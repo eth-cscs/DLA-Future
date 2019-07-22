@@ -1,0 +1,8 @@
+.DS_Store
+*~
+*.swp
+*.o
+*.a
+build*
+.ptp-sync-folder
+.vscode/

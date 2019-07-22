@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
+
+project(test CXX)
+
+find_package(HPX)
+
+add_hpx_executable(test SOURCES test.cpp)

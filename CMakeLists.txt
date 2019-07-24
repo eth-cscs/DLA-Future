@@ -22,6 +22,14 @@ if (NOT CMAKE_BUILD_TYPE)
 endif()
 
 # ---------------------------------------------------------------------------
+# CUDA
+# ---------------------------------------------------------------------------
+set(NS3C_WITH_CUDA OFF CACHE BOOL "Enable CUDA support")
+if (NS3C_WITH_CUDA)
+  enable_language(CUDA)
+endif()
+
+# ---------------------------------------------------------------------------
 # CMake configurations
 # ---------------------------------------------------------------------------
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)

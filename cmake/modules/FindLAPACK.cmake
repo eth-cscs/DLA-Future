@@ -52,7 +52,7 @@ mark_as_advanced(
 )
 
 
-### CHECKS
+### Checks
 include(CMakePushCheckState)
 cmake_push_check_state(RESET)
 
@@ -91,7 +91,6 @@ if (LAPACK_FOUND)
   set(LAPACK_INCLUDE_DIRS ${LAPACK_INCLUDE_DIR})
   set(LAPACK_LIBRARIES ${LAPACK_LIBRARY})
 
-  # CMake Target
   if (NOT TARGET lapack::lapack)
     add_library(lapack::lapack INTERFACE IMPORTED GLOBAL)
   endif()

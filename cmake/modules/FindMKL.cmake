@@ -31,7 +31,7 @@ endif()
 
 
 ### LAPACK
-# ----- options
+# ----- Options
 if(CMAKE_CXX_COMPILER_ID MATCHES "Intel" OR ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   set(MKL_THREADING_OPTIONS Sequential "Intel OpenMP")
   set(MKL_THREADING_DEFAULT "Intel OpenMP")
@@ -50,7 +50,7 @@ else()
   set(MKL_LIB_DIR "-L${MKL_ROOT}/lib/intel64")
 endif()
 
-# ----- set threading
+# ----- set MKL Threading
 if(MKL_THREADING MATCHES "Sequential")
   set(MKL_THREAD_LIB "-lmkl_sequential")
 elseif(MKL_THREADING MATCHES "GNU OpenMP")
@@ -83,7 +83,7 @@ mark_as_advanced(
 
 
 ### SCALAPACK
-# ----- options
+# ----- Options
 if (UNIX)
   set(MKL_MPI_TYPE "IntelMPI" CACHE STRING "MKL MPI support")
   set_property(CACHE MKL_MPI_TYPE PROPERTY STRINGS "IntelMPI" "OpenMPI")
@@ -109,7 +109,7 @@ set(SCALAPACK_LIBRARY "-lmkl_scalapack_lp64 ${MKL_BLACS_LIB}" CACHE STRING "Scal
 mark_as_advanced(SCALAPACK_LIBRARY)
 
 
-### ADDITIONAL OPTION
+### Additional Option
 include(CheckCXXSymbolExists)
 CHECK_CXX_SYMBOL_EXISTS(mkl_get_max_threads mkl.h _MKL_HAVE_NUM_THREADS_UTIL)
 if (_MKL_HAVE_NUM_THREADS_UTIL)
@@ -117,13 +117,13 @@ if (_MKL_HAVE_NUM_THREADS_UTIL)
 endif()
 
 
-### CHECKS
+### Checks
 include(CMakePushCheckState)
 cmake_push_check_state(RESET)
 
 include(CheckFunctionExists)
 
-## LAPACK
+# ----- LAPACK
 cmake_reset_check_state()
 set(CMAKE_REQUIRED_INCLUDES ${LAPACK_INCLUDE_DIR})
 set(CMAKE_REQUIRED_LIBRARIES ${LAPACK_LIBRARY})
@@ -140,7 +140,7 @@ if (NOT LAPACK_CHECK)
   message(FATAL_ERROR "LAPACK symbol not found with this configuration")
 endif()
 
-## SCALAPACK
+# ----- SCALAPACK
 cmake_reset_check_state()
 set(CMAKE_REQUIRED_LIBRARIES ${SCALAPACK_LIBRARY})
 
@@ -173,7 +173,7 @@ find_package_handle_standard_args(MKL DEFAULT_MSG
   SCALAPACK_FOUND
 )
 
-# CMake Target
+# ----- LAPACK
 if (LAPACK_FOUND)
   set(LAPACK_INCLUDE_DIRS ${LAPACK_INCLUDE_DIR})
   set(LAPACK_LIBRARIES ${LAPACK_LIBRARY})
@@ -193,7 +193,7 @@ if (LAPACK_FOUND)
   )
 endif()
 
-# CMake Target
+# ----- SCALAPACK
 if (SCALAPACK_FOUND)
   set(SCALAPACK_LIBRARIES ${SCALAPACK_LIBRARY})
 

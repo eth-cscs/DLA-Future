@@ -1,3 +1,13 @@
+#
+# NS3C
+#
+# Copyright (c) 2018-2019, ETH Zurich
+# All rights reserved.
+#
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+
 # Find LAPACK library
 #
 # This module finds an installed library that implements the LAPACK linear-algebra interface.
@@ -16,8 +26,6 @@
 #       ;-list of {lib name, lib filepath, -Llibrary_folder}
 #
 # It creates target lapack::lapack
-
-
 
 ### Options
 set(LAPACK_TYPE "Compiler" CACHE STRING "BLAS/LAPACK type setting")
@@ -42,6 +50,7 @@ mark_as_advanced(
   LAPACK_INCLUDE_DIR
   LAPACK_LIBRARY
 )
+
 
 ### CHECKS
 include(CMakePushCheckState)

@@ -1,3 +1,13 @@
+#
+# NS3C
+#
+# Copyright (c) 2018-2019, ETH Zurich
+# All rights reserved.
+#
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+
 cmake_minimum_required(VERSION 3.12.4)
 
 # ---------------------------------------------------------------------------
@@ -20,7 +30,6 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules)
 # ---------------------------------------------------------------------------
 # Libraries configuration
 # ---------------------------------------------------------------------------
-
 # ----- MPI
 find_package(MPI REQUIRED)
 

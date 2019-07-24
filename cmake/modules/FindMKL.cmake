@@ -1,3 +1,13 @@
+#
+# NS3C
+#
+# Copyright (c) 2018-2019, ETH Zurich
+# All rights reserved.
+#
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+
 # Find MKL library
 #
 # This module sets the following variables:
@@ -12,7 +22,6 @@
 #   MKL_MPI_TYPE - mpi supporto for SCALAPACK
 #
 # It creates targets MKL::lapack and MKL::scalapack
-
 
 set(MKL_ROOT $ENV{MKLROOT} CACHE PATH "Intel MKL Path")
 
@@ -142,6 +151,7 @@ if (NOT SCALAPACK_CHECK)
 endif()
 
 cmake_pop_check_state()
+
 
 ### MKL Package
 include(FindPackageHandleStandardArgs)

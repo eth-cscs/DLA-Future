@@ -22,12 +22,49 @@ enable_language(C)
 enable_language(CXX)
 set(CMAKE_CXX_STANDARD 14)
 
-# ---------------------------------------------------------------------------
-# CUDA
-# ---------------------------------------------------------------------------
+# ---- CUDA
 set(NS3C_WITH_CUDA OFF CACHE BOOL "Enable CUDA support")
 if (NS3C_WITH_CUDA)
   enable_language(CUDA)
+
+  # CUDA
+  find_path(CUDA_INCLUDE_DIR
+    cuda.h
+    PATHS ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
+  )
+
+  find_library(CUDA_LIBRARY
+    cudart
+    PATHS ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES}
+  )
+
+  if (NOT CUDA_INCLUDE_DIR OR NOT CUDA_LIBRARY)
+    message(FATAL_ERROR "Impossible to find cuda::cuda library")
+  endif()
+
+  add_library(cuda::cuda INTERFACE IMPORTED)
+  target_include_directories(cuda::cuda INTERFACE ${CUDA_INCLUDE_DIR})
+  target_link_libraries(cuda::cuda INTERFACE ${CUDA_LIBRARY})
+
+  # CUBLAS
+  find_path(CUDA_CUBLAS_INCLUDE_DIR
+    cublas_v2.h
+    PATHS ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
+  )
+
+  find_library(CUDA_CUBLAS_LIBRARY
+    cublas
+    PATHS ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES}
+  )
+
+  if (NOT CUDA_CUBLAS_INCLUDE_DIR OR NOT CUDA_CUBLAS_LIBRARY)
+    message(FATAL_ERROR "Impossible to find cuda::cublas library")
+  endif()
+
+  add_library(cuda::cublas INTERFACE IMPORTED)
+  target_include_directories(cuda::cublas INTERFACE ${CUDA_CUBLAS_INCLUDE_DIR})
+  target_link_libraries(cuda::cublas INTERFACE ${CUDA_CUBLAS_LIBRARY})
+endif()
 
 # ----- Options
 if (NOT CMAKE_BUILD_TYPE)

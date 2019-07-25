@@ -53,6 +53,12 @@ find_package(HPX REQUIRED)
 add_subdirectory(external)
 
 # ---------------------------------------------------------------------------
+# NS3C library
+# ---------------------------------------------------------------------------
+add_library(NS3C INTERFACE)
+target_include_directories(NS3C INTERFACE include)
+
+# ---------------------------------------------------------------------------
 # Test
 # ---------------------------------------------------------------------------
 set(NS3C_WITH_TEST BOOL "ON" "Enables tests")

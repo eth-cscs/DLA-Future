@@ -25,7 +25,9 @@ endif()
 # CMake configurations
 # ---------------------------------------------------------------------------
 
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules)
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+
+include(NS3C_Utils)
 
 # ---------------------------------------------------------------------------
 # Libraries configuration

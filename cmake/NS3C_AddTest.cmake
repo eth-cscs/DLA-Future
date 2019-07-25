@@ -35,7 +35,7 @@
 # )
 
 function(NS3C_ADD_TEST test_target_name)
-  set(options "")
+  set(options "USE_GTEST_MAIN")
   set(oneValueArgs MPIRANKS)
   set(multiValueArgs SOURCES COMPILE_DEFINITIONS INCLUDE_DIRS LIBRARIES ARGUMENTS)
   cmake_parse_arguments(NS3C_AT "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
@@ -65,7 +65,12 @@ function(NS3C_ADD_TEST test_target_name)
     )
   endif()
   
-  target_link_libraries(${test_target_name} PRIVATE gtest)
+  if (NS3C_AT_USE_GTEST_MAIN)
+    target_link_libraries(${test_target_name} PRIVATE gtest-main)
+  else()
+    target_link_libraries(${test_target_name} PRIVATE gtest)
+  endif()
+
   if (NS3C_AT_LIBRARIES)
     target_link_libraries(${test_target_name}
       ${NS3C_AT_LIBRARIES}

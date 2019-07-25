@@ -42,30 +42,35 @@ function(NS3C_ADD_TEST test_target_name)
 
   ### Checks
   if (NS3C_AT_UNPARSED_ARGUMENTS)
-    message(SEND_ERROR "Unknown arguments ${NS3C_AT_UNPARSED_ARGUMENTS}")
+    message(FATAL_ERROR "Unknown arguments ${NS3C_AT_UNPARSED_ARGUMENTS}")
   endif()
 
   if (NOT NS3C_AT_SOURCES)
-    message("No sources specified for this test")
+    message(FATAL_ERROR "No sources specified for this test")
   endif()
 
   ### Test executable target
   add_executable(${test_target_name} ${NS3C_AT_SOURCES})
 
-  target_compile_definitions(${test_target_name}
-    PRIVATE
-      ${NS3C_AT_COMPILE_DEFINITIONS}
-  )
+  if (NS3C_AT_COMPILE_DEFINITIONS)
+    target_compile_definitions(${test_target_name}
+      PRIVATE
+        ${NS3C_AT_COMPILE_DEFINITIONS}
+    )
+  endif()
 
-  target_include_directories(${test_target_name}
-    ${NS3C_AT_INCLUDE_DIRS}
-  )
+  if (NS3C_AT_INCLUDE_DIRS)
+    target_include_directories(${test_target_name}
+      ${NS3C_AT_INCLUDE_DIRS}
+    )
+  endif()
   
-  target_link_libraries(${test_target_name}
-    ${NS3C_AT_LIBRARIES}
-    PRIVATE
-      gtest
-  )
+  target_link_libraries(${test_target_name} PRIVATE gtest)
+  if (NS3C_AT_LIBRARIES)
+    target_link_libraries(${test_target_name}
+      ${NS3C_AT_LIBRARIES}
+    )
+  endif()
 
   ### Test target
   # ----- MPI-based test

@@ -83,7 +83,6 @@ else()
   include(FindPackageHandleStandardArgs)
   find_package_handle_standard_args(LAPACK DEFAULT_MSG
     LAPACK_LIBRARY
-    LAPACK_INCLUDE_DIR
   )
 endif()
 

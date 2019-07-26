@@ -10,11 +10,22 @@
 
 cmake_minimum_required(VERSION 3.12.4)
 
-# ---------------------------------------------------------------------------
-# PROJECT
-# ---------------------------------------------------------------------------
 project(NS3C)
 
+# ---------------------------------------------------------------------------
+# CMake configurations
+# ---------------------------------------------------------------------------
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+
+include(NS3C)
+
+if (NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build Type" FORCE)
+endif()
+
+# ---------------------------------------------------------------------------
+# Languages
+# ---------------------------------------------------------------------------
 # ----- C
 enable_language(C)
 
@@ -65,18 +76,6 @@ if (NS3C_WITH_CUDA)
   target_include_directories(cuda::cublas INTERFACE ${CUDA_CUBLAS_INCLUDE_DIR})
   target_link_libraries(cuda::cublas INTERFACE ${CUDA_CUBLAS_LIBRARY})
 endif()
-
-# ----- Options
-if (NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build Type" FORCE)
-endif()
-
-# ---------------------------------------------------------------------------
-# CMake configurations
-# ---------------------------------------------------------------------------
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
-
-include(NS3C)
 
 # ---------------------------------------------------------------------------
 # Libraries configuration

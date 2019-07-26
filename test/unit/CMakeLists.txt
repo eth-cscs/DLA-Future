@@ -8,4 +8,4 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-NS3C_ADD_TEST(test_util_math SOURCES test_util_math.cpp USE_GTEST_MAIN)
+NS3C_addTest(test_util_math SOURCES test_util_math.cpp USE_GTEST_MAIN)

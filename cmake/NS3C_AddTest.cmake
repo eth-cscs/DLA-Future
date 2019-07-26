@@ -8,7 +8,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-# NS3C_ADD_TEST(test_target_name
+# NS3C_addTest(test_target_name
 #   SOURCES <source1> [<source2> ...]
 #   [COMPILE_DEFINITIONS <arguments for target_compile_definitions>]
 #   [INCLUDE_DIRS <arguments for target_include_directories>]
@@ -26,7 +26,7 @@
 # 
 # e.g.
 # 
-# NS3C_ADD_TEST(example_test
+# NS3C_addTest(example_test
 #   SOURCE main.cpp testfixture.cpp
 #   LIBRARIES
 #     PRIVATE
@@ -34,7 +34,7 @@
 #       include/
 # )
 
-function(NS3C_ADD_TEST test_target_name)
+function(NS3C_addTest test_target_name)
   set(options "USE_GTEST_MAIN")
   set(oneValueArgs MPIRANKS)
   set(multiValueArgs SOURCES COMPILE_DEFINITIONS INCLUDE_DIRS LIBRARIES ARGUMENTS)

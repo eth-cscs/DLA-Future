@@ -11,7 +11,7 @@
 # Find MKL library
 #
 # This module sets the following variables:
-#  MKL_FOUND, LAPACK_FOUND, SCALAPACK_FOUND 
+#  MKL_FOUND, LAPACK_FOUND, SCALAPACK_FOUND
 #     set to true if a library implementing the MKL interface is found
 #  MKL_HAVE_NUM_THREADS_UTIL if it is available in the library
 #

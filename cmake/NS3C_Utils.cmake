@@ -8,4 +8,4 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-add_subdirectory(unit)
+include(NS3C_AddTest)

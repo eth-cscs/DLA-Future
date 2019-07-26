@@ -24,7 +24,6 @@ endif()
 # ---------------------------------------------------------------------------
 # CMake configurations
 # ---------------------------------------------------------------------------
-
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules)
 
 # ---------------------------------------------------------------------------
@@ -36,8 +35,7 @@ find_package(MPI REQUIRED)
 # ----- LAPACK/SCALAPACK
 set(NS3C_WITH_MKL OFF CACHE BOOL "Enable MKL as provider for LAPACK")
 if (NS3C_WITH_MKL)
-  message(WARNING "MKL Threading is fixed to sequential!")
-  set(MKL_THREADING "Sequential")
+  set(MKL_THREADING "Sequential" CACHE STRING "MKL Threading fixed to Sequential" FORCE)
   find_package(MKL REQUIRED)
 
   add_library(lapack::lapack ALIAS MKL::lapack)

@@ -38,9 +38,10 @@
 #
 # It creates targets MKL::lapack and MKL::scalapack (depending on selected components)
 
-include(FindPackageHandleStandardArgs)
-include(CheckFunctionExists)
 include(CMakePushCheckState)
+include(CheckFunctionExists)
+include(CheckCXXSymbolExists)
+include(FindPackageHandleStandardArgs)
 
 ### helper functions: find components
 macro(_mkl_find component_name)
@@ -65,13 +66,6 @@ macro(_mkl_find_lapack)
 
   set(MKL_THREADING ${MKL_THREADING_DEFAULT} CACHE STRING "MKL Threading support")
   set_property(CACHE MKL_THREADING PROPERTY STRINGS ${MKL_THREADING_OPTIONS})
-
-  # ----- Look for the library
-  if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    set(MKL_LIB_DIR "-L${MKL_ROOT}/lib -Wl,-rpath,${MKL_ROOT}/lib")
-  else()
-    set(MKL_LIB_DIR "-L${MKL_ROOT}/lib/intel64")
-  endif()
 
   # ----- set MKL Threading
   if(MKL_THREADING MATCHES "Sequential")
@@ -198,12 +192,29 @@ if (NOT MKL_ROOT)
   set(MKL_ROOT $ENV{MKLROOT})
 endif()
 
+find_path(MKL_INCLUDE_DIR
+  mkl.h
+  PATHS ${MKL_ROOT} ENV MKLROOT
+)
+
+if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  set(MKL_LIB_DIR "-L${MKL_ROOT}/lib -Wl,-rpath,${MKL_ROOT}/lib")
+else()
+  set(MKL_LIB_DIR "-L${MKL_ROOT}/lib/intel64")
+endif()
+
 ### Additional Option
-include(CheckCXXSymbolExists)
-CHECK_CXX_SYMBOL_EXISTS(mkl_get_max_threads mkl.h _MKL_HAVE_NUM_THREADS_UTIL)
+cmake_push_check_state(RESET)
+
+set(CMAKE_REQUIRED_INCLUDES ${MKL_INCLUDE_DIR})
+
+unset(_MKL_HAVE_NUM_THREADS_UTIL CACHE)
+check_cxx_symbol_exists(mkl_get_max_threads mkl.h _MKL_HAVE_NUM_THREADS_UTIL)
 if (_MKL_HAVE_NUM_THREADS_UTIL)
   set(MKL_HAVE_NUM_THREADS_UTIL TRUE)
 endif()
+
+cmake_pop_check_state()
 
 ### Components
 if (NOT MKL_FIND_COMPONENTS)

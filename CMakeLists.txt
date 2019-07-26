@@ -76,7 +76,7 @@ endif()
 # ---------------------------------------------------------------------------
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-include(NS3C_Utils)
+include(NS3C)
 
 # ---------------------------------------------------------------------------
 # Libraries configuration

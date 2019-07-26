@@ -19,7 +19,7 @@
 #   MKL_ROOT -  where to look for the library.
 #               If not set, it uses the environment variable MKLROOT
 #   MKL_THREADING - threading mode available for LAPACK
-#   MKL_MPI_TYPE - mpi supporto for SCALAPACK
+#   MKL_MPI_TYPE - mpi support for SCALAPACK
 #
 # It creates targets MKL::lapack and MKL::scalapack
 
@@ -33,10 +33,10 @@ endif()
 ### LAPACK
 # ----- Options
 if(CMAKE_CXX_COMPILER_ID MATCHES "Intel" OR ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  set(MKL_THREADING_OPTIONS Sequential "Intel OpenMP")
+  set(MKL_THREADING_OPTIONS "Sequential" "Intel OpenMP")
   set(MKL_THREADING_DEFAULT "Intel OpenMP")
 else()
-  set(MKL_THREADING_OPTIONS Sequential "GNU OpenMP" "Intel OpenMP")
+  set(MKL_THREADING_OPTIONS "Sequential" "GNU OpenMP" "Intel OpenMP")
   set(MKL_THREADING_DEFAULT "GNU OpenMP")
 endif()
 

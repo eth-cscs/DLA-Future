@@ -17,15 +17,15 @@
 # )
 #
 # At least one source file has to be specified, while other parameters are optional.
-# 
+#
 # COMPILE_DEFINITIONS, INCLUDE_DIRS and LIBRARIES are passed to respective cmake wrappers, so it is
 # possible to specify PRIVATE/INTERFACE/PUBLIC modifiers.
-# 
+#
 # MPIRANKS specifies the number of ranks on which the test will be carried out and it implies a link with
 # MPI library.
-# 
+#
 # e.g.
-# 
+#
 # NS3C_addTest(example_test
 #   SOURCE main.cpp testfixture.cpp
 #   LIBRARIES
@@ -64,7 +64,7 @@ function(NS3C_addTest test_target_name)
       ${NS3C_AT_INCLUDE_DIRS}
     )
   endif()
-  
+
   target_link_libraries(${test_target_name} PRIVATE NS3C)
   if (NS3C_AT_USE_GTEST_MAIN)
     target_link_libraries(${test_target_name} PRIVATE gtest_main)
@@ -88,11 +88,11 @@ function(NS3C_addTest test_target_name)
     if (NS3C_AT_MPIRANKS GREATER MPIEXEC_MAX_NUMPROCS)
       message(FATAL_ERROR "Impossible to have more than ${MPIEXEC_MAX_NUMPROCS}")
     endif()
-    
+
     target_link_libraries(${test_target_name}
       PRIVATE MPI::MPI_CXX
     )
-    
+
     add_test(
       NAME ${test_target_name}
       COMMAND

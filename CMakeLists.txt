@@ -64,6 +64,6 @@ set(NS3C_WITH_TEST BOOL "ON" "Enables tests")
 if (NS3C_WITH_TEST)
   include(CTest)
   enable_testing()
-  
+
   add_subdirectory(test)
 endif()

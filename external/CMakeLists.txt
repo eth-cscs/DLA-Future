@@ -8,7 +8,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-# ----- GoogleTest
+### GoogleTest
 include(FetchContent)
 
 FetchContent_Declare(
@@ -20,5 +20,10 @@ FetchContent_Declare(
 FetchContent_GetProperties(googletest)
 if (NOT googletest_POPULATED)
   FetchContent_Populate(googletest)
+
+  # set default values for options
+  option(BUILD_GMOCK "Build GoogleTest GMock" OFF)
+  option(BUILD_GTEST "Build GoogleTest GTest" ON)
+
   add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR})
 endif()

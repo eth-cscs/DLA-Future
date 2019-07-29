@@ -142,7 +142,7 @@ private:
 
 Prefer the `// Comment` syntax, and use the `/* ... */` syntax only when is required.
 
-Classes and functions has to be documented with doxigen using the `///` syntax.
+Classes and functions has to be documented with **Doxygen** (see dedicated section).
 
 ### Function Comments
 
@@ -206,6 +206,23 @@ other_statement;  // Comment other statement
 statement3;       // Comment statement3 (Comments are aligned)
 ```
 If you modify a piece of code, also adapt the comments that belong to it if necessary.
+
+## Doxygen
+All classes and functions must be documented with Doxygen using the `///` style.
+
+Doxygen commands should be specified with `@` syntax (e.g. `@param`).
+
+General rules:
+
+- no empty comment lines before and after the comment block
+- one space after the @brief comment
+
+```cpp
+/// @brief Returns @c ceiling(@p num / @p den) for integer types.
+///
+/// @tparam IntType has to be an integer type
+/// @pre @a num >= 0 and @a den >= 0
+```
 
 ## Formatting
 

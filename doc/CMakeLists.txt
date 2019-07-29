@@ -10,7 +10,12 @@
 
 find_package(Doxygen REQUIRED)
 
-set(DOXYGEN_INPUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/..")
+set(DOXYGEN_INPUTS
+  ${CMAKE_CURRENT_SOURCE_DIR}/../include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../src
+)
+
+string(REPLACE ";" " " DOXYGEN_INPUTS "${DOXYGEN_INPUTS}")
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in

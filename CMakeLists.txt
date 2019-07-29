@@ -10,23 +10,36 @@
 
 cmake_minimum_required(VERSION 3.12.4)
 
-# ---------------------------------------------------------------------------
-# PROJECT
-# ---------------------------------------------------------------------------
-project(NS3C C CXX)
-
-set(CMAKE_CXX_STANDARD 14)
-
-if (NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build Type" FORCE)
-endif()
+project(NS3C)
 
 # ---------------------------------------------------------------------------
 # CMake configurations
 # ---------------------------------------------------------------------------
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-include(NS3C_Utils)
+include(NS3C)
+
+if (NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build Type" FORCE)
+endif()
+
+# ---------------------------------------------------------------------------
+# Languages
+# ---------------------------------------------------------------------------
+# ----- C
+enable_language(C)
+
+# ----- CXX
+enable_language(CXX)
+set(CMAKE_CXX_STANDARD 14)
+
+# ---- CUDA
+set(NS3C_WITH_CUDA OFF CACHE BOOL "Enable CUDA support")
+if (NS3C_WITH_CUDA)
+  enable_language(CUDA)
+
+  NS3C_addCudaTargets()
+endif()
 
 # ---------------------------------------------------------------------------
 # Libraries configuration

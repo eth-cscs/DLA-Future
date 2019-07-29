@@ -111,7 +111,7 @@ int variable_name;
 
 void functionNameMultipleWords(...) {
   auto my_lambda = [](int i) { return i + 4; };
-  other_statements; 
+  other_statements;
 }
 
 class ClassNameMultipleWords {
@@ -151,7 +151,7 @@ Each function should have a brief description on what the function does.
 The detailed documentation should contain:
 * for each function parameters whose type is non-const reference or pointer to non-const memory,
 the specification if they are input (In:), output (Out:) or input-output parameters (InOut:),
-* a description of the return value, 
+* a description of the return value,
 * the type of exception that can be thrown and when it happens.
 
 Example:
@@ -162,7 +162,7 @@ Example:
 /// In/Out: foo
 /// Out: bar
 /// Returns the number of whatever.
-/// Throws an exception of type MyExceptionType if bar cannot be computed. 
+/// Throws an exception of type MyExceptionType if bar cannot be computed.
 int computeFooBar(Type in_1, const Type& in_2, Type& in_3,
                   const Type* in_4, Type* in_5, Type& foo,
                   Type& bar);
@@ -229,7 +229,7 @@ Use no space before a comma (`,`) and a semicolon (`;`) and add a space after th
 
 Parenthesis should have no internal padding.
 In general they have one space external padding, unless the following cases are met
-which require no external padding: 
+which require no external padding:
 * between two opening or two closing parenthesis,
 * between the function name and its arguments,
 * between a closing parenthesis and a comma (`,`) or a semicolon (`;`).

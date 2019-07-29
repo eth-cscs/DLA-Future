@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include <type_traits>
+#include "util_macros.h"
 
 /// @file
 
@@ -26,7 +26,7 @@ namespace util {
 ///
 /// @pre @a num >= 0 and @a den >= 0.
 template <class IntType>
-constexpr std::enable_if_t<std::is_integral<IntType>::value, IntType> ceilDiv(IntType num, IntType den) {
+constexpr RETURN_TYPE_IF(IntType, std::is_integral<IntType>::value) ceilDiv(IntType num, IntType den) {
   return (num + den - 1) / den;
 }
 

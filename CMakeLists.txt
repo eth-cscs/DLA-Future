@@ -81,3 +81,11 @@ if (NS3C_WITH_TEST)
 
   add_subdirectory(test)
 endif()
+
+# ---------------------------------------------------------------------------
+# Docs
+# ---------------------------------------------------------------------------
+option(BUILD_DOC "Build documentation" ON)
+if (BUILD_DOC)
+  add_subdirectory(doc)
+endif()

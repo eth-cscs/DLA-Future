@@ -17,6 +17,10 @@ project(NS3C)
 # ---------------------------------------------------------------------------
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
+if(NOT CMAKE_INSTALL_INCLUDEDIR)
+    include(GNUInstallDirs)
+endif()
+
 include(NS3C)
 
 if (NOT CMAKE_BUILD_TYPE)
@@ -69,7 +73,18 @@ add_subdirectory(external)
 # NS3C library
 # ---------------------------------------------------------------------------
 add_library(NS3C INTERFACE)
-target_include_directories(NS3C INTERFACE include)
+target_include_directories(NS3C 
+    INTERFACE 
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
+)
+
+install(
+    DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/ns3c
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    FILES_MATCHING # headers only
+    PATTERN "*.h"
+)
 
 # ---------------------------------------------------------------------------
 # Test

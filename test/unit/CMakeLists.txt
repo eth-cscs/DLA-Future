@@ -9,3 +9,4 @@
 #
 
 NS3C_addTest(test_util_math SOURCES test_util_math.cpp USE_GTEST_MAIN)
+NS3C_addTest(test_host SOURCES test_host.cpp USE_GTEST_MAIN)

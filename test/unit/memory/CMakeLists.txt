@@ -8,6 +8,4 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-NS3C_addTest(test_util_math SOURCES test_util_math.cpp USE_GTEST_MAIN)
-
-add_subdirectory(memory)
+NS3C_addTest(test_host SOURCES test_host.cpp USE_GTEST_MAIN)

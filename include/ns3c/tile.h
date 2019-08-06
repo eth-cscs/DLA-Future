@@ -71,7 +71,11 @@ class Tile {
   Mem& get_mem(int i, int j) {
     return *(new Mem(get_ptr(i, j)));
   }
-
+  
+  Mem* get_mem_ptr() {
+      return mem_;
+  }
+  
   int m() const {
     return m_;
   }

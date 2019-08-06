@@ -15,10 +15,14 @@
 namespace ns3c {
 
 template <class Mem>
+
+/// The Tile object aims to provide an effective way to access the memory as a two dimensional array.
+/// It is not intended to directly allocate memory, which is instead given as parameter to the constructor.
+/// It represents the building block of the Matrix object.
 class Tile {
   using T = typename Mem::ElementType;
 
-  public:
+public:
   Tile(int m, int n, Mem& mem, int ld) : m_(m), n_(n), mem_(&mem), ld_(ld) {}
 
   Tile(const Tile&) = delete;
@@ -89,7 +93,7 @@ class Tile {
     return m * n;
   }
 
-  private:
+private:
   int m_;
   int n_;
   int ld_;

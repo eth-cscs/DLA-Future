@@ -85,7 +85,7 @@ endif()
 # ---------------------------------------------------------------------------
 # Docs
 # ---------------------------------------------------------------------------
-option(BUILD_DOC "Build documentation" ON)
+option(BUILD_DOC "Build documentation" OFF)
 if (BUILD_DOC)
   add_subdirectory(doc)
 endif()

@@ -73,7 +73,24 @@ add_subdirectory(external)
 # DLAF library
 # ---------------------------------------------------------------------------
 add_library(DLAF INTERFACE)
-target_include_directories(DLAF INTERFACE include)
+target_include_directories(DLAF INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+
+install(TARGETS
+  DLAF
+  EXPORT DLAF-TARGETS
+  INCLUDES DESTINATION include
+)
+
+install(DIRECTORY include DESTINATION include)
+
+install(EXPORT
+  DLAF-TARGETS
+  NAMESPACE DLAF::
+  DESTINATION share/cmake
+)
 
 # ---------------------------------------------------------------------------
 # Test

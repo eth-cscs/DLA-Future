@@ -62,11 +62,12 @@ endif()
 # ----- HPX
 find_package(HPX REQUIRED)
 
+# ----- BLASPP/LAPACKPP
+find_package(BLASPP REQUIRED)
+find_package(LAPACKPP REQUIRED)
+
 # ----- EXTERNAL
 add_subdirectory(external)
-
-# ----- BLASPP/LAPACKPP
-find_package(LAPACKPP REQUIRED)
 
 # ---------------------------------------------------------------------------
 # NS3C library

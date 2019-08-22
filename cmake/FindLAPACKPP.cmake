@@ -7,58 +7,51 @@
 # Please, refer to the LICENSE file in the root directory.
 # SPDX-License-Identifier: BSD-3-Clause
 #
-# Set blas++ and lapack++ library targets
+# Set lapack++ library target
 #
-#  BLASPP_FOUND - set to true if a library implementing the BLASPP interface is found
 #  LAPACKPP_FOUND - set to true if a library implementing the LAPACKPP interface is found
 #
 # Following options are required:
-#   BLASPP_DIR - blas++ root directory
-#   LAPACKPP_DIR - lapack++ root directory
+#   LAPACKPP_ROOT - lapack++ root directory
 #
-# It creates targets blaspp::blaspp lapackpp::lapackpp
+# It creates targets lapackpp::lapackpp
 
 ### Options
-set(BLASPP_DIR "" CACHE STRING "Root directory for blas++")
-set(LAPACKPP_DIR "" CACHE STRING "Root directory for lapack++")
+set(LAPACKPP_ROOT "" CACHE STRING "Root directory for lapack++")
 
-if(BLASPP_DIR STREQUAL "")
-  message(FATAL_ERROR "BLASPP_DIR unset")
+if(NOT LAPACKPP_ROOT)
+  message(FATAL_ERROR "LAPACKPP_ROOT unset")
 endif()
 
-if(LAPACKPP_DIR STREQUAL "")
-  message(FATAL_ERROR "LAPACKPP_DIR unset")
-endif()
+find_path(LAPACKPP_INCLUDE_DIR
+  lapack.hh
+  PATHS ${LAPACKPP_ROOT}/include
+)
 
+find_library(LAPACKPP_LIBRARY
+  lapackpp
+  PATHS ${LAPACKPP_ROOT}/lib
+  NO_DEFAULT_PATH
+)
 
 ### Package
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(BLASPP DEFAULT_MSG
-  BLASPP_DIR
-)
 find_package_handle_standard_args(LAPACKPP DEFAULT_MSG
-  LAPACKPP_DIR
+  LAPACKPP_LIBRARY
+  LAPACKPP_INCLUDE_DIR
 )
 
-if(BLASPP_FOUND AND LAPACKPP_FOUND)
-  set(BLASPP_INCLUDE_DIR ${BLASPP_DIR}/include)
-  set(BLASPP_LIBRARY ${BLASPP_DIR}/lib/libblaspp.so)
+if(LAPACKPP_FOUND)
 
-  set(LAPACKPP_INCLUDE_DIR ${LAPACKPP_DIR}/include)
-  set(LAPACKPP_LIBRARY ${LAPACKPP_DIR}/lib/liblapackpp.so)
+  set(LAPACKPP_INCLUDE_DIRS ${LAPACKPP_INCLUDE_DIR})
+  set(LAPACKPP_LIBRARIES ${LAPACKPP_LIBRARY})
 
-  add_library(blaspp::blaspp INTERFACE IMPORTED GLOBAL)
   add_library(lapackpp::lapackpp INTERFACE IMPORTED GLOBAL)
 
-  set_target_properties(blaspp::blaspp
-    PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "${BLASPP_INCLUDE_DIR}"
-    INTERFACE_LINK_LIBRARIES "${BLASPP_LIBRARY}"
-  )
   set_target_properties(lapackpp::lapackpp
     PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "${LAPACKPP_INCLUDE_DIR}"
-    INTERFACE_LINK_LIBRARIES "${LAPACKPP_LIBRARY}"
+    INTERFACE_INCLUDE_DIRECTORIES "${LAPACKPP_INCLUDE_DIRS}"
+    INTERFACE_LINK_LIBRARIES "${LAPACKPP_LIBRARIES}"
   )
 
 endif()

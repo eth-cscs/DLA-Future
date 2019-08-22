@@ -73,8 +73,8 @@ add_subdirectory(external)
 # NS3C library
 # ---------------------------------------------------------------------------
 add_library(NS3C INTERFACE)
-target_include_directories(NS3C 
-    INTERFACE 
+target_include_directories(NS3C
+    INTERFACE
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
 )

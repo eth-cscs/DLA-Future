@@ -10,94 +10,72 @@
 
 #pragma once
 
-#include <vector>
+#include "ns3c/memory/memory_view.h"
+#include "ns3c/types.h"
 
 namespace ns3c {
 
-template <class Mem>
-
 /// The Tile object aims to provide an effective way to access the memory as a two dimensional array.
-/// It is not intended to directly allocate memory, which is instead given as parameter to the constructor.
-/// It represents the building block of the Matrix object.
+/// It does not allocate any memory, but it references the memori given by a MemoryView object.
+/// It represents the building block of the Matrix objecti and of linear algebra algorithms.
+template <class T, Device device>
 class Tile {
-  using T = typename Mem::ElementType;
-
 public:
-  Tile(int m, int n, Mem& mem, int ld) : m_(m), n_(n), mem_(&mem), ld_(ld) {}
+  using ElementType = T;
+
+  /// @brief Contructs a (m x n) Tile.
+  /// @throw std::invalid_argument if m < 0, n < 0 or ld < max(1, m).
+  /// @throw std::invalid_argument if memory_view does not contain enough elements.
+  /// The (i, j)-th element of the Tile is stored in the (i+ld*j)-th element of memory_view.
+  Tile(SizeType m, SizeType n, memory::MemoryView<T, device> memory_view, SizeType ld)
+      : m_(m), n_(n), memory_view_(memory_view), ld_(ld) {
+    if (m_ < 0 || n_ < 0)
+      throw std::invalid_argument("Error: Invalid Tile sizes");
+    if (ld_ < m_ || ld_ < 1)
+      throw std::invalid_argument("Error: Invalid Tile leading dimension");
+    if (m_ + (n_ - 1) * ld_ > memory_view_.size())
+      throw std::invalid_argument("Error: Tile exceeds the MemoryView limits");
+  }
 
   Tile(const Tile&) = delete;
 
-  Tile(Tile&& rhs) : m_(rhs.m_), n_(rhs.n_), mem_(rhs.mem_), ld_(rhs.ld_) {
-    rhs.mem_ = nullptr;
+  Tile(Tile&&) = default;
+
+  Tile& operator=(Tile&&) = default;
+
+  /// @brief Returns the (i, j)-th element.
+  T& operator()(SizeType i, SizeType j) {
+    return *ptr(i, j);
   }
 
-  Tile& operator=(Tile&& rhs) {
-    if (this != &rhs) {
-      delete this->mem_;
-      this->mem_ = rhs.mem_;
-      rhs.mem_ = nullptr;
-
-      this->m_ = rhs.m_;
-      this->n_ = rhs.n_;
-      this->ld_ = rhs.ld_;
-    }
-    return *this;
+  const T& operator()(SizeType i, SizeType j) const {
+    return *ptr(i, j);
   }
 
-  T& operator()() {
-    return *((*mem_)());
+  /// @brief Returns the pointer to the (i, j)-th element.
+  T* ptr(SizeType i, SizeType j) {
+    return memory_view_(i + ld_ * j);
   }
 
-  const T& operator()() const {
-    return *((*mem_)());
+  const T* ptr(SizeType i, SizeType j) const {
+    return memory_view_(i + ld_ * j);
   }
 
-  T& operator()(int i, int j) {
-    return *((*mem_)(i + ld_ * j));
-  }
-
-  const T& operator()(int i, int j) const {
-    return *((*mem_)(i + ld_ * j));
-  }
-
-  T* get_ptr() {
-    return (*mem_)();
-  }
-
-  T* get_ptr(int i, int j) {
-    return (*mem_)(i + ld_ * j);
-  }
-
-  const T* get_ptr(int i, int j) const {
-    return (*mem_)(i + ld_ * j);
-  }
-
-  Mem& get_mem(int i, int j) {
-    return *(new Mem(get_ptr(i, j)));
-  }
-  
-  Mem* get_mem_ptr() {
-      return mem_;
-  }
-  
-  int m() const {
+  SizeType m() const {
     return m_;
   }
-  int n() const {
+  SizeType n() const {
     return n_;
   }
-  int ld() const {
+  SizeType ld() const {
     return ld_;
-  }
-  int size() const {
-    return m * n;
   }
 
 private:
-  int m_;
-  int n_;
-  int ld_;
-  Mem* mem_;
+  SizeType m_;
+  SizeType n_;
+  memory::MemoryView<T, device> memory_view_;
+  SizeType ld_;
 };
 
 }

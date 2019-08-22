@@ -6,69 +6,57 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "ns3c/memory/host.h"
 #include "ns3c/tile.h"
 
+#include <stdexcept>
+
 #include "gtest/gtest.h"
+#include "ns3c/memory/memory_view.h"
+#include "ns3c_test/util_types.h"
 
-typedef double T;
+using namespace ns3c;
+using namespace ns3c_test;
+using namespace testing;
 
-int m = 1024;
-int n = 1024;
-int ld = 1024;
+int m = 137;
+int n = 987;
+int ld = 333;
 
-TEST(TileTest, Constructor) {
-  ns3c::memory::Host<T> tt(m * n);
+template <typename Type>
+class TileTest : public ::testing::Test {};
 
-  for (int i = 0; i < m; ++i)
-    for (int j = 0; j < n; ++j)
-      *tt(i + ld * j) = i + 0.0001 * j;
+TYPED_TEST_CASE(TileTest, MatrixElementTypes);
 
-  ns3c::Tile<ns3c::memory::Host<T>> mytile(m, n, tt, ld);
+TYPED_TEST(TileTest, Constructor) {
+  using Type = TypeParam;
+  memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
 
-  for (int i = 0; i < mytile.m(); ++i)
-    for (int j = 0; j < mytile.n(); ++j)
-      EXPECT_EQ(mytile(i, j), *tt(i + ld * j));
+  ns3c::Tile<Type, Device::CPU> tile(m, n, memory_view, ld);
+  const auto& const_tile = tile;
+
+  EXPECT_EQ(m, tile.m());
+  EXPECT_EQ(n, tile.n());
+  EXPECT_EQ(ld, tile.ld());
+
+  for (int j = 0; j < tile.n(); ++j)
+    for (int i = 0; i < tile.m(); ++i) {
+      Type el = TypeUtilities<Type>::element(i + 0.01 * j, j - 0.01 * i);
+      tile(i, j) = el;
+      EXPECT_EQ(el, tile(i, j));
+      EXPECT_EQ(el, const_tile(i, j));
+      EXPECT_EQ(el, *memory_view(i + ld * j));
+      EXPECT_EQ(tile.ptr(i, j), memory_view(i + ld * j));
+      EXPECT_EQ(const_tile.ptr(i, j), memory_view(i + ld * j));
+    }
 }
 
-TEST(TileTest, MoveConstructor) {
-  ns3c::memory::Host<T> tt(m * n);
+TYPED_TEST(TileTest, ConstructorExceptions) {
+  using Type = TypeParam;
+  memory::MemoryView<Type, Device::CPU> memory_view(ld * (n - 1) + m - 1);
 
-  for (int i = 0; i < m; ++i)
-    for (int j = 0; j < n; ++j)
-      *tt(i + ld * j) = i + 0.0001 * j;
-
-  ns3c::Tile<ns3c::memory::Host<T>> mytile(m, n, tt, ld);
-
-  ns3c::Tile<ns3c::memory::Host<T>> mynewtile(std::move(mytile));
-
-  for (int i = 0; i < mytile.m(); ++i)
-    for (int j = 0; j < mytile.n(); ++j)
-      EXPECT_EQ(mynewtile(i, j), *tt(i + ld * j));
-
-  EXPECT_EQ(mytile.get_mem_ptr(), nullptr);
-}
-
-TEST(TileTest, SubtileConstructor) {
-  int msub = 514;
-  int nsub = 324;
-  int isub = 124;
-  int jsub = 633;
-
-  ns3c::memory::Host<T> tt(m * n);
-
-  for (int i = 0; i < m; ++i)
-    for (int j = 0; j < n; ++j)
-      *tt(i + ld * j) = i + 0.0001 * j;
-
-  ns3c::Tile<ns3c::memory::Host<T>> mytile(m, n, tt, ld);
-  ns3c::Tile<ns3c::memory::Host<T>> mysubtile(msub, nsub, mytile.get_mem(isub, jsub), ld);
-
-  for (int i = 0; i < mysubtile.m(); ++i)
-    for (int j = 0; j < mysubtile.n(); ++j)
-      EXPECT_EQ(mysubtile(i, j), mytile(i + isub, j + jsub));
-
-  for (int i = 0; i < mysubtile.m(); ++i)
-    for (int j = 0; j < mysubtile.n(); ++j)
-      EXPECT_EQ(mysubtile.get_ptr(i, j), mytile.get_ptr(i + isub, j + jsub));
+  EXPECT_THROW((ns3c::Tile<Type, Device::CPU>(m, n, memory_view, ld)), std::invalid_argument);
+  EXPECT_THROW((ns3c::Tile<Type, Device::CPU>(-1, n, memory_view, ld)), std::invalid_argument);
+  EXPECT_THROW((ns3c::Tile<Type, Device::CPU>(m, -1, memory_view, ld)), std::invalid_argument);
+  EXPECT_THROW((ns3c::Tile<Type, Device::CPU>(m, n, memory_view, m - 1)), std::invalid_argument);
+  EXPECT_THROW((ns3c::Tile<Type, Device::CPU>(0, n, memory_view, 0)), std::invalid_argument);
 }

@@ -8,4 +8,5 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-NS3C_addTest(test_host SOURCES test_host.cpp USE_GTEST_MAIN)
+NS3C_addTest(test_memory_chunk SOURCES test_memory_chunk.cpp USE_GTEST_MAIN)
+NS3C_addTest(test_memory_view SOURCES test_memory_view.cpp USE_GTEST_MAIN)

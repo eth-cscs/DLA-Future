@@ -66,6 +66,10 @@ endif()
 # ----- HPX
 find_package(HPX REQUIRED)
 
+# ----- BLASPP/LAPACKPP
+find_package(BLASPP REQUIRED)
+find_package(LAPACKPP REQUIRED)
+
 # ----- EXTERNAL
 add_subdirectory(external)
 
@@ -95,4 +99,12 @@ if (NS3C_WITH_TEST)
   enable_testing()
 
   add_subdirectory(test)
+endif()
+
+# ---------------------------------------------------------------------------
+# Docs
+# ---------------------------------------------------------------------------
+option(BUILD_DOC "Build documentation" OFF)
+if (BUILD_DOC)
+  add_subdirectory(doc)
 endif()

@@ -10,12 +10,15 @@
 
 #pragma once
 
+/// @file
+
 namespace ns3c {
 namespace util {
 
-/// \brief Returns ceiling(num/den) for integer types.
-/// IntType has to be an integer type.
-/// Precondition: num >= 0 and den >= 0.
+/// @brief Returns @c ceiling(@p num / @p den) for integer types.
+///
+/// @tparam IntType has to be an integer type
+/// @pre @a num >= 0 and @a den >= 0
 template <class IntType>
 constexpr IntType ceilDiv(IntType num, IntType den) {
   return (num + den - 1) / den;

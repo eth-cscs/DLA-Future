@@ -74,7 +74,7 @@ target_include_directories(NS3C INTERFACE include)
 # ---------------------------------------------------------------------------
 # Test
 # ---------------------------------------------------------------------------
-set(NS3C_WITH_TEST BOOL "ON" "Enables tests")
+set(NS3C_WITH_TEST ON CACHE BOOL "Enables tests")
 if (NS3C_WITH_TEST)
   include(CTest)
   enable_testing()

@@ -16,15 +16,15 @@
 namespace ns3c {
 
 /// The Tile object aims to provide an effective way to access the memory as a two dimensional array.
-/// It does not allocate any memory, but it references the memory given by a MemoryView object.
+/// It does not allocate any memory, but it references the memory given by a @c MemoryView object.
 /// It represents the building block of the Matrix object and of linear algebra algorithms.
 template <class T, Device device>
 class Tile {
 public:
   using ElementType = T;
 
-  /// @brief Contructs a (m x n) Tile.
-  /// @throw std::invalid_argument if m < 0, n < 0 or ld < max(1, m).
+  /// @brief Constructs a (@p m x @p n) Tile.
+  /// @throw std::invalid_argument if @p m < 0, @p n < 0 or @p ld < max(1, @p m).
   /// @throw std::invalid_argument if memory_view does not contain enough elements.
   /// The (i, j)-th element of the Tile is stored in the (i+ld*j)-th element of memory_view.
   Tile(SizeType m, SizeType n, memory::MemoryView<T, device> memory_view, SizeType ld)
@@ -60,8 +60,8 @@ public:
   }
 
   /// @brief Returns the (i, j)-th element.
-  /// @pre 0 <= i < m.
-  /// @pre 0 <= j < n.
+  /// @pre 0 <= @p i < @p m.
+  /// @pre 0 <= @p j < @p n.
   T& operator()(SizeType i, SizeType j) {
     return *ptr(i, j);
   }
@@ -70,8 +70,8 @@ public:
   }
 
   /// @brief Returns the pointer to the (i, j)-th element.
-  /// @pre 0 <= i < m.
-  /// @pre 0 <= j < n.
+  /// @pre 0 <= @p i < @p m.
+  /// @pre 0 <= @p j < @p n.
   T* ptr(SizeType i, SizeType j) {
     assert(i >= 0 && i < m_);
     assert(j >= 0 && j < n_);

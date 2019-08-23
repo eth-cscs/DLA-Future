@@ -22,28 +22,28 @@
 namespace ns3c {
 namespace memory {
 
-/// The class MemoryView represents a layer of abstraction over the underlying host memory.
+/// The class @c MemoryView represents a layer of abstraction over the underlying host memory.
 
 template <class T, Device device>
 class MemoryView {
 public:
   using ElementType = T;
 
-  /// @brief Creates a MemoryView with size 0.
+  /// @brief Creates a MemoryView of size 0.
   MemoryView() : MemoryView(0) {}
 
   /// @brief Creates a MemoryView object allocating the required memory.
   ///
   /// @param size The size of the memory to be allocated.
   ///
-  /// Memory of @a size elements of type @c T are is allocated on the given device.
+  /// Memory of @p size elements of type @c T are is allocated on the given device.
   MemoryView(std::size_t size)
       : memory_(std::make_shared<MemoryChunk<T, device>>(size)), offset_(0), size_(size) {}
 
   /// @brief Creates a MemoryView object from an existing memory allocation.
   ///
   /// @param ptr  The pointer to the already allocated memory.
-  /// @param size The size (in number of elements of type T) of the existing allocation.
+  /// @param size The size (in number of elements of type @c T) of the existing allocation.
   MemoryView(T* ptr, std::size_t size)
       : memory_(std::make_shared<MemoryChunk<T, device>>(ptr, size)), offset_(0), size_(size) {}
 
@@ -59,8 +59,8 @@ public:
   ///
   /// @param memory_view The starting MemoryView object.
   /// @param offset      The index of the first element of the subview.
-  /// @param size        The size (in number of elements of type T) of the subview.
-  /// @throw std::invalid_argument if the subview exceeds the limits of memory_view.
+  /// @param size        The size (in number of elements of type @c T) of the subview.
+  /// @throw @c std::invalid_argument if the subview exceeds the limits of memory_view.
   MemoryView(const MemoryView& memory_view, std::size_t offset, std::size_t size)
       : memory_(memory_view.memory_), offset_(offset + memory_view.offset_), size_(size) {
     if (offset + size > memory_view.size_) {
@@ -85,7 +85,7 @@ public:
   /// @brief Returns a pointer to the underlying memory at a given index.
   ///
   /// @param index index of the position
-  /// @pre 0 <= index < size
+  /// @pre 0 <= @p index < @p size
   T* operator()(size_t index) {
     assert(index < size_);
     return memory_->operator()(offset_ + index);
@@ -96,7 +96,7 @@ public:
   }
 
   /// @brief Returns a pointer to the underlying memory.
-  /// If size == 0 a nullptr is returned.
+  /// If @p size == 0 a @c nullptr is returned.
   T* operator()() {
     return memory_->operator()(offset_);
   }

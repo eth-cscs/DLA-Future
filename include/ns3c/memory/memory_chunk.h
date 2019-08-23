@@ -21,7 +21,7 @@
 namespace ns3c {
 namespace memory {
 
-/// The class MemoryChunk represents a layer of abstraction over the underlying host memory.
+/// The class @c MemoryChunk represents a layer of abstraction over the underlying host memory.
 
 template <class T, Device device>
 class MemoryChunk {
@@ -62,8 +62,8 @@ public:
   /// @brief Creates a MemoryChunk object from an existing memory allocation.
   ///
   /// @param ptr  The pointer to the already allocated memory.
-  /// @param size The size (in number of elements of type T) of the existing allocation.
-  /// @pre size >= 0
+  /// @param size The size (in number of elements of type @c T) of the existing allocation.
+  /// @pre @p size >= 0
   MemoryChunk(T* ptr, std::size_t size)
       : size_(size), ptr_(size > 0 ? ptr : nullptr), allocated_(false) {
     assert(size_ >= 0);
@@ -103,7 +103,7 @@ public:
   /// @brief Returns a pointer to the underlying memory at a given index.
   ///
   /// @param index index of the position
-  /// @pre 0 <= index < size
+  /// @pre 0 <= @p index < @p size
   T* operator()(size_t index) {
     return ptr_ + index;
   }
@@ -112,7 +112,7 @@ public:
   }
 
   /// @brief Returns a pointer to the underlying memory.
-  /// If size == 0 a nullptr is returned.
+  /// If @p size == 0 a @c nullptr is returned.
   T* operator()() {
     return ptr_;
   }
@@ -120,6 +120,7 @@ public:
     return ptr_;
   }
 
+  /// @brief Returns the number of elements of type @c T allocated.
   std::size_t size() const {
     return size_;
   }

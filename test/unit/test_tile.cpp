@@ -18,9 +18,9 @@ using namespace ns3c;
 using namespace ns3c_test;
 using namespace testing;
 
-int m = 137;
-int n = 987;
-int ld = 333;
+int m = 37;
+int n = 87;
+int ld = 133;
 
 template <typename Type>
 class TileTest : public ::testing::Test {};
@@ -59,4 +59,47 @@ TYPED_TEST(TileTest, ConstructorExceptions) {
   EXPECT_THROW((ns3c::Tile<Type, Device::CPU>(m, -1, memory_view, ld)), std::invalid_argument);
   EXPECT_THROW((ns3c::Tile<Type, Device::CPU>(m, n, memory_view, m - 1)), std::invalid_argument);
   EXPECT_THROW((ns3c::Tile<Type, Device::CPU>(0, n, memory_view, 0)), std::invalid_argument);
+}
+
+TYPED_TEST(TileTest, MoveConstructor) {
+  using Type = TypeParam;
+  memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+
+  ns3c::Tile<Type, Device::CPU> tile0(m, n, memory_view, ld);
+
+  ns3c::Tile<Type, Device::CPU> tile(std::move(tile0));
+  EXPECT_EQ(0, tile0.m());
+  EXPECT_EQ(0, tile0.n());
+  EXPECT_EQ(1, tile0.ld());
+
+  EXPECT_EQ(m, tile.m());
+  EXPECT_EQ(n, tile.n());
+  EXPECT_EQ(ld, tile.ld());
+
+  for (int j = 0; j < tile.n(); ++j)
+    for (int i = 0; i < tile.m(); ++i) {
+      EXPECT_EQ(tile.ptr(i, j), memory_view(i + ld * j));
+    }
+}
+
+TYPED_TEST(TileTest, MoveAssignement) {
+  using Type = TypeParam;
+  memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+
+  ns3c::Tile<Type, Device::CPU> tile0(m, n, memory_view, ld);
+  ns3c::Tile<Type, Device::CPU> tile(1, 1, memory::MemoryView<Type, Device::CPU>(1), 1);
+
+  tile = std::move(tile0);
+  EXPECT_EQ(0, tile0.m());
+  EXPECT_EQ(0, tile0.n());
+  EXPECT_EQ(1, tile0.ld());
+
+  EXPECT_EQ(m, tile.m());
+  EXPECT_EQ(n, tile.n());
+  EXPECT_EQ(ld, tile.ld());
+
+  for (int j = 0; j < tile.n(); ++j)
+    for (int i = 0; i < tile.m(); ++i) {
+      EXPECT_EQ(tile.ptr(i, j), memory_view(i + ld * j));
+    }
 }

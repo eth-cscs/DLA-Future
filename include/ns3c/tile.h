@@ -16,8 +16,8 @@
 namespace ns3c {
 
 /// The Tile object aims to provide an effective way to access the memory as a two dimensional array.
-/// It does not allocate any memory, but it references the memori given by a MemoryView object.
-/// It represents the building block of the Matrix objecti and of linear algebra algorithms.
+/// It does not allocate any memory, but it references the memory given by a MemoryView object.
+/// It represents the building block of the Matrix object and of linear algebra algorithms.
 template <class T, Device device>
 class Tile {
 public:
@@ -39,34 +39,59 @@ public:
 
   Tile(const Tile&) = delete;
 
-  Tile(Tile&&) = default;
+  Tile(Tile&& rhs) : m_(rhs.m_), n_(rhs.n_), memory_view_(std::move(rhs.memory_view_)), ld_(rhs.ld_) {
+    rhs.m_ = 0;
+    rhs.n_ = 0;
+    rhs.ld_ = 1;
+  }
 
-  Tile& operator=(Tile&&) = default;
+  Tile& operator=(const Tile&) = delete;
+
+  Tile& operator=(Tile&& rhs) {
+    m_ = rhs.m_;
+    n_ = rhs.n_;
+    memory_view_ = std::move(rhs.memory_view_);
+    ld_ = rhs.ld_;
+    rhs.m_ = 0;
+    rhs.n_ = 0;
+    rhs.ld_ = 1;
+
+    return *this;
+  }
 
   /// @brief Returns the (i, j)-th element.
+  /// @pre 0 <= i < m.
+  /// @pre 0 <= j < n.
   T& operator()(SizeType i, SizeType j) {
     return *ptr(i, j);
   }
-
   const T& operator()(SizeType i, SizeType j) const {
     return *ptr(i, j);
   }
 
   /// @brief Returns the pointer to the (i, j)-th element.
+  /// @pre 0 <= i < m.
+  /// @pre 0 <= j < n.
   T* ptr(SizeType i, SizeType j) {
+    assert(i >= 0 && i < m_);
+    assert(j >= 0 && j < n_);
     return memory_view_(i + ld_ * j);
   }
-
   const T* ptr(SizeType i, SizeType j) const {
+    assert(i >= 0 && i < m_);
+    assert(j >= 0 && j < n_);
     return memory_view_(i + ld_ * j);
   }
 
+  /// @brief Returns the number of rows.
   SizeType m() const {
     return m_;
   }
+  /// @brief Returns the number of columns.
   SizeType n() const {
     return n_;
   }
+  /// @brief Returns the leading dimension.
   SizeType ld() const {
     return ld_;
   }

@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <type_traits>
+
 /// @file
 
 namespace dlaf {
@@ -20,7 +22,7 @@ namespace util {
 /// @tparam IntType has to be an integer type
 /// @pre @a num >= 0 and @a den >= 0
 template <class IntType>
-constexpr IntType ceilDiv(IntType num, IntType den) {
+constexpr std::enable_if_t<std::is_integral<IntType>::value, IntType> ceilDiv(IntType num, IntType den) {
   return (num + den - 1) / den;
 }
 

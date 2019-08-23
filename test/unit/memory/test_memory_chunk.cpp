@@ -37,7 +37,8 @@ TYPED_TEST(MemoryChunkTest, ConstructorAllocates) {
 
 TYPED_TEST(MemoryChunkTest, ConstructorPointer) {
   using Type = TypeParam;
-  Type* ptr = new Type[size];
+  std::unique_ptr<Type[]> uptr(new Type[size]);
+  Type* ptr = uptr.get();
 
   memory::MemoryChunk<Type, Device::CPU> mem(ptr, size);
 
@@ -46,8 +47,6 @@ TYPED_TEST(MemoryChunkTest, ConstructorPointer) {
 
   for (std::size_t i = 0; i < mem.size(); ++i)
     EXPECT_EQ(ptr + i, mem(i));
-
-  free(ptr);
 }
 
 TYPED_TEST(MemoryChunkTest, MoveConstructor) {

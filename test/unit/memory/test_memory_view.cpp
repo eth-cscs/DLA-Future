@@ -37,7 +37,8 @@ TYPED_TEST(MemoryViewTest, ConstructorAllocates) {
 
 TYPED_TEST(MemoryViewTest, ConstructorPointer) {
   using Type = TypeParam;
-  Type* ptr = new Type[size];
+  std::unique_ptr<Type[]> uptr(new Type[size]);
+  Type* ptr = uptr.get();
 
   memory::MemoryView<Type, Device::CPU> mem(ptr, size);
 
@@ -46,13 +47,12 @@ TYPED_TEST(MemoryViewTest, ConstructorPointer) {
 
   for (std::size_t i = 0; i < mem.size(); ++i)
     EXPECT_EQ(ptr + i, mem(i));
-
-  free(ptr);
 }
 
 TYPED_TEST(MemoryViewTest, ConstructorSubview) {
   using Type = TypeParam;
-  Type* ptr = new Type[size];
+  std::unique_ptr<Type[]> uptr(new Type[size]);
+  Type* ptr = uptr.get();
 
   memory::MemoryView<Type, Device::CPU> mem(ptr, size);
   memory::MemoryView<Type, Device::CPU> mem2(mem, 4, size - 5);
@@ -70,8 +70,6 @@ TYPED_TEST(MemoryViewTest, ConstructorSubview) {
 
   for (std::size_t i = 0; i < mem3.size(); ++i)
     EXPECT_EQ(ptr + 8 + i, mem3(i));
-
-  free(ptr);
 }
 
 TYPED_TEST(MemoryViewTest, CopyConstructor) {
@@ -96,6 +94,9 @@ TYPED_TEST(MemoryViewTest, MoveConstructor) {
   Type* ptr = mem();
 
   memory::MemoryView<Type, Device::CPU> mem2(std::move(mem));
+
+  EXPECT_EQ(nullptr, mem());
+  EXPECT_EQ(0, mem.size());
 
   EXPECT_EQ(size, mem2.size());
   for (std::size_t i = 0; i < mem2.size(); ++i)
@@ -128,6 +129,9 @@ TYPED_TEST(MemoryViewTest, MoveAssignement) {
   Type* ptr = mem();
 
   mem2 = std::move(mem);
+
+  EXPECT_EQ(nullptr, mem());
+  EXPECT_EQ(0, mem.size());
 
   EXPECT_EQ(size, mem2.size());
   for (std::size_t i = 0; i < mem2.size(); ++i)

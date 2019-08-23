@@ -44,6 +44,7 @@ public:
   ///
   /// @param ptr  The pointer to the already allocated memory.
   /// @param size The size (in number of elements of type @c T) of the existing allocation.
+  /// @pre @p ptr+i can be deferenced for 0 < @c i < @p size
   MemoryView(T* ptr, std::size_t size)
       : memory_(std::make_shared<MemoryChunk<T, device>>(ptr, size)), offset_(0), size_(size) {}
 
@@ -60,7 +61,7 @@ public:
   /// @param memory_view The starting MemoryView object.
   /// @param offset      The index of the first element of the subview.
   /// @param size        The size (in number of elements of type @c T) of the subview.
-  /// @throw @c std::invalid_argument if the subview exceeds the limits of memory_view.
+  /// @throw std::invalid_argument if the subview exceeds the limits of @p memory_view.
   MemoryView(const MemoryView& memory_view, std::size_t offset, std::size_t size)
       : memory_(memory_view.memory_), offset_(offset + memory_view.offset_), size_(size) {
     if (offset + size > memory_view.size_) {
@@ -85,7 +86,7 @@ public:
   /// @brief Returns a pointer to the underlying memory at a given index.
   ///
   /// @param index index of the position
-  /// @pre 0 <= @p index < @p size
+  /// @pre @p index < @p size
   T* operator()(size_t index) {
     assert(index < size_);
     return memory_->operator()(offset_ + index);

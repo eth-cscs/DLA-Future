@@ -34,11 +34,9 @@ public:
   /// @brief Creates a MemoryChunk object allocating the required memory.
   ///
   /// @param size The size of the memory to be allocated.
-  /// @pre size >= 0
   ///
   /// Memory of @a size elements of type @c T are is allocated on the given device.
   MemoryChunk(std::size_t size) : size_(size), ptr_(nullptr), allocated_(true) {
-    assert(size_ >= 0);
     if (size == 0)
       return;
 
@@ -63,11 +61,9 @@ public:
   ///
   /// @param ptr  The pointer to the already allocated memory.
   /// @param size The size (in number of elements of type @c T) of the existing allocation.
-  /// @pre @p size >= 0
+  /// @pre @p ptr+i can be deferenced for 0 < @c i < @p size
   MemoryChunk(T* ptr, std::size_t size)
-      : size_(size), ptr_(size > 0 ? ptr : nullptr), allocated_(false) {
-    assert(size_ >= 0);
-  }
+      : size_(size), ptr_(size > 0 ? ptr : nullptr), allocated_(false) {}
 
   MemoryChunk(const MemoryChunk&) = delete;
 
@@ -103,11 +99,13 @@ public:
   /// @brief Returns a pointer to the underlying memory at a given index.
   ///
   /// @param index index of the position
-  /// @pre 0 <= @p index < @p size
+  /// @pre @p index < @p size
   T* operator()(size_t index) {
+    assert(index < size_);
     return ptr_ + index;
   }
   const T* operator()(size_t index) const {
+    assert(index < size_);
     return ptr_ + index;
   }
 

@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <cassert>
 #include <cstdlib>
 #include <memory>
 #ifdef WITH_CUDA
@@ -27,12 +28,20 @@ class MemoryChunk {
 public:
   using ElementType = T;
 
+  /// @brief Creates a MemoryChunk object with size 0.
+  MemoryChunk() : MemoryChunk(0) {}
+
   /// @brief Creates a MemoryChunk object allocating the required memory.
   ///
   /// @param size The size of the memory to be allocated.
+  /// @pre size >= 0
   ///
   /// Memory of @a size elements of type @c T are is allocated on the given device.
   MemoryChunk(std::size_t size) : size_(size), ptr_(nullptr), allocated_(true) {
+    assert(size_ >= 0);
+    if (size == 0)
+      return;
+
 #ifdef WITH_CUDA
     if (device == Device::CPU) {
       cudaMallocHost(&ptr_, size_ * sizeof(T));
@@ -54,7 +63,11 @@ public:
   ///
   /// @param ptr  The pointer to the already allocated memory.
   /// @param size The size (in number of elements of type T) of the existing allocation.
-  MemoryChunk(T* ptr, std::size_t size) : size_(size), ptr_(ptr), allocated_(false) {}
+  /// @pre size >= 0
+  MemoryChunk(T* ptr, std::size_t size)
+      : size_(size), ptr_(size > 0 ? ptr : nullptr), allocated_(false) {
+    assert(size_ >= 0);
+  }
 
   MemoryChunk(const MemoryChunk&) = delete;
 
@@ -89,20 +102,20 @@ public:
 
   /// @brief Returns a pointer to the underlying memory at a given index.
   ///
-  /// \param index index of the position
+  /// @param index index of the position
+  /// @pre 0 <= index < size
   T* operator()(size_t index) {
     return ptr_ + index;
   }
-
   const T* operator()(size_t index) const {
     return ptr_ + index;
   }
 
   /// @brief Returns a pointer to the underlying memory.
+  /// If size == 0 a nullptr is returned.
   T* operator()() {
     return ptr_;
   }
-
   const T* operator()() const {
     return ptr_;
   }

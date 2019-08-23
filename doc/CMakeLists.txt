@@ -10,12 +10,20 @@
 
 find_package(Doxygen REQUIRED)
 
-set(DOXYGEN_INPUTS
-  ${CMAKE_CURRENT_SOURCE_DIR}/../include
-  ${CMAKE_CURRENT_SOURCE_DIR}/../src
-)
+macro(transform_to_doxygen_list list)
+  string(REPLACE ";" " " ${list} "${${list}}")
+endmacro()
 
-string(REPLACE ";" " " DOXYGEN_INPUTS "${DOXYGEN_INPUTS}")
+set(DOXYGEN_INPUTS
+  ${CMAKE_CURRENT_SOURCE_DIR}/mainpage.dox
+  ${CMAKE_CURRENT_SOURCE_DIR}/../include
+)
+transform_to_doxygen_list(DOXYGEN_INPUTS)
+
+set(DOXYGEN_EXAMPLE_PATH
+  ${CMAKE_CURRENT_SOURCE_DIR}/../LICENSE
+)
+transform_to_doxygen_list(DOXYGEN_EXAMPLE_PATH)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in

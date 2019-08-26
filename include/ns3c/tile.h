@@ -21,7 +21,8 @@ namespace ns3c {
 template <class T, Device device>
 class Tile {
 public:
-  using ElementType = T;
+  using ElementType = std::remove_const_t<T>;
+  friend Tile<const ElementType, device>;
 
   /// @brief Constructs a (@p m x @p n) Tile.
   /// @throw std::invalid_argument if @p m < 0, @p n < 0 or @p ld < max(1, @p m).
@@ -45,6 +46,15 @@ public:
     rhs.ld_ = 1;
   }
 
+  template <class U = T,
+            class = typename std::enable_if_t<std::is_const<U>::value && std::is_same<T, U>::value>>
+  Tile(Tile<ElementType, device>&& rhs)
+      : m_(rhs.m_), n_(rhs.n_), memory_view_(std::move(rhs.memory_view_)), ld_(rhs.ld_) {
+    rhs.m_ = 0;
+    rhs.n_ = 0;
+    rhs.ld_ = 1;
+  }
+
   Tile& operator=(const Tile&) = delete;
 
   Tile& operator=(Tile&& rhs) {
@@ -59,25 +69,31 @@ public:
     return *this;
   }
 
+  template <class U = T,
+            class = typename std::enable_if_t<std::is_const<U>::value && std::is_same<T, U>::value>>
+  Tile& operator=(Tile<ElementType, device>&& rhs) {
+    m_ = rhs.m_;
+    n_ = rhs.n_;
+    memory_view_ = std::move(rhs.memory_view_);
+    ld_ = rhs.ld_;
+    rhs.m_ = 0;
+    rhs.n_ = 0;
+    rhs.ld_ = 1;
+
+    return *this;
+  }
+
   /// @brief Returns the (i, j)-th element.
   /// @pre 0 <= @p i < @p m.
   /// @pre 0 <= @p j < @p n.
-  T& operator()(SizeType i, SizeType j) {
-    return *ptr(i, j);
-  }
-  const T& operator()(SizeType i, SizeType j) const {
+  T& operator()(SizeType i, SizeType j) const {
     return *ptr(i, j);
   }
 
   /// @brief Returns the pointer to the (i, j)-th element.
   /// @pre 0 <= @p i < @p m.
   /// @pre 0 <= @p j < @p n.
-  T* ptr(SizeType i, SizeType j) {
-    assert(i >= 0 && i < m_);
-    assert(j >= 0 && j < n_);
-    return memory_view_(i + ld_ * j);
-  }
-  const T* ptr(SizeType i, SizeType j) const {
+  T* ptr(SizeType i, SizeType j) const {
     assert(i >= 0 && i < m_);
     assert(j >= 0 && j < n_);
     return memory_view_(i + ld_ * j);

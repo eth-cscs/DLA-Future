@@ -53,13 +53,13 @@ TYPED_TEST(MemoryViewTest, ConstructorPointerConst) {
   using Type = TypeParam;
   std::unique_ptr<Type[]> uptr(new Type[size]);
   const Type* cptr = uptr.get();
-  memory::MemoryView<const Type, Device::CPU> cmem(cptr, size);
+  memory::MemoryView<const Type, Device::CPU> const_mem(cptr, size);
 
-  EXPECT_EQ(size, cmem.size());
-  EXPECT_NE(nullptr, cmem());
+  EXPECT_EQ(size, const_mem.size());
+  EXPECT_NE(nullptr, const_mem());
 
-  for (std::size_t i = 0; i < cmem.size(); ++i)
-    EXPECT_EQ(cptr + i, cmem(i));
+  for (std::size_t i = 0; i < const_mem.size(); ++i)
+    EXPECT_EQ(cptr + i, const_mem(i));
 }
 
 TYPED_TEST(MemoryViewTest, ConstructorSubview) {
@@ -141,16 +141,16 @@ TYPED_TEST(MemoryViewTest, CopyConstructor) {
 TYPED_TEST(MemoryViewTest, CopyConstructorConst) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> mem0(size + 2);
-  memory::MemoryView<const Type, Device::CPU> cmem(mem0, 1, size);
+  memory::MemoryView<const Type, Device::CPU> const_mem(mem0, 1, size);
 
-  memory::MemoryView<const Type, Device::CPU> cmem2(cmem);
+  memory::MemoryView<const Type, Device::CPU> const_mem2(const_mem);
 
-  EXPECT_EQ(cmem(), cmem2());
-  EXPECT_EQ(cmem.size(), cmem2.size());
+  EXPECT_EQ(const_mem(), const_mem2());
+  EXPECT_EQ(const_mem.size(), const_mem2.size());
 
-  const Type* ptr = cmem();
-  for (std::size_t i = 0; i < cmem2.size(); ++i)
-    EXPECT_EQ(ptr + i, cmem2(i));
+  const Type* ptr = const_mem();
+  for (std::size_t i = 0; i < const_mem2.size(); ++i)
+    EXPECT_EQ(ptr + i, const_mem2(i));
 }
 
 TYPED_TEST(MemoryViewTest, CopyConstructorMix) {
@@ -158,14 +158,14 @@ TYPED_TEST(MemoryViewTest, CopyConstructorMix) {
   memory::MemoryView<Type, Device::CPU> mem0(size + 2);
   memory::MemoryView<Type, Device::CPU> mem(mem0, 1, size);
 
-  memory::MemoryView<const Type, Device::CPU> cmem2(mem);
+  memory::MemoryView<const Type, Device::CPU> const_mem2(mem);
 
-  EXPECT_EQ(mem(), cmem2());
-  EXPECT_EQ(mem.size(), cmem2.size());
+  EXPECT_EQ(mem(), const_mem2());
+  EXPECT_EQ(mem.size(), const_mem2.size());
 
   Type* ptr = mem();
-  for (std::size_t i = 0; i < cmem2.size(); ++i)
-    EXPECT_EQ(ptr + i, cmem2(i));
+  for (std::size_t i = 0; i < const_mem2.size(); ++i)
+    EXPECT_EQ(ptr + i, const_mem2(i));
 }
 
 TYPED_TEST(MemoryViewTest, MoveConstructor) {
@@ -187,17 +187,17 @@ TYPED_TEST(MemoryViewTest, MoveConstructor) {
 TYPED_TEST(MemoryViewTest, MoveConstructorConst) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> mem0(size + 2);
-  memory::MemoryView<const Type, Device::CPU> cmem(mem0, 1, size);
-  const Type* ptr = cmem();
+  memory::MemoryView<const Type, Device::CPU> const_mem(mem0, 1, size);
+  const Type* ptr = const_mem();
 
-  memory::MemoryView<const Type, Device::CPU> cmem2(std::move(cmem));
+  memory::MemoryView<const Type, Device::CPU> const_mem2(std::move(const_mem));
 
-  EXPECT_EQ(nullptr, cmem());
-  EXPECT_EQ(0, cmem.size());
+  EXPECT_EQ(nullptr, const_mem());
+  EXPECT_EQ(0, const_mem.size());
 
-  EXPECT_EQ(size, cmem2.size());
-  for (std::size_t i = 0; i < cmem2.size(); ++i)
-    EXPECT_EQ(ptr + i, cmem2(i));
+  EXPECT_EQ(size, const_mem2.size());
+  for (std::size_t i = 0; i < const_mem2.size(); ++i)
+    EXPECT_EQ(ptr + i, const_mem2(i));
 }
 
 TYPED_TEST(MemoryViewTest, MoveConstructorMix) {
@@ -206,14 +206,14 @@ TYPED_TEST(MemoryViewTest, MoveConstructorMix) {
   memory::MemoryView<Type, Device::CPU> mem(mem0, 1, size);
   Type* ptr = mem();
 
-  memory::MemoryView<const Type, Device::CPU> cmem2(std::move(mem));
+  memory::MemoryView<const Type, Device::CPU> const_mem2(std::move(mem));
 
   EXPECT_EQ(nullptr, mem());
   EXPECT_EQ(0, mem.size());
 
-  EXPECT_EQ(size, cmem2.size());
-  for (std::size_t i = 0; i < cmem2.size(); ++i)
-    EXPECT_EQ(ptr + i, cmem2(i));
+  EXPECT_EQ(size, const_mem2.size());
+  for (std::size_t i = 0; i < const_mem2.size(); ++i)
+    EXPECT_EQ(ptr + i, const_mem2(i));
 }
 
 TYPED_TEST(MemoryViewTest, CopyAssignement) {
@@ -236,35 +236,35 @@ TYPED_TEST(MemoryViewTest, CopyAssignement) {
 TYPED_TEST(MemoryViewTest, CopyAssignementConst) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> mem0(size + 2);
-  memory::MemoryView<const Type, Device::CPU> cmem(mem0, 1, size);
-  memory::MemoryView<const Type, Device::CPU> cmem2;
-  EXPECT_NE(cmem(), cmem2());
+  memory::MemoryView<const Type, Device::CPU> const_mem(mem0, 1, size);
+  memory::MemoryView<const Type, Device::CPU> const_mem2;
+  EXPECT_NE(const_mem(), const_mem2());
 
-  cmem2 = cmem;
+  const_mem2 = const_mem;
 
-  EXPECT_EQ(cmem(), cmem2());
-  EXPECT_EQ(cmem.size(), cmem2.size());
+  EXPECT_EQ(const_mem(), const_mem2());
+  EXPECT_EQ(const_mem.size(), const_mem2.size());
 
-  const Type* ptr = cmem();
-  for (std::size_t i = 0; i < cmem2.size(); ++i)
-    EXPECT_EQ(ptr + i, cmem2(i));
+  const Type* ptr = const_mem();
+  for (std::size_t i = 0; i < const_mem2.size(); ++i)
+    EXPECT_EQ(ptr + i, const_mem2(i));
 }
 
 TYPED_TEST(MemoryViewTest, CopyAssignementMix) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> mem0(size + 2);
   memory::MemoryView<Type, Device::CPU> mem(mem0, 1, size);
-  memory::MemoryView<const Type, Device::CPU> cmem2;
-  EXPECT_NE(mem(), cmem2());
+  memory::MemoryView<const Type, Device::CPU> const_mem2;
+  EXPECT_NE(mem(), const_mem2());
 
-  cmem2 = mem;
+  const_mem2 = mem;
 
-  EXPECT_EQ(mem(), cmem2());
-  EXPECT_EQ(mem.size(), cmem2.size());
+  EXPECT_EQ(mem(), const_mem2());
+  EXPECT_EQ(mem.size(), const_mem2.size());
 
   Type* ptr = mem();
-  for (std::size_t i = 0; i < cmem2.size(); ++i)
-    EXPECT_EQ(ptr + i, cmem2(i));
+  for (std::size_t i = 0; i < const_mem2.size(); ++i)
+    EXPECT_EQ(ptr + i, const_mem2(i));
 }
 
 TYPED_TEST(MemoryViewTest, MoveAssignement) {
@@ -288,35 +288,35 @@ TYPED_TEST(MemoryViewTest, MoveAssignement) {
 TYPED_TEST(MemoryViewTest, MoveAssignementConst) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> mem0(size + 2);
-  memory::MemoryView<const Type, Device::CPU> cmem(mem0, 1, size);
-  memory::MemoryView<const Type, Device::CPU> cmem2;
-  EXPECT_NE(cmem(), cmem2());
-  const Type* ptr = cmem();
+  memory::MemoryView<const Type, Device::CPU> const_mem(mem0, 1, size);
+  memory::MemoryView<const Type, Device::CPU> const_mem2;
+  EXPECT_NE(const_mem(), const_mem2());
+  const Type* ptr = const_mem();
 
-  cmem2 = std::move(cmem);
+  const_mem2 = std::move(const_mem);
 
-  EXPECT_EQ(nullptr, cmem());
-  EXPECT_EQ(0, cmem.size());
+  EXPECT_EQ(nullptr, const_mem());
+  EXPECT_EQ(0, const_mem.size());
 
-  EXPECT_EQ(size, cmem2.size());
-  for (std::size_t i = 0; i < cmem2.size(); ++i)
-    EXPECT_EQ(ptr + i, cmem2(i));
+  EXPECT_EQ(size, const_mem2.size());
+  for (std::size_t i = 0; i < const_mem2.size(); ++i)
+    EXPECT_EQ(ptr + i, const_mem2(i));
 }
 
 TYPED_TEST(MemoryViewTest, MoveAssignementMix) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> mem0(size + 2);
   memory::MemoryView<Type, Device::CPU> mem(mem0, 1, size);
-  memory::MemoryView<Type, Device::CPU> cmem2;
-  EXPECT_NE(mem(), cmem2());
+  memory::MemoryView<const Type, Device::CPU> const_mem2;
+  EXPECT_NE(mem(), const_mem2());
   Type* ptr = mem();
 
-  cmem2 = std::move(mem);
+  const_mem2 = std::move(mem);
 
   EXPECT_EQ(nullptr, mem());
   EXPECT_EQ(0, mem.size());
 
-  EXPECT_EQ(size, cmem2.size());
-  for (std::size_t i = 0; i < cmem2.size(); ++i)
-    EXPECT_EQ(ptr + i, cmem2(i));
+  EXPECT_EQ(size, const_mem2.size());
+  for (std::size_t i = 0; i < const_mem2.size(); ++i)
+    EXPECT_EQ(ptr + i, const_mem2(i));
 }

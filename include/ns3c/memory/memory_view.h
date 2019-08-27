@@ -22,8 +22,11 @@
 namespace ns3c {
 namespace memory {
 
-/// The class @c MemoryView represents a layer of abstraction over the underlying host memory.
-
+/// @brief The class @c MemoryView represents a layer of abstraction over the underlying host memory.
+///
+/// Two level of constness exists for @c MemoryView analogously to ponter semantics:
+/// the constness of the view and the constness of the data referenced by the view.
+/// Implicit conversion is allowed from views of non-const elements to views of const elements.
 template <class T, Device device>
 class MemoryView {
 public:

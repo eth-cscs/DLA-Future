@@ -15,9 +15,13 @@
 
 namespace ns3c {
 
-/// The Tile object aims to provide an effective way to access the memory as a two dimensional array.
-/// It does not allocate any memory, but it references the memory given by a @c MemoryView object.
+/// @brief The Tile object aims to provide an effective way to access the memory as a two dimensional
+/// array. It does not allocate any memory, but it references the memory given by a @c MemoryView object.
 /// It represents the building block of the Matrix object and of linear algebra algorithms.
+///
+/// Two level of constness exists for @c Tile analogously to ponter semantics:
+/// the constness of the tile and the constness of the data referenced by the tile.
+/// Implicit conversion is allowed from tiles of non-const elements to tiles of const elements.
 template <class T, Device device>
 class Tile {
 public:

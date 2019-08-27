@@ -9,3 +9,6 @@
 #
 
 NS3C_addTest(test_util_math SOURCES test_util_math.cpp USE_GTEST_MAIN)
+NS3C_addTest(test_tile SOURCES test_tile.cpp USE_GTEST_MAIN)
+
+add_subdirectory(memory)

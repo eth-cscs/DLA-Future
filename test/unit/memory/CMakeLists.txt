@@ -8,10 +8,5 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-add_library(NS3C_test INTERFACE)
-target_include_directories(NS3C_test 
-    INTERFACE 
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
-)
-
-add_subdirectory(unit)
+NS3C_addTest(test_memory_chunk SOURCES test_memory_chunk.cpp USE_GTEST_MAIN)
+NS3C_addTest(test_memory_view SOURCES test_memory_view.cpp USE_GTEST_MAIN)

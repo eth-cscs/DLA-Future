@@ -66,6 +66,7 @@ function(NS3C_addTest test_target_name)
   endif()
 
   target_link_libraries(${test_target_name} PRIVATE NS3C)
+  target_link_libraries(${test_target_name} PRIVATE NS3C_test)
   if (NS3C_AT_USE_GTEST_MAIN)
     target_link_libraries(${test_target_name} PRIVATE gtest_main)
   else()

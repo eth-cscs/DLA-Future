@@ -100,7 +100,7 @@ install(EXPORT
 include(CMakePackageConfigHelpers)
 
 configure_package_config_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/DLAFConfig.cmake.in
+  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/template/DLAFConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/DLAFConfig.cmake
   INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
 )

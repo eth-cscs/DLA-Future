@@ -1,0 +1,8 @@
+@PACKAGE_INIT@
+
+# TODO FindPackage management
+#include(CMakeFindDependencyMacro)
+
+include(${CMAKE_CURRENT_LIST_DIR}/DLAF-Targets.cmake)
+
+#check_required_components(DLAF)

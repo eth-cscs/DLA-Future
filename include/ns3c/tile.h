@@ -19,7 +19,7 @@ namespace ns3c {
 /// array. It does not allocate any memory, but it references the memory given by a @c MemoryView object.
 /// It represents the building block of the Matrix object and of linear algebra algorithms.
 ///
-/// Two level of constness exists for @c Tile analogously to ponter semantics:
+/// Two levels of constness exist for @c Tile analogously to pointer semantics:
 /// the constness of the tile and the constness of the data referenced by the tile.
 /// Implicit conversion is allowed from tiles of non-const elements to tiles of const elements.
 template <class T, Device device>

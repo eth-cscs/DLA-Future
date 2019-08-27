@@ -24,7 +24,7 @@ namespace memory {
 
 /// @brief The class @c MemoryView represents a layer of abstraction over the underlying host memory.
 ///
-/// Two level of constness exists for @c MemoryView analogously to ponter semantics:
+/// Two levels of constness exist for @c MemoryView analogously to pointer semantics:
 /// the constness of the view and the constness of the data referenced by the view.
 /// Implicit conversion is allowed from views of non-const elements to views of const elements.
 template <class T, Device device>
@@ -82,7 +82,8 @@ public:
   /// @param size        The size (in number of elements of type @c T) of the subview.
   /// @throw std::invalid_argument if the subview exceeds the limits of @p memory_view.
   MemoryView(const MemoryView& memory_view, std::size_t offset, std::size_t size)
-      : memory_(memory_view.memory_), offset_(offset + memory_view.offset_), size_(size) {
+      : memory_(size > 0 ? memory_view.memory_ : std::make_shared<MemoryChunk<ElementType, device>>()),
+        offset_(size > 0 ? offset + memory_view.offset_ : 0), size_(size) {
     if (offset + size > memory_view.size_) {
       throw std::invalid_argument("Sub MemoryView exceeds the limits of the base MemoryView");
     }
@@ -90,7 +91,8 @@ public:
   template <class U = T,
             class = typename std::enable_if_t<std::is_const<U>::value && std::is_same<T, U>::value>>
   MemoryView(const MemoryView<ElementType, device>& memory_view, std::size_t offset, std::size_t size)
-      : memory_(memory_view.memory_), offset_(offset + memory_view.offset_), size_(size) {
+      : memory_(size > 0 ? memory_view.memory_ : std::make_shared<MemoryChunk<ElementType, device>>()),
+        offset_(size > 0 ? offset + memory_view.offset_ : 0), size_(size) {
     if (offset + size > memory_view.size_) {
       throw std::invalid_argument("Sub MemoryView exceeds the limits of the base MemoryView");
     }

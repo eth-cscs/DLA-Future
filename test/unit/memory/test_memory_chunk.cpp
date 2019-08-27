@@ -1,5 +1,5 @@
 //
-// NS3C
+// Distributed Linear Algebra with Future (DLAF)
 //
 // Copyright (c) 2018-2019, ETH Zurich
 // All rights reserved.
@@ -8,13 +8,13 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "ns3c/memory/memory_chunk.h"
+#include "dlaf/memory/memory_chunk.h"
 
 #include "gtest/gtest.h"
-#include "ns3c_test/util_types.h"
+#include "dlaf_test/util_types.h"
 
-using namespace ns3c;
-using namespace ns3c_test;
+using namespace dlaf;
+using namespace dlaf_test;
 using namespace testing;
 
 template <typename Type>

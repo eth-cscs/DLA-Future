@@ -1,5 +1,5 @@
 #
-# NS3C
+# Distributed Linear Algebra with Future (DLAF)
 #
 # Copyright (c) 2018-2019, ETH Zurich
 # All rights reserved.
@@ -8,7 +8,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-macro(NS3C_addCudaTargets)
+macro(DLAF_addCudaTargets)
   # check if the CUDA language is enabled
   if (NOT CMAKE_CUDA_COMPILER)
     message(FATAL_ERROR "Please enable CUDA language before using this module")

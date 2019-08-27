@@ -6,16 +6,16 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "ns3c/tile.h"
+#include "dlaf/tile.h"
 
 #include <stdexcept>
 
 #include "gtest/gtest.h"
-#include "ns3c/memory/memory_view.h"
-#include "ns3c_test/util_types.h"
+#include "dlaf/memory/memory_view.h"
+#include "dlaf_test/util_types.h"
 
-using namespace ns3c;
-using namespace ns3c_test;
+using namespace dlaf;
+using namespace dlaf_test;
 using namespace testing;
 
 int m = 37;

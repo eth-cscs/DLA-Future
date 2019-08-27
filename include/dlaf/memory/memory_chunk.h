@@ -1,5 +1,5 @@
 //
-// NS3C
+// Distributed Linear Algebra with Future (DLAF)
 //
 // Copyright (c) 2018-2019, ETH Zurich
 // All rights reserved.
@@ -16,9 +16,9 @@
 #ifdef WITH_CUDA
 #include <cuda_runtime.h>
 #endif
-#include "ns3c/types.h"
+#include "dlaf/types.h"
 
-namespace ns3c {
+namespace dlaf {
 namespace memory {
 
 /// The class @c MemoryChunk represents a layer of abstraction over the underlying host memory.
@@ -149,4 +149,4 @@ private:
 };
 
 }  // namespace memory
-}  // namespace ns3c
+}  // namespace dlaf

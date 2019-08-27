@@ -24,7 +24,7 @@ BLAS/LAPACK can be provided by:
 - Custom
 - MKL
 
-Former two options are available if `NS3C_WITH_MKL=off`, allowing through `LAPACK_TYPE` to choose between:
+Former two options are available if `DLAF_WITH_MKL=off`, allowing through `LAPACK_TYPE` to choose between:
 
 - Compiler: choose this if a compiler wrapper that internally manages linking to BLAS/LAPACK is available
 - Custom: choose this if you want to manually specify `LAPACK_INCLUDE_DIR` and `LAPACK_LIBRARY`
@@ -37,6 +37,6 @@ In particular:
 	- library filepaths (e.g. /usr/local/lib/libblas.so)
 	- `-L<library_folder>` (e.g. -L/usr/local/lib)
 
-Otherwise, with `NS3C_WITH_MKL=on` it looks for BLAS/LAPACK provided by MKL. It uses `MKLROOT` environment variable if set or `MKL_ROOT` CMake variable (which has priority if both are set).
+Otherwise, with `DLAF_WITH_MKL=on` it looks for BLAS/LAPACK provided by MKL. It uses `MKLROOT` environment variable if set or `MKL_ROOT` CMake variable (which has priority if both are set).
 
 MKL is fixed to "Sequential" and does not use threading.

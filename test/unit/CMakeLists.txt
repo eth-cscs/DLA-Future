@@ -1,5 +1,5 @@
 #
-# NS3C
+# Distributed Linear Algebra with Future (DLAF)
 #
 # Copyright (c) 2018-2019, ETH Zurich
 # All rights reserved.
@@ -8,7 +8,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-NS3C_addTest(test_util_math SOURCES test_util_math.cpp USE_GTEST_MAIN)
-NS3C_addTest(test_tile SOURCES test_tile.cpp USE_GTEST_MAIN)
+DLAF_addTest(test_util_math SOURCES test_util_math.cpp USE_GTEST_MAIN)
+DLAF_addTest(test_tile SOURCES test_tile.cpp USE_GTEST_MAIN)
 
 add_subdirectory(memory)

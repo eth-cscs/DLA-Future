@@ -146,7 +146,7 @@ public:
   /// @brief Returns a pointer to the underlying memory.
   /// If @p size == 0 a @c nullptr is returned.
   T* operator()() const {
-    return memory_->operator()(offset_);
+    return size_ == 0 ? nullptr : memory_->operator()(offset_);
   }
 
   /// @brief Returns the number of elements accessible from the MemoryView.

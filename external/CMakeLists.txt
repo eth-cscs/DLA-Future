@@ -25,7 +25,7 @@ if (NOT googletest_POPULATED)
   option(BUILD_GMOCK "Build GoogleTest GMock" OFF)
   option(BUILD_GTEST "Build GoogleTest GTest" ON)
 
-  add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR})
+  add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR} EXCLUDE_FROM_ALL)
 
   # keep project cache clean
   mark_as_advanced(

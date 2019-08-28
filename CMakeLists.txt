@@ -50,7 +50,7 @@ find_package(MPI REQUIRED)
 # ----- LAPACK/SCALAPACK
 set(DLAF_WITH_MKL OFF CACHE BOOL "Enable MKL as provider for LAPACK")
 if (DLAF_WITH_MKL)
-  set(MKL_THREADING "Sequential" CACHE STRING "MKL Threading fixed to Sequential" FORCE)
+  set(MKL_CUSTOM_THREADING "Sequential")
   find_package(MKL REQUIRED COMPONENTS LAPACK)
   set(LAPACK_FOUND ${MKL_LAPACK_FOUND})
 
@@ -87,18 +87,28 @@ install(TARGETS
   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
+# install includes
 install(DIRECTORY include/
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
 
+# install custom FindModules
+install(DIRECTORY cmake/
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
+  FILES_MATCHING PATTERN "Find*.cmake"
+)
+
+# ----- CMake INTEGRATION
+include(CMakePackageConfigHelpers)
+
+# install targets configuration
 install(EXPORT
   DLAF-Targets
   NAMESPACE DLAF::
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
 )
 
-# ----- CMake INTEGRATION
-include(CMakePackageConfigHelpers)
-
+# Config-file preparation and install
 configure_package_config_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake/template/DLAFConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/DLAFConfig.cmake

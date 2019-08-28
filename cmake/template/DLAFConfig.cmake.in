@@ -26,11 +26,9 @@ if (DLAF_WITH_MKL)
 
   find_dependency(MKL REQUIRED COMPONENTS LAPACK)
 else()
-  # TODO manage LAPACK dependency (with custom include/libs)
-  message(FATAL_ERROR "not yet implemented")
-
-  set(LAPACK_INCLUDE_DIR "@LAPACK_INCLUDE_DIR@")
-  set(LAPACK_LIBRARY "@LAPACK_LIBRARY@")
+  set(LAPACK_CUSTOM_TYPE "@LAPACK_TYPE@")
+  set(LAPACK_CUSTOM_INCLUDE_DIR "@LAPACK_INCLUDE_DIR@")
+  set(LAPACK_CUSTOM_LIBRARY "@LAPACK_LIBRARY@")
 
   find_dependency(LAPACK REQUIRED)
 endif()

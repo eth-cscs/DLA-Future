@@ -1,5 +1,5 @@
 //
-// NS3C
+// Distributed Linear Algebra with Future (DLAF)
 //
 // Copyright (c) 2018-2019, ETH Zurich
 // All rights reserved.
@@ -19,7 +19,7 @@
 
 #include "memory_chunk.h"
 
-namespace ns3c {
+namespace dlaf {
 namespace memory {
 
 /// @brief The class @c MemoryView represents a layer of abstraction over the underlying host memory.
@@ -161,4 +161,4 @@ private:
 };
 
 }  // namespace memory
-}  // namespace ns3c
+}  // namespace dlaf

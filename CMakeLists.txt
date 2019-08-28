@@ -1,5 +1,5 @@
 #
-# NS3C
+# Distributed Linear Algebra with Future (DLAF)
 #
 # Copyright (c) 2018-2019, ETH Zurich
 # All rights reserved.
@@ -10,14 +10,14 @@
 
 cmake_minimum_required(VERSION 3.12.4)
 
-project(NS3C)
+project(DLAF)
 
 # ---------------------------------------------------------------------------
 # CMake configurations
 # ---------------------------------------------------------------------------
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-include(NS3C)
+include(DLAF)
 
 if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build Type" FORCE)
@@ -34,11 +34,11 @@ enable_language(CXX)
 set(CMAKE_CXX_STANDARD 14)
 
 # ---- CUDA
-set(NS3C_WITH_CUDA OFF CACHE BOOL "Enable CUDA support")
-if (NS3C_WITH_CUDA)
+set(DLAF_WITH_CUDA OFF CACHE BOOL "Enable CUDA support")
+if (DLAF_WITH_CUDA)
   enable_language(CUDA)
 
-  NS3C_addCudaTargets()
+  DLAF_addCudaTargets()
 endif()
 
 # ---------------------------------------------------------------------------
@@ -48,8 +48,8 @@ endif()
 find_package(MPI REQUIRED)
 
 # ----- LAPACK/SCALAPACK
-set(NS3C_WITH_MKL OFF CACHE BOOL "Enable MKL as provider for LAPACK")
-if (NS3C_WITH_MKL)
+set(DLAF_WITH_MKL OFF CACHE BOOL "Enable MKL as provider for LAPACK")
+if (DLAF_WITH_MKL)
   set(MKL_THREADING "Sequential" CACHE STRING "MKL Threading fixed to Sequential" FORCE)
   find_package(MKL REQUIRED COMPONENTS LAPACK)
   set(LAPACK_FOUND ${MKL_LAPACK_FOUND})
@@ -70,16 +70,16 @@ find_package(LAPACKPP REQUIRED)
 add_subdirectory(external)
 
 # ---------------------------------------------------------------------------
-# NS3C library
+# DLAF library
 # ---------------------------------------------------------------------------
-add_library(NS3C INTERFACE)
-target_include_directories(NS3C INTERFACE include)
+add_library(DLAF INTERFACE)
+target_include_directories(DLAF INTERFACE include)
 
 # ---------------------------------------------------------------------------
 # Test
 # ---------------------------------------------------------------------------
-set(NS3C_WITH_TEST ON CACHE BOOL "Enables tests")
-if (NS3C_WITH_TEST)
+set(DLAF_WITH_TEST ON CACHE BOOL "Enables tests")
+if (DLAF_WITH_TEST)
   include(CTest)
   enable_testing()
 

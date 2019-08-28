@@ -1,5 +1,5 @@
 //
-// NS3C
+// Distributed Linear Algebra with Future (DLAF)
 //
 // Copyright (c) 2018-2019, ETH Zurich
 // All rights reserved.
@@ -10,10 +10,10 @@
 
 #pragma once
 
-#include "ns3c/memory/memory_view.h"
-#include "ns3c/types.h"
+#include "dlaf/memory/memory_view.h"
+#include "dlaf/types.h"
 
-namespace ns3c {
+namespace dlaf {
 
 /// @brief The Tile object aims to provide an effective way to access the memory as a two dimensional
 /// array. It does not allocate any memory, but it references the memory given by a @c MemoryView object.

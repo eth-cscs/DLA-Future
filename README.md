@@ -1,1 +1,1 @@
-# Refactoring of hpx_mpi_linalg
+# Distributed Linear Algebra with Futures.

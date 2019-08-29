@@ -97,7 +97,7 @@ macro(_mkl_find_lapack)
       FORCE
     )
   else()
-  set(MKL_THREADING ${MKL_THREADING_DEFAULT} CACHE STRING "MKL Threading support")
+    set(MKL_THREADING ${MKL_THREADING_DEFAULT} CACHE STRING "MKL Threading support")
   endif()
   set_property(CACHE MKL_THREADING PROPERTY STRINGS ${MKL_THREADING_OPTIONS})
   check_valid_option(${MKL_THREADING} ${MKL_THREADING_OPTIONS})
@@ -266,13 +266,9 @@ endfunction()
 ### MAIN
 set(MKL_ROOT $ENV{MKLROOT} CACHE PATH "Intel MKL Path")
 
-if (NOT MKL_ROOT)
-  set(MKL_ROOT $ENV{MKLROOT})
-endif()
-
 find_path(MKL_INCLUDE_DIR
   mkl.h
-  PATHS ${MKL_ROOT} ENV MKLROOT
+  PATHS ${MKL_ROOT}/include
 )
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")

@@ -90,15 +90,17 @@ macro(_mkl_find_lapack)
 
   # allow to set option from script
   if (MKL_CUSTOM_THREADING)
-    set(_MKL_THREADING_SELECTED ${MKL_CUSTOM_THREADING})
-    set(MKL_THREADING_DEFAULT ${MKL_CUSTOM_THREADING})
+    set(MKL_THREADING
+      ${MKL_CUSTOM_THREADING}
+      CACHE STRING
+      "MKL Threading support (from code)"
+      FORCE
+    )
   else()
-    set(_MKL_THREADING_SELECTED ${MKL_THREADING})
-  endif()
-  check_valid_option(${_MKL_THREADING_SELECTED} ${MKL_THREADING_OPTIONS})
-
   set(MKL_THREADING ${MKL_THREADING_DEFAULT} CACHE STRING "MKL Threading support")
+  endif()
   set_property(CACHE MKL_THREADING PROPERTY STRINGS ${MKL_THREADING_OPTIONS})
+  check_valid_option(${MKL_THREADING} ${MKL_THREADING_OPTIONS})
 
   # ----- set MKL Threading
   if(MKL_THREADING MATCHES "Sequential")
@@ -122,6 +124,7 @@ macro(_mkl_find_lapack)
 
   # allow to set LAPACK_INCLUDE_DIR from script
   if (MKL_LAPACK_CUSTOM_INCLUDE_DIR)
+    unset(MKL_LAPACK_INCLUDE_DIR CACHE)
     find_path(MKL_LAPACK_INCLUDE_DIR
       mkl_lapack.h
       PATHS ${MKL_LAPACK_CUSTOM_INCLUDE_DIR}
@@ -134,14 +137,19 @@ macro(_mkl_find_lapack)
 
   # allow to set LAPACK_LIBRARY from script
   if (MKL_LAPACK_CUSTOM_LIBRARY)
-    set(_MKL_LAPACK_LIBRARY ${MKL_LAPACK_CUSTOM_LIBRARY})
+    set(MKL_LAPACK_LIBRARY
+      ${MKL_LAPACK_CUSTOM_LIBRARY}
+      CACHE STRING "LAPACK libraries (from code)"
+      FORCE
+    )
   else()
-    set(_MKL_LAPACK_LIBRARY
+    set(MKL_LAPACK_LIBRARY
       "${MKL_LIB_DIR} -lmkl_intel_lp64\
       ${MKL_THREAD_LIB} -lmkl_core\
-      -lpthread -lm -ldl")                        # TODO pthread, m, dl ???
+      -lpthread -lm -ldl"                            # TODO pthread, m, dl ???
+      CACHE STRING "LAPACK libraries"
+    )
   endif()
-  set(MKL_LAPACK_LIBRARY ${_MKL_LAPACK_LIBRARY} CACHE STRING "LAPACK libraries")
 
   mark_as_advanced(
     MKL_LAPACK_INCLUDE_DIR
@@ -162,14 +170,12 @@ macro(_mkl_find_scalapack)
 
     # allow to set MPI_MPI_TYPE from code
     if (MKL_CUSTOM_MPI_TYPE)
-      set(_MKL_MPI_TYPE_SELECTED ${MKL_CUSTOM_MPI_TYPE})
+      set(MKL_MPI_TYPE ${MKL_CUSTOM_MPI_TYPE} CACHE STRING "MKL MPI support (from code)" FORCE)
     else()
-      set(_MKL_MPI_TYPE_SELECTED ${MKL_MPI_TYPE_DEFAULT})
+      set(MKL_MPI_TYPE ${MKL_MPI_TYPE_DEFAULT} CACHE STRING "MKL MPI support")
     endif()
-    check_valid_option(${_MKL_MPI_TYPE_SELECTED} ${MKL_MPI_TYPE_OPTIONS})
-
-    set(MKL_MPI_TYPE ${_MKL_MPI_TYPE_SELECTED} CACHE STRING "MKL MPI support")
     set_property(CACHE MKL_MPI_TYPE PROPERTY STRINGS ${MKL_MPI_TYPE_OPTIONS})
+    check_valid_option(${MKL_MPI_TYPE} ${MKL_MPI_TYPE_OPTIONS})
   endif()
 
   # ----- set MPI support
@@ -189,11 +195,18 @@ macro(_mkl_find_scalapack)
 
   # allow to set LAPACK_LIBRARY from script
   if (MKL_SCALAPACK_CUSTOM_LIBRARY)
-    set(_MKL_SCALAPACK_LIBRARY ${MKL_SCALAPACK_CUSTOM_LIBRARY})
+    set(MKL_SCALAPACK_LIBRARY
+      ${MKL_SCALAPACK_CUSTOM_LIBRARY}
+      CACHE STRING
+      "Scalapack libraries (from code)"
+      FORCE
+    )
   else()
-    set(_MKL_SCALAPACK_LIBRARY "-lmkl_scalapack_lp64 ${MKL_BLACS_LIB}")
+    set(MKL_SCALAPACK_LIBRARY
+      "-lmkl_scalapack_lp64 ${MKL_BLACS_LIB}"
+      CACHE STRING "Scalapack libraries"
+    )
   endif()
-  set(MKL_SCALAPACK_LIBRARY ${_MKL_SCALAPACK_LIBRARY} CACHE STRING "Scalapack libraries")
 
   mark_as_advanced(MKL_SCALAPACK_LIBRARY)
 

@@ -69,26 +69,40 @@ if(LAPACK_TYPE STREQUAL "Compiler")
     set(LAPACK_INCLUDE_DIR "" CACHE STRING "" FORCE)
     set(LAPACK_LIBRARY "" CACHE STRING "" FORCE)
   else()
-    message(FATAL_ERROR "With LAPACK_TYPE='${LAPACK_TYPE}',
+    message(FATAL_ERROR
+      "With LAPACK_TYPE='${LAPACK_TYPE}',
       LAPACK_CUSTOM_INCLUDE_DIR and LAPACK_CUSTOM_LIBRARY must be EMPTY.
       Instead they are set to
       LAPACK_CUSTOM_INCLUDE_DIR='${LAPACK_CUSTOM_INCLUDE_DIR}'
       LAPACK_CUSTOM_LIBRARY='${LAPACK_CUSTOM_LIBRARY}'")
   endif()
 elseif(LAPACK_TYPE STREQUAL "Custom")
-  # nothing to do
+  # allow to set LAPACK_INCLUDE_DIR from code
+  if (LAPACK_CUSTOM_INCLUDE_DIR)
+    set(LAPACK_INCLUDE_DIR "${LAPACK_CUSTOM_INCLUDE_DIR}" CACHE STRING
+      "BLAS and LAPACK include path for LAPACK_TYPE=Custom (from code)"
+      FORCE
+    )
+  else()
+    set(LAPACK_INCLUDE_DIR "" CACHE STRING
+      "BLAS and LAPACK include path for LAPACK_TYPE=Custom"
+    )
+  endif()
+
+  # allow to set LAPACK_LIBRARY from code
+  if (LAPACK_CUSTOM_LIBRARY)
+    set(LAPACK_LIBRARY "${LAPACK_CUSTOM_LIBRARY}" CACHE STRING
+      "BLAS and LAPACK link line for LAPACK_TYPE=Custom (from code)"
+      FORCE
+    )
+  else()
+    set(LAPACK_LIBRARY "" CACHE STRING
+      "BLAS and LAPACK link line for LAPACK_TYPE=Custom"
+    )
+  endif()
 else()
   message(FATAL_ERROR "Unknown LAPACK type: ${LAPACK_TYPE}")
 endif()
-
-set(LAPACK_INCLUDE_DIR
-  "${LAPACK_CUSTOM_INCLUDE_DIR}"
-  CACHE STRING
-  "BLAS and LAPACK include path for LAPACK_TYPE=Custom")
-set(LAPACK_LIBRARY
-  "${LAPACK_CUSTOM_LIBRARY}"
-  CACHE STRING
-  "BLAS and LAPACK link line for LAPACK_TYPE=Custom")
 
 mark_as_advanced(
   LAPACK_TYPE

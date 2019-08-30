@@ -9,8 +9,8 @@
 #
 
 add_library(DLAF_test INTERFACE)
-target_include_directories(DLAF_test 
-    INTERFACE 
+target_include_directories(DLAF_test
+    INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
 )
 

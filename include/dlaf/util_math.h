@@ -19,14 +19,20 @@ namespace util {
 
 /// @brief Returns ceiling(num/den) for integer types.
 ///
-/// @tparam IntType has to be an integer type.
+/// It accepts both signed and unsigned integer types, but as precondition states both values must
+/// not be negative (additionally, @p den must not be zero either)
+///
+/// @tparam IntNumType and IntDenType have to be integer types.
 /// @param num
 /// @param den
-/// @return constexpr IntType
+/// @return ceiled division of type @a IntNumType
 ///
-/// @pre @a num >= 0 and @a den >= 0.
-template <class IntType>
-constexpr RETURN_TYPE_IF(IntType, std::is_integral<IntType>::value) ceilDiv(IntType num, IntType den) {
+/// @pre @a num >= 0 and @a den > 0.
+/// @pre @a num + @a den - 1 must not overflow @a IntNumType max value
+template <typename IntNumType, typename IntDenType>
+constexpr
+RETURN_TYPE_IF(IntNumType, std::is_integral<IntNumType>::value && std::is_integral<IntDenType>::value)
+ceilDiv(const IntNumType num, const IntDenType den) {
   return (num + den - 1) / den;
 }
 

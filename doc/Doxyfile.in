@@ -2112,7 +2112,7 @@ MACRO_EXPANSION        = YES
 # The default value is: NO.
 # This tag requires that the tag ENABLE_PREPROCESSING is set to YES.
 
-EXPAND_ONLY_PREDEF     = YES
+EXPAND_ONLY_PREDEF     = NO
 
 # If the SEARCH_INCLUDES tag is set to YES, the include files in the
 # INCLUDE_PATH will be searched if a #include is found.
@@ -2144,7 +2144,7 @@ INCLUDE_FILE_PATTERNS  =
 # recursively expanded use the := operator instead of the = operator.
 # This tag requires that the tag ENABLE_PREPROCESSING is set to YES.
 
-PREDEFINED             = NS3C_DOXYGEN
+PREDEFINED             = DLAF_DOXYGEN
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then this
 # tag can be used to specify a list of macro names that should be expanded. The
@@ -2153,7 +2153,7 @@ PREDEFINED             = NS3C_DOXYGEN
 # definition found in the source code.
 # This tag requires that the tag ENABLE_PREPROCESSING is set to YES.
 
-EXPAND_AS_DEFINED      = RETURN_TYPE_IF
+EXPAND_AS_DEFINED      =
 
 # If the SKIP_FUNCTION_MACROS tag is set to YES then doxygen's preprocessor will
 # remove all references to function-like macros that are alone on a line, have

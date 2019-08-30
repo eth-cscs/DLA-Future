@@ -106,4 +106,16 @@ function(DLAF_addTest test_target_name)
       COMMAND ${test_target_name} ${DLAF_AT_ARGUMENTS}
     )
   endif()
+
+  ### DEPLOY
+  include(GNUInstallDirs)
+
+  set(DLAF_INSTALL_TESTS OFF CACHE BOOL "If tests are built, it controls if they will be installed")
+  if (DLAF_INSTALL_TESTS)
+    install(TARGETS
+      ${test_target_name}
+      # EXPORT DLAF-tests
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+  endif()
 endfunction()

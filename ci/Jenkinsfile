@@ -12,52 +12,6 @@ pipeline {
         checkout scm
       }
     }
-    stage('Compile') {
-      parallel {
-        stage('Compile mc Debug') {
-          steps {
-            sh '''
-               ci/compile.sh daint-mc Debug
-               '''
-          }
-        }
-        stage('Compile mc Release') {
-          steps {
-            sh '''
-               ci/compile.sh daint-mc Release
-               '''
-          }
-        }
-        stage('make doc') {
-          steps {
-            sh '''
-               echo "----- make doc -----"
-               export ENV=`realpath ci/daint-mc_env.sh`
-
-               sbatch --wait ci/make-doc.sbatch
-               '''
-          }
-        }
-      }
-    }
-    stage('Test') {
-      parallel {
-        stage('Test mc Debug') {
-          steps {
-            sh '''
-               ci/test.sh daint-mc Debug
-               '''
-          }
-        }
-        stage('Test mc Release') {
-          steps {
-            sh '''
-               ci/test.sh daint-mc Release
-               '''
-          }
-        }
-      }
-    }
   }
 
   post {

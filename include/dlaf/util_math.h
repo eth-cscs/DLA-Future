@@ -22,7 +22,7 @@ namespace util {
 /// It accepts both signed and unsigned integer types, but as precondition states both values must
 /// not be negative (additionally, @p den must not be zero either)
 ///
-/// @tparam IntNumType and IntDenType have to be integer types.
+/// @tparam IntNumType and @tparam IntDenType have to be integer types.
 /// @param num
 /// @param den
 /// @return ceiled division of type @a IntNumType

@@ -15,7 +15,8 @@ pipeline {
     stage('Check format') {
       steps {
         sh '''
-           ci/check_format.sh
+           echo "----- check format -----"
+           sbatch --wait ci/check_format.sbatch
            '''
       }
     }  

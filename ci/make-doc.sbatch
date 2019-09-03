@@ -23,8 +23,8 @@ cd $DIR
 cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
       -DDLAF_USE_MKL=1                 \
       -DHPX_DIR=$EBROOTHPX             \
-      -DBLASPP_ROOT=$EBROOTBLASPP      \
-      -DLAPACKPP_ROOT=$EBROOTLAPACKPP  \
+      -Dblaspp_DIR=$EBROOTBLASPP       \
+      -Dlapackpp_DIR=$EBROOTLAPACKPP   \
       -DBUILD_DOC=1                    \
       ../
 make doc -j 50 VERBOSE=1

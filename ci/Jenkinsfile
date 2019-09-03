@@ -19,8 +19,8 @@ pipeline {
            sbatch --wait ci/check_format.sbatch
            '''
       }
-    }  
-    /*stage('Compile') {
+    }
+    stage('Compile') {
       parallel {
         stage('Compile mc Debug') {
           steps {
@@ -65,7 +65,7 @@ pipeline {
           }
         }
       }
-    }*/
+    }
   }
 
   post {

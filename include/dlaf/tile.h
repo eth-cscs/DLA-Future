@@ -23,8 +23,7 @@ namespace dlaf {
 /// the constness of the tile and the constness of the data referenced by the tile.
 /// Implicit conversion is allowed from tiles of non-const elements to tiles of const elements.
 template <class T, Device device>
-class
-Tile {
+class Tile {
 public:
   using ElementType = std::remove_const_t<T>;
   friend Tile<const ElementType, device>;

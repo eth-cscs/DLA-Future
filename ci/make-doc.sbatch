@@ -21,7 +21,7 @@ rm -rf $DIR
 mkdir -p $DIR
 cd $DIR
 cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-      -DDLAF_USE_MKL=1                 \
+      -DDLAF_WITH_MKL=1                 \
       -DHPX_DIR=$EBROOTHPX             \
       -DBLASPP_ROOT=$EBROOTBLASPP      \
       -DLAPACKPP_ROOT=$EBROOTLAPACKPP  \

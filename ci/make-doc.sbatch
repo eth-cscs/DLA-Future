@@ -7,21 +7,27 @@
 #SBATCH --output=make-doc.out.txt
 #SBATCH --error=make-doc.out.txt
 
-set -ex
+set -e
 
 source ${ENV}
 module list
+
+set -x
 DIR=build_doc
 
+# If exists remove previous build
+rm -rf $DIR
+
 mkdir -p $DIR
-(
-    cd $DIR
-    cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-          -DDLAF_USE_MKL=1                 \
-          -DHPX_DIR=$EBROOTHPX             \
-          -DBLASPP_ROOT=$EBROOTBLASPP      \
-          -DLAPACKPP_ROOT=$EBROOTLAPACKPP  \
-          -DBUILD_DOC=1                    \
-          ../
-    make doc -j 50 VERBOSE=1
-) && echo "doc generated"
+cd $DIR
+cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+      -DDLAF_USE_MKL=1                 \
+      -DHPX_DIR=$EBROOTHPX             \
+      -DBLASPP_ROOT=$EBROOTBLASPP      \
+      -DLAPACKPP_ROOT=$EBROOTLAPACKPP  \
+      -DBUILD_DOC=1                    \
+      ../
+make doc -j 50 VERBOSE=1
+
+# only executed if build passed
+echo "doc generated"

@@ -7,7 +7,6 @@
 
 set -e
 
-printenv
 source ${ENV}
 module list
 
@@ -25,7 +24,7 @@ cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
       -DBLASPP_ROOT=$EBROOTBLASPP      \
       -DLAPACKPP_ROOT=$EBROOTLAPACKPP  \
       -DMPIEXEC_EXECUTABLE="srun"      \
-      -DMPIEXEC_NUMPROC_FLAG="-n "     \
+      -DMPIEXEC_NUMPROC_FLAG="-n"      \
       ../
 make -j 50 VERBOSE=1
 

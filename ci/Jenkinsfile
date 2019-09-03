@@ -12,7 +12,14 @@ pipeline {
         checkout scm
       }
     }
-    stage('Compile') {
+    stage('Check format') {
+      steps {
+        sh '''
+           ci/check_format.sh
+           '''
+      }
+    }
+    /*stage('Compile') {
       parallel {
         stage('Compile mc Debug') {
           steps {
@@ -57,7 +64,7 @@ pipeline {
           }
         }
       }
-    }
+    }*/
   }
 
   post {

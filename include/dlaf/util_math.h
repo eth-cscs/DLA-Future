@@ -10,8 +10,6 @@
 
 #pragma once
 
-#include "util_macros.h"
-
 /// @file
 
 namespace dlaf {
@@ -29,12 +27,17 @@ namespace util {
 ///
 /// @pre @a num >= 0 and @a den > 0.
 /// @pre @a num + @a den - 1 must not overflow @a IntNumType max value
+#ifndef DLAF_DOXYGEN
+template <typename IntNumType, typename IntDenType>
+constexpr IntNumType ceilDiv(const IntNumType num, const IntDenType den);
+#else
 template <typename IntNumType, typename IntDenType>
 constexpr
-RETURN_TYPE_IF(IntNumType, std::is_integral<IntNumType>::value && std::is_integral<IntDenType>::value)
+std::enable_if_t<std::is_integral<IntNumType>::value && std::is_integral<IntDenType>::value, IntNumType>
 ceilDiv(const IntNumType num, const IntDenType den) {
   return (num + den - 1) / den;
 }
+#endif
 
 }
 }

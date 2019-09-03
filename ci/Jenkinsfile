@@ -18,7 +18,7 @@ pipeline {
            ci/check_format.sh
            '''
       }
-    }
+    }  
     /*stage('Compile') {
       parallel {
         stage('Compile mc Debug') {

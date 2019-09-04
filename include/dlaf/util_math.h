@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <type_traits>
+
 /// @file
 
 namespace dlaf {
@@ -27,7 +29,7 @@ namespace util {
 ///
 /// @pre @a num >= 0 and @a den > 0.
 /// @pre @a num + @a den - 1 must not overflow @a IntNumType max value
-#ifndef DLAF_DOXYGEN
+#ifdef DLAF_DOXYGEN
 template <typename IntNumType, typename IntDenType>
 constexpr IntNumType ceilDiv(const IntNumType num, const IntDenType den);
 #else

@@ -15,7 +15,7 @@
 # This module sets the following variables:
 #  LAPACK_FOUND - set to true if a library implementing the LAPACK interface is found
 #
-# Following options are allowed:
+# Following options are allowed (for setting options from code see next section):
 #   LAPACK_TYPE - it can be "Compiler" or "Custom"
 #     - Compiler (Default): The compiler add the scalapack flag automatically therefore no
 #                           extra link line has to be added.
@@ -25,22 +25,81 @@
 #   LAPACK_LIBRARY - used if SCALAPACK_TYPE=Custom
 #       ;-list of {lib name, lib filepath, -Llibrary_folder}
 #
+# If you want to set options from CMake script you cannot use previous variables, instead you should use:
+#   - LAPACK_CUSTOM_TYPE
+#   - LAPACK_CUSTOM_INCLUDE_DIR
+#   - LAPACK_CUSTOM_LIBRARY
+#
 # It creates target lapack::lapack
 
-### Options
-set(LAPACK_TYPE "Compiler" CACHE STRING "BLAS/LAPACK type setting")
-set_property(CACHE LAPACK_TYPE PROPERTY STRINGS "Compiler" "Custom")
+### helper function
+function(check_valid_option selected_option)
+  set(available_options ${ARGN})
+  list(LENGTH available_options _how_many_options)
 
-set(LAPACK_INCLUDE_DIR "" CACHE STRING "BLAS and LAPACK include path for DLA_LAPACK_TYPE = Custom")
-set(LAPACK_LIBRARY "" CACHE STRING "BLAS and LAPACK link line for DLA_LAPACK_TYPE = Custom")
+  if (NOT _how_many_options GREATER_EQUAL 1)
+    message(
+      FATAL_ERROR
+      "You are checking value of an option without giving the list of valid ones")
+  endif()
 
+  list(FIND available_options ${selected_option} selected_index)
+  if (${selected_index} EQUAL -1)
+    message(FATAL_ERROR
+      "You have selected '${selected_option}', but you have to choose among '${available_options}'")
+  endif()
+endfunction()
+
+### MAIN
+set(LAPACK_TYPE_OPTIONS "Compiler" "Custom")
+set(LAPACK_TYPE_DEFAULT "Compiler")
+
+# allow to set LAPACK_TYPE from code
+if (LAPACK_CUSTOM_TYPE)
+  set(LAPACK_TYPE ${LAPACK_CUSTOM_TYPE} CACHE STRING "BLAS/LAPACK type set from script" FORCE)
+else()
+  set(LAPACK_TYPE ${LAPACK_TYPE_DEFAULT} CACHE STRING "BLAS/LAPACK type setting")
+endif()
+set_property(CACHE LAPACK_TYPE PROPERTY STRINGS ${LAPACK_TYPE_OPTIONS})
+check_valid_option(${LAPACK_TYPE} ${LAPACK_TYPE_OPTIONS})
 
 if(LAPACK_TYPE STREQUAL "Compiler")
-  # reset variables
-  set(LAPACK_INCLUDE_DIR "" CACHE STRING "" FORCE)
-  set(LAPACK_LIBRARY "" CACHE STRING "" FORCE)
+  if (NOT LAPACK_CUSTOM_INCLUDE_DIR AND NOT LAPACK_CUSTOM_LIBRARY)
+    # reset variables
+    set(LAPACK_INCLUDE_DIR "" CACHE STRING "" FORCE)
+    set(LAPACK_LIBRARY "" CACHE STRING "" FORCE)
+  else()
+    message(FATAL_ERROR
+      "With LAPACK_TYPE='${LAPACK_TYPE}',
+      LAPACK_CUSTOM_INCLUDE_DIR and LAPACK_CUSTOM_LIBRARY must be EMPTY.
+      Instead they are set to
+      LAPACK_CUSTOM_INCLUDE_DIR='${LAPACK_CUSTOM_INCLUDE_DIR}'
+      LAPACK_CUSTOM_LIBRARY='${LAPACK_CUSTOM_LIBRARY}'")
+  endif()
 elseif(LAPACK_TYPE STREQUAL "Custom")
-  # nothing to do
+  # allow to set LAPACK_INCLUDE_DIR from code
+  if (LAPACK_CUSTOM_INCLUDE_DIR)
+    set(LAPACK_INCLUDE_DIR "${LAPACK_CUSTOM_INCLUDE_DIR}" CACHE STRING
+      "BLAS and LAPACK include path for LAPACK_TYPE=Custom (from code)"
+      FORCE
+    )
+  else()
+    set(LAPACK_INCLUDE_DIR "" CACHE STRING
+      "BLAS and LAPACK include path for LAPACK_TYPE=Custom"
+    )
+  endif()
+
+  # allow to set LAPACK_LIBRARY from code
+  if (LAPACK_CUSTOM_LIBRARY)
+    set(LAPACK_LIBRARY "${LAPACK_CUSTOM_LIBRARY}" CACHE STRING
+      "BLAS and LAPACK link line for LAPACK_TYPE=Custom (from code)"
+      FORCE
+    )
+  else()
+    set(LAPACK_LIBRARY "" CACHE STRING
+      "BLAS and LAPACK link line for LAPACK_TYPE=Custom"
+    )
+  endif()
 else()
   message(FATAL_ERROR "Unknown LAPACK type: ${LAPACK_TYPE}")
 endif()
@@ -50,7 +109,6 @@ mark_as_advanced(
   LAPACK_INCLUDE_DIR
   LAPACK_LIBRARY
 )
-
 
 ### Checks
 include(CMakePushCheckState)

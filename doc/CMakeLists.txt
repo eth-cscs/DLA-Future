@@ -35,3 +35,10 @@ add_custom_target(doc ALL
   COMMENT "Building Doxygen documentation"
   COMMAND Doxygen::doxygen
 )
+
+# INSTALL
+include(GNUInstallDirs)
+
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html/
+  DESTINATION ${CMAKE_INSTALL_DOCDIR}
+)

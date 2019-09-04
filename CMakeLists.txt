@@ -63,8 +63,8 @@ endif()
 find_package(HPX REQUIRED)
 
 # ----- BLASPP/LAPACKPP
-find_package(BLASPP REQUIRED)
-find_package(LAPACKPP REQUIRED)
+find_package(blaspp REQUIRED)
+find_package(lapackpp REQUIRED)
 
 # ----- EXTERNAL
 add_subdirectory(external)

@@ -4,6 +4,7 @@
 - OpenMP
 - HPX
 - BLAS/LAPACK
+- BLASPP & LAPACKPP
 
 ## MPI
 
@@ -37,6 +38,12 @@ In particular:
 	- library filepaths (e.g. /usr/local/lib/libblas.so)
 	- `-L<library_folder>` (e.g. -L/usr/local/lib)
 
-Otherwise, with `DLAF_WITH_MKL=on` it looks for BLAS/LAPACK provided by MKL. It uses `MKLROOT` environment variable if set or `MKL_ROOT` CMake variable (which has priority if both are set).
+Otherwise, with `DLAF_WITH_MKL=on` it looks for BLAS/LAPACK provided by MKL. It uses `MKLROOT`
+environment variable if set or `MKL_ROOT` CMake variable (which has priority if both are set).
 
 MKL is fixed to "Sequential" and does not use threading.
+
+## BLASPP & LAPACKPP
+
+BLASPP and LAPACKPP dependencies can be satisfied by specifying installation directories into
+`blaspp_DIR` and `lapackpp_DIR` variables, respectively.

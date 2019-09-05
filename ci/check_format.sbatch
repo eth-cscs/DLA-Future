@@ -33,9 +33,26 @@ do
     *.cpp|*.h|*.hpp)
       clang-format -i --style=file $FILE
       ;;
+    *.pdf|*.hdf5|*.jpg|*.png|*.ppt|*.pptx)
+      # Exclude some binary files types,
+      # others can be excluded as needed.
+      ;;
     *)
-      # remove trailing whitespaces
+      # Remove trailing whitespaces.
       sed -i "s/\\s\\+$//g" $FILE
+
+      # Count number of trailing newlines at the end of the file.
+      # For performance reason we limit the search (max is 32).
+      n_newlines=`tail -c 32 $FILE | xxd -p -c 32 | egrep -o "(0a)+$" | grep -o 0a | wc -l`
+
+      # Add or remove trailing newlines if needed.
+      if [[ $n_newlines -eq 0 ]]
+      then
+        echo "" >> $FILE
+      elif [[ $n_newlines -gt 1 ]]
+      then
+        truncate -s -$(($n_newlines-1)) $FILE
+      fi
       ;;
   esac
 done

@@ -6,35 +6,31 @@
 #include "hpx/include/parallel_executors.hpp"
 
 // Subtract 1 to tile value.
-void work0(const Wrapper<int>&& i, int index) {
-  auto& i_ = i.get()();
-  std::cout << out("start", i_, -1, index);
+void work0(const Tile<int>&& i, int index) {
+  std::cout << out("start", i(), -1, index);
   sleep(5);
-  std::cout << out("stop", i_, -1, index);
-  --i_;
+  std::cout << out("stop", i(), -1, index);
+  --i();
 }
 
 // Sum j to tile value.
-void work(const Wrapper<int>&& i, int j, int index) {
-  auto& i_ = i.get()();
-  std::cout << out("start", i_, j, index);
+void work(const Tile<int>&& i, int j, int index) {
+  std::cout << out("start", i(), j, index);
   sleep(1);
-  std::cout << out("stop", i_, j, index);
-  i_ += j;
+  std::cout << out("stop", i(), j, index);
+  i() += j;
 }
 
 // Sum (plus = true)/Subtract the value of the tile j to the value of tile i.
 template <bool plus = true>
-void work2(const Wrapper<int>&& i, const Wrapper<const int>& j, int index) {
-  auto& i_ = i.get()();
-  auto& j_ = j.get()();
-  std::cout << out("start2", i_, j_, index);
+void work2(const Tile<int>&& i, const Tile<const int>& j, int index) {
+  std::cout << out("start2", i(), j(), index);
   sleep(1);
-  std::cout << out("stop2", i_, j_, index);
+  std::cout << out("stop2", i(), j(), index);
   if (plus)
-    i_ += j_;
+    i() += j();
   else
-    i_ -= j_;
+    i() -= j();
 }
 
 void foo() {
@@ -90,9 +86,9 @@ void foo() {
 
   // print the value of A and B.
   for (std::size_t i = 0; i < 4; ++i) {
-    int ai = ma(i).get().get()();
+    int ai = ma(i).get()();
     std::cout << "Result A(" << i << ") = " << ai << std::endl;
-    int bi = mb(i).get().get()();
+    int bi = mb(i).get()();
     std::cout << "Result B(" << i << ") = " << bi << std::endl;
   }
   std::cout << "End" << std::endl;

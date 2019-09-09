@@ -14,6 +14,7 @@
 #   [INCLUDE_DIRS <arguments for target_include_directories>]
 #   [LIBRARIES <arguments for target_link_libraries>]
 #   [MPIRANKS <number of rank>]
+#   [USE_GTEST_MAIN]
 # )
 #
 # At least one source file has to be specified, while other parameters are optional.
@@ -22,7 +23,11 @@
 # possible to specify PRIVATE/INTERFACE/PUBLIC modifiers.
 #
 # MPIRANKS specifies the number of ranks on which the test will be carried out and it implies a link with
-# MPI library.
+# MPI library. At build time the constant NUM_MPI_RANKS = MPIRANKS is set.
+#
+# USE_GTEST_MAIN flag links an external defined main. In particular, if MPIRANKS is specified
+# it links against `gtest_mpi_main` (that initializes MPI), otherwise it uses the classical main provided
+# by `gtest_main`.
 #
 # e.g.
 #
@@ -35,7 +40,7 @@
 # )
 
 function(DLAF_addTest test_target_name)
-  set(options "USE_GTEST_MAIN")
+  set(options USE_GTEST_MAIN)
   set(oneValueArgs MPIRANKS)
   set(multiValueArgs SOURCES COMPILE_DEFINITIONS INCLUDE_DIRS LIBRARIES ARGUMENTS)
   cmake_parse_arguments(DLAF_AT "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
@@ -68,7 +73,11 @@ function(DLAF_addTest test_target_name)
   target_link_libraries(${test_target_name} PRIVATE DLAF)
   target_link_libraries(${test_target_name} PRIVATE DLAF_test)
   if (DLAF_AT_USE_GTEST_MAIN)
-    target_link_libraries(${test_target_name} PRIVATE gtest_main)
+    if(NOT DEFINED DLAF_AT_MPIRANKS)
+      target_link_libraries(${test_target_name} PRIVATE gtest_main)
+    else()
+      target_link_libraries(${test_target_name} PRIVATE gtest_mpi_main)
+    endif()
   else()
     target_link_libraries(${test_target_name} PRIVATE gtest)
   endif()
@@ -90,8 +99,11 @@ function(DLAF_addTest test_target_name)
       message(FATAL_ERROR "Impossible to have more than ${MPIEXEC_MAX_NUMPROCS}")
     endif()
 
+    target_compile_definitions(${test_target_name} PRIVATE NUM_MPI_RANKS=${DLAF_AT_MPIRANKS})
+
     target_link_libraries(${test_target_name}
-      PRIVATE MPI::MPI_CXX
+      PRIVATE
+        MPI::MPI_CXX
     )
 
     add_test(

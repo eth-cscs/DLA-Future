@@ -1,15 +1,10 @@
-#include <iostream>
-#include <mpi.h>
-
 #include "dlaf/communicator/communicator.h"
 
-int main() {
-  MPI_Init(nullptr, nullptr);
+#include <mpi.h>
+#include <gtest/gtest.h>
 
+TEST(Communicator, basic) {
   dlaf::comm::Communicator world;
 
-  std::cout << world.rank() << "/" << world.size() << std::endl;
-
-  MPI_Finalize();
-  return 0;
+  EXPECT_EQ(world.size(), NUM_MPI_RANKS);
 }

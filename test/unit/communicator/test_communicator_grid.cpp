@@ -1,23 +1,15 @@
-#include <iostream>
-#include <mpi.h>
-
 #include "dlaf/communicator/communicator_grid.h"
 
-int main() {
-  MPI_Init(nullptr, nullptr);
+#include <mpi.h>
+#include <gtest/gtest.h>
 
+TEST(CommunicatorGrid, basic) {
   using namespace dlaf::comm;
 
-  {
-    Communicator world;
-    CommunicatorGrid grid(world, computeGridDims(world.size()));
+  Communicator world;
+  CommunicatorGrid grid(world, computeGridDims(world.size()));
 
-    std::cout << "grid" << std::endl;
-    std::cout << "(" << grid.rank().row() << "; " << grid.rank().col() << ")" << std::endl;
-    std::cout << grid.rows() << "x" << grid.cols() << std::endl;
-  }
+  EXPECT_EQ(grid.rows() * grid.cols(), NUM_MPI_RANKS);
 
-  MPI_Finalize();
-
-  return 0;
+  // std::cout << "(" << grid.rank().row() << "; " << grid.rank().col() << ")" << std::endl;
 }

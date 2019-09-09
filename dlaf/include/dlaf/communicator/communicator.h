@@ -1,11 +1,19 @@
+//
+// Distributed Linear Algebra with Future (DLAF)
+//
+// Copyright (c) 2018-2019, ETH Zurich
+// All rights reserved.
+//
+// Please, refer to the LICENSE file in the root directory.
+// SPDX-License-Identifier: BSD-3-Clause
+//
+
 #pragma once
 
 #include "dlaf/mpi_header.h"
 
-namespace dlaf
-{
-namespace comm
-{
+namespace dlaf {
+namespace comm {
 
 /// This class is a wrapper for MPI_Comm, it does not get ownership of it
 class Communicator {

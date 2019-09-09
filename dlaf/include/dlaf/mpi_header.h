@@ -16,7 +16,7 @@
 namespace dlaf {
 namespace mpi {
 
-// it is used to hide old-style cast warning (it doesn't need to be freed, so it is ok)
+// alias that hides old-style cast warning (since it doesn't need to be freed, it is ok)
 constexpr MPI_Comm COMM_WORLD = MPI_COMM_WORLD;
 
 }

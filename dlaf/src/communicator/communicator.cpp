@@ -1,6 +1,4 @@
-#include "communicator.h"
-
-#include <iostream>
+#include "dlaf/communicator/communicator.h"
 
 namespace dlaf {
 namespace comm {

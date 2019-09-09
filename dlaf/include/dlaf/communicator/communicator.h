@@ -1,6 +1,6 @@
 #pragma once
 
-#include "mpi_header.h"
+#include "dlaf/mpi_header.h"
 
 namespace dlaf
 {

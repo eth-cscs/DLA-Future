@@ -5,5 +5,3 @@ project(test CXX)
 find_package(HPX)
 
 add_hpx_executable(test SOURCES test.cpp)
-
-add_subdirectory(communication)

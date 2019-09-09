@@ -1,23 +1,13 @@
-cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
-
-project(example_communication CXX)
-
-set(CMAKE_CXX_STANDARD 14)
-
-find_package(MPI REQUIRED)
-
-add_subdirectory(communication)
-
 add_executable(test_communicator test_communicator.cpp)
 target_link_libraries(test_communicator
   PRIVATE
-    communication
+    DLAF
     MPI::MPI_CXX
 )
 
 add_executable(test_communicator_grid test_communicator_grid.cpp)
 target_link_libraries(test_communicator_grid
   PRIVATE
-    communication
+    DLAF
     MPI::MPI_CXX
 )

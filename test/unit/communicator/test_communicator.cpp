@@ -1,7 +1,7 @@
 #include <iostream>
 #include <mpi.h>
 
-#include "communicator.h"
+#include "dlaf/communicator/communicator.h"
 
 int main() {
   MPI_Init(nullptr, nullptr);

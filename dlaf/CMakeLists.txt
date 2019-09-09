@@ -1,11 +1,44 @@
-add_library(DLAF INTERFACE)
-
-target_include_directories(DLAF INTERFACE
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>
-  ${HPX_INCLUDE_DIRS}
+add_library(DLAF
+  src/communicator/communicator.cpp
+  src/communicator/communicator_grid.cpp
 )
-target_link_libraries(DLAF INTERFACE ${HPX_LIBRARIES})
+
+target_include_directories(DLAF
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+    ${HPX_INCLUDE_DIRS}
+)
+
+target_link_libraries(DLAF
+  PUBLIC
+    MPI::MPI_CXX
+    ${HPX_LIBRARIES}
+)
+
+target_compile_options(DLAF
+  PRIVATE
+    -Wall
+    -Wextra
+    -Wshadow
+    -Wnon-virtual-dtor
+    -Wold-style-cast
+    -Wcast-align
+    -Wunused
+    -Woverloaded-virtual
+    -Wpedantic
+    -Wconversion
+    -Wsign-conversion
+    -Wnull-dereference
+    -Wdouble-promotion
+    -Wformat=2
+    ## -Wmisleading-indentation
+    ## -Wduplicated-cond
+    ## -Wduplicated-branches
+    ## -Wlogical-op
+    ## -Wuseless-cast
+    ## -Wlifetime
+)
 
 # ----- DEPLOY
 include(GNUInstallDirs)

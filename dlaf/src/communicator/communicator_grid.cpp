@@ -21,14 +21,6 @@ std::array<int, 2> computeGridDims(int nranks) {
   return dimensions;
 }
 
-
-Index2D::Index2D() noexcept : row_(-1), col_(-1) {}
-Index2D::Index2D(const std::array<int, 2> & coords) noexcept : row_(coords[0]), col_(coords[1]) {}
-Index2D::Index2D(int row, int col) noexcept : row_(row), col_(col) {}
-int Index2D::row() const noexcept { return row_; }
-int Index2D::col() const noexcept { return col_; }
-
-
 CommunicatorGrid::CommunicatorGrid(Communicator comm, int nrows, int ncols)
 : rows_(nrows), cols_(ncols) {
   {
@@ -57,7 +49,7 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, int nrows, int ncols)
     2,
     coords.data()
   ));
-  position_ = Index2D(coords);
+  position_ = common::Index2D(coords);
 }
 
 CommunicatorGrid::CommunicatorGrid(Communicator comm, const std::array<int, 2> & size)
@@ -69,7 +61,7 @@ CommunicatorGrid::~CommunicatorGrid() noexcept(false) {
   release_communicator(all_);
 }
 
-Index2D CommunicatorGrid::rank() const noexcept { return position_; }
+common::Index2D CommunicatorGrid::rank() const noexcept { return position_; }
 int CommunicatorGrid::rows() const noexcept { return rows_; }
 int CommunicatorGrid::cols() const noexcept { return cols_; }
 Communicator & CommunicatorGrid::all() noexcept { return all_; }

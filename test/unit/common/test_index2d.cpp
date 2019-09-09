@@ -8,14 +8,13 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#pragma once
-
 #include "dlaf/common/index2d.h"
 
-namespace dlaf {
+#include <gtest/gtest.h>
 
-using SizeType = int;
+TEST(Index2D, basic) {
+  dlaf::common::Index2D index(5, 3);
 
-enum class Device { CPU, GPU };
-
+  EXPECT_EQ(5, index.row());
+  EXPECT_EQ(3, index.col());
 }

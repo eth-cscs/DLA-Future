@@ -12,26 +12,13 @@
 
 #include <array>
 
+#include "dlaf/common/index2d.h"
 #include "communicator.h"
 
 namespace dlaf {
 namespace comm {
 
 std::array<int, 2> computeGridDims(int nranks) noexcept(false);
-
-class Index2D {
-  public:
-  Index2D() noexcept;
-  Index2D(const std::array<int, 2> & coords) noexcept;
-  Index2D(int row, int col) noexcept;
-
-  int row() const noexcept;
-  int col() const noexcept;
-
-  protected:
-  int row_;
-  int col_;
-};
 
 /// Input communicator lifetime should be granted for the constructor
 /// CommunicatorGrid should go out of scope before the call to MPI_Finalize
@@ -47,7 +34,7 @@ class CommunicatorGrid {
   CommunicatorGrid(const CommunicatorGrid &) = delete;
   CommunicatorGrid & operator=(const CommunicatorGrid &) = delete;
 
-  Index2D rank() const noexcept;
+  common::Index2D rank() const noexcept;
 
   int rows() const noexcept;
   int cols() const noexcept;
@@ -63,7 +50,7 @@ class CommunicatorGrid {
 
   int rows_;
   int cols_;
-  Index2D position_;
+  common::Index2D position_;
 
   private:
   static Communicator getAxisCommunicator(int axis, Communicator grid) noexcept(false);

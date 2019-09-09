@@ -9,6 +9,7 @@
 #
 
 add_library(DLAF
+  src/common/index2d.cpp
   src/communicator/communicator.cpp
   src/communicator/communicator_grid.cpp
 )

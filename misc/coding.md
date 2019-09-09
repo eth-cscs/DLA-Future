@@ -44,10 +44,11 @@ Even if the included file is located in the same directory as the including file
 For readability it is suggested to use the standard order of includes:
 
 * Related header (i.e. `filename.h` for `filename.cpp` or `test_filename.cpp`)
+* Empty line
 * C library headers
 * C++ library headers
 * Other libraries' headers
-* <libname> headers
+* Current library's headers
 
 In each section the included files should be sorted in alphabetical order.
 

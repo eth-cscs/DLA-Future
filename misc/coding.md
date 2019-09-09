@@ -281,8 +281,8 @@ Class1<Class2<type1>> object;
 Use empty lines when it helps to improve the readability of the code, but do not use too many.
 Do not use empty lines after a brace which opens a scope,
 or before a brace which closes a scope.
-Each file should contain an empty line at the end of the file.
-Some editors add an empty line automatically, some do not.
+Each file should contain exactly one empty line at the end of the file.
+**Note that some editors add an empty line automatically without displaying it (e.g. vi), some do not.**
 
 ### Indentation
 

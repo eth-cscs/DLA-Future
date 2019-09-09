@@ -226,7 +226,7 @@ General rules:
 
 ## Formatting
 
-Use the provided clang-format style to format `.hpp`, `.ipp` and `.cpp` files.
+Use the provided clang-format style to format `.h`, `.hpp`, `.ipp` and `.cpp` files.
 
 ### Line Length
 

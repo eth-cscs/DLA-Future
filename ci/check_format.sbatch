@@ -30,7 +30,7 @@ FILES_CHANGED=`git diff --name-only origin/master`
 for FILE in $FILES_CHANGED
 do
   case $FILE in
-    *.cpp|*.h|*.hpp)
+    *.cpp|*.h|*.hpp|*.ipp)
       clang-format -i --style=file $FILE
       ;;
     *.pdf|*.hdf5|*.jpg|*.png|*.ppt|*.pptx)

@@ -10,8 +10,8 @@
 
 add_library(DLAF
   src/common/index2d.cpp
-  src/communicator/communicator.cpp
-  src/communicator/communicator_grid.cpp
+  src/communication/communicator.cpp
+  src/communication/communicator_grid.cpp
 )
 
 target_include_directories(DLAF

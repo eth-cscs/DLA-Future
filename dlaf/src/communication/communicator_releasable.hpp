@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "dlaf/communicator/communicator.h"
+#include "dlaf/communication/communicator.h"
 
 namespace dlaf {
 namespace comm {

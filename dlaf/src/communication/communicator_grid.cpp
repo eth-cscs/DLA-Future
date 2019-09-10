@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/communicator/communicator_grid.h"
+#include "dlaf/communication/communicator_grid.h"
 
 #include "communicator_releasable.hpp"
 

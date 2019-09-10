@@ -13,7 +13,7 @@
 #include <array>
 
 #include "dlaf/common/index2d.h"
-#include "dlaf/communicator/communicator.h"
+#include "dlaf/communication/communicator.h"
 
 namespace dlaf {
 namespace comm {

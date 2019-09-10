@@ -13,4 +13,4 @@ DLAF_addTest(test_tile SOURCES test_tile.cpp LIBRARIES PRIVATE DLAF_gtest_hpx_ma
 
 add_subdirectory(common)
 add_subdirectory(memory)
-add_subdirectory(communicator)
+add_subdirectory(communication)

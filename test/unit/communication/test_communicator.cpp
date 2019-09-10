@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/communicator/communicator.h"
+#include "dlaf/communication/communicator.h"
 
 #include <mpi.h>
 #include <gtest/gtest.h>

@@ -18,8 +18,14 @@ Communicator::Communicator()
 
 Communicator::Communicator(MPI_Comm mpi_communicator)
 : comm_(mpi_communicator) {
-  MPI_Comm_rank(comm_, &rank_);
-  MPI_Comm_size(comm_, &size_);
+  if (MPI_COMM_NULL != mpi_communicator) {
+    MPI_Comm_rank(comm_, &rank_);
+    MPI_Comm_size(comm_, &size_);
+  }
+  else {
+    rank_ = MPI_UNDEFINED;
+    size_ = 0;
+  }
 }
 
 Communicator::operator MPI_Comm() const noexcept { return comm_; }

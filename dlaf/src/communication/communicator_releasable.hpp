@@ -23,7 +23,7 @@ struct CommunicatorReleasable : Communicator {
 
 /// internal helper function to release communicator
 auto release_communicator = [](Communicator comm) {
-  static_cast<CommunicatorReleasable*>(&comm)->release();
+  static_cast<CommunicatorReleasable*>(std::addressof(comm))->release();
 };
 
 }

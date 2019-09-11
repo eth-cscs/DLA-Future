@@ -22,15 +22,17 @@ Communicator::Communicator(MPI_Comm mpi_communicator)
     MPI_Comm_rank(comm_, &rank_);
     MPI_Comm_size(comm_, &size_);
   }
-  else {
-    rank_ = MPI_UNDEFINED;
-    size_ = 0;
-  }
 }
 
 Communicator::operator MPI_Comm() const noexcept { return comm_; }
+
+MPI_Comm * Communicator::operator &() noexcept {
+  return &comm_;
+}
+
 int Communicator::rank() const noexcept { return rank_; }
 int Communicator::size() const noexcept { return size_; }
+
 void Communicator::release() { MPI_CALL(MPI_Comm_free(&comm_)); }
 
 }

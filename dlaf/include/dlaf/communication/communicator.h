@@ -15,9 +15,14 @@
 namespace dlaf {
 namespace comm {
 
-/// @brief A wrapper for the MPI_Comm handler.
+/// @brief An MPI-compatible wrapper for the MPI_Comm.
 ///
-/// MPI_Comm validity must be granted by the user
+/// MPI_Comm validity must be granted by the user. A copy of a Communicator refers exactly to the same
+/// MPI_Comm of the original one (i.e. MPI_Comm is not duplicated).
+///
+/// Being MPI-compatible means that it can be used in MPI calls, in fact, it is implicitly converted
+/// to MPI_Comm and the reference of a Communicator instance returns the pointer to the internal MPI_Comm.
+/// In case of need, a pointer to Communicator instance can be obtained using std::addressof.
 /// @pre MPI_Comm must be a valid handler to the communicator
 /// @post MPI_Comm must still be a valid handler to the same communicator
 class Communicator {
@@ -31,8 +36,15 @@ class Communicator {
   /// lifetime of the Communicator object, otherwise UB occurs. It is neither released on destruction.
   Communicator(MPI_Comm mpi_communicator) noexcept(false);
 
-  /// Cast to MPI_Comm to be used in MPI calls
-  explicit operator MPI_Comm() const noexcept;
+  /// @brief Return the internal MPI_Comm handler
+  ///
+  /// Useful for MPI function calls
+  operator MPI_Comm() const noexcept;
+
+  /// @brief Return the pointer to the internal MPI_Comm handler
+  ///
+  /// Useful for MPI function calls
+  MPI_Comm * operator &() noexcept;
 
   /// @brief Return the rank in the Communicator
   int rank() const noexcept;

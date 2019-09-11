@@ -28,21 +28,24 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, int nrows, int ncols) {
     std::array<int, 2> periodicity({false, false});
 
     MPI_CALL(MPI_Cart_create(
-      static_cast<MPI_Comm>(comm),
+      comm,
       2,
       dimensions.data(),
       periodicity.data(),
-      0,
+      false,
       &mpi_grid));
     all_ = Communicator(mpi_grid);
   }
+
+  if (MPI_COMM_NULL == all_)
+    return;
 
   row_ = CommunicatorGrid::getAxisCommunicator(0, all_);
   col_ = CommunicatorGrid::getAxisCommunicator(1, all_);
 
   std::array<int, 2> coords;
   MPI_CALL(MPI_Cart_coords(
-    static_cast<MPI_Comm>(all_),
+    all_,
     all_.rank(),
     2,
     coords.data()
@@ -54,6 +57,9 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, const std::array<int, 2> &
 : CommunicatorGrid(comm, size[0], size[1]) {}
 
 CommunicatorGrid::~CommunicatorGrid() noexcept(false) {
+  if (MPI_COMM_NULL == all_)
+    return;
+
   release_communicator(row_);
   release_communicator(col_);
   release_communicator(all_);
@@ -72,7 +78,7 @@ Communicator CommunicatorGrid::getAxisCommunicator(int axis, Communicator grid) 
   keep_axis[static_cast<size_t>(axis)] = true;
 
   MPI_CALL(MPI_Cart_sub(
-    static_cast<MPI_Comm>(grid),
+    grid,
     keep_axis.data(),
     &mpi_axis));
 

@@ -15,6 +15,8 @@
 namespace dlaf {
 namespace comm {
 
+namespace internal {
+
 /// It exposes the release method of Communicator that it is kept protected to not allow the user
 /// to release a Communicator.
 struct CommunicatorReleasable : Communicator {
@@ -23,9 +25,11 @@ struct CommunicatorReleasable : Communicator {
   }
 };
 
+}
+
 /// internal helper function to release communicator
 auto release_communicator = [](Communicator comm) {
-  static_cast<CommunicatorReleasable*>(std::addressof(comm))->release();
+  static_cast<internal::CommunicatorReleasable*>(std::addressof(comm))->release();
 };
 
 }

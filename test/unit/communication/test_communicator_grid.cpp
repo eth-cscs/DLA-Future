@@ -64,8 +64,8 @@ TEST(CommunicatorGrid, ConstructorIncomplete) {
     EXPECT_EQ(rank_col, incomplete_grid.col().rank());
   }
   else {  // last rank is not in the grid
-    EXPECT_EQ(incomplete_grid.rows(), MPI_UNDEFINED);
-    EXPECT_EQ(incomplete_grid.cols(), MPI_UNDEFINED);
+    EXPECT_EQ(incomplete_grid.rows(), 0);
+    EXPECT_EQ(incomplete_grid.cols(), 0);
 
     EXPECT_EQ(incomplete_grid.all(), MPI_COMM_NULL);
     EXPECT_EQ(incomplete_grid.row(), MPI_COMM_NULL);

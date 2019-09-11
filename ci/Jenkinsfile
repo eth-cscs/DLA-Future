@@ -6,9 +6,13 @@ pipeline {
       label 'ssl_daintvm1'
     }
   }
+  environment {
+    OUTDIR = "/project/csstaff/rasolca/jenkins/DLA-Future/${env.BUILD_TAG}"
+  }
   stages {
     stage('Checkout') {
       steps {
+        deleteDir()
         checkout scm
       }
     }
@@ -70,6 +74,10 @@ pipeline {
 
   post {
     always {
+      sh '''
+         mkdir ${OUTDIR}
+         cp *.out.txt ${OUTDIR}
+         '''
       archiveArtifacts artifacts: '**/*.out.txt', fingerprint: true
     }
   }

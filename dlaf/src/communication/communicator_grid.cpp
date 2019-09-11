@@ -22,36 +22,36 @@ std::array<int, 2> computeGridDims(int nranks) {
 }
 
 CommunicatorGrid::CommunicatorGrid(Communicator comm, int nrows, int ncols) {
+  Communicator all;
   {
     MPI_Comm mpi_grid;
     std::array<int, 2> dimensions({nrows, ncols});
     std::array<int, 2> periodicity({false, false});
 
     MPI_CALL(MPI_Cart_create(comm, 2, dimensions.data(), periodicity.data(), false, &mpi_grid));
-    all_ = Communicator(mpi_grid);
+    all = Communicator(mpi_grid);
   }
 
-  if (MPI_COMM_NULL == all_)
-    return;
+  // TODO manage out of grid
 
-  row_ = CommunicatorGrid::getAxisCommunicator(0, all_);
-  col_ = CommunicatorGrid::getAxisCommunicator(1, all_);
+  row_ = CommunicatorGrid::getAxisCommunicator(0, all);
+  col_ = CommunicatorGrid::getAxisCommunicator(1, all);
 
   std::array<int, 2> coords;
-  MPI_CALL(MPI_Cart_coords(all_, all_.rank(), 2, coords.data()));
+  MPI_CALL(MPI_Cart_coords(all, all.rank(), 2, coords.data()));
   position_ = common::Index2D(coords);
+
+  release_communicator(all);
 }
 
 CommunicatorGrid::CommunicatorGrid(Communicator comm, const std::array<int, 2>& size)
     : CommunicatorGrid(comm, size[0], size[1]) {}
 
 CommunicatorGrid::~CommunicatorGrid() noexcept(false) {
-  if (MPI_COMM_NULL == all_)
-    return;
+  // TODO manage out of grid
 
   release_communicator(row_);
   release_communicator(col_);
-  release_communicator(all_);
 }
 
 common::Index2D CommunicatorGrid::rank() const noexcept {
@@ -64,10 +64,6 @@ int CommunicatorGrid::rows() const noexcept {
 
 int CommunicatorGrid::cols() const noexcept {
   return col_.size();
-}
-
-Communicator& CommunicatorGrid::all() noexcept {
-  return all_;
 }
 
 Communicator& CommunicatorGrid::row() noexcept {

@@ -50,7 +50,6 @@ TEST(CommunicatorGrid, ConstructorIncomplete) {
     EXPECT_EQ(incomplete_grid.rows(), NUM_MPI_RANKS - 1);
     EXPECT_EQ(incomplete_grid.cols(), 1);
 
-    EXPECT_NE(incomplete_grid.all(), MPI_COMM_NULL);
     EXPECT_NE(incomplete_grid.row(), MPI_COMM_NULL);
     EXPECT_NE(incomplete_grid.col(), MPI_COMM_NULL);
 
@@ -67,7 +66,6 @@ TEST(CommunicatorGrid, ConstructorIncomplete) {
     EXPECT_EQ(incomplete_grid.rows(), 0);
     EXPECT_EQ(incomplete_grid.cols(), 0);
 
-    EXPECT_EQ(incomplete_grid.all(), MPI_COMM_NULL);
     EXPECT_EQ(incomplete_grid.row(), MPI_COMM_NULL);
     EXPECT_EQ(incomplete_grid.col(), MPI_COMM_NULL);
 

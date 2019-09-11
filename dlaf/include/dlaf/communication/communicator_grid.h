@@ -59,15 +59,12 @@ public:
   /// @brief Return the number of columns in the grid
   int cols() const noexcept;
 
-  /// @brief Return a Communicator grouping all ranks in the grid
-  Communicator& all() noexcept;
   /// @brief Return a Communicator grouping all ranks in the row (that includes the current process)
   Communicator& row() noexcept;
   /// @brief Return a Communicator grouping all ranks in the col (that includes the current process)
   Communicator& col() noexcept;
 
 protected:
-  Communicator all_;
   Communicator row_;
   Communicator col_;
 

@@ -60,7 +60,7 @@ class Communicator {
   private:
   MPI_Comm comm_;
   int rank_ = MPI_UNDEFINED;
-  int size_ = MPI_UNDEFINED;
+  int size_ = 0;
 };
 
 }

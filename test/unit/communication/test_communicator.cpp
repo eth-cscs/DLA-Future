@@ -15,69 +15,107 @@
 
 using namespace dlaf::comm;
 
-TEST(Communicator, ConstructorDefault) {
+class CommunicatorTest : public ::testing::Test {
+  protected:
+  ~CommunicatorTest() noexcept {};
+
+  void SetUp() noexcept(false) override {
+    world = Communicator(MPI_COMM_WORLD);
+
+    if (rankInGroup()) {
+      color = 0;
+      key = world.rank() / 2;
+    }
+
+    MPI_Comm odd_mpi_comm;
+    MPI_CALL(MPI_Comm_split(
+      world,
+      color,
+      key,
+      &odd_mpi_comm
+    ));
+
+    odd_comm = Communicator(odd_mpi_comm);
+  }
+
+  void TearDown() noexcept(false) override {
+    if (odd_comm != MPI_COMM_NULL)
+      MPI_CALL(MPI_Comm_free(&odd_comm));
+  }
+
+  bool rankInGroup() const {
+    return world.rank() % 2 == 1;
+  }
+
   Communicator world;
+  Communicator odd_comm;
+  int color = MPI_UNDEFINED;
+  int key = MPI_UNDEFINED;
+};
 
-  int result;
-  MPI_Comm_compare(MPI_COMM_WORLD, static_cast<MPI_Comm>(world), &result);
-  EXPECT_EQ(MPI_IDENT, result);
+TEST(Communicator, ConstructorDefault) {
+  Communicator comm_null;
 
+  EXPECT_EQ(MPI_COMM_NULL, comm_null);
+
+  EXPECT_EQ(comm_null.size(), 0);
+  EXPECT_EQ(comm_null.rank(), MPI_UNDEFINED);
+}
+
+TEST_F(CommunicatorTest, Rank) {
+  if (rankInGroup()) {
+    // check that that new communicator size consistency and correctness
+    EXPECT_LT(odd_comm.size(), NUM_MPI_RANKS);
+    EXPECT_EQ(odd_comm.size(), (NUM_MPI_RANKS + 1) / 2);
+
+    // check rank consistency
+    EXPECT_LT(odd_comm.rank(), odd_comm.size());
+    EXPECT_GE(odd_comm.rank(), 0);
+
+    // check rank correctness
+    EXPECT_NE(odd_comm.rank(), world.rank());
+    EXPECT_EQ(odd_comm.rank(), world.rank() / 2);
+  }
+  else {
+    // check that new communicator is not valid
+    EXPECT_EQ(MPI_COMM_NULL, odd_comm);
+
+    // check rank correctness
+    EXPECT_EQ(odd_comm.rank(), MPI_UNDEFINED);
+    EXPECT_EQ(odd_comm.size(), 0);
+  }
+
+  // check that in the world nothing is changed
   EXPECT_EQ(world.size(), NUM_MPI_RANKS);
   EXPECT_LT(world.rank(), world.size());
   EXPECT_GE(world.rank(), 0);
 }
 
-TEST(Communicator, Constructor) {
-  // at least 3 ranks, 2 will be grouped and the rest will be left outside
-  ASSERT_GT(NUM_MPI_RANKS, 2);
+TEST_F(CommunicatorTest, Copy) {
+  Communicator copy = odd_comm;
 
-  Communicator world;
-
-  // split rule (just for 2 ranks will be part of the new communicator)
-  int color = MPI_UNDEFINED;
-  int key = MPI_UNDEFINED;
-  if (world.rank() < 2) {
-    color = 0;
-    key = !world.rank();    // invert rank
-  }
-
-  MPI_Comm new_communicator;
-  MPI_CALL(MPI_Comm_split(
-    static_cast<MPI_Comm>(Communicator()),
-    color,
-    key,
-    &new_communicator
-  ));
-
-  Communicator new_comm(new_communicator);
-
-  // ranks in the new communicator
-  if (world.rank() < 2) {
-    // check that it is the same communicator as in MPI
+  if (rankInGroup()) {
     int result;
-    MPI_Comm_compare(new_communicator, static_cast<MPI_Comm>(new_comm), &result);
+    MPI_Comm_compare(copy, odd_comm, &result);
     EXPECT_EQ(MPI_IDENT, result);
 
     // check that that new communicator size consistency and correctness
-    EXPECT_LT(new_comm.size(), NUM_MPI_RANKS);
-    EXPECT_EQ(new_comm.size(), 2);
+    EXPECT_EQ(odd_comm.size(), copy.size());
 
     // check rank consistency
-    EXPECT_LT(new_comm.rank(), new_comm.size());
-    EXPECT_GE(new_comm.rank(), 0);
+    EXPECT_LT(copy.rank(), copy.size());
+    EXPECT_GE(copy.rank(), 0);
 
     // check rank correctness
-    EXPECT_NE(new_comm.rank(), world.rank());
-    EXPECT_EQ(new_comm.rank(), !world.rank());
+    EXPECT_EQ(odd_comm.rank(), copy.rank());
   }
-  // ranks oustide the new communicator
   else {
     // check that new communicator is not valid
-    EXPECT_EQ(MPI_COMM_NULL, static_cast<MPI_Comm>(new_comm));
+    EXPECT_EQ(MPI_COMM_NULL, odd_comm);
 
     // check rank correctness
-    EXPECT_EQ(new_comm.rank(), MPI_UNDEFINED);
-    EXPECT_EQ(new_comm.size(), 0);
+    EXPECT_EQ(copy.rank(), MPI_UNDEFINED);
+    EXPECT_EQ(copy.size(), 0);
   }
 
   // check that in the world nothing is changed

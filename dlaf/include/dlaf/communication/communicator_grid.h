@@ -25,31 +25,31 @@ namespace comm {
 std::array<int, 2> computeGridDims(int nranks) noexcept(false);
 
 
-/// @brief Organize a Communicator as a 2D Grid
+/// @brief Create a communicator with a 2D Grid structure
 ///
 /// It creates internal communicators, e.g. for row and column communication, and manages their lifetimes.
-/// Every CommunicatorGrid must be destroyed before calling MPI_Finalize, allowing it to release resources.
+/// CommunicatorGrid must be destroyed before calling MPI_Finalize, allowing it to release resources.
 class CommunicatorGrid {
   public:
   /// @brief Create a grid @p rows x @p cols
   ///
-  /// Communicator must be valid during construction
+  /// @p comm must be valid during construction
   CommunicatorGrid(Communicator comm, int rows, int cols) noexcept(false);
 
   /// @brief Create a grid with dimensions specified by @p size
   ///
   /// @p size[0] rows and @p size[1] columns
   ///
-  /// Communicator must be valid during construction
+  /// @p comm must be valid during construction
   CommunicatorGrid(Communicator comm, const std::array<int, 2> & size) noexcept(false);
 
-  /// Release all communicators
+  /// Release all internal resources (i.e. all/row/col Communicator s)
   ~CommunicatorGrid() noexcept(false);
 
   CommunicatorGrid(const CommunicatorGrid &) = delete;
   CommunicatorGrid & operator=(const CommunicatorGrid &) = delete;
 
-  /// @brief Return the rank in the CommunicatorGrid
+  /// @brief Return the rank of the current process in the CommunicatorGrid
   ///
   /// @return a common::Index2D representing the position in the grid
   common::Index2D rank() const noexcept;
@@ -62,9 +62,9 @@ class CommunicatorGrid {
 
   /// @brief Return a Communicator grouping all ranks in the grid
   Communicator & all() noexcept;
-  /// @brief Return a Communicator grouping all ranks in the row (that includes the current rank)
+  /// @brief Return a Communicator grouping all ranks in the row (that includes the current process)
   Communicator & row() noexcept;
-  /// @brief Return a Communicator grouping all ranks in the col (that includes the current rank)
+  /// @brief Return a Communicator grouping all ranks in the col (that includes the current process)
   Communicator & col() noexcept;
 
   protected:

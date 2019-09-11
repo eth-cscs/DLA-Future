@@ -28,12 +28,12 @@ struct Index2D {
   /// Where coords[0] is the row index and coords[1] is the column index
   Index2D(const std::array<int, 2> & coords) noexcept;
 
-  /// @brief Return true if it is a valid index
+  /// @brief Check if it is a valid position (no upper bound check)
   ///
-  /// A valid index has row >= 0 and column >= 0
-  explicit operator bool() const noexcept;
+  /// @return true if row >= 0 and column >= 0
+  bool isValid() const noexcept;
 
-  /// @brief Compare coordinates
+  /// @brief Compare positions
   ///
   /// @return true if the current index is in the range [0, boundary) for both row and column
   ///

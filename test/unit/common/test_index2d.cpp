@@ -21,12 +21,7 @@ TEST(Index2D, ConstructorDefault) {
   EXPECT_LT(index.row(), 0);
   EXPECT_LT(index.col(), 0);
 
-  EXPECT_FALSE(static_cast<bool>(index));
-
-  EXPECT_FALSE(index < Index2D(6, 4));    // both in bounds
-  EXPECT_FALSE(index < Index2D(5, 3));    // both out of bounds
-  EXPECT_FALSE(index < Index2D(5, 4));    // row out of bounds
-  EXPECT_FALSE(index < Index2D(6, 3));    // col out of bounds
+  EXPECT_FALSE(index.isValid());
 }
 
 TEST(Index2D, ConstructorFromParams) {
@@ -35,14 +30,7 @@ TEST(Index2D, ConstructorFromParams) {
   EXPECT_EQ(5, index.row());
   EXPECT_EQ(3, index.col());
 
-  EXPECT_TRUE(static_cast<bool>(index));
-
-  EXPECT_TRUE(index < Index2D(6, 4));     // both in limit
-
-  EXPECT_FALSE(index < Index2D(5, 3));    // both out of bounds
-
-  EXPECT_FALSE(index < Index2D(5, 4));    // row out of bounds
-  EXPECT_FALSE(index < Index2D(6, 3));    // col out of bounds
+  EXPECT_TRUE(index.isValid());
 }
 
 TEST(Index2D, ConstructorFromArray) {
@@ -51,12 +39,24 @@ TEST(Index2D, ConstructorFromArray) {
   EXPECT_EQ(5, index.row());
   EXPECT_EQ(3, index.col());
 
-  EXPECT_TRUE(static_cast<bool>(index));
+  EXPECT_TRUE(index.isValid());
+}
 
-  EXPECT_TRUE(index < Index2D(6, 4));     // both in limit
+TEST(Index2D, BoundaryCheck) {
+  Index2D boundary(3, 6);
 
-  EXPECT_FALSE(index < Index2D(5, 3));    // both out of bounds
+  EXPECT_TRUE(boundary.isValid());
 
-  EXPECT_FALSE(index < Index2D(5, 4));    // row out of bounds
-  EXPECT_FALSE(index < Index2D(6, 3));    // col out of bounds
+  auto index_tests = std::vector<std::pair<Index2D, bool>>{
+    std::make_pair(Index2D(0, 4), true),    // in bounds
+    std::make_pair(Index2D(3, 6), false),   // out (on edge)
+    std::make_pair(Index2D(5, 9), false),   // out of bounds
+    std::make_pair(Index2D(3, 5), false),   // out of row
+    std::make_pair(Index2D(2, 6), false),   // out of col
+  };
+
+  for (auto & test : index_tests) {
+    EXPECT_TRUE(test.first.isValid());
+    EXPECT_EQ(test.first < boundary, test.second);
+  }
 }

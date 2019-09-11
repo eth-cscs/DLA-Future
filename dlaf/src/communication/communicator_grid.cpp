@@ -32,7 +32,8 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, int nrows, int ncols) {
     all = Communicator(mpi_grid);
   }
 
-  // TODO manage out of grid
+  if (all == MPI_COMM_NULL)
+    return;
 
   row_ = CommunicatorGrid::getAxisCommunicator(0, all);
   col_ = CommunicatorGrid::getAxisCommunicator(1, all);
@@ -48,10 +49,12 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, const std::array<int, 2>& 
     : CommunicatorGrid(comm, size[0], size[1]) {}
 
 CommunicatorGrid::~CommunicatorGrid() noexcept(false) {
-  // TODO manage out of grid
+  assert(row_ == MPI_COMM_NULL ? row_ == col_ : col_ != MPI_COMM_NULL);
 
-  release_communicator(row_);
-  release_communicator(col_);
+  if (row_ != MPI_COMM_NULL /* && col_ != MPI_COMM_NULL */) {
+    release_communicator(row_);
+    release_communicator(col_);
+  }
 }
 
 common::Index2D CommunicatorGrid::rank() const noexcept {

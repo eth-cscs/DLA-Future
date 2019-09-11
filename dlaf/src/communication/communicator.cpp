@@ -14,7 +14,7 @@ namespace dlaf {
 namespace comm {
 
 Communicator::Communicator()
-: Communicator(mpi::COMM_WORLD) {}
+: Communicator(MPI_COMM_NULL) {}
 
 Communicator::Communicator(MPI_Comm mpi_communicator)
 : comm_(mpi_communicator) {

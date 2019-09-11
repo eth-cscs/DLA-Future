@@ -23,15 +23,6 @@
     std::cout << "MPI ERROR [" << _ << "]: " << #x << std::endl;\
   }
 
-namespace dlaf {
-namespace mpi {
-
-// alias that hides old-style cast warning (since it doesn't need to be freed, it is ok)
-constexpr MPI_Comm COMM_WORLD = MPI_COMM_WORLD;
-
-}
-}
-
 #if __GNUC__
 #pragma GCC diagnostic pop
 #endif

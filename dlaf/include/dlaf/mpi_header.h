@@ -15,12 +15,14 @@
 #endif
 
 #include <iostream>
+
 #include <mpi.h>
 
-#define MPI_CALL(x) {\
-  auto _ = x;\
-  if (MPI_SUCCESS != _)\
-    std::cout << "MPI ERROR [" << _ << "]: " << #x << std::endl;\
+#define MPI_CALL(x)                                                \
+  {                                                                \
+    auto _ = x;                                                    \
+    if (MPI_SUCCESS != _)                                          \
+      std::cout << "MPI ERROR [" << _ << "]: " << #x << std::endl; \
   }
 
 #if __GNUC__

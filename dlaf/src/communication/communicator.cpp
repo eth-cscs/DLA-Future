@@ -13,27 +13,34 @@
 namespace dlaf {
 namespace comm {
 
-Communicator::Communicator()
-: Communicator(MPI_COMM_NULL) {}
+Communicator::Communicator() : Communicator(MPI_COMM_NULL) {}
 
-Communicator::Communicator(MPI_Comm mpi_communicator)
-: comm_(mpi_communicator) {
+Communicator::Communicator(MPI_Comm mpi_communicator) : comm_(mpi_communicator) {
   if (MPI_COMM_NULL != mpi_communicator) {
     MPI_Comm_rank(comm_, &rank_);
     MPI_Comm_size(comm_, &size_);
   }
 }
 
-Communicator::operator MPI_Comm() const noexcept { return comm_; }
+Communicator::operator MPI_Comm() const noexcept {
+  return comm_;
+}
 
-MPI_Comm * Communicator::operator &() noexcept {
+MPI_Comm* Communicator::operator&() noexcept {
   return &comm_;
 }
 
-int Communicator::rank() const noexcept { return rank_; }
-int Communicator::size() const noexcept { return size_; }
+int Communicator::rank() const noexcept {
+  return rank_;
+}
 
-void Communicator::release() { MPI_CALL(MPI_Comm_free(&comm_)); }
+int Communicator::size() const noexcept {
+  return size_;
+}
+
+void Communicator::release() {
+  MPI_CALL(MPI_Comm_free(&comm_));
+}
 
 }
 }

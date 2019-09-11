@@ -17,9 +17,9 @@ Index2D::Index2D() noexcept : row_(-1), col_(-1) {}
 
 Index2D::Index2D(int row, int col) noexcept : row_(row), col_(col) {}
 
-Index2D::Index2D(const std::array<int, 2> & coords) noexcept : row_(coords[0]), col_(coords[1]) {}
+Index2D::Index2D(const std::array<int, 2>& coords) noexcept : row_(coords[0]), col_(coords[1]) {}
 
-bool Index2D::operator <(const Index2D & boundary) const noexcept {
+bool Index2D::operator<(const Index2D& boundary) const noexcept {
   return row_ < boundary.row_ && col_ < boundary.col_ && (isValid()) && boundary.isValid();
 }
 
@@ -27,9 +27,13 @@ bool Index2D::isValid() const noexcept {
   return row_ >= 0 && col_ >= 0;
 }
 
-int Index2D::row() const noexcept { return row_; }
+int Index2D::row() const noexcept {
+  return row_;
+}
 
-int Index2D::col() const noexcept { return col_; }
+int Index2D::col() const noexcept {
+  return col_;
+}
 
 }
 }

@@ -26,7 +26,7 @@ struct Index2D {
   /// @brief Create a position with given coordinates
   ///
   /// Where coords[0] is the row index and coords[1] is the column index
-  Index2D(const std::array<int, 2> & coords) noexcept;
+  Index2D(const std::array<int, 2>& coords) noexcept;
 
   /// @brief Check if it is a valid position (no upper bound check)
   ///
@@ -38,7 +38,7 @@ struct Index2D {
   /// @return true if the current index is in the range [0, boundary) for both row and column
   ///
   /// @pre both this and @p boundary must be valid indexes
-  bool operator <(const Index2D & boundary) const noexcept;
+  bool operator<(const Index2D& boundary) const noexcept;
 
   /// @brief Return row index
   int row() const noexcept;
@@ -46,7 +46,7 @@ struct Index2D {
   /// @brief Return column index
   int col() const noexcept;
 
-  protected:
+protected:
   int row_;
   int col_;
 };

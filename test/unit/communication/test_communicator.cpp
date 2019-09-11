@@ -10,13 +10,13 @@
 
 #include "dlaf/communication/communicator.h"
 
-#include <mpi.h>
 #include <gtest/gtest.h>
+#include <mpi.h>
 
 using namespace dlaf::comm;
 
 class CommunicatorTest : public ::testing::Test {
-  protected:
+protected:
   ~CommunicatorTest() noexcept {};
 
   void SetUp() noexcept(false) override {
@@ -28,12 +28,7 @@ class CommunicatorTest : public ::testing::Test {
     }
 
     MPI_Comm odd_mpi_comm;
-    MPI_CALL(MPI_Comm_split(
-      world,
-      color,
-      key,
-      &odd_mpi_comm
-    ));
+    MPI_CALL(MPI_Comm_split(world, color, key, &odd_mpi_comm));
 
     odd_comm = Communicator(odd_mpi_comm);
   }

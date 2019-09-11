@@ -24,13 +24,12 @@ namespace comm {
 /// @post ret_dims[0] * ret_dims[0] == @p nranks
 std::array<int, 2> computeGridDims(int nranks) noexcept(false);
 
-
 /// @brief Create a communicator with a 2D Grid structure
 ///
 /// It creates internal communicators, e.g. for row and column communication, and manages their lifetimes.
 /// CommunicatorGrid must be destroyed before calling MPI_Finalize, allowing it to release resources.
 class CommunicatorGrid {
-  public:
+public:
   /// @brief Create a grid @p rows x @p cols
   ///
   /// @p comm must be valid during construction
@@ -41,13 +40,13 @@ class CommunicatorGrid {
   /// @p size[0] rows and @p size[1] columns
   ///
   /// @p comm must be valid during construction
-  CommunicatorGrid(Communicator comm, const std::array<int, 2> & size) noexcept(false);
+  CommunicatorGrid(Communicator comm, const std::array<int, 2>& size) noexcept(false);
 
   /// Release all internal resources (i.e. all/row/col Communicator s)
   ~CommunicatorGrid() noexcept(false);
 
-  CommunicatorGrid(const CommunicatorGrid &) = delete;
-  CommunicatorGrid & operator=(const CommunicatorGrid &) = delete;
+  CommunicatorGrid(const CommunicatorGrid&) = delete;
+  CommunicatorGrid& operator=(const CommunicatorGrid&) = delete;
 
   /// @brief Return the rank of the current process in the CommunicatorGrid
   ///
@@ -61,13 +60,13 @@ class CommunicatorGrid {
   int cols() const noexcept;
 
   /// @brief Return a Communicator grouping all ranks in the grid
-  Communicator & all() noexcept;
+  Communicator& all() noexcept;
   /// @brief Return a Communicator grouping all ranks in the row (that includes the current process)
-  Communicator & row() noexcept;
+  Communicator& row() noexcept;
   /// @brief Return a Communicator grouping all ranks in the col (that includes the current process)
-  Communicator & col() noexcept;
+  Communicator& col() noexcept;
 
-  protected:
+protected:
   Communicator all_;
   Communicator row_;
   Communicator col_;

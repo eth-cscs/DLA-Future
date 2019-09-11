@@ -11,6 +11,7 @@
 #include "dlaf/common/index2d.h"
 
 #include <array>
+
 #include <gtest/gtest.h>
 
 using dlaf::common::Index2D;
@@ -48,14 +49,14 @@ TEST(Index2D, BoundaryCheck) {
   EXPECT_TRUE(boundary.isValid());
 
   auto index_tests = std::vector<std::pair<Index2D, bool>>{
-    std::make_pair(Index2D(0, 4), true),    // in bounds
-    std::make_pair(Index2D(3, 6), false),   // out (on edge)
-    std::make_pair(Index2D(5, 9), false),   // out of bounds
-    std::make_pair(Index2D(3, 5), false),   // out of row
-    std::make_pair(Index2D(2, 6), false),   // out of col
+      std::make_pair(Index2D(0, 4), true),   // in bounds
+      std::make_pair(Index2D(3, 6), false),  // out (on edge)
+      std::make_pair(Index2D(5, 9), false),  // out of bounds
+      std::make_pair(Index2D(3, 5), false),  // out of row
+      std::make_pair(Index2D(2, 6), false),  // out of col
   };
 
-  for (auto & test : index_tests) {
+  for (auto& test : index_tests) {
     EXPECT_TRUE(test.first.isValid());
     EXPECT_EQ(test.first < boundary, test.second);
   }

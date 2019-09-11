@@ -10,8 +10,8 @@
 
 #include "dlaf/communication/communicator_grid.h"
 
-#include <mpi.h>
 #include <gtest/gtest.h>
+#include <mpi.h>
 
 using namespace dlaf::comm;
 
@@ -46,7 +46,7 @@ TEST(CommunicatorGrid, ConstructorIncomplete) {
   Communicator world(MPI_COMM_WORLD);
   CommunicatorGrid incomplete_grid(world, NUM_MPI_RANKS - 1, 1);
 
-  if (world.rank() != NUM_MPI_RANKS - 1) { // ranks in the grid
+  if (world.rank() != NUM_MPI_RANKS - 1) {  // ranks in the grid
     EXPECT_EQ(incomplete_grid.rows(), NUM_MPI_RANKS - 1);
     EXPECT_EQ(incomplete_grid.cols(), 1);
 
@@ -83,7 +83,7 @@ TEST(CommunicatorGrid, Rank) {
   auto grid_dims = computeGridDims(NUM_MPI_RANKS);
 
   auto grid_area = 1;
-  for(auto dim : grid_dims) {
+  for (auto dim : grid_dims) {
     ASSERT_NE(dim, 1);
     grid_area *= dim;
   }

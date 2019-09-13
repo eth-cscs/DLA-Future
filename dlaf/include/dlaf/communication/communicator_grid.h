@@ -30,7 +30,7 @@ std::array<int, 2> computeGridDims(int nranks) noexcept(false);
 ///
 /// If the grid size does not cover the entire set of ranks available in the original Communicator,
 /// there will be ranks that will be not part of the row and column communicators. On the opposite,
-///if a grid size bigger that overfit the available number of ranks is specified, it will raise an
+/// if a grid size bigger that overfit the available number of ranks is specified, it will raise an
 /// exception.
 ///
 /// CommunicatorGrid must be destroyed before calling MPI_Finalize, to allow it releasing resources.

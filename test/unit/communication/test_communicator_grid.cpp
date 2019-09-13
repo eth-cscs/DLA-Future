@@ -16,11 +16,6 @@
 using dlaf::common::LeadingDimension;
 using namespace dlaf::comm;
 
-struct coords_t {
-  const int row;
-  const int col;
-};
-
 class CommunicatorGridTest : public ::testing::TestWithParam<LeadingDimension> {};
 
 TEST_P(CommunicatorGridTest, ConstructorWithParams) {

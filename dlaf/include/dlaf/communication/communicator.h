@@ -31,8 +31,7 @@ public:
   /// @brief Wrap an MPI_Comm into a Communicator
   ///
   /// The validity of the wrapped MPI_Comm must be granted and managed by the user, otherwise an UB occurs.
-  ///
-  /// @p mpi_communicator MPI_Comm to wrap.
+  /// @param mpi_communicator MPI_Comm to wrap.
   Communicator(MPI_Comm mpi_communicator) noexcept(false);
 
   /// @brief Return the internal MPI_Comm handler

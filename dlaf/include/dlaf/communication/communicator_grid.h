@@ -19,28 +19,31 @@ namespace dlaf {
 namespace comm {
 
 /// @brief Compute valid 2D grid dimensions for a given number of ranks
-///
 /// @return std::array<int, 2> an array with the two dimensions
 /// @post ret_dims[0] * ret_dims[0] == @p nranks
 std::array<int, 2> computeGridDims(int nranks) noexcept(false);
 
 /// @brief Create a communicator with a 2D Grid structure
 ///
-/// It creates internal communicators, e.g. for row and column communication, and manages their lifetimes.
-/// CommunicatorGrid must be destroyed before calling MPI_Finalize, allowing it to release resources.
+/// Given a communicator, it creates communicators for rows and columns, completely independent from the
+/// original one. These new communicators lifetimes management is up to the CommunicatorGrid.
+///
+/// If the grid size does not cover the entire set of ranks available in the original Communicator,
+/// there will be ranks that will be not part of the row and column communicators. On the opposite,
+///if a grid size bigger that overfit the available number of ranks is specified, it will raise an
+/// exception.
+///
+/// CommunicatorGrid must be destroyed before calling MPI_Finalize, to allow it releasing resources.
 class CommunicatorGrid {
 public:
-  /// @brief Create a grid @p rows x @p cols
-  ///
-  /// @p comm must be valid during construction
+  /// @brief Create a communicator grid @p rows x @p cols with given @p ordering
+  /// @param comm must be valid during construction
   CommunicatorGrid(Communicator comm, int rows, int cols,
                    common::LeadingDimension ordering = common::LeadingDimension::Row) noexcept(false);
 
-  /// @brief Create a grid with dimensions specified by @p size
-  ///
-  /// @p size[0] rows and @p size[1] columns
-  ///
-  /// @p comm must be valid during construction
+  /// @brief Create a communicator grid with dimensions specified by @p size and given @p ordering
+  /// @param size with @p size[0] rows and @p size[1] columns
+  /// @param comm must be valid during construction
   CommunicatorGrid(Communicator comm, const std::array<int, 2>& size,
                    common::LeadingDimension ordering = common::LeadingDimension::Row) noexcept(false);
 
@@ -51,7 +54,6 @@ public:
   CommunicatorGrid& operator=(const CommunicatorGrid&) = delete;
 
   /// @brief Return the rank of the current process in the CommunicatorGrid
-  ///
   /// @return a common::Index2D representing the position in the grid
   common::Index2D rank() const noexcept;
 
@@ -63,7 +65,8 @@ public:
 
   /// @brief Return a Communicator grouping all ranks in the row (that includes the current process)
   Communicator& row() noexcept;
-  /// @brief Return a Communicator grouping all ranks in the col (that includes the current process)
+
+  /// @brief Return a Communicator grouping all ranks in the column (that includes the current process)
   Communicator& col() noexcept;
 
 protected:

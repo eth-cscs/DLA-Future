@@ -54,6 +54,15 @@ TEST_P(CommunicatorGridTest, ConstructorWithArray) {
 INSTANTIATE_TEST_CASE_P(ConstructorWithArray, CommunicatorGridTest,
                         ::testing::Values(LeadingDimension::Row, LeadingDimension::Column));
 
+TEST_P(CommunicatorGridTest, ConstructorOverfit) {
+  Communicator world(MPI_COMM_WORLD);
+
+  EXPECT_ANY_THROW(CommunicatorGrid grid(world, NUM_MPI_RANKS, 2, GetParam()));
+}
+
+INSTANTIATE_TEST_CASE_P(ConstructorOverfit, CommunicatorGridTest,
+                        ::testing::Values(LeadingDimension::Row, LeadingDimension::Column));
+
 TEST_P(CommunicatorGridTest, ConstructorIncomplete) {
   static_assert(NUM_MPI_RANKS > 1, "There must be at least 2 ranks");
 

@@ -15,6 +15,20 @@
 
 using namespace dlaf::comm;
 
+enum class LeadingDimension { Row, Column };
+
+struct coords_t {
+  const int row;
+  const int col;
+};
+
+template <LeadingDimension axis>
+coords_t computeCoords(int index, const std::array<int, 2> & dims) {
+  int ld_size_index = (axis == LeadingDimension::Row) ? 1 : 0;
+  auto leading_size = dims[ld_size_index];
+  return { index / leading_size, index % leading_size };
+}
+
 TEST(CommunicatorGrid, ConstructorWithParams) {
   Communicator world(MPI_COMM_WORLD);
 
@@ -43,8 +57,10 @@ TEST(CommunicatorGrid, ConstructorWithArray) {
 TEST(CommunicatorGrid, ConstructorIncomplete) {
   static_assert(NUM_MPI_RANKS > 1, "There must be at least 2 ranks");
 
+  std::array<int, 2> grid_dims { NUM_MPI_RANKS - 1, 1 };
+
   Communicator world(MPI_COMM_WORLD);
-  CommunicatorGrid incomplete_grid(world, NUM_MPI_RANKS - 1, 1);
+  CommunicatorGrid incomplete_grid(world, grid_dims);
 
   if (world.rank() != NUM_MPI_RANKS - 1) {  // ranks in the grid
     EXPECT_EQ(incomplete_grid.rows(), NUM_MPI_RANKS - 1);
@@ -53,14 +69,16 @@ TEST(CommunicatorGrid, ConstructorIncomplete) {
     EXPECT_NE(incomplete_grid.row(), MPI_COMM_NULL);
     EXPECT_NE(incomplete_grid.col(), MPI_COMM_NULL);
 
-    auto rank_row = world.rank() / incomplete_grid.cols();
-    auto rank_col = world.rank() % incomplete_grid.cols();
+    auto coords = computeCoords<LeadingDimension::Row>(world.rank(), grid_dims);
 
-    EXPECT_EQ(rank_row, incomplete_grid.rank().row());
-    EXPECT_EQ(rank_col, incomplete_grid.rank().col());
+    auto coord_row = coords.row;
+    auto coord_col = coords.col;
 
-    EXPECT_EQ(rank_row, incomplete_grid.row().rank());
-    EXPECT_EQ(rank_col, incomplete_grid.col().rank());
+    EXPECT_EQ(coord_row, incomplete_grid.rank().row());
+    EXPECT_EQ(coord_col, incomplete_grid.rank().col());
+
+    EXPECT_EQ(coord_col, incomplete_grid.row().rank());
+    EXPECT_EQ(coord_row, incomplete_grid.col().rank());
   }
   else {  // last rank is not in the grid
     EXPECT_EQ(incomplete_grid.rows(), 0);
@@ -93,13 +111,14 @@ TEST(CommunicatorGrid, Rank) {
   EXPECT_EQ(complete_grid.rows(), grid_dims[0]);
   EXPECT_EQ(complete_grid.cols(), grid_dims[1]);
 
-  auto rank_row = world.rank() / complete_grid.cols();
-  auto rank_col = world.rank() % complete_grid.cols();
+  auto coords = computeCoords<LeadingDimension::Row>(world.rank(), grid_dims);
 
-  EXPECT_EQ(rank_row, complete_grid.rank().row());
-  EXPECT_EQ(rank_col, complete_grid.rank().col());
+  auto coord_row = coords.row;
+  auto coord_col = coords.col;
 
-  // TODO equivalent call...redundancy?!
-  EXPECT_EQ(rank_row, complete_grid.row().rank());
-  EXPECT_EQ(rank_col, complete_grid.col().rank());
+  EXPECT_EQ(coord_row, complete_grid.rank().row());
+  EXPECT_EQ(coord_col, complete_grid.rank().col());
+
+  EXPECT_EQ(coord_col, complete_grid.row().rank());
+  EXPECT_EQ(coord_row, complete_grid.col().rank());
 }

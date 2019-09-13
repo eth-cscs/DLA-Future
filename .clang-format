@@ -55,7 +55,9 @@ DisableFormat:   false
 FixNamespaceComments: false
 ForEachMacros:   [ foreach, Q_FOREACH, BOOST_FOREACH ]
 IncludeBlocks:   Preserve
-IncludeCategories: 
+IncludeCategories:
+  - Regex:           'dlaf.*/'
+    Priority:        4
   - Regex:           '^<ext/.*\.h>'
     Priority:        2
   - Regex:           '^<.*\.h>'
@@ -64,7 +66,7 @@ IncludeCategories:
     Priority:        2
   - Regex:           '.*'
     Priority:        3
-IncludeIsMainRegex: '(test_)?$'
+IncludeIsMainRegex: '(test)?$'
 IndentCaseLabels: true
 IndentPPDirectives: None
 IndentWidth:     2
@@ -74,13 +76,13 @@ MacroBlockBegin: ''
 MacroBlockEnd:   ''
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: None
-PenaltyBreakBeforeFirstCallParameter: 500
+PenaltyBreakBeforeFirstCallParameter: 2500
 PenaltyBreakComment: 1500
 PenaltyBreakFirstLessLess: 500
 PenaltyBreakString: 10000
 PenaltyBreakTemplateDeclaration: 500
 PenaltyExcessCharacter: 100
-PenaltyReturnTypeOnItsOwnLine: 100000000
+PenaltyReturnTypeOnItsOwnLine: 1000
 PointerAlignment: Left
 ReflowComments: true
 SortIncludes:    true

@@ -1,4 +1,6 @@
 //
+// Distributed Linear Algebra with Future (DLAF)
+//
 // Copyright (c) 2018-2019, ETH Zurich
 // All rights reserved.
 //

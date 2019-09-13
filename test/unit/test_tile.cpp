@@ -1,4 +1,6 @@
 //
+// Distributed Linear Algebra with Future (DLAF)
+//
 // Copyright (c) 2018-2019, ETH Zurich
 // All rights reserved.
 //
@@ -9,7 +11,6 @@
 #include "dlaf/tile.h"
 
 #include <stdexcept>
-
 #include "gtest/gtest.h"
 #include "dlaf/memory/memory_view.h"
 #include "dlaf_test/util_types.h"
@@ -50,9 +51,8 @@ TYPED_TEST(TileTest, Constructor) {
 TYPED_TEST(TileTest, ConstructorConst) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
-  memory::MemoryView<const Type, Device::CPU> c_memory_view(memory_view);
 
-  Tile<const Type, Device::CPU> tile(m, n, c_memory_view, ld);
+  Tile<const Type, Device::CPU> tile(m, n, memory_view, ld);
 
   EXPECT_EQ(m, tile.m());
   EXPECT_EQ(n, tile.n());
@@ -87,19 +87,12 @@ TYPED_TEST(TileTest, ConstructorMix) {
 TYPED_TEST(TileTest, ConstructorExceptions) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> memory_view(ld * (n - 1) + m - 1);
-  memory::MemoryView<const Type, Device::CPU> c_memory_view(memory_view);
 
   EXPECT_THROW((Tile<Type, Device::CPU>(m, n, memory_view, ld)), std::invalid_argument);
   EXPECT_THROW((Tile<Type, Device::CPU>(-1, n, memory_view, ld)), std::invalid_argument);
   EXPECT_THROW((Tile<Type, Device::CPU>(m, -1, memory_view, ld)), std::invalid_argument);
   EXPECT_THROW((Tile<Type, Device::CPU>(m, n, memory_view, m - 1)), std::invalid_argument);
   EXPECT_THROW((Tile<Type, Device::CPU>(0, n, memory_view, 0)), std::invalid_argument);
-
-  EXPECT_THROW((Tile<const Type, Device::CPU>(m, n, c_memory_view, ld)), std::invalid_argument);
-  EXPECT_THROW((Tile<const Type, Device::CPU>(-1, n, c_memory_view, ld)), std::invalid_argument);
-  EXPECT_THROW((Tile<const Type, Device::CPU>(m, -1, c_memory_view, ld)), std::invalid_argument);
-  EXPECT_THROW((Tile<const Type, Device::CPU>(m, n, c_memory_view, m - 1)), std::invalid_argument);
-  EXPECT_THROW((Tile<const Type, Device::CPU>(0, n, c_memory_view, 0)), std::invalid_argument);
 
   EXPECT_THROW((Tile<const Type, Device::CPU>(m, n, memory_view, ld)), std::invalid_argument);
   EXPECT_THROW((Tile<const Type, Device::CPU>(-1, n, memory_view, ld)), std::invalid_argument);
@@ -234,5 +227,69 @@ TYPED_TEST(TileTest, MoveAssignementMix) {
   for (int j = 0; j < const_tile.n(); ++j)
     for (int i = 0; i < const_tile.m(); ++i) {
       EXPECT_EQ(const_tile.ptr(i, j), memory_view(i + ld * j));
+    }
+}
+
+TYPED_TEST(TileTest, PromiseToFuture) {
+  using Type = TypeParam;
+  memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+
+  Tile<Type, Device::CPU> tile(m, n, memory_view, ld);
+
+  hpx::promise<Tile<Type, Device::CPU>> tile_promise;
+  hpx::future<Tile<Type, Device::CPU>> tile_future = tile_promise.get_future();
+  tile.setPromise(std::move(tile_promise));
+  EXPECT_EQ(false, tile_future.is_ready());
+
+  {
+    Tile<Type, Device::CPU> tile1 = std::move(tile);
+    EXPECT_EQ(false, tile_future.is_ready());
+    EXPECT_EQ(0, tile.m());
+    EXPECT_EQ(0, tile.n());
+    EXPECT_EQ(1, tile.ld());
+  }
+
+  ASSERT_EQ(true, tile_future.is_ready());
+  Tile<Type, Device::CPU> tile2 = std::move(tile_future.get());
+
+  EXPECT_EQ(m, tile2.m());
+  EXPECT_EQ(n, tile2.n());
+  EXPECT_EQ(ld, tile2.ld());
+
+  for (int j = 0; j < tile2.n(); ++j)
+    for (int i = 0; i < tile2.m(); ++i) {
+      EXPECT_EQ(tile2.ptr(i, j), memory_view(i + ld * j));
+    }
+}
+
+TYPED_TEST(TileTest, PromiseToFutureConst) {
+  using Type = TypeParam;
+  memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+
+  Tile<Type, Device::CPU> tile(m, n, memory_view, ld);
+
+  hpx::promise<Tile<Type, Device::CPU>> tile_promise;
+  hpx::future<Tile<Type, Device::CPU>> tile_future = tile_promise.get_future();
+  tile.setPromise(std::move(tile_promise));
+  EXPECT_EQ(false, tile_future.is_ready());
+
+  {
+    Tile<const Type, Device::CPU> const_tile = std::move(tile);
+    EXPECT_EQ(false, tile_future.is_ready());
+    EXPECT_EQ(0, tile.m());
+    EXPECT_EQ(0, tile.n());
+    EXPECT_EQ(1, tile.ld());
+  }
+
+  ASSERT_EQ(true, tile_future.is_ready());
+  Tile<Type, Device::CPU> tile2 = std::move(tile_future.get());
+
+  EXPECT_EQ(m, tile2.m());
+  EXPECT_EQ(n, tile2.n());
+  EXPECT_EQ(ld, tile2.ld());
+
+  for (int j = 0; j < tile2.n(); ++j)
+    for (int i = 0; i < tile2.m(); ++i) {
+      EXPECT_EQ(tile2.ptr(i, j), memory_view(i + ld * j));
     }
 }

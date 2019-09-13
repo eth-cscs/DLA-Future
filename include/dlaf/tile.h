@@ -66,6 +66,9 @@ public:
     rhs.ld_ = 1;
   }
 
+  /// @brief Destroys the Tile.
+  /// If a promise was set using @c setPromise its value is set to a Tile
+  /// which has the same size and which references the same memory as @p *this.
   ~Tile() {
     if (p_) {
       p_->set_value(Tile<ElementType, device>(m_, n_, memory_view_, ld_));
@@ -132,11 +135,13 @@ public:
   }
 
   /// @brief Sets the promise to which this Tile will be moved on destruction.
-  /// @pre The promise should not be already set.
+  /// @c setPromise can be called only once per object.
+  /// @throw std::logic_error if @c setPromise was already called.
   template <class U = T>
   std::enable_if_t<!std::is_const<U>::value && std::is_same<T, U>::value, Tile&> setPromise(
       hpx::promise<Tile<T, device>>&& p) {
-    assert(!p_);
+    if (p_)
+      throw std::logic_error("setPromise has been already used on this object!");
     p_ = std::make_unique<hpx::promise<Tile<T, device>>>(std::move(p));
     return *this;
   }

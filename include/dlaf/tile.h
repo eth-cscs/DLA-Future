@@ -68,8 +68,7 @@ public:
 
   ~Tile() {
     if (p_) {
-      auto p = std::move(p_);
-      p->set_value(Tile<ElementType, device>(m_, n_, memory_view_, ld_));
+      p_->set_value(Tile<ElementType, device>(m_, n_, memory_view_, ld_));
     }
   }
 

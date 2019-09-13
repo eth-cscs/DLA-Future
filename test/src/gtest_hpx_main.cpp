@@ -44,7 +44,7 @@
 #include "gtest/gtest.h"
 
 GTEST_API_ int test_main(int argc, char** argv) {
-  std::printf("Running main() from gtest_main.cc\n");
+  std::printf("Running main() from gtest_hpx_main.cpp\n");
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

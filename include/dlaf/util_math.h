@@ -29,11 +29,12 @@ namespace util {
 ///
 /// @pre @a num >= 0 and @a den > 0.
 /// @pre @a num + @a den - 1 must not overflow @a IntType max value
+#ifdef DLAF_DOXYGEN
+template <typename IntType>
+constexpr IntType ceilDiv(const IntType num, const IntType den);
+#else
 template <typename IntType>
 constexpr auto ceilDiv(const IntType num, const IntType den)
-#ifdef DLAF_DOXYGEN
-    ;
-#else
     -> std::enable_if_t<std::is_integral<IntType>::value, IntType> {
   return (num + den - 1) / den;
 }

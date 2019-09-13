@@ -58,6 +58,10 @@ function(DLAF_addTest test_target_name)
     message(FATAL_ERROR "No sources specified for this test")
   endif()
 
+  if (NOT DLAF_AT_MPIRANKS AND DLAF_AT_MPI_OVERSUBSCRIBE)
+    message(FATAL_ERROR "To create an MPI test, MPIRANKS parameter must be specified")
+  endif()
+
   ### Test executable target
   add_executable(${test_target_name} ${DLAF_AT_SOURCES})
 
@@ -102,7 +106,7 @@ function(DLAF_addTest test_target_name)
     if (DLAF_AT_MPIRANKS GREATER MPIEXEC_MAX_NUMPROCS AND NOT DLAF_AT_MPI_OVERSUBSCRIBE)
       message(WARNING "\
         YOU ARE ASKING FOR ${DLAF_AT_MPIRANKS} RANKS, BUT THERE ARE JUST ${MPIEXEC_MAX_NUMPROCS} CORES.
-        This may lead to deadlocks, be careful!")
+        Use MPI_OVERSUBSCRIBE flag to overcome this: be careful, since this may lead to deadlocks.")
     endif()
 
     target_compile_definitions(${test_target_name} PRIVATE NUM_MPI_RANKS=${DLAF_AT_MPIRANKS})

@@ -34,8 +34,8 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, int nrows, int ncols, Lead
   if (is_in_grid_) {
     switch (ordering) {
       case LeadingDimension::Column:
-        index_row = comm.rank() / nrows;
-        index_col = comm.rank() % nrows;
+        index_row = comm.rank() % nrows;
+        index_col = comm.rank() / nrows;
         break;
       case LeadingDimension::Row:
         index_row = comm.rank() / ncols;

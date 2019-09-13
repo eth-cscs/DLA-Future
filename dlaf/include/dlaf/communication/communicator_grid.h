@@ -30,17 +30,21 @@ std::array<int, 2> computeGridDims(int nranks) noexcept(false);
 /// CommunicatorGrid must be destroyed before calling MPI_Finalize, allowing it to release resources.
 class CommunicatorGrid {
 public:
+  enum class RANK_ORDER { RowMajor, ColumnMajor };
+
   /// @brief Create a grid @p rows x @p cols
   ///
   /// @p comm must be valid during construction
-  CommunicatorGrid(Communicator comm, int rows, int cols) noexcept(false);
+  CommunicatorGrid(Communicator comm, int rows, int cols,
+                   RANK_ORDER ordering = RANK_ORDER::RowMajor) noexcept(false);
 
   /// @brief Create a grid with dimensions specified by @p size
   ///
   /// @p size[0] rows and @p size[1] columns
   ///
   /// @p comm must be valid during construction
-  CommunicatorGrid(Communicator comm, const std::array<int, 2>& size) noexcept(false);
+  CommunicatorGrid(Communicator comm, const std::array<int, 2>& size,
+                   RANK_ORDER ordering = RANK_ORDER::RowMajor) noexcept(false);
 
   /// Release all internal resources (i.e. all/row/col Communicator s)
   ~CommunicatorGrid() noexcept(false);
@@ -68,6 +72,7 @@ protected:
   Communicator row_;
   Communicator col_;
 
+  bool is_in_grid_;
   common::Index2D position_;
 
   /// @brief Given a Communicator with grid structure, it returns the Communicator along requested @p axis

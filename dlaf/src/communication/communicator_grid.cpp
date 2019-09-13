@@ -21,37 +21,50 @@ std::array<int, 2> computeGridDims(int nranks) {
   return dimensions;
 }
 
-CommunicatorGrid::CommunicatorGrid(Communicator comm, int nrows, int ncols) {
-  Communicator all;
-  {
-    MPI_Comm mpi_grid;
-    std::array<int, 2> dimensions({nrows, ncols});
-    std::array<int, 2> periodicity({false, false});
+CommunicatorGrid::CommunicatorGrid(Communicator comm, int nrows, int ncols, RANK_ORDER ordering) {
+  if (nrows * ncols > comm.size())
+    throw std::runtime_error("grid is bigger than available ranks in communicator");
 
-    MPI_CALL(MPI_Cart_create(comm, 2, dimensions.data(), periodicity.data(), false, &mpi_grid));
-    all = Communicator(mpi_grid);
+  is_in_grid_ = comm.rank() < nrows * ncols;
+
+  int index_row = MPI_UNDEFINED;
+  int index_col = MPI_UNDEFINED;
+  int key = comm.rank();
+
+  if (is_in_grid_) {
+    switch (ordering) {
+      case RANK_ORDER::ColumnMajor:
+        index_row = comm.rank() / nrows;
+        index_col = comm.rank() % nrows;
+        break;
+      case RANK_ORDER::RowMajor:
+        index_row = comm.rank() / ncols;
+        index_col = comm.rank() % ncols;
+    }
   }
 
-  if (all == MPI_COMM_NULL)
+  MPI_Comm mpi_col, mpi_row;
+  MPI_CALL(MPI_Comm_split(comm, index_row, key, &mpi_row));
+  MPI_CALL(MPI_Comm_split(comm, index_col, key, &mpi_col));
+
+  if (!is_in_grid_)
     return;
 
-  row_ = CommunicatorGrid::getAxisCommunicator(0, all);
-  col_ = CommunicatorGrid::getAxisCommunicator(1, all);
+  row_ = Communicator(mpi_row);
+  col_ = Communicator(mpi_col);
 
-  std::array<int, 2> coords;
-  MPI_CALL(MPI_Cart_coords(all, all.rank(), 2, coords.data()));
-  position_ = common::Index2D(coords);
-
-  release_communicator(all);
+  position_ = common::Index2D(index_row, index_col);
 }
 
-CommunicatorGrid::CommunicatorGrid(Communicator comm, const std::array<int, 2>& size)
-    : CommunicatorGrid(comm, size[0], size[1]) {}
+CommunicatorGrid::CommunicatorGrid(Communicator comm, const std::array<int, 2>& size,
+                                   RANK_ORDER ordering)
+    : CommunicatorGrid(comm, size[0], size[1], ordering) {}
 
 CommunicatorGrid::~CommunicatorGrid() noexcept(false) {
-  assert(row_ == MPI_COMM_NULL ? row_ == col_ : col_ != MPI_COMM_NULL);
+  assert(row_ == MPI_COMM_NULL ? (row_ == col_ && !is_in_grid_ && !position_.isValid())
+                               : col_ != MPI_COMM_NULL);
 
-  if (row_ != MPI_COMM_NULL /* && col_ != MPI_COMM_NULL */) {
+  if (is_in_grid_) {
     release_communicator(row_);
     release_communicator(col_);
   }

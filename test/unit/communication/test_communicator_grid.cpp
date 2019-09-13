@@ -15,18 +15,16 @@
 
 using namespace dlaf::comm;
 
-enum class LeadingDimension { Row, Column };
-
 struct coords_t {
   const int row;
   const int col;
 };
 
-template <LeadingDimension axis>
-coords_t computeCoords(int index, const std::array<int, 2> & dims) {
-  int ld_size_index = (axis == LeadingDimension::Row) ? 1 : 0;
+template <CommunicatorGrid::LeadingDimension axis>
+coords_t computeCoords(int index, const std::array<int, 2>& dims) {
+  int ld_size_index = (axis == CommunicatorGrid::LeadingDimension::Row) ? 1 : 0;
   auto leading_size = dims[ld_size_index];
-  return { index / leading_size, index % leading_size };
+  return {index / leading_size, index % leading_size};
 }
 
 TEST(CommunicatorGrid, ConstructorWithParams) {
@@ -69,7 +67,7 @@ TEST(CommunicatorGrid, ConstructorIncomplete) {
     EXPECT_NE(incomplete_grid.row(), MPI_COMM_NULL);
     EXPECT_NE(incomplete_grid.col(), MPI_COMM_NULL);
 
-    auto coords = computeCoords<LeadingDimension::Row>(world.rank(), grid_dims);
+    auto coords = computeCoords<CommunicatorGrid::LeadingDimension::Row>(world.rank(), grid_dims);
 
     auto coord_row = coords.row;
     auto coord_col = coords.col;
@@ -111,7 +109,7 @@ TEST(CommunicatorGrid, Rank) {
   EXPECT_EQ(complete_grid.rows(), grid_dims[0]);
   EXPECT_EQ(complete_grid.cols(), grid_dims[1]);
 
-  auto coords = computeCoords<LeadingDimension::Row>(world.rank(), grid_dims);
+  auto coords = computeCoords<CommunicatorGrid::LeadingDimension::Row>(world.rank(), grid_dims);
 
   auto coord_row = coords.row;
   auto coord_col = coords.col;

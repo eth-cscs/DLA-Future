@@ -21,7 +21,7 @@ std::array<int, 2> computeGridDims(int nranks) {
   return dimensions;
 }
 
-CommunicatorGrid::CommunicatorGrid(Communicator comm, int nrows, int ncols, RANK_ORDER ordering) {
+CommunicatorGrid::CommunicatorGrid(Communicator comm, int nrows, int ncols, LeadingDimension ordering) {
   if (nrows * ncols > comm.size())
     throw std::runtime_error("grid is bigger than available ranks in communicator");
 
@@ -33,11 +33,11 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, int nrows, int ncols, RANK
 
   if (is_in_grid_) {
     switch (ordering) {
-      case RANK_ORDER::ColumnMajor:
+      case LeadingDimension::Column:
         index_row = comm.rank() / nrows;
         index_col = comm.rank() % nrows;
         break;
-      case RANK_ORDER::RowMajor:
+      case LeadingDimension::Row:
         index_row = comm.rank() / ncols;
         index_col = comm.rank() % ncols;
     }
@@ -57,7 +57,7 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, int nrows, int ncols, RANK
 }
 
 CommunicatorGrid::CommunicatorGrid(Communicator comm, const std::array<int, 2>& size,
-                                   RANK_ORDER ordering)
+                                   LeadingDimension ordering)
     : CommunicatorGrid(comm, size[0], size[1], ordering) {}
 
 CommunicatorGrid::~CommunicatorGrid() noexcept(false) {
@@ -88,16 +88,6 @@ Communicator& CommunicatorGrid::row() noexcept {
 
 Communicator& CommunicatorGrid::col() noexcept {
   return col_;
-}
-
-Communicator CommunicatorGrid::getAxisCommunicator(int axis, Communicator grid) noexcept(false) {
-  MPI_Comm mpi_axis;
-  std::array<int, 2> keep_axis{true, true};
-  keep_axis[static_cast<size_t>(axis)] = false;
-
-  MPI_CALL(MPI_Cart_sub(grid, keep_axis.data(), &mpi_axis));
-
-  return Communicator(mpi_axis);
 }
 
 }

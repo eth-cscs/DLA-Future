@@ -16,6 +16,7 @@ DLAF_addTest(test_communicator
 
 DLAF_addTest(test_communicator_grid
   SOURCES test_communicator_grid.cpp
-  MPIRANKS 4
+  MPIRANKS 6
   USE_GTEST_MAIN
+  MPI_OVERSUBSCRIBE
 )

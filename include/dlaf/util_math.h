@@ -10,19 +10,35 @@
 
 #pragma once
 
+#include <type_traits>
+
 /// @file
 
 namespace dlaf {
 namespace util {
 
-/// @brief Returns @c ceiling(@p num / @p den) for integer types.
+/// @brief Returns ceiling(num/den) for integer types.
 ///
-/// @tparam IntType has to be an integer type
-/// @pre @a num >= 0 and @a den >= 0
-template <class IntType>
-constexpr IntType ceilDiv(IntType num, IntType den) {
+/// It accepts both signed and unsigned integer types, but as precondition states both values must
+/// not be negative (additionally, @p den must not be zero either)
+///
+/// @tparam IntType must be a signed or unsigned integer type.
+/// @param num
+/// @param den
+/// @return ceiled division of type @a IntType
+///
+/// @pre @a num >= 0 and @a den > 0.
+/// @pre @a num + @a den - 1 must not overflow @a IntType max value
+#ifdef DLAF_DOXYGEN
+template <typename IntType>
+constexpr IntType ceilDiv(const IntType num, const IntType den);
+#else
+template <typename IntType>
+constexpr auto ceilDiv(const IntType num, const IntType den)
+    -> std::enable_if_t<std::is_integral<IntType>::value, IntType> {
   return (num + den - 1) / den;
 }
+#endif
 
 }
 }

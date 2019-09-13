@@ -225,6 +225,42 @@ General rules:
 /// @pre @a num >= 0 and @a den >= 0
 ```
 
+### Documentation & advanced languages features
+Sometimes, it can be necessary to hide a complex language syntax from the documentation with the aim of
+making it more clear and simple.
+In all these cases it is possible to separate the code to be processed by Doxygen from the real one by
+using the macro `DLAF_DOXYGEN`.
+
+```cpp
+#ifdef DLAF_DOXYGEN
+code to show in doxygen
+#else
+code to build
+#endif
+```
+
+Example:
+
+```cpp
+#ifdef DLAF_DOXYGEN
+template <typename IntType>
+constexpr IntType ceilDiv(const IntType num, const IntType den);
+#else
+template <typename IntType>
+constexpr auto ceilDiv(const IntType num, const IntType den)
+   -> std::enable_if_t<std::is_integral<IntType>::value, IntType> {
+  return (num + den - 1) / den;
+}
+#endif
+```
+
+In the first part there is a simplified declaration of the function, while in the second one the real
+definition. The former one will be the one processed by Doxygen, the latter the one seen by the compiler.
+
+The two different parts should be completely independent and they should not share any part of the
+declaration. For instance, in the example it would have been possible to have just one
+`template <typename IntType>` as first line without repeating it, but it is discouraged.
+
 ## Formatting
 
 Use the provided clang-format style to format `.h`, `.hpp`, `.ipp` and `.cpp` files.

@@ -20,9 +20,7 @@ namespace internal {
 /// It exposes the release method of Communicator that it is kept protected to not allow the user
 /// to release a Communicator.
 struct CommunicatorReleasable : Communicator {
-  void release() noexcept(false) {
-    Communicator::release();
-  }
+  using Communicator::release;
 };
 
 }

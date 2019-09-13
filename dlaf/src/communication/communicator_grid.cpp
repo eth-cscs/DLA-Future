@@ -62,11 +62,11 @@ common::Index2D CommunicatorGrid::rank() const noexcept {
 }
 
 int CommunicatorGrid::rows() const noexcept {
-  return row_.size();
+  return col_.size();
 }
 
 int CommunicatorGrid::cols() const noexcept {
-  return col_.size();
+  return row_.size();
 }
 
 Communicator& CommunicatorGrid::row() noexcept {
@@ -79,8 +79,8 @@ Communicator& CommunicatorGrid::col() noexcept {
 
 Communicator CommunicatorGrid::getAxisCommunicator(int axis, Communicator grid) noexcept(false) {
   MPI_Comm mpi_axis;
-  std::array<int, 2> keep_axis{false, false};
-  keep_axis[static_cast<size_t>(axis)] = true;
+  std::array<int, 2> keep_axis{true, true};
+  keep_axis[static_cast<size_t>(axis)] = false;
 
   MPI_CALL(MPI_Cart_sub(grid, keep_axis.data(), &mpi_axis));
 

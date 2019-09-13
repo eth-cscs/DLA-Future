@@ -35,5 +35,17 @@ int Index2D::col() const noexcept {
   return col_;
 }
 
+Index2D computeCoords(LeadingDimension axis, int index, const std::array<int, 2>& dims) {
+  size_t ld_size_index = (axis == LeadingDimension::Row) ? 1 : 0;
+  auto leading_size = dims[ld_size_index];
+
+  switch (axis) {
+    case LeadingDimension::Row:
+      return {index / leading_size, index % leading_size};
+    case LeadingDimension::Column:
+      return {index % leading_size, index / leading_size};
+  }
+}
+
 }
 }

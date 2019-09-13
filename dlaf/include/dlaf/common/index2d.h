@@ -15,6 +15,8 @@
 namespace dlaf {
 namespace common {
 
+enum class LeadingDimension { Row, Column };
+
 /// 2D coordinates
 struct Index2D {
   /// Create an invalid position
@@ -50,6 +52,12 @@ protected:
   int row_;
   int col_;
 };
+
+/// @brief Compute coords for a cell in a grid with specified ordering
+///
+/// Compute coords of the @p index -th cell in a grid with sizes @dims with @axis ordering
+/// @p dims: with number of rows at @p dims[0] and number of columns at @p dims[1]
+Index2D computeCoords(LeadingDimension axis, int index, const std::array<int, 2>& dims);
 
 }
 }

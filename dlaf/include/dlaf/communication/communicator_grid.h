@@ -30,13 +30,11 @@ std::array<int, 2> computeGridDims(int nranks) noexcept(false);
 /// CommunicatorGrid must be destroyed before calling MPI_Finalize, allowing it to release resources.
 class CommunicatorGrid {
 public:
-  enum class LeadingDimension { Row, Column };
-
   /// @brief Create a grid @p rows x @p cols
   ///
   /// @p comm must be valid during construction
   CommunicatorGrid(Communicator comm, int rows, int cols,
-                   LeadingDimension ordering = LeadingDimension::Row) noexcept(false);
+                   common::LeadingDimension ordering = common::LeadingDimension::Row) noexcept(false);
 
   /// @brief Create a grid with dimensions specified by @p size
   ///
@@ -44,7 +42,7 @@ public:
   ///
   /// @p comm must be valid during construction
   CommunicatorGrid(Communicator comm, const std::array<int, 2>& size,
-                   LeadingDimension ordering = LeadingDimension::Row) noexcept(false);
+                   common::LeadingDimension ordering = common::LeadingDimension::Row) noexcept(false);
 
   /// Release all internal resources (i.e. all/row/col Communicator s)
   ~CommunicatorGrid() noexcept(false);

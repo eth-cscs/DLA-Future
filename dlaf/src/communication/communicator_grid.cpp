@@ -21,7 +21,8 @@ std::array<int, 2> computeGridDims(int nranks) {
   return dimensions;
 }
 
-CommunicatorGrid::CommunicatorGrid(Communicator comm, int nrows, int ncols, LeadingDimension ordering) {
+CommunicatorGrid::CommunicatorGrid(Communicator comm, int nrows, int ncols,
+                                   common::LeadingDimension ordering) {
   if (nrows * ncols > comm.size())
     throw std::runtime_error("grid is bigger than available ranks in communicator");
 
@@ -32,15 +33,9 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, int nrows, int ncols, Lead
   int key = comm.rank();
 
   if (is_in_grid_) {
-    switch (ordering) {
-      case LeadingDimension::Column:
-        index_row = comm.rank() % nrows;
-        index_col = comm.rank() / nrows;
-        break;
-      case LeadingDimension::Row:
-        index_row = comm.rank() / ncols;
-        index_col = comm.rank() % ncols;
-    }
+    position_ = common::computeCoords(ordering, comm.rank(), {nrows, ncols});
+    index_row = position_.row();
+    index_col = position_.col();
   }
 
   MPI_Comm mpi_col, mpi_row;
@@ -52,12 +47,10 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, int nrows, int ncols, Lead
 
   row_ = Communicator(mpi_row);
   col_ = Communicator(mpi_col);
-
-  position_ = common::Index2D(index_row, index_col);
 }
 
 CommunicatorGrid::CommunicatorGrid(Communicator comm, const std::array<int, 2>& size,
-                                   LeadingDimension ordering)
+                                   common::LeadingDimension ordering)
     : CommunicatorGrid(comm, size[0], size[1], ordering) {}
 
 CommunicatorGrid::~CommunicatorGrid() noexcept(false) {

@@ -10,8 +10,6 @@
 
 #pragma once
 
-#include "dlaf/common/index2d.h"
-
 namespace dlaf {
 
 using SizeType = int;

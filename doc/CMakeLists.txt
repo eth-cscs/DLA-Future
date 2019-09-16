@@ -16,7 +16,7 @@ endmacro()
 
 set(DOXYGEN_INPUTS
   ${CMAKE_CURRENT_SOURCE_DIR}/mainpage.dox
-  ${CMAKE_CURRENT_SOURCE_DIR}/../dlaf/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../dlaf
 )
 transform_to_doxygen_list(DOXYGEN_INPUTS)
 

@@ -1,12 +1,15 @@
 #include "communicator_impl.h"
 
+#include <cassert>
 #include <stdexcept>
+
+#include "dlaf/mpi_header.h"
 
 namespace dlaf {
 namespace comm {
 
 constexpr bool is_manageable(MPI_Comm mpi_communicator) noexcept {
-  switch(mpi_communicator) {
+  switch (mpi_communicator) {
     case MPI_COMM_WORLD:
     case MPI_COMM_NULL:
       return false;
@@ -14,29 +17,24 @@ constexpr bool is_manageable(MPI_Comm mpi_communicator) noexcept {
   return true;
 }
 
-CommunicatorImpl::CommunicatorImpl(MPI_Comm mpi_communicator, bool to_manage)
-    : comm_(mpi_communicator) {
-  if (to_manage) {
-    if (!is_manageable(mpi_communicator))
-      throw std::runtime_error("MPI_COMM_WORLD and MPI_COMM_NULL can not be managed");
-    else
-      is_managed_ = true;
-  }
-
-  if (MPI_COMM_NULL != mpi_communicator) {
-    MPI_Comm_size(comm_, &size_);
-    MPI_Comm_rank(comm_, &rank_);
-  }
-}
-
-CommunicatorImpl::~CommunicatorImpl() {
-  if (is_managed_)
-    release();
+CommunicatorImpl::CommunicatorImpl(MPI_Comm mpi_communicator) : comm_(mpi_communicator) {
+  assert(comm_ != MPI_COMM_NULL);
+  MPI_CALL(MPI_Comm_size(comm_, &size_));
+  MPI_CALL(MPI_Comm_rank(comm_, &rank_));
 }
 
 void CommunicatorImpl::release() {
-  if (is_managed_)
-    MPI_Comm_free(&comm_);
+  MPI_CALL(MPI_Comm_free(&comm_));
+}
+
+CommunicatorImpl_Managed::CommunicatorImpl_Managed(MPI_Comm mpi_communicator) noexcept(false)
+    : CommunicatorImpl(mpi_communicator) {
+  if (!is_manageable(comm_))
+    throw std::invalid_argument("Passed communicator is not manageable");
+}
+
+CommunicatorImpl_Managed::~CommunicatorImpl_Managed() {
+  release();
 }
 
 }

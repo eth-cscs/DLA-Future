@@ -15,9 +15,9 @@
 namespace dlaf {
 namespace comm {
 
-struct Managed {};
-
 class CommunicatorImpl;
+
+struct Managed {};
 
 /// @brief MPI-compatible wrapper for the MPI_Comm.
 ///

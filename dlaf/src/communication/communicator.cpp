@@ -15,13 +15,16 @@
 namespace dlaf {
 namespace comm {
 
-Communicator::Communicator() : Communicator(MPI_COMM_NULL) {}
+class CommunicatorImpl_NotManaged;
+class CommunicatorImpl_Managed;
+
+Communicator::Communicator() : comm_ref_(new CommunicatorImpl()) {}
 
 Communicator::Communicator(MPI_Comm mpi_communicator)
-   : comm_ref_(new CommunicatorImpl(mpi_communicator, false)) {}
+    : comm_ref_(new CommunicatorImpl_NotManaged(mpi_communicator)) {}
 
 Communicator::Communicator(MPI_Comm mpi_communicator, Managed) noexcept(false)
-   : comm_ref_(new CommunicatorImpl(mpi_communicator, true)) {}
+    : comm_ref_(new CommunicatorImpl_Managed(mpi_communicator)) {}
 
 Communicator::operator MPI_Comm() const noexcept {
   return comm_ref_->comm_;

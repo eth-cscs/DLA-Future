@@ -47,9 +47,6 @@ public:
   CommunicatorGrid(Communicator comm, const std::array<int, 2>& size,
                    common::LeadingDimension ordering = common::LeadingDimension::Row) noexcept(false);
 
-  /// Release all internal resources (i.e. all/row/col Communicator s)
-  ~CommunicatorGrid() noexcept(false);
-
   CommunicatorGrid(const CommunicatorGrid&) = delete;
   CommunicatorGrid& operator=(const CommunicatorGrid&) = delete;
 

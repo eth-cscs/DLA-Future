@@ -10,36 +10,33 @@
 
 #include "dlaf/communication/communicator.h"
 
+#include "communicator_impl.h"
+
 namespace dlaf {
 namespace comm {
 
 Communicator::Communicator() : Communicator(MPI_COMM_NULL) {}
 
-Communicator::Communicator(MPI_Comm mpi_communicator) : comm_(mpi_communicator) {
-  if (MPI_COMM_NULL != mpi_communicator) {
-    MPI_Comm_rank(comm_, &rank_);
-    MPI_Comm_size(comm_, &size_);
-  }
-}
+Communicator::Communicator(MPI_Comm mpi_communicator)
+   : comm_ref_(new CommunicatorImpl(mpi_communicator, false)) {}
+
+Communicator::Communicator(MPI_Comm mpi_communicator, Managed) noexcept(false)
+   : comm_ref_(new CommunicatorImpl(mpi_communicator, true)) {}
 
 Communicator::operator MPI_Comm() const noexcept {
-  return comm_;
+  return comm_ref_->comm_;
 }
 
 MPI_Comm* Communicator::operator&() noexcept {
-  return &comm_;
+  return &(comm_ref_->comm_);
 }
 
 int Communicator::rank() const noexcept {
-  return rank_;
+  return comm_ref_->rank_;
 }
 
 int Communicator::size() const noexcept {
-  return size_;
-}
-
-void Communicator::release() {
-  MPI_CALL(MPI_Comm_free(&comm_));
+  return comm_ref_->size_;
 }
 
 }

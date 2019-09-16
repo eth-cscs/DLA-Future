@@ -52,7 +52,7 @@ INSTANTIATE_TEST_CASE_P(ConstructorWithArray, CommunicatorGridTest,
 TEST_P(CommunicatorGridTest, ConstructorOverfit) {
   Communicator world(MPI_COMM_WORLD);
 
-  EXPECT_ANY_THROW(CommunicatorGrid grid(world, NUM_MPI_RANKS, 2, GetParam()));
+  EXPECT_THROW(CommunicatorGrid grid(world, NUM_MPI_RANKS, 2, GetParam()), std::invalid_argument);
 }
 
 INSTANTIATE_TEST_CASE_P(ConstructorOverfit, CommunicatorGridTest,

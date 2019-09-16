@@ -15,6 +15,10 @@
 namespace dlaf {
 namespace comm {
 
+struct Managed {};
+
+class CommunicatorImpl;
+
 /// @brief MPI-compatible wrapper for the MPI_Comm.
 ///
 /// Being MPI-compatible means that it can be used in MPI calls, in fact, it is implicitly converted
@@ -33,6 +37,12 @@ public:
   /// The validity of the wrapped MPI_Comm must be granted and managed by the user, otherwise an UB occurs.
   /// @param mpi_communicator MPI_Comm to wrap.
   Communicator(MPI_Comm mpi_communicator) noexcept(false);
+
+  /// @brief Wrap and manage an MPI_Comm into a Communicator
+  ///
+  /// The management of the underlying MPI_Comm is up to this Communicator and not to the user
+  /// @param mpi_communicator MPI_Comm to wrap.
+  Communicator(MPI_Comm mpi_communicator, Managed) noexcept(false);
 
   /// @brief Return the internal MPI_Comm handler
   ///
@@ -56,9 +66,7 @@ protected:
   void release() noexcept(false);
 
 private:
-  MPI_Comm comm_;
-  int rank_ = MPI_UNDEFINED;
-  int size_ = 0;
+  std::shared_ptr<CommunicatorImpl> comm_ref_;
 };
 
 }

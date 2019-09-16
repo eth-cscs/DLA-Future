@@ -10,8 +10,6 @@
 
 #include "dlaf/communication/communicator_grid.h"
 
-#include "communicator_releasable.hpp"
-
 namespace dlaf {
 namespace comm {
 

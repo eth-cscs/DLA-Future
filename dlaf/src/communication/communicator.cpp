@@ -23,7 +23,7 @@ Communicator::Communicator() : comm_ref_(new CommunicatorImpl()) {}
 Communicator::Communicator(MPI_Comm mpi_communicator)
     : comm_ref_(new CommunicatorImpl_NotManaged(mpi_communicator)) {}
 
-Communicator::Communicator(MPI_Comm mpi_communicator, Managed) noexcept(false)
+Communicator::Communicator(MPI_Comm mpi_communicator, managed) noexcept(false)
     : comm_ref_(new CommunicatorImpl_Managed(mpi_communicator)) {}
 
 Communicator::operator MPI_Comm() const noexcept {

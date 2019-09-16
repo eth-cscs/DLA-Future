@@ -17,8 +17,6 @@ namespace comm {
 
 class CommunicatorImpl;
 
-struct Managed {};
-
 /// @brief MPI-compatible wrapper for the MPI_Comm.
 ///
 /// Being MPI-compatible means that it can be used in MPI calls, in fact, it is implicitly converted
@@ -29,6 +27,9 @@ struct Managed {};
 /// MPI_Comm of the original one (i.e. MPI_Comm is not duplicated).
 class Communicator {
 public:
+  /// Tag to give to constructor in order to give MPI_Comm ownership to Communicator
+  struct managed {};
+
   /// @brief Create a NULL Communicator (i.e. MPI_COMM_NULL)
   Communicator() noexcept(false);
 
@@ -42,7 +43,7 @@ public:
   ///
   /// The management of the underlying MPI_Comm is up to this Communicator and not to the user
   /// @param mpi_communicator MPI_Comm to wrap.
-  Communicator(MPI_Comm mpi_communicator, Managed) noexcept(false);
+  Communicator(MPI_Comm mpi_communicator, managed) noexcept(false);
 
   /// @brief Return the internal MPI_Comm handler
   ///

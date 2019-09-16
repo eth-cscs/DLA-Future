@@ -45,8 +45,8 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, int nrows, int ncols,
   if (!is_in_grid_)
     return;
 
-  row_ = Communicator(mpi_row, Managed{});
-  col_ = Communicator(mpi_col, Managed{});
+  row_ = Communicator(mpi_row, Communicator::managed{});
+  col_ = Communicator(mpi_col, Communicator::managed{});
 }
 
 CommunicatorGrid::CommunicatorGrid(Communicator comm, const std::array<int, 2>& size,

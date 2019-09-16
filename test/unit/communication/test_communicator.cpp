@@ -68,7 +68,7 @@ protected:
 class CommunicatorTestManaged : public CommunicatorTest {
 protected:
   virtual Communicator createCommunicator(MPI_Comm mpi_communicator) override {
-    return Communicator(mpi_communicator, Managed());
+    return Communicator(mpi_communicator, Communicator::managed());
   }
 };
 

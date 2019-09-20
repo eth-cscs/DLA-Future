@@ -31,3 +31,5 @@ make doc -j 50 VERBOSE=1
 
 # only executed if build passed
 echo "doc generated"
+cd ..
+rm -rf $DIR

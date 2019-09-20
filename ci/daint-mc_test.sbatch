@@ -18,4 +18,5 @@ make test
 
 # only executed if tests passed
 echo "test successful"
+cd ..
 rm -rf $DIR

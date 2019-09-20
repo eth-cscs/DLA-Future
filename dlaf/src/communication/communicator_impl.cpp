@@ -18,7 +18,7 @@ constexpr bool is_manageable(MPI_Comm mpi_communicator) noexcept {
 }
 
 CommunicatorImpl::CommunicatorImpl(MPI_Comm mpi_communicator) : comm_(mpi_communicator) {
-  assert(comm_ != MPI_COMM_NULL);
+  assert(comm_ != mpi::NULL_COMMUNICATOR);
   MPI_CALL(MPI_Comm_size(comm_, &size_));
   MPI_CALL(MPI_Comm_rank(comm_, &rank_));
 }

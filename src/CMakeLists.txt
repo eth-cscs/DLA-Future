@@ -20,6 +20,8 @@ target_include_directories(DLAF
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
     $<INSTALL_INTERFACE:include>
     ${HPX_INCLUDE_DIRS}
+  PRIVATE
+    include/
 )
 
 target_link_libraries(DLAF

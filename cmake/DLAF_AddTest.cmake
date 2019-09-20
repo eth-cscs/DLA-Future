@@ -14,7 +14,6 @@
 #   [INCLUDE_DIRS <arguments for target_include_directories>]
 #   [LIBRARIES <arguments for target_link_libraries>]
 #   [MPIRANKS <number of rank>]
-#   [MPI_OVERSUBSCRIBE]
 #   [USE_MAIN {PLAIN | HPX | MPI | MPIHPX}]
 # )
 #
@@ -25,9 +24,6 @@
 #
 # MPIRANKS specifies the number of ranks on which the test will be carried out and it implies a link with
 # MPI library. At build time the constant NUM_MPI_RANKS=MPIRANKS is set.
-#
-# MPI_OVERSUBSCRIBE flag allows to launch more ranks than number of cores available on the platform.
-# In case more ranks than cores are requested and this flag is not specified, it prints a warning message.
 #
 # USE_MAIN links to an external main function, in particular:
 #   - PLAIN: uses the classic gtest_main
@@ -47,7 +43,7 @@
 # )
 
 function(DLAF_addTest test_target_name)
-  set(options MPI_OVERSUBSCRIBE)
+  set(options "")
   set(oneValueArgs MPIRANKS USE_MAIN)
   set(multiValueArgs SOURCES COMPILE_DEFINITIONS INCLUDE_DIRS LIBRARIES ARGUMENTS)
   cmake_parse_arguments(DLAF_AT "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
@@ -59,10 +55,6 @@ function(DLAF_addTest test_target_name)
 
   if (NOT DLAF_AT_SOURCES)
     message(FATAL_ERROR "No sources specified for this test")
-  endif()
-
-  if (NOT DLAF_AT_MPIRANKS AND DLAF_AT_MPI_OVERSUBSCRIBE)
-    message(FATAL_ERROR "You cannot specify MPI_OVERSUBSCRIBE without specifying MPIRANKS")
   endif()
 
   set(_DLAF_MPI_MAINS "MPI;MPIHPX")
@@ -118,10 +110,11 @@ function(DLAF_addTest test_target_name)
       message(FATAL_ERROR "Wrong MPIRANKS number ${DLAF_AT_MPIRANKS}")
     endif()
 
-    if (DLAF_AT_MPIRANKS GREATER MPIEXEC_MAX_NUMPROCS AND NOT DLAF_AT_MPI_OVERSUBSCRIBE)
+    if (DLAF_AT_MPIRANKS GREATER MPIEXEC_MAX_NUMPROCS)
       message(WARNING "\
         YOU ARE ASKING FOR ${DLAF_AT_MPIRANKS} RANKS, BUT THERE ARE JUST ${MPIEXEC_MAX_NUMPROCS} CORES.
-        Use MPI_OVERSUBSCRIBE flag to overcome this: be careful, since this may lead to deadlocks.")
+        You can adjust MPIEXEC_MAX_NUMPROCS value to overcome this.
+        With OpenMPI it may be needed to set environment variable OMPI_MCA_rmaps_base_oversubscribe=1.")
     endif()
 
     target_compile_definitions(${test_target_name} PRIVATE NUM_MPI_RANKS=${DLAF_AT_MPIRANKS})

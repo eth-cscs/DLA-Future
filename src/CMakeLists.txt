@@ -8,18 +8,44 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-add_library(DLAF INTERFACE)
+add_library(DLAF
+  common/index2d.cpp
+  communication/communicator_impl.cpp
+  communication/communicator.cpp
+  communication/communicator_grid.cpp
+)
 
 target_include_directories(DLAF
-  INTERFACE
+  PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
     $<INSTALL_INTERFACE:include>
     ${HPX_INCLUDE_DIRS}
-  # PRIVATE
-  #   include/
 )
 
-target_link_libraries(DLAF INTERFACE ${HPX_LIBRARIES})
+target_link_libraries(DLAF
+  PUBLIC
+    MPI::MPI_CXX
+    ${HPX_LIBRARIES}
+)
+
+target_compile_options(DLAF
+  PRIVATE
+    -Werror
+    -Wall
+    -Wextra
+    -Wshadow
+    -Wnon-virtual-dtor
+    -Wold-style-cast
+    -Wcast-align
+    -Wunused
+    -Woverloaded-virtual
+    -Wpedantic
+    -Wconversion
+    -Wsign-conversion
+    -Wnull-dereference
+    -Wdouble-promotion
+    -Wformat=2
+)
 
 # ----- DEPLOY
 include(GNUInstallDirs)
@@ -54,7 +80,7 @@ install(EXPORT
 
 # Config-file preparation and install
 configure_package_config_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/../cmake/template/DLAFConfig.cmake.in
+  ${CMAKE_CURRENT_LIST_DIR}/../cmake/template/DLAFConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/DLAFConfig.cmake
   INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
 )

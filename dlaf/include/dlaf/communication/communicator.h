@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <memory>
 #include "dlaf/mpi_header.h"
 
 namespace dlaf {

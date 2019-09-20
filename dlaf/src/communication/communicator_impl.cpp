@@ -10,8 +10,8 @@ namespace comm {
 
 constexpr bool is_manageable(MPI_Comm mpi_communicator) noexcept {
   switch (mpi_communicator) {
-    case MPI_COMM_WORLD:
-    case MPI_COMM_NULL:
+    case mpi::WORLD_COMMUNICATOR:
+    case mpi::NULL_COMMUNICATOR:
       return false;
   }
   return true;

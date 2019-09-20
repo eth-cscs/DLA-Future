@@ -1,6 +1,6 @@
 #pragma once
 
-#include <mpi.h>
+#include "dlaf/mpi_header.h"
 
 /// @file
 
@@ -35,7 +35,7 @@ protected:
   /// It calls MPI_Comm_free (for additional info, see MPI documentation)
   void release();
 
-  MPI_Comm comm_ = MPI_COMM_NULL;
+  MPI_Comm comm_ = mpi::NULL_COMMUNICATOR;
   int size_ = 0;
   int rank_ = MPI_UNDEFINED;
 };

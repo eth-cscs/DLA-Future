@@ -30,6 +30,7 @@ target_link_libraries(DLAF
 
 target_compile_options(DLAF
   PRIVATE
+    -Werror
     -Wall
     -Wextra
     -Wshadow

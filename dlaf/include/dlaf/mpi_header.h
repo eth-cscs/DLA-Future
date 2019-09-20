@@ -8,15 +8,28 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#pragma once
+
 #if __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wsign-conversion"
 #endif
 
+#include <mpi.h>
+
 #include <iostream>
 
-#include <mpi.h>
+namespace dlaf {
+namespace comm {
+namespace mpi {
+
+constexpr MPI_Comm NULL_COMMUNICATOR = MPI_COMM_NULL;
+constexpr MPI_Comm WORLD_COMMUNICATOR = MPI_COMM_WORLD;
+
+}
+}
+}
 
 #define MPI_CALL(x)                                                \
   {                                                                \

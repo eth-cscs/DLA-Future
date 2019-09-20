@@ -45,6 +45,8 @@ Index2D computeCoords(LeadingDimension axis, int index, const std::array<int, 2>
     case LeadingDimension::Column:
       return {index % leading_size, index / leading_size};
   }
+
+  throw std::runtime_error("leading dimension specified is not valid");
 }
 
 }

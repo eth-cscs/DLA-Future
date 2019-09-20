@@ -24,12 +24,13 @@ class CommunicatorImpl;
 /// to MPI_Comm and the reference of a Communicator instance returns the pointer to the internal
 /// MPI_Comm. In case of need, a pointer to Communicator instance can be obtained using std::addressof.
 ///
-/// Apart from the default constructor Communicator() that creates a NULL communicator, the other two constructors differ
-/// on MPI_Comm management: Communicator(MPI_Comm) leaves the ownership to the user, that will have to
-/// grant its validity for the entire Communicator lifetime; instead, Communicator(MPI_Comm, managed) acquires
-/// the ownership and will release it on destroy.
+/// Apart from the default constructor Communicator() that creates a NULL communicator, the other two
+/// constructors differ on MPI_Comm management: Communicator(MPI_Comm) leaves the ownership to the user,
+/// that will have to grant its validity for the entire Communicator lifetime; instead,
+/// Communicator(MPI_Comm, managed) acquires the ownership and will release it on destroy.
 ///
-/// A copy of a Communicator refers exactly to the same MPI_Comm of the original one (i.e. MPI_Comm is not duplicated).
+/// A copy of a Communicator refers exactly to the same MPI_Comm of the original one (i.e. MPI_Comm is
+/// not duplicated).
 class Communicator {
 public:
   /// Tag to give to constructor in order to give MPI_Comm ownership to Communicator

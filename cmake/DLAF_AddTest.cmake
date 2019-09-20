@@ -119,8 +119,8 @@ function(DLAF_addTest test_target_name)
     if (DLAF_AT_MPIRANKS GREATER MPIEXEC_MAX_NUMPROCS)
       message(WARNING "\
         YOU ARE ASKING FOR ${DLAF_AT_MPIRANKS} RANKS, BUT THERE ARE JUST ${MPIEXEC_MAX_NUMPROCS} CORES.
-        You can adjust MPIEXEC_MAX_NUMPROCS value to overcome this.
-        With OpenMPI it may be needed to set environment variable OMPI_MCA_rmaps_base_oversubscribe=1.")
+        You can adjust MPIEXEC_MAX_NUMPROCS value to suppress this warning.
+        Using OpenMPI may require to set the environment variable OMPI_MCA_rmaps_base_oversubscribe=1.")
     endif()
 
     target_compile_definitions(${test_target_name} PRIVATE NUM_MPI_RANKS=${DLAF_AT_MPIRANKS})

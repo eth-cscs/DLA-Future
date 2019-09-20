@@ -45,12 +45,6 @@ target_compile_options(DLAF
     -Wnull-dereference
     -Wdouble-promotion
     -Wformat=2
-    ## -Wmisleading-indentation
-    ## -Wduplicated-cond
-    ## -Wduplicated-branches
-    ## -Wlogical-op
-    ## -Wuseless-cast
-    ## -Wlifetime
 )
 
 # ----- DEPLOY

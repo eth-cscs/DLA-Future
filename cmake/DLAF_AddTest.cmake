@@ -58,8 +58,14 @@ function(DLAF_addTest test_target_name)
   endif()
 
   set(_DLAF_MPI_MAINS "MPI;MPIHPX")
-  if (DLAF_AT_USE_MAIN IN_LIST _DLAF_MPI_MAINS AND NOT DLAF_AT_MPIRANKS)
-    message(FATAL_ERROR "You are asking for an MPI external main without specifying MPIRANKS")
+  if (DLAF_AT_USE_MAIN)
+    if (DLAF_AT_USE_MAIN IN_LIST _DLAF_MPI_MAINS AND NOT DLAF_AT_MPIRANKS)
+      message(FATAL_ERROR "You are asking for an MPI external main without specifying MPIRANKS")
+    endif()
+
+    if (DLAF_AT_MPIRANKS AND NOT DLAF_AT_USE_MAIN IN_LIST _DLAF_MPI_MAINS)
+      message(FATAL_ERROR "You specified MPIRANKS and asked for an external main without MPI")
+    endif()
   endif()
 
   ### Test executable target

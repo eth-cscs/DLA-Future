@@ -10,10 +10,13 @@
 
 add_library(DLAF INTERFACE)
 
-target_include_directories(DLAF INTERFACE
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
-  $<INSTALL_INTERFACE:include>
-  ${HPX_INCLUDE_DIRS}
+target_include_directories(DLAF
+  INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
+    $<INSTALL_INTERFACE:include>
+    ${HPX_INCLUDE_DIRS}
+  # PRIVATE
+  #   include/
 )
 
 target_link_libraries(DLAF INTERFACE ${HPX_LIBRARIES})

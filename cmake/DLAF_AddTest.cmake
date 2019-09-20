@@ -14,6 +14,8 @@
 #   [INCLUDE_DIRS <arguments for target_include_directories>]
 #   [LIBRARIES <arguments for target_link_libraries>]
 #   [MPIRANKS <number of rank>]
+#   [MPI_OVERSUBSCRIBE]
+#   [USE_MAIN {PLAIN | HPX | MPI | MPIHPX}]
 # )
 #
 # At least one source file has to be specified, while other parameters are optional.
@@ -22,7 +24,17 @@
 # possible to specify PRIVATE/INTERFACE/PUBLIC modifiers.
 #
 # MPIRANKS specifies the number of ranks on which the test will be carried out and it implies a link with
-# MPI library.
+# MPI library. At build time the constant NUM_MPI_RANKS=MPIRANKS is set.
+#
+# MPI_OVERSUBSCRIBE flag allows to launch more ranks than number of cores available on the platform.
+# In case more ranks than cores are requested and this flag is not specified, it prints a warning message.
+#
+# USE_MAIN links to an external main function, in particular:
+#   - PLAIN: uses the classic gtest_main
+#   - HPX: uses a main that initializes HPX
+#   - MPI: uses a main that initializes MPI
+#   - MPIHPX: uses a main that initializes both HPX and MPI
+# If not specified, no external main is used and it should exist in the test source code.
 #
 # e.g.
 #
@@ -35,8 +47,8 @@
 # )
 
 function(DLAF_addTest test_target_name)
-  set(options "USE_GTEST_MAIN")
-  set(oneValueArgs MPIRANKS)
+  set(options MPI_OVERSUBSCRIBE)
+  set(oneValueArgs MPIRANKS USE_MAIN)
   set(multiValueArgs SOURCES COMPILE_DEFINITIONS INCLUDE_DIRS LIBRARIES ARGUMENTS)
   cmake_parse_arguments(DLAF_AT "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
@@ -47,6 +59,15 @@ function(DLAF_addTest test_target_name)
 
   if (NOT DLAF_AT_SOURCES)
     message(FATAL_ERROR "No sources specified for this test")
+  endif()
+
+  if (NOT DLAF_AT_MPIRANKS AND DLAF_AT_MPI_OVERSUBSCRIBE)
+    message(FATAL_ERROR "You cannot specify MPI_OVERSUBSCRIBE without specifying MPIRANKS")
+  endif()
+
+  set(_DLAF_MPI_MAINS "MPI;MPIHPX")
+  if (DLAF_AT_USE_MAIN IN_LIST _DLAF_MPI_MAINS AND NOT DLAF_AT_MPIRANKS)
+    message(FATAL_ERROR "You are asking for an MPI external main without specifying MPIRANKS")
   endif()
 
   ### Test executable target
@@ -67,8 +88,19 @@ function(DLAF_addTest test_target_name)
 
   target_link_libraries(${test_target_name} PRIVATE DLAF)
   target_link_libraries(${test_target_name} PRIVATE DLAF_test)
-  if (DLAF_AT_USE_GTEST_MAIN)
-    target_link_libraries(${test_target_name} PRIVATE gtest_main)
+
+  if (DLAF_AT_USE_MAIN)
+    if (DLAF_AT_USE_MAIN STREQUAL PLAIN)
+      target_link_libraries(${test_target_name} PRIVATE gtest_main)
+    elseif (DLAF_AT_USE_MAIN STREQUAL HPX)
+      target_link_libraries(${test_target_name} PRIVATE DLAF_gtest_hpx_main)
+    elseif (DLAF_AT_USE_MAIN STREQUAL MPI)
+      target_link_libraries(${test_target_name} PRIVATE DLAF_gtest_mpi_main)
+    elseif (DLAF_AT_USE_MAIN STREQUAL MPIHPX)
+      message(FATAL_ERROR "USE_MAIN=${DLAF_AT_USE_MAIN} is not yet supported")
+    else()
+      message(FATAL_ERROR "USE_MAIN=${DLAF_AT_USE_MAIN} is not a supported option")
+    endif()
   else()
     target_link_libraries(${test_target_name} PRIVATE gtest)
   endif()
@@ -86,9 +118,13 @@ function(DLAF_addTest test_target_name)
       message(FATAL_ERROR "Wrong MPIRANKS number ${DLAF_AT_MPIRANKS}")
     endif()
 
-    if (DLAF_AT_MPIRANKS GREATER MPIEXEC_MAX_NUMPROCS)
-      message(FATAL_ERROR "Impossible to have more than ${MPIEXEC_MAX_NUMPROCS}")
+    if (DLAF_AT_MPIRANKS GREATER MPIEXEC_MAX_NUMPROCS AND NOT DLAF_AT_MPI_OVERSUBSCRIBE)
+      message(WARNING "\
+        YOU ARE ASKING FOR ${DLAF_AT_MPIRANKS} RANKS, BUT THERE ARE JUST ${MPIEXEC_MAX_NUMPROCS} CORES.
+        Use MPI_OVERSUBSCRIBE flag to overcome this: be careful, since this may lead to deadlocks.")
     endif()
+
+    target_compile_definitions(${test_target_name} PRIVATE NUM_MPI_RANKS=${DLAF_AT_MPIRANKS})
 
     target_link_libraries(${test_target_name}
       PRIVATE MPI::MPI_CXX

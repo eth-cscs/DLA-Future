@@ -60,6 +60,7 @@ public:
   ///
   /// Useful for MPI function calls
   MPI_Comm* operator&() noexcept;
+  const MPI_Comm* operator&() const noexcept;
 
   /// @brief Return the rank of the current process in the Communicator
   int rank() const noexcept;

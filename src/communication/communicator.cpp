@@ -34,6 +34,10 @@ MPI_Comm* Communicator::operator&() noexcept {
   return &(comm_ref_->comm_);
 }
 
+const MPI_Comm* Communicator::operator&() const noexcept {
+  return &(comm_ref_->comm_);
+}
+
 int Communicator::rank() const noexcept {
   return comm_ref_->rank_;
 }

@@ -16,6 +16,36 @@
 using dlaf::common::LeadingDimension;
 using namespace dlaf::comm;
 
+void test_grid_communication(CommunicatorGrid& grid) {
+  if (mpi::NULL_COMMUNICATOR == grid.row() || mpi::NULL_COMMUNICATOR == grid.col())
+    return;
+
+  int buffer;
+  int buffer_send = 1, buffer_recv;
+
+  // Row Communication
+  if (grid.rank().col() == 0)
+    buffer = grid.rank().row();
+
+  MPI_CALL(MPI_Bcast(&buffer, 1, MPI_INT, 0, grid.row()));
+  EXPECT_EQ(buffer, grid.rank().row());
+
+  buffer_recv = 0;
+  MPI_CALL(MPI_Allreduce(&buffer_send, &buffer_recv, 1, MPI_INT, MPI_SUM, grid.row()));
+  EXPECT_EQ(buffer_recv, grid.row().size());
+
+  // Column Communication
+  if (grid.rank().row() == 0)
+    buffer = grid.rank().col();
+
+  MPI_CALL(MPI_Bcast(&buffer, 1, MPI_INT, 0, grid.col()));
+  EXPECT_EQ(buffer, grid.rank().col());
+
+  buffer_recv = 0;
+  MPI_CALL(MPI_Allreduce(&buffer_send, &buffer_recv, 1, MPI_INT, MPI_SUM, grid.col()));
+  EXPECT_EQ(buffer_recv, grid.col().size());
+}
+
 class CommunicatorGridTest : public ::testing::TestWithParam<LeadingDimension> {};
 
 TEST_P(CommunicatorGridTest, Copy) {
@@ -46,6 +76,8 @@ TEST_P(CommunicatorGridTest, Copy) {
     MPI_CALL(MPI_Comm_compare(copy.col(), grid.col(), &result));
     EXPECT_EQ(MPI_IDENT, result);
     EXPECT_NE(mpi::NULL_COMMUNICATOR, copy.col());
+
+    test_grid_communication(copy);
   }
 
   EXPECT_EQ(grid.rows() * grid.cols(), NUM_MPI_RANKS);
@@ -54,6 +86,8 @@ TEST_P(CommunicatorGridTest, Copy) {
 
   EXPECT_NE(mpi::NULL_COMMUNICATOR, grid.row());
   EXPECT_NE(mpi::NULL_COMMUNICATOR, grid.col());
+
+  test_grid_communication(grid);
 }
 
 TEST_P(CommunicatorGridTest, ConstructorWithParams) {
@@ -68,6 +102,8 @@ TEST_P(CommunicatorGridTest, ConstructorWithParams) {
   EXPECT_EQ(grid.rows() * grid.cols(), NUM_MPI_RANKS);
   EXPECT_EQ(grid.rows(), nrows);
   EXPECT_EQ(grid.cols(), ncols);
+
+  test_grid_communication(grid);
 }
 
 INSTANTIATE_TEST_CASE_P(ConstructorWithParams, CommunicatorGridTest,
@@ -82,6 +118,8 @@ TEST_P(CommunicatorGridTest, ConstructorWithArray) {
   EXPECT_EQ(grid.rows() * grid.cols(), NUM_MPI_RANKS);
   EXPECT_EQ(grid.rows(), grid_dims[0]);
   EXPECT_EQ(grid.cols(), grid_dims[1]);
+
+  test_grid_communication(grid);
 }
 
 INSTANTIATE_TEST_CASE_P(ConstructorWithArray, CommunicatorGridTest,
@@ -132,6 +170,8 @@ TEST_P(CommunicatorGridTest, ConstructorIncomplete) {
     EXPECT_EQ(incomplete_grid.row().rank(), MPI_UNDEFINED);
     EXPECT_EQ(incomplete_grid.col().rank(), MPI_UNDEFINED);
   }
+
+  test_grid_communication(incomplete_grid);
 }
 
 INSTANTIATE_TEST_CASE_P(ConstructorIncomplete, CommunicatorGridTest,

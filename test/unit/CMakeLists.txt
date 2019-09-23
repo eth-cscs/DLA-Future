@@ -8,7 +8,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-DLAF_addTest(test_util_math SOURCES test_util_math.cpp USE_GTEST_MAIN)
-DLAF_addTest(test_tile SOURCES test_tile.cpp LIBRARIES PRIVATE DLAF_gtest_hpx_main)
+DLAF_addTest(test_util_math SOURCES test_util_math.cpp USE_MAIN PLAIN)
+DLAF_addTest(test_tile SOURCES test_tile.cpp USE_MAIN HPX)
 
 add_subdirectory(memory)

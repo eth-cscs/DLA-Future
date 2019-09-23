@@ -47,9 +47,6 @@ public:
   CommunicatorGrid(Communicator comm, const std::array<int, 2>& size,
                    common::LeadingDimension ordering = common::LeadingDimension::Row) noexcept(false);
 
-  CommunicatorGrid(const CommunicatorGrid&) = delete;
-  CommunicatorGrid& operator=(const CommunicatorGrid&) = delete;
-
   /// @brief Return the rank of the current process in the CommunicatorGrid
   /// @return a common::Index2D representing the position in the grid
   common::Index2D rank() const noexcept;

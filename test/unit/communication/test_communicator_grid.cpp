@@ -18,6 +18,44 @@ using namespace dlaf::comm;
 
 class CommunicatorGridTest : public ::testing::TestWithParam<LeadingDimension> {};
 
+TEST_P(CommunicatorGridTest, Copy) {
+  Communicator world(MPI_COMM_WORLD);
+
+  auto grid_dims = computeGridDims(NUM_MPI_RANKS);
+  int nrows = grid_dims[0];
+  int ncols = grid_dims[1];
+
+  CommunicatorGrid grid(world, nrows, ncols, GetParam());
+
+  EXPECT_EQ(grid.rows() * grid.cols(), NUM_MPI_RANKS);
+  EXPECT_EQ(grid.rows(), nrows);
+  EXPECT_EQ(grid.cols(), ncols);
+
+  {
+    CommunicatorGrid copy = grid;
+
+    EXPECT_EQ(copy.rows() * copy.cols(), NUM_MPI_RANKS);
+    EXPECT_EQ(copy.rows(), nrows);
+    EXPECT_EQ(copy.cols(), ncols);
+
+    int result;
+    MPI_CALL(MPI_Comm_compare(copy.row(), grid.row(), &result));
+    EXPECT_EQ(MPI_IDENT, result);
+    EXPECT_NE(mpi::NULL_COMMUNICATOR, copy.row());
+
+    MPI_CALL(MPI_Comm_compare(copy.col(), grid.col(), &result));
+    EXPECT_EQ(MPI_IDENT, result);
+    EXPECT_NE(mpi::NULL_COMMUNICATOR, copy.col());
+  }
+
+  EXPECT_EQ(grid.rows() * grid.cols(), NUM_MPI_RANKS);
+  EXPECT_EQ(grid.rows(), nrows);
+  EXPECT_EQ(grid.cols(), ncols);
+
+  EXPECT_NE(mpi::NULL_COMMUNICATOR, grid.row());
+  EXPECT_NE(mpi::NULL_COMMUNICATOR, grid.col());
+}
+
 TEST_P(CommunicatorGridTest, ConstructorWithParams) {
   Communicator world(MPI_COMM_WORLD);
 

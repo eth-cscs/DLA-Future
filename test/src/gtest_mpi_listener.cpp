@@ -25,15 +25,10 @@ void MPIListener::OnTestProgramEnd(const ::testing::UnitTest& unit_test) {
   MPI_Finalize();
 }
 
-// Called before a test starts.
 void MPIListener::OnTestStart(const ::testing::TestInfo& test_info) {
   last_test_result_ = "";
-
-  if (!isMainRank())
-    return;
 }
 
-// Called after a failed assertion or a SUCCESS().
 void MPIListener::OnTestPartResult(const ::testing::TestPartResult& test_part_result) {
   std::ostringstream error_description;
 
@@ -44,7 +39,6 @@ void MPIListener::OnTestPartResult(const ::testing::TestPartResult& test_part_re
   last_test_result_ += error_description.str();
 }
 
-// Called after a test ends.
 void MPIListener::OnTestEnd(const ::testing::TestInfo& test_info) {
   int result = test_info.result()->Passed();
 
@@ -56,7 +50,6 @@ void MPIListener::OnTestEnd(const ::testing::TestInfo& test_info) {
 
     printf("*** Test %s.%s RESULT = %s\n", test_info.test_case_name(), test_info.name(),
            final_result ? "OK" : "FAILED");
-
   }
 
   for (int rank = 0; rank < world_size_; rank++) {

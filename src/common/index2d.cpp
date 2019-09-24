@@ -15,9 +15,12 @@ namespace common {
 
 Index2D::Index2D() noexcept : row_(-1), col_(-1) {}
 
-Index2D::Index2D(int row, int col) noexcept : row_(row), col_(col) {}
+Index2D::Index2D(int row, int col) noexcept(false) : row_(row), col_(col) {
+  if (!isValid())
+    throw std::runtime_error("passed not valid negative indexes");
+}
 
-Index2D::Index2D(const std::array<int, 2>& coords) noexcept : row_(coords[0]), col_(coords[1]) {}
+Index2D::Index2D(const std::array<int, 2>& coords) noexcept(false) : Index2D(coords[0], coords[1]) {}
 
 bool Index2D::operator<(const Index2D& boundary) const noexcept {
   return row_ < boundary.row_ && col_ < boundary.col_ && (isValid()) && boundary.isValid();

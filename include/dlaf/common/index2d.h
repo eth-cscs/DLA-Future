@@ -29,11 +29,11 @@ struct Index2D {
   Index2D() noexcept;
 
   /// @brief Create a position with given coordinates
-  Index2D(int row, int col) noexcept;
+  Index2D(int row, int col) noexcept(false);
 
   /// @brief Create a position with given coordinates
   /// @param coords where coords[0] is the row index and coords[1] is the column index
-  Index2D(const std::array<int, 2>& coords) noexcept;
+  Index2D(const std::array<int, 2>& coords) noexcept(false);
 
   /// @brief Check if it is a valid position (no upper bound check)
   /// @return true if row >= 0 and column >= 0

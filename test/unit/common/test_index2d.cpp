@@ -43,21 +43,32 @@ TEST(Index2D, ConstructorFromArray) {
   EXPECT_TRUE(index.isValid());
 }
 
-TEST(Index2D, BoundaryCheck) {
+class Index2DTestNegative : public ::testing::TestWithParam<std::pair<int, int>> {};
+
+TEST_P(Index2DTestNegative, NegativeValues) {
+  EXPECT_THROW(Index2D(GetParam().first, GetParam().second), std::runtime_error);
+  EXPECT_THROW(Index2D(std::array<int, 2>{GetParam().first, GetParam().second}), std::runtime_error);
+}
+
+INSTANTIATE_TEST_CASE_P(NegativeValues, Index2DTestNegative,
+                        ::testing::Values(std::make_pair(-10, -10), std::make_pair(-1, -1),
+                                          std::make_pair(-15, 3), std::make_pair(8, -7)));
+
+class Index2DTest : public ::testing::TestWithParam<std::pair<Index2D, bool>> {};
+
+TEST_P(Index2DTest, BoundaryCheck) {
   Index2D boundary(3, 6);
 
   EXPECT_TRUE(boundary.isValid());
 
-  auto index_tests = std::vector<std::pair<Index2D, bool>>{
-      std::make_pair(Index2D(0, 4), true),   // in bounds
-      std::make_pair(Index2D(3, 6), false),  // out (on edge)
-      std::make_pair(Index2D(5, 9), false),  // out of bounds
-      std::make_pair(Index2D(3, 5), false),  // out of row
-      std::make_pair(Index2D(2, 6), false),  // out of col
-  };
-
-  for (auto& test : index_tests) {
-    EXPECT_TRUE(test.first.isValid());
-    EXPECT_EQ(test.first < boundary, test.second);
-  }
+  EXPECT_TRUE(GetParam().first.isValid());
+  EXPECT_EQ(GetParam().first < boundary, GetParam().second);
 }
+
+INSTANTIATE_TEST_CASE_P(BoundaryCheck, Index2DTest,
+                        ::testing::Values(std::make_pair(Index2D(0, 4), true),   // in bounds
+                                          std::make_pair(Index2D(3, 6), false),  // out (on edge)
+                                          std::make_pair(Index2D(5, 9), false),  // out of bounds
+                                          std::make_pair(Index2D(3, 5), false),  // out of row
+                                          std::make_pair(Index2D(2, 6), false)   // out of col
+                                          ));

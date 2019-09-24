@@ -31,6 +31,8 @@ namespace comm {
 /// CommunicatorGrid must be destroyed before calling MPI_Finalize, to allow it releasing resources.
 class CommunicatorGrid {
 public:
+  using IndexType = common::Index2D<int>;
+
   /// @brief Create a communicator grid @p rows x @p cols with given @p ordering
   /// @param comm must be valid during construction
   CommunicatorGrid(Communicator comm, int rows, int cols, common::Ordering ordering) noexcept(false);
@@ -43,7 +45,7 @@ public:
 
   /// @brief Return the rank of the current process in the CommunicatorGrid
   /// @return a common::Index2D representing the position in the grid
-  common::Index2D rank() const noexcept;
+  IndexType rank() const noexcept;
 
   /// @brief Return the number of rows in the grid
   int rows() const noexcept;
@@ -62,7 +64,7 @@ protected:
   Communicator col_;
 
   bool is_in_grid_;
-  common::Index2D position_;
+  IndexType position_;
 };
 
 }

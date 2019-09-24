@@ -24,7 +24,7 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, int nrows, int ncols, comm
   int key = comm.rank();
 
   if (is_in_grid_) {
-    position_ = common::computeCoords(ordering, comm.rank(), {nrows, ncols});
+    position_ = common::computeCoords<int>(ordering, comm.rank(), {nrows, ncols});
     index_row = position_.row();
     index_col = position_.col();
   }
@@ -44,7 +44,7 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, const std::array<int, 2>& 
                                    common::Ordering ordering)
     : CommunicatorGrid(comm, size[0], size[1], ordering) {}
 
-common::Index2D CommunicatorGrid::rank() const noexcept {
+CommunicatorGrid::IndexType CommunicatorGrid::rank() const noexcept {
   return position_;
 }
 

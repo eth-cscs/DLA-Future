@@ -29,7 +29,7 @@ protected:
 private:
   bool isMainRank() const;
 
-  void printTestFailure(const ::testing::TestPartResult & test_result) const;
+  void printTestFailure(const ::testing::TestPartResult& test_result) const;
 
   int argc_;
   char** argv_;

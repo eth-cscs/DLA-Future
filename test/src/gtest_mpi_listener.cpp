@@ -9,8 +9,8 @@
 
 #include "gtest_mpi_listener.h"
 
-#include <vector>
 #include <algorithm>
+#include <vector>
 
 MPIListener::MPIListener(int argc, char** argv) : argc_(argc), argv_(argv) {}
 
@@ -37,10 +37,9 @@ void MPIListener::OnTestStart(const ::testing::TestInfo& test_info) {
 void MPIListener::OnTestPartResult(const ::testing::TestPartResult& test_part_result) {
   std::ostringstream error_description;
 
-  error_description
-    << "- " << (test_part_result.failed() ? "Failure" : "Success")
-    << " in " << test_part_result.file_name() << ":" << test_part_result.line_number() << std::endl
-    << test_part_result.summary() << std::endl;
+  error_description << "- " << (test_part_result.failed() ? "Failure" : "Success") << " in "
+                    << test_part_result.file_name() << ":" << test_part_result.line_number() << std::endl
+                    << test_part_result.summary() << std::endl;
 
   last_test_result_ += error_description.str();
 }
@@ -55,14 +54,15 @@ void MPIListener::OnTestEnd(const ::testing::TestInfo& test_info) {
   if (isMainRank()) {
     bool final_result = std::all_of(results.begin(), results.end(), [](bool r) { return r; });
 
-    printf("*** Test %s.%s RESULT = %s\n", test_info.test_case_name(), test_info.name(), final_result ? "OK" : "FAILED");
+    printf("*** Test %s.%s RESULT = %s\n", test_info.test_case_name(), test_info.name(),
+           final_result ? "OK" : "FAILED");
 
   }
 
   for (int rank = 0; rank < world_size_; rank++) {
     if (isMainRank()) {
       std::string rank_error_message;
-      if(!results[rank]) {
+      if (!results[rank]) {
         if (rank != 0) {
           MPI_Status status;
           MPI_Probe(rank, 0, MPI_COMM_WORLD, &status);
@@ -81,9 +81,10 @@ void MPIListener::OnTestEnd(const ::testing::TestInfo& test_info) {
         printf("[R%d]\n%s", rank, rank_error_message.c_str());
       }
     }
-    else if(rank_ == rank) {
+    else if (rank_ == rank) {
       if (!result) {
-        MPI_Send(last_test_result_.c_str(), last_test_result_.size() + 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+        MPI_Send(last_test_result_.c_str(), last_test_result_.size() + 1, MPI_CHAR, 0, 0,
+                 MPI_COMM_WORLD);
       }
     }
   }

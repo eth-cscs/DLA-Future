@@ -57,26 +57,28 @@ void MPIListener::OnTestEnd(const ::testing::TestInfo& test_info) {
 
     printf("*** Test %s.%s RESULT = %s\n", test_info.test_case_name(), test_info.name(), final_result ? "OK" : "FAILED");
 
-    // RANK 0
-    assert(result == results[rank_]);
-
-    if (!result)
-      printf("[R%d]\n%s", rank_, last_test_result_.c_str());
   }
 
-  for (int rank = 1; rank < world_size_; rank++) {
+  for (int rank = 0; rank < world_size_; rank++) {
     if (isMainRank()) {
+      std::string rank_error_message;
       if(!results[rank]) {
-        MPI_Status status;
-        MPI_Probe(rank, 0, MPI_COMM_WORLD, &status);
+        if (rank != 0) {
+          MPI_Status status;
+          MPI_Probe(rank, 0, MPI_COMM_WORLD, &status);
 
-        int number_amount;
-        MPI_Get_count(&status, MPI_CHAR, &number_amount);
+          int number_amount;
+          MPI_Get_count(&status, MPI_CHAR, &number_amount);
 
-        char rank_error_message[number_amount];
-        MPI_Recv(rank_error_message, number_amount, MPI_CHAR, rank, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+          char buffer[number_amount];
+          MPI_Recv(buffer, number_amount, MPI_CHAR, rank, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-        printf("[R%d]\n%s", rank, rank_error_message);
+          rank_error_message = buffer;
+        }
+        else
+          rank_error_message = last_test_result_;
+
+        printf("[R%d]\n%s", rank, rank_error_message.c_str());
       }
     }
     else if(rank_ == rank) {

@@ -19,6 +19,8 @@ using dlaf_test::comm::computeGridDims;
 using dlaf::common::LeadingDimension;
 using namespace dlaf::comm;
 
+auto valid_orderings = ::testing::Values(LeadingDimension::Row, LeadingDimension::Column);
+
 void test_grid_communication(CommunicatorGrid& grid) {
   if (mpi::NULL_COMMUNICATOR == grid.row() || mpi::NULL_COMMUNICATOR == grid.col())
     return;
@@ -109,8 +111,7 @@ TEST_P(CommunicatorGridTest, ConstructorWithParams) {
   test_grid_communication(grid);
 }
 
-INSTANTIATE_TEST_CASE_P(ConstructorWithParams, CommunicatorGridTest,
-                        ::testing::Values(LeadingDimension::Row, LeadingDimension::Column));
+INSTANTIATE_TEST_CASE_P(ConstructorWithParams, CommunicatorGridTest, valid_orderings);
 
 TEST_P(CommunicatorGridTest, ConstructorWithArray) {
   Communicator world(MPI_COMM_WORLD);
@@ -125,17 +126,16 @@ TEST_P(CommunicatorGridTest, ConstructorWithArray) {
   test_grid_communication(grid);
 }
 
-INSTANTIATE_TEST_CASE_P(ConstructorWithArray, CommunicatorGridTest,
-                        ::testing::Values(LeadingDimension::Row, LeadingDimension::Column));
+INSTANTIATE_TEST_CASE_P(ConstructorWithArray, CommunicatorGridTest, valid_orderings);
 
 TEST_P(CommunicatorGridTest, ConstructorOverfit) {
   Communicator world(MPI_COMM_WORLD);
 
   EXPECT_THROW(CommunicatorGrid grid(world, NUM_MPI_RANKS, 2, GetParam()), std::invalid_argument);
+  EXPECT_THROW(CommunicatorGrid grid(world, NUM_MPI_RANKS + 1, 1, GetParam()), std::invalid_argument);
 }
 
-INSTANTIATE_TEST_CASE_P(ConstructorOverfit, CommunicatorGridTest,
-                        ::testing::Values(LeadingDimension::Row, LeadingDimension::Column));
+INSTANTIATE_TEST_CASE_P(ConstructorOverfit, CommunicatorGridTest, valid_orderings);
 
 TEST_P(CommunicatorGridTest, ConstructorIncomplete) {
   static_assert(NUM_MPI_RANKS > 1, "There must be at least 2 ranks");
@@ -177,8 +177,7 @@ TEST_P(CommunicatorGridTest, ConstructorIncomplete) {
   test_grid_communication(incomplete_grid);
 }
 
-INSTANTIATE_TEST_CASE_P(ConstructorIncomplete, CommunicatorGridTest,
-                        ::testing::Values(LeadingDimension::Row, LeadingDimension::Column));
+INSTANTIATE_TEST_CASE_P(ConstructorIncomplete, CommunicatorGridTest, valid_orderings);
 
 TEST_P(CommunicatorGridTest, Rank) {
   auto grid_dims = computeGridDims(NUM_MPI_RANKS);
@@ -205,5 +204,4 @@ TEST_P(CommunicatorGridTest, Rank) {
   EXPECT_EQ(coords.row(), complete_grid.col().rank());
 }
 
-INSTANTIATE_TEST_CASE_P(Rank, CommunicatorGridTest,
-                        ::testing::Values(LeadingDimension::Row, LeadingDimension::Column));
+INSTANTIATE_TEST_CASE_P(Rank, CommunicatorGridTest, valid_orderings);

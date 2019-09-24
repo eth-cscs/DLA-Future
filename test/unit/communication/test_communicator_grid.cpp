@@ -16,10 +16,10 @@
 #include "dlaf_test/util_mpi.h"
 
 using dlaf_test::comm::computeGridDims;
-using dlaf::common::LeadingDimension;
+using dlaf::common::Ordering;
 using namespace dlaf::comm;
 
-auto valid_orderings = ::testing::Values(LeadingDimension::Row, LeadingDimension::Column);
+auto valid_orderings = ::testing::Values(Ordering::RowMajor, Ordering::ColumnMajor);
 
 void test_grid_communication(CommunicatorGrid& grid) {
   if (mpi::NULL_COMMUNICATOR == grid.row() || mpi::NULL_COMMUNICATOR == grid.col())
@@ -51,7 +51,7 @@ void test_grid_communication(CommunicatorGrid& grid) {
   EXPECT_EQ(buffer_recv, grid.col().size());
 }
 
-class CommunicatorGridTest : public ::testing::TestWithParam<LeadingDimension> {};
+class CommunicatorGridTest : public ::testing::TestWithParam<Ordering> {};
 
 TEST_P(CommunicatorGridTest, Copy) {
   Communicator world(MPI_COMM_WORLD);

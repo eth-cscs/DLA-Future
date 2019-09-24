@@ -19,9 +19,9 @@ namespace common {
 
 /// @brief Type specifying the leading dimension
 ///
-/// A Row Major ordering means that the row is the first direction to look for the next value.
-/// Instead, a Column Major ordering means that the column is the first direction to look for the next value
-enum class LeadingDimension { Row, Column };
+/// A RowMajor ordering means that the row is the first direction to look for the next value.
+/// Instead, a ColumnMajor ordering means that the column is the first direction to look for the next value
+enum class Ordering { RowMajor, ColumnMajor };
 
 /// 2D coordinates
 struct Index2D {
@@ -55,9 +55,9 @@ protected:
   int col_;
 };
 
-/// Compute coords of the @p index -th cell in a grid with sizes @p dims and @p axis ordering
+/// Compute coords of the @p index -th cell in a grid with @p ordering and sizes @p dims
 /// @param dims with number of rows at @p dims[0] and number of columns at @p dims[1]
-Index2D computeCoords(LeadingDimension axis, int index, const std::array<int, 2>& dims);
+Index2D computeCoords(Ordering ordering, int index, const std::array<int, 2>& dims);
 
 }
 }

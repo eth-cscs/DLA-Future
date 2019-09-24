@@ -13,8 +13,7 @@
 namespace dlaf {
 namespace comm {
 
-CommunicatorGrid::CommunicatorGrid(Communicator comm, int nrows, int ncols,
-                                   common::LeadingDimension ordering) {
+CommunicatorGrid::CommunicatorGrid(Communicator comm, int nrows, int ncols, common::Ordering ordering) {
   if (nrows * ncols > comm.size())
     throw std::invalid_argument("grid is bigger than available ranks in communicator");
 
@@ -42,7 +41,7 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, int nrows, int ncols,
 }
 
 CommunicatorGrid::CommunicatorGrid(Communicator comm, const std::array<int, 2>& size,
-                                   common::LeadingDimension ordering)
+                                   common::Ordering ordering)
     : CommunicatorGrid(comm, size[0], size[1], ordering) {}
 
 common::Index2D CommunicatorGrid::rank() const noexcept {

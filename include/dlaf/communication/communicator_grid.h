@@ -34,13 +34,13 @@ public:
   /// @brief Create a communicator grid @p rows x @p cols with given @p ordering
   /// @param comm must be valid during construction
   CommunicatorGrid(Communicator comm, int rows, int cols,
-                   common::LeadingDimension ordering = common::LeadingDimension::Row) noexcept(false);
+                   common::LeadingDimension ordering) noexcept(false);
 
   /// @brief Create a communicator grid with dimensions specified by @p size and given @p ordering
   /// @param size with @p size[0] rows and @p size[1] columns
   /// @param comm must be valid during construction
   CommunicatorGrid(Communicator comm, const std::array<int, 2>& size,
-                   common::LeadingDimension ordering = common::LeadingDimension::Row) noexcept(false);
+                   common::LeadingDimension ordering) noexcept(false);
 
   /// @brief Return the rank of the current process in the CommunicatorGrid
   /// @return a common::Index2D representing the position in the grid

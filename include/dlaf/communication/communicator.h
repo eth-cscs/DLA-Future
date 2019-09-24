@@ -67,12 +67,6 @@ public:
   /// @brief Return the number of ranks in the Communicator
   int size() const noexcept;
 
-protected:
-  /// @brief Release the underlying communicator
-  ///
-  /// It calls MPI_Comm_free (for additional info see MPI documentation)
-  void release() noexcept(false);
-
 private:
   std::shared_ptr<CommunicatorImpl> comm_ref_;
 };

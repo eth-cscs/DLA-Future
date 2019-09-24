@@ -23,10 +23,6 @@ CommunicatorImpl::CommunicatorImpl(MPI_Comm mpi_communicator) : comm_(mpi_commun
   MPI_CALL(MPI_Comm_rank(comm_, &rank_));
 }
 
-void CommunicatorImpl::release() {
-  MPI_CALL(MPI_Comm_free(&comm_));
-}
-
 CommunicatorImpl_Managed::CommunicatorImpl_Managed(MPI_Comm mpi_communicator) noexcept(false)
     : CommunicatorImpl(mpi_communicator) {
   if (!is_manageable(comm_))
@@ -34,7 +30,7 @@ CommunicatorImpl_Managed::CommunicatorImpl_Managed(MPI_Comm mpi_communicator) no
 }
 
 CommunicatorImpl_Managed::~CommunicatorImpl_Managed() {
-  release();
+  MPI_CALL(MPI_Comm_free(&comm_));
 }
 
 }

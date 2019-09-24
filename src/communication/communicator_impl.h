@@ -32,9 +32,6 @@ protected:
   /// It creates a wrapper for a NULL communicator
   CommunicatorImpl() noexcept = default;
 
-  /// It calls MPI_Comm_free (for additional info, see MPI documentation)
-  void release();
-
   MPI_Comm comm_ = mpi::NULL_COMMUNICATOR;
   int size_ = 0;
   int rank_ = MPI_UNDEFINED;
@@ -46,7 +43,7 @@ public:
   /// @pre @p mpi_communicator must be a manageable communicator (see dlaf::comm::is_manageable())
   CommunicatorImpl_Managed(MPI_Comm mpi_communicator) noexcept(false);
 
-  /// It calls Communicator::release() on destruction
+  /// It calls MPI_Comm_free (for additional info, see MPI documentation)
   ~CommunicatorImpl_Managed();
 };
 

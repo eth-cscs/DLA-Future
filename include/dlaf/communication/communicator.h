@@ -32,24 +32,18 @@ class CommunicatorImpl;
 /// A copy of a Communicator refers exactly to the same MPI_Comm of the original one (i.e. MPI_Comm is
 /// not duplicated).
 class Communicator {
-public:
-  /// Tag to give to constructor in order to give MPI_Comm ownership to Communicator
-  struct managed {};
+  friend Communicator make_communicator_managed(MPI_Comm);
 
+public:
   /// @brief Create a NULL Communicator (i.e. MPI_COMM_NULL)
   Communicator() noexcept(false);
 
   /// @brief Wrap an MPI_Comm into a Communicator
   ///
-  /// The validity of the wrapped MPI_Comm must be granted and managed by the user, otherwise an UB occurs.
+  /// User keeps the ownership of the MPI_Comm, but this object has the usage exclusiveness.
+  /// The user has to grant this, otherwise it leads to UB.
   /// @param mpi_communicator MPI_Comm to wrap.
   Communicator(MPI_Comm mpi_communicator) noexcept(false);
-
-  /// @brief Wrap and manage an MPI_Comm into a Communicator
-  ///
-  /// The management of the underlying MPI_Comm is up to this Communicator and not to the user
-  /// @param mpi_communicator MPI_Comm to wrap.
-  Communicator(MPI_Comm mpi_communicator, managed) noexcept(false);
 
   /// @brief Return the internal MPI_Comm handler
   ///
@@ -68,8 +62,21 @@ public:
   int size() const noexcept;
 
 private:
+  /// Tag to give to constructor in order to give MPI_Comm ownership to Communicator
+  struct managed {};
+
+  /// @brief Wrap and manage an MPI_Comm into a Communicator
+  ///
+  /// This object takes the ownership of the MPI_Comm.
+  /// @param mpi_communicator MPI_Comm to wrap.
+  /// @param managed tag (anonymous parameter)
+  Communicator(MPI_Comm mpi_communicator, managed) noexcept(false);
+
   std::shared_ptr<CommunicatorImpl> comm_ref_;
 };
+
+/// Wrap an MPI_Comm into a Communicator that takes the ownership
+Communicator make_communicator_managed(MPI_Comm communicator) noexcept(false);
 
 }
 }

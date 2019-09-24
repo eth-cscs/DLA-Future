@@ -30,25 +30,6 @@ target_link_libraries(DLAF
     ${HPX_LIBRARIES}
 )
 
-target_compile_options(DLAF
-  PRIVATE
-    -Werror
-    -Wall
-    -Wextra
-    -Wshadow
-    -Wnon-virtual-dtor
-    -Wold-style-cast
-    -Wcast-align
-    -Wunused
-    -Woverloaded-virtual
-    -Wpedantic
-    -Wconversion
-    -Wsign-conversion
-    -Wnull-dereference
-    -Wdouble-promotion
-    -Wformat=2
-)
-
 # ----- DEPLOY
 include(GNUInstallDirs)
 

@@ -13,12 +13,6 @@
 namespace dlaf {
 namespace comm {
 
-std::array<int, 2> computeGridDims(int nranks) {
-  std::array<int, 2> dimensions{0, 0};
-  MPI_CALL(MPI_Dims_create(nranks, 2, dimensions.data()));
-  return dimensions;
-}
-
 CommunicatorGrid::CommunicatorGrid(Communicator comm, int nrows, int ncols,
                                    common::LeadingDimension ordering) {
   if (nrows * ncols > comm.size())

@@ -13,6 +13,9 @@
 #include <gtest/gtest.h>
 #include <mpi.h>
 
+#include "dlaf_test/util_mpi.h"
+
+using dlaf_test::comm::computeGridDims;
 using dlaf::common::LeadingDimension;
 using namespace dlaf::comm;
 

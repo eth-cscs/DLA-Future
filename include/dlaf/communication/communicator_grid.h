@@ -18,11 +18,6 @@
 namespace dlaf {
 namespace comm {
 
-/// @brief Compute valid 2D grid dimensions for a given number of ranks
-/// @return std::array<int, 2> an array with the two dimensions
-/// @post ret_dims[0] * ret_dims[0] == @p nranks
-std::array<int, 2> computeGridDims(int nranks) noexcept(false);
-
 /// @brief Create a communicator with a 2D Grid structure
 ///
 /// Given a communicator, it creates communicators for rows and columns, completely independent from the

@@ -46,10 +46,10 @@ index_t Index2D<index_t>::col() const noexcept {
   return col_;
 }
 
-template <typename index_t>
-Index2D<index_t> computeCoords(Ordering ordering, std::size_t index,
+template <typename index_t, typename linear_t>
+Index2D<index_t> computeCoords(Ordering ordering, linear_t index,
                                const std::array<index_t, 2>& dims) {
-  auto ld_size_index = (ordering == Ordering::RowMajor) ? 1 : 0;
+  std::size_t ld_size_index = (ordering == Ordering::RowMajor) ? 1 : 0;
   auto leading_size = dims[ld_size_index];
 
   switch (ordering) {

@@ -64,8 +64,9 @@ protected:
 
 /// Compute coords of the @p index -th cell in a grid with @p ordering and sizes @p dims
 /// @param dims with number of rows at @p dims[0] and number of columns at @p dims[1]
-template <typename index_t>
-Index2D<index_t> computeCoords(Ordering ordering, std::size_t index, const std::array<index_t, 2>& dims);
+/// @param index is the linear index of the cell with specified @p ordering
+template <typename index_t, typename linear_t>
+Index2D<index_t> computeCoords(Ordering ordering, linear_t index, const std::array<index_t, 2>& dims);
 
 }
 }

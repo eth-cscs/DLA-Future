@@ -13,18 +13,18 @@
 namespace dlaf {
 namespace comm {
 
-CommunicatorGrid::CommunicatorGrid(Communicator comm, int nrows, int ncols, common::Ordering ordering) {
+CommunicatorGrid::CommunicatorGrid(Communicator comm, index_t nrows, index_t ncols, common::Ordering ordering) {
   if (nrows * ncols > comm.size())
     throw std::invalid_argument("grid is bigger than available ranks in communicator");
 
-  is_in_grid_ = comm.rank() < nrows * ncols;
+  bool is_in_grid = comm.rank() < nrows * ncols;
 
   int index_row = MPI_UNDEFINED;
   int index_col = MPI_UNDEFINED;
   int key = comm.rank();
 
-  if (is_in_grid_) {
-    position_ = common::computeCoords<int>(ordering, comm.rank(), {nrows, ncols});
+  if (is_in_grid) {
+    position_ = common::computeCoords<index_t>(ordering, comm.rank(), {nrows, ncols});
     index_row = position_.row();
     index_col = position_.col();
   }
@@ -33,27 +33,25 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, int nrows, int ncols, comm
   MPI_CALL(MPI_Comm_split(comm, index_row, key, &mpi_row));
   MPI_CALL(MPI_Comm_split(comm, index_col, key, &mpi_col));
 
-  if (!is_in_grid_)
+  if (!is_in_grid)
     return;
+
+  grid_size_ = index2d_t(nrows, ncols);
 
   row_ = make_communicator_managed(mpi_row);
   col_ = make_communicator_managed(mpi_col);
 }
 
-CommunicatorGrid::CommunicatorGrid(Communicator comm, const std::array<int, 2>& size,
+CommunicatorGrid::CommunicatorGrid(Communicator comm, const std::array<index_t, 2>& size,
                                    common::Ordering ordering)
     : CommunicatorGrid(comm, size[0], size[1], ordering) {}
 
-CommunicatorGrid::IndexType CommunicatorGrid::rank() const noexcept {
+CommunicatorGrid::index2d_t CommunicatorGrid::rank() const noexcept {
   return position_;
 }
 
-int CommunicatorGrid::rows() const noexcept {
-  return col_.size();
-}
-
-int CommunicatorGrid::cols() const noexcept {
-  return row_.size();
+CommunicatorGrid::index2d_t CommunicatorGrid::size() const noexcept {
+  return grid_size_;
 }
 
 Communicator& CommunicatorGrid::row() noexcept {

@@ -32,16 +32,6 @@ template <typename index_t, class Tag>
 bool basic_coords<index_t, Tag>::isValid() const noexcept {
   return row_ >= 0 && col_ >= 0;
 }
-
-template <typename index_t, class Tag>
-index_t basic_coords<index_t, Tag>::row() const noexcept {
-  return row_;
-}
-
-template <typename index_t, class Tag>
-index_t basic_coords<index_t, Tag>::col() const noexcept {
-  return col_;
-}
 }
 
 template <typename index_t, class Tag>

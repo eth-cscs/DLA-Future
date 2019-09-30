@@ -58,34 +58,50 @@ public:
   /// @return true if row >= 0 and column >= 0
   bool isValid() const noexcept;
 
-  /// @brief Return row index
-  index_t row() const noexcept;
-
-  /// @brief Return column index
-  index_t col() const noexcept;
-
 protected:
   index_t row_;
   index_t col_;
 };
 }
 
-template <typename T, class Tag>
-struct Size2D : public internal::basic_coords<T, Tag> {
-  using internal::basic_coords<T, Tag>::basic_coords;
+/// @brief A tagged 2D Size
+///
+/// The tag is used to avoid mixing elements tagged differently
+template <typename IndexType, class Tag>
+struct Size2D : public internal::basic_coords<IndexType, Tag> {
+  using internal::basic_coords<IndexType, Tag>::basic_coords;
 
   template <typename, class>
   friend class Index2D;
+
+  IndexType rows() const noexcept {
+    return this->row_;
+  }
+
+  IndexType cols() const noexcept {
+    return this->col_;
+  }
 };
 
-template <typename T, class Tag>
-struct Index2D : public internal::basic_coords<T, Tag> {
-  using internal::basic_coords<T, Tag>::basic_coords;
+/// @brief A tagged 2D index
+///
+/// The tag is used to avoid mixing elements tagged differently
+template <typename IndexType, class Tag>
+struct Index2D : public internal::basic_coords<IndexType, Tag> {
+  using internal::basic_coords<IndexType, Tag>::basic_coords;
 
-  /// @brief Compare positions
+  /// @brief Check if it is a valid position inside the grid size specified by @p boundary
   /// @return true if the current index is in the range [0, @p boundary) for both row and column
   /// @pre both this and @p boundary must be valid indexes
-  bool isIn(const Size2D<T, Tag>& boundary) const noexcept;
+  bool isIn(const Size2D<IndexType, Tag>& boundary) const noexcept;
+
+  IndexType row() const noexcept {
+    return this->row_;
+  }
+
+  IndexType col() const noexcept {
+    return this->col_;
+  }
 };
 
 /// Compute coords of the @p index -th cell in a grid with @p ordering and sizes @p dims

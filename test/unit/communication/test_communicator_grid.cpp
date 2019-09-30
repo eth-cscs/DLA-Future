@@ -62,16 +62,16 @@ TEST_P(CommunicatorGridTest, Copy) {
 
   CommunicatorGrid grid(world, nrows, ncols, GetParam());
 
-  EXPECT_EQ(grid.size().row() * grid.size().col(), NUM_MPI_RANKS);
-  EXPECT_EQ(grid.size().row(), nrows);
-  EXPECT_EQ(grid.size().col(), ncols);
+  EXPECT_EQ(grid.size().rows() * grid.size().cols(), NUM_MPI_RANKS);
+  EXPECT_EQ(grid.size().rows(), nrows);
+  EXPECT_EQ(grid.size().cols(), ncols);
 
   {
     CommunicatorGrid copy = grid;
 
-    EXPECT_EQ(copy.size().row() * copy.size().col(), NUM_MPI_RANKS);
-    EXPECT_EQ(copy.size().row(), nrows);
-    EXPECT_EQ(copy.size().col(), ncols);
+    EXPECT_EQ(copy.size().rows() * copy.size().cols(), NUM_MPI_RANKS);
+    EXPECT_EQ(copy.size().rows(), nrows);
+    EXPECT_EQ(copy.size().cols(), ncols);
 
     int result;
     MPI_CALL(MPI_Comm_compare(copy.row(), grid.row(), &result));
@@ -85,9 +85,9 @@ TEST_P(CommunicatorGridTest, Copy) {
     test_grid_communication(copy);
   }
 
-  EXPECT_EQ(grid.size().row() * grid.size().col(), NUM_MPI_RANKS);
-  EXPECT_EQ(grid.size().row(), nrows);
-  EXPECT_EQ(grid.size().col(), ncols);
+  EXPECT_EQ(grid.size().rows() * grid.size().cols(), NUM_MPI_RANKS);
+  EXPECT_EQ(grid.size().rows(), nrows);
+  EXPECT_EQ(grid.size().cols(), ncols);
 
   EXPECT_NE(mpi::NULL_COMMUNICATOR, grid.row());
   EXPECT_NE(mpi::NULL_COMMUNICATOR, grid.col());
@@ -104,9 +104,9 @@ TEST_P(CommunicatorGridTest, ConstructorWithParams) {
 
   CommunicatorGrid grid(world, nrows, ncols, GetParam());
 
-  EXPECT_EQ(grid.size().row() * grid.size().col(), NUM_MPI_RANKS);
-  EXPECT_EQ(grid.size().row(), nrows);
-  EXPECT_EQ(grid.size().col(), ncols);
+  EXPECT_EQ(grid.size().rows() * grid.size().cols(), NUM_MPI_RANKS);
+  EXPECT_EQ(grid.size().rows(), nrows);
+  EXPECT_EQ(grid.size().cols(), ncols);
 
   test_grid_communication(grid);
 }
@@ -119,9 +119,9 @@ TEST_P(CommunicatorGridTest, ConstructorWithArray) {
   auto grid_dims = computeGridDims(NUM_MPI_RANKS);
   CommunicatorGrid grid(world, grid_dims, GetParam());
 
-  EXPECT_EQ(grid.size().row() * grid.size().col(), NUM_MPI_RANKS);
-  EXPECT_EQ(grid.size().row(), grid_dims[0]);
-  EXPECT_EQ(grid.size().col(), grid_dims[1]);
+  EXPECT_EQ(grid.size().rows() * grid.size().cols(), NUM_MPI_RANKS);
+  EXPECT_EQ(grid.size().rows(), grid_dims[0]);
+  EXPECT_EQ(grid.size().cols(), grid_dims[1]);
 
   test_grid_communication(grid);
 }
@@ -146,8 +146,8 @@ TEST_P(CommunicatorGridTest, ConstructorIncomplete) {
   CommunicatorGrid incomplete_grid(world, grid_dims, GetParam());
 
   if (world.rank() != NUM_MPI_RANKS - 1) {  // ranks in the grid
-    EXPECT_EQ(incomplete_grid.size().row(), NUM_MPI_RANKS - 1);
-    EXPECT_EQ(incomplete_grid.size().col(), 1);
+    EXPECT_EQ(incomplete_grid.size().rows(), NUM_MPI_RANKS - 1);
+    EXPECT_EQ(incomplete_grid.size().cols(), 1);
 
     EXPECT_NE(incomplete_grid.row(), MPI_COMM_NULL);
     EXPECT_NE(incomplete_grid.col(), MPI_COMM_NULL);
@@ -162,8 +162,8 @@ TEST_P(CommunicatorGridTest, ConstructorIncomplete) {
     EXPECT_EQ(coords.row(), incomplete_grid.col().rank());
   }
   else {  // last rank is not in the grid
-    EXPECT_EQ(incomplete_grid.size().row(), 0);
-    EXPECT_EQ(incomplete_grid.size().col(), 0);
+    EXPECT_EQ(incomplete_grid.size().rows(), 0);
+    EXPECT_EQ(incomplete_grid.size().cols(), 0);
 
     EXPECT_EQ(incomplete_grid.row(), MPI_COMM_NULL);
     EXPECT_EQ(incomplete_grid.col(), MPI_COMM_NULL);
@@ -193,8 +193,8 @@ TEST_P(CommunicatorGridTest, Rank) {
   Communicator world(MPI_COMM_WORLD);
   CommunicatorGrid complete_grid(world, grid_dims, GetParam());
 
-  EXPECT_EQ(complete_grid.size().row(), grid_dims[0]);
-  EXPECT_EQ(complete_grid.size().col(), grid_dims[1]);
+  EXPECT_EQ(complete_grid.size().rows(), grid_dims[0]);
+  EXPECT_EQ(complete_grid.size().cols(), grid_dims[1]);
 
   CommunicatorGrid::index2d_t coords;
   dlaf::common::computeCoords(GetParam(), world.rank(), grid_dims, coords);

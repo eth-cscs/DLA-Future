@@ -152,7 +152,8 @@ TEST_P(CommunicatorGridTest, ConstructorIncomplete) {
     EXPECT_NE(incomplete_grid.row(), MPI_COMM_NULL);
     EXPECT_NE(incomplete_grid.col(), MPI_COMM_NULL);
 
-    auto coords = dlaf::common::computeCoords(GetParam(), world.rank(), grid_dims);
+    CommunicatorGrid::index2d_t coords;
+    dlaf::common::computeCoords(GetParam(), world.rank(), grid_dims, coords);
 
     EXPECT_EQ(coords.row(), incomplete_grid.rank().row());
     EXPECT_EQ(coords.col(), incomplete_grid.rank().col());
@@ -195,7 +196,8 @@ TEST_P(CommunicatorGridTest, Rank) {
   EXPECT_EQ(complete_grid.size().row(), grid_dims[0]);
   EXPECT_EQ(complete_grid.size().col(), grid_dims[1]);
 
-  auto coords = computeCoords(GetParam(), world.rank(), grid_dims);
+  CommunicatorGrid::index2d_t coords;
+  dlaf::common::computeCoords(GetParam(), world.rank(), grid_dims, coords);
 
   EXPECT_EQ(coords.row(), complete_grid.rank().row());
   EXPECT_EQ(coords.col(), complete_grid.rank().col());

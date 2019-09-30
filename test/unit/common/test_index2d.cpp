@@ -14,7 +14,8 @@
 
 #include <gtest/gtest.h>
 
-using dlaf::common::Index2D;
+template <typename IndexType>
+using Index2D = dlaf::common::Index2D<IndexType, struct TAG_TEST>;
 
 template <typename IndexType>
 class Index2DTest : public ::testing::Test {};
@@ -53,18 +54,19 @@ TYPED_TEST(Index2DTest, ConstructorFromArray) {
 }
 
 TYPED_TEST(Index2DTest, Negative) {
-  auto index_tests = std::vector<std::pair<TypeParam, TypeParam>>{
-    std::make_pair(-10, -10), std::make_pair(-1, -1), std::make_pair(-15, 3), std::make_pair(8, -7)
-  };
+  auto index_tests =
+      std::vector<std::pair<TypeParam, TypeParam>>{std::make_pair(-10, -10), std::make_pair(-1, -1),
+                                                   std::make_pair(-15, 3), std::make_pair(8, -7)};
 
   for (auto& test : index_tests) {
     EXPECT_THROW(Index2D<TypeParam>(test.first, test.second), std::runtime_error);
-    EXPECT_THROW(Index2D<TypeParam>(std::array<TypeParam, 2>{test.first, test.second}), std::runtime_error);
+    EXPECT_THROW(Index2D<TypeParam>(std::array<TypeParam, 2>{test.first, test.second}),
+                 std::runtime_error);
   }
 }
 
 TYPED_TEST(Index2DTest, BoundaryCheck) {
-  Index2D<TypeParam> boundary(3, 6);
+  dlaf::common::Size2D<TypeParam, struct TAG_TEST> boundary(3, 6);
 
   EXPECT_TRUE(boundary.isValid());
 
@@ -78,6 +80,6 @@ TYPED_TEST(Index2DTest, BoundaryCheck) {
 
   for (auto& test : index_tests) {
     EXPECT_TRUE(test.first.isValid());
-    EXPECT_EQ(test.first < boundary, test.second);
+    EXPECT_EQ(test.first.isIn(boundary), test.second);
   }
 }

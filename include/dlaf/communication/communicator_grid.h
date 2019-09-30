@@ -30,13 +30,17 @@ namespace comm {
 ///
 /// CommunicatorGrid must be destroyed before calling MPI_Finalize, to allow it releasing resources.
 class CommunicatorGrid {
-public:
+  struct TAG_MPI;
   using index_t = int;
-  using index2d_t = common::Index2D<index_t>;
+
+public:
+  using index2d_t = common::Index2D<index_t, TAG_MPI>;
+  using size2d_t = common::Size2D<index_t, TAG_MPI>;
 
   /// @brief Create a communicator grid @p rows x @p cols with given @p ordering
   /// @param comm must be valid during construction
-  CommunicatorGrid(Communicator comm, index_t rows, index_t cols, common::Ordering ordering) noexcept(false);
+  CommunicatorGrid(Communicator comm, index_t rows, index_t cols,
+                   common::Ordering ordering) noexcept(false);
 
   /// @brief Create a communicator grid with dimensions specified by @p size and given @p ordering
   /// @param size with @p size[0] rows and @p size[1] columns
@@ -49,7 +53,7 @@ public:
   index2d_t rank() const noexcept;
 
   /// @brief Return the number of rows in the grid
-  index2d_t size() const noexcept;
+  size2d_t size() const noexcept;
 
   /// @brief Return a Communicator grouping all ranks in the row (that includes the current process)
   Communicator& row() noexcept;
@@ -62,7 +66,7 @@ protected:
   Communicator col_;
 
   index2d_t position_;
-  index2d_t grid_size_ = index2d_t(0, 0);
+  size2d_t grid_size_ = size2d_t(0, 0);
 };
 
 }

@@ -13,7 +13,8 @@
 namespace dlaf {
 namespace comm {
 
-CommunicatorGrid::CommunicatorGrid(Communicator comm, index_t nrows, index_t ncols, common::Ordering ordering) {
+CommunicatorGrid::CommunicatorGrid(Communicator comm, index_t nrows, index_t ncols,
+                                   common::Ordering ordering) {
   if (nrows * ncols > comm.size())
     throw std::invalid_argument("grid is bigger than available ranks in communicator");
 
@@ -24,7 +25,7 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, index_t nrows, index_t nco
   int key = comm.rank();
 
   if (is_in_grid) {
-    position_ = common::computeCoords<index_t>(ordering, comm.rank(), {nrows, ncols});
+    common::computeCoords(ordering, comm.rank(), {nrows, ncols}, position_);
     index_row = position_.row();
     index_col = position_.col();
   }
@@ -36,7 +37,7 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, index_t nrows, index_t nco
   if (!is_in_grid)
     return;
 
-  grid_size_ = index2d_t(nrows, ncols);
+  grid_size_ = {nrows, ncols};
 
   row_ = make_communicator_managed(mpi_row);
   col_ = make_communicator_managed(mpi_col);
@@ -50,7 +51,7 @@ CommunicatorGrid::index2d_t CommunicatorGrid::rank() const noexcept {
   return position_;
 }
 
-CommunicatorGrid::index2d_t CommunicatorGrid::size() const noexcept {
+CommunicatorGrid::size2d_t CommunicatorGrid::size() const noexcept {
   return grid_size_;
 }
 

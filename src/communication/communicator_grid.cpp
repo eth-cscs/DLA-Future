@@ -25,7 +25,7 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexType nrows, IndexType
   int key = comm.rank();
 
   if (is_in_grid) {
-    common::computeCoords(ordering, comm.rank(), {nrows, ncols}, position_);
+    position_ = common::computeCoords<Index2D>(ordering, comm.rank(), {nrows, ncols});
     index_row = position_.row();
     index_col = position_.col();
   }

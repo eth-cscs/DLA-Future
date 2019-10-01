@@ -18,17 +18,6 @@
 namespace dlaf {
 namespace common {
 
-// forward declarations
-namespace internal {
-template <typename IndexType, class Tag>
-struct basic_coords;
-}
-
-template <typename IndexType, class Tag>
-struct Size2D;
-template <typename IndexType, class Tag>
-struct Index2D;
-
 /// @brief Type specifying the leading dimension
 ///
 /// A RowMajor ordering means that the row is the first direction to look for the next value.
@@ -36,80 +25,83 @@ struct Index2D;
 enum class Ordering { RowMajor, ColumnMajor };
 
 namespace internal {
-template <typename IndexType, class Tag>
+template <typename IndexT>
 class basic_coords {
-  static_assert(std::is_integral<IndexType>::value && std::is_signed<IndexType>::value,
+public:
+  static_assert(std::is_integral<IndexT>::value && std::is_signed<IndexT>::value,
                 "basic_coords just works with signed integers types");
 
-  using index_t = IndexType;
-
-public:
-  /// Create an invalid position
-  basic_coords() noexcept;
-
   /// @brief Create a position with given coordinates
-  basic_coords(index_t row, index_t col) noexcept(false);
+  basic_coords(IndexT row, IndexT col) noexcept;
 
   /// @brief Create a position with given coordinates
   /// @param coords where coords[0] is the row index and coords[1] is the column index
-  basic_coords(const std::array<index_t, 2>& coords) noexcept(false);
+  basic_coords(const std::array<IndexT, 2>& coords) noexcept;
 
   /// @brief Check if it is a valid position (no upper bound check)
   /// @return true if row >= 0 and column >= 0
   bool isValid() const noexcept;
 
 protected:
-  index_t row_;
-  index_t col_;
+  IndexT row_;
+  IndexT col_;
 };
 }
 
-/// @brief A tagged 2D Size
-///
-/// The tag is used to avoid mixing elements tagged differently
+// forward declarations
 template <typename IndexType, class Tag>
-struct Size2D : public internal::basic_coords<IndexType, Tag> {
-  using internal::basic_coords<IndexType, Tag>::basic_coords;
+struct Size2D;
 
-  template <typename, class>
-  friend class Index2D;
+template <typename IndexT, class Tag>
+class Index2D : public internal::basic_coords<IndexT> {
+public:
+  using IndexType = IndexT;
 
-  IndexType rows() const noexcept {
-    return this->row_;
-  }
-
-  IndexType cols() const noexcept {
-    return this->col_;
-  }
-};
-
-/// @brief A tagged 2D index
-///
-/// The tag is used to avoid mixing elements tagged differently
-template <typename IndexType, class Tag>
-struct Index2D : public internal::basic_coords<IndexType, Tag> {
-  using internal::basic_coords<IndexType, Tag>::basic_coords;
+  /// Create an invalid position
+  Index2D() noexcept;
+  Index2D(IndexT row, IndexT col) noexcept(false);
+  Index2D(const std::array<IndexT, 2>& coords) noexcept(false);
 
   /// @brief Check if it is a valid position inside the grid size specified by @p boundary
   /// @return true if the current index is in the range [0, @p boundary) for both row and column
   /// @pre both this and @p boundary must be valid indexes
-  bool isIn(const Size2D<IndexType, Tag>& boundary) const noexcept;
+  bool isIn(const Size2D<IndexT, Tag>& boundary) const noexcept;
 
-  IndexType row() const noexcept {
-    return this->row_;
+  IndexT row() const noexcept {
+    return internal::basic_coords<IndexT>::row_;
   }
 
-  IndexType col() const noexcept {
-    return this->col_;
+  IndexT col() const noexcept {
+    return internal::basic_coords<IndexT>::col_;
+  }
+};
+
+/// @brief A tagged 2D Size
+///
+/// The tag is used to avoid mixing elements tagged differently
+template <typename IndexT, class Tag>
+class Size2D : public internal::basic_coords<IndexT> {
+  template <typename, class>
+  friend class Index2D;
+
+public:
+  using internal::basic_coords<IndexT>::basic_coords;
+
+  IndexT rows() const noexcept {
+    return internal::basic_coords<IndexT>::row_;
+  }
+
+  IndexT cols() const noexcept {
+    return internal::basic_coords<IndexT>::col_;
   }
 };
 
 /// Compute coords of the @p index -th cell in a grid with @p ordering and sizes @p dims
 /// @param dims with number of rows at @p dims[0] and number of columns at @p dims[1]
 /// @param index is the linear index of the cell with specified @p ordering
-template <typename index_t, typename linear_t, class Tag>
-void computeCoords(Ordering ordering, linear_t index, const std::array<index_t, 2>& dims,
-                   internal::basic_coords<index_t, Tag>& coords);
+template <class Index2DType, typename LinearIndexT>
+Index2DType computeCoords(Ordering ordering, LinearIndexT index,
+                          const std::array<typename Index2DType::IndexType, 2>& dims);
 
 }
 }

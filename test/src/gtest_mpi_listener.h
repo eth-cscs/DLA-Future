@@ -10,30 +10,37 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 #include <gtest/gtest.h>
 #include <mpi.h>
 
-class MPIListener : public ::testing::EmptyTestEventListener {
+class MPIListener : public ::testing::TestEventListener {
 public:
-  MPIListener(int argc, char** argv);
+  MPIListener(int argc, char** argv, ::testing::TestEventListener* other);
 
 protected:
   virtual void OnTestProgramStart(const ::testing::UnitTest& unit_test) override;
-  virtual void OnTestProgramEnd(const ::testing::UnitTest& unit_test) override;
-
+  virtual void OnTestIterationStart(const ::testing::UnitTest& unit_test, int iteration) override;
+  virtual void OnEnvironmentsSetUpStart(const ::testing::UnitTest& unit_test) override;
+  virtual void OnEnvironmentsSetUpEnd(const ::testing::UnitTest& unit_test) override;
+  virtual void OnTestCaseStart(const ::testing::TestCase& test_case) override;
   virtual void OnTestStart(const ::testing::TestInfo& test_info) override;
   virtual void OnTestPartResult(const ::testing::TestPartResult& test_part_result) override;
   virtual void OnTestEnd(const ::testing::TestInfo& test_info) override;
+  virtual void OnTestCaseEnd(const ::testing::TestCase& test_case) override {}
+  virtual void OnEnvironmentsTearDownStart(const ::testing::UnitTest& unit_test) override;
+  virtual void OnEnvironmentsTearDownEnd(const ::testing::UnitTest& unit_test) override;
+  virtual void OnTestIterationEnd(const ::testing::UnitTest& unit_test, int iteration) override {}
+  virtual void OnTestProgramEnd(const ::testing::UnitTest& unit_test) override;
 
 private:
-  bool isMainRank() const;
-
-  int argc_;
-  char** argv_;
+  bool isMasterRank() const;
+  void OnAllRanksTestEnd(const ::testing::TestInfo& test_info) const;
 
   int rank_;
   int world_size_;
 
-  std::string last_test_result_;
+  std::vector<std::string> last_test_part_results_;
+  std::unique_ptr<::testing::TestEventListener> listener_;
 };

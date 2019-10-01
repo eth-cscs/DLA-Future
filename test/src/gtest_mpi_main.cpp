@@ -48,11 +48,9 @@ GTEST_API_ int main(int argc, char* argv[]) {
   // Gets hold of the event listener list.
   ::testing::TestEventListeners& listeners = ::testing::UnitTest::GetInstance()->listeners();
 
-  // Delete the default one
-  delete listeners.Release(listeners.default_result_printer());
-
   // Adds MPIListener to the end. googletest takes the ownership.
-  listeners.Append(new MPIListener(argc, argv));
+  auto default_listener = listeners.Release(listeners.default_result_printer());
+  listeners.Append(new MPIListener(argc, argv, default_listener));
 
   int result = 0;
   result = RUN_ALL_TESTS();

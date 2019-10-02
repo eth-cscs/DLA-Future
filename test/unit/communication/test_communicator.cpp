@@ -23,11 +23,11 @@ void test_communication(const Communicator& comm) {
   if (comm.rank() == 0)
     buffer = 13;
 
-  MPI_CALL(MPI_Bcast(&buffer, 1, MPI_INT, 0, comm));
-  EXPECT_EQ(buffer, 13);
+  MPI_Bcast(&buffer, 1, MPI_INT, 0, comm);
+  EXPECT_EQ(13, buffer);
 
   int buffer_send = 1, buffer_recv;
-  MPI_CALL(MPI_Allreduce(&buffer_send, &buffer_recv, 1, MPI_INT, MPI_SUM, comm));
+  MPI_Allreduce(&buffer_send, &buffer_recv, 1, MPI_INT, MPI_SUM, comm);
   EXPECT_EQ(buffer_recv, comm.size());
 }
 
@@ -44,7 +44,7 @@ protected:
     }
 
     MPI_Comm odd_mpi_comm;
-    MPI_CALL(MPI_Comm_split(world, color, key, &odd_mpi_comm));
+    MPI_Comm_split(world, color, key, &odd_mpi_comm);
 
     if (rankInGroup()) {
       ASSERT_NE(MPI_COMM_NULL, odd_mpi_comm);
@@ -58,7 +58,7 @@ protected:
 
   void TearDown() noexcept(false) override {
     if (MPI_COMM_NULL != odd_comm)
-      MPI_CALL(MPI_Comm_free(&odd_comm));
+      MPI_Comm_free(&odd_comm);
   }
 
   bool rankInGroup() const {
@@ -76,35 +76,33 @@ TEST(Communicator, ConstructorDefault) {
 
   EXPECT_EQ(MPI_COMM_NULL, comm_null);
 
-  EXPECT_EQ(comm_null.size(), 0);
-  EXPECT_EQ(comm_null.rank(), MPI_UNDEFINED);
+  EXPECT_EQ(0, comm_null.size());
+  EXPECT_EQ(MPI_UNDEFINED, comm_null.rank());
 }
 
 TEST_F(CommunicatorTest, Rank) {
   if (rankInGroup()) {
     // check new communicator size consistency and correctness
-    EXPECT_LT(odd_comm.size(), NUM_MPI_RANKS);
-    EXPECT_EQ(odd_comm.size(), (NUM_MPI_RANKS + 1) / 2);
+    EXPECT_EQ(NUM_MPI_RANKS / 2, odd_comm.size());
 
     // check rank consistency
     EXPECT_LT(odd_comm.rank(), odd_comm.size());
     EXPECT_GE(odd_comm.rank(), 0);
 
     // check rank correctness
-    EXPECT_NE(odd_comm.rank(), world.rank());
-    EXPECT_EQ(odd_comm.rank(), world.rank() / 2);
+    EXPECT_EQ(world.rank() / 2, odd_comm.rank());
   }
   else {
     // check that new communicator is not valid
     EXPECT_EQ(MPI_COMM_NULL, odd_comm);
 
     // check rank correctness
-    EXPECT_EQ(odd_comm.rank(), MPI_UNDEFINED);
-    EXPECT_EQ(odd_comm.size(), 0);
+    EXPECT_EQ(MPI_UNDEFINED, odd_comm.rank());
+    EXPECT_EQ(0, odd_comm.size());
   }
 
   // check that in the world nothing is changed
-  EXPECT_EQ(world.size(), NUM_MPI_RANKS);
+  EXPECT_EQ(NUM_MPI_RANKS, world.size());
   EXPECT_LT(world.rank(), world.size());
   EXPECT_GE(world.rank(), 0);
 
@@ -136,15 +134,15 @@ TEST_F(CommunicatorTest, Copy) {
       EXPECT_EQ(MPI_COMM_NULL, odd_comm);
 
       // check rank correctness
-      EXPECT_EQ(copy.rank(), MPI_UNDEFINED);
-      EXPECT_EQ(copy.size(), 0);
+      EXPECT_EQ(MPI_UNDEFINED, copy.rank());
+      EXPECT_EQ(0, copy.size());
     }
 
     test_communication(copy);
   }
 
   // check that in the world nothing is changed
-  EXPECT_EQ(world.size(), NUM_MPI_RANKS);
+  EXPECT_EQ(NUM_MPI_RANKS, world.size());
   EXPECT_LT(world.rank(), world.size());
   EXPECT_GE(world.rank(), 0);
 

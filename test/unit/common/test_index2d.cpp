@@ -80,6 +80,6 @@ TYPED_TEST(Index2DTest, BoundaryCheck) {
 
   for (auto& test : index_tests) {
     EXPECT_TRUE(test.first.isValid());
-    EXPECT_EQ(test.first.isIn(boundary), test.second);
+    EXPECT_EQ(test.second, test.first.isIn(boundary));
   }
 }

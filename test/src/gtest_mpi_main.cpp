@@ -40,17 +40,20 @@
 #include <gtest/gtest.h>
 #include <mpi.h>
 
-GTEST_API_ int main(int argc, char* argv[]) {
-  std::printf("Running main() from gtest_mpi_main.cpp\n");
+#include "gtest_mpi_listener.h"
 
+GTEST_API_ int main(int argc, char* argv[]) {
   ::testing::InitGoogleTest(&argc, argv);
 
-  MPI_Init(&argc, &argv);
+  // Gets hold of the event listener list.
+  ::testing::TestEventListeners& listeners = ::testing::UnitTest::GetInstance()->listeners();
+
+  // Adds MPIListener to the end. googletest takes the ownership.
+  auto default_listener = listeners.Release(listeners.default_result_printer());
+  listeners.Append(new MPIListener(argc, argv, default_listener));
 
   int result = 0;
   result = RUN_ALL_TESTS();
-
-  MPI_Finalize();
 
   return result;
 }

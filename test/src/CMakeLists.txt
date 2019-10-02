@@ -17,7 +17,7 @@ target_link_libraries(DLAF_gtest_hpx_main
     ${HPX_LIBRARIES}
 )
 
-add_library(DLAF_gtest_mpi_main STATIC gtest_mpi_main.cpp)
+add_library(DLAF_gtest_mpi_main STATIC gtest_mpi_main.cpp gtest_mpi_listener.cpp)
 target_link_libraries(DLAF_gtest_mpi_main
   PUBLIC
     gtest

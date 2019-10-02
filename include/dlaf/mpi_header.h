@@ -10,13 +10,13 @@
 
 #pragma once
 
-#include <mpi.h>
-
 #include <iostream>
 
-#define MPI_CALL(x)                                                \
-  {                                                                \
-    auto _ = x;                                                    \
-    if (MPI_SUCCESS != _)                                          \
-      std::cerr << "MPI ERROR [" << _ << "]: " << #x << std::endl; \
+#include <mpi.h>
+
+#define MPI_CALL(x)                                                             \
+  {                                                                             \
+    auto error_code = x;                                                        \
+    if (MPI_SUCCESS != error_code)                                              \
+      std::cerr << "MPI error at " << __FILE__ << ":" << __LINE__ << std::endl; \
   }

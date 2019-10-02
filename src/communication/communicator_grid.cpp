@@ -55,11 +55,11 @@ CommunicatorGrid::Size2D CommunicatorGrid::size() const noexcept {
   return grid_size_;
 }
 
-Communicator& CommunicatorGrid::row() noexcept {
+Communicator& CommunicatorGrid::rowCommunicator() noexcept {
   return row_;
 }
 
-Communicator& CommunicatorGrid::col() noexcept {
+Communicator& CommunicatorGrid::colCommunicator() noexcept {
   return col_;
 }
 

@@ -56,10 +56,10 @@ public:
   Size2D size() const noexcept;
 
   /// @brief Return a Communicator grouping all ranks in the row (that includes the current process)
-  Communicator& row() noexcept;
+  Communicator& rowCommunicator() noexcept;
 
   /// @brief Return a Communicator grouping all ranks in the column (that includes the current process)
-  Communicator& col() noexcept;
+  Communicator& colCommunicator() noexcept;
 
 protected:
   Communicator row_;

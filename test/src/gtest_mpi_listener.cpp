@@ -94,9 +94,7 @@ void MPIListener::OnTestEnd(const ::testing::TestInfo& test_info) {
     }
   }
 
-  makeMasterFailIfAnyoneFailed(test_info);
-
-  MASTER_CALLS_DEFAULT_LISTENER(OnTestEnd, test_info);
+  OnTestEndAllRanks(test_info);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -117,7 +115,7 @@ bool MPIListener::isMasterRank() const {
   return rank_ == 0;
 }
 
-void MPIListener::makeMasterFailIfAnyoneFailed(const ::testing::TestInfo& test_info) const {
+void MPIListener::OnTestEndAllRanks(const ::testing::TestInfo& test_info) const {
   bool is_local_passed = test_info.result()->Passed();
 
   bool all_tests_passed[world_size_];
@@ -134,10 +132,12 @@ void MPIListener::makeMasterFailIfAnyoneFailed(const ::testing::TestInfo& test_i
   // and they have been already printed, it won't generate output in any case
   EXPECT_EQ(0, how_many_ranks_failed);
 
+  MASTER_CALLS_DEFAULT_LISTENER(OnTestEnd, test_info);
+
   if (how_many_ranks_failed == 0)
     return;
 
-  printf("[  FAILED  ] %ld of %d ranks failed\n", how_many_ranks_failed, world_size_);
+  printf("[  INFO    ] %ld of %d ranks failed\n", how_many_ranks_failed, world_size_);
   fflush(stdout);
 }
 

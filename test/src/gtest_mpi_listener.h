@@ -36,7 +36,7 @@ protected:
 
 private:
   bool isMasterRank() const;
-  void makeMasterFailIfAnyoneFailed(const ::testing::TestInfo& test_info) const;
+  void OnTestEndAllRanks(const ::testing::TestInfo& test_info) const;
 
   int rank_;
   int world_size_;

@@ -99,12 +99,20 @@ void MPIListener::OnTestEnd(const ::testing::TestInfo& test_info) {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
+void MPIListener::OnTestCaseEnd(const ::testing::TestCase& test_case) {
+  MASTER_CALLS_DEFAULT_LISTENER(OnTestCaseEnd, test_case);
+}
+
 void MPIListener::OnEnvironmentsTearDownStart(const ::testing::UnitTest& unit_test) {
   MASTER_CALLS_DEFAULT_LISTENER(OnEnvironmentsTearDownStart, unit_test);
 }
 
 void MPIListener::OnEnvironmentsTearDownEnd(const ::testing::UnitTest& unit_test) {
   MASTER_CALLS_DEFAULT_LISTENER(OnEnvironmentsTearDownEnd, unit_test);
+}
+
+void MPIListener::OnTestIterationEnd(const ::testing::UnitTest& unit_test, int iteration) {
+  MASTER_CALLS_DEFAULT_LISTENER(OnTestIterationEnd, unit_test, iteration);
 }
 
 void MPIListener::OnTestProgramEnd(const ::testing::UnitTest& unit_test) {

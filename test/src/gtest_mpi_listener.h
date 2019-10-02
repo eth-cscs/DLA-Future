@@ -28,10 +28,10 @@ protected:
   virtual void OnTestStart(const ::testing::TestInfo& test_info) override;
   virtual void OnTestPartResult(const ::testing::TestPartResult& test_part_result) override;
   virtual void OnTestEnd(const ::testing::TestInfo& test_info) override;
-  virtual void OnTestCaseEnd(const ::testing::TestCase& test_case) override {}
+  virtual void OnTestCaseEnd(const ::testing::TestCase& test_case) override;
   virtual void OnEnvironmentsTearDownStart(const ::testing::UnitTest& unit_test) override;
   virtual void OnEnvironmentsTearDownEnd(const ::testing::UnitTest& unit_test) override;
-  virtual void OnTestIterationEnd(const ::testing::UnitTest& unit_test, int iteration) override {}
+  virtual void OnTestIterationEnd(const ::testing::UnitTest& unit_test, int iteration) override;
   virtual void OnTestProgramEnd(const ::testing::UnitTest& unit_test) override;
 
 private:

@@ -93,7 +93,9 @@ void MPIListener::OnTestEnd(const ::testing::TestInfo& test_info) {
     }
   }
 
-  OnAllRanksTestEnd(test_info);
+  makeMasterFailIfAnyoneFailed(test_info);
+
+  MASTER_CALLS_DEFAULT_LISTENER(OnTestEnd, test_info);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -114,7 +116,7 @@ bool MPIListener::isMasterRank() const {
   return rank_ == 0;
 }
 
-void MPIListener::OnAllRanksTestEnd(const ::testing::TestInfo& test_info) const {
+void MPIListener::makeMasterFailIfAnyoneFailed(const ::testing::TestInfo& test_info) const {
   bool is_local_passed = test_info.result()->Passed();
 
   bool all_tests_passed[world_size_];
@@ -127,13 +129,10 @@ void MPIListener::OnAllRanksTestEnd(const ::testing::TestInfo& test_info) const 
   auto all_passed =
       std::all_of(all_tests_passed, all_tests_passed + world_size_, [](bool result) { return result; });
 
-  if (all_passed)
-    printf("[       OK ] ");
-  else
-    printf("[  FAILED  ] ");
-
-  printf("%s.%s\n", test_info.test_case_name(), test_info.name());
-  fflush(stdout);
+  // exploit this to make the master rank fail if any rank failed
+  // as a side-effect it calls OnTestPartResult, but since it just collects error messages,
+  // and they have been already printed, it won't generate output in any case
+  EXPECT_TRUE(all_passed);
 }
 
 namespace internal {

@@ -43,25 +43,5 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexType nrows, IndexType
   col_ = make_communicator_managed(mpi_col);
 }
 
-CommunicatorGrid::CommunicatorGrid(Communicator comm, const std::array<IndexType, 2>& size,
-                                   common::Ordering ordering)
-    : CommunicatorGrid(comm, size[0], size[1], ordering) {}
-
-CommunicatorGrid::Index2D CommunicatorGrid::rank() const noexcept {
-  return position_;
-}
-
-CommunicatorGrid::Size2D CommunicatorGrid::size() const noexcept {
-  return grid_size_;
-}
-
-Communicator& CommunicatorGrid::rowCommunicator() noexcept {
-  return row_;
-}
-
-Communicator& CommunicatorGrid::colCommunicator() noexcept {
-  return col_;
-}
-
 }
 }

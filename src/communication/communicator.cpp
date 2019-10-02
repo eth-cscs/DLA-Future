@@ -46,9 +46,5 @@ int Communicator::size() const noexcept {
   return comm_ref_->size_;
 }
 
-Communicator make_communicator_managed(MPI_Comm mpi_communicator) {
-  return Communicator(mpi_communicator, Communicator::managed{});
-}
-
 }
 }

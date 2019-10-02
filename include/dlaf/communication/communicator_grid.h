@@ -44,20 +44,29 @@ public:
   /// @brief Create a communicator grid with dimensions specified by @p size and given @p ordering
   /// @param size with @p size[0] rows and @p size[1] columns
   /// @param comm must be valid during construction
-  CommunicatorGrid(Communicator comm, const std::array<IndexType, 2>& size, common::Ordering ordering);
+  CommunicatorGrid(Communicator comm, const std::array<IndexType, 2>& size, common::Ordering ordering)
+      : CommunicatorGrid(comm, size[0], size[1], ordering) {}
 
   /// @brief Return the rank of the current process in the CommunicatorGrid
   /// @return a common::Index2D representing the position in the grid
-  Index2D rank() const noexcept;
+  Index2D rank() const noexcept {
+    return position_;
+  }
 
   /// @brief Return the number of rows in the grid
-  Size2D size() const noexcept;
+  Size2D size() const noexcept {
+    return grid_size_;
+  }
 
   /// @brief Return a Communicator grouping all ranks in the row (that includes the current process)
-  Communicator& rowCommunicator() noexcept;
+  Communicator& rowCommunicator() noexcept {
+    return row_;
+  }
 
   /// @brief Return a Communicator grouping all ranks in the column (that includes the current process)
-  Communicator& colCommunicator() noexcept;
+  Communicator& colCommunicator() noexcept {
+    return col_;
+  }
 
 protected:
   Communicator row_;

@@ -76,7 +76,9 @@ private:
 };
 
 /// Wrap an MPI_Comm into a Communicator that takes the ownership
-Communicator make_communicator_managed(MPI_Comm communicator);
+inline Communicator make_communicator_managed(MPI_Comm mpi_communicator) {
+  return Communicator(mpi_communicator, Communicator::managed{});
+}
 
 }
 }

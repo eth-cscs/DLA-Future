@@ -126,13 +126,18 @@ void MPIListener::makeMasterFailIfAnyoneFailed(const ::testing::TestInfo& test_i
   if (!isMasterRank())
     return;
 
-  auto all_passed =
-      std::all_of(all_tests_passed, all_tests_passed + world_size_, [](bool result) { return result; });
+  auto how_many_ranks_failed = std::count(all_tests_passed, all_tests_passed + world_size_, false);
 
   // exploit this to make the master rank fail if any rank failed
   // as a side-effect it calls OnTestPartResult, but since it just collects error messages,
   // and they have been already printed, it won't generate output in any case
-  EXPECT_TRUE(all_passed);
+  EXPECT_EQ(0, how_many_ranks_failed);
+
+  if (how_many_ranks_failed == 0)
+    return;
+
+  printf("[  FAILED  ] %ld of %d ranks failed\n", how_many_ranks_failed, world_size_);
+  fflush(stdout);
 }
 
 namespace internal {

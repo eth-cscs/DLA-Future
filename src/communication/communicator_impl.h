@@ -20,7 +20,7 @@ class CommunicatorImpl {
 public:
   /// Create a wrapper for the given MPI_Comm
   /// @pre mpi_communicator != MPI_COMM_NULL
-  CommunicatorImpl(MPI_Comm mpi_communicator) noexcept(false);
+  CommunicatorImpl(MPI_Comm mpi_communicator);
 
   /// It does nothing, it is just needed for extending destruction behavior with inheritance
   virtual ~CommunicatorImpl() = default;
@@ -41,7 +41,7 @@ protected:
 class CommunicatorImpl_Managed : public CommunicatorImpl {
 public:
   /// @pre @p mpi_communicator must be a manageable communicator (see dlaf::comm::is_manageable())
-  CommunicatorImpl_Managed(MPI_Comm mpi_communicator) noexcept(false);
+  CommunicatorImpl_Managed(MPI_Comm mpi_communicator);
 
   /// It calls MPI_Comm_free (for additional info, see MPI documentation)
   ~CommunicatorImpl_Managed();

@@ -36,14 +36,14 @@ class Communicator {
 
 public:
   /// @brief Create a NULL Communicator (i.e. MPI_COMM_NULL)
-  Communicator() noexcept(false);
+  Communicator();
 
   /// @brief Wrap an MPI_Comm into a Communicator
   ///
   /// User keeps the ownership of the MPI_Comm, but this object has the usage exclusiveness.
   /// The user has to grant this, otherwise it leads to UB.
   /// @param mpi_communicator MPI_Comm to wrap.
-  Communicator(MPI_Comm mpi_communicator) noexcept(false);
+  Communicator(MPI_Comm mpi_communicator);
 
   /// @brief Return the internal MPI_Comm handler
   ///
@@ -70,13 +70,13 @@ private:
   /// This object takes the ownership of the MPI_Comm.
   /// @param mpi_communicator MPI_Comm to wrap.
   /// @param managed tag (anonymous parameter)
-  Communicator(MPI_Comm mpi_communicator, managed) noexcept(false);
+  Communicator(MPI_Comm mpi_communicator, managed);
 
   std::shared_ptr<CommunicatorImpl> comm_ref_;
 };
 
 /// Wrap an MPI_Comm into a Communicator that takes the ownership
-Communicator make_communicator_managed(MPI_Comm communicator) noexcept(false);
+Communicator make_communicator_managed(MPI_Comm communicator);
 
 }
 }

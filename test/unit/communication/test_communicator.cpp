@@ -35,7 +35,7 @@ class CommunicatorTest : public ::testing::Test {
 protected:
   ~CommunicatorTest() noexcept {};
 
-  void SetUp() noexcept(false) override {
+  void SetUp() override {
     world = Communicator(MPI_COMM_WORLD);
 
     if (rankInGroup()) {
@@ -56,7 +56,7 @@ protected:
     }
   }
 
-  void TearDown() noexcept(false) override {
+  void TearDown() override {
     if (MPI_COMM_NULL != odd_comm)
       MPI_Comm_free(&odd_comm);
   }

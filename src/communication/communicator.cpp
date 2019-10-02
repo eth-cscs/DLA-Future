@@ -23,7 +23,7 @@ Communicator::Communicator() : comm_ref_(new CommunicatorImpl()) {}
 Communicator::Communicator(MPI_Comm mpi_communicator)
     : comm_ref_(new CommunicatorImpl(mpi_communicator)) {}
 
-Communicator::Communicator(MPI_Comm mpi_communicator, managed) noexcept(false)
+Communicator::Communicator(MPI_Comm mpi_communicator, managed)
     : comm_ref_(new CommunicatorImpl_Managed(mpi_communicator)) {}
 
 Communicator::operator MPI_Comm() const noexcept {
@@ -46,7 +46,7 @@ int Communicator::size() const noexcept {
   return comm_ref_->size_;
 }
 
-Communicator make_communicator_managed(MPI_Comm mpi_communicator) noexcept(false) {
+Communicator make_communicator_managed(MPI_Comm mpi_communicator) {
   return Communicator(mpi_communicator, Communicator::managed{});
 }
 

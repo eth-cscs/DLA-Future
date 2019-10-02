@@ -59,8 +59,8 @@ public:
 
   /// Create an invalid position
   Index2D() noexcept;
-  Index2D(IndexT row, IndexT col) noexcept(false);
-  Index2D(const std::array<IndexT, 2>& coords) noexcept(false);
+  Index2D(IndexT row, IndexT col);
+  Index2D(const std::array<IndexT, 2>& coords);
 
   /// @brief Check if it is a valid position inside the grid size specified by @p boundary
   /// @return true if the current index is in the range [0, @p boundary) for both row and column

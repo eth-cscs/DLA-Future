@@ -10,15 +10,15 @@ namespace comm {
 
 constexpr bool is_manageable(MPI_Comm mpi_communicator) noexcept {
   switch (mpi_communicator) {
-    case mpi::WORLD_COMMUNICATOR:
-    case mpi::NULL_COMMUNICATOR:
+    case MPI_COMM_WORLD:
+    case MPI_COMM_NULL:
       return false;
   }
   return true;
 }
 
 CommunicatorImpl::CommunicatorImpl(MPI_Comm mpi_communicator) : comm_(mpi_communicator) {
-  assert(comm_ != mpi::NULL_COMMUNICATOR);
+  assert(comm_ != MPI_COMM_NULL);
   MPI_CALL(MPI_Comm_size(comm_, &size_));
   MPI_CALL(MPI_Comm_rank(comm_, &rank_));
 }

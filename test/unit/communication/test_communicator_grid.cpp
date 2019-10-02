@@ -22,7 +22,7 @@ using namespace dlaf::comm;
 auto valid_orderings = ::testing::Values(Ordering::RowMajor, Ordering::ColumnMajor);
 
 void test_grid_communication(CommunicatorGrid& grid) {
-  if (mpi::NULL_COMMUNICATOR == grid.row() || mpi::NULL_COMMUNICATOR == grid.col())
+  if (MPI_COMM_NULL == grid.row() || MPI_COMM_NULL == grid.col())
     return;
 
   int buffer;
@@ -76,11 +76,11 @@ TEST_P(CommunicatorGridTest, Copy) {
     int result;
     MPI_CALL(MPI_Comm_compare(copy.row(), grid.row(), &result));
     EXPECT_EQ(MPI_IDENT, result);
-    EXPECT_NE(mpi::NULL_COMMUNICATOR, copy.row());
+    EXPECT_NE(MPI_COMM_NULL, copy.row());
 
     MPI_CALL(MPI_Comm_compare(copy.col(), grid.col(), &result));
     EXPECT_EQ(MPI_IDENT, result);
-    EXPECT_NE(mpi::NULL_COMMUNICATOR, copy.col());
+    EXPECT_NE(MPI_COMM_NULL, copy.col());
 
     test_grid_communication(copy);
   }
@@ -89,8 +89,8 @@ TEST_P(CommunicatorGridTest, Copy) {
   EXPECT_EQ(grid.size().rows(), nrows);
   EXPECT_EQ(grid.size().cols(), ncols);
 
-  EXPECT_NE(mpi::NULL_COMMUNICATOR, grid.row());
-  EXPECT_NE(mpi::NULL_COMMUNICATOR, grid.col());
+  EXPECT_NE(MPI_COMM_NULL, grid.row());
+  EXPECT_NE(MPI_COMM_NULL, grid.col());
 
   test_grid_communication(grid);
 }

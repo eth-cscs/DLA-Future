@@ -32,7 +32,7 @@ protected:
   /// It creates a wrapper for a NULL communicator
   CommunicatorImpl() noexcept = default;
 
-  MPI_Comm comm_ = mpi::NULL_COMMUNICATOR;
+  MPI_Comm comm_ = MPI_COMM_NULL;
   int size_ = 0;
   int rank_ = MPI_UNDEFINED;
 };

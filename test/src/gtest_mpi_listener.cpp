@@ -49,6 +49,7 @@ void MPIListener::OnTestCaseStart(const ::testing::TestCase& test_case) {
 
 void MPIListener::OnTestStart(const ::testing::TestInfo& test_info) {
   MASTER_CALLS_DEFAULT_LISTENER(OnTestStart, test_info);
+  last_test_part_results_.clear();
 }
 
 void MPIListener::OnTestPartResult(const ::testing::TestPartResult& test_part_result) {

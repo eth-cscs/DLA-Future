@@ -29,15 +29,13 @@ template <typename IndexT, class Tag>
 Index2D<IndexT, Tag>::Index2D() noexcept : internal::basic_coords<IndexT>(-1, -1) {}
 
 template <typename IndexT, class Tag>
-Index2D<IndexT, Tag>::Index2D(IndexT row, IndexT col)
-    : internal::basic_coords<IndexT>(row, col) {
+Index2D<IndexT, Tag>::Index2D(IndexT row, IndexT col) : internal::basic_coords<IndexT>(row, col) {
   if (!internal::basic_coords<IndexT>::isValid())
     throw std::runtime_error("passed not valid negative indexes");
 }
 
 template <typename IndexT, class Tag>
-Index2D<IndexT, Tag>::Index2D(const std::array<IndexT, 2>& coords)
-    : Index2D(coords[0], coords[1]) {}
+Index2D<IndexT, Tag>::Index2D(const std::array<IndexT, 2>& coords) : Index2D(coords[0], coords[1]) {}
 
 template <typename IndexT, class Tag>
 bool Index2D<IndexT, Tag>::isIn(const Size2D<IndexT, Tag>& boundary) const noexcept {

@@ -39,14 +39,12 @@ public:
 
   /// @brief Create a communicator grid @p rows x @p cols with given @p ordering
   /// @param comm must be valid during construction
-  CommunicatorGrid(Communicator comm, IndexType rows, IndexType cols,
-                   common::Ordering ordering);
+  CommunicatorGrid(Communicator comm, IndexType rows, IndexType cols, common::Ordering ordering);
 
   /// @brief Create a communicator grid with dimensions specified by @p size and given @p ordering
   /// @param size with @p size[0] rows and @p size[1] columns
   /// @param comm must be valid during construction
-  CommunicatorGrid(Communicator comm, const std::array<IndexType, 2>& size,
-                   common::Ordering ordering);
+  CommunicatorGrid(Communicator comm, const std::array<IndexType, 2>& size, common::Ordering ordering);
 
   /// @brief Return the rank of the current process in the CommunicatorGrid
   /// @return a common::Index2D representing the position in the grid

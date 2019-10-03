@@ -9,8 +9,10 @@
 #
 
 DLAF_addTest(test_util_math SOURCES test_util_math.cpp USE_MAIN PLAIN)
+DLAF_addTest(test_matrix_base SOURCES test_matrix_base.cpp USE_MAIN PLAIN)
+
 DLAF_addTest(test_tile SOURCES test_tile.cpp USE_MAIN HPX)
 
-add_subdirectory(common)
-add_subdirectory(memory)
 add_subdirectory(communication)
+add_subdirectory(matrix)
+add_subdirectory(memory)

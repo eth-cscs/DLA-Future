@@ -62,8 +62,19 @@ TYPED_TEST(MathUtilTest, CeilDivType) {
 TYPED_TEST(MathUtilTest, SizeTArithmetic_Sum) {
   using Type = TypeParam;
 
-  Type a = std::numeric_limits<Type>::max();
-  Type b = std::numeric_limits<Type>::max();
+  constexpr auto type_size = sizeof(Type);
+  constexpr auto arithmetic_size = sizeof(std::size_t);
+
+  Type a, b;
+
+  if (type_size < arithmetic_size) {
+    a = std::numeric_limits<Type>::max();
+    b = std::numeric_limits<Type>::max();
+  }
+  else {
+    a = std::numeric_limits<std::size_t>::max() / 2;
+    b = std::numeric_limits<std::size_t>::max() / 2;
+  }
 
   auto expected_result = static_cast<size_t>(a) + static_cast<size_t>(b);
 
@@ -73,8 +84,19 @@ TYPED_TEST(MathUtilTest, SizeTArithmetic_Sum) {
 TYPED_TEST(MathUtilTest, SizeTArithmetic_Mul) {
   using Type = TypeParam;
 
-  Type a = std::numeric_limits<Type>::max();
-  Type b = 2;
+  constexpr auto type_size = sizeof(Type);
+  constexpr auto arithmetic_size = sizeof(std::size_t);
+
+  Type a, b;
+
+  if (type_size < arithmetic_size) {
+    a = std::numeric_limits<Type>::max();
+    b = std::numeric_limits<Type>::max();
+  }
+  else {
+    a = std::numeric_limits<std::size_t>::max() / 2;
+    b = 2;
+  }
 
   auto expected_result = static_cast<size_t>(a) * static_cast<size_t>(b);
 
@@ -84,11 +106,25 @@ TYPED_TEST(MathUtilTest, SizeTArithmetic_Mul) {
 TYPED_TEST(MathUtilTest, SizeTArithmetic_SumMul) {
   using Type = TypeParam;
 
-  Type a = std::numeric_limits<Type>::max() / 2;
+  constexpr auto type_size = sizeof(Type);
+  constexpr auto arithmetic_size = sizeof(std::size_t);
+
   Type b = 2;
-  Type c = std::numeric_limits<Type>::max();
+  Type a, c;
+
+  if (type_size < arithmetic_size) {
+    a = std::numeric_limits<Type>::max() / 2;
+    c = std::numeric_limits<Type>::max();
+  }
+  else {
+    a = std::numeric_limits<std::size_t>::max() / 4;
+    c = std::numeric_limits<std::size_t>::max() / 2;
+  }
 
   auto expected_result = static_cast<size_t>(a) * static_cast<size_t>(b) + static_cast<size_t>(c);
 
-  EXPECT_EQ(expected_result, util::size_t::sum(util::size_t::mul(a, b), c));
+  using util::size_t::sum;
+  using util::size_t::mul;
+
+  EXPECT_EQ(expected_result, sum(mul(a, b), c));
 }

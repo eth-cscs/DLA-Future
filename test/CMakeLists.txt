@@ -8,10 +8,16 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-add_library(DLAF_test INTERFACE)
+add_library(DLAF_test src/util_mpi.cpp)
+
 target_include_directories(DLAF_test
-    INTERFACE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+)
+
+target_link_libraries(DLAF_test
+  PRIVATE
+    MPI::MPI_CXX
 )
 
 add_subdirectory(src)

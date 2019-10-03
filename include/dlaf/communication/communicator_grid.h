@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+/// @file
+
 #pragma once
 
 #include <array>
@@ -17,6 +19,17 @@
 
 namespace dlaf {
 namespace comm {
+
+/// TAG for strong-typing basic_coords
+struct TAG_MPI;
+
+/// Type used for indexes in MPI API
+using IndexT_MPI = int;
+
+/// 2D index strong-typed for MPI
+using Index2D = common::Index2D<IndexT_MPI, TAG_MPI>;
+/// 2D size strong-typed for MPI
+using Size2D = common::Size2D<IndexT_MPI, TAG_MPI>;
 
 /// @brief Create a communicator with a 2D Grid structure
 ///
@@ -30,25 +43,19 @@ namespace comm {
 ///
 /// CommunicatorGrid must be destroyed before calling MPI_Finalize, to allow it releasing resources.
 class CommunicatorGrid {
-  struct TAG_MPI;
-  using IndexType = int;
-
 public:
-  using Index2D = common::Index2D<IndexType, TAG_MPI>;
-  using Size2D = common::Size2D<IndexType, TAG_MPI>;
-
   /// @brief Create a communicator grid @p rows x @p cols with given @p ordering
   /// @param comm must be valid during construction
-  CommunicatorGrid(Communicator comm, IndexType rows, IndexType cols, common::Ordering ordering);
+  CommunicatorGrid(Communicator comm, IndexT_MPI rows, IndexT_MPI cols, common::Ordering ordering);
 
   /// @brief Create a communicator grid with dimensions specified by @p size and given @p ordering
   /// @param size with @p size[0] rows and @p size[1] columns
   /// @param comm must be valid during construction
-  CommunicatorGrid(Communicator comm, const std::array<IndexType, 2>& size, common::Ordering ordering)
+  CommunicatorGrid(Communicator comm, const std::array<IndexT_MPI, 2>& size, common::Ordering ordering)
       : CommunicatorGrid(comm, size[0], size[1], ordering) {}
 
   /// @brief Return the rank of the current process in the CommunicatorGrid
-  /// @return a common::Index2D representing the position in the grid
+  /// @return the 2D coordinate representing the position in the grid
   Index2D rank() const noexcept {
     return position_;
   }

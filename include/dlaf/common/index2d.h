@@ -74,7 +74,6 @@ public:
 };
 
 /// A strong-type for 2D coordinates
-/// Coordinates
 /// @tparam IndexT type for row and column coordinates
 /// @tparam Tag for strong-typing
 template <typename IndexT, class Tag>

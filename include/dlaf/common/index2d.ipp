@@ -31,7 +31,7 @@ Index2D<IndexT, Tag>::Index2D() noexcept : internal::basic_coords<IndexT>(-1, -1
 template <typename IndexT, class Tag>
 Index2D<IndexT, Tag>::Index2D(IndexT row, IndexT col) : internal::basic_coords<IndexT>(row, col) {
   if (!internal::basic_coords<IndexT>::isValid())
-    throw std::runtime_error("passed not valid negative indexes");
+    throw std::invalid_argument("indices are not valid (negative).");
 }
 
 template <typename IndexT, class Tag>
@@ -58,7 +58,7 @@ Index2DType computeCoords(Ordering ordering, LinearIndexT index,
       return {static_cast<IndexT>(index % leading_size), static_cast<IndexT>(index / leading_size)};
   }
 
-  throw std::runtime_error("leading dimension specified is not valid");
+  throw std::invalid_argument("Ordering specified is not valid.");
 }
 
 }

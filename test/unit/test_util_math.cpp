@@ -58,3 +58,37 @@ TYPED_TEST(MathUtilTest, CeilDivType) {
   EXPECT_EQ(res, util::ceilDiv(num, den));
   EXPECT_TRUE((std::is_same<Type, decltype(util::ceilDiv(num, den))>()));
 }
+
+TYPED_TEST(MathUtilTest, SizeTArithmetic_Sum) {
+  using Type = TypeParam;
+
+  Type a = std::numeric_limits<Type>::max();
+  Type b = std::numeric_limits<Type>::max();
+
+  auto expected_result = static_cast<size_t>(a) + static_cast<size_t>(b);
+
+  EXPECT_EQ(expected_result, util::size_t::sum(a, b));
+}
+
+TYPED_TEST(MathUtilTest, SizeTArithmetic_Mul) {
+  using Type = TypeParam;
+
+  Type a = std::numeric_limits<Type>::max();
+  Type b = 2;
+
+  auto expected_result = static_cast<size_t>(a) * static_cast<size_t>(b);
+
+  EXPECT_EQ(expected_result, util::size_t::mul(a, b));
+}
+
+TYPED_TEST(MathUtilTest, SizeTArithmetic_SumMul) {
+  using Type = TypeParam;
+
+  Type a = std::numeric_limits<Type>::max() / 2;
+  Type b = 2;
+  Type c = std::numeric_limits<Type>::max();
+
+  auto expected_result = static_cast<size_t>(a) * static_cast<size_t>(b) + static_cast<size_t>(c);
+
+  EXPECT_EQ(expected_result, util::size_t::sum(util::size_t::mul(a, b), c));
+}

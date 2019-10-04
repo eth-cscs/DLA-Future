@@ -58,3 +58,73 @@ TYPED_TEST(MathUtilTest, CeilDivType) {
   EXPECT_EQ(res, util::ceilDiv(num, den));
   EXPECT_TRUE((std::is_same<Type, decltype(util::ceilDiv(num, den))>()));
 }
+
+TYPED_TEST(MathUtilTest, SizeTArithmetic_Sum) {
+  using Type = TypeParam;
+
+  constexpr auto type_size = sizeof(Type);
+  constexpr auto arithmetic_size = sizeof(std::size_t);
+
+  Type a, b;
+
+  if (type_size < arithmetic_size) {
+    a = std::numeric_limits<Type>::max();
+    b = std::numeric_limits<Type>::max();
+  }
+  else {
+    a = static_cast<Type>(std::numeric_limits<std::size_t>::max() / 2);
+    b = static_cast<Type>(std::numeric_limits<std::size_t>::max() / 2);
+  }
+
+  auto expected_result = static_cast<size_t>(a) + static_cast<size_t>(b);
+
+  EXPECT_EQ(expected_result, util::size_t::sum(a, b));
+}
+
+TYPED_TEST(MathUtilTest, SizeTArithmetic_Mul) {
+  using Type = TypeParam;
+
+  constexpr auto type_size = sizeof(Type);
+  constexpr auto arithmetic_size = sizeof(std::size_t);
+
+  Type a, b;
+
+  if (type_size < arithmetic_size) {
+    a = std::numeric_limits<Type>::max();
+    b = std::numeric_limits<Type>::max();
+  }
+  else {
+    a = static_cast<Type>(std::numeric_limits<std::size_t>::max() / 2);
+    b = 2;
+  }
+
+  auto expected_result = static_cast<size_t>(a) * static_cast<size_t>(b);
+
+  EXPECT_EQ(expected_result, util::size_t::mul(a, b));
+}
+
+TYPED_TEST(MathUtilTest, SizeTArithmetic_SumMul) {
+  using Type = TypeParam;
+
+  constexpr auto type_size = sizeof(Type);
+  constexpr auto arithmetic_size = sizeof(std::size_t);
+
+  Type b = 2;
+  Type a, c;
+
+  if (type_size < arithmetic_size) {
+    a = std::numeric_limits<Type>::max() / 2;
+    c = std::numeric_limits<Type>::max();
+  }
+  else {
+    a = static_cast<Type>(std::numeric_limits<std::size_t>::max() / 4);
+    c = static_cast<Type>(std::numeric_limits<std::size_t>::max() / 2);
+  }
+
+  auto expected_result = static_cast<size_t>(a) * static_cast<size_t>(b) + static_cast<size_t>(c);
+
+  using util::size_t::sum;
+  using util::size_t::mul;
+
+  EXPECT_EQ(expected_result, sum(mul(a, b), c));
+}

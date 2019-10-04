@@ -72,8 +72,8 @@ TYPED_TEST(MathUtilTest, SizeTArithmetic_Sum) {
     b = std::numeric_limits<Type>::max();
   }
   else {
-    a = std::numeric_limits<std::size_t>::max() / 2;
-    b = std::numeric_limits<std::size_t>::max() / 2;
+    a = static_cast<Type>(std::numeric_limits<std::size_t>::max() / 2);
+    b = static_cast<Type>(std::numeric_limits<std::size_t>::max() / 2);
   }
 
   auto expected_result = static_cast<size_t>(a) + static_cast<size_t>(b);
@@ -94,7 +94,7 @@ TYPED_TEST(MathUtilTest, SizeTArithmetic_Mul) {
     b = std::numeric_limits<Type>::max();
   }
   else {
-    a = std::numeric_limits<std::size_t>::max() / 2;
+    a = static_cast<Type>(std::numeric_limits<std::size_t>::max() / 2);
     b = 2;
   }
 
@@ -117,8 +117,8 @@ TYPED_TEST(MathUtilTest, SizeTArithmetic_SumMul) {
     c = std::numeric_limits<Type>::max();
   }
   else {
-    a = std::numeric_limits<std::size_t>::max() / 4;
-    c = std::numeric_limits<std::size_t>::max() / 2;
+    a = static_cast<Type>(std::numeric_limits<std::size_t>::max() / 4);
+    c = static_cast<Type>(std::numeric_limits<std::size_t>::max() / 2);
   }
 
   auto expected_result = static_cast<size_t>(a) * static_cast<size_t>(b) + static_cast<size_t>(c);

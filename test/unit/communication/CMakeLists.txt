@@ -19,3 +19,9 @@ DLAF_addTest(test_communicator_grid
   MPIRANKS 6
   USE_MAIN MPI
 )
+
+DLAF_addTest(test_broadcast
+  SOURCES test_broadcast.cpp
+  MPIRANKS 5
+  USE_MAIN MPI
+)

@@ -60,11 +60,22 @@ LayoutInfo::LayoutInfo(GlobalElementSize size, TileElementSize block_size, SizeT
   }
 }
 
+std::size_t LayoutInfo::minMemSize() const noexcept {
+  if (size_.rows() == 0 || size_.cols() == 0) {
+    return 0;
+  }
+
+  SizeType last_rows = size_.rows() - block_size_.rows() * (nr_tiles_.rows() - 1);
+  SizeType last_cols = size_.cols() - block_size_.cols() * (nr_tiles_.cols() - 1);
+
+  return tileOffset({nr_tiles_.rows() - 1, nr_tiles_.cols() - 1}) + minTileSize({last_rows, last_cols});
+}
+
 std::size_t LayoutInfo::minTileSize(TileElementSize size) const noexcept {
   using util::size_t::sum;
   using util::size_t::mul;
 
-  if (size_.rows() == 0 || size_.cols() == 0)
+  if (size.rows() == 0 || size.cols() == 0)
     return 0;
 
   return sum(size.rows(), mul(ld_tile_, size.cols() - 1));

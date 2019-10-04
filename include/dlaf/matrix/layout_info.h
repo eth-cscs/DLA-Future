@@ -9,6 +9,7 @@
 //
 
 #pragma once
+#include <cassert>
 #include "dlaf/matrix/index.h"
 #include "dlaf/util_math.h"
 
@@ -19,22 +20,16 @@ public:
   LayoutInfo(GlobalElementSize size, TileElementSize block_size, SizeType tile_ld,
              std::size_t tile_offset_row, std::size_t tile_offset_col);
 
-  std::size_t tileOffset(LocalTileIndex index) const {
-    // TODO checks
+  /// @brief Returns the position of the first element of the @p index tile.
+  /// @pre 0 < @p index.row() < nrTiles().rows()
+  /// @pre 0 < @p index.col() < nrTiles().cols()
+  std::size_t tileOffset(const LocalTileIndex index) const {
+    assert(index.isValid() && index.isIn(nr_tiles_));
     return index.row() * tile_offset_row_ + index.col() * tile_offset_col_;
   }
 
-  std::size_t minMemSize() const noexcept {
-    if (size_.rows() == 0 || size_.cols() == 0) {
-      return 0;
-    }
-
-    SizeType last_rows = size_.rows() - block_size_.rows() * (nr_tiles_.rows() - 1);
-    SizeType last_cols = size_.cols() - block_size_.cols() * (nr_tiles_.cols() - 1);
-
-    return tileOffset({nr_tiles_.rows() - 1, nr_tiles_.cols() - 1}) +
-           static_cast<std::size_t>(ld_tile_) * static_cast<std::size_t>(last_cols - 1) + last_rows;
-  }
+  /// @brief Returns the minimum number of elements that are needed to fit a matrix with the given layout.
+  std::size_t minMemSize() const noexcept;
 
   GlobalElementSize size() const noexcept {
     return size_;
@@ -53,6 +48,7 @@ public:
   }
 
 private:
+  /// @brief Returns the minimum number of elements that are needed to fit a tile with the given size.
   std::size_t minTileSize(TileElementSize size) const noexcept;
 
   GlobalElementSize size_;
@@ -64,12 +60,14 @@ private:
   std::size_t tile_offset_col_;
 };
 
+/// @brief Returns LayoutInfo for a column major matrix.
 inline LayoutInfo ColMajorLayout(GlobalElementSize size, TileElementSize block_size, SizeType ld) {
   using util::size_t::mul;
   return LayoutInfo(size, block_size, ld, static_cast<std::size_t>(block_size.rows()),
                     mul(block_size.cols(), ld));
 }
 
+/// @brief Returns LayoutInfo for a matrix which use the tile layout.
 inline LayoutInfo TileLayout(GlobalElementSize size, TileElementSize block_size, SizeType ld_tile,
                              SizeType tiles_per_col) {
   using util::size_t::mul;

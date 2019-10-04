@@ -15,12 +15,18 @@
 
 namespace dlaf {
 
+/// @brief MatrixBase contains the information about the size (TODO: and distribution) of a matrix.
+/// It is used as base for the Matrix class.
 class MatrixBase {
 public:
   MatrixBase() noexcept;
 
+  /// @brief Construct matrix information for a matrix of size @p size and block size @p block_size.yy
+  /// @throw std::invalid_argument if size.rows() < 0 or size.cols() < 0.
+  /// @throw std::invalid_argument if block_size.rows() < 1 or block_size.cols() < 1.
   MatrixBase(GlobalElementSize size, TileElementSize block_size);
 
+  /// @brief Construct matrix information from the layout informations.
   MatrixBase(matrix::LayoutInfo layout) noexcept;
 
   MatrixBase(const MatrixBase& rhs) = default;

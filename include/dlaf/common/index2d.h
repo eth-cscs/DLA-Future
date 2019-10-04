@@ -42,6 +42,18 @@ public:
   /// @param coords where coords[0] is the row index and coords[1] is the column index
   basic_coords(const std::array<IndexT, 2>& coords) noexcept;
 
+  /// @brief Compare two indices.
+  /// Returns True if row and column index of *this and rhs are equal.
+  bool operator==(const basic_coords& rhs) const noexcept {
+    return row_ == rhs.row_ && col_ == rhs.col_;
+  }
+
+  /// @brief Compare two indices.
+  /// Returns True if any of row and column index of *this and rhs are different.
+  bool operator!=(const basic_coords& rhs) const noexcept {
+    return !operator==(rhs);
+  }
+
   /// @brief Check if it is a valid position (no upper bound check)
   /// @return true if row >= 0 and column >= 0
   bool isValid() const noexcept;
@@ -87,12 +99,13 @@ public:
   /// Create a valid 2D coordinate
   /// @param row index of the row
   /// @param col index of the column
-  /// @pre row >= 0 and col >= 0
+  /// @throw std::invalid_argument if row < 0 or col < 0
   Index2D(IndexT row, IndexT col);
 
   /// Create a valid 2D coordinate
   /// @see Index2D::Index2D(IndexT row, IndexT col)
   /// @param coords where coords[0] is the row index and coords[1] is the column index
+  /// @throw std::invalid_argument if coords[0] < 0 or coords[1] < 0
   Index2D(const std::array<IndexT, 2>& coords);
 
   /// @brief Check if it is a valid position inside the grid size specified by @p boundary

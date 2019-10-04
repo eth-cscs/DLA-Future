@@ -59,9 +59,9 @@ TYPED_TEST(Index2DTest, Negative) {
                                                    std::make_pair(-15, 3), std::make_pair(8, -7)};
 
   for (auto& test : index_tests) {
-    EXPECT_THROW(Index2D<TypeParam>(test.first, test.second), std::runtime_error);
+    EXPECT_THROW(Index2D<TypeParam>(test.first, test.second), std::invalid_argument);
     EXPECT_THROW(Index2D<TypeParam>(std::array<TypeParam, 2>{test.first, test.second}),
-                 std::runtime_error);
+                 std::invalid_argument);
   }
 }
 
@@ -82,4 +82,27 @@ TYPED_TEST(Index2DTest, BoundaryCheck) {
     EXPECT_TRUE(test.first.isValid());
     EXPECT_EQ(test.second, test.first.isIn(boundary));
   }
+}
+
+TYPED_TEST(Index2DTest, Comparison) {
+  TypeParam row = 5;
+  TypeParam col = 3;
+  Index2D<TypeParam> index1(row, col);
+
+  std::array<TypeParam, 2> coords{row, col};
+  Index2D<TypeParam> index2(coords);
+
+  EXPECT_TRUE(index1 == index2);
+  EXPECT_FALSE(index1 != index2);
+
+  Index2D<TypeParam> index3(row + 1, col);
+  Index2D<TypeParam> index4(row, col - 1);
+  Index2D<TypeParam> index5(row + 4, col - 2);
+
+  EXPECT_TRUE(index1 != index3);
+  EXPECT_TRUE(index1 != index4);
+  EXPECT_TRUE(index1 != index5);
+  EXPECT_FALSE(index1 == index3);
+  EXPECT_FALSE(index1 == index4);
+  EXPECT_FALSE(index1 == index5);
 }

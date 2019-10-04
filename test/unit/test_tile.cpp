@@ -208,6 +208,40 @@ TYPED_TEST(TileTest, MoveAssignementMix) {
     }
 }
 
+TYPED_TEST(TileTest, ReferenceMix) {
+  using Type = TypeParam;
+  memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+
+  TileElementSize size(m, n);
+  Tile<Type, Device::CPU> tile0(size, memory_view, ld);
+  Tile<const Type, Device::CPU>& const_tile = tile0;
+
+  EXPECT_EQ(TileSizes(size, ld), getSizes(tile0));
+  EXPECT_EQ(TileSizes(size, ld), getSizes(const_tile));
+
+  for (int j = 0; j < const_tile.size().cols(); ++j)
+    for (int i = 0; i < const_tile.size().rows(); ++i) {
+      EXPECT_EQ(const_tile.ptr(TileElementIndex(i, j)), memory_view(i + ld * j));
+    }
+}
+
+TYPED_TEST(TileTest, PointerMix) {
+  using Type = TypeParam;
+  memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+
+  TileElementSize size(m, n);
+  Tile<Type, Device::CPU> tile0(size, memory_view, ld);
+  Tile<const Type, Device::CPU>* const_tile = &tile0;
+
+  EXPECT_EQ(TileSizes(size, ld), getSizes(tile0));
+  EXPECT_EQ(TileSizes(size, ld), getSizes(*const_tile));
+
+  for (int j = 0; j < const_tile->size().cols(); ++j)
+    for (int i = 0; i < const_tile->size().rows(); ++i) {
+      EXPECT_EQ(const_tile->ptr(TileElementIndex(i, j)), memory_view(i + ld * j));
+    }
+}
+
 TYPED_TEST(TileTest, PromiseToFuture) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> memory_view(ld * n);

@@ -9,8 +9,8 @@
 //
 
 template <class T, Device device>
-Tile<T, device>::Tile(TileElementSize size, memory::MemoryView<ElementType, device> memory_view,
-                      SizeType ld)
+Tile<const T, device>::Tile(TileElementSize size, memory::MemoryView<ElementType, device> memory_view,
+                            SizeType ld)
     : size_(size), memory_view_(memory_view), ld_(ld) {
   using util::size_t::sum;
   using util::size_t::mul;
@@ -23,42 +23,21 @@ Tile<T, device>::Tile(TileElementSize size, memory::MemoryView<ElementType, devi
 }
 
 template <class T, Device device>
-Tile<T, device>::Tile(Tile&& rhs) noexcept
+Tile<const T, device>::Tile(Tile&& rhs) noexcept
     : size_(rhs.size_), memory_view_(std::move(rhs.memory_view_)), ld_(rhs.ld_), p_(std::move(rhs.p_)) {
   rhs.size_ = {0, 0};
   rhs.ld_ = 1;
 }
 
 template <class T, Device device>
-template <class U, class>
-Tile<T, device>::Tile(Tile<ElementType, device>&& rhs) noexcept
-    : size_(rhs.size_), memory_view_(std::move(rhs.memory_view_)), ld_(rhs.ld_), p_(std::move(rhs.p_)) {
-  rhs.size_ = {0, 0};
-  rhs.ld_ = 1;
-}
-
-template <class T, Device device>
-Tile<T, device>::~Tile() {
+Tile<const T, device>::~Tile() {
   if (p_) {
     p_->set_value(Tile<ElementType, device>(size_, memory_view_, ld_));
   }
 }
 
 template <class T, Device device>
-Tile<T, device>& Tile<T, device>::operator=(Tile<T, device>&& rhs) noexcept {
-  size_ = rhs.size_;
-  memory_view_ = std::move(rhs.memory_view_);
-  ld_ = rhs.ld_;
-  p_ = std::move(rhs.p_);
-  rhs.size_ = {0, 0};
-  rhs.ld_ = 1;
-
-  return *this;
-}
-
-template <class T, Device device>
-template <class U, class>
-Tile<T, device>& Tile<T, device>::operator=(Tile<Tile<T, device>::ElementType, device>&& rhs) noexcept {
+Tile<const T, device>& Tile<const T, device>::operator=(Tile<const T, device>&& rhs) noexcept {
   size_ = rhs.size_;
   memory_view_ = std::move(rhs.memory_view_);
   ld_ = rhs.ld_;

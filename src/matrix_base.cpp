@@ -24,7 +24,7 @@ MatrixBase::MatrixBase(const GlobalElementSize& size, const TileElementSize& blo
                util::ceilDiv(size.cols(), block_size.cols())};
 }
 
-MatrixBase::MatrixBase(matrix::LayoutInfo layout) noexcept
+MatrixBase::MatrixBase(const matrix::LayoutInfo& layout) noexcept
     : size_(layout.size()), nr_tiles_(layout.nrTiles()), block_size_(layout.blockSize()) {}
 
 MatrixBase::MatrixBase(MatrixBase&& rhs) noexcept

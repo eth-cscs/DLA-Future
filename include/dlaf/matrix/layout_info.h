@@ -23,7 +23,7 @@ public:
   /// @brief Returns the position of the first element of the @p index tile.
   /// @pre 0 < @p index.row() < nrTiles().rows()
   /// @pre 0 < @p index.col() < nrTiles().cols()
-  std::size_t tileOffset(const LocalTileIndex index) const {
+  std::size_t tileOffset(const LocalTileIndex& index) const {
     assert(index.isValid() && index.isIn(nr_tiles_));
     return index.row() * tile_offset_row_ + index.col() * tile_offset_col_;
   }

@@ -27,7 +27,7 @@ public:
   MatrixBase(const GlobalElementSize& size, const TileElementSize& block_size);
 
   /// @brief Construct matrix information from the layout informations.
-  MatrixBase(matrix::LayoutInfo layout) noexcept;
+  MatrixBase(const matrix::LayoutInfo& layout) noexcept;
 
   MatrixBase(const MatrixBase& rhs) = default;
 

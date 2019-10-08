@@ -55,7 +55,7 @@ TEST(MatrixBaseTest, ConstructorExceptions) {
         }
 }
 
-TEST(MatrixBaseTest, EqualityOperator) {
+TEST(MatrixBaseTest, ComparisonOperator) {
   for (const auto m : ms)
     for (const auto n : ns)
       for (const auto mb : mbs)

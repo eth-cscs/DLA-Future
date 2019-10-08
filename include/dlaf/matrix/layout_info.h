@@ -61,15 +61,16 @@ private:
 };
 
 /// @brief Returns LayoutInfo for a column major matrix.
-inline LayoutInfo ColMajorLayout(const GlobalElementSize& size, const TileElementSize& block_size, SizeType ld) {
+inline LayoutInfo ColMajorLayout(const GlobalElementSize& size, const TileElementSize& block_size,
+                                 SizeType ld) {
   using util::size_t::mul;
   return LayoutInfo(size, block_size, ld, static_cast<std::size_t>(block_size.rows()),
                     mul(block_size.cols(), ld));
 }
 
 /// @brief Returns LayoutInfo for a matrix which use the tile layout.
-inline LayoutInfo TileLayout(const GlobalElementSize& size, const TileElementSize& block_size, SizeType ld_tile,
-                             SizeType tiles_per_col) {
+inline LayoutInfo TileLayout(const GlobalElementSize& size, const TileElementSize& block_size,
+                             SizeType ld_tile, SizeType tiles_per_col) {
   using util::size_t::mul;
   std::size_t tile_size = mul(ld_tile, block_size.cols());
   return LayoutInfo(size, block_size, ld_tile, tile_size, mul(tile_size, tiles_per_col));

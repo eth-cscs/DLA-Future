@@ -18,11 +18,6 @@ basic_coords<IndexT>::basic_coords(IndexT row, IndexT col) noexcept : row_(row),
 template <typename IndexT>
 basic_coords<IndexT>::basic_coords(const std::array<IndexT, 2>& coords) noexcept
     : basic_coords(coords[0], coords[1]) {}
-
-template <typename IndexT>
-bool basic_coords<IndexT>::isValid() const noexcept {
-  return row_ >= 0 && col_ >= 0;
-}
 }
 
 template <typename IndexT, class Tag>

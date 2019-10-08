@@ -56,7 +56,9 @@ public:
 
   /// @brief Check if it is a valid position (no upper bound check)
   /// @return true if row >= 0 and column >= 0
-  bool isValid() const noexcept;
+  bool isValid() const noexcept {
+    return row_ >= 0 && col_ >= 0;
+  }
 
 protected:
   IndexT row_;
@@ -82,6 +84,11 @@ public:
 
   IndexT cols() const noexcept {
     return internal::basic_coords<IndexT>::col_;
+  }
+
+  bool isEmpty() const noexcept {
+    assert(isValid());
+    return rows() == 0 || cols() == 0;
   }
 };
 

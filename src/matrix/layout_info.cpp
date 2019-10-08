@@ -13,23 +13,25 @@
 
 namespace dlaf {
 namespace matrix {
-LayoutInfo::LayoutInfo(const GlobalElementSize& size, const TileElementSize& block_size, SizeType tile_ld,
-                       std::size_t tile_offset_row, std::size_t tile_offset_col)
+LayoutInfo::LayoutInfo(const GlobalElementSize& size, const TileElementSize& block_size,
+                       SizeType tile_ld, std::size_t tile_offset_row, std::size_t tile_offset_col)
     : size_(size), nr_tiles_(0, 0), block_size_(block_size), ld_tile_(tile_ld),
       tile_offset_row_(tile_offset_row), tile_offset_col_(tile_offset_col) {
   using util::size_t::sum;
   using util::size_t::mul;
 
-  if (size_.rows() < 0 || size_.cols() < 0)
+  if (!size_.isValid()) {
     throw std::invalid_argument("Error: Invalid Matrix size");
-  if (block_size_.rows() < 1 || block_size_.cols() < 1)
+  }
+  if (!block_size_.isValid() || block_size_.isEmpty()) {
     throw std::invalid_argument("Error: Invalid Block size");
+  }
 
   nr_tiles_ = {util::ceilDiv(size_.rows(), block_size_.rows()),
                util::ceilDiv(size_.cols(), block_size_.cols())};
 
-  if (size_.rows() == 0 || size_.cols() == 0) {
-    if (ld_tile_ < 1) {
+  if (size_.isEmpty() == 0) {
+    if (ld_tile_ < block_size.rows()) {
       throw std::invalid_argument("Error: Invalid Leading Dimension");
     }
     if (tile_offset_row_ < 1) {
@@ -49,19 +51,18 @@ LayoutInfo::LayoutInfo(const GlobalElementSize& size, const TileElementSize& blo
       throw std::invalid_argument("Error: Invalid Tile Row Offset");
     }
     if (tile_offset_row_ < minTileSize(block_size_) &&
-        static_cast<std::size_t>(ld_tile_) <
-            sum(mul((nr_tiles_.rows() - 1), tile_offset_row_), last_rows)) {
+        static_cast<std::size_t>(ld_tile_) < sum(tileOffset({nr_tiles_.rows() - 1, 0}), last_rows)) {
       throw std::invalid_argument("Error: Invalid Leading Dimension & Tile Row Offset combination");
     }
     if (tile_offset_col_ <
-        mul(nr_tiles_.rows() - 1, tile_offset_row_) + minTileSize({last_rows, block_size_.cols()})) {
+        tileOffset({nr_tiles_.rows() - 1, 0}) + minTileSize({last_rows, block_size_.cols()})) {
       throw std::invalid_argument("Error: Invalid Tile Col Offset");
     }
   }
 }
 
 std::size_t LayoutInfo::minMemSize() const noexcept {
-  if (size_.rows() == 0 || size_.cols() == 0) {
+  if (size_.isEmpty()) {
     return 0;
   }
 
@@ -75,8 +76,9 @@ std::size_t LayoutInfo::minTileSize(const TileElementSize& size) const noexcept 
   using util::size_t::sum;
   using util::size_t::mul;
 
-  if (size.rows() == 0 || size.cols() == 0)
+  if (size_.isEmpty()) {
     return 0;
+  }
 
   return sum(size.rows(), mul(ld_tile_, size.cols() - 1));
 }

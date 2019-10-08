@@ -28,6 +28,16 @@ public:
     return index.row() * tile_offset_row_ + index.col() * tile_offset_col_;
   }
 
+  bool operator==(const LayoutInfo& rhs) const noexcept {
+    return size_ == rhs.size_ && nr_tiles_ == rhs.nr_tiles_ && block_size_ == rhs.block_size_ &&
+           ld_tile_ == rhs.ld_tile_ && tile_offset_row_ == rhs.tile_offset_row_ &&
+           tile_offset_col_ == rhs.tile_offset_col_;
+  }
+
+  bool operator!=(const LayoutInfo& rhs) const noexcept {
+    return !operator==(rhs);
+  }
+
   /// @brief Returns the minimum number of elements that are needed to fit a matrix with the given layout.
   std::size_t minMemSize() const noexcept;
 
@@ -61,7 +71,7 @@ private:
 };
 
 /// @brief Returns LayoutInfo for a column major matrix.
-inline LayoutInfo ColMajorLayout(const GlobalElementSize& size, const TileElementSize& block_size,
+inline LayoutInfo colMajorLayout(const GlobalElementSize& size, const TileElementSize& block_size,
                                  SizeType ld) {
   using util::size_t::mul;
   return LayoutInfo(size, block_size, ld, static_cast<std::size_t>(block_size.rows()),
@@ -69,11 +79,17 @@ inline LayoutInfo ColMajorLayout(const GlobalElementSize& size, const TileElemen
 }
 
 /// @brief Returns LayoutInfo for a matrix which use the tile layout.
-inline LayoutInfo TileLayout(const GlobalElementSize& size, const TileElementSize& block_size,
+/// Advanced interface.
+inline LayoutInfo tileLayout(const GlobalElementSize& size, const TileElementSize& block_size,
                              SizeType ld_tile, SizeType tiles_per_col) {
   using util::size_t::mul;
   std::size_t tile_size = mul(ld_tile, block_size.cols());
   return LayoutInfo(size, block_size, ld_tile, tile_size, mul(tile_size, tiles_per_col));
+}
+/// @brief Returns LayoutInfo for a matrix which use the tile layout.
+/// Basic interface.
+inline LayoutInfo tileLayout(const GlobalElementSize& size, const TileElementSize& block_size) {
+  return tileLayout(size, block_size, block_size.rows(), util::ceilDiv(size.rows(), block_size.rows()));
 }
 }
 }

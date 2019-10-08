@@ -29,6 +29,7 @@ std::vector<
             {{29, 41}, {13, 11}, 13, 143, 436, 1688},  // with padding (col)
             {{29, 41}, {13, 11}, 13, 143, 419, 1637},  // compressed col_offset
             {{0, 0}, {1, 1}, 1, 1, 1, 0}});
+
 std::vector<std::tuple<GlobalElementSize, TileElementSize, SizeType, std::size_t, std::size_t>> wrong_values(
     {
         {{31, 17}, {7, 11}, 30, 7, 341},     // ld, row_offset combo is wrong
@@ -42,6 +43,7 @@ std::vector<std::tuple<GlobalElementSize, TileElementSize, SizeType, std::size_t
         {{0, 0}, {0, 1}, 1, 1, 1},           // wrong block_size
         {{0, 0}, {1, 0}, 1, 1, 1},           // wrong block_size
         {{0, 0}, {1, 1}, 0, 1, 1},           // wrong ld
+        {{0, 0}, {3, 1}, 2, 1, 1},           // wrong ld
         {{0, 0}, {1, 1}, 1, 0, 1},           // wrong row_offset
         {{0, 0}, {1, 1}, 1, 1, 0}            // wrong col_offset
     });
@@ -86,5 +88,99 @@ TEST(LayoutInfoTest, ConstructorException) {
 
     EXPECT_THROW(matrix::LayoutInfo(size, block_size, ld, row_offset, col_offset),
                  std::invalid_argument);
+  }
+}
+
+std::vector<std::tuple<GlobalElementSize, TileElementSize, SizeType, std::size_t, std::size_t, bool>>
+    comp_values({
+        {{25, 25}, {5, 5}, 50, 8, 1000, true},   // Original
+        {{23, 25}, {5, 5}, 50, 8, 1000, false},  // different size
+        {{25, 25}, {6, 5}, 50, 8, 1000, false},  // different block_size
+        {{25, 25}, {5, 5}, 40, 8, 1000, false},  // different ld
+        {{25, 25}, {5, 5}, 50, 6, 1000, false},  // different row_offset
+        {{25, 25}, {5, 5}, 50, 8, 900, false},   // different col_offset
+    });
+
+TEST(LayoutInfoTest, ComparisonOperator) {
+  matrix::LayoutInfo layout0({25, 25}, {5, 5}, 50, 8, 1000);
+
+  for (const auto& v : comp_values) {
+    auto size = std::get<0>(v);
+    auto block_size = std::get<1>(v);
+    auto ld = std::get<2>(v);
+    auto row_offset = std::get<3>(v);
+    auto col_offset = std::get<4>(v);
+    auto is_equal = std::get<5>(v);
+
+    matrix::LayoutInfo layout(size, block_size, ld, row_offset, col_offset);
+
+    if (is_equal) {
+      EXPECT_TRUE(layout0 == layout);
+      EXPECT_FALSE(layout0 != layout);
+    }
+    else {
+      EXPECT_FALSE(layout0 == layout);
+      EXPECT_TRUE(layout0 != layout);
+    }
+  }
+}
+
+std::vector<
+    std::tuple<GlobalElementSize, TileElementSize, SizeType, std::size_t, std::size_t, std::size_t>>
+    col_major_values({
+        {{31, 17}, {7, 11}, 31, 7, 341, 527},     // packed ld
+        {{31, 17}, {7, 11}, 33, 7, 363, 559},     // padded ld
+        {{29, 41}, {13, 11}, 29, 13, 319, 1189},  // packed ld
+        {{29, 41}, {13, 11}, 35, 13, 385, 1429},  // padded ld
+    });
+
+TEST(LayoutInfoTest, ColMajorLayout) {
+  for (const auto& v : col_major_values) {
+    auto size = std::get<0>(v);
+    auto block_size = std::get<1>(v);
+    auto ld = std::get<2>(v);
+    auto row_offset = std::get<3>(v);
+    auto col_offset = std::get<4>(v);
+    auto min_memory = std::get<5>(v);
+
+    matrix::LayoutInfo exp_layout(size, block_size, ld, row_offset, col_offset);
+    matrix::LayoutInfo layout = colMajorLayout(size, block_size, ld);
+
+    EXPECT_EQ(exp_layout, layout);
+    EXPECT_EQ(min_memory, layout.minMemSize());
+  }
+}
+
+std::vector<std::tuple<GlobalElementSize, TileElementSize, SizeType, SizeType, std::size_t, std::size_t,
+                       std::size_t, bool>>
+    tile_values({
+        {{31, 17}, {7, 11}, 7, 5, 77, 385, 731, true},       // basic tile layout
+        {{31, 17}, {7, 11}, 11, 5, 121, 605, 1147, false},   // padded ld
+        {{31, 17}, {7, 11}, 7, 7, 77, 539, 885, false},      // padded ld
+        {{29, 41}, {13, 11}, 13, 3, 143, 429, 1667, true},   // basic tile layout
+        {{29, 41}, {13, 11}, 17, 3, 187, 561, 2179, false},  // padded ld
+        {{29, 41}, {13, 11}, 13, 4, 143, 572, 2096, false},  // padded tiles_per_col
+    });
+
+TEST(LayoutInfoTest, TileLayout) {
+  for (const auto& v : tile_values) {
+    auto size = std::get<0>(v);
+    auto block_size = std::get<1>(v);
+    auto ld = std::get<2>(v);
+    auto tiles_per_col = std::get<3>(v);
+    auto row_offset = std::get<4>(v);
+    auto col_offset = std::get<5>(v);
+    auto min_memory = std::get<6>(v);
+    auto is_basic = std::get<7>(v);
+
+    matrix::LayoutInfo exp_layout(size, block_size, ld, row_offset, col_offset);
+    if (is_basic) {
+      matrix::LayoutInfo layout_basic = tileLayout(size, block_size);
+      EXPECT_EQ(exp_layout, layout_basic);
+      EXPECT_EQ(min_memory, layout_basic.minMemSize());
+    }
+    matrix::LayoutInfo layout = tileLayout(size, block_size, ld, tiles_per_col);
+    EXPECT_EQ(exp_layout, layout);
+    EXPECT_EQ(min_memory, layout.minMemSize());
   }
 }

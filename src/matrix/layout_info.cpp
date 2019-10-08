@@ -30,7 +30,7 @@ LayoutInfo::LayoutInfo(const GlobalElementSize& size, const TileElementSize& blo
   nr_tiles_ = {util::ceilDiv(size_.rows(), block_size_.rows()),
                util::ceilDiv(size_.cols(), block_size_.cols())};
 
-  if (size_.isEmpty() == 0) {
+  if (size_.isEmpty()) {
     if (ld_tile_ < block_size.rows()) {
       throw std::invalid_argument("Error: Invalid Leading Dimension");
     }

@@ -20,9 +20,15 @@ using namespace dlaf;
 using namespace dlaf_test;
 using namespace testing;
 
-int m = 37;
-int n = 87;
-int ld = 133;
+SizeType m = 37;
+SizeType n = 87;
+SizeType ld = 133;
+
+std::size_t elIndex(SizeType i, SizeType j, SizeType ld) {
+  using util::size_t::sum;
+  using util::size_t::mul;
+  return sum(i, mul(ld, j));
+}
 
 using TileSizes = std::tuple<TileElementSize, SizeType>;
 
@@ -44,13 +50,13 @@ TYPED_TEST(TileTest, Constructor) {
   Tile<Type, Device::CPU> tile(size, memory_view, ld);
   EXPECT_EQ(TileSizes(size, ld), getSizes(tile));
 
-  for (int j = 0; j < tile.size().cols(); ++j)
-    for (int i = 0; i < tile.size().rows(); ++i) {
+  for (SizeType j = 0; j < tile.size().cols(); ++j)
+    for (SizeType i = 0; i < tile.size().rows(); ++i) {
       Type el = TypeUtilities<Type>::element(i + 0.01 * j, j - 0.01 * i);
       tile(TileElementIndex(i, j)) = el;
       EXPECT_EQ(el, tile(TileElementIndex(i, j)));
-      EXPECT_EQ(el, *memory_view(i + ld * j));
-      EXPECT_EQ(memory_view(i + ld * j), tile.ptr(TileElementIndex(i, j)));
+      EXPECT_EQ(el, *memory_view(elIndex(i, j, ld)));
+      EXPECT_EQ(memory_view(elIndex(i, j, ld)), tile.ptr(TileElementIndex(i, j)));
     }
 }
 
@@ -62,9 +68,9 @@ TYPED_TEST(TileTest, ConstructorConst) {
   Tile<const Type, Device::CPU> tile(size, memory_view, ld);
   EXPECT_EQ(TileSizes(size, ld), getSizes(tile));
 
-  for (int j = 0; j < tile.size().cols(); ++j)
-    for (int i = 0; i < tile.size().rows(); ++i) {
-      EXPECT_EQ(memory_view(i + ld * j), tile.ptr(TileElementIndex(i, j)));
+  for (SizeType j = 0; j < tile.size().cols(); ++j)
+    for (SizeType i = 0; i < tile.size().rows(); ++i) {
+      EXPECT_EQ(memory_view(elIndex(i, j, ld)), tile.ptr(TileElementIndex(i, j)));
     }
 }
 
@@ -76,13 +82,13 @@ TYPED_TEST(TileTest, ConstructorMix) {
   Tile<const Type, Device::CPU> tile(size, memory_view, ld);
   EXPECT_EQ(TileSizes(size, ld), getSizes(tile));
 
-  for (int j = 0; j < tile.size().cols(); ++j)
-    for (int i = 0; i < tile.size().rows(); ++i) {
+  for (SizeType j = 0; j < tile.size().cols(); ++j)
+    for (SizeType i = 0; i < tile.size().rows(); ++i) {
       Type el = TypeUtilities<Type>::element(i + 0.01 * j, j - 0.01 * i);
-      *memory_view(i + ld * j) = el;
+      *memory_view(elIndex(i, j, ld)) = el;
       EXPECT_EQ(el, tile(TileElementIndex(i, j)));
-      EXPECT_EQ(el, *memory_view(i + ld * j));
-      EXPECT_EQ(memory_view(i + ld * j), tile.ptr(TileElementIndex(i, j)));
+      EXPECT_EQ(el, *memory_view(elIndex(i, j, ld)));
+      EXPECT_EQ(memory_view(elIndex(i, j, ld)), tile.ptr(TileElementIndex(i, j)));
     }
 }
 
@@ -114,9 +120,9 @@ TYPED_TEST(TileTest, MoveConstructor) {
   EXPECT_EQ(TileSizes({0, 0}, 1), getSizes(tile0));
   EXPECT_EQ(TileSizes(size, ld), getSizes(tile));
 
-  for (int j = 0; j < tile.size().cols(); ++j)
-    for (int i = 0; i < tile.size().rows(); ++i) {
-      EXPECT_EQ(tile.ptr(TileElementIndex(i, j)), memory_view(i + ld * j));
+  for (SizeType j = 0; j < tile.size().cols(); ++j)
+    for (SizeType i = 0; i < tile.size().rows(); ++i) {
+      EXPECT_EQ(memory_view(elIndex(i, j, ld)), tile.ptr(TileElementIndex(i, j)));
     }
 }
 
@@ -131,9 +137,9 @@ TYPED_TEST(TileTest, MoveConstructorConst) {
   EXPECT_EQ(TileSizes({0, 0}, 1), getSizes(const_tile0));
   EXPECT_EQ(TileSizes(size, ld), getSizes(const_tile));
 
-  for (int j = 0; j < const_tile.size().cols(); ++j)
-    for (int i = 0; i < const_tile.size().rows(); ++i) {
-      EXPECT_EQ(const_tile.ptr(TileElementIndex(i, j)), memory_view(i + ld * j));
+  for (SizeType j = 0; j < const_tile.size().cols(); ++j)
+    for (SizeType i = 0; i < const_tile.size().rows(); ++i) {
+      EXPECT_EQ(memory_view(elIndex(i, j, ld)), const_tile.ptr(TileElementIndex(i, j)));
     }
 }
 
@@ -148,9 +154,9 @@ TYPED_TEST(TileTest, MoveConstructorMix) {
   EXPECT_EQ(TileSizes({0, 0}, 1), getSizes(tile0));
   EXPECT_EQ(TileSizes(size, ld), getSizes(const_tile));
 
-  for (int j = 0; j < const_tile.size().cols(); ++j)
-    for (int i = 0; i < const_tile.size().rows(); ++i) {
-      EXPECT_EQ(const_tile.ptr(TileElementIndex(i, j)), memory_view(i + ld * j));
+  for (SizeType j = 0; j < const_tile.size().cols(); ++j)
+    for (SizeType i = 0; i < const_tile.size().rows(); ++i) {
+      EXPECT_EQ(memory_view(elIndex(i, j, ld)), const_tile.ptr(TileElementIndex(i, j)));
     }
 }
 
@@ -166,9 +172,9 @@ TYPED_TEST(TileTest, MoveAssignement) {
   EXPECT_EQ(TileSizes({0, 0}, 1), getSizes(tile0));
   EXPECT_EQ(TileSizes(size, ld), getSizes(tile));
 
-  for (int j = 0; j < tile.size().cols(); ++j)
-    for (int i = 0; i < tile.size().rows(); ++i) {
-      EXPECT_EQ(tile.ptr(TileElementIndex(i, j)), memory_view(i + ld * j));
+  for (SizeType j = 0; j < tile.size().cols(); ++j)
+    for (SizeType i = 0; i < tile.size().rows(); ++i) {
+      EXPECT_EQ(memory_view(elIndex(i, j, ld)), tile.ptr(TileElementIndex(i, j)));
     }
 }
 
@@ -184,9 +190,9 @@ TYPED_TEST(TileTest, MoveAssignementConst) {
   EXPECT_EQ(TileSizes({0, 0}, 1), getSizes(const_tile0));
   EXPECT_EQ(TileSizes(size, ld), getSizes(const_tile));
 
-  for (int j = 0; j < const_tile.size().cols(); ++j)
-    for (int i = 0; i < const_tile.size().rows(); ++i) {
-      EXPECT_EQ(const_tile.ptr(TileElementIndex(i, j)), memory_view(i + ld * j));
+  for (SizeType j = 0; j < const_tile.size().cols(); ++j)
+    for (SizeType i = 0; i < const_tile.size().rows(); ++i) {
+      EXPECT_EQ(memory_view(elIndex(i, j, ld)), const_tile.ptr(TileElementIndex(i, j)));
     }
 }
 
@@ -202,9 +208,9 @@ TYPED_TEST(TileTest, MoveAssignementMix) {
   EXPECT_EQ(TileSizes({0, 0}, 1), getSizes(tile0));
   EXPECT_EQ(TileSizes(size, ld), getSizes(const_tile));
 
-  for (int j = 0; j < const_tile.size().cols(); ++j)
-    for (int i = 0; i < const_tile.size().rows(); ++i) {
-      EXPECT_EQ(const_tile.ptr(TileElementIndex(i, j)), memory_view(i + ld * j));
+  for (SizeType j = 0; j < const_tile.size().cols(); ++j)
+    for (SizeType i = 0; i < const_tile.size().rows(); ++i) {
+      EXPECT_EQ(memory_view(elIndex(i, j, ld)), const_tile.ptr(TileElementIndex(i, j)));
     }
 }
 
@@ -219,9 +225,9 @@ TYPED_TEST(TileTest, ReferenceMix) {
   EXPECT_EQ(TileSizes(size, ld), getSizes(tile0));
   EXPECT_EQ(TileSizes(size, ld), getSizes(const_tile));
 
-  for (int j = 0; j < const_tile.size().cols(); ++j)
-    for (int i = 0; i < const_tile.size().rows(); ++i) {
-      EXPECT_EQ(const_tile.ptr(TileElementIndex(i, j)), memory_view(i + ld * j));
+  for (SizeType j = 0; j < const_tile.size().cols(); ++j)
+    for (SizeType i = 0; i < const_tile.size().rows(); ++i) {
+      EXPECT_EQ(memory_view(elIndex(i, j, ld)), const_tile.ptr(TileElementIndex(i, j)));
     }
 }
 
@@ -236,9 +242,9 @@ TYPED_TEST(TileTest, PointerMix) {
   EXPECT_EQ(TileSizes(size, ld), getSizes(tile0));
   EXPECT_EQ(TileSizes(size, ld), getSizes(*const_tile));
 
-  for (int j = 0; j < const_tile->size().cols(); ++j)
-    for (int i = 0; i < const_tile->size().rows(); ++i) {
-      EXPECT_EQ(const_tile->ptr(TileElementIndex(i, j)), memory_view(i + ld * j));
+  for (SizeType j = 0; j < const_tile->size().cols(); ++j)
+    for (SizeType i = 0; i < const_tile->size().rows(); ++i) {
+      EXPECT_EQ(memory_view(elIndex(i, j, ld)), const_tile->ptr(TileElementIndex(i, j)));
     }
 }
 
@@ -264,9 +270,9 @@ TYPED_TEST(TileTest, PromiseToFuture) {
   Tile<Type, Device::CPU> tile2 = std::move(tile_future.get());
   EXPECT_EQ(TileSizes(size, ld), getSizes(tile2));
 
-  for (int j = 0; j < tile2.size().cols(); ++j)
-    for (int i = 0; i < tile2.size().rows(); ++i) {
-      EXPECT_EQ(tile2.ptr(TileElementIndex(TileElementIndex(i, j))), memory_view(i + ld * j));
+  for (SizeType j = 0; j < tile2.size().cols(); ++j)
+    for (SizeType i = 0; i < tile2.size().rows(); ++i) {
+      EXPECT_EQ(memory_view(elIndex(i, j, ld)), tile2.ptr(TileElementIndex(i, j)));
     }
 }
 
@@ -292,8 +298,8 @@ TYPED_TEST(TileTest, PromiseToFutureConst) {
   Tile<Type, Device::CPU> tile2 = std::move(tile_future.get());
   EXPECT_EQ(TileSizes(size, ld), getSizes(tile2));
 
-  for (int j = 0; j < tile2.size().cols(); ++j)
-    for (int i = 0; i < tile2.size().rows(); ++i) {
-      EXPECT_EQ(tile2.ptr(TileElementIndex(TileElementIndex(i, j))), memory_view(i + ld * j));
+  for (SizeType j = 0; j < tile2.size().cols(); ++j)
+    for (SizeType i = 0; i < tile2.size().rows(); ++i) {
+      EXPECT_EQ(memory_view(elIndex(i, j, ld)), tile2.ptr(TileElementIndex(TileElementIndex(i, j))));
     }
 }

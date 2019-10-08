@@ -37,89 +37,90 @@ protected:
 
 TEST_F(BroadcastTest, Broadcast_ClassicAPI) {
   auto broadcaster = 0;
-  auto where = splitted_comm;
+  auto communicator = splitted_comm;
 
-  int what;
+  int message;
   if (isMasterInSplitted())
-    what = color;
+    message = color;
   else
-    what = -1;
+    message = -1;
 
-  dlaf::comm::bcast(broadcaster, what, where);
-  EXPECT_EQ(color, what);
+  dlaf::comm::bcast(broadcaster, message, communicator);
+  EXPECT_EQ(color, message);
 }
 
 TEST_F(BroadcastTest, Broadcast_ClassicAPI_Splitted) {
   auto broadcaster = 0;
-  auto where = splitted_comm;
+  auto communicator = splitted_comm;
 
   if (isMasterInSplitted())
-    dlaf::comm::bcast(broadcaster, color, where);
+    dlaf::comm::bcast(broadcaster, color, communicator);
   else {
-    int what;
-    dlaf::comm::bcast(broadcaster, what, where);
-    EXPECT_EQ(color, what);
+    int message;
+    dlaf::comm::bcast(broadcaster, message, communicator);
+    EXPECT_EQ(color, message);
   }
 }
 
 TEST_F(BroadcastTest, Broadcast_NewAPI) {
   auto broadcaster = 0;
-  auto where = splitted_comm;
+  auto communicator = splitted_comm;
 
   if (isMasterInSplitted())
-    dlaf::comm::broadcast::send(color, where);
+    dlaf::comm::broadcast::send(color, communicator);
   else {
-    int what;
-    dlaf::comm::broadcast::receive_from(broadcaster, what, where);
-    EXPECT_EQ(color, what);
+    int message;
+    dlaf::comm::broadcast::receive_from(broadcaster, message, communicator);
+    EXPECT_EQ(color, message);
   }
 }
 
 TEST_F(BroadcastTest, AsyncBroadcast_ClassicAPI) {
   auto broadcaster = 0;
-  auto where = splitted_comm;
+  auto communicator = splitted_comm;
 
   bool waited;
   auto what_to_do_before_retesting = [&waited]() { waited = true; };
 
-  int what;
+  int message;
   if (isMasterInSplitted())
-    what = color;
+    message = color;
   else
-    what = -1;
+    message = -1;
 
-  dlaf::comm::async_bcast(broadcaster, what, where, what_to_do_before_retesting);
-  EXPECT_EQ(color, what);
+  dlaf::comm::async_bcast(broadcaster, message, communicator, what_to_do_before_retesting);
+  EXPECT_EQ(color, message);
 }
 
 TEST_F(BroadcastTest, AsyncBroadcast_ClassicAPI_Splitted) {
   auto broadcaster = 0;
-  auto where = splitted_comm;
+  auto communicator = splitted_comm;
 
   bool waited;
   auto what_to_do_before_retesting = [&waited]() { waited = true; };
 
   if (isMasterInSplitted())
-    dlaf::comm::async_bcast(broadcaster, color, where, what_to_do_before_retesting);
+    dlaf::comm::async_bcast(broadcaster, color, communicator, what_to_do_before_retesting);
   else {
-    int what;
-    dlaf::comm::async_bcast(broadcaster, what, where, what_to_do_before_retesting);
-    EXPECT_EQ(color, what);
+    int message;
+    dlaf::comm::async_bcast(broadcaster, message, communicator, what_to_do_before_retesting);
+    EXPECT_EQ(color, message);
   }
 }
 
 TEST_F(BroadcastTest, AsyncBroadcast_NewAPI) {
   auto broadcaster = 0;
-  auto where = splitted_comm;
+  auto communicator = splitted_comm;
 
   bool waited;
   auto what_to_do_before_retesting = [&waited]() { waited = true; };
 
   if (isMasterInSplitted())
-    dlaf::comm::async_broadcast::send(color, where, what_to_do_before_retesting);
+    dlaf::comm::async_broadcast::send(color, communicator, what_to_do_before_retesting);
   else {
-    int what;
-    dlaf::comm::async_broadcast::receive_from(broadcaster, what, where, what_to_do_before_retesting);
-    EXPECT_EQ(color, what);
+    int message;
+    dlaf::comm::async_broadcast::receive_from(broadcaster, message, communicator,
+                                              what_to_do_before_retesting);
+    EXPECT_EQ(color, message);
   }
 }

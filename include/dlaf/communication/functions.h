@@ -19,16 +19,16 @@ namespace comm {
 
 /// basic wrapper for MPI_Bcast
 template <typename MessageType>
-void bcast(int broadcaster_rank, MessageType& what, Communicator where) {
-  MPI_Bcast(&what, 1, mpi_datatype<MessageType>::type, broadcaster_rank, where);
+void bcast(int broadcaster_rank, MessageType& message, Communicator communicator) {
+  MPI_Bcast(&message, 1, mpi_datatype<MessageType>::type, broadcaster_rank, communicator);
 }
 
 /// basic wrapper for MPI_Ibcast
 template <typename MessageType>
-void async_bcast(int broadcaster_rank, MessageType& what, Communicator where,
+void async_bcast(int broadcaster_rank, MessageType& message, Communicator communicator,
                  std::function<void()> action_before_retrying) {
   MPI_Request request;
-  MPI_Ibcast(&what, 1, mpi_datatype<MessageType>::type, broadcaster_rank, where, &request);
+  MPI_Ibcast(&message, 1, mpi_datatype<MessageType>::type, broadcaster_rank, communicator, &request);
 
   while (true) {
     int test_flag = 1;
@@ -43,14 +43,14 @@ namespace broadcast {
 
 /// specialized wrapper for MPI_Bcast on sender side
 template <typename MessageType>
-void send(const MessageType& what, Communicator where) {
-  bcast(where.rank(), const_cast<MessageType&>(what), where);
+void send(const MessageType& message, Communicator communicator) {
+  bcast(communicator.rank(), const_cast<MessageType&>(message), communicator);
 }
 
 /// specialized wrapper for MPI_Bcast on receiver side
 template <typename MessageType>
-void receive_from(int broadcaster_rank, MessageType& what, Communicator where) {
-  bcast(broadcaster_rank, what, where);
+void receive_from(int broadcaster_rank, MessageType& message, Communicator communicator) {
+  bcast(broadcaster_rank, message, communicator);
 }
 
 }
@@ -59,15 +59,17 @@ namespace async_broadcast {
 
 /// specialized wrapper for MPI_Ibcast on sender side
 template <typename MessageType>
-void send(const MessageType& what, Communicator where, std::function<void()> action_before_retrying) {
-  async_bcast(where.rank(), const_cast<MessageType&>(what), where, action_before_retrying);
+void send(const MessageType& message, Communicator communicator,
+          std::function<void()> action_before_retrying) {
+  async_bcast(communicator.rank(), const_cast<MessageType&>(message), communicator,
+              action_before_retrying);
 }
 
 /// specialized wrapper for MPI_Ibcast on receiver side
 template <typename MessageType>
-void receive_from(int broadcaster_rank, MessageType& what, Communicator where,
+void receive_from(int broadcaster_rank, MessageType& message, Communicator communicator,
                   std::function<void()> action_before_retrying) {
-  async_bcast(broadcaster_rank, what, where, action_before_retrying);
+  async_bcast(broadcaster_rank, message, communicator, action_before_retrying);
 }
 
 }

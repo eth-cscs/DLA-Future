@@ -49,7 +49,7 @@ std::vector<std::tuple<GlobalElementSize, TileElementSize, SizeType, std::size_t
 TEST(LayoutInfoTest, Constructor) {
   using util::size_t::mul;
 
-  for (auto& v : values) {
+  for (const auto& v : values) {
     auto size = std::get<0>(v);
     auto block_size = std::get<1>(v);
     auto ld = std::get<2>(v);
@@ -77,14 +77,14 @@ TEST(LayoutInfoTest, Constructor) {
 }
 
 TEST(LayoutInfoTest, ConstructorException) {
-  for (auto& v : wrong_values) {
+  for (const auto& v : wrong_values) {
     auto size = std::get<0>(v);
     auto block_size = std::get<1>(v);
     auto ld = std::get<2>(v);
     auto row_offset = std::get<3>(v);
     auto col_offset = std::get<4>(v);
 
-    EXPECT_THROW(matrix::LayoutInfo layout(size, block_size, ld, row_offset, col_offset),
+    EXPECT_THROW(matrix::LayoutInfo(size, block_size, ld, row_offset, col_offset),
                  std::invalid_argument);
   }
 }

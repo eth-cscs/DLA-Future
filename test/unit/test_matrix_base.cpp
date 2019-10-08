@@ -29,10 +29,10 @@ TEST(MatrixBaseTest, DefaultConstructor) {
 }
 
 TEST(MatrixBaseTest, Constructor) {
-  for (auto& m : ms)
-    for (auto& n : ns)
-      for (auto& mb : mbs)
-        for (auto& nb : nbs) {
+  for (const auto m : ms)
+    for (const auto n : ns)
+      for (const auto mb : mbs)
+        for (const auto nb : nbs) {
           MatrixBase obj({m, n}, {mb, nb});
 
           EXPECT_EQ(GlobalElementSize(m, n), obj.size());
@@ -42,10 +42,10 @@ TEST(MatrixBaseTest, Constructor) {
 }
 
 TEST(MatrixBaseTest, ConstructorExceptions) {
-  for (auto& m : ms)
-    for (auto& n : ns)
-      for (auto& mb : mbs)
-        for (auto& nb : nbs) {
+  for (const auto m : ms)
+    for (const auto n : ns)
+      for (const auto mb : mbs)
+        for (const auto nb : nbs) {
           EXPECT_THROW(MatrixBase obj({-1, n}, {mb, nb}), std::invalid_argument);
           EXPECT_THROW(MatrixBase obj({m, -1}, {mb, nb}), std::invalid_argument);
           EXPECT_THROW(MatrixBase obj({m, n}, {0, nb}), std::invalid_argument);
@@ -56,10 +56,10 @@ TEST(MatrixBaseTest, ConstructorExceptions) {
 }
 
 TEST(MatrixBaseTest, EqualityOperator) {
-  for (auto& m : ms)
-    for (auto& n : ns)
-      for (auto& mb : mbs)
-        for (auto& nb : nbs) {
+  for (const auto m : ms)
+    for (const auto n : ns)
+      for (const auto mb : mbs)
+        for (const auto nb : nbs) {
           MatrixBase obj({m, n}, {mb, nb});
           MatrixBase obj_eq({m, n}, {mb, nb});
 
@@ -72,7 +72,7 @@ TEST(MatrixBaseTest, EqualityOperator) {
           objs_ne.emplace_back(GlobalElementSize(m, n), TileElementSize(mb + 1, nb));
           objs_ne.emplace_back(GlobalElementSize(m, n), TileElementSize(mb, nb + 1));
 
-          for (auto& obj_ne : objs_ne) {
+          for (const auto& obj_ne : objs_ne) {
             EXPECT_TRUE(obj != obj_ne);
             EXPECT_FALSE(obj == obj_ne);
           }
@@ -80,10 +80,10 @@ TEST(MatrixBaseTest, EqualityOperator) {
 }
 
 TEST(MatrixBaseTest, CopyConstructor) {
-  for (auto& m : ms)
-    for (auto& n : ns)
-      for (auto& mb : mbs)
-        for (auto& nb : nbs) {
+  for (const auto m : ms)
+    for (const auto n : ns)
+      for (const auto mb : mbs)
+        for (const auto nb : nbs) {
           MatrixBase obj0({m, n}, {mb, nb});
           MatrixBase obj({m, n}, {mb, nb});
           EXPECT_EQ(obj0, obj);
@@ -95,10 +95,10 @@ TEST(MatrixBaseTest, CopyConstructor) {
 }
 
 TEST(MatrixBaseTest, MoveConstructor) {
-  for (auto& m : ms)
-    for (auto& n : ns)
-      for (auto& mb : mbs)
-        for (auto& nb : nbs) {
+  for (const auto m : ms)
+    for (const auto n : ns)
+      for (const auto mb : mbs)
+        for (const auto nb : nbs) {
           MatrixBase obj0({m, n}, {mb, nb});
           MatrixBase obj({m, n}, {mb, nb});
           EXPECT_EQ(obj0, obj);
@@ -110,10 +110,10 @@ TEST(MatrixBaseTest, MoveConstructor) {
 }
 
 TEST(MatrixBaseTest, CopyAssignment) {
-  for (auto& m : ms)
-    for (auto& n : ns)
-      for (auto& mb : mbs)
-        for (auto& nb : nbs) {
+  for (const auto m : ms)
+    for (const auto n : ns)
+      for (const auto mb : mbs)
+        for (const auto nb : nbs) {
           MatrixBase obj0({m, n}, {mb, nb});
           MatrixBase obj({m, n}, {mb, nb});
           EXPECT_EQ(obj0, obj);
@@ -126,10 +126,10 @@ TEST(MatrixBaseTest, CopyAssignment) {
 }
 
 TEST(MatrixBaseTest, MoveAssignment) {
-  for (auto& m : ms)
-    for (auto& n : ns)
-      for (auto& mb : mbs)
-        for (auto& nb : nbs) {
+  for (const auto m : ms)
+    for (const auto n : ns)
+      for (const auto mb : mbs)
+        for (const auto nb : nbs) {
           MatrixBase obj0({m, n}, {mb, nb});
           MatrixBase obj({m, n}, {mb, nb});
           EXPECT_EQ(obj0, obj);

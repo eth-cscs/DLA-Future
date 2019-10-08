@@ -13,7 +13,7 @@
 namespace dlaf {
 MatrixBase::MatrixBase() noexcept : size_(0, 0), nr_tiles_(0, 0), block_size_(1, 1) {}
 
-MatrixBase::MatrixBase(GlobalElementSize size, TileElementSize block_size)
+MatrixBase::MatrixBase(const GlobalElementSize& size, const TileElementSize& block_size)
     : size_(size), nr_tiles_(0, 0), block_size_(block_size) {
   if (size_.rows() < 0 || size_.cols() < 0)
     throw std::invalid_argument("Error: Invalid Matrix size");

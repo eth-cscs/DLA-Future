@@ -17,7 +17,7 @@ namespace dlaf {
 namespace matrix {
 class LayoutInfo {
 public:
-  LayoutInfo(GlobalElementSize size, TileElementSize block_size, SizeType tile_ld,
+  LayoutInfo(const GlobalElementSize& size, const TileElementSize& block_size, SizeType tile_ld,
              std::size_t tile_offset_row, std::size_t tile_offset_col);
 
   /// @brief Returns the position of the first element of the @p index tile.
@@ -31,15 +31,15 @@ public:
   /// @brief Returns the minimum number of elements that are needed to fit a matrix with the given layout.
   std::size_t minMemSize() const noexcept;
 
-  GlobalElementSize size() const noexcept {
+  const GlobalElementSize& size() const noexcept {
     return size_;
   }
 
-  LocalTileSize nrTiles() const noexcept {
+  const LocalTileSize& nrTiles() const noexcept {
     return nr_tiles_;
   }
 
-  TileElementSize blockSize() const noexcept {
+  const TileElementSize& blockSize() const noexcept {
     return block_size_;
   }
 
@@ -49,7 +49,7 @@ public:
 
 private:
   /// @brief Returns the minimum number of elements that are needed to fit a tile with the given size.
-  std::size_t minTileSize(TileElementSize size) const noexcept;
+  std::size_t minTileSize(const TileElementSize& size) const noexcept;
 
   GlobalElementSize size_;
   LocalTileSize nr_tiles_;
@@ -61,14 +61,14 @@ private:
 };
 
 /// @brief Returns LayoutInfo for a column major matrix.
-inline LayoutInfo ColMajorLayout(GlobalElementSize size, TileElementSize block_size, SizeType ld) {
+inline LayoutInfo ColMajorLayout(const GlobalElementSize& size, const TileElementSize& block_size, SizeType ld) {
   using util::size_t::mul;
   return LayoutInfo(size, block_size, ld, static_cast<std::size_t>(block_size.rows()),
                     mul(block_size.cols(), ld));
 }
 
 /// @brief Returns LayoutInfo for a matrix which use the tile layout.
-inline LayoutInfo TileLayout(GlobalElementSize size, TileElementSize block_size, SizeType ld_tile,
+inline LayoutInfo TileLayout(const GlobalElementSize& size, const TileElementSize& block_size, SizeType ld_tile,
                              SizeType tiles_per_col) {
   using util::size_t::mul;
   std::size_t tile_size = mul(ld_tile, block_size.cols());

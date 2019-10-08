@@ -21,10 +21,10 @@ class MatrixBase {
 public:
   MatrixBase() noexcept;
 
-  /// @brief Construct matrix information for a matrix of size @p size and block size @p block_size.yy
+  /// @brief Construct matrix information for a matrix of size @p size and block size @p block_size.
   /// @throw std::invalid_argument if size.rows() < 0 or size.cols() < 0.
   /// @throw std::invalid_argument if block_size.rows() < 1 or block_size.cols() < 1.
-  MatrixBase(GlobalElementSize size, TileElementSize block_size);
+  MatrixBase(const GlobalElementSize& size, const TileElementSize& block_size);
 
   /// @brief Construct matrix information from the layout informations.
   MatrixBase(matrix::LayoutInfo layout) noexcept;
@@ -45,15 +45,15 @@ public:
     return !operator==(rhs);
   }
 
-  GlobalElementSize size() const noexcept {
+  const GlobalElementSize& size() const noexcept {
     return size_;
   }
 
-  LocalTileSize nrTiles() const noexcept {
+  const LocalTileSize& nrTiles() const noexcept {
     return nr_tiles_;
   }
 
-  TileElementSize blockSize() const noexcept {
+  const TileElementSize& blockSize() const noexcept {
     return block_size_;
   }
 

@@ -13,6 +13,7 @@
 /// @file
 
 #include <array>
+#include <cassert>
 #include <type_traits>
 
 namespace dlaf {

@@ -22,16 +22,16 @@ using MatrixElementTypes = ::testing::Types<float, double, std::complex<float>, 
 template <class T>
 struct TypeUtilities {
   /// Returns r.
-  static T element(T r, T i) {
-    return r;
+  static T element(double r, double i) {
+    return static_cast<T>(r);
   }
 };
 
 template <class T>
 struct TypeUtilities<std::complex<T>> {
   /// Returns r + I * i (I is the imaginary unit).
-  static std::complex<T> element(T r, T i) {
-    return std::complex<T>(r, i);
+  static std::complex<T> element(double r, double i) {
+    return std::complex<T>(static_cast<T>(r), static_cast<T>(i));
   }
 };
 

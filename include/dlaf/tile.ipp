@@ -10,8 +10,8 @@
 
 template <class T, Device device>
 Tile<const T, device>::Tile(const TileElementSize& size,
-                            memory::MemoryView<ElementType, device> memory_view, SizeType ld)
-    : size_(size), memory_view_(memory_view), ld_(ld) {
+                            memory::MemoryView<ElementType, device>&& memory_view, SizeType ld)
+    : size_(size), memory_view_(std::move(memory_view)), ld_(ld) {
   using util::size_t::sum;
   using util::size_t::mul;
   if (size_.isValid())
@@ -31,7 +31,7 @@ Tile<const T, device>::Tile(Tile&& rhs) noexcept
 template <class T, Device device>
 Tile<const T, device>::~Tile() {
   if (p_) {
-    p_->set_value(Tile<ElementType, device>(size_, memory_view_, ld_));
+    p_->set_value(Tile<ElementType, device>(size_, std::move(memory_view_), ld_));
   }
 }
 

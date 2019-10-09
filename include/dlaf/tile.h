@@ -45,7 +45,7 @@ public:
   /// @throw std::invalid_argument if @p size.row() < 0, @p size.cols() < 0 or @p ld < max(1, @p size.rows()).
   /// @throw std::invalid_argument if memory_view does not contain enough elements.
   /// The (i, j)-th element of the Tile is stored in the (i+ld*j)-th element of memory_view.
-  Tile(const TileElementSize& size, memory::MemoryView<ElementType, device> memory_view, SizeType ld);
+  Tile(const TileElementSize& size, memory::MemoryView<ElementType, device>&& memory_view, SizeType ld);
 
   Tile(const Tile&) = delete;
 
@@ -112,8 +112,8 @@ public:
   /// @throw std::invalid_argument if @p size.row() < 0, @p size.cols() < 0 or @p ld < max(1, @p size.rows()).
   /// @throw std::invalid_argument if memory_view does not contain enough elements.
   /// The (i, j)-th element of the Tile is stored in the (i+ld*j)-th element of memory_view.
-  Tile(const TileElementSize& size, memory::MemoryView<ElementType, device> memory_view, SizeType ld)
-      : Tile<const T, device>(size, memory_view, ld) {}
+  Tile(const TileElementSize& size, memory::MemoryView<ElementType, device>&& memory_view, SizeType ld)
+      : Tile<const T, device>(size, std::move(memory_view), ld) {}
 
   Tile(const Tile&) = delete;
 

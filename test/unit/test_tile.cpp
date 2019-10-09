@@ -45,9 +45,10 @@ TYPED_TEST_CASE(TileTest, MatrixElementTypes);
 TYPED_TEST(TileTest, Constructor) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+  auto mem_view = memory_view;
 
   TileElementSize size(m, n);
-  Tile<Type, Device::CPU> tile(size, memory_view, ld);
+  Tile<Type, Device::CPU> tile(size, std::move(mem_view), ld);
   EXPECT_EQ(TileSizes(size, ld), getSizes(tile));
 
   for (SizeType j = 0; j < tile.size().cols(); ++j)
@@ -63,9 +64,10 @@ TYPED_TEST(TileTest, Constructor) {
 TYPED_TEST(TileTest, ConstructorConst) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+  auto mem_view = memory_view;
 
   TileElementSize size(m, n);
-  Tile<const Type, Device::CPU> tile(size, memory_view, ld);
+  Tile<const Type, Device::CPU> tile(size, std::move(mem_view), ld);
   EXPECT_EQ(TileSizes(size, ld), getSizes(tile));
 
   for (SizeType j = 0; j < tile.size().cols(); ++j)
@@ -77,9 +79,10 @@ TYPED_TEST(TileTest, ConstructorConst) {
 TYPED_TEST(TileTest, ConstructorMix) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+  auto mem_view = memory_view;
 
   TileElementSize size(m, n);
-  Tile<const Type, Device::CPU> tile(size, memory_view, ld);
+  Tile<const Type, Device::CPU> tile(size, std::move(memory_view), ld);
   EXPECT_EQ(TileSizes(size, ld), getSizes(tile));
 
   for (SizeType j = 0; j < tile.size().cols(); ++j)
@@ -94,27 +97,29 @@ TYPED_TEST(TileTest, ConstructorMix) {
 
 TYPED_TEST(TileTest, ConstructorExceptions) {
   using Type = TypeParam;
-  memory::MemoryView<Type, Device::CPU> memory_view(ld * (n - 1) + m - 1);
+  using MemView = memory::MemoryView<Type, Device::CPU>;
+  std::size_t size = elIndex(m - 1, n - 1, ld) + 1;
 
-  EXPECT_THROW((Tile<Type, Device::CPU>({m, n}, memory_view, ld)), std::invalid_argument);
-  EXPECT_THROW((Tile<Type, Device::CPU>({-1, n}, memory_view, ld)), std::invalid_argument);
-  EXPECT_THROW((Tile<Type, Device::CPU>({m, -1}, memory_view, ld)), std::invalid_argument);
-  EXPECT_THROW((Tile<Type, Device::CPU>({m, n}, memory_view, m - 1)), std::invalid_argument);
-  EXPECT_THROW((Tile<Type, Device::CPU>({0, n}, memory_view, 0)), std::invalid_argument);
+  EXPECT_THROW((Tile<Type, Device::CPU>({m, n}, MemView(size - 1), ld)), std::invalid_argument);
+  EXPECT_THROW((Tile<Type, Device::CPU>({-1, n}, MemView(size), ld)), std::invalid_argument);
+  EXPECT_THROW((Tile<Type, Device::CPU>({m, -1}, MemView(size), ld)), std::invalid_argument);
+  EXPECT_THROW((Tile<Type, Device::CPU>({m, n}, MemView(size), m - 1)), std::invalid_argument);
+  EXPECT_THROW((Tile<Type, Device::CPU>({0, n}, MemView(size), 0)), std::invalid_argument);
 
-  EXPECT_THROW((Tile<const Type, Device::CPU>({m, n}, memory_view, ld)), std::invalid_argument);
-  EXPECT_THROW((Tile<const Type, Device::CPU>({-1, n}, memory_view, ld)), std::invalid_argument);
-  EXPECT_THROW((Tile<const Type, Device::CPU>({m, -1}, memory_view, ld)), std::invalid_argument);
-  EXPECT_THROW((Tile<const Type, Device::CPU>({m, n}, memory_view, m - 1)), std::invalid_argument);
-  EXPECT_THROW((Tile<const Type, Device::CPU>({0, n}, memory_view, 0)), std::invalid_argument);
+  EXPECT_THROW((Tile<const Type, Device::CPU>({m, n}, MemView(size - 1), ld)), std::invalid_argument);
+  EXPECT_THROW((Tile<const Type, Device::CPU>({-1, n}, MemView(size), ld)), std::invalid_argument);
+  EXPECT_THROW((Tile<const Type, Device::CPU>({m, -1}, MemView(size), ld)), std::invalid_argument);
+  EXPECT_THROW((Tile<const Type, Device::CPU>({m, n}, MemView(size), m - 1)), std::invalid_argument);
+  EXPECT_THROW((Tile<const Type, Device::CPU>({0, n}, MemView(size), 0)), std::invalid_argument);
 }
 
 TYPED_TEST(TileTest, MoveConstructor) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+  auto mem_view = memory_view;
 
   TileElementSize size(m, n);
-  Tile<Type, Device::CPU> tile0(size, memory_view, ld);
+  Tile<Type, Device::CPU> tile0(size, std::move(mem_view), ld);
 
   Tile<Type, Device::CPU> tile(std::move(tile0));
   EXPECT_EQ(TileSizes({0, 0}, 1), getSizes(tile0));
@@ -129,9 +134,10 @@ TYPED_TEST(TileTest, MoveConstructor) {
 TYPED_TEST(TileTest, MoveConstructorConst) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+  auto mem_view = memory_view;
 
   TileElementSize size(m, n);
-  Tile<const Type, Device::CPU> const_tile0(size, memory_view, ld);
+  Tile<const Type, Device::CPU> const_tile0(size, std::move(mem_view), ld);
 
   Tile<const Type, Device::CPU> const_tile(std::move(const_tile0));
   EXPECT_EQ(TileSizes({0, 0}, 1), getSizes(const_tile0));
@@ -146,9 +152,10 @@ TYPED_TEST(TileTest, MoveConstructorConst) {
 TYPED_TEST(TileTest, MoveConstructorMix) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+  auto mem_view = memory_view;
 
   TileElementSize size(m, n);
-  Tile<Type, Device::CPU> tile0(size, memory_view, ld);
+  Tile<Type, Device::CPU> tile0(size, std::move(mem_view), ld);
 
   Tile<const Type, Device::CPU> const_tile(std::move(tile0));
   EXPECT_EQ(TileSizes({0, 0}, 1), getSizes(tile0));
@@ -163,9 +170,10 @@ TYPED_TEST(TileTest, MoveConstructorMix) {
 TYPED_TEST(TileTest, MoveAssignement) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+  auto mem_view = memory_view;
 
   TileElementSize size(m, n);
-  Tile<Type, Device::CPU> tile0(size, memory_view, ld);
+  Tile<Type, Device::CPU> tile0(size, std::move(mem_view), ld);
   Tile<Type, Device::CPU> tile({1, 1}, memory::MemoryView<Type, Device::CPU>(1), 1);
 
   tile = std::move(tile0);
@@ -181,9 +189,10 @@ TYPED_TEST(TileTest, MoveAssignement) {
 TYPED_TEST(TileTest, MoveAssignementConst) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+  auto mem_view = memory_view;
 
   TileElementSize size(m, n);
-  Tile<const Type, Device::CPU> const_tile0(size, memory_view, ld);
+  Tile<const Type, Device::CPU> const_tile0(size, std::move(mem_view), ld);
   Tile<const Type, Device::CPU> const_tile({1, 1}, memory::MemoryView<Type, Device::CPU>(1), 1);
 
   const_tile = std::move(const_tile0);
@@ -199,9 +208,10 @@ TYPED_TEST(TileTest, MoveAssignementConst) {
 TYPED_TEST(TileTest, MoveAssignementMix) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+  auto mem_view = memory_view;
 
   TileElementSize size(m, n);
-  Tile<Type, Device::CPU> tile0(size, memory_view, ld);
+  Tile<Type, Device::CPU> tile0(size, std::move(mem_view), ld);
   Tile<const Type, Device::CPU> const_tile({1, 1}, memory::MemoryView<Type, Device::CPU>(1), 1);
 
   const_tile = std::move(tile0);
@@ -217,9 +227,10 @@ TYPED_TEST(TileTest, MoveAssignementMix) {
 TYPED_TEST(TileTest, ReferenceMix) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+  auto mem_view = memory_view;
 
   TileElementSize size(m, n);
-  Tile<Type, Device::CPU> tile0(size, memory_view, ld);
+  Tile<Type, Device::CPU> tile0(size, std::move(mem_view), ld);
   Tile<const Type, Device::CPU>& const_tile = tile0;
 
   EXPECT_EQ(TileSizes(size, ld), getSizes(tile0));
@@ -234,9 +245,10 @@ TYPED_TEST(TileTest, ReferenceMix) {
 TYPED_TEST(TileTest, PointerMix) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+  auto mem_view = memory_view;
 
   TileElementSize size(m, n);
-  Tile<Type, Device::CPU> tile0(size, memory_view, ld);
+  Tile<Type, Device::CPU> tile0(size, std::move(mem_view), ld);
   Tile<const Type, Device::CPU>* const_tile = &tile0;
 
   EXPECT_EQ(TileSizes(size, ld), getSizes(tile0));
@@ -251,9 +263,10 @@ TYPED_TEST(TileTest, PointerMix) {
 TYPED_TEST(TileTest, PromiseToFuture) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+  auto mem_view = memory_view;
 
   TileElementSize size(m, n);
-  Tile<Type, Device::CPU> tile(size, memory_view, ld);
+  Tile<Type, Device::CPU> tile(size, std::move(mem_view), ld);
 
   hpx::promise<Tile<Type, Device::CPU>> tile_promise;
   hpx::future<Tile<Type, Device::CPU>> tile_future = tile_promise.get_future();
@@ -279,9 +292,10 @@ TYPED_TEST(TileTest, PromiseToFuture) {
 TYPED_TEST(TileTest, PromiseToFutureConst) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+  auto mem_view = memory_view;
 
   TileElementSize size(m, n);
-  Tile<Type, Device::CPU> tile(size, memory_view, ld);
+  Tile<Type, Device::CPU> tile(size, std::move(mem_view), ld);
 
   hpx::promise<Tile<Type, Device::CPU>> tile_promise;
   hpx::future<Tile<Type, Device::CPU>> tile_future = tile_promise.get_future();

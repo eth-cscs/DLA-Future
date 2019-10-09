@@ -41,7 +41,7 @@ MatrixBase& MatrixBase::operator=(MatrixBase&& rhs) noexcept {
   return *this;
 }
 
-MatrixBase& MatrixBase::setDefaultSizes() noexcept {
+void MatrixBase::setDefaultSizes() noexcept {
   size_ = {0, 0};
   nr_tiles_ = {0, 0};
   block_size_ = {1, 1};

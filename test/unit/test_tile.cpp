@@ -300,6 +300,6 @@ TYPED_TEST(TileTest, PromiseToFutureConst) {
 
   for (SizeType j = 0; j < tile2.size().cols(); ++j)
     for (SizeType i = 0; i < tile2.size().rows(); ++i) {
-      EXPECT_EQ(memory_view(elIndex(i, j, ld)), tile2.ptr(TileElementIndex(TileElementIndex(i, j))));
+      EXPECT_EQ(memory_view(elIndex(i, j, ld)), tile2.ptr(TileElementIndex(i, j)));
     }
 }

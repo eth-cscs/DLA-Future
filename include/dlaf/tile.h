@@ -91,6 +91,9 @@ public:
   }
 
 private:
+  /// @brief Sets size to {0, 0} and ld to 1.
+  void setDefaultSizes() noexcept;
+
   TileElementSize size_;
   memory::MemoryView<ElementType, device> memory_view_;
   SizeType ld_;

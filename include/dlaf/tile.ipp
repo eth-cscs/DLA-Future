@@ -25,8 +25,7 @@ Tile<const T, device>::Tile(TileElementSize size, memory::MemoryView<ElementType
 template <class T, Device device>
 Tile<const T, device>::Tile(Tile&& rhs) noexcept
     : size_(rhs.size_), memory_view_(std::move(rhs.memory_view_)), ld_(rhs.ld_), p_(std::move(rhs.p_)) {
-  rhs.size_ = {0, 0};
-  rhs.ld_ = 1;
+  rhs.setDefaultSizes();
 }
 
 template <class T, Device device>
@@ -42,8 +41,13 @@ Tile<const T, device>& Tile<const T, device>::operator=(Tile<const T, device>&& 
   memory_view_ = std::move(rhs.memory_view_);
   ld_ = rhs.ld_;
   p_ = std::move(rhs.p_);
-  rhs.size_ = {0, 0};
-  rhs.ld_ = 1;
+  rhs.setDefaultSizes();
 
   return *this;
+}
+
+template <class T, Device device>
+void Tile<const T, device>::setDefaultSizes() noexcept {
+  size_ = {0, 0};
+  ld_ = 1;
 }

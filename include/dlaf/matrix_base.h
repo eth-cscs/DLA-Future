@@ -49,6 +49,7 @@ public:
     return size_;
   }
 
+  /// @brief Returns the number of tiles (2D size).
   const LocalTileSize& nrTiles() const noexcept {
     return nr_tiles_;
   }
@@ -58,6 +59,10 @@ public:
   }
 
 private:
+  /// @brief Sets default values.
+  /// Sets size = {0, 0} and block_size = {1, 1}
+  void setDefaultSizes() noexcept;
+
   GlobalElementSize size_;
   LocalTileSize nr_tiles_;
   TileElementSize block_size_;

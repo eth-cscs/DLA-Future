@@ -29,9 +29,7 @@ MatrixBase::MatrixBase(const matrix::LayoutInfo& layout) noexcept
 
 MatrixBase::MatrixBase(MatrixBase&& rhs) noexcept
     : size_(rhs.size_), nr_tiles_(rhs.nr_tiles_), block_size_(rhs.block_size_) {
-  rhs.size_ = {0, 0};
-  rhs.nr_tiles_ = {0, 0};
-  rhs.block_size_ = {1, 1};
+  rhs.setDefaultSizes();
 }
 
 MatrixBase& MatrixBase::operator=(MatrixBase&& rhs) noexcept {
@@ -39,10 +37,13 @@ MatrixBase& MatrixBase::operator=(MatrixBase&& rhs) noexcept {
   nr_tiles_ = rhs.nr_tiles_;
   block_size_ = rhs.block_size_;
 
-  rhs.size_ = {0, 0};
-  rhs.nr_tiles_ = {0, 0};
-  rhs.block_size_ = {1, 1};
-
+  rhs.setDefaultSizes();
   return *this;
+}
+
+MatrixBase& MatrixBase::setDefaultSizes() noexcept {
+  size_ = {0, 0};
+  nr_tiles_ = {0, 0};
+  block_size_ = {1, 1};
 }
 }

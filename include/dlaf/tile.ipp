@@ -9,8 +9,8 @@
 //
 
 template <class T, Device device>
-Tile<const T, device>::Tile(TileElementSize size, memory::MemoryView<ElementType, device> memory_view,
-                            SizeType ld)
+Tile<const T, device>::Tile(const TileElementSize& size,
+                            memory::MemoryView<ElementType, device> memory_view, SizeType ld)
     : size_(size), memory_view_(memory_view), ld_(ld) {
   using util::size_t::sum;
   using util::size_t::mul;

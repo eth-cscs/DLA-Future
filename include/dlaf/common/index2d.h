@@ -88,7 +88,7 @@ public:
   }
 
   bool isEmpty() const noexcept {
-    assert(isValid());
+    assert(internal::basic_coords<IndexT>::isValid());
     return rows() == 0 || cols() == 0;
   }
 };

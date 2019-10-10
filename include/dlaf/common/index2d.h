@@ -13,6 +13,7 @@
 /// @file
 
 #include <array>
+#include <cassert>
 #include <type_traits>
 
 namespace dlaf {
@@ -56,7 +57,9 @@ public:
 
   /// @brief Check if it is a valid position (no upper bound check)
   /// @return true if row >= 0 and column >= 0
-  bool isValid() const noexcept;
+  bool isValid() const noexcept {
+    return row_ >= 0 && col_ >= 0;
+  }
 
 protected:
   IndexT row_;
@@ -82,6 +85,13 @@ public:
 
   IndexT cols() const noexcept {
     return internal::basic_coords<IndexT>::col_;
+  }
+
+  /// @brief Returns true if rows() == 0 or cols() == 0
+  /// @pre isValid() == true
+  bool isEmpty() const noexcept {
+    assert(internal::basic_coords<IndexT>::isValid());
+    return rows() == 0 || cols() == 0;
   }
 };
 

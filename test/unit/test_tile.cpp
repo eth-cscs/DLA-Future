@@ -72,21 +72,6 @@ TYPED_TEST(TileTest, ConstructorConst) {
 
   for (SizeType j = 0; j < tile.size().cols(); ++j)
     for (SizeType i = 0; i < tile.size().rows(); ++i) {
-      EXPECT_EQ(memory_view(elIndex(i, j, ld)), tile.ptr(TileElementIndex(i, j)));
-    }
-}
-
-TYPED_TEST(TileTest, ConstructorMix) {
-  using Type = TypeParam;
-  memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
-  auto mem_view = memory_view;
-
-  TileElementSize size(m, n);
-  Tile<const Type, Device::CPU> tile(size, std::move(memory_view), ld);
-  EXPECT_EQ(TileSizes(size, ld), getSizes(tile));
-
-  for (SizeType j = 0; j < tile.size().cols(); ++j)
-    for (SizeType i = 0; i < tile.size().rows(); ++i) {
       Type el = TypeUtilities<Type>::element(i + 0.01 * j, j - 0.01 * i);
       *memory_view(elIndex(i, j, ld)) = el;
       EXPECT_EQ(el, tile(TileElementIndex(i, j)));
@@ -305,7 +290,7 @@ TYPED_TEST(TileTest, PromiseToFutureConst) {
   {
     Tile<const Type, Device::CPU> const_tile = std::move(tile);
     EXPECT_EQ(false, tile_future.is_ready());
-    EXPECT_EQ(TileSizes({0, 0}, 1), getSizes(const_tile));
+    EXPECT_EQ(TileSizes({0, 0}, 1), getSizes(tile));
   }
 
   ASSERT_EQ(true, tile_future.is_ready());

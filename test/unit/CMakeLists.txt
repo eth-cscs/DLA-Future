@@ -10,6 +10,7 @@
 
 DLAF_addTest(test_util_math SOURCES test_util_math.cpp USE_MAIN PLAIN)
 DLAF_addTest(test_matrix_base SOURCES test_matrix_base.cpp USE_MAIN PLAIN)
+DLAF_addTest(test_matrix SOURCES test_matrix.cpp USE_MAIN HPX)
 
 DLAF_addTest(test_tile SOURCES test_tile.cpp USE_MAIN HPX)
 

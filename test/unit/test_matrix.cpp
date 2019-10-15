@@ -169,7 +169,7 @@ TYPED_TEST(MatrixTest, ConstructorExistingConst) {
 template <template <class> class Future, class T, Device device>
 bool checkFuturesStep(size_t ready, const std::vector<Future<Tile<T, device>>>& futures) {
   assert(ready >= 0);
-  assert(ready <= future.size());
+  assert(ready <= futures.size());
 
   for (std::size_t index = 0; index < ready; ++index) {
     if (!futures[index].is_ready())
@@ -190,7 +190,7 @@ template <template <class> class Future1, template <class> class Future2, class 
           Device device>
 void checkFutures(bool get_ready, const std::vector<Future1<Tile<T1, device>>>& current,
                   std::vector<Future2<Tile<T2, device>>>& previous) {
-  assert(current.size == previous.size);
+  assert(current.size() == previous.size());
 
   for (std::size_t index = 0; index < current.size(); ++index) {
     EXPECT_TRUE(checkFuturesStep(get_ready ? index : 0, current));

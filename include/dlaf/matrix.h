@@ -52,7 +52,7 @@ protected:
   /// @pre index.isValid() == true.
   /// @pre index.isIn(nrTiles()) == true.
   std::size_t tileLinearIndex(const LocalTileIndex& index) {
-    assert(index.isValid() && index.isIn(nr_tiles_));
+    assert(index.isValid() && index.isIn(nrTiles()));
     using util::size_t::sum;
     using util::size_t::mul;
     return sum(index.row(), mul(ld_futures_, index.col()));
@@ -95,7 +95,7 @@ protected:
   /// @pre index.isValid() == true.
   /// @pre index.isIn(nrTiles()) == true.
   std::size_t tileLinearIndex(const LocalTileIndex& index) noexcept {
-    assert(index.isValid() && index.isIn(nr_tiles_));
+    assert(index.isValid() && index.isIn(nrTiles()));
     using util::size_t::sum;
     using util::size_t::mul;
     return sum(index.row(), mul(ld_futures_, index.col()));

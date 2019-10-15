@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#pragma once
+
 #include "dlaf/mpi_header.h"
 
 namespace dlaf {

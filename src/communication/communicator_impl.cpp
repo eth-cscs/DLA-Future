@@ -9,11 +9,11 @@ namespace dlaf {
 namespace comm {
 
 constexpr bool is_manageable(MPI_Comm mpi_communicator) noexcept {
-  switch (mpi_communicator) {
-    case MPI_COMM_WORLD:
-    case MPI_COMM_NULL:
-      return false;
-  }
+  if (mpi_communicator == MPI_COMM_WORLD)
+    return false;
+  else if (mpi_communicator == MPI_COMM_NULL)
+    return false;
+
   return true;
 }
 

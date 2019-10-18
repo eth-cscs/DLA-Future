@@ -10,6 +10,7 @@
 #include "gtest_mpi_listener.h"
 
 #include <algorithm>
+#include <functional>
 
 #define MASTER_CALLS_DEFAULT_LISTENER(name, ...) \
   if (isMasterRank())                            \

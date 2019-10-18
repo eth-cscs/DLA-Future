@@ -9,6 +9,7 @@
 //
 
 #pragma once
+#include <functional>
 #include <sstream>
 #include "gtest/gtest.h"
 #include "dlaf/tile.h"
@@ -17,7 +18,7 @@ namespace dlaf_test {
 namespace tile_test {
 using namespace dlaf;
 
-/// @brief Sets the element of the tile.
+/// @brief Sets the elements of the tile.
 /// The (i, j)-element of the tile is set to el({i, j}).
 /// @pre el argument is an index of type const TileElementIndex&.
 /// @pre el return type should be T.
@@ -63,17 +64,16 @@ void check(Tile<T, Device::CPU>& tile, Func1 el, Func2 comp, Func3 err_message, 
 /// @pre el return type should be T.
 template <class T, class Func>
 void checkEQ(Tile<T, Device::CPU>& tile, Func el, const char* file, const int line) {
-  auto comp = [](T expected, T value) { return expected == value; };
   auto err_message = [](T expected, T value) {
     std::stringstream s;
     s << "expected " << expected << " == " << value;
     return s.str();
   };
-  internal::check(tile, el, comp, err_message, file, line);
+  internal::check(tile, el, std::equal_to<T>{}, err_message, file, line);
 }
 #define CHECK_TILE_EQ(el, tile) ::dlaf_test::tile_test::checkEQ(tile, el, __FILE__, __LINE__);
 
-/// @brief Checks the pointers to the elements of the matrix.
+/// @brief Checks the pointers to the elements of the tile.
 /// The pointer to (i, j)-element of the matrix is compared to ptr({i, j}).
 /// @pre ptr argument is an index of type const TileElementIndex&.
 /// @pre ptr return type should be T*.

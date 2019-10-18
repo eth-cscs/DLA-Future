@@ -11,24 +11,18 @@
 #include <functional>
 
 #include "dlaf/communication/communicator.h"
-#include "dlaf/communication/mpi_datatypes.h"
-#include "dlaf/mpi_header.h"
+#include "dlaf/communication/message.h"
 
 namespace dlaf {
 namespace comm {
 
-/// basic wrapper for MPI_Bcast
-template <typename MessageType>
-void bcast(int broadcaster_rank, MessageType& message, Communicator communicator) {
-  MPI_Bcast(&message, 1, mpi_datatype<MessageType>::type, broadcaster_rank, communicator);
-}
-
-/// basic wrapper for MPI_Ibcast
-template <typename MessageType>
-void async_bcast(int broadcaster_rank, MessageType& message, Communicator communicator,
-                 std::function<void()> action_before_retrying) {
+namespace internal {
+template <typename T>
+void async_bcast(int broadcaster_rank, T* ptr, std::size_t size, MPI_Datatype mpi_type,
+                 Communicator communicator, std::function<void()> action_before_retrying) {
   MPI_Request request;
-  MPI_Ibcast(&message, 1, mpi_datatype<MessageType>::type, broadcaster_rank, communicator, &request);
+  MPI_Ibcast(const_cast<std::remove_const_t<T>*>(ptr), size, mpi_type, broadcaster_rank, communicator,
+             &request);
 
   while (true) {
     int test_flag = 1;
@@ -38,19 +32,22 @@ void async_bcast(int broadcaster_rank, MessageType& message, Communicator commun
     action_before_retrying();  // has this to be called from both sides of the communication?
   }
 }
+}
 
 namespace broadcast {
 
 /// specialized wrapper for MPI_Bcast on sender side
-template <typename MessageType>
-void send(const MessageType& message, Communicator communicator) {
-  bcast(communicator.rank(), const_cast<MessageType&>(message), communicator);
+template <class T>
+void send(message<T>&& message, Communicator& communicator) {
+  MPI_Bcast(const_cast<std::remove_const_t<typename dlaf::comm::message<T>::T>*>(message.ptr()),
+            message.count(), message.mpi_type(), communicator.rank(), communicator);
 }
 
 /// specialized wrapper for MPI_Bcast on receiver side
-template <typename MessageType>
-void receive_from(int broadcaster_rank, MessageType& message, Communicator communicator) {
-  bcast(broadcaster_rank, message, communicator);
+template <typename T, std::enable_if_t<!std::is_const<T>::value, int> = 0>
+void receive_from(int broadcaster_rank, message<T>&& message, Communicator communicator) {
+  MPI_Bcast(static_cast<void*>(message.ptr()), message.count(), message.mpi_type(), communicator.rank(),
+            communicator);
 }
 
 }
@@ -58,18 +55,21 @@ void receive_from(int broadcaster_rank, MessageType& message, Communicator commu
 namespace async_broadcast {
 
 /// specialized wrapper for MPI_Ibcast on sender side
-template <typename MessageType>
-void send(const MessageType& message, Communicator communicator,
+template <typename T>
+void send(message<T>&& message, Communicator communicator,
           std::function<void()> action_before_retrying) {
-  async_bcast(communicator.rank(), const_cast<MessageType&>(message), communicator,
-              action_before_retrying);
+  internal::async_bcast(communicator.rank(),
+                        const_cast<std::remove_const_t<typename dlaf::comm::message<T>::T>*>(
+                            message.ptr()),
+                        message.count(), message.mpi_type(), communicator, action_before_retrying);
 }
 
 /// specialized wrapper for MPI_Ibcast on receiver side
-template <typename MessageType>
-void receive_from(int broadcaster_rank, MessageType& message, Communicator communicator,
+template <typename T>
+void receive_from(int broadcaster_rank, const message<T>& message, Communicator communicator,
                   std::function<void()> action_before_retrying) {
-  async_bcast(broadcaster_rank, message, communicator, action_before_retrying);
+  internal::async_bcast(broadcaster_rank, message.ptr(), message.count(), message.mpi_type(),
+                        communicator, action_before_retrying);
 }
 
 }

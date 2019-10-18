@@ -35,75 +35,22 @@ protected:
   int key = MPI_UNDEFINED;
 };
 
-TEST_F(BroadcastTest, Broadcast_ClassicAPI) {
-  auto broadcaster = 0;
-  auto communicator = splitted_comm;
-
-  int message;
-  if (isMasterInSplitted())
-    message = color;
-  else
-    message = -1;
-
-  dlaf::comm::bcast(broadcaster, message, communicator);
-  EXPECT_EQ(color, message);
-}
-
-TEST_F(BroadcastTest, Broadcast_ClassicAPI_Splitted) {
-  auto broadcaster = 0;
-  auto communicator = splitted_comm;
-
-  if (isMasterInSplitted())
-    dlaf::comm::bcast(broadcaster, color, communicator);
-  else {
-    int message;
-    dlaf::comm::bcast(broadcaster, message, communicator);
-    EXPECT_EQ(color, message);
-  }
-}
-
 TEST_F(BroadcastTest, Broadcast_NewAPI) {
   auto broadcaster = 0;
   auto communicator = splitted_comm;
 
-  if (isMasterInSplitted())
-    dlaf::comm::broadcast::send(color, communicator);
-  else {
-    int message;
-    dlaf::comm::broadcast::receive_from(broadcaster, message, communicator);
-    EXPECT_EQ(color, message);
+  if (isMasterInSplitted()) {
+    const int message = color;
+    // dlaf::comm::broadcast::send(dlaf::comm::mpi::make_message(dlaf::common::make_buffer(&message, 1)),
+    //                             communicator);
+    dlaf::comm::broadcast::send(dlaf::comm::make_message(dlaf::common::make_buffer(message)),
+                                communicator);
   }
-}
-
-TEST_F(BroadcastTest, AsyncBroadcast_ClassicAPI) {
-  auto broadcaster = 0;
-  auto communicator = splitted_comm;
-
-  bool waited;
-  auto what_to_do_before_retesting = [&waited]() { waited = true; };
-
-  int message;
-  if (isMasterInSplitted())
-    message = color;
-  else
-    message = -1;
-
-  dlaf::comm::async_bcast(broadcaster, message, communicator, what_to_do_before_retesting);
-  EXPECT_EQ(color, message);
-}
-
-TEST_F(BroadcastTest, AsyncBroadcast_ClassicAPI_Splitted) {
-  auto broadcaster = 0;
-  auto communicator = splitted_comm;
-
-  bool waited;
-  auto what_to_do_before_retesting = [&waited]() { waited = true; };
-
-  if (isMasterInSplitted())
-    dlaf::comm::async_bcast(broadcaster, color, communicator, what_to_do_before_retesting);
   else {
     int message;
-    dlaf::comm::async_bcast(broadcaster, message, communicator, what_to_do_before_retesting);
+    dlaf::comm::broadcast::receive_from(broadcaster,
+                                        dlaf::comm::make_message(dlaf::common::make_buffer(&message, 1)),
+                                        communicator);
     EXPECT_EQ(color, message);
   }
 }
@@ -116,11 +63,14 @@ TEST_F(BroadcastTest, AsyncBroadcast_NewAPI) {
   auto what_to_do_before_retesting = [&waited]() { waited = true; };
 
   if (isMasterInSplitted())
-    dlaf::comm::async_broadcast::send(color, communicator, what_to_do_before_retesting);
+    dlaf::comm::async_broadcast::send(dlaf::comm::make_message(dlaf::common::make_buffer(&color, 1)),
+                                      communicator, what_to_do_before_retesting);
   else {
     int message;
-    dlaf::comm::async_broadcast::receive_from(broadcaster, message, communicator,
-                                              what_to_do_before_retesting);
+    dlaf::comm::async_broadcast::receive_from(broadcaster,
+                                              dlaf::comm::make_message(
+                                                  dlaf::common::make_buffer(&message, 1)),
+                                              communicator, what_to_do_before_retesting);
     EXPECT_EQ(color, message);
   }
 }

@@ -9,6 +9,7 @@
 //
 
 #pragma once
+#include <functional>
 #include <sstream>
 #include "gtest/gtest.h"
 #include "dlaf/matrix.h"
@@ -18,7 +19,7 @@ namespace dlaf_test {
 namespace matrix_test {
 using namespace dlaf;
 
-/// @brief Returns the pointer to the index element of the matrix.
+/// @brief Returns the pointer to the index elements of the matrix.
 /// @pre index should be a valid and contained in layout.size().
 template <class T>
 T* getPtr(T* base_ptr, const matrix::LayoutInfo& layout, const GlobalElementIndex& index) {
@@ -120,13 +121,12 @@ void check(Matrix<T, Device::CPU>& mat, Func1 el, Func2 comp, Func3 err_message,
 /// @pre el return type should be T.
 template <class T, class Func>
 void checkEQ(Matrix<T, Device::CPU>& mat, Func el, const char* file, const int line) {
-  auto comp = [](T expected, T value) { return expected == value; };
   auto err_message = [](T expected, T value) {
     std::stringstream s;
     s << "expected " << expected << " == " << value;
     return s.str();
   };
-  internal::check(mat, el, comp, err_message, file, line);
+  internal::check(mat, el, std::equal_to<T>{}, err_message, file, line);
 }
 #define CHECK_MATRIX_EQ(el, mat) ::dlaf_test::matrix_test::checkEQ(mat, el, __FILE__, __LINE__);
 

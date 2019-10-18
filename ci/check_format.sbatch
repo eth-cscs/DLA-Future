@@ -29,6 +29,11 @@ FILES_CHANGED=`git diff --name-only origin/master`
 
 for FILE in $FILES_CHANGED
 do
+  if [[ ! -f $FILE ]]
+  then
+    continue
+  fi
+
   case $FILE in
     *.cpp|*.h|*.hpp|*.ipp)
       clang-format -i --style=file $FILE

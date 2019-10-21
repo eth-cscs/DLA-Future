@@ -10,6 +10,8 @@
 
 #pragma once
 #include <functional>
+#include <iomanip>
+#include <iostream>
 #include <sstream>
 #include "gtest/gtest.h"
 #include "dlaf/tile.h"
@@ -19,7 +21,9 @@ namespace tile_test {
 using namespace dlaf;
 
 /// @brief Sets the elements of the tile.
-/// The (i, j)-element of the tile is set to el({i, j}).
+/// The (i, j)-element of the tile is set to el({i, j}) if op == NoTrans,
+///                                          el({j, i}) if op == Trans,
+///                                          conj(el({j, i})) if op == ConjTrans.
 /// @pre el argument is an index of type const TileElementIndex&.
 /// @pre el return type should be T.
 template <class T, class Func>
@@ -30,6 +34,32 @@ void set(Tile<T, Device::CPU>& tile, Func el) {
       tile(index) = el(index);
     }
   }
+}
+
+/// @brief Sets the elements of the tile.
+/// The (i, j)-element of the tile is set to el({i, j}) if op == NoTrans,
+///                                          el({j, i}) if op == Trans,
+///                                          conj(el({j, i})) if op == ConjTrans.
+/// @pre el argument is an index of type const TileElementIndex&.
+/// @pre el return type should be T.
+template <class T>
+void print(Tile<T, Device::CPU>& tile, int precision = 4, std::ostream& out = std::cout) {
+  auto out_precision = out.precision();
+  out.precision(precision);
+  // sign + number + . + exponent (e+xxx)
+  int base_width = 1 + precision + 1 + 5;
+
+  int width = std::is_same<T, ComplexType<T>>::value ? 2 * base_width + 3 : base_width;
+
+  std::cout << "(" << tile.size().rows() << ", " << tile.size().cols() << ") Tile:" << std::endl;
+  for (SizeType i = 0; i < tile.size().rows(); ++i) {
+    for (SizeType j = 0; j < tile.size().cols(); ++j) {
+      TileElementIndex index(i, j);
+      out << std::setw(width) << tile(index) << " ";
+    }
+    out << std::endl;
+  }
+  out.precision(out_precision);
 }
 
 namespace internal {
@@ -88,6 +118,38 @@ void checkPtr(Tile<T, Device::CPU>& tile, Func ptr, const char* file, const int 
   internal::check(tile, ptr, comp, err_message, file, line);
 }
 #define CHECK_TILE_PTR(ptr, tile) ::dlaf_test::tile_test::checkPtr(tile, ptr, __FILE__, __LINE__);
+
+/// @brief Checks the elements of the tile.
+/// The (i, j)-element of the tile is compared to el({i, j}).
+/// @pre el argument is an index of type const TileElementIndex&.
+/// @pre el return type should be T.
+/// @pre rel_err > 0.
+/// @pre abs_err > 0.
+template <class T, class Func>
+void checkNear(Tile<T, Device::CPU>& tile, Func el, BaseType<T> rel_err, BaseType<T> abs_err,
+               const char* file, const int line) {
+  ASSERT_GT(rel_err, 0);
+  ASSERT_GT(abs_err, 0);
+
+  auto comp = [rel_err, abs_err](T expected, T value) {
+    auto diff = std::abs(expected - value);
+    auto abs_max = std::max(std::abs(expected), std::abs(value));
+
+    return (diff < abs_err) || (diff / abs_max < rel_err);
+  };
+  auto err_message = [rel_err, abs_err](T expected, T value) {
+    auto diff = std::abs(expected - value);
+    auto abs_max = std::max(std::abs(expected), std::abs(value));
+
+    std::stringstream s;
+    s << "expected " << expected << " == " << value << " (Relative diff: " << diff / abs_max << " > "
+      << rel_err << ", " << diff << " > " << abs_err << ")";
+    return s.str();
+  };
+  internal::check(tile, el, comp, err_message, file, line);
+}
+#define CHECK_TILE_NEAR(el, tile, rel_err, abs_err) \
+  ::dlaf_test::tile_test::checkNear(tile, el, rel_err, abs_err, __FILE__, __LINE__);
 
 }
 }

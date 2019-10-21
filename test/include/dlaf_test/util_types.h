@@ -25,6 +25,20 @@ struct TypeUtilities {
   static T element(double r, double i) {
     return static_cast<T>(r);
   }
+
+  /// Returns r.
+  /// @pre r > 0
+  static T polar(double r, double i) {
+    return static_cast<T>(r);
+  }
+
+  /// Returns val.
+  static T conj(T val) {
+    return val;
+  }
+
+  /// Relative maximum error for a multiplication + addition.
+  static constexpr T error = 2 * std::numeric_limits<T>::epsilon();
 };
 
 template <class T>
@@ -33,6 +47,20 @@ struct TypeUtilities<std::complex<T>> {
   static std::complex<T> element(double r, double i) {
     return std::complex<T>(static_cast<T>(r), static_cast<T>(i));
   }
+
+  /// Returns r * (cos(theta) + I * sin(theta)) (I is the imaginary unit).
+  /// @pre r > 0
+  static std::complex<T> polar(double r, double i) {
+    return std::polar<T>(static_cast<T>(r), static_cast<T>(i));
+  }
+
+  /// Returns std::conj(val).
+  static std::complex<T> conj(std::complex<T> val) {
+    return std::conj(val);
+  }
+
+  /// Relative maximum error for a multiplication + addition.
+  static constexpr T error = 8 * std::numeric_limits<T>::epsilon();
 };
 
 }

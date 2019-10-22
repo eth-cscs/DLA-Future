@@ -206,6 +206,10 @@ TYPED_TEST(MatrixTest, Dependencies) {
 
   for (const auto& size : sizes) {
     for (const auto& block_size : block_sizes) {
+      // Dependencies graph:
+      // fut0 - fut1 - shfut2a - fut3 - shfut4a - fut5
+      //             \ shfut2b /      \ shfut4b /
+
       Matrix<Type, Device::CPU> mat(size, block_size);
 
       auto fut0 = getFutures(mat);

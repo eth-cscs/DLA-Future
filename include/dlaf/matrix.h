@@ -66,7 +66,7 @@ private:
   std::size_t ld_futures_;
 };
 
-#include <dlaf/matrix.ipp>
+#include "dlaf/matrix.ipp"
 
 template <class T, Device device>
 class Matrix<const T, device> : public MatrixBase {
@@ -108,7 +108,7 @@ private:
   std::size_t ld_futures_;
 };
 
-#include <dlaf/matrix_const.ipp>
+#include "dlaf/matrix_const.ipp"
 
 template <class T, Device device>
 Matrix<T, device> createMatrixFromColMajor(const GlobalElementSize& size,

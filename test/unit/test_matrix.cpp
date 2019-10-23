@@ -39,7 +39,8 @@ TYPED_TEST(MatrixTest, Constructor) {
     for (const auto& block_size : block_sizes) {
       Matrix<Type, Device::CPU> mat(size, block_size);
 
-      EXPECT_EQ(MatrixBase(size, block_size), mat);
+      EXPECT_EQ(size, mat.size());
+      EXPECT_EQ(block_size, mat.blockSize());
 
       set(mat, el);
 
@@ -84,7 +85,9 @@ void checkFromExisting(T* p, const matrix::LayoutInfo& layout, Matrix<T, device>
     }
   }
 
-  EXPECT_EQ(MatrixBase(layout), matrix);
+  EXPECT_EQ(layout.size(), matrix.size());
+  EXPECT_EQ(layout.blockSize(), matrix.blockSize());
+  EXPECT_EQ(layout.nrTiles(), matrix.nrTiles());
   CHECK_MATRIX_PTR(ptr, matrix);
   CHECK_MATRIX_EQ(el, matrix);
 
@@ -113,7 +116,9 @@ void checkFromExisting(T* p, const matrix::LayoutInfo& layout, Matrix<const T, d
     }
   }
 
-  EXPECT_EQ(MatrixBase(layout), matrix);
+  EXPECT_EQ(layout.size(), matrix.size());
+  EXPECT_EQ(layout.blockSize(), matrix.blockSize());
+  EXPECT_EQ(layout.nrTiles(), matrix.nrTiles());
   CHECK_MATRIX_PTR(ptr, matrix);
   CHECK_MATRIX_EQ(el, matrix);
 }

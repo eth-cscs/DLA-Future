@@ -18,7 +18,7 @@
 namespace dlaf {
 
 template <class T, Device device>
-class Matrix : public MatrixBase {
+class Matrix : public Matrix<const T, device> {
 public:
   using ElementType = T;
   using TileType = Tile<ElementType, device>;
@@ -35,12 +35,6 @@ public:
   Matrix& operator=(const Matrix& rhs) = delete;
   Matrix& operator=(Matrix&& rhs) = default;
 
-  /// @brief Returns a read-only shared_future of index Tile.
-  /// TODO: Sync details.
-  /// @pre index.isValid() == true.
-  /// @pre index.isIn(nrTiles()) == true.
-  hpx::shared_future<ConstTileType> read(const LocalTileIndex& index);
-
   /// @brief Returns a future of index Tile.
   /// TODO: Sync details.
   /// @pre index.isValid() == true.
@@ -48,31 +42,27 @@ public:
   hpx::future<TileType> operator()(const LocalTileIndex& index);
 
 protected:
-  /// @brief Returns the position in the vector of the index Tile.
-  /// @pre index.isValid() == true.
-  /// @pre index.isIn(nrTiles()) == true.
-  std::size_t tileLinearIndex(const LocalTileIndex& index) {
-    assert(index.isValid() && index.isIn(nrTiles()));
-    using util::size_t::sum;
-    using util::size_t::mul;
-    return sum(index.row(), mul(ld_futures_, index.col()));
-  }
+  using Matrix<const T, device>::tileLinearIndex;
 
 private:
   void setUpTiles(const memory::MemoryView<ElementType, device>& mem, const matrix::LayoutInfo& layout);
 
-  std::vector<hpx::future<TileType>> tile_futures_;
-  std::vector<hpx::shared_future<ConstTileType>> tile_shared_futures_;
-  std::size_t ld_futures_;
+  using Matrix<const T, device>::setUpTilesInternal;
+  using Matrix<const T, device>::futureVectorSize;
+  using Matrix<const T, device>::tile_futures_;
+  using Matrix<const T, device>::tile_shared_futures_;
+  using Matrix<const T, device>::ld_futures_;
 };
 
 #include "dlaf/matrix.ipp"
 
 template <class T, Device device>
-class Matrix<const T, device> : public MatrixBase {
+class Matrix<const T, device> : protected MatrixBase {
 public:
   using ElementType = T;
+  using TileType = Tile<ElementType, device>;
   using ConstTileType = Tile<const ElementType, device>;
+  friend Matrix<ElementType, device>;
 
   Matrix(const matrix::LayoutInfo& layout, ElementType* ptr, std::size_t elements);
 
@@ -85,7 +75,12 @@ public:
   Matrix& operator=(const Matrix& rhs) = delete;
   Matrix& operator=(Matrix&& rhs) = default;
 
+  using MatrixBase::size;
+  using MatrixBase::blockSize;
+  using MatrixBase::nrTiles;
+
   /// @brief Returns a read-only shared_future of index Tile.
+  /// TODO: Sync details.
   /// @pre index.isValid() == true.
   /// @pre index.isIn(nrTiles()) == true.
   hpx::shared_future<ConstTileType> read(const LocalTileIndex& index) noexcept;
@@ -102,8 +97,21 @@ protected:
   }
 
 private:
-  void setUpTiles(const memory::MemoryView<ElementType, device>& mem, const matrix::LayoutInfo& layout);
+  Matrix(const GlobalElementSize& size, const TileElementSize& block_size,
+         std::vector<hpx::future<TileType>>&& tile_futures,
+         std::vector<hpx::shared_future<ConstTileType>>&& tile_shared_futures);
 
+  void setUpConstTiles(const memory::MemoryView<ElementType, device>& mem,
+                       const matrix::LayoutInfo& layout);
+
+  template <template <class> class Future, class TileT>
+  void setUpTilesInternal(std::vector<Future<TileT>>& tile_futures_vector,
+                          const memory::MemoryView<ElementType, device>& mem,
+                          const matrix::LayoutInfo& layout);
+
+  std::size_t futureVectorSize(const matrix::LayoutInfo& layout);
+
+  std::vector<hpx::future<TileType>> tile_futures_;
   std::vector<hpx::shared_future<ConstTileType>> tile_shared_futures_;
   std::size_t ld_futures_;
 };

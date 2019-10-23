@@ -45,12 +45,11 @@ LayoutInfo::LayoutInfo(const GlobalElementSize& size, const TileElementSize& blo
   else {
     SizeType last_rows = size_.rows() - block_size_.rows() * (nr_tiles_.rows() - 1);
 
-    // tmp is the absolute minimum value for ld and tile_offset_row.
-    SizeType tmp = std::min(size_.rows(), block_size_.rows());
-    if (ld_tile_ < tmp) {
+    SizeType max_rows_tiles = std::min(size_.rows(), block_size_.rows());
+    if (ld_tile_ < max_rows_tiles) {
       throw std::invalid_argument("Error: Invalid Leading Dimension");
     }
-    if (tile_offset_row_ < static_cast<std::size_t>(tmp)) {
+    if (tile_offset_row_ < static_cast<std::size_t>(max_rows_tiles)) {
       throw std::invalid_argument("Error: Invalid Tile Row Offset");
     }
     if (tile_offset_row_ < minTileMemSize(block_size_) &&

@@ -110,20 +110,23 @@ private:
 
 #include "dlaf/matrix_const.ipp"
 
-template <class T, Device device>
+// Note: the templates of the following helper functions are inverted w.r.t. the Matrix templates
+// to allow the user to only specify the device and let the compiler deduce the type T.
+
+template <Device device, class T>
 Matrix<T, device> createMatrixFromColMajor(const GlobalElementSize& size,
                                            const TileElementSize& block_size, SizeType ld, T* ptr,
                                            std::size_t elements) {
   return Matrix<T, device>(matrix::colMajorLayout(size, block_size, ld), ptr, elements);
 }
 
-template <class T, Device device>
+template <Device device, class T>
 Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const TileElementSize& block_size,
                                        T* ptr, std::size_t elements) {
   return Matrix<T, device>(matrix::tileLayout(size, block_size), ptr, elements);
 }
 
-template <class T, Device device>
+template <Device device, class T>
 Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const TileElementSize& block_size,
                                        SizeType ld_tile, SizeType tiles_per_col, T* ptr,
                                        std::size_t elements) {

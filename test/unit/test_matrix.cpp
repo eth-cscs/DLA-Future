@@ -60,9 +60,8 @@ std::size_t memoryIndex(const matrix::LayoutInfo& layout, const GlobalElementInd
   SizeType i = index.row() % block_size.rows();
   SizeType j = index.col() % block_size.cols();
   std::size_t element_offset = sum(i, mul(layout.ldTile(), j));
-return tile_offset + element_offset;
+  return tile_offset + element_offset;
 }
-
 
 template <class T, Device device>
 void checkFromExisting(T* p, const matrix::LayoutInfo& layout, Matrix<T, device>& matrix) {
@@ -93,10 +92,7 @@ void checkFromExisting(T* p, const matrix::LayoutInfo& layout, Matrix<T, device>
 
   for (SizeType j = 0; j < size.cols(); ++j) {
     for (SizeType i = 0; i < size.rows(); ++i) {
-      if (el2({i, j}) != *ptr({i, j})) {
-        FAIL() << "Error at index (" << i << ", " << j << "): "
-               << "expected " << el2({i, j}) << " == " << *ptr({i, j}) << std::endl;
-      }
+      ASSERT_EQ(el2({i, j}), *ptr({i, j})) << "Error at index (" << i << ", " << j << ").";
     }
   }
 }
@@ -179,11 +175,11 @@ TYPED_TEST(MatrixTest, ConstructorExistingConst) {
   }
 }
 
-/// @brief Returns true if the first @p ready futures are ready.
-/// @pre Future* should be future or shared_future
+/// @brief Returns true if only the first @p futures are ready.
+/// @pre Future should be a future or shared_future.
 /// @pre 0 <= ready <= futures.size()
-template <template <class> class Future, class T, Device device>
-bool checkFuturesStep(size_t ready, const std::vector<Future<Tile<T, device>>>& futures) {
+template <class Future>
+bool checkFuturesStep(size_t ready, const std::vector<Future>& futures) {
   assert(ready >= 0);
   assert(ready <= futures.size());
 
@@ -201,11 +197,9 @@ bool checkFuturesStep(size_t ready, const std::vector<Future<Tile<T, device>>>& 
 /// @brief Checks if current[i] depends correctly on previous[i].
 /// If get_ready == true it checks if current[i] is ready after previous[i] is used.
 /// If get_ready == false it checks if current[i] is not ready after previous[i] is used.
-/// @pre Future* should be future or shared_future
-template <template <class> class Future1, template <class> class Future2, class T1, class T2,
-          Device device>
-void checkFutures(bool get_ready, const std::vector<Future1<Tile<T1, device>>>& current,
-                  std::vector<Future2<Tile<T2, device>>>& previous) {
+/// @pre Future[1,2] should be a future or shared_future
+template <class Future1, class Future2>
+void checkFutures(bool get_ready, const std::vector<Future1>& current, std::vector<Future2>& previous) {
   assert(current.size() == previous.size());
 
   for (std::size_t index = 0; index < current.size(); ++index) {
@@ -276,7 +270,7 @@ TYPED_TEST(MatrixTest, DependenciesConst) {
       matrix::LayoutInfo layout = tileLayout(size, block_size);
       memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
       const Type* p = mem();
-      auto mat = createMatrixFromTile<const Type, Device::CPU>(size, block_size, p, mem.size());
+      auto mat = createMatrixFromTile<Device::CPU>(size, block_size, p, mem.size());
       auto shfut1 = getSharedFutures(mat);
       EXPECT_TRUE(checkFuturesStep(shfut1.size(), shfut1));
 
@@ -303,7 +297,7 @@ TYPED_TEST(MatrixTest, FromColMajor) {
 
     matrix::LayoutInfo layout = colMajorLayout(size, block_size, ld);
     memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
-    auto mat = createMatrixFromColMajor<Type, Device::CPU>(size, block_size, ld, mem(), mem.size());
+    auto mat = createMatrixFromColMajor<Device::CPU>(size, block_size, ld, mem(), mem.size());
 
     CHECK_FROM_EXISTING(mem(), layout, mat);
   }
@@ -320,7 +314,7 @@ TYPED_TEST(MatrixTest, FromColMajorConst) {
     matrix::LayoutInfo layout = colMajorLayout(size, block_size, ld);
     memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
     const Type* p = mem();
-    auto mat = createMatrixFromColMajor<const Type, Device::CPU>(size, block_size, ld, p, mem.size());
+    auto mat = createMatrixFromColMajor<Device::CPU>(size, block_size, ld, p, mem.size());
 
     CHECK_FROM_EXISTING(mem(), layout, mat);
   }
@@ -348,12 +342,11 @@ TYPED_TEST(MatrixTest, FromTile) {
     matrix::LayoutInfo layout = tileLayout(size, block_size, ld, tiles_per_col);
     memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
     if (is_basic) {
-      auto mat = createMatrixFromTile<Type, Device::CPU>(size, block_size, mem(), mem.size());
+      auto mat = createMatrixFromTile<Device::CPU>(size, block_size, mem(), mem.size());
       CHECK_FROM_EXISTING(mem(), layout, mat);
     }
 
-    auto mat =
-        createMatrixFromTile<Type, Device::CPU>(size, block_size, ld, tiles_per_col, mem(), mem.size());
+    auto mat = createMatrixFromTile<Device::CPU>(size, block_size, ld, tiles_per_col, mem(), mem.size());
 
     CHECK_FROM_EXISTING(mem(), layout, mat);
   }
@@ -373,12 +366,11 @@ TYPED_TEST(MatrixTest, FromTileConst) {
     memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
     const Type* p = mem();
     if (is_basic) {
-      auto mat = createMatrixFromTile<const Type, Device::CPU>(size, block_size, p, mem.size());
+      auto mat = createMatrixFromTile<Device::CPU>(size, block_size, p, mem.size());
       CHECK_FROM_EXISTING(mem(), layout, mat);
     }
 
-    auto mat = createMatrixFromTile<const Type, Device::CPU>(size, block_size, ld, tiles_per_col, p,
-                                                             mem.size());
+    auto mat = createMatrixFromTile<Device::CPU>(size, block_size, ld, tiles_per_col, p, mem.size());
 
     CHECK_FROM_EXISTING(mem(), layout, mat);
   }

@@ -44,8 +44,10 @@
 #include <hpx/hpx_start.hpp>
 #include <hpx/runtime/threads/run_as_hpx_thread.hpp>
 
+#include "gtest_mpi_listener.h"
+
 GTEST_API_ int test_main(int argc, char** argv) {
-  std::printf("Running main() from gtest_hpx_main.cpp\n");
+  std::printf("Running main() from gtest_mpihpx_main.cpp\n");
   auto ret = RUN_ALL_TESTS();
   hpx::finalize();
   return ret;
@@ -53,6 +55,13 @@ GTEST_API_ int test_main(int argc, char** argv) {
 
 GTEST_API_ int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
+
+  // Gets hold of the event listener list.
+  ::testing::TestEventListeners& listeners = ::testing::UnitTest::GetInstance()->listeners();
+
+  // Adds MPIListener to the end. googletest takes the ownership.
+  auto default_listener = listeners.Release(listeners.default_result_printer());
+  listeners.Append(new MPIListener(argc, argv, default_listener));
 
   hpx::start(nullptr, argc, argv);
   hpx::runtime* rt = hpx::get_runtime_ptr();

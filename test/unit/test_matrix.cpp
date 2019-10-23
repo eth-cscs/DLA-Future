@@ -48,6 +48,22 @@ TYPED_TEST(MatrixTest, Constructor) {
   }
 }
 
+/// @brief Returns the memory index of the @p index element of the matrix.
+/// @pre index should be a valid and contained in @p layout.size().
+std::size_t memoryIndex(const matrix::LayoutInfo& layout, const GlobalElementIndex& index) {
+  using util::size_t::sum;
+  using util::size_t::mul;
+  const auto& block_size = layout.blockSize();
+  SizeType tile_i = index.row() / block_size.rows();
+  SizeType tile_j = index.col() / block_size.cols();
+  std::size_t tile_offset = layout.tileOffset({tile_i, tile_j});
+  SizeType i = index.row() % block_size.rows();
+  SizeType j = index.col() % block_size.cols();
+  std::size_t element_offset = sum(i, mul(layout.ldTile(), j));
+return tile_offset + element_offset;
+}
+
+
 template <class T, Device device>
 void checkFromExisting(T* p, const matrix::LayoutInfo& layout, Matrix<T, device>& matrix) {
   auto el = [](const GlobalElementIndex& index) {
@@ -60,7 +76,7 @@ void checkFromExisting(T* p, const matrix::LayoutInfo& layout, Matrix<T, device>
     SizeType j = index.col();
     return TypeUtilities<T>::element(-i + 0.001 * j, j + 0.01 * i);
   };
-  auto ptr = [p, layout](const GlobalElementIndex& index) { return getPtr(p, layout, index); };
+  auto ptr = [p, layout](const GlobalElementIndex& index) { return p + memoryIndex(layout, index); };
   const auto& size = layout.size();
 
   for (SizeType j = 0; j < size.cols(); ++j) {
@@ -92,7 +108,7 @@ void checkFromExisting(T* p, const matrix::LayoutInfo& layout, Matrix<const T, d
     SizeType j = index.col();
     return TypeUtilities<T>::element(i + 0.001 * j, j - 0.01 * i);
   };
-  auto ptr = [p, layout](const GlobalElementIndex& index) { return getPtr(p, layout, index); };
+  auto ptr = [p, layout](const GlobalElementIndex& index) { return p + memoryIndex(layout, index); };
   const auto& size = layout.size();
 
   for (SizeType j = 0; j < size.cols(); ++j) {

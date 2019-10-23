@@ -19,23 +19,6 @@ namespace dlaf_test {
 namespace matrix_test {
 using namespace dlaf;
 
-/// @brief Returns the pointer to the index element of the matrix.
-/// @pre index should be a valid and contained in layout.size().
-template <class T>
-inline std::size_t getPtr(T* base_ptr, const matrix::LayoutInfo& layout,
-                          const GlobalElementIndex& index) {
-  using util::size_t::sum;
-  using util::size_t::mul;
-  const auto& block_size = layout.blockSize();
-  SizeType tile_i = index.row() / block_size.rows();
-  SizeType tile_j = index.col() / block_size.cols();
-  std::size_t tile_offset = layout.tileOffset({tile_i, tile_j});
-  SizeType i = index.row() % block_size.rows();
-  SizeType j = index.col() % block_size.cols();
-  std::size_t element_offset = sum(i, mul(layout.ldTile(), j));
-  return tile_offset + element_offset;
-}
-
 /// @brief Sets the elements of the matrix.
 /// The (i, j)-element of the matrix is set to el({i, j}).
 /// @pre el argument is an index of type const GlobalElementIndex&.

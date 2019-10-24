@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <cassert>
 #include <type_traits>
 
 namespace dlaf {
@@ -18,38 +19,14 @@ namespace common {
 template <class T, class Enable = void>
 struct Buffer;
 
-/// buffer by copy for arithmetic types
-template <class T>
-struct Buffer<T, std::enable_if_t<std::is_arithmetic<T>::value>> {
-  T data_;
-
-  T* ptr() {
-    return &data_;
-  }
-
-  const T* ptr() const {
-    return &data_;
-  }
-
-  std::size_t nblocks() const {
-    return 1;
-  }
-
-  std::size_t blocksize() const {
-    return 1;
-  }
-
-  std::size_t block_offset() const {
-    return 0;
-  }
-};
-
 /// buffer by reference
 template <class T>
 struct Buffer<T*, void> {
   Buffer(T* ptr, std::size_t n) : Buffer(ptr, 1, n, 0) {}
-  Buffer(T* ptr, std::size_t num_blocks, std::size_t blocksize, std::size_t block_offset)
-      : ptr_(ptr), nblocks_(num_blocks), blocksize_(blocksize), blocks_offset_(block_offset) {}
+  Buffer(T* ptr, std::size_t num_blocks, std::size_t blocksize, std::size_t stride)
+      : ptr_(ptr), nblocks_(num_blocks), blocksize_(blocksize), stride_(stride) {
+    assert(nblocks_ == 1 ? stride_ == 0 : stride_ > blocksize_);
+  }
 
   T* ptr() {
     return ptr_;
@@ -67,26 +44,22 @@ struct Buffer<T*, void> {
     return blocksize_;
   }
 
-  std::size_t block_offset() const {
-    return blocks_offset_;
+  std::size_t stride() const {
+    return stride_;
   }
 
+protected:
   T* ptr_;
   std::size_t nblocks_;
   std::size_t blocksize_;
-  std::size_t blocks_offset_;
+  std::size_t stride_;
 };
 
-/// helper class for bounded arrays
+/// helper class for bounded contiguous array
 template <class T, std::size_t N>
 struct Buffer<T[N], std::enable_if_t<std::is_array<T[N]>::value>> : Buffer<std::decay_t<T[N]>> {
-  Buffer(T array[N]) : Buffer<T*>(array, std::extent<T>::value) {}
+  Buffer(T array[N]) : Buffer<T*>(array, std::extent<T[N]>::value) {}
 };
-
-template <class T, class... Ts>
-auto make_buffer(T data, Ts... args) {
-  return Buffer<T>{data, static_cast<std::size_t>(args)...};
-}
 
 // API for algorithms
 template <class Buffer>
@@ -105,6 +78,11 @@ auto get_blocksize(const Buffer& buffer) -> decltype(buffer.blocksize()) {
 }
 
 template <class Buffer>
+auto get_stride(const Buffer& buffer) -> decltype(buffer.stride()) {
+  return buffer.stride();
+}
+
+template <class Buffer>
 struct buffer_traits;
 
 template <class T>
@@ -112,10 +90,13 @@ struct buffer_traits<Buffer<T*>> {
   using element_t = T;
 };
 
-template <class T>
-struct buffer_traits<Buffer<T>> {
-  using element_t = T;
-};
+template <class T, std::size_t N>
+struct buffer_traits<Buffer<T[N]>> : buffer_traits<Buffer<std::decay_t<T[N]>>> {};
 
 }
+}
+
+template <class T, class... Ts>
+auto make_buffer(T data, Ts... args) {
+  return dlaf::common::Buffer<T>{data, static_cast<std::size_t>(args)...};
 }

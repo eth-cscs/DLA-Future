@@ -30,8 +30,8 @@ struct message {
       return;
     }
 
-    custom_type_ =
-        type_handler<T>(get_pointer(buffer), get_num_blocks(buffer), get_blocksize(buffer), 0);
+    custom_type_ = type_handler<T>(get_pointer(buffer), get_num_blocks(buffer), get_blocksize(buffer),
+                                   get_stride(buffer));
   }
 
   T* ptr() {
@@ -43,16 +43,11 @@ struct message {
   }
 
   std::size_t count() const {
-    if (custom_type_)
-      return get_num_blocks(buffer_);
-    return get_blocksize(buffer_);
-    ;
+    return custom_type_ ? 1 : get_blocksize(buffer_);
   }
 
   MPI_Datatype mpi_type() const {
-    if (custom_type_)
-      return custom_type_();
-    return classic_type_;
+    return custom_type_ ? custom_type_ : classic_type_;
   }
 
   buffer_t buffer_;
@@ -60,9 +55,15 @@ struct message {
   type_handler<T> custom_type_;
 };
 
-template <class Buffer>
-auto make_message(Buffer buffer) -> decltype(message<Buffer>(buffer)) {
-  return {buffer};
+template <class T>
+auto make_message(dlaf::common::Buffer<T>&& buffer)
+    -> decltype(message<dlaf::common::Buffer<T>>{buffer}) {
+  return {std::forward<dlaf::common::Buffer<T>>(buffer)};
+}
+
+template <class... Ts>
+auto make_message(Ts&&... args) {
+  return make_message(make_buffer(std::forward<Ts>(args)...));
 }
 
 }

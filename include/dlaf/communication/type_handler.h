@@ -18,37 +18,44 @@
 namespace dlaf {
 namespace comm {
 
-namespace internal {
-void mpi_release_type(MPI_Datatype* d) {
-  if (d == nullptr)
-    return;
-  MPI_Type_free(d);
-}
-}
-
 template <typename T>
 struct type_handler {
-  using mpi_type_handler_t = std::unique_ptr<MPI_Datatype, decltype(internal::mpi_release_type)*>;
-
   type_handler() = default;
 
   type_handler(T* ptr, std::size_t nblocks, std::size_t block_size, std::size_t stride) {
     MPI_Datatype element_type = dlaf::comm::mpi_datatype<std::remove_pointer_t<T>>::type;
-    MPI_Datatype new_type;
-    MPI_Type_vector(nblocks, block_size, stride, element_type, &new_type);
-
-    mpi_handler_ = mpi_type_handler_t(&new_type, internal::mpi_release_type);
+    MPI_Type_vector(nblocks, block_size, stride, element_type, &custom_type_);
+    MPI_Type_commit(&custom_type_);
   }
+
+  ~type_handler() {
+    if (static_cast<bool>(*this))
+      MPI_Type_free(&custom_type_);
+  }
+
+  type_handler(type_handler&& rhs) {
+    custom_type_ = rhs.custom_type_;
+    rhs.custom_type_ = MPI_DATATYPE_NULL;
+  }
+
+  type_handler& operator=(type_handler&& rhs) {
+    custom_type_ = rhs.custom_type_;
+    rhs.custom_type_ = MPI_DATATYPE_NULL;
+    return *this;
+  }
+
+  type_handler(const type_handler&) = delete;
+  type_handler& operator=(const type_handler&) = delete;
 
   operator bool() const {
-    return static_cast<bool>(mpi_handler_);
+    return MPI_DATATYPE_NULL != custom_type_;
   }
 
-  MPI_Datatype operator()() const {
-    return *mpi_handler_;
+  operator MPI_Datatype() const {
+    return custom_type_;
   }
 
-  mpi_type_handler_t mpi_handler_{nullptr, internal::mpi_release_type};
+  MPI_Datatype custom_type_ = MPI_DATATYPE_NULL;
 };
 
 }

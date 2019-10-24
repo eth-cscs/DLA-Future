@@ -45,6 +45,8 @@
 GTEST_API_ int main(int argc, char* argv[]) {
   ::testing::InitGoogleTest(&argc, argv);
 
+  MPI_Init(&argc, &argv);
+
   // Gets hold of the event listener list.
   ::testing::TestEventListeners& listeners = ::testing::UnitTest::GetInstance()->listeners();
 
@@ -54,6 +56,8 @@ GTEST_API_ int main(int argc, char* argv[]) {
 
   int result = 0;
   result = RUN_ALL_TESTS();
+
+  MPI_Finalize();
 
   return result;
 }

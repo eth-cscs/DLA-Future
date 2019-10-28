@@ -78,6 +78,5 @@ template <class T, Device device>
 std::size_t Matrix<const T, device>::futureVectorSize(const matrix::LayoutInfo& layout) const noexcept {
   using util::size_t::mul;
   const auto& nr_tiles = layout.nrTiles();
-  assert(ld_futures_ >= static_cast<std::size_t>(nr_tiles.rows()));
   return mul(nr_tiles.rows(), nr_tiles.cols());
 }

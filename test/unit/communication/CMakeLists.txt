@@ -8,6 +8,12 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+DLAF_addTest(test_message
+  SOURCES test_message.cpp
+  MPIRANKS 2
+  USE_MAIN MPI
+)
+
 DLAF_addTest(test_communicator
   SOURCES test_communicator.cpp
   MPIRANKS 4

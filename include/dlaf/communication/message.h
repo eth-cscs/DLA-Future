@@ -30,39 +30,46 @@ struct message {
       return;
     }
 
-    custom_type_ = type_handler<T>(get_pointer(buffer), get_num_blocks(buffer), get_blocksize(buffer),
-                                   get_stride(buffer));
+    custom_type_ = internal::type_handler<T>(get_pointer(buffer), get_num_blocks(buffer),
+                                             get_blocksize(buffer), get_stride(buffer));
   }
 
-  T* ptr() {
+  message(message&&) = default;
+  message& operator=(message&&) = default;
+
+  message(const message&) = delete;
+  message& operator=(const message&) = delete;
+
+  T* ptr() noexcept {
     return get_pointer(buffer_);
   }
 
-  const T* ptr() const {
+  const T* ptr() const noexcept {
     return get_pointer(buffer_);
   }
 
-  std::size_t count() const {
+  std::size_t count() const noexcept {
     return custom_type_ ? 1 : get_blocksize(buffer_);
   }
 
-  MPI_Datatype mpi_type() const {
+  MPI_Datatype mpi_type() const noexcept {
     return custom_type_ ? custom_type_ : classic_type_;
   }
 
+protected:
   buffer_t buffer_;
   MPI_Datatype classic_type_;
-  type_handler<T> custom_type_;
+  internal::type_handler<T> custom_type_;
 };
 
 template <class T>
-auto make_message(dlaf::common::Buffer<T>&& buffer)
+auto make_message(dlaf::common::Buffer<T>&& buffer) noexcept
     -> decltype(message<dlaf::common::Buffer<T>>{buffer}) {
   return {std::forward<dlaf::common::Buffer<T>>(buffer)};
 }
 
 template <class... Ts>
-auto make_message(Ts&&... args) {
+auto make_message(Ts&&... args) noexcept {
   return make_message(make_buffer(std::forward<Ts>(args)...));
 }
 

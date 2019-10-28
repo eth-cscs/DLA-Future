@@ -17,10 +17,11 @@
 
 namespace dlaf {
 namespace comm {
+namespace internal {
 
 template <typename T>
 struct type_handler {
-  type_handler() = default;
+  type_handler() noexcept = default;
 
   type_handler(T* ptr, std::size_t nblocks, std::size_t block_size, std::size_t stride) {
     MPI_Datatype element_type = dlaf::comm::mpi_datatype<std::remove_pointer_t<T>>::type;
@@ -33,12 +34,12 @@ struct type_handler {
       MPI_Type_free(&custom_type_);
   }
 
-  type_handler(type_handler&& rhs) {
+  type_handler(type_handler&& rhs) noexcept {
     custom_type_ = rhs.custom_type_;
     rhs.custom_type_ = MPI_DATATYPE_NULL;
   }
 
-  type_handler& operator=(type_handler&& rhs) {
+  type_handler& operator=(type_handler&& rhs) noexcept {
     custom_type_ = rhs.custom_type_;
     rhs.custom_type_ = MPI_DATATYPE_NULL;
     return *this;
@@ -47,16 +48,18 @@ struct type_handler {
   type_handler(const type_handler&) = delete;
   type_handler& operator=(const type_handler&) = delete;
 
-  operator bool() const {
+  operator bool() const noexcept {
     return MPI_DATATYPE_NULL != custom_type_;
   }
 
-  operator MPI_Datatype() const {
+  operator MPI_Datatype() const noexcept {
     return custom_type_;
   }
 
+protected:
   MPI_Datatype custom_type_ = MPI_DATATYPE_NULL;
 };
 
+}
 }
 }

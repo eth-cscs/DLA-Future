@@ -53,6 +53,14 @@ TYPED_TEST(MatrixTest, StaticAPIConst) {
                 "wrong ConstTileType");
 }
 
+template <class MatrixType>
+struct TestMatrix : protected MatrixType {
+  // Test function which compares matrix sizes and distribution.
+  static bool compareBase(const MatrixBase& matrix_base, const MatrixType& matrix) {
+    return matrix_base == matrix;
+  }
+};
+
 TYPED_TEST(MatrixTest, Constructor) {
   using Type = TypeParam;
   auto el = [](const GlobalElementIndex& index) {
@@ -65,8 +73,8 @@ TYPED_TEST(MatrixTest, Constructor) {
     for (const auto& block_size : block_sizes) {
       Matrix<Type, Device::CPU> mat(size, block_size);
 
-      EXPECT_EQ(size, mat.size());
-      EXPECT_EQ(block_size, mat.blockSize());
+      EXPECT_TRUE(
+          (TestMatrix<Matrix<Type, Device::CPU>>::compareBase(MatrixBase(size, block_size), mat)));
 
       set(mat, el);
 
@@ -111,9 +119,7 @@ void checkFromExisting(T* p, const matrix::LayoutInfo& layout, Matrix<T, device>
     }
   }
 
-  EXPECT_EQ(layout.size(), matrix.size());
-  EXPECT_EQ(layout.blockSize(), matrix.blockSize());
-  EXPECT_EQ(layout.nrTiles(), matrix.nrTiles());
+  EXPECT_TRUE((TestMatrix<Matrix<T, Device::CPU>>::compareBase(MatrixBase(layout), matrix)));
   CHECK_MATRIX_PTR(ptr, matrix);
   CHECK_MATRIX_EQ(el, matrix);
 
@@ -142,9 +148,7 @@ void checkFromExisting(T* p, const matrix::LayoutInfo& layout, Matrix<const T, d
     }
   }
 
-  EXPECT_EQ(layout.size(), matrix.size());
-  EXPECT_EQ(layout.blockSize(), matrix.blockSize());
-  EXPECT_EQ(layout.nrTiles(), matrix.nrTiles());
+  EXPECT_TRUE((TestMatrix<Matrix<const T, Device::CPU>>::compareBase(MatrixBase(layout), matrix)));
   CHECK_MATRIX_PTR(ptr, matrix);
   CHECK_MATRIX_EQ(el, matrix);
 }

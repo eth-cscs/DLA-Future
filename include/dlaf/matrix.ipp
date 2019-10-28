@@ -34,7 +34,7 @@ Matrix<T, device>::Matrix(const matrix::LayoutInfo& layout, ElementType* ptr, st
 }
 
 template <class T, Device device>
-hpx::future<Tile<T, device>> Matrix<T, device>::operator()(const LocalTileIndex& index) {
+hpx::future<Tile<T, device>> Matrix<T, device>::operator()(const LocalTileIndex& index) noexcept {
   std::size_t i = tileLinearIndex(index);
   hpx::future<TileType> old_future = std::move(tile_futures_[i]);
   hpx::promise<TileType> p;
@@ -47,8 +47,7 @@ hpx::future<Tile<T, device>> Matrix<T, device>::operator()(const LocalTileIndex&
 
 template <class T, Device device>
 void Matrix<T, device>::setUpTiles(const memory::MemoryView<T, device>& mem,
-                                   const matrix::LayoutInfo& layout) {
-  ld_futures_ = static_cast<std::size_t>(layout.nrTiles().rows());
+                                   const matrix::LayoutInfo& layout) noexcept {
   tile_shared_futures_.resize(futureVectorSize(layout));
 
   setUpTilesInternal(tile_futures_, mem, layout);

@@ -46,8 +46,7 @@ Matrix<const T, device>::Matrix(const GlobalElementSize& size, const TileElement
 
 template <class T, Device device>
 void Matrix<const T, device>::setUpConstTiles(const memory::MemoryView<T, device>& mem,
-                                              const matrix::LayoutInfo& layout) {
-  ld_futures_ = static_cast<std::size_t>(layout.nrTiles().rows());
+                                              const matrix::LayoutInfo& layout) noexcept {
   tile_futures_.resize(futureVectorSize(layout));
 
   setUpTilesInternal(tile_shared_futures_, mem, layout);
@@ -57,7 +56,7 @@ template <class T, Device device>
 template <template <class> class Future, class TileT>
 void Matrix<const T, device>::setUpTilesInternal(std::vector<Future<TileT>>& tile_futures_vector,
                                                  const memory::MemoryView<ElementType, device>& mem,
-                                                 const matrix::LayoutInfo& layout) {
+                                                 const matrix::LayoutInfo& layout) noexcept {
   tile_futures_vector.clear();
   tile_futures_vector.reserve(futureVectorSize(layout));
 
@@ -76,9 +75,9 @@ void Matrix<const T, device>::setUpTilesInternal(std::vector<Future<TileT>>& til
 }
 
 template <class T, Device device>
-std::size_t Matrix<const T, device>::futureVectorSize(const matrix::LayoutInfo& layout) {
+std::size_t Matrix<const T, device>::futureVectorSize(const matrix::LayoutInfo& layout) const noexcept {
   using util::size_t::mul;
   const auto& nr_tiles = layout.nrTiles();
   assert(ld_futures_ >= static_cast<std::size_t>(nr_tiles.rows()));
-  return mul(ld_futures_, nr_tiles.cols());
+  return mul(nr_tiles.rows(), nr_tiles.cols());
 }

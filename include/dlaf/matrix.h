@@ -39,19 +39,19 @@ public:
   /// TODO: Sync details.
   /// @pre index.isValid() == true.
   /// @pre index.isIn(nrTiles()) == true.
-  hpx::future<TileType> operator()(const LocalTileIndex& index);
+  hpx::future<TileType> operator()(const LocalTileIndex& index) noexcept;
 
 protected:
   using Matrix<const T, device>::tileLinearIndex;
 
 private:
-  void setUpTiles(const memory::MemoryView<ElementType, device>& mem, const matrix::LayoutInfo& layout);
+  void setUpTiles(const memory::MemoryView<ElementType, device>& mem,
+                  const matrix::LayoutInfo& layout) noexcept;
 
   using Matrix<const T, device>::setUpTilesInternal;
   using Matrix<const T, device>::futureVectorSize;
   using Matrix<const T, device>::tile_futures_;
   using Matrix<const T, device>::tile_shared_futures_;
-  using Matrix<const T, device>::ld_futures_;
 };
 
 #include "dlaf/matrix.ipp"
@@ -89,11 +89,11 @@ protected:
   /// @brief Returns the position in the vector of the index Tile.
   /// @pre index.isValid() == true.
   /// @pre index.isIn(nrTiles()) == true.
-  std::size_t tileLinearIndex(const LocalTileIndex& index) noexcept {
+  std::size_t tileLinearIndex(const LocalTileIndex& index) const noexcept {
     assert(index.isValid() && index.isIn(nrTiles()));
     using util::size_t::sum;
     using util::size_t::mul;
-    return sum(index.row(), mul(ld_futures_, index.col()));
+    return sum(index.row(), mul(nrTiles().rows(), index.col()));
   }
 
 private:
@@ -102,18 +102,17 @@ private:
          std::vector<hpx::shared_future<ConstTileType>>&& tile_shared_futures);
 
   void setUpConstTiles(const memory::MemoryView<ElementType, device>& mem,
-                       const matrix::LayoutInfo& layout);
+                       const matrix::LayoutInfo& layout) noexcept;
 
   template <template <class> class Future, class TileT>
   void setUpTilesInternal(std::vector<Future<TileT>>& tile_futures_vector,
                           const memory::MemoryView<ElementType, device>& mem,
-                          const matrix::LayoutInfo& layout);
+                          const matrix::LayoutInfo& layout) noexcept;
 
-  std::size_t futureVectorSize(const matrix::LayoutInfo& layout);
+  std::size_t futureVectorSize(const matrix::LayoutInfo& layout) const noexcept;
 
   std::vector<hpx::future<TileType>> tile_futures_;
   std::vector<hpx::shared_future<ConstTileType>> tile_shared_futures_;
-  std::size_t ld_futures_;
 };
 
 #include "dlaf/matrix_const.ipp"

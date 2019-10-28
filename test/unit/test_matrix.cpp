@@ -27,6 +27,32 @@ TYPED_TEST_CASE(MatrixTest, MatrixElementTypes);
 std::vector<GlobalElementSize> sizes({{31, 17}, {29, 41}, {0, 1}, {3, 0}});
 std::vector<TileElementSize> block_sizes({{7, 11}, {13, 11}, {3, 3}});
 
+TYPED_TEST(MatrixTest, StaticAPI) {
+  const Device device = Device::CPU;
+
+  using matrix_t = Matrix<TypeParam, device>;
+
+  static_assert(std::is_same<TypeParam, typename matrix_t::ElementType>::value, "wrong ElementType");
+  static_assert(std::is_same<Tile<TypeParam, device>, typename matrix_t::TileType>::value,
+                "wrong TileType");
+  static_assert(std::is_same<Tile<const TypeParam, device>, typename matrix_t::ConstTileType>::value,
+                "wrong ConstTileType");
+}
+
+TYPED_TEST(MatrixTest, StaticAPIConst) {
+  const Device device = Device::CPU;
+
+  using const_matrix_t = Matrix<const TypeParam, device>;
+
+  static_assert(std::is_same<TypeParam, typename const_matrix_t::ElementType>::value,
+                "wrong ElementType");
+  static_assert(std::is_same<Tile<TypeParam, device>, typename const_matrix_t::TileType>::value,
+                "wrong TileType");
+  static_assert(std::is_same<Tile<const TypeParam, device>,
+                             typename const_matrix_t::ConstTileType>::value,
+                "wrong ConstTileType");
+}
+
 TYPED_TEST(MatrixTest, Constructor) {
   using Type = TypeParam;
   auto el = [](const GlobalElementIndex& index) {

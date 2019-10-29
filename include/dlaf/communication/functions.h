@@ -38,15 +38,15 @@ namespace broadcast {
 
 /// specialized wrapper for MPI_Bcast on sender side
 template <class T>
-void send(message<T>&& message, Communicator& communicator) {
-  MPI_Bcast(const_cast<std::remove_const_t<typename dlaf::comm::message<T>::value_t>*>(message.ptr()),
+void send(Message<T>&& message, Communicator& communicator) {
+  MPI_Bcast(const_cast<std::remove_const_t<typename dlaf::comm::Message<T>::element_t>*>(message.data()),
             message.count(), message.mpi_type(), communicator.rank(), communicator);
 }
 
 /// specialized wrapper for MPI_Bcast on receiver side
 template <typename T, std::enable_if_t<!std::is_const<T>::value, int> = 0>
-void receive_from(int broadcaster_rank, message<T>&& message, Communicator communicator) {
-  MPI_Bcast(static_cast<void*>(message.ptr()), message.count(), message.mpi_type(), communicator.rank(),
+void receive_from(int broadcaster_rank, Message<T>&& message, Communicator communicator) {
+  MPI_Bcast(static_cast<void*>(message.data()), message.count(), message.mpi_type(), communicator.rank(),
             communicator);
 }
 
@@ -56,19 +56,19 @@ namespace async_broadcast {
 
 /// specialized wrapper for MPI_Ibcast on sender side
 template <typename T>
-void send(message<T>&& message, Communicator communicator,
+void send(Message<T>&& message, Communicator communicator,
           std::function<void()> action_before_retrying) {
   internal::async_bcast(communicator.rank(),
-                        const_cast<std::remove_const_t<typename dlaf::comm::message<T>::value_t>*>(
-                            message.ptr()),
+                        const_cast<std::remove_const_t<typename dlaf::comm::Message<T>::element_t>*>(
+                            message.data()),
                         message.count(), message.mpi_type(), communicator, action_before_retrying);
 }
 
 /// specialized wrapper for MPI_Ibcast on receiver side
 template <typename T>
-void receive_from(int broadcaster_rank, const message<T>& message, Communicator communicator,
+void receive_from(int broadcaster_rank, const Message<T>& message, Communicator communicator,
                   std::function<void()> action_before_retrying) {
-  internal::async_bcast(broadcaster_rank, message.ptr(), message.count(), message.mpi_type(),
+  internal::async_bcast(broadcaster_rank, message.data(), message.count(), message.mpi_type(),
                         communicator, action_before_retrying);
 }
 

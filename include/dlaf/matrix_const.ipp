@@ -47,8 +47,6 @@ Matrix<const T, device>::Matrix(const GlobalElementSize& size, const TileElement
 template <class T, Device device>
 void Matrix<const T, device>::setUpConstTiles(const memory::MemoryView<T, device>& mem,
                                               const matrix::LayoutInfo& layout) noexcept {
-  tile_futures_.resize(futureVectorSize(layout));
-
   setUpTilesInternal(tile_shared_futures_, mem, layout);
 }
 

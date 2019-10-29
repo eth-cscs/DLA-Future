@@ -150,7 +150,7 @@ TYPED_TEST(BufferTest, CtorFromStridedArray) {
                 "Wrong type returned");
 }
 
-TYPED_TEST(BufferTest, CopyabilityFromPointer) {
+TYPED_TEST(BufferTest, CopyFromPointer) {
   using namespace dlaf::common;
 
   TypeParam value = 26;
@@ -173,7 +173,7 @@ TYPED_TEST(BufferTest, CopyabilityFromPointer) {
                 "Wrong type returned");
 }
 
-TYPED_TEST(BufferTest, CopyabilityContiguousArray) {
+TYPED_TEST(BufferTest, CopyContiguousArray) {
   const int N = 13;
   TypeParam value_array[N]{};
 
@@ -194,7 +194,7 @@ TYPED_TEST(BufferTest, CopyabilityContiguousArray) {
                 "Wrong type returned");
 }
 
-TYPED_TEST(BufferTest, CopyabilityStridedArray) {
+TYPED_TEST(BufferTest, CopyStridedArray) {
   using dlaf::SizeType;
 
   // 3 blocks, 2 elements each, with a distance of 5 elements between start of each block

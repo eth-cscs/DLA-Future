@@ -132,7 +132,7 @@ TYPED_TEST(MessageTest, MakeFromStridedArray) {
                 "Wrong type");
 }
 
-TYPED_TEST(MessageTest, MovabilityBasicType) {
+TYPED_TEST(MessageTest, MoveBasicType) {
   using namespace dlaf::common;
 
   TypeParam value = 26;
@@ -153,7 +153,7 @@ TYPED_TEST(MessageTest, MovabilityBasicType) {
   static_assert(std::is_same<TypeParam, typename decltype(new_message)::value_t>::value, "Wrong type");
 }
 
-TYPED_TEST(MessageTest, MovabilityCustomType) {
+TYPED_TEST(MessageTest, MoveCustomType) {
   using dlaf::SizeType;
 
   // 3 blocks, 2 elements each, with a distance of 5 elements between start of each block

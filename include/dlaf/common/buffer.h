@@ -41,7 +41,7 @@ struct Buffer<T*, void> {
   /// Create a Buffer pointing to structured data.
   /// @param ptr        pointer to the first element of the underlying buffer
   /// @param num_blocks number of blocks
-  /// @param blocksize  number of elements of type @p T in each block
+  /// @param blocksize  number of contiguous elements of type @p T in each block
   /// @param stride     stride (in elements) between starts of adjacent blocks
   /// @pre num_blocks != 0
   /// @pre stride == 0 if num_blocks == 1

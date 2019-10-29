@@ -41,8 +41,8 @@ public:
       return;
     }
 
-    custom_type_ = internal::type_handler<element_t>(get_pointer(buffer), get_num_blocks(buffer),
-                                                     get_blocksize(buffer), get_stride(buffer));
+    custom_type_ = internal::type_handler<element_t>(get_num_blocks(buffer), get_blocksize(buffer),
+                                                     get_stride(buffer));
   }
 
   // movable

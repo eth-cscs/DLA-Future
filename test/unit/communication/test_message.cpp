@@ -49,6 +49,11 @@ TYPED_TEST(MessageTest, MakeFromPointer) {
             message_direct.mpi_type());
   EXPECT_EQ(static_cast<MPI_Datatype>(dlaf::comm::mpi_datatype<TypeParam>::type),
             message_indirect.mpi_type());
+
+  static_assert(std::is_same<TypeParam, typename decltype(message_direct)::value_t>::value,
+                "Wrong type");
+  static_assert(std::is_same<TypeParam, typename decltype(message_indirect)::value_t>::value,
+                "Wrong type");
 }
 
 TYPED_TEST(MessageTest, MakeFromContiguousArray) {
@@ -78,6 +83,11 @@ TYPED_TEST(MessageTest, MakeFromContiguousArray) {
             message_direct.mpi_type());
   EXPECT_EQ(static_cast<MPI_Datatype>(dlaf::comm::mpi_datatype<TypeParam>::type),
             message_indirect.mpi_type());
+
+  static_assert(std::is_same<TypeParam, typename decltype(message_direct)::value_t>::value,
+                "Wrong type");
+  static_assert(std::is_same<TypeParam, typename decltype(message_indirect)::value_t>::value,
+                "Wrong type");
 }
 
 TYPED_TEST(MessageTest, MakeFromStridedArray) {
@@ -115,6 +125,11 @@ TYPED_TEST(MessageTest, MakeFromStridedArray) {
 
   EXPECT_NE(MPI_DATATYPE_NULL, message_direct.mpi_type());
   EXPECT_NE(MPI_DATATYPE_NULL, message_indirect.mpi_type());
+
+  static_assert(std::is_same<TypeParam, typename decltype(message_direct)::value_t>::value,
+                "Wrong type");
+  static_assert(std::is_same<TypeParam, typename decltype(message_indirect)::value_t>::value,
+                "Wrong type");
 }
 
 TYPED_TEST(MessageTest, MovabilityBasicType) {
@@ -134,6 +149,8 @@ TYPED_TEST(MessageTest, MovabilityBasicType) {
   EXPECT_EQ(1, new_message.count());
   EXPECT_EQ(static_cast<MPI_Datatype>(new_message.mpi_type()), new_message.mpi_type());
   EXPECT_EQ(sizeof(TypeParam), type_size);
+
+  static_assert(std::is_same<TypeParam, typename decltype(new_message)::value_t>::value, "Wrong type");
 }
 
 TYPED_TEST(MessageTest, MovabilityCustomType) {
@@ -160,4 +177,6 @@ TYPED_TEST(MessageTest, MovabilityCustomType) {
   EXPECT_EQ(1, new_message.count());
   EXPECT_EQ(total_elements * sizeof(TypeParam), type_size);
   EXPECT_NE(MPI_DATATYPE_NULL, new_message.mpi_type());
+
+  static_assert(std::is_same<TypeParam, typename decltype(new_message)::value_t>::value, "Wrong type");
 }

@@ -20,18 +20,20 @@ namespace dlaf {
 namespace comm {
 
 template <class Buffer>
-struct message {
+class message {
   using buffer_t = Buffer;
-  using T = typename dlaf::common::buffer_traits<buffer_t>::element_t;
+
+public:
+  using value_t = typename dlaf::common::buffer_traits<buffer_t>::element_t;
 
   message(buffer_t buffer) : buffer_(buffer) {
     if (get_num_blocks(buffer) == 1) {  // TODO contiguous
-      classic_type_ = dlaf::comm::mpi_datatype<T>::type;
+      classic_type_ = dlaf::comm::mpi_datatype<value_t>::type;
       return;
     }
 
-    custom_type_ = internal::type_handler<T>(get_pointer(buffer), get_num_blocks(buffer),
-                                             get_blocksize(buffer), get_stride(buffer));
+    custom_type_ = internal::type_handler<value_t>(get_pointer(buffer), get_num_blocks(buffer),
+                                                   get_blocksize(buffer), get_stride(buffer));
   }
 
   message(message&&) = default;
@@ -40,11 +42,11 @@ struct message {
   message(const message&) = delete;
   message& operator=(const message&) = delete;
 
-  T* ptr() noexcept {
+  value_t* ptr() noexcept {
     return get_pointer(buffer_);
   }
 
-  const T* ptr() const noexcept {
+  const value_t* ptr() const noexcept {
     return get_pointer(buffer_);
   }
 
@@ -59,7 +61,7 @@ struct message {
 protected:
   buffer_t buffer_;
   MPI_Datatype classic_type_;
-  internal::type_handler<T> custom_type_;
+  internal::type_handler<value_t> custom_type_;
 };
 
 template <class T>

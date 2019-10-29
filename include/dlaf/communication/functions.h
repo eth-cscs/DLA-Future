@@ -39,7 +39,7 @@ namespace broadcast {
 /// specialized wrapper for MPI_Bcast on sender side
 template <class T>
 void send(message<T>&& message, Communicator& communicator) {
-  MPI_Bcast(const_cast<std::remove_const_t<typename dlaf::comm::message<T>::T>*>(message.ptr()),
+  MPI_Bcast(const_cast<std::remove_const_t<typename dlaf::comm::message<T>::value_t>*>(message.ptr()),
             message.count(), message.mpi_type(), communicator.rank(), communicator);
 }
 
@@ -59,7 +59,7 @@ template <typename T>
 void send(message<T>&& message, Communicator communicator,
           std::function<void()> action_before_retrying) {
   internal::async_bcast(communicator.rank(),
-                        const_cast<std::remove_const_t<typename dlaf::comm::message<T>::T>*>(
+                        const_cast<std::remove_const_t<typename dlaf::comm::message<T>::value_t>*>(
                             message.ptr()),
                         message.count(), message.mpi_type(), communicator, action_before_retrying);
 }

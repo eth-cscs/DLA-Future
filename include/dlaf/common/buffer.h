@@ -87,14 +87,13 @@ struct Buffer<T[N], std::enable_if_t<std::is_array<T[N]>::value>> : Buffer<std::
   Buffer(T array[N]) noexcept : Buffer<T*>(array, std::extent<T[N]>::value) {}
 };
 
-
 /// @brief fallback function for creating a buffer
 ///
 /// If you want to create a dlaf::common::Buffer, it is preferred to use make_buffer()\n
 /// \n
 /// Override this in the same namespace of a type for which you want to provide this concept.
 template <class T, class... Ts>
-auto create_buffer(T data, Ts...args) noexcept {
+auto create_buffer(T data, Ts... args) noexcept {
   return dlaf::common::Buffer<T>{data, static_cast<std::size_t>(args)...};
 }
 

@@ -2,8 +2,8 @@
 
 #include <gtest/gtest.h>
 
-#include "dlaf/memory/memory_view.h"
 #include "dlaf/matrix/index.h"
+#include "dlaf/memory/memory_view.h"
 #include "dlaf_test/util_types.h"
 
 template <typename Type>

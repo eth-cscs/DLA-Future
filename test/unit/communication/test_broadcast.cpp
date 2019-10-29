@@ -63,8 +63,7 @@ TEST_F(BroadcastTest, AsyncBroadcast_NewAPI) {
                                       what_to_do_before_retesting);
   else {
     int message;
-    dlaf::comm::async_broadcast::receive_from(broadcaster,
-                                              dlaf::comm::make_message(&message, 1),
+    dlaf::comm::async_broadcast::receive_from(broadcaster, dlaf::comm::make_message(&message, 1),
                                               communicator, what_to_do_before_retesting);
     EXPECT_EQ(color, message);
   }

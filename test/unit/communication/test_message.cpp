@@ -105,8 +105,8 @@ TYPED_TEST(MessageTest, MakeFromStridedArray) {
 
   auto buffer = dlaf::common::make_buffer(value_array, nblocks, block_size, block_distance);
 
-  auto message_direct =
-      dlaf::comm::make_message(dlaf::common::make_buffer(value_array, nblocks, block_size, block_distance));
+  auto message_direct = dlaf::comm::make_message(
+      dlaf::common::make_buffer(value_array, nblocks, block_size, block_distance));
   auto message_indirect = dlaf::comm::make_message(value_array, nblocks, block_size, block_distance);
 
   int type_direct_size;

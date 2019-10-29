@@ -61,6 +61,19 @@ struct Buffer<T[N], std::enable_if_t<std::is_array<T[N]>::value>> : Buffer<std::
   Buffer(T array[N]) noexcept : Buffer<T*>(array, std::extent<T[N]>::value) {}
 };
 
+
+/// fallback function for primitive types
+template <class T, class... Ts>
+auto create_buffer(T data, Ts...args) noexcept {
+  return dlaf::common::Buffer<T>{data, static_cast<std::size_t>(args)...};
+}
+
+/// Generic API for creating a buffer
+template <class T, class... Ts>
+auto make_buffer(T data, Ts... args) noexcept {
+  return create_buffer(data, static_cast<std::size_t>(args)...);
+}
+
 // API for algorithms
 template <class Buffer>
 auto get_pointer(Buffer& buffer) noexcept -> decltype(buffer.ptr()) {
@@ -82,6 +95,7 @@ auto get_stride(const Buffer& buffer) noexcept -> decltype(buffer.stride()) {
   return buffer.stride();
 }
 
+// traits for buffer
 template <class Buffer>
 struct buffer_traits;
 
@@ -94,9 +108,4 @@ template <class T, std::size_t N>
 struct buffer_traits<Buffer<T[N]>> : buffer_traits<Buffer<std::decay_t<T[N]>>> {};
 
 }
-}
-
-template <class T, class... Ts>
-auto make_buffer(T data, Ts... args) noexcept {
-  return dlaf::common::Buffer<T>{data, static_cast<std::size_t>(args)...};
 }

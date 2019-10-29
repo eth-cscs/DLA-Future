@@ -60,9 +60,9 @@ TYPED_TEST(MessageTest, MakeFromContiguousArray) {
   const int N = 13;
   TypeParam value_array[N]{};
 
-  auto buffer = make_buffer(value_array, N);
+  auto buffer = dlaf::common::make_buffer(value_array, N);
 
-  auto message_direct = dlaf::comm::make_message(make_buffer(value_array, N));
+  auto message_direct = dlaf::comm::make_message(dlaf::common::make_buffer(value_array, N));
   auto message_indirect = dlaf::comm::make_message(value_array, N);
 
   int type_direct_size;
@@ -103,10 +103,10 @@ TYPED_TEST(MessageTest, MakeFromStridedArray) {
   const std::size_t memory_footprint = (nblocks - 1) * block_distance + block_size;
   TypeParam value_array[memory_footprint]{};
 
-  auto buffer = make_buffer(value_array, nblocks, block_size, block_distance);
+  auto buffer = dlaf::common::make_buffer(value_array, nblocks, block_size, block_distance);
 
   auto message_direct =
-      dlaf::comm::make_message(make_buffer(value_array, nblocks, block_size, block_distance));
+      dlaf::comm::make_message(dlaf::common::make_buffer(value_array, nblocks, block_size, block_distance));
   auto message_indirect = dlaf::comm::make_message(value_array, nblocks, block_size, block_distance);
 
   int type_direct_size;

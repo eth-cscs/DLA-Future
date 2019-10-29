@@ -27,7 +27,7 @@ public:
   using value_t = typename dlaf::common::buffer_traits<buffer_t>::element_t;
 
   message(buffer_t buffer) : buffer_(buffer) {
-    if (get_num_blocks(buffer) == 1) {  // TODO contiguous
+    if (get_num_blocks(buffer) == 1) {
       classic_type_ = dlaf::comm::mpi_datatype<value_t>::type;
       return;
     }
@@ -72,7 +72,7 @@ auto make_message(dlaf::common::Buffer<T>&& buffer) noexcept
 
 template <class... Ts>
 auto make_message(Ts&&... args) noexcept {
-  return make_message(make_buffer(std::forward<Ts>(args)...));
+  return make_message(dlaf::common::make_buffer(std::forward<Ts>(args)...));
 }
 
 }

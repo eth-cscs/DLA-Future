@@ -28,7 +28,7 @@ TYPED_TEST(BufferTest, MakeFromPointer) {
   TypeParam value = 26;
   TypeParam* value_ptr = &value;
 
-  auto buffer = make_buffer(value_ptr, 1);
+  auto buffer = dlaf::common::make_buffer(value_ptr, 1);
 
   EXPECT_EQ(value_ptr, get_pointer(buffer));
   EXPECT_EQ(1, get_num_blocks(buffer));
@@ -46,7 +46,7 @@ TYPED_TEST(BufferTest, MakeFromContiguousArray) {
   const int N = 13;
   TypeParam value_array[N]{};
 
-  auto buffer = make_buffer(value_array, N);
+  auto buffer = dlaf::common::make_buffer(value_array, N);
 
   EXPECT_EQ(&value_array[0], get_pointer(buffer));
   EXPECT_EQ(1, get_num_blocks(buffer));
@@ -72,7 +72,7 @@ TYPED_TEST(BufferTest, MakeFromStridedArray) {
   const std::size_t memory_footprint = (nblocks - 1) * block_distance + block_size;
   TypeParam value_array[memory_footprint]{};
 
-  auto buffer = make_buffer(value_array, nblocks, block_size, block_distance);
+  auto buffer = dlaf::common::make_buffer(value_array, nblocks, block_size, block_distance);
 
   EXPECT_EQ(&value_array[0], get_pointer(buffer));
   EXPECT_EQ(nblocks, get_num_blocks(buffer));
@@ -177,7 +177,7 @@ TYPED_TEST(BufferTest, CopyContiguousArray) {
   const int N = 13;
   TypeParam value_array[N]{};
 
-  auto buffer = make_buffer(value_array, N);
+  auto buffer = dlaf::common::make_buffer(value_array, N);
 
   auto buffer_copy = buffer;
 
@@ -206,7 +206,7 @@ TYPED_TEST(BufferTest, CopyStridedArray) {
   const std::size_t memory_footprint = (nblocks - 1) * block_distance + block_size;
   TypeParam value_array[memory_footprint]{};
 
-  auto buffer = make_buffer(value_array, nblocks, block_size, block_distance);
+  auto buffer = dlaf::common::make_buffer(value_array, nblocks, block_size, block_distance);
 
   auto buffer_copy = buffer;
 

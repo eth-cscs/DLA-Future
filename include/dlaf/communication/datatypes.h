@@ -17,10 +17,11 @@
 namespace dlaf {
 namespace comm {
 
+/// @brief mapper between language types and basic MPI_Datatype
 template <typename T>
 struct mpi_datatype;
 
-/// get mapping also for const types
+/// helper for mapping also custom types
 template <typename T>
 struct mpi_datatype<const T> : public mpi_datatype<T> {};
 

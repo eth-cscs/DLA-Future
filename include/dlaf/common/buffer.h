@@ -101,8 +101,8 @@ auto create_buffer(T data, Ts... args) noexcept {
 ///
 /// Use this function to create a dlaf::common::Buffer from the given parameters
 template <class T, class... Ts>
-auto make_buffer(T data, Ts... args) noexcept {
-  return create_buffer(data, static_cast<std::size_t>(args)...);
+auto make_buffer(T&& data, Ts... args) noexcept {
+  return create_buffer(std::forward<T&&>(data), static_cast<std::size_t>(args)...);
 }
 
 // API for algorithms

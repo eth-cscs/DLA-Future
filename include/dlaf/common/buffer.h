@@ -14,6 +14,7 @@
 
 #include <cassert>
 #include <type_traits>
+#include <utility>
 
 namespace dlaf {
 namespace common {

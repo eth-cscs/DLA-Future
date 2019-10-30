@@ -315,6 +315,124 @@ TYPED_TEST(MatrixTest, DependenciesConst) {
   }
 }
 
+TYPED_TEST(MatrixTest, DependenciesReferenceMix) {
+  using Type = TypeParam;
+
+  for (const auto& size : sizes) {
+    for (const auto& block_size : block_sizes) {
+      // Dependencies graph:
+      // fut0 - fut1 - shfut2a - fut3 - shfut4a - fut5
+      //             \ shfut2b /      \ shfut4b /
+
+      Matrix<Type, Device::CPU> mat(size, block_size);
+
+      auto fut0 = getFutures(mat);
+      EXPECT_TRUE(checkFuturesStep(fut0.size(), fut0));
+
+      auto fut1 = getFutures(mat);
+      EXPECT_TRUE(checkFuturesStep(0, fut1));
+
+      auto shfut2a = getSharedFutures(mat);
+      EXPECT_TRUE(checkFuturesStep(0, shfut2a));
+
+      decltype(shfut2a) shfut2b;
+      {
+        Matrix<const Type, Device::CPU>& const_mat = mat;
+        shfut2b = getSharedFutures(const_mat);
+        EXPECT_TRUE(checkFuturesStep(0, shfut2b));
+      }
+
+      auto fut3 = getFutures(mat);
+      EXPECT_TRUE(checkFuturesStep(0, fut3));
+
+      decltype(shfut2a) shfut4a;
+      {
+        Matrix<const Type, Device::CPU>& const_mat = mat;
+        shfut4a = getSharedFutures(const_mat);
+        EXPECT_TRUE(checkFuturesStep(0, shfut4a));
+      }
+
+      checkFutures(true, fut1, fut0);
+      EXPECT_TRUE(checkFuturesStep(0, shfut2b));
+      checkFutures(true, shfut2b, fut1);
+      EXPECT_TRUE(checkFuturesStep(shfut2a.size(), shfut2a));
+
+      checkFutures(false, fut3, shfut2b);
+      checkFutures(true, fut3, shfut2a);
+
+      checkFutures(true, shfut4a, fut3);
+
+      auto shfut4b = getSharedFutures(mat);
+      EXPECT_TRUE(checkFuturesStep(shfut4b.size(), shfut4b));
+
+      auto fut5 = getFutures(mat);
+      EXPECT_TRUE(checkFuturesStep(0, fut3));
+
+      checkFutures(false, fut5, shfut4a);
+      checkFutures(true, fut5, shfut4b);
+    }
+  }
+}
+
+TYPED_TEST(MatrixTest, DependenciesPointerMix) {
+  using Type = TypeParam;
+
+  for (const auto& size : sizes) {
+    for (const auto& block_size : block_sizes) {
+      // Dependencies graph:
+      // fut0 - fut1 - shfut2a - fut3 - shfut4a - fut5
+      //             \ shfut2b /      \ shfut4b /
+
+      Matrix<Type, Device::CPU> mat(size, block_size);
+
+      auto fut0 = getFutures(mat);
+      EXPECT_TRUE(checkFuturesStep(fut0.size(), fut0));
+
+      auto fut1 = getFutures(mat);
+      EXPECT_TRUE(checkFuturesStep(0, fut1));
+
+      auto shfut2a = getSharedFutures(mat);
+      EXPECT_TRUE(checkFuturesStep(0, shfut2a));
+
+      decltype(shfut2a) shfut2b;
+      {
+        Matrix<const Type, Device::CPU>* const_mat = &mat;
+        shfut2b = getSharedFutures(*const_mat);
+        EXPECT_TRUE(checkFuturesStep(0, shfut2b));
+      }
+
+      auto fut3 = getFutures(mat);
+      EXPECT_TRUE(checkFuturesStep(0, fut3));
+
+      decltype(shfut2a) shfut4a;
+      {
+        Matrix<const Type, Device::CPU>* const_mat = &mat;
+        shfut4a = getSharedFutures(*const_mat);
+        EXPECT_TRUE(checkFuturesStep(0, shfut4a));
+      }
+
+      checkFutures(true, fut1, fut0);
+      EXPECT_TRUE(checkFuturesStep(0, shfut2b));
+      checkFutures(true, shfut2b, fut1);
+      EXPECT_TRUE(checkFuturesStep(shfut2a.size(), shfut2a));
+
+      checkFutures(false, fut3, shfut2b);
+      checkFutures(true, fut3, shfut2a);
+
+      checkFutures(true, shfut4a, fut3);
+
+      auto shfut4b = getSharedFutures(mat);
+      EXPECT_TRUE(checkFuturesStep(shfut4b.size(), shfut4b));
+
+      auto fut5 = getFutures(mat);
+      EXPECT_TRUE(checkFuturesStep(0, fut3));
+
+      checkFutures(false, fut5, shfut4a);
+      checkFutures(true, fut5, shfut4b);
+    }
+  }
+}
+
 std::vector<std::tuple<GlobalElementSize, TileElementSize, SizeType>> col_major_values({
     {{31, 17}, {7, 11}, 31},   // packed ld
     {{31, 17}, {7, 11}, 33},   // padded ld

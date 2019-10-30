@@ -31,3 +31,9 @@ DLAF_addTest(test_broadcast
   MPIRANKS 5
   USE_MAIN MPI
 )
+
+DLAF_addTest(test_broadcast_tile
+  SOURCES test_broadcast_tile.cpp
+  MPIRANKS 5
+  USE_MAIN MPI
+)

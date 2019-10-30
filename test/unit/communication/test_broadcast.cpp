@@ -1,39 +1,20 @@
-#include <gtest/gtest.h>
+//
+// Distributed Linear Algebra with Future (DLAF)
+//
+// Copyright (c) 2018-2019, ETH Zurich
+// All rights reserved.
+//
+// Please, refer to the LICENSE file in the root directory.
+// SPDX-License-Identifier: BSD-3-Clause
+//
 
 #include "dlaf/communication/functions.h"
 
-using dlaf::comm::Communicator;
+#include <gtest/gtest.h>
 
-class BroadcastTest : public ::testing::Test {
-protected:
-  void SetUp() override {
-    world = Communicator(MPI_COMM_WORLD);
+#include "internal/helper_communicators.h"
 
-    color = world.rank() % 2;
-    key = world.rank() / 2;
-
-    MPI_Comm mpi_splitted_comm;
-    MPI_Comm_split(world, color, key, &mpi_splitted_comm);
-
-    ASSERT_NE(MPI_COMM_NULL, mpi_splitted_comm);
-    splitted_comm = Communicator(mpi_splitted_comm);
-  }
-
-  void TearDown() override {
-    if (MPI_COMM_NULL != splitted_comm)
-      MPI_Comm_free(&splitted_comm);
-  }
-
-  bool isMasterInSplitted() {
-    return world.rank() == color;
-  }
-
-  Communicator world;
-  Communicator splitted_comm;
-
-  int color = MPI_UNDEFINED;
-  int key = MPI_UNDEFINED;
-};
+using BroadcastTest = dlaf_test::SplittedCommunicatorsTest;
 
 TEST_F(BroadcastTest, Broadcast_NewAPI) {
   auto broadcaster = 0;

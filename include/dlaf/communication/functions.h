@@ -46,8 +46,7 @@ void send(Message<T>&& message, Communicator& communicator) {
 /// specialized wrapper for MPI_Bcast on receiver side
 template <typename T, std::enable_if_t<!std::is_const<T>::value, int> = 0>
 void receive_from(int broadcaster_rank, Message<T>&& message, Communicator communicator) {
-  MPI_Bcast(message.data(), message.count(), message.mpi_type(), communicator.rank(),
-            communicator);
+  MPI_Bcast(message.data(), message.count(), message.mpi_type(), communicator.rank(), communicator);
 }
 
 }

@@ -9,6 +9,7 @@
 //
 
 #include "dlaf/matrix/layout_info.h"
+#include <cassert>
 #include "dlaf/util_math.h"
 
 namespace dlaf {
@@ -31,7 +32,7 @@ LayoutInfo::LayoutInfo(const GlobalElementSize& size, const TileElementSize& blo
                util::ceilDiv(size_.cols(), block_size_.cols())};
 
   if (size_.isEmpty()) {
-    if (ld_tile_ < block_size.rows()) {
+    if (ld_tile_ < 1) {
       throw std::invalid_argument("Error: Invalid Leading Dimension");
     }
     if (tile_offset_row_ < 1) {
@@ -44,18 +45,19 @@ LayoutInfo::LayoutInfo(const GlobalElementSize& size, const TileElementSize& blo
   else {
     SizeType last_rows = size_.rows() - block_size_.rows() * (nr_tiles_.rows() - 1);
 
-    if (ld_tile_ < block_size_.rows()) {
+    SizeType max_rows_tiles = std::min(size_.rows(), block_size_.rows());
+    if (ld_tile_ < max_rows_tiles) {
       throw std::invalid_argument("Error: Invalid Leading Dimension");
     }
-    if (tile_offset_row_ < static_cast<std::size_t>(block_size_.rows())) {
+    if (tile_offset_row_ < static_cast<std::size_t>(max_rows_tiles)) {
       throw std::invalid_argument("Error: Invalid Tile Row Offset");
     }
-    if (tile_offset_row_ < minTileSize(block_size_) &&
+    if (tile_offset_row_ < minTileMemSize(block_size_) &&
         static_cast<std::size_t>(ld_tile_) < sum(tileOffset({nr_tiles_.rows() - 1, 0}), last_rows)) {
       throw std::invalid_argument("Error: Invalid Leading Dimension & Tile Row Offset combination");
     }
-    if (tile_offset_col_ <
-        tileOffset({nr_tiles_.rows() - 1, 0}) + minTileSize({last_rows, block_size_.cols()})) {
+    if (tile_offset_col_ < tileOffset({nr_tiles_.rows() - 1, 0}) +
+                               minTileMemSize(LocalTileIndex(nr_tiles_.rows() - 1, 0))) {
       throw std::invalid_argument("Error: Invalid Tile Col Offset");
     }
   }
@@ -66,21 +68,21 @@ std::size_t LayoutInfo::minMemSize() const noexcept {
     return 0;
   }
 
-  SizeType last_rows = size_.rows() - block_size_.rows() * (nr_tiles_.rows() - 1);
-  SizeType last_cols = size_.cols() - block_size_.cols() * (nr_tiles_.cols() - 1);
-
-  return tileOffset({nr_tiles_.rows() - 1, nr_tiles_.cols() - 1}) + minTileSize({last_rows, last_cols});
+  LocalTileIndex index_last(nr_tiles_.rows() - 1, nr_tiles_.cols() - 1);
+  return tileOffset(index_last) + minTileMemSize(index_last);
 }
 
-std::size_t LayoutInfo::minTileSize(const TileElementSize& size) const noexcept {
+std::size_t LayoutInfo::minTileMemSize(const TileElementSize& tile_size) const noexcept {
   using util::size_t::sum;
   using util::size_t::mul;
 
-  if (size_.isEmpty()) {
+  assert(tile_size.rows() <= block_size_.rows());
+  assert(tile_size.cols() <= block_size_.cols());
+
+  if (tile_size.isEmpty()) {
     return 0;
   }
-
-  return sum(size.rows(), mul(ld_tile_, size.cols() - 1));
+  return sum(tile_size.rows(), mul(ld_tile_, tile_size.cols() - 1));
 }
 }
 }

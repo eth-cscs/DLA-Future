@@ -48,7 +48,7 @@ struct Buffer<T*, void> {
   /// @pre stride == 0 if num_blocks == 1
   /// @pre stride >= blocksize if num_blocks > 1
   Buffer(T* ptr, std::size_t num_blocks, std::size_t blocksize, std::size_t stride) noexcept
-      : data_(ptr), nblocks_(num_blocks), blocksize_(blocksize), stride_(stride) {
+      : data_(ptr), nblocks_(num_blocks), blocksize_(blocksize), stride_(num_blocks == 1 ? 0 : stride) {
     assert(nblocks_ != 0);
     assert(nullptr != data_);
     assert(nblocks_ == 1 ? stride_ == 0 : stride_ >= blocksize_);

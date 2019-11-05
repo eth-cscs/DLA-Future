@@ -45,10 +45,7 @@ protected:
   using Matrix<const T, device>::tileLinearIndex;
 
 private:
-  void setUpTiles(const memory::MemoryView<ElementType, device>& mem,
-                  const matrix::LayoutInfo& layout) noexcept;
-
-  using Matrix<const T, device>::setUpTilesInternal;
+  using Matrix<const T, device>::setUpTiles;
   using Matrix<const T, device>::futureVectorSize;
   using Matrix<const T, device>::tile_futures_;
   using Matrix<const T, device>::tile_shared_futures_;
@@ -71,6 +68,8 @@ public:
 
   Matrix(const Matrix& rhs) = delete;
   Matrix(Matrix&& rhs) = default;
+
+  virtual ~Matrix();
 
   Matrix& operator=(const Matrix& rhs) = delete;
   Matrix& operator=(Matrix&& rhs) = default;
@@ -101,13 +100,8 @@ private:
          std::vector<hpx::future<TileType>>&& tile_futures,
          std::vector<hpx::shared_future<ConstTileType>>&& tile_shared_futures);
 
-  void setUpConstTiles(const memory::MemoryView<ElementType, device>& mem,
-                       const matrix::LayoutInfo& layout) noexcept;
-
-  template <template <class> class Future, class TileT>
-  void setUpTilesInternal(std::vector<Future<TileT>>& tile_futures_vector,
-                          const memory::MemoryView<ElementType, device>& mem,
-                          const matrix::LayoutInfo& layout) noexcept;
+  void setUpTiles(const memory::MemoryView<ElementType, device>& mem,
+                  const matrix::LayoutInfo& layout) noexcept;
 
   std::size_t futureVectorSize(const matrix::LayoutInfo& layout) const noexcept;
 

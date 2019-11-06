@@ -66,3 +66,37 @@ TYPED_TEST(Size2DTest, Comparison) {
   EXPECT_FALSE(size1 == size4);
   EXPECT_FALSE(size1 == size5);
 }
+
+TYPED_TEST(Size2DTest, Transpose) {
+  Size2D<TypeParam> size1(7, 13);
+  std::array<TypeParam, 2> coords{9, 6};
+  Size2D<TypeParam> size2(coords);
+
+  size1.transpose();
+  EXPECT_EQ(Size2D<TypeParam>(13, 7), size1);
+  size1.transpose();
+  EXPECT_EQ(Size2D<TypeParam>(7, 13), size1);
+
+  size2.transpose();
+  EXPECT_EQ(Size2D<TypeParam>(6, 9), size2);
+}
+
+TYPED_TEST(Size2DTest, Print) {
+  Size2D<TypeParam> size1(7, 13);
+  std::array<TypeParam, 2> coords{9, 6};
+  Size2D<TypeParam> size2(coords);
+
+  std::stringstream s;
+  size1.print(s);
+  EXPECT_EQ("(7, 13)", s.str());
+  s.str("");
+  s << size1;
+  EXPECT_EQ("(7, 13)", s.str());
+
+  s.str("");
+  size2.print(s);
+  EXPECT_EQ("(9, 6)", s.str());
+  s.str("");
+  s << size2;
+  EXPECT_EQ("(9, 6)", s.str());
+}

@@ -14,6 +14,7 @@
 
 #include <array>
 #include <cassert>
+#include <ostream>
 #include <type_traits>
 
 namespace dlaf {
@@ -59,6 +60,21 @@ public:
   /// @return true if row >= 0 and column >= 0
   bool isValid() const noexcept {
     return row_ >= 0 && col_ >= 0;
+  }
+
+  /// @brief Swaps row and column index/size.
+  void transpose() noexcept {
+    std::swap(row_, col_);
+  }
+
+  /// @brief Adds "(<row_>, <col_>)" to out.
+  void print(std::ostream& out) const noexcept {
+    if (std::is_same<IndexT, signed char>::value) {
+      out << "(" << static_cast<int>(row_) << ", " << static_cast<int>(col_) << ")";
+    }
+    else {
+      out << "(" << row_ << ", " << col_ << ")";
+    }
   }
 
 protected:
@@ -132,6 +148,12 @@ public:
     return internal::basic_coords<IndexT>::col_;
   }
 };
+
+template <typename IndexT>
+std::ostream& operator<<(std::ostream& out, const internal::basic_coords<IndexT>& index) {
+  index.print(out);
+  return out;
+}
 
 /// Compute coords of the @p index -th cell in a grid with @p ordering and sizes @p dims
 /// @param ordering specify linear index layout in the grid

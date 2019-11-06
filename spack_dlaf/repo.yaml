@@ -1,2 +1,2 @@
-rpo:
-  namespace: 'spack_dlaf'
+repo:
+  namespace: 'dlaf'

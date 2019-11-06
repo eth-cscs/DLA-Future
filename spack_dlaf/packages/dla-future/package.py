@@ -13,11 +13,13 @@ class DlaFuture(CMakePackage):
     variant('gpu', default=False,
             description='Use the GPU/cuBLAS back end.')
 
-    depends_on('mpi@3:')
-    depends_on('intel-mkl threads=openmp')
+    # Until mpich is default comment this out
+    #depends_on('mpi@3:')
+    depends_on('mpich')
+    depends_on('intel-mkl')
     depends_on('blaspp')
     depends_on('lapackpp')
-    depends_on('hpx')
+    depends_on('hpx cxxstd=14 networking=none')
     depends_on('cuda', when='gpu=True')
 
     def cmake_args(self):

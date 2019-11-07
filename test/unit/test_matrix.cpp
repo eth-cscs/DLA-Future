@@ -529,24 +529,23 @@ TYPED_TEST(MatrixTest, FromTileConst) {
   }
 }
 
-/* MatrixDestructorFutures
- *
- * These tests checks that futures management on destruction is performed correctly. The behaviour is
- * strictly related to the future/shared_futures mechanism and generally is not affected by the element
- * type of the matrix. For this reason, this kind of test will be carried out with just a (randomly
- * chosen) element type.
- *
- * Note 1:
- * In each task there is the last_task future that must depend on the launched task. This is needed in
- * order to being able to wait for it before the test ends, otherwise it may end after the test is
- * already finished (and in case of failure it may not be presented correctly)
- *
- * Note 2:
- * WAIT_GUARD is the time to wait in the launched task for assuring that Matrix d'tor has been called
- * after going out-of-scope. This duration must be kept as low as possible in order to not waste time
- * during tests, but at the same time it must be enough to let the "main" to arrive to the end of the
- * scope.
- */
+// MatrixDestructorFutures
+//
+// These tests checks that futures management on destruction is performed correctly. The behaviour is
+// strictly related to the future/shared_futures mechanism and generally is not affected by the element
+// type of the matrix. For this reason, this kind of test will be carried out with just a (randomly
+// chosen) element type.
+//
+// Note 1:
+// In each task there is the last_task future that must depend on the launched task. This is needed in
+// order to being able to wait for it before the test ends, otherwise it may end after the test is
+// already finished (and in case of failure it may not be presented correctly)
+//
+// Note 2:
+// WAIT_GUARD is the time to wait in the launched task for assuring that Matrix d'tor has been called
+// after going out-of-scope. This duration must be kept as low as possible in order to not waste time
+// during tests, but at the same time it must be enough to let the "main" to arrive to the end of the
+// scope.
 
 const auto WAIT_GUARD = std::chrono::milliseconds(10);
 const auto device = dlaf::Device::CPU;

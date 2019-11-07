@@ -18,7 +18,15 @@ Matrix<const T, device>::Matrix(const matrix::LayoutInfo& layout, ElementType* p
 
   memory::MemoryView<ElementType, device> mem(ptr, elements);
 
-  setUpConstTiles(mem, layout);
+  setUpTiles(mem, layout);
+}
+
+template <class T, Device device>
+Matrix<const T, device>::~Matrix() {
+  tile_shared_futures_.clear();
+
+  for (auto&& tile_future : tile_futures_)
+    tile_future.get();
 }
 
 template <class T, Device device>
@@ -45,18 +53,12 @@ Matrix<const T, device>::Matrix(const GlobalElementSize& size, const TileElement
       tile_shared_futures_(std::move(tile_shared_futures)) {}
 
 template <class T, Device device>
-void Matrix<const T, device>::setUpConstTiles(const memory::MemoryView<T, device>& mem,
-                                              const matrix::LayoutInfo& layout) noexcept {
-  setUpTilesInternal(tile_shared_futures_, mem, layout);
-}
+void Matrix<const T, device>::setUpTiles(const memory::MemoryView<ElementType, device>& mem,
+                                         const matrix::LayoutInfo& layout) noexcept {
+  tile_shared_futures_.resize(futureVectorSize(layout));
 
-template <class T, Device device>
-template <template <class> class Future, class TileT>
-void Matrix<const T, device>::setUpTilesInternal(std::vector<Future<TileT>>& tile_futures_vector,
-                                                 const memory::MemoryView<ElementType, device>& mem,
-                                                 const matrix::LayoutInfo& layout) noexcept {
-  tile_futures_vector.clear();
-  tile_futures_vector.reserve(futureVectorSize(layout));
+  tile_futures_.clear();
+  tile_futures_.reserve(futureVectorSize(layout));
 
   using MemView = memory::MemoryView<T, device>;
   const auto& nr_tiles = layout.nrTiles();
@@ -65,9 +67,9 @@ void Matrix<const T, device>::setUpTilesInternal(std::vector<Future<TileT>>& til
     for (SizeType i = 0; i < nr_tiles.rows(); ++i) {
       LocalTileIndex ind(i, j);
       TileElementSize tile_size = layout.tileSize(ind);
-      tile_futures_vector.emplace_back(hpx::make_ready_future<TileT>(
-          TileT(tile_size, MemView(mem, layout.tileOffset(ind), layout.minTileMemSize(tile_size)),
-                layout.ldTile())));
+      tile_futures_.emplace_back(hpx::make_ready_future(
+          TileType(tile_size, MemView(mem, layout.tileOffset(ind), layout.minTileMemSize(tile_size)),
+                   layout.ldTile())));
     }
   }
 }

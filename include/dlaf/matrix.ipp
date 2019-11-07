@@ -44,11 +44,3 @@ hpx::future<Tile<T, device>> Matrix<T, device>::operator()(const LocalTileIndex&
     return std::move(fut.get().setPromise(std::move(p)));
   });
 }
-
-template <class T, Device device>
-void Matrix<T, device>::setUpTiles(const memory::MemoryView<T, device>& mem,
-                                   const matrix::LayoutInfo& layout) noexcept {
-  tile_shared_futures_.resize(futureVectorSize(layout));
-
-  setUpTilesInternal(tile_futures_, mem, layout);
-}

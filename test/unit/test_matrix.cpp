@@ -528,3 +528,93 @@ TYPED_TEST(MatrixTest, FromTileConst) {
     CHECK_FROM_EXISTING(mem(), layout, mat);
   }
 }
+
+// MatrixDestructorFutures
+//
+// These tests checks that futures management on destruction is performed correctly. The behaviour is
+// strictly related to the future/shared_futures mechanism and generally is not affected by the element
+// type of the matrix. For this reason, this kind of test will be carried out with just a (randomly
+// chosen) element type.
+//
+// Note 1:
+// In each task there is the last_task future that must depend on the launched task. This is needed in
+// order to being able to wait for it before the test ends, otherwise it may end after the test is
+// already finished (and in case of failure it may not be presented correctly)
+//
+// Note 2:
+// WAIT_GUARD is the time to wait in the launched task for assuring that Matrix d'tor has been called
+// after going out-of-scope. This duration must be kept as low as possible in order to not waste time
+// during tests, but at the same time it must be enough to let the "main" to arrive to the end of the
+// scope.
+
+const auto WAIT_GUARD = std::chrono::milliseconds(10);
+const auto device = dlaf::Device::CPU;
+using TypeParam = std::complex<float>;  // randomly chosen element type for matrix
+
+template <class T>
+auto createMatrix() -> Matrix<T, device> {
+  return {{1, 1}, {1, 1}};
+}
+
+template <class T>
+auto createConstMatrix() -> Matrix<T, device> {
+  matrix::LayoutInfo layout({1, 1}, {1, 1}, 1, 1, 1);
+  memory::MemoryView<T, device> mem(layout.minMemSize());
+  const T* p = mem();
+
+  return {layout, p, mem.size()};
+}
+
+TEST(MatrixDestructorFutures, NonConstAfterRead) {
+  hpx::future<void> last_task;
+
+  volatile int guard = 0;
+  {
+    auto matrix = createMatrix<TypeParam>();
+
+    auto shared_future = matrix.read({0, 0});
+    last_task = shared_future.then(hpx::launch::async, [&guard](auto&&) {
+      hpx::this_thread::sleep_for(WAIT_GUARD);
+      EXPECT_EQ(0, guard);
+    });
+  }
+  guard = 1;
+
+  last_task.get();
+}
+
+TEST(MatrixDestructorFutures, NonConstAfterReadWrite) {
+  hpx::future<void> last_task;
+
+  volatile int guard = 0;
+  {
+    auto matrix = createMatrix<TypeParam>();
+
+    auto future = matrix({0, 0});
+    last_task = future.then(hpx::launch::async, [&guard](auto&&) {
+      hpx::this_thread::sleep_for(WAIT_GUARD);
+      EXPECT_EQ(0, guard);
+    });
+  }
+  guard = 1;
+
+  last_task.get();
+}
+
+TEST(MatrixDestructorFutures, ConstAfterRead) {
+  hpx::future<void> last_task;
+
+  volatile int guard = 0;
+  {
+    auto matrix = createConstMatrix<const TypeParam>();
+
+    auto sf = matrix.read({0, 0});
+    last_task = sf.then(hpx::launch::async, [&guard](auto&&) {
+      hpx::this_thread::sleep_for(WAIT_GUARD);
+      EXPECT_EQ(0, guard);
+    });
+  }
+  guard = 1;
+
+  last_task.get();
+}

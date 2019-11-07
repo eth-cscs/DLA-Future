@@ -128,15 +128,9 @@ TYPED_TEST(Index2DTest, Print) {
   Index2D<TypeParam> index2(coords);
 
   std::stringstream s;
-  index1.print(s);
-  EXPECT_EQ("(7, 13)", s.str());
-  s.str("");
   s << index1;
   EXPECT_EQ("(7, 13)", s.str());
 
-  s.str("");
-  index2.print(s);
-  EXPECT_EQ("(9, 6)", s.str());
   s.str("");
   s << index2;
   EXPECT_EQ("(9, 6)", s.str());

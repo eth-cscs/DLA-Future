@@ -68,13 +68,11 @@ public:
   }
 
   /// @brief Adds "(<row_>, <col_>)" to out.
-  void print(std::ostream& out) const noexcept {
+  friend std::ostream& operator<<(std::ostream& out, const basic_coords& index) {
     if (std::is_same<IndexT, signed char>::value) {
-      out << "(" << static_cast<int>(row_) << ", " << static_cast<int>(col_) << ")";
+      return out << "(" << static_cast<int>(index.row_) << ", " << static_cast<int>(index.col_) << ")";
     }
-    else {
-      out << "(" << row_ << ", " << col_ << ")";
-    }
+    return out << "(" << index.row_ << ", " << index.col_ << ")";
   }
 
 protected:
@@ -148,12 +146,6 @@ public:
     return internal::basic_coords<IndexT>::col_;
   }
 };
-
-template <typename IndexT>
-std::ostream& operator<<(std::ostream& out, const internal::basic_coords<IndexT>& index) {
-  index.print(out);
-  return out;
-}
 
 /// Compute coords of the @p index -th cell in a grid with @p ordering and sizes @p dims
 /// @param ordering specify linear index layout in the grid

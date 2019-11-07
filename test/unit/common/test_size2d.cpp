@@ -87,15 +87,9 @@ TYPED_TEST(Size2DTest, Print) {
   Size2D<TypeParam> size2(coords);
 
   std::stringstream s;
-  size1.print(s);
-  EXPECT_EQ("(7, 13)", s.str());
-  s.str("");
   s << size1;
   EXPECT_EQ("(7, 13)", s.str());
 
-  s.str("");
-  size2.print(s);
-  EXPECT_EQ("(9, 6)", s.str());
   s.str("");
   s << size2;
   EXPECT_EQ("(9, 6)", s.str());

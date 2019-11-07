@@ -13,7 +13,7 @@
 #include <ostream>
 #include "blas.hh"
 
-namespace dlaf {
+namespace blas {
 std::ostream& operator<<(std::ostream& stream, const blas::Diag& diag) {
   switch (diag) {
     case blas::Diag::Unit:

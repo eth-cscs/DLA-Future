@@ -49,23 +49,10 @@ void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType e
   Tile<T, Device::CPU> c(size_c, std::move(mem_c), ldc);
 
   // Returns op_a(a)_ik
-  auto el_op_a = [](SizeType i, SizeType k) {
-    double ii = i;
-    double kk = k;
-
-    return TypeUtilities<T>::polar(.9 * (ii + 1) / (kk + .5), i - kk);
-  };
-  // Returns a_ik, where i = index.row() and j = index.col()
-  // from el_op_a (transposition and conjugation according to op_a).
-  auto el_a = [op_a, &el_op_a](const TileElementIndex& index) {
-    switch (op_a) {
-      case blas::Op::NoTrans:
-        return el_op_a(index.row(), index.col());
-      case blas::Op::Trans:
-        return el_op_a(index.col(), index.row());
-      case blas::Op::ConjTrans:
-        return TypeUtilities<T>::conj(el_op_a(index.col(), index.row()));
-    }
+  auto el_op_a = [](const TileElementIndex& index) {
+    double i = index.row();
+    double k = index.col();
+    return TypeUtilities<T>::polar(.9 * (i + 1) / (k + .5), i - k);
   };
   auto el_c = [uplo](const TileElementIndex& index) {
     // Return -1 for elements not referenced
@@ -90,12 +77,12 @@ void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType e
     T tmp = TypeUtilities<T>::element(0, 0);
     // Compute result of cij
     for (SizeType kk = 0; kk < k; ++kk) {
-      tmp += el_op_a(index.row(), kk) * TypeUtilities<T>::conj(el_op_a(index.col(), kk));
+      tmp += el_op_a({index.row(), kk}) * TypeUtilities<T>::conj(el_op_a({index.col(), kk}));
     }
     return beta * el_c(index) + alpha * tmp;
   };
 
-  tile_test::set(a0, el_a);
+  tile_test::set(a0, el_op_a, op_a);
   tile_test::set(c, el_c);
 
   Tile<CT, Device::CPU> a(std::move(a0));

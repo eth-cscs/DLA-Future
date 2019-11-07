@@ -64,19 +64,15 @@ void testGemm(blas::Op op_a, blas::Op op_b, SizeType m, SizeType n, SizeType k, 
   // res_ij = beta * c_ij + Sum_k(alpha * op_a(a)_ik * op_b(b)_kj)
   //        = beta * c_ij + gamma * (i+1) / (j+2) * exp(I*(2*i+j)),
   // where gamma = .72 * k * alpha.
-  auto el_a = [op_a](const TileElementIndex& index) {
-    double i = op_a == blas::Op::NoTrans ? index.row() : index.col();
-    double k = op_a == blas::Op::NoTrans ? index.col() : index.row();
-    double sign = op_a == blas::Op::ConjTrans ? -1 : 1;
-
-    return TypeUtilities<T>::polar(.9 * (i + 1) / (k + .5), sign * (2 * i - k));
+  auto el_op_a = [](const TileElementIndex& index) {
+    double i = index.row();
+    double k = index.col();
+    return TypeUtilities<T>::polar(.9 * (i + 1) / (k + .5), 2 * i - k);
   };
-  auto el_b = [op_b](const TileElementIndex& index) {
-    double k = op_b == blas::Op::NoTrans ? index.row() : index.col();
-    double j = op_b == blas::Op::NoTrans ? index.col() : index.row();
-    double sign = op_b == blas::Op::ConjTrans ? -1 : 1;
-
-    return TypeUtilities<T>::polar(.8 * (k + .5) / (j + 2), sign * (k + j));
+  auto el_op_b = [](const TileElementIndex& index) {
+    double k = index.row();
+    double j = index.col();
+    return TypeUtilities<T>::polar(.8 * (k + .5) / (j + 2), k + j);
   };
   auto el_c = [](const TileElementIndex& index) {
     double i = index.row();
@@ -95,8 +91,8 @@ void testGemm(blas::Op op_a, blas::Op op_b, SizeType m, SizeType n, SizeType k, 
   };
 
   // Set tile elements.
-  tile_test::set(a0, el_a);
-  tile_test::set(b0, el_b);
+  tile_test::set(a0, el_op_a, op_a);
+  tile_test::set(b0, el_op_b, op_b);
   tile_test::set(c, el_c);
 
   // Read-only tiles become constant if CT is const T.

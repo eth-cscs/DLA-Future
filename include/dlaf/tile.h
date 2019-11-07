@@ -68,6 +68,11 @@ public:
     return *ptr(index);
   }
 
+  /// @brief Returns the base pointer.
+  const T* ptr() const noexcept {
+    return memory_view_();
+  }
+
   /// @brief Returns the pointer to the (i, j)-th element,
   /// where @p i := @p index.row and @p j := @p index.col.
   /// @pre index.isValid() == true.
@@ -129,6 +134,11 @@ public:
   /// @pre index.isIn(size()) == true.
   T& operator()(const TileElementIndex& index) const noexcept {
     return *ptr(index);
+  }
+
+  /// @brief Returns the base pointer.
+  T* ptr() const noexcept {
+    return memory_view_();
   }
 
   /// @brief Returns the pointer to the (i, j)-th element,

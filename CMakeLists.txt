@@ -63,6 +63,7 @@ endif()
 find_package(HPX REQUIRED)
 
 # ----- BLASPP/LAPACKPP
+find_package(OpenMP REQUIRED)
 find_package(blaspp REQUIRED)
 find_package(lapackpp REQUIRED)
 

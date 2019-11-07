@@ -11,6 +11,7 @@
 #include "dlaf/common/index2d.h"
 
 #include <array>
+#include <sstream>
 
 #include <gtest/gtest.h>
 
@@ -105,4 +106,32 @@ TYPED_TEST(Index2DTest, Comparison) {
   EXPECT_FALSE(index1 == index3);
   EXPECT_FALSE(index1 == index4);
   EXPECT_FALSE(index1 == index5);
+}
+
+TYPED_TEST(Index2DTest, Transpose) {
+  Index2D<TypeParam> index1(7, 13);
+  std::array<TypeParam, 2> coords{9, 6};
+  Index2D<TypeParam> index2(coords);
+
+  index1.transpose();
+  EXPECT_EQ(Index2D<TypeParam>(13, 7), index1);
+  index1.transpose();
+  EXPECT_EQ(Index2D<TypeParam>(7, 13), index1);
+
+  index2.transpose();
+  EXPECT_EQ(Index2D<TypeParam>(6, 9), index2);
+}
+
+TYPED_TEST(Index2DTest, Print) {
+  Index2D<TypeParam> index1(7, 13);
+  std::array<TypeParam, 2> coords{9, 6};
+  Index2D<TypeParam> index2(coords);
+
+  std::stringstream s;
+  s << index1;
+  EXPECT_EQ("(7, 13)", s.str());
+
+  s.str("");
+  s << index2;
+  EXPECT_EQ("(9, 6)", s.str());
 }

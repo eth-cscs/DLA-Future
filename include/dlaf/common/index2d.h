@@ -14,6 +14,7 @@
 
 #include <array>
 #include <cassert>
+#include <ostream>
 #include <type_traits>
 
 namespace dlaf {
@@ -59,6 +60,19 @@ public:
   /// @return true if row >= 0 and column >= 0
   bool isValid() const noexcept {
     return row_ >= 0 && col_ >= 0;
+  }
+
+  /// @brief Swaps row and column index/size.
+  void transpose() noexcept {
+    std::swap(row_, col_);
+  }
+
+  /// @brief Adds "(<row_>, <col_>)" to out.
+  friend std::ostream& operator<<(std::ostream& out, const basic_coords& index) {
+    if (std::is_same<IndexT, signed char>::value) {
+      return out << "(" << static_cast<int>(index.row_) << ", " << static_cast<int>(index.col_) << ")";
+    }
+    return out << "(" << index.row_ << ", " << index.col_ << ")";
   }
 
 protected:

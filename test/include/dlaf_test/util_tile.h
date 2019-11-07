@@ -9,6 +9,9 @@
 //
 
 #pragma once
+
+/// @file
+
 #include <functional>
 #include <iomanip>
 #include <iostream>
@@ -21,9 +24,8 @@ namespace tile_test {
 using namespace dlaf;
 
 /// @brief Sets the elements of the tile.
-/// The (i, j)-element of the tile is set to el({i, j}) if op == NoTrans,
-///                                          el({j, i}) if op == Trans,
-///                                          conj(el({j, i})) if op == ConjTrans.
+///
+/// The (i, j)-element of the tile is set to el({i, j}).
 /// @pre el argument is an index of type const TileElementIndex&.
 /// @pre el return type should be T.
 template <class T, class Func>
@@ -37,6 +39,7 @@ void set(Tile<T, Device::CPU>& tile, Func el) {
 }
 
 /// @brief Sets the elements of the tile.
+///
 /// The (i, j)-element of the tile is set to el({i, j}) if op == NoTrans,
 ///                                          el({j, i}) if op == Trans,
 ///                                          conj(el({j, i})) if op == ConjTrans.
@@ -64,6 +67,7 @@ void print(Tile<T, Device::CPU>& tile, int precision = 4, std::ostream& out = st
 
 namespace internal {
 /// @brief Checks the elements of the tile.
+///
 /// comp(el({i, j}), (i, j)-element) is used to compare the elements.
 /// err_message(el({i, j}), (i, j)-element) is printed for the first element which does not fulfill the comparison.
 /// @pre el argument is an index of type const TileElementIndex&.
@@ -89,6 +93,7 @@ void check(Tile<T, Device::CPU>& tile, Func1 el, Func2 comp, Func3 err_message, 
 }
 
 /// @brief Checks the elements of the tile (exact equality).
+///
 /// The (i, j)-element of the tile is compared to el({i, j}).
 /// @pre el argument is an index of type const TileElementIndex&.
 /// @pre el return type should be T.
@@ -104,6 +109,7 @@ void checkEQ(Tile<T, Device::CPU>& tile, Func el, const char* file, const int li
 #define CHECK_TILE_EQ(el, tile) ::dlaf_test::tile_test::checkEQ(tile, el, __FILE__, __LINE__);
 
 /// @brief Checks the pointers to the elements of the tile.
+///
 /// The pointer to (i, j)-element of the matrix is compared to ptr({i, j}).
 /// @pre ptr argument is an index of type const TileElementIndex&.
 /// @pre ptr return type should be T*.
@@ -120,6 +126,7 @@ void checkPtr(Tile<T, Device::CPU>& tile, Func ptr, const char* file, const int 
 #define CHECK_TILE_PTR(ptr, tile) ::dlaf_test::tile_test::checkPtr(tile, ptr, __FILE__, __LINE__);
 
 /// @brief Checks the elements of the tile.
+///
 /// The (i, j)-element of the tile is compared to el({i, j}).
 /// @pre el argument is an index of type const TileElementIndex&.
 /// @pre el return type should be T.

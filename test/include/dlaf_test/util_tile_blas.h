@@ -9,6 +9,9 @@
 //
 
 #pragma once
+
+/// @file
+
 #include "blas.hh"
 #include "dlaf/tile.h"
 #include "dlaf_test/util_types.h"
@@ -18,6 +21,7 @@ namespace tile_test {
 using namespace dlaf;
 
 /// @brief Sets the elements of the tile.
+///
 /// The (i, j)-element of the tile is set to el({i, j}) if op == NoTrans,
 ///                                          el({j, i}) if op == Trans,
 ///                                          conj(el({j, i})) if op == ConjTrans.

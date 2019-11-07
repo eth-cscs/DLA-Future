@@ -21,45 +21,45 @@ using MatrixElementTypes = ::testing::Types<float, double, std::complex<float>, 
 
 template <class T>
 struct TypeUtilities {
-  /// Returns r.
+  /// @brief Returns r.
   static T element(double r, double i) {
     return static_cast<T>(r);
   }
 
-  /// Returns r.
+  /// @brief Returns r.
   /// @pre r > 0
   static T polar(double r, double i) {
     return static_cast<T>(r);
   }
 
-  /// Returns val.
+  /// @brief Returns val.
   static T conj(T val) {
     return val;
   }
 
-  /// Relative maximum error for a multiplication + addition.
+  /// @brief Relative maximum error for a multiplication + addition.
   static constexpr T error = 2 * std::numeric_limits<T>::epsilon();
 };
 
 template <class T>
 struct TypeUtilities<std::complex<T>> {
-  /// Returns r + I * i (I is the imaginary unit).
+  /// @brief Returns r + I * i (I is the imaginary unit).
   static std::complex<T> element(double r, double i) {
     return std::complex<T>(static_cast<T>(r), static_cast<T>(i));
   }
 
-  /// Returns r * (cos(theta) + I * sin(theta)) (I is the imaginary unit).
+  /// @brief Returns r * (cos(theta) + I * sin(theta)) (I is the imaginary unit).
   /// @pre r > 0
   static std::complex<T> polar(double r, double i) {
     return std::polar<T>(static_cast<T>(r), static_cast<T>(i));
   }
 
-  /// Returns std::conj(val).
+  /// @brief Returns std::conj(val).
   static std::complex<T> conj(std::complex<T> val) {
     return std::conj(val);
   }
 
-  /// Relative maximum error for a multiplication + addition.
+  /// @brief Relative maximum error for a multiplication + addition.
   static constexpr T error = 8 * std::numeric_limits<T>::epsilon();
 };
 

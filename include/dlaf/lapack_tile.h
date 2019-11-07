@@ -13,6 +13,12 @@
 /// @file
 
 #include "lapack.hh"
+// LAPACKPP includes complex.h which defines the macro I.
+// This breaks HPX.
+#ifdef I
+#undef I
+#endif
+
 #include "dlaf/tile.h"
 
 namespace dlaf {

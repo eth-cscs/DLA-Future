@@ -1,7 +1,7 @@
 from spack import *
 
-# 1) The CMake options exposed by `blaspp` allow for a value called `auto`. The 
-#    value is not needed here as the choice of dependency in the spec determines 
+# 1) The CMake options exposed by `blaspp` allow for a value called `auto`. The
+#    value is not needed here as the choice of dependency in the spec determines
 #    the appropriate flags.
 # 2) BLASFinder.cmake handles most options. For `auto`, it searches all blas
 #    libraries listed in `def_lib_list`.
@@ -16,7 +16,7 @@ class Blaspp(CMakePackage):
 
     version('develop', hg=hg)
 
-    variant('ifort', 
+    variant('ifort',
             default=False,
             description='Use Intel Fortran conventions. Default is GNU gfortran. (Only for Intel MKL)')
 
@@ -26,7 +26,7 @@ class Blaspp(CMakePackage):
         spec = self.spec
         args = ['-DBLASPP_BUILD_TESTS=OFF']
 
-        # Missing: 
+        # Missing:
         #
         # - acml  : BLAS_LIBRARY="AMD ACML"
         #           BLAS_LIBRARY_THREADING= threaded/sequential
@@ -40,7 +40,7 @@ class Blaspp(CMakePackage):
             #
             if '+ifort':
                 args.append('-DBLAS_LIBRARY_MKL="Intel ifort conventions"')
-            else: 
+            else:
                 args.append('-DBLAS_LIBRARY_MKL="GNU gfortran conventions"')
 
             if '+ilp64' in spec:

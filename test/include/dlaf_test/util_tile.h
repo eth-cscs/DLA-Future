@@ -29,7 +29,7 @@ using namespace dlaf;
 /// @pre el argument is an index of type const TileElementIndex&.
 /// @pre el return type should be T.
 template <class T, class Func>
-void set(Tile<T, Device::CPU>& tile, Func el) {
+void set(const Tile<T, Device::CPU>& tile, Func el) {
   for (SizeType j = 0; j < tile.size().cols(); ++j) {
     for (SizeType i = 0; i < tile.size().rows(); ++i) {
       TileElementIndex index(i, j);
@@ -46,7 +46,7 @@ void set(Tile<T, Device::CPU>& tile, Func el) {
 /// @pre el argument is an index of type const TileElementIndex&.
 /// @pre el return type should be T.
 template <class T>
-void print(Tile<T, Device::CPU>& tile, int precision = 4, std::ostream& out = std::cout) {
+void print(const Tile<T, Device::CPU>& tile, int precision = 4, std::ostream& out = std::cout) {
   auto out_precision = out.precision();
   out.precision(precision);
   // sign + number + . + exponent (e+xxx)
@@ -68,23 +68,24 @@ void print(Tile<T, Device::CPU>& tile, int precision = 4, std::ostream& out = st
 namespace internal {
 /// @brief Checks the elements of the tile.
 ///
-/// comp(el({i, j}), (i, j)-element) is used to compare the elements.
-/// err_message(el({i, j}), (i, j)-element) is printed for the first element which does not fulfill the comparison.
-/// @pre el argument is an index of type const TileElementIndex&.
+/// comp(expected({i, j}), (i, j)-element) is used to compare the elements.
+/// err_message(expected({i, j}), (i, j)-element) is printed for the first element which does not fulfill
+/// the comparison.
+/// @pre expected argument is an index of type const TileElementIndex&.
 /// @pre comp should have two arguments and return true if the comparison is fulfilled and false otherwise.
 /// @pre err_message should have two arguments and return a string.
-/// @pre el return type should be the same as the type of the first argument of comp and of err_message.
+/// @pre expected return type should be the same as the type of the first argument of comp and of err_message.
 /// @pre The second argument of comp should be either T, T& or const T&.
 /// @pre The second argument of err_message should be either T, T& or const T&.
-template <class T, class Func1, class Func2, class Func3>
-void check(Tile<T, Device::CPU>& tile, Func1 el, Func2 comp, Func3 err_message, const char* file,
-           const int line) {
+template <class T, class ElementGetter, class ComparisonOp, class ErrorMessageGetter>
+void check(ElementGetter expected, const Tile<T, Device::CPU>& tile, ComparisonOp comp,
+           ErrorMessageGetter err_message, const char* file, const int line) {
   for (SizeType j = 0; j < tile.size().cols(); ++j) {
     for (SizeType i = 0; i < tile.size().rows(); ++i) {
       TileElementIndex index(i, j);
-      if (!comp(el(index), tile(index))) {
+      if (!comp(expected(index), tile(index))) {
         ADD_FAILURE_AT(file, line) << "Error at index (" << i << ", " << j
-                                   << "): " << err_message(el({i, j}), tile({i, j})) << std::endl;
+                                   << "): " << err_message(expected({i, j}), tile({i, j})) << std::endl;
         return;
       }
     }
@@ -94,47 +95,49 @@ void check(Tile<T, Device::CPU>& tile, Func1 el, Func2 comp, Func3 err_message, 
 
 /// @brief Checks the elements of the tile (exact equality).
 ///
-/// The (i, j)-element of the tile is compared to el({i, j}).
-/// @pre el argument is an index of type const TileElementIndex&.
-/// @pre el return type should be T.
-template <class T, class Func>
-void checkEQ(Tile<T, Device::CPU>& tile, Func el, const char* file, const int line) {
+/// The (i, j)-element of the tile is compared to exp_el({i, j}).
+/// @pre exp_el argument is an index of type const TileElementIndex&.
+/// @pre exp_el return type should be T.
+template <class T, class ElementGetter>
+void checkEQ(ElementGetter exp_el, const Tile<T, Device::CPU>& tile, const char* file, const int line) {
   auto err_message = [](T expected, T value) {
     std::stringstream s;
     s << "expected " << expected << " == " << value;
     return s.str();
   };
-  internal::check(tile, el, std::equal_to<T>{}, err_message, file, line);
+  internal::check(exp_el, tile, std::equal_to<T>{}, err_message, file, line);
 }
-#define CHECK_TILE_EQ(el, tile) ::dlaf_test::tile_test::checkEQ(tile, el, __FILE__, __LINE__);
+#define CHECK_TILE_EQ(exp_el, tile) ::dlaf_test::tile_test::checkEQ(exp_el, tile, __FILE__, __LINE__);
 
 /// @brief Checks the pointers to the elements of the tile.
 ///
-/// The pointer to (i, j)-element of the matrix is compared to ptr({i, j}).
-/// @pre ptr argument is an index of type const TileElementIndex&.
-/// @pre ptr return type should be T*.
-template <class T, class Func>
-void checkPtr(Tile<T, Device::CPU>& tile, Func ptr, const char* file, const int line) {
+/// The pointer to (i, j)-element of the matrix is compared to exp_ptr({i, j}).
+/// @pre exp_ptr argument is an index of type const TileElementIndex&.
+/// @pre exp_ptr return type should be T*.
+template <class T, class PointerGetter>
+void checkPtr(PointerGetter exp_ptr, const Tile<T, Device::CPU>& tile, const char* file,
+              const int line) {
   auto comp = [](T* ptr, const T& value) { return ptr == &value; };
   auto err_message = [](T* expected, const T& value) {
     std::stringstream s;
     s << "expected " << expected << " == " << &value;
     return s.str();
   };
-  internal::check(tile, ptr, comp, err_message, file, line);
+  internal::check(exp_ptr, tile, comp, err_message, file, line);
 }
-#define CHECK_TILE_PTR(ptr, tile) ::dlaf_test::tile_test::checkPtr(tile, ptr, __FILE__, __LINE__);
+#define CHECK_TILE_PTR(exp_ptr, tile) \
+  ::dlaf_test::tile_test::checkPtr(exp_ptr, tile, __FILE__, __LINE__);
 
 /// @brief Checks the elements of the tile.
 ///
-/// The (i, j)-element of the tile is compared to el({i, j}).
-/// @pre el argument is an index of type const TileElementIndex&.
-/// @pre el return type should be T.
+/// The (i, j)-element of the tile is compared to expected({i, j}).
+/// @pre expected argument is an index of type const TileElementIndex&.
+/// @pre expected return type should be T.
 /// @pre rel_err > 0.
 /// @pre abs_err > 0.
-template <class T, class Func>
-void checkNear(Tile<T, Device::CPU>& tile, Func el, BaseType<T> rel_err, BaseType<T> abs_err,
-               const char* file, const int line) {
+template <class T, class ElementGetter>
+void checkNear(ElementGetter expected, const Tile<T, Device::CPU>& tile, BaseType<T> rel_err,
+               BaseType<T> abs_err, const char* file, const int line) {
   ASSERT_GT(rel_err, 0);
   ASSERT_GT(abs_err, 0);
 
@@ -153,10 +156,9 @@ void checkNear(Tile<T, Device::CPU>& tile, Func el, BaseType<T> rel_err, BaseTyp
       << rel_err << ", " << diff << " > " << abs_err << ")";
     return s.str();
   };
-  internal::check(tile, el, comp, err_message, file, line);
+  internal::check(expected, tile, comp, err_message, file, line);
 }
-#define CHECK_TILE_NEAR(el, tile, rel_err, abs_err) \
-  ::dlaf_test::tile_test::checkNear(tile, el, rel_err, abs_err, __FILE__, __LINE__);
-
+#define CHECK_TILE_NEAR(expected, tile, rel_err, abs_err) \
+  ::dlaf_test::tile_test::checkNear(expected, tile, rel_err, abs_err, __FILE__, __LINE__);
 }
 }

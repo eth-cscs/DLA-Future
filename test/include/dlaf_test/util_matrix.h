@@ -20,6 +20,7 @@ namespace matrix_test {
 using namespace dlaf;
 
 /// @brief Sets the elements of the matrix.
+///
 /// The (i, j)-element of the matrix is set to el({i, j}).
 /// @pre el argument is an index of type const GlobalElementIndex&.
 /// @pre el return type should be T.
@@ -71,6 +72,7 @@ std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFutures(Matrix<T
 }
 
 /// @brief Checks the elements of the matrix.
+///
 /// comp(expected({i, j}), (i, j)-element) is used to compare the elements.
 /// err_message(expected({i, j}), (i, j)-element) is printed for the first element
 /// that does not fulfill the comparison.
@@ -105,6 +107,7 @@ void check(ElementGetter expected, Matrix<T, Device::CPU>& mat, ComparisonOp com
 }
 
 /// @brief Checks the elements of the matrix (exact equality).
+///
 /// The (i, j)-element of the matrix is compared to exp_el({i, j}).
 /// @pre exp_el argument is an index of type const GlobalElementIndex&.
 /// @pre exp_el return type should be T.
@@ -120,9 +123,10 @@ void checkEQ(ElementGetter exp_el, Matrix<T, Device::CPU>& mat, const char* file
 #define CHECK_MATRIX_EQ(exp_el, mat) ::dlaf_test::matrix_test::checkEQ(exp_el, mat, __FILE__, __LINE__);
 
 /// @brief Checks the pointers to the elements of the matrix.
-/// The pointer to (i, j)-element of the matrix is compared to ptr({i, j}).
-/// @pre el argument is an index of type const GlobalElementIndex&.
-/// @pre el return type should be T*.
+///
+/// The pointer to (i, j)-element of the matrix is compared to exp_ptr({i, j}).
+/// @pre exp_ptr argument is an index of type const GlobalElementIndex&.
+/// @pre exp_ptr return type should be T*.
 template <class T, class PointerGetter>
 void checkPtr(PointerGetter exp_ptr, Matrix<T, Device::CPU>& mat, const char* file, const int line) {
   auto comp = [](T* ptr, const T& value) { return ptr == &value; };
@@ -135,6 +139,5 @@ void checkPtr(PointerGetter exp_ptr, Matrix<T, Device::CPU>& mat, const char* fi
 }
 #define CHECK_MATRIX_PTR(exp_ptr, mat) \
   ::dlaf_test::matrix_test::checkPtr(exp_ptr, mat, __FILE__, __LINE__);
-
 }
 }

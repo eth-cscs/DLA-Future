@@ -29,7 +29,7 @@ using namespace dlaf;
 /// @pre el argument is an index of type const TileElementIndex&.
 /// @pre el return type should be T.
 template <class T, class Func>
-void set(Tile<T, Device::CPU>& tile, Func el) {
+void set(const Tile<T, Device::CPU>& tile, Func el) {
   for (SizeType j = 0; j < tile.size().cols(); ++j) {
     for (SizeType i = 0; i < tile.size().rows(); ++i) {
       TileElementIndex index(i, j);
@@ -46,7 +46,7 @@ void set(Tile<T, Device::CPU>& tile, Func el) {
 /// @pre el argument is an index of type const TileElementIndex&.
 /// @pre el return type should be T.
 template <class T>
-void print(Tile<T, Device::CPU>& tile, int precision = 4, std::ostream& out = std::cout) {
+void print(const Tile<T, Device::CPU>& tile, int precision = 4, std::ostream& out = std::cout) {
   auto out_precision = out.precision();
   out.precision(precision);
   // sign + number + . + exponent (e+xxx)
@@ -77,7 +77,7 @@ namespace internal {
 /// @pre The second argument of comp should be either T, T& or const T&.
 /// @pre The second argument of err_message should be either T, T& or const T&.
 template <class T, class Func1, class Func2, class Func3>
-void check(Tile<T, Device::CPU>& tile, Func1 el, Func2 comp, Func3 err_message, const char* file,
+void check(const Tile<T, Device::CPU>& tile, Func1 el, Func2 comp, Func3 err_message, const char* file,
            const int line) {
   for (SizeType j = 0; j < tile.size().cols(); ++j) {
     for (SizeType i = 0; i < tile.size().rows(); ++i) {
@@ -98,7 +98,7 @@ void check(Tile<T, Device::CPU>& tile, Func1 el, Func2 comp, Func3 err_message, 
 /// @pre el argument is an index of type const TileElementIndex&.
 /// @pre el return type should be T.
 template <class T, class Func>
-void checkEQ(Tile<T, Device::CPU>& tile, Func el, const char* file, const int line) {
+void checkEQ(const Tile<T, Device::CPU>& tile, Func el, const char* file, const int line) {
   auto err_message = [](T expected, T value) {
     std::stringstream s;
     s << "expected " << expected << " == " << value;
@@ -114,7 +114,7 @@ void checkEQ(Tile<T, Device::CPU>& tile, Func el, const char* file, const int li
 /// @pre ptr argument is an index of type const TileElementIndex&.
 /// @pre ptr return type should be T*.
 template <class T, class Func>
-void checkPtr(Tile<T, Device::CPU>& tile, Func ptr, const char* file, const int line) {
+void checkPtr(const Tile<T, Device::CPU>& tile, Func ptr, const char* file, const int line) {
   auto comp = [](T* ptr, const T& value) { return ptr == &value; };
   auto err_message = [](T* expected, const T& value) {
     std::stringstream s;
@@ -133,7 +133,7 @@ void checkPtr(Tile<T, Device::CPU>& tile, Func ptr, const char* file, const int 
 /// @pre rel_err > 0.
 /// @pre abs_err > 0.
 template <class T, class Func>
-void checkNear(Tile<T, Device::CPU>& tile, Func el, BaseType<T> rel_err, BaseType<T> abs_err,
+void checkNear(const Tile<T, Device::CPU>& tile, Func el, BaseType<T> rel_err, BaseType<T> abs_err,
                const char* file, const int line) {
   ASSERT_GT(rel_err, 0);
   ASSERT_GT(abs_err, 0);

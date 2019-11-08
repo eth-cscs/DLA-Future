@@ -18,6 +18,7 @@
 #include <sstream>
 #include "gtest/gtest.h"
 #include "dlaf/tile.h"
+#include "dlaf/common/traits.h"
 
 namespace dlaf_test {
 namespace tile_test {
@@ -28,12 +29,27 @@ using namespace dlaf;
 /// The (i, j)-element of the tile is set to el({i, j}).
 /// @pre el argument is an index of type const TileElementIndex&.
 /// @pre el return type should be T.
-template <class T, class Func>
+template <class T, class Func, dlaf::enable_if_signature_t<Func, T(const TileElementIndex &), int> = 0>
 void set(const Tile<T, Device::CPU>& tile, Func el) {
   for (SizeType j = 0; j < tile.size().cols(); ++j) {
     for (SizeType i = 0; i < tile.size().rows(); ++i) {
       TileElementIndex index(i, j);
       tile(index) = el(index);
+    }
+  }
+}
+
+/// @brief Sets the elements of the tile.
+///
+/// @pre el argument is an index of type const TileElementIndex&.
+/// @pre el return type should be T.
+template <class T, class U, std::enable_if_t<std::is_convertible<U, T>::value, int> = 0>
+void set(const Tile<T, Device::CPU>& tile, U el) {
+  // TODO evaluate to use the other one with a lambda
+  for (SizeType j = 0; j < tile.size().cols(); ++j) {
+    for (SizeType i = 0; i < tile.size().rows(); ++i) {
+      TileElementIndex index(i, j);
+      tile(index) = el;
     }
   }
 }

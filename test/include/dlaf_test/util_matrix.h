@@ -84,7 +84,7 @@ std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFutures(Matrix<T
 /// @pre The second argument of err_message should be either T, T& or const T&.
 namespace internal {
 template <class T, class ElementGetter, class ComparisonOp, class ErrorMessageGetter>
-void check(Matrix<T, Device::CPU>& mat, ElementGetter expected, ComparisonOp comp,
+void check(ElementGetter expected, Matrix<T, Device::CPU>& mat, ComparisonOp comp,
            ErrorMessageGetter err_message, const char* file, const int line) {
   for (SizeType tile_j = 0; tile_j < mat.nrTiles().cols(); ++tile_j) {
     for (SizeType tile_i = 0; tile_i < mat.nrTiles().rows(); ++tile_i) {
@@ -112,33 +112,32 @@ void check(Matrix<T, Device::CPU>& mat, ElementGetter expected, ComparisonOp com
 /// @pre exp_el argument is an index of type const GlobalElementIndex&.
 /// @pre exp_el return type should be T.
 template <class T, class ElementGetter>
-void checkEQ(Matrix<T, Device::CPU>& mat, ElementGetter exp_el, const char* file, const int line) {
+void checkEQ(ElementGetter exp_el, Matrix<T, Device::CPU>& mat, const char* file, const int line) {
   auto err_message = [](T expected, T value) {
     std::stringstream s;
     s << "expected " << expected << " == " << value;
     return s.str();
   };
-  internal::check(mat, exp_el, std::equal_to<T>{}, err_message, file, line);
+  internal::check(exp_el, mat, std::equal_to<T>{}, err_message, file, line);
 }
-#define CHECK_MATRIX_EQ(mat, exp_el) ::dlaf_test::matrix_test::checkEQ(exp_el, mat, __FILE__, __LINE__);
+#define CHECK_MATRIX_EQ(exp_el, mat) ::dlaf_test::matrix_test::checkEQ(exp_el, mat, __FILE__, __LINE__);
 
 /// @brief Checks the pointers to the elements of the matrix.
 ///
-/// The pointer to (i, j)-element of the matrix is compared to ptr({i, j}).
-/// @pre el argument is an index of type const GlobalElementIndex&.
-/// @pre el return type should be T*.
+/// The pointer to (i, j)-element of the matrix is compared to exp_ptr({i, j}).
+/// @pre exp_ptr argument is an index of type const GlobalElementIndex&.
+/// @pre exp_ptr return type should be T*.
 template <class T, class PointerGetter>
-void checkPtr(Matrix<T, Device::CPU>& mat, PointerGetter exp_ptr, const char* file, const int line) {
+void checkPtr(PointerGetter exp_ptr, Matrix<T, Device::CPU>& mat, const char* file, const int line) {
   auto comp = [](T* ptr, const T& value) { return ptr == &value; };
   auto err_message = [](T* expected, const T& value) {
     std::stringstream s;
     s << "expected " << expected << " == " << &value;
     return s.str();
   };
-  internal::check(mat, exp_ptr, comp, err_message, file, line);
+  internal::check(exp_ptr, mat, comp, err_message, file, line);
 }
 #define CHECK_MATRIX_PTR(exp_ptr, mat) \
-  ::dlaf_test::matrix_test::checkPtr(mat, exp_ptr, __FILE__, __LINE__);
-
+  ::dlaf_test::matrix_test::checkPtr(exp_ptr, mat, __FILE__, __LINE__);
 }
 }

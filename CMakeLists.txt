@@ -62,6 +62,15 @@ endif()
 # ----- HPX
 find_package(HPX REQUIRED)
 
+# In HPX 1.3.0 there is compiler matching check, but it does not check matching of build types.
+# Since it is source of headaches, waiting for HPX to add this check, we check on our own
+if (NOT "${HPX_BUILD_TYPE}" STREQUAL "${CMAKE_BUILD_TYPE}")
+  message(WARNING
+  "CMAKE_BUILD_TYPE does not match HPX_BUILD_TYPE=${HPX_BUILD_TYPE}\n"
+  "This project uses ${CMAKE_BUILD_TYPE}, while HPX uses ${HPX_BUILD_TYPE}.\n"
+  "Please add -DCMAKE_BUILD_TYPE=${HPX_BUILD_TYPE} to your cmake command or use a debug build of HPX")
+endif()
+
 # ----- BLASPP/LAPACKPP
 find_package(OpenMP REQUIRED)
 find_package(blaspp REQUIRED)

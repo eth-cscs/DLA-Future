@@ -11,11 +11,11 @@
 #pragma once
 
 #include <hpx/hpx.hpp>
+#include "dlaf/common/buffer.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/memory/memory_view.h"
 #include "dlaf/types.h"
 #include "dlaf/util_math.h"
-#include "dlaf/common/buffer.h"
 
 namespace dlaf {
 

@@ -13,8 +13,8 @@
 #include <gtest/gtest.h>
 
 #include "dlaf_test/helper_communicators.h"
-#include "dlaf_test/util_types.h"
 #include "dlaf_test/util_tile.h"
+#include "dlaf_test/util_types.h"
 
 #include "dlaf/tile.h"
 

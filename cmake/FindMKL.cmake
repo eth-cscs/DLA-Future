@@ -1,356 +1,309 @@
-#
-# Distributed Linear Algebra with Future (DLAF)
+# Source: https://github.com/eth-cscs/cmake-recipes
 #
 # Copyright (c) 2018-2019, ETH Zurich
-# All rights reserved.
+# BSD 3-Clause License. All rights reserved.
 #
-# Please, refer to the LICENSE file in the root directory.
-# SPDX-License-Identifier: BSD-3-Clause
+# Author: Teodor Nikolov (teodor.nikolov22@gmail.com)
 #
+#[=======================================================================[.rst:
+FindMKL
+-------
 
-# Find MKL library
-#
-# Components (UPPERCASE):
-#   LAPACK
-#   SCALAPACK (requires LAPACK, automatically added if not specified)
-#
-# Without specifying any components, it will look just for LAPACK.
-#
-# This module sets the following variables:
-#   - MKL_FOUND set to true if all selected required components are found
-#   - MKL_HAVE_NUM_THREADS_UTIL if it is available in the library
-#
-#   Components-related variables:
-#   - MKL_<COMPONENT>_FOUND se to true if <COMPOMENT> is found
-#   - MKL_<COMPONENT>_INCLUDE_DIRS and MKL_<COMPONENT>_LIBRARIES for each component
-#
-# Following options are allowed (for setting options from code see next section):
-#   - MKL_ROOT - where to look for the library. If not set, it uses the environment variable MKLROOT
-#
-#   for each COMPONENT:
-#   - MKL_<COMPONENT>_INCLUDE_DIR, MKL_<COMPONENT>_LIBRARY for each component
-#
-#   for LAPACK:
-#   - MKL_THREADING - threading mode available for LAPACK
-#
-#   fo SCALAPACK:
-#   - MKL_MPI_TYPE - MPI support for SCALAPACK
-#
-# If you want to set options from CMake script you cannot use previous variables, instead you should use:
-#   - MKL_<COMPONENT>_CUSTOM_INCLUDE_DIR
-#   - MKL_<COMPONENT>_CUSTOM_LIBRARY
-#   - MKL_CUSTOM_THREADING
-#   - MKL_CUSTOM_MPI_TYPE
-#
-# It creates targets MKL::lapack and MKL::scalapack (depending on selected components)
+The following conventions are used:
 
-include(CMakePushCheckState)
-include(CheckFunctionExists)
-include(CheckCXXSymbolExists)
+seq / SEQ      - sequential MKL
+omp / OMP      - threaded MKL with OpenMP back-end
+32bit / 32BIT  - MKL 32 bit integer interface (used most often)
+64bit / 64BIT  - MKL 64 bit integer interface
+
+The module attempts to define a target for each MKL configuration. The
+configuration will not be available if there are missing library files or a
+missing dependency. Configurations can be requested explicitly as COMPONENTS:
+
+  find_package(MKL REQUIRED COMPONENTS BLAS_32BIT_SEQ BLAS_64BIT_OMP)
+
+MKL is considered found if
+  a. all required components have been found (if any).
+  b. mkl core libraries and headers have been found.
+
+Example usage
+^^^^^^^^^^^^^
+
+  find_package(MKL)
+  target_link_libraries(... mkl::blas_32bit_seq)
+
+  or
+
+  target_link_libraries(... mkl::blas_32bit_omp)
+
+  or
+
+  target_link_libraries(... mkl::blas_64bit_omp)
+
+  or
+
+  target_link_libraries(... mkl::scalapack_32bit_omp)
+
+Search variables
+^^^^^^^^^^^^^^^^
+
+``MKLROOT``
+  Environment variable set to MKL's root directory
+
+``MKL_ROOT``
+  CMake variable set to MKL's root directory
+
+
+Imported targets
+^^^^^^^^^^^^^^^^
+
+mkl::core
+
+mkl::blas_32bit_seq
+mkl::blas_32bit_omp
+mkl::blas_64bit_seq
+mkl::blas_64bit_omp
+
+mkl::blacs_32bit_seq
+mkl::blacs_32bit_omp
+mkl::blacs_64bit_seq
+mkl::blacs_64bit_omp
+
+mkl::scalapack_32bit_seq
+mkl::scalapack_32bit_omp
+mkl::scalapack_64bit_seq
+mkl::scalapack_64bit_omp
+
+Result variables
+^^^^^^^^^^^^^^^^
+
+MKL_FOUND
+
+MKL_BLAS_32BIT_SEQ_FOUND
+MKL_BLAS_32BIT_OMP_FOUND
+MKL_BLAS_64BIT_SEQ_FOUND
+MKL_BLAS_64BIT_OMP_FOUND
+
+MKL_BLACS_32BIT_SEQ_FOUND
+MKL_BLACS_32BIT_OMP_FOUND
+MKL_BLACS_64BIT_SEQ_FOUND
+MKL_BLACS_64BIT_OMP_FOUND
+
+MKL_SCALAPACK_32BIT_SEQ_FOUND
+MKL_SCALAPACK_32BIT_OMP_FOUND
+MKL_SCALAPACK_64BIT_SEQ_FOUND
+MKL_SCALAPACK_64BIT_OMP_FOUND
+
+Components
+^^^^^^^^^^
+
+BLAS_32BIT_SEQ
+BLAS_32BIT_OMP
+BLAS_64BIT_SEQ
+BLAS_64BIT_OMP
+
+BLACS_32BIT_SEQ
+BLACS_32BIT_OMP
+BLACS_64BIT_SEQ
+BLACS_64BIT_OMP
+
+SCALAPACK_32BIT_SEQ
+SCALAPACK_32BIT_OMP
+SCALAPACK_64BIT_SEQ
+SCALAPACK_64BIT_OMP
+
+Not supported
+^^^^^^^^^^^^^
+
+- TBB threading back-end
+- F95 interfaces
+
+Note: Mixing GCC and Intel OpenMP backends is a bad idea.
+
+#]=======================================================================]
+
+cmake_minimum_required(VERSION 3.10)
+
+# Modules
+#
 include(FindPackageHandleStandardArgs)
 
-### helper function
-function(check_valid_option selected_option)
-  set(available_options ${ARGN})
-  list(LENGTH available_options _how_many_options)
-
-  if (NOT _how_many_options GREATER_EQUAL 1)
-    message(
-      FATAL_ERROR
-      "You are checking value of an option without giving the list of valid ones")
-  endif()
-
-  list(FIND available_options ${selected_option} selected_index)
-  if (${selected_index} EQUAL -1)
-    message(FATAL_ERROR
-      "You have selected '${selected_option}', but you have to choose among '${available_options}'")
-  endif()
+# Functions
+#
+function(__mkl_find_library _name)
+    find_library(${_name}
+        NAMES ${ARGN}
+        HINTS ${MKL_ROOT}
+        PATH_SUFFIXES ${_mkl_libpath_suffix}
+                      lib
+        )
+    mark_as_advanced(${_name})
 endfunction()
 
-### helper functions: find components
-macro(_mkl_find component_name)
-  if (${component_name} STREQUAL "LAPACK")
-    _mkl_find_lapack()
-  elseif(${component_name} STREQUAL "SCALAPACK")
-    _mkl_find_scalapack()
-  else()
-    message(FATAL_ERROR "Unknown component ${component_name}")
-  endif()
-endmacro()
+# External Find packages
+#
+find_package(Threads)
+find_package(MPI COMPONENTS CXX)
+find_package(OpenMP COMPONENTS CXX)
 
-macro(_mkl_find_lapack)
-  # ----- Options
-  if(CMAKE_CXX_COMPILER_ID MATCHES "Intel" OR ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    set(MKL_THREADING_OPTIONS "Sequential" "Intel OpenMP")
-    set(MKL_THREADING_DEFAULT "Intel OpenMP")
-  else()
-    set(MKL_THREADING_OPTIONS "Sequential" "GNU OpenMP" "Intel OpenMP")
-    set(MKL_THREADING_DEFAULT "GNU OpenMP")
-  endif()
+# Options
+#
+# The `NOT DEFINED` guards on CACHED variables are needed to make sure that
+# normal variables of the same name always take precedence*.
+#
+# * There are many caveats with CACHE variables in CMake. Before version
+#   3.12, both `option()` and `set(... CACHE ...)` would override normal
+#   variables if cached equivalents don't exist or they exisit but their type
+#   is not specified (e.g. command line arguments: -DFOO=ON instead of
+#   -DFOO:BOOL=ON). For 3.13 with policy CMP0077, `option()` no longer overrides
+#   normal variables of the same name. `set(... CACHE ...)` is still stuck with
+#   the old behaviour.
+#
+#   https://cmake.org/cmake/help/v3.15/command/set.html#set-cache-entry
+#   https://cmake.org/cmake/help/v3.15/policy/CMP0077.html
+#
+if(NOT DEFINED MKL_ROOT)
+    set(MKL_ROOT $ENV{MKLROOT} CACHE PATH "MKL's root directory.")
+endif()
 
-  # allow to set option from script
-  if (MKL_CUSTOM_THREADING)
-    set(MKL_THREADING
-      ${MKL_CUSTOM_THREADING}
-      CACHE STRING
-      "MKL Threading support (from code)"
-      FORCE
-    )
-  else()
-    set(MKL_THREADING ${MKL_THREADING_DEFAULT} CACHE STRING "MKL Threading support")
-  endif()
-  set_property(CACHE MKL_THREADING PROPERTY STRINGS ${MKL_THREADING_OPTIONS})
-  check_valid_option(${MKL_THREADING} ${MKL_THREADING_OPTIONS})
+# Determine MKL's library folder
+#
+set(_mkl_libpath_suffix "lib/intel64")
+if(CMAKE_SIZEOF_VOID_P EQUAL 4) # 32 bit
+    set(_mkl_libpath_suffix "lib/ia32")
+endif()
 
-  # ----- set MKL Threading
-  if(MKL_THREADING MATCHES "Sequential")
-    set(MKL_THREAD_LIB "-lmkl_sequential")
-  elseif(MKL_THREADING MATCHES "GNU OpenMP")
-    set(MKL_THREAD_LIB "-lmkl_gnu_thread -fopenmp")
-  elseif(MKL_THREADING MATCHES "Intel OpenMP")
-    if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-      set(INTEL_LIBS_ROOT "/opt/intel/lib" CACHE PATH "Path to Intel libraries")
-      find_library(IOMP5_LIB iomp5 HINTS "${INTEL_LIBS_ROOT}" NO_DEFAULT_PATH)
-      if (NOT IOMP5_LIB)
-        message(FATAL_ERROR "libiomp5 not found, please set INTEL_LIBS_ROOT correctly")
-      endif()
-      set(IOMP5_LIB_INTERNAL "-Wl,-rpath,${INTEL_LIBS_ROOT} ${IOMP5_LIB}")
-    else()
-      set(IOMP5_LIB_INTERNAL "-liomp5")
-    endif()
-    set(MKL_THREAD_LIB "-lmkl_intel_thread ${IOMP5_LIB_INTERNAL}")
-  endif()
-  message(STATUS "MKL Threading: ${MKL_THREADING}")
-
-  # allow to set LAPACK_INCLUDE_DIR from script
-  if (MKL_LAPACK_CUSTOM_INCLUDE_DIR)
-    unset(MKL_LAPACK_INCLUDE_DIR CACHE)
-    find_path(MKL_LAPACK_INCLUDE_DIR
-      mkl_lapack.h
-      PATHS ${MKL_LAPACK_CUSTOM_INCLUDE_DIR}
-      NO_DEFAULT_PATH)
-  else()
-    find_path(MKL_LAPACK_INCLUDE_DIR
-      mkl_lapack.h
-      PATHS ${MKL_ROOT}/include)
-  endif()
-
-  # allow to set LAPACK_LIBRARY from script
-  if (MKL_LAPACK_CUSTOM_LIBRARY)
-    set(MKL_LAPACK_LIBRARY
-      ${MKL_LAPACK_CUSTOM_LIBRARY}
-      CACHE STRING "LAPACK libraries (from code)"
-      FORCE
-    )
-  else()
-    set(MKL_LAPACK_LIBRARY
-      "${MKL_LIB_DIR} -lmkl_intel_lp64\
-      ${MKL_THREAD_LIB} -lmkl_core\
-      -lpthread -lm -ldl"                            # TODO pthread, m, dl ???
-      CACHE STRING "LAPACK libraries"
-    )
-  endif()
-
-  mark_as_advanced(
-    MKL_LAPACK_INCLUDE_DIR
-    MKL_LAPACK_LIBRARY
-  )
-
-  find_package_handle_standard_args(MKL_LAPACK DEFAULT_MSG
-    MKL_LAPACK_LIBRARY
-    MKL_LAPACK_INCLUDE_DIR
-  )
-endmacro()
-
-macro(_mkl_find_scalapack)
-  # ----- Options
-  if (UNIX)
-    set(MKL_MPI_TYPE_OPTIONS "IntelMPI" "OpenMPI")
-    set(MKL_MPI_TYPE_DEFAULT "IntelMPI")
-
-    # allow to set MPI_MPI_TYPE from code
-    if (MKL_CUSTOM_MPI_TYPE)
-      set(MKL_MPI_TYPE ${MKL_CUSTOM_MPI_TYPE} CACHE STRING "MKL MPI support (from code)" FORCE)
-    else()
-      set(MKL_MPI_TYPE ${MKL_MPI_TYPE_DEFAULT} CACHE STRING "MKL MPI support")
-    endif()
-    set_property(CACHE MKL_MPI_TYPE PROPERTY STRINGS ${MKL_MPI_TYPE_OPTIONS})
-    check_valid_option(${MKL_MPI_TYPE} ${MKL_MPI_TYPE_OPTIONS})
-  endif()
-
-  # ----- set MPI support
-  if (UNIX)
-    if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-      set(MKL_BLACS_LIB "-lmkl_blacs_mpich_lp64")
-    else()
-      if(MKL_MPI_TYPE MATCHES "OpenMPI")
-        set(MKL_BLACS_LIB "-lmkl_blacs_openmpi_lp64")
-      elseif(MKL_MPI_TYPE MATCHES "IntelMPI")
-        set(MKL_BLACS_LIB "-lmkl_blacs_intelmpi_lp64")
-      else()
-        message(FATAL_ERROR "Unknown MKL MPI Support: ${MKL_MPI_TYPE}")
-      endif()
-    endif()
-  endif()
-
-  # allow to set LAPACK_LIBRARY from script
-  if (MKL_SCALAPACK_CUSTOM_LIBRARY)
-    set(MKL_SCALAPACK_LIBRARY
-      ${MKL_SCALAPACK_CUSTOM_LIBRARY}
-      CACHE STRING
-      "Scalapack libraries (from code)"
-      FORCE
-    )
-  else()
-    set(MKL_SCALAPACK_LIBRARY
-      "-lmkl_scalapack_lp64 ${MKL_BLACS_LIB}"
-      CACHE STRING "Scalapack libraries"
-    )
-  endif()
-
-  mark_as_advanced(MKL_SCALAPACK_LIBRARY)
-
-  find_package_handle_standard_args(MKL_SCALAPACK DEFAULT_MSG
-    MKL_SCALAPACK_LIBRARY
-  )
-endmacro()
-
-### helper functions: checks components
-macro(_mkl_check component_name)
-  if (${component_name} STREQUAL "LAPACK")
-    _mkl_check_lapack()
-  elseif(${component_name} STREQUAL "SCALAPACK")
-    _mkl_check_scalapack()
-  else()
-    message(FATAL_ERROR "Unknown component ${component_name}")
-  endif()
-endmacro()
-
-function(_mkl_check_lapack)
-  cmake_push_check_state(RESET)
-
-  set(CMAKE_REQUIRED_INCLUDES ${MKL_LAPACK_INCLUDE_DIR})
-  set(CMAKE_REQUIRED_LIBRARIES ${MKL_LAPACK_LIBRARY})
-
-  unset(LAPACK_CHECK_BLAS CACHE)
-  check_symbol_exists(dgemm "mkl_blas.h" LAPACK_CHECK_BLAS)
-  if (NOT LAPACK_CHECK_BLAS)
-    message(FATAL_ERROR "BLAS symbol not found with this configuration")
-  endif()
-
-  unset(LAPACK_CHECK CACHE)
-  check_symbol_exists(dpotrf_ "mkl_lapack.h" LAPACK_CHECK)
-  if (NOT LAPACK_CHECK)
-    message(FATAL_ERROR "LAPACK symbol not found with this configuration")
-  endif()
-
-  cmake_pop_check_state()
-endfunction()
-
-function(_mkl_check_scalapack)
-  cmake_push_check_state(RESET)
-
-  set(CMAKE_REQUIRED_INCLUDES ${MKL_LAPACK_INCLUDE_DIR})
-  set(CMAKE_REQUIRED_LIBRARIES ${MKL_LAPACK_LIBRARY} ${MKL_SCALAPACK_LIBRARY})
-
-  unset(SCALAPACK_CHECK CACHE)
-  check_symbol_exists(pdpotrf_ "mkl_scalapack.h" SCALAPACK_CHECK)
-  if (NOT SCALAPACK_CHECK)
-    message(FATAL_ERROR "Scalapack symbol not found with this configuration")
-  endif()
-
-  cmake_pop_check_state()
-endfunction()
-
-
-### MAIN
-set(MKL_ROOT $ENV{MKLROOT} CACHE PATH "Intel MKL Path")
-
-find_path(MKL_INCLUDE_DIR
-  mkl.h
-  PATHS ${MKL_ROOT}/include
-)
-
-if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  set(MKL_LIB_DIR "-L${MKL_ROOT}/lib -Wl,-rpath,${MKL_ROOT}/lib")
+if(WIN32)
+    string(APPEND _mkl_libpath_suffix "_win")
+elseif(APPLE)
+    string(APPEND _mkl_libpath_suffix "_mac")
 else()
-  set(MKL_LIB_DIR "-L${MKL_ROOT}/lib/intel64")
+    string(APPEND _mkl_libpath_suffix "_lin")
 endif()
 
-### Additional Option
-cmake_push_check_state(RESET)
+# Find MKL header
+#
+find_path(MKL_INCLUDE_DIR mkl.h
+    HINTS ${MKL_ROOT}/include
+    )
+mark_as_advanced(MKL_INCLUDE_DIR)
 
-set(CMAKE_REQUIRED_INCLUDES ${MKL_INCLUDE_DIR})
+# BLAS components (core MKL)
+#
+__mkl_find_library(MKL_CORE_LIB mkl_core)
 
-unset(_MKL_HAVE_NUM_THREADS_UTIL CACHE)
-check_cxx_symbol_exists(mkl_get_max_threads mkl.h _MKL_HAVE_NUM_THREADS_UTIL)
-if (_MKL_HAVE_NUM_THREADS_UTIL)
-  set(MKL_HAVE_NUM_THREADS_UTIL TRUE)
+__mkl_find_library(MKL_INTERFACE_32BIT_LIB mkl_intel_lp64)
+__mkl_find_library(MKL_INTERFACE_64BIT_LIB mkl_intel_ilp64)
+
+__mkl_find_library(MKL_SEQ_LIB mkl_sequential)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT APPLE)
+    __mkl_find_library(MKL_OMP_LIB mkl_gnu_thread)
+else()
+    __mkl_find_library(MKL_OMP_LIB mkl_intel_thread)
 endif()
 
-cmake_pop_check_state()
-
-### Components
-if (NOT MKL_FIND_COMPONENTS)
-  set(MKL_FIND_COMPONENTS LAPACK)
+# BLACS components
+#
+execute_process(COMMAND mpirun --version OUTPUT_VARIABLE MPIRUN_OUTPUT)
+string(FIND "${MPIRUN_OUTPUT}" "Open MPI" _ompi_pos)
+if(_ompi_pos STREQUAL "-1")  # MPICH
+    if(APPLE)
+        __mkl_find_library(MKL_BLACS_32BIT_LIB mkl_blacs_mpich_lp64)
+        __mkl_find_library(MKL_BLACS_64BIT_LIB mkl_blacs_mpich_ilp64)
+    else()
+        __mkl_find_library(MKL_BLACS_32BIT_LIB mkl_blacs_intelmpi_lp64)
+        __mkl_find_library(MKL_BLACS_64BIT_LIB mkl_blacs_intelmpi_ilp64)
+    endif()
+else()                      # OpenMPI
+    if(APPLE)
+        message(FATAL_ERROR "Only MPICH is supported on Apple.")
+    endif()
+     __mkl_find_library(MKL_BLACS_32BIT_LIB mkl_blacs_openmpi_lp64)
+     __mkl_find_library(MKL_BLACS_64BIT_LIB mkl_blacs_openmpi_ilp64)
 endif()
 
-list(FIND MKL_FIND_COMPONENTS SCALAPACK _MKL_WITH_SCALAPACK)
-if (_MKL_WITH_SCALAPACK)
-  list(APPEND MKL_FIND_COMPONENTS LAPACK)
-endif()
+# ScaLAPACK components
+#
+__mkl_find_library(MKL_SCALAPACK_32BIT_LIB mkl_scalapack_lp64)
+__mkl_find_library(MKL_SCALAPACK_64BIT_LIB mkl_scalapack_ilp64)
 
-list(REMOVE_DUPLICATES MKL_FIND_COMPONENTS)
-list(SORT MKL_FIND_COMPONENTS)  # LAPACK should be found before SCALAPACK (exploit alphabetical order)
-foreach(_mkl_component_name IN LISTS MKL_FIND_COMPONENTS)
-  _mkl_find(${_mkl_component_name})
-  _mkl_check(${_mkl_component_name})
+# Determine target existence for all components and define them if they do
+#
+foreach(_bits "32BIT" "64BIT")
+    set(_mkl_interface_lib ${MKL_INTERFACE_${_bits}_LIB})
+    set(_mkl_blacs_lib ${MKL_BLACS_${_bits}_LIB})
+    set(_mkl_scalapack_lib ${MKL_SCALAPACK_${_bits}_LIB})
 
-  if (MKL_${_mkl_component_name}_FOUND)
-    continue()
-  else()
-    message(FATAL_ERROR "!!! ${_mkl_component_name} not found")
-  endif()
+    foreach(_threading "SEQ" "OMP")
+        set(_mkl_threading_lib ${MKL_${_threading}_LIB})
+
+        set(_config "${_bits}_${_threading}")
+        string(TOLOWER ${_config} _tgt_config)
+
+        set(_omp_found_var "")
+        set(_omp_target "")
+        if(${_threading} STREQUAL "OMP")
+            set(_omp_found_var "OpenMP_CXX_FOUND")
+            set(_omp_target "OpenMP::OpenMP_CXX")
+        endif()
+
+        list(FIND MKL_FIND_COMPONENTS BLAS_${_config} _blas_cpt_requested)
+        list(FIND MKL_FIND_COMPONENTS BLACS_${_config} _blacs_cpt_requested)
+        list(FIND MKL_FIND_COMPONENTS SCALAPACK_${_config} _scalapack_cpt_requested)
+
+        if(${_blas_cpt_requested} GREATER "-1" OR
+           ${_blacs_cpt_requested} GREATER "-1" OR
+           ${_scalapack_cpt_requested} GREATER "-1")
+            find_package_handle_standard_args(MKL_BLAS_${_config} REQUIRED_VARS _mkl_threading_lib
+                                                                                _mkl_interface_lib
+                                                                                ${_omp_found_var})
+        endif()
+
+        if(${_blacs_cpt_requested} GREATER "-1" OR
+           ${_scalapack_cpt_requested} GREATER "-1")
+            find_package_handle_standard_args(MKL_BLACS_${_config} REQUIRED_VARS _mkl_blacs_lib
+                                                                                 MKL_BLAS_${_config}_FOUND
+                                                                                 MPI_FOUND)
+        endif()
+
+        if(${_scalapack_cpt_requested} GREATER "-1")
+            find_package_handle_standard_args(MKL_SCALAPACK_${_config} REQUIRED_VARS _mkl_scalapack_lib
+                                                                                     MKL_BLACS_${_config}_FOUND)
+        endif()
+
+        if(MKL_BLAS_${_config}_FOUND AND NOT TARGET mkl::blas_${_tgt_config})
+            add_library(mkl::blas_${_tgt_config} INTERFACE IMPORTED)
+            set_target_properties(mkl::blas_${_tgt_config} PROPERTIES
+                INTERFACE_INCLUDE_DIRECTORIES "${MKL_INCLUDE_DIR}"
+                INTERFACE_LINK_LIBRARIES "${_mkl_interface_lib};${_mkl_threading_lib};${MKL_CORE_LIB};${_omp_target};Threads::Threads")
+        endif()
+
+        if(MKL_BLACS_${_config}_FOUND AND NOT TARGET mkl::blacs_${_tgt_config})
+            add_library(mkl::blacs_${_tgt_config} INTERFACE IMPORTED)
+            set_target_properties(mkl::blacs_${_tgt_config} PROPERTIES
+                INTERFACE_INCLUDE_DIRECTORIES "${MKL_INCLUDE_DIR}"
+                INTERFACE_LINK_LIBRARIES "${_mkl_interface_lib};${_mkl_threading_lib};${MKL_CORE_LIB};${_mkl_blacs_lib};${_omp_target};Threads::Threads")
+        endif()
+
+        if(MKL_SCALAPACK_${_config}_FOUND AND NOT TARGET mkl::scalapack_${_tgt_config})
+            add_library(mkl::scalapack_${_tgt_config} INTERFACE IMPORTED)
+            set_target_properties(mkl::scalapack_${_tgt_config} PROPERTIES
+                INTERFACE_INCLUDE_DIRECTORIES "${MKL_INCLUDE_DIR}"
+                INTERFACE_LINK_LIBRARIES "${_mkl_scalapack_lib};mkl::blacs_${_tgt_config}")
+        endif()
+    endforeach()
 endforeach()
 
-### MKL Package
-find_package_handle_standard_args(MKL
-  FOUND_VAR MKL_FOUND
-  REQUIRED_VARS
-    MKL_ROOT
-  HANDLE_COMPONENTS
-)
+# Check if core libs were found
+#
+find_package_handle_standard_args(MKL REQUIRED_VARS MKL_INCLUDE_DIR
+                                                    MKL_CORE_LIB
+                                                    Threads_FOUND
+                                      HANDLE_COMPONENTS)
 
-# ----- LAPACK
-if (MKL_LAPACK_FOUND)
-  set(MKL_LAPACK_INCLUDE_DIRS ${MKL_LAPACK_INCLUDE_DIR})
-  set(MKL_LAPACK_LIBRARIES ${MKL_LAPACK_LIBRARY})
-
-  if (NOT TARGET MKL::lapack)
-    add_library(MKL::lapack INTERFACE IMPORTED GLOBAL)
-  endif()
-
-  target_include_directories(MKL::lapack
-    INTERFACE
-      ${MKL_LAPACK_INCLUDE_DIRS}
-  )
-
-  target_link_libraries(MKL::lapack
-    INTERFACE
-      ${MKL_LAPACK_LIBRARIES}
-  )
-endif()
-
-# ----- SCALAPACK
-if (MKL_SCALAPACK_FOUND)
-  set(MKL_SCALAPACK_LIBRARIES ${MKL_SCALAPACK_LIBRARY})
-
-  if (NOT TARGET MKL::scalapack)
-    add_library(MKL::scalapack INTERFACE IMPORTED GLOBAL)
-  endif()
-
-  target_link_libraries(MKL::scalapack
-    INTERFACE
-      ${MKL_SCALAPACK_LIBRARIES}
-  )
+if (MKL_FOUND AND NOT TARGET mkl::core)
+    add_library(mkl::core INTERFACE IMPORTED)
+    set_target_properties(mkl::core PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${MKL_INCLUDE_DIR}"
+        INTERFACE_LINK_LIBRARIES "${MKL_CORE_LIB}")
 endif()

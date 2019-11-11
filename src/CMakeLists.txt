@@ -29,7 +29,7 @@ target_link_libraries(DLAF
   PUBLIC
     MPI::MPI_CXX
     ${HPX_LIBRARIES}
-    lapack::lapack
+    ${LAPACK_TARGET}
     lapackpp
     blaspp
 )

@@ -48,14 +48,16 @@ endif()
 find_package(MPI REQUIRED)
 
 # ----- LAPACK/SCALAPACK
+set(LAPACK_TARGET "")
 set(DLAF_WITH_MKL OFF CACHE BOOL "Enable MKL as provider for LAPACK")
 if (DLAF_WITH_MKL)
   set(MKL_CUSTOM_THREADING "Sequential")
-  find_package(MKL REQUIRED COMPONENTS LAPACK)
+  find_package(MKL REQUIRED COMPONENTS BLAS_32BIT_SEQ)
   set(LAPACK_FOUND ${MKL_LAPACK_FOUND})
 
-  add_library(lapack::lapack ALIAS MKL::lapack)
+  set(LAPACK_TARGET "mkl::blas_32bit_seq")
 else()
+  set(LAPACK_TARGET "lapack::lapack")
   find_package(LAPACK REQUIRED)
 endif()
 

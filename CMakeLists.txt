@@ -64,11 +64,18 @@ find_package(HPX REQUIRED)
 
 # In HPX 1.3.0 there is compiler matching check, but it does not check matching of build types.
 # Since it is source of headaches, waiting for HPX to add this check, we check on our own
-if (NOT "${HPX_BUILD_TYPE}" STREQUAL "${CMAKE_BUILD_TYPE}")
-  message(WARNING
-  "CMAKE_BUILD_TYPE does not match HPX_BUILD_TYPE=${HPX_BUILD_TYPE}\n"
-  "This project uses ${CMAKE_BUILD_TYPE}, while HPX uses ${HPX_BUILD_TYPE}.\n"
-  "Please add -DCMAKE_BUILD_TYPE=${HPX_BUILD_TYPE} to your cmake command or use a debug build of HPX")
+get_property(_MULTI_CONFIG_GENERATOR GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if (NOT _MULTI_CONFIG_GENERATOR)
+  # They may not match just if none of them is a Debug build
+  if (  (NOT HPX_BUILD_TYPE STREQUAL CMAKE_BUILD_TYPE)
+          AND
+        (HPX_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "Debug")  )
+    message(WARNING
+      "The build type used (${CMAKE_BUILD_TYPE}) does not match with HPX build type (${HPX_BUILD_TYPE}).\n"
+      "Please either change CMAKE_BUILD_TYPE to ${HPX_BUILD_TYPE} or use a ${CMAKE_BUILD_TYPE} build of HPX")
+  endif()
+else()
+  # build-type check not available for multi-configuration generators
 endif()
 
 # ----- BLASPP/LAPACKPP

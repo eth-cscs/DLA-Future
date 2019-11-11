@@ -33,20 +33,3 @@ TEST_F(BroadcastTest, Broadcast_NewAPI) {
     EXPECT_EQ(color, message);
   }
 }
-
-TEST_F(BroadcastTest, AsyncBroadcast_NewAPI) {
-  auto broadcaster = 0;
-  auto communicator = splitted_comm;
-
-  bool waited;
-  auto what_to_do_before_retesting = [&waited]() { waited = true; };
-
-  if (splitted_comm.rank() == 0)
-    async_broadcast::send(make_message(&color, 1), communicator, what_to_do_before_retesting);
-  else {
-    int message;
-    async_broadcast::receive_from(broadcaster, make_message(&message, 1), communicator,
-                                  what_to_do_before_retesting);
-    EXPECT_EQ(color, message);
-  }
-}

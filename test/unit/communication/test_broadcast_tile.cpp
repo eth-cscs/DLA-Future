@@ -14,6 +14,7 @@
 
 #include "internal/helper_communicators.h"
 #include "dlaf_test/util_types.h"
+#include "dlaf_test/util_tile.h"
 
 #include "dlaf/tile.h"
 
@@ -28,27 +29,21 @@ TEST_F(BroadcastTileTest, SyncTile) {
   EXPECT_EQ(2, tile.size().rows());
   EXPECT_EQ(2, tile.size().cols());
 
-  auto message_values = [](dlaf::TileElementIndex index) -> TypeParam {
+  auto message_values = [](const dlaf::TileElementIndex& index) -> TypeParam {
     return dlaf_test::TypeUtilities<TypeParam>::element((index.row() + 1) + (index.col() + 1) * 10,
                                                         (index.col() + 1));
   };
 
   if (splitted_comm.rank() == 0) {
-    for (int j = 0; j < tile.size().cols(); ++j)
-      for (int i = 0; i < tile.size().rows(); ++i)
-        *tile.ptr({i, j}) = message_values({i, j});
+    dlaf_test::tile_test::set(tile, message_values);
 
     dlaf::comm::broadcast::send(dlaf::comm::make_message(tile), splitted_comm);
   }
   else {
-    for (int j = 0; j < tile.size().cols(); ++j)
-      for (int i = 0; i < tile.size().rows(); ++i)
-        EXPECT_NE(message_values({i, j}), *tile.ptr({i, j}));
+    CHECK_TILE_NE(message_values, tile);
 
     dlaf::comm::broadcast::receive_from(0, dlaf::comm::make_message(tile), splitted_comm);
   }
 
-  for (int j = 0; j < tile.size().cols(); ++j)
-    for (int i = 0; i < tile.size().rows(); ++i)
-      EXPECT_EQ(message_values({i, j}), *tile.ptr({i, j}));
+  CHECK_TILE_EQ(message_values, tile);
 }

@@ -18,7 +18,7 @@
 #include <sstream>
 #include "gtest/gtest.h"
 #include "dlaf/tile.h"
-#include "dlaf/common/traits.h"
+#include "dlaf/traits.h"
 
 namespace dlaf_test {
 namespace tile_test {
@@ -29,8 +29,8 @@ using namespace dlaf;
 /// The (i, j)-element of the tile is set to el({i, j}).
 /// @pre el argument is an index of type const TileElementIndex&.
 /// @pre el return type should be T.
-template <class T, class Func, dlaf::enable_if_signature_t<Func, T(const TileElementIndex &), int> = 0>
-void set(const Tile<T, Device::CPU>& tile, Func el) {
+template <class T, class ElementGetter, enable_if_signature_t<ElementGetter, T(const TileElementIndex &), int> = 0>
+void set(const Tile<T, Device::CPU>& tile, ElementGetter el) {
   for (SizeType j = 0; j < tile.size().cols(); ++j) {
     for (SizeType i = 0; i < tile.size().rows(); ++i) {
       TileElementIndex index(i, j);
@@ -39,7 +39,7 @@ void set(const Tile<T, Device::CPU>& tile, Func el) {
   }
 }
 
-/// @brief Sets the elements of the tile.
+/// @brief Sets all the elements of the tile with given value.
 ///
 /// @pre el argument is an index of type const TileElementIndex&.
 /// @pre el return type should be T.

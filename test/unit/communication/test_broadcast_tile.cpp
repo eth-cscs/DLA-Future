@@ -44,7 +44,7 @@ TEST_F(BroadcastTileTest, SyncTile) {
     broadcast::send(make_message(tile), splitted_comm);
   }
   else {
-    CHECK_TILE_NE(message_values, tile);
+    tile_test::set(tile, TypeUtilities<TypeParam>::element(0, 0));
 
     broadcast::receive_from(0, make_message(tile), splitted_comm);
   }

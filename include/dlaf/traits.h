@@ -19,7 +19,7 @@ namespace dlaf {
 template <class, class, class, class Enable = void>
 struct enable_if_signature;
 
-template <class T, class Func, class RetType, class ...Args>
+template <class T, class Func, class RetType, class... Args>
 struct enable_if_signature<
     Func, RetType(Args...), T,
     std::enable_if_t<std::is_convertible<Func, std::function<RetType(Args...)>>::value>> {

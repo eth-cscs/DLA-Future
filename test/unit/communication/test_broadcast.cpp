@@ -14,7 +14,10 @@
 
 #include "internal/helper_communicators.h"
 
-using BroadcastTest = dlaf_test::SplittedCommunicatorsTest;
+using namespace dlaf_test;
+using namespace dlaf::comm;
+
+using BroadcastTest = SplittedCommunicatorsTest;
 
 TEST_F(BroadcastTest, Broadcast_NewAPI) {
   auto broadcaster = 0;
@@ -22,12 +25,11 @@ TEST_F(BroadcastTest, Broadcast_NewAPI) {
 
   if (splitted_comm.rank() == 0) {
     const int message = color;
-    dlaf::comm::broadcast::send(dlaf::comm::make_message(&message, 1), communicator);
+    broadcast::send(make_message(&message, 1), communicator);
   }
   else {
     int message;
-    dlaf::comm::broadcast::receive_from(broadcaster, dlaf::comm::make_message(&message, 1),
-                                        communicator);
+    broadcast::receive_from(broadcaster, make_message(&message, 1), communicator);
     EXPECT_EQ(color, message);
   }
 }
@@ -40,12 +42,11 @@ TEST_F(BroadcastTest, AsyncBroadcast_NewAPI) {
   auto what_to_do_before_retesting = [&waited]() { waited = true; };
 
   if (splitted_comm.rank() == 0)
-    dlaf::comm::async_broadcast::send(dlaf::comm::make_message(&color, 1), communicator,
-                                      what_to_do_before_retesting);
+    async_broadcast::send(make_message(&color, 1), communicator, what_to_do_before_retesting);
   else {
     int message;
-    dlaf::comm::async_broadcast::receive_from(broadcaster, dlaf::comm::make_message(&message, 1),
-                                              communicator, what_to_do_before_retesting);
+    async_broadcast::receive_from(broadcaster, make_message(&message, 1), communicator,
+                                  what_to_do_before_retesting);
     EXPECT_EQ(color, message);
   }
 }

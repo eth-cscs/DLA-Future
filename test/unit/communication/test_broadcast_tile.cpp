@@ -18,31 +18,35 @@
 
 #include "dlaf/tile.h"
 
-using BroadcastTileTest = dlaf_test::SplittedCommunicatorsTest;
+using namespace dlaf;
+using namespace dlaf_test;
+using namespace dlaf::comm;
+
+using BroadcastTileTest = SplittedCommunicatorsTest;
 
 TEST_F(BroadcastTileTest, SyncTile) {
   using TypeParam = std::complex<float>;
 
   TypeParam data[4];
-  dlaf::Tile<TypeParam, dlaf::Device::CPU> tile({2, 2}, {data, 4}, 2);
+  Tile<TypeParam, dlaf::Device::CPU> tile({2, 2}, {data, 4}, 2);
 
   EXPECT_EQ(2, tile.size().rows());
   EXPECT_EQ(2, tile.size().cols());
 
-  auto message_values = [](const dlaf::TileElementIndex& index) -> TypeParam {
-    return dlaf_test::TypeUtilities<TypeParam>::element((index.row() + 1) + (index.col() + 1) * 10,
-                                                        (index.col() + 1));
+  auto message_values = [](const TileElementIndex& index) -> TypeParam {
+    return TypeUtilities<TypeParam>::element((index.row() + 1) + (index.col() + 1) * 10,
+                                             (index.col() + 1));
   };
 
   if (splitted_comm.rank() == 0) {
-    dlaf_test::tile_test::set(tile, message_values);
+    tile_test::set(tile, message_values);
 
-    dlaf::comm::broadcast::send(dlaf::comm::make_message(tile), splitted_comm);
+    broadcast::send(make_message(tile), splitted_comm);
   }
   else {
     CHECK_TILE_NE(message_values, tile);
 
-    dlaf::comm::broadcast::receive_from(0, dlaf::comm::make_message(tile), splitted_comm);
+    broadcast::receive_from(0, make_message(tile), splitted_comm);
   }
 
   CHECK_TILE_EQ(message_values, tile);

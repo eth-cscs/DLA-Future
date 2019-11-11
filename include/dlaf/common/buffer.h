@@ -25,11 +25,11 @@ namespace common {
 /// Data is viewed as a structure of optionally strided blocks of blocksize elements each.
 ///
 /// It has reference semantic and it does not own the underlying memory buffer.
-template <class T, class Enable = void>
+template <class T>
 struct Buffer;
 
 template <class T>
-struct Buffer<T*, void> {
+struct Buffer<T*> {
   /// @brief Create a buffer pointing to contiguous data
   ///
   /// Create a Buffer pointing to @p n contiguous elements of type @p T starting at @p ptr
@@ -83,7 +83,7 @@ protected:
 
 /// @brief Helper class for creatig a buffer from a bounded array
 template <class T, std::size_t N>
-struct Buffer<T[N], std::enable_if_t<std::is_array<T[N]>::value>> : Buffer<std::decay_t<T[N]>> {
+struct Buffer<T[N]> : Buffer<std::decay_t<T[N]>> {
   /// @brief Create a Buffer from a given bounded C-array
   Buffer(T array[N]) noexcept : Buffer<T*>(array, std::extent<T[N]>::value) {}
 };

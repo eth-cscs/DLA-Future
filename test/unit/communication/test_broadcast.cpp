@@ -20,7 +20,7 @@ TEST_F(BroadcastTest, Broadcast_NewAPI) {
   auto broadcaster = 0;
   auto communicator = splitted_comm;
 
-  if (isMasterInSplitted()) {
+  if (splitted_comm.rank() == 0) {
     const int message = color;
     dlaf::comm::broadcast::send(dlaf::comm::make_message(&message, 1), communicator);
   }
@@ -39,7 +39,7 @@ TEST_F(BroadcastTest, AsyncBroadcast_NewAPI) {
   bool waited;
   auto what_to_do_before_retesting = [&waited]() { waited = true; };
 
-  if (isMasterInSplitted())
+  if (splitted_comm.rank() == 0)
     dlaf::comm::async_broadcast::send(dlaf::comm::make_message(&color, 1), communicator,
                                       what_to_do_before_retesting);
   else {

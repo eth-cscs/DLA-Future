@@ -34,7 +34,7 @@ TEST_F(BroadcastTileTest, SyncTile) {
                                                         (index.col() + 1));
   };
 
-  if (isMasterInSplitted()) {
+  if (splitted_comm.rank() == 0) {
     for (int j = 0; j < tile.size().cols(); ++j)
       for (int i = 0; i < tile.size().rows(); ++i)
         *tile.ptr({i, j}) = message_values({i, j});

@@ -35,11 +35,6 @@ protected:
       MPI_Comm_free(&splitted_comm);
   }
 
-  /// @brief Return true if the current rank is the master in one of the two communicators
-  bool isMasterInSplitted() {
-    return world.rank() == color;
-  }
-
   Communicator world;          ///< the world communicator
   Communicator splitted_comm;  ///< even/odd communicator, based on what category this rank belongs to
 

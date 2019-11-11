@@ -12,7 +12,7 @@
 
 #include <gtest/gtest.h>
 
-#include "internal/helper_communicators.h"
+#include "dlaf_test/helper_communicators.h"
 
 using namespace dlaf_test;
 using namespace dlaf::comm;

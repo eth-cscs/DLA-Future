@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include "dlaf/communication/communicator.h"
+
 namespace dlaf_test {
 
 using dlaf::comm::Communicator;

@@ -44,7 +44,7 @@ void set(const Tile<T, Device::CPU>& tile, ElementGetter el) {
 ///
 /// @pre el argument is an index of type const TileElementIndex&.
 /// @pre el return type should be T.
-template <class T, class U, std::enable_if_t<std::is_convertible<U, T>::value, int> = 0>
+template <class T, class U, enable_if_convertible_t<U, T, int> = 0>
 void set(const Tile<T, Device::CPU>& tile, U el) {
   // TODO evaluate to use the other one with a lambda
   for (SizeType j = 0; j < tile.size().cols(); ++j) {

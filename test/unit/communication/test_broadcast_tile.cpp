@@ -16,7 +16,6 @@
 #include "dlaf_test/util_types.h"
 
 #include "dlaf/tile.h"
-#include "dlaf/util_tile.h"
 
 using BroadcastTileTest = dlaf_test::SplittedCommunicatorsTest;
 

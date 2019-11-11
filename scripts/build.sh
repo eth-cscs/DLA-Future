@@ -9,8 +9,8 @@ export CC=<FIXME: path to C compiler>
 export CXX=<FIXME: path to C++ compiler>
 export MKLROOT=<FIXME: path to the root installation directory of MKL>
 HPX_DIR=<FIXME: path to the root installation directory of HPX>
-BLASPP_DIR=<FIXME: path to the root installation directory of BLASPP>
-LAPACKPP_DIR=<FIXME: path to the root installation directory of LAPACKPP>
+blaspp_DIR=<FIXME: path to the root installation directory of BLASPP>
+lapackpp_DIR=<FIXME: path to the root installation directory of LAPACKPP>
 
 # CMAKE_BUILD_TYPE := Release | RelWithDebugInfo | Debug
 #

@@ -9,3 +9,4 @@
 #
 
 DLAF_addTest(test_cholesky SOURCES test_cholesky.cpp USE_MAIN HPX)
+

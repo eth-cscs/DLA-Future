@@ -158,4 +158,4 @@ Index2DType computeCoords(Ordering ordering, LinearIndexT index,
 }
 }
 
-#include "index2d.ipp"
+#include "index2d.tpp"

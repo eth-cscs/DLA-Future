@@ -36,6 +36,6 @@ template <class T, Device device>
 void trsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha,
           const Tile<const T, device>& a, const Tile<T, device>& b);
 
-#include "dlaf/blas_tile.ipp"
+#include "dlaf/blas_tile.tpp"
 }
 }

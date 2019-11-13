@@ -51,7 +51,7 @@ private:
   using Matrix<const T, device>::tile_shared_futures_;
 };
 
-#include "dlaf/matrix.ipp"
+#include "dlaf/matrix.tpp"
 
 template <class T, Device device>
 class Matrix<const T, device> : protected MatrixBase {
@@ -109,7 +109,7 @@ private:
   std::vector<hpx::shared_future<ConstTileType>> tile_shared_futures_;
 };
 
-#include "dlaf/matrix_const.ipp"
+#include "dlaf/matrix_const.tpp"
 
 // Note: the templates of the following helper functions are inverted w.r.t. the Matrix templates
 // to allow the user to only specify the device and let the compiler deduce the type T.

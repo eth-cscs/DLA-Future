@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include "dlaf/common/pipeline.h"
+
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/matrix.h"
@@ -7,68 +9,9 @@
 #include "dlaf_test/util_tile.h"
 
 using namespace dlaf;
+using dlaf::common::Pipeline;
 
-template <class T>
-struct Pipeline {
-public:
-  template <class U>
-  class Wrapper {
-    friend class Pipeline<U>;
-
-    Wrapper(U& object) : object_(object) {}
-
-  public:
-    Wrapper(Wrapper&& rhs) : object_(rhs.object_) {
-      promise_ = std::move(rhs.promise_);
-    }
-
-    ~Wrapper() {
-      if (promise_)
-        promise_->set_value(Wrapper<U>(object_));
-    }
-
-    U& get_value() {
-      return object_;
-    }
-
-  private:
-    Wrapper<U>& set_promise(hpx::promise<Wrapper<U>>&& next_promise) {
-      assert(!promise_);
-      promise_ = std::make_unique<hpx::promise<Wrapper<U>>>(std::move(next_promise));
-      return *this;
-    }
-
-    U& object_;
-    std::unique_ptr<hpx::promise<Wrapper<U>>> promise_;
-  };
-
-  Pipeline(T object) : object_(object) {
-    future_ = hpx::make_ready_future(std::move(Wrapper<T>(object_)));
-  }
-
-  ~Pipeline() {
-    if (future_.valid())
-      future_.get();
-  }
-
-  hpx::future<Wrapper<T>> operator()() {
-    auto before_last = std::move(future_);
-
-    hpx::promise<Wrapper<T>> promise;
-    future_ = promise.get_future();
-
-    return before_last.then(hpx::launch::async,
-                            [p = std::move(promise)](hpx::future<Wrapper<T>>&& fut) mutable {
-                              return std::move(fut.get().set_promise(std::move(p)));
-                            });
-  }
-
-private:
-  T object_;
-  hpx::future<Wrapper<T>> future_;
-};
-
-TEST(Basic, Simulation) {
+TEST(Pipeline, Basic) {
   static_assert(NUM_MPI_RANKS == 2, "This test requires exactly 2 MPI ranks");
   using TypeParam = float;
 
@@ -80,10 +23,11 @@ TEST(Basic, Simulation) {
   dlaf_test::tile_test::set(matrix({0, 0}).get(), 0);
 
   dlaf::comm::Communicator world(MPI_COMM_WORLD);
+  int rank = world.rank();
 
-  Pipeline<dlaf::comm::Communicator> serial_comm(world);
+  Pipeline<dlaf::comm::Communicator> serial_comm(std::move(world));
 
-  if (world.rank() == 0) {
+  if (rank == 0) {
     matrix({0, 0}).then(hpx::util::unwrapping([](auto&& tile) {
       CHECK_TILE_EQ(0, tile);
       dlaf_test::tile_test::set(tile, 13);
@@ -92,7 +36,7 @@ TEST(Basic, Simulation) {
     }));
 
     hpx::dataflow(hpx::util::unwrapping([](auto&& tile, auto&& comm_wrapper) {
-                    dlaf::comm::sync::broadcast::send(comm_wrapper.get_value(), tile);
+                    dlaf::comm::sync::broadcast::send(comm_wrapper(), tile);
                     CHECK_TILE_EQ(13, tile);
                   }),
                   matrix.read({0, 0}), serial_comm());
@@ -102,7 +46,7 @@ TEST(Basic, Simulation) {
       matrix::LayoutInfo layout = matrix::colMajorLayout({2, 2}, {2, 2}, 2);
 
       dlaf::Tile<TypeParam, dlaf::Device::CPU> workspace({2, 2}, {layout.minMemSize()}, 2);
-      dlaf::comm::sync::broadcast::receive_from(0, comm_wrapper.get_value(), workspace);
+      dlaf::comm::sync::broadcast::receive_from(0, comm_wrapper(), workspace);
       return std::move(workspace);
     }));
 

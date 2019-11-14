@@ -38,7 +38,11 @@ class Pool {
         channel_->set(std::move(object_));
     }
 
-    U& get_value() {
+    U& operator()() {
+      return object_;
+    }
+
+    const U& operator()() const {
       return object_;
     }
 

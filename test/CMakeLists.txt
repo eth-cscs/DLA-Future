@@ -77,5 +77,3 @@ target_link_libraries(DLAF_test
 
 add_subdirectory(src)
 add_subdirectory(unit)
-
-add_subdirectory(examples)

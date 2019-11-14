@@ -1,3 +1,0 @@
-add_executable(example_hpx_channel example_hpx_channel.cpp)
-
-target_link_libraries(example_hpx_channel PRIVATE DLAF)

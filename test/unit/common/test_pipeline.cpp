@@ -8,11 +8,11 @@ using namespace dlaf;
 using dlaf::common::Pipeline;
 
 TEST(Pipeline, Basic) {
-  int resource = 26;
-  Pipeline<int> serial(std::move(resource));
+  Pipeline<int> serial(26);
 
   auto checkpoint0 = serial();
-  auto checkpoint1 = checkpoint0.then(hpx::util::unwrapping([](auto&& wrapper) {
+  auto checkpoint1 = checkpoint0.then(
+    hpx::launch::sync, hpx::util::unwrapping([](auto&& wrapper) {
     return std::move(wrapper);
   }));
 
@@ -33,4 +33,13 @@ TEST(Pipeline, Basic) {
   EXPECT_TRUE(guard1.is_ready());
 
   guard1.get();
+}
+
+TEST(Pipeline, DestructionNoDependency) {
+  Pipeline<int> serial(13);
+}
+
+TEST(Pipeline, DestructionWithDependency) {
+  Pipeline<int> serial(26);
+  auto checkpoint = serial();
 }

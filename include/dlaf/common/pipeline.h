@@ -23,16 +23,18 @@ public:
   class Wrapper {
     friend class Pipeline<U>;
 
-    Wrapper(U&& object) : object_(std::move(object)) {}
+    Wrapper(U&& object, hpx::promise<T> next)
+      : object_(std::move(object)), promise_(std::move(next)), valid_(true) {}
 
   public:
-    Wrapper(Wrapper&& rhs) : object_(std::move(rhs.object_)) {
-      promise_ = std::move(rhs.promise_);
-    }
+    Wrapper(Wrapper&& rhs)
+      : object_(std::move(rhs.object_)), promise_(std::move(rhs.promise_)) {
+        std::swap(valid_, rhs.valid_);
+      }
 
     ~Wrapper() {
-      if (promise_)
-        promise_->set_value(Wrapper<U>(std::move(object_)));
+      if (valid_)
+        promise_.set_value(std::move(object_));
     }
 
     U& operator()() {
@@ -44,18 +46,13 @@ public:
     }
 
   private:
-    Wrapper<U>& set_promise(hpx::promise<Wrapper<U>>&& next_promise) {
-      assert(!promise_);
-      promise_ = std::make_unique<hpx::promise<Wrapper<U>>>(std::move(next_promise));
-      return *this;
-    }
-
+    bool valid_ = false;
     U object_;
-    std::unique_ptr<hpx::promise<Wrapper<U>>> promise_;
+    hpx::promise<U> promise_;
   };
 
   Pipeline(T&& object) {
-    future_ = hpx::make_ready_future(std::move(Wrapper<T>(std::move(object))));
+    future_ = hpx::make_ready_future(std::move(object));
   }
 
   ~Pipeline() {
@@ -66,17 +63,17 @@ public:
   hpx::future<Wrapper<T>> operator()() {
     auto before_last = std::move(future_);
 
-    hpx::promise<Wrapper<T>> promise;
-    future_ = promise.get_future();
+    hpx::promise<T> promise_next;
+    future_ = promise_next.get_future();
 
     return before_last.then(hpx::launch::sync, hpx::util::unwrapping(
-                            [p = std::move(promise)](Wrapper<T>&& wrapper) mutable {
-                              return std::move(wrapper.set_promise(std::move(p)));
+                            [promise_next = std::move(promise_next)](T&& object) mutable {
+                              return Wrapper<T>{std::move(object), std::move(promise_next)};
                             }));
   }
 
 private:
-  hpx::future<Wrapper<T>> future_;
+  hpx::future<T> future_;
 };
 
 }

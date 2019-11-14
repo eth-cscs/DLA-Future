@@ -13,8 +13,8 @@
 #include <functional>
 
 #include <hpx/lcos/future.hpp>
-#include <hpx/lcos/promise.hpp>
 #include <hpx/lcos/local/channel.hpp>
+#include <hpx/lcos/promise.hpp>
 
 namespace dlaf {
 namespace common {
@@ -61,7 +61,8 @@ public:
 
   hpx::future<Wrapper<T>> get() {
     return channel_.get().then(hpx::launch::sync,
-        hpx::util::unwrapping(std::bind(&Pool::make_wrapper, this, std::placeholders::_1)));
+                               hpx::util::unwrapping(
+                                   std::bind(&Pool::make_wrapper, this, std::placeholders::_1)));
   }
 
 private:

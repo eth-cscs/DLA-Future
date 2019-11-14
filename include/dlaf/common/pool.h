@@ -52,6 +52,8 @@ class Pool {
   };
 
 public:
+  using future_t = hpx::future<Wrapper<T>>;
+
   Pool() {
     for (int i = 0; i < PoolSize; ++i)
       channel_.set(T{});

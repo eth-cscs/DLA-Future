@@ -171,5 +171,5 @@ private:
   using Tile<const T, device>::p_;
 };
 
-#include <dlaf/tile.ipp>
+#include <dlaf/tile.tpp>
 }

@@ -16,7 +16,7 @@ Tests should be placed according to their type in `test/<type>/`.
 
 ### File Names
 Filenames should be all lowercase and can include numbers and underscores (`_`).
-Header files use the extension `.h`, template implementation files `.ipp` and source files use the extension `.cpp`.
+Header files use the extension `.h`, template implementation files `.tpp` and source files use the extension `.cpp`.
 
 ### Header files
 All header files should be self-contained.
@@ -263,7 +263,7 @@ declaration. For instance, in the example it would have been possible to have ju
 
 ## Formatting
 
-Use the provided clang-format style to format `.h`, `.hpp`, `.ipp` and `.cpp` files.
+Use the provided clang-format style to format `.h`, `.hpp`, `.tpp` and `.cpp` files.
 
 ### Line Length
 

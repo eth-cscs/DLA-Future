@@ -25,7 +25,7 @@ class Pool {
   class Wrapper {
     friend class Pool<U, PoolSize>;
 
-    Wrapper(hpx::lcos::local::channel<U>* channel, U&& object)
+    Wrapper(U&& object, hpx::lcos::local::channel<U>* channel)
         : channel_(channel), object_(std::move(object)) {}
 
   public:
@@ -66,7 +66,7 @@ public:
 
 private:
   Wrapper<T> make_wrapper(T&& object) {
-    return Wrapper<T>{&channel_, std::move(object)};
+    return Wrapper<T>{std::move(object), &channel_};
   }
 
   hpx::lcos::local::channel<T> channel_;

@@ -24,13 +24,12 @@ public:
     friend class Pipeline<U>;
 
     Wrapper(U&& object, hpx::promise<T> next)
-      : object_(std::move(object)), promise_(std::move(next)), valid_(true) {}
+        : object_(std::move(object)), promise_(std::move(next)), valid_(true) {}
 
   public:
-    Wrapper(Wrapper&& rhs)
-      : object_(std::move(rhs.object_)), promise_(std::move(rhs.promise_)) {
-        std::swap(valid_, rhs.valid_);
-      }
+    Wrapper(Wrapper&& rhs) : object_(std::move(rhs.object_)), promise_(std::move(rhs.promise_)) {
+      std::swap(valid_, rhs.valid_);
+    }
 
     ~Wrapper() {
       if (valid_)
@@ -66,10 +65,11 @@ public:
     hpx::promise<T> promise_next;
     future_ = promise_next.get_future();
 
-    return before_last.then(hpx::launch::sync, hpx::util::unwrapping(
-                            [promise_next = std::move(promise_next)](T&& object) mutable {
-                              return Wrapper<T>{std::move(object), std::move(promise_next)};
-                            }));
+    return before_last.then(hpx::launch::sync,
+                            hpx::util::unwrapping(
+                                [promise_next = std::move(promise_next)](T&& object) mutable {
+                                  return Wrapper<T>{std::move(object), std::move(promise_next)};
+                                }));
   }
 
 private:

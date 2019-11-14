@@ -11,10 +11,9 @@ TEST(Pipeline, Basic) {
   Pipeline<int> serial(26);
 
   auto checkpoint0 = serial();
-  auto checkpoint1 = checkpoint0.then(
-    hpx::launch::sync, hpx::util::unwrapping([](auto&& wrapper) {
-    return std::move(wrapper);
-  }));
+  auto checkpoint1 =
+      checkpoint0.then(hpx::launch::sync,
+                       hpx::util::unwrapping([](auto&& wrapper) { return std::move(wrapper); }));
 
   auto guard0 = serial();
   auto guard1 = serial();

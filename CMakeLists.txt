@@ -48,19 +48,37 @@ endif()
 find_package(MPI REQUIRED)
 
 # ----- LAPACK/SCALAPACK
+set(LAPACK_TARGET "")
 set(DLAF_WITH_MKL OFF CACHE BOOL "Enable MKL as provider for LAPACK")
 if (DLAF_WITH_MKL)
   set(MKL_CUSTOM_THREADING "Sequential")
-  find_package(MKL REQUIRED COMPONENTS LAPACK)
+  find_package(MKL REQUIRED COMPONENTS BLAS_32BIT_SEQ)
   set(LAPACK_FOUND ${MKL_LAPACK_FOUND})
 
-  add_library(lapack::lapack ALIAS MKL::lapack)
+  set(LAPACK_TARGET "mkl::blas_32bit_seq")
 else()
+  set(LAPACK_TARGET "lapack::lapack")
   find_package(LAPACK REQUIRED)
 endif()
 
 # ----- HPX
 find_package(HPX REQUIRED)
+
+# In HPX 1.3.0 there is compiler matching check, but it does not check matching of build types.
+# Since it is source of headaches, waiting for HPX to add this check, we check on our own
+get_property(_MULTI_CONFIG_GENERATOR GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if (NOT _MULTI_CONFIG_GENERATOR)
+  # They may not match just if none of them is a Debug build
+  if (  (NOT HPX_BUILD_TYPE STREQUAL CMAKE_BUILD_TYPE)
+          AND
+        (HPX_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "Debug")  )
+    message(WARNING
+      "The build type used (${CMAKE_BUILD_TYPE}) does not match with HPX build type (${HPX_BUILD_TYPE}).\n"
+      "Please either change CMAKE_BUILD_TYPE to ${HPX_BUILD_TYPE} or use a ${CMAKE_BUILD_TYPE} build of HPX")
+  endif()
+else()
+  # build-type check not available for multi-configuration generators
+endif()
 
 # ----- BLASPP/LAPACKPP
 find_package(OpenMP REQUIRED)

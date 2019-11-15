@@ -46,6 +46,6 @@ void potrf(blas::Uplo uplo, const Tile<T, device>& a);
 template <class T, Device device>
 long long potrfInfo(blas::Uplo uplo, const Tile<T, device>& a);
 
-#include "dlaf/lapack_tile.ipp"
+#include "dlaf/lapack_tile.tpp"
 }
 }

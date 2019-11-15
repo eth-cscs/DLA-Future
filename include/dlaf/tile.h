@@ -178,5 +178,6 @@ auto create_buffer(const dlaf::Tile<T, device>& tile) {
   return dlaf::common::Buffer<T*>(tile.ptr({0, 0}), tile.size().cols(), tile.size().rows(), tile.ld());
 }
 
-#include <dlaf/tile.ipp>
+#include <dlaf/tile.tpp>
+
 }

@@ -21,4 +21,4 @@ The review consists of checking:
 
 A PR is ready to merge when all the reviewers (at least one review is required) approve the changes and the CI tests pass.
 To avoid a long history with commits which do not pass a review the "Squash and Merge" method is used.
-The title of the PR (with its reference number) has to be used as commit title, and the PR message as commit message (The default in GitHub).
+The title of the PR (with its reference number) has to be used as commit title (this is default on GitHub), and the PR message (updated if needed) as commit message (has to be done manually).

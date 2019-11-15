@@ -35,7 +35,7 @@ do
   fi
 
   case $FILE in
-    *.cpp|*.h|*.hpp|*.ipp)
+    *.cpp|*.h|*.hpp|*.tpp|*.ipp)
       clang-format -i --style=file $FILE
       ;;
     *.pdf|*.hdf5|*.jpg|*.png|*.ppt|*.pptx)

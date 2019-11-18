@@ -16,6 +16,7 @@
 namespace dlaf {
 namespace matrix {
 struct GlobalElement_TAG;
+struct LocalElement_TAG;
 struct GlobalTile_TAG;
 struct LocalTile_TAG;
 struct TileElement_TAG;
@@ -23,6 +24,8 @@ struct TileElement_TAG;
 
 using GlobalElementIndex = common::Index2D<SizeType, matrix::GlobalElement_TAG>;
 using GlobalElementSize = common::Size2D<SizeType, matrix::GlobalElement_TAG>;
+
+using LocalElementSize = common::Size2D<SizeType, matrix::LocalElement_TAG>;
 
 using GlobalTileIndex = common::Index2D<SizeType, matrix::GlobalTile_TAG>;
 using GlobalTileSize = common::Size2D<SizeType, matrix::GlobalTile_TAG>;

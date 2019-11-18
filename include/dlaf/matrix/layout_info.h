@@ -10,6 +10,7 @@
 
 #pragma once
 #include <cassert>
+#include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/util_math.h"
 
@@ -17,7 +18,7 @@ namespace dlaf {
 namespace matrix {
 class LayoutInfo {
 public:
-  LayoutInfo(const GlobalElementSize& size, const TileElementSize& block_size, SizeType tile_ld,
+  LayoutInfo(const LocalElementSize& size, const TileElementSize& block_size, SizeType tile_ld,
              std::size_t tile_offset_row, std::size_t tile_offset_col);
 
   bool operator==(const LayoutInfo& rhs) const noexcept {
@@ -65,7 +66,7 @@ public:
   /// @pre tile_size.cols() <= block_size.cols()
   std::size_t minTileMemSize(const TileElementSize& tile_size) const noexcept;
 
-  const GlobalElementSize& size() const noexcept {
+  const LocalElementSize& size() const noexcept {
     return size_;
   }
 
@@ -82,7 +83,7 @@ public:
   }
 
 private:
-  GlobalElementSize size_;
+  LocalElementSize size_;
   LocalTileSize nr_tiles_;
   TileElementSize block_size_;
 
@@ -91,17 +92,20 @@ private:
   std::size_t tile_offset_col_;
 };
 
-/// @brief Returns LayoutInfo for a column major matrix.
-inline LayoutInfo colMajorLayout(const GlobalElementSize& size, const TileElementSize& block_size,
+/// Returns LayoutInfo for a local column major matrix.
+inline LayoutInfo colMajorLayout(const LocalElementSize& size, const TileElementSize& block_size,
                                  SizeType ld) {
   using util::size_t::mul;
   return LayoutInfo(size, block_size, ld, static_cast<std::size_t>(block_size.rows()),
                     mul(block_size.cols(), ld));
 }
+/// Returns LayoutInfo for a distributed column major matrix.
+inline LayoutInfo colMajorLayout(const matrix::Distribution& distribution, SizeType ld) {
+  return colMajorLayout(distribution.localSize(), distribution.blockSize(), ld);
+}
 
-/// @brief Returns LayoutInfo for a matrix which use the tile layout.
-/// Advanced interface.
-inline LayoutInfo tileLayout(const GlobalElementSize& size, const TileElementSize& block_size,
+/// Returns LayoutInfo for a local matrix which use the tile layout (Advanced interface).
+inline LayoutInfo tileLayout(const LocalElementSize& size, const TileElementSize& block_size,
                              SizeType ld_tile, SizeType tiles_per_col) {
   using util::size_t::mul;
   std::size_t tile_size = mul(ld_tile, block_size.cols());
@@ -109,12 +113,23 @@ inline LayoutInfo tileLayout(const GlobalElementSize& size, const TileElementSiz
   std::size_t col_offset = std::max<std::size_t>(1, mul(tile_size, tiles_per_col));
   return LayoutInfo(size, block_size, ld_tile, row_offset, col_offset);
 }
-/// @brief Returns LayoutInfo for a matrix which use the tile layout.
-/// Basic interface.
-inline LayoutInfo tileLayout(const GlobalElementSize& size, const TileElementSize& block_size) {
+
+/// Returns LayoutInfo for a distributed matrix which use the tile layout (Advanced interface).
+inline LayoutInfo tileLayout(const matrix::Distribution& distribution, SizeType ld_tile,
+                             SizeType tiles_per_col) {
+  return tileLayout(distribution.localSize(), distribution.blockSize(), ld_tile, tiles_per_col);
+}
+
+/// Returns LayoutInfo for a local matrix which use the tile layout (Basic interface).
+inline LayoutInfo tileLayout(const LocalElementSize& size, const TileElementSize& block_size) {
   SizeType ld = std::max(1, block_size.rows());
   SizeType tiles_per_col = util::ceilDiv(size.rows(), block_size.rows());
   return tileLayout(size, block_size, ld, tiles_per_col);
+}
+
+/// Returns LayoutInfo for a distributed matrix which use the tile layout (Basic interface).
+inline LayoutInfo tileLayout(const matrix::Distribution& distribution) {
+  return tileLayout(distribution.localSize(), distribution.blockSize());
 }
 }
 }

@@ -18,6 +18,9 @@
 #include <type_traits>
 
 namespace dlaf {
+
+enum class RowCol { Row, Col };
+
 namespace common {
 
 /// A RowMajor ordering means that the row is the first direction to look for the next value.
@@ -34,40 +37,53 @@ public:
   static_assert(std::is_integral<IndexT>::value && std::is_signed<IndexT>::value,
                 "basic_coords just works with signed integers types");
 
-  /// @brief Create a position with given coordinates
+  /// Create a position with given coordinates
+  ///
   /// @param row index of the row (0-based)
   /// @param col index of the col (0-based)
   basic_coords(IndexT row, IndexT col) noexcept;
 
-  /// @brief Create a position with given coordinates
+  /// Create a position with given coordinates
+  ///
   /// @see basic_coords::basic_coords(IndexT row, IndexT col)
   /// @param coords where coords[0] is the row index and coords[1] is the column index
   basic_coords(const std::array<IndexT, 2>& coords) noexcept;
 
-  /// @brief Compare two indices.
-  /// Returns True if row and column index of *this and rhs are equal.
+  /// Compare two indices.
+  ///
+  /// @return true if row and column index of *this and rhs are equal.
   bool operator==(const basic_coords& rhs) const noexcept {
     return row_ == rhs.row_ && col_ == rhs.col_;
   }
 
-  /// @brief Compare two indices.
-  /// Returns True if any of row and column index of *this and rhs are different.
+  /// Compare two indices.
+  ///
+  /// @return true if any of row and column index of *this and rhs are different.
   bool operator!=(const basic_coords& rhs) const noexcept {
     return !operator==(rhs);
   }
 
-  /// @brief Check if it is a valid position (no upper bound check)
+  /// Return a copy of the row or the col index as specified by @p rc
+  template <RowCol rc>
+  IndexT get() const noexcept {
+    if (rc == RowCol::Row)
+      return row_;
+    return col_;
+  }
+
+  /// Check if it is a valid position (no upper bound check)
+  ///
   /// @return true if row >= 0 and column >= 0
   bool isValid() const noexcept {
     return row_ >= 0 && col_ >= 0;
   }
 
-  /// @brief Swaps row and column index/size.
+  /// Swaps row and column index/size.
   void transpose() noexcept {
     std::swap(row_, col_);
   }
 
-  /// @brief Adds "(<row_>, <col_>)" to out.
+  /// Adds "(<row_>, <col_>)" to out.
   friend std::ostream& operator<<(std::ostream& out, const basic_coords& index) {
     if (std::is_same<IndexT, signed char>::value) {
       return out << "(" << static_cast<int>(index.row_) << ", " << static_cast<int>(index.col_) << ")";

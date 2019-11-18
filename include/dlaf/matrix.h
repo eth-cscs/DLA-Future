@@ -10,8 +10,8 @@
 
 #pragma once
 #include <vector>
+#include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/layout_info.h"
-#include "dlaf/matrix_base.h"
 #include "dlaf/tile.h"
 #include "dlaf/types.h"
 
@@ -25,7 +25,7 @@ public:
   using ConstTileType = Tile<const ElementType, device>;
   friend Matrix<const ElementType, device>;
 
-  Matrix(const GlobalElementSize& size, const TileElementSize& block_size);
+  Matrix(const LocalElementSize& size, const TileElementSize& block_size);
 
   Matrix(const matrix::LayoutInfo& layout, ElementType* ptr, std::size_t elements);
 
@@ -38,7 +38,7 @@ public:
   /// @brief Returns a future of index Tile.
   /// TODO: Sync details.
   /// @pre index.isValid() == true.
-  /// @pre index.isIn(nrTiles()) == true.
+  /// @pre index.isIn(localNrTiles()) == true.
   hpx::future<TileType> operator()(const LocalTileIndex& index) noexcept;
 
 protected:
@@ -54,7 +54,7 @@ private:
 #include "dlaf/matrix.tpp"
 
 template <class T, Device device>
-class Matrix<const T, device> : protected MatrixBase {
+class Matrix<const T, device> : protected matrix::Distribution {
 public:
   using ElementType = T;
   using TileType = Tile<ElementType, device>;
@@ -74,30 +74,36 @@ public:
   Matrix& operator=(const Matrix& rhs) = delete;
   Matrix& operator=(Matrix&& rhs) = default;
 
-  using MatrixBase::size;
-  using MatrixBase::blockSize;
-  using MatrixBase::nrTiles;
+  using Distribution::size;
+  using Distribution::blockSize;
+  //  using Distribution::nrTiles;
+
+  using Distribution::rankIndex;
+  using Distribution::commGridSize;
+
+  const matrix::Distribution& distribution() const noexcept {
+    return *this;
+  }
 
   /// @brief Returns a read-only shared_future of index Tile.
   /// TODO: Sync details.
   /// @pre index.isValid() == true.
-  /// @pre index.isIn(nrTiles()) == true.
+  /// @pre index.isIn(localNrTiles()) == true.
   hpx::shared_future<ConstTileType> read(const LocalTileIndex& index) noexcept;
 
 protected:
   /// @brief Returns the position in the vector of the index Tile.
   /// @pre index.isValid() == true.
-  /// @pre index.isIn(nrTiles()) == true.
+  /// @pre index.isIn(localNrTiles()) == true.
   std::size_t tileLinearIndex(const LocalTileIndex& index) const noexcept {
-    assert(index.isValid() && index.isIn(nrTiles()));
+    assert(index.isValid() && index.isIn(localNrTiles()));
     using util::size_t::sum;
     using util::size_t::mul;
-    return sum(index.row(), mul(nrTiles().rows(), index.col()));
+    return sum(index.row(), mul(localNrTiles().rows(), index.col()));
   }
 
 private:
-  Matrix(const GlobalElementSize& size, const TileElementSize& block_size,
-         std::vector<hpx::future<TileType>>&& tile_futures,
+  Matrix(matrix::Distribution&& distribution, std::vector<hpx::future<TileType>>&& tile_futures,
          std::vector<hpx::shared_future<ConstTileType>>&& tile_shared_futures);
 
   void setUpTiles(const memory::MemoryView<ElementType, device>& mem,
@@ -115,22 +121,27 @@ private:
 // to allow the user to only specify the device and let the compiler deduce the type T.
 
 template <Device device, class T>
-Matrix<T, device> createMatrixFromColMajor(const GlobalElementSize& size,
+Matrix<T, device> createMatrixFromColMajor(const LocalElementSize& size,
                                            const TileElementSize& block_size, SizeType ld, T* ptr,
                                            std::size_t elements) {
-  return Matrix<T, device>(matrix::colMajorLayout(size, block_size, ld), ptr, elements);
+  return Matrix<T, device>(matrix::colMajorLayout(LocalElementSize(size.rows(), size.cols()), block_size,
+                                                  ld),
+                           ptr, elements);
 }
 
 template <Device device, class T>
-Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const TileElementSize& block_size,
+Matrix<T, device> createMatrixFromTile(const LocalElementSize& size, const TileElementSize& block_size,
                                        T* ptr, std::size_t elements) {
-  return Matrix<T, device>(matrix::tileLayout(size, block_size), ptr, elements);
+  return Matrix<T, device>(matrix::tileLayout(LocalElementSize(size.rows(), size.cols()), block_size),
+                           ptr, elements);
 }
 
 template <Device device, class T>
-Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const TileElementSize& block_size,
+Matrix<T, device> createMatrixFromTile(const LocalElementSize& size, const TileElementSize& block_size,
                                        SizeType ld_tile, SizeType tiles_per_col, T* ptr,
                                        std::size_t elements) {
-  return Matrix<T, device>(matrix::tileLayout(size, block_size, ld_tile, tiles_per_col), ptr, elements);
+  return Matrix<T, device>(matrix::tileLayout(LocalElementSize(size.rows(), size.cols()), block_size,
+                                              ld_tile, tiles_per_col),
+                           ptr, elements);
 }
 }

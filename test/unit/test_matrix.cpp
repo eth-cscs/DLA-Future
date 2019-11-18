@@ -15,8 +15,9 @@
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
+using namespace dlaf::matrix;
 using namespace dlaf_test;
-using namespace matrix_test;
+using namespace dlaf_test::matrix_test;
 using namespace testing;
 
 template <typename Type>
@@ -24,7 +25,7 @@ class MatrixTest : public ::testing::Test {};
 
 TYPED_TEST_CASE(MatrixTest, MatrixElementTypes);
 
-std::vector<GlobalElementSize> sizes({{31, 17}, {29, 41}, {0, 1}, {3, 0}});
+std::vector<LocalElementSize> local_sizes({{31, 17}, {29, 41}, {0, 1}, {3, 0}});
 std::vector<TileElementSize> block_sizes({{7, 11}, {13, 11}, {3, 3}});
 
 TYPED_TEST(MatrixTest, StaticAPI) {
@@ -53,14 +54,6 @@ TYPED_TEST(MatrixTest, StaticAPIConst) {
                 "wrong ConstTileType");
 }
 
-template <class MatrixType>
-struct TestMatrix : protected MatrixType {
-  // Test function which compares matrix sizes and distribution.
-  static bool compareBase(const MatrixBase& matrix_base, const MatrixType& matrix) {
-    return matrix_base == matrix;
-  }
-};
-
 TYPED_TEST(MatrixTest, Constructor) {
   using Type = TypeParam;
   auto el = [](const GlobalElementIndex& index) {
@@ -69,12 +62,11 @@ TYPED_TEST(MatrixTest, Constructor) {
     return TypeUtilities<Type>::element(i + 0.001 * j, j - 0.01 * i);
   };
 
-  for (const auto& size : sizes) {
+  for (const auto& size : local_sizes) {
     for (const auto& block_size : block_sizes) {
       Matrix<Type, Device::CPU> mat(size, block_size);
 
-      EXPECT_TRUE(
-          (TestMatrix<Matrix<Type, Device::CPU>>::compareBase(MatrixBase(size, block_size), mat)));
+      EXPECT_EQ(Distribution(size, block_size), mat.distribution());
 
       set(mat, el);
 
@@ -85,7 +77,7 @@ TYPED_TEST(MatrixTest, Constructor) {
 
 /// @brief Returns the memory index of the @p index element of the matrix.
 /// @pre index should be a valid and contained in @p layout.size().
-std::size_t memoryIndex(const matrix::LayoutInfo& layout, const GlobalElementIndex& index) {
+std::size_t memoryIndex(const LayoutInfo& layout, const GlobalElementIndex& index) {
   using util::size_t::sum;
   using util::size_t::mul;
   const auto& block_size = layout.blockSize();
@@ -99,7 +91,7 @@ std::size_t memoryIndex(const matrix::LayoutInfo& layout, const GlobalElementInd
 }
 
 template <class T, Device device>
-void checkFromExisting(T* p, const matrix::LayoutInfo& layout, Matrix<T, device>& matrix) {
+void checkFromExisting(T* p, const LayoutInfo& layout, Matrix<T, device>& matrix) {
   auto el = [](const GlobalElementIndex& index) {
     SizeType i = index.row();
     SizeType j = index.col();
@@ -119,7 +111,7 @@ void checkFromExisting(T* p, const matrix::LayoutInfo& layout, Matrix<T, device>
     }
   }
 
-  EXPECT_TRUE((TestMatrix<Matrix<T, Device::CPU>>::compareBase(MatrixBase(layout), matrix)));
+  EXPECT_EQ(Distribution(size, layout.blockSize()), matrix.distribution());
   CHECK_MATRIX_PTR(ptr, matrix);
   CHECK_MATRIX_EQ(el, matrix);
 
@@ -133,7 +125,7 @@ void checkFromExisting(T* p, const matrix::LayoutInfo& layout, Matrix<T, device>
 }
 
 template <class T, Device device>
-void checkFromExisting(T* p, const matrix::LayoutInfo& layout, Matrix<const T, device>& matrix) {
+void checkFromExisting(T* p, const LayoutInfo& layout, Matrix<const T, device>& matrix) {
   auto el = [](const GlobalElementIndex& index) {
     SizeType i = index.row();
     SizeType j = index.col();
@@ -148,7 +140,7 @@ void checkFromExisting(T* p, const matrix::LayoutInfo& layout, Matrix<const T, d
     }
   }
 
-  EXPECT_TRUE((TestMatrix<Matrix<const T, Device::CPU>>::compareBase(MatrixBase(layout), matrix)));
+  EXPECT_EQ(Distribution(size, layout.blockSize()), matrix.distribution());
   CHECK_MATRIX_PTR(ptr, matrix);
   CHECK_MATRIX_EQ(el, matrix);
 }
@@ -159,12 +151,12 @@ void checkFromExisting(T* p, const matrix::LayoutInfo& layout, Matrix<const T, d
     checkFromExisting(p, layout, mat);      \
   } while (0)
 
-std::vector<std::tuple<GlobalElementSize, TileElementSize, SizeType, std::size_t, std::size_t>> values(
-    {{{31, 17}, {7, 10}, 31, 7, 341},     // Scalapack like layout
+std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, std::size_t, std::size_t>> values(
+    {{{31, 17}, {7, 10}, 31, 7, 341},     // Column major layout
      {{31, 17}, {7, 11}, 33, 7, 363},     // with padding (ld)
      {{31, 17}, {7, 11}, 47, 11, 517},    // with padding (row)
      {{31, 17}, {7, 11}, 31, 7, 348},     // with padding (col)
-     {{29, 41}, {13, 11}, 13, 143, 429},  // Tile like layout
+     {{29, 41}, {13, 11}, 13, 143, 429},  // Tile layout
      {{29, 41}, {13, 11}, 17, 183, 549},  // with padding (ld)
      {{29, 41}, {13, 11}, 13, 146, 438},  // with padding (row)
      {{29, 41}, {13, 11}, 13, 143, 436},  // with padding (col)
@@ -181,7 +173,7 @@ TYPED_TEST(MatrixTest, ConstructorExisting) {
     auto row_offset = std::get<3>(v);
     auto col_offset = std::get<4>(v);
 
-    matrix::LayoutInfo layout(size, block_size, ld, row_offset, col_offset);
+    LayoutInfo layout(size, block_size, ld, row_offset, col_offset);
     memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
 
     Matrix<Type, Device::CPU> mat(layout, mem(), mem.size());
@@ -200,7 +192,7 @@ TYPED_TEST(MatrixTest, ConstructorExistingConst) {
     auto row_offset = std::get<3>(v);
     auto col_offset = std::get<4>(v);
 
-    matrix::LayoutInfo layout(size, block_size, ld, row_offset, col_offset);
+    LayoutInfo layout(size, block_size, ld, row_offset, col_offset);
     memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
 
     const Type* p = mem();
@@ -249,7 +241,7 @@ void checkFutures(bool get_ready, const std::vector<Future1>& current, std::vect
 TYPED_TEST(MatrixTest, Dependencies) {
   using Type = TypeParam;
 
-  for (const auto& size : sizes) {
+  for (const auto& size : local_sizes) {
     for (const auto& block_size : block_sizes) {
       // Dependencies graph:
       // fut0 - fut1 - shfut2a - fut3 - shfut4a - fut5
@@ -300,9 +292,9 @@ TYPED_TEST(MatrixTest, Dependencies) {
 TYPED_TEST(MatrixTest, DependenciesConst) {
   using Type = TypeParam;
 
-  for (const auto& size : sizes) {
+  for (const auto& size : local_sizes) {
     for (const auto& block_size : block_sizes) {
-      matrix::LayoutInfo layout = tileLayout(size, block_size);
+      LayoutInfo layout = tileLayout(size, block_size);
       memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
       const Type* p = mem();
       auto mat = createMatrixFromTile<Device::CPU>(size, block_size, p, mem.size());
@@ -318,7 +310,7 @@ TYPED_TEST(MatrixTest, DependenciesConst) {
 TYPED_TEST(MatrixTest, DependenciesReferenceMix) {
   using Type = TypeParam;
 
-  for (const auto& size : sizes) {
+  for (const auto& size : local_sizes) {
     for (const auto& block_size : block_sizes) {
       // Dependencies graph:
       // fut0 - fut1 - shfut2a - fut3 - shfut4a - fut5
@@ -377,7 +369,7 @@ TYPED_TEST(MatrixTest, DependenciesReferenceMix) {
 TYPED_TEST(MatrixTest, DependenciesPointerMix) {
   using Type = TypeParam;
 
-  for (const auto& size : sizes) {
+  for (const auto& size : local_sizes) {
     for (const auto& block_size : block_sizes) {
       // Dependencies graph:
       // fut0 - fut1 - shfut2a - fut3 - shfut4a - fut5
@@ -433,7 +425,7 @@ TYPED_TEST(MatrixTest, DependenciesPointerMix) {
   }
 }
 
-std::vector<std::tuple<GlobalElementSize, TileElementSize, SizeType>> col_major_values({
+std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType>> col_major_values({
     {{31, 17}, {7, 11}, 31},   // packed ld
     {{31, 17}, {7, 11}, 33},   // padded ld
     {{29, 41}, {13, 11}, 29},  // packed ld
@@ -448,7 +440,7 @@ TYPED_TEST(MatrixTest, FromColMajor) {
     auto block_size = std::get<1>(v);
     auto ld = std::get<2>(v);
 
-    matrix::LayoutInfo layout = colMajorLayout(size, block_size, ld);
+    LayoutInfo layout = colMajorLayout(size, block_size, ld);
     memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
     auto mat = createMatrixFromColMajor<Device::CPU>(size, block_size, ld, mem(), mem.size());
 
@@ -464,7 +456,7 @@ TYPED_TEST(MatrixTest, FromColMajorConst) {
     auto block_size = std::get<1>(v);
     auto ld = std::get<2>(v);
 
-    matrix::LayoutInfo layout = colMajorLayout(size, block_size, ld);
+    LayoutInfo layout = colMajorLayout(size, block_size, ld);
     memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
     const Type* p = mem();
     auto mat = createMatrixFromColMajor<Device::CPU>(size, block_size, ld, p, mem.size());
@@ -473,7 +465,7 @@ TYPED_TEST(MatrixTest, FromColMajorConst) {
   }
 }
 
-std::vector<std::tuple<GlobalElementSize, TileElementSize, SizeType, SizeType, bool>> tile_values({
+std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, SizeType, bool>> tile_values({
     {{31, 17}, {7, 11}, 7, 5, true},     // basic tile layout
     {{31, 17}, {7, 11}, 11, 5, false},   // padded ld
     {{31, 17}, {7, 11}, 7, 7, false},    // padded ld
@@ -492,7 +484,7 @@ TYPED_TEST(MatrixTest, FromTile) {
     auto tiles_per_col = std::get<3>(v);
     auto is_basic = std::get<4>(v);
 
-    matrix::LayoutInfo layout = tileLayout(size, block_size, ld, tiles_per_col);
+    LayoutInfo layout = tileLayout(size, block_size, ld, tiles_per_col);
     memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
     if (is_basic) {
       auto mat = createMatrixFromTile<Device::CPU>(size, block_size, mem(), mem.size());
@@ -515,7 +507,7 @@ TYPED_TEST(MatrixTest, FromTileConst) {
     auto tiles_per_col = std::get<3>(v);
     auto is_basic = std::get<4>(v);
 
-    matrix::LayoutInfo layout = tileLayout(size, block_size, ld, tiles_per_col);
+    LayoutInfo layout = tileLayout(size, block_size, ld, tiles_per_col);
     memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
     const Type* p = mem();
     if (is_basic) {
@@ -558,7 +550,7 @@ auto createMatrix() -> Matrix<T, device> {
 
 template <class T>
 auto createConstMatrix() -> Matrix<T, device> {
-  matrix::LayoutInfo layout({1, 1}, {1, 1}, 1, 1, 1);
+  LayoutInfo layout({1, 1}, {1, 1}, 1, 1, 1);
   memory::MemoryView<T, device> mem(layout.minMemSize());
   const T* p = mem();
 

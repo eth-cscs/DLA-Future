@@ -9,10 +9,12 @@
 //
 
 template <class T, Device device>
-Matrix<T, device>::Matrix(const GlobalElementSize& size, const TileElementSize& block_size)
-    : Matrix<const T, device>(size, block_size, {}, {}) {
+Matrix<T, device>::Matrix(const LocalElementSize& size, const TileElementSize& block_size)
+    : Matrix<const T, device>(matrix::Distribution(size, block_size), {}, {}) {
   SizeType ld = std::max(1, util::ceilDiv(this->size().rows(), 64) * 64);
-  auto layout = matrix::colMajorLayout(this->size(), this->blockSize(), ld);
+
+  auto layout = matrix::colMajorLayout(LocalElementSize(this->size().rows(), this->size().cols()),
+                                       this->blockSize(), ld);
 
   std::size_t memory_size = layout.minMemSize();
   memory::MemoryView<ElementType, device> mem(memory_size);
@@ -22,7 +24,7 @@ Matrix<T, device>::Matrix(const GlobalElementSize& size, const TileElementSize& 
 
 template <class T, Device device>
 Matrix<T, device>::Matrix(const matrix::LayoutInfo& layout, ElementType* ptr, std::size_t elements)
-    : Matrix<const T, device>(layout.size(), layout.blockSize(), {}, {}) {
+    : Matrix<const T, device>(matrix::Distribution(layout.size(), layout.blockSize()), {}, {}) {
   std::size_t memory_size = layout.minMemSize();
   if (elements < memory_size) {
     throw std::invalid_argument("Error: Cannot build Matrix. The memory is too small.");

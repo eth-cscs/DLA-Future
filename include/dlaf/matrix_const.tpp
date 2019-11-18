@@ -10,7 +10,7 @@
 
 template <class T, Device device>
 Matrix<const T, device>::Matrix(const matrix::LayoutInfo& layout, ElementType* ptr, std::size_t elements)
-    : MatrixBase(layout.size(), layout.blockSize()) {
+    : Distribution(layout.size(), layout.blockSize()) {
   std::size_t memory_size = layout.minMemSize();
   if (elements < memory_size) {
     throw std::invalid_argument("Error: Cannot build Matrix. The memory is too small.");
@@ -46,10 +46,10 @@ hpx::shared_future<Tile<const T, device>> Matrix<const T, device>::read(
 }
 
 template <class T, Device device>
-Matrix<const T, device>::Matrix(const GlobalElementSize& size, const TileElementSize& block_size,
+Matrix<const T, device>::Matrix(matrix::Distribution&& distribution,
                                 std::vector<hpx::future<TileType>>&& tile_futures,
                                 std::vector<hpx::shared_future<ConstTileType>>&& tile_shared_futures)
-    : MatrixBase(size, block_size), tile_futures_(std::move(tile_futures)),
+    : Distribution(std::move(distribution)), tile_futures_(std::move(tile_futures)),
       tile_shared_futures_(std::move(tile_shared_futures)) {}
 
 template <class T, Device device>

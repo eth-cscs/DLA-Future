@@ -12,6 +12,7 @@
 /// More details about how a matrix is distributed can be found in `misc/matrix_distribution.md`
 
 #pragma once
+#include <cassert>
 #include "dlaf/types.h"
 
 namespace dlaf {

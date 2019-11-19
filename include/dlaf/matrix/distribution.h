@@ -107,7 +107,7 @@ public:
   SizeType globalElementFromGlobalTileAndTileElement(SizeType global_tile, SizeType tile_element) const
       noexcept {
     assert(0 <= global_tile && global_tile <= global_nr_tiles_.get<rc>());
-    assert(0 <= tile_element && tile_element <= global_nr_tiles_.get<rc>());
+    assert(0 <= tile_element && tile_element <= block_size_.get<rc>());
     return util::matrix::elementFromTileAndTileElement(global_tile, tile_element, block_size_.get<rc>());
   }
 
@@ -229,18 +229,25 @@ public:
   }
 
 private:
-  /// Computes @p local_size_.
-  /// @pre size_ is set.
-  void computeLocalSize() noexcept;
-
   /// Computes @p size_.
+  ///
+  /// @pre local_size_ and block_size_ are set.
+  /// @pre rank_index_, comm_size_ and source_rank_index_ are set.
   /// @pre To be used only for non distributed matrices, i.e. comm_size_ == {1, 1}.
-  /// @pre local_size_ is set.
   void computeGlobalSize() noexcept;
 
-  /// computes the number of tiles from sizes.
-  /// @pre size_ and local_size_ are set.
-  void computeLocalGlobalNrTiles() noexcept;
+  /// computes the number of global tiles from global size.
+  /// @pre size_ and block_size_ are set.
+  void computeGlobalNrTiles() noexcept;
+
+  /// Computes @p local_size_.
+  /// @pre size_ and global_nr_tiles_ and block_size_ are set.
+  /// @pre rank_index_, comm_size_ and source_rank_index_ are set.
+  void computeLocalSize() noexcept;
+
+  /// computes the number of local tiles from local size.
+  /// @pre local_size_ and block_size_ are set.
+  void computeLocalNrTiles() noexcept;
 
   /// Sets default values.
   ///

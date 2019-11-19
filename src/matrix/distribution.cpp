@@ -70,25 +70,25 @@ Distribution& Distribution::operator=(Distribution&& rhs) noexcept {
   return *this;
 }
 
-  void Distribution::computeLocalSize() noexcept {
-    auto row = nextLocalElementFromGlobalElement<RowCol::Row>(size_.rows());
-    auto col = nextLocalElementFromGlobalElement<RowCol::Col>(size_.cols());
-    local_size_ = LocalElementSize(row, col);
-  }
+void Distribution::computeLocalSize() noexcept {
+  auto row = nextLocalElementFromGlobalElement<RowCol::Row>(size_.rows());
+  auto col = nextLocalElementFromGlobalElement<RowCol::Col>(size_.cols());
+  local_size_ = LocalElementSize(row, col);
+}
 
-  void Distribution::computeGlobalSize() noexcept {
-    assert(comm_size_ == comm::Size2D(1, 1));
-    assert(rank_index_ == comm::Index2D(0, 0));
-    assert(source_rank_index_ == comm::Index2D(0, 0));
-    size_ = GlobalElementSize(local_size_.rows(), local_size_.cols());
-  }
+void Distribution::computeGlobalSize() noexcept {
+  assert(comm_size_ == comm::Size2D(1, 1));
+  assert(rank_index_ == comm::Index2D(0, 0));
+  assert(source_rank_index_ == comm::Index2D(0, 0));
+  size_ = GlobalElementSize(local_size_.rows(), local_size_.cols());
+}
 
-  void Distribution::computeLocalGlobalNrTiles() noexcept {
-    global_nr_tiles_ = {util::ceilDiv(size_.rows(), block_size_.rows()),
-                        util::ceilDiv(size_.cols(), block_size_.cols())};
-    local_nr_tiles_ = {util::ceilDiv(local_size_.rows(), block_size_.rows()),
-                       util::ceilDiv(local_size_.cols(), block_size_.cols())};
-  }
+void Distribution::computeLocalGlobalNrTiles() noexcept {
+  global_nr_tiles_ = {util::ceilDiv(size_.rows(), block_size_.rows()),
+                      util::ceilDiv(size_.cols(), block_size_.cols())};
+  local_nr_tiles_ = {util::ceilDiv(local_size_.rows(), block_size_.rows()),
+                     util::ceilDiv(local_size_.cols(), block_size_.cols())};
+}
 
 void Distribution::setDefaultSizes() noexcept {
   size_ = {0, 0};

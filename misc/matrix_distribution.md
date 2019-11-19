@@ -43,6 +43,8 @@ The following naming convention is used for the types of indices and sizes:
 - `LocalTileSize`: the size of a local matrix in tiles.
 - `TileElementSize`: the size of a tile in elements.
 
+Warning: 1D indices and sizes have all the same type.
+
 ## Index manipulation
 
 Utilities exist to tranform global indices to local indices and viceversa.
@@ -88,4 +90,3 @@ The layout is described by 3 parameters which are indicated in Fig 4:
 - `tile_leading_dimension`: the distance in the memory of tile element `(i,j)` and `(i,j+1)` (red line),
 - `tile_row_offset`: the distance between a tile and the next row tile (blue line),
 - `tile_col_offset`: the distance between a tile and the next column tile (green line).
-

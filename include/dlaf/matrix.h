@@ -76,7 +76,7 @@ public:
 
   using Distribution::size;
   using Distribution::blockSize;
-  //  using Distribution::nrTiles;
+  using Distribution::nrTiles;
 
   using Distribution::rankIndex;
   using Distribution::commGridSize;

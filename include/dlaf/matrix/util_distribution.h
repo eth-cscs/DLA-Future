@@ -18,38 +18,69 @@ namespace dlaf {
 namespace util {
 namespace matrix {
 
-/// Returns the tile index from a element index.
+/// Returns the index of the tile which contains the element with index @p element.
 ///
 /// If the element index is local, the returned tile index is local.
 /// If the element index is global, the returned tile index is global.
-inline SizeType tileFromElement(SizeType element, SizeType tile_size){
+/// @pre 0 <= element
+/// @pre 0 < tile_size
+inline SizeType tileFromElement(SizeType element, SizeType tile_size) {
+  assert(0 <= element);
+  assert(0 < tile_size);
   return element / tile_size;
 }
 
-/// Returns the index of the element in the tile from a element index.
+/// Returns the index within the tile of the element with index @p element.
 ///
 /// The element index can be either global or local.
-inline SizeType tileElementFromElement(SizeType element, SizeType tile_size){
+/// @pre 0 <= element
+/// @pre 0 < tile_size
+inline SizeType tileElementFromElement(SizeType element, SizeType tile_size) {
+  assert(0 <= element);
+  assert(0 < tile_size);
   return element % tile_size;
 }
 
-/// Returns the element index from the tile index and the index of the element in the tile.
+/// Returns the index of the element
+/// which has index @p tile_element in the tile with index @p tile.
 ///
 /// If the tile index is local, the returned element index is local.
 /// If the tile index is global, the returned element index is global.
-inline SizeType elementFromTileAndTileElement(SizeType tile, SizeType tile_element, SizeType tile_size){
+/// @pre 0 <= tile
+/// @pre 0 <= tile_element < tile_size
+/// @pre 0 < tile_size
+inline SizeType elementFromTileAndTileElement(SizeType tile, SizeType tile_element, SizeType tile_size) {
+  assert(0 <= tile);
+  assert(0 <= tile_element && tile_element < tile_size);
+  assert(0 < tile_size);
   return tile * tile_size + tile_element;
 }
 
-/// Returns the rank index of the process that stores the tiles with @p global_tile index.
+/// Returns the rank index of the process that stores the tiles with index @p global_tile.
+///
+/// @pre 0 <= element
+/// @pre 0 < grid_size
+/// @pre 0 <= src_rank < grid_size
 inline int rankGlobalTile(SizeType global_tile, int grid_size, int src_rank) {
+  assert(0 <= element);
+  assert(0 < grid_size);
+  assert(0 <= src_rank && src_rank < grid_size);
   return (global_tile + src_rank) % grid_size;
 }
 
 /// Returns the local tile index in process @p rank of the tile with index @p global_tile.
 ///
 /// If the tiles with @p global_tile index is not stored by @p rank it returns -1.
+/// @pre 0 <= global_tile
+/// @pre 0 < grid_size
+/// @pre 0 <= rank < grid_size
+/// @pre 0 <= src_rank < grid_size
 inline SizeType localTileFromGlobalTile(SizeType global_tile, int grid_size, int rank, int src_rank) {
+  assert(0 <= global_tile);
+  assert(0 < grid_size);
+  assert(0 <= rank && rank < grid_size);
+  assert(0 <= src_rank && src_rank < grid_size);
+
   if (rank == rankGlobalTile(global_tile, grid_size, src_rank))
     return global_tile / grid_size;
   else
@@ -59,7 +90,18 @@ inline SizeType localTileFromGlobalTile(SizeType global_tile, int grid_size, int
 /// Returns the local index in process @p rank of global tile
 /// whose index is the smallest index larger or equal @p global_tile
 /// and which is stored in process @p rank.
-inline SizeType nextLocalTileFromGlobalTile(SizeType global_tile, int grid_size, int rank, int src_rank) {
+///
+/// @pre 0 <= global_tile
+/// @pre 0 < grid_size
+/// @pre 0 <= rank < grid_size
+/// @pre 0 <= src_rank < grid_size
+inline SizeType nextLocalTileFromGlobalTile(SizeType global_tile, int grid_size, int rank,
+                                            int src_rank) {
+  assert(0 <= global_tile);
+  assert(0 < grid_size);
+  assert(0 <= rank && rank < grid_size);
+  assert(0 <= src_rank && src_rank < grid_size);
+
   // Renumber ranks such that src_rank is 0.
   int rank_to_src = (rank + grid_size - src_rank) % grid_size;
   SizeType owner_to_src = global_tile % grid_size;
@@ -74,7 +116,17 @@ inline SizeType nextLocalTileFromGlobalTile(SizeType global_tile, int grid_size,
 
 /// Returns the global tile index of the tile that has index @p local_tile
 /// in the process with index @p rank.
+///
+/// @pre 0 <= local_tile
+/// @pre 0 < grid_size
+/// @pre 0 <= rank < grid_size
+/// @pre 0 <= src_rank < grid_size
 inline SizeType globalTileFromLocalTile(SizeType local_tile, int grid_size, int rank, int src_rank) {
+  assert(0 <= local_tile);
+  assert(0 < grid_size);
+  assert(0 <= rank && rank < grid_size);
+  assert(0 <= src_rank && src_rank < grid_size);
+
   // Renumber ranks such that src_rank is 0.
   int rank_to_src = (rank + grid_size - src_rank) % grid_size;
 

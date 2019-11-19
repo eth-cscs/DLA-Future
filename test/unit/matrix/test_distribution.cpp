@@ -73,7 +73,7 @@ TEST(DistributionTest, DefaultConstructor) {
   EXPECT_EQ(comm::Index2D(0, 0), obj.sourceRankIndex());
 
   EXPECT_EQ(LocalElementSize(0, 0), TestDistribution::testLocalSize(obj));
-  EXPECT_EQ(GlobalTileSize(0, 0), obj.globalNrTiles());
+  EXPECT_EQ(GlobalTileSize(0, 0), obj.nrTiles());
   EXPECT_EQ(LocalTileSize(0, 0), obj.localNrTiles());
 }
 
@@ -88,7 +88,7 @@ TEST(DistributionTest, ConstructorLocal) {
       EXPECT_EQ(test.grid_size, obj.commGridSize());
       EXPECT_EQ(test.src_rank, obj.sourceRankIndex());
 
-      EXPECT_EQ(test.global_tiles, obj.globalNrTiles());
+      EXPECT_EQ(test.global_tiles, obj.nrTiles());
       EXPECT_EQ(test.local_size, TestDistribution::testLocalSize(obj));
       EXPECT_EQ(test.local_tiles, obj.localNrTiles());
     }
@@ -105,7 +105,7 @@ TEST(DistributionTest, Constructor) {
     EXPECT_EQ(test.grid_size, obj.commGridSize());
     EXPECT_EQ(test.src_rank, obj.sourceRankIndex());
 
-    EXPECT_EQ(test.global_tiles, obj.globalNrTiles());
+    EXPECT_EQ(test.global_tiles, obj.nrTiles());
     EXPECT_EQ(test.local_size, TestDistribution::testLocalSize(obj));
     EXPECT_EQ(test.local_tiles, obj.localNrTiles());
   }

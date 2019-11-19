@@ -58,11 +58,11 @@ inline SizeType elementFromTileAndTileElement(SizeType tile, SizeType tile_eleme
 
 /// Returns the rank index of the process that stores the tiles with index @p global_tile.
 ///
-/// @pre 0 <= element
+/// @pre 0 <= global_tile
 /// @pre 0 < grid_size
 /// @pre 0 <= src_rank < grid_size
 inline int rankGlobalTile(SizeType global_tile, int grid_size, int src_rank) {
-  assert(0 <= element);
+  assert(0 <= global_tile);
   assert(0 < grid_size);
   assert(0 <= src_rank && src_rank < grid_size);
   return (global_tile + src_rank) % grid_size;

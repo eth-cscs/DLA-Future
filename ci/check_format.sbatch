@@ -38,7 +38,7 @@ do
     *.cpp|*.h|*.hpp|*.tpp|*.ipp)
       clang-format -i --style=file $FILE
       ;;
-    *.pdf|*.hdf5|*.jpg|*.png|*.ppt|*.pptx)
+    *.pdf|*.hdf5|*.jpg|*.png|*.ppt|*.pptx|*.ipe)
       # Exclude some binary files types,
       # others can be excluded as needed.
       ;;

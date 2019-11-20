@@ -42,15 +42,12 @@ void set(const Tile<T, Device::CPU>& tile, ElementGetter el) {
 
 /// @brief Sets all the elements of the tile with given value.
 ///
-/// @pre el argument is an index of type const TileElementIndex&.
-/// @pre el return type should be T.
+/// @pre el is an element of a type U that can be assigned to T
 template <class T, class U, enable_if_convertible_t<U, T, int> = 0>
 void set(const Tile<T, Device::CPU>& tile, U el) {
-  // TODO evaluate to use the other one with a lambda
   for (SizeType j = 0; j < tile.size().cols(); ++j) {
     for (SizeType i = 0; i < tile.size().rows(); ++i) {
-      TileElementIndex index(i, j);
-      tile(index) = el;
+      tile(TileElementIndex{i, j}) = el;
     }
   }
 }

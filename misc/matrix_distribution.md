@@ -2,21 +2,21 @@
 
 The matrix (also denoted global matrix) is the matrix which is distributed using a 2D block cyclic distribution scheme.
 Therefore any of the rank stores in its own memory only a part the elements which are part of the local matrix.
-The matrix is divided in submatrices of the same size (exceptions are ithe submatrices in the boundaries which can be smaller) called tiles.
+The matrix is divided in submatrices of the same size (exceptions are the submatrices in the boundaries which can be smaller) called tiles.
 
 ## Global to local mapping
 
 The global matrix of size `size` (denoted by blue lines in Fig. 1) is divided in blocks of size `block_size` (red lines).
 The blocks are then distributed ciclically among the processes which are mapped in a 2D grid. In Fig. 1 there are 6 processes on a (3x2) grid.
 
-![Fig. 1 Distribution of a matrix. Each color represent a process.](figures/distribution.png)
-*Fig. 1 Distribution of a matrix. Each color represent a process.*
+![Fig. 1 Distribution of a matrix. Each color represents a process.](figures/distribution.png)
+*Fig. 1 Distribution of a matrix. Each color represents a process.*
 
 An index is used to indicate the source rank, i.e. the rank which has the top left block of the matrix.
-For example, Fig. 2 illustrates how the first (4x4) blocks are doistributed for different source rank.
+For example, Fig. 2 illustrates how the first (4x4) blocks are distributed for different source rank.
 
-![Fig. 2. Mapping of blocks and processes with different sorce rank. On the left the source rank is {0, 0}, in the center is {2, 1} and on the right is {1, 0}.](figures/src_rank.png)
-*Fig. 2. Mapping of blocks and processes with different sorce rank. On the left the source rank is {0, 0}, in the center is {2, 1} and on the right is {1, 0}.*
+![Fig. 2. Mapping of blocks and processes with different source rank. On the left the source rank is {0, 0}, in the center is {2, 1} and on the right is {1, 0}.](figures/src_rank.png)
+*Fig. 2. Mapping of blocks and processes with different source rank. On the left the source rank is {0, 0}, in the center is {2, 1} and on the right is {1, 0}.*
 
 Fig. 3 shows the local matrix of size `local_size` (green lines in Fig. 3) of each of the 6 processes.
 
@@ -49,7 +49,7 @@ Warning: 1D indices and sizes have all the same type.
 
 Utilities exist to tranform global indices to local indices and viceversa.
 The "Next" versions of conversions from global to local indices return the corresponding local index of the global index, if the global index is the given process,
-otherwise they return the local index correnponding to the next global index in the given process.
+otherwise they return the local index corresponding to the next global index in the given process.
 
 The following table shows how a component of GlobalElementIndex tranforms for `block_size = 3`, `grid_size = 2`, `src_rank_index = 2`.
 
@@ -73,7 +73,7 @@ while `include/dlaf/matrix/distribution.h` provides index conversion member func
 
 # Local Matrix Layout
 
-The layout of the matrix represent the map which gives the position in the memory of each each element of the local matrix.
+The layout of the matrix represents the map which gives the position in the memory of each each element of the local matrix.
 It is used for compatibility with other libraries and existing applications.
 The matrix layout can describe both a column-major matrix or a matrix stored in tile layout.
 

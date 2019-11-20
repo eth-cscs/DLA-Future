@@ -24,7 +24,7 @@ struct Parameters {
   int rank;
   int grid_size;
   int src_rank;
-  // Valid indeces
+  // Valid indices
   SizeType global_element;
   SizeType global_tile;
   SizeType rank_tile;

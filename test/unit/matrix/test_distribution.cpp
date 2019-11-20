@@ -10,6 +10,7 @@
 
 #include "dlaf/matrix/distribution.h"
 
+#include <array>
 #include <stdexcept>
 #include "gtest/gtest.h"
 
@@ -38,15 +39,6 @@ public:
     return TestDistribution(d).localSize();
   }
 };
-/*
-  // Valid indeces
-  SizeType global_element;
-  SizeType global_tile;
-  SizeType rank_tile;
-  SizeType local_tile;
-  SizeType local_tile_next;
-  SizeType tile_element;
-};*/
 
 std::vector<ParametersConstructor> tests_constructor = {
     // {size, block_size, rank, grid_size, src_rank, global_tiles, local_tiles, local_size}
@@ -251,5 +243,90 @@ TEST(DistributionTest, MoveAssignment) {
     obj_move = std::move(obj);
     EXPECT_EQ(Distribution(), obj);
     EXPECT_EQ(obj0, obj_move);
+  }
+}
+
+struct ParametersIndices {
+  // Distribution settings
+  GlobalElementSize size;
+  TileElementSize block_size;
+  comm::Index2D rank;
+  comm::Size2D grid_size;
+  comm::Index2D src_rank;
+  // Valid indices
+  GlobalElementIndex global_element;
+  GlobalTileIndex global_tile;
+  comm::Index2D rank_tile;
+  std::array<SizeType, 2> local_tile;  // can be an invalid LocalTileIndex
+  LocalTileIndex local_tile_next;
+  TileElementIndex tile_element;
+};
+
+std::vector<ParametersIndices> tests_indices = {
+    // {size, block_size, rank, grid_size, src_rank, global_element, global_tile,
+    // rank_tile, local_tile, local_tile_next, tile_element}
+    {{121, 232}, {10, 25}, {0, 0}, {1, 1}, {0, 0}, {31, 231}, {3, 9}, {0, 0}, {3, 9}, {3, 9}, {1, 6}},
+    {{133, 111}, {13, 25}, {1, 3}, {4, 5}, {3, 4}, {77, 102}, {5, 4}, {0, 3}, {-1, 0}, {1, 0}, {12, 2}},
+    {{13, 130}, {25, 10}, {4, 0}, {5, 5}, {3, 0}, {0, 102}, {0, 10}, {3, 0}, {-1, 2}, {0, 2}, {0, 2}},
+    {{134, 300}, {32, 64}, {2, 3}, {3, 5}, {2, 0}, {113, 229}, {3, 3}, {2, 3}, {1, 0}, {1, 0}, {17, 37}},
+};
+
+template <RowCol rc>
+void testIndex(const Distribution& obj, const ParametersIndices& test) {
+  SizeType local_tile = rc == RowCol::Row ? test.local_tile[0] : test.local_tile[1];
+
+  EXPECT_EQ(test.global_element.get<rc>(),
+            obj.globalElementFromGlobalTileAndTileElement<rc>(test.global_tile.get<rc>(),
+                                                              test.tile_element.get<rc>()));
+  EXPECT_EQ(test.rank_tile.get<rc>(), obj.rankGlobalElement<rc>(test.global_element.get<rc>()));
+  EXPECT_EQ(test.rank_tile.get<rc>(), obj.rankGlobalTile<rc>(test.global_tile.get<rc>()));
+
+  EXPECT_EQ(test.global_tile.get<rc>(),
+            obj.globalTileFromGlobalElement<rc>(test.global_element.get<rc>()));
+
+  EXPECT_EQ(local_tile, obj.localTileFromGlobalElement<rc>(test.global_element.get<rc>()));
+  EXPECT_EQ(local_tile, obj.localTileFromGlobalTile<rc>(test.global_tile.get<rc>()));
+
+  EXPECT_EQ(test.local_tile_next.get<rc>(),
+            obj.nextLocalTileFromGlobalElement<rc>(test.global_element.get<rc>()));
+  EXPECT_EQ(test.local_tile_next.get<rc>(),
+            obj.nextLocalTileFromGlobalTile<rc>(test.global_tile.get<rc>()));
+
+  EXPECT_EQ(test.tile_element.get<rc>(),
+            obj.tileElementFromGlobalElement<rc>(test.global_element.get<rc>()));
+
+  if (local_tile >= 0) {
+    EXPECT_EQ(test.global_element.get<rc>(),
+              obj.globalElementFromLocalTileAndTileElement<rc>(local_tile, test.tile_element.get<rc>()));
+    EXPECT_EQ(test.global_tile.get<rc>(), obj.globalTileFromLocalTile<rc>(local_tile));
+  }
+}
+
+TEST(DistributionTest, IndexConversions) {
+  for (const auto& test : tests_indices) {
+    Distribution obj(test.size, test.block_size, test.grid_size, test.rank, test.src_rank);
+
+    testIndex<RowCol::Row>(obj, test);
+    testIndex<RowCol::Col>(obj, test);
+  }
+}
+
+TEST(DistributionTest, Index2DConversions) {
+  for (const auto& test : tests_indices) {
+    Distribution obj(test.size, test.block_size, test.grid_size, test.rank, test.src_rank);
+
+    EXPECT_EQ(test.global_element, obj.globalElementIndex(test.global_tile, test.tile_element));
+    EXPECT_EQ(test.global_tile, obj.globalTileIndex(test.global_element));
+    EXPECT_EQ(test.rank_tile, obj.rankGlobalTile(test.global_tile));
+    EXPECT_EQ(test.tile_element, obj.tileElementIndex(test.global_element));
+
+    if (test.rank == test.rank_tile) {
+      LocalTileIndex local_tile(test.local_tile);
+      EXPECT_EQ(test.global_tile, obj.globalTileIndex(local_tile));
+      EXPECT_EQ(local_tile, obj.localTileIndex(test.global_tile));
+    }
+    else {
+      EXPECT_THROW(obj.localTileIndex(test.global_tile), std::invalid_argument);
+    }
   }
 }

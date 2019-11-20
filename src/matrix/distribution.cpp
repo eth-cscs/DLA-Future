@@ -24,9 +24,9 @@ Distribution::Distribution(const LocalElementSize& size, const TileElementSize& 
   if (!block_size_.isValid() || block_size_.isEmpty())
     throw std::invalid_argument("Error: Invalid Block size");
 
-  computeLocalNrTiles();
-  computeGlobalSize();
-  computeGlobalNrTiles();
+  computeLocalNrTiles(local_size_, block_size_);
+  computeGlobalSize(local_size_, comm_size_);
+  computeGlobalNrTiles(size_, block_size_);
 }
 
 Distribution::Distribution(const GlobalElementSize& size, const TileElementSize& block_size,
@@ -46,9 +46,8 @@ Distribution::Distribution(const GlobalElementSize& size, const TileElementSize&
   if (!source_rank_index_.isValid())
     throw std::invalid_argument("Error: Invalid Matrix Source Rank Index");
 
-  computeGlobalNrTiles();
-  computeLocalSize();
-  computeLocalNrTiles();
+  computeGlobalAndLocalNrTilesAndLocalSize(size_, block_size_, comm_size_, rank_index_,
+                                           source_rank_index_);
 }
 
 Distribution::Distribution(Distribution&& rhs) noexcept
@@ -72,27 +71,63 @@ Distribution& Distribution::operator=(Distribution&& rhs) noexcept {
   return *this;
 }
 
-void Distribution::computeGlobalSize() noexcept {
-  assert(comm_size_ == comm::Size2D(1, 1));
-  assert(rank_index_ == comm::Index2D(0, 0));
-  assert(source_rank_index_ == comm::Index2D(0, 0));
-  size_ = GlobalElementSize(local_size_.rows(), local_size_.cols());
+void Distribution::computeGlobalSize(const LocalElementSize& local_size,
+                                     const comm::Size2D& comm_size) noexcept {
+  assert(comm_size == comm::Size2D(1, 1));
+  size_ = GlobalElementSize(local_size.rows(), local_size.cols());
 }
 
-void Distribution::computeGlobalNrTiles() noexcept {
-  global_nr_tiles_ = {util::ceilDiv(size_.rows(), block_size_.rows()),
-                      util::ceilDiv(size_.cols(), block_size_.cols())};
+void Distribution::computeGlobalNrTiles(const GlobalElementSize& size,
+                                        const TileElementSize& block_size) noexcept {
+  global_nr_tiles_ = {util::ceilDiv(size.rows(), block_size.rows()),
+                      util::ceilDiv(size.cols(), block_size.cols())};
 }
 
-void Distribution::computeLocalSize() noexcept {
-  auto row = nextLocalElementFromGlobalElement<RowCol::Row>(size_.rows());
-  auto col = nextLocalElementFromGlobalElement<RowCol::Col>(size_.cols());
+void Distribution::computeGlobalAndLocalNrTilesAndLocalSize(
+    const GlobalElementSize& size, const TileElementSize& block_size, const comm::Size2D& comm_size,
+    const comm::Index2D& rank_index, const comm::Index2D& source_rank_index) noexcept {
+  // Sets global_nr_tiles_.
+  computeGlobalNrTiles(size, block_size);
+
+  auto tile_row = util::matrix::nextLocalTileFromGlobalTile(global_nr_tiles_.rows(), comm_size.rows(),
+                                                            rank_index.row(), source_rank_index.row());
+  auto tile_col = util::matrix::nextLocalTileFromGlobalTile(global_nr_tiles_.cols(), comm_size.cols(),
+                                                            rank_index.col(), source_rank_index.col());
+
+  local_nr_tiles_ = {tile_row, tile_col};
+
+  SizeType row = 0;
+  if (size.rows() > 0) {
+    if (rank_index.row() == util::matrix::rankGlobalTile(global_nr_tiles_.rows() - 1, comm_size.rows(),
+                                                         source_rank_index.row())) {
+      auto last_tile_rows = util::matrix::tileElementFromElement(size.rows() - 1, block_size.rows()) + 1;
+      row = util::matrix::elementFromTileAndTileElement(tile_row - 1, 0, block_size.rows()) +
+            last_tile_rows;
+    }
+    else {
+      row = util::matrix::elementFromTileAndTileElement(tile_row, 0, block_size.rows());
+    }
+  }
+  SizeType col = 0;
+  if (size.cols() > 0) {
+    if (rank_index.col() == util::matrix::rankGlobalTile(global_nr_tiles_.cols() - 1, comm_size.cols(),
+                                                         source_rank_index.col())) {
+      auto last_tile_cols = util::matrix::tileElementFromElement(size.cols() - 1, block_size.cols()) + 1;
+      col = util::matrix::elementFromTileAndTileElement(tile_col - 1, 0, block_size.cols()) +
+            last_tile_cols;
+    }
+    else {
+      col = util::matrix::elementFromTileAndTileElement(tile_col, 0, block_size.cols());
+    }
+  }
+
   local_size_ = LocalElementSize(row, col);
 }
 
-void Distribution::computeLocalNrTiles() noexcept {
-  local_nr_tiles_ = {util::ceilDiv(local_size_.rows(), block_size_.rows()),
-                     util::ceilDiv(local_size_.cols(), block_size_.cols())};
+void Distribution::computeLocalNrTiles(const LocalElementSize& local_size,
+                                       const TileElementSize& block_size) noexcept {
+  local_nr_tiles_ = {util::ceilDiv(local_size.rows(), block_size.rows()),
+                     util::ceilDiv(local_size.cols(), block_size.cols())};
 }
 
 void Distribution::setDefaultSizes() noexcept {

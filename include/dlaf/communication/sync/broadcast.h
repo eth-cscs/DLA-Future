@@ -39,7 +39,7 @@ void send(Communicator& communicator, Ts&&... args) {
 /// @brief MPI_Bcast wrapper for receiver side accepting a dlaf::comm::Message
 template <typename T, std::enable_if_t<!std::is_const<T>::value, int> = 0>
 void receive_from(int broadcaster_rank, Communicator& communicator, Message<T>&& message) {
-  MPI_Bcast(message.data(), message.count(), message.mpi_type(), communicator.rank(), communicator);
+  MPI_Bcast(message.data(), message.count(), message.mpi_type(), broadcaster_rank, communicator);
 }
 
 /// @brief MPI_Bcast wrapper for receiver side that builds a Message from given trailing arguments

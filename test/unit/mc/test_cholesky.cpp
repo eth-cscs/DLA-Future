@@ -9,10 +9,9 @@
 //
 #include "dlaf/mc/cholesky_local.h"
 
-#include <typeinfo>
 #include "gtest/gtest.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/layout_info.h"
+//#include "dlaf/matrix/index.h"
+//#include "dlaf/matrix/layout_info.h"
 #include "dlaf_test/util_matrix.h"
 #include "dlaf_test/util_types.h"
 
@@ -70,12 +69,7 @@ TYPED_TEST(CholeskyTest, Correctness) {
       Matrix<Type, Device::CPU> mat(size, block_size);
       set(mat, el);
 
-      // Matrix with analytical results
-      Matrix<Type, Device::CPU> matres(size, block_size);
-      set(matres, res);
-
-      EXPECT_NO_THROW(cholesky_local(mat, blas::Uplo::Lower, blas::Side::Right, blas::Op::ConjTrans,
-                                     blas::Diag::NonUnit));
+      EXPECT_NO_THROW(cholesky_local(blas::Uplo::Lower, mat));
 
       CHECK_MATRIX_NEAR(res, mat, 4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error,
                         4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);
@@ -92,26 +86,12 @@ TYPED_TEST(CholeskyTest, NoSquareMatrixException) {
     return TypeUtilities<Type>::element(i + 0.001 * j, j - 0.01 * i);
   };
 
-  // Check for square sizes
-  for (const auto& size : square_sizes) {
-    for (const auto& block_size : square_block_sizes) {
-      Matrix<Type, Device::CPU> mat(size, block_size);
-
-      set(mat, el);
-
-      EXPECT_NO_THROW(cholesky_local(mat, blas::Uplo::Lower, blas::Side::Right, blas::Op::ConjTrans,
-                                     blas::Diag::NonUnit));
-    }
-  }
-
   // Check for rectangular sizes
   for (const auto& size : rectangular_sizes) {
     for (const auto& block_size : square_block_sizes) {
       Matrix<Type, Device::CPU> mat(size, block_size);
 
-      EXPECT_THROW(cholesky_local(mat, blas::Uplo::Lower, blas::Side::Right, blas::Op::ConjTrans,
-                                  blas::Diag::NonUnit),
-                   std::invalid_argument);
+      EXPECT_THROW(cholesky_local(blas::Uplo::Lower, mat), std::invalid_argument);
     }
   }
 }
@@ -125,26 +105,12 @@ TYPED_TEST(CholeskyTest, NoSquareBlockException) {
     return TypeUtilities<Type>::element(i + 0.001 * j, j - 0.01 * i);
   };
 
-  // Check for square sizes
-  for (const auto& size : square_sizes) {
-    for (const auto& block_size : square_block_sizes) {
-      Matrix<Type, Device::CPU> mat(size, block_size);
-
-      set(mat, el);
-
-      EXPECT_NO_THROW(cholesky_local(mat, blas::Uplo::Lower, blas::Side::Right, blas::Op::ConjTrans,
-                                     blas::Diag::NonUnit));
-    }
-  }
-
   // Check for rectangular sizes
   for (const auto& size : square_sizes) {
     for (const auto& block_size : rectangular_block_sizes) {
       Matrix<Type, Device::CPU> mat(size, block_size);
 
-      EXPECT_THROW(cholesky_local(mat, blas::Uplo::Lower, blas::Side::Right, blas::Op::ConjTrans,
-                                  blas::Diag::NonUnit),
-                   std::invalid_argument);
+      EXPECT_THROW(cholesky_local(blas::Uplo::Lower, mat), std::invalid_argument);
     }
   }
 }

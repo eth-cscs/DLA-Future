@@ -7,11 +7,7 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
-
 #pragma once
-
-#ifndef UTIL_MATRIX_H
-#define UTIL_MATRIX_H
 
 #include <exception>
 
@@ -24,9 +20,8 @@ namespace util_matrix {
 ///
 /// @tparam M refers to a dlaf::Matrix object
 /// @throws std::invalid_argument if the matrix is not squared
-/// @pre dlaf::Matrix sizes >= 0
 template <class Matrix>
-void check_size_square(const Matrix& matrix, std::string function, std::string mat_name) {
+void assert_size_square(const Matrix& matrix, std::string function, std::string mat_name) {
   assert(matrix.size().isValid());
   if (matrix.size().rows() != matrix.size().cols())
     throw std::invalid_argument(function + ": " + "Matrix " + mat_name + " is not square.");
@@ -36,9 +31,8 @@ void check_size_square(const Matrix& matrix, std::string function, std::string m
 ///
 /// @tparam M refers to a dlaf::Matrix object
 /// @throws std::invalid_argument if the matrix block is not squared
-/// @pre dlaf::Matrix sizes > 0
 template <class Matrix>
-void check_blocksize_square(const Matrix& matrix, std::string function, std::string mat_name) {
+void assert_blocksize_square(const Matrix& matrix, std::string function, std::string mat_name) {
   assert(matrix.size().isValid());
   if (matrix.blockSize().rows() != matrix.blockSize().cols())
     throw std::invalid_argument(function + ": " + "Block matrix in matrix " + mat_name +
@@ -47,4 +41,3 @@ void check_blocksize_square(const Matrix& matrix, std::string function, std::str
 
 }
 }
-#endif

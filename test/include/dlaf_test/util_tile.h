@@ -121,16 +121,7 @@ template <class T, class U, class ComparisonOp, class ErrorMessageGetter,
           enable_if_convertible_t<U, T, int> = 0>
 void check(U expected, const Tile<T, Device::CPU>& tile, ComparisonOp comp,
            ErrorMessageGetter err_message, const char* file, const int line) {
-  for (SizeType j = 0; j < tile.size().cols(); ++j) {
-    for (SizeType i = 0; i < tile.size().rows(); ++i) {
-      TileElementIndex index(i, j);
-      if (!comp(expected, tile(index))) {
-        ADD_FAILURE_AT(file, line) << "Error at index (" << i << ", " << j
-                                   << "): " << err_message(expected, tile({i, j})) << std::endl;
-        return;
-      }
-    }
-  }
+  check([expected](TileElementIndex) { return expected; }, tile, comp, err_message, file, line);
 }
 }
 

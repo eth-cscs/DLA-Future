@@ -25,7 +25,7 @@ using namespace dlaf::comm;
 using BroadcastMatrixTest = dlaf_test::SplittedCommunicatorsTest;
 
 template <class T>
-auto message_values(const TileElementIndex& index) {
+T message_values(const TileElementIndex& index) {
   return TypeUtilities<T>::element((index.row() + 1) + (index.col() + 1) * 10, (index.col() + 1));
 }
 

@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/communication/functions.h"
+#include "dlaf/communication/functions_sync.h"
 
 #include <gtest/gtest.h>
 
@@ -41,12 +41,12 @@ TEST_F(BroadcastTileTest, SyncTile) {
   if (splitted_comm.rank() == 0) {
     tile_test::set(tile, message_values);
 
-    broadcast::send(make_message(tile), splitted_comm);
+    sync::broadcast::send(splitted_comm, tile);
   }
   else {
     tile_test::set(tile, TypeUtilities<TypeParam>::element(0, 0));
 
-    broadcast::receive_from(0, make_message(tile), splitted_comm);
+    sync::broadcast::receive_from(0, splitted_comm, tile);
   }
 
   CHECK_TILE_EQ(message_values, tile);

@@ -37,3 +37,9 @@ DLAF_addTest(test_broadcast_tile
   MPIRANKS 5
   USE_MAIN MPI
 )
+
+DLAF_addTest(test_broadcast_matrix
+  SOURCES test_broadcast_matrix.cpp
+  MPIRANKS 4
+  USE_MAIN MPIHPX
+)

@@ -14,7 +14,6 @@
 
 #include <hpx/lcos/future.hpp>
 #include <hpx/lcos/local/channel.hpp>
-#include <hpx/lcos/promise.hpp>
 
 namespace dlaf {
 namespace common {

@@ -10,6 +10,7 @@
 #include "dlaf/mc/cholesky_local.h"
 
 #include "gtest/gtest.h"
+#include "dlaf/matrix.h"
 #include "dlaf_test/util_matrix.h"
 #include "dlaf_test/util_types.h"
 

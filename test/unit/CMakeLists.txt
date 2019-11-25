@@ -16,8 +16,6 @@ DLAF_addTest(test_blas_tile SOURCES test_blas_tile.cpp USE_MAIN HPX)
 DLAF_addTest(test_lapack_tile SOURCES test_lapack_tile.cpp USE_MAIN HPX)
 DLAF_addTest(test_tile SOURCES test_tile.cpp USE_MAIN HPX)
 
-DLAF_addTest(simulate_algorithm SOURCES simulate_algorithm.cpp USE_MAIN MPIHPX MPIRANKS 2)
-
 add_subdirectory(common)
 add_subdirectory(communication)
 add_subdirectory(matrix)

@@ -10,8 +10,6 @@
 #include "dlaf/mc/cholesky_local.h"
 
 #include "gtest/gtest.h"
-//#include "dlaf/matrix/index.h"
-//#include "dlaf/matrix/layout_info.h"
 #include "dlaf_test/util_matrix.h"
 #include "dlaf_test/util_types.h"
 
@@ -41,7 +39,7 @@ TYPED_TEST(CholeskyTest, Correctness) {
   //      = Sum_k(1 / 2^(|i-k| + |j-k|) * exp(I*(-i+j))),
   // where k = 0 .. min(i,j)
   // Therefore,
-  // a_ij = (4^(min(i,j)+1) - 1) / (3 * 2^(i+j)) * exp(I*(-i+j)
+  // a_ij = (4^(min(i,j)+1) - 1) / (3 * 2^(i+j)) * exp(I*(-i+j))
   auto el = [](const GlobalElementIndex& index) {
     SizeType i = index.row();
     SizeType j = index.col();
@@ -80,12 +78,6 @@ TYPED_TEST(CholeskyTest, Correctness) {
 TYPED_TEST(CholeskyTest, NoSquareMatrixException) {
   using Type = TypeParam;
 
-  auto el = [](const GlobalElementIndex& index) {
-    SizeType i = index.row();
-    SizeType j = index.col();
-    return TypeUtilities<Type>::element(i + 0.001 * j, j - 0.01 * i);
-  };
-
   // Check for rectangular sizes
   for (const auto& size : rectangular_sizes) {
     for (const auto& block_size : square_block_sizes) {
@@ -98,12 +90,6 @@ TYPED_TEST(CholeskyTest, NoSquareMatrixException) {
 
 TYPED_TEST(CholeskyTest, NoSquareBlockException) {
   using Type = TypeParam;
-
-  auto el = [](const GlobalElementIndex& index) {
-    SizeType i = index.row();
-    SizeType j = index.col();
-    return TypeUtilities<Type>::element(i + 0.001 * j, j - 0.01 * i);
-  };
 
   // Check for rectangular sizes
   for (const auto& size : square_sizes) {

@@ -1,12 +1,11 @@
 #
-# Distributed Linear Algebra with Future (DLAF)
+#Distributed Linear Algebra with Future(DLAF)
 #
-# Copyright (c) 2018-2019, ETH Zurich
-# All rights reserved.
+#Copyright(c) 2018 - 2019, ETH Zurich
+#All rights reserved.
 #
-# Please, refer to the LICENSE file in the root directory.
-# SPDX-License-Identifier: BSD-3-Clause
+#Please, refer to the LICENSE file in the root directory.
+#SPDX - License - Identifier : BSD - 3 - Clause
 #
 
 DLAF_addTest(test_cholesky SOURCES test_cholesky.cpp USE_MAIN HPX)
-

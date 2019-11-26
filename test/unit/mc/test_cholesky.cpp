@@ -17,7 +17,6 @@
 using namespace dlaf;
 using namespace dlaf_test;
 using namespace matrix_test;
-using namespace testing;
 
 template <typename Type>
 class CholeskyTest : public ::testing::Test {};
@@ -30,8 +29,6 @@ std::vector<TileElementSize> square_block_sizes({{5, 5}, {20, 20}});
 std::vector<TileElementSize> rectangular_block_sizes({{10, 30}, {20, 10}});
 
 TYPED_TEST(CholeskyTest, Correctness) {
-  using Type = TypeParam;
-
   // Note: The tile elements are chosen such that:
   // - res_ij = 1 / 2^(|i-j|) * exp(I*(-i+j)),
   // where I = 0 for real types or I is the complex unit for complex types.
@@ -65,7 +62,7 @@ TYPED_TEST(CholeskyTest, Correctness) {
   for (const auto& size : square_sizes) {
     for (const auto& block_size : square_block_sizes) {
       // Matrix to undergo Cholesky decomposition
-      Matrix<Type, Device::CPU> mat(size, block_size);
+      Matrix<TypeParam, Device::CPU> mat(size, block_size);
       set(mat, el);
 
       EXPECT_NO_THROW(cholesky_local(blas::Uplo::Lower, mat));
@@ -77,12 +74,9 @@ TYPED_TEST(CholeskyTest, Correctness) {
 }
 
 TYPED_TEST(CholeskyTest, NoSquareMatrixException) {
-  using Type = TypeParam;
-
-  // Check for rectangular sizes
   for (const auto& size : rectangular_sizes) {
     for (const auto& block_size : square_block_sizes) {
-      Matrix<Type, Device::CPU> mat(size, block_size);
+      Matrix<TypeParam, Device::CPU> mat(size, block_size);
 
       EXPECT_THROW(cholesky_local(blas::Uplo::Lower, mat), std::invalid_argument);
     }
@@ -90,12 +84,9 @@ TYPED_TEST(CholeskyTest, NoSquareMatrixException) {
 }
 
 TYPED_TEST(CholeskyTest, NoSquareBlockException) {
-  using Type = TypeParam;
-
-  // Check for rectangular sizes
   for (const auto& size : square_sizes) {
     for (const auto& block_size : rectangular_block_sizes) {
-      Matrix<Type, Device::CPU> mat(size, block_size);
+      Matrix<TypeParam, Device::CPU> mat(size, block_size);
 
       EXPECT_THROW(cholesky_local(blas::Uplo::Lower, mat), std::invalid_argument);
     }

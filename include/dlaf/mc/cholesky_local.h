@@ -48,37 +48,33 @@ void cholesky_local(blas::Uplo uplo, Matrix<T, Device::CPU>& mat) {
   if (uplo == blas::Uplo::Lower) {
     for (SizeType k = 0; k < nrtile; ++k) {
       // Cholesky decomposition on mat(k,k) r/w potrf (lapack operation)
+      auto kk = LocalTileIndex{k, k};
 
       hpx::dataflow(matrix_HP_executor, hpx::util::unwrapping(tile::potrf<T, Device::CPU>), uplo,
-                    std::move(mat({k, k})));
+                    std::move(mat(kk)));
 
       for (SizeType i = k + 1; i < nrtile; ++i) {
         // Update panel mat(i,k) with trsm (blas operation), using data mat.read(k,k)
         hpx::dataflow(matrix_HP_executor, hpx::util::unwrapping(tile::trsm<T, Device::CPU>),
                       blas::Side::Right, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, 1.0,
-                      mat.read({k, k}), std::move(mat({i, k})));
+                      mat.read(kk), std::move(mat(LocalTileIndex{i, k})));
       }
 
       for (SizeType j = k + 1; j < nrtile; ++j) {
         // Choose queue priority
-        auto trailing_matrix_executor = matrix_normal_executor;
-        if (j == k + 1) {
-          trailing_matrix_executor = matrix_HP_executor;
-        }
-        else {
-          trailing_matrix_executor = matrix_normal_executor;
-        }
+        auto trailing_matrix_executor = (j == k + 1) ? matrix_HP_executor : matrix_normal_executor;
 
         // Update trailing matrix: diagonal element mat(j,j, reading mat.read(j,k), using herk (blas operation)
         hpx::dataflow(trailing_matrix_executor, hpx::util::unwrapping(tile::herk<T, Device::CPU>), uplo,
-                      blas::Op::NoTrans, -1.0, mat.read({j, k}), 1.0, std::move(mat({j, j})));
+                      blas::Op::NoTrans, -1.0, mat.read(LocalTileIndex{j, k}), 1.0,
+                      std::move(mat(LocalTileIndex{j, j})));
 
         for (SizeType i = j + 1; i < nrtile; ++i) {
           // Update remaining trailing matrix mat(i,j), reading mat.read(i,k) and mat.read(j,k), using
           // gemm (blas operation)
           hpx::dataflow(trailing_matrix_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>),
-                        blas::Op::NoTrans, blas::Op::ConjTrans, -1.0, mat.read({i, k}), mat.read({j, k}),
-                        1.0, std::move(mat({i, j})));
+                        blas::Op::NoTrans, blas::Op::ConjTrans, -1.0, mat.read(LocalTileIndex{i, k}),
+                        mat.read(LocalTileIndex{j, k}), 1.0, std::move(mat(LocalTileIndex{i, j})));
         }
       }
     }

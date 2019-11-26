@@ -86,7 +86,7 @@ void Distribution::computeGlobalNrTiles(const GlobalElementSize& size,
 void Distribution::computeGlobalAndLocalNrTilesAndLocalSize(
     const GlobalElementSize& size, const TileElementSize& block_size, const comm::Size2D& comm_size,
     const comm::Index2D& rank_index, const comm::Index2D& source_rank_index) noexcept {
-  // Sets global_nr_tiles_.
+  // Set global_nr_tiles_.
   computeGlobalNrTiles(size, block_size);
 
   auto tile_row = util::matrix::nextLocalTileFromGlobalTile(global_nr_tiles_.rows(), comm_size.rows(),
@@ -94,33 +94,38 @@ void Distribution::computeGlobalAndLocalNrTilesAndLocalSize(
   auto tile_col = util::matrix::nextLocalTileFromGlobalTile(global_nr_tiles_.cols(), comm_size.cols(),
                                                             rank_index.col(), source_rank_index.col());
 
+  // Set local_nr_tiles_.
   local_nr_tiles_ = {tile_row, tile_col};
 
+  // The local size is computed in the following way:
+  // If the last element belongs to my rank:
+  //   local_size = (local_nr_tiles - 1) * block_size + size of last tile.
+  // otherwise:
+  //   local_size = local_nr_tiles * block_size
   SizeType row = 0;
   if (size.rows() > 0) {
     if (rank_index.row() == util::matrix::rankGlobalTile(global_nr_tiles_.rows() - 1, comm_size.rows(),
                                                          source_rank_index.row())) {
-      auto last_tile_rows = util::matrix::tileElementFromElement(size.rows() - 1, block_size.rows()) + 1;
-      row = util::matrix::elementFromTileAndTileElement(tile_row - 1, 0, block_size.rows()) +
-            last_tile_rows;
+      auto last_tile_rows = (size.rows() - 1) % block_size.rows() + 1;
+      row = (tile_row - 1) * block_size.rows() + last_tile_rows;
     }
     else {
-      row = util::matrix::elementFromTileAndTileElement(tile_row, 0, block_size.rows());
+      row = tile_row * block_size.rows();
     }
   }
   SizeType col = 0;
   if (size.cols() > 0) {
     if (rank_index.col() == util::matrix::rankGlobalTile(global_nr_tiles_.cols() - 1, comm_size.cols(),
                                                          source_rank_index.col())) {
-      auto last_tile_cols = util::matrix::tileElementFromElement(size.cols() - 1, block_size.cols()) + 1;
-      col = util::matrix::elementFromTileAndTileElement(tile_col - 1, 0, block_size.cols()) +
-            last_tile_cols;
+      auto last_tile_cols = (size.cols() - 1) % block_size.cols() + 1;
+      col = (tile_col - 1) * block_size.cols() + last_tile_cols;
     }
     else {
-      col = util::matrix::elementFromTileAndTileElement(tile_col, 0, block_size.cols());
+      col = tile_col * block_size.cols();
     }
   }
 
+  // Set local_size_.
   local_size_ = LocalElementSize(row, col);
 }
 

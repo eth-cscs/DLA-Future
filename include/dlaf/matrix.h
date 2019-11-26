@@ -38,7 +38,7 @@ public:
   /// @brief Returns a future of index Tile.
   /// TODO: Sync details.
   /// @pre index.isValid() == true.
-  /// @pre index.isIn(localNrTiles()) == true.
+  /// @pre index.isIn(distribution().localNrTiles()) == true.
   hpx::future<TileType> operator()(const LocalTileIndex& index) noexcept;
 
 protected:
@@ -88,7 +88,7 @@ public:
   /// @brief Returns a read-only shared_future of index Tile.
   /// TODO: Sync details.
   /// @pre index.isValid() == true.
-  /// @pre index.isIn(localNrTiles()) == true.
+  /// @pre index.isIn(distribution().localNrTiles()) == true.
   hpx::shared_future<ConstTileType> read(const LocalTileIndex& index) noexcept;
 
 protected:

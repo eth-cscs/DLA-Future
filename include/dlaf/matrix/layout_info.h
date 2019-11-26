@@ -16,8 +16,29 @@
 
 namespace dlaf {
 namespace matrix {
+
+/// LayoutInfo contains the information about how the elements of a matrix are stored in memory.
+/// More details available in misc/matrix_distribution.md.
+
 class LayoutInfo {
 public:
+  /// Construct a generic layout of a local matrix of size @p size.
+  ///
+  /// @param[in] size the size of the local matrix,
+  /// @param[in] block_size the size of the tiles,
+  /// @param[in] tile_ld the leading dimension of the tile,
+  /// @param[in] tile_offset_row the distance of the next row tile,
+  /// @param[in] tile_offset_col the distance of the next column tile.
+  ///
+  /// See misc/matrix_distribution.md for for more detail about the parameters.
+  ///
+  /// @throw std::invalid_argument if @p tile_ld < 1 or @p tile_offset_row < 1 or @p tile_offset_col < 1,
+  /// @throw std::invalid_argument if @p !size.isEmpty() and
+  ///        @p tile_ld < @c max(@c size.rows(), @c block_size.rows())
+  /// @throw std::invalid_argument if @p !size.isEmpty() and @p tile_row_offset < @c block_size.rows()
+  /// @throw std::invalid_argument if @p !size.isEmpty() and @p tile_col_offset < size of the memory
+  ///        (in elements, padding included) to store a column of tiles,
+  /// @throw std::invalid_argument if the tiles overlap (combinations of @p tile_ld, @p tile_row_offset).
   LayoutInfo(const LocalElementSize& size, const TileElementSize& block_size, SizeType tile_ld,
              std::size_t tile_offset_row, std::size_t tile_offset_col);
 
@@ -31,10 +52,11 @@ public:
     return !operator==(rhs);
   }
 
-  /// @brief Returns the minimum number of elements that are needed to fit a matrix with the given layout.
+  /// Returns the minimum number of elements that are needed to fit a matrix with the given layout.
   std::size_t minMemSize() const noexcept;
 
-  /// @brief Returns the position of the first element of the @p index tile.
+  /// Returns the position of the first element of the @p index tile.
+  ///
   /// @pre 0 < @p index.row() < nrTiles().rows()
   /// @pre 0 < @p index.col() < nrTiles().cols()
   std::size_t tileOffset(const LocalTileIndex& index) const noexcept {
@@ -43,7 +65,8 @@ public:
     return mul(index.row(), tile_offset_row_) + mul(index.col(), tile_offset_col_);
   }
 
-  /// @brief Returns the size @p index tile.
+  /// Returns the size @p index tile.
+  ///
   /// @pre 0 < @p index.row() < nrTiles().rows()
   /// @pre 0 < @p index.col() < nrTiles().cols()
   TileElementSize tileSize(const LocalTileIndex& index) const noexcept {
@@ -53,7 +76,8 @@ public:
     return {m, n};
   }
 
-  /// @brief Returns the minimum number of elements that are needed for the @p index tile.
+  /// Returns the minimum number of elements that are needed for the @p index tile.
+  ///
   /// @pre 0 < @p index.row() < nrTiles().rows()
   /// @pre 0 < @p index.col() < nrTiles().cols()
   std::size_t minTileMemSize(const LocalTileIndex& index) const noexcept {
@@ -61,7 +85,8 @@ public:
     return minTileMemSize(tileSize(index));
   }
 
-  /// @brief Returns the minimum number of elements that are needed to fit a tile with the given size.
+  /// Returns the minimum number of elements that are needed to fit a tile with the given size.
+  ///
   /// @pre tile_size.rows() <= block_size.rows()
   /// @pre tile_size.cols() <= block_size.cols()
   std::size_t minTileMemSize(const TileElementSize& tile_size) const noexcept;

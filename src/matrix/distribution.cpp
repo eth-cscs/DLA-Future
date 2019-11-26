@@ -39,11 +39,11 @@ Distribution::Distribution(const GlobalElementSize& size, const TileElementSize&
     throw std::invalid_argument("Error: Invalid Matrix size");
   if (!block_size_.isValid() || block_size_.isEmpty())
     throw std::invalid_argument("Error: Invalid Block size");
-  if (!rank_index_.isValid())
-    throw std::invalid_argument("Error: Invalid Rank Index");
   if (!comm_size_.isValid() || comm_size_.isEmpty())
     throw std::invalid_argument("Error: Invalid Communicator Size");
-  if (!source_rank_index_.isValid())
+  if (!rank_index_.isValid() || !rank_index.isIn(comm_size_))
+    throw std::invalid_argument("Error: Invalid Rank Index");
+  if (!source_rank_index_.isValid() || !source_rank_index.isIn(comm_size_))
     throw std::invalid_argument("Error: Invalid Matrix Source Rank Index");
 
   computeGlobalAndLocalNrTilesAndLocalSize(size_, block_size_, comm_size_, rank_index_,

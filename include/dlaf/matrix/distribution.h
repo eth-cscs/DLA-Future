@@ -23,24 +23,25 @@ namespace matrix {
 
 class Distribution {
 public:
+  /// Constructs a distribution for a non distributed matrix of size {0, 0} and block size {1, 1}.
   Distribution() noexcept;
 
   /// Constructs a distribution for a non distributed matrix of size @p size and block size @p block_size.
   ///
-  /// @throw std::invalid_argument if size.rows() < 0 or size.cols() < 0.
-  /// @throw std::invalid_argument if block_size.rows() < 1 or block_size.cols() < 1.
+  /// @throw std::invalid_argument if @p !size.isValid().
+  /// @throw std::invalid_argument if @p !block_size.isValid() or @p block_size_.isEmpty().
   Distribution(const LocalElementSize& size, const TileElementSize& block_size);
 
   /// Constructs a distribution for a matrix of size @p size and block size @p block_size,
   /// distributed on a 2D grid of processes of size @p comm_size.
   ///
-  /// @in rank_index is the rank of the current process,
-  /// @in source_rank_index is the rank of the process wich contains the top left tile of the matrix.
-  /// @throw std::invalid_argument if size.rows() < 0 or size.cols() < 0.
-  /// @throw std::invalid_argument if block_size.rows() < 1 or block_size.cols() < 1.
-  /// @throw std::invalid_argument if comm_size.rows() < 1 or comm_size.cols() < 1.
-  /// @throw std::invalid_argument if rank_index.row() < 0 or rank_index.col() < 0.
-  /// @throw std::invalid_argument if source_rank_index.row() < 0 or source_rank_index.col() < 0.
+  /// @param[in] rank_index is the rank of the current process,
+  /// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix.
+  /// @throw std::invalid_argument if @p !size.isValid().
+  /// @throw std::invalid_argument if @p !block_size.isValid() or @p block_size_.isEmpty().
+  /// @throw std::invalid_argument if @p !comm_size.isValid() or @p comm_size_.isEmpty().
+  /// @throw std::invalid_argument if @p !rank_index.isValid() or @p !rank_index_.isIn(comm_size).
+  /// @throw std::invalid_argument if @p !source_rank_index.isValid() or @p !source_rank_index_.isIn(comm_size).
   Distribution(const GlobalElementSize& size, const TileElementSize& block_size,
                const comm::Size2D& comm_size, const comm::Index2D& rank_index,
                const comm::Index2D& source_rank_index);

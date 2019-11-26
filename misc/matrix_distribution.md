@@ -23,9 +23,9 @@ Fig. 3 shows the local matrix of size `local_size` (green lines in Fig. 3) of ea
 ![Fig. 3. Local matrix of each process for the matrix depicted in Fig 1.](figures/local.png)
 *Fig. 3. Local matrix of each process for the matrix depicted in Fig 1.*
 
-## Distribution constrains
+## Distribution constraints
 
-The following constrains hold:
+The following constraints hold:
 - Each tile is stored in the memory of a single rank.
 - A tile is entirely stored in the memory of a single rank (it cannot be shared/distributed among multiple ranks).
 - Each block of the 2D block cyclic distribution is a tile (`tile_size == block_size` for tiles not in the boundaries, `tile_size.rows() <= block_size.rows() && tile_size.cols() <= block_size.cols()` otherwise).

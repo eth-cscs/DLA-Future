@@ -92,5 +92,3 @@ TYPED_TEST(CholeskyTest, NoSquareBlockException) {
     }
   }
 }
-
-TYPED_TEST(CholeskyTest, NonPositiveDefiniteException) {}

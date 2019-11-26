@@ -1,8 +1,9 @@
 spack:
   specs:
+    - hpx build_type=Release cxxstd=14 networking=none
+    - boost cxxstd=14 ~atomic~math~iostreams~locale~graph~random~serialization~signals~timer~test~wave~mpi~python
     - mpich
     - intel-mkl
-    - hpx cxxstd=14 networking=none
-    - blaspp
-    - lapackpp
+    - blaspp build_type=Release
+    - lapackpp build_type=Release
   concretization: together

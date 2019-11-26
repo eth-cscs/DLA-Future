@@ -9,15 +9,22 @@
 //
 
 template <class T, Device device>
-Matrix<const T, device>::Matrix(const matrix::LayoutInfo& layout, ElementType* ptr, std::size_t elements)
+Matrix<const T, device>::Matrix(const matrix::LayoutInfo& layout, ElementType* ptr)
     : Distribution(layout.size(), layout.blockSize()) {
-  std::size_t memory_size = layout.minMemSize();
-  if (elements < memory_size) {
-    throw std::invalid_argument("Error: Cannot build Matrix. The memory is too small.");
-  }
+  memory::MemoryView<ElementType, device> mem(ptr, layout.minMemSize());
+  setUpTiles(mem, layout);
+}
 
-  memory::MemoryView<ElementType, device> mem(ptr, elements);
+template <class T, Device device>
+Matrix<const T, device>::Matrix(matrix::Distribution&& distribution, const matrix::LayoutInfo& layout,
+                                ElementType* ptr)
+    : Distribution(std::move(distribution)) {
+  if (this->localSize() != layout.size())
+    throw std::invalid_argument("Error: distribution.localSize() != layout.size()");
+  if (this->blockSize() != layout.blockSize())
+    throw std::invalid_argument("Error: distribution.blockSize() != layout.blockSize()");
 
+  memory::MemoryView<ElementType, device> mem(ptr, layout.minMemSize());
   setUpTiles(mem, layout);
 }
 

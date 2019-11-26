@@ -10,11 +10,19 @@
 
 template <class T, Device device>
 Matrix<T, device>::Matrix(const LocalElementSize& size, const TileElementSize& block_size)
-    : Matrix<const T, device>(matrix::Distribution(size, block_size), {}, {}) {
-  SizeType ld = std::max(1, util::ceilDiv(this->size().rows(), 64) * 64);
+    : Matrix<T, device>(matrix::Distribution(size, block_size)) {}
 
-  auto layout = matrix::colMajorLayout(LocalElementSize(this->size().rows(), this->size().cols()),
-                                       this->blockSize(), ld);
+template <class T, Device device>
+Matrix<T, device>::Matrix(const GlobalElementSize& size, const TileElementSize& block_size,
+                          const comm::CommunicatorGrid& comm)
+    : Matrix<T, device>(matrix::Distribution(size, block_size, comm.size(), comm.rank(), {0, 0})) {}
+
+template <class T, Device device>
+Matrix<T, device>::Matrix(matrix::Distribution&& distribution)
+    : Matrix<const T, device>(std::move(distribution), {}, {}) {
+  SizeType ld = std::max(1, util::ceilDiv(this->localSize().rows(), 64) * 64);
+
+  auto layout = matrix::colMajorLayout(this->localSize(), this->blockSize(), ld);
 
   std::size_t memory_size = layout.minMemSize();
   memory::MemoryView<ElementType, device> mem(memory_size);
@@ -23,17 +31,26 @@ Matrix<T, device>::Matrix(const LocalElementSize& size, const TileElementSize& b
 }
 
 template <class T, Device device>
-Matrix<T, device>::Matrix(const matrix::LayoutInfo& layout, ElementType* ptr, std::size_t elements)
-    : Matrix<const T, device>(matrix::Distribution(layout.size(), layout.blockSize()), {}, {}) {
-  std::size_t memory_size = layout.minMemSize();
-  if (elements < memory_size) {
-    throw std::invalid_argument("Error: Cannot build Matrix. The memory is too small.");
-  }
+Matrix<T, device>::Matrix(matrix::Distribution&& distribution, const matrix::LayoutInfo& layout)
+    : Matrix<const T, device>(std::move(distribution), {}, {}) {
+  if (this->localSize() != layout.size())
+    throw std::invalid_argument("Error: distribution.localSize() != layout.size()");
+  if (this->blockSize() != layout.blockSize())
+    throw std::invalid_argument("Error: distribution.blockSize() != layout.blockSize()");
 
-  memory::MemoryView<ElementType, device> mem(ptr, elements);
+  memory::MemoryView<ElementType, device> mem(layout.minMemSize());
 
   setUpTiles(mem, layout);
 }
+
+template <class T, Device device>
+Matrix<T, device>::Matrix(matrix::Distribution&& distribution, const matrix::LayoutInfo& layout,
+                          ElementType* ptr)
+    : Matrix<const T, device>(std::move(distribution), layout, ptr) {}
+
+template <class T, Device device>
+Matrix<T, device>::Matrix(const matrix::LayoutInfo& layout, ElementType* ptr)
+    : Matrix<const T, device>(layout, ptr) {}
 
 template <class T, Device device>
 hpx::future<Tile<T, device>> Matrix<T, device>::operator()(const LocalTileIndex& index) noexcept {

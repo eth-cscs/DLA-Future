@@ -66,6 +66,18 @@ GTEST_API_ int main(int argc, char** argv) {
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
 
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  if (rank == 0) {
+    std::printf("%d\n", getpid());
+
+    bool flag = true;
+    while(flag);
+  }
+
+  MPI_Barrier(MPI_COMM_WORLD);
+
   // Gets hold of the event listener list.
   ::testing::TestEventListeners& listeners = ::testing::UnitTest::GetInstance()->listeners();
 

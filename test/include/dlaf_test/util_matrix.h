@@ -32,9 +32,9 @@ void set(Matrix<T, Device::CPU>& mat, ElementGetter el) {
     for (SizeType tile_i = 0; tile_i < dist.localNrTiles().rows(); ++tile_i) {
       auto tile = mat(LocalTileIndex(tile_i, tile_j)).get();
       for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
-        SizeType j = dist.globalElementFromLocalTileAndTileElement<RowCol::Col>(tile_j, jj);
+        SizeType j = dist.globalElementFromLocalTileAndTileElement<Coord::Col>(tile_j, jj);
         for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
-          SizeType i = dist.globalElementFromLocalTileAndTileElement<RowCol::Row>(tile_i, ii);
+          SizeType i = dist.globalElementFromLocalTileAndTileElement<Coord::Row>(tile_i, ii);
           tile({ii, jj}) = el({i, j});
         }
       }
@@ -97,9 +97,9 @@ void check(ElementGetter expected, Matrix<T, Device::CPU>& mat, ComparisonOp com
     for (SizeType tile_i = 0; tile_i < dist.localNrTiles().rows(); ++tile_i) {
       auto& tile = mat.read(LocalTileIndex(tile_i, tile_j)).get();
       for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
-        SizeType j = dist.globalElementFromLocalTileAndTileElement<RowCol::Col>(tile_j, jj);
+        SizeType j = dist.globalElementFromLocalTileAndTileElement<Coord::Col>(tile_j, jj);
         for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
-          SizeType i = dist.globalElementFromLocalTileAndTileElement<RowCol::Row>(tile_i, ii);
+          SizeType i = dist.globalElementFromLocalTileAndTileElement<Coord::Row>(tile_i, ii);
           if (!comp(expected({i, j}), tile({ii, jj}))) {
             ADD_FAILURE_AT(file, line)
                 << "Error at index (" << i << ", " << j

@@ -271,9 +271,9 @@ std::vector<ParametersIndices> tests_indices = {
     {{134, 300}, {32, 64}, {2, 3}, {3, 5}, {2, 0}, {113, 229}, {3, 3}, {2, 3}, {1, 0}, {1, 0}, {17, 37}},
 };
 
-template <RowCol rc>
+template <Coord rc>
 void testIndex(const Distribution& obj, const ParametersIndices& test) {
-  SizeType local_tile = rc == RowCol::Row ? test.local_tile[0] : test.local_tile[1];
+  SizeType local_tile = rc == Coord::Row ? test.local_tile[0] : test.local_tile[1];
 
   EXPECT_EQ(test.global_element.get<rc>(),
             obj.globalElementFromGlobalTileAndTileElement<rc>(test.global_tile.get<rc>(),
@@ -306,8 +306,8 @@ TEST(DistributionTest, IndexConversions) {
   for (const auto& test : tests_indices) {
     Distribution obj(test.size, test.block_size, test.grid_size, test.rank, test.src_rank);
 
-    testIndex<RowCol::Row>(obj, test);
-    testIndex<RowCol::Col>(obj, test);
+    testIndex<Coord::Row>(obj, test);
+    testIndex<Coord::Col>(obj, test);
   }
 }
 

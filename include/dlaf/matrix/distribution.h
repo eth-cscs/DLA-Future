@@ -108,10 +108,9 @@ public:
     assert(global_tile.isValid() && global_tile.isIn(global_nr_tiles_));
     assert(tile_element.isValid() && tile_element.isIn(block_size_));
 
-    return {globalElementFromGlobalTileAndTileElement<RowCol::Row>(global_tile.row(),
-                                                                   tile_element.row()),
-            globalElementFromGlobalTileAndTileElement<RowCol::Col>(global_tile.col(),
-                                                                   tile_element.col())};
+    return {globalElementFromGlobalTileAndTileElement<Coord::Row>(global_tile.row(), tile_element.row()),
+            globalElementFromGlobalTileAndTileElement<Coord::Col>(global_tile.col(),
+                                                                  tile_element.col())};
   }
 
   /// Returns the global 2D index of the tile which contains the element with global index @p global_element.
@@ -120,8 +119,8 @@ public:
   GlobalTileIndex globalTileIndex(const GlobalElementIndex& global_element) const noexcept {
     assert(global_element.isValid() && global_element.isIn(size_));
 
-    return {globalTileFromGlobalElement<RowCol::Row>(global_element.row()),
-            globalTileFromGlobalElement<RowCol::Col>(global_element.col())};
+    return {globalTileFromGlobalElement<Coord::Row>(global_element.row()),
+            globalTileFromGlobalElement<Coord::Col>(global_element.col())};
   }
 
   /// Returns the global 2D index of the tile that has index @p local_tile
@@ -131,8 +130,8 @@ public:
   GlobalTileIndex globalTileIndex(const LocalTileIndex& local_tile) const noexcept {
     assert(local_tile.isValid() && local_tile.isIn(local_nr_tiles_));
 
-    return {globalTileFromLocalTile<RowCol::Row>(local_tile.row()),
-            globalTileFromLocalTile<RowCol::Col>(local_tile.col())};
+    return {globalTileFromLocalTile<Coord::Row>(local_tile.row()),
+            globalTileFromLocalTile<Coord::Col>(local_tile.col())};
   }
 
   /// Returns the 2D rank index of the process that stores the tile with global index @p global_tile.
@@ -141,8 +140,8 @@ public:
   comm::Index2D rankGlobalTile(const GlobalTileIndex& global_tile) const noexcept {
     assert(global_tile.isValid() && global_tile.isIn(global_nr_tiles_));
 
-    return {rankGlobalTile<RowCol::Row>(global_tile.row()),
-            rankGlobalTile<RowCol::Col>(global_tile.col())};
+    return {rankGlobalTile<Coord::Row>(global_tile.row()),
+            rankGlobalTile<Coord::Col>(global_tile.col())};
   }
 
   /// Returns the local 2D index in current process of the tile with index @p global_tile.
@@ -155,8 +154,8 @@ public:
     if (rank_index_ != rankGlobalTile(global_tile)) {
       throw std::invalid_argument("Global tile not available in this rank.");
     }
-    return {localTileFromGlobalTile<RowCol::Row>(global_tile.row()),
-            localTileFromGlobalTile<RowCol::Col>(global_tile.col())};
+    return {localTileFromGlobalTile<Coord::Row>(global_tile.row()),
+            localTileFromGlobalTile<Coord::Col>(global_tile.col())};
   }
 
   /// Returns the local index in current process of the global element
@@ -167,8 +166,8 @@ public:
   TileElementIndex tileElementIndex(const GlobalElementIndex& global_element) const noexcept {
     assert(global_element.isValid() && global_element.isIn(size_));
 
-    return {tileElementFromGlobalElement<RowCol::Row>(global_element.row()),
-            tileElementFromGlobalElement<RowCol::Col>(global_element.col())};
+    return {tileElementFromGlobalElement<Coord::Row>(global_element.row()),
+            tileElementFromGlobalElement<Coord::Col>(global_element.col())};
   }
 
   /// Returns the global index of the element
@@ -176,7 +175,7 @@ public:
   ///
   /// @pre 0 <= global_tile < nrTiles().get<rc>()
   /// @pre 0 <= tile_element < blockSize.get<rc>()
-  template <RowCol rc>
+  template <Coord rc>
   SizeType globalElementFromGlobalTileAndTileElement(SizeType global_tile, SizeType tile_element) const
       noexcept {
     assert(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>());
@@ -189,7 +188,7 @@ public:
   ///
   /// @pre 0 <= local_tile < localNrTiles().get<rc>()
   /// @pre 0 <= tile_element < blockSize.get<rc>()
-  template <RowCol rc>
+  template <Coord rc>
   SizeType globalElementFromLocalTileAndTileElement(SizeType local_tile, SizeType tile_element) const
       noexcept {
     return globalElementFromGlobalTileAndTileElement<rc>(globalTileFromLocalTile<rc>(local_tile),
@@ -199,7 +198,7 @@ public:
   /// Returns the rank index of the process that stores the element with global index @p global_element.
   ///
   /// @pre 0 <= global_element < size().get<rc>()
-  template <RowCol rc>
+  template <Coord rc>
   int rankGlobalElement(SizeType global_element) const noexcept {
     return rankGlobalTile<rc>(globalTileFromGlobalElement<rc>(global_element));
   }
@@ -207,7 +206,7 @@ public:
   /// Returns the rank index of the process that stores the tile with global index @p global_tile.
   ///
   /// @pre 0 <= global_tile < nrTiles().get<rc>()
-  template <RowCol rc>
+  template <Coord rc>
   int rankGlobalTile(SizeType global_tile) const noexcept {
     assert(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>());
     return util::matrix::rankGlobalTile(global_tile, comm_size_.get<rc>(), source_rank_index_.get<rc>());
@@ -216,7 +215,7 @@ public:
   /// Returns the global index of the tile which contains the element with global index @p global_element.
   ///
   /// @pre 0 <= global_element < size().get<rc>()
-  template <RowCol rc>
+  template <Coord rc>
   SizeType globalTileFromGlobalElement(SizeType global_element) const noexcept {
     assert(0 <= global_element && global_element < size_.get<rc>());
     return util::matrix::tileFromElement(global_element, block_size_.get<rc>());
@@ -226,7 +225,7 @@ public:
   /// in the current rank.
   ///
   /// @pre 0 <= local_tile < localNrTiles().get<rc>()
-  template <RowCol rc>
+  template <Coord rc>
   SizeType globalTileFromLocalTile(SizeType local_tile) const noexcept {
     assert(0 <= local_tile && local_tile < local_nr_tiles_.get<rc>());
     return util::matrix::globalTileFromLocalTile(local_tile, comm_size_.get<rc>(), rank_index_.get<rc>(),
@@ -237,7 +236,7 @@ public:
   ///
   /// If the element with @p global_element index is not by current rank it returns -1.
   /// @pre 0 <= global_element < size().get<rc>()
-  template <RowCol rc>
+  template <Coord rc>
   SizeType localTileFromGlobalElement(SizeType global_element) const noexcept {
     return localTileFromGlobalTile<rc>(globalTileFromGlobalElement<rc>(global_element));
   }
@@ -246,7 +245,7 @@ public:
   ///
   /// If the tiles with @p global_tile index is not by current rank it returns -1.
   /// @pre 0 <= global_tile < nrTiles().get<rc>()
-  template <RowCol rc>
+  template <Coord rc>
   SizeType localTileFromGlobalTile(SizeType global_tile) const noexcept {
     assert(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>());
     return util::matrix::localTileFromGlobalTile(global_tile, comm_size_.get<rc>(),
@@ -259,7 +258,7 @@ public:
   /// and which is stored in current process.
   ///
   /// @pre 0 <= global_element < size().get<rc>()
-  template <RowCol rc>
+  template <Coord rc>
   SizeType nextLocalTileFromGlobalElement(SizeType global_element) const noexcept {
     return nextLocalTileFromGlobalTile<rc>(globalTileFromGlobalElement<rc>(global_element));
   }
@@ -269,7 +268,7 @@ public:
   /// and which is stored in current process.
   ///
   /// @pre 0 <= global_tile < nrTiles().get<rc>()
-  template <RowCol rc>
+  template <Coord rc>
   SizeType nextLocalTileFromGlobalTile(SizeType global_tile) const noexcept {
     assert(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>());
     return util::matrix::nextLocalTileFromGlobalTile(global_tile, comm_size_.get<rc>(),
@@ -280,7 +279,7 @@ public:
   /// Returns the index within the tile of the global element with index @p global_element.
   ///
   /// @pre 0 <= global_element < size().get<rc>()
-  template <RowCol rc>
+  template <Coord rc>
   SizeType tileElementFromGlobalElement(SizeType global_element) const noexcept {
     assert(0 <= global_element && global_element < size_.get<rc>());
     return util::matrix::tileElementFromElement(global_element, block_size_.get<rc>());

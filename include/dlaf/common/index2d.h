@@ -19,7 +19,7 @@
 
 namespace dlaf {
 
-enum class RowCol { Row, Col };
+enum class Coord { Row, Col };
 
 namespace common {
 
@@ -64,9 +64,9 @@ public:
   }
 
   /// Return a copy of the row or the col index as specified by @p rc
-  template <RowCol rc>
+  template <Coord rc>
   IndexT get() const noexcept {
-    if (rc == RowCol::Row)
+    if (rc == Coord::Row)
       return row_;
     return col_;
   }

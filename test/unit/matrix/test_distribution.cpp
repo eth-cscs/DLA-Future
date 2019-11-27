@@ -137,14 +137,26 @@ TEST(DistributionTest, ConstructorExceptions) {
     EXPECT_THROW(Distribution(test.size, test.block_size, test.grid_size, {-1, test.rank.col()},
                               test.src_rank),
                  std::invalid_argument);
+    EXPECT_THROW(Distribution(test.size, test.block_size, test.grid_size,
+                              {test.grid_size.rows(), test.rank.col()}, test.src_rank),
+                 std::invalid_argument);
     EXPECT_THROW(Distribution(test.size, test.block_size, test.grid_size, {test.rank.row(), -1},
                               test.src_rank),
+                 std::invalid_argument);
+    EXPECT_THROW(Distribution(test.size, test.block_size, test.grid_size,
+                              {test.rank.row(), test.grid_size.cols()}, test.src_rank),
                  std::invalid_argument);
     EXPECT_THROW(Distribution(test.size, test.block_size, test.grid_size, test.rank,
                               {-1, test.src_rank.col()}),
                  std::invalid_argument);
     EXPECT_THROW(Distribution(test.size, test.block_size, test.grid_size, test.rank,
+                              {test.grid_size.rows(), test.src_rank.col()}),
+                 std::invalid_argument);
+    EXPECT_THROW(Distribution(test.size, test.block_size, test.grid_size, test.rank,
                               {test.src_rank.row(), -1}),
+                 std::invalid_argument);
+    EXPECT_THROW(Distribution(test.size, test.block_size, test.grid_size, test.rank,
+                              {test.src_rank.row(), test.grid_size.cols()}),
                  std::invalid_argument);
   }
 }

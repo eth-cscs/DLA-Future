@@ -24,22 +24,22 @@ namespace matrix {
 /// If the element index is local, the returned tile index is local.
 /// If the element index is global, the returned tile index is global.
 /// @pre 0 <= element
-/// @pre 0 < tile_size
-inline SizeType tileFromElement(SizeType element, SizeType tile_size) {
+/// @pre 0 < block_size
+inline SizeType tileFromElement(SizeType element, SizeType block_size) {
   assert(0 <= element);
-  assert(0 < tile_size);
-  return element / tile_size;
+  assert(0 < block_size);
+  return element / block_size;
 }
 
 /// Returns the index within the tile of the element with index @p element.
 ///
 /// The element index can be either global or local.
 /// @pre 0 <= element
-/// @pre 0 < tile_size
-inline SizeType tileElementFromElement(SizeType element, SizeType tile_size) {
+/// @pre 0 < block_size
+inline SizeType tileElementFromElement(SizeType element, SizeType block_size) {
   assert(0 <= element);
-  assert(0 < tile_size);
-  return element % tile_size;
+  assert(0 < block_size);
+  return element % block_size;
 }
 
 /// Returns the index of the element
@@ -48,13 +48,14 @@ inline SizeType tileElementFromElement(SizeType element, SizeType tile_size) {
 /// If the tile index is local, the returned element index is local.
 /// If the tile index is global, the returned element index is global.
 /// @pre 0 <= tile
-/// @pre 0 <= tile_element < tile_size
-/// @pre 0 < tile_size
-inline SizeType elementFromTileAndTileElement(SizeType tile, SizeType tile_element, SizeType tile_size) {
+/// @pre 0 <= tile_element < block_size
+/// @pre 0 < block_size
+inline SizeType elementFromTileAndTileElement(SizeType tile, SizeType tile_element,
+                                              SizeType block_size) {
   assert(0 <= tile);
-  assert(0 <= tile_element && tile_element < tile_size);
-  assert(0 < tile_size);
-  return tile * tile_size + tile_element;
+  assert(0 <= tile_element && tile_element < block_size);
+  assert(0 < block_size);
+  return tile * block_size + tile_element;
 }
 
 /// Returns the rank index of the process that stores the tiles with index @p global_tile.

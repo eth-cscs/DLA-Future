@@ -14,46 +14,46 @@ namespace dlaf {
 namespace matrix {
 Distribution::Distribution() noexcept
     : size_(0, 0), local_size_(0, 0), global_nr_tiles_(0, 0), local_nr_tiles_(0, 0), block_size_(1, 1),
-      rank_index_(0, 0), comm_size_(1, 1), source_rank_index_(0, 0) {}
+      rank_index_(0, 0), grid_size_(1, 1), source_rank_index_(0, 0) {}
 
 Distribution::Distribution(const LocalElementSize& size, const TileElementSize& block_size)
     : size_(0, 0), local_size_(size), global_nr_tiles_(0, 0), local_nr_tiles_(0, 0),
-      block_size_(block_size), rank_index_(0, 0), comm_size_(1, 1), source_rank_index_(0, 0) {
+      block_size_(block_size), rank_index_(0, 0), grid_size_(1, 1), source_rank_index_(0, 0) {
   if (!local_size_.isValid())
     throw std::invalid_argument("Error: Invalid Matrix size");
   if (!block_size_.isValid() || block_size_.isEmpty())
     throw std::invalid_argument("Error: Invalid Block size");
 
   computeLocalNrTiles(local_size_, block_size_);
-  computeGlobalSize(local_size_, comm_size_);
+  computeGlobalSize(local_size_, grid_size_);
   computeGlobalNrTiles(size_, block_size_);
 }
 
 Distribution::Distribution(const GlobalElementSize& size, const TileElementSize& block_size,
-                           const comm::Size2D& comm_size, const comm::Index2D& rank_index,
+                           const comm::Size2D& grid_size, const comm::Index2D& rank_index,
                            const comm::Index2D& source_rank_index)
     : size_(size), local_size_(0, 0), global_nr_tiles_(0, 0), local_nr_tiles_(0, 0),
-      block_size_(block_size), rank_index_(rank_index), comm_size_(comm_size),
+      block_size_(block_size), rank_index_(rank_index), grid_size_(grid_size),
       source_rank_index_(source_rank_index) {
   if (!size_.isValid())
     throw std::invalid_argument("Error: Invalid Matrix size");
   if (!block_size_.isValid() || block_size_.isEmpty())
     throw std::invalid_argument("Error: Invalid Block size");
-  if (!comm_size_.isValid() || comm_size_.isEmpty())
+  if (!grid_size_.isValid() || grid_size_.isEmpty())
     throw std::invalid_argument("Error: Invalid Communicator Size");
-  if (!rank_index_.isValid() || !rank_index.isIn(comm_size_))
+  if (!rank_index_.isValid() || !rank_index.isIn(grid_size_))
     throw std::invalid_argument("Error: Invalid Rank Index");
-  if (!source_rank_index_.isValid() || !source_rank_index.isIn(comm_size_))
+  if (!source_rank_index_.isValid() || !source_rank_index.isIn(grid_size_))
     throw std::invalid_argument("Error: Invalid Matrix Source Rank Index");
 
-  computeGlobalAndLocalNrTilesAndLocalSize(size_, block_size_, comm_size_, rank_index_,
+  computeGlobalAndLocalNrTilesAndLocalSize(size_, block_size_, grid_size_, rank_index_,
                                            source_rank_index_);
 }
 
 Distribution::Distribution(Distribution&& rhs) noexcept
     : size_(rhs.size_), local_size_(rhs.local_size_), global_nr_tiles_(rhs.global_nr_tiles_),
       local_nr_tiles_(rhs.local_nr_tiles_), block_size_(rhs.block_size_), rank_index_(rhs.rank_index_),
-      comm_size_(rhs.comm_size_), source_rank_index_(rhs.source_rank_index_) {
+      grid_size_(rhs.grid_size_), source_rank_index_(rhs.source_rank_index_) {
   rhs.setDefaultSizes();
 }
 
@@ -64,7 +64,7 @@ Distribution& Distribution::operator=(Distribution&& rhs) noexcept {
   local_nr_tiles_ = rhs.local_nr_tiles_;
   block_size_ = rhs.block_size_;
   rank_index_ = rhs.rank_index_;
-  comm_size_ = rhs.comm_size_;
+  grid_size_ = rhs.grid_size_;
   source_rank_index_ = rhs.source_rank_index_;
 
   rhs.setDefaultSizes();
@@ -72,8 +72,8 @@ Distribution& Distribution::operator=(Distribution&& rhs) noexcept {
 }
 
 void Distribution::computeGlobalSize(const LocalElementSize& local_size,
-                                     const comm::Size2D& comm_size) noexcept {
-  assert(comm_size == comm::Size2D(1, 1));
+                                     const comm::Size2D& grid_size) noexcept {
+  assert(grid_size == comm::Size2D(1, 1));
   size_ = GlobalElementSize(local_size.rows(), local_size.cols());
 }
 
@@ -84,14 +84,14 @@ void Distribution::computeGlobalNrTiles(const GlobalElementSize& size,
 }
 
 void Distribution::computeGlobalAndLocalNrTilesAndLocalSize(
-    const GlobalElementSize& size, const TileElementSize& block_size, const comm::Size2D& comm_size,
+    const GlobalElementSize& size, const TileElementSize& block_size, const comm::Size2D& grid_size,
     const comm::Index2D& rank_index, const comm::Index2D& source_rank_index) noexcept {
   // Set global_nr_tiles_.
   computeGlobalNrTiles(size, block_size);
 
-  auto tile_row = util::matrix::nextLocalTileFromGlobalTile(global_nr_tiles_.rows(), comm_size.rows(),
+  auto tile_row = util::matrix::nextLocalTileFromGlobalTile(global_nr_tiles_.rows(), grid_size.rows(),
                                                             rank_index.row(), source_rank_index.row());
-  auto tile_col = util::matrix::nextLocalTileFromGlobalTile(global_nr_tiles_.cols(), comm_size.cols(),
+  auto tile_col = util::matrix::nextLocalTileFromGlobalTile(global_nr_tiles_.cols(), grid_size.cols(),
                                                             rank_index.col(), source_rank_index.col());
 
   // Set local_nr_tiles_.
@@ -104,7 +104,7 @@ void Distribution::computeGlobalAndLocalNrTilesAndLocalSize(
   //   local_size = local_nr_tiles * block_size
   SizeType row = 0;
   if (size.rows() > 0) {
-    if (rank_index.row() == util::matrix::rankGlobalTile(global_nr_tiles_.rows() - 1, comm_size.rows(),
+    if (rank_index.row() == util::matrix::rankGlobalTile(global_nr_tiles_.rows() - 1, grid_size.rows(),
                                                          source_rank_index.row())) {
       auto last_tile_rows = (size.rows() - 1) % block_size.rows() + 1;
       row = (tile_row - 1) * block_size.rows() + last_tile_rows;
@@ -115,7 +115,7 @@ void Distribution::computeGlobalAndLocalNrTilesAndLocalSize(
   }
   SizeType col = 0;
   if (size.cols() > 0) {
-    if (rank_index.col() == util::matrix::rankGlobalTile(global_nr_tiles_.cols() - 1, comm_size.cols(),
+    if (rank_index.col() == util::matrix::rankGlobalTile(global_nr_tiles_.cols() - 1, grid_size.cols(),
                                                          source_rank_index.col())) {
       auto last_tile_cols = (size.cols() - 1) % block_size.cols() + 1;
       col = (tile_col - 1) * block_size.cols() + last_tile_cols;
@@ -143,7 +143,7 @@ void Distribution::setDefaultSizes() noexcept {
   block_size_ = {1, 1};
 
   rank_index_ = {0, 0};
-  comm_size_ = {1, 1};
+  grid_size_ = {1, 1};
   source_rank_index_ = {0, 0};
 }
 

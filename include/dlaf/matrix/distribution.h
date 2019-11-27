@@ -33,17 +33,17 @@ public:
   Distribution(const LocalElementSize& size, const TileElementSize& block_size);
 
   /// Constructs a distribution for a matrix of size @p size and block size @p block_size,
-  /// distributed on a 2D grid of processes of size @p comm_size.
+  /// distributed on a 2D grid of processes of size @p grid_size.
   ///
   /// @param[in] rank_index is the rank of the current process,
   /// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix.
   /// @throw std::invalid_argument if @p !size.isValid().
   /// @throw std::invalid_argument if @p !block_size.isValid() or @p block_size_.isEmpty().
-  /// @throw std::invalid_argument if @p !comm_size.isValid() or @p comm_size_.isEmpty().
-  /// @throw std::invalid_argument if @p !rank_index.isValid() or @p !rank_index_.isIn(comm_size).
-  /// @throw std::invalid_argument if @p !source_rank_index.isValid() or @p !source_rank_index_.isIn(comm_size).
+  /// @throw std::invalid_argument if @p !grid_size.isValid() or @p grid_size_.isEmpty().
+  /// @throw std::invalid_argument if @p !rank_index.isValid() or @p !rank_index_.isIn(grid_size).
+  /// @throw std::invalid_argument if @p !source_rank_index.isValid() or @p !source_rank_index_.isIn(grid_size).
   Distribution(const GlobalElementSize& size, const TileElementSize& block_size,
-               const comm::Size2D& comm_size, const comm::Index2D& rank_index,
+               const comm::Size2D& grid_size, const comm::Index2D& rank_index,
                const comm::Index2D& source_rank_index);
 
   Distribution(const Distribution& rhs) = default;
@@ -57,7 +57,7 @@ public:
   bool operator==(const Distribution& rhs) const noexcept {
     return size_ == rhs.size_ && local_size_ == rhs.local_size_ && block_size_ == rhs.block_size_ &&
            global_nr_tiles_ == rhs.global_nr_tiles_ && local_nr_tiles_ == rhs.local_nr_tiles_ &&
-           rank_index_ == rhs.rank_index_ && comm_size_ == rhs.comm_size_ &&
+           rank_index_ == rhs.rank_index_ && grid_size_ == rhs.grid_size_ &&
            source_rank_index_ == rhs.source_rank_index_;
   }
 
@@ -92,7 +92,7 @@ public:
   }
 
   const comm::Size2D& commGridSize() const noexcept {
-    return comm_size_;
+    return grid_size_;
   }
 
   const comm::Index2D& sourceRankIndex() const noexcept {
@@ -210,7 +210,7 @@ public:
   template <Coord rc>
   int rankGlobalTile(SizeType global_tile) const noexcept {
     assert(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>());
-    return util::matrix::rankGlobalTile(global_tile, comm_size_.get<rc>(), source_rank_index_.get<rc>());
+    return util::matrix::rankGlobalTile(global_tile, grid_size_.get<rc>(), source_rank_index_.get<rc>());
   }
 
   /// Returns the global index of the tile which contains the element with global index @p global_element.
@@ -229,7 +229,7 @@ public:
   template <Coord rc>
   SizeType globalTileFromLocalTile(SizeType local_tile) const noexcept {
     assert(0 <= local_tile && local_tile < local_nr_tiles_.get<rc>());
-    return util::matrix::globalTileFromLocalTile(local_tile, comm_size_.get<rc>(), rank_index_.get<rc>(),
+    return util::matrix::globalTileFromLocalTile(local_tile, grid_size_.get<rc>(), rank_index_.get<rc>(),
                                                  source_rank_index_.get<rc>());
   }
 
@@ -249,7 +249,7 @@ public:
   template <Coord rc>
   SizeType localTileFromGlobalTile(SizeType global_tile) const noexcept {
     assert(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>());
-    return util::matrix::localTileFromGlobalTile(global_tile, comm_size_.get<rc>(),
+    return util::matrix::localTileFromGlobalTile(global_tile, grid_size_.get<rc>(),
                                                  rank_index_.get<rc>(), source_rank_index_.get<rc>());
   }
 
@@ -272,7 +272,7 @@ public:
   template <Coord rc>
   SizeType nextLocalTileFromGlobalTile(SizeType global_tile) const noexcept {
     assert(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>());
-    return util::matrix::nextLocalTileFromGlobalTile(global_tile, comm_size_.get<rc>(),
+    return util::matrix::nextLocalTileFromGlobalTile(global_tile, grid_size_.get<rc>(),
                                                      rank_index_.get<rc>(),
                                                      source_rank_index_.get<rc>());
   }
@@ -290,8 +290,8 @@ private:
   /// Computes and sets @p size_.
   ///
   /// @pre local_size.rows() >= 0 and local_size.cols() >= 0.
-  /// @pre comm_size.rows() == 1 and comm_size.cols() == 1.
-  void computeGlobalSize(const LocalElementSize& size, const comm::Size2D& comm_size) noexcept;
+  /// @pre grid_size.rows() == 1 and grid_size.cols() == 1.
+  void computeGlobalSize(const LocalElementSize& size, const comm::Size2D& grid_size) noexcept;
 
   /// computes and sets global_tiles_.
   ///
@@ -303,12 +303,12 @@ private:
   ///
   /// @pre size.rows() >= 0 and size.cols() >= 0.
   /// @pre block_size.rows() >= 1 and block_size.cols() >= 1.
-  /// @pre comm_size.rows() >= 1 and comm_size.cols() >= 1.
+  /// @pre grid_size.rows() >= 1 and grid_size.cols() >= 1.
   /// @pre rank_index.row() >= 0 and rank_index.col() >= 0.
   /// @pre source_rank_index.row() >= 0 and source_rank_index.col() >= 0.
   void computeGlobalAndLocalNrTilesAndLocalSize(const GlobalElementSize& size,
                                                 const TileElementSize& block_size,
-                                                const comm::Size2D& comm_size,
+                                                const comm::Size2D& grid_size,
                                                 const comm::Index2D& rank_index,
                                                 const comm::Index2D& source_rank_index) noexcept;
 
@@ -326,7 +326,7 @@ private:
   /// local_nr_tiles_    = {0, 0}
   /// block_size_        = {1, 1}
   /// rank_index_        = {0, 0}
-  /// comm_size_         = {1, 1}
+  /// grid_size_         = {1, 1}
   /// source_rank_index_ = {0, 0}
   void setDefaultSizes() noexcept;
 
@@ -337,7 +337,7 @@ private:
   TileElementSize block_size_;
 
   comm::Index2D rank_index_;
-  comm::Size2D comm_size_;
+  comm::Size2D grid_size_;
   comm::Index2D source_rank_index_;
 };
 }

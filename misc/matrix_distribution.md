@@ -1,7 +1,7 @@
 # Matrix Distribution
 
 The matrix (also denoted global matrix) is the matrix which is distributed using a 2D block cyclic distribution scheme.
-Therefore any of the rank stores in its own memory only a subset of the elements which compose to the local matrix.
+Therefore any of the rank stores in its own memory only a subset of the elements which compose the local matrix.
 The matrix is divided in submatrices of the same size (exceptions are the submatrices in the boundaries which can be smaller) called tiles.
 
 ## Global to local mapping
@@ -45,7 +45,7 @@ The following naming convention is used for the types of indices and sizes:
 - `LocalTileSize`: the size of a local matrix in tiles.
 - `TileElementSize`: the size of a tile in elements.
 
-Warning: 1D indices and sizes have all the same type (SizeType).
+Warning: 1D indices and sizes have all the same type (`SizeType`).
 
 ## Index manipulation
 

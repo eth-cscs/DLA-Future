@@ -17,8 +17,8 @@ module load slurm
 module load xalt
 module load PrgEnv-gnu
 module load daint-mc
-module use /apps/daint/SSL/software/spack-current/share/spack/modules/cray-cnl6-broadwell
-module load llvm/8.0.0-gcc-6.2.0-cray-cnl6-broadwell-release
+module use /apps/daint/SSL/software/spack-current/share/spack/modules/cray-cnl7-broadwell
+module load llvm/8.0.0-gcc-8.3.0-cray-cnl7-broadwell-release-python3
 
 git config --add remote.origin.fetch +refs/heads/master:refs/remotes/origin/master
 git fetch --no-tags

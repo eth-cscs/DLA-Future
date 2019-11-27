@@ -14,7 +14,8 @@ class Blaspp(CMakePackage):
     hg       = "https://bitbucket.org/icl/blaspp"
     maintainers = ['Sely85']
 
-    version('develop', hg=hg)
+    version('develop', hg=hg, revision="86ccadd")
+
 
     variant('ifort',
             default=False,
@@ -36,8 +37,6 @@ class Blaspp(CMakePackage):
         if '^intel-mkl' in spec or '^intel-parallel-studio+mkl' in spec:
             args.append('-DBLAS_LIBRARY="Intel MKL"')
 
-            # TODO: This belongs to `intel-mkl`, open a PR
-            #
             if '+ifort':
                 args.append('-DBLAS_LIBRARY_MKL="Intel ifort conventions"')
             else:

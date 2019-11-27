@@ -9,7 +9,12 @@
 //
 
 #pragma once
+
+/// @file
+
 #include <functional>
+#include <iomanip>
+#include <iostream>
 #include <sstream>
 #include "gtest/gtest.h"
 #include "dlaf/matrix.h"
@@ -146,5 +151,39 @@ void checkPtr(PointerGetter exp_ptr, Matrix<T, Device::CPU>& mat, const char* fi
 }
 #define CHECK_MATRIX_PTR(exp_ptr, mat) \
   ::dlaf_test::matrix_test::checkPtr(exp_ptr, mat, __FILE__, __LINE__);
+
+/// @brief Checks the elements of the matrix.
+///
+/// The (i, j)-element of the matrix is compared to expected({i, j}).
+/// @pre expected argument is an index of type const MatrixElementIndex&.
+/// @pre expected return type should be T.
+/// @pre rel_err > 0.
+/// @pre abs_err > 0.
+template <class T, class ElementGetter>
+void checkNear(ElementGetter expected, Matrix<T, Device::CPU>& mat, BaseType<T> rel_err,
+               BaseType<T> abs_err, const char* file, const int line) {
+  ASSERT_GT(rel_err, 0);
+  ASSERT_GT(abs_err, 0);
+
+  auto comp = [rel_err, abs_err](T expected, T value) {
+    auto diff = std::abs(expected - value);
+    auto abs_max = std::max(std::abs(expected), std::abs(value));
+
+    return (diff < abs_err) || (diff / abs_max < rel_err);
+  };
+  auto err_message = [rel_err, abs_err](T expected, T value) {
+    auto diff = std::abs(expected - value);
+    auto abs_max = std::max(std::abs(expected), std::abs(value));
+
+    std::stringstream s;
+    s << "expected " << expected << " == " << value << " (Relative diff: " << diff / abs_max << " > "
+      << rel_err << ", " << diff << " > " << abs_err << ")";
+    return s.str();
+  };
+  internal::check(expected, mat, comp, err_message, file, line);
+}
+#define CHECK_MATRIX_NEAR(expected, matrix, rel_err, abs_err) \
+  ::dlaf_test::matrix_test::checkNear(expected, mat, rel_err, abs_err, __FILE__, __LINE__);
+
 }
 }

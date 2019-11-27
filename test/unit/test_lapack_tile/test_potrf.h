@@ -47,7 +47,7 @@ void testPotrf(blas::Uplo uplo, SizeType n, SizeType extra_lda) {
   //      = Sum_k(1 / 2^(|i-k| + |j-k|) * exp(I*(-i+j))),
   // where k = 0 .. min(i,j)
   // Therefore,
-  // a_ij = (2^(min(i,j)+1) - 1) / (3 * 2^(i+j)) * exp(I*(-i+j)
+  // a_ij = (4^(min(i,j)+1) - 1) / (3 * 2^(i+j)) * exp(I*(-i+j))
   auto el_a = [uplo](const TileElementIndex& index) {
     if ((uplo == blas::Uplo::Lower && index.row() < index.col()) ||
         (uplo == blas::Uplo::Upper && index.row() > index.col()))
@@ -125,7 +125,7 @@ void testPotrfNonPosDef(blas::Uplo uplo, SizeType n, SizeType extra_lda) {
   Tile<T, Device::CPU> a(size_a, std::move(mem_a), lda);
 
   // Use null matrix
-  auto el_a = [uplo](const TileElementIndex&) { return TypeUtilities<T>::element(0, 0); };
+  auto el_a = [](const TileElementIndex&) { return TypeUtilities<T>::element(0, 0); };
 
   // Set tile elements.
   tile_test::set(a, el_a);

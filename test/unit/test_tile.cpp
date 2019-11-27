@@ -334,3 +334,25 @@ TYPED_TEST(TileTest, PromiseToFutureConst) {
   auto ptr = [&memory_view](const TileElementIndex& index) { return memory_view(elIndex(index, ld)); };
   CHECK_TILE_PTR(ptr, tile2);
 }
+
+// Buffer
+TYPED_TEST(TileTest, CreateBuffer) {
+  using namespace dlaf;
+
+  SizeType m = 37;
+  SizeType n = 87;
+  SizeType ld = 133;
+
+  memory::MemoryView<TypeParam, Device::CPU> memory_view(ld * n);
+  auto mem_view = memory_view;
+
+  TileElementSize size(m, n);
+  Tile<TypeParam, Device::CPU> tile(size, std::move(mem_view), ld);
+
+  auto tile_buffer = dlaf::common::make_buffer(tile);
+
+  EXPECT_EQ(tile.ptr({0, 0}), get_pointer(tile_buffer));
+  EXPECT_EQ(tile.size().cols(), get_num_blocks(tile_buffer));
+  EXPECT_EQ(tile.size().rows(), get_blocksize(tile_buffer));
+  EXPECT_EQ(tile.ld(), get_stride(tile_buffer));
+}

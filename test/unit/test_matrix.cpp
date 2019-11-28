@@ -34,7 +34,7 @@ TYPED_TEST_CASE(MatrixLocalTest, MatrixElementTypes);
 
 template <typename Type>
 class MatrixTest : public ::testing::Test {
-  public:
+public:
   const std::vector<CommunicatorGrid>& commGrids() {
     return comm_grids;
   }
@@ -173,8 +173,7 @@ std::size_t memoryIndex(const Distribution& distribution, const LayoutInfo& layo
   return tile_offset + element_offset;
 }
 /// Returns true if the memory index is stored in distribution.rankIndex().
-bool ownIndex(const Distribution& distribution,
-                     const GlobalElementIndex& index) {
+bool ownIndex(const Distribution& distribution, const GlobalElementIndex& index) {
   auto global_tile_index = distribution.globalTileIndex(index);
   return distribution.rankIndex() == distribution.rankGlobalTile(global_tile_index);
 }
@@ -383,8 +382,8 @@ TYPED_TEST(MatrixTest, ConstructorExistingConst) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size(test.size);
       Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      LayoutInfo layout =
-          colMajorLayout(distribution.localSize(), test.block_size, std::max(1, distribution.localSize().rows()));
+      LayoutInfo layout = colMajorLayout(distribution.localSize(), test.block_size,
+                                         std::max(1, distribution.localSize().rows()));
       memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
 
       // Copy distribution for testing purpose.
@@ -1055,4 +1054,3 @@ TEST(MatrixDestructorFutures, ConstAfterRead) {
 
   last_task.get();
 }
-

@@ -20,7 +20,7 @@ using namespace testing;
 template <typename Type>
 class MemoryViewTest : public ::testing::Test {};
 
-TYPED_TEST_CASE(MemoryViewTest, ElementTypes);
+TYPED_TEST_SUITE(MemoryViewTest, ElementTypes);
 
 int size = 397;
 

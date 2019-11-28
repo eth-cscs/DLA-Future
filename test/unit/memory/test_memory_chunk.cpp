@@ -20,7 +20,7 @@ using namespace testing;
 template <typename Type>
 class MemoryChunkTest : public ::testing::Test {};
 
-TYPED_TEST_CASE(MemoryChunkTest, ElementTypes);
+TYPED_TEST_SUITE(MemoryChunkTest, ElementTypes);
 
 int size = 397;
 

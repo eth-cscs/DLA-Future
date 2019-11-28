@@ -29,7 +29,7 @@ std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
 template <typename Type>
 class TileOperationsTest : public ::testing::Test {};
 
-TYPED_TEST_CASE(TileOperationsTest, MatrixElementTypes);
+TYPED_TEST_SUITE(TileOperationsTest, MatrixElementTypes);
 
 TYPED_TEST(TileOperationsTest, Gemm) {
   using Type = TypeParam;

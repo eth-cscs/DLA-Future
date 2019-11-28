@@ -47,7 +47,7 @@ class MathUtilTest : public ::testing::Test {};
 using IntegerTypes = ::testing::Types<char, short, int, long, long long, unsigned char, unsigned short,
                                       unsigned int, unsigned long, unsigned long long>;
 
-TYPED_TEST_CASE(MathUtilTest, IntegerTypes);
+TYPED_TEST_SUITE(MathUtilTest, IntegerTypes);
 
 TYPED_TEST(MathUtilTest, CeilDivType) {
   using Type = TypeParam;

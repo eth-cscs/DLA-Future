@@ -40,7 +40,7 @@ public:
   }
 };
 
-TYPED_TEST_CASE(MatrixTest, MatrixElementTypes);
+TYPED_TEST_SUITE(MatrixTest, MatrixElementTypes);
 
 struct TestSizes {
   std::array<SizeType, 2> size;

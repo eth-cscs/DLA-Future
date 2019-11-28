@@ -9,13 +9,14 @@
 //
 
 #include "dlaf/matrix/layout_info.h"
+
 #include <cassert>
 #include "dlaf/util_math.h"
 
 namespace dlaf {
 namespace matrix {
-LayoutInfo::LayoutInfo(const GlobalElementSize& size, const TileElementSize& block_size,
-                       SizeType tile_ld, std::size_t tile_offset_row, std::size_t tile_offset_col)
+LayoutInfo::LayoutInfo(const LocalElementSize& size, const TileElementSize& block_size, SizeType tile_ld,
+                       std::size_t tile_offset_row, std::size_t tile_offset_col)
     : size_(size), nr_tiles_(0, 0), block_size_(block_size), ld_tile_(tile_ld),
       tile_offset_row_(tile_offset_row), tile_offset_col_(tile_offset_col) {
   using util::size_t::sum;

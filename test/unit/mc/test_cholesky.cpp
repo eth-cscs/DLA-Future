@@ -23,8 +23,8 @@ class CholeskyTest : public ::testing::Test {};
 
 TYPED_TEST_CASE(CholeskyTest, MatrixElementTypes);
 
-std::vector<GlobalElementSize> square_sizes({{10, 10}, {25, 25}, {12, 12}, {0, 0}});
-std::vector<GlobalElementSize> rectangular_sizes({{10, 20}, {50, 20}, {0, 10}, {20, 0}});
+std::vector<LocalElementSize> square_sizes({{10, 10}, {25, 25}, {12, 12}, {0, 0}});
+std::vector<LocalElementSize> rectangular_sizes({{10, 20}, {50, 20}, {0, 10}, {20, 0}});
 std::vector<TileElementSize> square_block_sizes({{5, 5}, {20, 20}});
 std::vector<TileElementSize> rectangular_block_sizes({{10, 30}, {20, 10}});
 

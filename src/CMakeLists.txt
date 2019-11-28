@@ -12,8 +12,8 @@ add_library(DLAF
   communication/communicator_impl.cpp
   communication/communicator.cpp
   communication/communicator_grid.cpp
+  matrix/distribution.cpp
   matrix/layout_info.cpp
-  matrix_base.cpp
 )
 
 target_include_directories(DLAF

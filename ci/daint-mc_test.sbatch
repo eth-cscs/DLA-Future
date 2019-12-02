@@ -26,11 +26,7 @@ set -e
 # add test log to output
 cat Testing/Temporary/LastTest.log*
 
-if [ $RETCODE -ne 0 ]
-then
-  echo "Test Failed"
-  false
-fi
+(exit $RETCODE)
 
 # only executed if tests passed
 echo "Test Successful"

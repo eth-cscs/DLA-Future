@@ -76,7 +76,7 @@ pipeline {
     always {
       sh '''
          mkdir ${OUTDIR}
-         cp *.out.txt ${OUTDIR}
+         find . -name "*.out.txt" -exec cp {} $OUTDIR ";"
          '''
       archiveArtifacts artifacts: '**/*.out.txt', fingerprint: true
     }

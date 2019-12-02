@@ -14,9 +14,25 @@ set -x
 DIR=build_${BUILD_TYPE}
 
 cd $DIR
+
+# make sure no test log exists
+rm -f Testing/Temporary/LastTest.log*
+
+set +e
 make test
+RETCODE=$?
+set -e
+
+# add test log to output
+cat Testing/Temporary/LastTest.log*
+
+if [ $RETCODE -ne 0 ]
+then
+  echo "Test Failed"
+  false
+fi
 
 # only executed if tests passed
-echo "test successful"
+echo "Test Successful"
 cd ..
 rm -rf $DIR

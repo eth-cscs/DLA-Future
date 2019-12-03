@@ -217,9 +217,7 @@ Matrix<T, device> createMatrixFromColMajor(const LocalElementSize& size,
 /// which references elements
 /// that are already allocated in the memory with a tile layout
 ///
-/// @param[in] ld_tile the leading dimension of the tiles.
 /// @param[in] ptr is the pointer to the first element of the local part of the matrix.
-/// @throw std::invalid_argument if @p ld_tile < max(1, min(block_size.row(), size.row()).
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
 /// stored in the given layout.
 template <Device device, class T>
@@ -235,7 +233,7 @@ Matrix<T, device> createMatrixFromTile(const LocalElementSize& size, const TileE
 /// @param[in] ld_tile the leading dimension of the tiles.
 /// @param[in] tiles_per_col the number of tiles stored for each column of tiles.
 /// @param[in] ptr is the pointer to the first element of the local part of the matrix.
-/// @throw std::invalid_argument if @p ld_tile < max(1, min(block_size.row(), size.row()).
+/// @throw std::invalid_argument if @p ld_tile < max(1, min(block_size.row(), size.row())).
 /// @throw std::invalid_argument if @p tiles_per_col < ceilDiv(size.row(), block_size.col()).
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
 /// stored in the given layout.
@@ -273,8 +271,8 @@ Matrix<T, device> createMatrixFromColMajor(const GlobalElementSize& size,
 /// on the given 2D communicator grid @p comm which references elements
 /// that are already allocated in the memory with a column major layout
 ///
+/// This method assumes @p source_rank_index to be {0,0}.
 /// @param[in] ld the leading dimension of the matrix.
-/// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix.
 /// @param[in] ptr is the pointer to the first element of the local part of the matrix.
 /// @throw std::invalid_argument if @p ld < max(1, size.row()).
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
@@ -290,10 +288,8 @@ Matrix<T, device> createMatrixFromColMajor(const GlobalElementSize& size,
 /// on the given 2D communicator grid @p comm which references elements
 /// that are already allocated in the memory with a tile layout
 ///
-/// @param[in] ld_tile the leading dimension of the tiles.
 /// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix.
 /// @param[in] ptr is the pointer to the first element of the local part of the matrix.
-/// @throw std::invalid_argument if @p ld_tile < max(1, min(block_size.row(), size.row()).
 /// @throw std::invalid_argument if @p !source_rank_index.isValid() or @p !source_rank_index_.isIn(grid_size).
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
 /// stored in the given layout.
@@ -311,10 +307,8 @@ Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const Tile
 /// on the given 2D communicator grid @p comm which references elements
 /// that are already allocated in the memory with a tile layout
 ///
-/// @param[in] ld_tile the leading dimension of the tiles.
+/// This method assumes @p source_rank_index to be {0,0}.
 /// @param[in] ptr is the pointer to the first element of the local part of the matrix.
-/// @throw std::invalid_argument if @p ld_tile < max(1, min(block_size.row(), size.row()).
-/// @throw std::invalid_argument if @p !source_rank_index.isValid() or @p !source_rank_index_.isIn(grid_size).
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
 /// stored in the given layout.
 template <Device device, class T>
@@ -331,7 +325,7 @@ Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const Tile
 /// @param[in] tiles_per_col the number of tiles stored for each column of tiles.
 /// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix.
 /// @param[in] ptr is the pointer to the first element of the local part of the matrix.
-/// @throw std::invalid_argument if @p ld_tile < max(1, min(block_size.row(), size.row()).
+/// @throw std::invalid_argument if @p ld_tile < max(1, min(block_size.row(), size.row())).
 /// @throw std::invalid_argument if @p tiles_per_col < ceilDiv(size.row(), block_size.row()).
 /// @throw std::invalid_argument if @p !source_rank_index.isValid() or @p !source_rank_index_.isIn(grid_size).
 
@@ -352,6 +346,7 @@ Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const Tile
 /// on the given 2D communicator grid @p comm which references elements
 /// that are already allocated in the memory with a tile layout
 ///
+/// This method assumes @p source_rank_index to be {0,0}.
 /// @param[in] ld_tile the leading dimension of the tiles.
 /// @param[in] tiles_per_col the number of tiles stored for each column of tiles.
 /// @param[in] ptr is the pointer to the first element of the local part of the matrix.

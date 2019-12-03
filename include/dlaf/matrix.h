@@ -19,12 +19,12 @@
 
 namespace dlaf {
 
-/// Matrix represent a collection of tiles which contain all the elements of a matrix.
+/// A @c Matrix object represents a collection of tiles which contain all the elements of a matrix.
 ///
-/// The tiles are distributed according a distribution (see @c Matrix::distribution()),
+/// The tiles are distributed according to a distribution (see @c Matrix::distribution()),
 /// therefore some tiles are stored locally on this rank,
 /// while the others are available on other ranks.
-/// More details available in misc/matrix_distribution.md.
+/// More details are available in misc/matrix_distribution.md.
 /// TODO: Sync details.
 
 template <class T, Device device>
@@ -55,14 +55,14 @@ public:
   /// Create a matrix distributed according the distribution @p distribution,
   /// specifying the layout.
   ///
-  /// @param[in] layout is the layout which describe how the elements
+  /// @param[in] layout is the layout which describes how the elements
   ///            of the local part of the matrix will be stored in memory.
   Matrix(matrix::Distribution&& distribution, const matrix::LayoutInfo& layout);
 
   /// Create a non distributed matrix,
   /// which references elements that are already allocated in the memory
   ///
-  /// @param[in] layout is the layout which describe how the elements
+  /// @param[in] layout is the layout which describes how the elements
   ///            of the local part of the matrix are stored in memory.
   /// @param[in] ptr is the pointer to the first element of the local part of the matrix.
   /// @pre @p ptr refers to an allocated memory region of at least @c layout.minMemSize() elements.
@@ -71,7 +71,7 @@ public:
   /// Create a matrix distributed according the distribution @p distribution,
   /// which references elements that are already allocated in the memory
   ///
-  /// @param[in] layout is the layout which describe how the elements
+  /// @param[in] layout is the layout which describes how the elements
   ///            of the local part of the matrix are stored in memory.
   /// @param[in] ptr is the pointer to the first element of the local part of the matrix.
   /// @throw std::invalid_argument if @p distribution.localSize() != @p layout.size().

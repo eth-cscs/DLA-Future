@@ -19,13 +19,14 @@ using namespace dlaf::comm;
 std::vector<CommunicatorGrid> comm_grids;
 
 class CommunicatorGrid6RanksEnvironment : public ::testing::Environment {
+  static_assert(NUM_MPI_RANKS == 6, "Exactly 6 ranks are required");
 public:
   virtual void SetUp() override {
     if (comm_grids.empty()) {
       Communicator world(MPI_COMM_WORLD);
       comm_grids.emplace_back(world, 3, 2, common::Ordering::ColumnMajor);
-      // comm_grids.emplace_back(world, 3, 2, common::Ordering::RowMajor);
-      // comm_grids.emplace_back(world, 2, 3, common::Ordering::ColumnMajor);
+      comm_grids.emplace_back(world, 3, 2, common::Ordering::RowMajor);
+      comm_grids.emplace_back(world, 2, 3, common::Ordering::ColumnMajor);
 
       int rows = -1;
       int cols = -1;
@@ -49,7 +50,7 @@ public:
       MPI_Comm_split(world, color, world.rank(), &split_comm);
 
       Communicator comm(split_comm);
-      // comm_grids.emplace_back(comm, rows, cols, common::Ordering::ColumnMajor);
+      comm_grids.emplace_back(comm, rows, cols, common::Ordering::ColumnMajor);
     }
   }
 

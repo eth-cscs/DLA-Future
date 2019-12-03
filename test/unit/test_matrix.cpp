@@ -88,7 +88,7 @@ TYPED_TEST(MatrixLocalTest, Constructor) {
   auto el = [](const GlobalElementIndex& index) {
     SizeType i = index.row();
     SizeType j = index.col();
-    return TypeUtilities<Type>::element(i + 0.001 * j, j - 0.01 * i);
+    return TypeUtilities<Type>::element(i + j / 1024., j - i / 128.);
   };
 
   for (const auto& test : sizes_tests) {
@@ -108,7 +108,7 @@ TYPED_TEST(MatrixTest, Constructor) {
   auto el = [](const GlobalElementIndex& index) {
     SizeType i = index.row();
     SizeType j = index.col();
-    return TypeUtilities<Type>::element(i + 0.001 * j, j - 0.01 * i);
+    return TypeUtilities<Type>::element(i + j / 1024., j - i / 128.);
   };
 
   for (const auto& comm_grid : this->commGrids()) {
@@ -131,7 +131,7 @@ TYPED_TEST(MatrixTest, ConstructorFromDistribution) {
   auto el = [](const GlobalElementIndex& index) {
     SizeType i = index.row();
     SizeType j = index.col();
-    return TypeUtilities<Type>::element(i + 0.001 * j, j - 0.01 * i);
+    return TypeUtilities<Type>::element(i + j / 1024., j - i / 128.);
   };
 
   for (const auto& comm_grid : this->commGrids()) {
@@ -184,12 +184,12 @@ void checkDistributionLayout(T* p, const Distribution& distribution, const Layou
   auto el = [](const GlobalElementIndex& index) {
     SizeType i = index.row();
     SizeType j = index.col();
-    return TypeUtilities<T>::element(i + 0.001 * j, j - 0.01 * i);
+    return TypeUtilities<T>::element(i + j / 1024., j - i / 128.);
   };
   auto el2 = [](const GlobalElementIndex& index) {
     SizeType i = index.row();
     SizeType j = index.col();
-    return TypeUtilities<T>::element(-i + 0.001 * j, j + 0.01 * i);
+    return TypeUtilities<T>::element(-2 - i + j / 1024., j + i / 64.);
   };
 
   ASSERT_EQ(distribution, matrix.distribution());
@@ -234,7 +234,7 @@ void checkDistributionLayout(T* p, const Distribution& distribution, const Layou
   auto el = [](const GlobalElementIndex& index) {
     SizeType i = index.row();
     SizeType j = index.col();
-    return TypeUtilities<T>::element(i + 0.001 * j, j - 0.01 * i);
+    return TypeUtilities<T>::element(i + j / 1024., j - i / 128.);
   };
 
   ASSERT_EQ(distribution, matrix.distribution());

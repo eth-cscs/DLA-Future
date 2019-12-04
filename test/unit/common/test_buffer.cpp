@@ -20,7 +20,7 @@
 template <class Type>
 class BufferTest : public ::testing::Test {};
 
-TYPED_TEST_CASE(BufferTest, dlaf_test::BufferTypes);
+TYPED_TEST_SUITE(BufferTest, dlaf_test::BufferTypes);
 
 TYPED_TEST(BufferTest, MakeFromPointer) {
   using namespace dlaf::common;

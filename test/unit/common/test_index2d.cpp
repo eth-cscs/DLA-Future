@@ -22,7 +22,7 @@ template <typename IndexType>
 class Index2DTest : public ::testing::Test {};
 
 using IndexTypes = ::testing::Types<int8_t, int16_t, int32_t, int64_t>;
-TYPED_TEST_CASE(Index2DTest, IndexTypes);
+TYPED_TEST_SUITE(Index2DTest, IndexTypes);
 
 TYPED_TEST(Index2DTest, ConstructorDefault) {
   Index2D<TypeParam> index;

@@ -42,7 +42,7 @@ TileSizes getSizes(const Tile<T, device>& tile) {
 template <typename Type>
 class TileTest : public ::testing::Test {};
 
-TYPED_TEST_CASE(TileTest, MatrixElementTypes);
+TYPED_TEST_SUITE(TileTest, MatrixElementTypes);
 
 TYPED_TEST(TileTest, Constructor) {
   using Type = TypeParam;

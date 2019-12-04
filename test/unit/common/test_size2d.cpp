@@ -21,7 +21,7 @@ template <typename IndexType>
 class Size2DTest : public ::testing::Test {};
 
 using IndexTypes = ::testing::Types<int8_t, int16_t, int32_t, int64_t>;
-TYPED_TEST_CASE(Size2DTest, IndexTypes);
+TYPED_TEST_SUITE(Size2DTest, IndexTypes);
 
 TYPED_TEST(Size2DTest, ConstructorFromParams) {
   TypeParam row = 5;

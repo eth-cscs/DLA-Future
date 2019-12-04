@@ -21,7 +21,7 @@ using namespace matrix_test;
 template <typename Type>
 class CholeskyTest : public ::testing::Test {};
 
-TYPED_TEST_CASE(CholeskyTest, MatrixElementTypes);
+TYPED_TEST_SUITE(CholeskyTest, MatrixElementTypes);
 
 std::vector<LocalElementSize> square_sizes({{10, 10}, {25, 25}, {12, 12}, {0, 0}});
 std::vector<LocalElementSize> rectangular_sizes({{10, 20}, {50, 20}, {0, 10}, {20, 0}});

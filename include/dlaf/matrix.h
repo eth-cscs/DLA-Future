@@ -49,10 +49,10 @@ public:
   Matrix(const GlobalElementSize& size, const TileElementSize& block_size,
          const comm::CommunicatorGrid& comm);
 
-  /// Create a matrix distributed according the distribution @p distribution.
+  /// Create a matrix distributed according to the distribution @p distribution.
   Matrix(matrix::Distribution&& distribution);
 
-  /// Create a matrix distributed according the distribution @p distribution,
+  /// Create a matrix distributed according to the distribution @p distribution,
   /// specifying the layout.
   ///
   /// @param[in] layout is the layout which describes how the elements
@@ -68,7 +68,7 @@ public:
   /// @pre @p ptr refers to an allocated memory region of at least @c layout.minMemSize() elements.
   Matrix(const matrix::LayoutInfo& layout, ElementType* ptr);
 
-  /// Create a matrix distributed according the distribution @p distribution,
+  /// Create a matrix distributed according to the distribution @p distribution,
   /// which references elements that are already allocated in the memory
   ///
   /// @param[in] layout is the layout which describes how the elements

@@ -18,11 +18,11 @@
 namespace dlaf {
 namespace common {
 
-template <typename T, std::size_t PoolSize>
+template <typename T>
 class Pool {
   template <class U>
   class Wrapper {
-    friend class Pool<U, PoolSize>;
+    friend class Pool<U>;
 
     Wrapper(U&& object, hpx::lcos::local::channel<U>* channel)
         : channel_(channel), object_(std::move(object)) {}
@@ -53,14 +53,14 @@ class Pool {
 public:
   using future_t = hpx::future<Wrapper<T>>;
 
-  Pool() {
-    for (int i = 0; i < PoolSize; ++i)
+  Pool(std::size_t pool_size) : size_(pool_size) {
+    for (int i = 0; i < size_; ++i)
       channel_.set(T{});
   }
 
   ~Pool() {
     channel_.close(/*true*/);  // TODO check what force_delete does
-    for (int i = 0; i < PoolSize; ++i)
+    for (int i = 0; i < size_; ++i)
       channel_.get().get();
   }
 
@@ -75,6 +75,7 @@ private:
     return Wrapper<T>{std::move(object), &channel_};
   }
 
+  const std::size_t size_;
   hpx::lcos::local::channel<T> channel_;
 };
 

@@ -17,12 +17,12 @@ using dlaf::common::Pool;
 TEST(Pool, UsageExample) {
   using TypeParam = std::unique_ptr<int>;
 
-  Pool<TypeParam, 2> pool;
+  Pool<TypeParam> pool(2);
   // (ready, ready) queue: []
 
-  Pool<TypeParam, 2>::future_t workspace2;
+  Pool<TypeParam>::future_t workspace2;
   {
-    Pool<TypeParam, 2>::future_t workspace0, workspace1;
+    Pool<TypeParam>::future_t workspace0, workspace1;
 
     workspace0 = pool.get();
     // (workspace0, ready) queue: []

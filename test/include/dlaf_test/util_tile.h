@@ -91,7 +91,8 @@ namespace internal {
 /// @pre expected return type should be the same as the type of the first argument of comp and of err_message.
 /// @pre The second argument of comp should be either T, T& or const T&.
 /// @pre The second argument of err_message should be either T, T& or const T&.
-template <class T, class ElementGetter, class ComparisonOp, class ErrorMessageGetter>
+template <class T, class ElementGetter, class ComparisonOp, class ErrorMessageGetter,
+          std::enable_if_t<!std::is_convertible<ElementGetter, T>::value, int> = 0>
 void check(ElementGetter expected, const Tile<T, Device::CPU>& tile, ComparisonOp comp,
            ErrorMessageGetter err_message, const char* file, const int line) {
   for (SizeType j = 0; j < tile.size().cols(); ++j) {
@@ -104,6 +105,23 @@ void check(ElementGetter expected, const Tile<T, Device::CPU>& tile, ComparisonO
       }
     }
   }
+}
+
+/// @brief Checks the elements of the tile w.r.t. a fixed value
+///
+/// comp(expected, (i, j)-element) is used to compare the elements.
+/// err_message(expected, (i, j)-element) is printed for the first element which does not fulfill
+/// the comparison.
+/// @pre comp should have two arguments and return true if the comparison is fulfilled and false otherwise.
+/// @pre err_message should have two arguments and return a string.
+/// @pre expected type should be the same as the type of the first argument of comp and of err_message.
+/// @pre The second argument of comp should be either T, T& or const T&.
+/// @pre The second argument of err_message should be either T, T& or const T&.
+template <class T, class U, class ComparisonOp, class ErrorMessageGetter,
+          enable_if_convertible_t<U, T, int> = 0>
+void check(U expected, const Tile<T, Device::CPU>& tile, ComparisonOp comp,
+           ErrorMessageGetter err_message, const char* file, const int line) {
+  check([expected](TileElementIndex) { return expected; }, tile, comp, err_message, file, line);
 }
 }
 

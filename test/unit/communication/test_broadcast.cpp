@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/communication/functions.h"
+#include "dlaf/communication/functions_sync.h"
 
 #include <gtest/gtest.h>
 
@@ -25,11 +25,11 @@ TEST_F(BroadcastTest, Broadcast_NewAPI) {
 
   if (splitted_comm.rank() == 0) {
     const int message = color;
-    broadcast::send(make_message(&message, 1), communicator);
+    sync::broadcast::send(communicator, make_message(&message, 1));
   }
   else {
     int message;
-    broadcast::receive_from(broadcaster, make_message(&message, 1), communicator);
+    sync::broadcast::receive_from(broadcaster, communicator, make_message(&message, 1));
     EXPECT_EQ(color, message);
   }
 }

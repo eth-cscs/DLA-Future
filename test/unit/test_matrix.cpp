@@ -30,7 +30,7 @@ using namespace testing;
 template <typename Type>
 class MatrixLocalTest : public ::testing::Test {};
 
-TYPED_TEST_CASE(MatrixLocalTest, MatrixElementTypes);
+TYPED_TEST_SUITE(MatrixLocalTest, MatrixElementTypes);
 
 template <typename Type>
 class MatrixTest : public ::testing::Test {

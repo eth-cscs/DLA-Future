@@ -143,6 +143,7 @@ std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, std::size_t,
         {{29, 41}, {13, 11}, 35, 13, 385, 1429},  // padded ld
         {{1, 0}, {1, 1}, 1, 1, 1, 0},             // empty matrix
         {{0, 1}, {1, 1}, 1, 1, 1, 0},             // empty matrix
+        {{0, 0}, {1, 1}, 1, 1, 1, 0},             // empty matrix
     });
 
 TEST(LayoutInfoTest, ColMajorLayout) {
@@ -173,6 +174,7 @@ std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, SizeType, st
         {{29, 41}, {13, 11}, 13, 4, 143, 572, 2096, false},  // padded tiles_per_col
         {{1, 0}, {1, 1}, 1, 0, 1, 1, 0, true},               // empty matrix
         {{0, 1}, {1, 1}, 1, 0, 1, 1, 0, true},               // empty matrix
+        {{0, 0}, {1, 1}, 1, 0, 1, 1, 0, true},               // empty matrix
     });
 
 TEST(LayoutInfoTest, TileLayout) {

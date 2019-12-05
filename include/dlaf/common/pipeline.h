@@ -16,49 +16,71 @@
 namespace dlaf {
 namespace common {
 
+/// Pipeline takes ownership of a given object and manages the access to this resource by serializing
+/// calls. Anyone that requires access to the underlying resource will get an hpx::future, which is the
+/// way to register to the queue. All requests are serialized and served in the same order they are
+/// arrived.
+///
+/// The mechanism for auto-releasing the resource and passing it to the next user works thanks to the
+/// internal Wrapper object. This Wrapper contains the real resource, and it will what is needed to
+/// unlock the next user as soon as the Wrapper is destroyed.
 template <class T>
 struct Pipeline {
 public:
+  /// Wrapper is the object that manages the auto-release mechanism
   template <class U>
   class Wrapper {
     friend class Pipeline<U>;
 
+    /// Create a wrapper
+    /// @param object	the resource to wrap (the wrapper becomes the owner of the resource)
+    /// @param next	the promise that has to be set on destruction
     Wrapper(U&& object, hpx::promise<T> next)
         : object_(std::move(object)), promise_(std::move(next)), valid_(true) {}
 
   public:
+    /// Trivial move constructor (that invalidates the status of the source object)
     Wrapper(Wrapper&& rhs) : object_(std::move(rhs.object_)), promise_(std::move(rhs.promise_)) {
       std::swap(valid_, rhs.valid_);
     }
 
+    /// This is where the "magic" happens!
+    ///
+    /// If the wrapper is still valid, set the promise to unlock the next future
     ~Wrapper() {
       if (valid_)
         promise_.set_value(std::move(object_));
     }
 
+    /// Get a reference to the internal object
     U& operator()() {
       return object_;
     }
 
+    /// Get a reference to the internal object
     const U& operator()() const {
       return object_;
     }
 
   private:
-    bool valid_ = false;
-    U object_;
-    hpx::promise<U> promise_;
+    bool valid_ = false;       ///< tells if the Wrapper is in a valid state (it has not been moved)
+    U object_;                 ///< the wrapped object! it is actually owned by the wrapper
+    hpx::promise<U> promise_;  ///< promise containing the shared state that will unlock the next user
   };
 
+  /// Create a Pipeline by moving in the resource (it takes the ownership)
   Pipeline(T&& object) {
     future_ = hpx::make_ready_future(std::move(object));
   }
 
+  /// On destruction it waits that all users have finished using it
   ~Pipeline() {
     if (future_.valid())
       future_.get();
   }
 
+  /// Enqueue for the resource
+  /// @return a future that will become ready as soon as the previous user release the resource
   hpx::future<Wrapper<T>> operator()() {
     auto before_last = std::move(future_);
 
@@ -73,7 +95,7 @@ public:
   }
 
 private:
-  hpx::future<T> future_;
+  hpx::future<T> future_;  ///< This contains always the "tail" of the queue of futures
 };
 
 }

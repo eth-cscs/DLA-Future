@@ -18,11 +18,10 @@ namespace common {
 
 /// Pipeline takes ownership of a given object and manages the access to this resource by serializing
 /// calls. Anyone that requires access to the underlying resource will get an hpx::future, which is the
-/// way to register to the queue. All requests are serialized and served in the same order they are
-/// arrived.
+/// way to register to the queue. All requests are serialized and served in the same order they arrive.
 ///
 /// The mechanism for auto-releasing the resource and passing it to the next user works thanks to the
-/// internal Wrapper object. This Wrapper contains the real resource, and it will what is needed to
+/// internal Wrapper object. This Wrapper contains the real resource, and it will do what is needed to
 /// unlock the next user as soon as the Wrapper is destroyed.
 template <class T>
 struct Pipeline {

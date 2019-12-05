@@ -1,6 +1,6 @@
 #pragma once
 
-#include <memory>
+#include <hpx/lcos/promise.hpp>
 
 namespace dlaf {
 namespace common {
@@ -8,19 +8,22 @@ namespace common {
 template <class U>
 class IWrapper {
   public:
-  IWrapper(U&& object) : object_(std::move(object)) {}
+  IWrapper(U&& object) : object_(std::move(object)), is_valid_(false) {}
 
-  IWrapper(IWrapper&& rhs) = default;
+  IWrapper(IWrapper&& rhs) : object_(std::move(rhs.object_)), is_valid_(std::move(rhs.is_valid_)), promise_(std::move(rhs.promise_)) {
+    rhs.is_valid_ = false;
+  }
 
   ~IWrapper() {
-    if (p_)
-      p_->set_value(std::move(object_));
+    if (is_valid_)
+      promise_.set_value(std::move(object_));
   }
 
   U& setPromise(hpx::promise<U>&& p) {
-    if (p_)
+    if (is_valid_)
       throw std::logic_error("setPromise has been already used on this object!");
-    p_ = std::make_unique<hpx::promise<U>>(std::move(p));
+    is_valid_ = true;
+    promise_ = std::move(p);
     return object_;
   }
 
@@ -34,7 +37,8 @@ class IWrapper {
 
   private:
   U object_;
-  std::unique_ptr<hpx::promise<U>> p_;
+  bool is_valid_;
+  hpx::promise<U> promise_;
 };
 
 }

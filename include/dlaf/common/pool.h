@@ -13,8 +13,8 @@
 #include <functional>
 
 #include <hpx/lcos/future.hpp>
-#include <hpx/lcos/promise.hpp>
 #include <hpx/lcos/local/channel.hpp>
+#include <hpx/lcos/promise.hpp>
 
 #include "dlaf/common/iwrapper.hpp"
 
@@ -40,16 +40,16 @@ public:
   future_t get() {
     using hpx::util::unwrapping;
 
-    return channel_.get().then(hpx::launch::sync,
-                               unwrapping(
-				 [&channel = channel_] (auto&& object) {
-				   auto wrapper = IWrapper<T>(std::move(object));
-				   hpx::promise<T> next_promise;
-				   next_promise.get_future().then(hpx::launch::sync, unwrapping([&channel](auto&& object){ channel.set(std::move(object)); }));
-				   wrapper.setPromise(std::move(next_promise));
-				   return std::move(wrapper);
-				 }
-			       ));
+    return channel_.get().then(hpx::launch::sync, unwrapping([&channel = channel_](auto&& object) {
+                                 auto wrapper = IWrapper<T>(std::move(object));
+                                 hpx::promise<T> next_promise;
+                                 next_promise.get_future().then(hpx::launch::sync,
+                                                                unwrapping([&channel](auto&& object) {
+                                                                  channel.set(std::move(object));
+                                                                }));
+                                 wrapper.setPromise(std::move(next_promise));
+                                 return std::move(wrapper);
+                               }));
   }
 
 private:

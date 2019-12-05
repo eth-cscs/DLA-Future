@@ -7,10 +7,12 @@ namespace common {
 
 template <class U>
 class IWrapper {
-  public:
+public:
   IWrapper(U&& object) : object_(std::move(object)), is_valid_(false) {}
 
-  IWrapper(IWrapper&& rhs) : object_(std::move(rhs.object_)), is_valid_(std::move(rhs.is_valid_)), promise_(std::move(rhs.promise_)) {
+  IWrapper(IWrapper&& rhs)
+      : object_(std::move(rhs.object_)), is_valid_(std::move(rhs.is_valid_)),
+        promise_(std::move(rhs.promise_)) {
     rhs.is_valid_ = false;
   }
 
@@ -35,7 +37,7 @@ class IWrapper {
     return object_;
   }
 
-  private:
+private:
   U object_;
   bool is_valid_;
   hpx::promise<U> promise_;

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 //
 // Distributed Linear Algebra with Future (DLAF)
 //

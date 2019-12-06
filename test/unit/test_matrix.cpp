@@ -325,11 +325,11 @@ std::vector<ExistingLocalTestSizes> existing_local_tests({
     {{10, 7}, {3, 4}, 11, 3, 44},  // with padding (ld)
     {{10, 7}, {3, 4}, 13, 4, 52},  // with padding (row)
     {{10, 7}, {3, 4}, 10, 3, 41},  // with padding (col)
-    {{11, 7}, {4, 3}, 4, 12, 36},  // Tile layout
-    {{11, 7}, {4, 3}, 5, 15, 45},  // with padding (ld)
-    {{11, 7}, {4, 3}, 4, 13, 39},  // with padding (row)
-    {{11, 7}, {4, 3}, 4, 12, 37},  // with padding (col)
-    {{11, 7}, {4, 3}, 4, 12, 35},  // compressed col_offset
+    {{6, 11}, {4, 3}, 4, 12, 24},  // Tile layout
+    {{6, 11}, {4, 3}, 5, 15, 30},  // with padding (ld)
+    {{6, 11}, {4, 3}, 4, 13, 26},  // with padding (row)
+    {{6, 11}, {4, 3}, 4, 12, 31},  // with padding (col)
+    {{6, 11}, {4, 3}, 4, 12, 28},  // compressed col_offset
     {{0, 0}, {1, 1}, 1, 1, 1},
 });
 
@@ -640,8 +640,8 @@ struct TestLocalColMajor {
 std::vector<TestLocalColMajor> col_major_sizes_tests({
     {{10, 7}, {3, 4}, 10},  // packed ld
     {{10, 7}, {3, 4}, 11},  // padded ld
-    {{11, 7}, {4, 3}, 11},  // packed ld
-    {{11, 7}, {4, 3}, 13},  // padded ld
+    {{6, 11}, {4, 3}, 6},   // packed ld
+    {{6, 11}, {4, 3}, 7},   // padded ld
 });
 
 template <class T, Device device>
@@ -774,8 +774,8 @@ struct TestLocalTile {
 std::vector<TestLocalTile> tile_sizes_tests({
     {{10, 7}, {3, 4}, 3, 4, true},   // basic tile layout
     {{10, 7}, {3, 4}, 3, 7, false},  // padded tiles_per_col
-    {{11, 7}, {4, 3}, 4, 3, true},   // basic tile layout
-    {{11, 7}, {4, 3}, 5, 3, false},  // padded ld
+    {{6, 11}, {4, 3}, 4, 2, true},   // basic tile layout
+    {{6, 11}, {4, 3}, 5, 2, false},  // padded ld
 });
 
 TYPED_TEST(MatrixLocalTest, FromTile) {

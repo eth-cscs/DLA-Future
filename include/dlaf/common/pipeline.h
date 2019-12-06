@@ -34,20 +34,17 @@ public:
     /// Create a wrapper
     /// @param object	the resource to wrap (the wrapper becomes the owner of the resource)
     /// @param next	the promise that has to be set on destruction
-    Wrapper(U&& object, hpx::promise<T> next)
-        : object_(std::move(object)), promise_(std::move(next)), valid_(true) {}
+    Wrapper(U&& object, hpx::promise<T> next) : object_(std::move(object)), promise_(std::move(next)) {}
 
   public:
     /// Trivial move constructor (that invalidates the status of the source object)
-    Wrapper(Wrapper&& rhs) : object_(std::move(rhs.object_)), promise_(std::move(rhs.promise_)) {
-      std::swap(valid_, rhs.valid_);
-    }
+    Wrapper(Wrapper&& rhs) = default;
 
     /// This is where the "magic" happens!
     ///
     /// If the wrapper is still valid, set the promise to unlock the next future
     ~Wrapper() {
-      if (valid_)
+      if (promise_.valid())
         promise_.set_value(std::move(object_));
     }
 
@@ -62,7 +59,6 @@ public:
     }
 
   private:
-    bool valid_ = false;       ///< tells if the Wrapper is in a valid state (it has not been moved)
     U object_;                 ///< the wrapped object! it is actually owned by the wrapper
     hpx::promise<U> promise_;  ///< promise containing the shared state that will unlock the next user
   };

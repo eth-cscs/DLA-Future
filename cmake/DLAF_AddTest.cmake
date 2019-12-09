@@ -168,7 +168,8 @@ function(DLAF_addTest test_target_name)
   endif()
 
   if (IS_AN_HPX_TEST)
-    list(APPEND _TEST_ARGUMENTS ${DLAF_HPXTEST_EXTRA_ARGS})
+    separate_arguments(_HPX_EXTRA_ARGS_LIST UNIX_COMMAND ${DLAF_HPXTEST_EXTRA_ARGS})
+    list(APPEND _TEST_ARGUMENTS ${_HPX_EXTRA_ARGS_LIST})
   endif()
 
   add_test(

@@ -78,11 +78,11 @@ template <class T>
       
       // If the diagonal tile is on this node factorize it
       if (mat.rankIndex().col() == k_rank_col) {
-
 	auto k_local_col = mat.distribution().template localTileFromGlobalTile<Coord::Col>(k);
 
-	if (mat.rankIndex().row() == k_rank_row ) {
+        hpx::shared_future<Tile<const T, Device::CPU>> kk_tile;
 
+	if (mat.rankIndex().row() == k_rank_row ) {
 	  auto k_local_row = mat.distribution().template localTileFromGlobalTile<Coord::Row>(k);
 
 	  // Select tile kk
@@ -97,33 +97,31 @@ template <class T>
                   }),
 	    mat.read(kk), serial_comm() );
 	  
-	  panel[k_local_row] = mat.read(kk);
+	  kk_tile = mat.read(kk);
 	}
 	else {
-	  // Update panel
-	  auto k_local_row = mat.distribution().template localTileFromGlobalTile<Coord::Row>(k);
-	  
-	  TileElementSize tile_size (mat.blockSize().cols(), mat.blockSize().cols());
 
-	  panel[k_local_row] = hpx::dataflow(hpx::util::unwrapping([](auto &&index, auto&& tile_size, auto&& comm_wrapper) -> Tile<const T, Device::CPU> {
+	  kk_tile =
+          hpx::dataflow(hpx::util::unwrapping([](auto index, auto&& tile_size, auto&& comm_wrapper) -> Tile<const T, Device::CPU> {
 		memory::MemoryView<T, Device::CPU> mem_view(util::size_t::mul(tile_size.rows(), tile_size.cols()));
 		Tile<T, Device::CPU> tile(tile_size, std::move(mem_view), tile_size.rows());
 		dlaf::comm::sync::broadcast::receive_from(index, comm_wrapper().colCommunicator(), tile);
 		return std::move(tile);
-	      }), k_rank_row, tile_size, serial_comm() );
+	      }), k_rank_row, TileElementSize(mat.blockSize().cols(), mat.blockSize().cols()), serial_comm() );
+              // will be
+	      //}), k_rank_row, mat.tileSize(GlobalElementSize(k, k)), serial_comm() );
  
 	  
 	}
-      }
-      
-
-      
+	// Update panel
 //      for (SizeType i = k + 1; i < nrtile; ++i) {
 //        // Update panel mat(i,k) with trsm (blas operation), using data mat.read(k,k)
 //        hpx::dataflow(matrix_HP_executor, hpx::util::unwrapping(tile::trsm<T, Device::CPU>),
 //                      blas::Side::Right, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, 1.0,
 //                      mat.read(kk), std::move(mat(LocalTileIndex{i, k})));
 //      }
+      }
+      
 //
 //      for (SizeType j = k + 1; j < nrtile; ++j) {
 //        // Choose queue priority

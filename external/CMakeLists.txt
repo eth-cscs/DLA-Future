@@ -15,6 +15,10 @@ FetchContent_Declare(
   googletest
   GIT_REPOSITORY https://github.com/google/googletest.git
   GIT_TAG        release-1.10.0
+
+  # Patch for TestPartResult operator<<
+  # Fixes missing filename on exceptions causing segmentation fault
+  PATCH_COMMAND git cherry-pick -n 5395345ca4f0c596110188688ed990e0de5a181c -m 1
 )
 
 FetchContent_GetProperties(googletest)

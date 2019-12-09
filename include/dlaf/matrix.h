@@ -166,6 +166,12 @@ public:
   /// @pre index.isIn(globalNrTiles()) == true.
   hpx::shared_future<ConstTileType> read(const GlobalTileIndex& index) noexcept;
 
+  /// Returns the size of the Tile with global index @p index.
+  TileElementSize tileSize(const GlobalTileIndex& index) noexcept {
+    return {std::min(blockSize().rows(), size().rows() - index.row() * blockSize().rows()),
+            std::min(blockSize().cols(), size().cols() - index.col() * blockSize().cols())};
+  }
+
 protected:
   /// Returns the position in the vector of the index Tile.
   ///

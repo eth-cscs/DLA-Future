@@ -57,15 +57,28 @@ function(DLAF_addTest test_target_name)
     message(FATAL_ERROR "No sources specified for this test")
   endif()
 
+  ### Check if the test use MPI
   set(_DLAF_MPI_MAINS "MPI;MPIHPX")
+  set(IS_AN_MPI_TEST FALSE)
+  if (DLAF_AT_USE_MAIN IN_LIST _DLAF_MPI_MAINS)
+    set(IS_AN_MPI_TEST TRUE)
+  endif()
+
   if (DLAF_AT_USE_MAIN)
-    if (DLAF_AT_USE_MAIN IN_LIST _DLAF_MPI_MAINS AND NOT DLAF_AT_MPIRANKS)
+    if (IS_AN_MPI_TEST AND NOT DLAF_AT_MPIRANKS)
       message(FATAL_ERROR "You are asking for an MPI external main without specifying MPIRANKS")
     endif()
 
-    if (DLAF_AT_MPIRANKS AND NOT DLAF_AT_USE_MAIN IN_LIST _DLAF_MPI_MAINS)
+    if (DLAF_AT_MPIRANKS AND NOT IS_AN_MPI_TEST)
       message(FATAL_ERROR "You specified MPIRANKS and asked for an external main without MPI")
     endif()
+  endif()
+
+  ### Check if the test use HPX
+  set(_DLAF_HPX_MAINS "HPX;MPIHPX")
+  set(IS_AN_HPX_TEST FALSE)
+  if (DLAF_AT_USE_MAIN IN_LIST _DLAF_HPX_MAINS)
+    set(IS_AN_HPX_TEST TRUE)
   endif()
 
   ### Test executable target
@@ -110,6 +123,8 @@ function(DLAF_addTest test_target_name)
   endif()
 
   ### Test target
+  set(_TEST_ARGUMENTS ${DLAF_AT_ARGUMENTS})
+
   # ----- MPI-based test
   if(DEFINED DLAF_AT_MPIRANKS)
     if (NOT DLAF_AT_MPIRANKS GREATER 0)
@@ -129,18 +144,36 @@ function(DLAF_addTest test_target_name)
       PRIVATE MPI::MPI_CXX
     )
 
-    add_test(
-      NAME ${test_target_name}
-      COMMAND
-        ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${DLAF_AT_MPIRANKS}
-        ${MPIEXEC_PREFLAGS} $<TARGET_FILE:${test_target_name}> ${MPIEXEC_POSTFLAGS} ${DLAF_AT_ARGUMENTS})
+    if (IS_AN_HPX_TEST AND MPIEXEC_NUMCORE_FLAG)
+      if (MPIEXEC_NUMCORES)
+	set(_CORES_PER_RANK ${MPIEXEC_NUMCORES})
+      else()
+	set(_CORES_PER_RANK 1)
+      endif()
+
+      math(EXPR DLAF_CORE_PER_RANK "${_CORES_PER_RANK}/${DLAF_AT_MPIRANKS}")
+
+      if (NOT DLAF_CORE_PER_RANK)
+	set(DLAF_CORE_PER_RANK 1)
+      endif()
+    
+      set(_MPI_CORE_ARGS ${MPIEXEC_NUMCORE_FLAG} ${DLAF_CORE_PER_RANK})
+    endif()
+    
+    set(_TEST_COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${DLAF_AT_MPIRANKS} ${_MPI_CORE_ARGS}
+        ${MPIEXEC_PREFLAGS} $<TARGET_FILE:${test_target_name}> ${MPIEXEC_POSTFLAGS})
   # ----- Classic test
   else()
-    add_test(
-      NAME ${test_target_name}
-      COMMAND ${test_target_name} ${DLAF_AT_ARGUMENTS}
-    )
+    set(_TEST_COMMAND ${test_target_name})
   endif()
+
+  if (IS_AN_HPX_TEST)
+    list(APPEND _TEST_ARGUMENTS ${DLAF_HPXTEST_EXTRA_ARGS})
+  endif()
+
+  add_test(
+    NAME ${test_target_name}
+    COMMAND ${_TEST_COMMAND} ${_TEST_ARGUMENTS})
 
   ### DEPLOY
   include(GNUInstallDirs)

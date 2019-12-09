@@ -631,6 +631,27 @@ TYPED_TEST(MatrixTest, DependenciesPointerMix) {
   }
 }
 
+TYPED_TEST(MatrixTest, TileSize) {
+  using Type = TypeParam;
+
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      Matrix<Type, Device::CPU> mat(size, test.block_size, comm_grid);
+
+      for (SizeType i = 0; i < mat.nrTiles().rows(); ++i) {
+        SizeType mb = mat.blockSize().rows();
+        SizeType ib = std::min(mb, mat.size().rows() - i * mb);
+        for (SizeType j = 0; j < mat.nrTiles().cols(); ++j) {
+          SizeType nb = mat.blockSize().cols();
+          SizeType jb = std::min(nb, mat.size().cols() - j * nb);
+          EXPECT_EQ(TileElementSize(ib, jb), mat.tileSize({i, j}));
+        }
+      }
+    }
+  }
+}
+
 struct TestLocalColMajor {
   LocalElementSize size;
   TileElementSize block_size;

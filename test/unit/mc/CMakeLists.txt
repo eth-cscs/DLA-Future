@@ -10,5 +10,4 @@
 
 DLAF_addTest(test_cholesky SOURCES test_cholesky.cpp USE_MAIN HPX)
 
-DLAF_addTest(
-    test_cholesky_distributed SOURCES test_cholesky_distributed.cpp USE_MAIN MPIHPX MPIRANKS 6)
+DLAF_addTest(test_cholesky_distributed SOURCES test_cholesky_distributed.cpp USE_MAIN MPIHPX MPIRANKS 6)

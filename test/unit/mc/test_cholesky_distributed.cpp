@@ -21,6 +21,7 @@ using namespace dlaf::matrix;
 using namespace dlaf::comm;
 using namespace dlaf_test;
 using namespace dlaf_test::matrix_test;
+using namespace testing;
 
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);

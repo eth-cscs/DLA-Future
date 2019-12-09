@@ -29,6 +29,7 @@ namespace dlaf {
 
 /// @brief Cholesky implementation on distributed memory
 ///
+/// @parame grid refers to a comm::CommunicatorGrid object
 /// @param uplo specifies that the matrix is \a Lower triangular
 /// @tparam mat refers to a dlaf::Matrix object
 ///
@@ -82,13 +83,13 @@ void cholesky_distributed(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T
       auto k_rank_row = mat.distribution().template rankGlobalTile<Coord::Row>(k);
       auto k_rank_col = mat.distribution().template rankGlobalTile<Coord::Col>(k);
 
-      // If the diagonal tile is on this node factorize it
       if (mat.rankIndex().col() == k_rank_col) {
         auto k_local_col = mat.distribution().template localTileFromGlobalTile<Coord::Col>(k);
 
         hpx::shared_future<Tile<const T, Device::CPU>> kk_tile;
 
         if (mat.rankIndex().row() == k_rank_row) {
+	  // If the diagonal tile is on this node factorize it
           auto k_local_row = mat.distribution().template localTileFromGlobalTile<Coord::Row>(k);
 
           // Select tile kk
@@ -98,7 +99,7 @@ void cholesky_distributed(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T
           hpx::dataflow(matrix_HP_executor, hpx::util::unwrapping(tile::potrf<T, Device::CPU>), uplo,
                         std::move(mat(kk)));
 
-          // Broadcast panel
+          // Broadcast the panel column-wise
           hpx::dataflow(hpx::util::unwrapping([](auto&& tile, auto&& comm_wrapper) {
                           dlaf::comm::sync::broadcast::send(comm_wrapper().colCommunicator(), tile);
                         }),
@@ -156,17 +157,17 @@ void cholesky_distributed(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T
           auto k_local_row = mat.distribution().template localTileFromGlobalTile<Coord::Row>(k);
 
           TileElementSize tile_size(mat.blockSize().cols(), mat.blockSize().cols());
-          // TileElementSize tile_size = mat.tileSize({i,k});
+          // TileElementSize tile_size = mat.tileSize(GlobalElementSize(i_local,k_local_row)));
 
           panel[i_local] =
-              hpx::dataflow(hpx::util::unwrapping([](auto&& index, auto&& tile_size,
+              hpx::dataflow(hpx::util::unwrapping([](auto index, auto&& tile_size,
                                                      auto&& comm_wrapper) -> Tile<const T, Device::CPU> {
                               memory::MemoryView<T, Device::CPU> mem_view(
                                   util::size_t::mul(tile_size.rows(), tile_size.cols()));
                               Tile<T, Device::CPU> tile(tile_size, std::move(mem_view),
-                                                        tile_size.rows());
+                                                        tile_size.cols());
                               dlaf::comm::sync::broadcast::receive_from(index,
-                                                                        comm_wrapper().colCommunicator(),
+                                                                        comm_wrapper().rowCommunicator(),
                                                                         tile);
                               return std::move(tile);
                             }),
@@ -184,52 +185,55 @@ void cholesky_distributed(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T
         auto j = mat.distribution().template globalTileFromLocalTile<Coord::Col>(j_local);
 
         auto j_rank_row = mat.distribution().template rankGlobalTile<Coord::Row>(j);
+	auto j_rank_col = mat.distribution().template rankGlobalTile<Coord::Col>(j_local);
 
-        if (mat.rankIndex().row() == j_rank_row) {
+	//        if (mat.rankIndex().row() == j_rank_row && mat.rankIndex().col() == j_rank_col) {
+	if (mat.rankIndex().row() == j_rank_row) {
           auto i_local = mat.distribution().template localTileFromGlobalTile<Coord::Row>(j);
 
-          hpx::dataflow(hpx::util::unwrapping([](auto&& tile, auto&& comm_wrapper) {
-                          dlaf::comm::sync::broadcast::send(comm_wrapper().colCommunicator(), tile);
-                        }),
-                        panel[i_local], serial_comm());
-
-          // Update trailing matrix: diagonal element mat(j,j), reading mat.read(j,k), using herk (blas operation)
-          //  hpx::dataflow(trailing_matrix_executor, hpx::util::unwrapping(tile::herk<T, Device::CPU>), uplo,
-          //		blas::Op::NoTrans, -1.0, mat.read(LocalTileIndex{i_local, j_local}), 1.0,
-          //		panel[i_local]);
-
-          col_panel = panel[i_local];
+//            hpx::dataflow(hpx::util::unwrapping([](auto&& tile, auto&& comm_wrapper) {
+//                    dlaf::comm::sync::broadcast::send(comm_wrapper().colCommunicator(), tile);
+//                  }),
+//                  panel[i_local], serial_comm());
+//
+//  // Update trailing matrix: diagonal element mat(j,j), reading mat.read(j,k), using herk (blas operation)
+//  hpx::dataflow(trailing_matrix_executor, hpx::util::unwrapping(tile::herk<T, Device::CPU>), uplo,
+//  		blas::Op::NoTrans, -1.0, mat.read(LocalTileIndex{i_local, j_local}), 1.0,
+//  		panel[i_local]);
+//
+//  	            col_panel = panel[i_local];
         }
-        else {
-          col_panel =
-              hpx::dataflow(hpx::util::unwrapping([](auto index, auto&& tile_size,
-                                                     auto&& comm_wrapper) -> Tile<const T, Device::CPU> {
-                              memory::MemoryView<T, Device::CPU> mem_view(
-                                  util::size_t::mul(tile_size.rows(), tile_size.cols()));
-                              Tile<T, Device::CPU> tile(tile_size, std::move(mem_view),
-                                                        tile_size.rows());
-                              dlaf::comm::sync::broadcast::receive_from(index,
-                                                                        comm_wrapper().colCommunicator(),
-                                                                        tile);
-                              return std::move(tile);
-                            }),
-                            k_rank_row, TileElementSize(mat.blockSize().cols(), mat.blockSize().cols()),
-                            serial_comm());
-          // will be
-          //}), k_rank_row, mat.tileSize(GlobalElementSize(k, k)), serial_comm() );
-        }
+//        else {
+//          col_panel =
+//              hpx::dataflow(hpx::util::unwrapping([](auto index, auto&& tile_size,
+//                                                     auto&& comm_wrapper) -> Tile<const T, Device::CPU> {
+//                              memory::MemoryView<T, Device::CPU> mem_view(
+//                                  util::size_t::mul(tile_size.rows(), tile_size.cols()));
+//                              Tile<T, Device::CPU> tile(tile_size, std::move(mem_view),
+//                                                        tile_size.rows());
+//                              dlaf::comm::sync::broadcast::receive_from(index,
+//                                                                        comm_wrapper().colCommunicator(),
+//                                                                        tile);
+//                              return std::move(tile);
+//                            }),
+//                            k_rank_row, TileElementSize(mat.blockSize().cols(), mat.blockSize().cols()),
+//                            serial_comm());
+//          // will be
+//          //}), k_rank_row, mat.tileSize(GlobalElementSize(k, k)), serial_comm() );
+//        }
+
+      for (SizeType i_local = mat.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(j + 1);
+           i_local < localnrtile_rows; ++i_local) {
+          // Update remaining trailing matrix mat(i,j), reading mat.read(i,k) and mat.read(j,k), using
+          // gemm (blas operation)
+          hpx::dataflow(trailing_matrix_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>),
+                        blas::Op::NoTrans, blas::Op::ConjTrans, -1.0, panel[i_local],
+                        col_panel, 1.0, std::move(mat(LocalTileIndex{i_local, j_local})));
+
+	  //last call should be std::move(mat(LocalTileIndex{i_local, k_local_col}))?
+      }
       }
 
-      //      for (SizeType j = k + 1; j < nrtile; ++j) {
-      //
-      //        for (SizeType i = j + 1; i < nrtile; ++i) {
-      //          // Update remaining trailing matrix mat(i,j), reading mat.read(i,k) and mat.read(j,k), using
-      //          // gemm (blas operation)
-      //          hpx::dataflow(trailing_matrix_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>),
-      //                        blas::Op::NoTrans, blas::Op::ConjTrans, -1.0, mat.read(LocalTileIndex{i, k}),
-      //                        mat.read(LocalTileIndex{j, k}), 1.0, std::move(mat(LocalTileIndex{i, j})));
-      //        }
-      //      }
     }
   }
   else {

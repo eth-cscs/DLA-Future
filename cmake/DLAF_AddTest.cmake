@@ -146,15 +146,15 @@ function(DLAF_addTest test_target_name)
 
     if (IS_AN_HPX_TEST AND MPIEXEC_NUMCORE_FLAG)
       if (MPIEXEC_NUMCORES)
-	set(_CORES_PER_RANK ${MPIEXEC_NUMCORES})
+        set(_CORES_PER_RANK ${MPIEXEC_NUMCORES})
       else()
-	set(_CORES_PER_RANK 1)
+        set(_CORES_PER_RANK 1)
       endif()
 
       math(EXPR DLAF_CORE_PER_RANK "${_CORES_PER_RANK}/${DLAF_AT_MPIRANKS}")
 
       if (NOT DLAF_CORE_PER_RANK)
-	set(DLAF_CORE_PER_RANK 1)
+        set(DLAF_CORE_PER_RANK 1)
       endif()
     
       set(_MPI_CORE_ARGS ${MPIEXEC_NUMCORE_FLAG} ${DLAF_CORE_PER_RANK})

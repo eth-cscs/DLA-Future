@@ -19,7 +19,7 @@
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix.h"
-//#include "dlaf/matrix/distribution.h"
+#include "dlaf/matrix/distribution.h"
 //#include "dlaf/matrix/util_distribution.h"
 #include "dlaf/util_matrix.h"
 
@@ -61,13 +61,16 @@ void cholesky_distributed(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T
   // Check if block matrix is square
   util_matrix::assert_blocksize_square(mat, "Cholesky", "mat");
 
+  // Semplifying call for mat.distribution()
+  const dlaf::matrix::Distribution& distr = mat.distribution();
+
   // Number of tile (rows = cols)
   SizeType nrtile = mat.nrTiles().cols();
 
   // Number of local tiles (rows)
-  auto localnrtile_rows = mat.distribution().localNrTiles().rows();
+  auto localnrtile_rows = distr.localNrTiles().rows();
   // Number of local tiles (cols)
-  auto localnrtile_cols = mat.distribution().localNrTiles().cols();
+  auto localnrtile_cols = distr.localNrTiles().cols();
 
   // Pipeline for CommunicatorGrid
   dlaf::common::Pipeline<comm::CommunicatorGrid> serial_comm(std::move(grid));
@@ -76,21 +79,20 @@ void cholesky_distributed(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T
   if (uplo == blas::Uplo::Lower) {
     for (SizeType k = 0; k < nrtile; ++k) {
       // Create the panel as a vector of shared future
-      std::vector<hpx::shared_future<Tile<const T, Device::CPU>>> panel(
-          mat.distribution().localNrTiles().rows());
+      std::vector<hpx::shared_future<Tile<const T, Device::CPU>>> panel(distr.localNrTiles().rows());
 
       // Index of rank owning the tile
-      auto k_rank_row = mat.distribution().template rankGlobalTile<Coord::Row>(k);
-      auto k_rank_col = mat.distribution().template rankGlobalTile<Coord::Col>(k);
+      auto k_rank_row = distr.rankGlobalTile<Coord::Row>(k);
+      auto k_rank_col = distr.rankGlobalTile<Coord::Col>(k);
 
       if (mat.rankIndex().col() == k_rank_col) {
-        auto k_local_col = mat.distribution().template localTileFromGlobalTile<Coord::Col>(k);
+        auto k_local_col = distr.localTileFromGlobalTile<Coord::Col>(k);
 
         hpx::shared_future<Tile<const T, Device::CPU>> kk_tile;
 
         if (mat.rankIndex().row() == k_rank_row) {
-	  // If the diagonal tile is on this node factorize it
-          auto k_local_row = mat.distribution().template localTileFromGlobalTile<Coord::Row>(k);
+          // If the diagonal tile is on this node factorize it
+          auto k_local_row = distr.localTileFromGlobalTile<Coord::Row>(k);
 
           // Select tile kk
           auto kk = LocalTileIndex{k_local_row, k_local_col};
@@ -121,15 +123,13 @@ void cholesky_distributed(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T
                                                                         tile);
                               return std::move(tile);
                             }),
-			    k_rank_row, mat.tileSize(GlobalTileIndex(k, k)), serial_comm() );
-	          }
+                            k_rank_row, mat.tileSize(GlobalTileIndex(k, k)), serial_comm());
+        }
 
-	
-        for (SizeType i_local =
-                 mat.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
+        for (SizeType i_local = distr.nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
              i_local < localnrtile_rows; ++i_local) {
           // Update panel mat(i,k) with trsm (blas operation), using data mat.read(k,k)
-          auto k_local_row = mat.distribution().template localTileFromGlobalTile<Coord::Row>(k);
+          auto k_local_row = distr.localTileFromGlobalTile<Coord::Row>(k);
 
           hpx::dataflow(matrix_HP_executor, hpx::util::unwrapping(tile::trsm<T, Device::CPU>),
                         blas::Side::Right, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, 1.0, kk_tile,
@@ -145,13 +145,12 @@ void cholesky_distributed(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T
         }
       }
       else {
-        for (SizeType i_local =
-                 mat.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
+        for (SizeType i_local = distr.nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
              i_local < localnrtile_rows; ++i_local) {
-          auto k_local_row = mat.distribution().template localTileFromGlobalTile<Coord::Row>(k);
+          auto k_local_row = distr.localTileFromGlobalTile<Coord::Row>(k);
 
-	  auto i = mat.distribution().template globalTileFromLocalTile<Coord::Row>(i_local);
-	
+          auto i = distr.globalTileFromLocalTile<Coord::Row>(i_local);
+
           panel[i_local] =
               hpx::dataflow(hpx::util::unwrapping([](auto index, auto&& tile_size,
                                                      auto&& comm_wrapper) -> Tile<const T, Device::CPU> {
@@ -164,69 +163,70 @@ void cholesky_distributed(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T
                                                                         tile);
                               return std::move(tile);
                             }),
-                            k_rank_col, mat.tileSize(GlobalTileIndex(i,k)), serial_comm());
+                            k_rank_col, mat.tileSize(GlobalTileIndex(i, k)), serial_comm());
         }
       }
 
-      for (SizeType j_local = mat.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(k + 1);
+      for (SizeType j_local = distr.nextLocalTileFromGlobalTile<Coord::Col>(k + 1);
            j_local < localnrtile_cols; ++j_local) {
         // Choose queue priority
         auto trailing_matrix_executor = (j_local == k + 1) ? matrix_HP_executor : matrix_normal_executor;
 
         hpx::shared_future<Tile<const T, Device::CPU>> col_panel;
 
-        auto j = mat.distribution().template globalTileFromLocalTile<Coord::Col>(j_local);
+        auto j = distr.globalTileFromLocalTile<Coord::Col>(j_local);
 
-        auto j_rank_row = mat.distribution().template rankGlobalTile<Coord::Row>(j);
-	auto j_rank_col = mat.distribution().template rankGlobalTile<Coord::Col>(j_local);
+        auto j_rank_row = distr.rankGlobalTile<Coord::Row>(j);
+        auto j_rank_col = distr.rankGlobalTile<Coord::Col>(j_local);
 
-	//        if (mat.rankIndex().row() == j_rank_row && mat.rankIndex().col() == j_rank_col) {
-	if (mat.rankIndex().row() == j_rank_row) {
-          auto i_local = mat.distribution().template localTileFromGlobalTile<Coord::Row>(j);
+        //        if (mat.rankIndex().row() == j_rank_row && mat.rankIndex().col() == j_rank_col) {
+        if (mat.rankIndex().row() == j_rank_row) {
+          auto i_local = distr.localTileFromGlobalTile<Coord::Row>(j);
 
-//            hpx::dataflow(hpx::util::unwrapping([](auto&& tile, auto&& comm_wrapper) {
-//                    dlaf::comm::sync::broadcast::send(comm_wrapper().colCommunicator(), tile);
-//                  }),
-//                  panel[i_local], serial_comm());
-//
-//  // Update trailing matrix: diagonal element mat(j,j), reading mat.read(j,k), using herk (blas operation)
-//  hpx::dataflow(trailing_matrix_executor, hpx::util::unwrapping(tile::herk<T, Device::CPU>), uplo,
-//  		blas::Op::NoTrans, -1.0, mat.read(LocalTileIndex{i_local, j_local}), 1.0,
-//  		panel[i_local]);
-//
-//  	            col_panel = panel[i_local];
+          //            hpx::dataflow(hpx::util::unwrapping([](auto&& tile, auto&& comm_wrapper) {
+          //                    dlaf::comm::sync::broadcast::send(comm_wrapper().colCommunicator(),
+          //                    tile);
+          //                  }),
+          //                  panel[i_local], serial_comm());
+          //
+          //  // Update trailing matrix: diagonal element mat(j,j), reading mat.read(j,k), using herk
+          //  (blas operation) hpx::dataflow(trailing_matrix_executor,
+          //  hpx::util::unwrapping(tile::herk<T, Device::CPU>), uplo, 		blas::Op::NoTrans, -1.0,
+          //  mat.read(LocalTileIndex{i_local, j_local}), 1.0, 		panel[i_local]);
+          //
+          //  	            col_panel = panel[i_local];
         }
-//        else {
-//		  auto i = mat.distribution().template globalTileFromLocalTile<Coord::Row>(i_local);
-//          col_panel =
-//              hpx::dataflow(hpx::util::unwrapping([](auto index, auto&& tile_size,
-//                                                     auto&& comm_wrapper) -> Tile<const T, Device::CPU> {
-//                              memory::MemoryView<T, Device::CPU> mem_view(
-//                                  util::size_t::mul(tile_size.rows(), tile_size.cols()));
-//                              Tile<T, Device::CPU> tile(tile_size, std::move(mem_view),
-//                                                        tile_size.rows());
-//                              dlaf::comm::sync::broadcast::receive_from(index,
-//                                                                        comm_wrapper().colCommunicator(),
-//                                                                        tile);
-//                              return std::move(tile);
-//                            }),
-//                            k_rank_row, mat.tileSize(GlobalTileIndex(i, j)),
-//                            serial_comm());
-;
-//        }
+        //        else {
+        //		  auto i = distr.globalTileFromLocalTile<Coord::Row>(i_local);
+        //          col_panel =
+        //              hpx::dataflow(hpx::util::unwrapping([](auto index, auto&& tile_size,
+        //                                                     auto&& comm_wrapper) -> Tile<const T,
+        //                                                     Device::CPU> {
+        //                              memory::MemoryView<T, Device::CPU> mem_view(
+        //                                  util::size_t::mul(tile_size.rows(), tile_size.cols()));
+        //                              Tile<T, Device::CPU> tile(tile_size, std::move(mem_view),
+        //                                                        tile_size.rows());
+        //                              dlaf::comm::sync::broadcast::receive_from(index,
+        //                                                                        comm_wrapper().colCommunicator(),
+        //                                                                        tile);
+        //                              return std::move(tile);
+        //                            }),
+        //                            k_rank_row, mat.tileSize(GlobalTileIndex(i, j)),
+        //                            serial_comm());
+        ;
+        //        }
 
-      for (SizeType i_local = mat.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(j + 1);
-           i_local < localnrtile_rows; ++i_local) {
+        for (SizeType i_local = distr.nextLocalTileFromGlobalTile<Coord::Row>(j + 1);
+             i_local < localnrtile_rows; ++i_local) {
           // Update remaining trailing matrix mat(i,j), reading mat.read(i,k) and mat.read(j,k), using
           // gemm (blas operation)
           hpx::dataflow(trailing_matrix_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>),
-                        blas::Op::NoTrans, blas::Op::ConjTrans, -1.0, panel[i_local],
-                        col_panel, 1.0, std::move(mat(LocalTileIndex{i_local, j_local})));
+                        blas::Op::NoTrans, blas::Op::ConjTrans, -1.0, panel[i_local], col_panel, 1.0,
+                        std::move(mat(LocalTileIndex{i_local, j_local})));
 
-	  //last call should be std::move(mat(LocalTileIndex{i_local, k_local_col}))?
+          // last call should be std::move(mat(LocalTileIndex{i_local, k_local_col}))?
+        }
       }
-      }
-
     }
   }
   else {

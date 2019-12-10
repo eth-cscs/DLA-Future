@@ -81,9 +81,8 @@ TYPED_TEST(CholeskyDistributedTest, Correctness) {
         Distribution distribution(size, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
         Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
         set(mat, el);
-        cholesky_distributed(comm_grid, blas::Uplo::Lower, mat);
 
-	//        EXPECT_NO_THROW(cholesky_distributed(comm_grid, blas::Uplo::Lower, mat));
+	EXPECT_NO_THROW(cholesky_distributed(comm_grid, blas::Uplo::Lower, mat));
 
         CHECK_MATRIX_NEAR(res, mat, 4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error,
 			  4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);

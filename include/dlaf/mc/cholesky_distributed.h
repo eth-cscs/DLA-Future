@@ -20,7 +20,6 @@
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix.h"
 #include "dlaf/matrix/distribution.h"
-//#include "dlaf/matrix/util_distribution.h"
 #include "dlaf/util_matrix.h"
 
 /// @file
@@ -61,18 +60,13 @@ void cholesky_distributed(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T
   // Check if block matrix is square
   util_matrix::assert_blocksize_square(mat, "Cholesky", "mat");
 
-  // Semplifying call for mat.distribution()
   const dlaf::matrix::Distribution& distr = mat.distribution();
 
-  // Number of tile (rows = cols)
   SizeType nrtile = mat.nrTiles().cols();
 
-  // Number of local tiles (rows)
   auto localnrtile_rows = distr.localNrTiles().rows();
-  // Number of local tiles (cols)
   auto localnrtile_cols = distr.localNrTiles().cols();
 
-  // Pipeline for CommunicatorGrid
   dlaf::common::Pipeline<comm::CommunicatorGrid> serial_comm(std::move(grid));
 
   // Method only for Lower triangular matrix
@@ -81,7 +75,6 @@ void cholesky_distributed(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T
       // Create the panel as a vector of shared future
       std::vector<hpx::shared_future<Tile<const T, Device::CPU>>> panel(distr.localNrTiles().rows());
 
-      // Index of rank owning the tile
       auto k_rank_row = distr.rankGlobalTile<Coord::Row>(k);
       auto k_rank_col = distr.rankGlobalTile<Coord::Col>(k);
 
@@ -94,7 +87,6 @@ void cholesky_distributed(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T
           // If the diagonal tile is on this node factorize it
           auto k_local_row = distr.localTileFromGlobalTile<Coord::Row>(k);
 
-          // Select tile kk
           auto kk = LocalTileIndex{k_local_row, k_local_col};
 
           // Cholesky decomposition on mat(k,k) r/w potrf (lapack operation)
@@ -129,8 +121,6 @@ void cholesky_distributed(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T
         for (SizeType i_local = distr.nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
              i_local < localnrtile_rows; ++i_local) {
           // Update panel mat(i,k) with trsm (blas operation), using data mat.read(k,k)
-	  //          auto k_local_row = distr.localTileFromGlobalTile<Coord::Row>(k);
-
           hpx::dataflow(matrix_HP_executor, hpx::util::unwrapping(tile::trsm<T, Device::CPU>),
                         blas::Side::Right, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, 1.0, kk_tile,
                         std::move(mat(LocalTileIndex{i_local, k_local_col})));
@@ -147,8 +137,6 @@ void cholesky_distributed(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T
       else {
         for (SizeType i_local = distr.nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
              i_local < localnrtile_rows; ++i_local) {
-	  //          auto k_local_row = distr.localTileFromGlobalTile<Coord::Row>(k);
-
           auto i = distr.globalTileFromLocalTile<Coord::Row>(i_local);
 
 	  // Update the panel row-wise
@@ -170,7 +158,7 @@ void cholesky_distributed(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T
 
       for (SizeType j_local = distr.nextLocalTileFromGlobalTile<Coord::Col>(k + 1);
            j_local < localnrtile_cols; ++j_local) {
-        // Choose queue priority
+        // Choose "high priority" for first tile of the trailing matrix
         auto trailing_matrix_executor = (j_local == k + 1) ? matrix_HP_executor : matrix_normal_executor;
 
         hpx::shared_future<Tile<const T, Device::CPU>> col_panel;

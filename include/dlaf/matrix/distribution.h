@@ -268,10 +268,10 @@ public:
   /// whose index is the smallest index larger or equal @p global_tile
   /// and which is stored in current process.
   ///
-  /// @pre 0 <= global_tile < nrTiles().get<rc>()
+  /// @pre 0 <= global_tile <= nrTiles().get<rc>()
   template <Coord rc>
   SizeType nextLocalTileFromGlobalTile(SizeType global_tile) const noexcept {
-    assert(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>());
+    assert(0 <= global_tile && global_tile <= global_nr_tiles_.get<rc>());
     return util::matrix::nextLocalTileFromGlobalTile(global_tile, grid_size_.get<rc>(),
                                                      rank_index_.get<rc>(),
                                                      source_rank_index_.get<rc>());

@@ -121,21 +121,15 @@ void cholesky_distributed(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T
                                                                         tile);
                               return std::move(tile);
                             }),
-                            k_rank_row, TileElementSize(mat.blockSize().cols(), mat.blockSize().cols()),
-                            serial_comm());
-          // will be
-          //}), k_rank_row, mat.tileSize(GlobalElementSize(k, k)), serial_comm() );
-        }
+			    k_rank_row, mat.tileSize(GlobalTileIndex(k, k)), serial_comm() );
+	          }
 
+	
         for (SizeType i_local =
                  mat.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
              i_local < localnrtile_rows; ++i_local) {
           // Update panel mat(i,k) with trsm (blas operation), using data mat.read(k,k)
           auto k_local_row = mat.distribution().template localTileFromGlobalTile<Coord::Row>(k);
-
-          //	  hpx::dataflow(matrix_HP_executor, hpx::util::unwrapping(tile::trsm<T, Device::CPU>),
-          //			blas::Side::Right, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, 1.0,
-          //			panel[k_local_row], std::move(mat(LocalTileIndex{i_local, k_local_col})));
 
           hpx::dataflow(matrix_HP_executor, hpx::util::unwrapping(tile::trsm<T, Device::CPU>),
                         blas::Side::Right, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, 1.0, kk_tile,
@@ -156,22 +150,21 @@ void cholesky_distributed(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T
              i_local < localnrtile_rows; ++i_local) {
           auto k_local_row = mat.distribution().template localTileFromGlobalTile<Coord::Row>(k);
 
-          TileElementSize tile_size(mat.blockSize().cols(), mat.blockSize().cols());
-          // TileElementSize tile_size = mat.tileSize(GlobalElementSize(i_local,k_local_row)));
-
+	  auto i = mat.distribution().template globalTileFromLocalTile<Coord::Row>(i_local);
+	
           panel[i_local] =
               hpx::dataflow(hpx::util::unwrapping([](auto index, auto&& tile_size,
                                                      auto&& comm_wrapper) -> Tile<const T, Device::CPU> {
                               memory::MemoryView<T, Device::CPU> mem_view(
                                   util::size_t::mul(tile_size.rows(), tile_size.cols()));
                               Tile<T, Device::CPU> tile(tile_size, std::move(mem_view),
-                                                        tile_size.cols());
+                                                        tile_size.rows());
                               dlaf::comm::sync::broadcast::receive_from(index,
                                                                         comm_wrapper().rowCommunicator(),
                                                                         tile);
                               return std::move(tile);
                             }),
-                            k_rank_col, tile_size, serial_comm());
+                            k_rank_col, mat.tileSize(GlobalTileIndex(i,k)), serial_comm());
         }
       }
 
@@ -204,6 +197,7 @@ void cholesky_distributed(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T
 //  	            col_panel = panel[i_local];
         }
 //        else {
+//		  auto i = mat.distribution().template globalTileFromLocalTile<Coord::Row>(i_local);
 //          col_panel =
 //              hpx::dataflow(hpx::util::unwrapping([](auto index, auto&& tile_size,
 //                                                     auto&& comm_wrapper) -> Tile<const T, Device::CPU> {
@@ -216,10 +210,9 @@ void cholesky_distributed(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T
 //                                                                        tile);
 //                              return std::move(tile);
 //                            }),
-//                            k_rank_row, TileElementSize(mat.blockSize().cols(), mat.blockSize().cols()),
+//                            k_rank_row, mat.tileSize(GlobalTileIndex(i, j)),
 //                            serial_comm());
-//          // will be
-//          //}), k_rank_row, mat.tileSize(GlobalElementSize(k, k)), serial_comm() );
+;
 //        }
 
       for (SizeType i_local = mat.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(j + 1);

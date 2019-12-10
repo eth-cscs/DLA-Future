@@ -143,8 +143,9 @@ void cholesky_distributed(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T
                           }),
                           mat.read(LocalTileIndex{i_local, k_local_col}), serial_comm());
 
-            panel[i_local] = mat.read(LocalTileIndex{i_local, k_local_col});
           }
+
+	  panel[i_local] = mat.read(LocalTileIndex{i_local, k_local_col});
         }
       }
       else {

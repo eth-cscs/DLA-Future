@@ -58,7 +58,7 @@ TYPED_TEST(CholeskyDistributedTest, Correctness) {
       return TypeUtilities<TypeParam>::element(-9.9, 0.0);
 
     return TypeUtilities<TypeParam>::polar(std::exp2(-(i + j)) / 3 *
-					   (std::exp2(2 * (std::min(i, j) + 1)) - 1),
+                                               (std::exp2(2 * (std::min(i, j) + 1)) - 1),
                                            -i + j);
   };
 
@@ -82,10 +82,10 @@ TYPED_TEST(CholeskyDistributedTest, Correctness) {
         Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
         set(mat, el);
 
-	EXPECT_NO_THROW(cholesky_distributed(comm_grid, blas::Uplo::Lower, mat));
+        EXPECT_NO_THROW(cholesky_distributed(comm_grid, blas::Uplo::Lower, mat));
 
         CHECK_MATRIX_NEAR(res, mat, 4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error,
-			  4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);
+                          4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);
       }
     }
   }

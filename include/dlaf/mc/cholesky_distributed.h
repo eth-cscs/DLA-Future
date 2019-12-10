@@ -129,7 +129,7 @@ void cholesky_distributed(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T
         for (SizeType i_local = distr.nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
              i_local < localnrtile_rows; ++i_local) {
           // Update panel mat(i,k) with trsm (blas operation), using data mat.read(k,k)
-          auto k_local_row = distr.localTileFromGlobalTile<Coord::Row>(k);
+	  //          auto k_local_row = distr.localTileFromGlobalTile<Coord::Row>(k);
 
           hpx::dataflow(matrix_HP_executor, hpx::util::unwrapping(tile::trsm<T, Device::CPU>),
                         blas::Side::Right, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, 1.0, kk_tile,
@@ -147,10 +147,11 @@ void cholesky_distributed(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T
       else {
         for (SizeType i_local = distr.nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
              i_local < localnrtile_rows; ++i_local) {
-          auto k_local_row = distr.localTileFromGlobalTile<Coord::Row>(k);
+	  //          auto k_local_row = distr.localTileFromGlobalTile<Coord::Row>(k);
 
           auto i = distr.globalTileFromLocalTile<Coord::Row>(i_local);
 
+	  // Update the panel row-wise
           panel[i_local] =
               hpx::dataflow(hpx::util::unwrapping([](auto index, auto&& tile_size,
                                                      auto&& comm_wrapper) -> Tile<const T, Device::CPU> {
@@ -178,16 +179,18 @@ void cholesky_distributed(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T
 
         auto j_rank_row = distr.rankGlobalTile<Coord::Row>(j);
 
+	// Check if the diagonal tile of the trailing matrix is on this node
         if (mat.rankIndex().row() == j_rank_row) {
           auto i_local = distr.localTileFromGlobalTile<Coord::Row>(j);
 
+	  // Broadcast the (trailing) panel column-wise
           hpx::dataflow(hpx::util::unwrapping([k, j](auto&& tile, auto&& comm_wrapper) {
-                                              std::cout << "Send" << k << j << tile.size() << std::endl;
+		//                                              std::cout << "Send" << k << j << tile.size() << std::endl;
                           dlaf::comm::sync::broadcast::send(comm_wrapper().colCommunicator(), tile);
                         }),
                         panel[i_local], serial_comm());
 
-          // Update trailing matrix: diagonal element mat(j,j), reading mat.read(j,k), using herk
+          // Compute first tile of the column of the trailing matrix: diagonal element mat(j,j), reading mat.read(j,k), using herk
           // (blas operation)
           hpx::dataflow(trailing_matrix_executor, hpx::util::unwrapping(tile::herk<T, Device::CPU>),
                         uplo, blas::Op::NoTrans, -1.0, panel[i_local], 1.0,
@@ -196,6 +199,7 @@ void cholesky_distributed(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T
           col_panel = panel[i_local];
         }
         else {
+	  // Update the (trailing) panel column-wise 
           col_panel =
               hpx::dataflow(hpx::util::unwrapping([k, j](auto index, auto&& tile_size,
                                                      auto&& comm_wrapper) -> Tile<const T, Device::CPU> {
@@ -203,7 +207,7 @@ void cholesky_distributed(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T
                                   util::size_t::mul(tile_size.rows(), tile_size.cols()));
                               Tile<T, Device::CPU> tile(tile_size, std::move(mem_view),
                                                         tile_size.rows());
-                                              std::cout << "Recv" << index << k << j << tile.size() << std::endl;
+			      //                            std::cout << "Recv" << index << k << j << tile.size() << std::endl;
                               dlaf::comm::sync::broadcast::receive_from(index,
                                                                         comm_wrapper().colCommunicator(),
                                                                         tile);
@@ -219,7 +223,6 @@ void cholesky_distributed(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T
            hpx::dataflow(trailing_matrix_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>),
                         blas::Op::NoTrans, blas::Op::ConjTrans, -1.0, panel[i_local], col_panel, 1.0,
                         std::move(mat(LocalTileIndex{i_local, j_local})));
-
         }
       }
     }

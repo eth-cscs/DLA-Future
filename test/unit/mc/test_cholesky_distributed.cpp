@@ -58,7 +58,7 @@ TYPED_TEST(CholeskyDistributedTest, Correctness) {
       return TypeUtilities<TypeParam>::element(-9.9, 0.0);
 
     return TypeUtilities<TypeParam>::polar(std::exp2(-(i + j)) / 3 *
-                                               (std::exp2(2 * (std::min(i, j) + 1)) - 1),
+					   (std::exp2(2 * (std::min(i, j) + 1)) - 1),
                                            -i + j);
   };
 
@@ -76,19 +76,17 @@ TYPED_TEST(CholeskyDistributedTest, Correctness) {
     for (const auto& size : square_sizes) {
       for (const auto& block_size : square_block_sizes) {
         // Matrix to undergo Cholesky decomposition
-
         comm::Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
                                      std::min(1, comm_grid.size().cols() - 1));
         Distribution distribution(size, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
         Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
-        // Matrix<TypeParam, Device::CPU> mat(size, block_size, comm_grid);
         set(mat, el);
         cholesky_distributed(comm_grid, blas::Uplo::Lower, mat);
 
-        //EXPECT_NO_THROW(cholesky_distributed(comm_grid, blas::Uplo::Lower, mat));
+	//        EXPECT_NO_THROW(cholesky_distributed(comm_grid, blas::Uplo::Lower, mat));
 
         CHECK_MATRIX_NEAR(res, mat, 4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error,
-          4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);
+			  4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);
       }
     }
   }

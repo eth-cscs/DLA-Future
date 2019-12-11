@@ -43,11 +43,11 @@ TYPED_TEST_SUITE(CholeskyDistributedTest, MatrixElementTypes);
 
 std::vector<LocalElementSize> square_sizes({{10, 10}, {25, 25}, {12, 12}, {0, 0}});
 std::vector<LocalElementSize> rectangular_sizes({{10, 20}, {50, 20}, {0, 10}, {20, 0}});
-std::vector<TileElementSize> square_block_sizes({{5, 5}, {20, 20}});
+std::vector<TileElementSize> square_block_sizes({{3, 3}, {5, 5}});
 std::vector<TileElementSize> rectangular_block_sizes({{10, 30}, {20, 10}});
 
 GlobalElementSize globalTestSize(const LocalElementSize& size, const Size2D& grid_size) {
-  return {size.rows() * grid_size.rows(), size.cols() * grid_size.cols()};
+  return {size.rows(), size.cols()};
 }
 
 TYPED_TEST(CholeskyLocalTest, Correctness) {
@@ -87,7 +87,7 @@ TYPED_TEST(CholeskyLocalTest, Correctness) {
       Matrix<TypeParam, Device::CPU> mat(size, block_size);
       set(mat, el);
 
-      EXPECT_NO_THROW(cholesky(blas::Uplo::Lower, mat));
+      cholesky(blas::Uplo::Lower, mat);
 
       CHECK_MATRIX_NEAR(res, mat, 4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error,
                         4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);
@@ -157,7 +157,7 @@ TYPED_TEST(CholeskyDistributedTest, Correctness) {
         Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
         set(mat, el);
 
-        EXPECT_NO_THROW(cholesky(comm_grid, blas::Uplo::Lower, mat));
+        cholesky(comm_grid, blas::Uplo::Lower, mat);
 
         CHECK_MATRIX_NEAR(res, mat, 4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error,
                           4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);

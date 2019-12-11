@@ -156,12 +156,12 @@ function(DLAF_addTest test_target_name)
       if (NOT DLAF_CORE_PER_RANK)
         set(DLAF_CORE_PER_RANK 1)
       endif()
-    
+
       set(_MPI_CORE_ARGS ${MPIEXEC_NUMCORE_FLAG} ${DLAF_CORE_PER_RANK})
     else()
       set(_MPI_CORE_ARGS "")
     endif()
-    
+
     set(_TEST_COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${DLAF_AT_MPIRANKS} ${_MPI_CORE_ARGS}
         ${MPIEXEC_PREFLAGS} $<TARGET_FILE:${test_target_name}> ${MPIEXEC_POSTFLAGS})
   # ----- Classic test

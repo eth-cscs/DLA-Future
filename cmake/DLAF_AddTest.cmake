@@ -144,7 +144,7 @@ function(DLAF_addTest test_target_name)
       PRIVATE MPI::MPI_CXX
     )
 
-    if (IS_AN_HPX_TEST AND MPIEXEC_NUMCORE_FLAG)
+    if (MPIEXEC_NUMCORE_FLAG)
       if (MPIEXEC_NUMCORES)
         set(_CORES_PER_RANK ${MPIEXEC_NUMCORES})
       else()
@@ -158,6 +158,8 @@ function(DLAF_addTest test_target_name)
       endif()
     
       set(_MPI_CORE_ARGS ${MPIEXEC_NUMCORE_FLAG} ${DLAF_CORE_PER_RANK})
+    else()
+      set(_MPI_CORE_ARGS "")
     endif()
     
     set(_TEST_COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${DLAF_AT_MPIRANKS} ${_MPI_CORE_ARGS}

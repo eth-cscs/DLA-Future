@@ -171,6 +171,7 @@ function(DLAF_addTest test_target_name)
 
   if (IS_AN_HPX_TEST)
     separate_arguments(_HPX_EXTRA_ARGS_LIST UNIX_COMMAND ${DLAF_HPXTEST_EXTRA_ARGS})
+    list(APPEND _TEST_ARGUMENTS "--hpx:use-process-mask")
     list(APPEND _TEST_ARGUMENTS ${_HPX_EXTRA_ARGS_LIST})
   endif()
 

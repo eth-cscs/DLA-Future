@@ -23,7 +23,7 @@ cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
       -DHPX_DIR=$EBROOTHPX             \
       -Dblaspp_DIR=$EBROOTBLASPP       \
       -Dlapackpp_DIR=$EBROOTLAPACKPP   \
-      -DMPIEXEC_PRESET=slurm           \
+      -DDLAF_MPI_PRESET=slurm          \
       -DMPIEXEC_NUMCORES=36            \
       ../
 make -j 50 VERBOSE=1

@@ -41,10 +41,14 @@ public:
 
 TYPED_TEST_SUITE(CholeskyDistributedTest, MatrixElementTypes);
 
-std::vector<GlobalElementSize> square_sizes({{10, 10}, {25, 25}, {12, 12}, {0, 0}});
-std::vector<GlobalElementSize> rectangular_sizes({{10, 20}, {50, 20}, {0, 10}, {20, 0}});
+std::vector<LocalElementSize> square_sizes({{10, 10}, {25, 25}, {12, 12}, {0, 0}});
+std::vector<LocalElementSize> rectangular_sizes({{10, 20}, {50, 20}, {0, 10}, {20, 0}});
 std::vector<TileElementSize> square_block_sizes({{5, 5}, {20, 20}});
 std::vector<TileElementSize> rectangular_block_sizes({{10, 30}, {20, 10}});
+
+GlobalElementSize globalTestSize(const LocalElementSize& size, const Size2D& grid_size) {
+  return {size.rows() * grid_size.rows(), size.cols() * grid_size.cols()};
+}
 
 TYPED_TEST(CholeskyLocalTest, Correctness) {
   // Note: The tile elements are chosen such that:
@@ -86,7 +90,7 @@ TYPED_TEST(CholeskyLocalTest, Correctness) {
       EXPECT_NO_THROW(cholesky(blas::Uplo::Lower, mat));
 
       CHECK_MATRIX_NEAR(res, mat, 4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error,
-			4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);
+                        4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);
     }
   }
 }
@@ -148,7 +152,8 @@ TYPED_TEST(CholeskyDistributedTest, Correctness) {
         // Matrix to undergo Cholesky decomposition
         comm::Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
                                      std::min(1, comm_grid.size().cols() - 1));
-        Distribution distribution(size, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
+        GlobalElementSize sz = globalTestSize(size, comm_grid.size());
+        Distribution distribution(sz, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
         Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
         set(mat, el);
 
@@ -167,7 +172,8 @@ TYPED_TEST(CholeskyDistributedTest, NoSquareMatrixException) {
       for (const auto& block_size : square_block_sizes) {
         comm::Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
                                      std::min(1, comm_grid.size().cols() - 1));
-        Distribution distribution(size, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
+        GlobalElementSize sz = globalTestSize(size, comm_grid.size());
+        Distribution distribution(sz, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
         Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
 
         EXPECT_THROW(cholesky(comm_grid, blas::Uplo::Lower, mat), std::invalid_argument);
@@ -182,7 +188,8 @@ TYPED_TEST(CholeskyDistributedTest, NoSquareBlockException) {
       for (const auto& block_size : rectangular_block_sizes) {
         comm::Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
                                      std::min(1, comm_grid.size().cols() - 1));
-        Distribution distribution(size, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
+        GlobalElementSize sz = globalTestSize(size, comm_grid.size());
+        Distribution distribution(sz, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
         Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
 
         EXPECT_THROW(cholesky(comm_grid, blas::Uplo::Lower, mat), std::invalid_argument);

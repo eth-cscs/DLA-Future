@@ -40,5 +40,30 @@ void assert_blocksize_square(const Matrix& matrix, std::string function, std::st
                                 " is not square.");
 }
 
+/// @brief Verify if dlaf::Matrix is on local memory
+///
+/// @tparam Matrix refers to a dlaf::Matrix object
+/// @throws std::invalid_argument if the matrix is not stored on local memory
+template <class Matrix>
+void assert_local_matrix(const Matrix& matrix, std::string function, std::string mat_name) {
+  assert(matrix.size().isValid());
+  if (matrix.distribution().commGridSize() != comm::Size2D{1, 1}) 
+    throw std::invalid_argument(function + ": " + "Matrix " + mat_name +
+                                " is not local.");
+}
+ 
+/// @brief Verify that distributed dlaf::Matrix correspond to the one in the Communicator
+///
+/// @tparam Matrix refers to a dlaf::Matrix object
+/// @throws std::invalid_argument if the matrix does not correspond to that of the Communicator
+template <class Matrix>
+  void assert_comm_distr(const comm::CommunicatorGrid& grid, const Matrix& matrix, std::string function, std::string mat_name, std::string comm_name) {
+  assert(matrix.size().isValid());
+
+  if ( (matrix.distribution().commGridSize() != grid.size()) && (matrix.distribution().rankIndex() != grid.rank()))
+    throw std::invalid_argument(function + ": " + "Distributed matrix " + mat_name +
+                                " and communicator grid " + comm_name + " are not compatibile.");
+}
+
 }
 }

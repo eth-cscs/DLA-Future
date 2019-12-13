@@ -450,22 +450,22 @@ TYPED_TEST(MatrixTest, Dependencies) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
       Matrix<Type, Device::CPU> mat(size, test.block_size, comm_grid);
 
-      auto fut0 = getFutures(mat);
+      auto fut0 = getFuturesUsingLocal(mat);
       EXPECT_TRUE(checkFuturesStep(fut0.size(), fut0));
 
-      auto fut1 = getFutures(mat);
+      auto fut1 = getFuturesUsingGlobal(mat);
       EXPECT_TRUE(checkFuturesStep(0, fut1));
 
-      auto shfut2a = getSharedFutures(mat);
+      auto shfut2a = getSharedFuturesUsingLocal(mat);
       EXPECT_TRUE(checkFuturesStep(0, shfut2a));
 
-      auto shfut2b = getSharedFutures(mat);
+      auto shfut2b = getSharedFuturesUsingGlobal(mat);
       EXPECT_TRUE(checkFuturesStep(0, shfut2b));
 
-      auto fut3 = getFutures(mat);
+      auto fut3 = getFuturesUsingLocal(mat);
       EXPECT_TRUE(checkFuturesStep(0, fut3));
 
-      auto shfut4a = getSharedFutures(mat);
+      auto shfut4a = getSharedFuturesUsingGlobal(mat);
       EXPECT_TRUE(checkFuturesStep(0, shfut4a));
 
       checkFutures(true, fut1, fut0);
@@ -478,10 +478,10 @@ TYPED_TEST(MatrixTest, Dependencies) {
 
       checkFutures(true, shfut4a, fut3);
 
-      auto shfut4b = getSharedFutures(mat);
+      auto shfut4b = getSharedFuturesUsingLocal(mat);
       EXPECT_TRUE(checkFuturesStep(shfut4b.size(), shfut4b));
 
-      auto fut5 = getFutures(mat);
+      auto fut5 = getFuturesUsingGlobal(mat);
       EXPECT_TRUE(checkFuturesStep(0, fut3));
 
       checkFutures(false, fut5, shfut4a);
@@ -502,10 +502,10 @@ TYPED_TEST(MatrixTest, DependenciesConst) {
       memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
       const Type* p = mem();
       Matrix<const Type, Device::CPU> mat(std::move(distribution), layout, p);
-      auto shfut1 = getSharedFutures(mat);
+      auto shfut1 = getSharedFuturesUsingGlobal(mat);
       EXPECT_TRUE(checkFuturesStep(shfut1.size(), shfut1));
 
-      auto shfut2 = getSharedFutures(mat);
+      auto shfut2 = getSharedFuturesUsingLocal(mat);
       EXPECT_TRUE(checkFuturesStep(shfut2.size(), shfut2));
     }
   }
@@ -523,29 +523,29 @@ TYPED_TEST(MatrixTest, DependenciesReferenceMix) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
       Matrix<Type, Device::CPU> mat(size, test.block_size, comm_grid);
 
-      auto fut0 = getFutures(mat);
+      auto fut0 = getFuturesUsingGlobal(mat);
       EXPECT_TRUE(checkFuturesStep(fut0.size(), fut0));
 
-      auto fut1 = getFutures(mat);
+      auto fut1 = getFuturesUsingLocal(mat);
       EXPECT_TRUE(checkFuturesStep(0, fut1));
 
-      auto shfut2a = getSharedFutures(mat);
+      auto shfut2a = getSharedFuturesUsingGlobal(mat);
       EXPECT_TRUE(checkFuturesStep(0, shfut2a));
 
       decltype(shfut2a) shfut2b;
       {
         Matrix<const Type, Device::CPU>& const_mat = mat;
-        shfut2b = getSharedFutures(const_mat);
+        shfut2b = getSharedFuturesUsingLocal(const_mat);
         EXPECT_TRUE(checkFuturesStep(0, shfut2b));
       }
 
-      auto fut3 = getFutures(mat);
+      auto fut3 = getFuturesUsingGlobal(mat);
       EXPECT_TRUE(checkFuturesStep(0, fut3));
 
       decltype(shfut2a) shfut4a;
       {
         Matrix<const Type, Device::CPU>& const_mat = mat;
-        shfut4a = getSharedFutures(const_mat);
+        shfut4a = getSharedFuturesUsingLocal(const_mat);
         EXPECT_TRUE(checkFuturesStep(0, shfut4a));
       }
 
@@ -559,10 +559,10 @@ TYPED_TEST(MatrixTest, DependenciesReferenceMix) {
 
       checkFutures(true, shfut4a, fut3);
 
-      auto shfut4b = getSharedFutures(mat);
+      auto shfut4b = getSharedFuturesUsingGlobal(mat);
       EXPECT_TRUE(checkFuturesStep(shfut4b.size(), shfut4b));
 
-      auto fut5 = getFutures(mat);
+      auto fut5 = getFuturesUsingLocal(mat);
       EXPECT_TRUE(checkFuturesStep(0, fut3));
 
       checkFutures(false, fut5, shfut4a);
@@ -583,29 +583,29 @@ TYPED_TEST(MatrixTest, DependenciesPointerMix) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
       Matrix<Type, Device::CPU> mat(size, test.block_size, comm_grid);
 
-      auto fut0 = getFutures(mat);
+      auto fut0 = getFuturesUsingLocal(mat);
       EXPECT_TRUE(checkFuturesStep(fut0.size(), fut0));
 
-      auto fut1 = getFutures(mat);
+      auto fut1 = getFuturesUsingGlobal(mat);
       EXPECT_TRUE(checkFuturesStep(0, fut1));
 
-      auto shfut2a = getSharedFutures(mat);
+      auto shfut2a = getSharedFuturesUsingLocal(mat);
       EXPECT_TRUE(checkFuturesStep(0, shfut2a));
 
       decltype(shfut2a) shfut2b;
       {
         Matrix<const Type, Device::CPU>* const_mat = &mat;
-        shfut2b = getSharedFutures(*const_mat);
+        shfut2b = getSharedFuturesUsingGlobal(*const_mat);
         EXPECT_TRUE(checkFuturesStep(0, shfut2b));
       }
 
-      auto fut3 = getFutures(mat);
+      auto fut3 = getFuturesUsingLocal(mat);
       EXPECT_TRUE(checkFuturesStep(0, fut3));
 
       decltype(shfut2a) shfut4a;
       {
         Matrix<const Type, Device::CPU>* const_mat = &mat;
-        shfut4a = getSharedFutures(*const_mat);
+        shfut4a = getSharedFuturesUsingGlobal(*const_mat);
         EXPECT_TRUE(checkFuturesStep(0, shfut4a));
       }
 
@@ -619,10 +619,10 @@ TYPED_TEST(MatrixTest, DependenciesPointerMix) {
 
       checkFutures(true, shfut4a, fut3);
 
-      auto shfut4b = getSharedFutures(mat);
+      auto shfut4b = getSharedFuturesUsingLocal(mat);
       EXPECT_TRUE(checkFuturesStep(shfut4b.size(), shfut4b));
 
-      auto fut5 = getFutures(mat);
+      auto fut5 = getFuturesUsingGlobal(mat);
       EXPECT_TRUE(checkFuturesStep(0, fut3));
 
       checkFutures(false, fut5, shfut4a);

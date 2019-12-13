@@ -312,6 +312,78 @@ TYPED_TEST(MatrixTest, ConstructorFromDistributionLayout) {
   }
 }
 
+TYPED_TEST(MatrixTest, LocalGlobalAccessOperatorCall) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+
+      comm::Index2D src_rank_index(std::min(1, comm_grid.size().rows() - 1),
+                                   std::max(0, comm_grid.size().cols() - 1));
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(),
+                                src_rank_index);
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+
+      Matrix<TypeParam, Device::CPU> mat(std::move(distribution), layout);
+      const Distribution& dist = mat.distribution();
+
+      for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
+        for (SizeType i = 0; i < dist.nrTiles().rows(); ++i) {
+          comm::Index2D owner{
+            dist.rankGlobalTile<Coord::Row>(i),
+            dist.rankGlobalTile<Coord::Col>(j)};
+
+          if(dist.rankIndex() == owner) {
+            GlobalTileIndex global_index(i, j);
+            LocalTileIndex local_index = dist.localTileIndex(global_index);
+
+            const TypeParam* ptr_global = mat(global_index).get().ptr(TileElementIndex{0, 0});
+            const TypeParam* ptr_local = mat(local_index).get().ptr(TileElementIndex{0, 0});
+
+            EXPECT_NE(ptr_global, nullptr);
+            EXPECT_EQ(ptr_global, ptr_local);
+          }
+        }
+      }
+    }
+  }
+}
+
+TYPED_TEST(MatrixTest, LocalGlobalAccessRead) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+
+      comm::Index2D src_rank_index(std::min(1, comm_grid.size().rows() - 1),
+                                   std::max(0, comm_grid.size().cols() - 1));
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(),
+                                src_rank_index);
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+
+      Matrix<TypeParam, Device::CPU> mat(std::move(distribution), layout);
+      const Distribution& dist = mat.distribution();
+
+      for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
+        for (SizeType i = 0; i < dist.nrTiles().rows(); ++i) {
+          comm::Index2D owner{
+            dist.rankGlobalTile<Coord::Row>(i),
+            dist.rankGlobalTile<Coord::Col>(j)};
+
+          if(dist.rankIndex() == owner) {
+            GlobalTileIndex global_index(i, j);
+            LocalTileIndex local_index = dist.localTileIndex(global_index);
+
+            const TypeParam* ptr_global = mat.read(global_index).get().ptr(TileElementIndex{0, 0});
+            const TypeParam* ptr_local = mat.read(local_index).get().ptr(TileElementIndex{0, 0});
+
+            EXPECT_NE(ptr_global, nullptr);
+            EXPECT_EQ(ptr_global, ptr_local);
+          }
+        }
+      }
+    }
+  }
+}
+
 struct ExistingLocalTestSizes {
   LocalElementSize size;
   TileElementSize block_size;

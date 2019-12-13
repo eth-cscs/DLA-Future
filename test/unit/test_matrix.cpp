@@ -328,11 +328,9 @@ TYPED_TEST(MatrixTest, LocalGlobalAccessOperatorCall) {
 
       for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
         for (SizeType i = 0; i < dist.nrTiles().rows(); ++i) {
-          comm::Index2D owner{
-            dist.rankGlobalTile<Coord::Row>(i),
-            dist.rankGlobalTile<Coord::Col>(j)};
+          comm::Index2D owner{dist.rankGlobalTile<Coord::Row>(i), dist.rankGlobalTile<Coord::Col>(j)};
 
-          if(dist.rankIndex() == owner) {
+          if (dist.rankIndex() == owner) {
             GlobalTileIndex global_index(i, j);
             LocalTileIndex local_index = dist.localTileIndex(global_index);
 
@@ -364,11 +362,9 @@ TYPED_TEST(MatrixTest, LocalGlobalAccessRead) {
 
       for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
         for (SizeType i = 0; i < dist.nrTiles().rows(); ++i) {
-          comm::Index2D owner{
-            dist.rankGlobalTile<Coord::Row>(i),
-            dist.rankGlobalTile<Coord::Col>(j)};
+          comm::Index2D owner{dist.rankGlobalTile<Coord::Row>(i), dist.rankGlobalTile<Coord::Col>(j)};
 
-          if(dist.rankIndex() == owner) {
+          if (dist.rankIndex() == owner) {
             GlobalTileIndex global_index(i, j);
             LocalTileIndex local_index = dist.localTileIndex(global_index);
 

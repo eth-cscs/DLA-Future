@@ -76,7 +76,7 @@ std::vector<hpx::future<Tile<T, device>>> getFuturesUsingGlobal(Matrix<T, device
     for (SizeType i = 0; i < dist.nrTiles().rows(); ++i) {
       comm::Index2D owner{dist.rankGlobalTile<Coord::Row>(i), dist.rankGlobalTile<Coord::Col>(j)};
 
-      if(dist.rankIndex() == owner) {
+      if (dist.rankIndex() == owner) {
         result.emplace_back(std::move(mat(GlobalTileIndex(i, j))));
         EXPECT_TRUE(result.back().valid());
       }
@@ -87,7 +87,8 @@ std::vector<hpx::future<Tile<T, device>>> getFuturesUsingGlobal(Matrix<T, device
 
 /// @brief Returns a col-major ordered vector with the read-only shared-futures to the matrix tiles.
 template <class T, Device device>
-std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingLocal(Matrix<T, device>& mat) {
+std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingLocal(
+    Matrix<T, device>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
   std::vector<hpx::shared_future<Tile<const T, device>>> result;
@@ -105,7 +106,8 @@ std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingLoca
 
 /// @brief Returns a col-major ordered vector with the read-only shared-futures to the matrix tiles.
 template <class T, Device device>
-std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingGlobal(Matrix<T, device>& mat) {
+std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingGlobal(
+    Matrix<T, device>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
   std::vector<hpx::shared_future<Tile<const T, device>>> result;
@@ -115,7 +117,7 @@ std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingGlob
     for (SizeType i = 0; i < dist.nrTiles().rows(); ++i) {
       comm::Index2D owner{dist.rankGlobalTile<Coord::Row>(i), dist.rankGlobalTile<Coord::Col>(j)};
 
-      if(dist.rankIndex() == owner) {
+      if (dist.rankIndex() == owner) {
         result.emplace_back(mat.read(GlobalTileIndex(i, j)));
         EXPECT_TRUE(result.back().valid());
       }

@@ -49,7 +49,7 @@ void set(Matrix<T, Device::CPU>& mat, ElementGetter el) {
 
 /// @brief Returns a col-major ordered vector with the futures to the matrix tiles.
 template <class T, Device device>
-std::vector<hpx::future<Tile<T, device>>> getFutures(Matrix<T, device>& mat) {
+std::vector<hpx::future<Tile<T, device>>> getFuturesUsingLocalIndex(Matrix<T, device>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
   std::vector<hpx::future<Tile<T, device>>> result;
@@ -64,9 +64,32 @@ std::vector<hpx::future<Tile<T, device>>> getFutures(Matrix<T, device>& mat) {
   return result;
 }
 
+/// @brief Returns a col-major ordered vector with the futures to the matrix tiles.
+template <class T, Device device>
+std::vector<hpx::future<Tile<T, device>>> getFuturesUsingGlobalIndex(Matrix<T, device>& mat) {
+  const matrix::Distribution& dist = mat.distribution();
+
+  std::vector<hpx::future<Tile<T, device>>> result;
+  result.reserve(util::size_t::mul(dist.localNrTiles().rows(), dist.localNrTiles().cols()));
+
+  for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
+    for (SizeType i = 0; i < dist.nrTiles().rows(); ++i) {
+      GlobalTileIndex global_index{i, j};
+      comm::Index2D owner = dist.rankGlobalTile(global_index);
+
+      if (dist.rankIndex() == owner) {
+        result.emplace_back(std::move(mat(global_index)));
+        EXPECT_TRUE(result.back().valid());
+      }
+    }
+  }
+  return result;
+}
+
 /// @brief Returns a col-major ordered vector with the read-only shared-futures to the matrix tiles.
 template <class T, Device device>
-std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFutures(Matrix<T, device>& mat) {
+std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingLocal(
+    Matrix<T, device>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
   std::vector<hpx::shared_future<Tile<const T, device>>> result;
@@ -76,6 +99,30 @@ std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFutures(Matrix<T
     for (SizeType i = 0; i < dist.localNrTiles().rows(); ++i) {
       result.emplace_back(mat.read(LocalTileIndex(i, j)));
       EXPECT_TRUE(result.back().valid());
+    }
+  }
+
+  return result;
+}
+
+/// @brief Returns a col-major ordered vector with the read-only shared-futures to the matrix tiles.
+template <class T, Device device>
+std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingGlobal(
+    Matrix<T, device>& mat) {
+  const matrix::Distribution& dist = mat.distribution();
+
+  std::vector<hpx::shared_future<Tile<const T, device>>> result;
+  result.reserve(util::size_t::mul(dist.localNrTiles().rows(), dist.localNrTiles().cols()));
+
+  for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
+    for (SizeType i = 0; i < dist.nrTiles().rows(); ++i) {
+      GlobalTileIndex global_index{i, j};
+      comm::Index2D owner = dist.rankGlobalTile(global_index);
+
+      if (dist.rankIndex() == owner) {
+        result.emplace_back(mat.read(global_index));
+        EXPECT_TRUE(result.back().valid());
+      }
     }
   }
 

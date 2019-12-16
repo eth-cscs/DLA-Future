@@ -49,7 +49,7 @@ void set(Matrix<T, Device::CPU>& mat, ElementGetter el) {
 
 /// @brief Returns a col-major ordered vector with the futures to the matrix tiles.
 template <class T, Device device>
-std::vector<hpx::future<Tile<T, device>>> getFuturesUsingLocal(Matrix<T, device>& mat) {
+std::vector<hpx::future<Tile<T, device>>> getFuturesUsingLocalIndex(Matrix<T, device>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
   std::vector<hpx::future<Tile<T, device>>> result;
@@ -66,7 +66,7 @@ std::vector<hpx::future<Tile<T, device>>> getFuturesUsingLocal(Matrix<T, device>
 
 /// @brief Returns a col-major ordered vector with the futures to the matrix tiles.
 template <class T, Device device>
-std::vector<hpx::future<Tile<T, device>>> getFuturesUsingGlobal(Matrix<T, device>& mat) {
+std::vector<hpx::future<Tile<T, device>>> getFuturesUsingGlobalIndex(Matrix<T, device>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
   std::vector<hpx::future<Tile<T, device>>> result;
@@ -74,10 +74,11 @@ std::vector<hpx::future<Tile<T, device>>> getFuturesUsingGlobal(Matrix<T, device
 
   for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
     for (SizeType i = 0; i < dist.nrTiles().rows(); ++i) {
-      comm::Index2D owner{dist.rankGlobalTile<Coord::Row>(i), dist.rankGlobalTile<Coord::Col>(j)};
+      GlobalTileIndex global_index{i, j};
+      comm::Index2D owner = dist.rankGlobalTile(global_index);
 
       if (dist.rankIndex() == owner) {
-        result.emplace_back(std::move(mat(GlobalTileIndex(i, j))));
+        result.emplace_back(std::move(mat(global_index)));
         EXPECT_TRUE(result.back().valid());
       }
     }
@@ -115,10 +116,11 @@ std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingGlob
 
   for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
     for (SizeType i = 0; i < dist.nrTiles().rows(); ++i) {
-      comm::Index2D owner{dist.rankGlobalTile<Coord::Row>(i), dist.rankGlobalTile<Coord::Col>(j)};
+      GlobalTileIndex global_index{i, j};
+      comm::Index2D owner = dist.rankGlobalTile(global_index);
 
       if (dist.rankIndex() == owner) {
-        result.emplace_back(mat.read(GlobalTileIndex(i, j)));
+        result.emplace_back(mat.read(global_index));
         EXPECT_TRUE(result.back().valid());
       }
     }

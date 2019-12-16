@@ -98,7 +98,7 @@ public:
   /// @throw std::invalid_argument if the global tile is not stored in the current process.
   /// @pre index.isValid() == true.
   /// @pre index.isIn(globalNrTiles()) == true.
-  hpx::future<TileType> operator()(const GlobalTileIndex& index) noexcept {
+  hpx::future<TileType> operator()(const GlobalTileIndex& index) {
     return operator()(this->localTileIndex(index));
   }
 
@@ -166,7 +166,7 @@ public:
   /// @throw std::invalid_argument if the global tile is not stored in the current process.
   /// @pre index.isValid() == true.
   /// @pre index.isIn(globalNrTiles()) == true.
-  hpx::shared_future<ConstTileType> read(const GlobalTileIndex& index) noexcept {
+  hpx::shared_future<ConstTileType> read(const GlobalTileIndex& index) {
     return read(localTileIndex(index));
   }
 

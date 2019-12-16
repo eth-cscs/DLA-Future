@@ -328,10 +328,10 @@ TYPED_TEST(MatrixTest, LocalGlobalAccessOperatorCall) {
 
       for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
         for (SizeType i = 0; i < dist.nrTiles().rows(); ++i) {
-          comm::Index2D owner{dist.rankGlobalTile<Coord::Row>(i), dist.rankGlobalTile<Coord::Col>(j)};
+          GlobalTileIndex global_index(i, j);
+          comm::Index2D owner = dist.rankGlobalTile(global_index);
 
           if (dist.rankIndex() == owner) {
-            GlobalTileIndex global_index(i, j);
             LocalTileIndex local_index = dist.localTileIndex(global_index);
 
             const TypeParam* ptr_global = mat(global_index).get().ptr(TileElementIndex{0, 0});
@@ -339,6 +339,9 @@ TYPED_TEST(MatrixTest, LocalGlobalAccessOperatorCall) {
 
             EXPECT_NE(ptr_global, nullptr);
             EXPECT_EQ(ptr_global, ptr_local);
+          }
+          else {
+            EXPECT_THROW(mat(global_index), std::invalid_argument);
           }
         }
       }
@@ -362,10 +365,10 @@ TYPED_TEST(MatrixTest, LocalGlobalAccessRead) {
 
       for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
         for (SizeType i = 0; i < dist.nrTiles().rows(); ++i) {
-          comm::Index2D owner{dist.rankGlobalTile<Coord::Row>(i), dist.rankGlobalTile<Coord::Col>(j)};
+          GlobalTileIndex global_index(i, j);
+          comm::Index2D owner = dist.rankGlobalTile(global_index);
 
           if (dist.rankIndex() == owner) {
-            GlobalTileIndex global_index(i, j);
             LocalTileIndex local_index = dist.localTileIndex(global_index);
 
             const TypeParam* ptr_global = mat.read(global_index).get().ptr(TileElementIndex{0, 0});
@@ -373,6 +376,9 @@ TYPED_TEST(MatrixTest, LocalGlobalAccessRead) {
 
             EXPECT_NE(ptr_global, nullptr);
             EXPECT_EQ(ptr_global, ptr_local);
+          }
+          else {
+            EXPECT_THROW(mat.read(global_index), std::invalid_argument);
           }
         }
       }

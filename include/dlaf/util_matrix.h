@@ -23,7 +23,6 @@ namespace util_matrix {
 /// @throws std::invalid_argument if the matrix is not squared
 template <class Matrix>
 void assert_size_square(const Matrix& matrix, std::string function, std::string mat_name) {
-  assert(matrix.size().isValid());
   if (matrix.size().rows() != matrix.size().cols())
     throw std::invalid_argument(function + ": " + "Matrix " + mat_name + " is not square.");
 }
@@ -34,36 +33,32 @@ void assert_size_square(const Matrix& matrix, std::string function, std::string 
 /// @throws std::invalid_argument if the matrix block is not squared
 template <class Matrix>
 void assert_blocksize_square(const Matrix& matrix, std::string function, std::string mat_name) {
-  assert(matrix.size().isValid());
   if (matrix.blockSize().rows() != matrix.blockSize().cols())
     throw std::invalid_argument(function + ": " + "Block size in matrix " + mat_name +
                                 " is not square.");
 }
 
-/// @brief Verify if dlaf::Matrix is on local memory
+/// @brief Verify if dlaf::Matrix is entirely stored locally and elements are not shared with other ranks
 ///
 /// @tparam Matrix refers to a dlaf::Matrix object
-/// @throws std::invalid_argument if the matrix is not stored on local memory
+/// @throws std::invalid_argument if the matrix is not entirely stored on local memory
 template <class Matrix>
 void assert_local_matrix(const Matrix& matrix, std::string function, std::string mat_name) {
-  assert(matrix.size().isValid());
   if (matrix.distribution().commGridSize() != comm::Size2D{1, 1})
     throw std::invalid_argument(function + ": " + "Matrix " + mat_name + " is not local.");
 }
 
-/// @brief Verify that distributed dlaf::Matrix correspond to the one in the Communicator
+/// @brief Verify that sizes and rank ids of the distributed dlaf::Matrix and of the Communicator match
 ///
 /// @tparam Matrix refers to a dlaf::Matrix object
 /// @throws std::invalid_argument if the matrix does not correspond to that of the Communicator
 template <class Matrix>
 void assert_comm_distr(const comm::CommunicatorGrid& grid, const Matrix& matrix, std::string function,
                        std::string mat_name, std::string comm_name) {
-  assert(matrix.size().isValid());
-
   if ((matrix.distribution().commGridSize() != grid.size()) &&
       (matrix.distribution().rankIndex() != grid.rank()))
     throw std::invalid_argument(function + ": " + "Distributed matrix " + mat_name +
-                                " and communicator grid " + comm_name + " are not compatibile.");
+                                " and communicator grid " + comm_name + " are not compatible.");
 }
 
 }

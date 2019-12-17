@@ -119,7 +119,7 @@ void cholesky(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, Device::CP
   // Check if block matrix is square
   util_matrix::assert_blocksize_square(mat, "Cholesky", "mat");
   // Check compatibility of the communicator grid and the distribution
-  util_matrix::assert_comm_distr(grid, mat, "Cholesky", "mat", "comm");
+  util_matrix::assert_compatible_communicator(grid, mat, "Cholesky", "mat", "comm");
 
   const dlaf::matrix::Distribution& distr = mat.distribution();
 

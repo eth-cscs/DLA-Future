@@ -53,8 +53,8 @@ void assert_local_matrix(const Matrix& matrix, std::string function, std::string
 /// @tparam Matrix refers to a dlaf::Matrix object
 /// @throws std::invalid_argument if the matrix does not correspond to that of the Communicator
 template <class Matrix>
-void assert_comm_distr(const comm::CommunicatorGrid& grid, const Matrix& matrix, std::string function,
-                       std::string mat_name, std::string comm_name) {
+void assert_compatible_communicator(const comm::CommunicatorGrid& grid, const Matrix& matrix,
+                                    std::string function, std::string mat_name, std::string comm_name) {
   if ((matrix.distribution().commGridSize() != grid.size()) &&
       (matrix.distribution().rankIndex() != grid.rank()))
     throw std::invalid_argument(function + ": " + "Distributed matrix " + mat_name +

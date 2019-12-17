@@ -38,11 +38,11 @@ static bool use_pools = true;
 template <class T>
 void cholesky(blas::Uplo uplo, Matrix<T, Device::CPU>& mat) {
   // Set up executor on the default queue with high priority.
-  hpx::threads::scheduled_executor matrix_HP_executor =
+  hpx::threads::scheduled_executor executor_hp =
       hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_high);
 
   // Set up executor on the default queue with default priority.
-  hpx::threads::scheduled_executor matrix_normal_executor =
+  hpx::threads::scheduled_executor executor_normal =
       hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_default);
 
   // Check if matrix is square
@@ -60,19 +60,19 @@ void cholesky(blas::Uplo uplo, Matrix<T, Device::CPU>& mat) {
       // Cholesky decomposition on mat(k,k) r/w potrf (lapack operation)
       auto kk = LocalTileIndex{k, k};
 
-      hpx::dataflow(matrix_HP_executor, hpx::util::unwrapping(tile::potrf<T, Device::CPU>), uplo,
+      hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::potrf<T, Device::CPU>), uplo,
                     std::move(mat(kk)));
 
       for (SizeType i = k + 1; i < nrtile; ++i) {
         // Update panel mat(i,k) with trsm (blas operation), using data mat.read(k,k)
-        hpx::dataflow(matrix_HP_executor, hpx::util::unwrapping(tile::trsm<T, Device::CPU>),
-                      blas::Side::Right, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, 1.0,
-                      mat.read(kk), std::move(mat(LocalTileIndex{i, k})));
+        hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), blas::Side::Right,
+                      uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, 1.0, mat.read(kk),
+                      std::move(mat(LocalTileIndex{i, k})));
       }
 
       for (SizeType j = k + 1; j < nrtile; ++j) {
         // Choose queue priority
-        auto trailing_matrix_executor = (j == k + 1) ? matrix_HP_executor : matrix_normal_executor;
+        auto trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_normal;
 
         // Update trailing matrix: diagonal element mat(j,j, reading mat.read(j,k), using herk (blas operation)
         hpx::dataflow(trailing_matrix_executor, hpx::util::unwrapping(tile::herk<T, Device::CPU>), uplo,

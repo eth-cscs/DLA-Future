@@ -72,7 +72,7 @@ TYPED_TEST(CholeskyLocalTest, Correctness) {
   };
 
   // Analytical results
-  auto res = [](const TileElementIndex& index) {
+  auto res = [](const GlobalElementIndex& index) {
     SizeType i = index.row();
     SizeType j = index.col();
     if (i < j)
@@ -137,7 +137,7 @@ TYPED_TEST(CholeskyDistributedTest, Correctness) {
   };
 
   // Analytical results
-  auto res = [](const TileElementIndex& index) {
+  auto res = [](const GlobalElementIndex& index) {
     SizeType i = index.row();
     SizeType j = index.col();
     if (i < j)

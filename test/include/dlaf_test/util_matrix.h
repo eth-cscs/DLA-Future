@@ -155,7 +155,7 @@ void checkPtr(PointerGetter exp_ptr, Matrix<T, Device::CPU>& mat, const char* fi
 /// @brief Checks the elements of the matrix.
 ///
 /// The (i, j)-element of the matrix is compared to expected({i, j}).
-/// @pre expected argument is an index of type const MatrixElementIndex&.
+/// @pre expected argument is an index of type const GlobalElementIndex&.
 /// @pre expected return type should be T.
 /// @pre rel_err > 0.
 /// @pre abs_err > 0.

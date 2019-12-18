@@ -22,7 +22,7 @@ namespace util_matrix {
 /// @tparam Matrix refers to a dlaf::Matrix object
 /// @throws std::invalid_argument if the matrix is not squared
 template <class Matrix>
-void assert_size_square(const Matrix& matrix, std::string function, std::string mat_name) {
+void assertSizeSquare(const Matrix& matrix, std::string function, std::string mat_name) {
   if (matrix.size().rows() != matrix.size().cols())
     throw std::invalid_argument(function + ": " + "Matrix " + mat_name + " is not square.");
 }
@@ -32,33 +32,34 @@ void assert_size_square(const Matrix& matrix, std::string function, std::string 
 /// @tparam Matrix refers to a dlaf::Matrix object
 /// @throws std::invalid_argument if the matrix block is not squared
 template <class Matrix>
-void assert_blocksize_square(const Matrix& matrix, std::string function, std::string mat_name) {
+void assertBlocksizeSquare(const Matrix& matrix, std::string function, std::string mat_name) {
   if (matrix.blockSize().rows() != matrix.blockSize().cols())
     throw std::invalid_argument(function + ": " + "Block size in matrix " + mat_name +
                                 " is not square.");
 }
 
-/// @brief Verify if dlaf::Matrix is entirely stored locally and elements are not shared with other ranks
+/// @brief Verify if dlaf::Matrix is distributed on a (1x1) grid (i.e. if it is a local matrix).
 ///
 /// @tparam Matrix refers to a dlaf::Matrix object
-/// @throws std::invalid_argument if the matrix is not entirely stored on local memory
+/// @throws std::invalid_argument if the matrix is not local
 template <class Matrix>
-void assert_local_matrix(const Matrix& matrix, std::string function, std::string mat_name) {
+void assertLocalMatrix(const Matrix& matrix, std::string function, std::string mat_name) {
   if (matrix.distribution().commGridSize() != comm::Size2D{1, 1})
     throw std::invalid_argument(function + ": " + "Matrix " + mat_name + " is not local.");
 }
 
-/// @brief Verify that sizes and rank ids of the distributed dlaf::Matrix and of the Communicator match
+/// @brief Verify that the matrix is distributed according to the given communicator grid.
 ///
 /// @tparam Matrix refers to a dlaf::Matrix object
-/// @throws std::invalid_argument if the matrix does not correspond to that of the Communicator
+/// @throws std::invalid_argument if the matrix is not distributed correctly
 template <class Matrix>
-void assert_compatible_communicator(const comm::CommunicatorGrid& grid, const Matrix& matrix,
-                                    std::string function, std::string mat_name, std::string comm_name) {
+void assertMatrixDistributedOnGrid(const comm::CommunicatorGrid& grid, const Matrix& matrix,
+                                   std::string function, std::string mat_name, std::string grid_name) {
   if ((matrix.distribution().commGridSize() != grid.size()) &&
       (matrix.distribution().rankIndex() != grid.rank()))
-    throw std::invalid_argument(function + ": " + "Distributed matrix " + mat_name +
-                                " and communicator grid " + comm_name + " are not compatible.");
+    throw std::invalid_argument(function + ": " + "The matrix " + mat_name +
+                                " is not distributed according to the communicator grid " + grid_name +
+                                ".");
 }
 
 }

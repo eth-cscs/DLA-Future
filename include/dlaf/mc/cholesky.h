@@ -28,12 +28,14 @@ namespace dlaf {
 
 static bool use_pools = true;
 
-/// @brief Cholesky implementation on local memory
+/// @brief Local implementation of the Cholesky factorization.
 ///
-/// @param uplo specifies whether matrix is \a Lower or \a Upper triangular
-/// @tparam mat refers to a dlaf::Matrix object
+/// Since the matrix is Hermitian only half of the elements are referenced.
+/// @param uplo specifies if the elements of the Hermitian matrix to be referenced are the elements in
+/// the lower or upper triangular part.
+/// @tparam mat refers to a dlaf::Matrix object.
 ///
-/// @throws std::runtime_error if \p uplo = \a Upper decomposition is chosen (not yet implemented)
+/// @throws std::runtime_error if \p uplo = \a Upper (not yet implemented).
 
 template <class T>
 void cholesky(blas::Uplo uplo, Matrix<T, Device::CPU>& mat) {
@@ -46,11 +48,11 @@ void cholesky(blas::Uplo uplo, Matrix<T, Device::CPU>& mat) {
       hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_default);
 
   // Check if matrix is square
-  util_matrix::assert_size_square(mat, "Cholesky", "mat");
+  util_matrix::assertSizeSquare(mat, "Cholesky", "mat");
   // Check if block matrix is square
-  util_matrix::assert_blocksize_square(mat, "Cholesky", "mat");
+  util_matrix::assertBlocksizeSquare(mat, "Cholesky", "mat");
   // Check if matrix is stored on local memory
-  util_matrix::assert_local_matrix(mat, "Cholesky", "mat");
+  util_matrix::assertLocalMatrix(mat, "Cholesky", "mat");
 
   // Number of tile (rows = cols)
   SizeType nrtile = mat.nrTiles().cols();
@@ -94,13 +96,15 @@ void cholesky(blas::Uplo uplo, Matrix<T, Device::CPU>& mat) {
   }
 }
 
-/// @brief Distributed implementation of the Cholesky factorization
+/// @brief Distributed implementation of the Cholesky factorization.
 ///
+/// Since the matrix is Hermitian only half of the elements are referenced.
 /// @param grid refers to a comm::CommunicatorGrid object
-/// @param uplo specifies whether the matrix is \a Lower or \a Upper triangular
-/// @tparam mat refers to a dlaf::Matrix object
+/// @param uplo specifies if the elements of the Hermitian matrix to be referenced are the elements in
+/// the lower or upper triangular part.
+/// @tparam mat refers to a dlaf::Matrix object.
 ///
-/// @throws std::runtime_error if \p uplo = \a Upper decomposition is chosen (not yet implemented)
+/// @throws std::runtime_error if \p uplo = \a Upper (not yet implemented).
 
 template <class T>
 void cholesky(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, Device::CPU>& mat) {
@@ -115,11 +119,11 @@ void cholesky(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, Device::CP
   auto row_comm_size = grid.rowCommunicator().size();
 
   // Check if matrix is square
-  util_matrix::assert_size_square(mat, "Cholesky", "mat");
+  util_matrix::assertSizeSquare(mat, "Cholesky", "mat");
   // Check if block matrix is square
-  util_matrix::assert_blocksize_square(mat, "Cholesky", "mat");
+  util_matrix::assertBlocksizeSquare(mat, "Cholesky", "mat");
   // Check compatibility of the communicator grid and the distribution
-  util_matrix::assert_compatible_communicator(grid, mat, "Cholesky", "mat", "comm");
+  util_matrix::assertMatrixDistributedOnGrid(grid, mat, "Cholesky", "mat", "grid");
 
   const dlaf::matrix::Distribution& distr = mat.distribution();
 

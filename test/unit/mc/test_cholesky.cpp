@@ -41,16 +41,6 @@ public:
 
 TYPED_TEST_SUITE(CholeskyDistributedTest, MatrixElementTypes);
 
-template <typename Type>
-class CholeskyGridTest : public ::testing::Test {
-public:
-  const std::vector<CommunicatorGrid>& commGrids() {
-    return comm_grids;
-  }
-};
-
-TYPED_TEST_SUITE(CholeskyGridTest, MatrixElementTypes);
-
 std::vector<LocalElementSize> square_sizes({{10, 10}, {25, 25}, {12, 12}, {0, 0}});
 std::vector<LocalElementSize> rectangular_sizes({{10, 20}, {50, 20}, {0, 10}, {20, 0}});
 std::vector<TileElementSize> square_block_sizes({{3, 3}, {5, 5}});
@@ -105,7 +95,7 @@ TYPED_TEST(CholeskyLocalTest, Correctness) {
   }
 }
 
-TYPED_TEST(CholeskyLocalTest, NoSquareMatrixException) {
+TYPED_TEST(CholeskyLocalTest, MatrixNotSquareException) {
   for (const auto& size : rectangular_sizes) {
     for (const auto& block_size : square_block_sizes) {
       Matrix<TypeParam, Device::CPU> mat(size, block_size);
@@ -115,10 +105,22 @@ TYPED_TEST(CholeskyLocalTest, NoSquareMatrixException) {
   }
 }
 
-TYPED_TEST(CholeskyLocalTest, NoSquareBlockException) {
+TYPED_TEST(CholeskyLocalTest, BlockNotSquareException) {
   for (const auto& size : square_sizes) {
     for (const auto& block_size : rectangular_block_sizes) {
       Matrix<TypeParam, Device::CPU> mat(size, block_size);
+
+      EXPECT_THROW(cholesky(blas::Uplo::Lower, mat), std::invalid_argument);
+    }
+  }
+}
+
+TYPED_TEST(CholeskyLocalTest, MatrixNotLocalException) {
+  for (const auto& size : square_sizes) {
+    for (const auto& block_size : square_block_sizes) {
+      GlobalElementSize sz = globalTestSize(size);
+      Distribution distribution(sz, block_size, {2, 1}, {0, 0}, {0, 0});
+      Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
 
       EXPECT_THROW(cholesky(blas::Uplo::Lower, mat), std::invalid_argument);
     }
@@ -176,7 +178,7 @@ TYPED_TEST(CholeskyDistributedTest, Correctness) {
   }
 }
 
-TYPED_TEST(CholeskyDistributedTest, NoSquareMatrixException) {
+TYPED_TEST(CholeskyDistributedTest, MatrixNotSquareException) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& size : rectangular_sizes) {
       for (const auto& block_size : square_block_sizes) {
@@ -192,7 +194,7 @@ TYPED_TEST(CholeskyDistributedTest, NoSquareMatrixException) {
   }
 }
 
-TYPED_TEST(CholeskyDistributedTest, NoSquareBlockException) {
+TYPED_TEST(CholeskyDistributedTest, BlockNotSquareException) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& size : square_sizes) {
       for (const auto& block_size : rectangular_block_sizes) {
@@ -208,55 +210,35 @@ TYPED_TEST(CholeskyDistributedTest, NoSquareBlockException) {
   }
 }
 
-TYPED_TEST(CholeskyGridTest, NoLocalMatrixException) {
-  for (const auto& comm_grid : this->commGrids()) {
-    for (const auto& size : square_sizes) {
-      for (const auto& block_size : square_block_sizes) {
-        dlaf::comm::Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
-                                           std::min(1, comm_grid.size().cols() - 1));
-        GlobalElementSize sz = globalTestSize(size);
-        Size2D grid_augmented = Size2D(comm_grid.size().rows() + 1, comm_grid.size().cols() + 1);
-        Distribution distribution(sz, block_size, grid_augmented, comm_grid.rank(), src_rank_index);
-        Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
-
-        EXPECT_THROW(cholesky(blas::Uplo::Lower, mat), std::invalid_argument);
-      }
-    }
-  }
-}
-
-TYPED_TEST(CholeskyGridTest, NoMatrixDistributedOnGridException) {
+TYPED_TEST(CholeskyDistributedTest, MatrixNotDistributedOnGridException) {
   // Test: matrix not distributed according to the given communicator grid
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& size : square_sizes) {
       for (const auto& block_size : square_block_sizes) {
         GlobalElementSize sz = globalTestSize(size);
 
-        // Different grid size
-        Size2D grid_distributed = Size2D(comm_grid.size().rows() + 1, comm_grid.size().cols() + 1);
-        dlaf::comm::Index2D src_rank_index_distributed(std::max(0, grid_distributed.rows() - 1),
-                                                       std::min(1, grid_distributed.cols() - 1));
-        Distribution distribution(sz, block_size, grid_distributed, comm_grid.rank(),
-                                  src_rank_index_distributed);
-        Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
+        {
+          // Different grid size
+          Size2D grid_distributed = Size2D(comm_grid.size().rows() + 1, comm_grid.size().cols() + 1);
+          Distribution distribution(sz, block_size, grid_distributed, comm_grid.rank(), {0, 0});
+          Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
 
-        EXPECT_THROW(cholesky(comm_grid, blas::Uplo::Lower, mat), std::invalid_argument);
+          EXPECT_THROW(cholesky(comm_grid, blas::Uplo::Lower, mat), std::invalid_argument);
+        }
 
-        // Different rank
-        dlaf::comm::Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
-                                           std::min(1, comm_grid.size().cols() - 1));
-        dlaf::comm::Index2D rank_index_distributed(std::max(0, comm_grid.rank().row() - 1),
-                                                   std::max(0, comm_grid.rank().col() - 1));
-        //	dlaf::comm::Index2D rank_index_distributed(comm_grid.size().rows(), comm_grid.rank.col());
+        {
+          // Different rank
+          dlaf::comm::Index2D rank_index_distributed(std::max(0, comm_grid.rank().row() - 1),
+                                                     std::max(0, comm_grid.rank().col() - 1));
 
-        Distribution distributionrank(sz, block_size, comm_grid.size(), rank_index_distributed,
-                                      src_rank_index);
-        Matrix<TypeParam, Device::CPU> matrank(std::move(distributionrank));
+          Distribution distribution(sz, block_size, comm_grid.size(), rank_index_distributed, {0, 0});
+          Matrix<TypeParam, Device::CPU> rank(std::move(distribution));
 
-        if (matrank.distribution().rankIndex() == comm_grid.rank())
-          continue;
-        else
-          EXPECT_THROW(cholesky(comm_grid, blas::Uplo::Lower, matrank), std::invalid_argument);
+          if (rank.distribution().rankIndex() == comm_grid.rank())
+            continue;
+          else
+            EXPECT_THROW(cholesky(comm_grid, blas::Uplo::Lower, rank), std::invalid_argument);
+        }
       }
     }
   }

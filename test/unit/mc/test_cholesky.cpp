@@ -85,7 +85,7 @@ TYPED_TEST(CholeskyLocalTest, Correctness) {
     for (const auto& block_size : square_block_sizes) {
       // Matrix to undergo Cholesky decomposition
       Matrix<TypeParam, Device::CPU> mat(size, block_size);
-      set(mat, el);
+      matrix_test::set(mat, el);
 
       cholesky(blas::Uplo::Lower, mat);
 
@@ -198,8 +198,8 @@ TYPED_TEST(CholeskyDistributedTest, BlockNotSquareException) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& size : square_sizes) {
       for (const auto& block_size : rectangular_block_sizes) {
-        dlaf::comm::Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
-                                           std::min(1, comm_grid.size().cols() - 1));
+        comm::Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
+                                     std::min(1, comm_grid.size().cols() - 1));
         GlobalElementSize sz = globalTestSize(size);
         Distribution distribution(sz, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
         Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
@@ -219,7 +219,8 @@ TYPED_TEST(CholeskyDistributedTest, MatrixNotDistributedOnGridException) {
 
         {
           // Different grid size
-          Size2D grid_distributed = Size2D(comm_grid.size().rows() + 1, comm_grid.size().cols() + 1);
+          comm::Size2D grid_distributed =
+              comm::Size2D(comm_grid.size().rows() + 1, comm_grid.size().cols() + 1);
           Distribution distribution(sz, block_size, grid_distributed, comm_grid.rank(), {0, 0});
           Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
 
@@ -228,8 +229,8 @@ TYPED_TEST(CholeskyDistributedTest, MatrixNotDistributedOnGridException) {
 
         {
           // Different rank
-          dlaf::comm::Index2D rank_index_distributed(std::max(0, comm_grid.rank().row() - 1),
-                                                     std::max(0, comm_grid.rank().col() - 1));
+          comm::Index2D rank_index_distributed(std::max(0, comm_grid.rank().row() - 1),
+                                               std::max(0, comm_grid.rank().col() - 1));
 
           Distribution distribution(sz, block_size, comm_grid.size(), rank_index_distributed, {0, 0});
           Matrix<TypeParam, Device::CPU> rank(std::move(distribution));

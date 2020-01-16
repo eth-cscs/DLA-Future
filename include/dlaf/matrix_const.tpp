@@ -40,7 +40,7 @@ template <class T, Device device>
 hpx::shared_future<Tile<const T, device>> Matrix<const T, device>::read(
     const LocalTileIndex& index) noexcept {
   std::size_t i = tileLinearIndex(index);
-  if (!tile_shared_futures_[i].valid()) {
+if (!tile_shared_futures_[i].valid()) {
     hpx::future<TileType> old_future = std::move(tile_futures_[i]);
     hpx::promise<TileType> p;
     tile_futures_[i] = p.get_future();

@@ -65,10 +65,35 @@ void triangular_solve(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag 
   if (uplo == blas::Uplo::Upper) {
     if (side == blas::Side::Left) {
       if (op == blas::Op::NoTrans) {
-        // Upper Left NoTrans case
+        // Upper Left NoTrans
+        std::cout << "Upper Left NoTrans\n";
+
+        // Loop on rows of A matrix
+        for (SizeType k = m - 1; k > -1; --k) {
+          // Loop on cols of A matrix
+          for (SizeType j = n - 1; j > -1; --j) {
+            auto kj = LocalTileIndex{k, j};
+            // Triangular solve of the first tile
+            hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), side, uplo, op,
+                          diag, alpha, A.read(LocalTileIndex{k, k}), std::move(B(kj)));
+
+            for (SizeType i = k - 1; i > -1; --i) {
+              // Choose queue priority
+              auto trailing_executor = (i == k - 1) ? executor_hp : executor_normal;
+
+              auto beta = static_cast<T>(-1.0) / alpha;
+              // Matrix multiplication to update other eigenvectors
+              hpx::dataflow(trailing_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), op,
+                            blas::Op::NoTrans, beta, A.read(LocalTileIndex{i, k}), B.read(kj), 1.0,
+                            std::move(B(LocalTileIndex{i, j})));
+            }
+          }
+        }
       }
       else {
         // Upper Left Trans/ConjTrans case
+        std::cout << "Upper Left Trans/ConjTrans" << std::endl;
+
         // Loop on rows of A matrix
         for (SizeType k = 0; k < m; ++k) {
           // Loop on cols of A matrix
@@ -106,6 +131,7 @@ void triangular_solve(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag 
     if (side == blas::Side::Left) {
       if (op == blas::Op::NoTrans) {
         // Lower Left NoTrans case
+        std::cout << "Lower Left NoTrans" << std::endl;
 
         // Loop on rows of A matrix
         for (SizeType k = 0; k < m; ++k) {
@@ -132,6 +158,29 @@ void triangular_solve(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag 
       }
       else {
         // Lower Left Trans/ConjTrans case
+        std::cout << "Lower Left Trans/ConjTrans\n";
+
+        // Loop on rows of A matrix
+        for (SizeType k = m - 1; k > -1; --k) {
+          // Loop on cols of A matrix
+          for (SizeType j = n - 1; j > -1; --j) {
+            auto kj = LocalTileIndex{k, j};
+            // Triangular solve of the first tile
+            hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), side, uplo, op,
+                          diag, alpha, A.read(LocalTileIndex{k, k}), std::move(B(kj)));
+
+            for (SizeType i = k - 1; i > -1; --i) {
+              // Choose queue priority
+              auto trailing_executor = (i == k - 1) ? executor_hp : executor_normal;
+
+              auto beta = static_cast<T>(-1.0) / alpha;
+              // Matrix multiplication to update other eigenvectors
+              hpx::dataflow(trailing_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), op,
+                            blas::Op::NoTrans, beta, A.read(LocalTileIndex{k, i}), B.read(kj), 1.0,
+                            std::move(B(LocalTileIndex{i, j})));
+            }
+          }
+        }
       }
     }
     else {

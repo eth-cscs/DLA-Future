@@ -35,7 +35,7 @@ using namespace testing;
 std::vector<blas::Diag> blas_diags({blas::Diag::NonUnit});
 std::vector<blas::Op> blas_ops({blas::Op::Trans});
 std::vector<blas::Side> blas_sides({blas::Side::Left});
-std::vector<blas::Uplo> blas_uplos({blas::Uplo::Upper});
+std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
 
 template <typename Type>
 class TriangularSolveLocalTest : public ::testing::Test {};
@@ -45,7 +45,7 @@ TYPED_TEST_SUITE(TriangularSolveLocalTest, MatrixElementTypes);
 std::vector<LocalElementSize> square_sizes({{3, 3}, {6, 6}, {10, 10}, {25, 25}, {12, 12}, {0, 0}});
 std::vector<LocalElementSize> rectangular_sizes({{10, 20}, {50, 20}, {0, 10}, {20, 0}});
 
-std::vector<unsigned int> col_b({{3}, {20}, {50}, {70}});
+std::vector<unsigned int> col_b({{1}, {3}, {20}, {50}, {70}});
 
 std::vector<TileElementSize> square_block_sizes({{3, 3}, {5, 5}});
 std::vector<TileElementSize> rectangular_block_sizes({{10, 30}, {20, 10}});
@@ -65,7 +65,7 @@ auto testTriangularSolveElementFunctionsLeft(blas::Uplo uplo, blas::Op op, blas:
   //      = (op(a)_ii * res_ij + (kk-1) * gamma) / alpha,
   // where gamma = (i+1) / (j+2) * exp(I*(2*i+j)),
   //       kk = i+1 if op(a) is an lower triangular matrix, or
-  //       kk = m-i if op(a) is an lower triangular matrix.
+  //       kk = m-i if op(a) is an upper triangular matrix.
   // Therefore
   // b_ij = (res_ij + (kk-1) * gamma) / alpha, if diag == Unit
   // b_ij = kk * gamma / alpha, otherwise.
@@ -93,13 +93,20 @@ auto testTriangularSolveElementFunctionsLeft(blas::Uplo uplo, blas::Op op, blas:
     return TypeUtilities<T>::polar((k + .5) / (j + 2), k + j);
   };
 
-  std::function<T(const GlobalElementIndex&)> el_b = [m, alpha, diag, op_a_lower,
+  std::function<T(const GlobalElementIndex&)> el_b = [m, alpha, diag, op_a_lower, uplo,
                                                       res_b](const GlobalElementIndex& index) {
     BaseType<T> kk = op_a_lower ? index.row() + 1 : m - index.row();
 
+    //    std::cout<< kk << " is kk, lower " << op_a_lower << " yes " << index.row()+1 << " , no " << m -
+    //    index.row()<< " m " << m << " index_row " << index.row() << std::endl;
+
     double i = index.row();
     double j = index.col();
+
     T gamma = TypeUtilities<T>::polar((i + 1) / (j + 2), 2 * i + j);
+    //    std::cout << " kk " << kk << " gamma " << gamma << " alpha " << alpha << " el_b " << kk * gamma
+    //    / alpha << std::endl;
+
     if (diag == blas::Diag::Unit)
       return ((kk - 1) * gamma + res_b(index)) / alpha;
     else
@@ -172,8 +179,9 @@ void testTriangularSolve(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Di
                          Matrix<T, Device::CPU>& matA, Matrix<T, Device::CPU>& matB,
                          Matrix<T, Device::CPU>& matX) {
   std::function<T(const GlobalElementIndex&)> el_op_a, el_b, res_b;
-  auto m = matB.nrTiles().rows();
-  auto n = matB.nrTiles().cols();
+
+  auto m = matB.size().rows();
+  auto n = matB.size().cols();
 
   if (side == blas::Side::Left)
     std::tie(el_op_a, el_b, res_b) =
@@ -186,72 +194,72 @@ void testTriangularSolve(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Di
   set(matB, el_b);
   set(matX, res_b);
 
-  //  std::cout << "trsm total " << m << "x" << n << std::endl;
-  //  std::cout << "Matrix A\n";
-  //  const matrix::Distribution& distA = matA.distribution();
-  //  for (SizeType tile_i = 0; tile_i < distA.localNrTiles().rows(); ++tile_i) {
-  //    for (SizeType tile_j = 0; tile_j < distA.localNrTiles().cols(); ++tile_j) {
-  //      auto tile = matA(LocalTileIndex(tile_i, tile_j)).get();
-  //      std::cout << " tile " << tile_i << ", " << tile_j << "\n";
-  //      for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
-  //	SizeType i = distA.globalElementFromLocalTileAndTileElement<Coord::Row>(tile_i, ii);
-  //	for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
-  //	  SizeType j = distA.globalElementFromLocalTileAndTileElement<Coord::Col>(tile_j, jj);
-  //	  std::cout << tile({ii, jj}) << " ";
+  //    std::cout << "trsm total " << m << "x" << n << std::endl;
+  //    std::cout << "Matrix A\n";
+  //    const matrix::Distribution& distA = matA.distribution();
+  //    for (SizeType tile_i = 0; tile_i < distA.localNrTiles().rows(); ++tile_i) {
+  //      for (SizeType tile_j = 0; tile_j < distA.localNrTiles().cols(); ++tile_j) {
+  //        auto tile = matA(LocalTileIndex(tile_i, tile_j)).get();
+  //        std::cout << " tile " << tile_i << ", " << tile_j << "\n";
+  //        for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
+  //  	SizeType i = distA.globalElementFromLocalTileAndTileElement<Coord::Row>(tile_i, ii);
+  //  	for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
+  //  	  SizeType j = distA.globalElementFromLocalTileAndTileElement<Coord::Col>(tile_j, jj);
+  //  	  std::cout << tile({ii, jj}) << " ";
+  //          }
+  //  	std::cout << "\n" << std::endl;
   //        }
-  //	std::cout << "\n" << std::endl;
   //      }
   //    }
-  //  }
   //
-  //  std::cout << "Matrix B\n";
-  //  const matrix::Distribution& distB = matB.distribution();
-  //  for (SizeType tile_i = 0; tile_i < distB.localNrTiles().rows(); ++tile_i) {
-  //    for (SizeType tile_j = 0; tile_j < distB.localNrTiles().cols(); ++tile_j) {
-  //      auto tile = matB(LocalTileIndex(tile_i, tile_j)).get();
-  //      for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
-  //	SizeType i = distB.globalElementFromLocalTileAndTileElement<Coord::Row>(tile_i, ii);
-  //	for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
-  //	  SizeType j = distB.globalElementFromLocalTileAndTileElement<Coord::Col>(tile_j, jj);
-  //	  std::cout << tile({ii, jj}) << " ";
+  //    std::cout << "Matrix B\n";
+  //    const matrix::Distribution& distB = matB.distribution();
+  //    for (SizeType tile_i = 0; tile_i < distB.localNrTiles().rows(); ++tile_i) {
+  //      for (SizeType tile_j = 0; tile_j < distB.localNrTiles().cols(); ++tile_j) {
+  //        auto tile = matB(LocalTileIndex(tile_i, tile_j)).get();
+  //        for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
+  //  	SizeType i = distB.globalElementFromLocalTileAndTileElement<Coord::Row>(tile_i, ii);
+  //  	for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
+  //  	  SizeType j = distB.globalElementFromLocalTileAndTileElement<Coord::Col>(tile_j, jj);
+  //  	  std::cout << tile({ii, jj}) << " ";
+  //          }
+  //  	std::cout << "\n" << std::endl;
   //        }
-  //	std::cout << "\n" << std::endl;
   //      }
   //    }
-  //  }
   //
-  //  std::cout << "Matrix X\n";
-  //  const matrix::Distribution& distX = matX.distribution();
-  //  for (SizeType tile_i = 0; tile_i < distX.localNrTiles().rows(); ++tile_i) {
-  //    for (SizeType tile_j = 0; tile_j < distX.localNrTiles().cols(); ++tile_j) {
-  //      auto tile = matX(LocalTileIndex(tile_i, tile_j)).get();
-  //      for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
-  //	SizeType i = distX.globalElementFromLocalTileAndTileElement<Coord::Row>(tile_i, ii);
-  //	for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
-  //	  SizeType j = distX.globalElementFromLocalTileAndTileElement<Coord::Col>(tile_j, jj);
-  //    	  std::cout << tile({ii, jj}) << " ";
+  //    std::cout << "Matrix X\n";
+  //    const matrix::Distribution& distX = matX.distribution();
+  //    for (SizeType tile_i = 0; tile_i < distX.localNrTiles().rows(); ++tile_i) {
+  //      for (SizeType tile_j = 0; tile_j < distX.localNrTiles().cols(); ++tile_j) {
+  //        auto tile = matX(LocalTileIndex(tile_i, tile_j)).get();
+  //        for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
+  //  	SizeType i = distX.globalElementFromLocalTileAndTileElement<Coord::Row>(tile_i, ii);
+  //  	for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
+  //  	  SizeType j = distX.globalElementFromLocalTileAndTileElement<Coord::Col>(tile_j, jj);
+  //      	  std::cout << tile({ii, jj}) << " ";
+  //          }
+  //  	std::cout << "\n" << std::endl;
   //        }
-  //	std::cout << "\n" << std::endl;
   //      }
   //    }
-  //  }
 
   triangular_solve(side, uplo, op, diag, alpha, matA, matB);
 
-  //  std::cout << "Matrix B solved\n";
-  //  for (SizeType tile_i = 0; tile_i < distB.localNrTiles().rows(); ++tile_i) {
-  //    for (SizeType tile_j = 0; tile_j < distB.localNrTiles().cols(); ++tile_j) {
-  //      auto tile = matB(LocalTileIndex(tile_i, tile_j)).get();
-  //      for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
-  //	SizeType i = distB.globalElementFromLocalTileAndTileElement<Coord::Row>(tile_i, ii);
-  //	for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
-  //	  SizeType j = distB.globalElementFromLocalTileAndTileElement<Coord::Col>(tile_j, jj);
-  //	  std::cout << tile({ii, jj}) << " ";
+  //    std::cout << "Matrix B solved\n";
+  //    for (SizeType tile_i = 0; tile_i < distB.localNrTiles().rows(); ++tile_i) {
+  //      for (SizeType tile_j = 0; tile_j < distB.localNrTiles().cols(); ++tile_j) {
+  //        auto tile = matB(LocalTileIndex(tile_i, tile_j)).get();
+  //        for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
+  //  	SizeType i = distB.globalElementFromLocalTileAndTileElement<Coord::Row>(tile_i, ii);
+  //  	for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
+  //  	  SizeType j = distB.globalElementFromLocalTileAndTileElement<Coord::Col>(tile_j, jj);
+  //  	  std::cout << tile({ii, jj}) << " ";
+  //          }
+  //  	std::cout << "\n" << std::endl;
   //        }
-  //	std::cout << "\n" << std::endl;
   //      }
   //    }
-  //  }
 
   CHECK_MATRIX_NEAR(res_b, matB, 10 * (matB.size().rows() + 1) * TypeUtilities<T>::error,
                     10 * (matB.size().rows() + 1) * TypeUtilities<T>::error);

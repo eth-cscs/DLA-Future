@@ -55,7 +55,7 @@ void assertLocalMatrix(const Matrix& matrix, std::string function, std::string m
 template <class Matrix>
 void assertMatrixDistributedOnGrid(const comm::CommunicatorGrid& grid, const Matrix& matrix,
                                    std::string function, std::string mat_name, std::string grid_name) {
-  if ((matrix.distribution().commGridSize() != grid.size()) &&
+  if ((matrix.distribution().commGridSize() != grid.size()) ||
       (matrix.distribution().rankIndex() != grid.rank()))
     throw std::invalid_argument(function + ": " + "The matrix " + mat_name +
                                 " is not distributed according to the communicator grid " + grid_name +

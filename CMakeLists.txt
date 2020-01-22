@@ -62,7 +62,7 @@ else()
 endif()
 
 # ----- HPX
-find_package(HPX REQUIRED)
+find_package(HPX 1.4.0 REQUIRED)
 
 # In HPX 1.3.0 there is compiler matching check, but it does not check matching of build types.
 # Since it is source of headaches, waiting for HPX to add this check, we check on our own

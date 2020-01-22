@@ -23,8 +23,8 @@ cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
       -DHPX_DIR=$EBROOTHPX             \
       -Dblaspp_DIR=$EBROOTBLASPP       \
       -Dlapackpp_DIR=$EBROOTLAPACKPP   \
-      -DMPIEXEC_EXECUTABLE=`which srun`\
-      -DMPIEXEC_NUMPROC_FLAG="-n"      \
+      -DDLAF_MPI_PRESET=slurm          \
+      -DMPIEXEC_NUMCORES=36            \
       ../
 make -j 50 VERBOSE=1
 

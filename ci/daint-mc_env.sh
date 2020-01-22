@@ -17,9 +17,9 @@ module load BLASPP/20190829-CrayGNU-19.10
 module load LAPACKPP/20190829-CrayGNU-19.10
 if [ "${BUILD_TYPE,,}" = debug ]
 then
-  module load HPX/20190830-CrayGNU-19.10-jemalloc-debug
+  module load HPX/1.4.0-CrayGNU-19.10-jemalloc-debug
 else
-  module load HPX/20190830-CrayGNU-19.10-jemalloc
+  module load HPX/1.4.0-CrayGNU-19.10-jemalloc
 fi
 
 export CRAYPE_LINK_TYPE=dynamic

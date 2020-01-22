@@ -45,6 +45,10 @@ std::vector<unsigned int> col_b({{1}, {3}, {10}, {20}});
 std::vector<TileElementSize> square_block_sizes({{2, 2}, {3, 3}, {5, 5}});
 std::vector<TileElementSize> rectangular_block_sizes({{12, 30}, {20, 12}});
 
+GlobalElementSize globalTestSize(const LocalElementSize& size) {
+  return {size.rows(), size.cols()};
+}
+
 /// @brief Returns el_op_a, el_b, res_b for side = Left. Same implementation as in test_trsm.h (there
 /// referred to tiles).
 template <class T>
@@ -292,4 +296,42 @@ TYPED_TEST(TriangularSolveLocalTest, MultipliableMatricesException) {
   }
 }
 
-// NoLocalMatrixException test to be added
+TYPED_TEST(TriangularSolveLocalTest, MatrixNotLocalException) {
+  for (auto diag : blas_diags) {
+    for (auto op : blas_ops) {
+      for (auto side : blas_sides) {
+        for (auto uplo : blas_uplos) {
+          for (const auto& size : square_sizes) {
+            for (const auto& block_size : rectangular_block_sizes) {
+              for (const auto& col : col_b) {
+                {
+                  GlobalElementSize sz = globalTestSize(size);
+                  Distribution distribution(sz, block_size, {2, 1}, {0, 0}, {0, 0});
+                  Matrix<TypeParam, Device::CPU> matA(std::move(distribution));
+                  LocalElementSize B_size(size.cols(), col);
+                  Matrix<TypeParam, Device::CPU> matB(B_size, block_size);
+                  TypeParam alpha = 1.0;
+
+                  EXPECT_THROW(triangular_solve(side, uplo, op, diag, alpha, matA, matB),
+                               std::invalid_argument);
+                }
+
+                {
+                  Matrix<TypeParam, Device::CPU> matA(size, block_size);
+                  LocalElementSize B_size(size.cols(), col);
+                  GlobalElementSize sz = globalTestSize(B_size);
+                  Distribution distribution(sz, block_size, {2, 1}, {0, 0}, {0, 0});
+                  Matrix<TypeParam, Device::CPU> matB(std::move(distribution));
+                  TypeParam alpha = 1.0;
+
+                  EXPECT_THROW(triangular_solve(side, uplo, op, diag, alpha, matA, matB),
+                               std::invalid_argument);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

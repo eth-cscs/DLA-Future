@@ -9,5 +9,4 @@
 #
 
 DLAF_addTest(test_cholesky SOURCES test_cholesky.cpp USE_MAIN MPIHPX MPIRANKS 6)
-DLAF_addTest(test_triangular_solve_local SOURCES test_triangular_solve_local.cpp USE_MAIN HPX)
-
+    DLAF_addTest(test_triangular_solve_local SOURCES test_triangular_solve_local.cpp USE_MAIN HPX)

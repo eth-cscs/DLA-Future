@@ -34,7 +34,7 @@ using namespace testing;
 
 std::vector<blas::Diag> blas_diags({blas::Diag::NonUnit});
 std::vector<blas::Op> blas_ops({blas::Op::Trans});
-std::vector<blas::Side> blas_sides({blas::Side::Left});
+std::vector<blas::Side> blas_sides({blas::Side::Right});
 std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
 
 template <typename Type>
@@ -42,13 +42,15 @@ class TriangularSolveLocalTest : public ::testing::Test {};
 
 TYPED_TEST_SUITE(TriangularSolveLocalTest, MatrixElementTypes);
 
-std::vector<LocalElementSize> square_sizes({{3, 3}, {6, 6}, {10, 10}, {25, 25}, {12, 12}, {0, 0}});
-std::vector<LocalElementSize> rectangular_sizes({{10, 20}, {50, 20}, {0, 10}, {20, 0}});
+std::vector<LocalElementSize> square_sizes(
+    {{2, 2}, {3, 3}, {4, 4}, {6, 6}, {10, 10}, {25, 25}, {15, 15}, {0, 0}});
+std::vector<LocalElementSize> rectangular_sizes({{12, 20}, {50, 20}, {0, 12}, {20, 0}});
 
-std::vector<unsigned int> col_b({{1}, {3}, {20}, {50}, {70}});
+// Need to check if the system is "oversized"? Infinite solutions
+std::vector<unsigned int> col_b({{1}, {3}, {10}, {20}});
 
-std::vector<TileElementSize> square_block_sizes({{3, 3}, {5, 5}});
-std::vector<TileElementSize> rectangular_block_sizes({{10, 30}, {20, 10}});
+std::vector<TileElementSize> square_block_sizes({{2, 2}, {3, 3}, {5, 5}});
+std::vector<TileElementSize> rectangular_block_sizes({{12, 30}, {20, 12}});
 
 /// @brief Returns el_op_a, el_b, res_b for side = Left. Same implementation as in test_trsm.h (there
 /// referred to tiles).
@@ -97,15 +99,10 @@ auto testTriangularSolveElementFunctionsLeft(blas::Uplo uplo, blas::Op op, blas:
                                                       res_b](const GlobalElementIndex& index) {
     BaseType<T> kk = op_a_lower ? index.row() + 1 : m - index.row();
 
-    //    std::cout<< kk << " is kk, lower " << op_a_lower << " yes " << index.row()+1 << " , no " << m -
-    //    index.row()<< " m " << m << " index_row " << index.row() << std::endl;
-
     double i = index.row();
     double j = index.col();
 
     T gamma = TypeUtilities<T>::polar((i + 1) / (j + 2), 2 * i + j);
-    //    std::cout << " kk " << kk << " gamma " << gamma << " alpha " << alpha << " el_b " << kk * gamma
-    //    / alpha << std::endl;
 
     if (diag == blas::Diag::Unit)
       return ((kk - 1) * gamma + res_b(index)) / alpha;
@@ -131,7 +128,7 @@ auto testTriangularSolveElementFunctionsRight(blas::Uplo uplo, blas::Op op, blas
   //      = (res_ij * op(a)_jj + (kk-1) * gamma) / alpha,
   // where gamma = (j+1) / (i+2) * exp(I*(i+2*j)),
   //       kk = j+1 if op(a) is an upper triangular matrix, or
-  //       kk = m-j if op(a) is an upper triangular matrix.
+  //       kk = n-j if op(a) is an lower triangular matrix.
   // Therefore
   // b_ij = (res_ij + (kk-1) * gamma) / alpha, if diag == Unit
   // b_ij = kk * gamma / alpha, otherwise.
@@ -165,6 +162,7 @@ auto testTriangularSolveElementFunctionsRight(blas::Uplo uplo, blas::Op op, blas
     double i = index.row();
     double j = index.col();
     T gamma = TypeUtilities<T>::polar((j + 1) / (i + 2), i + 2 * j);
+
     if (diag == blas::Diag::Unit)
       return ((kk - 1) * gamma + res_b(index)) / alpha;
     else
@@ -217,6 +215,7 @@ void testTriangularSolve(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Di
   //    for (SizeType tile_i = 0; tile_i < distB.localNrTiles().rows(); ++tile_i) {
   //      for (SizeType tile_j = 0; tile_j < distB.localNrTiles().cols(); ++tile_j) {
   //        auto tile = matB(LocalTileIndex(tile_i, tile_j)).get();
+  //        std::cout << " tile " << tile_i << ", " << tile_j << "\n";
   //        for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
   //  	SizeType i = distB.globalElementFromLocalTileAndTileElement<Coord::Row>(tile_i, ii);
   //  	for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
@@ -233,6 +232,7 @@ void testTriangularSolve(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Di
   //    for (SizeType tile_i = 0; tile_i < distX.localNrTiles().rows(); ++tile_i) {
   //      for (SizeType tile_j = 0; tile_j < distX.localNrTiles().cols(); ++tile_j) {
   //        auto tile = matX(LocalTileIndex(tile_i, tile_j)).get();
+  //        std::cout << " tile " << tile_i << ", " << tile_j << "\n";
   //        for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
   //  	SizeType i = distX.globalElementFromLocalTileAndTileElement<Coord::Row>(tile_i, ii);
   //  	for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
@@ -246,23 +246,24 @@ void testTriangularSolve(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Di
 
   triangular_solve(side, uplo, op, diag, alpha, matA, matB);
 
-  //    std::cout << "Matrix B solved\n";
-  //    for (SizeType tile_i = 0; tile_i < distB.localNrTiles().rows(); ++tile_i) {
-  //      for (SizeType tile_j = 0; tile_j < distB.localNrTiles().cols(); ++tile_j) {
-  //        auto tile = matB(LocalTileIndex(tile_i, tile_j)).get();
-  //        for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
-  //  	SizeType i = distB.globalElementFromLocalTileAndTileElement<Coord::Row>(tile_i, ii);
-  //  	for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
-  //  	  SizeType j = distB.globalElementFromLocalTileAndTileElement<Coord::Col>(tile_j, jj);
-  //  	  std::cout << tile({ii, jj}) << " ";
-  //          }
-  //  	std::cout << "\n" << std::endl;
+  //  std::cout << "Matrix B solved\n";
+  //  for (SizeType tile_i = 0; tile_i < distB.localNrTiles().rows(); ++tile_i) {
+  //    for (SizeType tile_j = 0; tile_j < distB.localNrTiles().cols(); ++tile_j) {
+  //      auto tile = matB(LocalTileIndex(tile_i, tile_j)).get();
+  //      std::cout << " tile " << tile_i << ", " << tile_j << "\n";
+  //      for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
+  //	SizeType i = distB.globalElementFromLocalTileAndTileElement<Coord::Row>(tile_i, ii);
+  //	for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
+  //	  SizeType j = distB.globalElementFromLocalTileAndTileElement<Coord::Col>(tile_j, jj);
+  //	  std::cout << tile({ii, jj}) << " ";
   //        }
+  //	std::cout << "\n" << std::endl;
   //      }
   //    }
+  //  }
 
-  CHECK_MATRIX_NEAR(res_b, matB, 10 * (matB.size().rows() + 1) * TypeUtilities<T>::error,
-                    10 * (matB.size().rows() + 1) * TypeUtilities<T>::error);
+  CHECK_MATRIX_NEAR(res_b, matB, 20 * (matB.size().rows() + 1) * TypeUtilities<T>::error,
+                    20 * (matB.size().rows() + 1) * TypeUtilities<T>::error);
 }
 
 TYPED_TEST(TriangularSolveLocalTest, Correctness) {
@@ -274,7 +275,8 @@ TYPED_TEST(TriangularSolveLocalTest, Correctness) {
             for (const auto& block_size : square_block_sizes) {
               for (const auto& col : col_b) {
                 Matrix<TypeParam, Device::CPU> matA(size, block_size);
-                LocalElementSize B_size(size.cols(), col);
+                //
+                LocalElementSize B_size(col, size.rows());
                 Matrix<TypeParam, Device::CPU> matB(B_size, block_size);
                 Matrix<TypeParam, Device::CPU> matX(B_size, block_size);
 
@@ -346,7 +348,11 @@ TYPED_TEST(TriangularSolveLocalTest, MultipliableMatricesException) {
             for (const auto& block_size : square_block_sizes) {
               for (const auto& col : col_b) {
                 Matrix<TypeParam, Device::CPU> matA(size, block_size);
-                LocalElementSize B_size((size.cols() * 2 + 1), col);
+
+                LocalElementSize B_size(size.cols() * 2 + 3, col);
+                if (side == blas::Side::Right)
+                  B_size.transpose();
+
                 Matrix<TypeParam, Device::CPU> matB(B_size, block_size);
                 TypeParam alpha = 1.0;
                 EXPECT_THROW(triangular_solve(side, uplo, op, diag, alpha, matA, matB),

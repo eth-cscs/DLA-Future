@@ -67,13 +67,19 @@ void assertMatrixDistributedOnGrid(const comm::CommunicatorGrid& grid, const Mat
 /// @tparam Matrix refers to a dlaf::Matrix object
 /// @throws std::invalid_argument if the matrix is not distributed correctly
 template <class Matrix>
-void assertMultipliableMatrices(const Matrix& A, const Matrix& B, std::string function,
+void assertMultipliableMatrices(const Matrix& A, const Matrix& B, blas::Side side, std::string function,
                                 std::string A_name, std::string B_name) {
-  if (A.nrTiles().cols() != B.nrTiles().rows()) {
+  if (side == blas::Side::Left && A.nrTiles().cols() != B.nrTiles().rows()) {
     //      std::cout <<   A.nrTiles().cols() << " vsss "  << B.nrTiles().rows() << "\n";
     throw std::invalid_argument(
         function + ": " + "The matrices " + A_name + " and " + B_name +
-        " are not multipliable (cols of matrix A not equal to rows of matrix B).");
+        " are not left multipliable (cols of matrix A not equal to rows of matrix B).");
+  }
+  else if (side == blas::Side::Right && A.nrTiles().rows() != B.nrTiles().cols()) {
+    //      std::cout <<   A.nrTiles().cols() << " vsss "  << B.nrTiles().rows() << "\n";
+    throw std::invalid_argument(
+        function + ": " + "The matrices " + A_name + " and " + B_name +
+        " are not right multipliable (rows of matrix A not equal to cols of matrix B).");
   }
 }
 

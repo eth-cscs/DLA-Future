@@ -94,6 +94,14 @@ add_subdirectory(external)
 add_subdirectory(src)
 
 # ---------------------------------------------------------------------------
+# mini Apps
+# ---------------------------------------------------------------------------
+set(DLAF_BUILD_MINIAPPS ON CACHE BOOL "Build miniapps")
+if (DLAF_BUILD_MINIAPPS)
+  add_subdirectory(miniapp)
+endif()
+
+# ---------------------------------------------------------------------------
 # Test
 # ---------------------------------------------------------------------------
 set(DLAF_WITH_TEST ON CACHE BOOL "Enables tests")

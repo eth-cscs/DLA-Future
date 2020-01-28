@@ -11,6 +11,9 @@
 
 #include <exception>
 #include <string>
+#include <random>
+
+#include "dlaf/matrix.h"
 
 /// @file
 
@@ -147,4 +150,55 @@ void assertMultipliableMatrices(const MatrixConst& mat_a, const Matrix& mat_b, b
 }
 
 }
+
+namespace matrix {
+namespace util {
+
+/// @brief Sets the elements of the matrix.
+///
+/// The (i, j)-element of the matrix is set to el({i, j}).
+/// @pre el argument is an index of type const GlobalElementIndex&.
+/// @pre el return type should be T.
+template <class T, class ElementGetter>
+void set(Matrix<T, Device::CPU>& mat, ElementGetter el) {
+  const matrix::Distribution& dist = mat.distribution();
+  for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {
+    for (SizeType tile_i = 0; tile_i < dist.localNrTiles().rows(); ++tile_i) {
+      auto tile = mat(LocalTileIndex(tile_i, tile_j)).get();
+      for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
+        SizeType j = dist.globalElementFromLocalTileAndTileElement<Coord::Col>(tile_j, jj);
+        for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
+          SizeType i = dist.globalElementFromLocalTileAndTileElement<Coord::Row>(tile_i, ii);
+          tile({ii, jj}) = el({i, j});
+        }
+      }
+    }
+  }
+}
+
+template <class T>
+void set_random(Matrix<T, Device::CPU>& matrix) {
+  std::minstd_rand random_seed;
+  std::uniform_real_distribution<T> random_sampler(-1, 1);
+
+  dlaf::matrix::util::set(matrix, [random_sampler, random_seed](const GlobalElementIndex&) mutable {
+      return random_sampler(random_seed);
+  });
+}
+
+template <class T>
+void set_random_positive_definite(Matrix<T, Device::CPU>& matrix) {
+  std::minstd_rand random_seed;
+  std::uniform_real_distribution<T> random_sampler(-1, 1);
+
+  T offset_value = 2 * std::max(matrix.size().rows(), matrix.size().cols());
+
+  dlaf::matrix::util::set(matrix, [random_sampler, random_seed, offset_value](const GlobalElementIndex& index) mutable {
+      return random_sampler(random_seed) + (index.row() == index.col() ? 1 : offset_value);
+  });
+}
+
+}
+}
+
 }

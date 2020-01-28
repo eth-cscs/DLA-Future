@@ -32,8 +32,14 @@ template <class T, Device device>
 Matrix<const T, device>::~Matrix() {
   tile_shared_futures_.clear();
 
-  for (auto&& tile_future : tile_futures_)
-    tile_future.get();
+  for (auto&& tile_future : tile_futures_) {
+    try {
+      tile_future.get();
+    }
+    catch (...) {
+      // TODO WARNING
+    }
+  }
 }
 
 template <class T, Device device>

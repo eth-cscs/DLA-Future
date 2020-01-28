@@ -10,58 +10,57 @@
 
 #pragma once
 
+#include <chrono>
+#include <deque>
 #include <fstream>
+#include <map>
 #include <string>
 #include <thread>
-#include <chrono>
-#include <map>
-#include <deque>
 
 namespace dlaf {
 namespace profiler {
 namespace details {
 
-  /// Data structure for storing a single profile entry
-  class task_data_t {
-    using clock_t = std::chrono::steady_clock;
+/// Data structure for storing a single profile entry
+class task_data_t {
+  using clock_t = std::chrono::steady_clock;
 
-    std::string name_;
-    std::string group_;
+  std::string name_;
+  std::string group_;
 
-    /// data structure for the time information
-    struct {
-      std::thread::id id_;
-      std::size_t time_;
-    } start_data_, end_data_;
+  /// data structure for the time information
+  struct {
+    std::thread::id id_;
+    std::size_t time_;
+  } start_data_, end_data_;
 
-    public:
-    void enter(const std::string& name, const std::string& group) {
-      name_ = name;
-      group_ = group;
-      start_data_ = { std::this_thread::get_id(), get_time() };
-    }
+public:
+  void enter(const std::string& name, const std::string& group) {
+    name_ = name;
+    group_ = group;
+    start_data_ = {std::this_thread::get_id(), get_time()};
+  }
 
-    void leave() {
-      end_data_ = { std::this_thread::get_id(), get_time() };
-    }
+  void leave() {
+    end_data_ = {std::this_thread::get_id(), get_time()};
+  }
 
-    /// @return value is valid just if the same thread has called enter and leave methods
-    std::size_t get_time() {
-      return std::chrono::duration_cast<std::chrono::nanoseconds>(
-            clock_t::now().time_since_epoch()
-          ).count();
-    };
-
-    friend std::ostream& operator<<(std::ostream& os, const task_data_t& task_data) {
-      os << task_data.name_ << ", ";
-      os << task_data.group_ << ", ";
-      os << task_data.start_data_.id_ << ", ";
-      os << task_data.start_data_.time_ << ", ";
-      os << task_data.end_data_.id_ << ", ";
-      os << task_data.end_data_.time_;
-      return os;
-    }
+  /// @return value is valid just if the same thread has called enter and leave methods
+  std::size_t get_time() {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(clock_t::now().time_since_epoch())
+        .count();
   };
+
+  friend std::ostream& operator<<(std::ostream& os, const task_data_t& task_data) {
+    os << task_data.name_ << ", ";
+    os << task_data.group_ << ", ";
+    os << task_data.start_data_.id_ << ", ";
+    os << task_data.start_data_.time_ << ", ";
+    os << task_data.end_data_.id_ << ", ";
+    os << task_data.end_data_.time_;
+    return os;
+  }
+};
 
 }
 
@@ -69,7 +68,7 @@ namespace details {
 ///
 /// On destruction it dumps on a csv file all tasks
 class Manager {
-  public:
+public:
   static Manager& get_global_profiler() {
     static Manager global_;
     return global_;
@@ -88,7 +87,7 @@ class Manager {
     recorders_[tid].tasks.emplace_back(task_data);
   }
 
-  private:
+private:
   /// Container for task entries (it is NOT thread-safe)
   struct ThreadLocalRecorder {
     std::deque<details::task_data_t> tasks;
@@ -109,7 +108,7 @@ struct SectionScoped {
     Manager::get_global_profiler().add(data_);
   }
 
-  private:
+private:
   details::task_data_t data_;
 };
 
@@ -121,7 +120,7 @@ namespace util {
 /// @return a proxy callable with the same arguments of the given one
 template <class Func>
 auto time_it(std::string name, std::string group, Func&& target_function) {
-  return [name, group, function=std::forward<Func>(target_function)](auto&&... args) -> auto {
+  return [name, group, function = std::forward<Func>(target_function)](auto&&... args) {
     SectionScoped _(name, group);
     return function(std::forward<decltype(args)>(args)...);
   };

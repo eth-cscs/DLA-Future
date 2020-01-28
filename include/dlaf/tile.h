@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <exception>
 #include <hpx/hpx.hpp>
 #include "dlaf/common/buffer.h"
 #include "dlaf/matrix/index.h"

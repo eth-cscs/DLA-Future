@@ -60,6 +60,13 @@ hpx::future<Tile<T, device>> Matrix<T, device>::operator()(const LocalTileIndex&
   tile_futures_[i] = p.get_future();
   tile_shared_futures_[i] = {};
   return old_future.then(hpx::launch::sync, [p = std::move(p)](hpx::future<TileType>&& fut) mutable {
-    return std::move(fut.get().setPromise(std::move(p)));
+    try {
+      return std::move(fut.get().setPromise(std::move(p)));
+    }
+    catch (...) {
+      auto current_exception_ptr = std::current_exception();
+      p.set_exception(current_exception_ptr);
+      std::rethrow_exception(current_exception_ptr);
+    }
   });
 }

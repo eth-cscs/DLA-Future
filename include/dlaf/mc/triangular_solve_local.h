@@ -22,10 +22,10 @@
 /// @file
 
 namespace dlaf {
-
-static bool use_pools = true;
-
-/// @brief Triangular Solve implementation on local memory
+/// @brief Triangular Solve implementation on local memory, solving the linear system X = alpha A^(-1) B.
+/// In the specific case of a Hermitian positive definite generalized eigenvalue problem,
+/// B is a matrix of the eigenvectors of the reduced phase,
+/// and A is a matrix obtained from a Cholesky decomposition.
 ///
 /// @param side specifies whether op(A) appears on the \a Left or on the \a Right of dlaf::Matrix A
 /// @param uplo specifies whether the dlaf::Matrix A is a \a Lower or \a Upper triangular matrix
@@ -34,7 +34,7 @@ static bool use_pools = true;
 /// @param diag specifies whether dlaf::Matrix is \a Unit or not (\a NonUnit) triangular
 /// @param alpha specifies the scalar alpha
 /// @tparam A refers to a triangular dlaf::Matrix object
-/// @tparam B refers to a dlaf::Matrix object composed by eigenvectors
+/// @tparam B refers to a dlaf::Matrix object
 template <class T>
 void triangular_solve(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha,
                       Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& B) {
@@ -51,7 +51,7 @@ void triangular_solve(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag 
   // Check if block matrix A is square
   util_matrix::assertBlocksizeSquare(A, "TriangularSolve", "A");
   // Check if A and B dimensions are compatible
-  util_matrix::assertMultipliableMatrices(A, B, side, "TriangularSolve", "A", "B");
+  util_matrix::assertMultipliableMatrices(A, B, side, op, "TriangularSolve", "A", "B");
   // Check if matrix A is stored on local memory
   util_matrix::assertLocalMatrix(A, "TriangularSolve", "A");
   // Check if matrix B is stored on local memory

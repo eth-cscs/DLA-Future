@@ -9,6 +9,7 @@
 //
 
 #pragma once
+
 #include <complex>
 
 namespace dlaf {
@@ -18,34 +19,23 @@ using SizeType = int;
 enum class Device { CPU, GPU };
 
 template <class T>
-struct TypeInfo;
+struct TypeInfo {
+  using BaseType = T;
+  using Type = T;
+  using ComplexType = std::complex<T>;
 
-template <>
-struct TypeInfo<float> {
-  using BaseType = float;
-  using Type = float;
-  using ComplexType = std::complex<float>;
+  static constexpr int ops_add = 1;
+  static constexpr int ops_mul = 1;
 };
 
-template <>
-struct TypeInfo<double> {
-  using BaseType = double;
-  using Type = double;
-  using ComplexType = std::complex<double>;
-};
+template <class T>
+struct TypeInfo<std::complex<T>> {
+  using BaseType = T;
+  using Type = std::complex<T>;
+  using ComplexType = std::complex<T>;
 
-template <>
-struct TypeInfo<std::complex<float>> {
-  using BaseType = float;
-  using Type = std::complex<float>;
-  using ComplexType = std::complex<float>;
-};
-
-template <>
-struct TypeInfo<std::complex<double>> {
-  using BaseType = double;
-  using Type = std::complex<double>;
-  using ComplexType = std::complex<double>;
+  static constexpr int ops_add = 2;
+  static constexpr int ops_mul = 6;
 };
 
 template <class T>
@@ -53,5 +43,14 @@ using BaseType = typename TypeInfo<T>::BaseType;
 
 template <class T>
 using ComplexType = typename TypeInfo<T>::ComplexType;
+
+/// Compute the number of operations
+///
+/// Given the number of additions and multiplications of type @tparam T
+/// it returns the number of basic floating point operations
+template <class T>
+constexpr size_t total_ops(const size_t add, const size_t mul) {
+  return TypeInfo<T>::ops_add * add + TypeInfo<T>::ops_mul * mul;
+}
 
 }

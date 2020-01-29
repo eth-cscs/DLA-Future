@@ -101,8 +101,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     {
       double n = matrix.size().rows();
       double add_mul = n * n * n / 6;
-      static_assert(!std::is_same<T, double>::value || !std::is_same<T, float>::value, "FIX GIGAFLOPS");
-      gigaflops = 2 * add_mul / elapsed_time / 1e9;
+      gigaflops = total_ops<T>(add_mul, add_mul) / elapsed_time / 1e9;
     }
 
     // print benchmark results

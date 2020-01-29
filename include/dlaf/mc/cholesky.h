@@ -48,11 +48,11 @@ void cholesky(blas::Uplo uplo, Matrix<T, Device::CPU>& mat) {
       hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_default);
 
   // Check if matrix is square
-  util_matrix::assertSizeSquare(mat, "Cholesky", "mat");
+  DLAF_PRECONDITION_SIZE_SQUARE(mat);
   // Check if block matrix is square
-  util_matrix::assertBlocksizeSquare(mat, "Cholesky", "mat");
+  DLAF_PRECONDITION_BLOCKSIZE_SQUARE(mat);
   // Check if matrix is stored on local memory
-  util_matrix::assertLocalMatrix(mat, "Cholesky", "mat");
+  DLAF_PRECONDITION_LOCALMATRIX(mat);
 
   // Number of tile (rows = cols)
   SizeType nrtile = mat.nrTiles().cols();
@@ -119,11 +119,11 @@ void cholesky(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, Device::CP
   auto row_comm_size = grid.rowCommunicator().size();
 
   // Check if matrix is square
-  util_matrix::assertSizeSquare(mat, "Cholesky", "mat");
+  DLAF_PRECONDITION_SIZE_SQUARE(mat);
   // Check if block matrix is square
-  util_matrix::assertBlocksizeSquare(mat, "Cholesky", "mat");
+  DLAF_PRECONDITION_BLOCKSIZE_SQUARE(mat);
   // Check compatibility of the communicator grid and the distribution
-  util_matrix::assertMatrixDistributedOnGrid(grid, mat, "Cholesky", "mat", "grid");
+  DLAF_PRECONDITION_IS_DISTRIBUTED_ON_GRID(grid, mat);
 
   const dlaf::matrix::Distribution& distr = mat.distribution();
 

@@ -15,7 +15,15 @@
 /// @file
 
 namespace dlaf {
-namespace util_matrix {
+namespace matrix {
+
+namespace util {
+
+namespace details {
+
+#define _DLAF_PRECONDITION_FUNCTION(condition) dlaf::matrix::util::details::assert##condition
+#define _DLAF_PRECONDITION_1(condition, arg1) _DLAF_PRECONDITION_FUNCTION(condition)(arg1, __PRETTY_FUNCTION__, #arg1)
+#define _DLAF_PRECONDITION_2(condition, arg1, arg2) _DLAF_PRECONDITION_FUNCTION(condition)(arg1, arg2, __PRETTY_FUNCTION__, #arg1, #arg2)
 
 /// @brief Verify if dlaf::Matrix is square
 ///
@@ -26,6 +34,7 @@ void assertSizeSquare(const Matrix& matrix, std::string function, std::string ma
   if (matrix.size().rows() != matrix.size().cols())
     throw std::invalid_argument(function + ": " + "Matrix " + mat_name + " is not square.");
 }
+#define DLAF_PRECONDITION_SIZE_SQUARE(matrix) _DLAF_PRECONDITION_1(SizeSquare, matrix)
 
 /// @brief Verify if dlaf::Matrix tile is square
 ///
@@ -37,6 +46,7 @@ void assertBlocksizeSquare(const Matrix& matrix, std::string function, std::stri
     throw std::invalid_argument(function + ": " + "Block size in matrix " + mat_name +
                                 " is not square.");
 }
+#define DLAF_PRECONDITION_BLOCKSIZE_SQUARE(matrix) _DLAF_PRECONDITION_1(BlocksizeSquare, matrix)
 
 /// @brief Verify if dlaf::Matrix is distributed on a (1x1) grid (i.e. if it is a local matrix).
 ///
@@ -47,6 +57,7 @@ void assertLocalMatrix(const Matrix& matrix, std::string function, std::string m
   if (matrix.distribution().commGridSize() != comm::Size2D{1, 1})
     throw std::invalid_argument(function + ": " + "Matrix " + mat_name + " is not local.");
 }
+#define DLAF_PRECONDITION_LOCALMATRIX(matrix) _DLAF_PRECONDITION_1(LocalMatrix, matrix)
 
 /// @brief Verify that the matrix is distributed according to the given communicator grid.
 ///
@@ -61,6 +72,9 @@ void assertMatrixDistributedOnGrid(const comm::CommunicatorGrid& grid, const Mat
                                 " is not distributed according to the communicator grid " + grid_name +
                                 ".");
 }
+#define DLAF_PRECONDITION_IS_DISTRIBUTED_ON_GRID(grid, matrix) _DLAF_PRECONDITION_2(MatrixDistributedOnGrid, grid, matrix)
 
+}
+}
 }
 }

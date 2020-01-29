@@ -141,7 +141,7 @@ int main(int argc, char** argv) {
      value<int64_t>()->default_value(4096),
      "Matrix size.")
     ("block-size",
-     value<int64_t>()->default_value(128),
+     value<int64_t>()->default_value(256),
      "Block cyclic distribution size.")
     ("grid-rows",
      value<int64_t>()->default_value(1),

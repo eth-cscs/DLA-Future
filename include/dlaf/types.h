@@ -52,5 +52,4 @@ template <class T>
 constexpr size_t total_ops(const size_t add, const size_t mul) {
   return TypeInfo<T>::ops_add * add + TypeInfo<T>::ops_mul * mul;
 }
-
 }

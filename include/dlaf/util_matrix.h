@@ -16,9 +16,7 @@
 
 namespace dlaf {
 namespace matrix {
-
 namespace util {
-
 namespace details {
 
 #define _DLAF_PRECONDITION_FUNCTION(condition) dlaf::matrix::util::details::assert##condition

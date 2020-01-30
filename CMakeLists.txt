@@ -42,6 +42,18 @@ if (DLAF_WITH_CUDA)
 endif()
 
 # ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+# ----- DLAF_SOURCE_LOCATION
+try_compile_cxx_code("void foo() { const char *name = __PRETTY_FUNCTION__; }" is_pretty_function_available)
+
+if (is_pretty_function_available)
+  add_compile_definitions(DLAF_SOURCE_LOCATION=__PRETTY_FUNCTION__)
+else ()
+  add_compile_definitions(DLAF_SOURCE_LOCATION=__func__)
+endif()
+
+# ---------------------------------------------------------------------------
 # Libraries configuration
 # ---------------------------------------------------------------------------
 # ----- MPI

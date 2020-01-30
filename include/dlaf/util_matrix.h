@@ -22,8 +22,11 @@ namespace util {
 namespace details {
 
 #define _DLAF_PRECONDITION_FUNCTION(condition) dlaf::matrix::util::details::assert##condition
-#define _DLAF_PRECONDITION_1(condition, arg1) _DLAF_PRECONDITION_FUNCTION(condition)(arg1, __PRETTY_FUNCTION__, #arg1)
-#define _DLAF_PRECONDITION_2(condition, arg1, arg2) _DLAF_PRECONDITION_FUNCTION(condition)(arg1, arg2, __PRETTY_FUNCTION__, #arg1, #arg2)
+
+#define _DLAF_PRECONDITION_1(condition, arg1) \
+  _DLAF_PRECONDITION_FUNCTION(condition)(arg1, DLAF_SOURCE_LOCATION, #arg1)
+#define _DLAF_PRECONDITION_2(condition, arg1, arg2) \
+  _DLAF_PRECONDITION_FUNCTION(condition)(arg1, arg2, DLAF_SOURCE_LOCATION, #arg1, #arg2)
 
 /// @brief Verify if dlaf::Matrix is square
 ///

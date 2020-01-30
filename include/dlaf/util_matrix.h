@@ -75,7 +75,8 @@ void assertMatrixDistributedOnGrid(const comm::CommunicatorGrid& grid, const Mat
                                 " is not distributed according to the communicator grid " + grid_name +
                                 ".");
 }
-#define DLAF_PRECONDITION_IS_DISTRIBUTED_ON_GRID(grid, matrix) _DLAF_PRECONDITION_2(MatrixDistributedOnGrid, grid, matrix)
+#define DLAF_PRECONDITION_IS_DISTRIBUTED_ON_GRID(grid, matrix) \
+  _DLAF_PRECONDITION_2(MatrixDistributedOnGrid, grid, matrix)
 
 }
 }

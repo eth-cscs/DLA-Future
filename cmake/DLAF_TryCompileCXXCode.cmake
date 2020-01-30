@@ -13,7 +13,7 @@
 function (try_compile_cxx_code code built)
   execute_process(
     COMMAND echo "${code}"
-    COMMAND ${CMAKE_CXX_COMPILER} -c -x c++ -
+    COMMAND ${CMAKE_CXX_COMPILER} -c -x c++ -o- -
     OUTPUT_QUIET
     ERROR_QUIET
     RESULT_VARIABLE result)

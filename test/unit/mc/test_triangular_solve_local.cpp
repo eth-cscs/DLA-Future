@@ -171,12 +171,18 @@ auto testTriangularSolveElementFunctionsRight(blas::Uplo uplo, blas::Op op, blas
 
 template <class T>
 void testTriangularSolve(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha,
-                         Matrix<T, Device::CPU>& matA, Matrix<T, Device::CPU>& matB,
-                         Matrix<T, Device::CPU>& matX) {
+                         LocalElementSize size, unsigned int colB, TileElementSize block_size) {
   std::function<T(const GlobalElementIndex&)> el_op_a, el_b, res_b;
 
-  auto m = matB.size().rows();
-  auto n = matB.size().cols();
+  auto m = size.rows();
+  auto n = size.cols();
+
+  Matrix<T, Device::CPU> matA(size, block_size);
+  LocalElementSize B_size(m, colB);
+  if (side == blas::Side::Right)
+    B_size.transpose();
+
+  Matrix<T, Device::CPU> matB(B_size, block_size);
 
   if (side == blas::Side::Left)
     std::tie(el_op_a, el_b, res_b) =
@@ -187,7 +193,6 @@ void testTriangularSolve(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Di
 
   set(matA, el_op_a, op);
   set(matB, el_b);
-  set(matX, res_b);
 
   triangular_solve(side, uplo, op, diag, alpha, matA, matB);
 
@@ -196,26 +201,28 @@ void testTriangularSolve(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Di
 }
 
 TYPED_TEST(TriangularSolveLocalTest, Correctness) {
+  LocalElementSize MatSize(0, 0);
+  unsigned int colB;
+  TileElementSize BlockSize(0, 0);
+
+  std::vector<std::tuple<LocalElementSize, unsigned int, TileElementSize>> sizes;
+  for (const auto& size : square_sizes) {
+    for (const auto& col : col_b) {
+      for (const auto& block_size : square_block_sizes) {
+        sizes.push_back(std::make_tuple(size, col, block_size));
+      }
+    }
+  }
+
   for (auto diag : blas_diags) {
     for (auto op : blas_ops) {
       for (auto side : blas_sides) {
         for (auto uplo : blas_uplos) {
-          for (const auto& size : square_sizes) {
-            for (const auto& block_size : square_block_sizes) {
-              for (const auto& col : col_b) {
-                Matrix<TypeParam, Device::CPU> matA(size, block_size);
-                LocalElementSize B_size(size.rows(), col);
-                if (side == blas::Side::Right)
-                  B_size.transpose();
+          for (auto sz : sizes) {
+            std::tie(MatSize, colB, BlockSize) = sz;
+            TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
 
-                Matrix<TypeParam, Device::CPU> matB(B_size, block_size);
-                Matrix<TypeParam, Device::CPU> matX(B_size, block_size);
-
-                TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
-
-                testTriangularSolve(side, uplo, op, diag, alpha, matA, matB, matX);
-              }
-            }
+            testTriangularSolve(side, uplo, op, diag, alpha, MatSize, colB, BlockSize);
           }
         }
       }

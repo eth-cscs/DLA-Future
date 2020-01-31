@@ -22,16 +22,14 @@
 /// @file
 
 namespace dlaf {
-/// @brief Triangular Solve implementation on local memory, solving the linear system X = alpha A^(-1) B.
-/// In the specific case of a Hermitian positive definite generalized eigenvalue problem,
-/// B is a matrix of the eigenvectors of the reduced phase,
-/// and A is a matrix obtained from a Cholesky decomposition.
+/// @brief Triangular Solve implementation on local memory, solving op(A) X = alpha B (when side == Left)
+/// or X op(A) = alpha B (when side == Right).
 ///
-/// @param side specifies whether op(A) appears on the \a Left or on the \a Right of dlaf::Matrix A
+/// @param side specifies whether op(A) appears on the \a Left or on the \a Right of dlaf::Matrix X
 /// @param uplo specifies whether the dlaf::Matrix A is a \a Lower or \a Upper triangular matrix
 /// @param op specifies the form of op(A) to be used in the matrix multiplication: \a NoTrans, \a Trans,
 /// \a ConjTrans
-/// @param diag specifies whether dlaf::Matrix is \a Unit or not (\a NonUnit) triangular
+/// @param diag specifies if the dlaf::Matrix A is assumed to be unit triangular (\a Unit) or not (\a NonUnit)
 /// @param alpha specifies the scalar alpha
 /// @tparam A refers to a triangular dlaf::Matrix object
 /// @tparam B refers to a dlaf::Matrix object

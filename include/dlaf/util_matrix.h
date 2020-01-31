@@ -203,7 +203,7 @@ class getter_random_with_diagonal_offset {
 /// @brief Set the elements of the matrix
 ///
 /// The (i, j)-element of the matrix is set to el({i, j}).
-/// @param el is called concurrently
+/// @param el a copy is given to each tile
 /// @pre el argument is an index of type const GlobalElementIndex&.
 /// @pre el return type should be T.
 template <class T, class ElementGetter>

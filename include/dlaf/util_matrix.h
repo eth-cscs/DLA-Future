@@ -13,6 +13,8 @@
 #include <string>
 #include <random>
 
+#include <hpx/util.hpp>
+
 #include "dlaf/matrix.h"
 
 /// @file
@@ -154,51 +156,135 @@ void assertMultipliableMatrices(const MatrixConst& mat_a, const Matrix& mat_b, b
 namespace matrix {
 namespace util {
 
-/// @brief Sets the elements of the matrix.
+namespace details {
+
+/// Callable that returns a random value between [-1, 1]
+///
+/// Return random values for any given index
+template <class T>
+class getter_random {
+  static_assert(std::is_same<T, float>::value || std::is_same<T, double>::value, "T is not compatible with random generator used.");
+
+  public:
+  getter_random(const unsigned long seed = std::minstd_rand::default_seed) : random_engine_(seed) {}
+
+  T operator()(const GlobalElementIndex&) {
+    return random_sampler_(random_engine_);
+  }
+
+  private:
+  std::mt19937_64 random_engine_;
+  std::uniform_real_distribution<T> random_sampler_{-1, 1};
+};
+
+/// Callable that returns a random value between [-1, 1] and adds a fixed offset to the diagonal elements
+///
+/// Return random values for any given index and adds the specified offset on indexes on the diagonal (i.e. index.row() == index.col())
+template <class T>
+class getter_random_with_diagonal_offset {
+  static_assert(std::is_same<T, float>::value || std::is_same<T, double>::value, "T is not compatible with random generator used.");
+
+  public:
+  getter_random_with_diagonal_offset(T offset_value, const unsigned long seed = std::minstd_rand::default_seed)
+    : random_seed_(seed), offset_value_(offset_value) {}
+
+  T operator()(const GlobalElementIndex& index) {
+    return random_sampler_(random_seed_) + (index.row() == index.col() ? offset_value_ : 0);
+  }
+
+  private:
+  T offset_value_;
+  std::mt19937_64 random_seed_;
+  std::uniform_real_distribution<T> random_sampler_{-1, 1};
+};
+
+}
+
+/// @brief Set the elements of the matrix
 ///
 /// The (i, j)-element of the matrix is set to el({i, j}).
+/// @param el is called concurrently
 /// @pre el argument is an index of type const GlobalElementIndex&.
 /// @pre el return type should be T.
 template <class T, class ElementGetter>
-void set(Matrix<T, Device::CPU>& mat, ElementGetter el) {
-  const matrix::Distribution& dist = mat.distribution();
+void set(Matrix<T, Device::CPU>& matrix, ElementGetter&& el) {
+  const matrix::Distribution& dist = matrix.distribution();
   for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {
     for (SizeType tile_i = 0; tile_i < dist.localNrTiles().rows(); ++tile_i) {
-      auto tile = mat(LocalTileIndex(tile_i, tile_j)).get();
-      for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
-        SizeType j = dist.globalElementFromLocalTileAndTileElement<Coord::Col>(tile_j, jj);
-        for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
-          SizeType i = dist.globalElementFromLocalTileAndTileElement<Coord::Row>(tile_i, ii);
-          tile({ii, jj}) = el({i, j});
-        }
-      }
+      LocalTileIndex tile_wrt_local{tile_i, tile_j};
+      GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
+
+      auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
+
+      hpx::dataflow(hpx::util::unwrapping(
+        [tl_index, el](auto&& tile) mutable {
+          for (SizeType j = 0; j < tile.size().cols(); ++j)
+            for (SizeType i = 0; i < tile.size().rows(); ++i)
+              tile({i, j}) = el(GlobalElementIndex{i + tl_index.row(), j + tl_index.col()});
+        }), matrix(tile_wrt_local));
     }
   }
 }
 
+/// Set the matrix with random values in the range [-1, 1]
+///
+/// Each tile creates its own random generator engine with a unique seed
+/// This means that a specific tile index, no matter on which rank it will be,
+/// will have the same set of values.
 template <class T>
 void set_random(Matrix<T, Device::CPU>& matrix) {
-  std::minstd_rand random_seed;
-  std::uniform_real_distribution<T> random_sampler(-1, 1);
+  const matrix::Distribution& dist = matrix.distribution();
 
-  dlaf::matrix::util::set(matrix, [random_sampler, random_seed](const GlobalElementIndex&) mutable {
-      return random_sampler(random_seed);
-  });
+  for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {
+    for (SizeType tile_i = 0; tile_i < dist.localNrTiles().rows(); ++tile_i) {
+      LocalTileIndex tile_wrt_local{tile_i, tile_j};
+      GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
+
+      auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
+      auto seed = tl_index.row() * matrix.size().cols() + tl_index.col();
+
+      hpx::dataflow(hpx::util::unwrapping(
+        [tl_index, seed](auto&& tile) {
+          details::getter_random<T> value_at(seed);
+
+          for (SizeType j = 0; j < tile.size().cols(); ++j)
+            for (SizeType i = 0; i < tile.size().rows(); ++i)
+              tile(TileElementIndex{i, j}) = value_at(GlobalElementIndex{tl_index.row() + i, tl_index.col() + j});
+        }), matrix(tile_wrt_local));
+    }
+  }
 }
 
+/// Set a matrix with random values but assuring it will be positive definite.
+///
+/// Each tile creates its own random generator engine with a unique seed
+/// This means that a specific tile index, no matter on which rank it will be,
+/// it will have the same set of values.
 template <class T>
 void set_random_positive_definite(Matrix<T, Device::CPU>& matrix) {
-  std::minstd_rand random_seed;
-  std::uniform_real_distribution<T> random_sampler(-1, 1);
-
+  const matrix::Distribution& dist = matrix.distribution();
   T offset_value = 2 * std::max(matrix.size().rows(), matrix.size().cols());
 
-  dlaf::matrix::util::set(matrix, [random_sampler, random_seed, offset_value](const GlobalElementIndex& index) mutable {
-      return random_sampler(random_seed) + (index.row() == index.col() ? 1 : offset_value);
-  });
+  for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {
+    for (SizeType tile_i = 0; tile_i < dist.localNrTiles().rows(); ++tile_i) {
+      LocalTileIndex tile_wrt_local{tile_i, tile_j};
+      GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
+
+      auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
+      auto seed = tl_index.row() * matrix.size().cols() + tl_index.col();
+
+      hpx::dataflow(hpx::util::unwrapping(
+        [tl_index, seed, offset_value](auto&& tile) {
+          details::getter_random_with_diagonal_offset<T> value_at(offset_value, seed);
+
+          for (SizeType j = 0; j < tile.size().cols(); ++j)
+            for (SizeType i = 0; i < tile.size().rows(); ++i)
+              tile(TileElementIndex{i, j}) = value_at(GlobalElementIndex{tl_index.row() + i, tl_index.col() + j});
+        }), matrix(tile_wrt_local));
+    }
+  }
 }
 
 }
 }
-
 }

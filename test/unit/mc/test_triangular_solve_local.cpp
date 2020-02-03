@@ -27,7 +27,7 @@ using namespace dlaf_test;
 using namespace dlaf_test::matrix_test;
 using namespace testing;
 
-std::vector<blas::Diag> blas_diags({blas::Diag::NonUnit, blas::Diag::NonUnit});
+std::vector<blas::Diag> blas_diags({blas::Diag::NonUnit, blas::Diag::Unit});
 std::vector<blas::Op> blas_ops({blas::Op::NoTrans, blas::Op::Trans, blas::Op::ConjTrans});
 std::vector<blas::Side> blas_sides({blas::Side::Left, blas::Side::Right});
 std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});

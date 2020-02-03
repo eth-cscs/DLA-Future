@@ -10,50 +10,113 @@
 
 #include "dlaf/util_matrix.h"
 
+#include <vector>
 #include <gtest/gtest.h>
+
 #include "dlaf/matrix.h"
-#include "dlaf_test/util_matrix.h"
+#include "dlaf/communication/communicator_grid.h"
+
 #include "dlaf_test/util_types.h"
+#include "dlaf_test/util_matrix.h"
+#include "dlaf_test/comm_grids/grids_6_ranks.h"
 
 using namespace dlaf;
+using namespace dlaf::matrix;
+using namespace dlaf::comm;
+using namespace dlaf_test;
+using namespace dlaf_test::matrix_test;
 
-using T = std::complex<double>;
+::testing::Environment* const comm_grids_env =
+    ::testing::AddGlobalTestEnvironment(new dlaf_test::CommunicatorGrid6RanksEnvironment);
 
-TEST(MatrixUtils, Set) {
-  Matrix<T, Device::CPU> matrix({13, 7}, {2, 3});
+template <class T>
+class MatrixUtilsTest : public ::testing::Test {
+public:
+  const std::vector<CommunicatorGrid>& commGrids() {
+    return comm_grids;
+  }
+};
 
+TYPED_TEST_SUITE(MatrixUtilsTest, MatrixElementTypes);
+
+struct TestSizes {
+  LocalElementSize size;
+  TileElementSize block_size;
+};
+
+std::vector<TestSizes> sizes_tests({
+    {{0, 0}, {11, 13}},
+    {{3, 0}, {1, 2}},
+    {{0, 1}, {7, 32}},
+    {{15, 18}, {5, 9}},
+    {{6, 6}, {2, 2}},
+    {{3, 4}, {24, 15}},
+    {{16, 24}, {3, 5}},
+});
+
+GlobalElementSize globalTestSize(const LocalElementSize& size, const Size2D& grid_size) {
+  return {size.rows() * grid_size.rows(), size.cols() * grid_size.cols()};
+}
+
+TYPED_TEST(MatrixUtilsTest, Set) {
   auto identity = [](const GlobalElementIndex& index) {
     if (index.row() == index.col())
       return 1;
     return 0;
   };
 
-  dlaf::matrix::util::set(matrix, identity);
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+      memory::MemoryView<TypeParam, Device::CPU> mem(layout.minMemSize());
+      Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), layout, mem());
 
-  CHECK_MATRIX_EQ(identity, matrix);
+      dlaf::matrix::util::set(matrix, identity);
+
+      CHECK_MATRIX_EQ(identity, matrix);
+    }
+  }
 }
 
-TEST(MatrixUtils, SetRandom) {
-  Matrix<T, Device::CPU> matrix({13, 7}, {2, 3});
+TYPED_TEST(MatrixUtilsTest, SetRandom) {
+  auto zero = [](const GlobalElementIndex& index) { return dlaf_test::TypeUtilities<TypeParam>::element(0, 0); };
 
-  dlaf::matrix::util::set_random(matrix);
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+      memory::MemoryView<TypeParam, Device::CPU> mem(layout.minMemSize());
+      Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), layout, mem());
 
-  auto zero = [](const GlobalElementIndex& index) { return dlaf_test::TypeUtilities<T>::element(0, 0); };
+      dlaf::matrix::util::set_random(matrix);
 
-  CHECK_MATRIX_NEAR(zero, matrix, 0, std::abs(dlaf_test::TypeUtilities<T>::element(1, 1)));
+      CHECK_MATRIX_NEAR(zero, matrix, 0, std::abs(dlaf_test::TypeUtilities<TypeParam>::element(1, 1)));
+    }
+  }
 }
 
-TEST(MatrixUtils, SetRandomPositiveDefinite) {
-  Matrix<T, Device::CPU> matrix({13, 7}, {2, 3});
+TYPED_TEST(MatrixUtilsTest, SetRandomPositiveDefinite) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+      memory::MemoryView<TypeParam, Device::CPU> mem(layout.minMemSize());
+      Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), layout, mem());
 
-  dlaf::matrix::util::set_random_positive_definite(matrix);
+      auto N = std::max(matrix.size().cols(), matrix.size().rows());
+      auto identity_2N = [N](const GlobalElementIndex& index) {
+        if (index.row() == index.col())
+          return dlaf_test::TypeUtilities<TypeParam>::element(2 * N, 0);
+        return dlaf_test::TypeUtilities<TypeParam>::element(0, 0);
+      };
 
-  auto N = std::max(matrix.size().cols(), matrix.size().rows());
-  auto identity_2N = [N](const GlobalElementIndex& index) {
-    if (index.row() == index.col())
-      return dlaf_test::TypeUtilities<T>::element(2 * N, 0);
-    return dlaf_test::TypeUtilities<T>::element(0, 0);
-  };
+      dlaf::matrix::util::set_random_positive_definite(matrix);
 
-  CHECK_MATRIX_NEAR(identity_2N, matrix, 0, std::abs(dlaf_test::TypeUtilities<T>::element(1, 1)));
+      CHECK_MATRIX_NEAR(identity_2N, matrix, 0, std::abs(dlaf_test::TypeUtilities<TypeParam>::element(1, 1)));
+    }
+  }
 }

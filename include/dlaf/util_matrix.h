@@ -225,7 +225,7 @@ void set(Matrix<T, Device::CPU>& matrix, ElementGetter&& el) {
 
       auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
 
-      hpx::dataflow(hpx::util::unwrapping([tl_index, el](auto&& tile) mutable {
+      hpx::dataflow(hpx::util::unwrapping([tl_index, el](auto&& tile) {
                       for (SizeType j = 0; j < tile.size().cols(); ++j)
                         for (SizeType i = 0; i < tile.size().rows(); ++i)
                           tile({i, j}) = el(GlobalElementIndex{i + tl_index.row(), j + tl_index.col()});

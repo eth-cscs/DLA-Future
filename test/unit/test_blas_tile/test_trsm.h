@@ -68,7 +68,7 @@ auto testTrsmElementFunctionsLeft(blas::Uplo uplo, blas::Op op, blas::Diag diag,
   };
 
   std::function<T(const ElementIndex&)> el_b = [m, alpha, diag, op_a_lower,
-                                                    res_b](const ElementIndex& index) {
+                                                res_b](const ElementIndex& index) {
     BaseType<T> kk = op_a_lower ? index.row() + 1 : m - index.row();
 
     double i = index.row();
@@ -164,9 +164,11 @@ void testTrsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, Si
   std::function<T(const TileElementIndex&)> el_op_a, el_b, res_b;
 
   if (side == blas::Side::Left)
-    std::tie(el_op_a, el_b, res_b) = testTrsmElementFunctionsLeft<T, ElementIndex>(uplo, op, diag, alpha, m);
+    std::tie(el_op_a, el_b, res_b) =
+        testTrsmElementFunctionsLeft<T, ElementIndex>(uplo, op, diag, alpha, m);
   else
-    std::tie(el_op_a, el_b, res_b) = testTrsmElementFunctionsRight<T, ElementIndex>(uplo, op, diag, alpha, n);
+    std::tie(el_op_a, el_b, res_b) =
+        testTrsmElementFunctionsRight<T, ElementIndex>(uplo, op, diag, alpha, n);
 
   tile_test::set(a0, el_op_a, op);
   tile_test::set(b, el_b);
@@ -179,7 +181,7 @@ void testTrsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, Si
                   10 * (m + 1) * TypeUtilities<T>::error);
 }
 
-  template <class T, class CT = const T>
+template <class T, class CT = const T>
 void testTrsmExceptions(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag,
                         const TileElementSize& size_a, const TileElementSize& size_b, SizeType extra_lda,
                         SizeType extra_ldb) {

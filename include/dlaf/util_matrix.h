@@ -266,7 +266,7 @@ void set_random(Matrix<T, Device::CPU>& matrix) {
   }
 }
 
-/// Set a matrix with random values but assuring it will be positive definite.
+/// Set a matrix with random values in range [-1, 1] but assuring it will be positive definite.
 ///
 /// Each tile creates its own random generator engine with a unique seed
 /// which is computed as a function of the tile global index.

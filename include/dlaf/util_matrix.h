@@ -156,7 +156,7 @@ void assertMultipliableMatrices(const MatrixConst& mat_a, const Matrix& mat_b, b
 namespace matrix {
 namespace util {
 
-namespace details {
+namespace internal {
 
 /// Callable that returns a random value between [-1, 1]
 ///
@@ -254,7 +254,7 @@ void set_random(Matrix<T, Device::CPU>& matrix) {
       auto seed = tl_index.row() * matrix.size().cols() + tl_index.col();
 
       hpx::dataflow(hpx::util::unwrapping([tl_index, seed](auto&& tile) {
-                      details::getter_random<T> value_at(seed);
+                      internal::getter_random<T> value_at(seed);
 
                       for (SizeType j = 0; j < tile.size().cols(); ++j)
                         for (SizeType i = 0; i < tile.size().rows(); ++i)
@@ -286,7 +286,7 @@ void set_random_positive_definite(Matrix<T, Device::CPU>& matrix) {
       auto seed = tl_index.row() * matrix.size().cols() + tl_index.col();
 
       hpx::dataflow(hpx::util::unwrapping([tl_index, seed, offset_value](auto&& tile) {
-                      details::getter_random_with_diagonal_offset<T> value_at(offset_value, seed);
+                      internal::getter_random_with_diagonal_offset<T> value_at(offset_value, seed);
 
                       for (SizeType j = 0; j < tile.size().cols(); ++j)
                         for (SizeType i = 0; i < tile.size().rows(); ++i)

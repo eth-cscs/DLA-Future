@@ -229,6 +229,7 @@ void set(Matrix<T, Device::CPU>& matrix, ElementGetter&& el) {
 /// Set the matrix with random values in the range [-1, 1]
 ///
 /// Each tile creates its own random generator engine with a unique seed
+/// which is computed as a function of the tile global index.
 /// This means that a specific tile index, no matter on which rank it will be,
 /// will have the same set of values.
 template <class T>
@@ -258,6 +259,7 @@ void set_random(Matrix<T, Device::CPU>& matrix) {
 /// Set a matrix with random values but assuring it will be positive definite.
 ///
 /// Each tile creates its own random generator engine with a unique seed
+/// which is computed as a function of the tile global index.
 /// This means that a specific tile index, no matter on which rank it will be,
 /// it will have the same set of values.
 template <class T>

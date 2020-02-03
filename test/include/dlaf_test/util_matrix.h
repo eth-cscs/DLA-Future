@@ -226,7 +226,7 @@ void checkNear(ElementGetter expected, Matrix<T, Device::CPU>& mat, BaseType<T> 
 
     std::stringstream s;
     s << "expected " << expected << " == " << value << " (Relative diff: " << diff / abs_max << " > "
-      << rel_err << ", " << diff << " > " << abs_err << ")";
+      << rel_err << ", Absolute diff: " << diff << " > " << abs_err << ")";
     return s.str();
   };
   internal::check(expected, mat, comp, err_message, file, line);

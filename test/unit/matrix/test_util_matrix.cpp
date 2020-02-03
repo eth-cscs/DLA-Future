@@ -13,26 +13,20 @@
 #include <gtest/gtest.h>
 #include "dlaf/matrix.h"
 #include "dlaf_test/util_matrix.h"
+#include "dlaf_test/util_types.h"
 
 using namespace dlaf;
 
-auto identity = [](const GlobalElementIndex& index) { if (index.row() == index.col()) return 1; return 0; };
-
-template <class T>
-struct constant_matrix {
-  constant_matrix(const T value) : constant_(value) {}
-
-  T operator()(const GlobalElementIndex& index) {
-    return constant_;
-  };
-
-  const T constant_;
-};
-
-using T = double;
+using T = std::complex<double>;
 
 TEST(MatrixUtils, Set) {
   Matrix<T, Device::CPU> matrix({13, 7}, {2, 3});
+
+  auto identity = [](const GlobalElementIndex& index) {
+    if (index.row() == index.col())
+      return 1;
+    return 0;
+  };
 
   dlaf::matrix::util::set(matrix, identity);
 
@@ -44,7 +38,9 @@ TEST(MatrixUtils, SetRandom) {
 
   dlaf::matrix::util::set_random(matrix);
 
-  CHECK_MATRIX_NEAR(constant_matrix<T>{0}, matrix, 0, 1);
+  auto zero = [](const GlobalElementIndex& index) { return dlaf_test::TypeUtilities<T>::element(0, 0); };
+
+  CHECK_MATRIX_NEAR(zero, matrix, 0, std::abs(dlaf_test::TypeUtilities<T>::element(1, 1)));
 }
 
 TEST(MatrixUtils, SetRandomPositiveDefinite) {
@@ -53,7 +49,11 @@ TEST(MatrixUtils, SetRandomPositiveDefinite) {
   dlaf::matrix::util::set_random_positive_definite(matrix);
 
   auto N = std::max(matrix.size().cols(), matrix.size().rows());
-  auto identity_2N = [N](const GlobalElementIndex& index) { if (index.row() == index.col()) return 2*N; return 0; };
+  auto identity_2N = [N](const GlobalElementIndex& index) {
+    if (index.row() == index.col())
+      return dlaf_test::TypeUtilities<T>::element(2 * N, 0);
+    return dlaf_test::TypeUtilities<T>::element(0, 0);
+  };
 
-  CHECK_MATRIX_NEAR(identity_2N, matrix, 0, 1);
+  CHECK_MATRIX_NEAR(identity_2N, matrix, 0, std::abs(dlaf_test::TypeUtilities<T>::element(1, 1)));
 }

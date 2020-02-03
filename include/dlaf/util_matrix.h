@@ -177,25 +177,31 @@ class getter_random {
   std::uniform_real_distribution<T> random_sampler_{-1, 1};
 };
 
+template <class T>
+class getter_random<std::complex<T>> : private getter_random<T> {
+  public:
+  using getter_random<T>::getter_random;
+
+  std::complex<T> operator()(const GlobalElementIndex& index) {
+    return std::complex<T>(getter_random<T>::operator()(index), getter_random<T>::operator()(index));
+  }
+};
+
 /// Callable that returns a random value between [-1, 1] and adds a fixed offset to the diagonal elements
 ///
 /// Return random values for any given index and adds the specified offset on indexes on the diagonal (i.e. index.row() == index.col())
 template <class T>
-class getter_random_with_diagonal_offset {
-  static_assert(std::is_same<T, float>::value || std::is_same<T, double>::value, "T is not compatible with random generator used.");
-
+class getter_random_with_diagonal_offset : private getter_random<T> {
   public:
   getter_random_with_diagonal_offset(T offset_value, const unsigned long seed = std::minstd_rand::default_seed)
-    : random_seed_(seed), offset_value_(offset_value) {}
+    : getter_random<T>(seed), offset_value_(offset_value) {}
 
   T operator()(const GlobalElementIndex& index) {
-    return random_sampler_(random_seed_) + (index.row() == index.col() ? offset_value_ : 0);
+    return getter_random<T>::operator()(index) + (index.row() == index.col() ? offset_value_ : 0);
   }
 
   private:
   T offset_value_;
-  std::mt19937_64 random_seed_;
-  std::uniform_real_distribution<T> random_sampler_{-1, 1};
 };
 
 }

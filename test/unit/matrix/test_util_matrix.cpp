@@ -10,15 +10,15 @@
 
 #include "dlaf/util_matrix.h"
 
-#include <vector>
 #include <gtest/gtest.h>
+#include <vector>
 
-#include "dlaf/matrix.h"
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/matrix.h"
 
-#include "dlaf_test/util_types.h"
-#include "dlaf_test/util_matrix.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
+#include "dlaf_test/util_matrix.h"
+#include "dlaf_test/util_types.h"
 
 using namespace dlaf;
 using namespace dlaf::matrix;
@@ -81,7 +81,9 @@ TYPED_TEST(MatrixUtilsTest, Set) {
 }
 
 TYPED_TEST(MatrixUtilsTest, SetRandom) {
-  auto zero = [](const GlobalElementIndex& index) { return dlaf_test::TypeUtilities<TypeParam>::element(0, 0); };
+  auto zero = [](const GlobalElementIndex& index) {
+    return dlaf_test::TypeUtilities<TypeParam>::element(0, 0);
+  };
 
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
@@ -116,7 +118,8 @@ TYPED_TEST(MatrixUtilsTest, SetRandomPositiveDefinite) {
 
       dlaf::matrix::util::set_random_positive_definite(matrix);
 
-      CHECK_MATRIX_NEAR(identity_2N, matrix, 0, std::abs(dlaf_test::TypeUtilities<TypeParam>::element(1, 1)));
+      CHECK_MATRIX_NEAR(identity_2N, matrix, 0,
+                        std::abs(dlaf_test::TypeUtilities<TypeParam>::element(1, 1)));
     }
   }
 }

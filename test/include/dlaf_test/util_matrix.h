@@ -233,6 +233,5 @@ void checkNear(ElementGetter expected, Matrix<T, Device::CPU>& mat, BaseType<T> 
 }
 #define CHECK_MATRIX_NEAR(expected, matrix, rel_err, abs_err) \
   ::dlaf_test::matrix_test::checkNear(expected, matrix, rel_err, abs_err, __FILE__, __LINE__);
-
 }
 }

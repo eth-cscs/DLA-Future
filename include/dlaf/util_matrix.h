@@ -10,8 +10,8 @@
 #pragma once
 
 #include <exception>
-#include <string>
 #include <random>
+#include <string>
 
 #include <hpx/util.hpp>
 
@@ -163,23 +163,24 @@ namespace details {
 /// Return random values for any given index
 template <class T>
 class getter_random {
-  static_assert(std::is_same<T, float>::value || std::is_same<T, double>::value, "T is not compatible with random generator used.");
+  static_assert(std::is_same<T, float>::value || std::is_same<T, double>::value,
+                "T is not compatible with random generator used.");
 
-  public:
+public:
   getter_random(const unsigned long seed = std::minstd_rand::default_seed) : random_engine_(seed) {}
 
   T operator()(const GlobalElementIndex&) {
     return random_sampler_(random_engine_);
   }
 
-  private:
+private:
   std::mt19937_64 random_engine_;
   std::uniform_real_distribution<T> random_sampler_{-1, 1};
 };
 
 template <class T>
 class getter_random<std::complex<T>> : private getter_random<T> {
-  public:
+public:
   using getter_random<T>::getter_random;
 
   std::complex<T> operator()(const GlobalElementIndex& index) {
@@ -189,18 +190,20 @@ class getter_random<std::complex<T>> : private getter_random<T> {
 
 /// Callable that returns a random value between [-1, 1] and adds a fixed offset to the diagonal elements
 ///
-/// Return random values for any given index and adds the specified offset on indexes on the diagonal (i.e. index.row() == index.col())
+/// Return random values for any given index and adds the specified offset on indexes on the diagonal
+/// (i.e. index.row() == index.col())
 template <class T>
 class getter_random_with_diagonal_offset : private getter_random<T> {
-  public:
-  getter_random_with_diagonal_offset(T offset_value, const unsigned long seed = std::minstd_rand::default_seed)
-    : getter_random<T>(seed), offset_value_(offset_value) {}
+public:
+  getter_random_with_diagonal_offset(T offset_value,
+                                     const unsigned long seed = std::minstd_rand::default_seed)
+      : getter_random<T>(seed), offset_value_(offset_value) {}
 
   T operator()(const GlobalElementIndex& index) {
     return getter_random<T>::operator()(index) + (index.row() == index.col() ? offset_value_ : 0);
   }
 
-  private:
+private:
   T offset_value_;
 };
 
@@ -222,12 +225,12 @@ void set(Matrix<T, Device::CPU>& matrix, ElementGetter&& el) {
 
       auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
 
-      hpx::dataflow(hpx::util::unwrapping(
-        [tl_index, el](auto&& tile) mutable {
-          for (SizeType j = 0; j < tile.size().cols(); ++j)
-            for (SizeType i = 0; i < tile.size().rows(); ++i)
-              tile({i, j}) = el(GlobalElementIndex{i + tl_index.row(), j + tl_index.col()});
-        }), matrix(tile_wrt_local));
+      hpx::dataflow(hpx::util::unwrapping([tl_index, el](auto&& tile) mutable {
+                      for (SizeType j = 0; j < tile.size().cols(); ++j)
+                        for (SizeType i = 0; i < tile.size().rows(); ++i)
+                          tile({i, j}) = el(GlobalElementIndex{i + tl_index.row(), j + tl_index.col()});
+                    }),
+                    matrix(tile_wrt_local));
     }
   }
 }
@@ -250,14 +253,15 @@ void set_random(Matrix<T, Device::CPU>& matrix) {
       auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
       auto seed = tl_index.row() * matrix.size().cols() + tl_index.col();
 
-      hpx::dataflow(hpx::util::unwrapping(
-        [tl_index, seed](auto&& tile) {
-          details::getter_random<T> value_at(seed);
+      hpx::dataflow(hpx::util::unwrapping([tl_index, seed](auto&& tile) {
+                      details::getter_random<T> value_at(seed);
 
-          for (SizeType j = 0; j < tile.size().cols(); ++j)
-            for (SizeType i = 0; i < tile.size().rows(); ++i)
-              tile(TileElementIndex{i, j}) = value_at(GlobalElementIndex{tl_index.row() + i, tl_index.col() + j});
-        }), matrix(tile_wrt_local));
+                      for (SizeType j = 0; j < tile.size().cols(); ++j)
+                        for (SizeType i = 0; i < tile.size().rows(); ++i)
+                          tile(TileElementIndex{i, j}) =
+                              value_at(GlobalElementIndex{tl_index.row() + i, tl_index.col() + j});
+                    }),
+                    matrix(tile_wrt_local));
     }
   }
 }
@@ -281,14 +285,15 @@ void set_random_positive_definite(Matrix<T, Device::CPU>& matrix) {
       auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
       auto seed = tl_index.row() * matrix.size().cols() + tl_index.col();
 
-      hpx::dataflow(hpx::util::unwrapping(
-        [tl_index, seed, offset_value](auto&& tile) {
-          details::getter_random_with_diagonal_offset<T> value_at(offset_value, seed);
+      hpx::dataflow(hpx::util::unwrapping([tl_index, seed, offset_value](auto&& tile) {
+                      details::getter_random_with_diagonal_offset<T> value_at(offset_value, seed);
 
-          for (SizeType j = 0; j < tile.size().cols(); ++j)
-            for (SizeType i = 0; i < tile.size().rows(); ++i)
-              tile(TileElementIndex{i, j}) = value_at(GlobalElementIndex{tl_index.row() + i, tl_index.col() + j});
-        }), matrix(tile_wrt_local));
+                      for (SizeType j = 0; j < tile.size().cols(); ++j)
+                        for (SizeType i = 0; i < tile.size().rows(); ++i)
+                          tile(TileElementIndex{i, j}) =
+                              value_at(GlobalElementIndex{tl_index.row() + i, tl_index.col() + j});
+                    }),
+                    matrix(tile_wrt_local));
     }
   }
 }

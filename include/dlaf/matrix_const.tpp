@@ -10,7 +10,7 @@
 
 template <class T, Device device>
 Matrix<const T, device>::Matrix(const matrix::LayoutInfo& layout, ElementType* ptr)
-    : Distribution(layout.size(), layout.blockSize()) {
+    : MatrixBase({layout.size(), layout.blockSize()}) {
   memory::MemoryView<ElementType, device> mem(ptr, layout.minMemSize());
   setUpTiles(mem, layout);
 }
@@ -18,8 +18,8 @@ Matrix<const T, device>::Matrix(const matrix::LayoutInfo& layout, ElementType* p
 template <class T, Device device>
 Matrix<const T, device>::Matrix(matrix::Distribution&& distribution, const matrix::LayoutInfo& layout,
                                 ElementType* ptr)
-    : Distribution(std::move(distribution)) {
-  if (this->localSize() != layout.size())
+    : MatrixBase(std::move(distribution)) {
+  if (this->distribution().localSize() != layout.size())
     throw std::invalid_argument("Error: distribution.localSize() != layout.size()");
   if (this->blockSize() != layout.blockSize())
     throw std::invalid_argument("Error: distribution.blockSize() != layout.blockSize()");
@@ -56,7 +56,7 @@ template <class T, Device device>
 Matrix<const T, device>::Matrix(matrix::Distribution&& distribution,
                                 std::vector<hpx::future<TileType>>&& tile_futures,
                                 std::vector<hpx::shared_future<ConstTileType>>&& tile_shared_futures)
-    : Distribution(std::move(distribution)), tile_futures_(std::move(tile_futures)),
+    : MatrixBase(std::move(distribution)), tile_futures_(std::move(tile_futures)),
       tile_shared_futures_(std::move(tile_shared_futures)) {}
 
 template <class T, Device device>

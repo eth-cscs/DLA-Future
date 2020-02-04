@@ -14,6 +14,7 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/layout_info.h"
+#include "dlaf/matrix/matrix_base.h"
 #include "dlaf/tile.h"
 #include "dlaf/types.h"
 
@@ -99,7 +100,7 @@ public:
   /// @pre index.isValid() == true.
   /// @pre index.isIn(globalNrTiles()) == true.
   hpx::future<TileType> operator()(const GlobalTileIndex& index) {
-    return operator()(this->localTileIndex(index));
+    return operator()(this->distribution().localTileIndex(index));
   }
 
 protected:
@@ -115,7 +116,7 @@ private:
 #include "dlaf/matrix.tpp"
 
 template <class T, Device device>
-class Matrix<const T, device> : protected matrix::Distribution {
+class Matrix<const T, device> : public matrix::internal::MatrixBase {
 public:
   using ElementType = T;
   using TileType = Tile<ElementType, device>;
@@ -140,19 +141,6 @@ public:
   Matrix& operator=(const Matrix& rhs) = delete;
   Matrix& operator=(Matrix&& rhs) = default;
 
-  using Distribution::size;
-  using Distribution::blockSize;
-  using Distribution::nrTiles;
-
-  using Distribution::rankIndex;
-  using Distribution::commGridSize;
-
-  using Distribution::rankGlobalTile;
-
-  const matrix::Distribution& distribution() const noexcept {
-    return *this;
-  }
-
   /// Returns a read-only shared_future of the Tile with local index @p index.
   ///
   /// TODO: Sync details.
@@ -167,25 +155,13 @@ public:
   /// @pre index.isValid() == true.
   /// @pre index.isIn(globalNrTiles()) == true.
   hpx::shared_future<ConstTileType> read(const GlobalTileIndex& index) {
-    return read(localTileIndex(index));
+    return read(distribution().localTileIndex(index));
   }
 
   /// Returns the size of the Tile with global index @p index.
   TileElementSize tileSize(const GlobalTileIndex& index) noexcept {
     return {std::min(blockSize().rows(), size().rows() - index.row() * blockSize().rows()),
             std::min(blockSize().cols(), size().cols() - index.col() * blockSize().cols())};
-  }
-
-protected:
-  /// Returns the position in the vector of the index Tile.
-  ///
-  /// @pre index.isValid() == true.
-  /// @pre index.isIn(localNrTiles()) == true.
-  std::size_t tileLinearIndex(const LocalTileIndex& index) const noexcept {
-    assert(index.isValid() && index.isIn(localNrTiles()));
-    using util::size_t::sum;
-    using util::size_t::mul;
-    return sum(index.row(), mul(localNrTiles().rows(), index.col()));
   }
 
 private:

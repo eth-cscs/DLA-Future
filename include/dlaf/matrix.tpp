@@ -20,9 +20,9 @@ Matrix<T, device>::Matrix(const GlobalElementSize& size, const TileElementSize& 
 template <class T, Device device>
 Matrix<T, device>::Matrix(matrix::Distribution&& distribution)
     : Matrix<const T, device>(std::move(distribution), {}, {}) {
-  SizeType ld = std::max(1, util::ceilDiv(this->localSize().rows(), 64) * 64);
+  SizeType ld = std::max(1, util::ceilDiv(this->distribution().localSize().rows(), 64) * 64);
 
-  auto layout = matrix::colMajorLayout(this->localSize(), this->blockSize(), ld);
+  auto layout = matrix::colMajorLayout(this->distribution().localSize(), this->blockSize(), ld);
 
   std::size_t memory_size = layout.minMemSize();
   memory::MemoryView<ElementType, device> mem(memory_size);
@@ -33,7 +33,7 @@ Matrix<T, device>::Matrix(matrix::Distribution&& distribution)
 template <class T, Device device>
 Matrix<T, device>::Matrix(matrix::Distribution&& distribution, const matrix::LayoutInfo& layout)
     : Matrix<const T, device>(std::move(distribution), {}, {}) {
-  if (this->localSize() != layout.size())
+  if (this->distribution().localSize() != layout.size())
     throw std::invalid_argument("Error: distribution.localSize() != layout.size()");
   if (this->blockSize() != layout.blockSize())
     throw std::invalid_argument("Error: distribution.blockSize() != layout.blockSize()");

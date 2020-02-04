@@ -29,7 +29,7 @@ using namespace testing;
 
 std::vector<blas::Diag> blas_diags({blas::Diag::NonUnit, blas::Diag::Unit});
 std::vector<blas::Op> blas_ops({blas::Op::NoTrans, blas::Op::Trans, blas::Op::ConjTrans});
-std::vector<blas::Side> blas_sides({blas::Side::Left, blas::Side::Right});
+std::vector<blas::Side> blas_sides({blas::Side::Right, blas::Side::Right});
 std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
 
 template <typename Type>
@@ -46,64 +46,66 @@ std::vector<unsigned int> col_b({{1}, {3}, {10}, {20}});
 std::vector<TileElementSize> square_block_sizes({{2, 2}, {3, 3}, {5, 5}});
 std::vector<TileElementSize> rectangular_block_sizes({{12, 30}, {20, 12}});
 
+std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
+    {0, 0, 1, 1},                // all zero sizes
+    {0, 2, 1, 2}, {7, 0, 2, 1},  // one zero size
+    {2, 2, 2, 2}, {10, 10, 2, 3}, {6, 6, 2, 2},
+    {5, 4, 4, 4}, {5, 5, 5, 4},  // m=n, mb=nb, nb<mb, mb<nb, n<m
+    {6, 6, 4, 3}, {2, 5, 3, 3},   {3, 3, 4, 4},
+    {3, 3, 5, 4}, {6, 3, 5, 4},   {5, 4, 6, 4}  // m<n, nb>n, mb>m, m<n
+};
+
 GlobalElementSize globalTestSize(const LocalElementSize& size) {
   return {size.rows(), size.cols()};
 }
 
 template <class T>
 void testTriangularSolve(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha,
-                         LocalElementSize size, unsigned int colB, TileElementSize block_size) {
+                         SizeType m, SizeType n, SizeType mb, SizeType nb) {
   std::function<T(const GlobalElementIndex&)> el_op_a, el_b, res_b;
 
-  auto m = size.rows();
-  auto n = size.cols();
+  LocalElementSize size_a(m, m);
+  TileElementSize block_size_a(mb, mb);
 
-  Matrix<T, Device::CPU> matA(size, block_size);
-  LocalElementSize B_size(m, colB);
-  if (side == blas::Side::Right)
-    B_size.transpose();
+  if (side == blas::Side::Right) {
+    size_a = {n, n};
+    block_size_a = {nb, nb};
+  }
 
-  Matrix<T, Device::CPU> matB(B_size, block_size);
+  Matrix<T, Device::CPU> mat_a(size_a, block_size_a);
+
+  LocalElementSize size_b(m, n);
+  TileElementSize block_size_b(mb, nb);
+  Matrix<T, Device::CPU> mat_b(size_b, block_size_b);
 
   if (side == blas::Side::Left)
     std::tie(el_op_a, el_b, res_b) =
-        testTrsmElementFunctionsLeft<T, GlobalElementIndex>(uplo, op, diag, alpha, m);
+        testTrsmElementFunctionsLeft<GlobalElementIndex, T>(uplo, op, diag, alpha, m);
   else
     std::tie(el_op_a, el_b, res_b) =
-        testTrsmElementFunctionsRight<T, GlobalElementIndex>(uplo, op, diag, alpha, n);
+        testTrsmElementFunctionsRight<GlobalElementIndex, T>(uplo, op, diag, alpha, n);
 
-  set(matA, el_op_a, op);
-  set(matB, el_b);
+  set(mat_a, el_op_a, op);
+  set(mat_b, el_b);
 
-  triangular_solve(side, uplo, op, diag, alpha, matA, matB);
+  triangular_solve(side, uplo, op, diag, alpha, mat_a, mat_b);
 
-  CHECK_MATRIX_NEAR(res_b, matB, 20 * (matB.size().rows() + 1) * TypeUtilities<T>::error,
-                    20 * (matB.size().rows() + 1) * TypeUtilities<T>::error);
+  CHECK_MATRIX_NEAR(res_b, mat_b, 40 * (mat_b.size().rows() + 1) * TypeUtilities<T>::error,
+                    40 * (mat_b.size().rows() + 1) * TypeUtilities<T>::error);
 }
 
 TYPED_TEST(TriangularSolveLocalTest, Correctness) {
-  LocalElementSize MatSize(0, 0);
-  unsigned int colB;
-  TileElementSize BlockSize(0, 0);
-
-  std::vector<std::tuple<LocalElementSize, unsigned int, TileElementSize>> sizes;
-  for (const auto& size : square_sizes) {
-    for (const auto& col : col_b) {
-      for (const auto& block_size : square_block_sizes) {
-        sizes.push_back(std::make_tuple(size, col, block_size));
-      }
-    }
-  }
+  SizeType m, n, mb, nb;
 
   for (auto diag : blas_diags) {
     for (auto op : blas_ops) {
       for (auto side : blas_sides) {
         for (auto uplo : blas_uplos) {
           for (auto sz : sizes) {
-            std::tie(MatSize, colB, BlockSize) = sz;
+            std::tie(m, n, mb, nb) = sz;
             TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
 
-            testTriangularSolve(side, uplo, op, diag, alpha, MatSize, colB, BlockSize);
+            testTriangularSolve(side, uplo, op, diag, alpha, m, n, mb, nb);
           }
         }
       }
@@ -119,11 +121,11 @@ TYPED_TEST(TriangularSolveLocalTest, MatrixNotSquareException) {
           for (const auto& size : rectangular_sizes) {
             for (const auto& block_size : square_block_sizes) {
               for (const auto& col : col_b) {
-                Matrix<TypeParam, Device::CPU> matA(size, block_size);
-                LocalElementSize B_size(size.cols(), col);
-                Matrix<TypeParam, Device::CPU> matB(B_size, block_size);
+                Matrix<TypeParam, Device::CPU> mat_a(size, block_size);
+                LocalElementSize b_size(size.cols(), col);
+                Matrix<TypeParam, Device::CPU> mat_b(b_size, block_size);
                 TypeParam alpha = 1.0;
-                EXPECT_THROW(triangular_solve(side, uplo, op, diag, alpha, matA, matB),
+                EXPECT_THROW(triangular_solve(side, uplo, op, diag, alpha, mat_a, mat_b),
                              std::invalid_argument);
               }
             }
@@ -142,11 +144,11 @@ TYPED_TEST(TriangularSolveLocalTest, BlockNotSquareException) {
           for (const auto& size : square_sizes) {
             for (const auto& block_size : rectangular_block_sizes) {
               for (const auto& col : col_b) {
-                Matrix<TypeParam, Device::CPU> matA(size, block_size);
-                LocalElementSize B_size(size.cols(), col);
-                Matrix<TypeParam, Device::CPU> matB(B_size, block_size);
+                Matrix<TypeParam, Device::CPU> mat_a(size, block_size);
+                LocalElementSize b_size(size.cols(), col);
+                Matrix<TypeParam, Device::CPU> mat_b(b_size, block_size);
                 TypeParam alpha = 1.0;
-                EXPECT_THROW(triangular_solve(side, uplo, op, diag, alpha, matA, matB),
+                EXPECT_THROW(triangular_solve(side, uplo, op, diag, alpha, mat_a, mat_b),
                              std::invalid_argument);
               }
             }
@@ -165,15 +167,15 @@ TYPED_TEST(TriangularSolveLocalTest, MultipliableMatricesException) {
           for (const auto& size : square_sizes) {
             for (const auto& block_size : square_block_sizes) {
               for (const auto& col : col_b) {
-                Matrix<TypeParam, Device::CPU> matA(size, block_size);
+                Matrix<TypeParam, Device::CPU> mat_a(size, block_size);
 
-                LocalElementSize B_size(size.cols() * 2 + 3, col);
+                LocalElementSize b_size(size.cols() * 2 + 3, col);
                 if (side == blas::Side::Right)
-                  B_size.transpose();
+                  b_size.transpose();
 
-                Matrix<TypeParam, Device::CPU> matB(B_size, block_size);
+                Matrix<TypeParam, Device::CPU> mat_b(b_size, block_size);
                 TypeParam alpha = 1.0;
-                EXPECT_THROW(triangular_solve(side, uplo, op, diag, alpha, matA, matB),
+                EXPECT_THROW(triangular_solve(side, uplo, op, diag, alpha, mat_a, mat_b),
                              std::invalid_argument);
               }
             }
@@ -195,24 +197,24 @@ TYPED_TEST(TriangularSolveLocalTest, MatrixNotLocalException) {
                 {
                   GlobalElementSize sz = globalTestSize(size);
                   Distribution distribution(sz, block_size, {2, 1}, {0, 0}, {0, 0});
-                  Matrix<TypeParam, Device::CPU> matA(std::move(distribution));
-                  LocalElementSize B_size(size.cols(), col);
-                  Matrix<TypeParam, Device::CPU> matB(B_size, block_size);
+                  Matrix<TypeParam, Device::CPU> mat_a(std::move(distribution));
+                  LocalElementSize b_size(size.cols(), col);
+                  Matrix<TypeParam, Device::CPU> mat_b(b_size, block_size);
                   TypeParam alpha = 1.0;
 
-                  EXPECT_THROW(triangular_solve(side, uplo, op, diag, alpha, matA, matB),
+                  EXPECT_THROW(triangular_solve(side, uplo, op, diag, alpha, mat_a, mat_b),
                                std::invalid_argument);
                 }
 
                 {
-                  Matrix<TypeParam, Device::CPU> matA(size, block_size);
-                  LocalElementSize B_size(size.cols(), col);
-                  GlobalElementSize sz = globalTestSize(B_size);
+                  Matrix<TypeParam, Device::CPU> mat_a(size, block_size);
+                  LocalElementSize b_size(size.cols(), col);
+                  GlobalElementSize sz = globalTestSize(b_size);
                   Distribution distribution(sz, block_size, {2, 1}, {0, 0}, {0, 0});
-                  Matrix<TypeParam, Device::CPU> matB(std::move(distribution));
+                  Matrix<TypeParam, Device::CPU> mat_b(std::move(distribution));
                   TypeParam alpha = 1.0;
 
-                  EXPECT_THROW(triangular_solve(side, uplo, op, diag, alpha, matA, matB),
+                  EXPECT_THROW(triangular_solve(side, uplo, op, diag, alpha, mat_a, mat_b),
                                std::invalid_argument);
                 }
               }

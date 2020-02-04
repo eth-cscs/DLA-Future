@@ -28,7 +28,7 @@ using namespace dlaf_test;
 using namespace testing;
 
 /// @brief Returns el_op_a, el_b, res_b for side = Left.
-template <class T, class ElementIndex>
+template <class ElementIndex, class T>
 auto testTrsmElementFunctionsLeft(blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType m) {
   // Note: The tile elements are chosen such that:
   // - op(a)_ik = (i+1) / (k+.5) * exp(I*(2*i-k)) for the referenced elements
@@ -84,7 +84,7 @@ auto testTrsmElementFunctionsLeft(blas::Uplo uplo, blas::Op op, blas::Diag diag,
 }
 
 /// @brief Returns el_op_a, el_b, res_b for side = Right.
-template <class T, class ElementIndex>
+template <class ElementIndex, class T>
 auto testTrsmElementFunctionsRight(blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType n) {
   // Note: The tile elements are chosen such that:
   // - res_ik = (k+.5) / (i+2) * exp(I*(i+k)),
@@ -139,7 +139,7 @@ auto testTrsmElementFunctionsRight(blas::Uplo uplo, blas::Op op, blas::Diag diag
   return std::make_tuple(el_op_a, el_b, res_b);
 }
 
-template <class T, class ElementIndex, class CT = const T>
+template <class ElementIndex, class T, class CT = const T>
 void testTrsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, SizeType m, SizeType n,
               SizeType extra_lda, SizeType extra_ldb) {
   TileElementSize size_a = side == blas::Side::Left ? TileElementSize(m, m) : TileElementSize(n, n);
@@ -165,10 +165,10 @@ void testTrsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, Si
 
   if (side == blas::Side::Left)
     std::tie(el_op_a, el_b, res_b) =
-        testTrsmElementFunctionsLeft<T, ElementIndex>(uplo, op, diag, alpha, m);
+        testTrsmElementFunctionsLeft<ElementIndex, T>(uplo, op, diag, alpha, m);
   else
     std::tie(el_op_a, el_b, res_b) =
-        testTrsmElementFunctionsRight<T, ElementIndex>(uplo, op, diag, alpha, n);
+        testTrsmElementFunctionsRight<ElementIndex, T>(uplo, op, diag, alpha, n);
 
   tile_test::set(a0, el_op_a, op);
   tile_test::set(b, el_b);

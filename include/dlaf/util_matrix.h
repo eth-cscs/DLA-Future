@@ -62,82 +62,84 @@ void assertMatrixDistributedOnGrid(const comm::CommunicatorGrid& grid, const Mat
                                 ".");
 }
 
-/// @brief Verify that matrices A and B are multipliable, i.e. the number of )
+/// @brief Verify that matrices A and B are multipliable,
 ///
 /// @tparam A refers to a dlaf::Matrix object
 /// @tparam B refers to a dlaf::Matrix object
-/// @throws std::invalid_argument if the matrix A column number is not equal to the matrix B row number
-template <class Matrix>
-void assertMultipliableMatrices(const Matrix& A, const Matrix& B, blas::Side side, blas::Op op,
-                                std::string function, std::string A_name, std::string B_name) {
+/// @throws std::invalid_argument if matrices A and B are not multipliable, taking into account the Side
+/// (Left/Right) and the Op (NoTrans/Trans/ConjTrans) of the multiplication itself
+template <class MatrixConst, class Matrix>
+void assertMultipliableMatrices(const MatrixConst& mat_a, const Matrix& mat_b, blas::Side side,
+                                blas::Op op, std::string function, std::string mat_a_name,
+                                std::string mat_b_name) {
   if (side == blas::Side::Left) {
     if (op == blas::Op::NoTrans) {
-      if (A.nrTiles().cols() != B.nrTiles().rows()) {
+      if (mat_a.nrTiles().cols() != mat_b.nrTiles().rows()) {
         throw std::invalid_argument(
-            function + ": " + "The matrices " + A_name + " and " + B_name +
+            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
             " are not left multipliable (cols of matrix A not equal to rows of matrix B).");
       }
-      if (A.size().cols() != B.size().rows()) {
+      if (mat_a.size().cols() != mat_b.size().rows()) {
         throw std::invalid_argument(
-            function + ": " + "The matrices " + A_name + " and " + B_name +
+            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
             " are not left multipliable (size of matrix A not equal to that of matrix B).");
       }
-      if (A.blockSize().cols() != B.blockSize().rows()) {
+      if (mat_a.blockSize().cols() != mat_b.blockSize().rows()) {
         throw std::invalid_argument(
-            function + ": " + "The matrices " + A_name + " and " + B_name +
+            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
             " are not left multipliable (blocksize of matrix A not equal to that of matrix B).");
       }
     }
     else if (op == blas::Op::Trans || op == blas::Op::ConjTrans) {
-      if (A.nrTiles().rows() != B.nrTiles().rows()) {
+      if (mat_a.nrTiles().rows() != mat_b.nrTiles().rows()) {
         throw std::invalid_argument(
-            function + ": " + "The matrices " + A_name + " and " + B_name +
+            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
             " are not left multipliable (cols of matrix A not equal to rows of matrix B).");
       }
-      if (A.size().rows() != B.size().rows()) {
+      if (mat_a.size().rows() != mat_b.size().rows()) {
         throw std::invalid_argument(
-            function + ": " + "The matrices " + A_name + " and " + B_name +
+            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
             " are not left multipliable (size of matrix A not equal to that of matrix B).");
       }
-      if (A.blockSize().rows() != B.blockSize().rows()) {
+      if (mat_a.blockSize().rows() != mat_b.blockSize().rows()) {
         throw std::invalid_argument(
-            function + ": " + "The matrices " + A_name + " and " + B_name +
+            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
             " are not left multipliable (blocksize of matrix A not equal to that of matrix B).");
       }
     }
   }
   else if (side == blas::Side::Right) {
     if (op == blas::Op::NoTrans) {
-      if (A.nrTiles().rows() != B.nrTiles().cols()) {
+      if (mat_a.nrTiles().rows() != mat_b.nrTiles().cols()) {
         throw std::invalid_argument(
-            function + ": " + "The matrices " + A_name + " and " + B_name +
+            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
             " are not right multipliable (rows of matrix A not equal to cols of matrix B).");
       }
-      if (A.size().rows() != B.size().cols()) {
+      if (mat_a.size().rows() != mat_b.size().cols()) {
         throw std::invalid_argument(
-            function + ": " + "The matrices " + A_name + " and " + B_name +
+            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
             " are not right multipliable (size of matrix A not equal to that of matrix B).");
       }
-      if (A.blockSize().rows() != B.blockSize().cols()) {
+      if (mat_a.blockSize().rows() != mat_b.blockSize().cols()) {
         throw std::invalid_argument(
-            function + ": " + "The matrices " + A_name + " and " + B_name +
+            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
             " are not right multipliable (blocksize of matrix A not equal to that of matrix B).");
       }
     }
     else if (op == blas::Op::Trans || op == blas::Op::ConjTrans) {
-      if (A.nrTiles().cols() != B.nrTiles().cols()) {
+      if (mat_a.nrTiles().cols() != mat_b.nrTiles().cols()) {
         throw std::invalid_argument(
-            function + ": " + "The matrices " + A_name + " and " + B_name +
+            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
             " are not right multipliable (rows of matrix A not equal to cols of matrix B).");
       }
-      if (A.size().cols() != B.size().cols()) {
+      if (mat_a.size().cols() != mat_b.size().cols()) {
         throw std::invalid_argument(
-            function + ": " + "The matrices " + A_name + " and " + B_name +
+            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
             " are not right multipliable (size of matrix A not equal to that of matrix B).");
       }
-      if (A.blockSize().cols() != B.blockSize().cols()) {
+      if (mat_a.blockSize().cols() != mat_b.blockSize().cols()) {
         throw std::invalid_argument(
-            function + ": " + "The matrices " + A_name + " and " + B_name +
+            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
             " are not right multipliable (blocksize of matrix A not equal to that of matrix B).");
       }
     }

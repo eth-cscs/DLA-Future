@@ -74,19 +74,19 @@ void testTriangularSolveDistributed(comm::CommunicatorGrid grid, blas::Side side
   std::function<T(const GlobalElementIndex&)> el_op_a, el_b, res_b;
 
   Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
-  GlobalElementSize szA = globalTestSize(size);
-  Distribution distributionA(szA, block_size, grid.size(), grid.rank(), src_rank_index);
-  Matrix<T, Device::CPU> matA(std::move(distributionA));
+  GlobalElementSize sz_a = globalTestSize(size);
+  Distribution distr_a(sz_a, block_size, grid.size(), grid.rank(), src_rank_index);
+  Matrix<T, Device::CPU> mat_a(std::move(distr_a));
 
-  auto m = szA.rows();
-  LocalElementSize B_size(m, colB);
+  auto m = sz_a.rows();
+  LocalElementSize b_size(m, colB);
   if (side == blas::Side::Right)
-    B_size.transpose();
-  GlobalElementSize szB = globalTestSize(B_size);
-  Distribution distributionB(szB, block_size, grid.size(), grid.rank(), src_rank_index);
-  Matrix<T, Device::CPU> matB(std::move(distributionB));
+    b_size.transpose();
+  GlobalElementSize sz_b = globalTestSize(b_size);
+  Distribution distr_b(sz_b, block_size, grid.size(), grid.rank(), src_rank_index);
+  Matrix<T, Device::CPU> mat_b(std::move(distr_b));
 
-  auto n = szA.cols();
+  auto n = sz_a.cols();
 
   if (side == blas::Side::Left)
     std::tie(el_op_a, el_b, res_b) =
@@ -95,13 +95,13 @@ void testTriangularSolveDistributed(comm::CommunicatorGrid grid, blas::Side side
     std::tie(el_op_a, el_b, res_b) =
         testTrsmElementFunctionsRight<T, GlobalElementIndex>(uplo, op, diag, alpha, n);
 
-  set(matA, el_op_a, op);
-  set(matB, el_b);
+  set(mat_a, el_op_a, op);
+  set(mat_b, el_b);
 
-  triangular_solve_distributed(grid, side, uplo, op, diag, alpha, matA, matB);
+  triangular_solve_distributed(grid, side, uplo, op, diag, alpha, mat_a, mat_b);
 
-  CHECK_MATRIX_NEAR(res_b, matB, 20 * (matB.size().rows() + 1) * TypeUtilities<T>::error,
-                    20 * (matB.size().rows() + 1) * TypeUtilities<T>::error);
+  CHECK_MATRIX_NEAR(res_b, mat_b, 20 * (mat_b.size().rows() + 1) * TypeUtilities<T>::error,
+                    20 * (mat_b.size().rows() + 1) * TypeUtilities<T>::error);
 }
 
 TYPED_TEST(TriangularSolveDistributedTest, Correctness) {
@@ -148,23 +148,23 @@ TYPED_TEST(TriangularSolveDistributedTest, MatrixNotSquareException) {
                 for (const auto& col : col_b) {
                   Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
                                          std::min(1, comm_grid.size().cols() - 1));
-                  GlobalElementSize szA = globalTestSize(size);
-                  Distribution distributionA(szA, block_size, comm_grid.size(), comm_grid.rank(),
-                                             src_rank_index);
-                  Matrix<TypeParam, Device::CPU> matA(std::move(distributionA));
+                  GlobalElementSize sz_a = globalTestSize(size);
+                  Distribution distr_a(sz_a, block_size, comm_grid.size(), comm_grid.rank(),
+                                       src_rank_index);
+                  Matrix<TypeParam, Device::CPU> mat_a(std::move(distr_a));
 
-                  auto m = szA.rows();
-                  LocalElementSize B_size(m, col);
+                  auto m = sz_a.rows();
+                  LocalElementSize b_size(m, col);
                   if (side == blas::Side::Right)
-                    B_size.transpose();
-                  GlobalElementSize szB = globalTestSize(B_size);
-                  Distribution distributionB(szB, block_size, comm_grid.size(), comm_grid.rank(),
-                                             src_rank_index);
-                  Matrix<TypeParam, Device::CPU> matB(std::move(distributionB));
+                    b_size.transpose();
+                  GlobalElementSize sz_b = globalTestSize(b_size);
+                  Distribution distr_b(sz_b, block_size, comm_grid.size(), comm_grid.rank(),
+                                       src_rank_index);
+                  Matrix<TypeParam, Device::CPU> mat_b(std::move(distr_b));
 
                   TypeParam alpha = 1.0;
-                  EXPECT_THROW(triangular_solve_distributed(comm_grid, side, uplo, op, diag, alpha, matA,
-                                                            matB),
+                  EXPECT_THROW(triangular_solve_distributed(comm_grid, side, uplo, op, diag, alpha,
+                                                            mat_a, mat_b),
                                std::invalid_argument);
                 }
               }
@@ -187,23 +187,23 @@ TYPED_TEST(TriangularSolveDistributedTest, BlockNotSquareException) {
                 for (const auto& col : col_b) {
                   Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
                                          std::min(1, comm_grid.size().cols() - 1));
-                  GlobalElementSize szA = globalTestSize(size);
-                  Distribution distributionA(szA, block_size, comm_grid.size(), comm_grid.rank(),
-                                             src_rank_index);
-                  Matrix<TypeParam, Device::CPU> matA(std::move(distributionA));
+                  GlobalElementSize sz_a = globalTestSize(size);
+                  Distribution distr_a(sz_a, block_size, comm_grid.size(), comm_grid.rank(),
+                                       src_rank_index);
+                  Matrix<TypeParam, Device::CPU> mat_a(std::move(distr_a));
 
-                  auto m = szA.rows();
-                  LocalElementSize B_size(m, col);
+                  auto m = sz_a.rows();
+                  LocalElementSize b_size(m, col);
                   if (side == blas::Side::Right)
-                    B_size.transpose();
-                  GlobalElementSize szB = globalTestSize(B_size);
-                  Distribution distributionB(szB, block_size, comm_grid.size(), comm_grid.rank(),
-                                             src_rank_index);
-                  Matrix<TypeParam, Device::CPU> matB(std::move(distributionB));
+                    b_size.transpose();
+                  GlobalElementSize sz_b = globalTestSize(b_size);
+                  Distribution distr_b(sz_b, block_size, comm_grid.size(), comm_grid.rank(),
+                                       src_rank_index);
+                  Matrix<TypeParam, Device::CPU> mat_b(std::move(distr_b));
 
                   TypeParam alpha = 1.0;
-                  EXPECT_THROW(triangular_solve_distributed(comm_grid, side, uplo, op, diag, alpha, matA,
-                                                            matB),
+                  EXPECT_THROW(triangular_solve_distributed(comm_grid, side, uplo, op, diag, alpha,
+                                                            mat_a, mat_b),
                                std::invalid_argument);
                 }
               }
@@ -226,23 +226,23 @@ TYPED_TEST(TriangularSolveDistributedTest, MultipliableMatricesException) {
                 for (const auto& col : col_b) {
                   Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
                                          std::min(1, comm_grid.size().cols() - 1));
-                  GlobalElementSize szA = globalTestSize(size);
-                  Distribution distributionA(szA, block_size, comm_grid.size(), comm_grid.rank(),
-                                             src_rank_index);
-                  Matrix<TypeParam, Device::CPU> matA(std::move(distributionA));
+                  GlobalElementSize sz_a = globalTestSize(size);
+                  Distribution distr_a(sz_a, block_size, comm_grid.size(), comm_grid.rank(),
+                                       src_rank_index);
+                  Matrix<TypeParam, Device::CPU> mat_a(std::move(distr_a));
 
-                  auto n = szA.cols();
-                  LocalElementSize B_size(n * 2 + 3, col);
+                  auto n = sz_a.cols();
+                  LocalElementSize b_size(n * 2 + 3, col);
                   if (side == blas::Side::Right)
-                    B_size.transpose();
-                  GlobalElementSize szB = globalTestSize(B_size);
-                  Distribution distributionB(szB, block_size, comm_grid.size(), comm_grid.rank(),
-                                             src_rank_index);
-                  Matrix<TypeParam, Device::CPU> matB(std::move(distributionB));
+                    b_size.transpose();
+                  GlobalElementSize sz_b = globalTestSize(b_size);
+                  Distribution distr_b(sz_b, block_size, comm_grid.size(), comm_grid.rank(),
+                                       src_rank_index);
+                  Matrix<TypeParam, Device::CPU> mat_b(std::move(distr_b));
 
                   TypeParam alpha = 1.0;
-                  EXPECT_THROW(triangular_solve_distributed(comm_grid, side, uplo, op, diag, alpha, matA,
-                                                            matB),
+                  EXPECT_THROW(triangular_solve_distributed(comm_grid, side, uplo, op, diag, alpha,
+                                                            mat_a, mat_b),
                                std::invalid_argument);
                 }
               }
@@ -265,47 +265,43 @@ TYPED_TEST(TriangularSolveDistributedTest, MatrixNotDistributedOnGridException) 
                 for (const auto& col : col_b) {
                   {
                     // Matrix A: different grid size
-                    GlobalElementSize szA = globalTestSize(size);
+                    GlobalElementSize sz_a = globalTestSize(size);
                     Size2D grid_distributed(comm_grid.size().rows() + 1, comm_grid.size().cols() + 1);
-                    Distribution distributionA(szA, block_size, grid_distributed, comm_grid.rank(),
-                                               {0, 0});
-                    Matrix<TypeParam, Device::CPU> matA(std::move(distributionA));
+                    Distribution distr_a(sz_a, block_size, grid_distributed, comm_grid.rank(), {0, 0});
+                    Matrix<TypeParam, Device::CPU> mat_a(std::move(distr_a));
 
-                    auto m = szA.rows();
-                    LocalElementSize B_size(m, col);
+                    auto m = sz_a.rows();
+                    LocalElementSize b_size(m, col);
                     if (side == blas::Side::Right)
-                      B_size.transpose();
-                    GlobalElementSize szB = globalTestSize(B_size);
-                    Distribution distributionB(szB, block_size, comm_grid.size(), comm_grid.rank(),
-                                               {0, 0});
-                    Matrix<TypeParam, Device::CPU> matB(std::move(distributionB));
+                      b_size.transpose();
+                    GlobalElementSize sz_b = globalTestSize(b_size);
+                    Distribution distr_b(sz_b, block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+                    Matrix<TypeParam, Device::CPU> mat_b(std::move(distr_b));
 
                     TypeParam alpha = 1.0;
                     EXPECT_THROW(triangular_solve_distributed(comm_grid, side, uplo, op, diag, alpha,
-                                                              matA, matB),
+                                                              mat_a, mat_b),
                                  std::invalid_argument);
                   }
 
                   {
                     // Matrix B: different grid size
-                    GlobalElementSize szA = globalTestSize(size);
-                    Distribution distributionA(szA, block_size, comm_grid.size(), comm_grid.rank(),
-                                               {0, 0});
-                    Matrix<TypeParam, Device::CPU> matA(std::move(distributionA));
+                    GlobalElementSize sz_a = globalTestSize(size);
+                    Distribution distr_a(sz_a, block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+                    Matrix<TypeParam, Device::CPU> mat_a(std::move(distr_a));
 
-                    auto m = szA.rows();
-                    LocalElementSize B_size(m, col);
+                    auto m = sz_a.rows();
+                    LocalElementSize b_size(m, col);
                     if (side == blas::Side::Right)
-                      B_size.transpose();
-                    GlobalElementSize szB = globalTestSize(B_size);
+                      b_size.transpose();
+                    GlobalElementSize sz_b = globalTestSize(b_size);
                     Size2D grid_distributed(comm_grid.size().rows() + 1, comm_grid.size().cols() + 1);
-                    Distribution distributionB(szB, block_size, grid_distributed, comm_grid.rank(),
-                                               {0, 0});
-                    Matrix<TypeParam, Device::CPU> matB(std::move(distributionB));
+                    Distribution distr_b(sz_b, block_size, grid_distributed, comm_grid.rank(), {0, 0});
+                    Matrix<TypeParam, Device::CPU> mat_b(std::move(distr_b));
 
                     TypeParam alpha = 1.0;
                     EXPECT_THROW(triangular_solve_distributed(comm_grid, side, uplo, op, diag, alpha,
-                                                              matA, matB),
+                                                              mat_a, mat_b),
                                  std::invalid_argument);
                   }
 
@@ -313,23 +309,22 @@ TYPED_TEST(TriangularSolveDistributedTest, MatrixNotDistributedOnGridException) 
                     // Matrix A: different rank
                     Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
                                            std::min(1, comm_grid.size().cols() - 1));
-                    GlobalElementSize szA = globalTestSize(size);
-                    Distribution distributionA(szA, block_size, comm_grid.size(), comm_grid.rank(),
-                                               src_rank_index);
-                    Matrix<TypeParam, Device::CPU> matA(std::move(distributionA));
+                    GlobalElementSize sz_a = globalTestSize(size);
+                    Distribution distr_a(sz_a, block_size, comm_grid.size(), comm_grid.rank(),
+                                         src_rank_index);
+                    Matrix<TypeParam, Device::CPU> mat_a(std::move(distr_a));
 
-                    auto m = szA.rows();
-                    LocalElementSize B_size(m, col);
+                    auto m = sz_a.rows();
+                    LocalElementSize b_size(m, col);
                     if (side == blas::Side::Right)
-                      B_size.transpose();
-                    GlobalElementSize szB = globalTestSize(B_size);
-                    Distribution distributionB(szB, block_size, comm_grid.size(), comm_grid.rank(),
-                                               {0, 0});
-                    Matrix<TypeParam, Device::CPU> matB(std::move(distributionB));
+                      b_size.transpose();
+                    GlobalElementSize sz_b = globalTestSize(b_size);
+                    Distribution distr_b(sz_b, block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+                    Matrix<TypeParam, Device::CPU> mat_b(std::move(distr_b));
 
                     TypeParam alpha = 1.0;
                     EXPECT_THROW(triangular_solve_distributed(comm_grid, side, uplo, op, diag, alpha,
-                                                              matA, matB),
+                                                              mat_a, mat_b),
                                  std::invalid_argument);
                   }
 
@@ -337,23 +332,22 @@ TYPED_TEST(TriangularSolveDistributedTest, MatrixNotDistributedOnGridException) 
                     // Matrix B: different rank
                     Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
                                            std::min(1, comm_grid.size().cols() - 1));
-                    GlobalElementSize szA = globalTestSize(size);
-                    Distribution distributionA(szA, block_size, comm_grid.size(), comm_grid.rank(),
-                                               {0, 0});
-                    Matrix<TypeParam, Device::CPU> matA(std::move(distributionA));
+                    GlobalElementSize sz_a = globalTestSize(size);
+                    Distribution distr_a(sz_a, block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+                    Matrix<TypeParam, Device::CPU> mat_a(std::move(distr_a));
 
-                    auto m = szA.rows();
-                    LocalElementSize B_size(m, col);
+                    auto m = sz_a.rows();
+                    LocalElementSize b_size(m, col);
                     if (side == blas::Side::Right)
-                      B_size.transpose();
-                    GlobalElementSize szB = globalTestSize(B_size);
-                    Distribution distributionB(szB, block_size, comm_grid.size(), comm_grid.rank(),
-                                               src_rank_index);
-                    Matrix<TypeParam, Device::CPU> matB(std::move(distributionB));
+                      b_size.transpose();
+                    GlobalElementSize sz_b = globalTestSize(b_size);
+                    Distribution distr_b(sz_b, block_size, comm_grid.size(), comm_grid.rank(),
+                                         src_rank_index);
+                    Matrix<TypeParam, Device::CPU> mat_b(std::move(distr_b));
 
                     TypeParam alpha = 1.0;
                     EXPECT_THROW(triangular_solve_distributed(comm_grid, side, uplo, op, diag, alpha,
-                                                              matA, matB),
+                                                              mat_a, mat_b),
                                  std::invalid_argument);
                   }
                 }

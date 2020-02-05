@@ -20,12 +20,12 @@
 
 namespace dlaf {
 
-/// Exception used to notify that an exception has been thrown in a continuation task
+/// Exception used to notify a continuation task that an exception has been thrown in a dependency task.
 ///
 /// It is mainly used to enable exception propagation in the automatic-continuation mechanism.
 struct ContinuationException final : public std::runtime_error {
   ContinuationException()
-      : std::runtime_error("An exception has been thrown during the execution of the previous task") {}
+      : std::runtime_error("An exception has been thrown during the execution of the previous task.") {}
 };
 
 template <class T, Device device>

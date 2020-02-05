@@ -1154,46 +1154,48 @@ TEST(MatrixDestructorFutures, ConstAfterRead) {
   last_task.get();
 }
 
+struct CustomException final : public std::exception {};
+
 TEST(MatrixExceptionPropagation, PropagateOnRwWithRWAccess) {
   auto matrix = createMatrix<TypeParam>();
 
   auto f = matrix(LocalTileIndex(0, 0)).then(hpx::util::unwrapping([](auto&&) {
-    throw std::runtime_error("exception in task");
+    throw CustomException{};
   }));
 
   EXPECT_THROW(matrix(LocalTileIndex(0, 0)).get(), dlaf::ContinuationException);
-  EXPECT_ANY_THROW(f.get());
+  EXPECT_THROW(f.get(), CustomException);
 }
 
 TEST(MatrixExceptionPropagation, PropagateOnRwWithReadAccess) {
   auto matrix = createMatrix<TypeParam>();
 
   auto f = matrix(LocalTileIndex(0, 0)).then(hpx::util::unwrapping([](auto&&) {
-    throw std::runtime_error("exception in task");
+    throw CustomException{};
   }));
 
   EXPECT_THROW(matrix.read(LocalTileIndex(0, 0)).get(), dlaf::ContinuationException);
-  EXPECT_ANY_THROW(f.get());
+  EXPECT_THROW(f.get(), CustomException);
 }
 
 TEST(MatrixExceptionPropagation, NoPropagateOnReadOnlyWithRWAccess) {
   auto matrix = createMatrix<TypeParam>();
 
   auto f = matrix.read(LocalTileIndex(0, 0)).then(hpx::util::unwrapping([](auto&&) {
-    throw std::runtime_error("exception in task");
+    throw CustomException{};
   }));
 
   EXPECT_NO_THROW(matrix(LocalTileIndex(0, 0)).get());
-  EXPECT_ANY_THROW(f.get());
+  EXPECT_THROW(f.get(), CustomException);
 }
 
 TEST(MatrixExceptionPropagation, NoPropagateOnReadOnlyWithReadAccess) {
   auto matrix = createMatrix<TypeParam>();
 
   auto f = matrix.read(LocalTileIndex(0, 0)).then(hpx::util::unwrapping([](auto&&) {
-    throw std::runtime_error("exception in task");
+    throw CustomException{};
   }));
 
   EXPECT_NO_THROW(matrix.read(LocalTileIndex(0, 0)).get());
-  EXPECT_ANY_THROW(f.get());
+  EXPECT_THROW(f.get(), CustomException);
 }

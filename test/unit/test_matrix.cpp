@@ -1156,7 +1156,7 @@ TEST(MatrixDestructorFutures, ConstAfterRead) {
 
 struct CustomException final : public std::exception {};
 
-TEST(MatrixExceptionPropagation, PropagateOnRwWithRWAccess) {
+TEST(MatrixExceptionPropagation, RWPropagatesInRWAccess) {
   auto matrix = createMatrix<TypeParam>();
 
   auto f =
@@ -1166,7 +1166,7 @@ TEST(MatrixExceptionPropagation, PropagateOnRwWithRWAccess) {
   EXPECT_THROW(f.get(), CustomException);
 }
 
-TEST(MatrixExceptionPropagation, PropagateOnRwWithReadAccess) {
+TEST(MatrixExceptionPropagation, RWPropagatesInReadAccess) {
   auto matrix = createMatrix<TypeParam>();
 
   auto f =
@@ -1176,7 +1176,7 @@ TEST(MatrixExceptionPropagation, PropagateOnRwWithReadAccess) {
   EXPECT_THROW(f.get(), CustomException);
 }
 
-TEST(MatrixExceptionPropagation, NoPropagateOnReadOnlyWithRWAccess) {
+TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInRWAccess) {
   auto matrix = createMatrix<TypeParam>();
 
   auto f = matrix.read(LocalTileIndex(0, 0)).then(hpx::util::unwrapping([](auto&&) {
@@ -1187,7 +1187,7 @@ TEST(MatrixExceptionPropagation, NoPropagateOnReadOnlyWithRWAccess) {
   EXPECT_THROW(f.get(), CustomException);
 }
 
-TEST(MatrixExceptionPropagation, NoPropagateOnReadOnlyWithReadAccess) {
+TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInReadAccess) {
   auto matrix = createMatrix<TypeParam>();
 
   auto f = matrix.read(LocalTileIndex(0, 0)).then(hpx::util::unwrapping([](auto&&) {

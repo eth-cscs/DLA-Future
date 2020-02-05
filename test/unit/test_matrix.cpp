@@ -1159,9 +1159,8 @@ struct CustomException final : public std::exception {};
 TEST(MatrixExceptionPropagation, PropagateOnRwWithRWAccess) {
   auto matrix = createMatrix<TypeParam>();
 
-  auto f = matrix(LocalTileIndex(0, 0)).then(hpx::util::unwrapping([](auto&&) {
-    throw CustomException{};
-  }));
+  auto f =
+      matrix(LocalTileIndex(0, 0)).then(hpx::util::unwrapping([](auto&&) { throw CustomException{}; }));
 
   EXPECT_THROW(matrix(LocalTileIndex(0, 0)).get(), dlaf::ContinuationException);
   EXPECT_THROW(f.get(), CustomException);
@@ -1170,9 +1169,8 @@ TEST(MatrixExceptionPropagation, PropagateOnRwWithRWAccess) {
 TEST(MatrixExceptionPropagation, PropagateOnRwWithReadAccess) {
   auto matrix = createMatrix<TypeParam>();
 
-  auto f = matrix(LocalTileIndex(0, 0)).then(hpx::util::unwrapping([](auto&&) {
-    throw CustomException{};
-  }));
+  auto f =
+      matrix(LocalTileIndex(0, 0)).then(hpx::util::unwrapping([](auto&&) { throw CustomException{}; }));
 
   EXPECT_THROW(matrix.read(LocalTileIndex(0, 0)).get(), dlaf::ContinuationException);
   EXPECT_THROW(f.get(), CustomException);

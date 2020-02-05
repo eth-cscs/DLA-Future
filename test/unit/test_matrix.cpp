@@ -1161,7 +1161,7 @@ TEST(MatrixExceptionPropagation, PropagateOnRwWithRWAccess) {
     throw std::runtime_error("exception in task");
   }));
 
-  EXPECT_ANY_THROW(matrix(LocalTileIndex(0, 0)).get());
+  EXPECT_THROW(matrix(LocalTileIndex(0, 0)).get(), dlaf::ContinuationException);
   EXPECT_ANY_THROW(f.get());
 }
 
@@ -1172,7 +1172,7 @@ TEST(MatrixExceptionPropagation, PropagateOnRwWithReadAccess) {
     throw std::runtime_error("exception in task");
   }));
 
-  EXPECT_ANY_THROW(matrix.read(LocalTileIndex(0, 0)).get());
+  EXPECT_THROW(matrix.read(LocalTileIndex(0, 0)).get(), dlaf::ContinuationException);
   EXPECT_ANY_THROW(f.get());
 }
 

@@ -35,8 +35,7 @@ template <class T, Device device>
 Tile<const T, device>::~Tile() {
   if (p_) {
     if (std::uncaught_exception())
-      p_->set_exception(std::make_exception_ptr(
-          std::runtime_error("An exception has been thrown and this tile destroyed")));
+      p_->set_exception(std::make_exception_ptr(ContinuationException{}));
     else
       p_->set_value(Tile<ElementType, device>(size_, std::move(memory_view_), ld_));
   }

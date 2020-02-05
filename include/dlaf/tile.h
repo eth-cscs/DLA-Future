@@ -20,6 +20,10 @@
 
 namespace dlaf {
 
+struct ContinuationException final : public std::runtime_error {
+  ContinuationException() : std::runtime_error("An exception has been thrown during the execution of the previous task") {}
+};
+
 template <class T, Device device>
 class Tile;
 

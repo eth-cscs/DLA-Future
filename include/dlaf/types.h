@@ -20,6 +20,9 @@ enum class Device { CPU, GPU };
 template <class T>
 struct TypeInfo;
 
+template <class T>
+struct TypeInfo<const T> : public TypeInfo<T> {};
+
 template <>
 struct TypeInfo<float> {
   using BaseType = float;

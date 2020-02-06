@@ -52,11 +52,11 @@ void triangular_solve(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag 
   util_matrix::assertSizeSquare(mat_a, "TriangularSolve", "mat_a");
   // Check if block matrix A is square
   util_matrix::assertBlocksizeSquare(mat_a, "TriangularSolve", "mat_a");
-  // Check if A and mat_b dimensions are compatible
+  // Check if A and B dimensions are compatible
   util_matrix::assertMultipliableMatrices(mat_a, mat_b, side, op, "TriangularSolve", "mat_a", "mat_b");
   // Check if matrix A is stored on local memory
   util_matrix::assertLocalMatrix(mat_a, "TriangularSolve", "mat_a");
-  // Check if matrix mat_b is stored on local memory
+  // Check if matrix B is stored on local memory
   util_matrix::assertLocalMatrix(mat_b, "TriangularSolve", "mat_b");
 
   SizeType m = mat_b.nrTiles().rows();

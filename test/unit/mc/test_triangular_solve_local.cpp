@@ -29,7 +29,7 @@ using namespace testing;
 
 std::vector<blas::Diag> blas_diags({blas::Diag::NonUnit, blas::Diag::Unit});
 std::vector<blas::Op> blas_ops({blas::Op::NoTrans, blas::Op::Trans, blas::Op::ConjTrans});
-std::vector<blas::Side> blas_sides({blas::Side::Right, blas::Side::Right});
+std::vector<blas::Side> blas_sides({blas::Side::Left, blas::Side::Right});
 std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
 
 template <typename Type>
@@ -47,12 +47,11 @@ std::vector<TileElementSize> square_block_sizes({{2, 2}, {3, 3}, {5, 5}});
 std::vector<TileElementSize> rectangular_block_sizes({{12, 30}, {20, 12}});
 
 std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
-    {0, 0, 1, 1},                // all zero sizes
-    {0, 2, 1, 2}, {7, 0, 2, 1},  // one zero size
-    {2, 2, 2, 2}, {10, 10, 2, 3}, {6, 6, 2, 2},
-    {5, 4, 4, 4}, {5, 5, 5, 4},  // m=n, mb=nb, nb<mb, mb<nb, n<m
-    {6, 6, 4, 3}, {2, 5, 3, 3},   {3, 3, 4, 4},
-    {3, 3, 5, 4}, {6, 3, 5, 4},   {5, 4, 6, 4}  // m<n, nb>n, mb>m, m<n
+    {0, 0, 1, 1},                                                // m, n = 0
+    {0, 2, 1, 2}, {7, 0, 2, 1},                                  // m = 0 or n = 0
+    {2, 2, 5, 5}, {10, 10, 2, 3}, {7, 7, 3, 2},                  // m = n
+    {3, 2, 7, 7}, {12, 3, 5, 5},  {7, 6, 3, 2}, {15, 7, 3, 5},   // m > n
+    {2, 3, 7, 7}, {4, 13, 5, 5},  {7, 8, 2, 9}, {19, 25, 6, 5},  // m < n
 };
 
 GlobalElementSize globalTestSize(const LocalElementSize& size) {

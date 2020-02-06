@@ -22,19 +22,19 @@
 /// @file
 
 namespace dlaf {
-/// @brief Triangular Solve implementation on local memory, solving op(mat_a) X = alpha mat_b (when side
-/// == Left) or X op(mat_a) = alpha mat_b (when side == Right).
+/// @brief Triangular Solve implementation on local memory, solving op(A) X = alpha B (when side
+/// == Left) or X op(A) = alpha B (when side == Right).
 ///
-/// @param side specifies whether op(mat_a) appears on the \a Left or on the \a Right of matrix X
-/// @param uplo specifies whether the matrix mat_a is a \a Lower or \a Upper triangular matrix
-/// @param op specifies the form of op(mat_a) to be used in the matrix multiplication: \a NoTrans, \a
+/// @param side specifies whether op(A) appears on the \a Left or on the \a Right of matrix X
+/// @param uplo specifies whether the matrix A is a \a Lower or \a Upper triangular matrix
+/// @param op specifies the form of op(A) to be used in the matrix multiplication: \a NoTrans, \a
 /// Trans, \a ConjTrans
-/// @param diag specifies if the matrix mat_a is assumed to be unit triangular (\a Unit) or not (\a
+/// @param diag specifies if the matrix A is assumed to be unit triangular (\a Unit) or not (\a
 /// NonUnit)
-/// @param a contains the triangular matrix mat_a. Only the tiles of the matrix which contain the upper
-/// or the lower triangular part (depending on the value of uplo) are accessed in read-only mode (the elements
-/// are not modified).
-/// @param b on entry it contains the matrix mat_b, on exit the matrix elements are overwritten with the
+/// @param mat_a contains the triangular matrix A. Only the tiles of the matrix which contain the upper
+/// or the lower triangular part (depending on the value of uplo) are accessed in read-only mode (the
+/// elements are not modified).
+/// @param mat_b on entry it contains the matrix B, on exit the matrix elements are overwritten with the
 /// elements of the matrix X.
 
 template <class T>
@@ -48,13 +48,13 @@ void triangular_solve(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag 
   hpx::threads::scheduled_executor executor_normal =
       hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_default);
 
-  // Check if matrix mat_a is square
+  // Check if matrix A is square
   util_matrix::assertSizeSquare(mat_a, "TriangularSolve", "mat_a");
-  // Check if block matrix mat_a is square
+  // Check if block matrix A is square
   util_matrix::assertBlocksizeSquare(mat_a, "TriangularSolve", "mat_a");
-  // Check if mat_a and mat_b dimensions are compatible
+  // Check if A and mat_b dimensions are compatible
   util_matrix::assertMultipliableMatrices(mat_a, mat_b, side, op, "TriangularSolve", "mat_a", "mat_b");
-  // Check if matrix mat_a is stored on local memory
+  // Check if matrix A is stored on local memory
   util_matrix::assertLocalMatrix(mat_a, "TriangularSolve", "mat_a");
   // Check if matrix mat_b is stored on local memory
   util_matrix::assertLocalMatrix(mat_b, "TriangularSolve", "mat_b");
@@ -67,9 +67,9 @@ void triangular_solve(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag 
       if (op == blas::Op::NoTrans) {
         // Upper Left NoTrans
 
-        // Loop on rows of mat_a matrix
+        // Loop on rows of A matrix
         for (SizeType k = m - 1; k > -1; --k) {
-          // Loop on cols of mat_a matrix
+          // Loop on cols of A matrix
           for (SizeType j = n - 1; j > -1; --j) {
             auto kj = LocalTileIndex{k, j};
             // Triangular solve of the first tile
@@ -92,9 +92,9 @@ void triangular_solve(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag 
       else {
         // Upper Left Trans/ConjTrans case
 
-        // Loop on rows of mat_a matrix
+        // Loop on rows of A matrix
         for (SizeType k = 0; k < m; ++k) {
-          // Loop on cols of mat_a matrix
+          // Loop on cols of A matrix
           for (SizeType j = 0; j < n; ++j) {
             auto kj = LocalTileIndex{k, j};
 
@@ -120,9 +120,9 @@ void triangular_solve(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag 
       if (op == blas::Op::NoTrans) {
         // Upper Right NoTrans case
 
-        // Loop on cols of mat_a matrix
+        // Loop on cols of A matrix
         for (SizeType k = 0; k < n; ++k) {
-          // Loop on rows of mat_a matrix
+          // Loop on rows of A matrix
           for (SizeType i = 0; i < m; ++i) {
             auto ik = LocalTileIndex{i, k};
 
@@ -147,9 +147,9 @@ void triangular_solve(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag 
       else {
         // Upper Right Trans/ConjTrans case
 
-        // Loop on cols of mat_a matrix
+        // Loop on cols of A matrix
         for (SizeType k = n - 1; k > -1; --k) {
-          // Loop on rows of mat_a matrix
+          // Loop on rows of A matrix
           for (SizeType i = m - 1; i > -1; --i) {
             auto ik = LocalTileIndex{i, k};
 
@@ -178,9 +178,9 @@ void triangular_solve(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag 
       if (op == blas::Op::NoTrans) {
         // Lower Left NoTrans case
 
-        // Loop on rows of mat_a matrix
+        // Loop on rows of A matrix
         for (SizeType k = 0; k < m; ++k) {
-          // Loop on cols of mat_a matrix
+          // Loop on cols of A matrix
           for (SizeType j = 0; j < n; ++j) {
             auto kj = LocalTileIndex{k, j};
 
@@ -204,9 +204,9 @@ void triangular_solve(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag 
       else {
         // Lower Left Trans/ConjTrans case
 
-        // Loop on rows of mat_a matrix
+        // Loop on rows of A matrix
         for (SizeType k = m - 1; k > -1; --k) {
-          // Loop on cols of mat_a matrix
+          // Loop on cols of A matrix
           for (SizeType j = n - 1; j > -1; --j) {
             auto kj = LocalTileIndex{k, j};
             // Triangular solve of the first tile
@@ -231,9 +231,9 @@ void triangular_solve(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag 
       if (op == blas::Op::NoTrans) {
         // Lower Right NoTrans case
 
-        // Loop on cols of mat_a matrix
+        // Loop on cols of A matrix
         for (SizeType k = n - 1; k > -1; --k) {
-          // Loop on rows of mat_a matrix
+          // Loop on rows of A matrix
           for (SizeType i = m - 1; i > -1; --i) {
             auto ik = LocalTileIndex{i, k};
 
@@ -258,9 +258,9 @@ void triangular_solve(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag 
       else {
         // Lower Right Trans/ConjTrans case
 
-        // Loop on cols of mat_a matrix
+        // Loop on cols of A matrix
         for (SizeType k = 0; k < n; ++k) {
-          // Loop on rows of mat_a matrix
+          // Loop on rows of A matrix
           for (SizeType i = 0; i < m; ++i) {
             auto ik = LocalTileIndex{i, k};
 

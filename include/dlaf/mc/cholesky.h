@@ -25,9 +25,6 @@
 /// @file
 
 namespace dlaf {
-
-static bool use_pools = true;
-
 /// @brief Local implementation of the Cholesky factorization.
 ///
 /// Since the matrix is Hermitian only half of the elements are referenced.

@@ -193,10 +193,10 @@ TYPED_TEST(TileOperationsTest, Trsm) {
             std::tie(m, n, extra_lda, extra_ldb) = size;
 
             // Test a const Tile.
-            testTrsm<Type>(side, uplo, op, diag, m, n, extra_lda, extra_ldb);
+            testTrsm<TileElementIndex, Type>(side, uplo, op, diag, m, n, extra_lda, extra_ldb);
 
             // Test a non const Tile.
-            testTrsm<Type, Type>(side, uplo, op, diag, m, n, extra_lda, extra_ldb);
+            testTrsm<TileElementIndex, Type, Type>(side, uplo, op, diag, m, n, extra_lda, extra_ldb);
           }
         }
       }

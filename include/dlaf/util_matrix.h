@@ -214,7 +214,7 @@ public:
     if (element_position == dlaf::common::Position::LOWER)
       return random_value;
     else
-      return std::conj(random_value);
+      return dlaf::conj(random_value);
   }
 
 private:
@@ -287,7 +287,7 @@ void set_random(Matrix<T, Device::CPU>& matrix) {
 /// This means that a specific tile index, no matter on which rank it will be,
 /// it will have the same set of values.
 template <class T>
-void set_hermitian_random_positive_definite(Matrix<T, Device::CPU>& matrix) {
+void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
   const matrix::Distribution& dist = matrix.distribution();
 
   // Check if matrix is square
@@ -328,7 +328,7 @@ void set_hermitian_random_positive_definite(Matrix<T, Device::CPU>& matrix) {
 
                   tile(TileElementIndex{i, j}) = value;
                   if (i != j)
-                    tile(TileElementIndex{j, i}) = std::conj(value);
+                    tile(TileElementIndex{j, i}) = dlaf::conj(value);
                 }
               }
             }

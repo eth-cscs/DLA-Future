@@ -116,7 +116,7 @@ TYPED_TEST(MatrixUtilsTest, SetRandomPositiveDefinite) {
         return dlaf_test::TypeUtilities<TypeParam>::element(0, 0);
       };
 
-      dlaf::matrix::util::set_random_positive_definite(matrix);
+      dlaf::matrix::util::set_random_hermitian_positive_definite(matrix);
 
       CHECK_MATRIX_NEAR(identity_2N, matrix, 0,
                         std::abs(dlaf_test::TypeUtilities<TypeParam>::element(1, 1)));

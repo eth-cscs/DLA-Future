@@ -100,10 +100,21 @@ TYPED_TEST(MatrixUtilsTest, SetRandom) {
   }
 }
 
-TYPED_TEST(MatrixUtilsTest, SetRandomPositiveDefinite) {
+TYPED_TEST(MatrixUtilsTest, SetRandomHermitianPositiveDefinite) {
+  std::vector<TestSizes> square_blocks_configs({
+      {{0, 0}, {13, 13}},     // square null matrix
+      {{26, 26}, {2, 2}},     // square matrix multi block
+      {{2, 2}, {6, 6}},       // square matrix single block
+      });
+
+  auto globalSquareTestSize = [](const LocalElementSize& size, const Size2D& grid_size) {
+    auto k = std::max(grid_size.rows(), grid_size.cols());
+    return GlobalElementSize{size.rows() * k, size.cols() * k};
+  };
+
   for (const auto& comm_grid : this->commGrids()) {
-    for (const auto& test : sizes_tests) {
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+    for (const auto& test : square_blocks_configs) {
+      GlobalElementSize size = globalSquareTestSize(test.size, comm_grid.size());
       Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
       LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
       memory::MemoryView<TypeParam, Device::CPU> mem(layout.minMemSize());

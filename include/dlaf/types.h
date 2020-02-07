@@ -71,5 +71,4 @@ template <class T>
 T conj(const T number) {
   return number;
 }
-
 }

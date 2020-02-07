@@ -102,10 +102,10 @@ TYPED_TEST(MatrixUtilsTest, SetRandom) {
 
 TYPED_TEST(MatrixUtilsTest, SetRandomHermitianPositiveDefinite) {
   std::vector<TestSizes> square_blocks_configs({
-      {{0, 0}, {13, 13}},     // square null matrix
-      {{26, 26}, {2, 2}},     // square matrix multi block
-      {{2, 2}, {6, 6}},       // square matrix single block
-      });
+      {{0, 0}, {13, 13}},  // square null matrix
+      {{26, 26}, {2, 2}},  // square matrix multi block
+      {{2, 2}, {6, 6}},    // square matrix single block
+  });
 
   auto globalSquareTestSize = [](const LocalElementSize& size, const Size2D& grid_size) {
     auto k = std::max(grid_size.rows(), grid_size.cols());

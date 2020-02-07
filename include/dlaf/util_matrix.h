@@ -191,7 +191,8 @@ public:
 
 /// Helper function for random hermitian positive definite matrices
 ///
-/// Return random values in range [-1, 1] for any given index and adds the specified offset on indexes on the diagonal
+/// Return random values in range [-1, 1] for any given index and adds the specified offset on indexes on
+/// the diagonal.
 /// Moreover:
 /// - Values on the diagonal are returned as real numbers (if type is std::complex with imag() == 0)
 /// - Values that appears in the upper triangular part are conjugated
@@ -199,7 +200,7 @@ template <class T>
 class getter_random_hermitian_positive_definite : private getter_random<T> {
 public:
   getter_random_hermitian_positive_definite(const dlaf::BaseType<T> offset_value,
-                                     const unsigned long seed = std::minstd_rand::default_seed)
+                                            const unsigned long seed = std::minstd_rand::default_seed)
       : getter_random<T>(seed), offset_value_(offset_value) {}
 
   T operator()(const GlobalElementIndex& index) {
@@ -305,45 +306,48 @@ void set_hermitian_random_positive_definite(Matrix<T, Device::CPU>& matrix) {
 
       auto tile_position = dlaf::common::position(tile_wrt_global);
 
-      // compute the same seed for original and "transposed" tiles, so transposed ones will know the values of the original
-      // one without the need of accessing real values (nor communication in case of distributed matrices)
+      // compute the same seed for original and "transposed" tiles, so transposed ones will know the
+      // values of the original one without the need of accessing real values (nor communication in case
+      // of distributed matrices)
       size_t seed;
       if (tile_position <= dlaf::common::Position::DIAGONAL)
         seed = tl_index.row() * matrix.size().cols() + tl_index.col();
       else
         seed = tl_index.col() * matrix.size().rows() + tl_index.row();
 
-      hpx::dataflow(hpx::util::unwrapping([tile_position, tl_index, seed, offset_value](auto&& tile) {
-              internal::getter_random_hermitian_positive_definite<T> value_at(offset_value, seed);
+      hpx::dataflow(
+          hpx::util::unwrapping([tile_position, tl_index, seed, offset_value](auto&& tile) {
+            internal::getter_random_hermitian_positive_definite<T> value_at(offset_value, seed);
 
-                      if (tile_position == dlaf::common::Position::DIAGONAL) {
-                        // for diagonal tiles get just lower matrix values and set value for both straight and transposed indices
-                        for (SizeType j = 0; j < tile.size().cols(); ++j) {
-                          for (SizeType i = 0; i <= j; ++i) {
-                            auto value = value_at(GlobalElementIndex{tl_index.row() + i, tl_index.col() + j});
+            if (tile_position == dlaf::common::Position::DIAGONAL) {
+              // for diagonal tiles get just lower matrix values and set value for both straight and
+              // transposed indices
+              for (SizeType j = 0; j < tile.size().cols(); ++j) {
+                for (SizeType i = 0; i <= j; ++i) {
+                  auto value = value_at(GlobalElementIndex{tl_index.row() + i, tl_index.col() + j});
 
-                            tile(TileElementIndex{i, j}) = value;
-                            if (i != j)
-                              tile(TileElementIndex{j, i}) = std::conj(value);
-                          }
-                        }
-                      }
-                      else {
-                        // random values are requested in the same order for both original and transposed
-                        for (SizeType j = 0; j < tile.size().cols(); ++j) {
-                          for (SizeType i = 0; i < tile.size().rows(); ++i) {
-                            auto value = value_at(GlobalElementIndex{tl_index.row() + i, tl_index.col() + j});
+                  tile(TileElementIndex{i, j}) = value;
+                  if (i != j)
+                    tile(TileElementIndex{j, i}) = std::conj(value);
+                }
+              }
+            }
+            else {
+              // random values are requested in the same order for both original and transposed
+              for (SizeType j = 0; j < tile.size().cols(); ++j) {
+                for (SizeType i = 0; i < tile.size().rows(); ++i) {
+                  auto value = value_at(GlobalElementIndex{tl_index.row() + i, tl_index.col() + j});
 
-                            // but they are set row-wise in the original tile and col-wise in the transposed one
-                            if (tile_position == dlaf::common::Position::LOWER)
-                              tile(TileElementIndex{i, j}) = value;
-                            else
-                              tile(TileElementIndex{j, i}) = value;
-                          }
-                        }
-                      }
-                    }),
-                    matrix(tile_wrt_local));
+                  // but they are set row-wise in the original tile and col-wise in the transposed one
+                  if (tile_position == dlaf::common::Position::LOWER)
+                    tile(TileElementIndex{i, j}) = value;
+                  else
+                    tile(TileElementIndex{j, i}) = value;
+                }
+              }
+            }
+          }),
+          matrix(tile_wrt_local));
     }
   }
 }

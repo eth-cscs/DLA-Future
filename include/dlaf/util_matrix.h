@@ -15,7 +15,9 @@
 
 #include <hpx/util.hpp>
 
+#include "dlaf/common/index2d.h"
 #include "dlaf/matrix.h"
+#include "dlaf/types.h"
 
 /// @file
 
@@ -155,7 +157,6 @@ void assertMultipliableMatrices(const MatrixConst& mat_a, const Matrix& mat_b, b
 
 namespace matrix {
 namespace util {
-
 namespace internal {
 
 /// Callable that returns a random value between [-1, 1]
@@ -188,23 +189,35 @@ public:
   }
 };
 
-/// Callable that returns a random value between [-1, 1] and adds a fixed offset to the diagonal elements
+/// Helper function for random hermitian positive definite matrices
 ///
-/// Return random values for any given index and adds the specified offset on indexes on the diagonal
-/// (i.e. index.row() == index.col())
+/// Return random values in range [-1, 1] for any given index and adds the specified offset on indexes on the diagonal
+/// Moreover:
+/// - Values on the diagonal are returned as real numbers (if type is std::complex with imag() == 0)
+/// - Values that appears in the upper triangular part are conjugated
 template <class T>
-class getter_random_with_diagonal_offset : private getter_random<T> {
+class getter_random_hermitian_positive_definite : private getter_random<T> {
 public:
-  getter_random_with_diagonal_offset(T offset_value,
+  getter_random_hermitian_positive_definite(const dlaf::BaseType<T> offset_value,
                                      const unsigned long seed = std::minstd_rand::default_seed)
       : getter_random<T>(seed), offset_value_(offset_value) {}
 
   T operator()(const GlobalElementIndex& index) {
-    return getter_random<T>::operator()(index) + (index.row() == index.col() ? offset_value_ : 0);
+    const auto element_position = dlaf::common::position(index);
+
+    T random_value = getter_random<T>::operator()(index);
+
+    if (element_position == dlaf::common::Position::DIAGONAL)
+      return std::real(random_value) + offset_value_;
+
+    if (element_position == dlaf::common::Position::LOWER)
+      return random_value;
+    else
+      return std::conj(random_value);
   }
 
 private:
-  T offset_value_;
+  dlaf::BaseType<T> offset_value_;
 };
 
 }
@@ -273,9 +286,15 @@ void set_random(Matrix<T, Device::CPU>& matrix) {
 /// This means that a specific tile index, no matter on which rank it will be,
 /// it will have the same set of values.
 template <class T>
-void set_random_positive_definite(Matrix<T, Device::CPU>& matrix) {
+void set_hermitian_random_positive_definite(Matrix<T, Device::CPU>& matrix) {
   const matrix::Distribution& dist = matrix.distribution();
-  T offset_value = 2 * std::max(matrix.size().rows(), matrix.size().cols());
+
+  // Check if matrix is square
+  util_matrix::assertSizeSquare(matrix, "set_hermitian_random_positive_definite", "matrix");
+  // Check if block matrix is square
+  util_matrix::assertBlocksizeSquare(matrix, "set_hermitian_random_positive_definite", "matrix");
+
+  std::size_t offset_value = 2 * std::max(matrix.size().rows(), matrix.size().cols());
 
   for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {
     for (SizeType tile_i = 0; tile_i < dist.localNrTiles().rows(); ++tile_i) {
@@ -283,15 +302,46 @@ void set_random_positive_definite(Matrix<T, Device::CPU>& matrix) {
       GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
 
       auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
-      auto seed = tl_index.row() * matrix.size().cols() + tl_index.col();
 
-      hpx::dataflow(hpx::util::unwrapping([tl_index, seed, offset_value](auto&& tile) {
-                      internal::getter_random_with_diagonal_offset<T> value_at(offset_value, seed);
+      auto tile_position = dlaf::common::position(tile_wrt_global);
 
-                      for (SizeType j = 0; j < tile.size().cols(); ++j)
-                        for (SizeType i = 0; i < tile.size().rows(); ++i)
-                          tile(TileElementIndex{i, j}) =
-                              value_at(GlobalElementIndex{tl_index.row() + i, tl_index.col() + j});
+      // compute the same seed for original and "transposed" tiles, so transposed ones will know the values of the original
+      // one without the need of accessing real values (nor communication in case of distributed matrices)
+      size_t seed;
+      if (tile_position <= dlaf::common::Position::DIAGONAL)
+        seed = tl_index.row() * matrix.size().cols() + tl_index.col();
+      else
+        seed = tl_index.col() * matrix.size().rows() + tl_index.row();
+
+      hpx::dataflow(hpx::util::unwrapping([tile_position, tl_index, seed, offset_value](auto&& tile) {
+              internal::getter_random_hermitian_positive_definite<T> value_at(offset_value, seed);
+
+                      if (tile_position == dlaf::common::Position::DIAGONAL) {
+                        // for diagonal tiles get just lower matrix values and set value for both straight and transposed indices
+                        for (SizeType j = 0; j < tile.size().cols(); ++j) {
+                          for (SizeType i = 0; i <= j; ++i) {
+                            auto value = value_at(GlobalElementIndex{tl_index.row() + i, tl_index.col() + j});
+
+                            tile(TileElementIndex{i, j}) = value;
+                            if (i != j)
+                              tile(TileElementIndex{j, i}) = std::conj(value);
+                          }
+                        }
+                      }
+                      else {
+                        // random values are requested in the same order for both original and transposed
+                        for (SizeType j = 0; j < tile.size().cols(); ++j) {
+                          for (SizeType i = 0; i < tile.size().rows(); ++i) {
+                            auto value = value_at(GlobalElementIndex{tl_index.row() + i, tl_index.col() + j});
+
+                            // but they are set row-wise in the original tile and col-wise in the transposed one
+                            if (tile_position == dlaf::common::Position::LOWER)
+                              tile(TileElementIndex{i, j}) = value;
+                            else
+                              tile(TileElementIndex{j, i}) = value;
+                          }
+                        }
+                      }
                     }),
                     matrix(tile_wrt_local));
     }

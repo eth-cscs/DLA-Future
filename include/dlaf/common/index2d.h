@@ -184,9 +184,9 @@ enum class Position : int {
 /// Describe the position of an index in a grid using matrix specific nomenclature
 template <class IndexT, class IndexTag>
 Position position(const dlaf::common::Index2D<IndexT, IndexTag>& index) {
-  if (index.row() < index.col())
+  if (index.row() > index.col())
     return Position::LOWER;
-  else if (index.row() > index.col())
+  else if (index.row() < index.col())
     return Position::UPPER;
   return Position::DIAGONAL;
 }

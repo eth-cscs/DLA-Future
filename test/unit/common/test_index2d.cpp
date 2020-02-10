@@ -135,3 +135,24 @@ TYPED_TEST(Index2DTest, Print) {
   s << index2;
   EXPECT_EQ("(9, 6)", s.str());
 }
+
+TYPED_TEST(Index2DTest, Position) {
+  EXPECT_EQ(dlaf::common::Position::LOWER, position(Index2D<TypeParam>{13, 5}));
+  EXPECT_EQ(dlaf::common::Position::LOWER, position(Index2D<TypeParam>{1, 0}));
+
+  EXPECT_EQ(dlaf::common::Position::DIAGONAL, position(Index2D<TypeParam>{0, 0}));
+  EXPECT_EQ(dlaf::common::Position::DIAGONAL, position(Index2D<TypeParam>{13, 13}));
+
+  EXPECT_EQ(dlaf::common::Position::UPPER, position(Index2D<TypeParam>{5, 13}));
+  EXPECT_EQ(dlaf::common::Position::UPPER, position(Index2D<TypeParam>{0, 26}));
+
+  // test order relationship
+  Index2D<TypeParam> lower{13, 5}, diag{13, 13}, upper{5, 13};
+  EXPECT_EQ(dlaf::common::Position::LOWER, position(lower));
+  EXPECT_EQ(dlaf::common::Position::DIAGONAL, position(diag));
+  EXPECT_EQ(dlaf::common::Position::UPPER, position(upper));
+
+  EXPECT_LT(position(lower), position(diag));
+  EXPECT_LT(position(lower), position(upper));
+  EXPECT_LT(position(diag), position(upper));
+}

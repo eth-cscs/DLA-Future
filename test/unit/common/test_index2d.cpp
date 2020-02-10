@@ -136,6 +136,19 @@ TYPED_TEST(Index2DTest, Print) {
   EXPECT_EQ("(9, 6)", s.str());
 }
 
+TYPED_TEST(Index2DTest, ComputeLinearIndex) {
+  std::array<dlaf::common::Ordering, 2> orderings{dlaf::common::Ordering::RowMajor, dlaf::common::Ordering::ColumnMajor};
+
+  for (const auto& ordering : orderings) {
+    EXPECT_EQ(-1, computeLinearIndex(ordering, Index2D<TypeParam>{13, 26}, {13, 26}));    // out-of-rows & out-of-cols
+    EXPECT_EQ(-1, computeLinearIndex(ordering, Index2D<TypeParam>{13, 26}, {13, 39}));    // out-of-rows
+    EXPECT_EQ(-1, computeLinearIndex(ordering, Index2D<TypeParam>{13, 26}, {26, 26}));    // out-of-cols
+  }
+
+  EXPECT_EQ(13, computeLinearIndex(dlaf::common::Ordering::ColumnMajor, Index2D<TypeParam>{3, 2}, {5, 26}));
+  EXPECT_EQ(13, computeLinearIndex(dlaf::common::Ordering::RowMajor, Index2D<TypeParam>{2, 3}, {26, 5}));
+}
+
 TYPED_TEST(Index2DTest, Position) {
   EXPECT_EQ(dlaf::common::Position::LOWER, position(Index2D<TypeParam>{13, 5}));
   EXPECT_EQ(dlaf::common::Position::LOWER, position(Index2D<TypeParam>{1, 0}));

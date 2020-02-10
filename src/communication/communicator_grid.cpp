@@ -15,7 +15,7 @@ namespace comm {
 
 CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexT_MPI nrows, IndexT_MPI ncols,
                                    common::Ordering ordering)
- : ordering_(ordering) {
+    : ordering_(ordering) {
   if (nrows * ncols > comm.size())
     throw std::invalid_argument("grid is bigger than available ranks in communicator");
 
@@ -45,6 +45,5 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexT_MPI nrows, IndexT_M
   row_ = make_communicator_managed(mpi_row);
   col_ = make_communicator_managed(mpi_col);
 }
-
 }
 }

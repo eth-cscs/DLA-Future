@@ -179,7 +179,7 @@ void checkNear(ElementGetter expected, const Tile<T, Device::CPU>& tile, BaseTyp
 
     std::stringstream s;
     s << "expected " << expected << " == " << value << " (Relative diff: " << diff / abs_max << " > "
-      << rel_err << ", " << diff << " > " << abs_err << ")";
+      << rel_err << ", Absolute diff: " << diff << " > " << abs_err << ")";
     return s.str();
   };
   internal::check(expected, tile, comp, err_message, file, line);

@@ -280,7 +280,9 @@ void set_random(Matrix<T, Device::CPU>& matrix) {
   }
 }
 
-/// Set a matrix with random values in range [-1, 1] but assuring it will be positive definite.
+/// Set a matrix with random values in range [-1, 1] but assuring it will be hermitian and positive definite.
+///
+/// The positive definiteness is obtained by adding 2*N to the diagonal.
 ///
 /// Each tile creates its own random generator engine with a unique seed
 /// which is computed as a function of the tile global index.

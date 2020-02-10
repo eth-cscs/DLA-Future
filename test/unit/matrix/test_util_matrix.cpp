@@ -14,10 +14,12 @@
 #include <vector>
 
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/communication/sync/basic.h"
 #include "dlaf/matrix.h"
 
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/util_matrix.h"
+#include "dlaf_test/util_tile.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
@@ -100,11 +102,66 @@ TYPED_TEST(MatrixUtilsTest, SetRandom) {
   }
 }
 
+template <class T>
+void check_is_hermitian(dlaf::Matrix<const T, Device::CPU>& matrix, dlaf::comm::CommunicatorGrid comm_grid) {
+  const auto& distribution = matrix.distribution();
+  const auto current_rank = distribution.rankIndex();
+
+  for (auto j = 0; j < matrix.nrTiles().cols(); ++j) {
+    for (auto i = 0; i <= j; ++i) {
+      const GlobalTileIndex index_tile_original{i, j};
+      const auto owner_original = distribution.rankGlobalTile(index_tile_original);
+
+      const GlobalTileIndex index_tile_transposed{j, i};
+      const auto owner_transposed = distribution.rankGlobalTile(index_tile_transposed);
+
+      if (current_rank != owner_original && current_rank != owner_transposed)
+        continue;
+
+      if (current_rank == owner_original) {
+        const auto& tile_original = matrix.read(index_tile_original).get();
+        hpx::shared_future<dlaf::Tile<const T, Device::CPU>> tile_transposed;
+
+        if (current_rank == owner_transposed) {
+          tile_transposed = matrix.read(index_tile_transposed);
+        }
+        else {
+          dlaf::Tile<T, Device::CPU> workspace(
+              matrix.blockSize(),
+              dlaf::memory::MemoryView<T, Device::CPU>(matrix.blockSize().rows() * matrix.blockSize().cols()),
+              matrix.blockSize().rows());
+
+          // recv from owner_transposed
+          const auto sender_rank = comm_grid.rank_all(owner_transposed);
+          dlaf::comm::sync::receive_from(sender_rank, comm_grid.fullCommunicator(), workspace);
+
+          tile_transposed = hpx::make_ready_future<dlaf::Tile<const T, Device::CPU>>(std::move(workspace));
+        }
+
+        auto transposed_conj_tile = [&tile_original](const TileElementIndex& index) {
+          return dlaf::conj(tile_original({index.col(), index.row()}));
+        };
+
+        CHECK_TILE_NEAR(transposed_conj_tile, tile_transposed.get(), dlaf_test::TypeUtilities<T>::error, dlaf_test::TypeUtilities<T>::error);
+      }
+      else { // current_rank == owner_transposed
+        // send to owner_original
+        auto receiver_rank = comm_grid.rank_all(owner_original);
+        dlaf::comm::sync::send_to(
+            receiver_rank,
+            comm_grid.fullCommunicator(),
+            matrix.read(index_tile_transposed).get());
+      }
+    }
+  }
+}
+
 TYPED_TEST(MatrixUtilsTest, SetRandomHermitianPositiveDefinite) {
   std::vector<TestSizes> square_blocks_configs({
       {{0, 0}, {13, 13}},  // square null matrix
       {{26, 26}, {2, 2}},  // square matrix multi block
       {{2, 2}, {6, 6}},    // square matrix single block
+      {{4, 4}, {13, 13}},    // square matrix single block
   });
 
   auto globalSquareTestSize = [](const LocalElementSize& size, const Size2D& grid_size) {
@@ -120,7 +177,7 @@ TYPED_TEST(MatrixUtilsTest, SetRandomHermitianPositiveDefinite) {
       memory::MemoryView<TypeParam, Device::CPU> mem(layout.minMemSize());
       Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), layout, mem());
 
-      auto N = std::max(matrix.size().cols(), matrix.size().rows());
+      auto N = matrix.size().rows();
       auto identity_2N = [N](const GlobalElementIndex& index) {
         if (index.row() == index.col())
           return dlaf_test::TypeUtilities<TypeParam>::element(2 * N, 0);
@@ -131,6 +188,8 @@ TYPED_TEST(MatrixUtilsTest, SetRandomHermitianPositiveDefinite) {
 
       CHECK_MATRIX_NEAR(identity_2N, matrix, 0,
                         std::abs(dlaf_test::TypeUtilities<TypeParam>::element(1, 1)));
+
+      check_is_hermitian(matrix, comm_grid);
     }
   }
 }

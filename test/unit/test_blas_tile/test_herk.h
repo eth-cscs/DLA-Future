@@ -22,6 +22,8 @@
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
+using namespace dlaf::matrix;
+using namespace dlaf::matrix::test;
 using namespace dlaf_test;
 using namespace testing;
 
@@ -82,8 +84,8 @@ void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType e
     return beta * el_c(index) + alpha * tmp;
   };
 
-  tile_test::set(a0, el_op_a, op_a);
-  tile_test::set(c, el_c);
+  set(a0, el_op_a, op_a);
+  set(c, el_c);
 
   Tile<CT, Device::CPU> a(std::move(a0));
 

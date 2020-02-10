@@ -20,6 +20,8 @@
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
+using namespace dlaf::matrix;
+using namespace dlaf::matrix::test;
 using namespace dlaf_test;
 using namespace testing;
 
@@ -72,7 +74,7 @@ void testPotrf(blas::Uplo uplo, SizeType n, SizeType extra_lda) {
   };
 
   // Set tile elements.
-  tile_test::set(a, el_a);
+  set(a, el_a);
 
   if (return_info) {
     EXPECT_EQ(0, tile::potrfInfo(uplo, a));
@@ -128,7 +130,7 @@ void testPotrfNonPosDef(blas::Uplo uplo, SizeType n, SizeType extra_lda) {
   auto el_a = [](const TileElementIndex&) { return TypeUtilities<T>::element(0, 0); };
 
   // Set tile elements.
-  tile_test::set(a, el_a);
+  set(a, el_a);
 
   if (return_info) {
     EXPECT_EQ(1, tile::potrfInfo(uplo, a));

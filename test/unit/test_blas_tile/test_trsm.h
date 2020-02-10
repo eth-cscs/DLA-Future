@@ -24,6 +24,8 @@
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
+using namespace dlaf::matrix;
+using namespace dlaf::matrix::test;
 using namespace dlaf_test;
 using namespace testing;
 
@@ -170,8 +172,8 @@ void testTrsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, Si
     std::tie(el_op_a, el_b, res_b) =
         testTrsmElementFunctionsRight<ElementIndex, T>(uplo, op, diag, alpha, n);
 
-  tile_test::set(a0, el_op_a, op);
-  tile_test::set(b, el_b);
+  set(a0, el_op_a, op);
+  set(b, el_b);
 
   Tile<CT, Device::CPU> a(std::move(a0));
 

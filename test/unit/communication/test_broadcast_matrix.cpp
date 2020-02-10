@@ -19,6 +19,8 @@
 #include "dlaf/matrix.h"
 
 using namespace dlaf;
+using namespace dlaf::matrix;
+using namespace dlaf::matrix::test;
 using namespace dlaf_test;
 using namespace dlaf::comm;
 
@@ -38,7 +40,7 @@ TEST_F(BroadcastMatrixTest, Matrix2Workspace) {
     LocalTileIndex selected_tile{0, 1};
     auto tile = mat(selected_tile).get();
 
-    tile_test::set(tile, message_values<TypeParam>);
+    set(tile, message_values<TypeParam>);
 
     sync::broadcast::send(splitted_comm, tile);
   }
@@ -46,7 +48,7 @@ TEST_F(BroadcastMatrixTest, Matrix2Workspace) {
     TypeParam data[4];
     Tile<TypeParam, Device::CPU> workspace({2, 2}, {data, 4}, 2);
 
-    tile_test::set(workspace, TypeParam{});
+    set(workspace, TypeParam{});
 
     sync::broadcast::receive_from(0, splitted_comm, workspace);
 
@@ -59,7 +61,7 @@ TEST_F(BroadcastMatrixTest, ConstMatrix2Workspace) {
     Matrix<TypeParam, Device::CPU> mat({26, 13}, {2, 2});
 
     LocalTileIndex selected_tile{0, 1};
-    tile_test::set(mat(selected_tile).get(), message_values<TypeParam>);
+    set(mat(selected_tile).get(), message_values<TypeParam>);
 
     Matrix<const TypeParam, Device::CPU>& const_mat = mat;
     sync::broadcast::send(splitted_comm, const_mat.read(selected_tile).get());
@@ -68,7 +70,7 @@ TEST_F(BroadcastMatrixTest, ConstMatrix2Workspace) {
     TypeParam data[4];
     Tile<TypeParam, Device::CPU> workspace({2, 2}, {data, 4}, 2);
 
-    tile_test::set(workspace, TypeParam{});
+    set(workspace, TypeParam{});
 
     sync::broadcast::receive_from(0, splitted_comm, workspace);
 
@@ -83,7 +85,7 @@ TEST_F(BroadcastMatrixTest, Matrix2Matrix) {
     LocalTileIndex selected_tile{0, 1};
     auto tile = mat(selected_tile).get();
 
-    tile_test::set(tile, message_values<TypeParam>);
+    set(tile, message_values<TypeParam>);
 
     sync::broadcast::send(splitted_comm, tile);
   }
@@ -93,7 +95,7 @@ TEST_F(BroadcastMatrixTest, Matrix2Matrix) {
     LocalTileIndex selected_tile{0, 1};
     auto tile = mat(selected_tile).get();
 
-    tile_test::set(tile, TypeParam{});
+    set(tile, TypeParam{});
 
     sync::broadcast::receive_from(0, splitted_comm, tile);
 
@@ -107,7 +109,7 @@ TEST_F(BroadcastMatrixTest, ConstMatrix2Matrix) {
 
     LocalTileIndex selected_tile{0, 1};
 
-    tile_test::set(mat(selected_tile).get(), message_values<TypeParam>);
+    set(mat(selected_tile).get(), message_values<TypeParam>);
 
     Matrix<const TypeParam, Device::CPU>& const_mat = mat;
     sync::broadcast::send(splitted_comm, const_mat.read(selected_tile).get());
@@ -118,7 +120,7 @@ TEST_F(BroadcastMatrixTest, ConstMatrix2Matrix) {
     LocalTileIndex selected_tile{0, 1};
     auto tile = mat(selected_tile).get();
 
-    tile_test::set(tile, TypeParam{});
+    set(tile, TypeParam{});
 
     sync::broadcast::receive_from(0, splitted_comm, tile);
 
@@ -131,7 +133,7 @@ TEST_F(BroadcastMatrixTest, Workspace2Matrix) {
     TypeParam data[4];
     Tile<TypeParam, Device::CPU> workspace({2, 2}, {data, 4}, 2);
 
-    tile_test::set(workspace, message_values<TypeParam>);
+    set(workspace, message_values<TypeParam>);
 
     sync::broadcast::send(splitted_comm, workspace);
   }
@@ -141,7 +143,7 @@ TEST_F(BroadcastMatrixTest, Workspace2Matrix) {
     LocalTileIndex selected_tile{0, 1};
     auto tile = mat(selected_tile).get();
 
-    tile_test::set(tile, TypeParam{});
+    set(tile, TypeParam{});
 
     sync::broadcast::receive_from(0, splitted_comm, tile);
 
@@ -154,7 +156,7 @@ TEST_F(BroadcastMatrixTest, ConstWorkspace2Matrix) {
     TypeParam data[4];
     Tile<TypeParam, Device::CPU> workspace({2, 2}, {data, 4}, 2);
 
-    tile_test::set(workspace, message_values<TypeParam>);
+    set(workspace, message_values<TypeParam>);
 
     const Tile<const TypeParam, Device::CPU>& const_workspace = workspace;
     sync::broadcast::send(splitted_comm, const_workspace);
@@ -165,7 +167,7 @@ TEST_F(BroadcastMatrixTest, ConstWorkspace2Matrix) {
     LocalTileIndex selected_tile{0, 1};
     auto tile = mat(selected_tile).get();
 
-    tile_test::set(tile, TypeParam{});
+    set(tile, TypeParam{});
 
     sync::broadcast::receive_from(0, splitted_comm, tile);
 
@@ -179,7 +181,7 @@ TEST_F(BroadcastMatrixTest, Workspace2Workspace) {
     TypeParam data[4];
     Tile<TypeParam, Device::CPU> workspace({2, 2}, {data, 4}, 2);
 
-    tile_test::set(workspace, message_values<TypeParam>);
+    set(workspace, message_values<TypeParam>);
 
     sync::broadcast::send(splitted_comm, workspace);
   }
@@ -187,7 +189,7 @@ TEST_F(BroadcastMatrixTest, Workspace2Workspace) {
     TypeParam data[4];
     Tile<TypeParam, Device::CPU> workspace({2, 2}, {data, 4}, 2);
 
-    tile_test::set(workspace, TypeParam{});
+    set(workspace, TypeParam{});
 
     sync::broadcast::receive_from(0, splitted_comm, workspace);
 
@@ -200,7 +202,7 @@ TEST_F(BroadcastMatrixTest, ConstWorkspace2Workspace) {
     TypeParam data[4];
     Tile<TypeParam, Device::CPU> workspace({2, 2}, {data, 4}, 2);
 
-    tile_test::set(workspace, message_values<TypeParam>);
+    set(workspace, message_values<TypeParam>);
 
     const Tile<const TypeParam, Device::CPU>& const_workspace = workspace;
     sync::broadcast::send(splitted_comm, const_workspace);
@@ -209,7 +211,7 @@ TEST_F(BroadcastMatrixTest, ConstWorkspace2Workspace) {
     TypeParam data[4];
     Tile<TypeParam, Device::CPU> workspace({2, 2}, {data, 4}, 2);
 
-    tile_test::set(workspace, TypeParam{});
+    set(workspace, TypeParam{});
 
     sync::broadcast::receive_from(0, splitted_comm, workspace);
 

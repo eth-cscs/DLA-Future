@@ -18,6 +18,8 @@
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
+using namespace dlaf::matrix;
+using namespace dlaf::matrix::test;
 using namespace dlaf_test;
 using namespace testing;
 
@@ -82,7 +84,7 @@ TYPED_TEST(TileTest, Constructor) {
         };
         CHECK_TILE_PTR(ptr, tile);
 
-        tile_test::set(tile, el2);
+        set(tile, el2);
 
         for (SizeType j = 0; j < size.cols(); ++j) {
           for (SizeType i = 0; i < size.rows(); ++i) {

@@ -19,9 +19,9 @@
 
 using namespace dlaf;
 using namespace dlaf::matrix;
+using namespace dlaf::matrix::test;
 using namespace dlaf::comm;
 using namespace dlaf_test;
-using namespace dlaf_test::matrix_test;
 using namespace testing;
 
 ::testing::Environment* const comm_grids_env =

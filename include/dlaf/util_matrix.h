@@ -14,6 +14,7 @@
 #include <string>
 
 #include <hpx/util.hpp>
+#include <blas.hh>
 
 #include "dlaf/common/index2d.h"
 #include "dlaf/matrix.h"

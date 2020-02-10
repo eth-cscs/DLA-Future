@@ -61,8 +61,9 @@ Index2DType computeCoords(Ordering ordering, LinearIndexT index,
 /// @return -1 if given index is outside the grid size, otherwise the linear index (w.r.t specified ordering)
 /// @throws std::invalid_argument if ordering is not valid
 template <class Index2DType>
-typename Index2DType::IndexType computeLinearIndex(Ordering ordering, const Index2DType& index,
-                          const std::array<typename Index2DType::IndexType, 2>& dims) {
+typename Index2DType::IndexType computeLinearIndex(
+    Ordering ordering, const Index2DType& index,
+    const std::array<typename Index2DType::IndexType, 2>& dims) {
   if (!index.isIn(dims))
     return -1;
 
@@ -80,6 +81,5 @@ typename Index2DType::IndexType computeLinearIndex(Ordering ordering, const Inde
 
   throw std::invalid_argument("Ordering specified is not valid.");
 }
-
 }
 }

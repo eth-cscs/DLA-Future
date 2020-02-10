@@ -108,7 +108,6 @@ protected:
 
 private:
   using Matrix<const T, device>::setUpTiles;
-  using Matrix<const T, device>::futureVectorSize;
   using Matrix<const T, device>::tile_futures_;
   using Matrix<const T, device>::tile_shared_futures_;
 };
@@ -158,20 +157,12 @@ public:
     return read(distribution().localTileIndex(index));
   }
 
-  /// Returns the size of the Tile with global index @p index.
-  TileElementSize tileSize(const GlobalTileIndex& index) noexcept {
-    return {std::min(blockSize().rows(), size().rows() - index.row() * blockSize().rows()),
-            std::min(blockSize().cols(), size().cols() - index.col() * blockSize().cols())};
-  }
-
 private:
   Matrix(matrix::Distribution&& distribution, std::vector<hpx::future<TileType>>&& tile_futures,
          std::vector<hpx::shared_future<ConstTileType>>&& tile_shared_futures);
 
   void setUpTiles(const memory::MemoryView<ElementType, device>& mem,
                   const matrix::LayoutInfo& layout) noexcept;
-
-  std::size_t futureVectorSize(const matrix::LayoutInfo& layout) const noexcept;
 
   std::vector<hpx::future<TileType>> tile_futures_;
   std::vector<hpx::shared_future<ConstTileType>> tile_shared_futures_;

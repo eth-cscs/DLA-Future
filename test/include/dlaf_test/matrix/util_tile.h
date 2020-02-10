@@ -158,8 +158,7 @@ void checkPtr(PointerGetter exp_ptr, const Tile<T, Device::CPU>& tile, const cha
   };
   internal::check(exp_ptr, tile, comp, err_message, file, line);
 }
-#define CHECK_TILE_PTR(exp_ptr, tile) \
-  ::dlaf::matrix::test::checkPtr(exp_ptr, tile, __FILE__, __LINE__);
+#define CHECK_TILE_PTR(exp_ptr, tile) ::dlaf::matrix::test::checkPtr(exp_ptr, tile, __FILE__, __LINE__);
 
 /// @brief Checks the elements of the tile.
 ///

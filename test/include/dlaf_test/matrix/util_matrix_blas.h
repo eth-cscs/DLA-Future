@@ -14,7 +14,7 @@
 
 #include "blas.hh"
 #include "dlaf/matrix.h"
-#include "dlaf_test/util_matrix.h"
+#include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/util_types.h"
 
 namespace dlaf {
@@ -29,7 +29,7 @@ using namespace dlaf_test;
 ///                                          conj(el({j, i})) if op == ConjTrans.
 /// @pre el argument is an index of type const GlobalElementIndex& or GlobalElementIndex.
 /// @pre el return type should be T.
-template <template<class, Device> class MatrixType, class T, class ElementGetter>
+template <template <class, Device> class MatrixType, class T, class ElementGetter>
 void set(MatrixType<T, Device::CPU>& mat, ElementGetter el, blas::Op op) {
   switch (op) {
     case blas::Op::NoTrans:
@@ -37,7 +37,7 @@ void set(MatrixType<T, Device::CPU>& mat, ElementGetter el, blas::Op op) {
       break;
 
     case blas::Op::Trans: {
-      auto op_el = [el](GlobalElementIndex i){ 
+      auto op_el = [el](GlobalElementIndex i) {
         i.transpose();
         return el(i);
       };
@@ -46,7 +46,7 @@ void set(MatrixType<T, Device::CPU>& mat, ElementGetter el, blas::Op op) {
     }
 
     case blas::Op::ConjTrans: {
-      auto op_el = [el](GlobalElementIndex i){ 
+      auto op_el = [el](GlobalElementIndex i) {
         i.transpose();
         return TypeUtilities<T>::conj(el(i));
       };

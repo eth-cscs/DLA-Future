@@ -20,7 +20,7 @@
 #include "dlaf/matrix.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/layout_info.h"
-#include "dlaf_test/util_tile.h"
+#include "dlaf_test/matrix/util_tile.h"
 
 namespace dlaf {
 namespace matrix {
@@ -31,15 +31,17 @@ namespace test {
 /// The (i, j)-element of the matrix is set to el({i, j}).
 /// @pre el argument is an index of type const GlobalElementIndex& or GlobalElementIndex.
 /// @pre el return type should be T.
-template <template<class, Device> class MatrixType, class T, class ElementGetter>
+template <template <class, Device> class MatrixType, class T, class ElementGetter>
 void set(MatrixType<T, Device::CPU>& mat, ElementGetter el) {
   const matrix::Distribution& dist = mat.distribution();
   for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {
     for (SizeType tile_i = 0; tile_i < dist.localNrTiles().rows(); ++tile_i) {
       auto tile_index = LocalTileIndex(tile_i, tile_j);
-      auto tile_base_index = dist.globalElementIndex(dist.globalTileIndex(tile_index), TileElementIndex(0, 0));
+      auto tile_base_index =
+          dist.globalElementIndex(dist.globalTileIndex(tile_index), TileElementIndex(0, 0));
       auto el_tile = [&el, &tile_base_index](const TileElementIndex& tile_index) {
-        return el(GlobalElementIndex(tile_base_index.row() + tile_index.row(), tile_base_index.col() + tile_index.col()));
+        return el(GlobalElementIndex(tile_base_index.row() + tile_index.row(),
+                                     tile_base_index.col() + tile_index.col()));
       };
       set(mat(tile_index).get(), el_tile);
     }
@@ -47,7 +49,7 @@ void set(MatrixType<T, Device::CPU>& mat, ElementGetter el) {
 }
 
 /// @brief Returns a col-major ordered vector with the futures to the matrix tiles.
-template <template<class, Device> class MatrixType, class T, Device device>
+template <template <class, Device> class MatrixType, class T, Device device>
 std::vector<hpx::future<Tile<T, device>>> getFuturesUsingLocalIndex(MatrixType<T, device>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
@@ -64,7 +66,7 @@ std::vector<hpx::future<Tile<T, device>>> getFuturesUsingLocalIndex(MatrixType<T
 }
 
 /// @brief Returns a col-major ordered vector with the futures to the matrix tiles.
-template <template<class, Device> class MatrixType, class T, Device device>
+template <template <class, Device> class MatrixType, class T, Device device>
 std::vector<hpx::future<Tile<T, device>>> getFuturesUsingGlobalIndex(MatrixType<T, device>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
@@ -86,7 +88,7 @@ std::vector<hpx::future<Tile<T, device>>> getFuturesUsingGlobalIndex(MatrixType<
 }
 
 /// @brief Returns a col-major ordered vector with the read-only shared-futures to the matrix tiles.
-template <template<class, Device> class MatrixType, class T, Device device>
+template <template <class, Device> class MatrixType, class T, Device device>
 std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingLocal(
     MatrixType<T, device>& mat) {
   const matrix::Distribution& dist = mat.distribution();
@@ -105,7 +107,7 @@ std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingLoca
 }
 
 /// @brief Returns a col-major ordered vector with the read-only shared-futures to the matrix tiles.
-template <template<class, Device> class MatrixType, class T, Device device>
+template <template <class, Device> class MatrixType, class T, Device device>
 std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingGlobal(
     MatrixType<T, device>& mat) {
   const matrix::Distribution& dist = mat.distribution();
@@ -140,7 +142,8 @@ std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingGlob
 /// @pre The second argument of comp should be either T, T& or const T&.
 /// @pre The second argument of err_message should be either T, T& or const T&.
 namespace internal {
-template <template<class, Device> class MatrixType, class T, class ElementGetter, class ComparisonOp, class ErrorMessageGetter>
+template <template <class, Device> class MatrixType, class T, class ElementGetter, class ComparisonOp,
+          class ErrorMessageGetter>
 void check(ElementGetter expected, MatrixType<T, Device::CPU>& mat, ComparisonOp comp,
            ErrorMessageGetter err_message, const char* file, const int line) {
   const matrix::Distribution& dist = mat.distribution();
@@ -169,7 +172,7 @@ void check(ElementGetter expected, MatrixType<T, Device::CPU>& mat, ComparisonOp
 /// The (i, j)-element of the matrix is compared to exp_el({i, j}).
 /// @pre exp_el argument is an index of type const GlobalElementIndex&.
 /// @pre exp_el return type should be T.
-template <template<class, Device> class MatrixType, class T, class ElementGetter>
+template <template <class, Device> class MatrixType, class T, class ElementGetter>
 void checkEQ(ElementGetter exp_el, MatrixType<T, Device::CPU>& mat, const char* file, const int line) {
   auto err_message = [](T expected, T value) {
     std::stringstream s;
@@ -195,8 +198,7 @@ void checkPtr(PointerGetter exp_ptr, Matrix<T, Device::CPU>& mat, const char* fi
   };
   internal::check(exp_ptr, mat, comp, err_message, file, line);
 }
-#define CHECK_MATRIX_PTR(exp_ptr, mat) \
-  ::dlaf::matrix::test::checkPtr(exp_ptr, mat, __FILE__, __LINE__);
+#define CHECK_MATRIX_PTR(exp_ptr, mat) ::dlaf::matrix::test::checkPtr(exp_ptr, mat, __FILE__, __LINE__);
 
 /// @brief Checks the elements of the matrix.
 ///
@@ -205,7 +207,7 @@ void checkPtr(PointerGetter exp_ptr, Matrix<T, Device::CPU>& mat, const char* fi
 /// @pre expected return type should be T.
 /// @pre rel_err > 0.
 /// @pre abs_err > 0.
-template <template<class, Device> class MatrixType, class T, class ElementGetter>
+template <template <class, Device> class MatrixType, class T, class ElementGetter>
 void checkNear(ElementGetter expected, MatrixType<T, Device::CPU>& mat, BaseType<T> rel_err,
                BaseType<T> abs_err, const char* file, const int line) {
   ASSERT_GT(rel_err, 0);

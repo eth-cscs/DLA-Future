@@ -16,8 +16,8 @@
 #include "../test_blas_tile/test_trsm.h"
 #include "gtest/gtest.h"
 #include "dlaf/matrix.h"
-#include "dlaf_test/util_matrix.h"
-#include "dlaf_test/util_matrix_blas.h"
+#include "dlaf_test/matrix/util_matrix.h"
+#include "dlaf_test/matrix/util_matrix_blas.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;

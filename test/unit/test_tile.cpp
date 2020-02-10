@@ -14,7 +14,7 @@
 #include "gtest/gtest.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/memory/memory_view.h"
-#include "dlaf_test/util_tile.h"
+#include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;

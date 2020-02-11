@@ -37,7 +37,7 @@ void set(Tile<T, Device::CPU>& tile, Func el, blas::Op op) {
       break;
 
     case blas::Op::Trans: {
-      auto op_el = [el](TileElementIndex i) {
+      auto op_el = [&el](TileElementIndex i) {
         i.transpose();
         return el(i);
       };
@@ -46,7 +46,7 @@ void set(Tile<T, Device::CPU>& tile, Func el, blas::Op op) {
     }
 
     case blas::Op::ConjTrans: {
-      auto op_el = [el](TileElementIndex i) {
+      auto op_el = [&el](TileElementIndex i) {
         i.transpose();
         return TypeUtilities<T>::conj(el(i));
       };

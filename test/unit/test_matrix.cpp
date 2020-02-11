@@ -197,7 +197,7 @@ void checkDistributionLayout(T* p, const Distribution& distribution, const Layou
     return TypeUtilities<T>::element(-2 - i + j / 1024., j + i / 64.);
   };
 
-  ASSERT_EQ(distribution, matrix.distribution());
+  CHECK_MATRIX_DISTRIBUTION(distribution, matrix);
 
   auto ptr = [p, layout, distribution](const GlobalElementIndex& index) {
     return p + memoryIndex(distribution, layout, index);
@@ -242,7 +242,7 @@ void checkDistributionLayout(T* p, const Distribution& distribution, const Layou
     return TypeUtilities<T>::element(i + j / 1024., j - i / 128.);
   };
 
-  ASSERT_EQ(distribution, matrix.distribution());
+  CHECK_MATRIX_DISTRIBUTION(distribution, matrix);
 
   auto ptr = [p, layout, distribution](const GlobalElementIndex& index) {
     return p + memoryIndex(distribution, layout, index);
@@ -260,7 +260,7 @@ void checkDistributionLayout(T* p, const Distribution& distribution, const Layou
     }
   }
 
-  EXPECT_EQ(distribution, matrix.distribution());
+  CHECK_MATRIX_DISTRIBUTION(distribution, matrix);
   // Check if the matrix elements correspond to the memory elements.
   CHECK_MATRIX_PTR(ptr, matrix);
   CHECK_MATRIX_EQ(el, matrix);

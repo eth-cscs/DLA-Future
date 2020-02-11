@@ -151,6 +151,31 @@ void checkNear(ElementGetter expected, MatrixType<T, Device::CPU>& mat, BaseType
 #define CHECK_MATRIX_NEAR(expected, mat, rel_err, abs_err) \
   ::dlaf::matrix::test::checkNear(expected, mat, rel_err, abs_err, __FILE__, __LINE__);
 
+template <class MatrixType>
+void checkMatrixDistribution(const Distribution& distribution, MatrixType& matrix) {
+  ASSERT_EQ(distribution, matrix.distribution());
+
+  EXPECT_EQ(distribution.size(), matrix.size());
+  EXPECT_EQ(distribution.blockSize(), matrix.blockSize());
+  EXPECT_EQ(distribution.nrTiles(), matrix.nrTiles());
+  EXPECT_EQ(distribution.rankIndex(), matrix.rankIndex());
+  EXPECT_EQ(distribution.commGridSize(), matrix.commGridSize());
+
+  for (SizeType j = 0; j < distribution.nrTiles().cols(); ++j) {
+    for (SizeType i = 0; i < distribution.nrTiles().rows(); ++i) {
+      GlobalTileIndex index(i, j);
+      EXPECT_EQ(distribution.rankGlobalTile(index), matrix.rankGlobalTile(index));
+    }
+  }
+}
+#define CHECK_MATRIX_DISTRIBUTION(distribution, mat)                  \
+  do {                                                                \
+    std::stringstream s;                                              \
+    s << "Rank " << matrix.distribution().rankIndex();                \
+    SCOPED_TRACE(s.str());                                            \
+    ::dlaf::matrix::test::checkMatrixDistribution(distribution, mat); \
+  } while (0)
+
 }
 }
 }

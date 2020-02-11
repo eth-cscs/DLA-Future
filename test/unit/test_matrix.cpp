@@ -15,6 +15,7 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"
+#include "dlaf_test/matrix/util_matrix_futures.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
@@ -476,42 +477,6 @@ TYPED_TEST(MatrixTest, ConstructorExistingConst) {
   }
 }
 
-/// @brief Returns true if only the first @p futures are ready.
-/// @pre Future should be a future or shared_future.
-/// @pre 0 <= ready <= futures.size()
-template <class Future>
-bool checkFuturesStep(size_t ready, const std::vector<Future>& futures) {
-  assert(ready >= 0);
-  assert(ready <= futures.size());
-
-  for (std::size_t index = 0; index < ready; ++index) {
-    if (!futures[index].is_ready())
-      return false;
-  }
-  for (std::size_t index = ready; index < futures.size(); ++index) {
-    if (futures[index].is_ready())
-      return false;
-  }
-  return true;
-}
-
-/// @brief Checks if current[i] depends correctly on previous[i].
-/// If get_ready == true it checks if current[i] is ready after previous[i] is used.
-/// If get_ready == false it checks if current[i] is not ready after previous[i] is used.
-/// @pre Future[1,2] should be a future or shared_future
-template <class Future1, class Future2>
-void checkFutures(bool get_ready, const std::vector<Future1>& current, std::vector<Future2>& previous) {
-  assert(current.size() == previous.size());
-
-  for (std::size_t index = 0; index < current.size(); ++index) {
-    EXPECT_TRUE(checkFuturesStep(get_ready ? index : 0, current));
-    previous[index].get();
-    previous[index] = {};
-  }
-
-  EXPECT_TRUE(checkFuturesStep(get_ready ? current.size() : 0, current));
-}
-
 TYPED_TEST(MatrixTest, Dependencies) {
   using Type = TypeParam;
 
@@ -530,36 +495,36 @@ TYPED_TEST(MatrixTest, Dependencies) {
       auto fut1 = getFuturesUsingGlobalIndex(mat);
       EXPECT_TRUE(checkFuturesStep(0, fut1));
 
-      auto shfut2a = getSharedFuturesUsingLocal(mat);
+      auto shfut2a = getSharedFuturesUsingLocalIndex(mat);
       EXPECT_TRUE(checkFuturesStep(0, shfut2a));
 
-      auto shfut2b = getSharedFuturesUsingGlobal(mat);
+      auto shfut2b = getSharedFuturesUsingGlobalIndex(mat);
       EXPECT_TRUE(checkFuturesStep(0, shfut2b));
 
       auto fut3 = getFuturesUsingLocalIndex(mat);
       EXPECT_TRUE(checkFuturesStep(0, fut3));
 
-      auto shfut4a = getSharedFuturesUsingGlobal(mat);
+      auto shfut4a = getSharedFuturesUsingGlobalIndex(mat);
       EXPECT_TRUE(checkFuturesStep(0, shfut4a));
 
-      checkFutures(true, fut1, fut0);
+      CHECK_MATRIX_FUTURES(true, fut1, fut0);
       EXPECT_TRUE(checkFuturesStep(0, shfut2b));
-      checkFutures(true, shfut2b, fut1);
+      CHECK_MATRIX_FUTURES(true, shfut2b, fut1);
       EXPECT_TRUE(checkFuturesStep(shfut2a.size(), shfut2a));
 
-      checkFutures(false, fut3, shfut2b);
-      checkFutures(true, fut3, shfut2a);
+      CHECK_MATRIX_FUTURES(false, fut3, shfut2b);
+      CHECK_MATRIX_FUTURES(true, fut3, shfut2a);
 
-      checkFutures(true, shfut4a, fut3);
+      CHECK_MATRIX_FUTURES(true, shfut4a, fut3);
 
-      auto shfut4b = getSharedFuturesUsingLocal(mat);
+      auto shfut4b = getSharedFuturesUsingLocalIndex(mat);
       EXPECT_TRUE(checkFuturesStep(shfut4b.size(), shfut4b));
 
       auto fut5 = getFuturesUsingGlobalIndex(mat);
       EXPECT_TRUE(checkFuturesStep(0, fut3));
 
-      checkFutures(false, fut5, shfut4a);
-      checkFutures(true, fut5, shfut4b);
+      CHECK_MATRIX_FUTURES(false, fut5, shfut4a);
+      CHECK_MATRIX_FUTURES(true, fut5, shfut4b);
     }
   }
 }
@@ -576,10 +541,10 @@ TYPED_TEST(MatrixTest, DependenciesConst) {
       memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
       const Type* p = mem();
       Matrix<const Type, Device::CPU> mat(std::move(distribution), layout, p);
-      auto shfut1 = getSharedFuturesUsingGlobal(mat);
+      auto shfut1 = getSharedFuturesUsingGlobalIndex(mat);
       EXPECT_TRUE(checkFuturesStep(shfut1.size(), shfut1));
 
-      auto shfut2 = getSharedFuturesUsingLocal(mat);
+      auto shfut2 = getSharedFuturesUsingLocalIndex(mat);
       EXPECT_TRUE(checkFuturesStep(shfut2.size(), shfut2));
     }
   }
@@ -603,13 +568,13 @@ TYPED_TEST(MatrixTest, DependenciesReferenceMix) {
       auto fut1 = getFuturesUsingLocalIndex(mat);
       EXPECT_TRUE(checkFuturesStep(0, fut1));
 
-      auto shfut2a = getSharedFuturesUsingGlobal(mat);
+      auto shfut2a = getSharedFuturesUsingGlobalIndex(mat);
       EXPECT_TRUE(checkFuturesStep(0, shfut2a));
 
       decltype(shfut2a) shfut2b;
       {
         Matrix<const Type, Device::CPU>& const_mat = mat;
-        shfut2b = getSharedFuturesUsingLocal(const_mat);
+        shfut2b = getSharedFuturesUsingLocalIndex(const_mat);
         EXPECT_TRUE(checkFuturesStep(0, shfut2b));
       }
 
@@ -619,28 +584,28 @@ TYPED_TEST(MatrixTest, DependenciesReferenceMix) {
       decltype(shfut2a) shfut4a;
       {
         Matrix<const Type, Device::CPU>& const_mat = mat;
-        shfut4a = getSharedFuturesUsingLocal(const_mat);
+        shfut4a = getSharedFuturesUsingLocalIndex(const_mat);
         EXPECT_TRUE(checkFuturesStep(0, shfut4a));
       }
 
-      checkFutures(true, fut1, fut0);
+      CHECK_MATRIX_FUTURES(true, fut1, fut0);
       EXPECT_TRUE(checkFuturesStep(0, shfut2b));
-      checkFutures(true, shfut2b, fut1);
+      CHECK_MATRIX_FUTURES(true, shfut2b, fut1);
       EXPECT_TRUE(checkFuturesStep(shfut2a.size(), shfut2a));
 
-      checkFutures(false, fut3, shfut2b);
-      checkFutures(true, fut3, shfut2a);
+      CHECK_MATRIX_FUTURES(false, fut3, shfut2b);
+      CHECK_MATRIX_FUTURES(true, fut3, shfut2a);
 
-      checkFutures(true, shfut4a, fut3);
+      CHECK_MATRIX_FUTURES(true, shfut4a, fut3);
 
-      auto shfut4b = getSharedFuturesUsingGlobal(mat);
+      auto shfut4b = getSharedFuturesUsingGlobalIndex(mat);
       EXPECT_TRUE(checkFuturesStep(shfut4b.size(), shfut4b));
 
       auto fut5 = getFuturesUsingLocalIndex(mat);
       EXPECT_TRUE(checkFuturesStep(0, fut3));
 
-      checkFutures(false, fut5, shfut4a);
-      checkFutures(true, fut5, shfut4b);
+      CHECK_MATRIX_FUTURES(false, fut5, shfut4a);
+      CHECK_MATRIX_FUTURES(true, fut5, shfut4b);
     }
   }
 }
@@ -663,13 +628,13 @@ TYPED_TEST(MatrixTest, DependenciesPointerMix) {
       auto fut1 = getFuturesUsingGlobalIndex(mat);
       EXPECT_TRUE(checkFuturesStep(0, fut1));
 
-      auto shfut2a = getSharedFuturesUsingLocal(mat);
+      auto shfut2a = getSharedFuturesUsingLocalIndex(mat);
       EXPECT_TRUE(checkFuturesStep(0, shfut2a));
 
       decltype(shfut2a) shfut2b;
       {
         Matrix<const Type, Device::CPU>* const_mat = &mat;
-        shfut2b = getSharedFuturesUsingGlobal(*const_mat);
+        shfut2b = getSharedFuturesUsingGlobalIndex(*const_mat);
         EXPECT_TRUE(checkFuturesStep(0, shfut2b));
       }
 
@@ -679,28 +644,28 @@ TYPED_TEST(MatrixTest, DependenciesPointerMix) {
       decltype(shfut2a) shfut4a;
       {
         Matrix<const Type, Device::CPU>* const_mat = &mat;
-        shfut4a = getSharedFuturesUsingGlobal(*const_mat);
+        shfut4a = getSharedFuturesUsingGlobalIndex(*const_mat);
         EXPECT_TRUE(checkFuturesStep(0, shfut4a));
       }
 
-      checkFutures(true, fut1, fut0);
+      CHECK_MATRIX_FUTURES(true, fut1, fut0);
       EXPECT_TRUE(checkFuturesStep(0, shfut2b));
-      checkFutures(true, shfut2b, fut1);
+      CHECK_MATRIX_FUTURES(true, shfut2b, fut1);
       EXPECT_TRUE(checkFuturesStep(shfut2a.size(), shfut2a));
 
-      checkFutures(false, fut3, shfut2b);
-      checkFutures(true, fut3, shfut2a);
+      CHECK_MATRIX_FUTURES(false, fut3, shfut2b);
+      CHECK_MATRIX_FUTURES(true, fut3, shfut2a);
 
-      checkFutures(true, shfut4a, fut3);
+      CHECK_MATRIX_FUTURES(true, shfut4a, fut3);
 
-      auto shfut4b = getSharedFuturesUsingLocal(mat);
+      auto shfut4b = getSharedFuturesUsingLocalIndex(mat);
       EXPECT_TRUE(checkFuturesStep(shfut4b.size(), shfut4b));
 
       auto fut5 = getFuturesUsingGlobalIndex(mat);
       EXPECT_TRUE(checkFuturesStep(0, fut3));
 
-      checkFutures(false, fut5, shfut4a);
-      checkFutures(true, fut5, shfut4b);
+      CHECK_MATRIX_FUTURES(false, fut5, shfut4a);
+      CHECK_MATRIX_FUTURES(true, fut5, shfut4b);
     }
   }
 }

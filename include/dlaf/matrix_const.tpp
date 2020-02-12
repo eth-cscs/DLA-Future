@@ -75,13 +75,13 @@ Matrix<const T, device>::Matrix(matrix::Distribution&& distribution,
 template <class T, Device device>
 void Matrix<const T, device>::setUpTiles(const memory::MemoryView<ElementType, device>& mem,
                                          const matrix::LayoutInfo& layout) noexcept {
-  tile_shared_futures_.resize(futureVectorSize(layout));
+  const auto& nr_tiles = layout.nrTiles();
+  tile_shared_futures_.resize(futureVectorSize(nr_tiles));
 
   tile_futures_.clear();
-  tile_futures_.reserve(futureVectorSize(layout));
+  tile_futures_.reserve(futureVectorSize(nr_tiles));
 
   using MemView = memory::MemoryView<T, device>;
-  const auto& nr_tiles = layout.nrTiles();
 
   for (SizeType j = 0; j < nr_tiles.cols(); ++j) {
     for (SizeType i = 0; i < nr_tiles.rows(); ++i) {
@@ -92,11 +92,4 @@ void Matrix<const T, device>::setUpTiles(const memory::MemoryView<ElementType, d
                    layout.ldTile())));
     }
   }
-}
-
-template <class T, Device device>
-std::size_t Matrix<const T, device>::futureVectorSize(const matrix::LayoutInfo& layout) const noexcept {
-  using util::size_t::mul;
-  const auto& nr_tiles = layout.nrTiles();
-  return mul(nr_tiles.rows(), nr_tiles.cols());
 }

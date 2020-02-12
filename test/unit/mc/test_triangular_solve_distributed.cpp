@@ -18,15 +18,15 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
-#include "dlaf_test/util_matrix.h"
-#include "dlaf_test/util_matrix_blas.h"
+#include "dlaf_test/matrix/util_matrix.h"
+#include "dlaf_test/matrix/util_matrix_blas.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
-using namespace dlaf::matrix;
 using namespace dlaf::comm;
+using namespace dlaf::matrix;
+using namespace dlaf::matrix::test;
 using namespace dlaf_test;
-using namespace dlaf_test::matrix_test;
 using namespace testing;
 
 // std::vector<blas::Diag> blas_diags({blas::Diag::NonUnit, blas::Diag::Unit});
@@ -90,10 +90,10 @@ void testTriangularSolveDistributed(comm::CommunicatorGrid grid, blas::Side side
 
   if (side == blas::Side::Left)
     std::tie(el_op_a, el_b, res_b) =
-        testTrsmElementFunctionsLeft<T, GlobalElementIndex>(uplo, op, diag, alpha, m);
+        testTrsmElementFunctionsLeft<GlobalElementIndex, T>(uplo, op, diag, alpha, m);
   else
     std::tie(el_op_a, el_b, res_b) =
-        testTrsmElementFunctionsRight<T, GlobalElementIndex>(uplo, op, diag, alpha, n);
+        testTrsmElementFunctionsRight<GlobalElementIndex, T>(uplo, op, diag, alpha, n);
 
   set(mat_a, el_op_a, op);
   set(mat_b, el_b);

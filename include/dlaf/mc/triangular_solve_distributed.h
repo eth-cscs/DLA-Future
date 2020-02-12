@@ -25,8 +25,8 @@
 /// @file
 
 namespace dlaf {
-/// @brief Triangular Solve implementation on distributed memory, solving op(A) X = alpha B (when side ==
-/// Left) or X op(A) = alpha B (when side == Right). Algorithm 1: matrix A is communicated
+/// @brief Triangular Solve implementation on distributed memory, solving op(A) X = alpha B (when side == Left)
+/// or X op(A) = alpha B (when side == Right). Algorithm 1: matrix A is communicated
 ///
 /// @param side specifies whether op(A) appears on the \a Left or on the \a Right of matrix X
 /// @param uplo specifies whether the matrix A is a \a Lower or \a Upper triangular matrix
@@ -34,8 +34,12 @@ namespace dlaf {
 /// \a ConjTrans
 /// @param diag specifies if the matrix A is assumed to be unit triangular (\a Unit) or not (\a
 /// NonUnit)
-/// @tparam A refers to a triangular matrix object
-/// @tparam B refers to a matrix object
+/// @param mat_a contains the triangular matrix A. Only the tiles of the matrix which contain the upper or
+/// the lower triangular part (depending on the value of uplo) are accessed in read-only mode (the
+/// elements are not modified).
+/// @param mat_b on entry it contains the matrix B, on exit the matrix elements are overwritten with the
+/// elements of the matrix X.
+
 template <class T>
 void triangular_solve_distributed(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo,
                                   blas::Op op, blas::Diag diag, T alpha, Matrix<T, Device::CPU>& mat_a,

@@ -60,6 +60,12 @@ public:
     return *distribution_;
   }
 
+  /// Returns the size of the Tile with global index @p index.
+  TileElementSize tileSize(const GlobalTileIndex& index) noexcept {
+    return {std::min(blockSize().rows(), size().rows() - index.row() * blockSize().rows()),
+            std::min(blockSize().cols(), size().cols() - index.col() * blockSize().cols())};
+  }
+
 protected:
   // move constructor and assignment are protected to avoid invalidation of objects of
   // derived classes. I.e.:
@@ -68,6 +74,10 @@ protected:
   // MatrixBase base = std::move(derived);
   MatrixBase(MatrixBase&& rhs) = default;
   MatrixBase& operator=(MatrixBase&& rhs) = default;
+
+  static std::size_t futureVectorSize(const LocalTileSize& local_nr_tiles) noexcept {
+    return util::size_t::mul(local_nr_tiles.rows(), local_nr_tiles.cols());
+  }
 
   /// Returns the position in the vector of the index Tile.
   ///

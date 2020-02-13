@@ -18,15 +18,15 @@
 #include "dlaf/matrix.h"
 
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
-#include "dlaf_test/util_matrix.h"
-#include "dlaf_test/util_tile.h"
+#include "dlaf_test/matrix/util_matrix.h"
+#include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
-using namespace dlaf::matrix;
 using namespace dlaf::comm;
+using namespace dlaf::matrix;
+using namespace dlaf::matrix::test;
 using namespace dlaf_test;
-using namespace dlaf_test::matrix_test;
 
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new dlaf_test::CommunicatorGrid6RanksEnvironment);

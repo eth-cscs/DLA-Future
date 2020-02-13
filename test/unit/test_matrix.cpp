@@ -14,14 +14,14 @@
 #include "gtest/gtest.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
-#include "dlaf_test/util_matrix.h"
+#include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
 using namespace dlaf::matrix;
+using namespace dlaf::matrix::test;
 using namespace dlaf::comm;
 using namespace dlaf_test;
-using namespace dlaf_test::matrix_test;
 using namespace testing;
 
 ::testing::Environment* const comm_grids_env =

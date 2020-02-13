@@ -18,42 +18,44 @@
 #include <sstream>
 #include "gtest/gtest.h"
 #include "dlaf/matrix.h"
+#include "dlaf/util_math.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/layout_info.h"
+#include "dlaf_test/matrix/util_tile.h"
 
-namespace dlaf_test {
-namespace matrix_test {
-using namespace dlaf;
+namespace dlaf {
+namespace matrix {
+namespace test {
 
 /// @brief Sets the elements of the matrix.
 ///
 /// The (i, j)-element of the matrix is set to el({i, j}).
-/// @pre el argument is an index of type const GlobalElementIndex&.
+/// @pre el argument is an index of type const GlobalElementIndex& or GlobalElementIndex.
 /// @pre el return type should be T.
-template <class T, class ElementGetter>
-void set(Matrix<T, Device::CPU>& mat, ElementGetter el) {
+template <template <class, Device> class MatrixType, class T, class ElementGetter>
+void set(MatrixType<T, Device::CPU>& mat, ElementGetter el) {
   const matrix::Distribution& dist = mat.distribution();
   for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {
     for (SizeType tile_i = 0; tile_i < dist.localNrTiles().rows(); ++tile_i) {
-      auto tile = mat(LocalTileIndex(tile_i, tile_j)).get();
-      for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
-        SizeType j = dist.globalElementFromLocalTileAndTileElement<Coord::Col>(tile_j, jj);
-        for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
-          SizeType i = dist.globalElementFromLocalTileAndTileElement<Coord::Row>(tile_i, ii);
-          tile({ii, jj}) = el({i, j});
-        }
-      }
+      auto tile_index = LocalTileIndex(tile_i, tile_j);
+      auto tile_base_index =
+          dist.globalElementIndex(dist.globalTileIndex(tile_index), TileElementIndex(0, 0));
+      auto el_tile = [&el, &tile_base_index](const TileElementIndex& tile_index) {
+        return el(GlobalElementIndex(tile_base_index.row() + tile_index.row(),
+                                     tile_base_index.col() + tile_index.col()));
+      };
+      set(mat(tile_index).get(), el_tile);
     }
   }
 }
 
 /// @brief Returns a col-major ordered vector with the futures to the matrix tiles.
-template <class T, Device device>
-std::vector<hpx::future<Tile<T, device>>> getFuturesUsingLocalIndex(Matrix<T, device>& mat) {
+template <template <class, Device> class MatrixType, class T, Device device>
+std::vector<hpx::future<Tile<T, device>>> getFuturesUsingLocalIndex(MatrixType<T, device>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
   std::vector<hpx::future<Tile<T, device>>> result;
-  result.reserve(util::size_t::mul(dist.localNrTiles().rows(), dist.localNrTiles().cols()));
+  result.reserve(dlaf::util::size_t::mul(dist.localNrTiles().rows(), dist.localNrTiles().cols()));
 
   for (SizeType j = 0; j < dist.localNrTiles().cols(); ++j) {
     for (SizeType i = 0; i < dist.localNrTiles().rows(); ++i) {
@@ -65,12 +67,12 @@ std::vector<hpx::future<Tile<T, device>>> getFuturesUsingLocalIndex(Matrix<T, de
 }
 
 /// @brief Returns a col-major ordered vector with the futures to the matrix tiles.
-template <class T, Device device>
-std::vector<hpx::future<Tile<T, device>>> getFuturesUsingGlobalIndex(Matrix<T, device>& mat) {
+template <template <class, Device> class MatrixType, class T, Device device>
+std::vector<hpx::future<Tile<T, device>>> getFuturesUsingGlobalIndex(MatrixType<T, device>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
   std::vector<hpx::future<Tile<T, device>>> result;
-  result.reserve(util::size_t::mul(dist.localNrTiles().rows(), dist.localNrTiles().cols()));
+  result.reserve(dlaf::util::size_t::mul(dist.localNrTiles().rows(), dist.localNrTiles().cols()));
 
   for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
     for (SizeType i = 0; i < dist.nrTiles().rows(); ++i) {
@@ -87,13 +89,13 @@ std::vector<hpx::future<Tile<T, device>>> getFuturesUsingGlobalIndex(Matrix<T, d
 }
 
 /// @brief Returns a col-major ordered vector with the read-only shared-futures to the matrix tiles.
-template <class T, Device device>
+template <template <class, Device> class MatrixType, class T, Device device>
 std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingLocal(
-    Matrix<T, device>& mat) {
+    MatrixType<T, device>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
   std::vector<hpx::shared_future<Tile<const T, device>>> result;
-  result.reserve(util::size_t::mul(dist.localNrTiles().rows(), dist.localNrTiles().cols()));
+  result.reserve(dlaf::util::size_t::mul(dist.localNrTiles().rows(), dist.localNrTiles().cols()));
 
   for (SizeType j = 0; j < dist.localNrTiles().cols(); ++j) {
     for (SizeType i = 0; i < dist.localNrTiles().rows(); ++i) {
@@ -106,13 +108,13 @@ std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingLoca
 }
 
 /// @brief Returns a col-major ordered vector with the read-only shared-futures to the matrix tiles.
-template <class T, Device device>
+template <template <class, Device> class MatrixType, class T, Device device>
 std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingGlobal(
-    Matrix<T, device>& mat) {
+    MatrixType<T, device>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
   std::vector<hpx::shared_future<Tile<const T, device>>> result;
-  result.reserve(util::size_t::mul(dist.localNrTiles().rows(), dist.localNrTiles().cols()));
+  result.reserve(dlaf::util::size_t::mul(dist.localNrTiles().rows(), dist.localNrTiles().cols()));
 
   for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
     for (SizeType i = 0; i < dist.nrTiles().rows(); ++i) {
@@ -141,8 +143,9 @@ std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingGlob
 /// @pre The second argument of comp should be either T, T& or const T&.
 /// @pre The second argument of err_message should be either T, T& or const T&.
 namespace internal {
-template <class T, class ElementGetter, class ComparisonOp, class ErrorMessageGetter>
-void check(ElementGetter expected, Matrix<T, Device::CPU>& mat, ComparisonOp comp,
+template <template <class, Device> class MatrixType, class T, class ElementGetter, class ComparisonOp,
+          class ErrorMessageGetter>
+void check(ElementGetter expected, MatrixType<T, Device::CPU>& mat, ComparisonOp comp,
            ErrorMessageGetter err_message, const char* file, const int line) {
   const matrix::Distribution& dist = mat.distribution();
   for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {
@@ -170,8 +173,8 @@ void check(ElementGetter expected, Matrix<T, Device::CPU>& mat, ComparisonOp com
 /// The (i, j)-element of the matrix is compared to exp_el({i, j}).
 /// @pre exp_el argument is an index of type const GlobalElementIndex&.
 /// @pre exp_el return type should be T.
-template <class T, class ElementGetter>
-void checkEQ(ElementGetter exp_el, Matrix<T, Device::CPU>& mat, const char* file, const int line) {
+template <template <class, Device> class MatrixType, class T, class ElementGetter>
+void checkEQ(ElementGetter exp_el, MatrixType<T, Device::CPU>& mat, const char* file, const int line) {
   auto err_message = [](T expected, T value) {
     std::stringstream s;
     s << "expected " << expected << " == " << value;
@@ -179,7 +182,7 @@ void checkEQ(ElementGetter exp_el, Matrix<T, Device::CPU>& mat, const char* file
   };
   internal::check(exp_el, mat, std::equal_to<T>{}, err_message, file, line);
 }
-#define CHECK_MATRIX_EQ(exp_el, mat) ::dlaf_test::matrix_test::checkEQ(exp_el, mat, __FILE__, __LINE__);
+#define CHECK_MATRIX_EQ(exp_el, mat) ::dlaf::matrix::test::checkEQ(exp_el, mat, __FILE__, __LINE__);
 
 /// @brief Checks the pointers to the elements of the matrix.
 ///
@@ -196,8 +199,7 @@ void checkPtr(PointerGetter exp_ptr, Matrix<T, Device::CPU>& mat, const char* fi
   };
   internal::check(exp_ptr, mat, comp, err_message, file, line);
 }
-#define CHECK_MATRIX_PTR(exp_ptr, mat) \
-  ::dlaf_test::matrix_test::checkPtr(exp_ptr, mat, __FILE__, __LINE__);
+#define CHECK_MATRIX_PTR(exp_ptr, mat) ::dlaf::matrix::test::checkPtr(exp_ptr, mat, __FILE__, __LINE__);
 
 /// @brief Checks the elements of the matrix.
 ///
@@ -207,8 +209,8 @@ void checkPtr(PointerGetter exp_ptr, Matrix<T, Device::CPU>& mat, const char* fi
 /// @pre rel_err >= 0.
 /// @pre abs_err >= 0.
 /// @pre rel_err > 0 || abs_err > 0
-template <class T, class ElementGetter>
-void checkNear(ElementGetter expected, Matrix<T, Device::CPU>& mat, BaseType<T> rel_err,
+template <template <class, Device> class MatrixType, class T, class ElementGetter>
+void checkNear(ElementGetter expected, MatrixType<T, Device::CPU>& mat, BaseType<T> rel_err,
                BaseType<T> abs_err, const char* file, const int line) {
   ASSERT_GE(rel_err, 0);
   ASSERT_GE(abs_err, 0);
@@ -231,7 +233,9 @@ void checkNear(ElementGetter expected, Matrix<T, Device::CPU>& mat, BaseType<T> 
   };
   internal::check(expected, mat, comp, err_message, file, line);
 }
-#define CHECK_MATRIX_NEAR(expected, matrix, rel_err, abs_err) \
-  ::dlaf_test::matrix_test::checkNear(expected, matrix, rel_err, abs_err, __FILE__, __LINE__);
+#define CHECK_MATRIX_NEAR(expected, mat, rel_err, abs_err) \
+  ::dlaf::matrix::test::checkNear(expected, mat, rel_err, abs_err, __FILE__, __LINE__);
+
+}
 }
 }

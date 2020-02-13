@@ -16,15 +16,15 @@
 #include "../test_blas_tile/test_trsm.h"
 #include "gtest/gtest.h"
 #include "dlaf/matrix.h"
-#include "dlaf_test/util_matrix.h"
-#include "dlaf_test/util_matrix_blas.h"
+#include "dlaf_test/matrix/util_matrix.h"
+#include "dlaf_test/matrix/util_matrix_blas.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
-using namespace dlaf::matrix;
 using namespace dlaf::comm;
+using namespace dlaf::matrix;
+using namespace dlaf::matrix::test;
 using namespace dlaf_test;
-using namespace dlaf_test::matrix_test;
 using namespace testing;
 
 std::vector<blas::Diag> blas_diags({blas::Diag::NonUnit, blas::Diag::Unit});

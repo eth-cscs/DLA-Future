@@ -10,4 +10,18 @@
 
 #pragma once
 
-#include "dlaf/profiler/profiler.h"
+#include <hpx/hpx.hpp>
+
+#include "profiler.h"
+
+namespace dlaf {
+namespace profiling {
+namespace hpx {
+
+void init_thread_getter() {
+  profiler::instance().set_thread_id_getter(::hpx::get_worker_thread_num);
+}
+
+}
+}
+}

@@ -8,30 +8,30 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/profiler.h"
+#include "dlaf/profiling.h"
 
 #include <chrono>
 #include <thread>
 
 #include <gtest/gtest.h>
 
-TEST(Profiler, SectionScoped) {
-  using namespace dlaf::profiler;
+using namespace dlaf::profiling;
 
-  Manager manager = Manager::get_global_profiler();
+TEST(Profiler, ProfileScope) {
+  profiler::instance();
 
   {
-    SectionScoped _("1st", "test");
+    profile_scope _("1st", "test");
     std::this_thread::sleep_for(std::chrono::milliseconds(70));
   }
 
   std::thread other_thread([]() {
-    SectionScoped _("2nd", "test");
+    profile_scope _("2nd", "test");
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
   });
 
   {
-    SectionScoped _("3rd", "test");
+    profile_scope _("3rd", "test");
     std::this_thread::sleep_for(std::chrono::milliseconds(30));
   }
 
@@ -39,9 +39,7 @@ TEST(Profiler, SectionScoped) {
 }
 
 TEST(Profiler, WrapperTimeIt) {
-  using namespace dlaf::profiler;
-
-  Manager manager = Manager::get_global_profiler();
+  profiler::instance();
 
   bool called = false;
   auto wait = util::time_it("wrapper", "test", [&called](int milliseconds) {

@@ -14,8 +14,8 @@
 #include <deque>
 #include <fstream>
 #include <map>
-#include <string>
 #include <sstream>
+#include <string>
 #include <thread>
 
 #include <unistd.h>
@@ -72,7 +72,6 @@ private:
     using namespace std::chrono;
     return duration_cast<nanoseconds>(clock_t::now().time_since_epoch()).count();
   };
-
 };
 
 }
@@ -80,8 +79,8 @@ private:
 /// Profiler Manager
 ///
 /// This is a singleton that manages profiling and at program exit it dumps data to a csv file
-/// The report file is a CSV whose name is by default "<hostname>_<pid>.csv" and can be changed or resetted at any time.
-/// Each line in the report contains data for a single profile section:
+/// The report file is a CSV whose name is by default "<hostname>_<pid>.csv" and can be changed or
+/// resetted at any time. Each line in the report contains data for a single profile section:
 /// 1. task_name
 /// 2. task_group
 /// 3. thread id on which the profile section started
@@ -89,8 +88,8 @@ private:
 /// 5. * thread id on which the profile section ended
 /// 6. end time of the profile section
 ///
-/// note: thread id is by default obtained as the std::hash of std::this_thread::get_id(), but it can be changed to use
-/// any function with the signature "thread_id_t(*)(void)"
+/// note: thread id is by default obtained as the std::hash of std::this_thread::get_id(), but it can be
+/// changed to use any function with the signature "thread_id_t(*)(void)"
 class profiler {
 public:
   /// Initializes the profiler or return the existing one
@@ -111,9 +110,9 @@ public:
 
   /// Return the current thread id as per configuration
   ///
-  /// It returns the identifier for the thread. Once the thread identifier is computed with the currently configured function
-  /// this identifier is not changed. So, even if the thread identifier function is changed, a thread which has already recorded
-  /// a profile section, it will always have the same identifier.
+  /// It returns the identifier for the thread. Once the thread identifier is computed with the currently
+  /// configured function this identifier is not changed. So, even if the thread identifier function is
+  /// changed, a thread which has already recorded a profile section, it will always have the same identifier.
   const thread_id_t& get_thread_id() const noexcept {
     thread_local const thread_id_t tid = thread_id_getter_();
     return tid;
@@ -153,7 +152,7 @@ public:
   ///
   /// This function will be called by each thread during profiling activities
   /// Required signature is "thread_id_t function_name()"
-  void set_thread_id_getter(thread_id_t(*thread_id_getter)(void)) {
+  void set_thread_id_getter(thread_id_t (*thread_id_getter)(void)) {
     thread_id_getter_ = thread_id_getter;
   }
 
@@ -161,9 +160,8 @@ public:
   ///
   /// By default std::this_thread:::get_id() is used
   void set_thread_id_getter() {
-    set_thread_id_getter([]() -> thread_id_t {
-      return std::hash<std::thread::id>{}(std::this_thread::get_id());
-    });
+    set_thread_id_getter(
+        []() -> thread_id_t { return std::hash<std::thread::id>{}(std::this_thread::get_id()); });
   }
 
 private:
@@ -200,7 +198,8 @@ private:
 
     // TODO do we want an assert instead?
     if (!inserted)
-      throw std::runtime_error("recorder for the thread already exists. have you called it more than once?");
+      throw std::runtime_error(
+          "recorder for the thread already exists. have you called it more than once?");
 
     return it->second;
   }

@@ -13,7 +13,9 @@
 #include <chrono>
 #include <deque>
 #include <fstream>
+#include <functional>
 #include <map>
+#include <mutex>
 #include <sstream>
 #include <string>
 #include <thread>

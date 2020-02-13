@@ -18,9 +18,9 @@
 #include <sstream>
 #include "gtest/gtest.h"
 #include "dlaf/matrix.h"
-#include "dlaf/util_math.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/layout_info.h"
+#include "dlaf/util_math.h"
 #include "dlaf_test/matrix/util_tile.h"
 
 namespace dlaf {

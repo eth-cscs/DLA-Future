@@ -8,7 +8,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-DLAF_addTest(test_profiler SOURCES test_profiler.cpp USE_MAIN PLAIN)
+DLAF_addTest(test_profiler SOURCES test_profiler.cpp LIBRARIES PRIVATE profiling USE_MAIN PLAIN)
 
 DLAF_addTest(test_util_math SOURCES test_util_math.cpp USE_MAIN PLAIN)
 

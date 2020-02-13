@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/profiling.h"
+#include "profiling/profiler.h"
 
 #include <chrono>
 #include <thread>

@@ -61,12 +61,6 @@ GlobalElementSize globalTestSize(const LocalElementSize& size, const Size2D& gri
 }
 
 TYPED_TEST(MatrixUtilsTest, Set) {
-  auto identity = [](const GlobalElementIndex& index) {
-    if (index.row() == index.col())
-      return 1;
-    return 0;
-  };
-
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
@@ -75,9 +69,14 @@ TYPED_TEST(MatrixUtilsTest, Set) {
       memory::MemoryView<TypeParam, Device::CPU> mem(layout.minMemSize());
       Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), layout, mem());
 
-      dlaf::matrix::util::set(matrix, identity);
+      auto linear_matrix = [size=matrix.size()](const GlobalElementIndex& index) {
+        auto linear_index = dlaf::common::computeLinearIndex(dlaf::common::Ordering::RowMajor, index, {size.rows(), size.cols()});
+        return TypeUtilities<TypeParam>::element(linear_index, linear_index);
+      };
 
-      CHECK_MATRIX_EQ(identity, matrix);
+      dlaf::matrix::util::set(matrix, linear_matrix);
+
+      CHECK_MATRIX_EQ(linear_matrix, matrix);
     }
   }
 }
@@ -97,7 +96,7 @@ TYPED_TEST(MatrixUtilsTest, SetRandom) {
 
       dlaf::matrix::util::set_random(matrix);
 
-      CHECK_MATRIX_NEAR(zero, matrix, 0, std::abs(dlaf_test::TypeUtilities<TypeParam>::element(1, 1)));
+      CHECK_MATRIX_NEAR(zero, matrix, 0, 1);
     }
   }
 }
@@ -148,7 +147,7 @@ void check_is_hermitian(dlaf::Matrix<const T, Device::CPU>& matrix,
         CHECK_TILE_NEAR(transposed_conj_tile, tile_transposed.get(), dlaf_test::TypeUtilities<T>::error,
                         dlaf_test::TypeUtilities<T>::error);
       }
-      else {  // current_rank == owner_transposed
+      else if(current_rank == owner_transposed) {
         // send to owner_original
         auto receiver_rank = comm_grid.rank_all(owner_original);
         dlaf::comm::sync::send_to(receiver_rank, comm_grid.fullCommunicator(),
@@ -188,8 +187,7 @@ TYPED_TEST(MatrixUtilsTest, SetRandomHermitianPositiveDefinite) {
 
       dlaf::matrix::util::set_random_hermitian_positive_definite(matrix);
 
-      CHECK_MATRIX_NEAR(identity_2N, matrix, 0,
-                        std::abs(dlaf_test::TypeUtilities<TypeParam>::element(1, 1)));
+      CHECK_MATRIX_NEAR(identity_2N, matrix, 0, 1);
 
       check_is_hermitian(matrix, comm_grid);
     }

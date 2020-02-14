@@ -14,8 +14,7 @@ namespace dlaf {
 namespace comm {
 
 CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexT_MPI nrows, IndexT_MPI ncols,
-                                   common::Ordering ordering)
-    : ordering_(ordering) {
+                                   common::Ordering ordering) {
   if (nrows * ncols > comm.size())
     throw std::invalid_argument("grid is bigger than available ranks in communicator");
 
@@ -23,16 +22,18 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexT_MPI nrows, IndexT_M
 
   int index_row = MPI_UNDEFINED;
   int index_col = MPI_UNDEFINED;
+  int key_full = MPI_UNDEFINED;
   int key = comm.rank();
 
   if (is_in_grid) {
-    position_ = common::computeCoords<Index2D>(ordering_, comm.rank(), {nrows, ncols});
+    position_ = common::computeCoords<Index2D>(ordering, comm.rank(), {nrows, ncols});
+    key_full = common::computeLinearIndex(FULL_COMMUNICATOR_ORDER, position_, {nrows, ncols});
     index_row = position_.row();
     index_col = position_.col();
   }
 
   MPI_Comm mpi_full, mpi_col, mpi_row;
-  MPI_CALL(MPI_Comm_split(comm, is_in_grid ? 0 : MPI_UNDEFINED, key, &mpi_full));
+  MPI_CALL(MPI_Comm_split(comm, is_in_grid ? 0 : MPI_UNDEFINED, key_full, &mpi_full));
   MPI_CALL(MPI_Comm_split(comm, index_row, key, &mpi_row));
   MPI_CALL(MPI_Comm_split(comm, index_col, key, &mpi_col));
 

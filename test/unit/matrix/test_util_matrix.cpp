@@ -133,7 +133,7 @@ void check_is_hermitian(dlaf::Matrix<const T, Device::CPU>& matrix,
                                                matrix.blockSize().rows());
 
           // recv from owner_transposed
-          const auto sender_rank = comm_grid.rank_all(owner_transposed);
+          const auto sender_rank = comm_grid.rankFullCommunicator(owner_transposed);
           dlaf::comm::sync::receive_from(sender_rank, comm_grid.fullCommunicator(), workspace);
 
           tile_transposed =
@@ -149,7 +149,7 @@ void check_is_hermitian(dlaf::Matrix<const T, Device::CPU>& matrix,
       }
       else if(current_rank == owner_transposed) {
         // send to owner_original
-        auto receiver_rank = comm_grid.rank_all(owner_original);
+        auto receiver_rank = comm_grid.rankFullCommunicator(owner_original);
         dlaf::comm::sync::send_to(receiver_rank, comm_grid.fullCommunicator(),
                                   matrix.read(index_tile_transposed).get());
       }

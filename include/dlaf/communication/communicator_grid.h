@@ -55,8 +55,8 @@ public:
       : CommunicatorGrid(comm, size[0], size[1], ordering) {}
 
   /// Return rank in the grid with all ranks given the 2D index
-  IndexT_MPI rank_all(const Index2D& index) const noexcept {
-    return common::computeLinearIndex(ordering_, index, {grid_size_.rows(), grid_size_.cols()});
+  IndexT_MPI rankFullCommunicator(const Index2D& index) const noexcept {
+    return common::computeLinearIndex(FULL_COMMUNICATOR_ORDER, index, {grid_size_.rows(), grid_size_.cols()});
   }
 
   /// @brief Return the rank of the current process in the CommunicatorGrid
@@ -86,7 +86,7 @@ public:
   }
 
 protected:
-  common::Ordering ordering_;
+  static constexpr const dlaf::common::Ordering FULL_COMMUNICATOR_ORDER{dlaf::common::Ordering::RowMajor};
 
   Communicator full_;
   Communicator row_;

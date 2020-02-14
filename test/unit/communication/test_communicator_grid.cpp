@@ -29,7 +29,7 @@ void test_grid_communication(CommunicatorGrid& grid) {
   int buffer, buffer_recv;
 
   // All Communication
-  if (grid.rank_all(Index2D{0, 0}) == 0)
+  if (grid.rankFullCommunicator(Index2D{0, 0}) == 0)
     buffer = 13;
 
   MPI_Bcast(&buffer, 1, MPI_INT, 0, grid.fullCommunicator());
@@ -171,11 +171,11 @@ TEST_P(CommunicatorGridTest, ConstructorIncomplete) {
     EXPECT_NE(MPI_COMM_NULL, incomplete_grid.rowCommunicator());
     EXPECT_NE(MPI_COMM_NULL, incomplete_grid.colCommunicator());
 
-    EXPECT_EQ(world.rank(), incomplete_grid.rank_all(coords));
+    EXPECT_GE(incomplete_grid.rankFullCommunicator(coords), 0);
+    EXPECT_LT(incomplete_grid.rankFullCommunicator(coords), incomplete_grid.size().rows() * incomplete_grid.size().cols());
     EXPECT_EQ(coords.row(), incomplete_grid.rank().row());
     EXPECT_EQ(coords.col(), incomplete_grid.rank().col());
 
-    EXPECT_EQ(world.rank(), incomplete_grid.fullCommunicator().rank());
     EXPECT_EQ(coords.col(), incomplete_grid.rowCommunicator().rank());
     EXPECT_EQ(coords.row(), incomplete_grid.colCommunicator().rank());
   }
@@ -187,7 +187,7 @@ TEST_P(CommunicatorGridTest, ConstructorIncomplete) {
     EXPECT_EQ(MPI_COMM_NULL, incomplete_grid.rowCommunicator());
     EXPECT_EQ(MPI_COMM_NULL, incomplete_grid.colCommunicator());
 
-    EXPECT_EQ(-1, incomplete_grid.rank_all(coords));
+    EXPECT_EQ(-1, incomplete_grid.rankFullCommunicator(coords));
     EXPECT_EQ(-1, incomplete_grid.rank().row());
     EXPECT_EQ(-1, incomplete_grid.rank().col());
 
@@ -219,11 +219,11 @@ TEST_P(CommunicatorGridTest, Rank) {
 
   auto coords = dlaf::common::computeCoords<Index2D>(GetParam(), world.rank(), grid_dims);
 
-  EXPECT_EQ(world.rank(), complete_grid.rank_all(coords));
+  EXPECT_GE(complete_grid.rankFullCommunicator(coords), 0);
+  EXPECT_LT(complete_grid.rankFullCommunicator(coords), complete_grid.size().rows() * complete_grid.size().cols());
   EXPECT_EQ(coords.row(), complete_grid.rank().row());
   EXPECT_EQ(coords.col(), complete_grid.rank().col());
 
-  EXPECT_EQ(world.rank(), complete_grid.fullCommunicator().rank());
   EXPECT_EQ(coords.col(), complete_grid.rowCommunicator().rank());
   EXPECT_EQ(coords.row(), complete_grid.colCommunicator().rank());
 }

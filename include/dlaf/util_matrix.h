@@ -285,24 +285,22 @@ void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
       LocalTileIndex tile_wrt_local{tile_i, tile_j};
       GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
 
-      auto tile_position = dlaf::common::position(tile_wrt_global);
-
       auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
 
       // compute the same seed for original and "transposed" tiles, so transposed ones will know the
       // values of the original one without the need of accessing real values (nor communication in case
       // of distributed matrices)
       size_t seed;
-      if (tile_position <= dlaf::common::Position::DIAGONAL)
+      if (tile_wrt_global.row() >= tile_wrt_global.col()) // LOWER or DIAGONAL
         seed = tl_index.row() * matrix.size().cols() + tl_index.col();
       else
         seed = tl_index.col() * matrix.size().rows() + tl_index.row();
 
       hpx::dataflow(
-          hpx::util::unwrapping([tile_position, seed, offset_value](auto&& tile) {
+          hpx::util::unwrapping([tile_wrt_global, seed, offset_value](auto&& tile) {
             internal::getter_random<T> random_value(seed);
 
-            if (tile_position == dlaf::common::Position::DIAGONAL) {
+            if (tile_wrt_global.row() == tile_wrt_global.col()) { // DIAGONAL
               // for diagonal tiles get just lower matrix values and set value for both straight and
               // transposed indices
               for (SizeType j = 0; j < tile.size().cols(); ++j) {
@@ -315,16 +313,16 @@ void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
                 tile(TileElementIndex{j, j}) = std::real(random_value()) + offset_value;
               }
             }
-            else {
+            else { // LOWER or UPPER (except DIAGONAL)
               // random values are requested in the same order for both original and transposed
               for (SizeType j = 0; j < tile.size().cols(); ++j) {
                 for (SizeType i = 0; i < tile.size().rows(); ++i) {
                   auto value = random_value();
 
                   // but they are set row-wise in the original tile and col-wise in the transposed one
-                  if (tile_position == dlaf::common::Position::LOWER)
+                  if (tile_wrt_global.row() > tile_wrt_global.col()) // LOWER
                     tile(TileElementIndex{i, j}) = value;
-                  else
+                  else // UPPER
                     tile(TileElementIndex{j, i}) = dlaf::conj(value);
                 }
               }

@@ -171,25 +171,6 @@ template <class Index2DType, typename LinearIndexT>
 Index2DType computeCoords(Ordering ordering, LinearIndexT index,
                           const std::array<typename Index2DType::IndexType, 2>& dims);
 
-/// Describe the position in a grid using matrix specific nomenclature
-///
-/// LOWER < DIAGONAL < UPPER
-/// DIAGONAL refers to the main diagonal of a matrix, i.e. row == col
-enum class Position : int {
-  LOWER = -1,
-  DIAGONAL = 0,
-  UPPER = 1,
-};
-
-/// Describe the position of an index in a grid using matrix specific nomenclature
-template <class IndexT, class IndexTag>
-Position position(const dlaf::common::Index2D<IndexT, IndexTag>& index) {
-  if (index.row() > index.col())
-    return Position::LOWER;
-  else if (index.row() < index.col())
-    return Position::UPPER;
-  return Position::DIAGONAL;
-}
 }
 }
 

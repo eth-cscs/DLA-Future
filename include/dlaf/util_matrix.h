@@ -223,7 +223,11 @@ void set(Matrix<T, Device::CPU>& matrix, ElementGetter&& el) {
   }
 }
 
-/// Set the matrix with random values in the range [-1, 1]
+/// Set the matrix with random values whose absolute values is less than 1
+///
+/// Values will be:
+/// - real:     [-1, 1]
+/// - complex:  values in a circle of radius 1 centered at origin
 ///
 /// Each tile creates its own random generator engine with a unique seed
 /// which is computed as a function of the tile global index.
@@ -256,6 +260,10 @@ void set_random(Matrix<T, Device::CPU>& matrix) {
 /// Set a matrix with random values in range [-1, 1] but assuring it will be hermitian and positive definite.
 ///
 /// The positive definiteness is obtained by adding 2*N to the diagonal.
+///
+/// Values (not on the diagonal) will be:
+/// - real:     [-1, 1]
+/// - complex:  values in a circle of radius 1 centered at origin
 ///
 /// Each tile creates its own random generator engine with a unique seed
 /// which is computed as a function of the tile global index.

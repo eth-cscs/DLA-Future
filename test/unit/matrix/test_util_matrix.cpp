@@ -69,8 +69,9 @@ TYPED_TEST(MatrixUtilsTest, Set) {
       memory::MemoryView<TypeParam, Device::CPU> mem(layout.minMemSize());
       Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), layout, mem());
 
-      auto linear_matrix = [size=matrix.size()](const GlobalElementIndex& index) {
-        auto linear_index = dlaf::common::computeLinearIndex(dlaf::common::Ordering::RowMajor, index, {size.rows(), size.cols()});
+      auto linear_matrix = [size = matrix.size()](const GlobalElementIndex& index) {
+        auto linear_index = dlaf::common::computeLinearIndex(dlaf::common::Ordering::RowMajor, index,
+                                                             {size.rows(), size.cols()});
         return TypeUtilities<TypeParam>::element(linear_index, linear_index);
       };
 
@@ -147,7 +148,7 @@ void check_is_hermitian(dlaf::Matrix<const T, Device::CPU>& matrix,
         CHECK_TILE_NEAR(transposed_conj_tile, tile_transposed.get(), dlaf_test::TypeUtilities<T>::error,
                         dlaf_test::TypeUtilities<T>::error);
       }
-      else if(current_rank == owner_transposed) {
+      else if (current_rank == owner_transposed) {
         // send to owner_original
         auto receiver_rank = comm_grid.rankFullCommunicator(owner_original);
         dlaf::comm::sync::send_to(receiver_rank, comm_grid.fullCommunicator(),

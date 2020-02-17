@@ -40,8 +40,6 @@ public:
   MatrixView(const MatrixView& rhs) = delete;
   MatrixView(MatrixView&& rhs) = default;
 
-  virtual ~MatrixView() = default;
-
   MatrixView& operator=(const MatrixView& rhs) = delete;
   MatrixView& operator=(MatrixView&& rhs) = default;
   // MatrixView& operator=(MatrixView<T, device>&& rhs);

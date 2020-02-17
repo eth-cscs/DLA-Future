@@ -49,6 +49,9 @@ struct TestSizes {
   TileElementSize block_size;
 };
 
+// TODO (Upper and Lower cases NOT yet implemented)
+std::vector<blas::Uplo> blas_uplos({blas::Uplo::General});
+
 std::vector<TestSizes> sizes_tests({
     {{0, 0}, {11, 13}},
     {{3, 0}, {1, 2}},
@@ -97,8 +100,8 @@ TYPED_TEST(MatrixLocalViewTest, StaticAPIConst) {
 template <template <class, Device> class MatrixType, class T, Device device, class ElementGetter>
 void checkConstructorConst(MatrixType<T, device>& matrix, ElementGetter el) {
   const auto& distribution = matrix.distribution();
-  // TODO
-  for (const auto& uplo : {blas::Uplo::General}) {
+
+  for (const auto& uplo : blas_uplos) {
     MatrixView<const T, Device::CPU> mat_view(uplo, matrix);
     CHECK_MATRIX_DISTRIBUTION(distribution, mat_view);
     CHECK_MATRIX_EQ(el, mat_view);
@@ -110,8 +113,7 @@ void checkConstructorConst(MatrixType<T, device>& matrix, ElementGetter el) {
     CHECK_MATRIX_EQ(el, mat_view);
   }
 
-  // TODO
-  for (const auto& uplo : {blas::Uplo::General}) {
+  for (const auto& uplo : blas_uplos) {
     auto mat_view = getConstView(uplo, matrix);
     CHECK_MATRIX_DISTRIBUTION(distribution, mat_view);
     CHECK_MATRIX_EQ(el, mat_view);

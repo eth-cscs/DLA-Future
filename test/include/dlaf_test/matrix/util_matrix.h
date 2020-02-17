@@ -152,7 +152,7 @@ void checkNear(ElementGetter expected, MatrixType<T, Device::CPU>& mat, BaseType
   ::dlaf::matrix::test::checkNear(expected, mat, rel_err, abs_err, __FILE__, __LINE__);
 
 template <class MatrixType>
-void checkMatrixDistribution(const Distribution& distribution, MatrixType& matrix) {
+void checkMatrixDistribution(const Distribution& distribution, const MatrixType& matrix) {
   ASSERT_EQ(distribution, matrix.distribution());
 
   EXPECT_EQ(distribution.size(), matrix.size());

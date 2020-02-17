@@ -21,7 +21,10 @@ namespace dlaf {
 namespace matrix {
 namespace test {
 
-/// @brief Returns a col-major ordered vector with the futures to the matrix tiles.
+/// Returns a col-major ordered vector with the futures to the matrix tiles.
+///
+/// The futures are created using the matrix method operator()(const LocalTileIndex&).
+/// Note: This function is interchangeable with getFuturesUsingGlobalIndex.
 template <template <class, Device> class MatrixType, class T, Device device>
 std::vector<hpx::future<Tile<T, device>>> getFuturesUsingLocalIndex(MatrixType<T, device>& mat) {
   const matrix::Distribution& dist = mat.distribution();
@@ -38,7 +41,10 @@ std::vector<hpx::future<Tile<T, device>>> getFuturesUsingLocalIndex(MatrixType<T
   return result;
 }
 
-/// @brief Returns a col-major ordered vector with the futures to the matrix tiles.
+/// Returns a col-major ordered vector with the futures to the matrix tiles.
+///
+/// The futures are created using the matrix method operator()(const GlobalTileIndex&).
+/// Note: This function is interchangeable with getFuturesUsingLocalIndex.
 template <template <class, Device> class MatrixType, class T, Device device>
 std::vector<hpx::future<Tile<T, device>>> getFuturesUsingGlobalIndex(MatrixType<T, device>& mat) {
   const matrix::Distribution& dist = mat.distribution();
@@ -60,7 +66,10 @@ std::vector<hpx::future<Tile<T, device>>> getFuturesUsingGlobalIndex(MatrixType<
   return result;
 }
 
-/// @brief Returns a col-major ordered vector with the read-only shared-futures to the matrix tiles.
+/// Returns a col-major ordered vector with the read-only shared-futures to the matrix tiles.
+///
+/// The futures are created using the matrix method read(const LocalTileIndex&).
+/// Note: This function is interchangeable with getSharedFuturesUsingGlobalIndex.
 template <template <class, Device> class MatrixType, class T, Device device>
 std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingLocalIndex(
     MatrixType<T, device>& mat) {
@@ -79,7 +88,10 @@ std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingLoca
   return result;
 }
 
-/// @brief Returns a col-major ordered vector with the read-only shared-futures to the matrix tiles.
+/// Returns a col-major ordered vector with the read-only shared-futures to the matrix tiles.
+///
+/// The futures are created using the matrix method read(const GlobalTileIndex&).
+/// Note: This function is interchangeable with getSharedFuturesUsingLocalIndex.
 template <template <class, Device> class MatrixType, class T, Device device>
 std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingGlobalIndex(
     MatrixType<T, device>& mat) {
@@ -103,7 +115,8 @@ std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingGlob
   return result;
 }
 
-/// @brief Returns true if only the first @p futures are ready.
+/// Returns true if only the first @p futures are ready.
+///
 /// @pre Future should be a future or shared_future.
 /// @pre 0 <= ready <= futures.size()
 template <class Future>
@@ -122,7 +135,8 @@ bool checkFuturesStep(size_t ready, const std::vector<Future>& futures) {
   return true;
 }
 
-/// @brief Checks if current[i] depends correctly on previous[i].
+/// Checks if current[i] depends correctly on previous[i].
+///
 /// If get_ready == true it checks if current[i] is ready after previous[i] is used.
 /// If get_ready == false it checks if current[i] is not ready after previous[i] is used.
 /// @pre Future[1,2] should be a future or shared_future
@@ -145,11 +159,11 @@ void checkFutures(bool get_ready, const std::vector<Future1>& current, std::vect
     ::dlaf::matrix::test::checkFutures(get_ready, current, previous); \
   } while (0)
 
-/// @brief Checks if current[i] depends correctly on mat_view.done(index),
+/// Checks if current[i] depends correctly on mat_view.done(index),
 ///
 /// where index = LocalTileIndex(i % mat_view.localNrTiles.rows(), i / mat_view.localNrTiles.rows())
-/// If get_ready == true it checks if current[i] is ready after previous[i] is used.
-/// If get_ready == false it checks if current[i] is not ready after previous[i] is used.
+/// If get_ready == true it checks if current[i] is ready after the call to mat_view.done(i).
+/// If get_ready == false it checks if current[i] is not ready after the call to mat_view.done(i).
 /// @pre Future1 should be a future or shared_future
 template <class Future1, class MatrixViewType>
 void checkFuturesDone(bool get_ready, const std::vector<Future1>& current, MatrixViewType& mat_view) {

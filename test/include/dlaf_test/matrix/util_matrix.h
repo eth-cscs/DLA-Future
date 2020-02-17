@@ -171,7 +171,7 @@ void checkMatrixDistribution(const Distribution& distribution, MatrixType& matri
 #define CHECK_MATRIX_DISTRIBUTION(distribution, mat)                  \
   do {                                                                \
     std::stringstream s;                                              \
-    s << "Rank " << matrix.distribution().rankIndex();                \
+    s << "Rank " << mat.distribution().rankIndex();                   \
     SCOPED_TRACE(s.str());                                            \
     ::dlaf::matrix::test::checkMatrixDistribution(distribution, mat); \
   } while (0)

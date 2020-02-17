@@ -14,7 +14,6 @@
 #include <random>
 #include <string>
 
-#undef M_PI
 #if !defined M_PI
 constexpr double M_PI = 3.141592;
 #endif

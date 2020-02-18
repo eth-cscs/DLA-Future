@@ -49,88 +49,6 @@ void set(MatrixType<T, Device::CPU>& mat, ElementGetter el) {
   }
 }
 
-/// @brief Returns a col-major ordered vector with the futures to the matrix tiles.
-template <template <class, Device> class MatrixType, class T, Device device>
-std::vector<hpx::future<Tile<T, device>>> getFuturesUsingLocalIndex(MatrixType<T, device>& mat) {
-  const matrix::Distribution& dist = mat.distribution();
-
-  std::vector<hpx::future<Tile<T, device>>> result;
-  result.reserve(dlaf::util::size_t::mul(dist.localNrTiles().rows(), dist.localNrTiles().cols()));
-
-  for (SizeType j = 0; j < dist.localNrTiles().cols(); ++j) {
-    for (SizeType i = 0; i < dist.localNrTiles().rows(); ++i) {
-      result.emplace_back(std::move(mat(LocalTileIndex(i, j))));
-      EXPECT_TRUE(result.back().valid());
-    }
-  }
-  return result;
-}
-
-/// @brief Returns a col-major ordered vector with the futures to the matrix tiles.
-template <template <class, Device> class MatrixType, class T, Device device>
-std::vector<hpx::future<Tile<T, device>>> getFuturesUsingGlobalIndex(MatrixType<T, device>& mat) {
-  const matrix::Distribution& dist = mat.distribution();
-
-  std::vector<hpx::future<Tile<T, device>>> result;
-  result.reserve(dlaf::util::size_t::mul(dist.localNrTiles().rows(), dist.localNrTiles().cols()));
-
-  for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
-    for (SizeType i = 0; i < dist.nrTiles().rows(); ++i) {
-      GlobalTileIndex global_index{i, j};
-      comm::Index2D owner = dist.rankGlobalTile(global_index);
-
-      if (dist.rankIndex() == owner) {
-        result.emplace_back(std::move(mat(global_index)));
-        EXPECT_TRUE(result.back().valid());
-      }
-    }
-  }
-  return result;
-}
-
-/// @brief Returns a col-major ordered vector with the read-only shared-futures to the matrix tiles.
-template <template <class, Device> class MatrixType, class T, Device device>
-std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingLocal(
-    MatrixType<T, device>& mat) {
-  const matrix::Distribution& dist = mat.distribution();
-
-  std::vector<hpx::shared_future<Tile<const T, device>>> result;
-  result.reserve(dlaf::util::size_t::mul(dist.localNrTiles().rows(), dist.localNrTiles().cols()));
-
-  for (SizeType j = 0; j < dist.localNrTiles().cols(); ++j) {
-    for (SizeType i = 0; i < dist.localNrTiles().rows(); ++i) {
-      result.emplace_back(mat.read(LocalTileIndex(i, j)));
-      EXPECT_TRUE(result.back().valid());
-    }
-  }
-
-  return result;
-}
-
-/// @brief Returns a col-major ordered vector with the read-only shared-futures to the matrix tiles.
-template <template <class, Device> class MatrixType, class T, Device device>
-std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingGlobal(
-    MatrixType<T, device>& mat) {
-  const matrix::Distribution& dist = mat.distribution();
-
-  std::vector<hpx::shared_future<Tile<const T, device>>> result;
-  result.reserve(dlaf::util::size_t::mul(dist.localNrTiles().rows(), dist.localNrTiles().cols()));
-
-  for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
-    for (SizeType i = 0; i < dist.nrTiles().rows(); ++i) {
-      GlobalTileIndex global_index{i, j};
-      comm::Index2D owner = dist.rankGlobalTile(global_index);
-
-      if (dist.rankIndex() == owner) {
-        result.emplace_back(mat.read(global_index));
-        EXPECT_TRUE(result.back().valid());
-      }
-    }
-  }
-
-  return result;
-}
-
 /// @brief Checks the elements of the matrix.
 ///
 /// comp(expected({i, j}), (i, j)-element) is used to compare the elements.
@@ -235,6 +153,31 @@ void checkNear(ElementGetter expected, MatrixType<T, Device::CPU>& mat, BaseType
 }
 #define CHECK_MATRIX_NEAR(expected, mat, rel_err, abs_err) \
   ::dlaf::matrix::test::checkNear(expected, mat, rel_err, abs_err, __FILE__, __LINE__);
+
+template <class MatrixType>
+void checkMatrixDistribution(const Distribution& distribution, const MatrixType& matrix) {
+  ASSERT_EQ(distribution, matrix.distribution());
+
+  EXPECT_EQ(distribution.size(), matrix.size());
+  EXPECT_EQ(distribution.blockSize(), matrix.blockSize());
+  EXPECT_EQ(distribution.nrTiles(), matrix.nrTiles());
+  EXPECT_EQ(distribution.rankIndex(), matrix.rankIndex());
+  EXPECT_EQ(distribution.commGridSize(), matrix.commGridSize());
+
+  for (SizeType j = 0; j < distribution.nrTiles().cols(); ++j) {
+    for (SizeType i = 0; i < distribution.nrTiles().rows(); ++i) {
+      GlobalTileIndex index(i, j);
+      EXPECT_EQ(distribution.rankGlobalTile(index), matrix.rankGlobalTile(index));
+    }
+  }
+}
+#define CHECK_MATRIX_DISTRIBUTION(distribution, mat)                  \
+  do {                                                                \
+    std::stringstream s;                                              \
+    s << "Rank " << mat.distribution().rankIndex();                   \
+    SCOPED_TRACE(s.str());                                            \
+    ::dlaf::matrix::test::checkMatrixDistribution(distribution, mat); \
+  } while (0)
 
 }
 }

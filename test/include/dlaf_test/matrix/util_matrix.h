@@ -20,6 +20,7 @@
 #include "dlaf/matrix.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/layout_info.h"
+#include "dlaf/util_math.h"
 #include "dlaf_test/matrix/util_tile.h"
 
 namespace dlaf {
@@ -123,13 +124,15 @@ void checkPtr(PointerGetter exp_ptr, Matrix<T, Device::CPU>& mat, const char* fi
 /// The (i, j)-element of the matrix is compared to expected({i, j}).
 /// @pre expected argument is an index of type const GlobalElementIndex&.
 /// @pre expected return type should be T.
-/// @pre rel_err > 0.
-/// @pre abs_err > 0.
+/// @pre rel_err >= 0.
+/// @pre abs_err >= 0.
+/// @pre rel_err > 0 || abs_err > 0
 template <template <class, Device> class MatrixType, class T, class ElementGetter>
 void checkNear(ElementGetter expected, MatrixType<T, Device::CPU>& mat, BaseType<T> rel_err,
                BaseType<T> abs_err, const char* file, const int line) {
-  ASSERT_GT(rel_err, 0);
-  ASSERT_GT(abs_err, 0);
+  ASSERT_GE(rel_err, 0);
+  ASSERT_GE(abs_err, 0);
+  ASSERT_TRUE(rel_err > 0 || abs_err > 0);
 
   auto comp = [rel_err, abs_err](T expected, T value) {
     auto diff = std::abs(expected - value);
@@ -143,7 +146,7 @@ void checkNear(ElementGetter expected, MatrixType<T, Device::CPU>& mat, BaseType
 
     std::stringstream s;
     s << "expected " << expected << " == " << value << " (Relative diff: " << diff / abs_max << " > "
-      << rel_err << ", " << diff << " > " << abs_err << ")";
+      << rel_err << ", Absolute diff: " << diff << " > " << abs_err << ")";
     return s.str();
   };
   internal::check(expected, mat, comp, err_message, file, line);

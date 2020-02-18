@@ -25,8 +25,19 @@ void test_grid_communication(CommunicatorGrid& grid) {
   if (MPI_COMM_NULL == grid.rowCommunicator() || MPI_COMM_NULL == grid.colCommunicator())
     return;
 
-  int buffer;
-  int buffer_send = 1, buffer_recv;
+  const int buffer_send = 1;
+  int buffer, buffer_recv;
+
+  // All Communication
+  if (grid.rankFullCommunicator(Index2D{0, 0}) == 0)
+    buffer = 13;
+
+  MPI_Bcast(&buffer, 1, MPI_INT, 0, grid.fullCommunicator());
+  EXPECT_EQ(buffer, 13);
+
+  buffer_recv = 0;
+  MPI_Allreduce(&buffer_send, &buffer_recv, 1, MPI_INT, MPI_SUM, grid.fullCommunicator());
+  EXPECT_EQ(buffer_recv, grid.size().rows() * grid.size().cols());
 
   // Row Communication
   if (grid.rank().col() == 0)
@@ -49,6 +60,44 @@ void test_grid_communication(CommunicatorGrid& grid) {
   buffer_recv = 0;
   MPI_Allreduce(&buffer_send, &buffer_recv, 1, MPI_INT, MPI_SUM, grid.colCommunicator());
   EXPECT_EQ(buffer_recv, grid.colCommunicator().size());
+}
+
+void check_rank_full_communicator(const CommunicatorGrid& grid, bool is_in_grid) {
+  // Checks the function rank_full_communicator
+  // If the rank is not in the grid:
+  //  - all coords must return -1
+  // If the rank is in the grid:
+  //  - Check that every coords returns a valid distinct rank
+  //  - Check that returns -1 asking for a coordinate outside the grid
+  std::set<dlaf::comm::IndexT_MPI> ranks;
+
+  for (int c = 0; c < grid.size().cols(); ++c) {
+    for (int r = 0; r < grid.size().rows(); ++r) {
+      if (is_in_grid) {
+        // keep track of rank indexes for each coordinate of the grid
+        auto rank = grid.rankFullCommunicator({r, c});
+        ranks.insert(rank);
+
+        // check that it is a valid rank
+        EXPECT_GE(rank, 0);
+        EXPECT_LT(rank, grid.size().rows() * grid.size().cols());
+      }
+      else {
+        // a rank outside of the grid does not have access to any other rank in the grid
+        EXPECT_EQ(grid.rankFullCommunicator({r, c}), -1);
+      }
+    }
+  }
+
+  if (is_in_grid) {
+    // test that each rank has access to all others
+    EXPECT_EQ(ranks.size(), grid.size().rows() * grid.size().cols());
+
+    // test out of grid coordinates
+    EXPECT_EQ(grid.rankFullCommunicator({grid.size().rows() - 1, grid.size().cols()}), -1);
+    EXPECT_EQ(grid.rankFullCommunicator({grid.size().rows(), grid.size().cols() - 1}), -1);
+    EXPECT_EQ(grid.rankFullCommunicator({grid.size().rows(), grid.size().cols()}), -1);
+  }
 }
 
 class CommunicatorGridTest : public ::testing::TestWithParam<Ordering> {};
@@ -74,6 +123,10 @@ TEST_P(CommunicatorGridTest, Copy) {
     EXPECT_EQ(ncols, copy.size().cols());
 
     int result;
+    MPI_Comm_compare(copy.fullCommunicator(), grid.fullCommunicator(), &result);
+    EXPECT_EQ(MPI_IDENT, result);
+    EXPECT_NE(MPI_COMM_NULL, copy.fullCommunicator());
+
     MPI_Comm_compare(copy.rowCommunicator(), grid.rowCommunicator(), &result);
     EXPECT_EQ(MPI_IDENT, result);
     EXPECT_NE(MPI_COMM_NULL, copy.rowCommunicator());
@@ -89,6 +142,7 @@ TEST_P(CommunicatorGridTest, Copy) {
   EXPECT_EQ(nrows, grid.size().rows());
   EXPECT_EQ(ncols, grid.size().cols());
 
+  EXPECT_NE(MPI_COMM_NULL, grid.fullCommunicator());
   EXPECT_NE(MPI_COMM_NULL, grid.rowCommunicator());
   EXPECT_NE(MPI_COMM_NULL, grid.colCommunicator());
 
@@ -145,15 +199,17 @@ TEST_P(CommunicatorGridTest, ConstructorIncomplete) {
   Communicator world(MPI_COMM_WORLD);
   CommunicatorGrid incomplete_grid(world, grid_dims, GetParam());
 
+  auto coords = dlaf::common::computeCoords<Index2D>(GetParam(), world.rank(), grid_dims);
+
   if (world.rank() != NUM_MPI_RANKS - 1) {  // ranks in the grid
     EXPECT_EQ(NUM_MPI_RANKS - 1, incomplete_grid.size().rows());
     EXPECT_EQ(1, incomplete_grid.size().cols());
 
+    EXPECT_NE(MPI_COMM_NULL, incomplete_grid.fullCommunicator());
     EXPECT_NE(MPI_COMM_NULL, incomplete_grid.rowCommunicator());
     EXPECT_NE(MPI_COMM_NULL, incomplete_grid.colCommunicator());
 
-    auto coords = dlaf::common::computeCoords<Index2D>(GetParam(), world.rank(), grid_dims);
-
+    check_rank_full_communicator(incomplete_grid, true);
     EXPECT_EQ(coords.row(), incomplete_grid.rank().row());
     EXPECT_EQ(coords.col(), incomplete_grid.rank().col());
 
@@ -164,12 +220,15 @@ TEST_P(CommunicatorGridTest, ConstructorIncomplete) {
     EXPECT_EQ(0, incomplete_grid.size().rows());
     EXPECT_EQ(0, incomplete_grid.size().cols());
 
+    EXPECT_EQ(MPI_COMM_NULL, incomplete_grid.fullCommunicator());
     EXPECT_EQ(MPI_COMM_NULL, incomplete_grid.rowCommunicator());
     EXPECT_EQ(MPI_COMM_NULL, incomplete_grid.colCommunicator());
 
+    check_rank_full_communicator(incomplete_grid, false);
     EXPECT_EQ(-1, incomplete_grid.rank().row());
     EXPECT_EQ(-1, incomplete_grid.rank().col());
 
+    EXPECT_EQ(MPI_UNDEFINED, incomplete_grid.fullCommunicator().rank());
     EXPECT_EQ(MPI_UNDEFINED, incomplete_grid.rowCommunicator().rank());
     EXPECT_EQ(MPI_UNDEFINED, incomplete_grid.colCommunicator().rank());
   }
@@ -197,6 +256,7 @@ TEST_P(CommunicatorGridTest, Rank) {
 
   auto coords = dlaf::common::computeCoords<Index2D>(GetParam(), world.rank(), grid_dims);
 
+  check_rank_full_communicator(complete_grid, true);
   EXPECT_EQ(coords.row(), complete_grid.rank().row());
   EXPECT_EQ(coords.col(), complete_grid.rank().col());
 

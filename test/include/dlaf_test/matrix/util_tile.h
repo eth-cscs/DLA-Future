@@ -53,13 +53,7 @@ void set(const Tile<T, Device::CPU>& tile, U el) {
   }
 }
 
-/// @brief Sets the elements of the tile.
-///
-/// The (i, j)-element of the tile is set to el({i, j}) if op == NoTrans,
-///                                          el({j, i}) if op == Trans,
-///                                          conj(el({j, i})) if op == ConjTrans.
-/// @pre el argument is an index of type const TileElementIndex&.
-/// @pre el return type should be T.
+/// @brief Print the elements of the tile.
 template <class T>
 void print(const Tile<T, Device::CPU>& tile, int precision = 4, std::ostream& out = std::cout) {
   auto out_precision = out.precision();
@@ -185,7 +179,7 @@ void checkNear(ElementGetter expected, const Tile<T, Device::CPU>& tile, BaseTyp
 
     std::stringstream s;
     s << "expected " << expected << " == " << value << " (Relative diff: " << diff / abs_max << " > "
-      << rel_err << ", " << diff << " > " << abs_err << ")";
+      << rel_err << ", Absolute diff: " << diff << " > " << abs_err << ")";
     return s.str();
   };
   internal::check(expected, tile, comp, err_message, file, line);

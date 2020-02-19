@@ -123,26 +123,31 @@ function(DLAF_addTest test_target_name)
   endif()
 
   ### Test target
+  set(DLAF_TEST_RUNALL_WITH_MPIEXEC OFF CACHE BOOL "Run all tests using the workload manager.")
+
   set(_TEST_ARGUMENTS ${DLAF_AT_ARGUMENTS})
 
-  # ----- MPI-based test
-  if(DEFINED DLAF_AT_MPIRANKS)
-    if (NOT DLAF_AT_MPIRANKS GREATER 0)
-      message(FATAL_ERROR "Wrong MPIRANKS number ${DLAF_AT_MPIRANKS}")
+  if(DLAF_TEST_RUNALL_WITH_MPIEXEC OR IS_AN_MPI_TEST)
+    if(IS_AN_MPI_TEST)
+      if (NOT DLAF_AT_MPIRANKS GREATER 0)
+        message(FATAL_ERROR "Wrong MPIRANKS number ${DLAF_AT_MPIRANKS}")
+      endif()
+
+      if (DLAF_AT_MPIRANKS GREATER MPIEXEC_MAX_NUMPROCS)
+        message(WARNING "\
+          YOU ARE ASKING FOR ${DLAF_AT_MPIRANKS} RANKS, BUT THERE ARE JUST ${MPIEXEC_MAX_NUMPROCS} CORES.
+          You can adjust MPIEXEC_MAX_NUMPROCS value to suppress this warning.
+          Using OpenMPI may require to set the environment variable OMPI_MCA_rmaps_base_oversubscribe=1.")
+      endif()
+
+      target_compile_definitions(${test_target_name} PRIVATE NUM_MPI_RANKS=${DLAF_AT_MPIRANKS})
+
+      target_link_libraries(${test_target_name}
+        PRIVATE MPI::MPI_CXX
+        )
+    else()
+      set(DLAF_AT_MPIRANKS 1)
     endif()
-
-    if (DLAF_AT_MPIRANKS GREATER MPIEXEC_MAX_NUMPROCS)
-      message(WARNING "\
-        YOU ARE ASKING FOR ${DLAF_AT_MPIRANKS} RANKS, BUT THERE ARE JUST ${MPIEXEC_MAX_NUMPROCS} CORES.
-        You can adjust MPIEXEC_MAX_NUMPROCS value to suppress this warning.
-        Using OpenMPI may require to set the environment variable OMPI_MCA_rmaps_base_oversubscribe=1.")
-    endif()
-
-    target_compile_definitions(${test_target_name} PRIVATE NUM_MPI_RANKS=${DLAF_AT_MPIRANKS})
-
-    target_link_libraries(${test_target_name}
-      PRIVATE MPI::MPI_CXX
-    )
 
     if (MPIEXEC_NUMCORE_FLAG)
       if (MPIEXEC_NUMCORES)
@@ -171,7 +176,12 @@ function(DLAF_addTest test_target_name)
 
   if (IS_AN_HPX_TEST)
     separate_arguments(_HPX_EXTRA_ARGS_LIST UNIX_COMMAND ${DLAF_HPXTEST_EXTRA_ARGS})
-    list(APPEND _TEST_ARGUMENTS "--hpx:use-process-mask")
+
+    # APPLE platform does not support thread binding
+    if (NOT APPLE)
+      list(APPEND _TEST_ARGUMENTS "--hpx:use-process-mask")
+    endif()
+
     list(APPEND _TEST_ARGUMENTS ${_HPX_EXTRA_ARGS_LIST})
   endif()
 

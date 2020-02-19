@@ -11,3 +11,5 @@
 DLAF_addTest(test_layout_info SOURCES test_layout_info.cpp USE_MAIN PLAIN)
 DLAF_addTest(test_util_distribution SOURCES test_util_distribution.cpp USE_MAIN PLAIN)
 DLAF_addTest(test_distribution SOURCES test_distribution.cpp USE_MAIN PLAIN)
+DLAF_addTest(test_matrix_view SOURCES test_matrix_view.cpp USE_MAIN MPIHPX MPIRANKS 6)
+DLAF_addTest(test_util_matrix SOURCES test_util_matrix.cpp USE_MAIN MPIHPX MPIRANKS 6)

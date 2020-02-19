@@ -10,7 +10,7 @@
 
 template <class T, Device device>
 Matrix<const T, device>::Matrix(const matrix::LayoutInfo& layout, ElementType* ptr)
-    : Distribution(layout.size(), layout.blockSize()) {
+    : MatrixBase({layout.size(), layout.blockSize()}) {
   memory::MemoryView<ElementType, device> mem(ptr, layout.minMemSize());
   setUpTiles(mem, layout);
 }
@@ -18,8 +18,8 @@ Matrix<const T, device>::Matrix(const matrix::LayoutInfo& layout, ElementType* p
 template <class T, Device device>
 Matrix<const T, device>::Matrix(matrix::Distribution&& distribution, const matrix::LayoutInfo& layout,
                                 ElementType* ptr)
-    : Distribution(std::move(distribution)) {
-  if (this->localSize() != layout.size())
+    : MatrixBase(std::move(distribution)) {
+  if (this->distribution().localSize() != layout.size())
     throw std::invalid_argument("Error: distribution.localSize() != layout.size()");
   if (this->blockSize() != layout.blockSize())
     throw std::invalid_argument("Error: distribution.blockSize() != layout.blockSize()");
@@ -32,8 +32,14 @@ template <class T, Device device>
 Matrix<const T, device>::~Matrix() {
   tile_shared_futures_.clear();
 
-  for (auto&& tile_future : tile_futures_)
-    tile_future.get();
+  for (auto&& tile_future : tile_futures_) {
+    try {
+      tile_future.get();
+    }
+    catch (...) {
+      // TODO WARNING
+    }
+  }
 }
 
 template <class T, Device device>
@@ -46,7 +52,14 @@ hpx::shared_future<Tile<const T, device>> Matrix<const T, device>::read(
     tile_futures_[i] = p.get_future();
     tile_shared_futures_[i] = std::move(
         old_future.then(hpx::launch::sync, [p = std::move(p)](hpx::future<TileType>&& fut) mutable {
-          return ConstTileType(std::move(fut.get().setPromise(std::move(p))));
+          try {
+            return ConstTileType(std::move(fut.get().setPromise(std::move(p))));
+          }
+          catch (...) {
+            auto current_exception_ptr = std::current_exception();
+            p.set_exception(current_exception_ptr);
+            std::rethrow_exception(current_exception_ptr);
+          }
         }));
   }
   return tile_shared_futures_[i];
@@ -56,19 +69,19 @@ template <class T, Device device>
 Matrix<const T, device>::Matrix(matrix::Distribution&& distribution,
                                 std::vector<hpx::future<TileType>>&& tile_futures,
                                 std::vector<hpx::shared_future<ConstTileType>>&& tile_shared_futures)
-    : Distribution(std::move(distribution)), tile_futures_(std::move(tile_futures)),
+    : MatrixBase(std::move(distribution)), tile_futures_(std::move(tile_futures)),
       tile_shared_futures_(std::move(tile_shared_futures)) {}
 
 template <class T, Device device>
 void Matrix<const T, device>::setUpTiles(const memory::MemoryView<ElementType, device>& mem,
                                          const matrix::LayoutInfo& layout) noexcept {
-  tile_shared_futures_.resize(futureVectorSize(layout));
+  const auto& nr_tiles = layout.nrTiles();
+  tile_shared_futures_.resize(futureVectorSize(nr_tiles));
 
   tile_futures_.clear();
-  tile_futures_.reserve(futureVectorSize(layout));
+  tile_futures_.reserve(futureVectorSize(nr_tiles));
 
   using MemView = memory::MemoryView<T, device>;
-  const auto& nr_tiles = layout.nrTiles();
 
   for (SizeType j = 0; j < nr_tiles.cols(); ++j) {
     for (SizeType i = 0; i < nr_tiles.rows(); ++i) {
@@ -79,11 +92,4 @@ void Matrix<const T, device>::setUpTiles(const memory::MemoryView<ElementType, d
                    layout.ldTile())));
     }
   }
-}
-
-template <class T, Device device>
-std::size_t Matrix<const T, device>::futureVectorSize(const matrix::LayoutInfo& layout) const noexcept {
-  using util::size_t::mul;
-  const auto& nr_tiles = layout.nrTiles();
-  return mul(nr_tiles.rows(), nr_tiles.cols());
 }

@@ -53,6 +53,11 @@ void MPIListener::OnTestStart(const ::testing::TestInfo& test_info) {
 }
 
 void MPIListener::OnTestPartResult(const ::testing::TestPartResult& test_part_result) {
+  if (test_part_result.fatally_failed()) {
+    MASTER_CALLS_DEFAULT_LISTENER(OnTestPartResult, test_part_result);
+    return;
+  }
+
   std::ostringstream os;
   os << test_part_result;
   last_test_part_results_.push_back(os.str());

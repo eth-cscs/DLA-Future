@@ -20,14 +20,15 @@
 #include "dlaf/tile.h"
 #include "dlaf/traits.h"
 
-namespace dlaf_test {
-namespace tile_test {
+namespace dlaf {
+namespace matrix {
+namespace test {
 using namespace dlaf;
 
 /// @brief Sets the elements of the tile.
 ///
 /// The (i, j)-element of the tile is set to el({i, j}).
-/// @pre el argument is an index of type const TileElementIndex&.
+/// @pre el argument is an index of type const TileElementIndex& or TileElementIndex.
 /// @pre el return type should be T.
 template <class T, class ElementGetter,
           enable_if_signature_t<ElementGetter, T(const TileElementIndex&), int> = 0>
@@ -52,13 +53,7 @@ void set(const Tile<T, Device::CPU>& tile, U el) {
   }
 }
 
-/// @brief Sets the elements of the tile.
-///
-/// The (i, j)-element of the tile is set to el({i, j}) if op == NoTrans,
-///                                          el({j, i}) if op == Trans,
-///                                          conj(el({j, i})) if op == ConjTrans.
-/// @pre el argument is an index of type const TileElementIndex&.
-/// @pre el return type should be T.
+/// @brief Print the elements of the tile.
 template <class T>
 void print(const Tile<T, Device::CPU>& tile, int precision = 4, std::ostream& out = std::cout) {
   auto out_precision = out.precision();
@@ -139,7 +134,7 @@ void checkEQ(ElementGetter exp_el, const Tile<T, Device::CPU>& tile, const char*
   };
   internal::check(exp_el, tile, std::equal_to<T>{}, err_message, file, line);
 }
-#define CHECK_TILE_EQ(exp_el, tile) ::dlaf_test::tile_test::checkEQ(exp_el, tile, __FILE__, __LINE__);
+#define CHECK_TILE_EQ(exp_el, tile) ::dlaf::matrix::test::checkEQ(exp_el, tile, __FILE__, __LINE__);
 
 /// @brief Checks the pointers to the elements of the tile.
 ///
@@ -157,8 +152,7 @@ void checkPtr(PointerGetter exp_ptr, const Tile<T, Device::CPU>& tile, const cha
   };
   internal::check(exp_ptr, tile, comp, err_message, file, line);
 }
-#define CHECK_TILE_PTR(exp_ptr, tile) \
-  ::dlaf_test::tile_test::checkPtr(exp_ptr, tile, __FILE__, __LINE__);
+#define CHECK_TILE_PTR(exp_ptr, tile) ::dlaf::matrix::test::checkPtr(exp_ptr, tile, __FILE__, __LINE__);
 
 /// @brief Checks the elements of the tile.
 ///
@@ -185,12 +179,13 @@ void checkNear(ElementGetter expected, const Tile<T, Device::CPU>& tile, BaseTyp
 
     std::stringstream s;
     s << "expected " << expected << " == " << value << " (Relative diff: " << diff / abs_max << " > "
-      << rel_err << ", " << diff << " > " << abs_err << ")";
+      << rel_err << ", Absolute diff: " << diff << " > " << abs_err << ")";
     return s.str();
   };
   internal::check(expected, tile, comp, err_message, file, line);
 }
 #define CHECK_TILE_NEAR(expected, tile, rel_err, abs_err) \
-  ::dlaf_test::tile_test::checkNear(expected, tile, rel_err, abs_err, __FILE__, __LINE__);
+  ::dlaf::matrix::test::checkNear(expected, tile, rel_err, abs_err, __FILE__, __LINE__);
+}
 }
 }

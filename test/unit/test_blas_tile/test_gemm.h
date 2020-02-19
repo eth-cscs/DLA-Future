@@ -17,11 +17,13 @@
 #include "dlaf/memory/memory_view.h"
 #include "dlaf/tile.h"
 #include "dlaf/util_blas.h"
-#include "dlaf_test/util_tile.h"
-#include "dlaf_test/util_tile_blas.h"
+#include "dlaf_test/matrix/util_tile.h"
+#include "dlaf_test/matrix/util_tile_blas.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
+using namespace dlaf::matrix;
+using namespace dlaf::matrix::test;
 using namespace dlaf_test;
 using namespace testing;
 
@@ -91,9 +93,9 @@ void testGemm(blas::Op op_a, blas::Op op_b, SizeType m, SizeType n, SizeType k, 
   };
 
   // Set tile elements.
-  tile_test::set(a0, el_op_a, op_a);
-  tile_test::set(b0, el_op_b, op_b);
-  tile_test::set(c, el_c);
+  set(a0, el_op_a, op_a);
+  set(b0, el_op_b, op_b);
+  set(c, el_c);
 
   // Read-only tiles become constant if CT is const T.
   Tile<CT, Device::CPU> a(std::move(a0));

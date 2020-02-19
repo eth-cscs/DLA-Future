@@ -17,7 +17,7 @@
 #include "dlaf/matrix.h"
 #include "dlaf/mc/cholesky.h"
 #include "dlaf/util_matrix.h"
-#include "dlaf_test/util_matrix.h"
+#include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/util_types.h"
 
 #include "dlaf/common/timer.h"
@@ -41,7 +41,7 @@ T analytical_input_matrix(const GlobalElementIndex& index);
 T analytical_result_matrix(const GlobalElementIndex& index);
 
 void setup_input_matrix(Matrix<T, Device::CPU>& matrix) {
-  using namespace dlaf_test::matrix_test;
+  using namespace dlaf::matrix::test;
 
   util_matrix::assertSizeSquare(matrix, DLAF_SOURCE_LOCATION, "matrix");
   util_matrix::assertBlocksizeSquare(matrix, DLAF_SOURCE_LOCATION, "matrix");

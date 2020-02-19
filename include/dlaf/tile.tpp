@@ -34,7 +34,10 @@ Tile<const T, device>::Tile(Tile&& rhs) noexcept
 template <class T, Device device>
 Tile<const T, device>::~Tile() {
   if (p_) {
-    p_->set_value(Tile<ElementType, device>(size_, std::move(memory_view_), ld_));
+    if (std::uncaught_exception())
+      p_->set_exception(std::make_exception_ptr(ContinuationException{}));
+    else
+      p_->set_value(Tile<ElementType, device>(size_, std::move(memory_view_), ld_));
   }
 }
 

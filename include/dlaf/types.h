@@ -19,6 +19,12 @@ using SizeType = int;
 enum class Device { CPU, GPU };
 
 template <class T>
+struct TypeInfo;
+
+template <class T>
+struct TypeInfo<const T> : public TypeInfo<T> {};
+
+template <class T>
 struct TypeInfo {
   using BaseType = T;
   using Type = T;
@@ -51,5 +57,20 @@ using ComplexType = typename TypeInfo<T>::ComplexType;
 template <class T>
 constexpr size_t total_ops(const size_t add, const size_t mul) {
   return TypeInfo<T>::ops_add * add + TypeInfo<T>::ops_mul * mul;
+}
+
+/// Return complex conjugate of a complex number
+template <class T>
+std::complex<T> conj(const std::complex<T> number) {
+  return std::conj(number);
+}
+
+/// Return complex conjugate of a real number as a real number
+///
+/// It differs from std::conj just in the return type. In fact,
+/// std::conj always returns a std::complex
+template <class T>
+T conj(const T number) {
+  return number;
 }
 }

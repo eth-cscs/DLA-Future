@@ -19,16 +19,18 @@
 #include "dlaf/memory/memory_view.h"
 #include "dlaf/tile.h"
 #include "dlaf/util_blas.h"
-#include "dlaf_test/util_tile.h"
-#include "dlaf_test/util_tile_blas.h"
+#include "dlaf_test/matrix/util_tile.h"
+#include "dlaf_test/matrix/util_tile_blas.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
+using namespace dlaf::matrix;
+using namespace dlaf::matrix::test;
 using namespace dlaf_test;
 using namespace testing;
 
 /// @brief Returns el_op_a, el_b, res_b for side = Left.
-template <class T>
+template <class ElementIndex, class T>
 auto testTrsmElementFunctionsLeft(blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType m) {
   // Note: The tile elements are chosen such that:
   // - op(a)_ik = (i+1) / (k+.5) * exp(I*(2*i-k)) for the referenced elements
@@ -49,7 +51,7 @@ auto testTrsmElementFunctionsLeft(blas::Uplo uplo, blas::Op op, blas::Diag diag,
       (uplo == blas::Uplo::Upper && op != blas::Op::NoTrans))
     op_a_lower = true;
 
-  std::function<T(const TileElementIndex&)> el_op_a = [op_a_lower, diag](const TileElementIndex& index) {
+  std::function<T(const ElementIndex&)> el_op_a = [op_a_lower, diag](const ElementIndex& index) {
     if ((op_a_lower && index.row() < index.col()) || (!op_a_lower && index.row() > index.col()) ||
         (diag == blas::Diag::Unit && index.row() == index.col()))
       return TypeUtilities<T>::element(-9.9, 0);
@@ -60,15 +62,15 @@ auto testTrsmElementFunctionsLeft(blas::Uplo uplo, blas::Op op, blas::Diag diag,
     return TypeUtilities<T>::polar((i + 1) / (k + .5), 2 * i - k);
   };
 
-  std::function<T(const TileElementIndex&)> res_b = [](const TileElementIndex& index) {
+  std::function<T(const ElementIndex&)> res_b = [](const ElementIndex& index) {
     double k = index.row();
     double j = index.col();
 
     return TypeUtilities<T>::polar((k + .5) / (j + 2), k + j);
   };
 
-  std::function<T(const TileElementIndex&)> el_b = [m, alpha, diag, op_a_lower,
-                                                    res_b](const TileElementIndex& index) {
+  std::function<T(const ElementIndex&)> el_b = [m, alpha, diag, op_a_lower,
+                                                res_b](const ElementIndex& index) {
     BaseType<T> kk = op_a_lower ? index.row() + 1 : m - index.row();
 
     double i = index.row();
@@ -84,7 +86,7 @@ auto testTrsmElementFunctionsLeft(blas::Uplo uplo, blas::Op op, blas::Diag diag,
 }
 
 /// @brief Returns el_op_a, el_b, res_b for side = Right.
-template <class T>
+template <class ElementIndex, class T>
 auto testTrsmElementFunctionsRight(blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType n) {
   // Note: The tile elements are chosen such that:
   // - res_ik = (k+.5) / (i+2) * exp(I*(i+k)),
@@ -106,14 +108,14 @@ auto testTrsmElementFunctionsRight(blas::Uplo uplo, blas::Op op, blas::Diag diag
       (uplo == blas::Uplo::Upper && op != blas::Op::NoTrans))
     op_a_lower = true;
 
-  auto res_b = [](const TileElementIndex& index) {
+  auto res_b = [](const ElementIndex& index) {
     double i = index.row();
     double k = index.col();
 
     return TypeUtilities<T>::polar((k + .5) / (i + 2), i + k);
   };
 
-  auto el_op_a = [op_a_lower, diag](const TileElementIndex& index) {
+  auto el_op_a = [op_a_lower, diag](const ElementIndex& index) {
     if ((op_a_lower && index.row() < index.col()) || (!op_a_lower && index.row() > index.col()) ||
         (diag == blas::Diag::Unit && index.row() == index.col()))
       return TypeUtilities<T>::element(-9.9, 0);
@@ -124,7 +126,7 @@ auto testTrsmElementFunctionsRight(blas::Uplo uplo, blas::Op op, blas::Diag diag
     return TypeUtilities<T>::polar((j + 1) / (k + .5), 2 * j - k);
   };
 
-  auto el_b = [n, alpha, diag, op_a_lower, res_b](const TileElementIndex& index) {
+  auto el_b = [n, alpha, diag, op_a_lower, res_b](const ElementIndex& index) {
     BaseType<T> kk = op_a_lower ? n - index.col() : index.col() + 1;
 
     double i = index.row();
@@ -139,7 +141,7 @@ auto testTrsmElementFunctionsRight(blas::Uplo uplo, blas::Op op, blas::Diag diag
   return std::make_tuple(el_op_a, el_b, res_b);
 }
 
-template <class T, class CT = const T>
+template <class ElementIndex, class T, class CT = const T>
 void testTrsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, SizeType m, SizeType n,
               SizeType extra_lda, SizeType extra_ldb) {
   TileElementSize size_a = side == blas::Side::Left ? TileElementSize(m, m) : TileElementSize(n, n);
@@ -164,12 +166,14 @@ void testTrsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, Si
   std::function<T(const TileElementIndex&)> el_op_a, el_b, res_b;
 
   if (side == blas::Side::Left)
-    std::tie(el_op_a, el_b, res_b) = testTrsmElementFunctionsLeft<T>(uplo, op, diag, alpha, m);
+    std::tie(el_op_a, el_b, res_b) =
+        testTrsmElementFunctionsLeft<ElementIndex, T>(uplo, op, diag, alpha, m);
   else
-    std::tie(el_op_a, el_b, res_b) = testTrsmElementFunctionsRight<T>(uplo, op, diag, alpha, n);
+    std::tie(el_op_a, el_b, res_b) =
+        testTrsmElementFunctionsRight<ElementIndex, T>(uplo, op, diag, alpha, n);
 
-  tile_test::set(a0, el_op_a, op);
-  tile_test::set(b, el_b);
+  set(a0, el_op_a, op);
+  set(b, el_b);
 
   Tile<CT, Device::CPU> a(std::move(a0));
 

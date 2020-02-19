@@ -20,9 +20,9 @@ Matrix<T, device>::Matrix(const GlobalElementSize& size, const TileElementSize& 
 template <class T, Device device>
 Matrix<T, device>::Matrix(matrix::Distribution&& distribution)
     : Matrix<const T, device>(std::move(distribution), {}, {}) {
-  SizeType ld = std::max(1, util::ceilDiv(this->localSize().rows(), 64) * 64);
+  SizeType ld = std::max(1, util::ceilDiv(this->distribution().localSize().rows(), 64) * 64);
 
-  auto layout = matrix::colMajorLayout(this->localSize(), this->blockSize(), ld);
+  auto layout = matrix::colMajorLayout(this->distribution().localSize(), this->blockSize(), ld);
 
   std::size_t memory_size = layout.minMemSize();
   memory::MemoryView<ElementType, device> mem(memory_size);
@@ -33,7 +33,7 @@ Matrix<T, device>::Matrix(matrix::Distribution&& distribution)
 template <class T, Device device>
 Matrix<T, device>::Matrix(matrix::Distribution&& distribution, const matrix::LayoutInfo& layout)
     : Matrix<const T, device>(std::move(distribution), {}, {}) {
-  if (this->localSize() != layout.size())
+  if (this->distribution().localSize() != layout.size())
     throw std::invalid_argument("Error: distribution.localSize() != layout.size()");
   if (this->blockSize() != layout.blockSize())
     throw std::invalid_argument("Error: distribution.blockSize() != layout.blockSize()");
@@ -60,6 +60,13 @@ hpx::future<Tile<T, device>> Matrix<T, device>::operator()(const LocalTileIndex&
   tile_futures_[i] = p.get_future();
   tile_shared_futures_[i] = {};
   return old_future.then(hpx::launch::sync, [p = std::move(p)](hpx::future<TileType>&& fut) mutable {
-    return std::move(fut.get().setPromise(std::move(p)));
+    try {
+      return std::move(fut.get().setPromise(std::move(p)));
+    }
+    catch (...) {
+      auto current_exception_ptr = std::current_exception();
+      p.set_exception(current_exception_ptr);
+      std::rethrow_exception(current_exception_ptr);
+    }
   });
 }

@@ -13,13 +13,14 @@
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix.h"
 #include "dlaf/NNS/common.h"
+#include "dlaf/types.h"
 /// @file
 
 namespace dlaf {
 namespace NNS {
 
 template <>
-struct NST<Device::CPU> {
+struct NST<Execution::MC> {
 
 /// Cholesky factorization which computes the factorization of an Hermitian positive
 /// definite matrix A.
@@ -59,4 +60,4 @@ static void cholesky(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, Dev
 }
 }
 
-#include<dlaf/NSS/cholesky/mc.tpp>
+#include<dlaf/NNS/cholesky/mc.tpp>

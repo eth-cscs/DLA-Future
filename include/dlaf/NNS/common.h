@@ -9,11 +9,14 @@
 //
 #pragma once
 
+#include "dlaf/types.h"
 /// @file
 
+namespace dlaf {
 namespace NNS {
 
-template <Device device>
+template <Execution execution>
 struct NST;
 
+}
 }

@@ -17,6 +17,8 @@ using SizeType = int;
 
 enum class Device { CPU, GPU };
 
+enum class Execution { MC, GPU };
+
 template <class T>
 struct TypeInfo;
 

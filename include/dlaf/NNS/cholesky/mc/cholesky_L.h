@@ -84,7 +84,7 @@ void cholesky_L(Matrix<T, Device::CPU>& mat_a) {
 
 // Distributed implementation of Lower Cholesky factorization.
 template <class T>
-void cholesky(comm::CommunicatorGrid grid, blas::Uplo Lower, Matrix<T, Device::CPU>& mat_a) {
+void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
   constexpr auto NonUnit=blas::Diag::NonUnit;
   constexpr auto ConjTrans=blas::Op::ConjTrans;
   constexpr auto NoTrans=  blas::Op::NoTrans;

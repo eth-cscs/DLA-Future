@@ -17,9 +17,8 @@
 namespace dlaf {
 namespace NNS {
 
-template <>
 template <class T>
-void NST<Device::CPU>::cholesky(blas::Uplo uplo, Matrix<T, Device::CPU>& mat_a) {
+void NST<Execution::MC>::cholesky(blas::Uplo uplo, Matrix<T, Device::CPU>& mat_a) {
   // Check if matrix is square
   util_matrix::assertSizeSquare(mat_a, "Cholesky", "mat_a");
   // Check if block matrix is square
@@ -34,9 +33,8 @@ void NST<Device::CPU>::cholesky(blas::Uplo uplo, Matrix<T, Device::CPU>& mat_a) 
   }
 }
 
-template <>
 template <class T>
-void NST<Device::CPU>::cholesky(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, Device::CPU>& mat_a) {
+void NST<Execution::MC>::cholesky(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, Device::CPU>& mat_a) {
   // Check if matrix is square
   util_matrix::assertSizeSquare(mat_a, "Cholesky", "mat_a");
   // Check if block matrix is square

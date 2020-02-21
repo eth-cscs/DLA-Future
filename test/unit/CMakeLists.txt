@@ -18,7 +18,7 @@ DLAF_addTest(test_matrix SOURCES test_matrix.cpp USE_MAIN MPIHPX MPIRANKS 6)
 
 add_subdirectory(common)
 add_subdirectory(communication)
+add_subdirectory(factorization)
 add_subdirectory(matrix)
 add_subdirectory(memory)
 add_subdirectory(mc)
-add_subdirectory(NNS)

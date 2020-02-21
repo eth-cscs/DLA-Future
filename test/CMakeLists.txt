@@ -71,6 +71,8 @@ target_include_directories(DLAF_test
 target_link_libraries(DLAF_test
   PRIVATE
     MPI::MPI_CXX
+  PUBLIC
+    gtest
 )
 
 add_subdirectory(src)

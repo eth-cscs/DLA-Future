@@ -204,7 +204,7 @@ public:
 /// @pre el argument is an index of type const GlobalElementIndex&.
 /// @pre el return type should be T.
 template <class T, class ElementGetter>
-void set(Matrix<T, Device::CPU>& matrix, ElementGetter&& el) {
+void set(Matrix<T, Device::CPU>& matrix, const ElementGetter& el) {
   const matrix::Distribution& dist = matrix.distribution();
   for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {
     for (SizeType tile_i = 0; tile_i < dist.localNrTiles().rows(); ++tile_i) {
@@ -213,7 +213,7 @@ void set(Matrix<T, Device::CPU>& matrix, ElementGetter&& el) {
 
       auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
 
-      hpx::dataflow(hpx::util::unwrapping([tl_index, el](auto&& tile) {
+      hpx::dataflow(hpx::util::unwrapping([tl_index, el = el](auto&& tile) {
                       for (SizeType j = 0; j < tile.size().cols(); ++j)
                         for (SizeType i = 0; i < tile.size().rows(); ++i)
                           tile({i, j}) = el(GlobalElementIndex{i + tl_index.row(), j + tl_index.col()});

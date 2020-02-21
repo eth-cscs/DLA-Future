@@ -9,14 +9,5 @@
 //
 #pragma once
 
-#include "dlaf/types.h"
-/// @file
+#include "dlaf/factorization/mc.h"
 
-namespace dlaf {
-namespace NNS {
-
-template <Execution execution>
-struct NST;
-
-}
-}

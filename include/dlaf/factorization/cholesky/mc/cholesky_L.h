@@ -23,7 +23,6 @@
 #include "dlaf/util_matrix.h"
 
 namespace dlaf {
-namespace NNS {
 namespace internal {
 namespace mc {
 
@@ -270,7 +269,6 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
       }
     }
   }
-}
 }
 }
 }

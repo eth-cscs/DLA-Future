@@ -9,18 +9,17 @@
 //
 #pragma once
 
+#include <blas.hh>
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/lapack_tile.h"
+#include "dlaf/factorization/internal.h"
 #include "dlaf/matrix.h"
-#include "dlaf/NNS/common.h"
 #include "dlaf/types.h"
 /// @file
 
 namespace dlaf {
-namespace NNS {
 
 template <>
-struct NST<Execution::MC> {
+struct Factorization<Execution::MC> {
 
 /// Cholesky factorization which computes the factorization of an Hermitian positive
 /// definite matrix A.
@@ -57,7 +56,7 @@ static void cholesky(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, Dev
 
 };
 
-}
+
 }
 
-#include<dlaf/NNS/cholesky/mc.tpp>
+#include<dlaf/factorization/cholesky/mc.tpp>

@@ -12,13 +12,12 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix.h"
 #include "dlaf/util_matrix.h"
-#include "dlaf/NNS/cholesky/mc/cholesky_L.h"
+#include "dlaf/factorization/cholesky/mc/cholesky_L.h"
 
 namespace dlaf {
-namespace NNS {
 
 template <class T>
-void NST<Execution::MC>::cholesky(blas::Uplo uplo, Matrix<T, Device::CPU>& mat_a) {
+void Factorization<Execution::MC>::cholesky(blas::Uplo uplo, Matrix<T, Device::CPU>& mat_a) {
   // Check if matrix is square
   util_matrix::assertSizeSquare(mat_a, "Cholesky", "mat_a");
   // Check if block matrix is square
@@ -34,7 +33,7 @@ void NST<Execution::MC>::cholesky(blas::Uplo uplo, Matrix<T, Device::CPU>& mat_a
 }
 
 template <class T>
-void NST<Execution::MC>::cholesky(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, Device::CPU>& mat_a) {
+void Factorization<Execution::MC>::cholesky(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, Device::CPU>& mat_a) {
   // Check if matrix is square
   util_matrix::assertSizeSquare(mat_a, "Cholesky", "mat_a");
   // Check if block matrix is square
@@ -50,5 +49,4 @@ void NST<Execution::MC>::cholesky(comm::CommunicatorGrid grid, blas::Uplo uplo, 
   }
 }
 
-}
 }

@@ -7,7 +7,7 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
-#include "dlaf/NNS/mc.h"
+#include "dlaf/factorization/mc.h"
 
 #include "gtest/gtest.h"
 #include "dlaf/communication/communicator_grid.h"
@@ -85,7 +85,7 @@ TYPED_TEST(CholeskyLocalTest, Correctness) {
       Matrix<TypeParam, Device::CPU> mat(size, block_size);
       set(mat, el);
 
-      NNS::NST<Execution::MC>::cholesky(blas::Uplo::Lower, mat);
+      Factorization<Execution::MC>::cholesky(blas::Uplo::Lower, mat);
 
       CHECK_MATRIX_NEAR(res, mat, 4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error,
                         4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);
@@ -135,7 +135,7 @@ TYPED_TEST(CholeskyDistributedTest, Correctness) {
         Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
         set(mat, el);
 
-        NNS::NST<Execution::MC>::cholesky(comm_grid, blas::Uplo::Lower, mat);
+        Factorization<Execution::MC>::cholesky(comm_grid, blas::Uplo::Lower, mat);
 
         CHECK_MATRIX_NEAR(res, mat, 4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error,
                           4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);

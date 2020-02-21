@@ -143,4 +143,3 @@ TYPED_TEST(CholeskyDistributedTest, Correctness) {
     }
   }
 }
-

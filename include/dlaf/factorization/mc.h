@@ -14,7 +14,6 @@
 #include "dlaf/factorization/internal.h"
 #include "dlaf/matrix.h"
 #include "dlaf/types.h"
-/// @file
 
 namespace dlaf {
 

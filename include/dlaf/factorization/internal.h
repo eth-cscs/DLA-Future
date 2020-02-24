@@ -10,7 +10,6 @@
 #pragma once
 
 #include "dlaf/types.h"
-/// @file
 
 namespace dlaf {
 

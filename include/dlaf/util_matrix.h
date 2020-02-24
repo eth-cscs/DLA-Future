@@ -19,7 +19,7 @@ constexpr double M_PI = 3.141592;
 #endif
 
 #include <blas.hh>
-#include <hpx/util.hpp>
+#include <hpx/hpx.hpp>
 
 #include "dlaf/common/index2d.h"
 #include "dlaf/matrix.h"

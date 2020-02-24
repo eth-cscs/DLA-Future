@@ -14,8 +14,8 @@
 #include <hpx/hpx_init.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/factorization/mc.h"
 #include "dlaf/matrix.h"
-#include "dlaf/mc/cholesky.h"
 #include "dlaf/util_matrix.h"
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/util_types.h"
@@ -85,7 +85,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     }
 
     common::Timer<> timeit;
-    cholesky(comm_grid, blas::Uplo::Lower, matrix);
+    Factorization<Backend::MC>::cholesky(comm_grid, blas::Uplo::Lower, matrix);
 
     // wait for last task and barrier for all ranks
     {

@@ -106,14 +106,14 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
   auto col_comm_size = grid.colCommunicator().size();
   auto row_comm_size = grid.rowCommunicator().size();
 
-  const dlaf::matrix::Distribution& distr = mat_a.distribution();
+  const matrix::Distribution& distr = mat_a.distribution();
 
   SizeType nrtile = mat_a.nrTiles().cols();
 
   auto localnrtile_rows = distr.localNrTiles().rows();
   auto localnrtile_cols = distr.localNrTiles().cols();
 
-  dlaf::common::Pipeline<comm::CommunicatorGrid> serial_comm(std::move(grid));
+  common::Pipeline<comm::CommunicatorGrid> serial_comm(std::move(grid));
 
   for (SizeType k = 0; k < nrtile; ++k) {
     // Create a placeholder that will store the shared futures representing the panel
@@ -141,7 +141,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
         if (col_comm_size > 1 && k != (mat_a.nrTiles().cols() - 1)) {
           // Broadcast the panel column-wise
           hpx::dataflow(hpx::util::unwrapping([](auto&& tile, auto&& comm_wrapper) {
-                          dlaf::comm::sync::broadcast::send(comm_wrapper().colCommunicator(), tile);
+                          comm::sync::broadcast::send(comm_wrapper().colCommunicator(), tile);
                         }),
                         mat_a.read(kk), serial_comm());
         }
@@ -233,7 +233,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
         if (col_comm_size > 1 && j != (mat_a.nrTiles().cols() - 1)) {
           // Broadcast the (trailing) panel column-wise
           hpx::dataflow(executor_mpi, hpx::util::unwrapping([](auto&& tile, auto&& comm_wrapper) {
-                          dlaf::comm::sync::broadcast::send(comm_wrapper().colCommunicator(), tile);
+                          comm::sync::broadcast::send(comm_wrapper().colCommunicator(), tile);
                         }),
                         panel[i_local], serial_comm());
         }

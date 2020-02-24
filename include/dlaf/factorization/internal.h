@@ -14,7 +14,7 @@
 
 namespace dlaf {
 
-template <Execution execution>
+template <Backend execution>
 struct Factorization;
 
 }

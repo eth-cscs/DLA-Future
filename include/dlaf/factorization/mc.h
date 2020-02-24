@@ -19,7 +19,7 @@
 namespace dlaf {
 
 template <>
-struct Factorization<Execution::MC> {
+struct Factorization<Backend::MC> {
   /// Cholesky factorization which computes the factorization of an Hermitian positive
   /// definite matrix A.
   ///

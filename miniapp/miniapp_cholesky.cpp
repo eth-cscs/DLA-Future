@@ -85,7 +85,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     }
 
     common::Timer<> timeit;
-    Factorization<Execution::MC>::cholesky(comm_grid, blas::Uplo::Lower, matrix);
+    Factorization<Backend::MC>::cholesky(comm_grid, blas::Uplo::Lower, matrix);
 
     // wait for last task and barrier for all ranks
     {

@@ -14,7 +14,6 @@
 
 #include "dlaf/blas_tile.h"
 #include "dlaf/common/index2d.h"
-#include "dlaf/common/pipeline.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/lapack_tile.h"
@@ -32,6 +31,7 @@ void triangular_LLT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, Devic
                     Matrix<T, Device::CPU>& mat_b) {
   constexpr auto Left = blas::Side::Left;
   constexpr auto Lower = blas::Uplo::Lower;
+  constexpr auto NoTrans = blas::Op::NoTrans;
 
   // Set up executor on the default queue with high priority.
   hpx::threads::scheduled_executor executor_hp =
@@ -59,37 +59,14 @@ void triangular_LLT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, Devic
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Matrix multiplication to update other eigenvectors
-        hpx::dataflow(trailing_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), op,
-                      blas::Op::NoTrans, beta, mat_a.read(LocalTileIndex{k, i}), mat_b.read(kj), 1.0,
+        hpx::dataflow(trailing_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), op, NoTrans,
+                      beta, mat_a.read(LocalTileIndex{k, i}), mat_b.read(kj), 1.0,
                       std::move(mat_b(LocalTileIndex{i, j})));
       }
     }
   }
 }
 
-// Distributed implementation of Left Lower Trans/ConjTrans
-template <class T>
-void triangular_LLT(comm::CommunicatorGrid grid, blas::Op op, blas::Diag diag, T alpha,
-                    Matrix<const T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_b) {
-  constexpr auto Left = blas::Side::Left;
-  constexpr auto Lower = blas::Uplo::Lower;
-
-  // Set up executor on the default queue with high priority.
-  hpx::threads::scheduled_executor executor_hp =
-      hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_high);
-
-  // Set up executor on the default queue with default priority.
-  hpx::threads::scheduled_executor executor_normal =
-      hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_default);
-
-  hpx::threads::scheduled_executor executor_mpi;
-  try {
-    executor_mpi = hpx::threads::executors::pool_executor("mpi", hpx::threads::thread_priority_high);
-  }
-  catch (...) {
-    executor_mpi = executor_hp;
-  }
-}
 }
 }
 }

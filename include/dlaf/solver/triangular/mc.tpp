@@ -104,21 +104,21 @@ void Solver<Backend::MC>::triangular(comm::CommunicatorGrid grid, blas::Side sid
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
         // Left Lower NoTrans
-        internal::mc::triangular_LLN(grid, diag, alpha, mat_a, mat_b);
+        throw std::runtime_error("Distributed Left Lower NoTrans case not yet implemented");
       }
       else {
         // Left Lower Trans/ConjTrans
-        internal::mc::triangular_LLT(grid, op, diag, alpha, mat_a, mat_b);
+        throw std::runtime_error("Distributed Left Lower Trans/ConjTrans case not yet implemented");
       }
     }
     else {
       if (op == blas::Op::NoTrans) {
         // Left Upper NoTrans
-        internal::mc::triangular_LUN(grid, diag, alpha, mat_a, mat_b);
+        throw std::runtime_error("Distributed Left Upper NoTrans case not yet implemented");
       }
       else {
         // Left Upper Trans/ConjTrans
-        internal::mc::triangular_LUT(grid, op, diag, alpha, mat_a, mat_b);
+        throw std::runtime_error("Distributed Left Upper Trans/ConjTrans case not yet implemented");
       }
     }
   }
@@ -126,21 +126,21 @@ void Solver<Backend::MC>::triangular(comm::CommunicatorGrid grid, blas::Side sid
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
         // Right Lower NoTrans
-        internal::mc::triangular_RLN(grid, diag, alpha, mat_a, mat_b);
+        throw std::runtime_error("Distributed Right Lower NoTrans case not yet implemented");
       }
       else {
         // Right Lower Trans/ConjTrans
-        internal::mc::triangular_RLT(grid, op, diag, alpha, mat_a, mat_b);
+        throw std::runtime_error("Distributed Right Lower Trans/ConjTrans case not yet implemented");
       }
     }
     else {
       if (op == blas::Op::NoTrans) {
         // Right Upper NoTrans
-        internal::mc::triangular_RUN(grid, diag, alpha, mat_a, mat_b);
+        throw std::runtime_error("Distributed Right Upper NoTrans case not yet implemented");
       }
       else {
         // Right Upper Trans/ConjTrans
-        internal::mc::triangular_RUT(grid, op, diag, alpha, mat_a, mat_b);
+        throw std::runtime_error("Distributed Right Upper Trans/ConjTrans case not yet implemented");
       }
     }
   }

@@ -14,9 +14,7 @@
 #include <sstream>
 #include <tuple>
 #include "gtest/gtest.h"
-#include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix.h"
-#include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/matrix/util_matrix_blas.h"
 #include "dlaf_test/util_types.h"
@@ -28,23 +26,10 @@ using namespace dlaf::matrix::test;
 using namespace dlaf_test;
 using namespace testing;
 
-::testing::Environment* const comm_grids_env =
-    ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
-
 template <typename Type>
 class TriangularSolverLocalTest : public ::testing::Test {};
 
 TYPED_TEST_SUITE(TriangularSolverLocalTest, MatrixElementTypes);
-
-template <typename Type>
-class TriangularSolverDistributedTest : public ::testing::Test {
-public:
-  const std::vector<CommunicatorGrid>& commGrids() {
-    return comm_grids;
-  }
-};
-
-TYPED_TEST_SUITE(TriangularSolverDistributedTest, MatrixElementTypes);
 
 std::vector<blas::Diag> blas_diags({blas::Diag::NonUnit, blas::Diag::Unit});
 std::vector<blas::Op> blas_ops({blas::Op::NoTrans, blas::Op::Trans, blas::Op::ConjTrans});
@@ -58,10 +43,6 @@ std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
     {3, 2, 7, 7}, {12, 3, 5, 5},  {7, 6, 3, 2}, {15, 7, 3, 5},   // m > n
     {2, 3, 7, 7}, {4, 13, 5, 5},  {7, 8, 2, 9}, {19, 25, 6, 5},  // m < n
 };
-
-GlobalElementSize globalTestSize(const LocalElementSize& size) {
-  return {size.rows(), size.cols()};
-}
 
 template <class T>
 void testTriangularSolver(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha,
@@ -116,5 +97,3 @@ TYPED_TEST(TriangularSolverLocalTest, Correctness) {
     }
   }
 }
-
-TYPED_TEST(TriangularSolverDistributedTest, Correctness) {}

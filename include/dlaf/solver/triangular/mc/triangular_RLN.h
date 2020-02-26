@@ -14,7 +14,6 @@
 
 #include "dlaf/blas_tile.h"
 #include "dlaf/common/index2d.h"
-#include "dlaf/common/pipeline.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/lapack_tile.h"
@@ -61,38 +60,14 @@ void triangular_RLN(blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Matrix multiplication to update other eigenvectors
-        hpx::dataflow(trailing_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>),
-                      blas::Op::NoTrans, NoTrans, beta, mat_b.read(ik), mat_a.read(LocalTileIndex{k, j}),
-                      1.0, std::move(mat_b(LocalTileIndex{i, j})));
+        hpx::dataflow(trailing_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans,
+                      NoTrans, beta, mat_b.read(ik), mat_a.read(LocalTileIndex{k, j}), 1.0,
+                      std::move(mat_b(LocalTileIndex{i, j})));
       }
     }
   }
 }
 
-// Distributed implementation of Right Lower NoTrans
-template <class T>
-void triangular_RLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
-                    Matrix<const T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_b) {
-  constexpr auto Right = blas::Side::Right;
-  constexpr auto Lower = blas::Uplo::Lower;
-  constexpr auto NoTrans = blas::Op::NoTrans;
-
-  // Set up executor on the default queue with high priority.
-  hpx::threads::scheduled_executor executor_hp =
-      hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_high);
-
-  // Set up executor on the default queue with default priority.
-  hpx::threads::scheduled_executor executor_normal =
-      hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_default);
-
-  hpx::threads::scheduled_executor executor_mpi;
-  try {
-    executor_mpi = hpx::threads::executors::pool_executor("mpi", hpx::threads::thread_priority_high);
-  }
-  catch (...) {
-    executor_mpi = executor_hp;
-  }
-}
 }
 }
 }

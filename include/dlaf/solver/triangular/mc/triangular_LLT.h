@@ -25,24 +25,25 @@
 namespace dlaf {
 namespace internal {
 namespace mc {
-  
+
 // Local implementation of Left Lower Trans/ConjTrans
 template <class T>
-  void triangular_LLT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_b) {
+void triangular_LLT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_a,
+                    Matrix<T, Device::CPU>& mat_b) {
   constexpr auto Left = blas::Side::Left;
   constexpr auto Lower = blas::Uplo::Lower;
 
   // Set up executor on the default queue with high priority.
   hpx::threads::scheduled_executor executor_hp =
-    hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_high);
+      hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_high);
 
   // Set up executor on the default queue with default priority.
   hpx::threads::scheduled_executor executor_normal =
-    hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_default);
+      hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_default);
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
-  
+
   // Loop on rows
   for (SizeType k = m - 1; k > -1; --k) {
     // Loop on cols
@@ -50,36 +51,36 @@ template <class T>
       auto kj = LocalTileIndex{k, j};
       // Triangular solve of the first tile
       hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), Left, Lower, op,
-		    diag, alpha, mat_a.read(LocalTileIndex{k, k}), std::move(mat_b(kj)));
+                    diag, alpha, mat_a.read(LocalTileIndex{k, k}), std::move(mat_b(kj)));
 
       for (SizeType i = k - 1; i > -1; --i) {
-	// Choose queue priority
-	auto trailing_executor = (i == k - 1) ? executor_hp : executor_normal;
+        // Choose queue priority
+        auto trailing_executor = (i == k - 1) ? executor_hp : executor_normal;
 
-	auto beta = static_cast<T>(-1.0) / alpha;
-	// Matrix multiplication to update other eigenvectors
-	hpx::dataflow(trailing_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), op,
-		      blas::Op::NoTrans, beta, mat_a.read(LocalTileIndex{k, i}), mat_b.read(kj),
-		      1.0, std::move(mat_b(LocalTileIndex{i, j})));
+        auto beta = static_cast<T>(-1.0) / alpha;
+        // Matrix multiplication to update other eigenvectors
+        hpx::dataflow(trailing_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), op,
+                      blas::Op::NoTrans, beta, mat_a.read(LocalTileIndex{k, i}), mat_b.read(kj), 1.0,
+                      std::move(mat_b(LocalTileIndex{i, j})));
       }
     }
   }
-
 }
 
 // Distributed implementation of Left Lower Trans/ConjTrans
 template <class T>
-  void triangular_LLT(comm::CommunicatorGrid grid, blas::Op op, blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_b) {
+void triangular_LLT(comm::CommunicatorGrid grid, blas::Op op, blas::Diag diag, T alpha,
+                    Matrix<const T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_b) {
   constexpr auto Left = blas::Side::Left;
   constexpr auto Lower = blas::Uplo::Lower;
 
   // Set up executor on the default queue with high priority.
   hpx::threads::scheduled_executor executor_hp =
-    hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_high);
+      hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_high);
 
   // Set up executor on the default queue with default priority.
   hpx::threads::scheduled_executor executor_normal =
-    hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_default);
+      hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_default);
 
   hpx::threads::scheduled_executor executor_mpi;
   try {
@@ -88,7 +89,6 @@ template <class T>
   catch (...) {
     executor_mpi = executor_hp;
   }
-
 }
 }
 }

@@ -65,9 +65,9 @@ GlobalElementSize globalTestSize(const LocalElementSize& size) {
 
 template <class T>
 void testTriangularSolver(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha,
-                         SizeType m, SizeType n, SizeType mb, SizeType nb) {
+                          SizeType m, SizeType n, SizeType mb, SizeType nb) {
   std::function<T(const GlobalElementIndex&)> el_op_a, el_b, res_b;
-  
+
   LocalElementSize size_a(m, m);
   TileElementSize block_size_a(mb, mb);
 
@@ -117,6 +117,4 @@ TYPED_TEST(TriangularSolverLocalTest, Correctness) {
   }
 }
 
-
-TYPED_TEST(TriangularSolverDistributedTest, Correctness) {
-}
+TYPED_TEST(TriangularSolverDistributedTest, Correctness) {}

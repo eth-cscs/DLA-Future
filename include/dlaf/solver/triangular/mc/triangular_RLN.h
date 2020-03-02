@@ -50,7 +50,7 @@ void triangular_RLN(blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_
     for (SizeType i = m - 1; i > -1; --i) {
       auto ik = LocalTileIndex{i, k};
 
-      // Triangular solve of the first tile
+      // Triangular solve of k-th row Panel of B
       hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), Right, Lower,
                     NoTrans, diag, alpha, mat_a.read(LocalTileIndex{k, k}), std::move(mat_b(ik)));
 
@@ -59,7 +59,7 @@ void triangular_RLN(blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_
         auto trailing_executor = (j == k - 1) ? executor_hp : executor_normal;
 
         auto beta = static_cast<T>(-1.0) / alpha;
-        // Matrix multiplication to update other eigenvectors
+        // Update trailing matrix
         hpx::dataflow(trailing_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans,
                       NoTrans, beta, mat_b.read(ik), mat_a.read(LocalTileIndex{k, j}), 1.0,
                       std::move(mat_b(LocalTileIndex{i, j})));

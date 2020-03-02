@@ -16,9 +16,12 @@ DLAF_addTest(test_tile SOURCES test_tile.cpp USE_MAIN HPX)
 
 DLAF_addTest(test_matrix SOURCES test_matrix.cpp USE_MAIN MPIHPX MPIRANKS 6)
 
+# Generic libraries
 add_subdirectory(common)
 add_subdirectory(communication)
-add_subdirectory(factorization)
 add_subdirectory(matrix)
 add_subdirectory(memory)
+
+# Operations
+add_subdirectory(factorization)
 add_subdirectory(solver)

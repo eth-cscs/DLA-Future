@@ -41,7 +41,7 @@ std::vector<LocalElementSize> square_sizes(
     {{2, 2}, {3, 3}, {4, 4}, {6, 6}, {10, 10}, {25, 25}, {15, 15}, {0, 0}});
 std::vector<LocalElementSize> rectangular_sizes({{12, 20}, {50, 20}, {0, 12}, {20, 0}});
 
-std::vector<unsigned int> col_b({{1}, {3}, {10}, {20}});
+std::vector<unsigned int> col_b{1, 3, 10, 20};
 
 std::vector<TileElementSize> square_block_sizes({{2, 2}, {3, 3}, {5, 5}});
 std::vector<TileElementSize> rectangular_block_sizes({{12, 30}, {20, 12}});
@@ -79,10 +79,10 @@ void testTriangularSolve(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Di
 
   if (side == blas::Side::Left)
     std::tie(el_op_a, el_b, res_b) =
-        testTrsmElementFunctionsLeft<GlobalElementIndex, T>(uplo, op, diag, alpha, m);
+        test::getLeftTriangularSystem<GlobalElementIndex>(uplo, op, diag, alpha, m);
   else
     std::tie(el_op_a, el_b, res_b) =
-        testTrsmElementFunctionsRight<GlobalElementIndex, T>(uplo, op, diag, alpha, n);
+        test::getRightTriangularSystem<GlobalElementIndex>(uplo, op, diag, alpha, n);
 
   set(mat_a, el_op_a, op);
   set(mat_b, el_b);

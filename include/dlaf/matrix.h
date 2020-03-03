@@ -17,6 +17,7 @@
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/distribution.h"
+#include "dlaf/matrix/internal/tile_future_manager.h"
 #include "dlaf/matrix/layout_info.h"
 #include "dlaf/matrix/matrix_base.h"
 #include "dlaf/matrix/tile.h"
@@ -113,8 +114,7 @@ protected:
 
 private:
   using Matrix<const T, device>::setUpTiles;
-  using Matrix<const T, device>::tile_futures_;
-  using Matrix<const T, device>::tile_shared_futures_;
+  using Matrix<const T, device>::tile_managers_;
 };
 
 template <class T, Device device>
@@ -163,8 +163,7 @@ protected:
 
   void setUpTiles(const memory::MemoryView<ElementType, device>& mem, const LayoutInfo& layout) noexcept;
 
-  std::vector<hpx::future<TileType>> tile_futures_;
-  std::vector<hpx::shared_future<ConstTileType>> tile_shared_futures_;
+  std::vector<internal::TileFutureManager<T, device>> tile_managers_;
 };
 
 // Note: the templates of the following helper functions are inverted w.r.t. the Matrix templates

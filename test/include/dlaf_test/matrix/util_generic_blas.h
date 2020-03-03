@@ -34,18 +34,18 @@ using namespace dlaf_test;
 /// where I = 0 for real types or I is the complex unit for complex types.
 ///
 /// The elements of X (@p el_x) are computed as
-///   Xkj = (k+.5) / (j+2) * exp(I*(k+j)).
+///   X_kj = (k+.5) / (j+2) * exp(I*(k+j)).
 /// These data are typically used to check whether the result of the equation
 /// performed with any algorithm is consistent with the computed values.
 ///
 /// Finally, the elements of B (@p el_b) should be:
-/// B_ij = (Sum_k op(A)_ik * Xkj) / alpha
-///      = (op(A)_ii * Xij + (kk-1) * gamma) / alpha,
+/// B_ij = (Sum_k op(A)_ik * X_kj) / alpha
+///      = (op(A)_ii * X_ij + (kk-1) * gamma) / alpha,
 /// where gamma = (i+1) / (j+2) * exp(I*(2*i+j)),
 ///       kk = i+1 if op(a) is an lower triangular matrix, or
 ///       kk = m-i if op(a) is an lower triangular matrix.
 /// Therefore
-/// B_ij = (Xij + (kk-1) * gamma) / alpha, if diag == Unit
+/// B_ij = (X_ij + (kk-1) * gamma) / alpha, if diag == Unit
 /// B_ij = kk * gamma / alpha, otherwise.
 ///
 template <class ElementIndex, class T>
@@ -98,18 +98,18 @@ auto getLeftTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T al
 /// where I = 0 for real types or I is the complex unit for complex types.
 ///
 /// The elements of X (@p el_x) are computed as
-///   Xik = (k+.5) / (i+2) * exp(I*(i+k)).
+///   X_ik = (k+.5) / (i+2) * exp(I*(i+k)).
 /// These data are typically used to check whether the result of the equation
 /// performed with any algorithm is consistent with the computed values.
 ///
 /// Finally, the elements of B (@p el_b) should be:
-/// B_ij = (Sum_k Xik * op(A)_kj) / alpha
-///      = (Xij * op(A)_jj + (kk-1) * gamma) / alpha,
+/// B_ij = (Sum_k X_ik * op(A)_kj) / alpha
+///      = (X_ij * op(A)_jj + (kk-1) * gamma) / alpha,
 /// where gamma = (j+1) / (i+2) * exp(I*(i+2*j)),
 ///       kk = j+1 if op(a) is an upper triangular matrix, or
 ///       kk = m-j if op(a) is an upper triangular matrix.
 /// Therefore
-/// B_ij = (Xij + (kk-1) * gamma) / alpha, if diag == Unit
+/// B_ij = (X_ij + (kk-1) * gamma) / alpha, if diag == Unit
 /// B_ij = kk * gamma / alpha, otherwise.
 ///
 template <class ElementIndex, class T>

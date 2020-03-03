@@ -28,17 +28,17 @@ using namespace dlaf_test;
 /// Returns a tuple of element generators of three matrices A(m x m), B (m x n), X (m x n), for which it
 /// holds op(A) X = alpha B (n can be any value).
 ///
-/// The tile elements of A matrix (el_op_a) are chosen such that:
+/// The elements of op(A) (@p el_op_a) are chosen such that:
 ///   op(A)_ik = (i+1) / (k+.5) * exp(I*(2*i-k)) for the referenced elements
-///   op(A)_ik = -9.9 otherwise.
-///
-/// The X matrix elements (el_x) are computed as
-///   Xkj = (k+.5) / (j+2) * exp(I*(k+j)),
+///   op(A)_ik = -9.9 otherwise,
 /// where I = 0 for real types or I is the complex unit for complex types.
+///
+/// The elements of X (@p el_x) are computed as
+///   Xkj = (k+.5) / (j+2) * exp(I*(k+j)).
 /// These data are typically used to check whether the result of the equation
 /// performed with any algorithm is consistent with the computed values.
 ///
-/// Finally, the elements of B (el_b) should be:
+/// Finally, the elements of B (@p el_b) should be:
 /// B_ij = (Sum_k op(A)_ik * Xkj) / alpha
 ///      = (op(A)_ii * Xij + (kk-1) * gamma) / alpha,
 /// where gamma = (i+1) / (j+2) * exp(I*(2*i+j)),
@@ -92,17 +92,17 @@ auto getLeftTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T al
 /// Returns a tuple of element generators of three matrices A(m x m), B (m x n), X (m x n), for which it
 /// holds X op(A) = alpha B (n can be any value).
 ///
-/// The tile elements of A matrix (el_op_a) are chosen such that:
+/// The elements of op(A) (@p el_op_a) are chosen such that:
 ///   op(A)_kj = (j+1) / (k+.5) * exp(I*(2*j-k)) for the referenced elements
-///   op(A)_kj = -9.9 otherwise.
-///
-/// The X matrix elements (el_x) are computed as
-///   Xik = (k+.5) / (i+2) * exp(I*(i+k)),
+///   op(A)_kj = -9.9 otherwise,
 /// where I = 0 for real types or I is the complex unit for complex types.
+///
+/// The elements of X (@p el_x) are computed as
+///   Xik = (k+.5) / (i+2) * exp(I*(i+k)).
 /// These data are typically used to check whether the result of the equation
 /// performed with any algorithm is consistent with the computed values.
 ///
-/// Finally, the elements of B (el_b) should be:
+/// Finally, the elements of B (@p el_b) should be:
 /// B_ij = (Sum_k Xik * op(A)_kj) / alpha
 ///      = (Xij * op(A)_jj + (kk-1) * gamma) / alpha,
 /// where gamma = (j+1) / (i+2) * exp(I*(i+2*j)),

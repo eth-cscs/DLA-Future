@@ -22,6 +22,8 @@
 
 #include "dlaf/common/timer.h"
 
+#include "check_cholesky.tpp"
+
 using namespace dlaf;
 
 using T = double;
@@ -36,26 +38,6 @@ struct options_t {
 };
 
 options_t check_options(hpx::program_options::variables_map& vm);
-
-T analytical_input_matrix(const GlobalElementIndex& index);
-T analytical_result_matrix(const GlobalElementIndex& index);
-
-void setup_input_matrix(Matrix<T, Device::CPU>& matrix) {
-  using namespace dlaf::matrix::util;
-
-  util_matrix::assertSizeSquare(matrix, __FILE__, "matrix");
-  util_matrix::assertBlocksizeSquare(matrix, __FILE__, "matrix");
-
-  set(matrix, analytical_input_matrix);
-}
-
-void cholesky_check(Matrix<T, Device::CPU>& matrix) {
-  using namespace dlaf_test;
-
-  CHECK_MATRIX_NEAR(analytical_result_matrix, matrix,
-                    4 * (matrix.size().rows() + 1) * TypeUtilities<T>::error,
-                    4 * (matrix.size().rows() + 1) * TypeUtilities<T>::error);
-}
 
 int hpx_main(hpx::program_options::variables_map& vm) {
   options_t opts = check_options(vm);
@@ -74,7 +56,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     if (0 == world.rank())
       std::cout << "[" << run_index << "]" << std::endl;
 
-    setup_input_matrix(matrix);
+    // TODO this should be a clone of the original reference one
+    matrix::util::set_random_hermitian_positive_definite(matrix);
 
     // wait all setup tasks before starting benchmark
     {
@@ -113,8 +96,13 @@ int hpx_main(hpx::program_options::variables_map& vm) {
                 << hpx::get_os_thread_count() << std::endl;
 
     // (optional) run test
-    if (opts.do_check)
-      cholesky_check(matrix);
+    if (opts.do_check) {
+      // TODO this should be a clone of the original one
+      Matrix<T, Device::CPU> original(matrix_size, block_size, comm_grid);
+      matrix::util::set_random_hermitian_positive_definite(original);
+
+      check_cholesky(original, matrix, comm_grid);
+    }
   }
 
   return hpx::finalize();
@@ -201,37 +189,4 @@ options_t check_options(hpx::program_options::variables_map& vm) {
     throw std::runtime_error("number of grid columns must be a positive number");
 
   return opts;
-}
-
-// Note: The tile elements are chosen such that:
-// - res_ij = 1 / 2^(|i-j|) * exp(I*(-i+j)),
-// where I = 0 for real types or I is the complex unit for complex types.
-// Therefore the result should be:
-// a_ij = Sum_k(res_ik * ConjTrans(res)_kj) =
-//      = Sum_k(1 / 2^(|i-k| + |j-k|) * exp(I*(-i+j))),
-// where k = 0 .. min(i,j)
-// Therefore,
-// a_ij = (4^(min(i,j)+1) - 1) / (3 * 2^(i+j)) * exp(I*(-i+j))
-T analytical_input_matrix(const GlobalElementIndex& index) {
-  using namespace dlaf_test;
-
-  SizeType i = index.row();
-  SizeType j = index.col();
-  if (i < j)
-    return TypeUtilities<T>::element(-9.9, 0.0);
-
-  return TypeUtilities<T>::polar(1. / 3 *
-                                     (std::exp2(2 * std::min(i, j) + 2 - i - j) - std::exp2(-(i + j))),
-                                 -i + j);
-}
-
-T analytical_result_matrix(const GlobalElementIndex& index) {
-  using namespace dlaf_test;
-
-  SizeType i = index.row();
-  SizeType j = index.col();
-  if (i < j)
-    return TypeUtilities<T>::element(-9.9, 0.0);
-
-  return TypeUtilities<T>::polar(std::exp2(-std::abs(i - j)), -i + j);
 }

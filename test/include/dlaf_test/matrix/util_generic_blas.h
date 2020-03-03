@@ -25,28 +25,28 @@ namespace test {
 
 using namespace dlaf_test;
 
-/// Returns elements of the three matrices, solving the triangular matrix equation
-/// op(A) B = X (with A on side == Left).
+/// Returns a tuple of element generators of three matrices A(m x m), B (m x n), X (m x n), for which it
+/// holds op(A) X = alpha B (n can be any value).
 ///
 /// The tile elements of A matrix (el_op_a) are chosen such that:
 ///   op(A)_ik = (i+1) / (k+.5) * exp(I*(2*i-k)) for the referenced elements
 ///   op(A)_ik = -9.9 otherwise.
 ///
-/// The elements of B (el_b) should be:
-/// B_ij = (Sum_k op(A)_ik * res_Xkj) / alpha
-///      = (op(A)_ii * res_Xij + (kk-1) * gamma) / alpha,
+/// The X matrix elements (el_x) are computed as
+///   Xkj = (k+.5) / (j+2) * exp(I*(k+j)),
+/// where I = 0 for real types or I is the complex unit for complex types.
+/// These data are typically used to check whether the result of the equation
+/// performed with any algorithm is consistent with the computed values.
+///
+/// Finally, the elements of B (el_b) should be:
+/// B_ij = (Sum_k op(A)_ik * Xkj) / alpha
+///      = (op(A)_ii * Xij + (kk-1) * gamma) / alpha,
 /// where gamma = (i+1) / (j+2) * exp(I*(2*i+j)),
 ///       kk = i+1 if op(a) is an lower triangular matrix, or
 ///       kk = m-i if op(a) is an lower triangular matrix.
 /// Therefore
-/// B_ij = (res_Xij + (kk-1) * gamma) / alpha, if diag == Unit
+/// B_ij = (Xij + (kk-1) * gamma) / alpha, if diag == Unit
 /// B_ij = kk * gamma / alpha, otherwise.
-///
-/// Finally, the X matrix elements (res_b) are computed as
-///   res_Xkj = (k+.5) / (j+2) * exp(I*(k+j)),
-/// where I = 0 for real types or I is the complex unit for complex types.
-/// These data are typically used to check whether the result of the equation
-/// performed with any algorithm is consistent with the computed values.
 ///
 template <class ElementIndex, class T>
 auto getLeftTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType m) {
@@ -66,7 +66,7 @@ auto getLeftTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T al
     return TypeUtilities<T>::polar((i + 1) / (k + .5), 2 * i - k);
   };
 
-  std::function<T(const ElementIndex&)> res_b = [](const ElementIndex& index) {
+  std::function<T(const ElementIndex&)> el_x = [](const ElementIndex& index) {
     double k = index.row();
     double j = index.col();
 
@@ -74,43 +74,43 @@ auto getLeftTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T al
   };
 
   std::function<T(const ElementIndex&)> el_b = [m, alpha, diag, op_a_lower,
-                                                res_b](const ElementIndex& index) {
+                                                el_x](const ElementIndex& index) {
     BaseType<T> kk = op_a_lower ? index.row() + 1 : m - index.row();
 
     double i = index.row();
     double j = index.col();
     T gamma = TypeUtilities<T>::polar((i + 1) / (j + 2), 2 * i + j);
     if (diag == blas::Diag::Unit)
-      return ((kk - 1) * gamma + res_b(index)) / alpha;
+      return ((kk - 1) * gamma + el_x(index)) / alpha;
     else
       return kk * gamma / alpha;
   };
 
-  return std::make_tuple(el_op_a, el_b, res_b);
+  return std::make_tuple(el_op_a, el_b, el_x);
 }
 
-/// Returns elements of the three matrices, solving the triangular matrix equation
-/// B op(A) = X (with A on side == right)
+/// Returns a tuple of element generators of three matrices A(m x m), B (m x n), X (m x n), for which it
+/// holds X op(A) = alpha B (n can be any value).
 ///
 /// The tile elements of A matrix (el_op_a) are chosen such that:
 ///   op(A)_kj = (j+1) / (k+.5) * exp(I*(2*j-k)) for the referenced elements
 ///   op(A)_kj = -9.9 otherwise.
 ///
-/// The elements of B (el_b) should be:
-/// B_ij = (Sum_k res_Xik * op(A)_kj) / alpha
-///      = (res_Xij * op(A)_jj + (kk-1) * gamma) / alpha,
+/// The X matrix elements (el_x) are computed as
+///   Xik = (k+.5) / (i+2) * exp(I*(i+k)),
+/// where I = 0 for real types or I is the complex unit for complex types.
+/// These data are typically used to check whether the result of the equation
+/// performed with any algorithm is consistent with the computed values.
+///
+/// Finally, the elements of B (el_b) should be:
+/// B_ij = (Sum_k Xik * op(A)_kj) / alpha
+///      = (Xij * op(A)_jj + (kk-1) * gamma) / alpha,
 /// where gamma = (j+1) / (i+2) * exp(I*(i+2*j)),
 ///       kk = j+1 if op(a) is an upper triangular matrix, or
 ///       kk = m-j if op(a) is an upper triangular matrix.
 /// Therefore
-/// B_ij = (res_Xij + (kk-1) * gamma) / alpha, if diag == Unit
+/// B_ij = (Xij + (kk-1) * gamma) / alpha, if diag == Unit
 /// B_ij = kk * gamma / alpha, otherwise.
-///
-/// Finally, the X matrix elements (res_b) are computed as
-///   res_Xik = (k+.5) / (i+2) * exp(I*(i+k)),
-/// where I = 0 for real types or I is the complex unit for complex types.
-/// These data are typically used to check whether the result of the equation
-/// performed with any algorithm is consistent with the computed values.
 ///
 template <class ElementIndex, class T>
 auto getRightTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType n) {
@@ -119,7 +119,7 @@ auto getRightTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T a
       (uplo == blas::Uplo::Upper && op != blas::Op::NoTrans))
     op_a_lower = true;
 
-  auto res_b = [](const ElementIndex& index) {
+  auto el_x = [](const ElementIndex& index) {
     double i = index.row();
     double k = index.col();
 
@@ -137,19 +137,19 @@ auto getRightTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T a
     return TypeUtilities<T>::polar((j + 1) / (k + .5), 2 * j - k);
   };
 
-  auto el_b = [n, alpha, diag, op_a_lower, res_b](const ElementIndex& index) {
+  auto el_b = [n, alpha, diag, op_a_lower, el_x](const ElementIndex& index) {
     BaseType<T> kk = op_a_lower ? n - index.col() : index.col() + 1;
 
     double i = index.row();
     double j = index.col();
     T gamma = TypeUtilities<T>::polar((j + 1) / (i + 2), i + 2 * j);
     if (diag == blas::Diag::Unit)
-      return ((kk - 1) * gamma + res_b(index)) / alpha;
+      return ((kk - 1) * gamma + el_x(index)) / alpha;
     else
       return kk * gamma / alpha;
   };
 
-  return std::make_tuple(el_op_a, el_b, res_b);
+  return std::make_tuple(el_op_a, el_b, el_x);
 }
 
 }

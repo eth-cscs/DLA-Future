@@ -44,9 +44,7 @@ void triangular_LLT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, Devic
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
 
-  // Loop on rows
   for (SizeType k = m - 1; k > -1; --k) {
-    // Loop on cols
     for (SizeType j = n - 1; j > -1; --j) {
       auto kj = LocalTileIndex{k, j};
       // Triangular solve of k-th row Panel of B

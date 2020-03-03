@@ -44,13 +44,11 @@ void triangular_RUT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, Devic
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
 
-  // Loop on cols
   for (SizeType k = n - 1; k > -1; --k) {
-    // Loop on rows
     for (SizeType i = m - 1; i > -1; --i) {
       auto ik = LocalTileIndex{i, k};
 
-      // Triangular solve of k-th row Panel of B
+      // Triangular solve of k-th col Panel of B
       hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), Right, Upper, op,
                     diag, alpha, mat_a.read(LocalTileIndex{k, k}), std::move(mat_b(ik)));
 

@@ -44,9 +44,7 @@ void triangular_LUT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, Devic
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
 
-  // Loop on rows
   for (SizeType k = 0; k < m; ++k) {
-    // Loop on cols
     for (SizeType j = 0; j < n; ++j) {
       auto kj = LocalTileIndex{k, j};
 

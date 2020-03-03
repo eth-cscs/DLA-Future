@@ -44,9 +44,7 @@ void triangular_LUN(blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
 
-  // Loop on rows of A matrix
   for (SizeType k = m - 1; k > -1; --k) {
-    // Loop on cols of A matrix
     for (SizeType j = n - 1; j > -1; --j) {
       auto kj = LocalTileIndex{k, j};
       // Triangular solve of k-th row Panel of B

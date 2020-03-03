@@ -44,13 +44,11 @@ void triangular_RUN(blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
 
-  // Loop on cols
   for (SizeType k = 0; k < n; ++k) {
-    // Loop on rows
     for (SizeType i = 0; i < m; ++i) {
       auto ik = LocalTileIndex{i, k};
 
-      // Triangular solve of k-th row Panel of B
+      // Triangular solve of k-th col Panel of B
       hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), Right, Upper,
                     NoTrans, diag, alpha, mat_a.read(LocalTileIndex{k, k}), std::move(mat_b(ik)));
 

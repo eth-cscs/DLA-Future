@@ -65,10 +65,10 @@ void testTriangularSolver(blas::Side side, blas::Uplo uplo, blas::Op op, blas::D
 
   if (side == blas::Side::Left)
     std::tie(el_op_a, el_b, res_b) =
-      test::getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, m);
+        test::getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, m);
   else
     std::tie(el_op_a, el_b, res_b) =
-      test::getRightTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, n);
+        test::getRightTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, n);
 
   set(mat_a, el_op_a, op);
   set(mat_b, el_b);

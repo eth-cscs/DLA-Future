@@ -39,7 +39,7 @@ namespace dlaf {
 /// the lower triangular part (depending on the value of uplo) are accessed in read-only mode (the
 /// elements are not modified).
 /// @param mat_b on entry it contains the matrix B, on exit the matrix elements are overwritten with the
-/// elements of the matrix X.
+/// elements of the matrix X..
 
 template <class T>
 void triangular_solve(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, blas::Op op,

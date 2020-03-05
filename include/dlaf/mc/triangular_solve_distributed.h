@@ -42,9 +42,9 @@ namespace dlaf {
 /// elements of the matrix X.
 
 template <class T>
-void triangular_solve_distributed(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo,
-                                  blas::Op op, blas::Diag diag, T alpha, Matrix<T, Device::CPU>& mat_a,
-                                  Matrix<T, Device::CPU>& mat_b) {
+void triangular_solve(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, blas::Op op,
+                      blas::Diag diag, T alpha, Matrix<T, Device::CPU>& mat_a,
+                      Matrix<T, Device::CPU>& mat_b) {
   // Set up executor on the default queue with high priority.
   hpx::threads::scheduled_executor executor_hp =
       hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_high);
@@ -52,6 +52,14 @@ void triangular_solve_distributed(comm::CommunicatorGrid grid, blas::Side side, 
   // Set up executor on the default queue with default priority.
   hpx::threads::scheduled_executor executor_normal =
       hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_default);
+
+  hpx::threads::scheduled_executor executor_mpi;
+  try {
+    executor_mpi = hpx::threads::executors::pool_executor("mpi", hpx::threads::thread_priority_high);
+  }
+  catch (...) {
+    executor_mpi = executor_hp;
+  }
 
   // Check if matrix A is square
   util_matrix::assertSizeSquare(mat_a, "TriangularSolve", "mat_a");
@@ -67,16 +75,18 @@ void triangular_solve_distributed(comm::CommunicatorGrid grid, blas::Side side, 
   auto col_comm_size = grid.colCommunicator().size();
   auto row_comm_size = grid.rowCommunicator().size();
 
-  const dlaf::matrix::Distribution& distr_a = mat_a.distribution();
-  const dlaf::matrix::Distribution& distr_b = mat_b.distribution();
+  const matrix::Distribution& distr_a = mat_a.distribution();
+  const matrix::Distribution& distr_b = mat_b.distribution();
 
-  SizeType mtile = mat_a.nrTiles().rows();
-  SizeType ntile = mat_a.nrTiles().cols();
+  SizeType a_rows = mat_a.nrTiles().rows();
+  SizeType b_rows = mat_b.nrTiles().rows();
 
-  auto localnrtile_rows = distr_a.localNrTiles().rows();
-  auto localnrtile_cols = distr_b.localNrTiles().cols();
+  auto a_local_rows = distr_a.localNrTiles().rows();
+  auto a_local_cols = distr_a.localNrTiles().cols();
+  auto b_local_rows = distr_b.localNrTiles().rows();
+  auto b_local_cols = distr_b.localNrTiles().cols();
 
-  dlaf::common::Pipeline<comm::CommunicatorGrid> serial_comm(std::move(grid));
+  common::Pipeline<comm::CommunicatorGrid> serial_comm(std::move(grid));
 
   if (uplo == blas::Uplo::Upper) {
     if (side == blas::Side::Left) {
@@ -84,7 +94,7 @@ void triangular_solve_distributed(comm::CommunicatorGrid grid, blas::Side side, 
         // Upper Left NoTrans
       }
       else {
-        // Upper Left Trans/ConjTrans case
+        // Upper Left Trans/ConjTrans
       }
     }
     else {
@@ -103,7 +113,7 @@ void triangular_solve_distributed(comm::CommunicatorGrid grid, blas::Side side, 
         //        std::cout << "Lower Left NoTrans case" << std::endl;
 
         // Loop on rows of A matrix
-        for (SizeType k = 0; k < mtile; ++k) {
+        for (SizeType k = 0; k < a_rows; ++k) {
           // Create a placeholder that will store the shared futures representing the panel
           std::vector<hpx::shared_future<Tile<const T, Device::CPU>>> panel(
               distr_b.localNrTiles().cols());
@@ -124,9 +134,8 @@ void triangular_solve_distributed(comm::CommunicatorGrid grid, blas::Side side, 
               // Broadcast Akk row-wise
               // Avoid useless communication if one-column communicator
               if (row_comm_size > 1) {
-                hpx::dataflow(hpx::util::unwrapping([](auto&& tile, auto&& comm_wrapper) {
-                                dlaf::comm::sync::broadcast::send(comm_wrapper().rowCommunicator(),
-                                                                  tile);
+                hpx::dataflow(executor_mpi, hpx::util::unwrapping([](auto&& tile, auto&& comm_wrapper) {
+                                comm::sync::broadcast::send(comm_wrapper().rowCommunicator(), tile);
                               }),
                               mat_a.read(kk), serial_comm());
               }
@@ -135,26 +144,26 @@ void triangular_solve_distributed(comm::CommunicatorGrid grid, blas::Side side, 
             else {
               if (row_comm_size > 1) {
                 kk_tile =
-                    hpx::dataflow(hpx::util::unwrapping(
-                                      [](auto index, auto&& tile_size,
-                                         auto&& comm_wrapper) -> Tile<const T, Device::CPU> {
-                                        memory::MemoryView<T, Device::CPU> mem_view(
-                                            util::size_t::mul(tile_size.rows(), tile_size.cols()));
-                                        Tile<T, Device::CPU> tile(tile_size, std::move(mem_view),
-                                                                  tile_size.rows());
-                                        dlaf::comm::sync::broadcast::receive_from(index,
-                                                                                  comm_wrapper()
-                                                                                      .rowCommunicator(),
-                                                                                  tile);
-                                        return std::move(tile);
-                                      }),
+                    hpx::dataflow(executor_mpi,
+                                  hpx::util::unwrapping([](auto index, auto&& tile_size,
+                                                           auto&& comm_wrapper)
+                                                            -> Tile<const T, Device::CPU> {
+                                    memory::MemoryView<T, Device::CPU> mem_view(
+                                        util::size_t::mul(tile_size.rows(), tile_size.cols()));
+                                    Tile<T, Device::CPU> tile(tile_size, std::move(mem_view),
+                                                              tile_size.rows());
+                                    comm::sync::broadcast::receive_from(index,
+                                                                        comm_wrapper().rowCommunicator(),
+                                                                        tile);
+                                    return std::move(tile);
+                                  }),
                                   k_rank_col, mat_a.tileSize(GlobalTileIndex(k, k)), serial_comm());
               }
             }
           }
 
           // Loop j_local on B cols
-          for (SizeType j_local = 0; j_local < localnrtile_cols; ++j_local) {
+          for (SizeType j_local = 0; j_local < b_local_cols; ++j_local) {
             auto j = distr_b.globalTileFromLocalTile<Coord::Col>(j_local);
 
             if (mat_b.rankIndex().row() == k_rank_row) {
@@ -169,9 +178,8 @@ void triangular_solve_distributed(comm::CommunicatorGrid grid, blas::Side side, 
               // Broadcast Bkj column-wise
               // Avoid useless communication if one-column communicator and if on the last column
               if (col_comm_size > 1 && k != (mat_b.nrTiles().rows() - 1)) {
-                hpx::dataflow(hpx::util::unwrapping([](auto&& tile, auto&& comm_wrapper) {
-                                dlaf::comm::sync::broadcast::send(comm_wrapper().colCommunicator(),
-                                                                  tile);
+                hpx::dataflow(executor_mpi, hpx::util::unwrapping([](auto&& tile, auto&& comm_wrapper) {
+                                comm::sync::broadcast::send(comm_wrapper().colCommunicator(), tile);
                               }),
                               mat_b.read(kj), serial_comm());
               }
@@ -179,24 +187,28 @@ void triangular_solve_distributed(comm::CommunicatorGrid grid, blas::Side side, 
             }
             else {
               if (col_comm_size > 1 && k != (mat_b.nrTiles().rows() - 1)) {
-                panel[j_local] = hpx::dataflow(  //
-                    hpx::util::unwrapping([](auto index, auto&& tile_size,
-                                             auto&& comm_wrapper) -> Tile<const T, Device::CPU> {
-                      memory::MemoryView<T, Device::CPU> mem_view(
-                          util::size_t::mul(tile_size.rows(), tile_size.cols()));
-                      Tile<T, Device::CPU> tile(tile_size, std::move(mem_view), tile_size.rows());
-                      dlaf::comm::sync::broadcast::receive_from(index, comm_wrapper().colCommunicator(),
-                                                                tile);
-                      return std::move(tile);
-                    }),
-                    k_rank_row, mat_b.tileSize(GlobalTileIndex(k, j)), serial_comm());
+                panel[j_local] =
+                    hpx::dataflow(executor_mpi,
+                                  hpx::util::unwrapping([](auto index, auto&& tile_size,
+                                                           auto&& comm_wrapper)
+                                                            -> Tile<const T, Device::CPU> {
+                                    memory::MemoryView<T, Device::CPU> mem_view(
+                                        util::size_t::mul(tile_size.rows(), tile_size.cols()));
+                                    Tile<T, Device::CPU> tile(tile_size, std::move(mem_view),
+                                                              tile_size.rows());
+                                    comm::sync::broadcast::receive_from(index,
+                                                                        comm_wrapper().colCommunicator(),
+                                                                        tile);
+                                    return std::move(tile);
+                                  }),
+                                  k_rank_row, mat_b.tileSize(GlobalTileIndex(k, j)), serial_comm());
               }
             }
 
           }  // j_local loop
 
           for (SizeType i_local = distr_a.nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
-               i_local < localnrtile_rows; ++i_local) {
+               i_local < a_local_rows; ++i_local) {
             auto i = distr_a.globalTileFromLocalTile<Coord::Row>(i_local);
 
             // Choose queue priority
@@ -211,9 +223,8 @@ void triangular_solve_distributed(comm::CommunicatorGrid grid, blas::Side side, 
               auto ik = LocalTileIndex{i_local, k_local_col};
 
               if (row_comm_size > 1) {
-                hpx::dataflow(hpx::util::unwrapping([](auto&& tile, auto&& comm_wrapper) {
-                                dlaf::comm::sync::broadcast::send(comm_wrapper().rowCommunicator(),
-                                                                  tile);
+                hpx::dataflow(executor_mpi, hpx::util::unwrapping([](auto&& tile, auto&& comm_wrapper) {
+                                comm::sync::broadcast::send(comm_wrapper().rowCommunicator(), tile);
                               }),
                               mat_a.read(ik), serial_comm());
               }
@@ -222,25 +233,25 @@ void triangular_solve_distributed(comm::CommunicatorGrid grid, blas::Side side, 
             else {
               if (row_comm_size > 1) {
                 ik_tile =
-                    hpx::dataflow(hpx::util::unwrapping(
-                                      [](auto index, auto&& tile_size,
-                                         auto&& comm_wrapper) -> Tile<const T, Device::CPU> {
-                                        memory::MemoryView<T, Device::CPU> mem_view(
-                                            util::size_t::mul(tile_size.rows(), tile_size.cols()));
-                                        Tile<T, Device::CPU> tile(tile_size, std::move(mem_view),
-                                                                  tile_size.rows());
-                                        dlaf::comm::sync::broadcast::receive_from(index,
-                                                                                  comm_wrapper()
-                                                                                      .rowCommunicator(),
-                                                                                  tile);
-                                        return std::move(tile);
-                                      }),
+                    hpx::dataflow(executor_mpi,
+                                  hpx::util::unwrapping([](auto index, auto&& tile_size,
+                                                           auto&& comm_wrapper)
+                                                            -> Tile<const T, Device::CPU> {
+                                    memory::MemoryView<T, Device::CPU> mem_view(
+                                        util::size_t::mul(tile_size.rows(), tile_size.cols()));
+                                    Tile<T, Device::CPU> tile(tile_size, std::move(mem_view),
+                                                              tile_size.rows());
+                                    comm::sync::broadcast::receive_from(index,
+                                                                        comm_wrapper().rowCommunicator(),
+                                                                        tile);
+                                    return std::move(tile);
+                                  }),
                                   k_rank_col, mat_a.tileSize(GlobalTileIndex(i, k)), serial_comm());
               }
             }
 
-            for (SizeType j_local = 0; j_local < localnrtile_cols; ++j_local) {
-              // Matrix multiplication to update other eigenvectors
+            for (SizeType j_local = 0; j_local < b_local_cols; ++j_local) {
+              // Update trailing matrix
               auto beta = static_cast<T>(-1.0) / alpha;
               hpx::dataflow(trailing_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), op,
                             blas::Op::NoTrans, beta, ik_tile, panel[j_local], 1.0,

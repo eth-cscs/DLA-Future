@@ -8,6 +8,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+namespace dlaf {
+namespace matrix {
+
 template <class T, Device device>
 Matrix<const T, device>::Matrix(const matrix::LayoutInfo& layout, ElementType* ptr)
     : MatrixBase({layout.size(), layout.blockSize()}) {
@@ -100,4 +103,7 @@ void Matrix<const T, device>::setUpTiles(const memory::MemoryView<ElementType, d
                    layout.ldTile())));
     }
   }
+}
+
+}
 }

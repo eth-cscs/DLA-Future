@@ -15,8 +15,8 @@
 #include "dlaf/lapack/enum_output.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/index.h"
+#include "dlaf/matrix/tile.h"
 #include "dlaf/memory/memory_view.h"
-#include "dlaf/tile.h"
 #include "dlaf/types.h"
 
 #include "dlaf_test/matrix/util_tile.h"
@@ -29,8 +29,8 @@ namespace lange {
 using dlaf::SizeType;
 using dlaf::TileElementSize;
 using dlaf::TileElementIndex;
-using dlaf::Tile;
 using dlaf::Device;
+using dlaf::matrix::Tile;
 
 using dlaf::tile::lange;
 using dlaf::util::size_t::mul;

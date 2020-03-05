@@ -8,6 +8,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+namespace dlaf {
+namespace matrix {
+
 template <class T, Device device>
 Matrix<T, device>::Matrix(const LocalElementSize& size, const TileElementSize& block_size)
     : Matrix<T, device>(matrix::Distribution(size, block_size)) {}
@@ -80,4 +83,7 @@ hpx::future<Tile<T, device>> Matrix<T, device>::operator()(const LocalTileIndex&
     p.set_exception(current_exception_ptr);
     std::rethrow_exception(current_exception_ptr);
   });
+}
+
+}
 }

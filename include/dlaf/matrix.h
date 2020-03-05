@@ -19,10 +19,11 @@
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/layout_info.h"
 #include "dlaf/matrix/matrix_base.h"
-#include "dlaf/tile.h"
+#include "dlaf/matrix/tile.h"
 #include "dlaf/types.h"
 
 namespace dlaf {
+namespace matrix {
 
 /// A @c Matrix object represents a collection of tiles which contain all the elements of a matrix.
 ///
@@ -117,8 +118,6 @@ private:
   using Matrix<const T, device>::tile_shared_futures_;
 };
 
-#include "dlaf/matrix.tpp"
-
 template <class T, Device device>
 class Matrix<const T, device> : public matrix::internal::MatrixBase {
 public:
@@ -171,8 +170,6 @@ private:
   std::vector<hpx::future<TileType>> tile_futures_;
   std::vector<hpx::shared_future<ConstTileType>> tile_shared_futures_;
 };
-
-#include "dlaf/matrix_const.tpp"
 
 // Note: the templates of the following helper functions are inverted w.r.t. the Matrix templates
 // to allow the user to only specify the device and let the compiler deduce the type T.
@@ -358,3 +355,9 @@ DLAF_MATRIX_ETI(extern, std::complex<double>, Device::CPU)
 // DLAF_MATRIX_ETI(extern, std::complex<double>, Device::GPU)
 
 }
+/// Make dlaf::matrix::Matrix available as dlaf::Matrix.
+using matrix::Matrix;
+}
+
+#include "dlaf/matrix.tpp"
+#include "dlaf/matrix_const.tpp"

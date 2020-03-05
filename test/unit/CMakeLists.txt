@@ -25,22 +25,11 @@ DLAF_addTest(test_blas_tile
   LIBRARIES dlaf.core
   USE_MAIN HPX
 )
+
 DLAF_addTest(test_lapack_tile
   SOURCES test_lapack_tile.cpp
   LIBRARIES dlaf.core
   USE_MAIN HPX
-)
-DLAF_addTest(test_tile
-  SOURCES test_tile.cpp
-  LIBRARIES dlaf.core
-  USE_MAIN HPX
-)
-
-DLAF_addTest(test_matrix
-  SOURCES test_matrix.cpp
-  LIBRARIES dlaf.core
-  USE_MAIN MPIHPX
-  MPIRANKS 6
 )
 
 # Generic libraries

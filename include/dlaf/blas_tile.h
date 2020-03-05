@@ -13,11 +13,12 @@
 /// @file
 
 #include "blas.hh"
-#include "dlaf/tile.h"
+#include "dlaf/matrix/tile.h"
 #include "dlaf/types.h"
 
 namespace dlaf {
 namespace tile {
+using matrix::Tile;
 
 // See BLAS documentation for more details.
 

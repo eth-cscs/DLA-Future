@@ -23,5 +23,10 @@ macro(target_add_warnings target_name)
       -Wunused
       -Woverloaded-virtual
       -Wconversion
-      -pedantic-errors)
+      -pedantic-errors
+
+      # googletest macro problem
+      # must specify at least one argument for '...' parameter of variadic macro
+      -Wno-gnu-zero-variadic-macro-arguments
+    )
 endmacro()

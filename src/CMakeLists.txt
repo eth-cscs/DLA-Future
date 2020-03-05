@@ -38,6 +38,8 @@ target_compile_features(DLAF PUBLIC cxx_std_14)
 
 target_compile_definitions(DLAF PUBLIC DLAF_SOURCE_LOCATION=__func__)
 
+target_add_warnings(DLAF)
+
 # ----- DEPLOY
 include(GNUInstallDirs)
 

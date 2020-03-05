@@ -17,8 +17,7 @@ namespace dlaf_test {
 
 using ElementTypes =
     ::testing::Types<int, long long, float, double, std::complex<float>, std::complex<double>>;
-//using MatrixElementTypes = ::testing::Types<float, double, std::complex<float>, std::complex<double>>;
- using MatrixElementTypes = ::testing::Types<float>;
+using MatrixElementTypes = ::testing::Types<float, double, std::complex<float>, std::complex<double>>;
 
 using BufferTypes =
     ::testing::Types<int, const int, long long, const long long, float, const float, double,

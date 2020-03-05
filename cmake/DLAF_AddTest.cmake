@@ -141,6 +141,7 @@ function(DLAF_addTest test_target_name)
       endif()
 
       target_compile_definitions(${test_target_name} PRIVATE NUM_MPI_RANKS=${DLAF_AT_MPIRANKS})
+      target_add_warnings(${test_target_name})
 
       target_link_libraries(${test_target_name}
         PRIVATE MPI::MPI_CXX

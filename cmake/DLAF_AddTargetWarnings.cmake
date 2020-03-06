@@ -27,6 +27,6 @@ macro(target_add_warnings target_name)
 
       # googletest macro problem
       # must specify at least one argument for '...' parameter of variadic macro
-      -Wno-gnu-zero-variadic-macro-arguments
+      $<$<CXX_COMPILER_ID:Clang,AppleClang>:-Wno-gnu-zero-variadic-macro-arguments>
     )
 endmacro()

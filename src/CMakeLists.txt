@@ -34,6 +34,8 @@ target_link_libraries(DLAF
     blaspp
 )
 
+target_compile_definitions(DLAF PUBLIC DLAF_SOURCE_LOCATION=__func__)
+
 # ----- DEPLOY
 include(GNUInstallDirs)
 

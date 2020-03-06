@@ -41,8 +41,16 @@ constexpr auto ceilDiv(const IntType num, const IntType den)
 }
 #endif
 
-namespace size_t {
+template <class S, class U,
+         std::enable_if_t<
+          std::is_integral<U>::value && std::is_unsigned<U>::value
+          && std::is_integral<S>::value && std::is_signed<S>::value, int> = 0>
+S to_signed(const U unsigned_value) {
+    assert(std::numeric_limits<S>::max() > unsigned_value);
+    return static_cast<S>(unsigned_value);
+}
 
+namespace size_t {
 namespace internal {
 
 /// @brief Perform the given binary operation on integer types in size_t arithmetic
@@ -85,7 +93,7 @@ template <typename TA, typename TB>
 std::size_t mul(const TA a, const TB b) {
   return internal::generic_integer_op(a, b, std::multiplies<std::size_t>());
 }
-}
 
+}
 }
 }

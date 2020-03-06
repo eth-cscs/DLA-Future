@@ -58,7 +58,6 @@ set(DLAF_WITH_MKL OFF CACHE BOOL "Enable MKL as provider for LAPACK")
 if (DLAF_WITH_MKL)
   set(MKL_CUSTOM_THREADING "Sequential")
   find_package(MKL REQUIRED COMPONENTS BLAS_32BIT_SEQ)
-  set(LAPACK_FOUND ${MKL_LAPACK_FOUND})
 
   set(LAPACK_TARGET "mkl::blas_32bit_seq")
 else()

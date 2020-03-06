@@ -122,6 +122,8 @@ function(DLAF_addTest test_target_name)
     )
   endif()
 
+  target_add_warnings(${test_target_name})
+
   ### Test target
   set(DLAF_TEST_RUNALL_WITH_MPIEXEC OFF CACHE BOOL "Run all tests using the workload manager.")
 
@@ -141,7 +143,6 @@ function(DLAF_addTest test_target_name)
       endif()
 
       target_compile_definitions(${test_target_name} PRIVATE NUM_MPI_RANKS=${DLAF_AT_MPIRANKS})
-      target_add_warnings(${test_target_name})
 
       target_link_libraries(${test_target_name}
         PRIVATE MPI::MPI_CXX

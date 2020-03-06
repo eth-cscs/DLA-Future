@@ -9,7 +9,6 @@
 //
 #pragma once
 
-#include "dlaf/common/pipeline.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix.h"
 #include "dlaf/solver/triangular/mc/triangular_LLN.h"

@@ -14,6 +14,7 @@
 
 #include "dlaf/blas_tile.h"
 #include "dlaf/common/index2d.h"
+#include "dlaf/common/pipeline.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/lapack_tile.h"
@@ -193,8 +194,7 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
                             k_rank_row, mat_b.tileSize(GlobalTileIndex(k, j)), serial_comm());
         }
       }
-
-    }  // j_local loop
+    }
 
     for (SizeType i_local = distr_a.nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
          i_local < a_local_rows; ++i_local) {
@@ -244,11 +244,9 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
         hpx::dataflow(trailing_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans,
                       NoTrans, beta, ik_tile, panel[j_local], 1.0,
                       std::move(mat_b(LocalTileIndex{i_local, j_local})));
-
-      }  // j_local loop
-
-    }  // i_local loop
-  }    // k loop
+      }
+    }
+  }
 }
 
 }

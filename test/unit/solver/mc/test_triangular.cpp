@@ -43,14 +43,10 @@ public:
 };
 TYPED_TEST_SUITE(TriangularSolverDistributedTest, MatrixElementTypes);
 
+std::vector<blas::Side> blas_sides({blas::Side::Left, blas::Side::Right});
+std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
+std::vector<blas::Op> blas_ops({blas::Op::NoTrans, blas::Op::Trans, blas::Op::ConjTrans});
 std::vector<blas::Diag> blas_diags({blas::Diag::NonUnit, blas::Diag::Unit});
-// std::vector<blas::Op> blas_ops({blas::Op::NoTrans, blas::Op::Trans, blas::Op::ConjTrans});
-// std::vector<blas::Side> blas_sides({blas::Side::Left, blas::Side::Right});
-// std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
-
-std::vector<blas::Op> blas_ops({blas::Op::NoTrans});
-std::vector<blas::Side> blas_sides({blas::Side::Left});
-std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
 
 std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
     {0, 0, 1, 1},                                                // m, n = 0
@@ -141,10 +137,10 @@ void testTriangularSolver(comm::CommunicatorGrid grid, blas::Side side, blas::Up
 TYPED_TEST(TriangularSolverLocalTest, Correctness) {
   SizeType m, n, mb, nb;
 
-  for (auto diag : blas_diags) {
-    for (auto op : blas_ops) {
-      for (auto side : blas_sides) {
-        for (auto uplo : blas_uplos) {
+  for (auto side : blas_sides) {
+    for (auto uplo : blas_uplos) {
+      for (auto op : blas_ops) {
+        for (auto diag : blas_diags) {
           for (auto sz : sizes) {
             std::tie(m, n, mb, nb) = sz;
             TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
@@ -161,10 +157,14 @@ TYPED_TEST(TriangularSolverDistributedTest, Correctness) {
   SizeType m, n, mb, nb;
 
   for (const auto& comm_grid : {this->commGrids()[0]}) {
-    for (auto diag : blas_diags) {
-      for (auto op : blas_ops) {
-        for (auto side : blas_sides) {
-          for (auto uplo : blas_uplos) {
+    for (auto side : blas_sides) {
+      for (auto uplo : blas_uplos) {
+        for (auto op : blas_ops) {
+          for (auto diag : blas_diags) {
+            // Currently only Left Lower Notrans case is implemented
+            if (!(op == blas::Op::NoTrans && side == blas::Side::Left && uplo == blas::Uplo::Lower))
+              continue;
+
             for (auto sz : sizes) {
               std::tie(m, n, mb, nb) = sz;
               TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);

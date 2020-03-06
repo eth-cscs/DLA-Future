@@ -33,6 +33,10 @@ else()
   find_dependency(LAPACK REQUIRED)
 endif()
 
+find_dependency(OpenMP REQUIRED)
+find_dependency(blaspp REQUIRED)
+find_dependency(lapackpp REQUIRED)
+
 # ----- HPX
 find_dependency(HPX REQUIRED PATHS @HPX_DIR@)
 

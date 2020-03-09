@@ -21,6 +21,7 @@
 #include "dlaf/matrix.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/util_matrix.h"
+#include "dlaf/common/vector.h"
 
 namespace dlaf {
 namespace internal {
@@ -117,7 +118,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
 
   for (SizeType k = 0; k < nrtile; ++k) {
     // Create a placeholder that will store the shared futures representing the panel
-    std::vector<hpx::shared_future<Tile<const T, Device::CPU>>> panel(distr.localNrTiles().rows());
+    common::vector<hpx::shared_future<Tile<const T, Device::CPU>>> panel(distr.localNrTiles().rows());
 
     auto k_rank_row = distr.rankGlobalTile<Coord::Row>(k);
     auto k_rank_col = distr.rankGlobalTile<Coord::Col>(k);

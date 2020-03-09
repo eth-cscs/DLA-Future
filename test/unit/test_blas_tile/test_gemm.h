@@ -115,7 +115,7 @@ void testGemmExceptions(blas::Op op_a, blas::Op op_b, const TileElementSize& siz
   TileElementSize size_a = size_op_a;
   if (op_a != blas::Op::NoTrans)
     size_a.transpose();
-  TileElementSize size_b = size_op_a;
+  TileElementSize size_b = size_op_b;
   if (op_b != blas::Op::NoTrans)
     size_b.transpose();
 

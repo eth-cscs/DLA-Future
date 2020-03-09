@@ -10,3 +10,23 @@
 - [cuBLAS](https://developer.nvidia.com/cublas) (optional)
 - [GoogleTest](https://github.com/google/googletest) (optional; bundled) - unit testing
 - Doxygen (optional) - documentation
+
+## How to use the library
+
+Using DLAF in a CMake project is extremly easy!
+
+Let's use the variable `$DLAF_ROOT` for referring to the install path of DLAF.
+
+Configure your project with:
+
+`cmake -DDLAF_DIR="$DLAF_ROOT/lib/cmake" ..`
+
+Then, it is just as simple as:
+
+```
+find_package(DLAF)
+
+# ...
+
+target_link_libraries(<your_target> PRIVATE DLAF)
+```

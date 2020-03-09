@@ -191,7 +191,7 @@ public:
 
   std::complex<T> operator()() {
     return std::polar<T>(std::abs(getter_random<T>::operator()()),
-                         M_PI * getter_random<T>::operator()());
+                         static_cast<T>(M_PI) * getter_random<T>::operator()());
   }
 };
 

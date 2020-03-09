@@ -41,15 +41,6 @@ constexpr auto ceilDiv(const IntType num, const IntType den)
 }
 #endif
 
-template <class S, class U,
-          std::enable_if_t<std::is_integral<U>::value && std::is_unsigned<U>::value &&
-                               std::is_integral<S>::value && std::is_signed<S>::value,
-                           int> = 0>
-S to_signed(const U unsigned_value) {
-  assert(std::numeric_limits<S>::max() > unsigned_value);
-  return static_cast<S>(unsigned_value);
-}
-
 namespace size_t {
 namespace internal {
 

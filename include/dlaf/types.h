@@ -75,4 +75,35 @@ template <class T>
 T conj(const T number) {
   return number;
 }
+
+template <class S, class U,
+          std::enable_if_t<std::is_integral<U>::value && std::is_unsigned<U>::value &&
+                               std::is_integral<S>::value && std::is_signed<S>::value,
+                           int> = 0>
+S to_signed(const U unsigned_value) {
+  assert(std::numeric_limits<S>::max() > unsigned_value);
+  return static_cast<S>(unsigned_value);
+}
+
+template <class U, class S,
+          std::enable_if_t<std::is_integral<U>::value && std::is_unsigned<U>::value &&
+                               std::is_integral<S>::value && std::is_signed<S>::value,
+                           int> = 0>
+U to_unsigned(const S signed_value) {
+  assert(signed_value >= 0);
+  return static_cast<U>(signed_value);
+}
+
+auto to_SizeType = [](auto unsigned_value) {
+  return to_signed<SizeType>(unsigned_value);
+};
+
+auto to_int = [](auto unsigned_value) {
+  return to_signed<int>(unsigned_value);
+};
+
+auto to_sizet = [](auto signed_value) {
+  return to_unsigned<std::size_t>(signed_value);
+};
+
 }

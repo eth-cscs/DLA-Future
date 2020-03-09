@@ -18,6 +18,7 @@
 #endif
 
 #include "memory_chunk.h"
+#include "dlaf/types.h"
 
 namespace dlaf {
 namespace memory {
@@ -46,6 +47,10 @@ public:
   MemoryView(std::size_t size)
       : memory_(std::make_shared<MemoryChunk<ElementType, device>>(size)), offset_(0), size_(size) {}
 
+  template <class U = T,
+            class = typename std::enable_if_t<!std::is_const<U>::value && std::is_same<T, U>::value>>
+  MemoryView(int size) : MemoryView(to_sizet(size)) {}
+
   /// @brief Creates a MemoryView object from an existing memory allocation.
   ///
   /// @param ptr  The pointer to the already allocated memory.
@@ -54,6 +59,8 @@ public:
   MemoryView(T* ptr, std::size_t size)
       : memory_(std::make_shared<MemoryChunk<ElementType, device>>(const_cast<ElementType*>(ptr), size)),
         offset_(0), size_(size) {}
+
+  MemoryView(T* ptr, int size) : MemoryView(ptr, to_sizet(size)) {}
 
   MemoryView(const MemoryView&) = default;
   template <class U = T,

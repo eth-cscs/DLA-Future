@@ -243,7 +243,7 @@ void set_random(Matrix<T, Device::CPU>& matrix) {
       GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
 
       auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
-      auto seed = tl_index.row() * matrix.size().cols() + tl_index.col();
+      std::size_t seed = to_sizet(tl_index.row() * matrix.size().cols() + tl_index.col());
 
       hpx::dataflow(hpx::util::unwrapping([seed](auto&& tile) {
                       internal::getter_random<T> random_value(seed);
@@ -287,7 +287,7 @@ void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
   // Check if block matrix is square
   util_matrix::assertBlocksizeSquare(matrix, "set_hermitian_random_positive_definite", "matrix");
 
-  std::size_t offset_value = 2 * matrix.size().rows();
+  std::size_t offset_value = 2 * to_sizet(matrix.size().rows());
 
   for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {
     for (SizeType tile_i = 0; tile_i < dist.localNrTiles().rows(); ++tile_i) {
@@ -301,9 +301,9 @@ void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
       // of distributed matrices)
       size_t seed;
       if (tile_wrt_global.row() >= tile_wrt_global.col())  // LOWER or DIAGONAL
-        seed = tl_index.row() * matrix.size().cols() + tl_index.col();
+        seed = to_sizet(tl_index.row() * matrix.size().cols() + tl_index.col());
       else
-        seed = tl_index.col() * matrix.size().rows() + tl_index.row();
+        seed = to_sizet(tl_index.col() * matrix.size().rows() + tl_index.row());
 
       hpx::dataflow(hpx::util::unwrapping([tile_wrt_global, seed, offset_value](auto&& tile) {
                       internal::getter_random<T> random_value(seed);

@@ -14,6 +14,7 @@
 
 #include "dlaf/communication/datatypes.h"
 #include "dlaf/mpi_header.h"
+#include "dlaf/types.h"
 
 namespace dlaf {
 namespace comm {
@@ -36,7 +37,7 @@ struct type_handler {
   /// @param stride       stride (in elements) between starts of adjacent blocks
   type_handler(std::size_t nblocks, std::size_t block_size, std::size_t stride) {
     MPI_Datatype element_type = dlaf::comm::mpi_datatype<std::remove_pointer_t<T>>::type;
-    MPI_Type_vector(nblocks, block_size, stride, element_type, &custom_type_);
+    MPI_Type_vector(to_int(nblocks), to_int(block_size), to_int(stride), element_type, &custom_type_);
     MPI_Type_commit(&custom_type_);
   }
 

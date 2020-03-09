@@ -83,7 +83,7 @@ TYPED_TEST(MatrixUtilsTest, Set) {
 }
 
 TYPED_TEST(MatrixUtilsTest, SetRandom) {
-  auto zero = [](const GlobalElementIndex& index) {
+  auto zero = [](const GlobalElementIndex&) {
     return dlaf_test::TypeUtilities<TypeParam>::element(0, 0);
   };
 

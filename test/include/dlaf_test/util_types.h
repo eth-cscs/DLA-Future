@@ -27,13 +27,13 @@ using BufferTypes =
 template <class T>
 struct TypeUtilities {
   /// @brief Returns r.
-  static T element(double r, double i) {
+  static T element(double r, double) {
     return static_cast<T>(r);
   }
 
   /// @brief Returns r.
   /// @pre r > 0
-  static T polar(double r, double i) {
+  static T polar(double r, double) {
     return static_cast<T>(r);
   }
 

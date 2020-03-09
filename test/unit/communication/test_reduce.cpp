@@ -47,10 +47,10 @@ TEST_F(ReduceTest, Multiple) {
 
   // check that the root rank has the reduced results
   if (world.rank() == root)
-    for (auto index = 0; index < N; ++index)
+    for (std::size_t index = 0; index < N; ++index)
       EXPECT_EQ(NUM_MPI_RANKS * input[index], reduced[index]);
 
   // check that input has not been modified
-  for (auto index = 0; index < N; ++index)
+  for (std::size_t index = 0; index < N; ++index)
     EXPECT_EQ(index + 1, input[index]);
 }

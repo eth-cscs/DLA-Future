@@ -12,9 +12,9 @@
 
 /// @file
 
+#include <cassert>
 #include <complex>
 #include <limits>
-#include <cassert>
 
 namespace dlaf {
 
@@ -120,7 +120,7 @@ auto to_int = [](const auto unsigned_value) { return to_signed<int>(unsigned_val
 
 /// Helper function for casting from signed to std::size_t
 ///
-/// Useful for interaction between std, but not only, with other interfaces that does not use usigned types (e.g. MPI, BLAS, ...)
-/// see dlaf::to_unsigned
+/// Useful for interaction between std, but not only, with other interfaces that does not use usigned
+/// types (e.g. MPI, BLAS, ...) see dlaf::to_unsigned
 auto to_sizet = [](const auto signed_value) { return to_unsigned<std::size_t>(signed_value); };
 }

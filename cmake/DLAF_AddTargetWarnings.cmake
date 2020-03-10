@@ -31,19 +31,17 @@ macro(target_add_warnings target_name)
         -Wsign-conversion
         -Wfloat-conversion>
       $<${IS_COMPILER_CLANG}:
-        -Wbitfield-enum-conversion,
-        -Wbool-conversion,
-        -Wconstant-conversion,
-        -Wenum-conversion,
-        -Wfloat-conversion,
-        -Wimplicit-float-conversion,
-        -Wimplicit-int-conversion,
-        -Wint-conversion,
-        -Wliteral-conversion,
-        -Wnon-literal-null-conversion,
-        -Wnull-conversion,
-        -Wshorten-64-to-32,
-        -Wsign-conversion,
+        -Wbitfield-enum-conversion
+        -Wbool-conversion
+        -Wconstant-conversion
+        -Wenum-conversion
+        -Wfloat-conversion
+        -Wint-conversion
+        -Wliteral-conversion
+        -Wnon-literal-null-conversion
+        -Wnull-conversion
+        -Wshorten-64-to-32
+        -Wsign-conversion
         -Wstring-conversion>
       -pedantic-errors
 

@@ -83,6 +83,8 @@ void cholesky_L(Matrix<T, Device::CPU>& mat_a) {
 // Distributed implementation of Lower Cholesky factorization.
 template <class T>
 void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
+  using common::internal::vector;
+
   constexpr auto NonUnit = blas::Diag::NonUnit;
   constexpr auto ConjTrans = blas::Op::ConjTrans;
   constexpr auto NoTrans = blas::Op::NoTrans;
@@ -118,7 +120,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
 
   for (SizeType k = 0; k < nrtile; ++k) {
     // Create a placeholder that will store the shared futures representing the panel
-    common::vector<hpx::shared_future<Tile<const T, Device::CPU>>> panel(distr.localNrTiles().rows());
+    vector<hpx::shared_future<Tile<const T, Device::CPU>>> panel(distr.localNrTiles().rows());
 
     auto k_rank_row = distr.rankGlobalTile<Coord::Row>(k);
     auto k_rank_col = distr.rankGlobalTile<Coord::Col>(k);

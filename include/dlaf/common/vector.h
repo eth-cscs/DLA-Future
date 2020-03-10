@@ -15,6 +15,7 @@
 
 namespace dlaf {
 namespace common {
+namespace internal {
 
 /// Alias for std::vector with overloads for signed indexes
 ///
@@ -32,5 +33,6 @@ struct vector : public std::vector<T> {
   }
 };
 
+}
 }
 }

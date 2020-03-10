@@ -71,6 +71,8 @@ void triangular_LLN(blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_
 template <class T>
 void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
                     Matrix<const T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_b) {
+  using common::internal::vector;
+
   constexpr auto Left = blas::Side::Left;
   constexpr auto Lower = blas::Uplo::Lower;
   constexpr auto NoTrans = blas::Op::NoTrans;
@@ -107,7 +109,7 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
 
   for (SizeType k = 0; k < a_rows; ++k) {
     // Create a placeholder that will store the shared futures representing the panel
-    common::vector<hpx::shared_future<Tile<const T, Device::CPU>>> panel(distr_b.localNrTiles().cols());
+    vector<hpx::shared_future<Tile<const T, Device::CPU>>> panel(distr_b.localNrTiles().cols());
 
     auto k_rank_row = distr_a.rankGlobalTile<Coord::Row>(k);
     auto k_rank_col = distr_a.rankGlobalTile<Coord::Col>(k);

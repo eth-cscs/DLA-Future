@@ -15,6 +15,7 @@
 #include "dlaf/blas_tile.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
+#include "dlaf/common/vector.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/lapack_tile.h"
@@ -98,18 +99,15 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
   const matrix::Distribution& distr_b = mat_b.distribution();
 
   SizeType a_rows = mat_a.nrTiles().rows();
-  SizeType b_rows = mat_b.nrTiles().rows();
 
   auto a_local_rows = distr_a.localNrTiles().rows();
-  auto a_local_cols = distr_a.localNrTiles().cols();
-  auto b_local_rows = distr_b.localNrTiles().rows();
   auto b_local_cols = distr_b.localNrTiles().cols();
 
   common::Pipeline<comm::CommunicatorGrid> serial_comm(std::move(grid));
 
   for (SizeType k = 0; k < a_rows; ++k) {
     // Create a placeholder that will store the shared futures representing the panel
-    std::vector<hpx::shared_future<Tile<const T, Device::CPU>>> panel(distr_b.localNrTiles().cols());
+    common::vector<hpx::shared_future<Tile<const T, Device::CPU>>> panel(distr_b.localNrTiles().cols());
 
     auto k_rank_row = distr_a.rankGlobalTile<Coord::Row>(k);
     auto k_rank_col = distr_a.rankGlobalTile<Coord::Col>(k);

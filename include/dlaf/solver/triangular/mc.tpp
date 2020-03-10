@@ -86,7 +86,7 @@ void Solver<Backend::MC>::triangular(blas::Side side, blas::Uplo uplo, blas::Op 
 
 template <class T>
 void Solver<Backend::MC>::triangular(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo,
-                                     blas::Op op, blas::Diag /* diag */, T /* alpha */,
+                                     blas::Op op, blas::Diag diag, T alpha,
                                      Matrix<const T, Device::CPU>& mat_a,
                                      Matrix<T, Device::CPU>& mat_b) {
   // Check if matrix A is square

@@ -104,7 +104,7 @@ void Solver<Backend::MC>::triangular(comm::CommunicatorGrid grid, blas::Side sid
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
         // Left Lower NoTrans
-        throw std::runtime_error("Distributed Left Lower NoTrans case not yet implemented");
+        internal::mc::triangular_LLN(grid, diag, alpha, mat_a, mat_b);
       }
       else {
         // Left Lower Trans/ConjTrans

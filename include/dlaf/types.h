@@ -10,6 +10,9 @@
 
 #pragma once
 
+/// @file
+
+#include <cassert>
 #include <complex>
 #include <limits>
 
@@ -77,6 +80,9 @@ T conj(const T number) {
   return number;
 }
 
+/// Cast from unisgned to signed integer types
+///
+/// It performs the cast checking if the given unsigned value can be stored in the destination type
 template <class S, class U,
           std::enable_if_t<std::is_integral<U>::value && std::is_unsigned<U>::value &&
                                std::is_integral<S>::value && std::is_signed<S>::value,
@@ -86,18 +92,35 @@ S to_signed(const U unsigned_value) {
   return static_cast<S>(unsigned_value);
 }
 
+/// Cast from signed to unsigned integer types
+///
+/// It performs the cast checking if the given signed value is greater than 0 and if the destination type
+/// can store the value.
 template <class U, class S,
           std::enable_if_t<std::is_integral<U>::value && std::is_unsigned<U>::value &&
                                std::is_integral<S>::value && std::is_signed<S>::value,
                            int> = 0>
 U to_unsigned(const S signed_value) {
   assert(signed_value >= 0);
+  assert(std::numeric_limits<U>::max() >= signed_value);
   return static_cast<U>(signed_value);
 }
 
-auto to_SizeType = [](auto unsigned_value) { return to_signed<SizeType>(unsigned_value); };
+/// Helper function for casting from unsigned to dlaf::SizeType
+///
+/// Useful when passing parameter to the BLAS/LAPACK interface
+/// see dlaf::to_signed
+auto to_SizeType = [](const auto unsigned_value) { return to_signed<SizeType>(unsigned_value); };
 
-auto to_int = [](auto unsigned_value) { return to_signed<int>(unsigned_value); };
+/// Helper function for casting from unsigned to int
+///
+/// Useful when passing parameters to the MPI interface
+/// see dlaf::to_signed
+auto to_int = [](const auto unsigned_value) { return to_signed<int>(unsigned_value); };
 
-auto to_sizet = [](auto signed_value) { return to_unsigned<std::size_t>(signed_value); };
+/// Helper function for casting from signed to std::size_t
+///
+/// Useful for interaction between std, but not only, with other interfaces that does not use usigned
+/// types (e.g. MPI, BLAS, ...) see dlaf::to_unsigned
+auto to_sizet = [](const auto signed_value) { return to_unsigned<std::size_t>(signed_value); };
 }

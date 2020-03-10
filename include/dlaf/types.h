@@ -102,7 +102,7 @@ template <class U, class S,
                            int> = 0>
 U to_unsigned(const S signed_value) {
   assert(signed_value >= 0);
-  assert(std::numeric_limits<U>::max() >= signed_value);
+  assert(std::numeric_limits<U>::max() >= static_cast<std::size_t>(signed_value));
   return static_cast<U>(signed_value);
 }
 

@@ -182,15 +182,15 @@ int main(int argc, char** argv) {
 
 options_t check_options(hpx::program_options::variables_map& vm) {
   options_t opts = {
-      .m = vm["matrix-size"].as<int64_t>(),
-      .mb = vm["block-size"].as<int64_t>(),
+      vm["matrix-size"].as<int64_t>(),
+      vm["block-size"].as<int64_t>(),
 
-      .grid_rows = vm["grid-rows"].as<int64_t>(),
-      .grid_cols = vm["grid-cols"].as<int64_t>(),
+      vm["grid-rows"].as<int64_t>(),
+      vm["grid-cols"].as<int64_t>(),
 
-      .nruns = vm["nruns"].as<int64_t>(),
+      vm["nruns"].as<int64_t>(),
 
-      .do_check = vm["check-result"].as<bool>(),
+      vm["check-result"].as<bool>(),
   };
 
   if (opts.m <= 0)
@@ -226,7 +226,7 @@ T analytical_input_matrix(const GlobalElementIndex& index) {
   return TypeUtilities<T>::polar(1. / 3 *
                                      (std::exp2(2 * std::min(i, j) + 2 - i - j) - std::exp2(-(i + j))),
                                  -i + j);
-};
+}
 
 T analytical_result_matrix(const GlobalElementIndex& index) {
   using namespace dlaf_test;
@@ -237,4 +237,4 @@ T analytical_result_matrix(const GlobalElementIndex& index) {
     return TypeUtilities<T>::element(-9.9, 0.0);
 
   return TypeUtilities<T>::polar(std::exp2(-std::abs(i - j)), -i + j);
-};
+}

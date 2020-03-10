@@ -74,7 +74,7 @@ Distribution& Distribution::operator=(Distribution&& rhs) noexcept {
 void Distribution::computeGlobalSize(const LocalElementSize& local_size,
                                      const comm::Size2D& grid_size) noexcept {
   assert(grid_size == comm::Size2D(1, 1));
-  (void)grid_size;
+  (void) grid_size;
   size_ = GlobalElementSize(local_size.rows(), local_size.cols());
 }
 

@@ -172,9 +172,8 @@ void checkFuturesDone(bool get_ready, const std::vector<Future1>& current, Matri
 
   for (std::size_t index = 0; index < current.size(); ++index) {
     EXPECT_TRUE(checkFuturesStep(get_ready ? index : 0, current));
-    LocalTileIndex tile_index(
-        to_signed<LocalTileIndex::IndexType>(index) % nr_tiles.rows(),
-        to_signed<LocalTileIndex::IndexType>(index) / nr_tiles.rows());
+    LocalTileIndex tile_index(to_signed<LocalTileIndex::IndexType>(index) % nr_tiles.rows(),
+                              to_signed<LocalTileIndex::IndexType>(index) / nr_tiles.rows());
     mat_view.done(tile_index);
   }
 

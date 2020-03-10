@@ -190,7 +190,7 @@ TYPED_TEST(MatrixViewTest, LocalGlobalAccessOperatorCall) {
 
       Matrix<TypeParam, Device::CPU> mat(std::move(distribution), layout);
 
-      //auto run_test = [](auto&& mat_view) {
+      // auto run_test = [](auto&& mat_view) {
       //  const Distribution& dist = mat_view.distribution();
 
       //  for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {

@@ -20,7 +20,7 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 include(DLAF)
 
 if (NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build Type" FORCE)
+  set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Build Type" FORCE)
 endif()
 
 # ---------------------------------------------------------------------------
@@ -42,11 +42,6 @@ if (DLAF_WITH_CUDA)
 endif()
 
 # ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-add_compile_definitions(DLAF_SOURCE_LOCATION=__func__)
-
-# ---------------------------------------------------------------------------
 # Libraries configuration
 # ---------------------------------------------------------------------------
 # ----- MPI
@@ -58,7 +53,6 @@ set(DLAF_WITH_MKL OFF CACHE BOOL "Enable MKL as provider for LAPACK")
 if (DLAF_WITH_MKL)
   set(MKL_CUSTOM_THREADING "Sequential")
   find_package(MKL REQUIRED COMPONENTS BLAS_32BIT_SEQ)
-  set(LAPACK_FOUND ${MKL_LAPACK_FOUND})
 
   set(LAPACK_TARGET "mkl::blas_32bit_seq")
 else()
@@ -68,22 +62,6 @@ endif()
 
 # ----- HPX
 find_package(HPX 1.4.0 REQUIRED)
-
-# In HPX 1.3.0 there is compiler matching check, but it does not check matching of build types.
-# Since it is source of headaches, waiting for HPX to add this check, we check on our own
-get_property(_MULTI_CONFIG_GENERATOR GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
-if (NOT _MULTI_CONFIG_GENERATOR)
-  # They may not match just if none of them is a Debug build
-  if (  (NOT HPX_BUILD_TYPE STREQUAL CMAKE_BUILD_TYPE)
-          AND
-        (HPX_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "Debug")  )
-    message(WARNING
-      "The build type used (${CMAKE_BUILD_TYPE}) does not match with HPX build type (${HPX_BUILD_TYPE}).\n"
-      "Please either change CMAKE_BUILD_TYPE to ${HPX_BUILD_TYPE} or use a ${CMAKE_BUILD_TYPE} build of HPX")
-  endif()
-else()
-  # build-type check not available for multi-configuration generators
-endif()
 
 # ----- BLASPP/LAPACKPP
 find_package(OpenMP REQUIRED)

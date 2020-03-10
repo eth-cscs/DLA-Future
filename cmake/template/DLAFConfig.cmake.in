@@ -9,6 +9,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 
 # ===== VARIABLES
 set(DLAF_WITH_MKL @DLAF_WITH_MKL@)
+set(DLAF_WITH_CUDA @DLAF_WITH_CUDA@)
 
 # ===== DEPENDENCIES
 include(CMakeFindDependencyMacro)
@@ -21,10 +22,7 @@ if (DLAF_WITH_MKL)
   set(MKL_ROOT "@MKL_ROOT@")
   set(MKL_CUSTOM_THREADING "@MKL_THREADING@")
 
-  set(MKL_LAPACK_CUSTOM_INCLUDE_DIR "@MKL_LAPACK_INCLUDE_DIR@")
-  set(MKL_LAPACK_CUSTOM_LIBRARY "@MKL_LAPACK_LIBRARY@")
-
-  find_dependency(MKL REQUIRED COMPONENTS LAPACK)
+  find_dependency(MKL REQUIRED COMPONENTS BLAS_32BIT_SEQ)
 else()
   set(LAPACK_CUSTOM_TYPE "@LAPACK_TYPE@")
   set(LAPACK_CUSTOM_INCLUDE_DIR "@LAPACK_INCLUDE_DIR@")
@@ -32,6 +30,10 @@ else()
 
   find_dependency(LAPACK REQUIRED)
 endif()
+
+find_dependency(OpenMP REQUIRED)
+find_dependency(blaspp REQUIRED PATHS @blaspp_DIR@)
+find_dependency(lapackpp REQUIRED PATHS @lapackpp_DIR@)
 
 # ----- HPX
 find_dependency(HPX REQUIRED PATHS @HPX_DIR@)

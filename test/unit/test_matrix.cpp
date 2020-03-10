@@ -227,8 +227,9 @@ void checkDistributionLayout(T* p, const Distribution& distribution, const Layou
   // Check if the memory elements correspond to the matrix elements.
   for (SizeType j = 0; j < size.cols(); ++j) {
     for (SizeType i = 0; i < size.rows(); ++i) {
-      if (own_element({i, j}))
+      if (own_element({i, j})) {
         ASSERT_EQ(el2({i, j}), *ptr({i, j})) << "Error at index (" << i << ", " << j << ").";
+      }
     }
   }
 }

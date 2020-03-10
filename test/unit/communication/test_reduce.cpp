@@ -28,8 +28,9 @@ TEST_F(ReduceTest, Basic) {
   sync::reduce(root, world, MPI_SUM, make_message(&value, 1), make_message(&result, 1));
 
   // check that the root rank has the reduced results
-  if (world.rank() == root)
+  if (world.rank() == root) {
     EXPECT_EQ(NUM_MPI_RANKS * value, result);
+  }
 
   // check that input has not been modified
   EXPECT_EQ(1, value);
@@ -46,9 +47,10 @@ TEST_F(ReduceTest, Multiple) {
   sync::reduce(root, world, MPI_SUM, make_message(input, N), make_message(reduced, N));
 
   // check that the root rank has the reduced results
-  if (world.rank() == root)
+  if (world.rank() == root) {
     for (std::size_t index = 0; index < N; ++index)
       EXPECT_EQ(NUM_MPI_RANKS * input[index], reduced[index]);
+  }
 
   // check that input has not been modified
   for (std::size_t index = 0; index < N; ++index)

@@ -42,7 +42,6 @@ constexpr auto ceilDiv(const IntType num, const IntType den)
 #endif
 
 namespace size_t {
-
 namespace internal {
 
 /// @brief Perform the given binary operation on integer types in size_t arithmetic
@@ -85,7 +84,7 @@ template <typename TA, typename TB>
 std::size_t mul(const TA a, const TB b) {
   return internal::generic_integer_op(a, b, std::multiplies<std::size_t>());
 }
-}
 
+}
 }
 }

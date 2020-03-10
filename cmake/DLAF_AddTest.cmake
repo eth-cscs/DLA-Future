@@ -122,6 +122,8 @@ function(DLAF_addTest test_target_name)
     )
   endif()
 
+  target_add_warnings(${test_target_name})
+
   ### Test target
   set(DLAF_TEST_RUNALL_WITH_MPIEXEC OFF CACHE BOOL "Run all tests using the workload manager.")
 

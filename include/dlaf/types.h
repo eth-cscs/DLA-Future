@@ -11,6 +11,7 @@
 #pragma once
 
 #include <complex>
+#include <limits>
 
 namespace dlaf {
 
@@ -94,16 +95,9 @@ U to_unsigned(const S signed_value) {
   return static_cast<U>(signed_value);
 }
 
-auto to_SizeType = [](auto unsigned_value) {
-  return to_signed<SizeType>(unsigned_value);
-};
+auto to_SizeType = [](auto unsigned_value) { return to_signed<SizeType>(unsigned_value); };
 
-auto to_int = [](auto unsigned_value) {
-  return to_signed<int>(unsigned_value);
-};
+auto to_int = [](auto unsigned_value) { return to_signed<int>(unsigned_value); };
 
-auto to_sizet = [](auto signed_value) {
-  return to_unsigned<std::size_t>(signed_value);
-};
-
+auto to_sizet = [](auto signed_value) { return to_unsigned<std::size_t>(signed_value); };
 }

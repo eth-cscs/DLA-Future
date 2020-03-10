@@ -226,7 +226,7 @@ T analytical_input_matrix(const GlobalElementIndex& index) {
   return TypeUtilities<T>::polar(1. / 3 *
                                      (std::exp2(2 * std::min(i, j) + 2 - i - j) - std::exp2(-(i + j))),
                                  -i + j);
-};
+}
 
 T analytical_result_matrix(const GlobalElementIndex& index) {
   using namespace dlaf_test;
@@ -237,4 +237,4 @@ T analytical_result_matrix(const GlobalElementIndex& index) {
     return TypeUtilities<T>::element(-9.9, 0.0);
 
   return TypeUtilities<T>::polar(std::exp2(-std::abs(i - j)), -i + j);
-};
+}

@@ -25,6 +25,7 @@ macro(target_add_warnings target_name)
       -Wnon-virtual-dtor
       -Wunused
       -Woverloaded-virtual
+      -Wdangling-else
       # Conversions
       $<${IS_COMPILER_GCC}:
         -Wsign-conversion

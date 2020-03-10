@@ -10,11 +10,7 @@
 
 #pragma once
 
-/// @file
-
-#include <cassert>
 #include <complex>
-#include <limits>
 
 namespace dlaf {
 

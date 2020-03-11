@@ -689,7 +689,7 @@ TYPED_TEST(BufferBasicTest, CopyDataHeterogeneous) {
   // memory contiguous as strided
   memory_types.emplace_back(create_memory<TypeParam>(N_GROUPS, N / N_GROUPS, N / N_GROUPS));
   // memory strided
-  memory_types.emplace_back( create_memory<TypeParam>(N_GROUPS, N / N_GROUPS, N / N_GROUPS + 5));
+  memory_types.emplace_back(create_memory<TypeParam>(N_GROUPS, N / N_GROUPS, N / N_GROUPS + 5));
 
   // CArray as source
   for (auto& memory_dest : memory_types) {

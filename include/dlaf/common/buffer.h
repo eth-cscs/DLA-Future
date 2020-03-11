@@ -134,7 +134,7 @@ void copy(const BufferIn& src, const BufferOut& dest) {
       }
     }
     else if (buffer_iscontiguous(src)) {
-        assert(buffer_blocksize(src) == buffer_nblocks(dest) * buffer_blocksize(dest));
+      assert(buffer_blocksize(src) == buffer_nblocks(dest) * buffer_blocksize(dest));
 
       for (std::size_t i_block = 0; i_block < buffer_nblocks(dest); ++i_block) {
         auto ptr_block_start = buffer_pointer(src) + i_block * buffer_blocksize(dest);

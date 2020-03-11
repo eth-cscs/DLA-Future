@@ -83,6 +83,5 @@ template <class Buffer>
 auto make_message(Buffer buffer) noexcept {
   return Message<Buffer>{buffer};
 }
-
 }
 }

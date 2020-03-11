@@ -182,8 +182,8 @@ int main(int argc, char** argv) {
 
 options_t check_options(hpx::program_options::variables_map& vm) {
   options_t opts = {
-      vm["matrix-size"].as<SizeType>(),   vm["block-size"].as<SizeType>(),
-      vm["grid-rows"].as<int>(),     vm["grid-cols"].as<int>(),
+      vm["matrix-size"].as<SizeType>(), vm["block-size"].as<SizeType>(),
+      vm["grid-rows"].as<int>(),        vm["grid-cols"].as<int>(),
 
       vm["nruns"].as<int64_t>(),
 

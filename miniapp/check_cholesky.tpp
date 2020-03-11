@@ -23,27 +23,33 @@
 
 using namespace dlaf;
 
+/// Set to zero the upper part of the diagonal tiles
+///
+/// For the tiles on the diagonal (i.e. row == col), the elements in the upper triangular
+/// part of each tile, diagonal excluded, are set to zero.
+/// Tiles that are not on the diagonal (i.e. row != col) will not be touched or referenced
 template <class T>
-void setUpperZero(Matrix<T, Device::CPU>& matrix) {
-  util_matrix::assertBlocksizeSquare(matrix, "setUpperZero", "matrix");
+void setUpperToZeroForDiagonalTiles(Matrix<T, Device::CPU>& matrix) {
+  util_matrix::assertBlocksizeSquare(matrix, "setUpperToZeroForDiagonalTiles", "matrix");
 
   auto& distribution = matrix.distribution();
 
   for (int j = 0; j < distribution.localNrTiles().cols(); ++j) {
     for (int i = 0; i < distribution.localNrTiles().rows(); ++i) {
-      auto tile_wrt_global = distribution.globalTileIndex(LocalTileIndex{i, j});
-      auto tl_index = distribution.globalElementIndex(tile_wrt_global, {0, 0});
+      const auto tile_wrt_global = distribution.globalTileIndex(LocalTileIndex{i, j});
+      const auto tl_index = distribution.globalElementIndex(tile_wrt_global, {0, 0});
 
-      if (tile_wrt_global.row() <= tile_wrt_global.col()) {
-        matrix(tile_wrt_global).then(hpx::util::unwrapping([tl_index](auto&& tile) {
-          for (int j = 0; j < tile.size().cols(); ++j)
-            for (int i = 0; i < tile.size().rows(); ++i) {
-              GlobalElementIndex element_wrt_global{tl_index.row() + i, tl_index.col() + j};
-              if (element_wrt_global.row() < element_wrt_global.col())
-                tile(TileElementIndex{i, j}) = 0;
-            }
-        }));
-      }
+      if (tile_wrt_global.row() != tile_wrt_global.col())
+        continue;
+
+      matrix(tile_wrt_global).then(hpx::util::unwrapping([tl_index](auto&& tile) {
+        for (int j = 0; j < tile.size().cols(); ++j)
+          for (int i = 0; i < tile.size().rows(); ++i) {
+            GlobalElementIndex element_wrt_global{tl_index.row() + i, tl_index.col() + j};
+            if (element_wrt_global.row() < element_wrt_global.col())
+              tile(TileElementIndex{i, j}) = 0;
+          }
+      }));
     }
   }
 }
@@ -57,8 +63,10 @@ T matrix_norm(Matrix<const T, Device::CPU>& matrix, comm::CommunicatorGrid comm_
   vector<hpx::future<T>> tiles_max;
   tiles_max.reserve(distribution.localNrTiles().rows() * distribution.localNrTiles().cols());
 
+  // for each tile in local, create a task that finds the max element in the tile
   for (SizeType j_loc = 0; j_loc < distribution.localNrTiles().cols(); ++j_loc) {
     const SizeType j = distribution.template globalTileFromLocalTile<Coord::Col>(j_loc);
+
     SizeType i_loc = distribution.template nextLocalTileFromGlobalTile<Coord::Row>(j);
     for (; i_loc < distribution.localNrTiles().rows(); ++i_loc) {
       auto current_tile_max =
@@ -66,17 +74,21 @@ T matrix_norm(Matrix<const T, Device::CPU>& matrix, comm::CommunicatorGrid comm_
                           T tile_max_value = std::abs(T{0});
                           for (SizeType j = 0; j < tile.size().cols(); ++j)
                             for (SizeType i = j; i < tile.size().rows(); ++i)
+                              // TODO should we consider just elements in the lower triangular?
                               tile_max_value = std::max(tile_max_value, tile({i, j}));
                           return tile_max_value;
                         }),
                         matrix.read(LocalTileIndex{i_loc, j_loc}));
+
       tiles_max.emplace_back(std::move(current_tile_max));
     }
   }
 
+  // than it is necessary to reduce max values from all ranks into a single max value for the matrix
+
   // TODO unwrapping can be skipped for optimization reasons
   auto local_max_value = hpx::dataflow(hpx::util::unwrapping([](const auto&& values) {
-                                         // TODO some rank may not have any element
+                                         // some rank may not have any element
                                          if (values.size() == 0)
                                            return std::numeric_limits<T>::min();
                                          return *std::max_element(values.begin(), values.end());
@@ -84,13 +96,19 @@ T matrix_norm(Matrix<const T, Device::CPU>& matrix, comm::CommunicatorGrid comm_
                                        tiles_max)
                              .get();
 
-  // TODO reduce only if there are multiple rows/cols
   T max_value_rows;
+  if (comm_grid.size().cols() > 1)
+    comm::sync::reduce(0, comm_grid.rowCommunicator(), MPI_MAX, common::make_buffer(&local_max_value, 1),
+                       common::make_buffer(&max_value_rows, 1));
+  else
+    max_value_rows = local_max_value;
+
   T max_value;
-  comm::sync::reduce(0, comm_grid.rowCommunicator(), MPI_MAX, common::make_buffer(&local_max_value, 1),
-                     common::make_buffer(&max_value_rows, 1));
-  comm::sync::reduce(0, comm_grid.colCommunicator(), MPI_MAX, common::make_buffer(&max_value_rows, 1),
-                     common::make_buffer(&max_value, 1));
+  if (comm_grid.size().rows() > 1)
+    comm::sync::reduce(0, comm_grid.colCommunicator(), MPI_MAX, common::make_buffer(&max_value_rows, 1),
+                       common::make_buffer(&max_value, 1));
+  else
+    max_value = max_value_rows;
 
   return max_value;
 }
@@ -213,10 +231,13 @@ void cholesky_diff(Matrix<T, Device::CPU>& original, Matrix<T, Device::CPU>& cho
 template <class T>
 void check_cholesky(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L,
                     comm::CommunicatorGrid comm_grid) {
-  setUpperZero(L);
-
   // norm A (original matrix)
   float norm_A = matrix_norm(A, comm_grid);
+
+  // L is a lower triangular, reset values in the upper part (diagonal excluded)
+  // it is needed for the gemm to compute correctly the result when using
+  // tiles on the diagonal treating them as all the other ones
+  setUpperToZeroForDiagonalTiles(L);
 
   // compute diff in-place, A = A - L*L'
   cholesky_diff(A, L, comm_grid);

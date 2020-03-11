@@ -128,8 +128,8 @@ TEST_F(ReduceTest, StridedToContiguous) {
   const int N = nblocks * block_size;
   TypeParam data_contiguous[N];
 
-  for (int i_block = 0; i_block < nblocks; ++i_block)
-    for (int i_element = 0; i_element < block_size; ++i_element) {
+  for (std::size_t i_block = 0; i_block < nblocks; ++i_block)
+    for (std::size_t i_element = 0; i_element < block_size; ++i_element) {
       auto mem_pos = i_block * block_distance + i_element;
       data_strided[mem_pos] = dlaf_test::TypeUtilities<TypeParam>::element(value, 0);
     }
@@ -165,8 +165,8 @@ TEST_F(ReduceTest, ConstStridedToContiguous) {
   const int N = nblocks * block_size;
   TypeParam data_contiguous[N];
 
-  for (int i_block = 0; i_block < nblocks; ++i_block)
-    for (int i_element = 0; i_element < block_size; ++i_element) {
+  for (std::size_t i_block = 0; i_block < nblocks; ++i_block)
+    for (std::size_t i_element = 0; i_element < block_size; ++i_element) {
       auto mem_pos = i_block * block_distance + i_element;
       data_strided[mem_pos] = dlaf_test::TypeUtilities<TypeParam>::element(value, 0);
     }
@@ -212,8 +212,8 @@ TEST_F(ReduceTest, ContiguousToStrided) {
 
   sync::reduce(root, communicator, op, std::move(message_input), std::move(message_output));
   if (world.rank() == root) {
-    for (int i_block = 0; i_block < nblocks; ++i_block)
-      for (int i_element = 0; i_element < block_size; ++i_element) {
+    for (std::size_t i_block = 0; i_block < nblocks; ++i_block)
+      for (std::size_t i_element = 0; i_element < block_size; ++i_element) {
         auto mem_pos = i_block * block_distance + i_element;
         EXPECT_EQ(value * NUM_MPI_RANKS, data_strided[mem_pos]);
       }
@@ -249,8 +249,8 @@ TEST_F(ReduceTest, ConstContiguousToStrided) {
 
   sync::reduce(root, communicator, op, std::move(message_input), std::move(message_output));
   if (world.rank() == root) {
-    for (int i_block = 0; i_block < nblocks; ++i_block)
-      for (int i_element = 0; i_element < block_size; ++i_element) {
+    for (std::size_t i_block = 0; i_block < nblocks; ++i_block)
+      for (std::size_t i_element = 0; i_element < block_size; ++i_element) {
         auto mem_pos = i_block * block_distance + i_element;
         EXPECT_EQ(value * NUM_MPI_RANKS, data_strided[mem_pos]);
       }

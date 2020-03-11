@@ -227,8 +227,9 @@ void checkDistributionLayout(T* p, const Distribution& distribution, const Layou
   // Check if the memory elements correspond to the matrix elements.
   for (SizeType j = 0; j < size.cols(); ++j) {
     for (SizeType i = 0; i < size.rows(); ++i) {
-      if (own_element({i, j}))
+      if (own_element({i, j})) {
         ASSERT_EQ(el2({i, j}), *ptr({i, j})) << "Error at index (" << i << ", " << j << ").";
+      }
     }
   }
 }
@@ -391,8 +392,8 @@ struct ExistingLocalTestSizes {
   LocalElementSize size;
   TileElementSize block_size;
   SizeType ld;
-  SizeType row_offset;
-  SizeType col_offset;
+  std::size_t row_offset;
+  std::size_t col_offset;
 };
 
 std::vector<ExistingLocalTestSizes> existing_local_tests({

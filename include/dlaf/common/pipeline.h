@@ -29,7 +29,7 @@ public:
   /// Wrapper is the object that manages the auto-release mechanism
   template <class U>
   class Wrapper {
-    friend class Pipeline<U>;
+    friend struct Pipeline<U>;
 
     /// Create a wrapper
     /// @param object	the resource to wrap (the wrapper becomes the owner of the resource)

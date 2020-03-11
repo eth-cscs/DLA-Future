@@ -27,10 +27,10 @@ using namespace dlaf;
 using T = double;
 
 struct options_t {
-  int64_t m;
-  int64_t mb;
-  int64_t grid_rows;
-  int64_t grid_cols;
+  SizeType m;
+  SizeType mb;
+  int grid_rows;
+  int grid_cols;
   int64_t nruns;
   bool do_check;
 };
@@ -100,7 +100,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     double gigaflops;
     {
       double n = matrix.size().rows();
-      double add_mul = n * n * n / 6;
+      auto add_mul = n * n * n / 6;
       gigaflops = total_ops<T>(add_mul, add_mul) / elapsed_time / 1e9;
     }
 
@@ -138,16 +138,16 @@ int main(int argc, char** argv) {
   // clang-format off
   desc_commandline.add_options()
     ("matrix-size",
-     value<int64_t>()->default_value(4096),
+     value<SizeType>()->default_value(4096),
      "Matrix size.")
     ("block-size",
-     value<int64_t>()->default_value(256),
+     value<SizeType>()->default_value(256),
      "Block cyclic distribution size.")
     ("grid-rows",
-     value<int64_t>()->default_value(1),
+     value<int>()->default_value(1),
      "Number of row processes in the 2D communicator.")
     ("grid-cols",
-     value<int64_t>()->default_value(1),
+     value<int>()->default_value(1),
      "Number of column processes in the 2D communicator.")
     ("nruns",
      value<int64_t>()->default_value(1),
@@ -182,9 +182,8 @@ int main(int argc, char** argv) {
 
 options_t check_options(hpx::program_options::variables_map& vm) {
   options_t opts = {
-      vm["matrix-size"].as<int64_t>(), vm["block-size"].as<int64_t>(),
-
-      vm["grid-rows"].as<int64_t>(),   vm["grid-cols"].as<int64_t>(),
+      vm["matrix-size"].as<SizeType>(), vm["block-size"].as<SizeType>(),
+      vm["grid-rows"].as<int>(),        vm["grid-cols"].as<int>(),
 
       vm["nruns"].as<int64_t>(),
 

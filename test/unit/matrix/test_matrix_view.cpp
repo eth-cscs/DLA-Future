@@ -190,29 +190,29 @@ TYPED_TEST(MatrixViewTest, LocalGlobalAccessOperatorCall) {
 
       Matrix<TypeParam, Device::CPU> mat(std::move(distribution), layout);
 
-      auto run_test = [](auto&& mat_view) {
-        const Distribution& dist = mat_view.distribution();
+      // auto run_test = [](auto&& mat_view) {
+      //  const Distribution& dist = mat_view.distribution();
 
-        for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
-          for (SizeType i = 0; i < dist.nrTiles().rows(); ++i) {
-            GlobalTileIndex global_index(i, j);
-            comm::Index2D owner = dist.rankGlobalTile(global_index);
+      //  for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
+      //    for (SizeType i = 0; i < dist.nrTiles().rows(); ++i) {
+      //      GlobalTileIndex global_index(i, j);
+      //      comm::Index2D owner = dist.rankGlobalTile(global_index);
 
-            if (dist.rankIndex() == owner) {
-              LocalTileIndex local_index = dist.localTileIndex(global_index);
+      //      if (dist.rankIndex() == owner) {
+      //        LocalTileIndex local_index = dist.localTileIndex(global_index);
 
-              const TypeParam* ptr_global = mat_view(global_index).get().ptr(TileElementIndex{0, 0});
-              const TypeParam* ptr_local = mat_view(local_index).get().ptr(TileElementIndex{0, 0});
+      //        const TypeParam* ptr_global = mat_view(global_index).get().ptr(TileElementIndex{0, 0});
+      //        const TypeParam* ptr_local = mat_view(local_index).get().ptr(TileElementIndex{0, 0});
 
-              EXPECT_NE(ptr_global, nullptr);
-              EXPECT_EQ(ptr_global, ptr_local);
-            }
-            else {
-              EXPECT_THROW(mat_view(global_index), std::invalid_argument);
-            }
-          }
-        }
-      };
+      //        EXPECT_NE(ptr_global, nullptr);
+      //        EXPECT_EQ(ptr_global, ptr_local);
+      //      }
+      //      else {
+      //        EXPECT_THROW(mat_view(global_index), std::invalid_argument);
+      //      }
+      //    }
+      //  }
+      //};
       // TODO (non const matrix view NOT yet implemented)
       // run_test(getView(mat));
     }

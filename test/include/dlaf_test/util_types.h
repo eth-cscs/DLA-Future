@@ -27,13 +27,13 @@ using BufferTypes =
 template <class T>
 struct TypeUtilities {
   /// @brief Returns r.
-  static T element(double r, double i) {
+  static T element(double r, double /* i */) {
     return static_cast<T>(r);
   }
 
   /// @brief Returns r.
   /// @pre r > 0
-  static T polar(double r, double i) {
+  static T polar(double r, double /* theta */) {
     return static_cast<T>(r);
   }
 
@@ -55,8 +55,8 @@ struct TypeUtilities<std::complex<T>> {
 
   /// @brief Returns r * (cos(theta) + I * sin(theta)) (I is the imaginary unit).
   /// @pre r > 0
-  static std::complex<T> polar(double r, double i) {
-    return std::polar<T>(static_cast<T>(r), static_cast<T>(i));
+  static std::complex<T> polar(double r, double theta) {
+    return std::polar<T>(static_cast<T>(r), static_cast<T>(theta));
   }
 
   /// @brief Returns std::conj(val).

@@ -70,8 +70,6 @@ typename Index2DType::IndexType computeLinearIndex(
   std::size_t ld_size_index = (ordering == Ordering::RowMajor) ? 1 : 0;
   auto leading_size = dims[ld_size_index];
 
-  using IndexT = typename Index2DType::IndexType;
-
   switch (ordering) {
     case Ordering::RowMajor:
       return index.row() * leading_size + index.col();

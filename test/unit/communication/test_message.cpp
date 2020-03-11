@@ -33,8 +33,6 @@ TYPED_TEST(MessageTest, MakeFromPointer) {
   TypeParam value = 26;
   TypeParam* value_ptr = &value;
 
-  auto buffer = make_buffer(value_ptr, 1);
-
   auto message_direct = make_message(make_buffer(value_ptr, 1));
   auto message_indirect = make_message(value_ptr, 1);
 
@@ -64,8 +62,6 @@ TYPED_TEST(MessageTest, MakeFromPointer) {
 TYPED_TEST(MessageTest, MakeFromContiguousArray) {
   const int N = 13;
   TypeParam value_array[N]{};
-
-  auto buffer = make_buffer(value_array, N);
 
   auto message_direct = make_message(make_buffer(value_array, N));
   auto message_indirect = make_message(value_array, N);
@@ -103,8 +99,6 @@ TYPED_TEST(MessageTest, MakeFromStridedArray) {
 
   const std::size_t memory_footprint = (nblocks - 1) * block_distance + block_size;
   TypeParam value_array[memory_footprint]{};
-
-  auto buffer = make_buffer(value_array, nblocks, block_size, block_distance);
 
   auto message_direct = make_message(make_buffer(value_array, nblocks, block_size, block_distance));
   auto message_indirect = make_message(value_array, nblocks, block_size, block_distance);

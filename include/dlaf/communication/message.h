@@ -63,8 +63,8 @@ public:
   }
 
   /// @brief Return the number of Message::mpi_type() to send
-  std::size_t count() const noexcept {
-    return custom_type_ ? 1 : get_blocksize(buffer_);
+  int count() const noexcept {
+    return custom_type_ ? 1 : to_int(get_blocksize(buffer_));
   }
 
   /// @brief Return the MPI_Datatype to use during the MPI communication

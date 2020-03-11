@@ -10,7 +10,11 @@
 
 #pragma once
 
+/// @file
+
+#include <cassert>
 #include <complex>
+#include <limits>
 
 namespace dlaf {
 
@@ -57,7 +61,7 @@ using ComplexType = typename TypeInfo<T>::ComplexType;
 /// Given the number of additions and multiplications of type @tparam T
 /// it returns the number of basic floating point operations
 template <class T>
-constexpr size_t total_ops(const size_t add, const size_t mul) {
+constexpr double total_ops(const double add, const double mul) {
   return TypeInfo<T>::ops_add * add + TypeInfo<T>::ops_mul * mul;
 }
 
@@ -75,4 +79,48 @@ template <class T>
 T conj(const T number) {
   return number;
 }
+
+/// Cast from unisgned to signed integer types
+///
+/// It performs the cast checking if the given unsigned value can be stored in the destination type
+template <class S, class U,
+          std::enable_if_t<std::is_integral<U>::value && std::is_unsigned<U>::value &&
+                               std::is_integral<S>::value && std::is_signed<S>::value,
+                           int> = 0>
+S to_signed(const U unsigned_value) {
+  assert(std::numeric_limits<S>::max() > unsigned_value);
+  return static_cast<S>(unsigned_value);
+}
+
+/// Cast from signed to unsigned integer types
+///
+/// It performs the cast checking if the given signed value is greater than 0 and if the destination type
+/// can store the value.
+template <class U, class S,
+          std::enable_if_t<std::is_integral<U>::value && std::is_unsigned<U>::value &&
+                               std::is_integral<S>::value && std::is_signed<S>::value,
+                           int> = 0>
+U to_unsigned(const S signed_value) {
+  assert(signed_value >= 0);
+  assert(std::numeric_limits<U>::max() >= static_cast<std::size_t>(signed_value));
+  return static_cast<U>(signed_value);
+}
+
+/// Helper function for casting from unsigned to dlaf::SizeType
+///
+/// Useful when passing parameter to the BLAS/LAPACK interface
+/// see dlaf::to_signed
+auto to_SizeType = [](const auto unsigned_value) { return to_signed<SizeType>(unsigned_value); };
+
+/// Helper function for casting from unsigned to int
+///
+/// Useful when passing parameters to the MPI interface
+/// see dlaf::to_signed
+auto to_int = [](const auto unsigned_value) { return to_signed<int>(unsigned_value); };
+
+/// Helper function for casting from signed to std::size_t
+///
+/// Useful for interaction between std, but not only, with other interfaces that does not use usigned
+/// types (e.g. MPI, BLAS, ...) see dlaf::to_unsigned
+auto to_sizet = [](const auto signed_value) { return to_unsigned<std::size_t>(signed_value); };
 }

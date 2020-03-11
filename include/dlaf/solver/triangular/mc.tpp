@@ -145,5 +145,4 @@ void Solver<Backend::MC>::triangular(comm::CommunicatorGrid grid, blas::Side sid
     }
   }
 }
-
 }

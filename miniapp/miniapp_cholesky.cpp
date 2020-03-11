@@ -27,8 +27,8 @@ using namespace dlaf;
 using T = double;
 
 struct options_t {
-  int m;
-  int mb;
+  SizeType m;
+  SizeType mb;
   int grid_rows;
   int grid_cols;
   int64_t nruns;
@@ -99,8 +99,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 
     double gigaflops;
     {
-      auto n = static_cast<std::size_t>(matrix.size().rows());
-      auto add_mul = static_cast<std::size_t>(n * n * n / 6);
+      double n = matrix.size().rows();
+      auto add_mul = n * n * n / 6;
       gigaflops = total_ops<T>(add_mul, add_mul) / elapsed_time / 1e9;
     }
 
@@ -138,10 +138,10 @@ int main(int argc, char** argv) {
   // clang-format off
   desc_commandline.add_options()
     ("matrix-size",
-     value<int>()->default_value(4096),
+     value<SizeType>()->default_value(4096),
      "Matrix size.")
     ("block-size",
-     value<int>()->default_value(256),
+     value<SizeType>()->default_value(256),
      "Block cyclic distribution size.")
     ("grid-rows",
      value<int>()->default_value(1),
@@ -182,8 +182,8 @@ int main(int argc, char** argv) {
 
 options_t check_options(hpx::program_options::variables_map& vm) {
   options_t opts = {
-      vm["matrix-size"].as<int>(),   vm["block-size"].as<int>(),
-      vm["grid-rows"].as<int>(),     vm["grid-cols"].as<int>(),
+      vm["matrix-size"].as<SizeType>(), vm["block-size"].as<SizeType>(),
+      vm["grid-rows"].as<int>(),        vm["grid-cols"].as<int>(),
 
       vm["nruns"].as<int64_t>(),
 

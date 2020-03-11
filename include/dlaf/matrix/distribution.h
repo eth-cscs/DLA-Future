@@ -291,7 +291,7 @@ private:
   ///
   /// @pre local_size.rows() >= 0 and local_size.cols() >= 0.
   /// @pre grid_size.rows() == 1 and grid_size.cols() == 1.
-  void computeGlobalSize(const LocalElementSize& size, const comm::Size2D& grid_size) noexcept;
+  void computeGlobalSizeForNonDistr(const LocalElementSize& size) noexcept;
 
   /// computes and sets global_tiles_.
   ///

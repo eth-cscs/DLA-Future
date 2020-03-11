@@ -61,7 +61,7 @@ using ComplexType = typename TypeInfo<T>::ComplexType;
 /// Given the number of additions and multiplications of type @tparam T
 /// it returns the number of basic floating point operations
 template <class T>
-constexpr size_t total_ops(const size_t add, const size_t mul) {
+constexpr double total_ops(const double add, const double mul) {
   return TypeInfo<T>::ops_add * add + TypeInfo<T>::ops_mul * mul;
 }
 

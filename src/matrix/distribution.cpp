@@ -25,7 +25,7 @@ Distribution::Distribution(const LocalElementSize& size, const TileElementSize& 
     throw std::invalid_argument("Error: Invalid Block size");
 
   computeLocalNrTiles(local_size_, block_size_);
-  computeGlobalSize(local_size_, grid_size_);
+  computeGlobalSizeForNonDistr(local_size_);
   computeGlobalNrTiles(size_, block_size_);
 }
 
@@ -71,10 +71,7 @@ Distribution& Distribution::operator=(Distribution&& rhs) noexcept {
   return *this;
 }
 
-void Distribution::computeGlobalSize(const LocalElementSize& local_size,
-                                     const comm::Size2D& grid_size) noexcept {
-  assert(grid_size == comm::Size2D(1, 1));
-  (void) grid_size;
+void Distribution::computeGlobalSizeForNonDistr(const LocalElementSize& local_size) noexcept {
   size_ = GlobalElementSize(local_size.rows(), local_size.cols());
 }
 

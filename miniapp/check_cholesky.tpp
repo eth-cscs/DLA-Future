@@ -112,6 +112,9 @@ void cholesky_diff(Matrix<T, Device::CPU>& original, Matrix<T, Device::CPU>& cho
   Matrix<T, Device::CPU> mul_result(cholesky_lower.size(), cholesky_lower.blockSize(), comm_grid);
 
   // k is a global index that keeps track of the diagonal tile
+  // it is useful mainly for two reasons:
+  // - as limit for when to stop multiplying (because it is triangular and symmetric)
+  // - as reference for the row to be used in L, but transposed, as value for L'
   for (SizeType k = 0; k < cholesky_lower.nrTiles().cols(); ++k) {
     const auto k_loc = distribution.template nextLocalTileFromGlobalTile<Coord::Col>(k + 1);
 
@@ -124,23 +127,33 @@ void cholesky_diff(Matrix<T, Device::CPU>& original, Matrix<T, Device::CPU>& cho
     // TODO evaluate setting to zero (is it possible that a rank does not update it)
     matrix::util::set(partial_result, [](auto&&) { return 0; });
 
+    // for each local column, with the limit of the diagonal tile
     for (SizeType j_loc = 0; j_loc < k_loc; ++j_loc) {
+      // identify the tile to be used as 2nd operand in the gemm
       const GlobalTileIndex
           transposed_wrt_global{k, distribution.template globalTileFromLocalTile<Coord::Col>(j_loc)};
       const auto owner_transposed = distribution.rankGlobalTile(transposed_wrt_global);
 
+      // collect the 2nd operand, receving it from others if not available locally
       hpx::shared_future<dlaf::Tile<const T, Device::CPU>> tile_transposed;
 
       if (owner_transposed == current_rank) {
         // current rank already has what it needs
         tile_transposed = cholesky_lower.read(transposed_wrt_global);
 
+        // if there are more than 1 rank for column, others will need the data from this one
         if (distribution.commGridSize().rows() > 1)
           comm::sync::broadcast::send(comm_grid.colCommunicator(),
                                       cholesky_lower.read(transposed_wrt_global).get());
       }
       else {
-        // current rank has to receive the "transposed block"
+        // current rank has to receive it
+
+        // by construction: this rank has the 1st operand, so if it does not have the 2nd one,
+        // for sure another rank in the same column will have it (thanks to the regularity of the
+        // distribution given by the 2D grid)
+        assert(owner_transposed.col() == current_rank.col());
+
         Tile<T, Device::CPU> workspace(cholesky_lower.blockSize(),
                                        dlaf::memory::MemoryView<T, Device::CPU>(
                                            cholesky_lower.blockSize().rows() *
@@ -153,31 +166,34 @@ void cholesky_diff(Matrix<T, Device::CPU>& original, Matrix<T, Device::CPU>& cho
         tile_transposed = hpx::make_ready_future<Tile<const T, Device::CPU>>(std::move(workspace));
       }
 
+      // compute the part of results available locally, for each row this rank has in local
       auto i_loc = distribution.template nextLocalTileFromGlobalTile<Coord::Row>(k);
       for (; i_loc < distribution.localNrTiles().rows(); ++i_loc) {
         const LocalTileIndex tile_wrt_local{i_loc, j_loc};
-        const GlobalTileIndex tile_wrt_global = distribution.globalTileIndex(tile_wrt_local);
 
         hpx::dataflow(hpx::util::unwrapping(tile::gemm<T, Device::CPU>), blas::Op::NoTrans,
-                      blas::Op::ConjTrans, 1.0, cholesky_lower.read(tile_wrt_global), tile_transposed,
+                      blas::Op::ConjTrans, 1.0, cholesky_lower.read(tile_wrt_local), tile_transposed,
                       j_loc == 0 ? 0.0 : 1.0, std::move(partial_result(LocalTileIndex{i_loc, 0})));
       }
     }
 
+    // now that each rank has computed its partial result with the local data available
+    // aggregate the partial result for each row in the current column k
     for (int i_loc = 0; i_loc < partial_result.nrTiles().rows(); ++i_loc) {
       const auto i = distribution.template globalTileFromLocalTile<Coord::Row>(i_loc);
       const GlobalTileIndex tile_result{i, k};
       const auto owner_result = distribution.rankGlobalTile(tile_result);
 
-      const auto reduce_operator = MPI_SUM;
-      auto row_comm = comm_grid.rowCommunicator();
-      auto input_message = common::make_buffer(partial_result.read(LocalTileIndex{i_loc, 0}).get());
       common::BufferBasic<T> output_message;
       if (owner_result == current_rank)
         output_message = common::make_buffer(mul_result(tile_result).get());
 
-      comm::sync::reduce(owner_result.col(), row_comm, reduce_operator, input_message, output_message);
+      comm::sync::reduce(owner_result.col(), comm_grid.rowCommunicator(), MPI_SUM,
+                         common::make_buffer(partial_result.read(LocalTileIndex{i_loc, 0}).get()),
+                         output_message);
 
+      // L * L' for the current cell is computed
+      // here the owner of the result performs the last step (difference with original)
       if (owner_result == current_rank) {
         // TODO check for a blas function to replace it
         hpx::dataflow(hpx::util::unwrapping([](auto&& a, auto&& b) {

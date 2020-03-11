@@ -353,8 +353,8 @@ TYPED_TEST(TileTest, CreateBuffer) {
 
   auto tile_buffer = dlaf::common::make_buffer(tile);
 
-  EXPECT_EQ(tile.ptr({0, 0}), get_pointer(tile_buffer));
-  EXPECT_EQ(tile.size().cols(), get_num_blocks(tile_buffer));
-  EXPECT_EQ(tile.size().rows(), get_blocksize(tile_buffer));
-  EXPECT_EQ(tile.ld(), get_stride(tile_buffer));
+  EXPECT_EQ(tile.ptr({0, 0}), buffer_pointer(tile_buffer));
+  EXPECT_EQ(tile.size().cols(), buffer_nblocks(tile_buffer));
+  EXPECT_EQ(tile.size().rows(), buffer_blocksize(tile_buffer));
+  EXPECT_EQ(tile.ld(), buffer_stride(tile_buffer));
 }

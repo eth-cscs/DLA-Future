@@ -19,10 +19,7 @@ using ElementTypes =
     ::testing::Types<int, long long, float, double, std::complex<float>, std::complex<double>>;
 using MatrixElementTypes = ::testing::Types<float, double, std::complex<float>, std::complex<double>>;
 
-using BufferTypes =
-    ::testing::Types<int, const int, long long, const long long, float, const float, double,
-                     const double, std::complex<float>, const std::complex<float>, std::complex<double>,
-                     const std::complex<double>>;
+using BufferTypes = ElementTypes;
 
 template <class T>
 struct TypeUtilities {

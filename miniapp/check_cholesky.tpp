@@ -15,6 +15,7 @@
 #include <hpx/hpx.hpp>
 
 #include "dlaf/blas_tile.h"
+#include "dlaf/common/vector.h"
 #include "dlaf/communication/sync/broadcast.h"
 #include "dlaf/communication/sync/reduce.h"
 #include "dlaf/matrix.h"
@@ -49,10 +50,11 @@ void setUpperZero(Matrix<T, Device::CPU>& matrix) {
 
 template <class T>
 T matrix_norm(Matrix<const T, Device::CPU>& matrix, comm::CommunicatorGrid comm_grid) {
-  const auto& distribution = matrix.distribution();
-  const auto current_rank = distribution.rankIndex();
+  using common::internal::vector;
 
-  std::vector<hpx::future<T>> tiles_max;
+  const auto& distribution = matrix.distribution();
+
+  vector<hpx::future<T>> tiles_max;
   tiles_max.reserve(distribution.localNrTiles().rows() * distribution.localNrTiles().cols());
 
   for (SizeType j_loc = 0; j_loc < distribution.localNrTiles().cols(); ++j_loc) {

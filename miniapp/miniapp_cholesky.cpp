@@ -99,8 +99,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 
     double gigaflops;
     {
-      auto n = static_cast<std::size_t>(matrix.size().rows());
-      auto add_mul = static_cast<std::size_t>(n * n * n / 6);
+      double n = matrix.size().rows();
+      auto add_mul = n * n * n / 6;
       gigaflops = total_ops<T>(add_mul, add_mul) / elapsed_time / 1e9;
     }
 

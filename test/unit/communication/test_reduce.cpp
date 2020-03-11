@@ -80,9 +80,10 @@ TEST_F(ReduceTest, ContiguousToContiguous) {
 
   sync::reduce(root, communicator, op, std::move(message_input), std::move(message_output));
 
-  if (root == world.rank())
+  if (root == world.rank()) {
     for (auto i = 0; i < N; ++i)
       EXPECT_EQ(value * NUM_MPI_RANKS, data_B[i]);
+  }
 }
 
 TEST_F(ReduceTest, ConstContiguousToContiguous) {
@@ -106,9 +107,10 @@ TEST_F(ReduceTest, ConstContiguousToContiguous) {
 
   sync::reduce(root, communicator, op, std::move(message_input), std::move(message_output));
 
-  if (root == world.rank())
+  if (root == world.rank()) {
     for (auto i = 0; i < N; ++i)
       EXPECT_EQ(value * NUM_MPI_RANKS, data_B[i]);
+  }
 }
 
 TEST_F(ReduceTest, StridedToContiguous) {
@@ -142,9 +144,10 @@ TEST_F(ReduceTest, StridedToContiguous) {
 
   sync::reduce(root, communicator, op, std::move(message_input), std::move(message_output));
 
-  if (root == world.rank())
+  if (root == world.rank()) {
     for (auto i = 0; i < N; ++i)
       EXPECT_EQ(value * NUM_MPI_RANKS, data_contiguous[i]);
+  }
 }
 
 TEST_F(ReduceTest, ConstStridedToContiguous) {
@@ -179,9 +182,10 @@ TEST_F(ReduceTest, ConstStridedToContiguous) {
 
   sync::reduce(root, communicator, op, std::move(message_input), std::move(message_output));
 
-  if (root == world.rank())
+  if (root == world.rank()) {
     for (auto i = 0; i < N; ++i)
       EXPECT_EQ(value * NUM_MPI_RANKS, data_contiguous[i]);
+  }
 }
 
 TEST_F(ReduceTest, ContiguousToStrided) {

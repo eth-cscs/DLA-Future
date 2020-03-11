@@ -172,13 +172,11 @@ void cholesky_diff(Matrix<T, Device::CPU>& original, Matrix<T, Device::CPU>& cho
       const auto reduce_operator = MPI_SUM;
       auto row_comm = comm_grid.rowCommunicator();
       auto input_message = common::make_buffer(partial_result.read(LocalTileIndex{i_loc, 0}).get());
-
+      common::BufferBasic<T> output_message;
       if (owner_result == current_rank)
-        comm::sync::internal::reduce::collector(row_comm, reduce_operator, std::move(input_message),
-                                                common::make_buffer(mul_result(tile_result).get()));
-      else
-        comm::sync::internal::reduce::participant(owner_result.col(), row_comm, reduce_operator,
-                                                  std::move(input_message));
+        output_message = common::make_buffer(mul_result(tile_result).get());
+
+      comm::sync::reduce(owner_result.col(), row_comm, reduce_operator, input_message, output_message);
 
       if (owner_result == current_rank) {
         // TODO check for a blas function to replace it

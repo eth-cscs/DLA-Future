@@ -98,15 +98,15 @@ T matrix_norm(Matrix<const T, Device::CPU>& matrix, comm::CommunicatorGrid comm_
 
   T max_value_rows;
   if (comm_grid.size().cols() > 1)
-    comm::sync::reduce(0, comm_grid.rowCommunicator(), MPI_MAX, common::make_buffer(&local_max_value, 1),
-                       common::make_buffer(&max_value_rows, 1));
+    comm::sync::reduce(0, comm_grid.rowCommunicator(), MPI_MAX, common::make_data(&local_max_value, 1),
+                       common::make_data(&max_value_rows, 1));
   else
     max_value_rows = local_max_value;
 
   T max_value;
   if (comm_grid.size().rows() > 1)
-    comm::sync::reduce(0, comm_grid.colCommunicator(), MPI_MAX, common::make_buffer(&max_value_rows, 1),
-                       common::make_buffer(&max_value, 1));
+    comm::sync::reduce(0, comm_grid.colCommunicator(), MPI_MAX, common::make_data(&max_value_rows, 1),
+                       common::make_data(&max_value, 1));
   else
     max_value = max_value_rows;
 
@@ -202,12 +202,12 @@ void cholesky_diff(Matrix<T, Device::CPU>& original, Matrix<T, Device::CPU>& cho
       const GlobalTileIndex tile_result{i, k};
       const auto owner_result = distribution.rankGlobalTile(tile_result);
 
-      common::BufferBasic<T> output_message;
+      common::DataDescriptor<T> output_message;
       if (owner_result == current_rank)
-        output_message = common::make_buffer(mul_result(tile_result).get());
+        output_message = common::make_data(mul_result(tile_result).get());
 
       comm::sync::reduce(owner_result.col(), comm_grid.rowCommunicator(), MPI_SUM,
-                         common::make_buffer(partial_result.read(LocalTileIndex{i_loc, 0}).get()),
+                         common::make_data(partial_result.read(LocalTileIndex{i_loc, 0}).get()),
                          output_message);
 
       // L * L' for the current cell is computed

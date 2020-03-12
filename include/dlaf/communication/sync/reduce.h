@@ -31,8 +31,8 @@ template <class DataIn, class DataOut>
 void collector(Communicator& communicator, MPI_Op reduce_operation, DataIn input, DataOut output) {
   using T = std::remove_const_t<typename common::data_traits<DataIn>::element_t>;
 
-  common::BufferWithMemory<T> tmp_mem_input;
-  common::BufferWithMemory<T> tmp_mem_output;
+  common::Buffer<T> tmp_mem_input;
+  common::Buffer<T> tmp_mem_output;
 
   common::DataDescriptor<const T> tmp_in = input;
   common::DataDescriptor<T> tmp_out = output;
@@ -66,7 +66,7 @@ template <class DataIn>
 void participant(int rank_root, Communicator& communicator, MPI_Op reduce_operation, DataIn input) {
   using T = std::remove_const_t<typename common::data_traits<DataIn>::element_t>;
 
-  common::BufferWithMemory<T> tmp_mem_input;
+  common::Buffer<T> tmp_mem_input;
 
   common::DataDescriptor<const T> tmp_in = input;
 

@@ -351,10 +351,10 @@ TYPED_TEST(TileTest, CreateBuffer) {
   TileElementSize size(m, n);
   Tile<TypeParam, Device::CPU> tile(size, std::move(mem_view), ld);
 
-  auto tile_buffer = dlaf::common::make_buffer(tile);
+  auto tile_data = dlaf::common::make_data(tile);
 
-  EXPECT_EQ(tile.ptr({0, 0}), buffer_pointer(tile_buffer));
-  EXPECT_EQ(tile.size().cols(), buffer_nblocks(tile_buffer));
-  EXPECT_EQ(tile.size().rows(), buffer_blocksize(tile_buffer));
-  EXPECT_EQ(tile.ld(), buffer_stride(tile_buffer));
+  EXPECT_EQ(tile.ptr({0, 0}), data_pointer(tile_data));
+  EXPECT_EQ(tile.size().cols(), data_nblocks(tile_data));
+  EXPECT_EQ(tile.size().rows(), data_blocksize(tile_data));
+  EXPECT_EQ(tile.ld(), data_stride(tile_data));
 }

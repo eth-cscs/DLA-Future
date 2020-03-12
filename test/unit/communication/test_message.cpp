@@ -12,7 +12,7 @@
 
 #include <gtest/gtest.h>
 
-#include "dlaf/common/buffer_basic.h"
+#include "dlaf/common/data_descriptor.h"
 #include "dlaf/types.h"
 #include "dlaf_test/util_types.h"
 
@@ -21,7 +21,7 @@ using namespace dlaf_test;
 using namespace dlaf::comm;
 
 using dlaf::SizeType;
-using dlaf::common::make_buffer;
+using dlaf::common::make_data;
 using dlaf::comm::make_message;
 
 template <class Type>
@@ -33,8 +33,8 @@ TYPED_TEST(MessageTest, MakeFromPointer) {
   TypeParam value = 26;
   TypeParam* value_ptr = &value;
 
-  auto buffer = make_buffer(value_ptr, 1);
-  auto message = make_message(buffer);
+  auto data = make_data(value_ptr, 1);
+  auto message = make_message(data);
 
   int type_size;
   MPI_Type_size(message.mpi_type(), &type_size);
@@ -49,8 +49,8 @@ TYPED_TEST(MessageTest, MakeFromContiguousArray) {
   const int N = 13;
   TypeParam value_array[N]{};
 
-  auto buffer = make_buffer(value_array, N);
-  auto message = make_message(buffer);
+  auto data = make_data(value_array, N);
+  auto message = make_message(data);
 
   int type_size;
   MPI_Type_size(message.mpi_type(), &type_size);
@@ -72,8 +72,8 @@ TYPED_TEST(MessageTest, MakeFromContiguousAsStridedArray) {
   const std::size_t memory_footprint = (nblocks - 1) * block_distance + block_size;
   TypeParam value_array[memory_footprint]{};
 
-  auto buffer = make_buffer(value_array, nblocks, block_size, block_distance);
-  auto message = make_message(buffer);
+  auto data = make_data(value_array, nblocks, block_size, block_distance);
+  auto message = make_message(data);
 
   int type_size;
   MPI_Type_size(message.mpi_type(), &type_size);
@@ -95,8 +95,8 @@ TYPED_TEST(MessageTest, MakeFromStridedArray) {
   const std::size_t memory_footprint = (nblocks - 1) * block_distance + block_size;
   TypeParam value_array[memory_footprint]{};
 
-  auto buffer = make_buffer(value_array, nblocks, block_size, block_distance);
-  auto message = make_message(buffer);
+  auto data = make_data(value_array, nblocks, block_size, block_distance);
+  auto message = make_message(data);
 
   int type_size;
   MPI_Type_size(message.mpi_type(), &type_size);
@@ -111,7 +111,7 @@ TYPED_TEST(MessageTest, MoveBasicType) {
   TypeParam value = 26;
   TypeParam* value_ptr = &value;
 
-  auto message = make_message(common::make_buffer(value_ptr, 1));
+  auto message = make_message(common::make_data(value_ptr, 1));
 
   auto new_message = std::move(message);
 
@@ -135,7 +135,7 @@ TYPED_TEST(MessageTest, MoveCustomType) {
   const std::size_t memory_footprint = (nblocks - 1) * block_distance + block_size;
   TypeParam value_array[memory_footprint]{};
 
-  auto message = make_message(common::make_buffer(value_array, nblocks, block_size, block_distance));
+  auto message = make_message(common::make_data(value_array, nblocks, block_size, block_distance));
 
   auto new_message = std::move(message);
 

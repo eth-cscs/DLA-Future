@@ -180,7 +180,7 @@ struct data_traits<Buffer<T>> : data_traits<DataDescriptor<T>> {};
 ///
 /// Create a temporary data that allows to store contiguously all the elements of the given data
 template <class DataIn>
-auto create_temporary_data(const DataIn& input) {
+auto create_temporary_buffer(const DataIn& input) {
   using DataT = std::remove_const_t<typename common::data_traits<DataIn>::element_t>;
 
   assert(data_count(input) > 0);

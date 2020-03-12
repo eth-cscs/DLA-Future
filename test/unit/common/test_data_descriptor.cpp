@@ -544,7 +544,7 @@ TYPED_TEST(DataDescriptorTest, CopyCtorFromStridedArray) {
 
 template <class TypeParam, class Buffer>
 void check_temporary(Buffer& data) {
-  auto data_temp = create_temporary_data(data);
+  auto data_temp = create_temporary_buffer(data);
 
   EXPECT_NE(common::data_pointer(data), common::data_pointer(data_temp));
   EXPECT_EQ(common::data_count(data), common::data_count(data_temp));

@@ -47,8 +47,8 @@ void collector(Communicator& communicator, MPI_Op reduce_operation, DataIn input
   if (!output.is_contiguous())
     tmp_out = tmp_mem_output = common::create_temporary_buffer(tmp_out);
 
-  auto&& message_input = comm::make_message(std::move(tmp_in));
-  auto&& message_output = comm::make_message(DataOut(tmp_out));
+  auto message_input = comm::make_message(std::move(tmp_in));
+  auto message_output = comm::make_message(DataOut(tmp_out));
 
   MPI_Reduce(message_input.data(), message_output.data(), message_input.count(),
              message_input.mpi_type(), reduce_operation, communicator.rank(), communicator);
@@ -76,7 +76,7 @@ void participant(int rank_root, Communicator& communicator, MPI_Op reduce_operat
     common::copy(input, tmp_mem_input);
   }
 
-  auto&& message_input = comm::make_message(std::move(tmp_in));
+  auto message_input = comm::make_message(std::move(tmp_in));
 
   MPI_Reduce(message_input.data(), nullptr, message_input.count(), message_input.mpi_type(),
              reduce_operation, rank_root, communicator);

@@ -20,7 +20,6 @@ using namespace dlaf;
 using namespace dlaf_test;
 using namespace dlaf::comm;
 
-using dlaf::SizeType;
 using dlaf::common::make_data;
 using dlaf::comm::make_message;
 

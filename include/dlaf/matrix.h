@@ -56,7 +56,7 @@ public:
          const comm::CommunicatorGrid& comm);
 
   /// Create a matrix distributed according to the distribution @p distribution.
-  Matrix(matrix::Distribution&& distribution);
+  Matrix(Distribution&& distribution);
 
   /// Create a matrix distributed according to the distribution @p distribution,
   /// specifying the layout.
@@ -65,7 +65,7 @@ public:
   ///            of the local part of the matrix will be stored in memory,
   /// @pre distribution.localSize() == layout.size(),
   /// @pre distribution.blockSize() == layout.blockSize().
-  Matrix(matrix::Distribution&& distribution, const matrix::LayoutInfo& layout) noexcept;
+  Matrix(Distribution&& distribution, const LayoutInfo& layout) noexcept;
 
   /// Create a non distributed matrix,
   /// which references elements that are already allocated in the memory.
@@ -74,7 +74,7 @@ public:
   ///            of the local part of the matrix are stored in memory,
   /// @param[in] ptr is the pointer to the first element of the local part of the matrix,
   /// @pre @p ptr refers to an allocated memory region of at least @c layout.minMemSize() elements.
-  Matrix(const matrix::LayoutInfo& layout, ElementType* ptr);
+  Matrix(const LayoutInfo& layout, ElementType* ptr);
 
   /// Create a matrix distributed according to the distribution @p distribution,
   /// which references elements that are already allocated in the memory.
@@ -85,8 +85,7 @@ public:
   /// @pre distribution.localSize() == layout.size(),
   /// @pre distribution.blockSize() == layout.blockSize(),
   /// @pre @p ptr refers to an allocated memory region of at least @c layout.minMemSize() elements.
-  Matrix(matrix::Distribution&& distribution, const matrix::LayoutInfo& layout,
-         ElementType* ptr) noexcept;
+  Matrix(Distribution&& distribution, const LayoutInfo& layout, ElementType* ptr) noexcept;
 
   Matrix(const Matrix& rhs) = delete;
   Matrix(Matrix&& rhs) = default;
@@ -119,22 +118,21 @@ private:
 };
 
 template <class T, Device device>
-class Matrix<const T, device> : public matrix::internal::MatrixBase {
+class Matrix<const T, device> : public internal::MatrixBase {
 public:
   using ElementType = T;
   using TileType = Tile<ElementType, device>;
   using ConstTileType = Tile<const ElementType, device>;
   friend Matrix<ElementType, device>;
 
-  Matrix(const matrix::LayoutInfo& layout, ElementType* ptr);
+  Matrix(const LayoutInfo& layout, ElementType* ptr);
 
-  Matrix(const matrix::LayoutInfo& layout, const ElementType* ptr)
+  Matrix(const LayoutInfo& layout, const ElementType* ptr)
       : Matrix(layout, const_cast<ElementType*>(ptr)) {}
 
-  Matrix(matrix::Distribution&& distribution, const matrix::LayoutInfo& layout,
-         ElementType* ptr) noexcept;
+  Matrix(Distribution&& distribution, const LayoutInfo& layout, ElementType* ptr) noexcept;
 
-  Matrix(matrix::Distribution&& distribution, const matrix::LayoutInfo& layout, const ElementType* ptr)
+  Matrix(Distribution&& distribution, const LayoutInfo& layout, const ElementType* ptr)
       : Matrix(std::move(distribution), layout, const_cast<ElementType*>(ptr)) {}
 
   Matrix(const Matrix& rhs) = delete;
@@ -161,11 +159,10 @@ public:
   }
 
 private:
-  Matrix(matrix::Distribution&& distribution, std::vector<hpx::future<TileType>>&& tile_futures,
+  Matrix(Distribution&& distribution, std::vector<hpx::future<TileType>>&& tile_futures,
          std::vector<hpx::shared_future<ConstTileType>>&& tile_shared_futures);
 
-  void setUpTiles(const memory::MemoryView<ElementType, device>& mem,
-                  const matrix::LayoutInfo& layout) noexcept;
+  void setUpTiles(const memory::MemoryView<ElementType, device>& mem, const LayoutInfo& layout) noexcept;
 
   std::vector<hpx::future<TileType>> tile_futures_;
   std::vector<hpx::shared_future<ConstTileType>> tile_shared_futures_;
@@ -188,7 +185,7 @@ private:
 template <Device device, class T>
 Matrix<T, device> createMatrixFromColMajor(const LocalElementSize& size,
                                            const TileElementSize& block_size, SizeType ld, T* ptr) {
-  return Matrix<T, device>(matrix::colMajorLayout(size, block_size, ld), ptr);
+  return Matrix<T, device>(colMajorLayout(size, block_size, ld), ptr);
 }
 
 /// Create a non distributed matrix of size @p size and block size @p block_size
@@ -201,7 +198,7 @@ Matrix<T, device> createMatrixFromColMajor(const LocalElementSize& size,
 template <Device device, class T>
 Matrix<T, device> createMatrixFromTile(const LocalElementSize& size, const TileElementSize& block_size,
                                        T* ptr) {
-  return Matrix<T, device>(matrix::tileLayout(size, block_size), ptr);
+  return Matrix<T, device>(tileLayout(size, block_size), ptr);
 }
 
 /// Create a non distributed matrix of size @p size and block size @p block_size
@@ -218,7 +215,7 @@ Matrix<T, device> createMatrixFromTile(const LocalElementSize& size, const TileE
 template <Device device, class T>
 Matrix<T, device> createMatrixFromTile(const LocalElementSize& size, const TileElementSize& block_size,
                                        SizeType ld_tile, SizeType tiles_per_col, T* ptr) {
-  return Matrix<T, device>(matrix::tileLayout(size, block_size, ld_tile, tiles_per_col), ptr);
+  return Matrix<T, device>(tileLayout(size, block_size, ld_tile, tiles_per_col), ptr);
 }
 
 // Distributed versions
@@ -239,8 +236,8 @@ Matrix<T, device> createMatrixFromColMajor(const GlobalElementSize& size,
                                            const TileElementSize& block_size, SizeType ld,
                                            const comm::CommunicatorGrid& comm,
                                            const comm::Index2D& source_rank_index, T* ptr) {
-  matrix::Distribution distribution(size, block_size, comm.size(), comm.rank(), source_rank_index);
-  auto layout = matrix::colMajorLayout(distribution.localSize(), block_size, ld);
+  Distribution distribution(size, block_size, comm.size(), comm.rank(), source_rank_index);
+  auto layout = colMajorLayout(distribution.localSize(), block_size, ld);
 
   return Matrix<T, device>(std::move(distribution), layout, ptr);
 }
@@ -275,8 +272,8 @@ template <Device device, class T>
 Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const TileElementSize& block_size,
                                        const comm::CommunicatorGrid& comm,
                                        const comm::Index2D& source_rank_index, T* ptr) {
-  matrix::Distribution distribution(size, block_size, comm.size(), comm.rank(), source_rank_index);
-  auto layout = matrix::tileLayout(distribution.localSize(), block_size);
+  Distribution distribution(size, block_size, comm.size(), comm.rank(), source_rank_index);
+  auto layout = tileLayout(distribution.localSize(), block_size);
 
   return Matrix<T, device>(std::move(distribution), layout, ptr);
 }
@@ -313,8 +310,8 @@ Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const Tile
                                        SizeType ld_tile, SizeType tiles_per_col,
                                        const comm::CommunicatorGrid& comm,
                                        const comm::Index2D& source_rank_index, T* ptr) {
-  matrix::Distribution distribution(size, block_size, comm.size(), comm.rank(), source_rank_index);
-  auto layout = matrix::tileLayout(distribution.localSize(), block_size, ld_tile, tiles_per_col);
+  Distribution distribution(size, block_size, comm.size(), comm.rank(), source_rank_index);
+  auto layout = tileLayout(distribution.localSize(), block_size, ld_tile, tiles_per_col);
 
   return Matrix<T, device>(std::move(distribution), layout, ptr);
 }

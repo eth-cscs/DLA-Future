@@ -18,6 +18,7 @@ std::vector<comm::CommunicatorGrid> comm_grids;
 
 class CommunicatorGrid6RanksEnvironment : public ::testing::Environment {
   static_assert(NUM_MPI_RANKS == 6, "Exactly 6 ranks are required");
+
 public:
   virtual void SetUp() override {
     if (comm_grids.empty()) {

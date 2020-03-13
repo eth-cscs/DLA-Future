@@ -22,7 +22,6 @@
 #include "dlaf/util_math.h"
 
 namespace dlaf {
-
 /// Exception used to notify a continuation task that an exception has been thrown in a dependency task.
 ///
 /// It is mainly used to enable exception propagation in the automatic-continuation mechanism.
@@ -31,6 +30,7 @@ struct ContinuationException final : public std::runtime_error {
       : std::runtime_error("An exception has been thrown during the execution of the previous task.") {}
 };
 
+namespace matrix {
 template <class T, Device device>
 class Tile;
 

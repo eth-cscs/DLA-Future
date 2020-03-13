@@ -104,6 +104,7 @@ TYPED_TEST(MatrixUtilsTest, SetRandom) {
 
 template <class T>
 void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::CommunicatorGrid comm_grid) {
+  using dlaf::util::size_t::mul;
   const auto& distribution = matrix.distribution();
   const auto current_rank = distribution.rankIndex();
 
@@ -129,8 +130,8 @@ void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::Communicator
         else {
           Tile<T, Device::CPU> workspace(size_tile_transposed,
                                          memory::MemoryView<T, Device::CPU>(
-                                             util::size_t::mul(size_tile_transposed.rows(),
-                                                               size_tile_transposed.cols())),
+                                             mul(size_tile_transposed.rows(),
+                                                 size_tile_transposed.cols())),
                                          size_tile_transposed.rows());
 
           // recv from owner_transposed

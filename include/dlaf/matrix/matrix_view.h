@@ -29,7 +29,7 @@ template <class T, Device device>
 class MatrixView;
 
 template <class T, Device device>
-class MatrixView<const T, device> : public matrix::internal::MatrixBase {
+class MatrixView<const T, device> : public internal::MatrixBase {
 public:
   using ElementType = T;
   using TileType = Tile<ElementType, device>;

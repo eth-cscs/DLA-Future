@@ -46,8 +46,8 @@ using dlaf::comm::CommunicatorGrid;
 using T = double;
 using MatrixType = dlaf::Matrix<T, Device::CPU>;
 using ConstMatrixType = dlaf::Matrix<const T, Device::CPU>;
-using TileType = dlaf::Tile<T, Device::CPU>;
-using ConstTileType = dlaf::Tile<const T, Device::CPU>;
+using TileType = MatrixType::TileType;
+using ConstTileType = MatrixType::ConstTileType;
 
 /// Check Cholesky Factorization results
 ///
@@ -277,7 +277,7 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
       const auto owner_transposed = distribution.rankGlobalTile(transposed_wrt_global);
 
       // collect the 2nd operand, receving it from others if not available locally
-      hpx::shared_future<dlaf::Tile<const T, Device::CPU>> tile_to_transpose;
+      hpx::shared_future<ConstTileType> tile_to_transpose;
 
       if (owner_transposed == current_rank) {  // current rank already has what it needs
         tile_to_transpose = L.read(transposed_wrt_global);

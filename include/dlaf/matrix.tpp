@@ -13,22 +13,22 @@ namespace matrix {
 
 template <class T, Device device>
 Matrix<T, device>::Matrix(const LocalElementSize& size, const TileElementSize& block_size)
-    : Matrix<T, device>(matrix::Distribution(size, block_size)) {}
+    : Matrix<T, device>(Distribution(size, block_size)) {}
 
 template <class T, Device device>
 Matrix<T, device>::Matrix(const GlobalElementSize& size, const TileElementSize& block_size,
                           const comm::CommunicatorGrid& comm)
-    : Matrix<T, device>(matrix::Distribution(size, block_size, comm.size(), comm.rank(), {0, 0})) {}
+    : Matrix<T, device>(Distribution(size, block_size, comm.size(), comm.rank(), {0, 0})) {}
 
 template <class T, Device device>
-Matrix<T, device>::Matrix(matrix::Distribution&& distribution)
+Matrix<T, device>::Matrix(Distribution&& distribution)
     : Matrix<const T, device>(std::move(distribution), {}, {}) {
   const SizeType alignment = 64;
   const SizeType ld =
       std::max<SizeType>(1,
                          util::ceilDiv(this->distribution().localSize().rows(), alignment) * alignment);
 
-  auto layout = matrix::colMajorLayout(this->distribution().localSize(), this->blockSize(), ld);
+  auto layout = colMajorLayout(this->distribution().localSize(), this->blockSize(), ld);
 
   std::size_t memory_size = layout.minMemSize();
   memory::MemoryView<ElementType, device> mem(memory_size);
@@ -37,7 +37,7 @@ Matrix<T, device>::Matrix(matrix::Distribution&& distribution)
 }
 
 template <class T, Device device>
-Matrix<T, device>::Matrix(matrix::Distribution&& distribution, const matrix::LayoutInfo& layout) noexcept
+Matrix<T, device>::Matrix(Distribution&& distribution, const LayoutInfo& layout) noexcept
     : Matrix<const T, device>(std::move(distribution), {}, {}) {
   DLAF_ASSERT(this->distribution().localSize() == layout.size(),
               "Size of distribution does not match layout size!", distribution.localSize(),
@@ -52,12 +52,12 @@ Matrix<T, device>::Matrix(matrix::Distribution&& distribution, const matrix::Lay
 }
 
 template <class T, Device device>
-Matrix<T, device>::Matrix(matrix::Distribution&& distribution, const matrix::LayoutInfo& layout,
+Matrix<T, device>::Matrix(Distribution&& distribution, const LayoutInfo& layout,
                           ElementType* ptr) noexcept
     : Matrix<const T, device>(std::move(distribution), layout, ptr) {}
 
 template <class T, Device device>
-Matrix<T, device>::Matrix(const matrix::LayoutInfo& layout, ElementType* ptr)
+Matrix<T, device>::Matrix(const LayoutInfo& layout, ElementType* ptr)
     : Matrix<const T, device>(layout, ptr) {}
 
 template <class T, Device device>

@@ -311,43 +311,45 @@ void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
       else
         seed = sum(tl_index.row(), mul(tl_index.col(), matrix.size().rows()));
 
-      hpx::dataflow(hpx::util::unwrapping([tile_wrt_global, seed, offset_value, full_tile_size](auto&& tile) {
-                      internal::getter_random<T> random_value(seed);
+      hpx::dataflow(hpx::util::unwrapping(
+                        [tile_wrt_global, seed, offset_value, full_tile_size](auto&& tile) {
+                          internal::getter_random<T> random_value(seed);
 
-                      if (tile_wrt_global.row() == tile_wrt_global.col()) {  // DIAGONAL
-                        // for diagonal tiles get just lower matrix values and set value for both
-                        // straight and transposed indices
-                        for (SizeType j = 0; j < tile.size().cols(); ++j) {
-                          for (SizeType i = 0; i < j; ++i) {
-                            auto value = random_value();
+                          if (tile_wrt_global.row() == tile_wrt_global.col()) {  // DIAGONAL
+                            // for diagonal tiles get just lower matrix values and set value for both
+                            // straight and transposed indices
+                            for (SizeType j = 0; j < tile.size().cols(); ++j) {
+                              for (SizeType i = 0; i < j; ++i) {
+                                auto value = random_value();
 
-                            tile(TileElementIndex{i, j}) = value;
-                            tile(TileElementIndex{j, i}) = dlaf::conj(value);
-                          }
-                          tile(TileElementIndex{j, j}) = std::real(random_value()) + offset_value;
-                        }
-                      }
-                      else {  // LOWER or UPPER (except DIAGONAL)
-                        // random values are requested in the same order for both original and transposed
-                        for (SizeType j = 0; j < full_tile_size.cols(); ++j) {
-                          for (SizeType i = 0; i < full_tile_size.rows(); ++i) {
-                            auto value = random_value();
-
-                            // but they are set row-wise in the original tile and col-wise in the transposed one
-                            if (tile_wrt_global.row() > tile_wrt_global.col()) { // LOWER
-                              TileElementIndex index{i, j};
-                              if (index.isIn(tile.size()))
-                                tile(index) = value;
-                            }
-                            else { // UPPER
-                              TileElementIndex index{j, i};
-                              if (index.isIn(tile.size()))
-                                tile(index) = dlaf::conj(value);
+                                tile(TileElementIndex{i, j}) = value;
+                                tile(TileElementIndex{j, i}) = dlaf::conj(value);
+                              }
+                              tile(TileElementIndex{j, j}) = std::real(random_value()) + offset_value;
                             }
                           }
-                        }
-                      }
-                    }),
+                          else {  // LOWER or UPPER (except DIAGONAL)
+                            // random values are requested in the same order for both original and transposed
+                            for (SizeType j = 0; j < full_tile_size.cols(); ++j) {
+                              for (SizeType i = 0; i < full_tile_size.rows(); ++i) {
+                                auto value = random_value();
+
+                                // but they are set row-wise in the original tile and col-wise in the
+                                // transposed one
+                                if (tile_wrt_global.row() > tile_wrt_global.col()) {  // LOWER
+                                  TileElementIndex index{i, j};
+                                  if (index.isIn(tile.size()))
+                                    tile(index) = value;
+                                }
+                                else {  // UPPER
+                                  TileElementIndex index{j, i};
+                                  if (index.isIn(tile.size()))
+                                    tile(index) = dlaf::conj(value);
+                                }
+                              }
+                            }
+                          }
+                        }),
                     matrix(tile_wrt_local));
     }
   }

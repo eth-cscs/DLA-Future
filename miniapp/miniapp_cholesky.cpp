@@ -188,5 +188,10 @@ options_t check_options(hpx::program_options::variables_map& vm) {
   if (opts.grid_cols <= 0)
     throw std::runtime_error("number of grid columns must be a positive number");
 
+  if (opts.do_check && opts.m % opts.mb) {
+    std::cerr << "Warning! At the moment result checking works just with matrix sizes that are multiple of the block size." << std::endl;
+    opts.do_check = false;
+  }
+
   return opts;
 }

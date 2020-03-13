@@ -83,6 +83,12 @@ public:
     std::swap(row_, col_);
   }
 
+  /// Given a coordinate, returns its transposed with the same type
+  template <class Coords2DType>
+  friend Coords2DType transposed(const Coords2DType& coords) {
+    return {coords.col_, coords.row_};
+  }
+
   /// Adds "(<row_>, <col_>)" to out.
   friend std::ostream& operator<<(std::ostream& out, const basic_coords& index) {
     if (std::is_same<IndexT, signed char>::value) {

@@ -111,7 +111,6 @@ Coords2DType transposed(const Coords2DType& coords) {
 /// @tparam Tag for strong-typing
 template <typename IndexT, class Tag>
 class Size2D : public internal::basic_coords<IndexT> {
-
 public:
   using internal::basic_coords<IndexT>::basic_coords;
 

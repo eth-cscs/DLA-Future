@@ -104,7 +104,6 @@ template <class Coords2DType>
 Coords2DType transposed(const Coords2DType& coords) {
   return {coords.col_, coords.row_};
 }
-
 }
 
 /// A strong-type for 2D sizes

@@ -80,7 +80,7 @@ memory_data<T> create_memory(MEMORY_TYPE type) {
 template <class Type>
 class DataDescriptorTest : public ::testing::Test {};
 
-TYPED_TEST_SUITE(DataDescriptorTest, dlaf_test::BufferTypes);
+TYPED_TEST_SUITE(DataDescriptorTest, dlaf_test::ElementTypes);
 
 TYPED_TEST(DataDescriptorTest, MakeFromPointer) {
   TypeParam value = 26;

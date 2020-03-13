@@ -27,7 +27,7 @@ using dlaf::comm::make_message;
 template <class Type>
 class MessageTest : public ::testing::Test {};
 
-TYPED_TEST_SUITE(MessageTest, BufferTypes);
+TYPED_TEST_SUITE(MessageTest, ElementTypes);
 
 TYPED_TEST(MessageTest, MakeFromPointer) {
   TypeParam value = 26;

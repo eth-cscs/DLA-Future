@@ -83,6 +83,10 @@ public:
   }
 
 protected:
+  TileFutureManager(hpx::future<TileType>&& tile_future,
+                    hpx::shared_future<ConstTileType>&& tile_shared_future)
+      : tile_future_(std::move(tile_future)), tile_shared_future_(std::move(tile_shared_future)) {}
+
   // The future of the tile with no promise set.
   hpx::future<TileType> tile_future_;
 
@@ -91,6 +95,137 @@ protected:
   hpx::shared_future<ConstTileType> tile_shared_future_;
 };
 
+enum class TileStatus { None = 0, Read = 1, RW = 2 };
+
+template <class T, Device device>
+class ViewTileFutureManager : private TileFutureManager<T, device> {
+  using TileManagerType = TileFutureManager<T, device>;
+
+public:
+  using typename TileManagerType::TileType;
+  using typename TileManagerType::ConstTileType;
+
+  ViewTileFutureManager() {}
+
+  ViewTileFutureManager(TileManagerType& tile_manager, bool /* force_RW */)
+      : TileManagerType(), tile_promise_(), tile_shared_promise_() {
+    tile_future_ = std::move(tile_promise_.get_future());
+    tile_shared_future_ = std::move(tile_shared_promise_.get_future());
+
+    TileManagerType& base = *this;
+    std::swap(tile_manager, base);
+
+    tile_status_ = TileStatus::RW;
+    assert(tile_future_.valid());
+  }
+
+  ViewTileFutureManager(ViewTileFutureManager& tile_manager, bool force_RW)
+      : TileManagerType(), tile_promise_(), tile_shared_promise_() {
+    if (tile_manager.status() == TileStatus::RW) {
+      tile_future_ = std::move(tile_manager.tile_future_);
+      tile_shared_future_ = std::move(tile_manager.tile_shared_future_);
+      tile_manager.tile_future_ = std::move(tile_promise_.get_future());
+      tile_manager.tile_shared_future_ = std::move(tile_shared_promise_.get_future());
+    }
+    else {
+      assert(!force_RW);
+
+      if (tile_manager.status() == TileStatus::Read)
+        tile_shared_future_ = tile_manager.getReadTileSharedFuture();
+    }
+
+    tile_status_ = tile_manager.status();
+  }
+
+  ViewTileFutureManager(ViewTileFutureManager&& tile_manager) noexcept
+      : TileManagerType(std::move(tile_manager)), tile_status_(tile_manager.tile_status_),
+        tile_promise_(std::move(tile_manager.tile_promise_)),
+        tile_shared_promise_(std::move(tile_manager.tile_shared_promise_)) {
+    tile_manager.tile_status_ = TileStatus::None;
+  }
+
+  ~ViewTileFutureManager() {
+    release();
+  }
+
+  hpx::shared_future<ConstTileType> getReadTileSharedFuture() noexcept {
+    assert(tile_status_ != TileStatus::None);
+    return TileManagerType::getReadTileSharedFuture();
+  }
+
+  hpx::future<TileType> getRWTileFuture() noexcept {
+    assert(tile_status_ == TileStatus::RW);
+    return TileManagerType::getRWTileFuture();
+  }
+
+  void makeRead() {
+    if (tile_status_ == TileStatus::RW) {
+      tile_status_ = TileStatus::Read;
+
+      auto sf = getReadTileSharedFuture();
+
+      hpx::lcos::local::promise<TileType> p;
+      auto future = p.get_future();
+
+      // Set the original matrix shared future to a duplicate of the view shared_future.
+      sf.then(  //
+          hpx::launch::sync, [p = std::move(p), sp = std::move(tile_shared_promise_)](
+                                 const hpx::shared_future<ConstTileType>& sf) mutable {
+            try {
+              const auto& original_tile = sf.get();
+              auto memory_view_copy = original_tile.memory_view_;
+              TileType tile(original_tile.size_, std::move(memory_view_copy), original_tile.ld_);
+              tile.setPromise(std::move(p));
+              sp.set_value(ConstTileType(std::move(tile)));
+            }
+            catch (...) {
+              p.set_exception(std::current_exception());
+              sp.set_exception(std::current_exception());
+            }
+          });
+
+      // Set the original matrix future as ready only whe both the view shared_future
+      // and the original matrix shared_future have been destroyed.
+      hpx::dataflow(
+          hpx::launch::sync,
+          [p = std::move(tile_promise_)](hpx::future<TileType>&& future1,
+                                         hpx::future<TileType>&& future2) mutable {
+            try {
+              auto tile = future1.get();
+              future2.get();
+              p.set_value(std::move(tile));
+            }
+            catch (...) {
+              p.set_exception(std::current_exception());
+            }
+          },
+          tile_future_, future);
+    }
+  }
+
+  TileStatus status() {
+    return tile_status_;
+  }
+
+  void release() {
+    makeRead();
+
+    tile_status_ = TileStatus::None;
+    tile_shared_future_ = {};
+  }
+
+private:
+  using TileManagerType::tile_future_;
+  using TileManagerType::tile_shared_future_;
+
+  TileStatus tile_status_;
+
+  // promise to set tile_future_ in the original matrix.
+  hpx::lcos::local::promise<TileType> tile_promise_;
+
+  // promise to set tile_shared_future_ in the original matrix.
+  hpx::lcos::local::promise<ConstTileType> tile_shared_promise_;
+};
 }
 }
 }

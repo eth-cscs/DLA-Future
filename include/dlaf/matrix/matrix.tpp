@@ -22,10 +22,10 @@ Matrix<T, device>::Matrix(const GlobalElementSize& size, const TileElementSize& 
 
 template <class T, Device device>
 Matrix<T, device>::Matrix(Distribution distribution) : Matrix<const T, device>(std::move(distribution)) {
+  using dlaf::util::ceilDiv;
   const SizeType alignment = 64;
   const SizeType ld =
-      std::max<SizeType>(1,
-                         util::ceilDiv(this->distribution().localSize().rows(), alignment) * alignment);
+      std::max<SizeType>(1, ceilDiv(this->distribution().localSize().rows(), alignment) * alignment);
 
   auto layout = colMajorLayout(this->distribution().localSize(), this->blockSize(), ld);
 
@@ -59,8 +59,7 @@ Matrix<T, device>::Matrix(const LayoutInfo& layout, ElementType* ptr)
 
 template <class T, Device device>
 hpx::future<Tile<T, device>> Matrix<T, device>::operator()(const LocalTileIndex& index) noexcept {
-  const auto i = tileLinearIndex(index);
-  return tile_managers_[i].getRWTileFuture();
+  return tileManager(index).getRWTileFuture();
 }
 
 }

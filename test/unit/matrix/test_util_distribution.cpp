@@ -15,7 +15,7 @@
 #include "dlaf/types.h"
 
 using namespace dlaf;
-using namespace dlaf::util::matrix;
+using namespace dlaf::matrix::util;
 using namespace testing;
 
 struct Parameters {

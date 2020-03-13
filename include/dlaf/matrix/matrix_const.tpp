@@ -19,7 +19,7 @@ Matrix<const T, device>::Matrix(const LayoutInfo& layout, ElementType* ptr)
 }
 
 template <class T, Device device>
-Matrix<const T, device>::Matrix(Distribution distribution, const matrix::LayoutInfo& layout,
+Matrix<const T, device>::Matrix(Distribution distribution, const LayoutInfo& layout,
                                 ElementType* ptr) noexcept
     : MatrixBase(std::move(distribution)) {
   DLAF_ASSERT(this->distribution().localSize() == layout.size(), distribution.localSize(),
@@ -34,8 +34,7 @@ Matrix<const T, device>::Matrix(Distribution distribution, const matrix::LayoutI
 template <class T, Device device>
 hpx::shared_future<Tile<const T, device>> Matrix<const T, device>::read(
     const LocalTileIndex& index) noexcept {
-  const auto i = tileLinearIndex(index);
-  return tile_managers_[i].getReadTileSharedFuture();
+  return tileManager(index).getReadTileSharedFuture();
 }
 
 template <class T, Device device>
@@ -72,6 +71,13 @@ void Matrix<const T, device>::setUpTiles(const memory::MemoryView<ElementType, d
                    layout.ldTile()));
     }
   }
+}
+
+template <class T, Device device>
+internal::TileFutureManager<T, device>& Matrix<const T, device>::tileManager(
+    const LocalTileIndex& index) {
+  const auto i = tileLinearIndex(index);
+  return tile_managers_[i];
 }
 
 }

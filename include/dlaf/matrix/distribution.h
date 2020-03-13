@@ -182,7 +182,7 @@ public:
                       global_nr_tiles_.get<rc>());
     DLAF_ASSERT_HEAVY(0 <= tile_element && tile_element < block_size_.get<rc>(), tile_element,
                       block_size_.get<rc>());
-    return util::matrix::elementFromTileAndTileElement(global_tile, tile_element, block_size_.get<rc>());
+    return util::elementFromTileAndTileElement(global_tile, tile_element, block_size_.get<rc>());
   }
 
   /// Returns the global index of the element
@@ -212,7 +212,7 @@ public:
   int rankGlobalTile(SizeType global_tile) const noexcept {
     DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>(), global_tile,
                       global_nr_tiles_.get<rc>());
-    return util::matrix::rankGlobalTile(global_tile, grid_size_.get<rc>(), source_rank_index_.get<rc>());
+    return util::rankGlobalTile(global_tile, grid_size_.get<rc>(), source_rank_index_.get<rc>());
   }
 
   /// Returns the global index of the tile which contains the element with global index @p global_element.
@@ -221,7 +221,7 @@ public:
   template <Coord rc>
   SizeType globalTileFromGlobalElement(SizeType global_element) const noexcept {
     DLAF_ASSERT_HEAVY(0 <= global_element && global_element < size_.get<rc>(), global_element, size_);
-    return util::matrix::tileFromElement(global_element, block_size_.get<rc>());
+    return util::tileFromElement(global_element, block_size_.get<rc>());
   }
 
   /// Returns the global index of the tile that has index @p local_tile
@@ -232,8 +232,8 @@ public:
   SizeType globalTileFromLocalTile(SizeType local_tile) const noexcept {
     DLAF_ASSERT_HEAVY(0 <= local_tile && local_tile < local_nr_tiles_.get<rc>(), local_tile,
                       local_nr_tiles_.get<rc>());
-    return util::matrix::globalTileFromLocalTile(local_tile, grid_size_.get<rc>(), rank_index_.get<rc>(),
-                                                 source_rank_index_.get<rc>());
+    return util::globalTileFromLocalTile(local_tile, grid_size_.get<rc>(), rank_index_.get<rc>(),
+                                         source_rank_index_.get<rc>());
   }
 
   /// Returns the local index of the tile which contains the element with global index @p global_element.
@@ -253,8 +253,8 @@ public:
   SizeType localTileFromGlobalTile(SizeType global_tile) const noexcept {
     DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>(), global_tile,
                       global_nr_tiles_.get<rc>());
-    return util::matrix::localTileFromGlobalTile(global_tile, grid_size_.get<rc>(),
-                                                 rank_index_.get<rc>(), source_rank_index_.get<rc>());
+    return util::localTileFromGlobalTile(global_tile, grid_size_.get<rc>(), rank_index_.get<rc>(),
+                                         source_rank_index_.get<rc>());
   }
 
   /// Returns the local index in current process of the global tile
@@ -277,9 +277,8 @@ public:
   SizeType nextLocalTileFromGlobalTile(SizeType global_tile) const noexcept {
     DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile <= global_nr_tiles_.get<rc>(), global_tile,
                       global_nr_tiles_.get<rc>());
-    return util::matrix::nextLocalTileFromGlobalTile(global_tile, grid_size_.get<rc>(),
-                                                     rank_index_.get<rc>(),
-                                                     source_rank_index_.get<rc>());
+    return util::nextLocalTileFromGlobalTile(global_tile, grid_size_.get<rc>(), rank_index_.get<rc>(),
+                                             source_rank_index_.get<rc>());
   }
 
   /// Returns the index within the tile of the global element with index @p global_element.
@@ -289,7 +288,7 @@ public:
   SizeType tileElementFromGlobalElement(SizeType global_element) const noexcept {
     DLAF_ASSERT_HEAVY(0 <= global_element && global_element < size_.get<rc>(), global_element,
                       size_.get<rc>());
-    return util::matrix::tileElementFromElement(global_element, block_size_.get<rc>());
+    return util::tileElementFromElement(global_element, block_size_.get<rc>());
   }
 
   /// Returns the size of the Tile with global index @p index.

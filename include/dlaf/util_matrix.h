@@ -293,6 +293,7 @@ void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
   util_matrix::assertBlocksizeSquare(matrix, "set_hermitian_random_positive_definite", "matrix");
 
   auto offset_value = mul(2, to_sizet(matrix.size().rows()));
+  auto full_tile_size = matrix.blockSize();
 
   for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {
     for (SizeType tile_i = 0; tile_i < dist.localNrTiles().rows(); ++tile_i) {
@@ -310,7 +311,7 @@ void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
       else
         seed = sum(tl_index.row(), mul(tl_index.col(), matrix.size().rows()));
 
-      hpx::dataflow(hpx::util::unwrapping([tile_wrt_global, seed, offset_value](auto&& tile) {
+      hpx::dataflow(hpx::util::unwrapping([tile_wrt_global, seed, offset_value, full_tile_size](auto&& tile) {
                       internal::getter_random<T> random_value(seed);
 
                       if (tile_wrt_global.row() == tile_wrt_global.col()) {  // DIAGONAL
@@ -328,15 +329,21 @@ void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
                       }
                       else {  // LOWER or UPPER (except DIAGONAL)
                         // random values are requested in the same order for both original and transposed
-                        for (SizeType j = 0; j < tile.size().cols(); ++j) {
-                          for (SizeType i = 0; i < tile.size().rows(); ++i) {
+                        for (SizeType j = 0; j < full_tile_size.cols(); ++j) {
+                          for (SizeType i = 0; i < full_tile_size.rows(); ++i) {
                             auto value = random_value();
 
                             // but they are set row-wise in the original tile and col-wise in the transposed one
-                            if (tile_wrt_global.row() > tile_wrt_global.col())  // LOWER
-                              tile(TileElementIndex{i, j}) = value;
-                            else  // UPPER
-                              tile(TileElementIndex{j, i}) = dlaf::conj(value);
+                            if (tile_wrt_global.row() > tile_wrt_global.col()) { // LOWER
+                              TileElementIndex index{i, j};
+                              if (index.isIn(tile.size()))
+                                tile(index) = value;
+                            }
+                            else { // UPPER
+                              TileElementIndex index{j, i};
+                              if (index.isIn(tile.size()))
+                                tile(index) = dlaf::conj(value);
+                            }
                           }
                         }
                       }

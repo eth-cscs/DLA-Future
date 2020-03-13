@@ -24,7 +24,7 @@ namespace comm {
 namespace sync {
 namespace broadcast {
 
-/// @brief MPI_Bcast wrapper for sender side accepting a Data
+/// MPI_Bcast wrapper for sender side accepting a Data
 ///
 /// For more information, see the Data concept in "dlaf/common/data.h"
 template <class DataIn>
@@ -37,7 +37,7 @@ void send(Communicator& communicator, DataIn&& message_to_send) {
             communicator);
 }
 
-/// @brief MPI_Bcast wrapper for receiver side accepting a dlaf::comm::Message
+/// MPI_Bcast wrapper for receiver side accepting a dlaf::comm::Message
 ///
 /// For more information, see the Data concept in "dlaf/common/data.h"
 template <class DataOut>

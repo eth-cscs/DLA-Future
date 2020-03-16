@@ -103,6 +103,30 @@ public:
     return operator()(this->distribution().localTileIndex(index));
   }
 
+  template <class U, class = std::enable_if_t<std::is_same<T, std::remove_const_t<U>>::value>>
+  void copyFrom(Matrix<U, Device::CPU>& source, bool blocking = false) {
+    auto& dist = source.distribution();
+
+    std::vector<hpx::future<void>> copy_futures;
+
+    for (SizeType j = 0; j < dist.localNrTiles().cols(); ++j) {
+      for (SizeType i = 0; i < dist.localNrTiles().rows(); ++i) {
+        copy_futures.emplace_back(hpx::dataflow(hpx::util::unwrapping([](auto&& dst, auto&& src) {
+                                                  for (SizeType j = 0; j < src.size().cols(); ++j)
+                                                    for (SizeType i = 0; i < src.size().rows(); ++i) {
+                                                      TileElementIndex index(i, j);
+                                                      dst(index) = src(index);
+                                                    }
+                                                }),
+                                                this->operator()(LocalTileIndex(i, j)),
+                                                source.read(LocalTileIndex(i, j))));
+      }
+    }
+
+    if (blocking)
+      hpx::wait_all(copy_futures);
+  }
+
 protected:
   using Matrix<const T, device>::tileLinearIndex;
 

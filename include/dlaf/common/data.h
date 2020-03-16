@@ -36,7 +36,7 @@ struct is_data<
               std::is_same<decltype(data_iscontiguous(std::declval<const Data&>())), bool>::value>>
     : std::true_type {};
 
-/// @brief Traits for accessing properties of the given Data concept
+/// Traits for accessing properties of the given Data concept
 ///
 /// data_traits<Data>::element_t is the data type of the elements
 template <class Data>
@@ -46,7 +46,7 @@ struct data_traits;
 template <class T>
 struct DataDescriptor;
 
-/// @brief fallback function for creating a DataDescriptor
+/// fallback function for creating a DataDescriptor
 ///
 /// If you want to create a DataDescriptor, it is preferred to use common::make_data()
 /// Override this in the same namespace of the type for which you want to provide this concept.
@@ -55,7 +55,7 @@ auto create_data(T* data, Ts&&... args) noexcept {
   return DataDescriptor<T>(data, static_cast<std::size_t>(args)...);
 }
 
-/// @brief Generic API for creating a Data
+/// Generic API for creating a Data
 ///
 /// This is an helper function that given a Data, returns exactly it as it is
 /// It allows to use the make_data function for dealing both with common::DataDescriptor
@@ -65,7 +65,7 @@ auto make_data(Data&& data) noexcept {
   return std::forward<Data>(data);
 }
 
-/// @brief Generic API for creating a Data
+/// Generic API for creating a Data
 ///
 /// Use this function to create a Data from the given parameters
 /// This is the entry point for anything that can be converted to a DataDescriptor
@@ -80,43 +80,43 @@ auto make_data(T&& data, Ts&&... args) noexcept {
 }
 
 // API for algorithms
-/// @brief Return the pointer to data of the given Data
+/// Return the pointer to data of the given Data
 template <class Data>
 auto data_pointer(const Data& data) noexcept -> decltype(data.data()) {
   return data.data();
 }
 
-/// @brief Return the number of blocks in the given Data
+/// Return the number of blocks in the given Data
 template <class Data>
 auto data_nblocks(const Data& data) noexcept -> decltype(data.nblocks()) {
   return data.nblocks();
 }
 
-/// @brief Return the block size in the given Data
+/// Return the block size in the given Data
 template <class Data>
 auto data_blocksize(const Data& data) noexcept -> decltype(data.blocksize()) {
   return data.blocksize();
 }
 
-/// @brief Return the stride (in elements) of the given Data
+/// Return the stride (in elements) of the given Data
 template <class Data>
 auto data_stride(const Data& data) noexcept -> decltype(data.stride()) {
   return data.stride();
 }
 
-/// @brief Return the number of elements stored in the given Data
+/// Return the number of elements stored in the given Data
 template <class Data>
 auto data_count(const Data& data) noexcept -> decltype(data.count()) {
   return data.count();
 }
 
-/// @brief Return true if Data is contiguous
+/// Return true if Data is contiguous
 template <class Data>
 auto data_iscontiguous(const Data& data) noexcept -> decltype(data.is_contiguous()) {
   return data.is_contiguous();
 }
 
-/// @brief Generic API for copying Data
+/// Generic API for copying Data
 ///
 /// Use this function to copy values from one Data to another
 template <class DataIn, class DataOut>

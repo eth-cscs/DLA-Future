@@ -182,7 +182,7 @@ private:
   using Tile<const T, device>::p_;
 };
 
-/// @brief Create a common::Buffer from a Tile
+/// Create a common::Buffer from a Tile
 template <class T, Device device>
 auto create_data(const Tile<T, device>& tile) {
   return common::DataDescriptor<T>(tile.ptr({0, 0}), to_sizet(tile.size().cols()),

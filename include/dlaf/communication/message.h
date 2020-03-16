@@ -21,7 +21,7 @@
 namespace dlaf {
 namespace comm {
 
-/// @brief Message for MPI
+/// Message for MPI
 ///
 /// Given a generic Data concept, it provides suitable MPI_Datatype to be used for sending
 /// with MPI all elements of the given data.

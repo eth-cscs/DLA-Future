@@ -161,9 +161,8 @@ void check_is_hermitian(dlaf::Matrix<const T, Device::CPU>& matrix,
 TYPED_TEST(MatrixUtilsTest, SetRandomHermitianPositiveDefinite) {
   std::vector<TestSizes> square_blocks_configs({
       {{0, 0}, {13, 13}},  // square null matrix
-      {{26, 26}, {2, 2}},  // square matrix multi block
-      {{2, 2}, {6, 6}},    // square matrix single block
-      {{4, 4}, {13, 13}},  // square matrix single block
+      {{5, 5}, {26, 26}},  // square matrix single block
+      {{13, 13}, {3, 3}},  // square matrix multi block
   });
 
   auto globalSquareTestSize = [](const LocalElementSize& size, const Size2D& grid_size) {

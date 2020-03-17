@@ -163,6 +163,7 @@ TYPED_TEST(MatrixUtilsTest, SetRandomHermitianPositiveDefinite) {
   std::vector<TestSizes> square_blocks_configs({
       {{0, 0}, {13, 13}},  // square null matrix
       {{5, 5}, {26, 26}},  // square matrix single block
+      {{9, 9}, {3, 3}},    // square matrix multi block "full-tile"
       {{13, 13}, {3, 3}},  // square matrix multi block
   });
 

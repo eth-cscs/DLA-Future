@@ -1,8 +1,0 @@
-spack:
-  specs:
-    - mpich
-    - intel-mkl
-    - hpx cxxstd=14 networking=none
-    - blaspp
-    - lapackpp
-  concretization: together

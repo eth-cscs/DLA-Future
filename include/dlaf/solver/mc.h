@@ -60,3 +60,41 @@ struct Solver<Backend::MC> {
 }
 
 #include <dlaf/solver/triangular/mc.tpp>
+
+/// ---- ETI
+namespace dlaf {
+
+#define DLAF_TRIANGULAR_ETI_DECL(DATATYPE)                                                             \
+  extern template void Solver<Backend::MC>::triangular<DATATYPE>(comm::CommunicatorGrid grid,          \
+                                                                 blas::Side side, blas::Uplo uplo,     \
+                                                                 blas::Op op, blas::Diag diag,         \
+                                                                 DATATYPE alpha,                       \
+                                                                 Matrix<const DATATYPE, Device::CPU> & \
+                                                                     mat_a,                            \
+                                                                 Matrix<DATATYPE, Device::CPU> &       \
+                                                                     mat_b);                           \
+  extern template void Solver<Backend::MC>::triangular<DATATYPE>(blas::Side side, blas::Uplo uplo,     \
+                                                                 blas::Op op, blas::Diag diag,         \
+                                                                 DATATYPE alpha,                       \
+                                                                 Matrix<const DATATYPE, Device::CPU> & \
+                                                                     mat_a,                            \
+                                                                 Matrix<DATATYPE, Device::CPU> &       \
+                                                                     mat_b);
+
+#define DLAF_TRIANGULAR_ETI_INST(DATATYPE)                                                              \
+  template void Solver<Backend::MC>::triangular<DATATYPE>(comm::CommunicatorGrid grid, blas::Side side, \
+                                                          blas::Uplo uplo, blas::Op op,                 \
+                                                          blas::Diag diag, DATATYPE alpha,              \
+                                                          Matrix<const DATATYPE, Device::CPU> & mat_a,  \
+                                                          Matrix<DATATYPE, Device::CPU> & mat_b);       \
+  template void Solver<Backend::MC>::triangular<DATATYPE>(blas::Side side, blas::Uplo uplo,             \
+                                                          blas::Op op, blas::Diag diag, DATATYPE alpha, \
+                                                          Matrix<const DATATYPE, Device::CPU> & mat_a,  \
+                                                          Matrix<DATATYPE, Device::CPU> & mat_b);
+
+DLAF_TRIANGULAR_ETI_DECL(float)
+DLAF_TRIANGULAR_ETI_DECL(double)
+DLAF_TRIANGULAR_ETI_DECL(std::complex<float>)
+DLAF_TRIANGULAR_ETI_DECL(std::complex<double>)
+
+}

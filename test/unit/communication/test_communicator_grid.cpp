@@ -19,7 +19,7 @@ using dlaf_test::comm::computeGridDims;
 using dlaf::common::Ordering;
 using namespace dlaf::comm;
 
-auto valid_orderings = ::testing::Values(Ordering::RowMajor, Ordering::ColumnMajor);
+const auto valid_orderings = ::testing::Values(Ordering::RowMajor, Ordering::ColumnMajor);
 
 void test_grid_communication(CommunicatorGrid& grid) {
   if (MPI_COMM_NULL == grid.rowCommunicator() || MPI_COMM_NULL == grid.colCommunicator())

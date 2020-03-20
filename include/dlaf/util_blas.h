@@ -21,9 +21,6 @@ std::ostream& operator<<(std::ostream& stream, const blas::Diag& diag) {
       break;
     case blas::Diag::NonUnit:
       stream << "NonUnit";
-      break;
-    default:
-      stream << "Unknown";
   }
   return stream;
 }
@@ -36,8 +33,6 @@ std::ostream& operator<<(std::ostream& stream, const blas::Side& side) {
     case blas::Side::Right:
       stream << "Right";
       break;
-    default:
-      stream << "Unknown";
   }
   return stream;
 }
@@ -53,8 +48,6 @@ std::ostream& operator<<(std::ostream& stream, const blas::Op& trans) {
     case blas::Op::ConjTrans:
       stream << "ConjTrans";
       break;
-    default:
-      stream << "Unknown";
   }
   return stream;
 }
@@ -67,8 +60,9 @@ std::ostream& operator<<(std::ostream& stream, const blas::Uplo& uplo) {
     case blas::Uplo::Upper:
       stream << "Upper";
       break;
-    default:
-      stream << "Unknown";
+    case blas::Uplo::General:
+      stream << "General";
+      break;
   }
   return stream;
 }

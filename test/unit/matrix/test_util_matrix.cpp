@@ -46,7 +46,7 @@ struct TestSizes {
   TileElementSize block_size;
 };
 
-std::vector<TestSizes> sizes_tests({
+const std::vector<TestSizes> sizes_tests({
     {{0, 0}, {11, 13}},
     {{3, 0}, {1, 2}},
     {{0, 1}, {7, 32}},

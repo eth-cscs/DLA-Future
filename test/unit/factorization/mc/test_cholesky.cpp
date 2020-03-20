@@ -41,8 +41,8 @@ public:
 
 TYPED_TEST_SUITE(CholeskyDistributedTest, MatrixElementTypes);
 
-std::vector<LocalElementSize> square_sizes({{10, 10}, {25, 25}, {12, 12}, {0, 0}});
-std::vector<TileElementSize> square_block_sizes({{3, 3}, {5, 5}});
+const std::vector<LocalElementSize> square_sizes({{10, 10}, {25, 25}, {12, 12}, {0, 0}});
+const std::vector<TileElementSize> square_block_sizes({{3, 3}, {5, 5}});
 
 GlobalElementSize globalTestSize(const LocalElementSize& size) {
   return {size.rows(), size.cols()};

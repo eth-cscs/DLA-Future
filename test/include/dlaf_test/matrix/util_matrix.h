@@ -100,7 +100,7 @@ void checkEQ(ElementGetter exp_el, MatrixType<T, Device::CPU>& mat, const char* 
   };
   internal::check(exp_el, mat, std::equal_to<T>{}, err_message, file, line);
 }
-#define CHECK_MATRIX_EQ(exp_el, mat) ::dlaf::matrix::test::checkEQ(exp_el, mat, __FILE__, __LINE__);
+#define CHECK_MATRIX_EQ(exp_el, mat) ::dlaf::matrix::test::checkEQ(exp_el, mat, __FILE__, __LINE__)
 
 /// @brief Checks the pointers to the elements of the matrix.
 ///
@@ -117,7 +117,7 @@ void checkPtr(PointerGetter exp_ptr, Matrix<T, Device::CPU>& mat, const char* fi
   };
   internal::check(exp_ptr, mat, comp, err_message, file, line);
 }
-#define CHECK_MATRIX_PTR(exp_ptr, mat) ::dlaf::matrix::test::checkPtr(exp_ptr, mat, __FILE__, __LINE__);
+#define CHECK_MATRIX_PTR(exp_ptr, mat) ::dlaf::matrix::test::checkPtr(exp_ptr, mat, __FILE__, __LINE__)
 
 /// @brief Checks the elements of the matrix.
 ///
@@ -152,7 +152,7 @@ void checkNear(ElementGetter expected, MatrixType<T, Device::CPU>& mat, BaseType
   internal::check(expected, mat, comp, err_message, file, line);
 }
 #define CHECK_MATRIX_NEAR(expected, mat, rel_err, abs_err) \
-  ::dlaf::matrix::test::checkNear(expected, mat, rel_err, abs_err, __FILE__, __LINE__);
+  ::dlaf::matrix::test::checkNear(expected, mat, rel_err, abs_err, __FILE__, __LINE__)
 
 template <class MatrixType>
 void checkMatrixDistribution(const Distribution& distribution, const MatrixType& matrix) {

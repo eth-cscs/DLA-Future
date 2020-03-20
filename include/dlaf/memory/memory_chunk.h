@@ -49,7 +49,7 @@ public:
     }
 #else
     if (device == Device::CPU) {
-      ptr_ = (T*) std::malloc(size_ * sizeof(T));
+      ptr_ = static_cast<T*>(std::malloc(size_ * sizeof(T)));
     }
     else {
       std::terminate();

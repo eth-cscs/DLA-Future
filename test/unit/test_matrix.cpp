@@ -48,7 +48,7 @@ struct TestSizes {
   TileElementSize block_size;
 };
 
-std::vector<TestSizes> sizes_tests({
+const std::vector<TestSizes> sizes_tests({
     {{0, 0}, {11, 13}},
     {{3, 0}, {1, 2}},
     {{0, 1}, {7, 32}},
@@ -396,7 +396,7 @@ struct ExistingLocalTestSizes {
   std::size_t col_offset;
 };
 
-std::vector<ExistingLocalTestSizes> existing_local_tests({
+const std::vector<ExistingLocalTestSizes> existing_local_tests({
     {{10, 7}, {3, 4}, 10, 3, 40},  // Column major layout
     {{10, 7}, {3, 4}, 11, 3, 44},  // with padding (ld)
     {{10, 7}, {3, 4}, 13, 4, 52},  // with padding (row)
@@ -698,7 +698,7 @@ struct TestLocalColMajor {
   SizeType ld;
 };
 
-std::vector<TestLocalColMajor> col_major_sizes_tests({
+const std::vector<TestLocalColMajor> col_major_sizes_tests({
     {{10, 7}, {3, 4}, 10},  // packed ld
     {{10, 7}, {3, 4}, 11},  // padded ld
     {{6, 11}, {4, 3}, 6},   // packed ld
@@ -832,7 +832,7 @@ struct TestLocalTile {
   bool is_basic;
 };
 
-std::vector<TestLocalTile> tile_sizes_tests({
+const std::vector<TestLocalTile> tile_sizes_tests({
     {{10, 7}, {3, 4}, 3, 4, true},   // basic tile layout
     {{10, 7}, {3, 4}, 3, 7, false},  // padded tiles_per_col
     {{6, 11}, {4, 3}, 4, 2, true},   // basic tile layout

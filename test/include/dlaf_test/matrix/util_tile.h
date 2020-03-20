@@ -134,7 +134,7 @@ void checkEQ(ElementGetter exp_el, const Tile<T, Device::CPU>& tile, const char*
   };
   internal::check(exp_el, tile, std::equal_to<T>{}, err_message, file, line);
 }
-#define CHECK_TILE_EQ(exp_el, tile) ::dlaf::matrix::test::checkEQ(exp_el, tile, __FILE__, __LINE__);
+#define CHECK_TILE_EQ(exp_el, tile) ::dlaf::matrix::test::checkEQ(exp_el, tile, __FILE__, __LINE__)
 
 /// @brief Checks the pointers to the elements of the tile.
 ///
@@ -152,7 +152,7 @@ void checkPtr(PointerGetter exp_ptr, const Tile<T, Device::CPU>& tile, const cha
   };
   internal::check(exp_ptr, tile, comp, err_message, file, line);
 }
-#define CHECK_TILE_PTR(exp_ptr, tile) ::dlaf::matrix::test::checkPtr(exp_ptr, tile, __FILE__, __LINE__);
+#define CHECK_TILE_PTR(exp_ptr, tile) ::dlaf::matrix::test::checkPtr(exp_ptr, tile, __FILE__, __LINE__)
 
 /// @brief Checks the elements of the tile.
 ///
@@ -185,7 +185,7 @@ void checkNear(ElementGetter expected, const Tile<T, Device::CPU>& tile, BaseTyp
   internal::check(expected, tile, comp, err_message, file, line);
 }
 #define CHECK_TILE_NEAR(expected, tile, rel_err, abs_err) \
-  ::dlaf::matrix::test::checkNear(expected, tile, rel_err, abs_err, __FILE__, __LINE__);
+  ::dlaf::matrix::test::checkNear(expected, tile, rel_err, abs_err, __FILE__, __LINE__)
 }
 }
 }

@@ -10,7 +10,7 @@ namespace comm {
 class Communicator;
 
 /// @return true if it is a manageable communicator (i.e. it is not MPI_COMM_NULL or MPI_COMM_WORLD)
-constexpr bool is_manageable(MPI_Comm mpi_communicator) noexcept;
+bool is_manageable(MPI_Comm mpi_communicator) noexcept;
 
 /// Basic wrapper for MPI_Comm
 /// It is more or less an alias for MPI_Comm

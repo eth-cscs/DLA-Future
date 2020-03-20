@@ -43,12 +43,12 @@ public:
 };
 TYPED_TEST_SUITE(TriangularSolverDistributedTest, MatrixElementTypes);
 
-std::vector<blas::Side> blas_sides({blas::Side::Left, blas::Side::Right});
-std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
-std::vector<blas::Op> blas_ops({blas::Op::NoTrans, blas::Op::Trans, blas::Op::ConjTrans});
-std::vector<blas::Diag> blas_diags({blas::Diag::NonUnit, blas::Diag::Unit});
+const std::vector<blas::Side> blas_sides({blas::Side::Left, blas::Side::Right});
+const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
+const std::vector<blas::Op> blas_ops({blas::Op::NoTrans, blas::Op::Trans, blas::Op::ConjTrans});
+const std::vector<blas::Diag> blas_diags({blas::Diag::NonUnit, blas::Diag::Unit});
 
-std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
+const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
     {0, 0, 1, 1},                                                // m, n = 0
     {0, 2, 1, 2}, {7, 0, 2, 1},                                  // m = 0 or n = 0
     {2, 2, 5, 5}, {10, 10, 2, 3}, {7, 7, 3, 2},                  // m = n

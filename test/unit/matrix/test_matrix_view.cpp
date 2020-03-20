@@ -50,9 +50,9 @@ struct TestSizes {
 };
 
 // TODO (Upper and Lower cases NOT yet implemented)
-std::vector<blas::Uplo> blas_uplos({blas::Uplo::General});
+const std::vector<blas::Uplo> blas_uplos({blas::Uplo::General});
 
-std::vector<TestSizes> sizes_tests({
+const std::vector<TestSizes> sizes_tests({
     {{0, 0}, {11, 13}},
     {{3, 0}, {1, 2}},
     {{0, 1}, {7, 32}},

@@ -22,7 +22,7 @@ class MemoryChunkTest : public ::testing::Test {};
 
 TYPED_TEST_SUITE(MemoryChunkTest, ElementTypes);
 
-std::size_t size = 397;
+constexpr std::size_t size = 397;
 
 TYPED_TEST(MemoryChunkTest, ConstructorAllocates) {
   using Type = TypeParam;

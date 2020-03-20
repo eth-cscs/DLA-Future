@@ -21,10 +21,10 @@ using namespace dlaf;
 using namespace dlaf_test;
 using namespace testing;
 
-std::vector<blas::Diag> blas_diags({blas::Diag::Unit, blas::Diag::NonUnit});
-std::vector<blas::Op> blas_ops({blas::Op::NoTrans, blas::Op::Trans, blas::Op::ConjTrans});
-std::vector<blas::Side> blas_sides({blas::Side::Left, blas::Side::Right});
-std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
+const std::vector<blas::Diag> blas_diags({blas::Diag::Unit, blas::Diag::NonUnit});
+const std::vector<blas::Op> blas_ops({blas::Op::NoTrans, blas::Op::Trans, blas::Op::ConjTrans});
+const std::vector<blas::Side> blas_sides({blas::Side::Left, blas::Side::Right});
+const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
 
 template <typename Type>
 class TileOperationsTest : public ::testing::Test {};

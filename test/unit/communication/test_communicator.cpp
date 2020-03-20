@@ -33,7 +33,7 @@ void test_communication(const Communicator& comm) {
 
 class CommunicatorTest : public ::testing::Test {
 protected:
-  ~CommunicatorTest() noexcept {};
+  ~CommunicatorTest() noexcept override {}
 
   void SetUp() override {
     world = Communicator(MPI_COMM_WORLD);

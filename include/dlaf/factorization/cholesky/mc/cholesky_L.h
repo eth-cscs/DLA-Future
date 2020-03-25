@@ -278,6 +278,23 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
     }
   }
 }
+
+/// ---- ETI
+
+#define DLAF_CHOLESKY_ETI_DECL(DATATYPE)                                            \
+  extern template void cholesky_L<DATATYPE>(Matrix<DATATYPE, Device::CPU> & mat_a); \
+  extern template void cholesky_L<DATATYPE>(comm::CommunicatorGrid grid,            \
+                                            Matrix<DATATYPE, Device::CPU> & mat_a);
+
+#define DLAF_CHOLESKY_ETI_INST(DATATYPE)                                     \
+  template void cholesky_L<DATATYPE>(Matrix<DATATYPE, Device::CPU> & mat_a); \
+  template void cholesky_L<DATATYPE>(comm::CommunicatorGrid grid, Matrix<DATATYPE, Device::CPU> & mat_a);
+
+DLAF_CHOLESKY_ETI_DECL(float)
+DLAF_CHOLESKY_ETI_DECL(double)
+DLAF_CHOLESKY_ETI_DECL(std::complex<float>)
+DLAF_CHOLESKY_ETI_DECL(std::complex<double>)
+
 }
 }
 }

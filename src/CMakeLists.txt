@@ -12,8 +12,13 @@ add_library(DLAF
   communication/communicator_impl.cpp
   communication/communicator.cpp
   communication/communicator_grid.cpp
+  communication/datatypes.cpp
+  factorization/cholesky/mc/cholesky_L.cpp
   matrix/distribution.cpp
   matrix/layout_info.cpp
+  matrix.cpp
+  memory/memory_view.cpp
+  tile.cpp
 )
 
 target_include_directories(DLAF

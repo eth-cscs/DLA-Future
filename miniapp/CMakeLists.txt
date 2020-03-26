@@ -11,3 +11,6 @@
 add_executable(miniapp_cholesky miniapp_cholesky.cpp)
 target_link_libraries(miniapp_cholesky PRIVATE DLAF DLAF_test)
 target_add_warnings(miniapp_cholesky)
+
+add_executable(miniapp_tsgemm miniapp_tsgemm.cpp)
+target_link_libraries(miniapp_tsgemm PRIVATE DLAF)

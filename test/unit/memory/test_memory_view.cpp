@@ -22,7 +22,7 @@ class MemoryViewTest : public ::testing::Test {};
 
 TYPED_TEST_SUITE(MemoryViewTest, ElementTypes);
 
-std::size_t size = 397;
+constexpr std::size_t size = 397;
 
 TYPED_TEST(MemoryViewTest, ConstructorAllocates) {
   using Type = TypeParam;

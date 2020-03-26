@@ -40,7 +40,7 @@ public:
   }
 };
 
-std::vector<ParametersConstructor> tests_constructor = {
+const std::vector<ParametersConstructor> tests_constructor = {
     // {size, block_size, rank, grid_size, src_rank, global_tiles, local_tiles, local_size}
     {{0, 0}, {13, 17}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
     {{0, 0}, {13, 17}, {2, 1}, {3, 2}, {0, 1}, {0, 0}, {0, 0}, {0, 0}},
@@ -274,7 +274,7 @@ struct ParametersIndices {
   TileElementIndex tile_element;
 };
 
-std::vector<ParametersIndices> tests_indices = {
+const std::vector<ParametersIndices> tests_indices = {
     // {size, block_size, rank, grid_size, src_rank, global_element, global_tile,
     // rank_tile, local_tile, local_tile_next, tile_element}
     {{121, 232}, {10, 25}, {0, 0}, {1, 1}, {0, 0}, {31, 231}, {3, 9}, {0, 0}, {3, 9}, {3, 9}, {1, 6}},

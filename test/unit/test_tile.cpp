@@ -23,10 +23,10 @@ using namespace dlaf::matrix::test;
 using namespace dlaf_test;
 using namespace testing;
 
-std::vector<SizeType> sizes({0, 1, 13, 32});
-SizeType m = 37;
-SizeType n = 87;
-SizeType ld = 133;
+const std::vector<SizeType> sizes({0, 1, 13, 32});
+constexpr SizeType m = 37;
+constexpr SizeType n = 87;
+constexpr SizeType ld = 133;
 
 std::size_t elIndex(TileElementIndex index, SizeType ld) {
   using util::size_t::sum;

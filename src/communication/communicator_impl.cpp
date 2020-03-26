@@ -8,7 +8,7 @@
 namespace dlaf {
 namespace comm {
 
-constexpr bool is_manageable(MPI_Comm mpi_communicator) noexcept {
+bool is_manageable(MPI_Comm mpi_communicator) noexcept {
   if (mpi_communicator == MPI_COMM_WORLD)
     return false;
   else if (mpi_communicator == MPI_COMM_NULL)

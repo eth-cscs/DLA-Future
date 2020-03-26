@@ -20,7 +20,7 @@ namespace dlaf {
 namespace comm {
 namespace sync {
 
-/// @brief MPI_Reduce wrapper
+/// MPI_Reduce wrapper
 /// MPI Reduce(see MPI documentation for additional info)
 /// @param rank_root  the rank that will collect the result in output
 /// @param reduce_operation MPI_Op to perform on @p input data coming from ranks in @p communicator

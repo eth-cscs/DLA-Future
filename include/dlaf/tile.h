@@ -12,7 +12,8 @@
 
 #include <exception>
 #include <hpx/hpx.hpp>
-#include "dlaf/common/buffer.h"
+
+#include "dlaf/common/data_descriptor.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/memory/memory_view.h"
 #include "dlaf/types.h"
@@ -181,11 +182,11 @@ private:
   using Tile<const T, device>::p_;
 };
 
-/// @brief Create a common::Buffer from a Tile
+/// Create a common::Buffer from a Tile
 template <class T, Device device>
-auto create_buffer(const Tile<T, device>& tile) {
-  return common::Buffer<T*>(tile.ptr({0, 0}), to_sizet(tile.size().cols()), to_sizet(tile.size().rows()),
-                            to_sizet(tile.ld()));
+auto create_data(const Tile<T, device>& tile) {
+  return common::DataDescriptor<T>(tile.ptr({0, 0}), to_sizet(tile.size().cols()),
+                                   to_sizet(tile.size().rows()), to_sizet(tile.ld()));
 }
 
 #include <dlaf/tile.tpp>

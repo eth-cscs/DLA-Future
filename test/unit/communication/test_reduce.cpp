@@ -8,12 +8,14 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include "dlaf/common/data_descriptor.h"
 #include "dlaf/communication/sync/reduce.h"
 
 #include <gtest/gtest.h>
 
 #include "dlaf_test/helper_communicators.h"
 
+using namespace dlaf;
 using namespace dlaf_test;
 using namespace dlaf::comm;
 
@@ -25,7 +27,8 @@ TEST_F(ReduceTest, Basic) {
   int value = 1;
   int result = 0;
 
-  sync::reduce(root, world, MPI_SUM, make_message(&value, 1), make_message(&result, 1));
+  sync::reduce(root, world, MPI_SUM, make_message(common::make_data(&value, 1)),
+               make_message(common::make_data(&result, 1)));
 
   // check that the root rank has the reduced results
   if (world.rank() == root) {
@@ -44,7 +47,8 @@ TEST_F(ReduceTest, Multiple) {
   int input[N] = {1, 2, 3};
   int reduced[N];
 
-  sync::reduce(root, world, MPI_SUM, make_message(input, N), make_message(reduced, N));
+  sync::reduce(root, world, MPI_SUM, make_message(common::make_data(input, N)),
+               make_message(common::make_data(reduced, N)));
 
   // check that the root rank has the reduced results
   if (world.rank() == root) {

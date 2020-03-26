@@ -35,9 +35,15 @@ target_link_libraries(<your_target> PRIVATE DLAF)
 
 The development of DLAF library would not be possible without support of the following organizations (in alphabetic order):
 
-|||
+<style>
+/* Disable alternate row colors (from now on) */
+table tr:nth-child(2n) {
+  background-color: white;
+}
+</style>
+
+<img height="50" src="./doc/images/logo-cineca.png"> | [**CINECA**](https://www.cineca.it/en)**: Cineca Consorzio Interuniversitario**
 :---:|:---
-<img height="50" src="./doc/images/logo-cineca.png"> | [**CINECA**](https://www.cineca.it/en)**: Swiss National Supercomputing Centre**
 <img height="50" src="./doc/images/logo-cscs.jpg"> | [**CSCS**](https://www.cscs.ch)**: Swiss National Supercomputing Centre**
 <img height="50" src="./doc/images/logo-eth.svg"> | [**ETH Zurich**](https://ethz.ch/en.html)**: Swiss Federal Institute of Technology Zurich**
 <img height="50" src="./doc/images/logo-pasc.png"> | [**PASC**](https://www.pasc-ch.org/)**: Platform for Advanced Scientific Computing**

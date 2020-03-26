@@ -33,10 +33,12 @@ target_link_libraries(<your_target> PRIVATE DLAF)
 
 ## Acknowledgements
 
-The development of DLAF library would not be possible without support of the following organizations (alphabetic order):
+The development of DLAF library would not be possible without support of the following organizations (in alphabetic order):
 
-<img height="50" src="./doc/images/logo-cscs.jpg"> | [**CSCS**](https://www.cscs.ch)**: Swiss National Supercomputing Centre**
+|||
 :---:|:---
-<img height="50" src="./doc/images/logo-eth.svg"> | [**ETH Zürich**](https://ethz.ch/en.html)**: Swiss Federal Institute of Technology in Zürich**
+<img height="50" src="./doc/images/logo-cineca.png"> | [**CINECA**](https://www.cineca.it/en)**: Swiss National Supercomputing Centre**
+<img height="50" src="./doc/images/logo-cscs.jpg"> | [**CSCS**](https://www.cscs.ch)**: Swiss National Supercomputing Centre**
+<img height="50" src="./doc/images/logo-eth.svg"> | [**ETH Zurich**](https://ethz.ch/en.html)**: Swiss Federal Institute of Technology Zurich**
 <img height="50" src="./doc/images/logo-pasc.png"> | [**PASC**](https://www.pasc-ch.org/)**: Platform for Advanced Scientific Computing**
-<img height="50" src="./doc/images/logo-prace.jpg"> | [**PRACE**](https://prace-ri.eu/)**: Partnership for Advanced Computing in Europe**
+<img height="50" src="./doc/images/logo-prace.jpg"> | [**PRACE**](https://prace-ri.eu/)**: Partnership for Advanced Computing in Europe**<br/>[As part of IP6 WP8](https://prace-ri.eu/about/ip-projects/#PRACE6IP)

@@ -1,4 +1,4 @@
-#include <dlaf/communication/datatypes.h>
+#include "dlaf/communication/internal/datatypes.h"
 
 namespace dlaf {
 namespace comm {

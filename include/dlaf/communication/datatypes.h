@@ -10,22 +10,25 @@
 
 #pragma once
 
-#include "dlaf/mpi_header.h"
-
-#include <complex>
+#include "dlaf/communication/internal/datatypes.h"
 
 namespace dlaf {
 namespace comm {
 
-/// @brief mapper between language types and basic MPI_Datatype
-template <typename T>
-struct mpi_datatype {
-  static MPI_Datatype type;
-};
-
-/// helper for mapping also custom types
-template <typename T>
-struct mpi_datatype<const T> : public mpi_datatype<T> {};
-
+extern template MPI_Datatype mpi_datatype<char>::type;
+extern template MPI_Datatype mpi_datatype<short>::type;
+extern template MPI_Datatype mpi_datatype<int>::type;
+extern template MPI_Datatype mpi_datatype<long>::type;
+extern template MPI_Datatype mpi_datatype<long long>::type;
+extern template MPI_Datatype mpi_datatype<unsigned char>::type;
+extern template MPI_Datatype mpi_datatype<unsigned short>::type;
+extern template MPI_Datatype mpi_datatype<unsigned int>::type;
+extern template MPI_Datatype mpi_datatype<unsigned long>::type;
+extern template MPI_Datatype mpi_datatype<unsigned long long>::type;
+extern template MPI_Datatype mpi_datatype<float>::type;
+extern template MPI_Datatype mpi_datatype<double>::type;
+extern template MPI_Datatype mpi_datatype<bool>::type;
+extern template MPI_Datatype mpi_datatype<std::complex<float>>::type;
+extern template MPI_Datatype mpi_datatype<std::complex<double>>::type;
 }
 }

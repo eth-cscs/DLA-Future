@@ -16,9 +16,12 @@
 #include <hpx/hpx.hpp>
 #include <hpx/include/resource_partitioner.hpp>
 #include <hpx/include/threads.hpp>
+#include <hpx/runtime/threads/executors/pool_executor.hpp>
+
+#ifdef DLAF_WITH_MPI_FUTURES
 #include <hpx/mpi/mpi_executor.hpp>
 #include <hpx/mpi/mpi_future.hpp>
-#include <hpx/runtime/threads/executors/pool_executor.hpp>
+#endif
 
 #include <chrono>
 #include <complex>
@@ -69,15 +72,23 @@ using MatrixType = dlaf::Matrix<ScalarType, dlaf::Device::CPU>;
 using ConstMatrixType = dlaf::Matrix<const ScalarType, dlaf::Device::CPU>;
 using TileType = dlaf::Tile<ScalarType, dlaf::Device::CPU>;
 using ConstTileType = dlaf::Tile<const ScalarType, dlaf::Device::CPU>;
+
 using hpx::program_options::variables_map;
 using hpx::program_options::options_description;
+
+#ifdef DLAF_WITH_MPI_FUTURES
+using ExecutorType = hpx::mpi::executor;
+#else
+using ExecutorType = hpx::threads::executors::pool_executor;
+#endif
 
 // Local gemm
 //
 // - `A` is transposed and has similar layout to `B`.
 void schedule_gemm(ConstMatrixType& a_mat, ConstMatrixType& b_mat, MatrixType& cini_mat);
 
-void schedule_comm(CommunicatorGrid& comm_grid, Distribution const& cfin_dist, MatrixType& cini_mat);
+void schedule_comm(ExecutorType const& mpi_executor, CommunicatorGrid& comm_grid,
+                   Distribution const& cfin_dist, MatrixType& cini_mat);
 
 void schedule_offload(ConstMatrixType& cini_mat, MatrixType& cfin_mat);
 
@@ -144,11 +155,31 @@ int hpx_main(::variables_map& vm) {
   // Initialize matrices
   init_matrix(a_mat, ::ScalarType(1));
   init_matrix(b_mat, ::ScalarType(1));
-  init_matrix(cini_mat, ::ScalarType(0));
 
+  // 1. John's branch
+  // 2. MPI pool with a single core
+  // 3. Default pool with high priority executor
+  // 4. Default pool with default priority executor (the default)
+#if defined(DLAF_WITH_MPI_FUTURES)
   // This needs remain in scope for all uses of hpx::mpi
   std::string pool_name = "default";
   hpx::mpi::enable_user_polling enable_polling(pool_name);
+  ExecutorType mpi_executor(comm_grid.fullCommunicator());
+#else
+  using hpx::threads::thread_priority;
+#if defined(DLAF_WITH_MPI_POOL)
+  std::string pool_name = "mpi";
+  auto priority = thread_priority::thread_priority_default;
+#elif defined(DLAF_WITH_PRIORITIES)
+  std::string pool_name = "default";
+  auto priority = thread_priority::thread_priority_high;
+#else
+  std::string pool_name = "default";
+  auto priority = thread_priority::thread_priority_default;
+#endif
+  // an executor that can be used to place work on the MPI pool if it is enabled
+  ExecutorType mpi_executor(pool_name, priority);
+#endif
 
   // 0. Reset buffers
   // 1. Schedule multiply
@@ -157,13 +188,11 @@ int hpx_main(::variables_map& vm) {
   // 4. Wait for all
   //
   for (int i = 0; i < ps.num_iters; ++i) {
-    init_matrix(cini_mat, ::ScalarType(0));
-
     MPI_Barrier(MPI_COMM_WORLD);
     auto t_start = clock_t::now();
 
     schedule_gemm(a_mat, b_mat, cini_mat);
-    schedule_comm(comm_grid, cfin_dist, cini_mat);
+    schedule_comm(mpi_executor, comm_grid, cfin_dist, cini_mat);
     schedule_offload(cini_mat, cfin_mat);
     waitall_tiles(cfin_mat);
 
@@ -208,6 +237,20 @@ int main(int argc, char** argv) {
   // declare options before creating resource partitioner
   ::options_description desc_cmdline = ::init_desc();
 
+#ifdef DLAF_WITH_MPI_POOL
+  // NB.
+  // thread pools must be declared before starting the runtime
+
+  // Create resource partitioner
+  hpx::resource::partitioner rp(desc_cmdline, argc, argv);
+
+  // create a thread pool that is not "default" that we will use for MPI work
+  rp.create_thread_pool("mpi");
+
+  // add (enabled) PUs on the first core to it
+  rp.add_resource(rp.numa_domains()[0].cores()[0].pus(), "mpi");
+#endif
+
   // Start the HPX runtime
   hpx::init(desc_cmdline, argc, argv);
 
@@ -217,6 +260,8 @@ int main(int argc, char** argv) {
 namespace {
 
 void schedule_gemm(ConstMatrixType& a_mat, ConstMatrixType& b_mat, MatrixType& cini_mat) {
+  // TODO: Order communication and computation to limit the number of simultaneous non-blocking MPI calls
+
   dlaf::LocalTileSize const& tile_size = cini_mat.distribution().localNrTiles();
   for (SizeType tile_j = 0; tile_j < tile_size.cols(); ++tile_j) {
     for (SizeType tile_i = 0; tile_i < tile_size.rows(); ++tile_i) {
@@ -233,11 +278,11 @@ void schedule_gemm(ConstMatrixType& a_mat, ConstMatrixType& b_mat, MatrixType& c
   }
 }
 
-void schedule_comm(CommunicatorGrid& comm_grid, Distribution const& cfin_dist, MatrixType& cini_mat) {
+void schedule_comm(ExecutorType const& mpi_executor, CommunicatorGrid& comm_grid,
+                   Distribution const& cfin_dist, MatrixType& cini_mat) {
   MPI_Datatype mpi_type = dlaf::comm::mpi_datatype<ScalarType>::type;
   MPI_Op mpi_op = MPI_SUM;
   MPI_Comm mpi_comm(comm_grid.fullCommunicator());
-  hpx::mpi::executor mpi_executor(mpi_comm);
 
   CommIndex this_rank_coords = cfin_dist.rankIndex();
   dlaf::LocalTileSize const& tile_size = cini_mat.distribution().localNrTiles();
@@ -259,7 +304,9 @@ void schedule_comm(CommunicatorGrid& comm_grid, Distribution const& cfin_dist, M
           sendbuf = MPI_IN_PLACE;
         }
 
-#ifdef DLAF_WITH_HPX_FUTURE
+        // TODO: collective operations on the same communicator have to be ordered on all processes.
+
+#ifdef DLAF_WITH_MPI_FUTURES
         return hpx::async(mpi_executor, MPI_Ireduce, sendbuf, recvbuf, num_elements, mpi_type, mpi_op,
                           root_rank, mpi_comm);
 
@@ -274,7 +321,7 @@ void schedule_comm(CommunicatorGrid& comm_grid, Distribution const& cfin_dist, M
 #endif
       });
 
-      hpx::dataflow(mpi_f, cini_mat(c_mat_idx));
+      hpx::dataflow(mpi_executor, mpi_f, cini_mat(c_mat_idx));
     }
   }
 }

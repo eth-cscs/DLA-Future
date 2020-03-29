@@ -192,22 +192,18 @@ auto create_buffer(const Tile<T, device>& tile) {
 
 /// ---- ETI
 
-#define DLAF_TILE_ETI_DECL(DATATYPE, DEVICE)    \
-  extern template class Tile<DATATYPE, DEVICE>; \
-  extern template class Tile<const DATATYPE, DEVICE>;
+#define DLAF_TILE_ETI(KWORD, DATATYPE, DEVICE) \
+  KWORD template class Tile<DATATYPE, DEVICE>; \
+  KWORD template class Tile<const DATATYPE, DEVICE>;
 
-#define DLAF_TILE_ETI_INST(DATATYPE, DEVICE) \
-  template class Tile<DATATYPE, DEVICE>;     \
-  template class Tile<const DATATYPE, DEVICE>;
+DLAF_TILE_ETI(extern, float, Device::CPU)
+DLAF_TILE_ETI(extern, double, Device::CPU)
+DLAF_TILE_ETI(extern, std::complex<float>, Device::CPU)
+DLAF_TILE_ETI(extern, std::complex<double>, Device::CPU)
 
-DLAF_TILE_ETI_DECL(float, Device::CPU)
-DLAF_TILE_ETI_DECL(double, Device::CPU)
-DLAF_TILE_ETI_DECL(std::complex<float>, Device::CPU)
-DLAF_TILE_ETI_DECL(std::complex<double>, Device::CPU)
-
-// DLAF_TILE_ETI_DECL(float, Device::GPU)
-// DLAF_TILE_ETI_DECL(double, Device::GPU)
-// DLAF_TILE_ETI_DECL(std::complex<float>, Device::GPU)
-// DLAF_TILE_ETI_DECL(std::complex<double>, Device::GPU)
+// DLAF_TILE_ETI(extern, float, Device::GPU)
+// DLAF_TILE_ETI(extern, double, Device::GPU)
+// DLAF_TILE_ETI(extern, std::complex<float>, Device::GPU)
+// DLAF_TILE_ETI(extern, std::complex<double>, Device::GPU)
 
 }

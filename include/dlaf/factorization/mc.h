@@ -60,25 +60,16 @@ struct Factorization<Backend::MC> {
 /// ---- ETI
 namespace dlaf {
 
-#define DLAF_CHOLESKY_ETI_DECL(DATATYPE)                                                              \
-  extern template void Factorization<Backend::MC>::cholesky<DATATYPE>(comm::CommunicatorGrid grid,    \
-                                                                      blas::Uplo uplo,                \
-                                                                      Matrix<DATATYPE, Device::CPU> & \
-                                                                          mat_a);                     \
-  extern template void Factorization<Backend::MC>::cholesky<DATATYPE>(blas::Uplo uplo,                \
-                                                                      Matrix<DATATYPE, Device::CPU> & \
-                                                                          mat_a);
+#define DLAF_CHOLESKY_ETI(KWORD, DATATYPE)                                                            \
+  KWORD template void Factorization<Backend::MC>::cholesky<DATATYPE>(comm::CommunicatorGrid,          \
+                                                                     blas::Uplo,                      \
+                                                                     Matrix<DATATYPE, Device::CPU>&); \
+  KWORD template void Factorization<Backend::MC>::cholesky<DATATYPE>(blas::Uplo,                      \
+                                                                     Matrix<DATATYPE, Device::CPU>&);
 
-#define DLAF_CHOLESKY_ETI_INST(DATATYPE)                                                               \
-  template void Factorization<Backend::MC>::cholesky<DATATYPE>(comm::CommunicatorGrid grid,            \
-                                                               blas::Uplo uplo,                        \
-                                                               Matrix<DATATYPE, Device::CPU> & mat_a); \
-  template void Factorization<Backend::MC>::cholesky<DATATYPE>(blas::Uplo uplo,                        \
-                                                               Matrix<DATATYPE, Device::CPU> & mat_a);
-
-DLAF_CHOLESKY_ETI_DECL(float)
-DLAF_CHOLESKY_ETI_DECL(double)
-DLAF_CHOLESKY_ETI_DECL(std::complex<float>)
-DLAF_CHOLESKY_ETI_DECL(std::complex<double>)
+DLAF_CHOLESKY_ETI(extern, float)
+DLAF_CHOLESKY_ETI(extern, double)
+DLAF_CHOLESKY_ETI(extern, std::complex<float>)
+DLAF_CHOLESKY_ETI(extern, std::complex<double>)
 
 }

@@ -340,22 +340,18 @@ Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const Tile
 
 /// ---- ETI
 
-#define DLAF_MATRIX_ETI_DECL(DATATYPE, DEVICE)    \
-  extern template class Matrix<DATATYPE, DEVICE>; \
-  extern template class Matrix<const DATATYPE, DEVICE>;
+#define DLAF_MATRIX_ETI(KWORD, DATATYPE, DEVICE) \
+  KWORD template class Matrix<DATATYPE, DEVICE>; \
+  KWORD template class Matrix<const DATATYPE, DEVICE>;
 
-#define DLAF_MATRIX_ETI_INST(DATATYPE, DEVICE) \
-  template class Matrix<DATATYPE, DEVICE>;     \
-  template class Matrix<const DATATYPE, DEVICE>;
+DLAF_MATRIX_ETI(extern, float, Device::CPU)
+DLAF_MATRIX_ETI(extern, double, Device::CPU)
+DLAF_MATRIX_ETI(extern, std::complex<float>, Device::CPU)
+DLAF_MATRIX_ETI(extern, std::complex<double>, Device::CPU)
 
-DLAF_MATRIX_ETI_DECL(float, Device::CPU)
-DLAF_MATRIX_ETI_DECL(double, Device::CPU)
-DLAF_MATRIX_ETI_DECL(std::complex<float>, Device::CPU)
-DLAF_MATRIX_ETI_DECL(std::complex<double>, Device::CPU)
-
-// DLAF_MATRIX_ETI_DECL(float, Device::GPU)
-// DLAF_MATRIX_ETI_DECL(double, Device::GPU)
-// DLAF_MATRIX_ETI_DECL(std::complex<float>, Device::GPU)
-// DLAF_MATRIX_ETI_DECL(std::complex<double>, Device::GPU)
+// DLAF_MATRIX_ETI(extern, float, Device::GPU)
+// DLAF_MATRIX_ETI(extern, double, Device::GPU)
+// DLAF_MATRIX_ETI(extern, std::complex<float>, Device::GPU)
+// DLAF_MATRIX_ETI(extern, std::complex<double>, Device::GPU)
 
 }

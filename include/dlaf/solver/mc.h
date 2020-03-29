@@ -64,37 +64,20 @@ struct Solver<Backend::MC> {
 /// ---- ETI
 namespace dlaf {
 
-#define DLAF_TRIANGULAR_ETI_DECL(DATATYPE)                                                             \
-  extern template void Solver<Backend::MC>::triangular<DATATYPE>(comm::CommunicatorGrid grid,          \
-                                                                 blas::Side side, blas::Uplo uplo,     \
-                                                                 blas::Op op, blas::Diag diag,         \
-                                                                 DATATYPE alpha,                       \
-                                                                 Matrix<const DATATYPE, Device::CPU> & \
-                                                                     mat_a,                            \
-                                                                 Matrix<DATATYPE, Device::CPU> &       \
-                                                                     mat_b);                           \
-  extern template void Solver<Backend::MC>::triangular<DATATYPE>(blas::Side side, blas::Uplo uplo,     \
-                                                                 blas::Op op, blas::Diag diag,         \
-                                                                 DATATYPE alpha,                       \
-                                                                 Matrix<const DATATYPE, Device::CPU> & \
-                                                                     mat_a,                            \
-                                                                 Matrix<DATATYPE, Device::CPU> &       \
-                                                                     mat_b);
+#define DLAF_TRIANGULAR_ETI(KWORD, DATATYPE)                                                          \
+  KWORD template void Solver<Backend::MC>::triangular<DATATYPE>(comm::CommunicatorGrid, blas::Side,   \
+                                                                blas::Uplo, blas::Op op, blas::Diag,  \
+                                                                DATATYPE,                             \
+                                                                Matrix<const DATATYPE, Device::CPU>&, \
+                                                                Matrix<DATATYPE, Device::CPU>&);      \
+  KWORD template void Solver<Backend::MC>::triangular<DATATYPE>(blas::Side, blas::Uplo, blas::Op,     \
+                                                                blas::Diag, DATATYPE,                 \
+                                                                Matrix<const DATATYPE, Device::CPU>&, \
+                                                                Matrix<DATATYPE, Device::CPU>&);
 
-#define DLAF_TRIANGULAR_ETI_INST(DATATYPE)                                                              \
-  template void Solver<Backend::MC>::triangular<DATATYPE>(comm::CommunicatorGrid grid, blas::Side side, \
-                                                          blas::Uplo uplo, blas::Op op,                 \
-                                                          blas::Diag diag, DATATYPE alpha,              \
-                                                          Matrix<const DATATYPE, Device::CPU> & mat_a,  \
-                                                          Matrix<DATATYPE, Device::CPU> & mat_b);       \
-  template void Solver<Backend::MC>::triangular<DATATYPE>(blas::Side side, blas::Uplo uplo,             \
-                                                          blas::Op op, blas::Diag diag, DATATYPE alpha, \
-                                                          Matrix<const DATATYPE, Device::CPU> & mat_a,  \
-                                                          Matrix<DATATYPE, Device::CPU> & mat_b);
-
-DLAF_TRIANGULAR_ETI_DECL(float)
-DLAF_TRIANGULAR_ETI_DECL(double)
-DLAF_TRIANGULAR_ETI_DECL(std::complex<float>)
-DLAF_TRIANGULAR_ETI_DECL(std::complex<double>)
+DLAF_TRIANGULAR_ETI(extern, float)
+DLAF_TRIANGULAR_ETI(extern, double)
+DLAF_TRIANGULAR_ETI(extern, std::complex<float>)
+DLAF_TRIANGULAR_ETI(extern, std::complex<double>)
 
 }

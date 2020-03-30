@@ -71,6 +71,5 @@ MPI_Datatype mpi_datatype<std::complex<float>>::type = MPI_CXX_FLOAT_COMPLEX;
 
 template <>
 MPI_Datatype mpi_datatype<std::complex<double>>::type = MPI_CXX_DOUBLE_COMPLEX;
-
 }
 }

@@ -12,44 +12,40 @@
 
 /// @file
 
+#include <cassert>
+
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/message.h"
+
+#include "dlaf/common/data.h"
 
 namespace dlaf {
 namespace comm {
 namespace sync {
 namespace broadcast {
 
-/// @brief MPI_Bcast wrapper for sender side accepting a dlaf::comm::Message
-template <class T>
-void send(Communicator& communicator, Message<T>&& message) {
-  MPI_Bcast(const_cast<std::remove_const_t<typename dlaf::comm::Message<T>::element_t>*>(message.data()),
-            message.count(), message.mpi_type(), communicator.rank(), communicator);
-}
-
-/// @brief MPI_Bcast wrapper for sender side that builds a Message from given trailing arguments
+/// MPI_Bcast wrapper for sender side accepting a Data
 ///
-/// @param message_args are passed to dlaf::comm::make_message for creating a dlaf::comm::Message
-template <class... Ts>
-void send(Communicator& communicator, Ts&&... args) {
-  sync::broadcast::send(communicator, dlaf::comm::make_message(std::forward<Ts>(args)...));
+/// For more information, see the Data concept in "dlaf/common/data.h"
+template <class DataIn>
+void send(Communicator& communicator, DataIn&& message_to_send) {
+  auto data = common::make_data(message_to_send);
+  using DataT = std::remove_const_t<typename common::data_traits<decltype(data)>::element_t>;
+
+  auto message = comm::make_message(std::move(data));
+  MPI_Bcast(const_cast<DataT*>(message.data()), message.count(), message.mpi_type(), communicator.rank(),
+            communicator);
 }
 
-/// @brief MPI_Bcast wrapper for receiver side accepting a dlaf::comm::Message
-template <typename T, std::enable_if_t<!std::is_const<T>::value, int> = 0>
-void receive_from(int broadcaster_rank, Communicator& communicator, Message<T>&& message) {
+/// MPI_Bcast wrapper for receiver side accepting a dlaf::comm::Message
+///
+/// For more information, see the Data concept in "dlaf/common/data.h"
+template <class DataOut>
+void receive_from(const int broadcaster_rank, Communicator& communicator, DataOut&& data) {
+  assert(broadcaster_rank != communicator.rank());
+  auto message = comm::make_message(common::make_data(std::forward<DataOut>(data)));
   MPI_Bcast(message.data(), message.count(), message.mpi_type(), broadcaster_rank, communicator);
 }
-
-/// @brief MPI_Bcast wrapper for receiver side that builds a Message from given trailing arguments
-///
-/// @param message_args are passed to dlaf::comm::make_message for creating a dlaf::comm::Message
-template <class... Ts>
-void receive_from(int broadcaster_rank, Communicator& communicator, Ts&&... args) {
-  sync::broadcast::receive_from(broadcaster_rank, communicator,
-                                dlaf::comm::make_message(std::forward<Ts>(args)...));
-}
-
 }
 }
 }

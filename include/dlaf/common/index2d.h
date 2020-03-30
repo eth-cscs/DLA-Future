@@ -83,6 +83,10 @@ public:
     std::swap(row_, col_);
   }
 
+  /// Given a coordinate, returns its transposed with the same type
+  template <class Coords2DType>
+  friend Coords2DType transposed(const Coords2DType& coords);
+
   /// Adds "(<row_>, <col_>)" to out.
   friend std::ostream& operator<<(std::ostream& out, const basic_coords& index) {
     if (std::is_same<IndexT, signed char>::value) {
@@ -96,6 +100,10 @@ protected:
   IndexT col_;
 };
 
+template <class Coords2DType>
+Coords2DType transposed(const Coords2DType& coords) {
+  return {coords.col_, coords.row_};
+}
 }
 
 /// A strong-type for 2D sizes
@@ -103,9 +111,6 @@ protected:
 /// @tparam Tag for strong-typing
 template <typename IndexT, class Tag>
 class Size2D : public internal::basic_coords<IndexT> {
-  template <typename, class>
-  friend class Index2D;
-
 public:
   using internal::basic_coords<IndexT>::basic_coords;
 

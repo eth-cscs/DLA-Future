@@ -12,8 +12,10 @@
 
 #include <gtest/gtest.h>
 
+#include "dlaf/common/data_descriptor.h"
 #include "dlaf_test/helper_communicators.h"
 
+using namespace dlaf;
 using namespace dlaf_test;
 using namespace dlaf::comm;
 
@@ -25,11 +27,11 @@ TEST_F(BroadcastTest, Broadcast_NewAPI) {
 
   if (splitted_comm.rank() == 0) {
     const int message = color;
-    sync::broadcast::send(communicator, make_message(&message, 1));
+    sync::broadcast::send(communicator, common::make_data(&message, 1));
   }
   else {
     int message;
-    sync::broadcast::receive_from(broadcaster, communicator, make_message(&message, 1));
+    sync::broadcast::receive_from(broadcaster, communicator, common::make_data(&message, 1));
     EXPECT_EQ(color, message);
   }
 }

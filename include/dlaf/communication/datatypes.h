@@ -23,7 +23,7 @@ struct mpi_datatype {
   static MPI_Datatype type;
 };
 
-/// helper for mapping also custom types
+/// helper for mapping also const types
 template <typename T>
 struct mpi_datatype<const T> : public mpi_datatype<T> {};
 

@@ -338,4 +338,20 @@ Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const Tile
   return createMatrixFromTile<device>(size, block_size, ld_tile, tiles_per_col, comm, {0, 0}, ptr);
 }
 
+/// ---- ETI
+
+#define DLAF_MATRIX_ETI(KWORD, DATATYPE, DEVICE) \
+  KWORD template class Matrix<DATATYPE, DEVICE>; \
+  KWORD template class Matrix<const DATATYPE, DEVICE>;
+
+DLAF_MATRIX_ETI(extern, float, Device::CPU)
+DLAF_MATRIX_ETI(extern, double, Device::CPU)
+DLAF_MATRIX_ETI(extern, std::complex<float>, Device::CPU)
+DLAF_MATRIX_ETI(extern, std::complex<double>, Device::CPU)
+
+// DLAF_MATRIX_ETI(extern, float, Device::GPU)
+// DLAF_MATRIX_ETI(extern, double, Device::GPU)
+// DLAF_MATRIX_ETI(extern, std::complex<float>, Device::GPU)
+// DLAF_MATRIX_ETI(extern, std::complex<double>, Device::GPU)
+
 }

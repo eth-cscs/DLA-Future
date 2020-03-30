@@ -191,4 +191,20 @@ auto create_data(const Tile<T, device>& tile) {
 
 #include <dlaf/tile.tpp>
 
+/// ---- ETI
+
+#define DLAF_TILE_ETI(KWORD, DATATYPE, DEVICE) \
+  KWORD template class Tile<DATATYPE, DEVICE>; \
+  KWORD template class Tile<const DATATYPE, DEVICE>;
+
+DLAF_TILE_ETI(extern, float, Device::CPU)
+DLAF_TILE_ETI(extern, double, Device::CPU)
+DLAF_TILE_ETI(extern, std::complex<float>, Device::CPU)
+DLAF_TILE_ETI(extern, std::complex<double>, Device::CPU)
+
+// DLAF_TILE_ETI(extern, float, Device::GPU)
+// DLAF_TILE_ETI(extern, double, Device::GPU)
+// DLAF_TILE_ETI(extern, std::complex<float>, Device::GPU)
+// DLAF_TILE_ETI(extern, std::complex<double>, Device::GPU)
+
 }

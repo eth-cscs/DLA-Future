@@ -56,3 +56,20 @@ struct Factorization<Backend::MC> {
 }
 
 #include <dlaf/factorization/cholesky/mc.tpp>
+
+/// ---- ETI
+namespace dlaf {
+
+#define DLAF_CHOLESKY_ETI(KWORD, DATATYPE)                                                            \
+  KWORD template void Factorization<Backend::MC>::cholesky<DATATYPE>(comm::CommunicatorGrid,          \
+                                                                     blas::Uplo,                      \
+                                                                     Matrix<DATATYPE, Device::CPU>&); \
+  KWORD template void Factorization<Backend::MC>::cholesky<DATATYPE>(blas::Uplo,                      \
+                                                                     Matrix<DATATYPE, Device::CPU>&);
+
+DLAF_CHOLESKY_ETI(extern, float)
+DLAF_CHOLESKY_ETI(extern, double)
+DLAF_CHOLESKY_ETI(extern, std::complex<float>)
+DLAF_CHOLESKY_ETI(extern, std::complex<double>)
+
+}

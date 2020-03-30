@@ -36,7 +36,7 @@ struct type_handler {
   /// @param block_size   number of contiguous elements of type @p T in each block
   /// @param stride       stride (in elements) between starts of adjacent blocks
   type_handler(std::size_t nblocks, std::size_t block_size, std::size_t stride) {
-    MPI_Datatype element_type = dlaf::comm::mpi_datatype<std::remove_pointer_t<T>>::type();
+    MPI_Datatype element_type = dlaf::comm::mpi_datatype<std::remove_pointer_t<T>>::type;
     MPI_Type_vector(to_int(nblocks), to_int(block_size), to_int(stride), element_type, &custom_type_);
     MPI_Type_commit(&custom_type_);
   }

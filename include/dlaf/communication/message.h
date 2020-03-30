@@ -39,7 +39,7 @@ public:
   /// Create a Message from a given type implementing the Data concept
   Message(Data data) : data_(data) {
     if (data_iscontiguous(data) == 1)
-      classic_type_ = dlaf::comm::mpi_datatype<T>::type();
+      classic_type_ = dlaf::comm::mpi_datatype<T>::type;
     else
       custom_type_ =
           internal::type_handler<T>(data_nblocks(data), data_blocksize(data), data_stride(data));

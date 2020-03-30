@@ -27,5 +27,24 @@ struct mpi_datatype {
 template <typename T>
 struct mpi_datatype<const T> : public mpi_datatype<T> {};
 
+// Forward declare specializations
+// clang-format off
+template<> MPI_Datatype mpi_datatype<char>                 ::type;
+template<> MPI_Datatype mpi_datatype<short>                ::type;
+template<> MPI_Datatype mpi_datatype<int>                  ::type;
+template<> MPI_Datatype mpi_datatype<long>                 ::type;
+template<> MPI_Datatype mpi_datatype<long long>            ::type;
+template<> MPI_Datatype mpi_datatype<unsigned char>        ::type;
+template<> MPI_Datatype mpi_datatype<unsigned short>       ::type;
+template<> MPI_Datatype mpi_datatype<unsigned int>         ::type;
+template<> MPI_Datatype mpi_datatype<unsigned long>        ::type;
+template<> MPI_Datatype mpi_datatype<unsigned long long>   ::type;
+template<> MPI_Datatype mpi_datatype<float>                ::type;
+template<> MPI_Datatype mpi_datatype<double>               ::type;
+template<> MPI_Datatype mpi_datatype<bool>                 ::type;
+template<> MPI_Datatype mpi_datatype<std::complex<float>>  ::type;
+template<> MPI_Datatype mpi_datatype<std::complex<double>> ::type;
+// clang-format on
+
 }
 }

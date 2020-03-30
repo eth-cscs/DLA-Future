@@ -41,7 +41,7 @@ TYPED_TEST(MessageTest, MakeFromPointer) {
   EXPECT_EQ(value_ptr, message.data());
   EXPECT_EQ(1, message.count());
   EXPECT_EQ(sizeof(TypeParam), type_size);
-  EXPECT_EQ(static_cast<MPI_Datatype>(mpi_datatype<TypeParam>::type()), message.mpi_type());
+  EXPECT_EQ(static_cast<MPI_Datatype>(mpi_datatype<TypeParam>::type), message.mpi_type());
 }
 
 TYPED_TEST(MessageTest, MakeFromContiguousArray) {
@@ -57,7 +57,7 @@ TYPED_TEST(MessageTest, MakeFromContiguousArray) {
   EXPECT_EQ(value_array, message.data());
   EXPECT_EQ(N, message.count());
   EXPECT_EQ(sizeof(TypeParam), type_size);
-  EXPECT_EQ(static_cast<MPI_Datatype>(mpi_datatype<TypeParam>::type()), message.mpi_type());
+  EXPECT_EQ(static_cast<MPI_Datatype>(mpi_datatype<TypeParam>::type), message.mpi_type());
 }
 
 TYPED_TEST(MessageTest, MakeFromContiguousAsStridedArray) {
@@ -80,7 +80,7 @@ TYPED_TEST(MessageTest, MakeFromContiguousAsStridedArray) {
   EXPECT_EQ(value_array, message.data());
   EXPECT_EQ(total_elements, message.count());
   EXPECT_EQ(sizeof(TypeParam), type_size);
-  EXPECT_EQ(static_cast<MPI_Datatype>(mpi_datatype<TypeParam>::type()), message.mpi_type());
+  EXPECT_EQ(static_cast<MPI_Datatype>(mpi_datatype<TypeParam>::type), message.mpi_type());
 }
 
 TYPED_TEST(MessageTest, MakeFromStridedArray) {

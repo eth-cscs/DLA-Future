@@ -15,12 +15,12 @@
 
 #include "dlaf/common/utils.h"
 
-#define DLAF_TEST(category, condition, ...)                                                  \
-  if (!(condition)) {                                                                        \
-    std::cerr << "[" category "-ERROR] " << __FILE__ << " : " << DLAF_SOURCE_LOCATION << ":" \
-              << __LINE__ << "\n"                                                            \
-              << dlaf::common::concat(#condition, ##__VA_ARGS__) << std::endl;               \
-    std::terminate();                                                                        \
+#define DLAF_TEST(category, condition, ...)                                      \
+  if (!(condition)) {                                                            \
+    std::cerr << "[" category "-ERROR] " << __FILE__ << ":" << __LINE__ << " : " \
+              << DLAF_SOURCE_LOCATION << "\n"                                    \
+              << dlaf::common::concat(#condition, ##__VA_ARGS__) << std::endl;   \
+    std::terminate();                                                            \
   }
 
 #ifndef NDEBUG

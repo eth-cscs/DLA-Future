@@ -10,22 +10,21 @@
 
 #pragma once
 
-#include <string>
 #include <sstream>
+#include <string>
 
 namespace dlaf {
 namespace common {
 
 std::string concat() {
-    return "";
+  return "";
 }
 
-template <class T, class ...Ts>
-std::string concat(T&& first, Ts&& ... args) {
-    std::stringstream ss;
-    ss << first << " " << concat(std::forward<Ts>(args)...);
-    return ss.str();
+template <class T, class... Ts>
+std::string concat(T&& first, Ts&&... args) {
+  std::stringstream ss;
+  ss << first << " " << concat(std::forward<Ts>(args)...);
+  return ss.str();
 }
-
 }
 }

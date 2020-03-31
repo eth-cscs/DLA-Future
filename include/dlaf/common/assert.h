@@ -15,24 +15,24 @@
 
 #include "dlaf/common/utils.h"
 
-#define DLAF_TEST(category, condition, ...)                                                   \
-  if (!(condition)) {                                                                         \
-    std::cerr << "failed " category " " #condition << "\n at " << DLAF_SOURCE_LOCATION << ":" \
-              << __LINE__ << '\n'                                                             \
-              << dlaf::common::concat(__VA_ARGS__) << std::endl;                              \
-    std::terminate();                                                                         \
+#define DLAF_TEST(category, condition, ...)                                                  \
+  if (!(condition)) {                                                                        \
+    std::cerr << "[" category "-ERROR] " << __FILE__ << " : " << DLAF_SOURCE_LOCATION << ":" \
+              << __LINE__ << "\n"                                                            \
+              << dlaf::common::concat(#condition, ##__VA_ARGS__) << std::endl;               \
+    std::terminate();                                                                        \
   }
 
 #ifndef NDEBUG
-#define DLAF_ASSERT(condition, ...) DLAF_TEST("assertion", condition, __VA_ARGS__)
+#define DLAF_ASSERT(condition, ...) DLAF_TEST("ASSERT", condition, ##__VA_ARGS__)
 #else
 #define DLAF_ASSERT(condition, ...)
 #endif
 
-#ifdef DLAF_ENABLE_DEVASSERT
-#define DLAF_DEVASSERT(condition, ...) DLAF_TEST("dev assert", condition, __VA_ARGS__)
+#ifdef DLAF_ENABLE_AUDIT
+#define DLAF_AUDIT(condition, ...) DLAF_TEST("AUDIT", condition, ##__VA_ARGS__)
 #else
-#define DLAF_DEVASSERT(condition, ...)
+#define DLAF_AUDIT(condition, ...)
 #endif
 
-#define DLAF_PRECONDITION(condition, ...) DLAF_TEST("precondition", condition, __VA_ARGS__)
+#define DLAF_PRECONDITION(condition, ...) DLAF_TEST("PRECONDITION", condition, ##__VA_ARGS__)

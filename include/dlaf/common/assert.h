@@ -15,7 +15,7 @@
 
 #include "dlaf/common/utils.h"
 
-#define DLAF_TEST(category, condition, ...)                                      \
+#define DLAF_CHECK(category, condition, ...)                                      \
   if (!(condition)) {                                                            \
     std::cerr << "[" category "-ERROR] " << __FILE__ << ":" << __LINE__ << " : " \
               << DLAF_SOURCE_LOCATION << "\n"                                    \
@@ -24,15 +24,15 @@
   }
 
 #ifndef NDEBUG
-#define DLAF_ASSERT(condition, ...) DLAF_TEST("ASSERT", condition, ##__VA_ARGS__)
+#define DLAF_ASSERT(condition, ...) DLAF_CHECK("ASSERT", condition, ##__VA_ARGS__)
 #else
 #define DLAF_ASSERT(condition, ...)
 #endif
 
 #ifdef DLAF_ENABLE_AUDIT
-#define DLAF_AUDIT(condition, ...) DLAF_TEST("AUDIT", condition, ##__VA_ARGS__)
+#define DLAF_AUDIT(condition, ...) DLAF_CHECK("AUDIT", condition, ##__VA_ARGS__)
 #else
 #define DLAF_AUDIT(condition, ...)
 #endif
 
-#define DLAF_PRECONDITION(condition, ...) DLAF_TEST("PRECONDITION", condition, ##__VA_ARGS__)
+#define DLAF_PRECONDITION(condition, ...) DLAF_CHECK("PRECONDITION", condition, ##__VA_ARGS__)

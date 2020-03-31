@@ -28,15 +28,15 @@ void Solver<Backend::MC>::triangular(blas::Side side, blas::Uplo uplo, blas::Op 
                                      T alpha, Matrix<const T, Device::CPU>& mat_a,
                                      Matrix<T, Device::CPU>& mat_b) {
   // Check if matrix A is square
-  util_matrix::assertSizeSquare(mat_a, "TriangularSolver", "mat_a");
+  DLAF_PRECONDITION_SIZE_SQUARE(mat_a);
   // Check if block matrix A is square
-  util_matrix::assertBlocksizeSquare(mat_a, "TriangularSolver", "mat_a");
+  DLAF_PRECONDITION_BLOCKSIZE_SQUARE(mat_a);
   // Check if A and B dimensions are compatible
-  util_matrix::assertMultipliableMatrices(mat_a, mat_b, side, op, "TriangularSolver", "mat_a", "mat_b");
+  DLAF_PRECONDITION_MULTIPLIABLE_MATRICES(mat_a, mat_b, side, op);
   // Check if matrix A is stored on local memory
-  util_matrix::assertLocalMatrix(mat_a, "TriangularSolver", "mat_a");
+  DLAF_PRECONDITION_LOCALMATRIX(mat_a);
   // Check if matrix B is stored on local memory
-  util_matrix::assertLocalMatrix(mat_b, "TriangularSolver", "mat_b");
+  DLAF_PRECONDITION_LOCALMATRIX(mat_b);
 
   if (side == blas::Side::Left) {
     if (uplo == blas::Uplo::Lower) {
@@ -90,15 +90,15 @@ void Solver<Backend::MC>::triangular(comm::CommunicatorGrid grid, blas::Side sid
                                      Matrix<const T, Device::CPU>& mat_a,
                                      Matrix<T, Device::CPU>& mat_b) {
   // Check if matrix A is square
-  util_matrix::assertSizeSquare(mat_a, "TriangularSolver", "mat_a");
+  DLAF_PRECONDITION_SIZE_SQUARE(mat_a);
   // Check if block matrix A is square
-  util_matrix::assertBlocksizeSquare(mat_a, "TriangularSolver", "mat_a");
+  DLAF_PRECONDITION_BLOCKSIZE_SQUARE(mat_a);
   // Check if A and B dimensions are compatible
-  util_matrix::assertMultipliableMatrices(mat_a, mat_b, side, op, "TriangularSolver", "mat_a", "mat_b");
+  DLAF_PRECONDITION_MULTIPLIABLE_MATRICES(mat_a, mat_b, side, op);
   // Check compatibility of the communicator grid and the distribution of matrix A
-  util_matrix::assertMatrixDistributedOnGrid(grid, mat_a, "TriangularSolver", "mat_a", "grid");
+  DLAF_PRECONDITION_DISTRIBUTED_ON_GRID(grid, mat_a);
   // Check compatibility of the communicator grid and the distribution of matrix B
-  util_matrix::assertMatrixDistributedOnGrid(grid, mat_b, "TriangularSolver", "mat_b", "grid");
+  DLAF_PRECONDITION_DISTRIBUTED_ON_GRID(grid, mat_b);
 
   if (side == blas::Side::Left) {
     if (uplo == blas::Uplo::Lower) {

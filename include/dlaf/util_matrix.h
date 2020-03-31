@@ -27,8 +27,17 @@ constexpr double M_PI = 3.141592;
 
 /// @file
 
+#define _DLAF_PRECONDITION_FUNCTION(condition) ::dlaf::matrix::util::internal::assert##condition
+
+#define _DLAF_PRECONDITION_1(condition, arg1) \
+  _DLAF_PRECONDITION_FUNCTION(condition)(arg1, DLAF_FUNCTION_NAME, #arg1)
+#define _DLAF_PRECONDITION_2(condition, arg1, arg2) \
+  _DLAF_PRECONDITION_FUNCTION(condition)(arg1, arg2, DLAF_FUNCTION_NAME, #arg1, #arg2)
+
 namespace dlaf {
-namespace util_matrix {
+namespace matrix {
+namespace util {
+namespace internal {
 
 /// @brief Verify if dlaf::Matrix is square
 ///
@@ -39,6 +48,7 @@ void assertSizeSquare(const Matrix& matrix, std::string function, std::string ma
   if (matrix.size().rows() != matrix.size().cols())
     throw std::invalid_argument(function + ": " + "Matrix " + mat_name + " is not square.");
 }
+#define DLAF_PRECONDITION_SIZE_SQUARE(matrix) _DLAF_PRECONDITION_1(SizeSquare, matrix)
 
 /// @brief Verify if dlaf::Matrix tile is square
 ///
@@ -50,6 +60,7 @@ void assertBlocksizeSquare(const Matrix& matrix, std::string function, std::stri
     throw std::invalid_argument(function + ": " + "Block size in matrix " + mat_name +
                                 " is not square.");
 }
+#define DLAF_PRECONDITION_BLOCKSIZE_SQUARE(matrix) _DLAF_PRECONDITION_1(BlocksizeSquare, matrix)
 
 /// @brief Verify if dlaf::Matrix is distributed on a (1x1) grid (i.e. if it is a local matrix).
 ///
@@ -60,6 +71,7 @@ void assertLocalMatrix(const Matrix& matrix, std::string function, std::string m
   if (matrix.distribution().commGridSize() != comm::Size2D{1, 1})
     throw std::invalid_argument(function + ": " + "Matrix " + mat_name + " is not local.");
 }
+#define DLAF_PRECONDITION_LOCALMATRIX(matrix) _DLAF_PRECONDITION_1(LocalMatrix, matrix)
 
 /// @brief Verify that the matrix is distributed according to the given communicator grid.
 ///
@@ -74,6 +86,8 @@ void assertMatrixDistributedOnGrid(const comm::CommunicatorGrid& grid, const Mat
                                 " is not distributed according to the communicator grid " + grid_name +
                                 ".");
 }
+#define DLAF_PRECONDITION_DISTRIBUTED_ON_GRID(grid, matrix) \
+  _DLAF_PRECONDITION_2(MatrixDistributedOnGrid, grid, matrix)
 
 /// @brief Verify that matrices A and B are multipliable,
 ///
@@ -158,12 +172,8 @@ void assertMultipliableMatrices(const MatrixConst& mat_a, const Matrix& mat_b, b
     }
   }
 }
-
-}
-
-namespace matrix {
-namespace util {
-namespace internal {
+#define DLAF_PRECONDITION_MULTIPLIABLE_MATRICES(a, b, side, op) \
+  _DLAF_PRECONDITION_FUNCTION(MultipliableMatrices)(a, b, side, op, DLAF_FUNCTION_NAME, #a, #b);
 
 /// Callable that returns random values in the range [-1, 1]
 template <class T>
@@ -205,7 +215,7 @@ public:
 /// @pre el return type should be T.
 template <class T, class ElementGetter>
 void set(Matrix<T, Device::CPU>& matrix, const ElementGetter& el) {
-  const matrix::Distribution& dist = matrix.distribution();
+  const Distribution& dist = matrix.distribution();
   for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {
     for (SizeType tile_i = 0; tile_i < dist.localNrTiles().rows(); ++tile_i) {
       LocalTileIndex tile_wrt_local{tile_i, tile_j};
@@ -237,7 +247,7 @@ template <class T>
 void set_random(Matrix<T, Device::CPU>& matrix) {
   using namespace dlaf::util::size_t;
 
-  const matrix::Distribution& dist = matrix.distribution();
+  const Distribution& dist = matrix.distribution();
 
   for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {
     for (SizeType tile_i = 0; tile_i < dist.localNrTiles().rows(); ++tile_i) {
@@ -285,12 +295,12 @@ void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
 
   using namespace dlaf::util::size_t;
 
-  const matrix::Distribution& dist = matrix.distribution();
+  const Distribution& dist = matrix.distribution();
 
   // Check if matrix is square
-  util_matrix::assertSizeSquare(matrix, "set_hermitian_random_positive_definite", "matrix");
+  DLAF_PRECONDITION_SIZE_SQUARE(matrix);
   // Check if block matrix is square
-  util_matrix::assertBlocksizeSquare(matrix, "set_hermitian_random_positive_definite", "matrix");
+  DLAF_PRECONDITION_BLOCKSIZE_SQUARE(matrix);
 
   auto offset_value = mul(2, to_sizet(matrix.size().rows()));
   auto full_tile_size = matrix.blockSize();

@@ -16,7 +16,7 @@
 namespace dlaf {
 namespace common {
 
-std::string concat() {
+inline std::string concat() {
   return "";
 }
 

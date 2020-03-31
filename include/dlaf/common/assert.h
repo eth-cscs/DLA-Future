@@ -15,7 +15,7 @@
 
 #include "dlaf/common/utils.h"
 
-#define DLAF_CHECK(category, condition, ...)                                      \
+#define DLAF_CHECK(category, condition, ...)                                     \
   if (!(condition)) {                                                            \
     std::cerr << "[" category "-ERROR] " << __FILE__ << ":" << __LINE__ << " : " \
               << DLAF_SOURCE_LOCATION << "\n"                                    \

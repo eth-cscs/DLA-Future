@@ -105,34 +105,24 @@ public:
   using typename TileManagerType::TileType;
   using typename TileManagerType::ConstTileType;
 
-  ViewTileFutureManager() {}
+  ViewTileFutureManager() : tile_status_(TileStatus::None) {}
 
-  ViewTileFutureManager(TileManagerType& tile_manager, bool /* force_RW */)
-      : TileManagerType(), tile_promise_(), tile_shared_promise_() {
-    tile_future_ = std::move(tile_promise_.get_future());
-    tile_shared_future_ = std::move(tile_shared_promise_.get_future());
-
-    TileManagerType& base = *this;
-    std::swap(tile_manager, base);
-
-    tile_status_ = TileStatus::RW;
-    assert(tile_future_.valid());
+  ViewTileFutureManager(TileManagerType& tile_manager, bool /* force_RW */) {
+    setUpRW(tile_manager);
   }
 
-  ViewTileFutureManager(ViewTileFutureManager& tile_manager, bool force_RW)
-      : TileManagerType(), tile_promise_(), tile_shared_promise_() {
+  ViewTileFutureManager(ViewTileFutureManager& tile_manager, bool force_RW) {
+    // RW tiles are fine in any case.
     if (tile_manager.status() == TileStatus::RW) {
-      tile_future_ = std::move(tile_manager.tile_future_);
-      tile_shared_future_ = std::move(tile_manager.tile_shared_future_);
-      tile_manager.tile_future_ = std::move(tile_promise_.get_future());
-      tile_manager.tile_shared_future_ = std::move(tile_shared_promise_.get_future());
+      setUpRW(tile_manager);
+      return;
     }
-    else {
-      assert(!force_RW);
 
-      if (tile_manager.status() == TileStatus::Read)
-        tile_shared_future_ = tile_manager.getReadTileSharedFuture();
-    }
+    // Non-RW tiles are fine only if force_RW is false.
+    assert(!force_RW);
+
+    if (tile_manager.status() == TileStatus::Read)
+      tile_shared_future_ = tile_manager.getReadTileSharedFuture();
 
     tile_status_ = tile_manager.status();
   }
@@ -184,7 +174,7 @@ public:
             }
           });
 
-      // Set the original matrix future as ready only whe both the view shared_future
+      // Set the original matrix future as ready only when both the view shared_future
       // and the original matrix shared_future have been destroyed.
       hpx::dataflow(
           hpx::launch::sync,
@@ -215,6 +205,21 @@ public:
   }
 
 private:
+  void setUpRW(TileManagerType& tile_manager) {
+    // the futures of the tile_manager has to be moved in this object and
+    // be replaced with the futures of the promises of *this.
+    // Therefore we first set up the futures for tile_manager in *this
+    // and then swap the base class members (i.e. the futures).
+    tile_future_ = tile_promise_.get_future();
+    tile_shared_future_ = tile_shared_promise_.get_future();
+
+    TileManagerType& base = *this;
+    std::swap(tile_manager, base);
+
+    tile_status_ = TileStatus::RW;
+    assert(tile_future_.valid());
+  }
+
   using TileManagerType::tile_future_;
   using TileManagerType::tile_shared_future_;
 

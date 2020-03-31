@@ -616,7 +616,7 @@ TYPED_TEST(MatrixViewTest, DependenciesMultiLevelConst) {
         EXPECT_TRUE(checkFuturesStep(0, fut2));
 
         CHECK_MATRIX_FUTURES(true, shfut1a, fut0);
-        EXPECT_TRUE(checkFuturesStep(shfut1b.size(), shfut1a));
+        EXPECT_TRUE(checkFuturesStep(shfut1b.size(), shfut1b));
 
         if (check_done) {
           CHECK_MATRIX_FUTURES_DONE_WRITE(true, shfut1c, *mat_view_2);

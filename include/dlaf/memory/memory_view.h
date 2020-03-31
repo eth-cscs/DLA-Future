@@ -167,5 +167,19 @@ private:
   std::size_t size_;
 };
 
-}  // namespace memory
-}  // namespace dlaf
+/// ---- ETI
+
+#define DLAF_MEMVIEW_ETI(KWORD, DATATYPE, DEVICE) KWORD template class MemoryView<DATATYPE, DEVICE>;
+
+DLAF_MEMVIEW_ETI(extern, float, Device::CPU)
+DLAF_MEMVIEW_ETI(extern, double, Device::CPU)
+DLAF_MEMVIEW_ETI(extern, std::complex<float>, Device::CPU)
+DLAF_MEMVIEW_ETI(extern, std::complex<double>, Device::CPU)
+
+// DLAF_MEMVIEW_ETI(extern, float, Device::GPU)
+// DLAF_MEMVIEW_ETI(extern, double, Device::GPU)
+// DLAF_MEMVIEW_ETI(extern, std::complex<float>, Device::GPU)
+// DLAF_MEMVIEW_ETI(extern, std::complex<double>, Device::GPU)
+
+}
+}

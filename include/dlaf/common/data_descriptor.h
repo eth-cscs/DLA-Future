@@ -13,11 +13,11 @@
 #pragma once
 
 #include <algorithm>
-#include <cassert>
 #include <memory>
 #include <type_traits>
 #include <utility>
 
+#include "dlaf/common/assert.h"
 #include "dlaf/common/data.h"
 
 namespace dlaf {
@@ -62,9 +62,9 @@ struct DataDescriptor {
   /// @pre stride >= blocksize if num_blocks > 1
   DataDescriptor(T* ptr, std::size_t num_blocks, std::size_t blocksize, std::size_t stride) noexcept
       : data_(ptr), nblocks_(num_blocks), blocksize_(blocksize), stride_(num_blocks == 1 ? 0 : stride) {
-    assert(nblocks_ != 0);
-    assert(nullptr != data_);
-    assert(nblocks_ == 1 ? stride_ == 0 : stride_ >= blocksize_);
+    DLAF_ASSERT_HEAVY((nblocks_ != 0));
+    DLAF_ASSERT_HEAVY((nullptr != data_));
+    DLAF_ASSERT_HEAVY((nblocks_ == 1 ? stride_ == 0 : stride_ >= blocksize_));
 
     if (blocksize_ == stride_) {
       blocksize_ = num_blocks * blocksize_;
@@ -183,7 +183,7 @@ template <class DataIn>
 auto create_temporary_buffer(const DataIn& input) {
   using DataT = std::remove_const_t<typename common::data_traits<DataIn>::element_t>;
 
-  assert(data_count(input) > 0);
+  DLAF_ASSERT_HEAVY((data_count(input) > 0));
 
   return common::Buffer<DataT>(data_count(input));
 }

@@ -68,7 +68,7 @@ public:
   /// @pre @p ptr+i can be deferenced for 0 < @c i < @p size
   MemoryChunk(T* ptr, std::size_t size)
       : size_(size), ptr_(size > 0 ? ptr : nullptr), allocated_(false) {
-    assert(size == 0 ? ptr_ == nullptr : ptr_ != nullptr);
+    DLAF_ASSERT_HEAVY((size == 0 ? ptr_ == nullptr : ptr_ != nullptr));
   }
 
   MemoryChunk(const MemoryChunk&) = delete;
@@ -107,11 +107,11 @@ public:
   /// @param index index of the position
   /// @pre @p index < @p size
   T* operator()(size_t index) {
-    assert(index < size_);
+    DLAF_ASSERT_HEAVY((index < size_));
     return ptr_ + index;
   }
   const T* operator()(size_t index) const {
-    assert(index < size_);
+    DLAF_ASSERT_HEAVY((index < size_));
     return ptr_ + index;
   }
 

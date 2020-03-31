@@ -130,7 +130,7 @@ public:
   /// @brief Returns true if rows() == 0 or cols() == 0
   /// @pre isValid() == true
   bool isEmpty() const noexcept {
-    assert(BaseT::isValid());
+    DLAF_ASSERT_HEAVY((internal::basic_coords<IndexT>::isValid()));
     return rows() == 0 || cols() == 0;
   }
 

@@ -92,8 +92,8 @@ public:
   const T* ptr(const TileElementIndex& index) const noexcept {
     using util::size_t::sum;
     using util::size_t::mul;
-    assert(index.isValid());
-    assert(index.isIn(size_));
+    DLAF_ASSERT_HEAVY((index.isValid()));
+    DLAF_ASSERT_HEAVY((index.isIn(size_)));
 
     return memory_view_(sum(index.row(), mul(ld_, index.col())));
   }
@@ -165,8 +165,8 @@ public:
   T* ptr(const TileElementIndex& index) const noexcept {
     using util::size_t::sum;
     using util::size_t::mul;
-    assert(index.isValid());
-    assert(index.isIn(size_));
+    DLAF_ASSERT_HEAVY((index.isValid()));
+    DLAF_ASSERT_HEAVY((index.isIn(size_)));
 
     return memory_view_(sum(index.row(), mul(ld_, index.col())));
   }

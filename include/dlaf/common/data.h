@@ -13,10 +13,11 @@
 #pragma once
 
 #include <algorithm>
-#include <cassert>
 #include <memory>
 #include <type_traits>
 #include <utility>
+
+#include "dlaf/common/assert.h"
 
 namespace dlaf {
 namespace common {
@@ -125,13 +126,13 @@ void copy(const DataIn& src, const DataOut& dest) {
                 "Cannot copy to a const Data");
 
   if (data_iscontiguous(dest) && data_iscontiguous(src)) {
-    assert(data_blocksize(src) == data_blocksize(dest));
+    DLAF_ASSERT_HEAVY((data_blocksize(src) == data_blocksize(dest)));
 
     std::copy(data_pointer(src), data_pointer(src) + data_blocksize(src), data_pointer(dest));
   }
   else {
     if (data_iscontiguous(dest)) {
-      assert(data_nblocks(src) * data_blocksize(src) == data_blocksize(dest));
+      DLAF_ASSERT_HEAVY((data_nblocks(src) * data_blocksize(src) == data_blocksize(dest)));
 
       for (std::size_t i_block = 0; i_block < data_nblocks(src); ++i_block) {
         auto ptr_block_start = data_pointer(src) + i_block * data_stride(src);
@@ -140,7 +141,7 @@ void copy(const DataIn& src, const DataOut& dest) {
       }
     }
     else if (data_iscontiguous(src)) {
-      assert(data_blocksize(src) == data_nblocks(dest) * data_blocksize(dest));
+      DLAF_ASSERT_HEAVY((data_blocksize(src) == data_nblocks(dest) * data_blocksize(dest)));
 
       for (std::size_t i_block = 0; i_block < data_nblocks(dest); ++i_block) {
         auto ptr_block_start = data_pointer(src) + i_block * data_blocksize(dest);
@@ -149,7 +150,7 @@ void copy(const DataIn& src, const DataOut& dest) {
       }
     }
     else {
-      assert(data_count(src) == data_count(dest));
+      DLAF_ASSERT_HEAVY((data_count(src) == data_count(dest)));
 
       for (std::size_t i = 0; i < data_count(src); ++i) {
         auto i_src = i / data_blocksize(src) * data_stride(src) + i % data_blocksize(src);

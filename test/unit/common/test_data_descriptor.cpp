@@ -37,8 +37,8 @@ struct memory_data {
 template <class T>
 memory_data<T> create_memory(const std::size_t num_blocks, const std::size_t blocksize,
                              const std::size_t stride) {
-  assert(num_blocks > 0);
-  assert(blocksize <= stride || stride == 0);
+  DLAF_ASSERT_HEAVY((num_blocks > 0));
+  DLAF_ASSERT_HEAVY((blocksize <= stride || stride == 0));
 
   if (num_blocks == 1)
     return {std::make_unique<T[]>(blocksize), num_blocks, blocksize, stride};

@@ -57,7 +57,7 @@ long long potrfInfo(blas::Uplo uplo, const Tile<T, device>& a) {
   }
 
   auto info = lapack::potrf(uplo, a.size().rows(), a.ptr(), a.ld());
-  assert(info >= 0);
+  DLAF_ASSERT_HEAVY((info >= 0));
 
   return info;
 }

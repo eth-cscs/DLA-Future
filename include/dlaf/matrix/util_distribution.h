@@ -12,7 +12,7 @@
 /// More details about how a matrix is distributed can be found in `misc/matrix_distribution.md`
 
 #pragma once
-#include <cassert>
+#include "dlaf/common/assert.h"
 #include "dlaf/types.h"
 
 namespace dlaf {
@@ -26,8 +26,8 @@ namespace matrix {
 /// @pre 0 <= element
 /// @pre 0 < block_size
 inline SizeType tileFromElement(SizeType element, SizeType block_size) {
-  assert(0 <= element);
-  assert(0 < block_size);
+  DLAF_ASSERT_HEAVY((0 <= element));
+  DLAF_ASSERT_HEAVY((0 < block_size));
   return element / block_size;
 }
 
@@ -37,8 +37,8 @@ inline SizeType tileFromElement(SizeType element, SizeType block_size) {
 /// @pre 0 <= element
 /// @pre 0 < block_size
 inline SizeType tileElementFromElement(SizeType element, SizeType block_size) {
-  assert(0 <= element);
-  assert(0 < block_size);
+  DLAF_ASSERT_HEAVY((0 <= element));
+  DLAF_ASSERT_HEAVY((0 < block_size));
   return element % block_size;
 }
 
@@ -52,9 +52,9 @@ inline SizeType tileElementFromElement(SizeType element, SizeType block_size) {
 /// @pre 0 < block_size
 inline SizeType elementFromTileAndTileElement(SizeType tile, SizeType tile_element,
                                               SizeType block_size) {
-  assert(0 <= tile);
-  assert(0 <= tile_element && tile_element < block_size);
-  assert(0 < block_size);
+  DLAF_ASSERT_HEAVY((0 <= tile));
+  DLAF_ASSERT_HEAVY((0 <= tile_element && tile_element < block_size));
+  DLAF_ASSERT_HEAVY((0 < block_size));
   return tile * block_size + tile_element;
 }
 
@@ -64,9 +64,9 @@ inline SizeType elementFromTileAndTileElement(SizeType tile, SizeType tile_eleme
 /// @pre 0 < grid_size
 /// @pre 0 <= src_rank < grid_size
 inline int rankGlobalTile(SizeType global_tile, int grid_size, int src_rank) {
-  assert(0 <= global_tile);
-  assert(0 < grid_size);
-  assert(0 <= src_rank && src_rank < grid_size);
+  DLAF_ASSERT_HEAVY((0 <= global_tile));
+  DLAF_ASSERT_HEAVY((0 < grid_size));
+  DLAF_ASSERT_HEAVY((0 <= src_rank && src_rank < grid_size));
   return (global_tile + src_rank) % grid_size;
 }
 
@@ -78,10 +78,10 @@ inline int rankGlobalTile(SizeType global_tile, int grid_size, int src_rank) {
 /// @pre 0 <= rank < grid_size
 /// @pre 0 <= src_rank < grid_size
 inline SizeType localTileFromGlobalTile(SizeType global_tile, int grid_size, int rank, int src_rank) {
-  assert(0 <= global_tile);
-  assert(0 < grid_size);
-  assert(0 <= rank && rank < grid_size);
-  assert(0 <= src_rank && src_rank < grid_size);
+  DLAF_ASSERT_HEAVY((0 <= global_tile));
+  DLAF_ASSERT_HEAVY((0 < grid_size));
+  DLAF_ASSERT_HEAVY((0 <= rank && rank < grid_size));
+  DLAF_ASSERT_HEAVY((0 <= src_rank && src_rank < grid_size));
 
   if (rank == rankGlobalTile(global_tile, grid_size, src_rank))
     return global_tile / grid_size;
@@ -99,10 +99,10 @@ inline SizeType localTileFromGlobalTile(SizeType global_tile, int grid_size, int
 /// @pre 0 <= src_rank < grid_size
 inline SizeType nextLocalTileFromGlobalTile(SizeType global_tile, int grid_size, int rank,
                                             int src_rank) {
-  assert(0 <= global_tile);
-  assert(0 < grid_size);
-  assert(0 <= rank && rank < grid_size);
-  assert(0 <= src_rank && src_rank < grid_size);
+  DLAF_ASSERT_HEAVY((0 <= global_tile));
+  DLAF_ASSERT_HEAVY((0 < grid_size));
+  DLAF_ASSERT_HEAVY((0 <= rank && rank < grid_size));
+  DLAF_ASSERT_HEAVY((0 <= src_rank && src_rank < grid_size));
 
   // Renumber ranks such that src_rank is 0.
   int rank_to_src = (rank + grid_size - src_rank) % grid_size;
@@ -124,10 +124,10 @@ inline SizeType nextLocalTileFromGlobalTile(SizeType global_tile, int grid_size,
 /// @pre 0 <= rank < grid_size
 /// @pre 0 <= src_rank < grid_size
 inline SizeType globalTileFromLocalTile(SizeType local_tile, int grid_size, int rank, int src_rank) {
-  assert(0 <= local_tile);
-  assert(0 < grid_size);
-  assert(0 <= rank && rank < grid_size);
-  assert(0 <= src_rank && src_rank < grid_size);
+  DLAF_ASSERT_HEAVY((0 <= local_tile));
+  DLAF_ASSERT_HEAVY((0 < grid_size));
+  DLAF_ASSERT_HEAVY((0 <= rank && rank < grid_size));
+  DLAF_ASSERT_HEAVY((0 <= src_rank && src_rank < grid_size));
 
   // Renumber ranks such that src_rank is 0.
   int rank_to_src = (rank + grid_size - src_rank) % grid_size;

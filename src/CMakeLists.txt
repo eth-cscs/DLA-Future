@@ -42,9 +42,17 @@ target_link_libraries(DLAF
 
 target_compile_features(DLAF PUBLIC cxx_std_14)
 
-target_compile_definitions(DLAF PUBLIC DLAF_SOURCE_LOCATION=__func__)
-
 target_add_warnings(DLAF)
+
+# DLAF_FUNCTION_NAME
+include(CheckCXXSourceCompiles)
+check_cxx_source_compiles("int main() { const char *name = __PRETTY_FUNCTION__; }" is_pretty_function_available)
+
+if (is_pretty_function_available)
+  add_compile_definitions(DLAF_FUNCTION_NAME=__PRETTY_FUNCTION__)
+else ()
+  add_compile_definitions(DLAF_FUNCTION_NAME=__func__)
+endif()
 
 # ----- DEPLOY
 include(GNUInstallDirs)

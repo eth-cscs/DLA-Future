@@ -16,6 +16,26 @@
 namespace dlaf {
 namespace common {
 
+namespace internal {
+
+#define SOURCE_LOCATION()                     \
+  ::dlaf::common::internal::source_location { \
+    __FILE__, __LINE__, DLAF_FUNCTION_NAME    \
+  }
+
+struct source_location {
+  const char* filename;
+  const unsigned int line;
+  const char* function_name;
+
+  friend std::ostream& operator<<(std::ostream& os, const source_location& loc) {
+    os << loc.filename << ":" << loc.line << " : " << loc.function_name;
+    return os;
+  }
+};
+
+}
+
 inline std::string concat() {
   return "";
 }

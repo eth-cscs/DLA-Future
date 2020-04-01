@@ -15,12 +15,15 @@
 
 #include "dlaf/common/utils.h"
 
-#define DLAF_CHECK(category, condition, ...)                                   \
+#define DLAF_CHECK_WITH_ORIGIN(category, location, condition, ...)             \
   if (!(condition)) {                                                          \
-    std::cerr << "[" category "-ERROR] " << SOURCE_LOCATION() << std::endl     \
+    std::cerr << "[" category "-ERROR] " << location << std::endl              \
               << dlaf::common::concat(#condition, ##__VA_ARGS__) << std::endl; \
     std::terminate();                                                          \
   }
+
+#define DLAF_CHECK(category, condition, ...) \
+  DLAF_CHECK_WITH_ORIGIN(category, SOURCE_LOCATION(), condition, __VA_ARGS__)
 
 #ifndef NDEBUG
 #define DLAF_ASSERT(condition, ...) DLAF_CHECK("ASSERT", condition, ##__VA_ARGS__)
@@ -35,3 +38,5 @@
 #endif
 
 #define DLAF_PRECONDITION(condition, ...) DLAF_CHECK("PRECONDITION", condition, ##__VA_ARGS__)
+#define DLAF_PRECONDITION_WITH_ORIGIN(location, condition, ...) \
+  DLAF_CHECK_WITH_ORIGIN("PRECONDITION", location, condition, ##__VA_ARGS__)

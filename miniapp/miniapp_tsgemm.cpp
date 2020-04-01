@@ -82,15 +82,8 @@ using ExecutorType = hpx::mpi::executor;
 using ExecutorType = hpx::threads::executors::pool_executor;
 #endif
 
-// Local gemm
-//
-// - `A` is transposed and has similar layout to `B`.
-void schedule_gemm(ConstMatrixType& a_mat, ConstMatrixType& b_mat, MatrixType& cini_mat);
-
-void schedule_comm(ExecutorType const& mpi_executor, CommunicatorGrid& comm_grid,
-                   Distribution const& cfin_dist, MatrixType& cini_mat);
-
-void schedule_offload(ConstMatrixType& cini_mat, MatrixType& cfin_mat);
+void sirius_gemm(ExecutorType const& mpi_executor, CommunicatorGrid& comm_grid, ConstMatrixType& a_mat,
+                 ConstMatrixType& b_mat, MatrixType& cini_mat, MatrixType& cfin_mat);
 
 // Initialize matrix
 void init_matrix(MatrixType& matrix, ScalarType val);
@@ -150,11 +143,10 @@ int hpx_main(::variables_map& vm) {
                                    ::TileElementSize(ps.tile_m, ps.tile_n)));
   ::MatrixType cfin_mat(::GlobalElementSize(ps.len_m, ps.len_n), ::TileElementSize(ps.tile_m, ps.tile_n),
                         comm_grid);
-  ::Distribution const& cfin_dist = cfin_mat.distribution();
 
   // Initialize matrices
   init_matrix(a_mat, ::ScalarType(1));
-  init_matrix(b_mat, ::ScalarType(1));
+  init_matrix(b_mat, ::ScalarType(2));
 
   // 1. John's branch
   // 2. MPI pool with a single core
@@ -181,19 +173,13 @@ int hpx_main(::variables_map& vm) {
   ExecutorType mpi_executor(pool_name, priority);
 #endif
 
-  // 0. Reset buffers
-  // 1. Schedule multiply
-  // 3. Schedule offloads and receives after multiply
-  // 2. Schedule sends and loads
-  // 4. Wait for all
+  // Benchmark calls of `sirius_gemm`
   //
   for (int i = 0; i < ps.num_iters; ++i) {
     MPI_Barrier(MPI_COMM_WORLD);
     auto t_start = clock_t::now();
 
-    schedule_gemm(a_mat, b_mat, cini_mat);
-    schedule_comm(mpi_executor, comm_grid, cfin_dist, cini_mat);
-    schedule_offload(cini_mat, cfin_mat);
+    sirius_gemm(mpi_executor, comm_grid, a_mat, b_mat, cini_mat, cfin_mat);
     waitall_tiles(cfin_mat);
 
     MPI_Barrier(MPI_COMM_WORLD);
@@ -203,11 +189,11 @@ int hpx_main(::variables_map& vm) {
       std::printf("%d: t_tot  [s] = %.5f\n", i, seconds_t(t_end - t_start).count());
     }
 
-    //    // Simple check
-    //    ScalarType cfin_sum = sum_matrix(comm_world, cfin_mat);
-    //    if (rank == 0) {
-    //      std::cout << cfin_sum << '\n';
-    //    }
+    // Simple check
+    ScalarType cfin_sum = sum_matrix(comm_world, cfin_mat);
+    if (rank == 0) {
+      std::cout << cfin_sum << '\n';
+    }
   }
 
   // Upon exit the mpi/user polling RAII object will stop polling
@@ -259,94 +245,111 @@ int main(int argc, char** argv) {
 
 namespace {
 
-void schedule_gemm(ConstMatrixType& a_mat, ConstMatrixType& b_mat, MatrixType& cini_mat) {
-  // TODO: Order communication and computation to limit the number of simultaneous non-blocking MPI calls
+// Send tile to the process it belongs (`tile_rank`)
+void send_tile(ConstTileType const& c_tile, SizeType tile_rank, SizeType tag, MPI_Comm comm) {
+  TileElementSize tile_size = c_tile.size();
+  SizeType num_elements = tile_size.rows() * tile_size.cols();
+  void const* buf = c_tile.ptr(TileElementIndex(0, 0));
+  MPI_Datatype dtype = dlaf::comm::mpi_datatype<ScalarType>::type;
 
+  MPI_Request req;
+  MPI_Isend(buf, num_elements, dtype, tile_rank, tag, comm, &req);
+  hpx::util::yield_while([&req] {
+    int flag;
+    MPI_Test(&req, &flag, MPI_STATUS_IGNORE);
+    return flag == 0;
+  });
+}
+
+// Reduce into `c_tile` from all other processes
+void recv_tile(TileType& c_tile, int this_rank, SizeType tag, MPI_Comm comm) {
+  int nprocs = Communicator(MPI_COMM_WORLD).size() - 1;
+  TileElementSize tile_size = c_tile.size();
+  SizeType nelems = tile_size.rows() * tile_size.cols();
+  ScalarType* tile_buf = c_tile.ptr(TileElementIndex(0, 0));
+  MPI_Datatype dtype = dlaf::comm::mpi_datatype<ScalarType>::type;
+
+  // Note: these allocations should be better made from a pool
+  std::vector<MPI_Request> reqs(nprocs);
+  std::vector<ScalarType> staging_buf(nprocs * nelems);
+
+  // Issue receives
+  for (int idx = 0; idx < nprocs; ++idx) {
+    int rank = (idx < this_rank) ? idx : idx + 1;  // skip `this_rank`
+    ScalarType* rcv_buf = staging_buf.data() + idx * nelems;
+    MPI_Irecv(rcv_buf, nelems, dtype, rank, tag, comm, &reqs[idx]);
+  }
+
+  // Yield until all issued receives completed.
+  hpx::util::yield_while([&reqs, nprocs] {
+    int flag;
+    MPI_Testall(nprocs, reqs.data(), &flag, MPI_STATUSES_IGNORE);
+    return flag == 0;
+  });
+
+  // Do the reduction in rcv_buf
+  for (int r_idx = 0; r_idx < nprocs; ++r_idx) {
+    ScalarType const* rcv_buf = staging_buf.data() + r_idx * nelems;
+    for (int el_idx = 0; el_idx < nelems; ++el_idx) {
+      tile_buf[el_idx] += rcv_buf[el_idx];
+    }
+  }
+}
+
+void offload_tile(ConstTileType const& cini_tile, TileType& cfin_tile) {
+  TileElementSize tile_size = cini_tile.size();
+  for (SizeType j = 0; j < tile_size.cols(); ++j) {
+    for (SizeType i = 0; i < tile_size.rows(); ++i) {
+      TileElementIndex idx(i, j);
+      cfin_tile(idx) = cini_tile(idx);
+    }
+  }
+}
+
+void sirius_gemm(ExecutorType const& mpi_executor, CommunicatorGrid& comm_grid, ConstMatrixType& a_mat,
+                 ConstMatrixType& b_mat, MatrixType& cini_mat, MatrixType& cfin_mat) {
+  using hpx::util::unwrapping;
+
+  // TODO: Order tasks to execute `num_cores` to limit the number of issued non-blocking communicaitons
+  // constexpr int num_cores = 18;  // TODO: read this from an HPX object
+
+  MPI_Comm mpi_comm(comm_grid.fullCommunicator());
+  ::Distribution const& cfin_dist = cfin_mat.distribution();
+  int this_rank = comm_grid.rankFullCommunicator(cfin_dist.rankIndex());
   dlaf::LocalTileSize const& tile_size = cini_mat.distribution().localNrTiles();
   for (SizeType tile_j = 0; tile_j < tile_size.cols(); ++tile_j) {
     for (SizeType tile_i = 0; tile_i < tile_size.rows(); ++tile_i) {
-      LocalTileIndex a_mat_idx(0, tile_i);
-      LocalTileIndex b_mat_idx(0, tile_j);
-      LocalTileIndex c_mat_idx(tile_i, tile_j);
+      LocalTileIndex a_idx(0, tile_i);
+      LocalTileIndex b_idx(0, tile_j);
+      GlobalTileIndex c_idx(tile_i, tile_j);
 
-      auto gemm_f = hpx::util::unwrapping([](auto&& a_tile, auto&& b_tile, auto&& c_tile) {
+      int tile_rank = comm_grid.rankFullCommunicator(cfin_dist.rankGlobalTile(c_idx));
+      int tile_tag = dlaf::common::computeLinearIndex(Ordering::ColumnMajor, c_idx,
+                                                      {tile_size.rows(), tile_size.cols()});
+
+      // GEMM
+      auto gemm_f = unwrapping([](auto&& a_tile, auto&& b_tile, auto&& c_tile) {
         dlaf::tile::gemm(blas::Op::Trans, blas::Op::NoTrans, ScalarType(1), a_tile, b_tile,
                          ScalarType(0), c_tile);
       });
-      hpx::dataflow(gemm_f, a_mat.read(a_mat_idx), b_mat.read(b_mat_idx), cini_mat(c_mat_idx));
-    }
-  }
-}
+      hpx::dataflow(gemm_f, a_mat.read(a_idx), b_mat.read(b_idx), cini_mat(c_idx));
 
-void schedule_comm(ExecutorType const& mpi_executor, CommunicatorGrid& comm_grid,
-                   Distribution const& cfin_dist, MatrixType& cini_mat) {
-  MPI_Datatype mpi_type = dlaf::comm::mpi_datatype<ScalarType>::type;
-  MPI_Op mpi_op = MPI_SUM;
-  MPI_Comm mpi_comm(comm_grid.fullCommunicator());
+      if (this_rank == tile_rank) {
+        // RECV
+        auto recv_f =
+            unwrapping([=](auto&& c_tile) { recv_tile(c_tile, this_rank, tile_tag, mpi_comm); });
+        hpx::dataflow(mpi_executor, recv_f, cini_mat(c_idx));
 
-  CommIndex this_rank_coords = cfin_dist.rankIndex();
-  dlaf::LocalTileSize const& tile_size = cini_mat.distribution().localNrTiles();
-  for (SizeType tile_j = 0; tile_j < tile_size.cols(); ++tile_j) {
-    for (SizeType tile_i = 0; tile_i < tile_size.rows(); ++tile_i) {
-      LocalTileIndex c_mat_idx = LocalTileIndex(tile_i, tile_j);
-
-      CommIndex rank_coords = cfin_dist.rankGlobalTile(GlobalTileIndex(tile_i, tile_j));
-      dlaf::comm::IndexT_MPI root_rank = comm_grid.rankFullCommunicator(rank_coords);
-
-      auto mpi_f = hpx::util::unwrapping([=](auto&& c_tile) {
-        TileElementSize tile_size = c_tile.size();
-        SizeType num_elements = tile_size.rows() * tile_size.cols();
-
-        // Use the same send and recv buffers for `root` process
-        void* sendbuf = c_tile.ptr(TileElementIndex(0, 0));
-        void* recvbuf = sendbuf;  // only relevant at `root`
-        if (rank_coords == this_rank_coords) {
-          sendbuf = MPI_IN_PLACE;
-        }
-
-        // TODO: collective operations on the same communicator have to be ordered on all processes.
-
-#ifdef DLAF_WITH_MPI_FUTURES
-        return hpx::async(mpi_executor, MPI_Ireduce, sendbuf, recvbuf, num_elements, mpi_type, mpi_op,
-                          root_rank, mpi_comm);
-
-#else
-        MPI_Request req;
-        MPI_Ireduce(sendbuf, recvbuf, num_elements, mpi_type, mpi_op, root_rank, mpi_comm, &req);
-        hpx::util::yield_while([&req] {
-          int flag;
-          MPI_Test(&req, &flag, MPI_STATUS_IGNORE);
-          return flag == 0;
-        });
-#endif
-      });
-
-      hpx::dataflow(mpi_executor, mpi_f, cini_mat(c_mat_idx));
-    }
-  }
-}
-
-void schedule_offload(ConstMatrixType& cini_mat, MatrixType& cfin_mat) {
-  Distribution const& cfin_dist = cfin_mat.distribution();
-  CommIndex this_rank_coords = cfin_dist.rankIndex();
-  dlaf::LocalTileSize const& tile_size = cini_mat.distribution().localNrTiles();
-  for (SizeType tile_j = 0; tile_j < tile_size.cols(); ++tile_j) {
-    for (SizeType tile_i = 0; tile_i < tile_size.rows(); ++tile_i) {
-      GlobalTileIndex tile_idx(tile_i, tile_j);  // for cfin
-      CommIndex tile_rank_coords = cfin_dist.rankGlobalTile(tile_idx);
-
-      // If tile belongs to this process
-      if (this_rank_coords == tile_rank_coords) {
-        auto offload_f = hpx::util::unwrapping([](auto&& cini_tile, auto&& cfin_tile) {
-          TileElementSize tile_size = cini_tile.size();
-          for (SizeType j = 0; j < tile_size.cols(); ++j) {
-            for (SizeType i = 0; i < tile_size.rows(); ++i) {
-              TileElementIndex idx(i, j);
-              cfin_tile(idx) = cini_tile(idx);
-            }
-          }
-        });
-        hpx::dataflow(offload_f, cini_mat.read(tile_idx), cfin_mat(tile_idx));
+        // OFFLOAD
+        auto offload_f =
+            unwrapping([](auto&& cini_tile, auto&& cfin_tile) { offload_tile(cini_tile, cfin_tile); });
+        hpx::dataflow(offload_f, cini_mat.read(c_idx), cfin_mat(c_idx));
+      }
+      else {
+        // SEND
+        auto send_f =
+            unwrapping([=](auto&& c_tile) { send_tile(c_tile, tile_rank, tile_tag, mpi_comm); });
+        hpx::dataflow(mpi_executor, send_f, cini_mat(c_idx));
       }
     }
   }

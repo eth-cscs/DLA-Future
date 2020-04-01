@@ -42,7 +42,7 @@ inline std::string concat() {
 
 template <class T, class... Ts>
 std::string concat(T&& first, Ts&&... args) {
-  std::stringstream ss;
+  std::ostringstream ss;
   ss << first << " " << concat(std::forward<Ts>(args)...);
   return ss.str();
 }

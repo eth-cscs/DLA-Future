@@ -31,14 +31,15 @@ void Solver<Backend::MC>::triangular(blas::Side side, blas::Uplo uplo, blas::Op 
   DLAF_PRECONDITION_SIZE_SQUARE(mat_a);
   // Check if block matrix A is square
   DLAF_PRECONDITION_BLOCKSIZE_SQUARE(mat_a);
-  // Check if A and B dimensions are compatible
-  DLAF_PRECONDITION_MULTIPLIABLE_MATRICES(mat_a, mat_b, side, op);
   // Check if matrix A is stored on local memory
   DLAF_PRECONDITION_LOCALMATRIX(mat_a);
   // Check if matrix B is stored on local memory
   DLAF_PRECONDITION_LOCALMATRIX(mat_b);
 
   if (side == blas::Side::Left) {
+    // Check if A and B dimensions are compatible
+    DLAF_PRECONDITION_MULTIPLIABLE_MATRICES(mat_a, mat_b, op, blas::Op::NoTrans);
+
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
         // Left Lower NoTrans
@@ -61,6 +62,9 @@ void Solver<Backend::MC>::triangular(blas::Side side, blas::Uplo uplo, blas::Op 
     }
   }
   else {
+    // Check if A and B dimensions are compatible
+    DLAF_PRECONDITION_MULTIPLIABLE_MATRICES(mat_b, mat_a, blas::Op::NoTrans, op);
+
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
         // Right Lower NoTrans
@@ -93,14 +97,15 @@ void Solver<Backend::MC>::triangular(comm::CommunicatorGrid grid, blas::Side sid
   DLAF_PRECONDITION_SIZE_SQUARE(mat_a);
   // Check if block matrix A is square
   DLAF_PRECONDITION_BLOCKSIZE_SQUARE(mat_a);
-  // Check if A and B dimensions are compatible
-  DLAF_PRECONDITION_MULTIPLIABLE_MATRICES(mat_a, mat_b, side, op);
   // Check compatibility of the communicator grid and the distribution of matrix A
   DLAF_PRECONDITION_DISTRIBUTED_ON_GRID(grid, mat_a);
   // Check compatibility of the communicator grid and the distribution of matrix B
   DLAF_PRECONDITION_DISTRIBUTED_ON_GRID(grid, mat_b);
 
   if (side == blas::Side::Left) {
+    // Check if A and B dimensions are compatible
+    DLAF_PRECONDITION_MULTIPLIABLE_MATRICES(mat_a, mat_b, op, blas::Op::NoTrans);
+
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
         // Left Lower NoTrans
@@ -123,6 +128,9 @@ void Solver<Backend::MC>::triangular(comm::CommunicatorGrid grid, blas::Side sid
     }
   }
   else {
+    // Check if A and B dimensions are compatible
+    DLAF_PRECONDITION_MULTIPLIABLE_MATRICES(mat_b, mat_a, blas::Op::NoTrans, op);
+
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
         // Right Lower NoTrans

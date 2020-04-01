@@ -28,8 +28,6 @@ constexpr double M_PI = 3.141592;
 
 /// @file
 
-#define _DLAF_PRECONDITION_FUNCTION(condition) ::dlaf::matrix::util::internal::assert##condition
-
 namespace dlaf {
 namespace matrix {
 namespace util {
@@ -58,97 +56,63 @@ namespace internal {
 /// @brief Verify that the matrix is distributed according to the given communicator grid.
 ///
 /// @tparam Matrix refers to a dlaf::Matrix object
-#define DLAF_PRECONDITION_DISTRIBUTED_ON_GRID(grid, matrix)                                          \
-  DLAF_PRECONDITION(((matrix.distribution().commGridSize() == grid.size()) &&                        \
-                     (matrix.distribution().rankIndex() == grid.rank())),                            \
-                    "The matrix", #matrix, "is not distributed according to the communicator grid ", \
+#define DLAF_PRECONDITION_DISTRIBUTED_ON_GRID(grid, matrix)                                         \
+  DLAF_PRECONDITION(((matrix.distribution().commGridSize() == grid.size()) &&                       \
+                     (matrix.distribution().rankIndex() == grid.rank())),                           \
+                    "The matrix", #matrix, "is not distributed according to the communicator grid", \
                     #grid, ".")
 
+template <class MatrixConst, class Matrix, class Location>
+void assertMultipliableMatrices(const MatrixConst& mat_a, const Matrix& mat_b, const blas::Op opA,
+                                const blas::Op opB, const Location location, std::string mat_a_name,
+                                std::string mat_b_name) {
+  auto get_k = [](const auto& size, const blas::Op op, bool first_member) {
+    switch (op) {
+      case blas::Op::NoTrans:
+        return first_member ? size.cols() : size.rows();
+      case blas::Op::Trans:
+      case blas::Op::ConjTrans:
+        return first_member ? size.rows() : size.cols();
+    }
+  };
+
+  auto a_k = [=](const auto& size) { return get_k(size, opA, true); };
+  auto b_k = [=](const auto& size) { return get_k(size, opB, false); };
+
+  switch (opA) {
+    case blas::Op::NoTrans:
+      DLAF_PRECONDITION_WITH_ORIGIN(
+          location, (a_k(mat_a.nrTiles()) == b_k(mat_b.nrTiles())), "The matrices", mat_a_name, "and",
+          mat_b_name, "are not left multipliable (cols of matrix A not equal to rows of matrix B).");
+      DLAF_PRECONDITION_WITH_ORIGIN(
+          location, (a_k(mat_a.size()) == b_k(mat_b.size())), "The matrices", mat_a_name, "and",
+          mat_b_name, "are not left multipliable (size of matrix A not equal to that of matrix B).");
+      DLAF_PRECONDITION_WITH_ORIGIN(
+          location, (a_k(mat_a.blockSize()) == b_k(mat_b.blockSize())), "The matrices", mat_a_name,
+          "and", mat_b_name,
+          "are not left multipliable (blocksize of matrix A not equal to that of matrix B).");
+      break;
+    case blas::Op::Trans:
+    case blas::Op::ConjTrans:
+      DLAF_PRECONDITION_WITH_ORIGIN(
+          location, (a_k(mat_a.nrTiles()) == b_k(mat_b.nrTiles())), "The matrices", mat_a_name, "and",
+          mat_b_name, "are not left multipliable (cols of matrix A not equal to rows of matrix B).");
+      DLAF_PRECONDITION_WITH_ORIGIN(
+          location, (a_k(mat_a.size()) == b_k(mat_b.size())), "The matrices", mat_a_name, "and",
+          mat_b_name, "are not left multipliable (size of matrix A not equal to that of matrix B).");
+      DLAF_PRECONDITION_WITH_ORIGIN(
+          location, (a_k(mat_a.blockSize()) == b_k(mat_b.blockSize())), "The matrices", mat_a_name,
+          "and", mat_b_name,
+          "are not left multipliable (blocksize of matrix A not equal to that of matrix B).");
+      break;
+  }
+}
 /// @brief Verify that matrices A and B are multipliable,
 ///
 /// @tparam A refers to a dlaf::Matrix object
 /// @tparam B refers to a dlaf::Matrix object
-/// @throws std::invalid_argument if matrices A and B are not multipliable, taking into account the Side
-/// (Left/Right) and the Op (NoTrans/Trans/ConjTrans) of the multiplication itself
-template <class MatrixConst, class Matrix>
-void assertMultipliableMatrices(const MatrixConst& mat_a, const Matrix& mat_b, blas::Side side,
-                                blas::Op op, std::string function, std::string mat_a_name,
-                                std::string mat_b_name) {
-  if (side == blas::Side::Left) {
-    if (op == blas::Op::NoTrans) {
-      if (mat_a.nrTiles().cols() != mat_b.nrTiles().rows()) {
-        throw std::invalid_argument(
-            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
-            " are not left multipliable (cols of matrix A not equal to rows of matrix B).");
-      }
-      if (mat_a.size().cols() != mat_b.size().rows()) {
-        throw std::invalid_argument(
-            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
-            " are not left multipliable (size of matrix A not equal to that of matrix B).");
-      }
-      if (mat_a.blockSize().cols() != mat_b.blockSize().rows()) {
-        throw std::invalid_argument(
-            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
-            " are not left multipliable (blocksize of matrix A not equal to that of matrix B).");
-      }
-    }
-    else if (op == blas::Op::Trans || op == blas::Op::ConjTrans) {
-      if (mat_a.nrTiles().rows() != mat_b.nrTiles().rows()) {
-        throw std::invalid_argument(
-            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
-            " are not left multipliable (cols of matrix A not equal to rows of matrix B).");
-      }
-      if (mat_a.size().rows() != mat_b.size().rows()) {
-        throw std::invalid_argument(
-            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
-            " are not left multipliable (size of matrix A not equal to that of matrix B).");
-      }
-      if (mat_a.blockSize().rows() != mat_b.blockSize().rows()) {
-        throw std::invalid_argument(
-            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
-            " are not left multipliable (blocksize of matrix A not equal to that of matrix B).");
-      }
-    }
-  }
-  else if (side == blas::Side::Right) {
-    if (op == blas::Op::NoTrans) {
-      if (mat_a.nrTiles().rows() != mat_b.nrTiles().cols()) {
-        throw std::invalid_argument(
-            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
-            " are not right multipliable (rows of matrix A not equal to cols of matrix B).");
-      }
-      if (mat_a.size().rows() != mat_b.size().cols()) {
-        throw std::invalid_argument(
-            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
-            " are not right multipliable (size of matrix A not equal to that of matrix B).");
-      }
-      if (mat_a.blockSize().rows() != mat_b.blockSize().cols()) {
-        throw std::invalid_argument(
-            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
-            " are not right multipliable (blocksize of matrix A not equal to that of matrix B).");
-      }
-    }
-    else if (op == blas::Op::Trans || op == blas::Op::ConjTrans) {
-      if (mat_a.nrTiles().cols() != mat_b.nrTiles().cols()) {
-        throw std::invalid_argument(
-            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
-            " are not right multipliable (rows of matrix A not equal to cols of matrix B).");
-      }
-      if (mat_a.size().cols() != mat_b.size().cols()) {
-        throw std::invalid_argument(
-            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
-            " are not right multipliable (size of matrix A not equal to that of matrix B).");
-      }
-      if (mat_a.blockSize().cols() != mat_b.blockSize().cols()) {
-        throw std::invalid_argument(
-            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
-            " are not right multipliable (blocksize of matrix A not equal to that of matrix B).");
-      }
-    }
-  }
-}
-#define DLAF_PRECONDITION_MULTIPLIABLE_MATRICES(a, b, side, op) \
-  _DLAF_PRECONDITION_FUNCTION(MultipliableMatrices)(a, b, side, op, DLAF_FUNCTION_NAME, #a, #b);
+#define DLAF_PRECONDITION_MULTIPLIABLE_MATRICES(a, b, opA, opB) \
+  ::dlaf::matrix::util::internal::assertMultipliableMatrices(a, b, opA, opB, SOURCE_LOCATION(), #a, #b);
 
 /// Callable that returns random values in the range [-1, 1]
 template <class T>

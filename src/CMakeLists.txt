@@ -49,9 +49,9 @@ include(CheckCXXSourceCompiles)
 check_cxx_source_compiles("int main() { const char *name = __PRETTY_FUNCTION__; }" is_pretty_function_available)
 
 if (is_pretty_function_available)
-  add_compile_definitions(DLAF_FUNCTION_NAME=__PRETTY_FUNCTION__)
+  target_compile_definitions(DLAF PUBLIC DLAF_FUNCTION_NAME=__PRETTY_FUNCTION__)
 else ()
-  add_compile_definitions(DLAF_FUNCTION_NAME=__func__)
+  target_compile_definitions(DLAF PUBLIC DLAF_FUNCTION_NAME=__func__)
 endif()
 
 # ----- DEPLOY

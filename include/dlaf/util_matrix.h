@@ -21,6 +21,7 @@ constexpr double M_PI = 3.141592;
 #include <blas.hh>
 #include <hpx/hpx.hpp>
 
+#include "dlaf/common/assert.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/matrix.h"
 #include "dlaf/types.h"
@@ -28,11 +29,6 @@ constexpr double M_PI = 3.141592;
 /// @file
 
 #define _DLAF_PRECONDITION_FUNCTION(condition) ::dlaf::matrix::util::internal::assert##condition
-
-#define _DLAF_PRECONDITION_1(condition, arg1) \
-  _DLAF_PRECONDITION_FUNCTION(condition)(arg1, DLAF_FUNCTION_NAME, #arg1)
-#define _DLAF_PRECONDITION_2(condition, arg1, arg2) \
-  _DLAF_PRECONDITION_FUNCTION(condition)(arg1, arg2, DLAF_FUNCTION_NAME, #arg1, #arg2)
 
 namespace dlaf {
 namespace matrix {
@@ -42,52 +38,31 @@ namespace internal {
 /// @brief Verify if dlaf::Matrix is square
 ///
 /// @tparam Matrix refers to a dlaf::Matrix object
-/// @throws std::invalid_argument if the matrix is not squared
-template <class Matrix>
-void assertSizeSquare(const Matrix& matrix, std::string function, std::string mat_name) {
-  if (matrix.size().rows() != matrix.size().cols())
-    throw std::invalid_argument(function + ": " + "Matrix " + mat_name + " is not square.");
-}
-#define DLAF_PRECONDITION_SIZE_SQUARE(matrix) _DLAF_PRECONDITION_1(SizeSquare, matrix)
+#define DLAF_PRECONDITION_SIZE_SQUARE(matrix) \
+  DLAF_PRECONDITION((matrix.size().rows() == matrix.size().cols()), "Matrix", #matrix, "is not square.")
 
 /// @brief Verify if dlaf::Matrix tile is square
 ///
 /// @tparam Matrix refers to a dlaf::Matrix object
-/// @throws std::invalid_argument if the matrix block is not squared
-template <class Matrix>
-void assertBlocksizeSquare(const Matrix& matrix, std::string function, std::string mat_name) {
-  if (matrix.blockSize().rows() != matrix.blockSize().cols())
-    throw std::invalid_argument(function + ": " + "Block size in matrix " + mat_name +
-                                " is not square.");
-}
-#define DLAF_PRECONDITION_BLOCKSIZE_SQUARE(matrix) _DLAF_PRECONDITION_1(BlocksizeSquare, matrix)
+#define DLAF_PRECONDITION_BLOCKSIZE_SQUARE(matrix)                                                    \
+  DLAF_PRECONDITION((matrix.blockSize().rows() == matrix.blockSize().cols()), "Block size in matrix", \
+                    #matrix, "is not square.")
 
 /// @brief Verify if dlaf::Matrix is distributed on a (1x1) grid (i.e. if it is a local matrix).
 ///
 /// @tparam Matrix refers to a dlaf::Matrix object
-/// @throws std::invalid_argument if the matrix is not local
-template <class Matrix>
-void assertLocalMatrix(const Matrix& matrix, std::string function, std::string mat_name) {
-  if (matrix.distribution().commGridSize() != comm::Size2D{1, 1})
-    throw std::invalid_argument(function + ": " + "Matrix " + mat_name + " is not local.");
-}
-#define DLAF_PRECONDITION_LOCALMATRIX(matrix) _DLAF_PRECONDITION_1(LocalMatrix, matrix)
+#define DLAF_PRECONDITION_LOCALMATRIX(matrix)                                                        \
+  DLAF_PRECONDITION((matrix.distribution().commGridSize() == comm::Size2D{1, 1}), "Matrix", #matrix, \
+                    "is not local.")
 
 /// @brief Verify that the matrix is distributed according to the given communicator grid.
 ///
 /// @tparam Matrix refers to a dlaf::Matrix object
-/// @throws std::invalid_argument if the matrix is not distributed correctly
-template <class Matrix>
-void assertMatrixDistributedOnGrid(const comm::CommunicatorGrid& grid, const Matrix& matrix,
-                                   std::string function, std::string mat_name, std::string grid_name) {
-  if ((matrix.distribution().commGridSize() != grid.size()) ||
-      (matrix.distribution().rankIndex() != grid.rank()))
-    throw std::invalid_argument(function + ": " + "The matrix " + mat_name +
-                                " is not distributed according to the communicator grid " + grid_name +
-                                ".");
-}
-#define DLAF_PRECONDITION_DISTRIBUTED_ON_GRID(grid, matrix) \
-  _DLAF_PRECONDITION_2(MatrixDistributedOnGrid, grid, matrix)
+#define DLAF_PRECONDITION_DISTRIBUTED_ON_GRID(grid, matrix)                                          \
+  DLAF_PRECONDITION(((matrix.distribution().commGridSize() == grid.size()) &&                        \
+                     (matrix.distribution().rankIndex() == grid.rank())),                            \
+                    "The matrix", #matrix, "is not distributed according to the communicator grid ", \
+                    #grid, ".")
 
 /// @brief Verify that matrices A and B are multipliable,
 ///

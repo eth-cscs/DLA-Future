@@ -67,6 +67,10 @@ endif()
 # DLAF_ASSERT_DEFAULT_BUILDTYPE makes persistent the build type for which the current set of flags is configured
 # Checking its value, it is possible to reset to flag values when build type is changed
 # Build type comparison is case sensitive (Debug != Release != RelWithDebInfo != release)
+#
+# In order to force a flag configuration, you have to:
+# - set DLAF_ASSERT_DEFAULT_BUILDTYPE=${CMAKE_BUILD_TYPE} (in order to bypass this check)
+# - set DLAF_ASSERT_ENABLE_* variable(s) as you prefer
 if (NOT DLAF_ASSERT_DEFAULT_BUILDTYPE STREQUAL CMAKE_BUILD_TYPE)
   set(DLAF_ASSERT_DEFAULT_BUILDTYPE ${CMAKE_BUILD_TYPE} CACHE INTERNAL "" FORCE)
 

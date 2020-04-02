@@ -95,6 +95,7 @@ void waitall_tiles(MatrixType& matrix);
 ScalarType sum_matrix(Communicator const& comm, MatrixType& matrix);
 
 struct params {
+  bool check;
   int num_iters;
   int len_m;
   int len_n;
@@ -190,9 +191,11 @@ int hpx_main(::variables_map& vm) {
     }
 
     // Simple check
-    ScalarType cfin_sum = sum_matrix(comm_world, cfin_mat);
-    if (rank == 0) {
-      std::cout << cfin_sum << '\n';
+    if (ps.check) {
+      ScalarType cfin_sum = sum_matrix(comm_world, cfin_mat);
+      if (rank == 0) {
+        std::cout << cfin_sum << '\n';
+      }
     }
   }
 
@@ -403,6 +406,7 @@ ScalarType sum_matrix(Communicator const& comm, MatrixType& matrix) {
 params init_params(variables_map& vm) {
   using dlaf::util::ceilDiv;
 
+  bool check = vm["check"].as<bool>();
   int num_iters = vm["num_iters"].as<int>();
   int len_m = vm["len_m"].as<int>();
   int len_n = vm["len_n"].as<int>();
@@ -447,24 +451,26 @@ params init_params(variables_map& vm) {
     std::printf("pgrid    = %d %d\n", pgrid_rows, pgrid_cols);
   }
 
-  return params{num_iters, len_m, len_n, len_k, tile_m, tile_n, pgrid_rows, pgrid_cols};
+  return params{check, num_iters, len_m, len_n, len_k, tile_m, tile_n, pgrid_rows, pgrid_cols};
 }
 
 options_description init_desc() {
   using hpx::program_options::value;
+  using hpx::program_options::bool_switch;
 
   options_description desc("Allowed options.");
 
   // clang-format off
   desc.add_options()
-     ("num_iters",  value<int>()->default_value(   5), "number of iterations")
-     ("len_m",      value<int>()->default_value( 100), "m dimension")
-     ("len_n",      value<int>()->default_value( 100), "n dimension")
-     ("len_k",      value<int>()->default_value(1000), "k dimension")
-     ("tile_m",     value<int>()->default_value(  32), "tile m dimension")
-     ("tile_n",     value<int>()->default_value(  32), "tile n dimension")
-     ("pgrid_rows", value<int>()->default_value(   1), "process grid rows")
-     ("pgrid_cols", value<int>()->default_value(   1), "process grid columns")
+     ("check",      bool_switch() -> default_value(false), "correctness check")
+     ("num_iters",  value<int>()  -> default_value(   5) , "number of iterations")
+     ("len_m",      value<int>()  -> default_value( 100) , "m dimension")
+     ("len_n",      value<int>()  -> default_value( 100) , "n dimension")
+     ("len_k",      value<int>()  -> default_value(1000) , "k dimension")
+     ("tile_m",     value<int>()  -> default_value(  32) , "tile m dimension")
+     ("tile_n",     value<int>()  -> default_value(  32) , "tile n dimension")
+     ("pgrid_rows", value<int>()  -> default_value(   1) , "process grid rows")
+     ("pgrid_cols", value<int>()  -> default_value(   1) , "process grid columns")
   ;
   // clang-format on
 

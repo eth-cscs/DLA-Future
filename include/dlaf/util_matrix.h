@@ -37,27 +37,27 @@ namespace internal {
 ///
 /// @tparam Matrix refers to a dlaf::Matrix object
 #define DLAF_PRECONDITION_SIZE_SQUARE(matrix) \
-  DLAF_PRECONDITION((matrix.size().rows() == matrix.size().cols()), "Matrix", #matrix, "is not square.")
+  DLAF_ASSERT((matrix.size().rows() == matrix.size().cols()), "Matrix", #matrix, "is not square.")
 
 /// @brief Verify if dlaf::Matrix tile is square
 ///
 /// @tparam Matrix refers to a dlaf::Matrix object
 #define DLAF_PRECONDITION_BLOCKSIZE_SQUARE(matrix)                                                    \
-  DLAF_PRECONDITION((matrix.blockSize().rows() == matrix.blockSize().cols()), "Block size in matrix", \
+  DLAF_ASSERT((matrix.blockSize().rows() == matrix.blockSize().cols()), "Block size in matrix", \
                     #matrix, "is not square.")
 
 /// @brief Verify if dlaf::Matrix is distributed on a (1x1) grid (i.e. if it is a local matrix).
 ///
 /// @tparam Matrix refers to a dlaf::Matrix object
 #define DLAF_PRECONDITION_LOCALMATRIX(matrix)                                                        \
-  DLAF_PRECONDITION((matrix.distribution().commGridSize() == comm::Size2D{1, 1}), "Matrix", #matrix, \
+  DLAF_ASSERT((matrix.distribution().commGridSize() == comm::Size2D{1, 1}), "Matrix", #matrix, \
                     "is not local.")
 
 /// @brief Verify that the matrix is distributed according to the given communicator grid.
 ///
 /// @tparam Matrix refers to a dlaf::Matrix object
 #define DLAF_PRECONDITION_DISTRIBUTED_ON_GRID(grid, matrix)                                         \
-  DLAF_PRECONDITION(((matrix.distribution().commGridSize() == grid.size()) &&                       \
+  DLAF_ASSERT(((matrix.distribution().commGridSize() == grid.size()) &&                       \
                      (matrix.distribution().rankIndex() == grid.rank())),                           \
                     "The matrix", #matrix, "is not distributed according to the communicator grid", \
                     #grid, ".")
@@ -81,26 +81,26 @@ void assertMultipliableMatrices(const MatrixConst& mat_a, const Matrix& mat_b, c
 
   switch (opA) {
     case blas::Op::NoTrans:
-      DLAF_PRECONDITION_WITH_ORIGIN(
+      DLAF_ASSERT_WITH_ORIGIN(
           location, (a_k(mat_a.nrTiles()) == b_k(mat_b.nrTiles())), "The matrices", mat_a_name, "and",
           mat_b_name, "are not left multipliable (cols of matrix A not equal to rows of matrix B).");
-      DLAF_PRECONDITION_WITH_ORIGIN(
+      DLAF_ASSERT_WITH_ORIGIN(
           location, (a_k(mat_a.size()) == b_k(mat_b.size())), "The matrices", mat_a_name, "and",
           mat_b_name, "are not left multipliable (size of matrix A not equal to that of matrix B).");
-      DLAF_PRECONDITION_WITH_ORIGIN(
+      DLAF_ASSERT_WITH_ORIGIN(
           location, (a_k(mat_a.blockSize()) == b_k(mat_b.blockSize())), "The matrices", mat_a_name,
           "and", mat_b_name,
           "are not left multipliable (blocksize of matrix A not equal to that of matrix B).");
       break;
     case blas::Op::Trans:
     case blas::Op::ConjTrans:
-      DLAF_PRECONDITION_WITH_ORIGIN(
+      DLAF_ASSERT_WITH_ORIGIN(
           location, (a_k(mat_a.nrTiles()) == b_k(mat_b.nrTiles())), "The matrices", mat_a_name, "and",
           mat_b_name, "are not left multipliable (cols of matrix A not equal to rows of matrix B).");
-      DLAF_PRECONDITION_WITH_ORIGIN(
+      DLAF_ASSERT_WITH_ORIGIN(
           location, (a_k(mat_a.size()) == b_k(mat_b.size())), "The matrices", mat_a_name, "and",
           mat_b_name, "are not left multipliable (size of matrix A not equal to that of matrix B).");
-      DLAF_PRECONDITION_WITH_ORIGIN(
+      DLAF_ASSERT_WITH_ORIGIN(
           location, (a_k(mat_a.blockSize()) == b_k(mat_b.blockSize())), "The matrices", mat_a_name,
           "and", mat_b_name,
           "are not left multipliable (blocksize of matrix A not equal to that of matrix B).");

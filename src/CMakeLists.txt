@@ -44,6 +44,7 @@ target_compile_features(DLAF PUBLIC cxx_std_14)
 
 target_add_warnings(DLAF)
 
+# ----- Options, Flags, Defines, ...
 # DLAF_FUNCTION_NAME
 include(CheckCXXSourceCompiles)
 check_cxx_source_compiles("int main() { const char *name = __PRETTY_FUNCTION__; }" is_pretty_function_available)
@@ -53,6 +54,27 @@ if (is_pretty_function_available)
 else ()
   target_compile_definitions(DLAF PUBLIC DLAF_FUNCTION_NAME=__func__)
 endif()
+
+# Assertions
+if (CMAKE_BUILD_TYPE STREQUAL Debug)
+  set(DLAF_DEFAULT_ASSERT_LOW   ON)
+  set(DLAF_DEFAULT_ASSERT_MED   ON)
+  set(DLAF_DEFAULT_ASSERT_HIGH  ON)
+else()
+  set(DLAF_DEFAULT_ASSERT_LOW   ON)
+  set(DLAF_DEFAULT_ASSERT_MED   OFF)
+  set(DLAF_DEFAULT_ASSERT_HIGH  OFF)
+endif()
+
+option(DLAF_ENABLE_ASSERT_LOW   "Enable low impact assertions"    ${DLAF_DEFAULT_ASSERT_LOW})
+option(DLAF_ENABLE_ASSERT_MED   "Enable medium impact assertions" ${DLAF_DEFAULT_ASSERT_MED})
+option(DLAF_ENABLE_ASSERT_HIGH  "Enable high impact assertions"   ${DLAF_DEFAULT_ASSERT_HIGH})
+
+target_compile_definitions(DLAF PUBLIC
+  $<$<BOOL:${DLAF_ENABLE_ASSERT_LOW}>:DLAF_ENABLE_ASSERT_LOW>
+  $<$<BOOL:${DLAF_ENABLE_ASSERT_MED}>:DLAF_ENABLE_ASSERT_MED>
+  $<$<BOOL:${DLAF_ENABLE_ASSERT_HIGH}>:DLAF_ENABLE_ASSERT_HIGH>
+)
 
 # ----- DEPLOY
 include(GNUInstallDirs)

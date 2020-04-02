@@ -23,20 +23,24 @@
   }
 
 #define DLAF_CHECK(category, condition, ...) \
-  DLAF_CHECK_WITH_ORIGIN(category, SOURCE_LOCATION(), condition, __VA_ARGS__)
+  DLAF_CHECK_WITH_ORIGIN(category, (SOURCE_LOCATION()), condition, ##__VA_ARGS__)
 
-#ifndef NDEBUG
-#define DLAF_ASSERT(condition, ...) DLAF_CHECK("ASSERT", condition, ##__VA_ARGS__)
+#ifdef DLAF_ENABLE_ASSERT_HIGH
+#define DLAF_ASSERT_HIGH(condition, ...) DLAF_CHECK("HIGH", condition, ##__VA_ARGS__)
 #else
-#define DLAF_ASSERT(condition, ...)
+#define DLAF_ASSERT_HIGH(condition, ...)
 #endif
 
-#ifdef DLAF_ENABLE_AUDIT
-#define DLAF_AUDIT(condition, ...) DLAF_CHECK("AUDIT", condition, ##__VA_ARGS__)
+#ifdef DLAF_ENABLE_ASSERT_MED
+#define DLAF_ASSERT_MED(condition, ...) DLAF_CHECK("MEDIUM", condition, ##__VA_ARGS__)
 #else
-#define DLAF_AUDIT(condition, ...)
+#define DLAF_ASSERT_MED(condition, ...)
 #endif
 
-#define DLAF_PRECONDITION(condition, ...) DLAF_CHECK("PRECONDITION", condition, ##__VA_ARGS__)
-#define DLAF_PRECONDITION_WITH_ORIGIN(location, condition, ...) \
-  DLAF_CHECK_WITH_ORIGIN("PRECONDITION", location, condition, ##__VA_ARGS__)
+#ifdef DLAF_ENABLE_ASSERT_LOW
+#define DLAF_ASSERT_LOW_WITH_ORIGIN(location, condition, ...) DLAF_CHECK_WITH_ORIGIN("LOW", (location), condition, ##__VA_ARGS__)
+#define DLAF_ASSERT_LOW(condition, ...) DLAF_ASSERT_LOW_WITH_ORIGIN((SOURCE_LOCATION()), condition, ##__VA_ARGS__)
+#else
+#define DLAF_ASSERT_LOW_WITH_ORIGIN(location, condition, ...)
+#define DLAF_ASSERT_LOW(condition, ...)
+#endif

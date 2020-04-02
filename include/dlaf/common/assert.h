@@ -38,8 +38,10 @@
 #endif
 
 #ifdef DLAF_ENABLE_ASSERT_LOW
-#define DLAF_ASSERT_LOW_WITH_ORIGIN(location, condition, ...) DLAF_CHECK_WITH_ORIGIN("LOW", (location), condition, ##__VA_ARGS__)
-#define DLAF_ASSERT_LOW(condition, ...) DLAF_ASSERT_LOW_WITH_ORIGIN((SOURCE_LOCATION()), condition, ##__VA_ARGS__)
+#define DLAF_ASSERT_LOW_WITH_ORIGIN(location, condition, ...) \
+  DLAF_CHECK_WITH_ORIGIN("LOW", (location), condition, ##__VA_ARGS__)
+#define DLAF_ASSERT_LOW(condition, ...) \
+  DLAF_ASSERT_LOW_WITH_ORIGIN((SOURCE_LOCATION()), condition, ##__VA_ARGS__)
 #else
 #define DLAF_ASSERT_LOW_WITH_ORIGIN(location, condition, ...)
 #define DLAF_ASSERT_LOW(condition, ...)

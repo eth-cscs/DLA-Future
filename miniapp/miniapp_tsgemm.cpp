@@ -48,7 +48,7 @@
 // across ranks starting from the `0`-th.
 //
 
-// Forward declations
+// Forward declarations
 namespace {
 
 using dlaf::SizeType;
@@ -203,7 +203,7 @@ int hpx_main(::variables_map& vm) {
 // Example usage:
 //
 //   mpirun -np 1 tsgemm --len_m      100  --len_n      100  --len_k  10000
-//                       --tile_m      64  --tile_n
+//                       --tile_m      32  --tile_n      32
 //                       --pgrid_rows   1  --pgrid_cols   1
 //
 int main(int argc, char** argv) {
@@ -245,10 +245,9 @@ int main(int argc, char** argv) {
 
 namespace {
 
-// Send tile to the process it belongs (`tile_rank`)
+// Send Cini tile to the process it belongs (`tile_rank`)
 void send_tile(ConstTileType const& c_tile, SizeType tile_rank, SizeType tag, MPI_Comm comm) {
-  TileElementSize tile_size = c_tile.size();
-  SizeType num_elements = tile_size.rows() * tile_size.cols();
+  SizeType num_elements = c_tile.ld() * c_tile.size().cols();
   void const* buf = c_tile.ptr(TileElementIndex(0, 0));
   MPI_Datatype dtype = dlaf::comm::mpi_datatype<ScalarType>::type;
 
@@ -261,11 +260,10 @@ void send_tile(ConstTileType const& c_tile, SizeType tile_rank, SizeType tag, MP
   });
 }
 
-// Reduce into `c_tile` from all other processes
+// Reduce into Cini tile from all other processes
 void recv_tile(TileType& c_tile, int this_rank, SizeType tag, MPI_Comm comm) {
   int nprocs = Communicator(MPI_COMM_WORLD).size() - 1;
-  TileElementSize tile_size = c_tile.size();
-  SizeType nelems = tile_size.rows() * tile_size.cols();
+  SizeType nelems = c_tile.ld() * c_tile.size().cols();
   ScalarType* tile_buf = c_tile.ptr(TileElementIndex(0, 0));
   MPI_Datatype dtype = dlaf::comm::mpi_datatype<ScalarType>::type;
 
@@ -274,10 +272,10 @@ void recv_tile(TileType& c_tile, int this_rank, SizeType tag, MPI_Comm comm) {
   std::vector<ScalarType> staging_buf(nprocs * nelems);
 
   // Issue receives
-  for (int idx = 0; idx < nprocs; ++idx) {
-    int rank = (idx < this_rank) ? idx : idx + 1;  // skip `this_rank`
-    ScalarType* rcv_buf = staging_buf.data() + idx * nelems;
-    MPI_Irecv(rcv_buf, nelems, dtype, rank, tag, comm, &reqs[idx]);
+  for (int r_idx = 0; r_idx < nprocs; ++r_idx) {
+    int rank = (r_idx < this_rank) ? r_idx : r_idx + 1;  // skip `this_rank`
+    ScalarType* rcv_buf = staging_buf.data() + r_idx * nelems;
+    MPI_Irecv(rcv_buf, nelems, dtype, rank, tag, comm, &reqs[r_idx]);
   }
 
   // Yield until all issued receives completed.
@@ -287,7 +285,7 @@ void recv_tile(TileType& c_tile, int this_rank, SizeType tag, MPI_Comm comm) {
     return flag == 0;
   });
 
-  // Do the reduction in rcv_buf
+  // Do the reduction in tile_buf
   for (int r_idx = 0; r_idx < nprocs; ++r_idx) {
     ScalarType const* rcv_buf = staging_buf.data() + r_idx * nelems;
     for (int el_idx = 0; el_idx < nelems; ++el_idx) {

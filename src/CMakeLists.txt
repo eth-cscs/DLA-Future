@@ -55,23 +55,30 @@ target_compile_definitions(DLAF PUBLIC
 
 # Assertions
 if (CMAKE_BUILD_TYPE STREQUAL Debug)
-  set(DLAF_DEFAULT_ASSERT_LOW   ON)
-  set(DLAF_DEFAULT_ASSERT_MED   ON)
-  set(DLAF_DEFAULT_ASSERT_HIGH  ON)
+  set(DLAF_ASSERT_DEFAULT_LOW  ON)
+  set(DLAF_ASSERT_DEFAULT_MED  ON)
+  set(DLAF_ASSERT_DEFAULT_HIGH ON)
 else()
-  set(DLAF_DEFAULT_ASSERT_LOW   ON)
-  set(DLAF_DEFAULT_ASSERT_MED   OFF)
-  set(DLAF_DEFAULT_ASSERT_HIGH  OFF)
+  set(DLAF_ASSERT_DEFAULT_LOW  ON)
+  set(DLAF_ASSERT_DEFAULT_MED  OFF)
+  set(DLAF_ASSERT_DEFAULT_HIGH OFF)
 endif()
 
-option(DLAF_ENABLE_ASSERT_LOW   "Enable low impact assertions"    ${DLAF_DEFAULT_ASSERT_LOW})
-option(DLAF_ENABLE_ASSERT_MED   "Enable medium impact assertions" ${DLAF_DEFAULT_ASSERT_MED})
-option(DLAF_ENABLE_ASSERT_HIGH  "Enable high impact assertions"   ${DLAF_DEFAULT_ASSERT_HIGH})
+# DLAF_ASSERT_DEFAULT_BUILDTYPE makes persistent the build type for which the current set of flags is configured
+# Checking its value, it is possible to reset to flag values when build type is changed
+# Build type comparison is case sensitive (Debug != Release != RelWithDebInfo != release)
+if (NOT DLAF_ASSERT_DEFAULT_BUILDTYPE STREQUAL CMAKE_BUILD_TYPE)
+  set(DLAF_ASSERT_DEFAULT_BUILDTYPE ${CMAKE_BUILD_TYPE} CACHE INTERNAL "" FORCE)
+
+  set(DLAF_ASSERT_ENABLE_LOW  ${DLAF_ASSERT_DEFAULT_LOW}  CACHE BOOL "Enable low impact assertions"    FORCE)
+  set(DLAF_ASSERT_ENABLE_MED  ${DLAF_ASSERT_DEFAULT_MED}  CACHE BOOL "Enable medium impact assertions" FORCE)
+  set(DLAF_ASSERT_ENABLE_HIGH ${DLAF_ASSERT_DEFAULT_HIGH} CACHE BOOL "Enable high impact assertions"   FORCE)
+endif()
 
 target_compile_definitions(DLAF PUBLIC
-  $<$<BOOL:${DLAF_ENABLE_ASSERT_LOW}>:DLAF_ENABLE_ASSERT_LOW>
-  $<$<BOOL:${DLAF_ENABLE_ASSERT_MED}>:DLAF_ENABLE_ASSERT_MED>
-  $<$<BOOL:${DLAF_ENABLE_ASSERT_HIGH}>:DLAF_ENABLE_ASSERT_HIGH>
+  $<$<BOOL:${DLAF_ASSERT_ENABLE_LOW}>:DLAF_ASSERT_ENABLE_LOW>
+  $<$<BOOL:${DLAF_ASSERT_ENABLE_MED}>:DLAF_ASSERT_ENABLE_MED>
+  $<$<BOOL:${DLAF_ASSERT_ENABLE_HIGH}>:DLAF_ASSERT_ENABLE_HIGH>
 )
 
 # ----- DEPLOY

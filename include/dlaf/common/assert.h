@@ -25,19 +25,19 @@
 #define DLAF_CHECK(category, condition, ...) \
   DLAF_CHECK_WITH_ORIGIN(category, (SOURCE_LOCATION()), condition, ##__VA_ARGS__)
 
-#ifdef DLAF_ENABLE_ASSERT_HIGH
+#ifdef DLAF_ASSERT_ENABLE_HIGH
 #define DLAF_ASSERT_HIGH(condition, ...) DLAF_CHECK("HIGH", condition, ##__VA_ARGS__)
 #else
 #define DLAF_ASSERT_HIGH(condition, ...)
 #endif
 
-#ifdef DLAF_ENABLE_ASSERT_MED
+#ifdef DLAF_ASSERT_ENABLE_MED
 #define DLAF_ASSERT_MED(condition, ...) DLAF_CHECK("MEDIUM", condition, ##__VA_ARGS__)
 #else
 #define DLAF_ASSERT_MED(condition, ...)
 #endif
 
-#ifdef DLAF_ENABLE_ASSERT_LOW
+#ifdef DLAF_ASSERT_ENABLE_LOW
 #define DLAF_ASSERT_LOW_WITH_ORIGIN(location, condition, ...) \
   DLAF_CHECK_WITH_ORIGIN("LOW", (location), condition, ##__VA_ARGS__)
 #define DLAF_ASSERT_LOW(condition, ...) \

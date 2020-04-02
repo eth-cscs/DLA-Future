@@ -49,11 +49,9 @@ target_add_warnings(DLAF)
 include(CheckCXXSourceCompiles)
 check_cxx_source_compiles("int main() { const char *name = __PRETTY_FUNCTION__; }" is_pretty_function_available)
 
-if (is_pretty_function_available)
-  target_compile_definitions(DLAF PUBLIC DLAF_FUNCTION_NAME=__PRETTY_FUNCTION__)
-else ()
-  target_compile_definitions(DLAF PUBLIC DLAF_FUNCTION_NAME=__func__)
-endif()
+target_compile_definitions(DLAF PUBLIC
+  DLAF_FUNCTION_NAME=$<IF:$<BOOL:is_pretty_function_available>,__PRETTY_FUNCTION__,__func__>
+)
 
 # Assertions
 if (CMAKE_BUILD_TYPE STREQUAL Debug)

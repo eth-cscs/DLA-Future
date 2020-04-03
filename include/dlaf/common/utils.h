@@ -51,9 +51,9 @@ inline std::string concat() {
 }
 
 template <class T, class... Ts>
-std::string concat(T&& first, Ts&&... args) {
+std::string concat(const T&& first, const Ts&&... args) {
   std::ostringstream ss;
-  ss << first << " " << concat(std::forward<Ts>(args)...);
+  ss << first << " " << concat(std::forward<const Ts>(args)...);
   return ss.str();
 }
 }

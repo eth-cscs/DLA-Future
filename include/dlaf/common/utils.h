@@ -55,8 +55,8 @@ inline std::string concat() {
 
 /// Join a list of heterogenous parameters into a string
 ///
-/// Given a list of parameters for which a valid std::ostream& operator<<(std::ostream&, const T&) exists,
-/// it returns a std::string with all parameters joined using a space between each one
+/// Given a list of parameters for which a valid std::ostream& operator<<(std::ostream&, const T&)
+/// exists, it returns a std::string with all parameters joined using a space between each one
 template <class T, class... Ts>
 std::string concat(const T&& first, const Ts&&... args) {
   std::ostringstream ss;

@@ -95,7 +95,6 @@ void waitall_tiles(MatrixType& matrix);
 ScalarType sum_matrix(Communicator const& comm, MatrixType& matrix);
 
 struct params {
-  bool check;
   int num_iters;
   int len_m;
   int len_n;
@@ -104,6 +103,8 @@ struct params {
   int tile_n;
   int pgrid_rows;
   int pgrid_cols;
+  std::string setup;
+  bool check;
 };
 
 // Initialize parameters and check for consistency
@@ -149,10 +150,10 @@ int hpx_main(::variables_map& vm) {
   init_matrix(a_mat, ::ScalarType(1));
   init_matrix(b_mat, ::ScalarType(2));
 
-  // 1. John's branch
-  // 2. MPI pool with a single core
-  // 3. Default pool with high priority executor
-  // 4. Default pool with default priority executor (the default)
+  // 1. John's branch                               (mpi_futures)
+  // 2. MPI pool with a single core                 (mpi_pool)
+  // 3. Default pool with high priority executor    (priorities)
+  // 4. Default pool with default priority executor (default)
 #if defined(DLAF_WITH_MPI_FUTURES)
   // This needs remain in scope for all uses of hpx::mpi
   std::string pool_name = "default";
@@ -160,17 +161,9 @@ int hpx_main(::variables_map& vm) {
   ExecutorType mpi_executor(comm_grid.fullCommunicator());
 #else
   using hpx::threads::thread_priority;
-#if defined(DLAF_WITH_MPI_POOL)
-  std::string pool_name = "mpi";
-  auto priority = thread_priority::thread_priority_default;
-#elif defined(DLAF_WITH_PRIORITIES)
-  std::string pool_name = "default";
-  auto priority = thread_priority::thread_priority_high;
-#else
-  std::string pool_name = "default";
-  auto priority = thread_priority::thread_priority_default;
-#endif
-  // an executor that can be used to place work on the MPI pool if it is enabled
+  std::string pool_name = (ps.setup == "mpi_pool") ? "mpi" : "default";
+  auto priority = (ps.setup == "priorities") ? thread_priority::thread_priority_high
+                                             : thread_priority::thread_priority_default;
   ExecutorType mpi_executor(pool_name, priority);
 #endif
 
@@ -223,22 +216,27 @@ int main(int argc, char** argv) {
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
 
-  // declare options before creating resource partitioner
-  ::options_description desc_cmdline = ::init_desc();
+  // Declare options before creating resource partitioner
+  namespace po = hpx::program_options;
+  po::options_description desc_cmdline = ::init_desc();
+  po::variables_map vm;
+  po::store(po::command_line_parser(argc, argv).allow_unregistered().options(desc_cmdline).run(), vm);
+  std::string setup = vm["setup"].as<std::string>();
 
-#ifdef DLAF_WITH_MPI_POOL
-  // NB.
-  // thread pools must be declared before starting the runtime
-
-  // Create resource partitioner
-  hpx::resource::partitioner rp(desc_cmdline, argc, argv);
-
-  // create a thread pool that is not "default" that we will use for MPI work
-  rp.create_thread_pool("mpi");
-
-  // add (enabled) PUs on the first core to it
-  rp.add_resource(rp.numa_domains()[0].cores()[0].pus(), "mpi");
-#endif
+  if (setup == "mpi_pool") {
+    int num_procs;
+    MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+    if (num_procs > 1) {  // if more than 1 process
+      // Create a thread pool for MPI work and add (enabled) PUs on the first core
+      //
+      // Note: Thread pools must be declared before starting the runtime
+      hpx::resource::partitioner rp(desc_cmdline, argc, argv);
+      if (rp.numa_domains()[0].cores().size() != 1) {  // if more than 1 core
+        rp.create_thread_pool("mpi");
+        rp.add_resource(rp.numa_domains()[0].cores()[0].pus(), "mpi");
+      }
+    }
+  }
 
   // Start the HPX runtime
   hpx::init(desc_cmdline, argc, argv);
@@ -406,6 +404,7 @@ ScalarType sum_matrix(Communicator const& comm, MatrixType& matrix) {
 params init_params(variables_map& vm) {
   using dlaf::util::ceilDiv;
 
+  std::string setup = vm["setup"].as<std::string>();
   bool check = vm["check"].as<bool>();
   int num_iters = vm["num_iters"].as<int>();
   int len_m = vm["len_m"].as<int>();
@@ -433,9 +432,12 @@ params init_params(variables_map& vm) {
     std::fprintf(stderr, "[ERROR] tile_n > n");
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
+  if (setup != "default" && setup != "mpi_pool" && setup != "priorities") {
+    std::fprintf(stderr, "[ERROR] setup must be one of {default, mpi_pool, priorities}");
+    MPI_Abort(MPI_COMM_WORLD, 1);
+  }
 
-  // TODO: order the communications by sending `num_comm_cols` columns at once
-  // TODO: schedule the gemms associated with the columns first
+  // TODO: Fix when ordering is implemented
   // Check if too many non-blocking communications are being issued.
   //
   constexpr int max_comms = 1000;
@@ -451,26 +453,28 @@ params init_params(variables_map& vm) {
     std::printf("pgrid    = %d %d\n", pgrid_rows, pgrid_cols);
   }
 
-  return params{check, num_iters, len_m, len_n, len_k, tile_m, tile_n, pgrid_rows, pgrid_cols};
+  return params{num_iters, len_m, len_n, len_k, tile_m, tile_n, pgrid_rows, pgrid_cols, setup, check};
 }
 
 options_description init_desc() {
   using hpx::program_options::value;
   using hpx::program_options::bool_switch;
+  using std::string;
 
   options_description desc("Allowed options.");
 
   // clang-format off
   desc.add_options()
-     ("check",      bool_switch() -> default_value(false), "correctness check")
-     ("num_iters",  value<int>()  -> default_value(   5) , "number of iterations")
-     ("len_m",      value<int>()  -> default_value( 100) , "m dimension")
-     ("len_n",      value<int>()  -> default_value( 100) , "n dimension")
-     ("len_k",      value<int>()  -> default_value(1000) , "k dimension")
-     ("tile_m",     value<int>()  -> default_value(  32) , "tile m dimension")
-     ("tile_n",     value<int>()  -> default_value(  32) , "tile n dimension")
-     ("pgrid_rows", value<int>()  -> default_value(   1) , "process grid rows")
-     ("pgrid_cols", value<int>()  -> default_value(   1) , "process grid columns")
+     ("check",      bool_switch()   -> default_value(false)    , "correctness check")
+     ("setup",      value<string>() -> default_value("default"), "TSGEMM Executors setup")
+     ("num_iters",  value<int>()    -> default_value(   5)     , "number of iterations")
+     ("len_m",      value<int>()    -> default_value( 100)     , "m dimension")
+     ("len_n",      value<int>()    -> default_value( 100)     , "n dimension")
+     ("len_k",      value<int>()    -> default_value(1000)     , "k dimension")
+     ("tile_m",     value<int>()    -> default_value(  32)     , "tile m dimension")
+     ("tile_n",     value<int>()    -> default_value(  32)     , "tile n dimension")
+     ("pgrid_rows", value<int>()    -> default_value(   1)     , "process grid rows")
+     ("pgrid_cols", value<int>()    -> default_value(   1)     , "process grid columns")
   ;
   // clang-format on
 

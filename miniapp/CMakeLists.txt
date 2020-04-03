@@ -14,4 +14,4 @@ target_add_warnings(miniapp_cholesky)
 
 add_executable(miniapp_tsgemm miniapp_tsgemm.cpp)
 target_link_libraries(miniapp_tsgemm PRIVATE DLAF)
-target_compile_definitions(miniapp_tsgemm PRIVATE DLAF_WITH_PRIORITIES)
+#target_compile_definitions(miniapp_tsgemm PRIVATE DLAF_WITH_MPI_FUTURES)

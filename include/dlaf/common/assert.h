@@ -17,7 +17,7 @@
 
 #define DLAF_CHECK_WITH_ORIGIN(category, location, condition, ...)             \
   if (!(condition)) {                                                          \
-    std::cerr << "[ERROR] " << location << std::endl              \
+    std::cerr << "[ERROR] " << location << std::endl                           \
               << dlaf::common::concat(#condition, ##__VA_ARGS__) << std::endl; \
     std::terminate();                                                          \
   }

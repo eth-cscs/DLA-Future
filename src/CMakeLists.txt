@@ -64,20 +64,9 @@ else()
   set(DLAF_ASSERT_DEFAULT_HIGH OFF)
 endif()
 
-# DLAF_ASSERT_DEFAULT_BUILDTYPE makes persistent the build type for which the current set of flags is configured
-# Checking its value, it is possible to reset to flag values when build type is changed
-# Build type comparison is case sensitive (Debug != Release != RelWithDebInfo != release)
-#
-# In order to force a flag configuration, you have to:
-# - set DLAF_ASSERT_DEFAULT_BUILDTYPE=${CMAKE_BUILD_TYPE} (in order to bypass this check)
-# - set DLAF_ASSERT_ENABLE_* variable(s) as you prefer
-if (NOT DLAF_ASSERT_DEFAULT_BUILDTYPE STREQUAL CMAKE_BUILD_TYPE)
-  set(DLAF_ASSERT_DEFAULT_BUILDTYPE ${CMAKE_BUILD_TYPE} CACHE INTERNAL "" FORCE)
-
-  set(DLAF_ASSERT_ENABLE_LOW  ${DLAF_ASSERT_DEFAULT_LOW}  CACHE BOOL "Enable low impact assertions"    FORCE)
-  set(DLAF_ASSERT_ENABLE_MED  ${DLAF_ASSERT_DEFAULT_MED}  CACHE BOOL "Enable medium impact assertions" FORCE)
-  set(DLAF_ASSERT_ENABLE_HIGH ${DLAF_ASSERT_DEFAULT_HIGH} CACHE BOOL "Enable high impact assertions"   FORCE)
-endif()
+option(DLAF_ASSERT_ENABLE_LOW  "Enable low impact assertions" ${DLAF_ASSERT_DEFAULT_LOW})
+option(DLAF_ASSERT_ENABLE_MED  "Enable medium impact assertions" ${DLAF_ASSERT_DEFAULT_MED})
+option(DLAF_ASSERT_ENABLE_HIGH "Enable high impact assertions" ${DLAF_ASSERT_DEFAULT_HIGH})
 
 target_compile_definitions(DLAF PUBLIC
   $<$<BOOL:${DLAF_ASSERT_ENABLE_LOW}>:DLAF_ASSERT_ENABLE_LOW>

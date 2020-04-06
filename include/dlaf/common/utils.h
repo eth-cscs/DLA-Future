@@ -58,7 +58,7 @@ inline std::string concat() {
 /// Given a list of parameters for which a valid std::ostream& operator<<(std::ostream&, const T&)
 /// exists, it returns a std::string with all parameters joined using a space between each one
 template <class T, class... Ts>
-std::string concat(const T&& first, const Ts&&... args) {
+std::string concat(const T& first, const Ts&... args) {
   std::ostringstream ss;
   ss << first << " " << concat(std::forward<const Ts>(args)...);
   return ss.str();

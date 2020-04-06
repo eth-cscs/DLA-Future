@@ -14,12 +14,12 @@ The Matrix object (`dlaf::matrix::Matrix`) is the object which manage the setup 
 the correct dependencies of the tasks which involve any of its tiles.
 
 Matrix Tiles (`dlaf::matrix::Tile`) can be accessed using two Matrix methods.
-- operator() returns a `hpx::future` of a tile containing the requested tile,
-- read() returns a copy of a `hpx::shared_future` of a tile with constant elements representing
+- `operator()` returns a `hpx::future` of a tile containing the requested tile,
+- `read()` returns a copy of a `hpx::shared_future` of a tile with constant elements representing
   the tile (allows only read operations on tile elements).
 
-Subsequent calls to read() with the same tile index return a copy of the same `shared_future`
-if no operator() was invoked.
+Subsequent calls to `read()` with the same tile index return a copy of the same `shared_future`
+if no `operator()` was invoked.
 
 Both the Matrix and the Tile objects are not thread safe. The future mechanism ensures that
 each tile is either accessed in read-write mode by only one task, or in read-only mode by more tasks.
@@ -101,7 +101,7 @@ The `MatrixView` API contains 3 ways to accomplish that:
 It has to be noted that read-only task of the parent matrix and of the View can be performed at the same time
 if no read-write tasks has been scheduled in between (see [examples](#view-examples)).
 
-### Examples
+### View Examples
 
 (Note: this examples are used to illustrate how dependencies are determined,
 however they cannot be compiled since they are simplified to improve readability.
@@ -197,6 +197,10 @@ Note that returning matrix tiles from tasks may be a source of deadlocks,
 therefore a carefull analysis of dependencies to avoid problems.
 
 ### Examples advanced use
+
+(Note: this examples are used to illustrate how dependencies are determined,
+however they cannot be compiled since they are simplified to improve readability.
+(e.g. constructors and template parameters are omitted)).
 
 - Example 1: Returning Tiles.
 ```

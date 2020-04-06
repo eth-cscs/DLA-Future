@@ -17,6 +17,7 @@
 #include <hpx/include/resource_partitioner.hpp>
 #include <hpx/include/threads.hpp>
 #include <hpx/runtime/threads/executors/pool_executor.hpp>
+//#include <hpx/execution/executors/pool_executor.hpp> // > HPX v.1.4.1
 
 #ifdef DLAF_WITH_MPI_FUTURES
 #include <hpx/mpi/mpi_executor.hpp>
@@ -80,6 +81,7 @@ using hpx::program_options::options_description;
 using ExecutorType = hpx::mpi::executor;
 #else
 using ExecutorType = hpx::threads::executors::pool_executor;
+//using ExecutorType = hpx::parallel::execution::pool_executor; // > HPX v.1.4.1
 #endif
 
 void sirius_gemm(ExecutorType const& mpi_executor, CommunicatorGrid& comm_grid, ConstMatrixType& a_mat,

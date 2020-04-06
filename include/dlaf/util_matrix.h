@@ -66,13 +66,15 @@ template <class MatrixConst, class Matrix, class Location>
 void assertMultipliableMatrices(const MatrixConst& mat_a, const Matrix& mat_b, const blas::Op opA,
                                 const blas::Op opB, const Location location, std::string mat_a_name,
                                 std::string mat_b_name) {
-  auto get_k = [](const auto& size, const blas::Op op, bool first_member) {
+  auto get_k = [](const auto& size, const blas::Op op, bool first_member) -> decltype(size.rows()) {
     switch (op) {
       case blas::Op::NoTrans:
         return first_member ? size.cols() : size.rows();
       case blas::Op::Trans:
       case blas::Op::ConjTrans:
         return first_member ? size.rows() : size.cols();
+      default:
+        return {};
     }
   };
 

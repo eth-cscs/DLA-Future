@@ -81,7 +81,7 @@ using hpx::program_options::options_description;
 using ExecutorType = hpx::mpi::executor;
 #else
 using ExecutorType = hpx::threads::executors::pool_executor;
-//using ExecutorType = hpx::parallel::execution::pool_executor; // > HPX v.1.4.1
+// using ExecutorType = hpx::parallel::execution::pool_executor; // > HPX v.1.4.1
 #endif
 
 void sirius_gemm(ExecutorType const& mpi_executor, CommunicatorGrid& comm_grid, ConstMatrixType& a_mat,
@@ -310,14 +310,17 @@ void offload_tile(ConstTileType const& cini_tile, TileType& cfin_tile) {
 void sirius_gemm(ExecutorType const& mpi_executor, CommunicatorGrid& comm_grid, ConstMatrixType& a_mat,
                  ConstMatrixType& b_mat, MatrixType& cini_mat, MatrixType& cfin_mat) {
   using hpx::util::unwrapping;
-
-  // TODO: Order tasks to execute `num_cores` to limit the number of issued non-blocking communicaitons
-  // constexpr int num_cores = 18;  // TODO: read this from an HPX object
+  using hpx::util::annotated_function;
 
   MPI_Comm mpi_comm(comm_grid.fullCommunicator());
   ::Distribution const& cfin_dist = cfin_mat.distribution();
   int this_rank = comm_grid.rankFullCommunicator(cfin_dist.rankIndex());
   dlaf::LocalTileSize const& tile_size = cini_mat.distribution().localNrTiles();
+
+  int num_cores = 18;  // TODO: get the number of cores in the default thread pool
+  int dep_tile_j = num_cores / tile_size.rows();
+  int dep_tile_i = num_cores - dep_tile_j * tile_size.rows();
+
   for (SizeType tile_j = 0; tile_j < tile_size.cols(); ++tile_j) {
     for (SizeType tile_i = 0; tile_i < tile_size.rows(); ++tile_i) {
       LocalTileIndex a_idx(0, tile_i);
@@ -328,28 +331,43 @@ void sirius_gemm(ExecutorType const& mpi_executor, CommunicatorGrid& comm_grid, 
       int tile_tag = dlaf::common::computeLinearIndex(Ordering::ColumnMajor, c_idx,
                                                       {tile_size.rows(), tile_size.cols()});
 
+      // Orders tasks so that the number of c_tiles computed in parallel at any moment is equal to the
+      // number of cores in the `default` thread pool.
+      int c_dep_i = tile_i - dep_tile_i;
+      int c_dep_j = tile_j - dep_tile_j;
+      bool c_dep_exists = c_dep_i < 0 || c_dep_j < 0;
+      hpx::shared_future<void> c_dep_tile_fut =
+          (c_dep_exists) ? hpx::make_ready_future()
+                         : hpx::shared_future<void>(cini_mat.read(GlobalTileIndex(c_dep_i, c_dep_j)));
+
       // GEMM
-      auto gemm_f = unwrapping([](auto&& a_tile, auto&& b_tile, auto&& c_tile) {
-        dlaf::tile::gemm(blas::Op::Trans, blas::Op::NoTrans, ScalarType(1), a_tile, b_tile,
-                         ScalarType(0), c_tile);
-      });
-      hpx::dataflow(gemm_f, a_mat.read(a_idx), b_mat.read(b_idx), cini_mat(c_idx));
+      auto gemm_f = unwrapping(annotated_function(
+          [](auto&& a_tile, auto&& b_tile, auto&& c_tile) {
+            dlaf::tile::gemm(blas::Op::Trans, blas::Op::NoTrans, ScalarType(1), a_tile, b_tile,
+                             ScalarType(0), c_tile);
+          },
+          "gemm"));
+      hpx::dataflow(gemm_f, a_mat.read(a_idx), b_mat.read(b_idx), cini_mat(c_idx), c_dep_tile_fut);
 
       if (this_rank == tile_rank) {
         // RECV
-        auto recv_f =
-            unwrapping([=](auto&& c_tile) { recv_tile(c_tile, this_rank, tile_tag, mpi_comm); });
+        auto recv_f = unwrapping(
+            annotated_function([=](auto&& c_tile) { recv_tile(c_tile, this_rank, tile_tag, mpi_comm); },
+                               "recv"));
         hpx::dataflow(mpi_executor, recv_f, cini_mat(c_idx));
 
         // OFFLOAD
         auto offload_f =
-            unwrapping([](auto&& cini_tile, auto&& cfin_tile) { offload_tile(cini_tile, cfin_tile); });
+            unwrapping(annotated_function([](auto&& cini_tile,
+                                             auto&& cfin_tile) { offload_tile(cini_tile, cfin_tile); },
+                                          "offload"));
         hpx::dataflow(offload_f, cini_mat.read(c_idx), cfin_mat(c_idx));
       }
       else {
         // SEND
-        auto send_f =
-            unwrapping([=](auto&& c_tile) { send_tile(c_tile, tile_rank, tile_tag, mpi_comm); });
+        auto send_f = unwrapping(
+            annotated_function([=](auto&& c_tile) { send_tile(c_tile, tile_rank, tile_tag, mpi_comm); },
+                               "send"));
         hpx::dataflow(mpi_executor, send_f, cini_mat(c_idx));
       }
     }

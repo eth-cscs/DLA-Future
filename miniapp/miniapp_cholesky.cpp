@@ -9,6 +9,7 @@
 //
 
 #include <iostream>
+#include <string>
 
 #include <mpi.h>
 #include <hpx/hpx_init.hpp>
@@ -28,13 +29,19 @@ using namespace dlaf;
 
 using T = double;
 
+enum class DO_CHECK {
+  NONE,
+  LAST,
+  ALL
+};
+
 struct options_t {
   SizeType m;
   SizeType mb;
   int grid_rows;
   int grid_cols;
   int64_t nruns;
-  bool do_check;
+  DO_CHECK do_check;
 };
 
 options_t check_options(hpx::program_options::variables_map& vm);
@@ -96,7 +103,10 @@ int hpx_main(hpx::program_options::variables_map& vm) {
                 << hpx::get_os_thread_count() << std::endl;
 
     // (optional) run test
-    if (opts.do_check) {
+    if (opts.do_check != DO_CHECK::NONE) {
+      if (opts.do_check == DO_CHECK::LAST && run_index != (opts.nruns - 1))
+        continue;
+
       // TODO this should be a clone of the original one
       Matrix<T, Device::CPU> original(matrix_size, block_size, comm_grid);
       matrix::util::set_random_hermitian_positive_definite(original);
@@ -141,8 +151,8 @@ int main(int argc, char** argv) {
      value<int64_t>()->default_value(1),
      "Number of runs to compute the cholesky")
     ("check-result",
-     bool_switch()->default_value(false),
-     "Check the cholesky factorization (for each run)")
+     value<std::string>()->default_value("")->implicit_value("all"),
+     "Check the cholesky factorization ('': no-check, 'all': for each run, 'last': just last run)")
   ;
   // clang-format on
 
@@ -174,8 +184,7 @@ options_t check_options(hpx::program_options::variables_map& vm) {
       vm["grid-rows"].as<int>(),        vm["grid-cols"].as<int>(),
 
       vm["nruns"].as<int64_t>(),
-
-      vm["check-result"].as<bool>(),
+      DO_CHECK::NONE,
   };
 
   if (opts.m <= 0)
@@ -188,11 +197,21 @@ options_t check_options(hpx::program_options::variables_map& vm) {
   if (opts.grid_cols <= 0)
     throw std::runtime_error("number of grid columns must be a positive number");
 
-  if (opts.do_check && opts.m % opts.mb) {
+  const std::string check_type = vm["check-result"].as<std::string>();
+
+  if (check_type.compare("all") == 0)
+    opts.do_check = DO_CHECK::ALL;
+  else if (check_type.compare("last") == 0)
+    opts.do_check = DO_CHECK::LAST;
+  else
+    if (check_type.compare("") != 0)
+      throw std::runtime_error(check_type + " is not a valid value for check-result");
+
+  if (opts.do_check != DO_CHECK::NONE && opts.m % opts.mb) {
     std::cerr
         << "Warning! At the moment result checking works just with matrix sizes that are multiple of the block size."
         << std::endl;
-    opts.do_check = false;
+    opts.do_check = DO_CHECK::NONE;
   }
 
   return opts;

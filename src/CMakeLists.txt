@@ -8,6 +8,22 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+# Generate version header
+find_program(GIT_EXE NAMES git)
+string(TIMESTAMP DLAF_TIMESTAMP "%Y-%m-%d %H:%M:%S")
+if(DEFINED GIT_EXE AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
+  execute_process(COMMAND git rev-parse HEAD
+                  OUTPUT_VARIABLE DLAF_SHA
+                  WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+                  ERROR_QUIET
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+else()
+  set(SIRIUS_SHA "N/A : archive")
+endif()
+configure_file("${PROJECT_SOURCE_DIR}/include/dlaf/version.h.in"
+               "${PROJECT_BINARY_DIR}/include/dlaf/version.h"
+               @ONLY)
+
 add_library(DLAF
   communication/communicator_impl.cpp
   communication/communicator.cpp
@@ -24,7 +40,8 @@ add_library(DLAF
 
 target_include_directories(DLAF
   PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:include>
     ${HPX_INCLUDE_DIRS}
   PRIVATE
@@ -94,6 +111,10 @@ install(DIRECTORY ../cmake/
   FILES_MATCHING PATTERN "Find*.cmake"
   PATTERN "template" EXCLUDE
 )
+
+# install version header
+install(FILES "${PROJECT_BINARY_DIR}/include/dlaf/version.h"
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 
 # ----- CMake INTEGRATION
 include(CMakePackageConfigHelpers)

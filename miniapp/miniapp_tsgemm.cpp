@@ -84,8 +84,9 @@ using ExecutorType = hpx::threads::executors::pool_executor;
 // using ExecutorType = hpx::parallel::execution::pool_executor; // > HPX v.1.4.1
 #endif
 
-void sirius_gemm(ExecutorType const& mpi_executor, CommunicatorGrid& comm_grid, ConstMatrixType& a_mat,
-                 ConstMatrixType& b_mat, MatrixType& cini_mat, MatrixType& cfin_mat);
+void sirius_gemm(int batch_size, ExecutorType const& mpi_executor, CommunicatorGrid& comm_grid,
+                 ConstMatrixType& a_mat, ConstMatrixType& b_mat, MatrixType& cini_mat,
+                 MatrixType& cfin_mat);
 
 // Initialize matrix
 void init_matrix(MatrixType& matrix, ScalarType val);
@@ -105,6 +106,7 @@ struct params {
   int tile_n;
   int pgrid_rows;
   int pgrid_cols;
+  int batch_size;
   std::string setup;
   bool check;
 };
@@ -175,7 +177,7 @@ int hpx_main(::variables_map& vm) {
     MPI_Barrier(MPI_COMM_WORLD);
     auto t_start = clock_t::now();
 
-    sirius_gemm(mpi_executor, comm_grid, a_mat, b_mat, cini_mat, cfin_mat);
+    sirius_gemm(ps.batch_size, mpi_executor, comm_grid, a_mat, b_mat, cini_mat, cfin_mat);
     waitall_tiles(cfin_mat);
 
     MPI_Barrier(MPI_COMM_WORLD);
@@ -307,32 +309,31 @@ void offload_tile(ConstTileType const& cini_tile, TileType& cfin_tile) {
   }
 }
 
-void sirius_gemm(ExecutorType const& mpi_executor, CommunicatorGrid& comm_grid, ConstMatrixType& a_mat,
-                 ConstMatrixType& b_mat, MatrixType& cini_mat, MatrixType& cfin_mat) {
+void sirius_gemm(int batch_size, ExecutorType const& mpi_executor, CommunicatorGrid& comm_grid,
+                 ConstMatrixType& a_mat, ConstMatrixType& b_mat, MatrixType& cini_mat,
+                 MatrixType& cfin_mat) {
   using hpx::util::unwrapping;
   using hpx::util::annotated_function;
 
   MPI_Comm mpi_comm(comm_grid.fullCommunicator());
   ::Distribution const& cfin_dist = cfin_mat.distribution();
   int this_rank = comm_grid.rankFullCommunicator(cfin_dist.rankIndex());
-  dlaf::LocalTileSize const& tile_size = cini_mat.distribution().localNrTiles();
+  dlaf::LocalTileSize const& tile_grid_size = cini_mat.distribution().localNrTiles();
 
-  int num_cores = 18;  // TODO: get the number of cores in the default thread pool
-  int dep_tile_j = num_cores / tile_size.rows();
-  int dep_tile_i = num_cores - dep_tile_j * tile_size.rows();
+  int dep_tile_j = batch_size / tile_grid_size.rows();
+  int dep_tile_i = batch_size - dep_tile_j * tile_grid_size.rows();
 
-  for (SizeType tile_j = 0; tile_j < tile_size.cols(); ++tile_j) {
-    for (SizeType tile_i = 0; tile_i < tile_size.rows(); ++tile_i) {
+  for (SizeType tile_j = 0; tile_j < tile_grid_size.cols(); ++tile_j) {
+    for (SizeType tile_i = 0; tile_i < tile_grid_size.rows(); ++tile_i) {
       LocalTileIndex a_idx(0, tile_i);
       LocalTileIndex b_idx(0, tile_j);
       GlobalTileIndex c_idx(tile_i, tile_j);
 
       int tile_rank = comm_grid.rankFullCommunicator(cfin_dist.rankGlobalTile(c_idx));
       int tile_tag = dlaf::common::computeLinearIndex(Ordering::ColumnMajor, c_idx,
-                                                      {tile_size.rows(), tile_size.cols()});
+                                                      {tile_grid_size.rows(), tile_grid_size.cols()});
 
-      // Orders tasks so that the number of c_tiles computed in parallel at any moment is equal to the
-      // number of cores in the `default` thread pool.
+      // Order tasks such that tiles are computed/communicated in batches of `batch_size`
       int c_dep_i = tile_i - dep_tile_i;
       int c_dep_j = tile_j - dep_tile_j;
       bool c_dep_exists = c_dep_i < 0 || c_dep_j < 0;
@@ -422,11 +423,10 @@ ScalarType sum_matrix(Communicator const& comm, MatrixType& matrix) {
 }
 
 params init_params(variables_map& vm) {
-  using dlaf::util::ceilDiv;
-
   std::string setup = vm["setup"].as<std::string>();
   bool check = vm["check"].as<bool>();
   int num_iters = vm["num_iters"].as<int>();
+  int batch_size = vm["batch_size"].as<int>();
   int len_m = vm["len_m"].as<int>();
   int len_n = vm["len_n"].as<int>();
   int len_k = vm["len_k"].as<int>();
@@ -457,13 +457,11 @@ params init_params(variables_map& vm) {
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
 
-  // TODO: Fix when ordering is implemented
   // Check if too many non-blocking communications are being issued.
-  //
-  constexpr int max_comms = 1000;
-  int num_tiles = ceilDiv(len_m, tile_m) * ceilDiv(len_n, tile_n);
-  if (rank == 0 && num_tiles > max_comms) {
-    std::printf("[WARNING] There are too many pieces! Increase the tile size!");
+  if (rank == 0 && batch_size > 1000) {
+    std::printf("[WARNING] There are too many tiles batched, this may "
+                "result in slowdowns as the number of issued non-blocking "
+                "communications at each process is proportianal to the batch size!");
   }
 
   // Setup
@@ -473,7 +471,8 @@ params init_params(variables_map& vm) {
     std::printf("pgrid    = %d %d\n", pgrid_rows, pgrid_cols);
   }
 
-  return params{num_iters, len_m, len_n, len_k, tile_m, tile_n, pgrid_rows, pgrid_cols, setup, check};
+  return params{num_iters,  len_m,      len_n,      len_k, tile_m, tile_n,
+                pgrid_rows, pgrid_cols, batch_size, setup, check};
 }
 
 options_description init_desc() {
@@ -486,8 +485,9 @@ options_description init_desc() {
   // clang-format off
   desc.add_options()
      ("check",      bool_switch()   -> default_value(false)    , "correctness check")
-     ("setup",      value<string>() -> default_value("default"), "TSGEMM Executors setup")
+     ("setup",      value<string>() -> default_value("default"), "TSGEMM Executors setup: [default, mpi_pool, priorities]")
      ("num_iters",  value<int>()    -> default_value(   5)     , "number of iterations")
+     ("batch_size", value<int>()    -> default_value(  16)     , "number of tiles batched for computation/communication")
      ("len_m",      value<int>()    -> default_value( 100)     , "m dimension")
      ("len_n",      value<int>()    -> default_value( 100)     , "n dimension")
      ("len_k",      value<int>()    -> default_value(1000)     , "k dimension")

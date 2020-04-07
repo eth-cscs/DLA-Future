@@ -36,15 +36,17 @@ namespace internal {
 /// @brief Verify if dlaf::Matrix is square
 ///
 /// @tparam Matrix refers to a dlaf::Matrix object
-#define DLAF_PRECONDITION_SIZE_SQUARE(matrix) \
-  DLAF_ASSERT((matrix.size().rows() == matrix.size().cols()), "Matrix", #matrix, "is not square (", matrix.size().rows(), "x", matrix.size().cols(),").")
+#define DLAF_PRECONDITION_SIZE_SQUARE(matrix)                                                       \
+  DLAF_ASSERT((matrix.size().rows() == matrix.size().cols()), "Matrix", #matrix, "is not square (", \
+              matrix.size().rows(), "x", matrix.size().cols(), ").")
 
 /// @brief Verify if dlaf::Matrix tile is square
 ///
 /// @tparam Matrix refers to a dlaf::Matrix object
-#define DLAF_PRECONDITION_BLOCKSIZE_SQUARE(matrix)                                              \
-  DLAF_ASSERT((matrix.blockSize().rows() == matrix.blockSize().cols()), "Block size in matrix", \
-              #matrix, "is not square (", matrix.blockSize().rows(), "x", matrix.blockSize().cols(), ").")
+#define DLAF_PRECONDITION_BLOCKSIZE_SQUARE(matrix)                                                   \
+  DLAF_ASSERT((matrix.blockSize().rows() == matrix.blockSize().cols()), "Block size in matrix",      \
+              #matrix, "is not square (", matrix.blockSize().rows(), "x", matrix.blockSize().cols(), \
+              ").")
 
 /// @brief Verify if dlaf::Matrix is distributed on a (1x1) grid (i.e. if it is a local matrix).
 ///

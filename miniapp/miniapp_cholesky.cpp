@@ -52,6 +52,14 @@ using ConstMatrixType = dlaf::Matrix<const T, Device::CPU>;
 using TileType = dlaf::Tile<T, Device::CPU>;
 using ConstTileType = dlaf::Tile<const T, Device::CPU>;
 
+void setUpperToZeroForDiagonalTiles(MatrixType& matrix);
+
+T matrix_norm(ConstMatrixType& matrix, CommunicatorGrid comm_grid);
+
+void cholesky_diff(MatrixType& original, MatrixType& cholesky_lower, CommunicatorGrid comm_grid);
+
+void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid);
+
 enum class DO_CHECK { NONE, LAST, ALL };
 
 struct options_t {
@@ -64,19 +72,6 @@ struct options_t {
 };
 
 options_t check_options(hpx::program_options::variables_map& vm);
-
-/// Set to zero the upper part of the diagonal tiles
-///
-/// For the tiles on the diagonal (i.e. row == col), the elements in the upper triangular
-/// part of each tile, diagonal excluded, are set to zero.
-/// Tiles that are not on the diagonal (i.e. row != col) will not be touched or referenced
-void setUpperToZeroForDiagonalTiles(MatrixType& matrix);
-
-T matrix_norm(ConstMatrixType& matrix, CommunicatorGrid comm_grid);
-
-void cholesky_diff(MatrixType& original, MatrixType& cholesky_lower, CommunicatorGrid comm_grid);
-
-void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid);
 
 }
 
@@ -91,7 +86,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   TileElementSize block_size(opts.mb, opts.mb);
 
   MatrixType matrix(matrix_size, block_size, comm_grid);
-  auto distribution = matrix.distribution();
+  const auto& distribution = matrix.distribution();
 
   for (auto run_index = 0; run_index < opts.nruns; ++run_index) {
     if (0 == world.rank())
@@ -202,10 +197,15 @@ int main(int argc, char** argv) {
 
 namespace {
 
+/// Set to zero the upper part of the diagonal tiles
+///
+/// For the tiles on the diagonal (i.e. row == col), the elements in the upper triangular
+/// part of each tile, diagonal excluded, are set to zero.
+/// Tiles that are not on the diagonal (i.e. row != col) will not be touched or referenced
 void setUpperToZeroForDiagonalTiles(MatrixType& matrix) {
   dlaf::util_matrix::assertBlocksizeSquare(matrix, "setUpperToZeroForDiagonalTiles", "matrix");
 
-  auto& distribution = matrix.distribution();
+  const auto& distribution = matrix.distribution();
 
   for (int j = 0; j < distribution.localNrTiles().cols(); ++j) {
     for (int i = 0; i < distribution.localNrTiles().rows(); ++i) {

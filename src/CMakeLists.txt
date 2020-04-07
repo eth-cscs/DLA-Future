@@ -18,7 +18,7 @@ if(DEFINED GIT_EXE AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
                   ERROR_QUIET
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
 else()
-  set(SIRIUS_SHA "N/A : archive")
+  set(DLAF_SHA "N/A : archive")
 endif()
 configure_file("${PROJECT_SOURCE_DIR}/include/dlaf/version.h.in"
                "${PROJECT_BINARY_DIR}/include/dlaf/version.h"

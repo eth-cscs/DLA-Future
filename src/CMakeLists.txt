@@ -17,6 +17,14 @@ if(DEFINED GIT_EXE AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
                   WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
                   ERROR_QUIET
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
+  execute_process(COMMAND git diff --quiet HEAD
+                  RESULT_VARIABLE DLAF_GIT_CHANGES
+                  WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+                  ERROR_QUIET)
+  # Add a * to git SHA if there are changes
+  if (DLAF_GIT_CHANGES EQUAL 1)
+    set(DLAF_SHA "${DLAF_SHA} *")
+  endif()
 else()
   set(DLAF_SHA "N/A : archive")
 endif()

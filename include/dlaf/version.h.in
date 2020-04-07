@@ -14,6 +14,8 @@
 
 namespace dlaf {
 
+// clang-format off
+
 const std::string git_hash = "@DLAF_SHA@";
 const std::string build_date = "@DLAF_TIMESTAMP@";
 constexpr int major_version = @DLAF_VERSION_MAJOR@;
@@ -23,5 +25,7 @@ constexpr int revision = @DLAF_VERSION_PATCH@;
 #define DLAF_VERSION_MAJOR @DLAF_VERSION_MAJOR@
 #define DLAF_VERSION_MINOR @DLAF_VERSION_MINOR@
 #define DLAF_VERSION_PATCH @DLAF_VERSION_PATCH@
+
+// clang-format on
 
 }

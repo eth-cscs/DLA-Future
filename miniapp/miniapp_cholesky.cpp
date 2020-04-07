@@ -169,24 +169,12 @@ int main(int argc, char** argv) {
 
   // clang-format off
   desc_commandline.add_options()
-    ("matrix-size",
-     value<SizeType>()->default_value(4096),
-     "Matrix size.")
-    ("block-size",
-     value<SizeType>()->default_value(256),
-     "Block cyclic distribution size.")
-    ("grid-rows",
-     value<int>()->default_value(1),
-     "Number of row processes in the 2D communicator.")
-    ("grid-cols",
-     value<int>()->default_value(1),
-     "Number of column processes in the 2D communicator.")
-    ("nruns",
-     value<int64_t>()->default_value(1),
-     "Number of runs to compute the cholesky")
-    ("check-result",
-     value<std::string>()->default_value("")->implicit_value("all"),
-     "Check the cholesky factorization ('': no-check, 'all': for each run, 'last': just last run)")
+    ("matrix-size",  value<SizeType>()   ->default_value(4096),                        "Matrix size")
+    ("block-size",   value<SizeType>()   ->default_value( 256),                        "Block cyclic distribution size")
+    ("grid-rows",    value<int>()        ->default_value(   1),                        "Number of row processes in the 2D communicator")
+    ("grid-cols",    value<int>()        ->default_value(   1),                        "Number of column processes in the 2D communicator")
+    ("nruns",        value<int64_t>()    ->default_value(   1),                        "Number of runs to compute the cholesky")
+    ("check-result", value<std::string>()->default_value(  "")->implicit_value("all"), "Enable result check ('all', 'last')")
   ;
   // clang-format on
 

@@ -24,11 +24,11 @@
 /// Message composition is lazily evaluated and it will not add any overhead if the condition is true.
 ///
 /// **This check cannot be disabled**
-#define DLAF_CHECK_WITH_ORIGIN(category, origin, condition, ...)               \
-  if (!(condition)) {                                                          \
-    std::cerr << "[ERROR] " << origin << std::endl                             \
-              << dlaf::common::concat(#condition, ##__VA_ARGS__) << std::endl; \
-    std::terminate();                                                          \
+#define DLAF_CHECK_WITH_ORIGIN(category, origin, condition, ...)                    \
+  if (!(condition)) {                                                               \
+    std::cerr << "[ERROR] " << origin << std::endl                                  \
+              << dlaf::common::concat(#condition, ' ', ##__VA_ARGS__) << std::endl; \
+    std::terminate();                                                               \
   }
 
 /// This macro is a shortcut for #DLAF_CHECK_WITH_ORIGIN, it sets automatically the origin to the line

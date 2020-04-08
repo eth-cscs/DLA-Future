@@ -13,6 +13,7 @@
 /// @file
 
 #include <mpi.h>
+#include "dlaf/common/assert.h"
 #include "dlaf/common/data_descriptor.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/message.h"
@@ -28,7 +29,7 @@ namespace reduce {
 /// MPI Reduce(see MPI documentation for additional info)
 /// @param reduce_operation MPI_Op to perform on @p input data coming from ranks in @p communicator
 template <class DataIn, class DataOut>
-void collector(Communicator& communicator, MPI_Op reduce_operation, DataIn input, DataOut output) {
+void collector(Communicator& communicator, MPI_Op reduce_operation, const DataIn input, DataOut output) {
   using T = std::remove_const_t<typename common::data_traits<DataIn>::element_t>;
 
   common::Buffer<T> tmp_mem_input;
@@ -63,7 +64,8 @@ void collector(Communicator& communicator, MPI_Op reduce_operation, DataIn input
 /// @param rank_root  the rank that will collect the result in output
 /// @param reduce_operation MPI_Op to perform on @p input data coming from ranks in @p communicator
 template <class DataIn>
-void participant(int rank_root, Communicator& communicator, MPI_Op reduce_operation, DataIn input) {
+void participant(int rank_root, Communicator& communicator, MPI_Op reduce_operation,
+                 const DataIn input) {
   using T = std::remove_const_t<typename common::data_traits<DataIn>::element_t>;
 
   common::Buffer<T> tmp_mem_input;
@@ -81,7 +83,6 @@ void participant(int rank_root, Communicator& communicator, MPI_Op reduce_operat
   MPI_Reduce(message_input.data(), nullptr, message_input.count(), message_input.mpi_type(),
              reduce_operation, rank_root, communicator);
 }
-
 }
 }
 
@@ -90,7 +91,7 @@ void participant(int rank_root, Communicator& communicator, MPI_Op reduce_operat
 /// @param rank_root  the rank that will collect the result in output
 /// @param reduce_operation MPI_Op to perform on @p input data coming from ranks in @p communicator
 template <class DataIn, class DataOut>
-void reduce(const int rank_root, Communicator& communicator, MPI_Op reduce_operation, DataIn input,
+void reduce(const int rank_root, Communicator& communicator, MPI_Op reduce_operation, const DataIn input,
             DataOut output) {
   if (rank_root == communicator.rank())
     internal::reduce::collector(communicator, reduce_operation, input, output);

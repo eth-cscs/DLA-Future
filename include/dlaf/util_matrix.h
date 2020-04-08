@@ -36,24 +36,25 @@ namespace internal {
 /// @brief Verify if dlaf::Matrix is square
 ///
 /// @tparam Matrix refers to a dlaf::Matrix object
-#define DLAF_PRECONDITION_SIZE_SQUARE(matrix)                                                       \
-  DLAF_ASSERT((matrix.size().rows() == matrix.size().cols()), "Matrix", #matrix, "is not square (", \
+#define DLAF_PRECONDITION_SIZE_SQUARE(matrix)                                                         \
+  DLAF_ASSERT((matrix.size().rows() == matrix.size().cols()), "Matrix ", #matrix, " is not square (", \
               matrix.size().rows(), "x", matrix.size().cols(), ").")
 
 /// @brief Verify if dlaf::Matrix tile is square
 ///
 /// @tparam Matrix refers to a dlaf::Matrix object
-#define DLAF_PRECONDITION_BLOCKSIZE_SQUARE(matrix)                                                   \
-  DLAF_ASSERT((matrix.blockSize().rows() == matrix.blockSize().cols()), "Block size in matrix",      \
-              #matrix, "is not square (", matrix.blockSize().rows(), "x", matrix.blockSize().cols(), \
+#define DLAF_PRECONDITION_BLOCKSIZE_SQUARE(matrix)                                                    \
+  DLAF_ASSERT((matrix.blockSize().rows() == matrix.blockSize().cols()), "Block size in matrix ",      \
+              #matrix, " is not square (", matrix.blockSize().rows(), "x", matrix.blockSize().cols(), \
               ").")
 
 /// @brief Verify if dlaf::Matrix is distributed on a (1x1) grid (i.e. if it is a local matrix).
 ///
 /// @tparam Matrix refers to a dlaf::Matrix object
-#define DLAF_PRECONDITION_LOCALMATRIX(matrix)                                                  \
-  DLAF_ASSERT((matrix.distribution().commGridSize() == comm::Size2D{1, 1}), "Matrix", #matrix, \
-              "is not local.")
+#define DLAF_PRECONDITION_LOCALMATRIX(matrix)                                                   \
+  DLAF_ASSERT((matrix.distribution().commGridSize() == comm::Size2D{1, 1}), "Matrix ", #matrix, \
+              " is not local (grid size: ", matrix.distribution().commGridSize().rows(), "x",   \
+              matrix.distribution().commGridSize().cols(), ").")
 
 /// @brief Verify that the matrix is distributed according to the given communicator grid.
 ///
@@ -61,8 +62,12 @@ namespace internal {
 #define DLAF_PRECONDITION_DISTRIBUTED_ON_GRID(grid, matrix)                                          \
   DLAF_ASSERT(((matrix.distribution().commGridSize() == grid.size()) &&                              \
                (matrix.distribution().rankIndex() == grid.rank())),                                  \
-              "The matrix", #matrix, "is not distributed according to the communicator grid", #grid, \
-              ".")
+              "The matrix ", #matrix, " (rank: ", matrix.distribution().rankIndex(),                 \
+              ", grid size: ", matrix.distribution().commGridSize().rows(), "x",                     \
+              matrix.distribution().commGridSize().cols(),                                           \
+              ") is not distributed according to the communicator grid ", #grid,                     \
+              " (rank: ", grid.rank(), ", grid size: ", grid.size().rows(), "x", grid.size().cols(), \
+              ").")
 
 template <class MatrixConst, class Matrix, class Location>
 void assertMultipliableMatrices(const MatrixConst& mat_a, const Matrix& mat_b, const blas::Op opA,
@@ -85,27 +90,33 @@ void assertMultipliableMatrices(const MatrixConst& mat_a, const Matrix& mat_b, c
 
   switch (opA) {
     case blas::Op::NoTrans:
-      DLAF_ASSERT_WITH_ORIGIN(location, (a_k(mat_a.nrTiles()) == b_k(mat_b.nrTiles())), "The matrices",
-                              mat_a_name, "and", mat_b_name,
-                              "are not left multipliable (cols of matrix A not equal to rows of matrix B).");
-      DLAF_ASSERT_WITH_ORIGIN(location, (a_k(mat_a.size()) == b_k(mat_b.size())), "The matrices",
-                              mat_a_name, "and", mat_b_name,
-                              "are not left multipliable (size of matrix A not equal to that of matrix B).");
+      DLAF_ASSERT_WITH_ORIGIN(location, (a_k(mat_a.nrTiles()) == b_k(mat_b.nrTiles())), "The matrices ",
+                              mat_a_name, " and ", mat_b_name,
+                              " are not left multipliable (cols of matrix A, ", mat_a.size().cols(),
+                              ", not equal to rows of matrix B, ", mat_b.size().rows(), ").");
+      DLAF_ASSERT_WITH_ORIGIN(location, (a_k(mat_a.size()) == b_k(mat_b.size())), "The matrices ",
+                              mat_a_name, " and ", mat_b_name,
+                              " are not left multipliable (size of matrix A, ", mat_a.size(),
+                              ", not equal to that of matrix B, ", mat_b.size(), ").");
       DLAF_ASSERT_WITH_ORIGIN(location, (a_k(mat_a.blockSize()) == b_k(mat_b.blockSize())),
-                              "The matrices", mat_a_name, "and", mat_b_name,
-                              "are not left multipliable (blocksize of matrix A not equal to that of matrix B).");
+                              "The matrices ", mat_a_name, " and ", mat_b_name,
+                              " are not left multipliable (blocksize of matrix A, ", mat_a.blockSize(),
+                              ", not equal to that of matrix B, ", mat_b.blockSize(), ").");
       break;
     case blas::Op::Trans:
     case blas::Op::ConjTrans:
-      DLAF_ASSERT_WITH_ORIGIN(location, (a_k(mat_a.nrTiles()) == b_k(mat_b.nrTiles())), "The matrices",
-                              mat_a_name, "and", mat_b_name,
-                              "are not left multipliable (cols of matrix A not equal to rows of matrix B).");
-      DLAF_ASSERT_WITH_ORIGIN(location, (a_k(mat_a.size()) == b_k(mat_b.size())), "The matrices",
-                              mat_a_name, "and", mat_b_name,
-                              "are not left multipliable (size of matrix A not equal to that of matrix B).");
+      DLAF_ASSERT_WITH_ORIGIN(location, (a_k(mat_a.nrTiles()) == b_k(mat_b.nrTiles())), "The matrices ",
+                              mat_a_name, " and ", mat_b_name,
+                              " are not left multipliable (cols of matrix A, ", mat_a.size().cols(),
+                              ", not equal to rows of matrix B, ", mat_b.size().rows(), ").");
+      DLAF_ASSERT_WITH_ORIGIN(location, (a_k(mat_a.size()) == b_k(mat_b.size())), "The matrices ",
+                              mat_a_name, " and ", mat_b_name,
+                              " are not left multipliable (size of matrix A, ", mat_a.size(),
+                              ", not equal to that of matrix B, ", mat_b.size(), ").");
       DLAF_ASSERT_WITH_ORIGIN(location, (a_k(mat_a.blockSize()) == b_k(mat_b.blockSize())),
-                              "The matrices", mat_a_name, "and", mat_b_name,
-                              "are not left multipliable (blocksize of matrix A not equal to that of matrix B).");
+                              "The matrices ", mat_a_name, " and ", mat_b_name,
+                              " are not left multipliable (blocksize of matrix A, ", mat_a.blockSize(),
+                              ", not equal to that of matrix B, ", mat_b.blockSize(), ").");
       break;
   }
 }

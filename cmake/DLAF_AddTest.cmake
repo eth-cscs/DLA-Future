@@ -171,6 +171,8 @@ function(DLAF_addTest test_target_name)
 
     set(_TEST_COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${DLAF_AT_MPIRANKS} ${_MPI_CORE_ARGS}
         ${MPIEXEC_PREFLAGS} $<TARGET_FILE:${test_target_name}> ${MPIEXEC_POSTFLAGS})
+
+    set(_TEST_LABEL MPI)
   # ----- Classic test
   else()
     set(_TEST_COMMAND ${test_target_name})
@@ -190,6 +192,8 @@ function(DLAF_addTest test_target_name)
   add_test(
     NAME ${test_target_name}
     COMMAND ${_TEST_COMMAND} ${_TEST_ARGUMENTS})
+
+  set_tests_properties(${test_target_name} PROPERTIES LABELS "${_TEST_LABEL}")
 
   ### DEPLOY
   include(GNUInstallDirs)

@@ -63,6 +63,7 @@ target_link_libraries(DLAF
     ${LAPACK_TARGET}
     lapackpp
     blaspp
+    $<TARGET_NAME_IF_EXISTS:dlaf::cublas>
 )
 
 target_compile_features(DLAF PUBLIC cxx_std_14)

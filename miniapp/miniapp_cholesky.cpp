@@ -43,8 +43,8 @@ T analytical_result_matrix(const GlobalElementIndex& index);
 void setup_input_matrix(Matrix<T, Device::CPU>& matrix) {
   using namespace dlaf::matrix::util;
 
-  util_matrix::assertSizeSquare(matrix, DLAF_SOURCE_LOCATION, "matrix");
-  util_matrix::assertBlocksizeSquare(matrix, DLAF_SOURCE_LOCATION, "matrix");
+  util_matrix::assertSizeSquare(matrix, __FILE__, "matrix");
+  util_matrix::assertBlocksizeSquare(matrix, __FILE__, "matrix");
 
   set(matrix, analytical_input_matrix);
 }

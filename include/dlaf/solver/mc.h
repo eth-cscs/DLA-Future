@@ -60,3 +60,24 @@ struct Solver<Backend::MC> {
 }
 
 #include <dlaf/solver/triangular/mc.tpp>
+
+/// ---- ETI
+namespace dlaf {
+
+#define DLAF_TRIANGULAR_ETI(KWORD, DATATYPE)                                                          \
+  KWORD template void Solver<Backend::MC>::triangular<DATATYPE>(comm::CommunicatorGrid, blas::Side,   \
+                                                                blas::Uplo, blas::Op op, blas::Diag,  \
+                                                                DATATYPE,                             \
+                                                                Matrix<const DATATYPE, Device::CPU>&, \
+                                                                Matrix<DATATYPE, Device::CPU>&);      \
+  KWORD template void Solver<Backend::MC>::triangular<DATATYPE>(blas::Side, blas::Uplo, blas::Op,     \
+                                                                blas::Diag, DATATYPE,                 \
+                                                                Matrix<const DATATYPE, Device::CPU>&, \
+                                                                Matrix<DATATYPE, Device::CPU>&);
+
+DLAF_TRIANGULAR_ETI(extern, float)
+DLAF_TRIANGULAR_ETI(extern, double)
+DLAF_TRIANGULAR_ETI(extern, std::complex<float>)
+DLAF_TRIANGULAR_ETI(extern, std::complex<double>)
+
+}

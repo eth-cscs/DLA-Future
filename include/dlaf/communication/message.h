@@ -15,6 +15,7 @@
 #include <type_traits>
 
 #include "dlaf/common/data.h"
+#include "dlaf/communication/datatypes.h"
 #include "dlaf/communication/type_handler.h"
 #include "dlaf/mpi_header.h"
 

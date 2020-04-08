@@ -52,12 +52,10 @@ using ConstMatrixType = dlaf::Matrix<const T, Device::CPU>;
 using TileType = dlaf::Tile<T, Device::CPU>;
 using ConstTileType = dlaf::Tile<const T, Device::CPU>;
 
-void setUpperToZeroForDiagonalTiles(MatrixType& matrix);
-
-T matrix_norm(ConstMatrixType& matrix, CommunicatorGrid comm_grid);
-
-void cholesky_diff(MatrixType& original, MatrixType& cholesky_lower, CommunicatorGrid comm_grid);
-
+/// Check Cholesky Factorization results
+///
+/// Given a matrix A (Hermitian Positive Definite) and its Cholesky factorization in L,
+/// this function checks that A == L * L'
 void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid);
 
 enum class DO_CHECK { NONE, LAST, ALL };
@@ -71,6 +69,7 @@ struct options_t {
   DO_CHECK do_check;
 };
 
+/// Handle CLI options
 options_t check_options(hpx::program_options::variables_map& vm);
 
 }
@@ -197,36 +196,7 @@ int main(int argc, char** argv) {
 
 namespace {
 
-/// Set to zero the upper part of the diagonal tiles
-///
-/// For the tiles on the diagonal (i.e. row == col), the elements in the upper triangular
-/// part of each tile, diagonal excluded, are set to zero.
-/// Tiles that are not on the diagonal (i.e. row != col) will not be touched or referenced
-void setUpperToZeroForDiagonalTiles(MatrixType& matrix) {
-  dlaf::util_matrix::assertBlocksizeSquare(matrix, "setUpperToZeroForDiagonalTiles", "matrix");
-
-  const auto& distribution = matrix.distribution();
-
-  for (int j = 0; j < distribution.localNrTiles().cols(); ++j) {
-    for (int i = 0; i < distribution.localNrTiles().rows(); ++i) {
-      const auto tile_wrt_global = distribution.globalTileIndex(LocalTileIndex{i, j});
-      const auto tl_index = distribution.globalElementIndex(tile_wrt_global, {0, 0});
-
-      if (tile_wrt_global.row() != tile_wrt_global.col())
-        continue;
-
-      matrix(tile_wrt_global).then(hpx::util::unwrapping([tl_index](auto&& tile) {
-        for (int j = 0; j < tile.size().cols(); ++j)
-          for (int i = 0; i < tile.size().rows(); ++i) {
-            GlobalElementIndex element_wrt_global{tl_index.row() + i, tl_index.col() + j};
-            if (element_wrt_global.row() < element_wrt_global.col())
-              tile(TileElementIndex{i, j}) = 0;
-          }
-      }));
-    }
-  }
-}
-
+/// Compute max norm of the given matrix
 T matrix_norm(ConstMatrixType& matrix, CommunicatorGrid comm_grid) {
   using dlaf::common::internal::vector;
 
@@ -287,6 +257,43 @@ T matrix_norm(ConstMatrixType& matrix, CommunicatorGrid comm_grid) {
   return max_value;
 }
 
+/// Set to zero the upper part of the diagonal tiles
+///
+/// For the tiles on the diagonal (i.e. row == col), the elements in the upper triangular
+/// part of each tile, diagonal excluded, are set to zero.
+/// Tiles that are not on the diagonal (i.e. row != col) will not be touched or referenced
+void setUpperToZeroForDiagonalTiles(MatrixType& matrix) {
+  dlaf::util_matrix::assertBlocksizeSquare(matrix, "setUpperToZeroForDiagonalTiles", "matrix");
+
+  const auto& distribution = matrix.distribution();
+
+  for (int j = 0; j < distribution.localNrTiles().cols(); ++j) {
+    for (int i = 0; i < distribution.localNrTiles().rows(); ++i) {
+      const auto tile_wrt_global = distribution.globalTileIndex(LocalTileIndex{i, j});
+      const auto tl_index = distribution.globalElementIndex(tile_wrt_global, {0, 0});
+
+      if (tile_wrt_global.row() != tile_wrt_global.col())
+        continue;
+
+      matrix(tile_wrt_global).then(hpx::util::unwrapping([tl_index](auto&& tile) {
+        for (int j = 0; j < tile.size().cols(); ++j)
+          for (int i = 0; i < tile.size().rows(); ++i) {
+            GlobalElementIndex element_wrt_global{tl_index.row() + i, tl_index.col() + j};
+            if (element_wrt_global.row() < element_wrt_global.col())
+              tile(TileElementIndex{i, j}) = 0;
+          }
+      }));
+    }
+  }
+}
+
+/// Compute original - cholesky_lower * cholesky_lower'
+///
+/// It computes in-place the cholesky_lower * chlesky_lower'
+/// and then it subtracts in-place the result from original
+///
+/// It is used to get the difference matrix between the matrix computed starting from the
+/// cholesky factorization and the original one
 void cholesky_diff(MatrixType& original, MatrixType& cholesky_lower, CommunicatorGrid comm_grid) {
   // TODO original and cholesky_lower must be different
 
@@ -400,10 +407,22 @@ void cholesky_diff(MatrixType& original, MatrixType& cholesky_lower, Communicato
   }
 }
 
+/// Procedure to evaluate the result of the Cholesky factorization
+///
+/// 1. Compute the max norm of the original matrix
+/// 2. Compute the difference between the original and the computed matrix using the factorization
+/// 3. Compute the max norm of the difference
+/// 4. Evaluate the correctness of the result using the ratio between the two matrix max norms
+///
+/// Prints a message with the ratio and a note about the error:
+/// "":        check ok
+/// "ERROR":   error is high, there is an error in the factorization
+/// "WARNING": error is slightly high, there should be an error in the factorization
 void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
-  // norm A (original matrix)
+  // 1. Compute the max norm of the original matrix in A
   float norm_A = matrix_norm(A, comm_grid);
 
+  // 2.
   // L is a lower triangular, reset values in the upper part (diagonal excluded)
   // it is needed for the gemm to compute correctly the result when using
   // tiles on the diagonal treating them as all the other ones
@@ -412,24 +431,25 @@ void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
   // compute diff in-place, A = A - L*L'
   cholesky_diff(A, L, comm_grid);
 
-  // norm diff
+  // 3. Compute the max norm of the difference (it has been compute in-place in A)
   float norm_diff = matrix_norm(A, comm_grid);
 
+  // 4.
+  // Evaluation of correctness is done just by the master rank
   if (comm_grid.rank() != Index2D{0, 0})
     return;
 
-  // compute error with the two norms
   constexpr auto eps = std::numeric_limits<T>::epsilon();
   const auto n = A.size().rows();
 
-  const auto diff = norm_diff / norm_A;
+  const auto diff_ratio = norm_diff / norm_A;
 
-  if (diff > 100 * eps * n)
+  if (diff_ratio > 100 * eps * n)
     std::cout << "ERROR: ";
-  else if (diff > eps * n)
+  else if (diff_ratio > eps * n)
     std::cout << "Warning: ";
 
-  std::cout << "Max Diff / Max A: " << diff << std::endl;
+  std::cout << "Max Diff / Max A: " << diff_ratio << std::endl;
 }
 
 options_t check_options(hpx::program_options::variables_map& vm) {

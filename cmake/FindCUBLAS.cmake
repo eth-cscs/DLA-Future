@@ -1,9 +1,9 @@
-# 
+#
 # To find CUDA:
 #   1. Use `enable_language(CUDA)`
 #   2. Set `CMAKE_CUDA_COMPILER` if cuda in custom directory
 #
-# Imported Targets: 
+# Imported Targets:
 #   dlaf::cublas
 #
 cmake_minimum_required(VERSION 3.12)

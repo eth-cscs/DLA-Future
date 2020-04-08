@@ -13,7 +13,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <memory>
-#ifdef WITH_CUDA
+#ifdef DLAF_WITH_CUDA
 #include <cuda_runtime.h>
 #endif
 

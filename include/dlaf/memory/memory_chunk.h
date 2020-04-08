@@ -13,7 +13,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <memory>
-#ifdef WITH_CUDA
+#ifdef DLAF_WITH_CUDA
 #include <cuda_runtime.h>
 #endif
 #include "dlaf/types.h"
@@ -40,7 +40,7 @@ public:
     if (size == 0)
       return;
 
-#ifdef WITH_CUDA
+#ifdef DLAF_WITH_CUDA
     if (device == Device::CPU) {
       cudaMallocHost(&ptr_, size_ * sizeof(T));
     }
@@ -128,7 +128,7 @@ public:
 private:
   void deallocate() {
     if (allocated_) {
-#ifdef WITH_CUDA
+#ifdef DLAF_WITH_CUDA
       if (device == Device::CPU) {
         cudaFreeHost(ptr_);
       }

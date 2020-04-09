@@ -37,8 +37,7 @@ set(CMAKE_CXX_STANDARD 14)
 set(DLAF_WITH_CUDA OFF CACHE BOOL "Enable CUDA support")
 if (DLAF_WITH_CUDA)
   enable_language(CUDA)
-
-  DLAF_addCudaTargets()
+  find_package(CUDALIBS REQUIRED)
 endif()
 
 # ---------------------------------------------------------------------------

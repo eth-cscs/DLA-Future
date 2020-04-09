@@ -17,6 +17,7 @@
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/matrix/util_matrix_futures.h"
 #include "dlaf_test/util_types.h"
+#include "dlaf/util_matrix.h"
 
 using namespace dlaf;
 using namespace dlaf::matrix;
@@ -165,8 +166,8 @@ TYPED_TEST(MatrixTest, ConstructorFromDistribution) {
 /// @pre index should be valid, contained in @p distribution.size() and stored in the current rank.
 std::size_t memoryIndex(const Distribution& distribution, const LayoutInfo& layout,
                         const GlobalElementIndex& index) {
-  using util::size_t::sum;
-  using util::size_t::mul;
+  using dlaf::util::size_t::sum;
+  using dlaf::util::size_t::mul;
 
   auto global_tile_index = distribution.globalTileIndex(index);
   auto tile_element_index = distribution.tileElementIndex(index);
@@ -885,6 +886,8 @@ TYPED_TEST(MatrixLocalTest, FromTileConst) {
 TYPED_TEST(MatrixTest, FromTile) {
   using Type = TypeParam;
 
+  using dlaf::util::ceilDiv;
+
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
@@ -922,7 +925,7 @@ TYPED_TEST(MatrixTest, FromTile) {
 
         SizeType ld_tiles = test.block_size.rows();
         SizeType tiles_per_col =
-            util::ceilDiv(distribution.localSize().rows(), distribution.blockSize().rows()) + 3;
+            ceilDiv(distribution.localSize().rows(), distribution.blockSize().rows()) + 3;
         LayoutInfo layout = tileLayout(distribution, ld_tiles, tiles_per_col);
         memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
 
@@ -940,7 +943,7 @@ TYPED_TEST(MatrixTest, FromTile) {
 
         SizeType ld_tiles = test.block_size.rows();
         SizeType tiles_per_col =
-            util::ceilDiv(distribution.localSize().rows(), distribution.blockSize().rows()) + 1;
+            ceilDiv(distribution.localSize().rows(), distribution.blockSize().rows()) + 1;
         LayoutInfo layout = tileLayout(distribution, ld_tiles, tiles_per_col);
         memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
 
@@ -956,6 +959,8 @@ TYPED_TEST(MatrixTest, FromTile) {
 
 TYPED_TEST(MatrixTest, FromTileConst) {
   using Type = TypeParam;
+
+  using dlaf::util::ceilDiv;
 
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
@@ -996,7 +1001,7 @@ TYPED_TEST(MatrixTest, FromTileConst) {
 
         SizeType ld_tiles = test.block_size.rows();
         SizeType tiles_per_col =
-            util::ceilDiv(distribution.localSize().rows(), distribution.blockSize().rows()) + 3;
+            ceilDiv(distribution.localSize().rows(), distribution.blockSize().rows()) + 3;
         LayoutInfo layout = tileLayout(distribution, ld_tiles, tiles_per_col);
         memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
 
@@ -1015,7 +1020,7 @@ TYPED_TEST(MatrixTest, FromTileConst) {
 
         SizeType ld_tiles = test.block_size.rows();
         SizeType tiles_per_col =
-            util::ceilDiv(distribution.localSize().rows(), distribution.blockSize().rows()) + 1;
+            ceilDiv(distribution.localSize().rows(), distribution.blockSize().rows()) + 1;
         LayoutInfo layout = tileLayout(distribution, ld_tiles, tiles_per_col);
         memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
 

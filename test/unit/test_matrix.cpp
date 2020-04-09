@@ -13,11 +13,11 @@
 #include <vector>
 #include "gtest/gtest.h"
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/util_matrix.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/matrix/util_matrix_futures.h"
 #include "dlaf_test/util_types.h"
-#include "dlaf/util_matrix.h"
 
 using namespace dlaf;
 using namespace dlaf::matrix;
@@ -1047,18 +1047,20 @@ TYPED_TEST(MatrixTest, CopyFrom) {
       Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
       LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
 
-      auto input_matrix = [rows=size.rows()](const GlobalElementIndex& index) {
+      auto input_matrix = [rows = size.rows()](const GlobalElementIndex& index) {
         return index.row() + index.col() * rows;
       };
 
       MemoryViewT mem_src(layout.minMemSize());
-      MatrixT mat_src = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid, static_cast<TypeParam*>(mem_src()));
+      MatrixT mat_src = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid,
+                                                          static_cast<TypeParam*>(mem_src()));
       dlaf::matrix::util::set(mat_src, input_matrix);
 
       MatrixConstT mat_src_const = std::move(mat_src);
 
       MemoryViewT mem_dst(layout.minMemSize());
-      MatrixT mat_dst = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid, static_cast<TypeParam*>(mem_dst()));
+      MatrixT mat_dst = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid,
+                                                          static_cast<TypeParam*>(mem_dst()));
       dlaf::matrix::util::set(mat_dst, [](const auto&) { return 13; });
 
       mat_dst.copyFrom(mat_src_const);

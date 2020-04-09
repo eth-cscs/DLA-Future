@@ -1035,6 +1035,39 @@ TYPED_TEST(MatrixTest, FromTileConst) {
   }
 }
 
+TYPED_TEST(MatrixTest, CopyFrom) {
+  using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
+  using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
+  using MatrixConstT = dlaf::Matrix<TypeParam, Device::CPU>;
+
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+
+      auto input_matrix = [rows=size.rows()](const GlobalElementIndex& index) {
+        return index.row() + index.col() * rows;
+      };
+
+      MemoryViewT mem_src(layout.minMemSize());
+      MatrixT mat_src = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid, static_cast<TypeParam*>(mem_src()));
+      dlaf::matrix::util::set(mat_src, input_matrix);
+
+      MatrixConstT mat_src_const = std::move(mat_src);
+
+      MemoryViewT mem_dst(layout.minMemSize());
+      MatrixT mat_dst = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid, static_cast<TypeParam*>(mem_dst()));
+      dlaf::matrix::util::set(mat_dst, [](const auto&) { return 13; });
+
+      mat_dst.copyFrom(mat_src_const);
+
+      CHECK_MATRIX_EQ(input_matrix, mat_dst);
+    }
+  }
+}
+
 // MatrixDestructorFutures
 //
 // These tests checks that futures management on destruction is performed correctly. The behaviour is

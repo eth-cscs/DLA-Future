@@ -103,28 +103,32 @@ public:
     return operator()(this->distribution().localTileIndex(index));
   }
 
+  /// Copy values from another matrix
+  ///
+  /// Given a matrix with the same geometries and distribution, this function submits tasks that will
+  /// perform the copy of each tile
   template <class U, class = std::enable_if_t<std::is_same<T, std::remove_const_t<U>>::value>>
-  void copyFrom(Matrix<U, Device::CPU>& source, bool blocking = false) {
-    auto& dist = source.distribution();
+  void copyFrom(Matrix<U, Device::CPU>& source) {
+    const auto& distribution = source.distribution();
 
-    std::vector<hpx::future<void>> copy_futures;
+    // TODO check same size and blocksize
+    // TODO check equally distributed
 
-    for (SizeType j = 0; j < dist.localNrTiles().cols(); ++j) {
-      for (SizeType i = 0; i < dist.localNrTiles().rows(); ++i) {
-        copy_futures.emplace_back(hpx::dataflow(hpx::util::unwrapping([](auto&& dst, auto&& src) {
-                                                  for (SizeType j = 0; j < src.size().cols(); ++j)
-                                                    for (SizeType i = 0; i < src.size().rows(); ++i) {
-                                                      TileElementIndex index(i, j);
-                                                      dst(index) = src(index);
-                                                    }
-                                                }),
-                                                this->operator()(LocalTileIndex(i, j)),
-                                                source.read(LocalTileIndex(i, j))));
+    const SizeType local_tile_rows = distribution.localNrTiles().rows();
+    const SizeType local_tile_cols = distribution.localNrTiles().cols();
+
+    for (SizeType j = 0; j < local_tile_cols; ++j) {
+      for (SizeType i = 0; i < local_tile_rows; ++i) {
+        hpx::dataflow(hpx::util::unwrapping([](auto&& tile_dst, auto&& tile_src) {
+                        for (SizeType j = 0; j < tile_src.size().cols(); ++j)
+                          for (SizeType i = 0; i < tile_src.size().rows(); ++i) {
+                            TileElementIndex index(i, j);
+                            tile_dst(index) = tile_src(index);
+                          }
+                      }),
+                      this->operator()(LocalTileIndex(i, j)), source.read(LocalTileIndex(i, j)));
       }
     }
-
-    if (blocking)
-      hpx::wait_all(copy_futures);
   }
 
 protected:

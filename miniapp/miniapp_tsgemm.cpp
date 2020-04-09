@@ -320,8 +320,8 @@ void sirius_gemm(int batch_size, ExecutorType const& mpi_executor, CommunicatorG
   int this_rank = comm_grid.rankFullCommunicator(cfin_dist.rankIndex());
   dlaf::LocalTileSize const& tile_grid_size = cini_mat.distribution().localNrTiles();
 
-  int dep_tile_j = batch_size / tile_grid_size.rows();
-  int dep_tile_i = batch_size - dep_tile_j * tile_grid_size.rows();
+  SizeType dep_tile_j = batch_size / tile_grid_size.rows();
+  SizeType dep_tile_i = batch_size - dep_tile_j * tile_grid_size.rows();
 
   for (SizeType tile_j = 0; tile_j < tile_grid_size.cols(); ++tile_j) {
     for (SizeType tile_i = 0; tile_i < tile_grid_size.rows(); ++tile_i) {
@@ -334,8 +334,8 @@ void sirius_gemm(int batch_size, ExecutorType const& mpi_executor, CommunicatorG
                                                       {tile_grid_size.rows(), tile_grid_size.cols()});
 
       // Order tasks such that tiles are computed/communicated in batches of `batch_size`
-      int c_dep_i = tile_i - dep_tile_i;
-      int c_dep_j = tile_j - dep_tile_j;
+      SizeType c_dep_i = tile_i - dep_tile_i;
+      SizeType c_dep_j = tile_j - dep_tile_j;
       bool c_dep_exists = c_dep_i < 0 || c_dep_j < 0;
       hpx::shared_future<void> c_dep_tile_fut =
           (c_dep_exists) ? hpx::make_ready_future()

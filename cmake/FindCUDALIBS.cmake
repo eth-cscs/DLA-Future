@@ -1,4 +1,15 @@
 #
+# Distributed Linear Algebra with Future (DLAF)
+#
+# Copyright (c) 2018-2019, ETH Zurich
+# All rights reserved.
+#
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+
+
+#
 # To find CUDA:
 #   1. Use `enable_language(CUDA)`
 #   2. Set `CMAKE_CUDA_COMPILER` if cuda in custom directory

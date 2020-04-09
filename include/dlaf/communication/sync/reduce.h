@@ -32,6 +32,12 @@ template <class DataIn, class DataOut>
 void collector(Communicator& communicator, MPI_Op reduce_operation, const DataIn input, DataOut output) {
   using T = std::remove_const_t<typename common::data_traits<DataIn>::element_t>;
 
+  // Wayout for single rank communicator, just copy data
+  if (communicator.size() == 1) {
+    common::copy(input, output);
+    return;
+  }
+
   common::Buffer<T> tmp_mem_input;
   common::Buffer<T> tmp_mem_output;
 
@@ -88,11 +94,15 @@ void participant(int rank_root, Communicator& communicator, MPI_Op reduce_operat
 
 /// @brief MPI_Reduce wrapper
 /// MPI Reduce(see MPI documentation for additional info)
-/// @param rank_root  the rank that will collect the result in output
+/// @param rank_root the rank that will collect the result in output
 /// @param reduce_operation MPI_Op to perform on @p input data coming from ranks in @p communicator
 template <class DataIn, class DataOut>
 void reduce(const int rank_root, Communicator& communicator, MPI_Op reduce_operation, const DataIn input,
             DataOut output) {
+  DLAF_ASSERT_HEAVY((rank_root < communicator.size() && rank_root != MPI_UNDEFINED), rank_root,
+                    " is not a valid rank in the specified Communicator with size ",
+                    communicator.size());
+
   if (rank_root == communicator.rank())
     internal::reduce::collector(communicator, reduce_operation, input, output);
   else

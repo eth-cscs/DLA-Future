@@ -42,6 +42,9 @@ struct TypeUtilities {
 };
 
 template <class T>
+constexpr T TypeUtilities<T>::error;
+
+template <class T>
 struct TypeUtilities<std::complex<T>> {
   /// @brief Returns r + I * i (I is the imaginary unit).
   static constexpr std::complex<T> element(double r, double i) {
@@ -63,4 +66,6 @@ struct TypeUtilities<std::complex<T>> {
   static constexpr T error = 8 * std::numeric_limits<T>::epsilon();
 };
 
+template <class T>
+constexpr T TypeUtilities<std::complex<T>>::error;
 }

@@ -93,9 +93,10 @@ TEST_F(ReduceTest, CArray) {
 
   sync::reduce(root, world, MPI_SUM, common::make_data(input, N), common::make_data(reduced, N));
 
-  if (world.rank() == root)
+  if (world.rank() == root) {
     for (std::size_t index = 0; index < N; ++index)
       EXPECT_EQ(input[index] * static_cast<TypeParam>(NUM_MPI_RANKS), reduced[index]);
+  }
 }
 
 TEST_F(ReduceTest, ContiguousToContiguous) {
@@ -118,9 +119,10 @@ TEST_F(ReduceTest, ContiguousToContiguous) {
 
   sync::reduce(root, communicator, op, std::move(message_input), std::move(message_output));
 
-  if (root == world.rank())
+  if (root == world.rank()) {
     for (auto i = 0; i < N; ++i)
       EXPECT_EQ(value * static_cast<TypeParam>(NUM_MPI_RANKS), data_B[i]);
+  }
 }
 
 TEST_F(ReduceTest, StridedToContiguous) {
@@ -154,9 +156,10 @@ TEST_F(ReduceTest, StridedToContiguous) {
   MPI_Op op = MPI_SUM;
   sync::reduce(root, communicator, op, std::move(message_input), std::move(message_output));
 
-  if (root == world.rank())
+  if (root == world.rank()) {
     for (auto i = 0; i < N; ++i)
       EXPECT_EQ(value * static_cast<TypeParam>(NUM_MPI_RANKS), data_contiguous[i]);
+  }
 }
 
 TEST_F(ReduceTest, ContiguousToStrided) {

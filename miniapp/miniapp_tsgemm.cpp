@@ -10,6 +10,7 @@
 
 #include <dlaf/blas_tile.h>
 #include <dlaf/communication/datatypes.h>
+#include <dlaf/communication/message.h>
 #include <dlaf/matrix.h>
 
 #include <hpx/dataflow.hpp>
@@ -273,6 +274,8 @@ void recv_tile(TileType& c_tile, int this_rank, SizeType tag, MPI_Comm comm) {
   MPI_Datatype dtype = dlaf::comm::mpi_datatype<ScalarType>::type;
 
   // Note: these allocations should be better made from a pool
+  // auto message = dlaf::comm::make_message(dlaf::common::make_data(c_tile));
+
   std::vector<MPI_Request> reqs(nprocs);
   std::vector<ScalarType> staging_buf(nprocs * nelems);
 

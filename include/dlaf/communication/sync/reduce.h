@@ -29,7 +29,8 @@ namespace reduce {
 /// MPI Reduce(see MPI documentation for additional info)
 /// @param reduce_operation MPI_Op to perform on @p input data coming from ranks in @p communicator
 template <class DataIn, class DataOut>
-void collector(Communicator& communicator, MPI_Op reduce_operation, const DataIn input, DataOut output) {
+void collector(Communicator& communicator, MPI_Op reduce_operation, const DataIn input,
+               const DataOut output) {
   using T = std::remove_const_t<typename common::data_traits<DataIn>::element_t>;
 
   // Wayout for single rank communicator, just copy data
@@ -98,7 +99,7 @@ void participant(int rank_root, Communicator& communicator, MPI_Op reduce_operat
 /// @param reduce_operation MPI_Op to perform on @p input data coming from ranks in @p communicator
 template <class DataIn, class DataOut>
 void reduce(const int rank_root, Communicator& communicator, MPI_Op reduce_operation, const DataIn input,
-            DataOut output) {
+            const DataOut output) {
   DLAF_ASSERT_HEAVY((rank_root < communicator.size() && rank_root != MPI_UNDEFINED), rank_root,
                     " is not a valid rank in the specified Communicator with size ",
                     communicator.size());

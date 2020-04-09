@@ -24,6 +24,16 @@ using namespace dlaf::comm;
 
 using ReduceTest = SplittedCommunicatorsTest;
 
+template <class T, class = std::enable_if_t<std::is_arithmetic<T>::value>>
+void DLAF_EXPECT_NEAR(const T a, const T b, const T abs_err) {
+  EXPECT_NEAR(a, b, abs_err);
+}
+
+template <class T>
+void DLAF_EXPECT_NEAR(const std::complex<T>& a, const std::complex<T>& b, const T abs_err) {
+  EXPECT_NEAR(std::abs(a - b), 0, abs_err);
+}
+
 using TypeParam = std::complex<double>;
 
 TEST_F(ReduceTest, ValueOnSingleRank) {
@@ -43,7 +53,7 @@ TEST_F(ReduceTest, ValueOnSingleRank) {
 
   sync::reduce(root, alone_world, MPI_SUM, common::make_data(&value, 1), common::make_data(&result, 1));
 
-  EXPECT_NEAR(value, result, TypeUtilities<TypeParam>::error);
+  DLAF_EXPECT_NEAR(value, result, TypeUtilities<TypeParam>::error);
 }
 
 TEST_F(ReduceTest, CArrayOnSingleRank) {
@@ -67,7 +77,7 @@ TEST_F(ReduceTest, CArrayOnSingleRank) {
   sync::reduce(root, alone_world, MPI_SUM, common::make_data(input, N), common::make_data(reduced, N));
 
   for (std::size_t index = 0; index < N; ++index)
-    EXPECT_NEAR(input[index], reduced[index], TypeUtilities<TypeParam>::error);
+    DLAF_EXPECT_NEAR(input[index], reduced[index], TypeUtilities<TypeParam>::error);
 }
 
 TEST_F(ReduceTest, Value) {
@@ -78,8 +88,8 @@ TEST_F(ReduceTest, Value) {
   sync::reduce(root, world, MPI_SUM, common::make_data(&value, 1), common::make_data(&result, 1));
 
   if (world.rank() == root)
-    EXPECT_NEAR(value * static_cast<TypeParam>(NUM_MPI_RANKS), result,
-                NUM_MPI_RANKS * TypeUtilities<TypeParam>::error);
+    DLAF_EXPECT_NEAR(value * static_cast<TypeParam>(NUM_MPI_RANKS), result,
+                     NUM_MPI_RANKS * TypeUtilities<TypeParam>::error);
 }
 
 TEST_F(ReduceTest, CArray) {
@@ -96,8 +106,8 @@ TEST_F(ReduceTest, CArray) {
 
   if (world.rank() == root) {
     for (std::size_t index = 0; index < N; ++index)
-      EXPECT_NEAR(input[index] * static_cast<TypeParam>(NUM_MPI_RANKS), reduced[index],
-                  NUM_MPI_RANKS * TypeUtilities<TypeParam>::error);
+      DLAF_EXPECT_NEAR(input[index] * static_cast<TypeParam>(NUM_MPI_RANKS), reduced[index],
+                       NUM_MPI_RANKS * TypeUtilities<TypeParam>::error);
   }
 }
 
@@ -123,8 +133,8 @@ TEST_F(ReduceTest, ContiguousToContiguous) {
 
   if (root == world.rank()) {
     for (auto i = 0; i < N; ++i)
-      EXPECT_NEAR(value * static_cast<TypeParam>(NUM_MPI_RANKS), data_B[i],
-                  NUM_MPI_RANKS * TypeUtilities<TypeParam>::error);
+      DLAF_EXPECT_NEAR(value * static_cast<TypeParam>(NUM_MPI_RANKS), data_B[i],
+                       NUM_MPI_RANKS * TypeUtilities<TypeParam>::error);
   }
 }
 
@@ -161,8 +171,8 @@ TEST_F(ReduceTest, StridedToContiguous) {
 
   if (root == world.rank()) {
     for (auto i = 0; i < N; ++i)
-      EXPECT_NEAR(value * static_cast<TypeParam>(NUM_MPI_RANKS), data_contiguous[i],
-                  NUM_MPI_RANKS * TypeUtilities<TypeParam>::error);
+      DLAF_EXPECT_NEAR(value * static_cast<TypeParam>(NUM_MPI_RANKS), data_contiguous[i],
+                       NUM_MPI_RANKS * TypeUtilities<TypeParam>::error);
   }
 }
 
@@ -197,8 +207,8 @@ TEST_F(ReduceTest, ContiguousToStrided) {
     for (std::size_t i_block = 0; i_block < nblocks; ++i_block)
       for (std::size_t i_element = 0; i_element < block_size; ++i_element) {
         auto mem_pos = i_block * block_distance + i_element;
-        EXPECT_NEAR(value * static_cast<TypeParam>(NUM_MPI_RANKS), data_strided[mem_pos],
-                    NUM_MPI_RANKS * TypeUtilities<TypeParam>::error););
+        DLAF_EXPECT_NEAR(value * static_cast<TypeParam>(NUM_MPI_RANKS), data_strided[mem_pos],
+                         NUM_MPI_RANKS * TypeUtilities<TypeParam>::error);
       }
   }
 }

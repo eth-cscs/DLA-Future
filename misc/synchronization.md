@@ -298,6 +298,7 @@ the future contains a tile with constant element ant it is transformed in a shar
 A copy of the shared future is stored in the matrix for successive call to `read()` which simply return
 the stored object.
 Figure 1 shows how the mechanism works, while Figure 2 contains the legend.
+
 ![Fig. 1 Graphical representation of the promise-future mechanism for a tile of the matrix object.
 ](figures/matrix_sync.png)\
 ![Fig. 1b DAG](figures/matrix_sync_dag.png)\
@@ -335,8 +336,8 @@ However a copy of the shared future is still included in the matrix view
 `done()` after which the tile control is fully back to the parent matrix.
 
 It should be noted that the  `done()` method invokes `doneWrite()` if the tile is still in read-write mode, i.e. when `doneWrite()` hasn't be called yet.
-
 Figure 3 and 4 show how a non-constant matrix view works.
+
 ![Fig. 3 First example of the matrix view promise-future mechanism for a tile of the matrix object.
 ](figures/matrix_view_sync_1.png)\
 ![Fig. 3b DAG](figures/matrix_view_sync_1_dag.png)\

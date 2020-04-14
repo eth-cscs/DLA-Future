@@ -426,6 +426,8 @@ ScalarType sum_matrix(Communicator const& comm, MatrixType& matrix) {
 }
 
 params init_params(variables_map& vm) {
+  using dlaf::util::ceilDiv;
+
   std::string setup = vm["setup"].as<std::string>();
   bool check = vm["check"].as<bool>();
   int num_iters = vm["num_iters"].as<int>();
@@ -444,19 +446,30 @@ params init_params(variables_map& vm) {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   if (num_procs != pgrid_rows * pgrid_cols) {
-    std::fprintf(stderr, "[ERROR] Number of processes doesn't match the process grid size");
+    std::fprintf(stderr, "[ERROR] Number of processes doesn't match the process grid size\n");
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
   if (tile_m > len_m) {
-    std::fprintf(stderr, "[ERROR] tile_m > m");
+    std::fprintf(stderr, "[ERROR] `tile_m` > `m`.\n");
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
   if (tile_n > len_n) {
-    std::fprintf(stderr, "[ERROR] tile_n > n");
+    std::fprintf(stderr, "[ERROR] `tile_n` > `n`.\n");
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
   if (setup != "default" && setup != "mpi_pool" && setup != "priorities") {
-    std::fprintf(stderr, "[ERROR] setup must be one of {default, mpi_pool, priorities}");
+    std::fprintf(stderr, "[ERROR] `setup` must be one of {`default`, `mpi_pool`, `priorities`}.\n");
+    MPI_Abort(MPI_COMM_WORLD, 1);
+  }
+
+  int ntiles_m = ceilDiv(len_m, tile_m);
+  int ntiles_n = ceilDiv(len_n, tile_n);
+  if (pgrid_rows > ntiles_m) {
+    std::fprintf(stderr, "[ERROR] There are more processes along `m` than tiles.\n");
+    MPI_Abort(MPI_COMM_WORLD, 1);
+  }
+  if (pgrid_cols > ntiles_n) {
+    std::fprintf(stderr, "[ERROR] There are more processes along `n` than tiles.\n");
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
 
@@ -464,7 +477,7 @@ params init_params(variables_map& vm) {
   if (rank == 0 && batch_size > 1000) {
     std::printf("[WARNING] There are too many tiles batched, this may "
                 "result in slowdowns as the number of issued non-blocking "
-                "communications at each process is proportianal to the batch size!");
+                "communications at each process is proportianal to the batch size.");
   }
 
   // Setup

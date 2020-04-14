@@ -62,7 +62,7 @@ TYPED_TEST(TileTest, Constructor) {
 
   for (const auto m : sizes) {
     for (const auto n : sizes) {
-      SizeType min_ld = std::max(1, m);
+      SizeType min_ld = max(1, m);
       for (const SizeType ld : {min_ld, min_ld + 64}) {
         memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
         TileElementSize size(m, n);
@@ -108,7 +108,7 @@ TYPED_TEST(TileTest, ConstructorConst) {
 
   for (const auto m : sizes) {
     for (const auto n : sizes) {
-      SizeType min_ld = std::max(1, m);
+      SizeType min_ld = max(1, m);
       for (const SizeType ld : {min_ld, min_ld + 64}) {
         memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
         TileElementSize size(m, n);

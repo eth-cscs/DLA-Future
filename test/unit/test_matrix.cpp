@@ -464,7 +464,7 @@ TYPED_TEST(MatrixTest, ConstructorExistingConst) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
       Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
       LayoutInfo layout = colMajorLayout(distribution.localSize(), test.block_size,
-                                         std::max(1, distribution.localSize().rows()));
+                                         max(1, distribution.localSize().rows()));
       memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
 
       // Copy distribution for testing purpose.

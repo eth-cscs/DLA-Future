@@ -301,6 +301,7 @@ Figure 1 shows how the mechanism works, while Figure 2 contains the legend.
 ![Fig. 1 Graphical representation of the promise-future mechanism for a tile of the matrix object.
 ](figures/matrix_sync.png)\
 *Fig. 1 Graphical representation of the promise-future mechanism for a tile of the matrix object.*
+
 ![Fig. 2 Legend for Figure 1, 3, 4.
 ](figures/matrix_sync_legend.png)\
 *Fig. 2 Legend for Figure 1, 3, 4.*
@@ -338,6 +339,7 @@ Figure 3 and 4 show how a non-constant matrix view works.
 ![Fig. 3 First example of the matrix view promise-future mechanism for a tile of the matrix object.
 ](figures/matrix_view_sync_1.png)\
 *Fig. 3 First example of the matrix view promise-future mechanism for a tile of the matrix object.*
+
 ![Fig. 4 Second example of the matrix view promise-future mechanism for a tile of the matrix object.
 ](figures/matrix_view_sync_2.png)\
 *Fig. 4 Second example of the matrix view promise-future mechanism for a tile of the matrix object.*

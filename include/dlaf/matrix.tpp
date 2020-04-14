@@ -20,7 +20,9 @@ Matrix<T, device>::Matrix(const GlobalElementSize& size, const TileElementSize& 
 template <class T, Device device>
 Matrix<T, device>::Matrix(matrix::Distribution&& distribution)
     : Matrix<const T, device>(std::move(distribution), {}, {}) {
-  SizeType ld = std::max(1, util::ceilDiv(this->distribution().localSize().rows(), 64) * 64);
+  const SizeType alignment = 64;
+  const SizeType ld =
+      max(1, util::ceilDiv(this->distribution().localSize().rows(), alignment) * alignment);
 
   auto layout = matrix::colMajorLayout(this->distribution().localSize(), this->blockSize(), ld);
 

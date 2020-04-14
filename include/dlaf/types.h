@@ -19,6 +19,9 @@
 namespace dlaf {
 
 using SizeType = int;
+static_assert(std::is_signed<SizeType>::value && std::is_integral<SizeType>::value,
+              "SizeType should be a signed integral type");
+static_assert(sizeof(SizeType) >= 4, "SizeType should be >= 32bit");
 
 enum class Device { CPU, GPU };
 

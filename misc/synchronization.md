@@ -289,7 +289,7 @@ is kept by the matrix.
 In the general case when the `read()` operator has to be available as well a future and a
 shared future are needed for each tile.
 The usage of the future is the same as in the previous case, with an extra operation: A call to `operator()`
-sets invalidates the shared future setting it to a default constructed object.
+invalidates the shared future setting it to a default constructed object (red line with cross in the image).
 On the other hand the shared future is the main change to handle the read-only case.
 A call to `read()` first checks if the shared future is valid. If it is not it means that
 a read-write operation was scheduled before and the shared future has to be constructed.
@@ -297,8 +297,15 @@ The mechanism is similar to the one used in `operator()` with the only differenc
 the future contains a tile with constant element ant it is transformed in a shared future.
 A copy of the shared future is stored in the matrix for successive call to `read()` which simply return
 the stored object.
+Figure 1 shows how the mechanism works, while Figure 2 contains the legend.
+![Fig. 1 Graphical representation of the promise-future mechanism for a tile of the matrix object.
+](figures/matrix_sync.png)
+*Fig. 1 Graphical representation of the promise-future mechanism for a tile of the matrix object.*
+![Fig. 2 Legend for Figure 1, 3, 4.
+](figures/legend.png)
+*Fig. 2 Legend for Figure 1, 3, 4.*
 
-Extra care has to be used for correct exception handling.
+Extra care has to be used to ensure correct exception handling.
 The tile destructor sets the promise value if it was called during normal execution, while it sets
 an exception when it is called after an exception has been thrown.
 If the future f contains an exception the call to `get()` in the continuation will rethrow the exception,
@@ -307,17 +314,31 @@ Therefore the continuations in `operator()` and `read()` have to handle this cas
 
 Constant matrix views can be handled in a simple way. On construction it is only needed to call the `read()`
 method of the parent matrix to get a copy of the shared future that is saved in the view and returned
-each time the view is used. To release the view the `done()` method just clears the shared future.
+each time the view is used. To release the view the `done()` method just clears the view shared future.
 
 For non constant matrix view the mechanism works in this way. On construction the futures of the
 parent matrix are moved in the view and replaced by futures of the promises (two for each tile) also
 stored in the view.
-When `doneWrite()` is called the view creates its shared future and duplicates it to set the shared future of the
-parent matrix too. Each of the two shared future has a corresponding future which gets ready when the tile included
-is destructed, therefore a synchrounous dataflow is needed to set the future of the parent matrix
-only when both shared futures are destructed.
-On the other hand the `done()` method invokes `doneWrite()` if the tile is still in read-write mode,
-and then it clears the shared future of the view, to allow the future in the parent matrix to get ready.
+The `operator()` and `read()` methods works in the same way as for the matrix.
+When `doneWrite()` is called the view creates its shared future (if not existent)
+and duplicates the tile included (the promise cannot be dublicated,
+therefore in the copy it is replaced by a new promise (the blue promise in Fig 3 and 4 moved))
+to set the shared future (purple and red arrow pointing to the light yellow promise in Fig 3 and 4).
+When both the blue and purple futures are ready, it means that the tiles of both the two shared futures
+went out of scope, and therefore the reading of the elements of the tiles are completed.
+At this point the main future in the parent matrix can be set. A synchrounous dataflow is used to set
+the light green future value.
+However a copy of the shared future is still included in the matrix view
+(allowing read-only operations to still be scheduled.) The shared future is cleared by the call to
+`done()` after which the tile control is fully back to the parent matrix.
 
-Details about the matrix and the views are illustrated in Figure 1.
+It should be noted that the  `done()` method invokes `doneWrite()` if the tile is still in read-write mode, i.e. when `doneWrite()` hasn't be called yet.
+
+Figure 3 and 4 show how a non-constant matrix view works.
+![Fig. 3 First example of the matrix view promise-future mechanism for a tile of the matrix object.
+](figures/matrix_view_sync_1.png)
+*Fig. 3 First example of the matrix view promise-future mechanism for a tile of the matrix object.*
+![Fig. 4 Second example of the matrix view promise-future mechanism for a tile of the matrix object.
+](figures/matrix_view_sync_2.png)
+*Fig. 4 Second example of the matrix view promise-future mechanism for a tile of the matrix object.*
 

@@ -1065,7 +1065,7 @@ TYPED_TEST(MatrixTest, CopyFrom) {
 
       mat_dst.copyFrom(mat_src_const);
 
-      CHECK_MATRIX_EQ(input_matrix, mat_dst);
+      CHECK_MATRIX_NEAR(input_matrix, mat_dst, 0, dlaf_test::TypeUtilities<TypeParam>::error);
     }
   }
 }

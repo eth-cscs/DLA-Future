@@ -12,11 +12,16 @@
 
 #include <array>
 #include <sstream>
+#include <utility>
+#include <vector>
 
 #include <gtest/gtest.h>
 
 template <typename IndexType>
 using Index2D = dlaf::common::Index2D<IndexType, struct TAG_TEST>;
+
+template <typename IndexType>
+using Size2D = dlaf::common::Size2D<IndexType, struct TAG_TEST>;
 
 template <typename IndexType>
 class Index2DTest : public ::testing::Test {};
@@ -140,14 +145,29 @@ TYPED_TEST(Index2DTest, ComputeLinearIndex) {
   std::array<dlaf::common::Ordering, 2> orderings{dlaf::common::Ordering::RowMajor,
                                                   dlaf::common::Ordering::ColumnMajor};
 
+  using configs_t = std::pair<Index2D<TypeParam>, std::vector<Size2D<TypeParam>>>;
+  configs_t config{Index2D<TypeParam>(13, 26),
+                   {
+                       Size2D<TypeParam>{13, 26},  // out-of-rows & out-of-cols
+                       Size2D<TypeParam>{13, 39},  // out-of-rows
+                       Size2D<TypeParam>{26, 26},  // out-of-cols
+                   }};
+
   for (const auto& ordering : orderings) {
-    EXPECT_EQ(-1, computeLinearIndex(ordering, Index2D<TypeParam>{13, 26},
-                                     {13, 26}));  // out-of-rows & out-of-cols
-    EXPECT_EQ(-1, computeLinearIndex(ordering, Index2D<TypeParam>{13, 26}, {13, 39}));  // out-of-rows
-    EXPECT_EQ(-1, computeLinearIndex(ordering, Index2D<TypeParam>{13, 26}, {26, 26}));  // out-of-cols
+    const Index2D<TypeParam> index = config.first;
+
+    for (const Size2D<TypeParam>& size : config.second) {
+      EXPECT_EQ(-1, computeLinearIndex(ordering, index, {size.rows(), size.cols()}));
+      EXPECT_EQ(-1, computeLinearIndex(ordering, index, Size2D<TypeParam>(size)));
+    }
   }
 
   EXPECT_EQ(13,
             computeLinearIndex(dlaf::common::Ordering::ColumnMajor, Index2D<TypeParam>{3, 2}, {5, 26}));
+  EXPECT_EQ(13, computeLinearIndex(dlaf::common::Ordering::ColumnMajor, Index2D<TypeParam>{3, 2},
+                                   Size2D<TypeParam>{5, 26}));
+
   EXPECT_EQ(13, computeLinearIndex(dlaf::common::Ordering::RowMajor, Index2D<TypeParam>{2, 3}, {26, 5}));
+  EXPECT_EQ(13, computeLinearIndex(dlaf::common::Ordering::RowMajor, Index2D<TypeParam>{2, 3},
+                                   Size2D<TypeParam>{26, 5}));
 }

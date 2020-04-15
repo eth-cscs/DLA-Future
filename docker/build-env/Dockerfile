@@ -131,7 +131,7 @@ RUN COMPILERVARS_ARCHITECTURE=intel64 . /opt/intel/compilers_and_libraries/linux
     rm -rf /root/lapackpp.tar.gz /root/icl-lapackpp-${LAPACKPP_VERSION}
 
 # Add deployment tooling
-RUN wget -q https://github.com/haampie/bundler/releases/download/v0.1.3/bundler_x86_64.tar.gz && \
-    tar -xzf bundler_x86_64.tar.gz && \
-    rm bundler_x86_64.tar.gz
+RUN wget -q https://github.com/haampie/libtree/releases/download/v1.1.0/libtree_x86_64.tar.gz && \
+    tar -xzf libtree_x86_64.tar.gz && \
+    rm libtree_x86_64.tar.gz
 

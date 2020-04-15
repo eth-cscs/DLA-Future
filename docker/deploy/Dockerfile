@@ -31,28 +31,30 @@ RUN mkdir DLA-Future-build && cd DLA-Future-build && \
       make -j$(nproc) && \
       # Let's just bundle the libs to make the docker image small
       # We have to copy a couple of MKL libs by hand
-      /root/libtree/libtree --strip --chrpath \
+      /root/libtree/libtree \
+        --strip \
+        --chrpath \
         -d /root/DLA-Future.bundle \
         $TEST_BINARIES \
-        ${MKL_LIB}/libmkl_tbb_thread.so \
-        ${MKL_LIB}/libmkl_intel_thread.so \
-        ${MKL_LIB}/libmkl_sequential.so \
-        ${MKL_LIB}/libmkl_def.so \
-        ${MKL_LIB}/libmkl_vml_def.so \
-        ${MKL_LIB}/libmkl_vml_cmpt.so \
-        ${MKL_LIB}/libmkl_mc.so \
-        ${MKL_LIB}/libmkl_vml_mc.so \
-        ${MKL_LIB}/libmkl_mc3.so \
-        ${MKL_LIB}/libmkl_vml_mc3.so \
         ${MKL_LIB}/libmkl_avx.so \
-        ${MKL_LIB}/libmkl_vml_avx.so \
         ${MKL_LIB}/libmkl_avx2.so \
-        ${MKL_LIB}/libmkl_vml_avx2.so \
-        ${MKL_LIB}/libmkl_avx512_mic.so \
-        ${MKL_LIB}/libmkl_vml_avx512_mic.so \
         ${MKL_LIB}/libmkl_avx512.so \
+        ${MKL_LIB}/libmkl_avx512_mic.so \
+        ${MKL_LIB}/libmkl_core.so \
+        ${MKL_LIB}/libmkl_def.so \
+        ${MKL_LIB}/libmkl_intel_thread.so \
+        ${MKL_LIB}/libmkl_mc.so \
+        ${MKL_LIB}/libmkl_mc3.so \
+        ${MKL_LIB}/libmkl_sequential.so \
+        ${MKL_LIB}/libmkl_tbb_thread.so \
+        ${MKL_LIB}/libmkl_vml_avx.so \
+        ${MKL_LIB}/libmkl_vml_avx2.so \
         ${MKL_LIB}/libmkl_vml_avx512.so \
-        ${MKL_LIB}/libmkl_core.so && \
+        ${MKL_LIB}/libmkl_vml_avx512_mic.so \
+        ${MKL_LIB}/libmkl_vml_cmpt.so \
+        ${MKL_LIB}/libmkl_vml_def.so \
+        ${MKL_LIB}/libmkl_vml_mc.so \
+        ${MKL_LIB}/libmkl_vml_mc3.so && \
       rm -rf /DLA-Future
 
 FROM ubuntu:18.04

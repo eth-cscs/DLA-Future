@@ -38,19 +38,15 @@ bool Index2D<IndexT, Tag>::isIn(const Size2D<IndexT, Tag>& boundary) const noexc
          boundary.isValid();
 }
 
-template <class Index2DType, typename LinearIndexT>
-Index2DType computeCoords(Ordering ordering, LinearIndexT index,
-                          const std::array<typename Index2DType::IndexType, 2>& dims) {
-  std::size_t ld_size_index = (ordering == Ordering::RowMajor) ? 1 : 0;
-  auto leading_size = dims[ld_size_index];
-
-  using IndexT = typename Index2DType::IndexType;
-
+/// Compute Index2D of a linear index inside a 2D grid with specified size and ordering
+template <class IndexType, class LinearIndexT, class IndexTag>
+Index2D<IndexType, IndexTag> computeCoords(Ordering ordering, LinearIndexT index,
+                                           const Size2D<IndexType, IndexTag>& dims) {
   switch (ordering) {
     case Ordering::RowMajor:
-      return {static_cast<IndexT>(index / leading_size), static_cast<IndexT>(index % leading_size)};
+      return {static_cast<IndexType>(index / dims.cols()), static_cast<IndexType>(index % dims.cols())};
     case Ordering::ColumnMajor:
-      return {static_cast<IndexT>(index % leading_size), static_cast<IndexT>(index / leading_size)};
+      return {static_cast<IndexType>(index % dims.rows()), static_cast<IndexType>(index / dims.rows())};
   }
 
   throw std::invalid_argument("Ordering specified is not valid.");

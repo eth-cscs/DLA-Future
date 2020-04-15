@@ -60,9 +60,9 @@ RUN mkdir DLA-Future-build && cd DLA-Future-build && \
 FROM ubuntu:18.04
 
 # This is the only thing necessary really from nvidia/cuda's ubuntu18.04 runtime image
-ENV NVIDIA_VISIBLE_DEVICES all
-ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
-ENV NVIDIA_REQUIRE_CUDA "cuda>=10.1 brand=tesla,driver>=384,driver<385 brand=tesla,driver>=396,driver<397 brand=tesla,driver>=410,driver<411"
+#ENV NVIDIA_VISIBLE_DEVICES all
+#ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
+#ENV NVIDIA_REQUIRE_CUDA "cuda>=10.1 brand=tesla,driver>=384,driver<385 brand=tesla,driver>=396,driver<397 brand=tesla,driver>=410,driver<411"
 
 COPY --from=builder /root/DLA-Future.bundle /root/DLA-Future.bundle
 COPY --from=builder /root/run.sh /root/run.sh

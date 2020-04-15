@@ -46,7 +46,7 @@ TEST_F(ReduceTest, ValueOnSingleRank) {
     return;
 
   constexpr int root = 0;
-  constexpr TypeParam value = dlaf_test::TypeUtilities<TypeParam>::element(13, 26);
+  constexpr TypeParam value = TypeUtilities<TypeParam>::element(13, 26);
   TypeParam result = 0;
 
   ASSERT_EQ(alone_world.rank(), root);
@@ -67,9 +67,9 @@ TEST_F(ReduceTest, CArrayOnSingleRank) {
 
   constexpr int root = 0;
   constexpr std::size_t N = 3;
-  constexpr TypeParam input[N] = {dlaf_test::TypeUtilities<TypeParam>::element(0, 1),
-                                  dlaf_test::TypeUtilities<TypeParam>::element(1, 2),
-                                  dlaf_test::TypeUtilities<TypeParam>::element(2, 3)};
+  constexpr TypeParam input[N] = {TypeUtilities<TypeParam>::element(0, 1),
+                                  TypeUtilities<TypeParam>::element(1, 2),
+                                  TypeUtilities<TypeParam>::element(2, 3)};
   TypeParam reduced[N];
 
   ASSERT_EQ(alone_world.rank(), root);
@@ -82,7 +82,7 @@ TEST_F(ReduceTest, CArrayOnSingleRank) {
 
 TEST_F(ReduceTest, Value) {
   const int root = 0;
-  constexpr TypeParam value = dlaf_test::TypeUtilities<TypeParam>::element(13, 26);
+  constexpr TypeParam value = TypeUtilities<TypeParam>::element(13, 26);
   TypeParam result = 0;
 
   sync::reduce(root, world, MPI_SUM, common::make_data(&value, 1), common::make_data(&result, 1));
@@ -97,9 +97,9 @@ TEST_F(ReduceTest, CArray) {
   int root = 1;
 
   constexpr std::size_t N = 3;
-  constexpr TypeParam input[N] = {dlaf_test::TypeUtilities<TypeParam>::element(0, 1),
-                                  dlaf_test::TypeUtilities<TypeParam>::element(1, 2),
-                                  dlaf_test::TypeUtilities<TypeParam>::element(2, 3)};
+  constexpr TypeParam input[N] = {TypeUtilities<TypeParam>::element(0, 1),
+                                  TypeUtilities<TypeParam>::element(1, 2),
+                                  TypeUtilities<TypeParam>::element(2, 3)};
   TypeParam reduced[N];
 
   sync::reduce(root, world, MPI_SUM, common::make_data(input, N), common::make_data(reduced, N));
@@ -115,7 +115,7 @@ TEST_F(ReduceTest, ContiguousToContiguous) {
   static_assert(NUM_MPI_RANKS >= 2, "This test requires at least two ranks");
 
   constexpr int N = 10;
-  constexpr TypeParam value = dlaf_test::TypeUtilities<TypeParam>::element(13, 26);
+  constexpr TypeParam value = TypeUtilities<TypeParam>::element(13, 26);
 
   TypeParam data_A[N];
   TypeParam data_B[N];
@@ -153,7 +153,7 @@ TEST_F(ReduceTest, StridedToContiguous) {
   constexpr int N = nblocks * block_size;
   TypeParam data_contiguous[N];
 
-  constexpr TypeParam value = dlaf_test::TypeUtilities<TypeParam>::element(13, 26);
+  constexpr TypeParam value = TypeUtilities<TypeParam>::element(13, 26);
   for (std::size_t i_block = 0; i_block < nblocks; ++i_block)
     for (std::size_t i_element = 0; i_element < block_size; ++i_element) {
       auto mem_pos = i_block * block_distance + i_element;
@@ -191,7 +191,7 @@ TEST_F(ReduceTest, ContiguousToStrided) {
   constexpr int N = nblocks * block_size;
   TypeParam data_contiguous[N];
 
-  constexpr TypeParam value = dlaf_test::TypeUtilities<TypeParam>::element(13, 26);
+  constexpr TypeParam value = TypeUtilities<TypeParam>::element(13, 26);
   for (auto i = 0; i < N; ++i)
     data_contiguous[i] = value;
 

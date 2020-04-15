@@ -62,13 +62,11 @@ IndexType computeLinearIndex(Ordering ordering, const Index2D<IndexType, IndexTa
   if (!index.isIn(dims))
     return -1;
 
-  auto leading_size = (ordering == Ordering::RowMajor) ? dims.cols() : dims.rows();
-
   switch (ordering) {
     case Ordering::RowMajor:
-      return index.row() * leading_size + index.col();
+      return index.row() * dims.cols() + index.col();
     case Ordering::ColumnMajor:
-      return index.col() * leading_size + index.row();
+      return index.col() * dims.rows() + index.row();
   }
 
   throw std::invalid_argument("Ordering specified is not valid.");

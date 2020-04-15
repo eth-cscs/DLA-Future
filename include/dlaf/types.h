@@ -23,10 +23,6 @@ static_assert(std::is_signed<SizeType>::value && std::is_integral<SizeType>::val
               "SizeType should be a signed integral type");
 static_assert(sizeof(SizeType) >= 4, "SizeType should be >= 32bit");
 
-inline SizeType max(const SizeType a, const SizeType b) {
-  return std::max(a, b);
-}
-
 enum class Device { CPU, GPU };
 
 enum class Backend { MC, GPU };

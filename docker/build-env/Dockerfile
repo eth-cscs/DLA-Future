@@ -70,8 +70,7 @@ RUN wget -q https://github.com/gperftools/gperftools/releases/download/gperftool
     tar -xzf gperftools.tar.gz && \
     cd gperftools-${GPERFTOOLS_VERSION} && \
     ./configure \
-      --prefix=${GPERFTOOLS_PATH} \
-      --with-tcmalloc-pagesize=32 && \
+      --prefix=${GPERFTOOLS_PATH} && \
     make -j$(nproc) && \
     make install && \
     rm -rf /root/gperftools.tar.gz /root/gperftools-${GPERFTOOLS_VERSION}

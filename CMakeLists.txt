@@ -10,7 +10,7 @@
 
 cmake_minimum_required(VERSION 3.12.4)
 
-project(DLAF)
+project(DLAF VERSION 0.1.0)
 
 # ---------------------------------------------------------------------------
 # CMake configurations
@@ -37,8 +37,7 @@ set(CMAKE_CXX_STANDARD 14)
 set(DLAF_WITH_CUDA OFF CACHE BOOL "Enable CUDA support")
 if (DLAF_WITH_CUDA)
   enable_language(CUDA)
-
-  DLAF_addCudaTargets()
+  find_package(CUDALIBS REQUIRED)
 endif()
 
 # ---------------------------------------------------------------------------

@@ -22,7 +22,7 @@ Matrix<T, device>::Matrix(matrix::Distribution&& distribution)
     : Matrix<const T, device>(std::move(distribution), {}, {}) {
   const SizeType alignment = 64;
   const SizeType ld =
-      std::max(1, util::ceilDiv(this->distribution().localSize().rows(), alignment) * alignment);
+      std::max<SizeType>(1, util::ceilDiv(this->distribution().localSize().rows(), alignment) * alignment);
 
   auto layout = matrix::colMajorLayout(this->distribution().localSize(), this->blockSize(), ld);
 

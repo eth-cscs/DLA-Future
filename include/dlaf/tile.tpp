@@ -16,7 +16,7 @@ Tile<const T, device>::Tile(const TileElementSize& size,
   using util::size_t::mul;
   if (!size_.isValid())
     throw std::invalid_argument("Error: Invalid Tile sizes");
-  if (ld_ < std::max(1, size_.rows())) {
+  if (ld_ < std::max<SizeType>(1, size_.rows())) {
     throw std::invalid_argument("Error: Invalid Tile leading dimension");
   }
   if (!size.isEmpty()) {

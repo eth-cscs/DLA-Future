@@ -35,8 +35,8 @@ void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType e
     size_a.transpose();
   TileElementSize size_c(n, n);
 
-  SizeType lda = std::max(1, size_a.rows()) + extra_lda;
-  SizeType ldc = std::max(1, size_c.rows()) + extra_ldc;
+  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
+  SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
 
   std::stringstream s;
   s << "HERK: " << uplo << ", " << op_a;
@@ -101,8 +101,8 @@ void testHerkExceptions(blas::Uplo uplo, blas::Op op_a, const TileElementSize& s
   if (op_a != blas::Op::NoTrans)
     size_a.transpose();
 
-  SizeType lda = std::max(1, size_a.rows()) + extra_lda;
-  SizeType ldc = std::max(1, size_c.rows()) + extra_ldc;
+  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
+  SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
 
   std::stringstream s;
   s << "HERK Exceptions: " << uplo << ", " << op_a;

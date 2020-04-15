@@ -39,31 +39,42 @@ void collector(Communicator& communicator, MPI_Op reduce_operation, const DataIn
     return;
   }
 
-  common::Buffer<T> tmp_mem_input;
-  common::Buffer<T> tmp_mem_output;
+  // Data descriptors used internally, initialized with Data given as parameters,
+  // but they may be replaced internally by contiguous Buffers in case of need
+  common::DataDescriptor<const T> internal_input = input;
+  common::DataDescriptor<T> internal_output = output;
 
-  common::DataDescriptor<const T> tmp_in = input;
-  common::DataDescriptor<T> tmp_out = output;
+  // Buffers not allocated, just placeholders in case we need to allocate them
+  common::Buffer<T> temporary_buffer_in;
+  common::Buffer<T> temporary_buffer_out;
 
   // if input is not contiguous, copy it in a contiguous temporary buffer
   if (!input.is_contiguous()) {
-    tmp_in = tmp_mem_input = common::create_temporary_buffer(tmp_in);
-    common::copy(input, tmp_mem_input);
+    // allocate the temporary buffer
+    temporary_buffer_in = common::create_temporary_buffer(internal_input);
+    // set it as internal intermediate input
+    internal_input = temporary_buffer_in;
+    // copy the data to the internal intermediate buffer
+    common::copy(input, temporary_buffer_in);
   }
 
   // if output is not contiguous, create an intermediate buffer
-  if (!output.is_contiguous())
-    tmp_out = tmp_mem_output = common::create_temporary_buffer(tmp_out);
+  if (!output.is_contiguous()) {
+    // allocate the temporary buffer
+    temporary_buffer_out = common::create_temporary_buffer(internal_output);
+    // and set it as internal intermediate output
+    internal_output = temporary_buffer_out;
+  }
 
-  auto message_input = comm::make_message(std::move(tmp_in));
-  auto message_output = comm::make_message(DataOut(tmp_out));
+  auto message_input = comm::make_message(std::move(internal_input));
+  auto message_output = comm::make_message(DataOut(internal_output));
 
   MPI_Reduce(message_input.data(), message_output.data(), message_input.count(),
              message_input.mpi_type(), reduce_operation, communicator.rank(), communicator);
 
   // if output was not contiguous, copy it back!
   if (!output.is_contiguous())
-    common::copy(tmp_out, output);
+    common::copy(internal_output, output);
 }
 
 /// @brief MPI_Reduce wrapper (receiver side)
@@ -75,17 +86,24 @@ void participant(int rank_root, Communicator& communicator, MPI_Op reduce_operat
                  const DataIn input) {
   using T = std::remove_const_t<typename common::data_traits<DataIn>::element_t>;
 
-  common::Buffer<T> tmp_mem_input;
+  // Data descritpr used internally, initialized from Data given as parameter
+  // it may be switched to the internal temporary buffer in case of need
+  common::DataDescriptor<const T> internal_input = input;
 
-  common::DataDescriptor<const T> tmp_in = input;
+  // Placeholder for a temporary buffer
+  common::Buffer<T> temporary_buffer_in;
 
   // if input is not contiguous, copy it in a contiguous temporary buffer
   if (!input.is_contiguous()) {
-    tmp_in = tmp_mem_input = common::create_temporary_buffer(tmp_in);
-    common::copy(input, tmp_mem_input);
+    // allocate the temporary buffer
+    temporary_buffer_in = common::create_temporary_buffer(internal_input);
+    // set it as internal intermediate input
+    internal_input = temporary_buffer_in;
+    // copy the data to the internal intermediate buffer
+    common::copy(input, temporary_buffer_in);
   }
 
-  auto message_input = comm::make_message(std::move(tmp_in));
+  auto message_input = comm::make_message(std::move(internal_input));
 
   MPI_Reduce(message_input.data(), nullptr, message_input.count(), message_input.mpi_type(),
              reduce_operation, rank_root, communicator);

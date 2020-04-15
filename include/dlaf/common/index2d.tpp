@@ -47,15 +47,14 @@ Index2D<IndexType, IndexTag> computeCoords(Ordering ordering, LinearIndexT index
       return {static_cast<IndexType>(index / dims.cols()), static_cast<IndexType>(index % dims.cols())};
     case Ordering::ColumnMajor:
       return {static_cast<IndexType>(index % dims.rows()), static_cast<IndexType>(index / dims.rows())};
+    default:
+      return {};
   }
-
-  throw std::invalid_argument("Ordering specified is not valid.");
 }
 
 /// Compute linear index of an Index2D
 ///
 /// @return -1 if given index is outside the grid size, otherwise the linear index (w.r.t specified ordering)
-/// @throws std::invalid_argument if ordering is not valid
 template <class IndexType, class IndexTag>
 IndexType computeLinearIndex(Ordering ordering, const Index2D<IndexType, IndexTag>& index,
                              const Size2D<IndexType, IndexTag>& dims) {
@@ -67,9 +66,9 @@ IndexType computeLinearIndex(Ordering ordering, const Index2D<IndexType, IndexTa
       return index.row() * dims.cols() + index.col();
     case Ordering::ColumnMajor:
       return index.col() * dims.rows() + index.row();
+    default:
+      return {};
   }
-
-  throw std::invalid_argument("Ordering specified is not valid.");
 }
 }
 }

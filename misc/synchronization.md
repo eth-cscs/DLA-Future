@@ -366,4 +366,3 @@ Figure 3 and 4 show how a non-constant matrix view works.
 \
 ![Fig. 4b DAG](figures/matrix_view_sync_2_dag.png)\
 *Fig. 4 Second example of the matrix view promise-future mechanism for a tile of the matrix object.*
-

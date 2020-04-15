@@ -47,4 +47,3 @@ The development of DLAF library would not be possible without support of the fol
 |||
 <img height="50" src="./doc/images/logo-prace.jpg"> | [**PRACE**](https://prace-ri.eu/)**: Partnership for Advanced Computing in Europe**<br/>As part of [IP6 WP8](https://prace-ri.eu/about/ip-projects/#PRACE6IP)
 |||
-

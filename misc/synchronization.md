@@ -2,9 +2,9 @@
 
 To simplify the dependency tracking during the generation of the task graph we introduced
 a mechanism which generates automatically the following dependencies:
-- Subsequent tasks that modify (write) values of a tile are ordered, therefore each write
+- Successive tasks that modify (write) values of a tile are ordered, therefore each write
   task depends on the previous write task.
-- Subsequent tasks that only read values a tile can be executed concurrently,
+- Successive tasks that only read values a tile can be executed concurrently,
   however they all depends on the previous write task and the next write task depends on
   the completion of all the read tasks.
 
@@ -13,12 +13,12 @@ a mechanism which generates automatically the following dependencies:
 The Matrix object (`dlaf::matrix::Matrix`) is the object which manage the setup of
 the correct dependencies of the tasks which involve any of its tiles.
 
-Matrix Tiles (`dlaf::matrix::Tile`) can be accessed using two Matrix methods.
+Matrix tiles (`dlaf::matrix::Tile`) can be accessed using two Matrix methods.
 - `operator()` returns a `hpx::future` of a tile containing the requested tile,
 - `read()` returns a copy of a `hpx::shared_future` of a tile with constant elements representing
   the tile (allows only read operations on tile elements).
 
-Subsequent calls to `read()` with the same tile index return a copy of the same `shared_future`
+Successive calls to `read()` with the same tile index return a copy of the same `shared_future`
 if no `operator()` was invoked.
 
 Both the Matrix and the Tile objects are not thread safe. The future mechanism ensures that
@@ -66,20 +66,20 @@ however they cannot be compiled since they are simplified to improve readability
 
 If a task throws an exception during its execution the future returned by the asynchronous call
 contains the given exception.  Moreover any tile that was supposed to be written by the Task will
-be invalidated and any subsequent call to `operator()` and `read()` will return a future containing
-an exception. Note that because of limitations we cannot propagate the correct exception type and
+be invalidated and any successive call to `operator()` and `read()` will return a future containing
+an exception. Note that because of C++ limitations we cannot propagate the correct exception type and
 message to tiles. Therefore they will contain a generic exception.
 
 ## Matrix Views
 
-Matrix Views (`dlaf::matrix::MatrixView`) are objects which allow to schedule the DAG of an
+Matrix Views (`dlaf::matrix::MatrixView`) are objects which allow to schedule a part of the DAG of an
 algorithm in a different task.
 
 It can be created from a Matrix or from another MatrixView which will be indicated as "parent matrix".
 Both constant and non-constant views are available. The main difference is that `operator()`
 is not allowed for constant matrices as only read-only tasks can be performed on its tiles.
 
-When a matrix view is created each subsequent call of `operator()` and `read()` on the parent matrix
+When a matrix view is created each successive call of `operator()` and `read()` on the parent matrix
 will return futures which depend on the tasks scheduled with the futures obtained by the matrix view.
 It can be noted that it is possible to transfer the scheduling on only a part of the tiles.
 Currently it can be specified with the `uplo` parameter if:
@@ -129,7 +129,7 @@ however they cannot be compiled since they are simplified to improve readability
 //
 // Task3 - Task5 ~ Task7
 //
-// Note the that the ~ dependencies include the call to the mv destructor.
+// Note the that the ~ dependencies include the call to the destructor of mv.
 ```
 - Example 2: Basic Usage with `done()`.
 ```
@@ -193,8 +193,9 @@ of the next future is set using the promise which was assigned by the Matrix obj
 Note that the destructor of the Tile contained in the shared future is only called when all
 instances of the shared futures go out of scope, therefore,
 to avoid deadlocks the scope of tile shared futures needs extra care.
+
 Note that returning matrix tiles from tasks may be a source of deadlocks,
-therefore a carefull analysis of dependencies to avoid problems.
+therefore it should be avoided if possible. Otherwise a carefull analysis of the dependencies is needed to avoid problems.
 
 ### Examples advanced use
 
@@ -261,7 +262,7 @@ Tile&& Task1(hpx::future<Tile>&& future) {
 ```
   Matrix m;
 
-  auto future1 = hpx::dataflow(Task1, m({0, 0})));
+  hpx::dataflow(Task1, m({0, 0})));
   auto shared_future = matrix.read({0, 0});
   hpx::dataflow(Task2, shared_future);  // Depends on Task1.
   hpx::dataflow(Task3, m.read({0, 0}));  // Depends on Task1.
@@ -270,11 +271,25 @@ Tile&& Task1(hpx::future<Tile>&& future) {
 
   future4.get();  // DEADLOCK! Task4 is not ready yet, and cannot get ready because the destructor of the Tile in shared_future will not be called.
 ```
+- Example 4 fixed: Deadlock shared future scope.
+```
+  Matrix m;
+
+  hpx::dataflow(Task1, m({0, 0})));
+  {
+  auto shared_future = matrix.read({0, 0});
+  hpx::dataflow(Task2, shared_future);  // Depends on Task1.
+  hpx::dataflow(Task3, m.read({0, 0}));  // Depends on Task1.
+  }  // shared_future goes out of scope here.
+  auto future4 = hpx::dataflow(Task4, m({0, 0}));  // Depends on Task2 and Task3.
+
+  future4.get();  // Task4 may not be ready yet, but it will get ready after the completion of Task4.
+```
 
 ## Implementation details
 
-To explain how the dependencies mechanism works we build the mechanism from simple cases adding
-features one by one.
+To simplify the understanding of the dependencies mechanism we explain it for simple cases and we will add
+other features one by one.
 
 The simplest case includes constant matrices with read-only tiles. In this case only a shared future
 for each tile is needed which is returned by the `read()` operator.
@@ -289,15 +304,16 @@ is kept by the matrix.
 In the general case when the `read()` operator has to be available as well a future and a
 shared future are needed for each tile.
 The usage of the future is the same as in the previous case, with an extra operation: A call to `operator()`
-invalidates the shared future setting it to a default constructed object (red line with cross in the image).
+has to invalidate the shared future (It sets it to a default constructed object (red line with cross in the image)),
+such that when all the tasks complete no copies of the shared future remain and the destructor of the tile is called.
 On the other hand the shared future is the main change to handle the read-only case.
 A call to `read()` first checks if the shared future is valid. If it is not it means that
 a read-write operation was scheduled before and the shared future has to be constructed.
 The mechanism is similar to the one used in `operator()` with the only difference that
-the future contains a tile with constant element ant it is transformed in a shared future.
+the future contains a tile with constant element and it is transformed in a shared future.
 A copy of the shared future is stored in the matrix for successive call to `read()` which simply return
 the stored object.
-Figure 1 shows how the mechanism works, while Figure 2 contains the legend.
+Figure 1 shows how the mechanism works, while Figure 2 contains the legend of the notation used.
 
 ![Fig. 1 Graphical representation of the promise-future mechanism for a tile of the matrix object.
 ](figures/matrix_sync.png)\
@@ -312,7 +328,7 @@ Figure 1 shows how the mechanism works, while Figure 2 contains the legend.
 Extra care has to be used to ensure correct exception handling.
 The tile destructor sets the promise value if it was called during normal execution, while it sets
 an exception when it is called after an exception has been thrown.
-If the future f contains an exception the call to `get()` in the continuation will rethrow the exception,
+If the future contains an exception the call to `get()` in the continuation will rethrow the exception,
 the promise will be destructed and the new future stored in the matrix will have an invalid shared state.
 Therefore the continuations in `operator()` and `read()` have to handle this case.
 

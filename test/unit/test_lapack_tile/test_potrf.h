@@ -36,7 +36,7 @@ void testPotrf(blas::Uplo uplo, SizeType n, SizeType extra_lda) {
   s << ", n = " << n << ", lda = " << lda;
   SCOPED_TRACE(s.str());
 
-  memory::MemoryView<T, Device::CPU> mem_a(lda * size_a.cols());
+  memory::MemoryView<T, Device::CPU> mem_a(util::size_t::mul(lda, size_a.cols()));
 
   // Create tiles.
   Tile<T, Device::CPU> a(size_a, std::move(mem_a), lda);
@@ -97,7 +97,7 @@ void testPotrfArgExceptions(blas::Uplo uplo, TileElementSize size_a, SizeType ex
   s << ", size_a = " << size_a << ", lda = " << lda;
   SCOPED_TRACE(s.str());
 
-  memory::MemoryView<T, Device::CPU> mem_a(lda * size_a.cols());
+  memory::MemoryView<T, Device::CPU> mem_a(util::size_t::mul(lda, size_a.cols()));
 
   // Create tiles.
   Tile<T, Device::CPU> a(size_a, std::move(mem_a), lda);
@@ -121,7 +121,7 @@ void testPotrfNonPosDef(blas::Uplo uplo, SizeType n, SizeType extra_lda) {
   s << ", n = " << n << ", lda = " << lda;
   SCOPED_TRACE(s.str());
 
-  memory::MemoryView<T, Device::CPU> mem_a(lda * size_a.cols());
+  memory::MemoryView<T, Device::CPU> mem_a(util::size_t::mul(lda, size_a.cols()));
 
   // Create tiles.
   Tile<T, Device::CPU> a(size_a, std::move(mem_a), lda);

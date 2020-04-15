@@ -43,8 +43,8 @@ void testTrsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, Si
     << ", lda = " << lda << ", ldb = " << ldb;
   SCOPED_TRACE(s.str());
 
-  memory::MemoryView<T, Device::CPU> mem_a(lda * size_a.cols());
-  memory::MemoryView<T, Device::CPU> mem_b(ldb * size_b.cols());
+  memory::MemoryView<T, Device::CPU> mem_a(util::size_t::mul(lda, size_a.cols()));
+  memory::MemoryView<T, Device::CPU> mem_b(util::size_t::mul(ldb, size_b.cols()));
 
   Tile<T, Device::CPU> a0(size_a, std::move(mem_a), lda);
   Tile<T, Device::CPU> b(size_b, std::move(mem_b), ldb);
@@ -83,8 +83,8 @@ void testTrsmExceptions(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Dia
     << ", size_b = " << size_b << ", lda = " << lda << ", ldb = " << ldb;
   SCOPED_TRACE(s.str());
 
-  memory::MemoryView<T, Device::CPU> mem_a(lda * size_a.cols());
-  memory::MemoryView<T, Device::CPU> mem_b(ldb * size_b.cols());
+  memory::MemoryView<T, Device::CPU> mem_a(util::size_t::mul(lda, size_a.cols()));
+  memory::MemoryView<T, Device::CPU> mem_b(util::size_t::mul(ldb, size_b.cols()));
 
   Tile<CT, Device::CPU> a(size_a, std::move(mem_a), lda);
   Tile<T, Device::CPU> b(size_b, std::move(mem_b), ldb);

@@ -30,7 +30,6 @@ void reduce(int rank_root, Communicator& communicator, MPI_Op reduce_operation, 
   MPI_Reduce(input.data(), output.data(), input.count(), input.mpi_type(), reduce_operation, rank_root,
              communicator);
 }
-
 }
 }
 }

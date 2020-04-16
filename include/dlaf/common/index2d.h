@@ -168,14 +168,6 @@ public:
   }
 };
 
-/// Compute coords of the @p index -th cell in a grid with @p ordering and sizes @p dims
-/// @param ordering specify linear index layout in the grid
-/// @param dims with number of rows at @p dims[0] and number of columns at @p dims[1]
-/// @param index is the linear index of the cell with specified @p ordering
-template <class Index2DType, typename LinearIndexT>
-Index2DType computeCoords(Ordering ordering, LinearIndexT index,
-                          const std::array<typename Index2DType::IndexType, 2>& dims);
-
 }
 }
 

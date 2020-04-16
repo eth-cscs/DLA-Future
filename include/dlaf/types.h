@@ -92,6 +92,16 @@ S to_signed(const U unsigned_value) {
   return static_cast<S>(unsigned_value);
 }
 
+/// Fallback
+template <class S, class SB,
+          std::enable_if_t<std::is_integral<SB>::value && std::is_signed<SB>::value &&
+                               std::is_integral<S>::value && std::is_signed<S>::value,
+                           int> = 0>
+S to_signed(const SB value) {
+  assert(std::numeric_limits<S>::max() > value);
+  return static_cast<S>(value);
+}
+
 /// Cast from signed to unsigned integer types
 ///
 /// It performs the cast checking if the given signed value is greater than 0 and if the destination type
@@ -104,6 +114,16 @@ U to_unsigned(const S signed_value) {
   assert(signed_value >= 0);
   assert(std::numeric_limits<U>::max() >= static_cast<std::size_t>(signed_value));
   return static_cast<U>(signed_value);
+}
+
+/// Fallback
+template <class U, class UB,
+          std::enable_if_t<std::is_integral<U>::value && std::is_unsigned<U>::value &&
+                               std::is_integral<UB>::value && std::is_unsigned<UB>::value,
+                           int> = 0>
+U to_unsigned(const UB unsigned_value) {
+  assert(std::numeric_limits<U>::max() >= static_cast<std::size_t>(unisgned_value));
+  return static_cast<U>(unsigned_value);
 }
 
 /// Helper function for casting from unsigned to dlaf::SizeType

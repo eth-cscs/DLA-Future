@@ -8,6 +8,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include "dlaf/common/assert.h"
+#include "dlaf/types.h"
+#include "dlaf/util_math.h"
+
 namespace dlaf {
 namespace common {
 
@@ -38,37 +42,74 @@ bool Index2D<IndexT, Tag>::isIn(const Size2D<IndexT, Tag>& boundary) const noexc
          boundary.isValid();
 }
 
-/// Compute Index2D of a linear index inside a 2D grid with specified size and ordering
-template <class IndexType, class LinearIndexT, class IndexTag>
-Index2D<IndexType, IndexTag> computeCoords(Ordering ordering, LinearIndexT index,
-                                           const Size2D<IndexType, IndexTag>& dims) {
+/// Compute coords of the @p index -th cell in a grid with @p ordering and sizes @p dims
+///
+/// @param ordering specify linear index layout in the grid
+/// @param dims Size2D matching with the given Index2D (same type and tag)
+/// @param index is the linear index of the cell with specified @p ordering
+template <class IndexT, class Tag, class LinearIndexT>
+Index2D<IndexT, Tag> computeCoords(Ordering ordering, LinearIndexT linear_index,
+                                   const Size2D<IndexT, Tag>& dims) noexcept {
+  static_assert(std::is_integral<LinearIndexT>::value, "linear_index must be an integral type");
+
+  using dlaf::util::size_t::mul;
+
+  using UIndexT = std::make_unsigned_t<IndexT>;
+  using ULinearIndexT = std::make_unsigned_t<LinearIndexT>;
+
+  DLAF_ASSERT_HEAVY(linear_index >= 0, "The linear index cannot be negative (", linear_index, ")");
+  DLAF_ASSERT_HEAVY(linear_index < mul(dims.rows(), dims.cols()), "Linear index ", linear_index,
+                    " does not fit into grid ", dims);
+
+  ULinearIndexT linear_uindex = static_cast<ULinearIndexT>(linear_index);
+  UIndexT leading_size =
+      static_cast<UIndexT>(ordering == Ordering::ColumnMajor ? dims.rows() : dims.cols());
+
+  Index2D<IndexT, Tag> index;
   switch (ordering) {
     case Ordering::RowMajor:
-      return {static_cast<IndexType>(index / dims.cols()), static_cast<IndexType>(index % dims.cols())};
+      index = {to_signed<IndexT>(linear_uindex / leading_size),
+               to_signed<IndexT>(linear_uindex % leading_size)};
+      break;
     case Ordering::ColumnMajor:
-      return {static_cast<IndexType>(index % dims.rows()), static_cast<IndexType>(index / dims.rows())};
+      index = {to_signed<IndexT>(linear_uindex % leading_size),
+               to_signed<IndexT>(linear_uindex / leading_size)};
+      break;
     default:
       return {};
   }
+
+  if (!index.isIn(dims))
+    return {};
+
+  return index;
 }
 
 /// Compute linear index of an Index2D
 ///
 /// @return -1 if given index is outside the grid size, otherwise the linear index (w.r.t specified ordering)
-template <class IndexType, class IndexTag>
-IndexType computeLinearIndex(Ordering ordering, const Index2D<IndexType, IndexTag>& index,
-                             const Size2D<IndexType, IndexTag>& dims) {
+template <class IndexT, class Tag>
+IndexT computeLinearIndex(Ordering ordering, const Index2D<IndexT, Tag>& index,
+                          const Size2D<IndexT, Tag>& dims) noexcept {
+  using namespace dlaf::util::size_t;
+
   if (!index.isIn(dims))
     return -1;
 
+  std::size_t linear_index;
+
   switch (ordering) {
     case Ordering::RowMajor:
-      return index.row() * dims.cols() + index.col();
+      linear_index = sum(mul(index.row(), dims.cols()), index.col());
+      break;
     case Ordering::ColumnMajor:
-      return index.col() * dims.rows() + index.row();
+      linear_index = sum(mul(index.col(), dims.rows()), index.row());
+      break;
     default:
       return {};
   }
+
+  return to_signed<IndexT>(linear_index);
 }
 }
 }

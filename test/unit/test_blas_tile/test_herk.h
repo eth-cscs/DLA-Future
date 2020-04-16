@@ -27,6 +27,8 @@ using namespace dlaf::matrix::test;
 using namespace dlaf_test;
 using namespace testing;
 
+using dlaf::util::size_t::mul;
+
 template <class T, class CT = const T>
 void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType extra_lda,
               SizeType extra_ldc) {
@@ -44,8 +46,8 @@ void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType e
   s << ", lda = " << lda << ", ldc = " << ldc;
   SCOPED_TRACE(s.str());
 
-  memory::MemoryView<T, Device::CPU> mem_a(util::size_t::mul(lda, size_a.cols()));
-  memory::MemoryView<T, Device::CPU> mem_c(util::size_t::mul(ldc, size_c.cols()));
+  memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
+  memory::MemoryView<T, Device::CPU> mem_c(mul(ldc, size_c.cols()));
 
   Tile<T, Device::CPU> a0(size_a, std::move(mem_a), lda);
   Tile<T, Device::CPU> c(size_c, std::move(mem_c), ldc);
@@ -110,8 +112,8 @@ void testHerkExceptions(blas::Uplo uplo, blas::Op op_a, const TileElementSize& s
   s << ", lda = " << lda << ", ldc = " << ldc;
   SCOPED_TRACE(s.str());
 
-  memory::MemoryView<T, Device::CPU> mem_a(util::size_t::mul(lda, size_a.cols()));
-  memory::MemoryView<T, Device::CPU> mem_c(util::size_t::mul(ldc, size_c.cols()));
+  memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
+  memory::MemoryView<T, Device::CPU> mem_c(mul(ldc, size_c.cols()));
 
   Tile<CT, Device::CPU> a(size_a, std::move(mem_a), lda);
   Tile<T, Device::CPU> c(size_c, std::move(mem_c), ldc);

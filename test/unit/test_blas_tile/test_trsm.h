@@ -29,6 +29,8 @@ using namespace dlaf::matrix::test;
 using namespace dlaf_test;
 using namespace testing;
 
+using dlaf::util::size_t::mul;
+
 template <class ElementIndex, class T, class CT = const T>
 void testTrsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, SizeType m, SizeType n,
               SizeType extra_lda, SizeType extra_ldb) {
@@ -43,8 +45,8 @@ void testTrsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, Si
     << ", lda = " << lda << ", ldb = " << ldb;
   SCOPED_TRACE(s.str());
 
-  memory::MemoryView<T, Device::CPU> mem_a(util::size_t::mul(lda, size_a.cols()));
-  memory::MemoryView<T, Device::CPU> mem_b(util::size_t::mul(ldb, size_b.cols()));
+  memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
+  memory::MemoryView<T, Device::CPU> mem_b(mul(ldb, size_b.cols()));
 
   Tile<T, Device::CPU> a0(size_a, std::move(mem_a), lda);
   Tile<T, Device::CPU> b(size_b, std::move(mem_b), ldb);
@@ -83,8 +85,8 @@ void testTrsmExceptions(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Dia
     << ", size_b = " << size_b << ", lda = " << lda << ", ldb = " << ldb;
   SCOPED_TRACE(s.str());
 
-  memory::MemoryView<T, Device::CPU> mem_a(util::size_t::mul(lda, size_a.cols()));
-  memory::MemoryView<T, Device::CPU> mem_b(util::size_t::mul(ldb, size_b.cols()));
+  memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
+  memory::MemoryView<T, Device::CPU> mem_b(mul(ldb, size_b.cols()));
 
   Tile<CT, Device::CPU> a(size_a, std::move(mem_a), lda);
   Tile<T, Device::CPU> b(size_b, std::move(mem_b), ldb);

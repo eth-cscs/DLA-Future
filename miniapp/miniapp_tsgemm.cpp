@@ -13,12 +13,11 @@
 #include <dlaf/communication/message.h>
 #include <dlaf/matrix.h>
 
-#include <hpx/dataflow.hpp>
+#include <hpx/async/dataflow.hpp>
+#include <hpx/execution/executors/pool_executor.hpp>  // > HPX v.1.4.1
 #include <hpx/hpx.hpp>
 #include <hpx/include/resource_partitioner.hpp>
 #include <hpx/include/threads.hpp>
-#include <hpx/runtime/threads/executors/pool_executor.hpp>
-//#include <hpx/execution/executors/pool_executor.hpp> // > HPX v.1.4.1
 
 #ifdef DLAF_WITH_MPI_FUTURES
 #include <hpx/mpi/mpi_executor.hpp>
@@ -81,8 +80,7 @@ using hpx::program_options::options_description;
 #ifdef DLAF_WITH_MPI_FUTURES
 using ExecutorType = hpx::mpi::executor;
 #else
-using ExecutorType = hpx::threads::executors::pool_executor;
-// using ExecutorType = hpx::parallel::execution::pool_executor; // > HPX v.1.4.1
+using ExecutorType = hpx::parallel::execution::pool_executor;
 #endif
 
 void sirius_gemm(int batch_size, ExecutorType const& mpi_executor, CommunicatorGrid& comm_grid,
@@ -153,7 +151,10 @@ int hpx_main(::variables_map& vm) {
 
   // Initialize matrices
   init_matrix(a_mat, ::ScalarType(1));
+  std::cout << "Step #1\n" << std::endl;
   init_matrix(b_mat, ::ScalarType(2));
+
+  std::cout << "Step #2" << std::endl;
 
   // 1. John's branch                               (mpi_futures)
   // 2. MPI pool with a single core                 (mpi_pool)

@@ -25,6 +25,7 @@ RUN mkdir DLA-Future-build && cd DLA-Future-build && \
       -DMPIEXEC_NUMCORES=32 \
       -DMPIEXEC_EXECUTABLE=srun \
       -DMPIEXEC_PREFLAGS="--jobid=\$JOBID;unbuffer;sarus;run;-t;--mpi;\$IMAGE" \
+      -DMPIEXEC_POSTFLAGS="-Ihpx.stacks.small_size=0x80000" \
       -DCMAKE_INSTALL_PREFIX=/usr && \
       source /DLA-Future/ci/sarusify.sh && \
       echo "$SARUS_TEST_COMMANDS" > /root/run.sh && \

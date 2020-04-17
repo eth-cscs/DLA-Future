@@ -11,5 +11,3 @@ while IFS= read -r binary; do
     short=`basename "$binary"`
     SARUS_TEST_COMMANDS=`sed "s|$binary|$short|g" <<< "$SARUS_TEST_COMMANDS"`
 done <<< "$TEST_BINARIES"
-
-

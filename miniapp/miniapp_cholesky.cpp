@@ -58,7 +58,7 @@ using ConstTileType = dlaf::Tile<const T, Device::CPU>;
 /// this function checks that A == L * L'
 void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid);
 
-enum class DO_CHECK { NONE, LAST, ALL };
+enum class CHECK_RESULT { NONE, LAST, ALL };
 
 struct options_t {
   SizeType m;
@@ -66,7 +66,7 @@ struct options_t {
   int grid_rows;
   int grid_cols;
   int64_t nruns;
-  DO_CHECK do_check;
+  CHECK_RESULT do_check;
 };
 
 /// Handle CLI options
@@ -131,8 +131,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
                 << hpx::get_os_thread_count() << std::endl;
 
     // (optional) run test
-    if (opts.do_check != DO_CHECK::NONE) {
-      if (opts.do_check == DO_CHECK::LAST && run_index != (opts.nruns - 1))
+    if (opts.do_check != CHECK_RESULT::NONE) {
+      if (opts.do_check == CHECK_RESULT::LAST && run_index != (opts.nruns - 1))
         continue;
 
       // TODO this should be a clone of the original one
@@ -457,7 +457,7 @@ options_t check_options(hpx::program_options::variables_map& vm) {
       vm["matrix-size"].as<SizeType>(), vm["block-size"].as<SizeType>(),
       vm["grid-rows"].as<int>(),        vm["grid-cols"].as<int>(),
 
-      vm["nruns"].as<int64_t>(),        DO_CHECK::NONE,
+      vm["nruns"].as<int64_t>(),        CHECK_RESULT::NONE,
   };
 
   if (opts.m <= 0)
@@ -473,17 +473,17 @@ options_t check_options(hpx::program_options::variables_map& vm) {
   const std::string check_type = vm["check-result"].as<std::string>();
 
   if (check_type.compare("all") == 0)
-    opts.do_check = DO_CHECK::ALL;
+    opts.do_check = CHECK_RESULT::ALL;
   else if (check_type.compare("last") == 0)
-    opts.do_check = DO_CHECK::LAST;
+    opts.do_check = CHECK_RESULT::LAST;
   else if (check_type.compare("") != 0)
     throw std::runtime_error(check_type + " is not a valid value for check-result");
 
-  if (opts.do_check != DO_CHECK::NONE && opts.m % opts.mb) {
+  if (opts.do_check != CHECK_RESULT::NONE && opts.m % opts.mb) {
     std::cerr
         << "Warning! At the moment result checking works just with matrix sizes that are multiple of the block size."
         << std::endl;
-    opts.do_check = DO_CHECK::NONE;
+    opts.do_check = CHECK_RESULT::NONE;
   }
 
   return opts;

@@ -36,13 +36,13 @@ void cholesky_L(Matrix<T, Device::CPU>& mat_a) {
   constexpr auto Right = blas::Side::Right;
   constexpr auto Lower = blas::Uplo::Lower;
 
+  using hpx::threads::executors::pool_executor;
+
   // Set up executor on the default queue with high priority.
-  hpx::threads::scheduled_executor executor_hp =
-      hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_high);
+  pool_executor executor_hp("default", hpx::threads::thread_priority_high);
 
   // Set up executor on the default queue with default priority.
-  hpx::threads::scheduled_executor executor_normal =
-      hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_default);
+  pool_executor executor_normal("default", hpx::threads::thread_priority_default);
 
   // Number of tile (rows = cols)
   SizeType nrtile = mat_a.nrTiles().cols();
@@ -91,16 +91,17 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
   constexpr auto Right = blas::Side::Right;
   constexpr auto Lower = blas::Uplo::Lower;
 
-  // Set up executor on the default queue with high priority.
-  hpx::threads::scheduled_executor executor_hp =
-      hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_high);
-  // Set up executor on the default queue with default priority.
-  hpx::threads::scheduled_executor executor_normal =
-      hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_default);
+  using hpx::threads::executors::pool_executor;
 
-  hpx::threads::scheduled_executor executor_mpi;
+  // Set up executor on the default queue with high priority.
+  pool_executor executor_hp("default", hpx::threads::thread_priority_high);
+  // Set up executor on the default queue with default priority.
+  pool_executor executor_normal("default", hpx::threads::thread_priority_default);
+
+  // Workaround: for lack of API for this in HPX yet.
+  hpx::parallel::execution::thread_pool_executor executor_mpi;
   try {
-    executor_mpi = hpx::threads::executors::pool_executor("mpi", hpx::threads::thread_priority_high);
+    executor_mpi = pool_executor("mpi", hpx::threads::thread_priority_high);
   }
   catch (...) {
     executor_mpi = executor_hp;

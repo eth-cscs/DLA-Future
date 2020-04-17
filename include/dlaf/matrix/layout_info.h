@@ -147,7 +147,7 @@ inline LayoutInfo tileLayout(const matrix::Distribution& distribution, SizeType 
 
 /// Returns LayoutInfo for a local matrix which use the tile layout (Basic interface).
 inline LayoutInfo tileLayout(const LocalElementSize& size, const TileElementSize& block_size) {
-  SizeType ld = std::max(1, block_size.rows());
+  SizeType ld = std::max<SizeType>(1, block_size.rows());
   SizeType tiles_per_col = util::ceilDiv(size.rows(), block_size.rows());
   return tileLayout(size, block_size, ld, tiles_per_col);
 }

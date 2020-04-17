@@ -29,22 +29,24 @@ using namespace dlaf::matrix::test;
 using namespace dlaf_test;
 using namespace testing;
 
+using dlaf::util::size_t::mul;
+
 template <class ElementIndex, class T, class CT = const T>
 void testTrsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, SizeType m, SizeType n,
               SizeType extra_lda, SizeType extra_ldb) {
   TileElementSize size_a = side == blas::Side::Left ? TileElementSize(m, m) : TileElementSize(n, n);
   TileElementSize size_b(m, n);
 
-  SizeType lda = std::max(1, size_a.rows()) + extra_lda;
-  SizeType ldb = std::max(1, size_b.rows()) + extra_ldb;
+  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
+  SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
 
   std::stringstream s;
   s << "TRSM: " << side << ", " << uplo << ", " << op << ", " << diag << ", m = " << m << ", n = " << n
     << ", lda = " << lda << ", ldb = " << ldb;
   SCOPED_TRACE(s.str());
 
-  memory::MemoryView<T, Device::CPU> mem_a(lda * size_a.cols());
-  memory::MemoryView<T, Device::CPU> mem_b(ldb * size_b.cols());
+  memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
+  memory::MemoryView<T, Device::CPU> mem_b(mul(ldb, size_b.cols()));
 
   Tile<T, Device::CPU> a0(size_a, std::move(mem_a), lda);
   Tile<T, Device::CPU> b(size_b, std::move(mem_b), ldb);
@@ -75,16 +77,16 @@ template <class T, class CT = const T>
 void testTrsmExceptions(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag,
                         const TileElementSize& size_a, const TileElementSize& size_b, SizeType extra_lda,
                         SizeType extra_ldb) {
-  SizeType lda = std::max(1, size_a.rows()) + extra_lda;
-  SizeType ldb = std::max(1, size_b.rows()) + extra_ldb;
+  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
+  SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
 
   std::stringstream s;
   s << "TRSM: " << side << ", " << uplo << ", " << op << ", " << diag << ", size_a = " << size_a
     << ", size_b = " << size_b << ", lda = " << lda << ", ldb = " << ldb;
   SCOPED_TRACE(s.str());
 
-  memory::MemoryView<T, Device::CPU> mem_a(lda * size_a.cols());
-  memory::MemoryView<T, Device::CPU> mem_b(ldb * size_b.cols());
+  memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
+  memory::MemoryView<T, Device::CPU> mem_b(mul(ldb, size_b.cols()));
 
   Tile<CT, Device::CPU> a(size_a, std::move(mem_a), lda);
   Tile<T, Device::CPU> b(size_b, std::move(mem_b), ldb);

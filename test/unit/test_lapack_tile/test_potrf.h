@@ -25,18 +25,20 @@ using namespace dlaf::matrix::test;
 using namespace dlaf_test;
 using namespace testing;
 
+using dlaf::util::size_t::mul;
+
 template <class T, bool return_info>
 void testPotrf(blas::Uplo uplo, SizeType n, SizeType extra_lda) {
   TileElementSize size_a = TileElementSize(n, n);
 
-  SizeType lda = std::max(1, size_a.rows()) + extra_lda;
+  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
 
   std::stringstream s;
   s << "POTRF: " << uplo;
   s << ", n = " << n << ", lda = " << lda;
   SCOPED_TRACE(s.str());
 
-  memory::MemoryView<T, Device::CPU> mem_a(lda * size_a.cols());
+  memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
 
   // Create tiles.
   Tile<T, Device::CPU> a(size_a, std::move(mem_a), lda);
@@ -90,14 +92,14 @@ void testPotrf(blas::Uplo uplo, SizeType n, SizeType extra_lda) {
 
 template <class T, bool return_info>
 void testPotrfArgExceptions(blas::Uplo uplo, TileElementSize size_a, SizeType extra_lda) {
-  SizeType lda = std::max(1, size_a.rows()) + extra_lda;
+  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
 
   std::stringstream s;
   s << "POTRF Arguments Exceptions: " << uplo;
   s << ", size_a = " << size_a << ", lda = " << lda;
   SCOPED_TRACE(s.str());
 
-  memory::MemoryView<T, Device::CPU> mem_a(lda * size_a.cols());
+  memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
 
   // Create tiles.
   Tile<T, Device::CPU> a(size_a, std::move(mem_a), lda);
@@ -114,14 +116,14 @@ template <class T, bool return_info>
 void testPotrfNonPosDef(blas::Uplo uplo, SizeType n, SizeType extra_lda) {
   TileElementSize size_a = TileElementSize(n, n);
 
-  SizeType lda = std::max(1, size_a.rows()) + extra_lda;
+  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
 
   std::stringstream s;
   s << "POTRF Non Positive Definite: " << uplo;
   s << ", n = " << n << ", lda = " << lda;
   SCOPED_TRACE(s.str());
 
-  memory::MemoryView<T, Device::CPU> mem_a(lda * size_a.cols());
+  memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
 
   // Create tiles.
   Tile<T, Device::CPU> a(size_a, std::move(mem_a), lda);

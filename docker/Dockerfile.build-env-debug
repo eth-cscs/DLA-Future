@@ -101,7 +101,7 @@ RUN wget -q https://github.com/STEllAR-GROUP/hpx/archive/${HPX_MAJOR}.${HPX_MINO
       -DHPX_WITH_NETWORKING=OFF \
       -DHPX_WITH_TESTS=OFF \
       -DHPX_WITH_EXAMPLES=OFF && \
-    make VERBOSE=1 -j$(nproc) && \
+    make -j$(nproc) && \
     make install && \
     rm -rf /root/hpx.tar.gz /root/hpx-${HPX_MAJOR}.${HPX_MINOR}.${HPX_PATCH}
 

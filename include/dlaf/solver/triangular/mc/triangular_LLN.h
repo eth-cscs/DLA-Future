@@ -35,13 +35,13 @@ void triangular_LLN(blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_
   constexpr auto Lower = blas::Uplo::Lower;
   constexpr auto NoTrans = blas::Op::NoTrans;
 
+  using hpx::threads::executors::pool_executor;
+
   // Set up executor on the default queue with high priority.
-  hpx::threads::scheduled_executor executor_hp =
-      hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_high);
+  pool_executor executor_hp("default", hpx::threads::thread_priority_high);
 
   // Set up executor on the default queue with default priority.
-  hpx::threads::scheduled_executor executor_normal =
-      hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_default);
+  pool_executor executor_normal("default", hpx::threads::thread_priority_default);
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -77,18 +77,18 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
   constexpr auto Lower = blas::Uplo::Lower;
   constexpr auto NoTrans = blas::Op::NoTrans;
 
+  using hpx::threads::executors::pool_executor;
+
   // Set up executor on the default queue with high priority.
-  hpx::threads::scheduled_executor executor_hp =
-      hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_high);
+  pool_executor executor_hp("default", hpx::threads::thread_priority_high);
 
   // Set up executor on the default queue with default priority.
-  hpx::threads::scheduled_executor executor_normal =
-      hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_default);
+  pool_executor executor_normal("default", hpx::threads::thread_priority_default);
 
   // Set up mpi executor
-  hpx::threads::scheduled_executor executor_mpi;
+  hpx::parallel::execution::thread_pool_executor executor_mpi;
   try {
-    executor_mpi = hpx::threads::executors::pool_executor("mpi", hpx::threads::thread_priority_high);
+    executor_mpi = pool_executor("mpi", hpx::threads::thread_priority_high);
   }
   catch (...) {
     executor_mpi = executor_hp;

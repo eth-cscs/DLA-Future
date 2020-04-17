@@ -89,7 +89,7 @@ public:
 
   /// Adds "(<row_>, <col_>)" to out.
   friend std::ostream& operator<<(std::ostream& out, const basic_coords& index) {
-    if (std::is_same<IndexT, signed char>::value) {
+    if (std::is_same<IndexT, signed char>::value || std::is_same<IndexT, char>::value) {
       return out << "(" << static_cast<int>(index.row_) << ", " << static_cast<int>(index.col_) << ")";
     }
     return out << "(" << index.row_ << ", " << index.col_ << ")";

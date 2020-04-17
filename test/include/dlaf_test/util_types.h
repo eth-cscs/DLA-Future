@@ -22,18 +22,18 @@ using MatrixElementTypes = ::testing::Types<float, double, std::complex<float>, 
 template <class T>
 struct TypeUtilities {
   /// @brief Returns r.
-  static T element(double r, double /* i */) {
+  static constexpr T element(double r, double /* i */) {
     return static_cast<T>(r);
   }
 
   /// @brief Returns r.
   /// @pre r > 0
-  static T polar(double r, double /* theta */) {
+  static constexpr T polar(double r, double /* theta */) {
     return static_cast<T>(r);
   }
 
   /// @brief Returns val.
-  static T conj(T val) {
+  static constexpr T conj(T val) {
     return val;
   }
 
@@ -42,20 +42,23 @@ struct TypeUtilities {
 };
 
 template <class T>
+constexpr T TypeUtilities<T>::error;
+
+template <class T>
 struct TypeUtilities<std::complex<T>> {
   /// @brief Returns r + I * i (I is the imaginary unit).
-  static std::complex<T> element(double r, double i) {
+  static constexpr std::complex<T> element(double r, double i) {
     return std::complex<T>(static_cast<T>(r), static_cast<T>(i));
   }
 
   /// @brief Returns r * (cos(theta) + I * sin(theta)) (I is the imaginary unit).
   /// @pre r > 0
-  static std::complex<T> polar(double r, double theta) {
+  static constexpr std::complex<T> polar(double r, double theta) {
     return std::polar<T>(static_cast<T>(r), static_cast<T>(theta));
   }
 
   /// @brief Returns std::conj(val).
-  static std::complex<T> conj(std::complex<T> val) {
+  static constexpr std::complex<T> conj(std::complex<T> val) {
     return std::conj(val);
   }
 
@@ -63,4 +66,6 @@ struct TypeUtilities<std::complex<T>> {
   static constexpr T error = 8 * std::numeric_limits<T>::epsilon();
 };
 
+template <class T>
+constexpr T TypeUtilities<std::complex<T>>::error;
 }

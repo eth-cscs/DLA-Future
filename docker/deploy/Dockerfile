@@ -17,7 +17,7 @@ RUN mkdir DLA-Future-build && cd DLA-Future-build && \
     CC=/usr/local/mpich/bin/mpicc CXX=/usr/local/mpich/bin/mpicxx cmake /DLA-Future \
       -DMKL_ROOT=/opt/intel/compilers_and_libraries/linux/mkl \
       -DCMAKE_BUILD_TYPE=Release \
-      -DDLAF_WITH_CUDA=ON \
+      -DDLAF_WITH_CUDA=OFF \
       -DDLAF_WITH_MKL=ON \
       -DDLAF_WITH_TEST=ON \
       -DDLAF_BUILD_MINIAPPS=OFF \
@@ -59,17 +59,12 @@ RUN mkdir DLA-Future-build && cd DLA-Future-build && \
 
 FROM ubuntu:18.04
 
-# This is the only thing necessary really from nvidia/cuda's ubuntu18.04 runtime image
-#ENV NVIDIA_VISIBLE_DEVICES all
-#ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
-#ENV NVIDIA_REQUIRE_CUDA "cuda>=10.1 brand=tesla,driver>=384,driver<385 brand=tesla,driver>=396,driver<397 brand=tesla,driver>=410,driver<411"
-
 COPY --from=builder /root/DLA-Future.bundle /root/DLA-Future.bundle
 COPY --from=builder /root/run.sh /root/run.sh
 
 # Make it easy to call our binaries.
 ENV PATH="/root/DLA-Future.bundle/usr/bin:$PATH"
 
-RUN echo "/root/DLA-Future.bundle/usr/lib/" > /etc/ld.so.conf.d/cosma.conf && ldconfig
+RUN echo "/root/DLA-Future.bundle/usr/lib/" > /etc/ld.so.conf.d/dlaf.conf && ldconfig
 
 WORKDIR /root/DLA-Future.bundle/usr/bin

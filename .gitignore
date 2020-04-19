@@ -5,6 +5,7 @@ build*
 .ptp-sync-folder
 .vscode/
 !build.sh
+.clangd
 
 
 # ------------------- C++

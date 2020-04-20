@@ -14,7 +14,9 @@ SHELL ["/bin/bash", "-c"]
 RUN mkdir DLA-Future-build && cd DLA-Future-build && \
     CC=/usr/local/mpich/bin/mpicc CXX=/usr/local/mpich/bin/mpicxx cmake /DLA-Future \
       -DCMAKE_BUILD_TYPE=Debug \
-      -DCMAKE_CXX_FLAGS_DEBUG="-g -Og -fno-omit-frame-pointer" \
+      -DCMAKE_CXX_FLAGS_DEBUG="-g -Og" \
+      -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer" \
+      -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address" \
       -DLAPACK_CUSTOM_TYPE=Custom \
       -DLAPACK_CUSTOM_INCLUDE_DIR=/usr/local/include \
       -DLAPACK_CUSTOM_LIBRARY=openblas \
@@ -46,10 +48,6 @@ COPY --from=builder /root/run.sh /root/run.sh
 # Make it easy to call our binaries.
 ENV PATH="/root/DLA-Future.bundle/usr/bin:$PATH"
 
-# Automatically print stacktraces on segfault
-ENV LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so
-
 RUN echo "/root/DLA-Future.bundle/usr/lib/" > /etc/ld.so.conf.d/dlaf.conf && ldconfig
 
-WORKDIR /root/DLA-Future.bundle/usr/bin 
-
+WORKDIR /root/DLA-Future.bundle/usr/bin

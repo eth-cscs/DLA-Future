@@ -151,10 +151,7 @@ int hpx_main(::variables_map& vm) {
 
   // Initialize matrices
   init_matrix(a_mat, ::ScalarType(1));
-  std::cout << "Step #1\n" << std::endl;
   init_matrix(b_mat, ::ScalarType(2));
-
-  std::cout << "Step #2" << std::endl;
 
   // 1. John's branch                               (mpi_futures)
   // 2. MPI pool with a single core                 (mpi_pool)

@@ -1038,7 +1038,7 @@ TYPED_TEST(MatrixTest, FromTileConst) {
 TYPED_TEST(MatrixTest, CopyFrom) {
   using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
   using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
-  using MatrixConstT = dlaf::Matrix<TypeParam, Device::CPU>;
+  using MatrixConstT = dlaf::Matrix<const TypeParam, Device::CPU>;
 
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
@@ -1066,7 +1066,7 @@ TYPED_TEST(MatrixTest, CopyFrom) {
       dlaf::matrix::util::set(mat_dst,
                               [](const auto&) { return TypeUtilities<TypeParam>::element(13, 26); });
 
-      mat_dst.copyFrom(mat_src_const);
+      copy(mat_src_const, mat_dst);
 
       CHECK_MATRIX_NEAR(input_matrix, mat_dst, 0, TypeUtilities<TypeParam>::error);
     }

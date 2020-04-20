@@ -12,6 +12,7 @@
 #include <exception>
 #include <vector>
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/layout_info.h"
 #include "dlaf/matrix/matrix_base.h"
@@ -357,19 +358,10 @@ void copy(MatrixTypeSrc<Tsrc, Device::CPU>& source, MatrixTypeDst<Tdst, Device::
   const SizeType local_tile_rows = distribution.localNrTiles().rows();
   const SizeType local_tile_cols = distribution.localNrTiles().cols();
 
-  auto copy_func = hpx::util::unwrapping([](auto&& tile_dst, auto&& tile_src) {
-    for (SizeType j = 0; j < tile_src.size().cols(); ++j)
-      for (SizeType i = 0; i < tile_src.size().rows(); ++i) {
-        TileElementIndex index(i, j);
-        tile_dst(index) = tile_src(index);
-      }
-  });
-
-  for (SizeType j = 0; j < local_tile_cols; ++j) {
-    for (SizeType i = 0; i < local_tile_rows; ++i) {
-      hpx::dataflow(copy_func, dest(LocalTileIndex(i, j)), source.read(LocalTileIndex(i, j)));
-    }
-  }
+  for (SizeType j = 0; j < local_tile_cols; ++j)
+    for (SizeType i = 0; i < local_tile_rows; ++i)
+      hpx::dataflow(hpx::util::unwrapping(dlaf::tile::lacpy<Tdst>), source.read(LocalTileIndex(i, j)),
+                    dest(LocalTileIndex(i, j)));
 }
 
 /// ---- ETI

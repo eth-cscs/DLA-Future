@@ -36,6 +36,16 @@ namespace tile {
 template <class T, Device device>
 void potrf(blas::Uplo uplo, const Tile<T, device>& a);
 
+/// Copy
+template <class T>
+void lacpy(const Tile<const T, Device::CPU>& src, const Tile<T, Device::CPU>& dst) {
+  SizeType m = src.size().rows();
+  SizeType n = src.size().cols();
+  SizeType lda = src.ld();
+  SizeType ldb = dst.ld();
+  lapack::lacpy(lapack::MatrixType::General, m, n, src.ptr(), lda, dst.ptr(), ldb);
+}
+
 // Variants that return info code.
 
 /// Compute the cholesky decomposition of a.

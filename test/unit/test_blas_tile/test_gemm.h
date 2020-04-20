@@ -27,6 +27,8 @@ using namespace dlaf::matrix::test;
 using namespace dlaf_test;
 using namespace testing;
 
+using dlaf::util::size_t::mul;
+
 template <class T, class CT = const T>
 void testGemm(blas::Op op_a, blas::Op op_b, SizeType m, SizeType n, SizeType k, SizeType extra_lda,
               SizeType extra_ldb, SizeType extra_ldc) {
@@ -38,9 +40,9 @@ void testGemm(blas::Op op_a, blas::Op op_b, SizeType m, SizeType n, SizeType k, 
     size_b.transpose();
   TileElementSize size_c(m, n);
 
-  SizeType lda = std::max(1, size_a.rows()) + extra_lda;
-  SizeType ldb = std::max(1, size_b.rows()) + extra_ldb;
-  SizeType ldc = std::max(1, size_c.rows()) + extra_ldc;
+  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
+  SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
+  SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
 
   std::stringstream s;
   s << "GEMM: " << op_a << ", " << op_a;
@@ -48,9 +50,9 @@ void testGemm(blas::Op op_a, blas::Op op_b, SizeType m, SizeType n, SizeType k, 
   s << ", lda = " << lda << ", ldb = " << ldb << ", ldc = " << ldc;
   SCOPED_TRACE(s.str());
 
-  memory::MemoryView<T, Device::CPU> mem_a(lda * size_a.cols());
-  memory::MemoryView<T, Device::CPU> mem_b(ldb * size_b.cols());
-  memory::MemoryView<T, Device::CPU> mem_c(ldc * size_c.cols());
+  memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
+  memory::MemoryView<T, Device::CPU> mem_b(mul(ldb, size_b.cols()));
+  memory::MemoryView<T, Device::CPU> mem_c(mul(ldc, size_c.cols()));
 
   // Create tiles.
   Tile<T, Device::CPU> a0(size_a, std::move(mem_a), lda);
@@ -119,9 +121,9 @@ void testGemmExceptions(blas::Op op_a, blas::Op op_b, const TileElementSize& siz
   if (op_b != blas::Op::NoTrans)
     size_b.transpose();
 
-  SizeType lda = std::max(1, size_a.rows()) + extra_lda;
-  SizeType ldb = std::max(1, size_b.rows()) + extra_ldb;
-  SizeType ldc = std::max(1, size_c.rows()) + extra_ldc;
+  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
+  SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
+  SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
 
   std::stringstream s;
   s << "GEMM Exceptions: " << op_a << ", " << op_a;
@@ -129,9 +131,9 @@ void testGemmExceptions(blas::Op op_a, blas::Op op_b, const TileElementSize& siz
   s << ", lda = " << lda << ", ldb = " << ldb << ", ldc = " << ldc;
   SCOPED_TRACE(s.str());
 
-  memory::MemoryView<T, Device::CPU> mem_a(lda * size_a.cols());
-  memory::MemoryView<T, Device::CPU> mem_b(ldb * size_b.cols());
-  memory::MemoryView<T, Device::CPU> mem_c(ldc * size_c.cols());
+  memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
+  memory::MemoryView<T, Device::CPU> mem_b(mul(ldb, size_b.cols()));
+  memory::MemoryView<T, Device::CPU> mem_c(mul(ldc, size_c.cols()));
 
   // Create tiles.
   Tile<CT, Device::CPU> a(size_a, std::move(mem_a), lda);

@@ -24,17 +24,17 @@ template <typename T>
 struct vector : public std::vector<T> {
   using std::vector<T>::vector;
 
-  vector(int size) : std::vector<T>(to_sizet(size)) {}
+  vector(SizeType size) : std::vector<T>(to_sizet(size)) {}
 
-  void reserve(int size) {
+  void reserve(SizeType size) {
     std::vector<T>::reserve(to_sizet(size));
   }
 
-  T& operator[](int index) {
+  T& operator[](SizeType index) {
     return std::vector<T>::operator[](to_sizet(index));
   }
 
-  const T& operator[](int index) const {
+  const T& operator[](SizeType index) const {
     return std::vector<T>::operator[](to_sizet(index));
   }
 };

@@ -1,0 +1,57 @@
+name: Check format
+
+on:
+  - pull_request
+
+jobs:
+  check:
+    runs-on: ubuntu-18.04
+
+    steps:
+      - name: Install tools
+        run: sudo apt-get install --no-install-recommends clang-format-8
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Check formatting
+        run: |
+          git fetch --no-tags --depth=1 origin +refs/heads/master:refs/heads/master
+          FILES_CHANGED=`git diff --name-only origin/master`
+
+          for FILE in $FILES_CHANGED
+          do
+            if [[ ! -f $FILE ]]
+            then
+              continue
+            fi
+
+            case $FILE in
+              *.cpp|*.h|*.hpp|*.tpp|*.ipp)
+                clang-format-8 -i --style=file $FILE
+                ;;
+              *.pdf|*.hdf5|*.jpg|*.png|*.ppt|*.pptx|*.ipe)
+                # Exclude some binary files types,
+                # others can be excluded as needed.
+                ;;
+              *)
+                # Remove trailing whitespaces.
+                sed -i "s/\\s\\+$//g" $FILE
+
+                # Count number of trailing newlines at the end of the file.
+                # For performance reason we limit the search (max is 32).
+                n_newlines=`tail -c 32 $FILE | xxd -p -c 32 | egrep -o "(0a)+$" | grep -o 0a | wc -l`
+
+                # Add or remove trailing newlines if needed.
+                if [[ $n_newlines -eq 0 ]]
+                then
+                  echo "" >> $FILE
+                elif [[ $n_newlines -gt 1 ]]
+                then
+                  truncate -s -$(($n_newlines-1)) $FILE
+                fi
+                ;;
+            esac
+          done
+
+         # Fails if there are differences.
+      - name: Formatting issues
+        run: git diff --color --exit-code

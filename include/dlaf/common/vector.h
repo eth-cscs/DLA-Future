@@ -22,13 +22,13 @@ namespace internal {
 /// It is an std::vector with overloads for working seamlessly with unsigned integers as parameters
 template <typename T>
 struct vector : public std::vector<T> {
-  vector(int size) : std::vector<T>(to_sizet(size)) {}
+  vector(SizeType size) : std::vector<T>(to_sizet(size)) {}
 
-  T& operator[](int index) {
+  T& operator[](SizeType index) {
     return std::vector<T>::operator[](to_sizet(index));
   }
 
-  const T& operator[](int index) const {
+  const T& operator[](SizeType index) const {
     return std::vector<T>::operator[](to_sizet(index));
   }
 };

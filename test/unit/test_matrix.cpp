@@ -464,7 +464,7 @@ TYPED_TEST(MatrixTest, ConstructorExistingConst) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
       Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
       LayoutInfo layout = colMajorLayout(distribution.localSize(), test.block_size,
-                                         std::max(1, distribution.localSize().rows()));
+                                         std::max<SizeType>(1, distribution.localSize().rows()));
       memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
 
       // Copy distribution for testing purpose.
@@ -1058,12 +1058,12 @@ auto createMatrix() -> Matrix<T, device> {
 }
 
 template <class T>
-auto createConstMatrix() -> Matrix<T, device> {
+auto createConstMatrix() {
   LayoutInfo layout({1, 1}, {1, 1}, 1, 1, 1);
   memory::MemoryView<T, device> mem(layout.minMemSize());
   const T* p = mem();
 
-  return {layout, p};
+  return Matrix<const T, device>{layout, p};
 }
 
 TEST(MatrixDestructorFutures, NonConstAfterRead) {
@@ -1107,7 +1107,7 @@ TEST(MatrixDestructorFutures, ConstAfterRead) {
 
   volatile int guard = 0;
   {
-    auto matrix = createConstMatrix<const TypeParam>();
+    auto matrix = createConstMatrix<TypeParam>();
 
     auto sf = matrix.read(LocalTileIndex(0, 0));
     last_task = sf.then(hpx::launch::async, [&guard](auto&&) {

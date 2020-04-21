@@ -29,33 +29,30 @@ namespace tile {
 // Variants that throw an error on failure.
 
 /// Compute the cholesky decomposition of a.
-
+///
 /// Only the upper or lower triangular elements are referenced according to @p uplo.
 /// @throw std::invalid_argument if a is not square.
 /// @throw std::runtime_error if the tile was not positive definite.
 template <class T, Device device>
 void potrf(blas::Uplo uplo, const Tile<T, device>& a);
 
-/// Copy
+/// Copies all elements from Tile a to Tile b
+///
+/// @pre @param a and @param b must have the same size (number of elements)
 template <class T>
-void lacpy(const Tile<const T, Device::CPU>& src, const Tile<T, Device::CPU>& dst) {
-  SizeType m = src.size().rows();
-  SizeType n = src.size().cols();
-  SizeType lda = src.ld();
-  SizeType ldb = dst.ld();
-  lapack::lacpy(lapack::MatrixType::General, m, n, src.ptr(), lda, dst.ptr(), ldb);
-}
+void lacpy(const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b);
 
 // Variants that return info code.
 
 /// Compute the cholesky decomposition of a.
-
+///
 /// Only the upper or lower triangular elements are referenced according to @p uplo.
 /// @returns info = 0 on success or info > 0 if the tile is not positive definite.
 /// @throw std::runtime_error if the tile was not positive definite.
 template <class T, Device device>
 long long potrfInfo(blas::Uplo uplo, const Tile<T, device>& a);
 
+}
+}
+
 #include "dlaf/lapack_tile.tpp"
-}
-}

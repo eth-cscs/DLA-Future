@@ -10,10 +10,10 @@ a mechanism which generates automatically the following dependencies:
 
 ## Matrix and Matrix Tiles basics
 
-The Matrix object (`dlaf::matrix::Matrix`) is the object which manages the setup of
+The matrix object (`dlaf::matrix::Matrix`) is the object which manages the setup of
 the correct dependencies of the tasks which involve any of its tiles.
 
-Matrix tiles (`dlaf::matrix::Tile`) can be accessed using two Matrix methods.
+Matrix tiles (`dlaf::matrix::Tile`) can be accessed using two matrix methods.
 - `operator()` returns a `hpx::future` of a tile containing the requested tile,
 - `read()` returns a copy of a `hpx::shared_future` of a tile with constant elements representing
   the tile (allows only read operations on tile elements).
@@ -21,9 +21,9 @@ Matrix tiles (`dlaf::matrix::Tile`) can be accessed using two Matrix methods.
 Successive calls to `read()` with the same tile index return a copy of the same `shared_future`
 if no `operator()` was invoked.
 
-Both the Matrix and the Tile objects are not thread safe. The future mechanism ensures that
+Both the `Matrix` and the `Tile` objects are not thread safe. The future mechanism ensures that
 each tile is either accessed in read-write mode by only one task, or in read-only mode by more tasks.
-On the other hand the user has to guarantee that a Matrix object is used only by one task at a time.
+On the other hand the user has to guarantee that a `Matrix` object is used only by one task at a time.
 For asynchronous scheduling [matrix views](#matrix-views) has to be used.
 
 ### Basic Examples
@@ -33,12 +33,12 @@ however they cannot be compiled since they are simplified to improve readability
 (e.g. constructors and template parameters are omitted)).
 
 - Example 1: Write dependencies.
-```
+```cpp
   Matrix m;
 
-  hpx::dataflow(Task1, m({0, 0})));
-  hpx::dataflow(Task2, m({0, 0})));  // Depends on Task1.
-  hpx::dataflow(Task3, m({0, 1})));  // Different tile. No dependency on Task1 or Task2.
+  hpx::dataflow(Task1, m({0, 0}));
+  hpx::dataflow(Task2, m({0, 0}));  // Depends on Task1.
+  hpx::dataflow(Task3, m({0, 1}));  // Different tile. No dependency on Task1 or Task2.
 
 // Resulting dependency graph:
 // Task1 - Task2
@@ -46,15 +46,15 @@ however they cannot be compiled since they are simplified to improve readability
 // Task3
 ```
 - Example 2: Read dependencies.
-```
+```cpp
   Matrix m;
 
-  hpx::dataflow(Task1, m({0, 0})));
-  hpx::dataflow(Task2, m({0, 1})));  // Different tile.
-  hpx::dataflow(Task3, m.read({0, 0}), m({1, 1})));  // Depends on Task1.
-  hpx::dataflow(Task4, m.read({0, 0}), m({0, 1})));  // Depends on Task1 and Task2. No dependency on Task3 (both only read Tile {0, 0})
-  hpx::dataflow(Task5, m({0, 0})));  // Depends on Task3 and Task4.
-  hpx::dataflow(Task6, m.read({0, 0})));  // Depends on Task5.
+  hpx::dataflow(Task1, m({0, 0}));
+  hpx::dataflow(Task2, m({0, 1}));                  // Different tile.
+  hpx::dataflow(Task3, m.read({0, 0}), m({1, 1}));  // Depends on Task1.
+  hpx::dataflow(Task4, m.read({0, 0}), m({0, 1}));  // Depends on Task1 and Task2. No dependency on Task3 (both only read Tile {0, 0})
+  hpx::dataflow(Task5, m({0, 0}));                  // Depends on Task3 and Task4.
+  hpx::dataflow(Task6, m.read({0, 0}));             // Depends on Task5.
 
 // Resulting dependency graph:
 // Task1 - Task3 - Task 5 - Task6
@@ -72,10 +72,16 @@ message to tiles. Therefore they will contain a generic exception.
 
 ## Matrix Views
 
-Matrix Views (`dlaf::matrix::MatrixView`) are objects which allow to schedule a part of the DAG of an
-algorithm in a different task.
+A matrix view can be can be used to create "sub-DAG" in the global DAG of a matrix.
+It gives the chance to take control of a particular asynchronous step of the matrix,
+allowing to concurrently schedule the work that will bbe executed after the work
+scheduled by the matrix view has been executed and the matrix view is notified that
+all the tasks has been scheduled (`done()`, `doneWrite()`, destructor).
+This is very handy, because it allows to schedule tasks inside the sub-DAG of the matrix view,
+and it will be like inserting new dependencies in between two already existing ones.
 
-It can be created from a Matrix or from another MatrixView which will be indicated as "parent matrix".
+A matrix view (`dlaf::matrix::MatrixView`) can be created from a `Matrix` or from another `MatrixView`,
+which will be indicated as "parent matrix".
 Both constant and non-constant views are available. The main difference is that `operator()`
 is not allowed for constant matrices as only read-only tasks can be performed on its tiles.
 
@@ -108,21 +114,21 @@ however they cannot be compiled since they are simplified to improve readability
 (e.g. constructors and template parameters are omitted)).
 
 - Example 1: Basic view usage.
-```
+```cpp
   Matrix m;
 
-  hpx::dataflow(Task1, m({0, 0})));
-  hpx::dataflow(Task2, m({0, 0})));  // Depends on Task1.
-  hpx::dataflow(Task3, m({0, 1})));  // Different tile. No dependency on Task1 or Task2.
+  hpx::dataflow(Task1, m({0, 0}));
+  hpx::dataflow(Task2, m({0, 0}));  // Depends on Task1.
+  hpx::dataflow(Task3, m({0, 1}));  // Different tile. No dependency on Task1 or Task2.
 
   {
     MatrixView mv(UpLo::General, m);
-    hpx::dataflow(Task4, mv({0, 0})));  // Depends on Task2.
-    hpx::dataflow(Task5, mv({0, 1})));  // Depends on Task3.
+    hpx::dataflow(Task4, mv({0, 0}));  // Depends on Task2.
+    hpx::dataflow(Task5, mv({0, 1}));  // Depends on Task3.
   }
 
-  hpx::dataflow(Task6, m({0, 0})));  // Depends on Task4.
-  hpx::dataflow(Task7, m({0, 1})));  // Depends on Task5.
+  hpx::dataflow(Task6, m({0, 0}));  // Depends on Task4.
+  hpx::dataflow(Task7, m({0, 1}));  // Depends on Task5.
 
 // Resulting dependency graph:
 // Task1 - Task2 - Task4 ~ Task6
@@ -132,19 +138,19 @@ however they cannot be compiled since they are simplified to improve readability
 // Note the that the ~ dependencies include the call to the destructor of mv.
 ```
 - Example 2: Basic Usage with `done()`.
-```
+```cpp
   Matrix m;
 
-  hpx::dataflow(Task1, m({0, 0})));
-  hpx::dataflow(Task2, m({0, 0})));  // Depends on Task1.
-  hpx::dataflow(Task3, m({0, 1})));  // Different tile. No dependency on Task1 or Task2.
+  hpx::dataflow(Task1, m({0, 0}));
+  hpx::dataflow(Task2, m({0, 0}));  // Depends on Task1.
+  hpx::dataflow(Task3, m({0, 1}));  // Different tile. No dependency on Task1 or Task2.
 
   MatrixView mv(UpLo::General, m);
 
-  hpx::dataflow(Task4, m({0, 0})));  // Depends on done notification and Task6
-  hpx::dataflow(Task5, m({0, 1})));  // Depends on done notification and Task7
-  hpx::dataflow(Task6, mv({0, 0})));  // Depends on Task2.
-  hpx::dataflow(Task7, mv({0, 1})));  // Depends on Task3.
+  hpx::dataflow(Task4, m({0, 0}));   // Depends on done notification and Task6
+  hpx::dataflow(Task5, m({0, 1}));   // Depends on done notification and Task7
+  hpx::dataflow(Task6, mv({0, 0}));  // Depends on Task2.
+  hpx::dataflow(Task7, mv({0, 1}));  // Depends on Task3.
 
   mv.done({0, 0});
   mv.done({0, 1});
@@ -157,23 +163,26 @@ however they cannot be compiled since they are simplified to improve readability
 // Note the that the ~ dependencies include the dependency on the call to done().
 ```
 - Example 3: Read cuncurrency.
-```
+```cpp
   Matrix m;
 
-  hpx::dataflow(Task1, m({0, 0})));
-  hpx::dataflow(Task2, m.read({0, 0})));  // Depends on Task1
+  hpx::dataflow(Task1, m({0, 0}));
+  hpx::dataflow(Task2, m.read({0, 0}));  // Depends on Task1
 
   MatrixView mv(UpLo::General, m);
 
-  hpx::dataflow(Task3, m.read({0, 0})));  // Depends on doneWrite notification and Task5
-  hpx::dataflow(Task4, mv.read({0, 0})));  // Depends on Task2.
-  hpx::dataflow(Task5, mv({0, 0})));  // Depends on Task2 and Task4.
-  hpx::dataflow(Task6, mv.read({0, 0})));  // Depends on Task5.
+  hpx::dataflow(Task3, m.read({0, 0}));   // Depends on doneWrite notification and Task5
+  hpx::dataflow(Task4, mv.read({0, 0}));  // Depends on Task2.
+  hpx::dataflow(Task5, mv({0, 0}));       // Depends on Task2 and Task4.
 
   mv.doneWrite({0, 0});
-  hpx::dataflow(Task7, m.read({0, 0})));  // Depends on doneWrite notification and Task5
-  hpx::dataflow(Task8, m({0, 0})));  // Depends on done notification and Task3,6,7
+
+  hpx::dataflow(Task6, mv.read({0, 0}));  // Depends on Task5.
+
   mv.done({0, 0});
+
+  hpx::dataflow(Task7, m.read({0, 0}));  // Depends on doneWrite notification and Task5
+  hpx::dataflow(Task8, m({0, 0}));       // Depends on done notification and Task3,6,7
 
 // Resulting dependency graph:
 // Task1 - Task2 - Task5 -  Task6 -= Task8
@@ -189,7 +198,7 @@ however they cannot be compiled since they are simplified to improve readability
 The dependency are managed with a promise-future mechanism.
 
 When the destructor of a Tile obtained with `operator()` or `read()` is called, the future
-of the next future is set using the promise which was assigned by the Matrix object.
+of the next future is set using the promise which was assigned by the `Matrix` object.
 Note that the destructor of the Tile contained in the shared future is only called when all
 instances of the shared futures go out of scope, therefore,
 to avoid deadlocks the scope of tile shared futures needs extra care.
@@ -204,7 +213,7 @@ however they cannot be compiled since they are simplified to improve readability
 (e.g. constructors and template parameters are omitted)).
 
 - Example 1: Returning Tiles.
-```
+```cpp
 Tile&& Task1(hpx::future<Tile>&& future) {
   auto tile = future.get();
   // Do some work
@@ -214,7 +223,7 @@ Tile&& Task1(hpx::future<Tile>&& future) {
 
   Matrix m;
 
-  auto future1 = hpx::dataflow(Task1, m({0, 0})));
+  auto future1 = hpx::dataflow(Task1, m({0, 0}));
   hpx::dataflow(Task2, m.read({0, 0}));  // Depends on Task3 (The Tile used in Task1 is still available in future1).
 
   hpx::dataflow(Task3, future1);  // Depends on Task1.
@@ -223,7 +232,7 @@ Tile&& Task1(hpx::future<Tile>&& future) {
 // Task1 - Task3 - Task2
 ```
 - Example 2: Deadlock returning Tiles.
-```
+```cpp
 Tile&& Task1(hpx::future<Tile>&& future) {
   auto tile = future.get();
   // Do some work
@@ -233,38 +242,38 @@ Tile&& Task1(hpx::future<Tile>&& future) {
 
   Matrix m;
 
-  auto future1 = hpx::dataflow(Task1, m({0, 0})));
-  auto future2 = hpx::dataflow(Task2, m.read({0, 0}));  // Depends on Task3 (The Tile used in Task1 is still available in future1).
-
-  future2.get();  // DEADLOCK! Task2 is not ready yet, and cannot get ready because the destructor of the Tile in future1 will not be called.
-
-  hpx::dataflow(Task3, future1);  // Depends on Task1.
-```
-- Example 3: Deadlock returning Tiles (2).
-```
-Tile&& Task1(hpx::future<Tile>&& future) {
-  auto tile = future.get();
-  // Do some work
-
-  return std::move(tile);
-}
-
-  Matrix m;
-
-  auto future1 = hpx::dataflow(Task1, m({0, 0})));
+  auto future1 = hpx::dataflow(Task1, m({0, 0}));
   hpx::dataflow(Task2, future1, m.read({0, 0}));
   // DEADLOCK:
   // This task depends on Task1 (via future1), and on the destruction of the Tile in future1 (read()).
   // The scope of the Tile in future1 is extended to the end of Task2, and therefore the execution
   // of Task2, and therefore of the destructor of future1 tile, depends on the execution of itself.
 ```
-- Example 4: Deadlock shared future scope.
-```
+- Example 3: Deadlock returning Tiles (2).
+```cpp
+Tile&& Task1(hpx::future<Tile>&& future) {
+  auto tile = future.get();
+  // Do some work
+
+  return std::move(tile);
+}
+
   Matrix m;
 
-  hpx::dataflow(Task1, m({0, 0})));
+  auto future1 = hpx::dataflow(Task1, m({0, 0}));
+  auto future2 = hpx::dataflow(Task2, m.read({0, 0}));  // Depends on Task3 (The Tile used in Task1 is still available in future1).
+
+  future2.get();  // DEADLOCK! Task2 is not ready yet, and cannot get ready because the destructor of the Tile in future1 will not be called.
+
+  hpx::dataflow(Task3, future1);  // Depends on Task1.
+```
+- Example 4: Deadlock shared future scope.
+```cpp
+  Matrix m;
+
+  hpx::dataflow(Task1, m({0, 0}));
   auto shared_future = matrix.read({0, 0});
-  hpx::dataflow(Task2, shared_future);  // Depends on Task1.
+  hpx::dataflow(Task2, shared_future);   // Depends on Task1.
   hpx::dataflow(Task3, m.read({0, 0}));  // Depends on Task1.
 
   auto future4 = hpx::dataflow(Task4, m({0, 0}));  // Depends on Task2 and Task3.
@@ -272,15 +281,17 @@ Tile&& Task1(hpx::future<Tile>&& future) {
   future4.get();  // DEADLOCK! Task4 is not ready yet, and cannot get ready because the destructor of the Tile in shared_future will not be called.
 ```
 - Example 4 fixed: Deadlock shared future scope.
-```
+```cpp
   Matrix m;
 
-  hpx::dataflow(Task1, m({0, 0})));
+  hpx::dataflow(Task1, m({0, 0}));
+
   {
   auto shared_future = matrix.read({0, 0});
-  hpx::dataflow(Task2, shared_future);  // Depends on Task1.
+  hpx::dataflow(Task2, shared_future);   // Depends on Task1.
   hpx::dataflow(Task3, m.read({0, 0}));  // Depends on Task1.
   }  // shared_future goes out of scope here.
+
   auto future4 = hpx::dataflow(Task4, m({0, 0}));  // Depends on Task2 and Task3.
 
   future4.get();  // Task4 may not be ready yet, but it will get ready after the completion of Task4.
@@ -329,7 +340,8 @@ Figure 1 shows how the mechanism works, while Figure 2 contains the legend of th
 ### Async Exceptions
 To ensure correct exception handling, the tile destructor sets the promise value if it was called during normal execution,
 while it sets a custom exception when it is called after an exception has been thrown.
-In the latter case, the call to `get()` in the continuation will rethrow the exception, the promise will be destructed and the new future stored in the matrix will have an invalid shared state.
+In the latter case, the call to `get()` in the continuation will rethrow the exception,
+the promise will be destructed and the new future stored in the matrix will have an invalid shared state.
 Therefore the continuations in `operator()` and `read()` have to handle it.
 The tile destructor sets the promise value if it was called during normal execution, while it sets
 an exception when it is called after an exception has been thrown.
@@ -337,38 +349,51 @@ If the future contains an exception the call to `get()` in the continuation will
 the promise will be destructed and the new future stored in the matrix will have an invalid shared state.
 Therefore the continuations in `operator()` and `read()` have to handle this case.
 
-### MatrixView
+### Matrix View
 
 `MatrixView<const T>` can be handled in a simple way. On construction it only needs to call the `read()`
 method of the parent matrix to get a copy of the shared future, which is saved in the view and will be returned
 each time the view is used (`read()`). To release the view the `done()` method just clears the view shared future.
 
 Non constant `MatrixView<T>` requires a more complex handling mechanism.
-On construction the two futures (future and shared_future) of the parent matrix are moved in the view and replaced by futures of the promises also stored in the view. This is important because
+On construction the two futures (future and shared future) of the parent matrix are moved in the view and
+replaced by futures of the promises also stored in the view. This is important because
 
-- on one side, the MatrixView becomes the natural continuation of the Matrix in the exact point where we created it;
-- on the other side it detaches the main DAG, allowing to schedule tasks in the sub-DAG, but keeping track of where the flow has to go when the MatrixView will be marked as `done`/`doneWrite`.
+- on one side, the matrix view becomes the natural continuation of the matrix in the exact point where we created it;
+- on the other side it detaches the main DAG, allowing to schedule tasks in the sub-DAG,
+but keeping track of where the flow has to go when the matrix view will be marked as `done`/`doneWrite`.
 
-For what concerns the `operator()` and `read()`, the MatrixView works exactly as the Matrix.
+For what concerns the `operator()` and `read()`, the matrix view works exactly as the matrix.
 
-The new part comes when we have to deal with the extra features of the MatrixView: `doneWrite` and `done`.
-These methods are the ones that allows to go back to the normal flow that was detached on construction. 
+The new part comes when we have to deal with the extra features of the matrix view: `doneWrite` and `done`.
+These methods are the ones that allows to go back to the normal flow that was detached on construction.
 
 We have to keep in mind two things:
-- we have to attach back two lines, future (RW) and shared_future (R) in the parent matrix
-- with a call to `doneWrite`, the MatrixView should be able to continue get the read-access, but at the same time also the parent matrix should be able to read in parallel (since no other changes can be made by the subDAG of the MatrixView).
+- we have to attach back two lines, future (RW) and shared future (R) in the parent matrix
+- with a call to `doneWrite`, the matrix view should be able to continue get the read-access,
+but at the same time also the parent matrix should be able to read in parallel
+(since no other changes can be made by the subDAG of the matrix view).
 
 In order to achieve this, there is a articulated machinery that allows to finely control this re-attachment to the normal flow.
 
-A call to `doneWrite` internally performs a `read()` operation, this will be the last shared_future in the sub-DAG, and it will be the one that will be returned by any next call to `read` on the MatrixView.
-After that, a continuation task is executed on a copy of the shared_future. This is a crucial point of the machinery. As soon as the `shared_future` is ready, this task will create a copy of the tile (const), that will be used to trigger the shared_future of the parent matrix. This is what allows to have both the MatrixView and the parent Matrix to access in read-only mode the tile in parallel. Here there is the trick:
-- the Tile in the original shared future of the MatrixView has internally a promise that triggers the future of the MatrixView
-- the Tile copied, which just copies the reference and it does not copy any element, is given another promise that will set an ad-hoc temporary future.
+A call to `doneWrite` internally performs a `read()` operation, this will be the last shared future in the sub-DAG,
+and it will be the one that will be returned by any next call to `read` on the matrix view.
+After that, a continuation task is executed on a copy of the shared future. This is a crucial point of the machinery.
+As soon as the `shared_future` is ready, this task will create a copy of the tile (const),
+that will be used to trigger the shared future of the parent matrix.
+This is what allows to have both the matrix view and the parent matrix to access in read-only mode the tile in parallel.
+Here there is the trick:
+- the Tile in the original shared future of the matrix view has internally a promise that triggers the future of the matrix view
+- the Tile copied, which just copies the reference and it does not copy any element,
+  is given another promise that will set an ad-hoc temporary future.
 
-This two tiles together provide a way to lock the future write acesses from the parent Matrix. In fact, the synchronization taks that will attach back the future of the parent matrix, is triggered by both of them. So if the MatrixView releases all shared_futures, the mechanism has to wait that read access from the MatrixView will be released too, and viceversa.
+This two tiles together provide a way to lock the future write accesses from the parent matrix.
+In fact, the synchronization taks that will attach back the future of the parent matrix, is triggered by both of them.
+So if the matrix view releases all shared futures, the mechanism has to wait that all the shared future
+of the parent matrix are released too, and viceversa.
 
-It should be noted that the  `done()` method invokes `doneWrite()` if the tile is still in read-write mode, i.e. when `doneWrite()` hasn't be called yet.
-Figure 3 and 4 show how a non-constant matrix view works.
+It should be noted that the  `done()` method invokes `doneWrite()` if the tile is still in read-write mode,
+i.e. when `doneWrite()` hasn't be called yet.  Figure 3 and 4 show how a non-constant matrix view works.
 
 ![Fig. 3 First example of the matrix view promise-future mechanism for a tile of the matrix object.
 ](figures/matrix_view_sync_1.png)\

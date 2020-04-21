@@ -4,13 +4,13 @@ To simplify the dependency tracking during the generation of the task graph we i
 a mechanism which generates automatically the following dependencies:
 - Successive tasks that modify (write) values of a tile are ordered, therefore each write
   task depends on the previous write task.
-- Successive tasks that only read values a tile can be executed concurrently,
+- Successive tasks that only read values of a tile can be executed concurrently,
   however they all depends on the previous write task and the next write task depends on
   the completion of all the read tasks.
 
 ## Matrix and Matrix Tiles basics
 
-The Matrix object (`dlaf::matrix::Matrix`) is the object which manage the setup of
+The Matrix object (`dlaf::matrix::Matrix`) is the object which manages the setup of
 the correct dependencies of the tasks which involve any of its tiles.
 
 Matrix tiles (`dlaf::matrix::Tile`) can be accessed using two Matrix methods.
@@ -81,7 +81,7 @@ is not allowed for constant matrices as only read-only tasks can be performed on
 
 When a matrix view is created each successive call of `operator()` and `read()` on the parent matrix
 will return futures which depend on the tasks scheduled with the futures obtained by the matrix view.
-It can be noted that it is possible to transfer the scheduling on only a part of the tiles.
+It is possible to transfer the scheduling of all or just a subset of the tiles.
 Currently it can be specified with the `uplo` parameter if:
 - all the tiles or
 - only the tiles which contain an element of the diagonal or the upper (lower) triangular
@@ -98,7 +98,7 @@ The `MatrixView` API contains 3 ways to accomplish that:
 - `doneWrite(tile_index)` notifies that no new read-write task will be scheduled on the tile with the given index
 (After this call any use of `operator()` with the same tile index will return an error.).
 
-It has to be noted that read-only task of the parent matrix and of the View can be performed at the same time
+It has to be noted that read-only tasks of the parent matrix and of the View can be performed at the same time
 if no read-write tasks has been scheduled in between (see [examples](#view-examples)).
 
 ### View Examples
@@ -291,6 +291,7 @@ Tile&& Task1(hpx::future<Tile>&& future) {
 To simplify the understanding of the dependencies mechanism we explain it for simple cases and we will add
 other features one by one.
 
+### Matrix mechanism
 The simplest case includes constant matrices with read-only tiles. In this case only a shared future
 for each tile is needed which is returned by the `read()` operator.
 
@@ -325,32 +326,46 @@ Figure 1 shows how the mechanism works, while Figure 2 contains the legend of th
 ](figures/matrix_sync_legend.png)\
 *Fig. 2 Legend for Figure 1, 3, 4.*
 
-Extra care has to be used to ensure correct exception handling.
+### Async Exceptions
+To ensure correct exception handling, the tile destructor sets the promise value if it was called during normal execution,
+while it sets a custom exception when it is called after an exception has been thrown.
+In the latter case, the call to `get()` in the continuation will rethrow the exception, the promise will be destructed and the new future stored in the matrix will have an invalid shared state.
+Therefore the continuations in `operator()` and `read()` have to handle it.
 The tile destructor sets the promise value if it was called during normal execution, while it sets
 an exception when it is called after an exception has been thrown.
 If the future contains an exception the call to `get()` in the continuation will rethrow the exception,
 the promise will be destructed and the new future stored in the matrix will have an invalid shared state.
 Therefore the continuations in `operator()` and `read()` have to handle this case.
 
-Constant matrix views can be handled in a simple way. On construction it is only needed to call the `read()`
-method of the parent matrix to get a copy of the shared future that is saved in the view and returned
-each time the view is used. To release the view the `done()` method just clears the view shared future.
+### MatrixView
 
-For non constant matrix view the mechanism works in this way. On construction the futures of the
-parent matrix are moved in the view and replaced by futures of the promises (two for each tile) also
-stored in the view.
-The `operator()` and `read()` methods works in the same way as for the matrix.
-When `doneWrite()` is called the view creates its shared future (if not existent)
-and duplicates the tile included (the promise cannot be dublicated,
-therefore in the copy it is replaced by a new promise (the blue promise in Fig 3 and 4 moved))
-to set the shared future (purple and red arrow pointing to the light yellow promise in Fig 3 and 4).
-When both the blue and purple futures are ready, it means that the tiles of both the two shared futures
-went out of scope, and therefore the reading of the elements of the tiles are completed.
-At this point the main future in the parent matrix can be set. A synchrounous dataflow is used to set
-the light green future value.
-However a copy of the shared future is still included in the matrix view
-(allowing read-only operations to still be scheduled.) The shared future is cleared by the call to
-`done()` after which the tile control is fully back to the parent matrix.
+`MatrixView<const T>` can be handled in a simple way. On construction it only needs to call the `read()`
+method of the parent matrix to get a copy of the shared future, which is saved in the view and will be returned
+each time the view is used (`read()`). To release the view the `done()` method just clears the view shared future.
+
+Non constant `MatrixView<T>` requires a more complex handling mechanism.
+On construction the two futures (future and shared_future) of the parent matrix are moved in the view and replaced by futures of the promises also stored in the view. This is important because
+
+- on one side, the MatrixView becomes the natural continuation of the Matrix in the exact point where we created it;
+- on the other side it detaches the main DAG, allowing to schedule tasks in the sub-DAG, but keeping track of where the flow has to go when the MatrixView will be marked as `done`/`doneWrite`.
+
+For what concerns the `operator()` and `read()`, the MatrixView works exactly as the Matrix.
+
+The new part comes when we have to deal with the extra features of the MatrixView: `doneWrite` and `done`.
+These methods are the ones that allows to go back to the normal flow that was detached on construction. 
+
+We have to keep in mind two things:
+- we have to attach back two lines, future (RW) and shared_future (R) in the parent matrix
+- with a call to `doneWrite`, the MatrixView should be able to continue get the read-access, but at the same time also the parent matrix should be able to read in parallel (since no other changes can be made by the subDAG of the MatrixView).
+
+In order to achieve this, there is a articulated machinery that allows to finely control this re-attachment to the normal flow.
+
+A call to `doneWrite` internally performs a `read()` operation, this will be the last shared_future in the sub-DAG, and it will be the one that will be returned by any next call to `read` on the MatrixView.
+After that, a continuation task is executed on a copy of the shared_future. This is a crucial point of the machinery. As soon as the `shared_future` is ready, this task will create a copy of the tile (const), that will be used to trigger the shared_future of the parent matrix. This is what allows to have both the MatrixView and the parent Matrix to access in read-only mode the tile in parallel. Here there is the trick:
+- the Tile in the original shared future of the MatrixView has internally a promise that triggers the future of the MatrixView
+- the Tile copied, which just copies the reference and it does not copy any element, is given another promise that will set an ad-hoc temporary future.
+
+This two tiles together provide a way to lock the future write acesses from the parent Matrix. In fact, the synchronization taks that will attach back the future of the parent matrix, is triggered by both of them. So if the MatrixView releases all shared_futures, the mechanism has to wait that read access from the MatrixView will be released too, and viceversa.
 
 It should be noted that the  `done()` method invokes `doneWrite()` if the tile is still in read-write mode, i.e. when `doneWrite()` hasn't be called yet.
 Figure 3 and 4 show how a non-constant matrix view works.

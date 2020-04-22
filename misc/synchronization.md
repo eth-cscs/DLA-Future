@@ -374,16 +374,25 @@ In order to achieve this, there is a articulated machinery that allows to finely
 
 A call to `doneWrite()` internally performs a `read()` operation, this will be the last shared future in the sub-DAG,
 and it will be the one that will be returned by any next call to `read()` on the matrix view.
-After that, a continuation task is executed on a copy of the shared future. This is a crucial point of the machinery.
-As soon as the `shared_future` is ready, this task will create a copy of the tile (`Tile<const T>`),
-that will be used to trigger the shared future of the parent matrix.
+Then, a synchronous continuation task is attached to a copy of the shared future.
+This task will create a copy (a copy of the reference, the elements are not copied)
+of the tile (`Tile<const T>`) as soon as the `shared_future` is ready.
+The copy is used to set the value of the shared future of the parent matrix.
 This is what allows to have both the matrix view and the parent matrix to access in read-only mode the tile in parallel.
-Here there is the trick:
-- the tile in the original shared future of the matrix view has internally a promise that triggers the future of the matrix view
-- the tile (`Tile<const T>`) copied, which just copies the reference and it does not copy any element,
-  is given another promise that will set an ad-hoc temporary future.
+However, it has to e noted that a promise cannot be copied, therefore the copy will get a new promise.
+(The copy with a new promise is represented in Figure 3 and 4
+with the purple (copy) and red (move of the new promise) arrows pointing to the light yellow promise.)
 
-This two tiles together provide a way to lock the future write accesses from the parent matrix.
+The crucial point of the machinery is the correct handling of the next dependency
+that has to manage the synchronization of both the shared future of the matrix view and of the parent matrix.
+A synchronous dataflow, which sets the value of the internal future (light green future in Figure 3 and 4)
+of the parent matrix, is used in this case, whose arguments are two futures:
+- the tile in the original shared future of the matrix view has internally a promise
+  (purple promise) that triggers the first future of the dataflow,
+- the copied tile (contained in the light yellow shared future)
+  is given another promise (blue promise) that will set the second future.
+
+This dataflow provides a way to lock the future write accesses from the parent matrix.
 In fact, the synchronization task that will attach back the future of the parent matrix, is triggered by both of them.
 So if the matrix view releases all shared futures, the mechanism has to wait that all the shared futures
 of the parent matrix are released too, and viceversa.

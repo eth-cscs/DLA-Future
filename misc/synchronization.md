@@ -375,12 +375,12 @@ In order to achieve this, there is a articulated machinery that allows to finely
 A call to `doneWrite()` internally performs a `read()` operation, this will be the last shared future in the sub-DAG,
 and it will be the one that will be returned by any next call to `read()` on the matrix view.
 After that, a continuation task is executed on a copy of the shared future. This is a crucial point of the machinery.
-As soon as the `shared_future` is ready, this task will create a copy of the tile (const),
+As soon as the `shared_future` is ready, this task will create a copy of the tile (`Tile<const T>`),
 that will be used to trigger the shared future of the parent matrix.
 This is what allows to have both the matrix view and the parent matrix to access in read-only mode the tile in parallel.
 Here there is the trick:
 - the tile in the original shared future of the matrix view has internally a promise that triggers the future of the matrix view
-- the tile copied, which just copies the reference and it does not copy any element,
+- the tile (`Tile<const T>`) copied, which just copies the reference and it does not copy any element,
   is given another promise that will set an ad-hoc temporary future.
 
 This two tiles together provide a way to lock the future write accesses from the parent matrix.

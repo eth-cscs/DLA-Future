@@ -28,9 +28,9 @@ For asynchronous scheduling [matrix views](#matrix-views) has to be used.
 
 ### Basic Examples
 
-(Note: this examples are used to illustrate how dependencies are determined,
-however they cannot be compiled since they are simplified to improve readability.
-(e.g. constructors and template parameters are omitted)).
+(Note: these examples are used to illustrate how dependencies are determined,
+however they cannot be compiled since they are simplified to improve readability
+(e.g. constructors and template parameters are omitted).)
 
 - Example 1: Write dependencies.
 ```cpp
@@ -38,7 +38,7 @@ however they cannot be compiled since they are simplified to improve readability
 
   hpx::dataflow(Task1, m({0, 0}));
   hpx::dataflow(Task2, m({0, 0}));  // Depends on Task1.
-  hpx::dataflow(Task3, m({0, 1}));  // Different tile. No dependency on Task1 or Task2.
+  hpx::dataflow(Task3, m({0, 1}));  // Different tile. No dependency on Task1 nor on Task2.
 
 // Resulting dependency graph:
 // Task1 - Task2
@@ -109,9 +109,9 @@ if no read-write tasks has been scheduled in between (see [examples](#view-examp
 
 ### View Examples
 
-(Note: this examples are used to illustrate how dependencies are determined,
-however they cannot be compiled since they are simplified to improve readability.
-(e.g. constructors and template parameters are omitted)).
+(Note: these examples are used to illustrate how dependencies are determined,
+however they cannot be compiled since they are simplified to improve readability
+(e.g. constructors and template parameters are omitted).)
 
 - Example 1: Basic view usage.
 ```cpp
@@ -162,7 +162,7 @@ however they cannot be compiled since they are simplified to improve readability
 //
 // Note the that the ~ dependencies include the dependency on the call to done().
 ```
-- Example 3: Read cuncurrency.
+- Example 3: Read concurrency.
 ```cpp
   Matrix m;
 
@@ -208,9 +208,9 @@ therefore it should be avoided if possible. Otherwise a carefull analysis of the
 
 ### Examples advanced use
 
-(Note: this examples are used to illustrate how dependencies are determined,
-however they cannot be compiled since they are simplified to improve readability.
-(e.g. constructors and template parameters are omitted)).
+(Note: these examples are used to illustrate how dependencies are determined,
+however they cannot be compiled since they are simplified to improve readability
+(e.g. constructors and template parameters are omitted).)
 
 - Example 1: Returning Tiles.
 ```cpp
@@ -306,10 +306,10 @@ other features one by one.
 The simplest case includes constant matrices with read-only tiles. In this case only a shared future
 for each tile is needed which is returned by the `read()` method.
 
-The next case to be considered is a matrix for which read-only access is not be needed.
+The next case to be considered is a matrix for which read-only access is not needed.
 For this specific case a future for each tile is needed. This future is an "internal" future
 since the promise of the tile is not set yet.
-When the `operator()` is called a promise in injected into the future with a synchronous continuation
+When the `operator()` is called a promise is injected into the future with a synchronous continuation
 (i.e. a continuation which is executed as soon as the future gets ready) and the future of the promise
 is kept by the matrix.
 
@@ -362,7 +362,7 @@ but keeping track of where the flow has to go when the matrix view will be marke
 For what concerns the `operator()` and `read()`, the matrix view works exactly as the matrix.
 
 The new part comes when we have to deal with the extra features of the matrix view: `doneWrite()` and `done()`.
-These methods are the ones that allows to go back to the normal flow that was detached on construction.
+These methods are the ones that allow to go back to the normal flow that was detached on construction.
 
 We have to keep in mind two things:
 - we have to attach back two lines, future (RW) and shared future (R) in the parent matrix

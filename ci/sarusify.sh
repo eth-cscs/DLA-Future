@@ -39,13 +39,13 @@ done <<< "$TEST_COMMANDS"
 REPORT_COMMAND="if [[ -z \$FAILED ]]
 then
  echo \"Test Succeded\"
- exit(0)
+ exit 0
 else
   for TEST in \$FAILED
   do
     printf \"Test %s FAILED\n\" \$TEST
   done
-  exit(1)
+  exit 1
 fi"
 
 SARUS_TEST_COMMANDS="$SARUS_TEST_COMMANDS"$'\n'"$REPORT_COMMAND"

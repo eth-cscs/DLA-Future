@@ -59,21 +59,6 @@ TYPED_TEST(MathUtilTest, CeilDivType) {
   EXPECT_TRUE((std::is_same<Type, decltype(util::ceilDiv(num, den))>()));
 }
 
-template <class T>
-T foo(T* a) {
-  return *a;
-}
-
-TYPED_TEST(MathUtilTest, SegfaultTest) {
-  // This test has been added to try the CI.
-  // It is supposed to generate a segfault.
-  // Please remove it before merge
-  using Type = TypeParam;
-
-  Type* a = nullptr;
-  EXPECT_EQ(0, foo(a));
-}
-
 TYPED_TEST(MathUtilTest, SizeTArithmetic_Sum) {
   using Type = TypeParam;
 

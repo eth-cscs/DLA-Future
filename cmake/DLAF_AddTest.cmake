@@ -176,6 +176,7 @@ function(DLAF_addTest test_target_name)
   # ----- Classic test
   else()
     set(_TEST_COMMAND ${test_target_name})
+    set(_TEST_LABEL NOMPI)
   endif()
 
   if (IS_AN_HPX_TEST)

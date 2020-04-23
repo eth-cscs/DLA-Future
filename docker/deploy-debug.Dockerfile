@@ -19,9 +19,9 @@ RUN mkdir DLA-Future-build && cd DLA-Future-build && \
       -DDLAF_WITH_CUDA=OFF \
       -DDLAF_WITH_MKL=OFF \
       -DDLAF_WITH_TEST=ON \
-      -DDLAF_BUILD_MINIAPPS=OFF \
+      -DDLAF_BUILD_MINIAPPS=ON \
       -DDLAF_MPI_PRESET=slurm \
-      -DMPIEXEC_NUMCORES=32 \
+      -DMPIEXEC_NUMCORES=36 \
       -DMPIEXEC_EXECUTABLE=srun \
       -DMPIEXEC_PREFLAGS="--jobid=\$JOBID;sarus;run;--mpi;\$IMAGE" \
       -DCMAKE_INSTALL_PREFIX=/usr && \

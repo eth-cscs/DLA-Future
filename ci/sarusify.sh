@@ -31,7 +31,7 @@ while IFS= read -r TEST_COMMAND; do
     done
 
     # Add check if test passed. Otherwise add it to the list of failed tests.
-    FILTERED_COMMAND="$FILTERED_COMMAND"$'\n'"if [ $? -ne 0 ]; then FAILED=\${FAILED}\"$EXECUTABLE \"; fi"
+    FILTERED_COMMAND="$FILTERED_COMMAND"$'\n'"if [ \$? -ne 0 ]; then FAILED=\${FAILED}\"$EXECUTABLE \"; fi"
 
     SARUS_TEST_COMMANDS="$FILTERED_COMMAND"$'\n'"$SARUS_TEST_COMMANDS"
 done <<< "$TEST_COMMANDS"
@@ -43,7 +43,7 @@ then
 else
   for TEST in \$FAILED
   do
-    printf "Test %s FAILED\n" \$TEST
+    printf \"Test %s FAILED\n\" \$TEST
   done
   exit(1)
 fi"

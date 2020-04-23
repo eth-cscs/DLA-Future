@@ -25,15 +25,13 @@ RUN mkdir DLA-Future-build && cd DLA-Future-build && \
       -DMPIEXEC_EXECUTABLE=srun \
       -DMPIEXEC_PREFLAGS="--jobid=\$JOBID;sarus;run;--mpi;\$IMAGE" \
       -DCMAKE_INSTALL_PREFIX=/usr && \
+      make -j$(nproc) && \
       source /DLA-Future/ci/sarusify.sh && \
       echo "$SARUS_TEST_COMMANDS" > /root/run.sh && \
-      make -j$(nproc) && \
-      # Let's just bundle the libs to make the docker image small
-      # We have to copy a couple of MKL libs by hand
       /root/libtree/libtree \
         --chrpath \
         -d /root/DLA-Future.bundle \
-        $TEST_BINARIES && \
+        $TEST_EXECUTABLES && \
       rm -rf /DLA-Future
 
 FROM ubuntu:18.04

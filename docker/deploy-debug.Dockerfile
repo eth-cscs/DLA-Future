@@ -31,6 +31,7 @@ RUN mkdir DLA-Future-build && cd DLA-Future-build && \
       /root/libtree/libtree \
         --chrpath \
         -d /root/DLA-Future.bundle \
+        $(which addr2line) \
         $TEST_EXECUTABLES && \
       rm -rf /DLA-Future
 

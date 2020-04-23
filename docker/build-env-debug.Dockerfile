@@ -8,7 +8,7 @@ ENV FORCE_UNSAFE_CONFIGURE 1
 # Install basic tools
 RUN apt-get update -qq && apt-get install -qq -y --no-install-recommends \
     software-properties-common \
-    build-essential gfortran \
+    build-essential gfortran binutils \
     git tar wget curl gpg-agent && \
     rm -rf /var/lib/apt/lists/*
 
@@ -140,6 +140,6 @@ RUN wget -q https://bitbucket.org/icl/lapackpp/get/${LAPACKPP_VERSION}.tar.gz -O
    rm -rf /root/lapackpp.tar.gz /root/icl-lapackpp-${LAPACKPP_VERSION}
 
 # Add deployment tooling
-RUN wget -q https://github.com/haampie/libtree/releases/download/v1.1.2/libtree_x86_64.tar.gz && \
+RUN wget -q https://github.com/haampie/libtree/releases/download/v1.1.3/libtree_x86_64.tar.gz && \
    tar -xzf libtree_x86_64.tar.gz && \
    rm libtree_x86_64.tar.gz

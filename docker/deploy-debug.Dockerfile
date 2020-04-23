@@ -2,8 +2,6 @@ ARG BUILD_ENV
 
 FROM $BUILD_ENV as builder
 
-RUN ldconfig
-
 # Build DLA-Future
 COPY . /DLA-Future
 

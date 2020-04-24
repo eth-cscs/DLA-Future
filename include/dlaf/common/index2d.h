@@ -195,8 +195,6 @@ Index2DType computeCoords(Ordering ordering, LinearIndexT index,
 }
 
 /// Compute linear index of an Index2D
-///
-/// @return -1 if given index is outside the grid size, otherwise the linear index (w.r.t specified ordering)
 template <class IndexT, class Tag>
 IndexT computeLinearIndex(Ordering ordering, const Index2D<IndexT, Tag>& index,
                           const Size2D<IndexT, Tag>& dims) noexcept {

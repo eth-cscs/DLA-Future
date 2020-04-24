@@ -154,8 +154,8 @@ TYPED_TEST(Index2DTest, ComputeLinearIndex) {
 
   for (const auto& ordering : orderings) {
     for (const Size2D<TypeParam>& size : configs) {
-      EXPECT_EQ(-1, computeLinearIndex(ordering, index, {size.rows(), size.cols()}));
-      EXPECT_EQ(-1, computeLinearIndex(ordering, index, Size2D<TypeParam>(size)));
+      EXPECT_DEATH(computeLinearIndex(ordering, index, {size.rows(), size.cols()}), "[ERROR]");
+      EXPECT_DEATH(computeLinearIndex(ordering, index, Size2D<TypeParam>(size)), "[ERROR]");
     }
   }
 

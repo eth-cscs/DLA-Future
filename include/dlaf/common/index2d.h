@@ -17,6 +17,7 @@
 #include <ostream>
 #include <type_traits>
 
+#include "dlaf/common/assert.h"
 #include "dlaf/types.h"
 #include "dlaf/util_math.h"
 
@@ -199,11 +200,10 @@ Index2DType computeCoords(Ordering ordering, LinearIndexT index,
 template <class IndexT, class Tag>
 IndexT computeLinearIndex(Ordering ordering, const Index2D<IndexT, Tag>& index,
                           const Size2D<IndexT, Tag>& dims) noexcept {
+  DLAF_ASSERT_MODERATE(index.isIn(dims), "Index ", index, " is not in the grid ", dims);
+
   using dlaf::util::size_t::mul;
   using dlaf::util::size_t::sum;
-
-  if (!index.isIn(dims))
-    return -1;
 
   std::size_t linear_index;
 

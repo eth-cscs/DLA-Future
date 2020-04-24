@@ -77,123 +77,37 @@ template <class MatrixConst, class Matrix, class Mat, class Location>
 void assertMultipliableMatrices(const MatrixConst& mat_a, const Matrix& mat_b, const Mat& mat_c,
                                 const blas::Op opA, const blas::Op opB, const Location location,
                                 std::string mat_a_name, std::string mat_b_name, std::string mat_c_name) {
-  auto get_k = [](const auto& size, const blas::Op op, bool first_member) -> decltype(size.rows()) {
+  auto rows = [](const auto& size, const blas::Op op) -> decltype(size.rows()) {
     switch (op) {
       case blas::Op::NoTrans:
-        return first_member ? size.cols() : size.rows();
+        return size.rows();
       case blas::Op::Trans:
       case blas::Op::ConjTrans:
-        return first_member ? size.rows() : size.cols();
+        return size.cols();
+      default:
+        return {};
+    }
+  };
+  auto cols = [](const auto& size, const blas::Op op) -> decltype(size.cols()) {
+    switch (op) {
+      case blas::Op::NoTrans:
+        return size.cols();
+      case blas::Op::Trans:
+      case blas::Op::ConjTrans:
+        return size.rows();
       default:
         return {};
     }
   };
 
-  auto a_k = [=](const auto& size) { return get_k(size, opA, true); };
-  auto b_k = [=](const auto& size) { return get_k(size, opB, false); };
-
-  switch (opA) {
-    case blas::Op::NoTrans:
-      DLAF_ASSERT_WITH_ORIGIN(location, (a_k(mat_a.nrTiles()) == b_k(mat_b.nrTiles())), "The matrices ",
-                              mat_a_name, " and ", mat_b_name,
-                              " are not left multipliable (cols of matrix ", mat_a_name, ", ",
-                              a_k(mat_b.nrTiles()), ", not equal to rows of matrix ", mat_b_name, ", ",
-                              b_k(mat_b.nrTiles()), ").");
-      DLAF_ASSERT_WITH_ORIGIN(location, (a_k(mat_a.size()) == b_k(mat_b.size())), "The matrices ",
-                              mat_a_name, " and ", mat_b_name,
-                              " are not left multipliable (size of matrix ", mat_a_name, ", ",
-                              a_k(mat_a.size()), ", not equal to that of matrix ", mat_b_name, " , ",
-                              b_k(mat_b.size()), ").");
-      DLAF_ASSERT_WITH_ORIGIN(location, (a_k(mat_a.blockSize()) == b_k(mat_b.blockSize())),
-                              "The matrices ", mat_a_name, " and ", mat_b_name,
-                              " are not left multipliable (blocksize of matrix ", mat_a_name, ", ",
-                              a_k(mat_a.blockSize()), ", not equal to that of matrix ", mat_b_name, ", ",
-                              b_k(mat_b.blockSize()), ").");
-
-      DLAF_ASSERT_WITH_ORIGIN(location, (b_k(mat_a.nrTiles()) == b_k(mat_c.nrTiles())),
-                              "The result of the left multiplication between ", mat_a_name, " and ",
-                              mat_b_name, " cannot be stored in ", mat_c_name, " (rows of matrix ",
-                              mat_a_name, ", ", b_k(mat_a.nrTiles()), ", not equal to that of matrix ",
-                              mat_c_name, ", ", b_k(mat_c.nrTiles()), ").");
-      DLAF_ASSERT_WITH_ORIGIN(location, (b_k(mat_a.size()) == b_k(mat_c.size())),
-                              "The result of the left multiplication between ", mat_a_name, " and ",
-                              mat_b_name, " cannot be stored in ", mat_c_name, " (size of matrix ",
-                              mat_a_name, ", ", b_k(mat_a.size()), ", not equal to that of matrix ",
-                              mat_c_name, ", ", b_k(mat_c.size()), ").");
-      DLAF_ASSERT_WITH_ORIGIN(location, (b_k(mat_a.nrTiles()) == b_k(mat_c.nrTiles())),
-                              "The result of the left multiplication between ", mat_a_name, " and ",
-                              mat_b_name, " cannot be stored in ", mat_c_name, " (blocksize of matrix ",
-                              mat_a_name, ", ", b_k(mat_a.blockSize()), ", not equal to that of matrix ",
-                              mat_c_name, ", ", b_k(mat_c.blockSize()), ").");
-
-      DLAF_ASSERT_WITH_ORIGIN(location, (a_k(mat_b.nrTiles()) == a_k(mat_c.nrTiles())),
-                              "The result of the left multiplication between ", mat_a_name, " and ",
-                              mat_b_name, " cannot be stored in ", mat_c_name, " (rows of matrix ",
-                              mat_b_name, ", ", a_k(mat_b.nrTiles()), ", not equal to that of matrix ",
-                              mat_c_name, ", ", a_k(mat_c.nrTiles()), ").");
-      DLAF_ASSERT_WITH_ORIGIN(location, (a_k(mat_b.size()) == a_k(mat_c.size())),
-                              "The result of the left multiplication between ", mat_a_name, " and ",
-                              mat_b_name, " cannot be stored in ", mat_c_name, " (size of matrix ",
-                              mat_b_name, ", ", a_k(mat_b.size()), ", not equal to that of matrix ",
-                              mat_c_name, ", ", a_k(mat_c.size()), ").");
-      DLAF_ASSERT_WITH_ORIGIN(location, (a_k(mat_b.blockSize()) == a_k(mat_c.blockSize())),
-                              "The result of the left multiplication between ", mat_a_name, " and ",
-                              mat_b_name, " cannot be stored in ", mat_c_name, " (blocksize of matrix ",
-                              mat_b_name, ", ", a_k(mat_b.blockSize()), ", not equal to that of matrix ",
-                              mat_c_name, ", ", a_k(mat_c.blockSize()), ").");
-
-      break;
-    case blas::Op::Trans:
-    case blas::Op::ConjTrans:
-      DLAF_ASSERT_WITH_ORIGIN(location, (a_k(mat_a.nrTiles()) == b_k(mat_b.nrTiles())), "The matrices ",
-                              mat_a_name, " and ", mat_b_name,
-                              " are not left multipliable (cols of matrix ", mat_a_name, ", ",
-                              a_k(mat_b.nrTiles()), ", not equal to rows of matrix ", mat_b_name, ", ",
-                              b_k(mat_b.nrTiles()), ").");
-      DLAF_ASSERT_WITH_ORIGIN(location, (a_k(mat_a.size()) == b_k(mat_b.size())), "The matrices ",
-                              mat_a_name, " and ", mat_b_name,
-                              " are not left multipliable (size of matrix ", mat_a_name, ", ",
-                              a_k(mat_a.size()), ", not equal to that of matrix ", mat_b_name, " , ",
-                              b_k(mat_b.size()), ").");
-      DLAF_ASSERT_WITH_ORIGIN(location, (a_k(mat_a.blockSize()) == b_k(mat_b.blockSize())),
-                              "The matrices ", mat_a_name, " and ", mat_b_name,
-                              " are not left multipliable (blocksize of matrix ", mat_a_name, ", ",
-                              a_k(mat_a.blockSize()), ", not equal to that of matrix ", mat_b_name, ", ",
-                              b_k(mat_b.blockSize()), ").");
-
-      DLAF_ASSERT_WITH_ORIGIN(location, (b_k(mat_a.nrTiles()) == b_k(mat_c.nrTiles())),
-                              "The result of the left multiplication between ", mat_a_name, " and ",
-                              mat_b_name, " cannot be stored in ", mat_c_name, " (rows of matrix ",
-                              mat_a_name, ", ", b_k(mat_a.nrTiles()), ", not equal to that of matrix ",
-                              mat_c_name, ", ", b_k(mat_c.nrTiles()), ").");
-      DLAF_ASSERT_WITH_ORIGIN(location, (b_k(mat_a.size()) == b_k(mat_c.size())),
-                              "The result of the left multiplication between ", mat_a_name, " and ",
-                              mat_b_name, " cannot be stored in ", mat_c_name, " (size of matrix ",
-                              mat_a_name, ", ", b_k(mat_a.size()), ", not equal to that of matrix ",
-                              mat_c_name, ", ", b_k(mat_c.size()), ").");
-      DLAF_ASSERT_WITH_ORIGIN(location, (b_k(mat_a.nrTiles()) == b_k(mat_c.nrTiles())),
-                              "The result of the left multiplication between ", mat_a_name, " and ",
-                              mat_b_name, " cannot be stored in ", mat_c_name, " (blocksize of matrix ",
-                              mat_a_name, ", ", b_k(mat_a.blockSize()), ", not equal to that of matrix ",
-                              mat_c_name, ", ", b_k(mat_c.blockSize()), ").");
-
-      DLAF_ASSERT_WITH_ORIGIN(location, (a_k(mat_b.nrTiles()) == a_k(mat_c.nrTiles())),
-                              "The result of the left multiplication between ", mat_a_name, " and ",
-                              mat_b_name, " cannot be stored in ", mat_c_name, " (rows of matrix ",
-                              mat_b_name, ", ", a_k(mat_b.nrTiles()), ", not equal to that of matrix ",
-                              mat_c_name, ", ", a_k(mat_c.nrTiles()), ").");
-      DLAF_ASSERT_WITH_ORIGIN(location, (a_k(mat_b.size()) == a_k(mat_c.size())),
-                              "The result of the left multiplication between ", mat_a_name, " and ",
-                              mat_b_name, " cannot be stored in ", mat_c_name, " (size of matrix ",
-                              mat_b_name, ", ", a_k(mat_b.size()), ", not equal to that of matrix ",
-                              mat_c_name, ", ", a_k(mat_c.size()), ").");
-      DLAF_ASSERT_WITH_ORIGIN(location, (a_k(mat_b.blockSize()) == a_k(mat_c.blockSize())),
-                              "The result of the left multiplication between ", mat_a_name, " and ",
-                              mat_b_name, " cannot be stored in ", mat_c_name, " (blocksize of matrix ",
-                              mat_b_name, ", ", a_k(mat_b.blockSize()), ", not equal to that of matrix ",
-                              mat_c_name, ", ", a_k(mat_c.blockSize()), ").");
-      break;
-  }
+  DLAF_ASSERT_WITH_ORIGIN(location,
+                          rows(mat_a.size(), opA) == mat_c.size().rows() &&
+                              cols(mat_a.size(), opA) == rows(mat_b.size(), opB) &&
+                              cols(mat_b.size(), opB) == mat_c.size().cols(),
+                          "Size mismatch: ", mat_a_name, " (", rows(mat_a.size(), opA), ", ",
+                          cols(mat_a.size(), opA), ") x ", mat_b_name, " (", rows(mat_b.size(), opB),
+                          ", ", cols(mat_b.size(), opB), ") --> ", mat_c_name, " ", mat_c.size(),
+                          " cannot be performed.");
 }
 /// @brief Assert that the matrices @p mat_a and @p mat_b are multipliable and that matrix @p mat_c can
 /// store the result of this multiplication.

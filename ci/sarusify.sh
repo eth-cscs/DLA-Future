@@ -7,7 +7,7 @@ TEST_EXECUTABLES=""
 
 # Utilities for timers
 ## current time in seconds
-TIMER_UTIL="alias ct=\"date +\\\"%s\\\"\""
+TIMER_UTIL="function ct { date +\"%s\"; }"
 ## et(t) elapsed time since instant t (got with ct command)
 TIMER_UTIL="$TIMER_UTIL"$'\n'"function et { date +%T -d \"1/1 + \$(( \`ct\` - \$1 )) sec\"; }"
 
@@ -45,8 +45,8 @@ while IFS= read -r TEST_COMMAND; do
     SARUS_TEST_COMMANDS="$FILTERED_COMMAND"$'\n'"$SARUS_TEST_COMMANDS"
 done <<< "$TEST_COMMANDS"
 
-# Add a timer for each command
-SARUS_TEST_COMMANDS="FULL_START=\$(ct)"$'\n'"$SARUS_TEST_COMMANDS"$'\n'"echo \"Total Elapsed Time: \$(et \$TEST_START)\""
+# Add a timer for all tests
+SARUS_TEST_COMMANDS="FULL_START=\$(ct)"$'\n'"$SARUS_TEST_COMMANDS"$'\n'"echo \"Total Elapsed Time: \$(et \$TEST_FULL)\""
 
 SARUS_TEST_COMMANDS="$TIMER_UTIL"$'\n'"$SARUS_TEST_COMMANDS"
 

@@ -44,13 +44,13 @@ public:
   ///
   /// @param row index of the row (0-based)
   /// @param col index of the col (0-based)
-  basic_coords(IndexT row, IndexT col) noexcept;
+  basic_coords(IndexT row, IndexT col) noexcept : row_(row), col_(col) {}
 
   /// Create a position with given coordinates
   ///
   /// @see basic_coords::basic_coords(IndexT row, IndexT col)
   /// @param coords where coords[0] is the row index and coords[1] is the column index
-  basic_coords(const std::array<IndexT, 2>& coords) noexcept;
+  basic_coords(const std::array<IndexT, 2>& coords) noexcept : basic_coords(coords[0], coords[1]) {}
 
   /// Compare two indices.
   ///
@@ -142,25 +142,31 @@ public:
   using IndexType = IndexT;
 
   /// Create an invalid 2D coordinate
-  Index2D() noexcept;
+  Index2D() noexcept : internal::basic_coords<IndexT>(-1, -1) {}
 
   /// Create a valid 2D coordinate
   /// @param row index of the row
   /// @param col index of the column
   /// @throw std::invalid_argument if row < 0 or col < 0
-  Index2D(IndexT row, IndexT col);
+  Index2D(IndexT row, IndexT col) : internal::basic_coords<IndexT>(row, col) {
+    if (!internal::basic_coords<IndexT>::isValid())
+      throw std::invalid_argument("indices are not valid (negative).");
+  }
 
   /// Create a valid 2D coordinate
   /// @see Index2D::Index2D(IndexT row, IndexT col)
   /// @param coords where coords[0] is the row index and coords[1] is the column index
   /// @throw std::invalid_argument if coords[0] < 0 or coords[1] < 0
-  Index2D(const std::array<IndexT, 2>& coords);
+  Index2D(const std::array<IndexT, 2>& coords) : Index2D(coords[0], coords[1]) {}
 
   /// @brief Check if it is a valid position inside the grid size specified by @p boundary
   /// @param boundary size of the grid
   /// @return true if the current index is in the range [0, @p boundary) for both row and column
   /// @pre both this Index2D and @p boundary must be valid
-  bool isIn(const Size2D<IndexT, Tag>& boundary) const noexcept;
+  bool isIn(const Size2D<IndexT, Tag>& boundary) const noexcept {
+    return this->row() < boundary.rows() && this->col() < boundary.cols() && (this->isValid()) &&
+           boundary.isValid();
+  }
 
   IndexT row() const noexcept {
     return internal::basic_coords<IndexT>::row_;
@@ -170,6 +176,22 @@ public:
     return internal::basic_coords<IndexT>::col_;
   }
 };
+
+/// Compute Index2D of a linear index inside a 2D grid with specified size and ordering
+template <class Index2DType, typename LinearIndexT>
+Index2DType computeCoords(Ordering ordering, LinearIndexT index,
+                          const std::array<typename Index2DType::IndexType, 2>& dims) {
+  using IndexType = typename Index2DType::IndexType;
+
+  switch (ordering) {
+    case Ordering::RowMajor:
+      return {static_cast<IndexType>(index / dims[1]), static_cast<IndexType>(index % dims[1])};
+    case Ordering::ColumnMajor:
+      return {static_cast<IndexType>(index % dims[0]), static_cast<IndexType>(index / dims[0])};
+    default:
+      return {};
+  }
+}
 
 /// Compute linear index of an Index2D
 ///
@@ -201,5 +223,3 @@ IndexT computeLinearIndex(Ordering ordering, const Index2D<IndexT, Tag>& index,
 
 }
 }
-
-#include "index2d.tpp"

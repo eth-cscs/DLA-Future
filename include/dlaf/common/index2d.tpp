@@ -39,14 +39,16 @@ bool Index2D<IndexT, Tag>::isIn(const Size2D<IndexT, Tag>& boundary) const noexc
 }
 
 /// Compute Index2D of a linear index inside a 2D grid with specified size and ordering
-template <class IndexType, class LinearIndexT, class IndexTag>
-Index2D<IndexType, IndexTag> computeCoords(Ordering ordering, LinearIndexT index,
-                                           const Size2D<IndexType, IndexTag>& dims) {
+template <class Index2DType, typename LinearIndexT>
+Index2DType computeCoords(Ordering ordering, LinearIndexT index,
+                          const std::array<typename Index2DType::IndexType, 2>& dims) {
+  using IndexType = typename Index2DType::IndexType;
+
   switch (ordering) {
     case Ordering::RowMajor:
-      return {static_cast<IndexType>(index / dims.cols()), static_cast<IndexType>(index % dims.cols())};
+      return {static_cast<IndexType>(index / dims[1]), static_cast<IndexType>(index % dims[1])};
     case Ordering::ColumnMajor:
-      return {static_cast<IndexType>(index % dims.rows()), static_cast<IndexType>(index / dims.rows())};
+      return {static_cast<IndexType>(index % dims[0]), static_cast<IndexType>(index / dims[0])};
     default:
       return {};
   }

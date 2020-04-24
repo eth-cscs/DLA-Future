@@ -7,7 +7,7 @@ TEST_EXECUTABLES=""
 
 # Utilities for timers
 ## current time in seconds
-TIMER_UTIL="alias ct=\"date +\\\"%s\\\""
+TIMER_UTIL="alias ct=\"date +\\\"%s\\\"\""
 ## et(t) elapsed time since instant t (got with ct command)
 TIMER_UTIL="$TIMER_UTIL"$'\n'"function et { date +%T -d \"1/1 + \$(( \`ct\` - \$1 )) sec\" }"
 

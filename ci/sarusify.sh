@@ -5,6 +5,14 @@ TEST_COMMANDS=$(ctest -V -N | sed -n -e 's/^.*Test command: //p' | sed 's|/usr/b
 SARUS_TEST_COMMANDS=""
 TEST_EXECUTABLES=""
 
+# Utilities for timers
+## current time in seconds
+alias ct="date +\"%s\""
+## et(t) elapsed time since instant t (got with ct command)
+function et {
+  date +%T -d "1/1 + $(( `ct` - $1 )) sec"
+}
+
 # And replace absolute paths with basenames, assuming we move all tests to $PATH
 while IFS= read -r TEST_COMMAND; do
     FILTERED_COMMAND=""
@@ -33,9 +41,16 @@ while IFS= read -r TEST_COMMAND; do
     # Add check if test passed. Otherwise add it to the list of failed tests.
     FILTERED_COMMAND="$FILTERED_COMMAND"$'\n'"if [ \$? -ne 0 ]; then FAILED=\${FAILED}\"$EXECUTABLE \"; fi"
 
+    # Add a timer for each command
+    FILTERED_COMMAND="TEST_START=\$(ct)"$'\n'"$FILTERED_COMMAND"$'\n'"echo \"Elapsed: \$(et \$TEST_START)\""
+
     SARUS_TEST_COMMANDS="$FILTERED_COMMAND"$'\n'"$SARUS_TEST_COMMANDS"
 done <<< "$TEST_COMMANDS"
 
+# Add a timer for each command
+SARUS_TEST_COMMANDS="FULL_START=\$(ct)"$'\n'"$SARUS_TEST_COMMANDS"$'\n'"echo \"Total Elapsed Time: \$(et \$TEST_START)\""
+
+# Add a report with failed tests
 REPORT_COMMAND="if [[ -z \$FAILED ]]
 then
  echo \"Test Succeded\"

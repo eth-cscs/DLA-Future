@@ -17,6 +17,9 @@
 #include <ostream>
 #include <type_traits>
 
+#include "dlaf/types.h"
+#include "dlaf/util_math.h"
+
 namespace dlaf {
 
 enum class Coord { Row, Col };
@@ -168,13 +171,33 @@ public:
   }
 };
 
-/// Compute coords of the @p index -th cell in a grid with @p ordering and sizes @p dims
-/// @param ordering specify linear index layout in the grid
-/// @param dims with number of rows at @p dims[0] and number of columns at @p dims[1]
-/// @param index is the linear index of the cell with specified @p ordering
-template <class Index2DType, typename LinearIndexT>
-Index2DType computeCoords(Ordering ordering, LinearIndexT index,
-                          const std::array<typename Index2DType::IndexType, 2>& dims);
+/// Compute linear index of an Index2D
+///
+/// @return -1 if given index is outside the grid size, otherwise the linear index (w.r.t specified ordering)
+template <class IndexT, class Tag>
+IndexT computeLinearIndex(Ordering ordering, const Index2D<IndexT, Tag>& index,
+                          const Size2D<IndexT, Tag>& dims) noexcept {
+  using dlaf::util::size_t::mul;
+  using dlaf::util::size_t::sum;
+
+  if (!index.isIn(dims))
+    return -1;
+
+  std::size_t linear_index;
+
+  switch (ordering) {
+    case Ordering::RowMajor:
+      linear_index = sum(mul(index.row(), dims.cols()), index.col());
+      break;
+    case Ordering::ColumnMajor:
+      linear_index = sum(mul(index.col(), dims.rows()), index.row());
+      break;
+    default:
+      return {};
+  }
+
+  return to_signed<IndexT>(linear_index);
+}
 
 }
 }

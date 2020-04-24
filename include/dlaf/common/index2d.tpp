@@ -54,23 +54,5 @@ Index2DType computeCoords(Ordering ordering, LinearIndexT index,
   }
 }
 
-/// Compute linear index of an Index2D
-///
-/// @return -1 if given index is outside the grid size, otherwise the linear index (w.r.t specified ordering)
-template <class IndexType, class IndexTag>
-IndexType computeLinearIndex(Ordering ordering, const Index2D<IndexType, IndexTag>& index,
-                             const Size2D<IndexType, IndexTag>& dims) {
-  if (!index.isIn(dims))
-    return -1;
-
-  switch (ordering) {
-    case Ordering::RowMajor:
-      return index.row() * dims.cols() + index.col();
-    case Ordering::ColumnMajor:
-      return index.col() * dims.rows() + index.row();
-    default:
-      return {};
-  }
-}
 }
 }

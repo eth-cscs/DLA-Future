@@ -179,6 +179,9 @@ public:
 };
 
 /// Compute Index2D of a linear index inside a 2D grid with specified size and ordering
+/// @param ordering specify linear index layout in the grid
+/// @param dims with number of rows at @p dims[0] and number of columns at @p dims[1]
+/// @param index is the linear index of the cell with specified @p ordering
 template <class Index2DType, typename LinearIndexT>
 Index2DType computeCoords(Ordering ordering, LinearIndexT index,
                           const std::array<typename Index2DType::IndexType, 2>& dims) {

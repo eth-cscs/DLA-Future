@@ -7,11 +7,9 @@ TEST_EXECUTABLES=""
 
 # Utilities for timers
 ## current time in seconds
-alias ct="date +\"%s\""
+TIMER_UTIL="alias ct=\"date +\\\"%s\\\""
 ## et(t) elapsed time since instant t (got with ct command)
-function et {
-  date +%T -d "1/1 + $(( `ct` - $1 )) sec"
-}
+TIMER_UTIL="$TIMER_UTIL"$'\n'"function et { date +%T -d \"1/1 + \$(( \`ct\` - \$1 )) sec\" }"
 
 # And replace absolute paths with basenames, assuming we move all tests to $PATH
 while IFS= read -r TEST_COMMAND; do
@@ -49,6 +47,8 @@ done <<< "$TEST_COMMANDS"
 
 # Add a timer for each command
 SARUS_TEST_COMMANDS="FULL_START=\$(ct)"$'\n'"$SARUS_TEST_COMMANDS"$'\n'"echo \"Total Elapsed Time: \$(et \$TEST_START)\""
+
+SARUS_TEST_COMMANDS="$TIMER_UTIL"'\n'"$SARUS_TEST_COMMANDS"
 
 # Add a report with failed tests
 REPORT_COMMAND="if [[ -z \$FAILED ]]

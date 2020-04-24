@@ -56,6 +56,9 @@ COPY --from=builder /root/run.sh /root/run.sh
 # Make it easy to call our binaries.
 ENV PATH="/root/DLA-Future.bundle/usr/bin:$PATH"
 
+# Automatically print stacktraces on segfault
+ENV LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so
+
 RUN echo "/root/DLA-Future.bundle/usr/lib/" > /etc/ld.so.conf.d/dlaf.conf && ldconfig
 
 WORKDIR /root/DLA-Future.bundle/usr/bin

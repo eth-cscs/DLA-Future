@@ -197,29 +197,46 @@ Index2DType computeCoords(Ordering ordering, LinearIndexT index,
   }
 }
 
-/// Compute linear index of an Index2D
 template <class IndexT, class Tag>
-IndexT computeLinearIndex(Ordering ordering, const Index2D<IndexT, Tag>& index,
-                          const Size2D<IndexT, Tag>& dims) noexcept {
+IndexT computeLinearIndexRowMajor(const Index2D<IndexT, Tag>& index,
+                                  const Size2D<IndexT, Tag>& dims) noexcept {
   DLAF_ASSERT_MODERATE(index.isIn(dims), "Index ", index, " is not in the grid ", dims);
 
   using dlaf::util::size_t::mul;
   using dlaf::util::size_t::sum;
 
-  std::size_t linear_index;
+  std::size_t linear_index = sum(mul(index.row(), dims.cols()), index.col());
 
+  return to_signed<IndexT>(linear_index);
+}
+
+template <class IndexT, class Tag>
+IndexT computeLinearIndexColMajor(const Index2D<IndexT, Tag>& index,
+                                  const Size2D<IndexT, Tag>& dims) noexcept {
+  DLAF_ASSERT_MODERATE(index.isIn(dims), "Index ", index, " is not in the grid ", dims);
+
+  using dlaf::util::size_t::mul;
+  using dlaf::util::size_t::sum;
+
+  std::size_t linear_index = sum(mul(index.col(), dims.rows()), index.row());
+
+  return to_signed<IndexT>(linear_index);
+}
+
+/// Compute linear index of an Index2D
+///
+/// @pre index.isIn(dims)
+template <class IndexT, class Tag>
+IndexT computeLinearIndex(Ordering ordering, const Index2D<IndexT, Tag>& index,
+                          const Size2D<IndexT, Tag>& dims) noexcept {
   switch (ordering) {
     case Ordering::RowMajor:
-      linear_index = sum(mul(index.row(), dims.cols()), index.col());
-      break;
+      return computeLinearIndexRowMajor(index, dims);
     case Ordering::ColumnMajor:
-      linear_index = sum(mul(index.col(), dims.rows()), index.row());
-      break;
+      return computeLinearIndexColMajor(index, dims);
     default:
       return {};
   }
-
-  return to_signed<IndexT>(linear_index);
 }
 
 }

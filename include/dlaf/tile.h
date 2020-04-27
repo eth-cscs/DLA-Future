@@ -173,10 +173,11 @@ public:
 
   /// @brief Sets the promise to which this Tile will be moved on destruction.
   /// @c setPromise can be called only once per object.
-  /// When the assertion is enabled, terminates the program with an error message
-  /// if @c setPromise was already called. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
+  /// When the assertion is enabled, terminates the program with an error
+  /// message if @c setPromise was already called. This assertion is enabled
+  /// when **DLAF_ASSERT_ENABLE** is ON.
   Tile& setPromise(hpx::promise<Tile<T, device>>&& p) {
-    DLAF_ASSERT((p_), "setPromise has been already used on this object!");
+    DLAF_ASSERT((!p_), "setPromise has been already used on this object!");
     p_ = std::make_unique<hpx::promise<Tile<T, device>>>(std::move(p));
     return *this;
   }

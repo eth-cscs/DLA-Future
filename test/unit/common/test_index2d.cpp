@@ -144,20 +144,22 @@ TYPED_TEST(Index2DTest, Print) {
 TYPED_TEST(Index2DTest, ComputeLinearIndex) {
   using dlaf::common::Ordering;
 
-  const Index2D<TypeParam> index(13, 26);
-  std::vector<Size2D<TypeParam>> configs{{
-      Size2D<TypeParam>{13, 26},  // out-of-rows & out-of-cols
-      Size2D<TypeParam>{13, 39},  // out-of-rows
-      Size2D<TypeParam>{26, 26},  // out-of-cols
-  }};
-
 #ifdef DLAF_ASSERT_MODERATE_ENABLE
-  std::array<Ordering, 2> orderings{Ordering::RowMajor, Ordering::ColumnMajor};
+  {
+    const Index2D<TypeParam> index(13, 26);
+    std::vector<Size2D<TypeParam>> configs{{
+        Size2D<TypeParam>{13, 26},  // out-of-rows & out-of-cols
+        Size2D<TypeParam>{13, 39},  // out-of-rows
+        Size2D<TypeParam>{26, 26},  // out-of-cols
+    }};
 
-  for (const auto& ordering : orderings) {
-    for (const Size2D<TypeParam>& size : configs) {
-      EXPECT_DEATH(computeLinearIndex(ordering, index, {size.rows(), size.cols()}), "[ERROR]");
-      EXPECT_DEATH(computeLinearIndex(ordering, index, Size2D<TypeParam>(size)), "[ERROR]");
+    std::array<Ordering, 2> orderings{Ordering::RowMajor, Ordering::ColumnMajor};
+
+    for (const auto& ordering : orderings) {
+      for (const Size2D<TypeParam>& size : configs) {
+        EXPECT_DEATH(computeLinearIndex(ordering, index, {size.rows(), size.cols()}), "[ERROR]");
+        EXPECT_DEATH(computeLinearIndex(ordering, index, Size2D<TypeParam>(size)), "[ERROR]");
+      }
     }
   }
 #endif

@@ -36,29 +36,32 @@ while IFS= read -r TEST_COMMAND; do
         fi
     done
 
+    # Add echo of running command
+    FILTERED_COMMAND="echo \"- Running: $FILTERED_COMMAND\""$'\n'"$FILTERED_COMMAND"
+
     # Add check if test passed. Otherwise add it to the list of failed tests.
     FILTERED_COMMAND="$FILTERED_COMMAND"$'\n'"if [ \$? -ne 0 ]; then FAILED=\${FAILED}\"$EXECUTABLE \"; fi"
 
     # Add a timer for each command
-    FILTERED_COMMAND="TEST_START=\$(ct)"$'\n'"$FILTERED_COMMAND"$'\n'"echo \"Elapsed: \$(et \$TEST_START)\""
+    FILTERED_COMMAND="TEST_START=\$(ct)"$'\n'"$FILTERED_COMMAND"$'\n'"echo \"- Elapsed: \$(et \$TEST_START)\""
 
     SARUS_TEST_COMMANDS="$FILTERED_COMMAND"$'\n'"$SARUS_TEST_COMMANDS"
 done <<< "$TEST_COMMANDS"
 
 # Add a timer for all tests
-SARUS_TEST_COMMANDS="FULL_START=\$(ct)"$'\n'"$SARUS_TEST_COMMANDS"$'\n'"echo \"Total Elapsed Time: \$(et \$TEST_FULL)\""
+SARUS_TEST_COMMANDS="FULL_START=\$(ct)"$'\n'"$SARUS_TEST_COMMANDS"$'\n'"echo \"--- Total Elapsed Time: \$(et \$FULL_START)\""
 
 SARUS_TEST_COMMANDS="$TIMER_UTIL"$'\n'"$SARUS_TEST_COMMANDS"
 
 # Add a report with failed tests
 REPORT_COMMAND="if [[ -z \$FAILED ]]
 then
- echo \"Test Succeded\"
+ echo \"--- Test Succeded\"
  exit 0
 else
   for TEST in \$FAILED
   do
-    printf \"Test %s FAILED\n\" \$TEST
+    printf \"--- Test %s FAILED\n\" \$TEST
   done
   exit 1
 fi"

@@ -9,6 +9,7 @@
 //
 
 #include "dlaf/matrix.h"
+#include "dlaf/matrix/copy.h"
 
 #include <vector>
 #include "gtest/gtest.h"

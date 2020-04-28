@@ -12,7 +12,6 @@
 #include <exception>
 #include <vector>
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/layout_info.h"
 #include "dlaf/matrix/matrix_base.h"
@@ -337,31 +336,6 @@ Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const Tile
                                        SizeType ld_tile, SizeType tiles_per_col,
                                        const comm::CommunicatorGrid& comm, T* ptr) {
   return createMatrixFromTile<device>(size, block_size, ld_tile, tiles_per_col, comm, {0, 0}, ptr);
-}
-
-/// Copy values from another matrix
-///
-/// Given a matrix with the same geometries and distribution, this function submits tasks that will
-/// perform the copy of each tile
-template <template <class, Device> class MatrixTypeSrc, template <class, Device> class MatrixTypeDst,
-          class Tsrc, class Tdst>
-void copy(MatrixTypeSrc<Tsrc, Device::CPU>& source, MatrixTypeDst<Tdst, Device::CPU>& dest) {
-  static_assert(std::is_same<const Tsrc, const Tdst>::value,
-                "Source and destination matrix should have the same type");
-  static_assert(!std::is_const<Tdst>::value, "Destination matrix cannot be const");
-
-  const auto& distribution = source.distribution();
-
-  // TODO check same size and blocksize
-  // TODO check equally distributed
-
-  const SizeType local_tile_rows = distribution.localNrTiles().rows();
-  const SizeType local_tile_cols = distribution.localNrTiles().cols();
-
-  for (SizeType j = 0; j < local_tile_cols; ++j)
-    for (SizeType i = 0; i < local_tile_rows; ++i)
-      hpx::dataflow(hpx::util::unwrapping(dlaf::tile::lacpy<Tdst>), source.read(LocalTileIndex(i, j)),
-                    dest(LocalTileIndex(i, j)));
 }
 
 /// ---- ETI

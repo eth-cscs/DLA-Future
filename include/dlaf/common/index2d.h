@@ -178,6 +178,18 @@ public:
   }
 };
 
+template <class IndexT, class Tag, class LinearIndexT>
+Index2D<IndexT, Tag> computeCoordsRowMajor(LinearIndexT index,
+                                   const Size2D<IndexT, Tag>& dims) noexcept {
+  return {static_cast<IndexT>(index / dims.cols()), static_cast<IndexT>(index % dims.cols())};
+}
+
+template <class IndexT, class Tag, class LinearIndexT>
+Index2D<IndexT, Tag> computeCoordsColMajor(LinearIndexT index,
+                                   const Size2D<IndexT, Tag>& dims) noexcept {
+  return {static_cast<IndexT>(index % dims.rows()), static_cast<IndexT>(index / dims.rows())};
+}
+
 /// Compute coords of the @p index -th cell in a grid with @p ordering and sizes @p dims
 ///
 /// Return an Index2D matching the Size2D (same IndexT and Tag)
@@ -189,9 +201,9 @@ Index2D<IndexT, Tag> computeCoords(Ordering ordering, LinearIndexT index,
                                    const Size2D<IndexT, Tag>& dims) noexcept {
   switch (ordering) {
     case Ordering::RowMajor:
-      return {static_cast<IndexT>(index / dims.cols()), static_cast<IndexT>(index % dims.cols())};
+      return computeCoordsRowMajor(index, dims);
     case Ordering::ColumnMajor:
-      return {static_cast<IndexT>(index % dims.rows()), static_cast<IndexT>(index / dims.rows())};
+      return computeCoordsColMajor(index, dims);
     default:
       return {};
   }

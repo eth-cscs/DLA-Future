@@ -1,3 +1,13 @@
+//
+// Distributed Linear Algebra with Future (DLAF)
+//
+// Copyright (c) 2018-2019, ETH Zurich
+// All rights reserved.
+//
+// Please, refer to the LICENSE file in the root directory.
+// SPDX-License-Identifier: BSD-3-Clause
+//
+
 // force enable DLAF_ASSERT_MODERATE, otherwise cast checks cannot be tested
 #ifndef DLAF_ASSERT_MODERATE_ENABLE
 #define DLAF_ASSERT_MODERATE_ENABLE

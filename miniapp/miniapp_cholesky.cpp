@@ -23,6 +23,7 @@
 #include "dlaf/communication/sync/reduce.h"
 #include "dlaf/factorization/mc.h"
 #include "dlaf/matrix.h"
+#include "dlaf/util_math.h"
 #include "dlaf/util_matrix.h"
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/util_types.h"
@@ -298,6 +299,7 @@ void cholesky_diff(MatrixType& original, MatrixType& cholesky_lower, Communicato
   // TODO original and cholesky_lower must be different
 
   using dlaf::common::make_data;
+  using dlaf::util::size_t::mul;
 
   dlaf::util_matrix::assertSizeSquare(original, "check_cholesky", "original");
   dlaf::util_matrix::assertBlocksizeSquare(original, "check_cholesky", "original");
@@ -353,8 +355,9 @@ void cholesky_diff(MatrixType& original, MatrixType& cholesky_lower, Communicato
         assert(owner_transposed.col() == current_rank.col());
 
         TileType workspace(cholesky_lower.blockSize(),
-                           dlaf::memory::MemoryView<T, Device::CPU>(cholesky_lower.blockSize().rows() *
-                                                                    cholesky_lower.blockSize().cols()),
+                           dlaf::memory::MemoryView<T, Device::CPU>(
+                               mul(cholesky_lower.blockSize().rows(),
+                                   cholesky_lower.blockSize().cols())),
                            cholesky_lower.blockSize().rows());
 
         dlaf::comm::sync::broadcast::receive_from(owner_transposed.row(), comm_grid.colCommunicator(),

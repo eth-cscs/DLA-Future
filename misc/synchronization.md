@@ -379,7 +379,7 @@ This task will create a copy (a copy of the reference, the elements are not copi
 of the tile (`Tile<const T>`) as soon as the `shared_future` is ready.
 The copy is used to set the value of the shared future of the parent matrix.
 This is what allows to have both the matrix view and the parent matrix to access in read-only mode the tile in parallel.
-However, it has to e noted that a promise cannot be copied, therefore the copy will get a new promise.
+However, it has to be noted that a promise cannot be copied, therefore the copy will get a new promise.
 (The copy with a new promise is represented in Figure 3 and 4
 with the purple (copy) and red (move of the new promise) arrows pointing to the light yellow promise.)
 
@@ -387,7 +387,7 @@ The crucial point of the machinery is the correct handling of the next dependenc
 that has to manage the synchronization of both the shared future of the matrix view and of the parent matrix.
 A synchronous dataflow, which sets the value of the internal future (light green future in Figure 3 and 4)
 of the parent matrix, is used in this case, whose arguments are two futures:
-- the tile in the original shared future of the matrix view has internally a promise
+- the tile in the original shared future of the matrix view (orange) has internally a promise
   (purple promise) that triggers the first future of the dataflow,
 - the copied tile (contained in the light yellow shared future)
   is given another promise (blue promise) that will set the second future.

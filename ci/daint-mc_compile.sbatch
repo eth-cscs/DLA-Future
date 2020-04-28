@@ -25,9 +25,10 @@ cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
       -Dlapackpp_DIR=$EBROOTLAPACKPP   \
       -DDLAF_MPI_PRESET=slurm          \
       -DMPIEXEC_NUMCORES=36            \
+      -DDLAF_CI_TWEAK=1                \
       -DCMAKE_CXX_FLAGS="-Werror"      \
       ../
-make -j 50 VERBOSE=1
+make -j 20 VERBOSE=1
 
 # only executed if build passed
 echo "compilation successful"

@@ -22,7 +22,7 @@ while IFS= read -r TEST_COMMAND; do
 
         # Collect the test executables and
         # replace absolute paths with basenames
-        if [[ $var == *DLA-Future-build* ]]; then
+        if [[ -f "$var" ]] && [[ $var == *DLA-Future-build* ]]; then
             TEST_EXECUTABLES="$var"$'\n'"$TEST_EXECUTABLES"
             EXECUTABLE=$(basename "$var")
             FILTERED_COMMAND="$FILTERED_COMMAND\"$EXECUTABLE\" "

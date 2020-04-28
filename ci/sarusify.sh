@@ -15,11 +15,6 @@ TIMER_UTIL="$TIMER_UTIL"$'\n'"function et { date +%T -d \"1/1 + \$(( \`ct\` - \$
 while IFS= read -r TEST_COMMAND; do
     FILTERED_COMMAND=""
 
-    # Wrap non-MPI tests in `srun .. sarus run ...`
-    if [[ $TEST_COMMAND != srun* ]]; then
-        FILTERED_COMMAND='srun "-n" "1" "-c" "36" "--jobid=$JOBID" "sarus" "run" "$IMAGE" '
-    fi
-
     for arg in $TEST_COMMAND; do
         # Remove leading and trailing quotes
         var="${arg%\"}"
@@ -27,7 +22,7 @@ while IFS= read -r TEST_COMMAND; do
 
         # Collect the test executables and
         # replace absolute paths with basenames
-        if [[ $var == /root/DLA-Future-build/* ]]; then
+        if [[ $var == *DLA-Future-build* ]]; then
             TEST_EXECUTABLES="$var"$'\n'"$TEST_EXECUTABLES"
             EXECUTABLE=$(basename "$var")
             FILTERED_COMMAND="$FILTERED_COMMAND\"$EXECUTABLE\" "

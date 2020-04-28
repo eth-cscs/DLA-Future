@@ -18,6 +18,7 @@ RUN source /opt/intel/compilers_and_libraries/linux/mkl/bin/mklvars.sh intel64 &
       -DDLAF_WITH_TEST=ON \
       -DDLAF_BUILD_MINIAPPS=ON \
       -DDLAF_MPI_PRESET=slurm \
+      -DDLAF_TEST_RUNALL_WITH_MPIEXEC=ON \
       -DMPIEXEC_NUMCORES=36 \
       -DMPIEXEC_EXECUTABLE=srun \
       -DMPIEXEC_PREFLAGS="--jobid=\$JOBID;sarus;run;--mpi;\$IMAGE" \

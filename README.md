@@ -1,4 +1,4 @@
-[![pipeline status](https://gitlab.com/cscs-ci/eth-cscs/DLA-Future-CI/badges/master/pipeline.svg)](https://gitlab.com/cscs-ci/eth-cscs/DLA-Future-CI/-/commits/master)
+[![pipeline status](https://gitlab.com/cscs-ci/eth-cscs/DLA-Future-CI/badges/master/pipeline.svg)](https://gitlab.com/cscs-ci/eth-cscs/DLA-Future-CI/-/commits/master) [![codecov](https://codecov.io/gh/eth-cscs/DLA-Future/branch/master/graph/badge.svg)](https://codecov.io/gh/eth-cscs/DLA-Future)
 
 # Distributed Linear Algebra with Futures.
 

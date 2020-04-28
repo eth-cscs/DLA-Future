@@ -13,13 +13,6 @@
 namespace dlaf {
 namespace tile {
 
-template <class T, Device device>
-void potrf(blas::Uplo uplo, const Tile<T, device>& a) {
-  auto info = potrfInfo(uplo, a);
-  if (info != 0)
-    throw std::runtime_error("Error: POTRF: A is not positive definite.");
-}
-
 template <class T>
 void lacpy(const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b) {
   DLAF_ASSERT_HEAVY(a.size() == b.size(),
@@ -30,6 +23,13 @@ void lacpy(const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b) {
   SizeType n = a.size().cols();
 
   lapack::lacpy(lapack::MatrixType::General, m, n, a.ptr(), a.ld(), b.ptr(), b.ld());
+}
+
+template <class T, Device device>
+void potrf(blas::Uplo uplo, const Tile<T, device>& a) {
+  auto info = potrfInfo(uplo, a);
+  if (info != 0)
+    throw std::runtime_error("Error: POTRF: A is not positive definite.");
 }
 
 template <class T, Device device>

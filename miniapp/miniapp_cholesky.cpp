@@ -15,6 +15,7 @@
 #include <mpi.h>
 #include <hpx/hpx.hpp>
 #include <hpx/hpx_init.hpp>
+#include <lapack.hh>
 
 #include "dlaf/blas_tile.h"
 #include "dlaf/common/vector.h"
@@ -275,14 +276,9 @@ void setUpperToZeroForDiagonalTiles(MatrixType& matrix) {
     if (distribution.rankIndex() != distribution.rankGlobalTile(diag_tile))
       continue;
 
-    const auto tl_index = distribution.globalElementIndex(diag_tile, {0, 0});
-    auto tile_set = hpx::util::unwrapping([tl_index](auto&& tile) {
-      for (int j = 0; j < tile.size().cols(); ++j)
-        for (int i = 0; i < tile.size().rows(); ++i) {
-          GlobalElementIndex element_wrt_global{tl_index.row() + i, tl_index.col() + j};
-          if (element_wrt_global.row() < element_wrt_global.col())
-            tile(TileElementIndex{i, j}) = 0;
-        }
+    auto tile_set = hpx::util::unwrapping([](auto&& tile) {
+      lapack::laset(lapack::MatrixType::Upper, tile.size().rows() - 1, tile.size().cols() - 1, 0, 0,
+                    tile.ptr({0, 1}), tile.ld());
     });
 
     matrix(diag_tile).then(tile_set);

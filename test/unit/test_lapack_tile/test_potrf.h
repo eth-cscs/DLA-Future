@@ -105,10 +105,10 @@ void testPotrfArgExceptions(blas::Uplo uplo, TileElementSize size_a, SizeType ex
   Tile<T, Device::CPU> a(size_a, std::move(mem_a), lda);
 
   if (return_info) {
-    EXPECT_THROW(tile::potrfInfo(uplo, a), std::invalid_argument);
+    EXPECT_DEATH(tile::potrfInfo(uplo, a), "[ERROR]");
   }
   else {
-    EXPECT_THROW(tile::potrf(uplo, a), std::invalid_argument);
+    EXPECT_DEATH(tile::potrf(uplo, a), "[ERROR]");
   }
 }
 
@@ -138,6 +138,6 @@ void testPotrfNonPosDef(blas::Uplo uplo, SizeType n, SizeType extra_lda) {
     EXPECT_EQ(1, tile::potrfInfo(uplo, a));
   }
   else {
-    EXPECT_THROW(tile::potrf(uplo, a), std::runtime_error);
+    EXPECT_DEATH(tile::potrf(uplo, a), "[ERROR]");
   }
 }

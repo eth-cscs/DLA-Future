@@ -46,15 +46,13 @@ dlaf::BaseType<T> lantr(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag,
 template <class T, Device device>
 void potrf(blas::Uplo uplo, const Tile<T, device>& a) {
   auto info = potrfInfo(uplo, a);
-  if (info != 0)
-    throw std::runtime_error("Error: POTRF: A is not positive definite.");
+
+  DLAF_ASSERT((info == 0), "POTRF: A is not positive definite.")
 }
 
 template <class T, Device device>
 long long potrfInfo(blas::Uplo uplo, const Tile<T, device>& a) {
-  if (a.size().rows() != a.size().cols()) {
-    throw std::invalid_argument("Error: POTRF: A is not square.");
-  }
+  DLAF_ASSERT((a.size().rows() == a.size().cols()), "POTRF: A is not square.");
 
   auto info = lapack::potrf(uplo, a.size().rows(), a.ptr(), a.ld());
   DLAF_ASSERT_HEAVY((info >= 0));

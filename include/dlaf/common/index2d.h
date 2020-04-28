@@ -180,13 +180,13 @@ public:
 
 template <class IndexT, class Tag, class LinearIndexT>
 Index2D<IndexT, Tag> computeCoordsRowMajor(LinearIndexT index,
-                                   const Size2D<IndexT, Tag>& dims) noexcept {
+                                           const Size2D<IndexT, Tag>& dims) noexcept {
   return {static_cast<IndexT>(index / dims.cols()), static_cast<IndexT>(index % dims.cols())};
 }
 
 template <class IndexT, class Tag, class LinearIndexT>
 Index2D<IndexT, Tag> computeCoordsColMajor(LinearIndexT index,
-                                   const Size2D<IndexT, Tag>& dims) noexcept {
+                                           const Size2D<IndexT, Tag>& dims) noexcept {
   return {static_cast<IndexT>(index % dims.rows()), static_cast<IndexT>(index / dims.rows())};
 }
 

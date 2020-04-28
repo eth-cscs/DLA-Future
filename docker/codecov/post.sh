@@ -10,7 +10,8 @@ lcov ${TRACE_FILES_ARGS} --output-file /shared/combined.info
 # Only keep our own source
 lcov --extract /shared/combined.info "/DLA-Future/*" --output-file /shared/combined.info
 
-# Upload to codecov.io
+# Upload to codecov.io (once for github, once for the gitlab mirror)
 pushd /DLA-Future
-bash <(curl -s https://codecov.io/bash) -f /shared/combined.info
+bash <(curl -s https://codecov.io/bash) -f /shared/combined.info -t $CODECOV_TOKEN_GITHUB
+bash <(curl -s https://codecov.io/bash) -f /shared/combined.info -t $CODECOV_TOKEN_GITLAB
 popd

@@ -268,23 +268,24 @@ void setUpperToZeroForDiagonalTiles(MatrixType& matrix) {
 
   const auto& distribution = matrix.distribution();
 
-  for (int j = 0; j < distribution.localNrTiles().cols(); ++j) {
-    for (int i = 0; i < distribution.localNrTiles().rows(); ++i) {
-      const auto tile_wrt_global = distribution.globalTileIndex(LocalTileIndex{i, j});
-      const auto tl_index = distribution.globalElementIndex(tile_wrt_global, {0, 0});
+  for (int i_tile_local = 0; i_tile_local < distribution.localNrTiles().rows(); ++i_tile_local) {
+    auto k_tile_global = distribution.globalTileFromLocalTile<Coord::Row>(i_tile_local);
+    GlobalTileIndex diag_tile{k_tile_global, k_tile_global};
 
-      if (tile_wrt_global.row() != tile_wrt_global.col())
-        continue;
+    if (distribution.rankIndex() != distribution.rankGlobalTile(diag_tile))
+      continue;
 
-      matrix(tile_wrt_global).then(hpx::util::unwrapping([tl_index](auto&& tile) {
-        for (int j = 0; j < tile.size().cols(); ++j)
-          for (int i = 0; i < tile.size().rows(); ++i) {
-            GlobalElementIndex element_wrt_global{tl_index.row() + i, tl_index.col() + j};
-            if (element_wrt_global.row() < element_wrt_global.col())
-              tile(TileElementIndex{i, j}) = 0;
-          }
-      }));
-    }
+    const auto tl_index = distribution.globalElementIndex(diag_tile, {0, 0});
+    auto tile_set = hpx::util::unwrapping([tl_index](auto&& tile) {
+      for (int j = 0; j < tile.size().cols(); ++j)
+        for (int i = 0; i < tile.size().rows(); ++i) {
+          GlobalElementIndex element_wrt_global{tl_index.row() + i, tl_index.col() + j};
+          if (element_wrt_global.row() < element_wrt_global.col())
+            tile(TileElementIndex{i, j}) = 0;
+        }
+    });
+
+    matrix(diag_tile).then(tile_set);
   }
 }
 

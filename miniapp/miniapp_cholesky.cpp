@@ -421,7 +421,7 @@ void cholesky_diff(MatrixType& original, MatrixType& cholesky_lower, Communicato
 /// Prints a message with the ratio and a note about the error:
 /// "":        check ok
 /// "ERROR":   error is high, there is an error in the factorization
-/// "WARNING": error is slightly high, there should be an error in the factorization
+/// "WARNING": error is slightly high, there can be an error in the factorization
 void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
   // 1. Compute the max norm of the original matrix in A
   float norm_A = matrix_norm(A, comm_grid);

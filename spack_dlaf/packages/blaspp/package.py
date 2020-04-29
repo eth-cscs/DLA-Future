@@ -22,7 +22,6 @@ class Blaspp(CMakePackage):
 
     version('develop', hg=hg, revision="5191c9d")
 
-
     variant('gfort',
             default=False,
             description='Use GNU Fortran interface. Default is Intel interface. (MKL)')

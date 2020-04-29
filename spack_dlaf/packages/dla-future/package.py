@@ -22,7 +22,7 @@ class DlaFuture(CMakePackage):
     # Until mpich is default comment this out
     #depends_on('mpi@3:')
     depends_on('mpich')
-    depends_on('intel-mkl')
+    depends_on('mkl')
     depends_on('blaspp')
     depends_on('lapackpp')
     depends_on('hpx cxxstd=14 networking=none')

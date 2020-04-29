@@ -178,20 +178,32 @@ public:
   }
 };
 
-/// Compute Index2D of a linear index inside a 2D grid with specified size and ordering
-/// @param ordering specify linear index layout in the grid
-/// @param dims with number of rows at @p dims[0] and number of columns at @p dims[1]
-/// @param index is the linear index of the cell with specified @p ordering
-template <class Index2DType, typename LinearIndexT>
-Index2DType computeCoords(Ordering ordering, LinearIndexT index,
-                          const std::array<typename Index2DType::IndexType, 2>& dims) {
-  using IndexType = typename Index2DType::IndexType;
+template <class IndexT, class Tag, class LinearIndexT>
+Index2D<IndexT, Tag> computeCoordsRowMajor(LinearIndexT index,
+                                           const Size2D<IndexT, Tag>& dims) noexcept {
+  return {static_cast<IndexT>(index / dims.cols()), static_cast<IndexT>(index % dims.cols())};
+}
 
+template <class IndexT, class Tag, class LinearIndexT>
+Index2D<IndexT, Tag> computeCoordsColMajor(LinearIndexT index,
+                                           const Size2D<IndexT, Tag>& dims) noexcept {
+  return {static_cast<IndexT>(index % dims.rows()), static_cast<IndexT>(index / dims.rows())};
+}
+
+/// Compute coords of the @p index -th cell in a grid with @p ordering and sizes @p dims
+///
+/// Return an Index2D matching the Size2D (same IndexT and Tag)
+/// @param ordering specify linear index layout in the grid
+/// @param dims Size2D<IndexT, Tag>
+/// @param index is the linear index of the cell with specified @p ordering
+template <class IndexT, class Tag, class LinearIndexT>
+Index2D<IndexT, Tag> computeCoords(Ordering ordering, LinearIndexT index,
+                                   const Size2D<IndexT, Tag>& dims) noexcept {
   switch (ordering) {
     case Ordering::RowMajor:
-      return {static_cast<IndexType>(index / dims[1]), static_cast<IndexType>(index % dims[1])};
+      return computeCoordsRowMajor(index, dims);
     case Ordering::ColumnMajor:
-      return {static_cast<IndexType>(index % dims[0]), static_cast<IndexType>(index / dims[0])};
+      return computeCoordsColMajor(index, dims);
     default:
       return {};
   }

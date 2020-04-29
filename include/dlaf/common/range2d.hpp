@@ -95,6 +95,33 @@ private:
 };
 
 /// Function wrappers to deduce types in constructor calls to IterableRange2D
+///
+/// `iterateRange2D()` returns indices in column-major order with the begin
+/// index included and the end index/size excluded.
+///
+/// The following one-argument variants of `iterateRange2D()` iterate over the
+/// same range of indices:
+///
+/// (0, 0), (1, 0), (0, 1), (1, 1), (0, 2), (1, 2)
+///
+/// ```
+/// for(auto idx : iterateRange2D(Index2D(2, 3))) { ... }
+/// for(auto idx : iterateRange2D(Size2D(2, 3))) { ... }
+/// ```
+///
+/// The following two-argument variants of `iterateRange2D()` iterate over the
+/// same range of indices:
+///
+/// (5, 6), (6, 6), (5, 7), (6, 7), (5, 8), (6, 8)
+///
+/// ```
+/// for(auto idx : iterateRange2D(Index2D(5, 6), Index2D(7, 9))) { ... }
+/// for(auto idx : iterateRange2D(Index2D(5, 6), Size2D(2, 3))) { ... } // *
+/// ```
+///
+/// * Note: Size2D(2, 3) is added to Index2D(5, 6) to determine the end index of
+///         the range.
+
 template <typename IndexT, class Tag>
 IterableRange2D<IndexT, Tag> iterateRange2D(Index2D<IndexT, Tag> begin_idx,
                                             Index2D<IndexT, Tag> end_idx) noexcept {

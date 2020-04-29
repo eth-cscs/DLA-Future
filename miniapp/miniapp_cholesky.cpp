@@ -26,8 +26,6 @@
 #include "dlaf/matrix.h"
 #include "dlaf/util_math.h"
 #include "dlaf/util_matrix.h"
-#include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/util_types.h"
 
 #include "dlaf/common/timer.h"
 

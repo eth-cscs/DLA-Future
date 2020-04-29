@@ -1,13 +1,19 @@
+# Copyright 2013-2020 Lawrence Livermore National Security, LLC and other
+# Spack Project Developers. See the top-level COPYRIGHT file for details.
+#
+# SPDX-License-Identifier: (Apache-2.0 OR MIT)
+
 from spack import *
+
 
 class Lapackpp(CMakePackage):
     """LAPACK++: C++ API for the Basic Linear Algebra Subroutines (University of Tennessee)"""
 
     homepage = "https://bitbucket.org/icl/lapackpp"
     hg       = "https://bitbucket.org/icl/lapackpp"
-    maintainers = ['Sely85']
+    maintainers = ['teonnik', 'Sely85']
 
-    version('develop', hg=hg)
+    version('develop', hg=hg, revision="7ffa486")
 
     depends_on('blaspp')
 

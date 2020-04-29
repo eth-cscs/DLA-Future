@@ -39,7 +39,7 @@ class Blaspp(CMakePackage):
         spec = self.spec
         args = ['-DBLASPP_BUILD_TESTS=OFF']
 
-        if '+gfort':
+        if '+gfort' in spec:
             args.append('-DBLAS_LIBRARY_MKL="GNU gfortran conventions"')
         else:
             args.append('-DBLAS_LIBRARY_MKL="Intel ifort conventions"')
@@ -62,7 +62,7 @@ class Blaspp(CMakePackage):
         #
         # - apple : BLAS_LIBRARY="Apple Accelerate" (veclibfort ???)
         #
-        if '^mkl' in spec :
+        if '^mkl' in spec:
             args.append('-DBLAS_LIBRARY="Intel MKL"')
         elif '^essl' in spec:
             args.append('-DBLAS_LIBRARY="IBM ESSL"')

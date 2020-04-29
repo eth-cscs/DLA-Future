@@ -5,9 +5,9 @@ class Lapackpp(CMakePackage):
 
     homepage = "https://bitbucket.org/icl/lapackpp"
     hg       = "https://bitbucket.org/icl/lapackpp"
-    maintainers = ['Sely85']
+    maintainers = ['Sely85', 'teonnik']
 
-    version('develop', hg=hg)
+    version('develop', hg=hg, revision="7ffa486")
 
     depends_on('blaspp')
 

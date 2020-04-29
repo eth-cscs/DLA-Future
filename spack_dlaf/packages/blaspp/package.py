@@ -12,20 +12,42 @@ class Blaspp(CMakePackage):
 
     homepage = "https://bitbucket.org/icl/blaspp"
     hg       = "https://bitbucket.org/icl/blaspp"
-    maintainers = ['Sely85']
+    maintainers = ['Sely85', 'teonnik']
 
-    version('develop', hg=hg, revision="86ccadd")
+    version('develop', hg=hg, revision="5191c9d")
 
 
-    variant('ifort',
+    variant('gfort',
             default=False,
-            description='Use Intel Fortran conventions. Default is GNU gfortran. (Only for Intel MKL)')
+            description='Use GNU Fortran interface. Default is Intel interface. (MKL)')
+    variant('ilp64',
+            default=False,
+            description='Use 64bit integer interface. Default is 32bit. (MKL & ESSL)')
+    variant('parallel',
+            default=False,
+            description='Use OpenMP threaded backend. Default is sequential. (MKL & ESSL)')
 
     depends_on('blas')
 
     def cmake_args(self):
         spec = self.spec
         args = ['-DBLASPP_BUILD_TESTS=OFF']
+
+        if '+gfort':
+            args.append('-DBLAS_LIBRARY_MKL="GNU gfortran conventions"')
+        else:
+            args.append('-DBLAS_LIBRARY_MKL="Intel ifort conventions"')
+
+        if '+ilp64' in spec:
+            args.append('-DBLAS_LIBRARY_INTEGER="int64_t (ILP64)"')
+        else:
+            args.append('-DBLAS_LIBRARY_INTEGER="int (LP64)"')
+
+        if '+parallel' in spec:
+            args.append(['-DUSE_OPENMP=ON',
+                         '-DBLAS_LIBRARY_THREADING="threaded"'])
+        else:
+            args.append('-DBLAS_LIBRARY_THREADING="sequential"')
 
         # Missing:
         #
@@ -34,39 +56,10 @@ class Blaspp(CMakePackage):
         #
         # - apple : BLAS_LIBRARY="Apple Accelerate" (veclibfort ???)
         #
-        if '^intel-mkl' in spec or '^intel-parallel-studio+mkl' in spec:
+        if '^mkl' in spec :
             args.append('-DBLAS_LIBRARY="Intel MKL"')
-
-            if '+ifort':
-                args.append('-DBLAS_LIBRARY_MKL="Intel ifort conventions"')
-            else:
-                args.append('-DBLAS_LIBRARY_MKL="GNU gfortran conventions"')
-
-            if '+ilp64' in spec:
-                args.append('-DBLAS_LIBRARY_INTEGER="int64_t (ILP64)"')
-            else:
-                args.append('-DBLAS_LIBRARY_INTEGER="int (LP64)"')
-
-            if 'threads=openmp' in spec:
-                args.append(['-DUSE_OPENMP=ON',
-                             '-DBLAS_LIBRARY_THREADING="threaded"'])
-            else:
-                args.append('-DBLAS_LIBRARY_THREADING="sequential"')
-
         elif '^essl' in spec:
             args.append('-DBLAS_LIBRARY="IBM ESSL"')
-
-            if '+ilp64' in spec:
-                args.append('-DBLAS_LIBRARY_INTEGER="int64_t (ILP64)"')
-            else:
-                args.append('-DBLAS_LIBRARY_INTEGER="int (LP64)"')
-
-            if 'threads=openmp' in spec:
-                args.append(['-DUSE_OPENMP=ON',
-                             '-DBLAS_LIBRARY_THREADING="threaded"'])
-            else:
-                args.append('-DBLAS_LIBRARY_THREADING="sequential"')
-
         elif '^openblas' in spec:
             args.append('-DBLAS_LIBRARY="OpenBLAS"')
         elif '^cray-libsci' in spec:

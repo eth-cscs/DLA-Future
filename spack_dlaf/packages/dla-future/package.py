@@ -6,7 +6,7 @@ class DlaFuture(CMakePackage):
     homepage = "https://github.com/eth-cscs/DLA-Future.git/wiki"
     git      = "https://github.com/eth-cscs/DLA-Future.git"
 
-    maintainers = ['Sely85']
+    maintainers = ['Sely85', 'teonnik']
 
     version('develop', branch='master')
 

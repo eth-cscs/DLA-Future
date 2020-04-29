@@ -1,4 +1,10 @@
+# Copyright 2013-2020 Lawrence Livermore National Security, LLC and other
+# Spack Project Developers. See the top-level COPYRIGHT file for details.
+#
+# SPDX-License-Identifier: (Apache-2.0 OR MIT)
+
 from spack import *
+
 
 # 1) The CMake options exposed by `blaspp` allow for a value called `auto`. The
 #    value is not needed here as the choice of dependency in the spec determines
@@ -12,7 +18,7 @@ class Blaspp(CMakePackage):
 
     homepage = "https://bitbucket.org/icl/blaspp"
     hg       = "https://bitbucket.org/icl/blaspp"
-    maintainers = ['Sely85', 'teonnik']
+    maintainers = ['teonnik', 'Sely85']
 
     version('develop', hg=hg, revision="5191c9d")
 

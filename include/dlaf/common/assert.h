@@ -30,6 +30,7 @@
   if (!(condition)) {                                                \
     std::cerr << "[ERROR] " << origin << std::endl                   \
               << dlaf::common::concat(#condition, ' ', __VA_ARGS__); \
+    std::cerr.flush();                                               \
     std::terminate();                                                \
   }
 

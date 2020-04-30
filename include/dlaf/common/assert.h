@@ -47,9 +47,9 @@
 ///
 /// If the switch **DLAF_ASSERT_HEAVY_ENABLE** is not defined, this check will not
 /// be performed and it will not add any overhead, nor for the condition evaluation, nor for the message
-#define DLAF_ASSERT_HEAVY(condition, ...) DLAF_CHECK("HEAVY", condition, ##__VA_ARGS__)
+#define DLAF_ASSERT_HEAVY(...) DLAF_CHECK("HEAVY", __VA_ARGS__)
 #else
-#define DLAF_ASSERT_HEAVY(condition, ...)
+#define DLAF_ASSERT_HEAVY(...)
 #endif
 
 #ifdef DLAF_ASSERT_MODERATE_ENABLE
@@ -63,9 +63,9 @@
 ///
 /// If the switch **DLAF_ASSERT_MODERATE_ENABLE** is not defined, this check
 /// will not be performed and it will not add any overhead, nor for the condition evaluation, nor for the message
-#define DLAF_ASSERT_MODERATE(condition, ...) DLAF_CHECK("MODERATE", condition, ##__VA_ARGS__)
+#define DLAF_ASSERT_MODERATE(...) DLAF_CHECK("MODERATE", __VA_ARGS__)
 #else
-#define DLAF_ASSERT_MODERATE(condition, ...)
+#define DLAF_ASSERT_MODERATE(...)
 #endif
 
 #ifdef DLAF_ASSERT_ENABLE
@@ -79,8 +79,7 @@
 ///
 /// If the switch **DLAF_ASSERT_ENABLE** is not defined, this check will not be performed and it will not
 /// add any overhead, nor for the condition evaluation, nor for the message
-#define DLAF_ASSERT_WITH_ORIGIN(origin, condition, ...) \
-  DLAF_CHECK_WITH_ORIGIN("", (origin), condition, ##__VA_ARGS__)
+#define DLAF_ASSERT_WITH_ORIGIN(origin, ...) DLAF_CHECK_WITH_ORIGIN("", origin, __VA_ARGS__)
 
 /// **THIS MACRO MUST BE USED WHEN THE CHECK IS NEEDED TO ENSURE A CONDITION THAT HAVE
 /// VERY LOW IMPACT ON PERFORMANCES.**
@@ -92,10 +91,9 @@
 ///
 /// If the switch **DLAF_ASSERT_ENABLE** is not defined, this check will not
 /// be performed and it will not add any overhead, nor for the condition evaluation, nor for the message
-#define DLAF_ASSERT(condition, ...) \
-  DLAF_ASSERT_WITH_ORIGIN((SOURCE_LOCATION()), condition, ##__VA_ARGS__)
+#define DLAF_ASSERT(...) DLAF_ASSERT_WITH_ORIGIN((SOURCE_LOCATION()), __VA_ARGS__)
 #else
-#define DLAF_ASSERT_WITH_ORIGIN(origin, condition, ...)
+#define DLAF_ASSERT_WITH_ORIGIN(origin, ...)
 
-#define DLAF_ASSERT(condition, ...)
+#define DLAF_ASSERT(...)
 #endif

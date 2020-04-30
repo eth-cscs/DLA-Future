@@ -9,7 +9,7 @@
 //
 
 #include "dlaf/common/index2d.h"
-#include "dlaf/common/range2d.hpp"
+#include "dlaf/common/range2d.h"
 
 #include <gtest/gtest.h>
 #include <vector>

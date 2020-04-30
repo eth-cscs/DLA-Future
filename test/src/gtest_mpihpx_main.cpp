@@ -41,8 +41,6 @@
 
 #include <gtest/gtest.h>
 #include <hpx/hpx.hpp>
-#include <hpx/hpx_start.hpp>
-#include <hpx/runtime/threads/run_as_hpx_thread.hpp>
 
 #include "gtest_mpi_listener.h"
 
@@ -74,15 +72,8 @@ GTEST_API_ int main(int argc, char** argv) {
   listeners.Append(new MPIListener(argc, argv, default_listener));
 
   // Initialize HPX
-  hpx::start(nullptr, argc, argv);
-  hpx::runtime* rt = hpx::get_runtime_ptr();
-  hpx::util::yield_while([rt]() { return rt->get_state() < hpx::state_running; });
+  auto ret = hpx::init(test_main, argc, argv);
 
-  // Run!
-  auto ret = hpx::threads::run_as_hpx_thread(test_main, argc, argv);
-
-  // Tear-down
-  hpx::stop();
   MPI_Finalize();
 
   return ret;

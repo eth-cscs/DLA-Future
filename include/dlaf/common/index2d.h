@@ -17,6 +17,10 @@
 #include <ostream>
 #include <type_traits>
 
+#include "dlaf/common/assert.h"
+#include "dlaf/types.h"
+#include "dlaf/util_math.h"
+
 namespace dlaf {
 
 enum class Coord { Row, Col };
@@ -41,13 +45,13 @@ public:
   ///
   /// @param row index of the row (0-based)
   /// @param col index of the col (0-based)
-  basic_coords(IndexT row, IndexT col) noexcept;
+  basic_coords(IndexT row, IndexT col) noexcept : row_(row), col_(col) {}
 
   /// Create a position with given coordinates
   ///
   /// @see basic_coords::basic_coords(IndexT row, IndexT col)
   /// @param coords where coords[0] is the row index and coords[1] is the column index
-  basic_coords(const std::array<IndexT, 2>& coords) noexcept;
+  basic_coords(const std::array<IndexT, 2>& coords) noexcept : basic_coords(coords[0], coords[1]) {}
 
   /// Compare two indices.
   ///
@@ -139,25 +143,31 @@ public:
   using IndexType = IndexT;
 
   /// Create an invalid 2D coordinate
-  Index2D() noexcept;
+  Index2D() noexcept : internal::basic_coords<IndexT>(-1, -1) {}
 
   /// Create a valid 2D coordinate
   /// @param row index of the row
   /// @param col index of the column
   /// @throw std::invalid_argument if row < 0 or col < 0
-  Index2D(IndexT row, IndexT col);
+  Index2D(IndexT row, IndexT col) : internal::basic_coords<IndexT>(row, col) {
+    if (!internal::basic_coords<IndexT>::isValid())
+      throw std::invalid_argument("indices are not valid (negative).");
+  }
 
   /// Create a valid 2D coordinate
   /// @see Index2D::Index2D(IndexT row, IndexT col)
   /// @param coords where coords[0] is the row index and coords[1] is the column index
   /// @throw std::invalid_argument if coords[0] < 0 or coords[1] < 0
-  Index2D(const std::array<IndexT, 2>& coords);
+  Index2D(const std::array<IndexT, 2>& coords) : Index2D(coords[0], coords[1]) {}
 
   /// @brief Check if it is a valid position inside the grid size specified by @p boundary
   /// @param boundary size of the grid
   /// @return true if the current index is in the range [0, @p boundary) for both row and column
   /// @pre both this Index2D and @p boundary must be valid
-  bool isIn(const Size2D<IndexT, Tag>& boundary) const noexcept;
+  bool isIn(const Size2D<IndexT, Tag>& boundary) const noexcept {
+    return this->row() < boundary.rows() && this->col() < boundary.cols() && (this->isValid()) &&
+           boundary.isValid();
+  }
 
   IndexT row() const noexcept {
     return internal::basic_coords<IndexT>::row_;
@@ -168,15 +178,78 @@ public:
   }
 };
 
+template <class IndexT, class Tag, class LinearIndexT>
+Index2D<IndexT, Tag> computeCoordsRowMajor(LinearIndexT index,
+                                           const Size2D<IndexT, Tag>& dims) noexcept {
+  return {static_cast<IndexT>(index / dims.cols()), static_cast<IndexT>(index % dims.cols())};
+}
+
+template <class IndexT, class Tag, class LinearIndexT>
+Index2D<IndexT, Tag> computeCoordsColMajor(LinearIndexT index,
+                                           const Size2D<IndexT, Tag>& dims) noexcept {
+  return {static_cast<IndexT>(index % dims.rows()), static_cast<IndexT>(index / dims.rows())};
+}
+
 /// Compute coords of the @p index -th cell in a grid with @p ordering and sizes @p dims
+///
+/// Return an Index2D matching the Size2D (same IndexT and Tag)
 /// @param ordering specify linear index layout in the grid
-/// @param dims with number of rows at @p dims[0] and number of columns at @p dims[1]
+/// @param dims Size2D<IndexT, Tag>
 /// @param index is the linear index of the cell with specified @p ordering
-template <class Index2DType, typename LinearIndexT>
-Index2DType computeCoords(Ordering ordering, LinearIndexT index,
-                          const std::array<typename Index2DType::IndexType, 2>& dims);
+template <class IndexT, class Tag, class LinearIndexT>
+Index2D<IndexT, Tag> computeCoords(Ordering ordering, LinearIndexT index,
+                                   const Size2D<IndexT, Tag>& dims) noexcept {
+  switch (ordering) {
+    case Ordering::RowMajor:
+      return computeCoordsRowMajor(index, dims);
+    case Ordering::ColumnMajor:
+      return computeCoordsColMajor(index, dims);
+    default:
+      return {};
+  }
+}
+
+template <class IndexT, class Tag>
+IndexT computeLinearIndexRowMajor(const Index2D<IndexT, Tag>& index,
+                                  const Size2D<IndexT, Tag>& dims) noexcept {
+  DLAF_ASSERT_MODERATE(index.isIn(dims), "Index ", index, " is not in the grid ", dims);
+
+  using dlaf::util::size_t::mul;
+  using dlaf::util::size_t::sum;
+
+  std::size_t linear_index = sum(mul(index.row(), dims.cols()), index.col());
+
+  return to_signed<IndexT>(linear_index);
+}
+
+template <class IndexT, class Tag>
+IndexT computeLinearIndexColMajor(const Index2D<IndexT, Tag>& index,
+                                  const Size2D<IndexT, Tag>& dims) noexcept {
+  DLAF_ASSERT_MODERATE(index.isIn(dims), "Index ", index, " is not in the grid ", dims);
+
+  using dlaf::util::size_t::mul;
+  using dlaf::util::size_t::sum;
+
+  std::size_t linear_index = sum(mul(index.col(), dims.rows()), index.row());
+
+  return to_signed<IndexT>(linear_index);
+}
+
+/// Compute linear index of an Index2D
+///
+/// @pre index.isIn(dims)
+template <class IndexT, class Tag>
+IndexT computeLinearIndex(Ordering ordering, const Index2D<IndexT, Tag>& index,
+                          const Size2D<IndexT, Tag>& dims) noexcept {
+  switch (ordering) {
+    case Ordering::RowMajor:
+      return computeLinearIndexRowMajor(index, dims);
+    case Ordering::ColumnMajor:
+      return computeLinearIndexColMajor(index, dims);
+    default:
+      return {};
+  }
+}
 
 }
 }
-
-#include "index2d.tpp"

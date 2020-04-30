@@ -1,0 +1,545 @@
+<?xml version="1.0"?>
+<!DOCTYPE ipe SYSTEM "ipe.dtd">
+<ipe version="70206" creator="Ipe 7.2.11">
+<info created="D:20200409162811" modified="D:20200410181915"/>
+<ipestyle name="basic">
+<symbol name="arrow/arc(spx)">
+<path stroke="sym-stroke" fill="sym-stroke" pen="sym-pen">
+0 0 m
+-1 0.333 l
+-1 -0.333 l
+h
+</path>
+</symbol>
+<symbol name="arrow/farc(spx)">
+<path stroke="sym-stroke" fill="white" pen="sym-pen">
+0 0 m
+-1 0.333 l
+-1 -0.333 l
+h
+</path>
+</symbol>
+<symbol name="arrow/ptarc(spx)">
+<path stroke="sym-stroke" fill="sym-stroke" pen="sym-pen">
+0 0 m
+-1 0.333 l
+-0.8 0 l
+-1 -0.333 l
+h
+</path>
+</symbol>
+<symbol name="arrow/fptarc(spx)">
+<path stroke="sym-stroke" fill="white" pen="sym-pen">
+0 0 m
+-1 0.333 l
+-0.8 0 l
+-1 -0.333 l
+h
+</path>
+</symbol>
+<symbol name="mark/circle(sx)" transformations="translations">
+<path fill="sym-stroke">
+0.6 0 0 0.6 0 0 e
+0.4 0 0 0.4 0 0 e
+</path>
+</symbol>
+<symbol name="mark/disk(sx)" transformations="translations">
+<path fill="sym-stroke">
+0.6 0 0 0.6 0 0 e
+</path>
+</symbol>
+<symbol name="mark/fdisk(sfx)" transformations="translations">
+<group>
+<path fill="sym-fill">
+0.5 0 0 0.5 0 0 e
+</path>
+<path fill="sym-stroke" fillrule="eofill">
+0.6 0 0 0.6 0 0 e
+0.4 0 0 0.4 0 0 e
+</path>
+</group>
+</symbol>
+<symbol name="mark/box(sx)" transformations="translations">
+<path fill="sym-stroke" fillrule="eofill">
+-0.6 -0.6 m
+0.6 -0.6 l
+0.6 0.6 l
+-0.6 0.6 l
+h
+-0.4 -0.4 m
+0.4 -0.4 l
+0.4 0.4 l
+-0.4 0.4 l
+h
+</path>
+</symbol>
+<symbol name="mark/square(sx)" transformations="translations">
+<path fill="sym-stroke">
+-0.6 -0.6 m
+0.6 -0.6 l
+0.6 0.6 l
+-0.6 0.6 l
+h
+</path>
+</symbol>
+<symbol name="mark/fsquare(sfx)" transformations="translations">
+<group>
+<path fill="sym-fill">
+-0.5 -0.5 m
+0.5 -0.5 l
+0.5 0.5 l
+-0.5 0.5 l
+h
+</path>
+<path fill="sym-stroke" fillrule="eofill">
+-0.6 -0.6 m
+0.6 -0.6 l
+0.6 0.6 l
+-0.6 0.6 l
+h
+-0.4 -0.4 m
+0.4 -0.4 l
+0.4 0.4 l
+-0.4 0.4 l
+h
+</path>
+</group>
+</symbol>
+<symbol name="mark/cross(sx)" transformations="translations">
+<group>
+<path fill="sym-stroke">
+-0.43 -0.57 m
+0.57 0.43 l
+0.43 0.57 l
+-0.57 -0.43 l
+h
+</path>
+<path fill="sym-stroke">
+-0.43 0.57 m
+0.57 -0.43 l
+0.43 -0.57 l
+-0.57 0.43 l
+h
+</path>
+</group>
+</symbol>
+<symbol name="arrow/fnormal(spx)">
+<path stroke="sym-stroke" fill="white" pen="sym-pen">
+0 0 m
+-1 0.333 l
+-1 -0.333 l
+h
+</path>
+</symbol>
+<symbol name="arrow/pointed(spx)">
+<path stroke="sym-stroke" fill="sym-stroke" pen="sym-pen">
+0 0 m
+-1 0.333 l
+-0.8 0 l
+-1 -0.333 l
+h
+</path>
+</symbol>
+<symbol name="arrow/fpointed(spx)">
+<path stroke="sym-stroke" fill="white" pen="sym-pen">
+0 0 m
+-1 0.333 l
+-0.8 0 l
+-1 -0.333 l
+h
+</path>
+</symbol>
+<symbol name="arrow/linear(spx)">
+<path stroke="sym-stroke" pen="sym-pen">
+-1 0.333 m
+0 0 l
+-1 -0.333 l
+</path>
+</symbol>
+<symbol name="arrow/fdouble(spx)">
+<path stroke="sym-stroke" fill="white" pen="sym-pen">
+0 0 m
+-1 0.333 l
+-1 -0.333 l
+h
+-1 0 m
+-2 0.333 l
+-2 -0.333 l
+h
+</path>
+</symbol>
+<symbol name="arrow/double(spx)">
+<path stroke="sym-stroke" fill="sym-stroke" pen="sym-pen">
+0 0 m
+-1 0.333 l
+-1 -0.333 l
+h
+-1 0 m
+-2 0.333 l
+-2 -0.333 l
+h
+</path>
+</symbol>
+<pen name="heavier" value="0.8"/>
+<pen name="fat" value="1.2"/>
+<pen name="ultrafat" value="2"/>
+<symbolsize name="large" value="5"/>
+<symbolsize name="small" value="2"/>
+<symbolsize name="tiny" value="1.1"/>
+<arrowsize name="large" value="10"/>
+<arrowsize name="small" value="5"/>
+<arrowsize name="tiny" value="3"/>
+<color name="red" value="1 0 0"/>
+<color name="green" value="0 1 0"/>
+<color name="blue" value="0 0 1"/>
+<color name="yellow" value="1 1 0"/>
+<color name="orange" value="1 0.647 0"/>
+<color name="gold" value="1 0.843 0"/>
+<color name="purple" value="0.627 0.125 0.941"/>
+<color name="gray" value="0.745"/>
+<color name="brown" value="0.647 0.165 0.165"/>
+<color name="navy" value="0 0 0.502"/>
+<color name="pink" value="1 0.753 0.796"/>
+<color name="seagreen" value="0.18 0.545 0.341"/>
+<color name="turquoise" value="0.251 0.878 0.816"/>
+<color name="violet" value="0.933 0.51 0.933"/>
+<color name="darkblue" value="0 0 0.545"/>
+<color name="darkcyan" value="0 0.545 0.545"/>
+<color name="darkgray" value="0.663"/>
+<color name="darkgreen" value="0 0.392 0"/>
+<color name="darkmagenta" value="0.545 0 0.545"/>
+<color name="darkorange" value="1 0.549 0"/>
+<color name="darkred" value="0.545 0 0"/>
+<color name="lightblue" value="0.678 0.847 0.902"/>
+<color name="lightcyan" value="0.878 1 1"/>
+<color name="lightgray" value="0.827"/>
+<color name="lightgreen" value="0.565 0.933 0.565"/>
+<color name="lightyellow" value="1 1 0.878"/>
+<dashstyle name="dashed" value="[4] 0"/>
+<dashstyle name="dotted" value="[1 3] 0"/>
+<dashstyle name="dash dotted" value="[4 2 1 2] 0"/>
+<dashstyle name="dash dot dotted" value="[4 2 1 2 1 2] 0"/>
+<textsize name="large" value="\large"/>
+<textsize name="Large" value="\Large"/>
+<textsize name="LARGE" value="\LARGE"/>
+<textsize name="huge" value="\huge"/>
+<textsize name="Huge" value="\Huge"/>
+<textsize name="small" value="\small"/>
+<textsize name="footnote" value="\footnotesize"/>
+<textsize name="tiny" value="\tiny"/>
+<textstyle name="center" begin="\begin{center}" end="\end{center}"/>
+<textstyle name="itemize" begin="\begin{itemize}" end="\end{itemize}"/>
+<textstyle name="item" begin="\begin{itemize}\item{}" end="\end{itemize}"/>
+<gridsize name="4 pts" value="4"/>
+<gridsize name="8 pts (~3 mm)" value="8"/>
+<gridsize name="16 pts (~6 mm)" value="16"/>
+<gridsize name="32 pts (~12 mm)" value="32"/>
+<gridsize name="10 pts (~3.5 mm)" value="10"/>
+<gridsize name="20 pts (~7 mm)" value="20"/>
+<gridsize name="14 pts (~5 mm)" value="14"/>
+<gridsize name="28 pts (~10 mm)" value="28"/>
+<gridsize name="56 pts (~20 mm)" value="56"/>
+<anglesize name="90 deg" value="90"/>
+<anglesize name="60 deg" value="60"/>
+<anglesize name="45 deg" value="45"/>
+<anglesize name="30 deg" value="30"/>
+<anglesize name="22.5 deg" value="22.5"/>
+<opacity name="10%" value="0.1"/>
+<opacity name="30%" value="0.3"/>
+<opacity name="50%" value="0.5"/>
+<opacity name="75%" value="0.75"/>
+<tiling name="falling" angle="-60" step="4" width="1"/>
+<tiling name="rising" angle="30" step="4" width="1"/>
+</ipestyle>
+<page>
+<layer name="alpha"/>
+<view layers="alpha" active="alpha"/>
+<text layer="alpha" matrix="1 0 0 1 0 -336" transformations="translations" pos="32 816" stroke="black" type="label" width="77.93" height="6.918" depth="0" valign="baseline">Matrix Tile Data:</text>
+<text matrix="1 0 0 1 -4 -208" transformations="translations" pos="36 788" stroke="black" type="label" width="65.531" height="6.088" depth="0" valign="baseline">\verb|future&lt;Tile&gt;|:</text>
+<text matrix="1.30435 0 0 1 -14.9565 -240" transformations="translations" pos="36 788" stroke="black" type="label" width="107.374" height="6.096" depth="0.94" valign="baseline">\verb|shared_future&lt;CTile&gt;|:</text>
+<text matrix="1 0 0 1 0 -216" transformations="translations" pos="32 816" stroke="black" type="label" width="31.133" height="6.926" depth="1.93" valign="baseline">Legend</text>
+<path matrix="0.416667 0 0 1.5 126.667 -604" stroke="black" fill="lightcyan">
+32 800 m
+32 784 l
+128 784 l
+128 800 l
+h
+</path>
+<path matrix="1 0 0 1 16 -208" stroke="black" fill="white">
+144 800 m
+144 784 l
+160 784 l
+160 800 l
+h
+</path>
+<text matrix="1 0 0 1 40 -300" transformations="translations" pos="32 760" stroke="black" type="label" width="52.996" height="6.926" depth="1.93" valign="baseline">- Example 1</text>
+<text matrix="1 0 0 1 40 -332" transformations="translations" pos="32 760" stroke="black" type="label" width="52.996" height="6.926" depth="1.93" valign="baseline">- Example 2</text>
+<path matrix="0.416666 0 0 1.5 126.667 -756" stroke="black" fill="lightcyan">
+32 800 m
+32 784 l
+128 784 l
+128 800 l
+h
+</path>
+<path matrix="0.416666 0 0 1.5 166.666 -732" stroke="black" fill="lightyellow">
+32 784 m
+32 768 l
+128 768 l
+128 784 l
+h
+</path>
+<path matrix="1 0 0 1 16 -360" stroke="black" fill="white">
+144 800 m
+144 784 l
+160 784 l
+160 800 l
+h
+</path>
+<path matrix="0.606061 0 0 0.5 120.606 44" stroke="black" pen="fat">
+32 800 m
+32 752 l
+164 752 l
+164 800 l
+h
+</path>
+<text matrix="1 0 0 1 40 -340" transformations="translations" pos="148 768" stroke="black" type="label" width="5.535" height="6.808" depth="0" valign="baseline">S</text>
+<path matrix="1 0 0 1 8 -360" stroke="black" fill="lightcyan">
+192 800 m
+192 784 l
+208 784 l
+208 800 l
+h
+</path>
+<text matrix="1 0 0 1 -152 -360" transformations="translations" pos="356 788" stroke="black" type="label" width="6.78" height="6.808" depth="0" valign="baseline">P</text>
+<text matrix="1 0 0 1 -180 -288" transformations="translations" pos="212 804" stroke="black" type="label" width="101.398" height="7.473" depth="2.49" valign="baseline">Invalid (shared) future:</text>
+<path matrix="0.416667 0 0 1.5 126.667 -644" stroke="black" fill="pink">
+32 784 m
+32 768 l
+128 768 l
+128 784 l
+h
+</path>
+<path matrix="1 0 0 1 16 -272" stroke="black" fill="white">
+144 800 m
+144 784 l
+160 784 l
+160 800 l
+h
+</path>
+<path matrix="0.416667 0 0 1.5 174.667 -644" stroke="black" fill="pink">
+32 784 m
+32 768 l
+128 768 l
+128 784 l
+h
+</path>
+<path matrix="1 0 0 1 64 -272" stroke="black" fill="white">
+144 800 m
+144 784 l
+160 784 l
+160 800 l
+h
+</path>
+<path matrix="0.416666 0 0 1.5 126.667 -724" stroke="black" fill="lightcyan">
+32 800 m
+32 784 l
+128 784 l
+128 800 l
+h
+</path>
+<text matrix="1 0 0 1 48 -252" transformations="translations" pos="148 768" stroke="black" type="label" width="5.535" height="6.808" depth="0" valign="baseline">S</text>
+<path matrix="0.416666 0 0 1.5 166.666 -700" stroke="black" fill="pink">
+32 784 m
+32 768 l
+128 768 l
+128 784 l
+h
+</path>
+<path matrix="1 0 0 1 16 -328" stroke="black" fill="white">
+144 800 m
+144 784 l
+160 784 l
+160 800 l
+h
+</path>
+<path matrix="0.606061 0 0 0.5 120.606 76" stroke="black" pen="fat">
+32 800 m
+32 752 l
+164 752 l
+164 800 l
+h
+</path>
+<text matrix="1 0 0 1 40 -308" transformations="translations" pos="148 768" stroke="black" type="label" width="5.535" height="6.808" depth="0" valign="baseline">S</text>
+<path matrix="1 0 0 1 8 -328" stroke="black" fill="white">
+192 800 m
+192 784 l
+208 784 l
+208 800 l
+h
+</path>
+<path matrix="0.416666 0 0 1.5 174.666 -580" stroke="black" fill="lightgreen">
+32 784 m
+32 768 l
+128 768 l
+128 784 l
+h
+</path>
+<path matrix="1 0 0 1 16 -208" stroke="black" fill="lightcyan">
+192 800 m
+192 784 l
+208 784 l
+208 800 l
+h
+</path>
+<text matrix="1 0 0 1 -144 -208" transformations="translations" pos="356 788" stroke="black" type="label" width="6.78" height="6.808" depth="0" valign="baseline">P</text>
+<path matrix="0.416666 0 0 1.5 126.666 -612" stroke="black" fill="lightyellow">
+32 784 m
+32 768 l
+128 768 l
+128 784 l
+h
+</path>
+<text matrix="1 0 0 1 0 -220" transformations="translations" pos="148 768" stroke="black" type="label" width="5.535" height="6.808" depth="0" valign="baseline">S</text>
+<path matrix="1 0 0 1 -32 -240" stroke="black" fill="lightcyan">
+192 800 m
+192 784 l
+208 784 l
+208 800 l
+h
+</path>
+<text matrix="1 0 0 1 -192 -240" transformations="translations" pos="356 788" stroke="black" type="label" width="6.78" height="6.808" depth="0" valign="baseline">P</text>
+<text matrix="1 0 0 1 -4 0" transformations="translations" pos="192 560" stroke="black" type="minipage" width="136" height="11.205" depth="6.23" valign="top" size="footnote">(Note: shared futures with the same color
+ are copies of the same object)</text>
+<path stroke="gray" arrow="normal/normal">
+88 624 m
+160 588 l
+</path>
+<text matrix="1 0 0 1 -72 20" transformations="translations" pos="152 612" stroke="black" type="label" width="194.927" height="5.98" depth="1.99" valign="baseline" size="footnote">The tile in the future has (will have) no promise set.</text>
+<text matrix="1 0 0 1 0 4" transformations="translations" pos="176 616" stroke="black" type="minipage" width="208" height="10.212" depth="5.23" valign="top" size="footnote">The tile in the future has (will have) the promise which can set the value of the future with the same color.</text>
+<path stroke="gray" arrow="normal/normal">
+184 600 m
+208 588 l
+</path>
+<text transformations="translations" pos="32 384" stroke="black" type="label" width="25.46" height="6.815" depth="1.93" valign="baseline">Copy:</text>
+<text matrix="1 0 0 1 0 -16" transformations="translations" pos="32 384" stroke="black" type="label" width="26.014" height="6.808" depth="0" valign="baseline">Move:</text>
+<text matrix="1 0 0 1 0 -32" transformations="translations" pos="32 384" stroke="black" type="label" width="62.764" height="6.922" depth="2.21" valign="baseline">\verb|get_future()|</text>
+<path stroke="red" pen="heavier" arrow="normal/normal">
+112 372 m
+144 372 l
+</path>
+<path matrix="1 0 0 1 0 16" stroke="black" pen="heavier" arrow="normal/normal">
+112 372 m
+144 372 l
+</path>
+<path matrix="1 0 0 1 0 -16" stroke="blue" pen="heavier" arrow="normal/normal">
+112 372 m
+144 372 l
+</path>
+<path stroke="red" pen="heavier">
+112 340 m
+144 340 l
+</path>
+<use matrix="1 0 0 1 12 -204" name="mark/cross(sx)" pos="132 544" size="large" stroke="red"/>
+<text matrix="1 0 0 1 0 -48" transformations="translations" pos="32 384" stroke="black" type="label" width="62.322" height="6.918" depth="0" valign="baseline">Set as default:</text>
+<path matrix="0.416667 0 0 1.5 34.667 -892" stroke="black" fill="lightcyan">
+32 800 m
+32 784 l
+128 784 l
+128 800 l
+h
+</path>
+<path matrix="1 0 0 1 -76 -496" stroke="black" fill="white">
+144 800 m
+144 784 l
+160 784 l
+160 800 l
+h
+</path>
+<path matrix="1 0 0 1 -24 -76" stroke="seagreen" pen="heavier" arrow="normal/normal">
+112 372 m
+144 372 l
+</path>
+<path matrix="1 0 0 1 -72 -496" stroke="black" fill="lightgreen">
+192 800 m
+192 784 l
+208 784 l
+208 800 l
+h
+</path>
+<text matrix="1 0 0 1 -232 -496" transformations="translations" pos="356 788" stroke="black" type="label" width="6.78" height="6.808" depth="0" valign="baseline">P</text>
+<text matrix="1 0 0 1 0 -48" transformations="translations" pos="32 320" stroke="black" type="minipage" width="352" height="19.139" depth="14.18" valign="top">Take a copy of the tile included in the light blue future (The promise is replaced by the moved yellow promise), then use the new tile to set the value of the green promise:</text>
+<text matrix="1 0 0 1 0 12" transformations="translations" pos="32 308" stroke="black" type="label" width="326.415" height="6.926" depth="1.93" valign="baseline">Set the green promise value with the Tile included in the light blue future:</text>
+<path matrix="0.416667 0 0 1.5 34.667 -972" stroke="black" fill="lightcyan">
+32 800 m
+32 784 l
+128 784 l
+128 800 l
+h
+</path>
+<path matrix="1 0 0 1 -76 -576" stroke="black" fill="orange">
+144 800 m
+144 784 l
+160 784 l
+160 800 l
+h
+</path>
+<path matrix="1 0 0 1 -24 -156" stroke="purple" pen="heavier" arrow="normal/normal">
+112 372 m
+144 372 l
+</path>
+<path matrix="1 0 0 1 -72 -576" stroke="black" fill="lightgreen">
+192 800 m
+192 784 l
+208 784 l
+208 800 l
+h
+</path>
+<text matrix="1 0 0 1 -232 -576" transformations="translations" pos="356 788" stroke="black" type="label" width="6.78" height="6.808" depth="0" valign="baseline">P</text>
+<path matrix="1 0 0 1 -24 -576" stroke="black" fill="lightyellow">
+192 800 m
+192 784 l
+208 784 l
+208 800 l
+h
+</path>
+<text matrix="1 0 0 1 -184 -576" transformations="translations" pos="356 788" stroke="black" type="label" width="6.78" height="6.808" depth="0" valign="baseline">P</text>
+<path matrix="-1 0 0 1 280 -156" stroke="red" pen="heavier" arrow="normal/normal">
+112 372 m
+144 372 l
+</path>
+<text matrix="1 0 0 1 -284 -576" transformations="translations" pos="356 788" stroke="black" type="label" width="6.78" height="6.808" depth="0" valign="baseline">P</text>
+<text transformations="translations" pos="48 188" stroke="black" type="label" width="204.577" height="5.535" depth="1.55" valign="baseline" size="footnote">Note: The green shared future gets the yellow promise:</text>
+<text matrix="1 0 0 1 4 0" transformations="translations" pos="60 172" stroke="black" type="label" width="25.996" height="5.535" depth="0" valign="baseline" size="footnote">Before:</text>
+<text matrix="1 0 0 1 84 0" transformations="translations" pos="60 172" stroke="black" type="label" width="21.64" height="5.535" depth="0" valign="baseline" size="footnote">After:</text>
+<path matrix="0.416667 0 0 1.5 78.667 -1020" stroke="black" fill="lightgreen">
+32 800 m
+32 784 l
+128 784 l
+128 800 l
+h
+</path>
+<path matrix="1 0 0 1 -32 -624" stroke="black" fill="white">
+144 800 m
+144 784 l
+160 784 l
+160 800 l
+h
+</path>
+<path matrix="0.416667 0 0 1.5 154.667 -1020" stroke="black" fill="lightgreen">
+32 800 m
+32 784 l
+128 784 l
+128 800 l
+h
+</path>
+<path matrix="1 0 0 1 44 -624" stroke="black" fill="lightyellow">
+144 800 m
+144 784 l
+160 784 l
+160 800 l
+h
+</path>
+<text matrix="1 0 0 1 -164 -624" transformations="translations" pos="356 788" stroke="black" type="label" width="6.78" height="6.808" depth="0" valign="baseline">P</text>
+<text matrix="1 0 0 1 -92 -556" transformations="translations" pos="148 768" stroke="black" type="label" width="5.535" height="6.808" depth="0" valign="baseline">S</text>
+</page>
+</ipe>

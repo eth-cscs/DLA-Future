@@ -23,6 +23,8 @@
 /// by the parameter and an optional custom message composed by concatenating all extra parameters.
 /// Message composition is lazily evaluated and it will not add any overhead if the condition is true.
 ///
+/// No newline is appended to the given message, which cannot be empty.
+///
 /// **This check cannot be disabled**
 #define DLAF_CHECK_WITH_ORIGIN(category, origin, condition, ...)     \
   if (!(condition)) {                                                \
@@ -31,8 +33,9 @@
     std::terminate();                                                \
   }
 
-/// This macro is a shortcut for #DLAF_CHECK_WITH_ORIGIN, it sets automatically the origin to the line
-/// from where this macro is used
+/// This macro is a shortcut for #DLAF_CHECK_WITH_ORIGIN
+/// It sets automatically the origin to the line from where this macro is used.
+/// A newline is automatically appended at the end of the (optional) message.
 #define DLAF_CHECK(category, ...) \
   DLAF_CHECK_WITH_ORIGIN(category, (SOURCE_LOCATION()), __VA_ARGS__, '\n')
 
@@ -47,7 +50,7 @@
 ///
 /// If the switch **DLAF_ASSERT_HEAVY_ENABLE** is not defined, this check will not
 /// be performed and it will not add any overhead, nor for the condition evaluation, nor for the message
-#define DLAF_ASSERT_HEAVY(...) DLAF_CHECK("HEAVY", __VA_ARGS__, '\n')
+#define DLAF_ASSERT_HEAVY(...) DLAF_CHECK("HEAVY", __VA_ARGS__)
 #else
 #define DLAF_ASSERT_HEAVY(...)
 #endif
@@ -67,7 +70,7 @@
 ///
 /// If the switch **DLAF_ASSERT_MODERATE_ENABLE** is not defined, this check
 /// will not be performed and it will not add any overhead, nor for the condition evaluation, nor for the message
-#define DLAF_ASSERT_MODERATE(...) DLAF_CHECK("MODERATE", __VA_ARGS__, '\n')
+#define DLAF_ASSERT_MODERATE(...) DLAF_CHECK("MODERATE", __VA_ARGS__)
 #else
 #define DLAF_ASSERT_MODERATE(...)
 #endif
@@ -103,7 +106,7 @@
 ///
 /// If the switch **DLAF_ASSERT_ENABLE** is not defined, this check will not
 /// be performed and it will not add any overhead, nor for the condition evaluation, nor for the message
-#define DLAF_ASSERT(...) DLAF_ASSERT_WITH_ORIGIN((SOURCE_LOCATION()), __VA_ARGS__, '\n')
+#define DLAF_ASSERT(...) DLAF_ASSERT_WITH_ORIGIN((SOURCE_LOCATION()), __VA_ARGS__)
 #else
 #define DLAF_ASSERT_WITH_ORIGIN(origin, ...)
 

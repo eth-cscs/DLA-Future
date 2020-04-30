@@ -148,8 +148,10 @@ TYPED_TEST(Index2DTest, computeCoords) {
   Ordering ordering = Ordering::ColumnMajor;
 
 #ifdef DLAF_ASSERT_MODERATE_ENABLE
-  EXPECT_DEATH(computeCoords(ordering, 1, Size2D<TypeParam>{1, 1}), "[ERROR]");
-  EXPECT_DEATH(computeCoords(ordering, -1, Size2D<TypeParam>{1, 1}), "[ERROR]");
+  const char* ERROR_MESSAGE = "\\[ERROR\\]";
+
+  EXPECT_DEATH(computeCoords(ordering, 1, Size2D<TypeParam>{1, 1}), ERROR_MESSAGE);
+  EXPECT_DEATH(computeCoords(ordering, -1, Size2D<TypeParam>{1, 1}), ERROR_MESSAGE);
 #endif
 
   // TEST index with type that cannot span the entire grid size
@@ -216,10 +218,12 @@ TYPED_TEST(Index2DTest, computeLinearIndex) {
 
     std::array<Ordering, 2> orderings{Ordering::RowMajor, Ordering::ColumnMajor};
 
+    const char* ERROR_MESSAGE = "\\[ERROR\\]";
+
     for (const auto& ordering : orderings) {
       for (const Size2D<TypeParam>& size : configs) {
-        EXPECT_DEATH(computeLinearIndex(ordering, index, {size.rows(), size.cols()}), "[ERROR]");
-        EXPECT_DEATH(computeLinearIndex(ordering, index, Size2D<TypeParam>(size)), "[ERROR]");
+        EXPECT_DEATH(computeLinearIndex(ordering, index, {size.rows(), size.cols()}), ERROR_MESSAGE);
+        EXPECT_DEATH(computeLinearIndex(ordering, index, Size2D<TypeParam>(size)), ERROR_MESSAGE);
       }
     }
   }

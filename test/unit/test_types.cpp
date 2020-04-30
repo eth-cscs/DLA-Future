@@ -8,11 +8,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-// force enable DLAF_ASSERT_MODERATE, otherwise cast checks cannot be tested
-#ifndef DLAF_ASSERT_MODERATE_ENABLE
-#define DLAF_ASSERT_MODERATE_ENABLE
-#endif
-
 #include "dlaf/types.h"
 
 #include <limits>
@@ -56,7 +51,12 @@ void TEST_CAST_FAIL(To (*cast_func)(From), const From value, const source_locati
 }
 
 #define DLAF_TEST_CAST(From, To, ...) TEST_CAST<From, To>(__VA_ARGS__, SOURCE_LOCATION())
+
+#ifdef DLAF_ASSERT_MODERATE_ENABLE
 #define DLAF_TEST_CAST_FAIL(From, To, ...) TEST_CAST_FAIL<From, To>(__VA_ARGS__, SOURCE_LOCATION())
+#else
+#define DLAF_TEST_CAST_FAIL(From, To, ...)
+#endif
 
 TEST(ToSigned, FromUnsigned) {
   using To = int16_t;

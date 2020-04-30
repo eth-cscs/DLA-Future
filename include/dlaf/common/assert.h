@@ -56,6 +56,10 @@
 /// **THIS MACRO MUST BE USED WHEN THE CHECK IS NEEDED FOR DEBUGGING PURPOSES THAT HAVE
 /// MODERATE IMPACT ON PERFORMANCES.**
 ///
+/// Parameters:
+/// 1     condition
+/// 2-*   (optional) comma separated part(s) composing the custom message in case of failure
+///
 /// If the condition is false, it will print an error report and call std::terminate()
 ///
 /// The error report can be extended with a custom message composed concatenating additional parameters
@@ -72,6 +76,10 @@
 /// **THIS MACRO MUST BE USED WHEN THE CHECK IS
 /// NEEDED TO ENSURE A CONDITION THAT HAVE VERY LOW IMPACT ON PERFORMANCES.**
 ///
+/// Parameters:
+/// 1     condition
+/// 2-*   (optional) comma separated part(s) composing the custom message in case of failure
+///
 /// If the condition is false, it will print an error report and call std::terminate()
 ///
 /// The error report will refer to the given origin and can be extended with a custom message composed
@@ -83,6 +91,10 @@
 
 /// **THIS MACRO MUST BE USED WHEN THE CHECK IS NEEDED TO ENSURE A CONDITION THAT HAVE
 /// VERY LOW IMPACT ON PERFORMANCES.**
+///
+/// Parameters:
+/// 1     condition
+/// 2-*   (optional) comma separated part(s) composing the custom message in case of failure
 ///
 /// If the condition is false, it will print an error report and call std::terminate()
 ///

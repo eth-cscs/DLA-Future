@@ -19,10 +19,8 @@ template <class T, Device device>
 Matrix<const T, device>::Matrix(matrix::Distribution&& distribution, const matrix::LayoutInfo& layout,
                                 ElementType* ptr)
     : MatrixBase(std::move(distribution)) {
-  if (this->distribution().localSize() != layout.size())
-    throw std::invalid_argument("Error: distribution.localSize() != layout.size()");
-  if (this->blockSize() != layout.blockSize())
-    throw std::invalid_argument("Error: distribution.blockSize() != layout.blockSize()");
+  DLAF_ASSERT((this->distribution().localSize() != layout.size()), "distribution.localSize() != layout.size()");
+  DLAF_ASSERT((this->blockSize() != layout.blockSize()), "distribution.blockSize() != layout.blockSize()");
 
   memory::MemoryView<ElementType, device> mem(ptr, layout.minMemSize());
   setUpTiles(mem, layout);

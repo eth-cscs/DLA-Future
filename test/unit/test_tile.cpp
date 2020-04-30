@@ -139,17 +139,17 @@ TYPED_TEST(TileTest, ConstructorExceptions) {
   using MemView = memory::MemoryView<Type, Device::CPU>;
   std::size_t size = elIndex({m - 1, n - 1}, ld) + 1;
 
-  EXPECT_THROW((Tile<Type, Device::CPU>({m, n}, MemView(size - 1), ld)), std::invalid_argument);
-  EXPECT_THROW((Tile<Type, Device::CPU>({-1, n}, MemView(size), ld)), std::invalid_argument);
-  EXPECT_THROW((Tile<Type, Device::CPU>({m, -1}, MemView(size), ld)), std::invalid_argument);
-  EXPECT_THROW((Tile<Type, Device::CPU>({m, n}, MemView(size), m - 1)), std::invalid_argument);
-  EXPECT_THROW((Tile<Type, Device::CPU>({0, n}, MemView(size), 0)), std::invalid_argument);
+  EXPECT_DEATH((Tile<Type, Device::CPU>({m, n}, MemView(size - 1), ld)), "[ERROR]");
+  EXPECT_DEATH((Tile<Type, Device::CPU>({-1, n}, MemView(size), ld)), "[ERROR]");
+  EXPECT_DEATH((Tile<Type, Device::CPU>({m, -1}, MemView(size), ld)), "[ERROR]");
+  EXPECT_DEATH((Tile<Type, Device::CPU>({m, n}, MemView(size), m - 1)), "[ERROR]");
+  EXPECT_DEATH((Tile<Type, Device::CPU>({0, n}, MemView(size), 0)), "[ERROR]");
 
-  EXPECT_THROW((Tile<const Type, Device::CPU>({m, n}, MemView(size - 1), ld)), std::invalid_argument);
-  EXPECT_THROW((Tile<const Type, Device::CPU>({-1, n}, MemView(size), ld)), std::invalid_argument);
-  EXPECT_THROW((Tile<const Type, Device::CPU>({m, -1}, MemView(size), ld)), std::invalid_argument);
-  EXPECT_THROW((Tile<const Type, Device::CPU>({m, n}, MemView(size), m - 1)), std::invalid_argument);
-  EXPECT_THROW((Tile<const Type, Device::CPU>({0, n}, MemView(size), 0)), std::invalid_argument);
+  EXPECT_DEATH((Tile<const Type, Device::CPU>({m, n}, MemView(size - 1), ld)), "[ERROR]");
+  EXPECT_DEATH((Tile<const Type, Device::CPU>({-1, n}, MemView(size), ld)), "[ERROR]");
+  EXPECT_DEATH((Tile<const Type, Device::CPU>({m, -1}, MemView(size), ld)), "[ERROR]");
+  EXPECT_DEATH((Tile<const Type, Device::CPU>({m, n}, MemView(size), m - 1)), "[ERROR]");
+  EXPECT_DEATH((Tile<const Type, Device::CPU>({0, n}, MemView(size), 0)), "[ERROR]");
 }
 
 TYPED_TEST(TileTest, MoveConstructor) {

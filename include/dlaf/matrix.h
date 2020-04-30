@@ -38,15 +38,19 @@ public:
 
   /// Create a non distributed matrix of size @p size and block size @p block_size
   ///
-  /// @throw std::invalid_argument if @p !size.isValid().
-  /// @throw std::invalid_argument if @p !block_size.isValid() or @p block_size_.isEmpty().
+  /// When the assertion is enabled, terminates the program with an error
+  /// message if @p !size.isValid(), if !block_size.isValid() or if @p
+  /// block_size_.isEmpty(). This assertion is enabled when
+  /// **DLAF_ASSERT_ENABLE** is ON.
   Matrix(const LocalElementSize& size, const TileElementSize& block_size);
 
   /// Create a distributed matrix of size @p size and block size @p block_size on the given 2D
   /// communicator grid @p comm
   ///
-  /// @throw std::invalid_argument if @p !size.isValid().
-  /// @throw std::invalid_argument if @p !block_size.isValid() or @p block_size_.isEmpty().
+  /// When the assertion is enabled, terminates the program with an error
+  /// message if @p !size.isValid(), if !block_size.isValid() or if @p
+  /// block_size_.isEmpty(). This assertion is enabled when
+  /// **DLAF_ASSERT_ENABLE** is ON.
   Matrix(const GlobalElementSize& size, const TileElementSize& block_size,
          const comm::CommunicatorGrid& comm);
 
@@ -75,8 +79,10 @@ public:
   /// @param[in] layout is the layout which describes how the elements
   ///            of the local part of the matrix are stored in memory.
   /// @param[in] ptr is the pointer to the first element of the local part of the matrix.
-  /// @throw std::invalid_argument if @p distribution.localSize() != @p layout.size().
-  /// @throw std::invalid_argument if @p distribution.blockSize() != @p layout.blockSize().
+  /// When the assertion is enabled, terminates the program with an error
+  /// message if  @p distribution.localSize() != @p layout.size() or if
+  /// @p distribution.blockSize() != @p layout.blockSize(). This assertion is
+  /// enabled when **DLAF_ASSERT_ENABLE** is ON.
   /// @pre @p ptr refers to an allocated memory region of at least @c layout.minMemSize() elements.
   Matrix(matrix::Distribution&& distribution, const matrix::LayoutInfo& layout, ElementType* ptr);
 
@@ -96,7 +102,9 @@ public:
   /// @brief Returns a future of the Tile with global index @p index.
   ///
   /// TODO: Sync details.
-  /// @throw std::invalid_argument if the global tile is not stored in the current process.
+  /// When the assertion is enabled, terminates the program with an error
+  /// message if the global tile is not stored in the current process.
+  /// This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
   /// @pre index.isValid() == true.
   /// @pre index.isIn(globalNrTiles()) == true.
   hpx::future<TileType> operator()(const GlobalTileIndex& index) {
@@ -150,7 +158,9 @@ public:
   /// Returns a read-only shared_future of the Tile with global index @p index.
   ///
   /// TODO: Sync details.
-  /// @throw std::invalid_argument if the global tile is not stored in the current process.
+  /// When the assertion is enabled, terminates the program with an error
+  /// message if the global tile is not stored in the current process.
+  /// This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
   /// @pre index.isValid() == true.
   /// @pre index.isIn(globalNrTiles()) == true.
   hpx::shared_future<ConstTileType> read(const GlobalTileIndex& index) {
@@ -181,7 +191,9 @@ private:
 ///
 /// @param[in] ld the leading dimension of the matrix.
 /// @param[in] ptr is the pointer to the first element of the local part of the matrix.
-/// @throw std::invalid_argument if @p ld < max(1, size.row()).
+/// When the assertion is enabled, terminates the program with an error
+/// message if  @p ld < max(1, size.row()). This assertion is enabled when
+/// **DLAF_ASSERT_ENABLE** is ON.
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
 /// stored in the given layout.
 template <Device device, class T>
@@ -210,8 +222,10 @@ Matrix<T, device> createMatrixFromTile(const LocalElementSize& size, const TileE
 /// @param[in] ld_tile the leading dimension of the tiles.
 /// @param[in] tiles_per_col the number of tiles stored for each column of tiles.
 /// @param[in] ptr is the pointer to the first element of the local part of the matrix.
-/// @throw std::invalid_argument if @p ld_tile < max(1, min(block_size.row(), size.row())).
-/// @throw std::invalid_argument if @p tiles_per_col < ceilDiv(size.row(), block_size.col()).
+/// When the assertion is enabled, terminates the program with an error
+/// message if @p ld_tile < max(1, min(block_size.row(), size.row())) or if
+/// @p tiles_per_col < ceilDiv(size.row(), block_size.col()). This assertion is
+/// enabled when **DLAF_ASSERT_ENABLE** is ON.
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
 /// stored in the given layout.
 template <Device device, class T>
@@ -229,8 +243,10 @@ Matrix<T, device> createMatrixFromTile(const LocalElementSize& size, const TileE
 /// @param[in] ld the leading dimension of the matrix.
 /// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix.
 /// @param[in] ptr is the pointer to the first element of the local part of the matrix.
-/// @throw std::invalid_argument if @p ld < max(1, size.row()).
-/// @throw std::invalid_argument if @p !source_rank_index.isValid() or @p !source_rank_index_.isIn(grid_size).
+/// When the assertion is enabled, terminates the program with an error
+/// message if @p ld < max(1, size.row()), if @p !source_rank_index.isValid() or
+/// @p !source_rank_index_.isIn(grid_size). This assertion is enabled when
+/// **DLAF_ASSERT_ENABLE** is ON.
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
 /// stored in the given layout.
 template <Device device, class T>
@@ -251,7 +267,9 @@ Matrix<T, device> createMatrixFromColMajor(const GlobalElementSize& size,
 /// This method assumes @p source_rank_index to be {0,0}.
 /// @param[in] ld the leading dimension of the matrix.
 /// @param[in] ptr is the pointer to the first element of the local part of the matrix.
-/// @throw std::invalid_argument if @p ld < max(1, size.row()).
+/// When the assertion is enabled, terminates the program with an error
+/// message if @p ld < max(1, size.row()). This assertion is enabled when
+/// **DLAF_ASSERT_ENABLE** is ON.
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
 /// stored in the given layout.
 template <Device device, class T>
@@ -267,7 +285,9 @@ Matrix<T, device> createMatrixFromColMajor(const GlobalElementSize& size,
 ///
 /// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix.
 /// @param[in] ptr is the pointer to the first element of the local part of the matrix.
-/// @throw std::invalid_argument if @p !source_rank_index.isValid() or @p !source_rank_index_.isIn(grid_size).
+/// When the assertion is enabled, terminates the program with an error
+/// message if  @p !source_rank_index.isValid() or if @p !source_rank_index_.isIn(grid_size).
+/// This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
 /// stored in the given layout.
 template <Device device, class T>
@@ -302,10 +322,11 @@ Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const Tile
 /// @param[in] tiles_per_col the number of tiles stored for each column of tiles.
 /// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix.
 /// @param[in] ptr is the pointer to the first element of the local part of the matrix.
-/// @throw std::invalid_argument if @p ld_tile < max(1, min(block_size.row(), size.row())).
-/// @throw std::invalid_argument if @p tiles_per_col < ceilDiv(size.row(), block_size.row()).
-/// @throw std::invalid_argument if @p !source_rank_index.isValid() or @p !source_rank_index_.isIn(grid_size).
-
+/// When the assertion is enabled, terminates the program with an error
+/// message if @p ld_tile < max(1, min(block_size.row(), size.row())), if @p 
+/// tiles_per_col < ceilDiv(size.row(), block_size.row()) or if @p
+/// !source_rank_index.isValid() or @p !source_rank_index_.isIn(grid_size).
+/// This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
 /// stored in the given layout.
 template <Device device, class T>
@@ -327,8 +348,10 @@ Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const Tile
 /// @param[in] ld_tile the leading dimension of the tiles.
 /// @param[in] tiles_per_col the number of tiles stored for each column of tiles.
 /// @param[in] ptr is the pointer to the first element of the local part of the matrix.
-/// @throw std::invalid_argument if @p ld_tile < max(1, min(block_size.row(), size.row()).
-/// @throw std::invalid_argument if @p tiles_per_col < ceilDiv(size.row(), block_size.col()).
+/// When the assertion is enabled, terminates the program with an error
+/// message if @p ld_tile < max(1, min(block_size.row(), size.row()) or 
+/// if @p tiles_per_col < ceilDiv(size.row(), block_size.col()).
+/// This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
 /// stored in the given layout.
 template <Device device, class T>

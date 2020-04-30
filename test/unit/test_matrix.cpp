@@ -345,7 +345,7 @@ TYPED_TEST(MatrixTest, LocalGlobalAccessOperatorCall) {
             EXPECT_EQ(ptr_global, ptr_local);
           }
           else {
-            EXPECT_THROW(mat(global_index), std::invalid_argument);
+            EXPECT_DEATH(mat(global_index), "[ERROR]");
           }
         }
       }
@@ -382,7 +382,7 @@ TYPED_TEST(MatrixTest, LocalGlobalAccessRead) {
             EXPECT_EQ(ptr_global, ptr_local);
           }
           else {
-            EXPECT_THROW(mat.read(global_index), std::invalid_argument);
+            EXPECT_DEATH(mat.read(global_index), "[ERROR]");
           }
         }
       }

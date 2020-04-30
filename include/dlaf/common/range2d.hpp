@@ -11,14 +11,12 @@
 #pragma once
 
 /// @file
-
-#include "dlaf/common/assert.h"
-#include "dlaf/common/index2d.h"
-
-/// The combination of IteratorRange2D, IterableRange2D and iterateRange2D()
+///
+/// The combination of `IteratorRange2D`, `IterableRange2D` and `iterateRange2D()`
 /// allow us to write nested loops as a simple range-based for loop. For
 /// example, instead of this :
 ///
+/// ```
 /// Size2D sz(5, 6);
 ///
 /// for (SizeType idx_j = 0; idx_j < sz.cols(); ++idx_j) {
@@ -27,12 +25,18 @@
 ///      ....
 ///    }
 /// }
+/// ```
 ///
 /// we can write this:
 ///
-/// for(Index2D idx : iterateRange2D(sz)) {
+/// ```
+/// for (Index2D idx : iterateRange2D(sz)) {
 ///   ....
 /// }
+/// ```
+
+#include "dlaf/common/assert.h"
+#include "dlaf/common/index2d.h"
 
 namespace dlaf {
 namespace common {
@@ -96,8 +100,8 @@ private:
 
 /// Function wrappers to deduce types in constructor calls to IterableRange2D
 ///
-/// `iterateRange2D()` returns indices in column-major order with the begin
-/// index included and the end index/size excluded.
+/// The overload set returns indices in column-major order with the begin index included and the end
+/// index/size excluded.
 ///
 /// The following one-argument variants of `iterateRange2D()` iterate over the
 /// same range of indices:
@@ -116,10 +120,10 @@ private:
 ///
 /// ```
 /// for(auto idx : iterateRange2D(Index2D(5, 6), Index2D(7, 9))) { ... }
-/// for(auto idx : iterateRange2D(Index2D(5, 6), Size2D(2, 3))) { ... } // *
+/// for(auto idx : iterateRange2D(Index2D(5, 6), Size2D(2, 3))) { ... }
 /// ```
 ///
-/// * Note: Size2D(2, 3) is added to Index2D(5, 6) to determine the end index of
+/// - Note: Size2D(2, 3) is added to Index2D(5, 6) to determine the end index of
 ///         the range.
 
 template <typename IndexT, class Tag>

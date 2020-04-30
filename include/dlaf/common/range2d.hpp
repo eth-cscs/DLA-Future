@@ -38,6 +38,8 @@
 #include "dlaf/common/assert.h"
 #include "dlaf/common/index2d.h"
 
+#include <cstddef>
+
 namespace dlaf {
 namespace common {
 
@@ -47,7 +49,7 @@ class IteratorRange2D {
   using index2d_t = Index2D<IndexT, Tag>;
 
 public:
-  IteratorRange2D(index2d_t begin, IndexT ld, IndexT i) : begin_(begin), ld_(ld), i_(i) {}
+  IteratorRange2D(index2d_t begin, IndexT ld, std::ptrdiff_t i) : begin_(begin), ld_(ld), i_(i) {}
 
   void operator++() noexcept {
     ++i_;
@@ -58,13 +60,14 @@ public:
   }
 
   index2d_t operator*() const noexcept {
-    return index2d_t(begin_.row() + i_ % ld_, begin_.col() + i_ / ld_);
+    return index2d_t(begin_.row() + static_cast<IndexT>(i_ % ld_),
+                     begin_.col() + static_cast<IndexT>(i_ / ld_));
   }
 
 protected:
   index2d_t begin_;
   IndexT ld_;
-  IndexT i_;
+  std::ptrdiff_t i_;
 };
 
 /// An Iterable representing a 2D range.
@@ -95,7 +98,7 @@ public:
 private:
   index2d_t begin_idx_;
   IndexT ld_;
-  IndexT i_max_;  // the maximum linear index
+  std::ptrdiff_t i_max_;  // the maximum linear index
 };
 
 /// Function wrappers to deduce types in constructor calls to IterableRange2D

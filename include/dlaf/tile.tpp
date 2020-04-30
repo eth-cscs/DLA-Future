@@ -15,19 +15,20 @@ Tile<const T, device>::Tile(const TileElementSize& size,
   using util::size_t::sum;
   using util::size_t::mul;
 
-  DLAF_ASSERT((size.isValid()), "Invalid Tile sizes");  
+  DLAF_ASSERT((size.isValid()), "Invalid Tile sizes");
   DLAF_ASSERT((ld_ >= std::max<SizeType>(1, size_.rows())), "Invalid Tile leading dimension");
-  DLAF_ASSERT((size.isEmpty() || sum(size_.rows(), mul(ld_, (size_.cols() - 1))) <= memory_view_.size()), "Tile exceeds the MemoryView limits");
+  DLAF_ASSERT((size.isEmpty() || sum(size_.rows(), mul(ld_, (size_.cols() - 1))) <= memory_view_.size()),
+              "Tile exceeds the MemoryView limits");
 
-//  if (!size_.isValid())
-//    throw std::invalid_argument("Error: Invalid Tile sizes");
-//  if (ld_ < std::max<SizeType>(1, size_.rows())) {
-//    throw std::invalid_argument("Error: Invalid Tile leading dimension");
-//  }
-//  if (!size.isEmpty()) {
-//    if (sum(size_.rows(), mul(ld_, (size_.cols() - 1))) > memory_view_.size())
-//      throw std::invalid_argument("Error: Tile exceeds the MemoryView limits");
-//  }
+  //  if (!size_.isValid())
+  //    throw std::invalid_argument("Error: Invalid Tile sizes");
+  //  if (ld_ < std::max<SizeType>(1, size_.rows())) {
+  //    throw std::invalid_argument("Error: Invalid Tile leading dimension");
+  //  }
+  //  if (!size.isEmpty()) {
+  //    if (sum(size_.rows(), mul(ld_, (size_.cols() - 1))) > memory_view_.size())
+  //      throw std::invalid_argument("Error: Tile exceeds the MemoryView limits");
+  //  }
 }
 
 template <class T, Device device>

@@ -323,7 +323,7 @@ Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const Tile
 /// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix.
 /// @param[in] ptr is the pointer to the first element of the local part of the matrix.
 /// When the assertion is enabled, terminates the program with an error
-/// message if @p ld_tile < max(1, min(block_size.row(), size.row())), if @p 
+/// message if @p ld_tile < max(1, min(block_size.row(), size.row())), if @p
 /// tiles_per_col < ceilDiv(size.row(), block_size.row()) or if @p
 /// !source_rank_index.isValid() or @p !source_rank_index_.isIn(grid_size).
 /// This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
@@ -349,7 +349,7 @@ Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const Tile
 /// @param[in] tiles_per_col the number of tiles stored for each column of tiles.
 /// @param[in] ptr is the pointer to the first element of the local part of the matrix.
 /// When the assertion is enabled, terminates the program with an error
-/// message if @p ld_tile < max(1, min(block_size.row(), size.row()) or 
+/// message if @p ld_tile < max(1, min(block_size.row(), size.row()) or
 /// if @p tiles_per_col < ceilDiv(size.row(), block_size.col()).
 /// This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix

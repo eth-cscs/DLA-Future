@@ -38,3 +38,6 @@ if (NOT googletest_POPULATED)
     gtest_disable_pthreads gtest_force_shared_crt gtest_hide_internal_symbols
   )
 endif()
+
+### Profiling
+add_subdirectory(profiling)

@@ -141,7 +141,68 @@ TYPED_TEST(Index2DTest, Print) {
   EXPECT_EQ("(9, 6)", s.str());
 }
 
-TYPED_TEST(Index2DTest, ComputeLinearIndex) {
+TYPED_TEST(Index2DTest, computeCoords) {
+  using dlaf::common::computeCoords;
+  using dlaf::common::Ordering;
+
+  Ordering ordering = Ordering::ColumnMajor;
+
+#ifdef DLAF_ASSERT_MODERATE_ENABLE
+  EXPECT_DEATH(computeCoords(ordering, 1, Size2D<TypeParam>{1, 1}), "[ERROR]");
+  EXPECT_DEATH(computeCoords(ordering, -1, Size2D<TypeParam>{1, 1}), "[ERROR]");
+#endif
+
+  // TEST index with type that cannot span the entire grid size
+  {
+    using linear_index_t = int8_t;
+
+    linear_index_t upper_bound = std::numeric_limits<int8_t>::max();
+
+    EXPECT_EQ((Index2D<TypeParam>{0, 1}),
+              computeCoords(ordering, upper_bound, Size2D<TypeParam>{upper_bound, 2}));
+  }
+
+  {
+    using linear_index_t = uint8_t;
+
+    linear_index_t upper_bound = std::numeric_limits<int8_t>::max();
+
+    EXPECT_EQ((Index2D<TypeParam>{0, 1}),
+              computeCoords(ordering, upper_bound,
+                            Size2D<TypeParam>{static_cast<TypeParam>(upper_bound), 2}));
+  }
+
+  // linear index with a different type
+  EXPECT_EQ((Index2D<TypeParam>{0, 0}), computeCoords(ordering, int8_t(0), Size2D<TypeParam>{1, 1}));
+  EXPECT_EQ((Index2D<TypeParam>{0, 0}), computeCoords(ordering, int64_t(0), Size2D<TypeParam>{1, 1}));
+
+  EXPECT_EQ((Index2D<TypeParam>{0, 0}), computeCoords(ordering, uint8_t(0), Size2D<TypeParam>{1, 1}));
+  EXPECT_EQ((Index2D<TypeParam>{0, 0}), computeCoords(ordering, uint64_t(0), Size2D<TypeParam>{1, 1}));
+
+  // check that returns the components with the right type
+  EXPECT_TRUE((
+      std::is_same<TypeParam,
+                   decltype(computeCoords(ordering, int64_t{0}, Size2D<TypeParam>{1, 1}).row())>::value));
+  EXPECT_TRUE((
+      std::is_same<TypeParam,
+                   decltype(computeCoords(ordering, int64_t{0}, Size2D<TypeParam>{1, 1}).col())>::value));
+  EXPECT_TRUE(
+      (std::is_same<TypeParam, decltype(computeCoords(ordering, uint64_t{0}, Size2D<TypeParam>{1, 1})
+                                            .row())>::value));
+  EXPECT_TRUE(
+      (std::is_same<TypeParam, decltype(computeCoords(ordering, uint64_t{0}, Size2D<TypeParam>{1, 1})
+                                            .col())>::value));
+
+  // check that it returns the right type
+  EXPECT_TRUE(
+      (std::is_same<Index2D<TypeParam>,
+                    decltype(computeCoords(ordering, int64_t(0), Size2D<TypeParam>{1, 1}))>::value));
+  EXPECT_TRUE(
+      (std::is_same<Index2D<TypeParam>,
+                    decltype(computeCoords(ordering, uint64_t(0), Size2D<TypeParam>{1, 1}))>::value));
+}
+
+TYPED_TEST(Index2DTest, computeLinearIndex) {
   using dlaf::common::Ordering;
 
 #ifdef DLAF_ASSERT_MODERATE_ENABLE

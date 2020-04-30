@@ -187,15 +187,51 @@ public:
 };
 
 template <class IndexT, class Tag, class LinearIndexT>
-Index2D<IndexT, Tag> computeCoordsRowMajor(LinearIndexT index,
+Index2D<IndexT, Tag> computeCoordsRowMajor(LinearIndexT linear_index,
                                            const Size2D<IndexT, Tag>& dims) noexcept {
-  return {static_cast<IndexT>(index / dims.cols()), static_cast<IndexT>(index % dims.cols())};
+  static_assert(std::is_integral<LinearIndexT>::value, "linear_index must be an integral type");
+
+  using dlaf::util::size_t::mul;
+
+  DLAF_ASSERT_MODERATE(linear_index >= 0, "The linear index cannot be negative (",
+                       std::to_string(linear_index), ")");
+  DLAF_ASSERT_MODERATE(to_unsigned<size_t>(linear_index) < mul(dims.rows(), dims.cols()),
+                       "Linear index ", std::to_string(linear_index), " does not fit into grid ", dims);
+
+  LinearIndexT leading_size = dims.cols();
+
+  Index2D<IndexT, Tag> index;
+
+  index = {to_signed<IndexT>(linear_index / leading_size), to_signed<IndexT>(linear_index % leading_size)};
+
+  if (!index.isIn(dims))
+    return {};
+
+  return index;
 }
 
 template <class IndexT, class Tag, class LinearIndexT>
-Index2D<IndexT, Tag> computeCoordsColMajor(LinearIndexT index,
+Index2D<IndexT, Tag> computeCoordsColMajor(LinearIndexT linear_index,
                                            const Size2D<IndexT, Tag>& dims) noexcept {
-  return {static_cast<IndexT>(index % dims.rows()), static_cast<IndexT>(index / dims.rows())};
+  static_assert(std::is_integral<LinearIndexT>::value, "linear_index must be an integral type");
+
+  using dlaf::util::size_t::mul;
+
+  DLAF_ASSERT_MODERATE(linear_index >= 0, "The linear index cannot be negative (",
+                       std::to_string(linear_index), ")");
+  DLAF_ASSERT_MODERATE(to_unsigned<size_t>(linear_index) < mul(dims.rows(), dims.cols()),
+                       "Linear index ", std::to_string(linear_index), " does not fit into grid ", dims);
+
+  LinearIndexT leading_size = dims.rows();
+
+  Index2D<IndexT, Tag> index;
+
+  index = {to_signed<IndexT>(linear_index % leading_size), to_signed<IndexT>(linear_index / leading_size)};
+
+  if (!index.isIn(dims))
+    return {};
+
+  return index;
 }
 
 /// Compute coords of the @p index -th cell in a grid with @p ordering and sizes @p dims

@@ -26,6 +26,7 @@ macro(target_add_warnings target_name)
       -Wunused
       -Woverloaded-virtual
       -Wdangling-else
+      -Wswitch-enum
       # Conversions
       $<${IS_COMPILER_GCC}:
         -Wsign-conversion

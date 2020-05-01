@@ -41,8 +41,6 @@
 
 #include <gtest/gtest.h>
 #include <hpx/hpx.hpp>
-#include <hpx/hpx_start.hpp>
-#include <hpx/runtime/threads/run_as_hpx_thread.hpp>
 
 GTEST_API_ int test_main(int, char**) {
   std::printf("Running main() from gtest_hpx_main.cpp\n");

@@ -41,8 +41,6 @@
 
 #include <gtest/gtest.h>
 #include <hpx/hpx.hpp>
-#include <hpx/hpx_start.hpp>
-#include <hpx/runtime/threads/run_as_hpx_thread.hpp>
 
 #include "gtest_mpi_listener.h"
 

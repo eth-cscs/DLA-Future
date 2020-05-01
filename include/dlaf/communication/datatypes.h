@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "dlaf/mpi_header.h"
+#include "dlaf/communication/error.h"
 
 #include <complex>
 

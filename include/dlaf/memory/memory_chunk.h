@@ -19,7 +19,7 @@
 
 #include "dlaf/types.h"
 #ifdef DLAF_WITH_CUDA
-#include "dlaf/cuda_assert.h"
+#include "dlaf/cuda/error.h"
 #endif
 
 namespace dlaf {
@@ -46,10 +46,10 @@ public:
 
 #ifdef DLAF_WITH_CUDA
     if (device == Device::CPU) {
-      DLAF_CUDA_ASSERT(cudaMallocHost(&ptr_, size_ * sizeof(T)));
+      DLAF_CUDA_CALL(cudaMallocHost(&ptr_, size_ * sizeof(T)));
     }
     else {
-      DLAF_CUDA_ASSERT(cudaMalloc(&ptr_, size_ * sizeof(T)));
+      DLAF_CUDA_CALL(cudaMalloc(&ptr_, size_ * sizeof(T)));
     }
 #else
     if (device == Device::CPU) {
@@ -134,10 +134,10 @@ private:
     if (allocated_) {
 #ifdef DLAF_WITH_CUDA
       if (device == Device::CPU) {
-        DLAF_CUDA_ASSERT(cudaFreeHost(ptr_));
+        DLAF_CUDA_CALL(cudaFreeHost(ptr_));
       }
       else {
-        DLAF_CUDA_ASSERT(cudaFree(ptr_));
+        DLAF_CUDA_CALL(cudaFree(ptr_));
       }
 #else
       if (device == Device::CPU) {

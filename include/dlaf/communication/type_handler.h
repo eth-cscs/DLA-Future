@@ -13,7 +13,7 @@
 #include <type_traits>
 
 #include "dlaf/communication/datatypes.h"
-#include "dlaf/mpi_header.h"
+#include "dlaf/communication/error.h"
 #include "dlaf/types.h"
 
 namespace dlaf {

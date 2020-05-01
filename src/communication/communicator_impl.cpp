@@ -3,7 +3,7 @@
 #include <cassert>
 #include <stdexcept>
 
-#include "dlaf/mpi_header.h"
+#include "dlaf/communication/error.h"
 
 namespace dlaf {
 namespace comm {
@@ -19,8 +19,8 @@ bool is_manageable(MPI_Comm mpi_communicator) noexcept {
 
 CommunicatorImpl::CommunicatorImpl(MPI_Comm mpi_communicator) : comm_(mpi_communicator) {
   assert(comm_ != MPI_COMM_NULL);
-  MPI_CALL(MPI_Comm_size(comm_, &size_));
-  MPI_CALL(MPI_Comm_rank(comm_, &rank_));
+  DLAF_MPI_CALL(MPI_Comm_size(comm_, &size_));
+  DLAF_MPI_CALL(MPI_Comm_rank(comm_, &rank_));
 }
 
 CommunicatorImpl_Managed::CommunicatorImpl_Managed(MPI_Comm mpi_communicator)
@@ -30,7 +30,7 @@ CommunicatorImpl_Managed::CommunicatorImpl_Managed(MPI_Comm mpi_communicator)
 }
 
 CommunicatorImpl_Managed::~CommunicatorImpl_Managed() {
-  MPI_CALL(MPI_Comm_free(&comm_));
+  DLAF_MPI_CALL(MPI_Comm_free(&comm_));
 }
 
 }

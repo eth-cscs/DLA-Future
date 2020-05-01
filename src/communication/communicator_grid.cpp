@@ -33,9 +33,9 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexT_MPI nrows, IndexT_M
   }
 
   MPI_Comm mpi_full, mpi_col, mpi_row;
-  MPI_CALL(MPI_Comm_split(comm, is_in_grid ? 0 : MPI_UNDEFINED, key_full, &mpi_full));
-  MPI_CALL(MPI_Comm_split(comm, index_row, key, &mpi_row));
-  MPI_CALL(MPI_Comm_split(comm, index_col, key, &mpi_col));
+  DLAF_MPI_CALL(MPI_Comm_split(comm, is_in_grid ? 0 : MPI_UNDEFINED, key_full, &mpi_full));
+  DLAF_MPI_CALL(MPI_Comm_split(comm, index_row, key, &mpi_row));
+  DLAF_MPI_CALL(MPI_Comm_split(comm, index_col, key, &mpi_col));
 
   if (!is_in_grid)
     return;

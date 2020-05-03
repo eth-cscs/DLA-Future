@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include "dlaf/common/range2d.h"
 #include <dlaf/blas_tile.h>
 #include <dlaf/communication/datatypes.h>
 #include <dlaf/communication/message.h>
@@ -73,6 +74,7 @@ using MatrixType = dlaf::Matrix<ScalarType, dlaf::Device::CPU>;
 using ConstMatrixType = dlaf::Matrix<const ScalarType, dlaf::Device::CPU>;
 using TileType = dlaf::Tile<ScalarType, dlaf::Device::CPU>;
 using ConstTileType = dlaf::Tile<const ScalarType, dlaf::Device::CPU>;
+using dlaf::common::iterateRange2D;
 
 using hpx::program_options::variables_map;
 using hpx::program_options::options_description;
@@ -215,7 +217,7 @@ int main(int argc, char** argv) {
   MPI_Init_thread(&argc, &argv, thd_required, &thd_provided);
 
   if (thd_required != thd_provided) {
-    std::fprintf(stderr, "Provided MPI threading model does not match the required one.\n");
+    std::printf("Provided MPI threading model does not match the required one.\n");
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
 
@@ -377,42 +379,31 @@ void sirius_gemm(int batch_size, ExecutorType const& mpi_executor, CommunicatorG
 }
 
 void init_matrix(MatrixType& matrix, ScalarType val) {
-  Distribution const& dist = matrix.distribution();
-  for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {
-    for (SizeType tile_i = 0; tile_i < dist.localNrTiles().rows(); ++tile_i) {
-      TileType tile = matrix(LocalTileIndex(tile_i, tile_j)).get();
-      TileElementSize tile_size = tile.size();
-      for (SizeType j = 0; j < tile_size.cols(); ++j) {
-        for (SizeType i = 0; i < tile_size.rows(); ++i) {
-          tile(TileElementIndex(i, j)) = val;
-        }
-      }
+  auto const& tile_sz = matrix.distribution().localNrTiles();
+  for (auto tile_idx : iterateRange2D(tile_sz)) {
+    TileType tile = matrix(tile_idx).get();
+    for (auto el_idx : iterateRange2D(tile.size())) {
+      tile(el_idx) = val;
     }
   }
 }
 
 void waitall_tiles(MatrixType& matrix) {
-  Distribution const& dist = matrix.distribution();
-  for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {
-    for (SizeType tile_i = 0; tile_i < dist.localNrTiles().rows(); ++tile_i) {
-      matrix(LocalTileIndex(tile_i, tile_j)).get();
-    }
+  auto const& tile_sz = matrix.distribution().localNrTiles();
+  for (auto tile_idx : iterateRange2D(tile_sz)) {
+    matrix(tile_idx).get();
   }
 }
 
 // Sums the distributed matrix and returns the result to process 0.
 ScalarType sum_matrix(Communicator const& comm, MatrixType& matrix) {
   ScalarType local_sum = 0;
-  Distribution const& dist = matrix.distribution();
-  for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {
-    for (SizeType tile_i = 0; tile_i < dist.localNrTiles().rows(); ++tile_i) {
-      TileType tile = matrix(LocalTileIndex(tile_i, tile_j)).get();
-      TileElementSize tile_size = tile.size();
-      for (SizeType j = 0; j < tile_size.cols(); ++j) {
-        for (SizeType i = 0; i < tile_size.rows(); ++i) {
-          local_sum += tile(TileElementIndex(i, j));
-        }
-      }
+
+  auto const& tile_sz = matrix.distribution().localNrTiles();
+  for (auto tile_idx : iterateRange2D(tile_sz)) {
+    TileType tile = matrix(tile_idx).get();
+    for (auto el_idx : iterateRange2D(tile.size())) {
+      local_sum += tile(el_idx);
     }
   }
 
@@ -444,30 +435,30 @@ params init_params(variables_map& vm) {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   if (num_procs != pgrid_rows * pgrid_cols) {
-    std::fprintf(stderr, "[ERROR] Number of processes doesn't match the process grid size\n");
+    std::printf("[ERROR] Number of processes doesn't match the process grid size\n");
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
   if (tile_m > len_m) {
-    std::fprintf(stderr, "[ERROR] `tile_m` > `m`.\n");
+    std::printf("[ERROR] `tile_m` > `m`.\n");
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
   if (tile_n > len_n) {
-    std::fprintf(stderr, "[ERROR] `tile_n` > `n`.\n");
+    std::printf("[ERROR] `tile_n` > `n`.\n");
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
   if (setup != "default" && setup != "mpi_pool" && setup != "priorities") {
-    std::fprintf(stderr, "[ERROR] `setup` must be one of {`default`, `mpi_pool`, `priorities`}.\n");
+    std::printf("[ERROR] `setup` must be one of {`default`, `mpi_pool`, `priorities`}.\n");
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
 
   int ntiles_m = ceilDiv(len_m, tile_m);
   int ntiles_n = ceilDiv(len_n, tile_n);
   if (pgrid_rows > ntiles_m) {
-    std::fprintf(stderr, "[ERROR] There are more processes along `m` than tiles.\n");
+    std::printf("[ERROR] There are more processes along `m` than tiles.\n");
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
   if (pgrid_cols > ntiles_n) {
-    std::fprintf(stderr, "[ERROR] There are more processes along `n` than tiles.\n");
+    std::printf("[ERROR] There are more processes along `n` than tiles.\n");
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
 

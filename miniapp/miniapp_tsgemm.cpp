@@ -15,7 +15,7 @@
 
 #include <hpx/async/dataflow.hpp>
 #include <hpx/execution/executors/pool_executor.hpp>  // > HPX v.1.4.1
-#include <hpx/hpx.hpp>
+#include <hpx/hpx_init.hpp>
 #include <hpx/include/resource_partitioner.hpp>
 #include <hpx/include/threads.hpp>
 

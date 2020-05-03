@@ -8,10 +8,13 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include "dlaf/common/index2d.h"
 #include "dlaf/common/range2d.h"
 #include <dlaf/blas_tile.h>
 #include <dlaf/communication/datatypes.h>
+#include <dlaf/communication/init.h>
 #include <dlaf/communication/message.h>
+#include <dlaf/hpx_partitions.h>
 #include <dlaf/matrix.h>
 
 #include <hpx/async/dataflow.hpp>
@@ -99,6 +102,8 @@ void waitall_tiles(MatrixType& matrix);
 ScalarType sum_matrix(Communicator const& comm, MatrixType& matrix);
 
 struct params {
+  bool check;
+
   int num_iters;
   int len_m;
   int len_n;
@@ -108,8 +113,6 @@ struct params {
   int pgrid_rows;
   int pgrid_cols;
   int batch_size;
-  std::string setup;
-  bool check;
 };
 
 // Initialize parameters and check for consistency
@@ -155,21 +158,18 @@ int hpx_main(::variables_map& vm) {
   init_matrix(a_mat, ::ScalarType(1));
   init_matrix(b_mat, ::ScalarType(2));
 
-  // 1. John's branch                               (mpi_futures)
-  // 2. MPI pool with a single core                 (mpi_pool)
-  // 3. Default pool with high priority executor    (priorities)
-  // 4. Default pool with default priority executor (default)
+  // 1. John's branch
+  // 2. MPI pool with a single core
+  // 3. Default pool with high priority executor for MPI
 #if defined(DLAF_WITH_MPI_FUTURES)
   // This needs remain in scope for all uses of hpx::mpi
   std::string pool_name = "default";
   hpx::mpi::enable_user_polling enable_polling(pool_name);
   ExecutorType mpi_executor(comm_grid.fullCommunicator());
 #else
-  using hpx::threads::thread_priority;
-  std::string pool_name = (ps.setup == "mpi_pool") ? "mpi" : "default";
-  auto priority = (ps.setup == "priorities") ? thread_priority::thread_priority_high
-                                             : thread_priority::thread_priority_default;
-  ExecutorType mpi_executor(pool_name, priority);
+  using hpx::threads::thread_priority::thread_priority_high;
+  auto pool_name = (hpx::resource::pool_exists("mpi")) ? "mpi" : "default";  // New API v1.5
+  ExecutorType mpi_executor(pool_name, thread_priority_high);
 #endif
 
   // Benchmark calls of `sirius_gemm`
@@ -208,45 +208,17 @@ int hpx_main(::variables_map& vm) {
 //                       --pgrid_rows   1  --pgrid_cols   1
 //
 int main(int argc, char** argv) {
-  // Flush printf
-  setbuf(stdout, nullptr);
-
   // Initialize MPI
-  int thd_required = MPI_THREAD_MULTIPLE;
-  int thd_provided;
-  MPI_Init_thread(&argc, &argv, thd_required, &thd_provided);
+  dlaf::comm::InitMPI mpi_init(argc, argv, MPI_THREAD_MULTIPLE);
 
-  if (thd_required != thd_provided) {
-    std::printf("Provided MPI threading model does not match the required one.\n");
-    MPI_Abort(MPI_COMM_WORLD, 1);
-  }
+  // Declare options
+  auto desc_cmdline = ::init_desc();
 
-  // Declare options before creating resource partitioner
-  namespace po = hpx::program_options;
-  po::options_description desc_cmdline = ::init_desc();
-  po::variables_map vm;
-  po::store(po::command_line_parser(argc, argv).allow_unregistered().options(desc_cmdline).run(), vm);
-  std::string setup = vm["setup"].as<std::string>();
-
-  if (setup == "mpi_pool") {
-    int num_procs;
-    MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
-    if (num_procs > 1) {  // if more than 1 process
-      // Create a thread pool for MPI work and add (enabled) PUs on the first core
-      //
-      // Note: Thread pools must be declared before starting the runtime
-      hpx::resource::partitioner rp(desc_cmdline, argc, argv);
-      if (rp.numa_domains()[0].cores().size() != 1) {  // if more than 1 core
-        rp.create_thread_pool("mpi");
-        rp.add_resource(rp.numa_domains()[0].cores()[0].pus(), "mpi");
-      }
-    }
-  }
+  // Initialize MPI pool if requested
+  dlaf::try_init_mpi_pool(desc_cmdline, argc, argv);
 
   // Start the HPX runtime
-  hpx::init(desc_cmdline, argc, argv);
-
-  MPI_Finalize();
+  return hpx::init(desc_cmdline, argc, argv);
 }
 
 namespace {
@@ -317,70 +289,64 @@ void sirius_gemm(int batch_size, ExecutorType const& mpi_executor, CommunicatorG
                  MatrixType& cfin_mat) {
   using hpx::util::unwrapping;
   using hpx::util::annotated_function;
+  using dlaf::common::computeLinearIndexColMajor;
 
   MPI_Comm mpi_comm(comm_grid.fullCommunicator());
   ::Distribution const& cfin_dist = cfin_mat.distribution();
   int this_rank = comm_grid.rankFullCommunicator(cfin_dist.rankIndex());
   dlaf::LocalTileSize const& tile_grid_size = cini_mat.distribution().localNrTiles();
+  auto dep_tile_idx = dlaf::common::computeCoordsColMajor(batch_size, tile_grid_size);
+  for (auto cloc_idx : iterateRange2D(tile_grid_size)) {
+    LocalTileIndex a_idx(0, cloc_idx.row());
+    LocalTileIndex b_idx(0, cloc_idx.col());
+    GlobalTileIndex c_idx(cloc_idx.row(), cloc_idx.col());
 
-  SizeType dep_tile_j = batch_size / tile_grid_size.rows();
-  SizeType dep_tile_i = batch_size - dep_tile_j * tile_grid_size.rows();
+    int tile_rank = comm_grid.rankFullCommunicator(cfin_dist.rankGlobalTile(c_idx));
+    int tile_tag = computeLinearIndexColMajor(cloc_idx, tile_grid_size);
 
-  for (SizeType tile_j = 0; tile_j < tile_grid_size.cols(); ++tile_j) {
-    for (SizeType tile_i = 0; tile_i < tile_grid_size.rows(); ++tile_i) {
-      LocalTileIndex a_idx(0, tile_i);
-      LocalTileIndex b_idx(0, tile_j);
-      GlobalTileIndex c_idx(tile_i, tile_j);
+    // Order tasks such that tiles are computed/communicated in batches of `batch_size`
+    SizeType c_dep_i = cloc_idx.row() - dep_tile_idx.row();
+    SizeType c_dep_j = cloc_idx.col() - dep_tile_idx.col();
+    bool c_dep_exists = c_dep_i < 0 || c_dep_j < 0;
+    hpx::shared_future<void> c_dep_tile_fut =
+        (c_dep_exists) ? hpx::make_ready_future()
+                       : hpx::shared_future<void>(cini_mat.read(GlobalTileIndex(c_dep_i, c_dep_j)));
 
-      int tile_rank = comm_grid.rankFullCommunicator(cfin_dist.rankGlobalTile(c_idx));
-      int tile_tag = dlaf::common::computeLinearIndex(Ordering::ColumnMajor, c_idx,
-                                                      {tile_grid_size.rows(), tile_grid_size.cols()});
+    // GEMM
+    auto gemm_f = unwrapping(annotated_function(
+        [](auto&& a_tile, auto&& b_tile, auto&& c_tile) {
+          dlaf::tile::gemm(blas::Op::Trans, blas::Op::NoTrans, ScalarType(1), a_tile, b_tile,
+                           ScalarType(0), c_tile);
+        },
+        "gemm"));
+    hpx::dataflow(gemm_f, a_mat.read(a_idx), b_mat.read(b_idx), cini_mat(c_idx), c_dep_tile_fut);
 
-      // Order tasks such that tiles are computed/communicated in batches of `batch_size`
-      SizeType c_dep_i = tile_i - dep_tile_i;
-      SizeType c_dep_j = tile_j - dep_tile_j;
-      bool c_dep_exists = c_dep_i < 0 || c_dep_j < 0;
-      hpx::shared_future<void> c_dep_tile_fut =
-          (c_dep_exists) ? hpx::make_ready_future()
-                         : hpx::shared_future<void>(cini_mat.read(GlobalTileIndex(c_dep_i, c_dep_j)));
+    if (this_rank == tile_rank) {
+      // RECV
+      auto recv_f = unwrapping(
+          annotated_function([=](auto&& c_tile) { recv_tile(c_tile, this_rank, tile_tag, mpi_comm); },
+                             "recv"));
+      hpx::dataflow(mpi_executor, recv_f, cini_mat(c_idx));
 
-      // GEMM
-      auto gemm_f = unwrapping(annotated_function(
-          [](auto&& a_tile, auto&& b_tile, auto&& c_tile) {
-            dlaf::tile::gemm(blas::Op::Trans, blas::Op::NoTrans, ScalarType(1), a_tile, b_tile,
-                             ScalarType(0), c_tile);
-          },
-          "gemm"));
-      hpx::dataflow(gemm_f, a_mat.read(a_idx), b_mat.read(b_idx), cini_mat(c_idx), c_dep_tile_fut);
-
-      if (this_rank == tile_rank) {
-        // RECV
-        auto recv_f = unwrapping(
-            annotated_function([=](auto&& c_tile) { recv_tile(c_tile, this_rank, tile_tag, mpi_comm); },
-                               "recv"));
-        hpx::dataflow(mpi_executor, recv_f, cini_mat(c_idx));
-
-        // OFFLOAD
-        auto offload_f =
-            unwrapping(annotated_function([](auto&& cini_tile,
-                                             auto&& cfin_tile) { offload_tile(cini_tile, cfin_tile); },
-                                          "offload"));
-        hpx::dataflow(offload_f, cini_mat.read(c_idx), cfin_mat(c_idx));
-      }
-      else {
-        // SEND
-        auto send_f = unwrapping(
-            annotated_function([=](auto&& c_tile) { send_tile(c_tile, tile_rank, tile_tag, mpi_comm); },
-                               "send"));
-        hpx::dataflow(mpi_executor, send_f, cini_mat(c_idx));
-      }
+      // OFFLOAD
+      auto offload_f =
+          unwrapping(annotated_function([](auto&& cini_tile,
+                                           auto&& cfin_tile) { offload_tile(cini_tile, cfin_tile); },
+                                        "offload"));
+      hpx::dataflow(offload_f, cini_mat.read(c_idx), cfin_mat(c_idx));
+    }
+    else {
+      // SEND
+      auto send_f = unwrapping(
+          annotated_function([=](auto&& c_tile) { send_tile(c_tile, tile_rank, tile_tag, mpi_comm); },
+                             "send"));
+      hpx::dataflow(mpi_executor, send_f, cini_mat(c_idx));
     }
   }
 }
 
 void init_matrix(MatrixType& matrix, ScalarType val) {
-  auto const& tile_sz = matrix.distribution().localNrTiles();
-  for (auto tile_idx : iterateRange2D(tile_sz)) {
+  for (auto tile_idx : iterateRange2D(matrix.distribution().localNrTiles())) {
     TileType tile = matrix(tile_idx).get();
     for (auto el_idx : iterateRange2D(tile.size())) {
       tile(el_idx) = val;
@@ -389,8 +355,7 @@ void init_matrix(MatrixType& matrix, ScalarType val) {
 }
 
 void waitall_tiles(MatrixType& matrix) {
-  auto const& tile_sz = matrix.distribution().localNrTiles();
-  for (auto tile_idx : iterateRange2D(tile_sz)) {
+  for (auto tile_idx : iterateRange2D(matrix.distribution().localNrTiles())) {
     matrix(tile_idx).get();
   }
 }
@@ -399,8 +364,7 @@ void waitall_tiles(MatrixType& matrix) {
 ScalarType sum_matrix(Communicator const& comm, MatrixType& matrix) {
   ScalarType local_sum = 0;
 
-  auto const& tile_sz = matrix.distribution().localNrTiles();
-  for (auto tile_idx : iterateRange2D(tile_sz)) {
+  for (auto tile_idx : iterateRange2D(matrix.distribution().localNrTiles())) {
     TileType tile = matrix(tile_idx).get();
     for (auto el_idx : iterateRange2D(tile.size())) {
       local_sum += tile(el_idx);
@@ -417,8 +381,8 @@ ScalarType sum_matrix(Communicator const& comm, MatrixType& matrix) {
 params init_params(variables_map& vm) {
   using dlaf::util::ceilDiv;
 
-  std::string setup = vm["setup"].as<std::string>();
   bool check = vm["check"].as<bool>();
+
   int num_iters = vm["num_iters"].as<int>();
   int batch_size = vm["batch_size"].as<int>();
   int len_m = vm["len_m"].as<int>();
@@ -446,10 +410,6 @@ params init_params(variables_map& vm) {
     std::printf("[ERROR] `tile_n` > `n`.\n");
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
-  if (setup != "default" && setup != "mpi_pool" && setup != "priorities") {
-    std::printf("[ERROR] `setup` must be one of {`default`, `mpi_pool`, `priorities`}.\n");
-    MPI_Abort(MPI_COMM_WORLD, 1);
-  }
 
   int ntiles_m = ceilDiv(len_m, tile_m);
   int ntiles_n = ceilDiv(len_n, tile_n);
@@ -466,7 +426,7 @@ params init_params(variables_map& vm) {
   if (rank == 0 && batch_size > 1000) {
     std::printf("[WARNING] There are too many tiles batched, this may "
                 "result in slowdowns as the number of issued non-blocking "
-                "communications at each process is proportianal to the batch size.");
+                "communications at each process is proportianal to the batch size.\n");
   }
 
   // Setup
@@ -476,8 +436,8 @@ params init_params(variables_map& vm) {
     std::printf("pgrid    = %d %d\n", pgrid_rows, pgrid_cols);
   }
 
-  return params{num_iters,  len_m,      len_n,      len_k, tile_m, tile_n,
-                pgrid_rows, pgrid_cols, batch_size, setup, check};
+  return params{check,  num_iters, len_m,      len_n,      len_k,
+                tile_m, tile_n,    pgrid_rows, pgrid_cols, batch_size};
 }
 
 options_description init_desc() {
@@ -489,17 +449,17 @@ options_description init_desc() {
 
   // clang-format off
   desc.add_options()
-     ("check",      bool_switch()   -> default_value(false)    , "correctness check")
-     ("setup",      value<string>() -> default_value("default"), "TSGEMM Executors setup: [default, mpi_pool, priorities]")
-     ("num_iters",  value<int>()    -> default_value(   5)     , "number of iterations")
-     ("batch_size", value<int>()    -> default_value(  16)     , "number of tiles batched for computation/communication")
-     ("len_m",      value<int>()    -> default_value( 100)     , "m dimension")
-     ("len_n",      value<int>()    -> default_value( 100)     , "n dimension")
-     ("len_k",      value<int>()    -> default_value(1000)     , "k dimension")
-     ("tile_m",     value<int>()    -> default_value(  32)     , "tile m dimension")
-     ("tile_n",     value<int>()    -> default_value(  32)     , "tile n dimension")
-     ("pgrid_rows", value<int>()    -> default_value(   1)     , "process grid rows")
-     ("pgrid_cols", value<int>()    -> default_value(   1)     , "process grid columns")
+     ("check",      bool_switch() -> default_value(false) , "Print the sum of elements of the resulting matrix.")
+
+     ("num_iters",  value<int>()  -> default_value(   5)  , "number of iterations")
+     ("batch_size", value<int>()  -> default_value(  16)  , "number of tiles batched for computation/communication")
+     ("len_m",      value<int>()  -> default_value( 100)  , "m dimension")
+     ("len_n",      value<int>()  -> default_value( 100)  , "n dimension")
+     ("len_k",      value<int>()  -> default_value(1000)  , "k dimension")
+     ("tile_m",     value<int>()  -> default_value(  32)  , "tile m dimension")
+     ("tile_n",     value<int>()  -> default_value(  32)  , "tile n dimension")
+     ("pgrid_rows", value<int>()  -> default_value(   1)  , "process grid rows")
+     ("pgrid_cols", value<int>()  -> default_value(   1)  , "process grid columns")
   ;
   // clang-format on
 

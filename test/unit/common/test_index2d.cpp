@@ -205,7 +205,8 @@ TYPED_TEST(Index2DTest, computeCoords) {
 }
 
 TYPED_TEST(Index2DTest, computeLinearIndex) {
-  using dlaf::common::Ordering;
+   using dlaf::common::Ordering;
+   using dlaf::common::computeLinearIndex;
 
 #ifdef DLAF_ASSERT_MODERATE_ENABLE
   {
@@ -222,8 +223,8 @@ TYPED_TEST(Index2DTest, computeLinearIndex) {
 
     for (const auto& ordering : orderings) {
       for (const Size2D<TypeParam>& size : configs) {
-        EXPECT_DEATH(computeLinearIndex(ordering, index, {size.rows(), size.cols()}), ERROR_MESSAGE);
-        EXPECT_DEATH(computeLinearIndex(ordering, index, Size2D<TypeParam>(size)), ERROR_MESSAGE);
+        EXPECT_DEATH(computeLinearIndex<int>(ordering, index, {size.rows(), size.cols()}), ERROR_MESSAGE);
+        EXPECT_DEATH(computeLinearIndex<int>(ordering, index, Size2D<TypeParam>(size)), ERROR_MESSAGE);
       }
     }
   }
@@ -231,13 +232,13 @@ TYPED_TEST(Index2DTest, computeLinearIndex) {
 
   {
     const Index2D<TypeParam> index{3, 2};
-    EXPECT_EQ(13, computeLinearIndex(Ordering::ColumnMajor, index, {5, 26}));
-    EXPECT_EQ(13, computeLinearIndex(Ordering::ColumnMajor, index, Size2D<TypeParam>{5, 26}));
+    EXPECT_EQ(13, computeLinearIndex<int>(Ordering::ColumnMajor, index, {5, 26}));
+    EXPECT_EQ(13, computeLinearIndex<int>(Ordering::ColumnMajor, index, Size2D<TypeParam>{5, 26}));
   }
 
   {
     const Index2D<TypeParam> index{2, 3};
-    EXPECT_EQ(13, computeLinearIndex(Ordering::RowMajor, index, {26, 5}));
-    EXPECT_EQ(13, computeLinearIndex(Ordering::RowMajor, index, Size2D<TypeParam>{26, 5}));
+    EXPECT_EQ(13, computeLinearIndex<int>(Ordering::RowMajor, index, {26, 5}));
+    EXPECT_EQ(13, computeLinearIndex<int>(Ordering::RowMajor, index, Size2D<TypeParam>{26, 5}));
   }
 }

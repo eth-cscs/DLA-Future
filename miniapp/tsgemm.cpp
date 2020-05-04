@@ -56,32 +56,14 @@
 // Forward declarations
 namespace {
 
-using dlaf::SizeType;
-using dlaf::common::Ordering;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
-using dlaf::TileElementSize;
-using dlaf::TileElementIndex;
-using dlaf::GlobalElementSize;
-using dlaf::GlobalTileSize;
-using dlaf::GlobalTileIndex;
-using dlaf::LocalElementSize;
-using dlaf::LocalTileIndex;
-using dlaf::LocalTileSize;
 using dlaf::matrix::Distribution;
-using dlaf::matrix::LayoutInfo;
-using CommSize = dlaf::comm::Size2D;
-using CommIndex = dlaf::comm::Index2D;
+using hpx::program_options::variables_map;
+
 using ScalarType = std::complex<double>;
 using MatrixType = dlaf::Matrix<ScalarType, dlaf::Device::CPU>;
 using ConstMatrixType = dlaf::Matrix<const ScalarType, dlaf::Device::CPU>;
-using TileType = dlaf::Tile<ScalarType, dlaf::Device::CPU>;
-using ConstTileType = dlaf::Tile<const ScalarType, dlaf::Device::CPU>;
-using dlaf::common::iterateRange2D;
-
-using hpx::program_options::variables_map;
-using hpx::program_options::options_description;
-
 #ifdef DLAF_WITH_MPI_FUTURES
 using ExecutorType = hpx::mpi::executor;
 #else
@@ -121,6 +103,11 @@ params init_params(variables_map&);
 }  // end namespace
 
 int hpx_main(::variables_map& vm) {
+  using dlaf::common::Ordering;
+  using dlaf::TileElementSize;
+  using dlaf::GlobalElementSize;
+  using dlaf::LocalElementSize;
+
   using clock_t = std::chrono::high_resolution_clock;
   using seconds_t = std::chrono::duration<double>;
 
@@ -129,7 +116,7 @@ int hpx_main(::variables_map& vm) {
 
   // Communicators
   ::Communicator comm_world(MPI_COMM_WORLD);
-  ::CommunicatorGrid comm_grid(comm_world, ps.pgrid_rows, ps.pgrid_cols, ::Ordering::ColumnMajor);
+  ::CommunicatorGrid comm_grid(comm_world, ps.pgrid_rows, ps.pgrid_cols, Ordering::ColumnMajor);
 
   // Matrices `A` and `B`
   // The matrices are distributed only along the `k` dimension. In SIRIUS, the sections assigned to each
@@ -139,17 +126,17 @@ int hpx_main(::variables_map& vm) {
   int num_procs = comm_world.size();
   int rank = comm_world.rank();
   int k_loc = ps.len_k / num_procs + ((rank < ps.len_k % num_procs) ? 1 : 0);
-  ::MatrixType a_mat(::LocalElementSize(k_loc, ps.len_m), ::TileElementSize(k_loc, ps.tile_m));
-  ::MatrixType b_mat(::LocalElementSize(k_loc, ps.len_n), ::TileElementSize(k_loc, ps.tile_n));
+  ::MatrixType a_mat(LocalElementSize(k_loc, ps.len_m), TileElementSize(k_loc, ps.tile_m));
+  ::MatrixType b_mat(LocalElementSize(k_loc, ps.len_n), TileElementSize(k_loc, ps.tile_n));
 
   // Matrices `C`-initial and `C`-final
   using dlaf::matrix::tileLayout;
-  ::MatrixType cini_mat(::Distribution(::LocalElementSize(ps.len_m, ps.len_n),
-                                       ::TileElementSize(ps.tile_m, ps.tile_n)),
-                        tileLayout(::LocalElementSize(ps.len_m, ps.len_n),
-                                   ::TileElementSize(ps.tile_m, ps.tile_n)));
-  ::MatrixType cfin_mat(::GlobalElementSize(ps.len_m, ps.len_n), ::TileElementSize(ps.tile_m, ps.tile_n),
-                        comm_grid);
+  MatrixType cini_mat(Distribution(LocalElementSize(ps.len_m, ps.len_n),
+                                   TileElementSize(ps.tile_m, ps.tile_n)),
+                      tileLayout(LocalElementSize(ps.len_m, ps.len_n),
+                                 TileElementSize(ps.tile_m, ps.tile_n)));
+  MatrixType cfin_mat(GlobalElementSize(ps.len_m, ps.len_n), TileElementSize(ps.tile_m, ps.tile_n),
+                      comm_grid);
 
   // Initialize matrices
   init_matrix(a_mat, ::ScalarType(1));
@@ -210,7 +197,7 @@ int main(int argc, char** argv) {
 
   // Declare options
   namespace po = hpx::program_options;
-  options_description desc("Allowed options.");
+  po::options_description desc("Allowed options.");
 
   // clang-format off
   desc.add_options()
@@ -243,6 +230,16 @@ int main(int argc, char** argv) {
 }
 
 namespace {
+
+using dlaf::TileElementIndex;
+using dlaf::SizeType;
+using dlaf::GlobalTileIndex;
+using dlaf::LocalTileIndex;
+using dlaf::LocalTileSize;
+using dlaf::common::iterateRange2D;
+
+using TileType = dlaf::Tile<ScalarType, dlaf::Device::CPU>;
+using ConstTileType = dlaf::Tile<const ScalarType, dlaf::Device::CPU>;
 
 // Send Cini tile to the process it belongs (`tile_rank`)
 void send_tile(ConstTileType const& c_tile, SizeType tile_rank, SizeType tag, MPI_Comm comm) {
@@ -296,12 +293,8 @@ void recv_tile(TileType& c_tile, int this_rank, SizeType tag, MPI_Comm comm) {
 }
 
 void offload_tile(ConstTileType const& cini_tile, TileType& cfin_tile) {
-  TileElementSize tile_size = cini_tile.size();
-  for (SizeType j = 0; j < tile_size.cols(); ++j) {
-    for (SizeType i = 0; i < tile_size.rows(); ++i) {
-      TileElementIndex idx(i, j);
-      cfin_tile(idx) = cini_tile(idx);
-    }
+  for (auto idx : iterateRange2D(cini_tile.size())) {
+    cfin_tile(idx) = cini_tile(idx);
   }
 }
 

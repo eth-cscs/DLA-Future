@@ -247,27 +247,31 @@ Index2D<IndexT, Tag> computeCoords(Ordering ordering, std::ptrdiff_t index,
 template <class LinearIndexT, class IndexT, class Tag>
 LinearIndexT computeLinearIndexRowMajor(const Index2D<IndexT, Tag>& index,
                                         const Size2D<IndexT, Tag>& dims) noexcept {
-  DLAF_ASSERT_MODERATE(index.isIn(dims), "Index ", index, " is not in the grid ", dims);
-
   using dlaf::util::size_t::mul;
   using dlaf::util::size_t::sum;
 
+  static_assert(std::is_integral<LinearIndexT>::value, "LinearIndexT must be an integral type");
+
+  DLAF_ASSERT_MODERATE(index.isIn(dims), "Index ", index, " is not in the grid ", dims);
+
   std::size_t linear_index = sum(mul(index.row(), dims.cols()), index.col());
 
-  return to_signed<LinearIndexT>(linear_index);
+  return integral_cast<LinearIndexT>(linear_index);
 }
 
 template <class LinearIndexT, class IndexT, class Tag>
 LinearIndexT computeLinearIndexColMajor(const Index2D<IndexT, Tag>& index,
                                         const Size2D<IndexT, Tag>& dims) noexcept {
-  DLAF_ASSERT_MODERATE(index.isIn(dims), "Index ", index, " is not in the grid ", dims);
-
   using dlaf::util::size_t::mul;
   using dlaf::util::size_t::sum;
 
+  static_assert(std::is_integral<LinearIndexT>::value, "LinearIndexT must be an integral type");
+
+  DLAF_ASSERT_MODERATE(index.isIn(dims), "Index ", index, " is not in the grid ", dims);
+
   std::size_t linear_index = sum(mul(index.col(), dims.rows()), index.row());
 
-  return to_signed<LinearIndexT>(linear_index);
+  return integral_cast<LinearIndexT>(linear_index);
 }
 
 /// Compute linear index of an Index2D

@@ -37,7 +37,7 @@ RUN mkdir ${BUILD} && cd ${BUILD} && \
       -DDLAF_WITH_TEST=ON \
       -DDLAF_BUILD_MINIAPPS=ON \
       -DMPIEXEC_EXECUTABLE=srun \
-      -DCMAKE_INSTALL_PREFIX=/usr && \
+      -DDLAF_CI_TWEAK=1 && \
       make -j$(nproc)
 
 # Prune and bundle binaries
@@ -68,7 +68,7 @@ ARG DEPLOY
 # codecov upload needs curl + ca-certificates
 # TODO: remove git after https://github.com/codecov/codecov-bash/pull/291
 #       or https://github.com/codecov/codecov-bash/pull/265 is merged
-RUN apt-get update && \
+RUN apt-get update -qq && \
     apt-get install --no-install-recommends -qq \
       perl \
       curl \

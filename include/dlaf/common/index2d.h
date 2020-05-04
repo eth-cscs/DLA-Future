@@ -14,6 +14,7 @@
 
 #include <array>
 #include <cassert>
+#include <cstddef>
 #include <ostream>
 #include <type_traits>
 
@@ -186,11 +187,9 @@ public:
   }
 };
 
-template <class IndexT, class Tag, class LinearIndexT>
-Index2D<IndexT, Tag> computeCoordsRowMajor(LinearIndexT linear_index,
+template <class IndexT, class Tag>
+Index2D<IndexT, Tag> computeCoordsRowMajor(std::ptrdiff_t linear_index,
                                            const Size2D<IndexT, Tag>& dims) noexcept {
-  static_assert(std::is_integral<LinearIndexT>::value, "linear_index must be an integral type");
-
   using dlaf::util::size_t::mul;
 
   DLAF_ASSERT_MODERATE(linear_index >= 0, "The linear index cannot be negative (",
@@ -198,23 +197,18 @@ Index2D<IndexT, Tag> computeCoordsRowMajor(LinearIndexT linear_index,
   DLAF_ASSERT_MODERATE(to_unsigned<size_t>(linear_index) < mul(dims.rows(), dims.cols()),
                        "Linear index ", std::to_string(linear_index), " does not fit into grid ", dims);
 
-  LinearIndexT leading_size = dims.cols();
+  std::ptrdiff_t leading_size = dims.cols();
+  Index2D<IndexT, Tag> index{to_signed<IndexT>(linear_index / leading_size),
+                             to_signed<IndexT>(linear_index % leading_size)};
 
-  Index2D<IndexT, Tag> index;
-
-  index = {to_signed<IndexT>(linear_index / leading_size), to_signed<IndexT>(linear_index % leading_size)};
-
-  if (!index.isIn(dims))
-    return {};
+  DLAF_ASSERT_HEAVY(index.isIn(dims), "Computed index is outside the given grid.");
 
   return index;
 }
 
-template <class IndexT, class Tag, class LinearIndexT>
-Index2D<IndexT, Tag> computeCoordsColMajor(LinearIndexT linear_index,
+template <class IndexT, class Tag>
+Index2D<IndexT, Tag> computeCoordsColMajor(std::ptrdiff_t linear_index,
                                            const Size2D<IndexT, Tag>& dims) noexcept {
-  static_assert(std::is_integral<LinearIndexT>::value, "linear_index must be an integral type");
-
   using dlaf::util::size_t::mul;
 
   DLAF_ASSERT_MODERATE(linear_index >= 0, "The linear index cannot be negative (",
@@ -222,14 +216,11 @@ Index2D<IndexT, Tag> computeCoordsColMajor(LinearIndexT linear_index,
   DLAF_ASSERT_MODERATE(to_unsigned<size_t>(linear_index) < mul(dims.rows(), dims.cols()),
                        "Linear index ", std::to_string(linear_index), " does not fit into grid ", dims);
 
-  LinearIndexT leading_size = dims.rows();
+  std::ptrdiff_t leading_size = dims.rows();
+  Index2D<IndexT, Tag> index{to_signed<IndexT>(linear_index % leading_size),
+                             to_signed<IndexT>(linear_index / leading_size)};
 
-  Index2D<IndexT, Tag> index;
-
-  index = {to_signed<IndexT>(linear_index % leading_size), to_signed<IndexT>(linear_index / leading_size)};
-
-  if (!index.isIn(dims))
-    return {};
+  DLAF_ASSERT_HEAVY(index.isIn(dims), "Computed index is outside the given grid.");
 
   return index;
 }
@@ -240,8 +231,8 @@ Index2D<IndexT, Tag> computeCoordsColMajor(LinearIndexT linear_index,
 /// @param ordering specify linear index layout in the grid
 /// @param dims Size2D<IndexT, Tag>
 /// @param index is the linear index of the cell with specified @p ordering
-template <class IndexT, class Tag, class LinearIndexT>
-Index2D<IndexT, Tag> computeCoords(Ordering ordering, LinearIndexT index,
+template <class IndexT, class Tag>
+Index2D<IndexT, Tag> computeCoords(Ordering ordering, std::ptrdiff_t index,
                                    const Size2D<IndexT, Tag>& dims) noexcept {
   switch (ordering) {
     case Ordering::RowMajor:
@@ -253,9 +244,9 @@ Index2D<IndexT, Tag> computeCoords(Ordering ordering, LinearIndexT index,
   }
 }
 
-template <class IndexT, class Tag>
-IndexT computeLinearIndexRowMajor(const Index2D<IndexT, Tag>& index,
-                                  const Size2D<IndexT, Tag>& dims) noexcept {
+template <class LinearIndexT, class IndexT, class Tag>
+LinearIndexT computeLinearIndexRowMajor(const Index2D<IndexT, Tag>& index,
+                                        const Size2D<IndexT, Tag>& dims) noexcept {
   DLAF_ASSERT_MODERATE(index.isIn(dims), "Index ", index, " is not in the grid ", dims);
 
   using dlaf::util::size_t::mul;
@@ -263,12 +254,12 @@ IndexT computeLinearIndexRowMajor(const Index2D<IndexT, Tag>& index,
 
   std::size_t linear_index = sum(mul(index.row(), dims.cols()), index.col());
 
-  return to_signed<IndexT>(linear_index);
+  return to_signed<LinearIndexT>(linear_index);
 }
 
-template <class IndexT, class Tag>
-IndexT computeLinearIndexColMajor(const Index2D<IndexT, Tag>& index,
-                                  const Size2D<IndexT, Tag>& dims) noexcept {
+template <class LinearIndexT, class IndexT, class Tag>
+LinearIndexT computeLinearIndexColMajor(const Index2D<IndexT, Tag>& index,
+                                        const Size2D<IndexT, Tag>& dims) noexcept {
   DLAF_ASSERT_MODERATE(index.isIn(dims), "Index ", index, " is not in the grid ", dims);
 
   using dlaf::util::size_t::mul;
@@ -276,20 +267,20 @@ IndexT computeLinearIndexColMajor(const Index2D<IndexT, Tag>& index,
 
   std::size_t linear_index = sum(mul(index.col(), dims.rows()), index.row());
 
-  return to_signed<IndexT>(linear_index);
+  return to_signed<LinearIndexT>(linear_index);
 }
 
 /// Compute linear index of an Index2D
 ///
 /// @pre index.isIn(dims)
-template <class IndexT, class Tag>
-IndexT computeLinearIndex(Ordering ordering, const Index2D<IndexT, Tag>& index,
-                          const Size2D<IndexT, Tag>& dims) noexcept {
+template <class LinearIndexT, class IndexT, class Tag>
+LinearIndexT computeLinearIndex(Ordering ordering, const Index2D<IndexT, Tag>& index,
+                                const Size2D<IndexT, Tag>& dims) noexcept {
   switch (ordering) {
     case Ordering::RowMajor:
-      return computeLinearIndexRowMajor(index, dims);
+      return computeLinearIndexRowMajor<LinearIndexT>(index, dims);
     case Ordering::ColumnMajor:
-      return computeLinearIndexColMajor(index, dims);
+      return computeLinearIndexColMajor<LinearIndexT>(index, dims);
     default:
       return {};
   }

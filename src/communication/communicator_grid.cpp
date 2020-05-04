@@ -20,15 +20,15 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexT_MPI nrows, IndexT_M
 
   bool is_in_grid = comm.rank() < nrows * ncols;
 
-  int index_row = MPI_UNDEFINED;
-  int index_col = MPI_UNDEFINED;
-  int key_full = MPI_UNDEFINED;
-  int key = comm.rank();
+  IndexT_MPI index_row = MPI_UNDEFINED;
+  IndexT_MPI index_col = MPI_UNDEFINED;
+  IndexT_MPI key_full = MPI_UNDEFINED;
+  IndexT_MPI key = comm.rank();
 
   comm::Size2D grid_size{nrows, ncols};
   if (is_in_grid) {
     position_ = common::computeCoords(ordering, comm.rank(), grid_size);
-    key_full = common::computeLinearIndex(FULL_COMMUNICATOR_ORDER, position_, grid_size);
+    key_full = common::computeLinearIndex<IndexT_MPI>(FULL_COMMUNICATOR_ORDER, position_, grid_size);
     index_row = position_.row();
     index_col = position_.col();
   }

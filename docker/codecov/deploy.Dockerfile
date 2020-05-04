@@ -44,7 +44,7 @@ RUN mkdir ${BUILD} && cd ${BUILD} && \
       -DMPIEXEC_NUMCORES=36 \
       -DMPIEXEC_EXECUTABLE=srun \
       # wrap all commands in sarus and run.sh
-      -DMPIEXEC_PREFLAGS="--jobid=\$JOBID;sarus;run;--mpi;--mount=type=bind,source=\$PWD,destination=/shared;\$IMAGE;bash;-xe;${SOURCE}/docker/codecov/run.sh" \
+      -DMPIEXEC_PREFLAGS="--jobid=\$JOBID;sarus;run;--mpi;--mount=type=bind,source=\$PWD,destination=/shared;\$IMAGE;${SOURCE}/docker/codecov/run.sh" \
       -DCMAKE_INSTALL_PREFIX=/usr && \
       make -j$(nproc) && \
       source ${SOURCE}/ci/sarusify.sh && \

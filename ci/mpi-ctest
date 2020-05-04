@@ -1,7 +1,32 @@
 #!/bin/bash
 
+if [[ "$ENABLE_COVERAGE" == "YES" ]]; then
+    mkdir -p /codecov-reports
+    lcov --no-external --capture --initial --base-directory /DLA-Future --directory /DLA-Future-build --output-file /codecov-reports/baseline-codecov.info &> /dev/null
+fi;
+
+# Run the tests
 if [[ $SLURM_PROCID == "0" ]]; then
     ctest $@
 else
     ctest -Q $@
+fi
+
+# Create coverage reports for code run
+if [[ "$ENABLE_COVERAGE" == "YES" ]]; then
+    lcov --no-external --capture --base-directory /DLA-Future --directory /DLA-Future-build --output-file /codecov-reports/run.info &> /dev/null
+    lcov --add-tracefile /codecov-reports/baseline-codecov.info --add-tracefile /codecov-reports/run.info --output-file /codecov-reports/combined.info
+
+    # Only keep our own source
+    lcov --extract /codecov-reports/combined.info "/DLA-Future/*" --output-file /codecov-reports/combined.info
+
+    # exclude miniapp/ and test/
+    lcov --remove /codecov-reports/combined.info "/DLA-Future/miniapp/*" --output-file /codecov-reports/combined.info
+    lcov --remove /codecov-reports/combined.info "/DLA-Future/test/*" --output-file /codecov-reports/combined.info
+
+    # Upload to codecov.io (once for github, once for the gitlab mirror)
+    pushd /DLA-Future
+    bash <(curl -s https://codecov.io/bash) -f /codecov-reports/combined.info -t $CODECOV_TOKEN_GITHUB
+    bash <(curl -s https://codecov.io/bash) -f /codecov-reports/combined.info -t $CODECOV_TOKEN_GITLAB
+    popd
 fi

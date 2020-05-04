@@ -11,36 +11,36 @@
 #pragma once
 
 /// @file
-
-#include <cstdio>
-#include <iostream>
-#include <memory>
+//
+#include "dlaf/common/utils.h"
 
 #include <mpi.h>
+
+#include <iostream>
+#include <memory>
 
 namespace dlaf {
 namespace internal {
 
 /// MPI provides two predefined error handlers
 ///
-/// - `MPI_ERRORS_ARE_FATAL` (the default ?): causes MPI to abort
+/// - `MPI_ERRORS_ARE_FATAL` (the default): causes MPI to abort
 /// - `MPI_ERRORS_RETURN`: causes MPI to return an error values instead of aborting
 ///
 /// This function is only relevant when the error handler is `MPI_ERRORS_RETURN`. To set the error
 /// handler use `MPI_Errhandler_set`.
 ///
-inline void mpi_call(int err, char const* file, int line) {
+inline void mpi_call(int err, common::internal::source_location const& info) {
   if (err != MPI_SUCCESS) {
     std::unique_ptr<char[]> err_buff(new char[MPI_MAX_ERROR_STRING]);
     int err_str_len;
     MPI_Error_string(err, err_buff.get(), &err_str_len);
-    std::printf("[MPI ERROR] %s:%d: '%s'\n", file, line, err_buff.get());
-    // MPI_Abort(MPI_COMM_WORLD, err);
-    // std::abort();
+    std::cout << "[MPI ERROR] " << info << std::endl << err_buff.get() << std::endl;
+    MPI_Abort(MPI_COMM_WORLD, -1);
   }
 }
 
-#define DLAF_MPI_CALL(mpi_f) dlaf::internal::mpi_call((mpi_f), __FILE__, __LINE__)
+#define DLAF_MPI_CALL(mpi_f) dlaf::internal::mpi_call((mpi_f), SOURCE_LOCATION())
 
 }
 }

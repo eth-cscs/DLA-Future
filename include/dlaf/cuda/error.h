@@ -12,26 +12,28 @@
 
 /// @file
 
+#include "dlaf/common/utils.h"
+
 #ifdef DLAF_WITH_CUDA
 #include <cuda_runtime.h>
 #endif
 
-#include <cstdio>
-#include <cstdlib>
+#include <exception>
+#include <iostream>
 
 namespace dlaf {
 namespace internal {
 
 #ifdef DLAF_WITH_CUDA
 
-inline void cuda_call(cudaError_t err, char const* file, int line) noexcept {
+inline void cuda_call(cudaError_t err, common::internal::source_location const& info) noexcept {
   if (err != cudaSuccess) {
-    std::printf("[CUDA ERROR] %s:%d: '%s'\n", file, line, cudaGetErrorString(err));
-    // std::abort();
+    std::cout << "[CUDA ERROR] " << info << std::endl << cudaGetErrorString(err) << std::endl;
+    std::terminate();
   }
 }
 
-#define DLAF_CUDA_CALL(cuda_f) dlaf::internal::cuda_call((cuda_f), __FILE__, __LINE__)
+#define DLAF_CUDA_CALL(cuda_f) dlaf::internal::cuda_call((cuda_f), SOURCE_LOCATION())
 
 #endif
 

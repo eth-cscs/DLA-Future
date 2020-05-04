@@ -14,7 +14,7 @@
 #include <dlaf/communication/datatypes.h>
 #include <dlaf/communication/init.h>
 #include <dlaf/communication/message.h>
-#include <dlaf/hpx_partitions.h>
+#include <dlaf/communication/pool.h>
 #include <dlaf/matrix.h>
 
 #include <hpx/async/dataflow.hpp>
@@ -118,9 +118,6 @@ struct params {
 // Initialize parameters and check for consistency
 params init_params(variables_map&);
 
-// Handle input options
-options_description init_desc();
-
 }  // end namespace
 
 int hpx_main(::variables_map& vm) {
@@ -212,13 +209,37 @@ int main(int argc, char** argv) {
   dlaf::comm::InitMPI mpi_init(argc, argv, MPI_THREAD_MULTIPLE);
 
   // Declare options
-  auto desc_cmdline = ::init_desc();
+  namespace po = hpx::program_options;
+  options_description desc("Allowed options.");
 
-  // Initialize MPI pool if requested
-  dlaf::try_init_mpi_pool(desc_cmdline, argc, argv);
+  // clang-format off
+  desc.add_options()
+     ("check",      po::bool_switch() -> default_value(false) , "Print the sum of elements of the resulting matrix.")
+     ("mpipool",    po::bool_switch() -> default_value(false)   , "Dedicate a core to MPI if available.")
+
+     ("num_iters",  po::value<int>()  -> default_value(   5)  , "number of iterations")
+     ("batch_size", po::value<int>()  -> default_value(  16)  , "number of tiles batched for computation/communication")
+     ("len_m",      po::value<int>()  -> default_value( 100)  , "m dimension")
+     ("len_n",      po::value<int>()  -> default_value( 100)  , "n dimension")
+     ("len_k",      po::value<int>()  -> default_value(1000)  , "k dimension")
+     ("tile_m",     po::value<int>()  -> default_value(  32)  , "tile m dimension")
+     ("tile_n",     po::value<int>()  -> default_value(  32)  , "tile n dimension")
+     ("pgrid_rows", po::value<int>()  -> default_value(   1)  , "process grid rows")
+     ("pgrid_cols", po::value<int>()  -> default_value(   1)  , "process grid columns")
+  ;
+  // clang-format on
+
+  // Check if MPI pool is requested
+  po::variables_map vm;
+  po::store(po::command_line_parser(argc, argv).allow_unregistered().options(desc).run(), vm);
+  bool use_mpi_pool = vm["mpipool"].as<bool>();
+
+  if (use_mpi_pool) {
+    dlaf::comm::init_mpi_pool(desc, argc, argv);
+  }
 
   // Start the HPX runtime
-  return hpx::init(desc_cmdline, argc, argv);
+  return hpx::init(desc, argc, argv);
 }
 
 namespace {
@@ -438,32 +459,6 @@ params init_params(variables_map& vm) {
 
   return params{check,  num_iters, len_m,      len_n,      len_k,
                 tile_m, tile_n,    pgrid_rows, pgrid_cols, batch_size};
-}
-
-options_description init_desc() {
-  using hpx::program_options::value;
-  using hpx::program_options::bool_switch;
-  using std::string;
-
-  options_description desc("Allowed options.");
-
-  // clang-format off
-  desc.add_options()
-     ("check",      bool_switch() -> default_value(false) , "Print the sum of elements of the resulting matrix.")
-
-     ("num_iters",  value<int>()  -> default_value(   5)  , "number of iterations")
-     ("batch_size", value<int>()  -> default_value(  16)  , "number of tiles batched for computation/communication")
-     ("len_m",      value<int>()  -> default_value( 100)  , "m dimension")
-     ("len_n",      value<int>()  -> default_value( 100)  , "n dimension")
-     ("len_k",      value<int>()  -> default_value(1000)  , "k dimension")
-     ("tile_m",     value<int>()  -> default_value(  32)  , "tile m dimension")
-     ("tile_n",     value<int>()  -> default_value(  32)  , "tile n dimension")
-     ("pgrid_rows", value<int>()  -> default_value(   1)  , "process grid rows")
-     ("pgrid_cols", value<int>()  -> default_value(   1)  , "process grid columns")
-  ;
-  // clang-format on
-
-  return desc;
 }
 
 }

@@ -205,8 +205,8 @@ TYPED_TEST(Index2DTest, computeCoords) {
 }
 
 TYPED_TEST(Index2DTest, computeLinearIndex) {
-   using dlaf::common::Ordering;
-   using dlaf::common::computeLinearIndex;
+  using dlaf::common::Ordering;
+  using dlaf::common::computeLinearIndex;
 
 #ifdef DLAF_ASSERT_MODERATE_ENABLE
   {
@@ -223,7 +223,8 @@ TYPED_TEST(Index2DTest, computeLinearIndex) {
 
     for (const auto& ordering : orderings) {
       for (const Size2D<TypeParam>& size : configs) {
-        EXPECT_DEATH(computeLinearIndex<int>(ordering, index, {size.rows(), size.cols()}), ERROR_MESSAGE);
+        EXPECT_DEATH(computeLinearIndex<int>(ordering, index, {size.rows(), size.cols()}),
+                     ERROR_MESSAGE);
         EXPECT_DEATH(computeLinearIndex<int>(ordering, index, Size2D<TypeParam>(size)), ERROR_MESSAGE);
       }
     }

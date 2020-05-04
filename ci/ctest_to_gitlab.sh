@@ -32,8 +32,6 @@ allocate:
 deallocate:
   stage: cleanup
   extends: .daint_dealloc
-  variables:
-    PULL_IMAGE: 'NO'
 "
 
 JOB_TEMPLATE="
@@ -46,6 +44,7 @@ JOB_TEMPLATE="
     SLURM_NTASKS: {{NTASKS}}
     PULL_IMAGE: 'NO'
     USE_MPI: 'YES'
+    DISABLE_AFTER_SCRIPT: 'YES'
   script: bash -c 'cd /DLA-Future-build && mpi-ctest -L {{LABEL}}'"
 
 JOBS=""

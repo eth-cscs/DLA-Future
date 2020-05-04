@@ -229,7 +229,7 @@ int main(int argc, char** argv) {
   ;
   // clang-format on
 
-  // Check if MPI pool is requested
+  // Init MPI pool is requested
   po::variables_map vm;
   po::store(po::command_line_parser(argc, argv).allow_unregistered().options(desc).run(), vm);
   bool use_mpi_pool = vm["mpipool"].as<bool>();

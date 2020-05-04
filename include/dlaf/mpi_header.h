@@ -14,8 +14,8 @@
 
 #include <mpi.h>
 
-#define MPI_CALL(x)                                                                       \
-  do {                                                                                    \
-    auto error_code = x;                                                                  \
-    DLAF_ASSERT_WITH_ORIGIN(SOURCE_LOCATION(), (MPI_SUCCESS == error_code), "MPI error"); \
+#define MPI_CALL(x)                                                                         \
+  do {                                                                                      \
+    auto error_code = x;                                                                    \
+    DLAF_ASSERT_WITH_ORIGIN((SOURCE_LOCATION()), (MPI_SUCCESS == error_code), "MPI error"); \
   } while (0)

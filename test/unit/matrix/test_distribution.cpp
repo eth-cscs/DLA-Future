@@ -337,8 +337,5 @@ TEST(DistributionTest, Index2DConversions) {
       EXPECT_EQ(test.global_tile, obj.globalTileIndex(local_tile));
       EXPECT_EQ(local_tile, obj.localTileIndex(test.global_tile));
     }
-    else {
-      EXPECT_THROW(obj.localTileIndex(test.global_tile), std::invalid_argument);
-    }
   }
 }

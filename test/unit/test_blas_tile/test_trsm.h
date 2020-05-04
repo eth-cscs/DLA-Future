@@ -92,6 +92,4 @@ void testTrsmExceptions(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Dia
   Tile<T, Device::CPU> b(size_b, std::move(mem_b), ldb);
 
   T alpha = TypeUtilities<T>::element(-1.2, .7);
-
-  EXPECT_THROW(tile::trsm(side, uplo, op, diag, alpha, a, b), std::invalid_argument);
 }

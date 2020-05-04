@@ -142,6 +142,4 @@ void testGemmExceptions(blas::Op op_a, blas::Op op_b, const TileElementSize& siz
 
   T alpha = TypeUtilities<T>::element(-1.2, .7);
   T beta = TypeUtilities<T>::element(1.1, .4);
-
-  EXPECT_THROW(tile::gemm(op_a, op_b, alpha, a, b, beta, c), std::invalid_argument);
 }

@@ -78,22 +78,22 @@ public:
   /// @param memory_view The starting MemoryView object.
   /// @param offset      The index of the first element of the subview.
   /// @param size        The size (in number of elements of type @c T) of the subview.
-  /// @throw std::invalid_argument if the subview exceeds the limits of @p memory_view.
+  /// When the assertion is enabled, terminates the program with an error message if the
+  /// subview exceeds the limits of @p memory_view. This assertion is enabled
+  /// when **DLAF_ASSERT_ENABLE** is ON.
   MemoryView(const MemoryView& memory_view, std::size_t offset, std::size_t size)
       : memory_(size > 0 ? memory_view.memory_ : std::make_shared<MemoryChunk<ElementType, device>>()),
         offset_(size > 0 ? offset + memory_view.offset_ : 0), size_(size) {
-    if (offset + size > memory_view.size_) {
-      throw std::invalid_argument("Sub MemoryView exceeds the limits of the base MemoryView");
-    }
+    DLAF_ASSERT((offset + size <= memory_view.size_),
+                "Sub MemoryView exceeds the limits of the base MemoryView");
   }
   template <class U = T,
             class = typename std::enable_if_t<std::is_const<U>::value && std::is_same<T, U>::value>>
   MemoryView(const MemoryView<ElementType, device>& memory_view, std::size_t offset, std::size_t size)
       : memory_(size > 0 ? memory_view.memory_ : std::make_shared<MemoryChunk<ElementType, device>>()),
         offset_(size > 0 ? offset + memory_view.offset_ : 0), size_(size) {
-    if (offset + size > memory_view.size_) {
-      throw std::invalid_argument("Sub MemoryView exceeds the limits of the base MemoryView");
-    }
+    DLAF_ASSERT((offset + size <= memory_view.size_),
+                "Sub MemoryView exceeds the limits of the base MemoryView");
   }
 
   MemoryView& operator=(const MemoryView&) = default;

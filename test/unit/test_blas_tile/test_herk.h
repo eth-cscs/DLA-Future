@@ -120,6 +120,4 @@ void testHerkExceptions(blas::Uplo uplo, blas::Op op_a, const TileElementSize& s
 
   BaseType<T> alpha = -1.2f;
   BaseType<T> beta = 1.1f;
-
-  EXPECT_THROW(tile::herk(uplo, op_a, alpha, a, beta, c), std::invalid_argument);
 }

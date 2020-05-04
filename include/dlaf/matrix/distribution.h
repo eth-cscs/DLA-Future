@@ -147,14 +147,14 @@ public:
 
   /// Returns the local 2D index in current process of the tile with index @p global_tile.
   ///
-  /// @throws std::invalid_argument if the global tile is not stored in the current process.
+  /// When the assertion is enabled, terminates the program with an error message if
+  /// the global tile is not stored in the current process.
+  /// This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
   /// @pre global_tile.isValid() and global_tile.isIn(nrTiles())
   LocalTileIndex localTileIndex(const GlobalTileIndex& global_tile) const {
     DLAF_ASSERT_HEAVY((global_tile.isValid() && global_tile.isIn(global_nr_tiles_)));
 
-    if (rank_index_ != rankGlobalTile(global_tile)) {
-      throw std::invalid_argument("Global tile not available in this rank.");
-    }
+    DLAF_ASSERT((rank_index_ == rankGlobalTile(global_tile)), "Global tile not available in this rank.");
     return {localTileFromGlobalTile<Coord::Row>(global_tile.row()),
             localTileFromGlobalTile<Coord::Col>(global_tile.col())};
   }

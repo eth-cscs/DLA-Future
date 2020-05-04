@@ -32,15 +32,9 @@ void gemm(blas::Op op_a, blas::Op op_b, T alpha, const Tile<const T, device>& a,
     n = b.size().rows();
   }
 
-  if (m != c.size().rows()) {
-    throw std::invalid_argument("Error: GEMM: m cannot be determined.");
-  }
-  if (n != c.size().cols()) {
-    throw std::invalid_argument("Error: GEMM: n cannot be determined.");
-  }
-  if (k != k2) {
-    throw std::invalid_argument("Error: GEMM: k cannot be determined.");
-  }
+  DLAF_ASSERT((m == c.size().rows()), "GEMM: m cannot be determined.");
+  DLAF_ASSERT((n == c.size().cols()), "GEMM: n cannot be determined.");
+  DLAF_ASSERT((k == k2), "GEMM: k cannot be determined.");
 
   blas::gemm(blas::Layout::ColMajor, op_a, op_b, m, n, k, alpha, a.ptr(), a.ld(), b.ptr(), b.ld(), beta,
              c.ptr(), c.ld());
@@ -60,15 +54,10 @@ void herk(blas::Uplo uplo, blas::Op op, BaseType<T> alpha, const Tile<const T, d
     k = a.size().rows();
   }
 
-  if (std::is_same<T, ComplexType<T>>::value && op == blas::Op::Trans) {
-    throw std::invalid_argument("Error: Complex HERK: op = Trans is not allowed.");
-  }
-  if (c.size().rows() != c.size().cols()) {
-    throw std::invalid_argument("Error: HERK: C is not square.");
-  }
-  if (c.size().rows() != n) {
-    throw std::invalid_argument("Error: HERK: C has an invalid size.");
-  }
+  DLAF_ASSERT((!std::is_same<T, ComplexType<T>>::value || op != blas::Op::Trans),
+              "Complex HERK: op = Trans is not allowed.");
+  DLAF_ASSERT((c.size().rows() == c.size().cols()), "HERK: C is not square.");
+  DLAF_ASSERT((c.size().rows() == n), "HERK: C has an invalid size.");
 
   blas::herk(blas::Layout::ColMajor, uplo, op, n, k, alpha, a.ptr(), a.ld(), beta, c.ptr(), c.ld());
 }
@@ -79,12 +68,8 @@ void trsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alph
   SizeType m = b.size().rows();
   SizeType n = b.size().cols();
 
-  if (a.size().rows() != a.size().cols()) {
-    throw std::invalid_argument("Error: TRSM: A is not square.");
-  }
-  if (a.size().rows() != (side == blas::Side::Left ? m : n)) {
-    throw std::invalid_argument("Error: TRSM: A has an invalid size.");
-  }
+  DLAF_ASSERT((a.size().rows() == a.size().cols()), "TRSM: A is not square.");
+  DLAF_ASSERT((a.size().rows() == (side == blas::Side::Left ? m : n)), "TRSM: A has an invalid size.");
 
   blas::trsm(blas::Layout::ColMajor, side, uplo, op, diag, m, n, alpha, a.ptr(), a.ld(), b.ptr(),
              b.ld());

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [[ $SLURM_PROCID -eq 0]]; then
+if [[ $SLURM_PROCID == "0" ]]; then
     ctest $@
 else
     ctest -Q $@

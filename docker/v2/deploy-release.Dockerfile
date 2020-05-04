@@ -36,6 +36,7 @@ RUN mkdir ${BUILD} && cd ${BUILD} && \
 
 # Prune and bundle binaries
 RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
+    source /opt/intel/compilers_and_libraries/linux/mkl/bin/mklvars.sh intel64 && \
     export TEST_BINARIES=`ctest --show-only=json-v1 | jq '.tests | map(.command[0]) | .[]' | tr -d \"` && \
     libtree -d ${DEPLOY} ${TEST_BINARIES} && \
     rm -rf ${DEPLOY}/usr/bin && \

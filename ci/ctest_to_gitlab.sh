@@ -6,8 +6,6 @@ BASE_TEMPLATE="
 include:
   - remote: 'https://gitlab.com/cscs-ci/recipes/-/raw/master/templates/v1/.cscs.yml'
 
-resource_group: test_on_daint
-
 image: $1
 
 stages:

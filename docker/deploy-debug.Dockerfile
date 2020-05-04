@@ -21,6 +21,7 @@ RUN mkdir DLA-Future-build && cd DLA-Future-build && \
       -DDLAF_WITH_TEST=ON \
       -DDLAF_BUILD_MINIAPPS=ON \
       -DDLAF_MPI_PRESET=slurm \
+      -DDLAF_TEST_RUNALL_WITH_MPIEXEC=ON \
       -DMPIEXEC_NUMCORES=36 \
       -DMPIEXEC_EXECUTABLE=srun \
       -DMPIEXEC_PREFLAGS="--jobid=\$JOBID;sarus;run;--mpi;\$IMAGE" \

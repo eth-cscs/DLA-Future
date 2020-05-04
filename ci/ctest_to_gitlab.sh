@@ -46,7 +46,7 @@ JOB_TEMPLATE="
     SLURM_NTASKS: {{NTASKS}}
     PULL_IMAGE: 'NO'
     USE_MPI: 'YES'
-  script: mpi-ctest -L {{LABEL}} --build-run-dir /DLA-Future-build"
+  script: bash -c 'cd /DLA-Future-build && mpi-ctest -L {{LABEL}}'"
 
 JOBS=""
 

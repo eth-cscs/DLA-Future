@@ -16,7 +16,6 @@ stages:
 # Make one big allocation reused in all jobs
 variables:
   ALLOCATION_NAME: dlaf-ci-job-\$CI_PIPELINE_ID
-  SLURM_TIMELIMIT: '15:00'
 
 # Allocate the resources
 allocate:
@@ -24,6 +23,7 @@ allocate:
   extends: .daint_alloc
   variables:
     PULL_IMAGE: 'YES'
+    SLURM_TIMELIMIT: '15:00'
 
 # Execute multiple jobs
 {{JOBS}}
@@ -32,6 +32,8 @@ allocate:
 deallocate:
   stage: cleanup
   extends: .daint_dealloc
+  variables:
+    PULL_IMAGE: 'NO'
 "
 
 JOB_TEMPLATE="
@@ -43,6 +45,7 @@ JOB_TEMPLATE="
     SLURM_CPUS_PER_TASK: {{CPUS_PER_TASK}}
     SLURM_NTASKS: {{NTASKS}}
     PULL_IMAGE: 'NO'
+    USE_MPI: 'YES'
   script: mpi-ctest -L {{LABEL}}"
 
 JOBS=""

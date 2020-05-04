@@ -16,6 +16,8 @@
 #include <complex>
 #include <limits>
 
+#include "dlaf/common/assert.h"
+
 namespace dlaf {
 
 using SizeType = int;
@@ -91,8 +93,19 @@ template <class S, class U,
                                std::is_integral<S>::value && std::is_signed<S>::value,
                            int> = 0>
 S to_signed(const U unsigned_value) {
-  assert(std::numeric_limits<S>::max() > unsigned_value);
+  DLAF_ASSERT_MODERATE(std::numeric_limits<S>::max() >= unsigned_value);
   return static_cast<S>(unsigned_value);
+}
+
+/// Fallback
+template <class S, class SB,
+          std::enable_if_t<std::is_integral<SB>::value && std::is_signed<SB>::value &&
+                               std::is_integral<S>::value && std::is_signed<S>::value,
+                           int> = 0>
+S to_signed(const SB value) {
+  DLAF_ASSERT_MODERATE(std::numeric_limits<S>::max() >= value);
+  DLAF_ASSERT_MODERATE(std::numeric_limits<S>::min() <= value);
+  return static_cast<S>(value);
 }
 
 /// Cast from signed to unsigned integer types
@@ -104,9 +117,35 @@ template <class U, class S,
                                std::is_integral<S>::value && std::is_signed<S>::value,
                            int> = 0>
 U to_unsigned(const S signed_value) {
-  assert(signed_value >= 0);
-  assert(std::numeric_limits<U>::max() >= static_cast<std::size_t>(signed_value));
+  DLAF_ASSERT_MODERATE(signed_value >= 0);
+  DLAF_ASSERT_MODERATE(std::numeric_limits<U>::max() >= static_cast<std::size_t>(signed_value));
   return static_cast<U>(signed_value);
+}
+
+/// Fallback
+template <class U, class UB,
+          std::enable_if_t<std::is_integral<U>::value && std::is_unsigned<U>::value &&
+                               std::is_integral<UB>::value && std::is_unsigned<UB>::value,
+                           int> = 0>
+U to_unsigned(const UB unsigned_value) {
+  DLAF_ASSERT_MODERATE(std::numeric_limits<U>::max() >= static_cast<std::size_t>(unsigned_value));
+  return static_cast<U>(unsigned_value);
+}
+
+template <class To, class From,
+          std::enable_if_t<std::is_integral<From>::value && std::is_integral<To>::value &&
+                               std::is_unsigned<To>::value,
+                           int> = 0>
+To integral_cast(const From value) {
+  return to_unsigned<To, From>(value);
+}
+
+template <class To, class From,
+          std::enable_if_t<std::is_integral<From>::value && std::is_integral<To>::value &&
+                               std::is_signed<To>::value,
+                           int> = 0>
+To integral_cast(const From value) {
+  return to_signed<To, From>(value);
 }
 
 /// Helper function for casting from unsigned to dlaf::SizeType

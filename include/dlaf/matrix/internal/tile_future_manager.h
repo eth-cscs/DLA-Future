@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#pragma once
 #include <hpx/hpx.hpp>
 #include "dlaf/matrix/tile.h"
 

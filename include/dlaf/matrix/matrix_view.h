@@ -17,6 +17,7 @@
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/distribution.h"
+#include "dlaf/matrix/internal/tile_future_manager.h"
 #include "dlaf/matrix/layout_info.h"
 #include "dlaf/matrix/matrix_base.h"
 #include "dlaf/matrix/tile.h"
@@ -251,6 +252,22 @@ MatrixView<std::add_const_t<T>, device> getConstView(MatrixType<T, device>& matr
                                                      bool force_R = true) {
   return getConstView(blas::Uplo::General, matrix, force_R);
 }
+
+/// ---- ETI
+
+#define DLAF_MATRIXVIEW_ETI(KWORD, DATATYPE, DEVICE) \
+  KWORD template class MatrixView<DATATYPE, DEVICE>; \
+  KWORD template class MatrixView<const DATATYPE, DEVICE>;
+
+DLAF_MATRIXVIEW_ETI(extern, float, Device::CPU)
+DLAF_MATRIXVIEW_ETI(extern, double, Device::CPU)
+DLAF_MATRIXVIEW_ETI(extern, std::complex<float>, Device::CPU)
+DLAF_MATRIXVIEW_ETI(extern, std::complex<double>, Device::CPU)
+
+// DLAF_MATRIXVIEW_ETI(extern, float, Device::GPU)
+// DLAF_MATRIXVIEW_ETI(extern, double, Device::GPU)
+// DLAF_MATRIXVIEW_ETI(extern, std::complex<float>, Device::GPU)
+// DLAF_MATRIXVIEW_ETI(extern, std::complex<double>, Device::GPU)
 
 }
 }

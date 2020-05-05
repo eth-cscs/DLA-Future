@@ -205,12 +205,8 @@ Index2D<IndexT, Tag> computeCoordsRowMajor(std::ptrdiff_t linear_index,
                        "Linear index ", std::to_string(linear_index), " does not fit into grid ", dims);
 
   std::ptrdiff_t leading_size = dims.cols();
-  Index2D<IndexT, Tag> index{to_signed<IndexT>(linear_index / leading_size),
-                             to_signed<IndexT>(linear_index % leading_size)};
-
-  DLAF_ASSERT_HEAVY(index.isIn(dims), "Computed index is outside the given grid.");
-
-  return index;
+  return {to_signed<IndexT>(linear_index / leading_size),
+          to_signed<IndexT>(linear_index % leading_size)};
 }
 
 /// Compute coords of the @p index -th cell in a column-major ordered 2D grid with size op dims
@@ -231,12 +227,8 @@ Index2D<IndexT, Tag> computeCoordsColMajor(std::ptrdiff_t linear_index,
                        "Linear index ", std::to_string(linear_index), " does not fit into grid ", dims);
 
   std::ptrdiff_t leading_size = dims.rows();
-  Index2D<IndexT, Tag> index{to_signed<IndexT>(linear_index % leading_size),
-                             to_signed<IndexT>(linear_index / leading_size)};
-
-  DLAF_ASSERT_HEAVY(index.isIn(dims), "Computed index is outside the given grid.");
-
-  return index;
+  return {to_signed<IndexT>(linear_index % leading_size),
+          to_signed<IndexT>(linear_index / leading_size)};
 }
 
 /// Compute coords of the @p index -th cell in a grid with @p ordering and size @p dims
@@ -276,7 +268,6 @@ LinearIndexT computeLinearIndexRowMajor(const Index2D<IndexT, Tag>& index,
   DLAF_ASSERT_MODERATE(index.isIn(dims), "Index ", index, " is not in the grid ", dims);
 
   std::size_t linear_index = sum(mul(index.row(), dims.cols()), index.col());
-
   return integral_cast<LinearIndexT>(linear_index);
 }
 
@@ -294,7 +285,6 @@ LinearIndexT computeLinearIndexColMajor(const Index2D<IndexT, Tag>& index,
   DLAF_ASSERT_MODERATE(index.isIn(dims), "Index ", index, " is not in the grid ", dims);
 
   std::size_t linear_index = sum(mul(index.col(), dims.rows()), index.row());
-
   return integral_cast<LinearIndexT>(linear_index);
 }
 

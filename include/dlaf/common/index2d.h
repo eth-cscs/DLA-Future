@@ -187,6 +187,13 @@ public:
   }
 };
 
+/// Compute coords of the @p index -th cell in a row-major ordered 2D grid with size @p dims
+///
+/// @return an Index2D matching the Size2D (same IndexT and Tag)
+/// @param dims Size2D<IndexT, Tag> representing the size of the grid
+/// @param index linear index of the cell
+///
+/// @pre 0 <= linear_index < (dims.rows() * dims.cols())
 template <class IndexT, class Tag>
 Index2D<IndexT, Tag> computeCoordsRowMajor(std::ptrdiff_t linear_index,
                                            const Size2D<IndexT, Tag>& dims) noexcept {
@@ -206,6 +213,13 @@ Index2D<IndexT, Tag> computeCoordsRowMajor(std::ptrdiff_t linear_index,
   return index;
 }
 
+/// Compute coords of the @p index -th cell in a column-major ordered 2D grid with size op dims
+///
+/// @return an Index2D matching the Size2D (same IndexT and Tag)
+/// @param dims Size2D<IndexT, Tag> representing the size of the grid
+/// @param index linear index of the cell
+///
+/// @pre 0 <= linear_index < (dims.rows() * dims.cols())
 template <class IndexT, class Tag>
 Index2D<IndexT, Tag> computeCoordsColMajor(std::ptrdiff_t linear_index,
                                            const Size2D<IndexT, Tag>& dims) noexcept {
@@ -225,12 +239,16 @@ Index2D<IndexT, Tag> computeCoordsColMajor(std::ptrdiff_t linear_index,
   return index;
 }
 
-/// Compute coords of the @p index -th cell in a grid with @p ordering and sizes @p dims
+/// Compute coords of the @p index -th cell in a grid with @p ordering and size @p dims
 ///
-/// Return an Index2D matching the Size2D (same IndexT and Tag)
-/// @param ordering specify linear index layout in the grid
-/// @param dims Size2D<IndexT, Tag>
-/// @param index is the linear index of the cell with specified @p ordering
+/// It acts as dispatcher for computeCoordsColMajor() and computeCoordsRowMajor() depending on given @p ordering
+///
+/// @return an Index2D matching the Size2D (same IndexT and Tag)
+/// @param ordering specifies linear index layout in the grid
+/// @param dims Size2D<IndexT, Tag> representing the size of the grid
+/// @param index linear index of the cell (with specified @p ordering)
+///
+/// @pre 0 <= linear_index < (dims.rows() * dims.cols())
 template <class IndexT, class Tag>
 Index2D<IndexT, Tag> computeCoords(Ordering ordering, std::ptrdiff_t index,
                                    const Size2D<IndexT, Tag>& dims) noexcept {
@@ -244,6 +262,9 @@ Index2D<IndexT, Tag> computeCoords(Ordering ordering, std::ptrdiff_t index,
   }
 }
 
+/// Compute linear index of an Index2D in a row-major ordered 2D grid
+///
+/// @pre index.isIn(dims)
 template <class LinearIndexT, class IndexT, class Tag>
 LinearIndexT computeLinearIndexRowMajor(const Index2D<IndexT, Tag>& index,
                                         const Size2D<IndexT, Tag>& dims) noexcept {
@@ -259,6 +280,9 @@ LinearIndexT computeLinearIndexRowMajor(const Index2D<IndexT, Tag>& index,
   return integral_cast<LinearIndexT>(linear_index);
 }
 
+/// Compute linear index of an Index2D in a column-major ordered 2D grid
+///
+/// @pre index.isIn(dims)
 template <class LinearIndexT, class IndexT, class Tag>
 LinearIndexT computeLinearIndexColMajor(const Index2D<IndexT, Tag>& index,
                                         const Size2D<IndexT, Tag>& dims) noexcept {
@@ -275,6 +299,9 @@ LinearIndexT computeLinearIndexColMajor(const Index2D<IndexT, Tag>& index,
 }
 
 /// Compute linear index of an Index2D
+///
+/// It acts as dispatcher for computeLinearIndexColMajor() and computeLinearIndexRowMajor()
+/// depending on given @p ordering
 ///
 /// @pre index.isIn(dims)
 template <class LinearIndexT, class IndexT, class Tag>

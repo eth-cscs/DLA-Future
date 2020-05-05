@@ -46,7 +46,7 @@ RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
     libtree -d ${DEPLOY} ${TEST_BINARIES} && \
     rm -rf ${DEPLOY}/usr/bin && \
     libtree -d ${DEPLOY} $(which ctest gcov addr2line) && \
-    cp -L ${SOURCE}/ci/mpi-ctest ${DEPLOY}/usr/bin && \
+    cp -L ${SOURCE}/ci/{mpi-ctest,upload_codecov} ${DEPLOY}/usr/bin && \
     cp -L $(which lcov) $(which geninfo) ${DEPLOY}/usr/bin && \
     echo "$TEST_BINARIES" | xargs -I{file} find -samefile {file} -exec cp --parents '{}' ${BUILD}-tmp ';' && \
     find '(' -name CTestTestfile.cmake -o -iname "*.gcno" ')' -exec cp --parent '{}' ${BUILD}-tmp ';' && \
@@ -55,7 +55,7 @@ RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
 
 # Generate the gitlab-ci yml file
 RUN cd ${BUILD} && \
-    ${SOURCE}/ci/ctest_to_gitlab.sh "${DEPLOY_IMAGE}" > ${DEPLOY}/pipeline.yml
+    ${SOURCE}/ci/ctest_to_gitlab_codecov.sh "${DEPLOY_IMAGE}" > ${DEPLOY}/pipeline.yml
 
 # Multistage build, this is the final small image
 FROM ubuntu:18.04

@@ -11,6 +11,7 @@ image: $1
 stages:
   - allocate
   - test
+  - upload
   - cleanup
 
 # Make one big allocation reused in all jobs
@@ -27,6 +28,17 @@ allocate:
 
 # Execute multiple jobs
 {{JOBS}}
+
+upload_reports:
+  stage: upload
+  extends: .daint
+  variables:
+    PULL_IMAGE: 'NO'
+    SLURM_NTASKS: 1
+    SLURM_TIMELIMIT: '15:00'
+    DISABLE_AFTER_SCRIPT: 'YES'
+  script: upload_codecov
+  resource_group: job-in-allocation-\$CI_PIPELINE_ID
 
 # Remove the allocation
 deallocate:
@@ -47,7 +59,10 @@ JOB_TEMPLATE="
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
   script: bash -c 'cd /DLA-Future-build && mpi-ctest -L {{LABEL}}'
-  resource_group: job-in-allocation-\$CI_PIPELINE_ID"
+  resource_group: job-in-allocation-\$CI_PIPELINE_ID
+  artifacts:
+    paths:
+      - codecov-reports/"  
 
 JOBS=""
 

@@ -16,6 +16,7 @@ stages:
 # Make one big allocation reused in all jobs
 variables:
   ALLOCATION_NAME: dlaf-ci-job-\$CI_PIPELINE_ID
+  SLURM_WAIT: 90
 
 # Allocate the resources
 allocate:

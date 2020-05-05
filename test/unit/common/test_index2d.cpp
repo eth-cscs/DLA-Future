@@ -145,68 +145,68 @@ TYPED_TEST(Index2DTest, computeCoords) {
   using dlaf::common::computeCoords;
   using dlaf::common::Ordering;
 
-  Ordering ordering = Ordering::ColumnMajor;
+  {
+    EXPECT_EQ((Index2D<TypeParam>{0, 0}),
+              computeCoords(Ordering::ColumnMajor, int8_t(0), Size2D<TypeParam>{1, 1}));
+    EXPECT_EQ((Index2D<TypeParam>{0, 0}),
+              computeCoords(Ordering::ColumnMajor, int32_t(0), Size2D<TypeParam>{1, 1}));
+    EXPECT_EQ((Index2D<TypeParam>{0, 0}),
+              computeCoords(Ordering::ColumnMajor, int64_t(0), Size2D<TypeParam>{1, 1}));
+
+    EXPECT_EQ((Index2D<TypeParam>{0, 0}),
+              computeCoords(Ordering::ColumnMajor, uint8_t(0), Size2D<TypeParam>{1, 1}));
+    EXPECT_EQ((Index2D<TypeParam>{0, 0}),
+              computeCoords(Ordering::ColumnMajor, uint32_t(0), Size2D<TypeParam>{1, 1}));
+    EXPECT_EQ((Index2D<TypeParam>{0, 0}),
+              computeCoords(Ordering::ColumnMajor, uint64_t(0), Size2D<TypeParam>{1, 1}));
+  }
+
+  {
+    EXPECT_EQ((Index2D<TypeParam>{0, 0}),
+              computeCoords(Ordering::RowMajor, int8_t(0), Size2D<TypeParam>{1, 1}));
+    EXPECT_EQ((Index2D<TypeParam>{0, 0}),
+              computeCoords(Ordering::RowMajor, int32_t(0), Size2D<TypeParam>{1, 1}));
+    EXPECT_EQ((Index2D<TypeParam>{0, 0}),
+              computeCoords(Ordering::RowMajor, int64_t(0), Size2D<TypeParam>{1, 1}));
+
+    EXPECT_EQ((Index2D<TypeParam>{0, 0}),
+              computeCoords(Ordering::RowMajor, uint8_t(0), Size2D<TypeParam>{1, 1}));
+    EXPECT_EQ((Index2D<TypeParam>{0, 0}),
+              computeCoords(Ordering::RowMajor, uint32_t(0), Size2D<TypeParam>{1, 1}));
+    EXPECT_EQ((Index2D<TypeParam>{0, 0}),
+              computeCoords(Ordering::RowMajor, uint64_t(0), Size2D<TypeParam>{1, 1}));
+  }
 
 #ifdef DLAF_ASSERT_MODERATE_ENABLE
+  std::array<Ordering, 2> orderings{Ordering::RowMajor, Ordering::ColumnMajor};
+
   const char* ERROR_MESSAGE = "\\[ERROR\\]";
 
-  EXPECT_DEATH(computeCoords(ordering, 1, Size2D<TypeParam>{1, 1}), ERROR_MESSAGE);
-  EXPECT_DEATH(computeCoords(ordering, -1, Size2D<TypeParam>{1, 1}), ERROR_MESSAGE);
+  for (const auto& ordering : orderings) {
+    // linear index out of grid bounds
+    EXPECT_DEATH(computeCoords(ordering, -1, Size2D<TypeParam>{1, 1}), ERROR_MESSAGE);
+
+    // negative linear index
+    EXPECT_DEATH(computeCoords(ordering, 1, Size2D<TypeParam>{1, 1}), ERROR_MESSAGE);
+  }
 #endif
-
-  // TEST index with type that cannot span the entire grid size
-  {
-    using linear_index_t = int8_t;
-
-    linear_index_t upper_bound = std::numeric_limits<int8_t>::max();
-
-    EXPECT_EQ((Index2D<TypeParam>{0, 1}),
-              computeCoords(ordering, upper_bound, Size2D<TypeParam>{upper_bound, 2}));
-  }
-
-  {
-    using linear_index_t = uint8_t;
-
-    linear_index_t upper_bound = std::numeric_limits<int8_t>::max();
-
-    EXPECT_EQ((Index2D<TypeParam>{0, 1}),
-              computeCoords(ordering, upper_bound,
-                            Size2D<TypeParam>{static_cast<TypeParam>(upper_bound), 2}));
-  }
-
-  // linear index with a different type
-  EXPECT_EQ((Index2D<TypeParam>{0, 0}), computeCoords(ordering, int8_t(0), Size2D<TypeParam>{1, 1}));
-  EXPECT_EQ((Index2D<TypeParam>{0, 0}), computeCoords(ordering, int64_t(0), Size2D<TypeParam>{1, 1}));
-
-  EXPECT_EQ((Index2D<TypeParam>{0, 0}), computeCoords(ordering, uint8_t(0), Size2D<TypeParam>{1, 1}));
-  EXPECT_EQ((Index2D<TypeParam>{0, 0}), computeCoords(ordering, uint64_t(0), Size2D<TypeParam>{1, 1}));
-
-  // check that returns the components with the right type
-  EXPECT_TRUE((
-      std::is_same<TypeParam,
-                   decltype(computeCoords(ordering, int64_t{0}, Size2D<TypeParam>{1, 1}).row())>::value));
-  EXPECT_TRUE((
-      std::is_same<TypeParam,
-                   decltype(computeCoords(ordering, int64_t{0}, Size2D<TypeParam>{1, 1}).col())>::value));
-  EXPECT_TRUE(
-      (std::is_same<TypeParam, decltype(computeCoords(ordering, uint64_t{0}, Size2D<TypeParam>{1, 1})
-                                            .row())>::value));
-  EXPECT_TRUE(
-      (std::is_same<TypeParam, decltype(computeCoords(ordering, uint64_t{0}, Size2D<TypeParam>{1, 1})
-                                            .col())>::value));
-
-  // check that it returns the right type
-  EXPECT_TRUE(
-      (std::is_same<Index2D<TypeParam>,
-                    decltype(computeCoords(ordering, int64_t(0), Size2D<TypeParam>{1, 1}))>::value));
-  EXPECT_TRUE(
-      (std::is_same<Index2D<TypeParam>,
-                    decltype(computeCoords(ordering, uint64_t(0), Size2D<TypeParam>{1, 1}))>::value));
 }
 
 TYPED_TEST(Index2DTest, computeLinearIndex) {
-  using dlaf::common::Ordering;
   using dlaf::common::computeLinearIndex;
+  using dlaf::common::Ordering;
+
+  {
+    const Index2D<TypeParam> index{3, 2};
+    EXPECT_EQ(13, computeLinearIndex<int>(Ordering::ColumnMajor, index, {5, 26}));
+    EXPECT_EQ(13, computeLinearIndex<int>(Ordering::ColumnMajor, index, Size2D<TypeParam>{5, 26}));
+  }
+
+  {
+    const Index2D<TypeParam> index{2, 3};
+    EXPECT_EQ(13, computeLinearIndex<int>(Ordering::RowMajor, index, {26, 5}));
+    EXPECT_EQ(13, computeLinearIndex<int>(Ordering::RowMajor, index, Size2D<TypeParam>{26, 5}));
+  }
 
 #ifdef DLAF_ASSERT_MODERATE_ENABLE
   {
@@ -230,16 +230,4 @@ TYPED_TEST(Index2DTest, computeLinearIndex) {
     }
   }
 #endif
-
-  {
-    const Index2D<TypeParam> index{3, 2};
-    EXPECT_EQ(13, computeLinearIndex<int>(Ordering::ColumnMajor, index, {5, 26}));
-    EXPECT_EQ(13, computeLinearIndex<int>(Ordering::ColumnMajor, index, Size2D<TypeParam>{5, 26}));
-  }
-
-  {
-    const Index2D<TypeParam> index{2, 3};
-    EXPECT_EQ(13, computeLinearIndex<int>(Ordering::RowMajor, index, {26, 5}));
-    EXPECT_EQ(13, computeLinearIndex<int>(Ordering::RowMajor, index, Size2D<TypeParam>{26, 5}));
-  }
 }

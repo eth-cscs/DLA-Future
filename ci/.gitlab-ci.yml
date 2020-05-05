@@ -9,8 +9,9 @@ stages:
 ## BUILDS
 ##
 
-.kubernetes:
+.build_common:
   extends: .dind
+  stage: build
   only:
     - master
     - staging
@@ -19,214 +20,79 @@ stages:
     GIT_SUBMODULE_STRATEGY: recursive
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  artifacts:
+    paths:
+      - pipeline.yml
 
 # Builds a Docker image for the current commit
 cpu debug build:
-  stage: build
-  extends: .kubernetes
+  extends: .build_common
   variables:
-    BUILD_IMAGE: $CI_REGISTRY_IMAGE/build-env-debug:latest
-    IMAGE: $CI_REGISTRY_IMAGE/deploy-debug:$CI_COMMIT_SHA
+    BUILD_IMAGE: $CI_REGISTRY_IMAGE/debug/build:latest
+    IMAGE: $CI_REGISTRY_IMAGE/debug/deploy:$CI_COMMIT_SHA
   script:
-    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 -f docker/build-env-debug.Dockerfile --network=host .
+    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 -f ci/docker/debug/build.Dockerfile --network=host .
     - docker push $BUILD_IMAGE
-    - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE -f docker/deploy-debug.Dockerfile --network=host .
+    - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE --build-arg DEPLOY_IMAGE=$IMAGE -f ci/docker/debug/deploy.Dockerfile --network=host .
     - docker push $IMAGE
+    - docker run $IMAGE cat /root/DLA-Future.bundle/pipeline.yml > pipeline.yml
 
 cpu release build:
-  stage: build
-  extends: .kubernetes
+  extends: .build_common
   variables:
-    BUILD_IMAGE: $CI_REGISTRY_IMAGE/build-env-release:latest
-    IMAGE: $CI_REGISTRY_IMAGE/deploy-release:$CI_COMMIT_SHA
+    BUILD_IMAGE: $CI_REGISTRY_IMAGE/release/build:latest
+    IMAGE: $CI_REGISTRY_IMAGE/release/deploy:$CI_COMMIT_SHA
   script:
-    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 -f docker/build-env-release.Dockerfile --network=host .
+    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 -f ci/docker/release/build.Dockerfile --network=host .
     - docker push $BUILD_IMAGE
-    - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE -f docker/deploy-release.Dockerfile --network=host .
-    - docker push $IMAGE
-
-# Experimental
-
-codecov build:
-  stage: build
-  extends: .kubernetes
-  allow_failure: true
-  variables:
-    BUILD_IMAGE: $CI_REGISTRY_IMAGE/build-env-codecov:latest
-    IMAGE: $CI_REGISTRY_IMAGE/deploy-codecov:$CI_COMMIT_SHA
-  script:
-    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 -f docker/codecov/build-env.Dockerfile --network=host .
-    - docker push $BUILD_IMAGE
-    - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE -f docker/codecov/deploy.Dockerfile --network=host .
-    - docker push $IMAGE
-
-v2 cpu debug build:
-  stage: build
-  extends: .kubernetes
-  allow_failure: true
-  variables:
-    BUILD_IMAGE: $CI_REGISTRY_IMAGE/v2/build-env-debug:latest
-    IMAGE: $CI_REGISTRY_IMAGE/v2/deploy-debug:$CI_COMMIT_SHA
-  script:
-    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 -f docker/v2/build-env-debug.Dockerfile --network=host .
-    - docker push $BUILD_IMAGE
-    - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE --build-arg DEPLOY_IMAGE=$IMAGE -f docker/v2/deploy-debug.Dockerfile --network=host .
+    - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE --build-arg DEPLOY_IMAGE=$IMAGE -f ci/docker/release/deploy.Dockerfile --network=host .
     - docker push $IMAGE
     - docker run $IMAGE cat /root/DLA-Future.bundle/pipeline.yml > pipeline.yml
-  artifacts:
-    paths:
-      - pipeline.yml
 
-v2 cpu release build:
-  stage: build
-  extends: .kubernetes
-  allow_failure: true
+cpu codecov build:
+  extends: .build_common
   variables:
-    BUILD_IMAGE: $CI_REGISTRY_IMAGE/v2/build-env-release:latest
-    IMAGE: $CI_REGISTRY_IMAGE/v2/deploy-release:$CI_COMMIT_SHA
+    BUILD_IMAGE: $CI_REGISTRY_IMAGE/codecov/build:latest
+    IMAGE: $CI_REGISTRY_IMAGE/codecov/deploy:$CI_COMMIT_SHA
   script:
-    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 -f docker/v2/build-env-release.Dockerfile --network=host .
+    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 -f ci/docker/codecov/build.Dockerfile --network=host .
     - docker push $BUILD_IMAGE
-    - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE --build-arg DEPLOY_IMAGE=$IMAGE -f docker/v2/deploy-release.Dockerfile --network=host .
+    - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE --build-arg DEPLOY_IMAGE=$IMAGE -f ci/docker/codecov/deploy.Dockerfile --network=host .
     - docker push $IMAGE
     - docker run $IMAGE cat /root/DLA-Future.bundle/pipeline.yml > pipeline.yml
-  artifacts:
-    paths:
-      - pipeline.yml
-
-v2 codecov build:
-  stage: build
-  extends: .kubernetes
-  allow_failure: true
-  variables:
-    BUILD_IMAGE: $CI_REGISTRY_IMAGE/v2/build-env-codecov:latest
-    IMAGE: $CI_REGISTRY_IMAGE/v2/deploy-codecov:$CI_COMMIT_SHA
-  script:
-    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 -f docker/v2/codecov/build-env.Dockerfile --network=host .
-    - docker push $BUILD_IMAGE
-    - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE --build-arg DEPLOY_IMAGE=$IMAGE -f docker/v2/codecov/deploy.Dockerfile --network=host .
-    - docker push $IMAGE
-    - docker run $IMAGE cat /root/DLA-Future.bundle/pipeline.yml > pipeline.yml
-  artifacts:
-    paths:
-      - pipeline.yml
 
 ##
 ## RUNS
 ##
 
-.daint-common:
-  variables:
-    # no need to clone as we have images
-    GIT_SUBMODULE_STRATEGY: none
+.run_common:
+  stage: test
   only:
     - master
     - staging
     - trying
-  tags:
-    - daint
+  trigger:
+    strategy: depend
 
 # Executes the docker images on Daint via Sarus
 cpu debug test:
-  extends: .daint-common
-  stage: test
-  before_script:
-    - module load sarus daint-mc
-    - export IMAGE=$CI_REGISTRY_IMAGE/deploy-debug:$CI_COMMIT_SHA
-    - sarus pull $IMAGE
-    - sarus run $IMAGE cat /root/run.sh > run.sh
-    - chmod +x run.sh
-    - salloc --no-shell --time=15:00 --job-name=DLA-Future-ci-$CI_JOB_ID -N 1 -C mc -p cscsci
-    - export JOBID=$(squeue -h --name=DLA-Future-ci-$CI_JOB_ID --format=%A)
-  script:
-    - bash ./run.sh
-  after_script:
-    - module load sarus
-    - export IMAGE=$CI_REGISTRY_IMAGE/deploy-debug:$CI_COMMIT_SHA
-    - export JOBID=$(squeue -h --name=DLA-Future-ci-$CI_JOB_ID --format=%A)
-    - scancel $JOBID
-    - sarus rmi $IMAGE
+  extends: .run_common
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cpu debug build
 
 cpu release test:
-  extends: .daint-common
-  stage: test
-  before_script:
-    - module load sarus daint-mc
-    - export IMAGE=$CI_REGISTRY_IMAGE/deploy-release:$CI_COMMIT_SHA
-    - sarus pull $IMAGE
-    - sarus run $IMAGE cat /root/run.sh > run.sh
-    - chmod +x run.sh
-    - salloc --no-shell --time=15:00 --job-name=DLA-Future-ci-$CI_JOB_ID -N 1 -C mc -p cscsci
-    - export JOBID=$(squeue -h --name=DLA-Future-ci-$CI_JOB_ID --format=%A)
-  script:
-    - bash ./run.sh
-  after_script:
-    - module load sarus
-    - export IMAGE=$CI_REGISTRY_IMAGE/deploy-release:$CI_COMMIT_SHA
-    - export JOBID=$(squeue -h --name=DLA-Future-ci-$CI_JOB_ID --format=%A)
-    - scancel $JOBID
-    - sarus rmi $IMAGE
+  extends: .run_common
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cpu release build
 
-# Experimental
-
-codecov test:
-  allow_failure: true
-  extends: .daint-common
-  stage: test
-  before_script:
-    - module load sarus daint-mc
-    - export IMAGE=$CI_REGISTRY_IMAGE/deploy-codecov:$CI_COMMIT_SHA
-    - sarus pull $IMAGE
-    - sarus run $IMAGE cat /root/run.sh > run.sh
-    - chmod +x run.sh
-    - salloc --no-shell --time=15:00 --job-name=DLA-Future-ci-$CI_JOB_ID -N 1 -C mc -p cscsci
-    - export JOBID=$(squeue -h --name=DLA-Future-ci-$CI_JOB_ID --format=%A)
-  script:
-    - srun --jobid=$JOBID -N 1 -n 1 -J DLA-Future-ci-$CI_JOB_ID-pre sarus run --mount=type=bind,source=$PWD,destination=/shared $IMAGE /DLA-Future/docker/codecov/pre.sh
-    - bash ./run.sh
-    - srun --jobid=$JOBID -N 1 -n 1 -J DLA-Future-ci-$CI_JOB_ID-post sarus run --mount=type=bind,source=$PWD,destination=/shared $IMAGE /DLA-Future/docker/codecov/post.sh
-  after_script:
-    - module load sarus
-    - export IMAGE=$CI_REGISTRY_IMAGE/deploy-codecov:$CI_COMMIT_SHA
-    - export JOBID=$(squeue -h --name=DLA-Future-ci-$CI_JOB_ID --format=%A)
-    - scancel $JOBID
-    - sarus rmi $IMAGE
-
-v2 cpu debug test:
-  allow_failure: true
-  stage: test
-  only:
-    - master
-    - staging
-    - trying
+cpu codecov test:
+  extends: .run_common
   trigger:
     strategy: depend
-    include: # use the pipeline file from the build job
+    include:
       - artifact: pipeline.yml
-        job: v2 cpu debug build
-
-v2 cpu release test:
-  allow_failure: true
-  stage: test
-  only:
-    - master
-    - staging
-    - trying
-  trigger:
-    strategy: depend
-    include: # use the pipeline file from the build job
-      - artifact: pipeline.yml
-        job: v2 cpu release build
-
-v2 codecov test:
-  allow_failure: true
-  stage: test
-  only:
-    - master
-    - staging
-    - trying
-  trigger:
-    strategy: depend
-    include: # use the pipeline file from the build job
-      - artifact: pipeline.yml
-        job: v2 codecov build
+        job: cpu codecov build

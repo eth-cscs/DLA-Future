@@ -46,8 +46,8 @@ JOB_TEMPLATE="
     PULL_IMAGE: 'NO'
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
-  script: bash -c 'cd /DLA-Future-build && mpi-ctest -L {{LABEL}}'
-  resource_group: job-in-allocation-\$CI_PIPELINE_ID"
+  script: mpi-ctest -L {{LABEL}}
+  resource_group: daint-job"
 
 JOBS=""
 

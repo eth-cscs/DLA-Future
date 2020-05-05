@@ -16,15 +16,12 @@ FROM $BUILD_ENV as builder
 ARG BUILD
 ARG SOURCE
 ARG DEPLOY
-
-SHELL ["/bin/bash", "-c"]
+ARG DEPLOY_IMAGE
 
 # Build DLA-Future
 COPY . $SOURCE
 
-# ctest wants to be able to locate the test binaries when
-# you run `ctest -N`, so fake an srun command here.
-RUN touch /usr/bin/srun && chmod +x /usr/bin/srun
+SHELL ["/bin/bash", "-c"]
 
 # Build the project with coverage symbols
 RUN mkdir ${BUILD} && cd ${BUILD} && \
@@ -39,30 +36,26 @@ RUN mkdir ${BUILD} && cd ${BUILD} && \
       -DDLAF_WITH_MKL=OFF \
       -DDLAF_WITH_TEST=ON \
       -DDLAF_BUILD_MINIAPPS=ON \
-      -DDLAF_MPI_PRESET=slurm \
-      -DDLAF_TEST_RUNALL_WITH_MPIEXEC=ON \
-      -DMPIEXEC_NUMCORES=36 \
       -DMPIEXEC_EXECUTABLE=srun \
-      # wrap all commands in sarus and run.sh
-      -DMPIEXEC_PREFLAGS="--jobid=\$JOBID;sarus;run;--mpi;--mount=type=bind,source=\$PWD,destination=/shared;\$IMAGE;${SOURCE}/docker/codecov/run.sh" \
-      -DCMAKE_INSTALL_PREFIX=/usr && \
-      make -j$(nproc) && \
-      source ${SOURCE}/ci/sarusify.sh && \
-      echo "$SARUS_TEST_COMMANDS" > /root/run.sh && \
-      /root/libtree/libtree \
-        --chrpath \
-        -d ${DEPLOY} \
-        $(which gcov) \
-        $(which addr2line) \
-        $TEST_EXECUTABLES && \
-      # Copy lcov over (it's perl scripts, so cannot use libtree)
-      cp -L $(which lcov) $(which geninfo) ${DEPLOY}/usr/bin && \
-      # Remove everything except for gcno coverage files
-      mv ${BUILD} ${BUILD}-tmp && \
-      mkdir ${BUILD} && \
-      cd ${BUILD}-tmp && \
-      find -iname "*.gcno" -exec cp --parent \{\} ${BUILD} \; && \
-      rm -rf ${BUILD}-tmp
+      -DDLAF_CI_RUNNER_USES_MPIRUN=1 && \
+      make -j$(nproc)
+
+# Prune and bundle binaries
+RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
+    export TEST_BINARIES=`ctest --show-only=json-v1 | jq '.tests | map(.command[0]) | .[]' | tr -d \"` && \
+    libtree -d ${DEPLOY} ${TEST_BINARIES} && \
+    rm -rf ${DEPLOY}/usr/bin && \
+    libtree -d ${DEPLOY} $(which ctest gcov addr2line) && \
+    cp -L ${SOURCE}/ci/{mpi-ctest,upload_codecov} ${DEPLOY}/usr/bin && \
+    cp -L $(which lcov) $(which geninfo) ${DEPLOY}/usr/bin && \
+    echo "$TEST_BINARIES" | xargs -I{file} find -samefile {file} -exec cp --parents '{}' ${BUILD}-tmp ';' && \
+    find '(' -name CTestTestfile.cmake -o -iname "*.gcno" ')' -exec cp --parent '{}' ${BUILD}-tmp ';' && \
+    rm -rf ${BUILD} && \
+    mv ${BUILD}-tmp ${BUILD}
+
+# Generate the gitlab-ci yml file
+RUN cd ${BUILD} && \
+    ${SOURCE}/ci/ctest_to_gitlab_codecov.sh "${DEPLOY_IMAGE}" > ${DEPLOY}/pipeline.yml
 
 # Multistage build, this is the final small image
 FROM ubuntu:18.04
@@ -75,7 +68,7 @@ ARG DEPLOY
 # codecov upload needs curl + ca-certificates
 # TODO: remove git after https://github.com/codecov/codecov-bash/pull/291
 #       or https://github.com/codecov/codecov-bash/pull/265 is merged
-RUN apt-get update && \
+RUN apt-get update -qq && \
     apt-get install --no-install-recommends -qq \
       perl \
       curl \
@@ -95,15 +88,15 @@ COPY --from=builder ${DEPLOY} ${DEPLOY}
 # we can at the very least remove all remnants of git, in particular the `.git` folder...
 COPY --from=builder ${SOURCE} ${SOURCE}
 
-# Finally copy the srun commands
-COPY --from=builder /root/run.sh /root/run.sh
-
 # Make it easy to call our binaries.
 ENV PATH="${DEPLOY}/usr/bin:$PATH"
+
+# Used in our ctest wrapper to upload reports
+ENV ENABLE_COVERAGE="YES"
 
 # Automatically print stacktraces on segfault
 ENV LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so
 
 RUN echo "${DEPLOY}/usr/lib/" > /etc/ld.so.conf.d/dlaf.conf && ldconfig
 
-WORKDIR ${DEPLOY}/usr/bin
+WORKDIR ${BUILD}

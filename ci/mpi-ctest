@@ -1,0 +1,47 @@
+#!/bin/bash
+
+if [[ "$ENABLE_COVERAGE" == "YES" ]]; then
+    LOCAL_REPORTS="/codecov-reports"
+    SHARED_REPORTS="$CI_PROJECT_DIR/codecov-reports"
+    REPORT_NAME=`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1`
+
+    mkdir -p "$LOCAL_REPORTS"
+    mkdir -p "$SHARED_REPORTS"
+    lcov --no-external --capture --initial --base-directory /DLA-Future --directory /DLA-Future-build --output-file "$LOCAL_REPORTS/baseline-codecov.info" &> /dev/null
+fi;
+
+pushd /DLA-Future-build
+
+# Run the tests
+if [[ $SLURM_PROCID == "0" ]]; then
+    ctest $@
+else
+    ctest -Q $@
+fi
+
+echo "DONE testing from $SLURM_PROCID"
+
+popd
+
+# Create coverage reports for code run
+if [[ "$ENABLE_COVERAGE" == "YES" ]]; then
+    echo "Capturing on $SLURM_PROCID"
+    lcov --no-external --capture --base-directory /DLA-Future --directory /DLA-Future-build --output-file "$LOCAL_REPORTS/run.info" &> /dev/null
+
+    echo "Combining on $SLURM_PROCID"
+    lcov --add-tracefile "$LOCAL_REPORTS/baseline-codecov.info" --add-tracefile "$LOCAL_REPORTS/run.info" --output-file "$LOCAL_REPORTS/combined.info" &> /dev/null
+
+    # Only keep our own source
+    echo "Extracting on $SLURM_PROCID"
+    lcov --extract "$LOCAL_REPORTS/combined.info" "/DLA-Future/*" --output-file "$LOCAL_REPORTS/combined.info" &> /dev/null
+
+    # exclude miniapp/ and test/
+    echo "Removing on $SLURM_PROCID"
+    lcov --remove "$LOCAL_REPORTS/combined.info" "/DLA-Future/miniapp/*" --output-file "$LOCAL_REPORTS/combined.info" &> /dev/null
+    lcov --remove "$LOCAL_REPORTS/combined.info" "/DLA-Future/test/*" --output-file "$LOCAL_REPORTS/combined.info" &> /dev/null
+
+    echo "Copying on $SLURM_PROCID"
+    cp "$LOCAL_REPORTS/combined.info" "$SHARED_REPORTS/codecov-$REPORT_NAME.info"
+
+    echo "Done on $SLURM_PROCID"
+fi

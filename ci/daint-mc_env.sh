@@ -23,3 +23,5 @@ else
 fi
 
 export CRAYPE_LINK_TYPE=dynamic
+
+export CORES_PER_NODE=36

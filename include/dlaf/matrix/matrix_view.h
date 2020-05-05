@@ -55,9 +55,8 @@ public:
   ///
   /// TODO: Sync details.
   /// When the assertion is enabled, terminates the program with an error
-  /// message if @p !size.isValid(),  @throw std::invalid_argument if the global
-  /// tile is not stored in the current process. This assertion is enabled when
-  /// **DLAF_ASSERT_ENABLE** is ON.
+  /// message if the global tile is not stored in the current process.
+  /// This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
   ///
   /// @pre index.isValid() == true.
   /// @pre index.isIn(globalNrTiles()) == true.

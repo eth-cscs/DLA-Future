@@ -15,14 +15,14 @@ fi
 # Create coverage reports for code run
 if [[ "$ENABLE_COVERAGE" == "YES" ]]; then
     lcov --no-external --capture --base-directory /DLA-Future --directory /DLA-Future-build --output-file /codecov-reports/run.info &> /dev/null
-    lcov --add-tracefile /codecov-reports/baseline-codecov.info --add-tracefile /codecov-reports/run.info --output-file /codecov-reports/combined.info
+    lcov --add-tracefile /codecov-reports/baseline-codecov.info --add-tracefile /codecov-reports/run.info --output-file /codecov-reports/combined.info &> /dev/null
 
     # Only keep our own source
-    lcov --extract /codecov-reports/combined.info "/DLA-Future/*" --output-file /codecov-reports/combined.info
+    lcov --extract /codecov-reports/combined.info "/DLA-Future/*" --output-file /codecov-reports/combined.info &> /dev/null
 
     # exclude miniapp/ and test/
-    lcov --remove /codecov-reports/combined.info "/DLA-Future/miniapp/*" --output-file /codecov-reports/combined.info
-    lcov --remove /codecov-reports/combined.info "/DLA-Future/test/*" --output-file /codecov-reports/combined.info
+    lcov --remove /codecov-reports/combined.info "/DLA-Future/miniapp/*" --output-file /codecov-reports/combined.info &> /dev/null
+    lcov --remove /codecov-reports/combined.info "/DLA-Future/test/*" --output-file /codecov-reports/combined.info &> /dev/null
 
     # Upload to codecov.io (once for github, once for the gitlab mirror)
     pushd /DLA-Future

@@ -109,6 +109,7 @@ template <class Coords2DType>
 Coords2DType transposed(const Coords2DType& coords) {
   return {coords.col_, coords.row_};
 }
+
 }
 
 /// A strong-type for 2D sizes
@@ -138,6 +139,11 @@ public:
     return out << static_cast<internal::basic_coords<IndexT>>(index);
   }
 };
+
+template <class T, class Tag>
+std::ostream& operator<<(std::ostream& os, const Size2D<T, Tag>& size) {
+  return os << static_cast<internal::basic_coords<T>>(size);
+}
 
 /// A strong-type for 2D coordinates
 /// @tparam IndexT type for row and column coordinates
@@ -187,6 +193,11 @@ public:
   }
 };
 
+template <class T, class Tag>
+std::ostream& operator<<(std::ostream& os, const Index2D<T, Tag>& size) {
+  return os << static_cast<internal::basic_coords<T>>(size);
+}
+
 /// Compute coords of the @p index -th cell in a row-major ordered 2D grid with size @p dims
 ///
 /// @return an Index2D matching the Size2D (same IndexT and Tag)
@@ -204,7 +215,7 @@ Index2D<IndexT, Tag> computeCoordsRowMajor(std::ptrdiff_t linear_index,
   DLAF_ASSERT_MODERATE(to_unsigned<size_t>(linear_index) < mul(dims.rows(), dims.cols()),
                        "Linear index ", std::to_string(linear_index), " does not fit into grid ", dims);
 
-  std::ptrdiff_t leading_size = dims.cols();
+  std::ptrdiff_t leading_size = to_signed<std::ptrdiff_t>(dims.cols());
   return {to_signed<IndexT>(linear_index / leading_size),
           to_signed<IndexT>(linear_index % leading_size)};
 }
@@ -226,7 +237,7 @@ Index2D<IndexT, Tag> computeCoordsColMajor(std::ptrdiff_t linear_index,
   DLAF_ASSERT_MODERATE(to_unsigned<size_t>(linear_index) < mul(dims.rows(), dims.cols()),
                        "Linear index ", std::to_string(linear_index), " does not fit into grid ", dims);
 
-  std::ptrdiff_t leading_size = dims.rows();
+  std::ptrdiff_t leading_size = to_signed<std::ptrdiff_t>(dims.rows());
   return {to_signed<IndexT>(linear_index % leading_size),
           to_signed<IndexT>(linear_index / leading_size)};
 }

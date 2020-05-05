@@ -256,6 +256,7 @@ Index2D<IndexT, Tag> computeCoords(Ordering ordering, std::ptrdiff_t index,
 
 /// Compute linear index of an Index2D in a row-major ordered 2D grid
 ///
+/// @tparam LinearIndexT can be any integral type signed or unsigned
 /// @pre index.isIn(dims)
 template <class LinearIndexT, class IndexT, class Tag>
 LinearIndexT computeLinearIndexRowMajor(const Index2D<IndexT, Tag>& index,
@@ -273,6 +274,7 @@ LinearIndexT computeLinearIndexRowMajor(const Index2D<IndexT, Tag>& index,
 
 /// Compute linear index of an Index2D in a column-major ordered 2D grid
 ///
+/// @tparam LinearIndexT can be any integral type signed or unsigned
 /// @pre index.isIn(dims)
 template <class LinearIndexT, class IndexT, class Tag>
 LinearIndexT computeLinearIndexColMajor(const Index2D<IndexT, Tag>& index,
@@ -293,6 +295,7 @@ LinearIndexT computeLinearIndexColMajor(const Index2D<IndexT, Tag>& index,
 /// It acts as dispatcher for computeLinearIndexColMajor() and computeLinearIndexRowMajor()
 /// depending on given @p ordering
 ///
+/// @tparam LinearIndexT can be any integral type signed or unsigned
 /// @pre index.isIn(dims)
 template <class LinearIndexT, class IndexT, class Tag>
 LinearIndexT computeLinearIndex(Ordering ordering, const Index2D<IndexT, Tag>& index,

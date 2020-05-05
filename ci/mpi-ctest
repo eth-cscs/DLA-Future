@@ -27,7 +27,7 @@ popd
 if [[ "$ENABLE_COVERAGE" == "YES" ]]; then
     echo "Capturing on $SLURM_PROCID"
     lcov --no-external --capture --base-directory /DLA-Future --directory /DLA-Future-build --output-file "$LOCAL_REPORTS/run.info" &> /dev/null
-    
+
     echo "Combining on $SLURM_PROCID"
     lcov --add-tracefile "$LOCAL_REPORTS/baseline-codecov.info" --add-tracefile "$LOCAL_REPORTS/run.info" --output-file "$LOCAL_REPORTS/combined.info" &> /dev/null
 
@@ -42,6 +42,6 @@ if [[ "$ENABLE_COVERAGE" == "YES" ]]; then
 
     echo "Copying on $SLURM_PROCID"
     cp "$LOCAL_REPORTS/combined.info" "$SHARED_REPORTS/codecov-$REPORT_NAME.info"
-fi
 
-echo "Done on $SLURM_PROCID"
+    echo "Done on $SLURM_PROCID"
+fi

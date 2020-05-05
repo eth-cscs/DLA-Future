@@ -62,7 +62,7 @@ JOB_TEMPLATE="
   resource_group: job-in-allocation-\$CI_PIPELINE_ID
   artifacts:
     paths:
-      - codecov-reports/"  
+      - codecov-reports/"
 
 JOBS=""
 

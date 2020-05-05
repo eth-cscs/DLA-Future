@@ -169,7 +169,7 @@ function(DLAF_addTest test_target_name)
       set(_MPI_CORE_ARGS "")
     endif()
 
-    if(DLAF_CI_TWEAK)
+    if(DLAF_CI_RUNNER_USES_MPIRUN)
       set(_TEST_COMMAND $<TARGET_FILE:${test_target_name}>)
     else()
       set(_TEST_COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${DLAF_AT_MPIRANKS} ${_MPI_CORE_ARGS}
@@ -182,7 +182,6 @@ function(DLAF_addTest test_target_name)
     set(_TEST_COMMAND ${test_target_name})
     set(_TEST_LABEL "RANK_1")
   endif()
-
 
   if (IS_AN_HPX_TEST)
     separate_arguments(_HPX_EXTRA_ARGS_LIST UNIX_COMMAND ${DLAF_HPXTEST_EXTRA_ARGS})

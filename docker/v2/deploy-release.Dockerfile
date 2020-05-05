@@ -31,7 +31,7 @@ RUN mkdir ${BUILD} && cd ${BUILD} && \
       -DDLAF_WITH_TEST=ON \
       -DDLAF_BUILD_MINIAPPS=ON \
       -DMPIEXEC_EXECUTABLE=srun \
-      -DDLAF_CI_TWEAK=1 && \
+      -DDLAF_CI_RUNNER_USES_MPIRUN=1 && \
       make -j$(nproc)
 
 # Prune and bundle binaries

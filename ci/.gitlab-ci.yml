@@ -11,7 +11,7 @@ stages:
 
 .kubernetes:
   extends: .dind
-  only: 
+  only:
     - master
     - staging
     - trying
@@ -195,7 +195,7 @@ codecov test:
 v2 cpu debug test:
   allow_failure: true
   stage: test
-  only: 
+  only:
     - master
     - staging
     - trying
@@ -208,7 +208,7 @@ v2 cpu debug test:
 v2 cpu release test:
   allow_failure: true
   stage: test
-  only: 
+  only:
     - master
     - staging
     - trying
@@ -221,7 +221,7 @@ v2 cpu release test:
 v2 codecov test:
   allow_failure: true
   stage: test
-  only: 
+  only:
     - master
     - staging
     - trying
@@ -230,4 +230,3 @@ v2 codecov test:
     include: # use the pipeline file from the build job
       - artifact: pipeline.yml
         job: v2 codecov build
-  

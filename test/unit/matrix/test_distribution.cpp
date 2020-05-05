@@ -103,64 +103,6 @@ TEST(DistributionTest, Constructor) {
   }
 }
 
-TEST(DistributionTest, ConstructorLocalExceptions) {
-  for (const auto& test : tests_constructor) {
-    if (test.grid_size == comm::Size2D(1, 1)) {
-      EXPECT_THROW(Distribution({-1, test.local_size.cols()}, test.block_size), std::invalid_argument);
-      EXPECT_THROW(Distribution({test.local_size.rows(), -1}, test.block_size), std::invalid_argument);
-      EXPECT_THROW(Distribution(test.local_size, {0, test.block_size.cols()}), std::invalid_argument);
-      EXPECT_THROW(Distribution(test.local_size, {test.block_size.rows(), 0}), std::invalid_argument);
-    }
-  }
-}
-
-TEST(DistributionTest, ConstructorExceptions) {
-  for (const auto& test : tests_constructor) {
-    EXPECT_THROW(Distribution({-1, test.size.cols()}, test.block_size, test.grid_size, test.rank,
-                              test.src_rank),
-                 std::invalid_argument);
-    EXPECT_THROW(Distribution({test.size.rows(), -1}, test.block_size, test.grid_size, test.rank,
-                              test.src_rank),
-                 std::invalid_argument);
-    EXPECT_THROW(Distribution(test.size, {0, test.block_size.cols()}, test.grid_size, test.rank,
-                              test.src_rank),
-                 std::invalid_argument);
-    EXPECT_THROW(Distribution(test.size, {test.block_size.rows(), 0}, test.grid_size, test.rank,
-                              test.src_rank),
-                 std::invalid_argument);
-    EXPECT_THROW(Distribution(test.size, test.block_size, {0, test.grid_size.cols()}, test.rank,
-                              test.src_rank),
-                 std::invalid_argument);
-    EXPECT_THROW(Distribution(test.size, test.block_size, {test.grid_size.rows(), 0}, test.rank,
-                              test.src_rank),
-                 std::invalid_argument);
-    EXPECT_THROW(Distribution(test.size, test.block_size, test.grid_size, {-1, test.rank.col()},
-                              test.src_rank),
-                 std::invalid_argument);
-    EXPECT_THROW(Distribution(test.size, test.block_size, test.grid_size,
-                              {test.grid_size.rows(), test.rank.col()}, test.src_rank),
-                 std::invalid_argument);
-    EXPECT_THROW(Distribution(test.size, test.block_size, test.grid_size, {test.rank.row(), -1},
-                              test.src_rank),
-                 std::invalid_argument);
-    EXPECT_THROW(Distribution(test.size, test.block_size, test.grid_size,
-                              {test.rank.row(), test.grid_size.cols()}, test.src_rank),
-                 std::invalid_argument);
-    EXPECT_THROW(Distribution(test.size, test.block_size, test.grid_size, test.rank,
-                              {-1, test.src_rank.col()}),
-                 std::invalid_argument);
-    EXPECT_THROW(Distribution(test.size, test.block_size, test.grid_size, test.rank,
-                              {test.grid_size.rows(), test.src_rank.col()}),
-                 std::invalid_argument);
-    EXPECT_THROW(Distribution(test.size, test.block_size, test.grid_size, test.rank,
-                              {test.src_rank.row(), -1}),
-                 std::invalid_argument);
-    EXPECT_THROW(Distribution(test.size, test.block_size, test.grid_size, test.rank,
-                              {test.src_rank.row(), test.grid_size.cols()}),
-                 std::invalid_argument);
-  }
-}
-
 TEST(DistributionTest, ComparisonOperator) {
   for (const auto& test : tests_constructor) {
     Distribution obj(test.size, test.block_size, test.grid_size, test.rank, test.src_rank);

@@ -28,8 +28,10 @@ public:
 
   /// Constructs a distribution for a non distributed matrix of size @p size and block size @p block_size.
   ///
-  /// @throw std::invalid_argument if @p !size.isValid().
-  /// @throw std::invalid_argument if @p !block_size.isValid() or @p block_size_.isEmpty().
+  /// When the assertion is enabled, terminates the program with an error
+  /// message if @p !size.isValid(), if !block_size.isValid() or if @p
+  /// block_size_.isEmpty(). This assertion is enabled when
+  /// **DLAF_ASSERT_ENABLE** is ON.
   Distribution(const LocalElementSize& size, const TileElementSize& block_size);
 
   /// Constructs a distribution for a matrix of size @p size and block size @p block_size,
@@ -37,11 +39,12 @@ public:
   ///
   /// @param[in] rank_index is the rank of the current process,
   /// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix.
-  /// @throw std::invalid_argument if @p !size.isValid().
-  /// @throw std::invalid_argument if @p !block_size.isValid() or @p block_size_.isEmpty().
-  /// @throw std::invalid_argument if @p !grid_size.isValid() or @p grid_size_.isEmpty().
-  /// @throw std::invalid_argument if @p !rank_index.isValid() or @p !rank_index_.isIn(grid_size).
-  /// @throw std::invalid_argument if @p !source_rank_index.isValid() or @p !source_rank_index_.isIn(grid_size).
+  /// When the assertion is enabled, terminates the program with an error
+  /// message if @p !size.isValid(), if !block_size.isValid() or if @p
+  /// block_size_.isEmpty(), if @p !grid_size.isValid() or @p grid_size_.isEmpty(),
+  /// @p !rank_index.isValid() or @p !rank_index_.isIn(grid_size), or
+  /// if @p !source_rank_index.isValid() or @p !source_rank_index_.isIn(grid_size).
+  /// This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
   Distribution(const GlobalElementSize& size, const TileElementSize& block_size,
                const comm::Size2D& grid_size, const comm::Index2D& rank_index,
                const comm::Index2D& source_rank_index);

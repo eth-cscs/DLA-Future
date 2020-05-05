@@ -32,13 +32,15 @@ public:
   ///
   /// See misc/matrix_distribution.md for for more detail about the parameters.
   ///
-  /// @throw std::invalid_argument if @p tile_ld < 1 or @p tile_offset_row < 1 or @p tile_offset_col < 1,
-  /// @throw std::invalid_argument if @p !size.isEmpty() and
-  ///        @p tile_ld < @c max(@c size.rows(), @c block_size.rows())
-  /// @throw std::invalid_argument if @p !size.isEmpty() and @p tile_row_offset < @c block_size.rows()
-  /// @throw std::invalid_argument if @p !size.isEmpty() and @p tile_col_offset < size of the memory
-  ///        (in elements, padding included) to store a column of tiles,
-  /// @throw std::invalid_argument if the tiles overlap (combinations of @p tile_ld, @p tile_row_offset).
+  /// When the assertion is enabled, terminates the program with an error
+  /// message if @p tile_ld < 1 or @p tile_offset_row < 1 or @p tile_offset_col < 1,
+  /// if @p !size.isEmpty() and  @p tile_ld < @c max(@c size.rows(), @c block_size.rows()),
+  /// if @p !size.isEmpty() and @p tile_row_offset < @c block_size.rows(),
+  /// if @p !size.isEmpty() and @p tile_col_offset < size of the memory (in elements,
+  /// padding included) to store a column of tiles,
+  /// if the tiles overlap (combinations of @p tile_ld, @p tile_row_offset).
+  /// This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
+
   LayoutInfo(const LocalElementSize& size, const TileElementSize& block_size, SizeType tile_ld,
              std::size_t tile_offset_row, std::size_t tile_offset_col);
 

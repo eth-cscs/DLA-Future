@@ -25,8 +25,7 @@ CommunicatorImpl::CommunicatorImpl(MPI_Comm mpi_communicator) : comm_(mpi_commun
 
 CommunicatorImpl_Managed::CommunicatorImpl_Managed(MPI_Comm mpi_communicator)
     : CommunicatorImpl(mpi_communicator) {
-  if (!is_manageable(comm_))
-    throw std::invalid_argument("Passed communicator is not manageable");
+  DLAF_ASSERT((is_manageable(comm_)), "Passed communicator is not manageable");
 }
 
 CommunicatorImpl_Managed::~CommunicatorImpl_Managed() {

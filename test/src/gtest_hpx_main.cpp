@@ -41,8 +41,6 @@
 
 #include <gtest/gtest.h>
 #include <hpx/hpx.hpp>
-#include <hpx/hpx_start.hpp>
-#include <hpx/runtime/threads/run_as_hpx_thread.hpp>
 
 GTEST_API_ int test_main(int argc, char** argv) {
   std::printf("Running main() from gtest_hpx_main.cpp\n");
@@ -53,13 +51,5 @@ GTEST_API_ int test_main(int argc, char** argv) {
 
 GTEST_API_ int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
-
-  hpx::start(nullptr, argc, argv);
-  hpx::runtime* rt = hpx::get_runtime_ptr();
-  hpx::util::yield_while([rt]() { return rt->get_state() < hpx::state_running; });
-
-  auto ret = hpx::threads::run_as_hpx_thread(test_main, argc, argv);
-  hpx::stop();
-
-  return ret;
+  return hpx::init(test_main, argc, argv);
 }

@@ -62,42 +62,28 @@ void test_grid_communication(CommunicatorGrid& grid) {
   EXPECT_EQ(buffer_recv, grid.colCommunicator().size());
 }
 
-void check_rank_full_communicator(const CommunicatorGrid& grid, bool is_in_grid) {
+void check_rank_full_communicator(const CommunicatorGrid& grid) {
   // Checks the function rank_full_communicator
   // If the rank is not in the grid:
   //  - all coords must return -1
   // If the rank is in the grid:
   //  - Check that every coords returns a valid distinct rank
-  //  - Check that returns -1 asking for a coordinate outside the grid
   std::set<dlaf::comm::IndexT_MPI> ranks;
 
   for (int c = 0; c < grid.size().cols(); ++c) {
     for (int r = 0; r < grid.size().rows(); ++r) {
-      if (is_in_grid) {
-        // keep track of rank indexes for each coordinate of the grid
-        auto rank = grid.rankFullCommunicator({r, c});
-        ranks.insert(rank);
+      // keep track of rank indexes for each coordinate of the grid
+      auto rank = grid.rankFullCommunicator({r, c});
+      ranks.insert(rank);
 
-        // check that it is a valid rank
-        EXPECT_GE(rank, 0);
-        EXPECT_LT(rank, grid.size().rows() * grid.size().cols());
-      }
-      else {
-        // a rank outside of the grid does not have access to any other rank in the grid
-        EXPECT_EQ(grid.rankFullCommunicator({r, c}), -1);
-      }
+      // check that it is a valid rank
+      EXPECT_GE(rank, 0);
+      EXPECT_LT(rank, grid.size().rows() * grid.size().cols());
     }
   }
 
-  if (is_in_grid) {
-    // test that each rank has access to all others
-    EXPECT_EQ(ranks.size(), grid.size().rows() * grid.size().cols());
-
-    // test out of grid coordinates
-    EXPECT_EQ(grid.rankFullCommunicator({grid.size().rows() - 1, grid.size().cols()}), -1);
-    EXPECT_EQ(grid.rankFullCommunicator({grid.size().rows(), grid.size().cols() - 1}), -1);
-    EXPECT_EQ(grid.rankFullCommunicator({grid.size().rows(), grid.size().cols()}), -1);
-  }
+  // test that each rank has access to all others
+  EXPECT_EQ(ranks.size(), grid.size().rows() * grid.size().cols());
 }
 
 class CommunicatorGridTest : public ::testing::TestWithParam<Ordering> {};
@@ -199,9 +185,9 @@ TEST_P(CommunicatorGridTest, ConstructorIncomplete) {
   Communicator world(MPI_COMM_WORLD);
   CommunicatorGrid incomplete_grid(world, grid_dims, GetParam());
 
-  auto coords = dlaf::common::computeCoords<Index2D>(GetParam(), world.rank(), grid_dims);
-
   if (world.rank() != NUM_MPI_RANKS - 1) {  // ranks in the grid
+    auto coords = dlaf::common::computeCoords(GetParam(), world.rank(), Size2D(grid_dims));
+
     EXPECT_EQ(NUM_MPI_RANKS - 1, incomplete_grid.size().rows());
     EXPECT_EQ(1, incomplete_grid.size().cols());
 
@@ -209,7 +195,7 @@ TEST_P(CommunicatorGridTest, ConstructorIncomplete) {
     EXPECT_NE(MPI_COMM_NULL, incomplete_grid.rowCommunicator());
     EXPECT_NE(MPI_COMM_NULL, incomplete_grid.colCommunicator());
 
-    check_rank_full_communicator(incomplete_grid, true);
+    check_rank_full_communicator(incomplete_grid);
     EXPECT_EQ(coords.row(), incomplete_grid.rank().row());
     EXPECT_EQ(coords.col(), incomplete_grid.rank().col());
 
@@ -224,7 +210,6 @@ TEST_P(CommunicatorGridTest, ConstructorIncomplete) {
     EXPECT_EQ(MPI_COMM_NULL, incomplete_grid.rowCommunicator());
     EXPECT_EQ(MPI_COMM_NULL, incomplete_grid.colCommunicator());
 
-    check_rank_full_communicator(incomplete_grid, false);
     EXPECT_EQ(-1, incomplete_grid.rank().row());
     EXPECT_EQ(-1, incomplete_grid.rank().col());
 
@@ -254,9 +239,9 @@ TEST_P(CommunicatorGridTest, Rank) {
   EXPECT_EQ(grid_dims[0], complete_grid.size().rows());
   EXPECT_EQ(grid_dims[1], complete_grid.size().cols());
 
-  auto coords = dlaf::common::computeCoords<Index2D>(GetParam(), world.rank(), grid_dims);
+  auto coords = dlaf::common::computeCoords(GetParam(), world.rank(), Size2D(grid_dims));
 
-  check_rank_full_communicator(complete_grid, true);
+  check_rank_full_communicator(complete_grid);
   EXPECT_EQ(coords.row(), complete_grid.rank().row());
   EXPECT_EQ(coords.col(), complete_grid.rank().col());
 

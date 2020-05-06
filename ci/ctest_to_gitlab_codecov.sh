@@ -38,7 +38,7 @@ upload_reports:
     SLURM_TIMELIMIT: '15:00'
     DISABLE_AFTER_SCRIPT: 'YES'
   script: upload_codecov
-  resource_group: job-in-allocation-\$CI_PIPELINE_ID
+  resource_group: daint-job
 
 # Remove the allocation
 deallocate:
@@ -58,8 +58,8 @@ JOB_TEMPLATE="
     PULL_IMAGE: 'NO'
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
-  script: bash -c 'cd /DLA-Future-build && mpi-ctest -L {{LABEL}}'
-  resource_group: job-in-allocation-\$CI_PIPELINE_ID
+  script: mpi-ctest -L {{LABEL}}
+  resource_group: daint-job
   artifacts:
     paths:
       - codecov-reports/"

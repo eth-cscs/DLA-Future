@@ -16,8 +16,8 @@
 
 #include "dlaf/common/data.h"
 #include "dlaf/communication/datatypes.h"
+#include "dlaf/communication/error.h"
 #include "dlaf/communication/type_handler.h"
-#include "dlaf/mpi_header.h"
 
 namespace dlaf {
 namespace comm {

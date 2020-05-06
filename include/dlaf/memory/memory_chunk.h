@@ -16,7 +16,11 @@
 #ifdef DLAF_WITH_CUDA
 #include <cuda_runtime.h>
 #endif
+
 #include "dlaf/types.h"
+#ifdef DLAF_WITH_CUDA
+#include "dlaf/cuda/error.h"
+#endif
 
 namespace dlaf {
 namespace memory {
@@ -42,10 +46,10 @@ public:
 
 #ifdef DLAF_WITH_CUDA
     if (device == Device::CPU) {
-      cudaMallocHost(&ptr_, size_ * sizeof(T));
+      DLAF_CUDA_CALL(cudaMallocHost(&ptr_, size_ * sizeof(T)));
     }
     else {
-      cudaMalloc(&ptr_, size_ * sizeof(T));
+      DLAF_CUDA_CALL(cudaMalloc(&ptr_, size_ * sizeof(T)));
     }
 #else
     if (device == Device::CPU) {
@@ -130,10 +134,10 @@ private:
     if (allocated_) {
 #ifdef DLAF_WITH_CUDA
       if (device == Device::CPU) {
-        cudaFreeHost(ptr_);
+        DLAF_CUDA_CALL(cudaFreeHost(ptr_));
       }
       else {
-        cudaFree(ptr_);
+        DLAF_CUDA_CALL(cudaFree(ptr_));
       }
 #else
       if (device == Device::CPU) {

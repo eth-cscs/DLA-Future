@@ -12,12 +12,13 @@
 
 /// @file
 //
-#include "dlaf/common/utils.h"
-
-#include <mpi.h>
 
 #include <iostream>
 #include <memory>
+
+#include <mpi.h>
+
+#include "dlaf/common/utils.h"
 
 namespace dlaf {
 namespace internal {
@@ -30,7 +31,7 @@ namespace internal {
 /// This function is only relevant when the error handler is `MPI_ERRORS_RETURN`. To set the error
 /// handler use `MPI_Errhandler_set`.
 ///
-inline void mpi_call(int err, common::internal::source_location const& info) {
+inline void mpi_call(int err, const common::internal::source_location& info) {
   if (err != MPI_SUCCESS) {
     std::unique_ptr<char[]> err_buff(new char[MPI_MAX_ERROR_STRING]);
     int err_str_len;

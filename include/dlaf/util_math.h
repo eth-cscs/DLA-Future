@@ -70,7 +70,7 @@ namespace size_t {
 
 /// @brief Perform the sum on integer types in size_t arithmetic
 ///
-/// It casts operands to size_t type and then performs the sum
+/// It casts operands to std::size_t type and then performs the sum
 /// @tparam TA and @tparam TB must be an integer types (signed or unsigned)
 /// @return @p a + @p b
 /// @pre @p a >=0 and @p b >= 0
@@ -82,7 +82,7 @@ std::size_t sum(const TA a, const TB b) {
 
 /// @brief Perform the multiplication on integer types in size_t arithmetic
 ///
-/// It casts operands to size_t type and then performs the multiplication
+/// It casts operands to std::size_t type and then performs the multiplication
 /// @tparam TA and @tparam TB must be an integer types (signed or unsigned)
 /// @return @p a * @p b
 /// @pre @p a >=0 and @p b >= 0
@@ -98,7 +98,7 @@ namespace ptrdiff_t {
 
 /// @brief Perform the sum on integer types in ptrdiff_t arithmetic
 ///
-/// It casts operands to ptrdiff_t type and then performs the sum
+/// It casts operands to std::ptrdiff_t type and then performs the sum
 /// @tparam TA and @tparam TB must be an integer types (signed or unsigned)
 /// @return @p a + @p b
 /// @pre @p a and @p b can be stored in std::ptrdiff_t
@@ -110,7 +110,7 @@ std::ptrdiff_t sum(const TA a, const TB b) {
 
 /// @brief Perform the multiplication on integer types in ptrdiff_t arithmetic
 ///
-/// It casts operands to size_t type and then performs the multiplication
+/// It casts operands to std::ptrdiff_t type and then performs the multiplication
 /// @tparam TA and @tparam TB must be an integer types (signed or unsigned)
 /// @return @p a * @p b
 /// @pre @p a and @p b can be stored in std::ptrdiff_t

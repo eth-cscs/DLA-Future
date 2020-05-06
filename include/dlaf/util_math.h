@@ -10,8 +10,11 @@
 
 #pragma once
 
+#include <cstddef>
 #include <functional>
 #include <type_traits>
+
+#include "dlaf/types.h"
 
 /// @file
 
@@ -41,27 +44,29 @@ constexpr auto ceilDiv(const IntType num, const IntType den)
 }
 #endif
 
-namespace size_t {
 namespace internal {
 
-/// @brief Perform the given binary operation on integer types in size_t arithmetic
+/// @brief Perform the given binary operation on integer types in @tparam ArithmeticT arithmetic
 ///
-/// It casts operands to size_t type and then performs the given binary operation @p op
+/// It casts operands to @tparam ArithmeticT type and then performs the given binary operation @p op
 /// @tparam TA and @tparam TB must be an integer types (signed or unsigned)
 /// @return @p a @p op @p b
-/// @pre @p a >=0 and @p b >= 0
+/// @pre @p a and @p b can be stored in the type @tparam ArithmeticT
+/// @pre it must be possible to store the result in @tparam ArithemticT
 #ifdef DLAF_DOXYGEN
-template <typename TA, typename TB, typename BinaryOp>
+template <class ArithmeticT, class TA, class TB, class BinaryOp>
 constexpr std::size_t generic_integer_op(const TA a, const TB b, BinaryOp op);
 #else
-template <typename TA, typename TB, typename BinaryOp>
+template <class ArithmeticT, class TA, class TB, class BinaryOp>
 constexpr auto generic_integer_op(const TA a, const TB b, BinaryOp op)
-    -> std::enable_if_t<std::is_integral<TA>::value && std::is_integral<TB>::value, std::size_t> {
-  return op(static_cast<std::size_t>(a), static_cast<std::size_t>(b));
+    -> std::enable_if_t<std::is_integral<TA>::value && std::is_integral<TB>::value, ArithmeticT> {
+  return op(integral_cast<ArithmeticT>(a), integral_cast<ArithmeticT>(b));
 }
 #endif
 
 }
+
+namespace size_t {
 
 /// @brief Perform the sum on integer types in size_t arithmetic
 ///
@@ -69,9 +74,10 @@ constexpr auto generic_integer_op(const TA a, const TB b, BinaryOp op)
 /// @tparam TA and @tparam TB must be an integer types (signed or unsigned)
 /// @return @p a + @p b
 /// @pre @p a >=0 and @p b >= 0
+/// @pre it must be possible to store the result in std::size_t
 template <typename TA, typename TB>
 std::size_t sum(const TA a, const TB b) {
-  return internal::generic_integer_op(a, b, std::plus<std::size_t>());
+  return dlaf::util::internal::generic_integer_op<std::size_t>(a, b, std::plus<std::size_t>());
 }
 
 /// @brief Perform the multiplication on integer types in size_t arithmetic
@@ -80,9 +86,39 @@ std::size_t sum(const TA a, const TB b) {
 /// @tparam TA and @tparam TB must be an integer types (signed or unsigned)
 /// @return @p a * @p b
 /// @pre @p a >=0 and @p b >= 0
+/// @pre it must be possible to store the result in std::size_t
 template <typename TA, typename TB>
 std::size_t mul(const TA a, const TB b) {
-  return internal::generic_integer_op(a, b, std::multiplies<std::size_t>());
+  return dlaf::util::internal::generic_integer_op<std::size_t>(a, b, std::multiplies<std::size_t>());
+}
+
+}
+
+namespace ptrdiff_t {
+
+/// @brief Perform the sum on integer types in ptrdiff_t arithmetic
+///
+/// It casts operands to ptrdiff_t type and then performs the sum
+/// @tparam TA and @tparam TB must be an integer types (signed or unsigned)
+/// @return @p a + @p b
+/// @pre @p a and @p b can be stored in std::ptrdiff_t
+/// @pre it must be possible to store the result in std::ptrdiff_t
+template <typename TA, typename TB>
+std::ptrdiff_t sum(const TA a, const TB b) {
+  return dlaf::util::internal::generic_integer_op<std::ptrdiff_t>(a, b, std::plus<std::ptrdiff_t>());
+}
+
+/// @brief Perform the multiplication on integer types in ptrdiff_t arithmetic
+///
+/// It casts operands to size_t type and then performs the multiplication
+/// @tparam TA and @tparam TB must be an integer types (signed or unsigned)
+/// @return @p a * @p b
+/// @pre @p a and @p b can be stored in std::ptrdiff_t
+/// @pre it must be possible to store the result in std::ptrdiff_t
+template <typename TA, typename TB>
+std::ptrdiff_t mul(const TA a, const TB b) {
+  return dlaf::util::internal::generic_integer_op<std::ptrdiff_t>(a, b,
+                                                                  std::multiplies<std::ptrdiff_t>());
 }
 
 }

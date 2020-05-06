@@ -132,6 +132,10 @@ public:
     assert(internal::basic_coords<IndexT>::isValid());
     return rows() == 0 || cols() == 0;
   }
+
+  friend std::ostream& operator<<(std::ostream& out, const Size2D& index) {
+    return out << static_cast<internal::basic_coords<IndexT>>(index);
+  }
 };
 
 /// A strong-type for 2D coordinates
@@ -175,6 +179,10 @@ public:
 
   IndexT col() const noexcept {
     return internal::basic_coords<IndexT>::col_;
+  }
+
+  friend std::ostream& operator<<(std::ostream& out, const Index2D& index) {
+    return out << static_cast<internal::basic_coords<IndexT>>(index);
   }
 };
 

@@ -1,3 +1,0 @@
-[submodule "ci/DLA-Future-CI"]
-	path = ci/gitlab
-	url = https://gitlab.com/cscs-ci/eth-cscs/DLA-Future-CI.git

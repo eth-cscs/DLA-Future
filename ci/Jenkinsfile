@@ -16,14 +16,6 @@ pipeline {
         checkout scm
       }
     }
-    stage('Check format') {
-      steps {
-        sh '''
-           echo "----- check format -----"
-           sbatch --wait ci/check_format.sbatch
-           '''
-      }
-    }
     stage('Compile') {
       parallel {
         stage('Compile mc Debug') {

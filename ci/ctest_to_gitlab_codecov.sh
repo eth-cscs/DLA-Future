@@ -58,6 +58,7 @@ JOB_TEMPLATE="
     PULL_IMAGE: 'NO'
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
+    SARUS_VERBOSE: 'YES'
   script: mpi-ctest -L {{LABEL}}
   resource_group: daint-job
   artifacts:

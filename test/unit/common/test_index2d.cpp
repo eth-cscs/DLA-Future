@@ -141,55 +141,38 @@ TYPED_TEST(Index2DTest, Print) {
   EXPECT_EQ("(9, 6)", s.str());
 }
 
-TYPED_TEST(Index2DTest, computeCoords) {
+TYPED_TEST(Index2DTest, computeCoordsColMajor) {
+  const auto COL_MAJOR = dlaf::common::Ordering::ColumnMajor;
+
   using dlaf::common::computeCoords;
-  using dlaf::common::Ordering;
 
-  {
-    EXPECT_EQ((Index2D<TypeParam>{0, 0}),
-              computeCoords(Ordering::ColumnMajor, int8_t(0), Size2D<TypeParam>{1, 1}));
-    EXPECT_EQ((Index2D<TypeParam>{0, 0}),
-              computeCoords(Ordering::ColumnMajor, int32_t(0), Size2D<TypeParam>{1, 1}));
-    EXPECT_EQ((Index2D<TypeParam>{0, 0}),
-              computeCoords(Ordering::ColumnMajor, int64_t(0), Size2D<TypeParam>{1, 1}));
+  Size2D<TypeParam> grid_size(110, 78);
 
-    EXPECT_EQ((Index2D<TypeParam>{0, 0}),
-              computeCoords(Ordering::ColumnMajor, uint8_t(0), Size2D<TypeParam>{1, 1}));
-    EXPECT_EQ((Index2D<TypeParam>{0, 0}),
-              computeCoords(Ordering::ColumnMajor, uint32_t(0), Size2D<TypeParam>{1, 1}));
-    EXPECT_EQ((Index2D<TypeParam>{0, 0}),
-              computeCoords(Ordering::ColumnMajor, uint64_t(0), Size2D<TypeParam>{1, 1}));
+  int32_t linear_index = 0;
+  for (auto j = 0; j < grid_size.cols(); ++j) {
+    for (auto i = 0; i < grid_size.rows(); ++i) {
+      EXPECT_EQ(Index2D<TypeParam>(i, j), computeCoords(COL_MAJOR, linear_index, grid_size));
+      EXPECT_EQ(Index2D<TypeParam>(i, j), computeCoordsColMajor(linear_index, grid_size));
+      ++linear_index;
+    }
   }
+}
 
-  {
-    EXPECT_EQ((Index2D<TypeParam>{0, 0}),
-              computeCoords(Ordering::RowMajor, int8_t(0), Size2D<TypeParam>{1, 1}));
-    EXPECT_EQ((Index2D<TypeParam>{0, 0}),
-              computeCoords(Ordering::RowMajor, int32_t(0), Size2D<TypeParam>{1, 1}));
-    EXPECT_EQ((Index2D<TypeParam>{0, 0}),
-              computeCoords(Ordering::RowMajor, int64_t(0), Size2D<TypeParam>{1, 1}));
+TYPED_TEST(Index2DTest, computeCoordsRowMajor) {
+  const auto ROW_MAJOR = dlaf::common::Ordering::RowMajor;
 
-    EXPECT_EQ((Index2D<TypeParam>{0, 0}),
-              computeCoords(Ordering::RowMajor, uint8_t(0), Size2D<TypeParam>{1, 1}));
-    EXPECT_EQ((Index2D<TypeParam>{0, 0}),
-              computeCoords(Ordering::RowMajor, uint32_t(0), Size2D<TypeParam>{1, 1}));
-    EXPECT_EQ((Index2D<TypeParam>{0, 0}),
-              computeCoords(Ordering::RowMajor, uint64_t(0), Size2D<TypeParam>{1, 1}));
+  using dlaf::common::computeCoords;
+
+  Size2D<TypeParam> grid_size(110, 78);
+
+  int32_t linear_index = 0;
+  for (auto i = 0; i < grid_size.rows(); ++i) {
+    for (auto j = 0; j < grid_size.cols(); ++j) {
+      EXPECT_EQ(Index2D<TypeParam>(i, j), computeCoords(ROW_MAJOR, linear_index, grid_size));
+      EXPECT_EQ(Index2D<TypeParam>(i, j), computeCoordsRowMajor(linear_index, grid_size));
+      ++linear_index;
+    }
   }
-
-#ifdef DLAF_ASSERT_MODERATE_ENABLE
-  std::array<Ordering, 2> orderings{Ordering::RowMajor, Ordering::ColumnMajor};
-
-  const char* ERROR_MESSAGE = "\\[ERROR\\]";
-
-  for (const auto& ordering : orderings) {
-    // linear index out of grid bounds
-    EXPECT_DEATH(computeCoords(ordering, -1, Size2D<TypeParam>{1, 1}), ERROR_MESSAGE);
-
-    // negative linear index
-    EXPECT_DEATH(computeCoords(ordering, 1, Size2D<TypeParam>{1, 1}), ERROR_MESSAGE);
-  }
-#endif
 }
 
 TYPED_TEST(Index2DTest, computeLinearIndex) {
@@ -207,27 +190,4 @@ TYPED_TEST(Index2DTest, computeLinearIndex) {
     EXPECT_EQ(13, computeLinearIndex<int>(Ordering::RowMajor, index, {26, 5}));
     EXPECT_EQ(13, computeLinearIndex<int>(Ordering::RowMajor, index, Size2D<TypeParam>{26, 5}));
   }
-
-#ifdef DLAF_ASSERT_MODERATE_ENABLE
-  {
-    const Index2D<TypeParam> index(13, 26);
-    std::vector<Size2D<TypeParam>> configs{{
-        Size2D<TypeParam>{13, 26},  // out-of-rows & out-of-cols
-        Size2D<TypeParam>{13, 39},  // out-of-rows
-        Size2D<TypeParam>{26, 26},  // out-of-cols
-    }};
-
-    std::array<Ordering, 2> orderings{Ordering::RowMajor, Ordering::ColumnMajor};
-
-    const char* ERROR_MESSAGE = "\\[ERROR\\]";
-
-    for (const auto& ordering : orderings) {
-      for (const Size2D<TypeParam>& size : configs) {
-        EXPECT_DEATH(computeLinearIndex<int>(ordering, index, {size.rows(), size.cols()}),
-                     ERROR_MESSAGE);
-        EXPECT_DEATH(computeLinearIndex<int>(ordering, index, Size2D<TypeParam>(size)), ERROR_MESSAGE);
-      }
-    }
-  }
-#endif
 }

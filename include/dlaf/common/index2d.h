@@ -271,6 +271,7 @@ Index2D<IndexT, Tag> computeCoords(Ordering ordering, std::ptrdiff_t index,
 /// the casting of the value before returning it, not leaving the burden to the user.
 ///
 /// @tparam LinearIndexT can be any integral type signed or unsigned
+/// @pre LinearIndexT must be able to store the result
 /// @pre index.isIn(dims)
 template <class LinearIndexT, class IndexT, class Tag>
 LinearIndexT computeLinearIndexRowMajor(const Index2D<IndexT, Tag>& index,
@@ -292,6 +293,7 @@ LinearIndexT computeLinearIndexRowMajor(const Index2D<IndexT, Tag>& index,
 /// the casting of the value before returning it, not leaving the burden to the user.
 ///
 /// @tparam LinearIndexT can be any integral type signed or unsigned
+/// @pre LinearIndexT must be able to store the result
 /// @pre index.isIn(dims)
 template <class LinearIndexT, class IndexT, class Tag>
 LinearIndexT computeLinearIndexColMajor(const Index2D<IndexT, Tag>& index,
@@ -316,6 +318,7 @@ LinearIndexT computeLinearIndexColMajor(const Index2D<IndexT, Tag>& index,
 /// the casting of the value before returning it, not leaving the burden to the user.
 ///
 /// @tparam LinearIndexT can be any integral type signed or unsigned (it must be explicitly specified)
+/// @pre LinearIndexT must be able to store the result
 /// @pre index.isIn(dims)
 template <class LinearIndexT, class IndexT, class Tag>
 LinearIndexT computeLinearIndex(Ordering ordering, const Index2D<IndexT, Tag>& index,

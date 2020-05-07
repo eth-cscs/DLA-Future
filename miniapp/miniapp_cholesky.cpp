@@ -262,7 +262,7 @@ T matrix_norm(ConstMatrixType& matrix, CommunicatorGrid comm_grid) {
 /// part of each tile, diagonal excluded, are set to zero.
 /// Tiles that are not on the diagonal (i.e. row != col) will not be touched or referenced
 void setUpperToZeroForDiagonalTiles(MatrixType& matrix) {
-  dlaf::util_matrix::assertBlocksizeSquare(matrix, "setUpperToZeroForDiagonalTiles", "matrix");
+  DLAF_ASSERT_BLOCKSIZE_SQUARE(matrix);
 
   const auto& distribution = matrix.distribution();
 
@@ -298,11 +298,11 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
   using dlaf::common::make_data;
   using dlaf::util::size_t::mul;
 
-  dlaf::util_matrix::assertSizeSquare(A, "check_cholesky", "A");
-  dlaf::util_matrix::assertBlocksizeSquare(A, "check_cholesky", "A");
+  DLAF_ASSERT_SIZE_SQUARE(A);
+  DLAF_ASSERT_BLOCKSIZE_SQUARE(A);
 
-  dlaf::util_matrix::assertSizeSquare(L, "check_cholesky", "L");
-  dlaf::util_matrix::assertBlocksizeSquare(L, "check_cholesky", "L");
+  DLAF_ASSERT_SIZE_SQUARE(L);
+  DLAF_ASSERT_BLOCKSIZE_SQUARE(L);
 
   const auto& distribution = L.distribution();
   const auto current_rank = distribution.rankIndex();

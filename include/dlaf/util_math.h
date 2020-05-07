@@ -53,16 +53,10 @@ namespace internal {
 /// @return @p a @p op @p b
 /// @pre @p a and @p b can be stored in the type @tparam ArithmeticT
 /// @pre it must be possible to store the result in @tparam ArithemticT
-#ifdef DLAF_DOXYGEN
 template <class ArithmeticT, class TA, class TB, class BinaryOp>
-constexpr std::size_t generic_integer_op(const TA a, const TB b, BinaryOp op);
-#else
-template <class ArithmeticT, class TA, class TB, class BinaryOp>
-constexpr auto generic_integer_op(const TA a, const TB b, BinaryOp op)
-    -> std::enable_if_t<std::is_integral<TA>::value && std::is_integral<TB>::value, ArithmeticT> {
+constexpr ArithmeticT generic_integer_op(const TA a, const TB b, BinaryOp op) {
   return op(integral_cast<ArithmeticT>(a), integral_cast<ArithmeticT>(b));
 }
-#endif
 
 }
 

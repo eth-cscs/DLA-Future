@@ -389,12 +389,11 @@ void cholesky_diff(MatrixType& original, MatrixType& cholesky_lower, Communicato
       // L * L' for the current cell is computed
       // here the owner of the result performs the last step (difference with original)
       if (owner_result == current_rank) {
-        // TODO check for a blas function to replace it
         hpx::dataflow(hpx::util::unwrapping([](auto&& a, auto&& b) {
                         for (SizeType j = 0; j < a.size().cols(); ++j) {
                           for (SizeType i = 0; i < a.size().rows(); ++i) {
                             const TileElementIndex index_element{i, j};
-                            a(index_element) -= b(index_element);
+                            a(index_element) = std::abs(a(index_element) - b(index_element));
                           }
                         }
                       }),
@@ -407,7 +406,7 @@ void cholesky_diff(MatrixType& original, MatrixType& cholesky_lower, Communicato
 /// Procedure to evaluate the result of the Cholesky factorization
 ///
 /// 1. Compute the max norm of the original matrix
-/// 2. Compute the difference between the original and the computed matrix using the factorization
+/// 2. Compute the absolute difference between the original and the computed matrix using the factorization
 /// 3. Compute the max norm of the difference
 /// 4. Evaluate the correctness of the result using the ratio between the two matrix max norms
 ///

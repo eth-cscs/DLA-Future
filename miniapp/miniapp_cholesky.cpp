@@ -18,6 +18,7 @@
 #include <lapack.hh>
 
 #include "dlaf/blas_tile.h"
+#include "dlaf/common/range2d.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/sync/broadcast.h"
@@ -96,9 +97,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 
     // wait all setup tasks before starting benchmark
     {
-      for (int local_tile_j = 0; local_tile_j < distribution.localNrTiles().cols(); ++local_tile_j)
-        for (int local_tile_i = 0; local_tile_i < distribution.localNrTiles().rows(); ++local_tile_i)
-          matrix(LocalTileIndex{local_tile_i, local_tile_j}).get();
+      for (const auto tile_idx : dlaf::common::iterateRange2D(distribution.localNrTiles()))
+        matrix(tile_idx).get();
       MPI_Barrier(world);
     }
 
@@ -394,12 +394,8 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
       // here the owner of the result performs the last step (difference with original)
       if (owner_result == current_rank) {
         hpx::dataflow(hpx::util::unwrapping([](auto&& a, auto&& b) {
-                        for (SizeType j = 0; j < a.size().cols(); ++j) {
-                          for (SizeType i = 0; i < a.size().rows(); ++i) {
-                            const TileElementIndex index_element{i, j};
-                            a(index_element) = std::abs(a(index_element) - b(index_element));
-                          }
-                        }
+                        for (const auto el_idx : dlaf::common::iterateRange2D(a.size()))
+                          a(el_idx) = std::abs(a(el_idx) - b(el_idx));
                       }),
                       A(tile_result), mul_result.read(tile_result));
       }

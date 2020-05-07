@@ -32,6 +32,8 @@
 
 namespace {
 
+using hpx::util::unwrapping;
+
 using dlaf::Device;
 using dlaf::Coord;
 using dlaf::Backend;
@@ -199,8 +201,15 @@ namespace {
 /// Compute max norm of the lower triangular matrix
 T matrix_norm(ConstMatrixType& matrix, CommunicatorGrid comm_grid) {
   using dlaf::common::internal::vector;
-
   using dlaf::common::make_data;
+
+  // TODO unwrapping can be skipped for optimization reasons
+  auto max_f = unwrapping([](const auto&& values) {
+    // some rank may not have any element
+    if (values.size() == 0)
+      return std::numeric_limits<T>::min();
+    return *std::max_element(values.begin(), values.end());
+  });
 
   const auto& distribution = matrix.distribution();
 
@@ -214,7 +223,7 @@ T matrix_norm(ConstMatrixType& matrix, CommunicatorGrid comm_grid) {
 
     for (SizeType i_loc = i_diag_loc; i_loc < distribution.localNrTiles().rows(); ++i_loc) {
       auto current_tile_max =
-          hpx::dataflow(hpx::util::unwrapping([is_diag = (i_loc == i_diag_loc)](auto&& tile) -> T {
+          hpx::dataflow(unwrapping([is_diag = (i_loc == i_diag_loc)](auto&& tile) -> T {
                           T tile_max_value = std::abs(T{0});
                           for (SizeType j = 0; j < tile.size().cols(); ++j)
                             for (SizeType i = is_diag ? j : 0; i < tile.size().rows(); ++i)
@@ -229,15 +238,7 @@ T matrix_norm(ConstMatrixType& matrix, CommunicatorGrid comm_grid) {
 
   // than it is necessary to reduce max values from all ranks into a single max value for the matrix
 
-  // TODO unwrapping can be skipped for optimization reasons
-  auto local_max_value = hpx::dataflow(hpx::util::unwrapping([](const auto&& values) {
-                                         // some rank may not have any element
-                                         if (values.size() == 0)
-                                           return std::numeric_limits<T>::min();
-                                         return *std::max_element(values.begin(), values.end());
-                                       }),
-                                       tiles_max)
-                             .get();
+  auto local_max_value = hpx::dataflow(max_f, tiles_max).get();
 
   T max_value_rows;
   if (comm_grid.size().cols() > 1)
@@ -273,7 +274,7 @@ void setUpperToZeroForDiagonalTiles(MatrixType& matrix) {
     if (distribution.rankIndex() != distribution.rankGlobalTile(diag_tile))
       continue;
 
-    auto tile_set = hpx::util::unwrapping([](auto&& tile) {
+    auto tile_set = unwrapping([](auto&& tile) {
       lapack::laset(lapack::MatrixType::Upper, tile.size().rows() - 1, tile.size().cols() - 1, 0, 0,
                     tile.ptr({0, 1}), tile.ld());
     });
@@ -297,6 +298,19 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
 
   using dlaf::common::make_data;
   using dlaf::util::size_t::mul;
+
+  // compute tile * tile_to_transpose' with the option to cumulate the result
+  auto gemm_f =
+      unwrapping([](auto&& tile, auto&& tile_to_transpose, auto&& result, const bool accumulate_result) {
+        dlaf::tile::gemm<T, Device::CPU>(blas::Op::NoTrans, blas::Op::ConjTrans, 1.0, tile,
+                                         tile_to_transpose, accumulate_result ? 0.0 : 1.0, result);
+      });
+
+  // compute a = abs(a - b)
+  auto tile_abs_diff = unwrapping([](auto&& a, auto&& b) {
+    for (const auto el_idx : dlaf::common::iterate_range2d(a.size()))
+      a(el_idx) = std::abs(a(el_idx) - b(el_idx));
+  });
 
   DLAF_ASSERT_SIZE_SQUARE(A);
   DLAF_ASSERT_BLOCKSIZE_SQUARE(A);
@@ -332,10 +346,10 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
       const auto owner_transposed = distribution.rankGlobalTile(transposed_wrt_global);
 
       // collect the 2nd operand, receving it from others if not available locally
-      hpx::shared_future<dlaf::Tile<const T, Device::CPU>> tile_transposed;
+      hpx::shared_future<dlaf::Tile<const T, Device::CPU>> tile_to_transpose;
 
       if (owner_transposed == current_rank) {  // current rank already has what it needs
-        tile_transposed = L.read(transposed_wrt_global);
+        tile_to_transpose = L.read(transposed_wrt_global);
 
         // if there are more than 1 rank for column, others will need the data from this one
         if (distribution.commGridSize().rows() > 1)
@@ -356,7 +370,7 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
         dlaf::comm::sync::broadcast::receive_from(owner_transposed.row(), comm_grid.colCommunicator(),
                                                   workspace);
 
-        tile_transposed = hpx::make_ready_future<ConstTileType>(std::move(workspace));
+        tile_to_transpose = hpx::make_ready_future<ConstTileType>(std::move(workspace));
       }
 
       // compute the part of results available locally, for each row this rank has in local
@@ -364,9 +378,8 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
       for (; i_loc < distribution.localNrTiles().rows(); ++i_loc) {
         const LocalTileIndex tile_wrt_local{i_loc, j_loc};
 
-        hpx::dataflow(hpx::util::unwrapping(dlaf::tile::gemm<T, Device::CPU>), blas::Op::NoTrans,
-                      blas::Op::ConjTrans, 1.0, L.read(tile_wrt_local), tile_transposed,
-                      j_loc == 0 ? 0.0 : 1.0, partial_result(LocalTileIndex{i_loc, 0}));
+        hpx::dataflow(gemm_f, L.read(tile_wrt_local), tile_to_transpose,
+                      partial_result(LocalTileIndex{i_loc, 0}), j_loc == 0);
       }
     }
 
@@ -388,11 +401,7 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
       // L * L' for the current cell is computed
       // here the owner of the result performs the last step (difference with original)
       if (owner_result == current_rank) {
-        hpx::dataflow(hpx::util::unwrapping([](auto&& a, auto&& b) {
-                        for (const auto el_idx : dlaf::common::iterate_range2d(a.size()))
-                          a(el_idx) = std::abs(a(el_idx) - b(el_idx));
-                      }),
-                      A(tile_result), mul_result.read(tile_result));
+        hpx::dataflow(tile_abs_diff, A(tile_result), mul_result.read(tile_result));
       }
     }
   }

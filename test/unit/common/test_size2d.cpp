@@ -18,6 +18,9 @@ template <typename IndexType>
 using Size2D = dlaf::common::Size2D<IndexType, struct TAG_TEST>;
 
 template <typename IndexType>
+using Index2D = dlaf::common::Index2D<IndexType, struct TAG_TEST>;
+
+template <typename IndexType>
 class Size2DTest : public ::testing::Test {};
 
 using IndexTypes = ::testing::Types<int8_t, int16_t, int32_t, int64_t>;
@@ -32,6 +35,15 @@ TYPED_TEST(Size2DTest, ConstructorFromParams) {
   EXPECT_EQ(col, size.cols());
 
   EXPECT_TRUE(size.isValid());
+}
+
+TYPED_TEST(Size2DTest, ConstructorFromCoords) {
+  TypeParam row = 5;
+  TypeParam col = 3;
+  Size2D<TypeParam> size(Index2D<TypeParam>(row, col));
+
+  EXPECT_EQ(row, size.rows());
+  EXPECT_EQ(col, size.cols());
 }
 
 TYPED_TEST(Size2DTest, ConstructorFromArray) {
@@ -93,4 +105,22 @@ TYPED_TEST(Size2DTest, Print) {
   s.str("");
   s << size2;
   EXPECT_EQ("(9, 6)", s.str());
+}
+
+TYPED_TEST(Size2DTest, Substraction) {
+  Size2D<TypeParam> lhs(6, 5);
+  Size2D<TypeParam> rhs(3, 4);
+
+  Size2D<TypeParam> act(lhs - rhs);
+  Size2D<TypeParam> exp(3, 1);
+  ASSERT_TRUE(act == exp);
+}
+
+TYPED_TEST(Size2DTest, Addition) {
+  Size2D<TypeParam> lhs(6, 5);
+  Size2D<TypeParam> rhs(3, 4);
+
+  Size2D<TypeParam> act(lhs + rhs);
+  Size2D<TypeParam> exp(9, 9);
+  ASSERT_TRUE(act == exp);
 }

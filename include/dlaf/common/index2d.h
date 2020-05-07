@@ -99,6 +99,14 @@ public:
     return out << "(" << index.row_ << ", " << index.col_ << ")";
   }
 
+  friend basic_coords operator+(basic_coords lhs, basic_coords rhs) noexcept {
+    return basic_coords(lhs.row_ + rhs.row_, lhs.col_ + rhs.col_);
+  }
+
+  friend basic_coords operator-(basic_coords lhs, basic_coords rhs) noexcept {
+    return basic_coords(lhs.row_ - rhs.row_, lhs.col_ - rhs.col_);
+  }
+
 protected:
   IndexT row_;
   IndexT col_;
@@ -108,6 +116,7 @@ template <class Coords2DType>
 Coords2DType transposed(const Coords2DType& coords) {
   return {coords.col_, coords.row_};
 }
+
 }
 
 /// A strong-type for 2D sizes
@@ -115,8 +124,12 @@ Coords2DType transposed(const Coords2DType& coords) {
 /// @tparam Tag for strong-typing
 template <typename IndexT, class Tag>
 class Size2D : public internal::basic_coords<IndexT> {
+  using base = internal::basic_coords<IndexT>;
+
 public:
-  using internal::basic_coords<IndexT>::basic_coords;
+  using base::basic_coords;
+
+  Size2D(base const& coords) noexcept : base(coords) {}
 
   IndexT rows() const noexcept {
     return internal::basic_coords<IndexT>::row_;
@@ -143,11 +156,15 @@ public:
 /// @tparam Tag for strong-typing
 template <typename IndexT, class Tag>
 class Index2D : public internal::basic_coords<IndexT> {
+  using base = internal::basic_coords<IndexT>;
+
 public:
   using IndexType = IndexT;
 
   /// Create an invalid 2D coordinate
   Index2D() noexcept : internal::basic_coords<IndexT>(-1, -1) {}
+
+  Index2D(base const& coords) noexcept : base(coords) {}
 
   /// Create a valid 2D coordinate
   /// @param row index of the row

@@ -12,7 +12,7 @@
 
 /// @file
 ///
-/// The combination of `IteratorRange2D`, `IterableRange2D` and `iterateRange2D()`
+/// The combination of `IteratorRange2D`, `IterableRange2D` and `iterate_range2d()`
 /// allow us to write nested loops as a simple range-based for loop. For
 /// example, instead of this :
 ///
@@ -30,15 +30,15 @@
 /// we can write this:
 ///
 /// ```
-/// for (Index2D idx : iterateRange2D(sz)) {
+/// for (Index2D idx : iterate_range2d(sz)) {
 ///   ....
 /// }
 /// ```
 
+#include <cstddef>
+
 #include "dlaf/common/assert.h"
 #include "dlaf/common/index2d.h"
-
-#include <cstddef>
 
 namespace dlaf {
 namespace common {
@@ -55,7 +55,7 @@ public:
     ++i_;
   }
 
-  bool operator!=(IteratorRange2D const& o) const noexcept {
+  bool operator!=(const IteratorRange2D& o) const noexcept {
     return i_ != o.i_;
   }
 
@@ -106,48 +106,48 @@ private:
 /// The overload set returns indices in column-major order with the begin index included and the end
 /// index/size excluded.
 ///
-/// The following one-argument variants of `iterateRange2D()` iterate over the
+/// The following one-argument variants of `iterate_range2d()` iterate over the
 /// same range of indices:
 ///
 /// (0, 0), (1, 0), (0, 1), (1, 1), (0, 2), (1, 2)
 ///
 /// ```
-/// for(auto idx : iterateRange2D(Index2D(2, 3))) { ... }
-/// for(auto idx : iterateRange2D(Size2D(2, 3))) { ... }
+/// for(auto idx : iterate_range2d(Index2D(2, 3))) { ... }
+/// for(auto idx : iterate_range2d(Size2D(2, 3))) { ... }
 /// ```
 ///
-/// The following two-argument variants of `iterateRange2D()` iterate over the
+/// The following two-argument variants of `iterate_range2d()` iterate over the
 /// same range of indices:
 ///
 /// (5, 6), (6, 6), (5, 7), (6, 7), (5, 8), (6, 8)
 ///
 /// ```
-/// for(auto idx : iterateRange2D(Index2D(5, 6), Index2D(7, 9))) { ... }
-/// for(auto idx : iterateRange2D(Index2D(5, 6), Size2D(2, 3))) { ... }
+/// for(auto idx : iterate_range2d(Index2D(5, 6), Index2D(7, 9))) { ... }
+/// for(auto idx : iterate_range2d(Index2D(5, 6), Size2D(2, 3))) { ... }
 /// ```
 ///
 /// - Note: Size2D(2, 3) is added to Index2D(5, 6) to determine the end index of
 ///         the range.
 
 template <typename IndexT, class Tag>
-IterableRange2D<IndexT, Tag> iterateRange2D(Index2D<IndexT, Tag> begin_idx,
-                                            Index2D<IndexT, Tag> end_idx) noexcept {
+IterableRange2D<IndexT, Tag> iterate_range2d(Index2D<IndexT, Tag> begin_idx,
+                                             Index2D<IndexT, Tag> end_idx) noexcept {
   return IterableRange2D<IndexT, Tag>(begin_idx, end_idx);
 }
 
 template <typename IndexT, class Tag>
-IterableRange2D<IndexT, Tag> iterateRange2D(Index2D<IndexT, Tag> begin_idx,
-                                            Size2D<IndexT, Tag> sz) noexcept {
+IterableRange2D<IndexT, Tag> iterate_range2d(Index2D<IndexT, Tag> begin_idx,
+                                             Size2D<IndexT, Tag> sz) noexcept {
   return IterableRange2D<IndexT, Tag>(begin_idx, sz);
 }
 
 template <typename IndexT, class Tag>
-IterableRange2D<IndexT, Tag> iterateRange2D(Size2D<IndexT, Tag> sz) noexcept {
+IterableRange2D<IndexT, Tag> iterate_range2d(Size2D<IndexT, Tag> sz) noexcept {
   return IterableRange2D<IndexT, Tag>(Index2D<IndexT, Tag>(0, 0), sz);
 }
 
 template <typename IndexT, class Tag>
-IterableRange2D<IndexT, Tag> iterateRange2D(Index2D<IndexT, Tag> end_idx) noexcept {
+IterableRange2D<IndexT, Tag> iterate_range2d(Index2D<IndexT, Tag> end_idx) noexcept {
   return IterableRange2D<IndexT, Tag>(Index2D<IndexT, Tag>(0, 0), end_idx);
 }
 

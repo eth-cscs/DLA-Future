@@ -23,6 +23,7 @@ constexpr double M_PI = 3.141592;
 
 #include "dlaf/common/assert.h"
 #include "dlaf/common/index2d.h"
+#include "dlaf/common/range2d.h"
 #include "dlaf/matrix.h"
 #include "dlaf/types.h"
 
@@ -167,22 +168,18 @@ public:
 /// @pre el argument is an index of type const GlobalElementIndex&.
 /// @pre el return type should be T.
 template <class T, class ElementGetter>
-void set(Matrix<T, Device::CPU>& matrix, const ElementGetter& el) {
+void set(Matrix<T, Device::CPU>& matrix, const ElementGetter& el_f) {
   const Distribution& dist = matrix.distribution();
-  for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {
-    for (SizeType tile_i = 0; tile_i < dist.localNrTiles().rows(); ++tile_i) {
-      LocalTileIndex tile_wrt_local{tile_i, tile_j};
-      GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
-
-      auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
-
-      hpx::dataflow(hpx::util::unwrapping([tl_index, el = el](auto&& tile) {
-                      for (SizeType j = 0; j < tile.size().cols(); ++j)
-                        for (SizeType i = 0; i < tile.size().rows(); ++i)
-                          tile({i, j}) = el(GlobalElementIndex{i + tl_index.row(), j + tl_index.col()});
-                    }),
-                    matrix(tile_wrt_local));
-    }
+  for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
+    GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
+    auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
+    auto set_f = hpx::util::unwrapping([tl_index, el_f = el_f](auto&& tile) {
+      for (auto el_idx_l : iterate_range2d(tile.size())) {
+        GlobalElementIndex el_idx_g(el_idx_l.row() + tl_index.row(), el_idx_l.col() + tl_index.col());
+        tile(el_idx_l) = el_f(el_idx_g);
+      }
+    });
+    hpx::dataflow(std::move(set_f), matrix(tile_wrt_local));
   }
 }
 
@@ -199,27 +196,65 @@ void set(Matrix<T, Device::CPU>& matrix, const ElementGetter& el) {
 template <class T>
 void set_random(Matrix<T, Device::CPU>& matrix) {
   using namespace dlaf::util::size_t;
-
   const Distribution& dist = matrix.distribution();
+  for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
+    GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
+    auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
+    auto seed = sum(tl_index.col(), mul(tl_index.row(), matrix.size().cols()));
+    auto rnd_f = hpx::util::unwrapping([seed](auto&& tile) {
+      internal::getter_random<T> random_value(seed);
+      for (auto el_idx : iterate_range2d(tile.size())) {
+        tile(el_idx) = random_value();
+      }
+    });
+    hpx::dataflow(std::move(rnd_f), matrix(tile_wrt_local));
+  }
+}
 
-  for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {
-    for (SizeType tile_i = 0; tile_i < dist.localNrTiles().rows(); ++tile_i) {
-      LocalTileIndex tile_wrt_local{tile_i, tile_j};
-      GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
+namespace internal {
 
-      auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
-      auto seed = sum(tl_index.col(), mul(tl_index.row(), matrix.size().cols()));
+template <class T>
+void set_diagonal_tile(Tile<T, Device::CPU>& tile, internal::getter_random<T>& random_value,
+                       std::size_t offset_value) {
+  // DIAGONAL
+  // for diagonal tiles get just lower matrix values and set value for both
+  // straight and transposed indices
+  for (SizeType j = 0; j < tile.size().cols(); ++j) {
+    for (SizeType i = 0; i < j; ++i) {
+      auto value = random_value();
 
-      hpx::dataflow(hpx::util::unwrapping([seed](auto&& tile) {
-                      internal::getter_random<T> random_value(seed);
+      tile(TileElementIndex{i, j}) = value;
+      tile(TileElementIndex{j, i}) = dlaf::conj(value);
+    }
+    tile(TileElementIndex{j, j}) = std::real(random_value()) + offset_value;
+  }
+}
 
-                      for (SizeType j = 0; j < tile.size().cols(); ++j)
-                        for (SizeType i = 0; i < tile.size().rows(); ++i)
-                          tile(TileElementIndex{i, j}) = random_value();
-                    }),
-                    matrix(tile_wrt_local));
+template <class T>
+void set_lower_and_upper_tile(Tile<T, Device::CPU>& tile, internal::getter_random<T>& random_value,
+                              TileElementSize full_tile_size, GlobalTileIndex tile_wrt_global) {
+  // LOWER or UPPER (except DIAGONAL)
+  // random values are requested in the same order for both original and transposed
+  for (SizeType j = 0; j < full_tile_size.cols(); ++j) {
+    for (SizeType i = 0; i < full_tile_size.rows(); ++i) {
+      auto value = random_value();
+
+      // but they are set row-wise in the original tile and col-wise in the
+      // transposed one
+      if (tile_wrt_global.row() > tile_wrt_global.col()) {  // LOWER
+        TileElementIndex index{i, j};
+        if (index.isIn(tile.size()))
+          tile(index) = value;
+      }
+      else {  // UPPER
+        TileElementIndex index{j, i};
+        if (index.isIn(tile.size()))
+          tile(index) = dlaf::conj(value);
+      }
     }
   }
+}
+
 }
 
 /// Set a matrix with random values assuring it will be hermitian and positive definite.
@@ -258,63 +293,29 @@ void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
   auto offset_value = mul(2, to_sizet(matrix.size().rows()));
   auto full_tile_size = matrix.blockSize();
 
-  for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {
-    for (SizeType tile_i = 0; tile_i < dist.localNrTiles().rows(); ++tile_i) {
-      LocalTileIndex tile_wrt_local{tile_i, tile_j};
-      GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
+  for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
+    GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
 
-      auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
+    auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
 
-      // compute the same seed for original and "transposed" tiles, so transposed ones will know the
-      // values of the original one without the need of accessing real values (nor communication in case
-      // of distributed matrices)
-      size_t seed;
-      if (tile_wrt_global.row() >= tile_wrt_global.col())  // LOWER or DIAGONAL
-        seed = sum(tl_index.col(), mul(tl_index.row(), matrix.size().cols()));
+    // compute the same seed for original and "transposed" tiles, so transposed ones will know the
+    // values of the original one without the need of accessing real values (nor communication in case
+    // of distributed matrices)
+    size_t seed;
+    if (tile_wrt_global.row() >= tile_wrt_global.col())  // LOWER or DIAGONAL
+      seed = sum(tl_index.col(), mul(tl_index.row(), matrix.size().cols()));
+    else
+      seed = sum(tl_index.row(), mul(tl_index.col(), matrix.size().rows()));
+
+    auto set_hp_f = hpx::util::unwrapping([=](auto&& tile) {
+      internal::getter_random<T> random_value(seed);
+      if (tile_wrt_global.row() == tile_wrt_global.col())
+        internal::set_diagonal_tile(tile, random_value, offset_value);
       else
-        seed = sum(tl_index.row(), mul(tl_index.col(), matrix.size().rows()));
+        internal::set_lower_and_upper_tile(tile, random_value, full_tile_size, tile_wrt_global);
+    });
 
-      hpx::dataflow(hpx::util::unwrapping(
-                        [tile_wrt_global, seed, offset_value, full_tile_size](auto&& tile) {
-                          internal::getter_random<T> random_value(seed);
-
-                          if (tile_wrt_global.row() == tile_wrt_global.col()) {  // DIAGONAL
-                            // for diagonal tiles get just lower matrix values and set value for both
-                            // straight and transposed indices
-                            for (SizeType j = 0; j < tile.size().cols(); ++j) {
-                              for (SizeType i = 0; i < j; ++i) {
-                                auto value = random_value();
-
-                                tile(TileElementIndex{i, j}) = value;
-                                tile(TileElementIndex{j, i}) = dlaf::conj(value);
-                              }
-                              tile(TileElementIndex{j, j}) = std::real(random_value()) + offset_value;
-                            }
-                          }
-                          else {  // LOWER or UPPER (except DIAGONAL)
-                            // random values are requested in the same order for both original and transposed
-                            for (SizeType j = 0; j < full_tile_size.cols(); ++j) {
-                              for (SizeType i = 0; i < full_tile_size.rows(); ++i) {
-                                auto value = random_value();
-
-                                // but they are set row-wise in the original tile and col-wise in the
-                                // transposed one
-                                if (tile_wrt_global.row() > tile_wrt_global.col()) {  // LOWER
-                                  TileElementIndex index{i, j};
-                                  if (index.isIn(tile.size()))
-                                    tile(index) = value;
-                                }
-                                else {  // UPPER
-                                  TileElementIndex index{j, i};
-                                  if (index.isIn(tile.size()))
-                                    tile(index) = dlaf::conj(value);
-                                }
-                              }
-                            }
-                          }
-                        }),
-                    matrix(tile_wrt_local));
-    }
+    hpx::dataflow(std::move(set_hp_f), matrix(tile_wrt_local));
   }
 }
 

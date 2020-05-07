@@ -334,8 +334,7 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
       // collect the 2nd operand, receving it from others if not available locally
       hpx::shared_future<dlaf::Tile<const T, Device::CPU>> tile_transposed;
 
-      if (owner_transposed == current_rank) {
-        // current rank already has what it needs
+      if (owner_transposed == current_rank) {  // current rank already has what it needs
         tile_transposed = L.read(transposed_wrt_global);
 
         // if there are more than 1 rank for column, others will need the data from this one
@@ -343,13 +342,11 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
           dlaf::comm::sync::broadcast::send(comm_grid.colCommunicator(),
                                             L.read(transposed_wrt_global).get());
       }
-      else {
-        // current rank has to receive it
-
+      else {  // current rank has to receive it
         // by construction: this rank has the 1st operand, so if it does not have the 2nd one,
         // for sure another rank in the same column will have it (thanks to the regularity of the
         // distribution given by the 2D grid)
-        assert(owner_transposed.col() == current_rank.col());
+        DLAF_ASSERT_HEAVY(owner_transposed.col() == current_rank.col());
 
         TileType workspace(L.blockSize(),
                            dlaf::memory::MemoryView<T, Device::CPU>(

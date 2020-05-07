@@ -97,7 +97,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 
     // wait all setup tasks before starting benchmark
     {
-      for (const auto tile_idx : dlaf::common::iterateRange2D(distribution.localNrTiles()))
+      for (const auto tile_idx : dlaf::common::iterate_range2d(distribution.localNrTiles()))
         matrix(tile_idx).get();
       MPI_Barrier(world);
     }
@@ -392,7 +392,7 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
       // here the owner of the result performs the last step (difference with original)
       if (owner_result == current_rank) {
         hpx::dataflow(hpx::util::unwrapping([](auto&& a, auto&& b) {
-                        for (const auto el_idx : dlaf::common::iterateRange2D(a.size()))
+                        for (const auto el_idx : dlaf::common::iterate_range2d(a.size()))
                           a(el_idx) = std::abs(a(el_idx) - b(el_idx));
                       }),
                       A(tile_result), mul_result.read(tile_result));

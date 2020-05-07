@@ -318,8 +318,7 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
 
     // workspace for storing the partial results for all the rows in the current rank
     // TODO this size can be reduced to just the part below the current diagonal tile
-    MatrixType partial_result({distribution.localSize().rows(), L.blockSize().cols()},
-                              L.blockSize());
+    MatrixType partial_result({distribution.localSize().rows(), L.blockSize().cols()}, L.blockSize());
 
     // it has to be set to zero, because ranks may not be able to contribute for each row at each step
     // so when the result will be reduced along the rows, they will not alter the final result
@@ -354,8 +353,7 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
 
         TileType workspace(L.blockSize(),
                            dlaf::memory::MemoryView<T, Device::CPU>(
-                               mul(L.blockSize().rows(),
-                                   L.blockSize().cols())),
+                               mul(L.blockSize().rows(), L.blockSize().cols())),
                            L.blockSize().rows());
 
         dlaf::comm::sync::broadcast::receive_from(owner_transposed.row(), comm_grid.colCommunicator(),

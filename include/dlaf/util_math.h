@@ -49,7 +49,7 @@ namespace internal {
 /// @brief Perform the given binary operation on integer types in @tparam ArithmeticT arithmetic
 ///
 /// It casts operands to @tparam ArithmeticT type and then performs the given binary operation @p op
-/// @tparam TA and @tparam TB must be an integer types (signed or unsigned)
+/// @tparam TA and @tparam TB must be integer types (signed or unsigned)
 /// @return @p a @p op @p b
 /// @pre @p a and @p b can be stored in the type @tparam ArithmeticT
 /// @pre it must be possible to store the result in @tparam ArithemticT

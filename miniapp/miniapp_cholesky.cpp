@@ -196,7 +196,7 @@ int main(int argc, char** argv) {
 
 namespace {
 
-/// Compute max norm of the given matrix
+/// Compute max norm of the lower triangular matrix
 T matrix_norm(ConstMatrixType& matrix, CommunicatorGrid comm_grid) {
   using dlaf::common::internal::vector;
 
@@ -207,18 +207,17 @@ T matrix_norm(ConstMatrixType& matrix, CommunicatorGrid comm_grid) {
   vector<hpx::future<T>> tiles_max;
   tiles_max.reserve(distribution.localNrTiles().rows() * distribution.localNrTiles().cols());
 
-  // for each tile in local, create a task that finds the max element in the tile
+  // for each tile in local (lower triangular), create a task that finds the max element in the tile
   for (SizeType j_loc = 0; j_loc < distribution.localNrTiles().cols(); ++j_loc) {
     const SizeType j = distribution.template globalTileFromLocalTile<Coord::Col>(j_loc);
+    const SizeType i_diag_loc = distribution.template nextLocalTileFromGlobalTile<Coord::Row>(j);
 
-    SizeType i_loc = distribution.template nextLocalTileFromGlobalTile<Coord::Row>(j);
-    for (; i_loc < distribution.localNrTiles().rows(); ++i_loc) {
+    for (SizeType i_loc = i_diag_loc; i_loc < distribution.localNrTiles().rows(); ++i_loc) {
       auto current_tile_max =
-          hpx::dataflow(hpx::util::unwrapping([](auto&& tile) -> T {
+          hpx::dataflow(hpx::util::unwrapping([is_diag = (i_loc == i_diag_loc)](auto&& tile) -> T {
                           T tile_max_value = std::abs(T{0});
                           for (SizeType j = 0; j < tile.size().cols(); ++j)
-                            for (SizeType i = j; i < tile.size().rows(); ++i)
-                              // TODO should we consider just elements in the lower triangular?
+                            for (SizeType i = is_diag ? j : 0; i < tile.size().rows(); ++i)
                               tile_max_value = std::max(tile_max_value, tile({i, j}));
                           return tile_max_value;
                         }),

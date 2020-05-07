@@ -13,9 +13,6 @@
 #include <cassert>
 #include <cstdlib>
 #include <memory>
-#ifdef DLAF_WITH_CUDA
-#include <cuda_runtime.h>
-#endif
 
 #include "memory_chunk.h"
 #include "dlaf/types.h"

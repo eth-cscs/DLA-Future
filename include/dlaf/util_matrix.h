@@ -21,6 +21,7 @@ constexpr double M_PI = 3.141592;
 #include <blas.hh>
 #include <hpx/hpx.hpp>
 
+#include "dlaf/common/assert.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/matrix.h"
 #include "dlaf/types.h"
@@ -28,142 +29,104 @@ constexpr double M_PI = 3.141592;
 /// @file
 
 namespace dlaf {
-namespace util_matrix {
-
-/// @brief Verify if dlaf::Matrix is square
-///
-/// @tparam Matrix refers to a dlaf::Matrix object
-/// @throws std::invalid_argument if the matrix is not squared
-template <class Matrix>
-void assertSizeSquare(const Matrix& matrix, std::string function, std::string mat_name) {
-  if (matrix.size().rows() != matrix.size().cols())
-    throw std::invalid_argument(function + ": " + "Matrix " + mat_name + " is not square.");
-}
-
-/// @brief Verify if dlaf::Matrix tile is square
-///
-/// @tparam Matrix refers to a dlaf::Matrix object
-/// @throws std::invalid_argument if the matrix block is not squared
-template <class Matrix>
-void assertBlocksizeSquare(const Matrix& matrix, std::string function, std::string mat_name) {
-  if (matrix.blockSize().rows() != matrix.blockSize().cols())
-    throw std::invalid_argument(function + ": " + "Block size in matrix " + mat_name +
-                                " is not square.");
-}
-
-/// @brief Verify if dlaf::Matrix is distributed on a (1x1) grid (i.e. if it is a local matrix).
-///
-/// @tparam Matrix refers to a dlaf::Matrix object
-/// @throws std::invalid_argument if the matrix is not local
-template <class Matrix>
-void assertLocalMatrix(const Matrix& matrix, std::string function, std::string mat_name) {
-  if (matrix.distribution().commGridSize() != comm::Size2D{1, 1})
-    throw std::invalid_argument(function + ": " + "Matrix " + mat_name + " is not local.");
-}
-
-/// @brief Verify that the matrix is distributed according to the given communicator grid.
-///
-/// @tparam Matrix refers to a dlaf::Matrix object
-/// @throws std::invalid_argument if the matrix is not distributed correctly
-template <class Matrix>
-void assertMatrixDistributedOnGrid(const comm::CommunicatorGrid& grid, const Matrix& matrix,
-                                   std::string function, std::string mat_name, std::string grid_name) {
-  if ((matrix.distribution().commGridSize() != grid.size()) ||
-      (matrix.distribution().rankIndex() != grid.rank()))
-    throw std::invalid_argument(function + ": " + "The matrix " + mat_name +
-                                " is not distributed according to the communicator grid " + grid_name +
-                                ".");
-}
-
-/// @brief Verify that matrices A and B are multipliable,
-///
-/// @tparam A refers to a dlaf::Matrix object
-/// @tparam B refers to a dlaf::Matrix object
-/// @throws std::invalid_argument if matrices A and B are not multipliable, taking into account the Side
-/// (Left/Right) and the Op (NoTrans/Trans/ConjTrans) of the multiplication itself
-template <class MatrixConst, class Matrix>
-void assertMultipliableMatrices(const MatrixConst& mat_a, const Matrix& mat_b, blas::Side side,
-                                blas::Op op, std::string function, std::string mat_a_name,
-                                std::string mat_b_name) {
-  if (side == blas::Side::Left) {
-    if (op == blas::Op::NoTrans) {
-      if (mat_a.nrTiles().cols() != mat_b.nrTiles().rows()) {
-        throw std::invalid_argument(
-            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
-            " are not left multipliable (cols of matrix A not equal to rows of matrix B).");
-      }
-      if (mat_a.size().cols() != mat_b.size().rows()) {
-        throw std::invalid_argument(
-            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
-            " are not left multipliable (size of matrix A not equal to that of matrix B).");
-      }
-      if (mat_a.blockSize().cols() != mat_b.blockSize().rows()) {
-        throw std::invalid_argument(
-            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
-            " are not left multipliable (blocksize of matrix A not equal to that of matrix B).");
-      }
-    }
-    else if (op == blas::Op::Trans || op == blas::Op::ConjTrans) {
-      if (mat_a.nrTiles().rows() != mat_b.nrTiles().rows()) {
-        throw std::invalid_argument(
-            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
-            " are not left multipliable (cols of matrix A not equal to rows of matrix B).");
-      }
-      if (mat_a.size().rows() != mat_b.size().rows()) {
-        throw std::invalid_argument(
-            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
-            " are not left multipliable (size of matrix A not equal to that of matrix B).");
-      }
-      if (mat_a.blockSize().rows() != mat_b.blockSize().rows()) {
-        throw std::invalid_argument(
-            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
-            " are not left multipliable (blocksize of matrix A not equal to that of matrix B).");
-      }
-    }
-  }
-  else if (side == blas::Side::Right) {
-    if (op == blas::Op::NoTrans) {
-      if (mat_a.nrTiles().rows() != mat_b.nrTiles().cols()) {
-        throw std::invalid_argument(
-            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
-            " are not right multipliable (rows of matrix A not equal to cols of matrix B).");
-      }
-      if (mat_a.size().rows() != mat_b.size().cols()) {
-        throw std::invalid_argument(
-            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
-            " are not right multipliable (size of matrix A not equal to that of matrix B).");
-      }
-      if (mat_a.blockSize().rows() != mat_b.blockSize().cols()) {
-        throw std::invalid_argument(
-            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
-            " are not right multipliable (blocksize of matrix A not equal to that of matrix B).");
-      }
-    }
-    else if (op == blas::Op::Trans || op == blas::Op::ConjTrans) {
-      if (mat_a.nrTiles().cols() != mat_b.nrTiles().cols()) {
-        throw std::invalid_argument(
-            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
-            " are not right multipliable (rows of matrix A not equal to cols of matrix B).");
-      }
-      if (mat_a.size().cols() != mat_b.size().cols()) {
-        throw std::invalid_argument(
-            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
-            " are not right multipliable (size of matrix A not equal to that of matrix B).");
-      }
-      if (mat_a.blockSize().cols() != mat_b.blockSize().cols()) {
-        throw std::invalid_argument(
-            function + ": " + "The matrices " + mat_a_name + " and " + mat_b_name +
-            " are not right multipliable (blocksize of matrix A not equal to that of matrix B).");
-      }
-    }
-  }
-}
-
-}
-
 namespace matrix {
 namespace util {
 namespace internal {
+
+/// @brief Assert that the @p matrix is square.
+///
+/// When the assertion is enabled, terminates the program with an error message if the matrix is not
+/// square. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
+#define DLAF_ASSERT_SIZE_SQUARE(matrix)                                                               \
+  DLAF_ASSERT((matrix.size().rows() == matrix.size().cols()), "Matrix ", #matrix, " is not square (", \
+              matrix.size().rows(), "x", matrix.size().cols(), ").")
+
+/// @brief Assert that the @p matrix tiles are square.
+///
+/// When the assertion is enabled, terminates the program with an error message if the tiles of matrix
+/// are not square. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
+#define DLAF_ASSERT_BLOCKSIZE_SQUARE(matrix)                                                          \
+  DLAF_ASSERT((matrix.blockSize().rows() == matrix.blockSize().cols()), "Block size in matrix ",      \
+              #matrix, " is not square (", matrix.blockSize().rows(), "x", matrix.blockSize().cols(), \
+              ").")
+
+/// @brief Assert that the @p matrix is distributed on a (1x1) grid (i.e. if it is a local matrix).
+///
+/// When the assertion is enabled, terminates the program with an error message if matrix is not local.
+/// This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
+#define DLAF_ASSERT_LOCALMATRIX(matrix)                                                         \
+  DLAF_ASSERT((matrix.distribution().commGridSize() == comm::Size2D(1, 1)), "Matrix ", #matrix, \
+              " is not local (grid size: ", matrix.distribution().commGridSize().rows(), "x",   \
+              matrix.distribution().commGridSize().cols(), ").")
+
+/// @brief Assert that the @p matrix is distributed according to the given communicator grid.
+///
+/// When the assertion is enabled, terminates the program with an error message if matrix is not on distributed
+/// according to the given communicator grid. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
+#define DLAF_ASSERT_DISTRIBUTED_ON_GRID(grid, matrix)                                                \
+  DLAF_ASSERT(((matrix.distribution().commGridSize() == grid.size()) &&                              \
+               (matrix.distribution().rankIndex() == grid.rank())),                                  \
+              "The matrix ", #matrix, " (rank: ", matrix.distribution().rankIndex(),                 \
+              ", grid size: ", matrix.distribution().commGridSize().rows(), "x",                     \
+              matrix.distribution().commGridSize().cols(),                                           \
+              ") is not distributed according to the communicator grid ", #grid,                     \
+              " (rank: ", grid.rank(), ", grid size: ", grid.size().rows(), "x", grid.size().cols(), \
+              ").")
+
+template <class MatrixConst, class Matrix, class Mat, class Location>
+void assertMultipliableMatrices(const MatrixConst& mat_a, const Matrix& mat_b, const Mat& mat_c,
+                                const blas::Op opA, const blas::Op opB, const Location location,
+                                std::string mat_a_name, std::string mat_b_name, std::string mat_c_name) {
+  auto rows = [](const auto& size, const blas::Op op) -> decltype(size.rows()) {
+    switch (op) {
+      case blas::Op::NoTrans:
+        return size.rows();
+      case blas::Op::Trans:
+      case blas::Op::ConjTrans:
+        return size.cols();
+      default:
+        return {};
+    }
+  };
+  auto cols = [](const auto& size, const blas::Op op) -> decltype(size.cols()) {
+    switch (op) {
+      case blas::Op::NoTrans:
+        return size.cols();
+      case blas::Op::Trans:
+      case blas::Op::ConjTrans:
+        return size.rows();
+      default:
+        return {};
+    }
+  };
+
+  DLAF_ASSERT_WITH_ORIGIN(location,
+                          rows(mat_a.size(), opA) == mat_c.size().rows() &&
+                              cols(mat_a.size(), opA) == rows(mat_b.size(), opB) &&
+                              cols(mat_b.size(), opB) == mat_c.size().cols(),
+                          "Size mismatch: ", mat_a_name, " (", rows(mat_a.size(), opA), ", ",
+                          cols(mat_a.size(), opA), ") x ", mat_b_name, " (", rows(mat_b.size(), opB),
+                          ", ", cols(mat_b.size(), opB), ") --> ", mat_c_name, " ", mat_c.size(),
+                          " cannot be performed.");
+
+  DLAF_ASSERT_WITH_ORIGIN(location,
+                          rows(mat_a.blockSize(), opA) == mat_c.blockSize().rows() &&
+                              cols(mat_a.blockSize(), opA) == rows(mat_b.blockSize(), opB) &&
+                              cols(mat_b.blockSize(), opB) == mat_c.blockSize().cols(),
+                          "BlockSize mismatch: ", mat_a_name, " (", rows(mat_a.blockSize(), opA), ", ",
+                          cols(mat_a.blockSize(), opA), ") x ", mat_b_name, " (",
+                          rows(mat_b.blockSize(), opB), ", ", cols(mat_b.blockSize(), opB), ") --> ",
+                          mat_c_name, " ", mat_c.blockSize(), " cannot be performed.");
+}
+/// @brief Assert that the matrices @p mat_a and @p mat_b are multipliable and that matrix @p mat_c can
+/// store the result of this multiplication.
+///
+/// When the assertion is enabled, terminates the program with an error message if matrices @p mat_a and
+/// @p mat_b are not multipliable or if the matrix @p mat_c can not store the result. This assertion is
+/// enabled when **DLAF_ASSERT_ENABLE** is ON.
+#define DLAF_ASSERT_MULTIPLIABLE_MATRICES(a, b, c, opA, opB)                                           \
+  ::dlaf::matrix::util::internal::assertMultipliableMatrices(a, b, c, opA, opB, SOURCE_LOCATION(), #a, \
+                                                             #b, #c);
 
 /// Callable that returns random values in the range [-1, 1]
 template <class T>
@@ -197,15 +160,15 @@ public:
 
 }
 
-/// @brief Set the elements of the matrix
+/// @brief Set the elements of the matrix.
 ///
 /// The (i, j)-element of the matrix is set to el({i, j}).
-/// @param el a copy is given to each tile
+/// @param el a copy is given to each tile.
 /// @pre el argument is an index of type const GlobalElementIndex&.
 /// @pre el return type should be T.
 template <class T, class ElementGetter>
 void set(Matrix<T, Device::CPU>& matrix, const ElementGetter& el) {
-  const matrix::Distribution& dist = matrix.distribution();
+  const Distribution& dist = matrix.distribution();
   for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {
     for (SizeType tile_i = 0; tile_i < dist.localNrTiles().rows(); ++tile_i) {
       LocalTileIndex tile_wrt_local{tile_i, tile_j};
@@ -237,7 +200,7 @@ template <class T>
 void set_random(Matrix<T, Device::CPU>& matrix) {
   using namespace dlaf::util::size_t;
 
-  const matrix::Distribution& dist = matrix.distribution();
+  const Distribution& dist = matrix.distribution();
 
   for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {
     for (SizeType tile_i = 0; tile_i < dist.localNrTiles().rows(); ++tile_i) {
@@ -285,12 +248,12 @@ void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
 
   using namespace dlaf::util::size_t;
 
-  const matrix::Distribution& dist = matrix.distribution();
+  const Distribution& dist = matrix.distribution();
 
   // Check if matrix is square
-  util_matrix::assertSizeSquare(matrix, "set_hermitian_random_positive_definite", "matrix");
+  DLAF_ASSERT_SIZE_SQUARE(matrix);
   // Check if block matrix is square
-  util_matrix::assertBlocksizeSquare(matrix, "set_hermitian_random_positive_definite", "matrix");
+  DLAF_ASSERT_BLOCKSIZE_SQUARE(matrix);
 
   auto offset_value = mul(2, to_sizet(matrix.size().rows()));
   auto full_tile_size = matrix.blockSize();

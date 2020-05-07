@@ -1,0 +1,98 @@
+include:
+  - remote: 'https://gitlab.com/cscs-ci/recipes/-/raw/master/templates/v1/.cscs.yml'
+
+stages:
+  - build
+  - test
+
+##
+## BUILDS
+##
+
+.build_common:
+  extends: .dind
+  stage: build
+  only:
+    - master
+    - staging
+    - trying
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  artifacts:
+    paths:
+      - pipeline.yml
+
+# Builds a Docker image for the current commit
+cpu debug build:
+  extends: .build_common
+  variables:
+    BUILD_IMAGE: $CI_REGISTRY_IMAGE/debug/build:latest
+    IMAGE: $CI_REGISTRY_IMAGE/debug/deploy:$CI_COMMIT_SHA
+  script:
+    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 -f ci/docker/debug/build.Dockerfile --network=host .
+    - docker push $BUILD_IMAGE
+    - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE --build-arg DEPLOY_IMAGE=$IMAGE -f ci/docker/debug/deploy.Dockerfile --network=host .
+    - docker push $IMAGE
+    - docker run $IMAGE cat /root/DLA-Future.bundle/pipeline.yml > pipeline.yml
+
+cpu release build:
+  extends: .build_common
+  variables:
+    BUILD_IMAGE: $CI_REGISTRY_IMAGE/release/build:latest
+    IMAGE: $CI_REGISTRY_IMAGE/release/deploy:$CI_COMMIT_SHA
+  script:
+    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 -f ci/docker/release/build.Dockerfile --network=host .
+    - docker push $BUILD_IMAGE
+    - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE --build-arg DEPLOY_IMAGE=$IMAGE -f ci/docker/release/deploy.Dockerfile --network=host .
+    - docker push $IMAGE
+    - docker run $IMAGE cat /root/DLA-Future.bundle/pipeline.yml > pipeline.yml
+
+cpu codecov build:
+  extends: .build_common
+  variables:
+    BUILD_IMAGE: $CI_REGISTRY_IMAGE/codecov/build:latest
+    IMAGE: $CI_REGISTRY_IMAGE/codecov/deploy:$CI_COMMIT_SHA
+  script:
+    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 -f ci/docker/codecov/build.Dockerfile --network=host .
+    - docker push $BUILD_IMAGE
+    - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE --build-arg DEPLOY_IMAGE=$IMAGE -f ci/docker/codecov/deploy.Dockerfile --network=host .
+    - docker push $IMAGE
+    - docker run $IMAGE cat /root/DLA-Future.bundle/pipeline.yml > pipeline.yml
+
+##
+## RUNS
+##
+
+.run_common:
+  stage: test
+  only:
+    - master
+    - staging
+    - trying
+  trigger:
+    strategy: depend
+
+# Executes the docker images on Daint via Sarus
+cpu debug test:
+  extends: .run_common
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cpu debug build
+
+cpu release test:
+  extends: .run_common
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cpu release build
+
+cpu codecov test:
+  extends: .run_common
+  trigger:
+    strategy: depend
+    include:
+      - artifact: pipeline.yml
+        job: cpu codecov build

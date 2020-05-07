@@ -11,7 +11,7 @@
 #pragma once
 
 #include <memory>
-#include "dlaf/mpi_header.h"
+#include "dlaf/communication/error.h"
 
 namespace dlaf {
 namespace comm {

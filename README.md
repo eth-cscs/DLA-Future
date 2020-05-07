@@ -1,3 +1,5 @@
+[![pipeline status](https://gitlab.com/cscs-ci/eth-cscs/DLA-Future/badges/master/pipeline.svg)](https://gitlab.com/cscs-ci/eth-cscs/DLA-Future/-/commits/master) [![codecov](https://codecov.io/gl/cscs-ci:eth-cscs/DLA-Future/branch/master/graph/badge.svg)](https://codecov.io/gl/cscs-ci:eth-cscs/DLA-Future)
+
 # Distributed Linear Algebra with Futures.
 
 ## Dependencies

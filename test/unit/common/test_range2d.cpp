@@ -19,7 +19,7 @@ namespace {
 struct CustomTag;
 using Index = dlaf::common::Index2D<int, CustomTag>;
 using Size = dlaf::common::Size2D<int, CustomTag>;
-using dlaf::common::iterateRange2D;
+using dlaf::common::iterate_range2d;
 
 // TypeParam is either `Index` or `Size`
 template <typename TypeParam>
@@ -33,7 +33,7 @@ void test_single_arg() {
 
   std::vector<Index> act_values;
   act_values.reserve(act_values.size());
-  for (Index i : iterateRange2D(sz)) {
+  for (Index i : iterate_range2d(sz)) {
     act_values.push_back(i);
   }
 
@@ -50,7 +50,7 @@ void test_double_arg(TypeParam end) {
 
   std::vector<Index> act_values;
   act_values.reserve(act_values.size());
-  for (Index i : iterateRange2D(begin, end)) {
+  for (Index i : iterate_range2d(begin, end)) {
     act_values.push_back(i);
   }
 

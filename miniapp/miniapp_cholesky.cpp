@@ -282,43 +282,47 @@ void setUpperToZeroForDiagonalTiles(MatrixType& matrix) {
   }
 }
 
-/// Compute original - cholesky_lower * cholesky_lower'
+/// Compute the absolute difference |A - L * L'|
 ///
-/// It computes in-place the cholesky_lower * chlesky_lower'
-/// and then it subtracts in-place the result from original
+/// It computes:
+/// 1. L = L * L' (in-place)
+/// 2. A = |A - L| (in-place, where L is the updated data from previous step)
+///
+/// Just the lower triangular part of the matrices will be touched/computed.
 ///
 /// It is used to get the difference matrix between the matrix computed starting from the
 /// cholesky factorization and the original one
-void cholesky_diff(MatrixType& original, MatrixType& cholesky_lower, CommunicatorGrid comm_grid) {
-  // TODO original and cholesky_lower must be different
+void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
+  // TODO A and L must be different
 
   using dlaf::common::make_data;
   using dlaf::util::size_t::mul;
 
-  dlaf::util_matrix::assertSizeSquare(original, "check_cholesky", "original");
-  dlaf::util_matrix::assertBlocksizeSquare(original, "check_cholesky", "original");
+  dlaf::util_matrix::assertSizeSquare(A, "check_cholesky", "A");
+  dlaf::util_matrix::assertBlocksizeSquare(A, "check_cholesky", "A");
 
-  dlaf::util_matrix::assertSizeSquare(cholesky_lower, "check_cholesky", "cholesky_lower");
-  dlaf::util_matrix::assertBlocksizeSquare(cholesky_lower, "check_cholesky", "cholesky_lower");
+  dlaf::util_matrix::assertSizeSquare(L, "check_cholesky", "L");
+  dlaf::util_matrix::assertBlocksizeSquare(L, "check_cholesky", "L");
 
-  const auto& distribution = cholesky_lower.distribution();
+  const auto& distribution = L.distribution();
   const auto current_rank = distribution.rankIndex();
 
-  MatrixType mul_result(cholesky_lower.size(), cholesky_lower.blockSize(), comm_grid);
+  MatrixType mul_result(L.size(), L.blockSize(), comm_grid);
 
   // k is a global index that keeps track of the diagonal tile
   // it is useful mainly for two reasons:
   // - as limit for when to stop multiplying (because it is triangular and symmetric)
   // - as reference for the row to be used in L, but transposed, as value for L'
-  for (SizeType k = 0; k < cholesky_lower.nrTiles().cols(); ++k) {
+  for (SizeType k = 0; k < L.nrTiles().cols(); ++k) {
     const auto k_loc = distribution.template nextLocalTileFromGlobalTile<Coord::Col>(k + 1);
 
     // workspace for storing the partial results for all the rows in the current rank
     // TODO this size can be reduced to just the part below the current diagonal tile
-    MatrixType partial_result({distribution.localSize().rows(), cholesky_lower.blockSize().cols()},
-                              cholesky_lower.blockSize());
+    MatrixType partial_result({distribution.localSize().rows(), L.blockSize().cols()},
+                              L.blockSize());
 
-    // TODO evaluate setting to zero (is it possible that a rank does not update it)
+    // it has to be set to zero, because ranks may not be able to contribute for each row at each step
+    // so when the result will be reduced along the rows, they will not alter the final result
     dlaf::matrix::util::set(partial_result, [](auto&&) { return 0; });
 
     // for each local column, with the limit of the diagonal tile
@@ -333,12 +337,12 @@ void cholesky_diff(MatrixType& original, MatrixType& cholesky_lower, Communicato
 
       if (owner_transposed == current_rank) {
         // current rank already has what it needs
-        tile_transposed = cholesky_lower.read(transposed_wrt_global);
+        tile_transposed = L.read(transposed_wrt_global);
 
         // if there are more than 1 rank for column, others will need the data from this one
         if (distribution.commGridSize().rows() > 1)
           dlaf::comm::sync::broadcast::send(comm_grid.colCommunicator(),
-                                            cholesky_lower.read(transposed_wrt_global).get());
+                                            L.read(transposed_wrt_global).get());
       }
       else {
         // current rank has to receive it
@@ -348,11 +352,11 @@ void cholesky_diff(MatrixType& original, MatrixType& cholesky_lower, Communicato
         // distribution given by the 2D grid)
         assert(owner_transposed.col() == current_rank.col());
 
-        TileType workspace(cholesky_lower.blockSize(),
+        TileType workspace(L.blockSize(),
                            dlaf::memory::MemoryView<T, Device::CPU>(
-                               mul(cholesky_lower.blockSize().rows(),
-                                   cholesky_lower.blockSize().cols())),
-                           cholesky_lower.blockSize().rows());
+                               mul(L.blockSize().rows(),
+                                   L.blockSize().cols())),
+                           L.blockSize().rows());
 
         dlaf::comm::sync::broadcast::receive_from(owner_transposed.row(), comm_grid.colCommunicator(),
                                                   workspace);
@@ -366,7 +370,7 @@ void cholesky_diff(MatrixType& original, MatrixType& cholesky_lower, Communicato
         const LocalTileIndex tile_wrt_local{i_loc, j_loc};
 
         hpx::dataflow(hpx::util::unwrapping(dlaf::tile::gemm<T, Device::CPU>), blas::Op::NoTrans,
-                      blas::Op::ConjTrans, 1.0, cholesky_lower.read(tile_wrt_local), tile_transposed,
+                      blas::Op::ConjTrans, 1.0, L.read(tile_wrt_local), tile_transposed,
                       j_loc == 0 ? 0.0 : 1.0, partial_result(LocalTileIndex{i_loc, 0}));
       }
     }
@@ -397,7 +401,7 @@ void cholesky_diff(MatrixType& original, MatrixType& cholesky_lower, Communicato
                           }
                         }
                       }),
-                      original(tile_result), mul_result.read(tile_result));
+                      A(tile_result), mul_result.read(tile_result));
       }
     }
   }

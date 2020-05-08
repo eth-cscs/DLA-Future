@@ -38,18 +38,17 @@ namespace internal {
 ///
 /// When the assertion is enabled, terminates the program with an error message if the matrix is not
 /// square. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
-#define DLAF_ASSERT_SIZE_SQUARE(matrix)                                                               \
-  DLAF_ASSERT((matrix.size().rows() == matrix.size().cols()), "Matrix ", #matrix, " is not square (", \
-              matrix.size().rows(), "x", matrix.size().cols(), ").")
+#define DLAF_ASSERT_SIZE_SQUARE(matrix)                                                              \
+  DLAF_ASSERT((matrix.size().rows() == matrix.size().cols()), "Matrix ", #matrix, " is not square ", \
+              matrix.size())
 
 /// @brief Assert that the @p matrix tiles are square.
 ///
 /// When the assertion is enabled, terminates the program with an error message if the tiles of matrix
 /// are not square. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
-#define DLAF_ASSERT_BLOCKSIZE_SQUARE(matrix)                                                          \
-  DLAF_ASSERT((matrix.blockSize().rows() == matrix.blockSize().cols()), "Block size in matrix ",      \
-              #matrix, " is not square (", matrix.blockSize().rows(), "x", matrix.blockSize().cols(), \
-              ").")
+#define DLAF_ASSERT_BLOCKSIZE_SQUARE(matrix)                                                \
+  DLAF_ASSERT((matrix.blockSize().rows() == matrix.blockSize().cols()), "Matrix ", #matrix, \
+              " blocksize ", matrix.blockSize(), " is not square ")
 
 /// @brief Assert that @p matrixA and @p matrixB tiles have the same size.
 ///
@@ -129,7 +128,7 @@ void assertMultipliableMatrices(const MatrixConst& mat_a, const Matrix& mat_b, c
                           rows(mat_a.blockSize(), opA) == mat_c.blockSize().rows() &&
                               cols(mat_a.blockSize(), opA) == rows(mat_b.blockSize(), opB) &&
                               cols(mat_b.blockSize(), opB) == mat_c.blockSize().cols(),
-                          "BlockSize mismatch: ", mat_a_name, " (", rows(mat_a.blockSize(), opA), ", ",
+                          "Blocksize mismatch: ", mat_a_name, " (", rows(mat_a.blockSize(), opA), ", ",
                           cols(mat_a.blockSize(), opA), ") x ", mat_b_name, " (",
                           rows(mat_b.blockSize(), opB), ", ", cols(mat_b.blockSize(), opB), ") --> ",
                           mat_c_name, " ", mat_c.blockSize(), " cannot be performed.");

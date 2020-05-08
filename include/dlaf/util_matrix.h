@@ -38,9 +38,17 @@ namespace internal {
 ///
 /// When the assertion is enabled, terminates the program with an error message if the matrix is not
 /// square. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
-#define DLAF_ASSERT_SIZE_SQUARE(matrix)                                                              \
-  DLAF_ASSERT((matrix.size().rows() == matrix.size().cols()), "Matrix ", #matrix, " is not square ", \
-              matrix.size())
+#define DLAF_ASSERT_SIZE_SQUARE(matrix)                                                               \
+  DLAF_ASSERT((matrix.size().rows() == matrix.size().cols()), "Matrix ", #matrix, " ", matrix.size(), \
+              " is not square")
+
+/// @brief Assert that the @p matrix is square.
+///
+/// When the assertion is enabled, terminates the program with an error message if the matrix is not
+/// square. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
+#define DLAF_ASSERT_SIZE_EQ(matrixA, matrixB)                                                          \
+  DLAF_ASSERT((matrixA.size() == matrixB.size()), "Matrices ", #matrixA, " ", matrixA.size(), " and ", \
+              #matrixB, " ", matrixB.size(), " does not have the same size")
 
 /// @brief Assert that the @p matrix tiles are square.
 ///
@@ -54,9 +62,9 @@ namespace internal {
 ///
 /// When the assertion is enabled, terminates the program with an error message if the blocksize of the two
 /// matrices does not have the same size. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
-#define DLAF_ASSERT_BLOCKSIZE_EQ(matrixA, matrixB)                                                      \
-  DLAF_ASSERT((matrixA.blockSize() == matrixB.blockSize()), "Blocksizes of matrix ", #matrixA, " and ", \
-              #matrixB, " are not the same (", matrixA.blockSize(), " vs ", matrixB.blockSize(), ")")
+#define DLAF_ASSERT_BLOCKSIZE_EQ(matrixA, matrixB)                                                  \
+  DLAF_ASSERT((matrixA.blockSize() == matrixB.blockSize()), "Blocksizes of matrix ", #matrixA, " ", \
+              matrixA.blockSize(), " and ", #matrixB, " ", matrixB.blockSize(), " are not the same")
 
 /// @brief Assert that the @p matrix is distributed on a (1x1) grid (i.e. if it is a local matrix).
 ///

@@ -9,16 +9,17 @@
 //
 #pragma once
 
+#include <blas_util.hh>
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/utility/norm_max/mc/norm_max.h"
 #include "dlaf/matrix.h"
 #include "dlaf/util_matrix.h"
+#include "dlaf/utility/norm_max/mc/norm_max.h"
 
 namespace dlaf {
 
 template <class T>
-void Utility<Backend::MC>::norm_max(comm::CommunicatorGrid grid, blas::Uplo uplo,
-                                          Matrix<T, Device::CPU>& mat_a) {
+T Utility<Backend::MC>::norm_max(comm::CommunicatorGrid grid, blas::Uplo uplo,
+                                 Matrix<const T, Device::CPU>& mat_a) {
   // Check if matrix is square
   DLAF_ASSERT_SIZE_SQUARE(mat_a);
   // Check if block matrix is square
@@ -26,11 +27,16 @@ void Utility<Backend::MC>::norm_max(comm::CommunicatorGrid grid, blas::Uplo uplo
   // Check compatibility of the communicator grid and the distribution
   DLAF_ASSERT_DISTRIBUTED_ON_GRID(grid, mat_a);
 
-  // Method only for Lower triangular matrix
-  if (uplo == blas::Uplo::Lower)
-    internal::mc::norm_max(grid, mat_a);
-  else
-    throw std::runtime_error("uplo = Upper not yet implemented");
+  switch (uplo) {
+    case blas::Uplo::Lower:
+      return internal::mc::norm_max(grid, mat_a);
+    case blas::Uplo::Upper:
+      throw std::runtime_error("uplo = Upper not yet implemented");
+    case blas::Uplo::General:
+      throw std::runtime_error("uplo = General not yet implemented");
+    default:
+      return T{};
+  }
 }
 
 }

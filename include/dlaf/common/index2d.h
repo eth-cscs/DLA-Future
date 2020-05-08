@@ -14,6 +14,7 @@
 
 #include <array>
 #include <cassert>
+#include <cstddef>
 #include <ostream>
 #include <type_traits>
 
@@ -108,6 +109,7 @@ template <class Coords2DType>
 Coords2DType transposed(const Coords2DType& coords) {
   return {coords.col_, coords.row_};
 }
+
 }
 
 /// A strong-type for 2D sizes
@@ -137,6 +139,11 @@ public:
     return out << static_cast<internal::basic_coords<IndexT>>(index);
   }
 };
+
+template <class T, class Tag>
+std::ostream& operator<<(std::ostream& os, const Size2D<T, Tag>& size) {
+  return os << static_cast<internal::basic_coords<T>>(size);
+}
 
 /// A strong-type for 2D coordinates
 /// @tparam IndexT type for row and column coordinates
@@ -186,26 +193,67 @@ public:
   }
 };
 
-template <class IndexT, class Tag, class LinearIndexT>
-Index2D<IndexT, Tag> computeCoordsRowMajor(LinearIndexT index,
-                                           const Size2D<IndexT, Tag>& dims) noexcept {
-  return {static_cast<IndexT>(index / dims.cols()), static_cast<IndexT>(index % dims.cols())};
+template <class T, class Tag>
+std::ostream& operator<<(std::ostream& os, const Index2D<T, Tag>& size) {
+  return os << static_cast<internal::basic_coords<T>>(size);
 }
 
-template <class IndexT, class Tag, class LinearIndexT>
-Index2D<IndexT, Tag> computeCoordsColMajor(LinearIndexT index,
-                                           const Size2D<IndexT, Tag>& dims) noexcept {
-  return {static_cast<IndexT>(index % dims.rows()), static_cast<IndexT>(index / dims.rows())};
-}
-
-/// Compute coords of the @p index -th cell in a grid with @p ordering and sizes @p dims
+/// Compute coords of the @p index -th cell in a row-major ordered 2D grid with size @p dims
 ///
-/// Return an Index2D matching the Size2D (same IndexT and Tag)
-/// @param ordering specify linear index layout in the grid
-/// @param dims Size2D<IndexT, Tag>
-/// @param index is the linear index of the cell with specified @p ordering
-template <class IndexT, class Tag, class LinearIndexT>
-Index2D<IndexT, Tag> computeCoords(Ordering ordering, LinearIndexT index,
+/// @return an Index2D matching the Size2D (same IndexT and Tag)
+/// @param dims Size2D<IndexT, Tag> representing the size of the grid
+/// @param index linear index of the cell
+///
+/// @pre 0 <= linear_index < (dims.rows() * dims.cols())
+template <class IndexT, class Tag>
+Index2D<IndexT, Tag> computeCoordsRowMajor(std::ptrdiff_t linear_index,
+                                           const Size2D<IndexT, Tag>& dims) noexcept {
+  using dlaf::util::ptrdiff_t::mul;
+
+  DLAF_ASSERT_MODERATE(linear_index >= 0, "The linear index cannot be negative (",
+                       std::to_string(linear_index), ")");
+  DLAF_ASSERT_MODERATE(linear_index < mul(dims.rows(), dims.cols()), "Linear index ",
+                       std::to_string(linear_index), " does not fit into grid ", dims);
+
+  std::ptrdiff_t leading_size = dims.cols();
+  return {to_signed<IndexT>(linear_index / leading_size),
+          to_signed<IndexT>(linear_index % leading_size)};
+}
+
+/// Compute coords of the @p index -th cell in a column-major ordered 2D grid with size op dims
+///
+/// @return an Index2D matching the Size2D (same IndexT and Tag)
+/// @param dims Size2D<IndexT, Tag> representing the size of the grid
+/// @param index linear index of the cell
+///
+/// @pre 0 <= linear_index < (dims.rows() * dims.cols())
+template <class IndexT, class Tag>
+Index2D<IndexT, Tag> computeCoordsColMajor(std::ptrdiff_t linear_index,
+                                           const Size2D<IndexT, Tag>& dims) noexcept {
+  using dlaf::util::ptrdiff_t::mul;
+
+  DLAF_ASSERT_MODERATE(linear_index >= 0, "The linear index cannot be negative (",
+                       std::to_string(linear_index), ")");
+  DLAF_ASSERT_MODERATE(linear_index < mul(dims.rows(), dims.cols()), "Linear index ",
+                       std::to_string(linear_index), " does not fit into grid ", dims);
+
+  std::ptrdiff_t leading_size = dims.rows();
+  return {to_signed<IndexT>(linear_index % leading_size),
+          to_signed<IndexT>(linear_index / leading_size)};
+}
+
+/// Compute coords of the @p index -th cell in a grid with @p ordering and size @p dims
+///
+/// It acts as dispatcher for computeCoordsColMajor() and computeCoordsRowMajor() depending on given @p ordering
+///
+/// @return an Index2D matching the Size2D (same IndexT and Tag)
+/// @param ordering specifies linear index layout in the grid
+/// @param dims Size2D<IndexT, Tag> representing the size of the grid
+/// @param index linear index of the cell (with specified @p ordering)
+///
+/// @pre 0 <= linear_index < (dims.rows() * dims.cols())
+template <class IndexT, class Tag>
+Index2D<IndexT, Tag> computeCoords(Ordering ordering, std::ptrdiff_t index,
                                    const Size2D<IndexT, Tag>& dims) noexcept {
   switch (ordering) {
     case Ordering::RowMajor:
@@ -217,43 +265,69 @@ Index2D<IndexT, Tag> computeCoords(Ordering ordering, LinearIndexT index,
   }
 }
 
-template <class IndexT, class Tag>
-IndexT computeLinearIndexRowMajor(const Index2D<IndexT, Tag>& index,
-                                  const Size2D<IndexT, Tag>& dims) noexcept {
+/// Compute linear index of an Index2D in a row-major ordered 2D grid
+///
+/// The @tparam LinearIndexT cannot be deduced and it must be explicitly specified. It allows to
+/// internalize the casting of the value before returning it, not leaving the burden to the user.
+///
+/// @tparam LinearIndexT can be any integral type signed or unsigned
+/// @pre LinearIndexT must be able to store the result
+/// @pre index.isIn(dims)
+template <class LinearIndexT, class IndexT, class Tag>
+LinearIndexT computeLinearIndexRowMajor(const Index2D<IndexT, Tag>& index,
+                                        const Size2D<IndexT, Tag>& dims) noexcept {
+  using dlaf::util::ptrdiff_t::mul;
+  using dlaf::util::ptrdiff_t::sum;
+
+  static_assert(std::is_integral<LinearIndexT>::value, "LinearIndexT must be an integral type");
+
   DLAF_ASSERT_MODERATE(index.isIn(dims), "Index ", index, " is not in the grid ", dims);
 
-  using dlaf::util::size_t::mul;
-  using dlaf::util::size_t::sum;
-
-  std::size_t linear_index = sum(mul(index.row(), dims.cols()), index.col());
-
-  return to_signed<IndexT>(linear_index);
+  std::ptrdiff_t linear_index = sum(mul(index.row(), dims.cols()), index.col());
+  return integral_cast<LinearIndexT>(linear_index);
 }
 
-template <class IndexT, class Tag>
-IndexT computeLinearIndexColMajor(const Index2D<IndexT, Tag>& index,
-                                  const Size2D<IndexT, Tag>& dims) noexcept {
+/// Compute linear index of an Index2D in a column-major ordered 2D grid
+///
+/// The @tparam LinearIndexT cannot be deduced and it must be explicitly specified. It allows to
+/// internalize the casting of the value before returning it, not leaving the burden to the user.
+///
+/// @tparam LinearIndexT can be any integral type signed or unsigned
+/// @pre LinearIndexT must be able to store the result
+/// @pre index.isIn(dims)
+template <class LinearIndexT, class IndexT, class Tag>
+LinearIndexT computeLinearIndexColMajor(const Index2D<IndexT, Tag>& index,
+                                        const Size2D<IndexT, Tag>& dims) noexcept {
+  using dlaf::util::ptrdiff_t::mul;
+  using dlaf::util::ptrdiff_t::sum;
+
+  static_assert(std::is_integral<LinearIndexT>::value, "LinearIndexT must be an integral type");
+
   DLAF_ASSERT_MODERATE(index.isIn(dims), "Index ", index, " is not in the grid ", dims);
 
-  using dlaf::util::size_t::mul;
-  using dlaf::util::size_t::sum;
-
-  std::size_t linear_index = sum(mul(index.col(), dims.rows()), index.row());
-
-  return to_signed<IndexT>(linear_index);
+  std::ptrdiff_t linear_index = sum(mul(index.col(), dims.rows()), index.row());
+  return integral_cast<LinearIndexT>(linear_index);
 }
 
 /// Compute linear index of an Index2D
 ///
+/// It acts as dispatcher for computeLinearIndexColMajor() and computeLinearIndexRowMajor()
+/// depending on given @p ordering.
+///
+/// The @tparam LinearIndexT cannot be deduced and it must be explicitly specified. It allows to
+/// internalize the casting of the value before returning it, not leaving the burden to the user.
+///
+/// @tparam LinearIndexT can be any integral type signed or unsigned (it must be explicitly specified)
+/// @pre LinearIndexT must be able to store the result
 /// @pre index.isIn(dims)
-template <class IndexT, class Tag>
-IndexT computeLinearIndex(Ordering ordering, const Index2D<IndexT, Tag>& index,
-                          const Size2D<IndexT, Tag>& dims) noexcept {
+template <class LinearIndexT, class IndexT, class Tag>
+LinearIndexT computeLinearIndex(Ordering ordering, const Index2D<IndexT, Tag>& index,
+                                const Size2D<IndexT, Tag>& dims) noexcept {
   switch (ordering) {
     case Ordering::RowMajor:
-      return computeLinearIndexRowMajor(index, dims);
+      return computeLinearIndexRowMajor<LinearIndexT>(index, dims);
     case Ordering::ColumnMajor:
-      return computeLinearIndexColMajor(index, dims);
+      return computeLinearIndexColMajor<LinearIndexT>(index, dims);
     default:
       return {};
   }

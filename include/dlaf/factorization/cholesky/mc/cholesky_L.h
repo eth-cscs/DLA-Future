@@ -9,6 +9,7 @@
 //
 #pragma once
 
+#include <unistd.h>
 #include <hpx/coroutines/thread_enums.hpp>
 #include <hpx/include/parallel_executors.hpp>
 #include <hpx/include/threads.hpp>
@@ -41,13 +42,17 @@ void cholesky_L(Matrix<T, Device::CPU>& mat_a) {
   constexpr auto Right = blas::Side::Right;
   constexpr auto Lower = blas::Uplo::Lower;
 
-  // Set up executor on the default queue with high priority.
-  hpx::threads::scheduled_executor executor_hp =
-      hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_high);
+  using std::move;
+  using hpx::threads::executors::pool_executor;
+  using hpx::threads::thread_priority_high;
+  using hpx::threads::thread_priority_default;
+  using hpx::util::unwrapping;
+  using hpx::dataflow;
 
+  // Set up executor on the default queue with high priority.
+  pool_executor executor_hp("default", thread_priority_high);
   // Set up executor on the default queue with default priority.
-  hpx::threads::scheduled_executor executor_normal =
-      hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_default);
+  pool_executor executor_normal("default", thread_priority_default);
 
   // Number of tile (rows = cols)
   SizeType nrtile = mat_a.nrTiles().cols();
@@ -56,13 +61,15 @@ void cholesky_L(Matrix<T, Device::CPU>& mat_a) {
     // Cholesky decomposition on mat_a(k,k) r/w potrf (lapack operation)
     auto kk = LocalTileIndex{k, k};
 
-    hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::potrf<T, Device::CPU>), Lower,
-                  std::move(mat_a(kk)));
+    auto potrf_f = unwrapping([Lower](auto&& tile) { tile::potrf<T, Device::CPU>(Lower, tile); });
+    dataflow(executor_hp, move(potrf_f), move(mat_a(kk)));
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
       // Update panel mat_a(i,k) with trsm (blas operation), using data mat_a.read(k,k)
-      hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), Right, Lower,
-                    ConjTrans, NonUnit, 1.0, mat_a.read(kk), std::move(mat_a(LocalTileIndex{i, k})));
+      auto trsm_f = unwrapping([Right, Lower, ConjTrans, NonUnit](auto&& kk_tile, auto&& ik_tile) {
+        tile::trsm<T, Device::CPU>(Right, Lower, ConjTrans, NonUnit, 1.0, kk_tile, ik_tile);
+      });
+      dataflow(executor_hp, move(trsm_f), mat_a.read(kk), move(mat_a(LocalTileIndex{i, k})));
     }
 
     for (SizeType j = k + 1; j < nrtile; ++j) {
@@ -70,18 +77,34 @@ void cholesky_L(Matrix<T, Device::CPU>& mat_a) {
       auto trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_normal;
 
       // Update trailing matrix: diagonal element mat_a(j,j, reading mat_a.read(j,k), using herk (blas operation)
-      hpx::dataflow(trailing_matrix_executor, hpx::util::unwrapping(tile::herk<T, Device::CPU>), Lower,
-                    NoTrans, -1.0, mat_a.read(LocalTileIndex{j, k}), 1.0,
-                    std::move(mat_a(LocalTileIndex{j, j})));
+      auto herk_f = unwrapping([Lower, NoTrans](auto&& jk_tile, auto&& jj_tile) {
+        tile::herk<T, Device::CPU>(Lower, NoTrans, -1.0, jk_tile, 1.0, jj_tile);
+      });
+      dataflow(trailing_matrix_executor, move(herk_f), mat_a.read(LocalTileIndex{j, k}),
+               move(mat_a(LocalTileIndex{j, j})));
 
       for (SizeType i = j + 1; i < nrtile; ++i) {
         // Update remaining trailing matrix mat_a(i,j), reading mat_a.read(i,k) and mat_a.read(j,k),
         // using gemm (blas operation)
-        hpx::dataflow(trailing_matrix_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>),
-                      NoTrans, ConjTrans, -1.0, mat_a.read(LocalTileIndex{i, k}),
-                      mat_a.read(LocalTileIndex{j, k}), 1.0, std::move(mat_a(LocalTileIndex{i, j})));
+        auto gemm_f = unwrapping([NoTrans, ConjTrans](auto&& ik_tile, auto&& jk_tile, auto&& ij_tile) {
+          tile::gemm<T, Device::CPU>(NoTrans, ConjTrans, -1.0, ik_tile, jk_tile, 1.0, ij_tile);
+        });
+        dataflow(trailing_matrix_executor, move(gemm_f), mat_a.read(LocalTileIndex{i, k}),
+                 mat_a.read(LocalTileIndex{j, k}), move(mat_a(LocalTileIndex{i, j})));
       }
     }
+  }
+}
+
+// Temporary workaround until HPX v1.5 which exposes a proper API
+inline bool mpi_pool_exists() {
+  using hpx::threads::executors::pool_executor;
+  try {
+    pool_executor("mpi");
+    return true;
+  }
+  catch (...) {
+    return false;
   }
 }
 
@@ -91,7 +114,6 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
   using common::internal::vector;
   using hpx::util::unwrapping;
   using hpx::dataflow;
-  using hpx::threads::scheduled_executor;
   using hpx::threads::executors::pool_executor;
   using hpx::threads::thread_priority_high;
   using hpx::threads::thread_priority_default;
@@ -107,17 +129,11 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
   constexpr auto Lower = blas::Uplo::Lower;
 
   // Set up executor on the default queue with high priority.
-  scheduled_executor executor_hp = pool_executor("default", thread_priority_high);
+  pool_executor executor_hp("default", thread_priority_high);
   // Set up executor on the default queue with default priority.
-  scheduled_executor executor_normal = pool_executor("default", thread_priority_default);
+  pool_executor executor_normal("default", thread_priority_default);
 
-  scheduled_executor executor_mpi;
-  try {
-    executor_mpi = pool_executor("mpi", thread_priority_high);
-  }
-  catch (...) {
-    executor_mpi = executor_hp;
-  }
+  auto executor_mpi = (mpi_pool_exists()) ? pool_executor("mpi", thread_priority_high) : executor_hp;
 
   auto col_comm_size = grid.colCommunicator().size();
   auto row_comm_size = grid.rowCommunicator().size();
@@ -141,7 +157,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
     if (mat_a.rankIndex().col() == k_rank_col) {
       auto k_local_col = distr.localTileFromGlobalTile<Coord::Col>(k);
 
-      hpx::shared_future<Tile<const T, Device::CPU>> kk_tile;
+      hpx::shared_future<ConstTileType> kk_tile;
 
       if (mat_a.rankIndex().row() == k_rank_row) {
         auto k_local_row = distr.localTileFromGlobalTile<Coord::Row>(k);
@@ -155,11 +171,10 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
         // Avoid useless communication if one-column communicator and if on the last column
         if (col_comm_size > 1 && k != (mat_a.nrTiles().cols() - 1)) {
           // Broadcast the panel column-wise
-
-          hpx::dataflow(unwrapping([](auto&& tile, auto&& comm_wrapper) {
-                          comm::sync::broadcast::send(comm_wrapper().colCommunicator(), tile);
-                        }),
-                        mat_a.read(kk), serial_comm());
+          auto send_f = unwrapping([](auto&& tile, auto&& comm_wrapper) {
+            comm::sync::broadcast::send(comm_wrapper().colCommunicator(), tile);
+          });
+          dataflow(std::move(send_f), mat_a.read(kk), serial_comm());
         }
 
         kk_tile = mat_a.read(kk);
@@ -168,16 +183,15 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
         // Avoid useless communications if one-column communicator and if on the last column
         if (col_comm_size > 1 && k != (mat_a.nrTiles().cols() - 1)) {
           // Receive the diagonal tile
-          kk_tile = hpx::dataflow(  //
-              executor_mpi,
-              unwrapping([](auto index, auto&& tile_size, auto&& comm_wrapper) -> ConstTileType {
-                memory::MemoryView<T, Device::CPU> mem_view(
-                    util::size_t::mul(tile_size.rows(), tile_size.cols()));
-                Tile<T, Device::CPU> tile(tile_size, std::move(mem_view), tile_size.rows());
-                comm::sync::broadcast::receive_from(index, comm_wrapper().colCommunicator(), tile);
-                return std::move(tile);
-              }),
-              k_rank_row, mat_a.tileSize(GlobalTileIndex(k, k)), serial_comm());
+          auto tile_size = mat_a.tileSize(GlobalTileIndex(k, k));
+          auto recv_f = unwrapping([k_rank_row, tile_size](auto&& comm_wrapper) -> ConstTileType {
+            memory::MemoryView<T, Device::CPU> mem_view(
+                util::size_t::mul(tile_size.rows(), tile_size.cols()));
+            Tile<T, Device::CPU> tile(tile_size, std::move(mem_view), tile_size.rows());
+            comm::sync::broadcast::receive_from(k_rank_row, comm_wrapper().colCommunicator(), tile);
+            return std::move(tile);
+          });
+          kk_tile = hpx::dataflow(executor_mpi, std::move(recv_f), serial_comm());
         }
       }
 
@@ -193,11 +207,11 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
         // Avoid useless communications if one-row communicator grid
         if (row_comm_size > 1) {
           // Broadcast the panel row-wise
-          dataflow(  //
-              executor_mpi, unwrapping([](auto&& tile, auto&& comm_wrapper) {
-                comm::sync::broadcast::send(comm_wrapper().rowCommunicator(), tile);
-              }),
-              mat_a.read(LocalTileIndex{i_local, k_local_col}), serial_comm());
+          auto send_f = unwrapping([](auto&& tile, auto&& comm_wrapper) {
+            comm::sync::broadcast::send(comm_wrapper().rowCommunicator(), tile);
+          });
+          dataflow(executor_mpi, std::move(send_f), mat_a.read(LocalTileIndex{i_local, k_local_col}),
+                   serial_comm());
         }
 
         panel[i_local] = mat_a.read(LocalTileIndex{i_local, k_local_col});
@@ -211,8 +225,8 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
         // Avoid useless communications if one-row communicator grid
         if (row_comm_size > 1) {
           // Receiving the panel
-          auto recv_panel_f = unwrapping([k_rank_col, tile_size = mat_a.tileSize(GlobalTileIndex(i, k))](
-                                             auto&& comm_wrapper) -> ConstTileType {
+          auto tile_size = mat_a.tileSize(GlobalTileIndex(i, k));
+          auto recv_panel_f = unwrapping([k_rank_col, tile_size](auto&& comm_wrapper) -> ConstTileType {
             MemViewType mem_view(util::size_t::mul(tile_size.rows(), tile_size.cols()));
             TileType tile(tile_size, std::move(mem_view), tile_size.rows());
             comm::sync::broadcast::receive_from(k_rank_col, comm_wrapper().rowCommunicator(), tile);
@@ -246,10 +260,10 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
         // Avoid useless communications if one-row communicator grid and if on the last panel
         if (col_comm_size > 1 && j != (mat_a.nrTiles().cols() - 1)) {
           // Broadcast the (trailing) panel column-wise
-          hpx::dataflow(executor_mpi, hpx::util::unwrapping([](auto&& tile, auto&& comm_wrapper) {
-                          comm::sync::broadcast::send(comm_wrapper().colCommunicator(), tile);
-                        }),
-                        panel[i_local], serial_comm());
+          auto send_f = unwrapping([](auto&& tile, auto&& comm_wrapper) {
+            comm::sync::broadcast::send(comm_wrapper().colCommunicator(), tile);
+          });
+          dataflow(executor_mpi, std::move(send_f), panel[i_local], serial_comm());
         }
 
         // Check if the diagonal tile of the trailing matrix is on this node and
@@ -258,8 +272,8 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
         auto herk_f = unwrapping([Lower, NoTrans](auto&& panel_tile, auto&& a_tile) {
           tile::herk<T, Device::CPU>(Lower, NoTrans, -1.0, panel_tile, 1.0, a_tile);
         });
-        hpx::dataflow(trailing_matrix_executor, std::move(herk_f), panel[i_local],
-                      mat_a(LocalTileIndex{i_local, j_local}));
+        dataflow(trailing_matrix_executor, std::move(herk_f), panel[i_local],
+                 mat_a(LocalTileIndex{i_local, j_local}));
 
         col_panel = panel[i_local];
       }
@@ -267,17 +281,14 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
         // Avoid useless communications if one-row communicator grid and if on the last panel
         if (col_comm_size > 1 && j != (mat_a.nrTiles().cols() - 1)) {
           // Update the (trailing) panel column-wise
-          col_panel = hpx::dataflow(  //
-              executor_mpi,
-              hpx::util::unwrapping(
-                  [](auto index, auto&& tile_size, auto&& comm_wrapper) -> Tile<const T, Device::CPU> {
-                    memory::MemoryView<T, Device::CPU> mem_view(
-                        util::size_t::mul(tile_size.rows(), tile_size.cols()));
-                    Tile<T, Device::CPU> tile(tile_size, std::move(mem_view), tile_size.rows());
-                    comm::sync::broadcast::receive_from(index, comm_wrapper().colCommunicator(), tile);
-                    return std::move(tile);
-                  }),
-              j_rank_row, mat_a.tileSize(GlobalTileIndex(j, k)), serial_comm());
+          auto tile_size = mat_a.tileSize(GlobalTileIndex(j, k));
+          auto recv_f = unwrapping([j_rank_row, tile_size](auto&& comm_wrapper) -> ConstTileType {
+            MemViewType mem_view(util::size_t::mul(tile_size.rows(), tile_size.cols()));
+            TileType tile(tile_size, std::move(mem_view), tile_size.rows());
+            comm::sync::broadcast::receive_from(j_rank_row, comm_wrapper().colCommunicator(), tile);
+            return std::move(tile);
+          });
+          col_panel = hpx::dataflow(executor_mpi, std::move(recv_f), serial_comm());
         }
       }
 
@@ -285,9 +296,12 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
            i_local < localnrtile_rows; ++i_local) {
         // Update remaining trailing matrix mat_a(i,j), reading mat_a.read(i,k) and mat_a.read(j,k),
         // using gemm (blas operation)
-        hpx::dataflow(trailing_matrix_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>),
-                      NoTrans, ConjTrans, -1.0, panel[i_local], col_panel, 1.0,
-                      std::move(mat_a(LocalTileIndex{i_local, j_local})));
+        auto gemm_f =
+            unwrapping([NoTrans, ConjTrans](auto&& iloc_panel, auto&& col_panel, auto&& a_tile) {
+              tile::gemm<T, Device::CPU>(NoTrans, ConjTrans, -1.0, iloc_panel, col_panel, 1.0, a_tile);
+            });
+        dataflow(trailing_matrix_executor, std::move(gemm_f), panel[i_local], col_panel,
+                 std::move(mat_a(LocalTileIndex{i_local, j_local})));
       }
     }
   }

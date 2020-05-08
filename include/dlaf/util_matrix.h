@@ -48,7 +48,7 @@ namespace internal {
 /// are not square. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
 #define DLAF_ASSERT_BLOCKSIZE_SQUARE(matrix)                                                \
   DLAF_ASSERT((matrix.blockSize().rows() == matrix.blockSize().cols()), "Matrix ", #matrix, \
-              " blocksize ", matrix.blockSize(), " is not square ")
+              " blocksize ", matrix.blockSize(), " is not square")
 
 /// @brief Assert that @p matrixA and @p matrixB tiles have the same size.
 ///

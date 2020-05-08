@@ -51,28 +51,43 @@ namespace internal {
               #matrix, " is not square (", matrix.blockSize().rows(), "x", matrix.blockSize().cols(), \
               ").")
 
+/// @brief Assert that @p matrixA and @p matrixB tiles have the same size.
+///
+/// When the assertion is enabled, terminates the program with an error message if the blocksize of the two
+/// matrices does not have the same size. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
+#define DLAF_ASSERT_BLOCKSIZE_EQ(matrixA, matrixB)                                                      \
+  DLAF_ASSERT((matrixA.blockSize() == matrixB.blockSize()), "Blocksizes of matrix ", #matrixA, " and ", \
+              #matrixB, " are not the same (", matrixA.blockSize(), " vs ", matrixB.blockSize(), ").")
+
 /// @brief Assert that the @p matrix is distributed on a (1x1) grid (i.e. if it is a local matrix).
 ///
 /// When the assertion is enabled, terminates the program with an error message if matrix is not local.
 /// This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
 #define DLAF_ASSERT_LOCALMATRIX(matrix)                                                         \
   DLAF_ASSERT((matrix.distribution().commGridSize() == comm::Size2D(1, 1)), "Matrix ", #matrix, \
-              " is not local (grid size: ", matrix.distribution().commGridSize().rows(), "x",   \
-              matrix.distribution().commGridSize().cols(), ").")
+              " is not local (grid size: ", matrix.distribution().commGridSize(), ")")
 
 /// @brief Assert that the @p matrix is distributed according to the given communicator grid.
 ///
 /// When the assertion is enabled, terminates the program with an error message if matrix is not on distributed
 /// according to the given communicator grid. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
-#define DLAF_ASSERT_DISTRIBUTED_ON_GRID(grid, matrix)                                                \
-  DLAF_ASSERT(((matrix.distribution().commGridSize() == grid.size()) &&                              \
-               (matrix.distribution().rankIndex() == grid.rank())),                                  \
-              "The matrix ", #matrix, " (rank: ", matrix.distribution().rankIndex(),                 \
-              ", grid size: ", matrix.distribution().commGridSize().rows(), "x",                     \
-              matrix.distribution().commGridSize().cols(),                                           \
-              ") is not distributed according to the communicator grid ", #grid,                     \
-              " (rank: ", grid.rank(), ", grid size: ", grid.size().rows(), "x", grid.size().cols(), \
-              ").")
+#define DLAF_ASSERT_DISTRIBUTED_ON_GRID(grid, matrix)                            \
+  DLAF_ASSERT(((matrix.distribution().commGridSize() == grid.size()) &&          \
+               (matrix.rankIndex() == grid.rank())),                             \
+              "The matrix ", #matrix, " (rank: ", matrix.rankIndex(),            \
+              ", grid size: ", matrix.distribution().commGridSize(),             \
+              ") is not distributed according to the communicator grid ", #grid, \
+              " (rank: ", grid.rank(), ", grid size: ", grid.size(), ").")
+
+/// @brief Assert that @p matrixA and @p matrixB are distributed in the same way.
+///
+/// When the assertion is enabled, terminates the program with an error message if matrices are not
+/// distributed in the same way. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
+#define DLAF_ASSERT_DISTRIBUTED_EQ(matrixA, matrixB)                                                 \
+  DLAF_ASSERT(matrixA.distribution() == matrixB.distribution(), "The matrix ", #matrixA, " and ",    \
+              #matrixB, " are not distributed in the same way (rank: ", matrixA.rankIndex(), " vs ", \
+              matrixB.rankIndex(), ", grid size: ", matrixA.distribution().commGridSize(), " vs ",   \
+              matrixB.distribution().commGridSize(), ")")
 
 template <class MatrixConst, class Matrix, class Mat, class Location>
 void assertMultipliableMatrices(const MatrixConst& mat_a, const Matrix& mat_b, const Mat& mat_c,

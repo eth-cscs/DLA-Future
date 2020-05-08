@@ -35,7 +35,9 @@ public:
   }
 };
 
-TYPED_TEST_SUITE(NormMaxDistributedTest, ::testing::Types<float>); // TODO fix for complex MatrixElementTypes
+using COMPLEX_DOES_NOT_WORK =
+    ::testing::Types<float, double>;  // TODO fix for complex MatrixElementTypes
+TYPED_TEST_SUITE(NormMaxDistributedTest, COMPLEX_DOES_NOT_WORK);
 
 const std::vector<LocalElementSize> square_sizes({{10, 10}, {25, 25}, {12, 12}, {0, 0}});
 const std::vector<TileElementSize> square_block_sizes({{3, 3}, {5, 5}});
@@ -45,51 +47,22 @@ GlobalElementSize globalTestSize(const LocalElementSize& size) {
 }
 
 TYPED_TEST(NormMaxDistributedTest, Correctness) {
-  //// Note: The tile elements are chosen such that:
-  //// - res_ij = 1 / 2^(|i-j|) * exp(I*(-i+j)),
-  //// where I = 0 for real types or I is the complex unit for complex types.
-  //// Therefore the result should be:
-  //// a_ij = Sum_k(res_ik * ConjTrans(res)_kj) =
-  ////      = Sum_k(1 / 2^(|i-k| + |j-k|) * exp(I*(-i+j))),
-  //// where k = 0 .. min(i,j)
-  //// Therefore,
-  //// a_ij = (4^(min(i,j)+1) - 1) / (3 * 2^(i+j)) * exp(I*(-i+j))
-  //auto el = [](const GlobalElementIndex& index) {
-  //  SizeType i = index.row();
-  //  SizeType j = index.col();
-  //  if (i < j)
-  //    return TypeUtilities<TypeParam>::element(-9.9, 0.0);
-
-  //  return TypeUtilities<TypeParam>::polar(std::exp2(-(i + j)) / 3 *
-  //                                             (std::exp2(2 * (std::min(i, j) + 1)) - 1),
-  //                                         -i + j);
-  //};
-
-  //// Analytical results
-  //auto res = [](const GlobalElementIndex& index) {
-  //  SizeType i = index.row();
-  //  SizeType j = index.col();
-  //  if (i < j)
-  //    return TypeUtilities<TypeParam>::element(-9.9, 0.0);
-
-  //  return TypeUtilities<TypeParam>::polar(std::exp2(-std::abs(i - j)), -i + j);
-  //};
+  auto el = [](const GlobalElementIndex&) { return 0; };
 
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& size : square_sizes) {
       for (const auto& block_size : square_block_sizes) {
-        // Matrix to undergo Cholesky decomposition
         Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
                                std::min(1, comm_grid.size().cols() - 1));
         GlobalElementSize sz = globalTestSize(size);
         Distribution distribution(sz, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
         Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
-        //set(mat, el);
 
-        Utility<Backend::MC>::norm_max(comm_grid, blas::Uplo::Lower, mat);
+        set(mat, el);
 
-        //CHECK_MATRIX_NEAR(res, mat, 4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error,
-        //                  4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);
+        const TypeParam result = Utility<Backend::MC>::norm_max(comm_grid, blas::Uplo::Lower, mat);
+
+        EXPECT_NEAR(0, result, TypeUtilities<TypeParam>::error);
       }
     }
   }

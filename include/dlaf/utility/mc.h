@@ -33,7 +33,7 @@ struct Utility<Backend::MC> {
   /// @pre mat_a has a square block size
   /// @pre mat_a is distributed according to grid.
   template <class T>
-  static void norm_max(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, Device::CPU>& mat_a);
+  static T norm_max(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& mat_a);
 };
 
 }

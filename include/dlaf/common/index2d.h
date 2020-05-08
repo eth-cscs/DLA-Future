@@ -212,8 +212,8 @@ Index2D<IndexT, Tag> computeCoordsRowMajor(std::ptrdiff_t linear_index,
 
   DLAF_ASSERT_MODERATE(linear_index >= 0, "The linear index cannot be negative (",
                        std::to_string(linear_index), ")");
-  DLAF_ASSERT_MODERATE(linear_index < mul(dims.rows(), dims.cols()),
-                       "Linear index ", std::to_string(linear_index), " does not fit into grid ", dims);
+  DLAF_ASSERT_MODERATE(linear_index < mul(dims.rows(), dims.cols()), "Linear index ",
+                       std::to_string(linear_index), " does not fit into grid ", dims);
 
   std::ptrdiff_t leading_size = dims.cols();
   return {to_signed<IndexT>(linear_index / leading_size),
@@ -234,8 +234,8 @@ Index2D<IndexT, Tag> computeCoordsColMajor(std::ptrdiff_t linear_index,
 
   DLAF_ASSERT_MODERATE(linear_index >= 0, "The linear index cannot be negative (",
                        std::to_string(linear_index), ")");
-  DLAF_ASSERT_MODERATE(linear_index < mul(dims.rows(), dims.cols()),
-                       "Linear index ", std::to_string(linear_index), " does not fit into grid ", dims);
+  DLAF_ASSERT_MODERATE(linear_index < mul(dims.rows(), dims.cols()), "Linear index ",
+                       std::to_string(linear_index), " does not fit into grid ", dims);
 
   std::ptrdiff_t leading_size = dims.rows();
   return {to_signed<IndexT>(linear_index % leading_size),

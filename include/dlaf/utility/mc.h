@@ -39,20 +39,18 @@ struct Utility<Backend::MC> {
 }
 
 #include "dlaf/utility/norm_max/mc.tpp"
-//
-///// ---- ETI
-//namespace dlaf {
-//
-//#define DLAF_CHOLESKY_ETI(KWORD, DATATYPE)                                                            \
-//  KWORD template void Factorization<Backend::MC>::cholesky<DATATYPE>(comm::CommunicatorGrid,          \
-//                                                                     blas::Uplo,                      \
-//                                                                     Matrix<DATATYPE, Device::CPU>&); \
-//  KWORD template void Factorization<Backend::MC>::cholesky<DATATYPE>(blas::Uplo,                      \
-//                                                                     Matrix<DATATYPE, Device::CPU>&);
-//
-//DLAF_CHOLESKY_ETI(extern, float)
-//DLAF_CHOLESKY_ETI(extern, double)
-//DLAF_CHOLESKY_ETI(extern, std::complex<float>)
-//DLAF_CHOLESKY_ETI(extern, std::complex<double>)
-//
-//}
+
+/// ---- ETI
+namespace dlaf {
+
+#define DLAF_NORM_MAX_ETI(KWORD, DATATYPE)                                     \
+  KWORD template DATATYPE                                                      \
+  Utility<Backend::MC>::norm_max<DATATYPE>(comm::CommunicatorGrid, blas::Uplo, \
+                                           Matrix<const DATATYPE, Device::CPU>&);
+
+DLAF_NORM_MAX_ETI(extern, float)
+DLAF_NORM_MAX_ETI(extern, double)
+// DLAF_NORM_MAX_ETI(extern, std::complex<float>)
+// DLAF_NORM_MAX_ETI(extern, std::complex<double>)
+
+}

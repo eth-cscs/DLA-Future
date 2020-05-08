@@ -42,10 +42,10 @@ namespace internal {
   DLAF_ASSERT((matrix.size().rows() == matrix.size().cols()), "Matrix ", #matrix, " ", matrix.size(), \
               " is not square")
 
-/// @brief Assert that the @p matrix is square.
+/// @brief Assert that @p matrixA and @p matrixB have the same size.
 ///
-/// When the assertion is enabled, terminates the program with an error message if the matrix is not
-/// square. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
+/// When the assertion is enabled, terminates the program with an error message if the two
+/// matrices does not have the same size. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
 #define DLAF_ASSERT_SIZE_EQ(matrixA, matrixB)                                                          \
   DLAF_ASSERT((matrixA.size() == matrixB.size()), "Matrices ", #matrixA, " ", matrixA.size(), " and ", \
               #matrixB, " ", matrixB.size(), " does not have the same size")

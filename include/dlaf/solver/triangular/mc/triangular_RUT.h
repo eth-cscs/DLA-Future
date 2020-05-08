@@ -11,6 +11,7 @@
 
 #include <hpx/include/parallel_executors.hpp>
 #include <hpx/include/threads.hpp>
+#include <hpx/runtime/threads/executors/pool_executor.hpp>
 
 #include "dlaf/blas_tile.h"
 #include "dlaf/common/index2d.h"
@@ -33,13 +34,18 @@ void triangular_RUT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, Devic
   constexpr auto Upper = blas::Uplo::Upper;
   constexpr auto NoTrans = blas::Op::NoTrans;
 
-  // Set up executor on the default queue with high priority.
-  hpx::threads::scheduled_executor executor_hp =
-      hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_high);
+  using std::move;
 
+  using hpx::threads::executors::pool_executor;
+  using hpx::threads::thread_priority_high;
+  using hpx::threads::thread_priority_default;
+  using hpx::util::unwrapping;
+  using hpx::dataflow;
+
+  // Set up executor on the default queue with high priority.
+  pool_executor executor_hp("default", thread_priority_high);
   // Set up executor on the default queue with default priority.
-  hpx::threads::scheduled_executor executor_normal =
-      hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_default);
+  pool_executor executor_normal("default", thread_priority_default);
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -49,8 +55,10 @@ void triangular_RUT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, Devic
       auto ik = LocalTileIndex{i, k};
 
       // Triangular solve of k-th col Panel of B
-      hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), Right, Upper, op,
-                    diag, alpha, mat_a.read(LocalTileIndex{k, k}), std::move(mat_b(ik)));
+      auto trsm_f = unwrapping([Right, Upper, op, diag, alpha](auto&& kk_tile, auto&& ik_tile) {
+        tile::trsm<T, Device::CPU>(Right, Upper, op, diag, alpha, kk_tile, ik_tile);
+      });
+      dataflow(executor_hp, move(trsm_f), mat_a.read(LocalTileIndex{k, k}), move(mat_b(ik)));
 
       for (SizeType j = k - 1; j > -1; --j) {
         // Choose queue priority
@@ -58,9 +66,11 @@ void triangular_RUT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, Devic
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        hpx::dataflow(trailing_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans, op,
-                      beta, mat_b.read(ik), mat_a.read(LocalTileIndex{j, k}), 1.0,
-                      std::move(mat_b(LocalTileIndex{i, j})));
+        auto gemm_f = unwrapping([NoTrans, op, beta](auto&& ik_tile, auto&& jk_tile, auto&& ij_tile) {
+          tile::gemm<T, Device::CPU>(NoTrans, op, beta, ik_tile, jk_tile, 1.0, ij_tile);
+        });
+        dataflow(trailing_executor, move(gemm_f), mat_b.read(ik), mat_a.read(LocalTileIndex{j, k}),
+                 move(mat_b(LocalTileIndex{i, j})));
       }
     }
   }

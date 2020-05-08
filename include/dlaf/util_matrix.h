@@ -56,7 +56,7 @@ namespace internal {
 /// matrices does not have the same size. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
 #define DLAF_ASSERT_BLOCKSIZE_EQ(matrixA, matrixB)                                                      \
   DLAF_ASSERT((matrixA.blockSize() == matrixB.blockSize()), "Blocksizes of matrix ", #matrixA, " and ", \
-              #matrixB, " are not the same (", matrixA.blockSize(), " vs ", matrixB.blockSize(), ").")
+              #matrixB, " are not the same (", matrixA.blockSize(), " vs ", matrixB.blockSize(), ")")
 
 /// @brief Assert that the @p matrix is distributed on a (1x1) grid (i.e. if it is a local matrix).
 ///
@@ -122,7 +122,7 @@ void assertMultipliableMatrices(const MatrixConst& mat_a, const Matrix& mat_b, c
                           "Size mismatch: ", mat_a_name, " (", rows(mat_a.size(), opA), ", ",
                           cols(mat_a.size(), opA), ") x ", mat_b_name, " (", rows(mat_b.size(), opB),
                           ", ", cols(mat_b.size(), opB), ") --> ", mat_c_name, " ", mat_c.size(),
-                          " cannot be performed.");
+                          " cannot be performed");
 
   DLAF_ASSERT_WITH_ORIGIN(location,
                           rows(mat_a.blockSize(), opA) == mat_c.blockSize().rows() &&
@@ -131,7 +131,7 @@ void assertMultipliableMatrices(const MatrixConst& mat_a, const Matrix& mat_b, c
                           "Blocksize mismatch: ", mat_a_name, " (", rows(mat_a.blockSize(), opA), ", ",
                           cols(mat_a.blockSize(), opA), ") x ", mat_b_name, " (",
                           rows(mat_b.blockSize(), opB), ", ", cols(mat_b.blockSize(), opB), ") --> ",
-                          mat_c_name, " ", mat_c.blockSize(), " cannot be performed.");
+                          mat_c_name, " ", mat_c.blockSize(), " cannot be performed");
 }
 /// @brief Assert that the matrices @p mat_a and @p mat_b are multipliable and that matrix @p mat_c can
 /// store the result of this multiplication.

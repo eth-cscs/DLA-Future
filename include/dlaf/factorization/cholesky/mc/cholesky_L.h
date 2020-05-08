@@ -181,8 +181,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
           // Receive the diagonal tile
           auto tile_size = mat_a.tileSize(GlobalTileIndex(k, k));
           auto recv_f = unwrapping([k_rank_row, tile_size](auto&& comm_wrapper) -> ConstTileType {
-            memory::MemoryView<T, Device::CPU> mem_view(
-                util::size_t::mul(tile_size.rows(), tile_size.cols()));
+            MemViewType mem_view(util::size_t::mul(tile_size.rows(), tile_size.cols()));
             Tile<T, Device::CPU> tile(tile_size, move(mem_view), tile_size.rows());
             comm::sync::broadcast::receive_from(k_rank_row, comm_wrapper().colCommunicator(), tile);
             return move(tile);

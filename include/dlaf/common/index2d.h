@@ -99,14 +99,6 @@ public:
     return out << "(" << index.row_ << ", " << index.col_ << ")";
   }
 
-  friend basic_coords operator+(basic_coords lhs, basic_coords rhs) noexcept {
-    return basic_coords(lhs.row_ + rhs.row_, lhs.col_ + rhs.col_);
-  }
-
-  friend basic_coords operator-(basic_coords lhs, basic_coords rhs) noexcept {
-    return basic_coords(lhs.row_ - rhs.row_, lhs.col_ - rhs.col_);
-  }
-
 protected:
   IndexT row_;
   IndexT col_;
@@ -124,12 +116,8 @@ Coords2DType transposed(const Coords2DType& coords) {
 /// @tparam Tag for strong-typing
 template <typename IndexT, class Tag>
 class Size2D : public internal::basic_coords<IndexT> {
-  using base = internal::basic_coords<IndexT>;
-
 public:
-  using base::basic_coords;
-
-  Size2D(base const& coords) noexcept : base(coords) {}
+  using internal::basic_coords<IndexT>::basic_coords;
 
   IndexT rows() const noexcept {
     return internal::basic_coords<IndexT>::row_;
@@ -156,15 +144,11 @@ public:
 /// @tparam Tag for strong-typing
 template <typename IndexT, class Tag>
 class Index2D : public internal::basic_coords<IndexT> {
-  using base = internal::basic_coords<IndexT>;
-
 public:
   using IndexType = IndexT;
 
   /// Create an invalid 2D coordinate
   Index2D() noexcept : internal::basic_coords<IndexT>(-1, -1) {}
-
-  Index2D(base const& coords) noexcept : base(coords) {}
 
   /// Create a valid 2D coordinate
   /// @param row index of the row
@@ -274,6 +258,39 @@ IndexT computeLinearIndex(Ordering ordering, const Index2D<IndexT, Tag>& index,
     default:
       return {};
   }
+}
+/// The following operations are defined:
+///
+/// Index +/- Size -> Index
+/// Index - Index -> Size
+/// Size +/- Size -> Size
+
+template <class IndexT, class Tag>
+Index2D<IndexT, Tag> operator+(const Index2D<IndexT, Tag>& lhs,
+                               const Size2D<IndexT, Tag>& rhs) noexcept {
+  return Index2D<IndexT, Tag>(lhs.row() + rhs.rows(), lhs.col() + rhs.cols());
+}
+
+template <class IndexT, class Tag>
+Index2D<IndexT, Tag> operator-(const Index2D<IndexT, Tag>& lhs,
+                               const Size2D<IndexT, Tag>& rhs) noexcept {
+  return Index2D<IndexT, Tag>(lhs.row() - rhs.rows(), lhs.col() - rhs.cols());
+}
+
+template <class IndexT, class Tag>
+Size2D<IndexT, Tag> operator-(const Index2D<IndexT, Tag>& lhs,
+                              const Index2D<IndexT, Tag>& rhs) noexcept {
+  return Size2D<IndexT, Tag>(lhs.row() - rhs.row(), lhs.col() - rhs.col());
+}
+
+template <class IndexT, class Tag>
+Size2D<IndexT, Tag> operator-(const Size2D<IndexT, Tag>& lhs, const Size2D<IndexT, Tag>& rhs) noexcept {
+  return Size2D<IndexT, Tag>(lhs.rows() - rhs.rows(), lhs.cols() - rhs.cols());
+}
+
+template <class IndexT, class Tag>
+Size2D<IndexT, Tag> operator+(const Size2D<IndexT, Tag>& lhs, const Size2D<IndexT, Tag>& rhs) noexcept {
+  return Size2D<IndexT, Tag>(lhs.rows() + rhs.rows(), lhs.cols() + rhs.cols());
 }
 
 }

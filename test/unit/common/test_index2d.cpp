@@ -49,15 +49,6 @@ TYPED_TEST(Index2DTest, ConstructorFromParams) {
   EXPECT_TRUE(index.isValid());
 }
 
-TYPED_TEST(Index2DTest, ConstructorFromCoords) {
-  TypeParam row = 5;
-  TypeParam col = 3;
-  Index2D<TypeParam> index(Size2D<TypeParam>(row, col));
-
-  EXPECT_EQ(row, index.row());
-  EXPECT_EQ(col, index.col());
-}
-
 TYPED_TEST(Index2DTest, ConstructorFromArray) {
   std::array<TypeParam, 2> coords{5, 3};
   Index2D<TypeParam> index(coords);
@@ -148,24 +139,6 @@ TYPED_TEST(Index2DTest, Print) {
   s.str("");
   s << index2;
   EXPECT_EQ("(9, 6)", s.str());
-}
-
-TYPED_TEST(Index2DTest, Substraction) {
-  Index2D<TypeParam> lhs(6, 5);
-  Index2D<TypeParam> rhs(3, 4);
-
-  Index2D<TypeParam> act(lhs - rhs);
-  Index2D<TypeParam> exp(3, 1);
-  ASSERT_TRUE(act == exp);
-}
-
-TYPED_TEST(Index2DTest, Addition) {
-  Index2D<TypeParam> lhs(6, 5);
-  Index2D<TypeParam> rhs(3, 4);
-
-  Index2D<TypeParam> act(lhs + rhs);
-  Index2D<TypeParam> exp(9, 9);
-  ASSERT_TRUE(act == exp);
 }
 
 TYPED_TEST(Index2DTest, ComputeLinearIndex) {

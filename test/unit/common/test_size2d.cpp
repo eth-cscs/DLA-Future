@@ -37,15 +37,6 @@ TYPED_TEST(Size2DTest, ConstructorFromParams) {
   EXPECT_TRUE(size.isValid());
 }
 
-TYPED_TEST(Size2DTest, ConstructorFromCoords) {
-  TypeParam row = 5;
-  TypeParam col = 3;
-  Size2D<TypeParam> size(Index2D<TypeParam>(row, col));
-
-  EXPECT_EQ(row, size.rows());
-  EXPECT_EQ(col, size.cols());
-}
-
 TYPED_TEST(Size2DTest, ConstructorFromArray) {
   std::array<TypeParam, 2> coords{5, 3};
   Size2D<TypeParam> size(coords);
@@ -107,20 +98,12 @@ TYPED_TEST(Size2DTest, Print) {
   EXPECT_EQ("(9, 6)", s.str());
 }
 
-TYPED_TEST(Size2DTest, Substraction) {
-  Size2D<TypeParam> lhs(6, 5);
-  Size2D<TypeParam> rhs(3, 4);
-
-  Size2D<TypeParam> act(lhs - rhs);
-  Size2D<TypeParam> exp(3, 1);
-  ASSERT_TRUE(act == exp);
-}
-
-TYPED_TEST(Size2DTest, Addition) {
-  Size2D<TypeParam> lhs(6, 5);
-  Size2D<TypeParam> rhs(3, 4);
-
-  Size2D<TypeParam> act(lhs + rhs);
-  Size2D<TypeParam> exp(9, 9);
-  ASSERT_TRUE(act == exp);
+TYPED_TEST(Size2DTest, Arithmetic) {
+  using size2d_t = Size2D<TypeParam>;
+  using index2d_t = Index2D<TypeParam>;
+  ASSERT_TRUE(index2d_t(6, 5) - size2d_t(3, 4) == index2d_t(3, 1));
+  ASSERT_TRUE(index2d_t(6, 5) + size2d_t(3, 4) == index2d_t(9, 9));
+  ASSERT_TRUE(size2d_t(6, 5) - size2d_t(3, 4) == size2d_t(3, 1));
+  ASSERT_TRUE(size2d_t(6, 5) + size2d_t(3, 4) == size2d_t(9, 9));
+  ASSERT_TRUE(index2d_t(6, 5) - index2d_t(3, 4) == size2d_t(3, 1));
 }

@@ -77,7 +77,7 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
   using hpx::threads::thread_priority_high;
   using hpx::threads::thread_priority_default;
 
-  using comm::mpi_pool_exists;
+  using comm::internal::mpi_pool_exists;
   using common::internal::vector;
 
   constexpr auto Left = blas::Side::Left;

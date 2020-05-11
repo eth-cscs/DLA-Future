@@ -16,6 +16,7 @@
 
 namespace dlaf {
 namespace comm {
+namespace internal {
 
 // Temporary workaround until HPX v1.5 which exposes a proper API
 inline bool mpi_pool_exists() {
@@ -29,5 +30,6 @@ inline bool mpi_pool_exists() {
   }
 }
 
+}
 }
 }

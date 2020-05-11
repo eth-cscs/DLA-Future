@@ -92,7 +92,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
   using hpx::threads::thread_priority_high;
   using hpx::threads::thread_priority_default;
 
-  using comm::mpi_pool_exists;
+  using comm::internal::mpi_pool_exists;
 
   constexpr auto NonUnit = blas::Diag::NonUnit;
   constexpr auto ConjTrans = blas::Op::ConjTrans;

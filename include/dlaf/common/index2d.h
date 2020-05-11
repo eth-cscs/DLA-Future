@@ -155,19 +155,12 @@ class Index2D : public internal::basic_coords<IndexT> {
   using BaseT = internal::basic_coords<IndexT>;
 
 public:
+  using BaseT::basic_coords;
+
   using IndexType = IndexT;
 
   /// Create an invalid 2D coordinate
   Index2D() noexcept : BaseT(-1, -1) {}
-
-  /// Create a valid 2D coordinate
-  /// @param row index of the row
-  /// @param col index of the column
-  /// @throw std::invalid_argument if row < 0 or col < 0
-  Index2D(IndexT row, IndexT col) : BaseT(row, col) {
-    if (!BaseT::isValid())
-      throw std::invalid_argument("indices are not valid (negative).");
-  }
 
   /// Create a valid 2D coordinate
   /// @see Index2D::Index2D(IndexT row, IndexT col)
@@ -279,6 +272,7 @@ IndexT computeLinearIndex(Ordering ordering, const Index2D<IndexT, Tag>& index,
       return {};
   }
 }
+
 /// The following operations are defined:
 ///
 /// Index +/- Size -> Index

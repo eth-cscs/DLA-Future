@@ -12,14 +12,15 @@
 #include <blas_util.hh>
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix.h"
+#include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 #include "dlaf/utility/norm_max/mc/norm_max.h"
 
 namespace dlaf {
 
 template <class T>
-T Utility<Backend::MC>::norm_max(comm::CommunicatorGrid grid, blas::Uplo uplo,
-                                 Matrix<const T, Device::CPU>& mat_a) {
+dlaf::BaseType<T> Utility<Backend::MC>::norm_max(comm::CommunicatorGrid grid, blas::Uplo uplo,
+                                                 Matrix<const T, Device::CPU>& mat_a) {
   // Check if matrix is square
   DLAF_ASSERT_SIZE_SQUARE(mat_a);
   // Check if block matrix is square
@@ -35,7 +36,7 @@ T Utility<Backend::MC>::norm_max(comm::CommunicatorGrid grid, blas::Uplo uplo,
     case blas::Uplo::General:
       throw std::runtime_error("uplo = General not yet implemented");
     default:
-      return T{};
+      return {};
   }
 }
 

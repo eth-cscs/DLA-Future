@@ -91,7 +91,7 @@ protected:
     return row_ == rhs.row_ && col_ == rhs.col_;
   }
 
-  /// @return true if `this` and `rhs` have the different row or column.
+  /// @return true if `this` and `rhs` have different row or column.
   bool operator!=(const basic_coords& rhs) const noexcept {
     return !operator==(rhs);
   }
@@ -137,7 +137,7 @@ public:
     return BaseT::operator==(rhs);
   }
 
-  /// @return true if `this` and `rhs` have the different row or column.
+  /// @return true if `this` and `rhs` have different row or column.
   bool operator!=(const Size2D& rhs) const noexcept {
     return BaseT::operator!=(rhs);
   }
@@ -182,7 +182,7 @@ public:
     return BaseT::operator==(rhs);
   }
 
-  /// @return true if `this` and `rhs` have the different row or column.
+  /// @return true if `this` and `rhs` have different row or column.
   bool operator!=(const Index2D& rhs) const noexcept {
     return BaseT::operator!=(rhs);
   }

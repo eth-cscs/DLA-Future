@@ -59,6 +59,17 @@ TYPED_TEST(Index2DTest, ConstructorFromArray) {
   EXPECT_TRUE(index.isValid());
 }
 
+TYPED_TEST(Index2DTest, Negative) {
+  auto index_tests =
+      std::vector<std::pair<TypeParam, TypeParam>>{std::make_pair(-10, -10), std::make_pair(-1, -1),
+                                                   std::make_pair(-15, 3), std::make_pair(8, -7)};
+
+  for (auto& test : index_tests) {
+    EXPECT_FALSE(Index2D<TypeParam>(test.first, test.second).isValid());
+    EXPECT_FALSE(Index2D<TypeParam>(std::array<TypeParam, 2>{test.first, test.second}).isValid());
+  }
+}
+
 TYPED_TEST(Index2DTest, BoundaryCheck) {
   dlaf::common::Size2D<TypeParam, struct TAG_TEST> boundary(3, 6);
 

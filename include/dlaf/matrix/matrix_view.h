@@ -54,12 +54,9 @@ public:
   /// Returns a read-only shared_future of the Tile with global index @p index.
   ///
   /// TODO: Sync details.
-  /// When the assertion is enabled, terminates the program with an error
-  /// message if the global tile is not stored in the current process.
-  /// This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
   ///
-  /// @pre index.isValid() == true.
-  /// @pre index.isIn(globalNrTiles()) == true.
+  /// @pre index.isValid() and index.isIn(globalNrTiles())
+  /// @pre global tile store in current process
   hpx::shared_future<ConstTileType> read(const GlobalTileIndex& index) {
     return read(distribution().localTileIndex(index));
   }

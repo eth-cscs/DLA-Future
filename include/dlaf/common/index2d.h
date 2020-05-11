@@ -172,9 +172,8 @@ public:
   /// Create a valid 2D coordinate
   /// @see Index2D::Index2D(IndexT row, IndexT col)
   /// @param coords where coords[0] is the row index and coords[1] is the column index
-  /// When the assertion is enabled, terminates the program with an error
-  /// message if coords[0] < 0 or coords[1] < 0. This assertion is enabled when
-  /// **DLAF_ASSERT_ENABLE** is ON.
+  /// @pre coords[0] >= 0
+  /// @pre coords[1] >= 0
   Index2D(const std::array<IndexT, 2>& coords) : Index2D(coords[0], coords[1]) {}
 
   /// @brief Check if it is a valid position inside the grid size specified by @p boundary

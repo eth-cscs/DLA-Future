@@ -32,6 +32,10 @@ struct Solver<Backend::MC> {
   /// elements are not modified).
   /// @param mat_b on entry it contains the matrix B, on exit the matrix elements are overwritten with the
   /// elements of the matrix X.
+  /// @pre matrix A has a square size
+  /// @pre matrix A has a square block size
+  /// @pre matrix A and matrix B are not distributed
+  /// @pre matrix A and matrix B are multipliable
   template <class T>
   static void triangular(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha,
                          Matrix<const T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_b);
@@ -51,6 +55,10 @@ struct Solver<Backend::MC> {
   /// elements are not modified).
   /// @param mat_b on entry it contains the matrix B, on exit the matrix elements are overwritten with
   /// the elements of the matrix X.
+  /// @pre matrix A has a square size
+  /// @pre matrix A has a square block size
+  /// @pre matrix A and matrix B are distributed according to the grid
+  /// @pre matrix A and matrix B are multipliable
   template <class T>
   static void triangular(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, blas::Op op,
                          blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_a,

@@ -103,13 +103,6 @@ void testPotrfArgExceptions(blas::Uplo uplo, TileElementSize size_a, SizeType ex
 
   // Create tiles.
   Tile<T, Device::CPU> a(size_a, std::move(mem_a), lda);
-
-  if (return_info) {
-    EXPECT_DEATH(tile::potrfInfo(uplo, a), "[ERROR]");
-  }
-  else {
-    EXPECT_DEATH(tile::potrf(uplo, a), "[ERROR]");
-  }
 }
 
 template <class T, bool return_info>
@@ -136,8 +129,5 @@ void testPotrfNonPosDef(blas::Uplo uplo, SizeType n, SizeType extra_lda) {
 
   if (return_info) {
     EXPECT_EQ(1, tile::potrfInfo(uplo, a));
-  }
-  else {
-    EXPECT_DEATH(tile::potrf(uplo, a), "[ERROR]");
   }
 }

@@ -28,10 +28,7 @@ public:
 
   /// Constructs a distribution for a non distributed matrix of size @p size and block size @p block_size.
   ///
-  /// When the assertion is enabled, terminates the program with an error
-  /// message if @p !size.isValid(), if !block_size.isValid() or if @p
-  /// block_size_.isEmpty(). This assertion is enabled when
-  /// **DLAF_ASSERT_ENABLE** is ON.
+  /// @pre size.isValid(), block_size.isValid() and !block_size.isEmpty()
   Distribution(const LocalElementSize& size, const TileElementSize& block_size);
 
   /// Constructs a distribution for a matrix of size @p size and block size @p block_size,
@@ -39,12 +36,10 @@ public:
   ///
   /// @param[in] rank_index is the rank of the current process,
   /// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix.
-  /// When the assertion is enabled, terminates the program with an error
-  /// message if @p !size.isValid(), if !block_size.isValid() or if @p
-  /// block_size_.isEmpty(), if @p !grid_size.isValid() or @p grid_size_.isEmpty(),
-  /// @p !rank_index.isValid() or @p !rank_index_.isIn(grid_size), or
-  /// if @p !source_rank_index.isValid() or @p !source_rank_index_.isIn(grid_size).
-  /// This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
+  /// @pre size.isValid(), block_size.isValid() and !block_size.isEmpty()
+  /// @pre grid_size.isValid() and !grid_size_.isEmpty()
+  /// @pre rank_index.isValid() and rank_index_.isIn(grid_size)
+  /// @pre source_rank_index.isValid() and source_rank_index_.isIn(grid_size)
   Distribution(const GlobalElementSize& size, const TileElementSize& block_size,
                const comm::Size2D& grid_size, const comm::Index2D& rank_index,
                const comm::Index2D& source_rank_index);
@@ -150,10 +145,8 @@ public:
 
   /// Returns the local 2D index in current process of the tile with index @p global_tile.
   ///
-  /// When the assertion is enabled, terminates the program with an error message if
-  /// the global tile is not stored in the current process.
-  /// This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
   /// @pre global_tile.isValid() and global_tile.isIn(nrTiles())
+  /// @pre rank_index == rankGlobalTile(global_tile)
   LocalTileIndex localTileIndex(const GlobalTileIndex& global_tile) const {
     DLAF_ASSERT_HEAVY((global_tile.isValid() && global_tile.isIn(global_nr_tiles_)));
 

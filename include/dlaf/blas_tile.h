@@ -24,17 +24,17 @@ namespace tile {
 /// @brief Computes general matrix matrix multiplication.
 template <class T, Device device>
 void gemm(blas::Op op_a, blas::Op op_b, T alpha, const Tile<const T, device>& a,
-          const Tile<const T, device>& b, T beta, const Tile<T, device>& c);
+          const Tile<const T, device>& b, T beta, const Tile<T, device>& c) noexcept;
 
 /// @brief Performs a rank k update of hermitian (symmetric if T is real) tile a.
 template <class T, Device device>
 void herk(blas::Uplo uplo, blas::Op op, BaseType<T> alpha, const Tile<const T, device>& a,
-          BaseType<T> beta, const Tile<T, device>& c);
+          BaseType<T> beta, const Tile<T, device>& c) noexcept;
 
 /// @brief Performs a triangular solve.
 template <class T, Device device>
 void trsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha,
-          const Tile<const T, device>& a, const Tile<T, device>& b);
+          const Tile<const T, device>& a, const Tile<T, device>& b) noexcept;
 
 #include "dlaf/blas_tile.tpp"
 }

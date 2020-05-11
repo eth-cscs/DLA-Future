@@ -10,7 +10,7 @@
 
 template <class T, Device device>
 void gemm(blas::Op op_a, blas::Op op_b, T alpha, const Tile<const T, device>& a,
-          const Tile<const T, device>& b, T beta, const Tile<T, device>& c) {
+          const Tile<const T, device>& b, T beta, const Tile<T, device>& c) noexcept {
   SizeType m;
   SizeType k;
   if (op_a == blas::Op::NoTrans) {
@@ -32,9 +32,9 @@ void gemm(blas::Op op_a, blas::Op op_b, T alpha, const Tile<const T, device>& a,
     n = b.size().rows();
   }
 
-  DLAF_ASSERT((m == c.size().rows()), "GEMM: m cannot be determined.");
-  DLAF_ASSERT((n == c.size().cols()), "GEMM: n cannot be determined.");
-  DLAF_ASSERT((k == k2), "GEMM: k cannot be determined.");
+  DLAF_ASSERT((m == c.size().rows()), "m cannot be determined (", m, " != ", c.size().rows(), ")");
+  DLAF_ASSERT((n == c.size().cols()), "n cannot be determined (", n, " != ", c.size().cols(), ")");
+  DLAF_ASSERT((k == k2), "k cannot be determined (", k, " != ", k2, ")");
 
   blas::gemm(blas::Layout::ColMajor, op_a, op_b, m, n, k, alpha, a.ptr(), a.ld(), b.ptr(), b.ld(), beta,
              c.ptr(), c.ld());
@@ -42,7 +42,7 @@ void gemm(blas::Op op_a, blas::Op op_b, T alpha, const Tile<const T, device>& a,
 
 template <class T, Device device>
 void herk(blas::Uplo uplo, blas::Op op, BaseType<T> alpha, const Tile<const T, device>& a,
-          BaseType<T> beta, const Tile<T, device>& c) {
+          BaseType<T> beta, const Tile<T, device>& c) noexcept {
   SizeType n;
   SizeType k;
   if (op == blas::Op::NoTrans) {
@@ -55,21 +55,24 @@ void herk(blas::Uplo uplo, blas::Op op, BaseType<T> alpha, const Tile<const T, d
   }
 
   DLAF_ASSERT((!std::is_same<T, ComplexType<T>>::value || op != blas::Op::Trans),
-              "Complex HERK: op = Trans is not allowed.");
-  DLAF_ASSERT((c.size().rows() == c.size().cols()), "HERK: C is not square.");
-  DLAF_ASSERT((c.size().rows() == n), "HERK: C has an invalid size.");
+              "op = Trans is not allowed for Complex values");
+  DLAF_ASSERT((c.size().rows() == c.size().cols()), "c is not square (", c.size().rows(),
+              " != ", c.size().cols(), ")");
+  DLAF_ASSERT((c.size().rows() == n), "c has an invalid size (", c.size().rows(), " != ", n, ")");
 
   blas::herk(blas::Layout::ColMajor, uplo, op, n, k, alpha, a.ptr(), a.ld(), beta, c.ptr(), c.ld());
 }
 
 template <class T, Device device>
 void trsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha,
-          const Tile<const T, device>& a, const Tile<T, device>& b) {
+          const Tile<const T, device>& a, const Tile<T, device>& b) noexcept {
   SizeType m = b.size().rows();
   SizeType n = b.size().cols();
 
-  DLAF_ASSERT((a.size().rows() == a.size().cols()), "TRSM: A is not square.");
-  DLAF_ASSERT((a.size().rows() == (side == blas::Side::Left ? m : n)), "TRSM: A has an invalid size.");
+  DLAF_ASSERT((a.size().rows() == a.size().cols()), "a is not square (", a.size().rows(),
+              " != ", a.size().cols(), ")");
+  DLAF_ASSERT((a.size().rows() == (side == blas::Side::Left ? m : n)), "a has an invalid size (",
+              a.size().rows(), " != ", side == blas::Side::Left ? m : n, ")");
 
   blas::trsm(blas::Layout::ColMajor, side, uplo, op, diag, m, n, alpha, a.ptr(), a.ld(), b.ptr(),
              b.ld());

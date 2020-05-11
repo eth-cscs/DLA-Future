@@ -84,8 +84,7 @@ protected:
 
   /// Returns the position in the vector of the index Tile.
   ///
-  /// @pre index.isValid() == true.
-  /// @pre index.isIn(localNrTiles()) == true.
+  /// @pre index.isValid() and index.isIn(localNrTiles())
   std::size_t tileLinearIndex(const LocalTileIndex& index) const noexcept {
     DLAF_ASSERT_HEAVY((index.isValid() && index.isIn(distribution_->localNrTiles())));
     using util::size_t::sum;

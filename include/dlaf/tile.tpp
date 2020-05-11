@@ -10,13 +10,14 @@
 
 template <class T, Device device>
 Tile<const T, device>::Tile(const TileElementSize& size,
-                            memory::MemoryView<ElementType, device>&& memory_view, SizeType ld)
+                            memory::MemoryView<ElementType, device>&& memory_view, SizeType ld) noexcept
     : size_(size), memory_view_(std::move(memory_view)), ld_(ld) {
   using util::size_t::sum;
   using util::size_t::mul;
 
   DLAF_ASSERT((size.isValid()), "Invalid Tile sizes");
-  DLAF_ASSERT((ld_ >= std::max<SizeType>(1, size_.rows())), "Invalid Tile leading dimension");
+  DLAF_ASSERT((ld_ >= std::max<SizeType>(1, size_.rows())), "Invalid Tile leading dimension (", ld_,
+              " < ", std::max<SizeType>(1, size_.rows()), ")");
   DLAF_ASSERT((size.isEmpty() || sum(size_.rows(), mul(ld_, (size_.cols() - 1))) <= memory_view_.size()),
               "Tile exceeds the MemoryView limits");
 }

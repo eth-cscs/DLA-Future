@@ -54,12 +54,13 @@ public:
   using ElementType = T;
 
   /// @brief Constructs a (@p size.rows() x @p size.cols()) Tile.
-  /// When the assertion is enabled, terminates the program with an error
-  /// message if @p size.row() < 0, @p size.cols() < 0 or @p ld < max(1, @p size.rows())
-  /// or if memory_view does not contain enough elements. This assertion is
-  /// enabled when **DLAF_ASSERT_ENABLE** is ON.
+  /// @pre size.rows() >= 0
+  /// @pre size.cols() >= 0
+  /// @pre ld > max(1, @p size.rows())
+  /// @pre memory_view contains enough elements
   /// The (i, j)-th element of the Tile is stored in the (i+ld*j)-th element of memory_view.
-  Tile(const TileElementSize& size, memory::MemoryView<ElementType, device>&& memory_view, SizeType ld);
+  Tile(const TileElementSize& size, memory::MemoryView<ElementType, device>&& memory_view,
+       SizeType ld) noexcept;
 
   Tile(const Tile&) = delete;
 
@@ -133,12 +134,13 @@ public:
   using ElementType = T;
 
   /// @brief Constructs a (@p size.rows() x @p size.cols()) Tile.
-  /// When the assertion is enabled, terminates the program with an error
-  /// message if @p size.row() < 0, @p size.cols() < 0 or @p ld < max(1, @p size.rows())
-  /// or if memory_view does not contain enough elements. This assertion is
-  /// enabled when **DLAF_ASSERT_ENABLE** is ON.
+  /// @pre size.rows() >= 0
+  /// @pre size.cols() >= 0
+  /// @pre ld > max(1, @p size.rows())
+  /// @pre memory_view contains enough elements
   /// The (i, j)-th element of the Tile is stored in the (i+ld*j)-th element of memory_view.
-  Tile(const TileElementSize& size, memory::MemoryView<ElementType, device>&& memory_view, SizeType ld)
+  Tile(const TileElementSize& size, memory::MemoryView<ElementType, device>&& memory_view,
+       SizeType ld) noexcept
       : Tile<const T, device>(size, std::move(memory_view), ld) {}
 
   Tile(const Tile&) = delete;
@@ -177,9 +179,6 @@ public:
 
   /// @brief Sets the promise to which this Tile will be moved on destruction.
   /// @c setPromise can be called only once per object.
-  /// When the assertion is enabled, terminates the program with an error
-  /// message if @c setPromise was already called. This assertion is enabled
-  /// when **DLAF_ASSERT_ENABLE** is ON.
   Tile& setPromise(hpx::promise<Tile<T, device>>&& p) {
     DLAF_ASSERT((!p_), "setPromise has been already used on this object!");
     p_ = std::make_unique<hpx::promise<Tile<T, device>>>(std::move(p));

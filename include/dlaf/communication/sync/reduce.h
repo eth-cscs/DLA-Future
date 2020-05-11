@@ -115,6 +115,8 @@ void participant(int rank_root, Communicator& communicator, MPI_Op reduce_operat
 /// MPI Reduce(see MPI documentation for additional info)
 /// @param rank_root the rank that will collect the result in output
 /// @param reduce_operation MPI_Op to perform on @p input data coming from ranks in @p communicator
+/// @pre @p rank_root < @p communicator.size()
+/// @pre @p rank_root != MPI_UNDEFINED
 template <class DataIn, class DataOut>
 void reduce(const int rank_root, Communicator& communicator, MPI_Op reduce_operation, const DataIn input,
             const DataOut output) {

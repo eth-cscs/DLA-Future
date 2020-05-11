@@ -26,12 +26,12 @@
 /// No newline is appended to the given message, which cannot be empty.
 ///
 /// **This check cannot be disabled**
-#define DLAF_CHECK_WITH_ORIGIN(category, origin, condition, ...)     \
-  if (!(condition)) {                                                \
-    std::cerr << "[ERROR] " << origin << std::endl                   \
-              << dlaf::common::concat(#condition, ' ', __VA_ARGS__); \
-    std::cerr.flush();                                               \
-    std::terminate();                                                \
+#define DLAF_CHECK_WITH_ORIGIN(category, origin, condition, ...)      \
+  if (!(condition)) {                                                 \
+    std::cerr << "[ERROR] " << origin << std::endl                    \
+              << dlaf::common::concat(#condition, '\n', __VA_ARGS__); \
+    std::cerr.flush();                                                \
+    std::terminate();                                                 \
   }
 
 /// This macro is a shortcut for #DLAF_CHECK_WITH_ORIGIN

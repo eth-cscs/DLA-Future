@@ -53,20 +53,6 @@ public:
   /// @param coords where coords[0] is the row index and coords[1] is the column index
   basic_coords(const std::array<IndexT, 2>& coords) noexcept : basic_coords(coords[0], coords[1]) {}
 
-  /// Compare two indices.
-  ///
-  /// @return true if row and column index of *this and rhs are equal.
-  bool operator==(const basic_coords& rhs) const noexcept {
-    return row_ == rhs.row_ && col_ == rhs.col_;
-  }
-
-  /// Compare two indices.
-  ///
-  /// @return true if any of row and column index of *this and rhs are different.
-  bool operator!=(const basic_coords& rhs) const noexcept {
-    return !operator==(rhs);
-  }
-
   /// Return a copy of the row or the col index as specified by @p rc
   template <Coord rc>
   IndexT get() const noexcept {
@@ -100,6 +86,16 @@ public:
   }
 
 protected:
+  /// @return true if `this` and `rhs` have the same row and column.
+  bool operator==(const basic_coords& rhs) const noexcept {
+    return row_ == rhs.row_ && col_ == rhs.col_;
+  }
+
+  /// @return true if `this` and `rhs` have the different row or column.
+  bool operator!=(const basic_coords& rhs) const noexcept {
+    return !operator==(rhs);
+  }
+
   IndexT row_;
   IndexT col_;
 };
@@ -116,26 +112,38 @@ Coords2DType transposed(const Coords2DType& coords) {
 /// @tparam Tag for strong-typing
 template <typename IndexT, class Tag>
 class Size2D : public internal::basic_coords<IndexT> {
+  using BaseT = internal::basic_coords<IndexT>;
+
 public:
-  using internal::basic_coords<IndexT>::basic_coords;
+  using BaseT::basic_coords;
 
   IndexT rows() const noexcept {
-    return internal::basic_coords<IndexT>::row_;
+    return BaseT::row_;
   }
 
   IndexT cols() const noexcept {
-    return internal::basic_coords<IndexT>::col_;
+    return BaseT::col_;
   }
 
   /// @brief Returns true if rows() == 0 or cols() == 0
   /// @pre isValid() == true
   bool isEmpty() const noexcept {
-    assert(internal::basic_coords<IndexT>::isValid());
+    assert(BaseT::isValid());
     return rows() == 0 || cols() == 0;
   }
 
+  /// @return true if `this` and `rhs` have the same row and column.
+  bool operator==(const Size2D& rhs) const noexcept {
+    return BaseT::operator==(rhs);
+  }
+
+  /// @return true if `this` and `rhs` have the different row or column.
+  bool operator!=(const Size2D& rhs) const noexcept {
+    return BaseT::operator!=(rhs);
+  }
+
   friend std::ostream& operator<<(std::ostream& out, const Size2D& index) {
-    return out << static_cast<internal::basic_coords<IndexT>>(index);
+    return out << static_cast<BaseT>(index);
   }
 };
 
@@ -144,18 +152,20 @@ public:
 /// @tparam Tag for strong-typing
 template <typename IndexT, class Tag>
 class Index2D : public internal::basic_coords<IndexT> {
+  using BaseT = internal::basic_coords<IndexT>;
+
 public:
   using IndexType = IndexT;
 
   /// Create an invalid 2D coordinate
-  Index2D() noexcept : internal::basic_coords<IndexT>(-1, -1) {}
+  Index2D() noexcept : BaseT(-1, -1) {}
 
   /// Create a valid 2D coordinate
   /// @param row index of the row
   /// @param col index of the column
   /// @throw std::invalid_argument if row < 0 or col < 0
-  Index2D(IndexT row, IndexT col) : internal::basic_coords<IndexT>(row, col) {
-    if (!internal::basic_coords<IndexT>::isValid())
+  Index2D(IndexT row, IndexT col) : BaseT(row, col) {
+    if (!BaseT::isValid())
       throw std::invalid_argument("indices are not valid (negative).");
   }
 
@@ -174,16 +184,26 @@ public:
            boundary.isValid();
   }
 
+  /// @return true if `this` and `rhs` have the same row and column.
+  bool operator==(const Index2D& rhs) const noexcept {
+    return BaseT::operator==(rhs);
+  }
+
+  /// @return true if `this` and `rhs` have the different row or column.
+  bool operator!=(const Index2D& rhs) const noexcept {
+    return BaseT::operator!=(rhs);
+  }
+
   IndexT row() const noexcept {
-    return internal::basic_coords<IndexT>::row_;
+    return BaseT::row_;
   }
 
   IndexT col() const noexcept {
-    return internal::basic_coords<IndexT>::col_;
+    return BaseT::col_;
   }
 
   friend std::ostream& operator<<(std::ostream& out, const Index2D& index) {
-    return out << static_cast<internal::basic_coords<IndexT>>(index);
+    return out << static_cast<BaseT>(index);
   }
 };
 

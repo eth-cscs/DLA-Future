@@ -13,6 +13,7 @@
 #include <utility>
 
 #include <hpx/dataflow.hpp>
+#include <hpx/runtime/threads/executors/pool_executor.hpp>
 #include <hpx/util/unwrap.hpp>
 
 #include "dlaf/eti/function.h"
@@ -23,32 +24,37 @@
 namespace dlaf {
 
 template <class T, Device D>
-hpx::future<void> dataflow(func_w<T, D>&& fn, hpx::future<Tile<T, D>>&& tile) {
-  return hpx::dataflow(hpx::util::unwrapping(std::move(fn)), std::move(tile));
+hpx::future<void> dataflow(const hpx::threads::executors::pool_executor& ex, func_w<T, D>&& fn,
+                           hpx::future<Tile<T, D>>&& tile) {
+  return hpx::dataflow(ex, hpx::util::unwrapping(std::move(fn)), std::move(tile));
 }
 
 template <class T, Device D>
-hpx::future<void> dataflow(func_rw<T, D>&& fn, hpx::shared_future<Tile<const T, D>>&& tr,
-                           hpx::future<Tile<T, D>>&& tw) {
-  return hpx::dataflow(hpx::util::unwrapping(fn), std::move(tr), std::move(tw));
+hpx::future<void> dataflow(const hpx::threads::executors::pool_executor& ex, func_rw<T, D>&& fn,
+                           hpx::shared_future<Tile<const T, D>>&& tr, hpx::future<Tile<T, D>>&& tw) {
+  return hpx::dataflow(ex, hpx::util::unwrapping(fn), std::move(tr), std::move(tw));
 }
 
 template <class T, Device D>
-hpx::future<void> dataflow(func_rrw<T, D>&& fn, hpx::shared_future<Tile<const T, D>>&& tr1,
+hpx::future<void> dataflow(const hpx::threads::executors::pool_executor& ex, func_rrw<T, D>&& fn,
+                           hpx::shared_future<Tile<const T, D>>&& tr1,
                            hpx::shared_future<Tile<const T, D>>&& tr2, hpx::future<Tile<T, D>>&& tw) {
-  return hpx::dataflow(hpx::util::unwrapping(std::move(fn)), std::move(tr1), std::move(tr2),
+  return hpx::dataflow(ex, hpx::util::unwrapping(std::move(fn)), std::move(tr1), std::move(tr2),
                        std::move(tw));
 }
 
-#define DLAF_DATAFLOW_ETI(KWORD, DTYPE, DEVICE)                                              \
-  KWORD template hpx::future<void> dataflow(func_w<DTYPE, DEVICE>&&,                         \
-                                            hpx::future<Tile<DTYPE, DEVICE>>&&);             \
-  KWORD template hpx::future<void> dataflow(func_rw<DTYPE, DEVICE>&&,                        \
-                                            hpx::shared_future<Tile<const DTYPE, DEVICE>>&&, \
-                                            hpx::future<Tile<DTYPE, DEVICE>>&&);             \
-  KWORD template hpx::future<void> dataflow(func_rrw<DTYPE, DEVICE>&&,                       \
-                                            hpx::shared_future<Tile<const DTYPE, DEVICE>>&&, \
-                                            hpx::shared_future<Tile<const DTYPE, DEVICE>>&&, \
+#define DLAF_DATAFLOW_ETI(KWORD, DTYPE, DEVICE)                                               \
+  KWORD template hpx::future<void> dataflow(const hpx::threads::executors::pool_executor& ex, \
+                                            func_w<DTYPE, DEVICE>&&,                          \
+                                            hpx::future<Tile<DTYPE, DEVICE>>&&);              \
+  KWORD template hpx::future<void> dataflow(const hpx::threads::executors::pool_executor& ex, \
+                                            func_rw<DTYPE, DEVICE>&&,                         \
+                                            hpx::shared_future<Tile<const DTYPE, DEVICE>>&&,  \
+                                            hpx::future<Tile<DTYPE, DEVICE>>&&);              \
+  KWORD template hpx::future<void> dataflow(const hpx::threads::executors::pool_executor& ex, \
+                                            func_rrw<DTYPE, DEVICE>&&,                        \
+                                            hpx::shared_future<Tile<const DTYPE, DEVICE>>&&,  \
+                                            hpx::shared_future<Tile<const DTYPE, DEVICE>>&&,  \
                                             hpx::future<Tile<DTYPE, DEVICE>>&&);
 
 DLAF_DATAFLOW_ETI(extern, float, Device::CPU)

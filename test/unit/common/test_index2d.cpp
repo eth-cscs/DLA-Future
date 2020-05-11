@@ -65,9 +65,8 @@ TYPED_TEST(Index2DTest, Negative) {
                                                    std::make_pair(-15, 3), std::make_pair(8, -7)};
 
   for (auto& test : index_tests) {
-    EXPECT_THROW(Index2D<TypeParam>(test.first, test.second), std::invalid_argument);
-    EXPECT_THROW(Index2D<TypeParam>(std::array<TypeParam, 2>{test.first, test.second}),
-                 std::invalid_argument);
+    EXPECT_FALSE(Index2D<TypeParam>(test.first, test.second).isValid());
+    EXPECT_FALSE(Index2D<TypeParam>(std::array<TypeParam, 2>{test.first, test.second}).isValid());
   }
 }
 

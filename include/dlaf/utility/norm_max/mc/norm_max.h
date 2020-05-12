@@ -11,11 +11,11 @@
 
 #include <hpx/hpx.hpp>
 #include <hpx/util/unwrap.hpp>
-#include <lapack.hh>
 
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/sync/reduce.h"
+#include "dlaf/lapack_tile.h"
 #include "dlaf/matrix.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/types.h"
@@ -31,6 +31,9 @@ dlaf::BaseType<T> norm_max(comm::CommunicatorGrid comm_grid, Matrix<const T, Dev
   using dlaf::common::make_data;
   using hpx::util::unwrapping;
 
+  using dlaf::tile::lange;
+  using dlaf::tile::lantr;
+
   using NormT = dlaf::BaseType<T>;
 
   const auto& distribution = matrix.distribution();
@@ -44,17 +47,13 @@ dlaf::BaseType<T> norm_max(comm::CommunicatorGrid comm_grid, Matrix<const T, Dev
     const SizeType i_diag_loc = distribution.template nextLocalTileFromGlobalTile<Coord::Row>(j);
 
     for (SizeType i_loc = i_diag_loc; i_loc < distribution.localNrTiles().rows(); ++i_loc) {
-      auto current_tile_max =
-          hpx::dataflow(unwrapping([is_diag = (i_loc == i_diag_loc)](auto&& tile) -> NormT {
-                          if (is_diag)
-                            return lapack::lantr(lapack::Norm::Max, lapack::Uplo::Lower,
-                                                 lapack::Diag::NonUnit, tile.size().cols(),
-                                                 tile.size().rows(), tile.ptr(), tile.ld());
-                          else
-                            return lapack::lange(lapack::Norm::Max, tile.size().cols(),
-                                                 tile.size().rows(), tile.ptr(), tile.ld());
-                        }),
-                        matrix.read(LocalTileIndex{i_loc, j_loc}));
+      auto norm_max_f = unwrapping([is_diag = (i_loc == i_diag_loc)](auto&& tile) noexcept->NormT {
+        if (is_diag)
+          return lantr(lapack::Norm::Max, blas::Uplo::Lower, blas::Diag::NonUnit, tile);
+        else
+          return lange(lapack::Norm::Max, tile);
+      });
+      auto current_tile_max = hpx::dataflow(norm_max_f, matrix.read(LocalTileIndex{i_loc, j_loc}));
 
       tiles_max.emplace_back(std::move(current_tile_max));
     }

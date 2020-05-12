@@ -34,10 +34,10 @@ TYPED_TEST(TileOperationsTest, lange) {
   SizeType m, n, extra_lda;
 
   std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {{0, 0, 0},   {0, 0, 2},  // 0 size
-                                                                 {1, 1, 0},   {12, 8, 1}, {8, 12, 1}, {12, 12, 1},
-                                                                 {11, 17, 3}, {11, 17, 0},
-                                                                 {17, 11, 3}, {17, 11, 0},
-                                                                 {17, 17, 3}, {11, 11, 0}};
+                                                                 {1, 1, 0},   {12, 8, 1},  {8, 12, 1},
+                                                                 {12, 12, 1}, {11, 17, 3}, {11, 17, 0},
+                                                                 {17, 11, 3}, {17, 11, 0}, {17, 17, 3},
+                                                                 {11, 11, 0}};
 
   for (const auto& size : sizes) {
     std::tie(m, n, extra_lda) = size;

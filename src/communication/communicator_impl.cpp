@@ -3,6 +3,7 @@
 #include <cassert>
 #include <stdexcept>
 
+#include "dlaf/common/assert.h"
 #include "dlaf/communication/error.h"
 
 namespace dlaf {

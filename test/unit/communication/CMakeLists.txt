@@ -49,3 +49,9 @@ DLAF_addTest(test_broadcast_matrix
   MPIRANKS 4
   USE_MAIN MPIHPX
 )
+
+DLAF_addTest(test_async_comm
+  SOURCES test_async.cpp
+  MPIRANKS 4
+  USE_MAIN MPIHPX
+)

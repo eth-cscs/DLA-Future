@@ -35,7 +35,8 @@ dlaf::BaseType<T> lange(lapack::Norm norm, const Tile<T, device>& a) noexcept;
 /// Compute the value of the 1-norm, Frobenius norm, infinity-norm, or the largest absolute value of any
 /// element, of a triangular matrix.
 template <class T, Device device>
-dlaf::BaseType<T> lantr(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag, const Tile<T, device>& a) noexcept;
+dlaf::BaseType<T> lantr(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag,
+                        const Tile<T, device>& a) noexcept;
 
 /// Compute the cholesky decomposition of a.
 ///

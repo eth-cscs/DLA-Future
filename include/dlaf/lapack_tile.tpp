@@ -14,7 +14,8 @@ dlaf::BaseType<T> lange(lapack::Norm norm, const Tile<T, device>& a) noexcept {
 }
 
 template <class T, Device device>
-dlaf::BaseType<T> lantr(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag, const Tile<T, device>& a) noexcept {
+dlaf::BaseType<T> lantr(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag,
+                        const Tile<T, device>& a) noexcept {
   return lapack::lantr(norm, uplo, diag, a.size().rows(), a.size().cols(), a.ptr(), a.ld());
 }
 

@@ -14,6 +14,7 @@
 
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/types.h"
+#include "dlaf/util_matrix.h"
 
 namespace dlaf {
 
@@ -28,8 +29,9 @@ template <
 void copy(MatrixTypeSrc<Tsrc, device_source>& source, MatrixTypeDst<Tdst, device_dest>& dest) {
   const auto& distribution = source.distribution();
 
-  // TODO check same size and blocksize
-  // TODO check equally distributed
+  DLAF_ASSERT_SIZE_EQ(source, dest);
+  DLAF_ASSERT_BLOCKSIZE_EQ(source, dest);
+  DLAF_ASSERT_DISTRIBUTED_EQ(source, dest);
 
   const SizeType local_tile_rows = distribution.localNrTiles().rows();
   const SizeType local_tile_cols = distribution.localNrTiles().cols();

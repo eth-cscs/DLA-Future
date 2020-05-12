@@ -12,7 +12,6 @@
 /// @file
 
 #include <utility>
-#include <vector>
 
 #include <mpi.h>
 #include <hpx/async.hpp>
@@ -20,7 +19,6 @@
 #include <hpx/include/threads.hpp>
 #include <hpx/lcos/future.hpp>
 #include <hpx/util/yield_while.hpp>
-
 #ifdef DLAF_WITH_MPI_FUTURES
 #include <hpx/mpi/mpi_executor.hpp>
 #include <hpx/mpi/mpi_future.hpp>
@@ -43,10 +41,10 @@ namespace comm {
 /// there are two differences
 ///
 /// 1) MPI_Comm (comm) goes after the executor in async()
-/// 2) MPI_Requst (request) is omitted as it is handled internally in async()
+/// 2) MPI_Request (request) is omitted as it is handled internally in async()
 ///
 /// Note that if starting the communication depends on a previous task, it is often a good idea to call
-/// the `get()` method on a returned future to avoid weird constructs like futute<future<>>.
+/// the `get()` method on a returned future to avoid weird constructs like future<future<>>.
 ///
 /// Example:
 ///
@@ -86,7 +84,7 @@ hpx::future<void> async(hpx::threads::executors::pool_executor& ex, MPI_Comm com
 /// hpx::mpi::experimental::enable_user_polling enable_polling(pool_name);
 /// ...
 /// hpx::mpi::experimental::executor ex(mpi_comm);
-/// hpx::async(ex, MPI_Irecv, MPI_Irecv, recv_ptr, num_recv_elems, MPI_DOUBLE, src_rank, tag)
+/// hpx::async(ex, MPI_Irecv, recv_ptr, num_recv_elems, MPI_DOUBLE, src_rank, tag)
 /// ```
 ///
 /// The executor is quite simple and just forwards `MPI_Comm` to the internal

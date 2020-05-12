@@ -8,13 +8,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <bits/c++config.h>
+#include "dlaf/communication/async.h"
+
 #include <gtest/gtest.h>
 #include <mpi.h>
 #include <hpx/lcos/wait_all.hpp>
 #include <vector>
-
-#include "dlaf/communication/async.h"
 #include "dlaf/communication/communicator.h"
 
 TEST(Comm, SendRecv) {

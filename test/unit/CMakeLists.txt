@@ -8,6 +8,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+DLAF_addTest(test_types SOURCES test_types.cpp USE_MAIN PLAIN)
+
 DLAF_addTest(test_util_math SOURCES test_util_math.cpp USE_MAIN PLAIN)
 
 DLAF_addTest(test_blas_tile SOURCES test_blas_tile.cpp USE_MAIN HPX)

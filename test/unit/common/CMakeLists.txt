@@ -10,6 +10,7 @@
 
 DLAF_addTest(test_index2d SOURCES test_index2d.cpp USE_MAIN PLAIN)
 DLAF_addTest(test_size2d SOURCES test_size2d.cpp USE_MAIN PLAIN)
+DLAF_addTest(test_range2d SOURCES test_range2d.cpp USE_MAIN PLAIN)
 DLAF_addTest(test_data_descriptor SOURCES test_data_descriptor.cpp USE_MAIN PLAIN)
 
 DLAF_addTest(test_pipeline SOURCES test_pipeline.cpp USE_MAIN HPX)

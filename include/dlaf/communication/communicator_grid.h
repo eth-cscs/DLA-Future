@@ -56,8 +56,8 @@ public:
 
   /// Return rank in the grid with all ranks given the 2D index
   IndexT_MPI rankFullCommunicator(const Index2D& index) const noexcept {
-    return common::computeLinearIndex(FULL_COMMUNICATOR_ORDER, index,
-                                      {grid_size_.rows(), grid_size_.cols()});
+    return common::computeLinearIndex<IndexT_MPI>(FULL_COMMUNICATOR_ORDER, index,
+                                                  {grid_size_.rows(), grid_size_.cols()});
   }
 
   /// @brief Return the rank of the current process in the CommunicatorGrid

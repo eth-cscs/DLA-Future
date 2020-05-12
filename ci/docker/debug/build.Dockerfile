@@ -9,7 +9,7 @@ ENV FORCE_UNSAFE_CONFIGURE 1
 RUN apt-get update -qq && apt-get install -qq -y --no-install-recommends \
     software-properties-common \
     build-essential gfortran binutils \
-    git tar wget curl gpg-agent && \
+    git tar wget curl gpg-agent jq && \
     rm -rf /var/lib/apt/lists/*
 
 # Install cmake
@@ -142,4 +142,5 @@ RUN wget -q https://bitbucket.org/icl/lapackpp/get/${LAPACKPP_VERSION}.tar.gz -O
 # Add deployment tooling
 RUN wget -q https://github.com/haampie/libtree/releases/download/v1.1.3/libtree_x86_64.tar.gz && \
    tar -xzf libtree_x86_64.tar.gz && \
-   rm libtree_x86_64.tar.gz
+   rm libtree_x86_64.tar.gz && \
+   ln -s /root/libtree/libtree /usr/local/bin/libtree

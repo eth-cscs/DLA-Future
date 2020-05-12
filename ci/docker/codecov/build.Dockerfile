@@ -2,16 +2,14 @@ FROM ubuntu:18.04
 
 WORKDIR /root
 
-SHELL ["/bin/bash", "-l", "-c"]
-
 ENV DEBIAN_FRONTEND noninteractive
 ENV FORCE_UNSAFE_CONFIGURE 1
 
 # Install basic tools
-RUN apt-get update -qq && apt-get install -qq --no-install-recommends \
+RUN apt-get update -qq && apt-get install -qq -y --no-install-recommends \
     software-properties-common \
-    build-essential \
-    git tar wget curl gpg-agent && \
+    build-essential gfortran binutils lcov \
+    git tar wget curl gpg-agent jq && \
     rm -rf /var/lib/apt/lists/*
 
 # Install cmake
@@ -29,14 +27,16 @@ RUN wget -q https://www.mpich.org/static/downloads/${MPICH_VERSION}/mpich-${MPIC
     make install -j$(nproc) && \
     rm -rf /root/mpich-${MPICH_VERSION}.tar.gz /root/mpich-${MPICH_VERSION}
 
-# Install MKL
-ARG MKL_VERSION=2020.0-088
-RUN wget -qO - https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB 2>/dev/null | apt-key add - && \
-    apt-add-repository 'deb https://apt.repos.intel.com/mkl all main' && \
-    apt-get install -y -qq --no-install-recommends intel-mkl-64bit-${MKL_VERSION} && \
-    rm -rf /var/lib/apt/lists/* && \
-    echo "/opt/intel/lib/intel64\n/opt/intel/compilers_and_libraries/linux/mkl/lib/intel64" >> /etc/ld.so.conf.d/intel.conf && \
-    ldconfig
+# Install OpenBLAS
+ARG OPENBLAS_MAJOR=0
+ARG OPENBLAS_MINOR=3
+ARG OPENBLAS_PATCH=9
+RUN wget -qO - https://github.com/xianyi/OpenBLAS/archive/v${OPENBLAS_MAJOR}.${OPENBLAS_MINOR}.${OPENBLAS_PATCH}.tar.gz -O openblas.tar.gz && \
+    tar -xzf openblas.tar.gz && \
+    cd OpenBLAS-${OPENBLAS_MAJOR}.${OPENBLAS_MINOR}.${OPENBLAS_PATCH}/ && \
+    make USE_OPENMP=0 USE_THREAD=0 USE_LOCKING=1 -j$(nproc) && \
+    make install NO_STATIC=1 PREFIX=/usr/local/ && \
+    rm -rf /root/openblas.tar.gz /root/OpenBLAS-${OPENBLAS_MAJOR}.${OPENBLAS_MINOR}.${OPENBLAS_PATCH}/
 
 # Install Boost
 ARG BOOST_MAJOR=1
@@ -48,7 +48,7 @@ RUN wget -q https://dl.bintray.com/boostorg/release/${BOOST_MAJOR}.${BOOST_MINOR
     tar -xzf boost.tar.gz && \
     cd boost_${BOOST_MAJOR}_${BOOST_MINOR}_${BOOST_PATCH} && \
     ./bootstrap.sh --prefix=$BOOST_PATH && \
-    ./b2 -j$(nproc) debug-symbols=on install && \
+    ./b2 toolset=gcc -j$(nproc) install && \
     rm -rf /root/boost.tar.gz /root/boost_${BOOST_MAJOR}_${BOOST_MINOR}_${BOOST_PATCH}
 
 # Install hwloc
@@ -87,11 +87,12 @@ RUN wget -q https://github.com/STEllAR-GROUP/hpx/archive/${HPX_MAJOR}.${HPX_MINO
     mkdir build && \
     cd build && \
     cmake .. \
+      -DCMAKE_INSTALL_PREFIX=$HPX_PATH \
       -DBOOST_ROOT=$BOOST_PATH \
       -DHWLOC_ROOT=$HWLOC_PATH \
       -DTCMALLOC_ROOT=$GPERFTOOLS_PATH \
-      -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-      -DCMAKE_INSTALL_PREFIX=$HPX_PATH \
+      -DCMAKE_BUILD_TYPE=Debug \
+      -DHPX_WITH_SANITIZERS=ON \
       -DHPX_WITH_MAX_CPU_COUNT=128 \
       -DHPX_WITH_NETWORKING=OFF \
       -DHPX_WITH_TESTS=OFF \
@@ -100,38 +101,42 @@ RUN wget -q https://github.com/STEllAR-GROUP/hpx/archive/${HPX_MAJOR}.${HPX_MINO
     make install && \
     rm -rf /root/hpx.tar.gz /root/hpx-${HPX_MAJOR}.${HPX_MINOR}.${HPX_PATCH}
 
+RUN ldconfig
+
 # Install BLASPP
 ARG BLASPP_VERSION=d83c1faa7a09
 ARG BLASPP_PATH=/usr/local/blaspp
-RUN source /opt/intel/compilers_and_libraries/linux/mkl/bin/mklvars.sh intel64 && \
-    wget -q https://bitbucket.org/icl/blaspp/get/${BLASPP_VERSION}.tar.gz -O blaspp.tar.gz && \
+RUN wget -q https://bitbucket.org/icl/blaspp/get/${BLASPP_VERSION}.tar.gz -O blaspp.tar.gz && \
     tar -xzf blaspp.tar.gz && \
     cd icl-blaspp-${BLASPP_VERSION} && \
     mkdir build && \
     cd build && \
     cmake .. \
       -DBLASPP_BUILD_TESTS=OFF \
-      -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-      -DCMAKE_INSTALL_PREFIX=$BLASPP_PATH && \
+      -DBLAS_LIBRARY=OpenBLAS \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=$BLASPP_PATH \
+      && \
     make -j$(nproc) && \
     make install && \
     rm -rf /root/blaspp.tar.gz /root/icl-blaspp-${BLASPP_VERSION}
 
 ARG LAPACKPP_VERSION=b811bd1274d5
 ARG LAPACKPP_PATH=/usr/local/lapackpp
-RUN source /opt/intel/compilers_and_libraries/linux/mkl/bin/mklvars.sh intel64 && \
-    wget -q https://bitbucket.org/icl/lapackpp/get/${LAPACKPP_VERSION}.tar.gz -O lapackpp.tar.gz && \
+RUN wget -q https://bitbucket.org/icl/lapackpp/get/${LAPACKPP_VERSION}.tar.gz -O lapackpp.tar.gz && \
     tar -xzf lapackpp.tar.gz && \
     cd icl-lapackpp-${LAPACKPP_VERSION} && \
     mkdir build && \
     cd build && \
     cmake .. \
       -DBUILD_LAPACKPP_TESTS=OFF \
+      -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_INSTALL_PREFIX=$LAPACKPP_PATH && \
     make -j$(nproc) install && \
     rm -rf /root/lapackpp.tar.gz /root/icl-lapackpp-${LAPACKPP_VERSION}
 
 # Add deployment tooling
-RUN wget -q https://github.com/haampie/libtree/releases/download/v1.1.2/libtree_x86_64.tar.gz && \
+RUN wget -q https://github.com/haampie/libtree/releases/download/v1.1.3/libtree_x86_64.tar.gz && \
     tar -xzf libtree_x86_64.tar.gz && \
-    rm libtree_x86_64.tar.gz
+    rm libtree_x86_64.tar.gz  && \
+    ln -s /root/libtree/libtree /usr/local/bin/libtree

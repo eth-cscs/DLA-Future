@@ -70,8 +70,7 @@ TYPED_TEST(MatrixUtilsTest, Set) {
       Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), layout, mem());
 
       auto linear_matrix = [size = matrix.size()](const GlobalElementIndex& index) {
-        auto linear_index = dlaf::common::computeLinearIndex(dlaf::common::Ordering::RowMajor, index,
-                                                             {size.rows(), size.cols()});
+        auto linear_index = common::computeLinearIndex<int>(common::Ordering::RowMajor, index, size);
         return TypeUtilities<TypeParam>::element(linear_index, linear_index);
       };
 

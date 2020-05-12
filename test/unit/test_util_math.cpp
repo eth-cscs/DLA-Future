@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <cstddef>
+#include <limits>
 #include "dlaf/util_math.h"
 
 #include "gtest/gtest.h"
@@ -59,7 +61,7 @@ TYPED_TEST(MathUtilTest, CeilDivType) {
   EXPECT_TRUE((std::is_same<Type, decltype(util::ceilDiv(num, den))>()));
 }
 
-TYPED_TEST(MathUtilTest, SizeTArithmetic_Sum) {
+TYPED_TEST(MathUtilTest, size_t_Arithmetic_Sum) {
   using Type = TypeParam;
 
   constexpr auto type_size = sizeof(Type);
@@ -81,7 +83,7 @@ TYPED_TEST(MathUtilTest, SizeTArithmetic_Sum) {
   EXPECT_EQ(expected_result, util::size_t::sum(a, b));
 }
 
-TYPED_TEST(MathUtilTest, SizeTArithmetic_Mul) {
+TYPED_TEST(MathUtilTest, size_t_Arithmetic_Mul) {
   using Type = TypeParam;
 
   constexpr auto type_size = sizeof(Type);
@@ -103,7 +105,7 @@ TYPED_TEST(MathUtilTest, SizeTArithmetic_Mul) {
   EXPECT_EQ(expected_result, util::size_t::mul(a, b));
 }
 
-TYPED_TEST(MathUtilTest, SizeTArithmetic_SumMul) {
+TYPED_TEST(MathUtilTest, size_t_Arithmetic_SumMul) {
   using Type = TypeParam;
 
   constexpr auto type_size = sizeof(Type);
@@ -127,4 +129,94 @@ TYPED_TEST(MathUtilTest, SizeTArithmetic_SumMul) {
   using util::size_t::mul;
 
   EXPECT_EQ(expected_result, sum(mul(a, b), c));
+}
+
+TYPED_TEST(MathUtilTest, ptrdiff_t_Arithmetic_Sum) {
+  using ArithmeticT = std::ptrdiff_t;
+
+  constexpr auto type_size = sizeof(TypeParam);
+  constexpr auto arithmetic_size = sizeof(std::ptrdiff_t);
+
+  TypeParam a, b;
+
+  if (type_size < arithmetic_size) {
+    a = std::numeric_limits<TypeParam>::max();
+    b = std::numeric_limits<TypeParam>::max();
+  }
+  else {
+    a = static_cast<TypeParam>(std::numeric_limits<ArithmeticT>::max() / 2);
+    b = static_cast<TypeParam>(std::numeric_limits<ArithmeticT>::max() / 2);
+  }
+
+  {
+    auto expected_result = static_cast<ArithmeticT>(a) + static_cast<ArithmeticT>(b);
+    EXPECT_EQ(expected_result, util::ptrdiff_t::sum(a, b));
+  }
+
+  {
+    auto expected_result = static_cast<ArithmeticT>(a) + std::numeric_limits<ArithmeticT>::max();
+    EXPECT_EQ(expected_result, util::ptrdiff_t::sum(a, std::numeric_limits<ArithmeticT>::max()));
+  }
+}
+
+TYPED_TEST(MathUtilTest, ptrdiff_t_Arithmetic_Mul) {
+  using ArithmeticT = std::ptrdiff_t;
+
+  constexpr auto type_size = sizeof(TypeParam);
+  constexpr auto arithmetic_size = sizeof(ArithmeticT);
+
+  TypeParam a, b;
+
+  if (type_size < arithmetic_size) {
+    a = std::numeric_limits<TypeParam>::max();
+    b = std::numeric_limits<TypeParam>::max();
+  }
+  else {
+    a = static_cast<TypeParam>(std::numeric_limits<ArithmeticT>::max() / 2);
+    b = 2;
+  }
+
+  {
+    auto expected_result = static_cast<ArithmeticT>(a) * static_cast<ArithmeticT>(b);
+    EXPECT_EQ(expected_result, util::ptrdiff_t::mul(a, b));
+  }
+
+  {
+    auto expected_result = static_cast<ArithmeticT>(a) * static_cast<ArithmeticT>(-1);
+    EXPECT_EQ(expected_result, util::ptrdiff_t::mul(a, -1));
+  }
+}
+
+TYPED_TEST(MathUtilTest, ptrdiff_t_Arithmetic_SumMul) {
+  using ArithmeticT = std::ptrdiff_t;
+
+  constexpr auto type_size = sizeof(TypeParam);
+  constexpr auto arithmetic_size = sizeof(ArithmeticT);
+
+  TypeParam b = 2;
+  TypeParam a, c;
+
+  if (type_size < arithmetic_size) {
+    a = std::numeric_limits<TypeParam>::max() / 2;
+    c = std::numeric_limits<TypeParam>::max();
+  }
+  else {
+    a = static_cast<TypeParam>(std::numeric_limits<ArithmeticT>::max() / 4);
+    c = static_cast<TypeParam>(std::numeric_limits<ArithmeticT>::max() / 2);
+  }
+
+  using util::ptrdiff_t::sum;
+  using util::ptrdiff_t::mul;
+
+  {
+    auto expected_result =
+        static_cast<ArithmeticT>(a) * static_cast<ArithmeticT>(b) + static_cast<ArithmeticT>(c);
+    EXPECT_EQ(expected_result, sum(mul(a, b), c));
+  }
+
+  {
+    auto expected_result =
+        static_cast<ArithmeticT>(a) * static_cast<ArithmeticT>(-1) + static_cast<ArithmeticT>(c);
+    EXPECT_EQ(expected_result, sum(mul(a, -1), c));
+  }
 }

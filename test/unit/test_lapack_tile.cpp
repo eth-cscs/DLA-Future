@@ -52,12 +52,16 @@ TYPED_TEST(TileOperationsTest, lantr) {
   SizeType m, n, extra_lda;
 
   std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {{0, 0, 0},   {0, 0, 2},  // 0 size
-                                                                 {1, 1, 0},   {12, 12, 1},
-                                                                 {17, 17, 3}, {11, 11, 0}};
+                                                                 {1, 1, 0},   {17, 11, 3}, {17, 11, 0},
+                                                                 {17, 17, 3}, {17, 17, 3}, {11, 11, 0}};
 
   for (const auto uplo : blas_uplos) {
     for (const auto& size : sizes) {
       std::tie(m, n, extra_lda) = size;
+
+      // transpose rectangular matrix to be useful for upper triangular case
+      if (blas::Uplo::Upper == uplo)
+        std::swap(m, n);
 
       auto diag = blas::Diag::NonUnit;
       auto norm = lapack::Norm::Max;

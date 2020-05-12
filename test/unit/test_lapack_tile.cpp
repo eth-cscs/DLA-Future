@@ -30,27 +30,6 @@ class TileOperationsTest : public ::testing::Test {};
 
 TYPED_TEST_SUITE(TileOperationsTest, MatrixElementTypes);
 
-TYPED_TEST(TileOperationsTest, Potrf) {
-  using Type = TypeParam;
-
-  SizeType n, extra_lda;
-
-  std::vector<std::tuple<SizeType, SizeType>> sizes = {{0, 0}, {0, 2},  // 0 size
-                                                       {1, 0}, {12, 1}, {17, 3}, {11, 0}};
-
-  for (const auto uplo : blas_uplos) {
-    for (const auto& size : sizes) {
-      std::tie(n, extra_lda) = size;
-
-      // Test version non returning info
-      testPotrf<Type, false>(uplo, n, extra_lda);
-
-      // Test version returning info
-      testPotrf<Type, true>(uplo, n, extra_lda);
-    }
-  }
-}
-
 TYPED_TEST(TileOperationsTest, lange) {
   SizeType m, n, extra_lda;
 
@@ -84,6 +63,27 @@ TYPED_TEST(TileOperationsTest, lantr) {
       auto norm = lapack::Norm::Max;
 
       testLantr<TypeParam>(norm, uplo, diag, m, n, extra_lda);
+    }
+  }
+}
+
+TYPED_TEST(TileOperationsTest, Potrf) {
+  using Type = TypeParam;
+
+  SizeType n, extra_lda;
+
+  std::vector<std::tuple<SizeType, SizeType>> sizes = {{0, 0}, {0, 2},  // 0 size
+                                                       {1, 0}, {12, 1}, {17, 3}, {11, 0}};
+
+  for (const auto uplo : blas_uplos) {
+    for (const auto& size : sizes) {
+      std::tie(n, extra_lda) = size;
+
+      // Test version non returning info
+      testPotrf<Type, false>(uplo, n, extra_lda);
+
+      // Test version returning info
+      testPotrf<Type, true>(uplo, n, extra_lda);
     }
   }
 }

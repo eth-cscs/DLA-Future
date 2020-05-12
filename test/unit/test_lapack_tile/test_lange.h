@@ -11,84 +11,94 @@
 #pragma once
 
 #include <sstream>
-#include "gtest/gtest.h"
+
+#include <gtest/gtest.h>
+#include <lapack.hh>
+
 #include "dlaf/lapack_tile.h"
+#include "dlaf/matrix/index.h"
 #include "dlaf/memory/memory_view.h"
 #include "dlaf/tile.h"
-#include "dlaf/util_blas.h"
+#include "dlaf/types.h"
+
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/util_types.h"
 
-using namespace dlaf;
-using namespace dlaf::matrix;
-using namespace dlaf::matrix::test;
-using namespace dlaf_test;
-using namespace testing;
+namespace {
 
-using dlaf::util::size_t::mul;
+using dlaf::SizeType;
 
-template <class T, bool return_info>
-void testLange(blas::Uplo uplo, SizeType n, SizeType extra_lda) {
-  (void) uplo;
-  (void) n;
-  (void) extra_lda;
-  //  TileElementSize size_a = TileElementSize(n, n);
-  //
-  //  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
-  //
-  //  std::stringstream s;
-  //  s << "POTRF: " << uplo;
-  //  s << ", n = " << n << ", lda = " << lda;
-  //  SCOPED_TRACE(s.str());
-  //
-  //  memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
-  //
-  //  // Create tiles.
-  //  Tile<T, Device::CPU> a(size_a, std::move(mem_a), lda);
-  //
-  //  // Note: The tile elements are chosen such that:
-  //  // - res_ij = 1 / 2^(|i-j|) * exp(I*(-i+j)),
-  //  // where I = 0 for real types or I is the complex unit for complex types.
-  //  // Therefore the result should be:
-  //  // a_ij = Sum_k(res_ik * ConjTrans(res)_kj) =
-  //  //      = Sum_k(1 / 2^(|i-k| + |j-k|) * exp(I*(-i+j))),
-  //  // where k = 0 .. min(i,j)
-  //  // Therefore,
-  //  // a_ij = (4^(min(i,j)+1) - 1) / (3 * 2^(i+j)) * exp(I*(-i+j))
-  //  auto el_a = [uplo](const TileElementIndex& index) {
-  //    if ((uplo == blas::Uplo::Lower && index.row() < index.col()) ||
-  //        (uplo == blas::Uplo::Upper && index.row() > index.col()))
-  //      return TypeUtilities<T>::element(-9.9, 0);
-  //
-  //    double i = index.row();
-  //    double j = index.col();
-  //
-  //    return TypeUtilities<T>::polar(std::exp2(-(i + j)) / 3 * (std::exp2(2 * (std::min(i, j) + 1)) - 1),
-  //                                   -i + j);
-  //  };
-  //
-  //  auto res_a = [uplo](const TileElementIndex& index) {
-  //    if ((uplo == blas::Uplo::Lower && index.row() < index.col()) ||
-  //        (uplo == blas::Uplo::Upper && index.row() > index.col()))
-  //      return TypeUtilities<T>::element(-9.9, 0);
-  //
-  //    double i = index.row();
-  //    double j = index.col();
-  //
-  //    return TypeUtilities<T>::polar(std::exp2(-std::abs(i - j)), -i + j);
-  //  };
-  //
-  //  // Set tile elements.
-  //  set(a, el_a);
-  //
-  //  if (return_info) {
-  //    EXPECT_EQ(0, tile::potrfInfo(uplo, a));
-  //  }
-  //  else {
-  //    tile::potrf(uplo, a);
-  //  }
-  //
-  //  // Check result against analytical result.
-  //  CHECK_TILE_NEAR(res_a, a, 4 * (n + 1) * TypeUtilities<T>::error,
-  //                  4 * (n + 1) * TypeUtilities<T>::error);
+template <class T>
+void testLange(lapack::Norm norm, SizeType m, SizeType n, SizeType extra_lda) {
+  using dlaf::TileElementSize;
+  using dlaf::TileElementIndex;
+  using dlaf::Tile;
+  using dlaf::Device;
+  using dlaf::memory::MemoryView;
+
+  using dlaf::tile::lange;
+  using dlaf::util::size_t::mul;
+  using dlaf::matrix::test::set;
+
+  using NormT = dlaf::BaseType<T>;
+
+  TileElementSize size = TileElementSize(m, n);
+
+  SizeType lda = std::max<SizeType>(1, size.rows()) + extra_lda;
+
+  std::stringstream s;
+  s << "LANGE: " << lapack::norm2str(norm);
+  s << ", " << size << ", lda = " << lda;
+  SCOPED_TRACE(s.str());
+
+  MemoryView<T, Device::CPU> mem_a(mul(lda, size.cols()));
+
+  // Create tiles.
+  Tile<T, Device::CPU> a(size, std::move(mem_a), lda);
+
+  const T max_value = dlaf_test::TypeUtilities<T>::element(13, -13);
+
+  // by LAPACK documentation, if it is an empty matrix return 0
+  const NormT norm_expected = (size.isEmpty()) ? 0 : std::abs(max_value);
+
+  {
+    SCOPED_TRACE("Max in Lower Triangular");
+
+    auto el_L = [size, max_value](const TileElementIndex& index) {
+      if (TileElementIndex{size.rows() - 1, 0} == index)
+        return max_value;
+      return T(0);
+    };
+
+    set(a, el_L);
+    EXPECT_FLOAT_EQ(norm_expected, lange(norm, a));
+  }
+
+  {
+    SCOPED_TRACE("Max in Upper Triangular");
+
+    auto el_U = [size, max_value](const TileElementIndex& index) {
+      if (TileElementIndex{0, size.cols() - 1} == index)
+        return max_value;
+      return T(0);
+    };
+
+    set(a, el_U);
+    EXPECT_FLOAT_EQ(norm_expected, lange(norm, a));
+  }
+
+  {
+    SCOPED_TRACE("Max on Diagonal");
+
+    auto el_D = [size, max_value](const TileElementIndex& index) {
+      if (TileElementIndex{size.rows() - 1, size.cols() - 1} == index)
+        return max_value;
+      return T(0);
+    };
+
+    set(a, el_D);
+    EXPECT_FLOAT_EQ(norm_expected, lange(norm, a));
+  }
+}
+
 }

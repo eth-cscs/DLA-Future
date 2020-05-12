@@ -52,31 +52,36 @@ TYPED_TEST(TileOperationsTest, Potrf) {
 }
 
 TYPED_TEST(TileOperationsTest, lange) {
-  SizeType n, extra_lda;
+  SizeType m, n, extra_lda;
 
-  std::vector<std::tuple<SizeType, SizeType>> sizes = {{0, 0}, {0, 2},  // 0 size
-                                                       {1, 0}, {12, 1}, {17, 3}, {11, 0}};
+  std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {{0, 0, 0},   {0, 0, 2},  // 0 size
+                                                                 {1, 1, 0},   {12, 12, 1},
+                                                                 {17, 17, 3}, {11, 11, 0}};
 
-  for (const auto uplo : blas_uplos) {
-    for (const auto& size : sizes) {
-      std::tie(n, extra_lda) = size;
+  for (const auto& size : sizes) {
+    std::tie(m, n, extra_lda) = size;
 
-      testLange<TypeParam, false>(uplo, n, extra_lda);
-    }
+    auto norm = lapack::Norm::Max;
+
+    testLange<TypeParam>(norm, m, n, extra_lda);
   }
 }
 
 TYPED_TEST(TileOperationsTest, lantr) {
-  SizeType n, extra_lda;
+  SizeType m, n, extra_lda;
 
-  std::vector<std::tuple<SizeType, SizeType>> sizes = {{0, 0}, {0, 2},  // 0 size
-                                                       {1, 0}, {12, 1}, {17, 3}, {11, 0}};
+  std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {{0, 0, 0},   {0, 0, 2},  // 0 size
+                                                                 {1, 1, 0},   {12, 12, 1},
+                                                                 {17, 17, 3}, {11, 11, 0}};
 
   for (const auto uplo : blas_uplos) {
     for (const auto& size : sizes) {
-      std::tie(n, extra_lda) = size;
+      std::tie(m, n, extra_lda) = size;
 
-      testLantr<TypeParam, false>(uplo, n, extra_lda);
+      auto diag = blas::Diag::NonUnit;
+      auto norm = lapack::Norm::Max;
+
+      testLantr<TypeParam>(norm, uplo, diag, m, n, extra_lda);
     }
   }
 }

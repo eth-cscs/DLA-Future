@@ -7,6 +7,7 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
+
 #include "dlaf/utility/mc.h"
 
 #include <gtest/gtest.h>
@@ -59,7 +60,7 @@ TYPED_TEST(NormMaxDistributedTest, Correctness) {
         set(mat, el);
 
         const dlaf::BaseType<TypeParam> result =
-            Utility<Backend::MC>::norm_max(comm_grid, blas::Uplo::Lower, mat);
+            Utility<Backend::MC>::norm(comm_grid, lapack::Norm::Max, blas::Uplo::Lower, mat);
 
         EXPECT_NEAR(0, result, TypeUtilities<TypeParam>::error);
       }

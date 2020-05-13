@@ -35,14 +35,24 @@ namespace util {
 namespace internal {
 
 template <class T, Device D>
-std::string square_matrix_msg(Matrix<T, D> const& m) noexcept {
+bool size_sq(Matrix<T, D> const& m) noexcept {
+  return m.size().rows() == m.size().cols();
+}
+
+template <class T, Device D>
+std::string size_sq_msg(Matrix<T, D> const& m) noexcept {
   std::stringstream ss;
   ss << "Matrix of size " << m.size() << " is not square!";
   return ss.str();
 }
 
 template <class T, Device D>
-std::string equal_size_matrices_msg(Matrix<T, D> const& mA, Matrix<T, D> const& mB) noexcept {
+bool size_eq(Matrix<T, D> const& mA, Matrix<T, D> const& mB) noexcept {
+  return mA.size() == mB.size();
+}
+
+template <class T, Device D>
+std::string size_eq_msg(Matrix<T, D> const& mA, Matrix<T, D> const& mB) noexcept {
   std::stringstream ss;
   ss << "LHS matrix of size " << mA.size() << " is not equal to RHS matrix of size: " << mB.size()
      << "!";
@@ -50,17 +60,67 @@ std::string equal_size_matrices_msg(Matrix<T, D> const& mA, Matrix<T, D> const& 
 }
 
 template <class T, Device D>
-std::string square_blocksize_matrix_msg(Matrix<T, D> const& m) noexcept {
+bool blocksize_sq(Matrix<T, D> const& m) noexcept {
+  return m.blockSize() == m.blockSize();
+}
+
+template <class T, Device D>
+std::string blocksize_sq_msg(Matrix<T, D> const& m) noexcept {
   std::stringstream ss;
   ss << "Matrix blocksize " << m.blockSize() << " is not square!";
   return ss.str();
 }
 
 template <class T, Device D>
-std::string equal_blksize_matrices_msg(Matrix<T, D> const& mA, Matrix<T, D> const& mB) noexcept {
+bool blocksize_eq(Matrix<T, D> const& mA, Matrix<T, D> const& mB) noexcept {
+  return mA.blockSize() == mB.blockSize();
+}
+
+template <class T, Device D>
+std::string blocksize_eq_msg(Matrix<T, D> const& mA, Matrix<T, D> const& mB) noexcept {
   std::stringstream ss;
   ss << "LHS matrix with blocksize " << mA.blockSize() << " is not equal to RHS matrix with blocksize "
      << mB.blockSize() << "!";
+  return ss.str();
+}
+
+template <class T, Device D>
+bool local_matrix(Matrix<T, D> const& m) noexcept {
+  return m.commGridSize() == comm::Size2D(1, 1);
+}
+
+template <class T, Device D>
+std::string local_matrix_msg(Matrix<T, D> const& m) noexcept {
+  std::stringstream ss;
+  ss << "Matrix is not local (grid size: ", m.commGridSize() << ")!";
+  return ss.str();
+}
+
+template <class T, Device D>
+bool distributed_on_grid(comm::CommunicatorGrid const& g, const Matrix<T, D>& m) noexcept {
+  return m.commGridSize() == g.size() && m.rankIndex() == g.rank();
+}
+
+template <class T, Device D>
+std::string distributed_on_grid_msg(comm::CommunicatorGrid const& g, const Matrix<T, D>& m) noexcept {
+  std::stringstream ss;
+  ss << "The matrix (rank: " << m.rankIndex() << ", grid size: " << m.commGridSize()
+     << ") is not distributed according to the communicator grid  (rank: " << g.rank()
+     << ", grid size: " << g.size() << ").";
+  return ss.str();
+}
+
+template <class T, Device D>
+bool distributed_eq(Matrix<T, D> const& mA, Matrix<T, D> const& mB) noexcept {
+  return mA.distribution() == mB.distribution();
+}
+
+template <class T, Device D>
+std::string distributed_eq_msg(Matrix<T, D> const& mA, Matrix<T, D> const& mB) noexcept {
+  std::stringstream ss;
+  ss << "The LHS and RHS matrices are not distributed in the same way (rank: " << mA.rankIndex()
+     << " vs " << mB.rankIndex() << ", grid size: " << mA.commGridSize() << " vs " << mB.commGridSize()
+     << ")";
   return ss.str();
 }
 
@@ -68,62 +128,57 @@ std::string equal_blksize_matrices_msg(Matrix<T, D> const& mA, Matrix<T, D> cons
 ///
 /// When the assertion is enabled, terminates the program with an error message if the matrix is not
 /// square. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
-#define DLAF_ASSERT_SIZE_SQUARE(matrix)                                                               \
-  DLAF_ASSERT((matrix.size().rows() == matrix.size().cols()), "Matrix ", #matrix, " ", matrix.size(), \
-              " is not square")
+#define DLAF_ASSERT_SIZE_SQUARE(matrix)                      \
+  DLAF_ASSERT(dlaf::matrix::util::internal::size_sq(matrix), \
+              dlaf::matrix::util::internal::size_sq_msg(matrix))
 
 /// @brief Assert that @p matrixA and @p matrixB have the same size.
 ///
 /// When the assertion is enabled, terminates the program with an error message if the two
 /// matrices does not have the same size. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
-#define DLAF_ASSERT_SIZE_EQ(matrixA, matrixB)                                                          \
-  DLAF_ASSERT((matrixA.size() == matrixB.size()), "Matrices ", #matrixA, " ", matrixA.size(), " and ", \
-              #matrixB, " ", matrixB.size(), " does not have the same size")
+#define DLAF_ASSERT_SIZE_EQ(matrixA, matrixB)                          \
+  DLAF_ASSERT(dlaf::matrix::util::internal::size_eq(matrixA, matrixB), \
+              dlaf::matrix::util::internal::size_eq_msg(matrixA, matrixB))
 
 /// @brief Assert that the @p matrix tiles are square.
 ///
 /// When the assertion is enabled, terminates the program with an error message if the tiles of matrix
 /// are not square. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
-#define DLAF_ASSERT_BLOCKSIZE_SQUARE(matrix)                                                \
-  DLAF_ASSERT((matrix.blockSize().rows() == matrix.blockSize().cols()), "Matrix ", #matrix, \
-              " blocksize ", matrix.blockSize(), " is not square")
+#define DLAF_ASSERT_BLOCKSIZE_SQUARE(matrix)                      \
+  DLAF_ASSERT(dlaf::matrix::util::internal::blocksize_sq(matrix), \
+              dlaf::matrix::util::internal::blocksize_sq_msg(matrix))
 
 /// @brief Assert that @p matrixA and @p matrixB tiles have the same size.
 ///
 /// When the assertion is enabled, terminates the program with an error message if the blocksize of the two
 /// matrices does not have the same size. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
-#define DLAF_ASSERT_BLOCKSIZE_EQ(matrixA, matrixB)                                                  \
-  DLAF_ASSERT((matrixA.blockSize() == matrixB.blockSize()), "Blocksizes of matrix ", #matrixA, " ", \
-              matrixA.blockSize(), " and ", #matrixB, " ", matrixB.blockSize(), " are not the same")
+#define DLAF_ASSERT_BLOCKSIZE_EQ(matrixA, matrixB)                          \
+  DLAF_ASSERT(dlaf::matrix::util::internal::blocksize_eq(matrixA, matrixB), \
+              dlaf::matrix::util::internal::blocksize_eq_msg(matrixA, matrixB))
 
 /// @brief Assert that the @p matrix is distributed on a (1x1) grid (i.e. if it is a local matrix).
 ///
 /// When the assertion is enabled, terminates the program with an error message if matrix is not local.
 /// This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
-#define DLAF_ASSERT_LOCALMATRIX(matrix)                                          \
-  DLAF_ASSERT((matrix.commGridSize() == comm::Size2D(1, 1)), "Matrix ", #matrix, \
-              " is not local (grid size: ", matrix.commGridSize(), ")")
+#define DLAF_ASSERT_LOCALMATRIX(matrix)                           \
+  DLAF_ASSERT(dlaf::matrix::util::internal::local_matrix(matrix), \
+              dlaf::matrix::util::internal::local_matrix_msg(matrix))
 
 /// @brief Assert that the @p matrix is distributed according to the given communicator grid.
 ///
 /// When the assertion is enabled, terminates the program with an error message if matrix is not on distributed
 /// according to the given communicator grid. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
-#define DLAF_ASSERT_DISTRIBUTED_ON_GRID(grid, matrix)                                          \
-  DLAF_ASSERT(((matrix.commGridSize() == grid.size()) && (matrix.rankIndex() == grid.rank())), \
-              "The matrix ", #matrix, " (rank: ", matrix.rankIndex(),                          \
-              ", grid size: ", matrix.commGridSize(),                                          \
-              ") is not distributed according to the communicator grid ", #grid,               \
-              " (rank: ", grid.rank(), ", grid size: ", grid.size(), ").")
+#define DLAF_ASSERT_DISTRIBUTED_ON_GRID(grid, matrix)                          \
+  DLAF_ASSERT(dlaf::matrix::util::internal::distributed_on_grid(grid, matrix), \
+              dlaf::matrix::util::internal::distributed_on_grid_msg(grid, matrix))
 
 /// @brief Assert that @p matrixA and @p matrixB are distributed in the same way.
 ///
 /// When the assertion is enabled, terminates the program with an error message if matrices are not
 /// distributed in the same way. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
-#define DLAF_ASSERT_DISTRIBUTED_EQ(matrixA, matrixB)                                                 \
-  DLAF_ASSERT(matrixA.distribution() == matrixB.distribution(), "The matrix ", #matrixA, " and ",    \
-              #matrixB, " are not distributed in the same way (rank: ", matrixA.rankIndex(), " vs ", \
-              matrixB.rankIndex(), ", grid size: ", matrixA.commGridSize(), " vs ",                  \
-              matrixB.commGridSize(), ")")
+#define DLAF_ASSERT_DISTRIBUTED_EQ(matrixA, matrixB)                          \
+  DLAF_ASSERT(dlaf::matrix::util::internal::distributed_eq(matrixA, matrixB), \
+              dlaf::matrix::util::internal::distributed_eq_msg(matrixA, matrixB))
 
 template <class MatrixConst, class Matrix, class Mat, class Location>
 void assertMultipliableMatrices(const MatrixConst& mat_a, const Matrix& mat_b, const Mat& mat_c,

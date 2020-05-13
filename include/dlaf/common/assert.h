@@ -33,7 +33,8 @@
 /// No newline is appended to the given message, which cannot be empty.
 ///
 /// **This check cannot be disabled**
-#define DLAF_CHECK(Expr, MsgExpr) do_assert(Expr, SOURCE_LOCATION(), #Expr, MsgExpr)
+#define DLAF_CHECK(Expr, MsgExpr) \
+  dlaf::common::internal::do_assert(Expr, SOURCE_LOCATION(), #Expr, MsgExpr)
 
 // TODO: reword documentation
 /// **THIS MACRO MUST BE USED WHEN THE CHECK IS NEEDED FOR DEBUGGING PURPOSES THAT HAVE

@@ -24,9 +24,9 @@ namespace dlaf {
 /// perform the copy of each tile
 template <
     template <class, Device> class MatrixTypeSrc, template <class, Device> class MatrixTypeDst,
-    class Tsrc, class Tdst, Device device_source, Device device_dest,
+    class Tsrc, class Tdst, Device device,
     std::enable_if_t<std::is_same<const Tsrc, const Tdst>::value && !std::is_const<Tdst>::value, int> = 0>
-void copy(MatrixTypeSrc<Tsrc, device_source>& source, MatrixTypeDst<Tdst, device_dest>& dest) {
+void copy(MatrixTypeSrc<Tsrc, device>& source, MatrixTypeDst<Tdst, device>& dest) {
   const auto& distribution = source.distribution();
 
   DLAF_ASSERT_SIZE_EQ(source, dest);

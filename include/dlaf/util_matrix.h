@@ -34,6 +34,36 @@ namespace matrix {
 namespace util {
 namespace internal {
 
+template <class T, Device D>
+std::string square_matrix_msg(Matrix<T, D> const& m) noexcept {
+  std::stringstream ss;
+  ss << "Matrix of size " << m.size() << " is not square!";
+  return ss.str();
+}
+
+template <class T, Device D>
+std::string equal_size_matrices_msg(Matrix<T, D> const& mA, Matrix<T, D> const& mB) noexcept {
+  std::stringstream ss;
+  ss << "LHS matrix of size " << mA.size() << " is not equal to RHS matrix of size: " << mB.size()
+     << "!";
+  return ss.str();
+}
+
+template <class T, Device D>
+std::string square_blocksize_matrix_msg(Matrix<T, D> const& m) noexcept {
+  std::stringstream ss;
+  ss << "Matrix blocksize " << m.blockSize() << " is not square!";
+  return ss.str();
+}
+
+template <class T, Device D>
+std::string equal_blksize_matrices_msg(Matrix<T, D> const& mA, Matrix<T, D> const& mB) noexcept {
+  std::stringstream ss;
+  ss << "LHS matrix with blocksize " << mA.blockSize() << " is not equal to RHS matrix with blocksize "
+     << mB.blockSize() << "!";
+  return ss.str();
+}
+
 /// @brief Assert that the @p matrix is square.
 ///
 /// When the assertion is enabled, terminates the program with an error message if the matrix is not

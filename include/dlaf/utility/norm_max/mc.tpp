@@ -22,10 +22,6 @@ namespace dlaf {
 template <class T>
 dlaf::BaseType<T> Utility<Backend::MC>::norm(comm::CommunicatorGrid grid, lapack::Norm norm_type,
                                              blas::Uplo uplo, Matrix<const T, Device::CPU>& mat_a) {
-  // Check if matrix is square
-  DLAF_ASSERT_SIZE_SQUARE(mat_a);
-  // Check if block matrix is square
-  DLAF_ASSERT_BLOCKSIZE_SQUARE(mat_a);
   // Check compatibility of the communicator grid and the distribution
   DLAF_ASSERT_DISTRIBUTED_ON_GRID(grid, mat_a);
 

@@ -35,9 +35,7 @@ public:
   }
 };
 
-using COMPLEX_DOES_NOT_WORK =
-    ::testing::Types<float, double>;  // TODO fix for complex MatrixElementTypes
-TYPED_TEST_SUITE(NormMaxDistributedTest, COMPLEX_DOES_NOT_WORK);
+TYPED_TEST_SUITE(NormMaxDistributedTest, MatrixElementTypes);
 
 const std::vector<LocalElementSize> square_sizes({{10, 10}, {25, 25}, {12, 12}, {0, 0}});
 const std::vector<TileElementSize> square_block_sizes({{3, 3}, {5, 5}});
@@ -60,7 +58,8 @@ TYPED_TEST(NormMaxDistributedTest, Correctness) {
 
         set(mat, el);
 
-        const TypeParam result = Utility<Backend::MC>::norm_max(comm_grid, blas::Uplo::Lower, mat);
+        const dlaf::BaseType<TypeParam> result =
+            Utility<Backend::MC>::norm_max(comm_grid, blas::Uplo::Lower, mat);
 
         EXPECT_NEAR(0, result, TypeUtilities<TypeParam>::error);
       }

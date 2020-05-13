@@ -68,12 +68,12 @@ void testLantr(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag, SizeType m, 
   {
     SCOPED_TRACE("Max in Triangular");
 
-    auto el_T = [size, max_value, uplo](const TileElementIndex& index) {
+    auto el_T = [size, max_value, uplo, diag](const TileElementIndex& index) {
       auto max_in_range = max_value;
       auto max_out_range = max_value + max_value;
 
       if (TileElementSize{1, 1} == size)
-        return max_in_range;
+        return blas::Diag::Unit == diag ? 1 : max_in_range;
 
       if (TileElementIndex{size.rows() - 1, 0} == index)
         return blas::Uplo::Lower == uplo ? max_in_range : max_out_range;
@@ -83,10 +83,18 @@ void testLantr(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag, SizeType m, 
     };
 
     set(a, el_T);
-    EXPECT_FLOAT_EQ(norm_expected, lantr(norm, uplo, diag, a));
+
+    const NormT result = lantr(norm, uplo, diag, a);
+
+    // if unit-diagonal and without any element out of the diagonal
+    if (blas::Diag::Unit == diag && TileElementSize{1, 1} == size)
+      EXPECT_FLOAT_EQ(1, result);
+    else
+      EXPECT_FLOAT_EQ(norm_expected, result);
   }
 
-  {
+  // it does not make sense to test a max on the diagonal when it is a unit diagonal
+  if (blas::Diag::NonUnit == diag) {
     SCOPED_TRACE("Max on Diagonal");
 
     auto el_D = [size, max_value](const TileElementIndex& index) {

@@ -24,6 +24,7 @@ using namespace dlaf_test;
 using namespace testing;
 
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
+const std::vector<blas::Diag> blas_diags({blas::Diag::NonUnit, blas::Diag::Unit});
 
 template <typename Type>
 class TileOperationsTest : public ::testing::Test {};
@@ -55,18 +56,19 @@ TYPED_TEST(TileOperationsTest, lantr) {
                                                                  {1, 1, 0},   {17, 11, 3}, {17, 11, 0},
                                                                  {17, 17, 3}, {17, 17, 3}, {11, 11, 0}};
 
-  for (const auto uplo : blas_uplos) {
-    for (const auto& size : sizes) {
-      std::tie(m, n, extra_lda) = size;
+  for (const auto diag : blas_diags) {
+    for (const auto uplo : blas_uplos) {
+      for (const auto& size : sizes) {
+        std::tie(m, n, extra_lda) = size;
 
-      // transpose rectangular matrix to be useful for upper triangular case
-      if (blas::Uplo::Upper == uplo)
-        std::swap(m, n);
+        // transpose rectangular matrix to be useful for upper triangular case
+        if (blas::Uplo::Upper == uplo)
+          std::swap(m, n);
 
-      auto diag = blas::Diag::NonUnit;
-      auto norm = lapack::Norm::Max;
+        auto norm = lapack::Norm::Max;
 
-      testLantr<TypeParam>(norm, uplo, diag, m, n, extra_lda);
+        testLantr<TypeParam>(norm, uplo, diag, m, n, extra_lda);
+      }
     }
   }
 }

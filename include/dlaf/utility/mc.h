@@ -10,7 +10,9 @@
 #pragma once
 
 #include <blas.hh>
+
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/lapack_tile.h"
 #include "dlaf/matrix.h"
 #include "dlaf/types.h"
 #include "dlaf/utility/internal.h"
@@ -21,8 +23,8 @@ template <>
 struct Utility<Backend::MC> {
   /// Compute max norm of the distribtued Matrix @param mat_a (https://en.wikipedia.org/wiki/Matrix_norm#Max_norm)
   template <class T>
-  static dlaf::BaseType<T> norm_max(comm::CommunicatorGrid grid, blas::Uplo uplo,
-                                    Matrix<const T, Device::CPU>& mat_a);
+  static dlaf::BaseType<T> norm(comm::CommunicatorGrid grid, lapack::Norm norm_type, blas::Uplo uplo,
+                                Matrix<const T, Device::CPU>& mat_a);
 };
 
 }
@@ -32,10 +34,10 @@ struct Utility<Backend::MC> {
 /// ---- ETI
 namespace dlaf {
 
-#define DLAF_NORM_MAX_ETI(KWORD, DATATYPE)                                     \
-  KWORD template dlaf::BaseType<DATATYPE>                                      \
-  Utility<Backend::MC>::norm_max<DATATYPE>(comm::CommunicatorGrid, blas::Uplo, \
-                                           Matrix<const DATATYPE, Device::CPU>&);
+#define DLAF_NORM_MAX_ETI(KWORD, DATATYPE)                                               \
+  KWORD template dlaf::BaseType<DATATYPE>                                                \
+  Utility<Backend::MC>::norm<DATATYPE>(comm::CommunicatorGrid, lapack::Norm, blas::Uplo, \
+                                       Matrix<const DATATYPE, Device::CPU>&);
 
 DLAF_NORM_MAX_ETI(extern, float)
 DLAF_NORM_MAX_ETI(extern, double)

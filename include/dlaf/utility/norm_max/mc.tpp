@@ -11,6 +11,7 @@
 
 #include <blas_util.hh>
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/lapack_tile.h"
 #include "dlaf/matrix.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
@@ -19,8 +20,8 @@
 namespace dlaf {
 
 template <class T>
-dlaf::BaseType<T> Utility<Backend::MC>::norm_max(comm::CommunicatorGrid grid, blas::Uplo uplo,
-                                                 Matrix<const T, Device::CPU>& mat_a) {
+dlaf::BaseType<T> Utility<Backend::MC>::norm(comm::CommunicatorGrid grid, lapack::Norm norm_type,
+                                             blas::Uplo uplo, Matrix<const T, Device::CPU>& mat_a) {
   // Check if matrix is square
   DLAF_ASSERT_SIZE_SQUARE(mat_a);
   // Check if block matrix is square
@@ -28,16 +29,27 @@ dlaf::BaseType<T> Utility<Backend::MC>::norm_max(comm::CommunicatorGrid grid, bl
   // Check compatibility of the communicator grid and the distribution
   DLAF_ASSERT_DISTRIBUTED_ON_GRID(grid, mat_a);
 
-  switch (uplo) {
-    case blas::Uplo::Lower:
-      return internal::mc::norm_max(grid, mat_a);
-    case blas::Uplo::Upper:
-      throw std::runtime_error("uplo = Upper not yet implemented");
-    case blas::Uplo::General:
-      throw std::runtime_error("uplo = General not yet implemented");
-    default:
-      return {};
+  switch (norm_type) {
+    case lapack::Norm::One:
+      throw std::runtime_error("lapack::Norm::One not yet implemented");
+    case lapack::Norm::Two:
+      throw std::runtime_error("lapack::Norm::Two not yet implemented");
+    case lapack::Norm::Inf:
+      throw std::runtime_error("lapack::Norm::Inf not yet implemented");
+    case lapack::Norm::Fro:
+      throw std::runtime_error("lapack::Norm::Fro not yet implemented");
+    case lapack::Norm::Max:
+      switch (uplo) {
+        case blas::Uplo::Lower:
+          return internal::mc::norm_max(grid, mat_a);
+        case blas::Uplo::Upper:
+          throw std::runtime_error("uplo = Upper not yet implemented");
+        case blas::Uplo::General:
+          throw std::runtime_error("uplo = General not yet implemented");
+        default:
+          return {};
+      }
+      break;
   }
 }
-
 }

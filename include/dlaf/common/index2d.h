@@ -13,7 +13,6 @@
 /// @file
 
 #include <array>
-#include <cassert>
 #include <cstddef>
 #include <ostream>
 #include <string>

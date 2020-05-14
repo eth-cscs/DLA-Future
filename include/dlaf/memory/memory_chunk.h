@@ -10,7 +10,6 @@
 
 #pragma once
 
-#include <cassert>
 #include <cstdlib>
 #include <memory>
 #ifdef DLAF_WITH_CUDA

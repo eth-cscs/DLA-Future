@@ -73,7 +73,7 @@ TYPED_TEST(TileOperationsTest, GemmExceptions) {
           {{17, 24}, {24, 17}, {17, 19}, 0, 0, 0},  // different n
           {{17, 7}, {13, 11}, {17, 11}, 7, 2, 2},   // different k
           {{17, 13}, {7, 11}, {17, 11}, 7, 1, 0},   // different k
-          // Correct sizes which do not throw are: {{m, k}, {k, n}, {m, n}, >=0, >= 0, >= 0}
+          // Correct sizes which do not terminate are: {{m, k}, {k, n}, {m, n}, >=0, >= 0, >= 0}
       };
   for (const auto op_a : blas_ops) {
     for (const auto op_b : blas_ops) {
@@ -134,7 +134,7 @@ TYPED_TEST(TileOperationsTest, HerkExceptions) {
       {{10, 16}, {11, 11}, 1, 2}, {{13, 21}, {0, 0}, 1, 22},  // different n
       {{0, 0}, {0, 1}, 0, 0},     {{5, 12}, {5, 6}, 1, 0},
       {{11, 16}, {12, 11}, 1, 2}, {{0, 0}, {1, 0}, 1, 22},  // c not square
-      // Correct sizes which do not throw are: {{n, k}, {n, n}, >= 0, >= 0}
+      // Correct sizes which do not terminate are: {{n, k}, {n, n}, >= 0, >= 0}
   };
 
   for (const auto uplo : blas_uplos) {
@@ -215,7 +215,7 @@ TYPED_TEST(TileOperationsTest, TrsmExceptions) {
       {{11, 11}, {16, 11}, 1, 2}, {{0, 0}, {7, 7}, 1, 22},  // different m
       {{1, 0}, {0, 0}, 0, 0},     {{5, 6}, {5, 6}, 1, 0},
       {{11, 16}, {16, 11}, 1, 2}, {{6, 7}, {8, 9}, 1, 22},  // a not square
-      // Correct sizes which do not throw are: {{m, m}, {m, n}, >= 0, >= 0}
+      // Correct sizes which do not terminate are: {{m, m}, {m, n}, >= 0, >= 0}
   };
   std::vector<std::tuple<TileElementSize, TileElementSize, SizeType, SizeType>> sizes_right;
 

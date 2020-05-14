@@ -33,7 +33,7 @@ struct Factorization<Backend::MC> {
   /// @pre mat_a has a square block size
   /// @pre mat_a is not distributed
   template <class T>
-  static void cholesky(blas::Uplo uplo, Matrix<T, Device::CPU>& mat_a);
+  static void cholesky(blas::Uplo uplo, Matrix<T, Device::CPU>& mat_a) noexcept;
 
   /// Cholesky factorization which computes the factorization of an Hermitian positive
   /// definite matrix A.
@@ -50,7 +50,8 @@ struct Factorization<Backend::MC> {
   /// @pre mat_a has a square block size
   /// @pre mat_a is distributed according to grid.
   template <class T>
-  static void cholesky(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, Device::CPU>& mat_a);
+  static void cholesky(comm::CommunicatorGrid grid, blas::Uplo uplo,
+                       Matrix<T, Device::CPU>& mat_a) noexcept;
 };
 
 }

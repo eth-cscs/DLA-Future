@@ -53,7 +53,7 @@ memory_data<T> create_memory(const std::size_t num_blocks, const std::size_t blo
 enum class MEMORY_TYPE { ARRAY_CONTIGUOUS, ARRAY_STRIDED, ARRAY_CONTIGUOUS_AS_STRIDED };
 
 template <class T>
-memory_data<T> create_memory(MEMORY_TYPE type) {
+memory_data<T> create_memory(MEMORY_TYPE type) noexcept {
   switch (type) {
     case MEMORY_TYPE::ARRAY_CONTIGUOUS:
       // 1 block
@@ -73,7 +73,8 @@ memory_data<T> create_memory(MEMORY_TYPE type) {
       // E E E E E E E E E E E E E E E
       return create_memory<T>(3, 5, 5);
     default:
-      throw std::runtime_error("Unknown memory type");
+      std::cout << "Unknown memory type" << std::endl;
+      std::abort();
   }
 }
 

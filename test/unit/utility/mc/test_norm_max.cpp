@@ -55,7 +55,7 @@ TYPED_TEST(NormMaxDistributedTest, Correctness) {
     for (const auto& size : sizes) {
       for (const auto& block_size : block_sizes) {
         Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
-            std::min(1, comm_grid.size().cols() - 1));
+                               std::min(1, comm_grid.size().cols() - 1));
         GlobalElementSize sz = globalTestSize(size);
         Distribution distribution(sz, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
         Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
@@ -64,7 +64,7 @@ TYPED_TEST(NormMaxDistributedTest, Correctness) {
           if (Index2D{0, 0} == comm_grid.rank())
             SCOPED_TRACE("Max in Lower Triangular");
 
-          auto el_L = [size=sz, max_value](const GlobalElementIndex& index) {
+          auto el_L = [size = sz, max_value](const GlobalElementIndex& index) {
             if (GlobalElementIndex{size.rows() - 1, 0} == index)
               return max_value;
             return TypeParam(0);
@@ -73,7 +73,7 @@ TYPED_TEST(NormMaxDistributedTest, Correctness) {
           set(mat, el_L);
 
           const dlaf::BaseType<TypeParam> result =
-            Utility<Backend::MC>::norm(comm_grid, lapack::Norm::Max, blas::Uplo::Lower, mat);
+              Utility<Backend::MC>::norm(comm_grid, lapack::Norm::Max, blas::Uplo::Lower, mat);
 
           if (Index2D{0, 0} == comm_grid.rank())
             EXPECT_NEAR(norm_expected, result, TypeUtilities<NormT>::error);
@@ -103,7 +103,7 @@ TYPED_TEST(NormMaxDistributedTest, Correctness) {
           if (Index2D{0, 0} == comm_grid.rank())
             SCOPED_TRACE("Max on Diagonal");
 
-          auto el_D = [size=sz, max_value](const GlobalElementIndex& index) {
+          auto el_D = [size = sz, max_value](const GlobalElementIndex& index) {
             if (GlobalElementIndex{size.rows() - 1, size.cols() - 1} == index)
               return max_value;
             return TypeParam(0);
@@ -112,7 +112,7 @@ TYPED_TEST(NormMaxDistributedTest, Correctness) {
           set(mat, el_D);
 
           const dlaf::BaseType<TypeParam> result =
-            Utility<Backend::MC>::norm(comm_grid, lapack::Norm::Max, blas::Uplo::Lower, mat);
+              Utility<Backend::MC>::norm(comm_grid, lapack::Norm::Max, blas::Uplo::Lower, mat);
 
           if (Index2D{0, 0} == comm_grid.rank())
             EXPECT_NEAR(norm_expected, result, TypeUtilities<NormT>::error);

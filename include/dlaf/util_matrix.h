@@ -393,6 +393,8 @@ void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
 
   // Check if matrix is square
   DLAF_ASSERT_SIZE_SQUARE(matrix);
+  DLAF_ASSERT(dlaf::matrix::util::internal::size_sq(matrix),
+              dlaf::matrix::util::internal::size_sq_msg(matrix));
   // Check if block matrix is square
   DLAF_ASSERT_BLOCKSIZE_SQUARE(matrix);
 

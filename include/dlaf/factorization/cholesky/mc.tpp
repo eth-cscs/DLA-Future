@@ -19,7 +19,7 @@ namespace dlaf {
 template <class T>
 void Factorization<Backend::MC>::cholesky(blas::Uplo uplo, Matrix<T, Device::CPU>& mat_a) {
   // Check if matrix is square
-  DLAF_ASSERT_SIZE_SQUARE(mat_a);
+  DLAF_ASSERT(matrix::util::internal::size_sq(matrix), matrix::util::internal::size_sq_msg(matrix));
   // Check if block matrix is square
   DLAF_ASSERT_BLOCKSIZE_SQUARE(mat_a);
   // Check if matrix is stored on local memory
@@ -35,7 +35,7 @@ template <class T>
 void Factorization<Backend::MC>::cholesky(comm::CommunicatorGrid grid, blas::Uplo uplo,
                                           Matrix<T, Device::CPU>& mat_a) {
   // Check if matrix is square
-  DLAF_ASSERT_SIZE_SQUARE(mat_a);
+  DLAF_ASSERT(matrix::util::internal::size_sq(matrix), matrix::util::internal::size_sq_msg(matrix));
   // Check if block matrix is square
   DLAF_ASSERT_BLOCKSIZE_SQUARE(mat_a);
   // Check compatibility of the communicator grid and the distribution

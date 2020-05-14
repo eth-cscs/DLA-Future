@@ -111,6 +111,16 @@ void participant(int rank_root, Communicator& communicator, MPI_Op reduce_operat
 }
 }
 
+namespace internal {
+
+std::string valid_rank_msg(int rank_root, int size) {
+  std::stringstream ss;
+  ss << rank_root << " is not a valid rank in the specified Communicator with size " << size << "!";
+  return ss.str();
+}
+
+}
+
 /// @brief MPI_Reduce wrapper
 /// MPI Reduce(see MPI documentation for additional info)
 /// @param rank_root the rank that will collect the result in output
@@ -118,8 +128,8 @@ void participant(int rank_root, Communicator& communicator, MPI_Op reduce_operat
 template <class DataIn, class DataOut>
 void reduce(const int rank_root, Communicator& communicator, MPI_Op reduce_operation, const DataIn input,
             const DataOut output) {
-  DLAF_ASSERT(rank_root < communicator.size() && rank_root != MPI_UNDEFINED, rank_root,
-              " is not a valid rank in the specified Communicator with size ", communicator.size());
+  DLAF_ASSERT(rank_root < communicator.size() && rank_root != MPI_UNDEFINED,
+              internal::valid_rank_msg(rank_root, communicator.size()));
 
   if (rank_root == communicator.rank())
     internal::reduce::collector(communicator, reduce_operation, input, output);

@@ -86,7 +86,7 @@ protected:
   ///
   /// @pre index.isValid() and index.isIn(localNrTiles())
   std::size_t tileLinearIndex(const LocalTileIndex& index) const noexcept {
-    DLAF_ASSERT_HEAVY((index.isValid() && index.isIn(distribution_->localNrTiles())));
+    DLAF_ASSERT_HEAVY(index.isValid() && index.isIn(distribution_->localNrTiles()));
     using util::size_t::sum;
     using util::size_t::mul;
     return sum(index.row(), mul(distribution_->localNrTiles().rows(), index.col()));

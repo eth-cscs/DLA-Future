@@ -82,7 +82,7 @@ public:
   MemoryView(const MemoryView& memory_view, std::size_t offset, std::size_t size)
       : memory_(size > 0 ? memory_view.memory_ : std::make_shared<MemoryChunk<ElementType, device>>()),
         offset_(size > 0 ? offset + memory_view.offset_ : 0), size_(size) {
-    DLAF_ASSERT((offset + size <= memory_view.size_),
+    DLAF_ASSERT(offset + size <= memory_view.size_,
                 "Sub MemoryView exceeds the limits of the base MemoryView");
   }
   template <class U = T,
@@ -90,7 +90,7 @@ public:
   MemoryView(const MemoryView<ElementType, device>& memory_view, std::size_t offset, std::size_t size)
       : memory_(size > 0 ? memory_view.memory_ : std::make_shared<MemoryChunk<ElementType, device>>()),
         offset_(size > 0 ? offset + memory_view.offset_ : 0), size_(size) {
-    DLAF_ASSERT((offset + size <= memory_view.size_),
+    DLAF_ASSERT(offset + size <= memory_view.size_,
                 "Sub MemoryView exceeds the limits of the base MemoryView");
   }
 
@@ -135,7 +135,7 @@ public:
   /// @param index index of the position
   /// @pre @p index < @p size
   T* operator()(size_t index) const {
-    DLAF_ASSERT_HEAVY((index < size_));
+    DLAF_ASSERT_HEAVY(index < size_);
     return memory_->operator()(offset_ + index);
   }
 

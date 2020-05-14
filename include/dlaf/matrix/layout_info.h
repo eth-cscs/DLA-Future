@@ -62,7 +62,7 @@ public:
   /// @pre index.isValid() and index.isIn(nr_tiles_)));
   std::size_t tileOffset(const LocalTileIndex& index) const noexcept {
     using util::size_t::mul;
-    DLAF_ASSERT_HEAVY((index.isValid() && index.isIn(nr_tiles_)));
+    DLAF_ASSERT_HEAVY(index.isValid() && index.isIn(nr_tiles_));
     return mul(index.row(), tile_offset_row_) + mul(index.col(), tile_offset_col_);
   }
 
@@ -72,7 +72,7 @@ public:
   /// @pre 0 < @p index.col() < nrTiles().cols()
   /// @pre index.isValid() and index.isIn(nr_tiles_)));
   TileElementSize tileSize(const LocalTileIndex& index) const noexcept {
-    DLAF_ASSERT_HEAVY((index.isValid() && index.isIn(nr_tiles_)));
+    DLAF_ASSERT_HEAVY(index.isValid() && index.isIn(nr_tiles_));
     SizeType m = std::min(block_size_.rows(), size_.rows() - index.row() * block_size_.rows());
     SizeType n = std::min(block_size_.cols(), size_.cols() - index.col() * block_size_.cols());
     return {m, n};
@@ -84,7 +84,7 @@ public:
   /// @pre 0 < @p index.col() < nrTiles().cols()
   /// @pre index.isValid() and index.isIn(nr_tiles_)));
   std::size_t minTileMemSize(const LocalTileIndex& index) const noexcept {
-    DLAF_ASSERT_HEAVY((index.isValid() && index.isIn(nr_tiles_)));
+    DLAF_ASSERT_HEAVY(index.isValid() && index.isIn(nr_tiles_));
     return minTileMemSize(tileSize(index));
   }
 

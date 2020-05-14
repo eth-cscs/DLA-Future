@@ -95,8 +95,8 @@ public:
   const T* ptr(const TileElementIndex& index) const noexcept {
     using util::size_t::sum;
     using util::size_t::mul;
-    DLAF_ASSERT_HEAVY((index.isValid()));
-    DLAF_ASSERT_HEAVY((index.isIn(size_)));
+    DLAF_ASSERT_HEAVY(index.isValid());
+    DLAF_ASSERT_HEAVY(index.isIn(size_));
 
     return memory_view_(sum(index.row(), mul(ld_, index.col())));
   }
@@ -171,8 +171,8 @@ public:
   T* ptr(const TileElementIndex& index) const noexcept {
     using util::size_t::sum;
     using util::size_t::mul;
-    DLAF_ASSERT_HEAVY((index.isValid()));
-    DLAF_ASSERT_HEAVY((index.isIn(size_)));
+    DLAF_ASSERT_HEAVY(index.isValid());
+    DLAF_ASSERT_HEAVY(index.isIn(size_));
 
     return memory_view_(sum(index.row(), mul(ld_, index.col())));
   }
@@ -180,7 +180,7 @@ public:
   /// @brief Sets the promise to which this Tile will be moved on destruction.
   /// @c setPromise can be called only once per object.
   Tile& setPromise(hpx::promise<Tile<T, device>>&& p) {
-    DLAF_ASSERT((!p_), "setPromise has been already used on this object!");
+    DLAF_ASSERT(!p_, "setPromise has been already used on this object!");
     p_ = std::make_unique<hpx::promise<Tile<T, device>>>(std::move(p));
     return *this;
   }

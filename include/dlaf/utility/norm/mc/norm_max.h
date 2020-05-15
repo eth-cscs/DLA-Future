@@ -24,7 +24,9 @@ namespace dlaf {
 namespace internal {
 namespace mc {
 
-// Distributed implementation of Max Norm of a Lower Triangular Matrix
+/// Compute max norm of the distribtued Matrix @param mat_a (https://en.wikipedia.org/wiki/Matrix_norm#Max_norm)
+///
+/// @return max(abs(matrix(i,j))) or 0 if matrix.size().isEmpty()
 template <class T>
 dlaf::BaseType<T> norm_max(comm::CommunicatorGrid comm_grid, Matrix<const T, Device::CPU>& matrix) {
   using dlaf::common::internal::vector;
@@ -37,6 +39,9 @@ dlaf::BaseType<T> norm_max(comm::CommunicatorGrid comm_grid, Matrix<const T, Dev
   using NormT = dlaf::BaseType<T>;
 
   const auto& distribution = matrix.distribution();
+
+  if (GlobalElementSize{0, 0} == matrix.size())
+    return {0};
 
   vector<hpx::future<NormT>> tiles_max;
   tiles_max.reserve(distribution.localNrTiles().rows() * distribution.localNrTiles().cols());

@@ -49,8 +49,6 @@ TYPED_TEST(NormMaxDistributedTest, Correctness) {
   using NormT = dlaf::BaseType<TypeParam>;
   const TypeParam max_value = dlaf_test::TypeUtilities<TypeParam>::element(13, -13);
 
-  const NormT norm_expected = std::abs(max_value);
-
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& size : sizes) {
       for (const auto& block_size : block_sizes) {
@@ -60,10 +58,11 @@ TYPED_TEST(NormMaxDistributedTest, Correctness) {
         Distribution distribution(sz, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
         Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
 
-        {
-          if (Index2D{0, 0} == comm_grid.rank())
-            SCOPED_TRACE("Max in Lower Triangular");
+        const blas::Uplo uplo = blas::Uplo::Lower;
 
+        const NormT norm_expected = sz.isEmpty() ? 0 : std::abs(max_value);
+
+        {
           auto el_L = [size = sz, max_value](const GlobalElementIndex& index) {
             if (GlobalElementIndex{size.rows() - 1, 0} == index)
               return max_value;
@@ -73,7 +72,9 @@ TYPED_TEST(NormMaxDistributedTest, Correctness) {
           set(mat, el_L);
 
           const dlaf::BaseType<TypeParam> result =
-              Utility<Backend::MC>::norm(comm_grid, lapack::Norm::Max, blas::Uplo::Lower, mat);
+              Utility<Backend::MC>::norm(comm_grid, lapack::Norm::Max, uplo, mat);
+
+          SCOPED_TRACE(::testing::Message() << "Max in Lower Triangular " << sz);
 
           if (Index2D{0, 0} == comm_grid.rank())
             EXPECT_NEAR(norm_expected, result, TypeUtilities<NormT>::error);
@@ -100,9 +101,6 @@ TYPED_TEST(NormMaxDistributedTest, Correctness) {
         //}
 
         {
-          if (Index2D{0, 0} == comm_grid.rank())
-            SCOPED_TRACE("Max on Diagonal");
-
           auto el_D = [size = sz, max_value](const GlobalElementIndex& index) {
             if (GlobalElementIndex{size.rows() - 1, size.cols() - 1} == index)
               return max_value;
@@ -112,7 +110,9 @@ TYPED_TEST(NormMaxDistributedTest, Correctness) {
           set(mat, el_D);
 
           const dlaf::BaseType<TypeParam> result =
-              Utility<Backend::MC>::norm(comm_grid, lapack::Norm::Max, blas::Uplo::Lower, mat);
+              Utility<Backend::MC>::norm(comm_grid, lapack::Norm::Max, uplo, mat);
+
+          SCOPED_TRACE(::testing::Message() << "Max on Diagonal " << sz);
 
           if (Index2D{0, 0} == comm_grid.rank())
             EXPECT_NEAR(norm_expected, result, TypeUtilities<NormT>::error);

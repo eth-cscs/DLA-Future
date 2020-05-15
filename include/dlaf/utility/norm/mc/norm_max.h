@@ -52,7 +52,9 @@ dlaf::BaseType<T> norm_max(comm::CommunicatorGrid comm_grid, Matrix<const T, Dev
     const SizeType i_diag_loc = distribution.template nextLocalTileFromGlobalTile<Coord::Row>(j);
 
     for (SizeType i_loc = i_diag_loc; i_loc < distribution.localNrTiles().rows(); ++i_loc) {
-      auto norm_max_f = unwrapping([is_diag = (i_loc == i_diag_loc)](auto&& tile) noexcept->NormT {
+      const SizeType i = distribution.template globalTileFromLocalTile<Coord::Row>(i_loc);
+
+      auto norm_max_f = unwrapping([is_diag = (j == i)](auto&& tile) noexcept->NormT {
         if (is_diag)
           return lantr(lapack::Norm::Max, blas::Uplo::Lower, blas::Diag::NonUnit, tile);
         else

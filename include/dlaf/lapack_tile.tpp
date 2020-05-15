@@ -26,6 +26,7 @@ dlaf::BaseType<T> lantr(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag,
       DLAF_ASSERT(a.size().rows() <= a.size().cols(), "Not valid ", a.size());
       break;
     case blas::Uplo::General:
+      DLAF_ASSERT(blas::Uplo::General == uplo, "Invalid parameter");
       break;
   }
   return lapack::lantr(norm, uplo, diag, a.size().rows(), a.size().cols(), a.ptr(), a.ld());

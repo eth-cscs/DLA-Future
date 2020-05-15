@@ -29,11 +29,17 @@ namespace tile {
 
 /// Compute the value of the 1-norm, Frobenius norm, infinity-norm, or the largest absolute value of any
 /// element, of a general rectangular matrix.
+///
+/// @pre a.size().isValid()
 template <class T, Device device>
 dlaf::BaseType<T> lange(lapack::Norm norm, const Tile<T, device>& a) noexcept;
 
 /// Compute the value of the 1-norm, Frobenius norm, infinity-norm, or the largest absolute value of any
 /// element, of a triangular matrix.
+///
+/// @pre a.size().isValid()
+/// @pre a.size().rows() >= a.size().cols() if uplo == blas::Uplo::Lower
+/// @pre a.size().rows() <= a.size().cols() if uplo == blas::Uplo::Upper
 template <class T, Device device>
 dlaf::BaseType<T> lantr(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag,
                         const Tile<T, device>& a) noexcept;

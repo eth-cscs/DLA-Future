@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include "dlaf/common/assert.h"
+
 template <class T, Device device>
 dlaf::BaseType<T> lange(lapack::Norm norm, const Tile<T, device>& a) noexcept {
   return lapack::lange(norm, a.size().rows(), a.size().cols(), a.ptr(), a.ld());
@@ -16,6 +18,16 @@ dlaf::BaseType<T> lange(lapack::Norm norm, const Tile<T, device>& a) noexcept {
 template <class T, Device device>
 dlaf::BaseType<T> lantr(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag,
                         const Tile<T, device>& a) noexcept {
+  switch (uplo) {
+    case blas::Uplo::Lower:
+      DLAF_ASSERT(a.size().rows() >= a.size().cols(), "Not valid ", a.size());
+      break;
+    case blas::Uplo::Upper:
+      DLAF_ASSERT(a.size().rows() <= a.size().cols(), "Not valid ", a.size());
+      break;
+    case blas::Uplo::General:
+      break;
+  }
   return lapack::lantr(norm, uplo, diag, a.size().rows(), a.size().cols(), a.ptr(), a.ld());
 }
 

@@ -38,6 +38,8 @@ dlaf::BaseType<T> Utility<Backend::MC>::norm(comm::CommunicatorGrid grid, lapack
     case lapack::Norm::Max:
       switch (uplo) {
         case blas::Uplo::Lower:
+          DLAF_ASSERT(A.size().rows() >= A.size().cols(), "Invalid size ", A.size(),
+                      " for a lower triangular (required: m >= n)");
           return internal::mc::norm_max(grid, A);
         case blas::Uplo::Upper:
           throw std::runtime_error("uplo = Upper not yet implemented");

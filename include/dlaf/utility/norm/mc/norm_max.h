@@ -40,6 +40,8 @@ dlaf::BaseType<T> norm_max(comm::CommunicatorGrid comm_grid, Matrix<const T, Dev
 
   const auto& distribution = matrix.distribution();
 
+  DLAF_ASSERT_BLOCKSIZE_SQUARE(matrix);
+
   if (GlobalElementSize{0, 0} == matrix.size())
     return {0};
 

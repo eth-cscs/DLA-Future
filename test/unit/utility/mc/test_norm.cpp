@@ -38,7 +38,7 @@ public:
 
 TYPED_TEST_SUITE(NormMaxDistributedTest, MatrixElementTypes);
 
-const std::vector<LocalElementSize> sizes({{10, 10}, {25, 25}, {12, 12}, {0, 0}});
+const std::vector<LocalElementSize> sizes({{10, 10}, {26, 13}, {0, 0}});
 const std::vector<TileElementSize> block_sizes({{3, 3}, {5, 5}});
 
 GlobalElementSize globalTestSize(const LocalElementSize& size) {

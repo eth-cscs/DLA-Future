@@ -23,7 +23,6 @@ namespace dlaf {
 template <class T>
 dlaf::BaseType<T> Utility<Backend::MC>::norm(comm::CommunicatorGrid grid, lapack::Norm norm_type,
                                              blas::Uplo uplo, Matrix<const T, Device::CPU>& A) {
-  // Check compatibility of the communicator grid and the distribution
   DLAF_ASSERT_DISTRIBUTED_ON_GRID(grid, A);
 
   switch (norm_type) {

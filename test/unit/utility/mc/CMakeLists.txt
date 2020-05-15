@@ -8,4 +8,4 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-DLAF_addTest(test_norm_max SOURCES test_norm_max.cpp USE_MAIN MPIHPX MPIRANKS 6)
+DLAF_addTest(test_norm SOURCES test_norm.cpp USE_MAIN MPIHPX MPIRANKS 6)

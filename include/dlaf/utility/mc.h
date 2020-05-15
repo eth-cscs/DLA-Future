@@ -29,7 +29,7 @@ struct Utility<Backend::MC> {
 
 }
 
-#include "dlaf/utility/norm_max/mc.tpp"
+#include "dlaf/utility/norm/mc.tpp"
 
 /// ---- ETI
 namespace dlaf {

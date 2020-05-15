@@ -15,7 +15,8 @@
 #include "dlaf/matrix.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
-#include "dlaf/utility/norm_max/mc/norm_max.h"
+
+#include "dlaf/utility/norm/mc/norm_max.h"
 
 namespace dlaf {
 

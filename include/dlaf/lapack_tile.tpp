@@ -15,9 +15,9 @@ namespace tile {
 
 template <class T>
 void lacpy(const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b) {
-  DLAF_ASSERT_HEAVY(a.size() == b.size(),
-                    "Source and destination tile must have the same size. A=", a.size(),
-                    " B=", b.size());
+  DLAF_ASSERT_MODERATE(a.size() == b.size(),
+                       "Source and destination tile must have the same size. A=", a.size(),
+                       " B=", b.size());
 
   SizeType m = a.size().rows();
   SizeType n = a.size().cols();

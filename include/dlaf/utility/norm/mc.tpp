@@ -22,9 +22,9 @@ namespace dlaf {
 
 template <class T>
 dlaf::BaseType<T> Utility<Backend::MC>::norm(comm::CommunicatorGrid grid, lapack::Norm norm_type,
-                                             blas::Uplo uplo, Matrix<const T, Device::CPU>& mat_a) {
+                                             blas::Uplo uplo, Matrix<const T, Device::CPU>& A) {
   // Check compatibility of the communicator grid and the distribution
-  DLAF_ASSERT_DISTRIBUTED_ON_GRID(grid, mat_a);
+  DLAF_ASSERT_DISTRIBUTED_ON_GRID(grid, A);
 
   switch (norm_type) {
     case lapack::Norm::One:
@@ -38,7 +38,7 @@ dlaf::BaseType<T> Utility<Backend::MC>::norm(comm::CommunicatorGrid grid, lapack
     case lapack::Norm::Max:
       switch (uplo) {
         case blas::Uplo::Lower:
-          return internal::mc::norm_max(grid, mat_a);
+          return internal::mc::norm_max(grid, A);
         case blas::Uplo::Upper:
           throw std::runtime_error("uplo = Upper not yet implemented");
         case blas::Uplo::General:

@@ -21,10 +21,10 @@ namespace dlaf {
 
 template <>
 struct Utility<Backend::MC> {
-  /// Compute max norm of the distribtued Matrix @param mat_a (https://en.wikipedia.org/wiki/Matrix_norm#Max_norm)
+  /// Compute @p norm_type of the distribtued Matrix @param A
   template <class T>
   static dlaf::BaseType<T> norm(comm::CommunicatorGrid grid, lapack::Norm norm_type, blas::Uplo uplo,
-                                Matrix<const T, Device::CPU>& mat_a);
+                                Matrix<const T, Device::CPU>& A);
 };
 
 }

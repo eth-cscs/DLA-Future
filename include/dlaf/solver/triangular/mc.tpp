@@ -28,8 +28,7 @@ void Solver<Backend::MC>::triangular(blas::Side side, blas::Uplo uplo, blas::Op 
                                      T alpha, Matrix<const T, Device::CPU>& mat_a,
                                      Matrix<T, Device::CPU>& mat_b) {
   // Check if matrix A is square
-  DLAF_ASSERT(dlaf::matrix::util::internal::size_sq(matrix),
-              dlaf::matrix::util::internal::size_sq_msg(matrix));
+  DLAF_ASSERT_SIZE_SQUARE(mat_a);
   // Check if block matrix A is square
   DLAF_ASSERT_BLOCKSIZE_SQUARE(mat_a);
   // Check if matrix A is stored on local memory
@@ -95,8 +94,7 @@ void Solver<Backend::MC>::triangular(comm::CommunicatorGrid grid, blas::Side sid
                                      Matrix<const T, Device::CPU>& mat_a,
                                      Matrix<T, Device::CPU>& mat_b) {
   // Check if matrix A is square
-  DLAF_ASSERT(dlaf::matrix::util::internal::size_sq(matrix),
-              dlaf::matrix::util::internal::size_sq_msg(matrix));
+  DLAF_ASSERT_SIZE_SQUARE(mat_a);
   // Check if block matrix A is square
   DLAF_ASSERT_BLOCKSIZE_SQUARE(mat_a);
   // Check compatibility of the communicator grid and the distribution of matrix A

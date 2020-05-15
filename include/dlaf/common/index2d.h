@@ -16,11 +16,10 @@
 #include <cassert>
 #include <cstddef>
 #include <ostream>
-#include <sstream>
-#include <string>
 #include <type_traits>
 
 #include "dlaf/common/assert.h"
+#include "dlaf/common/utils.h"
 #include "dlaf/types.h"
 #include "dlaf/util_math.h"
 
@@ -213,23 +212,6 @@ std::ostream& operator<<(std::ostream& os, const Index2D<T, Tag>& size) {
   return os << static_cast<internal::basic_coords<T>>(size);
 }
 
-namespace internal {
-
-std::string negative_linear_index_msg(std::ptrdiff_t linear_index) {
-  std::stringstream ss;
-  ss << "The linear index cannot be negative (" << std::to_string(linear_index) << ")";
-  return ss.str();
-}
-
-template <class IndexT, class Tag>
-std::string overflow_linear_index_msg(std::ptrdiff_t linear_index, const Size2D<IndexT, Tag>& dims) {
-  std::stringstream ss;
-  ss << "Linear index " << std::to_string(linear_index) << "does not fit into grid " << dims;
-  return ss.str();
-}
-
-}
-
 /// Compute coords of the @p index -th cell in a row-major ordered 2D grid with size @p dims
 ///
 /// @return an Index2D matching the Size2D (same IndexT and Tag)
@@ -242,9 +224,11 @@ Index2D<IndexT, Tag> computeCoordsRowMajor(std::ptrdiff_t linear_index,
                                            const Size2D<IndexT, Tag>& dims) noexcept {
   using dlaf::util::ptrdiff_t::mul;
 
-  DLAF_ASSERT_MODERATE(linear_index >= 0, internal::negative_linear_index_msg(linear_index));
+  DLAF_ASSERT_MODERATE(linear_index >= 0, common::concat("The linear index cannot be negative (",
+                                                         std::to_string(linear_index), ")"));
   DLAF_ASSERT_MODERATE(linear_index < mul(dims.rows(), dims.cols()),
-                       internal::overflow_linear_index_msg(linear_index, dims));
+                       common::concat("Linear index ", std::to_string(linear_index),
+                                      " does not fit into grid ", dims));
 
   std::ptrdiff_t leading_size = dims.cols();
   return {to_signed<IndexT>(linear_index / leading_size),
@@ -263,9 +247,11 @@ Index2D<IndexT, Tag> computeCoordsColMajor(std::ptrdiff_t linear_index,
                                            const Size2D<IndexT, Tag>& dims) noexcept {
   using dlaf::util::ptrdiff_t::mul;
 
-  DLAF_ASSERT_MODERATE(linear_index >= 0, internal::negative_linear_index_msg(linear_index));
+  DLAF_ASSERT_MODERATE(linear_index >= 0, common::concat("The linear index cannot be negative (",
+                                                         std::to_string(linear_index), ")"));
   DLAF_ASSERT_MODERATE(linear_index < mul(dims.rows(), dims.cols()),
-                       internal::overflow_linear_index_msg(linear_index, dims));
+                       common::concat("Linear index ", std::to_string(linear_index),
+                                      " does not fit into grid ", dims));
 
   std::ptrdiff_t leading_size = dims.rows();
   return {to_signed<IndexT>(linear_index % leading_size),
@@ -295,17 +281,6 @@ Index2D<IndexT, Tag> computeCoords(Ordering ordering, std::ptrdiff_t index,
   }
 }
 
-namespace internal {
-
-template <class IndexT, class Tag>
-std::string index_not_in_grid_msg(const Index2D<IndexT, Tag>& index, const Size2D<IndexT, Tag>& dims) {
-  std::stringstream ss;
-  ss << "Index " << index << " is not in the grid " << dims;
-  return ss.str();
-}
-
-}
-
 /// Compute linear index of an Index2D in a row-major ordered 2D grid
 ///
 /// The @tparam LinearIndexT cannot be deduced and it must be explicitly specified. It allows to
@@ -322,7 +297,7 @@ LinearIndexT computeLinearIndexRowMajor(const Index2D<IndexT, Tag>& index,
 
   static_assert(std::is_integral<LinearIndexT>::value, "LinearIndexT must be an integral type");
 
-  DLAF_ASSERT_MODERATE(index.isIn(dims), internal::index_not_in_grid_msg(index, dims));
+  DLAF_ASSERT_MODERATE(index.isIn(dims), common::concat("Index ", index, " is not in the grid ", dims));
 
   std::ptrdiff_t linear_index = sum(mul(index.row(), dims.cols()), index.col());
   return integral_cast<LinearIndexT>(linear_index);
@@ -344,7 +319,7 @@ LinearIndexT computeLinearIndexColMajor(const Index2D<IndexT, Tag>& index,
 
   static_assert(std::is_integral<LinearIndexT>::value, "LinearIndexT must be an integral type");
 
-  DLAF_ASSERT_MODERATE(index.isIn(dims), internal::index_not_in_grid_msg(index, dims));
+  DLAF_ASSERT_MODERATE(index.isIn(dims), common::concat("Index ", index, " is not in the grid ", dims));
 
   std::ptrdiff_t linear_index = sum(mul(index.col(), dims.rows()), index.row());
   return integral_cast<LinearIndexT>(linear_index);

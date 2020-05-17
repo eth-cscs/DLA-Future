@@ -27,18 +27,18 @@ template <class T>
 void Solver<Backend::MC>::triangular(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag,
                                      T alpha, Matrix<const T, Device::CPU>& mat_a,
                                      Matrix<T, Device::CPU>& mat_b) {
-  // Check if matrix A is square
-  DLAF_ASSERT_SIZE_SQUARE(mat_a);
-  // Check if block matrix A is square
-  DLAF_ASSERT_BLOCKSIZE_SQUARE(mat_a);
-  // Check if matrix A is stored on local memory
-  DLAF_ASSERT_LOCALMATRIX(mat_a);
-  // Check if matrix B is stored on local memory
-  DLAF_ASSERT_LOCALMATRIX(mat_b);
+  DLAF_ASSERT(matrix::square_size(mat_a), "Matrix is not square!", mat_a);
+  DLAF_ASSERT(matrix::square_blocksize(mat_a), "Matrix blocksize is not square!", mat_a);
+  DLAF_ASSERT(matrix::local_matrix(mat_a), "Matrix is not local!", mat_a);
+  DLAF_ASSERT(matrix::local_matrix(mat_b), "Matrix is not local!", mat_b);
 
   if (side == blas::Side::Left) {
     // Check if A and B dimensions are compatible
-    DLAF_ASSERT_MULTIPLIABLE_MATRICES(mat_a, mat_b, mat_b, op, blas::Op::NoTrans);
+    DLAF_ASSERT(multipliable_sizes(mat_a.size(), mat_b.size(), mat_b.size(), op, blas::Op::NoTrans),
+                "Sizes mismatch!", mat_a, mat_b);
+    DLAF_ASSERT(multipliable_sizes(mat_a.blockSize(), mat_b.blockSize(), mat_b.blockSize(), op,
+                                   blas::Op::NoTrans),
+                "Sizes mismatch!", mat_a, mat_b);
 
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
@@ -63,7 +63,12 @@ void Solver<Backend::MC>::triangular(blas::Side side, blas::Uplo uplo, blas::Op 
   }
   else {
     // Check if A and B dimensions are compatible
-    DLAF_ASSERT_MULTIPLIABLE_MATRICES(mat_b, mat_a, mat_b, blas::Op::NoTrans, op);
+    DLAF_ASSERT(matrix::multipliable_sizes(mat_b.size(), mat_a.size(), mat_b.size(), blas::Op::NoTrans,
+                                           op),
+                "Sizes mismatch!", mat_a, mat_b);
+    DLAF_ASSERT(matrix::multipliable_sizes(mat_b.blockSize(), mat_a.blockSize(), mat_b.blockSize(),
+                                           blas::Op::NoTrans, op),
+                "Sizes mismatch!", mat_a, mat_b);
 
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
@@ -93,18 +98,21 @@ void Solver<Backend::MC>::triangular(comm::CommunicatorGrid grid, blas::Side sid
                                      blas::Op op, blas::Diag diag, T alpha,
                                      Matrix<const T, Device::CPU>& mat_a,
                                      Matrix<T, Device::CPU>& mat_b) {
-  // Check if matrix A is square
-  DLAF_ASSERT_SIZE_SQUARE(mat_a);
-  // Check if block matrix A is square
-  DLAF_ASSERT_BLOCKSIZE_SQUARE(mat_a);
-  // Check compatibility of the communicator grid and the distribution of matrix A
-  DLAF_ASSERT_DISTRIBUTED_ON_GRID(grid, mat_a);
-  // Check compatibility of the communicator grid and the distribution of matrix B
-  DLAF_ASSERT_DISTRIBUTED_ON_GRID(grid, mat_b);
+  DLAF_ASSERT(matrix::square_size(mat_a), "Matrix is not square!", mat_a);
+  DLAF_ASSERT(matrix::square_blocksize(mat_a), "Matrix blocksize is not square!", mat_a);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid),
+              "The matrix is not distributed according to the communicator grid!", mat_a);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_b, grid),
+              "The matrix is not distributed according to the communicator grid!", mat_b);
 
   if (side == blas::Side::Left) {
     // Check if A and B dimensions are compatible
-    DLAF_ASSERT_MULTIPLIABLE_MATRICES(mat_a, mat_b, mat_b, op, blas::Op::NoTrans);
+    DLAF_ASSERT(matrix::multipliable_sizes(mat_a.size(), mat_b.size(), mat_b.size(), op,
+                                           blas::Op::NoTrans),
+                "Sizes mismatch!", mat_a, mat_b);
+    DLAF_ASSERT(matrix::multipliable_sizes(mat_a.blockSize(), mat_b.blockSize(), mat_b.blockSize(), op,
+                                           blas::Op::NoTrans),
+                "Sizes mismatch!", mat_a, mat_b);
 
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
@@ -129,7 +137,12 @@ void Solver<Backend::MC>::triangular(comm::CommunicatorGrid grid, blas::Side sid
   }
   else {
     // Check if A and B dimensions are compatible
-    DLAF_ASSERT_MULTIPLIABLE_MATRICES(mat_b, mat_a, mat_b, blas::Op::NoTrans, op);
+    DLAF_ASSERT(matrix::multipliable_sizes(mat_b.size(), mat_a.size(), mat_b.size(), blas::Op::NoTrans,
+                                           op),
+                "Sizes mismatch!", mat_a, mat_b);
+    DLAF_ASSERT(matrix::multipliable_sizes(mat_b.blockSize(), mat_a.blockSize(), mat_a.blockSize(),
+                                           blas::Op::NoTrans, op),
+                "Sizes mismatch!", mat_a, mat_b);
 
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {

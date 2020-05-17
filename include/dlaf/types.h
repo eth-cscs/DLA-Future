@@ -93,7 +93,7 @@ template <class S, class U,
                                std::is_integral<S>::value && std::is_signed<S>::value,
                            int> = 0>
 S to_signed(const U unsigned_value) {
-  DLAF_ASSERT_MODERATE(std::numeric_limits<S>::max() >= unsigned_value, "");
+  DLAF_ASSERT_MODERATE(std::numeric_limits<S>::max() >= unsigned_value);
   return static_cast<S>(unsigned_value);
 }
 
@@ -103,8 +103,8 @@ template <class S, class SB,
                                std::is_integral<S>::value && std::is_signed<S>::value,
                            int> = 0>
 S to_signed(const SB value) {
-  DLAF_ASSERT_MODERATE(std::numeric_limits<S>::max() >= value, "");
-  DLAF_ASSERT_MODERATE(std::numeric_limits<S>::min() <= value, "");
+  DLAF_ASSERT_MODERATE(std::numeric_limits<S>::max() >= value);
+  DLAF_ASSERT_MODERATE(std::numeric_limits<S>::min() <= value);
   return static_cast<S>(value);
 }
 
@@ -117,8 +117,8 @@ template <class U, class S,
                                std::is_integral<S>::value && std::is_signed<S>::value,
                            int> = 0>
 U to_unsigned(const S signed_value) {
-  DLAF_ASSERT_MODERATE(signed_value >= 0, "");
-  DLAF_ASSERT_MODERATE(std::numeric_limits<U>::max() >= static_cast<std::size_t>(signed_value), "");
+  DLAF_ASSERT_MODERATE(signed_value >= 0);
+  DLAF_ASSERT_MODERATE(std::numeric_limits<U>::max() >= static_cast<std::size_t>(signed_value));
   return static_cast<U>(signed_value);
 }
 
@@ -128,7 +128,7 @@ template <class U, class UB,
                                std::is_integral<UB>::value && std::is_unsigned<UB>::value,
                            int> = 0>
 U to_unsigned(const UB unsigned_value) {
-  DLAF_ASSERT_MODERATE(std::numeric_limits<U>::max() >= static_cast<std::size_t>(unsigned_value), "");
+  DLAF_ASSERT_MODERATE(std::numeric_limits<U>::max() >= static_cast<std::size_t>(unsigned_value));
   return static_cast<U>(unsigned_value);
 }
 

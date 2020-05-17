@@ -31,73 +31,41 @@ constexpr double M_PI = 3.141592;
 
 namespace dlaf {
 namespace matrix {
-namespace util {
-namespace internal {
 
-/// @brief Assert that the @p matrix is square.
-///
-/// When the assertion is enabled, terminates the program with an error message if the matrix is not
-/// square. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
-#define DLAF_ASSERT_SIZE_SQUARE(matrix)                       \
-  DLAF_ASSERT((matrix.size().rows() == matrix.size().cols()), \
-              common::concat("Matrix ", #matrix, " ", matrix.size(), " is not square"))
+template <class T, Device D>
+bool square_size(Matrix<T, D> const& m) noexcept {
+  return m.size().rows() == m.size().cols();
+}
 
-/// @brief Assert that @p matrixA and @p matrixB have the same size.
-///
-/// When the assertion is enabled, terminates the program with an error message if the two
-/// matrices does not have the same size. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
-#define DLAF_ASSERT_SIZE_EQ(matrixA, matrixB)                                                    \
-  DLAF_ASSERT((matrixA.size() == matrixB.size()),                                                \
-              common::concat("Matrices ", #matrixA, " ", matrixA.size(), " and ", #matrixB, " ", \
-                             matrixB.size(), " does not have the same size"))
+template <class T, Device D>
+bool square_blocksize(Matrix<T, D> const& m) noexcept {
+  return m.blockSize().rows() == m.blockSize().cols();
+}
 
-/// @brief Assert that the @p matrix tiles are square.
-///
-/// When the assertion is enabled, terminates the program with an error message if the tiles of matrix
-/// are not square. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
-#define DLAF_ASSERT_BLOCKSIZE_SQUARE(matrix)                            \
-  DLAF_ASSERT((matrix.blockSize().rows() == matrix.blockSize().cols()), \
-              common::concat("Matrix ", #matrix, " blocksize ", matrix.blockSize(), " is not square"))
+template <class T, Device D>
+bool equal_size(Matrix<T, D> const& lhs, Matrix<T, D> const& rhs) noexcept {
+  return lhs.size() == rhs.size();
+}
 
-/// @brief Assert that @p matrixA and @p matrixB tiles have the same size.
-///
-/// When the assertion is enabled, terminates the program with an error message if the blocksize of the two
-/// matrices does not have the same size. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
-#define DLAF_ASSERT_BLOCKSIZE_EQ(matrixA, matrixB)                                                 \
-  DLAF_ASSERT((matrixA.blockSize() == matrixB.blockSize()),                                        \
-              common::concat("Blocksizes of matrix ", #matrixA, " ", matrixA.blockSize(), " and ", \
-                             #matrixB, " ", matrixB.blockSize(), " are not the same"))
+template <class T, Device D>
+bool equal_blocksize(Matrix<T, D> const& lhs, Matrix<T, D> const& rhs) noexcept {
+  return lhs.blockSize() == rhs.blockSize();
+}
 
-/// @brief Assert that the @p matrix is distributed on a (1x1) grid (i.e. if it is a local matrix).
-///
-/// When the assertion is enabled, terminates the program with an error message if matrix is not local.
-/// This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
-#define DLAF_ASSERT_LOCALMATRIX(matrix)                                                               \
-  DLAF_ASSERT((matrix.commGridSize() == comm::Size2D(1, 1)),                                          \
-              common::concat("Matrix ", #matrix, " is not local (grid size: ", matrix.commGridSize(), \
-                             ")"))
+template <class T, Device D>
+bool local_matrix(Matrix<T, D> const& m) noexcept {
+  return m.commGridSize() == comm::Size2D(1, 1);
+}
 
-/// @brief Assert that the @p matrix is distributed according to the given communicator grid.
-///
-/// When the assertion is enabled, terminates the program with an error message if matrix is not on distributed
-/// according to the given communicator grid. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
-#define DLAF_ASSERT_DISTRIBUTED_ON_GRID(grid, matrix)                                           \
-  DLAF_ASSERT(((matrix.commGridSize() == grid.size()) && (matrix.rankIndex() == grid.rank())),  \
-              common::concat("The matrix ", #matrix, " (rank: ", matrix.rankIndex(),            \
-                             ", grid size: ", matrix.commGridSize(),                            \
-                             ") is not distributed according to the communicator grid ", #grid, \
-                             " (rank: ", grid.rank(), ", grid size: ", grid.size(), ")."))
+template <class T, Device D>
+bool equal_process_grid(Matrix<T, D> const& m, comm::CommunicatorGrid const& g) noexcept {
+  return m.commGridSize() == g.size() && m.rankIndex() == g.rank();
+}
 
-/// @brief Assert that @p matrixA and @p matrixB are distributed in the same way.
-///
-/// When the assertion is enabled, terminates the program with an error message if matrices are not
-/// distributed in the same way. This assertion is enabled when **DLAF_ASSERT_ENABLE** is ON.
-#define DLAF_ASSERT_DISTRIBUTED_EQ(matrixA, matrixB)                                               \
-  DLAF_ASSERT(matrixA.distribution() == matrixB.distribution(),                                    \
-              common::concat("The matrix ", #matrixA, " and ", #matrixB,                           \
-                             " are not distributed in the same way (rank: ", matrixA.rankIndex(),  \
-                             " vs ", matrixB.rankIndex(), ", grid size: ", matrixA.commGridSize(), \
-                             " vs ", matrixB.commGridSize(), ")"))
+template <class T, Device D>
+bool equal_distributions(Matrix<T, D> const& lhs, Matrix<T, D> const& rhs) noexcept {
+  return lhs.distribution() == rhs.distribution();
+}
 
 template <class IndexT, class Tag>
 bool multipliable_sizes(common::Size2D<IndexT, Tag> a, common::Size2D<IndexT, Tag> b,
@@ -110,34 +78,8 @@ bool multipliable_sizes(common::Size2D<IndexT, Tag> a, common::Size2D<IndexT, Ta
   return a.rows() == c.rows() && a.cols() == b.rows() && b.cols() == c.cols();
 }
 
-template <class IndexT, class Tag>
-std::string multipliable_sizes_msg(common::Size2D<IndexT, Tag> a, common::Size2D<IndexT, Tag> b,
-                                   common::Size2D<IndexT, Tag> c, const blas::Op opA, const blas::Op opB,
-                                   const char* mat_a_name, const char* mat_b_name,
-                                   const char* mat_c_name) noexcept {
-  if (opA != blas::Op::NoTrans)
-    a.transpose();
-  if (opB != blas::Op::NoTrans)
-    b.transpose();
-  return common::concat("Size mismatch: ", mat_a_name, " ", a, " x ", mat_b_name, " ", b, " --> ",
-                        mat_c_name, " ", c, " cannot be performed!");
-}
-
-/// @brief Assert that the matrices @p mat_a and @p mat_b are multipliable and that matrix @p mat_c can
-/// store the result of this multiplication.
-///
-/// When the assertion is enabled, terminates the program with an error message if matrices @p mat_a and
-/// @p mat_b are not multipliable or if the matrix @p mat_c can not store the result. This assertion is
-/// enabled when **DLAF_ASSERT_ENABLE** is ON.
-#define DLAF_ASSERT_MULTIPLIABLE_MATRICES(a, b, c, opA, opB)                                            \
-  DLAF_ASSERT(dlaf::matrix::util::internal::multipliable_sizes(a.size(), b.size(), c.size(), opA, opB), \
-              dlaf::matrix::util::internal::multipliable_sizes_msg(a.size(), b.size(), c.size(), opA,   \
-                                                                   opB, #a, #b, #c));                   \
-  DLAF_ASSERT(dlaf::matrix::util::internal::multipliable_sizes(a.blockSize(), b.blockSize(),            \
-                                                               c.blockSize(), opA, opB),                \
-              dlaf::matrix::util::internal::multipliable_sizes_msg(a.blockSize(), b.blockSize(),        \
-                                                                   c.blockSize(), opA, opB, #a, #b,     \
-                                                                   #c))
+namespace util {
+namespace internal {
 
 /// Callable that returns random values in the range [-1, 1]
 template <class T>
@@ -295,10 +237,8 @@ void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
 
   const Distribution& dist = matrix.distribution();
 
-  // Check if matrix is square
-  DLAF_ASSERT_SIZE_SQUARE(matrix);
-  // Check if block matrix is square
-  DLAF_ASSERT_BLOCKSIZE_SQUARE(matrix);
+  DLAF_ASSERT(square_size(matrix), "Matrix is not square!", matrix);
+  DLAF_ASSERT(square_blocksize(matrix), "Matrix blocksize is not square!", matrix);
 
   auto offset_value = mul(2, to_sizet(matrix.size().rows()));
   auto full_tile_size = matrix.blockSize();

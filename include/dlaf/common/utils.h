@@ -46,32 +46,6 @@ struct source_location {
   }
 };
 
-inline void do_assert(bool expr, const source_location& loc, const char* expression,
-                      std::string const& msg) {
-  if (!expr) {
-    std::cerr << "[ERROR] " << loc << '\n' << expression << '\n' << msg << std::endl;
-    std::terminate();
-  }
-}
-
-}
-
-/// Return an empty string
-///
-/// This is just the fundamental step of the recursive algorithm
-inline std::string concat() {
-  return "";
-}
-
-/// Join a list of heterogenous parameters into a string
-///
-/// Given a list of parameters for which a valid std::ostream& operator<<(std::ostream&, const T&)
-/// exists, it returns a std::string with all parameters representations joined
-template <class T, class... Ts>
-std::string concat(const T& first, const Ts&... args) {
-  std::ostringstream ss;
-  ss << first << concat(std::forward<const Ts>(args)...);
-  return ss.str();
 }
 
 }

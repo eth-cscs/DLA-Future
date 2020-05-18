@@ -21,7 +21,9 @@
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/util_types.h"
 
-namespace {
+namespace dlaf {
+namespace test {
+namespace lange {
 
 using dlaf::SizeType;
 using dlaf::TileElementSize;
@@ -90,7 +92,7 @@ void test_lange(lapack::Norm norm, TileElementSize size, SizeType extra_lda, Nor
 }
 
 template <class T>
-void testLange(lapack::Norm norm, TileElementSize size, SizeType extra_lda) {
+void run(lapack::Norm norm, TileElementSize size, SizeType extra_lda) {
   NormT<T> value = std::abs(TileSetter<T>::value);
   NormT<T> norm_expected;
 
@@ -108,11 +110,13 @@ void testLange(lapack::Norm norm, TileElementSize size, SizeType extra_lda) {
       norm_expected = size != TileElementSize{1, 1} ? std::sqrt(17) : std::sqrt(4);
       break;
     case lapack::Norm::Two:
-      FAIL() << "not valid norm for lange" << lapack::norm2str(norm);
+      FAIL() << "not valid norm for lange " << lapack::norm2str(norm);
   }
 
   norm_expected *= value;
   test_lange<T>(norm, size, extra_lda, norm_expected);
 }
 
+}
+}
 }

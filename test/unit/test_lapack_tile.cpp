@@ -50,7 +50,7 @@ TYPED_TEST(TileOperationsTest, lange) {
     for (const auto& size : sizes) {
       std::tie(m, n, extra_lda) = size;
 
-      testLange<TypeParam>(norm, TileElementSize{m, n}, extra_lda);
+      dlaf::test::lange::run<TypeParam>(norm, TileElementSize{m, n}, extra_lda);
     }
   }
 }

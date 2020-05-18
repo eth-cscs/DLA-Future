@@ -49,6 +49,18 @@ Tile<T, Device::CPU> allocate_tile(TileElementSize size, SizeType extra_lda) {
   return std::move(a);
 }
 
+// This setter returns values of an abstract matrix like this
+//
+// 0v  0   0   3v
+// 0   0   0   0
+// 0   0   0   0
+// 2v  0   0   2v
+// 0   0   0   0
+// 0   0   0   0
+// 0   0   0   0
+// 0   0   0   0
+//
+// If the matrix is 1x1, its only value will be 2v
 template <class T>
 struct TileSetter {
   static const T value;

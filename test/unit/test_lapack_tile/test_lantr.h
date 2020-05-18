@@ -63,17 +63,17 @@ struct TileSetter {
       return T(2) * value;
     // bottom right corner
     else if (TileElementIndex{tr_size - 1, tr_size - 1} == index)
-      return T(3) * value;
+      return T(2) * value;
 
     // out of diagonal corner
     switch (uplo_) {
       case blas::Uplo::Lower:
         if (TileElementIndex{tr_size - 1, 0} == index)
-          return T(2) * value;
+          return T(3) * value;
         break;
       case blas::Uplo::Upper:
         if (TileElementIndex{0, tr_size - 1} == index)
-          return T(2) * value;
+          return T(3) * value;
         break;
       case blas::Uplo::General:
       default:
@@ -118,7 +118,7 @@ void run(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag, TileElementSize si
     case lapack::Norm::Max:
       switch (diag) {
         case blas::Diag::Unit:
-          norm_expected = size != TileElementSize{1, 1} ? 2 * value : 1;
+          norm_expected = size != TileElementSize{1, 1} ? 3 * value : 1;
           break;
         case blas::Diag::NonUnit:
           norm_expected = size != TileElementSize{1, 1} ? 3 * value : 2 * value;
@@ -127,12 +127,29 @@ void run(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag, TileElementSize si
       break;
     case lapack::Norm::One:
     case lapack::Norm::Inf:
+      switch (diag) {
+        case blas::Diag::Unit:
+          norm_expected = size != TileElementSize{1, 1} ? 3 * value + 1 : 1;
+          break;
+        case blas::Diag::NonUnit:
+          norm_expected = size != TileElementSize{1, 1} ? 5 * value : 2 * value;
+          break;
+      }
+      break;
     case lapack::Norm::Fro:
-      FAIL() << "test non yet implemented " << lapack::norm2str(norm);
-      return;
+      switch (diag) {
+        case blas::Diag::Unit:
+          norm_expected = size != TileElementSize{1, 1}
+                              ? std::sqrt(std::pow(3 * value, 2) + std::min(size.rows(), size.cols()))
+                              : 1;
+          break;
+        case blas::Diag::NonUnit:
+          norm_expected = size != TileElementSize{1, 1} ? std::sqrt(17) * value : std::sqrt(4) * value;
+          break;
+      }
       break;
     case lapack::Norm::Two:
-      FAIL() << "not valid norm for lange " << lapack::norm2str(norm);
+      FAIL() << "not valid norm for lantr " << lapack::norm2str(norm);
   }
 
   test_lantr<T>(norm, uplo, diag, size, extra_lda, norm_expected);

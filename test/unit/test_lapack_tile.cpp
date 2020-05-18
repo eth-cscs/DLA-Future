@@ -42,12 +42,16 @@ TYPED_TEST(TileOperationsTest, lange) {
                                                                  {17, 11, 3}, {17, 11, 0}, {17, 17, 3},
                                                                  {11, 11, 0}};
 
-  for (const auto& size : sizes) {
-    std::tie(m, n, extra_lda) = size;
+  for (const auto norm : lapack_norms) {
+    // lange cannot be tested for norm2
+    if (norm == lapack::Norm::Two)
+      continue;
 
-    auto norm = lapack::Norm::Max;
+    for (const auto& size : sizes) {
+      std::tie(m, n, extra_lda) = size;
 
-    testLange<TypeParam>(norm, m, n, extra_lda);
+      testLange<TypeParam>(norm, TileElementSize{m, n}, extra_lda);
+    }
   }
 }
 

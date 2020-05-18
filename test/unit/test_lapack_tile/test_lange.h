@@ -10,10 +10,7 @@
 
 #pragma once
 
-#include <sstream>
-
 #include <gtest/gtest.h>
-#include <lapack.hh>
 
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/index.h"
@@ -27,78 +24,95 @@
 namespace {
 
 using dlaf::SizeType;
+using dlaf::TileElementSize;
+using dlaf::TileElementIndex;
+using dlaf::Tile;
+using dlaf::Device;
+using dlaf::memory::MemoryView;
+
+using dlaf::tile::lange;
+using dlaf::util::size_t::mul;
+using dlaf::matrix::test::set;
 
 template <class T>
-void testLange(lapack::Norm norm, SizeType m, SizeType n, SizeType extra_lda) {
-  using dlaf::TileElementSize;
-  using dlaf::TileElementIndex;
-  using dlaf::Tile;
-  using dlaf::Device;
-  using dlaf::memory::MemoryView;
+using NormT = dlaf::BaseType<T>;
 
-  using dlaf::tile::lange;
-  using dlaf::util::size_t::mul;
-  using dlaf::matrix::test::set;
-
-  using NormT = dlaf::BaseType<T>;
-
-  TileElementSize size = TileElementSize(m, n);
-
+template <class T>
+Tile<T, Device::CPU> allocate_tile(TileElementSize size, SizeType extra_lda) {
   SizeType lda = std::max<SizeType>(1, size.rows()) + extra_lda;
 
-  std::stringstream s;
-  s << "LANGE: " << lapack::norm2str(norm);
-  s << ", " << size << ", lda = " << lda;
-  SCOPED_TRACE(s.str());
-
   MemoryView<T, Device::CPU> mem_a(mul(lda, size.cols()));
-
-  // Create tiles.
   Tile<T, Device::CPU> a(size, std::move(mem_a), lda);
 
-  const T max_value = dlaf_test::TypeUtilities<T>::element(13, -13);
+  return std::move(a);
+}
+
+template <class T>
+struct TileSetter {
+  static const T value;
+
+  TileSetter(TileElementSize size) : size_(size) {}
+
+  T operator()(const TileElementIndex& index) const {
+    // bottom right corner
+    if (TileElementIndex{size_.rows() - 1, size_.cols() - 1} == index)
+      return T(2) * value;
+    // bottom left corner
+    else if (TileElementIndex{size_.rows() - 1, 0} == index)
+      return T(2) * value;
+    // top right corner
+    else if (TileElementIndex{0, size_.cols() - 1} == index)
+      return T(3) * value;
+    // all the rest
+    return T(0);
+  }
+
+private:
+  TileElementSize size_;
+};
+
+template <class T>
+const T TileSetter<T>::value = dlaf_test::TypeUtilities<T>::element(13, -13);
+
+template <class T>
+void test_lange(lapack::Norm norm, TileElementSize size, SizeType extra_lda, NormT<T> norm_expected) {
+  auto a = allocate_tile<T>(size, extra_lda);
+
+  set(a, TileSetter<T>{size});
+
+  SCOPED_TRACE(::testing::Message() << "LANGE: " << lapack::norm2str(norm) << ", " << a.size()
+                                    << ", ld = " << a.ld());
 
   // by LAPACK documentation, if it is an empty matrix return 0
-  const NormT norm_expected = (size.isEmpty()) ? 0 : std::abs(max_value);
+  norm_expected = (a.size().isEmpty()) ? 0 : norm_expected;
 
-  {
-    SCOPED_TRACE("Max in Lower Triangular");
+  EXPECT_FLOAT_EQ(norm_expected, lange(norm, a));
+}
 
-    auto el_L = [size, max_value](const TileElementIndex& index) {
-      if (TileElementIndex{size.rows() - 1, 0} == index)
-        return max_value;
-      return T(0);
-    };
+template <class T>
+void testLange(lapack::Norm norm, TileElementSize size, SizeType extra_lda) {
+  NormT<T> value = std::abs(TileSetter<T>::value);
+  NormT<T> norm_expected;
 
-    set(a, el_L);
-    EXPECT_FLOAT_EQ(norm_expected, lange(norm, a));
+  switch (norm) {
+    case lapack::Norm::One:
+      norm_expected = size != TileElementSize{1, 1} ? 5 : 2;
+      break;
+    case lapack::Norm::Max:
+      norm_expected = size != TileElementSize{1, 1} ? 3 : 2;
+      break;
+    case lapack::Norm::Inf:
+      norm_expected = size != TileElementSize{1, 1} ? 4 : 2;
+      break;
+    case lapack::Norm::Fro:
+      norm_expected = size != TileElementSize{1, 1} ? std::sqrt(17) : std::sqrt(4);
+      break;
+    case lapack::Norm::Two:
+      FAIL() << "not valid norm for lange" << lapack::norm2str(norm);
   }
 
-  {
-    SCOPED_TRACE("Max in Upper Triangular");
-
-    auto el_U = [size, max_value](const TileElementIndex& index) {
-      if (TileElementIndex{0, size.cols() - 1} == index)
-        return max_value;
-      return T(0);
-    };
-
-    set(a, el_U);
-    EXPECT_FLOAT_EQ(norm_expected, lange(norm, a));
-  }
-
-  {
-    SCOPED_TRACE("Max on Diagonal");
-
-    auto el_D = [size, max_value](const TileElementIndex& index) {
-      if (TileElementIndex{size.rows() - 1, size.cols() - 1} == index)
-        return max_value;
-      return T(0);
-    };
-
-    set(a, el_D);
-    EXPECT_FLOAT_EQ(norm_expected, lange(norm, a));
-  }
+  norm_expected *= value;
+  test_lange<T>(norm, size, extra_lda, norm_expected);
 }
 
 }

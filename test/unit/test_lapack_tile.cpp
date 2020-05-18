@@ -63,6 +63,10 @@ TYPED_TEST(TileOperationsTest, lantr) {
                                                                  {17, 17, 3}, {17, 17, 3}, {11, 11, 0}};
 
   for (const auto norm : lapack_norms) {
+    // lange cannot be tested for norm2
+    if (norm == lapack::Norm::Two)
+      continue;
+
     for (const auto uplo : blas_uplos) {
       for (const auto diag : blas_diags) {
         for (const auto& size : sizes) {
@@ -72,7 +76,7 @@ TYPED_TEST(TileOperationsTest, lantr) {
           if (blas::Uplo::Upper == uplo)
             std::swap(m, n);
 
-          testLantr<TypeParam>(norm, uplo, diag, m, n, extra_lda);
+          dlaf::test::lantr::run<TypeParam>(norm, uplo, diag, TileElementSize{m, n}, extra_lda);
         }
       }
     }

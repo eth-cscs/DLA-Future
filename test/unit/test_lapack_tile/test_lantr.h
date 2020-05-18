@@ -10,11 +10,7 @@
 
 #pragma once
 
-#include <blas_util.hh>
-#include <sstream>
-
 #include <gtest/gtest.h>
-#include <lapack.hh>
 
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/index.h"
@@ -25,87 +21,123 @@
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/util_types.h"
 
-namespace {
+namespace dlaf {
+namespace test {
+namespace lantr {
 
 using dlaf::SizeType;
+using dlaf::TileElementSize;
+using dlaf::TileElementIndex;
+using dlaf::Tile;
+using dlaf::Device;
+using dlaf::memory::MemoryView;
+
+using dlaf::tile::lantr;
+using dlaf::util::size_t::mul;
+using dlaf::matrix::test::set;
 
 template <class T>
-void testLantr(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag, SizeType m, SizeType n,
-               SizeType extra_lda) {
-  using dlaf::TileElementSize;
-  using dlaf::TileElementIndex;
-  using dlaf::Tile;
-  using dlaf::Device;
-  using dlaf::memory::MemoryView;
+using NormT = dlaf::BaseType<T>;
 
-  using dlaf::tile::lantr;
-  using dlaf::util::size_t::mul;
-  using dlaf::matrix::test::set;
-
-  using NormT = dlaf::BaseType<T>;
-
-  TileElementSize size = TileElementSize(m, n);
-
+template <class T>
+Tile<T, Device::CPU> allocate_tile(TileElementSize size, SizeType extra_lda) {
   SizeType lda = std::max<SizeType>(1, size.rows()) + extra_lda;
 
-  std::stringstream s;
-  s << "LANTR: " << lapack::norm2str(norm);
-  s << ", " << blas::uplo2str(uplo);
-  s << ", " << blas::diag2str(diag);
-  s << ", " << size << ", lda = " << lda;
-  SCOPED_TRACE(s.str());
-
   MemoryView<T, Device::CPU> mem_a(mul(lda, size.cols()));
-
-  // Create tiles.
   Tile<T, Device::CPU> a(size, std::move(mem_a), lda);
 
-  const T max_value = dlaf_test::TypeUtilities<T>::element(13, -13);
-
-  // by LAPACK documentation, if it is an empty matrix return 0
-  const NormT norm_expected = (size.isEmpty()) ? 0 : std::abs(max_value);
-
-  {
-    SCOPED_TRACE("Max in Triangular");
-
-    auto el_T = [size, max_value, uplo, diag](const TileElementIndex& index) {
-      auto max_in_range = max_value;
-      auto max_out_range = max_value + max_value;
-
-      if (TileElementSize{1, 1} == size)
-        return blas::Diag::Unit == diag ? 1 : max_in_range;
-
-      if (TileElementIndex{size.rows() - 1, 0} == index)
-        return blas::Uplo::Lower == uplo ? max_in_range : max_out_range;
-      else if (TileElementIndex{0, size.cols() - 1} == index)
-        return blas::Uplo::Upper == uplo ? max_in_range : max_out_range;
-      return T(0);
-    };
-
-    set(a, el_T);
-
-    const NormT result = lantr(norm, uplo, diag, a);
-
-    // if unit-diagonal and without any element out of the diagonal
-    if (blas::Diag::Unit == diag && TileElementSize{1, 1} == size)
-      EXPECT_FLOAT_EQ(1, result);
-    else
-      EXPECT_FLOAT_EQ(norm_expected, result);
-  }
-
-  // it does not make sense to test a max on the diagonal when it is a unit diagonal
-  if (blas::Diag::NonUnit == diag) {
-    SCOPED_TRACE("Max on Diagonal");
-
-    auto el_D = [size, max_value](const TileElementIndex& index) {
-      if (TileElementIndex{size.rows() - 1, size.cols() - 1} == index)
-        return max_value;
-      return T(0);
-    };
-
-    set(a, el_D);
-    EXPECT_FLOAT_EQ(norm_expected, lantr(norm, uplo, diag, a));
-  }
+  return std::move(a);
 }
 
+template <class T>
+struct TileSetter {
+  static const T value;
+
+  TileSetter(TileElementSize size, blas::Uplo uplo) : size_(size), uplo_(uplo) {}
+
+  T operator()(const TileElementIndex& index) const {
+    const auto tr_size = std::min(size_.rows(), size_.cols());
+
+    // top left corner
+    if (TileElementIndex{0, 0} == index)
+      return T(2) * value;
+    // bottom right corner
+    else if (TileElementIndex{tr_size - 1, tr_size - 1} == index)
+      return T(3) * value;
+
+    // out of diagonal corner
+    switch (uplo_) {
+      case blas::Uplo::Lower:
+        if (TileElementIndex{tr_size - 1, 0} == index)
+          return T(2) * value;
+        break;
+      case blas::Uplo::Upper:
+        if (TileElementIndex{0, tr_size - 1} == index)
+          return T(2) * value;
+        break;
+      case blas::Uplo::General:
+      default:
+        break;
+    }
+
+    // all the rest
+    return T(0);
+  }
+
+private:
+  TileElementSize size_;
+  blas::Uplo uplo_;
+};
+
+template <class T>
+const T TileSetter<T>::value = dlaf_test::TypeUtilities<T>::element(13, -13);
+
+template <class T>
+void test_lantr(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag, TileElementSize size,
+                SizeType extra_lda, NormT<T> norm_expected) {
+  auto a = allocate_tile<T>(size, extra_lda);
+
+  set(a, TileSetter<T>{size, uplo});
+
+  SCOPED_TRACE(::testing::Message() << "LANTR: " << lapack::norm2str(norm) << ", " << a.size()
+                                    << ", ld = " << a.ld() << " uplo = " << blas::uplo2str(uplo)
+                                    << " diag = " << blas::diag2str(diag));
+
+  // by LAPACK documentation, if it is an empty matrix return 0
+  norm_expected = (a.size().isEmpty()) ? 0 : norm_expected;
+
+  EXPECT_FLOAT_EQ(norm_expected, lantr(norm, uplo, diag, a));
+}
+
+template <class T>
+void run(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag, TileElementSize size, SizeType extra_lda) {
+  NormT<T> value = std::abs(TileSetter<T>::value);
+  NormT<T> norm_expected;
+
+  switch (norm) {
+    case lapack::Norm::Max:
+      switch (diag) {
+        case blas::Diag::Unit:
+          norm_expected = size != TileElementSize{1, 1} ? 2 * value : 1;
+          break;
+        case blas::Diag::NonUnit:
+          norm_expected = size != TileElementSize{1, 1} ? 3 * value : 2 * value;
+          break;
+      }
+      break;
+    case lapack::Norm::One:
+    case lapack::Norm::Inf:
+    case lapack::Norm::Fro:
+      FAIL() << "test non yet implemented " << lapack::norm2str(norm);
+      return;
+      break;
+    case lapack::Norm::Two:
+      FAIL() << "not valid norm for lange " << lapack::norm2str(norm);
+  }
+
+  test_lantr<T>(norm, uplo, diag, size, extra_lda, norm_expected);
+}
+
+}
+}
 }

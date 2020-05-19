@@ -9,7 +9,7 @@
 //
 #pragma once
 
-#include <blas_util.hh>
+#include "dlaf/common/assert.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix.h"
@@ -27,25 +27,22 @@ dlaf::BaseType<T> Utility<Backend::MC>::norm(comm::CommunicatorGrid grid, lapack
 
   switch (norm_type) {
     case lapack::Norm::One:
-      throw std::runtime_error("lapack::Norm::One not yet implemented");
     case lapack::Norm::Two:
-      throw std::runtime_error("lapack::Norm::Two not yet implemented");
     case lapack::Norm::Inf:
-      throw std::runtime_error("lapack::Norm::Inf not yet implemented");
     case lapack::Norm::Fro:
-      throw std::runtime_error("lapack::Norm::Fro not yet implemented");
+      DLAF_CHECK("", false, "not yet implemented\n", lapack::norm2str(norm_type));
     case lapack::Norm::Max:
       switch (uplo) {
         case blas::Uplo::Lower:
           return internal::mc::norm_max_L(grid, A);
         case blas::Uplo::Upper:
-          throw std::runtime_error("uplo = Upper not yet implemented");
         case blas::Uplo::General:
-          throw std::runtime_error("uplo = General not yet implemented");
+          DLAF_CHECK("", false, "not yet implemented\n", lapack::norm2str(norm_type), " ", blas::uplo2str(uplo));
         default:
           return {};
       }
       break;
   }
 }
+
 }

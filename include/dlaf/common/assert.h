@@ -119,10 +119,11 @@ inline std::string concat(const std::string& a_str, const std::string& delim, co
 /// b : 4
 /// ```
 
-// This uses a macro trick to invoke the correct overload depending on the number of arguments
+// Invoke the correct overload depending on the number of arguments. The UNUSED argument is there to
+// prevent : "ISO C++11 requires at least one argument for the "..." in a variadic macro"
 #define DLAF_CHECK(...)                                                                             \
   DLAF_GET_MACRO(__VA_ARGS__, DLAF_CHECK_7, DLAF_CHECK_6, DLAF_CHECK_5, DLAF_CHECK_4, DLAF_CHECK_3, \
-                 DLAF_CHECK_2, DLAF_CHECK_1)                                                        \
+                 DLAF_CHECK_2, DLAF_CHECK_1, UNUSED)                                                \
   (__VA_ARGS__)
 
 #ifdef DLAF_ASSERT_HEAVY_ENABLE

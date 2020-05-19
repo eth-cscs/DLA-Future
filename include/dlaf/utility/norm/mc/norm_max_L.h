@@ -24,9 +24,9 @@ namespace dlaf {
 namespace internal {
 namespace mc {
 
-/// Compute max norm of the distribtued Matrix @param mat_a (https://en.wikipedia.org/wiki/Matrix_norm#Max_norm)
-///
-/// @return max(abs(matrix(i,j))) or 0 if matrix.size().isEmpty()
+// Compute max norm of the lower triangular part of the distribtued matrix
+// It just addresses tiles with elements belonging to the lower triangular part of the matrix
+// https://en.wikipedia.org/wiki/Matrix_norm#Max_norm
 template <class T>
 dlaf::BaseType<T> norm_max_L(comm::CommunicatorGrid comm_grid, Matrix<const T, Device::CPU>& matrix) {
   using dlaf::common::internal::vector;

@@ -28,7 +28,7 @@ namespace mc {
 ///
 /// @return max(abs(matrix(i,j))) or 0 if matrix.size().isEmpty()
 template <class T>
-dlaf::BaseType<T> norm_max(comm::CommunicatorGrid comm_grid, Matrix<const T, Device::CPU>& matrix) {
+dlaf::BaseType<T> norm_max_L(comm::CommunicatorGrid comm_grid, Matrix<const T, Device::CPU>& matrix) {
   using dlaf::common::internal::vector;
   using dlaf::common::make_data;
   using hpx::util::unwrapping;
@@ -40,6 +40,7 @@ dlaf::BaseType<T> norm_max(comm::CommunicatorGrid comm_grid, Matrix<const T, Dev
 
   const auto& distribution = matrix.distribution();
 
+  DLAF_ASSERT_SIZE_SQUARE(matrix);
   DLAF_ASSERT_BLOCKSIZE_SQUARE(matrix);
 
   if (GlobalElementSize{0, 0} == matrix.size())

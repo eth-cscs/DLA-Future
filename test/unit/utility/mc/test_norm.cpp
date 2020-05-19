@@ -25,97 +25,79 @@ using namespace dlaf::matrix::test;
 using namespace dlaf_test;
 using namespace testing;
 
+template <class T>
+using NormT = dlaf::BaseType<T>;
+
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
 template <typename Type>
-class NormMaxDistributedTest : public ::testing::Test {
+class NormDistributedTest : public ::testing::Test {
 public:
   const std::vector<CommunicatorGrid>& commGrids() {
     return comm_grids;
   }
 };
 
-TYPED_TEST_SUITE(NormMaxDistributedTest, MatrixElementTypes);
+TYPED_TEST_SUITE(NormDistributedTest, MatrixElementTypes);
 
-const std::vector<LocalElementSize> sizes({{10, 10}, {26, 13}, {0, 0}});
+const std::vector<GlobalElementSize> sizes({{10, 10}, {0, 0}});
 const std::vector<TileElementSize> block_sizes({{3, 3}, {5, 5}});
 
-GlobalElementSize globalTestSize(const LocalElementSize& size) {
-  return {size.rows(), size.cols()};
-}
+const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper, blas::Uplo::General});
 
-TYPED_TEST(NormMaxDistributedTest, Correctness) {
-  using NormT = dlaf::BaseType<TypeParam>;
-  const TypeParam max_value = dlaf_test::TypeUtilities<TypeParam>::element(13, -13);
+TYPED_TEST(NormDistributedTest, NormMax) {
+  const lapack::Norm norm = lapack::Norm::Max;
+
+  const TypeParam value = dlaf_test::TypeUtilities<TypeParam>::element(13, -13);
 
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& size : sizes) {
       for (const auto& block_size : block_sizes) {
         Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
                                std::min(1, comm_grid.size().cols() - 1));
-        GlobalElementSize sz = globalTestSize(size);
-        Distribution distribution(sz, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
+        Distribution distribution(size, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
         Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
 
-        const blas::Uplo uplo = blas::Uplo::Lower;
+        for (const auto& uplo : blas_uplos) {
+          if (blas::Uplo::Lower != uplo)
+            continue;
 
-        const NormT norm_expected = sz.isEmpty() ? 0 : std::abs(max_value);
+          const NormT<TypeParam> norm_expected = size.isEmpty() ? 0 : std::abs(value);
 
-        {
-          auto el_L = [size = sz, max_value](const GlobalElementIndex& index) {
-            if (GlobalElementIndex{size.rows() - 1, 0} == index)
-              return max_value;
-            return TypeParam(0);
-          };
+          {
+            auto el_L = [size, value](const GlobalElementIndex& index) {
+              if (GlobalElementIndex{size.rows() - 1, 0} == index)
+                return value;
+              return TypeParam(0);
+            };
 
-          set(mat, el_L);
+            set(mat, el_L);
 
-          const dlaf::BaseType<TypeParam> result =
-              Utility<Backend::MC>::norm(comm_grid, lapack::Norm::Max, uplo, mat);
+            const NormT<TypeParam> result = Utility<Backend::MC>::norm(comm_grid, norm, uplo, mat);
 
-          SCOPED_TRACE(::testing::Message() << "Max in Lower Triangular " << sz);
+            SCOPED_TRACE(::testing::Message() << lapack::norm2str(norm) << " Lower Triangular " << size);
 
-          if (Index2D{0, 0} == comm_grid.rank())
-            EXPECT_NEAR(norm_expected, result, TypeUtilities<NormT>::error);
-        }
+            if (Index2D{0, 0} == comm_grid.rank())
+              EXPECT_NEAR(norm_expected, result, TypeUtilities<NormT<TypeParam>>::error);
+          }
 
-        // TODO max in upper does not make sense if checking in lower
-        //{
-        //  if (Index2D{0, 0} == comm_grid.rank())
-        //    SCOPED_TRACE("Max in Upper Triangular");
+          {
+            auto el_D = [size, value](const GlobalElementIndex& index) {
+              if (GlobalElementIndex{size.rows() - 1, size.cols() - 1} == index)
+                return value;
+              return TypeParam(0);
+            };
 
-        //  auto el_U = [size=sz, max_value](const GlobalElementIndex& index) {
-        //    if (GlobalElementIndex{0, size.cols() - 1} == index)
-        //      return max_value;
-        //    return TypeParam(0);
-        //  };
+            set(mat, el_D);
 
-        //  set(mat, el_U);
+            const NormT<TypeParam> result = Utility<Backend::MC>::norm(comm_grid, norm, uplo, mat);
 
-        //  const dlaf::BaseType<TypeParam> result =
-        //    Utility<Backend::MC>::norm(comm_grid, lapack::Norm::Max, blas::Uplo::Lower, mat);
+            SCOPED_TRACE(::testing::Message() << lapack::norm2str(norm) << " Diagonal " << size);
 
-        //  if (Index2D{0, 0} == comm_grid.rank())
-        //    EXPECT_NEAR(norm_expected, result, TypeUtilities<NormT>::error);
-        //}
-
-        {
-          auto el_D = [size = sz, max_value](const GlobalElementIndex& index) {
-            if (GlobalElementIndex{size.rows() - 1, size.cols() - 1} == index)
-              return max_value;
-            return TypeParam(0);
-          };
-
-          set(mat, el_D);
-
-          const dlaf::BaseType<TypeParam> result =
-              Utility<Backend::MC>::norm(comm_grid, lapack::Norm::Max, uplo, mat);
-
-          SCOPED_TRACE(::testing::Message() << "Max on Diagonal " << sz);
-
-          if (Index2D{0, 0} == comm_grid.rank())
-            EXPECT_NEAR(norm_expected, result, TypeUtilities<NormT>::error);
+            if (Index2D{0, 0} == comm_grid.rank())
+              EXPECT_NEAR(norm_expected, result, TypeUtilities<NormT<TypeParam>>::error);
+          }
         }
       }
     }

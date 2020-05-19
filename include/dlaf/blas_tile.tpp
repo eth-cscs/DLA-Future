@@ -41,6 +41,44 @@ void gemm(blas::Op op_a, blas::Op op_b, T alpha, const Tile<const T, device>& a,
 }
 
 template <class T, Device device>
+void hemm(blas::Side side, blas::Uplo uplo, T alpha, const Tile<const T, device>& a,
+          const Tile<const T, device>& b, T beta, const Tile<T, device>& c) {
+  SizeType m;
+  SizeType n;
+  m = c.size().rows();
+  n = c.size().cols();
+
+  if (side == blas::Side::Left) {
+    if (m != a.size().rows()) {
+      throw std::invalid_argument("Error: GEMM: m cannot be determined.");
+    }
+    if (n != b.size().cols()) {
+      throw std::invalid_argument("Error: GEMM: n cannot be determined.");
+    }
+    if (a.size().cols() != b.size().rows()) {
+      throw std::invalid_argument(
+          "Error: GEMM: columns of matrix a does not correspond to rows of matrix b.");
+    }
+  }
+
+  if (side == blas::Side::Right) {
+    if (m != b.size().rows()) {
+      throw std::invalid_argument("Error: GEMM: m cannot be determined.");
+    }
+    if (n != a.size().cols()) {
+      throw std::invalid_argument("Error: GEMM: n cannot be determined.");
+    }
+    if (a.size().rows() != b.size().cols()) {
+      throw std::invalid_argument(
+          "Error: GEMM: rows of matrix a does not correspond to columns of matrix b.");
+    }
+  }
+
+  blas::hemm(blas::Layout::ColMajor, side, uplo, m, n, alpha, a.ptr(), a.ld(), b.ptr(), b.ld(), beta,
+             c.ptr(), c.ld());
+}
+
+template <class T, Device device>
 void herk(blas::Uplo uplo, blas::Op op, BaseType<T> alpha, const Tile<const T, device>& a,
           BaseType<T> beta, const Tile<T, device>& c) noexcept {
   SizeType n;

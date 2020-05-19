@@ -96,9 +96,9 @@ protected:
   /// Prints information about the matrix.
   friend std::ostream& operator<<(std::ostream& out, const MatrixBase& matrix) {
     // clang-format off
-    return out << "size="         << matrix.size() 
-               << ", block_size=" << matrix.blockSize() 
-               << ", tiles_grid"  << matrix.nrTiles() 
+    return out << "size="         << matrix.size()
+               << ", block_size=" << matrix.blockSize()
+               << ", tiles_grid=" << matrix.nrTiles()
                << ", rank_index=" << matrix.rankIndex()
                << ", comm_grid="  << matrix.commGridSize();
     // clang-format on

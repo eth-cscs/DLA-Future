@@ -140,7 +140,7 @@ void Solver<Backend::MC>::triangular(comm::CommunicatorGrid grid, blas::Side sid
     DLAF_ASSERT(matrix::multipliable_sizes(mat_b.size(), mat_a.size(), mat_b.size(), blas::Op::NoTrans,
                                            op),
                 "Sizes mismatch!", mat_a, mat_b);
-    DLAF_ASSERT(matrix::multipliable_sizes(mat_b.blockSize(), mat_a.blockSize(), mat_a.blockSize(),
+    DLAF_ASSERT(matrix::multipliable_sizes(mat_b.blockSize(), mat_a.blockSize(), mat_b.blockSize(),
                                            blas::Op::NoTrans, op),
                 "Sizes mismatch!", mat_a, mat_b);
 

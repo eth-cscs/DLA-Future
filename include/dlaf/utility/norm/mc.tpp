@@ -37,7 +37,8 @@ dlaf::BaseType<T> Utility<Backend::MC>::norm(comm::CommunicatorGrid grid, lapack
           return internal::mc::norm_max_L(grid, A);
         case blas::Uplo::Upper:
         case blas::Uplo::General:
-          DLAF_CHECK("", false, "not yet implemented\n", lapack::norm2str(norm_type), " ", blas::uplo2str(uplo));
+          DLAF_CHECK("", false, "not yet implemented\n", lapack::norm2str(norm_type), " ",
+                     blas::uplo2str(uplo));
         default:
           return {};
       }

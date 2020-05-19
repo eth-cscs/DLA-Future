@@ -21,11 +21,27 @@ namespace dlaf {
 
 template <>
 struct Utility<Backend::MC> {
-  /// Compute @p norm_type of the distribtued Matrix @param A
+  /// Compute the norm @p norm_type of the distribtued Matrix @p A
   ///
-  /// @param A.size().rows() >= 0, if @p uplo == blas::Uplo::Lower A.size().rows() >= A.size().cols()
-  /// @param A.size().cols() >= 0, if @p uplo == blas::Uplo::Upper A.size().cols() >= A.size().rows()
-  /// @return 0 if A.size().isEmpty()
+  /// - With @p norm_type == lapack::Norm::Max:
+  ///
+  ///   - With @p uplo == blas::uplo::Lower
+  ///   @pre @p A must be square matrix, A.size().rows() == A.size().cols()
+  ///
+  ///   - With @p uplo == blas::uplo::Upper
+  ///   @note not yet implemented
+  ///
+  ///   - With @p uplo == blas::uplo::General
+  ///   @note not yet implemented
+  ///
+  /// - With @p norm_type = lapack::Norm::{One, Two, Inf, Fro}
+  /// @note not yet implemented
+  ///
+  /// .
+  /// @pre `A.blockSize().rows() == A.blockSize().cols()`
+  /// @pre @p A is distributed according to @p grid
+  /// @return the norm @p norm_type of the Matrix @p A or 0 if `A.size().isEmpty()` (see LAPACK doc for
+  /// additional info)
   template <class T>
   static dlaf::BaseType<T> norm(comm::CommunicatorGrid grid, lapack::Norm norm_type, blas::Uplo uplo,
                                 Matrix<const T, Device::CPU>& A);

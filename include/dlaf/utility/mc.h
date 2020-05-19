@@ -24,16 +24,12 @@ struct Utility<Backend::MC> {
   /// Compute the norm @p norm_type of the distribtued Matrix @p A
   ///
   /// - With @p norm_type == lapack::Norm::Max:
-  ///
   ///   - With @p uplo == blas::uplo::Lower
   ///   @pre @p A must be square matrix, A.size().rows() == A.size().cols()
-  ///
   ///   - With @p uplo == blas::uplo::Upper
   ///   @note not yet implemented
-  ///
   ///   - With @p uplo == blas::uplo::General
   ///   @note not yet implemented
-  ///
   /// - With @p norm_type = lapack::Norm::{One, Two, Inf, Fro}
   /// @note not yet implemented
   ///

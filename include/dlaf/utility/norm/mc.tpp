@@ -16,7 +16,7 @@
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
-#include "dlaf/utility/norm/mc/norm_max.h"
+#include "dlaf/utility/norm/mc/norm_max_L.h"
 
 namespace dlaf {
 
@@ -37,9 +37,7 @@ dlaf::BaseType<T> Utility<Backend::MC>::norm(comm::CommunicatorGrid grid, lapack
     case lapack::Norm::Max:
       switch (uplo) {
         case blas::Uplo::Lower:
-          DLAF_ASSERT(A.size().rows() >= A.size().cols(), "Invalid size ", A.size(),
-                      " for a lower triangular (required: m >= n)");
-          return internal::mc::norm_max(grid, A);
+          return internal::mc::norm_max_L(grid, A);
         case blas::Uplo::Upper:
           throw std::runtime_error("uplo = Upper not yet implemented");
         case blas::Uplo::General:

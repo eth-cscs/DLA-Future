@@ -28,6 +28,16 @@ const std::vector<blas::Diag> blas_diags({blas::Diag::NonUnit, blas::Diag::Unit}
 const std::vector<lapack::Norm> lapack_norms({lapack::Norm::Fro, lapack::Norm::Inf, lapack::Norm::Max,
                                               lapack::Norm::One, lapack::Norm::Two});
 
+template <class T>
+Tile<T, Device::CPU> allocate_tile(TileElementSize size, SizeType extra_lda) {
+  using dlaf::memory::MemoryView;
+
+  SizeType lda = std::max<SizeType>(1, size.rows()) + extra_lda;
+
+  MemoryView<T, Device::CPU> mem_a(mul(lda, size.cols()));
+  return {size, std::move(mem_a), lda};
+}
+
 template <typename Type>
 class TileOperationsTest : public ::testing::Test {};
 
@@ -42,15 +52,17 @@ TYPED_TEST(TileOperationsTest, lange) {
                                                                  {17, 11, 3}, {17, 11, 0}, {17, 17, 3},
                                                                  {11, 11, 0}};
 
-  for (const auto norm : lapack_norms) {
-    // lange cannot be tested for norm2
-    if (norm == lapack::Norm::Two)
-      continue;
+  for (const auto& size : sizes) {
+    std::tie(m, n, extra_lda) = size;
 
-    for (const auto& size : sizes) {
-      std::tie(m, n, extra_lda) = size;
+    auto tile = allocate_tile<TypeParam>(TileElementSize{m, n}, extra_lda);
 
-      dlaf::test::lange::run<TypeParam>(norm, TileElementSize{m, n}, extra_lda);
+    for (const auto norm : lapack_norms) {
+      // lange cannot be tested for norm2
+      if (norm == lapack::Norm::Two)
+        continue;
+
+      dlaf::test::lange::run<TypeParam>(norm, tile);
     }
   }
 }
@@ -62,21 +74,23 @@ TYPED_TEST(TileOperationsTest, lantr) {
                                                                  {1, 1, 0},   {17, 11, 3}, {17, 11, 0},
                                                                  {17, 17, 3}, {17, 17, 3}, {11, 11, 0}};
 
-  for (const auto norm : lapack_norms) {
-    // lange cannot be tested for norm2
-    if (norm == lapack::Norm::Two)
-      continue;
+  for (const auto& size : sizes) {
+    std::tie(m, n, extra_lda) = size;
 
     for (const auto uplo : blas_uplos) {
-      for (const auto diag : blas_diags) {
-        for (const auto& size : sizes) {
-          std::tie(m, n, extra_lda) = size;
+      // transpose rectangular matrix to be useful for upper triangular case
+      if (blas::Uplo::Upper == uplo)
+        std::swap(m, n);
 
-          // transpose rectangular matrix to be useful for upper triangular case
-          if (blas::Uplo::Upper == uplo)
-            std::swap(m, n);
+      auto tile = allocate_tile<TypeParam>(TileElementSize{m, n}, extra_lda);
 
-          dlaf::test::lantr::run<TypeParam>(norm, uplo, diag, TileElementSize{m, n}, extra_lda);
+      for (const auto norm : lapack_norms) {
+        // lange cannot be tested for norm2
+        if (norm == lapack::Norm::Two)
+          continue;
+
+        for (const auto diag : blas_diags) {
+          dlaf::test::lantr::run<TypeParam>(norm, uplo, diag, tile);
         }
       }
     }

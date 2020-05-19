@@ -30,7 +30,6 @@ using dlaf::TileElementSize;
 using dlaf::TileElementIndex;
 using dlaf::Tile;
 using dlaf::Device;
-using dlaf::memory::MemoryView;
 
 using dlaf::tile::lange;
 using dlaf::util::size_t::mul;
@@ -38,16 +37,6 @@ using dlaf::matrix::test::set;
 
 template <class T>
 using NormT = dlaf::BaseType<T>;
-
-template <class T>
-Tile<T, Device::CPU> allocate_tile(TileElementSize size, SizeType extra_lda) {
-  SizeType lda = std::max<SizeType>(1, size.rows()) + extra_lda;
-
-  MemoryView<T, Device::CPU> mem_a(mul(lda, size.cols()));
-  Tile<T, Device::CPU> a(size, std::move(mem_a), lda);
-
-  return std::move(a);
-}
 
 // This setter returns values of an abstract matrix like this
 //
@@ -89,10 +78,8 @@ template <class T>
 const T TileSetter<T>::value = dlaf_test::TypeUtilities<T>::element(13, -13);
 
 template <class T>
-void test_lange(lapack::Norm norm, TileElementSize size, SizeType extra_lda, NormT<T> norm_expected) {
-  auto a = allocate_tile<T>(size, extra_lda);
-
-  set(a, TileSetter<T>{size});
+void test_lange(lapack::Norm norm, const Tile<T, Device::CPU>& a, NormT<T> norm_expected) {
+  set(a, TileSetter<T>{a.size()});
 
   SCOPED_TRACE(::testing::Message() << "LANGE: " << lapack::norm2str(norm) << ", " << a.size()
                                     << ", ld = " << a.ld());
@@ -104,7 +91,9 @@ void test_lange(lapack::Norm norm, TileElementSize size, SizeType extra_lda, Nor
 }
 
 template <class T>
-void run(lapack::Norm norm, TileElementSize size, SizeType extra_lda) {
+void run(lapack::Norm norm, const Tile<T, Device::CPU>& a) {
+  const TileElementSize size = a.size();
+
   NormT<T> value = std::abs(TileSetter<T>::value);
   NormT<T> norm_expected;
 
@@ -126,7 +115,7 @@ void run(lapack::Norm norm, TileElementSize size, SizeType extra_lda) {
   }
 
   norm_expected *= value;
-  test_lange<T>(norm, size, extra_lda, norm_expected);
+  test_lange<T>(norm, a, norm_expected);
 }
 
 }

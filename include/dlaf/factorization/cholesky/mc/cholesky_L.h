@@ -110,11 +110,17 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
   using hpx::threads::thread_priority_default;
 
   using common::internal::vector;
-  using comm::mpi_pool_exists;
+  using comm::internal::mpi_pool_exists;
 
   using TileType = Tile<T, Device::CPU>;
   using ConstTileType = Tile<const T, Device::CPU>;
   using MemViewType = memory::MemoryView<T, Device::CPU>;
+
+  using hpx::threads::executors::pool_executor;
+  using hpx::threads::thread_priority_high;
+  using hpx::threads::thread_priority_default;
+
+  using comm::internal::mpi_pool_exists;
 
   constexpr auto NonUnit = blas::Diag::NonUnit;
   constexpr auto ConjTrans = blas::Op::ConjTrans;
@@ -126,7 +132,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
   pool_executor executor_hp("default", thread_priority_high);
   // Set up executor on the default queue with default priority.
   pool_executor executor_normal("default", thread_priority_default);
-
+  // Set up MPI executor
   auto executor_mpi = (mpi_pool_exists()) ? pool_executor("mpi", thread_priority_high) : executor_hp;
 
   auto col_comm_size = grid.colCommunicator().size();

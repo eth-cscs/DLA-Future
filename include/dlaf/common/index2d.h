@@ -14,6 +14,7 @@
 
 #include <array>
 #include <cassert>
+#include <cstddef>
 #include <ostream>
 #include <type_traits>
 
@@ -53,20 +54,6 @@ public:
   /// @param coords where coords[0] is the row index and coords[1] is the column index
   basic_coords(const std::array<IndexT, 2>& coords) noexcept : basic_coords(coords[0], coords[1]) {}
 
-  /// Compare two indices.
-  ///
-  /// @return true if row and column index of *this and rhs are equal.
-  bool operator==(const basic_coords& rhs) const noexcept {
-    return row_ == rhs.row_ && col_ == rhs.col_;
-  }
-
-  /// Compare two indices.
-  ///
-  /// @return true if any of row and column index of *this and rhs are different.
-  bool operator!=(const basic_coords& rhs) const noexcept {
-    return !operator==(rhs);
-  }
-
   /// Return a copy of the row or the col index as specified by @p rc
   template <Coord rc>
   IndexT get() const noexcept {
@@ -100,6 +87,16 @@ public:
   }
 
 protected:
+  /// @return true if `this` and `rhs` have the same row and column.
+  bool operator==(const basic_coords& rhs) const noexcept {
+    return row_ == rhs.row_ && col_ == rhs.col_;
+  }
+
+  /// @return true if `this` and `rhs` have different row or column.
+  bool operator!=(const basic_coords& rhs) const noexcept {
+    return !operator==(rhs);
+  }
+
   IndexT row_;
   IndexT col_;
 };
@@ -108,6 +105,7 @@ template <class Coords2DType>
 Coords2DType transposed(const Coords2DType& coords) {
   return {coords.col_, coords.row_};
 }
+
 }
 
 /// A strong-type for 2D sizes
@@ -115,48 +113,60 @@ Coords2DType transposed(const Coords2DType& coords) {
 /// @tparam Tag for strong-typing
 template <typename IndexT, class Tag>
 class Size2D : public internal::basic_coords<IndexT> {
+  using BaseT = internal::basic_coords<IndexT>;
+
 public:
-  using internal::basic_coords<IndexT>::basic_coords;
+  using BaseT::basic_coords;
 
   IndexT rows() const noexcept {
-    return internal::basic_coords<IndexT>::row_;
+    return BaseT::row_;
   }
 
   IndexT cols() const noexcept {
-    return internal::basic_coords<IndexT>::col_;
+    return BaseT::col_;
   }
 
   /// @brief Returns true if rows() == 0 or cols() == 0
   /// @pre isValid() == true
   bool isEmpty() const noexcept {
-    assert(internal::basic_coords<IndexT>::isValid());
+    assert(BaseT::isValid());
     return rows() == 0 || cols() == 0;
   }
 
+  /// @return true if `this` and `rhs` have the same row and column.
+  bool operator==(const Size2D& rhs) const noexcept {
+    return BaseT::operator==(rhs);
+  }
+
+  /// @return true if `this` and `rhs` have different row or column.
+  bool operator!=(const Size2D& rhs) const noexcept {
+    return BaseT::operator!=(rhs);
+  }
+
   friend std::ostream& operator<<(std::ostream& out, const Size2D& index) {
-    return out << static_cast<internal::basic_coords<IndexT>>(index);
+    return out << static_cast<BaseT>(index);
   }
 };
+
+template <class T, class Tag>
+std::ostream& operator<<(std::ostream& os, const Size2D<T, Tag>& size) {
+  return os << static_cast<internal::basic_coords<T>>(size);
+}
 
 /// A strong-type for 2D coordinates
 /// @tparam IndexT type for row and column coordinates
 /// @tparam Tag for strong-typing
 template <typename IndexT, class Tag>
 class Index2D : public internal::basic_coords<IndexT> {
+  using BaseT = internal::basic_coords<IndexT>;
+
 public:
+  using BaseT::basic_coords;
+
   using IndexType = IndexT;
 
   /// Create an invalid 2D coordinate
-  Index2D() noexcept : internal::basic_coords<IndexT>(-1, -1) {}
-
-  /// Create a valid 2D coordinate
-  /// @param row index of the row
-  /// @param col index of the column
-  /// @throw std::invalid_argument if row < 0 or col < 0
-  Index2D(IndexT row, IndexT col) : internal::basic_coords<IndexT>(row, col) {
-    if (!internal::basic_coords<IndexT>::isValid())
-      throw std::invalid_argument("indices are not valid (negative).");
-  }
+  Index2D() noexcept : BaseT(-1, -1) {}
 
   /// Create a valid 2D coordinate
   /// @see Index2D::Index2D(IndexT row, IndexT col)
@@ -173,39 +183,90 @@ public:
            boundary.isValid();
   }
 
+  /// @return true if `this` and `rhs` have the same row and column.
+  bool operator==(const Index2D& rhs) const noexcept {
+    return BaseT::operator==(rhs);
+  }
+
+  /// @return true if `this` and `rhs` have different row or column.
+  bool operator!=(const Index2D& rhs) const noexcept {
+    return BaseT::operator!=(rhs);
+  }
+
   IndexT row() const noexcept {
-    return internal::basic_coords<IndexT>::row_;
+    return BaseT::row_;
   }
 
   IndexT col() const noexcept {
-    return internal::basic_coords<IndexT>::col_;
+    return BaseT::col_;
   }
 
   friend std::ostream& operator<<(std::ostream& out, const Index2D& index) {
-    return out << static_cast<internal::basic_coords<IndexT>>(index);
+    return out << static_cast<BaseT>(index);
   }
 };
 
-template <class IndexT, class Tag, class LinearIndexT>
-Index2D<IndexT, Tag> computeCoordsRowMajor(LinearIndexT index,
-                                           const Size2D<IndexT, Tag>& dims) noexcept {
-  return {static_cast<IndexT>(index / dims.cols()), static_cast<IndexT>(index % dims.cols())};
+template <class T, class Tag>
+std::ostream& operator<<(std::ostream& os, const Index2D<T, Tag>& size) {
+  return os << static_cast<internal::basic_coords<T>>(size);
 }
 
-template <class IndexT, class Tag, class LinearIndexT>
-Index2D<IndexT, Tag> computeCoordsColMajor(LinearIndexT index,
-                                           const Size2D<IndexT, Tag>& dims) noexcept {
-  return {static_cast<IndexT>(index % dims.rows()), static_cast<IndexT>(index / dims.rows())};
-}
-
-/// Compute coords of the @p index -th cell in a grid with @p ordering and sizes @p dims
+/// Compute coords of the @p index -th cell in a row-major ordered 2D grid with size @p dims
 ///
-/// Return an Index2D matching the Size2D (same IndexT and Tag)
-/// @param ordering specify linear index layout in the grid
-/// @param dims Size2D<IndexT, Tag>
-/// @param index is the linear index of the cell with specified @p ordering
-template <class IndexT, class Tag, class LinearIndexT>
-Index2D<IndexT, Tag> computeCoords(Ordering ordering, LinearIndexT index,
+/// @return an Index2D matching the Size2D (same IndexT and Tag)
+/// @param dims Size2D<IndexT, Tag> representing the size of the grid
+/// @param index linear index of the cell
+///
+/// @pre 0 <= linear_index < (dims.rows() * dims.cols())
+template <class IndexT, class Tag>
+Index2D<IndexT, Tag> computeCoordsRowMajor(std::ptrdiff_t linear_index,
+                                           const Size2D<IndexT, Tag>& dims) noexcept {
+  using dlaf::util::ptrdiff_t::mul;
+
+  DLAF_ASSERT_MODERATE(linear_index >= 0, "The linear index cannot be negative (",
+                       std::to_string(linear_index), ")");
+  DLAF_ASSERT_MODERATE(linear_index < mul(dims.rows(), dims.cols()), "Linear index ",
+                       std::to_string(linear_index), " does not fit into grid ", dims);
+
+  std::ptrdiff_t leading_size = dims.cols();
+  return {to_signed<IndexT>(linear_index / leading_size),
+          to_signed<IndexT>(linear_index % leading_size)};
+}
+
+/// Compute coords of the @p index -th cell in a column-major ordered 2D grid with size op dims
+///
+/// @return an Index2D matching the Size2D (same IndexT and Tag)
+/// @param dims Size2D<IndexT, Tag> representing the size of the grid
+/// @param index linear index of the cell
+///
+/// @pre 0 <= linear_index < (dims.rows() * dims.cols())
+template <class IndexT, class Tag>
+Index2D<IndexT, Tag> computeCoordsColMajor(std::ptrdiff_t linear_index,
+                                           const Size2D<IndexT, Tag>& dims) noexcept {
+  using dlaf::util::ptrdiff_t::mul;
+
+  DLAF_ASSERT_MODERATE(linear_index >= 0, "The linear index cannot be negative (",
+                       std::to_string(linear_index), ")");
+  DLAF_ASSERT_MODERATE(linear_index < mul(dims.rows(), dims.cols()), "Linear index ",
+                       std::to_string(linear_index), " does not fit into grid ", dims);
+
+  std::ptrdiff_t leading_size = dims.rows();
+  return {to_signed<IndexT>(linear_index % leading_size),
+          to_signed<IndexT>(linear_index / leading_size)};
+}
+
+/// Compute coords of the @p index -th cell in a grid with @p ordering and size @p dims
+///
+/// It acts as dispatcher for computeCoordsColMajor() and computeCoordsRowMajor() depending on given @p ordering
+///
+/// @return an Index2D matching the Size2D (same IndexT and Tag)
+/// @param ordering specifies linear index layout in the grid
+/// @param dims Size2D<IndexT, Tag> representing the size of the grid
+/// @param index linear index of the cell (with specified @p ordering)
+///
+/// @pre 0 <= linear_index < (dims.rows() * dims.cols())
+template <class IndexT, class Tag>
+Index2D<IndexT, Tag> computeCoords(Ordering ordering, std::ptrdiff_t index,
                                    const Size2D<IndexT, Tag>& dims) noexcept {
   switch (ordering) {
     case Ordering::RowMajor:
@@ -217,46 +278,106 @@ Index2D<IndexT, Tag> computeCoords(Ordering ordering, LinearIndexT index,
   }
 }
 
-template <class IndexT, class Tag>
-IndexT computeLinearIndexRowMajor(const Index2D<IndexT, Tag>& index,
-                                  const Size2D<IndexT, Tag>& dims) noexcept {
+/// Compute linear index of an Index2D in a row-major ordered 2D grid
+///
+/// The @tparam LinearIndexT cannot be deduced and it must be explicitly specified. It allows to
+/// internalize the casting of the value before returning it, not leaving the burden to the user.
+///
+/// @tparam LinearIndexT can be any integral type signed or unsigned
+/// @pre LinearIndexT must be able to store the result
+/// @pre index.isIn(dims)
+template <class LinearIndexT, class IndexT, class Tag>
+LinearIndexT computeLinearIndexRowMajor(const Index2D<IndexT, Tag>& index,
+                                        const Size2D<IndexT, Tag>& dims) noexcept {
+  using dlaf::util::ptrdiff_t::mul;
+  using dlaf::util::ptrdiff_t::sum;
+
+  static_assert(std::is_integral<LinearIndexT>::value, "LinearIndexT must be an integral type");
+
   DLAF_ASSERT_MODERATE(index.isIn(dims), "Index ", index, " is not in the grid ", dims);
 
-  using dlaf::util::size_t::mul;
-  using dlaf::util::size_t::sum;
-
-  std::size_t linear_index = sum(mul(index.row(), dims.cols()), index.col());
-
-  return to_signed<IndexT>(linear_index);
+  std::ptrdiff_t linear_index = sum(mul(index.row(), dims.cols()), index.col());
+  return integral_cast<LinearIndexT>(linear_index);
 }
 
-template <class IndexT, class Tag>
-IndexT computeLinearIndexColMajor(const Index2D<IndexT, Tag>& index,
-                                  const Size2D<IndexT, Tag>& dims) noexcept {
+/// Compute linear index of an Index2D in a column-major ordered 2D grid
+///
+/// The @tparam LinearIndexT cannot be deduced and it must be explicitly specified. It allows to
+/// internalize the casting of the value before returning it, not leaving the burden to the user.
+///
+/// @tparam LinearIndexT can be any integral type signed or unsigned
+/// @pre LinearIndexT must be able to store the result
+/// @pre index.isIn(dims)
+template <class LinearIndexT, class IndexT, class Tag>
+LinearIndexT computeLinearIndexColMajor(const Index2D<IndexT, Tag>& index,
+                                        const Size2D<IndexT, Tag>& dims) noexcept {
+  using dlaf::util::ptrdiff_t::mul;
+  using dlaf::util::ptrdiff_t::sum;
+
+  static_assert(std::is_integral<LinearIndexT>::value, "LinearIndexT must be an integral type");
+
   DLAF_ASSERT_MODERATE(index.isIn(dims), "Index ", index, " is not in the grid ", dims);
 
-  using dlaf::util::size_t::mul;
-  using dlaf::util::size_t::sum;
-
-  std::size_t linear_index = sum(mul(index.col(), dims.rows()), index.row());
-
-  return to_signed<IndexT>(linear_index);
+  std::ptrdiff_t linear_index = sum(mul(index.col(), dims.rows()), index.row());
+  return integral_cast<LinearIndexT>(linear_index);
 }
 
 /// Compute linear index of an Index2D
 ///
+/// It acts as dispatcher for computeLinearIndexColMajor() and computeLinearIndexRowMajor()
+/// depending on given @p ordering.
+///
+/// The @tparam LinearIndexT cannot be deduced and it must be explicitly specified. It allows to
+/// internalize the casting of the value before returning it, not leaving the burden to the user.
+///
+/// @tparam LinearIndexT can be any integral type signed or unsigned (it must be explicitly specified)
+/// @pre LinearIndexT must be able to store the result
 /// @pre index.isIn(dims)
-template <class IndexT, class Tag>
-IndexT computeLinearIndex(Ordering ordering, const Index2D<IndexT, Tag>& index,
-                          const Size2D<IndexT, Tag>& dims) noexcept {
+template <class LinearIndexT, class IndexT, class Tag>
+LinearIndexT computeLinearIndex(Ordering ordering, const Index2D<IndexT, Tag>& index,
+                                const Size2D<IndexT, Tag>& dims) noexcept {
   switch (ordering) {
     case Ordering::RowMajor:
-      return computeLinearIndexRowMajor(index, dims);
+      return computeLinearIndexRowMajor<LinearIndexT>(index, dims);
     case Ordering::ColumnMajor:
-      return computeLinearIndexColMajor(index, dims);
+      return computeLinearIndexColMajor<LinearIndexT>(index, dims);
     default:
       return {};
   }
+}
+
+/// The following operations are defined:
+///
+/// Index +/- Size -> Index
+/// Index - Index -> Size
+/// Size +/- Size -> Size
+
+template <class IndexT, class Tag>
+Index2D<IndexT, Tag> operator+(const Index2D<IndexT, Tag>& lhs,
+                               const Size2D<IndexT, Tag>& rhs) noexcept {
+  return Index2D<IndexT, Tag>(lhs.row() + rhs.rows(), lhs.col() + rhs.cols());
+}
+
+template <class IndexT, class Tag>
+Index2D<IndexT, Tag> operator-(const Index2D<IndexT, Tag>& lhs,
+                               const Size2D<IndexT, Tag>& rhs) noexcept {
+  return Index2D<IndexT, Tag>(lhs.row() - rhs.rows(), lhs.col() - rhs.cols());
+}
+
+template <class IndexT, class Tag>
+Size2D<IndexT, Tag> operator-(const Index2D<IndexT, Tag>& lhs,
+                              const Index2D<IndexT, Tag>& rhs) noexcept {
+  return Size2D<IndexT, Tag>(lhs.row() - rhs.row(), lhs.col() - rhs.col());
+}
+
+template <class IndexT, class Tag>
+Size2D<IndexT, Tag> operator-(const Size2D<IndexT, Tag>& lhs, const Size2D<IndexT, Tag>& rhs) noexcept {
+  return Size2D<IndexT, Tag>(lhs.rows() - rhs.rows(), lhs.cols() - rhs.cols());
+}
+
+template <class IndexT, class Tag>
+Size2D<IndexT, Tag> operator+(const Size2D<IndexT, Tag>& lhs, const Size2D<IndexT, Tag>& rhs) noexcept {
+  return Size2D<IndexT, Tag>(lhs.rows() + rhs.rows(), lhs.cols() + rhs.cols());
 }
 
 }

@@ -84,6 +84,11 @@ void triangular_LLN(blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_
 template <class T>
 void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
                     Matrix<const T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_b) {
+  using hpx::threads::executors::pool_executor;
+  using hpx::threads::thread_priority_high;
+  using hpx::threads::thread_priority_default;
+
+  using comm::internal::mpi_pool_exists;
   using common::internal::vector;
 
   constexpr auto Left = blas::Side::Left;
@@ -98,7 +103,7 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
   using hpx::util::unwrapping;
   using hpx::dataflow;
 
-  using comm::mpi_pool_exists;
+  using comm::internal::mpi_pool_exists;
 
   using TileType = Tile<T, Device::CPU>;
   using ConstTileType = Tile<const T, Device::CPU>;
@@ -109,6 +114,7 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
   // Set up executor on the default queue with default priority.
   pool_executor executor_normal("default", thread_priority_default);
 
+  // Set up MPI executor
   auto executor_mpi = (mpi_pool_exists()) ? pool_executor("mpi", thread_priority_high) : executor_hp;
 
   auto col_comm_size = grid.colCommunicator().size();

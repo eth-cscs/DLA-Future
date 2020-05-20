@@ -21,7 +21,7 @@ using dlaf::to_unsigned;
 using dlaf::integral_cast;
 using dlaf::common::internal::source_location;
 
-constexpr const char* ERROR_MESSAGE = "[ERROR]";
+const char* ERROR_MESSAGE = "\\[ERROR\\]";
 
 template <class T>
 const auto LOWER_BOUND = std::numeric_limits<T>::min;

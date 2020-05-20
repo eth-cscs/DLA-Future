@@ -38,7 +38,7 @@ add_library(DLAF
   communication/communicator_grid.cpp
   communication/datatypes.cpp
   eti/function.cpp
-  #eti/dataflow.cpp
+  eti/dataflow.cpp
   factorization/mc.cpp
   matrix/distribution.cpp
   matrix/layout_info.cpp

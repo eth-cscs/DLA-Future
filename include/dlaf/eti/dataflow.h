@@ -13,7 +13,8 @@
 #include <utility>
 
 #include <hpx/dataflow.hpp>
-#include <hpx/runtime/threads/executors/pool_executor.hpp>
+#include <hpx/include/parallel_executors.hpp>
+#include <hpx/include/thread_executors.hpp>
 #include <hpx/util/unwrap.hpp>
 
 #include "dlaf/eti/function.h"

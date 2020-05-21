@@ -46,22 +46,17 @@ public:
       return;
 
     std::size_t mem_size = static_cast<std::size_t>(size_) * sizeof(T);
-#ifdef DLAF_WITH_CUDA
     if (device == Device::CPU) {
-      DLAF_CUDA_CALL(cudaMallocHost(&ptr_, mem_size));
-    }
-    else {
-      DLAF_CUDA_CALL(cudaMalloc(&ptr_, mem_size));
-    }
-#else
-    if (device == Device::CPU) {
+      // FIXME: Pinned memory DLAF_CUDA_CALL(cudaMallocHost(&ptr_, size_ * sizeof(T)));
       ptr_ = static_cast<T*>(std::malloc(mem_size));
     }
     else {
-      std::cout << "[ERROR] CUDA code was requested but the `DLAF_WITH_CUDA` flag was not passed!";
+#ifdef DLAF_WITH_CUDA
+      DLAF_CUDA_CALL(cudaMalloc(&ptr_, mem_size));
+#else
       std::terminate();
-    }
 #endif
+    }
   }
 
   /// Creates a MemoryChunk object from an existing memory allocation.
@@ -134,18 +129,15 @@ public:
 private:
   void deallocate() {
     if (allocated_) {
-#ifdef DLAF_WITH_CUDA
       if (device == Device::CPU) {
-        DLAF_CUDA_CALL(cudaFreeHost(ptr_));
-      }
-      else {
-        DLAF_CUDA_CALL(cudaFree(ptr_));
-      }
-#else
-      if (device == Device::CPU) {
+        // FIXME: Pinned host memory DLAF_CUDA_CALL(cudaFreeHost(ptr_));
         std::free(ptr_);
       }
+      else {
+#ifdef DLAF_WITH_CUDA
+        DLAF_CUDA_CALL(cudaFree(ptr_));
 #endif
+      }
     }
   }
 

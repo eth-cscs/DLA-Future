@@ -19,3 +19,8 @@ if (DLAF_WITH_TEST)
   target_link_libraries(miniapp_triangular_solver PRIVATE DLAF_test)
   target_add_warnings(miniapp_triangular_solver)
 endif()
+
+if(DLAF_WITH_CUDA)
+  add_executable(cublas cublas.cpp)
+  target_link_libraries(cublas PRIVATE DLAF)
+endif()

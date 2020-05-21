@@ -15,18 +15,14 @@
 #include <exception>
 #include <iostream>
 
-#ifdef DLAF_WITH_CUDA
 #include <cuda_runtime.h>
-#endif
 
 #include "dlaf/common/source_location.h"
 
 namespace dlaf {
 namespace internal {
 
-#ifdef DLAF_WITH_CUDA
-
-inline void cuda_call(cudaError_t err, const common::internal::source_location& info) noexcept {
+inline void cuda_call(cudaError_t err, const dlaf::common::internal::source_location& info) noexcept {
   if (err != cudaSuccess) {
     std::cout << "[CUDA ERROR] " << info << std::endl << cudaGetErrorString(err) << std::endl;
     std::terminate();
@@ -34,8 +30,6 @@ inline void cuda_call(cudaError_t err, const common::internal::source_location& 
 }
 
 #define DLAF_CUDA_CALL(cuda_f) dlaf::internal::cuda_call((cuda_f), SOURCE_LOCATION())
-
-#endif
 
 }
 }

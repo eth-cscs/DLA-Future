@@ -33,13 +33,14 @@ void triangular_LUN(blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_
   constexpr auto Upper = blas::Uplo::Upper;
   constexpr auto NoTrans = blas::Op::NoTrans;
 
-  // Set up executor on the default queue with high priority.
-  hpx::threads::scheduled_executor executor_hp =
-      hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_high);
+  using hpx::threads::executors::pool_executor;
+  using hpx::threads::thread_priority_high;
+  using hpx::threads::thread_priority_default;
 
+  // Set up executor on the default queue with high priority.
+  pool_executor executor_hp("default", thread_priority_high);
   // Set up executor on the default queue with default priority.
-  hpx::threads::scheduled_executor executor_normal =
-      hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_default);
+  pool_executor executor_normal("default", thread_priority_default);
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();

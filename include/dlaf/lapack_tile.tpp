@@ -10,6 +10,18 @@
 
 #include "dlaf/common/assert.h"
 
+template <class T>
+void lacpy(const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b) {
+  DLAF_ASSERT_MODERATE(a.size() == b.size(),
+                       "Source and destination tile must have the same size. A=", a.size(),
+                       " B=", b.size());
+
+  SizeType m = a.size().rows();
+  SizeType n = a.size().cols();
+
+  lapack::lacpy(lapack::MatrixType::General, m, n, a.ptr(), a.ld(), b.ptr(), b.ld());
+}
+
 template <class T, Device device>
 dlaf::BaseType<T> lange(lapack::Norm norm, const Tile<T, device>& a) noexcept {
   return lapack::lange(norm, a.size().rows(), a.size().cols(), a.ptr(), a.ld());

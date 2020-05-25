@@ -58,7 +58,7 @@ TYPED_TEST(TileOperationsTest, lange) {
     auto tile = allocate_tile<TypeParam>(TileElementSize{m, n}, extra_lda);
 
     for (const auto norm : lapack_norms) {
-      // lange cannot be tested for norm2
+      // lange does not support norm2
       if (norm == lapack::Norm::Two)
         continue;
 
@@ -85,7 +85,7 @@ TYPED_TEST(TileOperationsTest, lantr) {
       auto tile = allocate_tile<TypeParam>(TileElementSize{m, n}, extra_lda);
 
       for (const auto norm : lapack_norms) {
-        // lange cannot be tested for norm2
+        // lantr does not support norm2
         if (norm == lapack::Norm::Two)
           continue;
 

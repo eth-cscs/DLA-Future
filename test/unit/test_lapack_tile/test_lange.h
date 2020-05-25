@@ -84,9 +84,6 @@ void test_lange(lapack::Norm norm, const Tile<T, Device::CPU>& a, NormT<T> norm_
   SCOPED_TRACE(::testing::Message() << "LANGE: " << lapack::norm2str(norm) << ", " << a.size()
                                     << ", ld = " << a.ld());
 
-  // by LAPACK documentation, if it is an empty matrix return 0
-  norm_expected = (a.size().isEmpty()) ? 0 : norm_expected;
-
   EXPECT_FLOAT_EQ(norm_expected, lange(norm, a));
 }
 
@@ -111,10 +108,14 @@ void run(lapack::Norm norm, const Tile<T, Device::CPU>& a) {
       norm_expected = size != TileElementSize{1, 1} ? std::sqrt(17) : std::sqrt(4);
       break;
     case lapack::Norm::Two:
-      FAIL() << "not valid norm for lange " << lapack::norm2str(norm);
+      FAIL() << "norm " << lapack::norm2str(norm) << " is not supported by lange";
   }
 
   norm_expected *= value;
+
+  // by LAPACK documentation, if it is an empty matrix return 0
+  norm_expected = (a.size().isEmpty()) ? 0 : norm_expected;
+
   test_lange<T>(norm, a, norm_expected);
 }
 

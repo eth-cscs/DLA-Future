@@ -111,9 +111,6 @@ void test_lantr(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag, const Tile<
                                     << ", ld = " << a.ld() << " uplo = " << blas::uplo2str(uplo)
                                     << " diag = " << blas::diag2str(diag));
 
-  // by LAPACK documentation, if it is an empty matrix return 0
-  norm_expected = (a.size().isEmpty()) ? 0 : norm_expected;
-
   EXPECT_FLOAT_EQ(norm_expected, lantr(norm, uplo, diag, a));
 }
 
@@ -159,8 +156,11 @@ void run(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag, const Tile<T, Devi
       }
       break;
     case lapack::Norm::Two:
-      FAIL() << "not valid norm for lantr " << lapack::norm2str(norm);
+      FAIL() << "norm " << lapack::norm2str(norm) << " is not supported by lantr";
   }
+
+  // by LAPACK documentation, if it is an empty matrix return 0
+  norm_expected = (a.size().isEmpty()) ? 0 : norm_expected;
 
   test_lantr<T>(norm, uplo, diag, a, norm_expected);
 }

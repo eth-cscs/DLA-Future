@@ -43,34 +43,54 @@ TYPED_TEST_SUITE(NormDistributedTest, MatrixElementTypes);
 
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper, blas::Uplo::General});
 
-// - set a matrix with the given el setter
-// - execute the Utility<Backend::MC>::norm with the given parameters
-// - compare the result with the norm_expected (in case of empty matrix, it compare with 0 instead of
-// expected norm)
+// Given a global index of an element, change its value using setter
+// A reference to the elemenet is given as parameter to the setter function [void (*setter)(T& element)]
 template <class T, class ElementSetter>
-void test_norm(const std::string message, NormT<T> norm_expected, ElementSetter el,
-               CommunicatorGrid comm_grid, Matrix<T, Device::CPU>& matrix, lapack::Norm norm,
-               blas::Uplo uplo) {
-  if (matrix.size().isEmpty())
-    norm_expected = 0;
+void modify_element(Matrix<T, Device::CPU>& matrix, GlobalElementIndex index, ElementSetter set) {
+  const auto& distribution = matrix.distribution();
 
-  set(matrix, el);
+  // clang-format off
+  GlobalTileIndex tile_index{
+    distribution.template globalTileFromGlobalElement<Coord::Row>(index.row()),
+    distribution.template globalTileFromGlobalElement<Coord::Col>(index.col())
+  };
+  // clang-format on
 
-  const NormT<T> result = Utility<Backend::MC>::norm(comm_grid, norm, uplo, matrix);
+  if (distribution.rankIndex() != distribution.rankGlobalTile(tile_index))
+    return;
 
-  SCOPED_TRACE(::testing::Message() << lapack::norm2str(norm) << " " << blas::uplo2str(uplo)
-                                    << " size=" << matrix.size() << " grid_size=" << comm_grid.size());
-  SCOPED_TRACE(::testing::Message() << message);
+  // clang-format off
+  const TileElementIndex index_wrt_local{
+    distribution.template tileElementFromGlobalElement<Coord::Row>(index.row()),
+    distribution.template tileElementFromGlobalElement<Coord::Col>(index.col())
+  };
+  // clang-format on
+
+  matrix(tile_index).then(hpx::util::unwrapping([set, index_wrt_local](auto&& tile) {
+    set(tile(index_wrt_local));
+  }));
+}
+
+// Change the specified value of the matrix, re-compute the norm with given parameters and check if the
+// result is the expected one
+template <class T>
+void set_and_test(CommunicatorGrid comm_grid, Matrix<T, Device::CPU>& matrix, GlobalElementIndex index,
+                  T new_value, NormT<T> norm_expected, lapack::Norm norm_type, blas::Uplo uplo) {
+  if (index.isIn(matrix.size()))
+    modify_element(matrix, index, [new_value](T& element) { element = new_value; });
+
+  const NormT<T> norm = Utility<Backend::MC>::norm(comm_grid, norm_type, uplo, matrix);
+
+  SCOPED_TRACE(::testing::Message() << lapack::norm2str(norm_type) << " " << blas::uplo2str(uplo)
+                                    << " changed element=" << index << " in matrix size="
+                                    << matrix.size() << " grid_size=" << comm_grid.size());
 
   if (Index2D{0, 0} == comm_grid.rank())
-    EXPECT_NEAR(norm_expected, result, TypeUtilities<NormT<T>>::error);
+    EXPECT_NEAR(norm_expected, norm, TypeUtilities<NormT<T>>::error);
 }
 
 TYPED_TEST(NormDistributedTest, NormMax) {
-  const lapack::Norm norm = lapack::Norm::Max;
-
-  const TypeParam value = dlaf_test::TypeUtilities<TypeParam>::element(13, -13);
-  const NormT<TypeParam> norm_expected = std::abs(value);
+  const lapack::Norm norm_type = lapack::Norm::Max;
 
   const std::vector<GlobalElementSize> sizes({{10, 10}, {0, 0}});
   const std::vector<TileElementSize> block_sizes({{3, 3}, {5, 5}});
@@ -81,27 +101,62 @@ TYPED_TEST(NormDistributedTest, NormMax) {
         Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
                                std::min(1, comm_grid.size().cols() - 1));
         Distribution distribution(size, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
-        Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
+        Matrix<TypeParam, Device::CPU> matrix(std::move(distribution));
 
         for (const auto& uplo : blas_uplos) {
           if (blas::Uplo::Lower != uplo)
             continue;
 
-          auto el_L = [size, value](const GlobalElementIndex& index) {
-            if (GlobalElementIndex{size.rows() - 1, 0} == index)
-              return value;
-            return TypeParam(0);
-          };
+          dlaf::matrix::util::set_random(matrix);
 
-          test_norm<TypeParam>("lower triangular", norm_expected, el_L, comm_grid, mat, norm, uplo);
+          const NormT<TypeParam> norm = Utility<Backend::MC>::norm(comm_grid, norm_type, uplo, matrix);
 
-          auto el_D = [size, value](const GlobalElementIndex& index) {
-            if (GlobalElementIndex{size.rows() - 1, size.cols() - 1} == index)
-              return value;
-            return TypeParam(0);
-          };
+          if (Index2D{0, 0} == comm_grid.rank()) {
+            EXPECT_GE(norm, -1);
+            EXPECT_LE(norm, +1);
+          }
 
-          test_norm<TypeParam>("diagonal", norm_expected, el_D, comm_grid, mat, norm, uplo);
+          NormT<TypeParam> norm_current = norm;
+          TypeParam new_value;
+
+          // TOP LEFT
+          {
+            new_value = 100;
+            const GlobalElementIndex index{0, 0};
+            const NormT<TypeParam> norm_expected = matrix.size().isEmpty() ? 0 : std::abs(new_value);
+            norm_current = norm_expected;
+
+            set_and_test(comm_grid, matrix, index, new_value, norm_expected, norm_type, uplo);
+          }
+
+          // BOTTOM LEFT
+          {
+            new_value += 100;
+            const GlobalElementIndex index{matrix.size().rows() - 1, 0};
+            const NormT<TypeParam> norm_expected = matrix.size().isEmpty() ? 0 : std::abs(new_value);
+            norm_current = norm_expected;
+
+            set_and_test(comm_grid, matrix, index, new_value, norm_expected, norm_type, uplo);
+          }
+
+          // TOP RIGHT
+          {
+            new_value += 100;
+            const GlobalElementIndex index{0, matrix.size().cols() - 1};
+            const NormT<TypeParam> norm_expected = norm_current;
+
+            set_and_test(comm_grid, matrix, index, new_value, norm_expected, norm_type, uplo);
+          }
+
+          // BOTTOM RIGHT
+          {
+            new_value += 100;
+            const GlobalElementIndex index{matrix.size().rows() - 1, matrix.size().cols() - 1};
+            const NormT<TypeParam> norm_expected = matrix.size().isEmpty() ? 0 : std::abs(new_value);
+            norm_current = norm_expected;
+
+            set_and_test(comm_grid, matrix, index, new_value, norm_expected, norm_type, uplo);
+          }
         }
       }
     }

@@ -14,6 +14,6 @@
 namespace dlaf {
 
 template <Backend execution>
-struct Reduction;
+struct Eigensolver;
 
 }

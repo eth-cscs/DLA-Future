@@ -62,23 +62,18 @@ void potrf(blas::Uplo uplo, const Tile<T, device>& a) {
   DLAF_ASSERT(info == 0, "a is not positive definite");
 }
 
-template <class T, Device device>
-long long hegstInfo(blas::Uplo uplo, const Tile<T, device>& a, const Tile<T, device>& b) {
-  // preconditions to be added? check!!!
-
-  // itype = 1 to solve inv(U**H)*A*inv(U) or inv(L)*A*inv(L**H))
-  auto info = lapack::hegst(1, uplo, a.size().rows(), a.ptr(), a.ld(), b.ptr(), b.ld());
-
-  assert(info >= 0);
-
-  return info;
-}
-
 // check!!!
 template <class T, Device device>
-void hegstInfo(blas::Uplo uplo, const Tile<T, device>& a, const Tile<T, device>& b) {
-  auto info = hegstInfo(uplo, a, b);
+void hegst(int itype, blas::Uplo uplo, const Tile<T, device>& a, const Tile<T, device>& b) {
+  //preconditions to be added
+  if (a.size().rows() != a.size().cols()) {
+    throw std::invalid_argument("Error: HEGST: matrix A is not square.");
+  }
 
-  if (info != 0)
-    throw std::runtime_error("Error: HEGS2: A is not Hermitian");
+  // itype = 1 to solve inv(U**H)*A*inv(U) or inv(L)*A*inv(L**H))
+  // itype = 2 to solve U*A*U**H
+  // itype = 3 to solve L**H*A*L
+  auto info = lapack::hegst(itype, uplo, a.size().rows(), a.ptr(), a.ld(), b.ptr(), b.ld());
+  DLAF_ASSERT(info == 0, "");
+
 }

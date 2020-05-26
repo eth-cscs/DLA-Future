@@ -49,10 +49,9 @@ add_subdirectory(communication)
 add_subdirectory(matrix)
 add_subdirectory(memory)
 
-
 # Operations
 add_subdirectory(auxiliary)
 add_subdirectory(factorization)
 add_subdirectory(solver)
 add_subdirectory(eigensolver)
-
+xs

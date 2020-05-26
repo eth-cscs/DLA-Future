@@ -10,7 +10,7 @@
 
 find_package(Doxygen REQUIRED)
 
-configure_file(Doxyfile Doxyfile)
+configure_file(Doxyfile.in Doxyfile)
 
 add_custom_target(doc ALL
   COMMENT "Building Doxygen documentation"

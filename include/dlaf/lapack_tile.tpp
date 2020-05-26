@@ -64,7 +64,7 @@ void potrf(blas::Uplo uplo, const Tile<T, device>& a) {
 
 // check!!!
 template <class T, Device device>
-void hegst(int itype, blas::Uplo uplo, const Tile<T, device>& a, const Tile<T, device>& b) {
+void hegst(int itype, blas::Uplo uplo, const Tile<T, device>& a, const Tile<const T, device>& b) {
   //preconditions to be added
   if (a.size().rows() != a.size().cols()) {
     throw std::invalid_argument("Error: HEGST: matrix A is not square.");

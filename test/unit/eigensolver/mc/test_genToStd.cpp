@@ -100,7 +100,7 @@ TYPED_TEST(EigensolverGenToStdLocalTest, Correctness) {
   }
 
 
-  //// genToStd
+  // genToStd
   Eigensolver<Backend::MC>::genToStd(mat_a, mat_l);
 
   std::cout << "Result" << std::endl;
@@ -117,6 +117,15 @@ TYPED_TEST(EigensolverGenToStdLocalTest, Correctness) {
       std::cout << "\n";
     }
   }
+
+
+  auto res = [](const GlobalElementIndex& index){
+    static const double values[] = {2.5, 0.625, -0.179, 0.625, 0.156, -0.045, -0.179, -0.045, 0.013};
+    return values[index.row()+3*index.col()];
+  };
+
+  CHECK_MATRIX_NEAR(res, mat_a, 40 * (mat_a.size().rows() + 1) * TypeUtilities<TypeParam>::error,
+                    40 * (mat_a.size().rows() + 1) * TypeUtilities<TypeParam>::error);
 
 
 }

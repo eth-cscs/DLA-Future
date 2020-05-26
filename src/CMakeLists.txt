@@ -42,9 +42,9 @@ add_library(DLAF
   matrix.cpp
   memory/memory_view.cpp
   tile.cpp
+  auxiliary/mc.cpp
   factorization/mc.cpp
   solver/mc.cpp
-  utility/mc.cpp
 )
 
 target_include_directories(DLAF

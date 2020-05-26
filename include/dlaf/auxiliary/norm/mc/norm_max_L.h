@@ -24,9 +24,14 @@ namespace dlaf {
 namespace internal {
 namespace mc {
 
-// Compute max norm of the lower triangular part of the distribtued matrix
-// It just addresses tiles with elements belonging to the lower triangular part of the matrix
+// Compute max norm of the lower triangular part of the distributed matrix
 // https://en.wikipedia.org/wiki/Matrix_norm#Max_norm
+//
+// It just addresses tiles with elements belonging to the lower triangular part of the matrix
+//
+// Thanks to the nature of the max norm, it is valid for:
+// - ge/sy/he lower
+// - tr lower non-unit
 template <class T>
 dlaf::BaseType<T> norm_max_L(comm::CommunicatorGrid comm_grid, Matrix<const T, Device::CPU>& matrix) {
   using dlaf::common::internal::vector;

@@ -14,6 +14,6 @@
 namespace dlaf {
 
 template <Backend execution>
-struct Utility;
+struct Auxiliary;
 
 }

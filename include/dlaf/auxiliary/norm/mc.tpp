@@ -16,13 +16,13 @@
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
-#include "dlaf/utility/norm/mc/norm_max_L.h"
+#include "dlaf/auxiliary/norm/mc/norm_max_L.h"
 
 namespace dlaf {
 
 template <class T>
-dlaf::BaseType<T> Utility<Backend::MC>::norm(comm::CommunicatorGrid grid, lapack::Norm norm_type,
-                                             blas::Uplo uplo, Matrix<const T, Device::CPU>& A) {
+dlaf::BaseType<T> Auxiliary<Backend::MC>::norm(comm::CommunicatorGrid grid, lapack::Norm norm_type,
+                                               blas::Uplo uplo, Matrix<const T, Device::CPU>& A) {
   DLAF_ASSERT_DISTRIBUTED_ON_GRID(grid, A);
 
   switch (norm_type) {

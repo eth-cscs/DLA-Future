@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/utility/mc.h"
+#include "dlaf/auxiliary/mc.h"
 
 #include <gtest/gtest.h>
 
@@ -79,7 +79,7 @@ void set_and_test(CommunicatorGrid comm_grid, Matrix<T, Device::CPU>& matrix, Gl
   if (index.isIn(matrix.size()))
     modify_element(matrix, index, [new_value](T& element) { element = new_value; });
 
-  const NormT<T> norm = Utility<Backend::MC>::norm(comm_grid, norm_type, uplo, matrix);
+  const NormT<T> norm = Auxiliary<Backend::MC>::norm(comm_grid, norm_type, uplo, matrix);
 
   SCOPED_TRACE(::testing::Message() << lapack::norm2str(norm_type) << " " << blas::uplo2str(uplo)
                                     << " changed element=" << index << " in matrix size="
@@ -109,7 +109,7 @@ TYPED_TEST(NormDistributedTest, NormMax) {
 
           dlaf::matrix::util::set_random(matrix);
 
-          const NormT<TypeParam> norm = Utility<Backend::MC>::norm(comm_grid, norm_type, uplo, matrix);
+          const NormT<TypeParam> norm = Auxiliary<Backend::MC>::norm(comm_grid, norm_type, uplo, matrix);
 
           if (Index2D{0, 0} == comm_grid.rank()) {
             EXPECT_GE(norm, -1);

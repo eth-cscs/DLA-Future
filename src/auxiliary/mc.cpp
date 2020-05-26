@@ -1,4 +1,4 @@
-#include <dlaf/utility/mc.h>
+#include <dlaf/auxiliary/mc.h>
 
 namespace dlaf {
 

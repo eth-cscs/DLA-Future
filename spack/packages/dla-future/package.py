@@ -16,23 +16,41 @@ class DlaFuture(CMakePackage):
 
     version('develop', branch='master')
 
-    variant('gpu', default=False,
+    variant('cuda', default=False,
             description='Use the GPU/cuBLAS back end.')
-
-    # Until mpich is default comment this out
+    variant('test', default=False,
+            description='Run unit tests.')
+    variant('doc', default=False,
+            description='Build documentation.')
+    
     #depends_on('mpi@3:')
-    depends_on('mpich')
-    depends_on('mkl')
+    depends_on('mpi')
+    depends_on('blas')
+    depends_on('lapack')
     depends_on('blaspp')
     depends_on('lapackpp')
-    depends_on('hpx cxxstd=14 networking=none')
-    depends_on('cuda', when='gpu=True')
+    depends_on('hpx@1.4.0 cxxstd=14 networking=none')
+    depends_on('cuda', when='cuda=True')
 
     def cmake_args(self):
        spec = self.spec
-       args = ['-DDLAF_WITH_MKL=ON']
+       
+       if (spec.satisfies('^intel-mkl')):
+           args = ['-DDLAF_WITH_MKL=ON']
+       else:
+           args = ['-DDLAF_WITH_MKL=OFF']
+           args.append('-DLAPACK_TYPE=Custom')
+           args.append('-DLAPACK_LIBRARY=-L{0} -lblas -llapack'.format(spec['lapack'].prefix.lib))
 
-       if '+gpu' in spec:
+       if '+cuda' in spec:
            args.append('-DDLAF_WITH_CUDA=ON')
+           args.append('-DCUDA_TOOLKIT_ROOT_DIR:STRING={0}'.format(spec['cuda'].prefix))
+
+       if '+test' in spec:
+           args.append('-DDLAF_WITH_TEST=ON')
+           args.append('-DDLAF_INSTALL_TESTS=ON')
+
+       if '+doc' in spec:
+           args.append('-DBUILD_DOC=on')
 
        return args

@@ -47,7 +47,7 @@ make doc
 
 Alternatively, the documentation can be generated independently by using `doc/Doxyfile.in`, which is a template configuration file in which you have to replace the text `${DLAF_SOURCE_DIR}` with the root folder of DLAF containing the source code (e.g. where you cloned this repository).
 
-As a shortcut for this process, a `Makefile` in the `doc` folder is avaialble, which automatically performs the substitution and then generates the documentation in the same folder.
+As a shortcut for this process a `doc/Makefile` is available, which automatically performs the substitution and then generates the documentation.
 
 ```
 cd doc

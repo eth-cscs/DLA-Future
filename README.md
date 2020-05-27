@@ -15,13 +15,15 @@
 
 ## How to use the library
 
-Using DLAF in a CMake project is extremly easy!
+Using DLAF in a CMake project is extremely easy!
 
 Let's use the variable `$DLAF_ROOT` for referring to the install path of DLAF.
 
 Configure your project with:
 
-`cmake -DDLAF_DIR="$DLAF_ROOT/lib/cmake" ..`
+```bash
+cmake -DDLAF_DIR="$DLAF_ROOT/lib/cmake" ..
+```
 
 Then, it is just as simple as:
 
@@ -31,6 +33,24 @@ find_package(DLAF)
 # ...
 
 target_link_libraries(<your_target> PRIVATE DLAF)
+```
+
+## How to generate the documentation
+
+The documentation can be built together with the project by enabling its generation with the flag `BUILD_DOC=on` and then use the `doc` target to eventually generate it.
+
+```bash
+# from the build folder, if you have already configured the CMake project
+cmake -DBUILD_DOC=on .
+make doc
+```
+
+Alternatively, the documentation can be generated independently by using `doc/Doxyfile.in`, which is a template configuration file in which you have to replace the text `${DLAF_SOURCE_DIR}` with the root folder of DLAF containing the source code (e.g. where you cloned this repository).
+As a shortcut for this process, a `Makefile` in the `doc` folder is avaialble, which automatically performs the substitution and then generates the documentation in the same folder.
+
+```
+cd doc
+make doc
 ```
 
 ## Acknowledgements

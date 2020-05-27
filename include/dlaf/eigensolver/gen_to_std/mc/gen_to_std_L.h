@@ -58,17 +58,17 @@ void genToStd(Matrix<T, Device::CPU>& mat_a, Matrix<const T, Device::CPU>& mat_l
 
     // Direct transformation to standard eigenvalue problem of the diagonal tile
     hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::hegst<T, Device::CPU>), 1, Lower, std::move(mat_a(kk)), mat_l.read(kk));
-
+    
     if (k != (n - 1)) {
       for (SizeType i = k + 1; i < m; ++i) {
 	// Working on panel...
         auto ik = LocalTileIndex{i, k};
 
-        // TRSM
-	hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), Right, Lower,
+	// TRSM
+	hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), Right, Lower,
                       ConjTrans, NonUnit, 1.0, mat_l.read(kk), std::move(mat_a(ik)));
         // HEMM
-        hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::hemm<T, Device::CPU>), Right, Lower, -0.5,
+        hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::hemm<T, Device::CPU>), Right, Lower, -0.5,
                       mat_a.read(kk), mat_l.read(ik), 1.0, std::move(mat_a(ik)));
       }
 
@@ -81,15 +81,15 @@ void genToStd(Matrix<T, Device::CPU>& mat_a, Matrix<const T, Device::CPU>& mat_l
         hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::her2k<T, Device::CPU>), Lower, NoTrans, -1.0,
                       mat_a.read(jk), mat_l.read(jk), 1.0, std::move(mat_a(jj)));
 
-	for (SizeType i = j + 1; j < m; ++i) {
+	for (SizeType i = j + 1; i < m; ++i) {
           auto ik = LocalTileIndex{i, k};
           auto ij = LocalTileIndex{i, j};
 
           // GEMM
-          hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans,
+          hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans,
                         ConjTrans, -1.0, mat_a.read(ik), mat_l.read(jk), 1.0, std::move(mat_a(ij)));
           // GEMM
-          hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans,
+          hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans,
                         ConjTrans, -1.0, mat_l.read(ik), mat_a.read(jk), 1.0, std::move(mat_a(ij)));
         }
       }
@@ -117,7 +117,7 @@ void genToStd(Matrix<T, Device::CPU>& mat_a, Matrix<const T, Device::CPU>& mat_l
           auto ik = LocalTileIndex{i, k};
 
           // GEMM
-          hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans,
+          hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans,
                         NoTrans, -1.0, mat_l.read(ij), mat_a.read(jk), 1.0, std::move(mat_a(ik)));
 
         }

@@ -33,37 +33,37 @@ namespace dlaf {
 namespace matrix {
 
 template <class T, Device D>
-bool square_size(Matrix<T, D> const& m) noexcept {
+bool square_size(const Matrix<const T, D>& m) noexcept {
   return m.size().rows() == m.size().cols();
 }
 
 template <class T, Device D>
-bool square_blocksize(Matrix<T, D> const& m) noexcept {
+bool square_blocksize(const Matrix<const T, D>& m) noexcept {
   return m.blockSize().rows() == m.blockSize().cols();
 }
 
 template <class T, Device D>
-bool equal_size(Matrix<T, D> const& lhs, Matrix<T, D> const& rhs) noexcept {
+bool equal_size(const Matrix<const T, D>& lhs, Matrix<const T, D>& rhs) noexcept {
   return lhs.size() == rhs.size();
 }
 
 template <class T, Device D>
-bool equal_blocksize(Matrix<T, D> const& lhs, Matrix<T, D> const& rhs) noexcept {
+bool equal_blocksize(const Matrix<const T, D>& lhs, Matrix<const T, D>& rhs) noexcept {
   return lhs.blockSize() == rhs.blockSize();
 }
 
 template <class T, Device D>
-bool local_matrix(Matrix<T, D> const& m) noexcept {
+bool local_matrix(const Matrix<const T, D>& m) noexcept {
   return m.commGridSize() == comm::Size2D(1, 1);
 }
 
 template <class T, Device D>
-bool equal_process_grid(Matrix<T, D> const& m, comm::CommunicatorGrid const& g) noexcept {
+bool equal_process_grid(const Matrix<const T, D>& m, comm::CommunicatorGrid const& g) noexcept {
   return m.commGridSize() == g.size() && m.rankIndex() == g.rank();
 }
 
 template <class T, Device D>
-bool equal_distributions(Matrix<T, D> const& lhs, Matrix<T, D> const& rhs) noexcept {
+bool equal_distributions(const Matrix<const T, D>& lhs, const Matrix<const T, D>& rhs) noexcept {
   return lhs.distribution() == rhs.distribution();
 }
 

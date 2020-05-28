@@ -12,9 +12,7 @@
 
 /// @file
 
-#include <exception>
 #include <iostream>
-#include <sstream>
 #include <string>
 
 namespace dlaf {

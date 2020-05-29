@@ -49,23 +49,11 @@ template <class T, class ElementSetter>
 void modify_element(Matrix<T, Device::CPU>& matrix, GlobalElementIndex index, ElementSetter set) {
   const auto& distribution = matrix.distribution();
 
-  // clang-format off
-  GlobalTileIndex tile_index{
-    distribution.template globalTileFromGlobalElement<Coord::Row>(index.row()),
-    distribution.template globalTileFromGlobalElement<Coord::Col>(index.col())
-  };
-  // clang-format on
-
+  const GlobalTileIndex tile_index = distribution.globalTileIndex(index);
   if (distribution.rankIndex() != distribution.rankGlobalTile(tile_index))
     return;
 
-  // clang-format off
-  const TileElementIndex index_wrt_local{
-    distribution.template tileElementFromGlobalElement<Coord::Row>(index.row()),
-    distribution.template tileElementFromGlobalElement<Coord::Col>(index.col())
-  };
-  // clang-format on
-
+  const TileElementIndex index_wrt_local = distribution.tileElementIndex(index);
   matrix(tile_index).then(hpx::util::unwrapping([set, index_wrt_local](auto&& tile) {
     set(tile(index_wrt_local));
   }));

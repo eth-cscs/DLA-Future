@@ -54,7 +54,7 @@ dlaf::BaseType<T> norm_max_L(comm::CommunicatorGrid comm_grid, Matrix<const T, D
   vector<hpx::future<NormT>> tiles_max;
   tiles_max.reserve(distribution.localNrTiles().rows() * distribution.localNrTiles().cols());
 
-  // for each tile in local (lower triangular), create a task that finds the max element in the tile
+  // for each local tile in the (global) lower triangular matrix, create a task that finds the max element in the tile
   for (SizeType j_loc = 0; j_loc < distribution.localNrTiles().cols(); ++j_loc) {
     const SizeType j = distribution.template globalTileFromLocalTile<Coord::Col>(j_loc);
     const SizeType i_diag_loc = distribution.template nextLocalTileFromGlobalTile<Coord::Row>(j);

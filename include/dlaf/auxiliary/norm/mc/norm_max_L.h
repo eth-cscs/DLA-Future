@@ -12,6 +12,7 @@
 #include <hpx/hpx.hpp>
 #include <hpx/util/unwrap.hpp>
 
+#include "dlaf/common/range2d.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/sync/reduce.h"
@@ -36,6 +37,7 @@ template <class T>
 dlaf::BaseType<T> norm_max_L(comm::CommunicatorGrid comm_grid, Matrix<const T, Device::CPU>& matrix) {
   using dlaf::common::internal::vector;
   using dlaf::common::make_data;
+  // using dlaf::common::iterate_range2d;
   using hpx::util::unwrapping;
 
   using dlaf::tile::lange;
@@ -55,23 +57,22 @@ dlaf::BaseType<T> norm_max_L(comm::CommunicatorGrid comm_grid, Matrix<const T, D
   tiles_max.reserve(distribution.localNrTiles().rows() * distribution.localNrTiles().cols());
 
   // for each local tile in the (global) lower triangular matrix, create a task that finds the max element in the tile
-  for (SizeType j_loc = 0; j_loc < distribution.localNrTiles().cols(); ++j_loc) {
-    const SizeType j = distribution.template globalTileFromLocalTile<Coord::Col>(j_loc);
-    const SizeType i_diag_loc = distribution.template nextLocalTileFromGlobalTile<Coord::Row>(j);
+  for (auto tile_wrt_local : iterate_range2d(distribution.localNrTiles())) {
+    auto tile_wrt_global = distribution.globalTileIndex(tile_wrt_local);
 
-    for (SizeType i_loc = i_diag_loc; i_loc < distribution.localNrTiles().rows(); ++i_loc) {
-      const SizeType i = distribution.template globalTileFromLocalTile<Coord::Row>(i_loc);
+    if (tile_wrt_global.row() < tile_wrt_global.col())
+      continue;
 
-      auto norm_max_f = unwrapping([is_diag = (j == i)](auto&& tile) noexcept->NormT {
-        if (is_diag)
-          return lantr(lapack::Norm::Max, blas::Uplo::Lower, blas::Diag::NonUnit, tile);
-        else
-          return lange(lapack::Norm::Max, tile);
-      });
-      auto current_tile_max = hpx::dataflow(norm_max_f, matrix.read(LocalTileIndex{i_loc, j_loc}));
+    bool is_diag = tile_wrt_global.row() == tile_wrt_global.col();
+    auto norm_max_f = unwrapping([is_diag](auto&& tile) noexcept->NormT {
+      if (is_diag)
+        return lantr(lapack::Norm::Max, blas::Uplo::Lower, blas::Diag::NonUnit, tile);
+      else
+        return lange(lapack::Norm::Max, tile);
+    });
+    auto current_tile_max = hpx::dataflow(norm_max_f, matrix.read(tile_wrt_local));
 
-      tiles_max.emplace_back(std::move(current_tile_max));
-    }
+    tiles_max.emplace_back(std::move(current_tile_max));
   }
 
   // than it is necessary to reduce max values from all ranks into a single max value for the matrix

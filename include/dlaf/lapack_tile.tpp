@@ -32,10 +32,10 @@ dlaf::BaseType<T> lantr(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag,
                         const Tile<T, device>& a) noexcept {
   switch (uplo) {
     case blas::Uplo::Lower:
-      DLAF_ASSERT(a.size().rows() >= a.size().cols(), "Not valid ", a.size());
+      DLAF_ASSERT(a.size().rows() >= a.size().cols(), a);
       break;
     case blas::Uplo::Upper:
-      DLAF_ASSERT(a.size().rows() <= a.size().cols(), "Not valid ", a.size());
+      DLAF_ASSERT(a.size().rows() <= a.size().cols(), a);
       break;
     case blas::Uplo::General:
       DLAF_ASSERT(blas::Uplo::General == uplo, "Invalid parameter");

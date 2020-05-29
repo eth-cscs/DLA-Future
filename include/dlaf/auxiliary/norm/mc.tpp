@@ -30,15 +30,14 @@ dlaf::BaseType<T> Auxiliary<Backend::MC>::norm(comm::CommunicatorGrid grid, lapa
     case lapack::Norm::Two:
     case lapack::Norm::Inf:
     case lapack::Norm::Fro:
-      DLAF_CHECK("", false, "not yet implemented\n", lapack::norm2str(norm_type));
+      DLAF_ASSERT(false, "not yet implemented", lapack::norm2str(norm_type));
     case lapack::Norm::Max:
       switch (uplo) {
         case blas::Uplo::Lower:
           return internal::mc::norm_max_L(grid, A);
         case blas::Uplo::Upper:
         case blas::Uplo::General:
-          DLAF_CHECK("", false, "not yet implemented\n", lapack::norm2str(norm_type), " ",
-                     blas::uplo2str(uplo));
+          DLAF_ASSERT(false, "not yet implemented", lapack::norm2str(norm_type), blas::uplo2str(uplo));
         default:
           return {};
       }

@@ -85,20 +85,9 @@ dlaf::BaseType<T> norm_max_L(comm::CommunicatorGrid comm_grid, Matrix<const T, D
                                         }),
                                         tiles_max)
                               .get();
-
-  NormT max_value_rows;
-  if (comm_grid.size().cols() > 1)
-    dlaf::comm::sync::reduce(0, comm_grid.rowCommunicator(), MPI_MAX, make_data(&local_max_value, 1),
-                             make_data(&max_value_rows, 1));
-  else
-    max_value_rows = local_max_value;
-
   NormT max_value;
-  if (comm_grid.size().rows() > 1)
-    dlaf::comm::sync::reduce(0, comm_grid.colCommunicator(), MPI_MAX, make_data(&max_value_rows, 1),
-                             make_data(&max_value, 1));
-  else
-    max_value = max_value_rows;
+  dlaf::comm::sync::reduce(0, comm_grid.fullCommunicator(), MPI_MAX, make_data(&local_max_value, 1),
+                           make_data(&max_value, 1));
 
   return max_value;
 }

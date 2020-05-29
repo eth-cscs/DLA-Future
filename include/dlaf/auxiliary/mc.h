@@ -21,7 +21,7 @@ namespace dlaf {
 
 template <>
 struct Auxiliary<Backend::MC> {
-  /// Compute the norm @p norm_type of the distribtued Matrix @p A (ge/sy/he)
+  /// Compute the norm @p norm_type of the distributed Matrix @p A (ge/sy/he)
   ///
   /// - With @p norm_type == lapack::Norm::Max:
   ///   - With @p uplo == blas::uplo::Lower

@@ -27,11 +27,9 @@ template <template <class, Device> class MatrixTypeSrc, template <class, Device>
 void copy(MatrixTypeSrc<const T, device>& source, MatrixTypeDst<T, device>& dest) {
   const auto& distribution = source.distribution();
 
-  DLAF_ASSERT(matrix::equal_size(source, dest), "Matrices have difference sizes!", source, dest);
-  DLAF_ASSERT(matrix::equal_blocksize(source, dest), "Matrices have difference block sizes!", source,
-              dest);
-  DLAF_ASSERT(matrix::equal_distributions(source, dest), "Matrices have different distributions!",
-              source, dest);
+  DLAF_ASSERT(matrix::equal_size(source, dest), source, dest);
+  DLAF_ASSERT(matrix::equal_blocksize(source, dest), source, dest);
+  DLAF_ASSERT(matrix::equal_distributions(source, dest), source, dest);
 
   const SizeType local_tile_rows = distribution.localNrTiles().rows();
   const SizeType local_tile_cols = distribution.localNrTiles().cols();

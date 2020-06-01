@@ -18,9 +18,9 @@ namespace dlaf {
 
 template <class T>
 void Factorization<Backend::MC>::cholesky(blas::Uplo uplo, Matrix<T, Device::CPU>& mat_a) {
-  DLAF_ASSERT(matrix::square_size(mat_a), "Matrix is not square!", mat_a);
-  DLAF_ASSERT(matrix::square_blocksize(mat_a), "Matrix blocksize is not square!", mat_a);
-  DLAF_ASSERT(matrix::local_matrix(mat_a), "Matrix is not local!", mat_a);
+  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
+  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
 
   if (uplo == blas::Uplo::Lower)
     internal::mc::cholesky_L(mat_a);
@@ -31,10 +31,9 @@ void Factorization<Backend::MC>::cholesky(blas::Uplo uplo, Matrix<T, Device::CPU
 template <class T>
 void Factorization<Backend::MC>::cholesky(comm::CommunicatorGrid grid, blas::Uplo uplo,
                                           Matrix<T, Device::CPU>& mat_a) {
-  DLAF_ASSERT(matrix::square_size(mat_a), "Matrix is not square!", mat_a);
-  DLAF_ASSERT(matrix::square_blocksize(mat_a), "Matrix blocksize is not square!", mat_a);
-  DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid),
-              "The matrix is not distributed according to the communicator grid!", mat_a);
+  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
+  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a);
 
   // Method only for Lower triangular matrix
   if (uplo == blas::Uplo::Lower)

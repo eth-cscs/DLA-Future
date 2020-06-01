@@ -32,41 +32,49 @@ constexpr double M_PI = 3.141592;
 namespace dlaf {
 namespace matrix {
 
+/// Returns true if the matrix is square.
 template <class T, Device D>
 bool square_size(const Matrix<const T, D>& m) noexcept {
   return m.size().rows() == m.size().cols();
 }
 
+/// Returns true if the matrix block size is square.
 template <class T, Device D>
 bool square_blocksize(const Matrix<const T, D>& m) noexcept {
   return m.blockSize().rows() == m.blockSize().cols();
 }
 
+/// Returns true if matrices have equal sizes.
 template <class T, Device D>
 bool equal_size(const Matrix<const T, D>& lhs, Matrix<const T, D>& rhs) noexcept {
   return lhs.size() == rhs.size();
 }
 
+/// Returns true if matrices have equal blocksizes.
 template <class T, Device D>
 bool equal_blocksize(const Matrix<const T, D>& lhs, Matrix<const T, D>& rhs) noexcept {
   return lhs.blockSize() == rhs.blockSize();
 }
 
+/// Returns true if the matrix is local to a process.
 template <class T, Device D>
 bool local_matrix(const Matrix<const T, D>& m) noexcept {
   return m.commGridSize() == comm::Size2D(1, 1);
 }
 
+/// Returns true if the matrix is distributed on the communication grid.
 template <class T, Device D>
 bool equal_process_grid(const Matrix<const T, D>& m, comm::CommunicatorGrid const& g) noexcept {
   return m.commGridSize() == g.size() && m.rankIndex() == g.rank();
 }
 
+/// Returns true if the matrices are distributed the same way.
 template <class T, Device D>
 bool equal_distributions(const Matrix<const T, D>& lhs, const Matrix<const T, D>& rhs) noexcept {
   return lhs.distribution() == rhs.distribution();
 }
 
+/// Returns true if the sizes are compatible for matrix multiplication.
 template <class IndexT, class Tag>
 bool multipliable_sizes(common::Size2D<IndexT, Tag> a, common::Size2D<IndexT, Tag> b,
                         common::Size2D<IndexT, Tag> c, const blas::Op opA, const blas::Op opB) noexcept {
@@ -76,6 +84,15 @@ bool multipliable_sizes(common::Size2D<IndexT, Tag> a, common::Size2D<IndexT, Ta
     b.transpose();
 
   return a.rows() == c.rows() && a.cols() == b.rows() && b.cols() == c.cols();
+}
+
+/// Returns true if matrices `a`, `b` and `c` have matrix multipliable sizes and block sizes
+template <class T, Device D>
+bool multipliable_matrices(const Matrix<const T, D>& a, const Matrix<const T, D>& b,
+                           const Matrix<const T, D>& c, const blas::Op opA,
+                           const blas::Op opB) noexcept {
+  return multipliable_sizes(a.size(), b.size(), c.size(), opA, opB) &&
+         multipliable_sizes(a.blockSize(), b.blockSize(), c.blockSize(), opA, opB);
 }
 
 namespace util {
@@ -237,8 +254,8 @@ void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
 
   const Distribution& dist = matrix.distribution();
 
-  DLAF_ASSERT(square_size(matrix), "Matrix is not square!", matrix);
-  DLAF_ASSERT(square_blocksize(matrix), "Matrix blocksize is not square!", matrix);
+  DLAF_ASSERT(square_size(matrix), matrix);
+  DLAF_ASSERT(square_blocksize(matrix), matrix);
 
   auto offset_value = mul(2, to_sizet(matrix.size().rows()));
   auto full_tile_size = matrix.blockSize();

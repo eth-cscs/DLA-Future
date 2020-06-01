@@ -44,8 +44,8 @@ void setup_input_matrix(Matrix<T, Device::CPU>& matrix) {
   using namespace dlaf::matrix::util;
   using namespace dlaf::matrix;
 
-  DLAF_ASSERT(square_size(matrix), "Matrix is not square!", matrix);
-  DLAF_ASSERT(square_blocksize(matrix), "Matrix blocksize is not square!", matrix);
+  DLAF_ASSERT(square_size(matrix), matrix);
+  DLAF_ASSERT(square_blocksize(matrix), matrix);
 
   set(matrix, analytical_input_matrix);
 }

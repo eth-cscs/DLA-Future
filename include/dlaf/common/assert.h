@@ -21,18 +21,12 @@
 namespace dlaf {
 namespace internal {
 
-inline void do_assert(bool expr, const common::internal::source_location& loc, const char* expression,
-                      std::string const& msg) {
-  if (!expr) {
-    std::cerr << "[ERROR] " << loc << '\n' << expression << '\n' << msg << std::endl;
-    std::terminate();
-  }
-}
+
 
 /// Return an empty string
 ///
 /// This is just the fundamental step of the recursive algorithm
-inline std::string concat() {
+inline std::string concat() noexcept {
   return "";
 }
 
@@ -41,10 +35,19 @@ inline std::string concat() {
 /// Given a list of parameters for which a valid std::ostream& operator<<(std::ostream&, const T&)
 /// exists, it returns a std::string with all parameters representations joined
 template <class T, class... Ts>
-std::string concat(const T& first, const Ts&... args) {
+std::string concat(const T& first, const Ts&... args) noexcept {
   std::ostringstream ss;
   ss << first << '\n' << concat(std::forward<const Ts>(args)...);
   return ss.str();
+}
+
+template <class... Ts>
+inline void do_assert(bool expr, const common::internal::source_location& loc, const char* expression,
+                      const Ts&... ts) noexcept {
+  if (!expr) {
+    std::cerr << "[ERROR] " << loc << '\n' << expression << '\n' << concat(ts...) << std::endl;
+    std::terminate();
+  }
 }
 
 }
@@ -87,27 +90,29 @@ std::string concat(const T& first, const Ts&... args) {
 /// [ERROR] <file_name>:<line_number> : <function>
 /// a == b
 /// my msg
-/// a : 3
-/// b : 4
+/// 3
+/// 4
 /// ```
+///
+/// Note that `my_msg()` is evaluated even if the condition is true.
 
 #ifdef DLAF_ASSERT_ENABLE
 #define DLAF_ASSERT(Expr, ...) \
-  dlaf::internal::do_assert(Expr, SOURCE_LOCATION(), #Expr, dlaf::internal::concat(__VA_ARGS__))
+  dlaf::internal::do_assert(Expr, SOURCE_LOCATION(), #Expr, __VA_ARGS__)
 #else
 #define DLAF_ASSERT(Expr, ...)
 #endif
 
 #ifdef DLAF_ASSERT_MODERATE_ENABLE
 #define DLAF_ASSERT_MODERATE(Expr, ...) \
-  dlaf::internal::do_assert(Expr, SOURCE_LOCATION(), #Expr, dlaf::internal::concat(__VA_ARGS__))
+  dlaf::internal::do_assert(Expr, SOURCE_LOCATION(), #Expr, __VA_ARGS__)
 #else
 #define DLAF_ASSERT_MODERATE(Expr, ...)
 #endif
 
 #ifdef DLAF_ASSERT_HEAVY_ENABLE
 #define DLAF_ASSERT_HEAVY(Expr, ...) \
-  dlaf::internal::do_assert(Expr, SOURCE_LOCATION(), #Expr, dlaf::internal::concat(__VA_ARGS__))
+  dlaf::internal::do_assert(Expr, SOURCE_LOCATION(), #Expr,__VA_ARGS__)
 #else
 #define DLAF_ASSERT_HEAVY(Expr, ...)
 #endif

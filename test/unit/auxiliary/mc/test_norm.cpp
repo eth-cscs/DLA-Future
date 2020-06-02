@@ -131,46 +131,27 @@ TYPED_TEST(NormDistributedTest, NormMax) {
             EXPECT_LE(norm, +1);
           }
 
-          NormT<TypeParam> norm_current = norm;
-          TypeParam new_value;
+          std::vector<GlobalElementIndex> test_indeces{{0, 0}, {matrix.size().rows() - 1, matrix.size().cols() - 1}}; // add diagonals
 
-          // TOP LEFT
-          {
-            new_value = 100;
-            const GlobalElementIndex index{0, 0};
-            const NormT<TypeParam> norm_expected = std::abs(new_value);
-            norm_current = norm_expected;
-
-            set_and_test(comm_grid, matrix, index, new_value, norm_expected, norm_type, uplo);
+          if (blas::Uplo::Lower == uplo || blas::Uplo::General == uplo) {
+            test_indeces.emplace_back(matrix.size().rows() - 1, 0); // bottom left
+          }
+          else if(blas::Uplo::Upper == uplo || blas::Uplo::General == uplo) {
+            test_indeces.emplace_back(0, matrix.size().cols() - 1); // top right
+          }
+          else {
+            FAIL() << "this should not reached";
           }
 
-          // BOTTOM LEFT
-          {
-            new_value += 100;
-            const GlobalElementIndex index{matrix.size().rows() - 1, 0};
+          TypeParam new_value{norm};
+
+          for (const auto& test_index : test_indeces) {
+            new_value = new_value + TypeParam{100};
+
             const NormT<TypeParam> norm_expected = std::abs(new_value);
-            norm_current = norm_expected;
 
-            set_and_test(comm_grid, matrix, index, new_value, norm_expected, norm_type, uplo);
-          }
+            set_and_test(comm_grid, matrix, test_index, new_value, norm_expected, norm_type, uplo);
 
-          // TOP RIGHT
-          {
-            new_value += 100;
-            const GlobalElementIndex index{0, matrix.size().cols() - 1};
-            const NormT<TypeParam> norm_expected = norm_current;
-
-            set_and_test(comm_grid, matrix, index, new_value, norm_expected, norm_type, uplo);
-          }
-
-          // BOTTOM RIGHT
-          {
-            new_value += 100;
-            const GlobalElementIndex index{matrix.size().rows() - 1, matrix.size().cols() - 1};
-            const NormT<TypeParam> norm_expected = std::abs(new_value);
-            norm_current = norm_expected;
-
-            set_and_test(comm_grid, matrix, index, new_value, norm_expected, norm_type, uplo);
           }
         }
       }

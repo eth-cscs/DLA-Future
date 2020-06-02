@@ -25,6 +25,10 @@ dlaf::BaseType<T> Auxiliary<Backend::MC>::norm(comm::CommunicatorGrid grid, lapa
                                                blas::Uplo uplo, Matrix<const T, Device::CPU>& A) {
   DLAF_ASSERT_DISTRIBUTED_ON_GRID(grid, A);
 
+  // LAPACK documentation specify that if any dimension is 0, the result is 0
+  if (A.size().isEmpty())
+    return {0};
+
   switch (norm_type) {
     case lapack::Norm::One:
     case lapack::Norm::Two:

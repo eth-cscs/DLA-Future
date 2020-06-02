@@ -26,6 +26,7 @@ constexpr double M_PI = 3.141592;
 #include "dlaf/common/range2d.h"
 #include "dlaf/matrix.h"
 #include "dlaf/types.h"
+#include "dlaf/blaspp/enums.h"
 
 /// @file
 

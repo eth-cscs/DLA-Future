@@ -64,15 +64,17 @@ void modify_element(Matrix<T, Device::CPU>& matrix, GlobalElementIndex index, co
 // result is the expected one
 template <class T>
 void set_and_test(CommunicatorGrid comm_grid, Matrix<T, Device::CPU>& matrix, GlobalElementIndex index,
-                  const T new_value, const NormT<T> norm_expected, lapack::Norm norm_type, blas::Uplo uplo) {
+                  const T new_value, const NormT<T> norm_expected, lapack::Norm norm_type,
+                  blas::Uplo uplo) {
   if (index.isIn(matrix.size()))
     modify_element(matrix, index, new_value);
 
   const NormT<T> norm = Auxiliary<Backend::MC>::norm(comm_grid, norm_type, uplo, matrix);
 
-  SCOPED_TRACE(::testing::Message() << "norm=" << lapack::norm2str(norm_type) << " uplo=" << blas::uplo2str(uplo)
-                                    << " changed element=" << index << " in matrix size="
-                                    << matrix.size() << " grid_size=" << comm_grid.size());
+  SCOPED_TRACE(::testing::Message() << "norm=" << lapack::norm2str(norm_type)
+                                    << " uplo=" << blas::uplo2str(uplo) << " changed element=" << index
+                                    << " in matrix size=" << matrix.size()
+                                    << " grid_size=" << comm_grid.size());
 
   if (Index2D{0, 0} == comm_grid.rank())
     EXPECT_NEAR(norm_expected, norm, TypeUtilities<NormT<T>>::error);
@@ -131,13 +133,16 @@ TYPED_TEST(NormDistributedTest, NormMax) {
             EXPECT_LE(norm, +1);
           }
 
-          std::vector<GlobalElementIndex> test_indeces{{0, 0}, {matrix.size().rows() - 1, matrix.size().cols() - 1}}; // add diagonals
+          SizeType nrows = matrix.size().rows();
+          SizeType ncols = matrix.size().cols();
+
+          std::vector<GlobalElementIndex> test_indeces{{0, 0}, {nrows - 1, ncols - 1}};
 
           if (blas::Uplo::Lower == uplo || blas::Uplo::General == uplo) {
-            test_indeces.emplace_back(matrix.size().rows() - 1, 0); // bottom left
+            test_indeces.emplace_back(nrows - 1, 0);  // bottom left
           }
-          else if(blas::Uplo::Upper == uplo || blas::Uplo::General == uplo) {
-            test_indeces.emplace_back(0, matrix.size().cols() - 1); // top right
+          else if (blas::Uplo::Upper == uplo || blas::Uplo::General == uplo) {
+            test_indeces.emplace_back(0, ncols - 1);  // top right
           }
           else {
             FAIL() << "this should not be reached";
@@ -151,7 +156,6 @@ TYPED_TEST(NormDistributedTest, NormMax) {
             const NormT<TypeParam> norm_expected = std::abs(new_value);
 
             set_and_test(comm_grid, matrix, test_index, new_value, norm_expected, norm_type, uplo);
-
           }
         }
       }

@@ -41,6 +41,8 @@ public:
 
 TYPED_TEST_SUITE(NormDistributedTest, MatrixElementTypes);
 
+const std::vector<lapack::Norm> lapack_norms({lapack::Norm::Fro, lapack::Norm::Inf, lapack::Norm::Max,
+                                              lapack::Norm::One, lapack::Norm::Two});
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper, blas::Uplo::General});
 
 // Given a global index of an element, set it with given value
@@ -76,10 +78,36 @@ void set_and_test(CommunicatorGrid comm_grid, Matrix<T, Device::CPU>& matrix, Gl
     EXPECT_NEAR(norm_expected, norm, TypeUtilities<NormT<T>>::error);
 }
 
+TYPED_TEST(NormDistributedTest, EmptyMatrices) {
+  const std::vector<GlobalElementSize> sizes({{13, 0}, {0, 13}, {0, 0}});
+  const std::vector<TileElementSize> block_sizes({{3, 3}, {5, 5}});
+
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& size : sizes) {
+      for (const auto& block_size : block_sizes) {
+        Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
+                               std::min(1, comm_grid.size().cols() - 1));
+        Distribution distribution(size, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
+        Matrix<TypeParam, Device::CPU> matrix(std::move(distribution));
+
+        for (const auto& norm_type : lapack_norms) {
+          for (const auto& uplo : blas_uplos) {
+            const NormT<TypeParam> norm =
+                Auxiliary<Backend::MC>::norm(comm_grid, norm_type, uplo, matrix);
+
+            if (Index2D{0, 0} == comm_grid.rank())
+              EXPECT_NEAR(0, norm, TypeUtilities<NormT<TypeParam>>::error);
+          }
+        }
+      }
+    }
+  }
+}
+
 TYPED_TEST(NormDistributedTest, NormMax) {
   const lapack::Norm norm_type = lapack::Norm::Max;
 
-  const std::vector<GlobalElementSize> sizes({{10, 10}, {0, 0}});
+  const std::vector<GlobalElementSize> sizes({{10, 10}});
   const std::vector<TileElementSize> block_sizes({{3, 3}, {5, 5}});
 
   for (const auto& comm_grid : this->commGrids()) {
@@ -110,7 +138,7 @@ TYPED_TEST(NormDistributedTest, NormMax) {
           {
             new_value = 100;
             const GlobalElementIndex index{0, 0};
-            const NormT<TypeParam> norm_expected = matrix.size().isEmpty() ? 0 : std::abs(new_value);
+            const NormT<TypeParam> norm_expected = std::abs(new_value);
             norm_current = norm_expected;
 
             set_and_test(comm_grid, matrix, index, new_value, norm_expected, norm_type, uplo);
@@ -120,7 +148,7 @@ TYPED_TEST(NormDistributedTest, NormMax) {
           {
             new_value += 100;
             const GlobalElementIndex index{matrix.size().rows() - 1, 0};
-            const NormT<TypeParam> norm_expected = matrix.size().isEmpty() ? 0 : std::abs(new_value);
+            const NormT<TypeParam> norm_expected = std::abs(new_value);
             norm_current = norm_expected;
 
             set_and_test(comm_grid, matrix, index, new_value, norm_expected, norm_type, uplo);
@@ -139,7 +167,7 @@ TYPED_TEST(NormDistributedTest, NormMax) {
           {
             new_value += 100;
             const GlobalElementIndex index{matrix.size().rows() - 1, matrix.size().cols() - 1};
-            const NormT<TypeParam> norm_expected = matrix.size().isEmpty() ? 0 : std::abs(new_value);
+            const NormT<TypeParam> norm_expected = std::abs(new_value);
             norm_current = norm_expected;
 
             set_and_test(comm_grid, matrix, index, new_value, norm_expected, norm_type, uplo);

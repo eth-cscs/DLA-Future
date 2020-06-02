@@ -45,6 +45,32 @@ const std::vector<lapack::Norm> lapack_norms({lapack::Norm::Fro, lapack::Norm::I
                                               lapack::Norm::One, lapack::Norm::Two});
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper, blas::Uplo::General});
 
+TYPED_TEST(NormDistributedTest, EmptyMatrices) {
+  const std::vector<GlobalElementSize> sizes({{13, 0}, {0, 13}, {0, 0}});
+  const std::vector<TileElementSize> block_sizes({{3, 3}, {5, 5}});
+
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& size : sizes) {
+      for (const auto& block_size : block_sizes) {
+        Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
+                               std::min(1, comm_grid.size().cols() - 1));
+        Distribution distribution(size, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
+        Matrix<TypeParam, Device::CPU> matrix(std::move(distribution));
+
+        for (const auto& norm_type : lapack_norms) {
+          for (const auto& uplo : blas_uplos) {
+            const NormT<TypeParam> norm =
+                Auxiliary<Backend::MC>::norm(comm_grid, norm_type, uplo, matrix);
+
+            if (Index2D{0, 0} == comm_grid.rank())
+              EXPECT_NEAR(0, norm, TypeUtilities<NormT<TypeParam>>::error);
+          }
+        }
+      }
+    }
+  }
+}
+
 // Given a global index of an element, set it with given value
 template <class T>
 void modify_element(Matrix<T, Device::CPU>& matrix, GlobalElementIndex index, const T value) {
@@ -78,32 +104,6 @@ void set_and_test(CommunicatorGrid comm_grid, Matrix<T, Device::CPU>& matrix, Gl
 
   if (Index2D{0, 0} == comm_grid.rank())
     EXPECT_NEAR(norm_expected, norm, TypeUtilities<NormT<T>>::error);
-}
-
-TYPED_TEST(NormDistributedTest, EmptyMatrices) {
-  const std::vector<GlobalElementSize> sizes({{13, 0}, {0, 13}, {0, 0}});
-  const std::vector<TileElementSize> block_sizes({{3, 3}, {5, 5}});
-
-  for (const auto& comm_grid : this->commGrids()) {
-    for (const auto& size : sizes) {
-      for (const auto& block_size : block_sizes) {
-        Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
-                               std::min(1, comm_grid.size().cols() - 1));
-        Distribution distribution(size, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
-        Matrix<TypeParam, Device::CPU> matrix(std::move(distribution));
-
-        for (const auto& norm_type : lapack_norms) {
-          for (const auto& uplo : blas_uplos) {
-            const NormT<TypeParam> norm =
-                Auxiliary<Backend::MC>::norm(comm_grid, norm_type, uplo, matrix);
-
-            if (Index2D{0, 0} == comm_grid.rank())
-              EXPECT_NEAR(0, norm, TypeUtilities<NormT<TypeParam>>::error);
-          }
-        }
-      }
-    }
-  }
 }
 
 TYPED_TEST(NormDistributedTest, NormMax) {

@@ -276,12 +276,10 @@ void set_lower_and_upper_tile(Tile<T, Device::CPU>& tile, internal::getter_rando
   }
 }
 
-}
-
-/// Set a matrix with random values assuring it will be hermitian and positive definite.
+/// Set a matrix with random values assuring it will be hermitian with an offset added to diagonal elements
 ///
-/// Values on the diagonal are 2*n added to a random value in the range [-1, 1], where
-/// n is the matrix size. In case of complex values, the imaginary part is 0.
+/// Values on the diagonal are added offset_value to a random value in the range [-1, 1].
+/// In case of complex values, the imaginary part is 0.
 ///
 /// Values not on the diagonal will be random numbers in:
 /// - real:     [-1, 1]
@@ -295,7 +293,7 @@ void set_lower_and_upper_tile(Tile<T, Device::CPU>& tile, internal::getter_rando
 /// @pre @param matrix is a square matrix
 /// @pre @param matrix has a square blocksize
 template <class T>
-void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
+void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const std::size_t offset_value) {
   // note:
   // By assuming square blocksizes, it is easier to locate elements. In fact:
   // - Elements on the diagonal are stored in the diagonal of the diagonal tiles
@@ -306,12 +304,9 @@ void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
 
   const Distribution& dist = matrix.distribution();
 
-  // Check if matrix is square
   DLAF_ASSERT_SIZE_SQUARE(matrix);
-  // Check if block matrix is square
   DLAF_ASSERT_BLOCKSIZE_SQUARE(matrix);
 
-  auto offset_value = mul(2, to_sizet(matrix.size().rows()));
   auto full_tile_size = matrix.blockSize();
 
   for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
@@ -338,6 +333,48 @@ void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
 
     hpx::dataflow(std::move(set_hp_f), matrix(tile_wrt_local));
   }
+}
+
+}
+
+/// Set a matrix with random values assuring it will be hermitian
+///
+/// Values will be random numbers in:
+/// - real:     [-1, 1]
+/// - complex:  a circle of radius 1 centered at origin
+///
+/// Each tile creates its own random generator engine with a unique seed
+/// which is computed as a function of the tile global index.
+/// This means that the elements of a specific tile, no matter how the matrix is distributed,
+/// will be set with the same set of values.
+///
+/// @pre @param matrix is a square matrix
+/// @pre @param matrix has a square blocksize
+template <class T>
+void set_random_hermitian(Matrix<T, Device::CPU>& matrix) {
+  internal::set_random_hermitian_with_offset(matrix, 0);
+}
+
+/// Set a matrix with random values assuring it will be hermitian and positive definite.
+///
+/// Values on the diagonal are 2*n added to a random value in the range [-1, 1], where
+/// n is the matrix size. In case of complex values, the imaginary part is 0.
+///
+/// Values not on the diagonal will be random numbers in:
+/// - real:     [-1, 1]
+/// - complex:  a circle of radius 1 centered at origin
+///
+/// Each tile creates its own random generator engine with a unique seed
+/// which is computed as a function of the tile global index.
+/// This means that the elements of a specific tile, no matter how the matrix is distributed,
+/// will be set with the same set of values.
+///
+/// @pre @param matrix is a square matrix
+/// @pre @param matrix has a square blocksize
+template <class T>
+void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
+  const auto offset_value = dlaf::util::size_t::mul(2, to_sizet(matrix.size().rows()));
+  internal::set_random_hermitian_with_offset(matrix, offset_value);
 }
 
 }

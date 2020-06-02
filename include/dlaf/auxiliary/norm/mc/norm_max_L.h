@@ -50,9 +50,6 @@ dlaf::BaseType<T> norm_max_L(comm::CommunicatorGrid comm_grid, Matrix<const T, D
   DLAF_ASSERT_SIZE_SQUARE(matrix);
   DLAF_ASSERT_BLOCKSIZE_SQUARE(matrix);
 
-  if (GlobalElementSize{0, 0} == matrix.size())
-    return {0};
-
   vector<hpx::future<NormT>> tiles_max;
   tiles_max.reserve(distribution.localNrTiles().rows() * distribution.localNrTiles().cols());
 

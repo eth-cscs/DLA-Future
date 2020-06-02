@@ -47,7 +47,7 @@ const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper, 
 
 // Given a global index of an element, set it with given value
 template <class T>
-void modify_element(Matrix<T, Device::CPU>& matrix, GlobalElementIndex index, T value) {
+void modify_element(Matrix<T, Device::CPU>& matrix, GlobalElementIndex index, const T value) {
   const auto& distribution = matrix.distribution();
 
   const GlobalTileIndex tile_index = distribution.globalTileIndex(index);
@@ -64,13 +64,13 @@ void modify_element(Matrix<T, Device::CPU>& matrix, GlobalElementIndex index, T 
 // result is the expected one
 template <class T>
 void set_and_test(CommunicatorGrid comm_grid, Matrix<T, Device::CPU>& matrix, GlobalElementIndex index,
-                  T new_value, NormT<T> norm_expected, lapack::Norm norm_type, blas::Uplo uplo) {
+                  const T new_value, const NormT<T> norm_expected, lapack::Norm norm_type, blas::Uplo uplo) {
   if (index.isIn(matrix.size()))
     modify_element(matrix, index, new_value);
 
   const NormT<T> norm = Auxiliary<Backend::MC>::norm(comm_grid, norm_type, uplo, matrix);
 
-  SCOPED_TRACE(::testing::Message() << lapack::norm2str(norm_type) << " " << blas::uplo2str(uplo)
+  SCOPED_TRACE(::testing::Message() << "norm=" << lapack::norm2str(norm_type) << " uplo=" << blas::uplo2str(uplo)
                                     << " changed element=" << index << " in matrix size="
                                     << matrix.size() << " grid_size=" << comm_grid.size());
 
@@ -140,13 +140,13 @@ TYPED_TEST(NormDistributedTest, NormMax) {
             test_indeces.emplace_back(0, matrix.size().cols() - 1); // top right
           }
           else {
-            FAIL() << "this should not reached";
+            FAIL() << "this should not be reached";
           }
 
-          TypeParam new_value{norm};
+          TypeParam new_value = TypeUtilities<TypeParam>::element(13.13, 26.26);
 
           for (const auto& test_index : test_indeces) {
-            new_value = new_value + TypeParam{100};
+            new_value = new_value + TypeUtilities<TypeParam>::element(26.05, 20.10);
 
             const NormT<TypeParam> norm_expected = std::abs(new_value);
 

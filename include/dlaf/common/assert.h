@@ -21,8 +21,6 @@
 namespace dlaf {
 namespace internal {
 
-
-
 /// Return an empty string
 ///
 /// This is just the fundamental step of the recursive algorithm
@@ -97,8 +95,7 @@ inline void do_assert(bool expr, const common::internal::source_location& loc, c
 /// Note that `my_msg()` is evaluated even if the condition is true.
 
 #ifdef DLAF_ASSERT_ENABLE
-#define DLAF_ASSERT(Expr, ...) \
-  dlaf::internal::do_assert(Expr, SOURCE_LOCATION(), #Expr, __VA_ARGS__)
+#define DLAF_ASSERT(Expr, ...) dlaf::internal::do_assert(Expr, SOURCE_LOCATION(), #Expr, __VA_ARGS__)
 #else
 #define DLAF_ASSERT(Expr, ...)
 #endif
@@ -112,7 +109,7 @@ inline void do_assert(bool expr, const common::internal::source_location& loc, c
 
 #ifdef DLAF_ASSERT_HEAVY_ENABLE
 #define DLAF_ASSERT_HEAVY(Expr, ...) \
-  dlaf::internal::do_assert(Expr, SOURCE_LOCATION(), #Expr,__VA_ARGS__)
+  dlaf::internal::do_assert(Expr, SOURCE_LOCATION(), #Expr, __VA_ARGS__)
 #else
 #define DLAF_ASSERT_HEAVY(Expr, ...)
 #endif

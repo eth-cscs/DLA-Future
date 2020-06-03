@@ -33,7 +33,7 @@ void Factorization<Backend::MC>::cholesky(comm::CommunicatorGrid grid, blas::Upl
                                           Matrix<T, Device::CPU>& mat_a) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
-  DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
 
   // Method only for Lower triangular matrix
   if (uplo == blas::Uplo::Lower)

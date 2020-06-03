@@ -10,10 +10,13 @@
 
 #include "dlaf/auxiliary/mc.h"
 
+#include <limits>
+
 #include <gtest/gtest.h>
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix.h"
+#include "dlaf/util_matrix.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/util_types.h"
@@ -63,7 +66,7 @@ TYPED_TEST(NormDistributedTest, EmptyMatrices) {
                 Auxiliary<Backend::MC>::norm(comm_grid, norm_type, uplo, matrix);
 
             if (Index2D{0, 0} == comm_grid.rank())
-              EXPECT_NEAR(0, norm, TypeUtilities<NormT<TypeParam>>::error);
+              EXPECT_NEAR(0, norm, std::numeric_limits<NormT<TypeParam>>::epsilon());
           }
         }
       }
@@ -103,7 +106,7 @@ void set_and_test(CommunicatorGrid comm_grid, Matrix<T, Device::CPU>& matrix, Gl
                                     << " grid_size=" << comm_grid.size());
 
   if (Index2D{0, 0} == comm_grid.rank())
-    EXPECT_NEAR(norm_expected, norm, TypeUtilities<NormT<T>>::error);
+    EXPECT_NEAR(norm_expected, norm, norm * std::numeric_limits<NormT<T>>::epsilon());
 }
 
 TYPED_TEST(NormDistributedTest, NormMax) {

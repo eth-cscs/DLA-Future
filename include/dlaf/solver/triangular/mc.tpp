@@ -34,8 +34,7 @@ void Solver<Backend::MC>::triangular(blas::Side side, blas::Uplo uplo, blas::Op 
 
   if (side == blas::Side::Left) {
     // Check if A and B dimensions are compatible
-    DLAF_ASSERT(matrix::multipliable_matrices(mat_a, mat_b, mat_b, op, blas::Op::NoTrans), mat_a, mat_b,
-                op);
+    DLAF_ASSERT(matrix::multipliable(mat_a, mat_b, mat_b, op, blas::Op::NoTrans), mat_a, mat_b, op);
 
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
@@ -60,8 +59,7 @@ void Solver<Backend::MC>::triangular(blas::Side side, blas::Uplo uplo, blas::Op 
   }
   else {
     // Check if A and B dimensions are compatible
-    DLAF_ASSERT(matrix::multipliable_matrices(mat_b, mat_a, mat_b, blas::Op::NoTrans, op), mat_a, mat_b,
-                op);
+    DLAF_ASSERT(matrix::multipliable(mat_b, mat_a, mat_b, blas::Op::NoTrans, op), mat_a, mat_b, op);
 
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
@@ -98,8 +96,7 @@ void Solver<Backend::MC>::triangular(comm::CommunicatorGrid grid, blas::Side sid
 
   if (side == blas::Side::Left) {
     // Check if A and B dimensions are compatible
-    DLAF_ASSERT(matrix::multipliable_matrices(mat_a, mat_b, mat_b, op, blas::Op::NoTrans), mat_a, mat_b,
-                op);
+    DLAF_ASSERT(matrix::multipliable(mat_a, mat_b, mat_b, op, blas::Op::NoTrans), mat_a, mat_b, op);
 
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
@@ -124,8 +121,7 @@ void Solver<Backend::MC>::triangular(comm::CommunicatorGrid grid, blas::Side sid
   }
   else {
     // Check if A and B dimensions are compatible
-    DLAF_ASSERT(matrix::multipliable_matrices(mat_a, mat_b, mat_b, blas::Op::NoTrans, op), mat_a, mat_b,
-                op);
+    DLAF_ASSERT(matrix::multipliable(mat_a, mat_b, mat_b, blas::Op::NoTrans, op), mat_a, mat_b, op);
 
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {

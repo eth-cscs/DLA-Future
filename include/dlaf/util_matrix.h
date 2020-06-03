@@ -89,9 +89,8 @@ bool multipliable_sizes(common::Size2D<IndexT, Tag> a, common::Size2D<IndexT, Ta
 
 /// Returns true if matrices `a`, `b` and `c` have matrix multipliable sizes and block sizes
 template <class T, Device D>
-bool multipliable_matrices(const Matrix<const T, D>& a, const Matrix<const T, D>& b,
-                           const Matrix<const T, D>& c, const blas::Op opA,
-                           const blas::Op opB) noexcept {
+bool multipliable(const Matrix<const T, D>& a, const Matrix<const T, D>& b, const Matrix<const T, D>& c,
+                  const blas::Op opA, const blas::Op opB) noexcept {
   return multipliable_sizes(a.size(), b.size(), c.size(), opA, opB) &&
          multipliable_sizes(a.blockSize(), b.blockSize(), c.blockSize(), opA, opB);
 }

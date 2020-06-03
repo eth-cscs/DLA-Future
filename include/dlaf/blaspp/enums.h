@@ -15,7 +15,7 @@
 #include <iostream>
 #include <string>
 
-#include <blas_util.hh>
+#include <blas.hh>
 
 namespace blas {
 

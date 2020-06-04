@@ -23,6 +23,8 @@ if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Build Type" FORCE)
 endif()
 
+option(BUILD_SHARED_LIBS "Build shared libraries." OFF)
+
 # ---------------------------------------------------------------------------
 # Languages
 # ---------------------------------------------------------------------------

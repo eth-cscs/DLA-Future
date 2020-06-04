@@ -14,7 +14,7 @@
 
 #include <gtest/gtest.h>
 
-#include "dlaf/common/utils.h"
+#include "dlaf/common/source_location.h"
 
 using dlaf::to_signed;
 using dlaf::to_unsigned;

@@ -20,7 +20,6 @@
 #include <type_traits>
 
 #include "dlaf/common/assert.h"
-#include "dlaf/common/utils.h"
 #include "dlaf/types.h"
 #include "dlaf/util_math.h"
 

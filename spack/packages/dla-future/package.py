@@ -17,18 +17,14 @@ class DlaFuture(CMakePackage):
 
     variant('cuda', default=False,
             description='Use the GPU/cuBLAS back end.')
-    variant('test', default=False,
-            description='Run unit tests.')
     variant('doc', default=False,
             description='Build documentation.')
     
     #depends_on('mpi@3:')
     depends_on('mpi')
-    depends_on('blas')
-    depends_on('lapack')
     depends_on('blaspp')
     depends_on('lapackpp')
-    depends_on('hpx@1.4.0 cxxstd=14 networking=none')
+    depends_on('hpx@1.4.0: cxxstd=14 networking=none')
     depends_on('cuda', when='cuda=True')
 
     def cmake_args(self):
@@ -43,11 +39,14 @@ class DlaFuture(CMakePackage):
 
        if '+cuda' in spec:
            args.append('-DDLAF_WITH_CUDA=ON')
-           args.append('-DCUDA_TOOLKIT_ROOT_DIR:STRING={0}'.format(spec['cuda'].prefix))
+           args.append('-DCUDA_HOME={0}'.format(spec['cuda'].prefix))
 
-       if '+test' in spec:
+       if self.run_tests:
            args.append('-DDLAF_WITH_TEST=ON')
            args.append('-DDLAF_INSTALL_TESTS=ON')
+       else:
+           args.append('-DDLAF_WITH_TEST=OFF')
+           args.append('-DDLAF_INSTALL_TESTS=OFF')
 
        if '+doc' in spec:
            args.append('-DBUILD_DOC=on')

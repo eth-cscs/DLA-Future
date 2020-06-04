@@ -12,6 +12,7 @@
 
 /// @file
 
+#include <iostream>
 #include <sstream>
 #include <string>
 
@@ -46,22 +47,5 @@ struct source_location {
 
 }
 
-/// Return an empty string
-///
-/// This is just the fundamental step of the recursive algorithm
-inline std::string concat() {
-  return "";
-}
-
-/// Join a list of heterogenous parameters into a string
-///
-/// Given a list of parameters for which a valid std::ostream& operator<<(std::ostream&, const T&)
-/// exists, it returns a std::string with all parameters representations joined
-template <class T, class... Ts>
-std::string concat(const T& first, const Ts&... args) {
-  std::ostringstream ss;
-  ss << first << concat(std::forward<const Ts>(args)...);
-  return ss.str();
-}
 }
 }

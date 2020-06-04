@@ -16,6 +16,7 @@
 #include <cassert>
 #include <cstddef>
 #include <ostream>
+#include <string>
 #include <type_traits>
 
 #include "dlaf/common/assert.h"
@@ -224,9 +225,12 @@ Index2D<IndexT, Tag> computeCoordsRowMajor(std::ptrdiff_t linear_index,
                                            const Size2D<IndexT, Tag>& dims) noexcept {
   using dlaf::util::ptrdiff_t::mul;
 
-  DLAF_ASSERT_MODERATE(linear_index >= 0, "The linear index cannot be negative!", linear_index);
+  // `linear_index` is wrapped with `std::to_string` because uint8_t or int8_t are interpreted as chars,
+  // so the equivalent ASCII mapping is printed instead of the numeric value.
+  DLAF_ASSERT_MODERATE(linear_index >= 0, "The linear index cannot be negative!",
+                       std::to_string(linear_index));
   DLAF_ASSERT_MODERATE(linear_index < mul(dims.rows(), dims.cols()),
-                       "Linear index does not fit into grid!", linear_index, dims);
+                       "Linear index does not fit into grid!", std::to_string(linear_index), dims);
 
   std::ptrdiff_t leading_size = dims.cols();
   return {to_signed<IndexT>(linear_index / leading_size),
@@ -247,7 +251,7 @@ Index2D<IndexT, Tag> computeCoordsColMajor(std::ptrdiff_t linear_index,
 
   DLAF_ASSERT_MODERATE(linear_index >= 0, linear_index);
   DLAF_ASSERT_MODERATE(linear_index < mul(dims.rows(), dims.cols()),
-                       "Linear index does not fit into grid!", linear_index, dims);
+                       "Linear index does not fit into grid!", std::to_string(linear_index), dims);
 
   std::ptrdiff_t leading_size = dims.rows();
   return {to_signed<IndexT>(linear_index % leading_size),

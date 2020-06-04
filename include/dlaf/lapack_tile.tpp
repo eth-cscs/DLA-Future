@@ -12,9 +12,8 @@
 
 template <class T>
 void lacpy(const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b) {
-  DLAF_ASSERT_MODERATE(a.size() == b.size(),
-                       "Source and destination tile must have the same size. A=", a.size(),
-                       " B=", b.size());
+  DLAF_ASSERT_MODERATE(a.size() == b.size(), "Source and destination tile must have the same size!", a,
+                       b);
 
   SizeType m = a.size().rows();
   SizeType n = a.size().cols();
@@ -32,13 +31,13 @@ dlaf::BaseType<T> lantr(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag,
                         const Tile<T, device>& a) noexcept {
   switch (uplo) {
     case blas::Uplo::Lower:
-      DLAF_ASSERT(a.size().rows() >= a.size().cols(), "Not valid ", a.size());
+      DLAF_ASSERT(a.size().rows() >= a.size().cols(), "Invalid!", a);
       break;
     case blas::Uplo::Upper:
-      DLAF_ASSERT(a.size().rows() <= a.size().cols(), "Not valid ", a.size());
+      DLAF_ASSERT(a.size().rows() <= a.size().cols(), "Invalid!", a);
       break;
     case blas::Uplo::General:
-      DLAF_ASSERT(blas::Uplo::General == uplo, "Invalid parameter");
+      DLAF_ASSERT(blas::Uplo::General == uplo, "Invalid parameter!");
       break;
   }
   return lapack::lantr(norm, uplo, diag, a.size().rows(), a.size().cols(), a.ptr(), a.ld());

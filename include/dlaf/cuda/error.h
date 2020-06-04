@@ -19,7 +19,7 @@
 #include <cuda_runtime.h>
 #endif
 
-#include "dlaf/common/utils.h"
+#include "dlaf/common/source_location.h"
 
 namespace dlaf {
 namespace internal {

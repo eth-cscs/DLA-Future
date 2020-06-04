@@ -86,6 +86,11 @@ public:
     return col_;
   }
 
+  /// Prints information about the CommunicationGrid.
+  friend std::ostream& operator<<(std::ostream& out, const CommunicatorGrid& grid) {
+    return out << "position=" << grid.position_ << ", size=" << grid.grid_size_;
+  }
+
 protected:
   static constexpr const dlaf::common::Ordering FULL_COMMUNICATOR_ORDER{
       dlaf::common::Ordering::RowMajor};

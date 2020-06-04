@@ -31,7 +31,7 @@ namespace mc {
 // It just addresses tiles with elements belonging to the lower triangular part of the matrix
 //
 // Thanks to the nature of the max norm, it is valid for:
-// - ge/sy/he lower
+// - sy/he lower
 // - tr lower non-unit
 template <class T>
 dlaf::BaseType<T> norm_max_L(comm::CommunicatorGrid comm_grid, Matrix<const T, Device::CPU>& matrix) {

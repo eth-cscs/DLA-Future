@@ -99,18 +99,12 @@ add_library(dlaf.core
 target_link_libraries(dlaf.core PUBLIC dlaf.prop)
 
 # Define DLAF's Factorization library
-add_library(dlaf.factorization
-  OBJECT
-    factorization/mc.cpp
-)
-target_link_libraries(dlaf.factorization PUBLIC dlaf.core dlaf.prop)
+add_library(dlaf.factorization OBJECT factorization/mc.cpp)
+target_link_libraries(dlaf.factorization PUBLIC dlaf.prop)
 
 # Define DLAF's Solver library
-add_library(dlaf.solver
-  OBJECT
-    solver/mc.cpp
-)
-target_link_libraries(dlaf.solver PUBLIC dlaf.core dlaf.prop)
+add_library(dlaf.solver OBJECT solver/mc.cpp)
+target_link_libraries(dlaf.solver PUBLIC dlaf.prop)
 
 # Define DLAF's complete library
 add_library(DLAF

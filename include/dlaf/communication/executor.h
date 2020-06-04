@@ -63,6 +63,9 @@ public:
 
   inline executor(MPI_Comm comm) : comm_(comm), ex_("default", hpx::threads::thread_priority_high) {}
 
+  inline executor(std::string pool, MPI_Comm comm)
+      : comm_(comm), ex_(pool, hpx::threads::thread_priority_high) {}
+
   constexpr bool operator==(executor const& rhs) const noexcept {
     return comm_ == rhs.comm_ && ex_ == rhs.ex_;
   }

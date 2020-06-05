@@ -92,7 +92,7 @@ void run(lapack::Norm norm, const Tile<T, Device::CPU>& a) {
   const TileElementSize size = a.size();
 
   NormT<T> value = std::abs(TileSetter<T>::value);
-  NormT<T> norm_expected;
+  NormT<T> norm_expected = -1;
 
   switch (norm) {
     case lapack::Norm::One:

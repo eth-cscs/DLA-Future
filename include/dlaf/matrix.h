@@ -113,24 +113,23 @@ private:
   using Matrix<const T, device>::tile_shared_futures_;
 };
  
-//template <class T, Device device>
-//std::ostream& operator<<(std::ostream& ostr, Matrix<const T, device> mat) {
-//  SizeType row = mat.nrTiles().rows();
-//  SizeType col = mat.nrTiles().cols();
-//
-//  for (SizeType i=0; i<row; ++i) {
-//    for (SizeType j=0; j<col; ++j) {
-//      auto tile = mat(LocalTileIndex(i,j)).get();
-//      for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
-//	for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
-//	  std::cout << tile({ii, jj}) << " ";
-//	}
-//      }
-//    }
-//      std::cout << "\n";
-//  }
-//  
-//}
+template <class T, Device device>
+std::ostream& operator<<(std::ostream& ostr, Matrix<T, device>& mat) {
+  SizeType row = mat.nrTiles().rows();
+  SizeType col = mat.nrTiles().cols();
+
+  for (SizeType i=0; i<row; ++i) {
+    for (SizeType j=0; j<col; ++j) {
+      const LocalTileIndex idx = {i, j};
+
+      auto tile = mat(idx).get();
+      ostr << tile << " ";
+    }
+    ostr << " " << std::endl;
+  }
+  
+  return ostr;
+}
 
 #include "dlaf/matrix.tpp"
 

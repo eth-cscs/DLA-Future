@@ -47,23 +47,25 @@ TYPED_TEST(EigensolverGenToStdLocalTest, Correctness) {
   Matrix<double, Device::CPU> mat_a(size, block_size);
   set(mat_a, el);
 
-  std::cout << "Matrix A size " << mat_a.size().rows() << " x " << mat_a.size().cols() << "\n";
+  std::cout << "Matrix A" << std::endl;
+  std::cout << "Size " << mat_a.size().rows() << " x " << mat_a.size().cols() << "\n";
   std::cout << "Tile size " << mat_a.blockSize().rows() << " x " << mat_a.blockSize().cols() << "\n";
   std::cout << "Number of tiles " << mat_a.nrTiles().rows()*mat_a.nrTiles().cols()  << "\n";
-
-  SizeType tottilecol = mat_a.nrTiles().cols();
-  SizeType tottilerow = mat_a.nrTiles().rows();
-  for (SizeType i=0; i<tottilerow; ++i) {
-    for (SizeType j=0; j<tottilecol; ++j) {
-      auto tile = mat_a(LocalTileIndex(i,j)).get();
-      for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
-	for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
-	  std::cout << tile({ii, jj}) << " ";
-	}
-      }
-    }
-      std::cout << "\n";
-  }
+  std::cout << mat_a << std::endl;
+  
+//  SizeType tottilecol = mat_a.nrTiles().cols();
+//  SizeType tottilerow = mat_a.nrTiles().rows();
+//  for (SizeType i=0; i<tottilerow; ++i) {
+//    for (SizeType j=0; j<tottilecol; ++j) {
+//      auto tile = mat_a(LocalTileIndex(i,j)).get();
+//      for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
+//	for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
+//	  std::cout << tile({ii, jj}) << " ";
+//	}
+//      }
+//    }
+//      std::cout << "\n";
+//  }
 
 
 
@@ -77,41 +79,32 @@ TYPED_TEST(EigensolverGenToStdLocalTest, Correctness) {
   Matrix<double, Device::CPU> mat_l(size, block_size);
   set(mat_l, el_l);
 
-  std::cout << "Mat L size " << mat_l.size().rows() << " x " << mat_l.size().cols() << "\n";
+  std::cout << "MAT L" << std::endl;
+  std::cout << "Size " << mat_l.size().rows() << " x " << mat_l.size().cols() << "\n";
   std::cout << "Tile size " << mat_l.blockSize().rows() << " x " << mat_l.blockSize().cols() << "\n";
   std::cout << "Number of tiles " << mat_l.nrTiles().rows()*mat_l.nrTiles().cols()  << "\n";
-
-  SizeType tottilecoll = mat_l.nrTiles().cols();
-  SizeType tottilerowl = mat_l.nrTiles().rows();
-  for (SizeType i=0; i<tottilerowl; ++i) {
-    for (SizeType j=0; j<tottilecoll; ++j) {
-      auto tile = mat_l(LocalTileIndex(i,j)).get();
-      for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
-	for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
-	  std::cout << tile({ii, jj}) << " ";
-	}
-      }
-    }
-    std::cout << "\n";
-  }
+  std::cout << mat_l << std::endl;
+  
+//  SizeType tottilecoll = mat_l.nrTiles().cols();
+//  SizeType tottilerowl = mat_l.nrTiles().rows();
+//  for (SizeType i=0; i<tottilerowl; ++i) {
+//    for (SizeType j=0; j<tottilecoll; ++j) {
+//      auto tile = mat_l(LocalTileIndex(i,j)).get();
+//      for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
+//	for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
+//	  std::cout << tile({ii, jj}) << " ";
+//	}
+//      }
+//    }
+//    std::cout << "\n";
+//  }
 
 
   // genToStd
   Eigensolver<Backend::MC>::genToStd(mat_a, mat_l);
 
-  //  std::cout << "Result" << mat_a << std::endl;
-    std::cout << "Result" << std::endl;
-  for (SizeType i=0; i<tottilerow; ++i) {
-    for (SizeType j=0; j<tottilecol; ++j) {
-      auto tile = mat_a(LocalTileIndex(i,j)).get();
-      for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
-	for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
-	  std::cout << tile({ii, jj}) << " ";
-	}
-      }
-    }
-    std::cout << "\n";
-  }
+  std::cout << "Result" << std::endl;
+  std::cout  << mat_a << std::endl;
 
 
   auto res = [](const GlobalElementIndex& index){

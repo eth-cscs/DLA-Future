@@ -283,6 +283,7 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const std:
   }
 }
 
+ 
 }
 
 /// Set a matrix with random values assuring it will be hermitian

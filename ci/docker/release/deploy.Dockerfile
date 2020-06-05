@@ -26,6 +26,7 @@ RUN mkdir ${BUILD} && cd ${BUILD} && \
     CC=/usr/local/mpich/bin/mpicc CXX=/usr/local/mpich/bin/mpicxx cmake ${SOURCE} \
       -DMKL_ROOT=/opt/intel/compilers_and_libraries/linux/mkl \
       -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+      -DCMAKE_CXX_FLAGS_RELEASE="-Werror" \
       -DDLAF_WITH_CUDA=OFF \
       -DDLAF_WITH_MKL=ON \
       -DDLAF_WITH_TEST=ON \

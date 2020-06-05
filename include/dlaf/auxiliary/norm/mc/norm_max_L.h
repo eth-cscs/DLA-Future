@@ -20,6 +20,7 @@
 #include "dlaf/matrix.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/types.h"
+#include "dlaf/util_matrix.h"
 
 namespace dlaf {
 namespace internal {
@@ -35,9 +36,10 @@ namespace mc {
 // - tr lower non-unit
 template <class T>
 dlaf::BaseType<T> norm_max_L(comm::CommunicatorGrid comm_grid, Matrix<const T, Device::CPU>& matrix) {
+  using namespace dlaf::matrix;
+
   using dlaf::common::internal::vector;
   using dlaf::common::make_data;
-  // using dlaf::common::iterate_range2d;
   using hpx::util::unwrapping;
 
   using dlaf::tile::lange;
@@ -47,8 +49,8 @@ dlaf::BaseType<T> norm_max_L(comm::CommunicatorGrid comm_grid, Matrix<const T, D
 
   const auto& distribution = matrix.distribution();
 
-  DLAF_ASSERT_SIZE_SQUARE(matrix);
-  DLAF_ASSERT_BLOCKSIZE_SQUARE(matrix);
+  DLAF_ASSERT(square_size(matrix), matrix);
+  DLAF_ASSERT(square_blocksize(matrix), matrix);
 
   vector<hpx::future<NormT>> tiles_max;
   tiles_max.reserve(distribution.localNrTiles().rows() * distribution.localNrTiles().cols());

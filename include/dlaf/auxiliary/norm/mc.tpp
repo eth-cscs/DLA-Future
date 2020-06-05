@@ -23,7 +23,9 @@ namespace dlaf {
 template <class T>
 dlaf::BaseType<T> Auxiliary<Backend::MC>::norm(comm::CommunicatorGrid grid, lapack::Norm norm_type,
                                                blas::Uplo uplo, Matrix<const T, Device::CPU>& A) {
-  DLAF_ASSERT_DISTRIBUTED_ON_GRID(grid, A);
+  using dlaf::matrix::equal_process_grid;
+
+  DLAF_ASSERT(equal_process_grid(A, grid), A, grid);
 
   // LAPACK documentation specify that if any dimension is 0, the result is 0
   if (A.size().isEmpty())

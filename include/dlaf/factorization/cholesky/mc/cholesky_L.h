@@ -86,16 +86,15 @@ void cholesky_L(Matrix<T, Device::CPU>& mat_a) {
 // Distributed implementation of Lower Cholesky factorization.
 template <class T>
 void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
-  using common::internal::vector;
-
   using hpx::threads::executors::pool_executor;
   using hpx::threads::thread_priority_high;
   using hpx::threads::thread_priority_default;
-
   using comm::internal::mpi_pool_exists;
+  using common::internal::vector;
 
   using ConstTile_t = Tile<const T, Device::CPU>;
   using Tile_t = Tile<T, Device::CPU>;
+  using MemView_t = memory::MemoryView<T, Device::CPU>;
 
   constexpr auto NonUnit = blas::Diag::NonUnit;
   constexpr auto ConjTrans = blas::Op::ConjTrans;
@@ -163,8 +162,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
 
           auto recv_bcast_f = hpx::util::unwrapping(
               [](auto index, auto&& tile_size, auto&& comm_wrapper) -> ConstTile_t {
-                memory::MemoryView<T, Device::CPU> mem_view(
-                    util::size_t::mul(tile_size.rows(), tile_size.cols()));
+                MemView_t mem_view(util::size_t::mul(tile_size.rows(), tile_size.cols()));
                 Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
                 comm::sync::broadcast::receive_from(index, comm_wrapper().colCommunicator(), tile);
                 return std::move(tile);
@@ -204,8 +202,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
           // Receiving the panel
           auto recv_bcast_f = hpx::util::unwrapping(
               [](auto index, auto&& tile_size, auto&& comm_wrapper) -> ConstTile_t {
-                memory::MemoryView<T, Device::CPU> mem_view(
-                    util::size_t::mul(tile_size.rows(), tile_size.cols()));
+                MemView_t mem_view(util::size_t::mul(tile_size.rows(), tile_size.cols()));
                 Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
                 comm::sync::broadcast::receive_from(index, comm_wrapper().rowCommunicator(), tile);
                 return std::move(tile);
@@ -259,8 +256,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
           // Update the (trailing) panel column-wise
           auto recv_bcast_f = hpx::util::unwrapping(
               [](auto index, auto&& tile_size, auto&& comm_wrapper) -> ConstTile_t {
-                memory::MemoryView<T, Device::CPU> mem_view(
-                    util::size_t::mul(tile_size.rows(), tile_size.cols()));
+                MemView_t mem_view(util::size_t::mul(tile_size.rows(), tile_size.cols()));
                 Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
                 comm::sync::broadcast::receive_from(index, comm_wrapper().colCommunicator(), tile);
                 return std::move(tile);

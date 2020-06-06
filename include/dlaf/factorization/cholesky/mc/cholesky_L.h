@@ -18,7 +18,9 @@
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/communication/executor.h"
 #include "dlaf/communication/functions_sync.h"
+#include "dlaf/communication/kernels.h"
 #include "dlaf/communication/pool.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix.h"
@@ -105,7 +107,10 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
   // Set up executor on the default queue with default priority.
   pool_executor executor_normal("default", thread_priority_default);
   // Set up MPI executor
-  auto executor_mpi = (mpi_pool_exists()) ? pool_executor("mpi", thread_priority_high) : executor_hp;
+  // auto executor_mpi = (mpi_pool_exists()) ? pool_executor("mpi", thread_priority_high) : executor_hp;
+  comm::executor executor_mpi("mpi", grid.fullCommunicator());
+  comm::executor executor_mpi_col("mpi", grid.colCommunicator());
+  comm::executor executor_mpi_row("mpi", grid.rowCommunicator());
 
   auto col_comm_size = grid.colCommunicator().size();
   auto row_comm_size = grid.rowCommunicator().size();
@@ -116,8 +121,6 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
 
   auto localnrtile_rows = distr.localNrTiles().rows();
   auto localnrtile_cols = distr.localNrTiles().cols();
-
-  common::Pipeline<comm::CommunicatorGrid> serial_comm(std::move(grid));
 
   for (SizeType k = 0; k < nrtile; ++k) {
     // Create a placeholder that will store the shared futures representing the panel
@@ -144,10 +147,11 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
         // Avoid useless communication if one-column communicator and if on the last column
         if (col_comm_size > 1 && k != (mat_a.nrTiles().cols() - 1)) {
           // Broadcast the panel column-wise
-          hpx::dataflow(hpx::util::unwrapping([](auto&& tile, auto&& comm_wrapper) {
-                          comm::sync::broadcast::send(comm_wrapper().colCommunicator(), tile);
-                        }),
-                        mat_a.read(kk), serial_comm());
+          auto bcast_f = hpx::util::unwrapping([ex = executor_mpi_col](auto&& tile) {
+            return comm::bcast(ex, ex.comm().rank(), tile).get();
+            // comm::sync::broadcast::send(comm_wrapper().colCommunicator(), tile);
+          });
+          auto bcast_fut = hpx::dataflow(std::move(bcast_f), mat_a.read(kk));
         }
 
         kk_tile = mat_a.read(kk);

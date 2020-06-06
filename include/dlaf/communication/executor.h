@@ -22,6 +22,8 @@
 #include <hpx/parallel/executors/execution_fwd.hpp>
 #include <hpx/util/yield_while.hpp>
 
+#include "dlaf/communication/communicator.h"
+
 namespace dlaf {
 namespace comm {
 
@@ -76,6 +78,10 @@ public:
 
   constexpr executor const& context() const noexcept {
     return *this;
+  }
+
+  Communicator comm() const noexcept {
+    return comm_;
   }
 
   /// The function only accepts non-blocking MPI routines. The MPI library needs

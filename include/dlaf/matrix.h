@@ -32,7 +32,7 @@ namespace matrix {
 /// therefore some tiles are stored locally on this rank,
 /// while the others are available on other ranks.
 /// More details are available in misc/matrix_distribution.md.
-/// TODO: Sync details.
+/// Details about the Tile synchronization mechanism can be found in misc/synchronization.md.
 
 template <class T, Device device>
 class Matrix : public Matrix<const T, device> {
@@ -83,8 +83,8 @@ public:
   /// @param[in] layout is the layout which describes how the elements
   ///            of the local part of the matrix are stored in memory,
   /// @param[in] ptr is the pointer to the first element of the local part of the matrix,
-  /// @pre distribution.localSize() == layout.size(),
-  /// @pre distribution.blockSize() == layout.blockSize(),
+  /// @pre @p distribution.localSize() == @p layout.size(),
+  /// @pre @p distribution.blockSize() == @p layout.blockSize(),
   /// @pre @p ptr refers to an allocated memory region of at least @c layout.minMemSize() elements.
   Matrix(Distribution distribution, const LayoutInfo& layout, ElementType* ptr) noexcept;
 
@@ -96,13 +96,13 @@ public:
 
   /// Returns a future of the Tile with local index @p index.
   ///
-  /// TODO: Sync details.
+  /// See misc/synchronization.md for the synchronization details.
   /// @pre index.isIn(distribution().localNrTiles()).
   hpx::future<TileType> operator()(const LocalTileIndex& index) noexcept;
 
   /// Returns a future of the Tile with global index @p index.
   ///
-  /// TODO: Sync details.
+  /// See misc/synchronization.md for the synchronization details.
   /// @pre the global tile is stored in the current process,
   /// @pre index.isIn(globalNrTiles()).
   hpx::future<TileType> operator()(const GlobalTileIndex& index) {
@@ -145,13 +145,13 @@ public:
 
   /// Returns a read-only shared_future of the Tile with local index @p index.
   ///
-  /// TODO: Sync details.
+  /// See misc/synchronization.md for the synchronization details.
   /// @pre index.isIn(distribution().localNrTiles()).
   hpx::shared_future<ConstTileType> read(const LocalTileIndex& index) noexcept;
 
   /// Returns a read-only shared_future of the Tile with global index @p index.
   ///
-  /// TODO: Sync details.
+  /// See misc/synchronization.md for the synchronization details.
   /// @pre the global tile is stored in the current process,
   /// @pre index.isIn(globalNrTiles()).
   hpx::shared_future<ConstTileType> read(const GlobalTileIndex& index) {
@@ -206,8 +206,8 @@ Matrix<T, device> createMatrixFromTile(const LocalElementSize& size, const TileE
 /// @param[in] ld_tile the leading dimension of the tiles,
 /// @param[in] tiles_per_col the number of tiles stored for each column of tiles,
 /// @param[in] ptr is the pointer to the first element of the local part of the matrix,
-/// @pre ld_tile >= max(1, min(block_size.row(), size.row())),
-/// @pre tiles_per_col >= ceilDiv(size.row(), block_size.col()),
+/// @pre @p ld_tile >= max(1, min(block_size.row(), size.row())),
+/// @pre @p tiles_per_col >= ceilDiv(size.row(), block_size.col()),
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
 /// stored in the given layout.
 template <Device device, class T>
@@ -225,8 +225,8 @@ Matrix<T, device> createMatrixFromTile(const LocalElementSize& size, const TileE
 /// @param[in] ld the leading dimension of the matrix,
 /// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix,
 /// @param[in] ptr is the pointer to the first element of the local part of the matrix,
-/// @pre ld >= max(1, size.row()),
-/// @pre source_rank_index.isIn(grid_size),
+/// @pre @p ld >= max(1, size.row()),
+/// @pre @p source_rank_index.isIn(grid_size),
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
 /// stored in the given layout.
 template <Device device, class T>
@@ -247,7 +247,7 @@ Matrix<T, device> createMatrixFromColMajor(const GlobalElementSize& size,
 /// This method assumes @p source_rank_index to be {0,0}.
 /// @param[in] ld the leading dimension of the matrix,
 /// @param[in] ptr is the pointer to the first element of the local part of the matrix,
-/// @pre ld >= max(1, size.row()),
+/// @pre @p ld >= max(1, size.row()),
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
 /// stored in the given layout.
 template <Device device, class T>
@@ -263,7 +263,7 @@ Matrix<T, device> createMatrixFromColMajor(const GlobalElementSize& size,
 ///
 /// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix,
 /// @param[in] ptr is the pointer to the first element of the local part of the matrix,
-/// @pre source_rank_index.isIn(grid_size),
+/// @pre @p source_rank_index.isIn(grid_size),
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
 /// stored in the given layout.
 template <Device device, class T>
@@ -298,9 +298,9 @@ Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const Tile
 /// @param[in] tiles_per_col the number of tiles stored for each column of tiles,
 /// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix,
 /// @param[in] ptr is the pointer to the first element of the local part of the matrix,
-/// @pre ld_tile >= max(1, min(block_size.row(), size.row())),
-/// @pre tiles_per_col >= ceilDiv(size.row(), block_size.row()),
-/// @pre source_rank_index.isIn(grid_size),
+/// @pre @p ld_tile >= max(1, min(block_size.row(), size.row())),
+/// @pre @p tiles_per_col >= ceilDiv(size.row(), block_size.row()),
+/// @pre @p source_rank_index.isIn(grid_size),
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
 /// stored in the given layout.
 template <Device device, class T>
@@ -322,8 +322,8 @@ Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const Tile
 /// @param[in] ld_tile the leading dimension of the tiles,
 /// @param[in] tiles_per_col the number of tiles stored for each column of tiles,
 /// @param[in] ptr is the pointer to the first element of the local part of the matrix,
-/// @pre ld_tile >= max(1, min(block_size.row(), size.row()),
-/// @pre tiles_per_col >= ceilDiv(size.row(), block_size.col()),
+/// @pre @p ld_tile >= max(1, min(block_size.row(), size.row()),
+/// @pre @p tiles_per_col >= ceilDiv(size.row(), block_size.col()),
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
 /// stored in the given layout.
 template <Device device, class T>

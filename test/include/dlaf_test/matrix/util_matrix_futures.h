@@ -167,9 +167,9 @@ void checkFutures(bool get_ready, const std::vector<Future1>& current, std::vect
 /// where index = LocalTileIndex(i % mat_view.localNrTiles.rows(), i / mat_view.localNrTiles.rows())
 /// If get_ready == true it checks if current[i] is ready after the call to mat_view.done(i).
 /// If get_ready == false it checks if current[i] is not ready after the call to mat_view.done(i).
-/// @pre Future1 should be a future or shared_future.
-template <class Future1, class MatrixViewType>
-void checkFuturesDone(bool get_ready, const std::vector<Future1>& current, MatrixViewType& mat_view) {
+/// @pre Future should be a future or shared_future.
+template <class Future, class MatrixViewType>
+void checkFuturesDone(bool get_ready, const std::vector<Future>& current, MatrixViewType& mat_view) {
   const auto& nr_tiles = mat_view.distribution().localNrTiles();
   DLAF_ASSERT(static_cast<SizeType>(current.size()) == nr_tiles.linear_size(), "");
 

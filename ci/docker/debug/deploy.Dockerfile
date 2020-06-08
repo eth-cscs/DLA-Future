@@ -25,7 +25,7 @@ SHELL ["/bin/bash", "-c"]
 RUN mkdir ${BUILD} && cd ${BUILD} && \
     CC=/usr/local/mpich/bin/mpicc CXX=/usr/local/mpich/bin/mpicxx cmake ${SOURCE} \
       -DCMAKE_BUILD_TYPE=Debug \
-      -DCMAKE_CXX_FLAGS="-Werror -Og -fno-omit-frame-pointer" \
+      -DCMAKE_CXX_FLAGS="-Og -Werror -fno-omit-frame-pointer" \
       -DLAPACK_CUSTOM_TYPE=Custom \
       -DLAPACK_CUSTOM_INCLUDE_DIR=/usr/local/include \
       -DLAPACK_CUSTOM_LIBRARY=openblas \

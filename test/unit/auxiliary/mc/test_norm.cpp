@@ -127,7 +127,7 @@ TYPED_TEST(NormDistributedTest, NormMax) {
           if (blas::Uplo::Lower != uplo)
             continue;
 
-          dlaf::matrix::util::set_random(matrix);
+          dlaf::matrix::util::set_random_hermitian(matrix);
 
           const NormT<TypeParam> norm = Auxiliary<Backend::MC>::norm(comm_grid, norm_type, uplo, matrix);
 

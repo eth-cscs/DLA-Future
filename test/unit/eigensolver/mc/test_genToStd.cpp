@@ -32,8 +32,7 @@ class EigensolverGenToStdLocalTest : public ::testing::Test {};
 
 TYPED_TEST_SUITE(EigensolverGenToStdLocalTest, MatrixElementTypes);
 
-TYPED_TEST(EigensolverGenToStdLocalTest, CorrectnessFixed) {
-
+TYPED_TEST(EigensolverGenToStdLocalTest, CorrectnessTile1) {
   LocalElementSize size = {3,3};
   TileElementSize block_size = {1,1};  
 
@@ -79,4 +78,79 @@ TYPED_TEST(EigensolverGenToStdLocalTest, CorrectnessFixed) {
   CHECK_MATRIX_NEAR(res, mat_a, 100000000 * (mat_a.size().rows() + 1) * TypeUtilities<TypeParam>::error,
                     100000000 * (mat_a.size().rows() + 1) * TypeUtilities<TypeParam>::error);
 }
-  
+
+
+TYPED_TEST(EigensolverGenToStdLocalTest, CorrectnessTile2) {
+  LocalElementSize size = {3,3};
+  TileElementSize block_size = {2,2};  
+
+  // MATRIX A
+    auto el = [](const GlobalElementIndex& index){
+      // ColMajor
+      static const double values[] = {10.0, 20.0, 30.0, 20.0, 40.0, 60.0, 30.0, 60.0, 90.0};
+    return values[index.row()+3*index.col()];
+  };
+  Matrix<double, Device::CPU> mat_a(size, block_size);
+  set(mat_a, el);
+
+  // MATRIX L
+  auto el_l = [](const GlobalElementIndex& index){
+    static const double values[] = {2., 3., 5., 0., 4., 6., 0., 0., 7.};
+    return values[index.row()+3*index.col()];
+  };
+  Matrix<double, Device::CPU> mat_l(size, block_size);
+  set(mat_l, el_l);
+
+  // genToStd
+  Eigensolver<Backend::MC>::genToStd(mat_a, mat_l);
+
+  std::cout << "Result" << std::endl;
+  std::cout  << mat_a << std::endl;
+
+  auto res = [](const GlobalElementIndex& index){
+    static const double values[] = {2.5, 0.625, -0.1785714, 20., 0.15625, -0.0446429, 30., 60., 0.0127551};
+    return values[index.row()+3*index.col()];
+  };
+
+  CHECK_MATRIX_NEAR(res, mat_a, 100000000 * (mat_a.size().rows() + 1) * TypeUtilities<TypeParam>::error,
+                    100000000 * (mat_a.size().rows() + 1) * TypeUtilities<TypeParam>::error);
+}
+
+
+
+TYPED_TEST(EigensolverGenToStdLocalTest, CorrectnessTile3) {
+  LocalElementSize size = {3,3};
+  TileElementSize block_size = {3,3};  
+
+  // MATRIX A
+    auto el = [](const GlobalElementIndex& index){
+      // ColMajor
+      static const double values[] = {10.0, 20.0, 30.0, 20.0, 40.0, 60.0, 30.0, 60.0, 90.0};
+    return values[index.row()+3*index.col()];
+  };
+  Matrix<double, Device::CPU> mat_a(size, block_size);
+  set(mat_a, el);
+
+  // MATRIX L
+  auto el_l = [](const GlobalElementIndex& index){
+    static const double values[] = {2., 3., 5., 0., 4., 6., 0., 0., 7.};
+    return values[index.row()+3*index.col()];
+  };
+  Matrix<double, Device::CPU> mat_l(size, block_size);
+  set(mat_l, el_l);
+
+  // genToStd
+  Eigensolver<Backend::MC>::genToStd(mat_a, mat_l);
+
+  std::cout << "Result" << std::endl;
+  std::cout  << mat_a << std::endl;
+
+  auto res = [](const GlobalElementIndex& index){
+    static const double values[] = {2.5, 0.625, -0.1785714, 20., 0.15625, -0.0446429, 30., 60., 0.0127551};
+    return values[index.row()+3*index.col()];
+  };
+
+  CHECK_MATRIX_NEAR(res, mat_a, 100000000 * (mat_a.size().rows() + 1) * TypeUtilities<TypeParam>::error,
+                    100000000 * (mat_a.size().rows() + 1) * TypeUtilities<TypeParam>::error);
+}
+

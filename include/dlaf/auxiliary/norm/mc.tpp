@@ -37,6 +37,7 @@ dlaf::BaseType<T> Auxiliary<Backend::MC>::norm(comm::CommunicatorGrid grid, lapa
     case lapack::Norm::Inf:
     case lapack::Norm::Fro:
       DLAF_ASSERT(false, "not yet implemented", lapack::norm2str(norm_type));
+      return {};
     case lapack::Norm::Max:
       switch (uplo) {
         case blas::Uplo::Lower:
@@ -44,10 +45,12 @@ dlaf::BaseType<T> Auxiliary<Backend::MC>::norm(comm::CommunicatorGrid grid, lapa
         case blas::Uplo::Upper:
         case blas::Uplo::General:
           DLAF_ASSERT(false, "not yet implemented", lapack::norm2str(norm_type), blas::uplo2str(uplo));
+          return {};
         default:
           return {};
       }
-      break;
+    default:
+      return {};
   }
 }
 

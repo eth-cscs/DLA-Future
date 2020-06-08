@@ -65,8 +65,9 @@ TYPED_TEST(NormDistributedTest, EmptyMatrices) {
             const NormT<TypeParam> norm =
                 Auxiliary<Backend::MC>::norm(comm_grid, norm_type, uplo, matrix);
 
-            if (Index2D{0, 0} == comm_grid.rank())
+            if (Index2D{0, 0} == comm_grid.rank()) {
               EXPECT_NEAR(0, norm, std::numeric_limits<NormT<TypeParam>>::epsilon());
+            }
           }
         }
       }
@@ -105,8 +106,9 @@ void set_and_test(CommunicatorGrid comm_grid, Matrix<T, Device::CPU>& matrix, Gl
                                     << " in matrix size=" << matrix.size()
                                     << " grid_size=" << comm_grid.size());
 
-  if (Index2D{0, 0} == comm_grid.rank())
+  if (Index2D{0, 0} == comm_grid.rank()) {
     EXPECT_NEAR(norm_expected, norm, norm * std::numeric_limits<NormT<T>>::epsilon());
+  }
 }
 
 TYPED_TEST(NormDistributedTest, NormMax) {

@@ -25,6 +25,10 @@
 namespace dlaf {
 namespace matrix {
 
+/// A @c MatrixView isused to create a view of a @c Matrix object.
+///
+/// Details can be found in misc/synchronization.md.
+
 template <class T, Device device>
 class MatrixView : public internal::MatrixBase {
 public:
@@ -47,34 +51,34 @@ public:
 
   /// Returns a read-only shared_future of the Tile with local index @p index.
   ///
-  /// TODO: Sync details.
+  /// See misc/synchronization.md for the synchronization details.
   /// @pre index.isValid() == true.
   /// @pre index.isIn(distribution().localNrTiles()) == true.
   hpx::shared_future<ConstTileType> read(const LocalTileIndex& index) noexcept;
 
   /// Returns a read-only shared_future of the Tile with global index @p index.
   ///
-  /// TODO: Sync details.
-  /// @throw std::invalid_argument if the global tile is not stored in the current process.
+  /// See misc/synchronization.md for the synchronization details.
   /// @pre index.isValid() == true.
   /// @pre index.isIn(globalNrTiles()) == true.
+  /// @pre the global tile is stored in the current process.
   hpx::shared_future<ConstTileType> read(const GlobalTileIndex& index) {
     return read(distribution().localTileIndex(index));
   }
 
   /// @brief Returns a future of the Tile with local index @p index.
   ///
-  /// TODO: Sync details.
+  /// See misc/synchronization.md for the synchronization details.
   /// @pre index.isValid() == true.
   /// @pre index.isIn(distribution().localNrTiles()) == true.
   hpx::future<TileType> operator()(const LocalTileIndex& index) noexcept;
 
   /// @brief Returns a future of the Tile with global index @p index.
   ///
-  /// TODO: Sync details.
-  /// @throw std::invalid_argument if the global tile is not stored in the current process.
+  /// See misc/synchronization.md for the synchronization details.
   /// @pre index.isValid() == true.
   /// @pre index.isIn(globalNrTiles()) == true.
+  /// @pre the global tile is stored in the current process.
   hpx::future<TileType> operator()(const GlobalTileIndex& index) {
     return operator()(this->distribution().localTileIndex(index));
   }
@@ -181,18 +185,16 @@ public:
 
   /// Returns a read-only shared_future of the Tile with local index @p index.
   ///
-  /// TODO: Sync details.
-  ///
+  /// See misc/synchronization.md for the synchronization details.
   /// @pre index.isIn(distribution().localNrTiles()).
   hpx::shared_future<ConstTileType> read(const LocalTileIndex& index) noexcept;
 
   /// Returns a read-only shared_future of the Tile with global index @p index.
   ///
-  /// TODO: Sync details.
-  ///
+  /// See misc/synchronization.md for the synchronization details.
   /// @pre index.isIn(globalNrTiles()),
-  /// @pre global tile stored in current process.
-  hpx::shared_future<ConstTileType> read(const GlobalTileIndex& index) noexcept {
+  /// @pre the global tile is stored in the current process.
+  hpx::shared_future<ConstTileType> read(const GlobalTileIndex& index) {
     return read(distribution().localTileIndex(index));
   }
 

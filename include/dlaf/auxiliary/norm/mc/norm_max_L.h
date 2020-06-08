@@ -35,7 +35,8 @@ namespace mc {
 // - sy/he lower
 // - tr lower non-unit
 template <class T>
-dlaf::BaseType<T> norm_max_L(comm::CommunicatorGrid comm_grid, Matrix<const T, Device::CPU>& matrix) {
+dlaf::BaseType<T> norm_max_L(comm::CommunicatorGrid comm_grid, comm::Index2D rank,
+                             Matrix<const T, Device::CPU>& matrix) {
   using namespace dlaf::matrix;
 
   using dlaf::common::internal::vector;
@@ -85,8 +86,8 @@ dlaf::BaseType<T> norm_max_L(comm::CommunicatorGrid comm_grid, Matrix<const T, D
                                         tiles_max)
                               .get();
   NormT max_value;
-  dlaf::comm::sync::reduce(0, comm_grid.fullCommunicator(), MPI_MAX, make_data(&local_max_value, 1),
-                           make_data(&max_value, 1));
+  dlaf::comm::sync::reduce(comm_grid.rankFullCommunicator(rank), comm_grid.fullCommunicator(), MPI_MAX,
+                           make_data(&local_max_value, 1), make_data(&max_value, 1));
 
   return max_value;
 }

@@ -39,8 +39,8 @@ struct Auxiliary<Backend::MC> {
   /// @return the norm @p norm_type of the Matrix @p A or 0 if `A.size().isEmpty()` (see LAPACK doc for
   /// additional info)
   template <class T>
-  static dlaf::BaseType<T> norm(comm::CommunicatorGrid grid, lapack::Norm norm_type, blas::Uplo uplo,
-                                Matrix<const T, Device::CPU>& A);
+  static dlaf::BaseType<T> norm(comm::CommunicatorGrid grid, comm::Index2D rank, lapack::Norm norm_type,
+                                blas::Uplo uplo, Matrix<const T, Device::CPU>& A);
 };
 
 }
@@ -50,10 +50,10 @@ struct Auxiliary<Backend::MC> {
 /// ---- ETI
 namespace dlaf {
 
-#define DLAF_NORM_MAX_ETI(KWORD, DATATYPE)                                                 \
-  KWORD template dlaf::BaseType<DATATYPE>                                                  \
-  Auxiliary<Backend::MC>::norm<DATATYPE>(comm::CommunicatorGrid, lapack::Norm, blas::Uplo, \
-                                         Matrix<const DATATYPE, Device::CPU>&);
+#define DLAF_NORM_MAX_ETI(KWORD, DATATYPE)                                                    \
+  KWORD template dlaf::BaseType<DATATYPE>                                                     \
+  Auxiliary<Backend::MC>::norm<DATATYPE>(comm::CommunicatorGrid, comm::Index2D, lapack::Norm, \
+                                         blas::Uplo, Matrix<const DATATYPE, Device::CPU>&);
 
 DLAF_NORM_MAX_ETI(extern, float)
 DLAF_NORM_MAX_ETI(extern, double)

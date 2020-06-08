@@ -21,8 +21,9 @@
 namespace dlaf {
 
 template <class T>
-dlaf::BaseType<T> Auxiliary<Backend::MC>::norm(comm::CommunicatorGrid grid, lapack::Norm norm_type,
-                                               blas::Uplo uplo, Matrix<const T, Device::CPU>& A) {
+dlaf::BaseType<T> Auxiliary<Backend::MC>::norm(comm::CommunicatorGrid grid, comm::Index2D rank,
+                                               lapack::Norm norm_type, blas::Uplo uplo,
+                                               Matrix<const T, Device::CPU>& A) {
   using dlaf::matrix::equal_process_grid;
 
   DLAF_ASSERT(equal_process_grid(A, grid), A, grid);
@@ -41,7 +42,7 @@ dlaf::BaseType<T> Auxiliary<Backend::MC>::norm(comm::CommunicatorGrid grid, lapa
     case lapack::Norm::Max:
       switch (uplo) {
         case blas::Uplo::Lower:
-          return internal::mc::norm_max_L(grid, A);
+          return internal::mc::norm_max_L(grid, rank, A);
         case blas::Uplo::Upper:
         case blas::Uplo::General:
           DLAF_ASSERT(false, "not yet implemented", lapack::norm2str(norm_type), blas::uplo2str(uplo));

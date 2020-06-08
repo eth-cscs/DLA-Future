@@ -63,7 +63,7 @@ TYPED_TEST(NormDistributedTest, EmptyMatrices) {
         for (const auto& norm_type : lapack_norms) {
           for (const auto& uplo : blas_uplos) {
             const NormT<TypeParam> norm =
-                Auxiliary<Backend::MC>::norm(comm_grid, norm_type, uplo, matrix);
+                Auxiliary<Backend::MC>::norm(comm_grid, {0, 0}, norm_type, uplo, matrix);
 
             if (Index2D{0, 0} == comm_grid.rank()) {
               EXPECT_NEAR(0, norm, std::numeric_limits<NormT<TypeParam>>::epsilon());
@@ -93,20 +93,20 @@ void modify_element(Matrix<T, Device::CPU>& matrix, GlobalElementIndex index, co
 // Change the specified value of the matrix, re-compute the norm with given parameters and check if the
 // result is the expected one
 template <class T>
-void set_and_test(CommunicatorGrid comm_grid, Matrix<T, Device::CPU>& matrix, GlobalElementIndex index,
-                  const T new_value, const NormT<T> norm_expected, lapack::Norm norm_type,
-                  blas::Uplo uplo) {
+void set_and_test(CommunicatorGrid comm_grid, comm::Index2D rank, Matrix<T, Device::CPU>& matrix,
+                  GlobalElementIndex index, const T new_value, const NormT<T> norm_expected,
+                  lapack::Norm norm_type, blas::Uplo uplo) {
   if (index.isIn(matrix.size()))
     modify_element(matrix, index, new_value);
 
-  const NormT<T> norm = Auxiliary<Backend::MC>::norm(comm_grid, norm_type, uplo, matrix);
+  const NormT<T> norm = Auxiliary<Backend::MC>::norm(comm_grid, rank, norm_type, uplo, matrix);
 
   SCOPED_TRACE(::testing::Message() << "norm=" << lapack::norm2str(norm_type)
                                     << " uplo=" << blas::uplo2str(uplo) << " changed element=" << index
                                     << " in matrix size=" << matrix.size()
-                                    << " grid_size=" << comm_grid.size());
+                                    << " grid_size=" << comm_grid.size() << " rank=" << rank);
 
-  if (Index2D{0, 0} == comm_grid.rank()) {
+  if (rank == comm_grid.rank()) {
     EXPECT_NEAR(norm_expected, norm, norm * std::numeric_limits<NormT<T>>::epsilon());
   }
 }
@@ -131,9 +131,11 @@ TYPED_TEST(NormDistributedTest, NormMax) {
 
           dlaf::matrix::util::set_random_hermitian(matrix);
 
-          const NormT<TypeParam> norm = Auxiliary<Backend::MC>::norm(comm_grid, norm_type, uplo, matrix);
+          const Index2D rank_result{comm_grid.size().rows() - 1, comm_grid.size().cols() - 1};
+          const NormT<TypeParam> norm =
+              Auxiliary<Backend::MC>::norm(comm_grid, rank_result, norm_type, uplo, matrix);
 
-          if (Index2D{0, 0} == comm_grid.rank()) {
+          if (rank_result == comm_grid.rank()) {
             EXPECT_GE(norm, -1);
             EXPECT_LE(norm, +1);
           }
@@ -141,13 +143,13 @@ TYPED_TEST(NormDistributedTest, NormMax) {
           SizeType nrows = matrix.size().rows();
           SizeType ncols = matrix.size().cols();
 
-          std::vector<GlobalElementIndex> test_indeces{{0, 0}, {nrows - 1, ncols - 1}};
+          std::vector<GlobalElementIndex> test_indices{{0, 0}, {nrows - 1, ncols - 1}};
 
           if (blas::Uplo::Lower == uplo || blas::Uplo::General == uplo) {
-            test_indeces.emplace_back(nrows - 1, 0);  // bottom left
+            test_indices.emplace_back(nrows - 1, 0);  // bottom left
           }
           else if (blas::Uplo::Upper == uplo || blas::Uplo::General == uplo) {
-            test_indeces.emplace_back(0, ncols - 1);  // top right
+            test_indices.emplace_back(0, ncols - 1);  // top right
           }
           else {
             FAIL() << "this should not be reached";
@@ -155,12 +157,13 @@ TYPED_TEST(NormDistributedTest, NormMax) {
 
           TypeParam new_value = TypeUtilities<TypeParam>::element(13.13, 26.26);
 
-          for (const auto& test_index : test_indeces) {
+          for (const auto& test_index : test_indices) {
             new_value = new_value + TypeUtilities<TypeParam>::element(26.05, 20.10);
 
             const NormT<TypeParam> norm_expected = std::abs(new_value);
 
-            set_and_test(comm_grid, matrix, test_index, new_value, norm_expected, norm_type, uplo);
+            set_and_test(comm_grid, rank_result, matrix, test_index, new_value, norm_expected, norm_type,
+                         uplo);
           }
         }
       }

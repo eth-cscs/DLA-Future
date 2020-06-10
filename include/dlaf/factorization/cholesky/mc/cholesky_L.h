@@ -125,15 +125,14 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
     // Create a placeholder that will store the shared futures representing the panel
     vector<hpx::shared_future<ConstTile_t>> panel(distr.localNrTiles().rows());
 
-    auto k_rank_row = distr.rankGlobalTile<Coord::Row>(k);
-    auto k_rank_col = distr.rankGlobalTile<Coord::Col>(k);
+    auto k_rank = distr.rankGlobalTile(GlobalTileIndex(k, k));
 
-    if (mat_a.rankIndex().col() == k_rank_col) {
+    if (mat_a.rankIndex().col() == k_rank.col()) {
       auto k_local_col = distr.localTileFromGlobalTile<Coord::Col>(k);
 
       hpx::shared_future<ConstTile_t> kk_tile;
 
-      if (mat_a.rankIndex().row() == k_rank_row) {
+      if (mat_a.rankIndex().row() == k_rank.row()) {
         auto k_local_row = distr.localTileFromGlobalTile<Coord::Row>(k);
 
         auto kk = LocalTileIndex{k_local_row, k_local_col};
@@ -160,7 +159,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
         if (col_comm_size > 1 && k != (mat_a.nrTiles().cols() - 1)) {
           // Receive the diagonal tile
           auto recv_bcast_f = hpx::util::unwrapping(
-              [rank = k_rank_row,
+              [rank = k_rank.row(),
                tile_size = mat_a.tileSize(GlobalTileIndex(k, k))](auto&& comm_wrapper) -> ConstTile_t {
                 MemView_t mem_view(util::size_t::mul(tile_size.rows(), tile_size.cols()));
                 Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
@@ -200,7 +199,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
         if (row_comm_size > 1) {
           // Receiving the panel
           auto recv_bcast_f = hpx::util::unwrapping(
-              [rank = k_rank_col,
+              [rank = k_rank.col(),
                tile_size = mat_a.tileSize(GlobalTileIndex(i, k))](auto&& comm_wrapper) -> ConstTile_t {
                 MemView_t mem_view(util::size_t::mul(tile_size.rows(), tile_size.cols()));
                 Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());

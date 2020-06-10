@@ -201,9 +201,6 @@ auto create_data(const Tile<T, device>& tile) {
 
 template <class T, Device device>
 std::ostream& operator<<(std::ostream& ostr, const Tile<T, device>& tile) {
-  SizeType row = tile.size().rows();
-  SizeType col = tile.size().cols();
-
   for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
     for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
       ostr << tile({ii, jj}) << " ";

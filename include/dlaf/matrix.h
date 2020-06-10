@@ -115,15 +115,24 @@ private:
  
 template <class T, Device device>
 std::ostream& operator<<(std::ostream& ostr, Matrix<T, device>& mat) {
-  SizeType row = mat.nrTiles().rows();
-  SizeType col = mat.nrTiles().cols();
+  SizeType nrow = mat.size().rows();
+  SizeType ncol = mat.size().cols();
+  SizeType blockrow = mat.blockSize().rows();
+  SizeType blockcol = mat.blockSize().cols();
+  
+  for (SizeType irow = 0; irow < nrow; ++irow) {
+    SizeType tilerow = irow/blockrow;
+    SizeType elrow = irow%blockrow;
 
-  for (SizeType i=0; i<row; ++i) {
-    for (SizeType j=0; j<col; ++j) {
-      const LocalTileIndex idx = {i, j};
+    for (SizeType icol = 0; icol < ncol; ++icol) {
+      SizeType tilecol = icol/blockcol;
+      SizeType elcol = icol%blockcol;
 
+      const LocalTileIndex idx = {tilerow, tilecol};
       auto tile = mat(idx).get();
-      ostr << tile << " ";
+
+      ostr << tile({elrow, elcol}) << " ";
+      
     }
     ostr << " " << std::endl;
   }

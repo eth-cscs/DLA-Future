@@ -116,8 +116,6 @@ TYPED_TEST(EigensolverGenToStdLocalTest, CorrectnessTile2) {
                     100000000 * (mat_a.size().rows() + 1) * TypeUtilities<TypeParam>::error);
 }
 
-
-
 TYPED_TEST(EigensolverGenToStdLocalTest, CorrectnessTile3) {
   LocalElementSize size = {3,3};
   TileElementSize block_size = {3,3};  

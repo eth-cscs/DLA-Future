@@ -355,8 +355,8 @@ void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
   const Index2D rank_result{0, 0};
 
   // 1. Compute the max norm of the original matrix in A
-  float norm_A = dlaf::Auxiliary<dlaf::Backend::MC>::norm(comm_grid, rank_result, lapack::Norm::Max,
-                                                          blas::Uplo::Lower, A);
+  const auto norm_A = dlaf::Auxiliary<dlaf::Backend::MC>::norm(comm_grid, rank_result, lapack::Norm::Max,
+                                                               blas::Uplo::Lower, A);
 
   // 2.
   // L is a lower triangular, reset values in the upper part (diagonal excluded)
@@ -368,8 +368,9 @@ void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
   cholesky_diff(A, L, comm_grid);
 
   // 3. Compute the max norm of the difference (it has been compute in-place in A)
-  float norm_diff = dlaf::Auxiliary<dlaf::Backend::MC>::norm(comm_grid, rank_result, lapack::Norm::Max,
-                                                             blas::Uplo::Lower, A);
+  const auto norm_diff =
+      dlaf::Auxiliary<dlaf::Backend::MC>::norm(comm_grid, rank_result, lapack::Norm::Max,
+                                               blas::Uplo::Lower, A);
 
   // 4.
   // Evaluation of correctness is done just by the master rank

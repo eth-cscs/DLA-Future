@@ -13,9 +13,11 @@
 #include <mpi.h>
 #include <hpx/hpx_init.hpp>
 
+#include "dlaf/auxiliary/mc.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/factorization/mc.h"
 #include "dlaf/matrix.h"
+#include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
 #include "dlaf/common/timer.h"
@@ -188,65 +190,6 @@ int main(int argc, char** argv) {
 
 namespace {
 
-/// Compute max norm of the lower triangular matrix
-T matrix_norm(ConstMatrixType& matrix, CommunicatorGrid comm_grid) {
-  using dlaf::common::internal::vector;
-  using dlaf::common::make_data;
-
-  // TODO unwrapping can be skipped for optimization reasons
-  auto max_f = unwrapping([](const auto&& values) {
-    // some rank may not have any element
-    if (values.size() == 0)
-      return std::numeric_limits<T>::min();
-    return *std::max_element(values.begin(), values.end());
-  });
-
-  const auto& distribution = matrix.distribution();
-
-  vector<hpx::future<T>> tiles_max;
-  tiles_max.reserve(distribution.localNrTiles().rows() * distribution.localNrTiles().cols());
-
-  // for each tile in local (lower triangular), create a task that finds the max element in the tile
-  for (SizeType j_loc = 0; j_loc < distribution.localNrTiles().cols(); ++j_loc) {
-    const SizeType j = distribution.template globalTileFromLocalTile<Coord::Col>(j_loc);
-    const SizeType i_diag_loc = distribution.template nextLocalTileFromGlobalTile<Coord::Row>(j);
-
-    for (SizeType i_loc = i_diag_loc; i_loc < distribution.localNrTiles().rows(); ++i_loc) {
-      auto current_tile_max =
-          hpx::dataflow(unwrapping([is_diag = (i_loc == i_diag_loc)](auto&& tile) -> T {
-                          T tile_max_value = std::abs(T{0});
-                          for (SizeType j = 0; j < tile.size().cols(); ++j)
-                            for (SizeType i = is_diag ? j : 0; i < tile.size().rows(); ++i)
-                              tile_max_value = std::max(tile_max_value, tile({i, j}));
-                          return tile_max_value;
-                        }),
-                        matrix.read(LocalTileIndex{i_loc, j_loc}));
-
-      tiles_max.emplace_back(std::move(current_tile_max));
-    }
-  }
-
-  // than it is necessary to reduce max values from all ranks into a single max value for the matrix
-
-  auto local_max_value = hpx::dataflow(max_f, tiles_max).get();
-
-  T max_value_rows;
-  if (comm_grid.size().cols() > 1)
-    dlaf::comm::sync::reduce(0, comm_grid.rowCommunicator(), MPI_MAX, make_data(&local_max_value, 1),
-                             make_data(&max_value_rows, 1));
-  else
-    max_value_rows = local_max_value;
-
-  T max_value;
-  if (comm_grid.size().rows() > 1)
-    dlaf::comm::sync::reduce(0, comm_grid.colCommunicator(), MPI_MAX, make_data(&max_value_rows, 1),
-                             make_data(&max_value, 1));
-  else
-    max_value = max_value_rows;
-
-  return max_value;
-}
-
 /// Set to zero the upper part of the diagonal tiles
 ///
 /// For the tiles on the diagonal (i.e. row == col), the elements in the upper triangular
@@ -409,8 +352,11 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
 /// "ERROR":   error is high, there is an error in the factorization
 /// "WARNING": error is slightly high, there can be an error in the factorization
 void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
+  const Index2D rank_result{0, 0};
+
   // 1. Compute the max norm of the original matrix in A
-  float norm_A = matrix_norm(A, comm_grid);
+  float norm_A = dlaf::Auxiliary<dlaf::Backend::MC>::norm(comm_grid, rank_result, lapack::Norm::Max,
+                                                          blas::Uplo::Lower, A);
 
   // 2.
   // L is a lower triangular, reset values in the upper part (diagonal excluded)
@@ -422,11 +368,12 @@ void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
   cholesky_diff(A, L, comm_grid);
 
   // 3. Compute the max norm of the difference (it has been compute in-place in A)
-  float norm_diff = matrix_norm(A, comm_grid);
+  float norm_diff = dlaf::Auxiliary<dlaf::Backend::MC>::norm(comm_grid, rank_result, lapack::Norm::Max,
+                                                             blas::Uplo::Lower, A);
 
   // 4.
   // Evaluation of correctness is done just by the master rank
-  if (comm_grid.rank() != Index2D{0, 0})
+  if (comm_grid.rank() != rank_result)
     return;
 
   constexpr auto eps = std::numeric_limits<T>::epsilon();

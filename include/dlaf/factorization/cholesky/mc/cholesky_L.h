@@ -131,14 +131,10 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
     auto kk_tile_rank = distr.rankGlobalTile(kk_idx);
 
     if (this_rank.col() == kk_tile_rank.col()) {
-      auto k_local_col = distr.localTileFromGlobalTile<Coord::Col>(k);
-
       hpx::shared_future<ConstTile_t> kk_tile;
 
       if (this_rank.row() == kk_tile_rank.row()) {
-        auto k_local_row = distr.localTileFromGlobalTile<Coord::Row>(k);
-
-        auto kk = LocalTileIndex{k_local_row, k_local_col};
+        LocalTileIndex kk = distr.localTileIndex(kk_idx);
 
         // If the diagonal tile is on this node factorize it
         // Cholesky decomposition on mat_a(k,k) r/w potrf (lapack operation)
@@ -171,6 +167,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
         }
       }
 
+      auto k_local_col = distr.localTileFromGlobalTile<Coord::Col>(k);
       for (SizeType i_local = distr.nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
            i_local < localnrtile_rows; ++i_local) {
         LocalTileIndex ik_local_idx(i_local, k_local_col);

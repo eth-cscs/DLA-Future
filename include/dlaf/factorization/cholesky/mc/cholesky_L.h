@@ -121,18 +121,21 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
 
   common::Pipeline<comm::CommunicatorGrid> serial_comm(std::move(grid));
 
+  auto this_rank = grid.rank();
+
   for (SizeType k = 0; k < nrtile; ++k) {
     // Create a placeholder that will store the shared futures representing the panel
     vector<hpx::shared_future<ConstTile_t>> panel(distr.localNrTiles().rows());
 
-    auto k_rank = distr.rankGlobalTile(GlobalTileIndex(k, k));
+    auto kk_idx = GlobalTileIndex(k, k);
+    auto kk_tile_rank = distr.rankGlobalTile(kk_idx);
 
-    if (mat_a.rankIndex().col() == k_rank.col()) {
+    if (this_rank.col() == kk_tile_rank.col()) {
       auto k_local_col = distr.localTileFromGlobalTile<Coord::Col>(k);
 
       hpx::shared_future<ConstTile_t> kk_tile;
 
-      if (mat_a.rankIndex().row() == k_rank.row()) {
+      if (this_rank.row() == kk_tile_rank.row()) {
         auto k_local_row = distr.localTileFromGlobalTile<Coord::Row>(k);
 
         auto kk = LocalTileIndex{k_local_row, k_local_col};
@@ -159,8 +162,8 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
         if (col_comm_size > 1 && k != (mat_a.nrTiles().cols() - 1)) {
           // Receive the diagonal tile
           auto recv_bcast_f = hpx::util::unwrapping(
-              [rank = k_rank.row(),
-               tile_size = mat_a.tileSize(GlobalTileIndex(k, k))](auto&& comm_wrapper) -> ConstTile_t {
+              [rank = kk_tile_rank.row(),
+               tile_size = mat_a.tileSize(kk_idx)](auto&& comm_wrapper) -> ConstTile_t {
                 MemView_t mem_view(util::size_t::mul(tile_size.rows(), tile_size.cols()));
                 Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
                 comm::sync::broadcast::receive_from(rank, comm_wrapper().colCommunicator(), tile);
@@ -199,7 +202,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
         if (row_comm_size > 1) {
           // Receiving the panel
           auto recv_bcast_f = hpx::util::unwrapping(
-              [rank = k_rank.col(),
+              [rank = kk_tile_rank.col(),
                tile_size = mat_a.tileSize(GlobalTileIndex(i, k))](auto&& comm_wrapper) -> ConstTile_t {
                 MemView_t mem_view(util::size_t::mul(tile_size.rows(), tile_size.cols()));
                 Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
@@ -228,7 +231,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
 
       auto j_rank_row = distr.rankGlobalTile<Coord::Row>(j);
 
-      if (mat_a.rankIndex().row() == j_rank_row) {
+      if (this_rank.row() == j_rank_row) {
         auto i_local = distr.localTileFromGlobalTile<Coord::Row>(j);
 
         // Avoid useless communications if one-row communicator grid and if on the last panel

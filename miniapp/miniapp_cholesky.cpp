@@ -8,25 +8,17 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <algorithm>
 #include <iostream>
-#include <string>
 
 #include <mpi.h>
-#include <hpx/hpx.hpp>
 #include <hpx/hpx_init.hpp>
-#include <lapack.hh>
 
-#include "dlaf/blas_tile.h"
-#include "dlaf/common/range2d.h"
-#include "dlaf/common/vector.h"
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/sync/broadcast.h"
-#include "dlaf/communication/sync/reduce.h"
 #include "dlaf/factorization/mc.h"
 #include "dlaf/matrix.h"
-#include "dlaf/util_math.h"
 #include "dlaf/util_matrix.h"
+#include "dlaf_test/matrix/util_matrix.h"
+#include "dlaf_test/util_types.h"
 
 #include "dlaf/common/timer.h"
 

@@ -12,6 +12,7 @@
 
 #include <exception>
 #include <hpx/hpx.hpp>
+#include <ostream>
 
 #include "dlaf/common/data_descriptor.h"
 #include "dlaf/matrix/index.h"
@@ -104,6 +105,11 @@ public:
   /// @brief Returns the leading dimension.
   SizeType ld() const noexcept {
     return ld_;
+  }
+
+  /// Prints information about the tile.
+  friend std::ostream& operator<<(std::ostream& out, const Tile& tile) {
+    return out << "size=" << tile.size() << ", ld=" << tile.ld();
   }
 
 private:

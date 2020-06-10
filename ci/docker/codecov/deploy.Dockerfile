@@ -27,7 +27,7 @@ SHELL ["/bin/bash", "-c"]
 RUN mkdir ${BUILD} && cd ${BUILD} && \
     CC=/usr/local/mpich/bin/mpicc CXX=/usr/local/mpich/bin/mpicxx cmake ${SOURCE} \
       -DCMAKE_BUILD_TYPE=Debug \
-      -DCMAKE_CXX_FLAGS_DEBUG="-g -O0 -fprofile-arcs -ftest-coverage" \
+      -DCMAKE_CXX_FLAGS="-O0 -Werror -fprofile-arcs -ftest-coverage" \
       -DCMAKE_EXE_LINKER_FLAGS="-fprofile-arcs -ftest-coverage" \
       -DLAPACK_CUSTOM_TYPE=Custom \
       -DLAPACK_CUSTOM_INCLUDE_DIR=/usr/local/include \

@@ -14,102 +14,102 @@
 
 #include <exception>
 #include <iostream>
+#include <sstream>
 
-#include "dlaf/common/utils.h"
+#include "dlaf/common/source_location.h"
 
-/// If @p condition is false, it prints out an error message and calls std::terminate()
+namespace dlaf {
+namespace internal {
+
+/// Return an empty string
 ///
-/// The error message contains information about the @p condition, the @p origin of the error as specified
-/// by the parameter and an optional custom message composed by concatenating all extra parameters.
-/// Message composition is lazily evaluated and it will not add any overhead if the condition is true.
+/// This is just the fundamental step of the recursive algorithm
+inline std::string concat() noexcept {
+  return "";
+}
+
+/// Join a list of heterogenous parameters into a string
 ///
-/// No newline is appended to the given message, which cannot be empty.
-///
-/// **This check cannot be disabled**
-#define DLAF_CHECK_WITH_ORIGIN(category, origin, condition, ...)     \
-  if (!(condition)) {                                                \
-    std::cerr << "[ERROR] " << origin << std::endl                   \
-              << dlaf::common::concat(#condition, ' ', __VA_ARGS__); \
-    std::cerr.flush();                                               \
-    std::terminate();                                                \
+/// Given a list of parameters for which a valid std::ostream& operator<<(std::ostream&, const T&)
+/// exists, it returns a std::string with all parameters representations joined
+template <class T, class... Ts>
+std::string concat(const T& first, const Ts&... args) noexcept {
+  std::ostringstream ss;
+  ss << first << '\n' << concat(std::forward<const Ts>(args)...);
+  return ss.str();
+}
+
+template <class... Ts>
+inline void do_assert(bool expr, const common::internal::source_location& loc, const char* expression,
+                      const Ts&... ts) noexcept {
+  if (!expr) {
+    std::cerr << "[ERROR] " << loc << '\n' << expression << '\n' << concat(ts...) << std::endl;
+    std::terminate();
   }
+}
 
-/// This macro is a shortcut for #DLAF_CHECK_WITH_ORIGIN
-/// It sets automatically the origin to the line from where this macro is used.
-/// A newline is automatically appended at the end of the (optional) message.
-#define DLAF_CHECK(category, ...) \
-  DLAF_CHECK_WITH_ORIGIN(category, (SOURCE_LOCATION()), __VA_ARGS__, '\n')
+}
+}
 
-#ifdef DLAF_ASSERT_HEAVY_ENABLE
-/// **THIS MACRO MUST BE USED WHEN THE CHECK IS NEEDED FOR DEBUGGING PURPOSES THAT HAS
-/// HIGH IMPACT ON PERFORMANCES.**
+/// Each macro has two required parameters and any number of optional parameters:
 ///
-/// If the condition is false, it will print an error report and call std::terminate()
+/// 1. @Expr        (required) : an experssion that returns a bool
+/// 2. @Msg / @Var  (required) : additional message (even if empty) or variable to print
+/// >2. @Msg / @Var (optional) : optional messages / variables to print
 ///
-/// The error report can be extended with a custom message composed concatenating additional parameters
-/// given to the macro.
+/// If @Expr is false, an error message is composed and `std::terminate()` is called. The error message
+/// contains information about @Expr, the origin of the error and any additional messages / variables provided
+/// as arguments. Any variables passed to the argument needs to be printable, i.e. support `operator<<()`.
 ///
-/// If the switch **DLAF_ASSERT_HEAVY_ENABLE** is not defined, this check will not
-/// be performed and it will not add any overhead, nor for the condition evaluation, nor for the message
-#define DLAF_ASSERT_HEAVY(...) DLAF_CHECK("HEAVY", __VA_ARGS__)
+/// A disabled ASSERT macro has no overhead, @Expr and any additional arguments are not evaluated.
+/// Macros are enabled/disabled as follows:
+///
+///                       Control flag                 Default
+/// DLAF_ASSERT           DLAF_ASSERT_ENABLE           enabled
+/// DLAF_ASSERT_MODERATE  DLAF_ASSERT_MODERATE_ENABLE  enabled in Debug, disabled in Release
+/// DLAF_ASSERT_HEAVY     DLAF_ASSERT_HEAVY_ENABLE     enabled in Debug, disabled in Release
+///
+/// Examples:
+///
+/// ```
+/// bool is_sth_true(...) {...}
+/// std::string my_msg(...) {...}
+/// int a = 3;
+/// int b = 4;
+///
+/// DLAF_ASSERT(5 == 6, "");                 // ASSERT with no additional information
+/// DLAF_ASSERT(a == b, "my msg", a, b);     // * ASSERT with additional information and argument
+/// DLAF_ASSERT(is_sth_true(), my_msg());    // ASSERT calling functions
+/// ```
+///
+/// The output from * is as follows:
+//
+/// ```
+/// [ERROR] <file_name>:<line_number> : <function>
+/// a == b
+/// my msg
+/// 3
+/// 4
+/// ```
+///
+/// Note that `my_msg()` is evaluated even if the condition is true.
+
+#ifdef DLAF_ASSERT_ENABLE
+#define DLAF_ASSERT(Expr, ...) dlaf::internal::do_assert(Expr, SOURCE_LOCATION(), #Expr, __VA_ARGS__)
 #else
-#define DLAF_ASSERT_HEAVY(...)
+#define DLAF_ASSERT(Expr, ...)
 #endif
 
 #ifdef DLAF_ASSERT_MODERATE_ENABLE
-/// **THIS MACRO MUST BE USED WHEN THE CHECK IS NEEDED FOR DEBUGGING PURPOSES THAT HAVE
-/// MODERATE IMPACT ON PERFORMANCES.**
-///
-/// Parameters:
-/// 1     condition
-/// 2-*   (optional) comma separated part(s) composing the custom message in case of failure
-///
-/// If the condition is false, it will print an error report and call std::terminate()
-///
-/// The error report can be extended with a custom message composed concatenating additional parameters
-/// given to the macro.
-///
-/// If the switch **DLAF_ASSERT_MODERATE_ENABLE** is not defined, this check
-/// will not be performed and it will not add any overhead, nor for the condition evaluation, nor for the message
-#define DLAF_ASSERT_MODERATE(...) DLAF_CHECK("MODERATE", __VA_ARGS__)
+#define DLAF_ASSERT_MODERATE(Expr, ...) \
+  dlaf::internal::do_assert(Expr, SOURCE_LOCATION(), #Expr, __VA_ARGS__)
 #else
-#define DLAF_ASSERT_MODERATE(...)
+#define DLAF_ASSERT_MODERATE(Expr, ...)
 #endif
 
-#ifdef DLAF_ASSERT_ENABLE
-/// **THIS MACRO MUST BE USED WHEN THE CHECK IS
-/// NEEDED TO ENSURE A CONDITION THAT HAVE VERY LOW IMPACT ON PERFORMANCES.**
-///
-/// Parameters:
-/// 1     condition
-/// 2-*   (optional) comma separated part(s) composing the custom message in case of failure
-///
-/// If the condition is false, it will print an error report and call std::terminate()
-///
-/// The error report will refer to the given origin and can be extended with a custom message composed
-/// concatenating additional parameters given to the macro.
-///
-/// If the switch **DLAF_ASSERT_ENABLE** is not defined, this check will not be performed and it will not
-/// add any overhead, nor for the condition evaluation, nor for the message
-#define DLAF_ASSERT_WITH_ORIGIN(origin, ...) DLAF_CHECK_WITH_ORIGIN("", origin, __VA_ARGS__, '\n')
-
-/// **THIS MACRO MUST BE USED WHEN THE CHECK IS NEEDED TO ENSURE A CONDITION THAT HAVE
-/// VERY LOW IMPACT ON PERFORMANCES.**
-///
-/// Parameters:
-/// 1     condition
-/// 2-*   (optional) comma separated part(s) composing the custom message in case of failure
-///
-/// If the condition is false, it will print an error report and call std::terminate()
-///
-/// The error report can be extended with a custom message composed concatenating additional parameters
-/// given to the macro.
-///
-/// If the switch **DLAF_ASSERT_ENABLE** is not defined, this check will not
-/// be performed and it will not add any overhead, nor for the condition evaluation, nor for the message
-#define DLAF_ASSERT(...) DLAF_ASSERT_WITH_ORIGIN((SOURCE_LOCATION()), __VA_ARGS__)
+#ifdef DLAF_ASSERT_HEAVY_ENABLE
+#define DLAF_ASSERT_HEAVY(Expr, ...) \
+  dlaf::internal::do_assert(Expr, SOURCE_LOCATION(), #Expr, __VA_ARGS__)
 #else
-#define DLAF_ASSERT_WITH_ORIGIN(origin, ...)
-
-#define DLAF_ASSERT(...)
+#define DLAF_ASSERT_HEAVY(Expr, ...)
 #endif

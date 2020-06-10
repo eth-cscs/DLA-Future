@@ -18,6 +18,9 @@ template <typename IndexType>
 using Size2D = dlaf::common::Size2D<IndexType, struct TAG_TEST>;
 
 template <typename IndexType>
+using Index2D = dlaf::common::Index2D<IndexType, struct TAG_TEST>;
+
+template <typename IndexType>
 class Size2DTest : public ::testing::Test {};
 
 using IndexTypes = ::testing::Types<int8_t, int16_t, int32_t, int64_t>;
@@ -93,4 +96,14 @@ TYPED_TEST(Size2DTest, Print) {
   s.str("");
   s << size2;
   EXPECT_EQ("(9, 6)", s.str());
+}
+
+TYPED_TEST(Size2DTest, Arithmetic) {
+  using size2d_t = Size2D<TypeParam>;
+  using index2d_t = Index2D<TypeParam>;
+  ASSERT_TRUE(index2d_t(6, 5) - size2d_t(3, 4) == index2d_t(3, 1));
+  ASSERT_TRUE(index2d_t(6, 5) + size2d_t(3, 4) == index2d_t(9, 9));
+  ASSERT_TRUE(size2d_t(6, 5) - size2d_t(3, 4) == size2d_t(3, 1));
+  ASSERT_TRUE(size2d_t(6, 5) + size2d_t(3, 4) == size2d_t(9, 9));
+  ASSERT_TRUE(index2d_t(6, 5) - index2d_t(3, 4) == size2d_t(3, 1));
 }

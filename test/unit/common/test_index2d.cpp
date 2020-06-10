@@ -65,9 +65,8 @@ TYPED_TEST(Index2DTest, Negative) {
                                                    std::make_pair(-15, 3), std::make_pair(8, -7)};
 
   for (auto& test : index_tests) {
-    EXPECT_THROW(Index2D<TypeParam>(test.first, test.second), std::invalid_argument);
-    EXPECT_THROW(Index2D<TypeParam>(std::array<TypeParam, 2>{test.first, test.second}),
-                 std::invalid_argument);
+    EXPECT_FALSE(Index2D<TypeParam>(test.first, test.second).isValid());
+    EXPECT_FALSE(Index2D<TypeParam>(std::array<TypeParam, 2>{test.first, test.second}).isValid());
   }
 }
 
@@ -141,38 +140,76 @@ TYPED_TEST(Index2DTest, Print) {
   EXPECT_EQ("(9, 6)", s.str());
 }
 
-TYPED_TEST(Index2DTest, ComputeLinearIndex) {
-  using dlaf::common::Ordering;
+TYPED_TEST(Index2DTest, computeCoordsColMajor) {
+  const auto COL_MAJOR = dlaf::common::Ordering::ColumnMajor;
 
-#ifdef DLAF_ASSERT_MODERATE_ENABLE
-  {
-    const Index2D<TypeParam> index(13, 26);
-    std::vector<Size2D<TypeParam>> configs{{
-        Size2D<TypeParam>{13, 26},  // out-of-rows & out-of-cols
-        Size2D<TypeParam>{13, 39},  // out-of-rows
-        Size2D<TypeParam>{26, 26},  // out-of-cols
-    }};
+  using dlaf::common::computeCoords;
+  using dlaf::common::computeCoordsColMajor;
 
-    std::array<Ordering, 2> orderings{Ordering::RowMajor, Ordering::ColumnMajor};
+  Size2D<TypeParam> grid_size(110, 78);
 
-    for (const auto& ordering : orderings) {
-      for (const Size2D<TypeParam>& size : configs) {
-        EXPECT_DEATH(computeLinearIndex(ordering, index, {size.rows(), size.cols()}), "[ERROR]");
-        EXPECT_DEATH(computeLinearIndex(ordering, index, Size2D<TypeParam>(size)), "[ERROR]");
-      }
+  int16_t linear_index = 0;
+  for (auto j = 0; j < grid_size.cols(); ++j) {
+    for (auto i = 0; i < grid_size.rows(); ++i) {
+      EXPECT_EQ(Index2D<TypeParam>(i, j), computeCoords(COL_MAJOR, linear_index, grid_size));
+      EXPECT_EQ(Index2D<TypeParam>(i, j), computeCoordsColMajor(linear_index, grid_size));
+      ++linear_index;
     }
   }
-#endif
+}
 
-  {
-    const Index2D<TypeParam> index{3, 2};
-    EXPECT_EQ(13, computeLinearIndex(Ordering::ColumnMajor, index, {5, 26}));
-    EXPECT_EQ(13, computeLinearIndex(Ordering::ColumnMajor, index, Size2D<TypeParam>{5, 26}));
+TYPED_TEST(Index2DTest, computeCoordsRowMajor) {
+  const auto ROW_MAJOR = dlaf::common::Ordering::RowMajor;
+
+  using dlaf::common::computeCoords;
+  using dlaf::common::computeCoordsRowMajor;
+
+  Size2D<TypeParam> grid_size(110, 78);
+
+  int16_t linear_index = 0;
+  for (auto i = 0; i < grid_size.rows(); ++i) {
+    for (auto j = 0; j < grid_size.cols(); ++j) {
+      EXPECT_EQ(Index2D<TypeParam>(i, j), computeCoords(ROW_MAJOR, linear_index, grid_size));
+      EXPECT_EQ(Index2D<TypeParam>(i, j), computeCoordsRowMajor(linear_index, grid_size));
+      ++linear_index;
+    }
   }
+}
 
-  {
-    const Index2D<TypeParam> index{2, 3};
-    EXPECT_EQ(13, computeLinearIndex(Ordering::RowMajor, index, {26, 5}));
-    EXPECT_EQ(13, computeLinearIndex(Ordering::RowMajor, index, Size2D<TypeParam>{26, 5}));
+TYPED_TEST(Index2DTest, computeLinearIndexColMajor) {
+  const auto COL_MAJOR = dlaf::common::Ordering::ColumnMajor;
+
+  using dlaf::common::computeLinearIndex;
+  using dlaf::common::computeLinearIndexColMajor;
+
+  Size2D<TypeParam> grid_size(110, 78);
+
+  int16_t linear_index = 0;
+  for (auto j = 0; j < grid_size.cols(); ++j) {
+    for (auto i = 0; i < grid_size.rows(); ++i) {
+      EXPECT_EQ(linear_index,
+                computeLinearIndex<int16_t>(COL_MAJOR, Index2D<TypeParam>(i, j), grid_size));
+      EXPECT_EQ(linear_index, computeLinearIndexColMajor<int16_t>(Index2D<TypeParam>(i, j), grid_size));
+      ++linear_index;
+    }
+  }
+}
+
+TYPED_TEST(Index2DTest, computeLinearIndexRowMajor) {
+  const auto ROW_MAJOR = dlaf::common::Ordering::RowMajor;
+
+  using dlaf::common::computeLinearIndex;
+  using dlaf::common::computeLinearIndexRowMajor;
+
+  Size2D<TypeParam> grid_size(110, 78);
+
+  int16_t linear_index = 0;
+  for (auto i = 0; i < grid_size.rows(); ++i) {
+    for (auto j = 0; j < grid_size.cols(); ++j) {
+      EXPECT_EQ(linear_index,
+                computeLinearIndex<int16_t>(ROW_MAJOR, Index2D<TypeParam>(i, j), grid_size));
+      EXPECT_EQ(linear_index, computeLinearIndexRowMajor<int16_t>(Index2D<TypeParam>(i, j), grid_size));
+      ++linear_index;
+    }
   }
 }

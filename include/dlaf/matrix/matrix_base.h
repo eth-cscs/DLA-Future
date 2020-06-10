@@ -9,6 +9,9 @@
 //
 
 #pragma once
+
+#include <ostream>
+
 #include "dlaf/matrix/distribution.h"
 
 namespace dlaf {
@@ -88,6 +91,17 @@ protected:
     using util::size_t::sum;
     using util::size_t::mul;
     return sum(index.row(), mul(distribution_->localNrTiles().rows(), index.col()));
+  }
+
+  /// Prints information about the matrix.
+  friend std::ostream& operator<<(std::ostream& out, const MatrixBase& matrix) {
+    // clang-format off
+    return out << "size="         << matrix.size()
+               << ", block_size=" << matrix.blockSize()
+               << ", tiles_grid=" << matrix.nrTiles()
+               << ", rank_index=" << matrix.rankIndex()
+               << ", comm_grid="  << matrix.commGridSize();
+    // clang-format on
   }
 
 private:

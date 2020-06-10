@@ -29,7 +29,7 @@ namespace comm {
 template <class DataIn>
 hpx::future<void> send(executor& ex, int receiver_rank, const DataIn& data) {
   int tag = 0;
-  auto message = make_message(common::make_data(std::forward<DataIn>(data)));
+  auto message = make_message(common::make_data(data));
   return ex.async_execute(MPI_Isend, message.data(), message.count(), message.mpi_type(), receiver_rank,
                           tag);
 }
@@ -49,9 +49,13 @@ hpx::future<void> recv(executor& ex, int sender_rank, DataOut& data) {
 ///
 /// For more information, see the Data concept in "dlaf/common/data.h"
 template <class DataIn>
-hpx::future<void> bcast(executor& ex, int root_rank, DataIn& data) {
+hpx::future<void> bcast(executor& ex, int root_rank, DataIn& tile) {
+  auto data = common::make_data(tile);
+  using DataT = std::remove_const_t<typename common::data_traits<decltype(data)>::element_t>;
+
   auto message = comm::make_message(common::make_data(data));
-  return ex.async_execute(MPI_Ibcast, message.data(), message.count(), message.mpi_type(), root_rank);
+  return ex.async_execute(MPI_Ibcast, const_cast<DataT*>(message.data()), message.count(),
+                          message.mpi_type(), root_rank);
 }
 
 /// MPI_Ireduce wrapper

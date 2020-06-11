@@ -62,7 +62,7 @@ struct Solver<Backend::MC> {
   template <class T>
   static void triangular(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, blas::Op op,
                          blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_a,
-                         Matrix<T, Device::CPU>& mat_b) noexcept;
+                         Matrix<T, Device::CPU>& mat_b);
 };
 
 }

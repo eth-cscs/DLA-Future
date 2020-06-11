@@ -64,7 +64,7 @@ void potrf(blas::Uplo uplo, const Tile<T, device>& a) noexcept;
 /// @returns info = 0 on success or info > 0 if the tile is not positive definite.
 /// @pre matrix @p a is positive definite
 template <class T, Device device>
-long long potrfInfo(blas::Uplo uplo, const Tile<T, device>& a) noexcept;
+long long potrfInfo(blas::Uplo uplo, const Tile<T, device>& a);
 
 #include "dlaf/lapack_tile.tpp"
 

@@ -63,8 +63,8 @@ std::size_t LayoutInfo::minTileMemSize(const TileElementSize& tile_size) const n
   using util::size_t::sum;
   using util::size_t::mul;
 
-  DLAF_ASSERT_HEAVY((tile_size.rows() <= block_size_.rows()));
-  DLAF_ASSERT_HEAVY((tile_size.cols() <= block_size_.cols()));
+  DLAF_ASSERT_HEAVY((tile_size.rows() <= block_size_.rows()), "");
+  DLAF_ASSERT_HEAVY((tile_size.cols() <= block_size_.cols()), "");
 
   if (tile_size.isEmpty()) {
     return 0;

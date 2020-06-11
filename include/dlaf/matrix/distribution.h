@@ -104,8 +104,8 @@ public:
   /// @pre tile_element.isValid() and tile_element.isIn(blockSize())
   GlobalElementIndex globalElementIndex(const GlobalTileIndex& global_tile,
                                         const TileElementIndex& tile_element) const noexcept {
-    DLAF_ASSERT_HEAVY(global_tile.isValid() && global_tile.isIn(global_nr_tiles_));
-    DLAF_ASSERT_HEAVY(tile_element.isValid() && tile_element.isIn(block_size_));
+    DLAF_ASSERT_HEAVY(global_tile.isValid() && global_tile.isIn(global_nr_tiles_), "");
+    DLAF_ASSERT_HEAVY(tile_element.isValid() && tile_element.isIn(block_size_), "");
 
     return {globalElementFromGlobalTileAndTileElement<Coord::Row>(global_tile.row(), tile_element.row()),
             globalElementFromGlobalTileAndTileElement<Coord::Col>(global_tile.col(),
@@ -116,7 +116,7 @@ public:
   ///
   /// @pre global_element.isValid() and global_element.isIn(size())
   GlobalTileIndex globalTileIndex(const GlobalElementIndex& global_element) const noexcept {
-    DLAF_ASSERT_HEAVY(global_element.isValid() && global_element.isIn(size_));
+    DLAF_ASSERT_HEAVY(global_element.isValid() && global_element.isIn(size_), "");
 
     return {globalTileFromGlobalElement<Coord::Row>(global_element.row()),
             globalTileFromGlobalElement<Coord::Col>(global_element.col())};
@@ -127,7 +127,7 @@ public:
   ///
   /// @pre local_tile.isValid() and local_tile.isIn(localNrTiles())
   GlobalTileIndex globalTileIndex(const LocalTileIndex& local_tile) const noexcept {
-    DLAF_ASSERT_HEAVY(local_tile.isValid() && local_tile.isIn(local_nr_tiles_));
+    DLAF_ASSERT_HEAVY(local_tile.isValid() && local_tile.isIn(local_nr_tiles_), "");
 
     return {globalTileFromLocalTile<Coord::Row>(local_tile.row()),
             globalTileFromLocalTile<Coord::Col>(local_tile.col())};
@@ -137,7 +137,7 @@ public:
   ///
   /// @pre global_tile.isValid() and global_tile.isIn(nrTiles())
   comm::Index2D rankGlobalTile(const GlobalTileIndex& global_tile) const noexcept {
-    DLAF_ASSERT_HEAVY(global_tile.isValid() && global_tile.isIn(global_nr_tiles_));
+    DLAF_ASSERT_HEAVY(global_tile.isValid() && global_tile.isIn(global_nr_tiles_), "");
 
     return {rankGlobalTile<Coord::Row>(global_tile.row()),
             rankGlobalTile<Coord::Col>(global_tile.col())};
@@ -148,7 +148,7 @@ public:
   /// @pre global_tile.isValid() and global_tile.isIn(nrTiles())
   /// @pre rank_index == rankGlobalTile(global_tile)
   LocalTileIndex localTileIndex(const GlobalTileIndex& global_tile) const {
-    DLAF_ASSERT_HEAVY(global_tile.isValid() && global_tile.isIn(global_nr_tiles_));
+    DLAF_ASSERT_HEAVY(global_tile.isValid() && global_tile.isIn(global_nr_tiles_), "");
 
     DLAF_ASSERT(rank_index_ == rankGlobalTile(global_tile), "Global tile not available in this rank.");
     return {localTileFromGlobalTile<Coord::Row>(global_tile.row()),
@@ -161,7 +161,7 @@ public:
   ///
   /// @pre global_element.isValid() and global_element.isIn(size())
   TileElementIndex tileElementIndex(const GlobalElementIndex& global_element) const noexcept {
-    DLAF_ASSERT_HEAVY(global_element.isValid() && global_element.isIn(size_));
+    DLAF_ASSERT_HEAVY(global_element.isValid() && global_element.isIn(size_), "");
 
     return {tileElementFromGlobalElement<Coord::Row>(global_element.row()),
             tileElementFromGlobalElement<Coord::Col>(global_element.col())};
@@ -175,8 +175,8 @@ public:
   template <Coord rc>
   SizeType globalElementFromGlobalTileAndTileElement(SizeType global_tile, SizeType tile_element) const
       noexcept {
-    DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>());
-    DLAF_ASSERT_HEAVY(0 <= tile_element && tile_element < block_size_.get<rc>());
+    DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>(), "");
+    DLAF_ASSERT_HEAVY(0 <= tile_element && tile_element < block_size_.get<rc>(), "");
     return util::matrix::elementFromTileAndTileElement(global_tile, tile_element, block_size_.get<rc>());
   }
 
@@ -205,7 +205,7 @@ public:
   /// @pre 0 <= global_tile < nrTiles().get<rc>()
   template <Coord rc>
   int rankGlobalTile(SizeType global_tile) const noexcept {
-    DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>());
+    DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>(), "");
     return util::matrix::rankGlobalTile(global_tile, grid_size_.get<rc>(), source_rank_index_.get<rc>());
   }
 
@@ -214,7 +214,7 @@ public:
   /// @pre 0 <= global_element < size().get<rc>()
   template <Coord rc>
   SizeType globalTileFromGlobalElement(SizeType global_element) const noexcept {
-    DLAF_ASSERT_HEAVY(0 <= global_element && global_element < size_.get<rc>());
+    DLAF_ASSERT_HEAVY(0 <= global_element && global_element < size_.get<rc>(), "");
     return util::matrix::tileFromElement(global_element, block_size_.get<rc>());
   }
 
@@ -224,7 +224,7 @@ public:
   /// @pre 0 <= local_tile < localNrTiles().get<rc>()
   template <Coord rc>
   SizeType globalTileFromLocalTile(SizeType local_tile) const noexcept {
-    DLAF_ASSERT_HEAVY(0 <= local_tile && local_tile < local_nr_tiles_.get<rc>());
+    DLAF_ASSERT_HEAVY(0 <= local_tile && local_tile < local_nr_tiles_.get<rc>(), "");
     return util::matrix::globalTileFromLocalTile(local_tile, grid_size_.get<rc>(), rank_index_.get<rc>(),
                                                  source_rank_index_.get<rc>());
   }
@@ -244,7 +244,7 @@ public:
   /// @pre 0 <= global_tile < nrTiles().get<rc>()
   template <Coord rc>
   SizeType localTileFromGlobalTile(SizeType global_tile) const noexcept {
-    DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>());
+    DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>(), "");
     return util::matrix::localTileFromGlobalTile(global_tile, grid_size_.get<rc>(),
                                                  rank_index_.get<rc>(), source_rank_index_.get<rc>());
   }
@@ -267,7 +267,7 @@ public:
   /// @pre 0 <= global_tile <= nrTiles().get<rc>()
   template <Coord rc>
   SizeType nextLocalTileFromGlobalTile(SizeType global_tile) const noexcept {
-    DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile <= global_nr_tiles_.get<rc>());
+    DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile <= global_nr_tiles_.get<rc>(), "");
     return util::matrix::nextLocalTileFromGlobalTile(global_tile, grid_size_.get<rc>(),
                                                      rank_index_.get<rc>(),
                                                      source_rank_index_.get<rc>());
@@ -278,7 +278,7 @@ public:
   /// @pre 0 <= global_element < size().get<rc>()
   template <Coord rc>
   SizeType tileElementFromGlobalElement(SizeType global_element) const noexcept {
-    DLAF_ASSERT_HEAVY(0 <= global_element && global_element < size_.get<rc>());
+    DLAF_ASSERT_HEAVY(0 <= global_element && global_element < size_.get<rc>(), "");
     return util::matrix::tileElementFromElement(global_element, block_size_.get<rc>());
   }
 

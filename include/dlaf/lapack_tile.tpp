@@ -55,7 +55,7 @@ long long potrfInfo(blas::Uplo uplo, const Tile<T, device>& a) {
   DLAF_ASSERT((a.size().rows() == a.size().cols()), "POTRF: A is not square.");
 
   auto info = lapack::potrf(uplo, a.size().rows(), a.ptr(), a.ld());
-  DLAF_ASSERT_HEAVY((info >= 0));
+  DLAF_ASSERT_HEAVY((info >= 0), "");
 
   return info;
 }

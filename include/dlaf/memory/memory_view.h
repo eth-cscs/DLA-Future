@@ -135,7 +135,7 @@ public:
   /// @param index index of the position
   /// @pre @p index < @p size
   T* operator()(size_t index) const {
-    DLAF_ASSERT_HEAVY(index < size_);
+    DLAF_ASSERT_HEAVY(index < size_, "");
     return memory_->operator()(offset_ + index);
   }
 

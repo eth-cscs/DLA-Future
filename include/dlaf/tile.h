@@ -199,18 +199,6 @@ auto create_data(const Tile<T, device>& tile) {
                                    to_sizet(tile.size().rows()), to_sizet(tile.ld()));
 }
 
-template <class T, Device device>
-std::ostream& operator<<(std::ostream& ostr, const Tile<T, device>& tile) {
-  for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
-    for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
-      ostr << tile({ii, jj}) << " ";
-    }
-  }
-  
-  return ostr;
-}
-
- 
 #include <dlaf/tile.tpp>
 
 /// ---- ETI

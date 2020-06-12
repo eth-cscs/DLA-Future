@@ -32,8 +32,8 @@ void gemm(blas::Op op_a, blas::Op op_b, T alpha, const Tile<const T, device>& a,
     n = b.size().rows();
   }
 
-  DLAF_ASSERT(m == c.size().rows(), "`m` cannot be determined!", m,  c);
-  DLAF_ASSERT(n == c.size().cols(), "`n` cannot be determined!", n,  c);
+  DLAF_ASSERT(m == c.size().rows(), "`m` cannot be determined!", m, c);
+  DLAF_ASSERT(n == c.size().cols(), "`n` cannot be determined!", n, c);
   DLAF_ASSERT(k == k2, "`k` cannot be determined!", k, k2);
 
   blas::gemm(blas::Layout::ColMajor, op_a, op_b, m, n, k, alpha, a.ptr(), a.ld(), b.ptr(), b.ld(), beta,

@@ -191,12 +191,10 @@ options_t check_options(hpx::program_options::variables_map& vm) {
       vm["check-result"].as<bool>(),
   };
 
-  DLAF_ASSERT(opts.m > 0, "matrix size must be a positive number (", opts.m, ")");
-  DLAF_ASSERT(opts.mb > 0, "block size must be a positive number (", opts.mb, ")");
-  DLAF_ASSERT(opts.grid_rows > 0, "number of grid rows must be a positive number (", opts.grid_rows,
-              ")");
-  DLAF_ASSERT(opts.grid_cols > 0, "number of grid columns must be a positive number (", opts.grid_cols,
-              ")");
+  DLAF_ASSERT(opts.m > 0, "matrix size must be a positive number!", opts.m);
+  DLAF_ASSERT(opts.mb > 0, "block size must be a positive number!", opts.mb);
+  DLAF_ASSERT(opts.grid_rows > 0, "number of grid rows must be a positive number!", opts.grid_rows);
+  DLAF_ASSERT(opts.grid_cols > 0, "number of grid columns must be a positive number!", opts.grid_cols);
 
   return opts;
 }

@@ -19,10 +19,12 @@ template <class T, Device device>
 Matrix<const T, device>::Matrix(matrix::Distribution&& distribution, const matrix::LayoutInfo& layout,
                                 ElementType* ptr) noexcept
     : MatrixBase(std::move(distribution)) {
-  DLAF_ASSERT(this->distribution().localSize() == layout.size(), "Size of distribution ",
-              distribution.localSize(), " does not match layout size ", layout.size());
-  DLAF_ASSERT(this->blockSize() == layout.blockSize(), "Block size of distribution ",
-              distribution.blockSize(), " does not match layout size ", layout.blockSize());
+  DLAF_ASSERT(this->distribution().localSize() == layout.size(),
+              "Size of distribution does not match layout size!", distribution.localSize(),
+              layout.size());
+  DLAF_ASSERT(this->distribution().blockSize() == layout.blockSize(),
+              "Block size of distribution does not match layout block size!", distribution.blockSize(),
+              layout.blockSize());
 
   memory::MemoryView<ElementType, device> mem(ptr, layout.minMemSize());
   setUpTiles(mem, layout);

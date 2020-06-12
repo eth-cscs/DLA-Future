@@ -83,7 +83,7 @@ public:
       : memory_(size > 0 ? memory_view.memory_ : std::make_shared<MemoryChunk<ElementType, device>>()),
         offset_(size > 0 ? offset + memory_view.offset_ : 0), size_(size) {
     DLAF_ASSERT(offset + size <= memory_view.size_,
-                "Sub MemoryView exceeds the limits of the base MemoryView");
+                "Sub MemoryView exceeds the limits of the base MemoryView!");
   }
   template <class U = T,
             class = typename std::enable_if_t<std::is_const<U>::value && std::is_same<T, U>::value>>
@@ -91,7 +91,7 @@ public:
       : memory_(size > 0 ? memory_view.memory_ : std::make_shared<MemoryChunk<ElementType, device>>()),
         offset_(size > 0 ? offset + memory_view.offset_ : 0), size_(size) {
     DLAF_ASSERT(offset + size <= memory_view.size_,
-                "Sub MemoryView exceeds the limits of the base MemoryView");
+                "Sub MemoryView exceeds the limits of the base MemoryView!");
   }
 
   MemoryView& operator=(const MemoryView&) = default;

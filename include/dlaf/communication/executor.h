@@ -121,10 +121,11 @@ public:
   ///
   template <typename F, typename... Ts>
   hpx::future<void> async_execute(F f, Ts... ts) noexcept {
-    return hpx::async(ex_, [comm = comm_, f, ts...] {
-      MPI_Request req;
-      f(ts..., comm, &req);
-
+    // TODO: docs why this is done here instead of within the task
+    // TODO: support for MPI_THREAD_SERIALIZED
+    MPI_Request req;
+    f(ts..., comm_, &req);
+    return hpx::async(ex_, [req]() mutable {
       // Yield until non-blocking communication completes.
       hpx::util::yield_while([&req] {
         int flag;

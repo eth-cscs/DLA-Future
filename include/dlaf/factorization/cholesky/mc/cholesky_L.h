@@ -240,8 +240,8 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
         }
 
         // Check if the diagonal tile of the trailing matrix is on this node and
-        // compute first tile of the column of the trailing matrix: diagonal element mat_a(j,j), reading
-        // mat_a.read(j,k), using herk (blas operation)
+        // compute first tile of the column of the trailing matrix: diagonal element mat_a(j,j),
+        // reading mat_a.read(j,k), using herk (blas operation)
         hpx::dataflow(trailing_matrix_executor, hpx::util::unwrapping(tile::herk<T, Device::CPU>), Lower,
                       NoTrans, -1.0, panel[i_local], 1.0, mat_a(LocalTileIndex{i_local, j_local}));
 

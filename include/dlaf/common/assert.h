@@ -113,3 +113,5 @@ inline void do_assert(bool expr, const common::internal::source_location& loc, c
 #else
 #define DLAF_ASSERT_HEAVY(Expr, ...)
 #endif
+
+#define DLAF_NOT_YET_IMPLEMENTED(...) DLAF_ASSERT(dlaf::internal::not_yet_implemented, __VA_ARGS__)

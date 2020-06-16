@@ -32,6 +32,48 @@ configure_file("${PROJECT_SOURCE_DIR}/include/dlaf/version.h.in"
                "${PROJECT_BINARY_DIR}/include/dlaf/version.h"
                @ONLY)
 
+add_library(DLAF
+  communication/communicator_impl.cpp
+  communication/communicator.cpp
+  communication/communicator_grid.cpp
+  communication/datatypes.cpp
+  matrix/distribution.cpp
+  matrix/layout_info.cpp
+  matrix.cpp
+  memory/memory_view.cpp
+  tile.cpp
+  auxiliary/mc.cpp
+  factorization/mc.cpp
+  solver/mc.cpp
+)
+
+target_include_directories(DLAF
+  PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+    ${HPX_INCLUDE_DIRS}
+  PRIVATE
+    include/
+)
+
+target_link_libraries(DLAF
+  PUBLIC
+    MPI::MPI_CXX
+    ${HPX_LIBRARIES}
+    ${LAPACK_TARGET}
+    lapackpp
+    blaspp
+    $<TARGET_NAME_IF_EXISTS:dlaf::cublas>
+    $<TARGET_NAME_IF_EXISTS:dlaf::cudart>
+)
+
+target_compile_features(DLAF PUBLIC cxx_std_14)
+
+target_add_warnings(DLAF)
+
+# ----- Options, Flags, Defines, ...
+
 # Check for pretty function support
 include(CheckCXXSourceCompiles)
 check_cxx_source_compiles("int main() { const char *name = __PRETTY_FUNCTION__; }" is_pretty_function_available)

@@ -119,7 +119,7 @@ void run(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag, const Tile<T, Devi
   const TileElementSize size = a.size();
 
   NormT<T> value = std::abs(TileSetter<T>::value);
-  NormT<T> norm_expected;
+  NormT<T> norm_expected = -1;
 
   switch (norm) {
     case lapack::Norm::Max:

@@ -8,7 +8,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <blas_util.hh>
 #include <iostream>
 
 #include <mpi.h>
@@ -55,6 +54,10 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   Matrix<T, Device::CPU> b(GlobalElementSize{opts.m, opts.n}, TileElementSize{opts.mb, opts.nb},
                            comm_grid);
 
+  const auto side = blas::Side::Left;
+  const auto uplo = blas::Uplo::Lower;
+  const auto op = blas::Op::NoTrans;
+  const auto diag = blas::Diag::NonUnit;
   const T alpha = 2.0;
 
   for (auto run_index = 0; run_index < opts.nruns; ++run_index) {
@@ -64,40 +67,30 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     // setup matrix A and b
     std::function<T(const GlobalElementIndex&)> setter_A, setter_b, expected_b;
     std::tie(setter_A, setter_b, expected_b) =
-        dlaf::matrix::test::getLeftTriangularSystem<GlobalElementIndex, T>(blas::Uplo::Lower,
-                                                                           blas::Op::NoTrans,
-                                                                           blas::Diag::NonUnit, alpha,
-                                                                           A.size().rows());
+        dlaf::matrix::test::getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, A.size().rows());
 
     // TODO wait all setup tasks before starting benchmark
 
     common::Timer<> timeit;
-
-    Solver<Backend::MC>::triangular(comm_grid, blas::Side::Left, blas::Uplo::Lower, blas::Op::NoTrans,
-                                    blas::Diag::NonUnit, alpha, A, b);
+    Solver<Backend::MC>::triangular(comm_grid, side, uplo, op, diag, alpha, A, b);
 
     // TODO wait for last task and barrier for all ranks
 
     auto elapsed_time = timeit.elapsed();
 
     // TODO compute gigaflops
-    // double gigaflops;
-    //{
-    //  double n = matrix.size().rows();
-    //  auto add_mul = n * n * n / 6;
-    //  gigaflops = total_ops<T>(add_mul, add_mul) / elapsed_time / 1e9;
-    //}
 
     // TODO print benchmark results
     if (0 == world.rank())
       std::cout << "[" << run_index << "]"
                 << " " << elapsed_time << "s"
-                << " " << A.size() << " " << A.blockSize() << " " << comm_grid.size() << " "
+                << " " << A.size() << " " << A.blockSize() << " " << comm_grid.size()
                 << " " << b.size() << " " << b.blockSize() << " " << hpx::get_os_thread_count()
                 << std::endl;
 
     // (optional) run test
     if (opts.do_check) {
+      // TODO evaluate to change check
       CHECK_MATRIX_NEAR(expected_b, b, 20 * (b.size().rows() + 1) * TypeUtilities<T>::error,
                         20 * (b.size().rows() + 1) * TypeUtilities<T>::error);
     }
@@ -125,8 +118,8 @@ int main(int argc, char** argv) {
   desc_commandline.add_options()
     ("matrix-size", value<SizeType>()->default_value(4096), "Matrix size.")
     ("block-size", value<SizeType>()->default_value(256), "Block cyclic distribution size.")
-    ("result-cols", value<SizeType>()->default_value(1), "Matrix size.")
-    ("result-block-cols", value<SizeType>()->default_value(1), "Block cyclic distribution size.")
+    ("result-cols", value<SizeType>()->default_value(512), "Matrix size.")
+    ("result-block-cols", value<SizeType>()->default_value(512), "Block cyclic distribution size.")
     ("grid-rows", value<int>()->default_value(1), "Number of row processes in the 2D communicator.")
     ("grid-cols", value<int>()->default_value(1), "Number of column processes in the 2D communicator.")
     ("nruns", value<int64_t>()->default_value(1), "Number of runs to compute the cholesky")
@@ -168,14 +161,14 @@ options_t check_options(hpx::program_options::variables_map& vm) {
   };
 
   if (opts.m <= 0)
-    throw std::runtime_error("matrix size must be a positive number");
+    throw std::runtime_error("A size must be a positive number");
   if (opts.mb <= 0)
-    throw std::runtime_error("block size must be a positive number");
+    throw std::runtime_error("A block size must be a positive number");
 
   if (opts.n <= 0)
-    throw std::runtime_error("matrix size must be a positive number");
+    throw std::runtime_error("b number of cols must be a positive number");
   if (opts.nb <= 0)
-    throw std::runtime_error("block size must be a positive number");
+    throw std::runtime_error("b block width must be a positive number");
 
   if (opts.grid_rows <= 0)
     throw std::runtime_error("number of grid rows must be a positive number");

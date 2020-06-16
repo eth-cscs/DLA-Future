@@ -14,3 +14,4 @@ DLAF_addTest(test_range2d SOURCES test_range2d.cpp USE_MAIN PLAIN)
 DLAF_addTest(test_data_descriptor SOURCES test_data_descriptor.cpp USE_MAIN PLAIN)
 
 DLAF_addTest(test_pipeline SOURCES test_pipeline.cpp USE_MAIN HPX)
+DLAF_addTest(test_task_chain SOURCES test_pipeline.cpp USE_MAIN HPX)

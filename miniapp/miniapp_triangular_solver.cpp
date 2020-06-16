@@ -101,9 +101,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     if (0 == world.rank())
       std::cout << "[" << run_index << "]"
                 << " " << elapsed_time << "s"
-                << " " << A.size() << " " << A.blockSize() << " " << comm_grid.size()
-                << " " << b.size() << " " << b.blockSize() << " " << hpx::get_os_thread_count()
-                << std::endl;
+                << " " << A.size() << " " << A.blockSize() << " " << comm_grid.size() << " " << b.size()
+                << " " << b.blockSize() << " " << hpx::get_os_thread_count() << std::endl;
 
     // (optional) run test
     if (opts.do_check) {

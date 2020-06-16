@@ -34,6 +34,12 @@ public:
       return std::move(promise_next);
     });
   }
+
+  /// Wait until all tasks in the chain completed
+  ~TaskChain() {
+    if (tail_.valid())
+      tail_.get();
+  }
 };
 
 }

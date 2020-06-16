@@ -13,9 +13,12 @@
 #include <mpi.h>
 #include <hpx/hpx.hpp>
 
+#include "dlaf/common/index2d.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix.h"
+#include "dlaf/matrix/index.h"
 #include "dlaf/solver/mc.h"
+#include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 #include "dlaf_test/matrix/util_generic_blas.h"
 #include "dlaf_test/matrix/util_matrix.h"
@@ -23,7 +26,18 @@
 
 #include "dlaf/common/timer.h"
 
-using namespace dlaf;
+namespace {
+
+using dlaf::Backend;
+using dlaf::Device;
+using dlaf::GlobalElementIndex;
+using dlaf::GlobalElementSize;
+using dlaf::Matrix;
+using dlaf::SizeType;
+using dlaf::TileElementSize;
+using dlaf::comm::Communicator;
+using dlaf::comm::CommunicatorGrid;
+using dlaf::common::Ordering;
 
 using dlaf_test::TypeUtilities;
 
@@ -42,17 +56,19 @@ struct options_t {
 
 options_t check_options(hpx::program_options::variables_map& vm);
 
+}
+
 int hpx_main(hpx::program_options::variables_map& vm) {
   options_t opts = check_options(vm);
 
-  comm::Communicator world(MPI_COMM_WORLD);
-  comm::CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, common::Ordering::ColumnMajor);
+  Communicator world(MPI_COMM_WORLD);
+  CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
+
+  using MatrixType = Matrix<T, Device::CPU>;
 
   // Allocate memory for the matrices
-  Matrix<T, Device::CPU> A(GlobalElementSize{opts.m, opts.m}, TileElementSize{opts.mb, opts.mb},
-                           comm_grid);
-  Matrix<T, Device::CPU> b(GlobalElementSize{opts.m, opts.n}, TileElementSize{opts.mb, opts.nb},
-                           comm_grid);
+  MatrixType A(GlobalElementSize{opts.m, opts.m}, TileElementSize{opts.mb, opts.mb}, comm_grid);
+  MatrixType b(GlobalElementSize{opts.m, opts.n}, TileElementSize{opts.mb, opts.nb}, comm_grid);
 
   const auto side = blas::Side::Left;
   const auto uplo = blas::Uplo::Lower;
@@ -65,14 +81,15 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       std::cout << "[" << run_index << "]" << std::endl;
 
     // setup matrix A and b
+    using dlaf::matrix::test::getLeftTriangularSystem;
     std::function<T(const GlobalElementIndex&)> setter_A, setter_b, expected_b;
     std::tie(setter_A, setter_b, expected_b) =
-        dlaf::matrix::test::getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, A.size().rows());
+        getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, A.size().rows());
 
     // TODO wait all setup tasks before starting benchmark
 
-    common::Timer<> timeit;
-    Solver<Backend::MC>::triangular(comm_grid, side, uplo, op, diag, alpha, A, b);
+    dlaf::common::Timer<> timeit;
+    dlaf::Solver<Backend::MC>::triangular(comm_grid, side, uplo, op, diag, alpha, A, b);
 
     // TODO wait for last task and barrier for all ranks
 
@@ -149,6 +166,8 @@ int main(int argc, char** argv) {
   return ret_code;
 }
 
+namespace {
+
 options_t check_options(hpx::program_options::variables_map& vm) {
   options_t opts = {
       vm["matrix-size"].as<SizeType>(), vm["block-size"].as<SizeType>(),
@@ -176,4 +195,6 @@ options_t check_options(hpx::program_options::variables_map& vm) {
     throw std::runtime_error("number of grid columns must be a positive number");
 
   return opts;
+}
+
 }

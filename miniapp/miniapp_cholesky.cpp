@@ -17,6 +17,7 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/factorization/mc.h"
 #include "dlaf/matrix.h"
+#include "dlaf/matrix/copy.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
@@ -79,15 +80,23 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   GlobalElementSize matrix_size(opts.m, opts.m);
   TileElementSize block_size(opts.mb, opts.mb);
 
-  MatrixType matrix(matrix_size, block_size, comm_grid);
-  const auto& distribution = matrix.distribution();
+  ConstMatrixType matrix_ref = [matrix_size, block_size, comm_grid]() {
+    using dlaf::matrix::util::set_random_hermitian_positive_definite;
+
+    MatrixType hermitian_pos_def(matrix_size, block_size, comm_grid);
+    set_random_hermitian_positive_definite(hermitian_pos_def);
+
+    return hermitian_pos_def;
+  }();
+
+  const auto& distribution = matrix_ref.distribution();
 
   for (auto run_index = 0; run_index < opts.nruns; ++run_index) {
     if (0 == world.rank())
       std::cout << "[" << run_index << "]" << std::endl;
 
-    // TODO this should be a clone of the original reference one
-    dlaf::matrix::util::set_random_hermitian_positive_definite(matrix);
+    MatrixType matrix(matrix_size, block_size, comm_grid);
+    dlaf::copy(matrix_ref, matrix);
 
     // wait all setup tasks before starting benchmark
     {
@@ -129,10 +138,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       if (opts.do_check == CHECK_RESULT::LAST && run_index != (opts.nruns - 1))
         continue;
 
-      // TODO this should be a clone of the original one
       MatrixType original(matrix_size, block_size, comm_grid);
-      dlaf::matrix::util::set_random_hermitian_positive_definite(original);
-
+      dlaf::copy(matrix_ref, original);
       check_cholesky(original, matrix, comm_grid);
     }
   }

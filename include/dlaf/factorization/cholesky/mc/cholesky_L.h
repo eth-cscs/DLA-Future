@@ -147,7 +147,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
           auto send_bcast_f = unwrapping([](auto&& tile, auto&& comm_wrapper) {
             comm::sync::broadcast::send(comm_wrapper().colCommunicator(), tile);
           });
-          hpx::dataflow(std::move(send_bcast_f), mat_a.read(kk), serial_comm());
+          hpx::dataflow(executor_mpi, std::move(send_bcast_f), mat_a.read(kk), serial_comm());
         }
 
         kk_tile = mat_a.read(kk);

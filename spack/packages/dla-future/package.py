@@ -39,7 +39,7 @@ class DlaFuture(CMakePackage):
 
        if '+cuda' in spec:
            args.append('-DDLAF_WITH_CUDA=ON')
-           args.append('-DCUDA_HOME={0}'.format(spec['cuda'].prefix))
+           #args.append('-DCUDA_HOME={0}'.format(spec['cuda'].prefix))
 
        if self.run_tests:
            args.append('-DDLAF_WITH_TEST=ON')

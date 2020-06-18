@@ -153,7 +153,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
                 promise.set_value();
                 bcast_fut.get();
               });
-          hpx::dataflow(std::move(send_bcast_f), mat_a.read(kk), col_bcast.chain());
+          hpx::dataflow(executor_hp, std::move(send_bcast_f), mat_a.read(kk), col_bcast.chain());
         }
 
         kk_tile = mat_a.read(kk);

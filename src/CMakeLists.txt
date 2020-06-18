@@ -32,45 +32,6 @@ configure_file("${PROJECT_SOURCE_DIR}/include/dlaf/version.h.in"
                "${PROJECT_BINARY_DIR}/include/dlaf/version.h"
                @ONLY)
 
-add_library(DLAF
-  communication/communicator_impl.cpp
-  communication/communicator.cpp
-  communication/communicator_grid.cpp
-  communication/datatypes.cpp
-  factorization/mc.cpp
-  matrix/distribution.cpp
-  matrix/layout_info.cpp
-  matrix.cpp
-  memory/memory_view.cpp
-  tile.cpp
-  solver/mc.cpp
-)
-
-target_include_directories(DLAF
-  PUBLIC
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-    ${HPX_INCLUDE_DIRS}
-  PRIVATE
-    include/
-)
-
-target_link_libraries(DLAF
-  PUBLIC
-    MPI::MPI_CXX
-    ${HPX_LIBRARIES}
-    ${LAPACK_TARGET}
-    lapackpp
-    blaspp
-    $<TARGET_NAME_IF_EXISTS:dlaf::cublas>
-    $<TARGET_NAME_IF_EXISTS:dlaf::cudart>
-)
-
-target_compile_features(DLAF PUBLIC cxx_std_14)
-
-target_add_warnings(DLAF)
-
 # ----- Options, Flags, Defines, ...
 
 # Check for pretty function support
@@ -92,19 +53,80 @@ option(DLAF_ASSERT_ENABLE          "Enable low impact assertions"    ${DLAF_ASSE
 option(DLAF_ASSERT_MODERATE_ENABLE "Enable medium impact assertions" ${DLAF_ASSERT_MODERATE_DEFAULT})
 option(DLAF_ASSERT_HEAVY_ENABLE    "Enable high impact assertions"   ${DLAF_ASSERT_HEAVY_DEFAULT})
 
-target_compile_definitions(DLAF PUBLIC
-  $<$<BOOL:${DLAF_ASSERT_ENABLE}>:DLAF_ASSERT_ENABLE>
-  $<$<BOOL:${DLAF_ASSERT_MODERATE_ENABLE}>:DLAF_ASSERT_MODERATE_ENABLE>
-  $<$<BOOL:${DLAF_ASSERT_HEAVY_ENABLE}>:DLAF_ASSERT_HEAVY_ENABLE>
-  DLAF_FUNCTION_NAME=$<IF:$<BOOL:is_pretty_function_available>,__PRETTY_FUNCTION__,__func__>
-  $<$<BOOL:${DLAF_WITH_CUDA}>:DLAF_WITH_CUDA>
+# Define DLAF's PUBLIC properties
+add_library(dlaf.prop INTERFACE)
+target_include_directories(dlaf.prop
+  INTERFACE
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+    ${HPX_INCLUDE_DIRS}
 )
+target_link_libraries(dlaf.prop
+  INTERFACE
+    MPI::MPI_CXX
+    ${HPX_LIBRARIES}
+    ${LAPACK_TARGET}
+    lapackpp
+    blaspp
+    $<TARGET_NAME_IF_EXISTS:dlaf::cublas>
+    $<TARGET_NAME_IF_EXISTS:dlaf::cudart>
+)
+target_compile_features(dlaf.prop
+  INTERFACE
+    cxx_std_14
+)
+target_compile_definitions(dlaf.prop
+  INTERFACE
+    $<$<BOOL:${DLAF_ASSERT_ENABLE}>:DLAF_ASSERT_ENABLE>
+    $<$<BOOL:${DLAF_ASSERT_MODERATE_ENABLE}>:DLAF_ASSERT_MODERATE_ENABLE>
+    $<$<BOOL:${DLAF_ASSERT_HEAVY_ENABLE}>:DLAF_ASSERT_HEAVY_ENABLE>
+    DLAF_FUNCTION_NAME=$<IF:$<BOOL:is_pretty_function_available>,__PRETTY_FUNCTION__,__func__>
+    $<$<BOOL:${DLAF_WITH_CUDA}>:DLAF_WITH_CUDA>
+)
+
+# Define DLAF's CORE library
+add_library(dlaf.core
+  OBJECT
+    communication/communicator_impl.cpp
+    communication/communicator.cpp
+    communication/communicator_grid.cpp
+    communication/datatypes.cpp
+    matrix/distribution.cpp
+    matrix/layout_info.cpp
+    matrix.cpp
+    memory/memory_view.cpp
+    tile.cpp
+)
+target_link_libraries(dlaf.core PUBLIC dlaf.prop)
+
+# Define DLAF's factorization library
+add_library(dlaf.factorization OBJECT factorization/mc.cpp)
+target_link_libraries(dlaf.factorization PUBLIC dlaf.prop)
+
+# Define DLAF's solver library
+add_library(dlaf.solver OBJECT solver/mc.cpp)
+target_link_libraries(dlaf.solver PUBLIC dlaf.prop)
+
+# Define DLAF's auxiliary library
+add_library(dlaf.auxiliary OBJECT auxiliary/mc.cpp)
+target_link_libraries(dlaf.auxiliary PUBLIC dlaf.prop)
+
+# Define DLAF's complete library
+add_library(DLAF
+  $<TARGET_OBJECTS:dlaf.core>
+  $<TARGET_OBJECTS:dlaf.factorization>
+  $<TARGET_OBJECTS:dlaf.solver>
+  $<TARGET_OBJECTS:dlaf.auxiliary>
+)
+target_link_libraries(DLAF PUBLIC dlaf.prop)
+target_add_warnings(DLAF)
 
 # ----- DEPLOY
 include(GNUInstallDirs)
 
 install(TARGETS
-  DLAF
+  DLAF dlaf.prop
   EXPORT DLAF-Targets
   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )

@@ -16,7 +16,7 @@
 #include <hpx/lcos/future.hpp>
 #include <hpx/lcos/wait_all.hpp>
 
-TEST(Pipeline, Basic) {
+TEST(TaskChain, Deadlock) {
   dlaf::common::TaskChain tc{};
 
   // This shouldn't cause a race condition.

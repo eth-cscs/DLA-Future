@@ -22,14 +22,14 @@ TEST(TaskChain, Deadlock) {
   // This shouldn't cause a race condition.
   int d = 0;
   auto func_1 = [&d](hpx::future<hpx::promise<void>> fp) {
-    fp.get().set_value();
     d = 1;
+    fp.get().set_value();
   };
   auto fut1 = hpx::dataflow(std::move(func_1), tc.chain());
 
   auto func_2 = [&d](hpx::future<hpx::promise<void>> fp) {
-    fp.get().set_value();
     d = 2;
+    fp.get().set_value();
   };
   auto fut2 = hpx::dataflow(std::move(func_2), tc.chain());
 

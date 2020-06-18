@@ -8,4 +8,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-DLAF_addTest(test_triangular SOURCES test_triangular.cpp USE_MAIN MPIHPX MPIRANKS 6)
+DLAF_addTest(test_triangular
+  SOURCES test_triangular.cpp
+  LIBRARIES dlaf.solver dlaf.core
+  USE_MAIN MPIHPX
+  MPIRANKS 6
+)

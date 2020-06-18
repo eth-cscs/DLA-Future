@@ -57,72 +57,46 @@ function(DLAF_addTest test_target_name)
     message(FATAL_ERROR "No sources specified for this test")
   endif()
 
-  ### Check if the test use MPI
-  set(_DLAF_MPI_MAINS "MPI;MPIHPX")
   set(IS_AN_MPI_TEST FALSE)
-  if (DLAF_AT_USE_MAIN IN_LIST _DLAF_MPI_MAINS)
+  set(IS_AN_HPX_TEST FALSE)
+  if (NOT DLAF_AT_USE_MAIN)
+    set(_gtest_tgt gtest)
+  elseif (DLAF_AT_USE_MAIN STREQUAL PLAIN)
+    set(_gtest_tgt gtest_main)
+  elseif (DLAF_AT_USE_MAIN STREQUAL HPX)
+    set(_gtest_tgt DLAF_gtest_hpx_main)
+    set(IS_AN_HPX_TEST TRUE)
+  elseif (DLAF_AT_USE_MAIN STREQUAL MPI)
+    set(_gtest_tgt DLAF_gtest_mpi_main)
     set(IS_AN_MPI_TEST TRUE)
+  elseif (DLAF_AT_USE_MAIN STREQUAL MPIHPX)
+    set(_gtest_tgt DLAF_gtest_mpihpx_main)
+    set(IS_AN_MPI_TEST TRUE)
+    set(IS_AN_HPX_TEST TRUE)
+  else()
+    message(FATAL_ERROR "USE_MAIN=${DLAF_AT_USE_MAIN} is not a supported option")
   endif()
 
-  if (DLAF_AT_USE_MAIN)
-    if (IS_AN_MPI_TEST AND NOT DLAF_AT_MPIRANKS)
+  if (IS_AN_MPI_TEST)
+    if (NOT DLAF_AT_MPIRANKS)
       message(FATAL_ERROR "You are asking for an MPI external main without specifying MPIRANKS")
     endif()
-
-    if (DLAF_AT_MPIRANKS AND NOT IS_AN_MPI_TEST)
-      message(FATAL_ERROR "You specified MPIRANKS and asked for an external main without MPI")
+    if (NOT DLAF_AT_MPIRANKS GREATER 0)
+      message(FATAL_ERROR "Wrong MPIRANKS number ${DLAF_AT_MPIRANKS}")
     endif()
-  endif()
-
-  ### Check if the test use HPX
-  set(_DLAF_HPX_MAINS "HPX;MPIHPX")
-  set(IS_AN_HPX_TEST FALSE)
-  if (DLAF_AT_USE_MAIN IN_LIST _DLAF_HPX_MAINS)
-    set(IS_AN_HPX_TEST TRUE)
-  endif()
-
-  ### Test executable target
-  add_executable(${test_target_name} ${DLAF_AT_SOURCES})
-
-  if (DLAF_AT_COMPILE_DEFINITIONS)
-    target_compile_definitions(${test_target_name}
-      PRIVATE
-        ${DLAF_AT_COMPILE_DEFINITIONS}
-    )
-  endif()
-
-  if (DLAF_AT_INCLUDE_DIRS)
-    target_include_directories(${test_target_name}
-      ${DLAF_AT_INCLUDE_DIRS}
-    )
-  endif()
-
-  target_link_libraries(${test_target_name} PRIVATE DLAF)
-  target_link_libraries(${test_target_name} PRIVATE DLAF_test)
-
-  if (DLAF_AT_USE_MAIN)
-    if (DLAF_AT_USE_MAIN STREQUAL PLAIN)
-      target_link_libraries(${test_target_name} PRIVATE gtest_main)
-    elseif (DLAF_AT_USE_MAIN STREQUAL HPX)
-      target_link_libraries(${test_target_name} PRIVATE DLAF_gtest_hpx_main)
-    elseif (DLAF_AT_USE_MAIN STREQUAL MPI)
-      target_link_libraries(${test_target_name} PRIVATE DLAF_gtest_mpi_main)
-    elseif (DLAF_AT_USE_MAIN STREQUAL MPIHPX)
-      target_link_libraries(${test_target_name} PRIVATE DLAF_gtest_mpihpx_main)
-    else()
-      message(FATAL_ERROR "USE_MAIN=${DLAF_AT_USE_MAIN} is not a supported option")
+    if (DLAF_AT_MPIRANKS GREATER MPIEXEC_MAX_NUMPROCS)
+      message(WARNING "\
+      YOU ARE ASKING FOR ${DLAF_AT_MPIRANKS} RANKS, BUT THERE ARE JUST ${MPIEXEC_MAX_NUMPROCS} CORES.
+      You can adjust MPIEXEC_MAX_NUMPROCS value to suppress this warning.
+      Using OpenMPI may require to set the environment variable OMPI_MCA_rmaps_base_oversubscribe=1.")
     endif()
   else()
-    target_link_libraries(${test_target_name} PRIVATE gtest)
+    if (DLAF_AT_MPIRANKS)
+      message(FATAL_ERROR "You specified MPIRANKS and asked for an external main without MPI")
+    else()
+      set(DLAF_AT_MPIRANKS 1)
+    endif()
   endif()
-
-  if (DLAF_AT_LIBRARIES)
-    target_link_libraries(${test_target_name}
-      ${DLAF_AT_LIBRARIES}
-    )
-  endif()
-
-  target_add_warnings(${test_target_name})
 
   ### Test target
   set(DLAF_TEST_RUNALL_WITH_MPIEXEC OFF CACHE BOOL "Run all tests using the workload manager.")
@@ -130,27 +104,6 @@ function(DLAF_addTest test_target_name)
   set(_TEST_ARGUMENTS ${DLAF_AT_ARGUMENTS})
 
   if(DLAF_TEST_RUNALL_WITH_MPIEXEC OR IS_AN_MPI_TEST)
-    if(IS_AN_MPI_TEST)
-      if (NOT DLAF_AT_MPIRANKS GREATER 0)
-        message(FATAL_ERROR "Wrong MPIRANKS number ${DLAF_AT_MPIRANKS}")
-      endif()
-
-      if (DLAF_AT_MPIRANKS GREATER MPIEXEC_MAX_NUMPROCS)
-        message(WARNING "\
-          YOU ARE ASKING FOR ${DLAF_AT_MPIRANKS} RANKS, BUT THERE ARE JUST ${MPIEXEC_MAX_NUMPROCS} CORES.
-          You can adjust MPIEXEC_MAX_NUMPROCS value to suppress this warning.
-          Using OpenMPI may require to set the environment variable OMPI_MCA_rmaps_base_oversubscribe=1.")
-      endif()
-
-      target_compile_definitions(${test_target_name} PRIVATE NUM_MPI_RANKS=${DLAF_AT_MPIRANKS})
-
-      target_link_libraries(${test_target_name}
-        PRIVATE MPI::MPI_CXX
-        )
-    else()
-      set(DLAF_AT_MPIRANKS 1)
-    endif()
-
     if (MPIEXEC_NUMCORE_FLAG)
       if (MPIEXEC_NUMCORES)
         set(_CORES_PER_RANK ${MPIEXEC_NUMCORES})
@@ -194,10 +147,25 @@ function(DLAF_addTest test_target_name)
     list(APPEND _TEST_ARGUMENTS ${_HPX_EXTRA_ARGS_LIST})
   endif()
 
+  ### Test executable target
+  add_executable(${test_target_name} ${DLAF_AT_SOURCES})
+  target_link_libraries(${test_target_name}
+    PRIVATE
+      ${_gtest_tgt}
+      DLAF_test
+      ${DLAF_AT_LIBRARIES}
+  )
+  target_compile_definitions(${test_target_name}
+    PRIVATE
+      ${DLAF_AT_COMPILE_DEFINITIONS}
+      $<$<BOOL:${IS_AN_MPI_TEST}>: NUM_MPI_RANKS=${DLAF_AT_MPIRANKS}>
+  )
+  target_include_directories(${test_target_name} PRIVATE ${DLAF_AT_INCLUDE_DIRS})
+  target_add_warnings(${test_target_name})
   add_test(
     NAME ${test_target_name}
-    COMMAND ${_TEST_COMMAND} ${_TEST_ARGUMENTS})
-
+    COMMAND ${_TEST_COMMAND} ${_TEST_ARGUMENTS}
+  )
   set_tests_properties(${test_target_name} PROPERTIES LABELS "${_TEST_LABEL}")
 
   ### DEPLOY

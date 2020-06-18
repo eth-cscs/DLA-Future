@@ -8,7 +8,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-cmake_minimum_required(VERSION 3.12.4)
+cmake_minimum_required(VERSION 3.14)
 
 project(DLAF VERSION 0.1.0)
 
@@ -22,6 +22,8 @@ include(DLAF)
 if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Build Type" FORCE)
 endif()
+
+option(BUILD_SHARED_LIBS "Build shared libraries." OFF)
 
 # ---------------------------------------------------------------------------
 # Languages

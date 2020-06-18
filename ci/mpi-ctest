@@ -10,7 +10,7 @@ if [[ "$ENABLE_COVERAGE" == "YES" ]]; then
     lcov --no-external --capture --initial --base-directory /DLA-Future --directory /DLA-Future-build --output-file "$LOCAL_REPORTS/baseline-codecov.info" &> /dev/null
 fi;
 
-pushd /DLA-Future-build
+pushd /DLA-Future-build > /dev/null
 
 # Run the tests, only output on the first rank
 if [[ $SLURM_PROCID == "0" ]]; then
@@ -19,7 +19,7 @@ else
     ctest -Q $@
 fi
 
-popd
+popd > /dev/null
 
 # Create coverage reports for code run
 if [[ "$ENABLE_COVERAGE" == "YES" ]]; then

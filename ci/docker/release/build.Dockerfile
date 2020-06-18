@@ -112,6 +112,9 @@ RUN source /opt/intel/compilers_and_libraries/linux/mkl/bin/mklvars.sh intel64 &
     cmake .. \
       -DBLASPP_BUILD_TESTS=OFF \
       -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+      -DUSE_OPENMP=OFF \
+      -DBLAS_LIBRARY='Intel MKL' \
+      -DBLAS_LIBRARY_THREADING=sequential \
       -DCMAKE_INSTALL_PREFIX=$BLASPP_PATH && \
     make -j$(nproc) && \
     make install && \

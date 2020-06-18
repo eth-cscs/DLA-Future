@@ -19,6 +19,7 @@
 TEST(Pipeline, Basic) {
   dlaf::common::TaskChain tc{};
 
+  // This shouldn't cause a race condition.
   int d = 0;
   auto func_1 = [&d](hpx::future<hpx::promise<void>> fp) {
     fp.get().set_value();

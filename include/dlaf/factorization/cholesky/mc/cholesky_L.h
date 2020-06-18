@@ -173,7 +173,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
             bcast_fut.get();
             return std::move(tile);
           };
-          kk_tile = hpx::dataflow(std::move(recv_bcast_f), col_bcast.chain());
+          kk_tile = hpx::dataflow(executor_hp, std::move(recv_bcast_f), col_bcast.chain());
         }
       }
 
@@ -193,8 +193,8 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
                 promise.set_value();
                 fut.get();
               });
-          hpx::dataflow(std::move(send_bcast_f), mat_a.read(LocalTileIndex{i_local, k_local_col}),
-                        row_bcast.chain());
+          hpx::dataflow(executor_hp, std::move(send_bcast_f),
+                        mat_a.read(LocalTileIndex{i_local, k_local_col}), row_bcast.chain());
         }
 
         panel[i_local] = mat_a.read(LocalTileIndex{i_local, k_local_col});
@@ -219,7 +219,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
             fut.get();
             return std::move(tile);
           };
-          panel[i_local] = hpx::dataflow(std::move(recv_bcast_f), row_bcast.chain());
+          panel[i_local] = hpx::dataflow(executor_hp, std::move(recv_bcast_f), row_bcast.chain());
         }
       }
     }
@@ -253,7 +253,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
                 promise.set_value();
                 fut.get();
               });
-          hpx::dataflow(std::move(send_bcast_f), panel[i_local], col_bcast.chain());
+          hpx::dataflow(executor_hp, std::move(send_bcast_f), panel[i_local], col_bcast.chain());
         }
 
         // Check if the diagonal tile of the trailing matrix is on this node and
@@ -279,7 +279,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
             fut.get();
             return std::move(tile);
           };
-          col_panel = hpx::dataflow(std::move(recv_bcast_f), col_bcast.chain());
+          col_panel = hpx::dataflow(executor_hp, std::move(recv_bcast_f), col_bcast.chain());
         }
       }
 

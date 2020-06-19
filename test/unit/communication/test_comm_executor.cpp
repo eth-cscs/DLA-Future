@@ -20,7 +20,6 @@
 
 TEST(Comm, SendRecv) {
   // A send-recv cycle between 4 processes
-  // hpx::threads::executors::pool_executor ex("default");
 
   auto comm = dlaf::comm::Communicator(MPI_COMM_WORLD);
   int rank = comm.rank();

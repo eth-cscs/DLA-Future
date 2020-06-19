@@ -28,7 +28,7 @@ LayoutInfo::LayoutInfo(const LocalElementSize& size, const TileElementSize& bloc
   nr_tiles_ = {util::ceilDiv(size_.rows(), block_size_.rows()),
                util::ceilDiv(size_.cols(), block_size_.cols())};
 
-  if (!size_.isEmpty()) {
+  if (size_.isEmpty()) {
     DLAF_ASSERT(ld_tile_ >= 1, "Invalid Leading Dimension!", size, ld_tile_);
     DLAF_ASSERT(tile_offset_row_ >= 1, "Invalid Tile Row Offset!");
     DLAF_ASSERT(tile_offset_col_ >= 1, "Invalid Tile Col Offset!");

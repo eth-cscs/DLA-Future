@@ -17,9 +17,9 @@ namespace dlaf {
 namespace common {
 namespace internal {
 
-/// Alias for std::vector with overloads for signed indexes
+/// Alias for std::vector with overloads for signed indexes.
 ///
-/// It is an std::vector with overloads for working seamlessly with unsigned integers as parameters
+/// It is an std::vector with overloads for working seamlessly with unsigned integers as parameters.
 template <typename T>
 struct vector : public std::vector<T> {
   vector(SizeType size) : std::vector<T>(to_sizet(size)) {}

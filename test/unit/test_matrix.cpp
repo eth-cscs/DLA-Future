@@ -164,7 +164,9 @@ TYPED_TEST(MatrixTest, ConstructorFromDistribution) {
 
 /// Returns the memory index of the @p index element of the matrix.
 ///
-/// @pre index should be valid, contained in @p distribution.size() and stored in the current rank.
+/// @pre index.isValid(),
+/// @pre contained in @p distribution.size(),
+/// @pre stored in the current rank.
 std::size_t memoryIndex(const Distribution& distribution, const LayoutInfo& layout,
                         const GlobalElementIndex& index) {
   using dlaf::util::size_t::sum;

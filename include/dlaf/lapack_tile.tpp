@@ -52,10 +52,10 @@ void potrf(blas::Uplo uplo, const Tile<T, device>& a) noexcept {
 
 template <class T, Device device>
 long long potrfInfo(blas::Uplo uplo, const Tile<T, device>& a) {
-  DLAF_ASSERT((a.size().rows() == a.size().cols()), "POTRF: `a` is not square!", a);
+  DLAF_ASSERT(a.size().rows() == a.size().cols(), "POTRF: `a` is not square!", a);
 
   auto info = lapack::potrf(uplo, a.size().rows(), a.ptr(), a.ld());
-  DLAF_ASSERT_HEAVY((info >= 0), "");
+  DLAF_ASSERT_HEAVY(info >= 0, "");
 
   return info;
 }

@@ -129,8 +129,8 @@ std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingGlob
 /// @pre 0 <= ready <= futures.size()
 template <class Future>
 bool checkFuturesStep(size_t ready, const std::vector<Future>& futures) {
-  DLAF_ASSERT_HEAVY((ready >= 0), "");
-  DLAF_ASSERT_HEAVY((ready <= futures.size()), "");
+  DLAF_ASSERT_HEAVY(ready >= 0, "");
+  DLAF_ASSERT_HEAVY(ready <= futures.size(), "");
 
   for (std::size_t index = 0; index < ready; ++index) {
     if (!futures[index].is_ready())
@@ -150,7 +150,7 @@ bool checkFuturesStep(size_t ready, const std::vector<Future>& futures) {
 /// @pre Future[1,2] should be a future or shared_future
 template <class Future1, class Future2>
 void checkFutures(bool get_ready, const std::vector<Future1>& current, std::vector<Future2>& previous) {
-  DLAF_ASSERT_HEAVY((current.size() == previous.size()), "");
+  DLAF_ASSERT_HEAVY(current.size() == previous.size(), "");
 
   for (std::size_t index = 0; index < current.size(); ++index) {
     EXPECT_TRUE(checkFuturesStep(get_ready ? index : 0, current));

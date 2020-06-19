@@ -36,7 +36,7 @@ class Tile;
 template <class T, Device device>
 class Tile<const T, device>;
 
-/// @brief The Tile object aims to provide an effective way to access the memory as a two dimensional
+/// The Tile object aims to provide an effective way to access the memory as a two dimensional
 /// array. It does not allocate any memory, but it references the memory given by a @c MemoryView object.
 /// It represents the building block of the Matrix object and of linear algebra algorithms.
 ///
@@ -53,11 +53,12 @@ class Tile<const T, device> {
 public:
   using ElementType = T;
 
-  /// @brief Constructs a (@p size.rows() x @p size.cols()) Tile.
-  /// @pre size.rows() >= 0
-  /// @pre size.cols() >= 0
-  /// @pre ld > max(1, @p size.rows())
-  /// @pre memory_view contains enough elements
+  /// Constructs a (@p size.rows() x @p size.cols()) Tile.
+  ///
+  /// @pre size.rows() >= 0,
+  /// @pre size.cols() >= 0,
+  /// @pre ld >= max(1, @p size.rows()),
+  /// @pre memory_view contains enough elements.
   /// The (i, j)-th element of the Tile is stored in the (i+ld*j)-th element of memory_view.
   Tile(const TileElementSize& size, memory::MemoryView<ElementType, device>&& memory_view,
        SizeType ld) noexcept;
@@ -66,7 +67,8 @@ public:
 
   Tile(Tile&& rhs) noexcept;
 
-  /// @brief Destroys the Tile.
+  /// Destroys the Tile.
+  ///
   /// If a promise was set using @c setPromise its value is set to a Tile
   /// which has the same size and which references the same memory as @p *this.
   ~Tile();
@@ -75,23 +77,25 @@ public:
 
   Tile& operator=(Tile&& rhs) noexcept;
 
-  /// @brief Returns the (i, j)-th element,
+  /// Returns the (i, j)-th element,
   /// where @p i := @p index.row and @p j := @p index.col.
-  /// @pre index.isValid() == true.
+  ///
+  /// @pre index.isValid() == true,
   /// @pre index.isIn(size()) == true.
   const T& operator()(const TileElementIndex& index) const noexcept {
     return *ptr(index);
   }
 
-  /// @brief Returns the base pointer.
+  /// Returns the base pointer.
   const T* ptr() const noexcept {
     return memory_view_();
   }
 
-  /// @brief Returns the pointer to the (i, j)-th element,
+  /// Returns the pointer to the (i, j)-th element,
   /// where @p i := @p index.row and @p j := @p index.col.
-  /// @pre index.isValid() == true.
-  /// @pre index.isIn(size()) == true.
+  ///
+  /// @pre index.isValid(),
+  /// @pre index.isIn(size()).
   const T* ptr(const TileElementIndex& index) const noexcept {
     using util::size_t::sum;
     using util::size_t::mul;
@@ -101,11 +105,11 @@ public:
     return memory_view_(sum(index.row(), mul(ld_, index.col())));
   }
 
-  /// @brief Returns the size of the Tile.
+  /// Returns the size of the Tile.
   const TileElementSize& size() const noexcept {
     return size_;
   }
-  /// @brief Returns the leading dimension.
+  /// Returns the leading dimension.
   SizeType ld() const noexcept {
     return ld_;
   }
@@ -116,7 +120,7 @@ public:
   }
 
 private:
-  /// @brief Sets size to {0, 0} and ld to 1.
+  /// Sets size to {0, 0} and ld to 1.
   void setDefaultSizes() noexcept;
 
   TileElementSize size_;
@@ -133,11 +137,12 @@ class Tile : public Tile<const T, device> {
 public:
   using ElementType = T;
 
-  /// @brief Constructs a (@p size.rows() x @p size.cols()) Tile.
-  /// @pre size.rows() >= 0
-  /// @pre size.cols() >= 0
-  /// @pre ld > max(1, @p size.rows())
-  /// @pre memory_view contains enough elements
+  /// Constructs a (@p size.rows() x @p size.cols()) Tile.
+  ///
+  /// @pre size.rows() >= 0,
+  /// @pre size.cols() >= 0,
+  /// @pre ld >= max(1, @p size.rows()),
+  /// @pre memory_view contains enough elements.
   /// The (i, j)-th element of the Tile is stored in the (i+ld*j)-th element of memory_view.
   Tile(const TileElementSize& size, memory::MemoryView<ElementType, device>&& memory_view,
        SizeType ld) noexcept
@@ -151,23 +156,25 @@ public:
 
   Tile& operator=(Tile&& rhs) = default;
 
-  /// @brief Returns the (i, j)-th element,
+  /// Returns the (i, j)-th element,
   /// where @p i := @p index.row and @p j := @p index.col.
-  /// @pre index.isValid() == true.
-  /// @pre index.isIn(size()) == true.
+  ///
+  /// @pre index.isValid(),
+  /// @pre index.isIn(size()).
   T& operator()(const TileElementIndex& index) const noexcept {
     return *ptr(index);
   }
 
-  /// @brief Returns the base pointer.
+  /// Returns the base pointer.
   T* ptr() const noexcept {
     return memory_view_();
   }
 
-  /// @brief Returns the pointer to the (i, j)-th element,
+  /// Returns the pointer to the (i, j)-th element,
   /// where @p i := @p index.row and @p j := @p index.col.
-  /// @pre index.isValid() == true.
-  /// @pre index.isIn(size()) == true.
+  ///
+  /// @pre index.isValid(),
+  /// @pre index.isIn(size()).
   T* ptr(const TileElementIndex& index) const noexcept {
     using util::size_t::sum;
     using util::size_t::mul;
@@ -177,7 +184,8 @@ public:
     return memory_view_(sum(index.row(), mul(ld_, index.col())));
   }
 
-  /// @brief Sets the promise to which this Tile will be moved on destruction.
+  /// Sets the promise to which this Tile will be moved on destruction.
+  ///
   /// @c setPromise can be called only once per object.
   Tile& setPromise(hpx::promise<Tile<T, device>>&& p) {
     DLAF_ASSERT(!p_, "setPromise has been already used on this object!");
@@ -192,7 +200,7 @@ private:
   using Tile<const T, device>::p_;
 };
 
-/// Create a common::Buffer from a Tile
+/// Create a common::Buffer from a Tile.
 template <class T, Device device>
 auto create_data(const Tile<T, device>& tile) {
   return common::DataDescriptor<T>(tile.ptr({0, 0}), to_sizet(tile.size().cols()),

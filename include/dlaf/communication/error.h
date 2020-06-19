@@ -23,10 +23,10 @@
 namespace dlaf {
 namespace internal {
 
-/// MPI provides two predefined error handlers
+/// MPI provides two predefined error handlers.
 ///
-/// - `MPI_ERRORS_ARE_FATAL` (the default): causes MPI to abort
-/// - `MPI_ERRORS_RETURN`: causes MPI to return an error values instead of aborting
+/// - `MPI_ERRORS_ARE_FATAL` (the default): causes MPI to abort,
+/// - `MPI_ERRORS_RETURN`: causes MPI to return an error values instead of aborting.
 ///
 /// This function is only relevant when the error handler is `MPI_ERRORS_RETURN`. To set the error
 /// handler use `MPI_Errhandler_set`.

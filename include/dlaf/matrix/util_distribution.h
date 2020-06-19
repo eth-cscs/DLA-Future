@@ -23,8 +23,8 @@ namespace matrix {
 ///
 /// If the element index is local, the returned tile index is local.
 /// If the element index is global, the returned tile index is global.
-/// @pre 0 <= element
-/// @pre 0 < block_size
+/// @pre 0 <= element,
+/// @pre 0 < block_size.
 inline SizeType tileFromElement(SizeType element, SizeType block_size) {
   DLAF_ASSERT_HEAVY(0 <= element, "");
   DLAF_ASSERT_HEAVY(0 < block_size, "");
@@ -34,8 +34,8 @@ inline SizeType tileFromElement(SizeType element, SizeType block_size) {
 /// Returns the index within the tile of the element with index @p element.
 ///
 /// The element index can be either global or local.
-/// @pre 0 <= element
-/// @pre 0 < block_size
+/// @pre 0 <= element,
+/// @pre 0 < block_size.
 inline SizeType tileElementFromElement(SizeType element, SizeType block_size) {
   DLAF_ASSERT_HEAVY(0 <= element, "");
   DLAF_ASSERT_HEAVY(0 < block_size, "");
@@ -47,9 +47,9 @@ inline SizeType tileElementFromElement(SizeType element, SizeType block_size) {
 ///
 /// If the tile index is local, the returned element index is local.
 /// If the tile index is global, the returned element index is global.
-/// @pre 0 <= tile
-/// @pre 0 <= tile_element < block_size
-/// @pre 0 < block_size
+/// @pre 0 <= tile,
+/// @pre 0 <= tile_element < block_size,
+/// @pre 0 < block_size.
 inline SizeType elementFromTileAndTileElement(SizeType tile, SizeType tile_element,
                                               SizeType block_size) {
   DLAF_ASSERT_HEAVY(0 <= tile, "");
@@ -60,9 +60,9 @@ inline SizeType elementFromTileAndTileElement(SizeType tile, SizeType tile_eleme
 
 /// Returns the rank index of the process that stores the tiles with index @p global_tile.
 ///
-/// @pre 0 <= global_tile
-/// @pre 0 < grid_size
-/// @pre 0 <= src_rank < grid_size
+/// @pre 0 <= global_tile,
+/// @pre 0 < grid_size,
+/// @pre 0 <= src_rank < grid_size.
 inline int rankGlobalTile(SizeType global_tile, int grid_size, int src_rank) {
   DLAF_ASSERT_HEAVY(0 <= global_tile, "");
   DLAF_ASSERT_HEAVY(0 < grid_size, "");
@@ -73,10 +73,10 @@ inline int rankGlobalTile(SizeType global_tile, int grid_size, int src_rank) {
 /// Returns the local tile index in process @p rank of the tile with index @p global_tile.
 ///
 /// If the tiles with @p global_tile index is not stored by @p rank it returns -1.
-/// @pre 0 <= global_tile
-/// @pre 0 < grid_size
-/// @pre 0 <= rank < grid_size
-/// @pre 0 <= src_rank < grid_size
+/// @pre 0 <= global_tile,
+/// @pre 0 < grid_size,
+/// @pre 0 <= rank < grid_size,
+/// @pre 0 <= src_rank < grid_size.
 inline SizeType localTileFromGlobalTile(SizeType global_tile, int grid_size, int rank, int src_rank) {
   DLAF_ASSERT_HEAVY(0 <= global_tile, "");
   DLAF_ASSERT_HEAVY(0 < grid_size, "");
@@ -93,10 +93,10 @@ inline SizeType localTileFromGlobalTile(SizeType global_tile, int grid_size, int
 /// whose index is the smallest index larger or equal @p global_tile
 /// and which is stored in process @p rank.
 ///
-/// @pre 0 <= global_tile
-/// @pre 0 < grid_size
-/// @pre 0 <= rank < grid_size
-/// @pre 0 <= src_rank < grid_size
+/// @pre 0 <= global_tile,
+/// @pre 0 < grid_size,
+/// @pre 0 <= rank < grid_size,
+/// @pre 0 <= src_rank < grid_size.
 inline SizeType nextLocalTileFromGlobalTile(SizeType global_tile, int grid_size, int rank,
                                             int src_rank) {
   DLAF_ASSERT_HEAVY(0 <= global_tile, "");
@@ -119,10 +119,10 @@ inline SizeType nextLocalTileFromGlobalTile(SizeType global_tile, int grid_size,
 /// Returns the global tile index of the tile that has index @p local_tile
 /// in the process with index @p rank.
 ///
-/// @pre 0 <= local_tile
-/// @pre 0 < grid_size
-/// @pre 0 <= rank < grid_size
-/// @pre 0 <= src_rank < grid_size
+/// @pre 0 <= local_tile,
+/// @pre 0 < grid_size,
+/// @pre 0 <= rank < grid_size,
+/// @pre 0 <= src_rank < grid_size.
 inline SizeType globalTileFromLocalTile(SizeType local_tile, int grid_size, int rank, int src_rank) {
   DLAF_ASSERT_HEAVY(0 <= local_tile, "");
   DLAF_ASSERT_HEAVY(0 < grid_size, "");

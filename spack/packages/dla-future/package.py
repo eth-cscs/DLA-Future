@@ -24,7 +24,7 @@ class DlaFuture(CMakePackage):
     depends_on('mpi')
     depends_on('blaspp')
     depends_on('lapackpp')
-    depends_on('hpx@1.4.0: cxxstd=14 networking=none')
+    depends_on('hpx@1.4.1: max_cpu_count=128 cxxstd=14 networking=none')
     depends_on('cuda', when='+cuda')
 
     def cmake_args(self):

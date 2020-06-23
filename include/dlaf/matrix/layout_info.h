@@ -10,6 +10,7 @@
 
 #pragma once
 #include <cassert>
+#include <cstddef>
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/util_math.h"
@@ -40,7 +41,7 @@ public:
   ///        (in elements, padding included) to store a column of tiles,
   /// @throw std::invalid_argument if the tiles overlap (combinations of @p tile_ld, @p tile_row_offset).
   LayoutInfo(const LocalElementSize& size, const TileElementSize& block_size, SizeType tile_ld,
-             std::size_t tile_offset_row, std::size_t tile_offset_col);
+             std::ptrdiff_t tile_offset_row, std::ptrdiff_t tile_offset_col);
 
   bool operator==(const LayoutInfo& rhs) const noexcept {
     return size_ == rhs.size_ && nr_tiles_ == rhs.nr_tiles_ && block_size_ == rhs.block_size_ &&
@@ -53,16 +54,15 @@ public:
   }
 
   /// Returns the minimum number of elements that are needed to fit a matrix with the given layout.
-  std::size_t minMemSize() const noexcept;
+  std::ptrdiff_t minMemSize() const noexcept;
 
   /// Returns the position of the first element of the @p index tile.
   ///
   /// @pre 0 < @p index.row() < nrTiles().rows()
   /// @pre 0 < @p index.col() < nrTiles().cols()
-  std::size_t tileOffset(const LocalTileIndex& index) const noexcept {
-    using util::size_t::mul;
+  std::ptrdiff_t tileOffset(const LocalTileIndex& index) const noexcept {
     assert(index.isValid() && index.isIn(nr_tiles_));
-    return mul(index.row(), tile_offset_row_) + mul(index.col(), tile_offset_col_);
+    return index.row() * tile_offset_row_ + index.col() * tile_offset_col_;
   }
 
   /// Returns the size @p index tile.
@@ -80,7 +80,7 @@ public:
   ///
   /// @pre 0 < @p index.row() < nrTiles().rows()
   /// @pre 0 < @p index.col() < nrTiles().cols()
-  std::size_t minTileMemSize(const LocalTileIndex& index) const noexcept {
+  std::ptrdiff_t minTileMemSize(const LocalTileIndex& index) const noexcept {
     assert(index.isValid() && index.isIn(nr_tiles_));
     return minTileMemSize(tileSize(index));
   }
@@ -89,7 +89,7 @@ public:
   ///
   /// @pre tile_size.rows() <= block_size.rows()
   /// @pre tile_size.cols() <= block_size.cols()
-  std::size_t minTileMemSize(const TileElementSize& tile_size) const noexcept;
+  std::ptrdiff_t minTileMemSize(const TileElementSize& tile_size) const noexcept;
 
   const LocalElementSize& size() const noexcept {
     return size_;
@@ -113,16 +113,14 @@ private:
   TileElementSize block_size_;
 
   SizeType ld_tile_;
-  std::size_t tile_offset_row_;
-  std::size_t tile_offset_col_;
+  std::ptrdiff_t tile_offset_row_;
+  std::ptrdiff_t tile_offset_col_;
 };
 
 /// Returns LayoutInfo for a local column major matrix.
 inline LayoutInfo colMajorLayout(const LocalElementSize& size, const TileElementSize& block_size,
                                  SizeType ld) {
-  using util::size_t::mul;
-  return LayoutInfo(size, block_size, ld, static_cast<std::size_t>(block_size.rows()),
-                    mul(block_size.cols(), ld));
+  return LayoutInfo(size, block_size, ld, block_size.rows(), block_size.cols() * ld);
 }
 /// Returns LayoutInfo for a distributed column major matrix.
 inline LayoutInfo colMajorLayout(const matrix::Distribution& distribution, SizeType ld) {
@@ -132,10 +130,9 @@ inline LayoutInfo colMajorLayout(const matrix::Distribution& distribution, SizeT
 /// Returns LayoutInfo for a local matrix which use the tile layout (Advanced interface).
 inline LayoutInfo tileLayout(const LocalElementSize& size, const TileElementSize& block_size,
                              SizeType ld_tile, SizeType tiles_per_col) {
-  using util::size_t::mul;
-  std::size_t tile_size = mul(ld_tile, block_size.cols());
-  std::size_t row_offset = std::max<std::size_t>(1, tile_size);
-  std::size_t col_offset = std::max<std::size_t>(1, mul(tile_size, tiles_per_col));
+  std::ptrdiff_t tile_size = ld_tile * block_size.cols();
+  std::ptrdiff_t row_offset = std::max<std::ptrdiff_t>(1, tile_size);
+  std::ptrdiff_t col_offset = std::max<std::ptrdiff_t>(1, tile_size * tiles_per_col);
   return LayoutInfo(size, block_size, ld_tile, row_offset, col_offset);
 }
 

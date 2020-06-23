@@ -237,7 +237,6 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
   // TODO A and L must be different
 
   using dlaf::common::make_data;
-  using dlaf::util::size_t::mul;
 
   // compute tile * tile_to_transpose' with the option to cumulate the result
   auto gemm_f =
@@ -303,8 +302,7 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
         DLAF_ASSERT_HEAVY(owner_transposed.col() == current_rank.col(), "");
 
         TileType workspace(L.blockSize(),
-                           dlaf::memory::MemoryView<T, Device::CPU>(
-                               mul(L.blockSize().rows(), L.blockSize().cols())),
+                           dlaf::memory::MemoryView<T, Device::CPU>(L.blockSize().linear_size()),
                            L.blockSize().rows());
 
         dlaf::comm::sync::broadcast::receive_from(owner_transposed.row(), comm_grid.colCommunicator(),

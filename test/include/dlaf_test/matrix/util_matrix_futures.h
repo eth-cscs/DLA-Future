@@ -27,12 +27,10 @@ namespace test {
 /// Note: This function is interchangeable with getFuturesUsingGlobalIndex.
 template <template <class, Device> class MatrixType, class T, Device device>
 std::vector<hpx::future<Tile<T, device>>> getFuturesUsingLocalIndex(MatrixType<T, device>& mat) {
-  using dlaf::util::size_t::mul;
-
   const matrix::Distribution& dist = mat.distribution();
 
   std::vector<hpx::future<Tile<T, device>>> result;
-  result.reserve(mul(dist.localNrTiles().rows(), dist.localNrTiles().cols()));
+  result.reserve(static_cast<std::size_t>(dist.localNrTiles().linear_size()));
 
   for (SizeType j = 0; j < dist.localNrTiles().cols(); ++j) {
     for (SizeType i = 0; i < dist.localNrTiles().rows(); ++i) {
@@ -49,12 +47,10 @@ std::vector<hpx::future<Tile<T, device>>> getFuturesUsingLocalIndex(MatrixType<T
 /// Note: This function is interchangeable with getFuturesUsingLocalIndex.
 template <template <class, Device> class MatrixType, class T, Device device>
 std::vector<hpx::future<Tile<T, device>>> getFuturesUsingGlobalIndex(MatrixType<T, device>& mat) {
-  using dlaf::util::size_t::mul;
-
   const matrix::Distribution& dist = mat.distribution();
 
   std::vector<hpx::future<Tile<T, device>>> result;
-  result.reserve(mul(dist.localNrTiles().rows(), dist.localNrTiles().cols()));
+  result.reserve(static_cast<std::size_t>(dist.localNrTiles().linear_size()));
 
   for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
     for (SizeType i = 0; i < dist.nrTiles().rows(); ++i) {
@@ -77,12 +73,10 @@ std::vector<hpx::future<Tile<T, device>>> getFuturesUsingGlobalIndex(MatrixType<
 template <template <class, Device> class MatrixType, class T, Device device>
 std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingLocalIndex(
     MatrixType<T, device>& mat) {
-  using dlaf::util::size_t::mul;
-
   const matrix::Distribution& dist = mat.distribution();
 
   std::vector<hpx::shared_future<Tile<const T, device>>> result;
-  result.reserve(mul(dist.localNrTiles().rows(), dist.localNrTiles().cols()));
+  result.reserve(static_cast<std::size_t>(dist.localNrTiles().linear_size()));
 
   for (SizeType j = 0; j < dist.localNrTiles().cols(); ++j) {
     for (SizeType i = 0; i < dist.localNrTiles().rows(); ++i) {
@@ -101,12 +95,10 @@ std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingLoca
 template <template <class, Device> class MatrixType, class T, Device device>
 std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingGlobalIndex(
     MatrixType<T, device>& mat) {
-  using dlaf::util::size_t::mul;
-
   const matrix::Distribution& dist = mat.distribution();
 
   std::vector<hpx::shared_future<Tile<const T, device>>> result;
-  result.reserve(mul(dist.localNrTiles().rows(), dist.localNrTiles().cols()));
+  result.reserve(static_cast<std::size_t>(dist.localNrTiles().linear_size()));
 
   for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
     for (SizeType i = 0; i < dist.nrTiles().rows(); ++i) {
@@ -175,10 +167,8 @@ void checkFutures(bool get_ready, const std::vector<Future1>& current, std::vect
 /// @pre Future1 should be a future or shared_future
 template <class Future1, class MatrixViewType>
 void checkFuturesDone(bool get_ready, const std::vector<Future1>& current, MatrixViewType& mat_view) {
-  using dlaf::util::size_t::mul;
-
   const auto& nr_tiles = mat_view.distribution().localNrTiles();
-  assert(current.size() == mul(nr_tiles.rows(), nr_tiles.cols()));
+  assert(current.size() == static_cast<std::size_t>(nr_tiles.linear_size()));
 
   for (std::size_t index = 0; index < current.size(); ++index) {
     EXPECT_TRUE(checkFuturesStep(get_ready ? index : 0, current));

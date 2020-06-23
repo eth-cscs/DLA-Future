@@ -34,7 +34,7 @@ Tile<T, Device::CPU> allocate_tile(TileElementSize size, SizeType extra_lda) {
 
   SizeType lda = std::max<SizeType>(1, size.rows()) + extra_lda;
 
-  MemoryView<T, Device::CPU> mem_a(mul(lda, size.cols()));
+  MemoryView<T, Device::CPU> mem_a(lda * size.cols());
   return {size, std::move(mem_a), lda};
 }
 

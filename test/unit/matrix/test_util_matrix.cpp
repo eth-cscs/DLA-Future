@@ -129,8 +129,7 @@ void check_is_hermitian(dlaf::Matrix<const T, Device::CPU>& matrix,
         else {
           dlaf::Tile<T, Device::CPU> workspace(size_tile_transposed,
                                                dlaf::memory::MemoryView<T, Device::CPU>(
-                                                   dlaf::util::size_t::mul(size_tile_transposed.rows(),
-                                                                           size_tile_transposed.cols())),
+                                                   size_tile_transposed.linear_size()),
                                                size_tile_transposed.rows());
 
           // recv from owner_transposed

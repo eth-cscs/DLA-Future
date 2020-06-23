@@ -28,10 +28,8 @@ constexpr SizeType m = 37;
 constexpr SizeType n = 87;
 constexpr SizeType ld = 133;
 
-std::size_t elIndex(TileElementIndex index, SizeType ld) {
-  using util::size_t::sum;
-  using util::size_t::mul;
-  return sum(index.row(), mul(ld, index.col()));
+int elIndex(TileElementIndex index, SizeType ld) {
+  return index.row() + ld * index.col();
 }
 
 using TileSizes = std::tuple<TileElementSize, SizeType>;
@@ -64,7 +62,7 @@ TYPED_TEST(TileTest, Constructor) {
     for (const auto n : sizes) {
       SizeType min_ld = std::max<SizeType>(1, m);
       for (const SizeType ld : {min_ld, min_ld + 64}) {
-        memory::MemoryView<Type, Device::CPU> memory_view(util::size_t::mul(ld, n));
+        memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
         TileElementSize size(m, n);
         for (SizeType j = 0; j < size.cols(); ++j) {
           for (SizeType i = 0; i < size.rows(); ++i) {
@@ -110,7 +108,7 @@ TYPED_TEST(TileTest, ConstructorConst) {
     for (const auto n : sizes) {
       SizeType min_ld = std::max<SizeType>(1, m);
       for (const SizeType ld : {min_ld, min_ld + 64}) {
-        memory::MemoryView<Type, Device::CPU> memory_view(util::size_t::mul(ld, n));
+        memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
         TileElementSize size(m, n);
         for (SizeType j = 0; j < size.cols(); ++j) {
           for (SizeType i = 0; i < size.rows(); ++i) {
@@ -137,7 +135,7 @@ TYPED_TEST(TileTest, ConstructorConst) {
 TYPED_TEST(TileTest, ConstructorExceptions) {
   using Type = TypeParam;
   using MemView = memory::MemoryView<Type, Device::CPU>;
-  std::size_t size = elIndex({m - 1, n - 1}, ld) + 1;
+  int size = elIndex({m - 1, n - 1}, ld) + 1;
 
   EXPECT_THROW((Tile<Type, Device::CPU>({m, n}, MemView(size - 1), ld)), std::invalid_argument);
   EXPECT_THROW((Tile<Type, Device::CPU>({-1, n}, MemView(size), ld)), std::invalid_argument);
@@ -154,7 +152,7 @@ TYPED_TEST(TileTest, ConstructorExceptions) {
 
 TYPED_TEST(TileTest, MoveConstructor) {
   using Type = TypeParam;
-  memory::MemoryView<Type, Device::CPU> memory_view(util::size_t::mul(ld, n));
+  memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
 
   TileElementSize size(m, n);
   auto mem_view = memory_view;  // Copy the memory view to check the elements later.
@@ -170,7 +168,7 @@ TYPED_TEST(TileTest, MoveConstructor) {
 
 TYPED_TEST(TileTest, MoveConstructorConst) {
   using Type = TypeParam;
-  memory::MemoryView<Type, Device::CPU> memory_view(util::size_t::mul(ld, n));
+  memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
 
   TileElementSize size(m, n);
   auto mem_view = memory_view;  // Copy the memory view to check the elements later.
@@ -186,7 +184,7 @@ TYPED_TEST(TileTest, MoveConstructorConst) {
 
 TYPED_TEST(TileTest, MoveConstructorMix) {
   using Type = TypeParam;
-  memory::MemoryView<Type, Device::CPU> memory_view(util::size_t::mul(ld, n));
+  memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
 
   TileElementSize size(m, n);
   auto mem_view = memory_view;  // Copy the memory view to check the elements later.
@@ -202,7 +200,7 @@ TYPED_TEST(TileTest, MoveConstructorMix) {
 
 TYPED_TEST(TileTest, MoveAssignement) {
   using Type = TypeParam;
-  memory::MemoryView<Type, Device::CPU> memory_view(util::size_t::mul(ld, n));
+  memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
 
   TileElementSize size(m, n);
   auto mem_view = memory_view;  // Copy the memory view to check the elements later.
@@ -219,7 +217,7 @@ TYPED_TEST(TileTest, MoveAssignement) {
 
 TYPED_TEST(TileTest, MoveAssignementConst) {
   using Type = TypeParam;
-  memory::MemoryView<Type, Device::CPU> memory_view(util::size_t::mul(ld, n));
+  memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
 
   TileElementSize size(m, n);
   auto mem_view = memory_view;  // Copy the memory view to check the elements later.
@@ -236,7 +234,7 @@ TYPED_TEST(TileTest, MoveAssignementConst) {
 
 TYPED_TEST(TileTest, MoveAssignementMix) {
   using Type = TypeParam;
-  memory::MemoryView<Type, Device::CPU> memory_view(util::size_t::mul(ld, n));
+  memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
 
   TileElementSize size(m, n);
   auto mem_view = memory_view;  // Copy the memory view to check the elements later.
@@ -253,7 +251,7 @@ TYPED_TEST(TileTest, MoveAssignementMix) {
 
 TYPED_TEST(TileTest, ReferenceMix) {
   using Type = TypeParam;
-  memory::MemoryView<Type, Device::CPU> memory_view(util::size_t::mul(ld, n));
+  memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
 
   TileElementSize size(m, n);
   auto mem_view = memory_view;  // Copy the memory view to check the elements later.
@@ -269,7 +267,7 @@ TYPED_TEST(TileTest, ReferenceMix) {
 
 TYPED_TEST(TileTest, PointerMix) {
   using Type = TypeParam;
-  memory::MemoryView<Type, Device::CPU> memory_view(util::size_t::mul(ld, n));
+  memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
 
   TileElementSize size(m, n);
   auto mem_view = memory_view;  // Copy the memory view to check the elements later.
@@ -285,7 +283,7 @@ TYPED_TEST(TileTest, PointerMix) {
 
 TYPED_TEST(TileTest, PromiseToFuture) {
   using Type = TypeParam;
-  memory::MemoryView<Type, Device::CPU> memory_view(util::size_t::mul(ld, n));
+  memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
 
   TileElementSize size(m, n);
   auto mem_view = memory_view;  // Copy the memory view to check the elements later.
@@ -312,7 +310,7 @@ TYPED_TEST(TileTest, PromiseToFuture) {
 
 TYPED_TEST(TileTest, PromiseToFutureConst) {
   using Type = TypeParam;
-  memory::MemoryView<Type, Device::CPU> memory_view(util::size_t::mul(ld, n));
+  memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
 
   TileElementSize size(m, n);
   auto mem_view = memory_view;  // Copy the memory view to check the elements later.
@@ -345,7 +343,7 @@ TYPED_TEST(TileTest, CreateBuffer) {
   SizeType n = 87;
   SizeType ld = 133;
 
-  memory::MemoryView<TypeParam, Device::CPU> memory_view(util::size_t::mul(ld, n));
+  memory::MemoryView<TypeParam, Device::CPU> memory_view(ld * n);
   auto mem_view = memory_view;
 
   TileElementSize size(m, n);

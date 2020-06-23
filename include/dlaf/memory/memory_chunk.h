@@ -40,22 +40,26 @@ public:
   /// @param size The size of the memory to be allocated.
   ///
   /// Memory of @a size elements of type @c T are is allocated on the given device.
-  MemoryChunk(std::size_t size) : size_(size), ptr_(nullptr), allocated_(true) {
+  MemoryChunk(std::ptrdiff_t size) : size_(size), ptr_(nullptr), allocated_(true) {
+    DLAF_ASSERT(size >= 0, "");
+
     if (size == 0)
       return;
 
+    std::size_t mem_size = static_cast<std::size_t>(size_) * sizeof(T);
 #ifdef DLAF_WITH_CUDA
     if (device == Device::CPU) {
-      DLAF_CUDA_CALL(cudaMallocHost(&ptr_, size_ * sizeof(T)));
+      DLAF_CUDA_CALL(cudaMallocHost(&ptr_, mem_size));
     }
     else {
-      DLAF_CUDA_CALL(cudaMalloc(&ptr_, size_ * sizeof(T)));
+      DLAF_CUDA_CALL(cudaMalloc(&ptr_, mem_size));
     }
 #else
     if (device == Device::CPU) {
-      ptr_ = static_cast<T*>(std::malloc(size_ * sizeof(T)));
+      ptr_ = static_cast<T*>(std::malloc(mem_size));
     }
     else {
+      std::cout << "[ERROR] CUDA code was requested but the `DLAF_WITH_CUDA` flag was not passed!";
       std::terminate();
     }
 #endif
@@ -66,7 +70,7 @@ public:
   /// @param ptr  The pointer to the already allocated memory.
   /// @param size The size (in number of elements of type @c T) of the existing allocation.
   /// @pre @p ptr+i can be deferenced for 0 < @c i < @p size
-  MemoryChunk(T* ptr, std::size_t size)
+  MemoryChunk(T* ptr, std::ptrdiff_t size)
       : size_(size), ptr_(size > 0 ? ptr : nullptr), allocated_(false) {
     assert(size == 0 ? ptr_ == nullptr : ptr_ != nullptr);
   }
@@ -106,11 +110,11 @@ public:
   ///
   /// @param index index of the position
   /// @pre @p index < @p size
-  T* operator()(size_t index) {
+  T* operator()(std::ptrdiff_t index) {
     assert(index < size_);
     return ptr_ + index;
   }
-  const T* operator()(size_t index) const {
+  const T* operator()(std::ptrdiff_t index) const {
     assert(index < size_);
     return ptr_ + index;
   }
@@ -125,7 +129,7 @@ public:
   }
 
   /// @brief Returns the number of elements of type @c T allocated.
-  std::size_t size() const {
+  std::ptrdiff_t size() const {
     return size_;
   }
 
@@ -147,7 +151,7 @@ private:
     }
   }
 
-  std::size_t size_;
+  std::ptrdiff_t size_;
   T* ptr_;
   bool allocated_;
 };

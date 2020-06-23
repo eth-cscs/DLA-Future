@@ -147,6 +147,10 @@ public:
   friend std::ostream& operator<<(std::ostream& out, const Size2D& index) {
     return out << static_cast<BaseT>(index);
   }
+
+  std::ptrdiff_t linear_size() const noexcept {
+    return BaseT::row_ * BaseT::col_;
+  }
 };
 
 template <class T, class Tag>

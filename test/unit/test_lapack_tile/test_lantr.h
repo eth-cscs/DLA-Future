@@ -32,7 +32,6 @@ using dlaf::Tile;
 using dlaf::Device;
 
 using dlaf::tile::lantr;
-using dlaf::util::size_t::mul;
 using dlaf::matrix::test::set;
 
 template <class T>

@@ -158,7 +158,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
           // Receive the diagonal tile
           auto recv_bcast_f = unwrapping([rank = kk_tile_rank.row(), tile_size = mat_a.tileSize(kk_idx)](
                                              auto&& comm_wrapper) -> ConstTile_t {
-            MemView_t mem_view(util::size_t::mul(tile_size.rows(), tile_size.cols()));
+            MemView_t mem_view(tile_size.linear_size());
             Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
             comm::sync::broadcast::receive_from(rank, comm_wrapper().colCommunicator(), tile);
             return std::move(tile);
@@ -198,7 +198,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
           auto recv_bcast_f =
               unwrapping([rank = kk_tile_rank.col(), tile_size = mat_a.tileSize(GlobalTileIndex(i, k))](
                              auto&& comm_wrapper) -> ConstTile_t {
-                MemView_t mem_view(util::size_t::mul(tile_size.rows(), tile_size.cols()));
+                MemView_t mem_view(tile_size.linear_size());
                 Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
                 comm::sync::broadcast::receive_from(rank, comm_wrapper().rowCommunicator(), tile);
                 return std::move(tile);
@@ -252,7 +252,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
           auto recv_bcast_f =
               unwrapping([rank = j_rank_row, tile_size = mat_a.tileSize(GlobalTileIndex(j, k))](
                              auto&& comm_wrapper) -> ConstTile_t {
-                MemView_t mem_view(util::size_t::mul(tile_size.rows(), tile_size.cols()));
+                MemView_t mem_view(tile_size.linear_size());
                 Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
                 comm::sync::broadcast::receive_from(rank, comm_wrapper().colCommunicator(), tile);
                 return std::move(tile);

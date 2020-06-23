@@ -13,6 +13,7 @@
 #include <memory>
 #include <type_traits>
 
+#include <bits/c++config.h>
 #include <gtest/gtest.h>
 
 #include "dlaf/types.h"
@@ -23,11 +24,11 @@ using namespace dlaf;
 template <typename T>
 struct memory_data {
   std::unique_ptr<T[]> data;
-  std::size_t num_blocks;
-  std::size_t block_size;
-  std::size_t stride;
+  int num_blocks;
+  int block_size;
+  int stride;
 
-  T& operator[](std::size_t index) {
+  T& operator[](int index) {
     auto i_block = index / block_size;
     auto i_element = index % block_size;
     return data.get()[i_block * stride + i_element];
@@ -35,19 +36,19 @@ struct memory_data {
 };
 
 template <class T>
-memory_data<T> create_memory(const std::size_t num_blocks, const std::size_t blocksize,
-                             const std::size_t stride) {
+memory_data<T> create_memory(const int num_blocks, const int blocksize, const int stride) {
   assert(num_blocks > 0);
   assert(blocksize <= stride || stride == 0);
 
   if (num_blocks == 1)
-    return {std::make_unique<T[]>(blocksize), num_blocks, blocksize, stride};
+    return {std::make_unique<T[]>(static_cast<std::size_t>(blocksize)), num_blocks, blocksize, stride};
 
   // the last element does not have additional padding
   // no additional padding to the next (non-existing) element
   auto distance = std::max(blocksize, stride);
   auto memory_footprint = (num_blocks - 1) * distance + blocksize;
-  return {std::make_unique<T[]>(memory_footprint), num_blocks, blocksize, stride};
+  return {std::make_unique<T[]>(static_cast<std::size_t>(memory_footprint)), num_blocks, blocksize,
+          stride};
 }
 
 enum class MEMORY_TYPE { ARRAY_CONTIGUOUS, ARRAY_STRIDED, ARRAY_CONTIGUOUS_AS_STRIDED };
@@ -267,7 +268,7 @@ TYPED_TEST(DataDescriptorTest, MakeFromStridedArrayConst) {
 }
 
 TYPED_TEST(DataDescriptorTest, MakeBufferUniquePtr) {
-  const std::size_t N = 13;
+  const int N = 13;
   auto data = common::Buffer<TypeParam>(N);
 
   EXPECT_NE(nullptr, data_pointer(data));
@@ -460,7 +461,7 @@ TYPED_TEST(DataDescriptorTest, CtorFromStridedArrayConst) {
 }
 
 TYPED_TEST(DataDescriptorTest, CtorBufferUniquePtr) {
-  const std::size_t N = 13;
+  const int N = 13;
   auto data = common::Buffer<TypeParam>(N);
 
   EXPECT_NE(nullptr, data_pointer(data));
@@ -642,7 +643,7 @@ TYPED_TEST(DataDescriptorTest, CopyDataArrays) {
     auto memory_src = create_memory<TypeParam>(memory_type);
     auto memory_dest = create_memory<TypeParam>(memory_type);
 
-    for (std::size_t i = 0; i < memory_src.num_blocks * memory_src.block_size; ++i)
+    for (int i = 0; i < memory_src.num_blocks * memory_src.block_size; ++i)
       memory_src[i] = dlaf_test::TypeUtilities<TypeParam>::element(i, 0);
 
     auto data_src = create_const_data_from_memory(memory_src);
@@ -650,14 +651,14 @@ TYPED_TEST(DataDescriptorTest, CopyDataArrays) {
 
     common::copy(data_src, data_dest);
 
-    for (std::size_t i = 0; i < memory_src.num_blocks * memory_src.block_size; ++i)
+    for (int i = 0; i < memory_src.num_blocks * memory_src.block_size; ++i)
       EXPECT_EQ(dlaf_test::TypeUtilities<TypeParam>::element(i, 0), memory_dest[i]);
   }
 }
 
 TYPED_TEST(DataDescriptorTest, CopyDataHeterogeneous) {
-  const std::size_t N = 26;
-  const std::size_t N_GROUPS = 2;
+  const int N = 26;
+  const int N_GROUPS = 2;
   static_assert(N % N_GROUPS == 0, "Incompatible geometry");
 
   std::vector<memory_data<TypeParam>> memory_types;
@@ -672,10 +673,10 @@ TYPED_TEST(DataDescriptorTest, CopyDataHeterogeneous) {
   // CArray as source
   for (auto& memory_dest : memory_types) {
     TypeParam memory_array[N];
-    for (std::size_t i = 0; i < N; ++i)
+    for (int i = 0; i < N; ++i)
       memory_array[i] = dlaf_test::TypeUtilities<TypeParam>::element(i, 0);
 
-    for (std::size_t i = 0; i < N; ++i)
+    for (int i = 0; i < N; ++i)
       memory_dest[i] = 0;
 
     auto data_array = common::make_data(memory_array, N);
@@ -683,17 +684,17 @@ TYPED_TEST(DataDescriptorTest, CopyDataHeterogeneous) {
 
     copy(data_array, data_dest);
 
-    for (std::size_t i = 0; i < N; ++i)
+    for (int i = 0; i < N; ++i)
       EXPECT_EQ(dlaf_test::TypeUtilities<TypeParam>::element(i, 0), memory_dest[i]);
   }
 
   // CArray as destination
   for (auto& memory_src : memory_types) {
     TypeParam memory_array[N];
-    for (std::size_t i = 0; i < N; ++i)
+    for (int i = 0; i < N; ++i)
       memory_array[i] = 0;
 
-    for (std::size_t i = 0; i < N; ++i)
+    for (int i = 0; i < N; ++i)
       memory_src[i] = dlaf_test::TypeUtilities<TypeParam>::element(i, 0);
 
     auto data_src = create_const_data_from_memory(memory_src);
@@ -701,7 +702,7 @@ TYPED_TEST(DataDescriptorTest, CopyDataHeterogeneous) {
 
     copy(data_src, data_array);
 
-    for (std::size_t i = 0; i < N; ++i)
+    for (int i = 0; i < N; ++i)
       EXPECT_EQ(dlaf_test::TypeUtilities<TypeParam>::element(i, 0), memory_array[i]);
   }
 
@@ -711,10 +712,10 @@ TYPED_TEST(DataDescriptorTest, CopyDataHeterogeneous) {
       if (&memory_src == &memory_dest)
         continue;
 
-      for (std::size_t i = 0; i < N; ++i)
+      for (int i = 0; i < N; ++i)
         memory_src[i] = dlaf_test::TypeUtilities<TypeParam>::element(i, 0);
 
-      for (std::size_t i = 0; i < N; ++i)
+      for (int i = 0; i < N; ++i)
         memory_dest[i] = 0;
 
       auto data_src = create_const_data_from_memory(memory_src);
@@ -722,7 +723,7 @@ TYPED_TEST(DataDescriptorTest, CopyDataHeterogeneous) {
 
       copy(data_src, data_dest);
 
-      for (std::size_t i = 0; i < N; ++i)
+      for (int i = 0; i < N; ++i)
         EXPECT_EQ(dlaf_test::TypeUtilities<TypeParam>::element(i, 0), memory_dest[i]);
     }
   }

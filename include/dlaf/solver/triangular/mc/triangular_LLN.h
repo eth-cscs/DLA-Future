@@ -137,8 +137,7 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
               hpx::dataflow(executor_mpi,
                             hpx::util::unwrapping([](auto index, auto&& tile_size,
                                                      auto&& comm_wrapper) -> Tile<const T, Device::CPU> {
-                              memory::MemoryView<T, Device::CPU> mem_view(
-                                  util::size_t::mul(tile_size.rows(), tile_size.cols()));
+                              memory::MemoryView<T, Device::CPU> mem_view(tile_size.linear_size());
                               Tile<T, Device::CPU> tile(tile_size, std::move(mem_view),
                                                         tile_size.rows());
                               comm::sync::broadcast::receive_from(index,
@@ -179,8 +178,7 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
               hpx::dataflow(executor_mpi,
                             hpx::util::unwrapping([](auto index, auto&& tile_size,
                                                      auto&& comm_wrapper) -> Tile<const T, Device::CPU> {
-                              memory::MemoryView<T, Device::CPU> mem_view(
-                                  util::size_t::mul(tile_size.rows(), tile_size.cols()));
+                              memory::MemoryView<T, Device::CPU> mem_view(tile_size.linear_size());
                               Tile<T, Device::CPU> tile(tile_size, std::move(mem_view),
                                                         tile_size.rows());
                               comm::sync::broadcast::receive_from(index,
@@ -222,8 +220,7 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
               hpx::dataflow(executor_mpi,
                             hpx::util::unwrapping([](auto index, auto&& tile_size,
                                                      auto&& comm_wrapper) -> Tile<const T, Device::CPU> {
-                              memory::MemoryView<T, Device::CPU> mem_view(
-                                  util::size_t::mul(tile_size.rows(), tile_size.cols()));
+                              memory::MemoryView<T, Device::CPU> mem_view(tile_size.linear_size());
                               Tile<T, Device::CPU> tile(tile_size, std::move(mem_view),
                                                         tile_size.rows());
                               comm::sync::broadcast::receive_from(index,

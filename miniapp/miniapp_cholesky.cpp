@@ -123,7 +123,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 
 int main(int argc, char** argv) {
   // Initialize MPI
-  int threading_required = MPI_THREAD_SERIALIZED;
+  //int threading_required = MPI_THREAD_SERIALIZED;
+  int threading_required = MPI_THREAD_MULTIPLE;
   int threading_provided;
   MPI_Init_thread(&argc, &argv, threading_required, &threading_provided);
 

@@ -57,7 +57,7 @@ public:
   ///
   /// @pre index.isValid(),
   /// @pre index.isIn(globalNrTiles()),
-  /// @pre global tile store in current process.
+  /// @pre global tile stored in current process.
   hpx::shared_future<ConstTileType> read(const GlobalTileIndex& index) {
     return read(distribution().localTileIndex(index));
   }

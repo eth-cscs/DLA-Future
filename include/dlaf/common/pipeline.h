@@ -33,7 +33,8 @@ public:
     /// Create a wrapper.
     /// @param object	the resource to wrap (the wrapper becomes the owner of the resource),
     /// @param next	the promise that has to be set on destruction.
-    Wrapper(U&& object, hpx::lcos::local::promise<T> next) : object_(std::move(object)), promise_(std::move(next)) {}
+    Wrapper(U&& object, hpx::lcos::local::promise<T> next)
+        : object_(std::move(object)), promise_(std::move(next)) {}
 
   public:
     /// Trivial move constructor (that invalidates the status of the source object).
@@ -59,7 +60,8 @@ public:
 
   private:
     U object_;                 ///< the wrapped object! it is actually owned by the wrapper.
-    hpx::lcos::local::promise<U> promise_;  ///< promise containing the shared state that will unlock the next user.
+    /// promise containing the shared state that will unlock the next user.
+    hpx::lcos::local::promise<U> promise_;
   };
 
   /// Create a Pipeline by moving in the resource (it takes the ownership).

@@ -96,6 +96,8 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
   using ConstTile_t = Tile<const T, Device::CPU>;
   using Tile_t = Tile<T, Device::CPU>;
   using MemView_t = memory::MemoryView<T, Device::CPU>;
+  using SharedFutureConstTile_t = hpx::shared_future<ConstTile_t>;
+  using FuturePromise_t = hpx::future<hpx::promise<void>>;
 
   constexpr auto NonUnit = blas::Diag::NonUnit;
   constexpr auto ConjTrans = blas::Op::ConjTrans;
@@ -128,13 +130,13 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
 
   for (SizeType k = 0; k < nrtile; ++k) {
     // Create a placeholder that will store the shared futures representing the panel
-    vector<hpx::shared_future<ConstTile_t>> panel(distr.localNrTiles().rows());
+    vector<SharedFutureConstTile_t> panel(distr.localNrTiles().rows());
 
     auto kk_idx = GlobalTileIndex(k, k);
     auto kk_tile_rank = distr.rankGlobalTile(kk_idx);
 
     if (this_rank.col() == kk_tile_rank.col()) {
-      hpx::shared_future<ConstTile_t> kk_tile;
+      SharedFutureConstTile_t kk_tile;
 
       if (this_rank.row() == kk_tile_rank.row()) {
         LocalTileIndex kk = distr.localTileIndex(kk_idx);
@@ -146,12 +148,12 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
         // Avoid useless communication if one-column communicator and if on the last column
         if (col_comm_size > 1 && k != (mat_a.nrTiles().cols() - 1)) {
           // Broadcast the panel column-wise
-          auto send_bcast_f =
-              hpx::util::unwrapping([ex = executor_mpi_col](auto&& tile, auto&& promise) mutable {
-                auto bcast_fut = comm::bcast(ex, ex.comm().rank(), tile);
-                promise.set_value();
-                bcast_fut.get();
-              });
+          auto send_bcast_f = [ex = executor_mpi_col](SharedFutureConstTile_t fut_tile,
+                                                      FuturePromise_t fut_promise) mutable {
+            auto bcast_fut = comm::bcast(ex, ex.comm().rank(), fut_tile.get());
+            fut_promise.get().set_value();
+            bcast_fut.get();
+          };
           hpx::dataflow(executor_hp, std::move(send_bcast_f), mat_a.read(kk), col_bcast.chain());
         }
 
@@ -161,9 +163,9 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
         // Avoid useless communications if one-column communicator and if on the last column
         if (col_comm_size > 1 && k != (mat_a.nrTiles().cols() - 1)) {
           // Receive the diagonal tile
-          auto recv_bcast_f = [ex = executor_mpi_col, rank = kk_tile_rank.row(),
-                               tile_size =
-                                   mat_a.tileSize(kk_idx)](auto&& fut_promise) mutable -> ConstTile_t {
+          auto recv_bcast_f =
+              [ex = executor_mpi_col, rank = kk_tile_rank.row(),
+               tile_size = mat_a.tileSize(kk_idx)](FuturePromise_t fut_promise) mutable -> ConstTile_t {
             MemView_t mem_view(util::size_t::mul(tile_size.rows(), tile_size.cols()));
             Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
             auto bcast_fut = comm::bcast(ex, rank, tile);
@@ -186,12 +188,12 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
         // Avoid useless communications if one-row communicator grid
         if (row_comm_size > 1) {
           // Broadcast the panel row-wise
-          auto send_bcast_f =
-              hpx::util::unwrapping([ex = executor_mpi_row](auto&& tile, auto&& promise) mutable {
-                auto fut = comm::bcast(ex, ex.comm().rank(), tile);
-                promise.set_value();
-                fut.get();
-              });
+          auto send_bcast_f = [ex = executor_mpi_row](SharedFutureConstTile_t fut_tile,
+                                                      FuturePromise_t fut_promise) mutable {
+            auto fut = comm::bcast(ex, ex.comm().rank(), fut_tile.get());
+            fut_promise.get().set_value();
+            fut.get();
+          };
           hpx::dataflow(executor_hp, std::move(send_bcast_f), mat_a.read(ik_local_idx),
                         row_bcast.chain());
         }
@@ -209,7 +211,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
           // Receiving the panel
           auto recv_bcast_f = [ex = executor_mpi_row, rank = kk_tile_rank.col(),
                                tile_size = mat_a.tileSize(GlobalTileIndex(i, k))](
-                                  auto&& fut_promise) mutable -> ConstTile_t {
+                                  FuturePromise_t fut_promise) mutable -> ConstTile_t {
             MemView_t mem_view(util::size_t::mul(tile_size.rows(), tile_size.cols()));
             Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
             auto fut = comm::bcast(ex, rank, tile);
@@ -235,7 +237,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
       //        auto trailing_matrix_executor = (j_local == nextlocaltilek) ? executor_hp :
       //        executor_normal;
 
-      hpx::shared_future<ConstTile_t> col_panel;
+      SharedFutureConstTile_t col_panel;
 
       auto j_rank_row = distr.rankGlobalTile<Coord::Row>(j);
 
@@ -245,12 +247,12 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
         // Avoid useless communications if one-row communicator grid and if on the last panel
         if (col_comm_size > 1 && j != (mat_a.nrTiles().cols() - 1)) {
           // Broadcast the (trailing) panel column-wise
-          auto send_bcast_f =
-              hpx::util::unwrapping([ex = executor_mpi_col](auto&& tile, auto&& promise) mutable {
-                auto fut = comm::bcast(ex, ex.comm().rank(), tile);
-                promise.set_value();
-                fut.get();
-              });
+          auto send_bcast_f = [ex = executor_mpi_col](SharedFutureConstTile_t fut_tile,
+                                                      FuturePromise_t fut_promise) mutable {
+            auto fut = comm::bcast(ex, ex.comm().rank(), fut_tile.get());
+            fut_promise.get().set_value();
+            fut.get();
+          };
           hpx::dataflow(executor_hp, std::move(send_bcast_f), panel[i_local], col_bcast.chain());
         }
 
@@ -268,7 +270,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
           // Update the (trailing) panel column-wise
           auto recv_bcast_f = [ex = executor_mpi_col, rank = j_rank_row,
                                tile_size = mat_a.tileSize(GlobalTileIndex(j, k))](
-                                  auto&& fut_promise) mutable -> ConstTile_t {
+                                  FuturePromise_t fut_promise) mutable -> ConstTile_t {
             MemView_t mem_view(util::size_t::mul(tile_size.rows(), tile_size.cols()));
             Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
             auto fut = comm::bcast(ex, rank, tile);

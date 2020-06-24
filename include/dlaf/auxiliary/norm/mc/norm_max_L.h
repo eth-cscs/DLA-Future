@@ -10,7 +10,6 @@
 #pragma once
 
 #include <hpx/hpx.hpp>
-#include <hpx/util/unwrap.hpp>
 
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/vector.h"

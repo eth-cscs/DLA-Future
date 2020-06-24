@@ -50,7 +50,7 @@ hpx::shared_future<Tile<const T, device>> Matrix<const T, device>::read(
   std::size_t i = tileLinearIndex(index);
   if (!tile_shared_futures_[i].valid()) {
     hpx::future<TileType> old_future = std::move(tile_futures_[i]);
-    hpx::promise<TileType> p;
+    hpx::lcos::local::promise<TileType> p;
     tile_futures_[i] = p.get_future();
     tile_shared_futures_[i] = std::move(
         old_future.then(hpx::launch::sync, [p = std::move(p)](hpx::future<TileType>&& fut) mutable {

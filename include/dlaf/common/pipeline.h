@@ -10,8 +10,7 @@
 
 #pragma once
 
-#include <hpx/lcos/future.hpp>
-#include <hpx/lcos/promise.hpp>
+#include <hpx/hpx.hpp>
 
 namespace dlaf {
 namespace common {
@@ -34,7 +33,7 @@ public:
     /// Create a wrapper.
     /// @param object	the resource to wrap (the wrapper becomes the owner of the resource),
     /// @param next	the promise that has to be set on destruction.
-    Wrapper(U&& object, hpx::promise<T> next) : object_(std::move(object)), promise_(std::move(next)) {}
+    Wrapper(U&& object, hpx::lcos::local::promise<T> next) : object_(std::move(object)), promise_(std::move(next)) {}
 
   public:
     /// Trivial move constructor (that invalidates the status of the source object).
@@ -60,7 +59,7 @@ public:
 
   private:
     U object_;                 ///< the wrapped object! it is actually owned by the wrapper.
-    hpx::promise<U> promise_;  ///< promise containing the shared state that will unlock the next user.
+    hpx::lcos::local::promise<U> promise_;  ///< promise containing the shared state that will unlock the next user.
   };
 
   /// Create a Pipeline by moving in the resource (it takes the ownership).
@@ -80,7 +79,7 @@ public:
   hpx::future<Wrapper<T>> operator()() {
     auto before_last = std::move(future_);
 
-    hpx::promise<T> promise_next;
+    hpx::lcos::local::promise<T> promise_next;
     future_ = promise_next.get_future();
 
     return before_last.then(hpx::launch::sync,

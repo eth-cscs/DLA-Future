@@ -12,7 +12,7 @@
 /// @file
 
 #include <hpx/include/threads.hpp>
-#include <hpx/runtime/threads/executors/pool_executor.hpp>
+#include <hpx/runtime_local/pool_executor.hpp>
 
 namespace dlaf {
 namespace comm {

@@ -40,7 +40,7 @@
 #include <cstdio>
 
 #include <gtest/gtest.h>
-#include <hpx/hpx.hpp>
+#include <hpx/hpx_init.hpp>
 
 #include "gtest_mpi_listener.h"
 

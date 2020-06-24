@@ -12,7 +12,7 @@
 
 #include <gtest/gtest.h>
 
-#include <hpx/lcos/future.hpp>
+#include <hpx/hpx.hpp>
 
 using namespace dlaf;
 using dlaf::common::Pipeline;

@@ -11,8 +11,9 @@
 #pragma once
 
 #include <exception>
-#include <hpx/hpx.hpp>
 #include <ostream>
+
+#include <hpx/hpx.hpp>
 
 #include "dlaf/common/data_descriptor.h"
 #include "dlaf/matrix/index.h"
@@ -123,7 +124,7 @@ private:
   memory::MemoryView<ElementType, device> memory_view_;
   SizeType ld_;
 
-  std::unique_ptr<hpx::promise<Tile<ElementType, device>>> p_;
+  std::unique_ptr<hpx::lcos::local::promise<Tile<ElementType, device>>> p_;
 };
 
 template <class T, Device device>
@@ -179,9 +180,9 @@ public:
   /// Sets the promise to which this Tile will be moved on destruction.
   ///
   /// @c setPromise can be called only once per object.
-  Tile& setPromise(hpx::promise<Tile<T, device>>&& p) {
+  Tile& setPromise(hpx::lcos::local::promise<Tile<T, device>>&& p) {
     DLAF_ASSERT(!p_, "setPromise has been already used on this object!");
-    p_ = std::make_unique<hpx::promise<Tile<T, device>>>(std::move(p));
+    p_ = std::make_unique<hpx::lcos::local::promise<Tile<T, device>>>(std::move(p));
     return *this;
   }
 

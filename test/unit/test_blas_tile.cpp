@@ -73,7 +73,7 @@ TYPED_TEST(TileOperationsTest, GemmExceptions) {
           {{17, 24}, {24, 17}, {17, 19}, 0, 0, 0},  // different n
           {{17, 7}, {13, 11}, {17, 11}, 7, 2, 2},   // different k
           {{17, 13}, {7, 11}, {17, 11}, 7, 1, 0},   // different k
-          // Correct sizes which do not terminate are: {{m, k}, {k, n}, {m, n}, >=0, >= 0, >= 0}
+          // Sizes which which fulfill preconditions are: {{m, k}, {k, n}, {m, n}, >=0, >= 0, >= 0}.
       };
   for (const auto op_a : blas_ops) {
     for (const auto op_b : blas_ops) {

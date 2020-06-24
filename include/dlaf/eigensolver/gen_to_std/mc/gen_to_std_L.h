@@ -15,8 +15,10 @@
 #include "dlaf/blas_tile.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
+#include "dlaf/common/range2d.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/communication/executor.h"
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix.h"
@@ -29,13 +31,15 @@ namespace mc {
 
 // Local implementation
 template <class T>
-void genToStd(Matrix<T, Device::CPU>& mat_a, Matrix<const T, Device::CPU>& mat_l) {
+void genToStd_L(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l) {
   constexpr auto Right = blas::Side::Right;
   constexpr auto Left = blas::Side::Left;
   constexpr auto Lower = blas::Uplo::Lower;
   constexpr auto NonUnit = blas::Diag::NonUnit;
   constexpr auto NoTrans = blas::Op::NoTrans;
   constexpr auto ConjTrans = blas::Op::ConjTrans;
+
+  using hpx::util::unwrapping;
 
   // Set up executor on the default queue with high priority.
   hpx::threads::scheduled_executor executor_hp =
@@ -57,7 +61,8 @@ void genToStd(Matrix<T, Device::CPU>& mat_a, Matrix<const T, Device::CPU>& mat_l
     auto kk = LocalTileIndex{k, k};
 
     // Direct transformation to standard eigenvalue problem of the diagonal tile
-    hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::hegst<T, Device::CPU>), 1, Lower, std::move(mat_a(kk)), mat_l.read(kk));
+    //    hpx::dataflow(executor_hp, unwrapping(tile::hegst<T, Device::CPU>), 1, Lower, std::move(mat_a(kk)), mat_l.read(kk));
+    hpx::dataflow(executor_hp, unwrapping(tile::hegst<T, Device::CPU>), 1, Lower, std::move(mat_a(kk)), std::move(mat_l(kk)));
     
     if (k != (n - 1)) {
       for (SizeType i = k + 1; i < m; ++i) {

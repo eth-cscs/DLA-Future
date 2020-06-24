@@ -18,17 +18,14 @@ namespace dlaf {
 
 template <class T>
 void Eigensolver<Backend::MC>::genToStd(Matrix<T, Device::CPU>& mat_a,
-                                      Matrix<const T, Device::CPU>& mat_l) {
-  // Check if matrix A is square
-  util_matrix::assertSizeSquare(mat_a, "genToStd", "mat_a");
-  // Check if block matrix A is square
-  util_matrix::assertBlocksizeSquare(mat_a, "genToStd", "mat_a");
-  // Check if matrix A is stored on local memory
-  util_matrix::assertLocalMatrix(mat_a, "genToStd", "mat_a");
-  // Check if matrix L is stored on local memory
-  util_matrix::assertLocalMatrix(mat_l, "genToStd", "mat_l");
+                                      Matrix<T, Device::CPU>& mat_l) {
 
-  internal::mc::genToStd(mat_a, mat_l);
+  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
+  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
+  DLAF_ASSERT(matrix::local_matrix(mat_l), mat_l);
+
+  internal::mc::genToStd_L(mat_a, mat_l);
 }
 
 }

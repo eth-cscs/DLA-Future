@@ -153,3 +153,48 @@ TYPED_TEST(EigensolverGenToStdLocalTest, CorrectnessTile3) {
   CHECK_MATRIX_NEAR(res, mat_a, 100000000 * (mat_a.size().rows() + 1) * TypeUtilities<TypeParam>::error,
                     100000000 * (mat_a.size().rows() + 1) * TypeUtilities<TypeParam>::error);
 }
+
+
+//TYPED_TEST(EigensolverGenToStdLocalTest, Random) {
+//  const std::vector<SizeType> sizes = {3, 4, 5, 10, 25, 30};
+//  const std::vector<SizeType> blocksizes = {2, 3, 4, 5, 7};
+//
+//  LocalElementSize size = {3, 3};
+//  TileElementSize block_size = {3, 3};
+//  for (auto sz : sizes) {
+//    for (auto bs : blocksizes) { 
+//      LocalElementSize matrix_size(sz, sz);
+//      TileElementSize block_size(bs, bs);
+//
+//      // Allocate memory for the matrix A
+//      ConstMatrixType matrix_ref = [matrix_size, block_size, comm_grid]() {
+//	using dlaf::matrix::util::set_random_hermitian_positive_definite;
+//
+//	MatrixType hermitian_pos_def(matrix_size, block_size, comm_grid);
+//	set_random_hermitian_positive_definite(hermitian_pos_def);
+//
+//	return hermitian_pos_def;
+//      }();
+//
+//
+//      
+//    }
+//  }
+//
+//  
+//  // genToStd
+//  Eigensolver<Backend::MC>::genToStd(mat_a, mat_l);
+//
+//  std::cout << "Result" << std::endl;
+//  printElements(mat_a);
+//
+//  auto res = [](const GlobalElementIndex& index) {
+//    static const double values[] = {2.5,        0.625, -0.1785714, 20.,      0.15625,
+//                                    -0.0446429, 30.,   60.,        0.0127551};
+//    return values[index.row() + 3 * index.col()];
+//  };
+//
+//  CHECK_MATRIX_NEAR(res, mat_a, 100000000 * (mat_a.size().rows() + 1) * TypeUtilities<TypeParam>::error,
+//                    100000000 * (mat_a.size().rows() + 1) * TypeUtilities<TypeParam>::error);
+//}
+

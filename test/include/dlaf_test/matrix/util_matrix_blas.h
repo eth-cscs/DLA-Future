@@ -28,7 +28,8 @@ using namespace dlaf_test;
 /// The (i, j)-element of the matrix is set to el({i, j}) if op == NoTrans,
 ///                                          el({j, i}) if op == Trans,
 ///                                          conj(el({j, i})) if op == ConjTrans.
-/// @pre el is a callable with an argument of type const GlobalElementIndex& or GlobalElementIndex and return type T.
+/// @pre el is a callable with an argument of type const GlobalElementIndex& or GlobalElementIndex and
+/// return type T.
 template <template <class, Device> class MatrixType, class T, class ElementGetter>
 void set(MatrixType<T, Device::CPU>& mat, ElementGetter el, blas::Op op) {
   switch (op) {

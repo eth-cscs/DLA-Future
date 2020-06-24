@@ -60,8 +60,6 @@ public:
 
   /// Returns the position of the first element of the @p index tile.
   ///
-  /// @pre 0 < @p index.row() < nrTiles().rows(),
-  /// @pre 0 < @p index.col() < nrTiles().cols(),
   /// @pre index.isValid(),
   /// @pre index.isIn(nr_tiles_).
   std::size_t tileOffset(const LocalTileIndex& index) const noexcept {
@@ -72,8 +70,6 @@ public:
 
   /// Returns the size @p index tile.
   ///
-  /// @pre 0 < @p index.row() < nrTiles().rows(),
-  /// @pre 0 < @p index.col() < nrTiles().cols(),
   /// @pre index.isValid(),
   /// @pre index.isIn(nr_tiles_).
   TileElementSize tileSize(const LocalTileIndex& index) const noexcept {

@@ -101,7 +101,7 @@ RUN wget -q https://github.com/STEllAR-GROUP/hpx/archive/${HPX_MAJOR}.${HPX_MINO
     rm -rf /root/hpx.tar.gz /root/hpx-${HPX_MAJOR}.${HPX_MINOR}.${HPX_PATCH}
 
 # Install BLASPP
-ARG BLASPP_VERSION=c090b57
+ARG BLASPP_VERSION=c090b5738c8e
 ARG BLASPP_PATH=/usr/local/blaspp
 RUN source /opt/intel/compilers_and_libraries/linux/mkl/bin/mklvars.sh intel64 && \
     wget -q https://bitbucket.org/icl/blaspp/get/${BLASPP_VERSION}.tar.gz -O blaspp.tar.gz && \

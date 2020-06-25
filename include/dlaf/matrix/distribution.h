@@ -43,9 +43,9 @@ public:
   /// @pre block_size.isValid(),
   /// @pre !block_size.isEmpty(),
   /// @pre grid_size.isValid(),
-  /// @pre !grid_size_.isEmpty(),
+  /// @pre !grid_size.isEmpty(),
   /// @pre rank_index.isValid(),
-  /// @pre rank_index_.isIn(grid_size),
+  /// @pre rank_index.isIn(grid_size),
   /// @pre source_rank_index.isValid(),
   /// @pre source_rank_index_.isIn(grid_size).
   Distribution(const GlobalElementSize& size, const TileElementSize& block_size,
@@ -299,32 +299,23 @@ public:
 private:
   /// Computes and sets @p size_.
   ///
-  /// @pre local_size.rows() >= 0,
-  /// @pre local_size.cols() >= 0,
-  /// @pre grid_size.rows() == 1,
-  /// @pre grid_size.cols() == 1.
+  /// @pre local_size.isValid(),
+  /// @pre grid_size == {1,1}.
   void computeGlobalSizeForNonDistr(const LocalElementSize& size) noexcept;
 
   /// computes and sets global_tiles_.
   ///
-  /// @pre size.rows() >= 0,
-  /// @pre size.cols() >= 0,
-  /// @pre block_size.rows() >= 1,
-  /// @pre block_size.cols() >= 1.
+  /// @pre size.isValid(),
+  /// @pre block_size.isValid() && !block_size.isEmpty().
   void computeGlobalNrTiles(const GlobalElementSize& size, const TileElementSize& block_size) noexcept;
 
   /// Computes and sets @p global_tiles_, @p local_tiles_ and @p local_size_.
   ///
-  /// @pre size.rows() >= 0,
-  /// @pre size.cols() >= 0,
-  /// @pre block_size.rows() >= 1,
-  /// @pre block_size.cols() >= 1,
-  /// @pre grid_size.rows() >= 1,
-  /// @pre grid_size.cols() >= 1,
-  /// @pre rank_index.row() >= 0,
-  /// @pre rank_index.col() >= 0,
-  /// @pre source_rank_index.row() >= 0,
-  /// @pre source_rank_index.col() >= 0.
+  /// @pre size.isValid()
+  /// @pre block_size.isValid() && !block_size.isEmpty(),
+  /// @pre grid_size.isValid() && !grid_size.isEmpty(),
+  /// @pre rank_index.isValid(),
+  /// @pre source_rank_index.isValid().
   void computeGlobalAndLocalNrTilesAndLocalSize(const GlobalElementSize& size,
                                                 const TileElementSize& block_size,
                                                 const comm::Size2D& grid_size,
@@ -333,10 +324,8 @@ private:
 
   /// computes and sets @p local_tiles_.
   ///
-  /// @pre local_size.rows() >= 0,
-  /// @pre local_size.cols() >= 0,
-  /// @pre block_size.rows() >= 1,
-  /// @pre block_size.cols() >= 1.
+  /// @pre local_size.isValid(),
+  /// @pre block_size.isValid() && !block_size.isEmpty().
   void computeLocalNrTiles(const LocalElementSize& size, const TileElementSize& block_size) noexcept;
 
   /// Sets default values.

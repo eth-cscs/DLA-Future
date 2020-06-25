@@ -35,10 +35,9 @@ public:
   /// @pre tile_ld >= 1,
   /// @pre tile_offset_row >= 1,
   /// @pre tile_offset_col >= 1,
-  /// @pre !size.isEmpty(),
-  /// @pre tile_ld >= max(size.rows(), block_size.rows()),
-  /// @pre tile_row_offset >= block_size.rows(),
-  /// @pre tile_col_offset >= size of the memory (in elements, padding included)
+  /// @pre size.isEmpty() and tile_ld >= max(size.rows(), block_size.rows()),
+  /// @pre size.isEmpty() and tile_row_offset >= block_size.rows(),
+  /// @pre size.isEmpty() and tile_col_offset >= size of the memory (in elements, padding included)
   /// to store a column of tiles, if the tiles overlap
   ///(combinations of @p tile_ld, @p tile_row_offset).
 

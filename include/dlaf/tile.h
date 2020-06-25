@@ -55,8 +55,7 @@ public:
 
   /// Constructs a (@p size.rows() x @p size.cols()) Tile.
   ///
-  /// @pre size.rows() >= 0,
-  /// @pre size.cols() >= 0,
+  /// @pre size.isValid(),
   /// @pre ld >= max(1, @p size.rows()),
   /// @pre memory_view contains enough elements.
   /// The (i, j)-th element of the Tile is stored in the (i+ld*j)-th element of memory_view.
@@ -139,8 +138,7 @@ public:
 
   /// Constructs a (@p size.rows() x @p size.cols()) Tile.
   ///
-  /// @pre size.rows() >= 0,
-  /// @pre size.cols() >= 0,
+  /// @pre size.isValid(),
   /// @pre ld >= max(1, @p size.rows()),
   /// @pre memory_view contains enough elements.
   /// The (i, j)-th element of the Tile is stored in the (i+ld*j)-th element of memory_view.

@@ -33,7 +33,7 @@ namespace internal {
 
 /// Anticipation of std::source_location from C++20.
 ///
-/// see https://en.cppreference.com/w/cpp/utility/source_location.
+/// see https://en.cppreference.com/w/cpp/utility/source_location
 struct source_location {
   const char* filename;
   const unsigned int line;

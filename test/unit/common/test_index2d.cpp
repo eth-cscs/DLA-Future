@@ -35,7 +35,7 @@ TYPED_TEST(Index2DTest, ConstructorDefault) {
   EXPECT_LT(index.row(), 0);
   EXPECT_LT(index.col(), 0);
 
-  EXPECT_FALSE(index.isValid());
+  EXPECT_TRUE(index.isValid());
 }
 
 TYPED_TEST(Index2DTest, ConstructorFromParams) {

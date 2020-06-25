@@ -120,7 +120,7 @@ RUN source /opt/intel/compilers_and_libraries/linux/mkl/bin/mklvars.sh intel64 &
     make install && \
     rm -rf /root/blaspp.tar.gz /root/icl-blaspp-${BLASPP_VERSION}
 
-ARG LAPACKPP_VERSION=b811bd1274d5
+ARG LAPACKPP_VERSION=f878fada3765
 ARG LAPACKPP_PATH=/usr/local/lapackpp
 RUN source /opt/intel/compilers_and_libraries/linux/mkl/bin/mklvars.sh intel64 && \
     wget -q https://bitbucket.org/icl/lapackpp/get/${LAPACKPP_VERSION}.tar.gz -O lapackpp.tar.gz && \

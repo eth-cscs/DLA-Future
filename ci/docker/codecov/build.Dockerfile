@@ -121,7 +121,7 @@ RUN wget -q https://bitbucket.org/icl/blaspp/get/${BLASPP_VERSION}.tar.gz -O bla
     make install && \
     rm -rf /root/blaspp.tar.gz /root/icl-blaspp-${BLASPP_VERSION}
 
-ARG LAPACKPP_VERSION=b811bd1274d5
+ARG LAPACKPP_VERSION=f878fada3765
 ARG LAPACKPP_PATH=/usr/local/lapackpp
 RUN wget -q https://bitbucket.org/icl/lapackpp/get/${LAPACKPP_VERSION}.tar.gz -O lapackpp.tar.gz && \
     tar -xzf lapackpp.tar.gz && \

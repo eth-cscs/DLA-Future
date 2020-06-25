@@ -28,7 +28,7 @@ stages:
 cpu debug build:
   extends: .build_common
   variables:
-    BUILD_IMAGE: $CI_REGISTRY_IMAGE/debug/build:20200625-blaspp.c090b57
+    BUILD_IMAGE: $CI_REGISTRY_IMAGE/debug/build:20200625-lapackpp.f878fa
     IMAGE: $CI_REGISTRY_IMAGE/debug/deploy:$CI_COMMIT_SHA
   script:
     - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 -f ci/docker/debug/build.Dockerfile --network=host .
@@ -40,7 +40,7 @@ cpu debug build:
 cpu release build:
   extends: .build_common
   variables:
-    BUILD_IMAGE: $CI_REGISTRY_IMAGE/release/build:20200625-blaspp.c090b57
+    BUILD_IMAGE: $CI_REGISTRY_IMAGE/release/build:20200625-lapackpp.f878fa
     IMAGE: $CI_REGISTRY_IMAGE/release/deploy:$CI_COMMIT_SHA
   script:
     - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 -f ci/docker/release/build.Dockerfile --network=host .
@@ -52,7 +52,7 @@ cpu release build:
 cpu codecov build:
   extends: .build_common
   variables:
-    BUILD_IMAGE: $CI_REGISTRY_IMAGE/codecov/build:20200626-blaspp.c090b57
+    BUILD_IMAGE: $CI_REGISTRY_IMAGE/codecov/build:20200625-lapackpp.f878fa
     IMAGE: $CI_REGISTRY_IMAGE/codecov/deploy:$CI_COMMIT_SHA
   script:
     - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 -f ci/docker/codecov/build.Dockerfile --network=host .

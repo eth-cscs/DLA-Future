@@ -106,7 +106,7 @@ RUN wget -q https://github.com/STEllAR-GROUP/hpx/archive/${HPX_MAJOR}.${HPX_MINO
 RUN ldconfig
 
 # Install BLASPP
-ARG BLASPP_VERSION=d83c1faa7a09
+ARG BLASPP_VERSION=c090b57
 ARG BLASPP_PATH=/usr/local/blaspp
 RUN wget -q https://bitbucket.org/icl/blaspp/get/${BLASPP_VERSION}.tar.gz -O blaspp.tar.gz && \
     tar -xzf blaspp.tar.gz && \

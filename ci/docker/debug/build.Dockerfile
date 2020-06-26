@@ -79,7 +79,7 @@ RUN wget -q https://github.com/gperftools/gperftools/releases/download/gperftool
 # Install HPX
 ARG HPX_VERSION=291736b9538afed58269dd1611fd71b8ea839f1f
 ARG HPX_PATH=/usr/local/hpx
-RUN wget -q https://github.com/STEllAR-GROUP/hpx/archive/${HPX_MAJOR}.${HPX_MINOR}.${HPX_PATCH}.tar.gz -O hpx.tar.gz && \
+RUN wget -q https://github.com/STEllAR-GROUP/hpx/archive/${HPX_VERSION}.tar.gz -O hpx.tar.gz && \
     tar -xzf hpx.tar.gz && \
     cd hpx-${HPX_VERSION} && \
     mkdir build && \

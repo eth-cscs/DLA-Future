@@ -19,7 +19,7 @@ class DlaFuture(CMakePackage):
             description='Use the GPU/cuBLAS back end.')
     variant('doc', default=False,
             description='Build documentation.')
-    
+
     #depends_on('mpi@3:')
     depends_on('mpi')
     depends_on('blaspp')
@@ -29,24 +29,25 @@ class DlaFuture(CMakePackage):
 
     def cmake_args(self):
        spec = self.spec
-       
+
        if (spec.satisfies('^intel-mkl')):
            args = ['-DDLAF_WITH_MKL=ON']
        else:
            args = ['-DDLAF_WITH_MKL=OFF']
+           lapack_name = spec['lapack'].libs.ld_flags.split()[1]
+           blas_name = spec['blas'].libs.ld_flags.split()[1]
+           lapack_libs = spec['lapack'].prefix.lib
+           blas_libs = spec['blas'].prefix.lib
            args.append('-DLAPACK_TYPE=Custom')
-           args.append('-DLAPACK_LIBRARY=-L{0} -lblas -llapack'.format(spec['lapack'].prefix.lib))
+           args.append('-DLAPACK_LIBRARY=-L{0} {1} -L{2} {3}'.format(lapack_libs, lapack_name, blas_libs, blas_name))
 
        if '+cuda' in spec:
            args.append('-DDLAF_WITH_CUDA=ON')
-           #args.append('-DCUDA_HOME={0}'.format(spec['cuda'].prefix))
 
        if self.run_tests:
            args.append('-DDLAF_WITH_TEST=ON')
-           args.append('-DDLAF_INSTALL_TESTS=ON')
-       else:
+        else:
            args.append('-DDLAF_WITH_TEST=OFF')
-           args.append('-DDLAF_INSTALL_TESTS=OFF')
 
        if '+doc' in spec:
            args.append('-DBUILD_DOC=on')

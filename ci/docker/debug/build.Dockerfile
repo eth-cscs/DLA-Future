@@ -83,7 +83,7 @@ ARG HPX_PATCH=1
 ARG HPX_PATH=/usr/local/hpx
 RUN wget -q https://github.com/STEllAR-GROUP/hpx/archive/${HPX_MAJOR}.${HPX_MINOR}.${HPX_PATCH}.tar.gz -O hpx.tar.gz && \
     tar -xzf hpx.tar.gz && \
-    cd hpx-${HPX_MAJOR}.${HPX_MINOR}.${HPX_PATCH} && \
+    cd hpx-${HPX_VERSION} && \
     mkdir build && \
     cd build && \
     cmake .. \
@@ -101,7 +101,7 @@ RUN wget -q https://github.com/STEllAR-GROUP/hpx/archive/${HPX_MAJOR}.${HPX_MINO
       -DHPX_WITH_EXAMPLES=OFF && \
     make -j$(nproc) && \
     make install && \
-    rm -rf /root/hpx.tar.gz /root/hpx-${HPX_MAJOR}.${HPX_MINOR}.${HPX_PATCH}
+    rm -rf /root/hpx.tar.gz /root/hpx-${HPX_VERSION}
 
 RUN ldconfig
 

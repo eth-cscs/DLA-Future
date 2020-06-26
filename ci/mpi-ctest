@@ -14,7 +14,9 @@ pushd /DLA-Future-build > /dev/null
 
 # Run the tests, only output on the first rank
 if [[ $SLURM_PROCID == "0" ]]; then
+    date +"Run started at: %H:%M:%S"
     ctest -V $@
+    date +"Run finished at: %H:%M:%S"
 else
     ctest -Q $@
 fi

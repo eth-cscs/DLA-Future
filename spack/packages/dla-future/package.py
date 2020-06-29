@@ -34,12 +34,8 @@ class DlaFuture(CMakePackage):
            args = ['-DDLAF_WITH_MKL=ON']
        else:
            args = ['-DDLAF_WITH_MKL=OFF']
-           lapack_name = spec['lapack'].libs.ld_flags.split()[1]
-           blas_name = spec['blas'].libs.ld_flags.split()[1]
-           lapack_libs = spec['lapack'].prefix.lib
-           blas_libs = spec['blas'].prefix.lib
            args.append('-DLAPACK_TYPE=Custom')
-           args.append('-DLAPACK_LIBRARY=-L{0} {1} -L{2} {3}'.format(lapack_libs, lapack_name, blas_libs, blas_name))
+           args.append('-DLAPACK_LIBRARY={} {}'.format(spec['lapack'].libs.ld_flags, spec['blas'].libs.ld_flags))
 
        if '+cuda' in spec:
            args.append('-DDLAF_WITH_CUDA=ON')

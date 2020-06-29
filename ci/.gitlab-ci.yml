@@ -31,7 +31,8 @@ cpu debug build:
     BUILD_IMAGE: $CI_REGISTRY_IMAGE/debug/build:20200625-lapackpp.f878fa
     IMAGE: $CI_REGISTRY_IMAGE/debug/deploy:$CI_COMMIT_SHA
   script:
-    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 -f ci/docker/debug/build.Dockerfile --network=host .
+    - docker pull $BUILD_IMAGE
+    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE -f ci/docker/debug/build.Dockerfile --network=host .
     - docker push $BUILD_IMAGE
     - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE --build-arg DEPLOY_IMAGE=$IMAGE -f ci/docker/debug/deploy.Dockerfile --network=host .
     - docker push $IMAGE
@@ -43,7 +44,8 @@ cpu release build:
     BUILD_IMAGE: $CI_REGISTRY_IMAGE/release/build:20200625-lapackpp.f878fa
     IMAGE: $CI_REGISTRY_IMAGE/release/deploy:$CI_COMMIT_SHA
   script:
-    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 -f ci/docker/release/build.Dockerfile --network=host .
+    - docker pull $BUILD_IMAGE
+    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE -f ci/docker/release/build.Dockerfile --network=host .
     - docker push $BUILD_IMAGE
     - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE --build-arg DEPLOY_IMAGE=$IMAGE -f ci/docker/release/deploy.Dockerfile --network=host .
     - docker push $IMAGE
@@ -55,7 +57,8 @@ cpu codecov build:
     BUILD_IMAGE: $CI_REGISTRY_IMAGE/codecov/build:20200625-lapackpp.f878fa
     IMAGE: $CI_REGISTRY_IMAGE/codecov/deploy:$CI_COMMIT_SHA
   script:
-    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 -f ci/docker/codecov/build.Dockerfile --network=host .
+    - docker pull $BUILD_IMAGE
+    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE -f ci/docker/codecov/build.Dockerfile --network=host .
     - docker push $BUILD_IMAGE
     - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE --build-arg DEPLOY_IMAGE=$IMAGE -f ci/docker/codecov/deploy.Dockerfile --network=host .
     - docker push $IMAGE

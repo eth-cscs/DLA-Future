@@ -38,7 +38,6 @@ upload_reports:
     SLURM_TIMELIMIT: '15:00'
     DISABLE_AFTER_SCRIPT: 'YES'
   script: upload_codecov
-  resource_group: daint-job
 
 # Remove the allocation
 deallocate:
@@ -59,7 +58,6 @@ JOB_TEMPLATE="
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
   script: mpi-ctest -L {{LABEL}}
-  resource_group: daint-job
   artifacts:
     paths:
       - codecov-reports/"

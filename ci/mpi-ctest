@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 if [[ "$ENABLE_COVERAGE" == "YES" ]]; then
     LOCAL_REPORTS="/codecov-reports"
@@ -14,7 +14,7 @@ pushd /DLA-Future-build > /dev/null
 
 # Run the tests, only output on the first rank
 if [[ $SLURM_PROCID == "0" ]]; then
-    ctest $@
+    ctest -V $@
 else
     ctest -Q $@
 fi

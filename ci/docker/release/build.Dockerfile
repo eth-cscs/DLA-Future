@@ -101,7 +101,7 @@ RUN wget -q https://github.com/STEllAR-GROUP/hpx/archive/${HPX_MAJOR}.${HPX_MINO
     rm -rf /root/hpx.tar.gz /root/hpx-${HPX_MAJOR}.${HPX_MINOR}.${HPX_PATCH}
 
 # Install BLASPP
-ARG BLASPP_VERSION=d83c1faa7a09
+ARG BLASPP_VERSION=c090b5738c8e
 ARG BLASPP_PATH=/usr/local/blaspp
 RUN source /opt/intel/compilers_and_libraries/linux/mkl/bin/mklvars.sh intel64 && \
     wget -q https://bitbucket.org/icl/blaspp/get/${BLASPP_VERSION}.tar.gz -O blaspp.tar.gz && \
@@ -120,7 +120,7 @@ RUN source /opt/intel/compilers_and_libraries/linux/mkl/bin/mklvars.sh intel64 &
     make install && \
     rm -rf /root/blaspp.tar.gz /root/icl-blaspp-${BLASPP_VERSION}
 
-ARG LAPACKPP_VERSION=b811bd1274d5
+ARG LAPACKPP_VERSION=f878fada3765
 ARG LAPACKPP_PATH=/usr/local/lapackpp
 RUN source /opt/intel/compilers_and_libraries/linux/mkl/bin/mklvars.sh intel64 && \
     wget -q https://bitbucket.org/icl/lapackpp/get/${LAPACKPP_VERSION}.tar.gz -O lapackpp.tar.gz && \

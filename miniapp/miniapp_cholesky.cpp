@@ -15,6 +15,7 @@
 
 #include "dlaf/auxiliary/mc.h"
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/communication/functions_sync.h"
 #include "dlaf/factorization/mc.h"
 #include "dlaf/matrix.h"
 #include "dlaf/matrix/copy.h"

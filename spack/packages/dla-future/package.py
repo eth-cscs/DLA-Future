@@ -30,7 +30,7 @@ class DlaFuture(CMakePackage):
     def cmake_args(self):
        spec = self.spec
 
-       if (spec.satisfies('^intel-mkl')):
+       if '^mkl' in spec:
            args = ['-DDLAF_WITH_MKL=ON']
        else:
            args = ['-DDLAF_WITH_MKL=OFF']
@@ -42,7 +42,7 @@ class DlaFuture(CMakePackage):
 
        if self.run_tests:
            args.append('-DDLAF_WITH_TEST=ON')
-        else:
+       else:
            args.append('-DDLAF_WITH_TEST=OFF')
 
        if '+doc' in spec:

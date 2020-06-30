@@ -10,8 +10,11 @@
 #pragma once
 
 #include <iostream>
+#include <mutex>
 
 #include <mpi.h>
+
+#include "dlaf/communication/error.h"
 
 namespace dlaf {
 namespace comm {
@@ -36,6 +39,19 @@ inline bool mpi_serialized() noexcept {
     }
   }();
   return is_serialized;
+}
+
+/// Serializes the MPI call if `MPI_THREAD_SERIALIZED` is used.
+template <class F, class... Ts>
+void mpi_invoke(F f, Ts... ts) noexcept {
+  if (mpi_serialized()) {
+    static std::mutex mt;
+    std::lock_guard<std::mutex> lk(mt);
+    DLAF_MPI_CALL(f(ts...));
+  }
+  else {
+    DLAF_MPI_CALL(f(ts...));
+  }
 }
 
 /// Initialize MPI to either MPI_THREAD_SERIALIZED or MPI_THREAD_MULTIPLE

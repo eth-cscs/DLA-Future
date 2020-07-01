@@ -33,9 +33,7 @@ cpu debug build:
     IMAGE: $CI_REGISTRY_IMAGE/debug/deploy:$CI_COMMIT_SHA
   script:
     - BUILD_IMAGE=$BUILD_IMAGE_BASE`sha256sum $BUILD_DOCKER_FILE | head -c 64`
-    - (docker pull $BUILD_IMAGE && BUILD_CACHE="--cache-from $BUILD_IMAGE") || (docker pull ${BUILD_IMAGE_BASE}latest && BUILD_CACHE="--cache-from ${BUILD_IMAGE_BASE}latest") || BUILD_CACHE=""
-    - docker build -t $BUILD_IMAGE $BUILD_CACHE -f $BUILD_DOCKER_FILE --network=host .
-    - docker push $BUILD_IMAGE
+    - docker pull $BUILD_IMAGE || (docker build -t $BUILD_IMAGE -f $BUILD_DOCKER_FILE --network=host . && docker push $BUILD_IMAGE)
     - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE --build-arg DEPLOY_IMAGE=$IMAGE -f ci/docker/debug/deploy.Dockerfile --network=host .
     - docker push $IMAGE
     - docker run $IMAGE cat /root/DLA-Future.bundle/pipeline.yml > pipeline.yml
@@ -48,9 +46,7 @@ cpu release build:
     IMAGE: $CI_REGISTRY_IMAGE/release/deploy:$CI_COMMIT_SHA
   script:
     - BUILD_IMAGE=$BUILD_IMAGE_BASE`sha256sum $BUILD_DOCKER_FILE | head -c 64`
-    - (docker pull $BUILD_IMAGE && BUILD_CACHE="--cache-from $BUILD_IMAGE") || (docker pull ${BUILD_IMAGE_BASE}latest && BUILD_CACHE="--cache-from ${BUILD_IMAGE_BASE}latest") || BUILD_CACHE=""
-    - docker build -t $BUILD_IMAGE $BUILD_CACHE -f $BUILD_DOCKER_FILE --network=host .
-    - docker push $BUILD_IMAGE
+    - docker pull $BUILD_IMAGE || (docker build -t $BUILD_IMAGE -f $BUILD_DOCKER_FILE --network=host . && docker push $BUILD_IMAGE)
     - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE --build-arg DEPLOY_IMAGE=$IMAGE -f ci/docker/release/deploy.Dockerfile --network=host .
     - docker push $IMAGE
     - docker run $IMAGE cat /root/DLA-Future.bundle/pipeline.yml > pipeline.yml
@@ -63,9 +59,7 @@ cpu codecov build:
     IMAGE: $CI_REGISTRY_IMAGE/codecov/deploy:$CI_COMMIT_SHA
   script:
     - BUILD_IMAGE=$BUILD_IMAGE_BASE`sha256sum $BUILD_DOCKER_FILE | head -c 64`
-    - (docker pull $BUILD_IMAGE && BUILD_CACHE="--cache-from $BUILD_IMAGE") || (docker pull ${BUILD_IMAGE_BASE}latest && BUILD_CACHE="--cache-from ${BUILD_IMAGE_BASE}latest") || BUILD_CACHE=""
-    - docker build -t $BUILD_IMAGE $BUILD_CACHE -f $BUILD_DOCKER_FILE --network=host .
-    - docker push $BUILD_IMAGE
+    - docker pull $BUILD_IMAGE || (docker build -t $BUILD_IMAGE -f $BUILD_DOCKER_FILE --network=host . && docker push $BUILD_IMAGE)
     - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE --build-arg DEPLOY_IMAGE=$IMAGE -f ci/docker/codecov/deploy.Dockerfile --network=host .
     - docker push $IMAGE
     - docker run $IMAGE cat /root/DLA-Future.bundle/pipeline.yml > pipeline.yml

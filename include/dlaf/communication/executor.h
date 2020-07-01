@@ -23,6 +23,7 @@
 #include <hpx/util/yield_while.hpp>
 
 #include "dlaf/communication/communicator.h"
+#include "dlaf/communication/init.h"
 
 namespace dlaf {
 namespace comm {
@@ -122,14 +123,13 @@ public:
   template <typename F, typename... Ts>
   hpx::future<void> async_execute(F f, Ts... ts) noexcept {
     // TODO: docs why this is done here instead of within the task
-    // TODO: support for MPI_THREAD_SERIALIZED
     MPI_Request req;
-    f(ts..., comm_, &req);
+    mpi_invoke(f, ts..., comm_, &req);
     return hpx::async(ex_, [req]() mutable {
       // Yield until non-blocking communication completes.
       hpx::util::yield_while([&req] {
         int flag;
-        MPI_Test(&req, &flag, MPI_STATUS_IGNORE);
+        mpi_invoke(MPI_Test, &req, &flag, MPI_STATUS_IGNORE);
         return flag == 0;
       });
     });

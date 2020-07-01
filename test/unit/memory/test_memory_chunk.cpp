@@ -22,7 +22,7 @@ class MemoryChunkTest : public ::testing::Test {};
 
 TYPED_TEST_SUITE(MemoryChunkTest, ElementTypes);
 
-constexpr int size = 397;
+constexpr ssize size = 397;
 
 TYPED_TEST(MemoryChunkTest, ConstructorAllocates) {
   using Type = TypeParam;
@@ -31,7 +31,7 @@ TYPED_TEST(MemoryChunkTest, ConstructorAllocates) {
   EXPECT_EQ(size, mem.size());
   EXPECT_NE(nullptr, mem());
   Type* ptr = mem();
-  for (int i = 0; i < mem.size(); ++i)
+  for (ssize i = 0; i < mem.size(); ++i)
     EXPECT_EQ(ptr + i, mem(i));
 }
 
@@ -45,7 +45,7 @@ TYPED_TEST(MemoryChunkTest, ConstructorPointer) {
   EXPECT_EQ(size, mem.size());
   EXPECT_NE(nullptr, mem());
 
-  for (int i = 0; i < mem.size(); ++i)
+  for (ssize i = 0; i < mem.size(); ++i)
     EXPECT_EQ(ptr + i, mem(i));
 }
 
@@ -60,7 +60,7 @@ TYPED_TEST(MemoryChunkTest, MoveConstructor) {
   EXPECT_EQ(0, mem.size());
 
   EXPECT_EQ(size, mem2.size());
-  for (int i = 0; i < mem2.size(); ++i)
+  for (ssize i = 0; i < mem2.size(); ++i)
     EXPECT_EQ(ptr + i, mem2(i));
 }
 
@@ -77,6 +77,6 @@ TYPED_TEST(MemoryChunkTest, MoveAssignement) {
   EXPECT_EQ(0, mem.size());
 
   EXPECT_EQ(size, mem2.size());
-  for (int i = 0; i < mem2.size(); ++i)
+  for (ssize i = 0; i < mem2.size(); ++i)
     EXPECT_EQ(ptr + i, mem2(i));
 }

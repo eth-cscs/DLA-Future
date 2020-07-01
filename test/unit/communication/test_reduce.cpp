@@ -66,7 +66,7 @@ TEST_F(ReduceTest, CArrayOnSingleRank) {
     return;
 
   constexpr int root = 0;
-  constexpr int N = 3;
+  constexpr ssize N = 3;
   constexpr TypeParam input[N] = {TypeUtilities<TypeParam>::element(0, 1),
                                   TypeUtilities<TypeParam>::element(1, 2),
                                   TypeUtilities<TypeParam>::element(2, 3)};
@@ -76,7 +76,7 @@ TEST_F(ReduceTest, CArrayOnSingleRank) {
 
   sync::reduce(root, alone_world, MPI_SUM, common::make_data(input, N), common::make_data(reduced, N));
 
-  for (int index = 0; index < N; ++index)
+  for (ssize index = 0; index < N; ++index)
     DLAF_EXPECT_NEAR(input[index], reduced[index], TypeUtilities<TypeParam>::error);
 }
 
@@ -96,7 +96,7 @@ TEST_F(ReduceTest, CArray) {
   static_assert(NUM_MPI_RANKS >= 2, "This test requires at least two ranks");
   int root = 1;
 
-  constexpr int N = 3;
+  constexpr ssize N = 3;
   constexpr TypeParam input[N] = {TypeUtilities<TypeParam>::element(0, 1),
                                   TypeUtilities<TypeParam>::element(1, 2),
                                   TypeUtilities<TypeParam>::element(2, 3)};
@@ -105,7 +105,7 @@ TEST_F(ReduceTest, CArray) {
   sync::reduce(root, world, MPI_SUM, common::make_data(input, N), common::make_data(reduced, N));
 
   if (world.rank() == root) {
-    for (int index = 0; index < N; ++index)
+    for (ssize index = 0; index < N; ++index)
       DLAF_EXPECT_NEAR(input[index] * static_cast<TypeParam>(NUM_MPI_RANKS), reduced[index],
                        NUM_MPI_RANKS * TypeUtilities<TypeParam>::error);
   }
@@ -143,19 +143,19 @@ TEST_F(ReduceTest, StridedToContiguous) {
 
   // 3 blocks, 2 elements each, with a distance of 5 elements between start of each block
   // E E - - - E E - - - E E    (without padding at the end)
-  constexpr int nblocks = 3;
-  constexpr int block_size = 2;
-  constexpr int block_distance = 5;
+  constexpr ssize nblocks = 3;
+  constexpr ssize block_size = 2;
+  constexpr ssize block_distance = 5;
 
-  constexpr int memory_footprint = (nblocks - 1) * block_distance + block_size;
+  constexpr ssize memory_footprint = (nblocks - 1) * block_distance + block_size;
   TypeParam data_strided[memory_footprint];
 
   constexpr int N = nblocks * block_size;
   TypeParam data_contiguous[N];
 
   constexpr TypeParam value = TypeUtilities<TypeParam>::element(13, 26);
-  for (int i_block = 0; i_block < nblocks; ++i_block)
-    for (int i_element = 0; i_element < block_size; ++i_element) {
+  for (ssize i_block = 0; i_block < nblocks; ++i_block)
+    for (ssize i_element = 0; i_element < block_size; ++i_element) {
       auto mem_pos = i_block * block_distance + i_element;
       data_strided[mem_pos] = value;
     }
@@ -181,11 +181,11 @@ TEST_F(ReduceTest, ContiguousToStrided) {
 
   // 3 blocks, 2 elements each, with a distance of 5 elements between start of each block
   // E E - - - E E - - - E E    (without padding at the end)
-  constexpr int nblocks = 3;
-  constexpr int block_size = 2;
-  constexpr int block_distance = 5;
+  constexpr ssize nblocks = 3;
+  constexpr ssize block_size = 2;
+  constexpr ssize block_distance = 5;
 
-  constexpr int memory_footprint = (nblocks - 1) * block_distance + block_size;
+  constexpr ssize memory_footprint = (nblocks - 1) * block_distance + block_size;
   TypeParam data_strided[memory_footprint];
 
   constexpr int N = nblocks * block_size;
@@ -204,8 +204,8 @@ TEST_F(ReduceTest, ContiguousToStrided) {
   sync::reduce(root, communicator, op, std::move(message_input), std::move(message_output));
 
   if (world.rank() == root) {
-    for (int i_block = 0; i_block < nblocks; ++i_block)
-      for (int i_element = 0; i_element < block_size; ++i_element) {
+    for (ssize i_block = 0; i_block < nblocks; ++i_block)
+      for (ssize i_element = 0; i_element < block_size; ++i_element) {
         auto mem_pos = i_block * block_distance + i_element;
         DLAF_EXPECT_NEAR(value * static_cast<TypeParam>(NUM_MPI_RANKS), data_strided[mem_pos],
                          NUM_MPI_RANKS * TypeUtilities<TypeParam>::error);

@@ -390,8 +390,8 @@ struct ExistingLocalTestSizes {
   LocalElementSize size;
   TileElementSize block_size;
   SizeType ld;
-  int row_offset;
-  int col_offset;
+  ssize row_offset;
+  ssize col_offset;
 };
 
 const std::vector<ExistingLocalTestSizes> existing_local_tests({

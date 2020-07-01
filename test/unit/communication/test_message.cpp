@@ -68,7 +68,7 @@ TYPED_TEST(MessageTest, MakeFromContiguousAsStridedArray) {
   const SizeType block_distance = block_size;
   const SizeType total_elements = nblocks * block_size;
 
-  const SizeType memory_footprint = (nblocks - 1) * block_distance + block_size;
+  const ssize memory_footprint = (nblocks - 1) * block_distance + block_size;
   TypeParam value_array[memory_footprint]{};
 
   auto data = make_data(value_array, nblocks, block_size, block_distance);
@@ -91,7 +91,7 @@ TYPED_TEST(MessageTest, MakeFromStridedArray) {
   const SizeType block_distance = 5;
   const SizeType total_elements = nblocks * block_size;
 
-  const SizeType memory_footprint = (nblocks - 1) * block_distance + block_size;
+  const ssize memory_footprint = (nblocks - 1) * block_distance + block_size;
   TypeParam value_array[memory_footprint]{};
 
   auto data = make_data(value_array, nblocks, block_size, block_distance);
@@ -131,7 +131,7 @@ TYPED_TEST(MessageTest, MoveCustomType) {
   const SizeType block_distance = 5;
   const SizeType total_elements = nblocks * block_size;
 
-  const SizeType memory_footprint = (nblocks - 1) * block_distance + block_size;
+  const ssize memory_footprint = (nblocks - 1) * block_distance + block_size;
   TypeParam value_array[memory_footprint]{};
 
   auto message = make_message(common::make_data(value_array, nblocks, block_size, block_distance));

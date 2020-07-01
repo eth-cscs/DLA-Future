@@ -17,7 +17,7 @@
 using namespace dlaf;
 using namespace testing;
 
-const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, int, int, int>> values(
+const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, ssize, ssize, ssize>> values(
     {{{31, 17}, {7, 11}, 31, 7, 341, 527},      // Scalapack like layout
      {{31, 17}, {32, 11}, 31, 31, 341, 527},    // only one row of tiles
      {{31, 17}, {7, 11}, 33, 7, 363, 559},      // with padding (ld)
@@ -30,7 +30,7 @@ const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, int, i
      {{29, 41}, {13, 11}, 13, 143, 419, 1637},  // compressed col_offset
      {{0, 0}, {1, 1}, 1, 1, 1, 0}});
 
-const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, int, int>> wrong_values({
+const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, ssize, ssize>> wrong_values({
     {{31, 17}, {7, 11}, 30, 7, 341},     // ld, row_offset combo is wrong
     {{31, 17}, {32, 11}, 30, 7, 341},    // ld is wrong
     {{31, 17}, {7, 11}, 31, 6, 341},     // row_offset is wrong
@@ -73,10 +73,10 @@ TEST(LayoutInfoTest, Constructor) {
         LocalTileIndex tile_index(i, j);
         TileElementSize tile_size(ib, jb);
 
-        int offset = i * row_offset + j * col_offset;
+        ssize offset = i * row_offset + j * col_offset;
         EXPECT_EQ(offset, layout.tileOffset(tile_index));
         EXPECT_EQ(tile_size, layout.tileSize(tile_index));
-        int min_mem = ib + ld * (jb - 1);
+        ssize min_mem = ib + ld * (jb - 1);
         EXPECT_EQ(min_mem, layout.minTileMemSize(tile_index));
         EXPECT_EQ(min_mem, layout.minTileMemSize(tile_size));
       }
@@ -97,14 +97,15 @@ TEST(LayoutInfoTest, ConstructorException) {
   }
 }
 
-const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, int, int, bool>> comp_values({
-    {{25, 25}, {5, 5}, 50, 8, 1000, true},   // Original
-    {{23, 25}, {5, 5}, 50, 8, 1000, false},  // different size
-    {{25, 25}, {6, 5}, 50, 8, 1000, false},  // different block_size
-    {{25, 25}, {5, 5}, 40, 8, 1000, false},  // different ld
-    {{25, 25}, {5, 5}, 50, 6, 1000, false},  // different row_offset
-    {{25, 25}, {5, 5}, 50, 8, 900, false},   // different col_offset
-});
+const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, ssize, ssize, bool>> comp_values(
+    {
+        {{25, 25}, {5, 5}, 50, 8, 1000, true},   // Original
+        {{23, 25}, {5, 5}, 50, 8, 1000, false},  // different size
+        {{25, 25}, {6, 5}, 50, 8, 1000, false},  // different block_size
+        {{25, 25}, {5, 5}, 40, 8, 1000, false},  // different ld
+        {{25, 25}, {5, 5}, 50, 6, 1000, false},  // different row_offset
+        {{25, 25}, {5, 5}, 50, 8, 900, false},   // different col_offset
+    });
 
 TEST(LayoutInfoTest, ComparisonOperator) {
   matrix::LayoutInfo layout0({25, 25}, {5, 5}, 50, 8, 1000);
@@ -130,8 +131,8 @@ TEST(LayoutInfoTest, ComparisonOperator) {
   }
 }
 
-const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, int, int, int>> col_major_values(
-    {
+const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, ssize, ssize, ssize>>
+    col_major_values({
         {{31, 17}, {7, 11}, 31, 7, 341, 527},     // packed ld
         {{31, 17}, {7, 11}, 33, 7, 363, 559},     // padded ld
         {{29, 41}, {13, 11}, 29, 13, 319, 1189},  // packed ld
@@ -158,7 +159,7 @@ TEST(LayoutInfoTest, ColMajorLayout) {
   }
 }
 
-const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, SizeType, int, int, int, bool>>
+const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, SizeType, ssize, ssize, ssize, bool>>
     tile_values({
         {{31, 17}, {7, 11}, 7, 5, 77, 385, 731, true},       // basic tile layout
         {{31, 17}, {7, 11}, 11, 5, 121, 605, 1147, false},   // padded ld

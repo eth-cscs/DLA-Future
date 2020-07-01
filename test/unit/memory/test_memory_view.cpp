@@ -22,7 +22,7 @@ class MemoryViewTest : public ::testing::Test {};
 
 TYPED_TEST_SUITE(MemoryViewTest, ElementTypes);
 
-constexpr int size = 397;
+constexpr ssize size = 397;
 
 TYPED_TEST(MemoryViewTest, ConstructorAllocates) {
   using Type = TypeParam;
@@ -31,7 +31,7 @@ TYPED_TEST(MemoryViewTest, ConstructorAllocates) {
   EXPECT_EQ(size, mem.size());
   EXPECT_NE(nullptr, mem());
   Type* ptr = mem();
-  for (int i = 0; i < mem.size(); ++i)
+  for (ssize i = 0; i < mem.size(); ++i)
     EXPECT_EQ(ptr + i, mem(i));
 
   memory::MemoryView<Type, Device::CPU> mem2(0);
@@ -49,7 +49,7 @@ TYPED_TEST(MemoryViewTest, ConstructorPointer) {
   EXPECT_EQ(size, mem.size());
   EXPECT_EQ(ptr, mem());
 
-  for (int i = 0; i < mem.size(); ++i)
+  for (ssize i = 0; i < mem.size(); ++i)
     EXPECT_EQ(ptr + i, mem(i));
 
   memory::MemoryView<Type, Device::CPU> mem2(ptr, 0);
@@ -70,7 +70,7 @@ TYPED_TEST(MemoryViewTest, ConstructorPointerConst) {
   EXPECT_EQ(size, const_mem.size());
   EXPECT_EQ(const_ptr, const_mem());
 
-  for (int i = 0; i < const_mem.size(); ++i)
+  for (ssize i = 0; i < const_mem.size(); ++i)
     EXPECT_EQ(const_ptr + i, const_mem(i));
 
   memory::MemoryView<const Type, Device::CPU> const_mem2(const_ptr, 0);
@@ -93,7 +93,7 @@ TYPED_TEST(MemoryViewTest, ConstructorSubview) {
   EXPECT_EQ(size - 5, mem2.size());
   EXPECT_EQ(ptr + 4, mem2());
 
-  for (int i = 0; i < mem2.size(); ++i)
+  for (ssize i = 0; i < mem2.size(); ++i)
     EXPECT_EQ(ptr + 4 + i, mem2(i));
 
   memory::MemoryView<Type, Device::CPU> mem3(mem2, 4, size - 15);
@@ -101,7 +101,7 @@ TYPED_TEST(MemoryViewTest, ConstructorSubview) {
   EXPECT_EQ(size - 15, mem3.size());
   EXPECT_EQ(ptr + 8, mem3());
 
-  for (int i = 0; i < mem3.size(); ++i)
+  for (ssize i = 0; i < mem3.size(); ++i)
     EXPECT_EQ(ptr + 8 + i, mem3(i));
 
   memory::MemoryView<Type, Device::CPU> mem4(mem, 4, 0);
@@ -121,7 +121,7 @@ TYPED_TEST(MemoryViewTest, ConstructorSubviewConst) {
   EXPECT_EQ(size - 5, const_mem2.size());
   EXPECT_EQ(ptr + 4, const_mem2());
 
-  for (int i = 0; i < const_mem2.size(); ++i)
+  for (ssize i = 0; i < const_mem2.size(); ++i)
     EXPECT_EQ(ptr + 4 + i, const_mem2(i));
 
   memory::MemoryView<const Type, Device::CPU> const_mem3(const_mem2, 4, size - 15);
@@ -129,7 +129,7 @@ TYPED_TEST(MemoryViewTest, ConstructorSubviewConst) {
   EXPECT_EQ(size - 15, const_mem3.size());
   EXPECT_EQ(ptr + 8, const_mem3());
 
-  for (int i = 0; i < const_mem3.size(); ++i)
+  for (ssize i = 0; i < const_mem3.size(); ++i)
     EXPECT_EQ(ptr + 8 + i, const_mem3(i));
 
   memory::MemoryView<const Type, Device::CPU> const_mem4(const_mem, 4, 0);
@@ -149,7 +149,7 @@ TYPED_TEST(MemoryViewTest, ConstructorSubviewMix) {
   EXPECT_EQ(size - 5, const_mem2.size());
   EXPECT_EQ(ptr + 4, const_mem2());
 
-  for (int i = 0; i < const_mem2.size(); ++i)
+  for (ssize i = 0; i < const_mem2.size(); ++i)
     EXPECT_EQ(ptr + 4 + i, const_mem2(i));
 
   memory::MemoryView<Type, Device::CPU> const_mem4(mem, 4, 0);
@@ -169,7 +169,7 @@ TYPED_TEST(MemoryViewTest, CopyConstructor) {
   EXPECT_EQ(mem.size(), mem2.size());
 
   Type* ptr = mem();
-  for (int i = 0; i < mem2.size(); ++i)
+  for (ssize i = 0; i < mem2.size(); ++i)
     EXPECT_EQ(ptr + i, mem2(i));
 }
 
@@ -184,7 +184,7 @@ TYPED_TEST(MemoryViewTest, CopyConstructorConst) {
   EXPECT_EQ(const_mem.size(), const_mem2.size());
 
   const Type* ptr = const_mem();
-  for (int i = 0; i < const_mem2.size(); ++i)
+  for (ssize i = 0; i < const_mem2.size(); ++i)
     EXPECT_EQ(ptr + i, const_mem2(i));
 }
 
@@ -199,7 +199,7 @@ TYPED_TEST(MemoryViewTest, CopyConstructorMix) {
   EXPECT_EQ(mem.size(), const_mem2.size());
 
   Type* ptr = mem();
-  for (int i = 0; i < const_mem2.size(); ++i)
+  for (ssize i = 0; i < const_mem2.size(); ++i)
     EXPECT_EQ(ptr + i, const_mem2(i));
 }
 
@@ -215,7 +215,7 @@ TYPED_TEST(MemoryViewTest, MoveConstructor) {
   EXPECT_EQ(0, mem.size());
 
   EXPECT_EQ(size, mem2.size());
-  for (int i = 0; i < mem2.size(); ++i)
+  for (ssize i = 0; i < mem2.size(); ++i)
     EXPECT_EQ(ptr + i, mem2(i));
 }
 
@@ -231,7 +231,7 @@ TYPED_TEST(MemoryViewTest, MoveConstructorConst) {
   EXPECT_EQ(0, const_mem.size());
 
   EXPECT_EQ(size, const_mem2.size());
-  for (int i = 0; i < const_mem2.size(); ++i)
+  for (ssize i = 0; i < const_mem2.size(); ++i)
     EXPECT_EQ(ptr + i, const_mem2(i));
 }
 
@@ -247,7 +247,7 @@ TYPED_TEST(MemoryViewTest, MoveConstructorMix) {
   EXPECT_EQ(0, mem.size());
 
   EXPECT_EQ(size, const_mem2.size());
-  for (int i = 0; i < const_mem2.size(); ++i)
+  for (ssize i = 0; i < const_mem2.size(); ++i)
     EXPECT_EQ(ptr + i, const_mem2(i));
 }
 
@@ -264,7 +264,7 @@ TYPED_TEST(MemoryViewTest, CopyAssignement) {
   EXPECT_EQ(mem.size(), mem2.size());
 
   Type* ptr = mem();
-  for (int i = 0; i < mem2.size(); ++i)
+  for (ssize i = 0; i < mem2.size(); ++i)
     EXPECT_EQ(ptr + i, mem2(i));
 }
 
@@ -281,7 +281,7 @@ TYPED_TEST(MemoryViewTest, CopyAssignementConst) {
   EXPECT_EQ(const_mem.size(), const_mem2.size());
 
   const Type* ptr = const_mem();
-  for (int i = 0; i < const_mem2.size(); ++i)
+  for (ssize i = 0; i < const_mem2.size(); ++i)
     EXPECT_EQ(ptr + i, const_mem2(i));
 }
 
@@ -298,7 +298,7 @@ TYPED_TEST(MemoryViewTest, CopyAssignementMix) {
   EXPECT_EQ(mem.size(), const_mem2.size());
 
   Type* ptr = mem();
-  for (int i = 0; i < const_mem2.size(); ++i)
+  for (ssize i = 0; i < const_mem2.size(); ++i)
     EXPECT_EQ(ptr + i, const_mem2(i));
 }
 
@@ -316,7 +316,7 @@ TYPED_TEST(MemoryViewTest, MoveAssignement) {
   EXPECT_EQ(0, mem.size());
 
   EXPECT_EQ(size, mem2.size());
-  for (int i = 0; i < mem2.size(); ++i)
+  for (ssize i = 0; i < mem2.size(); ++i)
     EXPECT_EQ(ptr + i, mem2(i));
 }
 
@@ -334,7 +334,7 @@ TYPED_TEST(MemoryViewTest, MoveAssignementConst) {
   EXPECT_EQ(0, const_mem.size());
 
   EXPECT_EQ(size, const_mem2.size());
-  for (int i = 0; i < const_mem2.size(); ++i)
+  for (ssize i = 0; i < const_mem2.size(); ++i)
     EXPECT_EQ(ptr + i, const_mem2(i));
 }
 
@@ -352,6 +352,6 @@ TYPED_TEST(MemoryViewTest, MoveAssignementMix) {
   EXPECT_EQ(0, mem.size());
 
   EXPECT_EQ(size, const_mem2.size());
-  for (int i = 0; i < const_mem2.size(); ++i)
+  for (ssize i = 0; i < const_mem2.size(); ++i)
     EXPECT_EQ(ptr + i, const_mem2(i));
 }

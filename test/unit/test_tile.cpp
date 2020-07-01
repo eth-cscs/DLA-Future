@@ -28,7 +28,7 @@ constexpr SizeType m = 37;
 constexpr SizeType n = 87;
 constexpr SizeType ld = 133;
 
-int elIndex(TileElementIndex index, SizeType ld) {
+ssize elIndex(TileElementIndex index, SizeType ld) {
   return index.row() + ld * index.col();
 }
 

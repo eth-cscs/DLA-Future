@@ -89,7 +89,7 @@ protected:
   /// @pre index.isIn(localNrTiles()) == true.
   ssize tileLinearIndex(const LocalTileIndex& index) const noexcept {
     assert(index.isValid() && index.isIn(distribution_->localNrTiles()));
-    return index.row() + distribution_->localNrTiles().rows() * index.col();
+    return index.row() + distribution_->localNrTiles().rows() * static_cast<ssize>(index.col());
   }
 
   /// Prints information about the matrix.

@@ -10,7 +10,7 @@
 
 #pragma once
 #include <cassert>
-#include <cstddef>
+
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/util_math.h"
@@ -130,7 +130,7 @@ inline LayoutInfo colMajorLayout(const matrix::Distribution& distribution, SizeT
 /// Returns LayoutInfo for a local matrix which use the tile layout (Advanced interface).
 inline LayoutInfo tileLayout(const LocalElementSize& size, const TileElementSize& block_size,
                              SizeType ld_tile, SizeType tiles_per_col) {
-  ssize tile_size = ld_tile * block_size.cols();
+  ssize tile_size = static_cast<ssize>(ld_tile) * block_size.cols();
   ssize row_offset = std::max<ssize>(1, tile_size);
   ssize col_offset = std::max<ssize>(1, tile_size * tiles_per_col);
   return LayoutInfo(size, block_size, ld_tile, row_offset, col_offset);

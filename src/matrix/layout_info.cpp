@@ -11,7 +11,6 @@
 #include "dlaf/matrix/layout_info.h"
 
 #include <cassert>
-#include <cstddef>
 #include "dlaf/util_math.h"
 
 namespace dlaf {

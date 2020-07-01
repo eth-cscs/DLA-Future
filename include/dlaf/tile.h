@@ -93,7 +93,7 @@ public:
     assert(index.isValid());
     assert(index.isIn(size_));
 
-    return memory_view_(index.row() + ld_ * index.col());
+    return memory_view_(index.row() + static_cast<ssize>(ld_) * index.col());
   }
 
   /// @brief Returns the size of the Tile.

@@ -15,16 +15,19 @@
 
 ## How to install DLA-Future with spack
 
-We provide a spack package DLA-Future that can be easily add to your own spack as follows:
+We provide a spack package DLA-Future that can be easily added to your own spack as follows:
 
-`spack repo add spack`
+`spack repo add <dlaf root>/spack`
 
 This will add a new repository with namespace `dlaf`.
 
-The command to install the library for example on an HPC cluster will be similar to:
+Example installation:
 
-`spack install -v --test=root dla-future ^mkl ^hpx max_cpu_count=256`
+`spack install dla-future ^intel-mkl`
 
+Notice that, for the package to work correctly, the HPX option `max_cpu_count` must be set accordingly to the platform, as it represents the maximum number of OS-threads. 
+
+`spack install -v dla-future ^intel-mkl ^hpx max_cpu_count=256`
 
 ## How to use the library
 

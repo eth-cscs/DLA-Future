@@ -28,11 +28,13 @@ stages:
 cpu debug build:
   extends: .build_common
   variables:
-    BUILD_IMAGE: $CI_REGISTRY_IMAGE/debug/build:20200625-lapackpp.f878fa
+    BUILD_DOCKER_FILE: ci/docker/debug/build.Dockerfile
+    BUILD_IMAGE_BASE: $CI_REGISTRY_IMAGE/debug/build:
     IMAGE: $CI_REGISTRY_IMAGE/debug/deploy:$CI_COMMIT_SHA
   script:
-    - docker pull $BUILD_IMAGE
-    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE -f ci/docker/debug/build.Dockerfile --network=host .
+    - BUILD_IMAGE=$BUILD_IMAGE_BASE`sha256sum $BUILD_DOCKER_FILE | head -c 64`
+    - (docker pull $BUILD_IMAGE && BUILD_CACHE="--cache-from $BUILD_IMAGE") || (docker pull ${BUILD_IMAGE_BASE}latest && BUILD_CACHE="--cache-from ${BUILD_IMAGE_BASE}latest") || BUILD_CACHE=""
+    - docker build -t $BUILD_IMAGE $BUILD_CACHE -f $BUILD_DOCKER_FILE --network=host .
     - docker push $BUILD_IMAGE
     - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE --build-arg DEPLOY_IMAGE=$IMAGE -f ci/docker/debug/deploy.Dockerfile --network=host .
     - docker push $IMAGE
@@ -41,11 +43,13 @@ cpu debug build:
 cpu release build:
   extends: .build_common
   variables:
-    BUILD_IMAGE: $CI_REGISTRY_IMAGE/release/build:20200625-lapackpp.f878fa
+    BUILD_DOCKER_FILE: ci/docker/release/build.Dockerfile
+    BUILD_IMAGE_BASE: $CI_REGISTRY_IMAGE/release/build:
     IMAGE: $CI_REGISTRY_IMAGE/release/deploy:$CI_COMMIT_SHA
   script:
-    - docker pull $BUILD_IMAGE
-    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE -f ci/docker/release/build.Dockerfile --network=host .
+    - BUILD_IMAGE=$BUILD_IMAGE_BASE`sha256sum $BUILD_DOCKER_FILE | head -c 64`
+    - (docker pull $BUILD_IMAGE && BUILD_CACHE="--cache-from $BUILD_IMAGE") || (docker pull ${BUILD_IMAGE_BASE}latest && BUILD_CACHE="--cache-from ${BUILD_IMAGE_BASE}latest") || BUILD_CACHE=""
+    - docker build -t $BUILD_IMAGE $BUILD_CACHE -f $BUILD_DOCKER_FILE --network=host .
     - docker push $BUILD_IMAGE
     - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE --build-arg DEPLOY_IMAGE=$IMAGE -f ci/docker/release/deploy.Dockerfile --network=host .
     - docker push $IMAGE
@@ -54,11 +58,13 @@ cpu release build:
 cpu codecov build:
   extends: .build_common
   variables:
-    BUILD_IMAGE: $CI_REGISTRY_IMAGE/codecov/build:20200625-lapackpp.f878fa
+    BUILD_DOCKER_FILE: ci/docker/codecov/build.Dockerfile
+    BUILD_IMAGE_BASE: $CI_REGISTRY_IMAGE/codecov/build:
     IMAGE: $CI_REGISTRY_IMAGE/codecov/deploy:$CI_COMMIT_SHA
   script:
-    - docker pull $BUILD_IMAGE
-    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE -f ci/docker/codecov/build.Dockerfile --network=host .
+    - BUILD_IMAGE=$BUILD_IMAGE_BASE`sha256sum $BUILD_DOCKER_FILE | head -c 64`
+    - (docker pull $BUILD_IMAGE && BUILD_CACHE="--cache-from $BUILD_IMAGE") || (docker pull ${BUILD_IMAGE_BASE}latest && BUILD_CACHE="--cache-from ${BUILD_IMAGE_BASE}latest") || BUILD_CACHE=""
+    - docker build -t $BUILD_IMAGE $BUILD_CACHE -f $BUILD_DOCKER_FILE --network=host .
     - docker push $BUILD_IMAGE
     - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE --build-arg DEPLOY_IMAGE=$IMAGE -f ci/docker/codecov/deploy.Dockerfile --network=host .
     - docker push $IMAGE

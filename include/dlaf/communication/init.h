@@ -54,27 +54,29 @@ void mpi_invoke(F f, Ts... ts) noexcept {
   }
 }
 
-/// Initialize MPI to either MPI_THREAD_SERIALIZED or MPI_THREAD_MULTIPLE
-inline void mpi_init(int argc, char** argv, mpi_thread_level thd_level) noexcept {
-  int required_threading;
-  if (thd_level == mpi_thread_level::serialized)
-    required_threading = MPI_THREAD_SERIALIZED;
-  else
-    required_threading = MPI_THREAD_MULTIPLE;
+struct mpi_init {
+  /// Initialize MPI to either MPI_THREAD_SERIALIZED or MPI_THREAD_MULTIPLE
+  mpi_init(int argc, char** argv, mpi_thread_level thd_level) noexcept {
+    int required_threading;
+    if (thd_level == mpi_thread_level::serialized)
+      required_threading = MPI_THREAD_SERIALIZED;
+    else
+      required_threading = MPI_THREAD_MULTIPLE;
 
-  int provided_threading;
-  MPI_Init_thread(&argc, &argv, required_threading, &provided_threading);
+    int provided_threading;
+    MPI_Init_thread(&argc, &argv, required_threading, &provided_threading);
 
-  if (provided_threading != required_threading) {
-    std::cerr << "Provided MPI threading model does not match the required one." << std::endl;
-    MPI_Abort(MPI_COMM_WORLD, 1);
+    if (provided_threading != required_threading) {
+      std::cerr << "Provided MPI threading model does not match the required one." << std::endl;
+      MPI_Abort(MPI_COMM_WORLD, 1);
+    }
   }
-}
 
-/// Finalize MPI
-inline void mpi_fin() noexcept {
-  MPI_Finalize();
-}
+  /// Finalize MPI
+  ~mpi_init() noexcept {
+    MPI_Finalize();
+  }
+};
 
 }
 }

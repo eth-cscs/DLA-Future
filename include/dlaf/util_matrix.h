@@ -243,8 +243,7 @@ void set_lower_and_upper_tile(Tile<T, Device::CPU>& tile, internal::getter_rando
 /// @pre @param matrix is a square matrix
 /// @pre @param matrix has a square blocksize
 template <class T>
-void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix,
-                                      const ssize offset_value) {
+void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const ssize offset_value) {
   // note:
   // By assuming square blocksizes, it is easier to locate elements. In fact:
   // - Elements on the diagonal are stored in the diagonal of the diagonal tiles

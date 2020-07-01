@@ -13,8 +13,8 @@
 /// @file
 
 #include <cassert>
-#include <cstddef>
 #include <complex>
+#include <cstddef>
 #include <limits>
 
 #include "dlaf/common/assert.h"

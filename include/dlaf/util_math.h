@@ -111,8 +111,7 @@ ssize sum(const TA a, const TB b) {
 /// @pre it must be possible to store the result in ssize
 template <typename TA, typename TB>
 ssize mul(const TA a, const TB b) {
-  return dlaf::util::internal::generic_integer_op<ssize>(a, b,
-                                                                  std::multiplies<ssize>());
+  return dlaf::util::internal::generic_integer_op<ssize>(a, b, std::multiplies<ssize>());
 }
 
 }

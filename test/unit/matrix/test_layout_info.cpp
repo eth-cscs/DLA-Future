@@ -159,7 +159,8 @@ TEST(LayoutInfoTest, ColMajorLayout) {
   }
 }
 
-const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, SizeType, ssize, ssize, ssize, bool>>
+const std::vector<
+    std::tuple<LocalElementSize, TileElementSize, SizeType, SizeType, ssize, ssize, ssize, bool>>
     tile_values({
         {{31, 17}, {7, 11}, 7, 5, 77, 385, 731, true},       // basic tile layout
         {{31, 17}, {7, 11}, 11, 5, 121, 605, 1147, false},   // padded ld

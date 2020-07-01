@@ -166,7 +166,7 @@ TYPED_TEST(MatrixTest, ConstructorFromDistribution) {
 ///
 /// @pre index should be valid, contained in @p distribution.size() and stored in the current rank.
 ssize memoryIndex(const Distribution& distribution, const LayoutInfo& layout,
-                           const GlobalElementIndex& index) {
+                  const GlobalElementIndex& index) {
   auto global_tile_index = distribution.globalTileIndex(index);
   auto tile_element_index = distribution.tileElementIndex(index);
   auto local_tile_index = distribution.localTileIndex(global_tile_index);

@@ -16,6 +16,7 @@
 #include "dlaf/auxiliary/mc.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/functions_sync.h"
+#include "dlaf/communication/init.h"
 #include "dlaf/factorization/mc.h"
 #include "dlaf/matrix.h"
 #include "dlaf/matrix/copy.h"
@@ -149,16 +150,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 }
 
 int main(int argc, char** argv) {
-  // Initialize MPI
-  //int threading_required = MPI_THREAD_SERIALIZED;
-  int threading_required = MPI_THREAD_MULTIPLE;
-  int threading_provided;
-  MPI_Init_thread(&argc, &argv, threading_required, &threading_provided);
-
-  if (threading_provided != threading_required) {
-    std::fprintf(stderr, "Provided MPI threading model does not match the required one.\n");
-    MPI_Abort(MPI_COMM_WORLD, 1);
-  }
+  // Init MPI
+  dlaf::comm::mpi_init mpi_initter(argc, argv, dlaf::comm::mpi_thread_level::multiple);
 
   // options
   using namespace hpx::program_options;
@@ -191,8 +184,6 @@ int main(int argc, char** argv) {
   }
 
   auto ret_code = hpx::init(hpx_main, desc_commandline, argc, argv);
-
-  MPI_Finalize();
 
   return ret_code;
 }

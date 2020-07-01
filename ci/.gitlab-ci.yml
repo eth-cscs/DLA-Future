@@ -29,7 +29,7 @@ cpu debug build:
   extends: .build_common
   variables:
     BUILD_DOCKER_FILE: ci/docker/debug/build.Dockerfile
-    BUILD_IMAGE_BASE: $CI_REGISTRY_IMAGE/debug/build:
+    BUILD_IMAGE_BASE: "$CI_REGISTRY_IMAGE/debug/build:"
     IMAGE: $CI_REGISTRY_IMAGE/debug/deploy:$CI_COMMIT_SHA
   script:
     - BUILD_IMAGE=$BUILD_IMAGE_BASE`sha256sum $BUILD_DOCKER_FILE | head -c 64`
@@ -44,7 +44,7 @@ cpu release build:
   extends: .build_common
   variables:
     BUILD_DOCKER_FILE: ci/docker/release/build.Dockerfile
-    BUILD_IMAGE_BASE: $CI_REGISTRY_IMAGE/release/build:
+    BUILD_IMAGE_BASE: "$CI_REGISTRY_IMAGE/release/build:"
     IMAGE: $CI_REGISTRY_IMAGE/release/deploy:$CI_COMMIT_SHA
   script:
     - BUILD_IMAGE=$BUILD_IMAGE_BASE`sha256sum $BUILD_DOCKER_FILE | head -c 64`
@@ -59,7 +59,7 @@ cpu codecov build:
   extends: .build_common
   variables:
     BUILD_DOCKER_FILE: ci/docker/codecov/build.Dockerfile
-    BUILD_IMAGE_BASE: $CI_REGISTRY_IMAGE/codecov/build:
+    BUILD_IMAGE_BASE: "$CI_REGISTRY_IMAGE/codecov/build:"
     IMAGE: $CI_REGISTRY_IMAGE/codecov/deploy:$CI_COMMIT_SHA
   script:
     - BUILD_IMAGE=$BUILD_IMAGE_BASE`sha256sum $BUILD_DOCKER_FILE | head -c 64`

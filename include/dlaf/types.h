@@ -13,12 +13,15 @@
 /// @file
 
 #include <cassert>
+#include <cstddef>
 #include <complex>
 #include <limits>
 
 #include "dlaf/common/assert.h"
 
 namespace dlaf {
+
+using ssize = std::ptrdiff_t;
 
 using SizeType = int;
 static_assert(std::is_signed<SizeType>::value && std::is_integral<SizeType>::value,

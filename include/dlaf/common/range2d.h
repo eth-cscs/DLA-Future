@@ -49,7 +49,7 @@ class IteratorRange2D {
   using index2d_t = Index2D<IndexT, Tag>;
 
 public:
-  IteratorRange2D(index2d_t begin, IndexT ld, std::ptrdiff_t i) : begin_(begin), ld_(ld), i_(i) {}
+  IteratorRange2D(index2d_t begin, IndexT ld, ssize i) : begin_(begin), ld_(ld), i_(i) {}
 
   void operator++() noexcept {
     ++i_;
@@ -67,7 +67,7 @@ public:
 protected:
   index2d_t begin_;
   IndexT ld_;
-  std::ptrdiff_t i_;
+  ssize i_;
 };
 
 /// An Iterable representing a 2D range.
@@ -98,7 +98,7 @@ public:
 private:
   index2d_t begin_idx_;
   IndexT ld_;
-  std::ptrdiff_t i_max_;  // the maximum linear index
+  ssize i_max_;  // the maximum linear index
 };
 
 /// Function wrappers to deduce types in constructor calls to IterableRange2D

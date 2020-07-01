@@ -148,7 +148,7 @@ public:
     return out << static_cast<BaseT>(index);
   }
 
-  std::ptrdiff_t linear_size() const noexcept {
+  ssize linear_size() const noexcept {
     return BaseT::row_ * BaseT::col_;
   }
 };
@@ -224,7 +224,7 @@ std::ostream& operator<<(std::ostream& os, const Index2D<T, Tag>& size) {
 ///
 /// @pre 0 <= linear_index < (dims.rows() * dims.cols())
 template <class IndexT, class Tag>
-Index2D<IndexT, Tag> computeCoordsRowMajor(std::ptrdiff_t linear_index,
+Index2D<IndexT, Tag> computeCoordsRowMajor(ssize linear_index,
                                            const Size2D<IndexT, Tag>& dims) noexcept {
   using dlaf::util::ptrdiff_t::mul;
 
@@ -235,7 +235,7 @@ Index2D<IndexT, Tag> computeCoordsRowMajor(std::ptrdiff_t linear_index,
   DLAF_ASSERT_MODERATE(linear_index < mul(dims.rows(), dims.cols()),
                        "Linear index does not fit into grid!", std::to_string(linear_index), dims);
 
-  std::ptrdiff_t leading_size = dims.cols();
+  ssize leading_size = dims.cols();
   return {to_signed<IndexT>(linear_index / leading_size),
           to_signed<IndexT>(linear_index % leading_size)};
 }
@@ -248,7 +248,7 @@ Index2D<IndexT, Tag> computeCoordsRowMajor(std::ptrdiff_t linear_index,
 ///
 /// @pre 0 <= linear_index < (dims.rows() * dims.cols())
 template <class IndexT, class Tag>
-Index2D<IndexT, Tag> computeCoordsColMajor(std::ptrdiff_t linear_index,
+Index2D<IndexT, Tag> computeCoordsColMajor(ssize linear_index,
                                            const Size2D<IndexT, Tag>& dims) noexcept {
   using dlaf::util::ptrdiff_t::mul;
 
@@ -256,7 +256,7 @@ Index2D<IndexT, Tag> computeCoordsColMajor(std::ptrdiff_t linear_index,
   DLAF_ASSERT_MODERATE(linear_index < mul(dims.rows(), dims.cols()),
                        "Linear index does not fit into grid!", std::to_string(linear_index), dims);
 
-  std::ptrdiff_t leading_size = dims.rows();
+  ssize leading_size = dims.rows();
   return {to_signed<IndexT>(linear_index % leading_size),
           to_signed<IndexT>(linear_index / leading_size)};
 }
@@ -272,7 +272,7 @@ Index2D<IndexT, Tag> computeCoordsColMajor(std::ptrdiff_t linear_index,
 ///
 /// @pre 0 <= linear_index < (dims.rows() * dims.cols())
 template <class IndexT, class Tag>
-Index2D<IndexT, Tag> computeCoords(Ordering ordering, std::ptrdiff_t index,
+Index2D<IndexT, Tag> computeCoords(Ordering ordering, ssize index,
                                    const Size2D<IndexT, Tag>& dims) noexcept {
   switch (ordering) {
     case Ordering::RowMajor:
@@ -302,7 +302,7 @@ LinearIndexT computeLinearIndexRowMajor(const Index2D<IndexT, Tag>& index,
 
   DLAF_ASSERT_MODERATE(index.isIn(dims), index, dims);
 
-  std::ptrdiff_t linear_index = sum(mul(index.row(), dims.cols()), index.col());
+  ssize linear_index = sum(mul(index.row(), dims.cols()), index.col());
   return integral_cast<LinearIndexT>(linear_index);
 }
 
@@ -324,7 +324,7 @@ LinearIndexT computeLinearIndexColMajor(const Index2D<IndexT, Tag>& index,
 
   DLAF_ASSERT_MODERATE(index.isIn(dims), index, dims);
 
-  std::ptrdiff_t linear_index = sum(mul(index.col(), dims.rows()), index.row());
+  ssize linear_index = sum(mul(index.col(), dims.rows()), index.row());
   return integral_cast<LinearIndexT>(linear_index);
 }
 

@@ -87,7 +87,7 @@ protected:
   ///
   /// @pre index.isValid() == true.
   /// @pre index.isIn(localNrTiles()) == true.
-  std::ptrdiff_t tileLinearIndex(const LocalTileIndex& index) const noexcept {
+  ssize tileLinearIndex(const LocalTileIndex& index) const noexcept {
     assert(index.isValid() && index.isIn(distribution_->localNrTiles()));
     return index.row() + distribution_->localNrTiles().rows() * index.col();
   }

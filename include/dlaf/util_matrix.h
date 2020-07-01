@@ -106,7 +106,7 @@ class getter_random {
 
 public:
   getter_random() : random_engine_(std::minstd_rand::default_seed) {}
-  getter_random(std::ptrdiff_t seed) : random_engine_(static_cast<std::size_t>(seed)) {
+  getter_random(ssize seed) : random_engine_(static_cast<std::size_t>(seed)) {
     DLAF_ASSERT(seed >= 0, "");
   }
 
@@ -186,7 +186,7 @@ namespace internal {
 
 template <class T>
 void set_diagonal_tile(Tile<T, Device::CPU>& tile, internal::getter_random<T>& random_value,
-                       std::ptrdiff_t offset_value) {
+                       ssize offset_value) {
   // DIAGONAL
   // for diagonal tiles get just lower matrix values and set value for both
   // straight and transposed indices
@@ -244,7 +244,7 @@ void set_lower_and_upper_tile(Tile<T, Device::CPU>& tile, internal::getter_rando
 /// @pre @param matrix has a square blocksize
 template <class T>
 void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix,
-                                      const std::ptrdiff_t offset_value) {
+                                      const ssize offset_value) {
   // note:
   // By assuming square blocksizes, it is easier to locate elements. In fact:
   // - Elements on the diagonal are stored in the diagonal of the diagonal tiles
@@ -266,7 +266,7 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix,
     // compute the same seed for original and "transposed" tiles, so transposed ones will know the
     // values of the original one without the need of accessing real values (nor communication in case
     // of distributed matrices)
-    std::ptrdiff_t seed;
+    ssize seed;
     if (tile_wrt_global.row() >= tile_wrt_global.col())  // LOWER or DIAGONAL
       seed = tl_index.col() + tl_index.row() * matrix.size().cols();
     else

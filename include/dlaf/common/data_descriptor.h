@@ -20,6 +20,7 @@
 
 #include "dlaf/common/assert.h"
 #include "dlaf/common/data.h"
+#include "dlaf/types.h"
 
 namespace dlaf {
 namespace common {
@@ -47,7 +48,7 @@ struct DataDescriptor {
   /// Create a Data pointing to @p n contiguous elements of type @p T starting at @p ptr
   /// @param ptr  pointer to the first element of the underlying contiguous data
   /// @param n    number of elements
-  DataDescriptor(T* ptr, std::ptrdiff_t n) noexcept : DataDescriptor(ptr, 1, n, 0) {}
+  DataDescriptor(T* ptr, ssize n) noexcept : DataDescriptor(ptr, 1, n, 0) {}
 
   /// Create a DataDescriptor pointing to data with given structure
   ///
@@ -61,8 +62,7 @@ struct DataDescriptor {
   /// @pre num_blocks != 0
   /// @pre stride == 0 if num_blocks == 1
   /// @pre stride >= blocksize if num_blocks > 1
-  DataDescriptor(T* ptr, std::ptrdiff_t num_blocks, std::ptrdiff_t blocksize,
-                 std::ptrdiff_t stride) noexcept
+  DataDescriptor(T* ptr, ssize num_blocks, ssize blocksize, ssize stride) noexcept
       : data_(ptr), nblocks_(num_blocks), blocksize_(blocksize), stride_(num_blocks == 1 ? 0 : stride) {
     DLAF_ASSERT(num_blocks >= 0, "");
     DLAF_ASSERT(blocksize >= 0, "");
@@ -98,26 +98,26 @@ struct DataDescriptor {
   /// Number of blocks
   ///
   /// 1 in case of contiguous data (single block)
-  std::ptrdiff_t nblocks() const noexcept {
+  ssize nblocks() const noexcept {
     return nblocks_;
   }
 
   /// Number of elements in each block
   ///
   /// For contiguous block, the return value equals to count()
-  std::ptrdiff_t blocksize() const noexcept {
+  ssize blocksize() const noexcept {
     return blocksize_;
   }
 
   /// Number of elements between the start of each block
   ///
   /// 0 in case of contiguous data (single block)
-  std::ptrdiff_t stride() const noexcept {
+  ssize stride() const noexcept {
     return stride_;
   }
 
   /// Number of valid elements
-  std::ptrdiff_t count() const noexcept {
+  ssize count() const noexcept {
     return is_contiguous() ? blocksize() : (nblocks() * blocksize());
   }
 
@@ -128,9 +128,9 @@ struct DataDescriptor {
 
 protected:
   T* data_;
-  std::ptrdiff_t nblocks_;
-  std::ptrdiff_t blocksize_;
-  std::ptrdiff_t stride_;
+  ssize nblocks_;
+  ssize blocksize_;
+  ssize stride_;
 };
 
 /// Helper class for creatig a DataDescriptor from a bounded C-array
@@ -155,13 +155,13 @@ struct Buffer : public DataDescriptor<T> {
   /// Create a Buffer with given externally allocated memory
   ///
   /// Acquire ownership of an externally allocated std::unique_ptr
-  Buffer(std::unique_ptr<T[]>&& memory, const std::ptrdiff_t N)
+  Buffer(std::unique_ptr<T[]>&& memory, const ssize N)
       : DataDescriptor<T>(memory.get(), N), memory_(std::move(memory)) {}
 
   /// Create a Buffer internally allocating the memory
   ///
   /// Internally allocates the memory for @param N contiguous elements
-  Buffer(const std::ptrdiff_t N) : Buffer(std::make_unique<T[]>(static_cast<std::size_t>(N)), N) {}
+  Buffer(const ssize N) : Buffer(std::make_unique<T[]>(static_cast<std::size_t>(N)), N) {}
 
 protected:
   std::unique_ptr<T[]> memory_;

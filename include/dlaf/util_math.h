@@ -92,27 +92,27 @@ namespace ptrdiff_t {
 
 /// @brief Perform the sum on integer types in ptrdiff_t arithmetic
 ///
-/// It casts operands to std::ptrdiff_t type and then performs the sum
+/// It casts operands to ssize type and then performs the sum
 /// @tparam TA and @tparam TB must be integer types (signed or unsigned)
 /// @return @p a + @p b
-/// @pre @p a and @p b can be stored in std::ptrdiff_t
-/// @pre it must be possible to store the result in std::ptrdiff_t
+/// @pre @p a and @p b can be stored in ssize
+/// @pre it must be possible to store the result in ssize
 template <typename TA, typename TB>
-std::ptrdiff_t sum(const TA a, const TB b) {
-  return dlaf::util::internal::generic_integer_op<std::ptrdiff_t>(a, b, std::plus<std::ptrdiff_t>());
+ssize sum(const TA a, const TB b) {
+  return dlaf::util::internal::generic_integer_op<ssize>(a, b, std::plus<ssize>());
 }
 
 /// @brief Perform the multiplication on integer types in ptrdiff_t arithmetic
 ///
-/// It casts operands to std::ptrdiff_t type and then performs the multiplication
+/// It casts operands to ssize type and then performs the multiplication
 /// @tparam TA and @tparam TB must be integer types (signed or unsigned)
 /// @return @p a * @p b
-/// @pre @p a and @p b can be stored in std::ptrdiff_t
-/// @pre it must be possible to store the result in std::ptrdiff_t
+/// @pre @p a and @p b can be stored in ssize
+/// @pre it must be possible to store the result in ssize
 template <typename TA, typename TB>
-std::ptrdiff_t mul(const TA a, const TB b) {
-  return dlaf::util::internal::generic_integer_op<std::ptrdiff_t>(a, b,
-                                                                  std::multiplies<std::ptrdiff_t>());
+ssize mul(const TA a, const TB b) {
+  return dlaf::util::internal::generic_integer_op<ssize>(a, b,
+                                                                  std::multiplies<ssize>());
 }
 
 }

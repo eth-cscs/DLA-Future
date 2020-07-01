@@ -17,7 +17,7 @@
 namespace dlaf {
 namespace matrix {
 LayoutInfo::LayoutInfo(const LocalElementSize& size, const TileElementSize& block_size, SizeType tile_ld,
-                       std::ptrdiff_t tile_offset_row, std::ptrdiff_t tile_offset_col)
+                       ssize tile_offset_row, ssize tile_offset_col)
     : size_(size), nr_tiles_(0, 0), block_size_(block_size), ld_tile_(tile_ld),
       tile_offset_row_(tile_offset_row), tile_offset_col_(tile_offset_col) {
   if (!size_.isValid()) {
@@ -62,7 +62,7 @@ LayoutInfo::LayoutInfo(const LocalElementSize& size, const TileElementSize& bloc
   }
 }
 
-std::ptrdiff_t LayoutInfo::minMemSize() const noexcept {
+ssize LayoutInfo::minMemSize() const noexcept {
   if (size_.isEmpty()) {
     return 0;
   }
@@ -71,7 +71,7 @@ std::ptrdiff_t LayoutInfo::minMemSize() const noexcept {
   return tileOffset(index_last) + minTileMemSize(index_last);
 }
 
-std::ptrdiff_t LayoutInfo::minTileMemSize(const TileElementSize& tile_size) const noexcept {
+ssize LayoutInfo::minTileMemSize(const TileElementSize& tile_size) const noexcept {
   assert(tile_size.rows() <= block_size_.rows());
   assert(tile_size.cols() <= block_size_.cols());
 

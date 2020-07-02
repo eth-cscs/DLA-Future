@@ -55,8 +55,16 @@ RUN cd ${BUILD} && \
 
 FROM ubuntu:18.04
 
+ENV DEBIAN_FRONTEND noninteractive
+
 ARG BUILD
 ARG DEPLOY
+
+# tzdata is needed to print correct time
+RUN apt-get update -qq && \
+    apt-get install -qq -y --no-install-recommends \
+      tzdata && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder ${BUILD} ${BUILD}
 COPY --from=builder ${DEPLOY} ${DEPLOY}

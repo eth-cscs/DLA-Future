@@ -34,7 +34,7 @@ cpu debug build:
     IMAGE: $CI_REGISTRY_IMAGE/debug/deploy2:$CI_COMMIT_SHA
   script:
     - BUILD_IMAGE=$BUILD_IMAGE_BASE`sha256sum $BUILD_DOCKER_FILE | head -c 64`
-    - docker pull $BUILD_IMAGE || docker build -t $BUILD_IMAGE -f $BUILD_DOCKER_FILE --network=host .
+    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 -f ci/docker/debug/build.Dockerfile --network=host .
     - docker push $BUILD_IMAGE
     - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE --build-arg DEPLOY_IMAGE=$IMAGE -f ci/docker/debug/deploy.Dockerfile --network=host .
     - docker push $IMAGE
@@ -48,7 +48,7 @@ cpu release build:
     IMAGE: $CI_REGISTRY_IMAGE/release/deploy:$CI_COMMIT_SHA
   script:
     - BUILD_IMAGE=$BUILD_IMAGE_BASE`sha256sum $BUILD_DOCKER_FILE | head -c 64`
-    - docker pull $BUILD_IMAGE || docker build -t $BUILD_IMAGE -f $BUILD_DOCKER_FILE --network=host .
+    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 -f ci/docker/release/build.Dockerfile --network=host .
     - docker push $BUILD_IMAGE
     - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE --build-arg DEPLOY_IMAGE=$IMAGE -f ci/docker/release/deploy.Dockerfile --network=host .
     - docker push $IMAGE
@@ -62,7 +62,7 @@ cpu codecov build:
     IMAGE: $CI_REGISTRY_IMAGE/codecov/deploy:$CI_COMMIT_SHA
   script:
     - BUILD_IMAGE=$BUILD_IMAGE_BASE`sha256sum $BUILD_DOCKER_FILE | head -c 64`
-    - docker pull $BUILD_IMAGE || docker build -t $BUILD_IMAGE -f $BUILD_DOCKER_FILE --network=host .
+    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 -f ci/docker/codecov/build.Dockerfile --network=host .
     - docker push $BUILD_IMAGE
     - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE --build-arg DEPLOY_IMAGE=$IMAGE -f ci/docker/codecov/deploy.Dockerfile --network=host .
     - docker push $IMAGE

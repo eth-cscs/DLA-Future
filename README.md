@@ -17,7 +17,7 @@
 
 We provide a spack package DLA-Future that can be easily added to your own spack as follows:
 
-`spack repo add <dlaf root>/spack`
+`spack repo add $DLAF_ROOT/spack`
 
 This will add a new repository with namespace `dlaf`.
 

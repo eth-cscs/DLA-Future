@@ -25,7 +25,8 @@ Example installation:
 
 `spack install dla-future ^intel-mkl`
 
-Notice that, for the package to work correctly, the HPX option `max_cpu_count` must be set accordingly to the platform, as it represents the maximum number of OS-threads. 
+Notice that, for the package to work correctly, the HPX option `max_cpu_count` must be set accordingly to the platform,
+as it represents the maximum number of OS-threads. 
 
 `spack install dla-future ^intel-mkl ^hpx max_cpu_count=256`
 

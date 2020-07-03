@@ -224,6 +224,20 @@ void set_lower_and_upper_tile(Tile<T, Device::CPU>& tile, internal::getter_rando
   }
 }
 
+template <class T>
+void set_lower_tile(Tile<T, Device::CPU>& tile, internal::getter_random<T>& random_value,
+                       std::size_t offset_value) {
+  for (SizeType j = 0; j < tile.size().cols(); ++j) {
+    for (SizeType i = 0; i < j; ++i) {
+      auto value = random_value();
+
+      tile(TileElementIndex{i, j}) = 0.0;
+      tile(TileElementIndex{j, i}) = value;
+    }
+    tile(TileElementIndex{j, j}) = std::real(random_value()) + offset_value;
+  }
+}
+
 /// Set a matrix with random values assuring it will be hermitian with an offset added to diagonal elements
 ///
 /// Values on the diagonal are added offset_value to a random value in the range [-1, 1].
@@ -283,6 +297,61 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const std:
   }
 }
 
+
+/// Set a lower triangular matrix with random values
+///
+/// Values on the diagonal are added offset_value to a random value in the range [-1, 1].
+/// In case of complex values, the imaginary part is 0.
+///
+/// Values not on the diagonal will be random numbers in:
+/// - real:     [-1, 1]
+/// - complex:  a circle of radius 1 centered at origin
+///
+/// Each tile creates its own random generator engine with a unique seed
+/// which is computed as a function of the tile global index.
+/// This means that the elements of a specific tile, no matter how the matrix is distributed,
+/// will be set with the same set of values.
+///
+/// @pre @param matrix is a square matrix
+/// @pre @param matrix has a square blocksize
+template <class T>
+void set_random_lower_triangular(Matrix<T, Device::CPU>& matrix, const std::size_t offset_value) {
+  // note:
+  // By assuming square blocksizes, it is easier to locate elements. In fact:
+  // - Elements on the diagonal are stored in the diagonal of the diagonal tiles
+  // - Tiles under the diagonal store elements of the lower triangular matrix
+  // - Tiles over the diagonal store elements of the upper triangular matrix
+
+  using namespace dlaf::util::size_t;
+
+  const Distribution& dist = matrix.distribution();
+
+  DLAF_ASSERT(square_size(matrix), matrix);
+  DLAF_ASSERT(square_blocksize(matrix), matrix);
+
+  auto full_tile_size = matrix.blockSize();
+
+  for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
+    GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
+
+    auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
+
+    // compute the same seed for original and "transposed" tiles, so transposed ones will know the
+    // values of the original one without the need of accessing real values (nor communication in case
+    // of distributed matrices)
+    size_t seed;
+    if (tile_wrt_global.row() >= tile_wrt_global.col()) {
+      seed = sum(tl_index.col(), mul(tl_index.row(), matrix.size().cols()));
+
+      auto set_hp_f = hpx::util::unwrapping([=](auto&& tile) {
+	  internal::getter_random<T> random_value(seed);
+	  internal::set_lower_tile(tile, random_value, 0.0);
+	}); 
+    hpx::dataflow(std::move(set_hp_f), matrix(tile_wrt_local));
+    }
+  }
+}
+ 
  
 }
 
@@ -326,6 +395,23 @@ void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
   internal::set_random_hermitian_with_offset(matrix, offset_value);
 }
 
+/// Set a lower triangular matrix with random values
+///
+/// Values will be random numbers in:
+/// - real:     [-1, 1]
+/// - complex:  a circle of radius 1 centered at origin
+///
+/// Each tile creates its own random generator engine with a unique seed
+/// which is computed as a function of the tile global index.
+/// This means that the elements of a specific tile, no matter how the matrix is distributed,
+/// will be set with the same set of values.
+///
+/// @pre @param matrix is a square matrix
+/// @pre @param matrix has a square blocksize
+template <class T>
+void set_random_lowtr(Matrix<T, Device::CPU>& matrix) {
+  internal::set_random_lower_triangular(matrix, 0);
+}
 }
 }
 }

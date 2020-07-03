@@ -23,6 +23,7 @@
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix.h"
 #include "dlaf/matrix/distribution.h"
+#include "dlaf/tile_output.h"
 #include "dlaf/util_matrix.h"
 
 namespace dlaf {
@@ -50,6 +51,8 @@ void genToStd_L(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l) {
       hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_default);
   SizeType m = mat_a.nrTiles().rows();
   SizeType n = mat_a.nrTiles().cols();
+  SizeType tilerow = mat_a.blockSize().rows();
+  SizeType tilecol = mat_a.blockSize().cols();
 
   // Choose queue priority
   // auto trailing_executor = (j == k - 1) ? executor_hp : executor_normal;
@@ -61,7 +64,6 @@ void genToStd_L(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l) {
     auto kk = LocalTileIndex{k, k};
 
     // Direct transformation to standard eigenvalue problem of the diagonal tile
-    //    hpx::dataflow(executor_hp, unwrapping(tile::hegst<T, Device::CPU>), 1, Lower, std::move(mat_a(kk)), mat_l.read(kk));
     hpx::dataflow(executor_hp, unwrapping(tile::hegst<T, Device::CPU>), 1, Lower, std::move(mat_a(kk)), std::move(mat_l(kk)));
     
     if (k != (n - 1)) {
@@ -124,12 +126,12 @@ void genToStd_L(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l) {
           // GEMM
           hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans,
                         NoTrans, -1.0, mat_l.read(ij), mat_a.read(jk), 1.0, std::move(mat_a(ik)));
-
-        }
+	}
       }
       
     }
   }
+
 }
 
 }

@@ -11,6 +11,7 @@
 
 /// @file
 
+#include <atomic>
 #include <utility>
 
 #include <mpi.h>
@@ -22,11 +23,20 @@
 #include <hpx/parallel/executors/execution_fwd.hpp>
 #include <hpx/util/yield_while.hpp>
 
+#include "dlaf/common/assert.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/init.h"
 
 namespace dlaf {
 namespace comm {
+
+// This controls the maximum number of pending non-blocking communications launched by MPI. The limit is
+// useful to avoid slowdowns in MPI's runtime.
+#ifdef DLAF_MAX_PENDING_COMMS
+constexpr int max_pending_comms = DLAF_MAX_PENDING_COMMS;
+#else
+constexpr int max_pending_comms = 100;
+#endif
 
 // TODO: reference docs from misc/runtimes.md
 
@@ -59,6 +69,8 @@ namespace comm {
 class executor {
   MPI_Comm comm_;
   hpx::threads::executors::pool_executor ex_;
+
+  static std::atomic<int> num_pending_comms;
 
 public:
   // Associate the parallel_execution_tag executor tag type as a default with this executor.
@@ -125,6 +137,10 @@ public:
     // TODO: docs why this is done here instead of within the task
     MPI_Request req;
     mpi_invoke(f, ts..., comm_, &req);
+
+    ++num_pending_comms;
+    DLAF_ASSERT(num_pending_comms <= max_pending_comms, "Too many pending comms!", num_pending_comms);
+
     return hpx::async(ex_, [req]() mutable {
       // Yield until non-blocking communication completes.
       hpx::util::yield_while([&req] {
@@ -132,6 +148,7 @@ public:
         mpi_invoke(MPI_Test, &req, &flag, MPI_STATUS_IGNORE);
         return flag == 0;
       });
+      --num_pending_comms;
     });
   }
 };

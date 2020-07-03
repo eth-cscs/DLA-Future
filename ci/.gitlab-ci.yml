@@ -32,14 +32,13 @@ stages:
       - pipeline.yml
 
 # Builds a Docker image for the current commit
-# Temporarly use debug/deploy2 as image name as debug/deploy has some problems with gitlab registry cleanup
 cpu debug build:
   extends: .build_common
   variables:
     BUILD_DOCKER_FILE: ci/docker/debug/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/debug/deploy.Dockerfile
     BUILD_IMAGE_BASE: "$CI_REGISTRY_IMAGE/debug/build:"
-    IMAGE: $CI_REGISTRY_IMAGE/debug/deploy2:$CI_COMMIT_SHA
+    IMAGE: $CI_REGISTRY_IMAGE/debug/deploy:$CI_COMMIT_SHA
 
 cpu release build:
   extends: .build_common

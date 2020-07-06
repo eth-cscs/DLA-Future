@@ -80,7 +80,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   using dlaf::matrix::test::getLeftTriangularSystem;
   std::function<T(const GlobalElementIndex&)> setter_A, setter_b, expected_b;
   std::tie(setter_A, setter_b, expected_b) =
-    getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, A.size().rows());
+      getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, A.size().rows());
 
   for (auto run_index = 0; run_index < opts.nruns; ++run_index) {
     if (0 == world.rank())

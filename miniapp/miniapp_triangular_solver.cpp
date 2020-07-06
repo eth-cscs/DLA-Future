@@ -33,7 +33,6 @@ using dlaf::Backend;
 using dlaf::Device;
 using dlaf::GlobalElementIndex;
 using dlaf::GlobalElementSize;
-using dlaf::Matrix;
 using dlaf::SizeType;
 using dlaf::TileElementSize;
 using dlaf::comm::Communicator;
@@ -43,6 +42,7 @@ using dlaf::common::Ordering;
 using dlaf_test::TypeUtilities;
 
 using T = double;
+using MatrixType = dlaf::Matrix<T, Device::CPU>;
 
 struct options_t {
   SizeType m;
@@ -57,6 +57,8 @@ struct options_t {
 
 options_t check_options(hpx::program_options::variables_map& vm);
 
+void waitall_tiles(MatrixType& matrix);
+
 }
 
 int hpx_main(hpx::program_options::variables_map& vm) {
@@ -64,8 +66,6 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 
   Communicator world(MPI_COMM_WORLD);
   CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
-
-  using MatrixType = Matrix<T, Device::CPU>;
 
   // Allocate memory for the matrices
   MatrixType A(GlobalElementSize{opts.m, opts.m}, TileElementSize{opts.mb, opts.mb}, comm_grid);
@@ -77,22 +77,32 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   const auto diag = blas::Diag::NonUnit;
   const T alpha = 2.0;
 
+  using dlaf::matrix::test::getLeftTriangularSystem;
+  std::function<T(const GlobalElementIndex&)> setter_A, setter_b, expected_b;
+  std::tie(setter_A, setter_b, expected_b) =
+    getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, A.size().rows());
+
   for (auto run_index = 0; run_index < opts.nruns; ++run_index) {
     if (0 == world.rank())
       std::cout << "[" << run_index << "]" << std::endl;
 
     // setup matrix A and b
-    using dlaf::matrix::test::getLeftTriangularSystem;
-    std::function<T(const GlobalElementIndex&)> setter_A, setter_b, expected_b;
-    std::tie(setter_A, setter_b, expected_b) =
-        getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, A.size().rows());
+    using dlaf::matrix::util::set;
+    set(A, setter_A);
+    set(b, setter_b);
 
-    // TODO wait all setup tasks before starting benchmark
+    // wait all setup tasks before starting benchmark
+    ::waitall_tiles(A);
+    ::waitall_tiles(b);
+    MPI_Barrier(world);
 
     dlaf::common::Timer<> timeit;
     dlaf::Solver<Backend::MC>::triangular(comm_grid, side, uplo, op, diag, alpha, A, b);
 
-    // TODO wait for last task and barrier for all ranks
+    // wait for last task and barrier for all ranks
+    ::waitall_tiles(A);
+    ::waitall_tiles(b);
+    MPI_Barrier(world);
 
     auto elapsed_time = timeit.elapsed();
 
@@ -185,6 +195,11 @@ options_t check_options(hpx::program_options::variables_map& vm) {
     throw std::runtime_error("number of grid columns must be a positive number");
 
   return opts;
+}
+
+void waitall_tiles(MatrixType& matrix) {
+  for (const auto tile_idx : dlaf::common::iterate_range2d(matrix.distribution().localNrTiles()))
+    matrix(tile_idx).get();
 }
 
 }

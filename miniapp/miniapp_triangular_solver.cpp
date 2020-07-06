@@ -77,6 +77,11 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   const auto diag = blas::Diag::NonUnit;
   const T alpha = 2.0;
 
+  double m = A.size().rows();
+  double n = b.size().cols();
+  auto add_mul = n * m * m / 2;
+  const double total_ops = dlaf::total_ops<T>(add_mul, add_mul);
+
   using dlaf::matrix::test::getLeftTriangularSystem;
   std::function<T(const GlobalElementIndex&)> setter_A, setter_b, expected_b;
   std::tie(setter_A, setter_b, expected_b) =
@@ -106,12 +111,14 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 
     auto elapsed_time = timeit.elapsed();
 
-    // TODO compute gigaflops
+    // compute gigaflops
+    double gigaflops = total_ops / elapsed_time / 1e9;
 
-    // TODO print benchmark results
+    // print benchmark results
     if (0 == world.rank())
       std::cout << "[" << run_index << "]"
                 << " " << elapsed_time << "s"
+                << " " << gigaflops << "GFlop/s"
                 << " " << A.size() << " " << A.blockSize() << " " << comm_grid.size() << " " << b.size()
                 << " " << b.blockSize() << " " << hpx::get_os_thread_count() << std::endl;
 

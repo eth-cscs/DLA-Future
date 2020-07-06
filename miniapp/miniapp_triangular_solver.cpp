@@ -132,14 +132,14 @@ int main(int argc, char** argv) {
 
   // clang-format off
   desc_commandline.add_options()
-    ("matrix-size", value<SizeType>()->default_value(4096), "Matrix size.")
-    ("block-size", value<SizeType>()->default_value(256), "Block cyclic distribution size.")
-    ("result-cols", value<SizeType>()->default_value(512), "Matrix size.")
-    ("result-block-cols", value<SizeType>()->default_value(512), "Block cyclic distribution size.")
-    ("grid-rows", value<int>()->default_value(1), "Number of row processes in the 2D communicator.")
-    ("grid-cols", value<int>()->default_value(1), "Number of column processes in the 2D communicator.")
-    ("nruns", value<int64_t>()->default_value(1), "Number of runs to compute the cholesky")
-    ("check-result", bool_switch()->default_value(false), "Check the triangular system solution (for each run)")
+    ("matrix-size",       value<SizeType>()->default_value(4096),  "Matrix size.")
+    ("block-size",        value<SizeType>()->default_value(256),   "Block cyclic distribution size.")
+    ("result-cols",       value<SizeType>()->default_value(512),   "Matrix size.")
+    ("result-block-cols", value<SizeType>()->default_value(512),   "Block cyclic distribution size.")
+    ("grid-rows",         value<int>()     ->default_value(1),     "Number of row processes in the 2D communicator.")
+    ("grid-cols",         value<int>()     ->default_value(1),     "Number of column processes in the 2D communicator.")
+    ("nruns",             value<int64_t>() ->default_value(1),     "Number of runs to compute the cholesky")
+    ("check-result",      bool_switch()    ->default_value(false), "Check the triangular system solution (for each run)")
   ;
   // clang-format on
 

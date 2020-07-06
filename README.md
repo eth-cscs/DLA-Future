@@ -13,6 +13,23 @@
 - [GoogleTest](https://github.com/google/googletest) (optional; bundled) - unit testing
 - Doxygen (optional) - documentation
 
+## How to install DLA-Future with spack
+
+We provide a spack package DLA-Future that can be easily added to your own spack as follows:
+
+`spack repo add $DLAF_ROOT/spack`
+
+This will add a new repository with namespace `dlaf`.
+
+Example installation:
+
+`spack install dla-future ^intel-mkl`
+
+Notice that, for the package to work correctly, the HPX option `max_cpu_count` must be set accordingly to the platform,
+as it represents the maximum number of OS-threads.
+
+`spack install dla-future ^intel-mkl ^hpx max_cpu_count=256`
+
 ## How to use the library
 
 Using DLAF in a CMake project is extremely easy!

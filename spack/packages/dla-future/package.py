@@ -5,7 +5,6 @@
 
 from spack import *
 
-
 class DlaFuture(CMakePackage):
     """The DLAF package provides DLA-Future library: Distributed Linear Algebra with Future"""
 
@@ -16,23 +15,36 @@ class DlaFuture(CMakePackage):
 
     version('develop', branch='master')
 
-    variant('gpu', default=False,
+    variant('cuda', default=False,
             description='Use the GPU/cuBLAS back end.')
+    variant('doc', default=False,
+            description='Build documentation.')
 
-    # Until mpich is default comment this out
-    #depends_on('mpi@3:')
-    depends_on('mpich')
-    depends_on('mkl')
+    depends_on('mpi')
     depends_on('blaspp')
     depends_on('lapackpp')
-    depends_on('hpx cxxstd=14 networking=none')
-    depends_on('cuda', when='gpu=True')
+    depends_on('hpx@1.4.0:1.4.1 cxxstd=14 networking=none')
+    depends_on('cuda', when='+cuda')
 
     def cmake_args(self):
        spec = self.spec
-       args = ['-DDLAF_WITH_MKL=ON']
 
-       if '+gpu' in spec:
+       if '^mkl' in spec:
+           args = ['-DDLAF_WITH_MKL=ON']
+       else:
+           args = ['-DDLAF_WITH_MKL=OFF']
+           args.append('-DLAPACK_TYPE=Custom')
+           args.append('-DLAPACK_LIBRARY={} {}'.format(spec['lapack'].libs.ld_flags, spec['blas'].libs.ld_flags))
+
+       if '+cuda' in spec:
            args.append('-DDLAF_WITH_CUDA=ON')
+
+       if self.run_tests:
+           args.append('-DDLAF_WITH_TEST=ON')
+       else:
+           args.append('-DDLAF_WITH_TEST=OFF')
+
+       if '+doc' in spec:
+           args.append('-DBUILD_DOC=on')
 
        return args

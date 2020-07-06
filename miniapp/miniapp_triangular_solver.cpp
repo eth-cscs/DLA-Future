@@ -168,9 +168,7 @@ int main(int argc, char** argv) {
     rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], "mpi");
   }
 
-  auto ret_code = hpx::init(hpx_main, desc_commandline, argc, argv);
-
-  return ret_code;
+  return hpx::init(hpx_main, desc_commandline, argc, argv);
 }
 
 namespace {

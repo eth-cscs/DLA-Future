@@ -22,6 +22,7 @@ void printElementTile(const Tile<T, Device::CPU>& tile) {
     for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
       std::cout << tile({ii, jj}) << " ";
     }
+    std::cout << " " << std::endl;
   }
   std::cout << " " << std::endl;
 }

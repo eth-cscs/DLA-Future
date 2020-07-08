@@ -66,7 +66,6 @@ void potrf(blas::Uplo uplo, const Tile<T, device>& a) noexcept;
 template <class T, Device device>
 long long potrfInfo(blas::Uplo uplo, const Tile<T, device>& a);
 
-// CHECK!!!
 /// Reduce a Hermitian definite generalized eigenproblem to standard form
 /// (solving inv(U**H)*A*inv(U) or inv(L)*A*inv(L**H))
 ///
@@ -74,7 +73,7 @@ long long potrfInfo(blas::Uplo uplo, const Tile<T, device>& a);
 /// @pre b must be the triangular factor from the Cholesky factorization of B
 /// @throw std::runtime_error if the tile was not positive definite.
 template <class T, Device device>
-  void hegst(int itype, blas::Uplo uplo, const Tile<T, device>& a, const Tile<T, device>& b);
+void hegst(int itype, blas::Uplo uplo, const Tile<T, device>& a, const Tile<T, device>& b);
 
 #include "dlaf/lapack_tile.tpp"
 

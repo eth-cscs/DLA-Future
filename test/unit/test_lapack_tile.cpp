@@ -13,6 +13,7 @@
 #include "gtest/gtest.h"
 #include "dlaf_test/util_types.h"
 
+#include "test_lapack_tile/test_hegst.h"
 #include "test_lapack_tile/test_lange.h"
 #include "test_lapack_tile/test_lantr.h"
 #include "test_lapack_tile/test_potrf.h"
@@ -135,5 +136,21 @@ TYPED_TEST(TileOperationsTest, PotrfNonPositiveDefinite) {
       // Test version returning info
       testPotrfNonPosDef<Type, true>(uplo, n, extra_lda);
     }
+  }
+}
+
+TYPED_TEST(TileOperationsTest, Hegst) {
+  using Type = TypeParam;
+
+  SizeType m, extra_ld;
+
+  std::vector<std::tuple<SizeType, SizeType>> sizes = {{3, 0}};
+  //    {{0, 0},
+  //     {5, 0}, {5, 3}, {9, 0}, {9, 1},
+  //     {17, 0}, {17, 7}, {32, 0}, {32, 4}};
+
+  for (const auto& size : sizes) {
+    std::tie(m, extra_ld) = size;
+    testLowerHegst<TileElementIndex, Type>(m, extra_ld);
   }
 }

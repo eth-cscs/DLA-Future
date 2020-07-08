@@ -65,14 +65,13 @@ void potrf(blas::Uplo uplo, const Tile<T, device>& a) {
 // check!!!
 template <class T, Device device>
 void hegst(int itype, blas::Uplo uplo, const Tile<T, device>& a, const Tile<T, device>& b) {
-  //preconditions to be added
-  DLAF_ASSERT(a.size().rows() == a.size().cols(), "Error: HEGST: matrix A is not square.");  
-  
+  // Any other preconditions to be added?
+  DLAF_ASSERT(a.size().rows() == a.size().cols(), "Error: HEGST: matrix A is not square.");
+
   // itype = 1 to solve inv(U**H)*A*inv(U) or inv(L)*A*inv(L**H))
   // itype = 2 to solve U*A*U**H
   // itype = 3 to solve L**H*A*L
   auto info = lapack::hegst(itype, uplo, a.size().cols(), a.ptr(), a.ld(), b.ptr(), b.ld());
 
   DLAF_ASSERT(info == 0, "");
-
 }

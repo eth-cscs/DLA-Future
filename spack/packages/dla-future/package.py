@@ -20,6 +20,8 @@ class DlaFuture(CMakePackage):
     variant('doc', default=False,
             description='Build documentation.')
 
+    depends_on('cmake@3.14:', type='build')
+
     depends_on('mpi')
     depends_on('blaspp')
     depends_on('lapackpp')

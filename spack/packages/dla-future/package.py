@@ -8,8 +8,8 @@ from spack import *
 class DlaFuture(CMakePackage):
     """The DLAF package provides DLA-Future library: Distributed Linear Algebra with Future"""
 
-    homepage = "https://github.com/eth-cscs/DLA-Future.git/wiki"
-    git      = "https://github.com/eth-cscs/DLA-Future.git"
+    homepage = "https://github.com/eth-cscs/DLA-Future/wiki"
+    git      = "https://github.com/eth-cscs/DLA-Future"
 
     maintainers = ['teonnik', 'Sely85']
 

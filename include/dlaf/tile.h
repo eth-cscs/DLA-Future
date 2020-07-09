@@ -79,8 +79,7 @@ public:
   /// Returns the (i, j)-th element,
   /// where @p i := @p index.row and @p j := @p index.col.
   ///
-  /// @pre index.isValid() == true,
-  /// @pre index.isIn(size()) == true.
+  /// @pre index.isIn(size().
   const T& operator()(const TileElementIndex& index) const noexcept {
     return *ptr(index);
   }
@@ -93,12 +92,10 @@ public:
   /// Returns the pointer to the (i, j)-th element,
   /// where @p i := @p index.row and @p j := @p index.col.
   ///
-  /// @pre index.isValid(),
   /// @pre index.isIn(size()).
   const T* ptr(const TileElementIndex& index) const noexcept {
     using util::size_t::sum;
     using util::size_t::mul;
-    DLAF_ASSERT_HEAVY(index.isValid(), "");
     DLAF_ASSERT_HEAVY(index.isIn(size_), "");
 
     return memory_view_(sum(index.row(), mul(ld_, index.col())));
@@ -157,7 +154,6 @@ public:
   /// Returns the (i, j)-th element,
   /// where @p i := @p index.row and @p j := @p index.col.
   ///
-  /// @pre index.isValid(),
   /// @pre index.isIn(size()).
   T& operator()(const TileElementIndex& index) const noexcept {
     return *ptr(index);
@@ -171,12 +167,10 @@ public:
   /// Returns the pointer to the (i, j)-th element,
   /// where @p i := @p index.row and @p j := @p index.col.
   ///
-  /// @pre index.isValid(),
   /// @pre index.isIn(size()).
   T* ptr(const TileElementIndex& index) const noexcept {
     using util::size_t::sum;
     using util::size_t::mul;
-    DLAF_ASSERT_HEAVY(index.isValid(), "");
     DLAF_ASSERT_HEAVY(index.isIn(size_), "");
 
     return memory_view_(sum(index.row(), mul(ld_, index.col())));

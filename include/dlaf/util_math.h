@@ -52,7 +52,7 @@ namespace internal {
 /// @tparam TA and @tparam TB must be integer types (signed or unsigned),
 /// @return @p a @p op @p b.
 /// @pre @p a and @p b can be stored in the type @tparam ArithmeticT,
-/// @pre it must be possible to store the result in @tparam ArithemticT.
+/// @pre it must be possible to store the result in @tparam ArithmeticT.
 template <class ArithmeticT, class TA, class TB, class BinaryOp>
 constexpr ArithmeticT generic_integer_op(const TA a, const TB b, BinaryOp op) {
   return op(integral_cast<ArithmeticT>(a), integral_cast<ArithmeticT>(b));

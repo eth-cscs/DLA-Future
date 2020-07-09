@@ -23,7 +23,7 @@ LayoutInfo::LayoutInfo(const LocalElementSize& size, const TileElementSize& bloc
   using util::size_t::mul;
 
   DLAF_ASSERT(size_.isValid(), "Invalid Matrix size!");
-  DLAF_ASSERT(block_size_.isValid() && !block_size_.isEmpty(), "Invalid Block size!");
+  DLAF_ASSERT(!block_size_.isEmpty(), "Invalid Block size!");
 
   nr_tiles_ = {util::ceilDiv(size_.rows(), block_size_.rows()),
                util::ceilDiv(size_.cols(), block_size_.cols())};

@@ -32,12 +32,14 @@ public:
   ///
   /// See misc/matrix_distribution.md for for more detail about the parameters.
   ///
+  /// If !size.isEmpty():
   /// @pre tile_ld >= 1,
   /// @pre tile_offset_row >= 1,
-  /// @pre tile_offset_col >= 1,
-  /// @pre size.isEmpty() and tile_ld >= max(size.rows(), block_size.rows()),
-  /// @pre size.isEmpty() and tile_row_offset >= block_size.rows(),
-  /// @pre size.isEmpty() and tile_col_offset >= size of the memory (in elements, padding included)
+  /// @pre tile_offset_col >= 1;
+  /// while if size.isEmpty():
+  /// @pre tile_ld >= max(size.rows(), block_size.rows()),
+  /// @pre tile_row_offset >= block_size.rows(),
+  /// @pre tile_col_offset >= size of the memory (in elements, padding included)
   /// to store a column of tiles, if the tiles overlap
   ///(combinations of @p tile_ld, @p tile_row_offset).
 
@@ -59,20 +61,18 @@ public:
 
   /// Returns the position of the first element of the @p index tile.
   ///
-  /// @pre index.isValid(),
   /// @pre index.isIn(nr_tiles_).
   std::size_t tileOffset(const LocalTileIndex& index) const noexcept {
     using util::size_t::mul;
-    DLAF_ASSERT_HEAVY(index.isValid() && index.isIn(nr_tiles_), "");
+    DLAF_ASSERT_HEAVY(index.isIn(nr_tiles_), "");
     return mul(index.row(), tile_offset_row_) + mul(index.col(), tile_offset_col_);
   }
 
   /// Returns the size @p index tile.
   ///
-  /// @pre index.isValid(),
   /// @pre index.isIn(nr_tiles_).
   TileElementSize tileSize(const LocalTileIndex& index) const noexcept {
-    DLAF_ASSERT_HEAVY(index.isValid() && index.isIn(nr_tiles_), "");
+    DLAF_ASSERT_HEAVY(index.isIn(nr_tiles_), "");
     SizeType m = std::min(block_size_.rows(), size_.rows() - index.row() * block_size_.rows());
     SizeType n = std::min(block_size_.cols(), size_.cols() - index.col() * block_size_.cols());
     return {m, n};
@@ -82,10 +82,9 @@ public:
   ///
   /// @pre 0 < @p index.row() < nrTiles().rows(),
   /// @pre 0 < @p index.col() < nrTiles().cols(),
-  /// @pre index.isValid(),
   /// @pre index.isIn(nr_tiles_).
   std::size_t minTileMemSize(const LocalTileIndex& index) const noexcept {
-    DLAF_ASSERT_HEAVY(index.isValid() && index.isIn(nr_tiles_), "");
+    DLAF_ASSERT_HEAVY(index.isIn(nr_tiles_), "");
     return minTileMemSize(tileSize(index));
   }
 

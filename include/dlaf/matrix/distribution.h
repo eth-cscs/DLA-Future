@@ -30,7 +30,6 @@ public:
   /// Constructs a distribution for a non distributed matrix of size @p size and block size @p block_size.
   ///
   /// @pre size.isValid(),
-  /// @pre block_size.isValid(),
   /// @pre !block_size.isEmpty().
   Distribution(const LocalElementSize& size, const TileElementSize& block_size);
 
@@ -40,14 +39,10 @@ public:
   /// @param[in] rank_index is the rank of the current process,
   /// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix,
   /// @pre size.isValid(),
-  /// @pre block_size.isValid(),
   /// @pre !block_size.isEmpty(),
-  /// @pre grid_size.isValid(),
   /// @pre !grid_size.isEmpty(),
-  /// @pre rank_index.isValid(),
   /// @pre rank_index.isIn(grid_size),
-  /// @pre source_rank_index.isValid(),
-  /// @pre source_rank_index_.isIn(grid_size).
+  /// @pre source_rank_index.isIn(grid_size).
   Distribution(const GlobalElementSize& size, const TileElementSize& block_size,
                const comm::Size2D& grid_size, const comm::Index2D& rank_index,
                const comm::Index2D& source_rank_index);
@@ -108,14 +103,12 @@ public:
   /// Returns the global 2D index of the element.
   /// which has index @p tile_element in the tile with global index @p global_tile.
   ///
-  /// @pre global_tile.isValid(),
   /// @pre global_tile.isIn(nrTiles()),
-  /// @pre tile_element.isValid(),
   /// @pre tile_element.isIn(blockSize()).
   GlobalElementIndex globalElementIndex(const GlobalTileIndex& global_tile,
                                         const TileElementIndex& tile_element) const noexcept {
-    DLAF_ASSERT_HEAVY(global_tile.isValid() && global_tile.isIn(global_nr_tiles_), "");
-    DLAF_ASSERT_HEAVY(tile_element.isValid() && tile_element.isIn(block_size_), "");
+    DLAF_ASSERT_HEAVY(global_tile.isIn(global_nr_tiles_), "");
+    DLAF_ASSERT_HEAVY(tile_element.isIn(block_size_), "");
 
     return {globalElementFromGlobalTileAndTileElement<Coord::Row>(global_tile.row(), tile_element.row()),
             globalElementFromGlobalTileAndTileElement<Coord::Col>(global_tile.col(),
@@ -124,10 +117,9 @@ public:
 
   /// Returns the global 2D index of the tile which contains the element with global index @p global_element.
   ///
-  /// @pre global_element.isValid(),
   /// @pre global_element.isIn(size()).
   GlobalTileIndex globalTileIndex(const GlobalElementIndex& global_element) const noexcept {
-    DLAF_ASSERT_HEAVY(global_element.isValid() && global_element.isIn(size_), "");
+    DLAF_ASSERT_HEAVY(global_element.isIn(size_), "");
 
     return {globalTileFromGlobalElement<Coord::Row>(global_element.row()),
             globalTileFromGlobalElement<Coord::Col>(global_element.col())};
@@ -136,9 +128,9 @@ public:
   /// Returns the global 2D index of the tile that has index @p local_tile
   /// in the current rank.
   ///
-  /// @pre local_tile.isValid() and local_tile.isIn(localNrTiles()).
+  /// @pre local_tile.isIn(localNrTiles()).
   GlobalTileIndex globalTileIndex(const LocalTileIndex& local_tile) const noexcept {
-    DLAF_ASSERT_HEAVY(local_tile.isValid() && local_tile.isIn(local_nr_tiles_), "");
+    DLAF_ASSERT_HEAVY(local_tile.isIn(local_nr_tiles_), "");
 
     return {globalTileFromLocalTile<Coord::Row>(local_tile.row()),
             globalTileFromLocalTile<Coord::Col>(local_tile.col())};
@@ -146,10 +138,9 @@ public:
 
   /// Returns the 2D rank index of the process that stores the tile with global index @p global_tile.
   ///
-  /// @pre global_tile.isValid(),
   /// @pre global_tile.isIn(nrTiles()).
   comm::Index2D rankGlobalTile(const GlobalTileIndex& global_tile) const noexcept {
-    DLAF_ASSERT_HEAVY(global_tile.isValid() && global_tile.isIn(global_nr_tiles_), "");
+    DLAF_ASSERT_HEAVY(global_tile.isIn(global_nr_tiles_), "");
 
     return {rankGlobalTile<Coord::Row>(global_tile.row()),
             rankGlobalTile<Coord::Col>(global_tile.col())};
@@ -157,11 +148,10 @@ public:
 
   /// Returns the local 2D index in current process of the tile with index @p global_tile.
   ///
-  /// @pre global_tile.isValid(),
   /// @pre global_tile.isIn(nrTiles()),
   /// @pre rank_index == rankGlobalTile(global_tile).
   LocalTileIndex localTileIndex(const GlobalTileIndex& global_tile) const {
-    DLAF_ASSERT_HEAVY(global_tile.isValid() && global_tile.isIn(global_nr_tiles_), "");
+    DLAF_ASSERT_HEAVY(global_tile.isIn(global_nr_tiles_), "");
 
     DLAF_ASSERT(rank_index_ == rankGlobalTile(global_tile), "Global tile not available in this rank!");
     return {localTileFromGlobalTile<Coord::Row>(global_tile.row()),
@@ -172,10 +162,9 @@ public:
   /// whose index is the smallest index larger or equal @p global_element
   /// and which is stored in current process.
   ///
-  /// @pre global_element.isValid(),
   /// @pre global_element.isIn(size()).
   TileElementIndex tileElementIndex(const GlobalElementIndex& global_element) const noexcept {
-    DLAF_ASSERT_HEAVY(global_element.isValid() && global_element.isIn(size_), "");
+    DLAF_ASSERT_HEAVY(global_element.isIn(size_), "");
 
     return {tileElementFromGlobalElement<Coord::Row>(global_element.row()),
             tileElementFromGlobalElement<Coord::Col>(global_element.col())};
@@ -306,14 +295,14 @@ private:
   /// computes and sets global_tiles_.
   ///
   /// @pre size.isValid(),
-  /// @pre block_size.isValid() && !block_size.isEmpty().
+  /// @pre !block_size.isEmpty().
   void computeGlobalNrTiles(const GlobalElementSize& size, const TileElementSize& block_size) noexcept;
 
   /// Computes and sets @p global_tiles_, @p local_tiles_ and @p local_size_.
   ///
   /// @pre size.isValid()
-  /// @pre block_size.isValid() && !block_size.isEmpty(),
-  /// @pre grid_size.isValid() && !grid_size.isEmpty(),
+  /// @pre !block_size.isEmpty(),
+  /// @pre !grid_size.isEmpty(),
   /// @pre rank_index.isValid(),
   /// @pre source_rank_index.isValid().
   void computeGlobalAndLocalNrTilesAndLocalSize(const GlobalElementSize& size,
@@ -325,7 +314,7 @@ private:
   /// computes and sets @p local_tiles_.
   ///
   /// @pre local_size.isValid(),
-  /// @pre block_size.isValid() && !block_size.isEmpty().
+  /// @pre !block_size.isEmpty().
   void computeLocalNrTiles(const LocalElementSize& size, const TileElementSize& block_size) noexcept;
 
   /// Sets default values.

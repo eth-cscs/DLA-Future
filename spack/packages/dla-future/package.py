@@ -35,17 +35,17 @@ class DlaFuture(CMakePackage):
 
         # BLAS/LAPACK
         if '^mkl' in spec:
-            args = ['-DDLAF_WITH_MKL=ON']
+            args = [ self.define('DLAF_WITH_MKL', True) ]
         else:
             args = [
-                    '-DDLAF_WITH_MKL=OFF',
-                    '-DLAPACK_TYPE=Custom',
-                    '-DLAPACK_LIBRARY={} {}'.format(
-                        spec['lapack'].libs.ld_flags, spec['blas'].libs.ld_flags)
+                    self.define('DLAF_WITH_MKL', False),
+                    self.define('LAPACK_TYPE', 'Custom'),
+                    self.define('LAPACK_LIBRARY',
+                        ' '.join([spec[dep].libs.ld_flags for dep in ['blas', 'lapack']]))
                    ]
 
         # CUDA
-        args.append(self.define_from_variant("DLAF_WITH_CUDA", 'cuda'))
+        args.append(self.define_from_variant('DLAF_WITH_CUDA', 'cuda'))
 
         # DOC
         args.append(self.define_from_variant('BUILD_DOC', 'doc'))

@@ -4,6 +4,7 @@ include:
 stages:
   - build
   - test
+  - notify
 
 ##
 ## BUILDS
@@ -91,3 +92,19 @@ cpu codecov test:
     include:
       - artifact: pipeline.yml
         job: cpu codecov build
+
+notify_github_success:
+  stage: notify
+  when: on_success
+  only: ['master', 'staging', 'trying']
+  tags: ['kubernetes']
+  image: $CI_REGISTRY_IMAGE/debug/deploy:$CI_COMMIT_SHA
+  script: ./ci/set_github_status.sh success
+
+notify_github_failure:
+  stage: notify
+  when: on_failure
+  only: ['master', 'staging', 'trying']
+  tags: ['kubernetes']
+  image: $CI_REGISTRY_IMAGE/debug/deploy:$CI_COMMIT_SHA
+  script: ./ci/set_github_status.sh failure

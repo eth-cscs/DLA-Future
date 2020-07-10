@@ -24,3 +24,4 @@ if [[ $CI_COMMIT_REF_NAME =~ ^(trying|staging)$ ]]; then
     fi
 fi
 
+exit 0

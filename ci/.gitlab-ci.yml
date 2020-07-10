@@ -4,6 +4,7 @@ include:
 stages:
   - build
   - test
+  - notify
 
 ##
 ## BUILDS
@@ -56,6 +57,14 @@ cpu codecov build:
     BUILD_IMAGE_BASE: "$CI_REGISTRY_IMAGE/codecov/build:"
     IMAGE: $CI_REGISTRY_IMAGE/codecov/deploy:$CI_COMMIT_SHA
 
+notify_github_start:
+  stage: build
+  allow_failure: true
+  only: ['master', 'staging', 'trying']
+  tags: ['kubernetes']
+  image: stabbles/git-curl
+  script: ./ci/set_github_status.sh pending
+
 ##
 ## RUNS
 ##
@@ -91,3 +100,19 @@ cpu codecov test:
     include:
       - artifact: pipeline.yml
         job: cpu codecov build
+
+notify_github_success:
+  stage: notify
+  when: on_success
+  only: ['master', 'staging', 'trying']
+  tags: ['kubernetes']
+  image: stabbles/git-curl
+  script: ./ci/set_github_status.sh success
+
+notify_github_failure:
+  stage: notify
+  when: on_failure
+  only: ['master', 'staging', 'trying']
+  tags: ['kubernetes']
+  image: stabbles/git-curl
+  script: ./ci/set_github_status.sh failure

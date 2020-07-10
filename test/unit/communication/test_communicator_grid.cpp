@@ -156,7 +156,7 @@ INSTANTIATE_TEST_SUITE_P(ConstructorWithParams, CommunicatorGridTest, valid_orde
 TEST_P(CommunicatorGridTest, ConstructorWithArray) {
   Communicator world(MPI_COMM_WORLD);
 
-  auto grid_dims = computeGridDims(NUM_MPI_RANKS);
+  const std::array<IndexT_MPI, 2>& grid_dims = computeGridDims(NUM_MPI_RANKS);
   CommunicatorGrid grid(world, grid_dims, GetParam());
 
   EXPECT_EQ(NUM_MPI_RANKS, grid.size().rows() * grid.size().cols());
@@ -167,15 +167,6 @@ TEST_P(CommunicatorGridTest, ConstructorWithArray) {
 }
 
 INSTANTIATE_TEST_SUITE_P(ConstructorWithArray, CommunicatorGridTest, valid_orderings);
-
-TEST_P(CommunicatorGridTest, ConstructorOverfit) {
-  Communicator world(MPI_COMM_WORLD);
-
-  EXPECT_THROW(CommunicatorGrid grid(world, NUM_MPI_RANKS, 2, GetParam()), std::invalid_argument);
-  EXPECT_THROW(CommunicatorGrid grid(world, NUM_MPI_RANKS + 1, 1, GetParam()), std::invalid_argument);
-}
-
-INSTANTIATE_TEST_SUITE_P(ConstructorOverfit, CommunicatorGridTest, valid_orderings);
 
 TEST_P(CommunicatorGridTest, ConstructorIncomplete) {
   static_assert(NUM_MPI_RANKS > 1, "There must be at least 2 ranks");

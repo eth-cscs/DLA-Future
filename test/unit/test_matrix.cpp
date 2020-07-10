@@ -164,7 +164,8 @@ TYPED_TEST(MatrixTest, ConstructorFromDistribution) {
 
 /// Returns the memory index of the @p index element of the matrix.
 ///
-/// @pre index should be valid, contained in @p distribution.size() and stored in the current rank.
+/// @pre index is contained in @p distribution.size(),
+/// @pre index is stored in the current rank.
 std::size_t memoryIndex(const Distribution& distribution, const LayoutInfo& layout,
                         const GlobalElementIndex& index) {
   using dlaf::util::size_t::sum;
@@ -344,9 +345,6 @@ TYPED_TEST(MatrixTest, LocalGlobalAccessOperatorCall) {
             EXPECT_NE(ptr_global, nullptr);
             EXPECT_EQ(ptr_global, ptr_local);
           }
-          else {
-            EXPECT_THROW(mat(global_index), std::invalid_argument);
-          }
         }
       }
     }
@@ -380,9 +378,6 @@ TYPED_TEST(MatrixTest, LocalGlobalAccessRead) {
 
             EXPECT_NE(ptr_global, nullptr);
             EXPECT_EQ(ptr_global, ptr_local);
-          }
-          else {
-            EXPECT_THROW(mat.read(global_index), std::invalid_argument);
           }
         }
       }

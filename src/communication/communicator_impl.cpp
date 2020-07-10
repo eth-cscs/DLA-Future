@@ -1,8 +1,6 @@
 #include "communicator_impl.h"
 
-#include <cassert>
-#include <stdexcept>
-
+#include "dlaf/common/assert.h"
 #include "dlaf/communication/error.h"
 
 namespace dlaf {
@@ -18,15 +16,14 @@ bool is_manageable(MPI_Comm mpi_communicator) noexcept {
 }
 
 CommunicatorImpl::CommunicatorImpl(MPI_Comm mpi_communicator) : comm_(mpi_communicator) {
-  assert(comm_ != MPI_COMM_NULL);
+  DLAF_ASSERT(comm_ != MPI_COMM_NULL, "A null communicator is used!");
   DLAF_MPI_CALL(MPI_Comm_size(comm_, &size_));
   DLAF_MPI_CALL(MPI_Comm_rank(comm_, &rank_));
 }
 
 CommunicatorImpl_Managed::CommunicatorImpl_Managed(MPI_Comm mpi_communicator)
     : CommunicatorImpl(mpi_communicator) {
-  if (!is_manageable(comm_))
-    throw std::invalid_argument("Passed communicator is not manageable");
+  DLAF_ASSERT(is_manageable(comm_), "Passed communicator is not manageable!");
 }
 
 CommunicatorImpl_Managed::~CommunicatorImpl_Managed() {

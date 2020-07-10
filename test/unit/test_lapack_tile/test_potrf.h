@@ -91,28 +91,6 @@ void testPotrf(blas::Uplo uplo, SizeType n, SizeType extra_lda) {
 }
 
 template <class T, bool return_info>
-void testPotrfArgExceptions(blas::Uplo uplo, TileElementSize size_a, SizeType extra_lda) {
-  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
-
-  std::stringstream s;
-  s << "POTRF Arguments Exceptions: " << uplo;
-  s << ", size_a = " << size_a << ", lda = " << lda;
-  SCOPED_TRACE(s.str());
-
-  memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
-
-  // Create tiles.
-  Tile<T, Device::CPU> a(size_a, std::move(mem_a), lda);
-
-  if (return_info) {
-    EXPECT_THROW(tile::potrfInfo(uplo, a), std::invalid_argument);
-  }
-  else {
-    EXPECT_THROW(tile::potrf(uplo, a), std::invalid_argument);
-  }
-}
-
-template <class T, bool return_info>
 void testPotrfNonPosDef(blas::Uplo uplo, SizeType n, SizeType extra_lda) {
   TileElementSize size_a = TileElementSize(n, n);
 
@@ -136,8 +114,5 @@ void testPotrfNonPosDef(blas::Uplo uplo, SizeType n, SizeType extra_lda) {
 
   if (return_info) {
     EXPECT_EQ(1, tile::potrfInfo(uplo, a));
-  }
-  else {
-    EXPECT_THROW(tile::potrf(uplo, a), std::runtime_error);
   }
 }

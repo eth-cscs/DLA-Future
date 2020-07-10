@@ -29,12 +29,12 @@ const auto LOWER_BOUND = std::numeric_limits<T>::min;
 template <class T>
 const auto UPPER_BOUND = std::numeric_limits<T>::max;
 
-/// Check that no alteration happens during cast From -> To with @param cast_func and dlaf::integral_cast
+/// Check that no alteration happens during cast From -> To with @param cast_func and dlaf::integral_cast.
 ///
-/// Given template type parameters @tparam From and @tparam To,
+/// Given template type parameters @tparam From and @tparam To.
 /// This function calls @p cast_func with a @tparam From parameter, then
 /// it compares the return value of @p cast_func and dlaf::integral_cast, of type To, with the
-/// static_cast<To> of the value in From
+/// static_cast<To> of the value in From.
 template <class From, class To>
 void TEST_CAST(To (*cast_func)(From), const From value, const source_location origin) {
   ::testing::ScopedTrace trace(origin.filename, static_cast<int>(origin.line), "");
@@ -42,7 +42,7 @@ void TEST_CAST(To (*cast_func)(From), const From value, const source_location or
   EXPECT_EQ(static_cast<To>(value), (integral_cast<To, From>(value)));
 }
 
-/// Check that an error is generated during casting operation From -> To
+/// Check that an error is generated during casting operation From -> To.
 template <class From, class To>
 void TEST_CAST_FAIL(To (*cast_func)(From), const From value, const source_location origin) {
   ::testing::ScopedTrace trace(origin.filename, static_cast<int>(origin.line), "");

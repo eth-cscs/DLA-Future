@@ -105,17 +105,20 @@ void Solver<Backend::MC>::triangular(comm::CommunicatorGrid grid, blas::Side sid
       }
       else {
         // Left Lower Trans/ConjTrans
-        throw std::runtime_error("Distributed Left Lower Trans/ConjTrans case not yet implemented");
+        std::cout << "Distributed Left Lower Trans/ConjTrans case not yet implemented" << std::endl;
+        std::abort();
       }
     }
     else {
       if (op == blas::Op::NoTrans) {
         // Left Upper NoTrans
-        throw std::runtime_error("Distributed Left Upper NoTrans case not yet implemented");
+        std::cout << "Distributed Left Upper NoTrans case not yet implemented" << std::endl;
+        std::abort();
       }
       else {
         // Left Upper Trans/ConjTrans
-        throw std::runtime_error("Distributed Left Upper Trans/ConjTrans case not yet implemented");
+        std::cout << "Distributed Left Upper Trans/ConjTrans case not yet implemented" << std::endl;
+        std::abort();
       }
     }
   }
@@ -126,21 +129,25 @@ void Solver<Backend::MC>::triangular(comm::CommunicatorGrid grid, blas::Side sid
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
         // Right Lower NoTrans
-        throw std::runtime_error("Distributed Right Lower NoTrans case not yet implemented");
+        std::cout << "Distributed Right Lower NoTrans case not yet implemented" << std::endl;
+        std::abort();
       }
       else {
         // Right Lower Trans/ConjTrans
-        throw std::runtime_error("Distributed Right Lower Trans/ConjTrans case not yet implemented");
+        std::cout << "Distributed Right Lower Trans/ConjTrans case not yet implemented" << std::endl;
+        std::abort();
       }
     }
     else {
       if (op == blas::Op::NoTrans) {
         // Right Upper NoTrans
-        throw std::runtime_error("Distributed Right Upper NoTrans case not yet implemented");
+        std::cout << "Distributed Right Upper NoTrans case not yet implemented" << std::endl;
+        std::abort();
       }
       else {
         // Right Upper Trans/ConjTrans
-        throw std::runtime_error("Distributed Right Upper Trans/ConjTrans case not yet implemented");
+        std::cout << "Distributed Right Upper Trans/ConjTrans case not yet implemented" << std::endl;
+        std::abort();
       }
     }
   }

@@ -20,28 +20,28 @@ namespace dlaf {
 namespace comm {
 namespace internal {
 
-/// @brief MPI Type handler
+/// MPI Type handler.
 ///
 /// This class manages a custom MPI_Datatype with the RAII principle.
 /// It is movable but not copyable.
 template <typename T>
 struct type_handler {
-  /// @brief Create a not valid custom MPI_Datatype
+  /// Create a not valid custom MPI_Datatype.
   type_handler() noexcept = default;
 
-  /// @brief Create a custom MPI_Datatype for non-contiguous data
+  /// Create a custom MPI_Datatype for non-contiguous data.
   ///
   /// After creation, the MPI_Datatype is ready to be used.
-  /// @param nblocks      number of blocks
-  /// @param block_size   number of contiguous elements of type @p T in each block
-  /// @param stride       stride (in elements) between starts of adjacent blocks
+  /// @param nblocks      number of blocks,
+  /// @param block_size   number of contiguous elements of type @p T in each block,
+  /// @param stride       stride (in elements) between starts of adjacent blocks.
   type_handler(std::size_t nblocks, std::size_t block_size, std::size_t stride) {
     MPI_Datatype element_type = dlaf::comm::mpi_datatype<std::remove_pointer_t<T>>::type;
     MPI_Type_vector(to_int(nblocks), to_int(block_size), to_int(stride), element_type, &custom_type_);
     MPI_Type_commit(&custom_type_);
   }
 
-  /// @brief Release the custom MPI_Datatype
+  /// Release the custom MPI_Datatype.
   ~type_handler() {
     if (static_cast<bool>(*this))
       MPI_Type_free(&custom_type_);
@@ -63,16 +63,16 @@ struct type_handler {
   type_handler(const type_handler&) = delete;
   type_handler& operator=(const type_handler&) = delete;
 
-  /// @brief Implicit cast to bool
+  /// Implicit cast to bool.
   ///
-  /// @return true if it is a valid custom MPI_Datatype
+  /// @return true if it is a valid custom MPI_Datatype.
   operator bool() const noexcept {
     return MPI_DATATYPE_NULL != custom_type_;
   }
 
-  /// @brief Implicit cast to MPI_Datatype
+  /// Implicit cast to MPI_Datatype.
   ///
-  /// @return the underlying custom MPI_Datatype if valid, otherwise MPI_DATATYPE_NULL
+  /// @return the underlying custom MPI_Datatype if valid, otherwise MPI_DATATYPE_NULL.
   operator MPI_Datatype() const noexcept {
     return custom_type_;
   }

@@ -10,7 +10,6 @@
 
 #pragma once
 
-#include <exception>
 #include <sstream>
 #include "gtest/gtest.h"
 #include "dlaf/blas_tile.h"
@@ -94,32 +93,4 @@ void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType e
   tile::herk(uplo, op_a, alpha, a, beta, c);
 
   CHECK_TILE_NEAR(res_c, c, (k + 1) * TypeUtilities<T>::error, (k + 1) * TypeUtilities<T>::error);
-}
-
-template <class T, class CT = const T>
-void testHerkExceptions(blas::Uplo uplo, blas::Op op_a, const TileElementSize& size_op_a,
-                        const TileElementSize& size_c, SizeType extra_lda, SizeType extra_ldc) {
-  TileElementSize size_a = size_op_a;
-  if (op_a != blas::Op::NoTrans)
-    size_a.transpose();
-
-  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
-  SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
-
-  std::stringstream s;
-  s << "HERK Exceptions: " << uplo << ", " << op_a;
-  s << ", size_a = " << size_a << ", size_c = " << size_c;
-  s << ", lda = " << lda << ", ldc = " << ldc;
-  SCOPED_TRACE(s.str());
-
-  memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
-  memory::MemoryView<T, Device::CPU> mem_c(mul(ldc, size_c.cols()));
-
-  Tile<CT, Device::CPU> a(size_a, std::move(mem_a), lda);
-  Tile<T, Device::CPU> c(size_c, std::move(mem_c), ldc);
-
-  BaseType<T> alpha = -1.2f;
-  BaseType<T> beta = 1.1f;
-
-  EXPECT_THROW(tile::herk(uplo, op_a, alpha, a, beta, c), std::invalid_argument);
 }

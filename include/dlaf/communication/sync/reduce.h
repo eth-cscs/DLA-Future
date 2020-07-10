@@ -25,9 +25,10 @@ namespace sync {
 namespace internal {
 namespace reduce {
 
-/// @brief MPI_Reduce wrapper (sender side)
-/// MPI Reduce(see MPI documentation for additional info)
-/// @param reduce_operation MPI_Op to perform on @p input data coming from ranks in @p communicator
+/// MPI_Reduce wrapper (sender side).
+///
+/// MPI Reduce(see MPI documentation for additional info).
+/// @param reduce_operation MPI_Op to perform on @p input data coming from ranks in @p communicator.
 template <class DataIn, class DataOut>
 void collector(Communicator& communicator, MPI_Op reduce_operation, const DataIn input,
                const DataOut output) {
@@ -77,10 +78,11 @@ void collector(Communicator& communicator, MPI_Op reduce_operation, const DataIn
     common::copy(internal_output, output);
 }
 
-/// @brief MPI_Reduce wrapper (receiver side)
-/// MPI Reduce(see MPI documentation for additional info)
-/// @param rank_root  the rank that will collect the result in output
-/// @param reduce_operation MPI_Op to perform on @p input data coming from ranks in @p communicator
+/// MPI_Reduce wrapper (receiver side).
+///
+/// MPI Reduce(see MPI documentation for additional info).
+/// @param rank_root  the rank that will collect the result in output,
+/// @param reduce_operation MPI_Op to perform on @p input data coming from ranks in @p communicator.
 template <class DataIn>
 void participant(int rank_root, Communicator& communicator, MPI_Op reduce_operation,
                  const DataIn input) {
@@ -111,10 +113,13 @@ void participant(int rank_root, Communicator& communicator, MPI_Op reduce_operat
 }
 }
 
-/// @brief MPI_Reduce wrapper
-/// MPI Reduce(see MPI documentation for additional info)
-/// @param rank_root the rank that will collect the result in output
-/// @param reduce_operation MPI_Op to perform on @p input data coming from ranks in @p communicator
+/// MPI_Reduce wrapper.
+///
+/// MPI Reduce(see MPI documentation for additional info).
+/// @param rank_root the rank that will collect the result in output,
+/// @param reduce_operation MPI_Op to perform on @p input data coming from ranks in @p communicator,
+/// @pre @p rank_root < @p communicator.size(),
+/// @pre @p rank_root != MPI_UNDEFINED.
 template <class DataIn, class DataOut>
 void reduce(const int rank_root, Communicator& communicator, MPI_Op reduce_operation, const DataIn input,
             const DataOut output) {

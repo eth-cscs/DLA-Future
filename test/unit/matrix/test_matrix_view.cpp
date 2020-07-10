@@ -250,9 +250,6 @@ TYPED_TEST(MatrixViewTest, LocalGlobalAccessRead) {
               EXPECT_NE(ptr_global, nullptr);
               EXPECT_EQ(ptr_global, ptr_local);
             }
-            else {
-              EXPECT_THROW(mat_view.read(global_index), std::invalid_argument);
-            }
           }
         }
       };

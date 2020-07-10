@@ -60,8 +60,6 @@ cpu codecov build:
 notify_github_start:
   stage: build
   allow_failure: true
-  variables:
-    GIT_STRATEGY: none
   only: ['master', 'staging', 'trying']
   tags: ['kubernetes']
   image: stabbles/curl
@@ -106,8 +104,6 @@ cpu codecov test:
 notify_github_success:
   stage: notify
   when: on_success
-  variables:
-    GIT_STRATEGY: none
   only: ['master', 'staging', 'trying']
   tags: ['kubernetes']
   image: stabbles/curl
@@ -116,8 +112,6 @@ notify_github_success:
 notify_github_failure:
   stage: notify
   when: on_failure
-  variables:
-    GIT_STRATEGY: none
   only: ['master', 'staging', 'trying']
   tags: ['kubernetes']
   image: stabbles/curl

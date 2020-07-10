@@ -62,7 +62,7 @@ notify_github_start:
   allow_failure: true
   only: ['master', 'staging', 'trying']
   tags: ['kubernetes']
-  image: stabbles/curl
+  image: stabbles/git-curl
   script: ./ci/set_github_status.sh pending
 
 ##
@@ -106,7 +106,7 @@ notify_github_success:
   when: on_success
   only: ['master', 'staging', 'trying']
   tags: ['kubernetes']
-  image: stabbles/curl
+  image: stabbles/git-curl
   script: ./ci/set_github_status.sh success
 
 notify_github_failure:
@@ -114,5 +114,5 @@ notify_github_failure:
   when: on_failure
   only: ['master', 'staging', 'trying']
   tags: ['kubernetes']
-  image: stabbles/curl
+  image: stabbles/git-curl
   script: ./ci/set_github_status.sh failure

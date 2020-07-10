@@ -118,28 +118,6 @@ TYPED_TEST(TileOperationsTest, Potrf) {
   }
 }
 
-TYPED_TEST(TileOperationsTest, PotrfArgumentsExceptions) {
-  using Type = TypeParam;
-
-  TileElementSize size_a(0, 0);
-  SizeType extra_lda;
-
-  std::vector<std::tuple<TileElementSize, SizeType>> sizes = {{{0, 1}, 0},   {{1, 0}, 2},  // 0 size
-                                                              {{3, 7}, 1},   {{12, 9}, 1},
-                                                              {{64, 32}, 3}, {{2, 32}, 0}};
-
-  for (const auto uplo : blas_uplos) {
-    for (const auto& size : sizes) {
-      std::tie(size_a, extra_lda) = size;
-      // Test version non returning info
-      testPotrfArgExceptions<Type, false>(uplo, size_a, extra_lda);
-
-      // Test version returning info
-      testPotrfArgExceptions<Type, true>(uplo, size_a, extra_lda);
-    }
-  }
-}
-
 TYPED_TEST(TileOperationsTest, PotrfNonPositiveDefinite) {
   using Type = TypeParam;
 

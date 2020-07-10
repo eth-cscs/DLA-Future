@@ -40,8 +40,8 @@ public:
   /// @pre tile_ld >= max(size.rows(), block_size.rows()),
   /// @pre tile_row_offset >= block_size.rows(),
   /// @pre tile_col_offset >= size of the memory (in elements, padding included)
-  /// to store a column of tiles, if the tiles overlap
-  ///(combinations of @p tile_ld, @p tile_row_offset).
+  ///      to store a column of tiles
+  /// @pre the tiles should not overlap (combinations of @p tile_ld, @p tile_row_offset).
 
   LayoutInfo(const LocalElementSize& size, const TileElementSize& block_size, SizeType tile_ld,
              std::size_t tile_offset_row, std::size_t tile_offset_col);

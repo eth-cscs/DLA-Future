@@ -98,7 +98,7 @@ notify_github_success:
   when: on_success
   only: ['master', 'staging', 'trying']
   tags: ['kubernetes']
-  image: $CI_REGISTRY_IMAGE/debug/deploy:$CI_COMMIT_SHA
+  image: stabbles/curl
   script: ./ci/set_github_status.sh success
 
 notify_github_failure:
@@ -106,5 +106,5 @@ notify_github_failure:
   when: on_failure
   only: ['master', 'staging', 'trying']
   tags: ['kubernetes']
-  image: $CI_REGISTRY_IMAGE/debug/deploy:$CI_COMMIT_SHA
+  image: stabbles/curl
   script: ./ci/set_github_status.sh failure

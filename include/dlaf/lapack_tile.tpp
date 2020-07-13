@@ -62,10 +62,8 @@ void potrf(blas::Uplo uplo, const Tile<T, device>& a) {
   DLAF_ASSERT(info == 0, "a is not positive definite");
 }
 
-// check!!!
 template <class T, Device device>
 void hegst(int itype, blas::Uplo uplo, const Tile<T, device>& a, const Tile<T, device>& b) {
-  // Any other preconditions to be added?
   DLAF_ASSERT(a.size().rows() == a.size().cols(), "Error: HEGST: matrix A is not square.");
 
   // itype = 1 to solve inv(U**H)*A*inv(U) or inv(L)*A*inv(L**H))

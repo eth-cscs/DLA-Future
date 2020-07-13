@@ -29,7 +29,7 @@ using namespace dlaf_test;
 /// for which it holds inv(L) * A * inv(L**H) = B
 ///
 /// The elements of the Hermitian matrix A (@p el_a) are chosen such that:
-/// A_ij = (beta*beta*gamma)/(2^(i+j))*exp(I*alpha*(i-j))
+/// A_ij = (i+1)(j+1) (beta*beta*gamma)/(2^(i+j))*exp(I*alpha*(i-j))
 /// where alpha = 0 and I = 0 for real types or I is the complex unit for complex types.
 ///
 /// The elements of L (@p el_l) are computed as
@@ -48,7 +48,7 @@ auto getLowerHermitianSystem(T alpha, T beta, T gamma) {
     double i = index.row();
     double j = index.col();
 
-    return TypeUtilities<T>::polar(beta / std::exp2(i - j), alpha * (i - j));
+    return TypeUtilities<T>::polar(beta/std::exp2(i - j), alpha*(i - j));
   };
 
   std::function<T(const ElementIndex&)> el_a = [alpha, beta, gamma](const ElementIndex& index) {
@@ -58,7 +58,7 @@ auto getLowerHermitianSystem(T alpha, T beta, T gamma) {
     double i = index.row();
     double j = index.col();
 
-    return TypeUtilities<T>::polar((beta * beta * gamma) / std::exp2(i + j), alpha * (i - j));
+    return TypeUtilities<T>::polar((i+1) * (j+1) * (beta * beta * gamma) / std::exp2(i + j), alpha * (i - j));
   };
 
   std::function<T(const ElementIndex&)> res_b = [alpha, gamma](const ElementIndex& index) {

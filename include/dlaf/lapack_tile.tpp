@@ -56,7 +56,7 @@ long long potrfInfo(blas::Uplo uplo, const Tile<T, device>& a) {
 }
 
 template <class T, Device device>
-void potrf(blas::Uplo uplo, const Tile<T, device>& a) {
+void potrf(blas::Uplo uplo, const Tile<T, device>& a) noexcept {
   auto info = potrfInfo(uplo, a);
 
   DLAF_ASSERT(info == 0, "a is not positive definite");

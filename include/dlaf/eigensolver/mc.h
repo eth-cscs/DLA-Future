@@ -11,8 +11,8 @@
 
 #include <blas.hh>
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/matrix.h"
 #include "dlaf/eigensolver/internal.h"
+#include "dlaf/matrix.h"
 #include "dlaf/types.h"
 
 namespace dlaf {
@@ -29,7 +29,6 @@ struct Eigensolver<Backend::MC> {
   /// lower triangular part are accessed.
   template <class T>
   static void genToStd(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l);
-
 };
 
 }
@@ -39,8 +38,8 @@ struct Eigensolver<Backend::MC> {
 /// ---- ETI
 namespace dlaf {
 
-#define DLAF_GENTOSTD_ETI(KWORD, DATATYPE)                                                            \
-  KWORD template void Eigensolver<Backend::MC>::genToStd<DATATYPE>(Matrix<DATATYPE, Device::CPU>&,    \
+#define DLAF_GENTOSTD_ETI(KWORD, DATATYPE)                                                         \
+  KWORD template void Eigensolver<Backend::MC>::genToStd<DATATYPE>(Matrix<DATATYPE, Device::CPU>&, \
                                                                    Matrix<DATATYPE, Device::CPU>&);
 
 DLAF_GENTOSTD_ETI(extern, float)

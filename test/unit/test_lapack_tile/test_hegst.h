@@ -52,7 +52,7 @@ void testLowerHegst(SizeType m, SizeType extra_ld) {
   Tile<T, Device::CPU> b(size, std::move(mem_b), ld);
 
   BaseType<T> alpha = 1.2f;
-  BaseType<T> beta  = 1.5f;
+  BaseType<T> beta = 1.5f;
   BaseType<T> gamma = -1.1f;
 
   std::function<T(const TileElementIndex&)> el_l, el_a, res_b;

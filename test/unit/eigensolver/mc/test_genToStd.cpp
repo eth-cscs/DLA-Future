@@ -67,7 +67,7 @@ TYPED_TEST(EigensolverGenToStdLocalTest, Correctness) {
   for (auto sz : sizes) {
     std::tie(m, mb) = sz;
     BaseType<TypeParam> alpha = 1.2f;
-    BaseType<TypeParam> beta  = 1.5f;
+    BaseType<TypeParam> beta = 1.5f;
     BaseType<TypeParam> gamma = -1.1f;
 
     testGenToStdEigensolver(alpha, beta, gamma, m, mb);

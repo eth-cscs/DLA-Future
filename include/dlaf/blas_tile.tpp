@@ -101,8 +101,8 @@ void herk(blas::Uplo uplo, blas::Op op, BaseType<T> alpha, const Tile<const T, d
 }
 
 template <class T, Device device>
-void her2k(blas::Uplo uplo, blas::Op op, BaseType<T> alpha, const Tile<const T, device>& a, const Tile<const T, device>& b,
-          BaseType<T> beta, const Tile<T, device>& c) {
+void her2k(blas::Uplo uplo, blas::Op op, BaseType<T> alpha, const Tile<const T, device>& a,
+           const Tile<const T, device>& b, BaseType<T> beta, const Tile<T, device>& c) {
   SizeType n;
   SizeType k;
   if (op == blas::Op::NoTrans) {
@@ -124,7 +124,8 @@ void her2k(blas::Uplo uplo, blas::Op op, BaseType<T> alpha, const Tile<const T, 
     throw std::invalid_argument("Error: HERK: C has an invalid size.");
   }
 
-  blas::her2k(blas::Layout::ColMajor, uplo, op, n, k, alpha, a.ptr(), a.ld(), b.ptr(), b.ld(), beta, c.ptr(), c.ld());
+  blas::her2k(blas::Layout::ColMajor, uplo, op, n, k, alpha, a.ptr(), a.ld(), b.ptr(), b.ld(), beta,
+              c.ptr(), c.ld());
 }
 
 template <class T, Device device>

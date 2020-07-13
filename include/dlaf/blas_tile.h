@@ -38,8 +38,8 @@ void herk(blas::Uplo uplo, blas::Op op, BaseType<T> alpha, const Tile<const T, d
 
 /// @brief Performs a rank 2k update of hermitian (symmetric if T is real) tile a.
 template <class T, Device device>
-  void her2k(blas::Uplo uplo, blas::Op op, BaseType<T> alpha, const Tile<const T, device>& a, const Tile<const T, device>& b,
-          BaseType<T> beta, const Tile<T, device>& c);
+void her2k(blas::Uplo uplo, blas::Op op, BaseType<T> alpha, const Tile<const T, device>& a,
+           const Tile<const T, device>& b, BaseType<T> beta, const Tile<T, device>& c);
 
 /// @brief Performs a triangular solve.
 template <class T, Device device>

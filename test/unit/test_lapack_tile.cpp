@@ -144,10 +144,8 @@ TYPED_TEST(TileOperationsTest, Hegst) {
 
   SizeType m, extra_ld;
 
-  std::vector<std::tuple<SizeType, SizeType>> sizes = 
-      {{0, 0},
-       {3, 0}, {5, 3}, {9, 0}, {9, 1},
-       {17, 0}, {17, 7}, {32, 0}, {32, 4}};
+  std::vector<std::tuple<SizeType, SizeType>> sizes = {{0, 0},  {3, 0},  {5, 3},  {9, 0}, {9, 1},
+                                                       {17, 0}, {17, 7}, {32, 0}, {32, 4}};
 
   for (const auto& size : sizes) {
     std::tie(m, extra_ld) = size;

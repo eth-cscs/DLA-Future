@@ -48,7 +48,7 @@ auto getLowerHermitianSystem(T alpha, T beta, T gamma) {
     double i = index.row();
     double j = index.col();
 
-    return TypeUtilities<T>::polar(beta/std::exp2(i - j), alpha*(i - j));
+    return TypeUtilities<T>::polar(beta / std::exp2(i - j), alpha * (i - j));
   };
 
   std::function<T(const ElementIndex&)> el_a = [alpha, beta, gamma](const ElementIndex& index) {
@@ -58,7 +58,8 @@ auto getLowerHermitianSystem(T alpha, T beta, T gamma) {
     double i = index.row();
     double j = index.col();
 
-    return TypeUtilities<T>::polar((i+1) * (j+1) * (beta * beta * gamma) / std::exp2(i + j), alpha * (i - j));
+    return TypeUtilities<T>::polar((i + 1) * (j + 1) * (beta * beta * gamma) / std::exp2(i + j),
+                                   alpha * (i - j));
   };
 
   std::function<T(const ElementIndex&)> res_b = [alpha, gamma](const ElementIndex& index) {

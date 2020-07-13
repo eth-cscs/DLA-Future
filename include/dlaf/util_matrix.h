@@ -226,7 +226,7 @@ void set_lower_and_upper_tile(Tile<T, Device::CPU>& tile, internal::getter_rando
 
 template <class T>
 void set_lower_tile(Tile<T, Device::CPU>& tile, internal::getter_random<T>& random_value,
-                       std::size_t offset_value) {
+                    std::size_t offset_value) {
   for (SizeType j = 0; j < tile.size().cols(); ++j) {
     for (SizeType i = 0; i < j; ++i) {
       auto value = random_value();
@@ -297,7 +297,6 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const std:
   }
 }
 
-
 /// Set a lower triangular matrix with random values
 ///
 /// Values on the diagonal are added offset_value to a random value in the range [-1, 1].
@@ -344,15 +343,14 @@ void set_random_lower_triangular(Matrix<T, Device::CPU>& matrix, const std::size
       seed = sum(tl_index.col(), mul(tl_index.row(), matrix.size().cols()));
 
       auto set_hp_f = hpx::util::unwrapping([=](auto&& tile) {
-	  internal::getter_random<T> random_value(seed);
-	  internal::set_lower_tile(tile, random_value, 0.0);
-	}); 
-    hpx::dataflow(std::move(set_hp_f), matrix(tile_wrt_local));
+        internal::getter_random<T> random_value(seed);
+        internal::set_lower_tile(tile, random_value, 0.0);
+      });
+      hpx::dataflow(std::move(set_hp_f), matrix(tile_wrt_local));
     }
   }
 }
- 
- 
+
 }
 
 /// Set a matrix with random values assuring it will be hermitian

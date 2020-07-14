@@ -49,33 +49,44 @@ void hemm(blas::Side side, blas::Uplo uplo, T alpha, const Tile<const T, device>
   n = c.size().cols();
 
   if (side == blas::Side::Left) {
-    if (m != a.size().rows()) {
-      throw std::invalid_argument("Error: GEMM: m cannot be determined.");
-    }
-    if (n != b.size().cols()) {
-      throw std::invalid_argument("Error: GEMM: n cannot be determined.");
-    }
-    if (a.size().cols() != b.size().rows()) {
-      throw std::invalid_argument(
-          "Error: GEMM: columns of matrix a does not correspond to rows of matrix b.");
-    }
+    DLAF_ASSERT(m == a.size().rows(), "`m` cannot be determined!", m, a);
+    DLAF_ASSERT(n == b.size().cols(), "`n` cannot be determined!", n, b);
+    DLAF_ASSERT(a.size().cols() == b.size().rows(),
+                "columns of matrix `a` does not correspond to rows of matrix `b`", a, b);
   }
 
   if (side == blas::Side::Right) {
-    if (m != b.size().rows()) {
-      throw std::invalid_argument("Error: GEMM: m cannot be determined.");
-    }
-    if (n != a.size().cols()) {
-      throw std::invalid_argument("Error: GEMM: n cannot be determined.");
-    }
-    if (a.size().rows() != b.size().cols()) {
-      throw std::invalid_argument(
-          "Error: GEMM: rows of matrix a does not correspond to columns of matrix b.");
-    }
+    DLAF_ASSERT(m == b.size().rows(), "`m` cannot be determined!", m, b);
+    DLAF_ASSERT(n == a.size().cols(), "`n` cannot be determined!", n, a);
+    DLAF_ASSERT(a.size().rows() == b.size().cols(),
+                "rows of matrix `a` does not correspond to columns of matrix `b`", a, b);
   }
 
   blas::hemm(blas::Layout::ColMajor, side, uplo, m, n, alpha, a.ptr(), a.ld(), b.ptr(), b.ld(), beta,
              c.ptr(), c.ld());
+}
+
+template <class T, Device device>
+void her2k(blas::Uplo uplo, blas::Op op, BaseType<T> alpha, const Tile<const T, device>& a,
+           const Tile<const T, device>& b, BaseType<T> beta, const Tile<T, device>& c) {
+  SizeType n;
+  SizeType k;
+  if (op == blas::Op::NoTrans) {
+    n = a.size().rows();
+    k = a.size().cols();
+  }
+  else {
+    n = a.size().cols();
+    k = a.size().rows();
+  }
+
+  DLAF_ASSERT(!std::is_same<T, ComplexType<T>>::value && op != blas::Op::Trans,
+              "`op = Trans` is not allowed in complex HER2K.");
+  DLAF_ASSERT(c.size().rows() == c.size().cols(), "`c` is not square!", c);
+  DLAF_ASSERT(c.size().rows() == n, "`c` has an invalid size!", c, n);
+
+  blas::her2k(blas::Layout::ColMajor, uplo, op, n, k, alpha, a.ptr(), a.ld(), b.ptr(), b.ld(), beta,
+              c.ptr(), c.ld());
 }
 
 template <class T, Device device>
@@ -94,38 +105,10 @@ void herk(blas::Uplo uplo, blas::Op op, BaseType<T> alpha, const Tile<const T, d
 
   DLAF_ASSERT((!std::is_same<T, ComplexType<T>>::value || op != blas::Op::Trans),
               "op = Trans is not allowed for Complex values!");
-  DLAF_ASSERT(c.size().rows() == c.size().cols(), "`c` is not square!");
+  DLAF_ASSERT(c.size().rows() == c.size().cols(), "`c` is not square!", c);
   DLAF_ASSERT(c.size().rows() == n, "`c` has an invalid size!", c, n);
 
   blas::herk(blas::Layout::ColMajor, uplo, op, n, k, alpha, a.ptr(), a.ld(), beta, c.ptr(), c.ld());
-}
-
-template <class T, Device device>
-void her2k(blas::Uplo uplo, blas::Op op, BaseType<T> alpha, const Tile<const T, device>& a,
-           const Tile<const T, device>& b, BaseType<T> beta, const Tile<T, device>& c) {
-  SizeType n;
-  SizeType k;
-  if (op == blas::Op::NoTrans) {
-    n = a.size().rows();
-    k = a.size().cols();
-  }
-  else {
-    n = a.size().cols();
-    k = a.size().rows();
-  }
-
-  if (std::is_same<T, ComplexType<T>>::value && op == blas::Op::Trans) {
-    throw std::invalid_argument("Error: Complex HERK: op = Trans is not allowed.");
-  }
-  if (c.size().rows() != c.size().cols()) {
-    throw std::invalid_argument("Error: HER2K: C is not square.");
-  }
-  if (c.size().rows() != n) {
-    throw std::invalid_argument("Error: HERK: C has an invalid size.");
-  }
-
-  blas::her2k(blas::Layout::ColMajor, uplo, op, n, k, alpha, a.ptr(), a.ld(), b.ptr(), b.ld(), beta,
-              c.ptr(), c.ld());
 }
 
 template <class T, Device device>

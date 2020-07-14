@@ -44,6 +44,20 @@ class TileOperationsTest : public ::testing::Test {};
 
 TYPED_TEST_SUITE(TileOperationsTest, MatrixElementTypes);
 
+TYPED_TEST(TileOperationsTest, Hegst) {
+  using Type = TypeParam;
+
+  SizeType m, extra_ld;
+
+  std::vector<std::tuple<SizeType, SizeType>> sizes = {{0, 0},  {3, 0},  {5, 3},  {9, 0}, {9, 1},
+                                                       {17, 0}, {17, 7}, {32, 0}, {32, 4}};
+
+  for (const auto& size : sizes) {
+    std::tie(m, extra_ld) = size;
+    testLowerHegst<TileElementIndex, Type>(m, extra_ld);
+  }
+}
+
 TYPED_TEST(TileOperationsTest, lange) {
   SizeType m, n, extra_lda;
 
@@ -136,19 +150,5 @@ TYPED_TEST(TileOperationsTest, PotrfNonPositiveDefinite) {
       // Test version returning info
       testPotrfNonPosDef<Type, true>(uplo, n, extra_lda);
     }
-  }
-}
-
-TYPED_TEST(TileOperationsTest, Hegst) {
-  using Type = TypeParam;
-
-  SizeType m, extra_ld;
-
-  std::vector<std::tuple<SizeType, SizeType>> sizes = {{0, 0},  {3, 0},  {5, 3},  {9, 0}, {9, 1},
-                                                       {17, 0}, {17, 7}, {32, 0}, {32, 4}};
-
-  for (const auto& size : sizes) {
-    std::tie(m, extra_ld) = size;
-    testLowerHegst<TileElementIndex, Type>(m, extra_ld);
   }
 }

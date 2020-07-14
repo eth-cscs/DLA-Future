@@ -27,6 +27,15 @@ namespace tile {
 
 // See LAPACK documentation for more details.
 
+/// Reduce a Hermitian definite generalized eigenproblem to standard form
+/// (solving inv(U**H)*A*inv(U) or inv(L)*A*inv(L**H))
+///
+/// @pre a must be a square Hermitian matrix
+/// @pre b must be the triangular factor from the Cholesky factorization of B
+/// @throw std::runtime_error if the tile was not positive definite.
+template <class T, Device device>
+void hegst(int itype, blas::Uplo uplo, const Tile<T, device>& a, const Tile<T, device>& b);
+
 /// Copies all elements from Tile a to Tile b.
 ///
 /// @pre @param a and @param b must have the same size (number of elements).
@@ -51,14 +60,6 @@ template <class T, Device device>
 dlaf::BaseType<T> lantr(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag,
                         const Tile<T, device>& a) noexcept;
 
-/// Compute the cholesky decomposition of a.
-///
-/// Only the upper or lower triangular elements are referenced according to @p uplo.
-/// @pre matrix @p a is square,
-/// @pre matrix @p a is positive definite.
-template <class T, Device device>
-void potrf(blas::Uplo uplo, const Tile<T, device>& a) noexcept;
-
 /// Compute the cholesky decomposition of a (with return code).
 ///
 /// Only the upper or lower triangular elements are referenced according to @p uplo.
@@ -66,14 +67,13 @@ void potrf(blas::Uplo uplo, const Tile<T, device>& a) noexcept;
 template <class T, Device device>
 long long potrfInfo(blas::Uplo uplo, const Tile<T, device>& a);
 
-/// Reduce a Hermitian definite generalized eigenproblem to standard form
-/// (solving inv(U**H)*A*inv(U) or inv(L)*A*inv(L**H))
+/// Compute the cholesky decomposition of a.
 ///
-/// @pre a must be a square Hermitian matrix
-/// @pre b must be the triangular factor from the Cholesky factorization of B
-/// @throw std::runtime_error if the tile was not positive definite.
+/// Only the upper or lower triangular elements are referenced according to @p uplo.
+/// @pre matrix @p a is square,
+/// @pre matrix @p a is positive definite.
 template <class T, Device device>
-void hegst(int itype, blas::Uplo uplo, const Tile<T, device>& a, const Tile<T, device>& b);
+void potrf(blas::Uplo uplo, const Tile<T, device>& a) noexcept;
 
 #include "dlaf/lapack_tile.tpp"
 

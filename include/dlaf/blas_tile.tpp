@@ -80,7 +80,7 @@ void her2k(blas::Uplo uplo, blas::Op op, BaseType<T> alpha, const Tile<const T, 
     k = a.size().rows();
   }
 
-  DLAF_ASSERT(!std::is_same<T, ComplexType<T>>::value && op != blas::Op::Trans,
+  DLAF_ASSERT((!std::is_same<T, ComplexType<T>>::value || op != blas::Op::Trans),
               "`op = Trans` is not allowed in complex HER2K.");
   DLAF_ASSERT(c.size().rows() == c.size().cols(), "`c` is not square!", c);
   DLAF_ASSERT(c.size().rows() == n, "`c` has an invalid size!", c, n);

@@ -283,6 +283,8 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const std:
   }
 }
 
+}
+
 /// Set a matrix with random values assuring it will be hermitian
 ///
 /// Values will be random numbers in:
@@ -322,6 +324,7 @@ void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
   const auto offset_value = dlaf::util::size_t::mul(2, to_sizet(matrix.size().rows()));
   internal::set_random_hermitian_with_offset(matrix, offset_value);
 }
+
 }
 }
 }

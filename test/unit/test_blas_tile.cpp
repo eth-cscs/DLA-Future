@@ -59,6 +59,16 @@ TYPED_TEST(TileOperationsTest, Gemm) {
   }
 }
 
+TYPED_TEST(TileOperationsTest, Hemm) {
+  using Type = TypeParam;
+
+}
+
+TYPED_TEST(TileOperationsTest, Her2k) {
+  using Type = TypeParam;
+
+}
+
 TYPED_TEST(TileOperationsTest, Herk) {
   using Type = TypeParam;
 

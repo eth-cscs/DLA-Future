@@ -2,7 +2,19 @@
 
 # Distributed Linear Algebra with Futures.
 
-## Dependencies
+## Getting started with DLAF
+
+### Get DLA-Future
+
+If you have `git` you can clone this repository with the command
+
+```
+git clone https://github.com/eth-cscs/DLA-Future.git
+```
+
+Otherwise you can download the archive of the latest `master` branch as a [zip](https://github.com/eth-cscs/DLA-Future/archive/master.zip) or [tar.gz](https://github.com/eth-cscs/DLA-Future/archive/master.tar.gz) archive.
+
+### Dependencies
 
 - MPI
 - [HPX](https://github.com/STEllAR-GROUP/hpx)
@@ -13,9 +25,9 @@
 - [GoogleTest](https://github.com/google/googletest) (optional; bundled) - unit testing
 - Doxygen (optional) - documentation
 
-## How to install DLA-Future with spack
+#### Build using Spack
 
-We provide a spack package DLA-Future that can be easily added to your own spack as follows:
+We provide a spack package `dla-future` that can be easily added to your own spack as follows:
 
 `spack repo add $DLAF_ROOT/spack`
 
@@ -25,34 +37,41 @@ Example installation:
 
 `spack install dla-future ^intel-mkl`
 
-Notice that, for the package to work correctly, the HPX option `max_cpu_count` must be set accordingly to the platform,
-as it represents the maximum number of OS-threads.
+Notice that, for the package to work correctly, the HPX option `max_cpu_count` must be set accordingly to the architecture, as it represents the maximum number of OS-threads.
 
 `spack install dla-future ^intel-mkl ^hpx max_cpu_count=256`
 
-## How to use the library
+#### Build the old good way
+
+You can build all the dependencies by yourself, but you have to ensure that:
+- BLAS/LAPACK implementation is not multithreaded
+- HPX: `HPX_WITH_NETWORKING=none` + `HPX_WITH_MAX_CPU_COUNT=n` (according to number of cores in the architecture, suggested the next closest power of 2)
+
+TODO configure cmake script for DLAF (with/without MKL)
+
+### Link your program/library with DLAF
 
 Using DLAF in a CMake project is extremely easy!
-
-Let's use the variable `$DLAF_ROOT` for referring to the install path of DLAF.
 
 Configure your project with:
 
 ```bash
-cmake -DDLAF_DIR="$DLAF_ROOT/lib/cmake" ..
+# DLAF_INSTALL_PREFIX must be set to where you installed DLAF (i.e. CMAKE_INSTALL_PREFIX)
+cmake -DDLAF_DIR="$DLAF_INSTALL_PREFIX/lib/cmake" ..
+
+# ... or in case you used spack
+# cmake -DDLAF_DIR=`spack location -i dla-future` ..
 ```
 
-Then, it is just as simple as:
+Then, it is just as simple as adding these directives in your `CMakeLists.txt`:
 
 ```
 find_package(DLAF)
-
-# ...
-
-target_link_libraries(<your_target> PRIVATE DLAF)
+# ... and then for your executable/library target
+target_link_libraries(<your_target> PRIVATE DLAF::DLAF)
 ```
 
-## How to generate the documentation
+### How to generate the documentation
 
 The documentation can be built together with the project by enabling its generation with the flag `BUILD_DOC=on` and then use the `doc` target to eventually generate it.
 

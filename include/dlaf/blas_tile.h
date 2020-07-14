@@ -31,7 +31,7 @@ template <class T, Device device>
 void hemm(blas::Side side, blas::Uplo uplo, T alpha, const Tile<const T, device>& a,
           const Tile<const T, device>& b, T beta, const Tile<T, device>& c);
 
-/// @brief Performs a rank 2k update of hermitian (symmetric if T is real) tile a.
+/// Performs a rank 2k update of hermitian (symmetric if T is real) tile @p a.
 template <class T, Device device>
 void her2k(blas::Uplo uplo, blas::Op op, BaseType<T> alpha, const Tile<const T, device>& a,
            const Tile<const T, device>& b, BaseType<T> beta, const Tile<T, device>& c);
@@ -41,7 +41,7 @@ template <class T, Device device>
 void herk(blas::Uplo uplo, blas::Op op, BaseType<T> alpha, const Tile<const T, device>& a,
           BaseType<T> beta, const Tile<T, device>& c) noexcept;
 
-/// @brief Performs a triangular solve.
+/// Performs a triangular solve.
 template <class T, Device device>
 void trsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha,
           const Tile<const T, device>& a, const Tile<T, device>& b) noexcept;

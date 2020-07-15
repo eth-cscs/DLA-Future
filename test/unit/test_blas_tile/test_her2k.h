@@ -29,33 +29,44 @@ using namespace testing;
 using dlaf::util::size_t::mul;
 
 template <class T, class CT = const T>
-void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType extra_lda,
-              SizeType extra_ldc) {
+void testHer2k(blas::Uplo uplo, blas::Op op, SizeType n, SizeType k, SizeType extra_lda, SizeType extra_ldc) {
   TileElementSize size_a(n, k);
-  if (op_a != blas::Op::NoTrans)
+  if (op != blas::Op::NoTrans)
     size_a.transpose();
+  TileElementSize size_b(n, k);
+  if (op != blas::Op::NoTrans)
+    size_b.transpose();
   TileElementSize size_c(n, n);
 
   SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
+  SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_lda;
   SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
 
   std::stringstream s;
-  s << "HERK: " << uplo << ", " << op_a;
+  s << "HER2K: " << uplo << ", " << op;
   s << ", n = " << n << ", k = " << k;
-  s << ", lda = " << lda << ", ldc = " << ldc;
+  s << ", lda = " << lda << ", ldb = " << ldb << ", ldc = " << ldc;
   SCOPED_TRACE(s.str());
 
   memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
+  memory::MemoryView<T, Device::CPU> mem_b(mul(ldb, size_b.cols()));
   memory::MemoryView<T, Device::CPU> mem_c(mul(ldc, size_c.cols()));
 
   Tile<T, Device::CPU> a0(size_a, std::move(mem_a), lda);
+  Tile<T, Device::CPU> b0(size_b, std::move(mem_b), lda);
   Tile<T, Device::CPU> c(size_c, std::move(mem_c), ldc);
 
-  // Returns op_a(a)_ik
+  // Returns op(a)_ik
   auto el_op_a = [](const TileElementIndex& index) {
     double i = index.row();
     double k = index.col();
     return TypeUtilities<T>::polar(.9 * (i + 1) / (k + .5), i - k);
+  };
+  // Returns op(b)_kj
+  auto el_op_b = [](const TileElementIndex& index) {
+    double k = index.row();
+    double j = index.col();
+    return TypeUtilities<T>::polar(.7 * (k + .5) / (j + 1), k - j);
   };
   auto el_c = [uplo](const TileElementIndex& index) {
     // Return -1 for elements not referenced
@@ -68,10 +79,10 @@ void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType e
     return TypeUtilities<T>::polar(1.2 * i / (j + 1), -i + j);
   };
 
-  BaseType<T> alpha = -1.2f;
+  T alpha = TypeUtilities<T>::element(-1.2, 0.2);
   BaseType<T> beta = 1.1f;
 
-  auto res_c = [uplo, k, alpha, el_op_a, beta, el_c](const TileElementIndex& index) {
+  auto res_c = [uplo, k, alpha, el_op_a, el_op_b, beta, el_c](const TileElementIndex& index) {
     // Return el_c(index) for elements not referenced
     if ((uplo == blas::Uplo::Lower && index.row() < index.col()) ||
         (uplo == blas::Uplo::Upper && index.row() > index.col()))
@@ -80,17 +91,19 @@ void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType e
     T tmp = TypeUtilities<T>::element(0, 0);
     // Compute result of cij
     for (SizeType kk = 0; kk < k; ++kk) {
-      tmp += el_op_a({index.row(), kk}) * TypeUtilities<T>::conj(el_op_a({index.col(), kk}));
+      tmp += alpha * el_op_a({index.row(), kk}) * TypeUtilities<T>::conj(el_op_b({index.col(), kk})) + TypeUtilities<T>::conj(alpha) * el_op_b({index.row(), kk}) * TypeUtilities<T>::conj(el_op_a({index.col(), kk}));
     }
-    return beta * el_c(index) + alpha * tmp;
+    return beta * el_c(index) + tmp;
   };
 
-  set(a0, el_op_a, op_a);
+  set(a0, el_op_a, op);
+  set(b0, el_op_b, op);
   set(c, el_c);
 
   Tile<CT, Device::CPU> a(std::move(a0));
+  Tile<CT, Device::CPU> b(std::move(b0));
 
-  tile::herk(uplo, op_a, alpha, a, beta, c);
+  tile::her2k(uplo, op, alpha, a, b, beta, c);
 
   CHECK_TILE_NEAR(res_c, c, (k + 1) * TypeUtilities<T>::error, (k + 1) * TypeUtilities<T>::error);
 }

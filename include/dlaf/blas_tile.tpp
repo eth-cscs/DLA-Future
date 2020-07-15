@@ -67,7 +67,7 @@ void hemm(blas::Side side, blas::Uplo uplo, T alpha, const Tile<const T, device>
 }
 
 template <class T, Device device>
-void her2k(blas::Uplo uplo, blas::Op op, BaseType<T> alpha, const Tile<const T, device>& a,
+void her2k(blas::Uplo uplo, blas::Op op, T alpha, const Tile<const T, device>& a,
            const Tile<const T, device>& b, BaseType<T> beta, const Tile<T, device>& c) {
   SizeType n;
   SizeType k;

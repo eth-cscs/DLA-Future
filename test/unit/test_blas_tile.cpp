@@ -15,6 +15,7 @@
 
 #include "test_blas_tile/test_gemm.h"
 #include "test_blas_tile/test_hemm.h"
+#include "test_blas_tile/test_her2k.h"
 #include "test_blas_tile/test_herk.h"
 #include "test_blas_tile/test_trsm.h"
 
@@ -89,6 +90,34 @@ TYPED_TEST(TileOperationsTest, Hemm) {
 
 TYPED_TEST(TileOperationsTest, Her2k) {
   using Type = TypeParam;
+
+  using Type = TypeParam;
+
+  auto her2k_blas_ops = blas_ops;
+  // [c,z]her2k do not allow op = Trans
+  if (std::is_same<Type, ComplexType<Type>>::value)
+    her2k_blas_ops = {blas::Op::NoTrans, blas::Op::ConjTrans};
+  SizeType n, k, extra_lda, extra_ldc;
+
+  std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes =
+      {{0, 0, 0, 0},                 // all 0 sizes
+       {0, 5, 1, 0},  {7, 0, 1, 2},  // one 0 size
+       {1, 1, 0, 3},  {1, 12, 1, 0},  {17, 12, 1, 3}, {11, 23, 0, 3},
+       {9, 12, 1, 1}, {32, 32, 0, 0}, {32, 32, 4, 7}};
+
+  for (const auto uplo : blas_uplos) {
+    for (const auto op : her2k_blas_ops) {
+      for (const auto& size : sizes) {
+        std::tie(n, k, extra_lda, extra_ldc) = size;
+
+        // Test a const Tile.
+        testHer2k<Type>(uplo, op, n, k, extra_lda, extra_ldc);
+
+        // Test a non const Tile.
+        testHer2k<Type, Type>(uplo, op, n, k, extra_lda, extra_ldc);
+      }
+    }
+  }
 }
 
 TYPED_TEST(TileOperationsTest, Herk) {

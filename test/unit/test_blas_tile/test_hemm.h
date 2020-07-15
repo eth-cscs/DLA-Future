@@ -15,6 +15,7 @@
 #include "dlaf/blas_tile.h"
 #include "dlaf/memory/memory_view.h"
 #include "dlaf/tile.h"
+#include "dlaf/tile_output.h"
 #include "dlaf/util_blas.h"
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/matrix/util_tile_blas.h"
@@ -29,14 +30,20 @@ using namespace testing;
 using dlaf::util::size_t::mul;
 
 template <class T, class CT = const T>
-void testGemm(blas::Op op_a, blas::Op op_b, SizeType m, SizeType n, SizeType k, SizeType extra_lda,
+void testHemm(blas::Side side, blas::Uplo uplo, SizeType m, SizeType n, SizeType extra_lda,
               SizeType extra_ldb, SizeType extra_ldc) {
-  TileElementSize size_a(m, k);
-  if (op_a != blas::Op::NoTrans)
-    size_a.transpose();
-  TileElementSize size_b(k, n);
-  if (op_b != blas::Op::NoTrans)
-    size_b.transpose();
+  SizeType k;
+
+  if (side == blas::Side::Left) {
+    k = m;
+  }
+  else if (side == blas::Side::Right) {
+    k = n;
+  }
+
+  TileElementSize size_a(k, k);
+
+  TileElementSize size_b(m, n);
   TileElementSize size_c(m, n);
 
   SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
@@ -44,10 +51,14 @@ void testGemm(blas::Op op_a, blas::Op op_b, SizeType m, SizeType n, SizeType k, 
   SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
 
   std::stringstream s;
-  s << "GEMM: " << op_a << ", " << op_a;
-  s << ", m = " << m << ", n = " << n << ", k = " << k;
+  s << "HEMM: " << side << ", " << uplo;
+  s << ", m = " << m << ", n = " << n;
   s << ", lda = " << lda << ", ldb = " << ldb << ", ldc = " << ldc;
   SCOPED_TRACE(s.str());
+
+  T alpha = TypeUtilities<T>::element(1.2, .7);
+  T beta = TypeUtilities<T>::element(1.1, .4);
+  BaseType<T> gamma = 1.3f;
 
   memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
   memory::MemoryView<T, Device::CPU> mem_b(mul(ldb, size_b.cols()));
@@ -59,50 +70,78 @@ void testGemm(blas::Op op_a, blas::Op op_b, SizeType m, SizeType n, SizeType k, 
   Tile<T, Device::CPU> c(size_c, std::move(mem_c), ldc);
 
   // Note: The tile elements are chosen such that:
-  // - op_a(a)_ik = .9 * (i+1) / (k+.5) * exp(I*(2*i-k)),
-  // - op_b(b)_kj = .8 * (k+.5) / (j+2) * exp(I*(k-j)),
-  // - c_ij = 1.2 * i / (j+1) * exp(I*(-i+j)),
-  // where I = 0 for real types or I is the complex unit for complex types.
-  // Therefore the result should be:
-  // res_ij = beta * c_ij + Sum_k(alpha * op_a(a)_ik * op_b(b)_kj)
-  //        = beta * c_ij + gamma * (i+1) / (j+2) * exp(I*(2*i+j)),
-  // where gamma = .72 * k * alpha.
-  auto el_op_a = [](const TileElementIndex& index) {
-    double i = index.row();
-    double k = index.col();
-    return TypeUtilities<T>::polar(.9 * (i + 1) / (k + .5), 2 * i - k);
+  // Cij = 1.2 * i / (j+1) * exp(I * (j-i))
+  // where I is the imaginary number
+  //
+  // if side == Left
+  // Aik = 0.9 * (i+1) * (k+1) * exp(gamma * I * (i-k))
+  // Bkj = 0.7 / ((j+1) * (k+1)) * exp(gamma * I * (k+j))
+  //
+  // if side == Right
+  // Bik = 0.7 / ((i+1) * (k+1)) * exp(gamma * I * (i+k))
+  // Akj = 0.9 * (j+1) * (k+1) * exp(gamma * I * (j-k))
+  //
+  // Hence the solution (S) will be
+  // if side == Left
+  // Sij = beta * Cij + 0.63 * k * gamma * (i+1)/(j+1) exp(I * alpha * (i+j))
+  // if side == Right
+  // Sij = beta * Cij + 0.63 * k * gamma * (j+1)/(i+1) exp(I * alpha * (i+j))
+  auto el_a = [side, gamma](const TileElementIndex& index) {
+    if (side == blas::Side::Left) {
+      double i = index.row();
+      double k = index.col();
+      return TypeUtilities<T>::polar(.9 * (i + 1) * (k + 1), gamma * (i - k));
+    }
+    else if (side == blas::Side::Right) {
+      double k = index.row();
+      double j = index.col();
+      return TypeUtilities<T>::polar(.9 * (j + 1) * (k + 1), gamma * (j - k));
+    }
   };
-  auto el_op_b = [](const TileElementIndex& index) {
-    double k = index.row();
-    double j = index.col();
-    return TypeUtilities<T>::polar(.8 * (k + .5) / (j + 2), k + j);
+
+  auto el_b = [side, gamma](const TileElementIndex& index) {
+    if (side == blas::Side::Left) {
+      double k = index.row();
+      double j = index.col();
+      return TypeUtilities<T>::polar(.7 / ((j + 1) * (k + 1)), gamma * (k + j));
+    }
+    else if (side == blas::Side::Right) {
+      double i = index.row();
+      double k = index.col();
+      return TypeUtilities<T>::polar(.7 / ((i + 1) * (k + 1)), gamma * (i + k));
+    }
   };
+
   auto el_c = [](const TileElementIndex& index) {
     double i = index.row();
     double j = index.col();
     return TypeUtilities<T>::polar(1.2 * i / (j + 1), -i + j);
   };
 
-  T alpha = TypeUtilities<T>::element(-1.2, .7);
-  T beta = TypeUtilities<T>::element(1.1, .4);
-
-  T gamma = TypeUtilities<T>::element(.72 * k, 0) * alpha;
-  auto res_c = [beta, el_c, gamma](const TileElementIndex& index) {
+  auto res_c = [side, k, alpha, beta, gamma, el_c](const TileElementIndex& index) {
     double i = index.row();
     double j = index.col();
-    return beta * el_c(index) + gamma * TypeUtilities<T>::polar((i + 1) / (j + 2), 2 * i + j);
+
+    if (side == blas::Side::Left) {
+      return beta * el_c(index) + TypeUtilities<T>::element(0.63 * k, 0) * alpha *
+                                      TypeUtilities<T>::polar((i + 1) / (j + 1), gamma * (i + j));
+    }
+    if (side == blas::Side::Right) {
+      return beta * el_c(index) + TypeUtilities<T>::element(0.63 * k, 0) * alpha *
+                                      TypeUtilities<T>::polar((j + 1) / (i + 1), gamma * (i + j));
+    }
   };
 
   // Set tile elements.
-  set(a0, el_op_a, op_a);
-  set(b0, el_op_b, op_b);
+  set(a0, el_a);
+  set(b0, el_b);
   set(c, el_c);
 
   // Read-only tiles become constant if CT is const T.
-  Tile<CT, Device::CPU> a(std::move(a0));
-  Tile<CT, Device::CPU> b(std::move(b0));
+  const Tile<CT, Device::CPU> a(std::move(a0));
+  const Tile<CT, Device::CPU> b(std::move(b0));
 
-  tile::gemm(op_a, op_b, alpha, a, b, beta, c);
+  tile::hemm(side, uplo, alpha, a, b, beta, c);
 
   // Check result against analytical result.
   CHECK_TILE_NEAR(res_c, c, 2 * (k + 1) * TypeUtilities<T>::error,

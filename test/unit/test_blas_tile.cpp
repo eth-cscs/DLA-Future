@@ -14,6 +14,7 @@
 #include "dlaf_test/util_types.h"
 
 #include "test_blas_tile/test_gemm.h"
+#include "test_blas_tile/test_hemm.h"
 #include "test_blas_tile/test_herk.h"
 #include "test_blas_tile/test_trsm.h"
 
@@ -61,12 +62,33 @@ TYPED_TEST(TileOperationsTest, Gemm) {
 
 TYPED_TEST(TileOperationsTest, Hemm) {
   using Type = TypeParam;
+  SizeType m, n, extra_lda, extra_ldb, extra_ldc;
 
+  std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType>> sizes = {
+      {0, 0, 0, 0, 0},                                       // all 0 sizes
+      {7, 0, 3, 1, 0}, {0, 5, 0, 0, 1},   {0, 0, 1, 1, 2},   // two 0 sizes
+      {0, 5, 1, 0, 1}, {7, 0, 1, 2, 0},   {3, 11, 0, 1, 0},  // one 0 size
+      {1, 1, 0, 3, 0}, {1, 12, 1, 0, 7},  {17, 12, 1, 3, 0}, {11, 23, 0, 3, 4},
+      {6, 9, 1, 1, 1}, {32, 32, 0, 0, 0}, {32, 32, 4, 5, 7},
+  };
+
+  for (const auto side : blas_sides) {
+    for (const auto uplo : blas_uplos) {
+      for (const auto& size : sizes) {
+        std::tie(m, n, extra_lda, extra_ldb, extra_ldc) = size;
+
+        // Test a and b const Tiles.
+        testHemm<Type>(side, uplo, m, n, extra_lda, extra_ldb, extra_ldc);
+
+        // Test a and b non const Tiles.
+        testHemm<Type, Type>(side, uplo, m, n, extra_lda, extra_ldb, extra_ldc);
+      }
+    }
+  }
 }
 
 TYPED_TEST(TileOperationsTest, Her2k) {
   using Type = TypeParam;
-
 }
 
 TYPED_TEST(TileOperationsTest, Herk) {

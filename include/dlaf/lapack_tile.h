@@ -60,13 +60,6 @@ template <class T, Device device>
 dlaf::BaseType<T> lantr(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag,
                         const Tile<T, device>& a) noexcept;
 
-/// Compute the cholesky decomposition of a (with return code).
-///
-/// Only the upper or lower triangular elements are referenced according to @p uplo.
-/// @returns info = 0 on success or info > 0 if the tile is not positive definite.
-template <class T, Device device>
-long long potrfInfo(blas::Uplo uplo, const Tile<T, device>& a);
-
 /// Compute the cholesky decomposition of a.
 ///
 /// Only the upper or lower triangular elements are referenced according to @p uplo.
@@ -74,6 +67,13 @@ long long potrfInfo(blas::Uplo uplo, const Tile<T, device>& a);
 /// @pre matrix @p a is positive definite.
 template <class T, Device device>
 void potrf(blas::Uplo uplo, const Tile<T, device>& a) noexcept;
+
+/// Compute the cholesky decomposition of a (with return code).
+///
+/// Only the upper or lower triangular elements are referenced according to @p uplo.
+/// @returns info = 0 on success or info > 0 if the tile is not positive definite.
+template <class T, Device device>
+long long potrfInfo(blas::Uplo uplo, const Tile<T, device>& a);
 
 #include "dlaf/lapack_tile.tpp"
 

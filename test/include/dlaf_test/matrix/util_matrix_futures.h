@@ -125,7 +125,7 @@ std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingGlob
 
 /// Returns true if only the first @p futures are ready.
 ///
-/// @pre Future should be a future or shared_future.
+/// @pre Future should be a future or shared_future,
 /// @pre 0 <= ready <= futures.size().
 template <class Future>
 bool checkFuturesStep(size_t ready, const std::vector<Future>& futures) {

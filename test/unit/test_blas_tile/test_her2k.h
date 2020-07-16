@@ -29,7 +29,8 @@ using namespace testing;
 using dlaf::util::size_t::mul;
 
 template <class T, class CT = const T>
-void testHer2k(blas::Uplo uplo, blas::Op op, SizeType n, SizeType k, SizeType extra_lda, SizeType extra_ldc) {
+void testHer2k(blas::Uplo uplo, blas::Op op, SizeType n, SizeType k, SizeType extra_lda,
+               SizeType extra_ldc) {
   TileElementSize size_a(n, k);
   if (op != blas::Op::NoTrans)
     size_a.transpose();
@@ -91,7 +92,9 @@ void testHer2k(blas::Uplo uplo, blas::Op op, SizeType n, SizeType k, SizeType ex
     T tmp = TypeUtilities<T>::element(0, 0);
     // Compute result of cij
     for (SizeType kk = 0; kk < k; ++kk) {
-      tmp += alpha * el_op_a({index.row(), kk}) * TypeUtilities<T>::conj(el_op_b({index.col(), kk})) + TypeUtilities<T>::conj(alpha) * el_op_b({index.row(), kk}) * TypeUtilities<T>::conj(el_op_a({index.col(), kk}));
+      tmp += alpha * el_op_a({index.row(), kk}) * TypeUtilities<T>::conj(el_op_b({index.col(), kk})) +
+             TypeUtilities<T>::conj(alpha) * el_op_b({index.row(), kk}) *
+                 TypeUtilities<T>::conj(el_op_a({index.col(), kk}));
     }
     return beta * el_c(index) + tmp;
   };

@@ -64,12 +64,10 @@ void potrf(blas::Uplo uplo, const Tile<T, device>& a) noexcept {
 
 template <class T, Device device>
 long long potrfInfo(blas::Uplo uplo, const Tile<T, device>& a) {
-  if (a.size().rows() != a.size().cols()) {
-    throw std::invalid_argument("Error: POTRF: A is not square.");
-  }
+  DLAF_ASSERT(a.size().rows() == a.size().cols(), "POTRF: `a` is not square!", a);
 
   auto info = lapack::potrf(uplo, a.size().rows(), a.ptr(), a.ld());
-  assert(info >= 0);
+  DLAF_ASSERT_HEAVY(info >= 0, "");
 
   return info;
 }

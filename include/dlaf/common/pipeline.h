@@ -59,7 +59,7 @@ public:
     }
 
   private:
-    U object_;                 ///< the wrapped object! it is actually owned by the wrapper.
+    U object_;  ///< the wrapped object! it is actually owned by the wrapper.
     /// promise containing the shared state that will unlock the next user.
     hpx::lcos::local::promise<U> promise_;
   };

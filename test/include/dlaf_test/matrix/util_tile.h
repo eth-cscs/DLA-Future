@@ -102,7 +102,7 @@ void check(ElementGetter expected, const Tile<T, Device::CPU>& tile, ComparisonO
   }
 }
 
-/// Checks the elements of the tile w.r.t. a fixed value
+/// Checks the elements of the tile w.r.t. a fixed value.
 ///
 /// comp(expected, (i, j)-element) is used to compare the elements.
 /// err_message(expected, (i, j)-element) is printed for the first element which does not fulfill

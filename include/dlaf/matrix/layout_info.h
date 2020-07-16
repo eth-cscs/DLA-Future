@@ -36,7 +36,7 @@ public:
   /// @pre tile_ld >= 1,
   /// @pre tile_offset_row >= 1,
   /// @pre tile_offset_col >= 1;
-  /// If !size.isEmpty():
+  /// if !size.isEmpty():
   /// @pre tile_ld >= max(size.rows(), block_size.rows()),
   /// @pre tile_row_offset >= block_size.rows(),
   /// @pre tile_col_offset >= size of the memory (in elements, padding included)

@@ -54,7 +54,7 @@ struct TypeUtilities<std::complex<T>> {
 
   /// Returns r * (cos(theta) + I * sin(theta)) (I is the imaginary unit).
   ///
-  /// @pre r > 0
+  /// @pre r > 0.
   static constexpr std::complex<T> polar(double r, double theta) {
     return std::polar<T>(static_cast<T>(r), static_cast<T>(theta));
   }

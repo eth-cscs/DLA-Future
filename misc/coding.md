@@ -215,8 +215,8 @@ Doxygen commands should be specified with `@` syntax (e.g. `@param`).
 
 General rules:
 
-- no empty comment lines before and after the comment block
-- one space after the brief comment
+- no empty comment lines before and after the comment block,
+- one space after the brief comment.
 
 ```cpp
 /// Returns @c ceiling(@p num / @p den) for integer types.

@@ -23,12 +23,12 @@ namespace matrix {
 namespace test {
 using namespace dlaf_test;
 
-/// Sets the elements of the tile.
+/// @brief Sets the elements of the tile.
 ///
 /// The (i, j)-element of the tile is set to el({i, j}) if op == NoTrans,
 ///                                          el({j, i}) if op == Trans,
 ///                                          conj(el({j, i})) if op == ConjTrans.
-/// @pre el argument is an index of type const TileElementIndex& or TileElementIndex,
+/// @pre el argument is an index of type const TileElementIndex& or TileElementIndex.
 /// @pre el return type should be T.
 template <class T, class Func>
 void set(Tile<T, Device::CPU>& tile, Func el, blas::Op op) {

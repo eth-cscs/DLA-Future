@@ -95,7 +95,7 @@ public:
   /// @pre index.isIn(distribution().localNrTiles()).
   hpx::future<TileType> operator()(const LocalTileIndex& index) noexcept;
 
-  /// Returns a future of the Tile with global index @p index.
+  /// @brief Returns a future of the Tile with global index @p index.
   ///
   /// TODO: Sync details.
   /// @pre the global tile is stored in the current process,

@@ -27,10 +27,10 @@ namespace dlaf {
 namespace matrix {
 namespace test {
 
-/// Sets the elements of the matrix.
+/// @brief Sets the elements of the matrix.
 ///
 /// The (i, j)-element of the matrix is set to el({i, j}).
-/// @pre el argument is an index of type const GlobalElementIndex& or GlobalElementIndex,
+/// @pre el argument is an index of type const GlobalElementIndex& or GlobalElementIndex.
 /// @pre el return type should be T.
 template <template <class, Device> class MatrixType, class T, class ElementGetter>
 void set(MatrixType<T, Device::CPU>& mat, ElementGetter el) {
@@ -49,16 +49,16 @@ void set(MatrixType<T, Device::CPU>& mat, ElementGetter el) {
   }
 }
 
-/// Checks the elements of the matrix.
+/// @brief Checks the elements of the matrix.
 ///
 /// comp(expected({i, j}), (i, j)-element) is used to compare the elements.
 /// err_message(expected({i, j}), (i, j)-element) is printed for the first element
 /// that does not fulfill the comparison.
-/// @pre expected argument is an index of type const GlobalElementIndex&,
-/// @pre comp should have two arguments and return true if the comparison is fulfilled and false otherwise,
-/// @pre err_message should have two arguments and return a string,
-/// @pre expected return type should be the same as the type of the first argument of comp and of err_message,
-/// @pre The second argument of comp should be either T, T& or const T&,
+/// @pre expected argument is an index of type const GlobalElementIndex&.
+/// @pre comp should have two arguments and return true if the comparison is fulfilled and false otherwise.
+/// @pre err_message should have two arguments and return a string.
+/// @pre expected return type should be the same as the type of the first argument of comp and of err_message.
+/// @pre The second argument of comp should be either T, T& or const T&.
 /// @pre The second argument of err_message should be either T, T& or const T&.
 namespace internal {
 template <template <class, Device> class MatrixType, class T, class ElementGetter, class ComparisonOp,
@@ -86,10 +86,10 @@ void check(ElementGetter expected, MatrixType<T, Device::CPU>& mat, ComparisonOp
 }
 }
 
-/// Checks the elements of the matrix (exact equality).
+/// @brief Checks the elements of the matrix (exact equality).
 ///
 /// The (i, j)-element of the matrix is compared to exp_el({i, j}).
-/// @pre exp_el argument is an index of type const GlobalElementIndex&,
+/// @pre exp_el argument is an index of type const GlobalElementIndex&.
 /// @pre exp_el return type should be T.
 template <template <class, Device> class MatrixType, class T, class ElementGetter>
 void checkEQ(ElementGetter exp_el, MatrixType<T, Device::CPU>& mat, const char* file, const int line) {
@@ -102,10 +102,10 @@ void checkEQ(ElementGetter exp_el, MatrixType<T, Device::CPU>& mat, const char* 
 }
 #define CHECK_MATRIX_EQ(exp_el, mat) ::dlaf::matrix::test::checkEQ(exp_el, mat, __FILE__, __LINE__)
 
-/// Checks the pointers to the elements of the matrix.
+/// @brief Checks the pointers to the elements of the matrix.
 ///
 /// The pointer to (i, j)-element of the matrix is compared to exp_ptr({i, j}).
-/// @pre exp_ptr argument is an index of type const GlobalElementIndex&,
+/// @pre exp_ptr argument is an index of type const GlobalElementIndex&.
 /// @pre exp_ptr return type should be T*.
 template <class T, class PointerGetter>
 void checkPtr(PointerGetter exp_ptr, Matrix<T, Device::CPU>& mat, const char* file, const int line) {
@@ -119,14 +119,14 @@ void checkPtr(PointerGetter exp_ptr, Matrix<T, Device::CPU>& mat, const char* fi
 }
 #define CHECK_MATRIX_PTR(exp_ptr, mat) ::dlaf::matrix::test::checkPtr(exp_ptr, mat, __FILE__, __LINE__)
 
-/// Checks the elements of the matrix.
+/// @brief Checks the elements of the matrix.
 ///
 /// The (i, j)-element of the matrix is compared to expected({i, j}).
-/// @pre expected argument is an index of type const GlobalElementIndex&,
-/// @pre expected return type should be T,
-/// @pre rel_err >= 0,
-/// @pre abs_err >= 0,
-/// @pre rel_err > 0 || abs_err > 0.
+/// @pre expected argument is an index of type const GlobalElementIndex&.
+/// @pre expected return type should be T.
+/// @pre rel_err >= 0.
+/// @pre abs_err >= 0.
+/// @pre rel_err > 0 || abs_err > 0
 template <template <class, Device> class MatrixType, class T, class ElementGetter>
 void checkNear(ElementGetter expected, MatrixType<T, Device::CPU>& mat, BaseType<T> rel_err,
                BaseType<T> abs_err, const char* file, const int line) {

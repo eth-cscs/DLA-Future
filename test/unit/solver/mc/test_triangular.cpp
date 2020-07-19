@@ -9,7 +9,6 @@
 //
 #include "dlaf/solver/mc.h"
 
-#include <exception>
 #include <functional>
 #include <sstream>
 #include <tuple>

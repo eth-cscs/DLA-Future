@@ -54,7 +54,7 @@ public:
 
   /// Returns the 2D rank index of the process that stores the tile with global index @p global_tile.
   ///
-  /// @pre global_tile.isValid() and global_tile.isIn(nrTiles())
+  /// @pre global_tile.isIn(nrTiles()).
   comm::Index2D rankGlobalTile(const GlobalTileIndex& global_tile) const noexcept {
     return distribution_->rankGlobalTile(global_tile);
   }
@@ -88,7 +88,6 @@ protected:
   /// @pre index.isValid() == true.
   /// @pre index.isIn(localNrTiles()) == true.
   ssize tileLinearIndex(const LocalTileIndex& index) const noexcept {
-    assert(index.isValid() && index.isIn(distribution_->localNrTiles()));
     return index.row() + distribution_->localNrTiles().rows() * static_cast<ssize>(index.col());
   }
 

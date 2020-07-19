@@ -13,7 +13,6 @@
 /// @file
 
 #include <array>
-#include <cassert>
 #include <cstddef>
 #include <ostream>
 #include <string>
@@ -30,32 +29,33 @@ enum class Coord { Row, Col };
 namespace common {
 
 /// A RowMajor ordering means that the row is the first direction to look for the next value.
-/// Instead, a ColumnMajor ordering means that the column is the first direction to look for the next value
+/// Instead, a ColumnMajor ordering means that the column is the first direction to look for the next value.
 enum class Ordering { RowMajor, ColumnMajor };
 
 namespace internal {
 
-/// A data structure for storing 2D coordinates (0-based)
-/// @tparam IndexT signed integer type for row and column coordinates
+/// A data structure for storing 2D coordinates (0-based).
+///
+/// @tparam IndexT signed integer type for row and column coordinates.
 template <typename IndexT>
 class basic_coords {
 public:
   static_assert(std::is_integral<IndexT>::value && std::is_signed<IndexT>::value,
                 "basic_coords just works with signed integers types");
 
-  /// Create a position with given coordinates
+  /// Create a position with given coordinates.
   ///
-  /// @param row index of the row (0-based)
-  /// @param col index of the col (0-based)
+  /// @param row index of the row (0-based),
+  /// @param col index of the col (0-based).
   basic_coords(IndexT row, IndexT col) noexcept : row_(row), col_(col) {}
 
-  /// Create a position with given coordinates
+  /// Create a position with given coordinates.
   ///
-  /// @see basic_coords::basic_coords(IndexT row, IndexT col)
-  /// @param coords where coords[0] is the row index and coords[1] is the column index
+  /// @see basic_coords::basic_coords(IndexT row, IndexT col),
+  /// @param coords where coords[0] is the row index and coords[1] is the column index.
   basic_coords(const std::array<IndexT, 2>& coords) noexcept : basic_coords(coords[0], coords[1]) {}
 
-  /// Return a copy of the row or the col index as specified by @p rc
+  /// Return a copy of the row or the col index as specified by @p rc.
   template <Coord rc>
   IndexT get() const noexcept {
     if (rc == Coord::Row)
@@ -63,9 +63,9 @@ public:
     return col_;
   }
 
-  /// Check if it is a valid position (no upper bound check)
+  /// Check if it is a valid position (no upper bound check).
   ///
-  /// @return true if row >= 0 and column >= 0
+  /// @return true if row >= 0 and column >= 0.
   bool isValid() const noexcept {
     return row_ >= 0 && col_ >= 0;
   }
@@ -75,7 +75,7 @@ public:
     std::swap(row_, col_);
   }
 
-  /// Given a coordinate, returns its transposed with the same type
+  /// Given a coordinate, returns its transposed with the same type.
   template <class Coords2DType>
   friend Coords2DType transposed(const Coords2DType& coords);
 
@@ -109,9 +109,10 @@ Coords2DType transposed(const Coords2DType& coords) {
 
 }
 
-/// A strong-type for 2D sizes
-/// @tparam IndexT type for row and column coordinates
-/// @tparam Tag for strong-typing
+/// A strong-type for 2D sizes.
+///
+/// @tparam IndexT type for row and column coordinates,
+/// @tparam Tag for strong-typing.
 template <typename IndexT, class Tag>
 class Size2D : public internal::basic_coords<IndexT> {
   using BaseT = internal::basic_coords<IndexT>;
@@ -127,10 +128,11 @@ public:
     return BaseT::col_;
   }
 
-  /// @brief Returns true if rows() == 0 or cols() == 0
-  /// @pre isValid() == true
+  /// Returns true if rows() == 0 or cols() == 0.
+  ///
+  /// @pre isValid().
   bool isEmpty() const noexcept {
-    assert(BaseT::isValid());
+    DLAF_ASSERT_HEAVY(BaseT::isValid(), "");
     return rows() == 0 || cols() == 0;
   }
 
@@ -158,9 +160,10 @@ std::ostream& operator<<(std::ostream& os, const Size2D<T, Tag>& size) {
   return os << static_cast<internal::basic_coords<T>>(size);
 }
 
-/// A strong-type for 2D coordinates
-/// @tparam IndexT type for row and column coordinates
-/// @tparam Tag for strong-typing
+/// A strong-type for 2D coordinates.
+///
+/// @tparam IndexT type for row and column coordinates,
+/// @tparam Tag for strong-typing.
 template <typename IndexT, class Tag>
 class Index2D : public internal::basic_coords<IndexT> {
   using BaseT = internal::basic_coords<IndexT>;
@@ -170,19 +173,23 @@ public:
 
   using IndexType = IndexT;
 
-  /// Create an invalid 2D coordinate
+  /// Create an invalid 2D coordinate.
   Index2D() noexcept : BaseT(-1, -1) {}
 
-  /// Create a valid 2D coordinate
-  /// @see Index2D::Index2D(IndexT row, IndexT col)
-  /// @param coords where coords[0] is the row index and coords[1] is the column index
-  /// @throw std::invalid_argument if coords[0] < 0 or coords[1] < 0
+  /// Create a valid 2D coordinate,
+  /// @see Index2D::Index2D(IndexT row, IndexT col).
+  ///
+  /// @param coords where coords[0] is the row index and coords[1] is the column index,
+  /// @pre coords[0] >= 0,
+  /// @pre coords[1] >= 0.
   Index2D(const std::array<IndexT, 2>& coords) : Index2D(coords[0], coords[1]) {}
 
-  /// @brief Check if it is a valid position inside the grid size specified by @p boundary
-  /// @param boundary size of the grid
-  /// @return true if the current index is in the range [0, @p boundary) for both row and column
-  /// @pre both this Index2D and @p boundary must be valid
+  /// Check if it is a valid position inside the grid size specified by @p boundary.
+  ///
+  /// @param boundary size of the grid,
+  /// @return true if the current index is in the range [0, @p boundary) for both row and column.
+  /// @pre Index2D.isValid,
+  /// @pre boundary.isValid().
   bool isIn(const Size2D<IndexT, Tag>& boundary) const noexcept {
     return this->row() < boundary.rows() && this->col() < boundary.cols() && (this->isValid()) &&
            boundary.isValid();
@@ -216,13 +223,12 @@ std::ostream& operator<<(std::ostream& os, const Index2D<T, Tag>& size) {
   return os << static_cast<internal::basic_coords<T>>(size);
 }
 
-/// Compute coords of the @p index -th cell in a row-major ordered 2D grid with size @p dims
+/// Compute coords of the @p index -th cell in a row-major ordered 2D grid with size @p dims.
 ///
-/// @return an Index2D matching the Size2D (same IndexT and Tag)
-/// @param dims Size2D<IndexT, Tag> representing the size of the grid
-/// @param index linear index of the cell
-///
-/// @pre 0 <= linear_index < (dims.rows() * dims.cols())
+/// @return an Index2D matching the Size2D (same IndexT and Tag).
+/// @param dims Size2D<IndexT, Tag> representing the size of the grid,
+/// @param index linear index of the cell,
+/// @pre 0 <= linear_index < (dims.rows() * dims.cols()).
 template <class IndexT, class Tag>
 Index2D<IndexT, Tag> computeCoordsRowMajor(ssize linear_index,
                                            const Size2D<IndexT, Tag>& dims) noexcept {
@@ -240,13 +246,12 @@ Index2D<IndexT, Tag> computeCoordsRowMajor(ssize linear_index,
           to_signed<IndexT>(linear_index % leading_size)};
 }
 
-/// Compute coords of the @p index -th cell in a column-major ordered 2D grid with size op dims
+/// Compute coords of the @p index -th cell in a column-major ordered 2D grid with size op dims.
 ///
-/// @return an Index2D matching the Size2D (same IndexT and Tag)
-/// @param dims Size2D<IndexT, Tag> representing the size of the grid
-/// @param index linear index of the cell
-///
-/// @pre 0 <= linear_index < (dims.rows() * dims.cols())
+/// @return an Index2D matching the Size2D (same IndexT and Tag).
+/// @param dims Size2D<IndexT, Tag> representing the size of the grid,
+/// @param index linear index of the cell,
+/// @pre 0 <= linear_index < (dims.rows() * dims.cols()).
 template <class IndexT, class Tag>
 Index2D<IndexT, Tag> computeCoordsColMajor(ssize linear_index,
                                            const Size2D<IndexT, Tag>& dims) noexcept {
@@ -261,16 +266,16 @@ Index2D<IndexT, Tag> computeCoordsColMajor(ssize linear_index,
           to_signed<IndexT>(linear_index / leading_size)};
 }
 
-/// Compute coords of the @p index -th cell in a grid with @p ordering and size @p dims
+/// Compute coords of the @p index -th cell in a grid with @p ordering and size @p dims.
 ///
-/// It acts as dispatcher for computeCoordsColMajor() and computeCoordsRowMajor() depending on given @p ordering
+/// It acts as dispatcher for computeCoordsColMajor() and computeCoordsRowMajor() depending on given @p
+/// ordering.
 ///
-/// @return an Index2D matching the Size2D (same IndexT and Tag)
-/// @param ordering specifies linear index layout in the grid
-/// @param dims Size2D<IndexT, Tag> representing the size of the grid
-/// @param index linear index of the cell (with specified @p ordering)
-///
-/// @pre 0 <= linear_index < (dims.rows() * dims.cols())
+/// @return an Index2D matching the Size2D (same IndexT and Tag),
+/// @param ordering specifies linear index layout in the grid,
+/// @param dims Size2D<IndexT, Tag> representing the size of the grid,
+/// @param index linear index of the cell (with specified @p ordering),
+/// @pre 0 <= linear_index < (dims.rows() * dims.cols()).
 template <class IndexT, class Tag>
 Index2D<IndexT, Tag> computeCoords(Ordering ordering, ssize index,
                                    const Size2D<IndexT, Tag>& dims) noexcept {
@@ -284,14 +289,14 @@ Index2D<IndexT, Tag> computeCoords(Ordering ordering, ssize index,
   }
 }
 
-/// Compute linear index of an Index2D in a row-major ordered 2D grid
+/// Compute linear index of an Index2D in a row-major ordered 2D grid.
 ///
 /// The @tparam LinearIndexT cannot be deduced and it must be explicitly specified. It allows to
 /// internalize the casting of the value before returning it, not leaving the burden to the user.
 ///
-/// @tparam LinearIndexT can be any integral type signed or unsigned
-/// @pre LinearIndexT must be able to store the result
-/// @pre index.isIn(dims)
+/// @tparam LinearIndexT can be any integral type signed or unsigned,
+/// @pre LinearIndexT must be able to store the result,
+/// @pre index.isIn(dims).
 template <class LinearIndexT, class IndexT, class Tag>
 LinearIndexT computeLinearIndexRowMajor(const Index2D<IndexT, Tag>& index,
                                         const Size2D<IndexT, Tag>& dims) noexcept {
@@ -306,14 +311,14 @@ LinearIndexT computeLinearIndexRowMajor(const Index2D<IndexT, Tag>& index,
   return integral_cast<LinearIndexT>(linear_index);
 }
 
-/// Compute linear index of an Index2D in a column-major ordered 2D grid
+/// Compute linear index of an Index2D in a column-major ordered 2D grid.
 ///
 /// The @tparam LinearIndexT cannot be deduced and it must be explicitly specified. It allows to
 /// internalize the casting of the value before returning it, not leaving the burden to the user.
 ///
-/// @tparam LinearIndexT can be any integral type signed or unsigned
-/// @pre LinearIndexT must be able to store the result
-/// @pre index.isIn(dims)
+/// @tparam LinearIndexT can be any integral type signed or unsigned,
+/// @pre LinearIndexT must be able to store the result,
+/// @pre index.isIn(dims).
 template <class LinearIndexT, class IndexT, class Tag>
 LinearIndexT computeLinearIndexColMajor(const Index2D<IndexT, Tag>& index,
                                         const Size2D<IndexT, Tag>& dims) noexcept {
@@ -328,7 +333,7 @@ LinearIndexT computeLinearIndexColMajor(const Index2D<IndexT, Tag>& index,
   return integral_cast<LinearIndexT>(linear_index);
 }
 
-/// Compute linear index of an Index2D
+/// Compute linear index of an Index2D.
 ///
 /// It acts as dispatcher for computeLinearIndexColMajor() and computeLinearIndexRowMajor()
 /// depending on given @p ordering.
@@ -336,9 +341,9 @@ LinearIndexT computeLinearIndexColMajor(const Index2D<IndexT, Tag>& index,
 /// The @tparam LinearIndexT cannot be deduced and it must be explicitly specified. It allows to
 /// internalize the casting of the value before returning it, not leaving the burden to the user.
 ///
-/// @tparam LinearIndexT can be any integral type signed or unsigned (it must be explicitly specified)
-/// @pre LinearIndexT must be able to store the result
-/// @pre index.isIn(dims)
+/// @tparam LinearIndexT can be any integral type signed or unsigned (it must be explicitly specified),
+/// @pre LinearIndexT must be able to store the result,
+/// @pre index.isIn(dims).
 template <class LinearIndexT, class IndexT, class Tag>
 LinearIndexT computeLinearIndex(Ordering ordering, const Index2D<IndexT, Tag>& index,
                                 const Size2D<IndexT, Tag>& dims) noexcept {

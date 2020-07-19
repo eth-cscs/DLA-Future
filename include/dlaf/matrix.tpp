@@ -34,12 +34,14 @@ Matrix<T, device>::Matrix(matrix::Distribution&& distribution)
 }
 
 template <class T, Device device>
-Matrix<T, device>::Matrix(matrix::Distribution&& distribution, const matrix::LayoutInfo& layout)
+Matrix<T, device>::Matrix(matrix::Distribution&& distribution, const matrix::LayoutInfo& layout) noexcept
     : Matrix<const T, device>(std::move(distribution), {}, {}) {
-  if (this->distribution().localSize() != layout.size())
-    throw std::invalid_argument("Error: distribution.localSize() != layout.size()");
-  if (this->blockSize() != layout.blockSize())
-    throw std::invalid_argument("Error: distribution.blockSize() != layout.blockSize()");
+  DLAF_ASSERT(this->distribution().localSize() == layout.size(),
+              "Size of distribution does not match layout size!", distribution.localSize(),
+              layout.size());
+  DLAF_ASSERT(this->distribution().blockSize() == layout.blockSize(),
+              "Block size of distribution does not match layout block size!", distribution.blockSize(),
+              layout.blockSize());
 
   memory::MemoryView<ElementType, device> mem(layout.minMemSize());
 
@@ -48,7 +50,7 @@ Matrix<T, device>::Matrix(matrix::Distribution&& distribution, const matrix::Lay
 
 template <class T, Device device>
 Matrix<T, device>::Matrix(matrix::Distribution&& distribution, const matrix::LayoutInfo& layout,
-                          ElementType* ptr)
+                          ElementType* ptr) noexcept
     : Matrix<const T, device>(std::move(distribution), layout, ptr) {}
 
 template <class T, Device device>

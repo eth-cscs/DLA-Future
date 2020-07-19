@@ -36,7 +36,7 @@ class Tile;
 template <class T, Device device>
 class Tile<const T, device>;
 
-/// @brief The Tile object aims to provide an effective way to access the memory as a two dimensional
+/// The Tile object aims to provide an effective way to access the memory as a two dimensional
 /// array. It does not allocate any memory, but it references the memory given by a @c MemoryView object.
 /// It represents the building block of the Matrix object and of linear algebra algorithms.
 ///
@@ -53,17 +53,21 @@ class Tile<const T, device> {
 public:
   using ElementType = T;
 
-  /// @brief Constructs a (@p size.rows() x @p size.cols()) Tile.
-  /// @throw std::invalid_argument if @p size.row() < 0, @p size.cols() < 0 or @p ld < max(1, @p size.rows()).
-  /// @throw std::invalid_argument if memory_view does not contain enough elements.
+  /// Constructs a (@p size.rows() x @p size.cols()) Tile.
+  ///
+  /// @pre size.isValid(),
+  /// @pre ld >= max(1, @p size.rows()),
+  /// @pre memory_view contains enough elements.
   /// The (i, j)-th element of the Tile is stored in the (i+ld*j)-th element of memory_view.
-  Tile(const TileElementSize& size, memory::MemoryView<ElementType, device>&& memory_view, SizeType ld);
+  Tile(const TileElementSize& size, memory::MemoryView<ElementType, device>&& memory_view,
+       SizeType ld) noexcept;
 
   Tile(const Tile&) = delete;
 
   Tile(Tile&& rhs) noexcept;
 
-  /// @brief Destroys the Tile.
+  /// Destroys the Tile.
+  ///
   /// If a promise was set using @c setPromise its value is set to a Tile
   /// which has the same size and which references the same memory as @p *this.
   ~Tile();
@@ -72,35 +76,33 @@ public:
 
   Tile& operator=(Tile&& rhs) noexcept;
 
-  /// @brief Returns the (i, j)-th element,
+  /// Returns the (i, j)-th element,
   /// where @p i := @p index.row and @p j := @p index.col.
-  /// @pre index.isValid() == true.
-  /// @pre index.isIn(size()) == true.
+  ///
+  /// @pre index.isIn(size().
   const T& operator()(const TileElementIndex& index) const noexcept {
     return *ptr(index);
   }
 
-  /// @brief Returns the base pointer.
+  /// Returns the base pointer.
   const T* ptr() const noexcept {
     return memory_view_();
   }
 
-  /// @brief Returns the pointer to the (i, j)-th element,
+  /// Returns the pointer to the (i, j)-th element,
   /// where @p i := @p index.row and @p j := @p index.col.
-  /// @pre index.isValid() == true.
-  /// @pre index.isIn(size()) == true.
+  ///
+  /// @pre index.isIn(size()).
   const T* ptr(const TileElementIndex& index) const noexcept {
-    assert(index.isValid());
-    assert(index.isIn(size_));
-
+    DLAF_ASSERT_HEAVY(index.isIn(size_), "");
     return memory_view_(index.row() + static_cast<ssize>(ld_) * index.col());
   }
 
-  /// @brief Returns the size of the Tile.
+  /// Returns the size of the Tile.
   const TileElementSize& size() const noexcept {
     return size_;
   }
-  /// @brief Returns the leading dimension.
+  /// Returns the leading dimension.
   SizeType ld() const noexcept {
     return ld_;
   }
@@ -111,7 +113,7 @@ public:
   }
 
 private:
-  /// @brief Sets size to {0, 0} and ld to 1.
+  /// Sets size to {0, 0} and ld to 1.
   void setDefaultSizes() noexcept;
 
   TileElementSize size_;
@@ -128,11 +130,14 @@ class Tile : public Tile<const T, device> {
 public:
   using ElementType = T;
 
-  /// @brief Constructs a (@p size.rows() x @p size.cols()) Tile.
-  /// @throw std::invalid_argument if @p size.row() < 0, @p size.cols() < 0 or @p ld < max(1, @p size.rows()).
-  /// @throw std::invalid_argument if memory_view does not contain enough elements.
+  /// Constructs a (@p size.rows() x @p size.cols()) Tile.
+  ///
+  /// @pre size.isValid(),
+  /// @pre ld >= max(1, @p size.rows()),
+  /// @pre memory_view contains enough elements.
   /// The (i, j)-th element of the Tile is stored in the (i+ld*j)-th element of memory_view.
-  Tile(const TileElementSize& size, memory::MemoryView<ElementType, device>&& memory_view, SizeType ld)
+  Tile(const TileElementSize& size, memory::MemoryView<ElementType, device>&& memory_view,
+       SizeType ld) noexcept
       : Tile<const T, device>(size, std::move(memory_view), ld) {}
 
   Tile(const Tile&) = delete;
@@ -143,36 +148,33 @@ public:
 
   Tile& operator=(Tile&& rhs) = default;
 
-  /// @brief Returns the (i, j)-th element,
+  /// Returns the (i, j)-th element,
   /// where @p i := @p index.row and @p j := @p index.col.
-  /// @pre index.isValid() == true.
-  /// @pre index.isIn(size()) == true.
+  ///
+  /// @pre index.isIn(size()).
   T& operator()(const TileElementIndex& index) const noexcept {
     return *ptr(index);
   }
 
-  /// @brief Returns the base pointer.
+  /// Returns the base pointer.
   T* ptr() const noexcept {
     return memory_view_();
   }
 
-  /// @brief Returns the pointer to the (i, j)-th element,
+  /// Returns the pointer to the (i, j)-th element,
   /// where @p i := @p index.row and @p j := @p index.col.
-  /// @pre index.isValid() == true.
-  /// @pre index.isIn(size()) == true.
+  ///
+  /// @pre index.isIn(size()).
   T* ptr(const TileElementIndex& index) const noexcept {
-    assert(index.isValid());
-    assert(index.isIn(size_));
-
+    DLAF_ASSERT_HEAVY(index.isIn(size_), "");
     return memory_view_(index.row() + ld_ * index.col());
   }
 
-  /// @brief Sets the promise to which this Tile will be moved on destruction.
+  /// Sets the promise to which this Tile will be moved on destruction.
+  ///
   /// @c setPromise can be called only once per object.
-  /// @throw std::logic_error if @c setPromise was already called.
   Tile& setPromise(hpx::promise<Tile<T, device>>&& p) {
-    if (p_)
-      throw std::logic_error("setPromise has been already used on this object!");
+    DLAF_ASSERT(!p_, "setPromise has been already used on this object!");
     p_ = std::make_unique<hpx::promise<Tile<T, device>>>(std::move(p));
     return *this;
   }
@@ -184,7 +186,7 @@ private:
   using Tile<const T, device>::p_;
 };
 
-/// Create a common::Buffer from a Tile
+/// Create a common::Buffer from a Tile.
 template <class T, Device device>
 auto create_data(const Tile<T, device>& tile) {
   return common::DataDescriptor<T>(tile.ptr({0, 0}), tile.size().cols(), tile.size().rows(), tile.ld());

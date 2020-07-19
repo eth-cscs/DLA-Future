@@ -18,10 +18,10 @@
 
 namespace dlaf {
 
-/// Copy values from another matrix
+/// Copy values from another matrix.
 ///
 /// Given a matrix with the same geometries and distribution, this function submits tasks that will
-/// perform the copy of each tile
+/// perform the copy of each tile.
 template <template <class, Device> class MatrixTypeSrc, template <class, Device> class MatrixTypeDst,
           class T, Device device>
 void copy(MatrixTypeSrc<const T, device>& source, MatrixTypeDst<T, device>& dest) {

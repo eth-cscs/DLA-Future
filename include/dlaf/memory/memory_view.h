@@ -10,17 +10,17 @@
 
 #pragma once
 
-#include <cassert>
 #include <cstdlib>
 #include <memory>
 
 #include "memory_chunk.h"
+#include "dlaf/common/assert.h"
 #include "dlaf/types.h"
 
 namespace dlaf {
 namespace memory {
 
-/// @brief The class @c MemoryView represents a layer of abstraction over the underlying host memory.
+/// The class @c MemoryView represents a layer of abstraction over the underlying host memory.
 ///
 /// Two levels of constness exist for @c MemoryView analogously to pointer semantics:
 /// the constness of the view and the constness of the data referenced by the view.
@@ -31,10 +31,10 @@ public:
   using ElementType = std::remove_const_t<T>;
   friend MemoryView<const ElementType, device>;
 
-  /// @brief Creates a MemoryView of size 0.
+  /// Creates a MemoryView of size 0.
   MemoryView() : memory_(std::make_shared<MemoryChunk<ElementType, device>>()), offset_(0), size_(0) {}
 
-  /// @brief Creates a MemoryView object allocating the required memory.
+  /// Creates a MemoryView object allocating the required memory.
   ///
   /// @param size The size of the memory to be allocated.
   ///
@@ -46,7 +46,7 @@ public:
     DLAF_ASSERT(size >= 0, "");
   }
 
-  /// @brief Creates a MemoryView object from an existing memory allocation.
+  /// Creates a MemoryView object from an existing memory allocation.
   ///
   /// @param ptr  The pointer to the already allocated memory.
   /// @param size The size (in number of elements of type @c T) of the existing allocation.
@@ -77,7 +77,7 @@ public:
     rhs.offset_ = 0;
   }
 
-  /// @brief Creates a MemoryView object which is a subview of another MemoryView.
+  /// Creates a MemoryView object which is a subview of another MemoryView.
   ///
   /// @param memory_view The starting MemoryView object.
   /// @param offset      The index of the first element of the subview.
@@ -86,18 +86,16 @@ public:
   MemoryView(const MemoryView& memory_view, ssize offset, ssize size)
       : memory_(size > 0 ? memory_view.memory_ : std::make_shared<MemoryChunk<ElementType, device>>()),
         offset_(size > 0 ? offset + memory_view.offset_ : 0), size_(size) {
-    if (offset + size > memory_view.size_) {
-      throw std::invalid_argument("Sub MemoryView exceeds the limits of the base MemoryView");
-    }
+    DLAF_ASSERT(offset + size <= memory_view.size_,
+                "Sub MemoryView exceeds the limits of the base MemoryView!");
   }
   template <class U = T,
             class = typename std::enable_if_t<std::is_const<U>::value && std::is_same<T, U>::value>>
   MemoryView(const MemoryView<ElementType, device>& memory_view, ssize offset, ssize size)
       : memory_(size > 0 ? memory_view.memory_ : std::make_shared<MemoryChunk<ElementType, device>>()),
         offset_(size > 0 ? offset + memory_view.offset_ : 0), size_(size) {
-    if (offset + size > memory_view.size_) {
-      throw std::invalid_argument("Sub MemoryView exceeds the limits of the base MemoryView");
-    }
+    DLAF_ASSERT(offset + size <= memory_view.size_,
+                "Sub MemoryView exceeds the limits of the base MemoryView!");
   }
 
   MemoryView& operator=(const MemoryView&) = default;
@@ -136,16 +134,16 @@ public:
     return *this;
   }
 
-  /// @brief Returns a pointer to the underlying memory at a given index.
+  /// Returns a pointer to the underlying memory at a given index.
   ///
   /// @param index index of the position
   /// @pre @p index < @p size
   T* operator()(ssize index) const {
-    assert(index < size_);
+    DLAF_ASSERT_HEAVY(index < size_, "", index, size_);
     return memory_->operator()(offset_ + index);
   }
 
-  /// @brief Returns a pointer to the underlying memory.
+  /// Returns a pointer to the underlying memory.
   /// If @p size == 0 a @c nullptr is returned.
   T* operator()() const {
     return size_ == 0 ? nullptr : memory_->operator()(offset_);

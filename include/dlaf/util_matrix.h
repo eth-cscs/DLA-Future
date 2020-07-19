@@ -87,7 +87,7 @@ bool multipliable_sizes(common::Size2D<IndexT, Tag> a, common::Size2D<IndexT, Ta
   return a.rows() == c.rows() && a.cols() == b.rows() && b.cols() == c.cols();
 }
 
-/// Returns true if matrices `a`, `b` and `c` have matrix multipliable sizes and block sizes
+/// Returns true if matrices `a`, `b` and `c` have matrix multipliable sizes and block sizes.
 template <class T, Device D>
 bool multipliable(const Matrix<const T, D>& a, const Matrix<const T, D>& b, const Matrix<const T, D>& c,
                   const blas::Op opA, const blas::Op opB) noexcept {
@@ -98,7 +98,7 @@ bool multipliable(const Matrix<const T, D>& a, const Matrix<const T, D>& b, cons
 namespace util {
 namespace internal {
 
-/// Callable that returns random values in the range [-1, 1]
+/// Callable that returns random values in the range [-1, 1].
 template <class T>
 class getter_random {
   static_assert(std::is_same<T, float>::value || std::is_same<T, double>::value,
@@ -119,7 +119,7 @@ private:
   std::uniform_real_distribution<T> random_sampler_{-1, 1};
 };
 
-/// Callable that returns random complex numbers whose absolute values are less than 1
+/// Callable that returns random complex numbers whose absolute values are less than 1.
 template <class T>
 class getter_random<std::complex<T>> : private getter_random<T> {
 public:
@@ -133,11 +133,11 @@ public:
 
 }
 
-/// @brief Set the elements of the matrix.
+/// Set the elements of the matrix.
 ///
 /// The (i, j)-element of the matrix is set to el({i, j}).
-/// @param el a copy is given to each tile.
-/// @pre el argument is an index of type const GlobalElementIndex&.
+/// @param el a copy is given to each tile,
+/// @pre el argument is an index of type const GlobalElementIndex&,
 /// @pre el return type should be T.
 template <class T, class ElementGetter>
 void set(Matrix<T, Device::CPU>& matrix, const ElementGetter& el_f) {
@@ -159,7 +159,7 @@ void set(Matrix<T, Device::CPU>& matrix, const ElementGetter& el_f) {
 ///
 /// Values will be random numbers in:
 /// - real:     [-1, 1]
-/// - complex:  a circle of radius 1 centered at origin
+/// - complex:  a circle of radius 1 centered at origin.
 ///
 /// Each tile creates its own random generator engine with a unique seed
 /// which is computed as a function of the tile global index.
@@ -233,15 +233,15 @@ void set_lower_and_upper_tile(Tile<T, Device::CPU>& tile, internal::getter_rando
 ///
 /// Values not on the diagonal will be random numbers in:
 /// - real:     [-1, 1]
-/// - complex:  a circle of radius 1 centered at origin
+/// - complex:  a circle of radius 1 centered at origin.
 ///
 /// Each tile creates its own random generator engine with a unique seed
 /// which is computed as a function of the tile global index.
 /// This means that the elements of a specific tile, no matter how the matrix is distributed,
 /// will be set with the same set of values.
 ///
-/// @pre @param matrix is a square matrix
-/// @pre @param matrix has a square blocksize
+/// @pre @param matrix is a square matrix,
+/// @pre @param matrix has a square blocksize.
 template <class T>
 void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const ssize offset_value) {
   // note:

@@ -20,9 +20,9 @@ namespace dlaf {
 namespace comm {
 namespace sync {
 
-/// MPI_Send wrapper for sender side accepting a Data
+/// MPI_Send wrapper for sender side accepting a Data.
 ///
-/// For more information, see the Data concept in "dlaf/common/data.h"
+/// For more information, see the Data concept in "dlaf/common/data.h".
 template <class DataIn>
 void send_to(int receiver_rank, Communicator& communicator, DataIn&& data) {
   int tag = 0;
@@ -30,9 +30,9 @@ void send_to(int receiver_rank, Communicator& communicator, DataIn&& data) {
   MPI_Send(message.data(), message.count(), message.mpi_type(), receiver_rank, tag, communicator);
 }
 
-/// MPI_Recv wrapper for receiver side accepting a Data
+/// MPI_Recv wrapper for receiver side accepting a Data.
 ///
-/// For more information, see the Data concept in "dlaf/common/data.h"
+/// For more information, see the Data concept in "dlaf/common/data.h".
 template <class DataOut>
 void receive_from(int sender_rank, Communicator& communicator, DataOut&& data) {
   int tag = 0;

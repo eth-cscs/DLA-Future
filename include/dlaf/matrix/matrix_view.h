@@ -47,16 +47,15 @@ public:
   /// Returns a read-only shared_future of the Tile with local index @p index.
   ///
   /// TODO: Sync details.
-  /// @pre index.isValid() == true.
-  /// @pre index.isIn(distribution().localNrTiles()) == true.
+  /// @pre index.isIn(distribution().localNrTiles()).
   hpx::shared_future<ConstTileType> read(const LocalTileIndex& index) noexcept;
 
   /// Returns a read-only shared_future of the Tile with global index @p index.
   ///
   /// TODO: Sync details.
-  /// @throw std::invalid_argument if the global tile is not stored in the current process.
-  /// @pre index.isValid() == true.
-  /// @pre index.isIn(globalNrTiles()) == true.
+  ///
+  /// @pre index.isIn(globalNrTiles()),
+  /// @pre global tile stored in current process.
   hpx::shared_future<ConstTileType> read(const GlobalTileIndex& index) {
     return read(distribution().localTileIndex(index));
   }
@@ -64,16 +63,14 @@ public:
   /// Notify that all the operation on the @p index tile has been performed.
   ///
   /// The tile of the original matrix gets ready.
-  /// @pre index.isValid() == true.
-  /// @pre index.isIn(distribution().localNrTiles()) == true.
+  /// @pre index.isIn(distribution().localNrTiles()),
   /// @post any call to read() with index or the equivalent GlobalTileIndex return an invalid future.
   void done(const LocalTileIndex& index) noexcept;
 
   /// Notify that all the operation on the @p index tile has been performed.
   ///
   /// The tile of the original matrix gets ready.
-  /// @pre index.isValid() == true.
-  /// @pre index.isIn(globalNrTiles()) == true.
+  /// @pre index.isIn(globalNrTiles()),
   /// @post any call to read() with index or the equivalent LocalTileIndex return an invalid future.
   void done(const GlobalTileIndex& index) noexcept {
     done(distribution().localTileIndex(index));

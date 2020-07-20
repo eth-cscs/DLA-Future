@@ -17,8 +17,8 @@
 #include <type_traits>
 #include <utility>
 
-#include "dlaf/types.h"
 #include "dlaf/common/assert.h"
+#include "dlaf/types.h"
 
 namespace dlaf {
 namespace common {
@@ -29,13 +29,13 @@ struct is_data : std::false_type {};
 
 template <class Data>
 struct is_data<
-    Data,
-    std::enable_if_t<std::is_pointer<decltype(data_pointer(std::declval<const Data&>()))>::value &&
-                     std::is_same<decltype(data_nblocks(std::declval<const Data&>())), ssize>::value &&
-                     std::is_same<decltype(data_blocksize(std::declval<const Data&>())), ssize>::value &&
-                     std::is_same<decltype(data_stride(std::declval<const Data&>())), ssize>::value &&
-                     std::is_same<decltype(data_count(std::declval<const Data&>())), ssize>::value &&
-                     std::is_same<decltype(data_iscontiguous(std::declval<const Data&>())), bool>::value>>
+    Data, std::enable_if_t<
+              std::is_pointer<decltype(data_pointer(std::declval<const Data&>()))>::value &&
+              std::is_same<decltype(data_nblocks(std::declval<const Data&>())), SizeType>::value &&
+              std::is_same<decltype(data_blocksize(std::declval<const Data&>())), SizeType>::value &&
+              std::is_same<decltype(data_stride(std::declval<const Data&>())), SizeType>::value &&
+              std::is_same<decltype(data_count(std::declval<const Data&>())), SizeType>::value &&
+              std::is_same<decltype(data_iscontiguous(std::declval<const Data&>())), bool>::value>>
     : std::true_type {};
 
 /// Traits for accessing properties of the given Data concept.
@@ -135,7 +135,7 @@ void copy(const DataIn& src, const DataOut& dest) {
     if (data_iscontiguous(dest)) {
       DLAF_ASSERT_HEAVY(data_nblocks(src) * data_blocksize(src) == data_blocksize(dest), "");
 
-      for (ssize i_block = 0; i_block < data_nblocks(src); ++i_block) {
+      for (SizeType i_block = 0; i_block < data_nblocks(src); ++i_block) {
         auto ptr_block_start = data_pointer(src) + i_block * data_stride(src);
         auto dest_block_start = data_pointer(dest) + i_block * data_blocksize(src);
         std::copy(ptr_block_start, ptr_block_start + data_blocksize(src), dest_block_start);
@@ -144,7 +144,7 @@ void copy(const DataIn& src, const DataOut& dest) {
     else if (data_iscontiguous(src)) {
       DLAF_ASSERT_HEAVY(data_blocksize(src) == data_nblocks(dest) * data_blocksize(dest), "");
 
-      for (ssize i_block = 0; i_block < data_nblocks(dest); ++i_block) {
+      for (SizeType i_block = 0; i_block < data_nblocks(dest); ++i_block) {
         auto ptr_block_start = data_pointer(src) + i_block * data_blocksize(dest);
         auto dest_block_start = data_pointer(dest) + i_block * data_stride(dest);
         std::copy(ptr_block_start, ptr_block_start + data_blocksize(dest), dest_block_start);
@@ -153,7 +153,7 @@ void copy(const DataIn& src, const DataOut& dest) {
     else {
       DLAF_ASSERT_HEAVY(data_count(src) == data_count(dest), "");
 
-      for (ssize i = 0; i < data_count(src); ++i) {
+      for (SizeType i = 0; i < data_count(src); ++i) {
         auto i_src = i / data_blocksize(src) * data_stride(src) + i % data_blocksize(src);
         auto i_dest = i / data_blocksize(dest) * data_stride(dest) + i % data_blocksize(dest);
 

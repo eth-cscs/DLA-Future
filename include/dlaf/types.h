@@ -20,9 +20,8 @@
 
 namespace dlaf {
 
-using ssize = std::ptrdiff_t;
+using SizeType = std::ptrdiff_t;
 
-using SizeType = int;
 static_assert(std::is_signed<SizeType>::value && std::is_integral<SizeType>::value,
               "SizeType should be a signed integral type");
 static_assert(sizeof(SizeType) >= 4, "SizeType should be >= 32bit");

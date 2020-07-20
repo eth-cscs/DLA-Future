@@ -166,13 +166,13 @@ TYPED_TEST(MatrixTest, ConstructorFromDistribution) {
 ///
 /// @pre index is contained in @p distribution.size(),
 /// @pre index is stored in the current rank.
-ssize memoryIndex(const Distribution& distribution, const LayoutInfo& layout,
-                  const GlobalElementIndex& index) {
+SizeType memoryIndex(const Distribution& distribution, const LayoutInfo& layout,
+                     const GlobalElementIndex& index) {
   auto global_tile_index = distribution.globalTileIndex(index);
   auto tile_element_index = distribution.tileElementIndex(index);
   auto local_tile_index = distribution.localTileIndex(global_tile_index);
-  ssize tile_offset = layout.tileOffset(local_tile_index);
-  ssize element_offset = tile_element_index.row() + layout.ldTile() * tile_element_index.col();
+  SizeType tile_offset = layout.tileOffset(local_tile_index);
+  SizeType element_offset = tile_element_index.row() + layout.ldTile() * tile_element_index.col();
   return tile_offset + element_offset;
 }
 
@@ -385,8 +385,8 @@ struct ExistingLocalTestSizes {
   LocalElementSize size;
   TileElementSize block_size;
   SizeType ld;
-  ssize row_offset;
-  ssize col_offset;
+  SizeType row_offset;
+  SizeType col_offset;
 };
 
 const std::vector<ExistingLocalTestSizes> existing_local_tests({

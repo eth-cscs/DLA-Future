@@ -64,7 +64,7 @@ dlaf::BaseType<T> norm_max_L(comm::CommunicatorGrid comm_grid, comm::Index2D ran
       continue;
 
     bool is_diag = tile_wrt_global.row() == tile_wrt_global.col();
-    auto norm_max_f = unwrapping([is_diag](auto&& tile) noexcept->NormT {
+    auto norm_max_f = unwrapping([is_diag](auto&& tile) noexcept -> NormT {
       if (is_diag)
         return lantr(lapack::Norm::Max, blas::Uplo::Lower, blas::Diag::NonUnit, tile);
       else

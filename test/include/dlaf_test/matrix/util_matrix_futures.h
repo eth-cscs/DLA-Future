@@ -168,7 +168,7 @@ void checkFutures(bool get_ready, const std::vector<Future1>& current, std::vect
 template <class Future1, class MatrixViewType>
 void checkFuturesDone(bool get_ready, const std::vector<Future1>& current, MatrixViewType& mat_view) {
   const auto& nr_tiles = mat_view.distribution().localNrTiles();
-  DLAF_ASSERT(current.size() == nr_tiles.linear_size(), "");
+  DLAF_ASSERT(static_cast<SizeType>(current.size()) == nr_tiles.linear_size(), "");
 
   for (std::size_t index = 0; index < current.size(); ++index) {
     EXPECT_TRUE(checkFuturesStep(get_ready ? index : 0, current));

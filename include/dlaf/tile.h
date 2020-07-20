@@ -95,7 +95,7 @@ public:
   /// @pre index.isIn(size()).
   const T* ptr(const TileElementIndex& index) const noexcept {
     DLAF_ASSERT_HEAVY(index.isIn(size_), "");
-    return memory_view_(index.row() + static_cast<ssize>(ld_) * index.col());
+    return memory_view_(index.row() + static_cast<SizeType>(ld_) * index.col());
   }
 
   /// Returns the size of the Tile.

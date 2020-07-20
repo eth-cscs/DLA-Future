@@ -16,7 +16,7 @@
 namespace dlaf {
 namespace matrix {
 LayoutInfo::LayoutInfo(const LocalElementSize& size, const TileElementSize& block_size, SizeType tile_ld,
-                       ssize tile_offset_row, ssize tile_offset_col)
+                       SizeType tile_offset_row, SizeType tile_offset_col)
     : size_(size), nr_tiles_(0, 0), block_size_(block_size), ld_tile_(tile_ld),
       tile_offset_row_(tile_offset_row), tile_offset_col_(tile_offset_col) {
   using util::size_t::sum;
@@ -50,7 +50,7 @@ LayoutInfo::LayoutInfo(const LocalElementSize& size, const TileElementSize& bloc
   }
 }
 
-ssize LayoutInfo::minMemSize() const noexcept {
+SizeType LayoutInfo::minMemSize() const noexcept {
   if (size_.isEmpty()) {
     return 0;
   }
@@ -59,7 +59,7 @@ ssize LayoutInfo::minMemSize() const noexcept {
   return tileOffset(index_last) + minTileMemSize(index_last);
 }
 
-ssize LayoutInfo::minTileMemSize(const TileElementSize& tile_size) const noexcept {
+SizeType LayoutInfo::minTileMemSize(const TileElementSize& tile_size) const noexcept {
   DLAF_ASSERT_HEAVY(tile_size.rows() <= block_size_.rows(), "");
   DLAF_ASSERT_HEAVY(tile_size.cols() <= block_size_.cols(), "");
 

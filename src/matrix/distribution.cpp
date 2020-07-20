@@ -19,10 +19,8 @@ Distribution::Distribution() noexcept
 Distribution::Distribution(const LocalElementSize& size, const TileElementSize& block_size)
     : size_(0, 0), local_size_(size), global_nr_tiles_(0, 0), local_nr_tiles_(0, 0),
       block_size_(block_size), rank_index_(0, 0), grid_size_(1, 1), source_rank_index_(0, 0) {
-  if (!local_size_.isValid())
-    throw std::invalid_argument("Error: Invalid Matrix size");
-  if (!block_size_.isValid() || block_size_.isEmpty())
-    throw std::invalid_argument("Error: Invalid Block size");
+  DLAF_ASSERT(local_size_.isValid(), "Invalid Matrix size!");
+  DLAF_ASSERT(!block_size_.isEmpty(), "Invalid Block size!");
 
   computeLocalNrTiles(local_size_, block_size_);
   computeGlobalSizeForNonDistr(local_size_);
@@ -35,16 +33,11 @@ Distribution::Distribution(const GlobalElementSize& size, const TileElementSize&
     : size_(size), local_size_(0, 0), global_nr_tiles_(0, 0), local_nr_tiles_(0, 0),
       block_size_(block_size), rank_index_(rank_index), grid_size_(grid_size),
       source_rank_index_(source_rank_index) {
-  if (!size_.isValid())
-    throw std::invalid_argument("Error: Invalid Matrix size");
-  if (!block_size_.isValid() || block_size_.isEmpty())
-    throw std::invalid_argument("Error: Invalid Block size");
-  if (!grid_size_.isValid() || grid_size_.isEmpty())
-    throw std::invalid_argument("Error: Invalid Communicator Size");
-  if (!rank_index_.isValid() || !rank_index.isIn(grid_size_))
-    throw std::invalid_argument("Error: Invalid Rank Index");
-  if (!source_rank_index_.isValid() || !source_rank_index.isIn(grid_size_))
-    throw std::invalid_argument("Error: Invalid Matrix Source Rank Index");
+  DLAF_ASSERT(size_.isValid(), "Invalid Matrix size!");
+  DLAF_ASSERT(!block_size_.isEmpty(), "Invalid Block size!");
+  DLAF_ASSERT(!grid_size_.isEmpty(), "Invalid Communicator size!");
+  DLAF_ASSERT(rank_index.isIn(grid_size_), "Invalid Rank Index!");
+  DLAF_ASSERT(source_rank_index.isIn(grid_size_), "Invalid Matrix Source Rank Index!");
 
   computeGlobalAndLocalNrTilesAndLocalSize(size_, block_size_, grid_size_, rank_index_,
                                            source_rank_index_);

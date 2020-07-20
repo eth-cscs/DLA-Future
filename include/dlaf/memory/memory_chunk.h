@@ -10,7 +10,6 @@
 
 #pragma once
 
-#include <cassert>
 #include <cstdlib>
 #include <memory>
 #ifdef DLAF_WITH_CUDA
@@ -32,10 +31,10 @@ class MemoryChunk {
 public:
   using ElementType = T;
 
-  /// @brief Creates a MemoryChunk object with size 0.
+  /// Creates a MemoryChunk object with size 0.
   MemoryChunk() : MemoryChunk(0) {}
 
-  /// @brief Creates a MemoryChunk object allocating the required memory.
+  /// Creates a MemoryChunk object allocating the required memory.
   ///
   /// @param size The size of the memory to be allocated.
   ///
@@ -61,19 +60,19 @@ public:
 #endif
   }
 
-  /// @brief Creates a MemoryChunk object from an existing memory allocation.
+  /// Creates a MemoryChunk object from an existing memory allocation.
   ///
-  /// @param ptr  The pointer to the already allocated memory.
-  /// @param size The size (in number of elements of type @c T) of the existing allocation.
-  /// @pre @p ptr+i can be deferenced for 0 < @c i < @p size
+  /// @param ptr  The pointer to the already allocated memory,
+  /// @param size The size (in number of elements of type @c T) of the existing allocation,
+  /// @pre @p ptr+i can be deferenced for 0 < @c i < @p size.
   MemoryChunk(T* ptr, std::size_t size)
       : size_(size), ptr_(size > 0 ? ptr : nullptr), allocated_(false) {
-    assert(size == 0 ? ptr_ == nullptr : ptr_ != nullptr);
+    DLAF_ASSERT_HEAVY(size == 0 ? ptr_ == nullptr : ptr_ != nullptr, "");
   }
 
   MemoryChunk(const MemoryChunk&) = delete;
 
-  /// @brief Move constructor
+  /// Move constructor
   MemoryChunk(MemoryChunk&& rhs) : size_(rhs.size_), ptr_(rhs.ptr_), allocated_(rhs.allocated_) {
     rhs.ptr_ = nullptr;
     rhs.size_ = 0;
@@ -82,7 +81,7 @@ public:
 
   MemoryChunk& operator=(const MemoryChunk&) = delete;
 
-  /// @brief Move assignement
+  /// Move assignement
   MemoryChunk& operator=(MemoryChunk&& rhs) {
     deallocate();
 
@@ -97,25 +96,25 @@ public:
     return *this;
   }
 
-  /// @brief Destructor. Memory is deallocated only if it was allocated at construction.
+  /// Destructor. Memory is deallocated only if it was allocated at construction.
   ~MemoryChunk() {
     deallocate();
   }
 
-  /// @brief Returns a pointer to the underlying memory at a given index.
+  /// Returns a pointer to the underlying memory at a given index.
   ///
-  /// @param index index of the position
-  /// @pre @p index < @p size
+  /// @param index index of the position,
+  /// @pre @p index < @p size.
   T* operator()(size_t index) {
-    assert(index < size_);
+    DLAF_ASSERT_HEAVY(index < size_, "", index, size_);
     return ptr_ + index;
   }
   const T* operator()(size_t index) const {
-    assert(index < size_);
+    DLAF_ASSERT_HEAVY(index < size_, "", index, size_);
     return ptr_ + index;
   }
 
-  /// @brief Returns a pointer to the underlying memory.
+  /// Returns a pointer to the underlying memory.
   /// If @p size == 0 a @c nullptr is returned.
   T* operator()() {
     return ptr_;
@@ -124,7 +123,7 @@ public:
     return ptr_;
   }
 
-  /// @brief Returns the number of elements of type @c T allocated.
+  /// Returns the number of elements of type @c T allocated.
   std::size_t size() const {
     return size_;
   }

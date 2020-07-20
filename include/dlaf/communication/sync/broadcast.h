@@ -12,7 +12,7 @@
 
 /// @file
 
-#include <cassert>
+#include "dlaf/common/assert.h"
 
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/message.h"
@@ -24,9 +24,9 @@ namespace comm {
 namespace sync {
 namespace broadcast {
 
-/// MPI_Bcast wrapper for sender side accepting a Data
+/// MPI_Bcast wrapper for sender side accepting a Data.
 ///
-/// For more information, see the Data concept in "dlaf/common/data.h"
+/// For more information, see the Data concept in "dlaf/common/data.h".
 template <class DataIn>
 void send(Communicator& communicator, DataIn&& message_to_send) {
   auto data = common::make_data(message_to_send);
@@ -37,12 +37,12 @@ void send(Communicator& communicator, DataIn&& message_to_send) {
             communicator);
 }
 
-/// MPI_Bcast wrapper for receiver side accepting a dlaf::comm::Message
+/// MPI_Bcast wrapper for receiver side accepting a dlaf::comm::Message.
 ///
-/// For more information, see the Data concept in "dlaf/common/data.h"
+/// For more information, see the Data concept in "dlaf/common/data.h".
 template <class DataOut>
 void receive_from(const int broadcaster_rank, Communicator& communicator, DataOut&& data) {
-  assert(broadcaster_rank != communicator.rank());
+  DLAF_ASSERT_HEAVY(broadcaster_rank != communicator.rank(), "");
   auto message = comm::make_message(common::make_data(std::forward<DataOut>(data)));
   MPI_Bcast(message.data(), message.count(), message.mpi_type(), broadcaster_rank, communicator);
 }

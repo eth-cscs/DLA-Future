@@ -10,7 +10,6 @@
 
 #pragma once
 
-#include <exception>
 #include <functional>
 #include <sstream>
 #include <tuple>
@@ -71,27 +70,4 @@ void testTrsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, Si
 
   CHECK_TILE_NEAR(res_b, b, 10 * (m + 1) * TypeUtilities<T>::error,
                   10 * (m + 1) * TypeUtilities<T>::error);
-}
-
-template <class T, class CT = const T>
-void testTrsmExceptions(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag,
-                        const TileElementSize& size_a, const TileElementSize& size_b, SizeType extra_lda,
-                        SizeType extra_ldb) {
-  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
-  SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
-
-  std::stringstream s;
-  s << "TRSM: " << side << ", " << uplo << ", " << op << ", " << diag << ", size_a = " << size_a
-    << ", size_b = " << size_b << ", lda = " << lda << ", ldb = " << ldb;
-  SCOPED_TRACE(s.str());
-
-  memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
-  memory::MemoryView<T, Device::CPU> mem_b(mul(ldb, size_b.cols()));
-
-  Tile<CT, Device::CPU> a(size_a, std::move(mem_a), lda);
-  Tile<T, Device::CPU> b(size_b, std::move(mem_b), ldb);
-
-  T alpha = TypeUtilities<T>::element(-1.2, .7);
-
-  EXPECT_THROW(tile::trsm(side, uplo, op, diag, alpha, a, b), std::invalid_argument);
 }

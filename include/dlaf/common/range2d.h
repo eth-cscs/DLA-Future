@@ -14,7 +14,7 @@
 ///
 /// The combination of `IteratorRange2D`, `IterableRange2D` and `iterate_range2d()`
 /// allow us to write nested loops as a simple range-based for loop. For
-/// example, instead of this :
+/// example, instead of this:
 ///
 /// ```
 /// Size2D sz(5, 6);
@@ -43,7 +43,7 @@
 namespace dlaf {
 namespace common {
 
-/// An Iterator returning indices in column-major order
+/// An Iterator returning indices in column-major order.
 template <typename IndexT, class Tag>
 class IteratorRange2D {
   using index2d_t = Index2D<IndexT, Tag>;
@@ -101,7 +101,7 @@ private:
   std::ptrdiff_t i_max_;  // the maximum linear index
 };
 
-/// Function wrappers to deduce types in constructor calls to IterableRange2D
+/// Function wrappers to deduce types in constructor calls to IterableRange2D.
 ///
 /// The overload set returns indices in column-major order with the begin index included and the end
 /// index/size excluded.

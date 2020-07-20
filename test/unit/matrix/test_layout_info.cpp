@@ -89,19 +89,6 @@ TEST(LayoutInfoTest, Constructor) {
   }
 }
 
-TEST(LayoutInfoTest, ConstructorException) {
-  for (const auto& v : wrong_values) {
-    auto size = std::get<0>(v);
-    auto block_size = std::get<1>(v);
-    auto ld = std::get<2>(v);
-    auto row_offset = std::get<3>(v);
-    auto col_offset = std::get<4>(v);
-
-    EXPECT_THROW(matrix::LayoutInfo(size, block_size, ld, row_offset, col_offset),
-                 std::invalid_argument);
-  }
-}
-
 const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, std::size_t, std::size_t, bool>>
     comp_values({
         {{25, 25}, {5, 5}, 50, 8, 1000, true},   // Original

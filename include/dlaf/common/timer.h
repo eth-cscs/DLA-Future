@@ -15,9 +15,9 @@
 namespace dlaf {
 namespace common {
 
-/// Timer
+/// Timer.
 ///
-/// It measures time since its construction on the specified @tparam clock
+/// It measures time since its construction on the specified @tparam clock.
 template <class clock = std::chrono::high_resolution_clock>
 class Timer {
   using time_point = std::chrono::time_point<clock>;

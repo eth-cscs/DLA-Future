@@ -23,13 +23,13 @@ namespace matrix {
 namespace test {
 using namespace dlaf_test;
 
-/// @brief Sets the elements of the matrix.
+/// Sets the elements of the matrix.
 ///
 /// The (i, j)-element of the matrix is set to el({i, j}) if op == NoTrans,
 ///                                          el({j, i}) if op == Trans,
 ///                                          conj(el({j, i})) if op == ConjTrans.
-/// @pre el argument is an index of type const GlobalElementIndex& or GlobalElementIndex.
-/// @pre el return type should be T.
+/// @pre el is a callable with an argument of type const GlobalElementIndex& or GlobalElementIndex and
+/// return type T.
 template <template <class, Device> class MatrixType, class T, class ElementGetter>
 void set(MatrixType<T, Device::CPU>& mat, ElementGetter el, blas::Op op) {
   switch (op) {

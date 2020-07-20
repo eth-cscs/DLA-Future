@@ -18,7 +18,7 @@ namespace comm {
 
 class CommunicatorImpl;
 
-/// @brief MPI-compatible wrapper for the MPI_Comm.
+/// MPI-compatible wrapper for the MPI_Comm.
 ///
 /// Being MPI-compatible means that it can be used in MPI calls, in fact, it is implicitly converted
 /// to MPI_Comm and the reference of a Communicator instance returns the pointer to the internal
@@ -35,47 +35,47 @@ class Communicator {
   friend Communicator make_communicator_managed(MPI_Comm);
 
 public:
-  /// @brief Create a NULL Communicator (i.e. MPI_COMM_NULL)
+  /// Create a NULL Communicator (i.e. MPI_COMM_NULL).
   Communicator();
 
-  /// @brief Wrap an MPI_Comm into a Communicator
+  /// Wrap an MPI_Comm into a Communicator.
   ///
   /// User keeps the ownership of the MPI_Comm, but this object has the usage exclusiveness.
   /// The user has to grant this, otherwise it leads to UB.
   /// @param mpi_communicator MPI_Comm to wrap.
   Communicator(MPI_Comm mpi_communicator);
 
-  /// @brief Return the internal MPI_Comm handler
+  /// Return the internal MPI_Comm handler.
   ///
-  /// Useful for MPI function calls
+  /// Useful for MPI function calls.
   operator MPI_Comm() const noexcept;
 
-  /// @brief Return the pointer to the internal MPI_Comm handler
+  /// Return the pointer to the internal MPI_Comm handler.
   ///
-  /// Useful for MPI function calls
+  /// Useful for MPI function calls.
   MPI_Comm* operator&() noexcept;
   const MPI_Comm* operator&() const noexcept;
 
-  /// @brief Return the rank of the current process in the Communicator
+  /// Return the rank of the current process in the Communicator.
   int rank() const noexcept;
-  /// @brief Return the number of ranks in the Communicator
+  /// Return the number of ranks in the Communicator.
   int size() const noexcept;
 
 private:
-  /// Tag to give to constructor in order to give MPI_Comm ownership to Communicator
+  /// Tag to give to constructor in order to give MPI_Comm ownership to Communicator.
   struct managed {};
 
-  /// @brief Wrap and manage an MPI_Comm into a Communicator
+  ///  Wrap and manage an MPI_Comm into a Communicator.
   ///
   /// This object takes the ownership of the MPI_Comm.
-  /// @param mpi_communicator MPI_Comm to wrap.
-  /// @param managed tag (anonymous parameter)
+  /// @param mpi_communicator MPI_Comm to wrap,
+  /// @param managed tag (anonymous parameter).
   Communicator(MPI_Comm mpi_communicator, managed);
 
   std::shared_ptr<CommunicatorImpl> comm_ref_;
 };
 
-/// Wrap an MPI_Comm into a Communicator that takes the ownership
+/// Wrap an MPI_Comm into a Communicator that takes the ownership.
 inline Communicator make_communicator_managed(MPI_Comm mpi_communicator) {
   return Communicator(mpi_communicator, Communicator::managed{});
 }

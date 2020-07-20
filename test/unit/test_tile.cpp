@@ -134,24 +134,6 @@ TYPED_TEST(TileTest, ConstructorConst) {
   }
 }
 
-TYPED_TEST(TileTest, ConstructorExceptions) {
-  using Type = TypeParam;
-  using MemView = memory::MemoryView<Type, Device::CPU>;
-  std::size_t size = elIndex({m - 1, n - 1}, ld) + 1;
-
-  EXPECT_THROW((Tile<Type, Device::CPU>({m, n}, MemView(size - 1), ld)), std::invalid_argument);
-  EXPECT_THROW((Tile<Type, Device::CPU>({-1, n}, MemView(size), ld)), std::invalid_argument);
-  EXPECT_THROW((Tile<Type, Device::CPU>({m, -1}, MemView(size), ld)), std::invalid_argument);
-  EXPECT_THROW((Tile<Type, Device::CPU>({m, n}, MemView(size), m - 1)), std::invalid_argument);
-  EXPECT_THROW((Tile<Type, Device::CPU>({0, n}, MemView(size), 0)), std::invalid_argument);
-
-  EXPECT_THROW((Tile<const Type, Device::CPU>({m, n}, MemView(size - 1), ld)), std::invalid_argument);
-  EXPECT_THROW((Tile<const Type, Device::CPU>({-1, n}, MemView(size), ld)), std::invalid_argument);
-  EXPECT_THROW((Tile<const Type, Device::CPU>({m, -1}, MemView(size), ld)), std::invalid_argument);
-  EXPECT_THROW((Tile<const Type, Device::CPU>({m, n}, MemView(size), m - 1)), std::invalid_argument);
-  EXPECT_THROW((Tile<const Type, Device::CPU>({0, n}, MemView(size), 0)), std::invalid_argument);
-}
-
 TYPED_TEST(TileTest, MoveConstructor) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> memory_view(util::size_t::mul(ld, n));

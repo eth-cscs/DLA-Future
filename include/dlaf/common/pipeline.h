@@ -26,56 +26,57 @@ namespace common {
 template <class T>
 struct Pipeline {
 public:
-  /// Wrapper is the object that manages the auto-release mechanism
+  /// Wrapper is the object that manages the auto-release mechanism.
   template <class U>
   class Wrapper {
     friend struct Pipeline<U>;
 
-    /// Create a wrapper
-    /// @param object	the resource to wrap (the wrapper becomes the owner of the resource)
-    /// @param next	the promise that has to be set on destruction
+    /// Create a wrapper.
+    /// @param object	the resource to wrap (the wrapper becomes the owner of the resource),
+    /// @param next	the promise that has to be set on destruction.
     Wrapper(U&& object, hpx::promise<T> next) : object_(std::move(object)), promise_(std::move(next)) {}
 
   public:
-    /// Trivial move constructor (that invalidates the status of the source object)
+    /// Trivial move constructor (that invalidates the status of the source object).
     Wrapper(Wrapper&& rhs) = default;
 
     /// This is where the "magic" happens!
     ///
-    /// If the wrapper is still valid, set the promise to unlock the next future
+    /// If the wrapper is still valid, set the promise to unlock the next future.
     ~Wrapper() {
       if (promise_.valid())
         promise_.set_value(std::move(object_));
     }
 
-    /// Get a reference to the internal object
+    /// Get a reference to the internal object.
     U& operator()() {
       return object_;
     }
 
-    /// Get a reference to the internal object
+    /// Get a reference to the internal object.
     const U& operator()() const {
       return object_;
     }
 
   private:
-    U object_;                 ///< the wrapped object! it is actually owned by the wrapper
-    hpx::promise<U> promise_;  ///< promise containing the shared state that will unlock the next user
+    U object_;                 ///< the wrapped object! it is actually owned by the wrapper.
+    hpx::promise<U> promise_;  ///< promise containing the shared state that will unlock the next user.
   };
 
-  /// Create a Pipeline by moving in the resource (it takes the ownership)
+  /// Create a Pipeline by moving in the resource (it takes the ownership).
   Pipeline(T&& object) {
     future_ = hpx::make_ready_future(std::move(object));
   }
 
-  /// On destruction it waits that all users have finished using it
+  /// On destruction it waits that all users have finished using it.
   ~Pipeline() {
     if (future_.valid())
       future_.get();
   }
 
-  /// Enqueue for the resource
-  /// @return a future that will become ready as soon as the previous user release the resource
+  /// Enqueue for the resource.
+  ///
+  /// @return a future that will become ready as soon as the previous user release the resource.
   hpx::future<Wrapper<T>> operator()() {
     auto before_last = std::move(future_);
 
@@ -90,7 +91,7 @@ public:
   }
 
 private:
-  hpx::future<T> future_;  ///< This contains always the "tail" of the queue of futures
+  hpx::future<T> future_;  ///< This contains always the "tail" of the queue of futures.
 };
 
 }

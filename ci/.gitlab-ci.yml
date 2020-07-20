@@ -4,6 +4,7 @@ include:
 stages:
   - build
   - test
+  - notify
 
 ##
 ## BUILDS
@@ -20,6 +21,13 @@ stages:
     GIT_SUBMODULE_STRATEGY: recursive
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - BUILD_IMAGE=$BUILD_IMAGE_BASE`sha256sum $BUILD_DOCKER_FILE | head -c 64`
+    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 -f $BUILD_DOCKER_FILE --network=host .
+    - docker push $BUILD_IMAGE
+    - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE --build-arg DEPLOY_IMAGE=$IMAGE -f $DEPLOY_DOCKER_FILE --network=host .
+    - docker push $IMAGE
+    - docker run $IMAGE cat /root/DLA-Future.bundle/pipeline.yml > pipeline.yml
   artifacts:
     paths:
       - pipeline.yml
@@ -28,41 +36,34 @@ stages:
 cpu debug build:
   extends: .build_common
   variables:
-    BUILD_IMAGE: $CI_REGISTRY_IMAGE/debug/build:20200625-lapackpp.f878fa
+    BUILD_DOCKER_FILE: ci/docker/debug/build.Dockerfile
+    DEPLOY_DOCKER_FILE: ci/docker/debug/deploy.Dockerfile
+    BUILD_IMAGE_BASE: "$CI_REGISTRY_IMAGE/debug/build:"
     IMAGE: $CI_REGISTRY_IMAGE/debug/deploy:$CI_COMMIT_SHA
-  script:
-    - docker pull $BUILD_IMAGE
-    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE -f ci/docker/debug/build.Dockerfile --network=host .
-    - docker push $BUILD_IMAGE
-    - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE --build-arg DEPLOY_IMAGE=$IMAGE -f ci/docker/debug/deploy.Dockerfile --network=host .
-    - docker push $IMAGE
-    - docker run $IMAGE cat /root/DLA-Future.bundle/pipeline.yml > pipeline.yml
 
 cpu release build:
   extends: .build_common
   variables:
-    BUILD_IMAGE: $CI_REGISTRY_IMAGE/release/build:20200625-lapackpp.f878fa
+    BUILD_DOCKER_FILE: ci/docker/release/build.Dockerfile
+    DEPLOY_DOCKER_FILE: ci/docker/release/deploy.Dockerfile
+    BUILD_IMAGE_BASE: "$CI_REGISTRY_IMAGE/release/build:"
     IMAGE: $CI_REGISTRY_IMAGE/release/deploy:$CI_COMMIT_SHA
-  script:
-    - docker pull $BUILD_IMAGE
-    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE -f ci/docker/release/build.Dockerfile --network=host .
-    - docker push $BUILD_IMAGE
-    - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE --build-arg DEPLOY_IMAGE=$IMAGE -f ci/docker/release/deploy.Dockerfile --network=host .
-    - docker push $IMAGE
-    - docker run $IMAGE cat /root/DLA-Future.bundle/pipeline.yml > pipeline.yml
 
 cpu codecov build:
   extends: .build_common
   variables:
-    BUILD_IMAGE: $CI_REGISTRY_IMAGE/codecov/build:20200625-lapackpp.f878fa
+    BUILD_DOCKER_FILE: ci/docker/codecov/build.Dockerfile
+    DEPLOY_DOCKER_FILE: ci/docker/codecov/deploy.Dockerfile
+    BUILD_IMAGE_BASE: "$CI_REGISTRY_IMAGE/codecov/build:"
     IMAGE: $CI_REGISTRY_IMAGE/codecov/deploy:$CI_COMMIT_SHA
-  script:
-    - docker pull $BUILD_IMAGE
-    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE -f ci/docker/codecov/build.Dockerfile --network=host .
-    - docker push $BUILD_IMAGE
-    - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE --build-arg DEPLOY_IMAGE=$IMAGE -f ci/docker/codecov/deploy.Dockerfile --network=host .
-    - docker push $IMAGE
-    - docker run $IMAGE cat /root/DLA-Future.bundle/pipeline.yml > pipeline.yml
+
+notify_github_start:
+  stage: build
+  allow_failure: true
+  only: ['master', 'staging', 'trying']
+  tags: ['kubernetes']
+  image: stabbles/git-curl
+  script: ./ci/set_github_status.sh pending
 
 ##
 ## RUNS
@@ -99,3 +100,19 @@ cpu codecov test:
     include:
       - artifact: pipeline.yml
         job: cpu codecov build
+
+notify_github_success:
+  stage: notify
+  when: on_success
+  only: ['master', 'staging', 'trying']
+  tags: ['kubernetes']
+  image: stabbles/git-curl
+  script: ./ci/set_github_status.sh success
+
+notify_github_failure:
+  stage: notify
+  when: on_failure
+  only: ['master', 'staging', 'trying']
+  tags: ['kubernetes']
+  image: stabbles/git-curl
+  script: ./ci/set_github_status.sh failure

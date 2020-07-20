@@ -24,8 +24,10 @@ void Factorization<Backend::MC>::cholesky(blas::Uplo uplo, Matrix<T, Device::CPU
 
   if (uplo == blas::Uplo::Lower)
     internal::mc::cholesky_L(mat_a);
-  else
-    throw std::runtime_error("uplo = Upper not yet implemented");
+  else {
+    std::cout << "uplo = Upper not yet implemented" << std::endl;
+    std::abort();
+  }
 }
 
 template <class T>
@@ -38,8 +40,10 @@ void Factorization<Backend::MC>::cholesky(comm::CommunicatorGrid grid, blas::Upl
   // Method only for Lower triangular matrix
   if (uplo == blas::Uplo::Lower)
     internal::mc::cholesky_L(grid, mat_a);
-  else
-    throw std::runtime_error("uplo = Upper not yet implemented");
+  else {
+    std::cout << "uplo = Upper not yet implemented" << std::endl;
+    std::abort();
+  }
 }
 
 }

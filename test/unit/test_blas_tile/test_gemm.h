@@ -10,7 +10,6 @@
 
 #pragma once
 
-#include <exception>
 #include <sstream>
 #include "gtest/gtest.h"
 #include "dlaf/blas_tile.h"
@@ -108,40 +107,4 @@ void testGemm(blas::Op op_a, blas::Op op_b, SizeType m, SizeType n, SizeType k, 
   // Check result against analytical result.
   CHECK_TILE_NEAR(res_c, c, 2 * (k + 1) * TypeUtilities<T>::error,
                   2 * (k + 1) * TypeUtilities<T>::error);
-}
-
-template <class T, class CT = const T>
-void testGemmExceptions(blas::Op op_a, blas::Op op_b, const TileElementSize& size_op_a,
-                        const TileElementSize& size_op_b, const TileElementSize& size_c,
-                        SizeType extra_lda, SizeType extra_ldb, SizeType extra_ldc) {
-  TileElementSize size_a = size_op_a;
-  if (op_a != blas::Op::NoTrans)
-    size_a.transpose();
-  TileElementSize size_b = size_op_b;
-  if (op_b != blas::Op::NoTrans)
-    size_b.transpose();
-
-  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
-  SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
-  SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
-
-  std::stringstream s;
-  s << "GEMM Exceptions: " << op_a << ", " << op_a;
-  s << ", size_a = " << size_a << ", size_b = " << size_b << ", size_c = " << size_c;
-  s << ", lda = " << lda << ", ldb = " << ldb << ", ldc = " << ldc;
-  SCOPED_TRACE(s.str());
-
-  memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
-  memory::MemoryView<T, Device::CPU> mem_b(mul(ldb, size_b.cols()));
-  memory::MemoryView<T, Device::CPU> mem_c(mul(ldc, size_c.cols()));
-
-  // Create tiles.
-  Tile<CT, Device::CPU> a(size_a, std::move(mem_a), lda);
-  Tile<CT, Device::CPU> b(size_b, std::move(mem_b), ldb);
-  Tile<T, Device::CPU> c(size_c, std::move(mem_c), ldc);
-
-  T alpha = TypeUtilities<T>::element(-1.2, .7);
-  T beta = TypeUtilities<T>::element(1.1, .4);
-
-  EXPECT_THROW(tile::gemm(op_a, op_b, alpha, a, b, beta, c), std::invalid_argument);
 }

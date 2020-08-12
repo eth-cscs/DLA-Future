@@ -81,6 +81,8 @@ notify_github_start:
 # Executes the docker images on Daint via Sarus
 cpu debug test:
   extends: .run_common
+  needs:
+    - cpu debug build
   trigger:
     include:
       - artifact: pipeline.yml
@@ -88,6 +90,8 @@ cpu debug test:
 
 cpu release test:
   extends: .run_common
+  needs:
+    - cpu release build
   trigger:
     include:
       - artifact: pipeline.yml
@@ -95,6 +99,8 @@ cpu release test:
 
 cpu codecov test:
   extends: .run_common
+  needs:
+    - cpu codecov build
   trigger:
     strategy: depend
     include:

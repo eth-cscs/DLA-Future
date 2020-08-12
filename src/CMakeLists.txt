@@ -64,7 +64,7 @@ target_include_directories(dlaf.prop
 target_link_libraries(dlaf.prop
   INTERFACE
     MPI::MPI_CXX
-    HPX::hpx_no_wrap_main
+    HPX::hpx
     ${LAPACK_TARGET}
     lapackpp
     blaspp

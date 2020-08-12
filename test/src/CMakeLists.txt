@@ -13,7 +13,7 @@ target_link_libraries(DLAF_gtest_hpx_main
   PUBLIC
     gtest
   PRIVATE
-    HPX::hpx_no_wrap_main
+    HPX::hpx
 )
 
 add_library(DLAF_gtest_mpi_main STATIC gtest_mpi_main.cpp gtest_mpi_listener.cpp)
@@ -30,5 +30,5 @@ target_link_libraries(DLAF_gtest_mpihpx_main
     gtest
   PRIVATE
     MPI::MPI_CXX
-    HPX::hpx_no_wrap_main
+    HPX::hpx
 )

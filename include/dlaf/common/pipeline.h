@@ -16,6 +16,46 @@
 namespace dlaf {
 namespace common {
 
+/// A `hpx::promise` like type which is set upon destruction. The type separates the placement of data
+/// (T) into the promise from notifying the corresponding `hpx::future`.
+///
+/// Note: The type is non-copiable.
+template <class T>
+class PromiseGuard {
+public:
+  /// Create a wrapper.
+  /// @param object	the resource to wrap (the wrapper becomes the owner of the resource),
+  /// @param next	the promise that has to be set on destruction.
+  PromiseGuard(T object, hpx::promise<T> next) : object_(std::move(object)), promise_(std::move(next)) {}
+
+  PromiseGuard(PromiseGuard&&) = default;
+  PromiseGuard& operator=(PromiseGuard&&) = default;
+
+  PromiseGuard(const PromiseGuard&) = delete;
+  PromiseGuard& operator=(const PromiseGuard&) = delete;
+
+  /// This is where the "magic" happens!
+  ///
+  /// If the wrapper is still valid, set the promise to unlock the next future.
+  ~PromiseGuard() {
+    if (promise_.valid())
+      promise_.set_value(std::move(object_));
+  }
+
+  /// Get a reference to the internal object.
+  T& ref() {
+    return object_;
+  }
+
+  const T& ref() const {
+    return object_;
+  };
+
+private:
+  T object_;                 ///< the wrapped object! it is actually owned by the wrapper.
+  hpx::promise<T> promise_;  ///< promise containing the shared state that will unlock the next user.
+};
+
 /// Pipeline takes ownership of a given object and manages the access to this resource by serializing
 /// calls. Anyone that requires access to the underlying resource will get an hpx::future, which is the
 /// way to register to the queue. All requests are serialized and served in the same order they arrive.
@@ -24,47 +64,10 @@ namespace common {
 /// internal Wrapper object. This Wrapper contains the real resource, and it will do what is needed to
 /// unlock the next user as soon as the Wrapper is destroyed.
 template <class T>
-struct Pipeline {
+class Pipeline {
 public:
-  /// Wrapper is the object that manages the auto-release mechanism.
-  template <class U>
-  class Wrapper {
-    friend struct Pipeline<U>;
-
-    /// Create a wrapper.
-    /// @param object	the resource to wrap (the wrapper becomes the owner of the resource),
-    /// @param next	the promise that has to be set on destruction.
-    Wrapper(U&& object, hpx::promise<T> next) : object_(std::move(object)), promise_(std::move(next)) {}
-
-  public:
-    /// Trivial move constructor (that invalidates the status of the source object).
-    Wrapper(Wrapper&& rhs) = default;
-
-    /// This is where the "magic" happens!
-    ///
-    /// If the wrapper is still valid, set the promise to unlock the next future.
-    ~Wrapper() {
-      if (promise_.valid())
-        promise_.set_value(std::move(object_));
-    }
-
-    /// Get a reference to the internal object.
-    U& operator()() {
-      return object_;
-    }
-
-    /// Get a reference to the internal object.
-    const U& operator()() const {
-      return object_;
-    }
-
-  private:
-    U object_;                 ///< the wrapped object! it is actually owned by the wrapper.
-    hpx::promise<U> promise_;  ///< promise containing the shared state that will unlock the next user.
-  };
-
   /// Create a Pipeline by moving in the resource (it takes the ownership).
-  Pipeline(T&& object) {
+  Pipeline(T object) {
     future_ = hpx::make_ready_future(std::move(object));
   }
 
@@ -77,7 +80,7 @@ public:
   /// Enqueue for the resource.
   ///
   /// @return a future that will become ready as soon as the previous user release the resource.
-  hpx::future<Wrapper<T>> operator()() {
+  hpx::future<PromiseGuard<T>> operator()() {
     auto before_last = std::move(future_);
 
     hpx::promise<T> promise_next;
@@ -86,7 +89,7 @@ public:
     return before_last.then(hpx::launch::sync,
                             hpx::util::unwrapping(
                                 [promise_next = std::move(promise_next)](T&& object) mutable {
-                                  return Wrapper<T>{std::move(object), std::move(promise_next)};
+                                  return PromiseGuard<T>{std::move(object), std::move(promise_next)};
                                 }));
   }
 

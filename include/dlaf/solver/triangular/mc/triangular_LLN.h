@@ -125,7 +125,7 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
         // Avoid useless communication if one-column communicator
         if (row_comm_size > 1) {
           hpx::dataflow(executor_mpi, hpx::util::unwrapping([](auto&& tile, auto&& comm_wrapper) {
-                          comm::sync::broadcast::send(comm_wrapper().rowCommunicator(), tile);
+                          comm::sync::broadcast::send(comm_wrapper.ref().rowCommunicator(), tile);
                         }),
                         mat_a.read(kk), serial_comm());
         }
@@ -142,7 +142,7 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
                               Tile<T, Device::CPU> tile(tile_size, std::move(mem_view),
                                                         tile_size.rows());
                               comm::sync::broadcast::receive_from(index,
-                                                                  comm_wrapper().rowCommunicator(),
+                                                                  comm_wrapper.ref().rowCommunicator(),
                                                                   tile);
                               return std::move(tile);
                             }),
@@ -167,7 +167,7 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
         // Avoid useless communication if one-column communicator and if on the last column
         if (col_comm_size > 1 && k != (mat_b.nrTiles().rows() - 1)) {
           hpx::dataflow(executor_mpi, hpx::util::unwrapping([](auto&& tile, auto&& comm_wrapper) {
-                          comm::sync::broadcast::send(comm_wrapper().colCommunicator(), tile);
+                          comm::sync::broadcast::send(comm_wrapper.ref().colCommunicator(), tile);
                         }),
                         mat_b.read(kj), serial_comm());
         }
@@ -184,7 +184,7 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
                               Tile<T, Device::CPU> tile(tile_size, std::move(mem_view),
                                                         tile_size.rows());
                               comm::sync::broadcast::receive_from(index,
-                                                                  comm_wrapper().colCommunicator(),
+                                                                  comm_wrapper.ref().colCommunicator(),
                                                                   tile);
                               return std::move(tile);
                             }),
@@ -210,7 +210,7 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
 
         if (row_comm_size > 1) {
           hpx::dataflow(executor_mpi, hpx::util::unwrapping([](auto&& tile, auto&& comm_wrapper) {
-                          comm::sync::broadcast::send(comm_wrapper().rowCommunicator(), tile);
+                          comm::sync::broadcast::send(comm_wrapper.ref().rowCommunicator(), tile);
                         }),
                         mat_a.read(ik), serial_comm());
         }
@@ -227,7 +227,7 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
                               Tile<T, Device::CPU> tile(tile_size, std::move(mem_view),
                                                         tile_size.rows());
                               comm::sync::broadcast::receive_from(index,
-                                                                  comm_wrapper().rowCommunicator(),
+                                                                  comm_wrapper.ref().rowCommunicator(),
                                                                   tile);
                               return std::move(tile);
                             }),

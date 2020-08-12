@@ -32,8 +32,3 @@ DLAF_addTest(test_pipeline
   LIBRARIES dlaf.core
   USE_MAIN HPX
 )
-DLAF_addTest(test_task_chain
-  SOURCES test_task_chain.cpp
-  LIBRARIES dlaf.core
-  USE_MAIN HPX
-)

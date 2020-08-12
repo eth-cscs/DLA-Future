@@ -72,9 +72,6 @@ class executor {
   MPI_Comm comm_;
   hpx::threads::executors::pool_executor ex_;
 
-  std::atomic<int>* parent_ncopies_;
-  mutable std::atomic<int> ncopies_;
-
   static std::atomic<int> num_pending_comms;
 
 public:
@@ -85,31 +82,6 @@ public:
 
   inline executor(std::string pool, MPI_Comm comm)
       : comm_(comm), ex_(pool, hpx::threads::thread_priority_high) {}
-
-  executor& operator=(const executor & o) noexcept {
-    ex_ = o.ex_;
-    comm_ = o.comm_;
-    parent_ncopies_ = &o.ncopies_;
-    ++o.ncopies_;
-    ncopies_ = 0;
-    return *this;
-  }
-
-  executor& operator=(executor && o) noexcept {
-    ex_ = o.ex_;
-    comm_ = o.comm_;
-    ncopies_ = o.ncopies_.load();
-    o.parent_ncopies_ = nullptr;
-    return *this;
-  }
-
-  executor(const executor& o) {
-    *this = o;
-  }
-
-  executor(executor&& o) {
-    *this = std::move(o);
-  }
 
   constexpr bool operator==(executor const& rhs) const noexcept {
     return comm_ == rhs.comm_ && ex_ == rhs.ex_;

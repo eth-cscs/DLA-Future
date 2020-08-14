@@ -11,7 +11,7 @@
 #include <iostream>
 
 #include <mpi.h>
-#include <hpx/hpx_init.hpp>
+#include <hpx/init.hpp>
 
 #include "dlaf/auxiliary/mc.h"
 #include "dlaf/communication/communicator_grid.h"

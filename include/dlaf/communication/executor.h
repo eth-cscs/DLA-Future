@@ -17,6 +17,7 @@
 
 #include <mpi.h>
 
+#include <hpx/config.hpp>
 #include <hpx/include/async.hpp>
 #include <hpx/include/parallel_executors.hpp>
 #include <hpx/include/thread_executors.hpp>
@@ -24,74 +25,38 @@
 #include <hpx/parallel/executors/execution_fwd.hpp>
 #include <hpx/util/yield_while.hpp>
 
-#include "dlaf/common/assert.h"
+#ifdef HPX_HAVE_LIB_ASYNC_MPI
+#include <hpx/modules/async_mpi.h>
+#endif
+
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/init.h"
 
 namespace dlaf {
 namespace comm {
 
-// This controls the maximum number of pending non-blocking communications launched by MPI. The limit is
-// useful to avoid slowdowns in MPI's runtime.
-#ifdef DLAF_MAX_PENDING_COMMS
-constexpr int max_pending_comms = DLAF_MAX_PENDING_COMMS;
-#else
-constexpr int max_pending_comms = 100;
-#endif
+#ifdef HPX_HAVE_LIB_ASYNC_MPI
 
-// TODO: reference docs from misc/runtimes.md
-
-/// This section is in preparation for MPI_Futures in HPX 1.5. The mechanism for handling MPI
-/// communication is similar but there are notable differences.
-///
-/// Example usage:
-///
-/// ```
-/// // registers a `poll()` function on the thread pool with `pool_name`. This has to be in scope of all
-/// // uses of hpx::mpi.
-/// hpx::mpi::experimental::enable_user_polling enable_polling(pool_name);
-/// ...
-/// hpx::mpi::experimental::executor ex(mpi_comm);
-/// hpx::async(ex, MPI_Irecv, recv_ptr, num_recv_elems, MPI_DOUBLE, src_rank, tag)
-/// ```
-///
-/// The executor is quite simple and just forwards `MPI_Comm` to the internal
-/// hpx::mpi::experimental::detail::async()` call. Note that this is the main API difference with
-/// `dlaf::comm::async` where MPI_Comm is not part of the executor (i.e. pool_executor). The only other
-/// API difference is that `hpx::async` returns hpx::future<int> where `int` is the error code returned
-/// by the MPI call.
-///
-/// The internal mechanism for handling MPI requests is quite different. All requests are placed into a
-/// global array and polled for completion with `MPI_Testany()` on task completion/yielding for all tasks
-/// for which polling is enabled (note `enable_user_polling()`).
-///
-
-/// An executor for MPI calls.
-class executor {
-  // TODO: The communicator has to be owned by the executor
-  MPI_Comm comm_;
-  hpx::threads::executors::pool_executor ex_;
-
-  static std::atomic<int> num_pending_comms;
+/// An executor based on John's upstream HPX polling mechanism.
+class mpi_polling_executor {
+  Communicator comm_;
+  hpx::mpi::experimental::enable_user_polling enable_polling_;
 
 public:
   // Associate the parallel_execution_tag executor tag type as a default with this executor.
   using execution_category = hpx::parallel::execution::parallel_execution_tag;
 
-  inline executor(MPI_Comm comm) : comm_(comm), ex_("default", hpx::threads::thread_priority_high) {}
+  mpi_polling_executor(Communicator comm) : comm_(std::move(comm)), enable_polling_("default") {}
 
-  inline executor(std::string pool, MPI_Comm comm)
-      : comm_(comm), ex_(pool, hpx::threads::thread_priority_high) {}
-
-  constexpr bool operator==(executor const& rhs) const noexcept {
-    return comm_ == rhs.comm_ && ex_ == rhs.ex_;
+  constexpr bool operator==(const executor& rhs) const noexcept {
+    return comm_ == rhs.comm_;
   }
 
-  constexpr bool operator!=(executor const& rhs) const noexcept {
+  constexpr bool operator!=(const executor& rhs) const noexcept {
     return !(*this == rhs);
   }
 
-  constexpr executor const& context() const noexcept {
+  constexpr const executor& context() const noexcept {
     return *this;
   }
 
@@ -99,8 +64,47 @@ public:
     return comm_;
   }
 
-  /// The function only accepts non-blocking MPI routines. The MPI library needs
-  /// to support MPI_THREAD_MULTIPLE.
+  template <typename F, typename... Ts>
+  hpx::future<void> async_execute(F f, Ts... ts) noexcept {
+    return hpx::mpi::experimental::detail::async(f, ts..., comm_);
+  }
+};
+
+#endif
+
+/// An executor for MPI calls.
+class executor {
+  Communicator comm_;
+  hpx::threads::executors::pool_executor ex_;
+
+public:
+  // Associate the parallel_execution_tag executor tag type as a default with this executor.
+  using execution_category = hpx::parallel::execution::parallel_execution_tag;
+
+  executor(Communicator comm)
+      : comm_(std::move(comm)), ex_("default", hpx::threads::thread_priority_high) {}
+
+  executor(std::string pool, Communicator comm)
+      : comm_(std::move(comm)), ex_(pool, hpx::threads::thread_priority_high) {}
+
+  constexpr bool operator==(const executor& rhs) const noexcept {
+    return comm_ == rhs.comm_ && ex_ == rhs.ex_;
+  }
+
+  constexpr bool operator!=(const executor& rhs) const noexcept {
+    return !(*this == rhs);
+  }
+
+  constexpr const executor& context() const noexcept {
+    return *this;
+  }
+
+  Communicator comm() const noexcept {
+    return comm_;
+  }
+
+  /// The function only accepts non-blocking MPI routines. Both MPI_THREAD_MULTIPLE and
+  /// MPI_THREAD_SERIALIZED are supported.
   ///
   /// Example usage:
   ///
@@ -119,29 +123,13 @@ public:
   /// 1) MPI_Comm (comm) doesn't need to be specified as it is passed by the executor
   /// 2) MPI_Request (request) is omitted as it is handled internally in async()
   ///
-  /// Note that if starting the communication depends on a previous task, it is often a good idea to call
-  /// the `get()` method on a returned future to avoid weird constructs like future<future<>>.
-  ///
-  /// Example:
-  ///
-  /// auto comm_fut = prev_fut.then([=] {
-  ///   return dlaf::comm::async(...).get();
-  /// });
-  ///
-  /// or don't return the future from `dlaf::comm::async()` and just do:
-  ///
-  /// auto comm_fut = prev_fut.then([=] {
-  ///   dlaf::comm::async(...);
-  /// });
-  ///
   template <typename F, typename... Ts>
   hpx::future<void> async_execute(F f, Ts... ts) noexcept {
-    // TODO: docs why this is done here instead of within the task
+    // Note that the call is made inline instead of being wrapped in a task. This is to avoid overheads
+    // with task creations and to allow MPI calls on the same executor/communicator to be easily ordered
+    // within the task they are made.
     MPI_Request req;
     mpi_invoke(f, ts..., comm_, &req);
-
-    ++num_pending_comms;
-    DLAF_ASSERT(num_pending_comms <= max_pending_comms, "Too many pending comms!", num_pending_comms);
 
     return hpx::async(ex_, [req]() mutable {
       // Yield until non-blocking communication completes.
@@ -150,7 +138,6 @@ public:
         mpi_invoke(MPI_Test, &req, &flag, MPI_STATUS_IGNORE);
         return flag == 0;
       });
-      --num_pending_comms;
     });
   }
 };

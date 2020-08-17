@@ -92,7 +92,6 @@ add_library(dlaf.core
     communication/communicator.cpp
     communication/communicator_grid.cpp
     communication/datatypes.cpp
-    communication/executor.cpp
     matrix/distribution.cpp
     matrix/layout_info.cpp
     matrix.cpp

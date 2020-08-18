@@ -84,6 +84,68 @@ void cholesky_L(Matrix<T, Device::CPU>& mat_a) {
   }
 }
 
+// template <class T>
+// hpx::shared_future<Tile<const T, Device::CPU>> factorize_and_send_diag_tile(
+//    comm::Index2D this_rank, comm::Index2D kk_tile_rank, GlobalTileIndex kk_idx,
+//    hpx::threads::executors::pool_executor executor_hp, matrix::Distribution& distr,
+//    Matrix<T, Device::CPU>& mat_a, common::Pipeline<comm::executor>& mpi_col_task_chain) {
+//  using ConstTile_t = Tile<const T, Device::CPU>;
+//  using PromiseExec_t = common::PromiseGuard<comm::executor>;
+//
+//  // if this process doesn't have the diagonal tile, do nothing
+//  if (this_rank != kk_tile_rank)
+//    return;
+//
+//  LocalTileIndex kk = distr.localTileIndex(kk_idx);
+//
+//  // If the diagonal tile is on this node factorize it
+//  // Cholesky decomposition on mat_a(k,k) r/w potrf (lapack operation)
+//  hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::potrf<T, Device::CPU>), blas::Uplo::Lower,
+//                std::move(mat_a(kk)));
+//
+//  // Broadcast the panel column-wise
+//  auto send_bcast_f = annotated_function(
+//      [](hpx::shared_future<ConstTile_t> ftile, hpx::future<PromiseExec_t> fpex) mutable {
+//        PromiseExec_t pex = fpex.get();
+//        comm::bcast(pex.ref(), pex.ref().comm().rank(), ftile.get());
+//      },
+//      "send_diag_tile");
+//  hpx::dataflow(executor_hp, std::move(send_bcast_f), mat_a.read(kk), mpi_col_task_chain());
+//
+//  return mat_a.read(kk);
+//}
+//
+//// If this process holds tiles in the panel, receive the diagonal tile
+// template <class T>
+// hpx::shared_future<Tile<const T, Device::CPU>> recv_diag_tile(
+//    comm::Index2D this_rank, comm::Index2D kk_tile_rank, GlobalTileIndex kk_idx,
+//    hpx::threads::executors::pool_executor executor_hp, Matrix<T, Device::CPU>& mat_a,
+//    common::Pipeline<comm::executor>& mpi_col_task_chain) {
+//  using Tile_t = Tile<T, Device::CPU>;
+//  using ConstTile_t = Tile<const T, Device::CPU>;
+//  using PromiseExec_t = common::PromiseGuard<comm::executor>;
+//  using MemView_t = memory::MemoryView<T, Device::CPU>;
+//
+//  if (!(this_rank.col() == kk_tile_rank.col() && this_rank.row() != kk_tile_rank.row()))
+//    return;
+//
+//  // Receive the diagonal tile
+//  auto recv_bcast_f = annotated_function(
+//      [rank = kk_tile_rank.row(),
+//       tile_size = mat_a.tileSize(kk_idx)](hpx::future<PromiseExec_t> fpex) mutable {
+//        MemView_t mem_view(util::size_t::mul(tile_size.rows(), tile_size.cols()));
+//        Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
+//        PromiseExec_t pex = fpex.get();
+//        return comm::bcast(pex.ref(), rank, tile)
+//            .then(hpx::launch::sync, [t = std::move(tile)](hpx::future<void>) mutable -> ConstTile_t {
+//              return std::move(t);
+//            });
+//      },
+//      "recv_diag_tile");
+//  return hpx::future<ConstTile_t>(
+//      hpx::dataflow(executor_hp, std::move(recv_bcast_f), mpi_col_task_chain()));
+//}
+
 // Distributed implementation of Lower Cholesky factorization.
 template <class T>
 void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {

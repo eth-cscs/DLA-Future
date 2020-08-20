@@ -30,6 +30,10 @@ class DlaFuture(CMakePackage):
     depends_on('hpx@1.4.0:1.4.1 cxxstd=14 networking=none')
     depends_on('cuda', when='+cuda')
 
+    depends_on('hpx build_type=Debug', when='build_type=Debug')
+    depends_on('hpx build_type=Release', when='build_type=Release')
+    depends_on('hpx build_type=RelWithDebInfo', when='build_type=RelWithDebInfo')
+
     def cmake_args(self):
         spec = self.spec
 

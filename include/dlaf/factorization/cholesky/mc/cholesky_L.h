@@ -161,7 +161,6 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
   using hpx::threads::thread_priority_high;
   using hpx::threads::thread_priority_default;
   using comm::internal::mpi_pool_exists;
-  using common::internal::vector;
 
   using ConstTile_t = Tile<const T, Device::CPU>;
 
@@ -172,9 +171,8 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
   // Set up executor on the default queue with default priority.
   pool_executor executor_normal("default", thread_priority_default);
   // Set up MPI executor
-  std::string mpi_pool_name = (mpi_pool_exists()) ? "mpi" : "default";
-  comm::executor executor_mpi_col(mpi_pool_name, grid.colCommunicator());
-  comm::executor executor_mpi_row(mpi_pool_name, grid.rowCommunicator());
+  comm::executor executor_mpi_col(grid.colCommunicator());
+  comm::executor executor_mpi_row(grid.rowCommunicator());
 
   common::Pipeline<comm::executor> mpi_col_task_chain(std::move(executor_mpi_col));
   common::Pipeline<comm::executor> mpi_row_task_chain(std::move(executor_mpi_row));

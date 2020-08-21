@@ -11,6 +11,7 @@
 
 #include <hpx/include/parallel_executors.hpp>
 #include <hpx/include/threads.hpp>
+#include <hpx/lcos_fwd.hpp>
 #include <hpx/util/annotated_function.hpp>
 
 #include "dlaf/blas_tile.h"
@@ -84,20 +85,21 @@ void cholesky_L(Matrix<T, Device::CPU>& mat_a) {
   }
 }
 
+// If the diagonal tile is on this node factorize it
+// Cholesky decomposition on mat_a(k,k) r/w potrf (lapack operation)
 template <class T>
-hpx::shared_future<Tile<const T, Device::CPU>> factorize_and_send_diag_tile(
-    hpx::threads::executors::pool_executor executor_hp, Matrix<T, Device::CPU>& mat_a,
-    common::Pipeline<comm::executor>& mpi_col_task_chain, const matrix::Distribution& distr,
-    GlobalTileIndex kk_idx) {
+void factorize_diag_tile(hpx::threads::executors::pool_executor executor_hp,
+                         hpx::future<Tile<T, Device::CPU>> matrix_tile) {
+  hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::potrf<T, Device::CPU>), blas::Uplo::Lower,
+                std::move(matrix_tile));
+}
+
+template <class T>
+void send_diag_tile(hpx::threads::executors::pool_executor executor_hp,
+                    common::Pipeline<comm::executor>& mpi_col_task_chain,
+                    hpx::shared_future<Tile<const T, Device::CPU>> kk_tile) {
   using ConstTile_t = Tile<const T, Device::CPU>;
   using PromiseExec_t = common::PromiseGuard<comm::executor>;
-
-  LocalTileIndex kk = distr.localTileIndex(kk_idx);
-
-  // If the diagonal tile is on this node factorize it
-  // Cholesky decomposition on mat_a(k,k) r/w potrf (lapack operation)
-  hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::potrf<T, Device::CPU>), blas::Uplo::Lower,
-                std::move(mat_a(kk)));
 
   // Broadcast the panel column-wise
   auto send_bcast_f = hpx::util::annotated_function(
@@ -106,9 +108,7 @@ hpx::shared_future<Tile<const T, Device::CPU>> factorize_and_send_diag_tile(
         comm::bcast(pex.ref(), pex.ref().comm().rank(), ftile.get());
       },
       "send_diag_tile");
-  hpx::dataflow(executor_hp, std::move(send_bcast_f), mat_a.read(kk), mpi_col_task_chain());
-
-  return mat_a.read(kk);
+  hpx::dataflow(executor_hp, std::move(send_bcast_f), kk_tile, mpi_col_task_chain());
 }
 
 // If this process holds tiles in the panel, receive the diagonal tile
@@ -303,7 +303,9 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
 
       if (this_rank.row() == kk_tile_rank.row()) {
         // if the process has the diagonal tile, factorize and send it
-        kk_tile = factorize_and_send_diag_tile(executor_hp, mat_a, mpi_col_task_chain, distr, kk_idx);
+        factorize_diag_tile(executor_hp, mat_a(kk_idx));
+        kk_tile = mat_a.read(kk_idx);
+        send_diag_tile(executor_hp, mpi_col_task_chain, kk_tile);
       }
       else {
         // receive the diagonal tile in processes holding panel tiles

@@ -232,9 +232,9 @@ void herk_trailing_diag_tile(hpx::threads::executors::pool_executor trailing_mat
 }
 
 template <class T>
-hpx::shared_future<Tile<const T, Device::CPU>> recv_panel_tile_in_trailing_panel(
-    hpx::threads::executors::pool_executor executor_hp, Matrix<T, Device::CPU>& mat_a,
-    common::Pipeline<comm::executor>& mpi_col_task_chain, int j_rank_row, SizeType j, SizeType k) {
+hpx::shared_future<Tile<const T, Device::CPU>> recv_panel_tile(
+    hpx::threads::executors::pool_executor executor_hp,
+    common::Pipeline<comm::executor>& mpi_col_task_chain, TileElementSize tile_size, int rank) {
   using ConstTile_t = Tile<const T, Device::CPU>;
   using PromiseExec_t = common::PromiseGuard<comm::executor>;
   using MemView_t = memory::MemoryView<T, Device::CPU>;
@@ -242,8 +242,7 @@ hpx::shared_future<Tile<const T, Device::CPU>> recv_panel_tile_in_trailing_panel
 
   // Update the (trailing) panel column-wise
   auto recv_bcast_f = hpx::util::annotated_function(
-      [rank = j_rank_row,
-       tile_size = mat_a.tileSize(GlobalTileIndex(j, k))](hpx::future<PromiseExec_t> fpex) mutable {
+      [rank, tile_size](hpx::future<PromiseExec_t> fpex) mutable {
         MemView_t mem_view(util::size_t::mul(tile_size.rows(), tile_size.cols()));
         Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
         PromiseExec_t pex = fpex.get();
@@ -338,12 +337,11 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
         auto i_local = distr.localTileFromGlobalTile<Coord::Row>(j);
         col_panel = panel[i_local];
         send_panel_tile(executor_hp, mpi_col_task_chain, col_panel);
-        herk_trailing_diag_tile(trailing_matrix_executor, mat_a(LocalTileIndex{i_local, j_local}),
-                                col_panel);
+        herk_trailing_diag_tile(trailing_matrix_executor, mat_a(GlobalTileIndex{j, j}), col_panel);
       }
       else {
-        col_panel =
-            recv_panel_tile_in_trailing_panel(executor_hp, mat_a, mpi_col_task_chain, j_rank_row, j, k);
+        col_panel = recv_panel_tile<T>(executor_hp, mpi_col_task_chain,
+                                       mat_a.tileSize(GlobalTileIndex(j, k)), j_rank_row);
       }
 
       for (SizeType i_local = distr.nextLocalTileFromGlobalTile<Coord::Row>(j + 1);

@@ -95,51 +95,6 @@ void factorize_diag_tile(hpx::threads::executors::pool_executor executor_hp,
 }
 
 template <class T>
-void send_diag_tile(hpx::threads::executors::pool_executor executor_hp,
-                    common::Pipeline<comm::executor>& mpi_col_task_chain,
-                    hpx::shared_future<Tile<const T, Device::CPU>> kk_tile) {
-  using ConstTile_t = Tile<const T, Device::CPU>;
-  using PromiseExec_t = common::PromiseGuard<comm::executor>;
-
-  // Broadcast the panel column-wise
-  auto send_bcast_f = hpx::util::annotated_function(
-      [](hpx::shared_future<ConstTile_t> ftile, hpx::future<PromiseExec_t> fpex) mutable {
-        PromiseExec_t pex = fpex.get();
-        comm::bcast(pex.ref(), pex.ref().comm().rank(), ftile.get());
-      },
-      "send_diag_tile");
-  hpx::dataflow(executor_hp, std::move(send_bcast_f), kk_tile, mpi_col_task_chain());
-}
-
-// If this process holds tiles in the panel, receive the diagonal tile
-template <class T>
-hpx::shared_future<Tile<const T, Device::CPU>> recv_diag_tile(
-    hpx::threads::executors::pool_executor executor_hp, Matrix<T, Device::CPU>& mat_a,
-    common::Pipeline<comm::executor>& mpi_col_task_chain, comm::Index2D kk_tile_rank,
-    GlobalTileIndex kk_idx) {
-  using Tile_t = Tile<T, Device::CPU>;
-  using ConstTile_t = Tile<const T, Device::CPU>;
-  using PromiseExec_t = common::PromiseGuard<comm::executor>;
-  using MemView_t = memory::MemoryView<T, Device::CPU>;
-
-  // Receive the diagonal tile
-  auto recv_bcast_f = hpx::util::annotated_function(
-      [rank = kk_tile_rank.row(),
-       tile_size = mat_a.tileSize(kk_idx)](hpx::future<PromiseExec_t> fpex) mutable {
-        MemView_t mem_view(util::size_t::mul(tile_size.rows(), tile_size.cols()));
-        Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
-        PromiseExec_t pex = fpex.get();
-        return comm::bcast(pex.ref(), rank, tile)
-            .then(hpx::launch::sync, [t = std::move(tile)](hpx::future<void>) mutable -> ConstTile_t {
-              return std::move(t);
-            });
-      },
-      "recv_diag_tile");
-  return hpx::future<ConstTile_t>(
-      hpx::dataflow(executor_hp, std::move(recv_bcast_f), mpi_col_task_chain()));
-}
-
-template <class T>
 void solve_and_send_panel(hpx::threads::executors::pool_executor executor_hp,
                           Matrix<T, Device::CPU>& mat_a,
                           common::Pipeline<comm::executor>& mpi_row_task_chain,
@@ -205,9 +160,9 @@ void recv_panel(hpx::threads::executors::pool_executor executor_hp, Matrix<T, De
 }
 
 template <class T>
-void send_panel_tile(hpx::threads::executors::pool_executor executor_hp,
-                     common::Pipeline<comm::executor>& mpi_col_task_chain,
-                     hpx::shared_future<Tile<const T, Device::CPU>> panel_tile) {
+void send_tile(hpx::threads::executors::pool_executor executor_hp,
+               common::Pipeline<comm::executor>& mpi_col_task_chain,
+               hpx::shared_future<Tile<const T, Device::CPU>> tile) {
   using ConstTile_t = Tile<const T, Device::CPU>;
   using PromiseExec_t = common::PromiseGuard<comm::executor>;
 
@@ -218,21 +173,11 @@ void send_panel_tile(hpx::threads::executors::pool_executor executor_hp,
         comm::bcast(pex.ref(), pex.ref().comm().rank(), fut_tile.get());
       },
       "send_trailing_panel");
-  hpx::dataflow(executor_hp, std::move(send_bcast_f), panel_tile, mpi_col_task_chain());
-}
-
-// Compute first tile of the column of the trailing matrix: diagonal element mat_a(j,j),
-// reading mat_a.read(j,k), using herk (blas operation)
-template <class T>
-void herk_trailing_diag_tile(hpx::threads::executors::pool_executor trailing_matrix_executor,
-                             hpx::future<Tile<T, Device::CPU>> matrix_tile,
-                             hpx::shared_future<Tile<const T, Device::CPU>> panel_tile) {
-  hpx::dataflow(trailing_matrix_executor, hpx::util::unwrapping(tile::herk<T, Device::CPU>),
-                blas::Uplo::Lower, blas::Op::NoTrans, -1.0, panel_tile, 1.0, std::move(matrix_tile));
+  hpx::dataflow(executor_hp, std::move(send_bcast_f), tile, mpi_col_task_chain());
 }
 
 template <class T>
-hpx::shared_future<Tile<const T, Device::CPU>> recv_panel_tile(
+hpx::shared_future<Tile<const T, Device::CPU>> recv_tile(
     hpx::threads::executors::pool_executor executor_hp,
     common::Pipeline<comm::executor>& mpi_col_task_chain, TileElementSize tile_size, int rank) {
   using ConstTile_t = Tile<const T, Device::CPU>;
@@ -254,6 +199,16 @@ hpx::shared_future<Tile<const T, Device::CPU>> recv_panel_tile(
       "recv_trailing_panel");
   return hpx::future<ConstTile_t>(
       hpx::dataflow(executor_hp, std::move(recv_bcast_f), mpi_col_task_chain()));
+}
+
+// Compute first tile of the column of the trailing matrix: diagonal element mat_a(j,j),
+// reading mat_a.read(j,k), using herk (blas operation)
+template <class T>
+void herk_trailing_diag_tile(hpx::threads::executors::pool_executor trailing_matrix_executor,
+                             hpx::future<Tile<T, Device::CPU>> matrix_tile,
+                             hpx::shared_future<Tile<const T, Device::CPU>> panel_tile) {
+  hpx::dataflow(trailing_matrix_executor, hpx::util::unwrapping(tile::herk<T, Device::CPU>),
+                blas::Uplo::Lower, blas::Op::NoTrans, -1.0, panel_tile, 1.0, std::move(matrix_tile));
 }
 
 // Distributed implementation of Lower Cholesky factorization.
@@ -305,11 +260,13 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
         // if the process has the diagonal tile, factorize and send it
         factorize_diag_tile(executor_hp, mat_a(kk_idx));
         kk_tile = mat_a.read(kk_idx);
-        send_diag_tile(executor_hp, mpi_col_task_chain, kk_tile);
+        send_tile(executor_hp, mpi_col_task_chain, kk_tile);
       }
       else {
         // receive the diagonal tile in processes holding panel tiles
-        kk_tile = recv_diag_tile(executor_hp, mat_a, mpi_col_task_chain, kk_tile_rank, kk_idx);
+        // kk_tile = recv_diag_tile(executor_hp, mat_a, mpi_col_task_chain, kk_tile_rank, kk_idx);
+        kk_tile =
+            recv_tile<T>(executor_hp, mpi_col_task_chain, mat_a.tileSize(kk_idx), kk_tile_rank.row());
       }
 
       solve_and_send_panel(executor_hp, mat_a, mpi_row_task_chain, distr, k, std::move(kk_tile), panel);
@@ -338,12 +295,12 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
       if (this_rank.row() == j_rank_row) {
         auto i_local = distr.localTileFromGlobalTile<Coord::Row>(j);
         col_panel = panel[i_local];
-        send_panel_tile(executor_hp, mpi_col_task_chain, col_panel);
+        send_tile(executor_hp, mpi_col_task_chain, col_panel);
         herk_trailing_diag_tile(trailing_matrix_executor, mat_a(GlobalTileIndex{j, j}), col_panel);
       }
       else {
-        col_panel = recv_panel_tile<T>(executor_hp, mpi_col_task_chain,
-                                       mat_a.tileSize(GlobalTileIndex(j, k)), j_rank_row);
+        col_panel = recv_tile<T>(executor_hp, mpi_col_task_chain, mat_a.tileSize(GlobalTileIndex(j, k)),
+                                 j_rank_row);
       }
 
       for (SizeType i_local = distr.nextLocalTileFromGlobalTile<Coord::Row>(j + 1);

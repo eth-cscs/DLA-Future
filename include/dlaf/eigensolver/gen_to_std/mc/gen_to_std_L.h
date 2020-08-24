@@ -30,6 +30,8 @@ namespace dlaf {
 namespace internal {
 namespace mc {
 
+  // Implementation based on Algorithm 4 "LAPACK Algorithm for the transformation from generalized to standard eigenproblem", page 12, PhD thesis "GPU Accelerated Implementations of a Generalized Eigenvalue Solver for Hermitian Matrices with Systematic Energy and Time to Solution Analysis" presented by Raffaele Solcà
+  
 // Local implementation
 template <class T>
 void genToStd_L(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l) {
@@ -51,8 +53,6 @@ void genToStd_L(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l) {
       hpx::threads::executors::pool_executor("default", hpx::threads::thread_priority_default);
   SizeType m = mat_a.nrTiles().rows();
   SizeType n = mat_a.nrTiles().cols();
-  SizeType tilerow = mat_a.blockSize().rows();
-  SizeType tilecol = mat_a.blockSize().cols();
 
   // Choose queue priority
   // auto trailing_executor = (j == k - 1) ? executor_hp : executor_normal;

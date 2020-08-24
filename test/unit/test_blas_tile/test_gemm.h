@@ -60,7 +60,7 @@ void testGemm(blas::Op op_a, blas::Op op_b, SizeType m, SizeType n, SizeType k, 
 
   // Note: The tile elements are chosen such that:
   // - op_a(a)_ik = .9 * (i+1) / (k+.5) * exp(I*(2*i-k)),
-  // - op_b(b)_kj = .8 * (k+.5) / (j+2) * exp(I*(k-j)),
+  // - op_b(b)_kj = .8 * (k+.5) / (j+2) * exp(I*(k+j)),
   // - c_ij = 1.2 * i / (j+1) * exp(I*(-i+j)),
   // where I = 0 for real types or I is the complex unit for complex types.
   // Therefore the result should be:

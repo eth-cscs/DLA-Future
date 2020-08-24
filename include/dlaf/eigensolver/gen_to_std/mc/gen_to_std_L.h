@@ -30,7 +30,7 @@ namespace dlaf {
 namespace internal {
 namespace mc {
 
-  // Implementation based on Algorithm 4 "LAPACK Algorithm for the transformation from generalized to standard eigenproblem", page 12, PhD thesis "GPU Accelerated Implementations of a Generalized Eigenvalue Solver for Hermitian Matrices with Systematic Energy and Time to Solution Analysis" presented by Raffaele Solcà
+// Implementation based on Algorithm 4 "LAPACK Algorithm for the transformation from generalized to standard eigenproblem", page 12, PhD thesis "GPU Accelerated Implementations of a Generalized Eigenvalue Solver for Hermitian Matrices with Systematic Energy and Time to Solution Analysis" presented by Raffaele Solcà
   
 // Local implementation
 template <class T>

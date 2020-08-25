@@ -33,11 +33,10 @@ struct Auxiliary<Backend::MC> {
   /// - With @p norm_type = lapack::Norm::{One, Two, Inf, Fro}
   /// @note not yet implemented
   ///
-  /// .
-  /// @pre `A.blockSize().rows() == A.blockSize().cols()`
-  /// @pre @p A is distributed according to @p grid
+  /// @pre `A.blockSize().rows() == A.blockSize().cols()`,
+  /// @pre @p A is distributed according to @p grid,
   /// @return the norm @p norm_type of the Matrix @p A or 0 if `A.size().isEmpty()` (see LAPACK doc for
-  /// additional info)
+  /// additional info).
   template <class T>
   static dlaf::BaseType<T> norm(comm::CommunicatorGrid grid, comm::Index2D rank, lapack::Norm norm_type,
                                 blas::Uplo uplo, Matrix<const T, Device::CPU>& A);

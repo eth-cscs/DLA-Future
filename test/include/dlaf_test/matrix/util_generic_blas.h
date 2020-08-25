@@ -29,7 +29,7 @@ using namespace dlaf_test;
 /// holds op(A) X = alpha B (n can be any value).
 ///
 /// The elements of op(A) (@p el_op_a) are chosen such that:
-///   op(A)_ik = (i+1) / (k+.5) * exp(I*(2*i-k)) for the referenced elements
+///   op(A)_ik = (i+1) / (k+.5) * exp(I*(2*i-k)) for the referenced elements,
 ///   op(A)_ik = -9.9 otherwise,
 /// where I = 0 for real types or I is the complex unit for complex types.
 ///
@@ -45,7 +45,7 @@ using namespace dlaf_test;
 ///       kk = i+1 if op(a) is an lower triangular matrix, or
 ///       kk = m-i if op(a) is an lower triangular matrix.
 /// Therefore
-/// B_ij = (X_ij + (kk-1) * gamma) / alpha, if diag == Unit
+/// B_ij = (X_ij + (kk-1) * gamma) / alpha, if diag == Unit,
 /// B_ij = kk * gamma / alpha, otherwise.
 ///
 template <class ElementIndex, class T>
@@ -93,7 +93,7 @@ auto getLeftTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T al
 /// holds X op(A) = alpha B (n can be any value).
 ///
 /// The elements of op(A) (@p el_op_a) are chosen such that:
-///   op(A)_kj = (j+1) / (k+.5) * exp(I*(2*j-k)) for the referenced elements
+///   op(A)_kj = (j+1) / (k+.5) * exp(I*(2*j-k)) for the referenced elements,
 ///   op(A)_kj = -9.9 otherwise,
 /// where I = 0 for real types or I is the complex unit for complex types.
 ///
@@ -109,7 +109,7 @@ auto getLeftTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T al
 ///       kk = j+1 if op(a) is an upper triangular matrix, or
 ///       kk = m-j if op(a) is an upper triangular matrix.
 /// Therefore
-/// B_ij = (X_ij + (kk-1) * gamma) / alpha, if diag == Unit
+/// B_ij = (X_ij + (kk-1) * gamma) / alpha, if diag == Unit,
 /// B_ij = kk * gamma / alpha, otherwise.
 ///
 template <class ElementIndex, class T>

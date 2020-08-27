@@ -109,6 +109,46 @@ hpx::shared_future<Tile<const T, Device::CPU>> recv_tile(
   return hpx::future<ConstTile_t>(hpx::dataflow(executor_hp, std::move(recv_bcast_f), mpi_task_chain()));
 }
 
+enum class transfer_op { load, offload };
+
+template <transfer_op op>
+struct swap_if_load_f {
+  void operator()(SizeType&, SizeType&) noexcept {};  // noop
+};
+
+template <>
+struct swap_if_load_f<transfer_op::load> {
+  void operator()(SizeType& out_idx, SizeType& in_idx) noexcept {
+    std::swap(out_idx, in_idx);
+  };
+};
+
+/// Load a tile from the panel into the matrix or offload a tile from the panel into the matrix.
+///
+/// @p matrix_tile_index the index of the matrix tile within the panel
+template <class T, transfer_op op>
+void transfer_tile(hpx::threads::executors::pool_executor executor_hp,
+                   hpx::shared_future<Tile<const T, Device::CPU>> in_tile,
+                   hpx::future<Tile<T, Device::CPU>> out_tile, int tile_idx) {
+  using ConstTile_t = Tile<const T, Device::CPU>;
+  using Tile_t = Tile<T, Device::CPU>;
+  auto load_f = [tile_idx](hpx::shared_future<ConstTile_t> in_ftile, hpx::future<Tile_t> out_ftile) {
+    ConstTile_t in_tile = in_ftile.get();
+    Tile_t out_tile = out_ftile.get();
+    TileElementSize out_ts = out_tile.size();
+    SizeType pt_offset = tile_idx * out_ts.rows();
+    for (SizeType mt_i = 0; mt_i < out_ts.rows(); ++mt_i) {
+      for (SizeType mt_j = 0; mt_j < out_ts.cols(); ++mt_j) {
+        TileElementIndex out_idx(mt_i, mt_j);             // matrix tile
+        TileElementIndex in_idx(pt_offset + mt_i, mt_j);  // panel tile
+        swap_if_load_f<op>(out_idx, in_idx);
+        out_tile(out_idx) = in_tile(in_idx);
+      }
+    }
+  };
+  hpx::dataflow(executor_hp, std::move(load_f), std::move(in_tile), std::move(out_tile));
+}
+
 // Local implementation of Lower Cholesky factorization.
 template <class T>
 void cholesky_L(Matrix<T, Device::CPU>& mat_a) {

@@ -219,12 +219,15 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
   const matrix::Distribution& distr = mat_a.distribution();
   SizeType nrtile = mat_a.nrTiles().cols();
 
+  if (nrtile == 0)
+    return;
+
   auto localnrtile_rows = distr.localNrTiles().rows();
   auto localnrtile_cols = distr.localNrTiles().cols();
 
   auto this_rank = grid.rank();
 
-  for (SizeType k = 0; k < nrtile; ++k) {
+  for (SizeType k = 0; k < nrtile - 1; ++k) {
     // Create a placeholder that will store the shared futures representing the panel
     std::vector<hpx::shared_future<ConstTile_t>> panel(localnrtile_rows);
 
@@ -304,6 +307,11 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
                                   mat_a(LocalTileIndex{i_local, j_local}));
       }
     }
+  }
+
+  GlobalTileIndex last_idx(nrtile - 1, nrtile - 1);
+  if (this_rank == distr.rankGlobalTile(last_idx)) {
+    potrf_diag_tile(executor_hp, mat_a(GlobalTileIndex(last_idx)));
   }
 }
 }

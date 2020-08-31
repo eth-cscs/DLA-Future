@@ -79,7 +79,7 @@ public:
   /// Returns the (i, j)-th element,
   /// where @p i := @p index.row and @p j := @p index.col.
   ///
-  /// @pre index.isIn(size().
+  /// @pre index.isIn(size()).
   const T& operator()(const TileElementIndex& index) const noexcept {
     return *ptr(index);
   }

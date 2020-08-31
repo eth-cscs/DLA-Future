@@ -157,7 +157,7 @@ the specification if they are input (In:), output (Out:) or input-output paramet
 
 Example:
 ```c++
-/// \brief Updates foo and computes bar using in_1 .. in_5.
+/// Updates foo and computes bar using in_1 .. in_5.
 ///
 /// In: in_3, in_5
 /// In/Out: foo
@@ -215,11 +215,11 @@ Doxygen commands should be specified with `@` syntax (e.g. `@param`).
 
 General rules:
 
-- no empty comment lines before and after the comment block
-- one space after the @brief comment
+- no empty comment lines before and after the comment block,
+- one space after the brief comment.
 
 ```cpp
-/// @brief Returns @c ceiling(@p num / @p den) for integer types.
+/// Returns @c ceiling(@p num / @p den) for integer types.
 ///
 /// @tparam IntType has to be an integer type
 /// @pre @a num >= 0 and @a den >= 0

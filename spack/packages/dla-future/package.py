@@ -6,7 +6,7 @@
 from spack import *
 
 
-class DlaFuture(CMakePackage):
+class DlaFuture(CMakePackage, CudaPackage):
     """DLA-Future library: Distributed Linear Algebra with Future"""
 
     homepage = "https://github.com/eth-cscs/DLA-Future/wiki"
@@ -16,8 +16,6 @@ class DlaFuture(CMakePackage):
 
     version('develop', branch='master')
 
-    variant('cuda', default=False,
-            description='Use the GPU/cuBLAS back end.')
     variant('doc', default=False,
             description='Build documentation.')
 
@@ -28,7 +26,6 @@ class DlaFuture(CMakePackage):
     depends_on('blaspp')
     depends_on('lapackpp')
     depends_on('hpx@1.4.0:1.4.1 cxxstd=14 networking=none')
-    depends_on('cuda', when='+cuda')
 
     depends_on('hpx build_type=Debug', when='build_type=Debug')
     depends_on('hpx build_type=Release', when='build_type=Release')

@@ -68,7 +68,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
 
   // Allocate memory for the matrices
-  MatrixType A(GlobalElementSize{opts.m, opts.m}, TileElementSize{opts.mb, opts.mb}, comm_grid);
+  MatrixType a(GlobalElementSize{opts.m, opts.m}, TileElementSize{opts.mb, opts.mb}, comm_grid);
   MatrixType b(GlobalElementSize{opts.m, opts.n}, TileElementSize{opts.mb, opts.nb}, comm_grid);
 
   const auto side = blas::Side::Left;
@@ -77,15 +77,15 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   const auto diag = blas::Diag::NonUnit;
   const T alpha = 2.0;
 
-  double m = A.size().rows();
+  double m = a.size().rows();
   double n = b.size().cols();
   auto add_mul = n * m * m / 2;
   const double total_ops = dlaf::total_ops<T>(add_mul, add_mul);
 
   using dlaf::matrix::test::getLeftTriangularSystem;
-  std::function<T(const GlobalElementIndex&)> setter_A, setter_b, expected_b;
-  std::tie(setter_A, setter_b, expected_b) =
-      getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, A.size().rows());
+  std::function<T(const GlobalElementIndex&)> setter_a, setter_b, expected_b;
+  std::tie(setter_a, setter_b, expected_b) =
+      getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, a.size().rows());
 
   for (auto run_index = 0; run_index < opts.nruns; ++run_index) {
     if (0 == world.rank())
@@ -93,19 +93,19 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 
     // setup matrix A and b
     using dlaf::matrix::util::set;
-    set(A, setter_A);
+    set(a, setter_a);
     set(b, setter_b);
 
     // wait all setup tasks before starting benchmark
-    ::waitall_tiles(A);
+    ::waitall_tiles(a);
     ::waitall_tiles(b);
     MPI_Barrier(world);
 
     dlaf::common::Timer<> timeit;
-    dlaf::Solver<Backend::MC>::triangular(comm_grid, side, uplo, op, diag, alpha, A, b);
+    dlaf::Solver<Backend::MC>::triangular(comm_grid, side, uplo, op, diag, alpha, a, b);
 
     // wait for last task and barrier for all ranks
-    ::waitall_tiles(A);
+    ::waitall_tiles(a);
     ::waitall_tiles(b);
     MPI_Barrier(world);
 
@@ -119,7 +119,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       std::cout << "[" << run_index << "]"
                 << " " << elapsed_time << "s"
                 << " " << gigaflops << "GFlop/s"
-                << " " << A.size() << " " << A.blockSize() << " " << comm_grid.size() << " " << b.size()
+                << " " << a.size() << " " << a.blockSize() << " " << comm_grid.size() << " " << b.size()
                 << " " << b.blockSize() << " " << hpx::get_os_thread_count() << std::endl;
 
     // (optional) run test
@@ -138,9 +138,10 @@ int main(int argc, char** argv) {
 
   // options
   using namespace hpx::program_options;
-  options_description desc_commandline("Benchmark computation of solution for A . x = 2 . b, "
-                                       "where A is a non-unit lower triangular matrix\n\n"
-                                       "options");
+  options_description desc_commandline(
+      "Benchmark computation of solution for A . X = 2 . B, "
+      "where A is a non-unit lower triangular matrix, and B is an m by n matrix\n\n"
+      "options");
 
   // clang-format off
   desc_commandline.add_options()

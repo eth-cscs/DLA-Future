@@ -71,6 +71,12 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   MatrixType a(GlobalElementSize{opts.m, opts.m}, TileElementSize{opts.mb, opts.mb}, comm_grid);
   MatrixType b(GlobalElementSize{opts.m, opts.n}, TileElementSize{opts.mb, opts.nb}, comm_grid);
 
+  auto sync_barrier = [&] () {
+    ::waitall_tiles(a);
+    ::waitall_tiles(b);
+    MPI_Barrier(world);
+  };
+
   const auto side = blas::Side::Left;
   const auto uplo = blas::Uplo::Lower;
   const auto op = blas::Op::NoTrans;
@@ -96,18 +102,12 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     set(a, setter_a);
     set(b, setter_b);
 
-    // wait all setup tasks before starting benchmark
-    ::waitall_tiles(a);
-    ::waitall_tiles(b);
-    MPI_Barrier(world);
+    sync_barrier();
 
     dlaf::common::Timer<> timeit;
     dlaf::Solver<Backend::MC>::triangular(comm_grid, side, uplo, op, diag, alpha, a, b);
 
-    // wait for last task and barrier for all ranks
-    ::waitall_tiles(a);
-    ::waitall_tiles(b);
-    MPI_Barrier(world);
+    sync_barrier();
 
     auto elapsed_time = timeit.elapsed();
 
@@ -124,9 +124,9 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 
     // (optional) run test
     if (opts.do_check) {
-      // TODO evaluate to change check
-      CHECK_MATRIX_NEAR(expected_b, b, 20 * (b.size().rows() + 1) * TypeUtilities<T>::error,
-                        20 * (b.size().rows() + 1) * TypeUtilities<T>::error);
+      // TODO do not check element by element, but evaluate the entire matrix
+      const double max_error = 20 * (b.size().rows() + 1) * TypeUtilities<T>::error;
+      CHECK_MATRIX_NEAR(expected_b, b, max_error, 0);
     }
   }
 

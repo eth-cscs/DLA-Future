@@ -187,20 +187,9 @@ options_t check_options(hpx::program_options::variables_map& vm) {
   };
   // clang-format on
 
-  if (opts.m <= 0)
-    throw std::runtime_error("A size must be a positive number");
-  if (opts.mb <= 0)
-    throw std::runtime_error("A block size must be a positive number");
-
-  if (opts.n <= 0)
-    throw std::runtime_error("b number of cols must be a positive number");
-  if (opts.nb <= 0)
-    throw std::runtime_error("b block width must be a positive number");
-
-  if (opts.grid_rows <= 0)
-    throw std::runtime_error("number of grid rows must be a positive number");
-  if (opts.grid_cols <= 0)
-    throw std::runtime_error("number of grid columns must be a positive number");
+  DLAF_ASSERT(opts.m > 0 && opts.n > 0, opts.m, opts.n);
+  DLAF_ASSERT(opts.mb > 0 && opts.nb > 0, opts.mb, opts.nb);
+  DLAF_ASSERT(opts.grid_rows > 0 && opts.grid_cols > 0, opts.grid_rows, opts.grid_cols);
 
   return opts;
 }

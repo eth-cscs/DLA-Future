@@ -46,8 +46,8 @@ using MatrixType = dlaf::Matrix<T, Device::CPU>;
 
 struct options_t {
   SizeType m;
-  SizeType mb;
   SizeType n;
+  SizeType mb;
   SizeType nb;
   int grid_rows;
   int grid_cols;
@@ -138,18 +138,20 @@ int main(int argc, char** argv) {
 
   // options
   using namespace hpx::program_options;
-  options_description desc_commandline("Usage: " HPX_APPLICATION_STRING " [options]");
+  options_description desc_commandline("Benchmark computation of solution for A . x = 2 . b, "
+                                       "where A is a non-unit lower triangular matrix\n\n"
+                                       "options");
 
   // clang-format off
   desc_commandline.add_options()
-    ("matrix-size",       value<SizeType>()->default_value(4096),  "Matrix size.")
-    ("block-size",        value<SizeType>()->default_value(256),   "Block cyclic distribution size.")
-    ("result-cols",       value<SizeType>()->default_value(512),   "Matrix size.")
-    ("result-block-cols", value<SizeType>()->default_value(512),   "Block cyclic distribution size.")
-    ("grid-rows",         value<int>()     ->default_value(1),     "Number of row processes in the 2D communicator.")
-    ("grid-cols",         value<int>()     ->default_value(1),     "Number of column processes in the 2D communicator.")
-    ("nruns",             value<int64_t>() ->default_value(1),     "Number of runs to compute the cholesky")
-    ("check-result",      bool_switch()    ->default_value(false), "Check the triangular system solution (for each run)")
+    ("m",             value<SizeType>()->default_value(4096),  "Matrix b rows")
+    ("n",             value<SizeType>()->default_value(512),   "Matrix b columns")
+    ("mb",            value<SizeType>()->default_value(256),   "Matrix b block rows")
+    ("nb",            value<SizeType>()->default_value(512),   "Matrix b block columns")
+    ("grid-rows",     value<int>()     ->default_value(1),     "Number of row processes in the 2D communicator.")
+    ("grid-cols",     value<int>()     ->default_value(1),     "Number of column processes in the 2D communicator.")
+    ("nruns",         value<int64_t>() ->default_value(1),     "Number of runs to compute the cholesky")
+    ("check-result",  bool_switch()    ->default_value(false), "Check the triangular system solution (for each run)")
   ;
   // clang-format on
 
@@ -174,15 +176,16 @@ int main(int argc, char** argv) {
 namespace {
 
 options_t check_options(hpx::program_options::variables_map& vm) {
+  // clang-format off
   options_t opts = {
-      vm["matrix-size"].as<SizeType>(), vm["block-size"].as<SizeType>(),
-      vm["result-cols"].as<SizeType>(), vm["result-block-cols"].as<SizeType>(),
-      vm["grid-rows"].as<int>(),        vm["grid-cols"].as<int>(),
+    vm["m"].as<SizeType>(),     vm["n"].as<SizeType>(),
+    vm["mb"].as<SizeType>(),    vm["nb"].as<SizeType>(),
+    vm["grid-rows"].as<int>(),  vm["grid-cols"].as<int>(),
 
-      vm["nruns"].as<int64_t>(),
-
-      vm["check-result"].as<bool>(),
+    vm["nruns"].as<int64_t>(),
+    vm["check-result"].as<bool>(),
   };
+  // clang-format on
 
   if (opts.m <= 0)
     throw std::runtime_error("A size must be a positive number");

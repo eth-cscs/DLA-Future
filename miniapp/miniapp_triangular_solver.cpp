@@ -73,7 +73,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   MatrixType a(GlobalElementSize{opts.m, opts.m}, TileElementSize{opts.mb, opts.mb}, comm_grid);
   MatrixType b(GlobalElementSize{opts.m, opts.n}, TileElementSize{opts.mb, opts.nb}, comm_grid);
 
-  auto sync_barrier = [&] () {
+  auto sync_barrier = [&]() {
     ::waitall_tiles(a);
     ::waitall_tiles(b);
     MPI_Barrier(world);

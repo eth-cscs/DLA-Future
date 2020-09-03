@@ -9,11 +9,15 @@
 //
 
 #include <iostream>
+#include <limits>
+#include <type_traits>
 
 #include <mpi.h>
 #include <hpx/hpx.hpp>
 
 #include "dlaf/common/index2d.h"
+#include "dlaf/common/range2d.h"
+#include "dlaf/common/timer.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/init.h"
 #include "dlaf/matrix.h"
@@ -21,11 +25,8 @@
 #include "dlaf/solver/mc.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
-#include "dlaf_test/matrix/util_generic_blas.h"
-#include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/util_types.h"
 
-#include "dlaf/common/timer.h"
+#include "dlaf_test/matrix/util_matrix.h"
 
 namespace {
 
@@ -38,8 +39,6 @@ using dlaf::TileElementSize;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
 using dlaf::common::Ordering;
-
-using dlaf_test::TypeUtilities;
 
 using T = double;
 using MatrixType = dlaf::Matrix<T, Device::CPU>;
@@ -59,6 +58,9 @@ options_t check_options(hpx::program_options::variables_map& vm);
 
 void waitall_tiles(MatrixType& matrix);
 
+using matrix_values_t = std::function<T(const GlobalElementIndex&)>;
+using linear_system_t = std::tuple<matrix_values_t, matrix_values_t, matrix_values_t>;  // A, B, X
+linear_system_t sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType m);
 }
 
 int hpx_main(hpx::program_options::variables_map& vm) {
@@ -88,10 +90,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   auto add_mul = n * m * m / 2;
   const double total_ops = dlaf::total_ops<T>(add_mul, add_mul);
 
-  using dlaf::matrix::test::getLeftTriangularSystem;
-  std::function<T(const GlobalElementIndex&)> setter_a, setter_b, expected_b;
-  std::tie(setter_a, setter_b, expected_b) =
-      getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, a.size().rows());
+  matrix_values_t ref_a, ref_b, ref_x;
+  std::tie(ref_a, ref_b, ref_x) = ::sampleLeftTr(uplo, op, diag, alpha, a.size().rows());
 
   for (auto run_index = 0; run_index < opts.nruns; ++run_index) {
     if (0 == world.rank())
@@ -99,8 +99,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 
     // setup matrix A and b
     using dlaf::matrix::util::set;
-    set(a, setter_a);
-    set(b, setter_b);
+    set(a, ref_a);
+    set(b, ref_b);
 
     sync_barrier();
 
@@ -109,24 +109,27 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 
     sync_barrier();
 
-    auto elapsed_time = timeit.elapsed();
+    // benchmark results
+    if (0 == world.rank()) {
+      auto elapsed_time = timeit.elapsed();
+      double gigaflops = total_ops / elapsed_time / 1e9;
 
-    // compute gigaflops
-    double gigaflops = total_ops / elapsed_time / 1e9;
-
-    // print benchmark results
-    if (0 == world.rank())
       std::cout << "[" << run_index << "]"
                 << " " << elapsed_time << "s"
                 << " " << gigaflops << "GFlop/s"
                 << " " << a.size() << " " << a.blockSize() << " " << comm_grid.size() << " " << b.size()
                 << " " << b.blockSize() << " " << hpx::get_os_thread_count() << std::endl;
+    }
 
     // (optional) run test
     if (opts.do_check) {
       // TODO do not check element by element, but evaluate the entire matrix
-      const double max_error = 20 * (b.size().rows() + 1) * TypeUtilities<T>::error;
-      CHECK_MATRIX_NEAR(expected_b, b, max_error, 0);
+
+      static_assert(std::is_arithmetic<T>::value, "mul/add error is valid just for arithmetic types");
+      constexpr T muladd_error = 2 * std::numeric_limits<T>::epsilon();
+
+      const double max_error = 20 * (b.size().rows() + 1) * muladd_error;
+      CHECK_MATRIX_NEAR(ref_x, b, max_error, 0);
     }
   }
 
@@ -196,8 +199,70 @@ options_t check_options(hpx::program_options::variables_map& vm) {
 }
 
 void waitall_tiles(MatrixType& matrix) {
-  for (const auto tile_idx : dlaf::common::iterate_range2d(matrix.distribution().localNrTiles()))
+  using dlaf::common::iterate_range2d;
+  for (const auto tile_idx : iterate_range2d(matrix.distribution().localNrTiles()))
     matrix(tile_idx).get();
 }
 
+/// Returns a tuple of element generators of three matrices A(m x m), B (m x n), X (m x n), for which it
+/// holds op(A) X = alpha B (alpha can be any value).
+///
+/// The elements of op(A) (@p el_op_a) are chosen such that:
+///   op(A)_ik = (i+1) / (k+.5) * exp(I*(2*i-k)) for the referenced elements
+///   op(A)_ik = -9.9 otherwise,
+/// where I = 0 for real types or I is the complex unit for complex types.
+///
+/// The elements of X (@p el_x) are computed as
+///   X_kj = (k+.5) / (j+2) * exp(I*(k+j)).
+/// These data are typically used to check whether the result of the equation
+/// performed with any algorithm is consistent with the computed values.
+///
+/// Finally, the elements of B (@p el_b) should be:
+/// B_ij = (Sum_k op(A)_ik * X_kj) / alpha
+///      = (op(A)_ii * X_ij + (kk-1) * gamma) / alpha,
+/// where gamma = (i+1) / (j+2) * exp(I*(2*i+j)),
+///       kk = i+1 if op(a) is an lower triangular matrix, or
+///       kk = m-i if op(a) is an lower triangular matrix.
+/// Therefore
+/// B_ij = (X_ij + (kk-1) * gamma) / alpha, if diag == Unit
+/// B_ij = kk * gamma / alpha, otherwise.
+linear_system_t sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType m) {
+  static_assert(std::is_arithmetic<T>::value && !std::is_integral<T>::value,
+                "it is valid just with floating point values");
+
+  bool op_a_lower = (uplo == blas::Uplo::Lower && op == blas::Op::NoTrans) ||
+                    (uplo == blas::Uplo::Upper && op != blas::Op::NoTrans);
+
+  auto el_op_a = [op_a_lower, diag](const GlobalElementIndex& index) -> T {
+    if ((op_a_lower && index.row() < index.col()) || (!op_a_lower && index.row() > index.col()) ||
+        (diag == blas::Diag::Unit && index.row() == index.col()))
+      return -9.9;
+
+    const double i = index.row();
+    const double k = index.col();
+
+    return (i + 1) / (k + .5);
+  };
+
+  auto el_x = [](const GlobalElementIndex& index) -> T {
+    const double k = index.row();
+    const double j = index.col();
+
+    return (k + .5) / (j + 2);
+  };
+
+  auto el_b = [m, alpha, diag, op_a_lower, el_x](const GlobalElementIndex& index) -> T {
+    const dlaf::BaseType<T> kk = op_a_lower ? index.row() + 1 : m - index.row();
+
+    const double i = index.row();
+    const double j = index.col();
+    const T gamma = (i + 1) / (j + 2);
+    if (diag == blas::Diag::Unit)
+      return ((kk - 1) * gamma + el_x(index)) / alpha;
+    else
+      return kk * gamma / alpha;
+  };
+
+  return {el_op_a, el_b, el_x};
+}
 }

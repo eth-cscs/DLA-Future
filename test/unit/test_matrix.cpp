@@ -12,7 +12,11 @@
 #include "dlaf/matrix/copy.h"
 
 #include <vector>
-#include "gtest/gtest.h"
+
+#include <gtest/gtest.h>
+#include <hpx/include/util.hpp>
+#include <hpx/local/future.hpp>
+
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/util_matrix.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"

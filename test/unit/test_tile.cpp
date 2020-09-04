@@ -11,7 +11,10 @@
 #include "dlaf/tile.h"
 
 #include <stdexcept>
-#include "gtest/gtest.h"
+
+#include <gtest/gtest.h>
+#include <hpx/local/future.hpp>
+
 #include "dlaf/matrix/index.h"
 #include "dlaf/memory/memory_view.h"
 #include "dlaf_test/matrix/util_tile.h"

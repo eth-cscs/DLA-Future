@@ -13,6 +13,7 @@
 #include <limits>
 
 #include <gtest/gtest.h>
+#include <hpx/include/util.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix.h"

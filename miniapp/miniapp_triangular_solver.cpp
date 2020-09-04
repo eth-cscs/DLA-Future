@@ -117,8 +117,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       std::cout << "[" << run_index << "]"
                 << " " << elapsed_time << "s"
                 << " " << gigaflops << "GFlop/s"
-                << " " << a.size() << " " << a.blockSize() << " " << comm_grid.size() << " " << b.size()
-                << " " << b.blockSize() << " " << hpx::get_os_thread_count() << std::endl;
+                << " " << b.size() << " " << b.blockSize() << " " << comm_grid.size()
+                << " " << hpx::get_os_thread_count() << std::endl;
     }
 
     // (optional) run test

@@ -10,8 +10,10 @@
 
 #include "dlaf/util_matrix.h"
 
-#include <gtest/gtest.h>
 #include <vector>
+
+#include <gtest/gtest.h>
+#include <hpx/local/future.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/sync/basic.h"

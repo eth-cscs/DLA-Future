@@ -40,7 +40,7 @@
 #include <cstdio>
 
 #include <gtest/gtest.h>
-#include <hpx/hpx.hpp>
+#include <hpx/init.hpp>
 
 GTEST_API_ int test_main(int argc, char** argv) {
   std::printf("Running main() from gtest_hpx_main.cpp\n");

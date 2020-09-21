@@ -11,8 +11,8 @@
 
 /// @file
 
+#include <hpx/include/parallel_executors.hpp>
 #include <hpx/include/threads.hpp>
-#include <hpx/runtime/threads/executors/pool_executor.hpp>
 
 namespace dlaf {
 namespace comm {

@@ -14,6 +14,9 @@
 
 #include <sstream>
 #include <vector>
+
+#include <hpx/local/future.hpp>
+
 #include "gtest/gtest.h"
 #include "dlaf/matrix.h"
 

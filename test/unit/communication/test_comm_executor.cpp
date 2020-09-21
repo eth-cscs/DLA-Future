@@ -12,8 +12,6 @@
 
 #include <gtest/gtest.h>
 #include <mpi.h>
-#include <hpx/lcos/async.hpp>
-#include <hpx/lcos/wait_all.hpp>
 
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/executor.h"

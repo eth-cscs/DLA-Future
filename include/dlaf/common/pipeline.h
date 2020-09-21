@@ -10,13 +10,13 @@
 
 #pragma once
 
-#include <hpx/lcos/future.hpp>
-#include <hpx/lcos/promise.hpp>
+#include <hpx/include/util.hpp>
+#include <hpx/local/future.hpp>
 
 namespace dlaf {
 namespace common {
 
-/// A `hpx::promise` like type which is set upon destruction. The type separates the placement of data
+/// A `promise` like type which is set upon destruction. The type separates the placement of data
 /// (T) into the promise from notifying the corresponding `hpx::future`.
 ///
 /// Note: The type is non-copiable.
@@ -26,7 +26,8 @@ public:
   /// Create a wrapper.
   /// @param object	the resource to wrap (the wrapper becomes the owner of the resource),
   /// @param next	the promise that has to be set on destruction.
-  PromiseGuard(T object, hpx::promise<T> next) : object_(std::move(object)), promise_(std::move(next)) {}
+  PromiseGuard(T object, hpx::lcos::local::promise<T> next)
+      : object_(std::move(object)), promise_(std::move(next)) {}
 
   PromiseGuard(PromiseGuard&&) = default;
   PromiseGuard& operator=(PromiseGuard&&) = default;
@@ -52,8 +53,8 @@ public:
   };
 
 private:
-  T object_;                 ///< the wrapped object! it is actually owned by the wrapper.
-  hpx::promise<T> promise_;  ///< promise containing the shared state that will unlock the next user.
+  T object_;                              /// the object owned by the wrapper.
+  hpx::lcos::local::promise<T> promise_;  /// the shared state that will unlock the next user.
 };
 
 /// Pipeline takes ownership of a given object and manages the access to this resource by serializing
@@ -83,7 +84,7 @@ public:
   hpx::future<PromiseGuard<T>> operator()() {
     auto before_last = std::move(future_);
 
-    hpx::promise<T> promise_next;
+    hpx::lcos::local::promise<T> promise_next;
     future_ = promise_next.get_future();
 
     return before_last.then(hpx::launch::sync,
@@ -96,6 +97,5 @@ public:
 private:
   hpx::future<T> future_;  ///< This contains always the "tail" of the queue of futures.
 };
-
 }
 }

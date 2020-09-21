@@ -18,12 +18,11 @@
 #include <mpi.h>
 
 #include <hpx/config.hpp>
+#include <hpx/future.hpp>
 #include <hpx/include/async.hpp>
 #include <hpx/include/parallel_executors.hpp>
 #include <hpx/include/thread_executors.hpp>
-#include <hpx/lcos/future.hpp>
-#include <hpx/parallel/executors/execution_fwd.hpp>
-#include <hpx/util/yield_while.hpp>
+#include <hpx/modules/execution_base.hpp>
 
 #ifdef HPX_HAVE_LIB_ASYNC_MPI
 #include <hpx/modules/async_mpi.h>
@@ -87,15 +86,15 @@ public:
   executor(std::string pool, Communicator comm)
       : comm_(std::move(comm)), ex_(pool, hpx::threads::thread_priority_high) {}
 
-  constexpr bool operator==(const executor& rhs) const noexcept {
+  bool operator==(const executor& rhs) const noexcept {
     return comm_ == rhs.comm_ && ex_ == rhs.ex_;
   }
 
-  constexpr bool operator!=(const executor& rhs) const noexcept {
+  bool operator!=(const executor& rhs) const noexcept {
     return !(*this == rhs);
   }
 
-  constexpr const executor& context() const noexcept {
+  const executor& context() const noexcept {
     return *this;
   }
 

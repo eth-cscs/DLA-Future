@@ -11,7 +11,10 @@
 #include "dlaf/tile.h"
 
 #include <stdexcept>
-#include "gtest/gtest.h"
+
+#include <gtest/gtest.h>
+#include <hpx/local/future.hpp>
+
 #include "dlaf/matrix/index.h"
 #include "dlaf/memory/memory_view.h"
 #include "dlaf_test/matrix/util_tile.h"
@@ -273,7 +276,7 @@ TYPED_TEST(TileTest, PromiseToFuture) {
   auto mem_view = memory_view;  // Copy the memory view to check the elements later.
   Tile<Type, Device::CPU> tile(size, std::move(mem_view), ld);
 
-  hpx::promise<Tile<Type, Device::CPU>> tile_promise;
+  hpx::lcos::local::promise<Tile<Type, Device::CPU>> tile_promise;
   hpx::future<Tile<Type, Device::CPU>> tile_future = tile_promise.get_future();
   tile.setPromise(std::move(tile_promise));
   EXPECT_EQ(false, tile_future.is_ready());
@@ -300,7 +303,7 @@ TYPED_TEST(TileTest, PromiseToFutureConst) {
   auto mem_view = memory_view;  // Copy the memory view to check the elements later.
   Tile<Type, Device::CPU> tile(size, std::move(mem_view), ld);
 
-  hpx::promise<Tile<Type, Device::CPU>> tile_promise;
+  hpx::lcos::local::promise<Tile<Type, Device::CPU>> tile_promise;
   hpx::future<Tile<Type, Device::CPU>> tile_future = tile_promise.get_future();
   tile.setPromise(std::move(tile_promise));
   EXPECT_EQ(false, tile_future.is_ready());

@@ -14,7 +14,8 @@ class DlaFuture(CMakePackage, CudaPackage):
 
     maintainers = ['teonnik', 'albestro', 'Sely85']
 
-    version('develop', branch='master')
+    version('mpiexec', branch='teo/unified_mpi_interface')
+    version('cudaexec', branch='teo/cublas_executor')
 
     variant('doc', default=False,
             description='Build documentation.')

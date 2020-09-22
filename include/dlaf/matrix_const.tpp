@@ -54,14 +54,20 @@ hpx::shared_future<Tile<const T, device>> Matrix<const T, device>::read(
     tile_futures_[i] = p.get_future();
     tile_shared_futures_[i] = std::move(
         old_future.then(hpx::launch::sync, [p = std::move(p)](hpx::future<TileType>&& fut) mutable {
+          std::exception_ptr current_exception_ptr;
+
           try {
             return ConstTileType(std::move(fut.get().setPromise(std::move(p))));
           }
           catch (...) {
-            auto current_exception_ptr = std::current_exception();
-            p.set_exception(current_exception_ptr);
-            std::rethrow_exception(current_exception_ptr);
+            current_exception_ptr = std::current_exception();
           }
+
+          // The exception is set outside the catch block since set_exception
+          // may yield. Ending the catch block on a different worker thread than
+          // where it was started may lead to segfaults.
+          p.set_exception(current_exception_ptr);
+          std::rethrow_exception(current_exception_ptr);
         }));
   }
   return tile_shared_futures_[i];

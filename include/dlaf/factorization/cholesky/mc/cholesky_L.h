@@ -204,6 +204,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
   using ConstTile_t = Tile<const T, Device::CPU>;
 
   // constexpr int max_pending_comms = 100;
+  // constexpr int col_batch_size = 1;
 
   // Set up executor on the default queue with high priority.
   pool_executor executor_hp("default", thread_priority_high);
@@ -218,6 +219,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
 
   const matrix::Distribution& distr = mat_a.distribution();
   SizeType nrtile = mat_a.nrTiles().cols();
+  // TileElementSize blk_size = mat_a.blockSize();
 
   if (nrtile == 0)
     return;
@@ -231,40 +233,38 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
     // Create a placeholder that will store the shared futures representing the panel
     std::vector<hpx::shared_future<ConstTile_t>> panel(localnrtile_rows);
 
-    auto kk_idx = GlobalTileIndex(k, k);
-    auto kk_tile_rank = distr.rankGlobalTile(kk_idx);
+    GlobalTileIndex kk_idx(k, k);
+    comm::Index2D kk_rank = distr.rankGlobalTile(kk_idx);
+    hpx::shared_future<ConstTile_t> kk_tile;
 
-    if (this_rank.col() == kk_tile_rank.col()) {
-      // if the process is on the column of the diagonal tile and the panel
-      hpx::shared_future<ConstTile_t> kk_tile;
-
-      if (this_rank.row() == kk_tile_rank.row()) {
-        // if the process has the diagonal tile, factorize and send it
-        potrf_diag_tile(executor_hp, mat_a(kk_idx));
-        kk_tile = mat_a.read(kk_idx);
-        send_tile(executor_hp, mpi_col_task_chain, kk_tile);
-      }
-      else {
-        // receive the diagonal tile in processes holding panel tiles
-        kk_tile =
-            recv_tile<T>(executor_hp, mpi_col_task_chain, mat_a.tileSize(kk_idx), kk_tile_rank.row());
-      }
-
-      auto k_local_col = distr.localTileFromGlobalTile<Coord::Col>(k);
-      for (SizeType i_local = distr.nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
-           i_local < localnrtile_rows; ++i_local) {
-        LocalTileIndex ik_local_idx(i_local, k_local_col);
-        trsm_panel_tile(executor_hp, kk_tile, mat_a(ik_local_idx));
-        panel[i_local] = mat_a.read(ik_local_idx);
-        send_tile(executor_hp, mpi_row_task_chain, mat_a.read(ik_local_idx));
-      }
+    // if the process is on the column of the diagonal tile and the panel
+    if (this_rank == kk_rank) {
+      // if the process has the diagonal tile, factorize and send it
+      potrf_diag_tile(executor_hp, mat_a(kk_idx));
+      kk_tile = mat_a.read(kk_idx);
+      send_tile(executor_hp, mpi_col_task_chain, kk_tile);
     }
-    else {
-      for (SizeType i_local = distr.nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
-           i_local < localnrtile_rows; ++i_local) {
-        auto i = distr.globalTileFromLocalTile<Coord::Row>(i_local);
+    else if (this_rank.col() == kk_rank.col()) {
+      // receive the diagonal tile in processes holding panel tiles
+      kk_tile = recv_tile<T>(executor_hp, mpi_col_task_chain, mat_a.tileSize(kk_idx), kk_rank.row());
+    }
+
+    // Iterate over rows of the 'k'-th column
+    for (SizeType i = k + 1; i < nrtile; ++i) {
+      GlobalTileIndex ik_idx(i, k);
+      comm::Index2D ik_rank = mat_a.rankGlobalTile(ik_idx);
+
+      // If the tile belongs to this rank
+      if (this_rank == ik_rank) {
+        SizeType i_local = distr.localTileFromGlobalTile<Coord::Row>(i);
+        trsm_panel_tile(executor_hp, kk_tile, mat_a(ik_idx));
+        panel[i_local] = mat_a.read(ik_idx);
+        send_tile(executor_hp, mpi_row_task_chain, mat_a.read(ik_idx));
+      }
+      else if (this_rank.row() == ik_rank.row()) {
+        SizeType i_local = distr.localTileFromGlobalTile<Coord::Row>(i);
         panel[i_local] = recv_tile<T>(executor_hp, mpi_row_task_chain,
-                                      mat_a.tileSize(GlobalTileIndex(i, k)), kk_tile_rank.col());
+                                      mat_a.tileSize(GlobalTileIndex(i, k)), kk_rank.col());
       }
     }
 

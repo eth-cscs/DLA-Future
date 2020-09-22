@@ -179,7 +179,7 @@ void cholesky_L(Matrix<T, Device::CPU>& mat_a) {
       // Choose queue priority
       auto trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_normal;
 
-      // Update trailing matrix: diagonal element mat_a(j,j, reading mat_a.read(j,k), using herk (blas operation)
+      // Update trailing matrix: diagonal element mat_a(j,j), reading mat_a.read(j,k), using herk (blas operation)
       herk_trailing_diag_tile(trailing_matrix_executor, mat_a.read(LocalTileIndex{j, k}),
                               mat_a(LocalTileIndex{j, j}));
 
@@ -224,10 +224,8 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
   if (nrtile == 0)
     return;
 
-  auto localnrtile_rows = distr.localNrTiles().rows();
-  auto localnrtile_cols = distr.localNrTiles().cols();
-
-  auto this_rank = grid.rank();
+  SizeType localnrtile_rows = distr.localNrTiles().rows();
+  comm::Index2D this_rank = grid.rank();
 
   for (SizeType k = 0; k < nrtile - 1; ++k) {
     // Create a placeholder that will store the shared futures representing the panel
@@ -237,24 +235,22 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
     comm::Index2D kk_rank = distr.rankGlobalTile(kk_idx);
     hpx::shared_future<ConstTile_t> kk_tile;
 
-    // if the process is on the column of the diagonal tile and the panel
+    // Broadcast the diagonal tile along the `k`-th column
     if (this_rank == kk_rank) {
-      // if the process has the diagonal tile, factorize and send it
       potrf_diag_tile(executor_hp, mat_a(kk_idx));
       kk_tile = mat_a.read(kk_idx);
       send_tile(executor_hp, mpi_col_task_chain, kk_tile);
     }
     else if (this_rank.col() == kk_rank.col()) {
-      // receive the diagonal tile in processes holding panel tiles
       kk_tile = recv_tile<T>(executor_hp, mpi_col_task_chain, mat_a.tileSize(kk_idx), kk_rank.row());
     }
 
-    // Iterate over rows of the 'k'-th column
+    // Iterate over the k-th column
     for (SizeType i = k + 1; i < nrtile; ++i) {
       GlobalTileIndex ik_idx(i, k);
       comm::Index2D ik_rank = mat_a.rankGlobalTile(ik_idx);
 
-      // If the tile belongs to this rank
+      // Update and broadcast each k-th column tile along it's row
       if (this_rank == ik_rank) {
         SizeType i_local = distr.localTileFromGlobalTile<Coord::Row>(i);
         trsm_panel_tile(executor_hp, kk_tile, mat_a(ik_idx));
@@ -263,48 +259,41 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
       }
       else if (this_rank.row() == ik_rank.row()) {
         SizeType i_local = distr.localTileFromGlobalTile<Coord::Row>(i);
-        panel[i_local] = recv_tile<T>(executor_hp, mpi_row_task_chain,
-                                      mat_a.tileSize(GlobalTileIndex(i, k)), kk_rank.col());
+        GlobalTileIndex ik_idx(i, k);
+        panel[i_local] =
+            recv_tile<T>(executor_hp, mpi_row_task_chain, mat_a.tileSize(ik_idx), kk_rank.col());
       }
     }
 
-    auto nextlocaltilek = distr.nextLocalTileFromGlobalTile<Coord::Col>(k + 1);
-    for (SizeType j_local = nextlocaltilek; j_local < localnrtile_cols; ++j_local) {
-      auto j = distr.globalTileFromLocalTile<Coord::Col>(j_local);
+    // Iterate over the diagonal of the trailing matrix
+    for (SizeType j = k + 1; j < nrtile; ++j) {
+      pool_executor trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_normal;
+      // auto trailing_matrix_executor = (j_local == nextlocaltilek) ? executor_hp : executor_normal;
+      GlobalTileIndex jj_idx(j, j);
+      comm::Index2D jj_rank = mat_a.rankGlobalTile(jj_idx);
 
-      // Choose "high priority" for first tile of the trailing matrix
-      // Version 1: only the global k + 1 column is "high priority"
-      auto trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_normal;
-
-      // TODO: benchmark to find faster
-      // Version 2: the next column of each rank is "high priority"
-      //        auto trailing_matrix_executor = (j_local == nextlocaltilek) ? executor_hp :
-      //        executor_normal;
-
+      // Broadcast the jk-tile along the j-th column and update the jj-tile
       hpx::shared_future<ConstTile_t> col_panel;
-
-      auto j_rank_row = distr.rankGlobalTile<Coord::Row>(j);
-
-      if (this_rank.row() == j_rank_row) {
-        auto i_local = distr.localTileFromGlobalTile<Coord::Row>(j);
+      if (this_rank == jj_rank) {
+        SizeType i_local = distr.localTileFromGlobalTile<Coord::Row>(j);
         col_panel = panel[i_local];
         send_tile(executor_hp, mpi_col_task_chain, col_panel);
-
-        // Compute first tile of the column of the trailing matrix: diagonal element mat_a(j,j),
-        // reading mat_a.read(j,k), using herk (blas operation)
-        herk_trailing_diag_tile(trailing_matrix_executor, col_panel, mat_a(GlobalTileIndex{j, j}));
+        herk_trailing_diag_tile(trailing_matrix_executor, col_panel, mat_a(jj_idx));
       }
-      else {
-        col_panel = recv_tile<T>(executor_hp, mpi_col_task_chain, mat_a.tileSize(GlobalTileIndex(j, k)),
-                                 j_rank_row);
+      else if (this_rank.col() == jj_rank.col()) {
+        GlobalTileIndex jk_idx(j, k);
+        col_panel = recv_tile<T>(executor_hp, mpi_col_task_chain, mat_a.tileSize(jk_idx), jj_rank.row());
       }
 
-      for (SizeType i_local = distr.nextLocalTileFromGlobalTile<Coord::Row>(j + 1);
-           i_local < localnrtile_rows; ++i_local) {
-        // Update remaining trailing matrix mat_a(i,j), reading mat_a.read(i,k) and mat_a.read(j,k),
-        // using gemm (blas operation)
-        gemm_trailing_matrix_tile(trailing_matrix_executor, panel[i_local], col_panel,
-                                  mat_a(LocalTileIndex{i_local, j_local}));
+      // Iterate over the j-th column
+      for (SizeType i = j + 1; i < nrtile; ++i) {
+        // Update the ij-tile using the ik-tile and the jk-tile
+        GlobalTileIndex ij_idx(i, j);
+        comm::Index2D ij_rank = distr.rankGlobalTile(ij_idx);
+        if (this_rank == ij_rank) {
+          SizeType i_local = distr.localTileFromGlobalTile<Coord::Row>(i);
+          gemm_trailing_matrix_tile(trailing_matrix_executor, panel[i_local], col_panel, mat_a(ij_idx));
+        }
       }
     }
   }

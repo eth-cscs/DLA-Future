@@ -10,8 +10,8 @@
 
 #pragma once
 
-#include <hpx/lcos/future.hpp>
-#include <hpx/lcos/promise.hpp>
+#include <hpx/include/util.hpp>
+#include <hpx/local/future.hpp>
 
 namespace dlaf {
 namespace common {
@@ -24,17 +24,20 @@ namespace common {
 /// internal Wrapper object. This Wrapper contains the real resource, and it will do what is needed to
 /// unlock the next user as soon as the Wrapper is destroyed.
 template <class T>
-struct Pipeline {
+class Pipeline {
+  template <class PT>
+  using promise_t = hpx::lcos::local::promise<PT>;
+
 public:
   /// Wrapper is the object that manages the auto-release mechanism.
   template <class U>
   class Wrapper {
-    friend struct Pipeline<U>;
+    friend class Pipeline<U>;
 
     /// Create a wrapper.
     /// @param object	the resource to wrap (the wrapper becomes the owner of the resource),
     /// @param next	the promise that has to be set on destruction.
-    Wrapper(U&& object, hpx::promise<T> next) : object_(std::move(object)), promise_(std::move(next)) {}
+    Wrapper(U&& object, promise_t<T> next) : object_(std::move(object)), promise_(std::move(next)) {}
 
   public:
     /// Trivial move constructor (that invalidates the status of the source object).
@@ -59,8 +62,9 @@ public:
     }
 
   private:
-    U object_;                 ///< the wrapped object! it is actually owned by the wrapper.
-    hpx::promise<U> promise_;  ///< promise containing the shared state that will unlock the next user.
+    U object_;  ///< the wrapped object! it is actually owned by the wrapper.
+    /// promise containing the shared state that will unlock the next user.
+    promise_t<U> promise_;
   };
 
   /// Create a Pipeline by moving in the resource (it takes the ownership).
@@ -80,7 +84,7 @@ public:
   hpx::future<Wrapper<T>> operator()() {
     auto before_last = std::move(future_);
 
-    hpx::promise<T> promise_next;
+    promise_t<T> promise_next;
     future_ = promise_next.get_future();
 
     return before_last.then(hpx::launch::sync,
@@ -93,6 +97,5 @@ public:
 private:
   hpx::future<T> future_;  ///< This contains always the "tail" of the queue of futures.
 };
-
 }
 }

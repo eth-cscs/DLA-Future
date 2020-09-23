@@ -19,7 +19,8 @@ constexpr double M_PI = 3.141592;
 #endif
 
 #include <blas.hh>
-#include <hpx/hpx.hpp>
+#include <hpx/include/util.hpp>
+#include <hpx/local/future.hpp>
 
 #include "dlaf/blaspp/enums.h"
 #include "dlaf/common/assert.h"

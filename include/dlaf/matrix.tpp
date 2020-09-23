@@ -61,7 +61,7 @@ template <class T, Device device>
 hpx::future<Tile<T, device>> Matrix<T, device>::operator()(const LocalTileIndex& index) noexcept {
   std::size_t i = tileLinearIndex(index);
   hpx::future<TileType> old_future = std::move(tile_futures_[i]);
-  hpx::promise<TileType> p;
+  hpx::lcos::local::promise<TileType> p;
   tile_futures_[i] = p.get_future();
   tile_shared_futures_[i] = {};
   return old_future.then(hpx::launch::sync, [p = std::move(p)](hpx::future<TileType>&& fut) mutable {

@@ -11,8 +11,9 @@
 #pragma once
 
 #include <exception>
-#include <hpx/hpx.hpp>
 #include <ostream>
+
+#include <hpx/local/future.hpp>
 
 #include "dlaf/common/data_descriptor.h"
 #include "dlaf/matrix/index.h"
@@ -49,6 +50,9 @@ class Tile<const T, device>;
 template <class T, Device device>
 class Tile<const T, device> {
   friend Tile<T, device>;
+
+  template <class PT>
+  using promise_t = hpx::lcos::local::promise<PT>;
 
 public:
   using ElementType = T;
@@ -123,11 +127,14 @@ private:
   memory::MemoryView<ElementType, device> memory_view_;
   SizeType ld_;
 
-  std::unique_ptr<hpx::promise<Tile<ElementType, device>>> p_;
+  std::unique_ptr<promise_t<Tile<ElementType, device>>> p_;
 };
 
 template <class T, Device device>
 class Tile : public Tile<const T, device> {
+  template <class PT>
+  using promise_t = hpx::lcos::local::promise<PT>;
+
   friend Tile<const T, device>;
 
 public:
@@ -179,9 +186,9 @@ public:
   /// Sets the promise to which this Tile will be moved on destruction.
   ///
   /// @c setPromise can be called only once per object.
-  Tile& setPromise(hpx::promise<Tile<T, device>>&& p) {
+  Tile& setPromise(promise_t<Tile<T, device>>&& p) {
     DLAF_ASSERT(!p_, "setPromise has been already used on this object!");
-    p_ = std::make_unique<hpx::promise<Tile<T, device>>>(std::move(p));
+    p_ = std::make_unique<promise_t<Tile<T, device>>>(std::move(p));
     return *this;
   }
 

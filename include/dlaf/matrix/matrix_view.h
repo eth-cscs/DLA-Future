@@ -9,9 +9,11 @@
 //
 
 #pragma once
-#include <exception>
+
 #include <vector>
-#include "blas.hh"
+
+#include <blas.hh>
+#include <hpx/local/future.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/distribution.h"

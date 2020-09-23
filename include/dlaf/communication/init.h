@@ -13,7 +13,7 @@
 #include <mutex>
 
 #include <mpi.h>
-#include <hpx/synchronization/mutex.hpp>
+#include <hpx/mutex.hpp>
 
 #include "dlaf/communication/error.h"
 

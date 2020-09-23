@@ -38,7 +38,6 @@ set(CMAKE_CXX_STANDARD 14)
 # ---- CUDA
 set(DLAF_WITH_CUDA OFF CACHE BOOL "Enable CUDA support")
 if (DLAF_WITH_CUDA)
-  enable_language(CUDA)
   find_package(CUDALIBS REQUIRED)
 endif()
 
@@ -62,7 +61,7 @@ else()
 endif()
 
 # ----- HPX
-find_package(HPX 1.4.0 REQUIRED)
+find_package(HPX 1.5.0 REQUIRED)
 
 # ----- BLASPP/LAPACKPP
 find_package(OpenMP REQUIRED)

@@ -35,9 +35,9 @@ class EigensolverGenToStdLocalTest : public ::testing::Test {};
 TYPED_TEST_SUITE(EigensolverGenToStdLocalTest, MatrixElementTypes);
 
 const std::vector<std::tuple<SizeType, SizeType>> sizes = {
-    {0, 2},                              // m = 0
-    {2, 2}, {5, 5}, {13, 13}, {34, 34},  // m = mb
-    {4, 2}, {4, 3}, {16, 10}, {34, 13}   // m != mb
+    {0, 2},                      // m = 0
+    {5, 5}, {34, 34},            // m = mb
+    {4, 3}, {16, 10}, {34, 13}   // m != mb
 };
 
 template <class T>

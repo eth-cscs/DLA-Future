@@ -8,8 +8,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-DLAF_addTest(test_genToStd
-  SOURCES test_genToStd.cpp
+DLAF_addTest(test_gen_to_std
+  SOURCES test_gen_to_std.cpp
   LIBRARIES dlaf.eigensolver dlaf.core
   USE_MAIN HPX
 )

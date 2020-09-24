@@ -17,7 +17,7 @@
 namespace dlaf {
 
 template <class T>
-void printElementTile(const Tile<T, Device::CPU>& tile) {
+void printElements(const Tile<T, Device::CPU>& tile) {
   for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
     for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
       std::cout << tile({ii, jj}) << " ";

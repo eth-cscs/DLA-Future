@@ -15,7 +15,7 @@
 
 namespace dlaf {
 
-  //Note this works only on LOCAL MATRICES
+// Note this works only on LOCAL MATRICES
 template <class T>
 void printElements(Matrix<T, Device::CPU>& mat) {
   SizeType nrow = mat.size().rows();

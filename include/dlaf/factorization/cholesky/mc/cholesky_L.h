@@ -250,16 +250,17 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
       GlobalTileIndex ik_idx(i, k);
       comm::Index2D ik_rank = mat_a.rankGlobalTile(ik_idx);
 
+      if (this_rank.row() != ik_rank.row())
+        continue;
+
       // Update and broadcast each k-th column tile along it's row
-      if (this_rank == ik_rank) {
-        SizeType i_local = distr.localTileFromGlobalTile<Coord::Row>(i);
+      SizeType i_local = distr.localTileFromGlobalTile<Coord::Row>(i);
+      if (this_rank.col() == ik_rank.col()) {
         trsm_panel_tile(executor_hp, kk_tile, mat_a(ik_idx));
         panel[i_local] = mat_a.read(ik_idx);
         send_tile(executor_hp, mpi_row_task_chain, mat_a.read(ik_idx));
       }
-      else if (this_rank.row() == ik_rank.row()) {
-        SizeType i_local = distr.localTileFromGlobalTile<Coord::Row>(i);
-        GlobalTileIndex ik_idx(i, k);
+      else {
         panel[i_local] =
             recv_tile<T>(executor_hp, mpi_row_task_chain, mat_a.tileSize(ik_idx), kk_rank.col());
       }

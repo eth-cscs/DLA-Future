@@ -109,44 +109,20 @@ hpx::shared_future<Tile<const T, Device::CPU>> recv_tile(
   return hpx::future<ConstTile_t>(hpx::dataflow(executor_hp, std::move(recv_bcast_f), mpi_task_chain()));
 }
 
-enum class transfer_op { load, offload };
-
-template <transfer_op op>
-struct swap_if_load_f {
-  void operator()(SizeType&, SizeType&) noexcept {};  // noop
-};
-
-template <>
-struct swap_if_load_f<transfer_op::load> {
-  void operator()(SizeType& out_idx, SizeType& in_idx) noexcept {
-    std::swap(out_idx, in_idx);
-  };
-};
-
-/// Load a tile from the panel into the matrix or offload a tile from the panel into the matrix.
+/// Copy a tile
 ///
-/// @p matrix_tile_index the index of the matrix tile within the panel
-template <class T, transfer_op op>
-void transfer_tile(hpx::threads::executors::pool_executor executor_hp,
-                   hpx::shared_future<Tile<const T, Device::CPU>> in_tile,
-                   hpx::future<Tile<T, Device::CPU>> out_tile, int tile_idx) {
-  using ConstTile_t = Tile<const T, Device::CPU>;
-  using Tile_t = Tile<T, Device::CPU>;
-  auto load_f = [tile_idx](hpx::shared_future<ConstTile_t> in_ftile, hpx::future<Tile_t> out_ftile) {
-    ConstTile_t in_tile = in_ftile.get();
-    Tile_t out_tile = out_ftile.get();
-    TileElementSize out_ts = out_tile.size();
-    SizeType pt_offset = tile_idx * out_ts.rows();
-    for (SizeType mt_i = 0; mt_i < out_ts.rows(); ++mt_i) {
-      for (SizeType mt_j = 0; mt_j < out_ts.cols(); ++mt_j) {
-        TileElementIndex out_idx(mt_i, mt_j);             // matrix tile
-        TileElementIndex in_idx(pt_offset + mt_i, mt_j);  // panel tile
-        swap_if_load_f<op>(out_idx, in_idx);
-        out_tile(out_idx) = in_tile(in_idx);
-      }
+template <class T>
+void copy_tile(TileElementSize ts, TileElementIndex in_begin_idx,
+               Tile<const T, Device::CPU> const& in_tile, TileElementIndex out_begin_idx,
+               Tile<T, Device::CPU> const& out_tile) {
+  // TODO: `ts` must fit within in_tile and out_tile
+  for (SizeType i = 0; i < ts.rows(); ++i) {
+    for (SizeType j = 0; j < ts.cols(); ++j) {
+      TileElementIndex out_idx(i + out_begin_idx.row(), j + out_begin_idx.col());
+      TileElementIndex in_idx(i + in_begin_idx.row(), j + in_begin_idx.col());
+      out_tile(out_idx) = in_tile(in_idx);
     }
-  };
-  hpx::dataflow(executor_hp, std::move(load_f), std::move(in_tile), std::move(out_tile));
+  }
 }
 
 // Local implementation of Lower Cholesky factorization.
@@ -274,26 +250,26 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
       comm::Index2D jj_rank = mat_a.rankGlobalTile(jj_idx);
 
       // Broadcast the jk-tile along the j-th column and update the jj-tile
-      hpx::shared_future<ConstTile_t> col_panel;
+      hpx::shared_future<ConstTile_t> jk_tile;
       if (this_rank == jj_rank) {
-        SizeType i_local = distr.localTileFromGlobalTile<Coord::Row>(j);
-        col_panel = panel[i_local];
-        send_tile(executor_hp, mpi_col_task_chain, col_panel);
-        herk_trailing_diag_tile(trailing_matrix_executor, col_panel, mat_a(jj_idx));
+        SizeType j_local = distr.localTileFromGlobalTile<Coord::Row>(j);
+        jk_tile = panel[j_local];
+        send_tile(executor_hp, mpi_col_task_chain, jk_tile);
+        herk_trailing_diag_tile(trailing_matrix_executor, jk_tile, mat_a(jj_idx));
       }
       else if (this_rank.col() == jj_rank.col()) {
         GlobalTileIndex jk_idx(j, k);
-        col_panel = recv_tile<T>(executor_hp, mpi_col_task_chain, mat_a.tileSize(jk_idx), jj_rank.row());
+        jk_tile = recv_tile<T>(executor_hp, mpi_col_task_chain, mat_a.tileSize(jk_idx), jj_rank.row());
       }
 
       // Iterate over the j-th column
       for (SizeType i = j + 1; i < nrtile; ++i) {
-        // Update the ij-tile using the ik-tile and the jk-tile
+        // Update the ij-tile using the ik-tile and jk-tile
         GlobalTileIndex ij_idx(i, j);
         comm::Index2D ij_rank = distr.rankGlobalTile(ij_idx);
         if (this_rank == ij_rank) {
           SizeType i_local = distr.localTileFromGlobalTile<Coord::Row>(i);
-          gemm_trailing_matrix_tile(trailing_matrix_executor, panel[i_local], col_panel, mat_a(ij_idx));
+          gemm_trailing_matrix_tile(trailing_matrix_executor, panel[i_local], jk_tile, mat_a(ij_idx));
         }
       }
     }

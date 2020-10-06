@@ -352,8 +352,13 @@ DLAF_MATRIX_ETI(extern, std::complex<double>, Device::CPU)
 // DLAF_MATRIX_ETI(extern, std::complex<double>, Device::GPU)
 
 }
+#ifndef DLAF_DOXYGEN
+// Note: Doxygen doesn't deal correctly with template specialized inheritance,
+// and this line makes it run infinitely
+
 /// Make dlaf::matrix::Matrix available as dlaf::Matrix.
 using matrix::Matrix;
+#endif
 }
 
 #include "dlaf/matrix.tpp"

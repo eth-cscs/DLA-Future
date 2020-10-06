@@ -12,14 +12,14 @@ namespace dlaf {
 namespace matrix {
 
 template <class T, Device device>
-Matrix<const T, device>::Matrix(const matrix::LayoutInfo& layout, ElementType* ptr)
+Matrix<const T, device>::Matrix(const LayoutInfo& layout, ElementType* ptr)
     : MatrixBase({layout.size(), layout.blockSize()}) {
   memory::MemoryView<ElementType, device> mem(ptr, layout.minMemSize());
   setUpTiles(mem, layout);
 }
 
 template <class T, Device device>
-Matrix<const T, device>::Matrix(matrix::Distribution&& distribution, const matrix::LayoutInfo& layout,
+Matrix<const T, device>::Matrix(Distribution&& distribution, const matrix::LayoutInfo& layout,
                                 ElementType* ptr) noexcept
     : MatrixBase(std::move(distribution)) {
   DLAF_ASSERT(this->distribution().localSize() == layout.size(),
@@ -77,7 +77,7 @@ hpx::shared_future<Tile<const T, device>> Matrix<const T, device>::read(
 }
 
 template <class T, Device device>
-Matrix<const T, device>::Matrix(matrix::Distribution&& distribution,
+Matrix<const T, device>::Matrix(Distribution&& distribution,
                                 std::vector<hpx::future<TileType>>&& tile_futures,
                                 std::vector<hpx::shared_future<ConstTileType>>&& tile_shared_futures)
     : MatrixBase(std::move(distribution)), tile_futures_(std::move(tile_futures)),
@@ -85,7 +85,7 @@ Matrix<const T, device>::Matrix(matrix::Distribution&& distribution,
 
 template <class T, Device device>
 void Matrix<const T, device>::setUpTiles(const memory::MemoryView<ElementType, device>& mem,
-                                         const matrix::LayoutInfo& layout) noexcept {
+                                         const LayoutInfo& layout) noexcept {
   const auto& nr_tiles = layout.nrTiles();
   tile_shared_futures_.resize(futureVectorSize(nr_tiles));
 

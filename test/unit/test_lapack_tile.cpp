@@ -52,9 +52,13 @@ TYPED_TEST(TileOperationsTest, Hegst) {
   std::vector<std::tuple<SizeType, SizeType>> sizes = {{0, 0},  {3, 0},  {5, 3},  {9, 0}, {9, 1},
                                                        {17, 0}, {17, 7}, {32, 0}, {32, 4}};
 
+  std::vector<int> itypes = {1, 2, 3};
+  const auto uplo = blas::Uplo::Lower;
+  const auto itype = 1;
+
   for (const auto& size : sizes) {
     std::tie(m, extra_ld) = size;
-    testLowerHegst<TileElementIndex, Type>(m, extra_ld);
+    testHegst<TileElementIndex, Type>(itype, uplo, m, extra_ld);
   }
 }
 

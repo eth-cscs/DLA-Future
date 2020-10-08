@@ -40,39 +40,54 @@ using namespace dlaf_test;
 /// B_ij = (gamma)/(2^(i+j))*exp(I*alpha*(i-j))
 ///
 template <class ElementIndex, class T>
-auto getLowerHermitianSystem(T alpha, T beta, T gamma) {
-  std::function<T(const ElementIndex&)> el_l = [alpha, beta](const ElementIndex& index) {
-    if (index.row() < index.col())
+auto getHermitianSystem(blas::Uplo uplo, T alpha, T beta, T gamma) {
+  std::function<T(const ElementIndex&)> el_l = [uplo, alpha, beta](const ElementIndex& index) {
+    if ((uplo == blas::Uplo::Lower && index.row() < index.col()) ||
+        (uplo == blas::Uplo::Upper && index.row() > index.col()))
       return TypeUtilities<T>::element(-9.9, 0);
 
     double i = index.row();
     double j = index.col();
 
-    return TypeUtilities<T>::polar(beta / std::exp2(i - j), alpha * (i - j));
+    double sign;
+    if (uplo == blas::Uplo::Upper)
+      sign = -1.0;
+
+    return TypeUtilities<T>::polar(beta / std::exp2(i - j), sign * alpha * (i - j));
   };
 
-  std::function<T(const ElementIndex&)> el_a = [alpha, beta, gamma](const ElementIndex& index) {
-    if (index.row() < index.col())
+  std::function<T(const ElementIndex&)> el_a = [uplo, alpha, beta, gamma](const ElementIndex& index) {
+    if ((uplo == blas::Uplo::Lower && index.row() < index.col()) ||
+        (uplo == blas::Uplo::Upper && index.row() > index.col()))
       return TypeUtilities<T>::element(-9.9, 0);
 
     double i = index.row();
     double j = index.col();
+
+    double sign;
+    if (uplo == blas::Uplo::Upper)
+      sign = -1.0;
 
     return TypeUtilities<T>::polar((i + 1) * (j + 1) * (beta * beta * gamma) / std::exp2(i + j),
-                                   alpha * (i - j));
+                                   sign * alpha * (i - j));
   };
 
-  std::function<T(const ElementIndex&)> res_b = [alpha, gamma](const ElementIndex& index) {
-    if (index.row() < index.col())
+  std::function<T(const ElementIndex&)> el_b = [uplo, alpha, gamma](const ElementIndex& index) {
+    if ((uplo == blas::Uplo::Lower && index.row() < index.col()) ||
+        (uplo == blas::Uplo::Upper && index.row() > index.col()))
       return TypeUtilities<T>::element(-9.9, 0);
 
     double i = index.row();
     double j = index.col();
 
-    return TypeUtilities<T>::polar(gamma / std::exp2(i + j), alpha * (i - j));
+    double sign;
+    if (uplo == blas::Uplo::Upper)
+      sign = -1.0;
+
+    return TypeUtilities<T>::polar(gamma / std::exp2(i + j), sign * alpha * (i - j));
   };
 
-  return std::make_tuple(el_l, el_a, res_b);
+  return std::make_tuple(el_l, el_a, el_b);
 }
 
 }

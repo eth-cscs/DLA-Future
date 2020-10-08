@@ -17,7 +17,8 @@
 namespace dlaf {
 
 template <class T>
-void Eigensolver<Backend::MC>::genToStd(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l) {
+void Eigensolver<Backend::MC>::genToStd(blas::Uplo uplo, Matrix<T, Device::CPU>& mat_a,
+                                        Matrix<T, Device::CPU>& mat_l) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_size(mat_l), mat_l);
@@ -25,7 +26,12 @@ void Eigensolver<Backend::MC>::genToStd(Matrix<T, Device::CPU>& mat_a, Matrix<T,
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
   DLAF_ASSERT(matrix::local_matrix(mat_l), mat_l);
 
-  internal::mc::genToStd_L(mat_a, mat_l);
+  if (uplo == blas::Uplo::Lower)
+    internal::mc::genToStd_L(mat_a, mat_l);
+  else {
+    std::cout << "uplo = Upper not yet implemented" << std::endl;
+    std::abort();
+  }
 }
 
 }

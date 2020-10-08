@@ -35,13 +35,13 @@ class EigensolverGenToStdLocalTest : public ::testing::Test {};
 TYPED_TEST_SUITE(EigensolverGenToStdLocalTest, MatrixElementTypes);
 
 const std::vector<std::tuple<SizeType, SizeType>> sizes = {
-    {0, 2},                     // m = 0
-    {5, 5}, {34, 34},           // m = mb
-    {4, 3}, {16, 10}, {34, 13}  // m != mb
+    {0, 2},                              // m = 0
+    {5, 5}, {34, 34},                    // m = mb
+    {4, 3}, {16, 10}, {34, 13}, {32, 5}  // m != mb
 };
 
 template <class T>
-void testGenToStdEigensolver(T alpha, T beta, T gamma, SizeType m, SizeType mb) {
+void testGenToStdEigensolver(blas::Uplo uplo, T alpha, T beta, T gamma, SizeType m, SizeType mb) {
   std::function<T(const GlobalElementIndex&)> el_l, el_a, res_b;
 
   LocalElementSize size(m, m);
@@ -50,12 +50,13 @@ void testGenToStdEigensolver(T alpha, T beta, T gamma, SizeType m, SizeType mb) 
   Matrix<T, Device::CPU> mat_a(size, block_size);
   Matrix<T, Device::CPU> mat_l(size, block_size);
 
-  std::tie(el_l, el_a, res_b) = test::getLowerHermitianSystem<GlobalElementIndex, T>(alpha, beta, gamma);
+  std::tie(el_l, el_a, res_b) =
+      test::getHermitianSystem<GlobalElementIndex, T>(uplo, alpha, beta, gamma);
 
   set(mat_a, el_a);
   set(mat_l, el_l);
 
-  Eigensolver<Backend::MC>::genToStd(mat_a, mat_l);
+  Eigensolver<Backend::MC>::genToStd(uplo, mat_a, mat_l);
 
   CHECK_MATRIX_NEAR(res_b, mat_a, 10 * (mat_a.size().rows() + 1) * TypeUtilities<T>::error,
                     10 * (mat_a.size().rows() + 1) * TypeUtilities<T>::error);
@@ -63,6 +64,7 @@ void testGenToStdEigensolver(T alpha, T beta, T gamma, SizeType m, SizeType mb) 
 
 TYPED_TEST(EigensolverGenToStdLocalTest, Correctness) {
   SizeType m, mb;
+  blas::Uplo uplo = blas::Uplo::Lower;
 
   for (auto sz : sizes) {
     std::tie(m, mb) = sz;
@@ -70,6 +72,6 @@ TYPED_TEST(EigensolverGenToStdLocalTest, Correctness) {
     BaseType<TypeParam> beta = 1.5f;
     BaseType<TypeParam> gamma = -1.1f;
 
-    testGenToStdEigensolver(alpha, beta, gamma, m, mb);
+    testGenToStdEigensolver(uplo, alpha, beta, gamma, m, mb);
   }
 }

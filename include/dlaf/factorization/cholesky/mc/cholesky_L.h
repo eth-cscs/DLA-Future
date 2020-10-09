@@ -9,6 +9,7 @@
 //
 #pragma once
 
+#include <hpx/async_combinators/split_future.hpp>
 #include <hpx/include/parallel_executors.hpp>
 #include <hpx/include/threads.hpp>
 #include <hpx/lcos_fwd.hpp>
@@ -26,6 +27,7 @@
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix.h"
 #include "dlaf/matrix/distribution.h"
+#include "dlaf/memory/memory_view.h"
 #include "dlaf/util_matrix.h"
 
 namespace dlaf {
@@ -125,6 +127,76 @@ void copy_tile(TileElementSize ts, TileElementIndex in_begin_idx,
   }
 }
 
+// Calculates the batch size along a column
+//
+inline TileElementSize batch_sz(TileElementSize blk_sz, TileElementSize last_tile, SizeType ntiles) {
+  return TileElementSize(blk_sz.rows() * (ntiles - 1) + last_tile.rows(), last_tile.cols());
+}
+
+template <class T>
+hpx::future<Tile<const T, Device::CPU>> coalesce_tiles(
+    hpx::threads::executors::pool_executor ex, SizeType ntiles, TileElementSize batch_sz,
+    SizeType i_panel_end, std::vector<hpx::shared_future<Tile<const T, Device::CPU>>> const& panel) {
+  using ConstTile_t = Tile<const T, Device::CPU>;
+  using Tile_t = Tile<T, Device::CPU>;
+  using MemView_t = memory::MemoryView<T, Device::CPU>;
+
+  std::vector<hpx::shared_future<ConstTile_t>> fmtile_arr(ntiles);
+  SizeType i_panel_start = i_panel_end - ntiles + 1;
+  for (SizeType i = 0; i < ntiles; ++i) {
+    fmtile_arr[i] = panel[i_panel_start + i];
+  }
+  auto coalesce_f = [batch_sz](std::vector<hpx::shared_future<ConstTile_t>> fmtile_arr) -> ConstTile_t {
+    MemView_t bmem(util::size_t::mul(batch_sz.rows(), batch_sz.cols()));
+    Tile_t btile(batch_sz, std::move(bmem), batch_sz.rows());
+
+    SizeType boffset = 0;
+    for (hpx::shared_future<ConstTile_t>& fmtile : fmtile_arr) {
+      ConstTile_t mtile = fmtile.get();
+      TileElementSize mtile_sz = mtile.size();
+      copy_tile(mtile_sz, TileElementIndex(0, 0), mtile, TileElementIndex(boffset, 0), btile);
+      boffset += mtile_sz.rows();
+    }
+
+    return std::move(btile);
+  };
+  return hpx::dataflow(ex, std::move(coalesce_f), std::move(fmtile_arr));
+}
+
+template <class T>
+void split_batch(hpx::threads::executors::pool_executor ex, SizeType ntiles, TileElementSize blk_sz,
+                 hpx::future<Tile<const T, Device::CPU>> fbtile, SizeType i_panel_end,
+                 std::vector<hpx::shared_future<Tile<const T, Device::CPU>>>& panel) {
+  using ConstTile_t = Tile<const T, Device::CPU>;
+  using Tile_t = Tile<T, Device::CPU>;
+  using MemView_t = memory::MemoryView<T, Device::CPU>;
+
+  auto split_f = [ntiles, blk_sz](hpx::future<ConstTile_t> fbtile) -> std::vector<ConstTile_t> {
+    ConstTile_t btile = fbtile.get();
+    TileElementSize btile_sz = btile.size();
+
+    std::vector<ConstTile_t> mtile_arr(ntiles);
+    SizeType btile_offset = 0;
+    for (SizeType i = 0; i < ntiles; ++i) {
+      SizeType begin_rows = (i != ntiles - 1) ? blk_sz.rows() : btile_sz.rows() - i * blk_sz.rows();
+      TileElementSize mtile_sz(begin_rows, btile_sz.cols());
+      MemView_t mtile_mem(mtile_sz.rows() * mtile_sz.cols());
+      Tile_t mtile(mtile_sz, mtile_mem, mtile_sz.rows());
+      copy_tile(mtile_sz, TileElementIndex(btile_offset, 0), btile, TileElementIndex(0, 0), mtile);
+      btile_offset += mtile_sz.rows();
+    }
+
+    return mtile_arr;
+  };
+  std::vector<hpx::future<ConstTile_t>> fbtile_arr =
+      hpx::split_future(hpx::dataflow(ex, std::move(split_f), std::move(fbtile)));
+
+  SizeType i_panel_start = i_panel_end - ntiles + 1;
+  for (SizeType i = 0; i < ntiles; ++i) {
+    panel[i_panel_start + i] = std::move(fbtile_arr[i]);
+  }
+}
+
 // Local implementation of Lower Cholesky factorization.
 template <class T>
 void cholesky_L(Matrix<T, Device::CPU>& mat_a) {
@@ -202,6 +274,9 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
 
   SizeType localnrtile_rows = distr.localNrTiles().rows();
   comm::Index2D this_rank = grid.rank();
+
+  // TODO: set as a runtime parameter
+  constexpr int batch_ntiles = 1;
 
   for (SizeType k = 0; k < nrtile - 1; ++k) {
     // Create a placeholder that will store the shared futures representing the panel

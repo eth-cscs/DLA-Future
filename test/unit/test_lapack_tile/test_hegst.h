@@ -42,24 +42,25 @@ void testHegst(int itype, blas::Uplo uplo, SizeType m, SizeType extra_ld) {
   SCOPED_TRACE(s.str());
 
   memory::MemoryView<T, Device::CPU> mem_a(mul(ld, size.cols()));
-  memory::MemoryView<T, Device::CPU> mem_l(mul(ld, size.cols()));
+  memory::MemoryView<T, Device::CPU> mem_t(mul(ld, size.cols()));
 
   Tile<T, Device::CPU> a(size, std::move(mem_a), ld);
-  Tile<T, Device::CPU> l(size, std::move(mem_l), ld);
+  Tile<T, Device::CPU> t(size, std::move(mem_t), ld);
 
   BaseType<T> alpha = 1.2f;
   BaseType<T> beta = 1.5f;
   BaseType<T> gamma = -1.1f;
 
-  std::function<T(const TileElementIndex&)> el_l, el_a, res_a;
+  std::function<T(const TileElementIndex&)> el_t, el_a, res_a;
 
-  std::tie(el_l, el_a, res_a) =
-      dlaf::matrix::test::getHermitianSystem<ElementIndex, BaseType<T>>(uplo, alpha, beta, gamma);
+  std::tie(el_t, el_a, res_a) =
+      dlaf::matrix::test::getGeneralizedEigenvalueSystem<ElementIndex, BaseType<T>>(m, itype, uplo,
+                                                                                    alpha, beta, gamma);
 
-  set(l, el_l);
+  set(t, el_t);
   set(a, el_a);
 
-  tile::hegst(itype, uplo, a, l);
+  tile::hegst(itype, uplo, a, t);
 
   CHECK_TILE_NEAR(res_a, a, 10 * (m + 1) * TypeUtilities<T>::error,
                   10 * (m + 1) * TypeUtilities<T>::error);

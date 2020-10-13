@@ -53,12 +53,14 @@ TYPED_TEST(TileOperationsTest, Hegst) {
                                                        {17, 0}, {17, 7}, {32, 0}, {32, 4}};
 
   std::vector<int> itypes = {1, 2, 3};
-  const auto uplo = blas::Uplo::Lower;
-  const auto itype = 1;
 
   for (const auto& size : sizes) {
-    std::tie(m, extra_ld) = size;
-    testHegst<TileElementIndex, Type>(itype, uplo, m, extra_ld);
+    for (const auto& uplo : blas_uplos) {
+      for (const auto& itype : itypes) {
+        std::tie(m, extra_ld) = size;
+        testHegst<TileElementIndex, Type>(itype, uplo, m, extra_ld);
+      }
+    }
   }
 }
 

@@ -54,8 +54,8 @@ void testHegst(int itype, blas::Uplo uplo, SizeType m, SizeType extra_ld) {
   std::function<T(const TileElementIndex&)> el_t, el_a, res_a;
 
   std::tie(el_t, el_a, res_a) =
-      dlaf::matrix::test::getGeneralizedEigenvalueSystem<ElementIndex, BaseType<T>>(m, itype, uplo,
-                                                                                    alpha, beta, gamma);
+      dlaf::matrix::test::getGenToStdElementSetters<ElementIndex, BaseType<T>>(m, itype, uplo, alpha,
+                                                                               beta, gamma);
 
   set(t, el_t);
   set(a, el_a);

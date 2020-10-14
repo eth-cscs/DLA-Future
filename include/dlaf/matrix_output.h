@@ -12,12 +12,14 @@
 /// @file
 
 #include "dlaf/matrix.h"
+#include "dlaf/util_matrix.h"
 
 namespace dlaf {
 
-// Note this works only on LOCAL MATRICES
 template <class T>
 void printElements(Matrix<T, Device::CPU>& mat) {
+  DLAF_ASSERT(matrix::local_matrix(mat), mat);
+
   SizeType nrow = mat.size().rows();
   SizeType ncol = mat.size().cols();
   SizeType blockrow = mat.blockSize().rows();

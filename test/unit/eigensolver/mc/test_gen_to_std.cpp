@@ -51,7 +51,7 @@ void testGenToStdEigensolver(blas::Uplo uplo, T alpha, T beta, T gamma, SizeType
   Matrix<T, Device::CPU> mat_l(size, block_size);
 
   std::tie(el_l, el_a, res_b) =
-      test::getGeneralizedEigenvalueSystem<GlobalElementIndex, T>(m, 1, uplo, alpha, beta, gamma);
+      test::getGenToStdElementSetters<GlobalElementIndex, T>(m, 1, uplo, alpha, beta, gamma);
 
   set(mat_a, el_a);
   set(mat_l, el_l);

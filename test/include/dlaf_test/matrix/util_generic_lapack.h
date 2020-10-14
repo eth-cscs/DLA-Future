@@ -25,28 +25,32 @@ namespace test {
 
 using namespace dlaf_test;
 
-/// Returns a tuple of element generators of three matrices T (m x m), A(m x m) and B (m x m).
+/// Returns a tuple of element generators of three matrices T (n x n), A(n x n) and B (n x n).
 ///
 /// The elements of the Hermitian matrix A (@p el_a) are chosen such that for @p itype = 1:
-/// A_ij = (i+1)(j+1) (beta*beta*gamma)/(2^(i+j))*exp(I*alpha*(i-j))
+/// A_ij = ((i+1)(j+1)(beta^2 gamma)) / (2^(i+j)) exp(I alpha (i-j))
 /// or for @p itype = 2 and @p itype = 3:
-/// A_ij = gamma/(2^(i+j))*exp(I*alpha*(i-j))
+/// A_ij = gamma / 2^(i+j) exp(I alpha (i-j))
 /// where alpha = 0 and I = 0 for real types or I is the complex unit for complex types.
 ///
 /// The elements of T (@p el_T), a triangular matrix, are computed, for @p itype = 1, as
-/// T_ij = beta/(2^(i-j)) * exp(I*alpha*(i-j))
+/// T_ij = beta / 2^(i-j) exp(I alpha (i-j))
 /// and, for @p itype = 2 or @p itype = 3, as
-/// T_ij = beta/(2^(-i-j)) * exp(I*alpha*(i-j))
+/// T_ij = beta / 2^(-i-j) exp(I alpha (i-j))
 /// When the matrix is @p Upper row and column indices are swapped.
 ///
 /// Finally, the elements of B (@p el_b) should be, for @p itype = 1:
-/// B_ij = (gamma)/(2^(i+j))*exp(I*alpha*(i-j))
+/// B_ij = gamma / 2^(i+j) exp(I alpha (i-j))
 /// and for @p itype = 2 or @p itype = 3:
-/// B_ij = ((n-i)*(n-j)*(beta*beta*gamma)/(2^(-i-j))*exp(I*alpha*(i-j))
+/// B_ij = ((n-i) (n-j) (beta^2 gamma)) / 2^(-i-j) exp(I alpha (i-j))
 /// where @p n is the size of the matrix.
 ///
 template <class ElementIndex, class T>
-auto getGeneralizedEigenvalueSystem(SizeType n, int itype, blas::Uplo uplo, T alpha, T beta, T gamma) {
+auto getGenToStdElementSetters(SizeType n, int itype, blas::Uplo uplo, T alpha, T beta, T gamma) {
+  DLAF_ASSERT(uplo == blas::Uplo::Lower || uplo == blas::Uplo::Upper, "Only Upper and Lower supported",
+              uplo);
+  DLAF_ASSERT(itype < 4, "Only itype = 1, 2, 3 allowed", itype);
+
   std::function<T(const ElementIndex&)> el_t = [itype, uplo, alpha, beta](const ElementIndex& index) {
     if ((uplo == blas::Uplo::Lower && index.row() < index.col()) ||
         (uplo == blas::Uplo::Upper && index.row() > index.col()))
@@ -61,20 +65,12 @@ auto getGeneralizedEigenvalueSystem(SizeType n, int itype, blas::Uplo uplo, T al
       j = index.row();
       i = index.col();
     }
-    else if (uplo == blas::Uplo::General) {
-      std::cout << "uplo == General not allowed" << std::endl;
-      std::abort;
-    }
 
     if (itype == 1) {
       return TypeUtilities<T>::polar(beta / std::exp2(i - j), alpha * (i - j));
     }
     else if (itype == 2 || itype == 3) {
       return TypeUtilities<T>::polar(beta / std::exp2(-i - j), alpha * (i - j));
-    }
-    else {
-      std::cout << "HEGST: itype > 3 now allowed" << std::endl;
-      std::abort;
     }
   };
 
@@ -93,10 +89,6 @@ auto getGeneralizedEigenvalueSystem(SizeType n, int itype, blas::Uplo uplo, T al
     else if (itype == 2 || itype == 3) {
       return TypeUtilities<T>::polar(gamma / std::exp2(i + j), alpha * (i - j));
     }
-    else {
-      std::cout << "HEGST: itype > 3 now allowed" << std::endl;
-      std::abort;
-    }
   };
 
   std::function<T(const ElementIndex&)> el_b = [n, itype, uplo, alpha, beta,
@@ -114,10 +106,6 @@ auto getGeneralizedEigenvalueSystem(SizeType n, int itype, blas::Uplo uplo, T al
     else if (itype == 2 || itype == 3) {
       return TypeUtilities<T>::polar((n - i) * (n - j) * (beta * beta * gamma) / std::exp2(-i - j),
                                      alpha * (i - j));
-    }
-    else {
-      std::cout << "HEGST: itype > 3 now allowed" << std::endl;
-      std::abort;
     }
   };
 

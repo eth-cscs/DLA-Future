@@ -26,6 +26,12 @@ namespace test {
 using namespace dlaf_test;
 
 /// Returns a tuple of element generators of three matrices T (n x n), A(n x n) and B (n x n).
+/// The equations solved by this routine are for @p itype = 1
+/// B = U^(-H) A U^(-1), if @p uplo = Upper,
+/// B = L^(-1) A L^(-H), if @p uplo = Lower;
+/// while for @p itype = 2 and @p itype = 3
+/// B = U A U^(H), if @p uplo = Upper,
+/// B = L^(H) A L, if @p uplo = Lower.
 ///
 /// The elements of T (@p el_T), a triangular matrix, are computed, for @p itype = 1, as
 /// T_ij = beta / 2^(i-j) exp(I alpha (i-j))

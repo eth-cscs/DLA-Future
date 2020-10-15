@@ -32,14 +32,15 @@ using dlaf::util::size_t::mul;
 template <class T, class CT = const T>
 void testHemm(blas::Side side, blas::Uplo uplo, SizeType m, SizeType n, SizeType extra_lda,
               SizeType extra_ldb, SizeType extra_ldc) {
+  DLAF_ASSERT(side == blas::Side::Left || side == blas::Side::Right,
+              "Only Left and Right side supported", side);
+
   SizeType k;
 
-  if (side == blas::Side::Left) {
+  if (side == blas::Side::Left)
     k = m;
-  }
-  else if (side == blas::Side::Right) {
+  else
     k = n;
-  }
 
   TileElementSize size_a(k, k);
 
@@ -92,7 +93,7 @@ void testHemm(blas::Side side, blas::Uplo uplo, SizeType m, SizeType n, SizeType
       double k = index.col();
       return TypeUtilities<T>::polar(.9 * (i + 1) * (k + 1), gamma * (i - k));
     }
-    else if (side == blas::Side::Right) {
+    else {
       double k = index.row();
       double j = index.col();
       return TypeUtilities<T>::polar(.9 * (j + 1) * (k + 1), gamma * (j - k));
@@ -105,7 +106,7 @@ void testHemm(blas::Side side, blas::Uplo uplo, SizeType m, SizeType n, SizeType
       double j = index.col();
       return TypeUtilities<T>::polar(.7 / ((j + 1) * (k + 1)), gamma * (k + j));
     }
-    else if (side == blas::Side::Right) {
+    else {
       double i = index.row();
       double k = index.col();
       return TypeUtilities<T>::polar(.7 / ((i + 1) * (k + 1)), gamma * (i + k));
@@ -126,7 +127,7 @@ void testHemm(blas::Side side, blas::Uplo uplo, SizeType m, SizeType n, SizeType
       return beta * el_c(index) + TypeUtilities<T>::element(0.63 * k, 0) * alpha *
                                       TypeUtilities<T>::polar((i + 1) / (j + 1), gamma * (i + j));
     }
-    if (side == blas::Side::Right) {
+    else {
       return beta * el_c(index) + TypeUtilities<T>::element(0.63 * k, 0) * alpha *
                                       TypeUtilities<T>::polar((j + 1) / (i + 1), gamma * (i + j));
     }

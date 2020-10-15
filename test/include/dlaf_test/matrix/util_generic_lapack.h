@@ -27,22 +27,22 @@ using namespace dlaf_test;
 
 /// Returns a tuple of element generators of three matrices T (n x n), A(n x n) and B (n x n).
 ///
+/// The elements of T (@p el_T), a triangular matrix, are computed, for @p itype = 1, as
+/// T_ij = beta / 2^(i-j) exp(I alpha (i-j))
+/// and, for @p itype = 2 or @p itype = 3, as
+/// T_ij = beta / 2^(j-i) exp(I alpha (i-j))
+/// When the matrix is @p Upper row and column indices are swapped.
+///
 /// The elements of the Hermitian matrix A (@p el_a) are chosen such that for @p itype = 1:
 /// A_ij = ((i+1)(j+1)(beta^2 gamma)) / (2^(i+j)) exp(I alpha (i-j))
 /// or for @p itype = 2 and @p itype = 3:
 /// A_ij = gamma / 2^(i+j) exp(I alpha (i-j))
 /// where alpha = 0 and I = 0 for real types or I is the complex unit for complex types.
 ///
-/// The elements of T (@p el_T), a triangular matrix, are computed, for @p itype = 1, as
-/// T_ij = beta / 2^(i-j) exp(I alpha (i-j))
-/// and, for @p itype = 2 or @p itype = 3, as
-/// T_ij = beta / 2^(-i-j) exp(I alpha (i-j))
-/// When the matrix is @p Upper row and column indices are swapped.
-///
 /// Finally, the elements of B (@p el_b) should be, for @p itype = 1:
 /// B_ij = gamma / 2^(i+j) exp(I alpha (i-j))
 /// and for @p itype = 2 or @p itype = 3:
-/// B_ij = ((n-i) (n-j) (beta^2 gamma)) / 2^(-i-j) exp(I alpha (i-j))
+/// B_ij = ((n-i) (n-j) (beta^2 gamma)) / 2^(i+j) exp(I alpha (i-j))
 /// where @p n is the size of the matrix.
 ///
 template <class ElementIndex, class T>
@@ -56,22 +56,12 @@ auto getGenToStdElementSetters(SizeType n, int itype, blas::Uplo uplo, T alpha, 
         (uplo == blas::Uplo::Upper && index.row() > index.col()))
       return TypeUtilities<T>::element(-9.9, 0);
 
-    double i, j;
-    if (uplo == blas::Uplo::Lower) {
-      i = index.row();
-      j = index.col();
-    }
-    else if (uplo == blas::Uplo::Upper) {
-      j = index.row();
-      i = index.col();
-    }
-
-    if (itype == 1) {
-      return TypeUtilities<T>::polar(beta / std::exp2(i - j), alpha * (i - j));
-    }
-    else if (itype == 2 || itype == 3) {
-      return TypeUtilities<T>::polar(beta / std::exp2(-i - j), alpha * (i - j));
-    }
+    double i = index.row();
+    double j = index.col();
+    if (itype == 1)
+      return TypeUtilities<T>::polar(beta / std::exp2(std::abs(i - j)), alpha * (i - j));
+    else
+      return TypeUtilities<T>::polar(beta * std::exp2(std::abs(i - j)), alpha * (i - j));
   };
 
   std::function<T(const ElementIndex&)> el_a = [itype, uplo, alpha, beta,
@@ -82,13 +72,11 @@ auto getGenToStdElementSetters(SizeType n, int itype, blas::Uplo uplo, T alpha, 
 
     double i = index.row();
     double j = index.col();
-    if (itype == 1) {
+    if (itype == 1)
       return TypeUtilities<T>::polar((i + 1) * (j + 1) * (beta * beta * gamma) / std::exp2(i + j),
                                      alpha * (i - j));
-    }
-    else if (itype == 2 || itype == 3) {
+    else
       return TypeUtilities<T>::polar(gamma / std::exp2(i + j), alpha * (i - j));
-    }
   };
 
   std::function<T(const ElementIndex&)> el_b = [n, itype, uplo, alpha, beta,
@@ -100,13 +88,11 @@ auto getGenToStdElementSetters(SizeType n, int itype, blas::Uplo uplo, T alpha, 
     double i = index.row();
     double j = index.col();
 
-    if (itype == 1) {
+    if (itype == 1)
       return TypeUtilities<T>::polar(gamma / std::exp2(i + j), alpha * (i - j));
-    }
-    else if (itype == 2 || itype == 3) {
-      return TypeUtilities<T>::polar((n - i) * (n - j) * (beta * beta * gamma) / std::exp2(-i - j),
+    else
+      return TypeUtilities<T>::polar((n - i) * (n - j) * (beta * beta * gamma) / std::exp2(i + j),
                                      alpha * (i - j));
-    }
   };
 
   return std::make_tuple(el_t, el_a, el_b);

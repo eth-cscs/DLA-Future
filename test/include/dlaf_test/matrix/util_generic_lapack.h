@@ -31,13 +31,12 @@ using namespace dlaf_test;
 /// T_ij = beta / 2^(i-j) exp(I alpha (i-j))
 /// and, for @p itype = 2 or @p itype = 3, as
 /// T_ij = beta / 2^(j-i) exp(I alpha (i-j))
-/// When the matrix is @p Upper row and column indices are swapped.
+/// where alpha = 0 and I = 0 for real types or I is the complex unit for complex types.
 ///
 /// The elements of the Hermitian matrix A (@p el_a) are chosen such that for @p itype = 1:
 /// A_ij = ((i+1)(j+1)(beta^2 gamma)) / (2^(i+j)) exp(I alpha (i-j))
 /// or for @p itype = 2 and @p itype = 3:
 /// A_ij = gamma / 2^(i+j) exp(I alpha (i-j))
-/// where alpha = 0 and I = 0 for real types or I is the complex unit for complex types.
 ///
 /// Finally, the elements of B (@p el_b) should be, for @p itype = 1:
 /// B_ij = gamma / 2^(i+j) exp(I alpha (i-j))

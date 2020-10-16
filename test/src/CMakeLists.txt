@@ -9,12 +9,11 @@
 #
 
 add_library(DLAF_gtest_hpx_main STATIC gtest_hpx_main.cpp)
-target_include_directories(DLAF_gtest_hpx_main PRIVATE ${HPX_INCLUDE_DIRS})
 target_link_libraries(DLAF_gtest_hpx_main
   PUBLIC
     gtest
   PRIVATE
-    ${HPX_LIBRARIES}
+    HPX::hpx
 )
 
 add_library(DLAF_gtest_mpi_main STATIC gtest_mpi_main.cpp gtest_mpi_listener.cpp)
@@ -26,11 +25,10 @@ target_link_libraries(DLAF_gtest_mpi_main
 )
 
 add_library(DLAF_gtest_mpihpx_main STATIC gtest_mpihpx_main.cpp gtest_mpi_listener.cpp)
-target_include_directories(DLAF_gtest_mpihpx_main PRIVATE ${HPX_INCLUDE_DIRS})
 target_link_libraries(DLAF_gtest_mpihpx_main
   PUBLIC
     gtest
   PRIVATE
     MPI::MPI_CXX
-    ${HPX_LIBRARIES}
+    HPX::hpx
 )

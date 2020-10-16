@@ -9,8 +9,12 @@
 //
 
 #pragma once
+
 #include <exception>
 #include <vector>
+
+#include <hpx/local/future.hpp>
+
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/layout_info.h"
@@ -95,7 +99,7 @@ public:
   /// @pre index.isIn(distribution().localNrTiles()).
   hpx::future<TileType> operator()(const LocalTileIndex& index) noexcept;
 
-  /// @brief Returns a future of the Tile with global index @p index.
+  /// Returns a future of the Tile with global index @p index.
   ///
   /// TODO: Sync details.
   /// @pre the global tile is stored in the current process,

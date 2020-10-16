@@ -11,7 +11,7 @@
 #include <iostream>
 
 #include <mpi.h>
-#include <hpx/hpx_init.hpp>
+#include <hpx/init.hpp>
 
 #include "dlaf/auxiliary/mc.h"
 #include "dlaf/communication/communicator_grid.h"
@@ -166,22 +166,22 @@ int main(int argc, char** argv) {
   ;
   // clang-format on
 
-  // Create the resource partitioner
-  hpx::resource::partitioner rp(desc_commandline, argc, argv);
+  hpx::init_params p;
+  p.desc_cmdline = desc_commandline;
+  p.rp_callback = [](auto& rp) {
+    int ntasks;
+    MPI_Comm_size(MPI_COMM_WORLD, &ntasks);
+    // if the user has asked for special thread pools for communication
+    // then set them up
+    if (ntasks > 1) {
+      // Create a thread pool with a single core that we will use for all
+      // communication related tasks
+      rp.create_thread_pool("mpi", hpx::resource::scheduling_policy::local_priority_fifo);
+      rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], "mpi");
+    }
+  };
 
-  int ntasks;
-  MPI_Comm_size(MPI_COMM_WORLD, &ntasks);
-
-  // if the user has asked for special thread pools for communication
-  // then set them up
-  if (ntasks > 1) {
-    // Create a thread pool with a single core that we will use for all
-    // communication related tasks
-    rp.create_thread_pool("mpi", hpx::resource::scheduling_policy::local_priority_fifo);
-    rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], "mpi");
-  }
-
-  auto ret_code = hpx::init(hpx_main, desc_commandline, argc, argv);
+  auto ret_code = hpx::init(argc, argv, p);
 
   return ret_code;
 }

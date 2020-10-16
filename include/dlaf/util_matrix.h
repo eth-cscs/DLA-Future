@@ -19,7 +19,8 @@ constexpr double M_PI = 3.141592;
 #endif
 
 #include <blas.hh>
-#include <hpx/hpx.hpp>
+#include <hpx/include/util.hpp>
+#include <hpx/local/future.hpp>
 
 #include "dlaf/blaspp/enums.h"
 #include "dlaf/common/assert.h"
@@ -296,8 +297,8 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const std:
 /// This means that the elements of a specific tile, no matter how the matrix is distributed,
 /// will be set with the same set of values.
 ///
-/// @pre @param matrix is a square matrix
-/// @pre @param matrix has a square blocksize
+/// @pre @param matrix is a square matrix,
+/// @pre @param matrix has a square blocksize.
 template <class T>
 void set_random_hermitian(Matrix<T, Device::CPU>& matrix) {
   internal::set_random_hermitian_with_offset(matrix, 0);
@@ -317,8 +318,8 @@ void set_random_hermitian(Matrix<T, Device::CPU>& matrix) {
 /// This means that the elements of a specific tile, no matter how the matrix is distributed,
 /// will be set with the same set of values.
 ///
-/// @pre @param matrix is a square matrix
-/// @pre @param matrix has a square blocksize
+/// @pre @param matrix is a square matrix,
+/// @pre @param matrix has a square blocksize.
 template <class T>
 void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
   const auto offset_value = dlaf::util::size_t::mul(2, to_sizet(matrix.size().rows()));

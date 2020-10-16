@@ -60,12 +60,11 @@ target_include_directories(dlaf.prop
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:include>
-    ${HPX_INCLUDE_DIRS}
 )
 target_link_libraries(dlaf.prop
   INTERFACE
     MPI::MPI_CXX
-    ${HPX_LIBRARIES}
+    HPX::hpx
     ${LAPACK_TARGET}
     lapackpp
     blaspp

@@ -20,8 +20,8 @@ public:
 
   template <class T = El>
   Tile(std::enable_if_t<std::is_same<T, El>::value && !std::is_const<T>::value, El*> ptr,
-       hpx::promise<Tile<El>>&& p)
-      : ptr_(ptr), p_(std::make_unique<hpx::promise<Tile>>(std::move(p))) {}
+       hpx::lcos::local::promise<Tile<El>>&& p)
+      : ptr_(ptr), p_(std::make_unique<hpx::lcos::local::promise<Tile>>(std::move(p))) {}
 
   Tile(const Tile&) = delete;
   Tile(Tile&& rhs) = default;
@@ -39,9 +39,9 @@ public:
 
   template <class T = El>
   std::enable_if_t<std::is_same<T, El>::value && !std::is_const<T>::value, Tile&> setPromise(
-      hpx::promise<Tile<El>>&& p) {
+      hpx::lcos::local::promise<Tile<El>>&& p) {
     assert(!p_);
-    p_ = std::make_unique<hpx::promise<Tile<El>>>(std::move(p));
+    p_ = std::make_unique<hpx::lcos::local::promise<Tile<El>>>(std::move(p));
     return *this;
   }
 
@@ -51,7 +51,7 @@ public:
 
 private:
   ncEl* ptr_;
-  std::unique_ptr<hpx::promise<Tile<ncEl>>> p_;
+  std::unique_ptr<hpx::lcos::local::promise<Tile<ncEl>>> p_;
 };
 
 template <class Type>
@@ -76,7 +76,7 @@ public:
     // Note: the copy of the i-th shared future hold by *this is destroyed when the operator(i) is called.
     if (!s_[i].valid()) {
       hpx::future<Type> fut = std::move(f_[i]);
-      hpx::promise<Type> p;
+      hpx::lcos::local::promise<Type> p;
       f_[i] = p.get_future();
       s_[i] = std::move(fut.then(hpx::launch::sync, [p = std::move(p)](hpx::future<Type>&& fut) mutable {
         return ConstType(std::move(fut.get().setPromise(std::move(p))));
@@ -123,7 +123,7 @@ public:
   // returned future is destroyed.
   hpx::future<Type> operator()(int i) {
     auto fut = std::move(f_[i]);
-    hpx::promise<Type> p;
+    hpx::lcos::local::promise<Type> p;
     f_[i] = p.get_future();
     s_[i] = {};
     return fut.then(hpx::launch::sync, [p = std::move(p)](hpx::future<Type>&& fut) mutable {
@@ -150,8 +150,8 @@ protected:
 
 public:
   MatrixRW(std::array<hpx::future<Type>, 4>&& f, std::array<hpx::shared_future<ConstType>, 4>&& s,
-           std::array<std::unique_ptr<hpx::promise<Type>>, 4>&& p,
-           std::array<std::unique_ptr<hpx::promise<ConstType>>, 4>&& sp,
+           std::array<std::unique_ptr<hpx::lcos::local::promise<Type>>, 4>&& p,
+           std::array<std::unique_ptr<hpx::lcos::local::promise<ConstType>>, 4>&& sp,
            std::array<hpx::shared_future<ConstType>, 4> sf)
       : Matrix<El>(std::move(f), std::move(s)), p_(std::move(p)), sp_(std::move(sp)), sf_(sf) {}
 
@@ -181,8 +181,8 @@ public:
   }
 
 private:
-  std::array<std::unique_ptr<hpx::promise<Type>>, 4> p_;
-  std::array<std::unique_ptr<hpx::promise<ConstType>>, 4> sp_;
+  std::array<std::unique_ptr<hpx::lcos::local::promise<Type>>, 4> p_;
+  std::array<std::unique_ptr<hpx::lcos::local::promise<ConstType>>, 4> sp_;
   std::array<hpx::shared_future<ConstType>, 4> sf_;
 };
 
@@ -217,15 +217,15 @@ MatrixRW<El> Matrix<El>::block() {
   // Create a new future for each tile. The i-th future will be set as ready when the done(i)
   // method of MatrixRW is called or the MatrixRW object is destroyed.
   // The current futures and shared futures are moved to the MatrixRW object.
-  std::array<std::unique_ptr<hpx::promise<Type>>, 4> p;
-  std::array<std::unique_ptr<hpx::promise<ConstType>>, 4> sp;
+  std::array<std::unique_ptr<hpx::lcos::local::promise<Type>>, 4> p;
+  std::array<std::unique_ptr<hpx::lcos::local::promise<ConstType>>, 4> sp;
 
   std::array<hpx::future<Type>, 4> f = std::move(f_);
   std::array<hpx::shared_future<ConstType>, 4> s = std::move(s_);
 
   for (std::size_t i = 0; i < f_.size(); ++i) {
-    p[i] = std::make_unique<hpx::promise<Type>>();
-    sp[i] = std::make_unique<hpx::promise<ConstType>>();
+    p[i] = std::make_unique<hpx::lcos::local::promise<Type>>();
+    sp[i] = std::make_unique<hpx::lcos::local::promise<ConstType>>();
     f_[i] = std::move(p[i]->get_future());
     s_[i] = sp[i]->get_future();
   }

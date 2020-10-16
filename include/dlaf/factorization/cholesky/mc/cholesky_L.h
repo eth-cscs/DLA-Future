@@ -15,6 +15,8 @@
 #include <hpx/lcos_fwd.hpp>
 #include <hpx/util/annotated_function.hpp>
 
+#include <unordered_map>
+
 #include "dlaf/blas_tile.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
@@ -135,16 +137,17 @@ inline TileElementSize get_batch_sz(TileElementSize blk_sz, TileElementSize last
 
 template <class T>
 hpx::future<Tile<const T, Device::CPU>> coalesce_tiles(
-    hpx::threads::executors::pool_executor ex, SizeType nbtiles, TileElementSize batch_sz,
-    SizeType i_panel_end, std::vector<hpx::shared_future<Tile<const T, Device::CPU>>> const& panel) {
+    hpx::threads::executors::pool_executor ex, TileElementSize batch_sz,
+    std::vector<SizeType> const& batch_indices,
+    std::unordered_map<SizeType, hpx::shared_future<Tile<const T, Device::CPU>>> const& panel) {
   using ConstTile_t = Tile<const T, Device::CPU>;
   using Tile_t = Tile<T, Device::CPU>;
   using MemView_t = memory::MemoryView<T, Device::CPU>;
 
+  SizeType nbtiles = static_cast<SizeType>(batch_indices.size());
   std::vector<hpx::shared_future<ConstTile_t>> fmtile_arr(nbtiles);
-  SizeType i_panel_start = i_panel_end - nbtiles + 1;
   for (SizeType i = 0; i < nbtiles; ++i) {
-    fmtile_arr[i] = panel[i_panel_start + i];
+    fmtile_arr[i] = panel.at(batch_indices[i]);
   }
   auto coalesce_f = [batch_sz](std::vector<hpx::shared_future<ConstTile_t>> fmtile_arr) -> ConstTile_t {
     MemView_t bmem(util::size_t::mul(batch_sz.rows(), batch_sz.cols()));
@@ -164,13 +167,15 @@ hpx::future<Tile<const T, Device::CPU>> coalesce_tiles(
 }
 
 template <class T>
-void split_batch(hpx::threads::executors::pool_executor ex, SizeType nbtiles, TileElementSize blk_sz,
-                 hpx::future<Tile<const T, Device::CPU>> fbtile, SizeType i_panel_end,
-                 std::vector<hpx::shared_future<Tile<const T, Device::CPU>>>& panel) {
+void split_batch(hpx::threads::executors::pool_executor ex, TileElementSize blk_sz,
+                 hpx::future<Tile<const T, Device::CPU>> fbtile,
+                 std::vector<SizeType> const& batch_indices,
+                 std::unordered_map<SizeType, hpx::shared_future<Tile<const T, Device::CPU>>>& panel) {
   using ConstTile_t = Tile<const T, Device::CPU>;
   using Tile_t = Tile<T, Device::CPU>;
   using MemView_t = memory::MemoryView<T, Device::CPU>;
 
+  SizeType nbtiles = static_cast<SizeType>(batch_indices.size());
   auto split_f = [nbtiles, blk_sz](hpx::future<ConstTile_t> fbtile) -> std::vector<ConstTile_t> {
     const ConstTile_t& btile = fbtile.get();
     TileElementSize btile_sz = btile.size();
@@ -193,9 +198,8 @@ void split_batch(hpx::threads::executors::pool_executor ex, SizeType nbtiles, Ti
   std::vector<hpx::future<ConstTile_t>> fmtile_arr =
       hpx::split_future(hpx::dataflow(ex, std::move(split_f), std::move(fbtile)), nbtiles);
 
-  SizeType i_panel_start = i_panel_end - nbtiles + 1;
   for (SizeType i = 0; i < nbtiles; ++i) {
-    panel[i_panel_start + i] = std::move(fmtile_arr[i]);
+    panel[batch_indices[i]] = std::move(fmtile_arr[i]);
   }
 }
 
@@ -271,31 +275,31 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
   if (nrtile == 0)
     return;
 
-  SizeType localnrtile_rows = distr.localNrTiles().rows();
   comm::Index2D this_rank = grid.rank();
 
   constexpr int ntiles_batch = 2;
+  std::vector<SizeType> batch_indices;
+  batch_indices.reserve(ntiles_batch);
 
   for (SizeType k = 0; k < nrtile - 1; ++k) {
     // Create a placeholder that will store the shared futures representing the panel
-    std::vector<hpx::shared_future<ConstTile_t>> panel(localnrtile_rows);
+    std::unordered_map<SizeType, hpx::shared_future<ConstTile_t>> panel;
 
     GlobalTileIndex kk_idx(k, k);
     comm::Index2D kk_rank = distr.rankGlobalTile(kk_idx);
-    hpx::shared_future<ConstTile_t> kk_tile;
 
     // Broadcast the diagonal tile along the `k`-th column
     if (this_rank == kk_rank) {
       potrf_diag_tile(executor_hp, mat_a(kk_idx));
-      kk_tile = mat_a.read(kk_idx);
-      send_tile(executor_hp, mpi_col_task_chain, kk_tile);
+      panel[k] = mat_a.read(kk_idx);
+      send_tile(executor_hp, mpi_col_task_chain, panel[k]);
     }
     else if (this_rank.col() == kk_rank.col()) {
-      kk_tile = recv_tile<T>(executor_hp, mpi_col_task_chain, mat_a.tileSize(kk_idx), kk_rank.row());
+      panel[k] = recv_tile<T>(executor_hp, mpi_col_task_chain, mat_a.tileSize(kk_idx), kk_rank.row());
     }
 
     // Iterate over the k-th column
-    SizeType nbtiles = 0;
+    batch_indices.clear();
     for (SizeType i = k + 1; i < nrtile; ++i) {
       GlobalTileIndex ik_idx(i, k);
       comm::Index2D ik_rank = mat_a.rankGlobalTile(ik_idx);
@@ -304,31 +308,29 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
         continue;
 
       bool rank_is_on_k_col = this_rank.col() == ik_rank.col();
-      SizeType i_local = distr.localTileFromGlobalTile<Coord::Row>(i);
       if (rank_is_on_k_col) {
-        trsm_panel_tile(executor_hp, kk_tile, mat_a(ik_idx));
-        panel[i_local] = mat_a.read(ik_idx);
+        trsm_panel_tile(executor_hp, panel[k], mat_a(ik_idx));
+        panel[i] = mat_a.read(ik_idx);
       }
 
-      bool not_last_local_tile = i_local != localnrtile_rows - 1;
-      ++nbtiles;
-      if (nbtiles != ntiles_batch && not_last_local_tile)
+      batch_indices.push_back(i);
+      if (batch_indices.size() != ntiles_batch && !distr.lastLocalTileRow(i))
         continue;
 
-      TileElementSize batch_sz = get_batch_sz(blk_sz, mat_a.tileSize(ik_idx), nbtiles);
+      TileElementSize batch_sz = get_batch_sz(blk_sz, mat_a.tileSize(ik_idx), batch_indices.size());
 
       // Broadcast each k-th column tile along it's row
       if (rank_is_on_k_col) {
         hpx::shared_future<ConstTile_t> fbtile =
-            coalesce_tiles(executor_hp, nbtiles, batch_sz, i_local, panel);
+            coalesce_tiles(executor_hp, batch_sz, batch_indices, panel);
         send_tile(executor_hp, mpi_row_task_chain, std::move(fbtile));
       }
       else {
         hpx::future<ConstTile_t> fbtile =
             recv_tile<T>(executor_hp, mpi_row_task_chain, batch_sz, kk_rank.col());
-        split_batch(executor_hp, nbtiles, blk_sz, std::move(fbtile), i_local, panel);
+        split_batch(executor_hp, blk_sz, std::move(fbtile), batch_indices, panel);
       }
-      nbtiles = 0;
+      batch_indices.clear();
     }
 
     // Iterate over the diagonal of the trailing matrix
@@ -339,16 +341,13 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
       comm::Index2D jj_rank = mat_a.rankGlobalTile(jj_idx);
 
       // Broadcast the jk-tile along the j-th column and update the jj-tile
-      hpx::shared_future<ConstTile_t> jk_tile;
       if (this_rank == jj_rank) {
-        SizeType j_local = distr.localTileFromGlobalTile<Coord::Row>(j);
-        jk_tile = panel[j_local];
-        send_tile(executor_hp, mpi_col_task_chain, jk_tile);
-        herk_trailing_diag_tile(trailing_matrix_executor, jk_tile, mat_a(jj_idx));
+        send_tile(executor_hp, mpi_col_task_chain, panel[j]);
+        herk_trailing_diag_tile(trailing_matrix_executor, panel[j], mat_a(jj_idx));
       }
       else if (this_rank.col() == jj_rank.col()) {
         GlobalTileIndex jk_idx(j, k);
-        jk_tile = recv_tile<T>(executor_hp, mpi_col_task_chain, mat_a.tileSize(jk_idx), jj_rank.row());
+        panel[j] = recv_tile<T>(executor_hp, mpi_col_task_chain, mat_a.tileSize(jk_idx), jj_rank.row());
       }
 
       // Iterate over the j-th column
@@ -357,8 +356,7 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
         GlobalTileIndex ij_idx(i, j);
         comm::Index2D ij_rank = distr.rankGlobalTile(ij_idx);
         if (this_rank == ij_rank) {
-          SizeType i_local = distr.localTileFromGlobalTile<Coord::Row>(i);
-          gemm_trailing_matrix_tile(trailing_matrix_executor, panel[i_local], jk_tile, mat_a(ij_idx));
+          gemm_trailing_matrix_tile(trailing_matrix_executor, panel[i], panel[j], mat_a(ij_idx));
         }
       }
     }

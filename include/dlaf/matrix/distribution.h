@@ -285,6 +285,10 @@ public:
     return util::matrix::tileElementFromElement(global_element, block_size_.get<rc>());
   }
 
+  bool lastLocalTileRow(SizeType global_element) const noexcept {
+    return localTileFromGlobalTile<Coord::Row>(global_element) == local_nr_tiles_.rows() - 1;
+  }
+
 private:
   /// Computes and sets @p size_.
   ///

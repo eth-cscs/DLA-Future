@@ -13,6 +13,7 @@
 template <class T, Device device>
 void hegst(int itype, blas::Uplo uplo, const Tile<T, device>& a, const Tile<T, device>& b) {
   DLAF_ASSERT(a.size().rows() == a.size().cols(), "Error: HEGST: matrix A is not square.");
+  DLAF_ASSERT(itype > 0 && itype < 4, "Only itype = 1, 2, 3 allowed", itype);
 
   // itype = 1 to solve inv(U**H)*A*inv(U) or inv(L)*A*inv(L**H))
   // itype = 2, 3 to solve U*A*U**H or L**H*A*L
@@ -66,7 +67,7 @@ long long potrfInfo(blas::Uplo uplo, const Tile<T, device>& a) {
   DLAF_ASSERT(a.size().rows() == a.size().cols(), "POTRF: `a` is not square!", a);
 
   auto info = lapack::potrf(uplo, a.size().rows(), a.ptr(), a.ld());
-  DLAF_ASSERT_HEAVY(info >= 0, "");
+  DLAF_ASSERT_HEAVY(info >= 0, info);
 
   return info;
 }

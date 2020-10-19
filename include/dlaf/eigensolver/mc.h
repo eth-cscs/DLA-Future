@@ -23,7 +23,7 @@ struct Eigensolver<Backend::MC> {
   /// obtained from potrf (lower matrix from Cholesky decomposition), solving B=inv(L)*A*inv(L**H),
   /// implementation on local memory.
   ///
-  /// @param mat_a on entry it contains the square and Hermitian matrix A, on exit the matrix elements
+  /// @param mat_a on entry it contains the Hermitian matrix A, on exit the matrix elements
   /// are overwritten with the elements of the matrix B.
   /// @param mat_l contains the lower triangular matrix L. Only the tiles of the matrix which contain the
   /// lower triangular part are accessed.

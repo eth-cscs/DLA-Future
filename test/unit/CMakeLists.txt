@@ -43,6 +43,12 @@ DLAF_addTest(test_matrix
   MPIRANKS 6
 )
 
+DLAF_addTest(test_matrix_output
+  SOURCES test_matrix_output.cpp
+  LIBRARIES dlaf.core
+  USE_MAIN HPX
+)
+
 # Generic libraries
 add_subdirectory(common)
 add_subdirectory(communication)

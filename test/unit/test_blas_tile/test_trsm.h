@@ -31,8 +31,8 @@ using namespace testing;
 using dlaf::util::size_t::mul;
 
 template <class ElementIndex, class T, class CT = const T>
-void testTrsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, SizeType m, SizeType n,
-              SizeType extra_lda, SizeType extra_ldb) {
+void testTrsm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const blas::Diag diag,
+              SizeType m, SizeType n, SizeType extra_lda, SizeType extra_ldb) {
   TileElementSize size_a = side == blas::Side::Left ? TileElementSize(m, m) : TileElementSize(n, n);
   TileElementSize size_b(m, n);
 
@@ -50,7 +50,7 @@ void testTrsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, Si
   Tile<T, Device::CPU> a0(size_a, std::move(mem_a), lda);
   Tile<T, Device::CPU> b(size_b, std::move(mem_b), ldb);
 
-  T alpha = TypeUtilities<T>::element(-1.2, .7);
+  const T alpha = TypeUtilities<T>::element(-1.2, .7);
 
   std::function<T(const TileElementIndex&)> el_op_a, el_b, res_b;
 

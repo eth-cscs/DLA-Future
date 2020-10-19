@@ -29,8 +29,8 @@ using namespace testing;
 using dlaf::util::size_t::mul;
 
 template <class T, class CT = const T>
-void testGemm(blas::Op op_a, blas::Op op_b, SizeType m, SizeType n, SizeType k, SizeType extra_lda,
-              SizeType extra_ldb, SizeType extra_ldc) {
+void testGemm(const blas::Op op_a, const blas::Op op_b, SizeType m, SizeType n, SizeType k,
+              SizeType extra_lda, SizeType extra_ldb, SizeType extra_ldc) {
   TileElementSize size_a(m, k);
   if (op_a != blas::Op::NoTrans)
     size_a.transpose();
@@ -83,10 +83,10 @@ void testGemm(blas::Op op_a, blas::Op op_b, SizeType m, SizeType n, SizeType k, 
     return TypeUtilities<T>::polar(1.2 * i / (j + 1), -i + j);
   };
 
-  T alpha = TypeUtilities<T>::element(-1.2, .7);
-  T beta = TypeUtilities<T>::element(1.1, .4);
+  const T alpha = TypeUtilities<T>::element(-1.2, .7);
+  const T beta = TypeUtilities<T>::element(1.1, .4);
 
-  T gamma = TypeUtilities<T>::element(.72 * k, 0) * alpha;
+  const T gamma = TypeUtilities<T>::element(.72 * k, 0) * alpha;
   auto res_c = [beta, el_c, gamma](const TileElementIndex& index) {
     double i = index.row();
     double j = index.col();

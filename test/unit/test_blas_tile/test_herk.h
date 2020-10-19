@@ -29,7 +29,7 @@ using namespace testing;
 using dlaf::util::size_t::mul;
 
 template <class T, class CT = const T>
-void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType extra_lda,
+void testHerk(const blas::Uplo uplo, const blas::Op op_a, SizeType n, SizeType k, SizeType extra_lda,
               SizeType extra_ldc) {
   TileElementSize size_a(n, k);
   if (op_a != blas::Op::NoTrans)
@@ -68,8 +68,8 @@ void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType e
     return TypeUtilities<T>::polar(1.2 * i / (j + 1), -i + j);
   };
 
-  BaseType<T> alpha = -1.2f;
-  BaseType<T> beta = 1.1f;
+  const BaseType<T> alpha = -1.2f;
+  const BaseType<T> beta = 1.1f;
 
   auto res_c = [uplo, k, alpha, el_op_a, beta, el_c](const TileElementIndex& index) {
     // Return el_c(index) for elements not referenced

@@ -9,8 +9,8 @@
 //
 
 template <class T, Device device>
-void gemm(blas::Op op_a, blas::Op op_b, T alpha, const Tile<const T, device>& a,
-          const Tile<const T, device>& b, T beta, const Tile<T, device>& c) noexcept {
+void gemm(const blas::Op op_a, const blas::Op op_b, const T alpha, const Tile<const T, device>& a,
+          const Tile<const T, device>& b, const T beta, const Tile<T, device>& c) noexcept {
   SizeType m;
   SizeType k;
   if (op_a == blas::Op::NoTrans) {
@@ -79,8 +79,8 @@ void her2k(const blas::Uplo uplo, const blas::Op op, const T alpha, const Tile<c
 }
 
 template <class T, Device device>
-void herk(blas::Uplo uplo, blas::Op op, BaseType<T> alpha, const Tile<const T, device>& a,
-          BaseType<T> beta, const Tile<T, device>& c) noexcept {
+void herk(const blas::Uplo uplo, const blas::Op op, const BaseType<T> alpha,
+          const Tile<const T, device>& a, const BaseType<T> beta, const Tile<T, device>& c) noexcept {
   SizeType n;
   SizeType k;
   if (op == blas::Op::NoTrans) {
@@ -101,8 +101,8 @@ void herk(blas::Uplo uplo, blas::Op op, BaseType<T> alpha, const Tile<const T, d
 }
 
 template <class T, Device device>
-void trsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha,
-          const Tile<const T, device>& a, const Tile<T, device>& b) noexcept {
+void trsm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const blas::Diag diag,
+          const T alpha, const Tile<const T, device>& a, const Tile<T, device>& b) noexcept {
   SizeType m = b.size().rows();
   SizeType n = b.size().cols();
 

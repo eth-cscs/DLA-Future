@@ -32,12 +32,12 @@ void lacpy(const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b) {
 }
 
 template <class T, Device device>
-dlaf::BaseType<T> lange(lapack::Norm norm, const Tile<T, device>& a) noexcept {
+dlaf::BaseType<T> lange(const lapack::Norm norm, const Tile<T, device>& a) noexcept {
   return lapack::lange(norm, a.size().rows(), a.size().cols(), a.ptr(), a.ld());
 }
 
 template <class T, Device device>
-dlaf::BaseType<T> lantr(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag,
+dlaf::BaseType<T> lantr(const lapack::Norm norm, const blas::Uplo uplo, const blas::Diag diag,
                         const Tile<T, device>& a) noexcept {
   switch (uplo) {
     case blas::Uplo::Lower:
@@ -54,14 +54,14 @@ dlaf::BaseType<T> lantr(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag,
 }
 
 template <class T, Device device>
-void potrf(blas::Uplo uplo, const Tile<T, device>& a) noexcept {
+void potrf(const blas::Uplo uplo, const Tile<T, device>& a) noexcept {
   auto info = potrfInfo(uplo, a);
 
   DLAF_ASSERT(info == 0, "a is not positive definite");
 }
 
 template <class T, Device device>
-long long potrfInfo(blas::Uplo uplo, const Tile<T, device>& a) {
+long long potrfInfo(const blas::Uplo uplo, const Tile<T, device>& a) {
   DLAF_ASSERT(a.size().rows() == a.size().cols(), "POTRF: `a` is not square!", a);
 
   auto info = lapack::potrf(uplo, a.size().rows(), a.ptr(), a.ld());

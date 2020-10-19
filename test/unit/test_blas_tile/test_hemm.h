@@ -15,7 +15,6 @@
 #include "dlaf/blas_tile.h"
 #include "dlaf/memory/memory_view.h"
 #include "dlaf/tile.h"
-#include "dlaf/tile_output.h"
 #include "dlaf/util_blas.h"
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/matrix/util_tile_blas.h"

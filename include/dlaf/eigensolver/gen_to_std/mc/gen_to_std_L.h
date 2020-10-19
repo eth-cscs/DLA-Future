@@ -23,7 +23,6 @@
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix.h"
 #include "dlaf/matrix/distribution.h"
-#include "dlaf/tile_output.h"
 #include "dlaf/util_matrix.h"
 
 namespace dlaf {

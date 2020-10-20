@@ -39,6 +39,7 @@ Example installation:
 
 Or you can go even further with a more detailed spec like this one, which builds dla-future in debug mode, using the clang compiler, specifying that the HPX on which it depends has to be built
 in debug mode too, with APEX instrumentation enabled, and that we want to use MPICH as MPI implementation, without fortran support (because clang does not support it).
+
 `spack install dla-future %clang build_type=Debug ^hpx build_type=Debug instrumentation=apex ^mpich ~fortran`
 
 Notice that, for the package to work correctly, the HPX option `max_cpu_count` must be set accordingly to the architecture, as it represents the size of the bitmask to interface with hardware threads.

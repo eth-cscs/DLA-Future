@@ -21,7 +21,7 @@ void mpi_send_string(const std::string& message, int to_rank);
 std::string mpi_receive_string(int from_rank);
 }
 
-MPIListener::MPIListener(int argc, char** argv, ::testing::TestEventListener* other)
+MPIListener::MPIListener(int, char**, ::testing::TestEventListener* other)
     : listener_(std::move(other)) {
   MPI_Comm_size(MPI_COMM_WORLD, &world_size_);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank_);

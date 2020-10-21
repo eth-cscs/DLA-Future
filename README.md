@@ -59,14 +59,20 @@ TODO configure cmake script for DLAF (with/without MKL)
 
 Using DLAF in a CMake project is extremely easy!
 
-Configure your project with:
+In the following, the variable `DLAF_INSTALL_PREFIX` is set to where DLAF is installed. In case you used spack for installing DLAF, you can easily set it with:
 
 ```bash
-# DLAF_INSTALL_PREFIX must be set to where you installed DLAF
-cmake -DDLAF_DIR="$DLAF_INSTALL_PREFIX/lib/cmake" ..
+export DLAF_INSTALL_PREFIX=`spack location -i dla-future`
+```
 
-# ... or in case you used spack
-cmake -DDLAF_DIR=$(spack location -i dla-future) ..
+Then, you can configure your project with one of the following:
+
+```bash
+# By appending the value to the CMAKE_INSTALL_PREFIX
+cmake -DCMAKE_INSTALL_PREFIX=${DLAF_INSTALL_PREFIX} ..
+
+# ... or by setting DLAF_DIR
+cmake -DDLAF_DIR="$DLAF_INSTALL_PREFIX/lib/cmake" ..
 ```
 
 Then, it is just as simple as adding these directives in your `CMakeLists.txt`:

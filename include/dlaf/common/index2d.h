@@ -75,19 +75,13 @@ public:
     std::swap(row_, col_);
   }
 
-  /// Given a coordinate, returns its transposed with the same type.
-  template <class Coords2DType>
-  friend Coords2DType transposed(const Coords2DType& coords);
-
   /// Adds "(<row_>, <col_>)" to out.
   friend std::ostream& operator<<(std::ostream& out, const basic_coords& index) {
-    if (std::is_same<IndexT, signed char>::value || std::is_same<IndexT, char>::value) {
+    if (std::is_same<IndexT, signed char>::value || std::is_same<IndexT, char>::value)
       return out << "(" << static_cast<int>(index.row_) << ", " << static_cast<int>(index.col_) << ")";
-    }
     return out << "(" << index.row_ << ", " << index.col_ << ")";
   }
 
-protected:
   /// @return true if `this` and `rhs` have the same row and column.
   bool operator==(const basic_coords& rhs) const noexcept {
     return row_ == rhs.row_ && col_ == rhs.col_;
@@ -98,14 +92,10 @@ protected:
     return !operator==(rhs);
   }
 
+protected:
   IndexT row_;
   IndexT col_;
 };
-
-template <class Coords2DType>
-Coords2DType transposed(const Coords2DType& coords) {
-  return {coords.col_, coords.row_};
-}
 
 }
 
@@ -150,11 +140,6 @@ public:
     return out << static_cast<BaseT>(index);
   }
 };
-
-template <class T, class Tag>
-std::ostream& operator<<(std::ostream& os, const Size2D<T, Tag>& size) {
-  return os << static_cast<internal::basic_coords<T>>(size);
-}
 
 /// A strong-type for 2D coordinates.
 ///
@@ -214,9 +199,28 @@ public:
   }
 };
 
+// Traits
+/// This traits has a true value if T is an Index2D or a Size2D (with any index type and any tag)
+template <class T>
+struct is_coord {
+  constexpr static bool value = false;
+};
+
 template <class T, class Tag>
-std::ostream& operator<<(std::ostream& os, const Index2D<T, Tag>& size) {
-  return os << static_cast<internal::basic_coords<T>>(size);
+struct is_coord<Index2D<T, Tag>> {
+  constexpr static bool value = true;
+};
+
+template <class T, class Tag>
+struct is_coord<Size2D<T, Tag>> {
+  constexpr static bool value = true;
+};
+
+/// Given a Coordinate type, being it an Index2D or a Size2D, it returns its transpose
+template <class Coords2DType, std::enable_if_t<is_coord<Coords2DType>::value, int> = 0>
+Coords2DType transposed(Coords2DType coords) {
+  coords.transpose();
+  return coords;
 }
 
 /// Compute coords of the @p index -th cell in a row-major ordered 2D grid with size @p dims.

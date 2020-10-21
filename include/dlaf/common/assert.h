@@ -114,4 +114,4 @@ inline void do_assert(bool expr, const common::internal::source_location& loc, c
 #define DLAF_ASSERT_HEAVY(Expr, ...)
 #endif
 
-#define DLAF_NOT_YET_IMPLEMENTED(...) DLAF_ASSERT(dlaf::internal::not_yet_implemented, __VA_ARGS__)
+#define DLAF_UNIMPLEMENTED(...) DLAF_ASSERT(false, "Not yet implemented!", __VA_ARGS__)

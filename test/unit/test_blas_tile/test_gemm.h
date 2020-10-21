@@ -39,7 +39,7 @@ void testGemm(blas::Op op_a, blas::Op op_b, SizeType m, SizeType n, SizeType k, 
     size_b.transpose();
   TileElementSize size_c(m, n);
 
-  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
+  const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
   SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
   SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
 
@@ -49,12 +49,12 @@ void testGemm(blas::Op op_a, blas::Op op_b, SizeType m, SizeType n, SizeType k, 
   s << ", lda = " << lda << ", ldb = " << ldb << ", ldc = " << ldc;
   SCOPED_TRACE(s.str());
 
-  memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
+  //  memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
   memory::MemoryView<T, Device::CPU> mem_b(mul(ldb, size_b.cols()));
   memory::MemoryView<T, Device::CPU> mem_c(mul(ldc, size_c.cols()));
 
   // Create tiles.
-  Tile<T, Device::CPU> a0(size_a, std::move(mem_a), lda);
+  //Tile<T, Device::CPU> a0(size_a, std::move(mem_a), lda);
   Tile<T, Device::CPU> b0(size_b, std::move(mem_b), ldb);
   Tile<T, Device::CPU> c(size_c, std::move(mem_c), ldc);
 
@@ -94,17 +94,21 @@ void testGemm(blas::Op op_a, blas::Op op_b, SizeType m, SizeType n, SizeType k, 
   };
 
   // Set tile elements.
-  set(a0, el_op_a, op_a);
+  //  set(a0, el_op_a, op_a);
   set(b0, el_op_b, op_b);
   set(c, el_c);
 
+  
   // Read-only tiles become constant if CT is const T.
-  Tile<CT, Device::CPU> a(std::move(a0));
+  //  Tile<CT, Device::CPU> a(std::move(a0));
   Tile<CT, Device::CPU> b(std::move(b0));
 
-  tile::gemm(op_a, op_b, alpha, a, b, beta, c);
-
-  // Check result against analytical result.
-  CHECK_TILE_NEAR(res_c, c, 2 * (k + 1) * TypeUtilities<T>::error,
-                  2 * (k + 1) * TypeUtilities<T>::error);
+  //  Tile<T, Device::CPU> a = setup_tile(el_op_a, size_a, lda, op_a);
+  Tile<T, Device::CPU> a0 = setup_tile<T>(el_op_a, size_a, lda, op_a);
+  
+//  tile::gemm(op_a, op_b, alpha, a, b, beta, c);
+//
+//  // Check result against analytical result.
+//  CHECK_TILE_NEAR(res_c, c, 2 * (k + 1) * TypeUtilities<T>::error,
+//                  2 * (k + 1) * TypeUtilities<T>::error);
 }

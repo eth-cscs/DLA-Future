@@ -17,8 +17,11 @@
 #include <iostream>
 #include <sstream>
 #include "gtest/gtest.h"
+#include "dlaf/blas_tile.h"
 #include "dlaf/tile.h"
 #include "dlaf/traits.h"
+#include "dlaf_test/matrix/util_tile_blas.h"
+#include "dlaf_test/util_types.h"
 
 namespace dlaf {
 namespace matrix {
@@ -74,6 +77,91 @@ void print(const Tile<T, Device::CPU>& tile, int precision = 4, std::ostream& ou
   out.precision(out_precision);
 }
 
+/// Create a MemoryView and initialize a Tile on it.
+///
+/// @pre size is the dimension of the tile to be created (type: TileElementSize);
+/// @pre ld is the leading dimension of the tile to be created. 
+template <class T>
+  Tile<T, Device::CPU> create_tile(const TileElementSize& size, const SizeType& ld){
+  using dlaf::util::size_t::mul;
+  memory::MemoryView<T, Device::CPU> support_mem(mul(ld, size.cols()));
+  return Tile<T, Device::CPU>(size, std::move(support_mem), ld);
+}
+
+/// Creates a read/write tile and fill with selected values
+///
+/// @pre val argument is an index of type const TileElementIndex&,
+/// @pre val return type should be T;
+/// @pre size is the dimension of the tile to be created (type: TileElementSize);
+/// @pre ld is the leading dimension of the tile to be created. 
+template <class T, class ElementGetter> 
+Tile<T, Device::CPU> setup_tile(ElementGetter val, const TileElementSize& size, const SizeType& ld){
+  Tile<T, Device::CPU> support = create_tile<T>(size, ld);
+  set(support, val);
+  return support;
+ }
+
+/// Creates a read/write tile and fill with selected values
+///
+/// @pre val argument is an index of type const TileElementIndex&,
+/// @pre val return type should be T;
+/// @pre size is the dimension of the tile to be created (type: TileElementSize);
+/// @pre ld is the leading dimension of the tile to be created. 
+/// @pre op is the blas::Op to be applied to the tile.
+template <class T, class ElementGetter> 
+Tile<T, Device::CPU> setup_tile(ElementGetter val, const TileElementSize& size, const SizeType& ld, const blas::Op& op){
+  Tile<T, Device::CPU> support = create_tile<T>(size, ld);
+  set(support, val, op); 
+  return support;
+ }
+
+///// Creates a read/write tile and fill with selected values
+/////
+///// @pre val argument is an index of type const TileElementIndex&,
+///// @pre val return type should be T;
+///// @pre size is the dimension of the tile to be created (type: TileElementSize);
+///// @pre ld is the leading dimension of the tile to be created; 
+///// @pre op is the blas::Op to be applied to the tile.
+//template <class ElementGetter, class T, class CT = const T>
+//auto setup_tile(ElementGetter val, const TileElementSize& size, const SizeType& ld, blas::Op& op){
+//  using dlaf::util::size_t::mul;
+//  memory::MemoryView<T, Device::CPU> support_mem(mul(ld, size.cols()));
+//  Tile<T, Device::CPU> support(size, std::move(support_mem), ld);
+//  set(support, val, op);
+//  return Tile<CT, Device::CPU>(std::move(support));
+//}
+//
+///// Creates a read only tile and fill with selected values
+/////
+///// @pre val argument is an index of type const TileElementIndex&,
+///// @pre val return type should be T;
+///// @pre size is the dimension of the tile to be created (type: TileElementSize);
+///// @pre ld is the leading dimension of the tile to be created. 
+// template <class ElementGetter, class T, enable_if_signature_t<ElementGetter, T(const TileElementIndex&), int> = 0>
+//auto setup_readonly_tile(ElementGetter val, const TileElementSize& size, const SizeType& ld){
+//  using dlaf::util::size_t::mul;
+//  memory::MemoryView<T, Device::CPU> support_mem(mul(ld, size.cols()));
+//  Tile<T, Device::CPU> support(size, std::move(support_mem), ld);
+//  set(support, val);
+//  return Tile<T, Device::CPU>(std::move(support));
+//}
+//
+///// Creates a read only tile and fill with selected values
+/////
+///// @pre val argument is an index of type const TileElementIndex&,
+///// @pre val return type should be T;
+///// @pre size is the dimension of the tile to be created (type: TileElementSize);
+///// @pre ld is the leading dimension of the tile to be created; 
+///// @pre op is the blas::Op to be applied to the tile.
+//template <class ElementGetter, class T, class CT = const T>
+//  auto setup_readonly_tile(Tile<CT, Device::CPU> tile, ElementGetter val, const TileElementSize& size, const SizeType& ld, blas::Op& op){
+//  using dlaf::util::size_t::mul;
+//  memory::MemoryView<T, Device::CPU> support_mem(mul(ld, size.cols()));
+//  Tile<T, Device::CPU> support(size, std::move(support_mem), ld);
+//  set(support, val, op);
+//  tile(std::move(support));
+//}
+ 
 namespace internal {
 /// Checks the elements of the tile.
 ///

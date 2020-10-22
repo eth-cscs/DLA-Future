@@ -65,7 +65,7 @@ void MPIListener::OnTestPartResult(const ::testing::TestPartResult& test_part_re
 
 void MPIListener::OnTestEnd(const ::testing::TestInfo& test_info) {
   auto print_partial_results = [](int rank, int total_results,
-                                      std::function<std::string(int)> get_result) {
+                                  std::function<std::string(int)> get_result) {
     if (total_results <= 0)
       return;
 

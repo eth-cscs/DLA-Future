@@ -222,7 +222,7 @@ std::ostream& operator<<(std::ostream& out, const Coords2DType& index) {
   return out << static_cast<internal::basic_coords<IndexT>>(index);
 }
 
-/// Given a Coordinate type, being it an Index2D or a Size2D, it returns its transpose
+/// Given a coordinate type, it returns its transpose
 template <class Coords2DType, std::enable_if_t<internal::is_coord<Coords2DType>::value, int> = 0>
 Coords2DType transposed(Coords2DType coords) {
   coords.transpose();

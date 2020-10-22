@@ -156,16 +156,13 @@ TEST_F(AllReduceTest, StridedToContiguous) {
                                            block_size, block_distance);
   auto&& message_output = common::make_data(data_contiguous, N);
 
-  constexpr int root = 0;
   auto& communicator = world;
   MPI_Op op = MPI_SUM;
   sync::all_reduce(communicator, op, std::move(message_input), std::move(message_output));
 
-  if (root == world.rank()) {
-    for (auto i = 0; i < N; ++i)
-      DLAF_EXPECT_NEAR(value * static_cast<TypeParam>(NUM_MPI_RANKS), data_contiguous[i],
-                       NUM_MPI_RANKS * TypeUtilities<TypeParam>::error);
-  }
+  for (auto i = 0; i < N; ++i)
+    DLAF_EXPECT_NEAR(value * static_cast<TypeParam>(NUM_MPI_RANKS), data_contiguous[i],
+                     NUM_MPI_RANKS * TypeUtilities<TypeParam>::error);
 }
 
 TEST_F(AllReduceTest, ContiguousToStrided) {
@@ -190,17 +187,14 @@ TEST_F(AllReduceTest, ContiguousToStrided) {
   auto&& message_input = common::make_data(static_cast<const TypeParam*>(data_contiguous), N);
   auto&& message_output = common::make_data(data_strided, nblocks, block_size, block_distance);
 
-  constexpr int root = 0;
   auto& communicator = world;
   MPI_Op op = MPI_SUM;
   sync::all_reduce(communicator, op, std::move(message_input), std::move(message_output));
 
-  if (world.rank() == root) {
-    for (std::size_t i_block = 0; i_block < nblocks; ++i_block)
-      for (std::size_t i_element = 0; i_element < block_size; ++i_element) {
-        auto mem_pos = i_block * block_distance + i_element;
-        DLAF_EXPECT_NEAR(value * static_cast<TypeParam>(NUM_MPI_RANKS), data_strided[mem_pos],
-                         NUM_MPI_RANKS * TypeUtilities<TypeParam>::error);
-      }
-  }
+  for (std::size_t i_block = 0; i_block < nblocks; ++i_block)
+    for (std::size_t i_element = 0; i_element < block_size; ++i_element) {
+      auto mem_pos = i_block * block_distance + i_element;
+      DLAF_EXPECT_NEAR(value * static_cast<TypeParam>(NUM_MPI_RANKS), data_strided[mem_pos],
+                       NUM_MPI_RANKS * TypeUtilities<TypeParam>::error);
+    }
 }

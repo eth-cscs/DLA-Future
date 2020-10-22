@@ -48,7 +48,7 @@ void set(MatrixType<T, Device::CPU>& mat, ElementGetter el) {
     }
   }
 }
-  
+
 /// Checks the elements of the matrix.
 ///
 /// comp(expected({i, j}), (i, j)-element) is used to compare the elements.

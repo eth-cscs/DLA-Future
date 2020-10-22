@@ -18,6 +18,7 @@
 #include "dlaf/util_blas.h"
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/matrix/util_tile_blas.h"
+#include "dlaf_test/matrix/util_tile_setup.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
@@ -40,23 +41,14 @@ void testGemm(blas::Op op_a, blas::Op op_b, SizeType m, SizeType n, SizeType k, 
   TileElementSize size_c(m, n);
 
   const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
-  SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
-  SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
+  const SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
+  const SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
 
   std::stringstream s;
   s << "GEMM: " << op_a << ", " << op_a;
   s << ", m = " << m << ", n = " << n << ", k = " << k;
   s << ", lda = " << lda << ", ldb = " << ldb << ", ldc = " << ldc;
   SCOPED_TRACE(s.str());
-
-  //  memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
-  memory::MemoryView<T, Device::CPU> mem_b(mul(ldb, size_b.cols()));
-  memory::MemoryView<T, Device::CPU> mem_c(mul(ldc, size_c.cols()));
-
-  // Create tiles.
-  //Tile<T, Device::CPU> a0(size_a, std::move(mem_a), lda);
-  Tile<T, Device::CPU> b0(size_b, std::move(mem_b), ldb);
-  Tile<T, Device::CPU> c(size_c, std::move(mem_c), ldc);
 
   // Note: The tile elements are chosen such that:
   // - op_a(a)_ik = .9 * (i+1) / (k+.5) * exp(I*(2*i-k)),
@@ -93,22 +85,13 @@ void testGemm(blas::Op op_a, blas::Op op_b, SizeType m, SizeType n, SizeType k, 
     return beta * el_c(index) + gamma * TypeUtilities<T>::polar((i + 1) / (j + 2), 2 * i + j);
   };
 
-  // Set tile elements.
-  //  set(a0, el_op_a, op_a);
-  set(b0, el_op_b, op_b);
-  set(c, el_c);
+  Tile<CT, Device::CPU> a = setup_readonly_tile<T, CT>(el_op_a, size_a, lda, op_a);
+  Tile<CT, Device::CPU> b = setup_readonly_tile<T, CT>(el_op_b, size_b, ldb, op_b);
+  Tile<T, Device::CPU> c = setup_tile<T>(el_c, size_c, ldc);
 
-  
-  // Read-only tiles become constant if CT is const T.
-  //  Tile<CT, Device::CPU> a(std::move(a0));
-  Tile<CT, Device::CPU> b(std::move(b0));
+  tile::gemm(op_a, op_b, alpha, a, b, beta, c);
 
-  //  Tile<T, Device::CPU> a = setup_tile(el_op_a, size_a, lda, op_a);
-  Tile<T, Device::CPU> a0 = setup_tile<T>(el_op_a, size_a, lda, op_a);
-  
-//  tile::gemm(op_a, op_b, alpha, a, b, beta, c);
-//
-//  // Check result against analytical result.
-//  CHECK_TILE_NEAR(res_c, c, 2 * (k + 1) * TypeUtilities<T>::error,
-//                  2 * (k + 1) * TypeUtilities<T>::error);
+  // Check result against analytical result.
+  CHECK_TILE_NEAR(res_c, c, 2 * (k + 1) * TypeUtilities<T>::error,
+                  2 * (k + 1) * TypeUtilities<T>::error);
 }

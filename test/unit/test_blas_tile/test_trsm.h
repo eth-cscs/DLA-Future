@@ -20,6 +20,7 @@
 #include "dlaf/util_blas.h"
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/matrix/util_tile_blas.h"
+#include "dlaf_test/matrix/util_tile_setup.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
@@ -44,13 +45,7 @@ void testTrsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, Si
     << ", lda = " << lda << ", ldb = " << ldb;
   SCOPED_TRACE(s.str());
 
-  memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
-  memory::MemoryView<T, Device::CPU> mem_b(mul(ldb, size_b.cols()));
-
-  Tile<T, Device::CPU> a0(size_a, std::move(mem_a), lda);
-  Tile<T, Device::CPU> b(size_b, std::move(mem_b), ldb);
-
-  T alpha = TypeUtilities<T>::element(-1.2, .7);
+  const T alpha = TypeUtilities<T>::element(-1.2, .7);
 
   std::function<T(const TileElementIndex&)> el_op_a, el_b, res_b;
 
@@ -61,10 +56,8 @@ void testTrsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, Si
     std::tie(el_op_a, el_b, res_b) =
         test::getRightTriangularSystem<ElementIndex, T>(uplo, op, diag, alpha, n);
 
-  set(a0, el_op_a, op);
-  set(b, el_b);
-
-  Tile<CT, Device::CPU> a(std::move(a0));
+  Tile<CT, Device::CPU> a = setup_readonly_tile<T, CT>(el_op_a, size_a, lda, op);
+  Tile<T, Device::CPU> b = setup_tile<T>(el_b, size_b, ldb);
 
   tile::trsm(side, uplo, op, diag, alpha, a, b);
 

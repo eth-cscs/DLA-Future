@@ -18,6 +18,7 @@
 #include "dlaf/util_blas.h"
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/matrix/util_tile_blas.h"
+#include "dlaf_test/matrix/util_tile_setup.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
@@ -45,12 +46,6 @@ void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType e
   s << ", lda = " << lda << ", ldc = " << ldc;
   SCOPED_TRACE(s.str());
 
-  memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
-  memory::MemoryView<T, Device::CPU> mem_c(mul(ldc, size_c.cols()));
-
-  Tile<T, Device::CPU> a0(size_a, std::move(mem_a), lda);
-  Tile<T, Device::CPU> c(size_c, std::move(mem_c), ldc);
-
   // Returns op_a(a)_ik
   auto el_op_a = [](const TileElementIndex& index) {
     double i = index.row();
@@ -68,8 +63,8 @@ void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType e
     return TypeUtilities<T>::polar(1.2 * i / (j + 1), -i + j);
   };
 
-  BaseType<T> alpha = -1.2f;
-  BaseType<T> beta = 1.1f;
+  const BaseType<T> alpha = -1.2f;
+  const BaseType<T> beta = 1.1f;
 
   auto res_c = [uplo, k, alpha, el_op_a, beta, el_c](const TileElementIndex& index) {
     // Return el_c(index) for elements not referenced
@@ -85,10 +80,8 @@ void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType e
     return beta * el_c(index) + alpha * tmp;
   };
 
-  set(a0, el_op_a, op_a);
-  set(c, el_c);
-
-  Tile<CT, Device::CPU> a(std::move(a0));
+  Tile<CT, Device::CPU> a = setup_readonly_tile<T, CT>(el_op_a, size_a, lda, op_a);
+  Tile<T, Device::CPU> c = setup_tile<T>(el_c, size_c, ldc);
 
   tile::herk(uplo, op_a, alpha, a, beta, c);
 

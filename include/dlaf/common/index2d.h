@@ -43,6 +43,8 @@ public:
   static_assert(std::is_integral<IndexT>::value && std::is_signed<IndexT>::value,
                 "basic_coords just works with signed integers types");
 
+  using IndexType = IndexT;
+
   /// Create a position with given coordinates.
   ///
   /// @param row index of the row (0-based),
@@ -138,10 +140,6 @@ public:
   bool operator!=(const Size2D& rhs) const noexcept {
     return BaseT::operator!=(rhs);
   }
-
-  friend std::ostream& operator<<(std::ostream& out, const Size2D& index) {
-    return out << static_cast<BaseT>(index);
-  }
 };
 
 /// A strong-type for 2D coordinates.
@@ -154,8 +152,6 @@ class Index2D : public internal::basic_coords<IndexT> {
 
 public:
   using BaseT::basic_coords;
-
-  using IndexType = IndexT;
 
   /// Create an invalid 2D coordinate.
   Index2D() noexcept : BaseT(-1, -1) {}
@@ -221,6 +217,13 @@ struct is_coord<Size2D<T, Tag>> {
   constexpr static bool value = true;
 };
 
+}
+
+/// Basic print utility for coordinate types
+template <class Coords2DType, std::enable_if_t<internal::is_coord<Coords2DType>::value, int> = 0>
+std::ostream& operator<<(std::ostream& out, const Coords2DType& index) {
+  using IndexT = typename Coords2DType::IndexType;
+  return out << static_cast<internal::basic_coords<IndexT>>(index);
 }
 
 /// Given a Coordinate type, being it an Index2D or a Size2D, it returns its transpose

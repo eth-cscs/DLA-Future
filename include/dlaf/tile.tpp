@@ -16,7 +16,8 @@ Tile<const T, device>::Tile(const TileElementSize& size,
   using util::size_t::mul;
 
   DLAF_ASSERT(size.isValid(), "Invalid Tile sizes!", size);
-  DLAF_ASSERT(ld_ >= std::max<SizeType>(1, size_.rows()), "Invalid leading dimension!", ld, size_.rows());
+  DLAF_ASSERT(ld_ >= std::max<SizeType>(1, size_.rows()), "Invalid leading dimension!", ld,
+              size_.rows());
   DLAF_ASSERT(size.isEmpty() || sum(size_.rows(), mul(ld_, (size_.cols() - 1))) <= memory_view_.size(),
               "Tile exceeds the MemoryView limits!", size, memory_view_.size());
 }

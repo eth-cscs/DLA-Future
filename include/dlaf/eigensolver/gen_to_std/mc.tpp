@@ -31,8 +31,7 @@ void Eigensolver<Backend::MC>::genToStd(blas::Uplo uplo, Matrix<T, Device::CPU>&
       internal::mc::genToStd_L(mat_a, mat_l);
       break;
     case blas::Uplo::Upper:
-      std::cout << "uplo = Upper not yet implemented" << std::endl;
-      std::abort();
+      DLAF_ASSERT(false, "not yet implemented", blas::uplo2str(uplo));
       break;
   }
 }

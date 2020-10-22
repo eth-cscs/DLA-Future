@@ -162,7 +162,15 @@ public:
   /// @param coords where coords[0] is the row index and coords[1] is the column index,
   /// @pre coords[0] >= 0,
   /// @pre coords[1] >= 0.
-  Index2D(const std::array<IndexT, 2>& coords) : Index2D(coords[0], coords[1]) {}
+  Index2D(const std::array<IndexT, 2>& coords) noexcept : Index2D(coords[0], coords[1]) {}
+
+  IndexT row() const noexcept {
+    return BaseT::row_;
+  }
+
+  IndexT col() const noexcept {
+    return BaseT::col_;
+  }
 
   /// Check if it is a valid position inside the grid size specified by @p boundary.
   ///
@@ -183,18 +191,6 @@ public:
   /// @return true if `this` and `rhs` have different row or column.
   bool operator!=(const Index2D& rhs) const noexcept {
     return BaseT::operator!=(rhs);
-  }
-
-  IndexT row() const noexcept {
-    return BaseT::row_;
-  }
-
-  IndexT col() const noexcept {
-    return BaseT::col_;
-  }
-
-  friend std::ostream& operator<<(std::ostream& out, const Index2D& index) {
-    return out << static_cast<BaseT>(index);
   }
 };
 

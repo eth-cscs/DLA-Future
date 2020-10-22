@@ -42,7 +42,6 @@ void testHemm(blas::Side side, blas::Uplo uplo, SizeType m, SizeType n, SizeType
     k = n;
 
   TileElementSize size_a(k, k);
-
   TileElementSize size_b(m, n);
   TileElementSize size_c(m, n);
 

@@ -75,8 +75,8 @@ void testGemm(blas::Op op_a, blas::Op op_b, SizeType m, SizeType n, SizeType k, 
     return TypeUtilities<T>::polar(1.2 * i / (j + 1), -i + j);
   };
 
-  T alpha = TypeUtilities<T>::element(-1.2, .7);
-  T beta = TypeUtilities<T>::element(1.1, .4);
+  const T alpha = TypeUtilities<T>::element(-1.2, .7);
+  const T beta = TypeUtilities<T>::element(1.1, .4);
 
   T gamma = TypeUtilities<T>::element(.72 * k, 0) * alpha;
   auto res_c = [beta, el_c, gamma](const TileElementIndex& index) {

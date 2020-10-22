@@ -45,7 +45,7 @@ Tile<T, Device::CPU> setup_tile(ElementGetter val, const TileElementSize& size, 
 /// @pre val argument is an index of type const TileElementIndex&,
 /// @pre val return type should be T;
 /// @pre size is the dimension of the tile to be created (type: TileElementSize);
-/// @pre ld is the leading dimension of the tile to be created.
+/// @pre ld is the leading dimension of the tile to be created,
 /// @pre op is the blas::Op to be applied to the tile.
 template <class T, class ElementGetter>
 Tile<T, Device::CPU> setup_tile(ElementGetter val, const TileElementSize& size, const SizeType& ld,
@@ -75,7 +75,8 @@ Tile<CT, Device::CPU> setup_readonly_tile(ElementGetter val, const TileElementSi
 /// @pre val argument is an index of type const TileElementIndex&,
 /// @pre val return type should be T;
 /// @pre size is the dimension of the tile to be created (type: TileElementSize);
-/// @pre ld is the leading dimension of the tile to be created.
+/// @pre ld is the leading dimension of the tile to be created,
+/// @pre op is the blas::Op to be applied to the tile.
 template <class T, class CT = const T, class ElementGetter>
 Tile<CT, Device::CPU> setup_readonly_tile(ElementGetter val, const TileElementSize& size,
                                           const SizeType& ld, const blas::Op& op) {

@@ -294,6 +294,8 @@ Index2D<IndexT, Tag> computeCoords(Ordering ordering, std::ptrdiff_t index,
       return computeCoordsRowMajor(index, dims);
     case Ordering::ColumnMajor:
       return computeCoordsColMajor(index, dims);
+    default:
+      return {};
   }
 }
 
@@ -360,6 +362,8 @@ LinearIndexT computeLinearIndex(Ordering ordering, const Index2D<IndexT, Tag>& i
       return computeLinearIndexRowMajor<LinearIndexT>(index, dims);
     case Ordering::ColumnMajor:
       return computeLinearIndexColMajor<LinearIndexT>(index, dims);
+    default:
+      return {};
   }
 }
 

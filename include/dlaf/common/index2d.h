@@ -60,12 +60,9 @@ public:
   /// Return a copy of the row or the col index as specified by @p rc.
   template <Coord rc>
   IndexT get() const noexcept {
-    switch (rc) {
-      case Coord::Row:
-        return row_;
-      case Coord::Col:
-        return col_;
-    }
+    if (rc == Coord::Row)
+      return row_;
+    return col_;
   }
 
   /// Check if it is a valid position (no upper bound check).

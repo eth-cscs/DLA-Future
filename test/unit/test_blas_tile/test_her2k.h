@@ -29,8 +29,8 @@ using namespace testing;
 using dlaf::util::size_t::mul;
 
 template <class T, class CT = const T>
-void testHer2k(blas::Uplo uplo, blas::Op op, SizeType n, SizeType k, SizeType extra_lda,
-               SizeType extra_ldc) {
+void testHer2k(const blas::Uplo uplo, const blas::Op op, const SizeType n, const SizeType k,
+               const SizeType extra_lda, const SizeType extra_ldc) {
   const TileElementSize size_a =
       (op == blas::Op::NoTrans) ? TileElementSize(n, k) : TileElementSize(k, n);
   const TileElementSize size_b =

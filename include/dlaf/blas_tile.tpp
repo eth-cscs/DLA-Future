@@ -41,8 +41,8 @@ void gemm(blas::Op op_a, blas::Op op_b, T alpha, const Tile<const T, device>& a,
 }
 
 template <class T, Device device>
-void hemm(blas::Side side, blas::Uplo uplo, T alpha, const Tile<const T, device>& a,
-          const Tile<const T, device>& b, T beta, const Tile<T, device>& c) {
+void hemm(const blas::Side side, const blas::Uplo uplo, const T alpha, const Tile<const T, device>& a,
+          const Tile<const T, device>& b, const T beta, const Tile<T, device>& c) {
   const SizeType m = c.size().rows();
   const SizeType n = c.size().cols();
 
@@ -65,18 +65,10 @@ void hemm(blas::Side side, blas::Uplo uplo, T alpha, const Tile<const T, device>
 }
 
 template <class T, Device device>
-void her2k(blas::Uplo uplo, blas::Op op, T alpha, const Tile<const T, device>& a,
-           const Tile<const T, device>& b, BaseType<T> beta, const Tile<T, device>& c) {
-  SizeType n;
-  SizeType k;
-  if (op == blas::Op::NoTrans) {
-    n = a.size().rows();
-    k = a.size().cols();
-  }
-  else {
-    n = a.size().cols();
-    k = a.size().rows();
-  }
+void her2k(const blas::Uplo uplo, const blas::Op op, const T alpha, const Tile<const T, device>& a,
+           const Tile<const T, device>& b, const BaseType<T> beta, const Tile<T, device>& c) {
+  const SizeType n = (op == blas::Op::NoTrans) ? a.size().rows() : a.size().cols();
+  const SizeType k = (op == blas::Op::NoTrans) ? a.size().cols() : a.size().rows();
 
   DLAF_ASSERT((!std::is_same<T, ComplexType<T>>::value || op != blas::Op::Trans),
               "`op = Trans` is not allowed in complex HER2K.");

@@ -29,8 +29,8 @@ using namespace testing;
 using dlaf::util::size_t::mul;
 
 template <class T, class CT = const T>
-void testHemm(blas::Side side, blas::Uplo uplo, SizeType m, SizeType n, SizeType extra_lda,
-              SizeType extra_ldb, SizeType extra_ldc) {
+void testHemm(const blas::Side side, const blas::Uplo uplo, const SizeType m, const SizeType n,
+              const SizeType extra_lda, const SizeType extra_ldb, const SizeType extra_ldc) {
   DLAF_ASSERT(side == blas::Side::Left || side == blas::Side::Right,
               "Only Left and Right side supported", side);
 

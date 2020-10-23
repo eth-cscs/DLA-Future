@@ -91,8 +91,6 @@ TYPED_TEST(TileOperationsTest, Hemm) {
 TYPED_TEST(TileOperationsTest, Her2k) {
   using Type = TypeParam;
 
-  using Type = TypeParam;
-
   auto her2k_blas_ops = blas_ops;
   // [c,z]her2k do not allow op = Trans
   if (std::is_same<Type, ComplexType<Type>>::value)

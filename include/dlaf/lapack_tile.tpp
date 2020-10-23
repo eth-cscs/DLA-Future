@@ -11,7 +11,7 @@
 #include "dlaf/common/assert.h"
 
 template <class T, Device device>
-void hegst(int itype, blas::Uplo uplo, const Tile<T, device>& a, const Tile<T, device>& b) {
+void hegst(const int itype, const blas::Uplo uplo, const Tile<T, device>& a, const Tile<T, device>& b) {
   DLAF_ASSERT(a.size().rows() == a.size().cols(), a.size());
   DLAF_ASSERT(itype > 0 && itype <= 3, itype);
 

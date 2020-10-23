@@ -32,7 +32,7 @@ using namespace testing;
 using dlaf::util::size_t::mul;
 
 template <class ElementIndex, class T>
-void testHegst(int itype, blas::Uplo uplo, SizeType m, SizeType extra_ld) {
+void testHegst(const int itype, const blas::Uplo uplo, const SizeType m, const SizeType extra_ld) {
   const TileElementSize size(m, m);
 
   const SizeType ld = std::max<SizeType>(1, size.rows()) + extra_ld;

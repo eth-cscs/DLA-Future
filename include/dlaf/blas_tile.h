@@ -28,13 +28,13 @@ void gemm(blas::Op op_a, blas::Op op_b, T alpha, const Tile<const T, device>& a,
 
 /// Computes matrix matrix multiplication where matrix @p a is Hermitian.
 template <class T, Device device>
-void hemm(blas::Side side, blas::Uplo uplo, T alpha, const Tile<const T, device>& a,
-          const Tile<const T, device>& b, T beta, const Tile<T, device>& c);
+void hemm(const blas::Side side, const blas::Uplo uplo, const T alpha, const Tile<const T, device>& a,
+          const Tile<const T, device>& b, const T beta, const Tile<T, device>& c);
 
 /// Performs a rank 2k update of hermitian (symmetric if T is real) tile a.
 template <class T, Device device>
-void her2k(blas::Uplo uplo, blas::Op op, T alpha, const Tile<const T, device>& a,
-           const Tile<const T, device>& b, BaseType<T> beta, const Tile<T, device>& c);
+void her2k(const blas::Uplo uplo, const blas::Op op, const T alpha, const Tile<const T, device>& a,
+           const Tile<const T, device>& b, const BaseType<T> beta, const Tile<T, device>& c);
 
 /// Performs a rank k update of hermitian (symmetric if T is real) tile @p a.
 template <class T, Device device>

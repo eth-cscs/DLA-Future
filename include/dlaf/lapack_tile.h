@@ -34,7 +34,7 @@ namespace tile {
 /// @pre b must be the triangular factor from the Cholesky factorization of B
 /// @throw std::runtime_error if the tile was not positive definite.
 template <class T, Device device>
-void hegst(int itype, blas::Uplo uplo, const Tile<T, device>& a, const Tile<T, device>& b);
+void hegst(const int itype, const blas::Uplo uplo, const Tile<T, device>& a, const Tile<T, device>& b);
 
 /// Copies all elements from Tile a to Tile b.
 ///

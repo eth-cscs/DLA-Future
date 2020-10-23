@@ -71,7 +71,7 @@ CMake option | Values | Note
 `DLAF_INSTALL_TESTS` | `{ON,OFF}` (default: `OFF`) | enable/disable installing tests
 `DLAF_MPI_PRESET` | `{plain-mpi, slurm, custom}` (default `plain-mpi`) | presets for MPI configuration for tests. See [CMake Doc](https://cmake.org/cmake/help/latest/module/FindMPI.html?highlight=mpiexec_executable#usage-of-mpiexec) for additional information
 `DLAF_TEST_RUNALL_WITH_MPIEXEC` | `{ON, OFF}` (default: `OFF`) | Use mpi runner also for non-MPI based tests
-`DLAF_HPXTEST_EXTRA_ARGS` | CMAKE:STRING (default: `""`) | Additional HPX command-line options for tests
+`DLAF_HPXTEST_EXTRA_ARGS` | CMAKE:STRING | Additional HPX command-line options for tests
 `BUILD_DOC` | `{ON,OFF}` (default: `OFF`) | enable/disable documentation generation
 
 ### Link your program/library with DLAF

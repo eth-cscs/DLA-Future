@@ -86,7 +86,7 @@ public:
 
 protected:
   // NOTE: operator== and operator! are protected otherwise it would be possible to compare Index2D and
-  // Size2D or same type but mixing IndexType and/or Tag. Which is something not desired.
+  // Size2D or same type but mixing Tag. Which is something not desired.
 
   /// @return true if `this` and `rhs` have the same row and column.
   bool operator==(const basic_coords& rhs) const noexcept {

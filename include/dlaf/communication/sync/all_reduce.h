@@ -31,6 +31,8 @@ namespace sync {
 template <class DataIn, class DataOut>
 void all_reduce(Communicator& communicator, MPI_Op reduce_operation, const DataIn input,
                 const DataOut output) {
+  using common::make_contiguous;
+
   using T = std::remove_const_t<typename common::data_traits<DataIn>::element_t>;
 
   // Wayout for single rank communicator, just copy data
@@ -39,42 +41,22 @@ void all_reduce(Communicator& communicator, MPI_Op reduce_operation, const DataI
     return;
   }
 
-  // Data descriptors used internally, initialized with Data given as parameters,
-  // but they may be replaced internally by contiguous Buffers in case of need
-  common::DataDescriptor<const T> internal_input = input;
-  common::DataDescriptor<T> internal_output = output;
-
   // Buffers not allocated, just placeholders in case we need to allocate them
-  common::Buffer<T> temporary_buffer_in;
-  common::Buffer<T> temporary_buffer_out;
+  common::Buffer<T> buffer_in, buffer_out;
 
-  // if input is not contiguous, copy it in a contiguous temporary buffer
-  if (!input.is_contiguous()) {
-    // allocate the temporary buffer
-    temporary_buffer_in = common::create_temporary_buffer(internal_input);
-    // set it as internal intermediate input
-    internal_input = temporary_buffer_in;
-    // copy the data to the internal intermediate buffer
-    common::copy(input, temporary_buffer_in);
-  }
+  auto message_input = comm::make_message(make_contiguous(input, buffer_in));
+  auto message_output = comm::make_message(make_contiguous(output, buffer_out));
 
-  // if output is not contiguous, create an intermediate buffer
-  if (!output.is_contiguous()) {
-    // allocate the temporary buffer
-    temporary_buffer_out = common::create_temporary_buffer(internal_output);
-    // and set it as internal intermediate output
-    internal_output = temporary_buffer_out;
-  }
-
-  auto message_input = comm::make_message(std::move(internal_input));
-  auto message_output = comm::make_message(DataOut(internal_output));
+  // if the input buffer has been used, initialize it with input values
+  if (buffer_in)
+    common::copy(input, buffer_in);
 
   MPI_Allreduce(message_input.data(), message_output.data(), message_input.count(),
                 message_input.mpi_type(), reduce_operation, communicator);
 
-  // if output was not contiguous, copy it back!
-  if (!output.is_contiguous())
-    common::copy(internal_output, output);
+  // if the output buffer has been used, copy-back output values
+  if (buffer_out)
+    common::copy(buffer_out, output);
 }
 
 }

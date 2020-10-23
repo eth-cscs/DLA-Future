@@ -193,7 +193,7 @@ auto create_temporary_buffer(const DataIn& input) {
   return common::Buffer<DataT>(data_count(input));
 }
 
-/// Helper function that ensures that the buffer is contiguous, allocating a temporary buffer if needed
+/// Helper function ensuring to work with a contiguous Data, allocating a temporary buffer if needed
 ///
 /// @param support_buffer changed just if the @p input buffer is not contiguous
 /// @return the given @p input if it is already contiguous, otherwise returns a newly allocated buffer

@@ -200,14 +200,13 @@ auto create_temporary_buffer(const DataIn& input) {
 template <class DataIn, class Buffer>
 auto make_contiguous(DataIn input, Buffer& support_buffer) {
   using DataT = typename common::data_traits<DataIn>::element_t;
-  common::DataDescriptor<DataT>& internal_input = input;
 
   if (!input.is_contiguous()) {
     support_buffer = common::create_temporary_buffer(input);
-    internal_input = support_buffer;
+    return common::DataDescriptor<DataT>(support_buffer);
   }
 
-  return internal_input;
+  return input;
 }
 }
 }

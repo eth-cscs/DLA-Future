@@ -57,18 +57,22 @@ And here the main CMake options for DLAF build customization:
 
 CMake option | Values | Note
 :---|:---|:---
-`DLAF_ASSERT_ENABLE` | `{ON,OFF}` (default: `ON`) | to enable/disable cheap assertions
-`DLAF_ASSERT_MODERATE_ENABLE` | `{ON,OFF}` (default: `ON` in Debug, `OFF` otherwise) | to enable/disable moderate assertions
-`DLAF_ASSERT_HEAVY_ENABLE` | `{ON,OFF}` (default: `ON` in Debug, `OFF` otherwise) | to enable/disable heavy assertions
+`HPX_DIR` | CMAKE:PATH | Location of the HPX CMake-config file
+`blaspp_DIR` | CMAKE:PATH | Location of the blaspp CMake-config file
+`lapackpp_DIR` | CMAKE:PATH | Location of the lapackpp CMake-config file
+`DLAF_WITH_MKL` | `{ON,OFF}` (default: `OFF`) | if blaspp/lapackpp is built with MKL
+`MKL_ROOT` | CMAKE:PATH | Location of the MKL library
+`DLAF_ASSERT_ENABLE` | `{ON,OFF}` (default: `ON`) | enable/disable cheap assertions
+`DLAF_ASSERT_MODERATE_ENABLE` | `{ON,OFF}` (default: `ON` in Debug, `OFF` otherwise) | enable/disable moderate assertions
+`DLAF_ASSERT_HEAVY_ENABLE` | `{ON,OFF}` (default: `ON` in Debug, `OFF` otherwise) | enable/disable heavy assertions
 `DLAF_WITH_CUDA` | `{ON,OFF}` (default: `OFF`) | enable CUDA support
-`HPX_DIR` | |
-`blaspp_DIR` | |
-`lapackpp_DIR` | |
-`DLAF_WITH_MKL` | | if blaspp/lapackpp is built with MKL
-`MKL_ROOT` | |
-`DLAF_BUILD_MINIAPPS` | `{ON,OFF}` | to enable/disable building miniapps
-`DLAF_WITH_TEST` | `{ON,OFF}` | to enable/disable building tests
-`DLAF_INSTALL_TESTS` | `{ON,OFF}` | to enable/disable installing tests
+`DLAF_BUILD_MINIAPPS` | `{ON,OFF}` (default: `ON`) | enable/disable building miniapps
+`DLAF_WITH_TEST` | `{ON,OFF}` (default: `ON`) | enable/disable building tests
+`DLAF_INSTALL_TESTS` | `{ON,OFF}` (default: `OFF`) | enable/disable installing tests
+`DLAF_MPI_PRESET` | `{plain-mpi, slurm, custom}` (default `plain-mpi`) | presets for MPI configuration for tests. See [CMake Doc](https://cmake.org/cmake/help/latest/module/FindMPI.html?highlight=mpiexec_executable#usage-of-mpiexec) for additional information
+`DLAF_TEST_RUNALL_WITH_MPIEXEC` | `{ON, OFF}` (default: `OFF`) | Use mpi runner also for non-MPI based tests
+`DLAF_HPXTEST_EXTRA_ARGS` | CMAKE:STRING (default: `""`) | Additional HPX command-line options for tests
+`BUILD_DOC` | `{ON,OFF}` (default: `OFF`) | enable/disable documentation generation
 
 ### Link your program/library with DLAF
 

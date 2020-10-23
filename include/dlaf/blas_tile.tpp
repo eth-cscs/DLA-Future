@@ -43,10 +43,8 @@ void gemm(blas::Op op_a, blas::Op op_b, T alpha, const Tile<const T, device>& a,
 template <class T, Device device>
 void hemm(blas::Side side, blas::Uplo uplo, T alpha, const Tile<const T, device>& a,
           const Tile<const T, device>& b, T beta, const Tile<T, device>& c) {
-  SizeType m;
-  SizeType n;
-  m = c.size().rows();
-  n = c.size().cols();
+  const SizeType m = c.size().rows();
+  const SizeType n = c.size().cols();
 
   if (side == blas::Side::Left) {
     DLAF_ASSERT(m == a.size().rows(), "`m` cannot be determined!", m, a);

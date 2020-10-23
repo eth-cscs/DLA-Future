@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include "dlaf/common/data.h"
 #include "dlaf/common/data_descriptor.h"
 
 #include <memory>
@@ -543,8 +544,8 @@ TYPED_TEST(DataDescriptorTest, CopyCtorFromStridedArray) {
   check_copy_ctor<const TypeParam>(data_const);
 }
 
-template <class TypeParam, class Buffer>
-void check_temporary(Buffer& data) {
+template <class Data>
+void DLAF_CHECK_CREATE_TEMPORARY_BUFFER(const Data& data) {
   auto data_temp = create_temporary_buffer(data);
 
   EXPECT_NE(common::data_pointer(data), common::data_pointer(data_temp));
@@ -552,14 +553,40 @@ void check_temporary(Buffer& data) {
   EXPECT_TRUE(common::data_iscontiguous(data_temp));
 }
 
+template <bool from_contiguous, class Data>
+void DLAF_CHECK_MAKE_CONTIGUOUS(const Data& data) {
+  using T = std::remove_const_t<typename common::data_traits<Data>::element_t>;
+
+  ASSERT_EQ(from_contiguous, common::data_iscontiguous(data));
+
+  common::Buffer<T> temp_buffer;
+  auto data_contiguous = common::make_contiguous(data, temp_buffer);
+
+  EXPECT_EQ(common::data_count(data), common::data_count(data_contiguous));
+  EXPECT_TRUE(common::data_iscontiguous(data_contiguous));
+
+  if (from_contiguous) {
+    EXPECT_FALSE(temp_buffer);
+    EXPECT_EQ(common::data_pointer(data), common::data_pointer(data_contiguous));
+  }
+  else {
+    EXPECT_TRUE(temp_buffer);
+    EXPECT_EQ(common::data_pointer(temp_buffer), common::data_pointer(data_contiguous));
+  }
+}
+
 TYPED_TEST(DataDescriptorTest, CreateTemporaryFromPointer) {
   TypeParam value = 26;
   auto data = common::make_data(&value, 1);
-  check_temporary<TypeParam>(data);
+
+  DLAF_CHECK_CREATE_TEMPORARY_BUFFER(data);
+  DLAF_CHECK_MAKE_CONTIGUOUS<true>(data);
 
   const TypeParam value_const = value;
   auto data_const = common::make_data(&value_const, 1);
-  check_temporary<const TypeParam>(data_const);
+
+  DLAF_CHECK_CREATE_TEMPORARY_BUFFER(data_const);
+  DLAF_CHECK_MAKE_CONTIGUOUS<true>(data_const);
 }
 
 TYPED_TEST(DataDescriptorTest, CreateTemporaryFromCArray) {
@@ -567,44 +594,52 @@ TYPED_TEST(DataDescriptorTest, CreateTemporaryFromCArray) {
   TypeParam value_array[N]{};
 
   auto data = common::make_data(value_array, N);
-  check_temporary<TypeParam>(data);
+  DLAF_CHECK_CREATE_TEMPORARY_BUFFER(data);
+  DLAF_CHECK_MAKE_CONTIGUOUS<true>(data);
 
   const TypeParam value_array_const[N]{};
   auto data_const = common::make_data(value_array_const, N);
-  check_temporary<const TypeParam>(data_const);
+  DLAF_CHECK_CREATE_TEMPORARY_BUFFER(data_const);
+  DLAF_CHECK_MAKE_CONTIGUOUS<true>(data_const);
 }
 
 TYPED_TEST(DataDescriptorTest, CreateTemporaryFromContiguousArray) {
   auto memory = create_memory<TypeParam>(MEMORY_TYPE::ARRAY_CONTIGUOUS);
 
   auto data = common::make_data(memory.data.get(), memory.num_blocks, memory.block_size, memory.stride);
-  check_temporary<TypeParam>(data);
+  DLAF_CHECK_CREATE_TEMPORARY_BUFFER(data);
+  DLAF_CHECK_MAKE_CONTIGUOUS<true>(data);
 
   auto data_const = common::make_data(static_cast<const TypeParam*>(memory.data.get()),
                                       memory.num_blocks, memory.block_size, memory.stride);
-  check_temporary<const TypeParam>(data_const);
+  DLAF_CHECK_CREATE_TEMPORARY_BUFFER(data_const);
+  DLAF_CHECK_MAKE_CONTIGUOUS<true>(data_const);
 }
 
 TYPED_TEST(DataDescriptorTest, CreateTemporaryFromContiguousAsStridedArray) {
   auto memory = create_memory<TypeParam>(MEMORY_TYPE::ARRAY_CONTIGUOUS_AS_STRIDED);
 
   auto data = common::make_data(memory.data.get(), memory.num_blocks, memory.block_size, memory.stride);
-  check_temporary<TypeParam>(data);
+  DLAF_CHECK_CREATE_TEMPORARY_BUFFER(data);
+  DLAF_CHECK_MAKE_CONTIGUOUS<true>(data);
 
   auto data_const = common::make_data(static_cast<const TypeParam*>(memory.data.get()),
                                       memory.num_blocks, memory.block_size, memory.stride);
-  check_temporary<const TypeParam>(data_const);
+  DLAF_CHECK_CREATE_TEMPORARY_BUFFER(data_const);
+  DLAF_CHECK_MAKE_CONTIGUOUS<true>(data_const);
 }
 
 TYPED_TEST(DataDescriptorTest, CreateTemporaryFromStridedArray) {
   auto memory = create_memory<TypeParam>(MEMORY_TYPE::ARRAY_STRIDED);
 
   auto data = common::make_data(memory.data.get(), memory.num_blocks, memory.block_size, memory.stride);
-  check_temporary<TypeParam>(data);
+  DLAF_CHECK_CREATE_TEMPORARY_BUFFER(data);
+  DLAF_CHECK_MAKE_CONTIGUOUS<false>(data);
 
   auto data_const = common::make_data(const_cast<const TypeParam*>(memory.data.get()), memory.num_blocks,
                                       memory.block_size, memory.stride);
-  check_temporary<const TypeParam>(data_const);
+  DLAF_CHECK_CREATE_TEMPORARY_BUFFER(data_const);
+  DLAF_CHECK_MAKE_CONTIGUOUS<false>(data_const);
 }
 
 template <class T>

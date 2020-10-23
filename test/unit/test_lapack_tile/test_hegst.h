@@ -33,8 +33,9 @@ using dlaf::util::size_t::mul;
 
 template <class ElementIndex, class T>
 void testHegst(int itype, blas::Uplo uplo, SizeType m, SizeType extra_ld) {
-  TileElementSize size(m, m);
-  SizeType ld = std::max<SizeType>(1, size.rows()) + extra_ld;
+  const TileElementSize size(m, m);
+
+  const SizeType ld = std::max<SizeType>(1, size.rows()) + extra_ld;
 
   std::stringstream s;
   s << "HEGST: itype = " << itype << ", uplo = " << uplo << ", m = " << m << ", ld = " << ld;
@@ -46,9 +47,9 @@ void testHegst(int itype, blas::Uplo uplo, SizeType m, SizeType extra_ld) {
   Tile<T, Device::CPU> a(size, std::move(mem_a), ld);
   Tile<T, Device::CPU> t(size, std::move(mem_t), ld);
 
-  BaseType<T> alpha = 1.2f;
-  BaseType<T> beta = 1.5f;
-  BaseType<T> gamma = -1.1f;
+  const BaseType<T> alpha = 1.2f;
+  const BaseType<T> beta = 1.5f;
+  const BaseType<T> gamma = -1.1f;
 
   std::function<T(const TileElementIndex&)> el_t, el_a, res_a;
 

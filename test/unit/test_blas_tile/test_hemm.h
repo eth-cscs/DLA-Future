@@ -34,20 +34,15 @@ void testHemm(blas::Side side, blas::Uplo uplo, SizeType m, SizeType n, SizeType
   DLAF_ASSERT(side == blas::Side::Left || side == blas::Side::Right,
               "Only Left and Right side supported", side);
 
-  SizeType k;
+  const SizeType k = (side == blas::Side::Left) ? m : n;
 
-  if (side == blas::Side::Left)
-    k = m;
-  else
-    k = n;
+  const TileElementSize size_a(k, k);
+  const TileElementSize size_b(m, n);
+  const TileElementSize size_c(m, n);
 
-  TileElementSize size_a(k, k);
-  TileElementSize size_b(m, n);
-  TileElementSize size_c(m, n);
-
-  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
-  SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
-  SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
+  const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
+  const SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
+  const SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
 
   std::stringstream s;
   s << "HEMM: " << side << ", " << uplo;
@@ -55,9 +50,9 @@ void testHemm(blas::Side side, blas::Uplo uplo, SizeType m, SizeType n, SizeType
   s << ", lda = " << lda << ", ldb = " << ldb << ", ldc = " << ldc;
   SCOPED_TRACE(s.str());
 
-  T alpha = TypeUtilities<T>::element(1.2, .7);
-  T beta = TypeUtilities<T>::element(1.1, .4);
-  BaseType<T> gamma = 1.3f;
+  const T alpha = TypeUtilities<T>::element(1.2, .7);
+  const T beta = TypeUtilities<T>::element(1.1, .4);
+  const BaseType<T> gamma = 1.3f;
 
   memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
   memory::MemoryView<T, Device::CPU> mem_b(mul(ldb, size_b.cols()));

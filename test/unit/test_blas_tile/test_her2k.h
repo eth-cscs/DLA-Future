@@ -31,12 +31,10 @@ using dlaf::util::size_t::mul;
 template <class T, class CT = const T>
 void testHer2k(blas::Uplo uplo, blas::Op op, SizeType n, SizeType k, SizeType extra_lda,
                SizeType extra_ldc) {
-  TileElementSize size_a(n, k);
-  if (op != blas::Op::NoTrans)
-    size_a.transpose();
-  TileElementSize size_b(n, k);
-  if (op != blas::Op::NoTrans)
-    size_b.transpose();
+  const TileElementSize size_a =
+      (op == blas::Op::NoTrans) ? TileElementSize(n, k) : TileElementSize(k, n);
+  const TileElementSize size_b =
+      (op == blas::Op::NoTrans) ? TileElementSize(n, k) : TileElementSize(k, n);
   const TileElementSize size_c(n, n);
 
   const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;

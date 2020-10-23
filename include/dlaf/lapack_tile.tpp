@@ -25,8 +25,8 @@ void lacpy(const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b) {
   DLAF_ASSERT_MODERATE(a.size() == b.size(), "Source and destination tile must have the same size!", a,
                        b);
 
-  SizeType m = a.size().rows();
-  SizeType n = a.size().cols();
+  const SizeType m = a.size().rows();
+  const SizeType n = a.size().cols();
 
   lapack::lacpy(lapack::MatrixType::General, m, n, a.ptr(), a.ld(), b.ptr(), b.ld());
 }

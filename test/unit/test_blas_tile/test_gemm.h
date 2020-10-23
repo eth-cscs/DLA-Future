@@ -37,11 +37,11 @@ void testGemm(const blas::Op op_a, const blas::Op op_b, SizeType m, SizeType n, 
   TileElementSize size_b(k, n);
   if (op_b != blas::Op::NoTrans)
     size_b.transpose();
-  TileElementSize size_c(m, n);
+  const TileElementSize size_c(m, n);
 
-  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
-  SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
-  SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
+  const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
+  const SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
+  const SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
 
   std::stringstream s;
   s << "GEMM: " << op_a << ", " << op_a;

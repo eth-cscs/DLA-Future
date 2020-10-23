@@ -34,10 +34,10 @@ void testHerk(const blas::Uplo uplo, const blas::Op op_a, SizeType n, SizeType k
   TileElementSize size_a(n, k);
   if (op_a != blas::Op::NoTrans)
     size_a.transpose();
-  TileElementSize size_c(n, n);
+  const TileElementSize size_c(n, n);
 
-  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
-  SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
+  const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
+  const SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
 
   std::stringstream s;
   s << "HERK: " << uplo << ", " << op_a;

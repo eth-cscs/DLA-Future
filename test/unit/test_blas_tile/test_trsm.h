@@ -33,11 +33,12 @@ using dlaf::util::size_t::mul;
 template <class ElementIndex, class T, class CT = const T>
 void testTrsm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const blas::Diag diag,
               SizeType m, SizeType n, SizeType extra_lda, SizeType extra_ldb) {
-  TileElementSize size_a = side == blas::Side::Left ? TileElementSize(m, m) : TileElementSize(n, n);
-  TileElementSize size_b(m, n);
+  const TileElementSize size_a =
+      side == blas::Side::Left ? TileElementSize(m, m) : TileElementSize(n, n);
+  const TileElementSize size_b(m, n);
 
-  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
-  SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
+  const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
+  const SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
 
   std::stringstream s;
   s << "TRSM: " << side << ", " << uplo << ", " << op << ", " << diag << ", m = " << m << ", n = " << n

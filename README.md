@@ -57,23 +57,18 @@ And here the main CMake options for DLAF build customization:
 
 CMake option | Values | Note
 :---|:---|:---
-`DLAF_ASSERT_ENABLE` | `ON|OFF` (default: `ON`) | to enable/disable cheap assertions
-`DLAF_ASSERT_MODERATE_ENABLE` | `ON|OFF` (default: `ON` in Debug, `OFF` otherwise) | to enable/disable moderate assertions
-`DLAF_ASSERT_HEAVY_ENABLE` | `ON|OFF` (default: `ON` in Debug, `OFF` otherwise) | to enable/disable heavy assertions
-`DLAF_WITH_CUDA` | `ON|OFF` (default: `OFF`) | enable CUDA support
+`DLAF_ASSERT_ENABLE` | `{ON,OFF}` (default: `ON`) | to enable/disable cheap assertions
+`DLAF_ASSERT_MODERATE_ENABLE` | `{ON,OFF}` (default: `ON` in Debug, `OFF` otherwise) | to enable/disable moderate assertions
+`DLAF_ASSERT_HEAVY_ENABLE` | `{ON,OFF}` (default: `ON` in Debug, `OFF` otherwise) | to enable/disable heavy assertions
+`DLAF_WITH_CUDA` | `{ON,OFF}` (default: `OFF`) | enable CUDA support
 `HPX_DIR` | |
 `blaspp_DIR` | |
 `lapackpp_DIR` | |
-`DLAF_BUILD_MINIAPPS` | `ON|OFF` | to enable/disable building miniapps
-`DLAF_WITH_TEST` | `ON|OFF` | to enable/disable building tests
-`DLAF_INSTALL_TESTS` | `ON|OFF` | to enable/disable installing tests
-
-blaspp/lapackpp dependency:
-
-CMake option | Values | Note
-:---|:---|:---
 `DLAF_WITH_MKL` | | if blaspp/lapackpp is built with MKL
 `MKL_ROOT` | |
+`DLAF_BUILD_MINIAPPS` | `{ON,OFF}` | to enable/disable building miniapps
+`DLAF_WITH_TEST` | `{ON,OFF}` | to enable/disable building tests
+`DLAF_INSTALL_TESTS` | `{ON,OFF}` | to enable/disable installing tests
 
 ### Link your program/library with DLAF
 

@@ -61,8 +61,8 @@ auto getGenToStdElementSetters(SizeType n, int itype, blas::Uplo uplo, T alpha, 
         (uplo == blas::Uplo::Upper && index.row() > index.col()))
       return TypeUtilities<T>::element(-9.9, 0);
 
-    double i = index.row();
-    double j = index.col();
+    const double i = index.row();
+    const double j = index.col();
     if (itype == 1)
       return TypeUtilities<T>::polar(beta / std::exp2(std::abs(i - j)), alpha * (i - j));
     else
@@ -75,8 +75,8 @@ auto getGenToStdElementSetters(SizeType n, int itype, blas::Uplo uplo, T alpha, 
         (uplo == blas::Uplo::Upper && index.row() > index.col()))
       return TypeUtilities<T>::element(-9.9, 0);
 
-    double i = index.row();
-    double j = index.col();
+    const double i = index.row();
+    const double j = index.col();
     if (itype == 1)
       return TypeUtilities<T>::polar((i + 1) * (j + 1) * (beta * beta * gamma) / std::exp2(i + j),
                                      alpha * (i - j));
@@ -90,8 +90,8 @@ auto getGenToStdElementSetters(SizeType n, int itype, blas::Uplo uplo, T alpha, 
         (uplo == blas::Uplo::Upper && index.row() > index.col()))
       return TypeUtilities<T>::element(-9.9, 0);
 
-    double i = index.row();
-    double j = index.col();
+    const double i = index.row();
+    const double j = index.col();
 
     if (itype == 1)
       return TypeUtilities<T>::polar(gamma / std::exp2(i + j), alpha * (i - j));

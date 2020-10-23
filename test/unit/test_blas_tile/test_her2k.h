@@ -37,11 +37,11 @@ void testHer2k(blas::Uplo uplo, blas::Op op, SizeType n, SizeType k, SizeType ex
   TileElementSize size_b(n, k);
   if (op != blas::Op::NoTrans)
     size_b.transpose();
-  TileElementSize size_c(n, n);
+  const TileElementSize size_c(n, n);
 
-  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
-  SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_lda;
-  SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
+  const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
+  const SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_lda;
+  const SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
 
   std::stringstream s;
   s << "HER2K: " << uplo << ", " << op;
@@ -80,8 +80,8 @@ void testHer2k(blas::Uplo uplo, blas::Op op, SizeType n, SizeType k, SizeType ex
     return TypeUtilities<T>::polar(1.2 * i / (j + 1), -i + j);
   };
 
-  T alpha = TypeUtilities<T>::element(-1.2, 0.2);
-  BaseType<T> beta = 1.1f;
+  const T alpha = TypeUtilities<T>::element(-1.2, 0.2);
+  const BaseType<T> beta = 1.1f;
 
   auto res_c = [uplo, k, alpha, el_op_a, el_op_b, beta, el_c](const TileElementIndex& index) {
     // Return el_c(index) for elements not referenced

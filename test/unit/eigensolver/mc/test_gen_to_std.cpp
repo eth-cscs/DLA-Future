@@ -43,8 +43,8 @@ template <class T>
 void testGenToStdEigensolver(blas::Uplo uplo, T alpha, T beta, T gamma, SizeType m, SizeType mb) {
   std::function<T(const GlobalElementIndex&)> el_l, el_a, res_b;
 
-  LocalElementSize size(m, m);
-  TileElementSize block_size(mb, mb);
+  const LocalElementSize size(m, m);
+  const TileElementSize block_size(mb, mb);
 
   Matrix<T, Device::CPU> mat_a(size, block_size);
   Matrix<T, Device::CPU> mat_l(size, block_size);
@@ -63,13 +63,13 @@ void testGenToStdEigensolver(blas::Uplo uplo, T alpha, T beta, T gamma, SizeType
 
 TYPED_TEST(EigensolverGenToStdLocalTest, Correctness) {
   SizeType m, mb;
-  blas::Uplo uplo = blas::Uplo::Lower;
+  const blas::Uplo uplo = blas::Uplo::Lower;
 
   for (auto sz : sizes) {
     std::tie(m, mb) = sz;
-    BaseType<TypeParam> alpha = 1.2f;
-    BaseType<TypeParam> beta = 1.5f;
-    BaseType<TypeParam> gamma = -1.1f;
+    const BaseType<TypeParam> alpha = 1.2f;
+    const BaseType<TypeParam> beta = 1.5f;
+    const BaseType<TypeParam> gamma = -1.1f;
 
     testGenToStdEigensolver(uplo, alpha, beta, gamma, m, mb);
   }

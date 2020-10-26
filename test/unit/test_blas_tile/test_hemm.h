@@ -82,39 +82,39 @@ void testHemm(const blas::Side side, const blas::Uplo uplo, const SizeType m, co
   // Sij = beta * Cij + 0.63 * k * gamma * (j+1)/(i+1) exp(I * alpha * (i+j))
   auto el_a = [side, gamma](const TileElementIndex& index) {
     if (side == blas::Side::Left) {
-      double i = index.row();
-      double k = index.col();
+      const double i = index.row();
+      const double k = index.col();
       return TypeUtilities<T>::polar(.9 * (i + 1) * (k + 1), gamma * (i - k));
     }
     else {
-      double k = index.row();
-      double j = index.col();
+      const double k = index.row();
+      const double j = index.col();
       return TypeUtilities<T>::polar(.9 * (j + 1) * (k + 1), gamma * (j - k));
     }
   };
 
   auto el_b = [side, gamma](const TileElementIndex& index) {
     if (side == blas::Side::Left) {
-      double k = index.row();
-      double j = index.col();
+      const double k = index.row();
+      const double j = index.col();
       return TypeUtilities<T>::polar(.7 / ((j + 1) * (k + 1)), gamma * (k + j));
     }
     else {
-      double i = index.row();
-      double k = index.col();
+      const double i = index.row();
+      const double k = index.col();
       return TypeUtilities<T>::polar(.7 / ((i + 1) * (k + 1)), gamma * (i + k));
     }
   };
 
   auto el_c = [](const TileElementIndex& index) {
-    double i = index.row();
-    double j = index.col();
+    const double i = index.row();
+    const double j = index.col();
     return TypeUtilities<T>::polar(1.2 * i / (j + 1), -i + j);
   };
 
   auto res_c = [side, k, alpha, beta, gamma, el_c](const TileElementIndex& index) {
-    double i = index.row();
-    double j = index.col();
+    const double i = index.row();
+    const double j = index.col();
 
     if (side == blas::Side::Left) {
       return beta * el_c(index) + TypeUtilities<T>::element(0.63 * k, 0) * alpha *

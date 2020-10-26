@@ -60,15 +60,15 @@ auto getLeftTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T al
         (diag == blas::Diag::Unit && index.row() == index.col()))
       return TypeUtilities<T>::element(-9.9, 0);
 
-    double i = index.row();
-    double k = index.col();
+    const double i = index.row();
+    const double k = index.col();
 
     return TypeUtilities<T>::polar((i + 1) / (k + .5), 2 * i - k);
   };
 
   std::function<T(const ElementIndex&)> el_x = [](const ElementIndex& index) {
-    double k = index.row();
-    double j = index.col();
+    const double k = index.row();
+    const double j = index.col();
 
     return TypeUtilities<T>::polar((k + .5) / (j + 2), k + j);
   };
@@ -77,9 +77,9 @@ auto getLeftTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T al
                                                 el_x](const ElementIndex& index) {
     BaseType<T> kk = op_a_lower ? index.row() + 1 : m - index.row();
 
-    double i = index.row();
-    double j = index.col();
-    T gamma = TypeUtilities<T>::polar((i + 1) / (j + 2), 2 * i + j);
+    const double i = index.row();
+    const double j = index.col();
+    const T gamma = TypeUtilities<T>::polar((i + 1) / (j + 2), 2 * i + j);
     if (diag == blas::Diag::Unit)
       return ((kk - 1) * gamma + el_x(index)) / alpha;
     else
@@ -120,8 +120,8 @@ auto getRightTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T a
     op_a_lower = true;
 
   auto el_x = [](const ElementIndex& index) {
-    double i = index.row();
-    double k = index.col();
+    const double i = index.row();
+    const double k = index.col();
 
     return TypeUtilities<T>::polar((k + .5) / (i + 2), i + k);
   };
@@ -131,8 +131,8 @@ auto getRightTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T a
         (diag == blas::Diag::Unit && index.row() == index.col()))
       return TypeUtilities<T>::element(-9.9, 0);
 
-    double k = index.row();
-    double j = index.col();
+    const double k = index.row();
+    const double j = index.col();
 
     return TypeUtilities<T>::polar((j + 1) / (k + .5), 2 * j - k);
   };
@@ -140,9 +140,9 @@ auto getRightTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T a
   auto el_b = [n, alpha, diag, op_a_lower, el_x](const ElementIndex& index) {
     BaseType<T> kk = op_a_lower ? n - index.col() : index.col() + 1;
 
-    double i = index.row();
-    double j = index.col();
-    T gamma = TypeUtilities<T>::polar((j + 1) / (i + 2), i + 2 * j);
+    const double i = index.row();
+    const double j = index.col();
+    const T gamma = TypeUtilities<T>::polar((j + 1) / (i + 2), i + 2 * j);
     if (diag == blas::Diag::Unit)
       return ((kk - 1) * gamma + el_x(index)) / alpha;
     else

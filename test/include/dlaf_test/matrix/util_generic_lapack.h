@@ -54,7 +54,7 @@ template <class ElementIndex, class T>
 auto getGenToStdElementSetters(SizeType n, int itype, blas::Uplo uplo, T alpha, T beta, T gamma) {
   DLAF_ASSERT(uplo == blas::Uplo::Lower || uplo == blas::Uplo::Upper, "Only Upper and Lower supported",
               uplo);
-  DLAF_ASSERT(itype > 0 && itype < 4, "Only itype = 1, 2, 3 allowed", itype);
+  DLAF_ASSERT(itype >= 1 && itype <= 3, itype);
 
   std::function<T(const ElementIndex&)> el_t = [itype, uplo, alpha, beta](const ElementIndex& index) {
     if ((uplo == blas::Uplo::Lower && index.row() < index.col()) ||

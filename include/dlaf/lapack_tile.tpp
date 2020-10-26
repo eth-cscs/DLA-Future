@@ -13,13 +13,13 @@
 template <class T, Device device>
 void hegst(const int itype, const blas::Uplo uplo, const Tile<T, device>& a, const Tile<T, device>& b) {
   DLAF_ASSERT(a.size().rows() == a.size().cols(), a.size());
-  DLAF_ASSERT(itype > 0 && itype <= 3, itype);
+  DLAF_ASSERT(itype >= 1 && itype <= 3, itype);
 
   // itype = 1 to solve inv(U**H)*A*inv(U) or inv(L)*A*inv(L**H))
   // itype = 2, 3 to solve U*A*U**H or L**H*A*L
   auto info = lapack::hegst(itype, uplo, a.size().cols(), a.ptr(), a.ld(), b.ptr(), b.ld());
 
-  DLAF_ASSERT(info == 0, "");
+  DLAF_ASSERT(info == 0, info);
 }
 
 template <class T>

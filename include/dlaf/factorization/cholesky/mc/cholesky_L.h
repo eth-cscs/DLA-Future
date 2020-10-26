@@ -278,7 +278,7 @@ void cholesky_L(Matrix<T, Device::CPU>& mat_a) {
 
 // Distributed implementation of Lower Cholesky factorization.
 template <class T>
-void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
+void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a, int ntiles_batch) {
   using hpx::threads::executors::pool_executor;
   using hpx::threads::thread_priority_high;
   using hpx::threads::thread_priority_default;
@@ -299,17 +299,9 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
 
   const matrix::Distribution& distr = mat_a.distribution();
   SizeType nrtile = mat_a.nrTiles().cols();
-
-  if (nrtile == 0)
-    return;
-
   comm::Index2D this_rank = grid.rank();
 
-  constexpr int ntiles_batch = 2;
-  // std::vector<SizeType> batch_indices;
-  // batch_indices.reserve(ntiles_batch);
-
-  for (SizeType k = 0; k < nrtile - 1; ++k) {
+  for (SizeType k = 0; k < nrtile; ++k) {
     // Create a placeholder that will store the shared futures representing the panel
     std::unordered_map<SizeType, hpx::shared_future<ConstTile_t>> panel;
 
@@ -320,10 +312,12 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
     if (this_rank == kk_rank) {
       potrf_diag_tile(executor_hp, mat_a(kk_idx));
       panel[k] = mat_a.read(kk_idx);
-      send_tile(executor_hp, mpi_col_task_chain, panel[k]);
+      if (k != nrtile - 1)
+        send_tile(executor_hp, mpi_col_task_chain, panel[k]);
     }
     else if (this_rank.col() == kk_rank.col()) {
-      panel[k] = recv_tile<T>(executor_hp, mpi_col_task_chain, mat_a.tileSize(kk_idx), kk_rank.row());
+      if (k != nrtile - 1)
+        panel[k] = recv_tile<T>(executor_hp, mpi_col_task_chain, mat_a.tileSize(kk_idx), kk_rank.row());
     }
 
     // Iterate over the k-th column
@@ -349,13 +343,12 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
     }
 
     // Iterate over the diagonal of the trailing matrix
-    std::vector<std::vector<SizeType>> recv_bindices_map(
-        static_cast<std::size_t>(distr.commGridSize().rows()));
+    std::vector<std::vector<SizeType>> recv_bindices_map(distr.commGridSize().rows());
     for (SizeType j = k + 1; j < nrtile; ++j) {
       GlobalTileIndex jj_idx(j, j);
       comm::Index2D jj_rank = mat_a.rankGlobalTile(jj_idx);
 
-      std::vector<SizeType>& recv_bindices = recv_bindices_map[static_cast<std::size_t>(jj_rank.row())];
+      std::vector<SizeType>& recv_bindices = recv_bindices_map[jj_rank.row()];
 
       // Broadcast the jk-tile along the j-th column and update the jj-tile
       if (this_rank == jj_rank) {
@@ -385,11 +378,6 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
         }
       }
     }
-  }
-
-  GlobalTileIndex last_idx(nrtile - 1, nrtile - 1);
-  if (this_rank == distr.rankGlobalTile(last_idx)) {
-    potrf_diag_tile(executor_hp, mat_a(GlobalTileIndex(last_idx)));
   }
 }
 }

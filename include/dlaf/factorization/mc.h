@@ -51,6 +51,10 @@ struct Factorization<Backend::MC> {
   /// @pre mat_a is distributed according to grid.
   template <class T>
   static void cholesky(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, Device::CPU>& mat_a);
+
+  template <class T>
+  static void cholesky(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, Device::CPU>& mat_a,
+                       int ntiles_batch);
 };
 
 }

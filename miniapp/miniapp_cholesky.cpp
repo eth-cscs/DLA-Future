@@ -64,6 +64,7 @@ struct options_t {
   int grid_rows;
   int grid_cols;
   int64_t nruns;
+  int ntiles_batch;
   CHECK_RESULT do_check;
 };
 
@@ -108,7 +109,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     }
 
     dlaf::common::Timer<> timeit;
-    dlaf::Factorization<Backend::MC>::cholesky(comm_grid, blas::Uplo::Lower, matrix);
+    dlaf::Factorization<Backend::MC>::cholesky(comm_grid, blas::Uplo::Lower, matrix, opts.ntiles_batch);
 
     // wait for last task and barrier for all ranks
     {
@@ -164,28 +165,14 @@ int main(int argc, char** argv) {
     ("grid-rows",    value<int>()        ->default_value(   1),                        "Number of row processes in the 2D communicator")
     ("grid-cols",    value<int>()        ->default_value(   1),                        "Number of column processes in the 2D communicator")
     ("nruns",        value<int64_t>()    ->default_value(   1),                        "Number of runs to compute the cholesky")
+    ("batch",        value<int>()        ->default_value(   1),                        "Number of tiles to batch before communicating")
     ("check-result", value<std::string>()->default_value(  "")->implicit_value("all"), "Enable result check ('all', 'last')")
   ;
   // clang-format on
 
   hpx::init_params p;
   p.desc_cmdline = desc_commandline;
-  p.rp_callback = [](auto& rp) {
-    int ntasks;
-    MPI_Comm_size(MPI_COMM_WORLD, &ntasks);
-    // if the user has asked for special thread pools for communication
-    // then set them up
-    if (ntasks > 1) {
-      // Create a thread pool with a single core that we will use for all
-      // communication related tasks
-      rp.create_thread_pool("mpi", hpx::resource::scheduling_policy::local_priority_fifo);
-      rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], "mpi");
-    }
-  };
-
-  auto ret_code = hpx::init(argc, argv, p);
-
-  return ret_code;
+  return hpx::init(argc, argv, p);
 }
 
 namespace {
@@ -392,16 +379,20 @@ void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
 
 options_t check_options(hpx::program_options::variables_map& vm) {
   options_t opts = {
-      vm["matrix-size"].as<SizeType>(), vm["block-size"].as<SizeType>(),
-      vm["grid-rows"].as<int>(),        vm["grid-cols"].as<int>(),
-
-      vm["nruns"].as<int64_t>(),        CHECK_RESULT::NONE,
+      vm["matrix-size"].as<SizeType>(),
+      vm["block-size"].as<SizeType>(),
+      vm["grid-rows"].as<int>(),
+      vm["grid-cols"].as<int>(),
+      vm["nruns"].as<int64_t>(),
+      vm["batch"].as<int>(),
+      CHECK_RESULT::NONE,
   };
 
   DLAF_ASSERT(opts.m > 0, "matrix size must be a positive number!", opts.m);
   DLAF_ASSERT(opts.mb > 0, "block size must be a positive number!", opts.mb);
   DLAF_ASSERT(opts.grid_rows > 0, "number of grid rows must be a positive number!", opts.grid_rows);
   DLAF_ASSERT(opts.grid_cols > 0, "number of grid columns must be a positive number!", opts.grid_cols);
+  DLAF_ASSERT(opts.ntiles_batch > 0, "batch size should be at least 1", opts.ntiles_batch);
 
   const std::string check_type = vm["check-result"].as<std::string>();
 

@@ -32,7 +32,7 @@ using dlaf::util::size_t::mul;
 
 template <class ElementIndex, class T, class CT = const T>
 void testTrsm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const blas::Diag diag,
-              SizeType m, SizeType n, SizeType extra_lda, SizeType extra_ldb) {
+              const SizeType m, const SizeType n, const SizeType extra_lda, const SizeType extra_ldb) {
   const TileElementSize size_a =
       side == blas::Side::Left ? TileElementSize(m, m) : TileElementSize(n, n);
   const TileElementSize size_b(m, n);

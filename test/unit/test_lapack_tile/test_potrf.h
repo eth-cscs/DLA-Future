@@ -28,7 +28,7 @@ using namespace testing;
 using dlaf::util::size_t::mul;
 
 template <class T, bool return_info>
-void testPotrf(const blas::Uplo uplo, SizeType n, SizeType extra_lda) {
+void testPotrf(const blas::Uplo uplo, const SizeType n, const SizeType extra_lda) {
   const TileElementSize size_a = TileElementSize(n, n);
   const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
 

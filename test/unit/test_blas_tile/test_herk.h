@@ -29,11 +29,10 @@ using namespace testing;
 using dlaf::util::size_t::mul;
 
 template <class T, class CT = const T>
-void testHerk(const blas::Uplo uplo, const blas::Op op_a, SizeType n, SizeType k, SizeType extra_lda,
-              SizeType extra_ldc) {
-  TileElementSize size_a(n, k);
-  if (op_a != blas::Op::NoTrans)
-    size_a.transpose();
+void testHerk(const blas::Uplo uplo, const blas::Op op_a, const SizeType n, const SizeType k,
+              const SizeType extra_lda, const SizeType extra_ldc) {
+  const TileElementSize size_a =
+      (op_a == blas::Op::NoTrans) ? TileElementSize(n, k) : TileElementSize(k, n);
   const TileElementSize size_c(n, n);
 
   const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;

@@ -29,14 +29,13 @@ using namespace testing;
 using dlaf::util::size_t::mul;
 
 template <class T, class CT = const T>
-void testGemm(const blas::Op op_a, const blas::Op op_b, SizeType m, SizeType n, SizeType k,
-              SizeType extra_lda, SizeType extra_ldb, SizeType extra_ldc) {
-  TileElementSize size_a(m, k);
-  if (op_a != blas::Op::NoTrans)
-    size_a.transpose();
-  TileElementSize size_b(k, n);
-  if (op_b != blas::Op::NoTrans)
-    size_b.transpose();
+void testGemm(const blas::Op op_a, const blas::Op op_b, const SizeType m, const SizeType n,
+              const SizeType k, const SizeType extra_lda, const SizeType extra_ldb,
+              const SizeType extra_ldc) {
+  const TileElementSize size_a =
+      (op_a == blas::Op::NoTrans) ? TileElementSize(m, k) : TileElementSize(k, m);
+  const TileElementSize size_b =
+      (op_b == blas::Op::NoTrans) ? TileElementSize(k, n) : TileElementSize(n, k);
   const TileElementSize size_c(m, n);
 
   const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;

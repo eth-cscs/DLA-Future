@@ -31,7 +31,7 @@ void printElements(Matrix<T, Device::CPU>& mat) {
       SizeType elcol = icol % blockcol;
 
       const LocalTileIndex idx = {tilerow, tilecol};
-      auto tile = mat(idx).get();
+      auto& tile = mat.read(idx).get();
 
       std::cout << tile({elrow, elcol}) << " ";
     }

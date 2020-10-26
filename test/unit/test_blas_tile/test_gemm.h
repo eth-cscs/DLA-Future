@@ -67,18 +67,18 @@ void testGemm(const blas::Op op_a, const blas::Op op_b, const SizeType m, const 
   //        = beta * c_ij + gamma * (i+1) / (j+2) * exp(I*(2*i+j)),
   // where gamma = .72 * k * alpha.
   auto el_op_a = [](const TileElementIndex& index) {
-    double i = index.row();
-    double k = index.col();
+    const double i = index.row();
+    const double k = index.col();
     return TypeUtilities<T>::polar(.9 * (i + 1) / (k + .5), 2 * i - k);
   };
   auto el_op_b = [](const TileElementIndex& index) {
-    double k = index.row();
-    double j = index.col();
+    const double k = index.row();
+    const double j = index.col();
     return TypeUtilities<T>::polar(.8 * (k + .5) / (j + 2), k + j);
   };
   auto el_c = [](const TileElementIndex& index) {
-    double i = index.row();
-    double j = index.col();
+    const double i = index.row();
+    const double j = index.col();
     return TypeUtilities<T>::polar(1.2 * i / (j + 1), -i + j);
   };
 
@@ -87,8 +87,8 @@ void testGemm(const blas::Op op_a, const blas::Op op_b, const SizeType m, const 
 
   const T gamma = TypeUtilities<T>::element(.72 * k, 0) * alpha;
   auto res_c = [beta, el_c, gamma](const TileElementIndex& index) {
-    double i = index.row();
-    double j = index.col();
+    const double i = index.row();
+    const double j = index.col();
     return beta * el_c(index) + gamma * TypeUtilities<T>::polar((i + 1) / (j + 2), 2 * i + j);
   };
 

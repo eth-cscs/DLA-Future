@@ -52,8 +52,8 @@ void testHerk(const blas::Uplo uplo, const blas::Op op_a, const SizeType n, cons
 
   // Returns op_a(a)_ik
   auto el_op_a = [](const TileElementIndex& index) {
-    double i = index.row();
-    double k = index.col();
+    const double i = index.row();
+    const double k = index.col();
     return TypeUtilities<T>::polar(.9 * (i + 1) / (k + .5), i - k);
   };
   auto el_c = [uplo](const TileElementIndex& index) {
@@ -62,8 +62,8 @@ void testHerk(const blas::Uplo uplo, const blas::Op op_a, const SizeType n, cons
         (uplo == blas::Uplo::Upper && index.row() > index.col()))
       return TypeUtilities<T>::element(-1, 0);
 
-    double i = index.row();
-    double j = index.col();
+    const double i = index.row();
+    const double j = index.col();
     return TypeUtilities<T>::polar(1.2 * i / (j + 1), -i + j);
   };
 

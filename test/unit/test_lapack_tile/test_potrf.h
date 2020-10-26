@@ -56,8 +56,8 @@ void testPotrf(const blas::Uplo uplo, const SizeType n, const SizeType extra_lda
         (uplo == blas::Uplo::Upper && index.row() > index.col()))
       return TypeUtilities<T>::element(-9.9, 0);
 
-    double i = index.row();
-    double j = index.col();
+    const double i = index.row();
+    const double j = index.col();
 
     return TypeUtilities<T>::polar(std::exp2(-(i + j)) / 3 * (std::exp2(2 * (std::min(i, j) + 1)) - 1),
                                    -i + j);
@@ -68,8 +68,8 @@ void testPotrf(const blas::Uplo uplo, const SizeType n, const SizeType extra_lda
         (uplo == blas::Uplo::Upper && index.row() > index.col()))
       return TypeUtilities<T>::element(-9.9, 0);
 
-    double i = index.row();
-    double j = index.col();
+    const double i = index.row();
+    const double j = index.col();
 
     return TypeUtilities<T>::polar(std::exp2(-std::abs(i - j)), -i + j);
   };

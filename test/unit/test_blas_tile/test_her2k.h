@@ -57,14 +57,14 @@ void testHer2k(const blas::Uplo uplo, const blas::Op op, const SizeType n, const
 
   // Returns op(a)_ik
   auto el_op_a = [](const TileElementIndex& index) {
-    double i = index.row();
-    double k = index.col();
+    const double i = index.row();
+    const double k = index.col();
     return TypeUtilities<T>::polar(.9 * (i + 1) / (k + .5), i - k);
   };
   // Returns op(b)_kj
   auto el_op_b = [](const TileElementIndex& index) {
-    double k = index.row();
-    double j = index.col();
+    const double k = index.row();
+    const double j = index.col();
     return TypeUtilities<T>::polar(.7 * (k + .5) / (j + 1), k - j);
   };
   auto el_c = [uplo](const TileElementIndex& index) {

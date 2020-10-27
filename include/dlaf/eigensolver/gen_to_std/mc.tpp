@@ -18,19 +18,22 @@ namespace dlaf {
 
 template <class T>
 void Eigensolver<Backend::MC>::genToStd(blas::Uplo uplo, Matrix<T, Device::CPU>& mat_a,
-                                        Matrix<T, Device::CPU>& mat_l) {
+                                        Matrix<T, Device::CPU>& mat_t) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
-  DLAF_ASSERT(matrix::square_size(mat_l), mat_l);
-  DLAF_ASSERT(matrix::square_blocksize(mat_l), mat_l);
+  DLAF_ASSERT(matrix::square_size(mat_t), mat_t);
+  DLAF_ASSERT(matrix::square_blocksize(mat_t), mat_t);
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
-  DLAF_ASSERT(matrix::local_matrix(mat_l), mat_l);
+  DLAF_ASSERT(matrix::local_matrix(mat_t), mat_t);
 
   switch (uplo) {
     case blas::Uplo::Lower:
-      internal::mc::genToStd_L(mat_a, mat_l);
+      internal::mc::genToStd_L(mat_a, mat_t);
       break;
     case blas::Uplo::Upper:
+      DLAF_ASSERT(false, "not yet implemented", blas::uplo2str(uplo));
+      break;
+    default:
       DLAF_ASSERT(false, "not yet implemented", blas::uplo2str(uplo));
       break;
   }

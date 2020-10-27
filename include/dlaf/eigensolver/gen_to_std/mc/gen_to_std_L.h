@@ -61,17 +61,16 @@ void genToStd_L(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l) {
     const auto kk = LocalTileIndex{k, k};
 
     // Direct transformation to standard eigenvalue problem of the diagonal tile
-    hpx::dataflow(executor_hp, unwrapping(tile::hegst<T, Device::CPU>), 1, Lower, std::move(mat_a(kk)),
-                  std::move(mat_l(kk)));
+    hpx::dataflow(executor_hp, unwrapping(tile::hegst<T, Device::CPU>), 1, Lower, mat_a(kk), mat_l(kk));
 
     if (k != (n - 1)) {
       for (SizeType i = k + 1; i < m; ++i) {
         // Working on panel...
         const auto ik = LocalTileIndex{i, k};
         hpx::dataflow(executor_normal, unwrapping(tile::trsm<T, Device::CPU>), Right, Lower, ConjTrans,
-                      NonUnit, 1.0, mat_l.read(kk), std::move(mat_a(ik)));
+                      NonUnit, 1.0, mat_l.read(kk), mat_a(ik));
         hpx::dataflow(executor_normal, unwrapping(tile::hemm<T, Device::CPU>), Right, Lower, -0.5,
-                      mat_a.read(kk), mat_l.read(ik), 1.0, std::move(mat_a(ik)));
+                      mat_a.read(kk), mat_l.read(ik), 1.0, mat_a(ik));
       }
 
       for (SizeType j = k + 1; j < n; ++j) {
@@ -79,15 +78,15 @@ void genToStd_L(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l) {
         const auto jj = LocalTileIndex{j, j};
         const auto jk = LocalTileIndex{j, k};
         hpx::dataflow(executor_hp, unwrapping(tile::her2k<T, Device::CPU>), Lower, NoTrans, -1.0,
-                      mat_a.read(jk), mat_l.read(jk), 1.0, std::move(mat_a(jj)));
+                      mat_a.read(jk), mat_l.read(jk), 1.0, mat_a(jj));
 
         for (SizeType i = j + 1; i < m; ++i) {
           const auto ik = LocalTileIndex{i, k};
           const auto ij = LocalTileIndex{i, j};
           hpx::dataflow(executor_normal, unwrapping(tile::gemm<T, Device::CPU>), NoTrans, ConjTrans,
-                        -1.0, mat_a.read(ik), mat_l.read(jk), 1.0, std::move(mat_a(ij)));
+                        -1.0, mat_a.read(ik), mat_l.read(jk), 1.0, mat_a(ij));
           hpx::dataflow(executor_normal, unwrapping(tile::gemm<T, Device::CPU>), NoTrans, ConjTrans,
-                        -1.0, mat_l.read(ik), mat_a.read(jk), 1.0, std::move(mat_a(ij)));
+                        -1.0, mat_l.read(ik), mat_a.read(jk), 1.0, mat_a(ij));
         }
       }
 
@@ -95,20 +94,20 @@ void genToStd_L(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l) {
         // Working on panel...
         const auto ik = LocalTileIndex{i, k};
         hpx::dataflow(executor_hp, unwrapping(tile::hemm<T, Device::CPU>), Right, Lower, -0.5,
-                      mat_a.read(kk), mat_l.read(ik), 1.0, std::move(mat_a(ik)));
+                      mat_a.read(kk), mat_l.read(ik), 1.0, mat_a(ik));
       }
 
       for (SizeType j = k + 1; j < n; ++j) {
         const auto jj = LocalTileIndex{j, j};
         const auto jk = LocalTileIndex{j, k};
         hpx::dataflow(executor_hp, unwrapping(tile::trsm<T, Device::CPU>), Left, Lower, NoTrans, NonUnit,
-                      1.0, mat_l.read(jj), std::move(mat_a(jk)));
+                      1.0, mat_l.read(jj), mat_a(jk));
 
         for (SizeType i = j + 1; i < m; ++i) {
           const auto ij = LocalTileIndex{i, j};
           const auto ik = LocalTileIndex{i, k};
           hpx::dataflow(executor_normal, unwrapping(tile::gemm<T, Device::CPU>), NoTrans, NoTrans, -1.0,
-                        mat_l.read(ij), mat_a.read(jk), 1.0, std::move(mat_a(ik)));
+                        mat_l.read(ij), mat_a.read(jk), 1.0, mat_a(ik));
         }
       }
     }

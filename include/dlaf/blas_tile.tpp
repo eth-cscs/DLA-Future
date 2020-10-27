@@ -52,8 +52,7 @@ void hemm(const blas::Side side, const blas::Uplo uplo, const T alpha, const Til
     DLAF_ASSERT(a.size().cols() == b.size().rows(),
                 "columns of matrix `a` does not correspond to rows of matrix `b`", a, b);
   }
-
-  if (side == blas::Side::Right) {
+  else if (side == blas::Side::Right) {
     DLAF_ASSERT(m == b.size().rows(), "`m` cannot be determined!", m, b);
     DLAF_ASSERT(n == a.size().cols(), "`n` cannot be determined!", n, a);
     DLAF_ASSERT(a.size().rows() == b.size().cols(),

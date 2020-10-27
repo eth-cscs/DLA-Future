@@ -20,15 +20,16 @@ namespace dlaf {
 template <>
 struct Eigensolver<Backend::MC> {
   /// Reduce a Hermitian definite generalized eigenproblem to standard form, using the factorization
-  /// obtained from potrf (lower matrix from Cholesky decomposition), solving B=inv(L)*A*inv(L**H),
-  /// implementation on local memory.
+  /// obtained from potrf (lower matrix from Cholesky decomposition). It solves B=inv(L)*A*inv(L**H)
+  /// or B=inv(U**H)*A*inv(U)
+  /// Implementation on local memory.
   ///
   /// @param mat_a on entry it contains the Hermitian matrix A, on exit the matrix elements
   /// are overwritten with the elements of the matrix B.
-  /// @param mat_l contains the lower triangular matrix L. Only the tiles of the matrix which contain the
-  /// lower triangular part are accessed.
+  /// @param mat_t contains the triangular matrix. It can be lower (L) or upper (U). Only the tiles of
+  /// the matrix which contain the lower triangular or the upper triangular part are accessed.
   template <class T>
-  static void genToStd(blas::Uplo uplo, Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l);
+  static void genToStd(blas::Uplo uplo, Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_t);
 };
 
 }

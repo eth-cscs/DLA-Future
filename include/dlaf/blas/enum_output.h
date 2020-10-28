@@ -21,6 +21,7 @@ inline std::ostream& operator<<(std::ostream& out, const blas::Diag& diag) {
       break;
     case blas::Diag::NonUnit:
       out << "NonUnit";
+      break;
   }
   return out;
 }

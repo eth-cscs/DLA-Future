@@ -123,7 +123,7 @@ void check_is_hermitian(dlaf::Matrix<const T, Device::CPU>& matrix,
       if (current_rank == owner_original) {
         const auto& tile_original = matrix.read(index_tile_original).get();
         hpx::shared_future<dlaf::Tile<const T, Device::CPU>> tile_transposed;
-        auto size_tile_transposed = transposed(tile_original.size());
+        const auto size_tile_transposed = transposed(tile_original.size());
 
         if (current_rank == owner_transposed) {
           tile_transposed = matrix.read(index_tile_transposed);

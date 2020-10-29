@@ -12,7 +12,7 @@
 
 #include <ostream>
 
-#include <lapack_util.hh>
+#include <lapack/util.hh>
 
 namespace lapack {
 

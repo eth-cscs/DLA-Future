@@ -17,6 +17,7 @@
 #include "dlaf/memory/memory_view.h"
 #include "dlaf/tile.h"
 #include "dlaf/types.h"
+#include "dlaf/lapack/enum_output.h"
 
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/util_types.h"
@@ -81,7 +82,7 @@ template <class T>
 void test_lange(lapack::Norm norm, const Tile<T, Device::CPU>& a, NormT<T> norm_expected) {
   set(a, TileSetter<T>{a.size()});
 
-  SCOPED_TRACE(::testing::Message() << "LANGE: " << lapack::norm2str(norm) << ", " << a.size()
+  SCOPED_TRACE(::testing::Message() << "LANGE: " << norm << ", " << a.size()
                                     << ", ld = " << a.ld());
 
   EXPECT_FLOAT_EQ(norm_expected, lange(norm, a));
@@ -108,7 +109,7 @@ void run(lapack::Norm norm, const Tile<T, Device::CPU>& a) {
       norm_expected = size != TileElementSize{1, 1} ? std::sqrt(17) : std::sqrt(4);
       break;
     case lapack::Norm::Two:
-      FAIL() << "norm " << lapack::norm2str(norm) << " is not supported by lange";
+      FAIL() << "norm " << norm << " is not supported by lange";
   }
 
   norm_expected *= value;

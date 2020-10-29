@@ -18,20 +18,20 @@ namespace lapack {
 
 inline std::ostream& operator<<(std::ostream& out, const Norm& norm) {
   switch (norm) {
-    case lapack::Norm::One:
-      out << "One";
+    case Norm::One:
+      out << "OneNorm";
       break;
-    case lapack::Norm::Two:
-      out << "Two";
+    case Norm::Two:
+      out << "TwoNorm";
       break;
-    case lapack::Norm::Inf:
-      out << "Inf";
+    case Norm::Inf:
+      out << "InfinityNorm";
       break;
-    case lapack::Norm::Fro:
-      out << "Fro";
+    case Norm::Fro:
+      out << "FrobeniusNorm";
       break;
-    case lapack::Norm::Max:
-      out << "One";
+    case Norm::Max:
+      out << "MaxNorm";
       break;
   }
   return out;

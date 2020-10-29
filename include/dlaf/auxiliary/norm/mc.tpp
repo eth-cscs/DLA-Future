@@ -11,10 +11,10 @@
 
 #include "dlaf/auxiliary/norm/mc/norm_max_L.h"
 
+#include "dlaf/blas/enum_output.h"
 #include "dlaf/common/assert.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/lapack/enum_output.h"
-#include "dlaf/blas/enum_output.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix.h"
 #include "dlaf/types.h"

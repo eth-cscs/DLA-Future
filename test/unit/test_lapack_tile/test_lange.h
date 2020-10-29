@@ -12,12 +12,12 @@
 
 #include <gtest/gtest.h>
 
+#include "dlaf/lapack/enum_output.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/memory/memory_view.h"
 #include "dlaf/tile.h"
 #include "dlaf/types.h"
-#include "dlaf/lapack/enum_output.h"
 
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/util_types.h"
@@ -82,8 +82,7 @@ template <class T>
 void test_lange(lapack::Norm norm, const Tile<T, Device::CPU>& a, NormT<T> norm_expected) {
   set(a, TileSetter<T>{a.size()});
 
-  SCOPED_TRACE(::testing::Message() << "LANGE: " << norm << ", " << a.size()
-                                    << ", ld = " << a.ld());
+  SCOPED_TRACE(::testing::Message() << "LANGE: " << norm << ", " << a.size() << ", ld = " << a.ld());
 
   EXPECT_FLOAT_EQ(norm_expected, lange(norm, a));
 }

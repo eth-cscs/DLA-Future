@@ -107,9 +107,8 @@ void test_lantr(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag, const Tile<
                 NormT<T> norm_expected) {
   set(a, TileSetter<T>{a.size(), uplo});
 
-  SCOPED_TRACE(::testing::Message() << "LANTR: " << norm << ", " << a.size()
-                                    << ", ld = " << a.ld() << " uplo = " << uplo
-                                    << " diag = " << diag);
+  SCOPED_TRACE(::testing::Message() << "LANTR: " << norm << ", " << a.size() << ", ld = " << a.ld()
+                                    << " uplo = " << uplo << " diag = " << diag);
 
   EXPECT_FLOAT_EQ(norm_expected, lantr(norm, uplo, diag, a));
 }

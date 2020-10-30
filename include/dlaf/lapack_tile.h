@@ -28,11 +28,13 @@ namespace tile {
 // See LAPACK documentation for more details.
 
 /// Reduce a Hermitian definite generalized eigenproblem to standard form.
+///
 /// If @p itype = 1, the problem is A*x = lambda*B*x,
 /// and A is overwritten by inv(U**H)*A*inv(U) or inv(L)*A*inv(L**H).
+///
 /// If @p itype = 2 or 3, the problem is A*B*x = lambda*x or
 /// B*A*x = lambda*x, and A is overwritten by U*A*(U**H) or (L**H)*A*L.
-/// B must have been previously factorized as (U**H)*U or L*(L**H) by ZPOTRF.
+/// B must have been previously factorized as (U**H)*U or L*(L**H) by potrf().
 ///
 /// @pre a must be a Hermitian matrix (A),
 /// @pre b must be the triangular factor from the Cholesky factorization of B,

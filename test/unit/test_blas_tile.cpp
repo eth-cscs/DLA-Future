@@ -65,6 +65,7 @@ TYPED_TEST(TileOperationsTest, Hemm) {
   using Type = TypeParam;
   SizeType m, n, extra_lda, extra_ldb, extra_ldc;
 
+  // Tuple elements:  m, n, extra_lda, extra_ldb, extra_ldc
   std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType>> sizes = {
       {0, 0, 0, 0, 0},                                       // all 0 sizes
       {7, 0, 3, 1, 0}, {0, 5, 0, 0, 1},   {0, 0, 1, 1, 2},   // two 0 sizes

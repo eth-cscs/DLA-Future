@@ -20,7 +20,7 @@ namespace dlaf {
 template <>
 struct Eigensolver<Backend::MC> {
   /// Reduce a Hermitian definite generalized eigenproblem to standard form, using the factorization
-  /// obtained from potrf (lower matrix from Cholesky decomposition). It solves B=inv(L)*A*inv(L**H)
+  /// obtained from potrf (Cholesky factorization). It solves B=inv(L)*A*inv(L**H)
   /// or B=inv(U**H)*A*inv(U)
   /// Implementation on local memory.
   ///

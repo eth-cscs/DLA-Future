@@ -40,25 +40,25 @@ const std::vector<std::tuple<SizeType, SizeType>> sizes = {
 };
 
 template <class T>
-void testGenToStdEigensolver(blas::Uplo uplo, T alpha, T beta, T gamma, SizeType m, SizeType mb) {
-  std::function<T(const GlobalElementIndex&)> el_l, el_a, res_b;
+void testGenToStdEigensolver(const blas::Uplo uplo, const T alpha, const T beta, const T gamma,
+                             const SizeType m, const SizeType mb) {
+  std::function<T(const GlobalElementIndex&)> el_t, el_a, res_b;
 
   const LocalElementSize size(m, m);
   const TileElementSize block_size(mb, mb);
 
   Matrix<T, Device::CPU> mat_a(size, block_size);
-  Matrix<T, Device::CPU> mat_l(size, block_size);
+  Matrix<T, Device::CPU> mat_t(size, block_size);
 
-  std::tie(el_l, el_a, res_b) =
+  std::tie(el_t, el_a, res_b) =
       test::getGenToStdElementSetters<GlobalElementIndex, T>(m, 1, uplo, alpha, beta, gamma);
 
   set(mat_a, el_a);
-  set(mat_l, el_l);
+  set(mat_t, el_t);
 
-  Eigensolver<Backend::MC>::genToStd(uplo, mat_a, mat_l);
+  Eigensolver<Backend::MC>::genToStd(uplo, mat_a, mat_t);
 
-  CHECK_MATRIX_NEAR(res_b, mat_a, 10 * (mat_a.size().rows() + 1) * TypeUtilities<T>::error,
-                    10 * (mat_a.size().rows() + 1) * TypeUtilities<T>::error);
+  CHECK_MATRIX_NEAR(res_b, mat_a, 0, 10 * (mat_a.size().rows() + 1) * TypeUtilities<T>::error);
 }
 
 TYPED_TEST(EigensolverGenToStdLocalTest, Correctness) {

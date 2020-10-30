@@ -26,7 +26,7 @@ template <class T, Device device>
 void gemm(blas::Op op_a, blas::Op op_b, T alpha, const Tile<const T, device>& a,
           const Tile<const T, device>& b, T beta, const Tile<T, device>& c) noexcept;
 
-/// Computes matrix matrix multiplication where matrix @p a is Hermitian.
+/// Computes matrix matrix multiplication where matrix @p a is hermitian (symmetric if T is real).
 template <class T, Device device>
 void hemm(const blas::Side side, const blas::Uplo uplo, const T alpha, const Tile<const T, device>& a,
           const Tile<const T, device>& b, const T beta, const Tile<T, device>& c);

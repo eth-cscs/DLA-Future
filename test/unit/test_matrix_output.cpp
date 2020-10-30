@@ -202,19 +202,18 @@ template <class T>
   const std::regex regex_value{std::string("(") + regex_real + "|" + regex_complex + ")"};
 
   std::vector<T> values;
-  auto values_begin =
-      std::sregex_iterator(values_section.begin(), values_section.end(), regex_value);
-  auto deserialize_match = [](const auto& match) {
-    return deserialize_value<T>(match.str());
-  };
+  auto values_begin = std::sregex_iterator(values_section.begin(), values_section.end(), regex_value);
+  auto deserialize_match = [](const auto& match) { return deserialize_value<T>(match.str()); };
   std::transform(values_begin, std::sregex_iterator(), std::back_inserter(values), deserialize_match);
 
   std::vector<T> expected_values;
   const auto tile_elements = iterate_range2d(tile.size());
-  std::transform(tile_elements.begin(), tile_elements.end(), std::back_inserter(expected_values), std::ref(tile));
+  std::transform(tile_elements.begin(), tile_elements.end(), std::back_inserter(expected_values),
+                 std::ref(tile));
 
   // TODO equal is not the best choice, it would be better std::abs(a-b)
-  if (!std::equal(std::begin(expected_values), std::end(expected_values), std::begin(values), compare_values<T>))
+  if (!std::equal(std::begin(expected_values), std::end(expected_values), std::begin(values),
+                  compare_values<T>))
     return ::testing::AssertionFailure() << "values differ between expected and output";
 
   return ::testing::AssertionSuccess();

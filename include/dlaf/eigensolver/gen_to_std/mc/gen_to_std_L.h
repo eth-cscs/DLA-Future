@@ -64,13 +64,17 @@ void genToStd_L(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l) {
     hpx::dataflow(executor_hp, unwrapping(tile::hegst<T, Device::CPU>), 1, Lower, mat_a(kk), mat_l(kk));
 
     if (k != (n - 1)) {
-      for (SizeType i = k + 1; i < m; ++i) {
-        // Working on panel...
-        const auto ik = LocalTileIndex{i, k};
-        hpx::dataflow(executor_normal, unwrapping(tile::trsm<T, Device::CPU>), Right, Lower, ConjTrans,
-                      NonUnit, 1.0, mat_l.read(kk), mat_a(ik));
-        hpx::dataflow(executor_normal, unwrapping(tile::hemm<T, Device::CPU>), Right, Lower, -0.5,
-                      mat_a.read(kk), mat_l.read(ik), 1.0, mat_a(ik));
+      if (k + 1 < m) {
+        LocalTileIndex istart(k + 1, 0);
+        LocalTileIndex iend(m, 1);
+        for (auto i : dlaf::common::iterate_range2d(istart, iend)) {
+          // Working on panel...
+          const auto ik = LocalTileIndex{i.row(), k};
+          hpx::dataflow(executor_normal, unwrapping(tile::trsm<T, Device::CPU>), Right, Lower, ConjTrans,
+                        NonUnit, 1.0, mat_l.read(kk), mat_a(ik));
+          hpx::dataflow(executor_normal, unwrapping(tile::hemm<T, Device::CPU>), Right, Lower, -0.5,
+                        mat_a.read(kk), mat_l.read(ik), 1.0, mat_a(ik));
+        }
       }
 
       for (SizeType j = k + 1; j < n; ++j) {
@@ -80,13 +84,17 @@ void genToStd_L(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l) {
         hpx::dataflow(executor_hp, unwrapping(tile::her2k<T, Device::CPU>), Lower, NoTrans, -1.0,
                       mat_a.read(jk), mat_l.read(jk), 1.0, mat_a(jj));
 
-        for (SizeType i = j + 1; i < m; ++i) {
-          const auto ik = LocalTileIndex{i, k};
-          const auto ij = LocalTileIndex{i, j};
-          hpx::dataflow(executor_normal, unwrapping(tile::gemm<T, Device::CPU>), NoTrans, ConjTrans,
-                        -1.0, mat_a.read(ik), mat_l.read(jk), 1.0, mat_a(ij));
-          hpx::dataflow(executor_normal, unwrapping(tile::gemm<T, Device::CPU>), NoTrans, ConjTrans,
-                        -1.0, mat_l.read(ik), mat_a.read(jk), 1.0, mat_a(ij));
+        if (j + 1 < m) {
+          LocalTileIndex istart(j + 1, 0);
+          LocalTileIndex iend(m, 1);
+          for (auto i : dlaf::common::iterate_range2d(istart, iend)) {
+            const auto ik = LocalTileIndex{i.row(), k};
+            const auto ij = LocalTileIndex{i.row(), j};
+            hpx::dataflow(executor_normal, unwrapping(tile::gemm<T, Device::CPU>), NoTrans, ConjTrans,
+                          -1.0, mat_a.read(ik), mat_l.read(jk), 1.0, mat_a(ij));
+            hpx::dataflow(executor_normal, unwrapping(tile::gemm<T, Device::CPU>), NoTrans, ConjTrans,
+                          -1.0, mat_l.read(ik), mat_a.read(jk), 1.0, mat_a(ij));
+          }
         }
       }
 

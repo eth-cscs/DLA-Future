@@ -36,8 +36,8 @@ void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType e
     size_a.transpose();
   TileElementSize size_c(n, n);
 
-  const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
-  const SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
+  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
+  SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
 
   std::stringstream s;
   s << "HERK: " << uplo << ", " << op_a;
@@ -62,8 +62,8 @@ void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType e
     return TypeUtilities<T>::polar(1.2 * i / (j + 1), -i + j);
   };
 
-  const BaseType<T> alpha = -1.2f;
-  const BaseType<T> beta = 1.1f;
+  BaseType<T> alpha = -1.2f;
+  BaseType<T> beta = 1.1f;
 
   auto res_c = [uplo, k, alpha, el_op_a, beta, el_c](const TileElementIndex& index) {
     // Return el_c(index) for elements not referenced

@@ -39,9 +39,9 @@ void testGemm(blas::Op op_a, blas::Op op_b, SizeType m, SizeType n, SizeType k, 
     size_b.transpose();
   TileElementSize size_c(m, n);
 
-  const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
-  const SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
-  const SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
+  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
+  SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
+  SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
 
   std::stringstream s;
   s << "GEMM: " << op_a << ", " << op_a;
@@ -74,10 +74,10 @@ void testGemm(blas::Op op_a, blas::Op op_b, SizeType m, SizeType n, SizeType k, 
     return TypeUtilities<T>::polar(1.2 * i / (j + 1), -i + j);
   };
 
-  const T alpha = TypeUtilities<T>::element(-1.2, .7);
-  const T beta = TypeUtilities<T>::element(1.1, .4);
+  T alpha = TypeUtilities<T>::element(-1.2, .7);
+  T beta = TypeUtilities<T>::element(1.1, .4);
 
-  const T gamma = TypeUtilities<T>::element(.72 * k, 0) * alpha;
+  T gamma = TypeUtilities<T>::element(.72 * k, 0) * alpha;
   auto res_c = [beta, el_c, gamma](const TileElementIndex& index) {
     double i = index.row();
     double j = index.col();

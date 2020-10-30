@@ -31,7 +31,7 @@ template <class T, bool return_info>
 void testPotrf(blas::Uplo uplo, SizeType n, SizeType extra_lda) {
   TileElementSize size_a = TileElementSize(n, n);
 
-  const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
+  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
 
   std::stringstream s;
   s << "POTRF: " << uplo;

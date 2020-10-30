@@ -18,7 +18,6 @@
 #include "dlaf/util_blas.h"
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/matrix/util_tile_blas.h"
-#include "dlaf_test/matrix/util_tile_setup.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
@@ -80,8 +79,8 @@ void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType e
     return beta * el_c(index) + alpha * tmp;
   };
 
-  Tile<CT, Device::CPU> a = setup_readonly_tile<T, CT>(el_op_a, size_a, lda, op_a);
-  Tile<T, Device::CPU> c = setup_tile<T>(el_c, size_c, ldc);
+  Tile<CT, Device::CPU> a = createTile<CT>(el_op_a, size_a, lda, op_a);
+  Tile<T, Device::CPU> c = createTile<T>(el_c, size_c, ldc);
 
   tile::herk(uplo, op_a, alpha, a, beta, c);
 

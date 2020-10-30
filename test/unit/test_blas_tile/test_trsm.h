@@ -20,7 +20,6 @@
 #include "dlaf/util_blas.h"
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/matrix/util_tile_blas.h"
-#include "dlaf_test/matrix/util_tile_setup.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
@@ -56,8 +55,8 @@ void testTrsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, Si
     std::tie(el_op_a, el_b, res_b) =
         test::getRightTriangularSystem<ElementIndex, T>(uplo, op, diag, alpha, n);
 
-  Tile<CT, Device::CPU> a = setup_readonly_tile<T, CT>(el_op_a, size_a, lda, op);
-  Tile<T, Device::CPU> b = setup_tile<T>(el_b, size_b, ldb);
+  Tile<CT, Device::CPU> a = createTile<CT>(el_op_a, size_a, lda, op);
+  Tile<T, Device::CPU> b = createTile<T>(el_b, size_b, ldb);
 
   tile::trsm(side, uplo, op, diag, alpha, a, b);
 

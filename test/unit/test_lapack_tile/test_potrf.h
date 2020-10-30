@@ -17,7 +17,6 @@
 #include "dlaf/tile.h"
 #include "dlaf/util_blas.h"
 #include "dlaf_test/matrix/util_tile.h"
-#include "dlaf_test/matrix/util_tile_setup.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
@@ -71,7 +70,7 @@ void testPotrf(blas::Uplo uplo, SizeType n, SizeType extra_lda) {
     return TypeUtilities<T>::polar(std::exp2(-std::abs(i - j)), -i + j);
   };
 
-  Tile<T, Device::CPU> a = setup_tile<T>(el_a, size_a, lda);
+  Tile<T, Device::CPU> a = createTile<T>(el_a, size_a, lda);
 
   if (return_info) {
     EXPECT_EQ(0, tile::potrfInfo(uplo, a));
@@ -99,7 +98,7 @@ void testPotrfNonPosDef(blas::Uplo uplo, SizeType n, SizeType extra_lda) {
   // Use null matrix
   auto el_a = [](const TileElementIndex&) { return TypeUtilities<T>::element(0, 0); };
 
-  Tile<T, Device::CPU> a = setup_tile<T>(el_a, size_a, lda);
+  Tile<T, Device::CPU> a = createTile<T>(el_a, size_a, lda);
 
   if (return_info) {
     EXPECT_EQ(1, tile::potrfInfo(uplo, a));

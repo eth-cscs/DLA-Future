@@ -18,7 +18,6 @@
 #include "dlaf/util_blas.h"
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/matrix/util_tile_blas.h"
-#include "dlaf_test/matrix/util_tile_setup.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
@@ -85,9 +84,9 @@ void testGemm(blas::Op op_a, blas::Op op_b, SizeType m, SizeType n, SizeType k, 
     return beta * el_c(index) + gamma * TypeUtilities<T>::polar((i + 1) / (j + 2), 2 * i + j);
   };
 
-  Tile<CT, Device::CPU> a = setup_readonly_tile<T, CT>(el_op_a, size_a, lda, op_a);
-  Tile<CT, Device::CPU> b = setup_readonly_tile<T, CT>(el_op_b, size_b, ldb, op_b);
-  Tile<T, Device::CPU> c = setup_tile<T>(el_c, size_c, ldc);
+  Tile<CT, Device::CPU> a = createTile<CT>(el_op_a, size_a, lda, op_a);
+  Tile<CT, Device::CPU> b = createTile<CT>(el_op_b, size_b, ldb, op_b);
+  Tile<T, Device::CPU> c = createTile<T>(el_c, size_c, ldc);
 
   tile::gemm(op_a, op_b, alpha, a, b, beta, c);
 

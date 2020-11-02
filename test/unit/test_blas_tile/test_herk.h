@@ -40,7 +40,7 @@ void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType e
   SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
 
   std::stringstream s;
-  s << "HERK: " << uplo << ", " << op_a;
+  s << "HERK: " << uplo2str(uplo) << ", " << op2str(op_a);
   s << ", n = " << n << ", k = " << k;
   s << ", lda = " << lda << ", ldc = " << ldc;
   SCOPED_TRACE(s.str());

@@ -32,9 +32,9 @@ void gemm(blas::Op op_a, blas::Op op_b, T alpha, const Tile<const T, device>& a,
     n = b.size().rows();
   }
 
-  DLAF_ASSERT(m == c.size().rows(), "`m` cannot be determined!", m, c);
-  DLAF_ASSERT(n == c.size().cols(), "`n` cannot be determined!", n, c);
-  DLAF_ASSERT(k == k2, "`k` cannot be determined!", k, k2);
+  DLAF_ASSERT(m == c.size().rows(), m, c.size().rows());
+  DLAF_ASSERT(n == c.size().cols(), n, c.size().cols());
+  DLAF_ASSERT(k == k2, k, k2);
 
   blas::gemm(blas::Layout::ColMajor, op_a, op_b, m, n, k, alpha, a.ptr(), a.ld(), b.ptr(), b.ld(), beta,
              c.ptr(), c.ld());
@@ -54,10 +54,11 @@ void herk(blas::Uplo uplo, blas::Op op, BaseType<T> alpha, const Tile<const T, d
     k = a.size().rows();
   }
 
-  DLAF_ASSERT((!std::is_same<T, ComplexType<T>>::value || op != blas::Op::Trans),
-              "op = Trans is not allowed for Complex values!");
-  DLAF_ASSERT(c.size().rows() == c.size().cols(), "`c` is not square!", c);
-  DLAF_ASSERT(c.size().rows() == n, "`c` has an invalid size!", c, n);
+  DLAF_ASSERT((std::is_same<T, ComplexType<T>>::value || op != blas::Op::Trans),
+              "op = Trans is not allowed for Complex values!", std::is_same<T, ComplexType<T>>::value,
+              op2str(op));
+  DLAF_ASSERT(square_size(c), c);
+  DLAF_ASSERT(c.size().rows() == n, c.size().rows(), n);
 
   blas::herk(blas::Layout::ColMajor, uplo, op, n, k, alpha, a.ptr(), a.ld(), beta, c.ptr(), c.ld());
 }

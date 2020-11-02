@@ -40,8 +40,8 @@ void testTrsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, Si
   SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
 
   std::stringstream s;
-  s << "TRSM: " << side << ", " << uplo << ", " << op << ", " << diag << ", m = " << m << ", n = " << n
-    << ", lda = " << lda << ", ldb = " << ldb;
+  s << "TRSM: " << side2str(side) << ", " << uplo2str(uplo) << ", " << op2str(op) << ", "
+    << diag2str(diag) << ", m = " << m << ", n = " << n << ", lda = " << lda << ", ldb = " << ldb;
   SCOPED_TRACE(s.str());
 
   memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));

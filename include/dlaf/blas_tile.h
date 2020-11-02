@@ -15,6 +15,7 @@
 #include "blas.hh"
 #include "dlaf/tile.h"
 #include "dlaf/types.h"
+#include "dlaf/util_tile.h"
 
 namespace dlaf {
 namespace tile {

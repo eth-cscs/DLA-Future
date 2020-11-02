@@ -44,7 +44,7 @@ void testGemm(blas::Op op_a, blas::Op op_b, SizeType m, SizeType n, SizeType k, 
   SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
 
   std::stringstream s;
-  s << "GEMM: " << op_a << ", " << op_a;
+  s << "GEMM: " << op_a << ", " << op2str(op_b);
   s << ", m = " << m << ", n = " << n << ", k = " << k;
   s << ", lda = " << lda << ", ldb = " << ldb << ", ldc = " << ldc;
   SCOPED_TRACE(s.str());

@@ -98,11 +98,15 @@ void genToStd_L(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l) {
         }
       }
 
-      for (SizeType i = k + 1; i < m; ++i) {
-        // Working on panel...
-        const auto ik = LocalTileIndex{i, k};
-        hpx::dataflow(executor_hp, unwrapping(tile::hemm<T, Device::CPU>), Right, Lower, -0.5,
-                      mat_a.read(kk), mat_l.read(ik), 1.0, mat_a(ik));
+      if (k + 1 < m) {
+        LocalTileIndex istart(k + 1, 0);
+        LocalTileIndex iend(m, 1);
+        for (auto i : dlaf::common::iterate_range2d(istart, iend)) {
+          // Working on panel...
+          const auto ik = LocalTileIndex{i.row(), k};
+          hpx::dataflow(executor_hp, unwrapping(tile::hemm<T, Device::CPU>), Right, Lower, -0.5,
+                        mat_a.read(kk), mat_l.read(ik), 1.0, mat_a(ik));
+        }
       }
 
       for (SizeType j = k + 1; j < n; ++j) {

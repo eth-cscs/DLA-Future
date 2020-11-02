@@ -93,11 +93,9 @@ Tile<T, Device::CPU> createTile(const TileElementSize& size, const SizeType& ld)
 /// @pre ld is the leading dimension of the tile to be created.
 template <class T, class ElementGetter>
 Tile<T, Device::CPU> createTile(ElementGetter val, const TileElementSize& size, const SizeType& ld) {
-  using nonconstT = std::remove_const_t<T>;
-  Tile<nonconstT, Device::CPU> support = createTile<nonconstT>(size, ld);
-  set(support, val);
-  Tile<T, Device::CPU> tileout(std::move(support));
-  return tileout;
+  auto tile = createTile<std::remove_const_t<T>>(size, ld);
+  set(tile, val);
+  return Tile<T, Device::CPU>(std::move(tile));
 }
 
 namespace internal {

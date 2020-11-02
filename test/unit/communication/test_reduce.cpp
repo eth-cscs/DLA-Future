@@ -77,9 +77,10 @@ TEST_F(ReduceTest, Value) {
 
   sync::reduce(root, world, MPI_SUM, common::make_data(&value, 1), common::make_data(&result, 1));
 
-  if (world.rank() == root)
+  if (world.rank() == root) {
     EXPECT_LE(std::abs(value * static_cast<TypeParam>(NUM_MPI_RANKS) - result),
               NUM_MPI_RANKS * TypeUtilities<TypeParam>::error);
+  }
 }
 
 TEST_F(ReduceTest, CArray) {

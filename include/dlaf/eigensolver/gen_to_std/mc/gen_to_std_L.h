@@ -64,17 +64,15 @@ void genToStd_L(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l) {
     hpx::dataflow(executor_hp, unwrapping(tile::hegst<T, Device::CPU>), 1, Lower, mat_a(kk), mat_l(kk));
 
     if (k != (n - 1)) {
-      if (k + 1 < m) {
-        LocalTileIndex istart(k + 1, 0);
-        LocalTileIndex iend(m, 1);
-        for (auto i : dlaf::common::iterate_range2d(istart, iend)) {
-          // Working on panel...
-          const auto ik = LocalTileIndex{i.row(), k};
-          hpx::dataflow(executor_normal, unwrapping(tile::trsm<T, Device::CPU>), Right, Lower, ConjTrans,
-                        NonUnit, 1.0, mat_l.read(kk), mat_a(ik));
-          hpx::dataflow(executor_normal, unwrapping(tile::hemm<T, Device::CPU>), Right, Lower, -0.5,
-                        mat_a.read(kk), mat_l.read(ik), 1.0, mat_a(ik));
-        }
+      const LocalTileIndex ai_start(k + 1, k);
+      const LocalTileIndex ai_end(m, k + 1);
+      const auto ai_panel = dlaf::common::iterate_range2d(ai_start, ai_end);
+
+      for (auto ik : ai_panel) {
+        hpx::dataflow(executor_normal, unwrapping(tile::trsm<T, Device::CPU>), Right, Lower, ConjTrans,
+                      NonUnit, 1.0, mat_l.read(kk), mat_a(ik));
+        hpx::dataflow(executor_normal, unwrapping(tile::hemm<T, Device::CPU>), Right, Lower, -0.5,
+                      mat_a.read(kk), mat_l.read(ik), 1.0, mat_a(ik));
       }
 
       for (SizeType j = k + 1; j < n; ++j) {
@@ -98,15 +96,9 @@ void genToStd_L(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l) {
         }
       }
 
-      if (k + 1 < m) {
-        LocalTileIndex istart(k + 1, 0);
-        LocalTileIndex iend(m, 1);
-        for (auto i : dlaf::common::iterate_range2d(istart, iend)) {
-          // Working on panel...
-          const auto ik = LocalTileIndex{i.row(), k};
-          hpx::dataflow(executor_hp, unwrapping(tile::hemm<T, Device::CPU>), Right, Lower, -0.5,
-                        mat_a.read(kk), mat_l.read(ik), 1.0, mat_a(ik));
-        }
+      for (auto ik : ai_panel) {
+        hpx::dataflow(executor_hp, unwrapping(tile::hemm<T, Device::CPU>), Right, Lower, -0.5,
+                      mat_a.read(kk), mat_l.read(ik), 1.0, mat_a(ik));
       }
 
       for (SizeType j = k + 1; j < n; ++j) {

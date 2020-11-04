@@ -68,7 +68,7 @@ void genToStd_L(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l) {
       const LocalTileIndex ai_end(m, k + 1);
       const auto ai_panel = dlaf::common::iterate_range2d(ai_start, ai_end);
 
-      for (auto ik : ai_panel) {
+      for (const auto& ik : ai_panel) {
         hpx::dataflow(executor_normal, unwrapping(tile::trsm<T, Device::CPU>), Right, Lower, ConjTrans,
                       NonUnit, 1.0, mat_l.read(kk), mat_a(ik));
         hpx::dataflow(executor_normal, unwrapping(tile::hemm<T, Device::CPU>), Right, Lower, -0.5,
@@ -78,7 +78,7 @@ void genToStd_L(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l) {
       const LocalTileIndex ti_start(k + 1, k + 1);
       const LocalTileIndex ti_end(n, m);
       const auto ti_trailing = dlaf::common::iterate_range2d(ti_start, ti_end);
-      for (auto ji : ti_trailing) {
+      for (const auto& ji : ti_trailing) {
         const auto jj = LocalTileIndex{ji.row(), ji.row()};
         const auto jk = LocalTileIndex{ji.row(), k};
         const auto ik = LocalTileIndex{ji.col(), k};
@@ -98,7 +98,7 @@ void genToStd_L(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l) {
         }
       }
 
-      for (auto ik : ai_panel) {
+      for (const auto& ik : ai_panel) {
         hpx::dataflow(executor_hp, unwrapping(tile::hemm<T, Device::CPU>), Right, Lower, -0.5,
                       mat_a.read(kk), mat_l.read(ik), 1.0, mat_a(ik));
       }

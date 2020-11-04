@@ -93,9 +93,9 @@ add_library(dlaf.core
     communication/datatypes.cpp
     matrix/distribution.cpp
     matrix/layout_info.cpp
+    matrix/tile.cpp
     matrix.cpp
     memory/memory_view.cpp
-    tile.cpp
 )
 target_link_libraries(dlaf.core PUBLIC dlaf.prop)
 

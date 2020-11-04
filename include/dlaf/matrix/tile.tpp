@@ -8,6 +8,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+namespace dlaf {
+namespace matrix {
+
 template <class T, Device device>
 Tile<const T, device>::Tile(const TileElementSize& size,
                             memory::MemoryView<ElementType, device>&& memory_view, SizeType ld) noexcept
@@ -52,4 +55,7 @@ template <class T, Device device>
 void Tile<const T, device>::setDefaultSizes() noexcept {
   size_ = {0, 0};
   ld_ = 1;
+}
+
+}
 }

@@ -17,7 +17,7 @@
 #include <iostream>
 #include <sstream>
 #include "gtest/gtest.h"
-#include "dlaf/tile.h"
+#include "dlaf/matrix/tile.h"
 #include "dlaf/traits.h"
 
 namespace dlaf {

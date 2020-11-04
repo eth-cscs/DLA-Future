@@ -33,7 +33,7 @@ void Eigensolver<Backend::MC>::genToStd(blas::Uplo uplo, Matrix<T, Device::CPU>&
     case blas::Uplo::Upper:
       DLAF_ASSERT(false, "not yet implemented", blas::uplo2str(uplo));
       break;
-    default:
+    case blas::Uplo::General:
       DLAF_ASSERT(false, "not yet implemented", blas::uplo2str(uplo));
       break;
   }

@@ -10,15 +10,13 @@
 
 #pragma once
 
-#include <exception>
 #include <functional>
 #include <sstream>
-#include <tuple>
 #include "gtest/gtest.h"
-#include "dlaf/blas_tile.h"
+#include "dlaf/blas/enum_output.h"
+#include "dlaf/lapack_tile.h"
 #include "dlaf/memory/memory_view.h"
 #include "dlaf/tile.h"
-#include "dlaf/util_blas.h"
 #include "dlaf_test/matrix/util_generic_lapack.h"
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/util_types.h"

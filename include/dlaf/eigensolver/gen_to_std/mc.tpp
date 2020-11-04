@@ -31,10 +31,10 @@ void Eigensolver<Backend::MC>::genToStd(blas::Uplo uplo, Matrix<T, Device::CPU>&
       internal::mc::genToStd_L(mat_a, mat_b);
       break;
     case blas::Uplo::Upper:
-      DLAF_ASSERT(false, "not yet implemented", blas::uplo2str(uplo));
+      DLAF_UNIMPLEMENTED(uplo);
       break;
     case blas::Uplo::General:
-      DLAF_ASSERT(false, "not yet implemented", blas::uplo2str(uplo));
+      DLAF_UNIMPLEMENTED(uplo);
       break;
   }
 }

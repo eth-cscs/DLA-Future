@@ -22,7 +22,7 @@ constexpr double M_PI = 3.141592;
 #include <hpx/include/util.hpp>
 #include <hpx/local/future.hpp>
 
-#include "dlaf/blaspp/enums.h"
+#include "dlaf/blas/enum_output.h"
 #include "dlaf/common/assert.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/range2d.h"

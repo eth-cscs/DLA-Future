@@ -75,24 +75,26 @@ void genToStd_L(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l) {
                       mat_a.read(kk), mat_l.read(ik), 1.0, mat_a(ik));
       }
 
-      for (SizeType j = k + 1; j < n; ++j) {
-        // Working on trailing matrix...
-        const auto jj = LocalTileIndex{j, j};
-        const auto jk = LocalTileIndex{j, k};
-        hpx::dataflow(executor_hp, unwrapping(tile::her2k<T, Device::CPU>), Lower, NoTrans, -1.0,
-                      mat_a.read(jk), mat_l.read(jk), 1.0, mat_a(jj));
+      const LocalTileIndex ti_start(k + 1, k + 1);
+      const LocalTileIndex ti_end(n, m);
+      const auto ti_trailing = dlaf::common::iterate_range2d(ti_start, ti_end);
+      for (auto ji : ti_trailing) {
+        const auto jj = LocalTileIndex{ji.row(), ji.row()};
+        const auto jk = LocalTileIndex{ji.row(), k};
+        const auto ik = LocalTileIndex{ji.col(), k};
+        const auto ij = LocalTileIndex{ji.col(), ji.row()};
 
-        if (j + 1 < m) {
-          LocalTileIndex istart(j + 1, 0);
-          LocalTileIndex iend(m, 1);
-          for (auto i : dlaf::common::iterate_range2d(istart, iend)) {
-            const auto ik = LocalTileIndex{i.row(), k};
-            const auto ij = LocalTileIndex{i.row(), j};
-            hpx::dataflow(executor_normal, unwrapping(tile::gemm<T, Device::CPU>), NoTrans, ConjTrans,
-                          -1.0, mat_a.read(ik), mat_l.read(jk), 1.0, mat_a(ij));
-            hpx::dataflow(executor_normal, unwrapping(tile::gemm<T, Device::CPU>), NoTrans, ConjTrans,
-                          -1.0, mat_l.read(ik), mat_a.read(jk), 1.0, mat_a(ij));
-          }
+        if (ji.row() == ji.col()) {
+          hpx::dataflow(executor_hp, unwrapping(tile::her2k<T, Device::CPU>), Lower, NoTrans, -1.0,
+                        mat_a.read(jk), mat_l.read(jk), 1.0, mat_a(jj));
+        }
+        else if (ji.row() < ji.col()) {
+          hpx::dataflow(executor_normal, unwrapping(tile::gemm<T, Device::CPU>), NoTrans, ConjTrans,
+                        -1.0, mat_a.read(ik), mat_l.read(jk), 1.0, mat_a(ij));
+          hpx::dataflow(executor_normal, unwrapping(tile::gemm<T, Device::CPU>), NoTrans, ConjTrans,
+                        -1.0, mat_l.read(ik), mat_a.read(jk), 1.0, mat_a(ij));
+        }
+        else {
         }
       }
 

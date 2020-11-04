@@ -76,25 +76,21 @@ void genToStd_L(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l) {
       }
 
       const LocalTileIndex ti_start(k + 1, k + 1);
-      const LocalTileIndex ti_end(n, m);
+      const LocalTileIndex ti_end(m, n);
       const auto ti_trailing = dlaf::common::iterate_range2d(ti_start, ti_end);
-      for (const auto& ji : ti_trailing) {
-        const auto jj = LocalTileIndex{ji.row(), ji.row()};
-        const auto jk = LocalTileIndex{ji.row(), k};
-        const auto ik = LocalTileIndex{ji.col(), k};
-        const auto ij = LocalTileIndex{ji.col(), ji.row()};
+      for (const auto& ij : ti_trailing) {
+        const auto jk = LocalTileIndex{ij.col(), k};
+        const auto ik = LocalTileIndex{ij.row(), k};
 
-        if (ji.row() == ji.col()) {
+        if (ij.row() == ij.col()) {
           hpx::dataflow(executor_hp, unwrapping(tile::her2k<T, Device::CPU>), Lower, NoTrans, -1.0,
-                        mat_a.read(jk), mat_l.read(jk), 1.0, mat_a(jj));
+                        mat_a.read(jk), mat_l.read(jk), 1.0, mat_a(ij));
         }
-        else if (ji.row() < ji.col()) {
+        else if (ij.row() > ij.col()) {
           hpx::dataflow(executor_normal, unwrapping(tile::gemm<T, Device::CPU>), NoTrans, ConjTrans,
                         -1.0, mat_a.read(ik), mat_l.read(jk), 1.0, mat_a(ij));
           hpx::dataflow(executor_normal, unwrapping(tile::gemm<T, Device::CPU>), NoTrans, ConjTrans,
                         -1.0, mat_l.read(ik), mat_a.read(jk), 1.0, mat_a(ij));
-        }
-        else {
         }
       }
 

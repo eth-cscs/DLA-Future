@@ -24,8 +24,8 @@ struct Eigensolver<Backend::MC> {
   /// It solves B=inv(L)*A*inv(L**H) or B=inv(U**H)*A*inv(U).
   /// Implementation on local memory.
   ///
-  /// @param mat_a on entry it contains the Hermitian matrix A, on exit the matrix elements
-  /// are overwritten with the elements of the matrix B.
+  /// @param mat_a on entry it contains the Hermitian matrix A (if A is real, the matrix is symmetric),
+  /// on exit the matrix elements are overwritten with the elements of the matrix B.
   /// @param mat_b contains the triangular matrix. It can be lower (L) or upper (U). Only the tiles of
   /// the matrix which contain the lower triangular or the upper triangular part are accessed.
   template <class T>

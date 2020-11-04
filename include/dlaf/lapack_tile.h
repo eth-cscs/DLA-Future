@@ -36,7 +36,7 @@ namespace tile {
 /// B*A*x = lambda*x, and A is overwritten by U*A*(U**H) or (L**H)*A*L.
 /// B must have been previously factorized as (U**H)*U or L*(L**H) by potrf().
 ///
-/// @pre a must be a Hermitian matrix (A),
+/// @pre a must be a complex Hermitian matrix or a symmetric real matrix (A),
 /// @pre b must be the triangular factor from the Cholesky factorization of B,
 /// @throw std::runtime_error if the tile was not positive definite.
 template <class T, Device device>

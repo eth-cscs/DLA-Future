@@ -70,7 +70,7 @@ void testPotrf(blas::Uplo uplo, SizeType n, SizeType extra_lda) {
     return TypeUtilities<T>::polar(std::exp2(-std::abs(i - j)), -i + j);
   };
 
-  Tile<T, Device::CPU> a = createTile<T>(el_a, size_a, lda);
+  auto a = createTile<T>(el_a, size_a, lda);
 
   if (return_info) {
     EXPECT_EQ(0, tile::potrfInfo(uplo, a));
@@ -98,7 +98,7 @@ void testPotrfNonPosDef(blas::Uplo uplo, SizeType n, SizeType extra_lda) {
   // Use null matrix
   auto el_a = [](const TileElementIndex&) { return TypeUtilities<T>::element(0, 0); };
 
-  Tile<T, Device::CPU> a = createTile<T>(el_a, size_a, lda);
+  auto a = createTile<T>(el_a, size_a, lda);
 
   if (return_info) {
     EXPECT_EQ(1, tile::potrfInfo(uplo, a));

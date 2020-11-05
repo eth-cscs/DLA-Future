@@ -79,8 +79,8 @@ void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType e
     return beta * el_c(index) + alpha * tmp;
   };
 
-  Tile<CT, Device::CPU> a = createTile<CT>(el_op_a, size_a, lda, op_a);
-  Tile<T, Device::CPU> c = createTile<T>(el_c, size_c, ldc);
+  auto a = createTile<CT>(el_op_a, size_a, lda, op_a);
+  auto c = createTile<T>(el_c, size_c, ldc);
 
   tile::herk(uplo, op_a, alpha, a, beta, c);
 

@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/tile.h"
+#include "dlaf/matrix/tile.h"
 
 #include <stdexcept>
 

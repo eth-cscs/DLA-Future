@@ -8,6 +8,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+namespace dlaf {
+namespace matrix {
+
 template <class T, Device device>
 template <template <class, Device> class MatrixType, class T2,
           std::enable_if_t<std::is_same<T, std::remove_const_t<T2>>::value, int>>
@@ -43,4 +46,7 @@ void MatrixView<const T, device>::setUpTiles(MatrixType<T2, device>& matrix) noe
       tile_shared_futures_.emplace_back(std::move(matrix.read(ind)));
     }
   }
+}
+
+}
 }

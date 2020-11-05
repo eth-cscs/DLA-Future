@@ -15,8 +15,8 @@
 #include "dlaf/lapack/enum_output.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/index.h"
+#include "dlaf/matrix/tile.h"
 #include "dlaf/memory/memory_view.h"
-#include "dlaf/tile.h"
 #include "dlaf/types.h"
 
 #include "dlaf_test/matrix/util_tile.h"
@@ -29,8 +29,8 @@ namespace lange {
 using dlaf::SizeType;
 using dlaf::TileElementSize;
 using dlaf::TileElementIndex;
-using dlaf::Tile;
 using dlaf::Device;
+using dlaf::matrix::Tile;
 
 using dlaf::tile::lange;
 using dlaf::util::size_t::mul;
@@ -79,7 +79,7 @@ template <class T>
 const T TileSetter<T>::value = dlaf_test::TypeUtilities<T>::element(13, -13);
 
 template <class T>
-void test_lange(lapack::Norm norm, const Tile<T, Device::CPU>& a, NormT<T> norm_expected) {
+void test_lange(const lapack::Norm norm, const Tile<T, Device::CPU>& a, NormT<T> norm_expected) {
   set(a, TileSetter<T>{a.size()});
 
   SCOPED_TRACE(::testing::Message() << "LANGE: " << norm << ", " << a.size() << ", ld = " << a.ld());
@@ -88,7 +88,7 @@ void test_lange(lapack::Norm norm, const Tile<T, Device::CPU>& a, NormT<T> norm_
 }
 
 template <class T>
-void run(lapack::Norm norm, const Tile<T, Device::CPU>& a) {
+void run(const lapack::Norm norm, const Tile<T, Device::CPU>& a) {
   const TileElementSize size = a.size();
 
   NormT<T> value = std::abs(TileSetter<T>::value);

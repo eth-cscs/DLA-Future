@@ -29,15 +29,14 @@ using namespace testing;
 using dlaf::util::size_t::mul;
 
 template <class T, class CT = const T>
-void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType extra_lda,
-              SizeType extra_ldc) {
-  TileElementSize size_a(n, k);
-  if (op_a != blas::Op::NoTrans)
-    size_a.transpose();
-  TileElementSize size_c(n, n);
+void testHerk(const blas::Uplo uplo, const blas::Op op_a, const SizeType n, const SizeType k,
+              const SizeType extra_lda, const SizeType extra_ldc) {
+  const TileElementSize size_a =
+      (op_a == blas::Op::NoTrans) ? TileElementSize(n, k) : TileElementSize(k, n);
+  const TileElementSize size_c(n, n);
 
-  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
-  SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
+  const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
+  const SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
 
   std::stringstream s;
   s << "HERK: " << uplo << ", " << op_a;
@@ -53,8 +52,8 @@ void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType e
 
   // Returns op_a(a)_ik
   auto el_op_a = [](const TileElementIndex& index) {
-    double i = index.row();
-    double k = index.col();
+    const double i = index.row();
+    const double k = index.col();
     return TypeUtilities<T>::polar(.9 * (i + 1) / (k + .5), i - k);
   };
   auto el_c = [uplo](const TileElementIndex& index) {
@@ -63,13 +62,13 @@ void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType e
         (uplo == blas::Uplo::Upper && index.row() > index.col()))
       return TypeUtilities<T>::element(-1, 0);
 
-    double i = index.row();
-    double j = index.col();
+    const double i = index.row();
+    const double j = index.col();
     return TypeUtilities<T>::polar(1.2 * i / (j + 1), -i + j);
   };
 
-  BaseType<T> alpha = -1.2f;
-  BaseType<T> beta = 1.1f;
+  const BaseType<T> alpha = -1.2f;
+  const BaseType<T> beta = 1.1f;
 
   auto res_c = [uplo, k, alpha, el_op_a, beta, el_c](const TileElementIndex& index) {
     // Return el_c(index) for elements not referenced

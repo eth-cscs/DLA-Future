@@ -24,8 +24,8 @@ using matrix::Tile;
 
 /// Computes general matrix matrix multiplication.
 template <class T, Device device>
-void gemm(blas::Op op_a, blas::Op op_b, T alpha, const Tile<const T, device>& a,
-          const Tile<const T, device>& b, T beta, const Tile<T, device>& c) noexcept;
+void gemm(const blas::Op op_a, const blas::Op op_b, const T alpha, const Tile<const T, device>& a,
+          const Tile<const T, device>& b, const T beta, const Tile<T, device>& c) noexcept;
 
 /// Computes matrix matrix multiplication where matrix @p a is hermitian (symmetric if T is real).
 template <class T, Device device>
@@ -39,13 +39,13 @@ void her2k(const blas::Uplo uplo, const blas::Op op, const T alpha, const Tile<c
 
 /// Performs a rank k update of hermitian (symmetric if T is real) tile @p a.
 template <class T, Device device>
-void herk(blas::Uplo uplo, blas::Op op, BaseType<T> alpha, const Tile<const T, device>& a,
-          BaseType<T> beta, const Tile<T, device>& c) noexcept;
+void herk(const blas::Uplo uplo, const blas::Op op, const BaseType<T> alpha,
+          const Tile<const T, device>& a, const BaseType<T> beta, const Tile<T, device>& c) noexcept;
 
 /// Performs a triangular solve.
 template <class T, Device device>
-void trsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha,
-          const Tile<const T, device>& a, const Tile<T, device>& b) noexcept;
+void trsm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const blas::Diag diag,
+          const T alpha, const Tile<const T, device>& a, const Tile<T, device>& b) noexcept;
 
 #include "dlaf/blas_tile.tpp"
 }

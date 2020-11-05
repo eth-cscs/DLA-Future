@@ -63,7 +63,7 @@ template <class T>
 struct TileSetter {
   static const T value;
 
-  TileSetter(TileElementSize size, blas::Uplo uplo) : size_(size), uplo_(uplo) {}
+  TileSetter(const TileElementSize size, const blas::Uplo uplo) : size_(size), uplo_(uplo) {}
 
   T operator()(const TileElementIndex& index) const {
     const auto tr_size = std::min(size_.rows(), size_.cols());
@@ -103,8 +103,8 @@ template <class T>
 const T TileSetter<T>::value = dlaf_test::TypeUtilities<T>::element(13, -13);
 
 template <class T>
-void test_lantr(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag, const Tile<T, Device::CPU>& a,
-                NormT<T> norm_expected) {
+void test_lantr(const lapack::Norm norm, const blas::Uplo uplo, const blas::Diag diag,
+                const Tile<T, Device::CPU>& a, const NormT<T> norm_expected) {
   set(a, TileSetter<T>{a.size(), uplo});
 
   SCOPED_TRACE(::testing::Message() << "LANTR: " << norm << ", " << a.size() << ", ld = " << a.ld()
@@ -114,10 +114,11 @@ void test_lantr(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag, const Tile<
 }
 
 template <class T>
-void run(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag, const Tile<T, Device::CPU>& a) {
+void run(const lapack::Norm norm, const blas::Uplo uplo, const blas::Diag diag,
+         const Tile<T, Device::CPU>& a) {
   const TileElementSize size = a.size();
 
-  NormT<T> value = std::abs(TileSetter<T>::value);
+  const NormT<T> value = std::abs(TileSetter<T>::value);
   NormT<T> norm_expected = -1;
 
   switch (norm) {

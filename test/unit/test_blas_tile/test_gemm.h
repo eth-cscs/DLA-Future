@@ -29,19 +29,18 @@ using namespace testing;
 using dlaf::util::size_t::mul;
 
 template <class T, class CT = const T>
-void testGemm(blas::Op op_a, blas::Op op_b, SizeType m, SizeType n, SizeType k, SizeType extra_lda,
-              SizeType extra_ldb, SizeType extra_ldc) {
-  TileElementSize size_a(m, k);
-  if (op_a != blas::Op::NoTrans)
-    size_a.transpose();
-  TileElementSize size_b(k, n);
-  if (op_b != blas::Op::NoTrans)
-    size_b.transpose();
-  TileElementSize size_c(m, n);
+void testGemm(const blas::Op op_a, const blas::Op op_b, const SizeType m, const SizeType n,
+              const SizeType k, const SizeType extra_lda, const SizeType extra_ldb,
+              const SizeType extra_ldc) {
+  const TileElementSize size_a =
+      (op_a == blas::Op::NoTrans) ? TileElementSize(m, k) : TileElementSize(k, m);
+  const TileElementSize size_b =
+      (op_b == blas::Op::NoTrans) ? TileElementSize(k, n) : TileElementSize(n, k);
+  const TileElementSize size_c(m, n);
 
-  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
-  SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
-  SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
+  const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
+  const SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
+  const SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
 
   std::stringstream s;
   s << "GEMM: " << op_a << ", " << op_a;
@@ -68,28 +67,28 @@ void testGemm(blas::Op op_a, blas::Op op_b, SizeType m, SizeType n, SizeType k, 
   //        = beta * c_ij + gamma * (i+1) / (j+2) * exp(I*(2*i+j)),
   // where gamma = .72 * k * alpha.
   auto el_op_a = [](const TileElementIndex& index) {
-    double i = index.row();
-    double k = index.col();
+    const double i = index.row();
+    const double k = index.col();
     return TypeUtilities<T>::polar(.9 * (i + 1) / (k + .5), 2 * i - k);
   };
   auto el_op_b = [](const TileElementIndex& index) {
-    double k = index.row();
-    double j = index.col();
+    const double k = index.row();
+    const double j = index.col();
     return TypeUtilities<T>::polar(.8 * (k + .5) / (j + 2), k + j);
   };
   auto el_c = [](const TileElementIndex& index) {
-    double i = index.row();
-    double j = index.col();
+    const double i = index.row();
+    const double j = index.col();
     return TypeUtilities<T>::polar(1.2 * i / (j + 1), -i + j);
   };
 
-  T alpha = TypeUtilities<T>::element(-1.2, .7);
-  T beta = TypeUtilities<T>::element(1.1, .4);
+  const T alpha = TypeUtilities<T>::element(-1.2, .7);
+  const T beta = TypeUtilities<T>::element(1.1, .4);
 
-  T gamma = TypeUtilities<T>::element(.72 * k, 0) * alpha;
+  const T gamma = TypeUtilities<T>::element(.72 * k, 0) * alpha;
   auto res_c = [beta, el_c, gamma](const TileElementIndex& index) {
-    double i = index.row();
-    double j = index.col();
+    const double i = index.row();
+    const double j = index.col();
     return beta * el_c(index) + gamma * TypeUtilities<T>::polar((i + 1) / (j + 2), 2 * i + j);
   };
 

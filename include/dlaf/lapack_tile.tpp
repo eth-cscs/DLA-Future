@@ -10,6 +10,16 @@
 
 #include "dlaf/common/assert.h"
 
+template <class T, Device device>
+void hegst(const int itype, const blas::Uplo uplo, const Tile<T, device>& a, const Tile<T, device>& b) {
+  DLAF_ASSERT(a.size().rows() == a.size().cols(), a.size());
+  DLAF_ASSERT(itype >= 1 && itype <= 3, itype);
+
+  auto info = lapack::hegst(itype, uplo, a.size().cols(), a.ptr(), a.ld(), b.ptr(), b.ld());
+
+  DLAF_ASSERT(info == 0, info);
+}
+
 template <class T>
 void lacpy(const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b) {
   DLAF_ASSERT_MODERATE(a.size() == b.size(), "Source and destination tile must have the same size!", a,
@@ -55,7 +65,7 @@ long long potrfInfo(blas::Uplo uplo, const Tile<T, device>& a) {
   DLAF_ASSERT(a.size().rows() == a.size().cols(), "POTRF: `a` is not square!", a);
 
   auto info = lapack::potrf(uplo, a.size().rows(), a.ptr(), a.ld());
-  DLAF_ASSERT_HEAVY(info >= 0, "");
+  DLAF_ASSERT_HEAVY(info >= 0, info);
 
   return info;
 }

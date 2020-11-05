@@ -14,8 +14,8 @@
 
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/index.h"
+#include "dlaf/matrix/tile.h"
 #include "dlaf/memory/memory_view.h"
-#include "dlaf/tile.h"
 #include "dlaf/types.h"
 
 #include "dlaf_test/matrix/util_tile.h"
@@ -28,8 +28,8 @@ namespace lantr {
 using dlaf::SizeType;
 using dlaf::TileElementSize;
 using dlaf::TileElementIndex;
-using dlaf::Tile;
 using dlaf::Device;
+using dlaf::matrix::Tile;
 
 using dlaf::tile::lantr;
 using dlaf::util::size_t::mul;
@@ -107,9 +107,8 @@ void test_lantr(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag, const Tile<
                 NormT<T> norm_expected) {
   set(a, TileSetter<T>{a.size(), uplo});
 
-  SCOPED_TRACE(::testing::Message() << "LANTR: " << lapack::norm2str(norm) << ", " << a.size()
-                                    << ", ld = " << a.ld() << " uplo = " << blas::uplo2str(uplo)
-                                    << " diag = " << blas::diag2str(diag));
+  SCOPED_TRACE(::testing::Message() << "LANTR: " << norm << ", " << a.size() << ", ld = " << a.ld()
+                                    << " uplo = " << uplo << " diag = " << diag);
 
   EXPECT_FLOAT_EQ(norm_expected, lantr(norm, uplo, diag, a));
 }
@@ -156,7 +155,7 @@ void run(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag, const Tile<T, Devi
       }
       break;
     case lapack::Norm::Two:
-      FAIL() << "norm " << lapack::norm2str(norm) << " is not supported by lantr";
+      FAIL() << "norm " << norm << " is not supported by lantr";
   }
 
   // by LAPACK documentation, if it is an empty matrix return 0

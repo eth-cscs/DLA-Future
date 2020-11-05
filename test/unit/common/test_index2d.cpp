@@ -113,17 +113,19 @@ TYPED_TEST(Index2DTest, Comparison) {
 }
 
 TYPED_TEST(Index2DTest, Transpose) {
-  Index2D<TypeParam> index1(7, 13);
-  std::array<TypeParam, 2> coords{9, 6};
-  Index2D<TypeParam> index2(coords);
+  const Index2D<TypeParam> index_original(7, 13);
+  Index2D<TypeParam> index = index_original;
 
-  index1.transpose();
-  EXPECT_EQ(Index2D<TypeParam>(13, 7), index1);
-  index1.transpose();
-  EXPECT_EQ(Index2D<TypeParam>(7, 13), index1);
+  // tranpose it (with member function)
+  index.transpose();
+  EXPECT_EQ(Index2D<TypeParam>(13, 7), index);
 
-  index2.transpose();
-  EXPECT_EQ(Index2D<TypeParam>(6, 9), index2);
+  // get its tranpose, without changing it (with free function)
+  const auto index_transposed = transposed(index);
+  // check that tranpose is self-inverse
+  EXPECT_EQ(index_original, index_transposed);
+  // check the source has not been changed
+  EXPECT_EQ(Index2D<TypeParam>(13, 7), index);
 }
 
 TYPED_TEST(Index2DTest, Print) {

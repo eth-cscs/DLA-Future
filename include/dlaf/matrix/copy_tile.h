@@ -13,12 +13,12 @@
 #include <type_traits>
 
 #include "dlaf/lapack_tile.h"
-#include "dlaf/tile.h"
+#include "dlaf/matrix/tile.h"
 
 namespace dlaf {
 
 template <class T>
-void copy(const Tile<const T, Device::CPU>& source, const Tile<T, Device::CPU>& dest) {
+void copy(const matrix::Tile<const T, Device::CPU>& source, const matrix::Tile<T, Device::CPU>& dest) {
   dlaf::tile::lacpy<T>(source, dest);
 }
 

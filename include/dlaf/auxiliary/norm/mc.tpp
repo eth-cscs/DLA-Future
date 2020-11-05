@@ -9,14 +9,16 @@
 //
 #pragma once
 
+#include "dlaf/auxiliary/norm/mc/norm_max_L.h"
+
+#include "dlaf/blas/enum_output.h"
 #include "dlaf/common/assert.h"
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/lapack/enum_output.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
-
-#include "dlaf/auxiliary/norm/mc/norm_max_L.h"
 
 namespace dlaf {
 
@@ -37,7 +39,7 @@ dlaf::BaseType<T> Auxiliary<Backend::MC>::norm(comm::CommunicatorGrid grid, comm
     case lapack::Norm::Two:
     case lapack::Norm::Inf:
     case lapack::Norm::Fro:
-      DLAF_ASSERT(false, "not yet implemented", lapack::norm2str(norm_type));
+      DLAF_UNIMPLEMENTED(norm_type);
       return {};
     case lapack::Norm::Max:
       switch (uplo) {
@@ -45,7 +47,7 @@ dlaf::BaseType<T> Auxiliary<Backend::MC>::norm(comm::CommunicatorGrid grid, comm
           return internal::mc::norm_max_L(grid, rank, A);
         case blas::Uplo::Upper:
         case blas::Uplo::General:
-          DLAF_ASSERT(false, "not yet implemented", lapack::norm2str(norm_type), blas::uplo2str(uplo));
+          DLAF_UNIMPLEMENTED(norm_type, uplo);
           return {};
         default:
           return {};

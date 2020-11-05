@@ -105,20 +105,17 @@ void Solver<Backend::MC>::triangular(comm::CommunicatorGrid grid, blas::Side sid
       }
       else {
         // Left Lower Trans/ConjTrans
-        std::cout << "Distributed Left Lower Trans/ConjTrans case not yet implemented" << std::endl;
-        std::abort();
+        DLAF_UNIMPLEMENTED(side, uplo, op, diag);
       }
     }
     else {
       if (op == blas::Op::NoTrans) {
         // Left Upper NoTrans
-        std::cout << "Distributed Left Upper NoTrans case not yet implemented" << std::endl;
-        std::abort();
+        DLAF_UNIMPLEMENTED(side, uplo, op, diag);
       }
       else {
         // Left Upper Trans/ConjTrans
-        std::cout << "Distributed Left Upper Trans/ConjTrans case not yet implemented" << std::endl;
-        std::abort();
+        DLAF_UNIMPLEMENTED(side, uplo, op, diag);
       }
     }
   }
@@ -129,25 +126,21 @@ void Solver<Backend::MC>::triangular(comm::CommunicatorGrid grid, blas::Side sid
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
         // Right Lower NoTrans
-        std::cout << "Distributed Right Lower NoTrans case not yet implemented" << std::endl;
-        std::abort();
+        DLAF_UNIMPLEMENTED(side, uplo, op, diag);
       }
       else {
         // Right Lower Trans/ConjTrans
-        std::cout << "Distributed Right Lower Trans/ConjTrans case not yet implemented" << std::endl;
-        std::abort();
+        DLAF_UNIMPLEMENTED(side, uplo, op, diag);
       }
     }
     else {
       if (op == blas::Op::NoTrans) {
         // Right Upper NoTrans
-        std::cout << "Distributed Right Upper NoTrans case not yet implemented" << std::endl;
-        std::abort();
+        DLAF_UNIMPLEMENTED(side, uplo, op, diag);
       }
       else {
         // Right Upper Trans/ConjTrans
-        std::cout << "Distributed Right Upper Trans/ConjTrans case not yet implemented" << std::endl;
-        std::abort();
+        DLAF_UNIMPLEMENTED(side, uplo, op, diag);
       }
     }
   }

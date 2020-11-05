@@ -19,13 +19,29 @@
 #undef I
 #endif
 
-#include "dlaf/tile.h"
+#include "dlaf/matrix/tile.h"
 #include "dlaf/types.h"
 
 namespace dlaf {
 namespace tile {
+using matrix::Tile;
 
 // See LAPACK documentation for more details.
+
+/// Reduce a Hermitian definite generalized eigenproblem to standard form.
+///
+/// If @p itype = 1, the problem is A*x = lambda*B*x,
+/// and A is overwritten by inv(U**H)*A*inv(U) or inv(L)*A*inv(L**H).
+///
+/// If @p itype = 2 or 3, the problem is A*B*x = lambda*x or
+/// B*A*x = lambda*x, and A is overwritten by U*A*(U**H) or (L**H)*A*L.
+/// B must have been previously factorized as (U**H)*U or L*(L**H) by potrf().
+///
+/// @pre a must be a complex Hermitian matrix or a symmetric real matrix (A),
+/// @pre b must be the triangular factor from the Cholesky factorization of B,
+/// @throw std::runtime_error if the tile was not positive definite.
+template <class T, Device device>
+void hegst(const int itype, const blas::Uplo uplo, const Tile<T, device>& a, const Tile<T, device>& b);
 
 /// Copies all elements from Tile a to Tile b.
 ///

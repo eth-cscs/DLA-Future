@@ -71,17 +71,19 @@ TYPED_TEST(Size2DTest, Comparison) {
 }
 
 TYPED_TEST(Size2DTest, Transpose) {
-  Size2D<TypeParam> size1(7, 13);
-  std::array<TypeParam, 2> coords{9, 6};
-  Size2D<TypeParam> size2(coords);
+  const Size2D<TypeParam> size_original(7, 13);
+  Size2D<TypeParam> size = size_original;
 
-  size1.transpose();
-  EXPECT_EQ(Size2D<TypeParam>(13, 7), size1);
-  size1.transpose();
-  EXPECT_EQ(Size2D<TypeParam>(7, 13), size1);
+  // tranpose it (with member function)
+  size.transpose();
+  EXPECT_EQ(Size2D<TypeParam>(13, 7), size);
 
-  size2.transpose();
-  EXPECT_EQ(Size2D<TypeParam>(6, 9), size2);
+  // get its tranpose, without changing it (with free function)
+  const auto size_transposed = transposed(size);
+  // check that tranpose is self-inverse
+  EXPECT_EQ(size_original, size_transposed);
+  // check the source has not been changed
+  EXPECT_EQ(Size2D<TypeParam>(13, 7), size);
 }
 
 TYPED_TEST(Size2DTest, Print) {

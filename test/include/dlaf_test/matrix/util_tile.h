@@ -159,8 +159,9 @@ void checkPtr(PointerGetter exp_ptr, const Tile<T, Device::CPU>& tile, const cha
 /// The (i, j)-element of the tile is compared to expected({i, j}).
 /// @pre expected argument is an index of type const TileElementIndex&,
 /// @pre expected return type should be T,
-/// @pre rel_err > 0,
-/// @pre abs_err > 0.
+/// @pre rel_err >= 0,
+/// @pre abs_err >= 0,
+/// @pre rel_err > 0 || abs_err > 0.
 template <class T, class ElementGetter>
 void checkNear(ElementGetter expected, const Tile<T, Device::CPU>& tile, BaseType<T> rel_err,
                BaseType<T> abs_err, const char* file, const int line) {

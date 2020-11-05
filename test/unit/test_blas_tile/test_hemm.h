@@ -54,15 +54,6 @@ void testHemm(const blas::Side side, const blas::Uplo uplo, const SizeType m, co
   const T beta = TypeUtilities<T>::element(1.1, .4);
   const BaseType<T> gamma = 1.3f;
 
-  memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
-  memory::MemoryView<T, Device::CPU> mem_b(mul(ldb, size_b.cols()));
-  memory::MemoryView<T, Device::CPU> mem_c(mul(ldc, size_c.cols()));
-
-  // Create tiles.
-  Tile<T, Device::CPU> a0(size_a, std::move(mem_a), lda);
-  Tile<T, Device::CPU> b0(size_b, std::move(mem_b), ldb);
-  Tile<T, Device::CPU> c(size_c, std::move(mem_c), ldc);
-
   // Note: The tile elements are chosen such that:
   // Cij = 1.2 * i / (j+1) * exp(I * (j-i))
   // where I is the imaginary number
@@ -126,14 +117,10 @@ void testHemm(const blas::Side side, const blas::Uplo uplo, const SizeType m, co
     }
   };
 
-  // Set tile elements.
-  set(a0, el_a);
-  set(b0, el_b);
-  set(c, el_c);
-
   // Read-only tiles become constant if CT is const T.
-  const Tile<CT, Device::CPU> a(std::move(a0));
-  const Tile<CT, Device::CPU> b(std::move(b0));
+  auto a = createTile<CT>(el_a, size_a, lda);
+  auto b = createTile<CT>(el_b, size_b, ldb);
+  auto c = createTile<T>(el_c, size_c, ldc);
 
   tile::hemm(side, uplo, alpha, a, b, beta, c);
 

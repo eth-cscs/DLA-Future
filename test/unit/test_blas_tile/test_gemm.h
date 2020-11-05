@@ -48,15 +48,6 @@ void testGemm(const blas::Op op_a, const blas::Op op_b, const SizeType m, const 
   s << ", lda = " << lda << ", ldb = " << ldb << ", ldc = " << ldc;
   SCOPED_TRACE(s.str());
 
-  memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
-  memory::MemoryView<T, Device::CPU> mem_b(mul(ldb, size_b.cols()));
-  memory::MemoryView<T, Device::CPU> mem_c(mul(ldc, size_c.cols()));
-
-  // Create tiles.
-  Tile<T, Device::CPU> a0(size_a, std::move(mem_a), lda);
-  Tile<T, Device::CPU> b0(size_b, std::move(mem_b), ldb);
-  Tile<T, Device::CPU> c(size_c, std::move(mem_c), ldc);
-
   // Note: The tile elements are chosen such that:
   // - op_a(a)_ik = .9 * (i+1) / (k+.5) * exp(I*(2*i-k)),
   // - op_b(b)_kj = .8 * (k+.5) / (j+2) * exp(I*(k+j)),
@@ -92,14 +83,9 @@ void testGemm(const blas::Op op_a, const blas::Op op_b, const SizeType m, const 
     return beta * el_c(index) + gamma * TypeUtilities<T>::polar((i + 1) / (j + 2), 2 * i + j);
   };
 
-  // Set tile elements.
-  set(a0, el_op_a, op_a);
-  set(b0, el_op_b, op_b);
-  set(c, el_c);
-
-  // Read-only tiles become constant if CT is const T.
-  Tile<CT, Device::CPU> a(std::move(a0));
-  Tile<CT, Device::CPU> b(std::move(b0));
+  auto a = createTile<CT>(el_op_a, size_a, lda, op_a);
+  auto b = createTile<CT>(el_op_b, size_b, ldb, op_b);
+  auto c = createTile<T>(el_c, size_c, ldc);
 
   tile::gemm(op_a, op_b, alpha, a, b, beta, c);
 

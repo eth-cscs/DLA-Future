@@ -39,12 +39,6 @@ void testHegst(const int itype, const blas::Uplo uplo, const SizeType m, const S
   s << "HEGST: itype = " << itype << ", uplo = " << uplo << ", m = " << m << ", ld = " << ld;
   SCOPED_TRACE(s.str());
 
-  memory::MemoryView<T, Device::CPU> mem_a(mul(ld, size.cols()));
-  memory::MemoryView<T, Device::CPU> mem_t(mul(ld, size.cols()));
-
-  Tile<T, Device::CPU> a(size, std::move(mem_a), ld);
-  Tile<T, Device::CPU> t(size, std::move(mem_t), ld);
-
   const BaseType<T> alpha = 1.2f;
   const BaseType<T> beta = 1.5f;
   const BaseType<T> gamma = -1.1f;
@@ -55,8 +49,8 @@ void testHegst(const int itype, const blas::Uplo uplo, const SizeType m, const S
       dlaf::matrix::test::getGenToStdElementSetters<ElementIndex, BaseType<T>>(m, itype, uplo, alpha,
                                                                                beta, gamma);
 
-  set(t, el_t);
-  set(a, el_a);
+  auto a = createTile<T>(el_a, size, ld);
+  auto t = createTile<T>(el_t, size, ld);
 
   tile::hegst(itype, uplo, a, t);
 

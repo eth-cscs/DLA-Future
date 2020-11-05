@@ -44,12 +44,6 @@ void testHerk(const blas::Uplo uplo, const blas::Op op_a, const SizeType n, cons
   s << ", lda = " << lda << ", ldc = " << ldc;
   SCOPED_TRACE(s.str());
 
-  memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
-  memory::MemoryView<T, Device::CPU> mem_c(mul(ldc, size_c.cols()));
-
-  Tile<T, Device::CPU> a0(size_a, std::move(mem_a), lda);
-  Tile<T, Device::CPU> c(size_c, std::move(mem_c), ldc);
-
   // Returns op_a(a)_ik
   auto el_op_a = [](const TileElementIndex& index) {
     const double i = index.row();
@@ -84,10 +78,8 @@ void testHerk(const blas::Uplo uplo, const blas::Op op_a, const SizeType n, cons
     return beta * el_c(index) + alpha * tmp;
   };
 
-  set(a0, el_op_a, op_a);
-  set(c, el_c);
-
-  Tile<CT, Device::CPU> a(std::move(a0));
+  auto a = createTile<CT>(el_op_a, size_a, lda, op_a);
+  auto c = createTile<T>(el_c, size_c, ldc);
 
   tile::herk(uplo, op_a, alpha, a, beta, c);
 

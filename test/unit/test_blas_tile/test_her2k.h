@@ -47,14 +47,6 @@ void testHer2k(const blas::Uplo uplo, const blas::Op op, const SizeType n, const
   s << ", lda = " << lda << ", ldb = " << ldb << ", ldc = " << ldc;
   SCOPED_TRACE(s.str());
 
-  memory::MemoryView<T, Device::CPU> mem_a(mul(lda, size_a.cols()));
-  memory::MemoryView<T, Device::CPU> mem_b(mul(ldb, size_b.cols()));
-  memory::MemoryView<T, Device::CPU> mem_c(mul(ldc, size_c.cols()));
-
-  Tile<T, Device::CPU> a0(size_a, std::move(mem_a), lda);
-  Tile<T, Device::CPU> b0(size_b, std::move(mem_b), lda);
-  Tile<T, Device::CPU> c(size_c, std::move(mem_c), ldc);
-
   // Returns op(a)_ik
   auto el_op_a = [](const TileElementIndex& index) {
     const double i = index.row();
@@ -97,12 +89,9 @@ void testHer2k(const blas::Uplo uplo, const blas::Op op, const SizeType n, const
     return beta * el_c(index) + tmp;
   };
 
-  set(a0, el_op_a, op);
-  set(b0, el_op_b, op);
-  set(c, el_c);
-
-  Tile<CT, Device::CPU> a(std::move(a0));
-  Tile<CT, Device::CPU> b(std::move(b0));
+  auto a = createTile<CT>(el_op_a, size_a, lda, op);
+  auto b = createTile<CT>(el_op_b, size_b, ldb, op);
+  auto c = createTile<T>(el_c, size_c, ldc);
 
   tile::her2k(uplo, op, alpha, a, b, beta, c);
 

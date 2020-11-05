@@ -56,6 +56,22 @@ void set(Tile<T, Device::CPU>& tile, Func el, blas::Op op) {
     }
   }
 }
+
+/// Create a read-only tile and fill with selected values
+///
+/// @pre val argument is an index of type const TileElementIndex&,
+/// @pre val return type should be T;
+/// @pre size is the dimension of the tile to be created (type: TileElementSize);
+/// @pre ld is the leading dimension of the tile to be created,
+/// @pre op is the blas::Op to be applied to the tile.
+template <class T, class ElementGetter>
+Tile<T, Device::CPU> createTile(ElementGetter val, const TileElementSize size, const SizeType ld,
+                                const blas::Op op) {
+  auto tile = createTile<std::remove_const_t<T>>(size, ld);
+  set(tile, val, op);
+  return Tile<T, Device::CPU>(std::move(tile));
+}
+
 }
 }
 }

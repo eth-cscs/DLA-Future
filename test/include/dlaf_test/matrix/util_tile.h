@@ -74,6 +74,30 @@ void print(const Tile<T, Device::CPU>& tile, int precision = 4, std::ostream& ou
   out.precision(out_precision);
 }
 
+/// Create a MemoryView and initialize a Tile on it.
+///
+/// @pre size is the dimension of the tile to be created (type: TileElementSize);
+/// @pre ld is the leading dimension of the tile to be created.
+template <class T>
+Tile<T, Device::CPU> createTile(const TileElementSize size, const SizeType ld) {
+  using dlaf::util::size_t::mul;
+  memory::MemoryView<T, Device::CPU> support_mem(mul(ld, size.cols()));
+  return Tile<T, Device::CPU>(size, std::move(support_mem), ld);
+}
+
+/// Create a tile and fill with selected values
+///
+/// @pre val argument is an index of type const TileElementIndex&,
+/// @pre val return type should be T;
+/// @pre size is the dimension of the tile to be created (type: TileElementSize);
+/// @pre ld is the leading dimension of the tile to be created.
+template <class T, class ElementGetter>
+Tile<T, Device::CPU> createTile(ElementGetter val, const TileElementSize size, const SizeType ld) {
+  auto tile = createTile<std::remove_const_t<T>>(size, ld);
+  set(tile, val);
+  return Tile<T, Device::CPU>(std::move(tile));
+}
+
 namespace internal {
 /// Checks the elements of the tile.
 ///

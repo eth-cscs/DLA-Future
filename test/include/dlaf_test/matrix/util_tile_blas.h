@@ -65,8 +65,8 @@ void set(Tile<T, Device::CPU>& tile, Func el, blas::Op op) {
 /// @pre ld is the leading dimension of the tile to be created,
 /// @pre op is the blas::Op to be applied to the tile.
 template <class T, class ElementGetter>
-Tile<T, Device::CPU> createTile(ElementGetter val, const TileElementSize& size, const SizeType& ld,
-                                const blas::Op& op) {
+Tile<T, Device::CPU> createTile(ElementGetter val, const TileElementSize size, const SizeType ld,
+                                const blas::Op op) {
   auto tile = createTile<std::remove_const_t<T>>(size, ld);
   set(tile, val, op);
   return Tile<T, Device::CPU>(std::move(tile));

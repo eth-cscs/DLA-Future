@@ -54,7 +54,7 @@ void lacpy(const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b);
 ///
 /// @pre a.size().isValid().
 template <class T, Device device>
-dlaf::BaseType<T> lange(lapack::Norm norm, const Tile<T, device>& a) noexcept;
+dlaf::BaseType<T> lange(const lapack::Norm norm, const Tile<T, device>& a) noexcept;
 
 /// Compute the value of the 1-norm, Frobenius norm, infinity-norm, or the largest absolute value of any
 /// element, of a triangular matrix.
@@ -64,7 +64,7 @@ dlaf::BaseType<T> lange(lapack::Norm norm, const Tile<T, device>& a) noexcept;
 /// @pre a.size().rows() >= a.size().cols() if uplo == blas::Uplo::Lower,
 /// @pre a.size().rows() <= a.size().cols() if uplo == blas::Uplo::Upper.
 template <class T, Device device>
-dlaf::BaseType<T> lantr(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag,
+dlaf::BaseType<T> lantr(const lapack::Norm norm, const blas::Uplo uplo, const blas::Diag diag,
                         const Tile<T, device>& a) noexcept;
 
 /// Compute the cholesky decomposition of a.
@@ -73,14 +73,14 @@ dlaf::BaseType<T> lantr(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag,
 /// @pre matrix @p a is square,
 /// @pre matrix @p a is positive definite.
 template <class T, Device device>
-void potrf(blas::Uplo uplo, const Tile<T, device>& a) noexcept;
+void potrf(const blas::Uplo uplo, const Tile<T, device>& a) noexcept;
 
 /// Compute the cholesky decomposition of a (with return code).
 ///
 /// Only the upper or lower triangular elements are referenced according to @p uplo.
 /// @returns info = 0 on success or info > 0 if the tile is not positive definite.
 template <class T, Device device>
-long long potrfInfo(blas::Uplo uplo, const Tile<T, device>& a);
+long long potrfInfo(const blas::Uplo uplo, const Tile<T, device>& a);
 
 #include "dlaf/lapack_tile.tpp"
 

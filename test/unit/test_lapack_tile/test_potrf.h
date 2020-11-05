@@ -28,10 +28,9 @@ using namespace testing;
 using dlaf::util::size_t::mul;
 
 template <class T, bool return_info>
-void testPotrf(blas::Uplo uplo, SizeType n, SizeType extra_lda) {
-  TileElementSize size_a = TileElementSize(n, n);
-
-  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
+void testPotrf(const blas::Uplo uplo, const SizeType n, const SizeType extra_lda) {
+  const TileElementSize size_a = TileElementSize(n, n);
+  const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
 
   std::stringstream s;
   s << "POTRF: " << uplo;
@@ -52,8 +51,8 @@ void testPotrf(blas::Uplo uplo, SizeType n, SizeType extra_lda) {
         (uplo == blas::Uplo::Upper && index.row() > index.col()))
       return TypeUtilities<T>::element(-9.9, 0);
 
-    double i = index.row();
-    double j = index.col();
+    const double i = index.row();
+    const double j = index.col();
 
     return TypeUtilities<T>::polar(std::exp2(-(i + j)) / 3 * (std::exp2(2 * (std::min(i, j) + 1)) - 1),
                                    -i + j);
@@ -64,8 +63,8 @@ void testPotrf(blas::Uplo uplo, SizeType n, SizeType extra_lda) {
         (uplo == blas::Uplo::Upper && index.row() > index.col()))
       return TypeUtilities<T>::element(-9.9, 0);
 
-    double i = index.row();
-    double j = index.col();
+    const double i = index.row();
+    const double j = index.col();
 
     return TypeUtilities<T>::polar(std::exp2(-std::abs(i - j)), -i + j);
   };
@@ -85,10 +84,9 @@ void testPotrf(blas::Uplo uplo, SizeType n, SizeType extra_lda) {
 }
 
 template <class T, bool return_info>
-void testPotrfNonPosDef(blas::Uplo uplo, SizeType n, SizeType extra_lda) {
-  TileElementSize size_a = TileElementSize(n, n);
-
-  SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
+void testPotrfNonPosDef(const blas::Uplo uplo, SizeType n, SizeType extra_lda) {
+  const TileElementSize size_a = TileElementSize(n, n);
+  const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
 
   std::stringstream s;
   s << "POTRF Non Positive Definite: " << uplo;

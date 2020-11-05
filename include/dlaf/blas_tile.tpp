@@ -56,7 +56,7 @@ void herk(blas::Uplo uplo, blas::Op op, BaseType<T> alpha, const Tile<const T, d
 
   DLAF_ASSERT((std::is_same<T, ComplexType<T>>::value || op != blas::Op::Trans),
               "op = Trans is not allowed for Complex values!", std::is_same<T, ComplexType<T>>::value,
-              op2str(op));
+              op);
   DLAF_ASSERT(square_size(c), c);
   DLAF_ASSERT(c.size().rows() == n, c.size().rows(), n);
 

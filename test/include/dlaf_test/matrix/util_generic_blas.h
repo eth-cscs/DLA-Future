@@ -51,9 +51,7 @@ using namespace dlaf_test;
 template <class ElementIndex, class T>
 auto getLeftTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType m) {
   const bool op_a_lower = ((uplo == blas::Uplo::Lower && op == blas::Op::NoTrans) ||
-                           (uplo == blas::Uplo::Upper && op != blas::Op::NoTrans))
-                              ? true
-                              : false;
+                           (uplo == blas::Uplo::Upper && op != blas::Op::NoTrans));
 
   std::function<T(const ElementIndex&)> el_op_a = [op_a_lower, diag](const ElementIndex& index) {
     if ((op_a_lower && index.row() < index.col()) || (!op_a_lower && index.row() > index.col()) ||
@@ -115,9 +113,7 @@ auto getLeftTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T al
 template <class ElementIndex, class T>
 auto getRightTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType n) {
   const bool op_a_lower = ((uplo == blas::Uplo::Lower && op == blas::Op::NoTrans) ||
-                           (uplo == blas::Uplo::Upper && op != blas::Op::NoTrans))
-                              ? true
-                              : false;
+                           (uplo == blas::Uplo::Upper && op != blas::Op::NoTrans));
 
   auto el_x = [](const ElementIndex& index) {
     const double i = index.row();

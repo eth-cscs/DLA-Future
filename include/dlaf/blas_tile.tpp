@@ -47,13 +47,13 @@ void hemm(const blas::Side side, const blas::Uplo uplo, const T alpha, const Til
   const SizeType n = c.size().cols();
 
   if (side == blas::Side::Left) {
-    DLAF_ASSERT(m == a.size().rows(), m, a);
-    DLAF_ASSERT(n == b.size().cols(), n, b);
+    DLAF_ASSERT(m == a.size().rows(), m, a.size().rows());
+    DLAF_ASSERT(n == b.size().cols(), n, b.size().cols());
     DLAF_ASSERT(a.size().cols() == b.size().rows(), a.size().cols(), b.size().rows());
   }
   else if (side == blas::Side::Right) {
-    DLAF_ASSERT(m == b.size().rows(), m, b);
-    DLAF_ASSERT(n == a.size().cols(), n, a);
+    DLAF_ASSERT(m == b.size().rows(), m, b.size().rows());
+    DLAF_ASSERT(n == a.size().cols(), n, a.size().cols());
     DLAF_ASSERT(a.size().rows() == b.size().cols(), a.size().rows(), b.size().cols());
   }
 
@@ -67,11 +67,10 @@ void her2k(const blas::Uplo uplo, const blas::Op op, const T alpha, const Tile<c
   const SizeType n = (op == blas::Op::NoTrans) ? a.size().rows() : a.size().cols();
   const SizeType k = (op == blas::Op::NoTrans) ? a.size().cols() : a.size().rows();
 
-  DLAF_ASSERT((!std::is_same<T, ComplexType<T>>::value || op != blas::Op::Trans),
-              "`op = Trans` is not allowed in complex HER2K.");
-  DLAF_ASSERT(c.size().rows() == c.size().cols(), "`c` is not square!", c);
+  DLAF_ASSERT(tile_complex_trans<T>(op), op);
+
   DLAF_ASSERT(square_size(c), c);
-  DLAF_ASSERT(c.size().rows() == n, "`c` has an invalid size!", c, n);
+  DLAF_ASSERT(c.size().rows() == n, c.size().rows(), n);
 
   blas::her2k(blas::Layout::ColMajor, uplo, op, n, k, alpha, a.ptr(), a.ld(), b.ptr(), b.ld(), beta,
               c.ptr(), c.ld());
@@ -91,9 +90,7 @@ void herk(const blas::Uplo uplo, const blas::Op op, const BaseType<T> alpha,
     k = a.size().rows();
   }
 
-  DLAF_ASSERT((std::is_same<T, ComplexType<T>>::value || op != blas::Op::Trans),
-              "op = Trans is not allowed for Complex values!", std::is_same<T, ComplexType<T>>::value,
-              op);
+  DLAF_ASSERT(tile_complex_trans<T>(op), op);
   DLAF_ASSERT(square_size(c), c);
   DLAF_ASSERT(c.size().rows() == n, c.size().rows(), n);
 
@@ -106,10 +103,10 @@ void trsm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const
   const SizeType m = b.size().rows();
   const SizeType n = b.size().cols();
 
-  DLAF_ASSERT(a.size().rows() == a.size().cols(), "`a` is not square!", a);
+  DLAF_ASSERT(square_size(a), a);
 
   const auto left_side = (side == blas::Side::Left ? m : n);
-  DLAF_ASSERT(a.size().rows() == left_side, "`a` has an invalid size!", a, left_side);
+  DLAF_ASSERT(a.size().rows() == left_side, a.size().rows(), left_side);
 
   blas::trsm(blas::Layout::ColMajor, side, uplo, op, diag, m, n, alpha, a.ptr(), a.ld(), b.ptr(),
              b.ld());

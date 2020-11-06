@@ -22,8 +22,7 @@ void hegst(const int itype, const blas::Uplo uplo, const Tile<T, device>& a, con
 
 template <class T>
 void lacpy(const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b) {
-  DLAF_ASSERT_MODERATE(a.size() == b.size(), "Source and destination tile must have the same size!", a,
-                       b);
+  DLAF_ASSERT_MODERATE(a.size() == b.size(), a.size(), b.size());
 
   const SizeType m = a.size().rows();
   const SizeType n = a.size().cols();
@@ -41,13 +40,13 @@ dlaf::BaseType<T> lantr(const lapack::Norm norm, const blas::Uplo uplo, const bl
                         const Tile<T, device>& a) noexcept {
   switch (uplo) {
     case blas::Uplo::Lower:
-      DLAF_ASSERT(a.size().rows() >= a.size().cols(), "Invalid!", a);
+      DLAF_ASSERT(a.size().rows() >= a.size().cols(), a.size().rows(), a.size().cols());
       break;
     case blas::Uplo::Upper:
-      DLAF_ASSERT(a.size().rows() <= a.size().cols(), "Invalid!", a);
+      DLAF_ASSERT(a.size().rows() <= a.size().cols(), a.size().rows(), a.size().cols());
       break;
     case blas::Uplo::General:
-      DLAF_ASSERT(blas::Uplo::General == uplo, "Invalid parameter!");
+      DLAF_ASSERT(blas::Uplo::General != uplo, uplo);
       break;
   }
   return lapack::lantr(norm, uplo, diag, a.size().rows(), a.size().cols(), a.ptr(), a.ld());
@@ -62,7 +61,7 @@ void potrf(const blas::Uplo uplo, const Tile<T, device>& a) noexcept {
 
 template <class T, Device device>
 long long potrfInfo(const blas::Uplo uplo, const Tile<T, device>& a) {
-  DLAF_ASSERT(a.size().rows() == a.size().cols(), "POTRF: `a` is not square!", a);
+  DLAF_ASSERT(a.size().rows() == a.size().cols(), a.size().rows(), a.size().cols());
 
   auto info = lapack::potrf(uplo, a.size().rows(), a.ptr(), a.ld());
   DLAF_ASSERT_HEAVY(info >= 0, info);

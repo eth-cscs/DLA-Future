@@ -39,11 +39,9 @@ Matrix<T, device>::Matrix(Distribution&& distribution)
 template <class T, Device device>
 Matrix<T, device>::Matrix(Distribution&& distribution, const LayoutInfo& layout) noexcept
     : Matrix<const T, device>(std::move(distribution), {}, {}) {
-  DLAF_ASSERT(this->distribution().localSize() == layout.size(),
-              "Size of distribution does not match layout size!", distribution.localSize(),
+  DLAF_ASSERT(this->distribution().localSize() == layout.size(), distribution.localSize(),
               layout.size());
-  DLAF_ASSERT(this->distribution().blockSize() == layout.blockSize(),
-              "Block size of distribution does not match layout block size!", distribution.blockSize(),
+  DLAF_ASSERT(this->distribution().blockSize() == layout.blockSize(), distribution.blockSize(),
               layout.blockSize());
 
   memory::MemoryView<ElementType, device> mem(layout.minMemSize());

@@ -22,17 +22,17 @@ constexpr double M_PI = 3.141592;
 #include <hpx/include/util.hpp>
 #include <hpx/local/future.hpp>
 
-#include "dlaf/blaspp/enums.h"
 #include "dlaf/common/assert.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/range2d.h"
-#include "dlaf/tile.h"
+#include "dlaf/matrix/tile.h"
 #include "dlaf/types.h"
 
 /// @file
 
 namespace dlaf {
 namespace tile {
+using matrix::Tile;
 
 /// Returns true if the tile is square.
 template <class T, Device D>
@@ -41,9 +41,12 @@ bool square_size(const Tile<T, D>& t) noexcept {
 }
 
 template <class T>
-bool is_complex(T) noexcept {
-  return std::is_same<T, ComplexType<T>>::value;
-}
+bool tile_complex_trans(blas::Op op) noexcept {
+  bool complextrans = false;
+  if (!std::is_same<T, ComplexType<T>>::value || op != blas::Op::Trans)
+    complextrans = true;
 
+  return complextrans;
+}
 }
 }

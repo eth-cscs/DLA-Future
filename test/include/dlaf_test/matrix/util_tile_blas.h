@@ -21,7 +21,7 @@
 namespace dlaf {
 namespace matrix {
 namespace test {
-using namespace dlaf_test;
+using namespace dlaf::test;
 
 /// Sets the elements of the tile.
 ///

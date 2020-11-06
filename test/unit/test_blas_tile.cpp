@@ -11,7 +11,6 @@
 #include "dlaf/blas_tile.h"
 
 #include "gtest/gtest.h"
-#include "dlaf_test/util_types.h"
 
 #include "test_blas_tile/test_gemm.h"
 #include "test_blas_tile/test_hemm.h"
@@ -20,7 +19,7 @@
 #include "test_blas_tile/test_trsm.h"
 
 using namespace dlaf;
-using namespace dlaf_test;
+using namespace dlaf::test;
 using namespace testing;
 
 const std::vector<blas::Diag> blas_diags({blas::Diag::Unit, blas::Diag::NonUnit});

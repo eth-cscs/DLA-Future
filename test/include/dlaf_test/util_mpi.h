@@ -2,8 +2,9 @@
 
 #include <array>
 
-namespace dlaf_test {
+namespace dlaf {
 namespace comm {
+namespace test {
 
 /// Compute valid 2D grid dimensions for a given number of ranks.
 ///
@@ -11,5 +12,6 @@ namespace comm {
 /// @post ret_dims[0] * ret_dims[0] == @p nranks.
 std::array<int, 2> computeGridDims(int nranks);
 
+}
 }
 }

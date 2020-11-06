@@ -23,7 +23,7 @@ namespace dlaf {
 namespace matrix {
 namespace test {
 
-using namespace dlaf_test;
+using namespace dlaf::test;
 
 /// Returns a tuple of element generators of three matrices T (n x n), A(n x n) and B (n x n).
 /// It holds, for @p itype == 1

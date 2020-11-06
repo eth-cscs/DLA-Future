@@ -21,10 +21,11 @@
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/util_types.h"
 
-using namespace dlaf;
+namespace dlaf {
+namespace test {
+
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
-using namespace dlaf_test;
 using namespace testing;
 
 using dlaf::util::size_t::mul;
@@ -46,7 +47,7 @@ void testHegst(const int itype, const blas::Uplo uplo, const SizeType m, const S
   std::function<T(const TileElementIndex&)> el_t, el_a, res_a;
 
   std::tie(el_t, el_a, res_a) =
-      dlaf::matrix::test::getGenToStdElementSetters<ElementIndex, BaseType<T>>(m, itype, uplo, alpha,
+      getGenToStdElementSetters<ElementIndex, BaseType<T>>(m, itype, uplo, alpha,
                                                                                beta, gamma);
 
   auto a = createTile<T>(el_a, size, ld);
@@ -56,4 +57,7 @@ void testHegst(const int itype, const blas::Uplo uplo, const SizeType m, const S
 
   CHECK_TILE_NEAR(res_a, a, 10 * (m + 1) * TypeUtilities<T>::error,
                   10 * (m + 1) * TypeUtilities<T>::error);
+}
+
+}
 }

@@ -23,7 +23,7 @@ namespace dlaf {
 namespace matrix {
 namespace test {
 
-using namespace dlaf_test;
+using namespace dlaf::test;
 
 /// Returns a tuple of element generators of three matrices A(m x m), B (m x n), X (m x n), for which it
 /// holds op(A) X = alpha B (n can be any value).

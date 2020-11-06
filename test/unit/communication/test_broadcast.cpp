@@ -16,7 +16,7 @@
 #include "dlaf_test/helper_communicators.h"
 
 using namespace dlaf;
-using namespace dlaf_test;
+using namespace dlaf::comm::test;
 using namespace dlaf::comm;
 
 using BroadcastTest = SplittedCommunicatorsTest;

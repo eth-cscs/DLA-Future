@@ -2,8 +2,9 @@
 
 #include <mpi.h>
 
-namespace dlaf_test {
+namespace dlaf {
 namespace comm {
+namespace test {
 
 std::array<int, 2> computeGridDims(int nranks) {
   std::array<int, 2> dimensions{0, 0};
@@ -11,5 +12,6 @@ std::array<int, 2> computeGridDims(int nranks) {
   return dimensions;
 }
 
+}
 }
 }

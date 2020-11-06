@@ -22,10 +22,11 @@
 #include "dlaf_test/matrix/util_tile_blas.h"
 #include "dlaf_test/util_types.h"
 
-using namespace dlaf;
+namespace dlaf {
+namespace test {
+
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
-using namespace dlaf_test;
 using namespace testing;
 
 using dlaf::util::size_t::mul;
@@ -51,10 +52,10 @@ void testTrsm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, c
 
   if (side == blas::Side::Left)
     std::tie(el_op_a, el_b, res_b) =
-        test::getLeftTriangularSystem<ElementIndex, T>(uplo, op, diag, alpha, m);
+        getLeftTriangularSystem<ElementIndex, T>(uplo, op, diag, alpha, m);
   else
     std::tie(el_op_a, el_b, res_b) =
-        test::getRightTriangularSystem<ElementIndex, T>(uplo, op, diag, alpha, n);
+        getRightTriangularSystem<ElementIndex, T>(uplo, op, diag, alpha, n);
 
   auto a = createTile<CT>(el_op_a, size_a, lda, op);
   auto b = createTile<T>(el_b, size_b, ldb);
@@ -63,4 +64,7 @@ void testTrsm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, c
 
   CHECK_TILE_NEAR(res_b, b, 10 * (m + 1) * TypeUtilities<T>::error,
                   10 * (m + 1) * TypeUtilities<T>::error);
+}
+
+}
 }

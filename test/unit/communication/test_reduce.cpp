@@ -19,10 +19,10 @@
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
-using namespace dlaf_test;
+using namespace dlaf::test;
 using namespace dlaf::comm;
 
-using ReduceTest = SplittedCommunicatorsTest;
+using ReduceTest = dlaf::comm::test::SplittedCommunicatorsTest;
 
 using TypeParam = std::complex<double>;
 

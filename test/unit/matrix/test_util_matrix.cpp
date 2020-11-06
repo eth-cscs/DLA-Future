@@ -83,9 +83,7 @@ TYPED_TEST(MatrixUtilsTest, Set) {
 }
 
 TYPED_TEST(MatrixUtilsTest, SetRandom) {
-  auto zero = [](const GlobalElementIndex&) {
-    return TypeUtilities<TypeParam>::element(0, 0);
-  };
+  auto zero = [](const GlobalElementIndex&) { return TypeUtilities<TypeParam>::element(0, 0); };
 
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {

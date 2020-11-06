@@ -47,8 +47,7 @@ void testHegst(const int itype, const blas::Uplo uplo, const SizeType m, const S
   std::function<T(const TileElementIndex&)> el_t, el_a, res_a;
 
   std::tie(el_t, el_a, res_a) =
-      getGenToStdElementSetters<ElementIndex, BaseType<T>>(m, itype, uplo, alpha,
-                                                                               beta, gamma);
+      getGenToStdElementSetters<ElementIndex, BaseType<T>>(m, itype, uplo, alpha, beta, gamma);
 
   auto a = createTile<T>(el_a, size, ld);
   auto t = createTile<T>(el_t, size, ld);

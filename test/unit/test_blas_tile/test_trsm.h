@@ -51,11 +51,9 @@ void testTrsm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, c
   std::function<T(const TileElementIndex&)> el_op_a, el_b, res_b;
 
   if (side == blas::Side::Left)
-    std::tie(el_op_a, el_b, res_b) =
-        getLeftTriangularSystem<ElementIndex, T>(uplo, op, diag, alpha, m);
+    std::tie(el_op_a, el_b, res_b) = getLeftTriangularSystem<ElementIndex, T>(uplo, op, diag, alpha, m);
   else
-    std::tie(el_op_a, el_b, res_b) =
-        getRightTriangularSystem<ElementIndex, T>(uplo, op, diag, alpha, n);
+    std::tie(el_op_a, el_b, res_b) = getRightTriangularSystem<ElementIndex, T>(uplo, op, diag, alpha, n);
 
   auto a = createTile<CT>(el_op_a, size_a, lda, op);
   auto b = createTile<T>(el_b, size_b, ldb);

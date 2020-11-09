@@ -9,11 +9,4 @@
 //
 #pragma once
 
-#include "dlaf/types.h"
-
-namespace dlaf {
-
-template <Backend execution>
-struct Factorization;
-
-}
+#include "dlaf/factorization/cholesky.h"

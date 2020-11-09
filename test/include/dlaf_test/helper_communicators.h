@@ -16,7 +16,7 @@ namespace dlaf_test {
 
 using dlaf::comm::Communicator;
 
-/// @brief Test fixture that split even/odd ranks (wrt rank id) in two separate communicators.
+/// Test fixture that split even/odd ranks (wrt rank id) in two separate communicators.
 class SplittedCommunicatorsTest : public ::testing::Test {
   static_assert(NUM_MPI_RANKS >= 4, "At least 4 ranks, in order to avoid single rank communicators");
 

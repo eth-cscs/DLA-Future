@@ -33,16 +33,16 @@ public:
   ///
   /// See misc/matrix_distribution.md for for more detail about the parameters.
   ///
-  /// If size.isEmpty():
-  /// @pre tile_ld >= 1,
-  /// @pre tile_offset_row >= 1,
-  /// @pre tile_offset_col >= 1;
-  /// If !size.isEmpty():
-  /// @pre tile_ld >= max(size.rows(), block_size.rows()),
-  /// @pre tile_row_offset >= block_size.rows(),
-  /// @pre tile_col_offset >= size of the memory (in elements, padding included)
-  ///      to store a column of tiles
-  /// @pre the tiles should not overlap (combinations of @p tile_ld, @p tile_row_offset).
+  /// - If size.isEmpty():
+  ///   @pre tile_ld >= 1,
+  ///   @pre tile_offset_row >= 1,
+  ///   @pre tile_offset_col >= 1;
+  /// - if !size.isEmpty():
+  ///   @pre tile_ld >= max(size.rows(), block_size.rows()),
+  ///   @pre tile_row_offset >= block_size.rows(),
+  ///   @pre tile_col_offset >= size of the memory (in elements, padding included)
+  ///      to store a column of tiles;
+  ///   @pre the tiles should not overlap (combinations of @p tile_ld, @p tile_row_offset).
 
   LayoutInfo(const LocalElementSize& size, const TileElementSize& block_size, SizeType tile_ld,
              SizeType tile_offset_row, SizeType tile_offset_col);

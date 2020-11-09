@@ -80,10 +80,10 @@ void testTriangularSolver(blas::Side side, blas::Uplo uplo, blas::Op op, blas::D
 
   if (side == blas::Side::Left)
     std::tie(el_op_a, el_b, res_b) =
-        test::getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, m);
+        getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, m);
   else
     std::tie(el_op_a, el_b, res_b) =
-        test::getRightTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, n);
+        getRightTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, n);
 
   set(mat_a, el_op_a, op);
   set(mat_b, el_b);
@@ -119,10 +119,10 @@ void testTriangularSolver(comm::CommunicatorGrid grid, blas::Side side, blas::Up
 
   if (side == blas::Side::Left)
     std::tie(el_op_a, el_b, res_b) =
-        test::getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, m);
+        getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, m);
   else
     std::tie(el_op_a, el_b, res_b) =
-        test::getRightTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, n);
+        getRightTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, n);
 
   set(mat_a, el_op_a, op);
   set(mat_b, el_b);

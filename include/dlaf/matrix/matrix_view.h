@@ -9,15 +9,17 @@
 //
 
 #pragma once
-#include <exception>
+
 #include <vector>
-#include "blas.hh"
+
+#include <blas.hh>
+#include <hpx/local/future.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/layout_info.h"
 #include "dlaf/matrix/matrix_base.h"
-#include "dlaf/tile.h"
+#include "dlaf/matrix/tile.h"
 #include "dlaf/types.h"
 
 namespace dlaf {
@@ -27,7 +29,7 @@ template <class T, Device device>
 class MatrixView;
 
 template <class T, Device device>
-class MatrixView<const T, device> : public matrix::internal::MatrixBase {
+class MatrixView<const T, device> : public internal::MatrixBase {
 public:
   using ElementType = T;
   using TileType = Tile<ElementType, device>;
@@ -94,7 +96,7 @@ MatrixView<std::add_const_t<T>, device> getConstView(MatrixType<T, device>& matr
   return getConstView(blas::Uplo::General, matrix);
 }
 
-#include "dlaf/matrix/matrix_view_const.tpp"
+}
+}
 
-}
-}
+#include "dlaf/matrix/matrix_view_const.tpp"

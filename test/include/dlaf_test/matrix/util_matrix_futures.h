@@ -14,6 +14,9 @@
 
 #include <sstream>
 #include <vector>
+
+#include <hpx/local/future.hpp>
+
 #include "gtest/gtest.h"
 #include "dlaf/matrix.h"
 
@@ -117,8 +120,8 @@ std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingGlob
 
 /// Returns true if only the first @p futures are ready.
 ///
-/// @pre Future should be a future or shared_future.
-/// @pre 0 <= ready <= futures.size()
+/// @pre Future should be a future or shared_future,
+/// @pre 0 <= ready <= futures.size().
 template <class Future>
 bool checkFuturesStep(size_t ready, const std::vector<Future>& futures) {
   DLAF_ASSERT_HEAVY(ready >= 0, "");
@@ -139,7 +142,7 @@ bool checkFuturesStep(size_t ready, const std::vector<Future>& futures) {
 ///
 /// If get_ready == true it checks if current[i] is ready after previous[i] is used.
 /// If get_ready == false it checks if current[i] is not ready after previous[i] is used.
-/// @pre Future[1,2] should be a future or shared_future
+/// @pre Future[1,2] should be a future or shared_future.
 template <class Future1, class Future2>
 void checkFutures(bool get_ready, const std::vector<Future1>& current, std::vector<Future2>& previous) {
   DLAF_ASSERT_HEAVY(current.size() == previous.size(), "");
@@ -164,7 +167,7 @@ void checkFutures(bool get_ready, const std::vector<Future1>& current, std::vect
 /// where index = LocalTileIndex(i % mat_view.localNrTiles.rows(), i / mat_view.localNrTiles.rows())
 /// If get_ready == true it checks if current[i] is ready after the call to mat_view.done(i).
 /// If get_ready == false it checks if current[i] is not ready after the call to mat_view.done(i).
-/// @pre Future1 should be a future or shared_future
+/// @pre Future1 should be a future or shared_future.
 template <class Future1, class MatrixViewType>
 void checkFuturesDone(bool get_ready, const std::vector<Future1>& current, MatrixViewType& mat_view) {
   const auto& nr_tiles = mat_view.distribution().localNrTiles();

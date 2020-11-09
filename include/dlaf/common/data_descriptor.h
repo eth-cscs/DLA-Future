@@ -159,6 +159,11 @@ struct Buffer : public DataDescriptor<T> {
   /// Internally allocates the memory for @param N contiguous elements
   Buffer(const SizeType N) : Buffer(std::make_unique<T[]>(static_cast<std::size_t>(N)), N) {}
 
+  /// Return true if it is allocated, false otherwise
+  operator bool() const {
+    return static_cast<bool>(memory_);
+  }
+
 protected:
   std::unique_ptr<T[]> memory_;
 };
@@ -184,10 +189,25 @@ template <class DataIn>
 auto create_temporary_buffer(const DataIn& input) {
   using DataT = std::remove_const_t<typename common::data_traits<DataIn>::element_t>;
 
-  DLAF_ASSERT_HEAVY(data_count(input) > 0, "");
+  DLAF_ASSERT_HEAVY(data_count(input) > 0, data_count(input));
 
   return common::Buffer<DataT>(data_count(input));
 }
 
+/// Helper function ensuring to work with a contiguous Data, allocating a temporary buffer if needed
+///
+/// @param support_buffer changed just if the @p input buffer is not contiguous
+/// @return the given @p input if it is already contiguous, otherwise returns a newly allocated buffer
+template <class DataIn, class Buffer>
+auto make_contiguous(DataIn input, Buffer& support_buffer) {
+  using DataT = typename common::data_traits<DataIn>::element_t;
+
+  if (!input.is_contiguous()) {
+    support_buffer = common::create_temporary_buffer(input);
+    return common::DataDescriptor<DataT>(support_buffer);
+  }
+
+  return input;
+}
 }
 }

@@ -8,12 +8,16 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+namespace dlaf {
+namespace matrix {
+
 template <class T, Device device>
 Tile<const T, device>::Tile(const TileElementSize& size,
                             memory::MemoryView<ElementType, device>&& memory_view, SizeType ld) noexcept
     : size_(size), memory_view_(std::move(memory_view)), ld_(ld) {
   DLAF_ASSERT(size.isValid(), "Invalid Tile sizes!", size);
-  DLAF_ASSERT(ld_ >= std::max<SizeType>(1, size_.rows()), "Invalid leading dimension!", ld, size_);
+  DLAF_ASSERT(ld_ >= std::max<SizeType>(1, size_.rows()), "Invalid leading dimension!", ld,
+              size_.rows());
   DLAF_ASSERT(size.isEmpty() || size_.rows() + ld_ * (size_.cols() - 1) <= memory_view_.size(),
               "Tile exceeds the MemoryView limits!", size, memory_view_.size());
 }
@@ -49,4 +53,7 @@ template <class T, Device device>
 void Tile<const T, device>::setDefaultSizes() noexcept {
   size_ = {0, 0};
   ld_ = 1;
+}
+
+}
 }

@@ -11,7 +11,7 @@
 #include <iostream>
 
 #include <mpi.h>
-#include <hpx/hpx_init.hpp>
+#include <hpx/init.hpp>
 
 #include "dlaf/auxiliary/mc.h"
 #include "dlaf/communication/communicator_grid.h"
@@ -46,8 +46,8 @@ using dlaf::comm::CommunicatorGrid;
 using T = double;
 using MatrixType = dlaf::Matrix<T, Device::CPU>;
 using ConstMatrixType = dlaf::Matrix<const T, Device::CPU>;
-using TileType = dlaf::Tile<T, Device::CPU>;
-using ConstTileType = dlaf::Tile<const T, Device::CPU>;
+using TileType = MatrixType::TileType;
+using ConstTileType = MatrixType::ConstTileType;
 
 /// Check Cholesky Factorization results
 ///
@@ -166,22 +166,22 @@ int main(int argc, char** argv) {
   ;
   // clang-format on
 
-  // Create the resource partitioner
-  hpx::resource::partitioner rp(desc_commandline, argc, argv);
+  hpx::init_params p;
+  p.desc_cmdline = desc_commandline;
+  p.rp_callback = [](auto& rp) {
+    int ntasks;
+    MPI_Comm_size(MPI_COMM_WORLD, &ntasks);
+    // if the user has asked for special thread pools for communication
+    // then set them up
+    if (ntasks > 1) {
+      // Create a thread pool with a single core that we will use for all
+      // communication related tasks
+      rp.create_thread_pool("mpi", hpx::resource::scheduling_policy::local_priority_fifo);
+      rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], "mpi");
+    }
+  };
 
-  int ntasks;
-  MPI_Comm_size(MPI_COMM_WORLD, &ntasks);
-
-  // if the user has asked for special thread pools for communication
-  // then set them up
-  if (ntasks > 1) {
-    // Create a thread pool with a single core that we will use for all
-    // communication related tasks
-    rp.create_thread_pool("mpi", hpx::resource::scheduling_policy::local_priority_fifo);
-    rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], "mpi");
-  }
-
-  auto ret_code = hpx::init(hpx_main, desc_commandline, argc, argv);
+  auto ret_code = hpx::init(argc, argv, p);
 
   return ret_code;
 }
@@ -276,7 +276,7 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
       const auto owner_transposed = distribution.rankGlobalTile(transposed_wrt_global);
 
       // collect the 2nd operand, receving it from others if not available locally
-      hpx::shared_future<dlaf::Tile<const T, Device::CPU>> tile_to_transpose;
+      hpx::shared_future<ConstTileType> tile_to_transpose;
 
       if (owner_transposed == current_rank) {  // current rank already has what it needs
         tile_to_transpose = L.read(transposed_wrt_global);

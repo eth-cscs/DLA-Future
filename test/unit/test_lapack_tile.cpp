@@ -13,6 +13,7 @@
 #include "gtest/gtest.h"
 #include "dlaf_test/util_types.h"
 
+#include "test_lapack_tile/test_hegst.h"
 #include "test_lapack_tile/test_lange.h"
 #include "test_lapack_tile/test_lantr.h"
 #include "test_lapack_tile/test_potrf.h"
@@ -42,6 +43,26 @@ template <typename Type>
 class TileOperationsTest : public ::testing::Test {};
 
 TYPED_TEST_SUITE(TileOperationsTest, MatrixElementTypes);
+
+TYPED_TEST(TileOperationsTest, Hegst) {
+  using Type = TypeParam;
+
+  SizeType m, extra_ld;
+
+  std::vector<std::tuple<SizeType, SizeType>> sizes = {{0, 0},  {3, 0},  {5, 3},  {9, 0}, {9, 1},
+                                                       {17, 0}, {17, 7}, {32, 0}, {32, 4}};
+
+  std::vector<int> itypes = {1, 2, 3};
+
+  for (const auto& size : sizes) {
+    for (const auto& uplo : blas_uplos) {
+      for (const auto& itype : itypes) {
+        std::tie(m, extra_ld) = size;
+        testHegst<TileElementIndex, Type>(itype, uplo, m, extra_ld);
+      }
+    }
+  }
+}
 
 TYPED_TEST(TileOperationsTest, lange) {
   SizeType m, n, extra_lda;

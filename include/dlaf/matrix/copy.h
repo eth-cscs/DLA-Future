@@ -10,7 +10,8 @@
 
 #pragma once
 
-#include <hpx/hpx.hpp>
+#include <hpx/include/util.hpp>
+#include <hpx/local/future.hpp>
 
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/types.h"

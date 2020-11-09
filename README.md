@@ -2,7 +2,19 @@
 
 # Distributed Linear Algebra with Futures.
 
-## Dependencies
+## Getting started with DLAF
+
+### Get DLA-Future
+
+If you have `git` you can clone this repository with the command
+
+```
+git clone https://github.com/eth-cscs/DLA-Future.git
+```
+
+Otherwise you can download the archive of the latest `master` branch as a [zip](https://github.com/eth-cscs/DLA-Future/archive/master.zip) or [tar.gz](https://github.com/eth-cscs/DLA-Future/archive/master.tar.gz) archive.
+
+### Dependencies
 
 - MPI
 - [HPX](https://github.com/STEllAR-GROUP/hpx)
@@ -13,9 +25,9 @@
 - [GoogleTest](https://github.com/google/googletest) (optional; bundled) - unit testing
 - Doxygen (optional) - documentation
 
-## How to install DLA-Future with spack
+#### Build using Spack
 
-We provide a spack package DLA-Future that can be easily added to your own spack as follows:
+We provide a spack package `dla-future` that can be easily added to your own spack as follows:
 
 `spack repo add $DLAF_ROOT/spack`
 
@@ -25,34 +37,72 @@ Example installation:
 
 `spack install dla-future ^intel-mkl`
 
-Notice that, for the package to work correctly, the HPX option `max_cpu_count` must be set accordingly to the platform,
-as it represents the maximum number of OS-threads.
+Or you can go even further with a more detailed spec like this one, which builds dla-future in debug mode, using the clang compiler, specifying that the HPX on which it depends has to be built
+in debug mode too, with APEX instrumentation enabled, and that we want to use MPICH as MPI implementation, without fortran support (because clang does not support it).
+
+`spack install dla-future %clang build_type=Debug ^hpx build_type=Debug instrumentation=apex ^mpich ~fortran`
+
+Notice that, for the package to work correctly, the HPX option `max_cpu_count` must be set accordingly to the architecture, as it represents the size of the bitmask to interface with hardware threads.
 
 `spack install dla-future ^intel-mkl ^hpx max_cpu_count=256`
 
-## How to use the library
+#### Build the old good way
+
+You can build all the dependencies by yourself, but you have to ensure that:
+- BLAS/LAPACK implementation is not multithreaded
+- HPX: `HPX_WITH_NETWORKING=none` + `HPX_WITH_MAX_CPU_COUNT=n` (according to number of cores in the architecture, suggested the next closest power of 2)
+- HPX and DLAF must have a compatible `CMAKE_BUILD_TYPE`: they must be built both in Debug, or with any combination of release types (Release, RelWithDebInfo or MinSizeRel)
+
+And here the main CMake options for DLAF build customization:
+
+CMake option | Values | Note
+:---|:---|:---
+`HPX_DIR` | CMAKE:PATH | Location of the HPX CMake-config file
+`blaspp_DIR` | CMAKE:PATH | Location of the blaspp CMake-config file
+`lapackpp_DIR` | CMAKE:PATH | Location of the lapackpp CMake-config file
+`DLAF_WITH_MKL` | `{ON,OFF}` (default: `OFF`) | if blaspp/lapackpp is built with MKL
+`MKL_ROOT` | CMAKE:PATH | Location of the MKL library
+`DLAF_ASSERT_ENABLE` | `{ON,OFF}` (default: `ON`) | enable/disable cheap assertions
+`DLAF_ASSERT_MODERATE_ENABLE` | `{ON,OFF}` (default: `ON` in Debug, `OFF` otherwise) | enable/disable moderate assertions
+`DLAF_ASSERT_HEAVY_ENABLE` | `{ON,OFF}` (default: `ON` in Debug, `OFF` otherwise) | enable/disable heavy assertions
+`DLAF_WITH_CUDA` | `{ON,OFF}` (default: `OFF`) | enable CUDA support
+`DLAF_BUILD_MINIAPPS` | `{ON,OFF}` (default: `ON`) | enable/disable building miniapps
+`DLAF_WITH_TEST` | `{ON,OFF}` (default: `ON`) | enable/disable building tests
+`DLAF_INSTALL_TESTS` | `{ON,OFF}` (default: `OFF`) | enable/disable installing tests
+`DLAF_MPI_PRESET` | `{plain-mpi, slurm, custom}` (default `plain-mpi`) | presets for MPI configuration for tests. See [CMake Doc](https://cmake.org/cmake/help/latest/module/FindMPI.html?highlight=mpiexec_executable#usage-of-mpiexec) for additional information
+`DLAF_TEST_RUNALL_WITH_MPIEXEC` | `{ON, OFF}` (default: `OFF`) | Use mpi runner also for non-MPI based tests
+`DLAF_HPXTEST_EXTRA_ARGS` | CMAKE:STRING | Additional HPX command-line options for tests
+`BUILD_DOC` | `{ON,OFF}` (default: `OFF`) | enable/disable documentation generation
+
+### Link your program/library with DLAF
 
 Using DLAF in a CMake project is extremely easy!
 
-Let's use the variable `$DLAF_ROOT` for referring to the install path of DLAF.
-
-Configure your project with:
+In the following, the variable `DLAF_INSTALL_PREFIX` is set to where DLAF is installed. In case you used spack for installing DLAF, you can easily set it with:
 
 ```bash
-cmake -DDLAF_DIR="$DLAF_ROOT/lib/cmake" ..
+export DLAF_INSTALL_PREFIX=`spack location -i dla-future`
 ```
 
-Then, it is just as simple as:
+Then, you can configure your project with one of the following:
+
+```bash
+# By appending the value to the CMAKE_INSTALL_PREFIX
+cmake -DCMAKE_INSTALL_PREFIX=${DLAF_INSTALL_PREFIX} ..
+
+# ... or by setting DLAF_DIR
+cmake -DDLAF_DIR="$DLAF_INSTALL_PREFIX/lib/cmake" ..
+```
+
+Then, it is just as simple as adding these directives in your `CMakeLists.txt`:
 
 ```
 find_package(DLAF)
-
-# ...
-
-target_link_libraries(<your_target> PRIVATE DLAF)
+# ... and then for your executable/library target
+target_link_libraries(<your_target> PRIVATE DLAF::DLAF)
 ```
 
-## How to generate the documentation
+### How to generate the documentation
 
 The documentation can be built together with the project by enabling its generation with the flag `BUILD_DOC=on` and then use the `doc` target to eventually generate it.
 

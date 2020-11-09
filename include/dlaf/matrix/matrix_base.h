@@ -103,7 +103,7 @@ protected:
   }
 
 private:
-  std::shared_ptr<Distribution> distribution_;
+  std::shared_ptr<const Distribution> distribution_;
 };
 
 }

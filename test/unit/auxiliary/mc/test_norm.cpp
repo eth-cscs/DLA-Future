@@ -13,10 +13,13 @@
 #include <limits>
 
 #include <gtest/gtest.h>
+#include <hpx/include/util.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/lapack/enum_output.h"
 #include "dlaf/matrix.h"
 #include "dlaf/util_matrix.h"
+
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/util_types.h"
@@ -101,9 +104,8 @@ void set_and_test(CommunicatorGrid comm_grid, comm::Index2D rank, Matrix<T, Devi
 
   const NormT<T> norm = Auxiliary<Backend::MC>::norm(comm_grid, rank, norm_type, uplo, matrix);
 
-  SCOPED_TRACE(::testing::Message() << "norm=" << lapack::norm2str(norm_type)
-                                    << " uplo=" << blas::uplo2str(uplo) << " changed element=" << index
-                                    << " in matrix size=" << matrix.size()
+  SCOPED_TRACE(::testing::Message() << "norm=" << norm_type << " uplo=" << uplo << " changed element="
+                                    << index << " in matrix size=" << matrix.size()
                                     << " grid_size=" << comm_grid.size() << " rank=" << rank);
 
   if (rank == comm_grid.rank()) {

@@ -11,6 +11,8 @@
 
 #include <hpx/include/parallel_executors.hpp>
 #include <hpx/include/threads.hpp>
+#include <hpx/include/util.hpp>
+#include <hpx/local/future.hpp>
 
 #include "dlaf/blas_tile.h"
 #include "dlaf/common/index2d.h"
@@ -92,8 +94,8 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
   using comm::internal::mpi_pool_exists;
   using common::internal::vector;
 
-  using ConstTile_t = Tile<const T, Device::CPU>;
-  using Tile_t = Tile<T, Device::CPU>;
+  using ConstTile_t = typename Matrix<T, Device::CPU>::ConstTileType;
+  using Tile_t = typename Matrix<T, Device::CPU>::TileType;
   using MemView_t = memory::MemoryView<T, Device::CPU>;
 
   constexpr auto NonUnit = blas::Diag::NonUnit;

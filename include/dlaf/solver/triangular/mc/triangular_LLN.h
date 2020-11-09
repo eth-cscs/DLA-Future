@@ -11,6 +11,8 @@
 
 #include <hpx/include/parallel_executors.hpp>
 #include <hpx/include/threads.hpp>
+#include <hpx/include/util.hpp>
+#include <hpx/local/future.hpp>
 
 #include "dlaf/blas_tile.h"
 #include "dlaf/common/index2d.h"
@@ -83,6 +85,8 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
   constexpr auto Left = blas::Side::Left;
   constexpr auto Lower = blas::Uplo::Lower;
   constexpr auto NoTrans = blas::Op::NoTrans;
+  using TileType = typename Matrix<T, Device::CPU>::TileType;
+  using ConstTileType = typename Matrix<T, Device::CPU>::ConstTileType;
 
   // Set up executor on the default queue with high priority.
   pool_executor executor_hp("default", thread_priority_high);
@@ -106,12 +110,12 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
 
   for (SizeType k = 0; k < a_rows; ++k) {
     // Create a placeholder that will store the shared futures representing the panel
-    vector<hpx::shared_future<Tile<const T, Device::CPU>>> panel(distr_b.localNrTiles().cols());
+    vector<hpx::shared_future<ConstTileType>> panel(distr_b.localNrTiles().cols());
 
     auto k_rank_row = distr_a.rankGlobalTile<Coord::Row>(k);
     auto k_rank_col = distr_a.rankGlobalTile<Coord::Col>(k);
 
-    hpx::shared_future<Tile<const T, Device::CPU>> kk_tile;
+    hpx::shared_future<ConstTileType> kk_tile;
 
     if (mat_a.rankIndex().row() == k_rank_row) {
       auto k_local_row = distr_a.localTileFromGlobalTile<Coord::Row>(k);
@@ -133,19 +137,18 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
       }
       else {
         if (row_comm_size > 1) {
-          kk_tile =
-              hpx::dataflow(executor_mpi,
-                            hpx::util::unwrapping([](auto index, auto&& tile_size,
-                                                     auto&& comm_wrapper) -> Tile<const T, Device::CPU> {
-                              memory::MemoryView<T, Device::CPU> mem_view(tile_size.linear_size());
-                              Tile<T, Device::CPU> tile(tile_size, std::move(mem_view),
-                                                        tile_size.rows());
-                              comm::sync::broadcast::receive_from(index,
-                                                                  comm_wrapper().rowCommunicator(),
-                                                                  tile);
-                              return std::move(tile);
-                            }),
-                            k_rank_col, mat_a.tileSize(GlobalTileIndex(k, k)), serial_comm());
+          kk_tile = hpx::dataflow(executor_mpi,
+                                  hpx::util::unwrapping([](auto index, auto&& tile_size,
+                                                           auto&& comm_wrapper) -> ConstTileType {
+                                    memory::MemoryView<T, Device::CPU> mem_view(
+                                        util::size_t::mul(tile_size.rows(), tile_size.cols()));
+                                    TileType tile(tile_size, std::move(mem_view), tile_size.rows());
+                                    comm::sync::broadcast::receive_from(index,
+                                                                        comm_wrapper().rowCommunicator(),
+                                                                        tile);
+                                    return std::move(tile);
+                                  }),
+                                  k_rank_col, mat_a.tileSize(GlobalTileIndex(k, k)), serial_comm());
         }
       }
     }
@@ -176,16 +179,16 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
         if (col_comm_size > 1 && k != (mat_b.nrTiles().rows() - 1)) {
           panel[j_local] =
               hpx::dataflow(executor_mpi,
-                            hpx::util::unwrapping([](auto index, auto&& tile_size,
-                                                     auto&& comm_wrapper) -> Tile<const T, Device::CPU> {
-                              memory::MemoryView<T, Device::CPU> mem_view(tile_size.linear_size());
-                              Tile<T, Device::CPU> tile(tile_size, std::move(mem_view),
-                                                        tile_size.rows());
-                              comm::sync::broadcast::receive_from(index,
-                                                                  comm_wrapper().colCommunicator(),
-                                                                  tile);
-                              return std::move(tile);
-                            }),
+                            hpx::util::unwrapping(
+                                [](auto index, auto&& tile_size, auto&& comm_wrapper) -> ConstTileType {
+                                  memory::MemoryView<T, Device::CPU> mem_view(
+                                      util::size_t::mul(tile_size.rows(), tile_size.cols()));
+                                  TileType tile(tile_size, std::move(mem_view), tile_size.rows());
+                                  comm::sync::broadcast::receive_from(index,
+                                                                      comm_wrapper().colCommunicator(),
+                                                                      tile);
+                                  return std::move(tile);
+                                }),
                             k_rank_row, mat_b.tileSize(GlobalTileIndex(k, j)), serial_comm());
         }
       }
@@ -198,7 +201,7 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
       // Choose queue priority
       auto trailing_executor = (i == k + 1) ? executor_hp : executor_normal;
 
-      hpx::shared_future<Tile<const T, Device::CPU>> ik_tile;
+      hpx::shared_future<ConstTileType> ik_tile;
 
       // Broadcast Aik row-wise
       if (mat_a.rankIndex().col() == k_rank_col) {
@@ -216,19 +219,18 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
       }
       else {
         if (row_comm_size > 1) {
-          ik_tile =
-              hpx::dataflow(executor_mpi,
-                            hpx::util::unwrapping([](auto index, auto&& tile_size,
-                                                     auto&& comm_wrapper) -> Tile<const T, Device::CPU> {
-                              memory::MemoryView<T, Device::CPU> mem_view(tile_size.linear_size());
-                              Tile<T, Device::CPU> tile(tile_size, std::move(mem_view),
-                                                        tile_size.rows());
-                              comm::sync::broadcast::receive_from(index,
-                                                                  comm_wrapper().rowCommunicator(),
-                                                                  tile);
-                              return std::move(tile);
-                            }),
-                            k_rank_col, mat_a.tileSize(GlobalTileIndex(i, k)), serial_comm());
+          ik_tile = hpx::dataflow(executor_mpi,
+                                  hpx::util::unwrapping([](auto index, auto&& tile_size,
+                                                           auto&& comm_wrapper) -> ConstTileType {
+                                    memory::MemoryView<T, Device::CPU> mem_view(
+                                        util::size_t::mul(tile_size.rows(), tile_size.cols()));
+                                    TileType tile(tile_size, std::move(mem_view), tile_size.rows());
+                                    comm::sync::broadcast::receive_from(index,
+                                                                        comm_wrapper().rowCommunicator(),
+                                                                        tile);
+                                    return std::move(tile);
+                                  }),
+                                  k_rank_col, mat_a.tileSize(GlobalTileIndex(i, k)), serial_comm());
         }
       }
 

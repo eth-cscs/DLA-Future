@@ -40,9 +40,9 @@
 #include <cstdio>
 
 #include <gtest/gtest.h>
-#include <hpx/hpx.hpp>
+#include <hpx/init.hpp>
 
-GTEST_API_ int test_main(int argc, char** argv) {
+GTEST_API_ int test_main(int, char**) {
   std::printf("Running main() from gtest_hpx_main.cpp\n");
   auto ret = RUN_ALL_TESTS();
   hpx::finalize();

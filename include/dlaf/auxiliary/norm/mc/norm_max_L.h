@@ -9,8 +9,8 @@
 //
 #pragma once
 
-#include <hpx/hpx.hpp>
-#include <hpx/util/unwrap.hpp>
+#include <hpx/include/util.hpp>
+#include <hpx/local/future.hpp>
 
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/vector.h"

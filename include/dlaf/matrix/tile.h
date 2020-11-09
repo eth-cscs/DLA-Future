@@ -11,8 +11,9 @@
 #pragma once
 
 #include <exception>
-#include <hpx/hpx.hpp>
 #include <ostream>
+
+#include <hpx/local/future.hpp>
 
 #include "dlaf/common/data_descriptor.h"
 #include "dlaf/matrix/index.h"
@@ -21,7 +22,6 @@
 #include "dlaf/util_math.h"
 
 namespace dlaf {
-
 /// Exception used to notify a continuation task that an exception has been thrown in a dependency task.
 ///
 /// It is mainly used to enable exception propagation in the automatic-continuation mechanism.
@@ -30,6 +30,7 @@ struct ContinuationException final : public std::runtime_error {
       : std::runtime_error("An exception has been thrown during the execution of the previous task.") {}
 };
 
+namespace matrix {
 template <class T, Device device>
 class Tile;
 
@@ -49,6 +50,9 @@ class Tile<const T, device>;
 template <class T, Device device>
 class Tile<const T, device> {
   friend Tile<T, device>;
+
+  template <class PT>
+  using promise_t = hpx::lcos::local::promise<PT>;
 
 public:
   using ElementType = T;
@@ -79,7 +83,7 @@ public:
   /// Returns the (i, j)-th element,
   /// where @p i := @p index.row and @p j := @p index.col.
   ///
-  /// @pre index.isIn(size().
+  /// @pre index.isIn(size()).
   const T& operator()(const TileElementIndex& index) const noexcept {
     return *ptr(index);
   }
@@ -120,11 +124,14 @@ private:
   memory::MemoryView<ElementType, device> memory_view_;
   SizeType ld_;
 
-  std::unique_ptr<hpx::promise<Tile<ElementType, device>>> p_;
+  std::unique_ptr<promise_t<Tile<ElementType, device>>> p_;
 };
 
 template <class T, Device device>
 class Tile : public Tile<const T, device> {
+  template <class PT>
+  using promise_t = hpx::lcos::local::promise<PT>;
+
   friend Tile<const T, device>;
 
 public:
@@ -173,9 +180,9 @@ public:
   /// Sets the promise to which this Tile will be moved on destruction.
   ///
   /// @c setPromise can be called only once per object.
-  Tile& setPromise(hpx::promise<Tile<T, device>>&& p) {
+  Tile& setPromise(promise_t<Tile<T, device>>&& p) {
     DLAF_ASSERT(!p_, "setPromise has been already used on this object!");
-    p_ = std::make_unique<hpx::promise<Tile<T, device>>>(std::move(p));
+    p_ = std::make_unique<promise_t<Tile<T, device>>>(std::move(p));
     return *this;
   }
 
@@ -191,8 +198,6 @@ template <class T, Device device>
 auto create_data(const Tile<T, device>& tile) {
   return common::DataDescriptor<T>(tile.ptr({0, 0}), tile.size().cols(), tile.size().rows(), tile.ld());
 }
-
-#include <dlaf/tile.tpp>
 
 /// ---- ETI
 
@@ -211,3 +216,6 @@ DLAF_TILE_ETI(extern, std::complex<double>, Device::CPU)
 // DLAF_TILE_ETI(extern, std::complex<double>, Device::GPU)
 
 }
+}
+
+#include <dlaf/matrix/tile.tpp>

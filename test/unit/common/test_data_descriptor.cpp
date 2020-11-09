@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include "dlaf/common/data.h"
 #include "dlaf/common/data_descriptor.h"
 
 #include <memory>
@@ -544,23 +545,60 @@ TYPED_TEST(DataDescriptorTest, CopyCtorFromStridedArray) {
   check_copy_ctor<const TypeParam>(data_const);
 }
 
-template <class TypeParam, class Buffer>
-void check_temporary(Buffer& data) {
+template <class Data>
+::testing::AssertionResult checkCreateTemporaryBuffer(const Data& data) {
   auto data_temp = create_temporary_buffer(data);
 
-  EXPECT_NE(common::data_pointer(data), common::data_pointer(data_temp));
-  EXPECT_EQ(common::data_count(data), common::data_count(data_temp));
-  EXPECT_TRUE(common::data_iscontiguous(data_temp));
+  if (common::data_pointer(data) == common::data_pointer(data_temp))
+    return ::testing::AssertionFailure() << "temporary buffer points to the same memory location";
+  if (common::data_count(data) != common::data_count(data_temp))
+    return ::testing::AssertionFailure() << "temporary buffer does not have the same number of elements";
+  if (!common::data_iscontiguous(data_temp))
+    return ::testing::AssertionFailure() << "temporary buffer is not contiguous";
+
+  return ::testing::AssertionSuccess();
+}
+
+template <class Data>
+::testing::AssertionResult checkMakeContiguous(const Data& data) {
+  using T = std::remove_const_t<typename common::data_traits<Data>::element_t>;
+
+  common::Buffer<T> temp_buffer;
+  auto data_contiguous = common::make_contiguous(data, temp_buffer);
+
+  EXPECT_EQ(common::data_count(data), common::data_count(data_contiguous));
+  EXPECT_TRUE(common::data_iscontiguous(data_contiguous));
+
+  if (common::data_iscontiguous(data)) {
+    if (temp_buffer)
+      return ::testing::AssertionFailure()
+             << "A temporary buffer has been allocated, when it was not needed";
+    if (common::data_pointer(data) != common::data_pointer(data_contiguous))
+      return ::testing::AssertionFailure()
+             << "The returned buffer is different from the original one, which was already contiguous!";
+  }
+  else {
+    if (!temp_buffer)
+      return ::testing::AssertionFailure() << "No temporary buffer allocated, but it is needed";
+    if (common::data_pointer(temp_buffer) != common::data_pointer(data_contiguous))
+      return ::testing::AssertionFailure()
+             << "Returned buffer is not the temporary one, when it should be!";
+  }
+  return ::testing::AssertionSuccess();
 }
 
 TYPED_TEST(DataDescriptorTest, CreateTemporaryFromPointer) {
   TypeParam value = 26;
   auto data = common::make_data(&value, 1);
-  check_temporary<TypeParam>(data);
+
+  EXPECT_TRUE(checkCreateTemporaryBuffer((data)));
+  EXPECT_TRUE(checkMakeContiguous((data)));
 
   const TypeParam value_const = value;
   auto data_const = common::make_data(&value_const, 1);
-  check_temporary<const TypeParam>(data_const);
+
+  EXPECT_TRUE(checkCreateTemporaryBuffer((data_const)));
+  EXPECT_TRUE(checkMakeContiguous(data_const));
 }
 
 TYPED_TEST(DataDescriptorTest, CreateTemporaryFromCArray) {
@@ -568,44 +606,52 @@ TYPED_TEST(DataDescriptorTest, CreateTemporaryFromCArray) {
   TypeParam value_array[N]{};
 
   auto data = common::make_data(value_array, N);
-  check_temporary<TypeParam>(data);
+  EXPECT_TRUE(checkCreateTemporaryBuffer((data)));
+  EXPECT_TRUE(checkMakeContiguous(data));
 
   const TypeParam value_array_const[N]{};
   auto data_const = common::make_data(value_array_const, N);
-  check_temporary<const TypeParam>(data_const);
+  EXPECT_TRUE(checkCreateTemporaryBuffer((data_const)));
+  EXPECT_TRUE(checkMakeContiguous(data_const));
 }
 
 TYPED_TEST(DataDescriptorTest, CreateTemporaryFromContiguousArray) {
   auto memory = create_memory<TypeParam>(MEMORY_TYPE::ARRAY_CONTIGUOUS);
 
   auto data = common::make_data(memory.data.get(), memory.num_blocks, memory.block_size, memory.stride);
-  check_temporary<TypeParam>(data);
+  EXPECT_TRUE(checkCreateTemporaryBuffer((data)));
+  EXPECT_TRUE(checkMakeContiguous(data));
 
   auto data_const = common::make_data(static_cast<const TypeParam*>(memory.data.get()),
                                       memory.num_blocks, memory.block_size, memory.stride);
-  check_temporary<const TypeParam>(data_const);
+  EXPECT_TRUE(checkCreateTemporaryBuffer((data_const)));
+  EXPECT_TRUE(checkMakeContiguous(data_const));
 }
 
 TYPED_TEST(DataDescriptorTest, CreateTemporaryFromContiguousAsStridedArray) {
   auto memory = create_memory<TypeParam>(MEMORY_TYPE::ARRAY_CONTIGUOUS_AS_STRIDED);
 
   auto data = common::make_data(memory.data.get(), memory.num_blocks, memory.block_size, memory.stride);
-  check_temporary<TypeParam>(data);
+  EXPECT_TRUE(checkCreateTemporaryBuffer((data)));
+  EXPECT_TRUE(checkMakeContiguous(data));
 
   auto data_const = common::make_data(static_cast<const TypeParam*>(memory.data.get()),
                                       memory.num_blocks, memory.block_size, memory.stride);
-  check_temporary<const TypeParam>(data_const);
+  EXPECT_TRUE(checkCreateTemporaryBuffer((data_const)));
+  EXPECT_TRUE(checkMakeContiguous(data_const));
 }
 
 TYPED_TEST(DataDescriptorTest, CreateTemporaryFromStridedArray) {
   auto memory = create_memory<TypeParam>(MEMORY_TYPE::ARRAY_STRIDED);
 
   auto data = common::make_data(memory.data.get(), memory.num_blocks, memory.block_size, memory.stride);
-  check_temporary<TypeParam>(data);
+  EXPECT_TRUE(checkCreateTemporaryBuffer((data)));
+  EXPECT_TRUE(checkMakeContiguous(data));
 
   auto data_const = common::make_data(const_cast<const TypeParam*>(memory.data.get()), memory.num_blocks,
                                       memory.block_size, memory.stride);
-  check_temporary<const TypeParam>(data_const);
+  EXPECT_TRUE(checkCreateTemporaryBuffer((data_const)));
+  EXPECT_TRUE(checkMakeContiguous(data_const));
 }
 
 template <class T>

@@ -80,7 +80,7 @@ inline int rankGlobalTile(SizeType global_tile, int grid_size, int src_rank) {
 inline SizeType localTileFromGlobalTile(SizeType global_tile, int grid_size, int rank, int src_rank) {
   DLAF_ASSERT_HEAVY(0 <= global_tile, global_tile);
   DLAF_ASSERT_HEAVY(0 < grid_size, grid_size);
-  DLAF_ASSERT_HEAVY(0 <= rank && rank < grid_size, rand, grid_size);
+  DLAF_ASSERT_HEAVY(0 <= rank && rank < grid_size, rank, grid_size);
   DLAF_ASSERT_HEAVY(0 <= src_rank && src_rank < grid_size, src_rank, grid_size);
 
   if (rank == rankGlobalTile(global_tile, grid_size, src_rank))

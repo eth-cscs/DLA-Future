@@ -57,7 +57,7 @@ void triangular_RLT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, Devic
 
       for (SizeType j = k + 1; j < n; ++j) {
         // Choose queue priority
-        auto trailing_executor = (j == k - 1) ? executor_hp : executor_normal;
+        auto trailing_executor = (j == k + 1) ? executor_hp : executor_normal;
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix

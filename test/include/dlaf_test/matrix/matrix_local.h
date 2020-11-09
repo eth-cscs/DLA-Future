@@ -21,6 +21,7 @@
 #include "dlaf/util_math.h"
 
 namespace dlaf {
+namespace matrix {
 namespace test {
 
 template <class T>
@@ -148,5 +149,6 @@ protected:
   using MatrixLocal<const T>::tiles_;
 };
 
+}
 }
 }

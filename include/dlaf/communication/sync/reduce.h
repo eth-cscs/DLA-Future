@@ -93,8 +93,8 @@ void participant(int rank_root, Communicator& communicator, MPI_Op reduce_operat
 template <class DataIn, class DataOut>
 void reduce(const int rank_root, Communicator& communicator, MPI_Op reduce_operation, const DataIn input,
             const DataOut output) {
-  DLAF_ASSERT(rank_root < communicator.size() && rank_root != MPI_UNDEFINED, "The rank is not valid!",
-              rank_root, communicator.size());
+  DLAF_ASSERT(rank_root < communicator.size() && rank_root != MPI_UNDEFINED, rank_root,
+              communicator.size());
 
   if (rank_root == communicator.rank())
     internal::reduce::collector(communicator, reduce_operation, input, output);

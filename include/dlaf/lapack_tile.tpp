@@ -56,7 +56,7 @@ template <class T, Device device>
 void potrf(const blas::Uplo uplo, const Tile<T, device>& a) noexcept {
   auto info = potrfInfo(uplo, a);
 
-  DLAF_ASSERT(info == 0, "a is not positive definite");
+  DLAF_ASSERT(info == 0, info);
 }
 
 template <class T, Device device>

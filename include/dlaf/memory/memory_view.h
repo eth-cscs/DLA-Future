@@ -82,7 +82,7 @@ public:
   /// @param memory_view The starting MemoryView object.
   /// @param offset      The index of the first element of the subview.
   /// @param size        The size (in number of elements of type @c T) of the subview.
-  /// @throw std::invalid_argument if the subview exceeds the limits of @p memory_view.
+  /// @pre subview should not exceeds the limits of @p memory_view.
   MemoryView(const MemoryView& memory_view, SizeType offset, SizeType size)
       : memory_(size > 0 ? memory_view.memory_ : std::make_shared<MemoryChunk<ElementType, device>>()),
         offset_(size > 0 ? offset + memory_view.offset_ : 0), size_(size) {

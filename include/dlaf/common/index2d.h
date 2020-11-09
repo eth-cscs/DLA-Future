@@ -142,7 +142,7 @@ public:
   }
 
   SizeType linear_size() const noexcept {
-    return BaseT::row_ * BaseT::col_;
+    return static_cast<SizeType>(BaseT::row_) * BaseT::col_;
   }
 };
 

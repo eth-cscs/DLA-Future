@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2020, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -47,14 +47,14 @@ bool square_blocksize(const Matrix<const T, D>& m) noexcept {
 }
 
 /// Returns true if matrices have equal sizes.
-template <class T, Device D>
-bool equal_size(const Matrix<const T, D>& lhs, Matrix<const T, D>& rhs) noexcept {
+template <class T, Device D1, Device D2>
+bool equal_size(const Matrix<const T, D1>& lhs, Matrix<const T, D2>& rhs) noexcept {
   return lhs.size() == rhs.size();
 }
 
 /// Returns true if matrices have equal blocksizes.
-template <class T, Device D>
-bool equal_blocksize(const Matrix<const T, D>& lhs, Matrix<const T, D>& rhs) noexcept {
+template <class T, Device D1, Device D2>
+bool equal_blocksize(const Matrix<const T, D1>& lhs, Matrix<const T, D2>& rhs) noexcept {
   return lhs.blockSize() == rhs.blockSize();
 }
 
@@ -71,8 +71,8 @@ bool equal_process_grid(const Matrix<const T, D>& m, comm::CommunicatorGrid cons
 }
 
 /// Returns true if the matrices are distributed the same way.
-template <class T, Device D>
-bool equal_distributions(const Matrix<const T, D>& lhs, const Matrix<const T, D>& rhs) noexcept {
+template <class T, Device D1, Device D2>
+bool equal_distributions(const Matrix<const T, D1>& lhs, const Matrix<const T, D2>& rhs) noexcept {
   return lhs.distribution() == rhs.distribution();
 }
 

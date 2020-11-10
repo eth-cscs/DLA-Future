@@ -19,7 +19,7 @@
 #include "dlaf/common/range2d.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/functions_sync.h"
-#include "dlaf/matrix/matrix.h"
+#include "dlaf/matrix.h"
 
 #include "dlaf_test/matrix/matrix_local.h"
 
@@ -36,8 +36,8 @@ template <class T, class ElementGetter>
 void set(MatrixLocal<T>& matrix, ElementGetter el) {
   using dlaf::common::iterate_range2d;
 
-  for (const auto& tile_index : iterate_range2d(matrix.size()))
-    *matrix.ptr(*index) = el(index);
+  for (const auto& index : iterate_range2d(matrix.size()))
+    *matrix.ptr(index) = el(index);
 }
 
 template <class T>  // TODO add tile_selector predicate

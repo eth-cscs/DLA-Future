@@ -41,7 +41,8 @@ void set(MatrixLocal<T>& matrix, ElementGetter el) {
 }
 
 template <class T>  // TODO add tile_selector predicate
-void all_gather(Matrix<const T, Device::CPU>& source, MatrixLocal<T>& dest, comm::CommunicatorGrid comm_grid) {
+void all_gather(Matrix<const T, Device::CPU>& source, MatrixLocal<T>& dest,
+                comm::CommunicatorGrid comm_grid) {
   using namespace dlaf;
   const auto& dist_source = source.distribution();
   const auto rank = dist_source.rankIndex();

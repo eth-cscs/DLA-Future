@@ -44,24 +44,24 @@ struct DataDescriptor {
 
   /// Create a DataDescriptor pointing to contiguous data.
   ///
-  /// Create a Data pointing to @p n contiguous elements of type @p T starting at @p ptr
-  /// @param ptr  pointer to the first element of the underlying contiguous data
-  /// @param n    number of elements
+  /// Create a Data pointing to @p n contiguous elements of type @p T starting at @p ptr.
+  /// @param ptr  pointer to the first element of the underlying contiguous data,
+  /// @param n    number of elements.
   DataDescriptor(T* ptr, SizeType n) noexcept : DataDescriptor(ptr, 1, n, 0) {}
 
   /// Create a DataDescriptor pointing to data with given structure.
   ///
   /// Create a Data pointing to structured data.
   /// It ensures that the given structure is respected, but it is not guaranteed that it will
-  /// be used as it is (e.g. if an equivalent view is available, structure parameters can be altered)
-  /// @param ptr        pointer to the first element of the underlying data
-  /// @param num_blocks number of blocks
-  /// @param blocksize  number of contiguous elements of type @p T in each block
-  /// @param stride     stride (in elements) between starts of adjacent blocks
-  /// @pre num_blocks != 0
-  /// @pre stride == 0 if num_blocks == 1
-  /// @pre stride >= blocksize if num_blocks > 1
-  DataDescriptor(T* ptr, SizeType num_blocks, SizeType blocksize, SizeType stride) noexcept
+  /// be used as it is (e.g. if an equivalent view is available, structure parameters can be altered).
+  /// @param ptr        pointer to the first element of the underlying data,
+  /// @param num_blocks number of blocks,
+  /// @param blocksize  number of contiguous elements of type @p T in each block,
+  /// @param stride     stride (in elements) between starts of adjacent blocks,
+  /// @pre num_blocks != 0,
+  /// @pre stride == 0 if num_blocks == 1,
+  /// @pre stride >= blocksize if num_blocks > 1.
+    DataDescriptor(T* ptr, SizeType num_blocks, SizeType blocksize, SizeType stride) noexcept
       : data_(ptr), nblocks_(num_blocks), blocksize_(blocksize), stride_(num_blocks == 1 ? 0 : stride) {
     DLAF_ASSERT(num_blocks >= 0, "");
     DLAF_ASSERT(blocksize >= 0, "");
@@ -93,26 +93,26 @@ struct DataDescriptor {
 
   /// Number of blocks.
   ///
-  /// 1 in case of contiguous data (single block)
+  /// 1 in case of contiguous data (single block).
   SizeType nblocks() const noexcept {
     return nblocks_;
   }
 
   /// Number of elements in each block.
   ///
-  /// For contiguous block, the return value equals to count()
+  /// For contiguous block, the return value equals to count().
   SizeType blocksize() const noexcept {
     return blocksize_;
   }
 
   /// Number of elements between the start of each block.
   ///
-  /// 0 in case of contiguous data (single block)
+  /// 0 in case of contiguous data (single block).
   SizeType stride() const noexcept {
     return stride_;
   }
 
-  /// Number of valid elements
+  /// Number of valid elements.
   SizeType count() const noexcept {
     return is_contiguous() ? blocksize() : (nblocks() * blocksize());
   }
@@ -150,13 +150,13 @@ struct Buffer : public DataDescriptor<T> {
 
   /// Create a Buffer with given externally allocated memory.
   ///
-  /// Acquire ownership of an externally allocated std::unique_ptr
+  /// Acquire ownership of an externally allocated std::unique_ptr.
   Buffer(std::unique_ptr<T[]>&& memory, const SizeType N)
       : DataDescriptor<T>(memory.get(), N), memory_(std::move(memory)) {}
 
   /// Create a Buffer internally allocating the memory.
   ///
-  /// Internally allocates the memory for @param N contiguous elements
+  /// Internally allocates the memory for @param N contiguous elements.
   Buffer(const SizeType N) : Buffer(std::make_unique<T[]>(static_cast<std::size_t>(N)), N) {}
 
   /// Return true if it is allocated, false otherwise

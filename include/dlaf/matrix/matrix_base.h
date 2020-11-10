@@ -85,8 +85,7 @@ protected:
 
   /// Returns the position in the vector of the index Tile.
   ///
-  /// @pre index.isValid() == true.
-  /// @pre index.isIn(localNrTiles()) == true.
+  /// @pre index.isIn(localNrTiles()).
   SizeType tileLinearIndex(const LocalTileIndex& index) const noexcept {
     return index.row() + distribution_->localNrTiles().rows() * static_cast<SizeType>(index.col());
   }

@@ -32,9 +32,9 @@ struct type_handler {
   /// Create a custom MPI_Datatype for non-contiguous data.
   ///
   /// After creation, the MPI_Datatype is ready to be used.
-  /// @param nblocks      number of blocks
-  /// @param block_size   number of contiguous elements of type @p T in each block
-  /// @param stride       stride (in elements) between starts of adjacent blocks
+  /// @param nblocks      number of blocks,
+  /// @param block_size   number of contiguous elements of type @p T in each block,
+  /// @param stride       stride (in elements) between starts of adjacent blocks.
   type_handler(SizeType nblocks, SizeType block_size, SizeType stride) {
     MPI_Datatype element_type = dlaf::comm::mpi_datatype<std::remove_pointer_t<T>>::type;
     MPI_Type_vector(to_int(nblocks), to_int(block_size), to_int(stride), element_type, &custom_type_);

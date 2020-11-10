@@ -90,8 +90,8 @@ public:
 
   /// Returns the minimum number of elements that are needed to fit a tile with the given size.
   ///
-  /// @pre tile_size.rows() <= block_size.rows()
-  /// @pre tile_size.cols() <= block_size.cols()
+  /// @pre tile_size.rows() <= block_size.rows(),
+  /// @pre tile_size.cols() <= block_size.cols().
   SizeType minTileMemSize(const TileElementSize& tile_size) const noexcept;
 
   const LocalElementSize& size() const noexcept {

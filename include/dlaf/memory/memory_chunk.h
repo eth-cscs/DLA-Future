@@ -68,7 +68,7 @@ public:
   ///
   /// @param ptr  The pointer to the already allocated memory,
   /// @param size The size (in number of elements of type @c T) of the existing allocation,
-  /// @pre @p ptr+i can be deferenced for 0 < @c i < @p size
+  /// @pre @p ptr+i can be deferenced for 0 < @c i < @p size.
   MemoryChunk(T* ptr, SizeType size) : size_(size), ptr_(size > 0 ? ptr : nullptr), allocated_(false) {
     DLAF_ASSERT_HEAVY(size == 0 ? ptr_ == nullptr : ptr_ != nullptr, "");
   }

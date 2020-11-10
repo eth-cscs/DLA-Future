@@ -14,7 +14,7 @@
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
-using namespace dlaf_test;
+using namespace dlaf::test;
 using namespace testing;
 
 template <typename Type>

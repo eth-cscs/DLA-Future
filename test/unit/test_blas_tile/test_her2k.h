@@ -20,10 +20,11 @@
 #include "dlaf_test/matrix/util_tile_blas.h"
 #include "dlaf_test/util_types.h"
 
-using namespace dlaf;
+namespace dlaf {
+namespace test {
+
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
-using namespace dlaf_test;
 using namespace testing;
 
 using dlaf::util::size_t::mul;
@@ -96,4 +97,7 @@ void testHer2k(const blas::Uplo uplo, const blas::Op op, const SizeType n, const
   tile::her2k(uplo, op, alpha, a, b, beta, c);
 
   CHECK_TILE_NEAR(res_c, c, (k + 1) * TypeUtilities<T>::error, (k + 1) * TypeUtilities<T>::error);
+}
+
+}
 }

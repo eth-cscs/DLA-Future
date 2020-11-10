@@ -20,9 +20,10 @@
 
 using namespace dlaf;
 using namespace dlaf::comm;
+using namespace dlaf::comm::test;
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
-using namespace dlaf_test;
+using namespace dlaf::test;
 
 using BroadcastTileTest = SplittedCommunicatorsTest;
 

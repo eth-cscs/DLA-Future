@@ -19,10 +19,11 @@
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/util_types.h"
 
-using namespace dlaf;
+namespace dlaf {
+namespace test {
+
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
-using namespace dlaf_test;
 using namespace testing;
 
 template <class T, bool return_info>
@@ -99,4 +100,7 @@ void testPotrfNonPosDef(const blas::Uplo uplo, SizeType n, SizeType extra_lda) {
   if (return_info) {
     EXPECT_EQ(1, tile::potrfInfo(uplo, a));
   }
+}
+
+}
 }

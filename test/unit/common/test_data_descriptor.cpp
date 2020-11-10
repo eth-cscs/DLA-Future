@@ -20,6 +20,7 @@
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
+using namespace dlaf::test;
 
 template <typename T>
 struct memory_data {
@@ -83,7 +84,7 @@ memory_data<T> create_memory(MEMORY_TYPE type) noexcept {
 template <class Type>
 class DataDescriptorTest : public ::testing::Test {};
 
-TYPED_TEST_SUITE(DataDescriptorTest, dlaf_test::ElementTypes);
+TYPED_TEST_SUITE(DataDescriptorTest, ElementTypes);
 
 TYPED_TEST(DataDescriptorTest, MakeFromPointer) {
   TypeParam value = 26;
@@ -671,7 +672,7 @@ TYPED_TEST(DataDescriptorTest, CopyDataCArrays) {
   TypeParam memory_dst[N];
 
   for (int i = 0; i < N; ++i)
-    memory_src[i] = dlaf_test::TypeUtilities<TypeParam>::element(i, 0);
+    memory_src[i] = TypeUtilities<TypeParam>::element(i, 0);
 
   auto data_src = common::make_data(const_cast<const TypeParam*>(memory_src), N);
   auto data_dest = common::make_data(memory_dst, N);
@@ -679,7 +680,7 @@ TYPED_TEST(DataDescriptorTest, CopyDataCArrays) {
   common::copy(data_src, data_dest);
 
   for (int i = 0; i < N; ++i)
-    EXPECT_EQ(dlaf_test::TypeUtilities<TypeParam>::element(i, 0), memory_dst[i]);
+    EXPECT_EQ(TypeUtilities<TypeParam>::element(i, 0), memory_dst[i]);
 }
 
 TYPED_TEST(DataDescriptorTest, CopyDataArrays) {
@@ -691,7 +692,7 @@ TYPED_TEST(DataDescriptorTest, CopyDataArrays) {
     auto memory_dest = create_memory<TypeParam>(memory_type);
 
     for (SizeType i = 0; i < memory_src.num_blocks * memory_src.block_size; ++i)
-      memory_src[i] = dlaf_test::TypeUtilities<TypeParam>::element(i, 0);
+      memory_src[i] = TypeUtilities<TypeParam>::element(i, 0);
 
     auto data_src = create_const_data_from_memory(memory_src);
     auto data_dest = create_data_from_memory(memory_dest);
@@ -699,7 +700,7 @@ TYPED_TEST(DataDescriptorTest, CopyDataArrays) {
     common::copy(data_src, data_dest);
 
     for (SizeType i = 0; i < memory_src.num_blocks * memory_src.block_size; ++i)
-      EXPECT_EQ(dlaf_test::TypeUtilities<TypeParam>::element(i, 0), memory_dest[i]);
+      EXPECT_EQ(TypeUtilities<TypeParam>::element(i, 0), memory_dest[i]);
   }
 }
 
@@ -721,7 +722,7 @@ TYPED_TEST(DataDescriptorTest, CopyDataHeterogeneous) {
   for (auto& memory_dest : memory_types) {
     TypeParam memory_array[N];
     for (SizeType i = 0; i < N; ++i)
-      memory_array[i] = dlaf_test::TypeUtilities<TypeParam>::element(i, 0);
+      memory_array[i] = TypeUtilities<TypeParam>::element(i, 0);
 
     for (SizeType i = 0; i < N; ++i)
       memory_dest[i] = 0;
@@ -732,7 +733,7 @@ TYPED_TEST(DataDescriptorTest, CopyDataHeterogeneous) {
     copy(data_array, data_dest);
 
     for (SizeType i = 0; i < N; ++i)
-      EXPECT_EQ(dlaf_test::TypeUtilities<TypeParam>::element(i, 0), memory_dest[i]);
+      EXPECT_EQ(TypeUtilities<TypeParam>::element(i, 0), memory_dest[i]);
   }
 
   // CArray as destination
@@ -742,7 +743,7 @@ TYPED_TEST(DataDescriptorTest, CopyDataHeterogeneous) {
       memory_array[i] = 0;
 
     for (SizeType i = 0; i < N; ++i)
-      memory_src[i] = dlaf_test::TypeUtilities<TypeParam>::element(i, 0);
+      memory_src[i] = TypeUtilities<TypeParam>::element(i, 0);
 
     auto data_src = create_const_data_from_memory(memory_src);
     auto data_array = common::make_data(memory_array, N);
@@ -750,7 +751,7 @@ TYPED_TEST(DataDescriptorTest, CopyDataHeterogeneous) {
     copy(data_src, data_array);
 
     for (SizeType i = 0; i < N; ++i)
-      EXPECT_EQ(dlaf_test::TypeUtilities<TypeParam>::element(i, 0), memory_array[i]);
+      EXPECT_EQ(TypeUtilities<TypeParam>::element(i, 0), memory_array[i]);
   }
 
   // Other combinations
@@ -760,7 +761,7 @@ TYPED_TEST(DataDescriptorTest, CopyDataHeterogeneous) {
         continue;
 
       for (SizeType i = 0; i < N; ++i)
-        memory_src[i] = dlaf_test::TypeUtilities<TypeParam>::element(i, 0);
+        memory_src[i] = TypeUtilities<TypeParam>::element(i, 0);
 
       for (SizeType i = 0; i < N; ++i)
         memory_dest[i] = 0;
@@ -771,7 +772,7 @@ TYPED_TEST(DataDescriptorTest, CopyDataHeterogeneous) {
       copy(data_src, data_dest);
 
       for (SizeType i = 0; i < N; ++i)
-        EXPECT_EQ(dlaf_test::TypeUtilities<TypeParam>::element(i, 0), memory_dest[i]);
+        EXPECT_EQ(TypeUtilities<TypeParam>::element(i, 0), memory_dest[i]);
     }
   }
 }

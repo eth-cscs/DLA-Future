@@ -75,7 +75,7 @@ private:
 };
 
 template <class T>
-const T TileSetter<T>::value = dlaf_test::TypeUtilities<T>::element(13, -13);
+const T TileSetter<T>::value = TypeUtilities<T>::element(13, -13);
 
 template <class T>
 void test_lange(const lapack::Norm norm, const Tile<T, Device::CPU>& a, NormT<T> norm_expected) {

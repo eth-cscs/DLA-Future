@@ -23,8 +23,6 @@ namespace dlaf {
 namespace matrix {
 namespace test {
 
-using namespace dlaf_test;
-
 /// Returns a tuple of element generators of three matrices T (n x n), A(n x n) and B (n x n).
 /// It holds, for @p itype == 1
 /// B = U^(-H) A U^(-1), if @p uplo == Upper,
@@ -52,6 +50,8 @@ using namespace dlaf_test;
 ///
 template <class ElementIndex, class T>
 auto getGenToStdElementSetters(SizeType n, int itype, blas::Uplo uplo, T alpha, T beta, T gamma) {
+  using dlaf::test::TypeUtilities;
+
   DLAF_ASSERT(uplo == blas::Uplo::Lower || uplo == blas::Uplo::Upper, "Only Upper and Lower supported",
               uplo);
   DLAF_ASSERT(itype >= 1 && itype <= 3, itype);

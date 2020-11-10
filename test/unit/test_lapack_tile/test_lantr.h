@@ -99,7 +99,7 @@ private:
 };
 
 template <class T>
-const T TileSetter<T>::value = dlaf_test::TypeUtilities<T>::element(13, -13);
+const T TileSetter<T>::value = TypeUtilities<T>::element(13, -13);
 
 template <class T>
 void test_lantr(const lapack::Norm norm, const blas::Uplo uplo, const blas::Diag diag,

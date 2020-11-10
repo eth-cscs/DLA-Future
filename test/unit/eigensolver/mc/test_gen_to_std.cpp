@@ -25,7 +25,7 @@ using namespace dlaf;
 using namespace dlaf::comm;
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
-using namespace dlaf_test;
+using namespace dlaf::test;
 using namespace testing;
 
 template <typename Type>
@@ -51,7 +51,7 @@ void testGenToStdEigensolver(const blas::Uplo uplo, const T alpha, const T beta,
   Matrix<T, Device::CPU> mat_t(size, block_size);
 
   std::tie(el_t, el_a, res_b) =
-      test::getGenToStdElementSetters<GlobalElementIndex, T>(m, 1, uplo, alpha, beta, gamma);
+      getGenToStdElementSetters<GlobalElementIndex, T>(m, 1, uplo, alpha, beta, gamma);
 
   set(mat_a, el_a);
   set(mat_t, el_t);

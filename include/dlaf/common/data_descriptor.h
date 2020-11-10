@@ -61,7 +61,7 @@ struct DataDescriptor {
   /// @pre num_blocks != 0,
   /// @pre stride == 0 if num_blocks == 1,
   /// @pre stride >= blocksize if num_blocks > 1.
-    DataDescriptor(T* ptr, SizeType num_blocks, SizeType blocksize, SizeType stride) noexcept
+  DataDescriptor(T* ptr, SizeType num_blocks, SizeType blocksize, SizeType stride) noexcept
       : data_(ptr), nblocks_(num_blocks), blocksize_(blocksize), stride_(num_blocks == 1 ? 0 : stride) {
     DLAF_ASSERT(num_blocks >= 0, "");
     DLAF_ASSERT(blocksize >= 0, "");

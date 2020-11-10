@@ -48,9 +48,9 @@ public:
 
   /// Creates a MemoryView object from an existing memory allocation.
   ///
-  /// @param ptr  The pointer to the already allocated memory.
-  /// @param size The size (in number of elements of type @c T) of the existing allocation.
-  /// @pre @p ptr+i can be deferenced for 0 < @c i < @p size
+  /// @param ptr  The pointer to the already allocated memory,
+  /// @param size The size (in number of elements of type @c T) of the existing allocation,
+  /// @pre @p ptr+i can be deferenced for 0 < @c i < @p size.
   MemoryView(T* ptr, SizeType size)
       : memory_(std::make_shared<MemoryChunk<ElementType, device>>(const_cast<ElementType*>(ptr), size)),
         offset_(0), size_(size) {
@@ -79,9 +79,9 @@ public:
 
   /// Creates a MemoryView object which is a subview of another MemoryView.
   ///
-  /// @param memory_view The starting MemoryView object.
-  /// @param offset      The index of the first element of the subview.
-  /// @param size        The size (in number of elements of type @c T) of the subview.
+  /// @param memory_view The starting MemoryView object,
+  /// @param offset      The index of the first element of the subview,
+  /// @param size        The size (in number of elements of type @c T) of the subview,
   /// @pre subview should not exceeds the limits of @p memory_view.
   MemoryView(const MemoryView& memory_view, SizeType offset, SizeType size)
       : memory_(size > 0 ? memory_view.memory_ : std::make_shared<MemoryChunk<ElementType, device>>()),
@@ -136,8 +136,8 @@ public:
 
   /// Returns a pointer to the underlying memory at a given index.
   ///
-  /// @param index index of the position
-  /// @pre @p index < @p size
+  /// @param index index of the position,
+  /// @pre @p index < @p size.
   T* operator()(SizeType index) const {
     DLAF_ASSERT_HEAVY(index < size_, "", index, size_);
     return memory_->operator()(offset_ + index);
@@ -149,7 +149,7 @@ public:
     return size_ == 0 ? nullptr : memory_->operator()(offset_);
   }
 
-  /// @brief Returns the number of elements accessible from the MemoryView.
+  /// Returns the number of elements accessible from the MemoryView.
   SizeType size() const {
     return size_;
   }

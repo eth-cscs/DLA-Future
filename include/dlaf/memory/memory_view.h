@@ -41,17 +41,21 @@ public:
   /// Memory of @p size elements of type @c T is allocated on the given device.
   template <class U = T,
             class = typename std::enable_if_t<!std::is_const<U>::value && std::is_same<T, U>::value>>
-  explicit MemoryView(std::size_t size)
-      : memory_(std::make_shared<MemoryChunk<ElementType, device>>(size)), offset_(0), size_(size) {}
+  explicit MemoryView(SizeType size)
+      : memory_(std::make_shared<MemoryChunk<ElementType, device>>(size)), offset_(0), size_(size) {
+    DLAF_ASSERT(size >= 0, "");
+  }
 
   /// Creates a MemoryView object from an existing memory allocation.
   ///
   /// @param ptr  The pointer to the already allocated memory,
   /// @param size The size (in number of elements of type @c T) of the existing allocation,
   /// @pre @p ptr+i can be deferenced for 0 < @c i < @p size.
-  MemoryView(T* ptr, std::size_t size)
+  MemoryView(T* ptr, SizeType size)
       : memory_(std::make_shared<MemoryChunk<ElementType, device>>(const_cast<ElementType*>(ptr), size)),
-        offset_(0), size_(size) {}
+        offset_(0), size_(size) {
+    DLAF_ASSERT(size >= 0, "");
+  }
 
   MemoryView(const MemoryView&) = default;
   template <class U = T,
@@ -79,7 +83,7 @@ public:
   /// @param offset      The index of the first element of the subview,
   /// @param size        The size (in number of elements of type @c T) of the subview,
   /// @pre subview should not exceeds the limits of @p memory_view.
-  MemoryView(const MemoryView& memory_view, std::size_t offset, std::size_t size)
+  MemoryView(const MemoryView& memory_view, SizeType offset, SizeType size)
       : memory_(size > 0 ? memory_view.memory_ : std::make_shared<MemoryChunk<ElementType, device>>()),
         offset_(size > 0 ? offset + memory_view.offset_ : 0), size_(size) {
     DLAF_ASSERT(offset + size <= memory_view.size_,
@@ -87,7 +91,7 @@ public:
   }
   template <class U = T,
             class = typename std::enable_if_t<std::is_const<U>::value && std::is_same<T, U>::value>>
-  MemoryView(const MemoryView<ElementType, device>& memory_view, std::size_t offset, std::size_t size)
+  MemoryView(const MemoryView<ElementType, device>& memory_view, SizeType offset, SizeType size)
       : memory_(size > 0 ? memory_view.memory_ : std::make_shared<MemoryChunk<ElementType, device>>()),
         offset_(size > 0 ? offset + memory_view.offset_ : 0), size_(size) {
     DLAF_ASSERT(offset + size <= memory_view.size_,
@@ -134,7 +138,7 @@ public:
   ///
   /// @param index index of the position,
   /// @pre @p index < @p size.
-  T* operator()(size_t index) const {
+  T* operator()(SizeType index) const {
     DLAF_ASSERT_HEAVY(index < size_, "", index, size_);
     return memory_->operator()(offset_ + index);
   }
@@ -146,14 +150,14 @@ public:
   }
 
   /// Returns the number of elements accessible from the MemoryView.
-  std::size_t size() const {
+  SizeType size() const {
     return size_;
   }
 
 private:
   std::shared_ptr<MemoryChunk<ElementType, device>> memory_;
-  std::size_t offset_;
-  std::size_t size_;
+  SizeType offset_;
+  SizeType size_;
 };
 
 /// ---- ETI

@@ -100,8 +100,8 @@ namespace ptrdiff_t {
 /// @pre @p a and @p b can be stored in std::ptrdiff_t,
 /// @pre it must be possible to store the result in std::ptrdiff_t.
 template <typename TA, typename TB>
-std::ptrdiff_t sum(const TA a, const TB b) {
-  return dlaf::util::internal::generic_integer_op<std::ptrdiff_t>(a, b, std::plus<std::ptrdiff_t>());
+SizeType sum(const TA a, const TB b) {
+  return dlaf::util::internal::generic_integer_op<SizeType>(a, b, std::plus<SizeType>());
 }
 
 /// Perform the multiplication on integer types in ptrdiff_t arithmetic.
@@ -112,9 +112,8 @@ std::ptrdiff_t sum(const TA a, const TB b) {
 /// @pre @p a and @p b can be stored in std::ptrdiff_t,
 /// @pre it must be possible to store the result in std::ptrdiff_t.
 template <typename TA, typename TB>
-std::ptrdiff_t mul(const TA a, const TB b) {
-  return dlaf::util::internal::generic_integer_op<std::ptrdiff_t>(a, b,
-                                                                  std::multiplies<std::ptrdiff_t>());
+SizeType mul(const TA a, const TB b) {
+  return dlaf::util::internal::generic_integer_op<SizeType>(a, b, std::multiplies<SizeType>());
 }
 
 }

@@ -28,8 +28,6 @@ using namespace dlaf::matrix::test;
 using namespace dlaf_test;
 using namespace testing;
 
-using dlaf::util::size_t::mul;
-
 template <class ElementIndex, class T, class CT = const T>
 void testTrsm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const blas::Diag diag,
               const SizeType m, const SizeType n, const SizeType extra_lda, const SizeType extra_ldb) {

@@ -26,8 +26,6 @@ using namespace dlaf::matrix::test;
 using namespace dlaf_test;
 using namespace testing;
 
-using dlaf::util::size_t::mul;
-
 template <class T, class CT = const T>
 void testGemm(const blas::Op op_a, const blas::Op op_b, const SizeType m, const SizeType n,
               const SizeType k, const SizeType extra_lda, const SizeType extra_ldb,

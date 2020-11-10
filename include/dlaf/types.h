@@ -13,13 +13,15 @@
 /// @file
 
 #include <complex>
+#include <cstddef>
 #include <limits>
 
 #include "dlaf/common/assert.h"
 
 namespace dlaf {
 
-using SizeType = int;
+using SizeType = std::ptrdiff_t;
+
 static_assert(std::is_signed<SizeType>::value && std::is_integral<SizeType>::value,
               "SizeType should be a signed integral type");
 static_assert(sizeof(SizeType) >= 4, "SizeType should be >= 32bit");

@@ -27,8 +27,6 @@ using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
 using namespace testing;
 
-using dlaf::util::size_t::mul;
-
 template <class T, class CT = const T>
 void testHerk(const blas::Uplo uplo, const blas::Op op_a, const SizeType n, const SizeType k,
               const SizeType extra_lda, const SizeType extra_ldc) {

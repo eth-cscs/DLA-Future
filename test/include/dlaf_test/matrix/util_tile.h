@@ -80,8 +80,7 @@ void print(const Tile<T, Device::CPU>& tile, int precision = 4, std::ostream& ou
 /// @pre ld is the leading dimension of the tile to be created.
 template <class T>
 Tile<T, Device::CPU> createTile(const TileElementSize size, const SizeType ld) {
-  using dlaf::util::size_t::mul;
-  memory::MemoryView<T, Device::CPU> support_mem(mul(ld, size.cols()));
+  memory::MemoryView<T, Device::CPU> support_mem(ld * size.cols());
   return Tile<T, Device::CPU>(size, std::move(support_mem), ld);
 }
 
@@ -183,13 +182,15 @@ void checkPtr(PointerGetter exp_ptr, const Tile<T, Device::CPU>& tile, const cha
 /// The (i, j)-element of the tile is compared to expected({i, j}).
 /// @pre expected argument is an index of type const TileElementIndex&,
 /// @pre expected return type should be T,
-/// @pre rel_err > 0,
-/// @pre abs_err > 0.
+/// @pre rel_err >= 0,
+/// @pre abs_err >= 0,
+/// @pre rel_err > 0 || abs_err > 0.
 template <class T, class ElementGetter>
 void checkNear(ElementGetter expected, const Tile<T, Device::CPU>& tile, BaseType<T> rel_err,
                BaseType<T> abs_err, const char* file, const int line) {
-  ASSERT_GT(rel_err, 0);
-  ASSERT_GT(abs_err, 0);
+  ASSERT_GE(rel_err, 0);
+  ASSERT_GE(abs_err, 0);
+  ASSERT_TRUE(rel_err > 0 || abs_err > 0);
 
   auto comp = [rel_err, abs_err](T expected, T value) {
     auto diff = std::abs(expected - value);

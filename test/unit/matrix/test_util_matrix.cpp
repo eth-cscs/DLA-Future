@@ -128,8 +128,7 @@ void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::Communicator
         else {
           Tile<T, Device::CPU> workspace(size_tile_transposed,
                                          memory::MemoryView<T, Device::CPU>(
-                                             mul(size_tile_transposed.rows(),
-                                                 size_tile_transposed.cols())),
+                                             size_tile_transposed.linear_size()),
                                          size_tile_transposed.rows());
 
           // recv from owner_transposed

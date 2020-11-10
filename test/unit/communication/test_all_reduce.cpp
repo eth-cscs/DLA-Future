@@ -57,7 +57,7 @@ TEST_F(AllReduceTest, CArrayOnSingleRank) {
     return;
 
   constexpr int root = 0;
-  constexpr std::size_t N = 3;
+  constexpr SizeType N = 3;
   constexpr TypeParam input[N] = {TypeUtilities<TypeParam>::element(0, 1),
                                   TypeUtilities<TypeParam>::element(1, 2),
                                   TypeUtilities<TypeParam>::element(2, 3)};
@@ -67,7 +67,7 @@ TEST_F(AllReduceTest, CArrayOnSingleRank) {
 
   sync::all_reduce(alone_world, MPI_SUM, common::make_data(input, N), common::make_data(reduced, N));
 
-  for (std::size_t index = 0; index < N; ++index)
+  for (SizeType index = 0; index < N; ++index)
     EXPECT_LE(std::abs(input[index] - reduced[index]), TypeUtilities<TypeParam>::error);
 }
 
@@ -84,7 +84,7 @@ TEST_F(AllReduceTest, Value) {
 TEST_F(AllReduceTest, CArray) {
   static_assert(NUM_MPI_RANKS >= 2, "This test requires at least two ranks");
 
-  constexpr std::size_t N = 3;
+  constexpr SizeType N = 3;
   constexpr TypeParam input[N] = {TypeUtilities<TypeParam>::element(0, 1),
                                   TypeUtilities<TypeParam>::element(1, 2),
                                   TypeUtilities<TypeParam>::element(2, 3)};
@@ -92,7 +92,7 @@ TEST_F(AllReduceTest, CArray) {
 
   sync::all_reduce(world, MPI_SUM, common::make_data(input, N), common::make_data(reduced, N));
 
-  for (std::size_t index = 0; index < N; ++index)
+  for (SizeType index = 0; index < N; ++index)
     EXPECT_LE(std::abs(input[index] * static_cast<TypeParam>(NUM_MPI_RANKS) - reduced[index]),
               NUM_MPI_RANKS * TypeUtilities<TypeParam>::error);
 }
@@ -126,19 +126,19 @@ TEST_F(AllReduceTest, StridedToContiguous) {
 
   // 3 blocks, 2 elements each, with a distance of 5 elements between start of each block
   // E E - - - E E - - - E E    (without padding at the end)
-  constexpr std::size_t nblocks = 3;
-  constexpr std::size_t block_size = 2;
-  constexpr std::size_t block_distance = 5;
+  constexpr SizeType nblocks = 3;
+  constexpr SizeType block_size = 2;
+  constexpr SizeType block_distance = 5;
 
-  constexpr std::size_t memory_footprint = (nblocks - 1) * block_distance + block_size;
+  constexpr SizeType memory_footprint = (nblocks - 1) * block_distance + block_size;
   TypeParam data_strided[memory_footprint];
 
   constexpr int N = nblocks * block_size;
   TypeParam data_contiguous[N];
 
   constexpr TypeParam value = TypeUtilities<TypeParam>::element(13, 26);
-  for (std::size_t i_block = 0; i_block < nblocks; ++i_block)
-    for (std::size_t i_element = 0; i_element < block_size; ++i_element) {
+  for (SizeType i_block = 0; i_block < nblocks; ++i_block)
+    for (SizeType i_element = 0; i_element < block_size; ++i_element) {
       auto mem_pos = i_block * block_distance + i_element;
       data_strided[mem_pos] = value;
     }
@@ -161,11 +161,11 @@ TEST_F(AllReduceTest, ContiguousToStrided) {
 
   // 3 blocks, 2 elements each, with a distance of 5 elements between start of each block
   // E E - - - E E - - - E E    (without padding at the end)
-  constexpr std::size_t nblocks = 3;
-  constexpr std::size_t block_size = 2;
-  constexpr std::size_t block_distance = 5;
+  constexpr SizeType nblocks = 3;
+  constexpr SizeType block_size = 2;
+  constexpr SizeType block_distance = 5;
 
-  constexpr std::size_t memory_footprint = (nblocks - 1) * block_distance + block_size;
+  constexpr SizeType memory_footprint = (nblocks - 1) * block_distance + block_size;
   TypeParam data_strided[memory_footprint];
 
   constexpr int N = nblocks * block_size;
@@ -182,8 +182,8 @@ TEST_F(AllReduceTest, ContiguousToStrided) {
   MPI_Op op = MPI_SUM;
   sync::all_reduce(communicator, op, std::move(message_input), std::move(message_output));
 
-  for (std::size_t i_block = 0; i_block < nblocks; ++i_block)
-    for (std::size_t i_element = 0; i_element < block_size; ++i_element) {
+  for (SizeType i_block = 0; i_block < nblocks; ++i_block)
+    for (SizeType i_element = 0; i_element < block_size; ++i_element) {
       auto mem_pos = i_block * block_distance + i_element;
       EXPECT_LE(std::abs(value * static_cast<TypeParam>(NUM_MPI_RANKS) - data_strided[mem_pos]),
                 NUM_MPI_RANKS * TypeUtilities<TypeParam>::error);

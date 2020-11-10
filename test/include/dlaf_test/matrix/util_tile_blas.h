@@ -21,7 +21,6 @@
 namespace dlaf {
 namespace matrix {
 namespace test {
-using namespace dlaf::test;
 
 /// Sets the elements of the tile.
 ///
@@ -49,7 +48,7 @@ void set(Tile<T, Device::CPU>& tile, Func el, blas::Op op) {
     case blas::Op::ConjTrans: {
       auto op_el = [&el](TileElementIndex i) {
         i.transpose();
-        return TypeUtilities<T>::conj(el(i));
+        return dlaf::test::TypeUtilities<T>::conj(el(i));
       };
       set(tile, op_el);
       break;

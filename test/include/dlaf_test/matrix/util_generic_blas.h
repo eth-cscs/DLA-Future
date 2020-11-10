@@ -23,8 +23,6 @@ namespace dlaf {
 namespace matrix {
 namespace test {
 
-using namespace dlaf::test;
-
 /// Returns a tuple of element generators of three matrices A(m x m), B (m x n), X (m x n), for which it
 /// holds op(A) X = alpha B (n can be any value).
 ///
@@ -50,6 +48,8 @@ using namespace dlaf::test;
 ///
 template <class ElementIndex, class T>
 auto getLeftTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType m) {
+  using dlaf::test::TypeUtilities;
+
   const bool op_a_lower = ((uplo == blas::Uplo::Lower && op == blas::Op::NoTrans) ||
                            (uplo == blas::Uplo::Upper && op != blas::Op::NoTrans));
 
@@ -112,6 +112,8 @@ auto getLeftTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T al
 ///
 template <class ElementIndex, class T>
 auto getRightTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType n) {
+  using dlaf::test::TypeUtilities;
+
   const bool op_a_lower = ((uplo == blas::Uplo::Lower && op == blas::Op::NoTrans) ||
                            (uplo == blas::Uplo::Upper && op != blas::Op::NoTrans));
 

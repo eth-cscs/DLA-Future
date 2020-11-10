@@ -22,7 +22,7 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/executor.h"
 #include "dlaf/communication/functions_sync.h"
-#include "dlaf/factorization/cholesky/cholesky.h"
+#include "dlaf/factorization/cholesky/api.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix.h"
 #include "dlaf/matrix/distribution.h"

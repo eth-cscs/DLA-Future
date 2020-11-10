@@ -1,4 +1,4 @@
-#include "dlaf/factorization/cholesky/cholesky_mc.h"
+#include "dlaf/factorization/cholesky/mc.h"
 
 namespace dlaf {
 namespace factorization {

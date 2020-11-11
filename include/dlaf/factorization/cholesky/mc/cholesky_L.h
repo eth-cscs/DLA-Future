@@ -10,11 +10,14 @@
 #pragma once
 
 #include <hpx/async_combinators/split_future.hpp>
+#include <hpx/futures/future_fwd.hpp>
 #include <hpx/include/parallel_executors.hpp>
 #include <hpx/include/threads.hpp>
 #include <hpx/lcos_fwd.hpp>
 #include <hpx/util/annotated_function.hpp>
 
+#include <limits>
+#include <sstream>
 #include <unordered_map>
 
 #include "dlaf/blas_tile.h"
@@ -71,6 +74,34 @@ void gemm_trailing_matrix_tile(hpx::threads::executors::pool_executor trailing_m
   hpx::dataflow(trailing_matrix_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>),
                 blas::Op::NoTrans, blas::Op::ConjTrans, -1.0, std::move(panel_tile),
                 std::move(col_panel), 1.0, std::move(matrix_tile));
+}
+
+template <class T>
+double sum_tile(Tile<const T, Device::CPU> const& t) {
+  TileElementSize ts = t.size();
+  double sum = 0;
+  for (SizeType j = 0; j < ts.cols(); ++j) {
+    for (SizeType i = 0; i < ts.rows(); ++i) {
+      sum += std::norm(t(TileElementIndex(i, j)));
+    }
+  }
+  return sum;
+}
+
+template <class T>
+void print_tile(hpx::threads::executors::pool_executor ex,
+                hpx::shared_future<Tile<const T, Device::CPU>> ft, std::string info_str) {
+  using ConstTile_t = Tile<const T, Device::CPU>;
+  auto print_f = [info_str](hpx::shared_future<ConstTile_t> ft) {
+    const ConstTile_t& t = ft.get();
+    {
+      static hpx::lcos::local::mutex mt;
+      std::lock_guard<hpx::lcos::local::mutex> lk(mt);
+      std::cout.precision(17);
+      std::cout << info_str << " | sum : " << sum_tile(t) << "\n\n";
+    }
+  };
+  hpx::dataflow(std::move(ex), std::move(print_f), std::move(ft));
 }
 
 template <class T>
@@ -343,27 +374,52 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a, int 
     }
 
     // Iterate over the diagonal of the trailing matrix
-    std::vector<std::vector<SizeType>> recv_bindices_map(distr.commGridSize().rows());
+    // std::vector<std::vector<SizeType>> recv_bindices_map(distr.commGridSize().rows());
+    // for (SizeType j = k + 1; j < nrtile; ++j) {
+    //  GlobalTileIndex jj_idx(j, j);
+    //  comm::Index2D jj_rank = mat_a.rankGlobalTile(jj_idx);
+
+    //  std::vector<SizeType>& recv_bindices = recv_bindices_map[jj_rank.row()];
+
+    //  // Broadcast the jk-tile along the j-th column and update the jj-tile
+    //  if (this_rank == jj_rank) {
+    //    pool_executor trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_normal;
+    //    herk_trailing_diag_tile(trailing_matrix_executor, panel[j], mat_a(jj_idx));
+    //    bindices.push_back(j);
+    //    if (bindices.size() == ntiles_batch || distr.isLastDiagTile(jj_rank, j)) {
+    //      // if (bindices.size() == ntiles_batch) {
+    //      send_batch(executor_hp, mpi_col_task_chain, distr, k, bindices, panel);
+    //    }
+    //  }
+    //  else if (this_rank.col() == jj_rank.col()) {
+    //    recv_bindices.push_back(j);
+    //    if (recv_bindices.size() == ntiles_batch || distr.isLastDiagTile(jj_rank, j)) {
+    //      // if (recv_bindices.size() == ntiles_batch) {
+    //      recv_batch(executor_hp, mpi_col_task_chain, jj_rank.row(), distr, k, recv_bindices, panel);
+    //    }
+    //  }
+    //}
+    // if (!bindices.empty()) {
+    //  send_batch(executor_hp, mpi_col_task_chain, distr, k, bindices, panel);
+    //}
+    // for (int r = 0; r < recv_bindices_map.size(); ++r) {
+    //  auto& recv_bindices = recv_bindices_map[r];
+    //  if (!recv_bindices.empty()) {
+    //    recv_batch(executor_hp, mpi_col_task_chain, r, distr, k, recv_bindices, panel);
+    //  }
+    //}
+
     for (SizeType j = k + 1; j < nrtile; ++j) {
+      pool_executor trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_normal;
       GlobalTileIndex jj_idx(j, j);
       comm::Index2D jj_rank = mat_a.rankGlobalTile(jj_idx);
-
-      std::vector<SizeType>& recv_bindices = recv_bindices_map[jj_rank.row()];
-
-      // Broadcast the jk-tile along the j-th column and update the jj-tile
       if (this_rank == jj_rank) {
-        pool_executor trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_normal;
+        send_tile(executor_hp, mpi_col_task_chain, panel[j]);
         herk_trailing_diag_tile(trailing_matrix_executor, panel[j], mat_a(jj_idx));
-        bindices.push_back(j);
-        if (bindices.size() == ntiles_batch || distr.isLastDiagTile(jj_rank, j)) {
-          send_batch(executor_hp, mpi_col_task_chain, distr, k, bindices, panel);
-        }
       }
       else if (this_rank.col() == jj_rank.col()) {
-        recv_bindices.push_back(j);
-        if (recv_bindices.size() == ntiles_batch || distr.isLastDiagTile(jj_rank, j)) {
-          recv_batch(executor_hp, mpi_col_task_chain, jj_rank.row(), distr, k, recv_bindices, panel);
-        }
+        GlobalTileIndex jk_idx(j, k);
+        panel[j] = recv_tile<T>(executor_hp, mpi_col_task_chain, mat_a.tileSize(jk_idx), jj_rank.row());
       }
     }
 
@@ -374,6 +430,11 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a, int 
         GlobalTileIndex ij_idx(i, j);
         comm::Index2D ij_rank = distr.rankGlobalTile(ij_idx);
         if (this_rank == ij_rank) {
+          // std::stringstream si, sj;
+          // si << this_rank << " : " << comm::Index2D(i, k);
+          // print_tile(executor_hp, panel[i], si.str());
+          // sj << this_rank << " : " << comm::Index2D(j, k);
+          // print_tile(executor_hp, panel[j], sj.str());
           gemm_trailing_matrix_tile(executor_normal, panel[i], panel[j], mat_a(ij_idx));
         }
       }

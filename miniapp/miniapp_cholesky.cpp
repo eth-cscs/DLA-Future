@@ -95,9 +95,6 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   const auto& distribution = matrix_ref.distribution();
 
   for (auto run_index = 0; run_index < opts.nruns; ++run_index) {
-    if (0 == world.rank())
-      std::cout << "[" << run_index << "]" << std::endl;
-
     MatrixType matrix(matrix_size, block_size, comm_grid);
     dlaf::copy(matrix_ref, matrix);
 
@@ -134,13 +131,11 @@ int hpx_main(hpx::program_options::variables_map& vm) {
                 << " " << elapsed_time << "s"
                 << " " << gigaflops << "GFlop/s"
                 << " " << matrix.size() << " " << matrix.blockSize() << " " << comm_grid.size() << " "
-                << hpx::get_os_thread_count() << std::endl;
+                << " " << opts.ntiles_batch << " " << hpx::get_os_thread_count() << std::endl;
 
     // (optional) run test
-    if (opts.do_check != CHECK_RESULT::NONE) {
-      if (opts.do_check == CHECK_RESULT::LAST && run_index != (opts.nruns - 1))
-        continue;
-
+    if ((opts.do_check == CHECK_RESULT::LAST && run_index == (opts.nruns - 1)) ||
+        opts.do_check == CHECK_RESULT::ALL) {
       MatrixType original(matrix_size, block_size, comm_grid);
       dlaf::copy(matrix_ref, original);
       check_cholesky(original, matrix, comm_grid);

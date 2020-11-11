@@ -129,7 +129,7 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
         // Avoid useless communication if one-column communicator
         if (row_comm_size > 1) {
           hpx::dataflow(executor_mpi, hpx::util::unwrapping([](auto&& tile, auto&& comm_wrapper) {
-                          comm::sync::broadcast::send(comm_wrapper().rowCommunicator(), tile);
+                          comm::sync::broadcast::send(comm_wrapper.ref().rowCommunicator(), tile);
                         }),
                         mat_a.read(kk), serial_comm());
         }
@@ -137,18 +137,19 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
       }
       else {
         if (row_comm_size > 1) {
-          kk_tile = hpx::dataflow(executor_mpi,
-                                  hpx::util::unwrapping([](auto index, auto&& tile_size,
-                                                           auto&& comm_wrapper) -> ConstTileType {
-                                    memory::MemoryView<T, Device::CPU> mem_view(
-                                        util::size_t::mul(tile_size.rows(), tile_size.cols()));
-                                    TileType tile(tile_size, std::move(mem_view), tile_size.rows());
-                                    comm::sync::broadcast::receive_from(index,
-                                                                        comm_wrapper().rowCommunicator(),
-                                                                        tile);
-                                    return std::move(tile);
-                                  }),
-                                  k_rank_col, mat_a.tileSize(GlobalTileIndex(k, k)), serial_comm());
+          kk_tile =
+              hpx::dataflow(executor_mpi,
+                            hpx::util::unwrapping([](auto index, auto&& tile_size,
+                                                     auto&& comm_wrapper) -> ConstTileType {
+                              memory::MemoryView<T, Device::CPU> mem_view(
+                                  util::size_t::mul(tile_size.rows(), tile_size.cols()));
+                              TileType tile(tile_size, std::move(mem_view), tile_size.rows());
+                              comm::sync::broadcast::receive_from(index,
+                                                                  comm_wrapper.ref().rowCommunicator(),
+                                                                  tile);
+                              return std::move(tile);
+                            }),
+                            k_rank_col, mat_a.tileSize(GlobalTileIndex(k, k)), serial_comm());
         }
       }
     }
@@ -169,7 +170,7 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
         // Avoid useless communication if one-column communicator and if on the last column
         if (col_comm_size > 1 && k != (mat_b.nrTiles().rows() - 1)) {
           hpx::dataflow(executor_mpi, hpx::util::unwrapping([](auto&& tile, auto&& comm_wrapper) {
-                          comm::sync::broadcast::send(comm_wrapper().colCommunicator(), tile);
+                          comm::sync::broadcast::send(comm_wrapper.ref().colCommunicator(), tile);
                         }),
                         mat_b.read(kj), serial_comm());
         }
@@ -179,16 +180,16 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
         if (col_comm_size > 1 && k != (mat_b.nrTiles().rows() - 1)) {
           panel[j_local] =
               hpx::dataflow(executor_mpi,
-                            hpx::util::unwrapping(
-                                [](auto index, auto&& tile_size, auto&& comm_wrapper) -> ConstTileType {
-                                  memory::MemoryView<T, Device::CPU> mem_view(
-                                      util::size_t::mul(tile_size.rows(), tile_size.cols()));
-                                  TileType tile(tile_size, std::move(mem_view), tile_size.rows());
-                                  comm::sync::broadcast::receive_from(index,
-                                                                      comm_wrapper().colCommunicator(),
-                                                                      tile);
-                                  return std::move(tile);
-                                }),
+                            hpx::util::unwrapping([](auto index, auto&& tile_size,
+                                                     auto&& comm_wrapper) -> ConstTileType {
+                              memory::MemoryView<T, Device::CPU> mem_view(
+                                  util::size_t::mul(tile_size.rows(), tile_size.cols()));
+                              TileType tile(tile_size, std::move(mem_view), tile_size.rows());
+                              comm::sync::broadcast::receive_from(index,
+                                                                  comm_wrapper.ref().colCommunicator(),
+                                                                  tile);
+                              return std::move(tile);
+                            }),
                             k_rank_row, mat_b.tileSize(GlobalTileIndex(k, j)), serial_comm());
         }
       }
@@ -211,7 +212,7 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
 
         if (row_comm_size > 1) {
           hpx::dataflow(executor_mpi, hpx::util::unwrapping([](auto&& tile, auto&& comm_wrapper) {
-                          comm::sync::broadcast::send(comm_wrapper().rowCommunicator(), tile);
+                          comm::sync::broadcast::send(comm_wrapper.ref().rowCommunicator(), tile);
                         }),
                         mat_a.read(ik), serial_comm());
         }
@@ -219,18 +220,19 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
       }
       else {
         if (row_comm_size > 1) {
-          ik_tile = hpx::dataflow(executor_mpi,
-                                  hpx::util::unwrapping([](auto index, auto&& tile_size,
-                                                           auto&& comm_wrapper) -> ConstTileType {
-                                    memory::MemoryView<T, Device::CPU> mem_view(
-                                        util::size_t::mul(tile_size.rows(), tile_size.cols()));
-                                    TileType tile(tile_size, std::move(mem_view), tile_size.rows());
-                                    comm::sync::broadcast::receive_from(index,
-                                                                        comm_wrapper().rowCommunicator(),
-                                                                        tile);
-                                    return std::move(tile);
-                                  }),
-                                  k_rank_col, mat_a.tileSize(GlobalTileIndex(i, k)), serial_comm());
+          ik_tile =
+              hpx::dataflow(executor_mpi,
+                            hpx::util::unwrapping([](auto index, auto&& tile_size,
+                                                     auto&& comm_wrapper) -> ConstTileType {
+                              memory::MemoryView<T, Device::CPU> mem_view(
+                                  util::size_t::mul(tile_size.rows(), tile_size.cols()));
+                              TileType tile(tile_size, std::move(mem_view), tile_size.rows());
+                              comm::sync::broadcast::receive_from(index,
+                                                                  comm_wrapper.ref().rowCommunicator(),
+                                                                  tile);
+                              return std::move(tile);
+                            }),
+                            k_rank_col, mat_a.tileSize(GlobalTileIndex(i, k)), serial_comm());
         }
       }
 

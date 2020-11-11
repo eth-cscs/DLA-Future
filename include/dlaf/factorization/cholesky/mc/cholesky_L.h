@@ -34,8 +34,6 @@ namespace dlaf {
 namespace internal {
 namespace mc {
 
-// If the diagonal tile is on this node factorize it
-// Cholesky decomposition on mat_a(k,k) r/w potrf (lapack operation)
 template <class T>
 void potrf_diag_tile(hpx::threads::executors::pool_executor executor_hp,
                      hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
@@ -77,7 +75,6 @@ void send_tile(hpx::threads::executors::pool_executor ex,
   using ConstTile_t = matrix::Tile<const T, Device::CPU>;
   using PromiseComm_t = common::PromiseGuard<comm::CommunicatorGrid>;
 
-  // Broadcast the (trailing) panel column-wise
   auto send_bcast_f = hpx::util::annotated_function(
       [rc_comm](hpx::shared_future<ConstTile_t> ftile, hpx::future<PromiseComm_t> fpcomm) {
         PromiseComm_t pcomm = fpcomm.get();
@@ -96,7 +93,6 @@ hpx::future<matrix::Tile<const T, Device::CPU>> recv_tile(
   using MemView_t = memory::MemoryView<T, Device::CPU>;
   using Tile_t = matrix::Tile<T, Device::CPU>;
 
-  // Update the (trailing) panel column-wise
   auto recv_bcast_f = hpx::util::annotated_function(
       [rank, tile_size, rc_comm](hpx::future<PromiseComm_t> fpcomm) -> ConstTile_t {
         PromiseComm_t pcomm = fpcomm.get();
@@ -221,12 +217,14 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
       if (this_rank == jj_rank) {
         pool_executor trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_normal;
         herk_trailing_diag_tile(trailing_matrix_executor, panel[j], mat_a(jj_idx));
-        send_tile(executor_mpi, mpi_task_chain, Coord::Col, panel[j]);
+        if (j != nrtile - 1)
+          send_tile(executor_mpi, mpi_task_chain, Coord::Col, panel[j]);
       }
       else if (this_rank.col() == jj_rank.col()) {
         GlobalTileIndex jk_idx(j, k);
-        panel[j] = recv_tile<T>(executor_mpi, mpi_task_chain, Coord::Col, mat_a.tileSize(jk_idx),
-                                jj_rank.row());
+        if (j != nrtile - 1)
+          panel[j] = recv_tile<T>(executor_mpi, mpi_task_chain, Coord::Col, mat_a.tileSize(jk_idx),
+                                  jj_rank.row());
       }
 
       for (SizeType i = j + 1; i < nrtile; ++i) {

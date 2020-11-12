@@ -16,7 +16,9 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
-#include "gtest/gtest.h"
+
+#include <gtest/gtest.h>
+
 #include "dlaf/matrix.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/layout_info.h"

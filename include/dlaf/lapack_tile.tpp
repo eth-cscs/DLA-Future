@@ -34,15 +34,13 @@ void lacpy(const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b) {
 template <class T>
 void lacpy(TileElementSize region, TileElementIndex in_idx, const Tile<const T, Device::CPU>& in,
            TileElementIndex out_idx, const Tile<T, Device::CPU>& out) {
-  const SizeType m = region.rows();
-  const SizeType n = region.cols();
-
   DLAF_ASSERT_MODERATE(isWithin(region, in_idx, in.size()), "Region goes out of bounds for `in`!",
                        region, in_idx, in);
   DLAF_ASSERT_MODERATE(isWithin(region, out_idx, out.size()), "Region goes out of bounds for `out`!",
                        region, out_idx, out);
 
-  lapack::lacpy(lapack::MatrixType::General, m, n, in.ptr(in_idx), in.ld(), out.ptr(out_idx), out.ld());
+  lapack::lacpy(lapack::MatrixType::General, region.rows(), region.cols(), in.ptr(in_idx), in.ld(),
+                out.ptr(out_idx), out.ld());
 }
 
 template <class T, Device device>

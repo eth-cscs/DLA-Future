@@ -12,8 +12,12 @@
 #include "dlaf/types.h"
 
 namespace dlaf {
+namespace auxiliary {
+namespace internal {
 
-template <Backend execution>
-struct Auxiliary;
+template <Backend backend, Device device, class T>
+struct Norm {};
 
+}
+}
 }

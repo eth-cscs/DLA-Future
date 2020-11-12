@@ -13,7 +13,7 @@
 #include <mpi.h>
 #include <hpx/init.hpp>
 
-#include "dlaf/auxiliary/mc.h"
+#include "dlaf/auxiliary/norm.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/init.h"
 #include "dlaf/factorization/cholesky.h"
@@ -351,7 +351,7 @@ void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
   const Index2D rank_result{0, 0};
 
   // 1. Compute the max norm of the original matrix in A
-  const auto norm_A = dlaf::Auxiliary<dlaf::Backend::MC>::norm(comm_grid, rank_result, lapack::Norm::Max,
+  const auto norm_A = dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max,
                                                                blas::Uplo::Lower, A);
 
   // 2.
@@ -365,7 +365,7 @@ void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
 
   // 3. Compute the max norm of the difference (it has been compute in-place in A)
   const auto norm_diff =
-      dlaf::Auxiliary<dlaf::Backend::MC>::norm(comm_grid, rank_result, lapack::Norm::Max,
+      dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max,
                                                blas::Uplo::Lower, A);
 
   // 4.

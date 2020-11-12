@@ -112,7 +112,7 @@ add_library(dlaf.solver OBJECT solver/triangular/mc.cpp)
 target_link_libraries(dlaf.solver PUBLIC dlaf.prop)
 
 # Define DLAF's auxiliary library
-add_library(dlaf.auxiliary OBJECT auxiliary/mc.cpp)
+add_library(dlaf.auxiliary OBJECT auxiliary/norm/mc.cpp)
 target_link_libraries(dlaf.auxiliary PUBLIC dlaf.prop)
 
 # Define DLAF's complete library

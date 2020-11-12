@@ -20,21 +20,25 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/executor.h"
 #include "dlaf/communication/functions_sync.h"
+#include "dlaf/eigensolver/gen_to_std/api.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/util_matrix.h"
 
 namespace dlaf {
+namespace eigensolver {
 namespace internal {
-namespace mc {
 
 // Implementation based on LAPACK Algorithm for the transformation from generalized to standard
 // eigenproblem (xHEGST)
-
-// Local implementation
 template <class T>
-void genToStd_L(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l) {
+struct GenToStd<Backend::MC, Device::CPU, T> {
+  static void call_L(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l);
+};
+
+template <class T>
+void GenToStd<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l) {
   constexpr auto Right = blas::Side::Right;
   constexpr auto Left = blas::Side::Left;
   constexpr auto Lower = blas::Uplo::Lower;
@@ -116,6 +120,14 @@ void genToStd_L(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l) {
   }
 }
 
+/// ---- ETI
+#define DLAF_GENTOSTD_MC_ETI(KWORD, DATATYPE) \
+  KWORD template struct GenToStd<Backend::MC, Device::CPU, DATATYPE>;
+
+DLAF_GENTOSTD_MC_ETI(extern, float)
+DLAF_GENTOSTD_MC_ETI(extern, double)
+DLAF_GENTOSTD_MC_ETI(extern, std::complex<float>)
+DLAF_GENTOSTD_MC_ETI(extern, std::complex<double>)
 }
 }
 }

@@ -12,8 +12,12 @@
 #include "dlaf/types.h"
 
 namespace dlaf {
+namespace eigensolver {
+namespace internal {
 
-template <Backend execution>
-struct Eigensolver;
+template <Backend backend, Device device, class T>
+struct GenToStd {};
 
+}
+}
 }

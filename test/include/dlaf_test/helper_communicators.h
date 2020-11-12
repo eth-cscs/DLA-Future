@@ -12,9 +12,9 @@
 
 #include "dlaf/communication/communicator.h"
 
-namespace dlaf_test {
-
-using dlaf::comm::Communicator;
+namespace dlaf {
+namespace comm {
+namespace test {
 
 /// Test fixture that split even/odd ranks (wrt rank id) in two separate communicators.
 class SplittedCommunicatorsTest : public ::testing::Test {
@@ -46,4 +46,6 @@ protected:
   int key = MPI_UNDEFINED;    ///< key is the rank id in @p splitted_comm
 };
 
+}
+}
 }

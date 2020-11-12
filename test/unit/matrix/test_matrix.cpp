@@ -28,7 +28,7 @@ using namespace dlaf;
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
 using namespace dlaf::comm;
-using namespace dlaf_test;
+using namespace dlaf::test;
 using namespace testing;
 
 ::testing::Environment* const comm_grids_env =
@@ -170,17 +170,13 @@ TYPED_TEST(MatrixTest, ConstructorFromDistribution) {
 ///
 /// @pre index is contained in @p distribution.size(),
 /// @pre index is stored in the current rank.
-std::size_t memoryIndex(const Distribution& distribution, const LayoutInfo& layout,
-                        const GlobalElementIndex& index) {
-  using dlaf::util::size_t::sum;
-  using dlaf::util::size_t::mul;
-
+SizeType memoryIndex(const Distribution& distribution, const LayoutInfo& layout,
+                     const GlobalElementIndex& index) {
   auto global_tile_index = distribution.globalTileIndex(index);
   auto tile_element_index = distribution.tileElementIndex(index);
   auto local_tile_index = distribution.localTileIndex(global_tile_index);
-  std::size_t tile_offset = layout.tileOffset(local_tile_index);
-  std::size_t element_offset =
-      sum(tile_element_index.row(), mul(layout.ldTile(), tile_element_index.col()));
+  SizeType tile_offset = layout.tileOffset(local_tile_index);
+  SizeType element_offset = tile_element_index.row() + layout.ldTile() * tile_element_index.col();
   return tile_offset + element_offset;
 }
 
@@ -393,8 +389,8 @@ struct ExistingLocalTestSizes {
   LocalElementSize size;
   TileElementSize block_size;
   SizeType ld;
-  std::size_t row_offset;
-  std::size_t col_offset;
+  SizeType row_offset;
+  SizeType col_offset;
 };
 
 const std::vector<ExistingLocalTestSizes> existing_local_tests({

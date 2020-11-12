@@ -16,11 +16,10 @@
 namespace dlaf {
 namespace matrix {
 LayoutInfo::LayoutInfo(const LocalElementSize& size, const TileElementSize& block_size, SizeType tile_ld,
-                       std::size_t tile_offset_row, std::size_t tile_offset_col)
+                       SizeType tile_offset_row, SizeType tile_offset_col)
     : size_(size), nr_tiles_(0, 0), block_size_(block_size), ld_tile_(tile_ld),
       tile_offset_row_(tile_offset_row), tile_offset_col_(tile_offset_col) {
   using util::size_t::sum;
-  using util::size_t::mul;
 
   DLAF_ASSERT(size_.isValid(), "Invalid Matrix size!");
   DLAF_ASSERT(!block_size_.isEmpty(), "Invalid Block size!");
@@ -51,7 +50,7 @@ LayoutInfo::LayoutInfo(const LocalElementSize& size, const TileElementSize& bloc
   }
 }
 
-std::size_t LayoutInfo::minMemSize() const noexcept {
+SizeType LayoutInfo::minMemSize() const noexcept {
   if (size_.isEmpty()) {
     return 0;
   }
@@ -60,17 +59,14 @@ std::size_t LayoutInfo::minMemSize() const noexcept {
   return tileOffset(index_last) + minTileMemSize(index_last);
 }
 
-std::size_t LayoutInfo::minTileMemSize(const TileElementSize& tile_size) const noexcept {
-  using util::size_t::sum;
-  using util::size_t::mul;
-
+SizeType LayoutInfo::minTileMemSize(const TileElementSize& tile_size) const noexcept {
   DLAF_ASSERT_HEAVY(tile_size.rows() <= block_size_.rows(), "");
   DLAF_ASSERT_HEAVY(tile_size.cols() <= block_size_.cols(), "");
 
   if (tile_size.isEmpty()) {
     return 0;
   }
-  return sum(tile_size.rows(), mul(ld_tile_, tile_size.cols() - 1));
+  return tile_size.rows() + ld_tile_ * (tile_size.cols() - 1);
 }
 }
 }

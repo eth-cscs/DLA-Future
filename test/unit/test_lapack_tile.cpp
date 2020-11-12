@@ -21,7 +21,7 @@
 using namespace dlaf;
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
-using namespace dlaf_test;
+using namespace dlaf::test;
 using namespace testing;
 
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
@@ -35,7 +35,7 @@ Tile<T, Device::CPU> allocate_tile(TileElementSize size, SizeType extra_lda) {
 
   SizeType lda = std::max<SizeType>(1, size.rows()) + extra_lda;
 
-  MemoryView<T, Device::CPU> mem_a(mul(lda, size.cols()));
+  MemoryView<T, Device::CPU> mem_a(lda * size.cols());
   return {size, std::move(mem_a), lda};
 }
 

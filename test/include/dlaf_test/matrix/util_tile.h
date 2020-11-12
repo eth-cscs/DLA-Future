@@ -80,8 +80,7 @@ void print(const Tile<T, Device::CPU>& tile, int precision = 4, std::ostream& ou
 /// @pre ld is the leading dimension of the tile to be created.
 template <class T>
 Tile<T, Device::CPU> createTile(const TileElementSize size, const SizeType ld) {
-  using dlaf::util::size_t::mul;
-  memory::MemoryView<T, Device::CPU> support_mem(mul(ld, size.cols()));
+  memory::MemoryView<T, Device::CPU> support_mem(ld * size.cols());
   return Tile<T, Device::CPU>(size, std::move(support_mem), ld);
 }
 

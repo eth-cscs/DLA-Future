@@ -13,7 +13,8 @@
 #include <complex>
 #include "gtest/gtest.h"
 
-namespace dlaf_test {
+namespace dlaf {
+namespace test {
 
 using ElementTypes =
     ::testing::Types<int, long long, float, double, std::complex<float>, std::complex<double>>;
@@ -70,4 +71,5 @@ struct TypeUtilities<std::complex<T>> {
 
 template <class T>
 constexpr T TypeUtilities<std::complex<T>>::error;
+}
 }

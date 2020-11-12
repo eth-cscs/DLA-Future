@@ -59,9 +59,3 @@ public:
 
 }
 }
-
-namespace dlaf_test {
-// TODO: remove when cleaning-up namespaces.
-using dlaf::test::CommunicatorGrid6RanksEnvironment;
-std::vector<dlaf::comm::CommunicatorGrid>& comm_grids = dlaf::test::comm_grids;
-}

@@ -27,7 +27,7 @@
 using namespace dlaf;
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
-using namespace dlaf_test;
+using namespace dlaf::test;
 
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
@@ -83,9 +83,7 @@ TYPED_TEST(MatrixUtilsTest, Set) {
 }
 
 TYPED_TEST(MatrixUtilsTest, SetRandom) {
-  auto zero = [](const GlobalElementIndex&) {
-    return dlaf_test::TypeUtilities<TypeParam>::element(0, 0);
-  };
+  auto zero = [](const GlobalElementIndex&) { return TypeUtilities<TypeParam>::element(0, 0); };
 
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
@@ -130,8 +128,7 @@ void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::Communicator
         else {
           Tile<T, Device::CPU> workspace(size_tile_transposed,
                                          memory::MemoryView<T, Device::CPU>(
-                                             mul(size_tile_transposed.rows(),
-                                                 size_tile_transposed.cols())),
+                                             size_tile_transposed.linear_size()),
                                          size_tile_transposed.rows());
 
           // recv from owner_transposed
@@ -145,8 +142,8 @@ void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::Communicator
           return dlaf::conj(tile_original({index.col(), index.row()}));
         };
 
-        CHECK_TILE_NEAR(transposed_conj_tile, tile_transposed.get(), dlaf_test::TypeUtilities<T>::error,
-                        dlaf_test::TypeUtilities<T>::error);
+        CHECK_TILE_NEAR(transposed_conj_tile, tile_transposed.get(), TypeUtilities<T>::error,
+                        TypeUtilities<T>::error);
       }
       else if (current_rank == owner_transposed) {
         // send to owner_original
@@ -182,8 +179,8 @@ TYPED_TEST(MatrixUtilsTest, SetRandomHermitianPositiveDefinite) {
       auto N = matrix.size().rows();
       auto identity_2N = [N](const GlobalElementIndex& index) {
         if (index.row() == index.col())
-          return dlaf_test::TypeUtilities<TypeParam>::element(2 * N, 0);
-        return dlaf_test::TypeUtilities<TypeParam>::element(0, 0);
+          return TypeUtilities<TypeParam>::element(2 * N, 0);
+        return TypeUtilities<TypeParam>::element(0, 0);
       };
 
       matrix::util::set_random_hermitian_positive_definite(matrix);

@@ -98,11 +98,8 @@ public:
   ///
   /// @pre index.isIn(size()).
   const T* ptr(const TileElementIndex& index) const noexcept {
-    using util::size_t::sum;
-    using util::size_t::mul;
-    DLAF_ASSERT_HEAVY(index.isIn(size_), index, size_);
-
-    return memory_view_(sum(index.row(), mul(ld_, index.col())));
+    DLAF_ASSERT_HEAVY(index.isIn(size_), "");
+    return memory_view_(index.row() + static_cast<SizeType>(ld_) * index.col());
   }
 
   /// Returns the size of the Tile.
@@ -176,11 +173,8 @@ public:
   ///
   /// @pre index.isIn(size()).
   T* ptr(const TileElementIndex& index) const noexcept {
-    using util::size_t::sum;
-    using util::size_t::mul;
-    DLAF_ASSERT_HEAVY(index.isIn(size_), index, size_);
-
-    return memory_view_(sum(index.row(), mul(ld_, index.col())));
+    DLAF_ASSERT_HEAVY(index.isIn(size_), "");
+    return memory_view_(index.row() + ld_ * index.col());
   }
 
   /// Sets the promise to which this Tile will be moved on destruction.
@@ -202,8 +196,7 @@ private:
 /// Create a common::Buffer from a Tile.
 template <class T, Device device>
 auto create_data(const Tile<T, device>& tile) {
-  return common::DataDescriptor<T>(tile.ptr({0, 0}), to_sizet(tile.size().cols()),
-                                   to_sizet(tile.size().rows()), to_sizet(tile.ld()));
+  return common::DataDescriptor<T>(tile.ptr({0, 0}), tile.size().cols(), tile.size().rows(), tile.ld());
 }
 
 /// ---- ETI

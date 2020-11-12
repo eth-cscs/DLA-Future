@@ -102,13 +102,13 @@ struct MatrixLocal<const T> {
   }
 
 protected:
-  std::size_t elementLinearIndex(const GlobalElementIndex& index) const noexcept {
+  SizeType elementLinearIndex(const GlobalElementIndex& index) const noexcept {
     using dlaf::util::size_t::mul;
     using dlaf::util::size_t::sum;
 
     DLAF_ASSERT(GlobalElementIndex(index.row(), index.col()).isIn(size()), index, size());
 
-    return sum(mul(index.col(), layout_.ldTile()), index.row());
+    return index.row() + index.col() * layout_.ldTile();
   }
 
   SizeType tileLinearIndex(const GlobalTileIndex& index) const noexcept {

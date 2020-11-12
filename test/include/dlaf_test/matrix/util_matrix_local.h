@@ -69,6 +69,42 @@ void all_gather(Matrix<const T, Device::CPU>& source, MatrixLocal<T>& dest,
   }
 }
 
+template <class T>
+void checkNear(const MatrixLocal<const T>& expected, const MatrixLocal<const T>& mat, BaseType<T> rel_err,
+               BaseType<T> abs_err, const char* file, const int line) {
+  ASSERT_GE(rel_err, 0);
+  ASSERT_GE(abs_err, 0);
+  ASSERT_TRUE(rel_err > 0 || abs_err > 0);
+
+  DLAF_ASSERT(expected.size() == mat.size(), expected.size(), mat.size());
+
+  auto comp = [rel_err, abs_err](T expected, T value) {
+    auto diff = std::abs(expected - value);
+    auto abs_max = std::max(std::abs(expected), std::abs(value));
+
+    return (diff < abs_err) || (diff / abs_max < rel_err);
+  };
+  auto err_message = [rel_err, abs_err](T expected, T value) {
+    auto diff = std::abs(expected - value);
+    auto abs_max = std::max(std::abs(expected), std::abs(value));
+
+    std::stringstream s;
+    s << "expected " << expected << " == " << value << " (Relative diff: " << diff / abs_max << " > "
+      << rel_err << ", Absolute diff: " << diff << " > " << abs_err << ")";
+    return s.str();
+  };
+
+  //internal::check(expected, mat, comp, err_message, file, line);
+  for (const auto& index : iterate_range2d(expected.size())) {
+    if (!comp(*expected.ptr(index), *mat.ptr(index))) {
+      ADD_FAILURE_AT(file, line)
+        << "Error at index " << index
+        << "): " << err_message(*expected.ptr(index), *mat.ptr(index)) << std::endl;
+      return;
+    }
+  }
+}
+
 }
 }
 }

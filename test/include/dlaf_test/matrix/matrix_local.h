@@ -88,19 +88,6 @@ struct MatrixLocal<const T> {
     return GlobalTileSize{layout_.nrTiles().rows(), layout_.nrTiles().cols()};
   }
 
-  friend std::ostream& operator<<(std::ostream& os, const MatrixLocal& matrix) {
-    using dlaf::util::size_t::mul;
-    using dlaf::util::size_t::sum;
-
-    os << matrix.size() << matrix.ld() << std::endl;
-    for (const auto& index : iterate_range2d(matrix.size())) {
-      auto linear_index = dlaf::to_sizet(sum(mul(index.col(), matrix.ld()), index.row()));
-      os << "[" << index.row() << ", " << index.col() << "]" << '=' << *matrix.memory_(linear_index)
-         << "\n";
-    }
-    return os;
-  }
-
 protected:
   SizeType elementLinearIndex(const GlobalElementIndex& index) const noexcept {
     using dlaf::util::size_t::mul;

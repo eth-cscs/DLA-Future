@@ -57,16 +57,17 @@ struct MatrixLocal<const T> {
                       tiles_.size());
   }
 
-  /// Access directly elements
+  /// Access elements
   const T* ptr(const GlobalElementIndex& index = {0, 0}) const noexcept {
     return memory_(elementLinearIndex(index));
   }
 
+  /// Access elements
   const T& operator()(const GlobalElementIndex& index) const noexcept {
     return *ptr(index);
   }
 
-  /// Access a tile
+  /// Access tiles
   const ConstTileT& read_tile(const GlobalTileIndex& index) const noexcept {
     return tiles_[tileLinearIndex(index)];
   }
@@ -135,16 +136,17 @@ struct MatrixLocal : public MatrixLocal<const T> {
   MatrixLocal(GlobalElementSize size, TileElementSize blocksize) noexcept
       : MatrixLocal<const T>(size, blocksize) {}
 
-  /// Access an element
+  /// Access elements
   T* ptr(const GlobalElementIndex& index = {0, 0}) const noexcept {
     return memory_(elementLinearIndex(index));
   }
 
+  /// Access elements
   T& operator()(const GlobalElementIndex& index) const noexcept {
     return *ptr(index);
   }
 
-  /// Access a tile
+  /// Access tiles
   const TileT& readwrite_tile(const GlobalTileIndex& index) const noexcept {
     return tiles_[tileLinearIndex(index)];
   }

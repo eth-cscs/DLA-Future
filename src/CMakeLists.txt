@@ -108,7 +108,7 @@ add_library(dlaf.factorization OBJECT factorization/cholesky/mc.cpp)
 target_link_libraries(dlaf.factorization PUBLIC dlaf.prop)
 
 # Define DLAF's solver library
-add_library(dlaf.solver OBJECT solver/mc.cpp)
+add_library(dlaf.solver OBJECT solver/triangular/mc.cpp)
 target_link_libraries(dlaf.solver PUBLIC dlaf.prop)
 
 # Define DLAF's auxiliary library

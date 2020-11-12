@@ -32,14 +32,14 @@ namespace dlaf {
 namespace factorization {
 namespace internal {
 
-template <Device device, class T>
-struct Cholesky<Backend::MC, device, T> {
+template <class T>
+struct Cholesky<Backend::MC, Device::CPU, T> {
   static void call_L(Matrix<T, Device::CPU>& mat_a);
   static void call_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a);
 };
 
-template <Device device, class T>
-void Cholesky<Backend::MC, device, T>::call_L(Matrix<T, Device::CPU>& mat_a) {
+template <class T>
+void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a) {
   constexpr auto NonUnit = blas::Diag::NonUnit;
   constexpr auto ConjTrans = blas::Op::ConjTrans;
   constexpr auto NoTrans = blas::Op::NoTrans;
@@ -87,8 +87,8 @@ void Cholesky<Backend::MC, device, T>::call_L(Matrix<T, Device::CPU>& mat_a) {
   }
 }
 
-template <Device device, class T>
-void Cholesky<Backend::MC, device, T>::call_L(comm::CommunicatorGrid grid,
+template <class T>
+void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
                                               Matrix<T, Device::CPU>& mat_a) {
   using hpx::util::unwrapping;
   using hpx::threads::executors::pool_executor;

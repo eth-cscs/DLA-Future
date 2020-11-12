@@ -12,6 +12,7 @@
 #include <hpx/include/parallel_executors.hpp>
 #include <hpx/include/threads.hpp>
 #include <hpx/util/annotated_function.hpp>
+#include <hpx/include/util.hpp>
 
 #include <unordered_map>
 
@@ -192,7 +193,6 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
     }
 
     // Iterate over the k-th column
-    std::vector<SizeType> bindices;
     for (SizeType i = k + 1; i < nrtile; ++i) {
       GlobalTileIndex ik_idx(i, k);
       comm::Index2D ik_rank = mat_a.rankGlobalTile(ik_idx);

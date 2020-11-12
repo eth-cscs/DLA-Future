@@ -38,7 +38,7 @@ namespace solver {
 /// @pre mat_a and mat_b are multipliable.
 template <Backend backend, Device device, class T>
 void triangular(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha,
-                         Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
+                Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
@@ -117,8 +117,7 @@ void triangular(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, 
 /// @pre matrix A and matrix B are multipliable.
 template <Backend backend, Device device, class T>
 void triangular(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, blas::Op op,
-                         blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
-                         Matrix<T, device>& mat_b) {
+                blas::Diag diag, T alpha, Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
@@ -178,4 +177,3 @@ void triangular(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, b
 
 }
 }
-

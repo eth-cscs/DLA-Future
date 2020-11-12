@@ -40,7 +40,7 @@ namespace auxiliary {
 /// additional info).
 template <Backend backend, Device device, class T>
 dlaf::BaseType<T> norm(comm::CommunicatorGrid grid, comm::Index2D rank, lapack::Norm norm_type,
-                                blas::Uplo uplo, Matrix<const T, device>& A) {
+                       blas::Uplo uplo, Matrix<const T, device>& A) {
   using dlaf::matrix::equal_process_grid;
 
   DLAF_ASSERT(equal_process_grid(A, grid), A, grid);
@@ -71,7 +71,6 @@ dlaf::BaseType<T> norm(comm::CommunicatorGrid grid, comm::Index2D rank, lapack::
       return {};
   }
 }
-
 
 }
 }

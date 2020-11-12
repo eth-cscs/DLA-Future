@@ -38,7 +38,8 @@ struct GenToStd<Backend::MC, Device::CPU, T> {
 };
 
 template <class T>
-void GenToStd<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l) {
+void GenToStd<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a,
+                                                   Matrix<T, Device::CPU>& mat_l) {
   constexpr auto Right = blas::Side::Right;
   constexpr auto Left = blas::Side::Left;
   constexpr auto Lower = blas::Uplo::Lower;

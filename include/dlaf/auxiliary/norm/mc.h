@@ -30,7 +30,7 @@ namespace internal {
 template <class T>
 struct Norm<Backend::MC, Device::CPU, T> {
   static dlaf::BaseType<T> max_L(comm::CommunicatorGrid comm_grid, comm::Index2D rank,
-                             Matrix<const T, Device::CPU>& matrix);
+                                 Matrix<const T, Device::CPU>& matrix);
 };
 
 // Compute max norm of the lower triangular part of the distributed matrix
@@ -42,8 +42,9 @@ struct Norm<Backend::MC, Device::CPU, T> {
 // - sy/he lower
 // - tr lower non-unit
 template <class T>
-dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGrid comm_grid, comm::Index2D rank,
-                             Matrix<const T, Device::CPU>& matrix) {
+dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGrid comm_grid,
+                                                           comm::Index2D rank,
+                                                           Matrix<const T, Device::CPU>& matrix) {
   using namespace dlaf::matrix;
 
   using dlaf::common::internal::vector;
@@ -100,8 +101,7 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
 }
 
 /// ---- ETI
-#define DLAF_NORM_ETI(KWORD, DATATYPE) \
-  KWORD template struct Norm<Backend::MC, Device::CPU, DATATYPE>;
+#define DLAF_NORM_ETI(KWORD, DATATYPE) KWORD template struct Norm<Backend::MC, Device::CPU, DATATYPE>;
 
 DLAF_NORM_ETI(extern, float)
 DLAF_NORM_ETI(extern, double)

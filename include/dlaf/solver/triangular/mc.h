@@ -34,28 +34,29 @@ namespace internal {
 template <class T>
 struct Triangular<Backend::MC, Device::CPU, T> {
   static void call_LLN(blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_a,
-                    Matrix<T, Device::CPU>& mat_b);
+                       Matrix<T, Device::CPU>& mat_b);
   static void call_LLT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_a,
-                    Matrix<T, Device::CPU>& mat_b);
+                       Matrix<T, Device::CPU>& mat_b);
   static void call_LUN(blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_a,
-                    Matrix<T, Device::CPU>& mat_b);
+                       Matrix<T, Device::CPU>& mat_b);
   static void call_LUT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_a,
-                    Matrix<T, Device::CPU>& mat_b);
+                       Matrix<T, Device::CPU>& mat_b);
   static void call_RLN(blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_a,
-                    Matrix<T, Device::CPU>& mat_b);
+                       Matrix<T, Device::CPU>& mat_b);
   static void call_RLT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_a,
-                    Matrix<T, Device::CPU>& mat_b);
+                       Matrix<T, Device::CPU>& mat_b);
   static void call_RUN(blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_a,
-                    Matrix<T, Device::CPU>& mat_b);
+                       Matrix<T, Device::CPU>& mat_b);
   static void call_RUT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_a,
-                    Matrix<T, Device::CPU>& mat_b);
-  static void call_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_a,
-                    Matrix<T, Device::CPU>& mat_b);
+                       Matrix<T, Device::CPU>& mat_b);
+  static void call_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
+                       Matrix<const T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_b);
 };
 
 template <class T>
-void Triangular<Backend::MC, Device::CPU, T>::call_LLN(blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_a,
-                    Matrix<T, Device::CPU>& mat_b) {
+void Triangular<Backend::MC, Device::CPU, T>::call_LLN(blas::Diag diag, T alpha,
+                                                       Matrix<const T, Device::CPU>& mat_a,
+                                                       Matrix<T, Device::CPU>& mat_b) {
   constexpr auto Left = blas::Side::Left;
   constexpr auto Lower = blas::Uplo::Lower;
   constexpr auto NoTrans = blas::Op::NoTrans;
@@ -92,8 +93,9 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLN(blas::Diag diag, T alpha,
 }
 
 template <class T>
-void Triangular<Backend::MC, Device::CPU, T>::call_LLT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_a,
-                    Matrix<T, Device::CPU>& mat_b) {
+void Triangular<Backend::MC, Device::CPU, T>::call_LLT(blas::Op op, blas::Diag diag, T alpha,
+                                                       Matrix<const T, Device::CPU>& mat_a,
+                                                       Matrix<T, Device::CPU>& mat_b) {
   constexpr auto Left = blas::Side::Left;
   constexpr auto Lower = blas::Uplo::Lower;
   constexpr auto NoTrans = blas::Op::NoTrans;
@@ -132,8 +134,9 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLT(blas::Op op, blas::Diag d
 }
 
 template <class T>
-void Triangular<Backend::MC, Device::CPU, T>::call_LUN(blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_a,
-                    Matrix<T, Device::CPU>& mat_b) {
+void Triangular<Backend::MC, Device::CPU, T>::call_LUN(blas::Diag diag, T alpha,
+                                                       Matrix<const T, Device::CPU>& mat_a,
+                                                       Matrix<T, Device::CPU>& mat_b) {
   constexpr auto Left = blas::Side::Left;
   constexpr auto Upper = blas::Uplo::Upper;
   constexpr auto NoTrans = blas::Op::NoTrans;
@@ -172,8 +175,9 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LUN(blas::Diag diag, T alpha,
 }
 
 template <class T>
-void Triangular<Backend::MC, Device::CPU, T>::call_LUT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_a,
-                    Matrix<T, Device::CPU>& mat_b) {
+void Triangular<Backend::MC, Device::CPU, T>::call_LUT(blas::Op op, blas::Diag diag, T alpha,
+                                                       Matrix<const T, Device::CPU>& mat_a,
+                                                       Matrix<T, Device::CPU>& mat_b) {
   constexpr auto Left = blas::Side::Left;
   constexpr auto Upper = blas::Uplo::Upper;
   constexpr auto NoTrans = blas::Op::NoTrans;
@@ -213,8 +217,9 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LUT(blas::Op op, blas::Diag d
 }
 
 template <class T>
-void Triangular<Backend::MC, Device::CPU, T>::call_RLN(blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_a,
-                    Matrix<T, Device::CPU>& mat_b) {
+void Triangular<Backend::MC, Device::CPU, T>::call_RLN(blas::Diag diag, T alpha,
+                                                       Matrix<const T, Device::CPU>& mat_a,
+                                                       Matrix<T, Device::CPU>& mat_b) {
   constexpr auto Right = blas::Side::Right;
   constexpr auto Lower = blas::Uplo::Lower;
   constexpr auto NoTrans = blas::Op::NoTrans;
@@ -254,8 +259,9 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RLN(blas::Diag diag, T alpha,
 }
 
 template <class T>
-void Triangular<Backend::MC, Device::CPU, T>::call_RLT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_a,
-                    Matrix<T, Device::CPU>& mat_b) {
+void Triangular<Backend::MC, Device::CPU, T>::call_RLT(blas::Op op, blas::Diag diag, T alpha,
+                                                       Matrix<const T, Device::CPU>& mat_a,
+                                                       Matrix<T, Device::CPU>& mat_b) {
   constexpr auto Right = blas::Side::Right;
   constexpr auto Lower = blas::Uplo::Lower;
   constexpr auto NoTrans = blas::Op::NoTrans;
@@ -295,8 +301,9 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RLT(blas::Op op, blas::Diag d
 }
 
 template <class T>
-void Triangular<Backend::MC, Device::CPU, T>::call_RUN(blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_a,
-                    Matrix<T, Device::CPU>& mat_b) {
+void Triangular<Backend::MC, Device::CPU, T>::call_RUN(blas::Diag diag, T alpha,
+                                                       Matrix<const T, Device::CPU>& mat_a,
+                                                       Matrix<T, Device::CPU>& mat_b) {
   constexpr auto Right = blas::Side::Right;
   constexpr auto Upper = blas::Uplo::Upper;
   constexpr auto NoTrans = blas::Op::NoTrans;
@@ -336,8 +343,9 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RUN(blas::Diag diag, T alpha,
 }
 
 template <class T>
-void Triangular<Backend::MC, Device::CPU, T>::call_RUT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_a,
-                    Matrix<T, Device::CPU>& mat_b) {
+void Triangular<Backend::MC, Device::CPU, T>::call_RUT(blas::Op op, blas::Diag diag, T alpha,
+                                                       Matrix<const T, Device::CPU>& mat_a,
+                                                       Matrix<T, Device::CPU>& mat_b) {
   constexpr auto Right = blas::Side::Right;
   constexpr auto Upper = blas::Uplo::Upper;
   constexpr auto NoTrans = blas::Op::NoTrans;
@@ -377,8 +385,9 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RUT(blas::Op op, blas::Diag d
 }
 
 template <class T>
-void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
-                    Matrix<const T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_b) {
+void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid grid, blas::Diag diag,
+                                                       T alpha, Matrix<const T, Device::CPU>& mat_a,
+                                                       Matrix<T, Device::CPU>& mat_b) {
   using hpx::threads::executors::pool_executor;
   using hpx::threads::thread_priority_high;
   using hpx::threads::thread_priority_default;
@@ -444,8 +453,8 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid gr
           kk_tile = hpx::dataflow(executor_mpi,
                                   hpx::util::unwrapping([](auto index, auto&& tile_size,
                                                            auto&& comm_wrapper) -> ConstTileType {
-                                    memory::MemoryView<T, Device::CPU> mem_view(
-                                        tile_size.rows() * tile_size.cols());
+                                    memory::MemoryView<T, Device::CPU> mem_view(tile_size.rows() *
+                                                                                tile_size.cols());
                                     TileType tile(tile_size, std::move(mem_view), tile_size.rows());
                                     comm::sync::broadcast::receive_from(index,
                                                                         comm_wrapper().rowCommunicator(),
@@ -485,8 +494,8 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid gr
               hpx::dataflow(executor_mpi,
                             hpx::util::unwrapping(
                                 [](auto index, auto&& tile_size, auto&& comm_wrapper) -> ConstTileType {
-                                  memory::MemoryView<T, Device::CPU> mem_view(
-                                      tile_size.rows() * tile_size.cols());
+                                  memory::MemoryView<T, Device::CPU> mem_view(tile_size.rows() *
+                                                                              tile_size.cols());
                                   TileType tile(tile_size, std::move(mem_view), tile_size.rows());
                                   comm::sync::broadcast::receive_from(index,
                                                                       comm_wrapper().colCommunicator(),
@@ -526,8 +535,8 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid gr
           ik_tile = hpx::dataflow(executor_mpi,
                                   hpx::util::unwrapping([](auto index, auto&& tile_size,
                                                            auto&& comm_wrapper) -> ConstTileType {
-                                    memory::MemoryView<T, Device::CPU> mem_view(
-                                        tile_size.rows() * tile_size.cols());
+                                    memory::MemoryView<T, Device::CPU> mem_view(tile_size.rows() *
+                                                                                tile_size.cols());
                                     TileType tile(tile_size, std::move(mem_view), tile_size.rows());
                                     comm::sync::broadcast::receive_from(index,
                                                                         comm_wrapper().rowCommunicator(),

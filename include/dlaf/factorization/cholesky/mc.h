@@ -89,7 +89,7 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
 
 template <class T>
 void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
-                                              Matrix<T, Device::CPU>& mat_a) {
+                                                   Matrix<T, Device::CPU>& mat_a) {
   using hpx::util::unwrapping;
   using hpx::threads::executors::pool_executor;
   using hpx::threads::thread_priority_high;

@@ -31,6 +31,26 @@ void lacpy(const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b) {
   lapack::lacpy(lapack::MatrixType::General, m, n, a.ptr(), a.ld(), b.ptr(), b.ld());
 }
 
+template <class T>
+void lacpy(TileElementSize region, TileElementIndex in_idx, const Tile<const T, Device::CPU>& in,
+           TileElementIndex out_idx, const Tile<T, Device::CPU>& out) {
+  const SizeType m = region.rows();
+  const SizeType n = region.cols();
+  const TileElementSize in_sz = in.size();
+  const TileElementSize out_sz = out.size();
+
+  DLAF_ASSERT_MODERATE(m + in_idx.row() <= in_sz.rows(),
+                       "Region goes out of bounds for `in` along rows!", m, in_sz, in_idx);
+  DLAF_ASSERT_MODERATE(m + out_idx.row() <= out_sz.rows(),
+                       "Region goes out of bounds for `out` along rows!", m, out_sz, out_idx);
+  DLAF_ASSERT_MODERATE(n + in_idx.col() <= in_sz.cols(),
+                       "Region goes out of bounds for `in` along columns!", n, in_sz, in_idx);
+  DLAF_ASSERT_MODERATE(n + out_idx.col() <= out_sz.cols(),
+                       "Region goes out of bounds for `out` along columns!", n, out_sz, out_idx);
+
+  lapack::lacpy(lapack::MatrixType::General, m, n, in.ptr(in_idx), in.ld(), out.ptr(out_idx), out.ld());
+}
+
 template <class T, Device device>
 dlaf::BaseType<T> lange(const lapack::Norm norm, const Tile<T, device>& a) noexcept {
   return lapack::lange(norm, a.size().rows(), a.size().cols(), a.ptr(), a.ld());

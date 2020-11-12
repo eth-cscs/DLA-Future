@@ -20,6 +20,7 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/matrix.h"
+#include "dlaf/matrix/copy_tile.h"
 
 #include "dlaf_test/matrix/matrix_local.h"
 
@@ -33,11 +34,18 @@ namespace test {
 /// @pre el argument is an index of type const GlobalElementIndex& or GlobalElementIndex,
 /// @pre el return type should be T.
 template <class T, class ElementGetter>
-void set(MatrixLocal<T>& matrix, ElementGetter el) {
+void set(const MatrixLocal<T>& matrix, ElementGetter el) {
   using dlaf::common::iterate_range2d;
 
-  for (const auto& index : iterate_range2d(matrix.size()))
-    *matrix.ptr(index) = el(index);
+  for (const auto& tile_index : iterate_range2d(matrix.size()))
+    matrix(tile_index) = el(tile_index);
+}
+
+template <class T>
+void copy(const MatrixLocal<const T>& source, MatrixLocal<T>& dest) {
+  DLAF_ASSERT(source.size() == dest.size(), source.size(), dest.size());
+  const auto linear_size = static_cast<std::size_t>(source.size().rows() * source.size().cols());
+  std::copy(source.ptr(), source.ptr() + linear_size, dest.ptr());
 }
 
 template <class T>  // TODO add tile_selector predicate
@@ -48,7 +56,7 @@ void all_gather(Matrix<const T, Device::CPU>& source, MatrixLocal<T>& dest,
   const auto rank = dist_source.rankIndex();
   for (const auto& ij_tile : iterate_range2d(dist_source.nrTiles())) {
     const auto owner = dist_source.rankGlobalTile(ij_tile);
-    auto& dest_tile = dest(ij_tile);
+    auto& dest_tile = dest.readwrite_tile(ij_tile);
     if (owner == rank) {
       const auto& source_tile = source.read(ij_tile).get();
       comm::sync::broadcast::send(comm_grid.fullCommunicator(), source_tile);

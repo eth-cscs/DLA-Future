@@ -62,8 +62,12 @@ struct MatrixLocal<const T> {
     return memory_(elementLinearIndex(index));
   }
 
+  const T& operator()(const GlobalElementIndex& index) const noexcept {
+    return *ptr(index);
+  }
+
   /// Access a tile
-  const ConstTileT& operator()(const GlobalTileIndex& index) const noexcept {
+  const ConstTileT& read_tile(const GlobalTileIndex& index) const noexcept {
     return tiles_[tileLinearIndex(index)];
   }
 
@@ -136,8 +140,12 @@ struct MatrixLocal : public MatrixLocal<const T> {
     return memory_(elementLinearIndex(index));
   }
 
+  T& operator()(const GlobalElementIndex& index) const noexcept {
+    return *ptr(index);
+  }
+
   /// Access a tile
-  const TileT& operator()(const GlobalTileIndex& index) const noexcept {
+  const TileT& readwrite_tile(const GlobalTileIndex& index) const noexcept {
     return tiles_[tileLinearIndex(index)];
   }
 

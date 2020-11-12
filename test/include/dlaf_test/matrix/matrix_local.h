@@ -38,23 +38,22 @@ struct MatrixLocal;
 /// of it as the global matrix.
 template <class T>
 struct MatrixLocal<const T> {
-  using ConstTileT = Tile<const T, Device::CPU>;
+  static constexpr auto CPU = Device::CPU;
+
+  using Memory_t = memory::MemoryView<T, CPU>;
+  using ConstTileT = Tile<const T, CPU>;
 
   MatrixLocal(GlobalElementSize sz, TileElementSize blocksize) noexcept
-      : layout_(colMajorLayout({sz.rows(), sz.cols()}, blocksize, sz.rows())), memory_{
-                                                                                   layout_.minMemSize()} {
+      : layout_{colMajorLayout({sz.rows(), sz.cols()}, blocksize, sz.rows())} {
     using dlaf::util::size_t::mul;
 
-    for (const auto& tile_index : iterate_range2d(layout_.nrTiles())) {
-      memory::MemoryView<T, Device::CPU> tile_memory{memory_, layout_.tileOffset(tile_index),
-                                                     layout_.minTileMemSize(tile_index)};
-      tiles_.emplace_back(layout_.tileSize(tile_index), std::move(tile_memory), layout_.ldTile());
-    }
+    memory_ = Memory_t{layout_.minMemSize()};
 
-    DLAF_ASSERT_HEAVY(ld() == sz.rows(), ld(), sz.rows());
-    DLAF_ASSERT_HEAVY(size() == sz, size(), sz);
-    DLAF_ASSERT_HEAVY(tiles_.size() == mul(layout_.nrTiles().rows(), layout_.nrTiles().cols()),
-                      tiles_.size());
+    for (const auto& tile_index : iterate_range2d(layout_.nrTiles()))
+      tiles_.emplace_back(layout_.tileSize(tile_index),
+                          Memory_t{memory_, layout_.tileOffset(tile_index),
+                                   layout_.minTileMemSize(tile_index)},
+                          layout_.ldTile());
   }
 
   /// Access elements
@@ -68,7 +67,7 @@ struct MatrixLocal<const T> {
   }
 
   /// Access tiles
-  const ConstTileT& read_tile(const GlobalTileIndex& index) const noexcept {
+  const ConstTileT& tile_read(const GlobalTileIndex& index) const noexcept {
     return tiles_[tileLinearIndex(index)];
   }
 
@@ -108,7 +107,7 @@ protected:
     return dlaf::to_SizeType(sum(mul(index.col(), layout_.nrTiles().rows()), index.row()));
   }
 
-  const dlaf::matrix::LayoutInfo layout_;
+  dlaf::matrix::LayoutInfo layout_;
   memory::MemoryView<T, Device::CPU> memory_;
   common::internal::vector<Tile<T, Device::CPU>> tiles_;
 };
@@ -134,7 +133,7 @@ struct MatrixLocal : public MatrixLocal<const T> {
   }
 
   /// Access tiles
-  const TileT& readwrite_tile(const GlobalTileIndex& index) const noexcept {
+  const TileT& tile(const GlobalTileIndex& index) const noexcept {
     return tiles_[tileLinearIndex(index)];
   }
 

@@ -44,7 +44,9 @@ void set(const MatrixLocal<T>& matrix, ElementGetter el) {
 template <class T>
 void copy(const MatrixLocal<const T>& source, MatrixLocal<T>& dest) {
   DLAF_ASSERT(source.size() == dest.size(), source.size(), dest.size());
+
   const auto linear_size = static_cast<std::size_t>(source.size().rows() * source.size().cols());
+
   std::copy(source.ptr(), source.ptr() + linear_size, dest.ptr());
 }
 

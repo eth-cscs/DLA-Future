@@ -17,6 +17,7 @@
 #include <iostream>
 #include <memory>
 #include <sstream>
+#include <type_traits>
 
 #include <gtest/gtest.h>
 
@@ -25,12 +26,25 @@
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/layout_info.h"
 #include "dlaf/util_math.h"
-#include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/matrix/matrix_local.h"
+#include "dlaf_test/matrix/util_tile.h"
 
 namespace dlaf {
 namespace matrix {
 namespace test {
+
+template <class MatrixType>
+struct matrix_traits;
+
+template <template <class, Device> class MatrixLike, class T, Device device>
+struct matrix_traits<MatrixLike<T, device>> {
+  using Element_t = std::remove_cv_t<T>;
+};
+
+template <class T>
+struct matrix_traits<MatrixLocal<T>> {
+  using Element_t = std::remove_cv_t<T>;
+};
 
 /// Sets the elements of the matrix.
 ///
@@ -102,17 +116,16 @@ void check(ElementGetter expected, MatrixType<T, Device::CPU>& mat, ComparisonOp
 /// @pre expected return type should be the same as the type of the first argument of comp and of err_message,
 /// @pre The second argument of comp should be either T, T& or const T&,
 /// @pre The second argument of err_message should be either T, T& or const T&.
-template <class T, class ElementGetter, class ComparisonOp,
-          class ErrorMessageGetter>
-void check(ElementGetter expected, MatrixLocal<const T>& mat, ComparisonOp comp,
+template <class T, class ElementGetter, class ComparisonOp, class ErrorMessageGetter>
+void check(ElementGetter&& expected, MatrixLocal<const T>& mat, ComparisonOp comp,
            ErrorMessageGetter err_message, const char* file, const int line) {
   for (const auto& index : dlaf::common::iterate_range2d(mat.size())) {
     if (!comp(expected(index), mat(index))) {
-      ADD_FAILURE_AT(file, line)
-        << "Error at index (" << index
-        << "): " << err_message(expected(index), mat(index)) << std::endl;
+      ADD_FAILURE_AT(file, line) << "Error at index (" << index
+                                 << "): " << err_message(expected(index), mat(index)) << std::endl;
       return;
-    }}
+    }
+  }
 }
 }
 
@@ -122,8 +135,8 @@ void check(ElementGetter expected, MatrixLocal<const T>& mat, ComparisonOp comp,
 /// @pre exp_el argument is an index of type const GlobalElementIndex&,
 /// @pre exp_el return type should be T.
 template <class MatrixType, class ElementGetter>
-void checkEQ(ElementGetter exp_el, MatrixType& mat, const char* file, const int line) {
-  using T = decltype(exp_el({}));
+void checkEQ(ElementGetter&& exp_el, MatrixType& mat, const char* file, const int line) {
+  using T = typename matrix_traits<MatrixType>::Element_t;
   auto err_message = [](T expected, T value) {
     std::stringstream s;
     s << "expected " << expected << " == " << value;
@@ -160,9 +173,11 @@ void checkPtr(PointerGetter exp_ptr, MatrixType& mat, const char* file, const in
 /// @pre abs_err >= 0,
 /// @pre rel_err > 0 || abs_err > 0.
 template <class MatrixType, class ElementGetter>
-void checkNear(ElementGetter expected, MatrixType& mat, BaseType<decltype(expected({}))> rel_err,
-               BaseType<decltype(expected({}))> abs_err, const char* file, const int line) {
-  using T = decltype(expected({}));
+void checkNear(ElementGetter&& expected, MatrixType& mat,
+               BaseType<typename matrix_traits<MatrixType>::Element_t> rel_err,
+               BaseType<typename matrix_traits<MatrixType>::Element_t> abs_err, const char* file,
+               const int line) {
+  using T = typename matrix_traits<MatrixType>::Element_t;
   ASSERT_GE(rel_err, 0);
   ASSERT_GE(abs_err, 0);
   ASSERT_TRUE(rel_err > 0 || abs_err > 0);

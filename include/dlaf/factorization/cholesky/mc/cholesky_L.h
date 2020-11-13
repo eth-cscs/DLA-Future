@@ -11,8 +11,8 @@
 
 #include <hpx/include/parallel_executors.hpp>
 #include <hpx/include/threads.hpp>
-#include <hpx/util/annotated_function.hpp>
 #include <hpx/include/util.hpp>
+#include <hpx/util/annotated_function.hpp>
 
 #include <unordered_map>
 
@@ -213,14 +213,17 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
       GlobalTileIndex jj_idx(j, j);
       comm::Index2D jj_rank = mat_a.rankGlobalTile(jj_idx);
 
+      if (this_rank.col() != jj_rank.col())
+        continue;
+
       // Broadcast the jk-tile along the j-th column and update the jj-tile
-      if (this_rank == jj_rank) {
+      if (this_rank.row() == jj_rank.row()) {
         pool_executor trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_normal;
         herk_trailing_diag_tile(trailing_matrix_executor, panel[j], mat_a(jj_idx));
         if (j != nrtile - 1)
           send_tile(executor_mpi, mpi_task_chain, Coord::Col, panel[j]);
       }
-      else if (this_rank.col() == jj_rank.col()) {
+      else {
         GlobalTileIndex jk_idx(j, k);
         if (j != nrtile - 1)
           panel[j] = recv_tile<T>(executor_mpi, mpi_task_chain, Coord::Col, mat_a.tileSize(jk_idx),
@@ -229,9 +232,8 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
 
       for (SizeType i = j + 1; i < nrtile; ++i) {
         // Update the ij-tile using the ik-tile and jk-tile
-        GlobalTileIndex ij_idx(i, j);
-        comm::Index2D ij_rank = distr.rankGlobalTile(ij_idx);
-        if (this_rank == ij_rank) {
+        if (this_rank.row() == distr.rankGlobalTile<Coord::Row>(i)) {
+          GlobalTileIndex ij_idx(i, j);
           gemm_trailing_matrix_tile(executor_normal, panel[i], panel[j], mat_a(ij_idx));
         }
       }

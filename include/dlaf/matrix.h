@@ -158,9 +158,8 @@ public:
     return read(distribution().localTileIndex(index));
   }
 
-private:
-  Matrix(Distribution distribution, std::vector<hpx::future<TileType>> tile_futures,
-         std::vector<hpx::shared_future<ConstTileType>> tile_shared_futures);
+protected:
+  Matrix(Distribution distribution) : internal::MatrixBase{std::move(distribution)} {}
 
   void setUpTiles(const memory::MemoryView<ElementType, device>& mem, const LayoutInfo& layout) noexcept;
 

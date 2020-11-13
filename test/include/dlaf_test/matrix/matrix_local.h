@@ -13,7 +13,6 @@
 #include <type_traits>
 
 #include "dlaf/common/range2d.h"
-#include "dlaf/common/vector.h"
 #include "dlaf/matrix/layout_info.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/memory/memory_view.h"
@@ -41,12 +40,10 @@ struct MatrixLocal<const T> {
   static constexpr auto CPU = Device::CPU;
 
   using Memory_t = memory::MemoryView<T, CPU>;
-  using ConstTileT = Tile<const T, CPU>;
+  using ConstTile_t = Tile<const T, CPU>;
 
   MatrixLocal(GlobalElementSize sz, TileElementSize blocksize) noexcept
       : layout_{colMajorLayout({sz.rows(), sz.cols()}, blocksize, sz.rows())} {
-    using dlaf::util::size_t::mul;
-
     memory_ = Memory_t{layout_.minMemSize()};
 
     for (const auto& tile_index : iterate_range2d(layout_.nrTiles()))
@@ -69,8 +66,8 @@ struct MatrixLocal<const T> {
   }
 
   /// Access tiles
-  const ConstTileT& tile_read(const GlobalTileIndex& index) const noexcept {
-    return tiles_[tileLinearIndex(index)];
+  const ConstTile_t& tile_read(const GlobalTileIndex& index) const noexcept {
+    return tiles_[static_cast<size_t>(tileLinearIndex(index))];
   }
 
   SizeType ld() const noexcept {
@@ -104,8 +101,10 @@ protected:
   }
 
   dlaf::matrix::LayoutInfo layout_;
-  memory::MemoryView<T, Device::CPU> memory_;
-  common::internal::vector<Tile<T, Device::CPU>> tiles_;
+  Memory_t memory_;
+
+  // Note: this is non-const so that it can be used also by the inheriting class
+  std::vector<Tile<T, Device::CPU>> tiles_;
 };
 
 // Note:
@@ -113,7 +112,7 @@ protected:
 // assigning a non-const to a const matrix.
 template <class T>
 struct MatrixLocal : public MatrixLocal<const T> {
-  using TileT = Tile<T, Device::CPU>;
+  using Tile_t = Tile<T, Device::CPU>;
 
   MatrixLocal(GlobalElementSize size, TileElementSize blocksize) noexcept
       : MatrixLocal<const T>(size, blocksize) {}
@@ -131,8 +130,8 @@ struct MatrixLocal : public MatrixLocal<const T> {
   }
 
   /// Access tiles
-  const TileT& tile(const GlobalTileIndex& index) const noexcept {
-    return tiles_[tileLinearIndex(index)];
+  const Tile_t& tile(const GlobalTileIndex& index) const noexcept {
+    return tiles_[static_cast<size_t>(tileLinearIndex(index))];
   }
 
 protected:

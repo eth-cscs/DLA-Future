@@ -16,9 +16,10 @@
 #include "dlaf/matrix/tile.h"
 
 namespace dlaf {
+namespace matrix {
 
 template <class T>
-void copy(const matrix::Tile<const T, Device::CPU>& source, const matrix::Tile<T, Device::CPU>& dest) {
+void copy(const Tile<const T, Device::CPU>& source, const Tile<T, Device::CPU>& dest) {
   dlaf::tile::lacpy<T>(source, dest);
 }
 
@@ -28,4 +29,5 @@ void copy(TileElementSize region, TileElementIndex in_idx, const matrix::Tile<co
   dlaf::tile::lacpy<T>(region, in_idx, in, out_idx, out);
 }
 
+}
 }

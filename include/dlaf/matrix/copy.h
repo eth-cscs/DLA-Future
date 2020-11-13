@@ -18,6 +18,7 @@
 #include "dlaf/util_matrix.h"
 
 namespace dlaf {
+namespace matrix {
 
 /// Copy values from another matrix.
 ///
@@ -45,4 +46,5 @@ void copy(MatrixTypeSrc<const T, device>& source, MatrixTypeDst<T, device>& dest
                     dest(LocalTileIndex(i, j)));
 }
 
+}
 }

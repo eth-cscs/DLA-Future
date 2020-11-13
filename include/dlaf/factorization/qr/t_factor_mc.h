@@ -17,14 +17,14 @@
 
 #include "dlaf/factorization/qr/api.h"
 
-#include "dlaf/matrix.h"
 #include "dlaf/common/data.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/vector.h"
-#include "dlaf/types.h"
 #include "dlaf/communication/functions_sync.h"
+#include "dlaf/matrix.h"
+#include "dlaf/types.h"
 
 namespace dlaf {
 namespace factorization {
@@ -34,16 +34,18 @@ template <>
 struct QR<Backend::MC, Device::CPU> {
   template <class T>
   static void computeTFactor(Matrix<T, Device::CPU>& t, Matrix<const T, Device::CPU>& a,
-                    const LocalTileIndex ai_start_loc, const GlobalTileIndex ai_start,
-                    const SizeType last_reflector, common::internal::vector<hpx::shared_future<T>> taus,
-                    common::Pipeline<comm::CommunicatorGrid>& serial_comm);
+                             const LocalTileIndex ai_start_loc, const GlobalTileIndex ai_start,
+                             const SizeType last_reflector,
+                             common::internal::vector<hpx::shared_future<T>> taus,
+                             common::Pipeline<comm::CommunicatorGrid>& serial_comm);
 };
 
 template <class T>
-void QR<Backend::MC, Device::CPU>::computeTFactor(Matrix<T, Device::CPU>& t, Matrix<const T, Device::CPU>& a,
-                    const LocalTileIndex ai_start_loc, const GlobalTileIndex ai_start,
-                    const SizeType last_reflector, common::internal::vector<hpx::shared_future<T>> taus,
-                    common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
+void QR<Backend::MC, Device::CPU>::computeTFactor(
+    Matrix<T, Device::CPU>& t, Matrix<const T, Device::CPU>& a, const LocalTileIndex ai_start_loc,
+    const GlobalTileIndex ai_start, const SizeType last_reflector,
+    common::internal::vector<hpx::shared_future<T>> taus,
+    common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
   using hpx::util::unwrapping;
   using common::make_data;
   using namespace comm::sync;

@@ -15,8 +15,8 @@
 
 #include "dlaf/common/range2d.h"
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/lapack_tile.h"  // workaround for importing lapack.hh
 #include "dlaf/matrix.h"
-#include "dlaf/lapack_tile.h" // workaround for importing lapack.hh
 
 #include "dlaf/util_matrix.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
@@ -40,7 +40,7 @@ T el_eye(const dlaf::GlobalElementIndex& index) {
 template <class T>
 void is_orthogonal(const MatrixLocal<const T>& matrix) {
   MatrixLocal<T> ortho(matrix.size(), matrix.blockSize());
-  MatrixLocal<const T> eye = [&](){
+  MatrixLocal<const T> eye = [&]() {
     MatrixLocal<T> m(matrix.size(), matrix.blockSize());
     set(m, el_eye<T>);
     return m;
@@ -63,11 +63,11 @@ void is_orthogonal(const MatrixLocal<const T>& matrix) {
       ortho.ptr(), ortho.ld());
   // clang-format on
 
-  //CHECK_MATRIX_NEAR(eye, ortho, 1e-3, 1e-3);
+  // CHECK_MATRIX_NEAR(eye, ortho, 1e-3, 1e-3);
 
-  //std::cout << "O = ";
-  //dlaf::matrix::print_numpy(std::cout, ortho);
-  //std::cout << '\n';
+  // std::cout << "O = ";
+  // dlaf::matrix::print_numpy(std::cout, ortho);
+  // std::cout << '\n';
 }
 
 ::testing::Environment* const comm_grids_env =
@@ -101,7 +101,7 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
                                             comm_grid.rank(), {0, 0});
 
     const auto rank = comm_grid.rank();
-    const auto rank_col = 0; // TODO generalize this
+    const auto rank_col = 0;  // TODO generalize this
 
     if (rank.col() != rank_col) {
       std::cout << "NOT IN THE GAME\n";
@@ -172,7 +172,9 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
     Matrix<TypeParam, Device::CPU> T(LocalElementSize{k, k}, block_size);
     common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
 
-    dlaf::factorization::internal::QR<Backend::MC, Device::CPU>::computeTFactor(T, V, {0, 0}, {0, 0}, k - 1, taus, serial_comm);
+    dlaf::factorization::internal::QR<Backend::MC, Device::CPU>::computeTFactor(T, V, {0, 0}, {0, 0},
+                                                                                k - 1, taus,
+                                                                                serial_comm);
 
     // TODO compute H_result = I - VTV*
     // TODO W = T V*
@@ -220,6 +222,6 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
     is_orthogonal(H_result);
 
     // check H_result == H_exp
-    //CHECK_MATRIX_NEAR(H_exp, H_result, 1e-3, 1e-3);
+    // CHECK_MATRIX_NEAR(H_exp, H_result, 1e-3, 1e-3);
   }
 }

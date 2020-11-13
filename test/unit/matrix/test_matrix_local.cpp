@@ -29,16 +29,11 @@ using namespace dlaf::test;
 using namespace testing;
 
 template <class T>
-auto el(const GlobalElementIndex& index) {
+auto value_preset(const GlobalElementIndex& index) {
   const auto i = index.row();
   const auto j = index.col();
   return TypeUtilities<T>::element(i + j / 1024., j - i / 128.);
 };
-
-template <typename Type>
-class MatrixLocalTest : public ::testing::Test {};
-
-TYPED_TEST_SUITE(MatrixLocalTest, MatrixElementTypes);
 
 struct TestSizes {
   GlobalElementSize size;
@@ -54,6 +49,11 @@ const std::vector<TestSizes> sizes_tests({
     {{3, 4}, {24, 15}},
     {{16, 24}, {3, 5}},
 });
+
+template <typename Type>
+class MatrixLocalTest : public ::testing::Test {};
+
+TYPED_TEST_SUITE(MatrixLocalTest, MatrixElementTypes);
 
 TYPED_TEST(MatrixLocalTest, ConstructorAndShape) {
   for (const auto& test : sizes_tests) {
@@ -74,20 +74,24 @@ TYPED_TEST(MatrixLocalTest, ConstructorAndShape) {
 }
 
 TYPED_TEST(MatrixLocalTest, Set) {
+  constexpr auto error = TypeUtilities<TypeParam>::error;
+
   for (const auto& test : sizes_tests) {
     MatrixLocal<TypeParam> mat(test.size, test.block_size);
 
-    set(mat, el<TypeParam>);
+    set(mat, value_preset<TypeParam>);
 
-    CHECK_MATRIX_NEAR(el<TypeParam>, mat, 1e-3, 1e-3);
+    CHECK_MATRIX_NEAR(value_preset<TypeParam>, mat, error, error);
   }
 }
 
 TYPED_TEST(MatrixLocalTest, Copy) {
+  constexpr auto error = TypeUtilities<TypeParam>::error;
+
   for (const auto& config : sizes_tests) {
     MatrixLocal<const TypeParam> source = [&config]() {
       MatrixLocal<TypeParam> source(config.size, config.block_size);
-      set(source, el<TypeParam>);
+      set(source, value_preset<TypeParam>);
       return source;
     }();
 
@@ -95,7 +99,7 @@ TYPED_TEST(MatrixLocalTest, Copy) {
 
     copy(source, dest);
 
-    CHECK_MATRIX_NEAR(source, dest, 1e-3, 1e-3);
+    CHECK_MATRIX_NEAR(source, dest, error, error);
   }
 }
 
@@ -117,13 +121,7 @@ GlobalElementSize globalTestSize(const GlobalElementSize& size, const Size2D& gr
 }
 
 TYPED_TEST(MatrixLocalWithCommTest, AllGather) {
-  using namespace dlaf;
-
-  auto el = [](const GlobalElementIndex& index) {
-    SizeType i = index.row();
-    SizeType j = index.col();
-    return TypeUtilities<TypeParam>::element(i + j / 1024., j - i / 128.);
-  };
+  constexpr auto error = TypeUtilities<TypeParam>::error;
 
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& config : sizes_tests) {
@@ -134,7 +132,7 @@ TYPED_TEST(MatrixLocalWithCommTest, AllGather) {
                                 src_rank_index);
 
       Matrix<TypeParam, Device::CPU> source(std::move(distribution));
-      set(source, el);
+      set(source, value_preset<TypeParam>);
 
       auto dest = all_gather<const TypeParam>(source, comm_grid);
 
@@ -145,7 +143,7 @@ TYPED_TEST(MatrixLocalWithCommTest, AllGather) {
         const auto& tile_src = source.read(ij_local).get();
         const auto& tile_dst = dest.tile_read(ij_global);
 
-        CHECK_TILE_NEAR(tile_src, tile_dst, 1e-3, 1e-3);
+        CHECK_TILE_NEAR(tile_src, tile_dst, error, error);
       }
     }
   }

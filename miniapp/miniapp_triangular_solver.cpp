@@ -22,7 +22,7 @@
 #include "dlaf/communication/init.h"
 #include "dlaf/matrix.h"
 #include "dlaf/matrix/index.h"
-#include "dlaf/solver/mc.h"
+#include "dlaf/solver/triangular.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
@@ -105,7 +105,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     sync_barrier();
 
     dlaf::common::Timer<> timeit;
-    dlaf::Solver<Backend::MC>::triangular(comm_grid, side, uplo, op, diag, alpha, a, b);
+    dlaf::solver::triangular<Backend::MC>(comm_grid, side, uplo, op, diag, alpha, a, b);
 
     sync_barrier();
 

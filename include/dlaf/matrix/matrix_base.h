@@ -21,7 +21,7 @@ namespace internal {
 
 class MatrixBase {
 public:
-  MatrixBase(Distribution&& distribution)
+  MatrixBase(Distribution distribution)
       : distribution_(std::make_shared<Distribution>(std::move(distribution))) {}
 
   MatrixBase(const MatrixBase& rhs) = default;

@@ -9,4 +9,4 @@
 //
 #pragma once
 
-#include "dlaf/solver/mc.h"
+#include "dlaf/solver/triangular.h"

@@ -98,7 +98,7 @@ public:
   ///
   /// @pre index.isIn(size()).
   const T* ptr(const TileElementIndex& index) const noexcept {
-    DLAF_ASSERT_HEAVY(index.isIn(size_), "");
+    DLAF_ASSERT_HEAVY(index.isIn(size_), index, size_);
     return memory_view_(index.row() + static_cast<SizeType>(ld_) * index.col());
   }
 
@@ -173,7 +173,7 @@ public:
   ///
   /// @pre index.isIn(size()).
   T* ptr(const TileElementIndex& index) const noexcept {
-    DLAF_ASSERT_HEAVY(index.isIn(size_), "");
+    DLAF_ASSERT_HEAVY(index.isIn(size_), index, size_);
     return memory_view_(index.row() + ld_ * index.col());
   }
 

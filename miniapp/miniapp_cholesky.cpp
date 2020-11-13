@@ -97,7 +97,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       std::cout << "[" << run_index << "]" << std::endl;
 
     MatrixType matrix(matrix_size, block_size, comm_grid);
-    dlaf::copy(matrix_ref, matrix);
+    copy(matrix_ref, matrix);
 
     // wait all setup tasks before starting benchmark
     {
@@ -140,7 +140,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
         continue;
 
       MatrixType original(matrix_size, block_size, comm_grid);
-      dlaf::copy(matrix_ref, original);
+      copy(matrix_ref, original);
       check_cholesky(original, matrix, comm_grid);
     }
   }

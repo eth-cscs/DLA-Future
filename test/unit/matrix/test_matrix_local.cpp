@@ -41,9 +41,6 @@ struct TestSizes {
 };
 
 const std::vector<TestSizes> sizes_tests({
-    //{{0, 0}, {11, 13}},
-    //{{3, 0}, {1, 2}},
-    //{{0, 1}, {7, 32}},
     {{15, 18}, {5, 9}},
     {{6, 6}, {2, 2}},
     {{3, 4}, {24, 15}},
@@ -57,16 +54,15 @@ TYPED_TEST_SUITE(MatrixLocalTest, MatrixElementTypes);
 
 TYPED_TEST(MatrixLocalTest, ConstructorAndShape) {
   for (const auto& test : sizes_tests) {
-    const GlobalTileSize nrTiles{
-        dlaf::util::ceilDiv(test.size.rows(), test.block_size.rows()),
-        dlaf::util::ceilDiv(test.size.cols(), test.block_size.cols()),
-    };
-
     const MatrixLocal<const TypeParam> mat(test.size, test.block_size);
 
     EXPECT_EQ(test.size, mat.size());
     EXPECT_EQ(test.block_size, mat.blockSize());
 
+    const GlobalTileSize nrTiles{
+        dlaf::util::ceilDiv(test.size.rows(), test.block_size.rows()),
+        dlaf::util::ceilDiv(test.size.cols(), test.block_size.cols()),
+    };
     EXPECT_EQ(nrTiles, mat.nrTiles());
 
     EXPECT_EQ(test.size.rows(), mat.ld());

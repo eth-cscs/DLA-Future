@@ -26,7 +26,7 @@ namespace test {
 template <class T>
 struct MatrixLocal;
 
-/// MatrixLocal is a local matrix with column-layout, not thread-safe
+/// MatrixLocal is a local matrix with column-layout, not thread-safe.
 ///
 /// It is a useful helper object that allows you to access elements directly given their
 /// GlobalElementIndex, or by accessing the tile containing it via its GlobalTileIndex and then the
@@ -42,8 +42,14 @@ struct MatrixLocal<const T> {
   using MemoryT = memory::MemoryView<T, Device::CPU>;
   using ConstTileT = Tile<const T, Device::CPU>;
 
+  /// Create a matrix with given size and blocksize
+  //
+  /// @pre !sz.isEmpty()
+  /// @pre !blocksize.isEmpty()
   MatrixLocal(GlobalElementSize sz, TileElementSize blocksize) noexcept
       : layout_{colMajorLayout({sz.rows(), sz.cols()}, blocksize, sz.rows())} {
+    DLAF_ASSERT(!sz.isEmpty(), sz);
+    DLAF_ASSERT(!blocksize.isEmpty(), blocksize);
     memory_ = MemoryT{layout_.minMemSize()};
 
     for (const auto& tile_index : iterate_range2d(layout_.nrTiles()))

@@ -9,11 +9,4 @@
 //
 #pragma once
 
-#include "dlaf/types.h"
-
-namespace dlaf {
-
-template <Backend execution>
-struct Auxiliary;
-
-}
+#include "dlaf/eigensolver/gen_to_std.h"

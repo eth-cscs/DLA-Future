@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/auxiliary/mc.h"
+#include "dlaf/auxiliary/norm.h"
 
 #include <limits>
 
@@ -66,7 +66,7 @@ TYPED_TEST(NormDistributedTest, EmptyMatrices) {
         for (const auto& norm_type : lapack_norms) {
           for (const auto& uplo : blas_uplos) {
             const NormT<TypeParam> norm =
-                Auxiliary<Backend::MC>::norm(comm_grid, {0, 0}, norm_type, uplo, matrix);
+                auxiliary::norm<Backend::MC>(comm_grid, {0, 0}, norm_type, uplo, matrix);
 
             if (Index2D{0, 0} == comm_grid.rank()) {
               EXPECT_NEAR(0, norm, std::numeric_limits<NormT<TypeParam>>::epsilon());
@@ -102,7 +102,7 @@ void set_and_test(CommunicatorGrid comm_grid, comm::Index2D rank, Matrix<T, Devi
   if (index.isIn(matrix.size()))
     modify_element(matrix, index, new_value);
 
-  const NormT<T> norm = Auxiliary<Backend::MC>::norm(comm_grid, rank, norm_type, uplo, matrix);
+  const NormT<T> norm = auxiliary::norm<Backend::MC>(comm_grid, rank, norm_type, uplo, matrix);
 
   SCOPED_TRACE(::testing::Message() << "norm=" << norm_type << " uplo=" << uplo << " changed element="
                                     << index << " in matrix size=" << matrix.size()
@@ -135,7 +135,7 @@ TYPED_TEST(NormDistributedTest, NormMax) {
 
           const Index2D rank_result{comm_grid.size().rows() - 1, comm_grid.size().cols() - 1};
           const NormT<TypeParam> norm =
-              Auxiliary<Backend::MC>::norm(comm_grid, rank_result, norm_type, uplo, matrix);
+              auxiliary::norm<Backend::MC>(comm_grid, rank_result, norm_type, uplo, matrix);
 
           if (rank_result == comm_grid.rank()) {
             EXPECT_GE(norm, -1);

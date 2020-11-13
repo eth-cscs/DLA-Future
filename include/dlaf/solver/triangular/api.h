@@ -9,4 +9,15 @@
 //
 #pragma once
 
-#include "dlaf/factorization/cholesky.h"
+#include "dlaf/types.h"
+
+namespace dlaf {
+namespace solver {
+namespace internal {
+
+template <Backend backend, Device device, class T>
+struct Triangular {};
+
+}
+}
+}

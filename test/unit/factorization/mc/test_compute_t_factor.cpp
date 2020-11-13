@@ -63,7 +63,8 @@ void is_orthogonal(const MatrixLocal<const T>& matrix) {
       ortho.ptr(), ortho.ld());
   // clang-format on
 
-  // CHECK_MATRIX_NEAR(eye, ortho, 1e-3, 1e-3);
+  constexpr auto error = dlaf::test::TypeUtilities<T>::error;
+  CHECK_MATRIX_NEAR(eye, ortho, error, error);
 
   // std::cout << "O = ";
   // dlaf::matrix::print_numpy(std::cout, ortho);
@@ -85,6 +86,8 @@ TYPED_TEST_SUITE(ComputeTFactorDistributedTest, dlaf::test::MatrixElementTypes);
 
 TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
   using namespace dlaf;
+
+  constexpr auto error = test::TypeUtilities<TypeParam>::error;
 
   for (auto comm_grid : this->commGrids()) {
     const SizeType m = 30;
@@ -222,6 +225,6 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
     is_orthogonal(H_result);
 
     // check H_result == H_exp
-    // CHECK_MATRIX_NEAR(H_exp, H_result, 1e-3, 1e-3);
+    CHECK_MATRIX_NEAR(H_exp, H_result, error, error);
   }
 }

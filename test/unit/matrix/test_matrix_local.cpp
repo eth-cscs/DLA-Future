@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include "dlaf/matrix.h"
 #include "dlaf/util_math.h"
 #include "dlaf_test/matrix/matrix_local.h"
 
@@ -15,6 +16,7 @@
 
 #include <gtest/gtest.h>
 
+#include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/matrix/util_matrix_local.h"
 #include "dlaf_test/util_types.h"
@@ -71,6 +73,16 @@ TYPED_TEST(MatrixLocalTest, ConstructorAndShape) {
   }
 }
 
+TYPED_TEST(MatrixLocalTest, Set) {
+  for (const auto& test : sizes_tests) {
+    MatrixLocal<TypeParam> mat(test.size, test.block_size);
+
+    set(mat, el<TypeParam>);
+
+    CHECK_MATRIX_NEAR(el<TypeParam>, mat, 1e-3, 1e-3);
+  }
+}
+
 TYPED_TEST(MatrixLocalTest, Copy) {
   for (const auto& config : sizes_tests) {
     MatrixLocal<const TypeParam> source = [&config]() {
@@ -87,12 +99,54 @@ TYPED_TEST(MatrixLocalTest, Copy) {
   }
 }
 
-TYPED_TEST(MatrixLocalTest, Set) {
-  for (const auto& test : sizes_tests) {
-    MatrixLocal<TypeParam> mat(test.size, test.block_size);
+::testing::Environment* const comm_grids_env =
+    ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
-    set(mat, el<TypeParam>);
+template <typename Type>
+class MatrixLocalWithCommTest : public ::testing::Test {
+public:
+  const std::vector<CommunicatorGrid>& commGrids() {
+    return comm_grids;
+  }
+};
 
-    CHECK_MATRIX_NEAR(el<TypeParam>, mat, 1e-3, 1e-3);
+TYPED_TEST_SUITE(MatrixLocalWithCommTest, MatrixElementTypes);
+
+GlobalElementSize globalTestSize(const GlobalElementSize& size, const Size2D& grid_size) {
+  return {size.rows() * grid_size.rows(), size.cols() * grid_size.cols()};
+}
+
+TYPED_TEST(MatrixLocalWithCommTest, AllGather) {
+  using namespace dlaf;
+
+  auto el = [](const GlobalElementIndex& index) {
+    SizeType i = index.row();
+    SizeType j = index.col();
+    return TypeUtilities<TypeParam>::element(i + j / 1024., j - i / 128.);
+  };
+
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& config : sizes_tests) {
+      const GlobalElementSize size = globalTestSize(config.size, comm_grid.size());
+      comm::Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
+                                   std::min(1, comm_grid.size().cols() - 1));
+      Distribution distribution(size, config.block_size, comm_grid.size(), comm_grid.rank(),
+                                src_rank_index);
+
+      Matrix<TypeParam, Device::CPU> source(std::move(distribution));
+      set(source, el);
+
+      auto dest = all_gather<const TypeParam>(source, comm_grid);
+
+      const auto& dist_src = source.distribution();
+      for (const auto& ij_local : iterate_range2d(dist_src.localNrTiles())) {
+        const auto ij_global = dist_src.globalTileIndex(ij_local);
+
+        const auto& tile_src = source.read(ij_local).get();
+        const auto& tile_dst = dest.tile_read(ij_global);
+
+        CHECK_TILE_NEAR(tile_src, tile_dst, 1e-3, 1e-3);
+      }
+    }
   }
 }

@@ -13,6 +13,7 @@
 /// @file
 
 #include <functional>
+#include <type_traits>
 
 #include <gtest/gtest.h>
 
@@ -50,15 +51,16 @@ void copy(const MatrixLocal<const T>& source, MatrixLocal<T>& dest) {
   std::copy(source.ptr(), source.ptr() + linear_size, dest.ptr());
 }
 
-template <class T>  // TODO add tile_selector predicate
-void all_gather(Matrix<const T, Device::CPU>& source, MatrixLocal<T>& dest,
-                comm::CommunicatorGrid comm_grid) {
-  using namespace dlaf;
+template <class T>
+MatrixLocal<T> all_gather(Matrix<const T, Device::CPU>& source, comm::CommunicatorGrid comm_grid) {
+  MatrixLocal<std::remove_const_t<T>> dest(source.size(), source.blockSize());
+
   const auto& dist_source = source.distribution();
   const auto rank = dist_source.rankIndex();
-  for (const auto& ij_tile : iterate_range2d(dist_source.nrTiles())) {
+
+  for (const auto& ij_tile : iterate_range2d(source.nrTiles())) {
     const auto owner = dist_source.rankGlobalTile(ij_tile);
-    auto& dest_tile = dest.readwrite_tile(ij_tile);
+    auto& dest_tile = dest.tile(ij_tile);
     if (owner == rank) {
       const auto& source_tile = source.read(ij_tile).get();
       comm::sync::broadcast::send(comm_grid.fullCommunicator(), source_tile);
@@ -69,8 +71,9 @@ void all_gather(Matrix<const T, Device::CPU>& source, MatrixLocal<T>& dest,
                                           comm_grid.fullCommunicator(), dest_tile);
     }
   }
-}
 
+  return std::move(dest);
+}
 }
 }
 }

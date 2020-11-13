@@ -111,7 +111,7 @@ namespace internal {
 /// @pre The second argument of err_message should be either T, T& or const T&.
 template <class T, class ElementGetter, class ComparisonOp, class ErrorMessageGetter,
           std::enable_if_t<!std::is_convertible<ElementGetter, T>::value, int> = 0>
-void check(ElementGetter expected, const Tile<T, Device::CPU>& tile, ComparisonOp comp,
+void check(ElementGetter&& expected, const Tile<T, Device::CPU>& tile, ComparisonOp comp,
            ErrorMessageGetter err_message, const char* file, const int line) {
   for (SizeType j = 0; j < tile.size().cols(); ++j) {
     for (SizeType i = 0; i < tile.size().rows(); ++i) {
@@ -186,7 +186,7 @@ void checkPtr(PointerGetter exp_ptr, const Tile<T, Device::CPU>& tile, const cha
 /// @pre abs_err >= 0,
 /// @pre rel_err > 0 || abs_err > 0.
 template <class T, class ElementGetter>
-void checkNear(ElementGetter expected, const Tile<T, Device::CPU>& tile, BaseType<T> rel_err,
+void checkNear(ElementGetter&& expected, const Tile<T, Device::CPU>& tile, BaseType<T> rel_err,
                BaseType<T> abs_err, const char* file, const int line) {
   ASSERT_GE(rel_err, 0);
   ASSERT_GE(abs_err, 0);

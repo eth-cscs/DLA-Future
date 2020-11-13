@@ -56,6 +56,8 @@ struct MatrixLocal<const T> {
                           layout_.ldTile());
   }
 
+  MatrixLocal(MatrixLocal&&) = default;
+
   /// Access elements
   const T* ptr(const GlobalElementIndex& index = {0, 0}) const noexcept {
     return memory_(elementLinearIndex(index));
@@ -89,22 +91,16 @@ struct MatrixLocal<const T> {
 
 protected:
   SizeType elementLinearIndex(const GlobalElementIndex& index) const noexcept {
-    using dlaf::util::size_t::mul;
-    using dlaf::util::size_t::sum;
-
     DLAF_ASSERT(GlobalElementIndex(index.row(), index.col()).isIn(size()), index, size());
 
     return index.row() + index.col() * layout_.ldTile();
   }
 
   SizeType tileLinearIndex(const GlobalTileIndex& index) const noexcept {
-    using dlaf::util::size_t::mul;
-    using dlaf::util::size_t::sum;
-
     DLAF_ASSERT(LocalTileIndex(index.row(), index.col()).isIn(layout_.nrTiles()), index,
                 layout_.nrTiles());
 
-    return dlaf::to_SizeType(sum(mul(index.col(), layout_.nrTiles().rows()), index.row()));
+    return index.row() + index.col() * layout_.nrTiles().rows();
   }
 
   dlaf::matrix::LayoutInfo layout_;
@@ -121,6 +117,8 @@ struct MatrixLocal : public MatrixLocal<const T> {
 
   MatrixLocal(GlobalElementSize size, TileElementSize blocksize) noexcept
       : MatrixLocal<const T>(size, blocksize) {}
+
+  MatrixLocal(MatrixLocal&&) = default;
 
   /// Access elements
   T* ptr(const GlobalElementIndex& index = {0, 0}) const noexcept {

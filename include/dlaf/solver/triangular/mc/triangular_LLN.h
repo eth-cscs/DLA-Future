@@ -30,14 +30,28 @@ namespace dlaf {
 namespace internal {
 namespace mc {
 
+template <class T>
+void trsm_B_panel_tile(hpx::threads::executors::pool_executor ex, blas::Diag diag, T alpha,
+                       hpx::shared_future<matrix::Tile<const T, Device::CPU>> in_tile,
+                       hpx::future<matrix::Tile<T, Device::CPU>> out_tile) {
+  hpx::dataflow(ex, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), blas::Side::Left,
+                blas::Uplo::Lower, blas::Op::NoTrans, diag, alpha, std::move(in_tile),
+                std::move(out_tile));
+}
+
+template <class T>
+void gemm_trailing_matrix_tile(hpx::threads::executors::pool_executor ex, T beta,
+                               hpx::shared_future<matrix::Tile<const T, Device::CPU>> a_tile,
+                               hpx::shared_future<matrix::Tile<const T, Device::CPU>> b_tile,
+                               hpx::future<matrix::Tile<T, Device::CPU>> c_tile) {
+  hpx::dataflow(ex, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), blas::Op::NoTrans,
+                blas::Op::NoTrans, beta, std::move(a_tile), std::move(b_tile), 1.0, std::move(c_tile));
+}
+
 // Local implementation of Left Lower NoTrans
 template <class T>
 void triangular_LLN(blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_a,
                     Matrix<T, Device::CPU>& mat_b) {
-  constexpr auto Left = blas::Side::Left;
-  constexpr auto Lower = blas::Uplo::Lower;
-  constexpr auto NoTrans = blas::Op::NoTrans;
-
   using hpx::threads::executors::pool_executor;
   using hpx::threads::thread_priority_high;
   using hpx::threads::thread_priority_default;
@@ -55,17 +69,15 @@ void triangular_LLN(blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_
       auto kj = LocalTileIndex{k, j};
 
       // Triangular solve of k-th row Panel of B
-      hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), Left, Lower, NoTrans,
-                    diag, alpha, mat_a.read(LocalTileIndex{k, k}), std::move(mat_b(kj)));
+      trsm_B_panel_tile(executor_hp, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(kj));
 
       for (SizeType i = k + 1; i < m; ++i) {
         // Choose queue priority
         auto trailing_executor = (i == k + 1) ? executor_hp : executor_normal;
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        hpx::dataflow(trailing_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans,
-                      NoTrans, beta, mat_a.read(LocalTileIndex{i, k}), mat_b.read(kj), 1.0,
-                      std::move(mat_b(LocalTileIndex{i, j})));
+        gemm_trailing_matrix_tile(trailing_executor, beta, mat_a.read(LocalTileIndex{i, k}),
+                                  mat_b.read(kj), mat_b(LocalTileIndex{i, j}));
       }
     }
   }
@@ -78,31 +90,22 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
   using hpx::threads::executors::pool_executor;
   using hpx::threads::thread_priority_high;
   using hpx::threads::thread_priority_default;
-
   using comm::internal::mpi_pool_exists;
   using common::internal::vector;
-
-  constexpr auto Left = blas::Side::Left;
-  constexpr auto Lower = blas::Uplo::Lower;
-  constexpr auto NoTrans = blas::Op::NoTrans;
   using ConstTileType = typename Matrix<T, Device::CPU>::ConstTileType;
 
-  // Set up executor on the default queue with high priority.
   pool_executor executor_hp("default", thread_priority_high);
-  // Set up executor on the default queue with default priority.
   pool_executor executor_normal("default", thread_priority_default);
-  // Set up MPI executor
+
+  // Set up MPI
   auto executor_mpi = (mpi_pool_exists()) ? pool_executor("mpi", thread_priority_high) : executor_hp;
+  common::Pipeline<comm::CommunicatorGrid> serial_comm(std::move(grid));
 
   const matrix::Distribution& distr_a = mat_a.distribution();
   const matrix::Distribution& distr_b = mat_b.distribution();
-
   SizeType a_rows = mat_a.nrTiles().rows();
-
   auto a_local_rows = distr_a.localNrTiles().rows();
   auto b_local_cols = distr_b.localNrTiles().cols();
-
-  common::Pipeline<comm::CommunicatorGrid> serial_comm(std::move(grid));
 
   for (SizeType k = 0; k < a_rows; ++k) {
     // Create a placeholder that will store the shared futures representing the panel
@@ -117,14 +120,11 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
       auto k_local_row = distr_a.localTileFromGlobalTile<Coord::Row>(k);
 
       if (mat_a.rankIndex().col() == k_rank_col) {
+        // Broadcast A(kk) row-wise
         auto k_local_col = distr_a.localTileFromGlobalTile<Coord::Col>(k);
-
         auto kk = LocalTileIndex{k_local_row, k_local_col};
-
-        // Broadcast Akk row-wise
-        // Avoid useless communication if one-column communicator
-        comm::send_tile(executor_mpi, serial_comm, Coord::Row, mat_a.read(kk));
         kk_tile = mat_a.read(kk);
+        comm::send_tile(executor_mpi, serial_comm, Coord::Row, mat_a.read(kk));
       }
       else {
         kk_tile = comm::recv_tile<T>(executor_mpi, serial_comm, Coord::Row,
@@ -135,17 +135,11 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
     for (SizeType j_local = 0; j_local < b_local_cols; ++j_local) {
       auto j = distr_b.globalTileFromLocalTile<Coord::Col>(j_local);
 
+      // Triangular solve B's k-th row panel and broadcast B(kj) column-wise
       if (mat_b.rankIndex().row() == k_rank_row) {
         auto k_local_row = distr_b.localTileFromGlobalTile<Coord::Row>(k);
-
         auto kj = LocalTileIndex{k_local_row, j_local};
-
-        // Triangular solve of the k-th row Panel of B
-        hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), Left, Lower,
-                      NoTrans, diag, alpha, kk_tile, std::move(mat_b(kj)));
-
-        // Broadcast Bkj column-wise
-        // Avoid useless communication if one-column communicator and if on the last column
+        trsm_B_panel_tile(executor_hp, diag, alpha, kk_tile, mat_b(kj));
         panel[j_local] = mat_b.read(kj);
         if (k != (mat_b.nrTiles().rows() - 1)) {
           comm::send_tile(executor_mpi, serial_comm, Coord::Col, panel[j_local]);
@@ -168,7 +162,7 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
 
       hpx::shared_future<ConstTileType> ik_tile;
 
-      // Broadcast Aik row-wise
+      // Broadcast A(ik) row-wise
       if (mat_a.rankIndex().col() == k_rank_col) {
         auto k_local_col = distr_a.localTileFromGlobalTile<Coord::Col>(k);
         auto ik = LocalTileIndex{i_local, k_local_col};
@@ -180,12 +174,11 @@ void triangular_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
                                      mat_a.tileSize(GlobalTileIndex(i, k)), k_rank_col);
       }
 
+      // Update trailing matrix
       for (SizeType j_local = 0; j_local < b_local_cols; ++j_local) {
-        // Update trailing matrix
-        auto beta = static_cast<T>(-1.0) / alpha;
-        hpx::dataflow(trailing_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans,
-                      NoTrans, beta, ik_tile, panel[j_local], 1.0,
-                      std::move(mat_b(LocalTileIndex{i_local, j_local})));
+        T beta = T(-1.0) / alpha;
+        gemm_trailing_matrix_tile(trailing_executor, beta, ik_tile, panel[j_local],
+                                  mat_b(LocalTileIndex{i_local, j_local}));
       }
     }
   }

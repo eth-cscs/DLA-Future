@@ -39,11 +39,10 @@ public:
   ///   @pre tile_offset_col >= 1;
   /// - if !size.isEmpty():
   ///   @pre tile_ld >= max(size.rows(), block_size.rows()),
-  ///   @pre tile_row_offset >= block_size.rows(),
-  ///   @pre tile_col_offset >= size of the memory (in elements, padding included)
+  ///   @pre tile_offset_row >= block_size.rows(),
+  ///   @pre tile_offset_col >= size of the memory (in elements, padding included)
   ///      to store a column of tiles;
   ///   @pre the tiles should not overlap (combinations of @p tile_ld, @p tile_row_offset).
-
   LayoutInfo(const LocalElementSize& size, const TileElementSize& block_size, SizeType tile_ld,
              SizeType tile_offset_row, SizeType tile_offset_col);
 
@@ -64,7 +63,7 @@ public:
   ///
   /// @pre index.isIn(nr_tiles_).
   SizeType tileOffset(const LocalTileIndex& index) const noexcept {
-    DLAF_ASSERT_HEAVY(index.isIn(nr_tiles_), "");
+    DLAF_ASSERT_HEAVY(index.isIn(nr_tiles_), index, nr_tiles_);
     return index.row() * tile_offset_row_ + index.col() * tile_offset_col_;
   }
 

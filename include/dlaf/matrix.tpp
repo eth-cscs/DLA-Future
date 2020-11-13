@@ -21,7 +21,7 @@ Matrix<T, device>::Matrix(const GlobalElementSize& size, const TileElementSize& 
     : Matrix<T, device>(Distribution(size, block_size, comm.size(), comm.rank(), {0, 0})) {}
 
 template <class T, Device device>
-Matrix<T, device>::Matrix(Distribution&& distribution)
+Matrix<T, device>::Matrix(Distribution distribution)
     : Matrix<const T, device>(std::move(distribution), {}, {}) {
   const SizeType alignment = 64;
   const SizeType ld =
@@ -37,7 +37,7 @@ Matrix<T, device>::Matrix(Distribution&& distribution)
 }
 
 template <class T, Device device>
-Matrix<T, device>::Matrix(Distribution&& distribution, const LayoutInfo& layout) noexcept
+Matrix<T, device>::Matrix(Distribution distribution, const LayoutInfo& layout) noexcept
     : Matrix<const T, device>(std::move(distribution), {}, {}) {
   DLAF_ASSERT(this->distribution().localSize() == layout.size(),
               "Size of distribution does not match layout size!", distribution.localSize(),
@@ -52,8 +52,7 @@ Matrix<T, device>::Matrix(Distribution&& distribution, const LayoutInfo& layout)
 }
 
 template <class T, Device device>
-Matrix<T, device>::Matrix(Distribution&& distribution, const LayoutInfo& layout,
-                          ElementType* ptr) noexcept
+Matrix<T, device>::Matrix(Distribution distribution, const LayoutInfo& layout, ElementType* ptr) noexcept
     : Matrix<const T, device>(std::move(distribution), layout, ptr) {}
 
 template <class T, Device device>

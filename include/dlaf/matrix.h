@@ -56,7 +56,7 @@ public:
          const comm::CommunicatorGrid& comm);
 
   /// Create a matrix distributed according to the distribution @p distribution.
-  Matrix(Distribution&& distribution);
+  Matrix(Distribution distribution);
 
   /// Create a matrix distributed according to the distribution @p distribution,
   /// specifying the layout.
@@ -65,7 +65,7 @@ public:
   ///            of the local part of the matrix will be stored in memory,
   /// @pre distribution.localSize() == layout.size(),
   /// @pre distribution.blockSize() == layout.blockSize().
-  Matrix(Distribution&& distribution, const LayoutInfo& layout) noexcept;
+  Matrix(Distribution distribution, const LayoutInfo& layout) noexcept;
 
   /// Create a non distributed matrix,
   /// which references elements that are already allocated in the memory.
@@ -85,7 +85,7 @@ public:
   /// @pre distribution.localSize() == layout.size(),
   /// @pre distribution.blockSize() == layout.blockSize(),
   /// @pre @p ptr refers to an allocated memory region of at least @c layout.minMemSize() elements.
-  Matrix(Distribution&& distribution, const LayoutInfo& layout, ElementType* ptr) noexcept;
+  Matrix(Distribution distribution, const LayoutInfo& layout, ElementType* ptr) noexcept;
 
   Matrix(const Matrix& rhs) = delete;
   Matrix(Matrix&& rhs) = default;
@@ -130,9 +130,9 @@ public:
   Matrix(const LayoutInfo& layout, const ElementType* ptr)
       : Matrix(layout, const_cast<ElementType*>(ptr)) {}
 
-  Matrix(Distribution&& distribution, const LayoutInfo& layout, ElementType* ptr) noexcept;
+  Matrix(Distribution distribution, const LayoutInfo& layout, ElementType* ptr) noexcept;
 
-  Matrix(Distribution&& distribution, const LayoutInfo& layout, const ElementType* ptr)
+  Matrix(Distribution distribution, const LayoutInfo& layout, const ElementType* ptr)
       : Matrix(std::move(distribution), layout, const_cast<ElementType*>(ptr)) {}
 
   Matrix(const Matrix& rhs) = delete;
@@ -159,8 +159,8 @@ public:
   }
 
 private:
-  Matrix(Distribution&& distribution, std::vector<hpx::future<TileType>>&& tile_futures,
-         std::vector<hpx::shared_future<ConstTileType>>&& tile_shared_futures);
+  Matrix(Distribution distribution, std::vector<hpx::future<TileType>> tile_futures,
+         std::vector<hpx::shared_future<ConstTileType>> tile_shared_futures);
 
   void setUpTiles(const memory::MemoryView<ElementType, device>& mem, const LayoutInfo& layout) noexcept;
 

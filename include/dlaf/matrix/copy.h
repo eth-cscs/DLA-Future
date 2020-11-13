@@ -18,6 +18,7 @@
 #include "dlaf/util_matrix.h"
 
 namespace dlaf {
+namespace matrix {
 
 /// Copy values from another matrix.
 ///
@@ -37,8 +38,9 @@ void copy(MatrixTypeSrc<const T, device>& source, MatrixTypeDst<T, device>& dest
 
   for (SizeType j = 0; j < local_tile_cols; ++j)
     for (SizeType i = 0; i < local_tile_rows; ++i)
-      hpx::dataflow(hpx::util::unwrapping(dlaf::copy<T>), source.read(LocalTileIndex(i, j)),
+      hpx::dataflow(hpx::util::unwrapping(copy<T>), source.read(LocalTileIndex(i, j)),
                     dest(LocalTileIndex(i, j)));
 }
 
+}
 }

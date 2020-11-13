@@ -60,8 +60,8 @@ SizeType LayoutInfo::minMemSize() const noexcept {
 }
 
 SizeType LayoutInfo::minTileMemSize(const TileElementSize& tile_size) const noexcept {
-  DLAF_ASSERT_HEAVY(tile_size.rows() <= block_size_.rows(), "");
-  DLAF_ASSERT_HEAVY(tile_size.cols() <= block_size_.cols(), "");
+  DLAF_ASSERT_HEAVY(tile_size.rows() <= block_size_.rows(), tile_size.rows(), block_size_.rows());
+  DLAF_ASSERT_HEAVY(tile_size.cols() <= block_size_.cols(), tile_size.cols(), block_size_.cols());
 
   if (tile_size.isEmpty()) {
     return 0;

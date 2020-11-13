@@ -28,13 +28,15 @@ struct MatrixLocal;
 
 /// MatrixLocal is a local matrix with column-layout, not thread-safe
 ///
-/// It is a useful helper object that allows you to access element directly given their
-/// GlobalElementIndex, or by accessing the tile via its GlobalTileIndex and then the
+/// It is a useful helper object that allows you to access elements directly given their
+/// GlobalElementIndex, or by accessing the tile containing it via its GlobalTileIndex and then the
 /// related LocalTileIndex inside it.
 ///
 /// It uses Index/Size with the Global tag instead of the Local one, because its main task
 /// is to create a local copy of a distributed matrix. So, it is generally easier to think
 /// of it as the global matrix.
+///
+/// About its semantic, it is similar to a std::unique_ptr.
 template <class T>
 struct MatrixLocal<const T> {
   static constexpr auto CPU = Device::CPU;
@@ -52,6 +54,9 @@ struct MatrixLocal<const T> {
                                    layout_.minTileMemSize(tile_index)},
                           layout_.ldTile());
   }
+
+  MatrixLocal(const MatrixLocal&) = delete;
+  MatrixLocal& operator=(const MatrixLocal&) = delete;
 
   MatrixLocal(MatrixLocal&&) = default;
 
@@ -116,6 +121,9 @@ struct MatrixLocal : public MatrixLocal<const T> {
 
   MatrixLocal(GlobalElementSize size, TileElementSize blocksize) noexcept
       : MatrixLocal<const T>(size, blocksize) {}
+
+  MatrixLocal(const MatrixLocal&) = delete;
+  MatrixLocal& operator=(const MatrixLocal&) = delete;
 
   MatrixLocal(MatrixLocal&&) = default;
 

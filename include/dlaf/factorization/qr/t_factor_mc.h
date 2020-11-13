@@ -13,22 +13,36 @@
 #include <hpx/future.hpp>
 #include <hpx/include/util.hpp>
 
+#include <blas.hh>
+
+#include "dlaf/factorization/qr/api.h"
+
+#include "dlaf/matrix.h"
 #include "dlaf/common/data.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/types.h"
+#include "dlaf/communication/functions_sync.h"
 
 namespace dlaf {
+namespace factorization {
 namespace internal {
-namespace mc {
 
-template <class Type>
-void computeTFactor(Matrix<Type, Device::CPU>& t, Matrix<const Type, Device::CPU>& a,
-                    const LocalTileIndex ai_start_loc,
-                    const GlobalTileIndex ai_start, const SizeType last_reflector,
-                    common::internal::vector<hpx::shared_future<Type>> taus,
+template <>
+struct QR<Backend::MC, Device::CPU> {
+  template <class T>
+  static void computeTFactor(Matrix<T, Device::CPU>& t, Matrix<const T, Device::CPU>& a,
+                    const LocalTileIndex ai_start_loc, const GlobalTileIndex ai_start,
+                    const SizeType last_reflector, common::internal::vector<hpx::shared_future<T>> taus,
+                    common::Pipeline<comm::CommunicatorGrid>& serial_comm);
+};
+
+template <class T>
+void QR<Backend::MC, Device::CPU>::computeTFactor(Matrix<T, Device::CPU>& t, Matrix<const T, Device::CPU>& a,
+                    const LocalTileIndex ai_start_loc, const GlobalTileIndex ai_start,
+                    const SizeType last_reflector, common::internal::vector<hpx::shared_future<T>> taus,
                     common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
   using hpx::util::unwrapping;
   using common::make_data;
@@ -59,7 +73,7 @@ void computeTFactor(Matrix<Type, Device::CPU>& t, Matrix<const Type, Device::CPU
       const bool has_first_component = (index_tile_v_global == ai_start.row());
 
       // GEMV t = V(j:mV; 0:j)* . V(j:mV;j)
-      auto gemv_func = unwrapping([=](auto&& tile_t, const Type tau, const auto& tile_v) {
+      auto gemv_func = unwrapping([=](auto&& tile_t, const T tau, const auto& tile_v) {
         const SizeType first_element_in_tile = has_first_component ? index_el_x0.row() : 0;
 
         // T(0:j, j) = -tau . V(j:, 0:j)* . V(j:, j)
@@ -112,7 +126,7 @@ void computeTFactor(Matrix<Type, Device::CPU>& t, Matrix<const Type, Device::CPU
     if (!t_size.isEmpty()) {
       auto reduce_t_func = unwrapping([=](auto&& tile_t, auto&& comm_wrapper) {
         auto&& input_t = make_data(tile_t.ptr(t_start), t_size.rows());
-        std::vector<Type> out_data(to_sizet(t_size.rows()));
+        std::vector<T> out_data(to_sizet(t_size.rows()));
         auto&& output_t = make_data(out_data.data(), t_size.rows());
         // TODO reduce just the current, otherwise reduce all together
         reduce(rank_v0.row(), comm_wrapper().colCommunicator(), MPI_SUM, input_t, output_t);
@@ -140,7 +154,6 @@ void computeTFactor(Matrix<Type, Device::CPU>& t, Matrix<const Type, Device::CPU
     }
   }
 }
-
 }
 }
 }

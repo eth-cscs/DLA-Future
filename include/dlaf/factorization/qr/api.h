@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2019, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -9,5 +9,15 @@
 //
 #pragma once
 
-#include "dlaf/factorization/cholesky.h"
-#include "dlaf/factorization/qr.h"
+#include "dlaf/types.h"
+
+namespace dlaf {
+namespace factorization {
+namespace internal {
+
+template <Backend backend, Device device>
+struct QR {};
+
+}
+}
+}

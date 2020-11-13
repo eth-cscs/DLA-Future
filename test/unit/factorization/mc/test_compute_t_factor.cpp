@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/factorization/mc.h"
+#include "dlaf/factorization/qr/t_factor_mc.h"
 
 #include <gtest/gtest.h>
 #include <blas.hh>
@@ -172,7 +172,7 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
     Matrix<TypeParam, Device::CPU> T(LocalElementSize{k, k}, block_size);
     common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
 
-    dlaf::internal::mc::computeTFactor(T, V, {0, 0}, {0, 0}, k - 1, taus, serial_comm);
+    dlaf::factorization::internal::QR<Backend::MC, Device::CPU>::computeTFactor(T, V, {0, 0}, {0, 0}, k - 1, taus, serial_comm);
 
     // TODO compute H_result = I - VTV*
     // TODO W = T V*

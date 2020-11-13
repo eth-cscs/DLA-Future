@@ -36,9 +36,13 @@ void copy(MatrixTypeSrc<const T, device>& source, MatrixTypeDst<T, device>& dest
   const SizeType local_tile_rows = distribution.localNrTiles().rows();
   const SizeType local_tile_cols = distribution.localNrTiles().cols();
 
+  // This prevents a compiler error in `hpx::util::unwrapping()` which is unable to deduce the correct
+  // overload for tile `copy()`.
+  void (&cpy)(const matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T, Device::CPU>&) = copy<T>;
+
   for (SizeType j = 0; j < local_tile_cols; ++j)
     for (SizeType i = 0; i < local_tile_rows; ++i)
-      hpx::dataflow(hpx::util::unwrapping(copy<T>), source.read(LocalTileIndex(i, j)),
+      hpx::dataflow(hpx::util::unwrapping(cpy), source.read(LocalTileIndex(i, j)),
                     dest(LocalTileIndex(i, j)));
 }
 

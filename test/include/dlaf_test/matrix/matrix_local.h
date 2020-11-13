@@ -26,11 +26,18 @@ namespace test {
 template <class T>
 struct MatrixLocal;
 
-/// MatrixLocal is a local matrix with column-layout, not thread-safe.
+/// MatrixLocal is a column-major local matrix, not thread-safe.
 ///
 /// It is a useful helper object that allows you to access elements directly given their
 /// GlobalElementIndex, or by accessing the tile containing it via its GlobalTileIndex and then the
 /// related LocalTileIndex inside it.
+///
+/// Thanks to operator()(GlobalTileIndex) it can be used as a function, which turns out to be useful for
+/// comparisons with CHECK macros.
+///
+/// The column-major layout allow to use it with BLAS/LAPACK routines.
+///
+/// It is neither thread-safe nor async-ready (see dlaf::Matrix for that).
 ///
 /// It uses Index/Size with the Global tag instead of the Local one, because its main task
 /// is to create a local copy of a distributed matrix. So, it is generally easier to think

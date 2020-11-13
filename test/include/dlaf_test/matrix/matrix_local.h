@@ -154,11 +154,12 @@ struct MatrixLocal : public MatrixLocal<const T> {
   }
 
 protected:
-  using MatrixLocal<const T>::elementLinearIndex;
-  using MatrixLocal<const T>::tileLinearIndex;
-  using MatrixLocal<const T>::layout_;
-  using MatrixLocal<const T>::memory_;
-  using MatrixLocal<const T>::tiles_;
+  using BaseT = MatrixLocal<const T>;
+  using BaseT::elementLinearIndex;
+  using BaseT::tileLinearIndex;
+  using BaseT::layout_;
+  using BaseT::memory_;
+  using BaseT::tiles_;
 };
 
 }

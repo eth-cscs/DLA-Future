@@ -51,6 +51,9 @@ void copy(const MatrixLocal<const T>& source, MatrixLocal<T>& dest) {
   std::copy(source.ptr(), source.ptr() + linear_size, dest.ptr());
 }
 
+/// Given a (possibly) distributed Matrix, collect all data full-size local matrix
+///
+/// Optionally, it is possible to specify the type of the return MatrixLocal (useful for const correctness)
 template <class T>
 MatrixLocal<T> all_gather(Matrix<const T, Device::CPU>& source, comm::CommunicatorGrid comm_grid) {
   MatrixLocal<std::remove_const_t<T>> dest(source.size(), source.blockSize());
@@ -61,8 +64,10 @@ MatrixLocal<T> all_gather(Matrix<const T, Device::CPU>& source, comm::Communicat
   for (const auto& ij_tile : iterate_range2d(source.nrTiles())) {
     const auto owner = dist_source.rankGlobalTile(ij_tile);
     auto& dest_tile = dest.tile(ij_tile);
+
     if (owner == rank) {
       const auto& source_tile = source.read(ij_tile).get();
+
       comm::sync::broadcast::send(comm_grid.fullCommunicator(), source_tile);
       copy(source_tile, dest_tile);
     }

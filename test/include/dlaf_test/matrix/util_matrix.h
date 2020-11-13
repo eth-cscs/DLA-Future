@@ -38,12 +38,12 @@ struct matrix_traits;
 
 template <template <class, Device> class MatrixLike, class T, Device device>
 struct matrix_traits<MatrixLike<T, device>> {
-  using Element_t = std::remove_cv_t<T>;
+  using ElementT = std::remove_cv_t<T>;
 };
 
 template <class T>
 struct matrix_traits<MatrixLocal<T>> {
-  using Element_t = std::remove_cv_t<T>;
+  using ElementT = std::remove_cv_t<T>;
 };
 
 /// Sets the elements of the matrix.
@@ -83,7 +83,7 @@ namespace internal {
 /// @pre The second argument of err_message should be either T, T& or const T&.
 template <template <class, Device> class MatrixType, class T, class ElementGetter, class ComparisonOp,
           class ErrorMessageGetter>
-void check(ElementGetter expected, MatrixType<T, Device::CPU>& mat, ComparisonOp comp,
+void check(ElementGetter expected, MatrixType<const T, Device::CPU>& mat, ComparisonOp comp,
            ErrorMessageGetter err_message, const char* file, const int line) {
   const matrix::Distribution& dist = mat.distribution();
   for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {
@@ -136,7 +136,7 @@ void check(ElementGetter&& expected, MatrixLocal<const T>& mat, ComparisonOp com
 /// @pre exp_el return type should be T.
 template <class MatrixType, class ElementGetter>
 void checkEQ(ElementGetter&& exp_el, MatrixType& mat, const char* file, const int line) {
-  using T = typename matrix_traits<MatrixType>::Element_t;
+  using T = typename matrix_traits<MatrixType>::ElementT;
   auto err_message = [](T expected, T value) {
     std::stringstream s;
     s << "expected " << expected << " == " << value;
@@ -174,10 +174,10 @@ void checkPtr(PointerGetter exp_ptr, MatrixType& mat, const char* file, const in
 /// @pre rel_err > 0 || abs_err > 0.
 template <class MatrixType, class ElementGetter>
 void checkNear(ElementGetter&& expected, MatrixType& mat,
-               BaseType<typename matrix_traits<MatrixType>::Element_t> rel_err,
-               BaseType<typename matrix_traits<MatrixType>::Element_t> abs_err, const char* file,
+               BaseType<typename matrix_traits<MatrixType>::ElementT> rel_err,
+               BaseType<typename matrix_traits<MatrixType>::ElementT> abs_err, const char* file,
                const int line) {
-  using T = typename matrix_traits<MatrixType>::Element_t;
+  using T = typename matrix_traits<MatrixType>::ElementT;
   ASSERT_GE(rel_err, 0);
   ASSERT_GE(abs_err, 0);
   ASSERT_TRUE(rel_err > 0 || abs_err > 0);

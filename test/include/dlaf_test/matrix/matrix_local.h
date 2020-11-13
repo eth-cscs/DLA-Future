@@ -39,19 +39,17 @@ struct MatrixLocal;
 /// About its semantic, it is similar to a std::unique_ptr.
 template <class T>
 struct MatrixLocal<const T> {
-  static constexpr auto CPU = Device::CPU;
-
-  using Memory_t = memory::MemoryView<T, CPU>;
-  using ConstTile_t = Tile<const T, CPU>;
+  using MemoryT = memory::MemoryView<T, Device::CPU>;
+  using ConstTileT = Tile<const T, Device::CPU>;
 
   MatrixLocal(GlobalElementSize sz, TileElementSize blocksize) noexcept
       : layout_{colMajorLayout({sz.rows(), sz.cols()}, blocksize, sz.rows())} {
-    memory_ = Memory_t{layout_.minMemSize()};
+    memory_ = MemoryT{layout_.minMemSize()};
 
     for (const auto& tile_index : iterate_range2d(layout_.nrTiles()))
       tiles_.emplace_back(layout_.tileSize(tile_index),
-                          Memory_t{memory_, layout_.tileOffset(tile_index),
-                                   layout_.minTileMemSize(tile_index)},
+                          MemoryT{memory_, layout_.tileOffset(tile_index),
+                                  layout_.minTileMemSize(tile_index)},
                           layout_.ldTile());
   }
 
@@ -71,7 +69,7 @@ struct MatrixLocal<const T> {
   }
 
   /// Access tiles
-  const ConstTile_t& tile_read(const GlobalTileIndex& index) const noexcept {
+  const ConstTileT& tile_read(const GlobalTileIndex& index) const noexcept {
     return tiles_[static_cast<size_t>(tileLinearIndex(index))];
   }
 
@@ -106,7 +104,7 @@ protected:
   }
 
   dlaf::matrix::LayoutInfo layout_;
-  Memory_t memory_;
+  MemoryT memory_;
 
   // Note: this is non-const so that it can be used also by the inheriting class
   std::vector<Tile<T, Device::CPU>> tiles_;
@@ -117,7 +115,7 @@ protected:
 // assigning a non-const to a const matrix.
 template <class T>
 struct MatrixLocal : public MatrixLocal<const T> {
-  using Tile_t = Tile<T, Device::CPU>;
+  using TileT = Tile<T, Device::CPU>;
 
   MatrixLocal(GlobalElementSize size, TileElementSize blocksize) noexcept
       : MatrixLocal<const T>(size, blocksize) {}
@@ -138,7 +136,7 @@ struct MatrixLocal : public MatrixLocal<const T> {
   }
 
   /// Access tiles
-  const Tile_t& tile(const GlobalTileIndex& index) const noexcept {
+  const TileT& tile(const GlobalTileIndex& index) const noexcept {
     return tiles_[static_cast<size_t>(tileLinearIndex(index))];
   }
 

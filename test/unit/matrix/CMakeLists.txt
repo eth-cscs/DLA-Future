@@ -39,6 +39,13 @@ DLAF_addTest(test_matrix
   MPIRANKS 6
 )
 
+DLAF_addTest(test_matrix_local
+  SOURCES test_matrix_local.cpp
+  LIBRARIES dlaf.core
+  USE_MAIN MPIHPX
+  MPIRANKS 6
+)
+
 DLAF_addTest(test_matrix_view
   SOURCES test_matrix_view.cpp
   LIBRARIES dlaf.core

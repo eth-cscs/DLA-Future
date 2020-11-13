@@ -29,11 +29,11 @@ using namespace dlaf::test;
 using namespace testing;
 
 template <class T>
-auto value_preset(const GlobalElementIndex& index) {
+T value_preset(const GlobalElementIndex& index) {
   const auto i = index.row();
   const auto j = index.col();
   return TypeUtilities<T>::element(i + j / 1024., j - i / 128.);
-};
+}
 
 struct TestSizes {
   GlobalElementSize size;

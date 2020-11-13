@@ -12,8 +12,12 @@
 #include "dlaf/types.h"
 
 namespace dlaf {
+namespace factorization {
+namespace internal {
 
-template <Backend execution>
-struct Solver;
+template <Backend backend, Device device, class T>
+struct Cholesky {};
 
+}
+}
 }

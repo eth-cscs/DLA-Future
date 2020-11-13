@@ -100,19 +100,19 @@ add_library(dlaf.core
 target_link_libraries(dlaf.core PUBLIC dlaf.prop)
 
 # Define DLAF's eigensolver library
-add_library(dlaf.eigensolver OBJECT eigensolver/mc.cpp)
+add_library(dlaf.eigensolver OBJECT eigensolver/gen_to_std/mc.cpp)
 target_link_libraries(dlaf.eigensolver PUBLIC dlaf.prop)
 
 # Define DLAF's factorization library
-add_library(dlaf.factorization OBJECT factorization/mc.cpp)
+add_library(dlaf.factorization OBJECT factorization/cholesky/mc.cpp)
 target_link_libraries(dlaf.factorization PUBLIC dlaf.prop)
 
 # Define DLAF's solver library
-add_library(dlaf.solver OBJECT solver/mc.cpp)
+add_library(dlaf.solver OBJECT solver/triangular/mc.cpp)
 target_link_libraries(dlaf.solver PUBLIC dlaf.prop)
 
 # Define DLAF's auxiliary library
-add_library(dlaf.auxiliary OBJECT auxiliary/mc.cpp)
+add_library(dlaf.auxiliary OBJECT auxiliary/norm/mc.cpp)
 target_link_libraries(dlaf.auxiliary PUBLIC dlaf.prop)
 
 # Define DLAF's complete library

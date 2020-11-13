@@ -22,18 +22,24 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/executor.h"
 #include "dlaf/communication/functions_sync.h"
+#include "dlaf/factorization/cholesky/api.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/util_matrix.h"
 
 namespace dlaf {
+namespace factorization {
 namespace internal {
-namespace mc {
 
-// Local implementation of Lower Cholesky factorization.
 template <class T>
-void cholesky_L(Matrix<T, Device::CPU>& mat_a) {
+struct Cholesky<Backend::MC, Device::CPU, T> {
+  static void call_L(Matrix<T, Device::CPU>& mat_a);
+  static void call_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a);
+};
+
+template <class T>
+void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a) {
   constexpr auto NonUnit = blas::Diag::NonUnit;
   constexpr auto ConjTrans = blas::Op::ConjTrans;
   constexpr auto NoTrans = blas::Op::NoTrans;
@@ -45,16 +51,13 @@ void cholesky_L(Matrix<T, Device::CPU>& mat_a) {
   using hpx::threads::thread_priority_high;
   using hpx::threads::thread_priority_default;
 
-  // Set up executor on the default queue with high priority.
   pool_executor executor_hp("default", thread_priority_high);
-  // Set up executor on the default queue with default priority.
   pool_executor executor_normal("default", thread_priority_default);
 
   // Number of tile (rows = cols)
   SizeType nrtile = mat_a.nrTiles().cols();
 
   for (SizeType k = 0; k < nrtile; ++k) {
-    // Cholesky decomposition on mat_a(k,k) r/w potrf (lapack operation)
     auto kk = LocalTileIndex{k, k};
 
     hpx::dataflow(executor_hp, unwrapping(tile::potrf<T, Device::CPU>), Lower, std::move(mat_a(kk)));
@@ -66,7 +69,7 @@ void cholesky_L(Matrix<T, Device::CPU>& mat_a) {
     }
 
     for (SizeType j = k + 1; j < nrtile; ++j) {
-      // Choose queue priority
+      // first trailing panel gets high priority (look ahead).
       auto trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_normal;
 
       // Update trailing matrix: diagonal element mat_a(j,j, reading mat_a.read(j,k), using herk (blas operation)
@@ -84,9 +87,9 @@ void cholesky_L(Matrix<T, Device::CPU>& mat_a) {
   }
 }
 
-// Distributed implementation of Lower Cholesky factorization.
 template <class T>
-void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
+void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
+                                                   Matrix<T, Device::CPU>& mat_a) {
   using hpx::util::unwrapping;
   using hpx::threads::executors::pool_executor;
   using hpx::threads::thread_priority_high;
@@ -274,6 +277,16 @@ void cholesky_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
     }
   }
 }
+
+/// ---- ETI
+#define DLAF_CHOLESKY_MC_ETI(KWORD, DATATYPE) \
+  KWORD template struct Cholesky<Backend::MC, Device::CPU, DATATYPE>;
+
+DLAF_CHOLESKY_MC_ETI(extern, float)
+DLAF_CHOLESKY_MC_ETI(extern, double)
+DLAF_CHOLESKY_MC_ETI(extern, std::complex<float>)
+DLAF_CHOLESKY_MC_ETI(extern, std::complex<double>)
+
 }
 }
 }

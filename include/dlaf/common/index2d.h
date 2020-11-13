@@ -401,11 +401,5 @@ Size2D<IndexT, Tag> operator+(const Size2D<IndexT, Tag>& lhs, const Size2D<Index
   return Size2D<IndexT, Tag>(lhs.rows() + rhs.rows(), lhs.cols() + rhs.cols());
 }
 
-/// Returns true if @param small is within @param big starting at @param idx
-template <class IndexT, class Tag>
-bool isWithin(Size2D<IndexT, Tag> small, Index2D<IndexT, Tag> idx, Size2D<IndexT, Tag> big) {
-  return idx.row() + small.rows() <= big.rows() && idx.col() + small.cols() <= big.cols();
-}
-
 }
 }

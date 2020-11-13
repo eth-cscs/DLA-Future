@@ -12,6 +12,7 @@
 #include <hpx/include/util.hpp>
 #include <hpx/local/future.hpp>
 
+#include "dlaf/auxiliary/norm/api.h"
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/communicator_grid.h"
@@ -23,8 +24,14 @@
 #include "dlaf/util_matrix.h"
 
 namespace dlaf {
+namespace auxiliary {
 namespace internal {
-namespace mc {
+
+template <class T>
+struct Norm<Backend::MC, Device::CPU, T> {
+  static dlaf::BaseType<T> max_L(comm::CommunicatorGrid comm_grid, comm::Index2D rank,
+                                 Matrix<const T, Device::CPU>& matrix);
+};
 
 // Compute max norm of the lower triangular part of the distributed matrix
 // https://en.wikipedia.org/wiki/Matrix_norm#Max_norm
@@ -35,8 +42,9 @@ namespace mc {
 // - sy/he lower
 // - tr lower non-unit
 template <class T>
-dlaf::BaseType<T> norm_max_L(comm::CommunicatorGrid comm_grid, comm::Index2D rank,
-                             Matrix<const T, Device::CPU>& matrix) {
+dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGrid comm_grid,
+                                                           comm::Index2D rank,
+                                                           Matrix<const T, Device::CPU>& matrix) {
   using namespace dlaf::matrix;
 
   using dlaf::common::internal::vector;
@@ -91,6 +99,14 @@ dlaf::BaseType<T> norm_max_L(comm::CommunicatorGrid comm_grid, comm::Index2D ran
 
   return max_value;
 }
+
+/// ---- ETI
+#define DLAF_NORM_ETI(KWORD, DATATYPE) KWORD template struct Norm<Backend::MC, Device::CPU, DATATYPE>;
+
+DLAF_NORM_ETI(extern, float)
+DLAF_NORM_ETI(extern, double)
+DLAF_NORM_ETI(extern, std::complex<float>)
+DLAF_NORM_ETI(extern, std::complex<double>)
 
 }
 }

@@ -149,7 +149,8 @@ void check(U expected, const Tile<const T, Device::CPU>& tile, ComparisonOp comp
 /// @pre exp_el argument is an index of type const TileElementIndex&,
 /// @pre exp_el return type should be T.
 template <class T, class ElementGetter>
-void checkEQ(ElementGetter&& exp_el, const Tile<const T, Device::CPU>& tile, const char* file, const int line) {
+void checkEQ(ElementGetter&& exp_el, const Tile<const T, Device::CPU>& tile, const char* file,
+             const int line) {
   auto err_message = [](T expected, T value) {
     std::stringstream s;
     s << "expected " << expected << " == " << value;

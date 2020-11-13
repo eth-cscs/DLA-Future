@@ -21,8 +21,7 @@ Matrix<T, device>::Matrix(const GlobalElementSize& size, const TileElementSize& 
     : Matrix<T, device>(Distribution(size, block_size, comm.size(), comm.rank(), {0, 0})) {}
 
 template <class T, Device device>
-Matrix<T, device>::Matrix(Distribution distribution)
-    : Matrix<const T, device>(std::move(distribution)) {
+Matrix<T, device>::Matrix(Distribution distribution) : Matrix<const T, device>(std::move(distribution)) {
   const SizeType alignment = 64;
   const SizeType ld =
       std::max<SizeType>(1,

@@ -46,6 +46,7 @@ struct TestSizes {
   LocalElementSize size;
   TileElementSize block_size;
 };
+
 const std::vector<TestSizes> sizes({
     {{0, 0}, {2, 2}},
     {{6, 6}, {2, 2}},
@@ -53,10 +54,6 @@ const std::vector<TestSizes> sizes({
     {{8, 8}, {3, 3}},
     {{9, 7}, {3, 3}},
 });
-
-GlobalElementSize globalTestSize(const LocalElementSize& size) {
-  return {size.rows(), size.cols()};
-}
 
 template <class T>
 T el(const GlobalElementIndex& index) {
@@ -149,6 +146,24 @@ template <class T>
   return ::testing::AssertionSuccess();
 }
 
+TYPED_TEST(MatrixOutputLocalTest, NumpyFormatTile) {
+  for (const auto& sz : sizes) {
+    Matrix<TypeParam, Device::CPU> mat(sz.size, sz.block_size);
+    EXPECT_EQ(Distribution(sz.size, sz.block_size), mat.distribution());
+
+    set(mat, el<TypeParam>);
+
+    for (const auto& index : iterate_range2d(mat.nrTiles())) {
+      const auto& tile = mat.read(index).get();
+
+      std::ostringstream stream_tile_output;
+      print_numpy(stream_tile_output, tile);
+
+      EXPECT_TRUE(parseAndCheckTile(stream_tile_output.str(), tile));
+    }
+  }
+}
+
 template <class T>
 ::testing::AssertionResult parseAndCheckMatrix(const std::string numpy_output,
                                                Matrix<T, Device::CPU>& mat) {
@@ -216,7 +231,7 @@ template <class T>
   return ::testing::AssertionSuccess();
 }
 
-TYPED_TEST(MatrixOutputLocalTest, NumpyFormat) {
+TYPED_TEST(MatrixOutputLocalTest, NumpyFormatMatrix) {
   for (const auto& sz : sizes) {
     Matrix<TypeParam, Device::CPU> mat(sz.size, sz.block_size);
     EXPECT_EQ(Distribution(sz.size, sz.block_size), mat.distribution());
@@ -227,15 +242,6 @@ TYPED_TEST(MatrixOutputLocalTest, NumpyFormat) {
     print_numpy(stream_matrix_output, mat, "mat");
 
     EXPECT_TRUE(parseAndCheckMatrix(stream_matrix_output.str(), mat));
-
-    for (const auto& index : iterate_range2d(mat.nrTiles())) {
-      const auto& tile = mat.read(index).get();
-
-      std::ostringstream stream_tile_output;
-      print_numpy(stream_tile_output, tile);
-
-      EXPECT_TRUE(parseAndCheckTile(stream_tile_output.str(), tile));
-    }
   }
 }
 
@@ -253,7 +259,7 @@ GlobalElementSize globalTestSize(const LocalElementSize& size, const Size2D& gri
   return {size.rows() * grid_size.rows(), size.cols() * grid_size.cols()};
 }
 
-TYPED_TEST(MatrixOutputTest, NumpyFormat) {
+TYPED_TEST(MatrixOutputTest, NumpyFormatMatrix) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());

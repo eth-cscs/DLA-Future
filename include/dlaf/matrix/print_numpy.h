@@ -82,18 +82,17 @@ Stream& print_numpy(Stream& os, MatrixLikeT<const T, device>& matrix, std::strin
   const LocalTileSize local_tiles = distribution.localNrTiles();
   const LocalTileIndex last_tile{local_tiles.rows() - 1, local_tiles.cols() - 1};
 
-  auto getTileTopLeft = [&distribution](const GlobalTileIndex& local) -> GlobalElementIndex {
+  auto getTileTopLeft = [&distribution](const LocalTileIndex& local) -> GlobalElementIndex {
     return {
         distribution.template globalElementFromLocalTileAndTileElement<Coord::Row>(local.row(), 0),
         distribution.template globalElementFromLocalTileAndTileElement<Coord::Col>(local.col(), 0),
     };
   };
 
-  for (const auto& ij_local_tile : iterate_range2d(local_tiles)) {
-    const auto& tile = matrix.read(ij_local_tile).get();
+  for (const auto& ij_local : iterate_range2d(local_tiles)) {
+    const auto& tile = matrix.read(ij_local).get();
 
-    const auto ij_tile = distribution.globalTileIndex(ij_local_tile);
-    const auto index_tl = getTileTopLeft(ij_tile);
+    const auto index_tl = getTileTopLeft(ij_local);
 
     // clang-format off
     os
@@ -105,7 +104,7 @@ Stream& print_numpy(Stream& os, MatrixLikeT<const T, device>& matrix, std::strin
 
     print_numpy(os, tile);
 
-    if (ij_local_tile != last_tile)
+    if (ij_local != last_tile)
       os << "\n";
   }
 

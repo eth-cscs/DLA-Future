@@ -8,8 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/matrix.h"
-#include "dlaf/matrix/copy.h"
+#include "dlaf/matrix/print_numpy.h"
+#include "dlaf/matrix_output.h"
 
 #include <algorithm>
 #include <iterator>
@@ -23,10 +23,8 @@
 #include <hpx/include/util.hpp>
 #include <hpx/local/future.hpp>
 
-#include "dlaf/matrix/print_numpy.h"
-#include "dlaf/matrix_output.h"
+#include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_matrix_blas.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
@@ -36,10 +34,13 @@ using namespace dlaf::matrix::test;
 using namespace dlaf_test;
 using namespace testing;
 
-template <typename Type>
-class MatrixOutputTest : public ::testing::Test {};
+::testing::Environment* const comm_grids_env =
+    ::testing::AddGlobalTestEnvironment(new dlaf_test::CommunicatorGrid6RanksEnvironment);
 
-TYPED_TEST_SUITE(MatrixOutputTest, MatrixElementTypes);
+template <typename Type>
+class MatrixOutputLocalTest : public ::testing::Test {};
+
+TYPED_TEST_SUITE(MatrixOutputLocalTest, MatrixElementTypes);
 
 struct TestSizes {
   LocalElementSize size;
@@ -57,19 +58,20 @@ GlobalElementSize globalTestSize(const LocalElementSize& size) {
   return {size.rows(), size.cols()};
 }
 
-TYPED_TEST(MatrixOutputTest, printElements) {
-  using Type = float;
-  auto el = [](const GlobalElementIndex& index) {
-    SizeType i = index.row();
-    SizeType j = index.col();
-    return TypeUtilities<Type>::element(i + j, j - i);
-  };
+template <class T>
+T el(const GlobalElementIndex& index) {
+  SizeType i = index.row();
+  SizeType j = index.col();
+  return TypeUtilities<T>::element(i + j, j - i);
+};
 
+TYPED_TEST(MatrixOutputLocalTest, printElements) {
+  using Type = float;
   for (const auto& sz : sizes) {
     Matrix<Type, Device::CPU> mat(sz.size, sz.block_size);
     EXPECT_EQ(Distribution(sz.size, sz.block_size), mat.distribution());
 
-    set(mat, el);
+    set(mat, el<Type>);
 
     std::cout << "Matrix mat " << mat << std::endl;
     std::cout << "Printing elements" << std::endl;
@@ -150,6 +152,7 @@ template <class T>
 template <class T>
 ::testing::AssertionResult parseAndCheckMatrix(const std::string numpy_output,
                                                Matrix<T, Device::CPU>& mat) {
+  const auto dist = mat.distribution();
   std::stringstream stream(numpy_output);
 
   // look for definition and check it, in the first line
@@ -197,9 +200,12 @@ template <class T>
     const SizeType j_end = std::stoi(matches[5].str());
 
     const GlobalElementIndex ij_global{i_beg, j_beg};
+    if (dist.rankIndex() != dist.rankGlobalTile(dist.globalTileIndex(ij_global)))
+      continue;
+
     const TileElementSize size_tile{i_end - i_beg, j_end - j_beg};
 
-    const auto ij_local = mat.distribution().globalTileIndex(ij_global);
+    const auto ij_local = dist.globalTileIndex(ij_global);
 
     const auto& tile = mat.read(ij_local).get();
 
@@ -210,18 +216,12 @@ template <class T>
   return ::testing::AssertionSuccess();
 }
 
-TYPED_TEST(MatrixOutputTest, NumpyFormat) {
-  auto el = [](const GlobalElementIndex& index) -> TypeParam {
-    SizeType i = index.row();
-    SizeType j = index.col();
-    return TypeUtilities<TypeParam>::element(i + j, j - i);
-  };
-
+TYPED_TEST(MatrixOutputLocalTest, NumpyFormat) {
   for (const auto& sz : sizes) {
     Matrix<TypeParam, Device::CPU> mat(sz.size, sz.block_size);
     EXPECT_EQ(Distribution(sz.size, sz.block_size), mat.distribution());
 
-    set(mat, el);
+    set(mat, el<TypeParam>);
 
     std::ostringstream stream_matrix_output;
     print_numpy(stream_matrix_output, mat, "mat");
@@ -235,6 +235,37 @@ TYPED_TEST(MatrixOutputTest, NumpyFormat) {
       print_numpy(stream_tile_output, tile);
 
       EXPECT_TRUE(parseAndCheckTile(stream_tile_output.str(), tile));
+    }
+  }
+}
+
+template <class T>
+class MatrixOutputTest : public ::testing::Test {
+public:
+  const std::vector<CommunicatorGrid>& commGrids() {
+    return comm_grids;
+  }
+};
+
+TYPED_TEST_SUITE(MatrixOutputTest, MatrixElementTypes);
+
+GlobalElementSize globalTestSize(const LocalElementSize& size, const Size2D& grid_size) {
+  return {size.rows() * grid_size.rows(), size.cols() * grid_size.cols()};
+}
+
+TYPED_TEST(MatrixOutputTest, NumpyFormat) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
+
+      set(mat, el<TypeParam>);
+
+      std::ostringstream stream_matrix_output;
+      print_numpy(stream_matrix_output, mat, "mat");
+
+      EXPECT_TRUE(parseAndCheckMatrix(stream_matrix_output.str(), mat));
     }
   }
 }

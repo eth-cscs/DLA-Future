@@ -78,12 +78,6 @@ TYPED_TEST(MatrixOutputTest, printElements) {
 }
 
 template <class T>
-struct is_complex : public std::false_type {};
-
-template <class T>
-struct is_complex<std::complex<T>> : public std::true_type {};
-
-template <class T>
 struct numpy_type {
   static constexpr auto name = "float";
 
@@ -178,7 +172,7 @@ template <class T>
   if (std::string(numpy_type<T>::name) != matrix_type)
     return ::testing::AssertionFailure() << std::string(numpy_type<T>::name) << " " << matrix_type;
 
-  if (rows != mat.size().rows() || cols != mat.size().cols())
+  if (GlobalElementSize{rows, cols} != mat.size())
     return ::testing::AssertionFailure() << mat.size() << " " << rows << " " << cols;
 
   // each next line must contain an assignment: one for each tile of the matrix

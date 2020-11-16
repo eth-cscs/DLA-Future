@@ -46,7 +46,7 @@ std::string numpy_value(const T& value) {
 template <class T>
 std::string numpy_value(const std::complex<T>& value) {
   std::ostringstream os;
-  os << "complex" << value;
+  os << std::real(value) << "+" << std::imag(value) << "j";
   return os.str();
 }
 }

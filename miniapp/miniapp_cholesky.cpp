@@ -13,11 +13,11 @@
 #include <mpi.h>
 #include <hpx/init.hpp>
 
-#include "dlaf/auxiliary/mc.h"
+#include "dlaf/auxiliary/norm.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/communication/init.h"
-#include "dlaf/factorization/mc.h"
+#include "dlaf/factorization/cholesky.h"
 #include "dlaf/matrix.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/types.h"
@@ -47,8 +47,8 @@ using dlaf::comm::CommunicatorGrid;
 using T = double;
 using MatrixType = dlaf::Matrix<T, Device::CPU>;
 using ConstMatrixType = dlaf::Matrix<const T, Device::CPU>;
-using TileType = dlaf::Tile<T, Device::CPU>;
-using ConstTileType = dlaf::Tile<const T, Device::CPU>;
+using TileType = MatrixType::TileType;
+using ConstTileType = MatrixType::ConstTileType;
 
 /// Check Cholesky Factorization results
 ///
@@ -96,7 +96,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 
   for (auto run_index = 0; run_index < opts.nruns; ++run_index) {
     MatrixType matrix(matrix_size, block_size, comm_grid);
-    dlaf::copy(matrix_ref, matrix);
+    copy(matrix_ref, matrix);
 
     // wait all setup tasks before starting benchmark
     {
@@ -106,7 +106,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     }
 
     dlaf::common::Timer<> timeit;
-    dlaf::Factorization<Backend::MC>::cholesky(comm_grid, blas::Uplo::Lower, matrix, opts.ntiles_batch);
+    dlaf::factorization::cholesky<Backend::MC>(comm_grid, blas::Uplo::Lower, matrix);
 
     // wait for last task and barrier for all ranks
     {
@@ -137,7 +137,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     if ((opts.do_check == CHECK_RESULT::LAST && run_index == (opts.nruns - 1)) ||
         opts.do_check == CHECK_RESULT::ALL) {
       MatrixType original(matrix_size, block_size, comm_grid);
-      dlaf::copy(matrix_ref, original);
+      copy(matrix_ref, original);
       check_cholesky(original, matrix, comm_grid);
     }
   }
@@ -212,7 +212,6 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
   // TODO A and L must be different
 
   using dlaf::common::make_data;
-  using dlaf::util::size_t::mul;
 
   // compute tile * tile_to_transpose' with the option to cumulate the result
   auto gemm_f =
@@ -261,7 +260,7 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
       const auto owner_transposed = distribution.rankGlobalTile(transposed_wrt_global);
 
       // collect the 2nd operand, receving it from others if not available locally
-      hpx::shared_future<dlaf::Tile<const T, Device::CPU>> tile_to_transpose;
+      hpx::shared_future<ConstTileType> tile_to_transpose;
 
       if (owner_transposed == current_rank) {  // current rank already has what it needs
         tile_to_transpose = L.read(transposed_wrt_global);
@@ -278,8 +277,7 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
         DLAF_ASSERT_HEAVY(owner_transposed.col() == current_rank.col(), "");
 
         TileType workspace(L.blockSize(),
-                           dlaf::memory::MemoryView<T, Device::CPU>(
-                               mul(L.blockSize().rows(), L.blockSize().cols())),
+                           dlaf::memory::MemoryView<T, Device::CPU>(L.blockSize().linear_size()),
                            L.blockSize().rows());
 
         dlaf::comm::sync::broadcast::receive_from(owner_transposed.row(), comm_grid.colCommunicator(),
@@ -337,7 +335,7 @@ void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
   const Index2D rank_result{0, 0};
 
   // 1. Compute the max norm of the original matrix in A
-  const auto norm_A = dlaf::Auxiliary<dlaf::Backend::MC>::norm(comm_grid, rank_result, lapack::Norm::Max,
+  const auto norm_A = dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max,
                                                                blas::Uplo::Lower, A);
 
   // 2.
@@ -351,7 +349,7 @@ void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
 
   // 3. Compute the max norm of the difference (it has been compute in-place in A)
   const auto norm_diff =
-      dlaf::Auxiliary<dlaf::Backend::MC>::norm(comm_grid, rank_result, lapack::Norm::Max,
+      dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max,
                                                blas::Uplo::Lower, A);
 
   // 4.

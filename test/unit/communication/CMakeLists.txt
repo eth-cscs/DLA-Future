@@ -43,6 +43,13 @@ DLAF_addTest(test_reduce
   USE_MAIN MPI
 )
 
+DLAF_addTest(test_all_reduce
+  SOURCES test_all_reduce.cpp
+  LIBRARIES dlaf.core
+  MPIRANKS 4
+  USE_MAIN MPI
+)
+
 DLAF_addTest(test_broadcast_tile
   SOURCES test_broadcast_tile.cpp
   LIBRARIES dlaf.core

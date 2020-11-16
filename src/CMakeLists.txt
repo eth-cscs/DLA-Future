@@ -93,27 +93,32 @@ add_library(dlaf.core
     communication/datatypes.cpp
     matrix/distribution.cpp
     matrix/layout_info.cpp
+    matrix/tile.cpp
     matrix.cpp
     memory/memory_view.cpp
-    tile.cpp
 )
 target_link_libraries(dlaf.core PUBLIC dlaf.prop)
 
+# Define DLAF's eigensolver library
+add_library(dlaf.eigensolver OBJECT eigensolver/gen_to_std/mc.cpp)
+target_link_libraries(dlaf.eigensolver PUBLIC dlaf.prop)
+
 # Define DLAF's factorization library
-add_library(dlaf.factorization OBJECT factorization/mc.cpp)
+add_library(dlaf.factorization OBJECT factorization/cholesky/mc.cpp)
 target_link_libraries(dlaf.factorization PUBLIC dlaf.prop)
 
 # Define DLAF's solver library
-add_library(dlaf.solver OBJECT solver/mc.cpp)
+add_library(dlaf.solver OBJECT solver/triangular/mc.cpp)
 target_link_libraries(dlaf.solver PUBLIC dlaf.prop)
 
 # Define DLAF's auxiliary library
-add_library(dlaf.auxiliary OBJECT auxiliary/mc.cpp)
+add_library(dlaf.auxiliary OBJECT auxiliary/norm/mc.cpp)
 target_link_libraries(dlaf.auxiliary PUBLIC dlaf.prop)
 
 # Define DLAF's complete library
 add_library(DLAF
   $<TARGET_OBJECTS:dlaf.core>
+  $<TARGET_OBJECTS:dlaf.eigensolver>
   $<TARGET_OBJECTS:dlaf.factorization>
   $<TARGET_OBJECTS:dlaf.solver>
   $<TARGET_OBJECTS:dlaf.auxiliary>

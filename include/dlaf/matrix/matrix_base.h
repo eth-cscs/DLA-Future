@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <ostream>
 
 #include "dlaf/matrix/distribution.h"
@@ -20,7 +21,7 @@ namespace internal {
 
 class MatrixBase {
 public:
-  MatrixBase(Distribution&& distribution)
+  MatrixBase(Distribution distribution)
       : distribution_(std::make_shared<Distribution>(std::move(distribution))) {}
 
   MatrixBase(const MatrixBase& rhs) = default;
@@ -78,17 +79,14 @@ protected:
   MatrixBase& operator=(MatrixBase&& rhs) = default;
 
   static std::size_t futureVectorSize(const LocalTileSize& local_nr_tiles) noexcept {
-    return util::size_t::mul(local_nr_tiles.rows(), local_nr_tiles.cols());
+    return static_cast<std::size_t>(local_nr_tiles.linear_size());
   }
 
   /// Returns the position in the vector of the index Tile.
   ///
   /// @pre index.isIn(localNrTiles()).
-  std::size_t tileLinearIndex(const LocalTileIndex& index) const noexcept {
-    DLAF_ASSERT_HEAVY(index.isIn(distribution_->localNrTiles()), "");
-    using util::size_t::sum;
-    using util::size_t::mul;
-    return sum(index.row(), mul(distribution_->localNrTiles().rows(), index.col()));
+  SizeType tileLinearIndex(const LocalTileIndex& index) const noexcept {
+    return index.row() + distribution_->localNrTiles().rows() * static_cast<SizeType>(index.col());
   }
 
   /// Prints information about the matrix.
@@ -103,7 +101,7 @@ protected:
   }
 
 private:
-  std::shared_ptr<Distribution> distribution_;
+  std::shared_ptr<const Distribution> distribution_;
 };
 
 }

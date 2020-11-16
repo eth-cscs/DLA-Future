@@ -8,24 +8,26 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+namespace dlaf {
+namespace matrix {
+
 template <class T, Device device>
 Matrix<T, device>::Matrix(const LocalElementSize& size, const TileElementSize& block_size)
-    : Matrix<T, device>(matrix::Distribution(size, block_size)) {}
+    : Matrix<T, device>(Distribution(size, block_size)) {}
 
 template <class T, Device device>
 Matrix<T, device>::Matrix(const GlobalElementSize& size, const TileElementSize& block_size,
                           const comm::CommunicatorGrid& comm)
-    : Matrix<T, device>(matrix::Distribution(size, block_size, comm.size(), comm.rank(), {0, 0})) {}
+    : Matrix<T, device>(Distribution(size, block_size, comm.size(), comm.rank(), {0, 0})) {}
 
 template <class T, Device device>
-Matrix<T, device>::Matrix(matrix::Distribution&& distribution)
-    : Matrix<const T, device>(std::move(distribution), {}, {}) {
+Matrix<T, device>::Matrix(Distribution distribution) : Matrix<const T, device>(std::move(distribution)) {
   const SizeType alignment = 64;
   const SizeType ld =
       std::max<SizeType>(1,
                          util::ceilDiv(this->distribution().localSize().rows(), alignment) * alignment);
 
-  auto layout = matrix::colMajorLayout(this->distribution().localSize(), this->blockSize(), ld);
+  auto layout = colMajorLayout(this->distribution().localSize(), this->blockSize(), ld);
 
   std::size_t memory_size = layout.minMemSize();
   memory::MemoryView<ElementType, device> mem(memory_size);
@@ -34,8 +36,8 @@ Matrix<T, device>::Matrix(matrix::Distribution&& distribution)
 }
 
 template <class T, Device device>
-Matrix<T, device>::Matrix(matrix::Distribution&& distribution, const matrix::LayoutInfo& layout) noexcept
-    : Matrix<const T, device>(std::move(distribution), {}, {}) {
+Matrix<T, device>::Matrix(Distribution distribution, const LayoutInfo& layout) noexcept
+    : Matrix<const T, device>(std::move(distribution)) {
   DLAF_ASSERT(this->distribution().localSize() == layout.size(),
               "Size of distribution does not match layout size!", distribution.localSize(),
               layout.size());
@@ -49,12 +51,11 @@ Matrix<T, device>::Matrix(matrix::Distribution&& distribution, const matrix::Lay
 }
 
 template <class T, Device device>
-Matrix<T, device>::Matrix(matrix::Distribution&& distribution, const matrix::LayoutInfo& layout,
-                          ElementType* ptr) noexcept
+Matrix<T, device>::Matrix(Distribution distribution, const LayoutInfo& layout, ElementType* ptr) noexcept
     : Matrix<const T, device>(std::move(distribution), layout, ptr) {}
 
 template <class T, Device device>
-Matrix<T, device>::Matrix(const matrix::LayoutInfo& layout, ElementType* ptr)
+Matrix<T, device>::Matrix(const LayoutInfo& layout, ElementType* ptr)
     : Matrix<const T, device>(layout, ptr) {}
 
 template <class T, Device device>
@@ -65,13 +66,22 @@ hpx::future<Tile<T, device>> Matrix<T, device>::operator()(const LocalTileIndex&
   tile_futures_[i] = p.get_future();
   tile_shared_futures_[i] = {};
   return old_future.then(hpx::launch::sync, [p = std::move(p)](hpx::future<TileType>&& fut) mutable {
+    std::exception_ptr current_exception_ptr;
+
     try {
       return std::move(fut.get().setPromise(std::move(p)));
     }
     catch (...) {
-      auto current_exception_ptr = std::current_exception();
-      p.set_exception(current_exception_ptr);
-      std::rethrow_exception(current_exception_ptr);
+      current_exception_ptr = std::current_exception();
     }
+
+    // The exception is set outside the catch block since set_exception may
+    // yield. Ending the catch block on a different worker thread than where it
+    // was started may lead to segfaults.
+    p.set_exception(current_exception_ptr);
+    std::rethrow_exception(current_exception_ptr);
   });
+}
+
+}
 }

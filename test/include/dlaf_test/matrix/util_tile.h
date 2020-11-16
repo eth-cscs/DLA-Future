@@ -17,7 +17,7 @@
 #include <iostream>
 #include <sstream>
 #include "gtest/gtest.h"
-#include "dlaf/tile.h"
+#include "dlaf/matrix/tile.h"
 #include "dlaf/traits.h"
 
 namespace dlaf {
@@ -72,6 +72,29 @@ void print(const Tile<T, Device::CPU>& tile, int precision = 4, std::ostream& ou
     out << std::endl;
   }
   out.precision(out_precision);
+}
+
+/// Create a MemoryView and initialize a Tile on it.
+///
+/// @pre size is the dimension of the tile to be created (type: TileElementSize);
+/// @pre ld is the leading dimension of the tile to be created.
+template <class T>
+Tile<T, Device::CPU> createTile(const TileElementSize size, const SizeType ld) {
+  memory::MemoryView<T, Device::CPU> support_mem(ld * size.cols());
+  return Tile<T, Device::CPU>(size, std::move(support_mem), ld);
+}
+
+/// Create a tile and fill with selected values
+///
+/// @pre val argument is an index of type const TileElementIndex&,
+/// @pre val return type should be T;
+/// @pre size is the dimension of the tile to be created (type: TileElementSize);
+/// @pre ld is the leading dimension of the tile to be created.
+template <class T, class ElementGetter>
+Tile<T, Device::CPU> createTile(ElementGetter val, const TileElementSize size, const SizeType ld) {
+  auto tile = createTile<std::remove_const_t<T>>(size, ld);
+  set(tile, val);
+  return Tile<T, Device::CPU>(std::move(tile));
 }
 
 namespace internal {
@@ -159,13 +182,15 @@ void checkPtr(PointerGetter exp_ptr, const Tile<T, Device::CPU>& tile, const cha
 /// The (i, j)-element of the tile is compared to expected({i, j}).
 /// @pre expected argument is an index of type const TileElementIndex&,
 /// @pre expected return type should be T,
-/// @pre rel_err > 0,
-/// @pre abs_err > 0.
+/// @pre rel_err >= 0,
+/// @pre abs_err >= 0,
+/// @pre rel_err > 0 || abs_err > 0.
 template <class T, class ElementGetter>
 void checkNear(ElementGetter expected, const Tile<T, Device::CPU>& tile, BaseType<T> rel_err,
                BaseType<T> abs_err, const char* file, const int line) {
-  ASSERT_GT(rel_err, 0);
-  ASSERT_GT(abs_err, 0);
+  ASSERT_GE(rel_err, 0);
+  ASSERT_GE(abs_err, 0);
+  ASSERT_TRUE(rel_err > 0 || abs_err > 0);
 
   auto comp = [rel_err, abs_err](T expected, T value) {
     auto diff = std::abs(expected - value);

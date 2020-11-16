@@ -21,7 +21,6 @@
 namespace dlaf {
 namespace matrix {
 namespace test {
-using namespace dlaf_test;
 
 /// Sets the elements of the matrix.
 ///
@@ -49,7 +48,7 @@ void set(MatrixType<T, Device::CPU>& mat, ElementGetter el, blas::Op op) {
     case blas::Op::ConjTrans: {
       auto op_el = [&el](GlobalElementIndex i) {
         i.transpose();
-        return TypeUtilities<T>::conj(el(i));
+        return dlaf::test::TypeUtilities<T>::conj(el(i));
       };
       set(mat, op_el);
       break;

@@ -15,7 +15,7 @@
 
 #include "dlaf_test/util_mpi.h"
 
-using dlaf_test::comm::computeGridDims;
+using dlaf::comm::test::computeGridDims;
 using dlaf::common::Ordering;
 using namespace dlaf::comm;
 

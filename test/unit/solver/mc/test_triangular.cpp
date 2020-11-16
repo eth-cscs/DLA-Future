@@ -7,7 +7,7 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
-#include "dlaf/solver/mc.h"
+#include "dlaf/solver/triangular.h"
 
 #include <functional>
 #include <sstream>
@@ -23,7 +23,7 @@ using namespace dlaf;
 using namespace dlaf::comm;
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
-using namespace dlaf_test;
+using namespace dlaf::test;
 using namespace testing;
 
 ::testing::Environment* const comm_grids_env =
@@ -80,15 +80,15 @@ void testTriangularSolver(blas::Side side, blas::Uplo uplo, blas::Op op, blas::D
 
   if (side == blas::Side::Left)
     std::tie(el_op_a, el_b, res_b) =
-        test::getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, m);
+        getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, m);
   else
     std::tie(el_op_a, el_b, res_b) =
-        test::getRightTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, n);
+        getRightTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, n);
 
   set(mat_a, el_op_a, op);
   set(mat_b, el_b);
 
-  Solver<Backend::MC>::triangular(side, uplo, op, diag, alpha, mat_a, mat_b);
+  solver::triangular<Backend::MC>(side, uplo, op, diag, alpha, mat_a, mat_b);
 
   CHECK_MATRIX_NEAR(res_b, mat_b, 40 * (mat_b.size().rows() + 1) * TypeUtilities<T>::error,
                     40 * (mat_b.size().rows() + 1) * TypeUtilities<T>::error);
@@ -119,15 +119,15 @@ void testTriangularSolver(comm::CommunicatorGrid grid, blas::Side side, blas::Up
 
   if (side == blas::Side::Left)
     std::tie(el_op_a, el_b, res_b) =
-        test::getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, m);
+        getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, m);
   else
     std::tie(el_op_a, el_b, res_b) =
-        test::getRightTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, n);
+        getRightTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, n);
 
   set(mat_a, el_op_a, op);
   set(mat_b, el_b);
 
-  Solver<Backend::MC>::triangular(grid, side, uplo, op, diag, alpha, mat_a, mat_b);
+  solver::triangular<Backend::MC>(grid, side, uplo, op, diag, alpha, mat_a, mat_b);
 
   CHECK_MATRIX_NEAR(res_b, mat_b, 20 * (mat_b.size().rows() + 1) * TypeUtilities<T>::error,
                     20 * (mat_b.size().rows() + 1) * TypeUtilities<T>::error);

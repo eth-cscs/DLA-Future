@@ -9,4 +9,4 @@
 //
 #pragma once
 
-#include "dlaf/factorization/mc.h"
+#include "dlaf/factorization/cholesky.h"

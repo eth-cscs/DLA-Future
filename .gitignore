@@ -6,6 +6,7 @@ build*
 .vscode/
 !build.sh
 .clangd
+.cache
 
 
 # ------------------- C++

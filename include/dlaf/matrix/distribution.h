@@ -227,7 +227,8 @@ public:
   /// @pre 0 <= local_tile < localNrTiles().get<rc>().
   template <Coord rc>
   SizeType globalTileFromLocalTile(SizeType local_tile) const noexcept {
-    DLAF_ASSERT_HEAVY(0 <= local_tile && local_tile < local_nr_tiles_.get<rc>(), "");
+    DLAF_ASSERT_HEAVY(0 <= local_tile && local_tile < local_nr_tiles_.get<rc>(), local_tile,
+                      local_nr_tiles_.get<rc>());
     return util::matrix::globalTileFromLocalTile(local_tile, grid_size_.get<rc>(), rank_index_.get<rc>(),
                                                  source_rank_index_.get<rc>());
   }
@@ -289,8 +290,8 @@ public:
   template <Coord rc>
   bool islastTile(comm::IndexT_MPI r, SizeType i) const noexcept {
     SizeType n = global_nr_tiles_.get<rc>();
-    SizeType g = grid_size_.get<rc>();
-    SizeType s = source_rank_index_.get<rc>();
+    comm::IndexT_MPI g = grid_size_.get<rc>();
+    comm::IndexT_MPI s = source_rank_index_.get<rc>();
     return n - i <= g && r == util::matrix::rankGlobalTile(i, g, s);
   }
 

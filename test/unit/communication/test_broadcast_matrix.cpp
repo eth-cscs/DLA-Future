@@ -21,10 +21,10 @@
 using namespace dlaf;
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
-using namespace dlaf_test;
+using namespace dlaf::test;
 using namespace dlaf::comm;
 
-using BroadcastMatrixTest = dlaf_test::SplittedCommunicatorsTest;
+using BroadcastMatrixTest = dlaf::comm::test::SplittedCommunicatorsTest;
 
 template <class T>
 T message_values(const TileElementIndex& index) {

@@ -14,8 +14,8 @@
 
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/index.h"
+#include "dlaf/matrix/tile.h"
 #include "dlaf/memory/memory_view.h"
-#include "dlaf/tile.h"
 #include "dlaf/types.h"
 
 #include "dlaf_test/matrix/util_tile.h"
@@ -28,11 +28,10 @@ namespace lantr {
 using dlaf::SizeType;
 using dlaf::TileElementSize;
 using dlaf::TileElementIndex;
-using dlaf::Tile;
 using dlaf::Device;
+using dlaf::matrix::Tile;
 
 using dlaf::tile::lantr;
-using dlaf::util::size_t::mul;
 using dlaf::matrix::test::set;
 
 template <class T>
@@ -63,7 +62,7 @@ template <class T>
 struct TileSetter {
   static const T value;
 
-  TileSetter(TileElementSize size, blas::Uplo uplo) : size_(size), uplo_(uplo) {}
+  TileSetter(const TileElementSize size, const blas::Uplo uplo) : size_(size), uplo_(uplo) {}
 
   T operator()(const TileElementIndex& index) const {
     const auto tr_size = std::min(size_.rows(), size_.cols());
@@ -100,25 +99,25 @@ private:
 };
 
 template <class T>
-const T TileSetter<T>::value = dlaf_test::TypeUtilities<T>::element(13, -13);
+const T TileSetter<T>::value = TypeUtilities<T>::element(13, -13);
 
 template <class T>
-void test_lantr(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag, const Tile<T, Device::CPU>& a,
-                NormT<T> norm_expected) {
+void test_lantr(const lapack::Norm norm, const blas::Uplo uplo, const blas::Diag diag,
+                const Tile<T, Device::CPU>& a, const NormT<T> norm_expected) {
   set(a, TileSetter<T>{a.size(), uplo});
 
-  SCOPED_TRACE(::testing::Message() << "LANTR: " << lapack::norm2str(norm) << ", " << a.size()
-                                    << ", ld = " << a.ld() << " uplo = " << blas::uplo2str(uplo)
-                                    << " diag = " << blas::diag2str(diag));
+  SCOPED_TRACE(::testing::Message() << "LANTR: " << norm << ", " << a.size() << ", ld = " << a.ld()
+                                    << " uplo = " << uplo << " diag = " << diag);
 
   EXPECT_FLOAT_EQ(norm_expected, lantr(norm, uplo, diag, a));
 }
 
 template <class T>
-void run(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag, const Tile<T, Device::CPU>& a) {
+void run(const lapack::Norm norm, const blas::Uplo uplo, const blas::Diag diag,
+         const Tile<T, Device::CPU>& a) {
   const TileElementSize size = a.size();
 
-  NormT<T> value = std::abs(TileSetter<T>::value);
+  const NormT<T> value = std::abs(TileSetter<T>::value);
   NormT<T> norm_expected = -1;
 
   switch (norm) {
@@ -156,7 +155,7 @@ void run(lapack::Norm norm, blas::Uplo uplo, blas::Diag diag, const Tile<T, Devi
       }
       break;
     case lapack::Norm::Two:
-      FAIL() << "norm " << lapack::norm2str(norm) << " is not supported by lantr";
+      FAIL() << "norm " << norm << " is not supported by lantr";
   }
 
   // by LAPACK documentation, if it is an empty matrix return 0

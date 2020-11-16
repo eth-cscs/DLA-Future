@@ -19,6 +19,7 @@
 
 #include "dlaf/common/assert.h"
 #include "dlaf/common/data.h"
+#include "dlaf/types.h"
 
 namespace dlaf {
 namespace common {
@@ -46,7 +47,7 @@ struct DataDescriptor {
   /// Create a Data pointing to @p n contiguous elements of type @p T starting at @p ptr.
   /// @param ptr  pointer to the first element of the underlying contiguous data,
   /// @param n    number of elements.
-  DataDescriptor(T* ptr, std::size_t n) noexcept : DataDescriptor(ptr, 1, n, 0) {}
+  DataDescriptor(T* ptr, SizeType n) noexcept : DataDescriptor(ptr, 1, n, 0) {}
 
   /// Create a DataDescriptor pointing to data with given structure.
   ///
@@ -60,11 +61,11 @@ struct DataDescriptor {
   /// @pre num_blocks != 0,
   /// @pre stride == 0 if num_blocks == 1,
   /// @pre stride >= blocksize if num_blocks > 1.
-  DataDescriptor(T* ptr, std::size_t num_blocks, std::size_t blocksize, std::size_t stride) noexcept
+  DataDescriptor(T* ptr, SizeType num_blocks, SizeType blocksize, SizeType stride) noexcept
       : data_(ptr), nblocks_(num_blocks), blocksize_(blocksize), stride_(num_blocks == 1 ? 0 : stride) {
-    DLAF_ASSERT_HEAVY(nblocks_ != 0, "");
-    DLAF_ASSERT_HEAVY(nullptr != data_, "");
-    DLAF_ASSERT_HEAVY(nblocks_ == 1 ? stride_ == 0 : stride_ >= blocksize_, "");
+    DLAF_ASSERT(num_blocks >= 0, "");
+    DLAF_ASSERT(blocksize >= 0, "");
+    DLAF_ASSERT(stride >= 0, "");
 
     if (blocksize_ == stride_) {
       blocksize_ = num_blocks * blocksize_;
@@ -93,26 +94,26 @@ struct DataDescriptor {
   /// Number of blocks.
   ///
   /// 1 in case of contiguous data (single block).
-  std::size_t nblocks() const noexcept {
+  SizeType nblocks() const noexcept {
     return nblocks_;
   }
 
   /// Number of elements in each block.
   ///
   /// For contiguous block, the return value equals to count().
-  std::size_t blocksize() const noexcept {
+  SizeType blocksize() const noexcept {
     return blocksize_;
   }
 
   /// Number of elements between the start of each block.
   ///
   /// 0 in case of contiguous data (single block).
-  std::size_t stride() const noexcept {
+  SizeType stride() const noexcept {
     return stride_;
   }
 
   /// Number of valid elements.
-  std::size_t count() const noexcept {
+  SizeType count() const noexcept {
     return is_contiguous() ? blocksize() : (nblocks() * blocksize());
   }
 
@@ -123,9 +124,9 @@ struct DataDescriptor {
 
 protected:
   T* data_;
-  std::size_t nblocks_;
-  std::size_t blocksize_;
-  std::size_t stride_;
+  SizeType nblocks_;
+  SizeType blocksize_;
+  SizeType stride_;
 };
 
 /// Helper class for creatig a DataDescriptor from a bounded C-array.
@@ -150,13 +151,18 @@ struct Buffer : public DataDescriptor<T> {
   /// Create a Buffer with given externally allocated memory.
   ///
   /// Acquire ownership of an externally allocated std::unique_ptr.
-  Buffer(std::unique_ptr<T[]>&& memory, const std::size_t N)
+  Buffer(std::unique_ptr<T[]>&& memory, const SizeType N)
       : DataDescriptor<T>(memory.get(), N), memory_(std::move(memory)) {}
 
   /// Create a Buffer internally allocating the memory.
   ///
   /// Internally allocates the memory for @param N contiguous elements.
-  Buffer(const std::size_t N) : Buffer(std::make_unique<T[]>(N), N) {}
+  Buffer(const SizeType N) : Buffer(std::make_unique<T[]>(static_cast<std::size_t>(N)), N) {}
+
+  /// Return true if it is allocated, false otherwise
+  operator bool() const {
+    return static_cast<bool>(memory_);
+  }
 
 protected:
   std::unique_ptr<T[]> memory_;
@@ -183,10 +189,25 @@ template <class DataIn>
 auto create_temporary_buffer(const DataIn& input) {
   using DataT = std::remove_const_t<typename common::data_traits<DataIn>::element_t>;
 
-  DLAF_ASSERT_HEAVY(data_count(input) > 0, "");
+  DLAF_ASSERT_HEAVY(data_count(input) > 0, data_count(input));
 
   return common::Buffer<DataT>(data_count(input));
 }
 
+/// Helper function ensuring to work with a contiguous Data, allocating a temporary buffer if needed
+///
+/// @param support_buffer changed just if the @p input buffer is not contiguous
+/// @return the given @p input if it is already contiguous, otherwise returns a newly allocated buffer
+template <class DataIn, class Buffer>
+auto make_contiguous(DataIn input, Buffer& support_buffer) {
+  using DataT = typename common::data_traits<DataIn>::element_t;
+
+  if (!input.is_contiguous()) {
+    support_buffer = common::create_temporary_buffer(input);
+    return common::DataDescriptor<DataT>(support_buffer);
+  }
+
+  return input;
+}
 }
 }

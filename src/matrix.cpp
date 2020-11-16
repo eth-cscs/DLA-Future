@@ -1,4 +1,4 @@
-#include <dlaf/matrix.h>
+#include <dlaf/matrix/matrix.h>
 
 namespace dlaf {
 namespace matrix {

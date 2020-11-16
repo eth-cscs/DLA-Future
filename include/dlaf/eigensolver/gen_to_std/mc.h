@@ -22,7 +22,7 @@
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/eigensolver/gen_to_std/api.h"
 #include "dlaf/lapack_tile.h"
-#include "dlaf/matrix.h"
+#include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/util_matrix.h"
 

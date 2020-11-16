@@ -12,7 +12,7 @@
 #include <blas.hh>
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/factorization/cholesky/mc.h"
-#include "dlaf/matrix.h"
+#include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 

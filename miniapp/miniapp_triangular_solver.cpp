@@ -20,7 +20,7 @@
 #include "dlaf/common/timer.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/init.h"
-#include "dlaf/matrix.h"
+#include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/solver/triangular.h"
 #include "dlaf/types.h"

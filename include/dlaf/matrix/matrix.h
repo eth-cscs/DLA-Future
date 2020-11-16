@@ -359,5 +359,5 @@ using matrix::Matrix;
 #endif
 }
 
-#include "dlaf/matrix.tpp"
-#include "dlaf/matrix_const.tpp"
+#include "dlaf/matrix/matrix.tpp"
+#include "dlaf/matrix/matrix_const.tpp"

@@ -17,7 +17,7 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/init.h"
 #include "dlaf/factorization/cholesky.h"
-#include "dlaf/matrix.h"
+#include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"

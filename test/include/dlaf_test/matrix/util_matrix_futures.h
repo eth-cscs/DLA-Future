@@ -18,7 +18,7 @@
 #include <hpx/local/future.hpp>
 
 #include "gtest/gtest.h"
-#include "dlaf/matrix.h"
+#include "dlaf/matrix/matrix.h"
 
 namespace dlaf {
 namespace matrix {

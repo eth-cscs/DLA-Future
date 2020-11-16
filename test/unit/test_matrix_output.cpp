@@ -84,74 +84,105 @@ template <class T>
 struct is_complex<std::complex<T>> : public std::true_type {};
 
 template <class T>
-struct numpy_type;
-
-template <>
-struct numpy_type<float> {
+struct numpy_type {
   static constexpr auto name = "float";
-};
 
-template <>
-struct numpy_type<double> {
-  static constexpr auto name = "float";
+  static T deserialize(const std::string& value_str) {
+    std::istringstream deserializer(value_str);
+    T value;
+    deserializer >> value;
+    return value;
+  }
 };
 
 template <class T>
 struct numpy_type<std::complex<T>> {
   static constexpr auto name = "complex";
-};
 
-template <class T>
-T deserialize_value(const std::string& value_str) {
-  std::istringstream deserializer(value_str);
-  if (is_complex<T>::value) {
-    char prefix_value[] = {"complex"};
-    deserializer.read(prefix_value, sizeof prefix_value - 1);
-    if (std::string("complex") != std::string(prefix_value))
-      throw std::runtime_error("error during complex deserialization");
+  static std::complex<T> deserialize(const std::string& value_str) {
+    const auto regex_real = "-?[0-9]+(?:\\.[0-9]+)?";
+    const std::regex regex_complex{std::string("(") + regex_real + ")\\s*\\+\\s*(" + regex_real + ")[jJ]"};
+
+    std::smatch matches;
+    if (!std::regex_match(value_str, matches, regex_complex))
+      throw std::runtime_error(value_str + " does not look like a complex number");
+
+    const auto real = numpy_type<T>::deserialize(matches[1]);
+    const auto imag = numpy_type<T>::deserialize(matches[2]);
+
+    return {real, imag};
   }
-
-  T value;
-  deserializer >> value;
-  return value;
-}
+};
 
 template <class T>
 bool compare_values(const T& a, const T& b) {
   return std::abs(a - b) <= std::abs(std::numeric_limits<T>::epsilon());
 }
 
-template <class MatrixValues>
-::testing::AssertionResult parseAndCheckMatrix(const std::string numpy_output,
-                                               const LocalElementSize& size, MatrixValues&& values) {
-  using T = typename std::remove_const_t<decltype(values({0, 0}))>;
+template <class T>
+::testing::AssertionResult parseAndCheckTile(const std::string numpy_output,
+                                             const Tile<const T, Device::CPU>& tile) {
+  // np.array([complex(12,0), complex(13,-1), complex(13,1), complex(14,0), ]).reshape(2, 2).T
+  const std::regex regex_syntax{"np.array\\(\\[(.*)\\]\\).reshape\\((\\d+), (\\d+)\\).T"};
 
+  std::smatch syntax_components;
+  if (!std::regex_match(numpy_output, syntax_components, regex_syntax))
+    return ::testing::AssertionFailure() << "syntax not valid for " << numpy_output;
+
+  const std::string values_section = syntax_components[1].str();
+  const auto size = transposed(TileElementSize{std::stoi(syntax_components[2].str()),
+                             std::stoi(syntax_components[3].str())});
+
+  if (size != tile.size())
+    return ::testing::AssertionFailure() << size << " " << tile.size();
+
+  std::vector<T> values;
+  const std::regex regex_csv{"[^,\\s]+"};
+  auto values_begin = std::sregex_iterator(values_section.begin(), values_section.end(), regex_csv);
+  std::transform(values_begin, std::sregex_iterator(), std::back_inserter(values),
+      [](const auto& match) { return numpy_type<T>::deserialize(match.str()); });
+
+  std::vector<T> expected_values;
+  const auto tile_elements = iterate_range2d(tile.size());
+  std::transform(tile_elements.begin(), tile_elements.end(), std::back_inserter(expected_values),
+                 std::ref(tile));
+
+  if (!std::equal(expected_values.begin(), expected_values.end(), values.begin(), compare_values<T>))
+    return ::testing::AssertionFailure() << "values differ between expected and output";
+
+  return ::testing::AssertionSuccess();
+}
+
+template <class T>
+::testing::AssertionResult parseAndCheckMatrix(const std::string numpy_output, Matrix<T, Device::CPU>& mat) {
   std::stringstream stream(numpy_output);
 
   // look for definition and check it, in the first line
   std::string definition;
   std::getline(stream, definition);
 
-  std::regex regex_definition("(.+) = np.zeros\\(\\(([0-9]+), ([0-9]+)\\), dtype=np\\.(.+)\\)");
+  const std::regex regex_definition("(.+) = np.zeros\\(\\(([0-9]+), ([0-9]+)\\), dtype=np\\.(.+)\\)");
   std::smatch matches;
-  std::regex_match(definition, matches, regex_definition);
+  if (!std::regex_match(definition, matches, regex_definition))
+    return ::testing::AssertionFailure()
+      << "'" << definition << "'\n"
+      << "does not look like a numpy matrix definition";
 
   const std::string symbol = matches[1].str();
-
   const SizeType rows = std::stoi(matches[2].str());
   const SizeType cols = std::stoi(matches[3].str());
 
-  const std::string type = matches[4].str();
-  if (std::string(numpy_type<T>::name) != type)
-    return ::testing::AssertionFailure();
+  const std::string matrix_type = matches[4].str();
+  if (std::string(numpy_type<T>::name) != matrix_type)
+    return ::testing::AssertionFailure() << std::string(numpy_type<T>::name) << " " << matrix_type;
 
-  if (rows != size.rows() || cols != size.cols())
-    return ::testing::AssertionFailure() << size << " " << rows << " " << cols;
+  if (rows != mat.size().rows() || cols != mat.size().cols())
+    return ::testing::AssertionFailure() << mat.size() << " " << rows << " " << cols;
 
   // each next line must contain an assignment: one for each element of the matrix
   SizeType count_values = 0;
   for (std::string line; std::getline(stream, line); ++count_values) {
-    const std::regex regex_assignment("([^\\[]+)\\[([0-9]+),([0-9]+)\\] = (.+)");
+    const std::regex regex_assignment("([^\\[]+)\\[\\s*([0-9]+)\\s*:\\s*([0-9]+)\\s*,\\s*([0-9]+)\\s*:\\s*([0-9]+)\\s*\\] = (.+)");
 
     std::smatch matches;
     if (!std::regex_match(line, matches, regex_assignment))
@@ -160,61 +191,23 @@ template <class MatrixValues>
     const std::string assign_symbol = matches[1].str();
     if (symbol != assign_symbol)
       return ::testing::AssertionFailure()
-             << "defined " << symbol << " but assigning to " << assign_symbol;
+             << "symbol mismatch:" << symbol << " vs " << assign_symbol;
 
-    const SizeType i = std::stoi(matches[2].str());
-    const SizeType j = std::stoi(matches[3].str());
-    const T value = deserialize_value<T>(matches[4]);
+    const SizeType i_beg = std::stoi(matches[2].str());
+    const SizeType i_end = std::stoi(matches[3].str());
+    const SizeType j_beg = std::stoi(matches[4].str());
+    const SizeType j_end = std::stoi(matches[5].str());
 
-    const auto expected_value = values({i, j});
+    const GlobalElementIndex ij_global{i_beg, j_beg};
+    const TileElementSize size_tile{i_end - i_beg, j_end - j_beg};
 
-    if (!compare_values(expected_value, value))
-      return ::testing::AssertionFailure() << value << " " << expected_value << " " << matches[4].str();
+    const auto ij_local = mat.distribution().globalTileIndex(ij_global);
+
+    const auto& tile = mat.read(ij_local).get();
+
+    EXPECT_EQ(tile.size(), size_tile);
+    EXPECT_TRUE(parseAndCheckTile(matches[6].str(), tile));
   }
-
-  if (count_values != size.rows() * size.cols())
-    return ::testing::AssertionFailure()
-           << "assigned " << count_values << " of " << size.rows() * size.cols();
-
-  return ::testing::AssertionSuccess();
-}
-
-template <class T>
-::testing::AssertionResult parseAndCheckTile(const std::string numpy_output,
-                                             const Tile<const T, Device::CPU>& tile) {
-  // np.array([complex(12,0), complex(13,-1), complex(13,1), complex(14,0), ]).reshape(2, 2).T
-  const auto syntax = "np.array\\(\\[(.*)\\]\\).reshape\\((\\d+), (\\d+)\\).T";
-  const std::regex regex_syntax(syntax);
-
-  std::smatch syntax_components;
-  if (!std::regex_match(numpy_output, syntax_components, regex_syntax))
-    return ::testing::AssertionFailure() << "syntax not valid for " << numpy_output;
-
-  const std::string values_section = syntax_components[1].str();
-  const TileElementSize size{std::stoi(syntax_components[2].str()),
-                             std::stoi(syntax_components[3].str())};
-
-  if (size != tile.size())
-    return ::testing::AssertionFailure() << size << " " << tile.size();
-
-  const auto regex_real = "(?:-?(?:[0-9]+\\.)?[0-9]+)";
-  const auto regex_complex = std::string("complex\\(") + regex_real + ",\\s*" + regex_real + "\\)";
-  const std::regex regex_value{std::string("(") + regex_real + "|" + regex_complex + ")"};
-
-  std::vector<T> values;
-  auto values_begin = std::sregex_iterator(values_section.begin(), values_section.end(), regex_value);
-  auto deserialize_match = [](const auto& match) { return deserialize_value<T>(match.str()); };
-  std::transform(values_begin, std::sregex_iterator(), std::back_inserter(values), deserialize_match);
-
-  std::vector<T> expected_values;
-  const auto tile_elements = iterate_range2d(tile.size());
-  std::transform(tile_elements.begin(), tile_elements.end(), std::back_inserter(expected_values),
-                 std::ref(tile));
-
-  // TODO equal is not the best choice, it would be better std::abs(a-b)
-  if (!std::equal(std::begin(expected_values), std::end(expected_values), std::begin(values),
-                  compare_values<T>))
-    return ::testing::AssertionFailure() << "values differ between expected and output";
 
   return ::testing::AssertionSuccess();
 }
@@ -235,7 +228,7 @@ TYPED_TEST(MatrixOutputTest, NumpyFormat) {
     std::ostringstream stream_matrix_output;
     print_numpy(stream_matrix_output, mat, "mat");
 
-    EXPECT_TRUE(parseAndCheckMatrix(stream_matrix_output.str(), sz.size, el));
+    EXPECT_TRUE(parseAndCheckMatrix(stream_matrix_output.str(), mat));
 
     for (const auto& index : iterate_range2d(mat.nrTiles())) {
       const auto& tile = mat.read(index).get();

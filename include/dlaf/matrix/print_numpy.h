@@ -22,23 +22,29 @@ namespace dlaf {
 namespace matrix {
 
 namespace internal {
+
+// For reference see https://numpy.org/doc/stable/user/basics.types.html
+// Moreover, considering the small number of digits in the output,
+// just single-precision types are used.
 template <class T>
-constexpr const char* print_numpy_type(const T&) {
-  return "np.float";
+struct numpy_datatype {
+  static constexpr auto typestring = "float";
+};
+
+template <class T>
+struct numpy_datatype<std::complex<T>> {
+  static constexpr auto typestring = "complex";
+};
+
+template <class T>
+std::string numpy_value(const T& value) {
+  std::ostringstream os;
+  os << value;
+  return os.str();
 }
 
 template <class T>
-constexpr const char* print_numpy_type(const std::complex<T>&) {
-  return "np.complex";
-}
-
-template <class T>
-std::string print_numpy_value(const T& value) {
-  return std::to_string(value);
-}
-
-template <class T>
-std::string print_numpy_value(const std::complex<T>& value) {
+std::string numpy_value(const std::complex<T>& value) {
   std::ostringstream os;
   os << "complex" << value;
   return os.str();
@@ -56,7 +62,7 @@ Stream& print_numpy(Stream& os, const dlaf::Tile<const T, Device::CPU>& tile) {
   // For this reason, values are printed in a column-major order, and reordering is deferred
   // to python by tranposing the resulting array (and shaping it accordingly)
   for (const auto& index : iterate_range2d(tile.size()))
-    os << internal::print_numpy_value(tile(index)) << ", ";
+    os << internal::numpy_value(tile(index)) << ", ";
   os << "]).reshape" << transposed(tile.size()) << ".T";
   return os;
 }
@@ -70,7 +76,7 @@ Stream& print_numpy(Stream& os, MatrixLikeT<const T, device>& matrix, std::strin
   // clang-format off
   os
     << symbol << " = np.zeros(" << distribution.size()
-    << ", dtype=" << internal::print_numpy_type(T{}) << ")\n";
+    << ", dtype=np." << internal::numpy_datatype<T>::typestring << ")\n";
   // clang-format on
 
   const LocalTileSize local_tiles = distribution.localNrTiles();

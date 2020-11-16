@@ -114,7 +114,7 @@ T deserialize_value(const std::string& value_str) {
   T value;
   deserializer >> value;
   return value;
-};
+}
 
 template <class T>
 bool compare_values(const T& a, const T& b) {

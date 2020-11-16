@@ -18,8 +18,8 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/sync/reduce.h"
 #include "dlaf/lapack_tile.h"
-#include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/distribution.h"
+#include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 

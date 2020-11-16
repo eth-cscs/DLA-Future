@@ -45,41 +45,64 @@ std::string print_numpy_value(const std::complex<T>& value) {
 }
 }
 
+/// Print a tile as a numpy array
+template <class Stream, class T>
+Stream& print_numpy(Stream& os, const dlaf::Tile<const T, Device::CPU>& tile) {
+  os << "np.array([";
+
+  // Note:
+  // iterate_range2d loops over indices in column-major order, while python default
+  // order is row-major.
+  // For this reason, values are printed in a column-major order, and reordering is deferred
+  // to python by tranposing the resulting array (and shaping it accordingly)
+  for (const auto& index : iterate_range2d(tile.size()))
+    os << internal::print_numpy_value(tile(index)) << ", ";
+  os << "]).reshape" << transposed(tile.size()) << ".T";
+  return os;
+}
+
 template <class Stream, class T, Device device, template <class, Device> class MatrixLikeT>
 Stream& print_numpy(Stream& os, MatrixLikeT<const T, device>& matrix, std::string symbol) {
   using common::iterate_range2d;
 
   const auto& distribution = matrix.distribution();
 
-  os << symbol << " = np.zeros(" << distribution.size() << ", dtype=" << internal::print_numpy_type(T{})
-     << ")" << std::endl;
+  // clang-format off
+  os
+    << symbol << " = np.zeros(" << distribution.size()
+    << ", dtype=" << internal::print_numpy_type(T{}) << ")\n";
+  // clang-format on
 
-  for (const auto& index_tile : iterate_range2d(distribution.localNrTiles())) {
-    const auto& tile = matrix.read(index_tile).get();
+  const LocalTileSize local_tiles = distribution.localNrTiles();
+  const LocalTileIndex last_tile{local_tiles.rows() - 1, local_tiles.cols() - 1};
 
-    for (const auto& index_el : iterate_range2d(tile.size())) {
-      GlobalElementIndex index_g{
-          distribution.template globalElementFromLocalTileAndTileElement<Coord::Row>(index_tile.row(),
-                                                                                     index_el.row()),
-          distribution.template globalElementFromLocalTileAndTileElement<Coord::Col>(index_tile.col(),
-                                                                                     index_el.col()),
-      };
-      os << symbol << "[" << index_g.row() << "," << index_g.col()
-         << "] = " << internal::print_numpy_value(tile(index_el)) << std::endl;
-    }
+  auto getTileTopLeft = [&distribution](const GlobalTileIndex& local) -> GlobalElementIndex {
+    return {
+        distribution.template globalElementFromLocalTileAndTileElement<Coord::Row>(local.row(), 0),
+        distribution.template globalElementFromLocalTileAndTileElement<Coord::Col>(local.col(), 0),
+    };
+  };
+
+  for (const auto& ij_local_tile : iterate_range2d(local_tiles)) {
+    const auto& tile = matrix.read(ij_local_tile).get();
+
+    const auto ij_tile = distribution.globalTileIndex(ij_local_tile);
+    const auto index_tl = getTileTopLeft(ij_tile);
+
+    // clang-format off
+    os
+      << symbol << "["
+      << index_tl.row() << ":" << index_tl.row() + tile.size().rows() << ", "
+      << index_tl.col() << ":" << index_tl.col() + tile.size().cols()
+      << "] = ";
+    // clang-format on
+
+    print_numpy(os, tile);
+
+    if (ij_local_tile != last_tile)
+      os << "\n";
   }
 
-  return os;
-}
-
-template <class Stream, class T>
-Stream& print_numpy(Stream& os, const dlaf::Tile<const T, Device::CPU>& tile) {
-  os << "np.array([";
-  for (const auto& index : iterate_range2d(tile.size()))
-    os << internal::print_numpy_value(tile(index)) << ", ";
-  os << "]).reshape" << tile.size();
-  // since numpy reads a flat array as row-major, but iterate_range2d scans col-major
-  os << ".T";
   return os;
 }
 

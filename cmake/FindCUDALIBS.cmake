@@ -11,7 +11,7 @@
 
 #
 # To find CUDA, do one of the following:
-#   - Set `CUDALIBS_ROOT` as an environment variable or a CMake variable
+#   - Set `CUDALIBS_ROOT` as an environment variable or as a CMake variable
 #   - Set the environment variable `CUDA_HOME`
 #   - Use `enable_language(CUDA)` and set `CMAKE_CUDA_COMPILER` if cuda in
 #      custom directory

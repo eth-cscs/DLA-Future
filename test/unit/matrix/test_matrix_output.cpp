@@ -53,11 +53,11 @@ const std::vector<TestSizes> sizes({
 });
 
 template <class T>
-T el(const GlobalElementIndex& index) {
+T pattern_values(const GlobalElementIndex& index) {
   SizeType i = index.row();
   SizeType j = index.col();
   return dlaf::test::TypeUtilities<T>::element(i + j, j - i);
-};
+}
 
 template <class T>
 struct numpy_type {
@@ -136,7 +136,7 @@ TYPED_TEST(MatrixOutputLocalTest, NumpyFormatTile) {
     Matrix<TypeParam, Device::CPU> mat(sz.size, sz.block_size);
     EXPECT_EQ(Distribution(sz.size, sz.block_size), mat.distribution());
 
-    set(mat, el<TypeParam>);
+    set(mat, pattern_values<TypeParam>);
 
     for (const auto& index : iterate_range2d(mat.nrTiles())) {
       const auto& tile = mat.read(index).get();
@@ -221,7 +221,7 @@ TYPED_TEST(MatrixOutputLocalTest, NumpyFormatMatrix) {
     Matrix<TypeParam, Device::CPU> mat(sz.size, sz.block_size);
     EXPECT_EQ(Distribution(sz.size, sz.block_size), mat.distribution());
 
-    set(mat, el<TypeParam>);
+    set(mat, pattern_values<TypeParam>);
 
     std::ostringstream stream_matrix_output;
     print_numpy(stream_matrix_output, mat, "mat");
@@ -251,7 +251,7 @@ TYPED_TEST(MatrixOutputTest, NumpyFormatMatrix) {
       Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
       Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
 
-      set(mat, el<TypeParam>);
+      set(mat, pattern_values<TypeParam>);
 
       std::ostringstream stream_matrix_output;
       print_numpy(stream_matrix_output, mat, "mat");

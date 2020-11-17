@@ -59,3 +59,10 @@ DLAF_addTest(test_util_matrix
   USE_MAIN MPIHPX
   MPIRANKS 6
 )
+
+DLAF_addTest(test_matrix_output
+  SOURCES test_matrix_output.cpp
+  LIBRARIES dlaf.core
+  USE_MAIN MPIHPX
+  MPIRANKS 6
+)

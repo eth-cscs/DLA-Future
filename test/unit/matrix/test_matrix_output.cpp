@@ -27,10 +27,9 @@
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
-using namespace dlaf::comm;
 using namespace dlaf::matrix;
-using namespace dlaf::matrix::test;
-using namespace testing;
+
+using dlaf::matrix::test::set;
 
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new dlaf::test::CommunicatorGrid6RanksEnvironment);
@@ -234,14 +233,14 @@ TYPED_TEST(MatrixOutputLocalTest, NumpyFormatMatrix) {
 template <class T>
 class MatrixOutputTest : public ::testing::Test {
 public:
-  const std::vector<CommunicatorGrid>& commGrids() {
+  const auto& commGrids() {
     return dlaf::test::comm_grids;
   }
 };
 
 TYPED_TEST_SUITE(MatrixOutputTest, dlaf::test::MatrixElementTypes);
 
-GlobalElementSize globalTestSize(const LocalElementSize& size, const Size2D& grid_size) {
+GlobalElementSize globalTestSize(const LocalElementSize& size, const comm::Size2D& grid_size) {
   return {size.rows() * grid_size.rows(), size.cols() * grid_size.cols()};
 }
 

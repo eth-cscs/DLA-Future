@@ -76,10 +76,10 @@ struct numpy_type<std::complex<T>> {
   static constexpr auto name = "csingle";
 
   static std::complex<T> deserialize(const std::string& value_str) {
-    const std::string regex_sign{"([\\+\\-])"};              // capture sign
-    const std::string regex_real{"([0-9]+(?:\\.[0-9]+)?)"};  // <floating-point value>
-    const std::regex regex_complex{"\\s*" + regex_sign + "?\\s*" + regex_real +  // <(+/-)><real>
-                                   "\\s*" + regex_sign + "\\s*" + regex_real +   // <+/-><imag>
+    const std::string regex_sign{"([\\+\\-])"};              // <capture sign>
+    const std::string regex_real{"([0-9]+(?:\\.[0-9]+)?)"};  // <floating-point value> without sign
+    const std::regex regex_complex{"\\s*" + regex_sign + "?\\s*" + regex_real +  // <(+/-)> <real>
+                                   "\\s*" + regex_sign + "\\s*" + regex_real +   // <+/-> <imag>
                                    "[jJ]"};                                      // j (or J)
 
     std::smatch matches;

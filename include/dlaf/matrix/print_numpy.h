@@ -15,7 +15,7 @@
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/range2d.h"
 #include "dlaf/matrix.h"
-#include "dlaf/tile.h"
+#include "dlaf/matrix/tile.h"
 #include "dlaf/types.h"
 
 namespace dlaf {
@@ -53,7 +53,7 @@ std::string numpy_value(const std::complex<T>& value) {
 
 /// Print a tile as a numpy array
 template <class Stream, class T>
-Stream& print_numpy(Stream& os, const dlaf::Tile<const T, Device::CPU>& tile) {
+Stream& print_numpy(Stream& os, const Tile<const T, Device::CPU>& tile) {
   os << "np.array([";
 
   // Note:

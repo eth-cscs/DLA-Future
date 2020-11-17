@@ -9,7 +9,6 @@
 //
 
 #include "dlaf/matrix/print_numpy.h"
-#include "dlaf/matrix_output.h"
 
 #include <algorithm>
 #include <iterator>
@@ -31,16 +30,15 @@ using namespace dlaf;
 using namespace dlaf::comm;
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
-using namespace dlaf_test;
 using namespace testing;
 
 ::testing::Environment* const comm_grids_env =
-    ::testing::AddGlobalTestEnvironment(new dlaf_test::CommunicatorGrid6RanksEnvironment);
+    ::testing::AddGlobalTestEnvironment(new dlaf::test::CommunicatorGrid6RanksEnvironment);
 
 template <typename Type>
 class MatrixOutputLocalTest : public ::testing::Test {};
 
-TYPED_TEST_SUITE(MatrixOutputLocalTest, MatrixElementTypes);
+TYPED_TEST_SUITE(MatrixOutputLocalTest, dlaf::test::MatrixElementTypes);
 
 struct TestSizes {
   LocalElementSize size;
@@ -59,22 +57,8 @@ template <class T>
 T el(const GlobalElementIndex& index) {
   SizeType i = index.row();
   SizeType j = index.col();
-  return TypeUtilities<T>::element(i + j, j - i);
+  return dlaf::test::TypeUtilities<T>::element(i + j, j - i);
 };
-
-TYPED_TEST(MatrixOutputLocalTest, printElements) {
-  using Type = float;
-  for (const auto& sz : sizes) {
-    Matrix<Type, Device::CPU> mat(sz.size, sz.block_size);
-    EXPECT_EQ(Distribution(sz.size, sz.block_size), mat.distribution());
-
-    set(mat, el<Type>);
-
-    std::cout << "Matrix mat " << mat << std::endl;
-    std::cout << "Printing elements" << std::endl;
-    printElements(mat);
-  }
-}
 
 template <class T>
 struct numpy_type {
@@ -249,11 +233,11 @@ template <class T>
 class MatrixOutputTest : public ::testing::Test {
 public:
   const std::vector<CommunicatorGrid>& commGrids() {
-    return comm_grids;
+    return dlaf::test::comm_grids;
   }
 };
 
-TYPED_TEST_SUITE(MatrixOutputTest, MatrixElementTypes);
+TYPED_TEST_SUITE(MatrixOutputTest, dlaf::test::MatrixElementTypes);
 
 GlobalElementSize globalTestSize(const LocalElementSize& size, const Size2D& grid_size) {
   return {size.rows() * grid_size.rows(), size.cols() * grid_size.cols()};

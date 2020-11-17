@@ -84,34 +84,6 @@ void gemm_trailing_matrix_tile(hpx::threads::executors::pool_executor trailing_m
 }
 
 template <class T>
-double sum_tile(matrix::Tile<const T, Device::CPU> const& t) {
-  TileElementSize ts = t.size();
-  double sum = 0;
-  for (SizeType j = 0; j < ts.cols(); ++j) {
-    for (SizeType i = 0; i < ts.rows(); ++i) {
-      sum += std::norm(t(TileElementIndex(i, j)));
-    }
-  }
-  return sum;
-}
-
-template <class T>
-void print_tile(hpx::threads::executors::pool_executor ex,
-                hpx::shared_future<matrix::Tile<const T, Device::CPU>> ft, std::string info_str) {
-  using ConstTile_t = matrix::Tile<const T, Device::CPU>;
-  auto print_f = [info_str](hpx::shared_future<ConstTile_t> ft) {
-    const ConstTile_t& t = ft.get();
-    {
-      static hpx::lcos::local::mutex mt;
-      std::lock_guard<hpx::lcos::local::mutex> lk(mt);
-      std::cout.precision(17);
-      std::cout << info_str << " | sum : " << sum_tile(t) << "\n\n";
-    }
-  };
-  hpx::dataflow(std::move(ex), std::move(print_f), std::move(ft));
-}
-
-template <class T>
 void send_tile(hpx::threads::executors::pool_executor executor_hp,
                common::Pipeline<comm::executor>& mpi_task_chain,
                hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile) {
@@ -441,11 +413,6 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
         GlobalTileIndex ij_idx(i, j);
         comm::Index2D ij_rank = distr.rankGlobalTile(ij_idx);
         if (this_rank == ij_rank) {
-          // std::stringstream si, sj;
-          // si << this_rank << " : " << comm::Index2D(i, k);
-          // print_tile(executor_hp, panel[i], si.str());
-          // sj << this_rank << " : " << comm::Index2D(j, k);
-          // print_tile(executor_hp, panel[j], sj.str());
           gemm_trailing_matrix_tile(executor_normal, panel[i], panel[j], mat_a(ij_idx));
         }
       }

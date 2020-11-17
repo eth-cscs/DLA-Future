@@ -14,7 +14,7 @@
 
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/range2d.h"
-#include "dlaf/matrix.h"
+#include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/types.h"
 

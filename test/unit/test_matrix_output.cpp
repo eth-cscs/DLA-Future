@@ -78,7 +78,7 @@ TYPED_TEST(MatrixOutputLocalTest, printElements) {
 
 template <class T>
 struct numpy_type {
-  static constexpr auto name = "float";
+  static constexpr auto name = "single";
 
   static T deserialize(const std::string& value_str) {
     std::istringstream deserializer(value_str);
@@ -90,7 +90,7 @@ struct numpy_type {
 
 template <class T>
 struct numpy_type<std::complex<T>> {
-  static constexpr auto name = "complex";
+  static constexpr auto name = "csingle";
 
   static std::complex<T> deserialize(const std::string& value_str) {
     const std::string regex_real = "(-?[0-9]+(?:\\.[0-9]+)?)";  // <floating-point value>

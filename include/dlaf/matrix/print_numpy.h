@@ -28,12 +28,12 @@ namespace internal {
 // just single-precision types are used.
 template <class T>
 struct numpy_datatype {
-  static constexpr auto typestring = "float";
+  static constexpr auto typestring = "single";
 };
 
 template <class T>
 struct numpy_datatype<std::complex<T>> {
-  static constexpr auto typestring = "complex";
+  static constexpr auto typestring = "csingle";
 };
 
 template <class T>

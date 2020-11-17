@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2020, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -24,9 +24,8 @@ namespace matrix {
 ///
 /// Given a matrix with the same geometries and distribution, this function submits tasks that will
 /// perform the copy of each tile.
-template <template <class, Device> class MatrixTypeSrc, template <class, Device> class MatrixTypeDst,
-          class T, Device device>
-void copy(MatrixTypeSrc<const T, device>& source, MatrixTypeDst<T, device>& dest) {
+template <class T, Device Source, Device Destination>
+void copy(Matrix<const T, Source>& source, Matrix<T, Destination>& dest) {
   const auto& distribution = source.distribution();
 
   DLAF_ASSERT(matrix::equal_size(source, dest), source, dest);
@@ -38,13 +37,12 @@ void copy(MatrixTypeSrc<const T, device>& source, MatrixTypeDst<T, device>& dest
 
   // This prevents a compiler error in `hpx::util::unwrapping()` which is unable to deduce the correct
   // overload for tile `copy()`.
-  void (&cpy)(const matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T, Device::CPU>&) = copy<T>;
+  void (&cpy)(const matrix::Tile<const T, Source>&, const matrix::Tile<T, Destination>&) = copy<T>;
 
   for (SizeType j = 0; j < local_tile_cols; ++j)
     for (SizeType i = 0; i < local_tile_rows; ++i)
       hpx::dataflow(hpx::util::unwrapping(cpy), source.read(LocalTileIndex(i, j)),
                     dest(LocalTileIndex(i, j)));
 }
-
 }
 }

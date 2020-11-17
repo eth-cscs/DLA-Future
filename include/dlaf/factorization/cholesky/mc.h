@@ -326,7 +326,7 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
   using ConstTile_t = matrix::Tile<const T, Device::CPU>;
 
   // TODO: set a different value
-  constexpr int ntiles_batch = 2;
+  constexpr int ntiles_batch = 4;
 
   // Set up executor on the default queue with high priority.
   pool_executor executor_hp("default", thread_priority_high);

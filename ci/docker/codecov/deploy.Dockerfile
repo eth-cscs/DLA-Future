@@ -35,8 +35,7 @@ RUN mkdir ${BUILD} && cd ${BUILD} && \
       -DLAPACK_CUSTOM_INCLUDE_DIR=/usr/local/include \
       -DLAPACK_CUSTOM_LIBRARY=openblas \
       -DDLAF_WITH_CUDA=${DLAF_WITH_CUDA} \
-      -DCMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES=/usr/local/cuda/targets/x86_64-linux/include \
-      -DCMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES="/usr/local/cuda/targets/x86_64-linux/lib/stubs;/usr/local/cuda/targets/x86_64-linux/lib;/usr/lib/gcc/x86_64-linux-gnu/7;/usr/lib/x86_64-linux-gnu;/usr/lib;/lib/x86_64-linux-gnu;/lib;/usr/local/cuda/lib64/stubs" \
+      -DCUDALIBS_ROOT=/usr/local/cuda/targets/x86_64-linux \
       -DDLAF_WITH_MKL=OFF \
       -DDLAF_WITH_TEST=ON \
       -DDLAF_BUILD_MINIAPPS=ON \

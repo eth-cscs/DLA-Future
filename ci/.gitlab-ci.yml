@@ -45,7 +45,7 @@ cpu release build:
     BASE_IMAGE: ubuntu:18.04
     SLURM_CONSTRAINT: mc
     CORES_PER_NODE: 36
-    USE_CODECOV: false
+    USE_CODECOV: "false"
 
 cpu codecov build:
   extends: .build_common
@@ -58,7 +58,7 @@ cpu codecov build:
     BASE_IMAGE: ubuntu:18.04
     SLURM_CONSTRAINT: mc
     CORES_PER_NODE: 36
-    USE_CODECOV: true
+    USE_CODECOV: "true"
 
 gpu release build:
   extends: .build_common
@@ -71,7 +71,7 @@ gpu release build:
     BASE_IMAGE: nvidia/cuda:10.2-devel-ubuntu18.04
     SLURM_CONSTRAINT: gpu
     CORES_PER_NODE: 12
-    USE_CODECOV: false
+    USE_CODECOV: "false"
 
 gpu codecov build:
   extends: .build_common
@@ -84,7 +84,7 @@ gpu codecov build:
     BASE_IMAGE: nvidia/cuda:10.2-devel-ubuntu18.04
     SLURM_CONSTRAINT: gpu
     CORES_PER_NODE: 12
-    USE_CODECOV: true
+    USE_CODECOV: "true"
 
 notify_github_start:
   stage: build

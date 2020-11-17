@@ -23,7 +23,7 @@
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/functions_sync.h"
-#include "dlaf/matrix.h"
+#include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 
 namespace dlaf {
@@ -131,7 +131,7 @@ void QR<Backend::MC, Device::CPU>::computeTFactor(
         std::vector<T> out_data(to_sizet(t_size.rows()));
         auto&& output_t = make_data(out_data.data(), t_size.rows());
         // TODO reduce just the current, otherwise reduce all together
-        reduce(rank_v0.row(), comm_wrapper().colCommunicator(), MPI_SUM, input_t, output_t);
+        reduce(rank_v0.row(), comm_wrapper.ref().colCommunicator(), MPI_SUM, input_t, output_t);
         common::copy(output_t, input_t);
       });
 

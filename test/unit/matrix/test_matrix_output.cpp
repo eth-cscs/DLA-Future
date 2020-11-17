@@ -77,17 +77,18 @@ struct numpy_type<std::complex<T>> {
   static constexpr auto name = "csingle";
 
   static std::complex<T> deserialize(const std::string& value_str) {
-    const std::string regex_real = "(-?[0-9]+(?:\\.[0-9]+)?)";  // <floating-point value>
-    const std::regex regex_complex{regex_real +                 // <real>
-                                   "\\s*\\+\\s*" +              // +
-                                   regex_real + "[jJ]"};        // <imag>j (or J)
+    const std::string regex_sign{"([\\+\\-])"};              // capture sign
+    const std::string regex_real{"([0-9]+(?:\\.[0-9]+)?)"};  // <floating-point value>
+    const std::regex regex_complex{"\\s*" + regex_sign + "?\\s*" + regex_real +  // <(+/-)><real>
+                                   "\\s*" + regex_sign + "\\s*" + regex_real +   // <+/-><imag>
+                                   "[jJ]"};                                      // j (or J)
 
     std::smatch matches;
     DLAF_ASSERT(std::regex_match(value_str, matches, regex_complex), value_str,
-                " does not look like a complex number");
+                "does not look like a complex number");
 
-    const auto real = numpy_type<T>::deserialize(matches[1]);
-    const auto imag = numpy_type<T>::deserialize(matches[2]);
+    const auto real = numpy_type<T>::deserialize(matches[1].str() + matches[2].str());
+    const auto imag = numpy_type<T>::deserialize(matches[3].str() + matches[4].str());
 
     return {real, imag};
   }
@@ -110,8 +111,9 @@ template <class T>
     return ::testing::AssertionFailure() << size << " " << tile.size();
 
   std::vector<T> values;
-  const std::regex regex_csv{"[^,\\s]+"};  // TODO this does not work very well
-  auto values_begin = std::sregex_iterator(values_section.begin(), values_section.end(), regex_csv);
+  const std::regex regex_csv{"[^,\\s][^,]*"};
+  auto values_begin = std::sregex_iterator(values_section.begin(), values_section.end(), regex_csv,
+                                           std::regex_constants::match_not_null);
   std::transform(values_begin, std::sregex_iterator(), std::back_inserter(values),
                  [](const auto& match) { return numpy_type<T>::deserialize(match.str()); });
 

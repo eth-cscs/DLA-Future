@@ -22,7 +22,7 @@ stages:
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   script:
-    - BUILD_IMAGE=$BUILD_IMAGE_BASE`sha256sum $BUILD_DOCKER_FILE | head -c 64`
+    - export BUILD_IMAGE=$BUILD_IMAGE_BASE`sha256sum $BUILD_DOCKER_FILE | head -c 64`
     - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE --build-arg BASE_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 -f $BUILD_DOCKER_FILE --network=host .
     - docker push $BUILD_IMAGE
     - docker build -t $DEPLOY_IMAGE --build-arg BUILD_IMAGE --build-arg DEPLOY_IMAGE --build-arg DLAF_WITH_CUDA -f $DEPLOY_DOCKER_FILE --network=host .

@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2020, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -11,6 +11,8 @@
 #pragma once
 
 /// @file
+
+#ifdef DLAF_WITH_CUDA
 
 #include <cuda_runtime.h>
 
@@ -22,6 +24,7 @@ namespace dlaf {
 namespace cuda {
 
 // A Wrapper class for an event used for synchronization
+// TODO: Currently unused. Keep around as an alternative?
 class Event {
   bool is_moved;
   cudaEvent_t event_;
@@ -59,7 +62,7 @@ public:
   }
 
   // Queries if the event has completed and yields the HPX task if is not.
-  void query() const noexcept {
+  void wait() const noexcept {
     hpx::util::yield_while([event = event_] {
       // Note that the call succeeds even if the event is associated to a device that is different from
       // the current device on the host thread. That could be the case if a previous task executing on
@@ -85,3 +88,5 @@ public:
 
 }
 }
+
+#endif

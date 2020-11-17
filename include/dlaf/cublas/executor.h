@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2020, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -12,6 +12,8 @@
 
 /// @file
 
+#ifdef DLAF_WITH_CUDA
+
 #include <cstddef>
 #include <memory>
 #include <utility>
@@ -20,122 +22,172 @@
 #include <cublas_v2.h>
 #include <cuda_runtime.h>
 
+#include <hpx/execution.hpp>
+#include <hpx/functional.hpp>
 #include <hpx/future.hpp>
-#include <hpx/include/async.hpp>
-#include <hpx/include/parallel_executors.hpp>
-#include <hpx/include/thread_executors.hpp>
-#include <hpx/modules/execution_base.hpp>
+#include <hpx/modules/async_cuda.hpp>
+#include <hpx/mutex.hpp>
+#include <hpx/tuple.hpp>
 
 #include "dlaf/common/assert.h"
 #include "dlaf/cublas/error.h"
 #include "dlaf/cuda/error.h"
 #include "dlaf/cuda/event.h"
 #include "dlaf/cuda/executor.h"
-#include "dlaf/cuda/mutex.h"
 
 namespace dlaf {
 namespace cublas {
-
 namespace internal {
 
-struct cublas_handle_wrapper {
-  cublasHandle_t handle;
-  cublas_handle_wrapper(int device) noexcept {
+// Helper class for initializing and destroying a CUBLAS handle.
+struct CublasHandle {
+  cublasHandle_t handle_;
+
+  CublasHandle(int device) noexcept {
     DLAF_CUDA_CALL(cudaSetDevice(device));
-    DLAF_CUBLAS_CALL(cublasCreate(&handle));
+    DLAF_CUBLAS_CALL(cublasCreate(&handle_));
   }
-  ~cublas_handle_wrapper() {
+
+  ~CublasHandle() {
     // This implicitly calls `cublasDeviceSynchronize()` [1].
     //
     // [1]: cuBLAS, section 2.4 cuBLAS Helper Function Reference
-    DLAF_CUBLAS_CALL(cublasDestroy(handle));
+    DLAF_CUBLAS_CALL(cublasDestroy(handle_));
+  }
+};
+
+// Helper class which holds a CUBLAS handle, protected by a lock. This class is
+// intended to be used as an RAII guard. The usage of the handle is protected
+// as long as an instance is alive. It also provides a means to get an event
+// corresponding to the stream of the handle. Instances of this object can not
+// be shared among threads. The lifetime of an instance must be no longer than
+// the HandlePool from which an instance was taken.
+//
+// NOTE: This currently relies on the lock of LockedStream.
+class LockedHandle {
+  cuda::internal::LockedStream locked_stream_;
+  cublasHandle_t handle_;
+
+public:
+  LockedHandle(cuda::internal::LockedStream locked_stream, cublasHandle_t handle)
+      : locked_stream_(std::move(locked_stream)), handle_(handle) {}
+
+  cublasHandle_t& getHandle() {
+    return handle_;
+  }
+
+  cudaStream_t& getStream() {
+    return locked_stream_.getStream();
+  }
+
+  cuda::Event getEvent() {
+    return locked_stream_.getEvent();
+  }
+
+  // TODO: Do we need variants here?
+  // decltype(auto) getFutureCallback() {}
+  // decltype(auto) getFutureEventSchedulerPolling() {}
+  // decltype(auto) getFutureEventYieldPolling() {}
+
+  void unlock() {
+    locked_stream_.unlock();
+  }
+};
+
+// Helper class with a reference counted CUBLAS handle and a reference to a
+// StreamPool. Allows access to RAII locked handles (LockedHandle). Ensures
+// that the correct device is set.
+//
+// NOTE: This currently only holds a single CUBLAS handle, which uses streams
+// from the StreamPool.
+//
+// NOTE: This is only intended for use in the CUBLAS executor below. A
+// reference to the StreamPool is enough since its lifetime will be the same as
+// the base class, dlaf::cuda::Executor.
+class HandlePool {
+  cuda::internal::StreamPool stream_pool_;
+  cublasPointerMode_t ptr_mode_;
+  std::shared_ptr<CublasHandle> handle_ptr_;
+
+public:
+  HandlePool(cuda::internal::StreamPool stream_pool, cublasPointerMode_t ptr_mode, int device)
+      : stream_pool_(stream_pool), ptr_mode_(ptr_mode),
+        handle_ptr_(std::make_shared<CublasHandle>(device)) {}
+
+  LockedHandle getNextHandle() {
+    cuda::internal::LockedStream locked_stream = stream_pool_.getNextStream();
+    DLAF_CUBLAS_CALL(cublasSetStream(handle_ptr_->handle_, locked_stream.getStream()));
+    DLAF_CUBLAS_CALL(cublasSetPointerMode(handle_ptr_->handle_, ptr_mode_));
+    return LockedHandle(std::move(locked_stream), handle_ptr_.get()->handle_);
+  }
+
+  bool operator==(HandlePool const& rhs) const noexcept {
+    return stream_pool_ == rhs.stream_pool_ && ptr_mode_ == rhs.ptr_mode_ &&
+           handle_ptr_ == rhs.handle_ptr_;
+  }
+
+  bool operator!=(HandlePool const& rhs) const noexcept {
+    return !(*this == rhs);
   }
 };
 }
 
-/// An executor for a CUBLAS functions. Each device has a single CUBLAS handle associated to it.
-class executor : public cuda::executor {
-  using base = cuda::executor;
-
-  std::shared_ptr<internal::cublas_handle_wrapper> handler_ptr_;
-  cublasPointerMode_t cublas_ptr_mode_;
+/// An executor for CUBLAS functions. Each device has a single CUBLAS handle
+/// associated to it. A CUBLAS function is defined as any function that takes a
+/// CUBLAS handle as the first argument. The executor inserts a CUBLAS handle
+/// into the argument list, i.e. a handle should not be provided at the
+/// apply/async/dataflow invocation site.
+class Executor : public cuda::Executor {
+  using base = cuda::Executor;
+  internal::HandlePool handle_pool_;
 
 public:
-  // Associate the parallel_execution_tag executor tag type as a default with this executor.
-  using execution_category = hpx::parallel::execution::parallel_execution_tag;
+  Executor(int device, int num_streams,
+           hpx::threads::thread_priority priority = hpx::threads::thread_priority_normal,
+           cublasPointerMode_t ptr_mode = CUBLAS_POINTER_MODE_HOST)
+      : base(device, num_streams, priority), handle_pool_(base::stream_pool_, ptr_mode, device) {}
 
-  executor(int device, int num_streams, cublasPointerMode_t ptr_mode)
-      : base(device, num_streams),
-        handler_ptr_(std::make_shared<internal::cublas_handle_wrapper>(device)),
-        cublas_ptr_mode_(ptr_mode) {}
-
-  executor(cuda::executor ex, cublasPointerMode_t ptr_mode)
-      : base(std::move(ex)),
-        handler_ptr_(std::make_shared<internal::cublas_handle_wrapper>(base::device_)),
-        cublas_ptr_mode_(ptr_mode) {}
-
-  bool operator==(executor const& rhs) const noexcept {
-    return base::operator==(rhs) && handler_ptr_ == rhs.handler_ptr_ &&
-           cublas_ptr_mode_ == rhs.cublas_ptr_mode_;
+  bool operator==(Executor const& rhs) const noexcept {
+    return base::operator==(rhs) && handle_pool_ == rhs.handle_pool_;
   }
 
-  bool operator!=(executor const& rhs) const noexcept {
+  bool operator!=(Executor const& rhs) const noexcept {
     return !(*this == rhs);
   }
 
-  executor const& context() const noexcept {
+  Executor const& context() const noexcept {
     return *this;
   }
 
-  executor& reset_ptr_mode(cublasPointerMode_t ptr_mode) noexcept {
-    cublas_ptr_mode_ = ptr_mode;
-    return *this;
+  template <typename F, typename... Ts>
+  auto async_execute(F&& f, Ts&&... ts) {
+    internal::LockedHandle locked_handle = handle_pool_.getNextHandle();
+    auto r = hpx::invoke(std::forward<F>(f), locked_handle.getHandle(), std::forward<Ts>(ts)...);
+    hpx::future<void> fut =
+        hpx::cuda::experimental::detail::get_future_with_event(locked_handle.getStream());
+    locked_handle.unlock();
+
+    // TODO: If using get_future_with_callback, cudaFree may be called in the
+    // callback. Do we care?
+    return fut.then(hpx::launch::sync,
+                    [r = std::move(r)](hpx::future<void>&&) mutable { return std::move(r); });
   }
 
-  // Implement the TwoWayExecutor interface.
-  //
-  // Note: the member can't be marked `const` because of `threads_executor_`.
-  // Note: Parameters are passed by value as they are small types: pointers, integers or scalars.
-  template <class Return, class... Params, class... Ts>
-  hpx::future<typename std::enable_if<std::is_same<cublasStatus_t, Return>::value, void>::type>
-  async_execute(Return (*cublas_function)(Params...), Ts... ts) {
-    // Set the device corresponding to the CUBLAS handle.
-    //
-    // The CUBLAS library context is tied to the current CUDA device [1]. A previous task scheduled on
-    // the same thread may have set a different device, this makes sure the correct device is used. The
-    // function is considered very low overhead call [2].
-    //
-    // [1]: https://docs.nvidia.com/cuda/cublas/index.html#cublascreate
-    // [2]: CUDA Runtime API, section 5.1 Device Management
-    DLAF_CUDA_CALL(cudaSetDevice(base::device_));
+  template <class Frame, class F, class Futures>
+  void dataflow_finalize(Frame&& frame, F&& f, Futures&& futures) {
+    // Ensure the dataflow frame stays alive long enough.
+    hpx::intrusive_ptr<typename std::remove_pointer<typename std::decay<Frame>::type>::type> frame_p(
+        frame);
 
-    // Use an event to query the CUBLAS kernel for completion. Timing is disabled for performance. [1]
-    //
-    // [1]: CUDA Runtime API, section 5.5 Event Management
-    cuda::Event ev{};
+    internal::LockedHandle locked_handle = handle_pool_.getNextHandle();
+    auto r = hpx::invoke_fused(std::forward<F>(f), hpx::tuple_cat(hpx::tie(locked_handle.getHandle()),
+                                                                  std::forward<Futures>(futures)));
+    hpx::future<void> fut =
+        hpx::cuda::experimental::detail::get_future_with_event(locked_handle.getStream());
+    locked_handle.unlock();
 
-    // Call the CUBLAS function `f` and schedule an event after it.
-    //
-    // The event indicates the the function `f` has completed. The handle may be shared by mutliple
-    // host threads, the mutex is here to make sure no other CUBLAS calls or events are scheduled
-    // between the call to `f` and it's corresponding event.
-    {
-      std::lock_guard<hpx::lcos::local::mutex> lk(cuda::internal::get_cuda_mtx());
-      cudaStream_t stream = (*base::streams_ptr_)[base::curr_stream_idx_];
-      cublasHandle_t handle = handler_ptr_->handle;
-      DLAF_CUBLAS_CALL(cublasSetStream(handle, stream));
-      DLAF_CUBLAS_CALL(cublasSetPointerMode(handle, cublas_ptr_mode_));
-      DLAF_CUBLAS_CALL(cublas_function(handle, ts...));
-      ev.record(stream);
-      base::curr_stream_idx_ = (base::curr_stream_idx_ + 1) % base::streams_ptr_->size();
-    }
-    return hpx::async(base::threads_executor_, [e = std::move(ev)] { e.query(); });
-  }
-
-  template <class Return, class... Params, class... Args>
-  hpx::future<typename std::enable_if<std::is_same<cudaError_t, Return>::value, void>::type> async_execute(
-      Return (*cuda_function)(Params...), Args... args) {
-    return base::async_execute(cuda_function, args...);
+    fut.then(hpx::launch::sync, [r = std::move(r), frame_p = std::move(frame_p)](
+                                    hpx::future<void>&&) mutable { frame_p->set_data(std::move(r)); });
   }
 };
 }
@@ -144,10 +196,10 @@ public:
 namespace hpx {
 namespace parallel {
 namespace execution {
-
 template <>
-struct is_two_way_executor<dlaf::cublas::executor> : std::true_type {};
+struct is_two_way_executor<dlaf::cublas::Executor> : std::true_type {};
+}
+}
+}
 
-}
-}
-}
+#endif

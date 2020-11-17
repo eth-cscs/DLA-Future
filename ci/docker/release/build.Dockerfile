@@ -1,4 +1,6 @@
-FROM ubuntu:18.04
+ARG BASE_IMAGE=ubuntu:18.04
+
+FROM $BASE_IMAGE
 
 WORKDIR /root
 
@@ -100,41 +102,42 @@ RUN wget -q https://github.com/${HPX_FORK}/hpx/archive/${HPX_VERSION}.tar.gz -O 
     rm -rf /root/hpx.tar.gz /root/hpx-${HPX_VERSION}
 
 # Install BLASPP
-ARG BLASPP_VERSION=c090b5738c8e
+ARG BLASPP_VERSION=2020.10.02
 ARG BLASPP_PATH=/usr/local/blaspp
 RUN source /opt/intel/compilers_and_libraries/linux/mkl/bin/mklvars.sh intel64 && \
-    wget -q https://bitbucket.org/icl/blaspp/get/${BLASPP_VERSION}.tar.gz -O blaspp.tar.gz && \
+    wget -q https://bitbucket.org/icl/blaspp/downloads/blaspp-${BLASPP_VERSION}.tar.gz -O blaspp.tar.gz && \
     tar -xzf blaspp.tar.gz && \
-    cd icl-blaspp-${BLASPP_VERSION} && \
+    cd blaspp-${BLASPP_VERSION} && \
     mkdir build && \
     cd build && \
     cmake .. \
-      -DBLASPP_BUILD_TESTS=OFF \
+      -Dbuild_tests=OFF \
       -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-      -DUSE_OPENMP=OFF \
-      -DBLAS_LIBRARY='Intel MKL' \
-      -DBLAS_LIBRARY_THREADING=sequential \
+      -Duse_openmp=OFF \
+      -Duse_cuda=OFF \
+      -Dblas='Intel MKL' \
+      -Dblas_threaded=OFF \
       -DCMAKE_INSTALL_PREFIX=$BLASPP_PATH && \
     make -j$(nproc) && \
     make install && \
-    rm -rf /root/blaspp.tar.gz /root/icl-blaspp-${BLASPP_VERSION}
+    rm -rf /root/blaspp.tar.gz /root/blaspp-${BLASPP_VERSION}
 
-ARG LAPACKPP_VERSION=f878fada3765
+ARG LAPACKPP_VERSION=2020.10.02
 ARG LAPACKPP_PATH=/usr/local/lapackpp
 RUN source /opt/intel/compilers_and_libraries/linux/mkl/bin/mklvars.sh intel64 && \
-    wget -q https://bitbucket.org/icl/lapackpp/get/${LAPACKPP_VERSION}.tar.gz -O lapackpp.tar.gz && \
+    wget -q https://bitbucket.org/icl/lapackpp/downloads/lapackpp-$LAPACKPP_VERSION.tar.gz -O lapackpp.tar.gz && \
     tar -xzf lapackpp.tar.gz && \
-    cd icl-lapackpp-${LAPACKPP_VERSION} && \
+    cd lapackpp-${LAPACKPP_VERSION} && \
     mkdir build && \
     cd build && \
     cmake .. \
-      -DBUILD_LAPACKPP_TESTS=OFF \
+      -Dbuild_tests=OFF \
       -DCMAKE_INSTALL_PREFIX=$LAPACKPP_PATH && \
     make -j$(nproc) install && \
-    rm -rf /root/lapackpp.tar.gz /root/icl-lapackpp-${LAPACKPP_VERSION}
+    rm -rf /root/lapackpp.tar.gz /root/lapackpp-${LAPACKPP_VERSION}
 
 # Add deployment tooling
-RUN wget -q https://github.com/haampie/libtree/releases/download/v1.1.2/libtree_x86_64.tar.gz && \
+RUN wget -q https://github.com/haampie/libtree/releases/download/v1.2.0/libtree_x86_64.tar.gz && \
     tar -xzf libtree_x86_64.tar.gz && \
     rm libtree_x86_64.tar.gz && \
     ln -s /root/libtree/libtree /usr/local/bin/libtree

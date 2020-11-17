@@ -1,5 +1,5 @@
 # Build environment image
-ARG BUILD_ENV
+ARG BUILD_IMAGE
 
 # This is the folder where the project is built
 ARG BUILD=/DLA-Future-build
@@ -11,12 +11,14 @@ ARG SOURCE=/DLA-Future
 # of binaries to here
 ARG DEPLOY=/root/DLA-Future.bundle
 
-FROM $BUILD_ENV as builder
+FROM $BUILD_IMAGE as builder
 
 ARG BUILD
 ARG SOURCE
 ARG DEPLOY
-ARG DEPLOY_IMAGE
+
+# With or without CUDA
+ARG DLAF_WITH_CUDA=OFF
 
 # Build DLA-Future
 COPY . $SOURCE
@@ -32,7 +34,8 @@ RUN mkdir ${BUILD} && cd ${BUILD} && \
       -DLAPACK_CUSTOM_TYPE=Custom \
       -DLAPACK_CUSTOM_INCLUDE_DIR=/usr/local/include \
       -DLAPACK_CUSTOM_LIBRARY=openblas \
-      -DDLAF_WITH_CUDA=OFF \
+      -DDLAF_WITH_CUDA=${DLAF_WITH_CUDA} \
+      -DCUDALIBS_ROOT=/usr/local/cuda/targets/x86_64-linux \
       -DDLAF_WITH_MKL=OFF \
       -DDLAF_WITH_TEST=ON \
       -DDLAF_BUILD_MINIAPPS=ON \
@@ -52,10 +55,6 @@ RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
     find '(' -name CTestTestfile.cmake -o -iname "*.gcno" ')' -exec cp --parent '{}' ${BUILD}-tmp ';' && \
     rm -rf ${BUILD} && \
     mv ${BUILD}-tmp ${BUILD}
-
-# Generate the gitlab-ci yml file
-RUN cd ${BUILD} && \
-    ${SOURCE}/ci/ctest_to_gitlab_codecov.sh "${DEPLOY_IMAGE}" > ${DEPLOY}/pipeline.yml
 
 # Multistage build, this is the final small image
 FROM ubuntu:18.04
@@ -94,6 +93,9 @@ COPY --from=builder ${SOURCE} ${SOURCE}
 
 # Make it easy to call our binaries.
 ENV PATH="${DEPLOY}/usr/bin:$PATH"
+ENV NVIDIA_VISIBLE_DEVICES all
+ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
+ENV NVIDIA_REQUIRE_CUDA "cuda>=10.2"
 
 # Used in our ctest wrapper to upload reports
 ENV ENABLE_COVERAGE="YES"

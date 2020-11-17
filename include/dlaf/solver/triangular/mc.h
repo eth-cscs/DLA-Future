@@ -22,8 +22,8 @@
 #include "dlaf/communication/executor.h"
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/lapack_tile.h"
-#include "dlaf/matrix.h"
 #include "dlaf/matrix/distribution.h"
+#include "dlaf/matrix/matrix.h"
 #include "dlaf/solver/triangular/api.h"
 #include "dlaf/util_matrix.h"
 
@@ -440,6 +440,7 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid gr
         // Broadcast A(kk) row-wise
         auto k_local_col = distr_a.localTileFromGlobalTile<Coord::Col>(k);
         auto kk = LocalTileIndex{k_local_row, k_local_col};
+
         kk_tile = mat_a.read(kk);
         comm::send_tile(executor_mpi, serial_comm, Coord::Row, mat_a.read(kk));
       }
@@ -483,6 +484,7 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid gr
       if (mat_a.rankIndex().col() == k_rank_col) {
         auto k_local_col = distr_a.localTileFromGlobalTile<Coord::Col>(k);
         auto ik = LocalTileIndex{i_local, k_local_col};
+
         ik_tile = mat_a.read(ik);
         comm::send_tile(executor_mpi, serial_comm, Coord::Row, mat_a.read(ik));
       }

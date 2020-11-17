@@ -10,9 +10,11 @@
 
 
 #
-# To find CUDA:
-#   1. Use `enable_language(CUDA)`
-#   2. Set `CMAKE_CUDA_COMPILER` if cuda in custom directory
+# To find CUDA, do one of the following:
+#   - Set `CUDALIBS_ROOT` as an environment variable or a CMake variable
+#   - Set the environment variable `CUDA_HOME`
+#   - Use `enable_language(CUDA)` and set `CMAKE_CUDA_COMPILER` if cuda in
+#      custom directory
 #
 # Imported Targets:
 #   dlaf::cudart
@@ -21,13 +23,21 @@
 cmake_minimum_required(VERSION 3.12)
 
 find_path(CUDA_CUDART_INCLUDE cuda_runtime.h
-          PATHS ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+          PATHS ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
+                $ENV{CUDA_HOME}
+          PATH_SUFFIXES include)
 find_path(CUDA_CUBLAS_INCLUDE cublas_v2.h
-          PATHS ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+          PATHS ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
+                $ENV{CUDA_HOME}
+          PATH_SUFFIXES include)
 find_library(CUDA_CUDART_LIB cudart
-             PATHS ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES})
+             PATHS ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES}
+                   $ENV{CUDA_HOME}
+             PATH_SUFFIXES lib64)
 find_library(CUDA_CUBLAS_LIB cublas
-             PATHS ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES})
+             PATHS ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES}
+                   $ENV{CUDA_HOME}
+             PATH_SUFFIXES lib64)
 mark_as_advanced(CUDA_CUDART_INCLUDE)
 mark_as_advanced(CUDA_CUBLAS_INCLUDE)
 mark_as_advanced(CUDA_CUDART_LIB)

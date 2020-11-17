@@ -12,13 +12,16 @@
 #include <hpx/include/parallel_executors.hpp>
 #include <hpx/include/threads.hpp>
 #include <hpx/include/util.hpp>
-#include <hpx/local/future.hpp>
+#include <hpx/util/annotated_function.hpp>
+
+#include <unordered_map>
 
 #include "dlaf/blas_tile.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/vector.h"
+#include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/executor.h"
 #include "dlaf/communication/functions_sync.h"
@@ -26,11 +29,83 @@
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix.h"
 #include "dlaf/matrix/distribution.h"
+#include "dlaf/memory/memory_view.h"
 #include "dlaf/util_matrix.h"
 
 namespace dlaf {
 namespace factorization {
 namespace internal {
+
+template <class T>
+void potrf_diag_tile(hpx::threads::executors::pool_executor executor_hp,
+                     hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
+  hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::potrf<T, Device::CPU>), blas::Uplo::Lower,
+                std::move(matrix_tile));
+}
+
+template <class T>
+void trsm_panel_tile(hpx::threads::executors::pool_executor executor_hp,
+                     hpx::shared_future<matrix::Tile<const T, Device::CPU>> kk_tile,
+                     hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
+  hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), blas::Side::Right,
+                blas::Uplo::Lower, blas::Op::ConjTrans, blas::Diag::NonUnit, 1.0, std::move(kk_tile),
+                std::move(matrix_tile));
+}
+
+template <class T>
+void herk_trailing_diag_tile(hpx::threads::executors::pool_executor trailing_matrix_executor,
+                             hpx::shared_future<matrix::Tile<const T, Device::CPU>> panel_tile,
+                             hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
+  hpx::dataflow(trailing_matrix_executor, hpx::util::unwrapping(tile::herk<T, Device::CPU>),
+                blas::Uplo::Lower, blas::Op::NoTrans, -1.0, panel_tile, 1.0, std::move(matrix_tile));
+}
+
+template <class T>
+void gemm_trailing_matrix_tile(hpx::threads::executors::pool_executor trailing_matrix_executor,
+                               hpx::shared_future<matrix::Tile<const T, Device::CPU>> panel_tile,
+                               hpx::shared_future<matrix::Tile<const T, Device::CPU>> col_panel,
+                               hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
+  hpx::dataflow(trailing_matrix_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>),
+                blas::Op::NoTrans, blas::Op::ConjTrans, -1.0, std::move(panel_tile),
+                std::move(col_panel), 1.0, std::move(matrix_tile));
+}
+
+template <class T>
+void send_tile(hpx::threads::executors::pool_executor ex,
+               common::Pipeline<comm::CommunicatorGrid>& task_chain, Coord rc_comm,
+               hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile) {
+  using ConstTile_t = matrix::Tile<const T, Device::CPU>;
+  using PromiseComm_t = common::PromiseGuard<comm::CommunicatorGrid>;
+
+  auto send_bcast_f = hpx::util::annotated_function(
+      [rc_comm](hpx::shared_future<ConstTile_t> ftile, hpx::future<PromiseComm_t> fpcomm) {
+        PromiseComm_t pcomm = fpcomm.get();
+        comm::sync::broadcast::send(pcomm.ref().subCommunicator(rc_comm), ftile.get());
+      },
+      "send_tile");
+  hpx::dataflow(ex, std::move(send_bcast_f), tile, task_chain());
+}
+
+template <class T>
+hpx::future<matrix::Tile<const T, Device::CPU>> recv_tile(
+    hpx::threads::executors::pool_executor ex, common::Pipeline<comm::CommunicatorGrid>& mpi_task_chain,
+    Coord rc_comm, TileElementSize tile_size, int rank) {
+  using ConstTile_t = matrix::Tile<const T, Device::CPU>;
+  using PromiseComm_t = common::PromiseGuard<comm::CommunicatorGrid>;
+  using MemView_t = memory::MemoryView<T, Device::CPU>;
+  using Tile_t = matrix::Tile<T, Device::CPU>;
+
+  auto recv_bcast_f = hpx::util::annotated_function(
+      [rank, tile_size, rc_comm](hpx::future<PromiseComm_t> fpcomm) -> ConstTile_t {
+        PromiseComm_t pcomm = fpcomm.get();
+        MemView_t mem_view(tile_size.linear_size());
+        Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
+        comm::sync::broadcast::receive_from(rank, pcomm.ref().subCommunicator(rc_comm), tile);
+        return std::move(tile);
+      },
+      "recv_tile");
+  return hpx::dataflow(ex, std::move(recv_bcast_f), mpi_task_chain());
+}
 
 template <class T>
 struct Cholesky<Backend::MC, Device::CPU, T> {
@@ -40,13 +115,6 @@ struct Cholesky<Backend::MC, Device::CPU, T> {
 
 template <class T>
 void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a) {
-  constexpr auto NonUnit = blas::Diag::NonUnit;
-  constexpr auto ConjTrans = blas::Op::ConjTrans;
-  constexpr auto NoTrans = blas::Op::NoTrans;
-  constexpr auto Right = blas::Side::Right;
-  constexpr auto Lower = blas::Uplo::Lower;
-
-  using hpx::util::unwrapping;
   using hpx::threads::executors::pool_executor;
   using hpx::threads::thread_priority_high;
   using hpx::threads::thread_priority_default;
@@ -60,219 +128,118 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
   for (SizeType k = 0; k < nrtile; ++k) {
     auto kk = LocalTileIndex{k, k};
 
-    hpx::dataflow(executor_hp, unwrapping(tile::potrf<T, Device::CPU>), Lower, std::move(mat_a(kk)));
+    potrf_diag_tile(executor_hp, mat_a(kk));
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
       // Update panel mat_a(i,k) with trsm (blas operation), using data mat_a.read(k,k)
-      hpx::dataflow(executor_hp, unwrapping(tile::trsm<T, Device::CPU>), Right, Lower, ConjTrans,
-                    NonUnit, 1.0, mat_a.read(kk), std::move(mat_a(LocalTileIndex{i, k})));
+      trsm_panel_tile(executor_hp, mat_a.read(kk), mat_a(LocalTileIndex{i, k}));
     }
 
     for (SizeType j = k + 1; j < nrtile; ++j) {
       // first trailing panel gets high priority (look ahead).
       auto trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_normal;
 
-      // Update trailing matrix: diagonal element mat_a(j,j, reading mat_a.read(j,k), using herk (blas operation)
-      hpx::dataflow(trailing_matrix_executor, unwrapping(tile::herk<T, Device::CPU>), Lower, NoTrans,
-                    -1.0, mat_a.read(LocalTileIndex{j, k}), 1.0, std::move(mat_a(LocalTileIndex{j, j})));
+      // Update trailing matrix: diagonal element mat_a(j,j), reading mat_a.read(j,k), using herk (blas operation)
+      herk_trailing_diag_tile(trailing_matrix_executor, mat_a.read(LocalTileIndex{j, k}),
+                              mat_a(LocalTileIndex{j, j}));
 
       for (SizeType i = j + 1; i < nrtile; ++i) {
         // Update remaining trailing matrix mat_a(i,j), reading mat_a.read(i,k) and mat_a.read(j,k),
         // using gemm (blas operation)
-        hpx::dataflow(trailing_matrix_executor, unwrapping(tile::gemm<T, Device::CPU>), NoTrans,
-                      ConjTrans, -1.0, mat_a.read(LocalTileIndex{i, k}),
-                      mat_a.read(LocalTileIndex{j, k}), 1.0, std::move(mat_a(LocalTileIndex{i, j})));
+        gemm_trailing_matrix_tile(trailing_matrix_executor, mat_a.read(LocalTileIndex{i, k}),
+                                  mat_a.read(LocalTileIndex{j, k}), mat_a(LocalTileIndex{i, j}));
       }
     }
   }
 }
 
 template <class T>
+
 void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
                                                    Matrix<T, Device::CPU>& mat_a) {
-  using hpx::util::unwrapping;
   using hpx::threads::executors::pool_executor;
   using hpx::threads::thread_priority_high;
   using hpx::threads::thread_priority_default;
   using comm::internal::mpi_pool_exists;
-  using common::internal::vector;
-
-  using ConstTile_t = typename Matrix<T, Device::CPU>::ConstTileType;
-  using Tile_t = typename Matrix<T, Device::CPU>::TileType;
-  using MemView_t = memory::MemoryView<T, Device::CPU>;
-
-  constexpr auto NonUnit = blas::Diag::NonUnit;
-  constexpr auto ConjTrans = blas::Op::ConjTrans;
-  constexpr auto NoTrans = blas::Op::NoTrans;
-  constexpr auto Right = blas::Side::Right;
-  constexpr auto Lower = blas::Uplo::Lower;
+  using ConstTile_t = matrix::Tile<const T, Device::CPU>;
 
   // Set up executor on the default queue with high priority.
   pool_executor executor_hp("default", thread_priority_high);
   // Set up executor on the default queue with default priority.
   pool_executor executor_normal("default", thread_priority_default);
+
   // Set up MPI executor
+  comm::Index2D this_rank = grid.rank();
   auto executor_mpi = (mpi_pool_exists()) ? pool_executor("mpi", thread_priority_high) : executor_hp;
+  common::Pipeline<comm::CommunicatorGrid> mpi_task_chain(std::move(grid));
 
-  auto col_comm_size = grid.colCommunicator().size();
-  auto row_comm_size = grid.rowCommunicator().size();
-
-  const matrix::Distribution& distr = mat_a.distribution();
-
+  matrix::Distribution const& distr = mat_a.distribution();
   SizeType nrtile = mat_a.nrTiles().cols();
-
-  auto localnrtile_rows = distr.localNrTiles().rows();
-  auto localnrtile_cols = distr.localNrTiles().cols();
-
-  common::Pipeline<comm::CommunicatorGrid> serial_comm(std::move(grid));
-
-  auto this_rank = grid.rank();
 
   for (SizeType k = 0; k < nrtile; ++k) {
     // Create a placeholder that will store the shared futures representing the panel
-    vector<hpx::shared_future<ConstTile_t>> panel(distr.localNrTiles().rows());
+    std::unordered_map<SizeType, hpx::shared_future<ConstTile_t>> panel;
 
-    auto kk_idx = GlobalTileIndex(k, k);
-    auto kk_tile_rank = distr.rankGlobalTile(kk_idx);
+    GlobalTileIndex kk_idx(k, k);
+    comm::Index2D kk_rank = distr.rankGlobalTile(kk_idx);
 
-    if (this_rank.col() == kk_tile_rank.col()) {
-      hpx::shared_future<ConstTile_t> kk_tile;
-
-      if (this_rank.row() == kk_tile_rank.row()) {
-        LocalTileIndex kk = distr.localTileIndex(kk_idx);
-
-        // If the diagonal tile is on this node factorize it
-        // Cholesky decomposition on mat_a(k,k) r/w potrf (lapack operation)
-        hpx::dataflow(executor_hp, unwrapping(tile::potrf<T, Device::CPU>), Lower, std::move(mat_a(kk)));
-
-        // Avoid useless communication if one-column communicator and if on the last column
-        if (col_comm_size > 1 && k != (mat_a.nrTiles().cols() - 1)) {
-          // Broadcast the panel column-wise
-
-          auto send_bcast_f = unwrapping([](auto&& tile, auto&& comm_wrapper) {
-            comm::sync::broadcast::send(comm_wrapper().colCommunicator(), tile);
-          });
-          hpx::dataflow(executor_mpi, std::move(send_bcast_f), mat_a.read(kk), serial_comm());
-        }
-
-        kk_tile = mat_a.read(kk);
-      }
-      else {
-        // Avoid useless communications if one-column communicator and if on the last column
-        if (col_comm_size > 1 && k != (mat_a.nrTiles().cols() - 1)) {
-          // Receive the diagonal tile
-          auto recv_bcast_f = unwrapping([rank = kk_tile_rank.row(), tile_size = mat_a.tileSize(kk_idx)](
-                                             auto&& comm_wrapper) -> ConstTile_t {
-            MemView_t mem_view(tile_size.linear_size());
-            Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
-            comm::sync::broadcast::receive_from(rank, comm_wrapper().colCommunicator(), tile);
-            return std::move(tile);
-          });
-          kk_tile = hpx::dataflow(executor_mpi, std::move(recv_bcast_f), serial_comm());
-        }
-      }
-
-      auto k_local_col = distr.localTileFromGlobalTile<Coord::Col>(k);
-      for (SizeType i_local = distr.nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
-           i_local < localnrtile_rows; ++i_local) {
-        LocalTileIndex ik_local_idx(i_local, k_local_col);
-        // Update panel mat_a(i,k) with trsm (blas operation), using data mat_a.read(k,k)
-        hpx::dataflow(executor_hp, unwrapping(tile::trsm<T, Device::CPU>), Right, Lower, ConjTrans,
-                      NonUnit, 1.0, kk_tile, std::move(mat_a(ik_local_idx)));
-
-        // Avoid useless communications if one-row communicator grid
-        if (row_comm_size > 1) {
-          // Broadcast the panel row-wise
-          auto send_bcast_f = unwrapping([](auto&& tile, auto&& comm_wrapper) {
-            comm::sync::broadcast::send(comm_wrapper().rowCommunicator(), tile);
-          });
-          hpx::dataflow(executor_mpi, std::move(send_bcast_f), mat_a.read(ik_local_idx), serial_comm());
-        }
-
-        panel[i_local] = mat_a.read(ik_local_idx);
-      }
+    // Broadcast the diagonal tile along the `k`-th column
+    if (this_rank == kk_rank) {
+      potrf_diag_tile(executor_hp, mat_a(kk_idx));
+      panel[k] = mat_a.read(kk_idx);
+      if (k != nrtile - 1)
+        send_tile(executor_mpi, mpi_task_chain, Coord::Col, panel[k]);
     }
-    else {
-      for (SizeType i_local = distr.nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
-           i_local < localnrtile_rows; ++i_local) {
-        auto i = distr.globalTileFromLocalTile<Coord::Row>(i_local);
+    else if (this_rank.col() == kk_rank.col()) {
+      if (k != nrtile - 1)
+        panel[k] = recv_tile<T>(executor_mpi, mpi_task_chain, Coord::Col, mat_a.tileSize(kk_idx),
+                                kk_rank.row());
+    }
 
-        // Avoid useless communications if one-row communicator grid
-        if (row_comm_size > 1) {
-          // Receiving the panel
-          auto recv_bcast_f =
-              unwrapping([rank = kk_tile_rank.col(), tile_size = mat_a.tileSize(GlobalTileIndex(i, k))](
-                             auto&& comm_wrapper) -> ConstTile_t {
-                MemView_t mem_view(tile_size.linear_size());
-                Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
-                comm::sync::broadcast::receive_from(rank, comm_wrapper().rowCommunicator(), tile);
-                return std::move(tile);
-              });
-          panel[i_local] = hpx::dataflow(executor_mpi, std::move(recv_bcast_f), serial_comm());
-        }
+    // Iterate over the k-th column
+    for (SizeType i = k + 1; i < nrtile; ++i) {
+      GlobalTileIndex ik_idx(i, k);
+      comm::Index2D ik_rank = mat_a.rankGlobalTile(ik_idx);
+
+      if (this_rank == ik_rank) {
+        trsm_panel_tile(executor_hp, panel[k], mat_a(ik_idx));
+        panel[i] = mat_a.read(ik_idx);
+        send_tile(executor_mpi, mpi_task_chain, Coord::Row, panel[i]);
+      }
+      else if (this_rank.row() == ik_rank.row()) {
+        panel[i] = recv_tile<T>(executor_mpi, mpi_task_chain, Coord::Row, mat_a.tileSize(ik_idx),
+                                ik_rank.col());
       }
     }
 
-    auto nextlocaltilek = distr.nextLocalTileFromGlobalTile<Coord::Col>(k + 1);
-    for (SizeType j_local = nextlocaltilek; j_local < localnrtile_cols; ++j_local) {
-      auto j = distr.globalTileFromLocalTile<Coord::Col>(j_local);
+    // Iterate over the trailing matrix
+    for (SizeType j = k + 1; j < nrtile; ++j) {
+      GlobalTileIndex jj_idx(j, j);
+      comm::Index2D jj_rank = mat_a.rankGlobalTile(jj_idx);
 
-      // Choose "high priority" for first tile of the trailing matrix
-      // Version 1: only the global k + 1 column is "high priority"
-      auto trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_normal;
+      if (this_rank.col() != jj_rank.col())
+        continue;
 
-      // TODO: benchmark to find faster
-      // Version 2: the next column of each rank is "high priority"
-      //        auto trailing_matrix_executor = (j_local == nextlocaltilek) ? executor_hp :
-      //        executor_normal;
-
-      hpx::shared_future<ConstTile_t> col_panel;
-
-      auto j_rank_row = distr.rankGlobalTile<Coord::Row>(j);
-
-      if (this_rank.row() == j_rank_row) {
-        auto i_local = distr.localTileFromGlobalTile<Coord::Row>(j);
-
-        // Avoid useless communications if one-row communicator grid and if on the last panel
-        if (col_comm_size > 1 && j != (mat_a.nrTiles().cols() - 1)) {
-          // Broadcast the (trailing) panel column-wise
-          auto send_bcast_f = unwrapping([](auto&& tile, auto&& comm_wrapper) {
-            comm::sync::broadcast::send(comm_wrapper().colCommunicator(), tile);
-          });
-          hpx::dataflow(executor_mpi, std::move(send_bcast_f), panel[i_local], serial_comm());
-        }
-
-        // Check if the diagonal tile of the trailing matrix is on this node and
-        // compute first tile of the column of the trailing matrix: diagonal element mat_a(j,j), reading
-        // mat_a.read(j,k), using herk (blas operation)
-        hpx::dataflow(trailing_matrix_executor, unwrapping(tile::herk<T, Device::CPU>), Lower, NoTrans,
-                      -1.0, panel[i_local], 1.0, mat_a(LocalTileIndex{i_local, j_local}));
-
-        col_panel = panel[i_local];
+      // Broadcast the jk-tile along the j-th column and update the jj-tile
+      if (this_rank.row() == jj_rank.row()) {
+        pool_executor trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_normal;
+        herk_trailing_diag_tile(trailing_matrix_executor, panel[j], mat_a(jj_idx));
+        if (j != nrtile - 1)
+          send_tile(executor_mpi, mpi_task_chain, Coord::Col, panel[j]);
       }
       else {
-        // Avoid useless communications if one-row communicator grid and if on the last panel
-        if (col_comm_size > 1 && j != (mat_a.nrTiles().cols() - 1)) {
-          // Update the (trailing) panel column-wise
-          auto recv_bcast_f =
-              unwrapping([rank = j_rank_row, tile_size = mat_a.tileSize(GlobalTileIndex(j, k))](
-                             auto&& comm_wrapper) -> ConstTile_t {
-                MemView_t mem_view(tile_size.linear_size());
-                Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
-                comm::sync::broadcast::receive_from(rank, comm_wrapper().colCommunicator(), tile);
-                return std::move(tile);
-              });
-          col_panel = hpx::dataflow(executor_mpi, std::move(recv_bcast_f), serial_comm());
-        }
+        GlobalTileIndex jk_idx(j, k);
+        if (j != nrtile - 1)
+          panel[j] = recv_tile<T>(executor_mpi, mpi_task_chain, Coord::Col, mat_a.tileSize(jk_idx),
+                                  jj_rank.row());
       }
 
-      for (SizeType i_local = distr.nextLocalTileFromGlobalTile<Coord::Row>(j + 1);
-           i_local < localnrtile_rows; ++i_local) {
-        // Update remaining trailing matrix mat_a(i,j), reading mat_a.read(i,k) and mat_a.read(j,k),
-        // using gemm (blas operation)
-        hpx::dataflow(trailing_matrix_executor, unwrapping(tile::gemm<T, Device::CPU>), NoTrans,
-                      ConjTrans, -1.0, panel[i_local], col_panel, 1.0,
-                      std::move(mat_a(LocalTileIndex{i_local, j_local})));
+      for (SizeType i = j + 1; i < nrtile; ++i) {
+        // Update the ij-tile using the ik-tile and jk-tile
+        if (this_rank.row() == distr.rankGlobalTile<Coord::Row>(i)) {
+          GlobalTileIndex ij_idx(i, j);
+          gemm_trailing_matrix_tile(executor_normal, panel[i], panel[j], mat_a(ij_idx));
+        }
       }
     }
   }

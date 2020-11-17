@@ -87,6 +87,13 @@ public:
     return col_;
   }
 
+  Communicator& subCommunicator(Coord cr) noexcept {
+    if (cr == Coord::Row)
+      return row_;
+    else
+      return col_;
+  }
+
   /// Prints information about the CommunicationGrid.
   friend std::ostream& operator<<(std::ostream& out, const CommunicatorGrid& grid) {
     return out << "position=" << grid.position_ << ", size=" << grid.grid_size_;

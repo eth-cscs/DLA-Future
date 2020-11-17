@@ -126,6 +126,25 @@ cpu codecov test:
       - artifact: pipeline.yml
         job: cpu codecov build
 
+gpu release test:
+  extends: .run_common
+  needs:
+    - gpu release build
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: gpu release build
+
+gpu codecov test:
+  extends: .run_common
+  needs:
+    - gpu codecov build
+  trigger:
+    strategy: depend
+    include:
+      - artifact: pipeline.yml
+        job: gpu codecov build
+
 notify_github_success:
   stage: notify
   when: on_success

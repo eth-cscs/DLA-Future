@@ -14,7 +14,6 @@ FROM $BUILD_IMAGE as builder
 ARG BUILD
 ARG SOURCE
 ARG DEPLOY
-ARG DEPLOY_IMAGE
 
 # With or without CUDA
 ARG DLAF_WITH_CUDA=OFF
@@ -73,10 +72,6 @@ RUN source /opt/intel/compilers_and_libraries/linux/mkl/bin/mklvars.sh intel64 &
     ${MKL_LIB}/libmkl_vml_def.so \
     ${MKL_LIB}/libmkl_vml_mc.so \
     ${MKL_LIB}/libmkl_vml_mc3.so
-
-# Generate the gitlab-ci yml file
-RUN cd ${BUILD} && \
-    ${SOURCE}/ci/ctest_to_gitlab.sh "${DEPLOY_IMAGE}" > ${DEPLOY}/pipeline.yml
 
 FROM ubuntu:18.04
 

@@ -16,7 +16,6 @@ FROM $BUILD_IMAGE as builder
 ARG BUILD
 ARG SOURCE
 ARG DEPLOY
-ARG DEPLOY_IMAGE
 
 # With or without CUDA
 ARG DLAF_WITH_CUDA=OFF
@@ -57,10 +56,6 @@ RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
     find '(' -name CTestTestfile.cmake -o -iname "*.gcno" ')' -exec cp --parent '{}' ${BUILD}-tmp ';' && \
     rm -rf ${BUILD} && \
     mv ${BUILD}-tmp ${BUILD}
-
-# Generate the gitlab-ci yml file
-RUN cd ${BUILD} && \
-    ${SOURCE}/ci/ctest_to_gitlab_codecov.sh "${DEPLOY_IMAGE}" > ${DEPLOY}/pipeline.yml
 
 # Multistage build, this is the final small image
 FROM ubuntu:18.04

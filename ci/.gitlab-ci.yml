@@ -26,9 +26,9 @@ stages:
     - docker build -t $BUILD_IMAGE:$TAG -t $BUILD_IMAGE:latest --cache-from $BUILD_IMAGE:$TAG --cache-from $BUILD_IMAGE:latest --build-arg BASE_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 -f $BUILD_DOCKER_FILE --network=host .
     - docker push $BUILD_IMAGE:$TAG
     - docker push $BUILD_IMAGE:latest
-    - docker build -t $DEPLOY_IMAGE --build-arg BUILD_IMAGE=$BUILD_IMAGE:$TAG --build-arg DEPLOY_IMAGE --build-arg DLAF_WITH_CUDA -f $DEPLOY_DOCKER_FILE --network=host .
+    - docker build -t $DEPLOY_IMAGE --build-arg BUILD_IMAGE=$BUILD_IMAGE:$TAG --build-arg DLAF_WITH_CUDA -f $DEPLOY_DOCKER_FILE --network=host .
     - docker push $DEPLOY_IMAGE
-    - docker run $DEPLOY_IMAGE cat /root/DLA-Future.bundle/pipeline.yml > pipeline.yml
+    - docker run -v $PWD/ci/ctest_to_gitlab.sh:/ctest_to_gitlab.sh $DEPLOY_IMAGE /ctest_to_gitlab.sh "$DEPLOY_IMAGE" "$USE_CODECOV" "$CORES_PER_NODE" "$SLURM_CONSTRAINT" > pipeline.yml
   artifacts:
     paths:
       - pipeline.yml
@@ -43,6 +43,9 @@ cpu release build:
     DEPLOY_IMAGE: $CI_REGISTRY_IMAGE/release-cpu/deploy:$CI_COMMIT_SHA
     DLAF_WITH_CUDA: 'OFF'
     BASE_IMAGE: ubuntu:18.04
+    SLURM_CONSTRAINT: mc
+    CORES_PER_NODE: 36
+    USE_CODECOV: false
 
 cpu codecov build:
   extends: .build_common
@@ -53,6 +56,9 @@ cpu codecov build:
     DEPLOY_IMAGE: $CI_REGISTRY_IMAGE/codecov-cpu/deploy:$CI_COMMIT_SHA
     DLAF_WITH_CUDA: 'OFF'
     BASE_IMAGE: ubuntu:18.04
+    SLURM_CONSTRAINT: mc
+    CORES_PER_NODE: 36
+    USE_CODECOV: true
 
 gpu release build:
   extends: .build_common
@@ -63,6 +69,9 @@ gpu release build:
     DEPLOY_IMAGE: $CI_REGISTRY_IMAGE/release-gpu/deploy:$CI_COMMIT_SHA
     DLAF_WITH_CUDA: 'ON'
     BASE_IMAGE: nvidia/cuda:10.2-devel-ubuntu18.04
+    SLURM_CONSTRAINT: gpu
+    CORES_PER_NODE: 12
+    USE_CODECOV: false
 
 gpu codecov build:
   extends: .build_common
@@ -73,6 +82,9 @@ gpu codecov build:
     DEPLOY_IMAGE: $CI_REGISTRY_IMAGE/codecov-gpu/deploy:$CI_COMMIT_SHA
     DLAF_WITH_CUDA: 'ON'
     BASE_IMAGE: nvidia/cuda:10.2-devel-ubuntu18.04
+    SLURM_CONSTRAINT: gpu
+    CORES_PER_NODE: 12
+    USE_CODECOV: true
 
 notify_github_start:
   stage: build

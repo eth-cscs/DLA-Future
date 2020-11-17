@@ -20,8 +20,8 @@
 #include "dlaf/common/range2d.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/functions_sync.h"
-#include "dlaf/matrix.h"
 #include "dlaf/matrix/copy_tile.h"
+#include "dlaf/matrix/matrix.h"
 
 #include "dlaf_test/matrix/matrix_local.h"
 

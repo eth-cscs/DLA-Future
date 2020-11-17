@@ -61,26 +61,7 @@ Matrix<T, device>::Matrix(const LayoutInfo& layout, ElementType* ptr)
 template <class T, Device device>
 hpx::future<Tile<T, device>> Matrix<T, device>::operator()(const LocalTileIndex& index) noexcept {
   std::size_t i = tileLinearIndex(index);
-  hpx::future<TileType> old_future = std::move(tile_futures_[i]);
-  hpx::lcos::local::promise<TileType> p;
-  tile_futures_[i] = p.get_future();
-  tile_shared_futures_[i] = {};
-  return old_future.then(hpx::launch::sync, [p = std::move(p)](hpx::future<TileType>&& fut) mutable {
-    std::exception_ptr current_exception_ptr;
-
-    try {
-      return std::move(fut.get().setPromise(std::move(p)));
-    }
-    catch (...) {
-      current_exception_ptr = std::current_exception();
-    }
-
-    // The exception is set outside the catch block since set_exception may
-    // yield. Ending the catch block on a different worker thread than where it
-    // was started may lead to segfaults.
-    p.set_exception(current_exception_ptr);
-    std::rethrow_exception(current_exception_ptr);
-  });
+  return tile_managers_[i].getRWTileFuture();
 }
 
 }

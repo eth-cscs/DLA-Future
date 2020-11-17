@@ -22,9 +22,9 @@
 #include <gtest/gtest.h>
 
 #include "dlaf/common/range2d.h"
-#include "dlaf/matrix.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/layout_info.h"
+#include "dlaf/matrix/matrix.h"
 #include "dlaf/util_math.h"
 #include "dlaf_test/matrix/matrix_local.h"
 #include "dlaf_test/matrix/util_tile.h"

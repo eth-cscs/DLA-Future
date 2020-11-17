@@ -13,7 +13,7 @@
 /// @file
 
 #include "blas.hh"
-#include "dlaf/matrix.h"
+#include "dlaf/matrix/matrix.h"
 #include "dlaf_test/matrix/util_generic_blas.h"
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/util_types.h"

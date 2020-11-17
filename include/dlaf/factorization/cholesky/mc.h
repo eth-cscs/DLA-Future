@@ -27,8 +27,8 @@
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/factorization/cholesky/api.h"
 #include "dlaf/lapack_tile.h"
-#include "dlaf/matrix.h"
 #include "dlaf/matrix/distribution.h"
+#include "dlaf/matrix/matrix.h"
 #include "dlaf/memory/memory_view.h"
 #include "dlaf/util_matrix.h"
 

@@ -14,7 +14,7 @@
 #   - Set `CUDALIBS_ROOT` as an environment variable or as a CMake variable
 #   - Set the environment variable `CUDA_HOME`
 #   - Use `enable_language(CUDA)` and set `CMAKE_CUDA_COMPILER` if cuda in
-#      custom directory
+#     a custom directory
 #
 # Imported Targets:
 #   dlaf::cudart

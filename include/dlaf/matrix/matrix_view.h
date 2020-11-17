@@ -49,6 +49,7 @@ public:
   /// Returns a read-only shared_future of the Tile with local index @p index.
   ///
   /// TODO: Sync details.
+  ///
   /// @pre index.isIn(distribution().localNrTiles()).
   hpx::shared_future<ConstTileType> read(const LocalTileIndex& index) noexcept;
 
@@ -58,7 +59,7 @@ public:
   ///
   /// @pre index.isIn(globalNrTiles()),
   /// @pre global tile stored in current process.
-  hpx::shared_future<ConstTileType> read(const GlobalTileIndex& index) {
+  hpx::shared_future<ConstTileType> read(const GlobalTileIndex& index) noexcept {
     return read(distribution().localTileIndex(index));
   }
 
@@ -66,14 +67,14 @@ public:
   ///
   /// The tile of the original matrix gets ready.
   /// @pre index.isIn(distribution().localNrTiles()),
-  /// @post any call to read() with index or the equivalent GlobalTileIndex return an invalid future.
+  /// @post any call to read() with index or the equivalent GlobalTileIndex returns an invalid future.
   void done(const LocalTileIndex& index) noexcept;
 
   /// Notify that all the operation on the @p index tile has been performed.
   ///
   /// The tile of the original matrix gets ready.
   /// @pre index.isIn(globalNrTiles()),
-  /// @post any call to read() with index or the equivalent LocalTileIndex return an invalid future.
+  /// @post any call to read() with index or the equivalent LocalTileIndex returns an invalid future.
   void done(const GlobalTileIndex& index) noexcept {
     done(distribution().localTileIndex(index));
   }

@@ -23,8 +23,8 @@
 #include "dlaf/communication/kernels.h"
 #include "dlaf/communication/pool.h"
 #include "dlaf/lapack_tile.h"
-#include "dlaf/matrix.h"
 #include "dlaf/matrix/distribution.h"
+#include "dlaf/matrix/matrix.h"
 #include "dlaf/solver/triangular/api.h"
 #include "dlaf/util_matrix.h"
 

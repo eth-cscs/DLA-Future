@@ -22,6 +22,7 @@ variables:
   ALLOCATION_NAME: dlaf-ci-job-\$CI_PIPELINE_ID
   SLURM_EXCLUSIVE: ''
   SLURM_CONSTRAINT: $SLURM_CONSTRAINT
+  CRAY_CUDA_MPS: 1
 
 allocate:
   stage: allocate
@@ -78,6 +79,7 @@ variables:
   ALLOCATION_NAME: dlaf-ci-job-\$CI_PIPELINE_ID
   SLURM_EXCLUSIVE: ''
   SLURM_CONSTRAINT: $SLURM_CONSTRAINT
+  CRAY_CUDA_MPS: 1
 
 allocate:
   stage: allocate

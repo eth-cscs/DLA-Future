@@ -1,5 +1,5 @@
 # Build environment image
-ARG BUILD_ENV
+ARG BUILD_IMAGE
 
 # This is the folder where the project is built
 ARG BUILD=/DLA-Future-build
@@ -11,12 +11,15 @@ ARG SOURCE=/DLA-Future
 # of binaries to here
 ARG DEPLOY=/root/DLA-Future.bundle
 
-FROM $BUILD_ENV as builder
+FROM $BUILD_IMAGE as builder
 
 ARG BUILD
 ARG SOURCE
 ARG DEPLOY
 ARG DEPLOY_IMAGE
+
+# With or without CUDA
+ARG DLAF_WITH_CUDA=OFF
 
 # Build DLA-Future
 COPY . $SOURCE
@@ -32,7 +35,9 @@ RUN mkdir ${BUILD} && cd ${BUILD} && \
       -DLAPACK_CUSTOM_TYPE=Custom \
       -DLAPACK_CUSTOM_INCLUDE_DIR=/usr/local/include \
       -DLAPACK_CUSTOM_LIBRARY=openblas \
-      -DDLAF_WITH_CUDA=OFF \
+      -DDLAF_WITH_CUDA=${DLAF_WITH_CUDA} \
+      -DCMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES=/usr/local/cuda/targets/x86_64-linux/include \
+      -DCMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES="/usr/local/cuda/targets/x86_64-linux/lib/stubs;/usr/local/cuda/targets/x86_64-linux/lib;/usr/lib/gcc/x86_64-linux-gnu/7;/usr/lib/x86_64-linux-gnu;/usr/lib;/lib/x86_64-linux-gnu;/lib;/usr/local/cuda/lib64/stubs" \
       -DDLAF_WITH_MKL=OFF \
       -DDLAF_WITH_TEST=ON \
       -DDLAF_BUILD_MINIAPPS=ON \
@@ -94,6 +99,9 @@ COPY --from=builder ${SOURCE} ${SOURCE}
 
 # Make it easy to call our binaries.
 ENV PATH="${DEPLOY}/usr/bin:$PATH"
+ENV NVIDIA_VISIBLE_DEVICES all
+ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
+ENV NVIDIA_REQUIRE_CUDA "cuda>=10.2"
 
 # Used in our ctest wrapper to upload reports
 ENV ENABLE_COVERAGE="YES"

@@ -1,4 +1,6 @@
-FROM ubuntu:18.04
+ARG BASE_IMAGE=ubuntu:18.04
+
+FROM $BASE_IMAGE
 
 WORKDIR /root
 
@@ -34,7 +36,7 @@ ARG OPENBLAS_PATCH=9
 RUN wget -qO - https://github.com/xianyi/OpenBLAS/archive/v${OPENBLAS_MAJOR}.${OPENBLAS_MINOR}.${OPENBLAS_PATCH}.tar.gz -O openblas.tar.gz && \
     tar -xzf openblas.tar.gz && \
     cd OpenBLAS-${OPENBLAS_MAJOR}.${OPENBLAS_MINOR}.${OPENBLAS_PATCH}/ && \
-    make USE_OPENMP=0 USE_THREAD=0 USE_LOCKING=1 -j$(nproc) && \
+    make USE_OPENMP=0 USE_THREAD=0 USE_LOCKING=1 DEBUG=1 -j$(nproc) && \
     make install NO_STATIC=1 PREFIX=/usr/local/ && \
     rm -rf /root/openblas.tar.gz /root/OpenBLAS-${OPENBLAS_MAJOR}.${OPENBLAS_MINOR}.${OPENBLAS_PATCH}/
 
@@ -48,7 +50,7 @@ RUN wget -q https://dl.bintray.com/boostorg/release/${BOOST_MAJOR}.${BOOST_MINOR
     tar -xzf boost.tar.gz && \
     cd boost_${BOOST_MAJOR}_${BOOST_MINOR}_${BOOST_PATCH} && \
     ./bootstrap.sh --prefix=$BOOST_PATH && \
-    ./b2 toolset=gcc -j$(nproc) install && \
+    ./b2 toolset=gcc variant=debug -j$(nproc) install && \
     rm -rf /root/boost.tar.gz /root/boost_${BOOST_MAJOR}_${BOOST_MINOR}_${BOOST_PATCH}
 
 # Install hwloc
@@ -91,7 +93,9 @@ RUN wget -q https://github.com/${HPX_FORK}/hpx/archive/${HPX_VERSION}.tar.gz -O 
       -DHWLOC_ROOT=$HWLOC_PATH \
       -DTCMALLOC_ROOT=$GPERFTOOLS_PATH \
       -DCMAKE_BUILD_TYPE=Debug \
+      -DCMAKE_CXX_FLAGS_DEBUG="-g -Og -fno-omit-frame-pointer" \
       -DHPX_WITH_SANITIZERS=ON \
+      -DHPX_WITH_STACK_OVERFLOW_DETECTION=OFF \
       -DHPX_WITH_MAX_CPU_COUNT=128 \
       -DHPX_WITH_NETWORKING=OFF \
       -DHPX_WITH_TESTS=OFF \
@@ -103,39 +107,42 @@ RUN wget -q https://github.com/${HPX_FORK}/hpx/archive/${HPX_VERSION}.tar.gz -O 
 RUN ldconfig
 
 # Install BLASPP
-ARG BLASPP_VERSION=c090b5738c8e
+ARG BLASPP_VERSION=2020.10.02
 ARG BLASPP_PATH=/usr/local/blaspp
-RUN wget -q https://bitbucket.org/icl/blaspp/get/${BLASPP_VERSION}.tar.gz -O blaspp.tar.gz && \
+RUN wget -q https://bitbucket.org/icl/blaspp/downloads/blaspp-${BLASPP_VERSION}.tar.gz -O blaspp.tar.gz && \
     tar -xzf blaspp.tar.gz && \
-    cd icl-blaspp-${BLASPP_VERSION} && \
+    cd blaspp-${BLASPP_VERSION} && \
     mkdir build && \
     cd build && \
     cmake .. \
-      -DBLASPP_BUILD_TESTS=OFF \
+      -DBUILD_TESTS=OFF \
       -DBLAS_LIBRARY=OpenBLAS \
-      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_BUILD_TYPE=Debug \
+      -DUSE_CUDA=OFF \
+      -DCMAKE_CXX_FLAGS_DEBUG="-g -Og -fno-omit-frame-pointer" \
       -DCMAKE_INSTALL_PREFIX=$BLASPP_PATH \
       && \
     make -j$(nproc) && \
     make install && \
-    rm -rf /root/blaspp.tar.gz /root/icl-blaspp-${BLASPP_VERSION}
+    rm -rf /root/blaspp.tar.gz /root/blaspp-${BLASPP_VERSION}
 
-ARG LAPACKPP_VERSION=f878fada3765
+ARG LAPACKPP_VERSION=2020.10.02
 ARG LAPACKPP_PATH=/usr/local/lapackpp
-RUN wget -q https://bitbucket.org/icl/lapackpp/get/${LAPACKPP_VERSION}.tar.gz -O lapackpp.tar.gz && \
+RUN wget -q https://bitbucket.org/icl/lapackpp/downloads/lapackpp-$LAPACKPP_VERSION.tar.gz -O lapackpp.tar.gz && \
     tar -xzf lapackpp.tar.gz && \
-    cd icl-lapackpp-${LAPACKPP_VERSION} && \
+    cd lapackpp-${LAPACKPP_VERSION} && \
     mkdir build && \
     cd build && \
     cmake .. \
-      -DBUILD_LAPACKPP_TESTS=OFF \
-      -DCMAKE_BUILD_TYPE=Release \
+      -DBUILD_TESTS=OFF \
+      -DCMAKE_BUILD_TYPE=Debug \
+      -DCMAKE_CXX_FLAGS_DEBUG="-g -Og -fno-omit-frame-pointer" \
       -DCMAKE_INSTALL_PREFIX=$LAPACKPP_PATH && \
     make -j$(nproc) install && \
-    rm -rf /root/lapackpp.tar.gz /root/icl-lapackpp-${LAPACKPP_VERSION}
+    rm -rf /root/lapackpp.tar.gz /root/lapackpp-${LAPACKPP_VERSION}
 
 # Add deployment tooling
-RUN wget -q https://github.com/haampie/libtree/releases/download/v1.1.3/libtree_x86_64.tar.gz && \
+RUN wget -q https://github.com/haampie/libtree/releases/download/v1.2.0/libtree_x86_64.tar.gz && \
     tar -xzf libtree_x86_64.tar.gz && \
-    rm libtree_x86_64.tar.gz  && \
+    rm libtree_x86_64.tar.gz && \
     ln -s /root/libtree/libtree /usr/local/bin/libtree

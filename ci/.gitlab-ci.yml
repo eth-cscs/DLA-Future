@@ -23,39 +23,55 @@ stages:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   script:
     - BUILD_IMAGE=$BUILD_IMAGE_BASE`sha256sum $BUILD_DOCKER_FILE | head -c 64`
-    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 -f $BUILD_DOCKER_FILE --network=host .
+    - docker build -t $BUILD_IMAGE --cache-from $BUILD_IMAGE --build-arg BASE_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 -f $BUILD_DOCKER_FILE --network=host .
     - docker push $BUILD_IMAGE
-    - docker build -t $IMAGE --build-arg BUILD_ENV=$BUILD_IMAGE --build-arg DEPLOY_IMAGE=$IMAGE -f $DEPLOY_DOCKER_FILE --network=host .
-    - docker push $IMAGE
-    - docker run $IMAGE cat /root/DLA-Future.bundle/pipeline.yml > pipeline.yml
+    - docker build -t $DEPLOY_IMAGE --build-arg BUILD_IMAGE --build-arg DEPLOY_IMAGE --build-arg DLAF_WITH_CUDA -f $DEPLOY_DOCKER_FILE --network=host .
+    - docker push $DEPLOY_IMAGE
+    - docker run $DEPLOY_IMAGE cat /root/DLA-Future.bundle/pipeline.yml > pipeline.yml
   artifacts:
     paths:
       - pipeline.yml
 
 # Builds a Docker image for the current commit
-cpu debug build:
-  extends: .build_common
-  variables:
-    BUILD_DOCKER_FILE: ci/docker/debug/build.Dockerfile
-    DEPLOY_DOCKER_FILE: ci/docker/debug/deploy.Dockerfile
-    BUILD_IMAGE_BASE: "$CI_REGISTRY_IMAGE/debug/build:"
-    IMAGE: $CI_REGISTRY_IMAGE/debug/deploy:$CI_COMMIT_SHA
-
 cpu release build:
   extends: .build_common
   variables:
     BUILD_DOCKER_FILE: ci/docker/release/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/release/deploy.Dockerfile
-    BUILD_IMAGE_BASE: "$CI_REGISTRY_IMAGE/release/build:"
-    IMAGE: $CI_REGISTRY_IMAGE/release/deploy:$CI_COMMIT_SHA
+    BUILD_IMAGE_BASE: "$CI_REGISTRY_IMAGE/release-cpu/build:"
+    DEPLOY_IMAGE: $CI_REGISTRY_IMAGE/release-cpu/deploy:$CI_COMMIT_SHA
+    DLAF_WITH_CUDA: 'OFF'
+    BASE_IMAGE: ubuntu:18.04
 
 cpu codecov build:
   extends: .build_common
   variables:
     BUILD_DOCKER_FILE: ci/docker/codecov/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/codecov/deploy.Dockerfile
-    BUILD_IMAGE_BASE: "$CI_REGISTRY_IMAGE/codecov/build:"
-    IMAGE: $CI_REGISTRY_IMAGE/codecov/deploy:$CI_COMMIT_SHA
+    BUILD_IMAGE_BASE: "$CI_REGISTRY_IMAGE/codecov-cpu/build:"
+    DEPLOY_IMAGE: $CI_REGISTRY_IMAGE/codecov-cpu/deploy:$CI_COMMIT_SHA
+    DLAF_WITH_CUDA: 'OFF'
+    BASE_IMAGE: ubuntu:18.04
+
+gpu release build:
+  extends: .build_common
+  variables:
+    BUILD_DOCKER_FILE: ci/docker/release/build.Dockerfile
+    DEPLOY_DOCKER_FILE: ci/docker/release/deploy.Dockerfile
+    BUILD_IMAGE_BASE: "$CI_REGISTRY_IMAGE/release-gpu/build:"
+    DEPLOY_IMAGE: $CI_REGISTRY_IMAGE/release-gpu/deploy:$CI_COMMIT_SHA
+    DLAF_WITH_CUDA: 'ON'
+    BASE_IMAGE: nvidia/cuda:10.2-devel-ubuntu18.04
+
+gpu codecov build:
+  extends: .build_common
+  variables:
+    BUILD_DOCKER_FILE: ci/docker/codecov/build.Dockerfile
+    DEPLOY_DOCKER_FILE: ci/docker/codecov/deploy.Dockerfile
+    BUILD_IMAGE_BASE: "$CI_REGISTRY_IMAGE/codecov-gpu/build:"
+    DEPLOY_IMAGE: $CI_REGISTRY_IMAGE/codecov-gpu/deploy:$CI_COMMIT_SHA
+    DLAF_WITH_CUDA: 'ON'
+    BASE_IMAGE: nvidia/cuda:10.2-devel-ubuntu18.04
 
 notify_github_start:
   stage: build
@@ -77,16 +93,6 @@ notify_github_start:
     - trying
   trigger:
     strategy: depend
-
-# Executes the docker images on Daint via Sarus
-cpu debug test:
-  extends: .run_common
-  needs:
-    - cpu debug build
-  trigger:
-    include:
-      - artifact: pipeline.yml
-        job: cpu debug build
 
 cpu release test:
   extends: .run_common

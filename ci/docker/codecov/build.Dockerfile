@@ -115,10 +115,10 @@ RUN wget -q https://bitbucket.org/icl/blaspp/downloads/blaspp-${BLASPP_VERSION}.
     mkdir build && \
     cd build && \
     cmake .. \
-      -DBUILD_TESTS=OFF \
-      -DBLAS_LIBRARY=OpenBLAS \
+      -Dbuild_tests=OFF \
+      -Dblas=OpenBLAS \
       -DCMAKE_BUILD_TYPE=Debug \
-      -DUSE_CUDA=OFF \
+      -Duse_cuda=OFF \
       -DCMAKE_CXX_FLAGS_DEBUG="-g -Og -fno-omit-frame-pointer" \
       -DCMAKE_INSTALL_PREFIX=$BLASPP_PATH \
       && \
@@ -134,7 +134,7 @@ RUN wget -q https://bitbucket.org/icl/lapackpp/downloads/lapackpp-$LAPACKPP_VERS
     mkdir build && \
     cd build && \
     cmake .. \
-      -DBUILD_TESTS=OFF \
+      -Dbuild_tests=OFF \
       -DCMAKE_BUILD_TYPE=Debug \
       -DCMAKE_CXX_FLAGS_DEBUG="-g -Og -fno-omit-frame-pointer" \
       -DCMAKE_INSTALL_PREFIX=$LAPACKPP_PATH && \

@@ -111,12 +111,12 @@ RUN source /opt/intel/compilers_and_libraries/linux/mkl/bin/mklvars.sh intel64 &
     mkdir build && \
     cd build && \
     cmake .. \
-      -DBUILD_TESTS=OFF \
+      -Dbuild_tests=OFF \
       -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-      -DUSE_OPENMP=OFF \
-      -DUSE_CUDA=OFF \
-      -DBLAS_LIBRARY='Intel MKL' \
-      -DBLAS_LIBRARY_THREADING=sequential \
+      -Duse_openmp=OFF \
+      -Duse_cuda=OFF \
+      -Dblas='Intel MKL' \
+      -Dblas_threaded=OFF \
       -DCMAKE_INSTALL_PREFIX=$BLASPP_PATH && \
     make -j$(nproc) && \
     make install && \
@@ -131,7 +131,7 @@ RUN source /opt/intel/compilers_and_libraries/linux/mkl/bin/mklvars.sh intel64 &
     mkdir build && \
     cd build && \
     cmake .. \
-      -DBUILD_LAPACKPP_TESTS=OFF \
+      -Dbuild_tests=OFF \
       -DCMAKE_INSTALL_PREFIX=$LAPACKPP_PATH && \
     make -j$(nproc) install && \
     rm -rf /root/lapackpp.tar.gz /root/lapackpp-${LAPACKPP_VERSION}

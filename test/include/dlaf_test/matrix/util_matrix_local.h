@@ -81,8 +81,8 @@ MatrixLocal<T> all_gather(Matrix<const T, Device::CPU>& source, comm::Communicat
   return std::move(dest);
 }
 
-template <class Stream, class T>
-Stream& print_numpy(Stream& os, const MatrixLocal<const T>& matrix, std::string symbol) {
+template <class T>
+std::ostream& print_numpy(std::ostream& os, const MatrixLocal<const T>& matrix, std::string symbol) {
   using common::iterate_range2d;
 
   // clang-format off

@@ -54,8 +54,8 @@ std::string numpy_value(const std::complex<T>& value) {
 }
 
 /// Print a tile as a numpy array
-template <class Stream, class T>
-Stream& print_numpy(Stream& os, const Tile<const T, Device::CPU>& tile) {
+template <class T>
+std::ostream& print_numpy(std::ostream& os, const Tile<const T, Device::CPU>& tile) {
   os << "np.array([";
 
   // Note:
@@ -69,8 +69,8 @@ Stream& print_numpy(Stream& os, const Tile<const T, Device::CPU>& tile) {
   return os;
 }
 
-template <class Stream, class T, Device device, template <class, Device> class MatrixLikeT>
-Stream& print_numpy(Stream& os, MatrixLikeT<const T, device>& matrix, std::string symbol) {
+template <class T, Device device, template <class, Device> class MatrixLikeT>
+std::ostream& print_numpy(std::ostream& os, MatrixLikeT<const T, device>& matrix, std::string symbol) {
   using common::iterate_range2d;
 
   const auto& distribution = matrix.distribution();

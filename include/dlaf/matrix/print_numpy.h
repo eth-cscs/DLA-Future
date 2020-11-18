@@ -65,7 +65,7 @@ Stream& print_numpy(Stream& os, const Tile<const T, Device::CPU>& tile) {
   // to python by tranposing the resulting array (and shaping it accordingly)
   for (const auto& index : iterate_range2d(tile.size()))
     os << internal::numpy_value(tile(index)) << ", ";
-  os << "]).reshape" << transposed(tile.size()) << ".T";
+  os << "]).reshape" << transposed(tile.size()) << ".T\n";
   return os;
 }
 
@@ -82,7 +82,6 @@ Stream& print_numpy(Stream& os, MatrixLikeT<const T, device>& matrix, std::strin
   // clang-format on
 
   const LocalTileSize local_tiles = distribution.localNrTiles();
-  const LocalTileIndex last_tile{local_tiles.rows() - 1, local_tiles.cols() - 1};
 
   auto getTileTopLeft = [&distribution](const LocalTileIndex& local) -> GlobalElementIndex {
     return {
@@ -105,9 +104,6 @@ Stream& print_numpy(Stream& os, MatrixLikeT<const T, device>& matrix, std::strin
     // clang-format on
 
     print_numpy(os, tile);
-
-    if (ij_local != last_tile)
-      os << "\n";
   }
 
   return os;

@@ -214,8 +214,6 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
     // clang-format on
 
     if (distribution.rankIndex().col() == 0) {
-      print_numpy(std::cerr, localV, "V");
-      print_numpy(std::cerr, localT, "T");
 
       is_orthogonal(H_result);
 

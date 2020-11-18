@@ -84,7 +84,7 @@ hpx::future<matrix::Tile<const T, Device::CPU>> recv_tile(
         MemView_t mem_view(tile_size.linear_size());
         Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
         comm::sync::broadcast::receive_from(rank, pcomm.ref().subCommunicator(rc_comm), tile);
-        return std::move(tile);
+        return ConstTile_t(std::move(tile));
       },
       "recv_tile");
   return hpx::dataflow(ex, std::move(recv_bcast_f), mpi_task_chain());

@@ -96,15 +96,20 @@ struct numpy_type<std::complex<T>> {
 template <class T>
 ::testing::AssertionResult parseAndCheckTile(const std::string numpy_output,
                                              const Tile<const T, Device::CPU>& tile) {
-  const std::regex regex_syntax{"np.array\\(\\[(.*)\\]\\)"          // np.array([<values>])
-                                ".reshape\\((\\d+), (\\d+)\\).T"};  // .reshape(<n>, <n>).T
+  const std::regex regex_syntax{
+      "np\\.array\\(\\[(.*)\\],\\s*dtype=np\\.(.*)\\)"  // np.array([<values>], dtype=np.<type>)
+      "\\.reshape\\((\\d+), (\\d+)\\)\\.T\\s*"};        // .reshape(<n>, <n>).T
 
   std::smatch parts;
   if (!std::regex_match(numpy_output, parts, regex_syntax))
     return ::testing::AssertionFailure() << "syntax not valid for " << numpy_output;
 
   const std::string values_section = parts[1].str();
-  const auto size = transposed(TileElementSize{std::stoi(parts[2].str()), std::stoi(parts[3].str())});
+  const std::string dtype = parts[2].str();
+  const auto size = transposed(TileElementSize{std::stoi(parts[3].str()), std::stoi(parts[4].str())});
+
+  if (std::string(numpy_type<T>::name) != dtype)
+    return ::testing::AssertionFailure() << std::string(numpy_type<T>::name) << " != " << dtype;
 
   if (size != tile.size())
     return ::testing::AssertionFailure() << size << " " << tile.size();
@@ -160,8 +165,8 @@ template <class T>
   std::getline(stream, definition);
 
   const std::regex regex_definition(
-      "(.+) = np.zeros\\(\\(([0-9]+), ([0-9]+)\\)"  // <symbol> = np.zeros((<rows>, <cols>)
-      ", dtype=np\\.(.+)\\)");                      // , dtype=np.<type>)
+      "(.+) = np\\.zeros\\(\\(([0-9]+), ([0-9]+)\\)"  // <symbol> = np.zeros((<rows>, <cols>)
+      ", dtype=np\\.(.+)\\)");                        // , dtype=np.<type>)
   std::smatch matches;
   if (!std::regex_match(definition, matches, regex_definition))
     return ::testing::AssertionFailure() << "'" << definition << "'\n"

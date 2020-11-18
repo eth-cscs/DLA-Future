@@ -65,7 +65,11 @@ std::ostream& print_numpy(std::ostream& os, const Tile<const T, Device::CPU>& ti
   // to python by tranposing the resulting array (and shaping it accordingly)
   for (const auto& index : iterate_range2d(tile.size()))
     os << internal::numpy_value(tile(index)) << ", ";
-  os << "]).reshape" << transposed(tile.size()) << ".T\n";
+
+  os << "]"
+     << ", dtype=np." << internal::numpy_datatype<T>::typestring << ")"
+     << ".reshape" << transposed(tile.size()) << ".T\n";
+
   return os;
 }
 

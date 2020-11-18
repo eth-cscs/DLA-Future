@@ -24,6 +24,7 @@
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/util_matrix.h"
 #include "dlaf/types.h"
 
 namespace dlaf {
@@ -53,9 +54,16 @@ void QR<Backend::MC, Device::CPU>::computeTFactor(
   // TODO assumption: intra-tile reflector
   // check that last_reflector < block_size
 
+  // TODO assumption: no empty grid
+
   const auto& dist = a.distribution();
   const comm::Index2D rank = dist.rankIndex();
   const comm::Index2D rank_v0 = dist.rankGlobalTile(ai_start);
+
+  if (rank.col() != rank_v0.col())
+    return;
+
+  matrix::util::set(t, [](auto&&) {return 0;});
 
   const LocalTileIndex ai_bound_index{dist.localNrTiles().rows(), ai_start_loc.col() + 1};
 

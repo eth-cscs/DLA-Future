@@ -105,10 +105,10 @@ void QR<Backend::MC, Device::CPU>::computeTFactor(
             DLAF_ASSERT_HEAVY(i_t.isIn(tile_t.size()), i_t, t_size);
             DLAF_ASSERT_HEAVY(i_v.isIn(tile_v.size()), i_v, tile_v.size());
 
-            tile_t(i_t) += -tau * dlaf::conj(tile_v(i_v));
+            tile_t(i_t) = -tau * dlaf::conj(tile_v(i_v));
           }
 
-          // and update the geometries/indices to skip the element managed separately
+          // and update the geometries/indices to skip the elements managed separately
           va_start = va_start + TileElementSize{1, 0};
           vb_start = vb_start + TileElementSize{1, 0};
 

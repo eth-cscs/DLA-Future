@@ -36,7 +36,7 @@ inline void mpi_call(int err, const common::internal::source_location& info) {
     std::unique_ptr<char[]> err_buff(new char[MPI_MAX_ERROR_STRING]);
     int err_str_len;
     MPI_Error_string(err, err_buff.get(), &err_str_len);
-    std::cout << "[MPI ERROR] " << info << std::endl << err_buff.get() << std::endl;
+    std::cerr << "[MPI ERROR] " << info << std::endl << err_buff.get() << std::endl;
     MPI_Abort(MPI_COMM_WORLD, -1);
   }
 }

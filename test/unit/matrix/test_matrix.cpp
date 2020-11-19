@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2020, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -1068,6 +1068,58 @@ TYPED_TEST(MatrixTest, CopyFrom) {
     }
   }
 }
+
+#if DLAF_WITH_CUDA
+TYPED_TEST(MatrixTest, GPUCopy) {
+  using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
+  using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
+  using MatrixConstT = dlaf::Matrix<const TypeParam, Device::CPU>;
+  using GPUMemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::GPU>;
+  using GPUMatrixT = dlaf::Matrix<TypeParam, Device::GPU>;
+
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+
+      auto input_matrix = [](const GlobalElementIndex& index) {
+        SizeType i = index.row();
+        SizeType j = index.col();
+        return TypeUtilities<TypeParam>::element(i + j / 1024., j - i / 128.);
+      };
+
+      MemoryViewT mem_src(layout.minMemSize());
+      MatrixT mat_src = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid,
+                                                          static_cast<TypeParam*>(mem_src()));
+      dlaf::matrix::util::set(mat_src, input_matrix);
+
+      MatrixConstT mat_src_const = std::move(mat_src);
+
+      GPUMemoryViewT mem_gpu1(layout.minMemSize());
+      GPUMatrixT mat_gpu1 = createMatrixFromTile<Device::GPU>(size, test.block_size, comm_grid,
+                                                              static_cast<TypeParam*>(mem_gpu1()));
+
+      GPUMemoryViewT mem_gpu2(layout.minMemSize());
+      GPUMatrixT mat_gpu2 = createMatrixFromTile<Device::GPU>(size, test.block_size, comm_grid,
+                                                              static_cast<TypeParam*>(mem_gpu2()));
+
+      MemoryViewT mem_dst(layout.minMemSize());
+      MatrixT mat_dst = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid,
+                                                          static_cast<TypeParam*>(mem_dst()));
+      dlaf::matrix::util::set(mat_dst,
+                              [](const auto&) { return TypeUtilities<TypeParam>::element(13, 26); });
+
+      copy(mat_src_const, mat_gpu1);
+      copy(mat_gpu1, mat_gpu2);
+      copy(mat_gpu2, mat_dst);
+
+      CHECK_MATRIX_NEAR(input_matrix, mat_dst, 0, TypeUtilities<TypeParam>::error);
+    }
+  }
+}
+#endif
 
 // MatrixDestructorFutures
 //

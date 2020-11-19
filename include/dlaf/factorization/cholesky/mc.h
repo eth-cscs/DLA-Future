@@ -46,8 +46,6 @@ struct Cholesky<Backend::MC, Device::CPU, T> {
   static void call_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a);
 };
 
-// If the diagonal tile is on this node factorize it
-// Cholesky decomposition on mat_a(k,k) r/w potrf (lapack operation)
 template <class T>
 void potrf_diag_tile(hpx::threads::executors::pool_executor executor_hp,
                      hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {

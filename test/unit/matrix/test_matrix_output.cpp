@@ -97,8 +97,8 @@ template <class T>
 ::testing::AssertionResult parseAndCheckTile(const std::string numpy_output,
                                              const Tile<const T, Device::CPU>& tile) {
   const std::regex regex_syntax{
-      "np\\.array\\(\\[(.*)\\],\\s*dtype=np\\.(.*)\\)"  // np.array([<values>], dtype=np.<type>)
-      "\\.reshape\\((\\d+), (\\d+)\\)\\.T\\s*"};        // .reshape(<n>, <n>).T
+      "np\\.array\\(\\[(.*)\\],\\s*dtype=np\\.(\\w+)\\)"  // np.array([<values>], dtype=np.<type>)
+      "\\.reshape\\((\\d+),\\s*(\\d+)\\)\\.T\\s*"};       // .reshape(<n>, <n>).T
 
   std::smatch parts;
   if (!std::regex_match(numpy_output, parts, regex_syntax))
@@ -165,8 +165,8 @@ template <class T>
   std::getline(stream, definition);
 
   const std::regex regex_definition(
-      "(.+) = np\\.zeros\\(\\(([0-9]+), ([0-9]+)\\)"  // <symbol> = np.zeros((<rows>, <cols>)
-      ", dtype=np\\.(.+)\\)");                        // , dtype=np.<type>)
+      "(\\w+)\\s*=\\s*np\\.zeros\\(\\(([0-9]+),\\s*([0-9]+)\\)"  // <symbol> = np.zeros((<rows>, <cols>)
+      ",\\s*dtype=np\\.(\\w+)\\)");                              // , dtype=np.<type>)
   std::smatch matches;
   if (!std::regex_match(definition, matches, regex_definition))
     return ::testing::AssertionFailure() << "'" << definition << "'\n"
@@ -185,11 +185,11 @@ template <class T>
 
   // each next line must contain an assignment: one for each tile of the matrix
   for (std::string line; std::getline(stream, line);) {
-    const std::regex regex_assignment("([^\\[]+)\\[\\s*"           // <symbol>[
+    const std::regex regex_assignment("(\\w+)\\[\\s*"              // <symbol>[
                                       "([0-9]+)\\s*:\\s*([0-9]+)"  // <i_beg>:<i_end>
                                       "\\s*,\\s*"                  // ,
                                       "([0-9]+)\\s*:\\s*([0-9]+)"  // <j_beg>:<j_end>
-                                      "\\s*\\] = (.+)");           // ] = <tile>
+                                      "\\s*\\]\\s*=\\s*(.+)");     // ] = <tile>
 
     std::smatch matches;
     if (!std::regex_match(line, matches, regex_assignment))
@@ -197,7 +197,7 @@ template <class T>
 
     const std::string assign_symbol = matches[1].str();
     if (symbol != assign_symbol)
-      return ::testing::AssertionFailure() << "symbol mismatch:" << symbol << " vs " << assign_symbol;
+      return ::testing::AssertionFailure() << "symbol mismatch: " << symbol << " vs " << assign_symbol;
 
     const SizeType i_beg = std::stoi(matches[2].str());
     const SizeType i_end = std::stoi(matches[3].str());

@@ -61,17 +61,15 @@ endif()
 # ----- HPX
 set(DLAF_HPXTEST_EXTRA_ARGS "" CACHE STRING "Extra arguments for tests with HPX")
 
-add_library(DLAF_test src/util_mpi.cpp)
+add_library(DLAF_test INTERFACE)
 
 target_include_directories(DLAF_test
-  PUBLIC
+  INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 
 target_link_libraries(DLAF_test
-  PRIVATE
-    MPI::MPI_CXX
-  PUBLIC
+  INTERFACE
     gtest
 )
 

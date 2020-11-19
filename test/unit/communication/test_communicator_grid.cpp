@@ -14,13 +14,16 @@
 #include <gtest/gtest.h>
 #include <mpi.h>
 
-#include "dlaf_test/util_mpi.h"
-
-using dlaf::comm::test::computeGridDims;
-using dlaf::common::Ordering;
 using namespace dlaf::comm;
+using dlaf::common::Ordering;
 
 const auto valid_orderings = ::testing::Values(Ordering::RowMajor, Ordering::ColumnMajor);
+
+std::array<int, 2> computeGridDims(int nranks) {
+  std::array<int, 2> dimensions{0, 0};
+  DLAF_MPI_CALL(MPI_Dims_create(nranks, 2, dimensions.data()));
+  return dimensions;
+}
 
 void test_grid_communication(CommunicatorGrid& grid) {
   if (MPI_COMM_NULL == grid.rowCommunicator() || MPI_COMM_NULL == grid.colCommunicator())

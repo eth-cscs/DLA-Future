@@ -64,7 +64,7 @@ std::ostream& print_numpy(std::ostream& os, const Tile<const T, Device::CPU>& ti
   // For this reason, values are printed in a column-major order, and reordering is deferred
   // to python by tranposing the resulting array (and shaping it accordingly)
   for (const auto& index : iterate_range2d(tile.size()))
-    os << internal::numpy_value(tile(index)) << ", ";
+    os << internal::numpy_value(tile(index)) << ",";
 
   os << "]"
      << ", dtype=np." << internal::numpy_datatype<T>::typestring << ")"
@@ -79,11 +79,8 @@ std::ostream& print_numpy(std::ostream& os, MatrixLikeT<const T, device>& matrix
 
   const auto& distribution = matrix.distribution();
 
-  // clang-format off
-  os
-    << symbol << " = np.zeros(" << distribution.size()
-    << ", dtype=np." << internal::numpy_datatype<T>::typestring << ")\n";
-  // clang-format on
+  os << sym << " = np.zeros(" << distribution.size() << ", dtype=np."
+     << internal::numpy_datatype<T>::typestring << ")\n";
 
   const LocalTileSize local_tiles = distribution.localNrTiles();
 
@@ -97,21 +94,15 @@ std::ostream& print_numpy(std::ostream& os, MatrixLikeT<const T, device>& matrix
   for (const auto& ij_local : iterate_range2d(local_tiles)) {
     const auto& tile = matrix.read(ij_local).get();
 
-    const auto index_tl = getTileTopLeft(ij_local);
+    const auto tl = getTileTopLeft(ij_local);
+    const auto br = tl + GlobalElementSize{tile.size().rows(), tile.size().cols()};
 
-    // clang-format off
-    os
-      << symbol << "["
-      << index_tl.row() << ":" << index_tl.row() + tile.size().rows() << ", "
-      << index_tl.col() << ":" << index_tl.col() + tile.size().cols()
-      << "] = ";
-    // clang-format on
 
     print_numpy(os, tile);
+    os << sym << "[" << tl.row() << ":" << br.row() << "," << tl.col() << ":" << br.col() << "] = ";
   }
 
   return os;
 }
-
 }
 }

@@ -15,8 +15,8 @@
 
 #include "dlaf/auxiliary/norm.h"
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/init.h"
 #include "dlaf/communication/error.h"
+#include "dlaf/communication/init.h"
 #include "dlaf/factorization/cholesky.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"

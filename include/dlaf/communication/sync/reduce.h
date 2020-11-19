@@ -51,7 +51,8 @@ void collector(Communicator& communicator, MPI_Op reduce_operation, const DataIn
     common::copy(input, buffer_in);
 
   DLAF_MPI_CALL(MPI_Reduce(message_input.data(), message_output.data(), message_input.count(),
-             message_input.mpi_type(), reduce_operation, communicator.rank(), communicator));
+                           message_input.mpi_type(), reduce_operation, communicator.rank(),
+                           communicator));
 
   // if the output buffer has been used, copy-back output values
   if (buffer_out)
@@ -77,8 +78,8 @@ void participant(int rank_root, Communicator& communicator, MPI_Op reduce_operat
   if (buffer_in)
     common::copy(input, buffer_in);
 
-  DLAF_MPI_CALL(MPI_Reduce(message_input.data(), nullptr, message_input.count(), message_input.mpi_type(),
-             reduce_operation, rank_root, communicator));
+  DLAF_MPI_CALL(MPI_Reduce(message_input.data(), nullptr, message_input.count(),
+                           message_input.mpi_type(), reduce_operation, rank_root, communicator));
 }
 }
 }

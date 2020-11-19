@@ -52,7 +52,7 @@ void all_reduce(Communicator& communicator, MPI_Op reduce_operation, const DataI
     common::copy(input, buffer_in);
 
   DLAF_MPI_CALL(MPI_Allreduce(message_input.data(), message_output.data(), message_input.count(),
-                message_input.mpi_type(), reduce_operation, communicator));
+                              message_input.mpi_type(), reduce_operation, communicator));
 
   // if the output buffer has been used, copy-back output values
   if (buffer_out)

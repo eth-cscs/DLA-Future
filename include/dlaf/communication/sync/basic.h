@@ -28,7 +28,8 @@ template <class DataIn>
 void send_to(int receiver_rank, Communicator& communicator, DataIn&& data) {
   int tag = 0;
   auto message = make_message(common::make_data(std::forward<DataIn>(data)));
-  DLAF_MPI_CALL(MPI_Send(message.data(), message.count(), message.mpi_type(), receiver_rank, tag, communicator));
+  DLAF_MPI_CALL(
+      MPI_Send(message.data(), message.count(), message.mpi_type(), receiver_rank, tag, communicator));
 }
 
 /// MPI_Recv wrapper for receiver side accepting a Data.
@@ -38,10 +39,9 @@ template <class DataOut>
 void receive_from(int sender_rank, Communicator& communicator, DataOut&& data) {
   int tag = 0;
   auto message = make_message(common::make_data(std::forward<DataOut>(data)));
-  DLAF_MPI_CALL(MPI_Recv(message.data(), message.count(), message.mpi_type(), sender_rank, tag, communicator,
-           MPI_STATUS_IGNORE));
+  DLAF_MPI_CALL(MPI_Recv(message.data(), message.count(), message.mpi_type(), sender_rank, tag,
+                         communicator, MPI_STATUS_IGNORE));
 }
-
 }
 }
 }

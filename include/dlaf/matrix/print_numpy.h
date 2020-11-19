@@ -19,6 +19,11 @@
 #include "dlaf/types.h"
 
 namespace dlaf {
+
+namespace output_format {
+struct numpy {};
+}
+
 namespace matrix {
 
 namespace internal {
@@ -55,7 +60,8 @@ std::string numpy_value(const std::complex<T>& value) {
 
 /// Print a tile as a numpy array
 template <class T>
-std::ostream& print_numpy(std::ostream& os, const Tile<const T, Device::CPU>& tile) {
+std::ostream& print(output_format::numpy, const Tile<const T, Device::CPU>& tile,
+                    std::ostream& os = std::cout) {
   os << "np.array([";
 
   // Note:
@@ -74,7 +80,8 @@ std::ostream& print_numpy(std::ostream& os, const Tile<const T, Device::CPU>& ti
 }
 
 template <class T, Device device, template <class, Device> class MatrixLikeT>
-std::ostream& print_numpy(std::ostream& os, MatrixLikeT<const T, device>& matrix, std::string symbol) {
+std::ostream& print(output_format::numpy, std::string sym, MatrixLikeT<const T, device>& matrix,
+                    std::ostream& os = std::cout) {
   using common::iterate_range2d;
 
   const auto& distribution = matrix.distribution();
@@ -97,9 +104,8 @@ std::ostream& print_numpy(std::ostream& os, MatrixLikeT<const T, device>& matrix
     const auto tl = getTileTopLeft(ij_local);
     const auto br = tl + GlobalElementSize{tile.size().rows(), tile.size().cols()};
 
-
-    print_numpy(os, tile);
     os << sym << "[" << tl.row() << ":" << br.row() << "," << tl.col() << ":" << br.col() << "] = ";
+    print(output_format::numpy{}, tile, os);
   }
 
   return os;

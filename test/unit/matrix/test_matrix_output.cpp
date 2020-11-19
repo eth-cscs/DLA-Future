@@ -147,7 +147,7 @@ TYPED_TEST(MatrixOutputLocalTest, NumpyFormatTile) {
       const auto& tile = mat.read(index).get();
 
       std::ostringstream stream_tile_output;
-      print_numpy(stream_tile_output, tile);
+      print(output_format::numpy{}, tile, stream_tile_output);
 
       EXPECT_TRUE(parseAndCheckTile(stream_tile_output.str(), tile));
     }
@@ -229,7 +229,7 @@ TYPED_TEST(MatrixOutputLocalTest, NumpyFormatMatrix) {
     set(mat, pattern_values<TypeParam>);
 
     std::ostringstream stream_matrix_output;
-    print_numpy(stream_matrix_output, mat, "mat");
+    print(output_format::numpy{}, "mat", mat, stream_matrix_output);
 
     EXPECT_TRUE(parseAndCheckMatrix(stream_matrix_output.str(), mat));
   }
@@ -259,7 +259,7 @@ TYPED_TEST(MatrixOutputTest, NumpyFormatMatrix) {
       set(mat, pattern_values<TypeParam>);
 
       std::ostringstream stream_matrix_output;
-      print_numpy(stream_matrix_output, mat, "mat");
+      print(output_format::numpy{}, "mat", mat, stream_matrix_output);
 
       EXPECT_TRUE(parseAndCheckMatrix(stream_matrix_output.str(), mat));
     }

@@ -72,9 +72,14 @@ void bcast_send_tile(hpx::threads::executors::pool_executor executor_hp,
 
   // Broadcast the (trailing) panel column-wise
   auto send_bcast_f = hpx::util::annotated_function(
-      [](hpx::shared_future<ConstTile_t> fut_tile, hpx::future<PromiseExec_t> fpex) {
-        PromiseExec_t pex = fpex.get();
-        comm::bcast(pex.ref(), pex.ref().comm().rank(), fut_tile.get());
+      [](hpx::shared_future<ConstTile_t> ftile, hpx::future<PromiseExec_t> fpex) {
+        const ConstTile_t& tile = ftile.get();
+        hpx::future<void> comm_fut;
+        {
+          PromiseExec_t pex = fpex.get();
+          comm_fut = comm::bcast(pex.ref(), pex.ref().comm().rank(), tile);
+        }
+        comm_fut.get();
       },
       "send_tile");
   hpx::dataflow(executor_hp, std::move(send_bcast_f), tile, mpi_task_chain());

@@ -82,7 +82,8 @@ MatrixLocal<T> all_gather(Matrix<const T, Device::CPU>& source, comm::Communicat
 }
 
 template <class T>
-std::ostream& print_numpy(std::ostream& os, const MatrixLocal<const T>& matrix, std::string symbol) {
+void print(format::numpy, std::string symbol, const MatrixLocal<const T>& matrix,
+           std::ostream& os = std::cout) {
   using common::iterate_range2d;
 
   // clang-format off
@@ -100,18 +101,11 @@ std::ostream& print_numpy(std::ostream& os, const MatrixLocal<const T>& matrix, 
 
     const auto index_tl = getTileTopLeft(ij);
 
-    // clang-format off
-    os
-      << symbol << "["
-      << index_tl.row() << ":" << index_tl.row() + tile.size().rows() << ", "
-      << index_tl.col() << ":" << index_tl.col() + tile.size().cols()
-      << "] = ";
-    // clang-format on
+    os << symbol << "[" << index_tl.row() << ":" << index_tl.row() + tile.size().rows() << ", "
+       << index_tl.col() << ":" << index_tl.col() + tile.size().cols() << "] = ";
 
-    print_numpy(os, tile);
+    print(format::numpy{}, tile, os);
   }
-
-  return os;
 }
 }
 }

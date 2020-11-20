@@ -24,8 +24,8 @@
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/matrix/matrix.h"
-#include "dlaf/util_matrix.h"
 #include "dlaf/types.h"
+#include "dlaf/util_matrix.h"
 
 namespace dlaf {
 namespace factorization {
@@ -63,7 +63,7 @@ void QR<Backend::MC, Device::CPU>::computeTFactor(
   if (rank.col() != rank_v0.col())
     return;
 
-  matrix::util::set(t, [](auto&&) {return 0;});
+  matrix::util::set(t, [](auto&&) { return 0; });
 
   const LocalTileIndex ai_bound_index{dist.localNrTiles().rows(), ai_start_loc.col() + 1};
 

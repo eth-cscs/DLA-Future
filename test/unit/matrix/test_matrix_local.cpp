@@ -12,6 +12,7 @@
 #include "dlaf/util_math.h"
 #include "dlaf_test/matrix/matrix_local.h"
 
+#include <sstream>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -96,6 +97,21 @@ TYPED_TEST(MatrixLocalTest, Copy) {
     copy(source, dest);
 
     CHECK_MATRIX_NEAR(source, dest, error, error);
+  }
+}
+
+TYPED_TEST(MatrixLocalTest, OutputNumpyForamt) {
+  for (const auto& config : sizes_tests) {
+    MatrixLocal<const TypeParam> mat = [&config]() {
+      MatrixLocal<TypeParam> source(config.size, config.block_size);
+      set(source, value_preset<TypeParam>);
+      return source;
+    }();
+
+    std::ostringstream stream_matrix_output;
+    print(format::numpy{}, "mat", mat, stream_matrix_output);
+
+    // TODO check
   }
 }
 

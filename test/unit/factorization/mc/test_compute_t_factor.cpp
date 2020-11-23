@@ -169,8 +169,9 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
       Matrix<TypeParam, Device::CPU> t_output(LocalElementSize{k, k}, block_size);
       common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
 
-      dlaf::factorization::internal::computeTFactor<Backend::MC>(t_output, v_input, {0, 0}, {0, 0}, k,
-                                                                 taus_input, serial_comm);
+      // TODO just the first column panel is tested
+      dlaf::factorization::internal::computeTFactor<Backend::MC>(k, v_input, {0, 0}, taus_input,
+                                                                 t_output, serial_comm);
 
       // TODO T factor is reduced just on the rank owning V0
       const comm::Index2D owner_t{0, 0};

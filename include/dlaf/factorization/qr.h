@@ -24,11 +24,10 @@ namespace internal {
 // Schreiber, Robert & VanLoan, Charles. (1989)
 // SIAM Journal on Scientific and Statistical Computing. 10. 10.1137/0910005.
 template <Backend backend, Device device, class T>
-void computeTFactor(Matrix<T, device>& t, Matrix<const T, device>& a, const LocalTileIndex ai_start_loc,
-                    const GlobalTileIndex ai_start, const SizeType k,
-                    common::internal::vector<hpx::shared_future<T>> taus,
+void computeTFactor(const SizeType k, Matrix<const T, device>& v, const GlobalTileIndex v_start,
+                    common::internal::vector<hpx::shared_future<T>> taus, Matrix<T, device>& t,
                     common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
-  QR_Tfactor<backend, device, T>::call(t, a, ai_start_loc, ai_start, k, taus, serial_comm);
+  QR_Tfactor<backend, device, T>::call(k, v, v_start, taus, t, serial_comm);
 }
 
 }

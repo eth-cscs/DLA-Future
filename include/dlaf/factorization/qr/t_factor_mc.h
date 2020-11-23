@@ -33,38 +33,40 @@ namespace internal {
 
 template <class T>
 struct QR_Tfactor<Backend::MC, Device::CPU, T> {
-  static void call(Matrix<T, Device::CPU>& t, Matrix<const T, Device::CPU>& a,
-                   const LocalTileIndex ai_start_loc, const GlobalTileIndex ai_start,
-                   const SizeType last_reflector, common::internal::vector<hpx::shared_future<T>> taus,
+  static void call(const SizeType k, Matrix<const T, Device::CPU>& v, const GlobalTileIndex v_start,
+                   common::internal::vector<hpx::shared_future<T>> taus, Matrix<T, Device::CPU>& t,
                    common::Pipeline<comm::CommunicatorGrid>& serial_comm);
 };
 
 template <class T>
 void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
-    Matrix<T, Device::CPU>& t, Matrix<const T, Device::CPU>& a, const LocalTileIndex ai_start_loc,
-    const GlobalTileIndex ai_start, const SizeType k,
-    common::internal::vector<hpx::shared_future<T>> taus,
+    const SizeType k, Matrix<const T, Device::CPU>& v, const GlobalTileIndex v_start,
+    common::internal::vector<hpx::shared_future<T>> taus, Matrix<T, Device::CPU>& t,
     common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
   using hpx::util::unwrapping;
   using common::make_data;
   using namespace comm::sync;
 
   DLAF_ASSERT(k <= t.blockSize().cols(), k, t.blockSize());
-  DLAF_ASSERT(square_blocksize(a), a);
+  DLAF_ASSERT(square_blocksize(v), v);
 
   // TODO assumption: no empty grid
 
-  const auto& dist = a.distribution();
+  const auto& dist = v.distribution();
   const comm::Index2D rank = dist.rankIndex();
-  const comm::Index2D rank_v0 = dist.rankGlobalTile(ai_start);
+  const comm::Index2D rank_v0 = dist.rankGlobalTile(v_start);
 
   if (rank.col() != rank_v0.col())
     return;
 
+  const LocalTileIndex ai_start_loc{
+      dist.template nextLocalTileFromGlobalTile<Coord::Row>(v_start.row()),
+      dist.template nextLocalTileFromGlobalTile<Coord::Col>(v_start.col()),
+  };
+  const LocalTileIndex ai_bound_index{dist.localNrTiles().rows(), ai_start_loc.col() + 1};
+
   // TODO it would be better to embed this reset inside a bigger task
   matrix::util::set(t, [](auto&&) { return 0; });
-
-  const LocalTileIndex ai_bound_index{dist.localNrTiles().rows(), ai_start_loc.col() + 1};
 
   // 2. CALCULATE T-FACTOR
   // T(0:j, j) = T(0:j, 0:j) . -tau(j) . V(j:, 0:j)* . V(j:, j)
@@ -79,7 +81,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
       const SizeType index_tile_v_global =
           dist.template globalTileFromLocalTile<Coord::Row>(index_tile_v.row());
 
-      const bool has_first_component = (index_tile_v_global == ai_start.row());
+      const bool has_first_component = (index_tile_v_global == v_start.row());
 
       // GEMV t = V(j:mV; 0:j)* . V(j:mV;j)
       auto gemv_func = unwrapping([=](auto&& tile_t, const T tau, const auto& tile_v) {
@@ -128,7 +130,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
         }
       });
 
-      hpx::dataflow(gemv_func, t(LocalTileIndex{0, 0}), taus[j_reflector], a.read(index_tile_v));
+      hpx::dataflow(gemv_func, t(LocalTileIndex{0, 0}), taus[j_reflector], v.read(index_tile_v));
     }
 
     // REDUCE after GEMV

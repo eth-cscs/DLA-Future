@@ -81,9 +81,9 @@ struct ComputeTFactorDistributedTest : public ::testing::Test {
 TYPED_TEST_SUITE(ComputeTFactorDistributedTest, dlaf::test::MatrixElementTypes);
 
 std::vector<std::array<dlaf::SizeType, 5>> configs{
-  // m, n, mb, nb, k
-  {39, 26, 6, 6, 6},    // all reflectors
-  {39, 26, 6, 6, 4},    // k reflectors
+    // m, n, mb, nb, k
+    {39, 26, 6, 6, 6},  // all reflectors
+    {39, 26, 6, 6, 4},  // k reflectors
 };
 
 TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {

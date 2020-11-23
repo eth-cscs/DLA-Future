@@ -59,44 +59,40 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
   if (rank.col() != rank_v0.col())
     return;
 
-  const LocalTileIndex ai_start_loc{
+  const LocalTileIndex v_start_loc{
       dist.template nextLocalTileFromGlobalTile<Coord::Row>(v_start.row()),
       dist.template nextLocalTileFromGlobalTile<Coord::Col>(v_start.col()),
   };
-  const LocalTileIndex ai_bound_index{dist.localNrTiles().rows(), ai_start_loc.col() + 1};
+  const LocalTileIndex v_end_loc{dist.localNrTiles().rows(), v_start_loc.col() + 1};
 
   // TODO it would be better to embed this reset inside a bigger task
   matrix::util::set(t, [](auto&&) { return 0; });
 
-  // 2. CALCULATE T-FACTOR
   // T(0:j, j) = T(0:j, 0:j) . -tau(j) . V(j:, 0:j)* . V(j:, j)
-  for (SizeType j_reflector = 0; j_reflector < k; ++j_reflector) {
-    const TileElementIndex index_el_x0{j_reflector, j_reflector};
+  for (SizeType j = 0; j < k; ++j) {
+    // this is the x0 element of the reflector j and it is valid just in the tile v0
+    const TileElementIndex x0{j, j};
+
+    const TileElementIndex t_start{0, x0.col()};
+    const TileElementSize t_size{x0.row(), 1};
 
     // 2A First step GEMV
-    const TileElementIndex t_start{0, index_el_x0.col()};
-    const TileElementSize t_size{index_el_x0.row(), 1};
+    for (const auto& v_i_loc : iterate_range2d(v_start_loc, v_end_loc)) {
+      const SizeType v_i = dist.template globalTileFromLocalTile<Coord::Row>(v_i_loc.row());
 
-    for (const auto& index_tile_v : iterate_range2d(ai_start_loc, ai_bound_index)) {
-      const SizeType index_tile_v_global =
-          dist.template globalTileFromLocalTile<Coord::Row>(index_tile_v.row());
+      const bool is_v0 = (v_i == v_start.row());
 
-      const bool has_first_component = (index_tile_v_global == v_start.row());
-
-      // GEMV t = V(j:mV; 0:j)* . V(j:mV;j)
-      auto gemv_func = unwrapping([=](auto&& tile_t, const T tau, const auto& tile_v) {
-        const SizeType first_element_in_tile = has_first_component ? index_el_x0.row() : 0;
+      auto gemv_func = unwrapping([=](const auto& tile_v, const T tau, auto&& tile_t) {
+        const SizeType first_element_in_tile = is_v0 ? x0.row() : 0;
 
         // T(0:j, j) = -tau . V(j:, 0:j)* . V(j:, j)
         // [j x 1] = [(n-j) x j]* . [(n-j) x 1]
-        TileElementSize va_size{tile_v.size().rows() - first_element_in_tile, index_el_x0.col()};
+        TileElementSize va_size{tile_v.size().rows() - first_element_in_tile, x0.col()};
         TileElementIndex va_start{first_element_in_tile, 0};
-        TileElementIndex vb_start{first_element_in_tile, index_el_x0.col()};
+        TileElementIndex vb_start{first_element_in_tile, x0.col()};
 
-        // if it is the "head" tile...
-        if (has_first_component) {
-          // set the tau on the diagonal
-          tile_t(index_el_x0) = tau;
+        if (is_v0) {
+          tile_t(x0) = tau;
 
           // use implicit 1 for the 2nd operand
           for (SizeType r = 0; !va_size.isEmpty() && r < va_size.cols(); ++r) {
@@ -109,15 +105,13 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
             tile_t(i_t) = -tau * dlaf::conj(tile_v(i_v));
           }
 
-          // and update the geometries/indices to skip the elements managed separately
+          // skip alredy managed computations with implicit 1
           va_start = va_start + TileElementSize{1, 0};
           vb_start = vb_start + TileElementSize{1, 0};
-
           va_size = {va_size.rows() - 1, va_size.cols()};
         }
 
-        if (va_size.isValid() && !va_size.isEmpty()) {
-          // t = -tau . V* . V
+        if (!va_size.isEmpty()) {
           // clang-format off
           blas::gemv(blas::Layout::ColMajor,
               blas::Op::ConjTrans,
@@ -130,8 +124,10 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
         }
       });
 
-      hpx::dataflow(gemv_func, t(LocalTileIndex{0, 0}), taus[j_reflector], v.read(index_tile_v));
+      hpx::dataflow(gemv_func, v.read(v_i_loc), taus[j], t(LocalTileIndex{0, 0}));
     }
+
+    // TODO next steps can be moved outside the loop, in order to reduce just one time
 
     // REDUCE after GEMV
     if (!t_size.isEmpty()) {

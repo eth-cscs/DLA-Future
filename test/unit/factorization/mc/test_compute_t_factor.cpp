@@ -113,7 +113,8 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
 
       const MatrixLocal<const TypeParam> v = [&]() {
         auto v = matrix::test::all_gather<TypeParam>(v_input, comm_grid);
-        lapack::laset(lapack::MatrixType::Upper, n, n, 0, 1, v.ptr({0, 0}), v.ld());
+        const auto min_size = std::min(m, n);
+        lapack::laset(lapack::MatrixType::Upper, min_size, min_size, 0, 1, v.ptr({0, 0}), v.ld());
         return v;
       }();
 

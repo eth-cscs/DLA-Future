@@ -44,15 +44,15 @@ struct QR<Backend::MC, Device::CPU> {
 template <class T>
 void QR<Backend::MC, Device::CPU>::computeTFactor(
     Matrix<T, Device::CPU>& t, Matrix<const T, Device::CPU>& a, const LocalTileIndex ai_start_loc,
-    const GlobalTileIndex ai_start, const SizeType last_reflector,
+    const GlobalTileIndex ai_start, const SizeType k,
     common::internal::vector<hpx::shared_future<T>> taus,
     common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
   using hpx::util::unwrapping;
   using common::make_data;
   using namespace comm::sync;
 
-  // TODO assumption: intra-tile reflector
-  // check that last_reflector < block_size
+  DLAF_ASSERT(k <= t.blockSize().cols(), k, t.blockSize());
+  DLAF_ASSERT(square_blocksize(a), a);
 
   // TODO assumption: no empty grid
 
@@ -69,7 +69,7 @@ void QR<Backend::MC, Device::CPU>::computeTFactor(
 
   // 2. CALCULATE T-FACTOR
   // T(0:j, j) = T(0:j, 0:j) . -tau(j) . V(j:, 0:j)* . V(j:, j)
-  for (SizeType j_reflector = 0; j_reflector <= last_reflector; ++j_reflector) {
+  for (SizeType j_reflector = 0; j_reflector < k; ++j_reflector) {
     const TileElementIndex index_el_x0{j_reflector, j_reflector};
 
     // 2A First step GEMV
@@ -150,7 +150,7 @@ void QR<Backend::MC, Device::CPU>::computeTFactor(
     // 2B Second Step TRMV
     if (rank_v0 == rank) {
       // TRMV t = T . t
-      auto trmv_func = unwrapping([=](auto&& tile_t) {
+      auto trmv_func = unwrapping([](auto&& tile_t, TileElementIndex t_start, TileElementSize t_size) {
         // clang-format off
         blas::trmv(blas::Layout::ColMajor,
             blas::Uplo::Upper, blas::Op::NoTrans, blas::Diag::NonUnit,
@@ -160,7 +160,7 @@ void QR<Backend::MC, Device::CPU>::computeTFactor(
         // clang-format on
       });
 
-      hpx::dataflow(trmv_func, t(LocalTileIndex{0, 0}));
+      hpx::dataflow(trmv_func, t(LocalTileIndex{0, 0}), t_start, t_size);
     }
   }
 }

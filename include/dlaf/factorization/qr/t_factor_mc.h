@@ -31,18 +31,16 @@ namespace dlaf {
 namespace factorization {
 namespace internal {
 
-template <>
-struct QR_Tfactor<Backend::MC, Device::CPU> {
-  template <class T>
-  static void computeTFactor(Matrix<T, Device::CPU>& t, Matrix<const T, Device::CPU>& a,
-                             const LocalTileIndex ai_start_loc, const GlobalTileIndex ai_start,
-                             const SizeType last_reflector,
-                             common::internal::vector<hpx::shared_future<T>> taus,
-                             common::Pipeline<comm::CommunicatorGrid>& serial_comm);
+template <class T>
+struct QR_Tfactor<Backend::MC, Device::CPU, T> {
+  static void call(Matrix<T, Device::CPU>& t, Matrix<const T, Device::CPU>& a,
+                   const LocalTileIndex ai_start_loc, const GlobalTileIndex ai_start,
+                   const SizeType last_reflector, common::internal::vector<hpx::shared_future<T>> taus,
+                   common::Pipeline<comm::CommunicatorGrid>& serial_comm);
 };
 
 template <class T>
-void QR_Tfactor<Backend::MC, Device::CPU>::computeTFactor(
+void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
     Matrix<T, Device::CPU>& t, Matrix<const T, Device::CPU>& a, const LocalTileIndex ai_start_loc,
     const GlobalTileIndex ai_start, const SizeType k,
     common::internal::vector<hpx::shared_future<T>> taus,

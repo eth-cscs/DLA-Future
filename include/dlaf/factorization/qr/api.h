@@ -16,10 +16,10 @@ namespace dlaf {
 namespace factorization {
 namespace internal {
 
-template <Backend backend, Device device>
+template <Backend backend, Device device, class T>
 struct QR {};
 
-template <Backend backend, Device device>
+template <Backend backend, Device device, class T>
 struct QR_Tfactor {};
 
 }

@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/factorization/qr/t_factor_mc.h"
+#include "dlaf/factorization/qr.h"
 
 #include <gtest/gtest.h>
 #include <blas.hh>
@@ -169,8 +169,8 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
       Matrix<TypeParam, Device::CPU> t_output(LocalElementSize{k, k}, block_size);
       common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
 
-      using QR_Tfactor = dlaf::factorization::internal::QR_Tfactor<Backend::MC, Device::CPU>;
-      QR_Tfactor::computeTFactor(t_output, v_input, {0, 0}, {0, 0}, k, taus_input, serial_comm);
+      dlaf::factorization::internal::computeTFactor<Backend::MC>(t_output, v_input, {0, 0}, {0, 0}, k,
+                                                                 taus_input, serial_comm);
 
       // TODO T factor is reduced just on the rank owning V0
       const comm::Index2D owner_t{0, 0};

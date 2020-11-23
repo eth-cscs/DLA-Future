@@ -32,7 +32,7 @@ namespace factorization {
 namespace internal {
 
 template <>
-struct QR<Backend::MC, Device::CPU> {
+struct QR_Tfactor<Backend::MC, Device::CPU> {
   template <class T>
   static void computeTFactor(Matrix<T, Device::CPU>& t, Matrix<const T, Device::CPU>& a,
                              const LocalTileIndex ai_start_loc, const GlobalTileIndex ai_start,
@@ -42,7 +42,7 @@ struct QR<Backend::MC, Device::CPU> {
 };
 
 template <class T>
-void QR<Backend::MC, Device::CPU>::computeTFactor(
+void QR_Tfactor<Backend::MC, Device::CPU>::computeTFactor(
     Matrix<T, Device::CPU>& t, Matrix<const T, Device::CPU>& a, const LocalTileIndex ai_start_loc,
     const GlobalTileIndex ai_start, const SizeType k,
     common::internal::vector<hpx::shared_future<T>> taus,
@@ -63,6 +63,7 @@ void QR<Backend::MC, Device::CPU>::computeTFactor(
   if (rank.col() != rank_v0.col())
     return;
 
+  // TODO it would be better to embed this reset inside a bigger task
   matrix::util::set(t, [](auto&&) { return 0; });
 
   const LocalTileIndex ai_bound_index{dist.localNrTiles().rows(), ai_start_loc.col() + 1};

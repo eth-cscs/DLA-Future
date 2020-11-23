@@ -19,6 +19,9 @@ namespace internal {
 template <Backend backend, Device device>
 struct QR {};
 
+template <Backend backend, Device device>
+struct QR_Tfactor {};
+
 }
 }
 }

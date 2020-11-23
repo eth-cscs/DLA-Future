@@ -33,25 +33,15 @@ using dlaf::matrix::test::MatrixLocal;
 constexpr auto DEVICE_CPU = Device::CPU;
 
 template <class T>
-T el_eye(const dlaf::GlobalElementIndex& index) {
+T values_eye(const dlaf::GlobalElementIndex& index) {
   return index.row() == index.col() ? 1 : 0;
 }
 
 template <class T>
 void is_orthogonal(const MatrixLocal<const T>& matrix) {
   MatrixLocal<T> ortho(matrix.size(), matrix.blockSize());
-  MatrixLocal<const T> eye = [&]() {
-    MatrixLocal<T> m(matrix.size(), matrix.blockSize());
-    set(m, el_eye<T>);
-    return m;
-  }();
 
-  // beta = 1
-  // alpha = -1
-  // op(V) = NoTrans
-  // op(W) = ConjTrans
-  // I = beta I + alpha V W
-
+  // ortho = matrix . matrix*
   // clang-format off
   blas::gemm(blas::Layout::ColMajor,
       blas::Op::NoTrans, blas::Op::ConjTrans,
@@ -62,6 +52,12 @@ void is_orthogonal(const MatrixLocal<const T>& matrix) {
       0,
       ortho.ptr(), ortho.ld());
   // clang-format on
+
+  MatrixLocal<const T> eye = [&]() {
+    MatrixLocal<T> m(matrix.size(), matrix.blockSize());
+    set(m, values_eye<T>);
+    return m;
+  }();
 
   // TODO fix this
   constexpr auto error = 1e-4;  // dlaf::test::TypeUtilities<T>::error;
@@ -92,9 +88,10 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
   // TODO fix this
   constexpr auto error = 1e-4;  // test::TypeUtilities<TypeParam>::error;
 
+  SizeType m, n, mb, nb, k;
+
   for (auto comm_grid : this->commGrids()) {
     for (auto config : configs) {
-      SizeType m, n, mb, nb, k;
       std::tie(m, n, mb, nb, k) = config;
 
       DLAF_ASSERT(k <= nb, k, nb, "reflectors should be in the same column of tiles");
@@ -102,11 +99,10 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
       const GlobalElementSize size(m, n);
       const TileElementSize block_size(mb, nb);
 
-      const matrix::Distribution distribution(size, block_size, comm_grid.size(), comm_grid.rank(),
-                                              {0, 0});
+      const matrix::Distribution dist_v(size, block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
 
       Matrix<const TypeParam, DEVICE_CPU> v_input = [&]() {
-        Matrix<TypeParam, Device::CPU> V(distribution);
+        Matrix<TypeParam, Device::CPU> V(dist_v);
         dlaf::matrix::util::set_random(V);
         return V;
       }();
@@ -123,11 +119,11 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
 
       // compute taus and H_exp
       MatrixLocal<TypeParam> h_expected({m, m}, block_size);
-      set(h_expected, el_eye<TypeParam>);
+      set(h_expected, values_eye<TypeParam>);
 
-      for (auto i = 0; i < k; ++i) {
-        const TypeParam* data_ptr = v.ptr({i, i});
-        const auto norm = blas::nrm2(m - i, data_ptr, 1);
+      for (auto j = 0; j < k; ++j) {
+        const TypeParam* data_ptr = v.ptr({j, j});
+        const auto norm = blas::nrm2(m - j, data_ptr, 1);
         const TypeParam tau = 2 / std::pow(norm, 2);
 
         taus_input.push_back(hpx::make_ready_future<TypeParam>(tau));
@@ -135,19 +131,19 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
         // TODO work just on the submatrix
 
         MatrixLocal<TypeParam> h_i({m, m}, block_size);
-        set(h_i, el_eye<TypeParam>);
+        set(h_i, values_eye<TypeParam>);
 
         // Hi = (I - tau . v . v*)
         // clang-format off
         blas::ger(blas::Layout::ColMajor,
-            m - i, m - i,
+            m - j, m - j,
             -tau,
-            v.ptr({i, i}), 1,
-            v.ptr({i, i}), 1,
-            h_i.ptr({i, i}), h_i.ld());
+            v.ptr({j, j}), 1,
+            v.ptr({j, j}), 1,
+            h_i.ptr({j, j}), h_i.ld());
         // clang-format on
 
-        // H_exp = H_exp * Hi
+        // H_exp = H_exp . Hi
         // clang-format off
         MatrixLocal<TypeParam> workspace(h_expected.size(), h_expected.blockSize());
         blas::gemm(blas::Layout::ColMajor,
@@ -159,8 +155,6 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
             0,
             workspace.ptr(), workspace.ld());
         // clang-format on
-
-        // TODO improve this
         copy(workspace, h_expected);
       }
 
@@ -171,12 +165,13 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
       common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
 
       // TODO just the first column panel is tested
-      dlaf::factorization::internal::computeTFactor<Backend::MC>(k, v_input, {0, 0}, taus_input,
+      const GlobalTileIndex index_v0{0, 0};
+      dlaf::factorization::internal::computeTFactor<Backend::MC>(k, v_input, index_v0, taus_input,
                                                                  t_output, serial_comm);
 
-      // TODO T factor is reduced just on the rank owning V0
-      const comm::Index2D owner_t{0, 0};
-      if (distribution.rankIndex() != owner_t)
+      // T factor is reduced just on the rank owning V0
+      const comm::Index2D owner_t = dist_v.rankGlobalTile(index_v0);
+      if (dist_v.rankIndex() != owner_t)
         continue;
 
       const auto& t = t_output.read(LocalTileIndex{0, 0}).get();
@@ -203,7 +198,7 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
 
       // TODO H_result = I - V W
       MatrixLocal<TypeParam> h_result(h_expected.size(), block_size);
-      set(h_result, el_eye<TypeParam>);
+      set(h_result, values_eye<TypeParam>);
 
       // beta = 1
       // alpha = -1

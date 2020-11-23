@@ -47,14 +47,26 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
   using common::make_data;
   using namespace comm::sync;
 
-  DLAF_ASSERT(k <= t.blockSize().cols(), k, t.blockSize());
-  DLAF_ASSERT(square_blocksize(v), v);
-
-  // TODO assumption: no empty grid
-
   const auto& dist = v.distribution();
   const comm::Index2D rank = dist.rankIndex();
   const comm::Index2D rank_v0 = dist.rankGlobalTile(v_start);
+
+  // compute size of the V panel indicated by v_start
+  const auto panel_size = [&]() {
+    const auto tl = dist.globalElementIndex(v_start, {0, 0});
+    const auto br_tmp = tl + GlobalElementSize{v.blockSize().rows(), v.blockSize().cols()};
+    const auto br_end =
+        br_tmp.isIn(v.size()) ? br_tmp : GlobalElementIndex{v.size().rows(), v.size().cols()};
+
+    return br_end - tl;
+  }();
+
+  DLAF_ASSERT(k <= panel_size.cols(), k, panel_size);
+
+  DLAF_ASSERT(t.nrTiles() == GlobalTileSize(1, 1), t);
+  DLAF_ASSERT(t.size() == GlobalElementSize(k, k), t.size(), k);
+
+  // TODO assumption: no empty grid
 
   if (rank.col() != rank_v0.col())
     return;

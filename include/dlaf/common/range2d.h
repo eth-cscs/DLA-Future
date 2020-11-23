@@ -84,8 +84,8 @@ public:
   IterableRange2D(index2d_t begin_idx, index2d_t end_idx)
       : begin_idx_(begin_idx), ld_(end_idx.row() - begin_idx.row()),
         i_max_(ld_ * (end_idx.col() - begin_idx_.col())) {
-    DLAF_ASSERT(begin_idx.row() < end_idx.row(), begin_idx, end_idx);
-    DLAF_ASSERT(begin_idx.col() < end_idx.col(), begin_idx, end_idx);
+    DLAF_ASSERT(begin_idx.row() <= end_idx.row(), begin_idx, end_idx);
+    DLAF_ASSERT(begin_idx.col() <= end_idx.col(), begin_idx, end_idx);
   }
 
   iter2d_t begin() const noexcept {

@@ -76,7 +76,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   auto sync_barrier = [&]() {
     ::waitall_tiles(a);
     ::waitall_tiles(b);
-    MPI_Barrier(world);
+    DLAF_MPI_CALL(MPI_Barrier(world));
   };
 
   const auto side = blas::Side::Left;
@@ -163,7 +163,7 @@ int main(int argc, char** argv) {
   p.desc_cmdline = desc_commandline;
   p.rp_callback = [](auto& rp) {
     int ntasks;
-    MPI_Comm_size(MPI_COMM_WORLD, &ntasks);
+    DLAF_MPI_CALL(MPI_Comm_size(MPI_COMM_WORLD, &ntasks));
     // if the user has asked for special thread pools for communication
     // then set them up
     if (ntasks > 1) {

@@ -9,17 +9,21 @@
 //
 
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/communication/error.h"
 
 #include <gtest/gtest.h>
 #include <mpi.h>
 
-#include "dlaf_test/util_mpi.h"
-
-using dlaf::comm::test::computeGridDims;
-using dlaf::common::Ordering;
 using namespace dlaf::comm;
+using dlaf::common::Ordering;
 
 const auto valid_orderings = ::testing::Values(Ordering::RowMajor, Ordering::ColumnMajor);
+
+std::array<int, 2> computeGridDims(int nranks) {
+  std::array<int, 2> dimensions{0, 0};
+  DLAF_MPI_CALL(MPI_Dims_create(nranks, 2, dimensions.data()));
+  return dimensions;
+}
 
 void test_grid_communication(CommunicatorGrid& grid) {
   if (MPI_COMM_NULL == grid.rowCommunicator() || MPI_COMM_NULL == grid.colCommunicator())
@@ -32,33 +36,33 @@ void test_grid_communication(CommunicatorGrid& grid) {
   if (grid.rankFullCommunicator(Index2D{0, 0}) == 0)
     buffer = 13;
 
-  MPI_Bcast(&buffer, 1, MPI_INT, 0, grid.fullCommunicator());
+  DLAF_MPI_CALL(MPI_Bcast(&buffer, 1, MPI_INT, 0, grid.fullCommunicator()));
   EXPECT_EQ(buffer, 13);
 
   buffer_recv = 0;
-  MPI_Allreduce(&buffer_send, &buffer_recv, 1, MPI_INT, MPI_SUM, grid.fullCommunicator());
+  DLAF_MPI_CALL(MPI_Allreduce(&buffer_send, &buffer_recv, 1, MPI_INT, MPI_SUM, grid.fullCommunicator()));
   EXPECT_EQ(buffer_recv, grid.size().rows() * grid.size().cols());
 
   // Row Communication
   if (grid.rank().col() == 0)
     buffer = grid.rank().row();
 
-  MPI_Bcast(&buffer, 1, MPI_INT, 0, grid.rowCommunicator());
+  DLAF_MPI_CALL(MPI_Bcast(&buffer, 1, MPI_INT, 0, grid.rowCommunicator()));
   EXPECT_EQ(buffer, grid.rank().row());
 
   buffer_recv = 0;
-  MPI_Allreduce(&buffer_send, &buffer_recv, 1, MPI_INT, MPI_SUM, grid.rowCommunicator());
+  DLAF_MPI_CALL(MPI_Allreduce(&buffer_send, &buffer_recv, 1, MPI_INT, MPI_SUM, grid.rowCommunicator()));
   EXPECT_EQ(buffer_recv, grid.rowCommunicator().size());
 
   // Column Communication
   if (grid.rank().row() == 0)
     buffer = grid.rank().col();
 
-  MPI_Bcast(&buffer, 1, MPI_INT, 0, grid.colCommunicator());
+  DLAF_MPI_CALL(MPI_Bcast(&buffer, 1, MPI_INT, 0, grid.colCommunicator()));
   EXPECT_EQ(buffer, grid.rank().col());
 
   buffer_recv = 0;
-  MPI_Allreduce(&buffer_send, &buffer_recv, 1, MPI_INT, MPI_SUM, grid.colCommunicator());
+  DLAF_MPI_CALL(MPI_Allreduce(&buffer_send, &buffer_recv, 1, MPI_INT, MPI_SUM, grid.colCommunicator()));
   EXPECT_EQ(buffer_recv, grid.colCommunicator().size());
 }
 
@@ -109,15 +113,15 @@ TEST_P(CommunicatorGridTest, Copy) {
     EXPECT_EQ(ncols, copy.size().cols());
 
     int result;
-    MPI_Comm_compare(copy.fullCommunicator(), grid.fullCommunicator(), &result);
+    DLAF_MPI_CALL(MPI_Comm_compare(copy.fullCommunicator(), grid.fullCommunicator(), &result));
     EXPECT_EQ(MPI_IDENT, result);
     EXPECT_NE(MPI_COMM_NULL, copy.fullCommunicator());
 
-    MPI_Comm_compare(copy.rowCommunicator(), grid.rowCommunicator(), &result);
+    DLAF_MPI_CALL(MPI_Comm_compare(copy.rowCommunicator(), grid.rowCommunicator(), &result));
     EXPECT_EQ(MPI_IDENT, result);
     EXPECT_NE(MPI_COMM_NULL, copy.rowCommunicator());
 
-    MPI_Comm_compare(copy.colCommunicator(), grid.colCommunicator(), &result);
+    DLAF_MPI_CALL(MPI_Comm_compare(copy.colCommunicator(), grid.colCommunicator(), &result));
     EXPECT_EQ(MPI_IDENT, result);
     EXPECT_NE(MPI_COMM_NULL, copy.colCommunicator());
 

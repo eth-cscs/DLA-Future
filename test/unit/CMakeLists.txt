@@ -32,13 +32,6 @@ DLAF_addTest(test_lapack_tile
   USE_MAIN HPX
 )
 
-DLAF_addTest(test_matrix_output
-  SOURCES test_matrix_output.cpp
-  LIBRARIES dlaf.core
-  USE_MAIN MPIHPX
-  MPIRANKS 6
-)
-
 if(DLAF_WITH_CUDA)
   DLAF_addTest(test_cublas_tile
     SOURCES test_cublas_tile.cpp

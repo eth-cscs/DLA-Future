@@ -76,7 +76,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   auto sync_barrier = [&]() {
     ::waitall_tiles(a);
     ::waitall_tiles(b);
-    MPI_Barrier(world);
+    DLAF_MPI_CALL(MPI_Barrier(world));
   };
 
   const auto side = blas::Side::Left;
@@ -161,8 +161,7 @@ int main(int argc, char** argv) {
 
   hpx::init_params p;
   p.desc_cmdline = desc_commandline;
-  auto ret_code = hpx::init(argc, argv, p);
-  return ret_code;
+  return hpx::init(argc, argv, p);
 }
 
 namespace {

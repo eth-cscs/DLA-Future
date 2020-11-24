@@ -10,6 +10,7 @@
 
 #include "gtest/gtest.h"
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/communication/error.h"
 
 namespace dlaf {
 namespace test {
@@ -45,7 +46,7 @@ public:
         color = 3;
       }
       MPI_Comm split_comm;
-      MPI_Comm_split(world, color, world.rank(), &split_comm);
+      DLAF_MPI_CALL(MPI_Comm_split(world, color, world.rank(), &split_comm));
 
       comm::Communicator comm(split_comm);
       comm_grids.emplace_back(comm, rows, cols, common::Ordering::ColumnMajor);

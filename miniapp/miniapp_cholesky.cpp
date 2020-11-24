@@ -16,6 +16,7 @@
 #include "dlaf/auxiliary/norm.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/functions_sync.h"
+#include "dlaf/communication/error.h"
 #include "dlaf/communication/init.h"
 #include "dlaf/factorization/cholesky.h"
 #include "dlaf/matrix/copy.h"
@@ -101,7 +102,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     {
       for (const auto tile_idx : dlaf::common::iterate_range2d(distribution.localNrTiles()))
         matrix(tile_idx).get();
-      MPI_Barrier(world);
+      DLAF_MPI_CALL(MPI_Barrier(world));
     }
 
     dlaf::common::Timer<> timeit;
@@ -113,7 +114,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       if (matrix.rankIndex() == distribution.rankGlobalTile(last_tile))
         matrix(last_tile).get();
 
-      MPI_Barrier(world);
+      DLAF_MPI_CALL(MPI_Barrier(world));
     }
     auto elapsed_time = timeit.elapsed();
 

@@ -86,11 +86,8 @@ void print(format::numpy, std::string symbol, const MatrixLocal<const T>& matrix
            std::ostream& os = std::cout) {
   using common::iterate_range2d;
 
-  // clang-format off
-  os
-    << symbol << " = np.zeros(" << matrix.size()
-    << ", dtype=np." << dlaf::matrix::internal::numpy_datatype<T>::typestring << ")\n";
-  // clang-format on
+  os << symbol << " = np.zeros(" << matrix.size() << ", dtype=np."
+     << dlaf::matrix::internal::numpy_datatype<T>::typestring << ")\n";
 
   auto getTileTopLeft = [&](const GlobalTileIndex& ij) -> GlobalElementIndex {
     return {ij.row() * matrix.blockSize().rows(), ij.col() * matrix.blockSize().cols()};

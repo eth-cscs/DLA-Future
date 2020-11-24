@@ -101,7 +101,7 @@ TYPED_TEST(MatrixLocalTest, Copy) {
 }
 
 template <class T>
-struct test1 {
+struct test_output {
   using element_t = T;
   auto operator()() const {
     MatrixLocal<const element_t> mat = [&]() {
@@ -113,7 +113,7 @@ struct test1 {
       return source;
     }();
 
-    const std::string expected_output{
+    const std::string output{
         "mat = np.zeros((5, 4), dtype=np.single)\n"
         "mat[0:2,0:3] = np.array([0,-1,-5,6,10,-11,], dtype=np.single).reshape(3, 2).T\n"
         "mat[2:4,0:3] = np.array([2,-3,-7,8,12,-13,], dtype=np.single).reshape(3, 2).T\n"
@@ -122,12 +122,12 @@ struct test1 {
         "mat[2:4,3:4] = np.array([-17,18,], dtype=np.single).reshape(1, 2).T\n"
         "mat[4:5,3:4] = np.array([-19,], dtype=np.single).reshape(1, 1).T\n"};
 
-    return std::make_pair(std::move(mat), expected_output);
+    return std::make_pair(std::move(mat), output);
   }
 };
 
 template <class T>
-struct test1<std::complex<T>> {
+struct test_output<std::complex<T>> {
   using element_t = std::complex<T>;
 
   auto operator()() const {
@@ -139,7 +139,7 @@ struct test1<std::complex<T>> {
       return source;
     }();
 
-    const std::string expected_output{
+    const std::string output{
         "mat = np.zeros((5, 4), dtype=np.csingle)\n"
         "mat[0:2,0:3] = np.array([0+0j,1+0j,0-1j,1-1j,0+2j,1+2j,], dtype=np.csingle).reshape(3, 2).T\n"
         "mat[2:4,0:3] = np.array([2+0j,3+0j,2-1j,3-1j,2+2j,3+2j,], dtype=np.csingle).reshape(3, 2).T\n"
@@ -148,12 +148,12 @@ struct test1<std::complex<T>> {
         "mat[2:4,3:4] = np.array([2-3j,3-3j,], dtype=np.csingle).reshape(1, 2).T\n"
         "mat[4:5,3:4] = np.array([4-3j,], dtype=np.csingle).reshape(1, 1).T\n"};
 
-    return std::make_pair(std::move(mat), expected_output);
+    return std::make_pair(std::move(mat), output);
   }
 };
 
 TYPED_TEST(MatrixLocalTest, OutputNumpyForamt) {
-  const auto test_config = test1<TypeParam>{}();
+  const auto test_config = test_output<TypeParam>{}();
 
   std::ostringstream stream_matrix_output;
   print(format::numpy{}, "mat", test_config.first, stream_matrix_output);

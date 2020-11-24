@@ -42,9 +42,9 @@ struct test_tile_output {
     const SizeType ld = 1;
     auto mat = createTile<const element_t>([](auto&&) { return element_t(); }, size, ld);
 
-    const std::string expected_output{"np.array([], dtype=np.single).reshape(0, 0).T\n"};
+    const std::string output{"np.array([], dtype=np.single).reshape(0, 0).T\n"};
 
-    return std::make_pair(std::move(mat), expected_output);
+    return std::make_pair(std::move(mat), output);
   }
 
   static auto nonempty() {
@@ -57,9 +57,9 @@ struct test_tile_output {
         },
         size, ld);
 
-    const std::string expected_output{"np.array([0,-1,2,-3,4,-5,], dtype=np.single).reshape(2, 3).T\n"};
+    const std::string output{"np.array([0,-1,2,-3,4,-5,], dtype=np.single).reshape(2, 3).T\n"};
 
-    return std::make_pair(std::move(mat), expected_output);
+    return std::make_pair(std::move(mat), output);
   }
 };
 
@@ -71,9 +71,9 @@ struct test_tile_output<std::complex<T>> {
     const TileElementSize size{0, 0};
     auto mat = createTile<const element_t>([](auto&&) { return element_t{}; }, size, 1);
 
-    const std::string expected_output{"np.array([], dtype=np.csingle).reshape(0, 0).T\n"};
+    const std::string output{"np.array([], dtype=np.csingle).reshape(0, 0).T\n"};
 
-    return std::make_pair(std::move(mat), expected_output);
+    return std::make_pair(std::move(mat), output);
   }
 
   static auto nonempty() {
@@ -84,10 +84,10 @@ struct test_tile_output<std::complex<T>> {
     const TileElementSize size{3, 2};
     auto mat = createTile<const element_t>(value_preset, size, size.rows());
 
-    const std::string expected_output{
+    const std::string output{
         "np.array([0+0j,1+0j,2+0j,0-1j,1-1j,2-1j,], dtype=np.csingle).reshape(2, 3).T\n"};
 
-    return std::make_pair(std::move(mat), expected_output);
+    return std::make_pair(std::move(mat), output);
   }
 };
 
@@ -113,9 +113,9 @@ struct test_matrix_output {
       return source;
     }();
 
-    const std::string expected_output{"mat = np.zeros((0, 0), dtype=np.single)\n"};
+    const std::string output{"mat = np.zeros((0, 0), dtype=np.single)\n"};
 
-    return std::make_pair(std::move(mat), expected_output);
+    return std::make_pair(std::move(mat), output);
   }
 
   static auto nonempty() {
@@ -128,7 +128,7 @@ struct test_matrix_output {
       return source;
     }();
 
-    const std::string expected_output{
+    const std::string output{
         "mat = np.zeros((5, 4), dtype=np.single)\n"
         "mat[0:2,0:3] = np.array([0,-1,-5,6,10,-11,], dtype=np.single).reshape(3, 2).T\n"
         "mat[2:4,0:3] = np.array([2,-3,-7,8,12,-13,], dtype=np.single).reshape(3, 2).T\n"
@@ -137,7 +137,7 @@ struct test_matrix_output {
         "mat[2:4,3:4] = np.array([-17,18,], dtype=np.single).reshape(1, 2).T\n"
         "mat[4:5,3:4] = np.array([-19,], dtype=np.single).reshape(1, 1).T\n"};
 
-    return std::make_pair(std::move(mat), expected_output);
+    return std::make_pair(std::move(mat), output);
   }
 };
 
@@ -151,9 +151,9 @@ struct test_matrix_output<std::complex<T>> {
       return source;
     }();
 
-    const std::string expected_output{"mat = np.zeros((0, 0), dtype=np.csingle)\n"};
+    const std::string output{"mat = np.zeros((0, 0), dtype=np.csingle)\n"};
 
-    return std::make_pair(std::move(mat), expected_output);
+    return std::make_pair(std::move(mat), output);
   }
 
   static auto nonempty() {
@@ -165,7 +165,7 @@ struct test_matrix_output<std::complex<T>> {
       return source;
     }();
 
-    const std::string expected_output{
+    const std::string output{
         "mat = np.zeros((5, 4), dtype=np.csingle)\n"
         "mat[0:2,0:3] = np.array([0+0j,1+0j,0-1j,1-1j,0+2j,1+2j,], dtype=np.csingle).reshape(3, 2).T\n"
         "mat[2:4,0:3] = np.array([2+0j,3+0j,2-1j,3-1j,2+2j,3+2j,], dtype=np.csingle).reshape(3, 2).T\n"
@@ -174,7 +174,7 @@ struct test_matrix_output<std::complex<T>> {
         "mat[2:4,3:4] = np.array([2-3j,3-3j,], dtype=np.csingle).reshape(1, 2).T\n"
         "mat[4:5,3:4] = np.array([4-3j,], dtype=np.csingle).reshape(1, 1).T\n"};
 
-    return std::make_pair(std::move(mat), expected_output);
+    return std::make_pair(std::move(mat), output);
   }
 };
 
@@ -205,9 +205,9 @@ struct test_matrix_dist_output {
       return source;
     }();
 
-    const std::string expected_output{"mat = np.zeros((0, 0), dtype=np.single)\n"};
+    const std::string output{"M = np.zeros((0, 0), dtype=np.single)\n"};
 
-    return std::make_pair(std::move(mat), expected_output);
+    return std::make_pair(std::move(mat), output);
   }
 
   auto nonempty() const {
@@ -222,34 +222,25 @@ struct test_matrix_dist_output {
       return source;
     }();
 
-    std::string expected_output{"mat = np.zeros((5, 4), dtype=np.single)\n"};
+    std::string output{"M = np.zeros((5, 4), dtype=np.single)\n"};
 
     const auto linear_rank =
         comm_grid_.rank().row() + comm_grid_.rank().col() * comm_grid_.size().rows();
-    switch (linear_rank) {
-      case 0:
-        expected_output +=
-            "mat[0:2,0:3] = np.array([0,-1,-5,6,10,-11,], dtype=np.single).reshape(3, 2).T\n";
-        break;
-      case 1:
-        expected_output +=
-            "mat[2:4,0:3] = np.array([2,-3,-7,8,12,-13,], dtype=np.single).reshape(3, 2).T\n";
-        break;
-      case 2:
-        expected_output += "mat[4:5,0:3] = np.array([4,-9,14,], dtype=np.single).reshape(3, 1).T\n";
-        break;
-      case 3:
-        expected_output += "mat[0:2,3:4] = np.array([-15,16,], dtype=np.single).reshape(1, 2).T\n";
-        break;
-      case 4:
-        expected_output += "mat[2:4,3:4] = np.array([-17,18,], dtype=np.single).reshape(1, 2).T\n";
-        break;
-      case 5:
-        expected_output += "mat[4:5,3:4] = np.array([-19,], dtype=np.single).reshape(1, 1).T\n";
-        break;
-    };
 
-    return std::make_pair(std::move(mat), expected_output);
+    if (0 == linear_rank)
+      output += "M[0:2,0:3] = np.array([0,-1,-5,6,10,-11,], dtype=np.single).reshape(3, 2).T\n";
+    else if (1 == linear_rank)
+      output += "M[2:4,0:3] = np.array([2,-3,-7,8,12,-13,], dtype=np.single).reshape(3, 2).T\n";
+    else if (2 == linear_rank)
+      output += "M[4:5,0:3] = np.array([4,-9,14,], dtype=np.single).reshape(3, 1).T\n";
+    else if (3 == linear_rank)
+      output += "M[0:2,3:4] = np.array([-15,16,], dtype=np.single).reshape(1, 2).T\n";
+    else if (4 == linear_rank)
+      output += "M[2:4,3:4] = np.array([-17,18,], dtype=np.single).reshape(1, 2).T\n";
+    else if (5 == linear_rank)
+      output += "M[4:5,3:4] = np.array([-19,], dtype=np.single).reshape(1, 1).T\n";
+
+    return std::make_pair(std::move(mat), output);
   }
 };
 
@@ -268,9 +259,9 @@ struct test_matrix_dist_output<std::complex<T>> {
       return source;
     }();
 
-    const std::string expected_output{"mat = np.zeros((0, 0), dtype=np.csingle)\n"};
+    const std::string output{"M = np.zeros((0, 0), dtype=np.csingle)\n"};
 
-    return std::make_pair(std::move(mat), expected_output);
+    return std::make_pair(std::move(mat), output);
   }
 
   auto nonempty() {
@@ -284,35 +275,25 @@ struct test_matrix_dist_output<std::complex<T>> {
       return source;
     }();
 
-    std::string expected_output{"mat = np.zeros((5, 4), dtype=np.csingle)\n"};
+    std::string o{"M = np.zeros((5, 4), dtype=np.csingle)\n"};
 
     const auto linear_rank =
         comm_grid_.rank().row() + comm_grid_.rank().col() * comm_grid_.size().rows();
-    switch (linear_rank) {
-      case 0:
-        expected_output +=
-            "mat[0:2,0:3] = np.array([0+0j,1+0j,0-1j,1-1j,0+2j,1+2j,], dtype=np.csingle).reshape(3, 2).T\n";
-        break;
-      case 1:
-        expected_output +=
-            "mat[2:4,0:3] = np.array([2+0j,3+0j,2-1j,3-1j,2+2j,3+2j,], dtype=np.csingle).reshape(3, 2).T\n";
-        break;
-      case 2:
-        expected_output +=
-            "mat[4:5,0:3] = np.array([4+0j,4-1j,4+2j,], dtype=np.csingle).reshape(3, 1).T\n";
-        break;
-      case 3:
-        expected_output += "mat[0:2,3:4] = np.array([0-3j,1-3j,], dtype=np.csingle).reshape(1, 2).T\n";
-        break;
-      case 4:
-        expected_output += "mat[2:4,3:4] = np.array([2-3j,3-3j,], dtype=np.csingle).reshape(1, 2).T\n";
-        break;
-      case 5:
-        expected_output += "mat[4:5,3:4] = np.array([4-3j,], dtype=np.csingle).reshape(1, 1).T\n";
-        break;
-    };
 
-    return std::make_pair(std::move(mat), expected_output);
+    if (0 == linear_rank)
+      o += "M[0:2,0:3] = np.array([0+0j,1+0j,0-1j,1-1j,0+2j,1+2j,], dtype=np.csingle).reshape(3, 2).T\n";
+    else if (1 == linear_rank)
+      o += "M[2:4,0:3] = np.array([2+0j,3+0j,2-1j,3-1j,2+2j,3+2j,], dtype=np.csingle).reshape(3, 2).T\n";
+    else if (2 == linear_rank)
+      o += "M[4:5,0:3] = np.array([4+0j,4-1j,4+2j,], dtype=np.csingle).reshape(3, 1).T\n";
+    else if (3 == linear_rank)
+      o += "M[0:2,3:4] = np.array([0-3j,1-3j,], dtype=np.csingle).reshape(1, 2).T\n";
+    else if (4 == linear_rank)
+      o += "M[2:4,3:4] = np.array([2-3j,3-3j,], dtype=np.csingle).reshape(1, 2).T\n";
+    else if (5 == linear_rank)
+      o += "M[4:5,3:4] = np.array([4-3j,], dtype=np.csingle).reshape(1, 1).T\n";
+
+    return std::make_pair(std::move(mat), o);
   }
 };
 
@@ -324,7 +305,7 @@ TYPED_TEST(MatrixOutputTest, NumpyFormatMatrixDist) {
     auto config = (instance.*get_test_config)();
 
     std::ostringstream stream_matrix_output;
-    print(format::numpy{}, "mat", config.first, stream_matrix_output);
+    print(format::numpy{}, "M", config.first, stream_matrix_output);
 
     EXPECT_EQ(config.second, stream_matrix_output.str());
   }

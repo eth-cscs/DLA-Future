@@ -101,7 +101,7 @@ void print(format::numpy, std::string symbol, const MatrixLocal<const T>& matrix
 
     const auto index_tl = getTileTopLeft(ij);
 
-    os << symbol << "[" << index_tl.row() << ":" << index_tl.row() + tile.size().rows() << ", "
+    os << symbol << "[" << index_tl.row() << ":" << index_tl.row() + tile.size().rows() << ","
        << index_tl.col() << ":" << index_tl.col() + tile.size().cols() << "] = ";
 
     print(format::numpy{}, tile, os);

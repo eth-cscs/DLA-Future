@@ -11,6 +11,7 @@
 #pragma once
 
 #include "dlaf/communication/communicator.h"
+#include "dlaf/communication/error.h"
 
 namespace dlaf {
 namespace comm {
@@ -28,7 +29,7 @@ protected:
     key = world.rank() / 2;
 
     MPI_Comm mpi_splitted_comm;
-    MPI_Comm_split(world, color, key, &mpi_splitted_comm);
+    DLAF_MPI_CALL(MPI_Comm_split(world, color, key, &mpi_splitted_comm));
 
     ASSERT_NE(MPI_COMM_NULL, mpi_splitted_comm);
     splitted_comm = Communicator(mpi_splitted_comm);
@@ -36,7 +37,7 @@ protected:
 
   void TearDown() override {
     if (MPI_COMM_NULL != splitted_comm)
-      MPI_Comm_free(&splitted_comm);
+      DLAF_MPI_CALL(MPI_Comm_free(&splitted_comm));
   }
 
   Communicator world;          ///< the world communicator

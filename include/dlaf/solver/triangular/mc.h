@@ -19,12 +19,11 @@
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/executor.h"
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/communication/pool.h"
 #include "dlaf/lapack_tile.h"
-#include "dlaf/matrix.h"
 #include "dlaf/matrix/distribution.h"
+#include "dlaf/matrix/matrix.h"
 #include "dlaf/solver/triangular/api.h"
 #include "dlaf/util_matrix.h"
 

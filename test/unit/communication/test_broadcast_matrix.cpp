@@ -16,7 +16,7 @@
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/util_types.h"
 
-#include "dlaf/matrix.h"
+#include "dlaf/matrix/matrix.h"
 
 using namespace dlaf;
 using namespace dlaf::matrix;

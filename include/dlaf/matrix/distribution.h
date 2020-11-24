@@ -208,7 +208,8 @@ public:
   /// @pre 0 <= global_tile < nrTiles().get<rc>().
   template <Coord rc>
   int rankGlobalTile(SizeType global_tile) const noexcept {
-    DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>(), "");
+    DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>(), global_tile,
+                      global_nr_tiles_);
     return util::matrix::rankGlobalTile(global_tile, grid_size_.get<rc>(), source_rank_index_.get<rc>());
   }
 
@@ -217,7 +218,7 @@ public:
   /// @pre 0 <= global_element < size().get<rc>().
   template <Coord rc>
   SizeType globalTileFromGlobalElement(SizeType global_element) const noexcept {
-    DLAF_ASSERT_HEAVY(0 <= global_element && global_element < size_.get<rc>(), "");
+    DLAF_ASSERT_HEAVY(0 <= global_element && global_element < size_.get<rc>(), global_element, size_);
     return util::matrix::tileFromElement(global_element, block_size_.get<rc>());
   }
 

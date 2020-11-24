@@ -37,8 +37,8 @@ void send(Communicator& communicator, DataIn&& message_to_send) {
   using DataT = std::remove_const_t<typename common::data_traits<decltype(data)>::element_t>;
 
   auto message = comm::make_message(std::move(data));
-  MPI_Bcast(const_cast<DataT*>(message.data()), message.count(), message.mpi_type(), communicator.rank(),
-            communicator);
+  DLAF_MPI_CALL(MPI_Bcast(const_cast<DataT*>(message.data()), message.count(), message.mpi_type(),
+                          communicator.rank(), communicator));
 }
 
 /// MPI_Bcast wrapper for receiver side accepting a dlaf::comm::Message.
@@ -48,7 +48,8 @@ template <class DataOut>
 void receive_from(const int broadcaster_rank, Communicator& communicator, DataOut&& data) {
   DLAF_ASSERT_HEAVY(broadcaster_rank != communicator.rank(), "");
   auto message = comm::make_message(common::make_data(std::forward<DataOut>(data)));
-  MPI_Bcast(message.data(), message.count(), message.mpi_type(), broadcaster_rank, communicator);
+  DLAF_MPI_CALL(
+      MPI_Bcast(message.data(), message.count(), message.mpi_type(), broadcaster_rank, communicator));
 }
 }
 }
@@ -84,10 +85,11 @@ hpx::future<matrix::Tile<const T, Device::CPU>> recv_tile(
         MemView_t mem_view(tile_size.linear_size());
         Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
         comm::sync::broadcast::receive_from(rank, pcomm.ref().subCommunicator(rc_comm), tile);
-        return std::move(tile);
+        return ConstTile_t(std::move(tile));
       },
       "recv_tile");
   return hpx::dataflow(ex, std::move(recv_bcast_f), mpi_task_chain());
 }
+
 }
 }

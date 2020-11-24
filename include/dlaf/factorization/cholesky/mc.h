@@ -13,7 +13,7 @@
 #include <hpx/futures/future_fwd.hpp>
 #include <hpx/include/parallel_executors.hpp>
 #include <hpx/include/threads.hpp>
-#include <hpx/lcos_fwd.hpp>
+#include <hpx/include/util.hpp>
 #include <hpx/util/annotated_function.hpp>
 
 #include <limits>
@@ -32,8 +32,8 @@
 #include "dlaf/communication/pool.h"
 #include "dlaf/factorization/cholesky/api.h"
 #include "dlaf/lapack_tile.h"
-#include "dlaf/matrix.h"
 #include "dlaf/matrix/distribution.h"
+
 #include "dlaf/memory/memory_view.h"
 #include "dlaf/util_matrix.h"
 
@@ -41,14 +41,6 @@ namespace dlaf {
 namespace factorization {
 namespace internal {
 
-template <class T>
-struct Cholesky<Backend::MC, Device::CPU, T> {
-  static void call_L(Matrix<T, Device::CPU>& mat_a);
-  static void call_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a);
-};
-
-// If the diagonal tile is on this node factorize it
-// Cholesky decomposition on mat_a(k,k) r/w potrf (lapack operation)
 template <class T>
 void potrf_diag_tile(hpx::threads::executors::pool_executor executor_hp,
                      hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
@@ -82,6 +74,12 @@ void gemm_trailing_matrix_tile(hpx::threads::executors::pool_executor trailing_m
                 blas::Op::NoTrans, blas::Op::ConjTrans, -1.0, std::move(panel_tile),
                 std::move(col_panel), 1.0, std::move(matrix_tile));
 }
+
+template <class T>
+struct Cholesky<Backend::MC, Device::CPU, T> {
+  static void call_L(Matrix<T, Device::CPU>& mat_a);
+  static void call_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a);
+};
 
 template <class T>
 void send_tile(hpx::threads::executors::pool_executor executor_hp,
@@ -288,6 +286,7 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
 
 // Distributed implementation of Lower Cholesky factorization.
 template <class T>
+
 void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
                                                    Matrix<T, Device::CPU>& mat_a) {
   using hpx::threads::executors::pool_executor;

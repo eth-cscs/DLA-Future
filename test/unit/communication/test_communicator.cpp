@@ -9,6 +9,7 @@
 //
 
 #include "dlaf/communication/communicator.h"
+#include "dlaf/communication/error.h"
 
 #include <gtest/gtest.h>
 #include <mpi.h>
@@ -23,11 +24,11 @@ void test_communication(const Communicator& comm) {
   if (comm.rank() == 0)
     buffer = 13;
 
-  MPI_Bcast(&buffer, 1, MPI_INT, 0, comm);
+  DLAF_MPI_CALL(MPI_Bcast(&buffer, 1, MPI_INT, 0, comm));
   EXPECT_EQ(13, buffer);
 
   int buffer_send = 1, buffer_recv;
-  MPI_Allreduce(&buffer_send, &buffer_recv, 1, MPI_INT, MPI_SUM, comm);
+  DLAF_MPI_CALL(MPI_Allreduce(&buffer_send, &buffer_recv, 1, MPI_INT, MPI_SUM, comm));
   EXPECT_EQ(buffer_recv, comm.size());
 }
 
@@ -44,7 +45,7 @@ protected:
     }
 
     MPI_Comm odd_mpi_comm;
-    MPI_Comm_split(world, color, key, &odd_mpi_comm);
+    DLAF_MPI_CALL(MPI_Comm_split(world, color, key, &odd_mpi_comm));
 
     if (rankInGroup()) {
       ASSERT_NE(MPI_COMM_NULL, odd_mpi_comm);
@@ -58,7 +59,7 @@ protected:
 
   void TearDown() override {
     if (MPI_COMM_NULL != odd_comm)
-      MPI_Comm_free(&odd_comm);
+      DLAF_MPI_CALL(MPI_Comm_free(&odd_comm));
   }
 
   bool rankInGroup() const {
@@ -116,7 +117,7 @@ TEST_F(CommunicatorTest, Copy) {
 
     if (rankInGroup()) {
       int result;
-      MPI_Comm_compare(copy, odd_comm, &result);
+      DLAF_MPI_CALL(MPI_Comm_compare(copy, odd_comm, &result));
       EXPECT_EQ(MPI_IDENT, result);
 
       // check new communicator size consistency and correctness

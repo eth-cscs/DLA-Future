@@ -10,19 +10,14 @@
 
 #include "dlaf/matrix/print_numpy.h"
 
-#include <algorithm>
-#include <iterator>
-#include <limits>
-#include <regex>
 #include <sstream>
-#include <stdexcept>
-#include <vector>
 
 #include <gtest/gtest.h>
 #include <hpx/include/util.hpp>
 #include <hpx/local/future.hpp>
 
-#include "dlaf_test/comm_grids/grids_6_ranks.h"
+#include "dlaf/communication/communicator_grid.h"
+
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/util_types.h"
@@ -33,45 +28,10 @@ using namespace dlaf::matrix;
 using dlaf::matrix::test::set;
 using matrix::test::createTile;
 
-::testing::Environment* const comm_grids_env =
-    ::testing::AddGlobalTestEnvironment(new dlaf::test::CommunicatorGrid6RanksEnvironment);
-
 template <typename Type>
-class MatrixOutputLocalTest : public ::testing::Test {};
+class MatrixOutputTest : public ::testing::Test {};
 
-TYPED_TEST_SUITE(MatrixOutputLocalTest, dlaf::test::MatrixElementTypes);
-
-struct TestSizes {
-  LocalElementSize size;
-  TileElementSize block_size;
-};
-
-const std::vector<TestSizes> sizes({
-    {{0, 0}, {2, 2}},
-    {{6, 6}, {2, 2}},
-    {{6, 6}, {3, 3}},
-    {{8, 8}, {3, 3}},
-    {{9, 7}, {3, 3}},
-});
-
-template <class T>
-T pattern_values(const GlobalElementIndex& index) {
-  SizeType i = index.row();
-  SizeType j = index.col();
-  return dlaf::test::TypeUtilities<T>::element(i + j, j - i);
-}
-
-template <class T>
-struct numpy_type {
-  static constexpr auto name = "single";
-
-  static T deserialize(const std::string& value_str) {
-    std::istringstream deserializer(value_str);
-    T value;
-    deserializer >> value;
-    return value;
-  }
-};
+TYPED_TEST_SUITE(MatrixOutputTest, dlaf::test::MatrixElementTypes);
 
 template <class T>
 struct test_tile_output {
@@ -131,7 +91,7 @@ struct test_tile_output<std::complex<T>> {
   }
 };
 
-TYPED_TEST(MatrixOutputLocalTest, NumpyFormatTile) {
+TYPED_TEST(MatrixOutputTest, NumpyFormatTile) {
   using test_output = test_tile_output<TypeParam>;
   for (auto get_test_config : {test_output::empty, test_output::nonempty}) {
     const auto config = get_test_config();
@@ -150,7 +110,6 @@ struct test_matrix_output {
   static auto empty() {
     Matrix<const element_t, Device::CPU> mat = [&]() {
       Matrix<element_t, Device::CPU> source({0, 0}, {2, 3});
-      set(source, [](auto&&) { return element_t{}; });
       return source;
     }();
 
@@ -189,7 +148,6 @@ struct test_matrix_output<std::complex<T>> {
   static auto empty() {
     Matrix<const element_t, Device::CPU> mat = [&]() {
       Matrix<element_t, Device::CPU> source({0, 0}, {2, 3});
-      set(source, [](auto&&) { return element_t{}; });
       return source;
     }();
 
@@ -220,7 +178,7 @@ struct test_matrix_output<std::complex<T>> {
   }
 };
 
-TYPED_TEST(MatrixOutputLocalTest, NumpyFormatMatrix) {
+TYPED_TEST(MatrixOutputTest, NumpyFormatMatrix) {
   using test_output = test_matrix_output<TypeParam>;
   for (auto get_test_config : {test_output::empty, test_output::nonempty}) {
     auto config = get_test_config();
@@ -233,32 +191,141 @@ TYPED_TEST(MatrixOutputLocalTest, NumpyFormatMatrix) {
 }
 
 template <class T>
-class MatrixOutputTest : public ::testing::Test {
-public:
-  const auto& commGrids() {
-    return dlaf::test::comm_grids;
+struct test_matrix_dist_output {
+  using element_t = T;
+
+  comm::CommunicatorGrid comm_grid_;
+
+  test_matrix_dist_output() : comm_grid_({MPI_COMM_WORLD}, {3, 2}, common::Ordering::ColumnMajor) {}
+
+  auto empty() const {
+    Matrix<const element_t, Device::CPU> mat = [&]() {
+      Distribution distribution({0, 0}, {2, 3}, comm_grid_.size(), comm_grid_.rank(), {0, 0});
+      Matrix<element_t, Device::CPU> source(std::move(distribution));
+      return source;
+    }();
+
+    const std::string expected_output{"mat = np.zeros((0, 0), dtype=np.single)\n"};
+
+    return std::make_pair(std::move(mat), expected_output);
+  }
+
+  auto nonempty() const {
+    Matrix<const element_t, Device::CPU> mat = [&]() {
+      Distribution distribution({5, 4}, {2, 3}, comm_grid_.size(), comm_grid_.rank(), {0, 0});
+      Matrix<element_t, Device::CPU> source(std::move(distribution));
+
+      set(source, [ld = source.size().rows()](auto&& i) {
+        const auto value = i.row() + i.col() * ld;
+        return (value % 2 == 0) ? value : -value;
+      });
+      return source;
+    }();
+
+    std::string expected_output{"mat = np.zeros((5, 4), dtype=np.single)\n"};
+
+    const auto linear_rank =
+        comm_grid_.rank().row() + comm_grid_.rank().col() * comm_grid_.size().rows();
+    switch (linear_rank) {
+      case 0:
+        expected_output +=
+            "mat[0:2,0:3] = np.array([0,-1,-5,6,10,-11,], dtype=np.single).reshape(3, 2).T\n";
+        break;
+      case 1:
+        expected_output +=
+            "mat[2:4,0:3] = np.array([2,-3,-7,8,12,-13,], dtype=np.single).reshape(3, 2).T\n";
+        break;
+      case 2:
+        expected_output += "mat[4:5,0:3] = np.array([4,-9,14,], dtype=np.single).reshape(3, 1).T\n";
+        break;
+      case 3:
+        expected_output += "mat[0:2,3:4] = np.array([-15,16,], dtype=np.single).reshape(1, 2).T\n";
+        break;
+      case 4:
+        expected_output += "mat[2:4,3:4] = np.array([-17,18,], dtype=np.single).reshape(1, 2).T\n";
+        break;
+      case 5:
+        expected_output += "mat[4:5,3:4] = np.array([-19,], dtype=np.single).reshape(1, 1).T\n";
+        break;
+    };
+
+    return std::make_pair(std::move(mat), expected_output);
   }
 };
 
-TYPED_TEST_SUITE(MatrixOutputTest, dlaf::test::MatrixElementTypes);
+template <class T>
+struct test_matrix_dist_output<std::complex<T>> {
+  using element_t = std::complex<T>;
 
-GlobalElementSize globalTestSize(const LocalElementSize& size, const comm::Size2D& grid_size) {
-  return {size.rows() * grid_size.rows(), size.cols() * grid_size.cols()};
-}
+  comm::CommunicatorGrid comm_grid_;
 
-TYPED_TEST(MatrixOutputTest, NumpyFormatMatrix) {
-  // for (const auto& comm_grid : this->commGrids()) {
-  //  for (const auto& test : sizes) {
-  //    GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-  //    Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-  //    Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
+  test_matrix_dist_output() : comm_grid_({MPI_COMM_WORLD}, {3, 2}, common::Ordering::ColumnMajor) {}
 
-  //    set(mat, pattern_values<TypeParam>);
+  auto empty() {
+    Matrix<const element_t, Device::CPU> mat = [&]() {
+      Distribution distribution({0, 0}, {2, 3}, comm_grid_.size(), comm_grid_.rank(), {0, 0});
+      Matrix<element_t, Device::CPU> source(std::move(distribution));
+      return source;
+    }();
 
-  //    std::ostringstream stream_matrix_output;
-  //    print(format::numpy{}, "mat", mat, stream_matrix_output);
+    const std::string expected_output{"mat = np.zeros((0, 0), dtype=np.csingle)\n"};
 
-  //    //EXPECT_TRUE(parseAndCheckMatrix(stream_matrix_output.str(), mat));
-  //  }
-  //}
+    return std::make_pair(std::move(mat), expected_output);
+  }
+
+  auto nonempty() {
+    Matrix<const element_t, Device::CPU> mat = [&]() {
+      Distribution distribution({5, 4}, {2, 3}, comm_grid_.size(), comm_grid_.rank(), {0, 0});
+      Matrix<element_t, Device::CPU> source(std::move(distribution));
+
+      set(source, [ld = source.size().rows()](auto&& i) {
+        return element_t(i.row(), i.col() % 2 == 0 ? i.col() : -i.col());
+      });
+      return source;
+    }();
+
+    std::string expected_output{"mat = np.zeros((5, 4), dtype=np.csingle)\n"};
+
+    const auto linear_rank =
+        comm_grid_.rank().row() + comm_grid_.rank().col() * comm_grid_.size().rows();
+    switch (linear_rank) {
+      case 0:
+        expected_output +=
+            "mat[0:2,0:3] = np.array([0+0j,1+0j,0-1j,1-1j,0+2j,1+2j,], dtype=np.csingle).reshape(3, 2).T\n";
+        break;
+      case 1:
+        expected_output +=
+            "mat[2:4,0:3] = np.array([2+0j,3+0j,2-1j,3-1j,2+2j,3+2j,], dtype=np.csingle).reshape(3, 2).T\n";
+        break;
+      case 2:
+        expected_output +=
+            "mat[4:5,0:3] = np.array([4+0j,4-1j,4+2j,], dtype=np.csingle).reshape(3, 1).T\n";
+        break;
+      case 3:
+        expected_output += "mat[0:2,3:4] = np.array([0-3j,1-3j,], dtype=np.csingle).reshape(1, 2).T\n";
+        break;
+      case 4:
+        expected_output += "mat[2:4,3:4] = np.array([2-3j,3-3j,], dtype=np.csingle).reshape(1, 2).T\n";
+        break;
+      case 5:
+        expected_output += "mat[4:5,3:4] = np.array([4-3j,], dtype=np.csingle).reshape(1, 1).T\n";
+        break;
+    };
+
+    return std::make_pair(std::move(mat), expected_output);
+  }
+};
+
+TYPED_TEST(MatrixOutputTest, NumpyFormatMatrixDist) {
+  using test_output_t = test_matrix_dist_output<TypeParam>;
+  test_output_t instance;
+
+  for (auto get_test_config : {&test_output_t::empty, &test_output_t::nonempty}) {
+    auto config = (instance.*get_test_config)();
+
+    std::ostringstream stream_matrix_output;
+    print(format::numpy{}, "mat", config.first, stream_matrix_output);
+
+    EXPECT_EQ(config.second, stream_matrix_output.str());
+  }
 }

@@ -96,8 +96,10 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
 
       const TileElementSize block_size(mb, nb);
 
+      comm::Index2D source_rank_index(std::max(0, comm_grid.size().rows() - 1),
+                                      std::min(1, comm_grid.size().cols() - 1));
       const matrix::Distribution dist_v({a_m, a_n}, block_size, comm_grid.size(), comm_grid.rank(),
-                                        {0, 0});
+                                        source_rank_index);
 
       const GlobalTileIndex v_start{dist_v.nrTiles().rows() / 2, dist_v.nrTiles().cols() / 2};
 
@@ -107,7 +109,7 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
         return V;
       }();
 
-      const MatrixLocal<const TypeParam> v = [&]() {
+      const MatrixLocal<const TypeParam> v = [&v_input, &dist_v, &comm_grid, a_m, a_n, nb, v_start] {
         // TODO this can be improved by communicating just the interesting part
         // gather the entire A matrix
         auto a = matrix::test::all_gather<TypeParam>(v_input, comm_grid);
@@ -116,9 +118,9 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
         const auto v_start_el = dist_v.globalElementIndex(v_start, {0, 0});
         const auto v_end_el = GlobalElementIndex{a_m, std::min(v_start_el.col() + nb, a_n)};
         const auto v_size_el = v_end_el - v_start_el;
-        DLAF_ASSERT_HEAVY(v.size().rows() > v.size().cols(), v.size());
 
         MatrixLocal<TypeParam> v(v_size_el, a.blockSize());
+        DLAF_ASSERT_HEAVY(v.size().rows() > v.size().cols(), v.size());
 
         // copy just the panel
         const GlobalTileSize v_offset{v_start.row(), v_start.col()};
@@ -134,10 +136,10 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
 
       const SizeType m = v.size().rows();
 
+      // compute taus and H_exp
       common::internal::vector<hpx::shared_future<TypeParam>> taus_input;
       taus_input.reserve(k);
 
-      // compute taus and H_exp
       MatrixLocal<TypeParam> h_expected({m, m}, block_size);
       set(h_expected, values_eye<TypeParam>);
 
@@ -180,31 +182,35 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
 
       is_orthogonal(h_expected);
 
-      // TODO call the function to be tested
-      Matrix<TypeParam, Device::CPU> t_output(LocalElementSize{k, k}, block_size);
       common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
+      Matrix<TypeParam, Device::CPU> t_output(LocalElementSize{k, k}, block_size);
 
-      // TODO just the first column panel is tested
       dlaf::factorization::internal::computeTFactor<Backend::MC>(k, v_input, v_start, taus_input,
                                                                  t_output, serial_comm);
 
-      // T factor is reduced just on the rank owning V0
+      // Note:
       const comm::Index2D owner_t = dist_v.rankGlobalTile(v_start);
       if (dist_v.rankIndex() != owner_t)
         continue;
 
+      // Note:
+      // T factor is reduced just on the rank owning V0.
+      //
+      // In order to check T correcteness, the test will compute the H transformation matrix
+      // that will results from using it with the V panel.
+      //
+      // In particular
+      //
+      // H_res = I - V T V*
+      //
+      // is computed and compared to the one previously obtained by applying reflectors sequentially
+
       const auto& t = t_output.read(LocalTileIndex{0, 0}).get();
 
-      // compute H_result = I - VTV*
-
-      // TODO W = T V*
+      // TV* = (VT*)* = W
       MatrixLocal<TypeParam> w({m, k}, block_size);
       std::copy(v.ptr(), v.ptr() + w.size().linear_size(), w.ptr());
 
-      // alpha = 1
-      // op(T) = NoTrans
-      // V = alpha op(T) . V
-      // TV* = VT* = W
       // clang-format off
       blas::trmm(blas::Layout::ColMajor,
           blas::Side::Right, blas::Uplo::Upper,
@@ -215,15 +221,9 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
           w.ptr(), w.ld());
       // clang-format on
 
-      // TODO H_result = I - V W
+      // H_result = I - V W*
       MatrixLocal<TypeParam> h_result(h_expected.size(), block_size);
       set(h_result, values_eye<TypeParam>);
-
-      // beta = 1
-      // alpha = -1
-      // op(V) = NoTrans
-      // op(W) = ConjTrans
-      // I = beta I + alpha V W
 
       // clang-format off
       blas::gemm(blas::Layout::ColMajor,
@@ -238,7 +238,6 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
 
       is_orthogonal(h_result);
 
-      // check H_result == H_exp
       CHECK_MATRIX_NEAR(h_expected, h_result, error, error);
     }
   }

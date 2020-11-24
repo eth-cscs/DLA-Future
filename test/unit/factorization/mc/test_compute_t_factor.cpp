@@ -88,18 +88,18 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
   // TODO fix this
   constexpr auto error = 1e-4;  // test::TypeUtilities<TypeParam>::error;
 
-  SizeType m, n, mb, nb, k;
+  SizeType a_m, a_n, mb, nb, k;
 
   for (auto comm_grid : this->commGrids()) {
     for (auto config : configs) {
-      std::tie(m, n, mb, nb, k) = config;
+      std::tie(a_m, a_n, mb, nb, k) = config;
 
-      DLAF_ASSERT(k <= nb, k, nb, "reflectors should be in the same column of tiles");
-
-      const GlobalElementSize size(m, n);
       const TileElementSize block_size(mb, nb);
 
-      const matrix::Distribution dist_v(size, block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      const matrix::Distribution dist_v({a_m, a_n}, block_size, comm_grid.size(), comm_grid.rank(),
+                                        {0, 0});
+
+      const GlobalTileIndex v_start{dist_v.nrTiles().rows() / 2, dist_v.nrTiles().cols() / 2};
 
       Matrix<const TypeParam, DEVICE_CPU> v_input = [&]() {
         Matrix<TypeParam, Device::CPU> V(dist_v);
@@ -108,11 +108,31 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
       }();
 
       const MatrixLocal<const TypeParam> v = [&]() {
-        auto v = matrix::test::all_gather<TypeParam>(v_input, comm_grid);
-        const auto min_size = std::min(m, n);
-        lapack::laset(lapack::MatrixType::Upper, min_size, min_size, 0, 1, v.ptr({0, 0}), v.ld());
+        // TODO this can be improved by communicating just the interesting part
+        // gather the entire A matrix
+        auto a = matrix::test::all_gather<TypeParam>(v_input, comm_grid);
+
+        // panel shape
+        const auto v_start_el = dist_v.globalElementIndex(v_start, {0, 0});
+        const auto v_end_el = GlobalElementIndex{a_m, std::min(v_start_el.col() + nb, a_n)};
+        const auto v_size_el = v_end_el - v_start_el;
+        DLAF_ASSERT_HEAVY(v.size().rows() > v.size().cols(), v.size());
+
+        MatrixLocal<TypeParam> v(v_size_el, a.blockSize());
+
+        // copy just the panel
+        const GlobalTileSize v_offset{v_start.row(), v_start.col()};
+        for (const auto& ij : iterate_range2d(v.nrTiles()))
+          copy(a.tile_read(ij + v_offset), v.tile(ij));
+
+        // clean reflectors
+        lapack::laset(lapack::MatrixType::Upper, v.size().rows(), v.size().cols(), 0, 1, v.ptr(),
+                      v.ld());
+
         return v;
       }();
+
+      const SizeType m = v.size().rows();
 
       common::internal::vector<hpx::shared_future<TypeParam>> taus_input;
       taus_input.reserve(k);
@@ -165,12 +185,11 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
       common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
 
       // TODO just the first column panel is tested
-      const GlobalTileIndex index_v0{0, 0};
-      dlaf::factorization::internal::computeTFactor<Backend::MC>(k, v_input, index_v0, taus_input,
+      dlaf::factorization::internal::computeTFactor<Backend::MC>(k, v_input, v_start, taus_input,
                                                                  t_output, serial_comm);
 
       // T factor is reduced just on the rank owning V0
-      const comm::Index2D owner_t = dist_v.rankGlobalTile(index_v0);
+      const comm::Index2D owner_t = dist_v.rankGlobalTile(v_start);
       if (dist_v.rankIndex() != owner_t)
         continue;
 

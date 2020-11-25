@@ -30,10 +30,20 @@ using dlaf::Matrix;
 using dlaf::comm::CommunicatorGrid;
 using dlaf::matrix::test::MatrixLocal;
 
-constexpr auto DEVICE_CPU = Device::CPU;
+::testing::Environment* const comm_grids_env =
+    ::testing::AddGlobalTestEnvironment(new dlaf::test::CommunicatorGrid6RanksEnvironment);
+
+template <typename Type>
+struct ComputeTFactorDistributedTest : public ::testing::Test {
+  const std::vector<dlaf::comm::CommunicatorGrid>& commGrids() {
+    return dlaf::test::comm_grids;
+  }
+};
+
+TYPED_TEST_SUITE(ComputeTFactorDistributedTest, dlaf::test::MatrixElementTypes);
 
 template <class T>
-T values_eye(const dlaf::GlobalElementIndex& index) {
+T preset_eye(const dlaf::GlobalElementIndex& index) {
   return index.row() == index.col() ? 1 : 0;
 }
 
@@ -55,26 +65,13 @@ void is_orthogonal(const MatrixLocal<const T>& matrix) {
 
   MatrixLocal<const T> eye = [&]() {
     MatrixLocal<T> m(matrix.size(), matrix.blockSize());
-    set(m, values_eye<T>);
+    set(m, preset_eye<T>);
     return m;
   }();
 
-  // TODO fix this
-  constexpr auto error = 1e-4;  // dlaf::test::TypeUtilities<T>::error;
+  constexpr auto error = 2 * dlaf::test::TypeUtilities<T>::error;
   CHECK_MATRIX_NEAR(eye, ortho, error, error);
 }
-
-::testing::Environment* const comm_grids_env =
-    ::testing::AddGlobalTestEnvironment(new dlaf::test::CommunicatorGrid6RanksEnvironment);
-
-template <typename Type>
-struct ComputeTFactorDistributedTest : public ::testing::Test {
-  const std::vector<dlaf::comm::CommunicatorGrid>& commGrids() {
-    return dlaf::test::comm_grids;
-  }
-};
-
-TYPED_TEST_SUITE(ComputeTFactorDistributedTest, dlaf::test::MatrixElementTypes);
 
 std::vector<std::array<dlaf::SizeType, 5>> configs{
     // m, n, mb, nb, k
@@ -82,11 +79,35 @@ std::vector<std::array<dlaf::SizeType, 5>> configs{
     {39, 26, 6, 6, 4},  // k reflectors
 };
 
+// Note:
+// Testing this function requires next input values:
+// - V      the matrix with the elementary reflectors (columns)
+// - taus   the set of tau coefficients, one for each reflector
+//
+// V is generated randomly and the related tau values are computed, and at the same time they are used to compute the expected resulting
+// Householder transformation by applying one at a time the reflectors in V, by applying on each one the equation
+//
+// Hi = I - tau . v . v*
+//
+// and updating the final expected Householder transformation with
+//
+// H_exp = H_exp * Hi
+//
+// resulting in
+//
+// H = H1 . H2 . ... . Hk
+//
+// On the other side, from the function, by providing V and taus we get back a T factor, that we
+// can use to compute the Householder transformation by applying all reflectors in block.
+// This Householder transformation is obtained with the equation
+//
+// H = I - V . T . V*
+//
+// Which we expect to be the equal to the one computed previously.
 TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
   using namespace dlaf;
 
-  // TODO fix this
-  constexpr auto error = 1e-4;  // test::TypeUtilities<TypeParam>::error;
+  constexpr auto error = test::TypeUtilities<TypeParam>::error;
 
   SizeType a_m, a_n, mb, nb, k;
 
@@ -103,7 +124,7 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
 
       const GlobalTileIndex v_start{dist_v.nrTiles().rows() / 2, dist_v.nrTiles().cols() / 2};
 
-      Matrix<const TypeParam, DEVICE_CPU> v_input = [&]() {
+      Matrix<const TypeParam, Device::CPU> v_input = [&]() {
         Matrix<TypeParam, Device::CPU> V(dist_v);
         dlaf::matrix::util::set_random(V);
         return V;
@@ -141,7 +162,7 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
       taus_input.reserve(k);
 
       MatrixLocal<TypeParam> h_expected({m, m}, block_size);
-      set(h_expected, values_eye<TypeParam>);
+      set(h_expected, preset_eye<TypeParam>);
 
       for (auto j = 0; j < k; ++j) {
         const TypeParam* data_ptr = v.ptr({j, j});
@@ -153,7 +174,7 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
         // TODO work just on the submatrix
 
         MatrixLocal<TypeParam> h_i({m, m}, block_size);
-        set(h_i, values_eye<TypeParam>);
+        set(h_i, preset_eye<TypeParam>);
 
         // Hi = (I - tau . v . v*)
         // clang-format off
@@ -223,7 +244,7 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
 
       // H_result = I - V W*
       MatrixLocal<TypeParam> h_result(h_expected.size(), block_size);
-      set(h_result, values_eye<TypeParam>);
+      set(h_result, preset_eye<TypeParam>);
 
       // clang-format off
       blas::gemm(blas::Layout::ColMajor,

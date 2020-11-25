@@ -25,7 +25,6 @@
 using namespace dlaf;
 using namespace dlaf::matrix;
 
-using dlaf::matrix::test::set;
 using matrix::test::createTile;
 
 template <typename Type>
@@ -121,7 +120,7 @@ struct test_matrix_output {
   static auto nonempty() {
     Matrix<const element_t, Device::CPU> mat = [&]() {
       Matrix<element_t, Device::CPU> source({5, 4}, {2, 3});
-      set(source, [ld = source.size().rows()](auto&& i) {
+      matrix::test::set(source, [ld = source.size().rows()](auto&& i) {
         const auto value = i.row() + i.col() * ld;
         return (value % 2 == 0) ? value : -value;
       });
@@ -159,7 +158,7 @@ struct test_matrix_output<std::complex<T>> {
   static auto nonempty() {
     Matrix<const element_t, Device::CPU> mat = [&]() {
       Matrix<element_t, Device::CPU> source({5, 4}, {2, 3});
-      set(source, [ld = source.size().rows()](auto&& i) {
+      matrix::test::set(source, [ld = source.size().rows()](auto&& i) {
         return element_t(i.row(), i.col() % 2 == 0 ? i.col() : -i.col());
       });
       return source;
@@ -215,7 +214,7 @@ struct test_matrix_dist_output {
       Distribution distribution({5, 4}, {2, 3}, comm_grid_.size(), comm_grid_.rank(), {0, 0});
       Matrix<element_t, Device::CPU> source(std::move(distribution));
 
-      set(source, [ld = source.size().rows()](auto&& i) {
+      matrix::test::set(source, [ld = source.size().rows()](auto&& i) {
         const auto value = i.row() + i.col() * ld;
         return (value % 2 == 0) ? value : -value;
       });
@@ -269,7 +268,7 @@ struct test_matrix_dist_output<std::complex<T>> {
       Distribution distribution({5, 4}, {2, 3}, comm_grid_.size(), comm_grid_.rank(), {0, 0});
       Matrix<element_t, Device::CPU> source(std::move(distribution));
 
-      set(source, [ld = source.size().rows()](auto&& i) {
+      matrix::test::set(source, [ld = source.size().rows()](auto&& i) {
         return element_t(i.row(), i.col() % 2 == 0 ? i.col() : -i.col());
       });
       return source;

@@ -166,40 +166,42 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
       set(h_expected, preset_eye<TypeParam>);
 
       for (auto j = 0; j < k; ++j) {
+        const SizeType reflector_size = m - j;
+
         const TypeParam* data_ptr = v.ptr({j, j});
-        const auto norm = blas::nrm2(m - j, data_ptr, 1);
+        const auto norm = blas::nrm2(reflector_size, data_ptr, 1);
         const TypeParam tau = 2 / std::pow(norm, 2);
 
         taus_input.push_back(hpx::make_ready_future<TypeParam>(tau));
 
-        // TODO work just on the submatrix
-
-        MatrixLocal<TypeParam> h_i({m, m}, block_size);
+        MatrixLocal<TypeParam> h_i({reflector_size, reflector_size}, block_size);
         set(h_i, preset_eye<TypeParam>);
 
         // Hi = (I - tau . v . v*)
         // clang-format off
         blas::ger(blas::Layout::ColMajor,
-            m - j, m - j,
+            reflector_size, reflector_size,
             -tau,
             v.ptr({j, j}), 1,
             v.ptr({j, j}), 1,
-            h_i.ptr({j, j}), h_i.ld());
+            h_i.ptr(), h_i.ld());
         // clang-format on
 
-        // H_exp = H_exp . Hi
+        // H_exp[:, j:] = H_exp[:, j:] . Hi
         // clang-format off
-        MatrixLocal<TypeParam> workspace(h_expected.size(), h_expected.blockSize());
+        const GlobalElementIndex h_offset{0, j};
+        MatrixLocal<TypeParam> workspace({h_expected.size().rows(), h_i.size().cols()}, h_i.blockSize());
         blas::gemm(blas::Layout::ColMajor,
             blas::Op::NoTrans, blas::Op::NoTrans,
-            m, m, m,
+            h_expected.size().rows(), h_i.size().cols(), h_i.size().rows(),
             1,
-            h_expected.ptr(), h_expected.ld(),
+            h_expected.ptr(h_offset), h_expected.ld(),
             h_i.ptr(), h_i.ld(),
             0,
             workspace.ptr(), workspace.ld());
         // clang-format on
-        copy(workspace, h_expected);
+        std::copy(workspace.ptr(), workspace.ptr() + workspace.size().linear_size(),
+                  h_expected.ptr(h_offset));
       }
 
       is_orthogonal(h_expected);
@@ -210,7 +212,6 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
       dlaf::factorization::internal::computeTFactor<Backend::MC>(k, v_input, v_start, taus_input,
                                                                  t_output, serial_comm);
 
-      // Note:
       const comm::Index2D owner_t = dist_v.rankGlobalTile(v_start);
       if (dist_v.rankIndex() != owner_t)
         continue;

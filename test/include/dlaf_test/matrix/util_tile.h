@@ -23,7 +23,6 @@
 namespace dlaf {
 namespace matrix {
 namespace test {
-using namespace dlaf;
 
 /// Sets the elements of the tile.
 ///
@@ -93,7 +92,7 @@ Tile<T, Device::CPU> createTile(const TileElementSize size, const SizeType ld) {
 template <class T, class ElementGetter>
 Tile<T, Device::CPU> createTile(ElementGetter val, const TileElementSize size, const SizeType ld) {
   auto tile = createTile<std::remove_const_t<T>>(size, ld);
-  set(tile, val);
+  test::set(tile, val);
   return Tile<T, Device::CPU>(std::move(tile));
 }
 

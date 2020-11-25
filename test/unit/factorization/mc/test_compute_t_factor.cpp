@@ -84,8 +84,9 @@ std::vector<std::array<dlaf::SizeType, 5>> configs{
 // - V      the matrix with the elementary reflectors (columns)
 // - taus   the set of tau coefficients, one for each reflector
 //
-// V is generated randomly and the related tau values are computed, and at the same time they are used to compute the expected resulting
-// Householder transformation by applying one at a time the reflectors in V, by applying on each one the equation
+// V is generated randomly and the related tau values are computed, and at the same time they are used to
+// compute the expected resulting Householder transformation by applying one at a time the reflectors in
+// V, by applying on each one the equation
 //
 // Hi = I - tau . v . v*
 //

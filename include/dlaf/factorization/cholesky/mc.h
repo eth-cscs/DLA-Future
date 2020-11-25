@@ -12,7 +12,6 @@
 #include <hpx/include/parallel_executors.hpp>
 #include <hpx/include/threads.hpp>
 #include <hpx/include/util.hpp>
-#include <hpx/util/annotated_function.hpp>
 
 #include <unordered_map>
 

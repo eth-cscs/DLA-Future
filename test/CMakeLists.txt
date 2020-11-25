@@ -15,7 +15,7 @@ option(DLAF_CI_RUNNER_USES_MPIRUN "Remove mpiexec command for tests executed by 
 
 # On some machines, tests using multiple ranks + oversubscribing run
 # significantly faster when threads are not pinned.
-option(DLAF_TEST_DISABLE_THREAD_BINDING "If ON disables HPX thread binding." OFF)
+option(DLAF_TEST_THREAD_BINDING_ENABLED "If OFF disables HPX thread binding." ON)
 
 # if a preset has been selected and it has been changed from previous configurations
 if (NOT DLAF_MPI_PRESET STREQUAL _DLAF_MPI_PRESET)

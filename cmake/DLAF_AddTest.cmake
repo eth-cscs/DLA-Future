@@ -144,7 +144,7 @@ function(DLAF_addTest test_target_name)
       list(APPEND _TEST_ARGUMENTS "--hpx:use-process-mask")
     endif()
 
-    if(DLAF_TEST_DISABLE_THREAD_BINDING)
+    if(NOT DLAF_TEST_THREAD_BINDING_ENABLED)
       list(APPEND _TEST_ARGUMENTS "--hpx:bind=none")
     endif()
 

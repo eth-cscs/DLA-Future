@@ -29,30 +29,13 @@
 
 #include "dlaf/common/assert.h"
 #include "dlaf/cuda/error.h"
-#include "dlaf/cuda/event.h"
 
 namespace dlaf {
 namespace cuda {
-
-// Print information about the devices.
-// TODO: Used? Required?
-inline void printDeviceInfo(int device) noexcept {
-  cudaDeviceProp device_prop;
-  DLAF_CUDA_CALL(cudaGetDeviceProperties(&device_prop, device));
-  printf("Device %d has compute capability %d.%d.\n", device, device_prop.major, device_prop.minor);
-}
-
-// Return the number of devices.
-// TODO: Used? Required?
-inline int numDevices() noexcept {
-  int ndevices;
-  cudaGetDeviceCount(&ndevices);
-  return ndevices;
-}
-
 namespace internal {
 
-// This class works around the fact std::shared_ptr doesn't support raw arrays in C++14.
+// This class works around the fact std::shared_ptr doesn't support raw arrays
+// in C++14.
 class StreamArray {
   cudaStream_t* arr_;
   int num_streams_;
@@ -131,12 +114,6 @@ public:
 
   cudaStream_t& getStream() {
     return stream_;
-  }
-
-  Event getEvent() {
-    Event e;
-    e.record(stream_);
-    return e;
   }
 };
 

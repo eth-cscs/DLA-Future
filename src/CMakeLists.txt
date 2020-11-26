@@ -115,14 +115,6 @@ target_link_libraries(dlaf.solver PUBLIC dlaf.prop)
 add_library(dlaf.auxiliary OBJECT auxiliary/norm/mc.cpp)
 target_link_libraries(dlaf.auxiliary PUBLIC dlaf.prop)
 
-# TODO: Move non-templated functionality to source files.
-if(DLAF_WITH_CUDA)
-  # NOTE: Keeping this around only because it will reinstated.
-  #add_library(dlaf.cuda OBJECT cuda/mutex.cpp)
-  add_library(dlaf.cuda INTERFACE)
-  target_link_libraries(dlaf.cuda INTERFACE dlaf.prop)
-endif()
-
 # Define DLAF's complete library
 add_library(DLAF
   $<TARGET_OBJECTS:dlaf.core>
@@ -130,7 +122,6 @@ add_library(DLAF
   $<TARGET_OBJECTS:dlaf.factorization>
   $<TARGET_OBJECTS:dlaf.solver>
   $<TARGET_OBJECTS:dlaf.auxiliary>
-  #$<$<BOOL:${DLAF_WITH_CUDA}>:$<TARGET_OBJECTS:dlaf.cuda>> # TODO
 )
 target_link_libraries(DLAF PUBLIC dlaf.prop)
 target_add_warnings(DLAF)

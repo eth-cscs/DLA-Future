@@ -32,7 +32,6 @@
 #include "dlaf/common/assert.h"
 #include "dlaf/cublas/error.h"
 #include "dlaf/cuda/error.h"
-#include "dlaf/cuda/event.h"
 #include "dlaf/cuda/executor.h"
 
 namespace dlaf {
@@ -79,15 +78,6 @@ public:
   cudaStream_t& getStream() {
     return locked_stream_.getStream();
   }
-
-  cuda::Event getEvent() {
-    return locked_stream_.getEvent();
-  }
-
-  // TODO: Do we need variants here?
-  // decltype(auto) getFutureCallback() {}
-  // decltype(auto) getFutureEventSchedulerPolling() {}
-  // decltype(auto) getFutureEventYieldPolling() {}
 
   void unlock() {
     locked_stream_.unlock();
@@ -167,8 +157,6 @@ public:
         hpx::cuda::experimental::detail::get_future_with_event(locked_handle.getStream());
     locked_handle.unlock();
 
-    // TODO: If using get_future_with_callback, cudaFree may be called in the
-    // callback. Do we care?
     return fut.then(hpx::launch::sync,
                     [r = std::move(r)](hpx::future<void>&&) mutable { return std::move(r); });
   }

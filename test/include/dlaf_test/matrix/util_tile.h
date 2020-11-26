@@ -23,7 +23,6 @@
 namespace dlaf {
 namespace matrix {
 namespace test {
-using namespace dlaf;
 
 /// Sets the elements of the tile.
 ///

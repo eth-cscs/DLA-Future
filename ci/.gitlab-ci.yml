@@ -76,8 +76,8 @@ gpu release build:
     SLURM_CONSTRAINT: gpu
     CORES_PER_NODE: 12
     USE_CODECOV: "false"
-    # TODO: Change to master
-    HPX_VERSION: "3f5a8a41257082dc168c2e614b2b950284e77f2c"
+    # Fixed commit from HPX master
+    HPX_VERSION: "9048fce50e477ab49bf9fbffbb8258d6025ae036"
     HPX_WITH_CUDA: "ON"
 
 gpu codecov build:
@@ -92,8 +92,8 @@ gpu codecov build:
     SLURM_CONSTRAINT: gpu
     CORES_PER_NODE: 12
     USE_CODECOV: "true"
-    # TODO: Change to master
-    HPX_VERSION: "3f5a8a41257082dc168c2e614b2b950284e77f2c"
+    # Fixed commit from HPX master
+    HPX_VERSION: "9048fce50e477ab49bf9fbffbb8258d6025ae036"
     HPX_WITH_CUDA: "ON"
 
 notify_github_start:

@@ -64,6 +64,7 @@ struct options_t {
   int grid_rows;
   int grid_cols;
   int64_t nruns;
+  int64_t nwarmups;
   CHECK_RESULT do_check;
 };
 
@@ -93,8 +94,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 
   const auto& distribution = matrix_ref.distribution();
 
-  for (auto run_index = 0; run_index < opts.nruns; ++run_index) {
-    if (0 == world.rank())
+  for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
+    if (0 == world.rank() && run_index >= 0)
       std::cout << "[" << run_index << "]" << std::endl;
 
     MatrixType matrix(matrix_size, block_size, comm_grid);
@@ -128,7 +129,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     }
 
     // print benchmark results
-    if (0 == world.rank())
+    if (0 == world.rank() && run_index >= 0)
       std::cout << "[" << run_index << "]"
                 << " " << elapsed_time << "s"
                 << " " << gigaflops << "GFlop/s"
@@ -163,6 +164,7 @@ int main(int argc, char** argv) {
     ("grid-rows",    value<int>()        ->default_value(   1),                        "Number of row processes in the 2D communicator")
     ("grid-cols",    value<int>()        ->default_value(   1),                        "Number of column processes in the 2D communicator")
     ("nruns",        value<int64_t>()    ->default_value(   1),                        "Number of runs to compute the cholesky")
+    ("nwarmups",     value<int64_t>()    ->default_value(   1),                        "Number of warmup runs")
     ("check-result", value<std::string>()->default_value(  "")->implicit_value("all"), "Enable result check ('all', 'last')")
   ;
   // clang-format on
@@ -389,16 +391,18 @@ void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
 
 options_t check_options(hpx::program_options::variables_map& vm) {
   options_t opts = {
-      vm["matrix-size"].as<SizeType>(), vm["block-size"].as<SizeType>(),
-      vm["grid-rows"].as<int>(),        vm["grid-cols"].as<int>(),
+      vm["matrix-size"].as<SizeType>(), vm["block-size"].as<SizeType>(), vm["grid-rows"].as<int>(),
+      vm["grid-cols"].as<int>(),
 
-      vm["nruns"].as<int64_t>(),        CHECK_RESULT::NONE,
+      vm["nruns"].as<int64_t>(),        vm["nwarmups"].as<int64_t>(),    CHECK_RESULT::NONE,
   };
 
-  DLAF_ASSERT(opts.m > 0, "matrix size must be a positive number!", opts.m);
-  DLAF_ASSERT(opts.mb > 0, "block size must be a positive number!", opts.mb);
-  DLAF_ASSERT(opts.grid_rows > 0, "number of grid rows must be a positive number!", opts.grid_rows);
-  DLAF_ASSERT(opts.grid_cols > 0, "number of grid columns must be a positive number!", opts.grid_cols);
+  DLAF_ASSERT(opts.m > 0, opts.m);
+  DLAF_ASSERT(opts.mb > 0, opts.mb);
+  DLAF_ASSERT(opts.grid_rows > 0, opts.grid_rows);
+  DLAF_ASSERT(opts.grid_cols > 0, opts.grid_cols);
+  DLAF_ASSERT(opts.nruns > 0, opts.nruns);
+  DLAF_ASSERT(opts.nwarmups >= 0, opts.nwarmups);
 
   const std::string check_type = vm["check-result"].as<std::string>();
 

@@ -18,7 +18,7 @@ class DlaFuture(CMakePackage, CudaPackage):
 
     variant('doc', default=False,
             description='Build documentation.')
-    
+
     variant('miniapps', default=False,
             description='Build miniapps.')
 
@@ -56,8 +56,8 @@ class DlaFuture(CMakePackage, CudaPackage):
 
         # TESTs
         args.append(self.define('DLAF_WITH_TEST', self.run_tests))
-        
-        # MINIAPPS 
-        args.append(self.define('DLAF_BUILD_MINIAPPS', 'miniapps'))
+
+        # MINIAPPS
+        args.append(self.define_from_variant('DLAF_BUILD_MINIAPPS', 'miniapps'))
 
         return args

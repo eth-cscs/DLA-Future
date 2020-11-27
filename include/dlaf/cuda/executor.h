@@ -23,7 +23,6 @@
 #include <hpx/execution.hpp>
 #include <hpx/functional.hpp>
 #include <hpx/future.hpp>
-#include <hpx/mutex.hpp>
 #include <hpx/tuple.hpp>
 
 #include "dlaf/common/assert.h"
@@ -35,14 +34,14 @@ namespace internal {
 
 // This class works around the fact std::shared_ptr doesn't support raw arrays
 // in C++14.
-class StreamArray {
+struct StreamArray {
+  std::size_t num_worker_threads_ = hpx::get_num_worker_threads();
+  std::size_t num_streams_per_worker_thread_ = 10;
   cudaStream_t* arr_;
-  std::size_t num_streams_;
 
-public:
-  StreamArray(int device, std::size_t num_streams,
+  StreamArray(int device, std::size_t num_streams_per_worker_thread,
               hpx::threads::thread_priority hpx_thread_priority) noexcept
-      : arr_(new cudaStream_t[num_streams]), num_streams_(num_streams) {
+      : arr_(new cudaStream_t[num_worker_threads_ * num_streams_per_worker_thread]) {
     DLAF_CUDA_CALL(cudaSetDevice(device));
 
     // We map hpx::threads::thread_priority_high to the highest CUDA stream
@@ -55,14 +54,15 @@ public:
       stream_priority = greatest_priority;
     }
 
-    for (std::size_t i = 0; i < num_streams; ++i) {
+    for (std::size_t i = 0; i < num_worker_threads_ * num_streams_per_worker_thread_; ++i) {
       DLAF_CUDA_CALL(cudaStreamCreateWithPriority(&(arr_[i]), cudaStreamNonBlocking, stream_priority));
     }
   }
 
   StreamArray& operator=(StreamArray&& o) noexcept {
     arr_ = o.arr_;
-    num_streams_ = o.num_streams_;
+    num_streams_per_worker_thread_ = o.num_streams_per_worker_thread_;
+    num_worker_threads_ = o.num_worker_threads_;
     o.arr_ = nullptr;
     return *this;
   }
@@ -79,7 +79,7 @@ public:
     if (arr_ == nullptr)
       return;
 
-    for (std::size_t i = 0; i < num_streams_; ++i) {
+    for (std::size_t i = 0; i < num_worker_threads_ * num_streams_per_worker_thread_; ++i) {
       DLAF_CUDA_CALL(cudaStreamDestroy(arr_[i]));
     }
     delete[] arr_;
@@ -90,7 +90,7 @@ public:
   }
 
   std::size_t size() const noexcept {
-    return num_streams_;
+    return num_worker_threads_;
   }
 };
 
@@ -102,15 +102,11 @@ public:
 // StreamPool from which an instance was taken.
 class LockedStream {
   cudaStream_t stream_;
-  std::unique_lock<hpx::mutex> lk_;
 
 public:
-  LockedStream(cudaStream_t stream, std::unique_lock<hpx::mutex> lk)
-      : stream_(stream), lk_(std::move(lk)) {}
+  LockedStream(cudaStream_t stream) : stream_(stream) {}
 
-  void unlock() {
-    lk_.unlock();
-  };
+  void unlock() {}
 
   cudaStream_t& getStream() {
     return stream_;
@@ -124,12 +120,10 @@ class StreamPool {
   int device_;
   std::size_t curr_stream_idx_ = 0;
   std::shared_ptr<StreamArray> streams_ptr_;
-  std::shared_ptr<hpx::mutex> mtx_;
 
 public:
   StreamPool(int device, std::size_t num_streams, hpx::threads::thread_priority priority)
-      : device_(device), streams_ptr_(std::make_shared<StreamArray>(device, num_streams, priority)),
-        mtx_(std::make_shared<hpx::mutex>()) {}
+      : device_(device), streams_ptr_(std::make_shared<StreamArray>(device, num_streams, priority)) {}
 
   LockedStream getNextStream() {
     // Set the device corresponding to the CUBLAS handle.
@@ -142,8 +136,7 @@ public:
     // [2]: CUDA Runtime API, section 5.1 Device Management
     DLAF_CUDA_CALL(cudaSetDevice(device_));
 
-    curr_stream_idx_ = (curr_stream_idx_ + 1) % streams_ptr_->size();
-    return LockedStream((*streams_ptr_)[curr_stream_idx_], std::unique_lock<hpx::mutex>(*mtx_.get()));
+    return LockedStream((*streams_ptr_)[hpx::get_worker_thread_num() * streams_ptr_->num_streams_per_worker_thread_ + (++curr_stream_idx_ % streams_ptr_->num_streams_per_worker_thread_)]);
   }
 
   bool operator==(StreamPool const& rhs) const noexcept {

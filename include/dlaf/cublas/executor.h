@@ -36,20 +36,56 @@ namespace dlaf {
 namespace cublas {
 namespace internal {
 
-// Helper class for initializing and destroying a CUBLAS handle.
-struct CublasHandle {
-  cublasHandle_t handle_;
+// This class works around the fact std::shared_ptr doesn't support raw arrays
+// in C++14.
+class HandleArray {
+  std::size_t num_worker_threads_ = hpx::get_num_worker_threads();
+  std::size_t num_streams_per_worker_thread_ = 1;
+  cublasHandle_t* arr_;
 
-  CublasHandle(int device) noexcept {
+public:
+  HandleArray(int device, std::size_t num_streams_per_worker_thread) noexcept
+      : arr_(new cublasHandle_t[num_worker_threads_ * num_streams_per_worker_thread]) {
     DLAF_CUDA_CALL(cudaSetDevice(device));
-    DLAF_CUBLAS_CALL(cublasCreate(&handle_));
+
+    for (std::size_t i = 0; i < num_worker_threads_ * num_streams_per_worker_thread_; ++i) {
+      DLAF_CUBLAS_CALL(cublasCreate(&arr_[i]));
+    }
   }
 
-  ~CublasHandle() {
-    // This implicitly calls `cublasDeviceSynchronize()` [1].
-    //
-    // [1]: cuBLAS, section 2.4 cuBLAS Helper Function Reference
-    DLAF_CUBLAS_CALL(cublasDestroy(handle_));
+  HandleArray& operator=(HandleArray&& o) noexcept {
+    arr_ = o.arr_;
+    num_streams_per_worker_thread_ = o.num_streams_per_worker_thread_;
+    num_worker_threads_ = o.num_worker_threads_;
+    o.arr_ = nullptr;
+    return *this;
+  }
+
+  HandleArray(HandleArray&& o) noexcept {
+    *this = std::move(o);
+  }
+
+  HandleArray(const HandleArray&) = delete;
+
+  HandleArray& operator=(const HandleArray&) = delete;
+
+  ~HandleArray() {
+    if (arr_ == nullptr) {
+      return;
+    }
+
+    for (std::size_t i = 0; i < num_worker_threads_ * num_streams_per_worker_thread_; ++i) {
+      DLAF_CUBLAS_CALL(cublasDestroy(arr_[i]));
+    }
+    delete[] arr_;
+  }
+
+  cublasHandle_t operator[](std::size_t i) const noexcept {
+    return arr_[i];
+  }
+
+  std::size_t size() const noexcept {
+    return num_streams_per_worker_thread_;
   }
 };
 
@@ -94,24 +130,25 @@ public:
 // the base class, dlaf::cuda::Executor.
 class HandlePool {
   cuda::internal::StreamPool stream_pool_;
+  std::shared_ptr<HandleArray> handles_ptr_;
   cublasPointerMode_t ptr_mode_;
-  std::shared_ptr<CublasHandle> handle_ptr_;
 
 public:
   HandlePool(cuda::internal::StreamPool stream_pool, cublasPointerMode_t ptr_mode, int device)
-      : stream_pool_(stream_pool), ptr_mode_(ptr_mode),
-        handle_ptr_(std::make_shared<CublasHandle>(device)) {}
+      : stream_pool_(stream_pool), handles_ptr_(std::make_shared<HandleArray>(device, 1)), ptr_mode_(ptr_mode)
+{}
 
   LockedHandle getNextHandle() {
     cuda::internal::LockedStream locked_stream = stream_pool_.getNextStream();
-    DLAF_CUBLAS_CALL(cublasSetStream(handle_ptr_->handle_, locked_stream.getStream()));
-    DLAF_CUBLAS_CALL(cublasSetPointerMode(handle_ptr_->handle_, ptr_mode_));
-    return LockedHandle(std::move(locked_stream), handle_ptr_.get()->handle_);
+    cublasHandle_t handle = (*handles_ptr_)[hpx::get_worker_thread_num()];
+    DLAF_CUBLAS_CALL(cublasSetStream(handle, locked_stream.getStream()));
+    DLAF_CUBLAS_CALL(cublasSetPointerMode(handle, ptr_mode_));
+    return LockedHandle(std::move(locked_stream), handle);
   }
 
   bool operator==(HandlePool const& rhs) const noexcept {
     return stream_pool_ == rhs.stream_pool_ && ptr_mode_ == rhs.ptr_mode_ &&
-           handle_ptr_ == rhs.handle_ptr_;
+           handles_ptr_ == rhs.handles_ptr_;
   }
 
   bool operator!=(HandlePool const& rhs) const noexcept {

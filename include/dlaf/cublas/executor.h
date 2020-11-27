@@ -17,7 +17,6 @@
 #include <cstddef>
 #include <memory>
 #include <utility>
-#include <vector>
 
 #include <cublas_v2.h>
 #include <cuda_runtime.h>
@@ -29,7 +28,6 @@
 #include <hpx/mutex.hpp>
 #include <hpx/tuple.hpp>
 
-#include "dlaf/common/assert.h"
 #include "dlaf/cublas/error.h"
 #include "dlaf/cuda/error.h"
 #include "dlaf/cuda/executor.h"
@@ -132,7 +130,7 @@ class Executor : public cuda::Executor {
   internal::HandlePool handle_pool_;
 
 public:
-  Executor(int device, int num_streams,
+  Executor(int device, std::size_t num_streams,
            hpx::threads::thread_priority priority = hpx::threads::thread_priority_normal,
            cublasPointerMode_t ptr_mode = CUBLAS_POINTER_MODE_HOST)
       : base(device, num_streams, priority), handle_pool_(base::stream_pool_, ptr_mode, device) {}

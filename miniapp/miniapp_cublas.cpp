@@ -8,11 +8,17 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <iostream>
+
 #include <cublas_v2.h>
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
+
+#include <hpx/future.hpp>
 #include <hpx/include/util.hpp>
 #include <hpx/init.hpp>
+#include <hpx/modules/async_cuda.hpp>
+#include <hpx/thread.hpp>
 
 #include "dlaf/cublas/executor.h"
 
@@ -27,7 +33,6 @@ int hpx_main() {
   constexpr int n = 10000;
   constexpr int incx = 1;
   constexpr int incy = 1;
-  constexpr double alpha = 2.0;
 
   // Initialize buffers on the device
   thrust::device_vector<double> x = thrust::host_vector<double>(n, 4.0);
@@ -35,8 +40,8 @@ int hpx_main() {
 
   // https://docs.nvidia.com/cuda/cublas/index.html#cublas-lt-t-gt-axpy
 
-  // NOTE: The hpx::async only serves to check that dataflow works correctly
-  // also with future arguments.
+  // NOTE: The hpx::async only serves to produce a future and check that
+  // dataflow works correctly also with future arguments.
   hpx::dataflow(cublas_exec, hpx::util::unwrapping(cublasDaxpy), n, hpx::async([]() {
                   static constexpr double alpha = 2.0;
                   return &alpha;

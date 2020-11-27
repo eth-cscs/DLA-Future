@@ -17,7 +17,6 @@
 #include <cstddef>
 #include <memory>
 #include <utility>
-#include <vector>
 
 #include <cuda_runtime.h>
 
@@ -38,10 +37,11 @@ namespace internal {
 // in C++14.
 class StreamArray {
   cudaStream_t* arr_;
-  int num_streams_;
+  std::size_t num_streams_;
 
 public:
-  StreamArray(int device, int num_streams, hpx::threads::thread_priority hpx_thread_priority) noexcept
+  StreamArray(int device, std::size_t num_streams,
+              hpx::threads::thread_priority hpx_thread_priority) noexcept
       : arr_(new cudaStream_t[num_streams]), num_streams_(num_streams) {
     DLAF_CUDA_CALL(cudaSetDevice(device));
 
@@ -55,7 +55,7 @@ public:
       stream_priority = greatest_priority;
     }
 
-    for (int i = 0; i < num_streams; ++i) {
+    for (std::size_t i = 0; i < num_streams; ++i) {
       DLAF_CUDA_CALL(cudaStreamCreateWithPriority(&(arr_[i]), cudaStreamNonBlocking, stream_priority));
     }
   }
@@ -79,17 +79,17 @@ public:
     if (arr_ == nullptr)
       return;
 
-    for (int i = 0; i < num_streams_; ++i) {
+    for (std::size_t i = 0; i < num_streams_; ++i) {
       DLAF_CUDA_CALL(cudaStreamDestroy(arr_[i]));
     }
     delete[] arr_;
   }
 
-  cudaStream_t operator[](int i) const noexcept {
+  cudaStream_t operator[](std::size_t i) const noexcept {
     return arr_[i];
   }
 
-  int size() const noexcept {
+  std::size_t size() const noexcept {
     return num_streams_;
   }
 };
@@ -127,7 +127,7 @@ class StreamPool {
   std::shared_ptr<hpx::mutex> mtx_;
 
 public:
-  StreamPool(int device, int num_streams, hpx::threads::thread_priority priority)
+  StreamPool(int device, std::size_t num_streams, hpx::threads::thread_priority priority)
       : device_(device), streams_ptr_(std::make_shared<StreamArray>(device, num_streams, priority)),
         mtx_(std::make_shared<hpx::mutex>()) {}
 
@@ -165,7 +165,7 @@ protected:
   hpx::threads::thread_priority priority_ = hpx::threads::thread_priority_normal;
 
 public:
-  Executor(int device, int num_streams,
+  Executor(int device, std::size_t num_streams,
            hpx::threads::thread_priority priority = hpx::threads::thread_priority_normal)
       : stream_pool_(device, num_streams, priority), priority_(priority) {}
 

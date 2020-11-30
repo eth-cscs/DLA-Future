@@ -46,7 +46,7 @@ dlaf::BaseType<T> lantr(const lapack::Norm norm, const blas::Uplo uplo, const bl
       DLAF_ASSERT(a.size().rows() <= a.size().cols(), a);
       break;
     case blas::Uplo::General:
-      DLAF_ASSERT(blas::Uplo::General != uplo, uplo);
+      DLAF_ASSERT(blas::Uplo::General == uplo, uplo);
       break;
   }
   return lapack::lantr(norm, uplo, diag, a.size().rows(), a.size().cols(), a.ptr(), a.ld());

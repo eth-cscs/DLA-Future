@@ -94,10 +94,12 @@ void check(ElementGetter expected, MatrixType<const T, Device::CPU>& mat, Compar
         for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
           SizeType i = dist.globalElementFromLocalTileAndTileElement<Coord::Row>(tile_i, ii);
           if (!comp(expected({i, j}), tile({ii, jj}))) {
+            std::cerr << "[error] Error at index (" << i << ", " << j
+                      << "): " << err_message(expected({i, j}), tile({ii, jj})) << std::endl;
             ADD_FAILURE_AT(file, line)
                 << "Error at index (" << i << ", " << j
                 << "): " << err_message(expected({i, j}), tile({ii, jj})) << std::endl;
-            return;
+            // return;
           }
         }
       }

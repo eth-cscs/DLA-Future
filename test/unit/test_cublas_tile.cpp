@@ -105,7 +105,8 @@ TYPED_TEST(TileOperationsTest, Trsm) {
       {{0, 0, 0, 0},                 // all 0 sizes
        {0, 5, 1, 0},  {7, 0, 1, 2},  // one 0 size
        {1, 1, 0, 3},  {1, 12, 1, 0},  {17, 12, 1, 3}, {11, 23, 0, 3},
-       {9, 12, 1, 1}, {32, 32, 0, 0}, {32, 32, 4, 7}};
+       {9, 12, 1, 1}, {32, 32, 0, 0}, {32, 32, 4, 7}
+};
 
   for (const auto side : blas_sides) {
     for (const auto uplo : blas_uplos) {

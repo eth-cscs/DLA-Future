@@ -45,7 +45,7 @@ struct CopyTile<T, Device::CPU, Device::GPU> {
     SizeType n = source.size().cols();
 
     DLAF_CUDA_CALL(cudaMemcpy2D(destination.ptr(), destination.ld() * sizeof(T), source.ptr(),
-                                source.ld() * sizeof(T), m * sizeof(T), n, cudaMemcpyDefault));
+                                source.ld() * sizeof(T), m * sizeof(T), n, cudaMemcpyHostToDevice));
   }
 
   static void call(const matrix::Tile<const T, Device::CPU>& source,
@@ -67,7 +67,7 @@ struct CopyTile<T, Device::GPU, Device::CPU> {
     SizeType n = source.size().cols();
 
     DLAF_CUDA_CALL(cudaMemcpy2D(destination.ptr(), destination.ld() * sizeof(T), source.ptr(),
-                                source.ld() * sizeof(T), m * sizeof(T), n, cudaMemcpyDefault));
+                                source.ld() * sizeof(T), m * sizeof(T), n, cudaMemcpyDeviceToHost));
   }
 
   static void call(const matrix::Tile<const T, Device::GPU>& source,

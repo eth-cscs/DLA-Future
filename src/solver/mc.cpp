@@ -2,9 +2,8 @@
 
 namespace dlaf {
 
-DLAF_TRIANGULAR_ETI(, float)
-DLAF_TRIANGULAR_ETI(, double)
-DLAF_TRIANGULAR_ETI(, std::complex<float>)
-DLAF_TRIANGULAR_ETI(, std::complex<double>)
-
+DLAF_TRIANGULAR_ETI(, Backend::MC, float)
+DLAF_TRIANGULAR_ETI(, Backend::MC, double)
+DLAF_TRIANGULAR_ETI(, Backend::MC, std::complex<float>)
+DLAF_TRIANGULAR_ETI(, Backend::MC, std::complex<double>)
 }

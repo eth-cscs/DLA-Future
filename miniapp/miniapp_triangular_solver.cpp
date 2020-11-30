@@ -12,8 +12,12 @@
 #include <limits>
 #include <type_traits>
 
+#include <cublas_v2.h>
+
 #include <mpi.h>
 #include <hpx/init.hpp>
+#include <hpx/program_options.hpp>
+#include <hpx/runtime.hpp>
 
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/range2d.h"
@@ -21,9 +25,9 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/init.h"
 #include "dlaf/init.h"
+#include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/index.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/solver/triangular.h"
+#include "dlaf/solver.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
@@ -41,8 +45,15 @@ using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
 using dlaf::common::Ordering;
 
-using T = double;
+using T = float;
+#if DLAF_WITH_CUDA
+constexpr Backend B = Backend::GPU;
+using HostMatrixType = dlaf::Matrix<T, Device::CPU>;
+using MatrixType = dlaf::Matrix<T, Device::GPU>;
+#else
+constexpr Backend B = Backend::MC;
 using MatrixType = dlaf::Matrix<T, Device::CPU>;
+#endif
 
 struct options_t {
   SizeType m;
@@ -58,7 +69,8 @@ struct options_t {
 
 options_t check_options(hpx::program_options::variables_map& vm);
 
-void waitall_tiles(MatrixType& matrix);
+template <typename T, Device D>
+void waitall_tiles(dlaf::Matrix<T, D>& matrix);
 
 using matrix_values_t = std::function<T(const GlobalElementIndex&)>;
 using linear_system_t = std::tuple<matrix_values_t, matrix_values_t, matrix_values_t>;  // A, B, X
@@ -77,9 +89,18 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   MatrixType a(GlobalElementSize{opts.m, opts.m}, TileElementSize{opts.mb, opts.mb}, comm_grid);
   MatrixType b(GlobalElementSize{opts.m, opts.n}, TileElementSize{opts.mb, opts.nb}, comm_grid);
 
+#if DLAF_WITH_CUDA
+  HostMatrixType ah(GlobalElementSize{opts.m, opts.m}, TileElementSize{opts.mb, opts.mb}, comm_grid);
+  HostMatrixType bh(GlobalElementSize{opts.m, opts.n}, TileElementSize{opts.mb, opts.nb}, comm_grid);
+#endif
+
   auto sync_barrier = [&]() {
     ::waitall_tiles(a);
     ::waitall_tiles(b);
+#if DLAF_WITH_CUDA
+    ::waitall_tiles(ah);
+    ::waitall_tiles(bh);
+#endif
     DLAF_MPI_CALL(MPI_Barrier(world));
   };
 
@@ -103,13 +124,20 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 
     // setup matrix A and b
     using dlaf::matrix::util::set;
+#if DLAF_WITH_CUDA
+    set(ah, ref_a);
+    set(bh, ref_b);
+    copy(ah, a);
+    copy(bh, b);
+#else
     set(a, ref_a);
     set(b, ref_b);
+#endif
 
     sync_barrier();
 
     dlaf::common::Timer<> timeit;
-    dlaf::solver::triangular<Backend::MC>(comm_grid, side, uplo, op, diag, alpha, a, b);
+    dlaf::solver::triangular<B>(comm_grid, side, uplo, op, diag, alpha, a, b);
 
     sync_barrier();
 
@@ -125,6 +153,10 @@ int hpx_main(hpx::program_options::variables_map& vm) {
                 << hpx::get_os_thread_count() << std::endl;
     }
 
+#if DLAF_WITH_CUDA
+    copy(b, bh);
+#endif
+
     // (optional) run test
     if (opts.do_check) {
       // TODO do not check element by element, but evaluate the entire matrix
@@ -133,7 +165,11 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       constexpr T muladd_error = 2 * std::numeric_limits<T>::epsilon();
 
       const double max_error = 20 * (b.size().rows() + 1) * muladd_error;
+#if DLAF_WITH_CUDA
+      CHECK_MATRIX_NEAR(ref_x, bh, max_error, 0);
+#else
       CHECK_MATRIX_NEAR(ref_x, b, max_error, 0);
+#endif
     }
   }
 
@@ -212,7 +248,8 @@ options_t check_options(hpx::program_options::variables_map& vm) {
   return opts;
 }
 
-void waitall_tiles(MatrixType& matrix) {
+template <typename T, Device D>
+void waitall_tiles(dlaf::Matrix<T, D>& matrix) {
   using dlaf::common::iterate_range2d;
   for (const auto tile_idx : iterate_range2d(matrix.distribution().localNrTiles()))
     matrix(tile_idx).get();

@@ -149,6 +149,34 @@ void cublasHerk(cublasHandle_t handle, const blas::Uplo uplo, const blas::Op op,
                                 util::blasToCublasCast(&beta), util::blasToCublasCast(c.ptr()), c.ld());
 }
 
+// The following wrappers are used for launching cuBLAS work with host
+// executors. Since the cuBLAS call returns before the actual operation is
+// complete, returning void would make the tiles go out of scope too early and
+// let the next operation start before it should. Returning the tiles extends
+// their lifetime until the operation is complete (the executor forwards the
+// return value to the future state, which is kept alive at least until the
+// operation is complete).
+template <typename T>
+hpx::tuple<hpx::shared_future<matrix::Tile<const T, Device::GPU>>, matrix::Tile<T, Device::GPU>> cublas_trsm_future_wrapper(
+    cublasHandle_t handle, blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha,
+    hpx::shared_future<matrix::Tile<const T, Device::GPU>>&& a, hpx::future<matrix::Tile<T, Device::GPU>>&& b) {
+  matrix::Tile<T, Device::GPU> b_tile{b.get()};
+  cublasTrsm(handle, side, uplo, op, diag, alpha, a.get(), b_tile);
+  return hpx::make_tuple(std::move(a), std::move(b_tile));
+}
+
+template <typename T>
+hpx::tuple<hpx::shared_future<matrix::Tile<const T, Device::GPU>>,
+           hpx::shared_future<matrix::Tile<const T, Device::GPU>>, matrix::Tile<T, Device::GPU>>
+cublas_gemm_future_wrapper(cublasHandle_t handle, blas::Op op_a, blas::Op op_b, T alpha,
+                           hpx::shared_future<matrix::Tile<const T, Device::GPU>>&& a,
+                           hpx::shared_future<matrix::Tile<const T, Device::GPU>>&& b, T beta,
+                           hpx::future<matrix::Tile<T, Device::GPU>>&& c) {
+  matrix::Tile<T, Device::GPU> c_tile{c.get()};
+  cublasGemm(handle, op_a, op_b, alpha, a.get(), b.get(), beta, c_tile);
+  return hpx::make_tuple<>(std::move(a), std::move(b), std::move(c_tile));
+}
+
 }
 }
 

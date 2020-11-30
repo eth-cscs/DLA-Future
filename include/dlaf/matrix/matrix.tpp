@@ -40,7 +40,6 @@ Matrix<T, device>::Matrix(Distribution distribution, const LayoutInfo& layout) n
     : Matrix<const T, device>(std::move(distribution)) {
   DLAF_ASSERT(this->distribution().localSize() == layout.size(),
               "Size of distribution does not match layout size!", distribution.localSize(),
->>>>>>> origin/master:include/dlaf/matrix/matrix.tpp
               layout.size());
   DLAF_ASSERT(this->distribution().blockSize() == layout.blockSize(), distribution.blockSize(),
               layout.blockSize());

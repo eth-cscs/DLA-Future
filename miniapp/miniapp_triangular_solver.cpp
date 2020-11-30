@@ -20,9 +20,9 @@
 #include "dlaf/common/timer.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/init.h"
-#include "dlaf/matrix.h"
 #include "dlaf/matrix/index.h"
-#include "dlaf/solver/mc.h"
+#include "dlaf/matrix/matrix.h"
+#include "dlaf/solver/triangular.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
@@ -51,6 +51,7 @@ struct options_t {
   int grid_rows;
   int grid_cols;
   int64_t nruns;
+  int64_t nwarmups;
   bool do_check;
 };
 
@@ -76,7 +77,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   auto sync_barrier = [&]() {
     ::waitall_tiles(a);
     ::waitall_tiles(b);
-    MPI_Barrier(world);
+    DLAF_MPI_CALL(MPI_Barrier(world));
   };
 
   const auto side = blas::Side::Left;
@@ -93,8 +94,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   matrix_values_t ref_a, ref_b, ref_x;
   std::tie(ref_a, ref_b, ref_x) = ::sampleLeftTr(uplo, op, diag, alpha, a.size().rows());
 
-  for (auto run_index = 0; run_index < opts.nruns; ++run_index) {
-    if (0 == world.rank())
+  for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
+    if (0 == world.rank() && run_index >= 0)
       std::cout << "[" << run_index << "]" << std::endl;
 
     // setup matrix A and b
@@ -105,12 +106,12 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     sync_barrier();
 
     dlaf::common::Timer<> timeit;
-    dlaf::Solver<Backend::MC>::triangular(comm_grid, side, uplo, op, diag, alpha, a, b);
+    dlaf::solver::triangular<Backend::MC>(comm_grid, side, uplo, op, diag, alpha, a, b);
 
     sync_barrier();
 
     // benchmark results
-    if (0 == world.rank()) {
+    if (0 == world.rank() && run_index >= 0) {
       auto elapsed_time = timeit.elapsed();
       double gigaflops = total_ops / elapsed_time / 1e9;
 
@@ -155,6 +156,7 @@ int main(int argc, char** argv) {
     ("grid-rows",     value<int>()     ->default_value(1),     "Number of row processes in the 2D communicator.")
     ("grid-cols",     value<int>()     ->default_value(1),     "Number of column processes in the 2D communicator.")
     ("nruns",         value<int64_t>() ->default_value(1),     "Number of runs to compute the cholesky")
+    ("nwarmups",      value<int64_t>() ->default_value(1),     "Number of warmup runs")
     ("check-result",  bool_switch()    ->default_value(false), "Check the triangular system solution (for each run)")
   ;
   // clang-format on
@@ -163,7 +165,7 @@ int main(int argc, char** argv) {
   p.desc_cmdline = desc_commandline;
   p.rp_callback = [](auto& rp) {
     int ntasks;
-    MPI_Comm_size(MPI_COMM_WORLD, &ntasks);
+    DLAF_MPI_CALL(MPI_Comm_size(MPI_COMM_WORLD, &ntasks));
     // if the user has asked for special thread pools for communication
     // then set them up
     if (ntasks > 1) {
@@ -189,6 +191,7 @@ options_t check_options(hpx::program_options::variables_map& vm) {
     vm["grid-rows"].as<int>(),  vm["grid-cols"].as<int>(),
 
     vm["nruns"].as<int64_t>(),
+    vm["nwarmups"].as<int64_t>(),
     vm["check-result"].as<bool>(),
   };
   // clang-format on
@@ -196,6 +199,8 @@ options_t check_options(hpx::program_options::variables_map& vm) {
   DLAF_ASSERT(opts.m > 0 && opts.n > 0, opts.m, opts.n);
   DLAF_ASSERT(opts.mb > 0 && opts.nb > 0, opts.mb, opts.nb);
   DLAF_ASSERT(opts.grid_rows > 0 && opts.grid_cols > 0, opts.grid_rows, opts.grid_cols);
+  DLAF_ASSERT(opts.nruns > 0, opts.nruns);
+  DLAF_ASSERT(opts.nwarmups >= 0, opts.nwarmups);
 
   return opts;
 }

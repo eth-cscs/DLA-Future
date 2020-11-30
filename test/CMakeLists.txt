@@ -13,6 +13,10 @@ set(DLAF_MPI_PRESET "plain-mpi" CACHE STRING "Select a preset to use")
 set_property(CACHE DLAF_MPI_PRESET PROPERTY STRINGS ${DLAF_PRESET_OPTIONS})
 option(DLAF_CI_RUNNER_USES_MPIRUN "Remove mpiexec command for tests executed by ctest. This option is to be used if the CI runner executes the tests with <mpiexec + options> ctest -L RANK_<spawned MPI ranks>" OFF)
 
+# On some machines, tests using multiple ranks + oversubscribing run
+# significantly faster when threads are not pinned.
+option(DLAF_TEST_THREAD_BINDING_ENABLED "If OFF disables HPX thread binding." ON)
+
 # if a preset has been selected and it has been changed from previous configurations
 if (NOT DLAF_MPI_PRESET STREQUAL _DLAF_MPI_PRESET)
 
@@ -61,17 +65,15 @@ endif()
 # ----- HPX
 set(DLAF_HPXTEST_EXTRA_ARGS "" CACHE STRING "Extra arguments for tests with HPX")
 
-add_library(DLAF_test src/util_mpi.cpp)
+add_library(DLAF_test INTERFACE)
 
 target_include_directories(DLAF_test
-  PUBLIC
+  INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 
 target_link_libraries(DLAF_test
-  PRIVATE
-    MPI::MPI_CXX
-  PUBLIC
+  INTERFACE
     gtest
 )
 

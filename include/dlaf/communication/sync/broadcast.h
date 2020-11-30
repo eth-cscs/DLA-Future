@@ -12,12 +12,16 @@
 
 /// @file
 
+#include <hpx/include/parallel_executors.hpp>
+#include <hpx/local/future.hpp>
+
 #include "dlaf/common/assert.h"
-
-#include "dlaf/communication/communicator.h"
-#include "dlaf/communication/message.h"
-
 #include "dlaf/common/data.h"
+#include "dlaf/common/pipeline.h"
+#include "dlaf/communication/communicator.h"
+#include "dlaf/communication/communicator_grid.h"
+#include "dlaf/communication/message.h"
+#include "dlaf/matrix/tile.h"
 
 namespace dlaf {
 namespace comm {
@@ -33,8 +37,8 @@ void send(Communicator& communicator, DataIn&& message_to_send) {
   using DataT = std::remove_const_t<typename common::data_traits<decltype(data)>::element_t>;
 
   auto message = comm::make_message(std::move(data));
-  MPI_Bcast(const_cast<DataT*>(message.data()), message.count(), message.mpi_type(), communicator.rank(),
-            communicator);
+  DLAF_MPI_CALL(MPI_Bcast(const_cast<DataT*>(message.data()), message.count(), message.mpi_type(),
+                          communicator.rank(), communicator));
 }
 
 /// MPI_Bcast wrapper for receiver side accepting a dlaf::comm::Message.
@@ -44,9 +48,47 @@ template <class DataOut>
 void receive_from(const int broadcaster_rank, Communicator& communicator, DataOut&& data) {
   DLAF_ASSERT_HEAVY(broadcaster_rank != communicator.rank(), broadcaster_rank, communicator.rank());
   auto message = comm::make_message(common::make_data(std::forward<DataOut>(data)));
-  MPI_Bcast(message.data(), message.count(), message.mpi_type(), broadcaster_rank, communicator);
+  DLAF_MPI_CALL(
+      MPI_Bcast(message.data(), message.count(), message.mpi_type(), broadcaster_rank, communicator));
 }
 }
+}
+
+template <class T>
+void send_tile(hpx::threads::executors::pool_executor ex,
+               common::Pipeline<comm::CommunicatorGrid>& task_chain, Coord rc_comm,
+               hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile) {
+  using ConstTile_t = matrix::Tile<const T, Device::CPU>;
+  using PromiseComm_t = common::PromiseGuard<comm::CommunicatorGrid>;
+
+  auto send_bcast_f = hpx::util::annotated_function(
+      [rc_comm](hpx::shared_future<ConstTile_t> ftile, hpx::future<PromiseComm_t> fpcomm) {
+        PromiseComm_t pcomm = fpcomm.get();
+        comm::sync::broadcast::send(pcomm.ref().subCommunicator(rc_comm), ftile.get());
+      },
+      "send_tile");
+  hpx::dataflow(ex, std::move(send_bcast_f), tile, task_chain());
+}
+
+template <class T>
+hpx::future<matrix::Tile<const T, Device::CPU>> recv_tile(
+    hpx::threads::executors::pool_executor ex, common::Pipeline<comm::CommunicatorGrid>& mpi_task_chain,
+    Coord rc_comm, TileElementSize tile_size, int rank) {
+  using ConstTile_t = matrix::Tile<const T, Device::CPU>;
+  using PromiseComm_t = common::PromiseGuard<comm::CommunicatorGrid>;
+  using MemView_t = memory::MemoryView<T, Device::CPU>;
+  using Tile_t = matrix::Tile<T, Device::CPU>;
+
+  auto recv_bcast_f = hpx::util::annotated_function(
+      [rank, tile_size, rc_comm](hpx::future<PromiseComm_t> fpcomm) -> ConstTile_t {
+        PromiseComm_t pcomm = fpcomm.get();
+        MemView_t mem_view(tile_size.linear_size());
+        Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
+        comm::sync::broadcast::receive_from(rank, pcomm.ref().subCommunicator(rc_comm), tile);
+        return ConstTile_t(std::move(tile));
+      },
+      "recv_tile");
+  return hpx::dataflow(ex, std::move(recv_bcast_f), mpi_task_chain());
 }
 }
 }

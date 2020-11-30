@@ -7,11 +7,11 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
-#include "dlaf/factorization/mc.h"
+#include "dlaf/factorization/cholesky.h"
 
 #include "gtest/gtest.h"
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/matrix.h"
+#include "dlaf/matrix/matrix.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/util_types.h"
@@ -85,7 +85,7 @@ TYPED_TEST(CholeskyLocalTest, Correctness) {
       Matrix<TypeParam, Device::CPU> mat(size, block_size);
       set(mat, el);
 
-      Factorization<Backend::MC>::cholesky(blas::Uplo::Lower, mat);
+      factorization::cholesky<Backend::MC>(blas::Uplo::Lower, mat);
 
       CHECK_MATRIX_NEAR(res, mat, 4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error,
                         4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);
@@ -135,7 +135,7 @@ TYPED_TEST(CholeskyDistributedTest, Correctness) {
         Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
         set(mat, el);
 
-        Factorization<Backend::MC>::cholesky(comm_grid, blas::Uplo::Lower, mat);
+        factorization::cholesky<Backend::MC>(comm_grid, blas::Uplo::Lower, mat);
 
         CHECK_MATRIX_NEAR(res, mat, 4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error,
                           4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);

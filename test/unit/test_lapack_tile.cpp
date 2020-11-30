@@ -158,3 +158,32 @@ TYPED_TEST(TileOperationsTest, PotrfNonPositiveDefinite) {
     }
   }
 }
+
+TYPED_TEST(TileOperationsTest, Lacpy) {
+  using Scalar = TypeParam;
+  using Tile_t = Tile<Scalar, Device::CPU>;
+  using ConstTile_t = Tile<const Scalar, Device::CPU>;
+
+  TileElementSize region(3, 3);
+  TileElementIndex in_idx(1, 2);
+  ConstTile_t in_tile = createTile<Scalar>([](TileElementIndex idx) { return idx.row() + idx.col(); },
+                                           TileElementSize(5, 5), 5);
+  TileElementIndex out_idx(2, 3);
+  Tile_t out_tile = createTile<Scalar>([](TileElementIndex) { return 2; }, TileElementSize(7, 7), 7);
+
+  tile::lacpy(region, in_idx, in_tile, out_idx, out_tile);
+
+  double eps = std::numeric_limits<double>::epsilon();
+
+  ASSERT_TRUE(std::abs(Scalar(1 + 2) - out_tile(TileElementIndex(2, 3))) < eps);
+  ASSERT_TRUE(std::abs(Scalar(2 + 2) - out_tile(TileElementIndex(3, 3))) < eps);
+  ASSERT_TRUE(std::abs(Scalar(3 + 2) - out_tile(TileElementIndex(4, 3))) < eps);
+
+  ASSERT_TRUE(std::abs(Scalar(1 + 3) - out_tile(TileElementIndex(2, 4))) < eps);
+  ASSERT_TRUE(std::abs(Scalar(2 + 3) - out_tile(TileElementIndex(3, 4))) < eps);
+  ASSERT_TRUE(std::abs(Scalar(3 + 3) - out_tile(TileElementIndex(4, 4))) < eps);
+
+  ASSERT_TRUE(std::abs(Scalar(1 + 4) - out_tile(TileElementIndex(2, 5))) < eps);
+  ASSERT_TRUE(std::abs(Scalar(2 + 4) - out_tile(TileElementIndex(3, 5))) < eps);
+  ASSERT_TRUE(std::abs(Scalar(3 + 4) - out_tile(TileElementIndex(4, 5))) < eps);
+}

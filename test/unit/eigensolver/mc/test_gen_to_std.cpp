@@ -7,15 +7,15 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
-#include "dlaf/eigensolver/mc.h"
+#include "dlaf/eigensolver/gen_to_std.h"
 
 #include <exception>
 #include <functional>
 #include <sstream>
 #include <tuple>
 #include "gtest/gtest.h"
-#include "dlaf/matrix.h"
 #include "dlaf/matrix/distribution.h"
+#include "dlaf/matrix/matrix.h"
 #include "dlaf_test/matrix/util_generic_lapack.h"
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/matrix/util_matrix_blas.h"
@@ -56,7 +56,7 @@ void testGenToStdEigensolver(const blas::Uplo uplo, const T alpha, const T beta,
   set(mat_a, el_a);
   set(mat_t, el_t);
 
-  Eigensolver<Backend::MC>::genToStd(uplo, mat_a, mat_t);
+  eigensolver::genToStd<Backend::MC>(uplo, mat_a, mat_t);
 
   CHECK_MATRIX_NEAR(res_b, mat_a, 0, 10 * (mat_a.size().rows() + 1) * TypeUtilities<T>::error);
 }

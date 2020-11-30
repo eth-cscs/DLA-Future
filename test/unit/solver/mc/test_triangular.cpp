@@ -7,13 +7,13 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
-#include "dlaf/solver/mc.h"
+#include "dlaf/solver/triangular.h"
 
 #include <functional>
 #include <sstream>
 #include <tuple>
 #include "gtest/gtest.h"
-#include "dlaf/matrix.h"
+#include "dlaf/matrix/matrix.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/matrix/util_matrix_blas.h"
@@ -88,7 +88,7 @@ void testTriangularSolver(blas::Side side, blas::Uplo uplo, blas::Op op, blas::D
   set(mat_a, el_op_a, op);
   set(mat_b, el_b);
 
-  Solver<Backend::MC>::triangular(side, uplo, op, diag, alpha, mat_a, mat_b);
+  solver::triangular<Backend::MC>(side, uplo, op, diag, alpha, mat_a, mat_b);
 
   CHECK_MATRIX_NEAR(res_b, mat_b, 40 * (mat_b.size().rows() + 1) * TypeUtilities<T>::error,
                     40 * (mat_b.size().rows() + 1) * TypeUtilities<T>::error);
@@ -127,7 +127,7 @@ void testTriangularSolver(comm::CommunicatorGrid grid, blas::Side side, blas::Up
   set(mat_a, el_op_a, op);
   set(mat_b, el_b);
 
-  Solver<Backend::MC>::triangular(grid, side, uplo, op, diag, alpha, mat_a, mat_b);
+  solver::triangular<Backend::MC>(grid, side, uplo, op, diag, alpha, mat_a, mat_b);
 
   CHECK_MATRIX_NEAR(res_b, mat_b, 20 * (mat_b.size().rows() + 1) * TypeUtilities<T>::error,
                     20 * (mat_b.size().rows() + 1) * TypeUtilities<T>::error);

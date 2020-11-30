@@ -19,6 +19,7 @@
 #undef I
 #endif
 
+#include "dlaf/matrix/index.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/types.h"
 #include "dlaf/util_tile.h"
@@ -49,6 +50,15 @@ void hegst(const int itype, const blas::Uplo uplo, const Tile<T, device>& a, con
 /// @pre @param a and @param b must have the same size (number of elements).
 template <class T>
 void lacpy(const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b);
+
+/// Copies a 2D @param region from tile @param in starting at @param in_idx to tile @param out starting
+/// at @param out_idx.
+///
+/// @pre @param region has to fit within @param in and @param out taking into account the starting
+/// indices @param in_idx and @param out_idx.
+template <class T>
+void lacpy(TileElementSize region, TileElementIndex in_idx, const Tile<const T, Device::CPU>& in,
+           TileElementIndex out_idx, const Tile<T, Device::CPU>& out);
 
 /// Compute the value of the 1-norm, Frobenius norm, infinity-norm, or the largest absolute value of any
 /// element, of a general rectangular matrix.

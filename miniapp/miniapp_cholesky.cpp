@@ -13,12 +13,13 @@
 #include <mpi.h>
 #include <hpx/init.hpp>
 
-#include "dlaf/auxiliary/mc.h"
+#include "dlaf/auxiliary/norm.h"
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/communication/error.h"
 #include "dlaf/communication/init.h"
-#include "dlaf/factorization/mc.h"
-#include "dlaf/matrix.h"
+#include "dlaf/factorization/cholesky.h"
 #include "dlaf/matrix/copy.h"
+#include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
@@ -63,6 +64,7 @@ struct options_t {
   int grid_rows;
   int grid_cols;
   int64_t nruns;
+  int64_t nwarmups;
   CHECK_RESULT do_check;
 };
 
@@ -92,22 +94,22 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 
   const auto& distribution = matrix_ref.distribution();
 
-  for (auto run_index = 0; run_index < opts.nruns; ++run_index) {
-    if (0 == world.rank())
+  for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
+    if (0 == world.rank() && run_index >= 0)
       std::cout << "[" << run_index << "]" << std::endl;
 
     MatrixType matrix(matrix_size, block_size, comm_grid);
-    dlaf::copy(matrix_ref, matrix);
+    copy(matrix_ref, matrix);
 
     // wait all setup tasks before starting benchmark
     {
       for (const auto tile_idx : dlaf::common::iterate_range2d(distribution.localNrTiles()))
         matrix(tile_idx).get();
-      MPI_Barrier(world);
+      DLAF_MPI_CALL(MPI_Barrier(world));
     }
 
     dlaf::common::Timer<> timeit;
-    dlaf::Factorization<Backend::MC>::cholesky(comm_grid, blas::Uplo::Lower, matrix);
+    dlaf::factorization::cholesky<Backend::MC>(comm_grid, blas::Uplo::Lower, matrix);
 
     // wait for last task and barrier for all ranks
     {
@@ -115,7 +117,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       if (matrix.rankIndex() == distribution.rankGlobalTile(last_tile))
         matrix(last_tile).get();
 
-      MPI_Barrier(world);
+      DLAF_MPI_CALL(MPI_Barrier(world));
     }
     auto elapsed_time = timeit.elapsed();
 
@@ -127,7 +129,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     }
 
     // print benchmark results
-    if (0 == world.rank())
+    if (0 == world.rank() && run_index >= 0)
       std::cout << "[" << run_index << "]"
                 << " " << elapsed_time << "s"
                 << " " << gigaflops << "GFlop/s"
@@ -140,7 +142,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
         continue;
 
       MatrixType original(matrix_size, block_size, comm_grid);
-      dlaf::copy(matrix_ref, original);
+      copy(matrix_ref, original);
       check_cholesky(original, matrix, comm_grid);
     }
   }
@@ -162,6 +164,7 @@ int main(int argc, char** argv) {
     ("grid-rows",    value<int>()        ->default_value(   1),                        "Number of row processes in the 2D communicator")
     ("grid-cols",    value<int>()        ->default_value(   1),                        "Number of column processes in the 2D communicator")
     ("nruns",        value<int64_t>()    ->default_value(   1),                        "Number of runs to compute the cholesky")
+    ("nwarmups",     value<int64_t>()    ->default_value(   1),                        "Number of warmup runs")
     ("check-result", value<std::string>()->default_value(  "")->implicit_value("all"), "Enable result check ('all', 'last')")
   ;
   // clang-format on
@@ -170,7 +173,7 @@ int main(int argc, char** argv) {
   p.desc_cmdline = desc_commandline;
   p.rp_callback = [](auto& rp) {
     int ntasks;
-    MPI_Comm_size(MPI_COMM_WORLD, &ntasks);
+    DLAF_MPI_CALL(MPI_Comm_size(MPI_COMM_WORLD, &ntasks));
     // if the user has asked for special thread pools for communication
     // then set them up
     if (ntasks > 1) {
@@ -351,7 +354,7 @@ void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
   const Index2D rank_result{0, 0};
 
   // 1. Compute the max norm of the original matrix in A
-  const auto norm_A = dlaf::Auxiliary<dlaf::Backend::MC>::norm(comm_grid, rank_result, lapack::Norm::Max,
+  const auto norm_A = dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max,
                                                                blas::Uplo::Lower, A);
 
   // 2.
@@ -365,7 +368,7 @@ void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
 
   // 3. Compute the max norm of the difference (it has been compute in-place in A)
   const auto norm_diff =
-      dlaf::Auxiliary<dlaf::Backend::MC>::norm(comm_grid, rank_result, lapack::Norm::Max,
+      dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max,
                                                blas::Uplo::Lower, A);
 
   // 4.
@@ -388,16 +391,18 @@ void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
 
 options_t check_options(hpx::program_options::variables_map& vm) {
   options_t opts = {
-      vm["matrix-size"].as<SizeType>(), vm["block-size"].as<SizeType>(),
-      vm["grid-rows"].as<int>(),        vm["grid-cols"].as<int>(),
+      vm["matrix-size"].as<SizeType>(), vm["block-size"].as<SizeType>(), vm["grid-rows"].as<int>(),
+      vm["grid-cols"].as<int>(),
 
-      vm["nruns"].as<int64_t>(),        CHECK_RESULT::NONE,
+      vm["nruns"].as<int64_t>(),        vm["nwarmups"].as<int64_t>(),    CHECK_RESULT::NONE,
   };
 
-  DLAF_ASSERT(opts.m > 0, "matrix size must be a positive number!", opts.m);
-  DLAF_ASSERT(opts.mb > 0, "block size must be a positive number!", opts.mb);
-  DLAF_ASSERT(opts.grid_rows > 0, "number of grid rows must be a positive number!", opts.grid_rows);
-  DLAF_ASSERT(opts.grid_cols > 0, "number of grid columns must be a positive number!", opts.grid_cols);
+  DLAF_ASSERT(opts.m > 0, opts.m);
+  DLAF_ASSERT(opts.mb > 0, opts.mb);
+  DLAF_ASSERT(opts.grid_rows > 0, opts.grid_rows);
+  DLAF_ASSERT(opts.grid_cols > 0, opts.grid_cols);
+  DLAF_ASSERT(opts.nruns > 0, opts.nruns);
+  DLAF_ASSERT(opts.nwarmups >= 0, opts.nwarmups);
 
   const std::string check_type = vm["check-result"].as<std::string>();
 

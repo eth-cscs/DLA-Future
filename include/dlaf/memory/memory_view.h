@@ -68,6 +68,7 @@ public:
     rhs.size_ = 0;
     rhs.offset_ = 0;
   }
+
   template <class U = T,
             class = typename std::enable_if_t<std::is_const<U>::value && std::is_same<T, U>::value>>
   MemoryView(MemoryView<ElementType, device>&& rhs)

@@ -22,12 +22,15 @@
 
 #include "dlaf/cublas/executor.h"
 
-// An executor defined on a single GPU.
 int hpx_main() {
   constexpr int device = 0;
-  constexpr int num_streams = 10;
-  dlaf::cublas::Executor cublas_exec(device, num_streams, hpx::threads::thread_priority_high,
-                                     CUBLAS_POINTER_MODE_HOST);
+  constexpr std::size_t num_streams_per_worker_thread = 10;
+
+  dlaf::cuda::StreamPool stream_pool{device, num_streams_per_worker_thread,
+                                     hpx::threads::thread_priority::high};
+  dlaf::cublas::HandlePool handle_pool{device, CUBLAS_POINTER_MODE_HOST};
+  dlaf::cublas::Executor cublas_exec{stream_pool, handle_pool};
+
   hpx::cuda::experimental::enable_user_polling p;
 
   constexpr int n = 10000;

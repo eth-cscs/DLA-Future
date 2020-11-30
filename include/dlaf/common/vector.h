@@ -30,6 +30,10 @@ struct vector : public std::vector<T> {
     std::vector<T>::reserve(to_sizet(size));
   }
 
+  void resize(SizeType size) {
+    std::vector<T>::resize(to_sizet(size));
+  }
+
   T& operator[](SizeType index) {
     return std::vector<T>::operator[](to_sizet(index));
   }
@@ -38,8 +42,8 @@ struct vector : public std::vector<T> {
     return std::vector<T>::operator[](to_sizet(index));
   }
 
-  SizeType size() const noexcept {
-    return to_SizeType(std::vector<T>::size());
+  SizeType size() const {
+    return static_cast<SizeType>(std::vector<T>::size());
   }
 };
 

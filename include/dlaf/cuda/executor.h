@@ -23,6 +23,7 @@
 #include <hpx/execution.hpp>
 #include <hpx/functional.hpp>
 #include <hpx/future.hpp>
+#include <hpx/include/util.hpp>
 #include <hpx/tuple.hpp>
 
 #include "dlaf/common/assert.h"
@@ -37,13 +38,13 @@ struct StreamPoolImpl {
   std::size_t num_worker_threads_ = hpx::get_num_worker_threads();
   std::size_t num_streams_per_worker_thread_;
   std::vector<cudaStream_t> streams_;
-  std::vector<std::size_t> current_stream_idxs_;
+  std::vector<hpx::util::cache_aligned_data<std::size_t>> current_stream_idxs_;
 
   StreamPoolImpl(int device, std::size_t num_streams_per_worker_thread,
                  hpx::threads::thread_priority hpx_thread_priority)
       : device_(device), num_streams_per_worker_thread_(num_streams_per_worker_thread),
         streams_(num_worker_threads_ * num_streams_per_worker_thread),
-        current_stream_idxs_(num_worker_threads_, std::size_t(0)) {
+        current_stream_idxs_(num_worker_threads_, {std::size_t(0)}) {
     DLAF_CUDA_CALL(cudaSetDevice(device));
 
     // We map hpx::threads::thread_priority_high to the highest CUDA stream
@@ -86,7 +87,7 @@ struct StreamPoolImpl {
     DLAF_ASSERT(worker_thread_num != std::size_t(-1), "");
     std::size_t stream_idx =
         worker_thread_num * num_streams_per_worker_thread_ +
-        (++current_stream_idxs_[worker_thread_num] % num_streams_per_worker_thread_);
+        (++current_stream_idxs_[worker_thread_num].data_ % num_streams_per_worker_thread_);
 
     return streams_[stream_idx];
   }

@@ -34,34 +34,17 @@
 
 namespace dlaf {
 namespace cublas {
-// Helper class for a cuBLAS handle associated with a CUDA stream.
-class StreamHandle {
-  cudaStream_t stream_;
-  cublasHandle_t handle_;
-
-public:
-  StreamHandle(cudaStream_t stream, cublasHandle_t handle) : stream_(stream), handle_(handle) {}
-
-  cublasHandle_t& getHandle() {
-    return handle_;
-  }
-
-  cudaStream_t& getStream() {
-    return stream_;
-  }
-};
-
 namespace internal {
 class HandlePoolImpl {
+  int device_;
   std::size_t num_worker_threads_ = hpx::get_num_worker_threads();
-  cuda::StreamPool stream_pool_;
   std::vector<cublasHandle_t> handles_;
   cublasPointerMode_t ptr_mode_;
 
 public:
-  HandlePoolImpl(cuda::StreamPool stream_pool, cublasPointerMode_t ptr_mode)
-      : stream_pool_(stream_pool), handles_(num_worker_threads_), ptr_mode_(ptr_mode) {
-    DLAF_CUDA_CALL(cudaSetDevice(stream_pool_.getDevice()));
+  HandlePoolImpl(int device, cublasPointerMode_t ptr_mode)
+      : device_(device), handles_(num_worker_threads_), ptr_mode_(ptr_mode) {
+    DLAF_CUDA_CALL(cudaSetDevice(device_));
 
     for (auto& h : handles_) {
       DLAF_CUBLAS_CALL(cublasCreate(&h));
@@ -79,47 +62,37 @@ public:
     }
   }
 
-  StreamHandle getNextHandle() {
-    cudaStream_t stream = stream_pool_.getNextStream();
+  cublasHandle_t getNextHandle(cudaStream_t stream) {
     cublasHandle_t handle = handles_[hpx::get_worker_thread_num()];
     DLAF_CUBLAS_CALL(cublasSetStream(handle, stream));
     DLAF_CUBLAS_CALL(cublasSetPointerMode(handle, ptr_mode_));
-    return StreamHandle(stream, handle);
+    return handle;
   }
 
   int getDevice() {
-    return stream_pool_.getDevice();
-  }
-
-  cuda::StreamPool getStreamPool() {
-    return stream_pool_;
+    return device_;
   }
 };
 }
 
 // Helper class with a reference counted CUBLAS handles and a reference to a
-// StreamPool. Allows access to RAII handles (StreamHandle). Ensures
-// that the correct device is set.
+// StreamPool. Allows access to handles. Ensures that the correct device is
+// set.
 class HandlePool {
   std::shared_ptr<internal::HandlePoolImpl> handles_ptr_;
 
 public:
-  HandlePool(cuda::StreamPool stream_pool, cublasPointerMode_t ptr_mode = CUBLAS_POINTER_MODE_HOST)
-      : handles_ptr_(std::make_shared<internal::HandlePoolImpl>(stream_pool, ptr_mode)) {}
+  HandlePool(int device = 0, cublasPointerMode_t ptr_mode = CUBLAS_POINTER_MODE_HOST)
+      : handles_ptr_(std::make_shared<internal::HandlePoolImpl>(device, ptr_mode)) {}
 
-  StreamHandle getNextHandle() {
+  cublasHandle_t getNextHandle(cudaStream_t stream) {
     DLAF_ASSERT(bool(handles_ptr_), "");
-    return handles_ptr_->getNextHandle();
+    return handles_ptr_->getNextHandle(stream);
   }
 
   int getDevice() {
     DLAF_ASSERT(bool(handles_ptr_), "");
     return handles_ptr_->getDevice();
-  }
-
-  cuda::StreamPool getStreamPool() {
-    DLAF_ASSERT(bool(handles_ptr_), "");
-    return handles_ptr_->getStreamPool();
   }
 
   bool operator==(HandlePool const& rhs) const noexcept {
@@ -131,9 +104,9 @@ public:
   }
 };
 
-/// An executor for CUBLAS functions. Each device has a single CUBLAS handle
-/// associated to it. A CUBLAS function is defined as any function that takes a
-/// CUBLAS handle as the first argument. The executor inserts a CUBLAS handle
+/// An executor for cuBLAS functions. Each device has a single cuBLAS handle
+/// associated to it. A cuBLAS function is defined as any function that takes a
+/// cuBLAS handle as the first argument. The executor inserts a cuBLAS handle
 /// into the argument list, i.e. a handle should not be provided at the
 /// apply/async/dataflow invocation site.
 class Executor : public cuda::Executor {
@@ -141,7 +114,8 @@ class Executor : public cuda::Executor {
   HandlePool handle_pool_;
 
 public:
-  Executor(HandlePool handle_pool) : base(handle_pool.getStreamPool()), handle_pool_(handle_pool) {}
+  Executor(cuda::StreamPool stream_pool, HandlePool handle_pool)
+      : base(stream_pool), handle_pool_(handle_pool) {}
 
   bool operator==(Executor const& rhs) const noexcept {
     return base::operator==(rhs) && handle_pool_ == rhs.handle_pool_;
@@ -157,9 +131,10 @@ public:
 
   template <typename F, typename... Ts>
   auto async_execute(F&& f, Ts&&... ts) {
-    StreamHandle handle = handle_pool_.getNextHandle();
-    auto r = hpx::invoke(std::forward<F>(f), handle.getHandle(), std::forward<Ts>(ts)...);
-    hpx::future<void> fut = hpx::cuda::experimental::detail::get_future_with_event(handle.getStream());
+    cudaStream_t stream = stream_pool_.getNextStream();
+    cublasHandle_t handle = handle_pool_.getNextHandle(stream);
+    auto r = hpx::invoke(std::forward<F>(f), handle, std::forward<Ts>(ts)...);
+    hpx::future<void> fut = hpx::cuda::experimental::detail::get_future_with_event(stream);
 
     return fut.then(hpx::launch::sync,
                     [r = std::move(r)](hpx::future<void>&&) mutable { return std::move(r); });
@@ -171,10 +146,11 @@ public:
     hpx::intrusive_ptr<typename std::remove_pointer<typename std::decay<Frame>::type>::type> frame_p(
         frame);
 
-    StreamHandle handle = handle_pool_.getNextHandle();
-    auto r = hpx::invoke_fused(std::forward<F>(f), hpx::tuple_cat(hpx::tie(handle.getHandle()),
-                                                                  std::forward<Futures>(futures)));
-    hpx::future<void> fut = hpx::cuda::experimental::detail::get_future_with_event(handle.getStream());
+    cudaStream_t stream = stream_pool_.getNextStream();
+    cublasHandle_t handle = handle_pool_.getNextHandle(stream);
+    auto r = hpx::invoke_fused(std::forward<F>(f),
+                               hpx::tuple_cat(hpx::tie(handle), std::forward<Futures>(futures)));
+    hpx::future<void> fut = hpx::cuda::experimental::detail::get_future_with_event(stream);
 
     fut.then(hpx::launch::sync, [r = std::move(r), frame_p = std::move(frame_p)](
                                     hpx::future<void>&&) mutable { frame_p->set_data(std::move(r)); });

@@ -18,7 +18,7 @@
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_base.h"
-#include "dlaf/matrix/panel_workspace.h"
+#include "dlaf/matrix/workspace.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
@@ -113,7 +113,7 @@ protected:
   const LocalTileSize offset_;
   const matrix::Distribution dist_matrix_;
 
-  PanelWorkspace<Coord::Col, T, device> column_;
+  Workspace<T, device> column_;
   Matrix<T, device> row_;
 };
 

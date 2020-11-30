@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2020, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -19,24 +19,24 @@
 namespace dlaf {
 namespace matrix {
 
-template <Coord shape, class T, Device device>
-struct PanelWorkspace;
+template <class T, Device device>
+struct Workspace;
 
 // TODO it works just for tile layout
 // TODO the matrix always occupies memory entirely
 template <class T, Device device>
-struct PanelWorkspace<Coord::Col, const T, device> : public internal::MatrixBase {
+struct Workspace<const T, device> : internal::MatrixBase {
   using TileT = Tile<T, device>;
   using ConstTileT = Tile<const T, device>;
 
-  PanelWorkspace(matrix::Distribution distribution) : MatrixBase(distribution), internal_(distribution) {
-    DLAF_ASSERT(nrTiles().cols() == 1, nrTiles());
+  Workspace(matrix::Distribution distribution) : MatrixBase(distribution) {
     // TODO assert not distributed
+    DLAF_ASSERT(nrTiles().cols() == 1 || nrTiles().rows() == 1, nrTiles());
+
     external_.resize(nrTiles().rows());
-    util::set(internal_, [](auto&&) { return 0; });
   }
 
-  virtual ~PanelWorkspace() {
+  virtual ~Workspace() {
     reset();
   }
 
@@ -46,7 +46,8 @@ struct PanelWorkspace<Coord::Col, const T, device> : public internal::MatrixBase
   }
 
   hpx::shared_future<ConstTileT> read(const LocalTileIndex& index) {
-    return is_masked(index) ? external(index) : internal_.read(index);
+    if (is_masked(index))
+      return external(index);
   }
 
   void reset() {
@@ -55,7 +56,7 @@ struct PanelWorkspace<Coord::Col, const T, device> : public internal::MatrixBase
 
 protected:
   hpx::shared_future<ConstTileT> external(const LocalTileIndex& index) const {
-    DLAF_ASSERT(index.isIn(internal_.distribution().localNrTiles()), index);
+    DLAF_ASSERT(index.isIn(distribution().localNrTiles()), index);
     return external_[index.row()];
   }
 
@@ -63,25 +64,35 @@ protected:
     return external(index).valid();
   }
 
-  Matrix<T, device> internal_;
+  ///> Stores the shared_future
   common::internal::vector<hpx::shared_future<ConstTileT>> external_;
 };
 
 template <class T, Device device>
-struct PanelWorkspace<Coord::Col, T, device> : public PanelWorkspace<Coord::Col, const T, device> {
+struct Workspace : public Workspace<const T, device> {
   using TileT = Tile<T, device>;
   using ConstTileT = Tile<const T, device>;
 
-  using PanelWorkspace<Coord::Col, const T, device>::PanelWorkspace;
+  Workspace(matrix::Distribution distribution)
+      : Workspace<const T, device>(distribution), internal_(distribution) {
+    util::set(internal_, [](auto&&) { return 0; });
+  }
 
   hpx::future<TileT> operator()(const LocalTileIndex& index) {
     DLAF_ASSERT(!is_masked(index), "read-only access", index);
     return internal_(index);
   }
 
+  hpx::shared_future<ConstTileT> read(const LocalTileIndex& index) {
+    return is_masked(index) ? external(index) : internal_.read(index);
+  }
+
 protected:
-  using PanelWorkspace<Coord::Col, const T, device>::is_masked;
-  using PanelWorkspace<Coord::Col, const T, device>::internal_;
+  using Workspace<const T, device>::external;
+  using Workspace<const T, device>::is_masked;
+
+  ///> non-distributed matrix for internally allocated tiles
+  Matrix<T, device> internal_;
 };
 }
 }

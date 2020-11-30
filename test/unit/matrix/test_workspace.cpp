@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/matrix/panel_workspace.h"
+#include "dlaf/matrix/workspace.h"
 
 #include <vector>
 
@@ -30,11 +30,11 @@ using namespace dlaf::matrix::test;
 using namespace dlaf::comm;
 
 template <typename Type>
-class PanelWorkspaceLocalTest : public ::testing::Test {};
+class WorkspaceLocalTest : public ::testing::Test {};
 
-TYPED_TEST_SUITE(PanelWorkspaceLocalTest, MatrixElementTypes);
+TYPED_TEST_SUITE(WorkspaceLocalTest, MatrixElementTypes);
 
-TYPED_TEST(PanelWorkspaceLocalTest, Basic) {
+TYPED_TEST(WorkspaceLocalTest, Basic) {
   using hpx::util::unwrapping;
 
   Distribution dist(LocalElementSize{2, 1}, TileElementSize{1, 1});
@@ -45,7 +45,7 @@ TYPED_TEST(PanelWorkspaceLocalTest, Basic) {
   Matrix<TypeParam, Device::CPU> matrix(dist);
   matrix::util::set(matrix, [VALUE](auto&&) { return VALUE; });
 
-  PanelWorkspace<Coord::Col, TypeParam, Device::CPU> ws(dist);
+  Workspace<TypeParam, Device::CPU> ws(dist);
 
   ws({0, 0}).then(unwrapping([](auto&& tile) {
     tile({0, 0}) = TypeUtilities<TypeParam>::element(13, 26);

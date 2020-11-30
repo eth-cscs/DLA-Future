@@ -12,7 +12,7 @@
 
 template <class T, Device device>
 void hegst(const int itype, const blas::Uplo uplo, const Tile<T, device>& a, const Tile<T, device>& b) {
-  DLAF_ASSERT(a.size().rows() == a.size().cols(), a.size());
+  DLAF_ASSERT(square_size(a), a);
   DLAF_ASSERT(itype >= 1 && itype <= 3, itype);
 
   auto info = lapack::hegst(itype, uplo, a.size().cols(), a.ptr(), a.ld(), b.ptr(), b.ld());
@@ -22,7 +22,7 @@ void hegst(const int itype, const blas::Uplo uplo, const Tile<T, device>& a, con
 
 template <class T>
 void lacpy(const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b) {
-  DLAF_ASSERT_MODERATE(a.size() == b.size(), a.size(), b.size());
+  DLAF_ASSERT_MODERATE(a.size() == b.size(), a, b);
 
   const SizeType m = a.size().rows();
   const SizeType n = a.size().cols();
@@ -40,10 +40,10 @@ dlaf::BaseType<T> lantr(const lapack::Norm norm, const blas::Uplo uplo, const bl
                         const Tile<T, device>& a) noexcept {
   switch (uplo) {
     case blas::Uplo::Lower:
-      DLAF_ASSERT(a.size().rows() >= a.size().cols(), a.size().rows(), a.size().cols());
+      DLAF_ASSERT(a.size().rows() >= a.size().cols(), a);
       break;
     case blas::Uplo::Upper:
-      DLAF_ASSERT(a.size().rows() <= a.size().cols(), a.size().rows(), a.size().cols());
+      DLAF_ASSERT(a.size().rows() <= a.size().cols(), a);
       break;
     case blas::Uplo::General:
       DLAF_ASSERT(blas::Uplo::General != uplo, uplo);
@@ -61,7 +61,7 @@ void potrf(const blas::Uplo uplo, const Tile<T, device>& a) noexcept {
 
 template <class T, Device device>
 long long potrfInfo(const blas::Uplo uplo, const Tile<T, device>& a) {
-  DLAF_ASSERT(a.size().rows() == a.size().cols(), a.size().rows(), a.size().cols());
+  DLAF_ASSERT(square_size(a), a);
 
   auto info = lapack::potrf(uplo, a.size().rows(), a.ptr(), a.ld());
   DLAF_ASSERT_HEAVY(info >= 0, info);

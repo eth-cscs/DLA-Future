@@ -32,9 +32,9 @@ void gemm(const blas::Op op_a, const blas::Op op_b, const T alpha, const Tile<co
     n = b.size().rows();
   }
 
-  DLAF_ASSERT(m == c.size().rows(), m, c.size().rows());
-  DLAF_ASSERT(n == c.size().cols(), n, c.size().cols());
-  DLAF_ASSERT(k == k2, k, k2);
+  DLAF_ASSERT(m == c.size().rows(), op_a, a, c);
+  DLAF_ASSERT(n == c.size().cols(), op_b, b, c);
+  DLAF_ASSERT(k == k2, op_a, a, op_b, b);
 
   blas::gemm(blas::Layout::ColMajor, op_a, op_b, m, n, k, alpha, a.ptr(), a.ld(), b.ptr(), b.ld(), beta,
              c.ptr(), c.ld());
@@ -47,14 +47,14 @@ void hemm(const blas::Side side, const blas::Uplo uplo, const T alpha, const Til
   const SizeType n = c.size().cols();
 
   if (side == blas::Side::Left) {
-    DLAF_ASSERT(m == a.size().rows(), m, a.size().rows());
-    DLAF_ASSERT(n == b.size().cols(), n, b.size().cols());
-    DLAF_ASSERT(a.size().cols() == b.size().rows(), a.size().cols(), b.size().rows());
+    DLAF_ASSERT(m == a.size().rows(), c, a);
+    DLAF_ASSERT(n == b.size().cols(), c, b);
+    DLAF_ASSERT(a.size().cols() == b.size().rows(), a, b);
   }
   else if (side == blas::Side::Right) {
-    DLAF_ASSERT(m == b.size().rows(), m, b.size().rows());
-    DLAF_ASSERT(n == a.size().cols(), n, a.size().cols());
-    DLAF_ASSERT(a.size().rows() == b.size().cols(), a.size().rows(), b.size().cols());
+    DLAF_ASSERT(m == b.size().rows(), c, b);
+    DLAF_ASSERT(n == a.size().cols(), c, a);
+    DLAF_ASSERT(a.size().rows() == b.size().cols(), a, b);
   }
 
   blas::hemm(blas::Layout::ColMajor, side, uplo, m, n, alpha, a.ptr(), a.ld(), b.ptr(), b.ld(), beta,
@@ -70,7 +70,7 @@ void her2k(const blas::Uplo uplo, const blas::Op op, const T alpha, const Tile<c
   DLAF_ASSERT(tile_complex_trans<T>(op), op);
 
   DLAF_ASSERT(square_size(c), c);
-  DLAF_ASSERT(c.size().rows() == n, c.size().rows(), n);
+  DLAF_ASSERT(c.size().rows() == n, c, op, a);
 
   blas::her2k(blas::Layout::ColMajor, uplo, op, n, k, alpha, a.ptr(), a.ld(), b.ptr(), b.ld(), beta,
               c.ptr(), c.ld());
@@ -92,7 +92,7 @@ void herk(const blas::Uplo uplo, const blas::Op op, const BaseType<T> alpha,
 
   DLAF_ASSERT(tile_complex_trans<T>(op), op);
   DLAF_ASSERT(square_size(c), c);
-  DLAF_ASSERT(c.size().rows() == n, c.size().rows(), n);
+  DLAF_ASSERT(c.size().rows() == n, c, op, a);
 
   blas::herk(blas::Layout::ColMajor, uplo, op, n, k, alpha, a.ptr(), a.ld(), beta, c.ptr(), c.ld());
 }
@@ -106,7 +106,7 @@ void trsm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const
   DLAF_ASSERT(square_size(a), a);
 
   const auto left_side = (side == blas::Side::Left ? m : n);
-  DLAF_ASSERT(a.size().rows() == left_side, a.size().rows(), left_side);
+  DLAF_ASSERT(a.size().rows() == left_side, a, op, b);
 
   blas::trsm(blas::Layout::ColMajor, side, uplo, op, diag, m, n, alpha, a.ptr(), a.ld(), b.ptr(),
              b.ld());

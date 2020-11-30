@@ -9,6 +9,8 @@
 //
 #pragma once
 
+#include "dlaf/common/assert.h"
+#include "dlaf/common/index2d.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/matrix.h"
@@ -19,22 +21,15 @@
 namespace dlaf {
 namespace matrix {
 
-template <class T, Device device>
+template <Coord panel_type, class T, Device device>
 struct Workspace;
 
 // TODO it works just for tile layout
 // TODO the matrix always occupies memory entirely
-template <class T, Device device>
-struct Workspace<const T, device> : internal::MatrixBase {
+template <Coord panel_type, class T, Device device>
+struct Workspace<panel_type, const T, device> : public internal::MatrixBase {
   using TileT = Tile<T, device>;
   using ConstTileT = Tile<const T, device>;
-
-  Workspace(matrix::Distribution distribution) : MatrixBase(distribution) {
-    // TODO assert not distributed
-    DLAF_ASSERT(nrTiles().cols() == 1 || nrTiles().rows() == 1, nrTiles());
-
-    external_.resize(nrTiles().rows());
-  }
 
   virtual ~Workspace() {
     reset();
@@ -46,8 +41,7 @@ struct Workspace<const T, device> : internal::MatrixBase {
   }
 
   hpx::shared_future<ConstTileT> read(const LocalTileIndex& index) {
-    if (is_masked(index))
-      return external(index);
+    return is_masked(index) ? external(index) : internal_.read(index);
   }
 
   void reset() {
@@ -55,6 +49,44 @@ struct Workspace<const T, device> : internal::MatrixBase {
   }
 
 protected:
+  static Distribution compute_size(const Distribution& dist_matrix,
+      const LocalTileSize start = {0, 0}) {
+    //DLAF_ASSERT(start.isIn(dist_matrix.nrTiles()), start, dist_matrix.nrTiles());
+
+    const bool is_colpanel = panel_type == Coord::Col;
+
+    const Coord index_type = is_colpanel ? Coord::Row : Coord::Col;
+    const auto mat_size = is_colpanel ? dist_matrix.localNrTiles().rows() : dist_matrix.localNrTiles().cols();
+    const auto i_tile = is_colpanel ? start.rows() : start.cols();
+
+    const auto i_local = dist_matrix.template nextLocalTileFromGlobalTile<index_type>(i_tile);
+    const auto panel_length = mat_size - i_local;
+
+    const auto mb = dist_matrix.blockSize().rows();
+    const auto nb = dist_matrix.blockSize().cols();
+
+    const auto panel_size = is_colpanel ? LocalElementSize{panel_length * mb, nb} : LocalElementSize{mb, panel_length * nb};
+
+    return Distribution(panel_size,
+                        dist_matrix.blockSize());  // TODO transpose size for row panel
+  }
+
+  // Note
+  // TODO Row/Col, Matrix Distribution
+  // If with workspace we identify just a panel of tiles, we can simply
+  // have row/col workspace and internally compute sizes from the matrix
+  // distribution to which they apply to
+  //
+  // TODO sometimes we don't want to have a full matrix panel (e.g. when
+  // working with submatrix, like with trailing matrix)
+  Workspace(matrix::Distribution dist_matrix, LocalTileSize offset) // TODO migrate to Global
+      : MatrixBase(compute_size(std::move(dist_matrix), offset)), internal_(distribution()) {
+    // TODO assert not distributed
+    DLAF_ASSERT(nrTiles().cols() == 1 || nrTiles().rows() == 1, nrTiles());
+
+    external_.resize(nrTiles().rows());
+  }
+
   hpx::shared_future<ConstTileT> external(const LocalTileIndex& index) const {
     DLAF_ASSERT(index.isIn(distribution().localNrTiles()), index);
     return external_[index.row()];
@@ -66,15 +98,16 @@ protected:
 
   ///> Stores the shared_future
   common::internal::vector<hpx::shared_future<ConstTileT>> external_;
+  ///> non-distributed matrix for internally allocated tiles
+  Matrix<T, device> internal_;
 };
 
-template <class T, Device device>
-struct Workspace : public Workspace<const T, device> {
+template <Coord panel_type, class T, Device device>
+struct Workspace : public Workspace<panel_type, const T, device> {
   using TileT = Tile<T, device>;
   using ConstTileT = Tile<const T, device>;
 
-  Workspace(matrix::Distribution distribution)
-      : Workspace<const T, device>(distribution), internal_(distribution) {
+  Workspace(matrix::Distribution distribution, LocalTileSize start) : Workspace<panel_type, const T, device>(std::move(distribution), std::move(start)) {
     util::set(internal_, [](auto&&) { return 0; });
   }
 
@@ -83,16 +116,12 @@ struct Workspace : public Workspace<const T, device> {
     return internal_(index);
   }
 
-  hpx::shared_future<ConstTileT> read(const LocalTileIndex& index) {
-    return is_masked(index) ? external(index) : internal_.read(index);
-  }
-
 protected:
-  using Workspace<const T, device>::external;
-  using Workspace<const T, device>::is_masked;
+  using BaseT = Workspace<panel_type, const T, device>;
+  using BaseT::external;
+  using BaseT::is_masked;
 
-  ///> non-distributed matrix for internally allocated tiles
-  Matrix<T, device> internal_;
+  using BaseT::internal_;
 };
 }
 }

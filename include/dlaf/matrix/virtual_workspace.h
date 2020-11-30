@@ -39,37 +39,32 @@ struct VirtualWorkspace<const T, device> {
     LocalTileIndex index;
   };
 
-  VirtualWorkspace(Distribution matrix, Distribution dist_col, Distribution dist_row,
-                   LocalTileSize offset)
-      : offset_(offset), dist_matrix_(matrix), column_(dist_col), row_(dist_row) {
-    matrix::util::set(row_, [](auto&&) { return 0; });
-  }
+  VirtualWorkspace(Distribution matrix, LocalTileSize offset)
+      : offset_(offset), dist_matrix_(matrix), column_(matrix, offset), row_(matrix, offset) {}
 
+  // TODO needed by populate
   LocalTileSize offset() const {
     return offset_;
   }
 
+  // TODO needed by populate
   Distribution distribution_main() const {
     return dist_matrix_;
   }
 
   LocalTileSize colNrTiles() const {
-    return {(dist_matrix_.localNrTiles() - offset_).rows(), 1};
+    return column_.distribution().localNrTiles();
   }
 
   // TODO it is dangerous: using it with iterate_range2d, it returns
   // a local index that used directly, returns a tile from the column,
   // not from the row
   LocalTileSize rowNrTiles() const {
-    return {1, (dist_matrix_.localNrTiles() - offset_).cols()};
+    return row_.distribution().localNrTiles();
   }
 
   hpx::shared_future<ConstTileT> read(const LocalTileIndex& index) {
     return column_.read(index);
-  }
-
-  hpx::shared_future<ConstTileT> read(const GlobalTileIndex& index) {
-    return read(index.row());
   }
 
   hpx::shared_future<ConstTileT> read(const SizeType global_i) {
@@ -85,6 +80,10 @@ struct VirtualWorkspace<const T, device> {
   }
 
 protected:
+  hpx::shared_future<ConstTileT> read(const GlobalTileIndex& index) {
+    return read(index.row());
+  }
+
   WorkspaceTileIndex workspace_index(const SizeType global_i) {
     const auto& rank = dist_matrix_.rankIndex();
 
@@ -113,8 +112,8 @@ protected:
   const LocalTileSize offset_;
   const matrix::Distribution dist_matrix_;
 
-  Workspace<T, device> column_;
-  Matrix<T, device> row_;
+  Workspace<Coord::Col, T, device> column_;
+  Workspace<Coord::Row, T, device> row_;
 };
 
 template <class T, Device device>

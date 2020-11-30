@@ -97,9 +97,10 @@ struct StreamPoolImpl {
 };
 }
 
-// Helper class with a reference counted array of CUDA streams. Allows access
-// to RAII locked streams (LockedStream). Ensures that the correct device is
-// set.
+/// A pool of CUDA streams with reference semantics (copying points to the same
+/// underlying CUDA streams, last reference destroys the references).  Allows
+/// access to CUDA streams in a round-robin fashion.  Each HPX worker thread is
+/// assigned a set of thread local CUDA streams.
 class StreamPool {
   std::shared_ptr<internal::StreamPoolImpl> streams_ptr_;
 
@@ -128,9 +129,11 @@ public:
   }
 };
 
-/// An executor for CUDA calls.
-///
-/// Note: The streams are rotated in Round-robin.
+/// An executor for cuBLAS functions. Uses handles and streams from the given
+/// HandlePool and StreamPool. A cuBLAS function is defined as any function that
+/// takes a cuBLAS handle as the first argument. The executor inserts a cuBLAS
+/// handle into the argument list, i.e. a handle should not be provided at the
+/// apply/async/dataflow invocation site.
 class Executor {
 protected:
   StreamPool stream_pool_;

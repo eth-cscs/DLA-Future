@@ -28,6 +28,7 @@
 #include <hpx/mutex.hpp>
 #include <hpx/tuple.hpp>
 
+#include "dlaf/common/assert.h"
 #include "dlaf/cublas/error.h"
 #include "dlaf/cuda/error.h"
 #include "dlaf/cuda/executor.h"
@@ -64,6 +65,7 @@ public:
 
   cublasHandle_t getNextHandle(cudaStream_t stream) {
     cublasHandle_t handle = handles_[hpx::get_worker_thread_num()];
+    DLAF_CUDA_CALL(cudaSetDevice(device_));
     DLAF_CUBLAS_CALL(cublasSetStream(handle, stream));
     DLAF_CUBLAS_CALL(cublasSetPointerMode(handle, ptr_mode_));
     return handle;
@@ -75,9 +77,11 @@ public:
 };
 }
 
-// Helper class with a reference counted CUBLAS handles and a reference to a
-// StreamPool. Allows access to handles. Ensures that the correct device is
-// set.
+/// A pool of cuBLAS handles with reference semantics (copying points to the
+/// same underlying cuBLAS handles, last reference destroys the references).
+/// Allows access to cuBLAS handles associated with a particular stream. The
+/// user must ensure that the handle pool and the stream use the same device.
+/// Each HPX worker thread is assigned thread local cuBLAS handle.
 class HandlePool {
   std::shared_ptr<internal::HandlePoolImpl> handles_ptr_;
 
@@ -104,10 +108,10 @@ public:
   }
 };
 
-/// An executor for cuBLAS functions. Each device has a single cuBLAS handle
-/// associated to it. A cuBLAS function is defined as any function that takes a
-/// cuBLAS handle as the first argument. The executor inserts a cuBLAS handle
-/// into the argument list, i.e. a handle should not be provided at the
+/// An executor for cuBLAS functions. Uses handles and streams from the given
+/// HandlePool and StreamPool. A cuBLAS function is defined as any function that
+/// takes a cuBLAS handle as the first argument. The executor inserts a cuBLAS
+/// handle into the argument list, i.e. a handle should not be provided at the
 /// apply/async/dataflow invocation site.
 class Executor : public cuda::Executor {
   using base = cuda::Executor;
@@ -115,7 +119,10 @@ class Executor : public cuda::Executor {
 
 public:
   Executor(cuda::StreamPool stream_pool, HandlePool handle_pool)
-      : base(stream_pool), handle_pool_(handle_pool) {}
+      : base(stream_pool), handle_pool_(handle_pool) {
+    DLAF_ASSERT(stream_pool_.getDevice() == handle_pool_.getDevice(), "", stream_pool_.getDevice(),
+                handle_pool_.getDevice());
+  }
 
   bool operator==(Executor const& rhs) const noexcept {
     return base::operator==(rhs) && handle_pool_ == rhs.handle_pool_;

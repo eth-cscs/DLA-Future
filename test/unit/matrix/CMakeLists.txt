@@ -77,7 +77,8 @@ DLAF_addTest(test_matrix_output
 DLAF_addTest(test_workspace
   SOURCES test_workspace.cpp
   LIBRARIES dlaf.core
-  USE_MAIN HPX
+  USE_MAIN MPIHPX
+  MPIRANKS 6
 )
 
 DLAF_addTest(test_virtual_workspace

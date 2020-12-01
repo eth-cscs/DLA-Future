@@ -22,6 +22,7 @@
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/matrix/print_numpy.h"
 
 #include "dlaf_test/matrix/matrix_local.h"
 
@@ -78,6 +79,30 @@ MatrixLocal<T> all_gather(Matrix<const T, Device::CPU>& source, comm::Communicat
   }
 
   return std::move(dest);
+}
+
+template <class T>
+void print(format::numpy, std::string symbol, const MatrixLocal<const T>& matrix,
+           std::ostream& os = std::cout) {
+  using common::iterate_range2d;
+
+  os << symbol << " = np.zeros(" << matrix.size() << ", dtype=np."
+     << dlaf::matrix::internal::numpy_datatype<T>::typestring << ")\n";
+
+  auto getTileTopLeft = [&](const GlobalTileIndex& ij) -> GlobalElementIndex {
+    return {ij.row() * matrix.blockSize().rows(), ij.col() * matrix.blockSize().cols()};
+  };
+
+  for (const auto& ij : iterate_range2d(matrix.nrTiles())) {
+    const auto& tile = matrix.tile_read(ij);
+
+    const auto index_tl = getTileTopLeft(ij);
+
+    os << symbol << "[" << index_tl.row() << ":" << index_tl.row() + tile.size().rows() << ","
+       << index_tl.col() << ":" << index_tl.col() + tile.size().cols() << "] = ";
+
+    print(format::numpy{}, tile, os);
+  }
 }
 }
 }

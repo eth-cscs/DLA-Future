@@ -12,6 +12,7 @@
 #include "dlaf/util_math.h"
 #include "dlaf_test/matrix/matrix_local.h"
 
+#include <sstream>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -97,6 +98,67 @@ TYPED_TEST(MatrixLocalTest, Copy) {
 
     CHECK_MATRIX_NEAR(source, dest, error, error);
   }
+}
+
+template <class T>
+struct test_output {
+  using element_t = T;
+  auto operator()() const {
+    MatrixLocal<const element_t> mat = [&]() {
+      MatrixLocal<element_t> source({5, 4}, {2, 3});
+      set(source, [ld = source.ld()](auto&& i) {
+        const auto value = i.row() + i.col() * ld;
+        return (value % 2 == 0) ? value : -value;
+      });
+      return source;
+    }();
+
+    const std::string output{
+        "mat = np.zeros((5, 4), dtype=np.single)\n"
+        "mat[0:2,0:3] = np.array([0,-1,-5,6,10,-11,], dtype=np.single).reshape(3, 2).T\n"
+        "mat[2:4,0:3] = np.array([2,-3,-7,8,12,-13,], dtype=np.single).reshape(3, 2).T\n"
+        "mat[4:5,0:3] = np.array([4,-9,14,], dtype=np.single).reshape(3, 1).T\n"
+        "mat[0:2,3:4] = np.array([-15,16,], dtype=np.single).reshape(1, 2).T\n"
+        "mat[2:4,3:4] = np.array([-17,18,], dtype=np.single).reshape(1, 2).T\n"
+        "mat[4:5,3:4] = np.array([-19,], dtype=np.single).reshape(1, 1).T\n"};
+
+    return std::make_pair(std::move(mat), output);
+  }
+};
+
+template <class T>
+struct test_output<std::complex<T>> {
+  using element_t = std::complex<T>;
+
+  auto operator()() const {
+    MatrixLocal<const element_t> mat = [&]() {
+      MatrixLocal<element_t> source({5, 4}, {2, 3});
+      set(source, [ld = source.ld()](auto&& i) {
+        return element_t(i.row(), i.col() % 2 == 0 ? i.col() : -i.col());
+      });
+      return source;
+    }();
+
+    const std::string output{
+        "mat = np.zeros((5, 4), dtype=np.csingle)\n"
+        "mat[0:2,0:3] = np.array([0+0j,1+0j,0-1j,1-1j,0+2j,1+2j,], dtype=np.csingle).reshape(3, 2).T\n"
+        "mat[2:4,0:3] = np.array([2+0j,3+0j,2-1j,3-1j,2+2j,3+2j,], dtype=np.csingle).reshape(3, 2).T\n"
+        "mat[4:5,0:3] = np.array([4+0j,4-1j,4+2j,], dtype=np.csingle).reshape(3, 1).T\n"
+        "mat[0:2,3:4] = np.array([0-3j,1-3j,], dtype=np.csingle).reshape(1, 2).T\n"
+        "mat[2:4,3:4] = np.array([2-3j,3-3j,], dtype=np.csingle).reshape(1, 2).T\n"
+        "mat[4:5,3:4] = np.array([4-3j,], dtype=np.csingle).reshape(1, 1).T\n"};
+
+    return std::make_pair(std::move(mat), output);
+  }
+};
+
+TYPED_TEST(MatrixLocalTest, OutputNumpyForamt) {
+  const auto test_config = test_output<TypeParam>{}();
+
+  std::ostringstream stream_matrix_output;
+  print(format::numpy{}, "mat", test_config.first, stream_matrix_output);
+
+  EXPECT_EQ(test_config.second, stream_matrix_output.str());
 }
 
 ::testing::Environment* const comm_grids_env =

@@ -3,11 +3,12 @@
 The current cuBLAS executor implementation lives in DLA-Future. This will be
 upstreamed to HPX once stable.
 
-There are three main design considerations for the cuBLAS executors:
+There are four main design considerations for the cuBLAS executors:
 
 1. The synchronization mechanism.
 2. Tile lifetime management.
 3. Stream and handle management
+4. Stream and handle creation
 
 ## Synchronization
 
@@ -43,8 +44,13 @@ compared to CUDA latencies.
 
 ## Stream and handle management
 
-The current implementation uses a pool of CUDA streams and a single cuBLAS
-handle. Access to these are locked with a single lock to ensure that event
-registration is done in the order that tasks are submitted. A potential
-enhancement is to use thread-local streams (and possibly cuBLAS handles as
-well) to avoid locking.
+The current implementation uses a pool of multiple CUDA streams per HPX worker
+thread and a pool of a single cuBLAS handle per HPX worker thread. This avoids
+having to take locks to access the streams and handles and thus improves
+performance noticeably.
+
+## Stream and handle creation
+
+Creating and destroying CUDA streams and cuBLAS handles are expensive
+operations. Creating the pools of streams and handles should be done outside of
+the algorithm calls, e.g. in a DLA-Future initialization function.

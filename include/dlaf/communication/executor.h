@@ -17,6 +17,7 @@
 
 #include <mpi.h>
 
+#include <hpx/async_mpi/mpi_future.hpp>
 #include <hpx/config.hpp>
 #include <hpx/future.hpp>
 #include <hpx/include/async.hpp>
@@ -24,17 +25,11 @@
 #include <hpx/include/thread_executors.hpp>
 #include <hpx/modules/execution_base.hpp>
 
-#ifdef HPX_HAVE_LIB_ASYNC_MPI
-#include <hpx/modules/async_mpi.h>
-#endif
-
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/init.h"
 
 namespace dlaf {
 namespace comm {
-
-#ifdef HPX_HAVE_LIB_ASYNC_MPI
 
 /// An executor based on John's upstream HPX polling mechanism.
 class mpi_polling_executor {
@@ -47,15 +42,15 @@ public:
 
   mpi_polling_executor(Communicator comm) : comm_(std::move(comm)), enable_polling_("default") {}
 
-  constexpr bool operator==(const executor& rhs) const noexcept {
+  constexpr bool operator==(const mpi_polling_executor& rhs) const noexcept {
     return comm_ == rhs.comm_;
   }
 
-  constexpr bool operator!=(const executor& rhs) const noexcept {
+  constexpr bool operator!=(const mpi_polling_executor& rhs) const noexcept {
     return !(*this == rhs);
   }
 
-  constexpr const executor& context() const noexcept {
+  constexpr const mpi_polling_executor& context() const noexcept {
     return *this;
   }
 
@@ -68,8 +63,6 @@ public:
     return hpx::mpi::experimental::detail::async(f, ts..., comm_);
   }
 };
-
-#endif
 
 /// An executor for MPI calls.
 class executor {

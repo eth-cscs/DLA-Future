@@ -51,17 +51,9 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
   const comm::Index2D rank = dist.rankIndex();
   const comm::Index2D rank_v0 = dist.rankGlobalTile(v_start);
 
-  // compute size of the V panel indicated by v_start
-  const auto panel_size = [&]() {
-    const auto tl = dist.globalElementIndex(v_start, {0, 0});
-    const auto br_tmp = tl + GlobalElementSize{v.blockSize().rows(), v.blockSize().cols()};
-    const auto br_end =
-        br_tmp.isIn(v.size()) ? br_tmp : GlobalElementIndex{v.size().rows(), v.size().cols()};
+  const auto panel_width = v.tileSize(v_start).cols();
 
-    return br_end - tl;
-  }();
-
-  DLAF_ASSERT(k <= panel_size.cols(), k, panel_size);
+  DLAF_ASSERT(k <= panel_width, k, panel_width);
 
   DLAF_ASSERT(t.nrTiles() == GlobalTileSize(1, 1), t);
   DLAF_ASSERT(t.size() == GlobalElementSize(k, k), t.size(), k);

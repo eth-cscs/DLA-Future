@@ -31,8 +31,8 @@ namespace comm {
 /// MPI_Isend wrapper
 ///
 /// For more information, see the Data concept in "dlaf/common/data.h"
-template <class DataIn>
-hpx::future<void> send(executor& ex, int receiver_rank, const DataIn& data) {
+template <class MPIExecutor, class DataIn>
+hpx::future<void> send(MPIExecutor& ex, int receiver_rank, const DataIn& data) {
   int tag = 0;
   auto message = make_message(common::make_data(data));
   return ex.async_execute(MPI_Isend, message.data(), message.count(), message.mpi_type(), receiver_rank,
@@ -42,8 +42,8 @@ hpx::future<void> send(executor& ex, int receiver_rank, const DataIn& data) {
 /// MPI_Irecv wrapper
 ///
 /// For more information, see the Data concept in "dlaf/common/data.h"
-template <class DataOut>
-hpx::future<void> recv(executor& ex, int sender_rank, DataOut& data) {
+template <class MPIExecutor, class DataOut>
+hpx::future<void> recv(MPIExecutor& ex, int sender_rank, DataOut& data) {
   int tag = 0;
   auto message = make_message(common::make_data(data));
   return ex.async_execute(MPI_Irecv, message.data(), message.count(), message.mpi_type(), sender_rank,
@@ -53,8 +53,8 @@ hpx::future<void> recv(executor& ex, int sender_rank, DataOut& data) {
 /// MPI_Ibcast wrapper
 ///
 /// For more information, see the Data concept in "dlaf/common/data.h"
-template <class DataIn>
-hpx::future<void> bcast(executor& ex, int root_rank, DataIn& tile) {
+template <class MPIExecutor, class DataIn>
+hpx::future<void> bcast(MPIExecutor& ex, int root_rank, DataIn& tile) {
   auto data = common::make_data(tile);
   using DataT = std::remove_const_t<typename common::data_traits<decltype(data)>::element_t>;
 
@@ -63,12 +63,12 @@ hpx::future<void> bcast(executor& ex, int root_rank, DataIn& tile) {
                           message.mpi_type(), root_rank);
 }
 
-template <class T>
+template <class MPIExecutor, class T>
 void bcast_send_tile(hpx::threads::executors::pool_executor executor_hp,
-                     common::Pipeline<comm::executor>& mpi_task_chain,
+                     common::Pipeline<MPIExecutor>& mpi_task_chain,
                      hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile) {
   using ConstTile_t = matrix::Tile<const T, Device::CPU>;
-  using PromiseExec_t = common::PromiseGuard<comm::executor>;
+  using PromiseExec_t = common::PromiseGuard<MPIExecutor>;
 
   // Broadcast the (trailing) panel column-wise
   auto send_bcast_f = hpx::util::annotated_function(
@@ -85,12 +85,12 @@ void bcast_send_tile(hpx::threads::executors::pool_executor executor_hp,
   hpx::dataflow(executor_hp, std::move(send_bcast_f), tile, mpi_task_chain());
 }
 
-template <class T>
+template <class MPIExecutor, class T>
 hpx::future<matrix::Tile<const T, Device::CPU>> bcast_recv_tile(
-    hpx::threads::executors::pool_executor executor_hp, common::Pipeline<comm::executor>& mpi_task_chain,
+    hpx::threads::executors::pool_executor executor_hp, common::Pipeline<MPIExecutor>& mpi_task_chain,
     TileElementSize tile_size, int rank) {
   using ConstTile_t = matrix::Tile<const T, Device::CPU>;
-  using PromiseExec_t = common::PromiseGuard<comm::executor>;
+  using PromiseExec_t = common::PromiseGuard<MPIExecutor>;
   using MemView_t = memory::MemoryView<T, Device::CPU>;
   using Tile_t = matrix::Tile<T, Device::CPU>;
 

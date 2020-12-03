@@ -447,8 +447,9 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid gr
         comm::bcast_send_tile(executor_hp, mpi_row_task_chain, mat_a.read(kk));
       }
       else {
-        kk_tile = comm::bcast_recv_tile<T>(executor_hp, mpi_row_task_chain,
-                                           mat_a.tileSize(GlobalTileIndex(k, k)), k_rank_col);
+        kk_tile =
+            comm::bcast_recv_tile<comm::executor, T>(executor_hp, mpi_row_task_chain,
+                                                     mat_a.tileSize(GlobalTileIndex(k, k)), k_rank_col);
       }
     }
 
@@ -467,8 +468,10 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid gr
       }
       else {
         if (k != (mat_b.nrTiles().rows() - 1)) {
-          panel[j_local] = comm::bcast_recv_tile<T>(executor_hp, mpi_col_task_chain,
-                                                    mat_b.tileSize(GlobalTileIndex(k, j)), k_rank_row);
+          panel[j_local] =
+              comm::bcast_recv_tile<comm::executor, T>(executor_hp, mpi_col_task_chain,
+                                                       mat_b.tileSize(GlobalTileIndex(k, j)),
+                                                       k_rank_row);
         }
       }
     }
@@ -490,8 +493,9 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid gr
         comm::bcast_send_tile(executor_hp, mpi_row_task_chain, mat_a.read(ik));
       }
       else {
-        ik_tile = comm::bcast_recv_tile<T>(executor_hp, mpi_row_task_chain,
-                                           mat_a.tileSize(GlobalTileIndex(i, k)), k_rank_col);
+        ik_tile =
+            comm::bcast_recv_tile<comm::executor, T>(executor_hp, mpi_row_task_chain,
+                                                     mat_a.tileSize(GlobalTileIndex(i, k)), k_rank_col);
       }
 
       // Update trailing matrix

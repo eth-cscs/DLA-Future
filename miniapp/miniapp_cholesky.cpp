@@ -16,6 +16,7 @@
 #include "dlaf/auxiliary/norm.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/error.h"
+#include "dlaf/communication/executor.h"
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/communication/init.h"
 #include "dlaf/factorization/cholesky.h"
@@ -59,6 +60,8 @@ void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid);
 
 enum class CHECK_RESULT { NONE, LAST, ALL };
 
+enum class exec_backend { polling, yielding };
+
 struct options_t {
   SizeType m;
   SizeType mb;
@@ -67,6 +70,7 @@ struct options_t {
   int64_t nruns;
   int64_t nwarmups;
   CHECK_RESULT do_check;
+  exec_backend exec;
 };
 
 /// Handle CLI options
@@ -76,6 +80,9 @@ options_t check_options(hpx::program_options::variables_map& vm);
 
 int hpx_main(hpx::program_options::variables_map& vm) {
   options_t opts = check_options(vm);
+
+  // Only needed for the `polling` approach
+  hpx::mpi::experimental::enable_user_polling internal_helper("default");
 
   Communicator world(MPI_COMM_WORLD);
   CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
@@ -107,7 +114,16 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     }
 
     dlaf::common::Timer<> timeit;
-    dlaf::factorization::cholesky<Backend::MC>(comm_grid, blas::Uplo::Lower, matrix);
+    if (opts.exec == exec_backend::yielding) {
+      dlaf::factorization::cholesky<Backend::MC, Device::CPU, T, dlaf::comm::executor>(comm_grid,
+                                                                                       blas::Uplo::Lower,
+                                                                                       matrix);
+    }
+    else {
+      dlaf::factorization::cholesky<Backend::MC, Device::CPU, T,
+                                    dlaf::comm::mpi_polling_executor>(comm_grid, blas::Uplo::Lower,
+                                                                      matrix);
+    }
 
     // wait for last task and barrier for all ranks
     {
@@ -163,6 +179,7 @@ int main(int argc, char** argv) {
     ("nruns",        value<int64_t>()    ->default_value(   1),                        "Number of runs to compute the cholesky")
     ("nwarmups",     value<int64_t>()    ->default_value(   1),                        "Number of warmup runs")
     ("check-result", value<std::string>()->default_value(  "")->implicit_value("all"), "Enable result check ('all', 'last')")
+    ("polling",      bool_switch()       ->default_value(false),                       "Use the MPI polling mechanism.")
   ;
   // clang-format on
 
@@ -381,6 +398,7 @@ options_t check_options(hpx::program_options::variables_map& vm) {
       vm["nruns"].as<int64_t>(),
       vm["nwarmups"].as<int64_t>(),
       CHECK_RESULT::NONE,
+      exec_backend::yielding
   };
   // clang-format on
 
@@ -405,6 +423,10 @@ options_t check_options(hpx::program_options::variables_map& vm) {
         << "Warning! At the moment result checking works just with matrix sizes that are multiple of the block size."
         << std::endl;
     opts.do_check = CHECK_RESULT::NONE;
+  }
+
+  if (vm["polling"].as<bool>()) {
+    opts.exec = exec_backend::polling;
   }
 
   return opts;

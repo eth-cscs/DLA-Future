@@ -17,6 +17,7 @@
 
 #include <mpi.h>
 
+#include <hpx/async_mpi/mpi_executor.hpp>
 #include <hpx/async_mpi/mpi_future.hpp>
 #include <hpx/config.hpp>
 #include <hpx/future.hpp>
@@ -34,13 +35,12 @@ namespace comm {
 /// An executor based on John's upstream HPX polling mechanism.
 class mpi_polling_executor {
   Communicator comm_;
-  hpx::mpi::experimental::enable_user_polling enable_polling_;
 
 public:
   // Associate the parallel_execution_tag executor tag type as a default with this executor.
   using execution_category = hpx::parallel::execution::parallel_execution_tag;
 
-  mpi_polling_executor(Communicator comm) : comm_(std::move(comm)), enable_polling_("default") {}
+  mpi_polling_executor(Communicator comm) : comm_(std::move(comm)) {}
 
   constexpr bool operator==(const mpi_polling_executor& rhs) const noexcept {
     return comm_ == rhs.comm_;

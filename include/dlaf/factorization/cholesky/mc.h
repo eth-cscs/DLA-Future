@@ -17,6 +17,7 @@
 
 #include <limits>
 #include <sstream>
+#include <type_traits>
 #include <unordered_map>
 
 #include "dlaf/blas_tile.h"
@@ -40,8 +41,8 @@ namespace dlaf {
 namespace factorization {
 namespace internal {
 
-template <class T>
-struct Cholesky<Backend::MC, Device::CPU, T> {
+template <class T, class MPIExecutor>
+struct Cholesky<Backend::MC, Device::CPU, T, MPIExecutor> {
   static void call_L(Matrix<T, Device::CPU>& mat_a);
   static void call_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a);
 };
@@ -81,8 +82,8 @@ void gemm_trailing_matrix_tile(hpx::threads::executors::pool_executor trailing_m
 }
 
 // Local implementation of Lower Cholesky factorization.
-template <class T>
-void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a) {
+template <class T, class MPIExecutor>
+void Cholesky<Backend::MC, Device::CPU, T, MPIExecutor>::call_L(Matrix<T, Device::CPU>& mat_a) {
   using hpx::threads::executors::pool_executor;
   using hpx::threads::thread_priority_high;
   using hpx::threads::thread_priority_default;
@@ -125,9 +126,9 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
 }
 
 // Distributed implementation of Lower Cholesky factorization.
-template <class T>
-void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
-                                                   Matrix<T, Device::CPU>& mat_a) {
+template <class T, class MPIExecutor>
+void Cholesky<Backend::MC, Device::CPU, T, MPIExecutor>::call_L(comm::CommunicatorGrid grid,
+                                                                Matrix<T, Device::CPU>& mat_a) {
   using hpx::threads::executors::pool_executor;
   using hpx::threads::thread_priority_high;
   using hpx::threads::thread_priority_default;
@@ -141,10 +142,10 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
   pool_executor executor_normal("default", thread_priority_default);
 
   // Set up MPI executor pipelines
-  comm::executor executor_mpi_col(grid.colCommunicator());
-  comm::executor executor_mpi_row(grid.rowCommunicator());
-  common::Pipeline<comm::executor> mpi_col_task_chain(std::move(executor_mpi_col));
-  common::Pipeline<comm::executor> mpi_row_task_chain(std::move(executor_mpi_row));
+  MPIExecutor executor_mpi_col(grid.colCommunicator());
+  MPIExecutor executor_mpi_row(grid.rowCommunicator());
+  common::Pipeline<MPIExecutor> mpi_col_task_chain(std::move(executor_mpi_col));
+  common::Pipeline<MPIExecutor> mpi_row_task_chain(std::move(executor_mpi_row));
 
   const matrix::Distribution& distr = mat_a.distribution();
   SizeType nrtile = mat_a.nrTiles().cols();
@@ -166,8 +167,8 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
     }
     else if (this_rank.col() == kk_rank.col()) {
       if (k != nrtile - 1)
-        panel[k] = comm::bcast_recv_tile<T>(executor_hp, mpi_col_task_chain, mat_a.tileSize(kk_idx),
-                                            kk_rank.row());
+        panel[k] = comm::bcast_recv_tile<MPIExecutor, T>(executor_hp, mpi_col_task_chain,
+                                                         mat_a.tileSize(kk_idx), kk_rank.row());
     }
 
     // Iterate over the k-th column
@@ -181,8 +182,8 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
         comm::bcast_send_tile(executor_hp, mpi_row_task_chain, panel[i]);
       }
       else if (this_rank.row() == ik_rank.row()) {
-        panel[i] = comm::bcast_recv_tile<T>(executor_hp, mpi_row_task_chain, mat_a.tileSize(ik_idx),
-                                            ik_rank.col());
+        panel[i] = comm::bcast_recv_tile<MPIExecutor, T>(executor_hp, mpi_row_task_chain,
+                                                         mat_a.tileSize(ik_idx), ik_rank.col());
       }
     }
 
@@ -203,8 +204,8 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
       else {
         GlobalTileIndex jk_idx(j, k);
         if (j != nrtile - 1)
-          panel[j] = comm::bcast_recv_tile<T>(executor_hp, mpi_col_task_chain, mat_a.tileSize(jk_idx),
-                                              jj_rank.row());
+          panel[j] = comm::bcast_recv_tile<MPIExecutor, T>(executor_hp, mpi_col_task_chain,
+                                                           mat_a.tileSize(jk_idx), jj_rank.row());
       }
 
       for (SizeType i = j + 1; i < nrtile; ++i) {
@@ -216,16 +217,17 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
       }
     }
   }
+  // std::cout << this_rank << " : CHECKPOINT #1\n\n";
 }
 
 /// ---- ETI
 #define DLAF_CHOLESKY_MC_ETI(KWORD, DATATYPE) \
   KWORD template struct Cholesky<Backend::MC, Device::CPU, DATATYPE>;
 
-DLAF_CHOLESKY_MC_ETI(extern, float)
-DLAF_CHOLESKY_MC_ETI(extern, double)
-DLAF_CHOLESKY_MC_ETI(extern, std::complex<float>)
-DLAF_CHOLESKY_MC_ETI(extern, std::complex<double>)
+// DLAF_CHOLESKY_MC_ETI(extern, float)
+// DLAF_CHOLESKY_MC_ETI(extern, double)
+// DLAF_CHOLESKY_MC_ETI(extern, std::complex<float>)
+// DLAF_CHOLESKY_MC_ETI(extern, std::complex<double>)
 
 }
 }

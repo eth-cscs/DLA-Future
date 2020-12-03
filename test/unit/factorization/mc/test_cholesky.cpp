@@ -7,6 +7,7 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
+#include "dlaf/communication/executor.h"
 #include "dlaf/factorization/cholesky.h"
 
 #include "gtest/gtest.h"
@@ -85,7 +86,8 @@ TYPED_TEST(CholeskyLocalTest, Correctness) {
       Matrix<TypeParam, Device::CPU> mat(size, block_size);
       set(mat, el);
 
-      factorization::cholesky<Backend::MC>(blas::Uplo::Lower, mat);
+      factorization::cholesky<Backend::MC, Device::CPU, TypeParam, comm::executor>(blas::Uplo::Lower,
+                                                                                   mat);
 
       CHECK_MATRIX_NEAR(res, mat, 4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error,
                         4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);
@@ -123,22 +125,30 @@ TYPED_TEST(CholeskyDistributedTest, Correctness) {
 
     return TypeUtilities<TypeParam>::polar(std::exp2(-std::abs(i - j)), -i + j);
   };
+  hpx::mpi::experimental::enable_user_polling internal_helper("default");
 
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& size : square_sizes) {
       for (const auto& block_size : square_block_sizes) {
-        // Matrix to undergo Cholesky decomposition
-        Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
-                               std::min(1, comm_grid.size().cols() - 1));
-        GlobalElementSize sz = globalTestSize(size);
-        Distribution distribution(sz, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
-        Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
-        set(mat, el);
+        for (bool exec_yielding : {true, false} /*, false}*/) {
+          // Matrix to undergo Cholesky decomposition
+          Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
+                                 std::min(1, comm_grid.size().cols() - 1));
+          GlobalElementSize sz = globalTestSize(size);
+          Distribution distribution(sz, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
+          Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
+          set(mat, el);
 
-        factorization::cholesky<Backend::MC>(comm_grid, blas::Uplo::Lower, mat);
+          if (exec_yielding)
+            factorization::cholesky<Backend::MC, Device::CPU, TypeParam,
+                                    comm::executor>(comm_grid, blas::Uplo::Lower, mat);
+          else
+            factorization::cholesky<Backend::MC, Device::CPU, TypeParam,
+                                    comm::mpi_polling_executor>(comm_grid, blas::Uplo::Lower, mat);
 
-        CHECK_MATRIX_NEAR(res, mat, 4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error,
-                          4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);
+          CHECK_MATRIX_NEAR(res, mat, 4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error,
+                            4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);
+        }
       }
     }
   }

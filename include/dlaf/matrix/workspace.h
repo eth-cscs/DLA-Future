@@ -56,9 +56,10 @@ struct Workspace;
 // TODO it works just for tile layout
 // TODO the matrix always occupies memory entirely
 template <Coord panel_type, class T, Device device>
-struct Workspace<panel_type, const T, device> : protected internal::MatrixBase {
+struct Workspace<panel_type, const T, device> : protected Matrix<T, device> {
   using TileT = Tile<T, device>;
   using ConstTileT = Tile<const T, device>;
+  using BaseT = Matrix<T, device>;
 
   virtual ~Workspace() {
     reset();
@@ -67,7 +68,7 @@ struct Workspace<panel_type, const T, device> : protected internal::MatrixBase {
   // Note:
   // these 2 next methods allows to use iterate_range2d
   auto localNrTiles() const {
-    return this->distribution().localNrTiles();
+    return BaseT::distribution().localNrTiles();
   }
 
   auto offset() const {
@@ -83,14 +84,11 @@ struct Workspace<panel_type, const T, device> : protected internal::MatrixBase {
     return dist_matrix_.rankIndex();
   }
 
-  auto size() const {
-    return internal_.size();
-  }
-
   auto distribution_matrix() const {
     return dist_matrix_;
   }
 
+  // TODO a check about a not already used/asked for tile (avoiding "double" tiles)
   void set_tile(const LocalTileIndex& index, hpx::shared_future<ConstTileT> new_tile_fut) {
     DLAF_ASSERT(index.isIn(dist_matrix_.localNrTiles()), index, dist_matrix_.localNrTiles());
     DLAF_ASSERT(!is_masked(index), "already set to external", index);
@@ -107,7 +105,7 @@ struct Workspace<panel_type, const T, device> : protected internal::MatrixBase {
   // - TODO read(GlobalTileIndex)     still thinking how it should work
   hpx::shared_future<ConstTileT> read(const LocalTileIndex& index) {
     DLAF_ASSERT(index.isIn(dist_matrix_.localNrTiles()), index, dist_matrix_.localNrTiles());
-    return is_masked(index) ? external_[panel_index(index)] : internal_.read(full_index(index));
+    return is_masked(index) ? external_[panel_index(index)] : BaseT::read(full_index(index));
   }
 
   // it is possible to reset the mask for external tiles, so that memory can be easily re-used
@@ -116,25 +114,27 @@ struct Workspace<panel_type, const T, device> : protected internal::MatrixBase {
   }
 
 protected:
-  Workspace(matrix::Distribution dist_matrix, LocalTileSize offset)  // TODO migrate to Global
-      : MatrixBase(dlaf::internal::compute_size<panel_type>(dist_matrix, offset)),
-        dist_matrix_(dist_matrix), offset_(offset), internal_(distribution()) {
-    // TODO assert not distributed
-
-    util::set(internal_, [](auto&&) { return 0; });  // TODO remove this and enable util::set
+  // TODO think about passing a reference to the matrix instead of the distribution (useful for tilesize)
+  Workspace(matrix::Distribution dist_matrix,
+            LocalTileSize offset)  // TODO migrate to index? don't know...
+      : BaseT(dlaf::internal::compute_size<panel_type>(dist_matrix, offset)), dist_matrix_(dist_matrix),
+        offset_(offset) {
+    util::set(*((Matrix<T, device>*) this),
+              [](auto&&) { return 0; });  // TODO remove this and enable util::set
 
     switch (panel_type) {
       case Coord::Row:
-        DLAF_ASSERT(nrTiles().rows() == 1, nrTiles());
-        external_.resize(nrTiles().cols());
+        DLAF_ASSERT(BaseT::nrTiles().rows() == 1, BaseT::nrTiles());
+        external_.resize(BaseT::nrTiles().cols());
         break;
       case Coord::Col:
-        DLAF_ASSERT(nrTiles().cols() == 1, nrTiles());
-        external_.resize(nrTiles().rows());
+        DLAF_ASSERT(BaseT::nrTiles().cols() == 1, BaseT::nrTiles());
+        external_.resize(BaseT::nrTiles().rows());
         break;
     }
-    DLAF_ASSERT_MODERATE(internal_.distribution().localNrTiles().linear_size() == external_.size(),
-                         internal_.distribution().localNrTiles().linear_size(), external_.size());
+
+    DLAF_ASSERT_MODERATE(BaseT::distribution().localNrTiles().linear_size() == external_.size(),
+                         BaseT::distribution().localNrTiles().linear_size(), external_.size());
   }
 
   SizeType panel_index(const LocalTileIndex& index) const {
@@ -156,7 +156,7 @@ protected:
           return {index.row() - offset_.rows(), 0};
       }
     }();
-    DLAF_ASSERT(index.isIn(localNrTiles()), index);
+    DLAF_ASSERT(index.isIn(BaseT::distribution().localNrTiles()), index);
     return index;
   }
 
@@ -169,8 +169,6 @@ protected:
 
   ///> Stores the shared_future
   common::internal::vector<hpx::shared_future<ConstTileT>> external_;
-  ///> non-distributed matrix for internally allocated tiles
-  Matrix<T, device> internal_;
 };
 
 template <Coord panel_type, class T, Device device>
@@ -182,16 +180,15 @@ struct Workspace : public Workspace<panel_type, const T, device> {
       : Workspace<panel_type, const T, device>(std::move(distribution), std::move(start)) {}
 
   hpx::future<TileT> operator()(const LocalTileIndex& index) {
-    DLAF_ASSERT(index.isIn(this->dist_matrix_.localNrTiles()), index, this->dist_matrix_.localNrTiles());
+    DLAF_ASSERT(index.isIn(BaseT::dist_matrix_.localNrTiles()), index,
+                BaseT::dist_matrix_.localNrTiles());
     DLAF_ASSERT(!is_masked(index), "read-only access on external tiles", index);
-    return internal_(this->full_index(index));
+    return BaseT::operator()(BaseT::full_index(index));
   }
 
 protected:
   using BaseT = Workspace<panel_type, const T, device>;
   using BaseT::is_masked;
-
-  using BaseT::internal_;
 };
 
 template <class T, Device device, class BcastDir, Coord panel_type, class PredicateOwner>

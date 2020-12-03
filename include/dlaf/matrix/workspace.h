@@ -83,6 +83,10 @@ struct Workspace<panel_type, const T, device> : protected internal::MatrixBase {
     return dist_matrix_.rankIndex();
   }
 
+  auto size() const {
+    return internal_.size();
+  }
+
   auto distribution_matrix() const {
     return dist_matrix_;
   }
@@ -117,6 +121,8 @@ protected:
         dist_matrix_(dist_matrix), offset_(offset), internal_(distribution()) {
     // TODO assert not distributed
 
+    util::set(internal_, [](auto&&) { return 0; });  // TODO remove this and enable util::set
+
     switch (panel_type) {
       case Coord::Row:
         DLAF_ASSERT(nrTiles().rows() == 1, nrTiles());
@@ -127,8 +133,8 @@ protected:
         external_.resize(nrTiles().rows());
         break;
     }
-    DLAF_ASSERT_MODERATE(internal_.distribution().localNrTiles().linear_size(),
-                         external_.size() == external_.size(), internal_.nrTiles(), external_.size());
+    DLAF_ASSERT_MODERATE(internal_.distribution().localNrTiles().linear_size() == external_.size(),
+                         internal_.distribution().localNrTiles().linear_size(), external_.size());
   }
 
   SizeType panel_index(const LocalTileIndex& index) const {

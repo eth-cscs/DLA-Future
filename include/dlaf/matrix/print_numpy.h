@@ -16,6 +16,7 @@
 #include "dlaf/common/range2d.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/tile.h"
+#include "dlaf/matrix/workspace.h"
 #include "dlaf/types.h"
 
 namespace dlaf {
@@ -97,6 +98,34 @@ void print(format::numpy, std::string sym, MatrixLikeT<const T, device>& matrix,
 
   for (const auto& ij_local : iterate_range2d(local_tiles)) {
     const auto& tile = matrix.read(ij_local).get();
+
+    const auto tl = getTileTopLeft(ij_local);
+    const auto br = tl + GlobalElementSize{tile.size().rows(), tile.size().cols()};
+
+    os << sym << "[" << tl.row() << ":" << br.row() << "," << tl.col() << ":" << br.col() << "] = ";
+    print(format::numpy{}, tile, os);
+  }
+}
+
+template <Coord panel_type, class T, Device device>
+void print(format::numpy, std::string sym, Workspace<panel_type, const T, device>& workspace,
+           std::ostream& os = std::cout) {
+  using common::iterate_range2d;
+
+  const auto& distribution = workspace.distribution_matrix();
+
+  os << sym << " = np.zeros(" << workspace.size() << ", dtype=np."
+     << internal::numpy_datatype<T>::typestring << ")\n";
+
+  auto getTileTopLeft = [&distribution](const LocalTileIndex& local) -> GlobalElementIndex {
+    return {
+        distribution.template globalElementFromLocalTileAndTileElement<Coord::Row>(local.row(), 0),
+        distribution.template globalElementFromLocalTileAndTileElement<Coord::Col>(local.col(), 0),
+    };
+  };
+
+  for (const auto& ij_local : iterate_range2d(workspace.offset(), workspace.localNrTiles())) {
+    const auto& tile = workspace.read(ij_local).get();
 
     const auto tl = getTileTopLeft(ij_local);
     const auto br = tl + GlobalElementSize{tile.size().rows(), tile.size().cols()};

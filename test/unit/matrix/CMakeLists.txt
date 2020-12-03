@@ -80,10 +80,3 @@ DLAF_addTest(test_workspace
   USE_MAIN MPIHPX
   MPIRANKS 6
 )
-
-DLAF_addTest(test_virtual_workspace
-  SOURCES test_virtual_workspace.cpp
-  LIBRARIES dlaf.core
-  USE_MAIN MPIHPX
-  MPIRANKS 6
-)

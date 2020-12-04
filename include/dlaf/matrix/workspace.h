@@ -84,6 +84,7 @@ struct Workspace<panel_type, const T, device> : protected Matrix<T, device> {
   // TODO a check about a not already used/asked for tile (avoiding "double" tiles)
   void set_tile(const LocalTileIndex& index, hpx::shared_future<ConstTileT> new_tile_fut) {
     DLAF_ASSERT(index.isIn(dist_matrix_.localNrTiles()), index, dist_matrix_.localNrTiles());
+    DLAF_ASSERT(internal_.count(panel_index(index)) == 0, "internal tile have been used already", index);
     DLAF_ASSERT(!is_masked(index), "already set to external", index);
     external_[panel_index(index)] = std::move(new_tile_fut);
   }
@@ -98,12 +99,18 @@ struct Workspace<panel_type, const T, device> : protected Matrix<T, device> {
   // - TODO read(GlobalTileIndex)     still thinking how it should work
   hpx::shared_future<ConstTileT> read(const LocalTileIndex& index) {
     DLAF_ASSERT(index.isIn(dist_matrix_.localNrTiles()), index, dist_matrix_.localNrTiles());
-    return is_masked(index) ? external_[panel_index(index)] : BaseT::read(full_index(index));
+    if (is_masked(index))
+      return external_[panel_index(index)];
+    else {
+      internal_.insert(panel_index(index));
+      return BaseT::read(full_index(index));
+    }
   }
 
   // it is possible to reset the mask for external tiles, so that memory can be easily re-used
   void reset() {
     external_.clear();
+    internal_.clear();
   }
 
 protected:
@@ -168,6 +175,8 @@ protected:
 
   ///> Stores the shared_future
   common::internal::vector<hpx::shared_future<ConstTileT>> external_;
+
+  std::set<SizeType> internal_;
 };
 
 template <Coord panel_type, class T, Device device>
@@ -182,6 +191,7 @@ struct Workspace : public Workspace<panel_type, const T, device> {
     DLAF_ASSERT(index.isIn(BaseT::dist_matrix_.localNrTiles()), index,
                 BaseT::dist_matrix_.localNrTiles());
     DLAF_ASSERT(!is_masked(index), "read-only access on external tiles", index);
+    BaseT::internal_.insert(BaseT::panel_index(index));
     return BaseT::operator()(BaseT::full_index(index));
   }
 

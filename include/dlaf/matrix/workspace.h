@@ -65,19 +65,12 @@ struct Workspace<panel_type, const T, device> : protected Matrix<T, device> {
     reset();
   }
 
-  // Note:
-  // these 2 next methods allows to use iterate_range2d
-  auto localNrTiles() const {
-    return BaseT::distribution().localNrTiles();
+  auto begin() const {
+    return range_.begin();
   }
 
-  auto offset() const {
-    switch (panel_type) {
-      case Coord::Row:
-        return LocalTileIndex{0, offset_.cols()};
-      case Coord::Col:
-        return LocalTileIndex{offset_.rows(), 0};
-    }
+  auto end() const {
+    return range_.end();
   }
 
   auto rankIndex() const {
@@ -118,7 +111,10 @@ protected:
   Workspace(matrix::Distribution dist_matrix,
             LocalTileSize offset)  // TODO migrate to index? don't know...
       : BaseT(dlaf::internal::compute_size<panel_type>(dist_matrix, offset)), dist_matrix_(dist_matrix),
-        offset_(offset) {
+        offset_(Coord::Col == panel_type ? offset.rows() : offset.cols()),
+        range_(iterate_range2d(Coord::Col == panel_type ? LocalTileIndex{offset_, 0}
+                                                        : LocalTileIndex{0, offset_},
+                               BaseT::distribution().localNrTiles())) {
     util::set(*((Matrix<T, device>*) this),
               [](auto&&) { return 0; });  // TODO remove this and enable util::set
 
@@ -140,9 +136,9 @@ protected:
   SizeType panel_index(const LocalTileIndex& index) const {
     switch (panel_type) {
       case Coord::Row:
-        return index.col() - offset_.cols();
+        return index.col() - offset_;
       case Coord::Col:
-        return index.row() - offset_.rows();
+        return index.row() - offset_;
     }
   }
 
@@ -151,9 +147,9 @@ protected:
     index = [&]() -> LocalTileIndex {
       switch (panel_type) {
         case Coord::Row:
-          return {0, index.col() - offset_.cols()};
+          return {0, index.col() - offset_};
         case Coord::Col:
-          return {index.row() - offset_.rows(), 0};
+          return {index.row() - offset_, 0};
       }
     }();
     DLAF_ASSERT(index.isIn(BaseT::distribution().localNrTiles()), index);
@@ -164,8 +160,11 @@ protected:
     return external_[panel_index(linear_index)].valid();
   }
 
+  using iter2d_t = decltype(iterate_range2d(LocalTileIndex{0, 0}, LocalTileSize{0, 0}));
+
   Distribution dist_matrix_;
-  LocalTileSize offset_;
+  SizeType offset_;
+  iter2d_t range_;
 
   ///> Stores the shared_future
   common::internal::vector<hpx::shared_future<ConstTileT>> external_;
@@ -203,7 +202,7 @@ void share_panel(BcastDir direction, Workspace<panel_type, T, device>& ws, Predi
       return ws.rankIndex().row();
   }();
 
-  for (const auto& index : iterate_range2d(ws.offset(), ws.localNrTiles())) {
+  for (const auto& index : ws) {
     const comm::IndexT_MPI source_rank = whos_root(index).second;
     if (rank == source_rank)
       hpx::dataflow(broadcast_send(direction), ws.read(index), serial_comm());
@@ -226,7 +225,7 @@ auto transpose(Workspace<Coord::Col, T, device>& ws_col, Workspace<Coord::Row, T
   };
 
   const auto& dist = ws_col.distribution_matrix();
-  for (const auto& index : iterate_range2d(ws_row.offset(), ws_row.localNrTiles())) {
+  for (const auto& index : ws_row) {
     SizeType k;
     comm::IndexT_MPI rank_owner;
 

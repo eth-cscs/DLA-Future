@@ -56,7 +56,9 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
   DLAF_ASSERT(k <= panel_width, k, panel_width);
 
   DLAF_ASSERT(t.nrTiles() == GlobalTileSize(1, 1), t);
-  DLAF_ASSERT(t.size() == GlobalElementSize(k, k), t.size(), k);
+  // TODO assertion about t.blocksize() == v.blocksize()?
+  // TODO assertion about t.size() is compatible with k/panel_width?
+  // DLAF_ASSERT(t.size() == GlobalElementSize(k, k), t.size(), k);
 
   // TODO assumption: no empty grid
 

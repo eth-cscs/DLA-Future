@@ -13,6 +13,7 @@
 #include <hpx/include/parallel_executors.hpp>
 #include <hpx/include/threads.hpp>
 #include <hpx/lcos_fwd.hpp>
+#include <hpx/runtime_local/thread_pool_helpers.hpp>
 #include <hpx/util/annotated_function.hpp>
 
 #include <limits>
@@ -29,7 +30,6 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/executor.h"
 #include "dlaf/communication/kernels.h"
-#include "dlaf/communication/pool.h"
 #include "dlaf/factorization/cholesky/api.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/distribution.h"
@@ -132,7 +132,6 @@ void Cholesky<Backend::MC, Device::CPU, T, MPIExecutor>::call_L(comm::Communicat
   using hpx::threads::executors::pool_executor;
   using hpx::threads::thread_priority_high;
   using hpx::threads::thread_priority_default;
-  using comm::internal::mpi_pool_exists;
 
   using ConstTile_t = matrix::Tile<const T, Device::CPU>;
 
@@ -141,9 +140,11 @@ void Cholesky<Backend::MC, Device::CPU, T, MPIExecutor>::call_L(comm::Communicat
   // Set up executor on the default queue with default priority.
   pool_executor executor_normal("default", thread_priority_default);
 
+  std::string mpi_pool = (hpx::resource::pool_exists("mpi")) ? "mpi" : "default";
+
   // Set up MPI executor pipelines
-  MPIExecutor executor_mpi_col(grid.colCommunicator());
-  MPIExecutor executor_mpi_row(grid.rowCommunicator());
+  MPIExecutor executor_mpi_col(mpi_pool, grid.colCommunicator());
+  MPIExecutor executor_mpi_row(mpi_pool, grid.rowCommunicator());
   common::Pipeline<MPIExecutor> mpi_col_task_chain(std::move(executor_mpi_col));
   common::Pipeline<MPIExecutor> mpi_row_task_chain(std::move(executor_mpi_row));
 

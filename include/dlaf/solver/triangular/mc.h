@@ -21,7 +21,6 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/executor.h"
 #include "dlaf/communication/kernels.h"
-#include "dlaf/communication/pool.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/matrix.h"
@@ -408,7 +407,6 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid gr
   using hpx::threads::executors::pool_executor;
   using hpx::threads::thread_priority_high;
   using hpx::threads::thread_priority_default;
-  using comm::internal::mpi_pool_exists;
   using common::internal::vector;
   using ConstTileType = typename Matrix<T, Device::CPU>::ConstTileType;
 

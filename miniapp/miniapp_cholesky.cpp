@@ -11,9 +11,11 @@
 #include <iostream>
 
 #include <mpi.h>
+#include <hpx/include/resource_partitioner.hpp>
 #include <hpx/init.hpp>
 
 #include "dlaf/auxiliary/norm.h"
+#include "dlaf/common/timer.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/error.h"
 #include "dlaf/communication/executor.h"
@@ -24,8 +26,6 @@
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
-
-#include "dlaf/common/timer.h"
 
 namespace {
 
@@ -180,11 +180,33 @@ int main(int argc, char** argv) {
     ("nwarmups",     value<int64_t>()    ->default_value(   1),                        "Number of warmup runs")
     ("check-result", value<std::string>()->default_value(  "")->implicit_value("all"), "Enable result check ('all', 'last')")
     ("polling",      bool_switch()       ->default_value(false),                       "Use the MPI polling mechanism.")
+    ("mpipool",      bool_switch()       ->default_value(false),                       "Dedicate a core to MPI if available.")
   ;
   // clang-format on
 
+  variables_map vm;
+  store(command_line_parser(argc, argv).allow_unregistered().options(desc_commandline).run(), vm);
+  bool use_mpi_pool = vm["mpipool"].as<bool>();
+
+  // Create a thread pool with a single core that we will use for all
+  // communication related tasks
   hpx::init_params p;
   p.desc_cmdline = desc_commandline;
+  if (use_mpi_pool) {
+    // p.rp_mode = hpx::resource::mode_allow_oversubscription;
+    p.rp_callback = [](auto& rp) {
+      int ntasks;
+      DLAF_MPI_CALL(MPI_Comm_size(MPI_COMM_WORLD, &ntasks));
+      if (ntasks > 1) {
+        // bool exclusive = false; // mode has to be hpx::resource::mode_allow_dynamic_pools
+        // std::size_t num_threads = 2; // only makes sense with hpx::resource::mode_allow_oversubscription
+        std::string pool_name = "mpi";
+        rp.create_thread_pool(pool_name, hpx::resource::scheduling_policy::local_priority_fifo);
+        // rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], pool_name, exclusive, num_threads);
+        rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], pool_name);
+      }
+    };
+  }
   return hpx::init(argc, argv, p);
 }
 

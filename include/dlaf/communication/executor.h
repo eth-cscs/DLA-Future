@@ -41,6 +41,7 @@ public:
   using execution_category = hpx::parallel::execution::parallel_execution_tag;
 
   mpi_polling_executor(Communicator comm) : comm_(std::move(comm)) {}
+  mpi_polling_executor(std::string, Communicator comm) : comm_(std::move(comm)) {}
 
   constexpr bool operator==(const mpi_polling_executor& rhs) const noexcept {
     return comm_ == rhs.comm_;

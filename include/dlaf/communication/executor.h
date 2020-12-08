@@ -43,15 +43,15 @@ public:
   mpi_polling_executor(Communicator comm) : comm_(std::move(comm)) {}
   mpi_polling_executor(std::string, Communicator comm) : comm_(std::move(comm)) {}
 
-  constexpr bool operator==(const mpi_polling_executor& rhs) const noexcept {
+  bool operator==(const mpi_polling_executor& rhs) const noexcept {
     return comm_ == rhs.comm_;
   }
 
-  constexpr bool operator!=(const mpi_polling_executor& rhs) const noexcept {
+  bool operator!=(const mpi_polling_executor& rhs) const noexcept {
     return !(*this == rhs);
   }
 
-  constexpr const mpi_polling_executor& context() const noexcept {
+  const mpi_polling_executor& context() const noexcept {
     return *this;
   }
 

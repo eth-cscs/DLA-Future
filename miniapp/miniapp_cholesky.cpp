@@ -82,7 +82,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   options_t opts = check_options(vm);
 
   // Only needed for the `polling` approach
-  hpx::mpi::experimental::enable_user_polling internal_helper("default");
+  std::string mpi_pool = (hpx::resource::pool_exists("mpi")) ? "mpi" : "default";
+  hpx::mpi::experimental::enable_user_polling internal_helper(mpi_pool);
 
   Communicator world(MPI_COMM_WORLD);
   CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);

@@ -22,11 +22,12 @@ class DlaFuture(CMakePackage, CudaPackage):
 
     depends_on("cmake@3.14:", type="build")
     depends_on("doxygen", type="build", when="+doc")
-
     depends_on("mpi")
     depends_on("blaspp")
     depends_on("lapackpp")
-    depends_on("hpx@1.5.0 cxxstd=14 networking=none")
+    depends_on("hpx cxxstd=14 networking=none")
+    depends_on("hpx@1.5.0", when="~cuda")
+    depends_on("hpx@master +cuda", when="+cuda")
 
     depends_on("hpx build_type=Debug", when="build_type=Debug")
     depends_on("hpx build_type=Release", when="build_type=Release")

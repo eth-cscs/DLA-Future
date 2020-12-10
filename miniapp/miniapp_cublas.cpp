@@ -21,17 +21,13 @@
 #include <hpx/thread.hpp>
 
 #include "dlaf/cublas/executor.h"
+#include "dlaf/init.h"
 
-int hpx_main() {
-  constexpr int device = 0;
-  constexpr std::size_t num_streams_per_worker_thread = 10;
+int hpx_main(int argc, char* argv[]) {
+  dlaf::initialize(argc, argv);
 
-  dlaf::cuda::StreamPool stream_pool{device, num_streams_per_worker_thread,
-                                     hpx::threads::thread_priority::high};
-  dlaf::cublas::HandlePool handle_pool{device, CUBLAS_POINTER_MODE_HOST};
-  dlaf::cublas::Executor cublas_exec{stream_pool, handle_pool};
-
-  hpx::cuda::experimental::enable_user_polling p;
+  dlaf::cublas::Executor cublas_exec{dlaf::internal::getHpCudaStreamPool(),
+                                     dlaf::internal::getCublasHandlePool()};
 
   constexpr int n = 10000;
   constexpr int incx = 1;
@@ -68,7 +64,10 @@ int hpx_main() {
 
   f2.get();
 
-  return hpx::finalize();
+  dlaf::finalize();
+  hpx::finalize();
+
+  return 0;
 }
 
 int main(int argc, char** argv) {

@@ -15,7 +15,7 @@
 #include "blas.hh"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/types.h"
-#include "dlaf/util_tile.h"
+#include "dlaf/util_blas.h"
 
 namespace dlaf {
 namespace tile {

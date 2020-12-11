@@ -80,7 +80,8 @@ RUN wget -q https://github.com/gperftools/gperftools/releases/download/gperftool
 
 # Install HPX
 ARG HPX_FORK=STEllAR-GROUP
-ARG HPX_VERSION=1.5.0
+ARG HPX_VERSION=1.5.1
+ARG HPX_WITH_CUDA=OFF
 ARG HPX_PATH=/usr/local/hpx
 RUN wget -q https://github.com/${HPX_FORK}/hpx/archive/${HPX_VERSION}.tar.gz -O hpx.tar.gz && \
     tar -xzf hpx.tar.gz && \
@@ -95,6 +96,7 @@ RUN wget -q https://github.com/${HPX_FORK}/hpx/archive/${HPX_VERSION}.tar.gz -O 
       -DCMAKE_INSTALL_PREFIX=$HPX_PATH \
       -DHPX_WITH_MAX_CPU_COUNT=128 \
       -DHPX_WITH_NETWORKING=OFF \
+      -DHPX_WITH_CUDA=$HPX_WITH_CUDA \
       -DHPX_WITH_TESTS=OFF \
       -DHPX_WITH_EXAMPLES=OFF && \
     make -j$(nproc) && \

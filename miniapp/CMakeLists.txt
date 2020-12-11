@@ -1,7 +1,7 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2019, ETH Zurich
+# Copyright (c) 2018-2020, ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
@@ -18,4 +18,9 @@ target_link_libraries(miniapp_triangular_solver PRIVATE DLAF)
 if (DLAF_WITH_TEST)
   target_link_libraries(miniapp_triangular_solver PRIVATE DLAF_test)
   target_add_warnings(miniapp_triangular_solver)
+endif()
+
+if(DLAF_WITH_CUDA)
+  add_executable(miniapp_cublas miniapp_cublas.cpp)
+  target_link_libraries(miniapp_cublas PRIVATE DLAF)
 endif()

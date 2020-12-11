@@ -11,6 +11,7 @@
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
 
+#include <atomic>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -1160,17 +1161,17 @@ auto createConstMatrix() {
 TEST(MatrixDestructorFutures, NonConstAfterRead) {
   hpx::future<void> last_task;
 
-  volatile int guard = 0;
+  std::atomic<bool> guard{false};
   {
     auto matrix = createMatrix<TypeParam>();
 
     auto shared_future = matrix.read(LocalTileIndex(0, 0));
     last_task = shared_future.then(hpx::launch::async, [&guard](auto&&) {
       hpx::this_thread::sleep_for(WAIT_GUARD);
-      EXPECT_EQ(0, guard);
+      EXPECT_FALSE(guard);
     });
   }
-  guard = 1;
+  guard = true;
 
   last_task.get();
 }
@@ -1178,17 +1179,17 @@ TEST(MatrixDestructorFutures, NonConstAfterRead) {
 TEST(MatrixDestructorFutures, NonConstAfterReadWrite) {
   hpx::future<void> last_task;
 
-  volatile int guard = 0;
+  std::atomic<bool> guard{0};
   {
     auto matrix = createMatrix<TypeParam>();
 
     auto future = matrix(LocalTileIndex(0, 0));
     last_task = future.then(hpx::launch::async, [&guard](auto&&) {
       hpx::this_thread::sleep_for(WAIT_GUARD);
-      EXPECT_EQ(0, guard);
+      EXPECT_FALSE(guard);
     });
   }
-  guard = 1;
+  guard = true;
 
   last_task.get();
 }
@@ -1196,17 +1197,17 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWrite) {
 TEST(MatrixDestructorFutures, ConstAfterRead) {
   hpx::future<void> last_task;
 
-  volatile int guard = 0;
+  std::atomic<bool> guard{0};
   {
     auto matrix = createConstMatrix<TypeParam>();
 
     auto sf = matrix.read(LocalTileIndex(0, 0));
     last_task = sf.then(hpx::launch::async, [&guard](auto&&) {
       hpx::this_thread::sleep_for(WAIT_GUARD);
-      EXPECT_EQ(0, guard);
+      EXPECT_FALSE(guard);
     });
   }
-  guard = 1;
+  guard = true;
 
   last_task.get();
 }

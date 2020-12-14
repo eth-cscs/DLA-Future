@@ -21,7 +21,7 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/eigensolver/gen_to_std/api.h"
-#include "dlaf/init.h"
+#include "dlaf/executors.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/matrix.h"
@@ -53,8 +53,8 @@ void GenToStd<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
   using hpx::threads::thread_priority;
   using hpx::util::unwrapping;
 
-  auto executor_hp = dlaf::internal::getHpExecutor<Backend::MC>();
-  auto executor_np = dlaf::internal::getHpExecutor<Backend::MC>();
+  auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
+  auto executor_np = dlaf::getNpExecutor<Backend::MC>();
 
   const SizeType m = mat_a.nrTiles().rows();
   const SizeType n = mat_a.nrTiles().cols();

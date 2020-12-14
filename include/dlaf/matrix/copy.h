@@ -13,7 +13,7 @@
 #include <hpx/include/util.hpp>
 #include <hpx/local/future.hpp>
 
-#include "dlaf/init.h"
+#include "dlaf/executors.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
@@ -38,7 +38,7 @@ void copy(Matrix<const T, Source>& source, Matrix<T, Destination>& dest) {
 
   for (SizeType j = 0; j < local_tile_cols; ++j)
     for (SizeType i = 0; i < local_tile_rows; ++i)
-      hpx::dataflow(dlaf::internal::getCopyExecutor<Source, Destination>(), unwrapExtendTiles(copy_o),
+      hpx::dataflow(dlaf::getCopyExecutor<Source, Destination>(), unwrapExtendTiles(copy_o),
                     source.read(LocalTileIndex(i, j)), dest(LocalTileIndex(i, j)));
 }
 }

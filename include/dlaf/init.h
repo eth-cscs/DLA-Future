@@ -11,11 +11,8 @@
 
 #include <iostream>
 
-#include <hpx/execution.hpp>
-#include <hpx/functional.hpp>
 #include <hpx/include/resource_partitioner.hpp>
 #include <hpx/program_options.hpp>
-#include <hpx/thread.hpp>
 
 #ifdef DLAF_WITH_CUDA
 #include <hpx/modules/async_cuda.hpp>
@@ -68,108 +65,17 @@ struct Init<Backend::GPU> {
     initializeNpCudaStreamPool(device, cfg.num_np_cuda_streams_per_thread);
     initializeHpCudaStreamPool(device, cfg.num_hp_cuda_streams_per_thread);
     initializeCublasHandlePool();
-    hpx::cuda::experimental::detail::register_polling(hpx::resource::get_thread_pool(0));
+    hpx::cuda::experimental::detail::register_polling(hpx::resource::get_thread_pool("default"));
   }
 
   static void finalize() {
     finalizeNpCudaStreamPool();
     finalizeHpCudaStreamPool();
     finalizeCublasHandlePool();
-    hpx::cuda::experimental::detail::unregister_polling(hpx::resource::get_thread_pool(0));
+    hpx::cuda::experimental::detail::unregister_polling(hpx::resource::get_thread_pool("default"));
   }
 };
 #endif
-
-template <Backend B>
-struct GetMPIExecutor {
-  static auto call() {
-    return hpx::execution::parallel_executor(&hpx::resource::get_thread_pool(
-                                                 hpx::resource::pool_exists("mpi") ? "mpi" : "default"),
-                                             hpx::threads::thread_priority::high);
-  }
-};
-
-template <Backend B>
-decltype(auto) getMPIExecutor() {
-  return GetMPIExecutor<B>::call();
-}
-
-template <Backend B>
-struct GetNpExecutor {
-  static auto call() {
-    return hpx::execution::parallel_executor{};
-  }
-};
-
-#ifdef DLAF_WITH_CUDA
-template <>
-struct GetNpExecutor<Backend::GPU> {
-  static auto call() {
-    return dlaf::cublas::Executor{getNpCudaStreamPool(), getCublasHandlePool()};
-  }
-};
-#endif
-
-template <Backend B>
-decltype(auto) getNpExecutor() {
-  return GetNpExecutor<B>::call();
-}
-
-template <Backend B>
-struct GetHpExecutor {
-  static auto call() {
-    return hpx::execution::parallel_executor{hpx::threads::thread_priority::high};
-  }
-};
-
-#ifdef DLAF_WITH_CUDA
-template <>
-struct GetHpExecutor<Backend::GPU> {
-  static auto call() {
-    return dlaf::cublas::Executor{getHpCudaStreamPool(), getCublasHandlePool()};
-  }
-};
-#endif
-
-template <Backend B>
-decltype(auto) getHpExecutor() {
-  return GetHpExecutor<B>::call();
-}
-
-template <Device S, Device D>
-struct GetCopyExecutor {
-  static auto call() {
-    return hpx::execution::parallel_executor{};
-  }
-};
-
-#ifdef DLAF_WITH_CUDA
-template <>
-struct GetCopyExecutor<Device::GPU, Device::CPU> {
-  static auto call() {
-    return dlaf::cuda::Executor{getNpCudaStreamPool()};
-  }
-};
-
-template <>
-struct GetCopyExecutor<Device::CPU, Device::GPU> {
-  static auto call() {
-    return dlaf::cuda::Executor{getNpCudaStreamPool()};
-  }
-};
-
-template <>
-struct GetCopyExecutor<Device::GPU, Device::GPU> {
-  static auto call() {
-    return dlaf::cuda::Executor{getNpCudaStreamPool()};
-  }
-};
-#endif
-
-template <Device S, Device D>
-decltype(auto) getCopyExecutor() {
-  return GetCopyExecutor<S, D>::call();
-}
 
 template <typename T>
 void update_configuration(hpx::program_options::variables_map const& vm, T& var,

@@ -24,8 +24,8 @@
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/functions_sync.h"
+#include "dlaf/executors.h"
 #include "dlaf/factorization/cholesky/api.h"
-#include "dlaf/init.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/distribution.h"
 
@@ -80,8 +80,8 @@ struct Cholesky<Backend::MC, Device::CPU, T> {
 
 template <class T>
 void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a) {
-  auto executor_hp = dlaf::internal::getHpExecutor<Backend::MC>();
-  auto executor_np = dlaf::internal::getNpExecutor<Backend::MC>();
+  auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
+  auto executor_np = dlaf::getNpExecutor<Backend::MC>();
 
   // Number of tile (rows = cols)
   SizeType nrtile = mat_a.nrTiles().cols();
@@ -120,9 +120,9 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
                                                    Matrix<T, Device::CPU>& mat_a) {
   using ConstTileType = typename Matrix<T, Device::CPU>::ConstTileType;
 
-  auto executor_hp = dlaf::internal::getHpExecutor<Backend::MC>();
-  auto executor_np = dlaf::internal::getNpExecutor<Backend::MC>();
-  auto executor_mpi = dlaf::internal::getMPIExecutor<Backend::MC>();
+  auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
+  auto executor_np = dlaf::getNpExecutor<Backend::MC>();
+  auto executor_mpi = dlaf::getMPIExecutor<Backend::MC>();
 
   // Set up MPI executor
   comm::Index2D this_rank = grid.rank();

@@ -65,6 +65,8 @@ linear_system_t sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T al
 }
 
 int hpx_main(hpx::program_options::variables_map& vm) {
+  dlaf::initialize(vm);
+
   options_t opts = check_options(vm);
 
   Communicator world(MPI_COMM_WORLD);
@@ -134,6 +136,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     }
   }
 
+  dlaf::finalize();
+
   return hpx::finalize();
 }
 
@@ -160,6 +164,8 @@ int main(int argc, char** argv) {
     ("check-result",  bool_switch()    ->default_value(false), "Check the triangular system solution (for each run)")
   ;
   // clang-format on
+
+  desc_commandline.add(dlaf::get_options_description());
 
   hpx::init_params p;
   p.desc_cmdline = desc_commandline;

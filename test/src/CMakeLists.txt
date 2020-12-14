@@ -13,7 +13,7 @@ target_link_libraries(DLAF_gtest_hpx_main
   PUBLIC
     gtest
   PRIVATE
-    DLAF
+    dlaf.core
     HPX::hpx
 )
 
@@ -30,7 +30,7 @@ target_link_libraries(DLAF_gtest_mpihpx_main
   PUBLIC
     gtest
   PRIVATE
-    DLAF
+    dlaf.core
     MPI::MPI_CXX
     HPX::hpx
 )

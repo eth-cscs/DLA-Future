@@ -23,6 +23,7 @@
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/functions_sync.h"
+#include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
@@ -72,7 +73,10 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
   const LocalTileIndex v_end_loc{dist.localNrTiles().rows(), v_start_loc.col() + 1};
 
   // TODO it would be better to embed this reset inside a bigger task
-  matrix::util::set(t, [](auto&&) { return 0; });
+  t(LocalTileIndex{0, 0}).then(unwrapping([](auto&& tile) {
+    lapack::laset(lapack::MatrixType::General, tile.size().rows(), tile.size().cols(), 0, 0, tile.ptr(),
+                  tile.ld());
+  }));
 
   // T(0:j, j) = T(0:j, 0:j) . -tau(j) . V(j:, 0:j)* . V(j:, j)
   for (SizeType j = 0; j < k; ++j) {

@@ -46,6 +46,9 @@ if (DLAF_WITH_CUDA)
   find_package(CUDALIBS REQUIRED)
 endif()
 
+# TODO: use option?
+set(DLAF_WITH_CUDA_MPI_RDMA OFF CACHE BOOL "Enable MPI CUDA RDMA") # TODO: Or GPUDirect, or CUDA-aware MPI?
+
 # ---------------------------------------------------------------------------
 # Libraries configuration
 # ---------------------------------------------------------------------------
@@ -73,6 +76,12 @@ find_package(HPX 1.6.0 REQUIRED)
 find_package(OpenMP REQUIRED)
 find_package(blaspp REQUIRED)
 find_package(lapackpp REQUIRED)
+
+# ----- UMPIRE
+set(DLAF_WITH_UMPIRE OFF CACHE BOOL "Enable Umpire support")
+if (DLAF_WITH_UMPIRE)
+  find_package(Umpire REQUIRED)
+endif()
 
 # ----- EXTERNAL
 add_subdirectory(external)

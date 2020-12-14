@@ -12,8 +12,13 @@
 
 #include <cstdlib>
 #include <memory>
+#include <mutex>
 #ifdef DLAF_WITH_CUDA
 #include <cuda_runtime.h>
+#endif
+
+#ifdef DLAF_WITH_UMPIRE
+#include <umpire/Allocator.hpp>
 #endif
 
 #include "dlaf/types.h"
@@ -24,8 +29,12 @@
 namespace dlaf {
 namespace memory {
 
-/// The class @c MemoryChunk represents a layer of abstraction over the underlying host memory.
+#ifdef DLAF_WITH_UMPIRE
+  umpire::Allocator& getHostAllocator();
+  umpire::Allocator& getDeviceAllocator();
+#endif
 
+/// The class @c MemoryChunk represents a layer of abstraction over the underlying host memory.
 template <class T, Device device>
 class MemoryChunk {
 public:
@@ -48,14 +57,26 @@ public:
     std::size_t mem_size = static_cast<std::size_t>(size_) * sizeof(T);
 #ifdef DLAF_WITH_CUDA
     if (device == Device::CPU) {
+#if DLAF_WITH_UMPIRE
+      ptr_ = static_cast<T*>(getHostAllocator().allocate(mem_size));
+#else
       DLAF_CUDA_CALL(cudaMallocHost(&ptr_, mem_size));
+#endif
     }
     else {
+#ifdef DLAF_WITH_UMPIRE
+      ptr_ = static_cast<T*>(getDeviceAllocator().allocate(mem_size));
+#else
       DLAF_CUDA_CALL(cudaMalloc(&ptr_, mem_size));
+#endif
     }
 #else
     if (device == Device::CPU) {
+#if DLAF_WITH_UMPIRE
+      ptr_ = static_cast<T*>(getHostAllocator().allocate(mem_size));
+#else
       ptr_ = static_cast<T*>(std::malloc(mem_size));
+#endif
     }
     else {
       std::cout << "[ERROR] CUDA code was requested but the `DLAF_WITH_CUDA` flag was not passed!";
@@ -136,14 +157,26 @@ private:
     if (allocated_) {
 #ifdef DLAF_WITH_CUDA
       if (device == Device::CPU) {
+#if DLAF_WITH_UMPIRE
+        getHostAllocator().deallocate(ptr_);
+#else
         DLAF_CUDA_CALL(cudaFreeHost(ptr_));
+#endif
       }
       else {
+#ifdef DLAF_WITH_UMPIRE
+        getDeviceAllocator().deallocate(ptr_);
+#else
         DLAF_CUDA_CALL(cudaFree(ptr_));
+#endif
       }
 #else
       if (device == Device::CPU) {
+#if DLAF_WITH_UMPIRE
+        getHostAllocator().deallocate(ptr_);
+#else
         std::free(ptr_);
+#endif
       }
 #endif
     }

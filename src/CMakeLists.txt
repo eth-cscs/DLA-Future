@@ -70,6 +70,7 @@ target_link_libraries(dlaf.prop
     blaspp
     $<TARGET_NAME_IF_EXISTS:dlaf::cublas>
     $<TARGET_NAME_IF_EXISTS:dlaf::cudart>
+    $<$<BOOL:${DLAF_WITH_UMPIRE}>:umpire>
 )
 target_compile_features(dlaf.prop
   INTERFACE
@@ -82,6 +83,7 @@ target_compile_definitions(dlaf.prop
     $<$<BOOL:${DLAF_ASSERT_HEAVY_ENABLE}>:DLAF_ASSERT_HEAVY_ENABLE>
     DLAF_FUNCTION_NAME=$<IF:$<BOOL:is_pretty_function_available>,__PRETTY_FUNCTION__,__func__>
     $<$<BOOL:${DLAF_WITH_CUDA}>:DLAF_WITH_CUDA>
+    $<$<BOOL:${DLAF_WITH_UMPIRE}>:DLAF_WITH_UMPIRE>
 )
 
 # Define DLAF's CORE library
@@ -97,6 +99,7 @@ add_library(dlaf.core
     matrix/tile.cpp
     matrix.cpp
     memory/memory_view.cpp
+    memory/memory_chunk.cpp
 )
 target_link_libraries(dlaf.core PUBLIC dlaf.prop)
 

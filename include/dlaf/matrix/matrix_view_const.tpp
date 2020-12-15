@@ -18,7 +18,7 @@ template <template <class, Device> class MatrixType, class T2,
           std::enable_if_t<std::is_same<T, std::remove_const_t<T2>>::value, int>>
 MatrixView<const T, device>::MatrixView(blas::Uplo uplo, MatrixType<T2, device>& matrix)
     : MatrixBase(matrix) {
-  if (uplo == blas::Uplo::General)
+  if (uplo != blas::Uplo::General)
     DLAF_UNIMPLEMENTED(uplo);
   setUpTiles(matrix);
 }

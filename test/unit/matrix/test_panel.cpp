@@ -209,8 +209,7 @@ TYPED_TEST(WorkspaceLocalTest, PopulateCol_RowWise) {
   // TODO test for masked row (e.g. "v0")
   common::Pipeline<comm::CommunicatorGrid> serial_comm(std::move(grid));
 
-  share_panel(
-      comm::row_wise{}, ws_v, [&](auto&&) { return std::make_pair(-1, main_column); }, serial_comm);
+  broadcast(main_column, ws_v, serial_comm);
 
   for (const auto& i_w : ws_v) {
     const auto global_row = dist.template globalTileFromLocalTile<Coord::Row>(i_w.row());
@@ -225,23 +224,8 @@ TYPED_TEST(WorkspaceLocalTest, PopulateCol_RowWise) {
   }
 
   Panel<Coord::Row, TypeParam, dlaf::Device::CPU> ws_h(dist, at_offset);
-  auto whos_root = transpose(ws_v, ws_h);
 
-  // Check that the row panel has the info (just in locally available ones)
-  for (const auto& i_w : ws_h) {
-    const auto global_row = dist.template globalTileFromLocalTile<Coord::Col>(i_w.col());
-    const auto rank_owner_row = dist.template rankGlobalTile<Coord::Row>(global_row);
-
-    if (rank_owner_row != rank.row())
-      continue;
-
-    hpx::dataflow(unwrapping([=](auto&& tile) {
-                    EXPECT_EQ(TypeUtil::element(-global_row, 26), tile({0, 0}));
-                  }),
-                  ws_h.read(i_w));
-  }
-
-  share_panel(comm::col_wise{}, ws_h, whos_root, serial_comm);
+  broadcast(ws_v, ws_h, serial_comm);
 
   // Check that the row panel has the informations
   for (const auto& i_w : ws_h) {

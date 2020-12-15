@@ -98,21 +98,36 @@ struct GetCopyExecutor<Device::GPU, Device::GPU> {
 #endif
 }
 
+/// Returns an MPI executor approprate for use with the given backend.
+///
+/// @tparam B backend with which the executor should be used.
 template <Backend B>
 decltype(auto) getMPIExecutor() {
   return internal::GetMPIExecutor<B>::call();
 }
 
+/// Returns a normal priority executor approprate for use with the given
+/// backend.
+///
+/// @tparam B backend with which the executor should be used.
 template <Backend B>
 decltype(auto) getNpExecutor() {
   return internal::GetNpExecutor<B>::call();
 }
 
+/// Returns a high priority executor approprate for use with the given
+/// backend.
+///
+/// @tparam B backend with which the executor should be used.
 template <Backend B>
 decltype(auto) getHpExecutor() {
   return internal::GetHpExecutor<B>::call();
 }
 
+/// Returns an executor appropriate for copying from @tparam S to @tparam D.
+///
+/// @tparam S source device.
+/// @tparam D destination device.
 template <Device S, Device D>
 decltype(auto) getCopyExecutor() {
   return internal::GetCopyExecutor<S, D>::call();

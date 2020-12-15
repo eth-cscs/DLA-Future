@@ -85,7 +85,28 @@ cublas::HandlePool getCublasHandlePool() {
   DLAF_ASSERT(bool(handle_pool), "");
   return *handle_pool;
 }
+
+template <>
+void Init<Backend::GPU>::initialize(configuration const& cfg) {
+  const int device = 0;
+  initializeNpCudaStreamPool(device, cfg.num_np_cuda_streams_per_thread);
+  initializeHpCudaStreamPool(device, cfg.num_hp_cuda_streams_per_thread);
+  initializeCublasHandlePool();
+  hpx::cuda::experimental::detail::register_polling(hpx::resource::get_thread_pool("default"));
+}
+
+template <>
+void Init<Backend::GPU>::finalize() {
+  finalizeNpCudaStreamPool();
+  finalizeHpCudaStreamPool();
+  finalizeCublasHandlePool();
+  hpx::cuda::experimental::detail::unregister_polling(hpx::resource::get_thread_pool("default"));
+}
 #endif
+
+template <typename T>
+void update_configuration(hpx::program_options::variables_map const& vm, T& var,
+                          std::string const& cmdline_option, std::string const& env_var);
 
 template <>
 inline void update_configuration(hpx::program_options::variables_map const& vm, std::size_t& var,

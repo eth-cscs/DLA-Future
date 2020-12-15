@@ -241,15 +241,16 @@ struct UnwrapExtendTiles {
 };
 }
 
-/// Custom version of hpx::util::unwrapping, which unwraps and forwards all
-/// arguments to the function f, but also returns all arguments as they are with
-/// the exception of future<Tile> arguments. future<Tile> arguments are returned
-/// unwrapped (as getting the value from the future leaves the future empty).
-/// The return value of f is ignored. This wrapper is useful for extending the
-/// lifetimes of tiles with custom executors such as the CUDA/cuBLAS executors,
-/// where f returns immediately, but the tiles must be kept alive until the
-/// completion of the operation. The wrapper can be used with "normal" blocking
-/// host-side operations as well.
+/// Custom version of hpx::util::unwrapping for tile lifetime management.
+///
+/// Unwraps and forwards all arguments to the function f, but also returns all
+/// arguments as they are with the exception of future<Tile> arguments.
+/// future<Tile> arguments are returned unwrapped (as getting the value from the
+/// future leaves the future empty).  The return value of f is ignored. This
+/// wrapper is useful for extending the lifetimes of tiles with custom executors
+/// such as the CUDA/cuBLAS executors, where f returns immediately, but the
+/// tiles must be kept alive until the completion of the operation. The wrapper
+/// can be used with "normal" blocking host-side operations as well.
 template <typename F>
 auto unwrapExtendTiles(F&& f) {
   return internal::UnwrapExtendTiles<std::decay_t<F>>{std::forward<F>(f)};

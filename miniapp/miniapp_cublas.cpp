@@ -20,14 +20,13 @@
 #include <hpx/modules/async_cuda.hpp>
 #include <hpx/thread.hpp>
 
-#include "dlaf/cublas/executor.h"
+#include "dlaf/executors.h"
 #include "dlaf/init.h"
 
 int hpx_main(int argc, char* argv[]) {
   dlaf::initialize(argc, argv);
 
-  dlaf::cublas::Executor cublas_exec{dlaf::internal::getHpCudaStreamPool(),
-                                     dlaf::internal::getCublasHandlePool()};
+  auto exec = dlaf::getHpExecutor<dlaf::Backend::GPU>();
 
   constexpr int n = 10000;
   constexpr int incx = 1;
@@ -46,8 +45,8 @@ int hpx_main(int argc, char* argv[]) {
     return &alpha;
   });
 
-  hpx::future<cublasStatus_t> f1 = hpx::dataflow(cublas_exec, hpx::util::unwrapping(cublasDaxpy), n,
-                                                 alpha_f, x.data().get(), incx, y.data().get(), incy);
+  hpx::future<cublasStatus_t> f1 = hpx::dataflow(exec, hpx::util::unwrapping(cublasDaxpy), n, alpha_f,
+                                                 x.data().get(), incx, y.data().get(), incy);
 
   hpx::future<void> f2 = f1.then([&y](hpx::future<cublasStatus_t> s) {
     DLAF_CUBLAS_CALL(s.get());

@@ -52,14 +52,8 @@ TYPED_TEST(WorkspaceLocalTest, BasicColPanel) {
   ws({0, 0}).then(unwrapping([](auto&& tile) {
     tile({0, 0}) = TypeUtilities<TypeParam>::element(13, 26);
   }));
-  ws({1, 0}).then(unwrapping([](auto&& tile) {
-    tile({0, 0}) = TypeUtilities<TypeParam>::element(5, 10);
-  }));
   ws.read({0, 0}).then(unwrapping([](auto&& tile) {
     EXPECT_EQ(TypeUtilities<TypeParam>::element(13, 26), tile({0, 0}));
-  }));
-  ws.read({1, 0}).then(unwrapping([](auto&& tile) {
-    EXPECT_EQ(TypeUtilities<TypeParam>::element(5, 10), tile({0, 0}));
   }));
 
   for (const auto& index : common::iterate_range2d(matrix.distribution().localNrTiles()))
@@ -91,14 +85,8 @@ TYPED_TEST(WorkspaceLocalTest, BasicRowPanel) {
   ws({0, 0}).then(unwrapping([](auto&& tile) {
     tile({0, 0}) = TypeUtilities<TypeParam>::element(13, 26);
   }));
-  ws({0, 1}).then(unwrapping([](auto&& tile) {
-    tile({0, 0}) = TypeUtilities<TypeParam>::element(5, 10);
-  }));
   ws.read({0, 0}).then(unwrapping([](auto&& tile) {
     EXPECT_EQ(TypeUtilities<TypeParam>::element(13, 26), tile({0, 0}));
-  }));
-  ws.read({0, 1}).then(unwrapping([](auto&& tile) {
-    EXPECT_EQ(TypeUtilities<TypeParam>::element(5, 10), tile({0, 0}));
   }));
 
   for (const auto& index : common::iterate_range2d(matrix.distribution().localNrTiles()))

@@ -54,23 +54,15 @@ struct Workspace<panel_type, const T, device> : protected Matrix<T, device> {
     return dist_matrix_;
   }
 
-  // TODO a check about a not already used/asked for tile (avoiding "double" tiles)
   void set_tile(const LocalTileIndex& index, hpx::shared_future<ConstTileT> new_tile_fut) {
     DLAF_ASSERT(index.isIn(dist_matrix_.localNrTiles()), index, dist_matrix_.localNrTiles());
-    DLAF_ASSERT(internal_.count(panel_index(index)) == 0, "internal tile have been used already", index);
+    DLAF_ASSERT(internal_.count(panel_index(index)) == 0, "internal tile have been already used", index);
     DLAF_ASSERT(!is_masked(index), "already set to external", index);
 
     external_[panel_index(index)] = std::move(new_tile_fut);
   }
 
-  // Note:
-  // TODO LocalTileIndex must take into account the offset, so to keep association with SoR of the
-  // related matrix.
-  //
-  // You can access tiles by:
-  // - read(LocalTileIndex)           LocalTileIndex in the panel
-  // - TODO read(SizeType)                 Linear local index (like an array)
-  // - TODO read(GlobalTileIndex)     still thinking how it should work
+  // index w.r.t. the matrix coordinates system, not in the workspace (so it takes into account the offset)
   hpx::shared_future<ConstTileT> read(const LocalTileIndex& index) {
     DLAF_ASSERT(index.isIn(dist_matrix_.localNrTiles()), index, dist_matrix_.localNrTiles());
     if (is_masked(index))
@@ -81,7 +73,7 @@ struct Workspace<panel_type, const T, device> : protected Matrix<T, device> {
     }
   }
 
-  // it is possible to reset the mask for external tiles, so that memory can be easily re-used
+  // it is possible to reset masks, so that memory can be easily re-used
   void reset() {
     external_.clear();
     internal_.clear();
@@ -147,6 +139,7 @@ protected:
 
   LocalTileIndex full_index(LocalTileIndex index) const {
     DLAF_ASSERT_MODERATE(index.row() == 0 || index.col() == 0, index);
+
     index = [&]() -> LocalTileIndex {
       switch (panel_type) {
         case Coord::Row:
@@ -155,6 +148,7 @@ protected:
           return {index.row() - offset_, 0};
       }
     }();
+
     DLAF_ASSERT(index.isIn(BaseT::distribution().localNrTiles()), index);
     return index;
   }
@@ -187,6 +181,7 @@ struct Workspace : public Workspace<panel_type, const T, device> {
     DLAF_ASSERT(index.isIn(BaseT::dist_matrix_.localNrTiles()), index,
                 BaseT::dist_matrix_.localNrTiles());
     DLAF_ASSERT(!is_masked(index), "read-only access on external tiles", index);
+
     BaseT::internal_.insert(BaseT::panel_index(index));
     return BaseT::operator()(BaseT::full_index(index));
   }

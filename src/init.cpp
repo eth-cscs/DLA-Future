@@ -105,12 +105,12 @@ void Init<Backend::GPU>::finalize() {
 #endif
 
 template <typename T>
-void update_configuration(hpx::program_options::variables_map const& vm, T& var,
-                          std::string const& cmdline_option, std::string const& env_var);
+void updateConfigurationValue(hpx::program_options::variables_map const& vm, T& var,
+                              std::string const& cmdline_option, std::string const& env_var);
 
 template <>
-inline void update_configuration(hpx::program_options::variables_map const& vm, std::size_t& var,
-                                 std::string const& env_var, std::string const& cmdline_option) {
+void updateConfigurationValue(hpx::program_options::variables_map const& vm, std::size_t& var,
+                              std::string const& env_var, std::string const& cmdline_option) {
   const std::string dlaf_env_var = "DLAF_" + env_var;
   char* env_var_value = std::getenv(dlaf_env_var.c_str());
   if (env_var_value) {
@@ -123,20 +123,20 @@ inline void update_configuration(hpx::program_options::variables_map const& vm, 
   }
 }
 
-configuration get_configuration(hpx::program_options::variables_map const& vm,
-                                configuration const& user_cfg) {
-  configuration cfg = user_cfg;
+void updateConfiguration(hpx::program_options::variables_map const& vm, configuration& cfg) {
+  updateConfigurationValue(vm, cfg.num_np_cuda_streams_per_thread, "NUM_NP_CUDA_STREAMS_PER_THREAD",
+                           "num-np-cuda-streams-per-thread");
+  updateConfigurationValue(vm, cfg.num_hp_cuda_streams_per_thread, "NUM_HP_CUDA_STREAMS_PER_THREAD",
+                           "num-hp-cuda-streams-per-thread");
+}
 
-  update_configuration(vm, cfg.num_np_cuda_streams_per_thread, "NUM_NP_CUDA_STREAMS_PER_THREAD",
-                       "num-np-cuda-streams-per-thread");
-  update_configuration(vm, cfg.num_hp_cuda_streams_per_thread, "NUM_HP_CUDA_STREAMS_PER_THREAD",
-                       "num-hp-cuda-streams-per-thread");
-
+configuration& getConfiguration() {
+  static configuration cfg;
   return cfg;
 }
 }
 
-hpx::program_options::options_description get_options_description() {
+hpx::program_options::options_description getOptionsDescription() {
   hpx::program_options::options_description desc("DLA-Future options");
 
   desc.add_options()("dlaf:help", "Print help message");
@@ -151,10 +151,12 @@ hpx::program_options::options_description get_options_description() {
 
 void initialize(hpx::program_options::variables_map const& vm, configuration const& user_cfg) {
   if (vm.count("dlaf:help") > 0) {
-    std::cout << get_options_description() << std::endl;
+    std::cout << getOptionsDescription() << std::endl;
   }
 
-  auto cfg = internal::get_configuration(vm, user_cfg);
+  configuration cfg = user_cfg;
+  internal::updateConfiguration(vm, cfg);
+  internal::getConfiguration() = cfg;
 
   if (vm.count("dlaf:print-config") > 0) {
     std::cout << cfg << std::endl;
@@ -168,8 +170,8 @@ void initialize(hpx::program_options::variables_map const& vm, configuration con
   internal::initialized() = true;
 }
 
-void initialize(int argc, char** argv, configuration const& user_cfg) {
-  auto desc = get_options_description();
+void initialize(int argc, const char* const argv[], configuration const& user_cfg) {
+  auto desc = getOptionsDescription();
 
   hpx::program_options::variables_map vm;
   hpx::program_options::store(hpx::program_options::parse_command_line(argc, argv, desc), vm);
@@ -184,6 +186,7 @@ void finalize() {
 #ifdef DLAF_WITH_CUDA
   internal::Init<Backend::GPU>::finalize();
 #endif
+  internal::getConfiguration() = {};
   internal::initialized() = false;
 }
 }

@@ -38,6 +38,7 @@ std::ostream& operator<<(std::ostream& os, configuration const& cfg);
 
 namespace internal {
 bool& initialized();
+configuration& getConfiguration();
 
 template <Backend D>
 struct Init {
@@ -61,7 +62,7 @@ cublas::HandlePool getCublasHandlePool();
 }
 
 /// Returns the DLA-Future command-line options description.
-hpx::program_options::options_description get_options_description();
+hpx::program_options::options_description getOptionsDescription();
 
 /// Initialize DLA-Future.
 ///
@@ -69,7 +70,7 @@ hpx::program_options::options_description get_options_description();
 /// be used when the application is using hpx::program_options for its own
 /// command-line parsing needs. The user is responsible for ensuring that
 /// DLA-Future command-line options are parsed. The DLA-Future options can be
-/// retrieved with dlaf::get_options_description.
+/// retrieved with dlaf::getOptionsDescription.
 ///
 /// @param vm parsed command-line options as provided by the application entry point.
 /// @param user_cfg user-provided default configuration. Takes precedence over
@@ -84,7 +85,7 @@ void initialize(hpx::program_options::variables_map const& vm, configuration con
 /// @param argv as provided by the application entry point.
 /// @param user_cfg user-provided default configuration. Takes precedence over
 /// DLA-Future defaults.
-void initialize(int argc, char** argv, configuration const& user_cfg = {});
+void initialize(int argc, const char* const argv[], configuration const& user_cfg = {});
 
 /// Finalize DLA-Future.
 ///

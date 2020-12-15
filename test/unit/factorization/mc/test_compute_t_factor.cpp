@@ -212,8 +212,8 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
       dlaf::factorization::internal::computeTFactor<Backend::MC>(k, v_input, v_start, taus_input,
                                                                  t_output, serial_comm);
 
-      const comm::Index2D owner_t = dist_v.rankGlobalTile(v_start);
-      if (dist_v.rankIndex() != owner_t)
+      const auto column_involved = dist_v.rankGlobalTile(v_start).col();
+      if (dist_v.rankIndex().col() != column_involved)
         continue;
 
       // Note:

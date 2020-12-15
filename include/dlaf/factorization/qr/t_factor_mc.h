@@ -141,41 +141,33 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
   // REDUCE after GEMV
   if (true) {  // TODO if the column communicator has more than 1 tiles...but I just have the pipeline
     auto reduce_t_func = unwrapping([=](auto&& tile_t, auto&& comm_wrapper) {
-      // TODO this is a workaround to the reduce in-place
       auto&& input_t = make_data(tile_t);
-      const auto size = tile_t.size().linear_size();
-      std::vector<T> out_data(to_sizet(size));
-      auto&& output_t = make_data(out_data.data(), size);
-      reduce(rank_v0.row(), comm_wrapper.ref().colCommunicator(), MPI_SUM, input_t, output_t);
-      common::copy(output_t, input_t);
+      all_reduce(comm_wrapper.ref().colCommunicator(), MPI_SUM, input_t, input_t);
     });
 
-    // TODO just reducer needs RW
     hpx::dataflow(reduce_t_func, t(LocalTileIndex{0, 0}), serial_comm());
   }
 
-  if (rank_v0 == rank) {
-    for (SizeType j = 0; j < k; ++j) {
-      // this is the x0 element of the reflector j and it is valid just in the tile v0
-      const TileElementIndex x0{j, j};
+  for (SizeType j = 0; j < k; ++j) {
+    // this is the x0 element of the reflector j and it is valid just in the tile v0
+    const TileElementIndex x0{j, j};
 
-      const TileElementIndex t_start{0, x0.col()};
-      const TileElementSize t_size{x0.row(), 1};
+    const TileElementIndex t_start{0, x0.col()};
+    const TileElementSize t_size{x0.row(), 1};
 
-      // 2B Second Step TRMV
-      // TRMV t = T . t
-      auto trmv_func = unwrapping([](auto&& tile_t, TileElementIndex t_start, TileElementSize t_size) {
-        // clang-format off
-          blas::trmv(blas::Layout::ColMajor,
-              blas::Uplo::Upper, blas::Op::NoTrans, blas::Diag::NonUnit,
-              t_size.rows(),
-              tile_t.ptr(), tile_t.ld(),
-              tile_t.ptr(t_start), 1);
-        // clang-format on
-      });
+    // 2B Second Step TRMV
+    // TRMV t = T . t
+    auto trmv_func = unwrapping([](auto&& tile_t, TileElementIndex t_start, TileElementSize t_size) {
+      // clang-format off
+      blas::trmv(blas::Layout::ColMajor,
+          blas::Uplo::Upper, blas::Op::NoTrans, blas::Diag::NonUnit,
+          t_size.rows(),
+          tile_t.ptr(), tile_t.ld(),
+          tile_t.ptr(t_start), 1);
+      // clang-format on
+    });
 
-      hpx::dataflow(trmv_func, t(LocalTileIndex{0, 0}), t_start, t_size);
-    }
+    hpx::dataflow(trmv_func, t(LocalTileIndex{0, 0}), t_start, t_size);
   }
 }
 }

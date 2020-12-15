@@ -24,17 +24,17 @@ namespace dlaf {
 namespace matrix {
 
 template <Coord panel_type, class T, Device device>
-struct Workspace;
+struct Panel;
 
 // TODO it works just for tile layout
 // TODO the matrix always occupies memory entirely
 template <Coord panel_type, class T, Device device>
-struct Workspace<panel_type, const T, device> : protected Matrix<T, device> {
+struct Panel<panel_type, const T, device> : protected Matrix<T, device> {
   using TileT = Tile<T, device>;
   using ConstTileT = Tile<const T, device>;
   using BaseT = Matrix<T, device>;
 
-  virtual ~Workspace() {
+  virtual ~Panel() {
     reset();
   }
 
@@ -65,8 +65,9 @@ struct Workspace<panel_type, const T, device> : protected Matrix<T, device> {
   // index w.r.t. the matrix coordinates system, not in the workspace (so it takes into account the offset)
   hpx::shared_future<ConstTileT> read(const LocalTileIndex& index) {
     DLAF_ASSERT(index.isIn(dist_matrix_.localNrTiles()), index, dist_matrix_.localNrTiles());
-    if (is_masked(index))
+    if (is_masked(index)) {
       return external_[panel_index(index)];
+    }
     else {
       internal_.insert(panel_index(index));
       return BaseT::read(full_index(index));
@@ -103,7 +104,7 @@ protected:
   }
 
   // TODO think about passing a reference to the matrix instead of the distribution (useful for tilesize)
-  Workspace(matrix::Distribution dist_matrix,
+  Panel(matrix::Distribution dist_matrix,
             LocalTileSize offset)  // TODO migrate to index? don't know...
       : BaseT(compute_size(dist_matrix, offset)), dist_matrix_(dist_matrix),
         offset_(Coord::Col == panel_type ? offset.rows() : offset.cols()),
@@ -170,12 +171,12 @@ protected:
 };
 
 template <Coord panel_type, class T, Device device>
-struct Workspace : public Workspace<panel_type, const T, device> {
+struct Panel : public Panel<panel_type, const T, device> {
   using TileT = Tile<T, device>;
   using ConstTileT = Tile<const T, device>;
 
-  Workspace(matrix::Distribution distribution, LocalTileSize start = {0, 0})
-      : Workspace<panel_type, const T, device>(std::move(distribution), std::move(start)) {}
+  Panel(matrix::Distribution distribution, LocalTileSize start = {0, 0})
+      : Panel<panel_type, const T, device>(std::move(distribution), std::move(start)) {}
 
   hpx::future<TileT> operator()(const LocalTileIndex& index) {
     DLAF_ASSERT(index.isIn(BaseT::dist_matrix_.localNrTiles()), index,
@@ -187,12 +188,12 @@ struct Workspace : public Workspace<panel_type, const T, device> {
   }
 
 protected:
-  using BaseT = Workspace<panel_type, const T, device>;
+  using BaseT = Panel<panel_type, const T, device>;
   using BaseT::is_masked;
 };
 
 template <class T, Device device, class BcastDir, Coord panel_type, class PredicateOwner>
-void share_panel(BcastDir direction, Workspace<panel_type, T, device>& ws, PredicateOwner&& whos_root,
+void share_panel(BcastDir direction, Panel<panel_type, T, device>& ws, PredicateOwner&& whos_root,
                  common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
   using namespace comm::sync;
 
@@ -213,7 +214,7 @@ void share_panel(BcastDir direction, Workspace<panel_type, T, device>& ws, Predi
 }
 
 template <class T, Device device>
-auto transpose(Workspace<Coord::Col, T, device>& ws_col, Workspace<Coord::Row, T, device>& ws_row) {
+auto transpose(Panel<Coord::Col, T, device>& ws_col, Panel<Coord::Row, T, device>& ws_row) {
   DLAF_ASSERT(ws_col.distribution_matrix() == ws_row.distribution_matrix(),
               "they must refer to the same matrix");
   // DLAF_ASSERT(ws_col.offset() == ws_row.offset(), ws_col.offset(), ws_row.offset()); // TODO do I have
@@ -241,5 +242,6 @@ auto transpose(Workspace<Coord::Col, T, device>& ws_col, Workspace<Coord::Row, T
 
   return whos_root;
 }
+
 }
 }

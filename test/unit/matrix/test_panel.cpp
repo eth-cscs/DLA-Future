@@ -8,9 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/communication/communicator.h"
-#include "dlaf/communication/helpers.h"
-#include "dlaf/matrix/workspace.h"
+#include "dlaf/matrix/panel.h"
 
 #include <vector>
 
@@ -19,6 +17,8 @@
 #include <hpx/hpx_main.hpp>
 
 #include "dlaf/common/range2d.h"
+#include "dlaf/communication/communicator.h"
+#include "dlaf/communication/helpers.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/util_matrix.h"
 #include "dlaf_test/matrix/util_matrix.h"
@@ -47,7 +47,7 @@ TYPED_TEST(WorkspaceLocalTest, BasicColPanel) {
   Matrix<TypeParam, Device::CPU> matrix(dist);
   matrix::util::set(matrix, [VALUE](auto&&) { return VALUE; });
 
-  Workspace<Coord::Col, TypeParam, Device::CPU> ws(dist);
+  Panel<Coord::Col, TypeParam, Device::CPU> ws(dist);
 
   ws({0, 0}).then(unwrapping([](auto&& tile) {
     tile({0, 0}) = TypeUtilities<TypeParam>::element(13, 26);
@@ -80,7 +80,7 @@ TYPED_TEST(WorkspaceLocalTest, BasicRowPanel) {
   Matrix<TypeParam, Device::CPU> matrix(dist);
   matrix::util::set(matrix, [VALUE](auto&&) { return VALUE; });
 
-  Workspace<Coord::Row, TypeParam, Device::CPU> ws(dist);
+  Panel<Coord::Row, TypeParam, Device::CPU> ws(dist);
 
   ws({0, 0}).then(unwrapping([](auto&& tile) {
     tile({0, 0}) = TypeUtilities<TypeParam>::element(13, 26);
@@ -127,7 +127,7 @@ TYPED_TEST(WorkspaceLocalTest, PopulateCol_RowWise) {
       dist.template nextLocalTileFromGlobalTile<Coord::Col>(global_offset.cols()),
   };
 
-  Workspace<Coord::Col, TypeParam, dlaf::Device::CPU> ws_v(dist, at_offset);
+  Panel<Coord::Col, TypeParam, dlaf::Device::CPU> ws_v(dist, at_offset);
 
   // TODO this part has to be better designed
   // const auto& ws_dist = ws.distribution();
@@ -224,7 +224,7 @@ TYPED_TEST(WorkspaceLocalTest, PopulateCol_RowWise) {
                   ws_v.read(i_w));
   }
 
-  Workspace<Coord::Row, TypeParam, dlaf::Device::CPU> ws_h(dist, at_offset);
+  Panel<Coord::Row, TypeParam, dlaf::Device::CPU> ws_h(dist, at_offset);
   auto whos_root = transpose(ws_v, ws_h);
 
   // Check that the row panel has the info (just in locally available ones)

@@ -16,7 +16,7 @@
 #include "dlaf/common/range2d.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/tile.h"
-#include "dlaf/matrix/workspace.h"
+#include "dlaf/matrix/panel.h"
 #include "dlaf/types.h"
 
 namespace dlaf {
@@ -108,7 +108,7 @@ void print(format::numpy, std::string sym, MatrixLikeT<const T, device>& matrix,
 }
 
 template <Coord panel_type, class T, Device device>
-void print(format::numpy, std::string sym, Workspace<panel_type, const T, device>& workspace,
+void print(format::numpy, std::string sym, Panel<panel_type, const T, device>& workspace,
            std::ostream& os = std::cout) {
   using common::iterate_range2d;
 

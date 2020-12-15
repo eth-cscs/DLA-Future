@@ -127,7 +127,7 @@ public:
   ///
   /// @pre isValid().
   bool isEmpty() const noexcept {
-    DLAF_ASSERT_HEAVY(BaseT::isValid(), BaseT::isValid());
+    DLAF_ASSERT_HEAVY(BaseT::isValid(), "");
     return rows() == 0 || cols() == 0;
   }
 

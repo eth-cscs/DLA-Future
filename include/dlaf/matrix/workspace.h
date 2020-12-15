@@ -86,6 +86,7 @@ struct Workspace<panel_type, const T, device> : protected Matrix<T, device> {
     DLAF_ASSERT(index.isIn(dist_matrix_.localNrTiles()), index, dist_matrix_.localNrTiles());
     DLAF_ASSERT(internal_.count(panel_index(index)) == 0, "internal tile have been used already", index);
     DLAF_ASSERT(!is_masked(index), "already set to external", index);
+
     external_[panel_index(index)] = std::move(new_tile_fut);
   }
 

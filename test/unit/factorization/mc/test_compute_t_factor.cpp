@@ -144,14 +144,18 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
         MatrixLocal<TypeParam> v(v_size_el, a.blockSize());
         DLAF_ASSERT_HEAVY(v.size().rows() > v.size().cols(), v.size());
 
-        // copy just the panel
+        // copy only the panel
         const GlobalTileSize v_offset{v_start.row(), v_start.col()};
         for (const auto& ij : iterate_range2d(v.nrTiles()))
           copy(a.tile_read(ij + v_offset), v.tile(ij));
 
         // clean reflectors
-        lapack::laset(lapack::MatrixType::Upper, v.size().rows(), v.size().cols(), 0, 1, v.ptr(),
-                      v.ld());
+        // clang-format off
+        lapack::laset(lapack::MatrixType::Upper,
+            v.size().rows(), v.size().cols(),
+            0, 1,
+            v.ptr(), v.ld());
+        // clang-format on
 
         return v;
       }();
@@ -217,9 +221,7 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
         continue;
 
       // Note:
-      // T factor is reduced just on the rank owning V0.
-      //
-      // In order to check T correcteness, the test will compute the H transformation matrix
+      // In order to check T correctness, the test will compute the H transformation matrix
       // that will results from using it with the V panel.
       //
       // In particular

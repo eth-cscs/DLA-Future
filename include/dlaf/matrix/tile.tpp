@@ -16,10 +16,9 @@ Tile<const T, device>::Tile(const TileElementSize& size,
                             memory::MemoryView<ElementType, device>&& memory_view, SizeType ld) noexcept
     : size_(size), memory_view_(std::move(memory_view)), ld_(ld) {
   DLAF_ASSERT(size.isValid(), size);
-  DLAF_ASSERT(ld_ >= std::max<SizeType>(1, size_.rows()), ld,
-              size_.rows());
-  DLAF_ASSERT(size.isEmpty() || size_.rows() + ld_ * (size_.cols() - 1) <= memory_view_.size(),
-              size, size_.rows() + ld_ * (size_.cols() - 1), memory_view_.size());
+  DLAF_ASSERT(ld_ >= std::max<SizeType>(1, size_.rows()), ld, size_.rows());
+  DLAF_ASSERT(size.isEmpty() || size_.rows() + ld_ * (size_.cols() - 1) <= memory_view_.size(), size,
+              size_.rows() + ld_ * (size_.cols() - 1), memory_view_.size());
 }
 
 template <class T, Device device>

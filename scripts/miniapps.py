@@ -117,7 +117,7 @@ def chol(
             f"{queue_flag} "
             f"{mech_flag} "
             f"{pool_flags} "
-            f">> chol_{suffix}.txt"
+            f">> chol_{suffix}.out"
         )
 
 
@@ -158,7 +158,7 @@ def trsm(
             f"--nruns {nruns} "
             "--hpx:use-process-mask "
             f"{extra_flags} "
-            f">> trsm_{suffix}.txt"
+            f">> trsm_{suffix}.out"
         )
 
     return cmds

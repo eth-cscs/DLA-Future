@@ -37,9 +37,9 @@ def _gen_nodes_plot(plt_type, title, ylabel, file_name, df):
             alpha=0.2,
         )
 
-    ax.set_ylabel(f"GFlops/node\n(mb={mb})")
+    ax.set_ylabel(ylabel)
     ax.set_xlabel("nodes")
-    #ax.set_xticks(nodes_arr)
+    ax.set_xticks(df["nodes"].sort_values().unique())
     ax.legend(loc="upper right", prop={"size": 6})
     ax.set_title(title)
     fig.savefig(f"{file_name}.png", dpi=300)
@@ -67,39 +67,67 @@ def _calc_metrics(cols, df):
 
 
 # Iterate over benchmark sets and node folders and parse output
-def parse(data_dirs, nodes_arr, benchs_arr):
-    RE_FLOAT = "\d+(?:\.\d+)?"
-    regex_str = f"\[(\d+)\] ({RE_FLOAT})s ({RE_FLOAT})GFlop/s \((\d+), (\d+)\) \((\d+), (\d+)\) \((\d+), (\d+)\) \s?(\d+)"
+#
+# <data_dir>
+# |
+# ├── 16 # nodes
+# │   ├── job.sh
+# │   ├── <bench_name_1>.out
+# │   ├── <bench_name_2>.out
+# |   ...
+# ├── 32
+# │   ├── job.sh
+# │   ├── <bench_name_1>.out
+# │   ├── <bench_name_2>.out
+# |   ...
+#
+def parse(data_dir):
+    # [7] 5.40432s 4238.55GFlop/s (40960, 40960) (256, 256) (4, 4) 18
+    re_float = "\d+(?:\.\d+)?"
+    regex_str = (
+        "\[(\d+)\] "
+        f"({re_float})s "
+        f"({re_float})GFlop/s "
+        "\((\d+), (\d+)\) "
+        "\((\d+), (\d+)\) "
+        "\((\d+), (\d+)\) "
+        "\s?(\d+)"
+    )
 
     data = []
-    for data_dir, nodes, bench_name in product(data_dirs, nodes_arr, bench_name_arr):
-        out_file = os.path.join(data_dir, str(nodes), f"{bench_name}.txt")
-        with open(out_file, "r") as fout:
-            for line in fout.readlines():
-                reg = re.match(regex_str, line)
-                if reg:
-                    raw_data = reg.groups()
-                    data.append(
-                        {
-                            "bench_name": bench_name,
-                            "nodes": nodes,
-                            "run_index": int(raw_data[0]),
-                            "matrix_rows": int(raw_data[3]),
-                            "matrix_cols": int(raw_data[4]),
-                            "block_rows": int(raw_data[5]),
-                            "block_cols": int(raw_data[6]),
-                            "grid_rows": int(raw_data[7]),
-                            "grid_cols": int(raw_data[8]),
-                            "time": float(raw_data[1]),
-                            "perf": float(raw_data[2]),
-                            "perf_per_node": float(raw_data[2]) / nodes,
-                        }
-                    )
+    for subdir, dirs, files in os.walk(os.path.expanduser(data_dir)):
+        for f in files:
+            if f.endswith(".out"):
+                nodes = int(os.path.basename(subdir))
+                with open(os.path.join(subdir, f), "r") as fout:
+                    for line in fout.readlines():
+                        reg = re.match(regex_str, line)
+                        if reg:
+                            raw_data = reg.groups()
+                            data.append(
+                                {
+                                    "bench_name": f[:-4],  # removes .out
+                                    "nodes": nodes,
+                                    "run_index": int(raw_data[0]),
+                                    "matrix_rows": int(raw_data[3]),
+                                    "matrix_cols": int(raw_data[4]),
+                                    "block_rows": int(raw_data[5]),
+                                    "block_cols": int(raw_data[6]),
+                                    "grid_rows": int(raw_data[7]),
+                                    "grid_cols": int(raw_data[8]),
+                                    "time": float(raw_data[1]),
+                                    "perf": float(raw_data[2]),
+                                    "perf_per_node": float(raw_data[2]) / nodes,
+                                }
+                            )
+
     return pd.DataFrame(data)
 
 
 def calc_chol_metrics(df):
-    return _calc_metrics(["matrix_rows", "block_rows", "nodes", "bench_name"], df)
+    return _calc_metrics(
+        ["matrix_rows", "block_rows", "nodes", "bench_name"], df
+    )
 
 
 def calc_trsm_metrics(df):
@@ -115,14 +143,14 @@ def gen_chol_plots(df):
             "ppn",
             title,
             "GFlops/node",
-            f"chol_ppn_{m}_{mb}.png",
+            f"chol_ppn_{m}_{mb}",
             grp_data,
         )
         _gen_nodes_plot(
             "time",
             title,
             "Time [s]",
-            f"chol_time_{m}_{mb}.png",
+            f"chol_time_{m}_{mb}",
             grp_data,
         )
 
@@ -136,13 +164,13 @@ def gen_trsm_plots(df):
             "ppn",
             title,
             "GFlops/node",
-            f"trsm_ppn_{m}_{n}_{mb}.png",
+            f"trsm_ppn_{m}_{n}_{mb}",
             grp_data,
         )
         _gen_nodes_plot(
             "time",
             title,
             "Time [s]",
-            f"trsm_time_{m}_{n}_{mb}.png",
+            f"trsm_time_{m}_{n}_{mb}",
             grp_data,
         )

@@ -80,7 +80,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
 
   // T(0:j, j) = T(0:j, 0:j) . -tau(j) . V(j:, 0:j)* . V(j:, j)
   for (SizeType j = 0; j < k; ++j) {
-    // this is the x0 element of the reflector j and it is valid just in the tile v0
+    // this is the x0 element of the reflector j
     const TileElementIndex x0{j, j};
 
     const TileElementIndex t_start{0, x0.col()};
@@ -139,7 +139,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
   }
 
   // REDUCE after GEMV
-  if (true) {  // TODO if the column communicator has more than 1 tiles...but I just have the pipeline
+  if (true) {  // TODO if the column communicator has more than 1 tile...but I just have the pipeline
     auto reduce_t_func = unwrapping([=](auto&& tile_t, auto&& comm_wrapper) {
       auto&& input_t = make_data(tile_t);
       all_reduce(comm_wrapper.ref().colCommunicator(), MPI_SUM, input_t, input_t);
@@ -148,14 +148,11 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
     hpx::dataflow(reduce_t_func, t(LocalTileIndex{0, 0}), serial_comm());
   }
 
+  // 2B Second Step TRMV
   for (SizeType j = 0; j < k; ++j) {
-    // this is the x0 element of the reflector j and it is valid just in the tile v0
-    const TileElementIndex x0{j, j};
+    const TileElementIndex t_start{0, j};
+    const TileElementSize t_size{j, 1};
 
-    const TileElementIndex t_start{0, x0.col()};
-    const TileElementSize t_size{x0.row(), 1};
-
-    // 2B Second Step TRMV
     // TRMV t = T . t
     auto trmv_func = unwrapping([](auto&& tile_t, TileElementIndex t_start, TileElementSize t_size) {
       // clang-format off

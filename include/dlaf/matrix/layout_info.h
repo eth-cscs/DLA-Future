@@ -83,7 +83,7 @@ public:
   /// @pre 0 < @p index.col() < nrTiles().cols(),
   /// @pre index.isIn(nr_tiles_).
   SizeType minTileMemSize(const LocalTileIndex& index) const noexcept {
-    DLAF_ASSERT_HEAVY(index.isIn(nr_tiles_), "");
+    DLAF_ASSERT_HEAVY(index.isIn(nr_tiles_), index, nr_tiles_);
     return minTileMemSize(tileSize(index));
   }
 

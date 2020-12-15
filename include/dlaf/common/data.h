@@ -127,13 +127,15 @@ void copy(const DataIn& src, const DataOut& dest) {
                 "Cannot copy to a const Data");
 
   if (data_iscontiguous(dest) && data_iscontiguous(src)) {
-    DLAF_ASSERT_HEAVY(data_blocksize(src) == data_blocksize(dest), "");
+    DLAF_ASSERT_HEAVY(data_blocksize(src) == data_blocksize(dest), data_blocksize(src),
+                      data_blocksize(dest));
 
     std::copy(data_pointer(src), data_pointer(src) + data_blocksize(src), data_pointer(dest));
   }
   else {
     if (data_iscontiguous(dest)) {
-      DLAF_ASSERT_HEAVY(data_nblocks(src) * data_blocksize(src) == data_blocksize(dest), "");
+      DLAF_ASSERT_HEAVY(data_nblocks(src) * data_blocksize(src) == data_blocksize(dest),
+                        data_nblocks(src) * data_blocksize(src), data_blocksize(dest));
 
       for (SizeType i_block = 0; i_block < data_nblocks(src); ++i_block) {
         auto ptr_block_start = data_pointer(src) + i_block * data_stride(src);
@@ -142,7 +144,8 @@ void copy(const DataIn& src, const DataOut& dest) {
       }
     }
     else if (data_iscontiguous(src)) {
-      DLAF_ASSERT_HEAVY(data_blocksize(src) == data_nblocks(dest) * data_blocksize(dest), "");
+      DLAF_ASSERT_HEAVY(data_blocksize(src) == data_nblocks(dest) * data_blocksize(dest),
+                        data_blocksize(src), data_nblocks(dest) * data_blocksize(dest));
 
       for (SizeType i_block = 0; i_block < data_nblocks(dest); ++i_block) {
         auto ptr_block_start = data_pointer(src) + i_block * data_blocksize(dest);
@@ -151,7 +154,7 @@ void copy(const DataIn& src, const DataOut& dest) {
       }
     }
     else {
-      DLAF_ASSERT_HEAVY(data_count(src) == data_count(dest), "");
+      DLAF_ASSERT_HEAVY(data_count(src) == data_count(dest), data_count(src), data_count(dest));
 
       for (SizeType i = 0; i < data_count(src); ++i) {
         auto i_src = i / data_blocksize(src) * data_stride(src) + i % data_blocksize(src);

@@ -43,7 +43,7 @@ public:
             class = typename std::enable_if_t<!std::is_const<U>::value && std::is_same<T, U>::value>>
   explicit MemoryView(SizeType size)
       : memory_(std::make_shared<MemoryChunk<ElementType, device>>(size)), offset_(0), size_(size) {
-    DLAF_ASSERT(size >= 0, "");
+    DLAF_ASSERT(size >= 0, size);
   }
 
   /// Creates a MemoryView object from an existing memory allocation.
@@ -54,7 +54,7 @@ public:
   MemoryView(T* ptr, SizeType size)
       : memory_(std::make_shared<MemoryChunk<ElementType, device>>(const_cast<ElementType*>(ptr), size)),
         offset_(0), size_(size) {
-    DLAF_ASSERT(size >= 0, "");
+    DLAF_ASSERT(size >= 0, size);
   }
 
   MemoryView(const MemoryView&) = default;
@@ -138,7 +138,7 @@ public:
   /// @param index index of the position,
   /// @pre @p index < @p size.
   T* operator()(SizeType index) const {
-    DLAF_ASSERT_HEAVY(index < size_, "", index, size_);
+    DLAF_ASSERT_HEAVY(index < size_, index, size_);
     return memory_->operator()(offset_ + index);
   }
 

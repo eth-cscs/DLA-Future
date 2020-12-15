@@ -21,33 +21,6 @@
 #include "dlaf/util_matrix.h"
 
 namespace dlaf {
-
-namespace internal {
-template <Coord panel_type>
-matrix::Distribution compute_size(const matrix::Distribution& dist_matrix, const LocalTileSize start) {
-  const auto mb = dist_matrix.blockSize().rows();
-  const auto nb = dist_matrix.blockSize().cols();
-
-  const auto panel_size = [&]() -> LocalElementSize {
-    switch (panel_type) {
-      case Coord::Col: {
-        const auto mat_size = dist_matrix.localNrTiles().rows();
-        const auto i_tile = start.rows();
-        return {(mat_size - i_tile) * mb, nb};
-      }
-      case Coord::Row: {
-        const auto mat_size = dist_matrix.localNrTiles().cols();
-        const auto i_tile = start.cols();
-        return {mb, (mat_size - i_tile) * nb};
-      }
-    }
-  }();
-
-  return {panel_size, dist_matrix.blockSize()};
-}
-
-}
-
 namespace matrix {
 
 template <Coord panel_type, class T, Device device>
@@ -115,10 +88,32 @@ struct Workspace<panel_type, const T, device> : protected Matrix<T, device> {
   }
 
 protected:
+  static Distribution compute_size(const Distribution& dist_matrix, const LocalTileSize start) {
+    const auto mb = dist_matrix.blockSize().rows();
+    const auto nb = dist_matrix.blockSize().cols();
+
+    const auto panel_size = [&]() -> LocalElementSize {
+      switch (panel_type) {
+        case Coord::Col: {
+          const auto mat_size = dist_matrix.localNrTiles().rows();
+          const auto i_tile = start.rows();
+          return {(mat_size - i_tile) * mb, nb};
+        }
+        case Coord::Row: {
+          const auto mat_size = dist_matrix.localNrTiles().cols();
+          const auto i_tile = start.cols();
+          return {mb, (mat_size - i_tile) * nb};
+        }
+      }
+    }();
+
+    return {panel_size, dist_matrix.blockSize()};
+  }
+
   // TODO think about passing a reference to the matrix instead of the distribution (useful for tilesize)
   Workspace(matrix::Distribution dist_matrix,
             LocalTileSize offset)  // TODO migrate to index? don't know...
-      : BaseT(dlaf::internal::compute_size<panel_type>(dist_matrix, offset)), dist_matrix_(dist_matrix),
+      : BaseT(compute_size(dist_matrix, offset)), dist_matrix_(dist_matrix),
         offset_(Coord::Col == panel_type ? offset.rows() : offset.cols()),
         range_(iterate_range2d(Coord::Col == panel_type ? LocalTileIndex{offset_, 0}
                                                         : LocalTileIndex{0, offset_},

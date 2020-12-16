@@ -6,17 +6,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from itertools import product
-
-#%matplotlib
+from collections import deque
 
 sns.set_theme()
-
-# Checks if the miniapp parameter makes sense
-def _check_miniapp_param(miniapp):
-    if not (miniapp == "chol" or miniapp == "trsm"):
-        raise ValueError(f"Wrong value: miniapp = {miniapp}!")
-
 
 # plt_type : ppn | time
 def _gen_nodes_plot(plt_type, title, ylabel, file_name, df):
@@ -66,6 +58,88 @@ def _calc_metrics(cols, df):
     )
 
 
+# Assumptions:
+#
+# - at least a single white space  between various data of interest
+#
+def _parse_line_based(lib, fout, bench_name, nodes):
+
+    fl = "[+-]?([0-9]*[.])?[0-9]+"
+
+    if lib == "dlaf":
+        regstr = "[{}] {} {}GFlop/s ({}, {}) ({}, {}) ({}, {}) {}".format(fl)
+    elif lib == "slate_chol":
+        regstr = (
+            "d host task column lower {} {} {} {} {} {} NA {} {} NA NA no check".format(
+                fl
+            )
+        )
+    elif lib == "slate_trsm":
+        regstr = "d host task {} left lower notrans nonunit {} {} {} {} {} {} {} NA {} {} NA NA  no check".format(
+            fl
+        )
+    elif lin == "dplasma_chol":
+        regstr ="""
+        "a#+++++ P x Q : {} x {} ({}/{})",
+                "#+++++ M x N x K|NRHS : {} x {} x {}",
+                "#+++++ MB x NB : {} x {}",
+                "[****] TIME(s) {} : dpotrf PxQ= {} {} NB= {} N= {} : {} gflops - ENQ&PROG&DEST {} : {} gflops - ENQ {} - DEST {}"
+        """
+        regstr = "\n".join(
+            [
+                "#+++++ P x Q : {} x {} ({}/{})",
+                "#+++++ M x N x K|NRHS : {} x {} x {}",
+                "#+++++ MB x NB : {} x {}",
+                "[****] TIME(s) {} : dpotrf PxQ= {} {} NB= {} N= {} : {} gflops - ENQ&PROG&DEST {} : {} gflops - ENQ {} - DEST {}",
+            ]
+        ).format(fl)
+    elif lin == "dplasma_trsm":
+        regstr = "\n".join(
+            [
+                "#+++++ P x Q : {} x {} ({}/{})",
+                "#+++++ M x N x K|NRHS : {} x {} x {}",
+                "#+++++ MB x NB : {} x {}",
+                "[****] TIME(s) {} : dtrsm PxQ= {} {} NB= {} N= {} : {} gflops",
+            ]
+        ).format(fl)
+
+    multi_lines = deque([], maxlen=nlines)  # a double ended queue of fixed size
+    data = []
+    for line in fout:
+        multi_lines.append(line)
+        if len(multi_lines) != nlines:  # do nothing until the queue is filled
+            continue
+
+        reg = re.match(regstr, re.sub(" +", " ", multi_lines))
+        if reg:
+
+        # merge lines and tokenize: leave digits and dots, split on white space
+        split_data = re.sub("[^\d\.]", " ", " ".join(multi_lines.split())).split()
+        raw_data = [
+            split_data[i] for i in ind
+        ]  # pick data and leave only digits and dots
+        try:
+            data.append(
+                {
+                    "matrix_rows": int(raw_data[0]),
+                    "matrix_cols": int(raw_data[1]),
+                    "block_rows": int(raw_data[2]),
+                    "block_cols": int(raw_data[3]),
+                    "grid_rows": int(raw_data[4]),
+                    "grid_cols": int(raw_data[5]),
+                    "time": float(raw_data[6]),
+                    "perf": float(raw_data[7]),
+                    "perf_per_node": float(raw_data[7]) / nodes,
+                    "bench_name": bench_name,
+                    "nodes": nodes,
+                }
+            )
+        except ValueError:
+            pass
+
+    return data
+
+
 # Iterate over benchmark sets and node folders and parse output
 #
 # <data_dir>
@@ -82,52 +156,19 @@ def _calc_metrics(cols, df):
 # |   ...
 #
 def parse(data_dir):
-    # [7] 5.40432s 4238.55GFlop/s (40960, 40960) (256, 256) (4, 4) 18
-    re_float = "\d+(?:\.\d+)?"
-    regex_str = (
-        "\[(\d+)\] "
-        f"({re_float})s "
-        f"({re_float})GFlop/s "
-        "\((\d+), (\d+)\) "
-        "\((\d+), (\d+)\) "
-        "\((\d+), (\d+)\) "
-        "\s?(\d+)"
-    )
-
     data = []
     for subdir, dirs, files in os.walk(os.path.expanduser(data_dir)):
         for f in files:
             if f.endswith(".out"):
                 nodes = int(os.path.basename(subdir))
                 with open(os.path.join(subdir, f), "r") as fout:
-                    for line in fout.readlines():
-                        reg = re.match(regex_str, line)
-                        if reg:
-                            raw_data = reg.groups()
-                            data.append(
-                                {
-                                    "bench_name": f[:-4],  # removes .out
-                                    "nodes": nodes,
-                                    "run_index": int(raw_data[0]),
-                                    "matrix_rows": int(raw_data[3]),
-                                    "matrix_cols": int(raw_data[4]),
-                                    "block_rows": int(raw_data[5]),
-                                    "block_cols": int(raw_data[6]),
-                                    "grid_rows": int(raw_data[7]),
-                                    "grid_cols": int(raw_data[8]),
-                                    "time": float(raw_data[1]),
-                                    "perf": float(raw_data[2]),
-                                    "perf_per_node": float(raw_data[2]) / nodes,
-                                }
-                            )
+                    data.extend(_parse_line_based("dlaf", fout, f[:-4], nodes))
 
     return pd.DataFrame(data)
 
 
 def calc_chol_metrics(df):
-    return _calc_metrics(
-        ["matrix_rows", "block_rows", "nodes", "bench_name"], df
-    )
+    return _calc_metrics(["matrix_rows", "block_rows", "nodes", "bench_name"], df)
 
 
 def calc_trsm_metrics(df):

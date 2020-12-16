@@ -43,6 +43,11 @@ template <class T, Device device>
 void herk(const blas::Uplo uplo, const blas::Op op, const BaseType<T> alpha,
           const Tile<const T, device>& a, const BaseType<T> beta, const Tile<T, device>& c) noexcept;
 
+/// Performs a matrix-matrix multiplication, involving a triangular matrix.
+template <class T, Device device>
+void trmm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const blas::Diag diag, const T alpha,
+          const Tile<const T, device>& a, const Tile<T, device>& b) noexcept;
+
 /// Performs a triangular solve.
 template <class T, Device device>
 void trsm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const blas::Diag diag,

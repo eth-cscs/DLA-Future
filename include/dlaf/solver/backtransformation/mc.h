@@ -11,6 +11,8 @@
 
 #include <hpx/include/parallel_executors.hpp>
 #include <hpx/include/threads.hpp>
+#include <hpx/include/util.hpp>
+#include <hpx/local/future.hpp>
 
 #include <blas.hh>
 
@@ -24,6 +26,7 @@
 #include "dlaf/communication/executor.h"
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/lapack_tile.h"
+#include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/layout_info.h"
@@ -74,8 +77,8 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 
      SizeType m = mat_c.nrTiles().rows();
      SizeType n = mat_c.nrTiles().cols();
-     SizeType mb = mat_t.blockSize().rows();
-     SizeType nb = mat_t.blockSize().cols();
+     SizeType mb = mat_c.blockSize().rows();
+     SizeType nb = mat_c.blockSize().cols();
 
      // n-1 reflectors
      for (SizeType i = 0; i < (m - 1); ++i) {
@@ -84,10 +87,24 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 
        TileElementSize size(mb, nb);
        
-       auto dist_w = mat_t.distribution();
+       auto dist_w = mat_c.distribution();
        auto layout_w = tileLayout(dist_w.localSize(), size);
        Matrix<T, Device::CPU> mat_w(std::move(dist_w), layout_w);
-       matrix::util::set(mat_w, [](auto&&){return 0;});
+       for (SizeType w_col = 0; w_col < n; ++w_col) {
+	 for (SizeType w_row = 0; w_row < m; ++w_row) {
+	   auto tile_index = LocalTileIndex(w_row, w_col);
+	   auto tile = mat_w(tile_index).get();
+	   for (SizeType w_j = 0; w_j < nb; ++w_j) {
+	     for (SizeType w_i = 0; w_i < mb; ++w_i) {
+	       TileElementIndex index(w_i, w_j);
+	       dlaf::matrix::copy(mat_t(TileElementIndex(w_j, w_j)), std::move(mat_w(index)));
+	     }
+	   }
+	 }
+       }
+       std::cout << "MAT W" << std::endl;
+       printElements(mat_w);
+       //       matrix::copy(mat_t, mat_w);
 
        auto dist_w2 = mat_c.distribution();
        auto layout_w2 = tileLayout(dist_w2.localSize(), size);
@@ -97,9 +114,9 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
        for (SizeType k = i; k < m; ++k) {
 	 auto ki = LocalTileIndex{k, i};
 	 auto ii = LocalTileIndex{i, i};
-	 // W = V T 
-	 hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans,
-		       NoTrans, 1.0, mat_v.read(ki), mat_t.read(ii), 1.0, std::move(mat_w(ki)));
+	 // W = V T
+	 hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Left, Upper, NoTrans,
+                    NonUnit, 1.0, mat_v.read(ki), std::move(mat_w(ki)));
        }
 
        for (SizeType k = 0; k < m; ++k) {

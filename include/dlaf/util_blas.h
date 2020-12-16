@@ -128,12 +128,30 @@ herkSizes getHerkSizes(blas::Op op, const dlaf::matrix::Tile<const T, device>& a
   return s;
 }
 
-struct trsmSizes {
+struct trmmSizes {
   const SizeType m;
   const SizeType n;
 };
 
 template <typename T, Device device>
+  trmmSizes getTrmmSizes(blas::Side side, const dlaf::matrix::Tile<const T, device>& a,
+                       const dlaf::matrix::Tile<T, device>& b) {
+  trmmSizes s{b.size().rows(), b.size().cols()};
+
+  DLAF_ASSERT(a.size().rows() == a.size().cols(), "`a` is not square!", a);
+
+  const auto left_side = (side == blas::Side::Left ? s.m : s.n);
+  DLAF_ASSERT(a.size().rows() == left_side, "`a` has an invalid size!", a, left_side);
+
+  return s;
+}
+
+struct trsmSizes {
+  const SizeType m;
+  const SizeType n;
+};
+
+ template <typename T, Device device>
 trsmSizes getTrsmSizes(blas::Side side, const dlaf::matrix::Tile<const T, device>& a,
                        const dlaf::matrix::Tile<T, device>& b) {
   trsmSizes s{b.size().rows(), b.size().cols()};

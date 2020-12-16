@@ -9,5 +9,15 @@
 //
 #pragma once
 
-#include "dlaf/solver/backtransformation.h"
-#include "dlaf/solver/triangular.h"
+#include "dlaf/types.h"
+
+namespace dlaf {
+namespace solver {
+namespace internal {
+
+template <Backend backend, Device device, class T>
+struct BackTransformation {};
+
+}
+}
+}

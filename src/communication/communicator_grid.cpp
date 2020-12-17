@@ -15,7 +15,7 @@ namespace comm {
 
 CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexT_MPI nrows, IndexT_MPI ncols,
                                    common::Ordering ordering) {
-  DLAF_ASSERT((nrows * ncols) <= comm.size(), nrows * ncols, comm.size());
+  DLAF_ASSERT((nrows * ncols) <= comm.size(), nrows, ncols, comm.size());
 
   bool is_in_grid = comm.rank() < nrows * ncols;
 

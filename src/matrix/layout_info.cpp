@@ -38,13 +38,12 @@ LayoutInfo::LayoutInfo(const LocalElementSize& size, const TileElementSize& bloc
     SizeType max_rows_tiles = std::min(size_.rows(), block_size_.rows());
 
     DLAF_ASSERT(ld_tile_ >= max_rows_tiles, ld_tile_, max_rows_tiles);
-    DLAF_ASSERT(tile_offset_row_ >= static_cast<std::size_t>(max_rows_tiles), tile_offset_row,
-                static_cast<std::size_t>(max_rows_tiles));
+    DLAF_ASSERT(tile_offset_row_ >= max_rows_tiles, tile_offset_row,
+                max_rows_tiles);
     DLAF_ASSERT(tile_offset_row_ >= minTileMemSize(block_size_) ||
-                    static_cast<std::size_t>(ld_tile_) >=
-                        sum(tileOffset({nr_tiles_.rows() - 1, 0}), last_rows),
-                tile_offset_row_, minTileMemSize(block_size_), static_cast<std::size_t>(ld_tile_),
-                sum(tileOffset({nr_tiles_.rows() - 1, 0}), last_rows));
+                    ld_tile_ >= tileOffset({nr_tiles_.rows() - 1, 0}) + last_rows,
+                tile_offset_row_, minTileMemSize(block_size_), ld_tile_,
+                tileOffset({nr_tiles_.rows() - 1, 0}), last_rows);
     DLAF_ASSERT(tile_offset_col_ >= tileOffset({nr_tiles_.rows() - 1, 0}) +
                                         minTileMemSize(LocalTileIndex(nr_tiles_.rows() - 1, 0)),
                 tile_offset_col_,

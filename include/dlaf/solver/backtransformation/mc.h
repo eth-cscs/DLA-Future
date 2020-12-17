@@ -42,10 +42,8 @@ namespace internal {
   using namespace dlaf::matrix;
   //  using namespace dlaf::tile;
   
-// Local implementation of Left Lower NoTrans
-
 // Implementation based on:
-// 1. Algorithm 6 "LAPACK Algorithm for the eigenvector back-transformation", page 15, PhD thesis "GPU
+// 1. Part of algorithm 6 "LAPACK Algorithm for the eigenvector back-transformation", page 15, PhD thesis "GPU
 // Accelerated Implementations of a Generalized Eigenvalue Solver for Hermitian Matrices with Systematic
 // Energy and Time to Solution Analysis" presented by Raffaele Solcà (2016)
 // 2. Report "Gep + back-transformation", Alberto Invernizzi (2020)
@@ -108,7 +106,7 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 		       NonUnit, 1.0, mat_t.read(ii), std::move(mat_w(ki)));
        }
 
-       for (SizeType k = 0; k < m; ++k) {
+       for (SizeType k = i; k < m; ++k) {
 	 auto ik = LocalTileIndex{i, k};
 	 for (SizeType j = i; j < m; ++j) {
 	   auto ji = LocalTileIndex{j, i};
@@ -121,7 +119,7 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 
        for (SizeType k = i; k < m; ++k) {
 	 auto ki = LocalTileIndex{k, i};
-	 for (SizeType j = 0; j < m; ++j) {
+	 for (SizeType j = i; j < m; ++j) {
 	   auto ij = LocalTileIndex{i, j};
 	   auto kj = LocalTileIndex{k, j};
 	   // C = C - V W2

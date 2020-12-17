@@ -19,13 +19,18 @@
 namespace dlaf {
 namespace solver {
 
-  /// Eigenvalue back-transformation
+  /// Eigenvalue back-transformation implementation on local memory
+  /// Solves the equation: C = C - V T V^H A
+  /// where C is a square matrix, T an upper triangular matrix (T factors) and V a lower triangular matrix (reflectors).  
   ///
-  /// TODO: FIX THIS DESCRIPTION
+  /// @param mat_c contains the square matrix C,
+  /// @param mat_v contains the lower triangular matrix of reflectors,
+  /// @param mat_t contains the upper triangular matrix of T factors.
   template <Backend backend, Device device, class T>
   void backTransformation(Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
                          Matrix<T, device>& mat_t){
-  // TODO add preconditions
+  // TODO preconditions are enough?
+  // TODO blocksize? So far should be one
   DLAF_ASSERT(matrix::square_size(mat_c), mat_c);
   DLAF_ASSERT(matrix::square_blocksize(mat_c), mat_c);
   DLAF_ASSERT(matrix::local_matrix(mat_c), mat_c);

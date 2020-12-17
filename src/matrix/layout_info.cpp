@@ -19,7 +19,6 @@ LayoutInfo::LayoutInfo(const LocalElementSize& size, const TileElementSize& bloc
                        SizeType tile_offset_row, SizeType tile_offset_col)
     : size_(size), nr_tiles_(0, 0), block_size_(block_size), ld_tile_(tile_ld),
       tile_offset_row_(tile_offset_row), tile_offset_col_(tile_offset_col) {
-
   DLAF_ASSERT(size_.isValid(), size_);
   DLAF_ASSERT(!block_size_.isEmpty(), block_size_);
 
@@ -37,8 +36,7 @@ LayoutInfo::LayoutInfo(const LocalElementSize& size, const TileElementSize& bloc
     SizeType max_rows_tiles = std::min(size_.rows(), block_size_.rows());
 
     DLAF_ASSERT(ld_tile_ >= max_rows_tiles, ld_tile_, max_rows_tiles);
-    DLAF_ASSERT(tile_offset_row_ >= max_rows_tiles, tile_offset_row,
-                max_rows_tiles);
+    DLAF_ASSERT(tile_offset_row_ >= max_rows_tiles, tile_offset_row, max_rows_tiles);
     DLAF_ASSERT(tile_offset_row_ >= minTileMemSize(block_size_) ||
                     ld_tile_ >= tileOffset({nr_tiles_.rows() - 1, 0}) + last_rows,
                 tile_offset_row_, minTileMemSize(block_size_), ld_tile_,

@@ -18,7 +18,7 @@ Tile<const T, device>::Tile(const TileElementSize& size,
   DLAF_ASSERT(size.isValid(), size);
   DLAF_ASSERT(ld_ >= std::max<SizeType>(1, size_.rows()), ld, size_.rows());
   DLAF_ASSERT(size.isEmpty() || size_.rows() + ld_ * (size_.cols() - 1) <= memory_view_.size(), size,
-              size_.rows() + ld_ * (size_.cols() - 1), memory_view_.size());
+              size_, ld_, memory_view_.size());
 }
 
 template <class T, Device device>

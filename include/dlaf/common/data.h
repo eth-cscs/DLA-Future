@@ -135,7 +135,7 @@ void copy(const DataIn& src, const DataOut& dest) {
   else {
     if (data_iscontiguous(dest)) {
       DLAF_ASSERT_HEAVY(data_nblocks(src) * data_blocksize(src) == data_blocksize(dest),
-                        data_nblocks(src) * data_blocksize(src), data_blocksize(dest));
+                        data_nblocks(src), data_blocksize(src), data_blocksize(dest));
 
       for (SizeType i_block = 0; i_block < data_nblocks(src); ++i_block) {
         auto ptr_block_start = data_pointer(src) + i_block * data_stride(src);
@@ -145,7 +145,7 @@ void copy(const DataIn& src, const DataOut& dest) {
     }
     else if (data_iscontiguous(src)) {
       DLAF_ASSERT_HEAVY(data_blocksize(src) == data_nblocks(dest) * data_blocksize(dest),
-                        data_blocksize(src), data_nblocks(dest) * data_blocksize(dest));
+                        data_blocksize(src), data_nblocks(dest), data_blocksize(dest));
 
       for (SizeType i_block = 0; i_block < data_nblocks(dest); ++i_block) {
         auto ptr_block_start = data_pointer(src) + i_block * data_blocksize(dest);

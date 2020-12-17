@@ -139,7 +139,7 @@ trsmSizes getTrsmSizes(blas::Side side, const dlaf::matrix::Tile<const T, device
   DLAF_ASSERT(square_size(a), a);
 
   const auto left_side = (side == blas::Side::Left ? s.m : s.n);
-  DLAF_ASSERT(a.size().rows() == left_side, a, left_side, b);
+  DLAF_ASSERT(a.size().rows() == left_side, a, side, b);
 
   return s;
 }

@@ -3,8 +3,8 @@
 import miniapps as mp
 
 run_name = "extended_mpi"
-build_dir = "~/build/dlaf/i4otgnd/nbmpi"
-run_dir = f"~/runs/dlaf/{run_name}"
+build_dir = "~/build/dlaf/r2lupte/nbmpi"
+run_dir = f"~/code/dlaf/scripts/{run_name}"
 time_min = 60
 nruns = 10
 ranks_per_node = 2

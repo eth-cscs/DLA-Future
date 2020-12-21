@@ -41,8 +41,7 @@ printenv > env.txt
 
 
 def submit_job(run_dir, nodes, job_text):
-    home_dir = expanduser("~")
-    job_path = f"{run_dir}/{nodes}"
+    job_path = expanduser(f"{run_dir}/{nodes}")
     makedirs(job_path, exist_ok=False)
     job_file = f"{job_path}/job.sh"
     with open(job_file, "w") as f:
@@ -80,9 +79,9 @@ def _get_mech_flag(mech):
 
 def _get_pool_flag(pool):
     if pool == "mpi":
-        pool_flags = "--mpipool --hpx:ini=hpx.max_idle_backoff_time=0"
+        return "--mpipool --hpx:ini=hpx.max_idle_backoff_time=0"
     elif pool == "default" or pool == "na":
-        pool_flags = ""
+        return ""
     else:
         raise ValueError(f"Wrong value: pool = {pool}!")
 
@@ -132,7 +131,7 @@ def chol(
             "--hpx:use-process-mask "
             f"{queue_flag} "
             f"{mech_flag} "
-            f"{pool_flags} "
+            f"{pool_flag} "
             f">> chol_{suffix}.out"
         )
 

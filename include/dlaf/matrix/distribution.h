@@ -288,7 +288,7 @@ public:
   template <Coord rc>
   SizeType tileElementFromGlobalElement(SizeType global_element) const noexcept {
     DLAF_ASSERT_HEAVY(0 <= global_element && global_element < size_.get<rc>(), global_element,
-                      size_.get<rc>(), );
+                      size_.get<rc>());
     return util::matrix::tileElementFromElement(global_element, block_size_.get<rc>());
   }
 

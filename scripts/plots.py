@@ -3,6 +3,6 @@
 
 import postprocess as pp
 
-df = pp.parse("~/downloads/exp_data")
+df = pp.parse_jobs("~/downloads/exp_data")
 df_grp = pp.calc_chol_metrics(df)
 pp.gen_chol_plots(df_grp)

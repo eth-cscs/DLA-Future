@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from collections import deque
+from parse import parse
 
 sns.set_theme()
 
@@ -58,84 +58,67 @@ def _calc_metrics(cols, df):
     )
 
 
-# Assumptions:
-#
-# - at least a single white space  between various data of interest
-#
+# {
+#     "run_index":
+#     "matrix_rows":
+#     "matrix_cols":
+#     "block_rows":
+#     "block_cols":
+#     "grid_rows":
+#     "grid_cols":
+#     "time":
+#     "perf":
+#     "perf_per_node":
+#     "bench_name":
+#     "nodes":
+# }
 def _parse_line_based(lib, fout, bench_name, nodes):
-
-    fl = "[+-]?([0-9]*[.])?[0-9]+"
-
     if lib == "dlaf":
-        regstr = "[{}] {} {}GFlop/s ({}, {}) ({}, {}) ({}, {}) {}".format(fl)
+        pstr_arr = [ "[{run_index:d}] {time:f}s {perf:f}GFlop/s ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}" ]
     elif lib == "slate_chol":
-        regstr = (
-            "d host task column lower {} {} {} {} {} {} NA {} {} NA NA no check".format(
-                fl
-            )
-        )
+        pstr_arr = [ "d host task column lower {matrix_rows:d} {:d} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:f} {perf:f} NA NA no check" ]
     elif lib == "slate_trsm":
-        regstr = "d host task {} left lower notrans nonunit {} {} {} {} {} {} {} NA {} {} NA NA  no check".format(
-            fl
-        )
-    elif lin == "dplasma_chol":
-        regstr ="""
-        "a#+++++ P x Q : {} x {} ({}/{})",
-                "#+++++ M x N x K|NRHS : {} x {} x {}",
-                "#+++++ MB x NB : {} x {}",
-                "[****] TIME(s) {} : dpotrf PxQ= {} {} NB= {} N= {} : {} gflops - ENQ&PROG&DEST {} : {} gflops - ENQ {} - DEST {}"
-        """
-        regstr = "\n".join(
-            [
-                "#+++++ P x Q : {} x {} ({}/{})",
-                "#+++++ M x N x K|NRHS : {} x {} x {}",
-                "#+++++ MB x NB : {} x {}",
-                "[****] TIME(s) {} : dpotrf PxQ= {} {} NB= {} N= {} : {} gflops - ENQ&PROG&DEST {} : {} gflops - ENQ {} - DEST {}",
-            ]
-        ).format(fl)
-    elif lin == "dplasma_trsm":
-        regstr = "\n".join(
-            [
-                "#+++++ P x Q : {} x {} ({}/{})",
-                "#+++++ M x N x K|NRHS : {} x {} x {}",
-                "#+++++ MB x NB : {} x {}",
-                "[****] TIME(s) {} : dtrsm PxQ= {} {} NB= {} N= {} : {} gflops",
-            ]
-        ).format(fl)
+        pstr_arr = [ "d host task {:d} left lower notrans nonunit {matrix_rows:d} {matrix_cols:d} {:f} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:f} {perf:f} NA NA no check" ]
+    elif lib == "dplasma_chol":
+        pstr_arr = [
+            "#+++++ M x N x K|NRHS : {matrix_rows:d} x {matrix_cols:d} x {:d}",
+            "#+++++ MB x NB : {block_rows:d} x {block_cols:d}",
+            "[****] TIME(s) {time:f} : dpotrf PxQ= {grid_rows:d} {grid_cols:d} NB= {:d} N= {:d} : {perf:f} gflops - ENQ&PROG&DEST 1.07285 : 2669.068799 gflops - ENQ 0.00252 - DEST 0.00011",
+        ]
+    elif lib == "dplasma_trsm":
+        pstr_arr = [
+            "#+++++ M x N x K|NRHS : {matrix_rows:d} x {matrix_cols:d} x {:d}",
+            "#+++++ MB x NB : {block_rows:d} x {block_cols:d}",
+            "[****] TIME(s) {time:f} : dtrsm PxQ= {grid_rows:d} {grid_cols:d} NB= {block_rows:d} N= {:d} : {perf:f} gflops",
+        ]
 
-    multi_lines = deque([], maxlen=nlines)  # a double ended queue of fixed size
     data = []
+    rd = {}
+    i_pstr = 0
     for line in fout:
-        multi_lines.append(line)
-        if len(multi_lines) != nlines:  # do nothing until the queue is filled
-            continue
+        pdata = parse(pstr_arr[i_pstr], " ".join(line.split()))
+        if pdata:
+            rd.update(pdata.named)
+            i_pstr += 1
 
-        reg = re.match(regstr, re.sub(" +", " ", multi_lines))
-        if reg:
+        # if all lines are matched, add the data entry
+        if i_pstr == len(pstr_arr):
+            rd["bench_name"] = bench_name
+            rd["nodes"] = nodes
+            rd["perf_per_node"] = rd["perf"] / nodes
+            if lib == "slate_chol":
+                rd["block_cols"] = rd["block_rows"]
+                rd["matrix_cols"] = rd["matrix_rows"]
+            elif lib == "slate_trsm":
+                rd["block_cols"] = rd["block_rows"]
 
-        # merge lines and tokenize: leave digits and dots, split on white space
-        split_data = re.sub("[^\d\.]", " ", " ".join(multi_lines.split())).split()
-        raw_data = [
-            split_data[i] for i in ind
-        ]  # pick data and leave only digits and dots
-        try:
-            data.append(
-                {
-                    "matrix_rows": int(raw_data[0]),
-                    "matrix_cols": int(raw_data[1]),
-                    "block_rows": int(raw_data[2]),
-                    "block_cols": int(raw_data[3]),
-                    "grid_rows": int(raw_data[4]),
-                    "grid_cols": int(raw_data[5]),
-                    "time": float(raw_data[6]),
-                    "perf": float(raw_data[7]),
-                    "perf_per_node": float(raw_data[7]) / nodes,
-                    "bench_name": bench_name,
-                    "nodes": nodes,
-                }
-            )
-        except ValueError:
-            pass
+            # makes _calc_metrics work
+            if not lib == "dlaf":
+                rd["run_index"] = 1
+
+            data.append(rd)
+            i_pstr = 0
+            rd = {}
 
     return data
 
@@ -155,7 +138,7 @@ def _parse_line_based(lib, fout, bench_name, nodes):
 # │   ├── <bench_name_2>.out
 # |   ...
 #
-def parse(data_dir):
+def parse_jobs(data_dir):
     data = []
     for subdir, dirs, files in os.walk(os.path.expanduser(data_dir)):
         for f in files:

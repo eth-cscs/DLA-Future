@@ -78,8 +78,9 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLN(blas::Diag diag, T alpha,
                                                        Matrix<const T, Device::CPU>& mat_a,
                                                        Matrix<T, Device::CPU>& mat_b) {
   using hpx::threads::executors::pool_executor;
-  using hpx::threads::thread_priority_high;
-  using hpx::threads::thread_priority_default;
+
+  constexpr auto thread_priority_high = hpx::threads::thread_priority::high;
+  constexpr auto thread_priority_default = hpx::threads::thread_priority::default_;
 
   // Set up executor on the default queue with high priority.
   pool_executor executor_hp("default", thread_priority_high);
@@ -117,8 +118,9 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLT(blas::Op op, blas::Diag d
   constexpr auto NoTrans = blas::Op::NoTrans;
 
   using hpx::threads::executors::pool_executor;
-  using hpx::threads::thread_priority_high;
-  using hpx::threads::thread_priority_default;
+
+  constexpr auto thread_priority_high = hpx::threads::thread_priority::high;
+  constexpr auto thread_priority_default = hpx::threads::thread_priority::default_;
 
   // Set up executor on the default queue with high priority.
   pool_executor executor_hp("default", thread_priority_high);
@@ -158,8 +160,9 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LUN(blas::Diag diag, T alpha,
   constexpr auto NoTrans = blas::Op::NoTrans;
 
   using hpx::threads::executors::pool_executor;
-  using hpx::threads::thread_priority_high;
-  using hpx::threads::thread_priority_default;
+
+  constexpr auto thread_priority_high = hpx::threads::thread_priority::high;
+  constexpr auto thread_priority_default = hpx::threads::thread_priority::default_;
 
   // Set up executor on the default queue with high priority.
   pool_executor executor_hp("default", thread_priority_high);
@@ -199,8 +202,9 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LUT(blas::Op op, blas::Diag d
   constexpr auto NoTrans = blas::Op::NoTrans;
 
   using hpx::threads::executors::pool_executor;
-  using hpx::threads::thread_priority_high;
-  using hpx::threads::thread_priority_default;
+
+  constexpr auto thread_priority_high = hpx::threads::thread_priority::high;
+  constexpr auto thread_priority_default = hpx::threads::thread_priority::default_;
 
   // Set up executor on the default queue with high priority.
   pool_executor executor_hp("default", thread_priority_high);
@@ -241,8 +245,9 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RLN(blas::Diag diag, T alpha,
   constexpr auto NoTrans = blas::Op::NoTrans;
 
   using hpx::threads::executors::pool_executor;
-  using hpx::threads::thread_priority_high;
-  using hpx::threads::thread_priority_default;
+
+  constexpr auto thread_priority_high = hpx::threads::thread_priority::high;
+  constexpr auto thread_priority_default = hpx::threads::thread_priority::default_;
 
   // Set up executor on the default queue with high priority.
   pool_executor executor_hp("default", thread_priority_high);
@@ -283,8 +288,9 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RLT(blas::Op op, blas::Diag d
   constexpr auto NoTrans = blas::Op::NoTrans;
 
   using hpx::threads::executors::pool_executor;
-  using hpx::threads::thread_priority_high;
-  using hpx::threads::thread_priority_default;
+
+  constexpr auto thread_priority_high = hpx::threads::thread_priority::high;
+  constexpr auto thread_priority_default = hpx::threads::thread_priority::default_;
 
   // Set up executor on the default queue with high priority.
   pool_executor executor_hp("default", thread_priority_high);
@@ -325,8 +331,9 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RUN(blas::Diag diag, T alpha,
   constexpr auto NoTrans = blas::Op::NoTrans;
 
   using hpx::threads::executors::pool_executor;
-  using hpx::threads::thread_priority_high;
-  using hpx::threads::thread_priority_default;
+
+  constexpr auto thread_priority_high = hpx::threads::thread_priority::high;
+  constexpr auto thread_priority_default = hpx::threads::thread_priority::default_;
 
   // Set up executor on the default queue with high priority.
   pool_executor executor_hp("default", thread_priority_high);
@@ -367,8 +374,9 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RUT(blas::Op op, blas::Diag d
   constexpr auto NoTrans = blas::Op::NoTrans;
 
   using hpx::threads::executors::pool_executor;
-  using hpx::threads::thread_priority_high;
-  using hpx::threads::thread_priority_default;
+
+  constexpr auto thread_priority_high = hpx::threads::thread_priority::high;
+  constexpr auto thread_priority_default = hpx::threads::thread_priority::default_;
 
   // Set up executor on the default queue with high priority.
   pool_executor executor_hp("default", thread_priority_high);
@@ -405,11 +413,12 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid gr
                                                        T alpha, Matrix<const T, Device::CPU>& mat_a,
                                                        Matrix<T, Device::CPU>& mat_b) {
   using hpx::threads::executors::pool_executor;
-  using hpx::threads::thread_priority_high;
-  using hpx::threads::thread_priority_default;
   using comm::internal::mpi_pool_exists;
   using common::internal::vector;
   using ConstTileType = typename Matrix<T, Device::CPU>::ConstTileType;
+
+  constexpr auto thread_priority_high = hpx::threads::thread_priority::high;
+  constexpr auto thread_priority_default = hpx::threads::thread_priority::default_;
 
   pool_executor executor_hp("default", thread_priority_high);
   pool_executor executor_normal("default", thread_priority_default);

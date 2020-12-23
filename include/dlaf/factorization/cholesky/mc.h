@@ -78,8 +78,9 @@ struct Cholesky<Backend::MC, Device::CPU, T> {
 template <class T>
 void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a) {
   using hpx::threads::executors::pool_executor;
-  using hpx::threads::thread_priority_high;
-  using hpx::threads::thread_priority_default;
+
+  constexpr auto thread_priority_high = hpx::threads::thread_priority::high;
+  constexpr auto thread_priority_default = hpx::threads::thread_priority::default_;
 
   pool_executor executor_hp("default", thread_priority_high);
   pool_executor executor_normal("default", thread_priority_default);
@@ -120,8 +121,10 @@ template <class T>
 void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
                                                    Matrix<T, Device::CPU>& mat_a) {
   using hpx::threads::executors::pool_executor;
-  using hpx::threads::thread_priority_high;
-  using hpx::threads::thread_priority_default;
+
+  constexpr auto thread_priority_high = hpx::threads::thread_priority::high;
+  constexpr auto thread_priority_default = hpx::threads::thread_priority::default_;
+
   using comm::internal::mpi_pool_exists;
   using ConstTile_t = matrix::Tile<const T, Device::CPU>;
 

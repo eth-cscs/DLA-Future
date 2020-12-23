@@ -50,8 +50,9 @@ void GenToStd<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
   using hpx::util::unwrapping;
 
   using hpx::threads::executors::pool_executor;
-  using hpx::threads::thread_priority_high;
-  using hpx::threads::thread_priority_default;
+
+  constexpr auto thread_priority_high = hpx::threads::thread_priority::high;
+  constexpr auto thread_priority_default = hpx::threads::thread_priority::default_;
 
   // Set up executor on the default queue with high priority.
   pool_executor executor_hp("default", thread_priority_high);

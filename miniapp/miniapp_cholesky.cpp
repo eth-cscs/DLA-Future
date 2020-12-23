@@ -197,7 +197,7 @@ namespace {
 /// part of each tile, diagonal excluded, are set to zero.
 /// Tiles that are not on the diagonal (i.e. row != col) will not be touched or referenced
 void setUpperToZeroForDiagonalTiles(MatrixType& matrix) {
-  DLAF_ASSERT(dlaf::matrix::square_blocksize(matrix), "");
+  DLAF_ASSERT(dlaf::matrix::square_blocksize(matrix), matrix);
 
   const auto& distribution = matrix.distribution();
 
@@ -245,11 +245,11 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
       a(el_idx) = std::abs(a(el_idx) - b(el_idx));
   });
 
-  DLAF_ASSERT(dlaf::matrix::square_size(A), "");
-  DLAF_ASSERT(dlaf::matrix::square_blocksize(A), "");
+  DLAF_ASSERT(dlaf::matrix::square_size(A), A);
+  DLAF_ASSERT(dlaf::matrix::square_blocksize(A), A);
 
-  DLAF_ASSERT(dlaf::matrix::square_size(L), "");
-  DLAF_ASSERT(dlaf::matrix::square_blocksize(L), "");
+  DLAF_ASSERT(dlaf::matrix::square_size(L), L);
+  DLAF_ASSERT(dlaf::matrix::square_blocksize(L), L);
 
   const auto& distribution = L.distribution();
   const auto current_rank = distribution.rankIndex();
@@ -293,7 +293,7 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
         // by construction: this rank has the 1st operand, so if it does not have the 2nd one,
         // for sure another rank in the same column will have it (thanks to the regularity of the
         // distribution given by the 2D grid)
-        DLAF_ASSERT_HEAVY(owner_transposed.col() == current_rank.col(), "");
+        DLAF_ASSERT_HEAVY(owner_transposed.col() == current_rank.col(), owner_transposed, current_rank);
 
         TileType workspace(L.blockSize(),
                            dlaf::memory::MemoryView<T, Device::CPU>(L.blockSize().linear_size()),

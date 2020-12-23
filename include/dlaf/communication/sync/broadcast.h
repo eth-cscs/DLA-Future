@@ -46,7 +46,7 @@ void send(Communicator& communicator, DataIn&& message_to_send) {
 /// For more information, see the Data concept in "dlaf/common/data.h".
 template <class DataOut>
 void receive_from(const int broadcaster_rank, Communicator& communicator, DataOut&& data) {
-  DLAF_ASSERT_HEAVY(broadcaster_rank != communicator.rank(), "");
+  DLAF_ASSERT_HEAVY(broadcaster_rank != communicator.rank(), broadcaster_rank, communicator.rank());
   auto message = comm::make_message(common::make_data(std::forward<DataOut>(data)));
   DLAF_MPI_CALL(
       MPI_Bcast(message.data(), message.count(), message.mpi_type(), broadcaster_rank, communicator));

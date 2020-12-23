@@ -120,7 +120,7 @@ class Executor : public cuda::Executor {
 public:
   Executor(cuda::StreamPool stream_pool, HandlePool handle_pool)
       : base(stream_pool), handle_pool_(handle_pool) {
-    DLAF_ASSERT(stream_pool_.getDevice() == handle_pool_.getDevice(), "", stream_pool_.getDevice(),
+    DLAF_ASSERT(stream_pool_.getDevice() == handle_pool_.getDevice(), stream_pool_.getDevice(),
                 handle_pool_.getDevice());
   }
 

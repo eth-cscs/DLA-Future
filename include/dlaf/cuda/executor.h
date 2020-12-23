@@ -84,7 +84,7 @@ struct StreamPoolImpl {
     // [2]: CUDA Runtime API, section 5.1 Device Management
     DLAF_CUDA_CALL(cudaSetDevice(device_));
     const std::size_t worker_thread_num = hpx::get_worker_thread_num();
-    DLAF_ASSERT(worker_thread_num != std::size_t(-1), "");
+    DLAF_ASSERT(worker_thread_num != std::size_t(-1), worker_thread_num);
     std::size_t stream_idx =
         worker_thread_num * num_streams_per_worker_thread_ +
         (++current_stream_idxs_[worker_thread_num].data_ % num_streams_per_worker_thread_);

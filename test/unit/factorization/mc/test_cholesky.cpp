@@ -95,7 +95,10 @@ TYPED_TEST(CholeskyLocalTest, Correctness) {
   }
 }
 
-TYPED_TEST(CholeskyDistributedTest, Correctness) {
+enum class DistCholeskyVariant { Yielding, Polling, BatchedYielding, BatchedPolling };
+
+template <class TypeParam>
+void testDistCholesky(CholeskyDistributedTest<TypeParam>& test, DistCholeskyVariant var) {
   // Note: The tile elements are chosen such that:
   // - res_ij = 1 / 2^(|i-j|) * exp(I*(-i+j)),
   // where I = 0 for real types or I is the complex unit for complex types.
@@ -127,29 +130,54 @@ TYPED_TEST(CholeskyDistributedTest, Correctness) {
   };
   hpx::mpi::experimental::enable_user_polling internal_helper("default");
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (const auto& comm_grid : test.commGrids()) {
     for (const auto& size : square_sizes) {
       for (const auto& block_size : square_block_sizes) {
-        for (bool exec_yielding : {true, false} /*, false}*/) {
-          // Matrix to undergo Cholesky decomposition
-          Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
-                                 std::min(1, comm_grid.size().cols() - 1));
-          GlobalElementSize sz = globalTestSize(size);
-          Distribution distribution(sz, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
-          Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
-          set(mat, el);
+        // Matrix to undergo Cholesky decomposition
+        Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
+                               std::min(1, comm_grid.size().cols() - 1));
+        GlobalElementSize sz = globalTestSize(size);
+        Distribution distribution(sz, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
+        Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
+        set(mat, el);
 
-          if (exec_yielding)
-            factorization::cholesky<Backend::MC, Device::CPU, TypeParam,
-                                    comm::executor>(comm_grid, blas::Uplo::Lower, mat);
-          else
-            factorization::cholesky<Backend::MC, Device::CPU, TypeParam,
-                                    comm::mpi_polling_executor>(comm_grid, blas::Uplo::Lower, mat);
-
-          CHECK_MATRIX_NEAR(res, mat, 4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error,
-                            4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);
+        if (var == DistCholeskyVariant::Yielding) {
+          factorization::cholesky<Backend::MC, Device::CPU, TypeParam, comm::executor>(comm_grid,
+                                                                                       blas::Uplo::Lower,
+                                                                                       mat);
         }
+        else if (var == DistCholeskyVariant::Polling) {
+          factorization::cholesky<Backend::MC, Device::CPU, TypeParam,
+                                  comm::mpi_polling_executor>(comm_grid, blas::Uplo::Lower, mat);
+        }
+        else if (var == DistCholeskyVariant::BatchedPolling) {
+          factorization::batchedCholesky<Device::CPU, TypeParam,
+                                         comm::mpi_polling_executor>(comm_grid, blas::Uplo::Lower, mat);
+        }
+        else if (var == DistCholeskyVariant::BatchedYielding) {
+          factorization::batchedCholesky<Device::CPU, TypeParam, comm::executor>(comm_grid,
+                                                                                 blas::Uplo::Lower, mat);
+        }
+
+        CHECK_MATRIX_NEAR(res, mat, 4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error,
+                          4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);
       }
     }
   }
+}
+
+TYPED_TEST(CholeskyDistributedTest, DistCholesky_Yielding) {
+  testDistCholesky<TypeParam>(*this, DistCholeskyVariant::Yielding);
+}
+
+TYPED_TEST(CholeskyDistributedTest, DistCholesky_Polling) {
+  testDistCholesky<TypeParam>(*this, DistCholeskyVariant::Polling);
+}
+
+TYPED_TEST(CholeskyDistributedTest, DistCholesky_BatchedPolling) {
+  testDistCholesky<TypeParam>(*this, DistCholeskyVariant::BatchedPolling);
+}
+
+TYPED_TEST(CholeskyDistributedTest, DistCholesky_BatchedYielding) {
+  testDistCholesky<TypeParam>(*this, DistCholeskyVariant::BatchedYielding);
 }

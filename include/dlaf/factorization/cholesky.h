@@ -71,5 +71,13 @@ void cholesky(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, device>& m
     DLAF_UNIMPLEMENTED(uplo);
 }
 
+template <Device device, class T, class MPIExecutor>
+void batchedCholesky(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, device>& mat_a) {
+  if (uplo == blas::Uplo::Lower)
+    internal::batchedCholesky<T, MPIExecutor>(grid, mat_a);
+  else
+    DLAF_UNIMPLEMENTED(uplo);
+}
+
 }
 }

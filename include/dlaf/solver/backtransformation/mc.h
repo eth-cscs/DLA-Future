@@ -42,6 +42,21 @@ namespace internal {
 
   using namespace dlaf::matrix;
   //  using namespace dlaf::tile;
+
+  template <class T>
+  void print_mat(dlaf::Matrix<T, dlaf::Device::CPU>& matrix) {
+    using dlaf::common::iterate_range2d;
+
+    const auto& distribution = matrix.distribution();
+
+    //std::cout << matrix << std::endl;
+
+    for (const auto& index : iterate_range2d(distribution.localNrTiles())) {
+      const auto index_global = distribution.globalTileIndex(index);
+      std::cout << index_global << '\t' << matrix.read(index).get()({0, 0}) << std::endl;
+    }
+    std::cout << "finished" << std::endl;
+  }
   
 // Implementation based on:
 // 1. Part of algorithm 6 "LAPACK Algorithm for the eigenvector back-transformation", page 15, PhD thesis "GPU
@@ -149,9 +164,10 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
      using common::internal::vector;
      using dlaf::comm::Communicator;
      using dlaf::comm::CommunicatorGrid;
+     using dlaf::common::make_data;
 
      using TileType = typename Matrix<T, Device::CPU>::TileType;     
-     using ConstTileType = typename Matrix<T, Device::CPU>::ConstTileType;     
+     using ConstTileType = typename Matrix<const T, Device::CPU>::ConstTileType;     
 
      using hpx::threads::executors::pool_executor;
      using hpx::threads::thread_priority_high;
@@ -171,9 +187,14 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 
      TileElementSize size(mb, nb);
 
+     auto distrib = mat_c.distribution();
+     auto local_rows = distrib.localNrTiles().rows();
+     auto local_cols = distrib.localNrTiles().cols();
+     
+
      // CHECK!!
      // Distribution distributionC(szC, blockSizeC, comm_grid.size(), comm_grid.rank(), src_rank_index);
-     auto dist_w = mat_c.distribution();
+     auto dist_w = mat_v.distribution();
 //     auto layout_w = tileLayout(dist_w.localSize(), size);
 //     Matrix<T, Device::CPU> mat_w(std::move(dist_w), layout_w);
      Matrix<T, Device::CPU> mat_w(std::move(dist_w));
@@ -185,13 +206,12 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
      Matrix<T, Device::CPU> mat_w2(std::move(dist_w2));
      matrix::util::set(mat_w2, [](auto&&){return 0;});
 
-     auto dist_w2_local = mat_c.distribution();
+     auto dist_w2_partial = mat_c.distribution();
 //     auto layout_w2 = tileLayout(dist_w2.localSize(), size);
 //     Matrix<T, Device::CPU> mat_w2(std::move(dist_w2), layout_w2);
-     Matrix<T, Device::CPU> mat_w2_local(std::move(dist_w2_local));
-     matrix::util::set(mat_w2_local, [](auto&&){return 0;});
+     Matrix<T, Device::CPU> mat_w2_partial(std::move(dist_w2_partial));
+     matrix::util::set(mat_w2_partial, [](auto&&){return 0;});
 
-     auto distrib = mat_c.distribution();
 
      // n-1 reflectors
      //for (SizeType i = 0; i < (m - 1); ++i) {
@@ -206,46 +226,62 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
        hpx::shared_future<ConstTileType> matt_ii_tile; 
        
        // Broadcast Tii column-wise
-       if (mat_c.rankIndex().col() == rank_i_col) {
-	 if (mat_c.rankIndex().row() == rank_i_row) {
+       if (mat_t.rankIndex().col() == rank_i_col) {
+	 if (mat_t.rankIndex().row() == rank_i_row) {
+	   matt_ii_tile = mat_t.read(ii);
 	   comm::send_tile(executor_mpi, serial_comm, Coord::Col, mat_t.read(ii));
 	 }
 	 else {
-	   matt_ii_tile = comm::recv_tile<T>(executor_mpi, serial_comm, Coord::Row, mat_t.tileSize(GlobalTileIndex(i, i)), rank_i_col);
+	   matt_ii_tile = comm::recv_tile<T>(executor_mpi, serial_comm, Coord::Col, mat_t.tileSize(GlobalTileIndex(i, i)), rank_i_row);
 	 }
        }
-	   
-       for (SizeType k = i; k < m; ++k) {
-	 auto local_k_row = distrib.template localTileFromGlobalTile<Coord::Row>(k);
+
+       // Compute W = V T
+       for (SizeType k_local = 0; k_local < local_rows; ++k_local) {
+	 auto k = distrib.template globalTileFromLocalTile<Coord::Row>(k_local);
 	 const IndexT_MPI rank_k_row = distrib.template rankGlobalTile<Coord::Row>(k); 	 
-	 auto ki = LocalTileIndex{local_k_row, local_i_col};
+	 auto ki = LocalTileIndex{k_local, local_i_col};
 	 
-	 if (mat_c.rankIndex().col() == rank_i_col) {
-	   if (mat_c.rankIndex().row() == rank_k_row) {
+	 if (mat_w.rankIndex().col() == rank_i_col) {
+	   if (mat_w.rankIndex().row() == rank_k_row) {
 	     // W = V T
 	     hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper, ConjTrans,
 			   NonUnit, 1.0, matt_ii_tile, std::move(mat_w(ki)));
 	   }
 	 }
        }
-        
 
+       
     // Broadcast row-wise Wji to jk and compute W2_local ji = Wji Cji
-       for (SizeType k = i; k < m; ++k) {
+       for (SizeType k_local = 0; k_local < local_rows; ++k_local) { 
+	 auto k = distrib.template globalTileFromLocalTile<Coord::Row>(k_local);
 	 const IndexT_MPI rank_k_row = distrib.template rankGlobalTile<Coord::Row>(k);
-	 const SizeType local_k_row = distrib.template localTileFromGlobalTile<Coord::Row>(k);
 
+	 auto ki = LocalTileIndex{k_local, local_i_col};
+	 //	 hpx::future<TileType> tile_w2 = mat_w2(ki);
+	 
 	 vector<hpx::shared_future<ConstTileType>> panel_matwki(m-i);
-	 vector<hpx::shared_future<TileType>> panel_matw2k(m-i);
+	 //	 vector<hpx::future<ConstTileType>> panel_colj(m-i);
 
-	 for (SizeType j = i; j < m; ++j) {
+//	 auto dist_w2_local = mat_v.distribution();
+//	 auto layout_w2_local = tileLayout(dist_w2.localSize(), size);
+//	 Matrix<T, Device::CPU> mat_w2_local(std::move(dist_w2_local), layout_w2_local);
+////	 //	 Matrix<T, Device::CPU> mat_w2_local(std::move(dist_w2_local));
+////	 matrix::util::set(mat_w2_local, [](auto&&){return 0;});
+////	 hpx::future<TileType> tile_w2 = mat_w2(LocalTileIndex{00});
+
+//	 for (SizeType j = i; j < m; ++j) {
+	 for (SizeType j_local = 0; j_local < local_cols; ++j_local) {
+	   auto j = distrib.template globalTileFromLocalTile<Coord::Col>(j_local);
 	   const IndexT_MPI rank_j_col = distrib.template rankGlobalTile<Coord::Col>(j);
 
+	   auto kj = LocalTileIndex{k_local, j_local};
+	   auto ij = LocalTileIndex{local_i_row, j_local};
+	   hpx::future<TileType> tile_w2 = mat_w2(LocalTileIndex{0,0});
+	   // THIS WORKS LocalTileIndex{0,0}
+	   
 	   if (mat_w.rankIndex().row() == rank_k_row) {
 	     if (mat_w.rankIndex().col() == rank_j_col) {
-	       const SizeType local_j_col = distrib.template localTileFromGlobalTile<Coord::Col>(j);
-	       auto kj = LocalTileIndex{local_k_row, local_j_col};
-	       auto ki = LocalTileIndex{local_k_row, local_i_col};
 
 	       if (i == j) {
 		 std::cout << "send " << k << " " << j  << std::endl;
@@ -254,29 +290,77 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 		 // Send Wji
 		 comm::send_tile(executor_mpi, serial_comm, Coord::Row, panel_matwki[j]);
 
-		 hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), ConjTrans, NoTrans, 1.0, panel_matwki[j], mat_c.read(kj), 1.0, std::move(mat_w2_local(kj)));
+		 //hpx::future<TileType> tile_w2 = panel_colj[j];
+		 // Compute Wji Ckj = W2kj, local on W2ki
+		 hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), ConjTrans, NoTrans, 1.0, panel_matwki[j], mat_c.read(kj), 0.0, std::move(tile_w2));
 	       }
 	       else {
-		 //std::cout << "receive " << k << " " << j << std::endl;
+		 std::cout << "receive " << k << " " << j << std::endl;
 		 // Receive Wji
 		 panel_matwki[j] = comm::recv_tile<T>(executor_mpi, serial_comm, Coord::Row, mat_w.tileSize(GlobalTileIndex(k, j)), rank_i_col);
 
-		 hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), ConjTrans, NoTrans, 1.0, panel_matwki[j], mat_c.read(kj), 1.0, std::move(mat_w2_local(kj)));
+		 //hpx::future<TileType> tile_w2 = panel_colj[j];
+		 // Compute Wji Ckj = W2kj, local on W2ki
+		 hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), ConjTrans, NoTrans, 1.0, panel_matwki[j], mat_c.read(kj), 1.0, std::move(tile_w2));
 	       }
 	     }
 	   }
 	 }
 
+       }
 
-//	 if (mat_w.rankIndex().row() == rank_k_row) {
-//	   if (mat_w.rankIndex().col() == rank_i_col) {
-//	     using dlaf::common::make_data;
-//	     auto ki = LocalTileIndex{local_k_row, local_i_col};
-//	     dlaf::comm::sync::reduce(rank_k_row, grid.rowCommunicator(), MPI_SUM, make_data(panel_matw2k), make_data(mat_w2[ki]));
+
+//       hpx::future<TileType> tile_w2 = mat_w2(LocalTileIndex{0,0});
+//       auto all_reduce_w_func = hpx::util::unwrapping([](auto&& tile_w2, auto&& comm_wrapper) {
+//	   dlaf::comm::sync::all_reduce(comm_wrapper.ref().colCommunicator(), MPI_SUM, make_data(tile_w2), make_data(tile_w2));
+//	     
+//	 });
+//       hpx::dataflow(all_reduce_w_func, tile_w2, serial_comm());
+       
+       //       auto reduce_w_func = hpx::util::unwrapping([rank_i_row](auto&& tile_w2, auto&& comm_wrapper) {
+//	   dlaf::comm::sync::reduce(rank_i_row, comm_wrapper.ref().colCommunicator(), MPI_SUM, make_data(tile_w2), make_data(tile_w2));
+//	     
+//	 });
+
+//       for (SizeType k = i; k < m; ++k) {  // row
+//	 const IndexT_MPI rank_k_row = distrib.template rankGlobalTile<Coord::Row>(k);
+//	 const SizeType local_k_row = distrib.template localTileFromGlobalTile<Coord::Row>(k);
+//
+//	 for (SizeType j = i; j < m; ++j) { // col
+//	   const IndexT_MPI rank_j_col = distrib.template rankGlobalTile<Coord::Col>(j);
+//	   const SizeType local_j_col = distrib.template localTileFromGlobalTile<Coord::Col>(j);
+//
+//	   auto kj = LocalTileIndex{local_k_row, local_j_col};
+//
+//	   hpx::dataflow(reduce_w_func, mat_w2_partial(kj), serial_comm());
+//	 }
+//
+//       }
+
+      
+	 
+       //
+       //
+       //	 if (mat_w2.rankIndex().col() == rank_i_col) { 
+       //	 
+       //	   
+//	 }
+
+	 
+//	 for (SizeType j = i; j < m; ++j) {
+//	   const IndexT_MPI rank_j_col = distrib.template rankGlobalTile<Coord::Col>(j);
+//	   const SizeType local_j_col = distrib.template localTileFromGlobalTile<Coord::Col>(j);
+//	   auto ki = LocalTileIndex{local_k_row, local_i_col};
+//	   hpx::future<TileType> tile_w2 = mat_w2(ki);
+//
+//	   if (mat_w.rankIndex().row() == rank_k_row) {
+//	     if (rank_j_col == rank_i_col) {
+//	       using dlaf::common::make_data;
+//	       
+//	       hpx::dataflow(executor_normal, hpx::util::unwrapping(dlaf::comm::sync::reduce<T, Device::CPU>), rank_i_col, grid.rowCommunicator(), MPI_SUM, make_data(tile_w2), make_data(tile_w2));
+//	     }
 //	   }
 //	 }
-//	 
-//       }
 
 	 
 //	 //Reduce W2_local(jk)

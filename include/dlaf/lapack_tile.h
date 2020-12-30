@@ -22,6 +22,7 @@
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/types.h"
+#include "dlaf/util_tile.h"
 
 namespace dlaf {
 namespace tile {

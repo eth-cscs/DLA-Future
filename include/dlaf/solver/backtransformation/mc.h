@@ -308,7 +308,7 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 
 	     //	     std::cout <<  "Loop k " << k << " j " << j  << " vs i " << i << std::endl;
 	     auto kj = LocalTileIndex{k_local, j_local};
-	     hpx::shared_future<ConstTileType> wki_tile;
+	     //hpx::shared_future<ConstTileType> wki_tile;
 	 
 
 	     hpx::future<TileType> tile_w2 = mat_w2_local(LocalTileIndex{0,0});

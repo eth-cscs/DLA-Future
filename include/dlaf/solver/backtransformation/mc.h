@@ -225,7 +225,7 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
      for (SizeType i = 0; i < (m - 1); ++i) {
      //for (SizeType i = 0; i < 1; ++i) {
 
-	 Matrix<T, Device::CPU> mat_w2_local({1, nb}, mat_v.blockSize());
+	 Matrix<T, Device::CPU> mat_w2_local({mb, nb}, mat_t.blockSize());
 	 matrix::util::set(mat_w2_local, [](auto&&){return 0;});
 	 //     auto tile_w2 = mat_w2_local(LocalTileIndex{0,0});
 	 //     std::cout << tile_w2 << std::endl;
@@ -265,37 +265,21 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 	   }
 
 
-
 	   hpx::shared_future<ConstTileType> wki_tile;
 	   if (mat_w.rankIndex().row() == rank_k_row) {
 	     if (mat_w.rankIndex().col() == rank_i_col) {
-	       
-	       //	       if (j == i) {
-		 // std::cout << "send " << k << " " << j  << " (" << i << ") " << " l = " << m-i << " k_local " << k_local << " j_local " << j_local << " index " << k-i <<  " rank_i_col " << rank_i_col << " rank_k_row " << rank_k_row << " rank_j_col " << rank_j_col << std::endl;
-		 //panel_matwki[k-i] = mat_w.read(kj);
-		 // Send Wji
-		 comm::send_tile(executor_mpi, serial_comm, Coord::Row, mat_w.read(ki));
-		 wki_tile = mat_w.read(ki);
+	       // Send Wki
+	       comm::send_tile(executor_mpi, serial_comm, Coord::Row, mat_w.read(ki));
+	       wki_tile = mat_w.read(ki);
 
-		 //hpx::shared_future<TileType> tile_w2 = mat_w2_local(kj);
-		 //hpx::future<TileType> tile_w2 = mat_w2_local(LocalTileIndex{0,0});
-		 //
-		 //// Compute Wji Ckj = W2kj, local on W2ki
-		 //hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), ConjTrans, NoTrans, 1.0, wki_tile, std::move(mat_c.read(kj)), 0.0, std::move(tile_w2));
-		 std::cout << "send " << k << " (" << i << ") Wki " << wki_tile.get()({0,0}) <<  std::endl;
-	       }
-	       else {
-		 //std::cout << "receive " << k << " " << j << " (" << i << ") " << " k_local " << k_local << " j_local " << j_local << " index " << k-i <<  " rank_i_col " << rank_i_col << " rank_k_row " << rank_k_row << " rank_j_col " << rank_j_col << " Wki " << wki_tile.get()({0,0}) << std::endl;
-		 // Receive Wji
-		 wki_tile = comm::recv_tile<T>(executor_mpi, serial_comm, Coord::Row, mat_w.tileSize(GlobalTileIndex(k, i)), rank_i_col);
+	       //std::cout << "send " << k << " (" << i << ") Wki " << wki_tile.get()({0,0}) <<  std::endl;
+	     }
+	     else {
+	       // Receive Wki
+	       wki_tile = comm::recv_tile<T>(executor_mpi, serial_comm, Coord::Row, mat_w.tileSize(GlobalTileIndex(k, i)), rank_i_col);
 		   
-		 //hpx::future<TileType> tile_w2 = mat_w2_local(LocalTileIndex{0,0});
-		 //
-		 //// Compute Wji Ckj = W2kj, local on W2ki
-		 //hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), ConjTrans, NoTrans, 1.0, wki_tile, std::move(mat_c.read(kj)), 1.0, std::move(tile_w2));
-		 std::cout << "receive " << k  << " (" << i << ") Wki " << wki_tile.get()({0,0}) << std::endl;
-	       }
-	     //}
+	       //std::cout << "receive " << k  << " (" << i << ") Wki " << wki_tile.get()({0,0})  << std::endl;
+	     }
 	   }
 
 
@@ -311,11 +295,10 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 	     //hpx::shared_future<ConstTileType> wki_tile;
 	 
 
-	     hpx::future<TileType> tile_w2 = mat_w2_local(LocalTileIndex{0,0});
-
 	     if (mat_w.rankIndex().row() == rank_k_row) {
 	       if (mat_w.rankIndex().col() == rank_j_col) {
 
+		 hpx::future<TileType> tile_w2 = mat_w2_local(LocalTileIndex{0,0});
 		 //if (j == i) {
 		   // std::cout << "send " << k << " " << j  << " (" << i << ") " << " l = " << m-i << " k_local " << k_local << " j_local " << j_local << " index " << k-i <<  " rank_i_col " << rank_i_col << " rank_k_row " << rank_k_row << " rank_j_col " << rank_j_col << std::endl;
 
@@ -340,7 +323,7 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 		   //
 		   //// Compute Wji Ckj = W2kj, local on W2ki
 		   hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), ConjTrans, NoTrans, 1.0, wki_tile, std::move(mat_c.read(kj)), 1.0, std::move(tile_w2));
-		   std::cout << "receive " << k << " " << j << " (" << i << ") Wki " << wki_tile.get()({0,0}) << " Ckj " << mat_c.read(kj).get()({0,0}) << " W2 " << mat_w2(LocalTileIndex{0,0}).get()({0,0}) << " rank i col " << rank_i_col << std::endl;
+		   std::cout << "receive " << k << " " << j << " (" << i << ") Wki " << wki_tile.get()({0,0}) << " Ckj " << mat_c.read(kj).get()({0,0}) << " W2 " << mat_w2_local(LocalTileIndex{0,0}).get()({0,0}) << " rank i col " << rank_i_col << std::endl;
 		   // }
 	       }
 	     }

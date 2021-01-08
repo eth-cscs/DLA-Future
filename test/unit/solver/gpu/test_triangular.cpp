@@ -15,19 +15,33 @@
 #include "gtest/gtest.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/matrix/util_matrix_blas.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
+using namespace dlaf::comm;
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 using namespace testing;
 
+::testing::Environment* const comm_grids_env =
+    ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
+
 template <typename Type>
 class TriangularSolverLocalTest : public ::testing::Test {};
 TYPED_TEST_SUITE(TriangularSolverLocalTest, MatrixElementTypes);
+
+template <typename Type>
+class TriangularSolverDistributedTest : public ::testing::Test {
+public:
+  const std::vector<CommunicatorGrid>& commGrids() {
+    return comm_grids;
+  }
+};
+TYPED_TEST_SUITE(TriangularSolverDistributedTest, MatrixElementTypes);
 
 const std::vector<blas::Side> blas_sides({blas::Side::Left, blas::Side::Right});
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
@@ -46,49 +60,9 @@ GlobalElementSize globalTestSize(const LocalElementSize& size) {
   return {size.rows(), size.cols()};
 }
 
-// TODO: Only for debugging. Useful elsewhere?
-template <typename T>
-void print_matrix(Matrix<T, Device::CPU>& m) {
-  auto mrows = m.nrTiles().rows();
-  auto mcols = m.nrTiles().cols();
-  std::cout << "matrix rows = " << m.size().rows() << ", matrix columns = " << m.size().rows()
-            << std::endl;
-  std::cout << "matrix tile rows = " << mrows << ", matrix tile columns = " << mcols << std::endl;
-  for (SizeType r = 0; r < mrows; ++r) {
-    for (SizeType c = 0; c < mcols; ++c) {
-      auto t = m(LocalTileIndex{r, c}).get();
-      auto trows = t.size().rows();
-      auto tcols = t.size().cols();
-      std::cout << "tile row = " << r << ", tile column = " << c << std::endl;
-      std::cout << "tile rows = " << trows << ", tile columns = " << tcols << std::endl;
-      for (SizeType rr = 0; rr < trows; ++rr) {
-        for (SizeType cc = 0; cc < tcols; ++cc) {
-          std::cout << t(TileElementIndex{rr, cc}) << " ";
-        }
-        std::cout << std::endl;
-      }
-    }
-    std::cout << std::endl;
-  }
-}
-
-// TODO: Only for debugging. Useful elsewhere?
-template <typename T, Device b>
-void fence_matrix(Matrix<T, b>& m) {
-  auto mrows = m.nrTiles().rows();
-  auto mcols = m.nrTiles().cols();
-  for (SizeType r = 0; r < mrows; ++r) {
-    for (SizeType c = 0; c < mcols; ++c) {
-      m.read(LocalTileIndex{r, c}).get();
-    }
-  }
-}
-
 template <class T>
 void testTriangularSolver(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha,
                           SizeType m, SizeType n, SizeType mb, SizeType nb) {
-  hpx::cuda::experimental::enable_user_polling p;
-
   std::function<T(const GlobalElementIndex&)> el_op_a, el_b, res_b;
 
   LocalElementSize size_a(m, m);
@@ -128,6 +102,52 @@ void testTriangularSolver(blas::Side side, blas::Uplo uplo, blas::Op op, blas::D
                     40 * (mat_b.size().rows() + 1) * TypeUtilities<T>::error);
 }
 
+template <class T>
+void testTriangularSolver(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, blas::Op op,
+                          blas::Diag diag, T alpha, SizeType m, SizeType n, SizeType mb, SizeType nb) {
+  std::function<T(const GlobalElementIndex&)> el_op_a, el_b, res_b;
+
+  LocalElementSize size_a(m, m);
+  TileElementSize block_size_a(mb, mb);
+  if (side == blas::Side::Right) {
+    size_a = {n, n};
+    block_size_a = {nb, nb};
+  }
+
+  Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
+  GlobalElementSize sz_a = globalTestSize(size_a);
+  Distribution distr_a(sz_a, block_size_a, grid.size(), grid.rank(), src_rank_index);
+  Matrix<T, Device::CPU> mat_a(distr_a);
+  Matrix<T, Device::GPU> mat_ad(distr_a);
+
+  LocalElementSize size_b(m, n);
+  TileElementSize block_size_b(mb, nb);
+  GlobalElementSize sz_b = globalTestSize(size_b);
+  Distribution distr_b(sz_b, block_size_b, grid.size(), grid.rank(), src_rank_index);
+  Matrix<T, Device::CPU> mat_b(distr_b);
+  Matrix<T, Device::GPU> mat_bd(distr_b);
+
+  if (side == blas::Side::Left)
+    std::tie(el_op_a, el_b, res_b) =
+        getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, m);
+  else
+    std::tie(el_op_a, el_b, res_b) =
+        getRightTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, n);
+
+  set(mat_a, el_op_a, op);
+  set(mat_b, el_b);
+
+  copy(mat_a, mat_ad);
+  copy(mat_b, mat_bd);
+
+  solver::triangular<Backend::GPU>(grid, side, uplo, op, diag, alpha, mat_ad, mat_bd);
+
+  copy(mat_bd, mat_b);
+
+  CHECK_MATRIX_NEAR(res_b, mat_b, 20 * (mat_b.size().rows() + 1) * TypeUtilities<T>::error,
+                    20 * (mat_b.size().rows() + 1) * TypeUtilities<T>::error);
+}
+
 TYPED_TEST(TriangularSolverLocalTest, Correctness) {
   SizeType m, n, mb, nb;
 
@@ -140,6 +160,31 @@ TYPED_TEST(TriangularSolverLocalTest, Correctness) {
             TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
 
             testTriangularSolver(side, uplo, op, diag, alpha, m, n, mb, nb);
+          }
+        }
+      }
+    }
+  }
+}
+
+TYPED_TEST(TriangularSolverDistributedTest, Correctness) {
+  SizeType m, n, mb, nb;
+
+  for (const auto& comm_grid : {this->commGrids()[0]}) {
+    for (auto side : blas_sides) {
+      for (auto uplo : blas_uplos) {
+        for (auto op : blas_ops) {
+          for (auto diag : blas_diags) {
+            // Currently only Left Lower Notrans case is implemented
+            if (!(op == blas::Op::NoTrans && side == blas::Side::Left && uplo == blas::Uplo::Lower))
+              continue;
+
+            for (auto sz : sizes) {
+              std::tie(m, n, mb, nb) = sz;
+              TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
+
+              testTriangularSolver(comm_grid, side, uplo, op, diag, alpha, m, n, mb, nb);
+            }
           }
         }
       }

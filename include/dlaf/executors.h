@@ -10,6 +10,7 @@
 #pragma once
 
 #include <hpx/execution.hpp>
+#include <hpx/include/resource_partitioner.hpp>
 #include <hpx/thread.hpp>
 
 #ifdef DLAF_WITH_CUDA

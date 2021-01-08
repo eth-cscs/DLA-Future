@@ -162,12 +162,6 @@ int vm_no_command_line_option_main(hpx::program_options::variables_map& vm) {
 }
 
 TEST(Init, VariablesMapNoCommandLineOption) {
-  hpx::program_options::options_description options("options");
-  options.add(dlaf::getOptionsDescription());
-
-  hpx::init_params p;
-  p.desc_cmdline = options;
-
   // The const_cast is currently necessary for hpx::init. HPX should be updated
   // to take const argc/argv.
   hpx::init(vm_no_command_line_option_main, argc_without_option,

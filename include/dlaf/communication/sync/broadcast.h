@@ -56,103 +56,129 @@ void receive_from(const int broadcaster_rank, Communicator& communicator, DataOu
 }
 }
 
+namespace detail {
+template <Device D>
+struct prepare_send_tile {
+  template <typename T>
+  static auto call(hpx::shared_future<matrix::Tile<const T, D>> tile) {
+    return tile;
+  }
+};
+
 #if defined(DLAF_WITH_CUDA) && !defined(DLAF_WITH_CUDA_RDMA)
+template <>
+struct prepare_send_tile<Device::GPU> {
+  template <typename T>
+  static auto call(hpx::shared_future<matrix::Tile<const T, Device::GPU>> tile) {
+    // When using CUDA without RDMA we first copy the GPU tile to the CPU.
+    using ConstTile_t = matrix::Tile<const T, Device::GPU>;
+    using CPUMemView_t = memory::MemoryView<T, Device::CPU>;
+    using CPUConstTile_t = matrix::Tile<const T, Device::CPU>;
+    using CPUTile_t = matrix::Tile<T, Device::CPU>;
+
+    // TODO: Factor this out (very similar to the one in handle_recv_tile).
+    auto deep_copy_f = hpx::util::annotated_function(
+        [](hpx::shared_future<ConstTile_t>&& ftile, auto&&... ts) {
+          auto tile_size = ftile.get().size();
+          CPUMemView_t mem_view(tile_size.linear_size());
+          CPUTile_t tile(tile_size, std::move(mem_view), tile_size.rows());
+          dlaf::matrix::copy(ftile.get(), tile, std::forward<decltype(ts)>(ts)...);
+          // Have to make sure both tiles live until the copy is completed
+          return hpx::make_tuple(CPUConstTile_t(std::move(tile)), std::move(ftile));
+        },
+        "copy_tile_to_host");
+
+    // TODO: Use custom unwrapper.
+    auto gpu_cpu_tile =
+        hpx::dataflow(getCopyExecutor<Device::GPU, Device::CPU>(), std::move(deep_copy_f), tile);
+    auto split_tile = hpx::split_future(std::move(gpu_cpu_tile));
+    return std::move(hpx::get<0>(split_tile));
+  }
+};
+#endif
+
+template <Device DOut>
+struct handle_recv_tile {
+  template <typename T, Device D>
+  static auto call(hpx::future<matrix::Tile<const T, D>> tile) {
+    return tile;
+  }
+};
+
+#if defined(DLAF_WITH_CUDA) && !defined(DLAF_WITH_CUDA_RDMA)
+template <>
+struct handle_recv_tile<Device::GPU> {
+  template <typename T>
+  static auto call(hpx::future<matrix::Tile<const T, Device::CPU>> tile) {
+    // When using CUDA without RDMA, we have to copy the CPU tile to GPU memory.
+    using MemView_t = memory::MemoryView<T, Device::GPU>;
+    using ConstTile_t = matrix::Tile<const T, Device::GPU>;
+    using Tile_t = matrix::Tile<T, Device::GPU>;
+    using CPUConstTile_t = matrix::Tile<const T, Device::CPU>;
+
+    auto deep_copy_f = hpx::util::annotated_function(
+        [](hpx::shared_future<CPUConstTile_t> ftile, auto&&... ts) {
+          auto tile_size = ftile.get().size();
+          MemView_t mem_view(tile_size.linear_size());
+          Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
+          dlaf::matrix::copy(ftile.get(), tile, std::forward<decltype(ts)>(ts)...);
+          // Have to make sure both tiles live until the copy is completed.
+          return hpx::make_tuple(ConstTile_t(std::move(tile)), ftile);
+        },
+        "copy_tile_to_device");
+
+    // TODO: Use custom unwrapper.
+    auto gpu_cpu_tile =
+        hpx::dataflow(getCopyExecutor<Device::CPU, Device::GPU>(), std::move(deep_copy_f), tile);
+    auto split_tile = hpx::split_future(std::move(gpu_cpu_tile));
+    return std::move(hpx::get<0>(split_tile));
+  }
+};
+#endif
+}
+
 template <class T, Device D, class Executor>
 void send_tile(Executor&& ex, common::Pipeline<comm::CommunicatorGrid>& task_chain, Coord rc_comm,
                hpx::shared_future<matrix::Tile<const T, D>> tile) {
-  using ConstTile_t = matrix::Tile<const T, D>;
-  using CPUMemView_t = memory::MemoryView<T, Device::CPU>;
-  using CPUConstTile_t = matrix::Tile<T, Device::CPU>;
-  using CPUTile_t = matrix::Tile<T, Device::CPU>;
   using PromiseComm_t = common::PromiseGuard<comm::CommunicatorGrid>;
 
-  auto deep_copy_f = hpx::util::annotated_function(
-      [](hpx::shared_future<ConstTile_t> ftile, auto&&... ts) {
-        auto tile_size = ftile.get().size();
-        CPUMemView_t mem_view(tile_size.linear_size());
-        CPUTile_t tile(tile_size, std::move(mem_view), tile_size.rows());
-        dlaf::matrix::copy(ftile.get(), tile, std::forward<decltype(ts)>(ts)...);
-        return CPUConstTile_t(std::move(tile));
-      },
-      "copy_tile_to_host");
-
   auto send_bcast_f = hpx::util::annotated_function(
-      [rc_comm](hpx::shared_future<CPUConstTile_t> ftile, hpx::future<PromiseComm_t> fpcomm) {
+      [rc_comm](auto ftile, hpx::future<PromiseComm_t> fpcomm) {
         PromiseComm_t pcomm = fpcomm.get();
         comm::sync::broadcast::send(pcomm.ref().subCommunicator(rc_comm), ftile.get());
       },
       "send_tile");
 
-  auto cpu_tile = hpx::dataflow(getCopyExecutor<D, Device::CPU>(), std::move(deep_copy_f), tile);
-  hpx::dataflow(std::forward<Executor>(ex), std::move(send_bcast_f), cpu_tile, task_chain());
+  hpx::dataflow(std::forward<Executor>(ex), std::move(send_bcast_f),
+                detail::prepare_send_tile<D>::call(std::move(tile)), task_chain());
 }
 
 template <class T, Device D, class Executor>
-hpx::future<matrix::Tile<const T, D>> recv_tile(
-    Executor&& ex, common::Pipeline<comm::CommunicatorGrid>& mpi_task_chain, Coord rc_comm,
-    TileElementSize tile_size, int rank) {
-  using ConstTile_t = matrix::Tile<const T, D>;
-  using CPUMemView_t = memory::MemoryView<T, Device::CPU>;
-  using CPUConstTile_t = matrix::Tile<T, Device::CPU>;
-  using CPUTile_t = matrix::Tile<T, Device::CPU>;
+hpx::future<matrix::Tile<const T, D>> recv_tile(Executor&& ex,
+                                                common::Pipeline<comm::CommunicatorGrid>& mpi_task_chain,
+                                                Coord rc_comm, TileElementSize tile_size, int rank) {
   using PromiseComm_t = common::PromiseGuard<comm::CommunicatorGrid>;
-  using MemView_t = memory::MemoryView<T, D>;
-  using Tile_t = matrix::Tile<T, D>;
+
+#if defined(DLAF_WITH_CUDA) && !defined(DLAF_WITH_CUDA_RDMA)
+  constexpr Device device = Device::CPU;
+#else
+  constexpr Device device = D;
+#endif
+  using ConstTile_t = matrix::Tile<const T, device>;
+  using MemView_t = memory::MemoryView<T, device>;
+  using Tile_t = matrix::Tile<T, device>;
 
   auto recv_bcast_f = hpx::util::annotated_function(
-      [rank, tile_size, rc_comm](hpx::future<PromiseComm_t> fpcomm) -> CPUConstTile_t {
+      [rank, tile_size, rc_comm](hpx::future<PromiseComm_t> fpcomm) -> ConstTile_t {
         PromiseComm_t pcomm = fpcomm.get();
-        CPUTile_t tile(tile_size, CPUMemView_t(tile_size.linear_size()), tile_size.rows());
+        Tile_t tile(tile_size, MemView_t(tile_size.linear_size()), tile_size.rows());
         comm::sync::broadcast::receive_from(rank, pcomm.ref().subCommunicator(rc_comm), tile);
-        return CPUConstTile_t(std::move(tile));
+        return ConstTile_t(std::move(tile));
       },
       "recv_tile");
 
-  auto deep_copy_f = hpx::util::annotated_function(
-      [](hpx::shared_future<CPUConstTile_t> ftile, auto&&... ts) {
-        auto tile_size = ftile.get().size();
-        MemView_t mem_view(tile_size.linear_size() * 2);
-        Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
-        dlaf::matrix::copy(ftile.get(), tile, std::forward<decltype(ts)>(ts)...);
-        // Have to make sure the CPU tile lives until copy is completed
-        return hpx::make_tuple(ConstTile_t(std::move(tile)), ftile);
-      },
-      "copy_tile_to_device");
-
-  auto cpu_tile = hpx::dataflow(std::forward<Executor>(ex), std::move(recv_bcast_f), mpi_task_chain());
-  auto gpu_cpu_tile = hpx::dataflow(getCopyExecutor<Device::CPU, D>(), std::move(deep_copy_f), cpu_tile);
-  auto split_tile = hpx::split_future(std::move(gpu_cpu_tile));
-  auto gpu_tile = std::move(hpx::get<0>(split_tile));
-  return gpu_tile;
+  return detail::handle_recv_tile<D>::call(
+      hpx::dataflow(std::forward<Executor>(ex), std::move(recv_bcast_f), mpi_task_chain()));
 }
-
-#else
-
-template <class T, Device D, class Executor>
-void send_tile(Executor&& ex, common::Pipeline<comm::CommunicatorGrid>& task_chain, Coord rc_comm,
-               hpx::shared_future<matrix::Tile<const T, D>> tile) {
-  using ConstTile_t = matrix::Tile<const T, D>;
-  using PromiseComm_t = common::PromiseGuard<comm::CommunicatorGrid>;
-
-  PromiseComm_t pcomm = mpi_task_chain.get();
-  comm::sync::broadcast::receive_from(rank, pcomm.ref().subCommunicator(rc_comm), tile.get());
-}
-
-template <class T, Device D, class Executor>
-hpx::future<matrix::Tile<const T, D>> recv_tile(
-    Executor&& ex, common::Pipeline<comm::CommunicatorGrid>& mpi_task_chain, Coord rc_comm,
-    TileElementSize tile_size, int rank) {
-  using ConstTile_t = matrix::Tile<const T, D>;
-  using PromiseComm_t = common::PromiseGuard<comm::CommunicatorGrid>;
-  using MemView_t = memory::MemoryView<T, D>;
-  using Tile_t = matrix::Tile<T, D>;
-
-  PromiseComm_t pcomm = mpi_task_chain.get();
-  MemView_t mem_view(tile_size.linear_size());
-  Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
-  comm::sync::broadcast::receive_from(rank, pcomm.ref().subCommunicator(rc_comm), tile);
-  return ConstTile_t(std::move(tile));
-}
-#endif
 }
 }

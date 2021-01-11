@@ -113,9 +113,9 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
      matrix::util::set(mat_w2, [](auto&&){return 0;});
 
      // n-1 reflectors
-     for (SizeType k = 0; k < (m - 1); ++k) {
+     for (SizeType k = 0; k < (n - 1); ++k) {
 
-       for (SizeType i = k; i < m; ++i) {
+       for (SizeType i = k; i < n; ++i) {
 	 auto ik = LocalTileIndex{i, k};
 	 auto kk = LocalTileIndex{k, k};
 	 // W = V T
@@ -123,9 +123,9 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 		       NonUnit, 1.0, mat_t.read(kk), std::move(mat_w(ik)));
        }
 
-       for (SizeType j = k; j < m; ++j) {
+       for (SizeType j = k; j < n; ++j) {
 	 auto kj = LocalTileIndex{k, j};
-	 for (SizeType i = k; i < m; ++i) {
+	 for (SizeType i = k; i < n; ++i) {
 	   auto ik = LocalTileIndex{i, k};
 	   auto ij = LocalTileIndex{i, j};
 	   // W2 = WH C
@@ -134,9 +134,9 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 	 }
        }
 
-       for (SizeType j = k; j < m; ++j) {
+       for (SizeType j = k; j < n; ++j) {
 	 auto jk = LocalTileIndex{j, k};
-	 for (SizeType i = k; i < m; ++i) {
+	 for (SizeType i = k; i < n; ++i) {
 	   auto ki = LocalTileIndex{k, i};
 	   auto ji = LocalTileIndex{j, i};
 	   // C = C - V W2

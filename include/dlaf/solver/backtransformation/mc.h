@@ -28,7 +28,7 @@
 #include "dlaf/communication/init.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/copy.h"
-//#include "dlaf/matrix/copy_tile.h"
+#include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/layout_info.h"
@@ -101,22 +101,23 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 
      TileElementSize size(mb, nb);
 
-     // CHECK!!
-     auto dist_w = mat_c.distribution();
-     auto layout_w = tileLayout(dist_w.localSize(), size);
-     Matrix<T, Device::CPU> mat_w(std::move(dist_w), layout_w);
-     copy(mat_v, mat_w);
-
-     auto dist_w2 = mat_c.distribution();
-     auto layout_w2 = tileLayout(dist_w2.localSize(), size);
-     Matrix<T, Device::CPU> mat_w2(std::move(dist_w2), layout_w2);
-     matrix::util::set(mat_w2, [](auto&&){return 0;});
-
+     Matrix<T, Device::CPU> mat_w({(m), 1}, mat_v.blockSize());
+     Matrix<T, Device::CPU> mat_w2({1, n}, mat_c.blockSize());
+       
      // n-1 reflectors
      for (SizeType k = 0; k < (n - 1); ++k) {
+       void (&cpy)(const matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T, Device::CPU>&) = copy<T>;
 
+       // Copy V panel into WH
+       for (SizeType i = k; i < m; ++i) {
+	 hpx::dataflow(executor_hp, hpx::util::unwrapping(cpy), mat_v.read(LocalTileIndex(i, k)), mat_w(LocalTileIndex(i, 0)));
+       }
+
+       // Reset W2 to zero
+       matrix::util::set(mat_w2, [](auto&&){return 0;});
+       
        for (SizeType i = k; i < n; ++i) {
-	 auto ik = LocalTileIndex{i, k};
+	 auto ik = LocalTileIndex{i, 0};
 	 auto kk = LocalTileIndex{k, k};
 	 // WH = V T
 	 hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper, ConjTrans,
@@ -124,11 +125,11 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
        }
 
        for (SizeType j = k; j < n; ++j) {
-	 auto kj = LocalTileIndex{k, j};
+	 auto kj = LocalTileIndex{0, j};
 	 for (SizeType i = k; i < n; ++i) {
-	   auto ik = LocalTileIndex{i, k};
+	   auto ik = LocalTileIndex{i, 0};
 	   auto ij = LocalTileIndex{i, j};
-	   // W2 = WH C
+	   // W2 = W C
 	   hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), ConjTrans,
 			 NoTrans, 1.0, std::move(mat_w(ik)), mat_c.read(ij), 1.0, std::move(mat_w2(kj)));
 	 }
@@ -137,7 +138,7 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
        for (SizeType j = k; j < n; ++j) {
 	 auto jk = LocalTileIndex{j, k};
 	 for (SizeType i = k; i < n; ++i) {
-	   auto ki = LocalTileIndex{k, i};
+	   auto ki = LocalTileIndex{0, i};
 	   auto ji = LocalTileIndex{j, i};
 	   // C = C - V W2
 	   hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans,

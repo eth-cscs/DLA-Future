@@ -12,6 +12,7 @@
 
 #include <exception>
 #include <ostream>
+#include <type_traits>
 
 #include <hpx/functional.hpp>
 #include <hpx/local/future.hpp>
@@ -225,18 +226,35 @@ template <typename F>
 struct UnwrapExtendTiles {
   F f;
 
-  template <typename... Ts>
-  auto operator()(Ts&&... ts) {
-    // Extract values from futures (not shared_futures).
-    auto t = hpx::make_tuple<>(UnwrapFuture<std::decay_t<Ts>>::call(std::forward<Ts>(ts))...);
-
+  template <typename T>
+  auto call_helper(std::true_type, T&& t) {
     // Call f with all futures (not just future<Tile>) unwrapped.
     hpx::invoke_fused(hpx::util::unwrapping(f), t);
 
     // Finally, we extend the lifetime of read-write tiles directly and
     // read-only tiles wrapped in shared_futures by returning them here in a
     // tuple.
-    return t;
+    return std::forward<T>(t);
+  }
+
+  template <typename T>
+  auto call_helper(std::false_type, T&& t) {
+    // Call f with all futures (not just future<Tile>) unwrapped.
+    auto&& r = hpx::invoke_fused(hpx::util::unwrapping(f), t);
+
+    // Finally, we extend the lifetime of read-write tiles directly and
+    // read-only tiles wrapped in shared_futures by returning them here in a
+    // tuple.
+    return hpx::make_tuple<>(std::forward<decltype(r)>(r), std::forward<T>(t));
+  }
+
+  template <typename... Ts>
+  auto operator()(Ts&&... ts) {
+    // Extract values from futures (not shared_futures).
+    auto t = hpx::make_tuple<>(UnwrapFuture<std::decay_t<Ts>>::call(std::forward<Ts>(ts))...);
+    using return_type = decltype(hpx::invoke_fused(hpx::util::unwrapping(f), t));
+    using is_void = std::is_void<return_type>;
+    return call_helper(is_void{}, std::move(t));
   }
 };
 }

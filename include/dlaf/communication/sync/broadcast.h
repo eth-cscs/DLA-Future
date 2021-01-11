@@ -70,27 +70,12 @@ template <>
 struct prepare_send_tile<Device::GPU> {
   template <typename T>
   static auto call(hpx::shared_future<matrix::Tile<const T, Device::GPU>> tile) {
-    // When using CUDA without RDMA we first copy the GPU tile to the CPU.
-    using ConstTile_t = matrix::Tile<const T, Device::GPU>;
-    using CPUMemView_t = memory::MemoryView<T, Device::CPU>;
-    using CPUConstTile_t = matrix::Tile<const T, Device::CPU>;
-    using CPUTile_t = matrix::Tile<T, Device::CPU>;
-
-    // TODO: Factor this out (very similar to the one in handle_recv_tile).
-    auto deep_copy_f = hpx::util::annotated_function(
-        [](hpx::shared_future<ConstTile_t>&& ftile, auto&&... ts) {
-          auto tile_size = ftile.get().size();
-          CPUMemView_t mem_view(tile_size.linear_size());
-          CPUTile_t tile(tile_size, std::move(mem_view), tile_size.rows());
-          dlaf::matrix::copy(ftile.get(), tile, std::forward<decltype(ts)>(ts)...);
-          // Have to make sure both tiles live until the copy is completed
-          return hpx::make_tuple(CPUConstTile_t(std::move(tile)), std::move(ftile));
-        },
-        "copy_tile_to_host");
-
-    // TODO: Use custom unwrapper.
+    // TODO: Nicer API for Duplicate?
     auto gpu_cpu_tile =
-        hpx::dataflow(getCopyExecutor<Device::GPU, Device::CPU>(), std::move(deep_copy_f), tile);
+        hpx::dataflow(getCopyExecutor<Device::GPU, Device::CPU>(),
+                      dlaf::matrix::unwrapExtendTiles(dlaf::matrix::Duplicate<const T, Device::CPU>{}),
+                      tile);
+    // TODO: Nicer API for getting only the result?
     auto split_tile = hpx::split_future(std::move(gpu_cpu_tile));
     return std::move(hpx::get<0>(split_tile));
   }
@@ -110,26 +95,10 @@ template <>
 struct handle_recv_tile<Device::GPU> {
   template <typename T>
   static auto call(hpx::future<matrix::Tile<const T, Device::CPU>> tile) {
-    // When using CUDA without RDMA, we have to copy the CPU tile to GPU memory.
-    using MemView_t = memory::MemoryView<T, Device::GPU>;
-    using ConstTile_t = matrix::Tile<const T, Device::GPU>;
-    using Tile_t = matrix::Tile<T, Device::GPU>;
-    using CPUConstTile_t = matrix::Tile<const T, Device::CPU>;
-
-    auto deep_copy_f = hpx::util::annotated_function(
-        [](hpx::shared_future<CPUConstTile_t> ftile, auto&&... ts) {
-          auto tile_size = ftile.get().size();
-          MemView_t mem_view(tile_size.linear_size());
-          Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
-          dlaf::matrix::copy(ftile.get(), tile, std::forward<decltype(ts)>(ts)...);
-          // Have to make sure both tiles live until the copy is completed.
-          return hpx::make_tuple(ConstTile_t(std::move(tile)), ftile);
-        },
-        "copy_tile_to_device");
-
-    // TODO: Use custom unwrapper.
     auto gpu_cpu_tile =
-        hpx::dataflow(getCopyExecutor<Device::CPU, Device::GPU>(), std::move(deep_copy_f), tile);
+        hpx::dataflow(getCopyExecutor<Device::CPU, Device::GPU>(),
+                      dlaf::matrix::unwrapExtendTiles(dlaf::matrix::Duplicate<const T, Device::GPU>{}),
+                      tile);
     auto split_tile = hpx::split_future(std::move(gpu_cpu_tile));
     return std::move(hpx::get<0>(split_tile));
   }

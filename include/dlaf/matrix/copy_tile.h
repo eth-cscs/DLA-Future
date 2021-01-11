@@ -118,5 +118,18 @@ void copy(TileElementSize region, TileElementIndex in_idx, const matrix::Tile<co
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(copy);
+
+template <typename T, Device Destination>
+struct Duplicate {
+  template <Device Source, typename... Ts>
+  dlaf::matrix::Tile<T, Destination> operator()(const Tile<const T, Source>& source, Ts&&... ts) {
+    auto source_size = source.size();
+    dlaf::memory::MemoryView<std::remove_const_t<T>, Destination> mem_view(source_size.linear_size());
+    dlaf::matrix::Tile<std::remove_const_t<T>, Destination> destination(source_size, std::move(mem_view),
+                                                                        source_size.rows());
+    dlaf::matrix::copy(source, destination, std::forward<decltype(ts)>(ts)...);
+    return dlaf::matrix::Tile<T, Destination>(std::move(destination));
+  }
+};
 }
 }

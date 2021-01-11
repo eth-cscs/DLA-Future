@@ -118,7 +118,7 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
        for (SizeType i = k; i < n; ++i) {
 	 auto ik = LocalTileIndex{i, k};
 	 auto kk = LocalTileIndex{k, k};
-	 // W = V T
+	 // WH = V T
 	 hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper, ConjTrans,
 		       NonUnit, 1.0, mat_t.read(kk), std::move(mat_w(ik)));
        }

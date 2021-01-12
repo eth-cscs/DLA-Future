@@ -226,35 +226,44 @@ template <typename F>
 struct UnwrapExtendTiles {
   F f;
 
-  template <typename T>
-  auto call_helper(std::true_type, T&& t) {
+  template <typename... Ts>
+  auto call_helper(std::true_type, Ts&&... ts) {
+    // Extract values from futures (not shared_futures).
+    auto t = hpx::make_tuple<>(UnwrapFuture<std::decay_t<Ts>>::call(std::forward<Ts>(ts))...);
+
     // Call f with all futures (not just future<Tile>) unwrapped.
     hpx::invoke_fused(hpx::util::unwrapping(f), t);
 
     // Finally, we extend the lifetime of read-write tiles directly and
     // read-only tiles wrapped in shared_futures by returning them here in a
     // tuple.
-    return std::forward<T>(t);
+    return std::move(t);
   }
 
-  template <typename T>
-  auto call_helper(std::false_type, T&& t) {
+  template <typename... Ts>
+  auto call_helper(std::false_type, Ts&&... ts) {
+    // Extract values from futures (not shared_futures).
+    auto t = hpx::make_tuple<>(UnwrapFuture<std::decay_t<Ts>>::call(std::forward<Ts>(ts))...);
+
     // Call f with all futures (not just future<Tile>) unwrapped.
     auto&& r = hpx::invoke_fused(hpx::util::unwrapping(f), t);
 
     // Finally, we extend the lifetime of read-write tiles directly and
     // read-only tiles wrapped in shared_futures by returning them here in a
     // tuple.
-    return hpx::make_tuple<>(std::forward<decltype(r)>(r), std::forward<T>(t));
+    return hpx::make_tuple<>(std::forward<decltype(r)>(r), std::move(t));
   }
 
+  // We use trailing decltype for SFINAE. This ensures that this does not
+  // become a candidate when F is not callable with the given arguments.
   template <typename... Ts>
-  auto operator()(Ts&&... ts) {
-    // Extract values from futures (not shared_futures).
-    auto t = hpx::make_tuple<>(UnwrapFuture<std::decay_t<Ts>>::call(std::forward<Ts>(ts))...);
-    using return_type = decltype(hpx::invoke_fused(hpx::util::unwrapping(f), t));
-    using is_void = std::is_void<return_type>;
-    return call_helper(is_void{}, std::move(t));
+  auto operator()(Ts&&... ts)
+      -> decltype(call_helper(std::is_void<decltype(hpx::invoke(hpx::util::unwrapping(std::declval<F>()),
+                                                                std::declval<Ts>()...))>{},
+                              std::forward<Ts>(ts)...)) {
+    return call_helper(std::is_void<decltype(hpx::invoke(hpx::util::unwrapping(std::declval<F>()),
+                                                         std::declval<Ts>()...))>{},
+                       std::forward<Ts>(ts)...);
   }
 };
 }

@@ -105,7 +105,7 @@ void testGemm(blas::Op op_a, blas::Op op_b, SizeType m, SizeType n, SizeType k, 
 
   cublasHandle_t handle;
   DLAF_CUBLAS_CALL(cublasCreate(&handle));
-  cublasGemm(handle, op_a, op_b, alpha, ad, bd, beta, cd);
+  gemm(handle, op_a, op_b, alpha, ad, bd, beta, cd);
   DLAF_CUDA_CALL(cudaDeviceSynchronize());
   DLAF_CUBLAS_CALL(cublasDestroy(handle));
 

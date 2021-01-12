@@ -95,7 +95,7 @@ void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType e
 
   cublasHandle_t handle;
   DLAF_CUBLAS_CALL(cublasCreate(&handle));
-  cublasHerk(handle, uplo, op_a, alpha, ad, beta, cd);
+  herk(handle, uplo, op_a, alpha, ad, beta, cd);
   DLAF_CUDA_CALL(cudaDeviceSynchronize());
   DLAF_CUBLAS_CALL(cublasDestroy(handle));
 

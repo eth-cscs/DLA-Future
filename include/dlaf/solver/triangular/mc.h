@@ -16,6 +16,7 @@
 #include <hpx/local/future.hpp>
 
 #include "dlaf/blas_tile.h"
+#include "dlaf/cublas_tile.h" // TODO: Remove.
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/vector.h"
@@ -59,7 +60,7 @@ template <class T>
 void trsm_B_panel_tile(hpx::execution::parallel_executor ex, blas::Diag diag, T alpha,
                        hpx::shared_future<matrix::Tile<const T, Device::CPU>> in_tile,
                        hpx::future<matrix::Tile<T, Device::CPU>> out_tile) {
-  hpx::dataflow(ex, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), blas::Side::Left,
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Left,
                 blas::Uplo::Lower, blas::Op::NoTrans, diag, alpha, std::move(in_tile),
                 std::move(out_tile));
 }
@@ -69,8 +70,9 @@ void gemm_trailing_matrix_tile(hpx::execution::parallel_executor ex, T beta,
                                hpx::shared_future<matrix::Tile<const T, Device::CPU>> a_tile,
                                hpx::shared_future<matrix::Tile<const T, Device::CPU>> b_tile,
                                hpx::future<matrix::Tile<T, Device::CPU>> c_tile) {
-  hpx::dataflow(ex, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), blas::Op::NoTrans,
-                blas::Op::NoTrans, beta, std::move(a_tile), std::move(b_tile), 1.0, std::move(c_tile));
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o),
+                blas::Op::NoTrans, blas::Op::NoTrans, beta, std::move(a_tile), std::move(b_tile), T(1.0),
+                std::move(c_tile));
 }
 }
 
@@ -121,8 +123,8 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLT(blas::Op op, blas::Diag d
     for (SizeType j = n - 1; j > -1; --j) {
       auto kj = LocalTileIndex{k, j};
       // Triangular solve of k-th row Panel of B
-      hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), Left, Lower, op,
-                    diag, alpha, mat_a.read(LocalTileIndex{k, k}), std::move(mat_b(kj)));
+      hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), Left, Lower, op, diag, alpha,
+                    mat_a.read(LocalTileIndex{k, k}), std::move(mat_b(kj)));
 
       for (SizeType i = k - 1; i > -1; --i) {
         // Choose queue priority
@@ -130,8 +132,8 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLT(blas::Op op, blas::Diag d
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        hpx::dataflow(trailing_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), op, NoTrans,
-                      beta, mat_a.read(LocalTileIndex{k, i}), mat_b.read(kj), 1.0,
+        hpx::dataflow(trailing_executor, matrix::unwrapExtendTiles(tile::gemm_o), op, NoTrans,
+                      beta, mat_a.read(LocalTileIndex{k, i}), mat_b.read(kj), T(1.0),
                       std::move(mat_b(LocalTileIndex{i, j})));
       }
     }
@@ -156,8 +158,8 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LUN(blas::Diag diag, T alpha,
     for (SizeType j = n - 1; j > -1; --j) {
       auto kj = LocalTileIndex{k, j};
       // Triangular solve of k-th row Panel of B
-      hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), Left, Upper, NoTrans,
-                    diag, alpha, mat_a.read(LocalTileIndex{k, k}), std::move(mat_b(kj)));
+      hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), Left, Upper, NoTrans, diag,
+                    alpha, mat_a.read(LocalTileIndex{k, k}), std::move(mat_b(kj)));
 
       for (SizeType i = k - 1; i > -1; --i) {
         // Choose queue priority
@@ -165,8 +167,8 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LUN(blas::Diag diag, T alpha,
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        hpx::dataflow(trailing_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans,
-                      NoTrans, beta, mat_a.read(LocalTileIndex{i, k}), mat_b.read(kj), 1.0,
+        hpx::dataflow(trailing_executor, matrix::unwrapExtendTiles(tile::gemm_o), NoTrans,
+                      NoTrans, beta, mat_a.read(LocalTileIndex{i, k}), mat_b.read(kj), T(1.0),
                       std::move(mat_b(LocalTileIndex{i, j})));
       }
     }
@@ -192,8 +194,8 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LUT(blas::Op op, blas::Diag d
       auto kj = LocalTileIndex{k, j};
 
       // Triangular solve of k-th row Panel of B
-      hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), Left, Upper, op,
-                    diag, alpha, mat_a.read(LocalTileIndex{k, k}), std::move(mat_b(kj)));
+      hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), Left, Upper, op, diag, alpha,
+                    mat_a.read(LocalTileIndex{k, k}), std::move(mat_b(kj)));
 
       for (SizeType i = k + 1; i < m; ++i) {
         // Choose queue priority
@@ -201,8 +203,8 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LUT(blas::Op op, blas::Diag d
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        hpx::dataflow(trailing_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), op, NoTrans,
-                      beta, mat_a.read(LocalTileIndex{k, i}), mat_b.read(kj), 1.0,
+        hpx::dataflow(trailing_executor, matrix::unwrapExtendTiles(tile::gemm_o), op, NoTrans,
+                      beta, mat_a.read(LocalTileIndex{k, i}), mat_b.read(kj), T(1.0),
                       std::move(mat_b(LocalTileIndex{i, j})));
       }
     }
@@ -228,8 +230,8 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RLN(blas::Diag diag, T alpha,
       auto ik = LocalTileIndex{i, k};
 
       // Triangular solve of k-th col Panel of B
-      hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), Right, Lower,
-                    NoTrans, diag, alpha, mat_a.read(LocalTileIndex{k, k}), std::move(mat_b(ik)));
+      hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), Right, Lower, NoTrans, diag,
+                    alpha, mat_a.read(LocalTileIndex{k, k}), std::move(mat_b(ik)));
 
       for (SizeType j = k - 1; j > -1; --j) {
         // Choose queue priority
@@ -237,8 +239,8 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RLN(blas::Diag diag, T alpha,
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        hpx::dataflow(trailing_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans,
-                      NoTrans, beta, mat_b.read(ik), mat_a.read(LocalTileIndex{k, j}), 1.0,
+        hpx::dataflow(trailing_executor, matrix::unwrapExtendTiles(tile::gemm_o), NoTrans,
+                      NoTrans, beta, mat_b.read(ik), mat_a.read(LocalTileIndex{k, j}), T(1.0),
                       std::move(mat_b(LocalTileIndex{i, j})));
       }
     }
@@ -264,8 +266,8 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RLT(blas::Op op, blas::Diag d
       auto ik = LocalTileIndex{i, k};
 
       // Triangular solve of k-th col Panel of B
-      hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), Right, Lower, op,
-                    diag, alpha, mat_a.read(LocalTileIndex{k, k}), std::move(mat_b(ik)));
+      hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), Right, Lower, op, diag, alpha,
+                    mat_a.read(LocalTileIndex{k, k}), std::move(mat_b(ik)));
 
       for (SizeType j = k + 1; j < n; ++j) {
         // Choose queue priority
@@ -273,8 +275,8 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RLT(blas::Op op, blas::Diag d
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        hpx::dataflow(trailing_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans, op,
-                      beta, mat_b.read(ik), mat_a.read(LocalTileIndex{j, k}), 1.0,
+        hpx::dataflow(trailing_executor, matrix::unwrapExtendTiles(tile::gemm_o), NoTrans, op,
+                      beta, mat_b.read(ik), mat_a.read(LocalTileIndex{j, k}), T(1.0),
                       std::move(mat_b(LocalTileIndex{i, j})));
       }
     }
@@ -300,8 +302,8 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RUN(blas::Diag diag, T alpha,
       auto ik = LocalTileIndex{i, k};
 
       // Triangular solve of k-th col Panel of B
-      hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), Right, Upper,
-                    NoTrans, diag, alpha, mat_a.read(LocalTileIndex{k, k}), std::move(mat_b(ik)));
+      hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), Right, Upper, NoTrans, diag,
+                    alpha, mat_a.read(LocalTileIndex{k, k}), std::move(mat_b(ik)));
 
       for (SizeType j = k + 1; j < n; ++j) {
         // Choose queue priority
@@ -309,8 +311,8 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RUN(blas::Diag diag, T alpha,
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        hpx::dataflow(trailing_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans,
-                      NoTrans, beta, mat_b.read(ik), mat_a.read(LocalTileIndex{k, j}), 1.0,
+        hpx::dataflow(trailing_executor, matrix::unwrapExtendTiles(tile::gemm_o), NoTrans,
+                      NoTrans, beta, mat_b.read(ik), mat_a.read(LocalTileIndex{k, j}), T(1.0),
                       std::move(mat_b(LocalTileIndex{i, j})));
       }
     }
@@ -336,8 +338,8 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RUT(blas::Op op, blas::Diag d
       auto ik = LocalTileIndex{i, k};
 
       // Triangular solve of k-th col Panel of B
-      hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), Right, Upper, op,
-                    diag, alpha, mat_a.read(LocalTileIndex{k, k}), std::move(mat_b(ik)));
+      hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), Right, Upper, op, diag, alpha,
+                    mat_a.read(LocalTileIndex{k, k}), std::move(mat_b(ik)));
 
       for (SizeType j = k - 1; j > -1; --j) {
         // Choose queue priority
@@ -345,8 +347,8 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RUT(blas::Op op, blas::Diag d
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        hpx::dataflow(trailing_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans, op,
-                      beta, mat_b.read(ik), mat_a.read(LocalTileIndex{j, k}), 1.0,
+        hpx::dataflow(trailing_executor, matrix::unwrapExtendTiles(tile::gemm_o), NoTrans, op,
+                      beta, mat_b.read(ik), mat_a.read(LocalTileIndex{j, k}), T(1.0),
                       std::move(mat_b(LocalTileIndex{i, j})));
       }
     }

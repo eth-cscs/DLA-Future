@@ -73,7 +73,7 @@ void testTrsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, Si
 
   cublasHandle_t handle;
   DLAF_CUBLAS_CALL(cublasCreate(&handle));
-  cublasTrsm(handle, side, uplo, op, diag, alpha, ad, bd);
+  trsm(handle, side, uplo, op, diag, alpha, ad, bd);
   DLAF_CUDA_CALL(cudaDeviceSynchronize());
   DLAF_CUBLAS_CALL(cublasDestroy(handle));
 

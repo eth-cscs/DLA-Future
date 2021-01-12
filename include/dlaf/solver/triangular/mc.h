@@ -15,8 +15,6 @@
 #include <hpx/include/util.hpp>
 #include <hpx/local/future.hpp>
 
-#include "dlaf/blas_tile.h"
-#include "dlaf/cublas_tile.h" // TODO: Remove.
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/vector.h"
@@ -27,6 +25,7 @@
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/solver/triangular/api.h"
+#include "dlaf/tile.h"
 #include "dlaf/util_matrix.h"
 
 namespace dlaf {

@@ -17,7 +17,6 @@
 #include <cublas_v2.h>
 #include <blas.hh>
 
-#include "dlaf/common/callable_object.h"
 #include "dlaf/cublas/error.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/types.h"
@@ -129,9 +128,6 @@ void trsm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, c
                                 util::blasToCublasCast(b.ptr()), b.ld());
 }
 
-// TODO: This should be in a common location, not in the gpu header.
-DLAF_MAKE_CALLABLE_OBJECT(trsm);
-
 template <class T>
 void gemm(cublasHandle_t handle, const blas::Op op_a, const blas::Op op_b, const T alpha,
                 const matrix::Tile<const T, Device::GPU>& a, const matrix::Tile<const T, Device::GPU>& b,
@@ -143,8 +139,6 @@ void gemm(cublasHandle_t handle, const blas::Op op_a, const blas::Op op_b, const
                                 util::blasToCublasCast(&beta), util::blasToCublasCast(c.ptr()), c.ld());
 }
 
-// TODO: This should be in a common location, not in the gpu header.
-DLAF_MAKE_CALLABLE_OBJECT(gemm);
 
 template <class T>
 void herk(cublasHandle_t handle, const blas::Uplo uplo, const blas::Op op, const BaseType<T> alpha,
@@ -156,8 +150,6 @@ void herk(cublasHandle_t handle, const blas::Uplo uplo, const blas::Op op, const
                                 util::blasToCublasCast(&beta), util::blasToCublasCast(c.ptr()), c.ld());
 }
 
-// TODO: This should be in a common location, not in the gpu header.
-DLAF_MAKE_CALLABLE_OBJECT(herk);
 }
 }
 

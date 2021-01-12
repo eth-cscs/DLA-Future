@@ -10,6 +10,7 @@
 #pragma once
 
 #include <hpx/include/parallel_executors.hpp>
+#include <hpx/include/resource_partitioner.hpp>
 #include <hpx/include/threads.hpp>
 #include <hpx/include/util.hpp>
 #include <hpx/local/future.hpp>
@@ -19,7 +20,6 @@
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/executor.h"
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/distribution.h"
@@ -55,7 +55,7 @@ struct Triangular<Backend::MC, Device::CPU, T> {
 
 namespace lln {
 template <class T>
-void trsm_B_panel_tile(hpx::threads::executors::pool_executor ex, blas::Diag diag, T alpha,
+void trsm_B_panel_tile(hpx::execution::parallel_executor ex, blas::Diag diag, T alpha,
                        hpx::shared_future<matrix::Tile<const T, Device::CPU>> in_tile,
                        hpx::future<matrix::Tile<T, Device::CPU>> out_tile) {
   hpx::dataflow(ex, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), blas::Side::Left,
@@ -64,7 +64,7 @@ void trsm_B_panel_tile(hpx::threads::executors::pool_executor ex, blas::Diag dia
 }
 
 template <class T>
-void gemm_trailing_matrix_tile(hpx::threads::executors::pool_executor ex, T beta,
+void gemm_trailing_matrix_tile(hpx::execution::parallel_executor ex, T beta,
                                hpx::shared_future<matrix::Tile<const T, Device::CPU>> a_tile,
                                hpx::shared_future<matrix::Tile<const T, Device::CPU>> b_tile,
                                hpx::future<matrix::Tile<T, Device::CPU>> c_tile) {
@@ -77,15 +77,12 @@ template <class T>
 void Triangular<Backend::MC, Device::CPU, T>::call_LLN(blas::Diag diag, T alpha,
                                                        Matrix<const T, Device::CPU>& mat_a,
                                                        Matrix<T, Device::CPU>& mat_b) {
-  using hpx::threads::executors::pool_executor;
+  using hpx::execution::parallel_executor;
+  using hpx::resource::get_thread_pool;
+  using hpx::threads::thread_priority;
 
-  constexpr auto thread_priority_high = hpx::threads::thread_priority::high;
-  constexpr auto thread_priority_default = hpx::threads::thread_priority::default_;
-
-  // Set up executor on the default queue with high priority.
-  pool_executor executor_hp("default", thread_priority_high);
-  // Set up executor on the default queue with default priority.
-  pool_executor executor_normal("default", thread_priority_default);
+  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
+  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -117,15 +114,12 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLT(blas::Op op, blas::Diag d
   constexpr auto Lower = blas::Uplo::Lower;
   constexpr auto NoTrans = blas::Op::NoTrans;
 
-  using hpx::threads::executors::pool_executor;
+  using hpx::execution::parallel_executor;
+  using hpx::resource::get_thread_pool;
+  using hpx::threads::thread_priority;
 
-  constexpr auto thread_priority_high = hpx::threads::thread_priority::high;
-  constexpr auto thread_priority_default = hpx::threads::thread_priority::default_;
-
-  // Set up executor on the default queue with high priority.
-  pool_executor executor_hp("default", thread_priority_high);
-  // Set up executor on the default queue with default priority.
-  pool_executor executor_normal("default", thread_priority_default);
+  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
+  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -159,15 +153,12 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LUN(blas::Diag diag, T alpha,
   constexpr auto Upper = blas::Uplo::Upper;
   constexpr auto NoTrans = blas::Op::NoTrans;
 
-  using hpx::threads::executors::pool_executor;
+  using hpx::execution::parallel_executor;
+  using hpx::resource::get_thread_pool;
+  using hpx::threads::thread_priority;
 
-  constexpr auto thread_priority_high = hpx::threads::thread_priority::high;
-  constexpr auto thread_priority_default = hpx::threads::thread_priority::default_;
-
-  // Set up executor on the default queue with high priority.
-  pool_executor executor_hp("default", thread_priority_high);
-  // Set up executor on the default queue with default priority.
-  pool_executor executor_normal("default", thread_priority_default);
+  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
+  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -201,15 +192,12 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LUT(blas::Op op, blas::Diag d
   constexpr auto Upper = blas::Uplo::Upper;
   constexpr auto NoTrans = blas::Op::NoTrans;
 
-  using hpx::threads::executors::pool_executor;
+  using hpx::execution::parallel_executor;
+  using hpx::resource::get_thread_pool;
+  using hpx::threads::thread_priority;
 
-  constexpr auto thread_priority_high = hpx::threads::thread_priority::high;
-  constexpr auto thread_priority_default = hpx::threads::thread_priority::default_;
-
-  // Set up executor on the default queue with high priority.
-  pool_executor executor_hp("default", thread_priority_high);
-  // Set up executor on the default queue with default priority.
-  pool_executor executor_normal("default", thread_priority_default);
+  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
+  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -244,15 +232,12 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RLN(blas::Diag diag, T alpha,
   constexpr auto Lower = blas::Uplo::Lower;
   constexpr auto NoTrans = blas::Op::NoTrans;
 
-  using hpx::threads::executors::pool_executor;
+  using hpx::execution::parallel_executor;
+  using hpx::resource::get_thread_pool;
+  using hpx::threads::thread_priority;
 
-  constexpr auto thread_priority_high = hpx::threads::thread_priority::high;
-  constexpr auto thread_priority_default = hpx::threads::thread_priority::default_;
-
-  // Set up executor on the default queue with high priority.
-  pool_executor executor_hp("default", thread_priority_high);
-  // Set up executor on the default queue with default priority.
-  pool_executor executor_normal("default", thread_priority_default);
+  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
+  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -287,15 +272,12 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RLT(blas::Op op, blas::Diag d
   constexpr auto Lower = blas::Uplo::Lower;
   constexpr auto NoTrans = blas::Op::NoTrans;
 
-  using hpx::threads::executors::pool_executor;
+  using hpx::execution::parallel_executor;
+  using hpx::resource::get_thread_pool;
+  using hpx::threads::thread_priority;
 
-  constexpr auto thread_priority_high = hpx::threads::thread_priority::high;
-  constexpr auto thread_priority_default = hpx::threads::thread_priority::default_;
-
-  // Set up executor on the default queue with high priority.
-  pool_executor executor_hp("default", thread_priority_high);
-  // Set up executor on the default queue with default priority.
-  pool_executor executor_normal("default", thread_priority_default);
+  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
+  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -330,15 +312,12 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RUN(blas::Diag diag, T alpha,
   constexpr auto Upper = blas::Uplo::Upper;
   constexpr auto NoTrans = blas::Op::NoTrans;
 
-  using hpx::threads::executors::pool_executor;
+  using hpx::execution::parallel_executor;
+  using hpx::resource::get_thread_pool;
+  using hpx::threads::thread_priority;
 
-  constexpr auto thread_priority_high = hpx::threads::thread_priority::high;
-  constexpr auto thread_priority_default = hpx::threads::thread_priority::default_;
-
-  // Set up executor on the default queue with high priority.
-  pool_executor executor_hp("default", thread_priority_high);
-  // Set up executor on the default queue with default priority.
-  pool_executor executor_normal("default", thread_priority_default);
+  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
+  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -373,15 +352,12 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RUT(blas::Op op, blas::Diag d
   constexpr auto Upper = blas::Uplo::Upper;
   constexpr auto NoTrans = blas::Op::NoTrans;
 
-  using hpx::threads::executors::pool_executor;
+  using hpx::execution::parallel_executor;
+  using hpx::resource::get_thread_pool;
+  using hpx::threads::thread_priority;
 
-  constexpr auto thread_priority_high = hpx::threads::thread_priority::high;
-  constexpr auto thread_priority_default = hpx::threads::thread_priority::default_;
-
-  // Set up executor on the default queue with high priority.
-  pool_executor executor_hp("default", thread_priority_high);
-  // Set up executor on the default queue with default priority.
-  pool_executor executor_normal("default", thread_priority_default);
+  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
+  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -412,19 +388,20 @@ template <class T>
 void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid grid, blas::Diag diag,
                                                        T alpha, Matrix<const T, Device::CPU>& mat_a,
                                                        Matrix<T, Device::CPU>& mat_b) {
-  using hpx::threads::executors::pool_executor;
-  using comm::internal::mpi_pool_exists;
+  using hpx::execution::parallel_executor;
+  using hpx::resource::get_thread_pool;
+  using hpx::resource::pool_exists;
+  using hpx::threads::thread_priority;
   using common::internal::vector;
   using ConstTileType = typename Matrix<T, Device::CPU>::ConstTileType;
 
-  constexpr auto thread_priority_high = hpx::threads::thread_priority::high;
-  constexpr auto thread_priority_default = hpx::threads::thread_priority::default_;
-
-  pool_executor executor_hp("default", thread_priority_high);
-  pool_executor executor_normal("default", thread_priority_default);
+  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
+  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
 
   // Set up MPI
-  auto executor_mpi = (mpi_pool_exists()) ? pool_executor("mpi", thread_priority_high) : executor_hp;
+  auto executor_mpi = (pool_exists("mpi"))
+                          ? parallel_executor(&get_thread_pool("mpi"), thread_priority::high)
+                          : executor_hp;
   common::Pipeline<comm::CommunicatorGrid> serial_comm(std::move(grid));
 
   const matrix::Distribution& distr_a = mat_a.distribution();

@@ -10,6 +10,7 @@
 #pragma once
 
 #include <hpx/include/parallel_executors.hpp>
+#include <hpx/include/resource_partitioner.hpp>
 #include <hpx/include/threads.hpp>
 #include <hpx/include/util.hpp>
 
@@ -22,7 +23,6 @@
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/executor.h"
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/factorization/cholesky/api.h"
 #include "dlaf/lapack_tile.h"
@@ -36,14 +36,14 @@ namespace factorization {
 namespace internal {
 
 template <class T>
-void potrf_diag_tile(hpx::threads::executors::pool_executor executor_hp,
+void potrf_diag_tile(hpx::execution::parallel_executor executor_hp,
                      hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
   hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::potrf<T, Device::CPU>), blas::Uplo::Lower,
                 std::move(matrix_tile));
 }
 
 template <class T>
-void trsm_panel_tile(hpx::threads::executors::pool_executor executor_hp,
+void trsm_panel_tile(hpx::execution::parallel_executor executor_hp,
                      hpx::shared_future<matrix::Tile<const T, Device::CPU>> kk_tile,
                      hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
   hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), blas::Side::Right,
@@ -52,7 +52,7 @@ void trsm_panel_tile(hpx::threads::executors::pool_executor executor_hp,
 }
 
 template <class T>
-void herk_trailing_diag_tile(hpx::threads::executors::pool_executor trailing_matrix_executor,
+void herk_trailing_diag_tile(hpx::execution::parallel_executor trailing_matrix_executor,
                              hpx::shared_future<matrix::Tile<const T, Device::CPU>> panel_tile,
                              hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
   hpx::dataflow(trailing_matrix_executor, hpx::util::unwrapping(tile::herk<T, Device::CPU>),
@@ -60,7 +60,7 @@ void herk_trailing_diag_tile(hpx::threads::executors::pool_executor trailing_mat
 }
 
 template <class T>
-void gemm_trailing_matrix_tile(hpx::threads::executors::pool_executor trailing_matrix_executor,
+void gemm_trailing_matrix_tile(hpx::execution::parallel_executor trailing_matrix_executor,
                                hpx::shared_future<matrix::Tile<const T, Device::CPU>> panel_tile,
                                hpx::shared_future<matrix::Tile<const T, Device::CPU>> col_panel,
                                hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
@@ -77,13 +77,12 @@ struct Cholesky<Backend::MC, Device::CPU, T> {
 
 template <class T>
 void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a) {
-  using hpx::threads::executors::pool_executor;
+  using hpx::execution::parallel_executor;
+  using hpx::resource::get_thread_pool;
+  using hpx::threads::thread_priority;
 
-  constexpr auto thread_priority_high = hpx::threads::thread_priority::high;
-  constexpr auto thread_priority_default = hpx::threads::thread_priority::default_;
-
-  pool_executor executor_hp("default", thread_priority_high);
-  pool_executor executor_normal("default", thread_priority_default);
+  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
+  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
 
   // Number of tile (rows = cols)
   SizeType nrtile = mat_a.nrTiles().cols();
@@ -120,30 +119,30 @@ template <class T>
 
 void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
                                                    Matrix<T, Device::CPU>& mat_a) {
-  using hpx::threads::executors::pool_executor;
+  using hpx::execution::parallel_executor;
+  using hpx::resource::get_thread_pool;
+  using hpx::resource::pool_exists;
+  using hpx::threads::thread_priority;
+  using common::internal::vector;
+  using ConstTileType = typename Matrix<T, Device::CPU>::ConstTileType;
 
-  constexpr auto thread_priority_high = hpx::threads::thread_priority::high;
-  constexpr auto thread_priority_default = hpx::threads::thread_priority::default_;
+  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
+  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
 
-  using comm::internal::mpi_pool_exists;
-  using ConstTile_t = matrix::Tile<const T, Device::CPU>;
-
-  // Set up executor on the default queue with high priority.
-  pool_executor executor_hp("default", thread_priority_high);
-  // Set up executor on the default queue with default priority.
-  pool_executor executor_normal("default", thread_priority_default);
-
-  // Set up MPI executor
-  comm::Index2D this_rank = grid.rank();
-  auto executor_mpi = (mpi_pool_exists()) ? pool_executor("mpi", thread_priority_high) : executor_hp;
+  // Set up MPI
+  auto executor_mpi = (pool_exists("mpi"))
+                          ? parallel_executor(&get_thread_pool("mpi"), thread_priority::high)
+                          : executor_hp;
   common::Pipeline<comm::CommunicatorGrid> mpi_task_chain(std::move(grid));
+
+  comm::Index2D this_rank = grid.rank();
 
   matrix::Distribution const& distr = mat_a.distribution();
   SizeType nrtile = mat_a.nrTiles().cols();
 
   for (SizeType k = 0; k < nrtile; ++k) {
     // Create a placeholder that will store the shared futures representing the panel
-    std::unordered_map<SizeType, hpx::shared_future<ConstTile_t>> panel;
+    std::unordered_map<SizeType, hpx::shared_future<ConstTileType>> panel;
 
     GlobalTileIndex kk_idx(k, k);
     comm::Index2D kk_rank = distr.rankGlobalTile(kk_idx);
@@ -187,7 +186,7 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
 
       // Broadcast the jk-tile along the j-th column and update the jj-tile
       if (this_rank.row() == jj_rank.row()) {
-        pool_executor trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_normal;
+        parallel_executor trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_normal;
         herk_trailing_diag_tile(trailing_matrix_executor, panel[j], mat_a(jj_idx));
         if (j != nrtile - 1)
           comm::send_tile(executor_mpi, mpi_task_chain, Coord::Col, panel[j]);

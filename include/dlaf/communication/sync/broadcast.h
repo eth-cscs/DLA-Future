@@ -55,7 +55,7 @@ void receive_from(const int broadcaster_rank, Communicator& communicator, DataOu
 }
 
 template <class T>
-void send_tile(hpx::threads::executors::pool_executor ex,
+void send_tile(hpx::execution::parallel_executor ex,
                common::Pipeline<comm::CommunicatorGrid>& task_chain, Coord rc_comm,
                hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile) {
   using ConstTile_t = matrix::Tile<const T, Device::CPU>;
@@ -72,7 +72,7 @@ void send_tile(hpx::threads::executors::pool_executor ex,
 
 template <class T>
 hpx::future<matrix::Tile<const T, Device::CPU>> recv_tile(
-    hpx::threads::executors::pool_executor ex, common::Pipeline<comm::CommunicatorGrid>& mpi_task_chain,
+    hpx::execution::parallel_executor ex, common::Pipeline<comm::CommunicatorGrid>& mpi_task_chain,
     Coord rc_comm, TileElementSize tile_size, int rank) {
   using ConstTile_t = matrix::Tile<const T, Device::CPU>;
   using PromiseComm_t = common::PromiseGuard<comm::CommunicatorGrid>;

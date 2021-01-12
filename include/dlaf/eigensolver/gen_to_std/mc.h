@@ -10,6 +10,7 @@
 #pragma once
 
 #include <hpx/include/parallel_executors.hpp>
+#include <hpx/include/resource_partitioner.hpp>
 #include <hpx/include/threads.hpp>
 
 #include "dlaf/blas_tile.h"
@@ -18,7 +19,6 @@
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/executor.h"
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/eigensolver/gen_to_std/api.h"
 #include "dlaf/lapack_tile.h"
@@ -47,18 +47,13 @@ void GenToStd<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
   constexpr auto NoTrans = blas::Op::NoTrans;
   constexpr auto ConjTrans = blas::Op::ConjTrans;
 
+  using hpx::execution::parallel_executor;
+  using hpx::resource::get_thread_pool;
+  using hpx::threads::thread_priority;
   using hpx::util::unwrapping;
 
-  using hpx::threads::executors::pool_executor;
-
-  constexpr auto thread_priority_high = hpx::threads::thread_priority::high;
-  constexpr auto thread_priority_default = hpx::threads::thread_priority::default_;
-
-  // Set up executor on the default queue with high priority.
-  pool_executor executor_hp("default", thread_priority_high);
-
-  // Set up executor on the default queue with default priority.
-  pool_executor executor_normal("default", thread_priority_default);
+  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
+  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
 
   const SizeType m = mat_a.nrTiles().rows();
   const SizeType n = mat_a.nrTiles().cols();

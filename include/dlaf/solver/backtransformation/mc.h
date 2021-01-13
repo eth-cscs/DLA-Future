@@ -94,22 +94,21 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
      // Set up executor on the default queue with default priority.
      pool_executor executor_normal("default", thread_priority_default);
 
-     SizeType m = mat_c.nrTiles().rows();
-     SizeType n = mat_c.nrTiles().cols();
-     SizeType mb = mat_c.blockSize().rows();
-     SizeType nb = mat_c.blockSize().cols();
+     const SizeType m = mat_c.nrTiles().rows();
+     const SizeType n = mat_c.nrTiles().cols();
+     const SizeType mb = mat_c.blockSize().rows();
+     const SizeType nb = mat_c.blockSize().cols();
 
      TileElementSize size(mb, nb);
-
-     Matrix<T, Device::CPU> mat_w({(m), 1}, mat_v.blockSize());
-     Matrix<T, Device::CPU> mat_w2({1, n}, mat_c.blockSize());
+     
+     Matrix<T, Device::CPU> mat_w({mat_c.size().rows(), nb}, mat_v.blockSize());
+     Matrix<T, Device::CPU> mat_w2({mb, mat_c.size().cols()}, mat_c.blockSize());
+     
+     for (SizeType k = 0; k < n; ++k) {
        
-     // n-1 reflectors
-     for (SizeType k = 0; k < (n - 1); ++k) {
        void (&cpy)(const matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T, Device::CPU>&) = copy<T>;
-
        // Copy V panel into WH
-       for (SizeType i = k; i < m; ++i) {
+       for (SizeType i = 0; i < m; ++i) {
 	 hpx::dataflow(executor_hp, hpx::util::unwrapping(cpy), mat_v.read(LocalTileIndex(i, k)), mat_w(LocalTileIndex(i, 0)));
        }
 
@@ -120,7 +119,7 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 	 auto ik = LocalTileIndex{i, 0};
 	 auto kk = LocalTileIndex{k, k};
 	 // WH = V T
-	 hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper, ConjTrans,
+	 hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper, NoTrans,
 		       NonUnit, 1.0, mat_t.read(kk), std::move(mat_w(ik)));
        }
 
@@ -135,16 +134,17 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 	 }
        }
 
-       for (SizeType j = k; j < n; ++j) {
-	 auto jk = LocalTileIndex{j, k};
-	 for (SizeType i = k; i < n; ++i) {
-	   auto ki = LocalTileIndex{0, i};
-	   auto ji = LocalTileIndex{j, i};
+       for (SizeType i = k; i < n; ++i) {
+	 auto ik = LocalTileIndex{i, k};
+	 for (SizeType j = k; j < n; ++j) {
+	   auto kj = LocalTileIndex{0, j};
+	   auto ij = LocalTileIndex{i, j};
 	   // C = C - V W2
 	   hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans,
-			 NoTrans, -1.0, mat_v.read(jk), mat_w2.read(ki), 1.0, std::move(mat_c(ji)));
+			 NoTrans, -1.0, mat_v.read(ik), mat_w2.read(kj), 1.0, std::move(mat_c(ij)));
 	 }
        }
+       
      }
    }
 

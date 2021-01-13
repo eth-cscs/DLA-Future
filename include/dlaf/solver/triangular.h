@@ -12,13 +12,9 @@
 #include <blas.hh>
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/matrix.h"
-#include "dlaf/solver/triangular/mc.h"
+#include "dlaf/solver/triangular/impl.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
-
-#ifdef DLAF_WITH_CUDA
-#include "dlaf/solver/triangular/gpu.h"
-#endif
 
 namespace dlaf {
 namespace solver {

@@ -31,55 +31,54 @@ namespace dlaf {
 namespace solver {
 namespace internal {
 
-template <class T>
-struct Triangular<Backend::GPU, Device::GPU, T> {
-  static void call_LLN(blas::Diag diag, T alpha, Matrix<const T, Device::GPU>& mat_a,
-                       Matrix<T, Device::GPU>& mat_b);
-  static void call_LLT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, Device::GPU>& mat_a,
-                       Matrix<T, Device::GPU>& mat_b);
-  static void call_LUN(blas::Diag diag, T alpha, Matrix<const T, Device::GPU>& mat_a,
-                       Matrix<T, Device::GPU>& mat_b);
-  static void call_LUT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, Device::GPU>& mat_a,
-                       Matrix<T, Device::GPU>& mat_b);
-  static void call_RLN(blas::Diag diag, T alpha, Matrix<const T, Device::GPU>& mat_a,
-                       Matrix<T, Device::GPU>& mat_b);
-  static void call_RLT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, Device::GPU>& mat_a,
-                       Matrix<T, Device::GPU>& mat_b);
-  static void call_RUN(blas::Diag diag, T alpha, Matrix<const T, Device::GPU>& mat_a,
-                       Matrix<T, Device::GPU>& mat_b);
-  static void call_RUT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, Device::GPU>& mat_a,
-                       Matrix<T, Device::GPU>& mat_b);
+template <Backend backend, Device device, class T>
+struct Triangular {
+  static void call_LLN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
+                       Matrix<T, device>& mat_b);
+  static void call_LLT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
+                       Matrix<T, device>& mat_b);
+  static void call_LUN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
+                       Matrix<T, device>& mat_b);
+  static void call_LUT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
+                       Matrix<T, device>& mat_b);
+  static void call_RLN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
+                       Matrix<T, device>& mat_b);
+  static void call_RLT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
+                       Matrix<T, device>& mat_b);
+  static void call_RUN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
+                       Matrix<T, device>& mat_b);
+  static void call_RUT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
+                       Matrix<T, device>& mat_b);
   static void call_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
-                       Matrix<const T, Device::GPU>& mat_a, Matrix<T, Device::GPU>& mat_b);
+                       Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b);
 };
 
 namespace lln {
-template <class Executor, class T>
+template <class Executor, class T, Device D>
 void trsm_B_panel_tile(Executor&& ex, blas::Diag diag, T alpha,
-                       hpx::shared_future<matrix::Tile<const T, Device::GPU>> in_tile,
-                       hpx::future<matrix::Tile<T, Device::GPU>> out_tile) {
+                       hpx::shared_future<matrix::Tile<const T, D>> in_tile,
+                       hpx::future<matrix::Tile<T, D>> out_tile) {
   hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Left,
                 blas::Uplo::Lower, blas::Op::NoTrans, diag, alpha, std::move(in_tile),
                 std::move(out_tile));
 }
 
-template <class Executor, class T>
+template <class Executor, class T, Device D>
 void gemm_trailing_matrix_tile(Executor&& ex, T beta,
-                               hpx::shared_future<matrix::Tile<const T, Device::GPU>> a_tile,
-                               hpx::shared_future<matrix::Tile<const T, Device::GPU>> b_tile,
-                               hpx::future<matrix::Tile<T, Device::GPU>> c_tile) {
-  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::gemm_o),
-                blas::Op::NoTrans, blas::Op::NoTrans, beta, std::move(a_tile), std::move(b_tile), T(1.0),
+                               hpx::shared_future<matrix::Tile<const T, D>> a_tile,
+                               hpx::shared_future<matrix::Tile<const T, D>> b_tile,
+                               hpx::future<matrix::Tile<T, D>> c_tile) {
+  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans,
+                blas::Op::NoTrans, beta, std::move(a_tile), std::move(b_tile), T(1.0),
                 std::move(c_tile));
 }
 }
 
-template <class T>
-void Triangular<Backend::GPU, Device::GPU, T>::call_LLN(blas::Diag diag, T alpha,
-                                                       Matrix<const T, Device::GPU>& mat_a,
-                                                       Matrix<T, Device::GPU>& mat_b) {
-  auto executor_hp = dlaf::getHpExecutor<Backend::GPU>();
-  auto executor_np = dlaf::getNpExecutor<Backend::GPU>();
+template <Backend backend, Device device, class T>
+void Triangular<backend, device, T>::call_LLN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
+                                              Matrix<T, device>& mat_b) {
+  auto executor_hp = dlaf::getHpExecutor<backend>();
+  auto executor_np = dlaf::getNpExecutor<backend>();
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -103,16 +102,15 @@ void Triangular<Backend::GPU, Device::GPU, T>::call_LLN(blas::Diag diag, T alpha
   }
 }
 
-template <class T>
-void Triangular<Backend::GPU, Device::GPU, T>::call_LLT(blas::Op op, blas::Diag diag, T alpha,
-                                                       Matrix<const T, Device::GPU>& mat_a,
-                                                       Matrix<T, Device::GPU>& mat_b) {
+template <Backend backend, Device device, class T>
+void Triangular<backend, device, T>::call_LLT(blas::Op op, blas::Diag diag, T alpha,
+                                              Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   constexpr auto Left = blas::Side::Left;
   constexpr auto Lower = blas::Uplo::Lower;
   constexpr auto NoTrans = blas::Op::NoTrans;
 
-  auto executor_hp = dlaf::getHpExecutor<Backend::GPU>();
-  auto executor_np = dlaf::getNpExecutor<Backend::GPU>();
+  auto executor_hp = dlaf::getHpExecutor<backend>();
+  auto executor_np = dlaf::getNpExecutor<backend>();
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -138,16 +136,15 @@ void Triangular<Backend::GPU, Device::GPU, T>::call_LLT(blas::Op op, blas::Diag 
   }
 }
 
-template <class T>
-void Triangular<Backend::GPU, Device::GPU, T>::call_LUN(blas::Diag diag, T alpha,
-                                                       Matrix<const T, Device::GPU>& mat_a,
-                                                       Matrix<T, Device::GPU>& mat_b) {
+template <Backend backend, Device device, class T>
+void Triangular<backend, device, T>::call_LUN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
+                                              Matrix<T, device>& mat_b) {
   constexpr auto Left = blas::Side::Left;
   constexpr auto Upper = blas::Uplo::Upper;
   constexpr auto NoTrans = blas::Op::NoTrans;
 
-  auto executor_hp = dlaf::getHpExecutor<Backend::GPU>();
-  auto executor_np = dlaf::getNpExecutor<Backend::GPU>();
+  auto executor_hp = dlaf::getHpExecutor<backend>();
+  auto executor_np = dlaf::getNpExecutor<backend>();
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -173,16 +170,15 @@ void Triangular<Backend::GPU, Device::GPU, T>::call_LUN(blas::Diag diag, T alpha
   }
 }
 
-template <class T>
-void Triangular<Backend::GPU, Device::GPU, T>::call_LUT(blas::Op op, blas::Diag diag, T alpha,
-                                                       Matrix<const T, Device::GPU>& mat_a,
-                                                       Matrix<T, Device::GPU>& mat_b) {
+template <Backend backend, Device device, class T>
+void Triangular<backend, device, T>::call_LUT(blas::Op op, blas::Diag diag, T alpha,
+                                              Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   constexpr auto Left = blas::Side::Left;
   constexpr auto Upper = blas::Uplo::Upper;
   constexpr auto NoTrans = blas::Op::NoTrans;
 
-  auto executor_hp = dlaf::getHpExecutor<Backend::GPU>();
-  auto executor_np = dlaf::getNpExecutor<Backend::GPU>();
+  auto executor_hp = dlaf::getHpExecutor<backend>();
+  auto executor_np = dlaf::getNpExecutor<backend>();
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -209,16 +205,15 @@ void Triangular<Backend::GPU, Device::GPU, T>::call_LUT(blas::Op op, blas::Diag 
   }
 }
 
-template <class T>
-void Triangular<Backend::GPU, Device::GPU, T>::call_RLN(blas::Diag diag, T alpha,
-                                                       Matrix<const T, Device::GPU>& mat_a,
-                                                       Matrix<T, Device::GPU>& mat_b) {
+template <Backend backend, Device device, class T>
+void Triangular<backend, device, T>::call_RLN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
+                                              Matrix<T, device>& mat_b) {
   constexpr auto Right = blas::Side::Right;
   constexpr auto Lower = blas::Uplo::Lower;
   constexpr auto NoTrans = blas::Op::NoTrans;
 
-  auto executor_hp = dlaf::getHpExecutor<Backend::GPU>();
-  auto executor_np = dlaf::getNpExecutor<Backend::GPU>();
+  auto executor_hp = dlaf::getHpExecutor<backend>();
+  auto executor_np = dlaf::getNpExecutor<backend>();
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -245,16 +240,15 @@ void Triangular<Backend::GPU, Device::GPU, T>::call_RLN(blas::Diag diag, T alpha
   }
 }
 
-template <class T>
-void Triangular<Backend::GPU, Device::GPU, T>::call_RLT(blas::Op op, blas::Diag diag, T alpha,
-                                                       Matrix<const T, Device::GPU>& mat_a,
-                                                       Matrix<T, Device::GPU>& mat_b) {
+template <Backend backend, Device device, class T>
+void Triangular<backend, device, T>::call_RLT(blas::Op op, blas::Diag diag, T alpha,
+                                              Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   constexpr auto Right = blas::Side::Right;
   constexpr auto Lower = blas::Uplo::Lower;
   constexpr auto NoTrans = blas::Op::NoTrans;
 
-  auto executor_hp = dlaf::getHpExecutor<Backend::GPU>();
-  auto executor_np = dlaf::getNpExecutor<Backend::GPU>();
+  auto executor_hp = dlaf::getHpExecutor<backend>();
+  auto executor_np = dlaf::getNpExecutor<backend>();
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -281,16 +275,15 @@ void Triangular<Backend::GPU, Device::GPU, T>::call_RLT(blas::Op op, blas::Diag 
   }
 }
 
-template <class T>
-void Triangular<Backend::GPU, Device::GPU, T>::call_RUN(blas::Diag diag, T alpha,
-                                                       Matrix<const T, Device::GPU>& mat_a,
-                                                       Matrix<T, Device::GPU>& mat_b) {
+template <Backend backend, Device device, class T>
+void Triangular<backend, device, T>::call_RUN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
+                                              Matrix<T, device>& mat_b) {
   constexpr auto Right = blas::Side::Right;
   constexpr auto Upper = blas::Uplo::Upper;
   constexpr auto NoTrans = blas::Op::NoTrans;
 
-  auto executor_hp = dlaf::getHpExecutor<Backend::GPU>();
-  auto executor_np = dlaf::getNpExecutor<Backend::GPU>();
+  auto executor_hp = dlaf::getHpExecutor<backend>();
+  auto executor_np = dlaf::getNpExecutor<backend>();
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -317,16 +310,15 @@ void Triangular<Backend::GPU, Device::GPU, T>::call_RUN(blas::Diag diag, T alpha
   }
 }
 
-template <class T>
-void Triangular<Backend::GPU, Device::GPU, T>::call_RUT(blas::Op op, blas::Diag diag, T alpha,
-                                                       Matrix<const T, Device::GPU>& mat_a,
-                                                       Matrix<T, Device::GPU>& mat_b) {
+template <Backend backend, Device device, class T>
+void Triangular<backend, device, T>::call_RUT(blas::Op op, blas::Diag diag, T alpha,
+                                              Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   constexpr auto Right = blas::Side::Right;
   constexpr auto Upper = blas::Uplo::Upper;
   constexpr auto NoTrans = blas::Op::NoTrans;
 
-  auto executor_hp = dlaf::getHpExecutor<Backend::GPU>();
-  auto executor_np = dlaf::getNpExecutor<Backend::GPU>();
+  auto executor_hp = dlaf::getHpExecutor<backend>();
+  auto executor_np = dlaf::getNpExecutor<backend>();
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -353,16 +345,15 @@ void Triangular<Backend::GPU, Device::GPU, T>::call_RUT(blas::Op op, blas::Diag 
   }
 }
 
-template <class T>
-void Triangular<Backend::GPU, Device::GPU, T>::call_LLN(comm::CommunicatorGrid grid, blas::Diag diag,
-                                                       T alpha, Matrix<const T, Device::GPU>& mat_a,
-                                                       Matrix<T, Device::GPU>& mat_b) {
+template <Backend backend, Device device, class T>
+void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
+                                              Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using common::internal::vector;
-  using ConstTileType = typename Matrix<T, Device::GPU>::ConstTileType;
+  using ConstTileType = typename Matrix<T, device>::ConstTileType;
 
-  auto executor_hp = dlaf::getHpExecutor<Backend::GPU>();
-  auto executor_np = dlaf::getNpExecutor<Backend::GPU>();
-  auto executor_mpi = dlaf::getMPIExecutor<Backend::GPU>();
+  auto executor_hp = dlaf::getHpExecutor<backend>();
+  auto executor_np = dlaf::getNpExecutor<backend>();
+  auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   common::Pipeline<comm::CommunicatorGrid> serial_comm(std::move(grid));
 
@@ -393,8 +384,8 @@ void Triangular<Backend::GPU, Device::GPU, T>::call_LLN(comm::CommunicatorGrid g
         comm::send_tile(executor_mpi, serial_comm, Coord::Row, mat_a.read(kk));
       }
       else {
-        kk_tile = comm::recv_tile<T, Device::GPU>(executor_mpi, serial_comm, Coord::Row,
-                                     mat_a.tileSize(GlobalTileIndex(k, k)), k_rank_col);
+        kk_tile = comm::recv_tile<T, device>(executor_mpi, serial_comm, Coord::Row,
+                                             mat_a.tileSize(GlobalTileIndex(k, k)), k_rank_col);
       }
     }
 
@@ -413,8 +404,8 @@ void Triangular<Backend::GPU, Device::GPU, T>::call_LLN(comm::CommunicatorGrid g
       }
       else {
         if (k != (mat_b.nrTiles().rows() - 1)) {
-          panel[j_local] = comm::recv_tile<T, Device::GPU>(executor_mpi, serial_comm, Coord::Col,
-                                              mat_b.tileSize(GlobalTileIndex(k, j)), k_rank_row);
+          panel[j_local] = comm::recv_tile<T, device>(executor_mpi, serial_comm, Coord::Col,
+                                                      mat_b.tileSize(GlobalTileIndex(k, j)), k_rank_row);
         }
       }
     }
@@ -437,8 +428,8 @@ void Triangular<Backend::GPU, Device::GPU, T>::call_LLN(comm::CommunicatorGrid g
         comm::send_tile(executor_mpi, serial_comm, Coord::Row, mat_a.read(ik));
       }
       else {
-        ik_tile = comm::recv_tile<T, Device::GPU>(executor_mpi, serial_comm, Coord::Row,
-                                     mat_a.tileSize(GlobalTileIndex(i, k)), k_rank_col);
+        ik_tile = comm::recv_tile<T, device>(executor_mpi, serial_comm, Coord::Row,
+                                             mat_a.tileSize(GlobalTileIndex(i, k)), k_rank_col);
       }
 
       // Update trailing matrix
@@ -452,13 +443,20 @@ void Triangular<Backend::GPU, Device::GPU, T>::call_LLN(comm::CommunicatorGrid g
 }
 
 /// ---- ETI
-#define DLAF_SOLVER_TRIANGULAR_GPU_ETI(KWORD, DATATYPE) \
-  KWORD template struct Triangular<Backend::GPU, Device::GPU, DATATYPE>;
+#define DLAF_SOLVER_TRIANGULAR_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
+  KWORD template struct Triangular<BACKEND, DEVICE, DATATYPE>;
 
-DLAF_SOLVER_TRIANGULAR_GPU_ETI(extern, float)
-DLAF_SOLVER_TRIANGULAR_GPU_ETI(extern, double)
-DLAF_SOLVER_TRIANGULAR_GPU_ETI(extern, std::complex<float>)
-DLAF_SOLVER_TRIANGULAR_GPU_ETI(extern, std::complex<double>)
+DLAF_SOLVER_TRIANGULAR_ETI(extern, Backend::MC, Device::CPU, float)
+DLAF_SOLVER_TRIANGULAR_ETI(extern, Backend::MC, Device::CPU, double)
+DLAF_SOLVER_TRIANGULAR_ETI(extern, Backend::MC, Device::CPU, std::complex<float>)
+DLAF_SOLVER_TRIANGULAR_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
+
+#ifdef DLAF_WITH_CUDA
+DLAF_SOLVER_TRIANGULAR_ETI(extern, Backend::GPU, Device::GPU, float)
+DLAF_SOLVER_TRIANGULAR_ETI(extern, Backend::GPU, Device::GPU, double)
+DLAF_SOLVER_TRIANGULAR_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)
+DLAF_SOLVER_TRIANGULAR_ETI(extern, Backend::GPU, Device::GPU, std::complex<double>)
+#endif
 }
 }
 }

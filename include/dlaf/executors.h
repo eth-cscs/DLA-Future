@@ -16,7 +16,6 @@
 #include <hpx/modules/async_cuda.hpp>
 #endif
 
-#include <dlaf/communication/executor.h>
 #include <dlaf/init.h>
 #include <dlaf/types.h>
 
@@ -26,51 +25,10 @@
 
 namespace dlaf {
 namespace internal {
-template <Backend B>
-struct GetMPIExecutor {
-  static auto call() {
-    return hpx::execution::parallel_executor(&hpx::resource::get_thread_pool(
-                                                 comm::internal::mpi_pool_exists() ? "mpi" : "default"),
-                                             hpx::threads::thread_priority_high);
-  }
-};
-
-template <Backend B>
-struct GetNpExecutor {
-  static auto call() {
-    return hpx::execution::parallel_executor{hpx::threads::thread_priority::normal};
-  }
-};
-
-#ifdef DLAF_WITH_CUDA
-template <>
-struct GetNpExecutor<Backend::GPU> {
-  static auto call() {
-    return dlaf::cublas::Executor{getNpCudaStreamPool(), getCublasHandlePool()};
-  }
-};
-#endif
-
-template <Backend B>
-struct GetHpExecutor {
-  static auto call() {
-    return hpx::execution::parallel_executor{hpx::threads::thread_priority::high};
-  }
-};
-
-#ifdef DLAF_WITH_CUDA
-template <>
-struct GetHpExecutor<Backend::GPU> {
-  static auto call() {
-    return dlaf::cublas::Executor{getHpCudaStreamPool(), getCublasHandlePool()};
-  }
-};
-#endif
-
 template <Device S, Device D>
 struct GetCopyExecutor {
   static auto call() {
-    return hpx::execution::parallel_executor{};
+    return hpx::execution::parallel_executor{&hpx::resource::get_thread_pool("default")};
   }
 };
 
@@ -102,8 +60,12 @@ struct GetCopyExecutor<Device::GPU, Device::GPU> {
 ///
 /// @tparam B backend with which the executor should be used.
 template <Backend B>
-decltype(auto) getMPIExecutor() {
-  return internal::GetMPIExecutor<B>::call();
+auto getMPIExecutor() {
+  return hpx::execution::parallel_executor{&hpx::resource::get_thread_pool(
+                                                            hpx::resource::pool_exists("mpi")
+                                                                ? "mpi"
+                                                                : "default"),
+                                                        hpx::threads::thread_priority::high};
 }
 
 /// Returns a normal priority executor approprate for use with the given
@@ -111,18 +73,32 @@ decltype(auto) getMPIExecutor() {
 ///
 /// @tparam B backend with which the executor should be used.
 template <Backend B>
-decltype(auto) getNpExecutor() {
-  return internal::GetNpExecutor<B>::call();
+auto getNpExecutor() {
+  return hpx::execution::parallel_executor{hpx::threads::thread_priority::normal};
 }
+
+#ifdef DLAF_WITH_CUDA
+template <>
+inline auto getNpExecutor<Backend::GPU>() {
+  return dlaf::cublas::Executor{internal::getNpCudaStreamPool(), internal::getCublasHandlePool()};
+}
+#endif
 
 /// Returns a high priority executor approprate for use with the given
 /// backend.
 ///
 /// @tparam B backend with which the executor should be used.
 template <Backend B>
-decltype(auto) getHpExecutor() {
-  return internal::GetHpExecutor<B>::call();
+auto getHpExecutor() {
+  return hpx::execution::parallel_executor{hpx::threads::thread_priority::high};
 }
+
+#ifdef DLAF_WITH_CUDA
+template <>
+inline auto getHpExecutor<Backend::GPU>() {
+  return dlaf::cublas::Executor{internal::getHpCudaStreamPool(), internal::getCublasHandlePool()};
+}
+#endif
 
 /// Returns an executor appropriate for copying from @tparam S to @tparam D.
 ///

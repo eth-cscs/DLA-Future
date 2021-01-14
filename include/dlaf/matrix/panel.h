@@ -183,16 +183,13 @@ void bcast_panel(const comm::IndexT_MPI rank_root, Panel<panel_type, T, device>&
   using namespace comm::sync::broadcast;
   using hpx::util::unwrapping;
 
-  auto send_func = unwrapping(unwrap_guards(comm::selector<dir>(send_o)));
-  auto recv_func = unwrapping(unwrap_guards(comm::selector<dir>(receive_from_o)));
-
   const auto rank = ws.rankIndex().get(component(dir));
 
   for (const auto& index : ws) {
     if (rank == rank_root)
-      hpx::dataflow(send_func, serial_comm(), ws.read(index));
+      comm::send_tile(serial_comm, dir, ws.read(index));
     else
-      hpx::dataflow(recv_func, rank_root, serial_comm(), ws(index));
+      comm::recv_tile(serial_comm, dir, ws(index), rank_root);
   }
 }
 
@@ -252,8 +249,6 @@ void broadcast(comm::IndexT_MPI /*root*/, Panel<from_dir, T, device>& ws_from,
 
   // communicate each tile orthogonally to the direction of the destination panel
   constexpr Coord comm_dir = transposed(to_dir);
-  auto send_func = unwrapping(unwrap_guards(comm::selector<comm_dir>(send_o)));
-  auto recv_func = unwrapping(unwrap_guards(comm::selector<comm_dir>(receive_from_o)));
 
   const auto& dist = ws_from.distribution_matrix();
 
@@ -268,10 +263,10 @@ void broadcast(comm::IndexT_MPI /*root*/, Panel<from_dir, T, device>& ws_from,
     if (dist.rankIndex().get(from_coord) == owner) {
       const auto idx_src = dist.template localTileFromGlobalTile<from_coord>(idx_cross);
       ws_to.set_tile(idx_dst, ws_from.read({from_coord, idx_src}));
-      hpx::dataflow(send_func, serial_comm(), ws_to.read(idx_dst));
+      comm::send_tile(serial_comm, comm_dir, ws_to.read(idx_dst));
     }
     else {
-      hpx::dataflow(recv_func, owner, serial_comm(), ws_to(idx_dst));
+      comm::recv_tile(serial_comm, comm_dir, ws_to(idx_dst), owner);
     }
   }
 }

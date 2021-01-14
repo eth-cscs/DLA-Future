@@ -272,9 +272,9 @@ const std::vector<blas::Diag> blas_diags({blas::Diag::NonUnit, blas::Diag::Unit}
     Distribution distributionT(szT, blockSizeT, comm_grid.size(), comm_grid.rank(), src_rank_index);
     Matrix<double, Device::CPU> mat_t(std::move(distributionT));
     set(mat_t, el_T);
-
+        
     solver::backTransformation<Backend::MC>(comm_grid, mat_c, mat_v, mat_t);
-
+    
     double error = 0.1;
     CHECK_MATRIX_NEAR(res, mat_c, error, error);
   }

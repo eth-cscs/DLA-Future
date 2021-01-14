@@ -200,24 +200,41 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 
 //     Matrix<T, Device::CPU> mat_w({mat_c.size().rows(), nb}, mat_v.blockSize());
 //     Matrix<T, Device::CPU> mat_w2({mb, mat_c.size().cols()}, mat_c.blockSize());
-     
-     for (SizeType k = 0; k < n; ++k) {
 
-  //     void (&cpy)(const matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T, Device::CPU>&) = copy<T>;
-  //     // Copy V panel into WH
-  //     for (SizeType i = 0; i < m; ++i) {
-  //	 hpx::dataflow(executor_hp, hpx::util::unwrapping(cpy), mat_v.read(LocalTileIndex(i, k)), mat_w(LocalTileIndex(i, 0)));
-  //     }
-  //     
-  //     // Reset W2 to zero
-  //     matrix::util::set(mat_w2, [](auto&&){return 0;});
-       
+     Distribution dist_w({mat_v.size().rows(), mat_v.blockSize().cols()}, mat_v.blockSize(), grid.size(), grid.rank(), mat_v.distribution().sourceRankIndex());
+     Matrix<T, Device::CPU> mat_w(std::move(dist_w));
+     std::cout << "mat w " << mat_w << std::endl;
+     
+     for (SizeType k = 0; k < 1; ++k) {
+     //     for (SizeType k = 0; k < n; ++k) {
 
        const IndexT_MPI rank_k_col = distrib.template rankGlobalTile<Coord::Col>(k); 
        const IndexT_MPI rank_k_row = distrib.template rankGlobalTile<Coord::Row>(k); 
 	 
        const SizeType local_k_row = distrib.template localTileFromGlobalTile<Coord::Row>(k);
        const SizeType local_k_col = distrib.template localTileFromGlobalTile<Coord::Col>(k);
+
+       // Copy V panel into WH
+       void (&cpy)(const matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T, Device::CPU>&) = copy<T>;
+       for (SizeType i_local = 0; i_local < mat_v.distribution().localNrTiles().rows(); ++i_local) {
+	   auto i_row = distrib.template globalTileFromLocalTile<Coord::Row>(i_local);
+	   const IndexT_MPI rank_i_row = distrib.template rankGlobalTile<Coord::Row>(i_row);
+	   auto i_col = distrib.template globalTileFromLocalTile<Coord::Col>(i_local);
+	   const IndexT_MPI rank_i_col = distrib.template rankGlobalTile<Coord::Col>(i_col);
+
+	   if (mat_v.rankIndex().col() == rank_k_col) {
+	     if (mat_v.rankIndex().row() == rank_i_row) {
+	       std::cout << " k " << k << " i_local " << i_local << " i (" << i_row << ", " << i_col  << ") rank_i_row " << rank_i_row << " rank_k_col " << rank_k_col << std::endl;
+	       //	       hpx::dataflow(executor_hp, hpx::util::unwrapping(cpy), mat_v.read(LocalTileIndex(i_row, k)), mat_w(LocalTileIndex(i_row, 0)));
+	       std::cout << "mao " << mat_v.read(LocalTileIndex{i_row,k}).get()({0,0}) << std::endl;
+	     }
+	   }
+
+       }
+       
+//       // Reset W2 to zero
+//       matrix::util::set(mat_w2, [](auto&&){return 0;});
+       
        auto kk = LocalTileIndex{local_k_row, local_k_col};
        hpx::shared_future<ConstTileType> matt_kk_tile; 
        

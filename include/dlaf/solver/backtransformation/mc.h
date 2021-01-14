@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -99,8 +99,6 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
      const SizeType mb = mat_c.blockSize().rows();
      const SizeType nb = mat_c.blockSize().cols();
 
-     TileElementSize size(mb, nb);
-     
      Matrix<T, Device::CPU> mat_w({mat_c.size().rows(), nb}, mat_v.blockSize());
      Matrix<T, Device::CPU> mat_w2({mb, mat_c.size().cols()}, mat_c.blockSize());
      
@@ -149,50 +147,47 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
    }
 
  
-// template <class T>
-//   void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_c, Matrix<const T, Device::CPU>& mat_v, Matrix<T, Device::CPU>& mat_t)
-//   {
-//     constexpr auto Left = blas::Side::Left;
-//     constexpr auto Right = blas::Side::Right;
-//     constexpr auto Upper = blas::Uplo::Upper;
-//     constexpr auto Lower = blas::Uplo::Lower;
-//     constexpr auto NoTrans = blas::Op::NoTrans;
-//     constexpr auto ConjTrans = blas::Op::ConjTrans;
-//     constexpr auto NonUnit = blas::Diag::NonUnit;
-//
-//     using comm::IndexT_MPI;
-//     using comm::internal::mpi_pool_exists;
-//     using common::internal::vector;
-//     using dlaf::comm::Communicator;
-//     using dlaf::comm::CommunicatorGrid;
-//     using dlaf::common::make_data;
-//
-//     using TileType = typename Matrix<T, Device::CPU>::TileType;     
-//     using ConstTileType = typename Matrix<const T, Device::CPU>::ConstTileType;     
-//
-//     using hpx::threads::executors::pool_executor;
-//     using hpx::threads::thread_priority_high;
-//     using hpx::threads::thread_priority_default;
-//     using hpx::util::unwrapping;
-//
-//     pool_executor executor_hp("default", thread_priority_high);
-//     pool_executor executor_normal("default", thread_priority_default);
-//     // Set up MPI
-//     auto executor_mpi = (mpi_pool_exists()) ? pool_executor("mpi", thread_priority_high) : executor_hp;
-//     common::Pipeline<comm::CommunicatorGrid> serial_comm(std::move(grid));
-//
-//     SizeType m = mat_c.nrTiles().rows();
-//     SizeType n = mat_c.nrTiles().cols();
-//     SizeType mb = mat_c.blockSize().rows();
-//     SizeType nb = mat_c.blockSize().cols();
-//
-//     TileElementSize size(mb, nb);
-//
-//     auto distrib = mat_c.distribution();
-//     auto local_rows = distrib.localNrTiles().rows();
-//     auto local_cols = distrib.localNrTiles().cols();
-//     
-//
+ template <class T>
+   void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_c, Matrix<const T, Device::CPU>& mat_v, Matrix<T, Device::CPU>& mat_t)
+   {
+     constexpr auto Left = blas::Side::Left;
+     constexpr auto Right = blas::Side::Right;
+     constexpr auto Upper = blas::Uplo::Upper;
+     constexpr auto Lower = blas::Uplo::Lower;
+     constexpr auto NoTrans = blas::Op::NoTrans;
+     constexpr auto ConjTrans = blas::Op::ConjTrans;
+     constexpr auto NonUnit = blas::Diag::NonUnit;
+
+     using comm::IndexT_MPI;
+     using comm::internal::mpi_pool_exists;
+     using common::internal::vector;
+     using dlaf::comm::Communicator;
+     using dlaf::comm::CommunicatorGrid;
+     using dlaf::common::make_data;
+
+     using TileType = typename Matrix<T, Device::CPU>::TileType;     
+     using ConstTileType = typename Matrix<const T, Device::CPU>::ConstTileType;     
+
+     using hpx::threads::executors::pool_executor;
+     using hpx::threads::thread_priority_high;
+     using hpx::threads::thread_priority_default;
+     using hpx::util::unwrapping;
+
+     pool_executor executor_hp("default", thread_priority_high);
+     pool_executor executor_normal("default", thread_priority_default);
+     // Set up MPI
+     auto executor_mpi = (mpi_pool_exists()) ? pool_executor("mpi", thread_priority_high) : executor_hp;
+     common::Pipeline<comm::CommunicatorGrid> serial_comm(std::move(grid));
+
+     SizeType m = mat_c.nrTiles().rows();
+     SizeType n = mat_c.nrTiles().cols();
+     SizeType mb = mat_c.blockSize().rows();
+     SizeType nb = mat_c.blockSize().cols();
+
+     auto distrib = mat_c.distribution();
+     auto local_rows = distrib.localNrTiles().rows();
+     auto local_cols = distrib.localNrTiles().cols();     
+
 //     // CHECK!!
 //     // Distribution distributionC(szC, blockSizeC, comm_grid.size(), comm_grid.rank(), src_rank_index);
 //     auto dist_w = mat_v.distribution();
@@ -202,33 +197,41 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 //     auto dist_w2 = mat_c.distribution();
 //     Matrix<T, Device::CPU> mat_w2(std::move(dist_w2));
 //     matrix::util::set(mat_w2, [](auto&&){return 0;});
-//
-//
-//     // n-1 reflectors
-//     for (SizeType i = 0; i < (m - 1); ++i) {
-//
-//	 Matrix<T, Device::CPU> mat_w2_local({mb, nb}, mat_t.blockSize());
-//	 matrix::util::set(mat_w2_local, [](auto&&){return 0;});
-//
-//	 const IndexT_MPI rank_i_col = distrib.template rankGlobalTile<Coord::Col>(i); 
-//	 const IndexT_MPI rank_i_row = distrib.template rankGlobalTile<Coord::Row>(i); 
-//	 
-//	 const SizeType local_i_row = distrib.template localTileFromGlobalTile<Coord::Row>(i);
-//	 const SizeType local_i_col = distrib.template localTileFromGlobalTile<Coord::Col>(i);
-//	 auto ii = LocalTileIndex{local_i_row, local_i_col};
-//	 hpx::shared_future<ConstTileType> matt_ii_tile; 
-//       
-//	 // Broadcast Tii column-wise
-//	 if (mat_t.rankIndex().col() == rank_i_col) {
-//	   if (mat_t.rankIndex().row() == rank_i_row) {
-//	     matt_ii_tile = mat_t.read(ii);
-//	     comm::send_tile(executor_mpi, serial_comm, Coord::Col, mat_t.read(ii));
-//	   }
-//	   else {
-//	     matt_ii_tile = comm::recv_tile<T>(executor_mpi, serial_comm, Coord::Col, mat_t.tileSize(GlobalTileIndex(i, i)), rank_i_row);
-//	   }
+
+//     Matrix<T, Device::CPU> mat_w({mat_c.size().rows(), nb}, mat_v.blockSize());
+//     Matrix<T, Device::CPU> mat_w2({mb, mat_c.size().cols()}, mat_c.blockSize());
+     
+     for (SizeType k = 0; k < n; ++k) {
+
+  //     void (&cpy)(const matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T, Device::CPU>&) = copy<T>;
+  //     // Copy V panel into WH
+  //     for (SizeType i = 0; i < m; ++i) {
+  //	 hpx::dataflow(executor_hp, hpx::util::unwrapping(cpy), mat_v.read(LocalTileIndex(i, k)), mat_w(LocalTileIndex(i, 0)));
+  //     }
+  //     
+  //     // Reset W2 to zero
+  //     matrix::util::set(mat_w2, [](auto&&){return 0;});
+       
+
+       const IndexT_MPI rank_k_col = distrib.template rankGlobalTile<Coord::Col>(k); 
+       const IndexT_MPI rank_k_row = distrib.template rankGlobalTile<Coord::Row>(k); 
+	 
+       const SizeType local_k_row = distrib.template localTileFromGlobalTile<Coord::Row>(k);
+       const SizeType local_k_col = distrib.template localTileFromGlobalTile<Coord::Col>(k);
+       auto kk = LocalTileIndex{local_k_row, local_k_col};
+       hpx::shared_future<ConstTileType> matt_kk_tile; 
+       
+//       // Broadcast Tkk column-wise
+//       if (mat_t.rankIndex().col() == rank_k_col) {
+//	 if (mat_t.rankIndex().row() == rank_k_row) {
+//	   matt_kk_tile = mat_t.read(kk);
+//	   comm::send_tile(executor_mpi, serial_comm, Coord::Col, mat_t.read(kk));
 //	 }
-//
+//	 else {
+//	   matt_kk_tile = comm::recv_tile<T>(executor_mpi, serial_comm, Coord::Col, mat_t.tileSize(GlobalTileIndex(k, k)), rank_k_row);
+//	 }
+//       }
+
 //	 for (SizeType k_local = distrib.template nextLocalTileFromGlobalTile<Coord::Row>(i); k_local < local_rows; ++k_local) {
 //	   auto k = distrib.template globalTileFromLocalTile<Coord::Row>(k_local);
 //	   const IndexT_MPI rank_k_row = distrib.template rankGlobalTile<Coord::Row>(k); 	 
@@ -344,9 +347,10 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 //	   } // end loop on j_local (cols)
 //	   
 //	 } // end loop on k_local (rows)
-//
-//     } // loop on i
-//   }
+
+     } // loop on k
+
+   }
 
  
  /// ---- ETI

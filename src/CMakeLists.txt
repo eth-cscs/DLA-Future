@@ -83,6 +83,7 @@ target_compile_definitions(dlaf.prop
     $<$<BOOL:${DLAF_ASSERT_HEAVY_ENABLE}>:DLAF_ASSERT_HEAVY_ENABLE>
     DLAF_FUNCTION_NAME=$<IF:$<BOOL:is_pretty_function_available>,__PRETTY_FUNCTION__,__func__>
     $<$<BOOL:${DLAF_WITH_CUDA}>:DLAF_WITH_CUDA>
+    $<$<BOOL:${DLAF_WITH_CUDA_MPI_RDMA}>:DLAF_WITH_CUDA_MPI_RDMA>
     $<$<BOOL:${DLAF_WITH_UMPIRE}>:DLAF_WITH_UMPIRE>
 )
 

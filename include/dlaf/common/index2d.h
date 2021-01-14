@@ -26,6 +26,20 @@ namespace dlaf {
 
 enum class Coord { Row, Col };
 
+// Given a Coord direction, returns its transposed
+constexpr Coord transposed(const Coord rc) {
+  return rc == Coord::Row ? Coord::Col : Coord::Row;
+}
+
+// Given a Coord direction, return the component that varies
+constexpr Coord component(const Coord rc) {
+  return rc == Coord::Row ? Coord::Col : Coord::Row;
+}
+
+constexpr auto coord2str(const Coord rc) {
+  return rc == Coord::Row ? "ROW" : "COL";
+}
+
 namespace common {
 
 /// A RowMajor ordering means that the row is the first direction to look for the next value.
@@ -51,6 +65,21 @@ public:
   /// @param col index of the col (0-based).
   basic_coords(IndexT row, IndexT col) noexcept : row_(row), col_(col) {}
 
+  /// Create a position with specified component (other one is set to 0)
+  ///
+  /// @param component specifies which component has to be set,
+  /// @param value index along the @p component (0-based).
+  basic_coords(Coord component, IndexT value) noexcept {
+    switch (component) {
+      case Coord::Row:
+        *this = basic_coords(value, 0);
+        break;
+      case Coord::Col:
+        *this = basic_coords(0, value);
+        break;
+    }
+  }
+
   /// Create a position with given coordinates.
   ///
   /// @see basic_coords::basic_coords(IndexT row, IndexT col),
@@ -59,7 +88,13 @@ public:
 
   /// Return a copy of the row or the col index as specified by @p rc.
   template <Coord rc>
-  IndexT get() const noexcept {
+  constexpr IndexT get() const noexcept {
+    if (rc == Coord::Row)
+      return row_;
+    return col_;
+  }
+
+  constexpr IndexT get(const Coord rc) const noexcept {
     if (rc == Coord::Row)
       return row_;
     return col_;

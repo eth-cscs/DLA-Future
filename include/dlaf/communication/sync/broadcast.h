@@ -55,7 +55,22 @@ void receive_from(const int broadcaster_rank, Communicator& communicator, DataOu
 }
 
 template <class T>
-void send_tile(hpx::execution::parallel_executor ex,
+void send_tile(common::Pipeline<comm::CommunicatorGrid>& task_chain, Coord rc_comm,
+               hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile) {
+  using ConstTile_t = matrix::Tile<const T, Device::CPU>;
+  using PromiseComm_t = common::PromiseGuard<comm::CommunicatorGrid>;
+
+  auto send_bcast_f = hpx::util::annotated_function(
+      [rc_comm](hpx::shared_future<ConstTile_t> ftile, hpx::future<PromiseComm_t> fpcomm) {
+        PromiseComm_t pcomm = fpcomm.get();
+        comm::sync::broadcast::send(pcomm.ref().subCommunicator(rc_comm), ftile.get());
+      },
+      "send_tile");
+  hpx::dataflow(std::move(send_bcast_f), tile, task_chain());
+}
+
+template <class T>
+void send_tile(hpx::threads::executors::pool_executor ex,
                common::Pipeline<comm::CommunicatorGrid>& task_chain, Coord rc_comm,
                hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile) {
   using ConstTile_t = matrix::Tile<const T, Device::CPU>;
@@ -68,6 +83,23 @@ void send_tile(hpx::execution::parallel_executor ex,
       },
       "send_tile");
   hpx::dataflow(ex, std::move(send_bcast_f), tile, task_chain());
+}
+
+template <class T>
+void recv_tile(
+    common::Pipeline<comm::CommunicatorGrid>& mpi_task_chain,
+    Coord rc_comm, hpx::future<matrix::Tile<T, Device::CPU>>, int rank) {
+  using PromiseComm_t = common::PromiseGuard<comm::CommunicatorGrid>;
+  using Tile_t = matrix::Tile<T, Device::CPU>;
+
+  auto recv_bcast_f = hpx::util::annotated_function(
+      [rank, rc_comm](hpx::future<PromiseComm_t> fpcomm, hpx::future<Tile_t> ftile) {
+        PromiseComm_t pcomm = fpcomm.get();
+        Tile_t tile = ftile.get();
+        comm::sync::broadcast::receive_from(rank, pcomm.ref().subCommunicator(rc_comm), tile);
+      },
+      "recv_tile");
+  return hpx::dataflow(std::move(recv_bcast_f), mpi_task_chain());
 }
 
 template <class T>

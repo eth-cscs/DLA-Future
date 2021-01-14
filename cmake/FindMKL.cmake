@@ -1,6 +1,6 @@
 # Source: https://github.com/eth-cscs/cmake-recipes
 #
-# Copyright (c) 2018-2019, ETH Zurich
+# Copyright (c) 2018-2021, ETH Zurich
 # BSD 3-Clause License. All rights reserved.
 #
 # Author: Teodor Nikolov (teodor.nikolov22@gmail.com)

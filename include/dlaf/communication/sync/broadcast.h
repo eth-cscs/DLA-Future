@@ -86,9 +86,8 @@ void send_tile(hpx::threads::executors::pool_executor ex,
 }
 
 template <class T>
-void recv_tile(
-    common::Pipeline<comm::CommunicatorGrid>& mpi_task_chain,
-    Coord rc_comm, hpx::future<matrix::Tile<T, Device::CPU>>, int rank) {
+void recv_tile(common::Pipeline<comm::CommunicatorGrid>& mpi_task_chain, Coord rc_comm,
+               hpx::future<matrix::Tile<T, Device::CPU>> tile, int rank) {
   using PromiseComm_t = common::PromiseGuard<comm::CommunicatorGrid>;
   using Tile_t = matrix::Tile<T, Device::CPU>;
 
@@ -99,7 +98,7 @@ void recv_tile(
         comm::sync::broadcast::receive_from(rank, pcomm.ref().subCommunicator(rc_comm), tile);
       },
       "recv_tile");
-  return hpx::dataflow(std::move(recv_bcast_f), mpi_task_chain());
+  hpx::dataflow(std::move(recv_bcast_f), mpi_task_chain(), std::move(tile));
 }
 
 template <class T>

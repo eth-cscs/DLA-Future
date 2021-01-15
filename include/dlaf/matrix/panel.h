@@ -229,7 +229,7 @@ void broadcast(comm::IndexT_MPI root_row, Panel<Coord::Row, T, device>& ws,
 /// - linked as external tile to the corresponding one in the column panel, if current rank owns it
 /// - received from the owning rank, which broadcasts the tile from the row panel along the column
 template <class T, Device device, Coord from_dir, Coord to_dir>
-void broadcast(comm::IndexT_MPI /*root*/, Panel<from_dir, T, device>& ws_from,
+void broadcast(comm::IndexT_MPI root, Panel<from_dir, T, device>& ws_from,
                Panel<to_dir, T, device>& ws_to, common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
   static_assert(from_dir == transposed(to_dir), "this method broadcasts and transposes coordinates");
 
@@ -251,10 +251,10 @@ void broadcast(comm::IndexT_MPI /*root*/, Panel<from_dir, T, device>& ws_from,
   // communicate each tile orthogonally to the direction of the destination panel
   constexpr Coord comm_dir = transposed(to_dir);
 
+  // TODO I think this can be replaced with a smarter strategy for owner selection in next loop
+  broadcast(root, ws_from, serial_comm);
+
   const auto& dist = ws_from.distribution_matrix();
-
-  // broadcast(root, ws_from, serial_comm);
-
   for (const auto& idx_dst : ws_to) {
     SizeType idx_cross;
     comm::IndexT_MPI owner;

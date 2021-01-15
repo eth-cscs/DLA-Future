@@ -37,13 +37,13 @@ using namespace dlaf::comm;
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
 template <typename Type>
-struct WorkspaceTest : public ::testing::Test {
+struct PanelTest : public ::testing::Test {
   const std::vector<CommunicatorGrid>& commGrids() {
     return comm_grids;
   }
 };
 
-TYPED_TEST_SUITE(WorkspaceTest, MatrixElementTypes);
+TYPED_TEST_SUITE(PanelTest, MatrixElementTypes);
 
 using test_params_t = std::tuple<GlobalElementSize, TileElementSize, GlobalElementIndex>;
 
@@ -61,23 +61,41 @@ config_t configure(const test_params_t& params) {
   return {std::get<0>(params), std::get<1>(params), std::get<2>(params)};
 }
 
-TYPED_TEST(WorkspaceTest, AssignToConstRef) {
+TYPED_TEST(PanelTest, AssignToConstRef) {
   using namespace dlaf;
   using hpx::util::unwrapping;
 
-  for (const auto& params : test_params) {
-    const auto cfg = configure(params);
+  for (auto& comm_grid : this->commGrids()) {
+    for (const auto& params : test_params) {
+      const auto cfg = configure(params);
 
-    const Distribution fake_dist(cfg.sz, cfg.blocksz, {1, 1}, {0, 0}, {0, 0});
+      const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
 
-    Panel<Coord::Col, TypeParam, dlaf::Device::CPU> panel(fake_dist, {0, 0});
-    Panel<Coord::Col, const TypeParam, dlaf::Device::CPU>& ref = panel;
+      // TODO a good idea would be to set a matrix, than set externals, then change matrix
+      // and check that the ref points correctly
+      Panel<Coord::Col, TypeParam, dlaf::Device::CPU> panel(dist, {0, 0});
+      Panel<Coord::Col, const TypeParam, dlaf::Device::CPU>& ref = panel;
 
-    (void)ref; // TODO check that they are equal
+      std::vector<LocalTileIndex> exp_indices;
+      for (const auto& idx : panel) {
+        exp_indices.push_back(idx);
+      }
+
+      std::vector<LocalTileIndex> ref_indices;
+      for (const auto& idx : ref) {
+        ref_indices.push_back(idx);
+      }
+
+      EXPECT_EQ(exp_indices, ref_indices);
+
+      for (const auto& idx : exp_indices) {
+        CHECK_TILE_EQ(panel.read(idx).get(), ref.read(idx).get());
+      }
+    }
   }
 }
 
-TYPED_TEST(WorkspaceTest, IteratorCol) {
+TYPED_TEST(PanelTest, IteratorCol) {
   using namespace dlaf;
   using hpx::util::unwrapping;
 
@@ -114,7 +132,7 @@ TYPED_TEST(WorkspaceTest, IteratorCol) {
   }
 }
 
-TYPED_TEST(WorkspaceTest, IteratorRow) {
+TYPED_TEST(PanelTest, IteratorRow) {
   using namespace dlaf;
   using hpx::util::unwrapping;
 
@@ -151,7 +169,7 @@ TYPED_TEST(WorkspaceTest, IteratorRow) {
   }
 }
 
-TYPED_TEST(WorkspaceTest, AccessCol) {
+TYPED_TEST(PanelTest, AccessCol) {
   using namespace dlaf;
   using hpx::util::unwrapping;
   using TypeUtil = TypeUtilities<TypeParam>;
@@ -185,7 +203,7 @@ TYPED_TEST(WorkspaceTest, AccessCol) {
   }
 }
 
-TYPED_TEST(WorkspaceTest, AccessRow) {
+TYPED_TEST(PanelTest, AccessRow) {
   using namespace dlaf;
   using hpx::util::unwrapping;
   using TypeUtil = TypeUtilities<TypeParam>;
@@ -219,7 +237,7 @@ TYPED_TEST(WorkspaceTest, AccessRow) {
   }
 }
 
-TYPED_TEST(WorkspaceTest, ExternalTilesCol) {
+TYPED_TEST(PanelTest, ExternalTilesCol) {
   using namespace dlaf;
   using hpx::util::unwrapping;
   using TypeUtil = TypeUtilities<TypeParam>;
@@ -285,7 +303,7 @@ TYPED_TEST(WorkspaceTest, ExternalTilesCol) {
   }
 }
 
-TYPED_TEST(WorkspaceTest, ExternalTilesRow) {
+TYPED_TEST(PanelTest, ExternalTilesRow) {
   using namespace dlaf;
   using hpx::util::unwrapping;
   using TypeUtil = TypeUtilities<TypeParam>;
@@ -351,7 +369,7 @@ TYPED_TEST(WorkspaceTest, ExternalTilesRow) {
   }
 }
 
-TYPED_TEST(WorkspaceTest, BroadcastCol) {
+TYPED_TEST(PanelTest, BroadcastCol) {
   using namespace dlaf;
   using hpx::util::unwrapping;
   using TypeUtil = TypeUtilities<TypeParam>;
@@ -406,7 +424,7 @@ TYPED_TEST(WorkspaceTest, BroadcastCol) {
   }
 }
 
-TYPED_TEST(WorkspaceTest, BroadcastRow) {
+TYPED_TEST(PanelTest, BroadcastRow) {
   using namespace dlaf;
   using hpx::util::unwrapping;
   using TypeUtil = TypeUtilities<TypeParam>;
@@ -469,7 +487,7 @@ config_t configure_bcast_transpose(const test_params_t& params, const Communicat
   return {std::get<0>(params), std::get<1>(params), std::get<2>(params)};
 }
 
-TYPED_TEST(WorkspaceTest, BroadcastCol2Row) {
+TYPED_TEST(PanelTest, BroadcastCol2Row) {
   using namespace dlaf;
   using hpx::util::unwrapping;
   using TypeUtil = TypeUtilities<TypeParam>;
@@ -514,7 +532,7 @@ TYPED_TEST(WorkspaceTest, BroadcastCol2Row) {
   }
 }
 
-TYPED_TEST(WorkspaceTest, BroadcastRow2Col) {
+TYPED_TEST(PanelTest, BroadcastRow2Col) {
   using namespace dlaf;
   using hpx::util::unwrapping;
   using TypeUtil = TypeUtilities<TypeParam>;

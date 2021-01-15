@@ -12,7 +12,9 @@
 #include <limits>
 #include <type_traits>
 
+#ifdef DLAF_WITH_CUDA
 #include <cublas_v2.h>
+#endif
 
 #include <mpi.h>
 #include <hpx/init.hpp>

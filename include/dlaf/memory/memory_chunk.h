@@ -12,7 +12,6 @@
 
 #include <cstdlib>
 #include <memory>
-#include <mutex>
 #ifdef DLAF_WITH_CUDA
 #include <cuda_runtime.h>
 #endif

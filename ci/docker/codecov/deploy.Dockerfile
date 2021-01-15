@@ -37,7 +37,7 @@ RUN mkdir ${BUILD} && cd ${BUILD} && \
       -DDLAF_WITH_CUDA=${DLAF_WITH_CUDA} \
       -DCUDALIBS_ROOT=/usr/local/cuda/targets/x86_64-linux \
       -DDLAF_WITH_MKL=OFF \
-      -DDLAF_WITH_TEST=ON \
+      -DBUILD_TESTING=ON \
       -DDLAF_BUILD_MINIAPPS=ON \
       -DMPIEXEC_EXECUTABLE=srun \
       -DDLAF_CI_RUNNER_USES_MPIRUN=1 && \

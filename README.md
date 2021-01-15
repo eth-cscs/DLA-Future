@@ -67,7 +67,7 @@ CMake option | Values | Note
 `DLAF_ASSERT_HEAVY_ENABLE` | `{ON,OFF}` (default: `ON` in Debug, `OFF` otherwise) | enable/disable heavy assertions
 `DLAF_WITH_CUDA` | `{ON,OFF}` (default: `OFF`) | enable CUDA support
 `DLAF_BUILD_MINIAPPS` | `{ON,OFF}` (default: `ON`) | enable/disable building miniapps
-`DLAF_WITH_TEST` | `{ON,OFF}` (default: `ON`) | enable/disable building tests
+`BUILD_TESTING` | `{ON,OFF}` (default: `ON`) | enable/disable building tests
 `DLAF_INSTALL_TESTS` | `{ON,OFF}` (default: `OFF`) | enable/disable installing tests
 `DLAF_MPI_PRESET` | `{plain-mpi, slurm, custom}` (default `plain-mpi`) | presets for MPI configuration for tests. See [CMake Doc](https://cmake.org/cmake/help/latest/module/FindMPI.html?highlight=mpiexec_executable#usage-of-mpiexec) for additional information
 `DLAF_TEST_RUNALL_WITH_MPIEXEC` | `{ON, OFF}` (default: `OFF`) | Use mpi runner also for non-MPI based tests

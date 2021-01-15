@@ -17,6 +17,7 @@ project(DLAF VERSION 0.1.0)
 # ---------------------------------------------------------------------------
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
+include(CTest)
 include(DLAF)
 
 if (NOT CMAKE_BUILD_TYPE)
@@ -24,6 +25,9 @@ if (NOT CMAKE_BUILD_TYPE)
 endif()
 
 option(BUILD_SHARED_LIBS "Build shared libraries." OFF)
+option(DLAF_WITH_CUDA "Enable CUDA support" OFF)
+option(DLAF_BUILD_MINIAPPS "Build miniapps" ON)
+option(BUILD_DOC "Build documentation" OFF)
 
 # ---------------------------------------------------------------------------
 # Languages
@@ -36,7 +40,6 @@ enable_language(CXX)
 set(CMAKE_CXX_STANDARD 14)
 
 # ---- CUDA
-set(DLAF_WITH_CUDA OFF CACHE BOOL "Enable CUDA support")
 if (DLAF_WITH_CUDA)
   find_package(CUDALIBS REQUIRED)
 endif()
@@ -79,7 +82,6 @@ add_subdirectory(src)
 # ---------------------------------------------------------------------------
 # mini Apps
 # ---------------------------------------------------------------------------
-set(DLAF_BUILD_MINIAPPS ON CACHE BOOL "Build miniapps")
 if (DLAF_BUILD_MINIAPPS)
   add_subdirectory(miniapp)
 endif()
@@ -87,18 +89,13 @@ endif()
 # ---------------------------------------------------------------------------
 # Test
 # ---------------------------------------------------------------------------
-set(DLAF_WITH_TEST ON CACHE BOOL "Enables tests")
-if (DLAF_WITH_TEST)
-  include(CTest)
-  enable_testing()
-
+if (BUILD_TESTING)
   add_subdirectory(test)
 endif()
 
 # ---------------------------------------------------------------------------
 # Docs
 # ---------------------------------------------------------------------------
-option(BUILD_DOC "Build documentation" OFF)
 if (BUILD_DOC)
   add_subdirectory(doc)
 endif()

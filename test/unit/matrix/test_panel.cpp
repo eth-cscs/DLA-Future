@@ -490,9 +490,8 @@ TYPED_TEST(WorkspaceTest, BroadcastCol2Row) {
 
       // check that all destination row panels got the value from the right rank
       for (const auto i_w : ws_h) {
-        hpx::dataflow(unwrapping([owner](auto&& tile) {
-                        CHECK_TILE_EQ(TypeUtil::element(owner, 26), tile);
-                      }),
+        hpx::dataflow(unwrapping(
+                          [owner](auto&& tile) { CHECK_TILE_EQ(TypeUtil::element(owner, 26), tile); }),
                       ws_h.read(i_w));
       }
     }
@@ -537,9 +536,8 @@ TYPED_TEST(WorkspaceTest, BroadcastRow2Col) {
 
       // check that all destination column panels got the value from the right rank
       for (const auto i_w : ws_v) {
-        hpx::dataflow(unwrapping([owner](auto&& tile) {
-                        CHECK_TILE_EQ(TypeUtil::element(owner, 26), tile);
-                      }),
+        hpx::dataflow(unwrapping(
+                          [owner](auto&& tile) { CHECK_TILE_EQ(TypeUtil::element(owner, 26), tile); }),
                       ws_v.read(i_w));
       }
     }

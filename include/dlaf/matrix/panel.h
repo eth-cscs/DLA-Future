@@ -114,7 +114,7 @@ protected:
         range_(iterate_range2d(LocalTileIndex(component(dir), offset_),
                                BaseT::distribution().localNrTiles())) {
     // TODO remove this and enable util::set (for setting to zero for red2band)
-    util::set(static_cast<Matrix<T, device>&>(*this), [](const auto&){ return 0; });
+    util::set(static_cast<Matrix<T, device>&>(*this), [](const auto&) { return 0; });
 
     DLAF_ASSERT_MODERATE(BaseT::nrTiles().get(dir) == 1, BaseT::nrTiles());
 

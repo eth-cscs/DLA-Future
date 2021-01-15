@@ -47,7 +47,7 @@ if (DLAF_WITH_CUDA)
 endif()
 
 # TODO: use option?
-set(DLAF_WITH_CUDA_MPI_RDMA OFF CACHE BOOL "Enable MPI CUDA RDMA") # TODO: Or GPUDirect, or CUDA-aware MPI?
+set(DLAF_WITH_CUDA_MPI_RDMA OFF CACHE BOOL "Enable MPI CUDA RDMA")
 
 # ---------------------------------------------------------------------------
 # Libraries configuration

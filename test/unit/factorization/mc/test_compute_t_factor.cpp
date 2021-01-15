@@ -73,11 +73,12 @@ void is_orthogonal(const MatrixLocal<const T>& matrix) {
   CHECK_MATRIX_NEAR(eye, ortho, error, error);
 }
 
-std::vector<std::array<dlaf::SizeType, 5>> configs{
-    // m, n, mb, nb, k
-    {39, 26, 6, 6, 6},  // all reflectors
-    {39, 26, 6, 6, 4},  // k reflectors
-};
+std::vector<std::tuple<dlaf::SizeType, dlaf::SizeType, dlaf::SizeType, dlaf::SizeType, dlaf::SizeType>>
+    configs{
+        // m, n, mb, nb, k
+        {39, 26, 6, 6, 6},  // all reflectors
+        {39, 26, 6, 6, 4},  // k reflectors
+    };
 
 // Note:
 // Testing this function requires next input values:

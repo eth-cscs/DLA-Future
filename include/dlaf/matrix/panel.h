@@ -40,6 +40,8 @@ struct Panel<dir, const T, device> : protected Matrix<T, device> {
     reset();
   }
 
+  Panel(Panel&&) = default;
+
   auto begin() const noexcept {
     return range_.begin();
   }

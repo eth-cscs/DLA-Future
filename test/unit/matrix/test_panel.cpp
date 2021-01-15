@@ -61,6 +61,22 @@ config_t configure(const test_params_t& params) {
   return {std::get<0>(params), std::get<1>(params), std::get<2>(params)};
 }
 
+TYPED_TEST(WorkspaceTest, AssignToConstRef) {
+  using namespace dlaf;
+  using hpx::util::unwrapping;
+
+  for (const auto& params : test_params) {
+    const auto cfg = configure(params);
+
+    const Distribution fake_dist(cfg.sz, cfg.blocksz, {1, 1}, {0, 0}, {0, 0});
+
+    Panel<Coord::Col, TypeParam, dlaf::Device::CPU> panel(fake_dist, {0, 0});
+    Panel<Coord::Col, const TypeParam, dlaf::Device::CPU>& ref = panel;
+
+    (void)ref; // TODO check that they are equal
+  }
+}
+
 TYPED_TEST(WorkspaceTest, IteratorCol) {
   using namespace dlaf;
   using hpx::util::unwrapping;

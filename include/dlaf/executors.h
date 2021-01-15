@@ -62,10 +62,8 @@ struct GetCopyExecutor<Device::GPU, Device::GPU> {
 template <Backend B>
 auto getMPIExecutor() {
   return hpx::execution::parallel_executor{&hpx::resource::get_thread_pool(
-                                                            hpx::resource::pool_exists("mpi")
-                                                                ? "mpi"
-                                                                : "default"),
-                                                        hpx::threads::thread_priority::high};
+                                               hpx::resource::pool_exists("mpi") ? "mpi" : "default"),
+                                           hpx::threads::thread_priority::high};
 }
 
 /// Returns a normal priority executor approprate for use with the given

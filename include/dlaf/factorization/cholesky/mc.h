@@ -47,18 +47,17 @@ template <class T>
 void trsm_panel_tile(hpx::execution::parallel_executor executor_hp,
                      hpx::shared_future<matrix::Tile<const T, Device::CPU>> kk_tile,
                      hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
-  hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trsm<T, Device::CPU>),
-                blas::Side::Right, blas::Uplo::Lower, blas::Op::ConjTrans, blas::Diag::NonUnit, 1.0,
-                std::move(kk_tile), std::move(matrix_tile));
+  hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), blas::Side::Right,
+                blas::Uplo::Lower, blas::Op::ConjTrans, blas::Diag::NonUnit, 1.0, std::move(kk_tile),
+                std::move(matrix_tile));
 }
 
 template <class T>
 void herk_trailing_diag_tile(hpx::execution::parallel_executor trailing_matrix_executor,
                              hpx::shared_future<matrix::Tile<const T, Device::CPU>> panel_tile,
                              hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
-  hpx::dataflow(trailing_matrix_executor,
-                hpx::util::unwrapping(tile::herk<T, Device::CPU>), blas::Uplo::Lower, blas::Op::NoTrans,
-                -1.0, panel_tile, 1.0, std::move(matrix_tile));
+  hpx::dataflow(trailing_matrix_executor, hpx::util::unwrapping(tile::herk<T, Device::CPU>),
+                blas::Uplo::Lower, blas::Op::NoTrans, -1.0, panel_tile, 1.0, std::move(matrix_tile));
 }
 
 template <class T>
@@ -66,10 +65,9 @@ void gemm_trailing_matrix_tile(hpx::execution::parallel_executor trailing_matrix
                                hpx::shared_future<matrix::Tile<const T, Device::CPU>> panel_tile,
                                hpx::shared_future<matrix::Tile<const T, Device::CPU>> col_panel,
                                hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
-  hpx::dataflow(trailing_matrix_executor,
-                hpx::util::unwrapping(tile::gemm<T, Device::CPU>), blas::Op::NoTrans,
-                blas::Op::ConjTrans, -1.0, std::move(panel_tile), std::move(col_panel), 1.0,
-                std::move(matrix_tile));
+  hpx::dataflow(trailing_matrix_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>),
+                blas::Op::NoTrans, blas::Op::ConjTrans, -1.0, std::move(panel_tile),
+                std::move(col_panel), 1.0, std::move(matrix_tile));
 }
 
 template <class T>

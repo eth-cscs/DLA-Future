@@ -28,7 +28,8 @@ namespace internal {
 template <Device S, Device D>
 struct GetCopyExecutor {
   static auto call() {
-    return hpx::execution::parallel_executor{&hpx::resource::get_thread_pool("default")};
+    return hpx::execution::parallel_executor{&hpx::resource::get_thread_pool("default"),
+                                             hpx::threads::thread_priority::normal};
   }
 };
 
@@ -72,7 +73,8 @@ auto getMPIExecutor() {
 /// @tparam B backend with which the executor should be used.
 template <Backend B>
 auto getNpExecutor() {
-  return hpx::execution::parallel_executor{hpx::threads::thread_priority::normal};
+  return hpx::execution::parallel_executor{&hpx::resource::get_thread_pool("default"),
+                                           hpx::threads::thread_priority::normal};
 }
 
 #ifdef DLAF_WITH_CUDA
@@ -88,7 +90,8 @@ inline auto getNpExecutor<Backend::GPU>() {
 /// @tparam B backend with which the executor should be used.
 template <Backend B>
 auto getHpExecutor() {
-  return hpx::execution::parallel_executor{hpx::threads::thread_priority::high};
+  return hpx::execution::parallel_executor{&hpx::resource::get_thread_pool("default"),
+                                           hpx::threads::thread_priority::high};
 }
 
 #ifdef DLAF_WITH_CUDA

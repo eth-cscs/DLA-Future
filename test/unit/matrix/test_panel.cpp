@@ -464,35 +464,34 @@ TYPED_TEST(WorkspaceTest, BroadcastCol2Row) {
 
       // TODO use config size
       const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
-      const auto rank_row = dist.rankIndex().row();
+      const auto rank_col = dist.rankIndex().col();
 
       const LocalTileIndex at_offset{
           dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
           dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
       };
 
-      Panel<Coord::Col, TypeParam, dlaf::Device::CPU> ws_v(dist, at_offset);
       // TODO It is important to keep the order of initialization to avoid deadlocks!
+      Panel<Coord::Col, TypeParam, dlaf::Device::CPU> ws_v(dist, at_offset);
       Panel<Coord::Row, TypeParam, dlaf::Device::CPU> ws_h(dist, at_offset);
 
       for (const auto i_w : ws_v)
-        hpx::dataflow(unwrapping([rank_row](auto&& tile) {
-                        matrix::test::set(tile, TypeUtil::element(rank_row, 26));
+        hpx::dataflow(unwrapping([rank_col](auto&& tile) {
+                        matrix::test::set(tile, TypeUtil::element(rank_col, 26));
                       }),
                       ws_v(i_w));
 
       // test it!
       common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
 
-      broadcast(0, ws_v, ws_h, serial_comm);
+      // select a "random" col which will be the source for the data
+      const comm::IndexT_MPI owner = comm_grid.size().cols() / 2;
+      broadcast(owner, ws_v, ws_h, serial_comm);
 
-      // check all panel are equal on all ranks
+      // check that all destination row panels got the value from the right rank
       for (const auto i_w : ws_h) {
-        const auto k = dist.template globalTileFromLocalTile<Coord::Col>(i_w.col());
-        const auto owner_row = dist.template rankGlobalTile<Coord::Row>(k);
-
-        hpx::dataflow(unwrapping([owner_row](auto&& tile) {
-                        CHECK_TILE_EQ(TypeUtil::element(owner_row, 26), tile);
+        hpx::dataflow(unwrapping([owner](auto&& tile) {
+                        CHECK_TILE_EQ(TypeUtil::element(owner, 26), tile);
                       }),
                       ws_h.read(i_w));
       }
@@ -511,34 +510,35 @@ TYPED_TEST(WorkspaceTest, BroadcastRow2Col) {
 
       // TODO use config size
       const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
-      const auto rank_col = dist.rankIndex().col();
+      const auto rank_row = dist.rankIndex().row();
 
       const LocalTileIndex at_offset{
           dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
           dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
       };
 
+      // TODO It is important to keep the order of initialization to avoid deadlocks!
       Panel<Coord::Row, TypeParam, dlaf::Device::CPU> ws_h(dist, at_offset);
       Panel<Coord::Col, TypeParam, dlaf::Device::CPU> ws_v(dist, at_offset);
 
+      // each row panel is initialized with a value identifying the row of the rank
       for (const auto i_w : ws_h)
-        hpx::dataflow(unwrapping([rank_col](auto&& tile) {
-                        matrix::test::set(tile, TypeUtil::element(rank_col, 26));
+        hpx::dataflow(unwrapping([rank_row](auto&& tile) {
+                        matrix::test::set(tile, TypeUtil::element(rank_row, 26));
                       }),
                       ws_h(i_w));
 
       // test it!
       common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
 
-      broadcast(0, ws_h, ws_v, serial_comm);
+      // select a "random" row which will be the source for the data
+      const comm::IndexT_MPI owner = comm_grid.size().rows() / 2;
+      broadcast(owner, ws_h, ws_v, serial_comm);
 
-      // check all panel are equal on all ranks
+      // check that all destination column panels got the value from the right rank
       for (const auto i_w : ws_v) {
-        const auto k = dist.template globalTileFromLocalTile<Coord::Row>(i_w.row());
-        const auto owner_col = dist.template rankGlobalTile<Coord::Col>(k);
-
-        hpx::dataflow(unwrapping([owner_col](auto&& tile) {
-                        CHECK_TILE_EQ(TypeUtil::element(owner_col, 26), tile);
+        hpx::dataflow(unwrapping([owner](auto&& tile) {
+                        CHECK_TILE_EQ(TypeUtil::element(owner, 26), tile);
                       }),
                       ws_v.read(i_w));
       }

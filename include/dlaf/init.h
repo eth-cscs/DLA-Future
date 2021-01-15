@@ -32,6 +32,8 @@ namespace dlaf {
 struct configuration {
   std::size_t num_np_cuda_streams_per_thread = 3;
   std::size_t num_hp_cuda_streams_per_thread = 3;
+  std::size_t umpire_host_memory_pool_initial_bytes = 1 << 30;
+  std::size_t umpire_device_memory_pool_initial_bytes = 1 << 30;
 };
 
 std::ostream& operator<<(std::ostream& os, configuration const& cfg);
@@ -47,6 +49,12 @@ struct Init {
   static void initialize(configuration const&) {}
   static void finalize() {}
 };
+
+template <>
+void Init<Backend::MC>::initialize(configuration const&);
+template <>
+void Init<Backend::MC>::finalize();
+extern template struct Init<Backend::MC>;
 
 #ifdef DLAF_WITH_CUDA
 template <>

@@ -29,8 +29,16 @@ namespace dlaf {
 namespace memory {
 
 #ifdef DLAF_WITH_UMPIRE
-umpire::Allocator& getHostAllocator();
-umpire::Allocator& getDeviceAllocator();
+namespace internal {
+umpire::Allocator& getUmpireHostAllocator();
+void initializeUmpireHostAllocator(std::size_t initial_bytes);
+void finalizeUmpireHostAllocator();
+#ifdef DLAF_WITH_CUDA
+void initializeUmpireDeviceAllocator(std::size_t initial_bytes);
+void finalizeUmpireDeviceAllocator();
+umpire::Allocator& getUmpireDeviceAllocator();
+#endif
+}
 #endif
 
 /// The class @c MemoryChunk represents a layer of abstraction over the underlying host memory.
@@ -57,14 +65,14 @@ public:
 #ifdef DLAF_WITH_CUDA
     if (device == Device::CPU) {
 #if DLAF_WITH_UMPIRE
-      ptr_ = static_cast<T*>(getHostAllocator().allocate(mem_size));
+      ptr_ = static_cast<T*>(internal::getUmpireHostAllocator().allocate(mem_size));
 #else
       DLAF_CUDA_CALL(cudaMallocHost(&ptr_, mem_size));
 #endif
     }
     else {
 #ifdef DLAF_WITH_UMPIRE
-      ptr_ = static_cast<T*>(getDeviceAllocator().allocate(mem_size));
+      ptr_ = static_cast<T*>(internal::getUmpireDeviceAllocator().allocate(mem_size));
 #else
       DLAF_CUDA_CALL(cudaMalloc(&ptr_, mem_size));
 #endif
@@ -72,7 +80,7 @@ public:
 #else
     if (device == Device::CPU) {
 #if DLAF_WITH_UMPIRE
-      ptr_ = static_cast<T*>(getHostAllocator().allocate(mem_size));
+      ptr_ = static_cast<T*>(internal::getUmpireHostAllocator().allocate(mem_size));
 #else
       ptr_ = static_cast<T*>(std::malloc(mem_size));
 #endif
@@ -157,14 +165,14 @@ private:
 #ifdef DLAF_WITH_CUDA
       if (device == Device::CPU) {
 #if DLAF_WITH_UMPIRE
-        getHostAllocator().deallocate(ptr_);
+        internal::getUmpireHostAllocator().deallocate(ptr_);
 #else
         DLAF_CUDA_CALL(cudaFreeHost(ptr_));
 #endif
       }
       else {
 #ifdef DLAF_WITH_UMPIRE
-        getDeviceAllocator().deallocate(ptr_);
+        internal::getUmpireDeviceAllocator().deallocate(ptr_);
 #else
         DLAF_CUDA_CALL(cudaFree(ptr_));
 #endif
@@ -172,7 +180,7 @@ private:
 #else
       if (device == Device::CPU) {
 #if DLAF_WITH_UMPIRE
-        getHostAllocator().deallocate(ptr_);
+        internal::getUmpireHostAllocator().deallocate(ptr_);
 #else
         std::free(ptr_);
 #endif

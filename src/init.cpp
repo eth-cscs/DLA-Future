@@ -10,6 +10,7 @@
 
 #include <dlaf/common/assert.h>
 #include <dlaf/init.h>
+#include <dlaf/memory/memory_chunk.h>
 
 #ifdef DLAF_WITH_CUDA
 #include <dlaf/cublas/executor.h>
@@ -22,7 +23,10 @@
 namespace dlaf {
 std::ostream& operator<<(std::ostream& os, configuration const& cfg) {
   os << "  num_np_cuda_streams_per_thread = " << cfg.num_np_cuda_streams_per_thread << std::endl;
-  os << "  num_hp_cuda_streams_per_thread = " << cfg.num_hp_cuda_streams_per_thread;
+  os << "  num_hp_cuda_streams_per_thread = " << cfg.num_hp_cuda_streams_per_thread << std::endl;
+  os << "  umpire_host_memory_pool_initial_bytes = " << cfg.umpire_host_memory_pool_initial_bytes
+     << std::endl;
+  os << "  umpire_device_memory_pool_initial_bytes = " << cfg.umpire_device_memory_pool_initial_bytes;
 
   return os;
 }
@@ -31,6 +35,20 @@ namespace internal {
 bool& initialized() {
   static bool i = false;
   return i;
+}
+
+template <>
+void Init<Backend::MC>::initialize(configuration const& cfg) {
+#ifdef DLAF_WITH_UMPIRE
+  memory::internal::initializeUmpireHostAllocator(cfg.umpire_host_memory_pool_initial_bytes);
+#endif
+}
+
+template <>
+void Init<Backend::MC>::finalize() {
+#ifdef DLAF_WITH_UMPIRE
+  memory::internal::finalizeUmpireHostAllocator();
+#endif
 }
 
 #ifdef DLAF_WITH_CUDA
@@ -90,6 +108,9 @@ cublas::HandlePool getCublasHandlePool() {
 template <>
 void Init<Backend::GPU>::initialize(configuration const& cfg) {
   const int device = 0;
+#ifdef DLAF_WITH_UMPIRE
+  memory::internal::initializeUmpireDeviceAllocator(cfg.umpire_device_memory_pool_initial_bytes);
+#endif
   initializeNpCudaStreamPool(device, cfg.num_np_cuda_streams_per_thread);
   initializeHpCudaStreamPool(device, cfg.num_hp_cuda_streams_per_thread);
   initializeCublasHandlePool();
@@ -98,6 +119,9 @@ void Init<Backend::GPU>::initialize(configuration const& cfg) {
 
 template <>
 void Init<Backend::GPU>::finalize() {
+#ifdef DLAF_WITH_UMPIRE
+  memory::internal::finalizeUmpireDeviceAllocator();
+#endif
   finalizeNpCudaStreamPool();
   finalizeHpCudaStreamPool();
   finalizeCublasHandlePool();
@@ -129,6 +153,12 @@ void updateConfiguration(hpx::program_options::variables_map const& vm, configur
                            "num-np-cuda-streams-per-thread");
   updateConfigurationValue(vm, cfg.num_hp_cuda_streams_per_thread, "NUM_HP_CUDA_STREAMS_PER_THREAD",
                            "num-hp-cuda-streams-per-thread");
+  updateConfigurationValue(vm, cfg.umpire_host_memory_pool_initial_bytes,
+                           "UMPIRE_HOST_MEMORY_POOL_INITIAL_BYTES",
+                           "umpire-host-memory-pool-initial-bytes");
+  updateConfigurationValue(vm, cfg.umpire_device_memory_pool_initial_bytes,
+                           "UMPIRE_DEVICE_MEMORY_POOL_INITIAL_BYTES",
+                           "umpire-device-memory-pool-initial-bytes");
 }
 
 configuration& getConfiguration() {
@@ -146,6 +176,12 @@ hpx::program_options::options_description getOptionsDescription() {
                      "Number of normal priority CUDA streams per worker thread");
   desc.add_options()("dlaf:num-hp-cuda-streams-per-thread", hpx::program_options::value<std::size_t>(),
                      "Number of high priority CUDA streams per worker thread");
+  desc.add_options()("dlaf:umpire-host-memory-pool-initial-bytes",
+                     hpx::program_options::value<std::size_t>(),
+                     "Number of bytes to preallocate for pinned host memory pool");
+  desc.add_options()("dlaf:umpire-device-memory-pool-initial-bytes",
+                     hpx::program_options::value<std::size_t>(),
+                     "Number of bytes to preallocate for device memory pool");
 
   return desc;
 }

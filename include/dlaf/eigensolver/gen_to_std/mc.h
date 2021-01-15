@@ -73,8 +73,8 @@ void GenToStd<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
       for (const auto& ik : ai_panel) {
         hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::trsm_o), Right, Lower, ConjTrans,
                       NonUnit, T(1.0), mat_l.read(kk), mat_a(ik));
-        hpx::dataflow(executor_np, unwrapping(tile::hemm<T, Device::CPU>), Right, Lower, -0.5,
-                      mat_a.read(kk), mat_l.read(ik), 1.0, mat_a(ik));
+        hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::hemm_o), Right, Lower, T(-0.5),
+                      mat_a.read(kk), mat_l.read(ik), T(1.0), mat_a(ik));
       }
 
       const LocalTileIndex ti_start(k + 1, k + 1);
@@ -85,8 +85,8 @@ void GenToStd<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
         const auto ik = LocalTileIndex{ij.row(), k};
 
         if (ij.row() == ij.col()) {
-          hpx::dataflow(executor_hp, unwrapping(tile::her2k<T, Device::CPU>), Lower, NoTrans, -1.0,
-                        mat_a.read(jk), mat_l.read(jk), 1.0, mat_a(ij));
+          hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::her2k_o), Lower, NoTrans, T(-1.0),
+                        mat_a.read(jk), mat_l.read(jk), BaseType<T>(1.0), mat_a(ij));
         }
         else if (ij.row() > ij.col()) {
           hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::gemm_o), NoTrans, ConjTrans,
@@ -97,7 +97,7 @@ void GenToStd<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
       }
 
       for (const auto& ik : ai_panel) {
-        hpx::dataflow(executor_hp, unwrapping(tile::hemm<T, Device::CPU>), Right, Lower, T(-0.5),
+        hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::hemm_o), Right, Lower, T(-0.5),
                       mat_a.read(kk), mat_l.read(ik), T(1.0), mat_a(ik));
       }
 

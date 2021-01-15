@@ -130,15 +130,14 @@ void trsm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, c
 
 template <class T>
 void gemm(cublasHandle_t handle, const blas::Op op_a, const blas::Op op_b, const T alpha,
-                const matrix::Tile<const T, Device::GPU>& a, const matrix::Tile<const T, Device::GPU>& b,
-                const T beta, const matrix::Tile<T, Device::GPU>& c) {
+          const matrix::Tile<const T, Device::GPU>& a, const matrix::Tile<const T, Device::GPU>& b,
+          const T beta, const matrix::Tile<T, Device::GPU>& c) {
   auto s = tile::internal::getGemmSizes(op_a, op_b, a, b, c);
   internal::CublasGemm<T>::call(handle, util::blasToCublas(op_a), util::blasToCublas(op_b), s.m, s.n,
                                 s.k, util::blasToCublasCast(&alpha), util::blasToCublasCast(a.ptr()),
                                 a.ld(), util::blasToCublasCast(b.ptr()), b.ld(),
                                 util::blasToCublasCast(&beta), util::blasToCublasCast(c.ptr()), c.ld());
 }
-
 
 template <class T>
 void herk(cublasHandle_t handle, const blas::Uplo uplo, const blas::Op op, const BaseType<T> alpha,
@@ -149,7 +148,6 @@ void herk(cublasHandle_t handle, const blas::Uplo uplo, const blas::Op op, const
                                 util::blasToCublasCast(&alpha), util::blasToCublasCast(a.ptr()), a.ld(),
                                 util::blasToCublasCast(&beta), util::blasToCublasCast(c.ptr()), c.ld());
 }
-
 }
 }
 

@@ -46,18 +46,18 @@ template <class T>
 void trsm_panel_tile(hpx::execution::parallel_executor executor_hp,
                      hpx::shared_future<matrix::Tile<const T, Device::CPU>> kk_tile,
                      hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
-  hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o),
-                blas::Side::Right, blas::Uplo::Lower, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0),
-                std::move(kk_tile), std::move(matrix_tile));
+  hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Right,
+                blas::Uplo::Lower, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), std::move(kk_tile),
+                std::move(matrix_tile));
 }
 
 template <class T>
 void herk_trailing_diag_tile(hpx::execution::parallel_executor trailing_matrix_executor,
                              hpx::shared_future<matrix::Tile<const T, Device::CPU>> panel_tile,
                              hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
-  hpx::dataflow(trailing_matrix_executor,
-                matrix::unwrapExtendTiles(tile::herk_o), blas::Uplo::Lower, blas::Op::NoTrans,
-                BaseType<T>(-1.0), panel_tile, BaseType<T>(1.0), std::move(matrix_tile));
+  hpx::dataflow(trailing_matrix_executor, matrix::unwrapExtendTiles(tile::herk_o), blas::Uplo::Lower,
+                blas::Op::NoTrans, BaseType<T>(-1.0), panel_tile, BaseType<T>(1.0),
+                std::move(matrix_tile));
 }
 
 template <class T>
@@ -65,8 +65,7 @@ void gemm_trailing_matrix_tile(hpx::execution::parallel_executor trailing_matrix
                                hpx::shared_future<matrix::Tile<const T, Device::CPU>> panel_tile,
                                hpx::shared_future<matrix::Tile<const T, Device::CPU>> col_panel,
                                hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
-  hpx::dataflow(trailing_matrix_executor,
-                matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans,
+  hpx::dataflow(trailing_matrix_executor, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans,
                 blas::Op::ConjTrans, T(-1.0), std::move(panel_tile), std::move(col_panel), T(1.0),
                 std::move(matrix_tile));
 }
@@ -145,8 +144,8 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
     }
     else if (this_rank.col() == kk_rank.col()) {
       if (k != nrtile - 1)
-        panel[k] = comm::recv_tile<T, Device::CPU>(executor_mpi, mpi_task_chain, Coord::Col, mat_a.tileSize(kk_idx),
-                                      kk_rank.row());
+        panel[k] = comm::recv_tile<T, Device::CPU>(executor_mpi, mpi_task_chain, Coord::Col,
+                                                   mat_a.tileSize(kk_idx), kk_rank.row());
     }
 
     // Iterate over the k-th column
@@ -160,8 +159,8 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
         dataflow(executor_mpi, comm::sendTile_o, mpi_task_chain(), Coord::Row, panel[i]);
       }
       else if (this_rank.row() == ik_rank.row()) {
-        panel[i] = comm::recv_tile<T, Device::CPU>(executor_mpi, mpi_task_chain, Coord::Row, mat_a.tileSize(ik_idx),
-                                      ik_rank.col());
+        panel[i] = comm::recv_tile<T, Device::CPU>(executor_mpi, mpi_task_chain, Coord::Row,
+                                                   mat_a.tileSize(ik_idx), ik_rank.col());
       }
     }
 
@@ -183,8 +182,8 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
       else {
         GlobalTileIndex jk_idx(j, k);
         if (j != nrtile - 1)
-          panel[j] = comm::recv_tile<T, Device::CPU>(executor_mpi, mpi_task_chain, Coord::Col, mat_a.tileSize(jk_idx),
-                                        jj_rank.row());
+          panel[j] = comm::recv_tile<T, Device::CPU>(executor_mpi, mpi_task_chain, Coord::Col,
+                                                     mat_a.tileSize(jk_idx), jj_rank.row());
       }
 
       for (SizeType i = j + 1; i < nrtile; ++i) {

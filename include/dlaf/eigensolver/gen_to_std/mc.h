@@ -89,10 +89,10 @@ void GenToStd<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
                         mat_a.read(jk), mat_l.read(jk), 1.0, mat_a(ij));
         }
         else if (ij.row() > ij.col()) {
-          hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::gemm_o), NoTrans, ConjTrans, T(-1.0),
-                        mat_a.read(ik), mat_l.read(jk), T(1.0), mat_a(ij));
-          hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::gemm_o), NoTrans, ConjTrans, T(-1.0),
-                        mat_l.read(ik), mat_a.read(jk), T(1.0), mat_a(ij));
+          hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::gemm_o), NoTrans, ConjTrans,
+                        T(-1.0), mat_a.read(ik), mat_l.read(jk), T(1.0), mat_a(ij));
+          hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::gemm_o), NoTrans, ConjTrans,
+                        T(-1.0), mat_l.read(ik), mat_a.read(jk), T(1.0), mat_a(ij));
         }
       }
 

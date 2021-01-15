@@ -30,8 +30,8 @@ namespace dlaf {
 namespace memory {
 
 #ifdef DLAF_WITH_UMPIRE
-  umpire::Allocator& getHostAllocator();
-  umpire::Allocator& getDeviceAllocator();
+umpire::Allocator& getHostAllocator();
+umpire::Allocator& getDeviceAllocator();
 #endif
 
 /// The class @c MemoryChunk represents a layer of abstraction over the underlying host memory.

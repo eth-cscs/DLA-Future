@@ -107,7 +107,8 @@ struct handle_recv_tile<Device::GPU> {
 }
 
 template <class T, Device D>
-void send_tile(hpx::execution::parallel_executor ex, common::Pipeline<comm::CommunicatorGrid>& task_chain, Coord rc_comm,
+void send_tile(hpx::execution::parallel_executor ex,
+               common::Pipeline<comm::CommunicatorGrid>& task_chain, Coord rc_comm,
                hpx::shared_future<matrix::Tile<const T, D>> tile) {
   using PromiseComm_t = common::PromiseGuard<comm::CommunicatorGrid>;
 
@@ -118,8 +119,8 @@ void send_tile(hpx::execution::parallel_executor ex, common::Pipeline<comm::Comm
       },
       "send_tile");
 
-  hpx::dataflow(ex, std::move(send_bcast_f),
-                detail::prepare_send_tile<D>::call(std::move(tile)), task_chain());
+  hpx::dataflow(ex, std::move(send_bcast_f), detail::prepare_send_tile<D>::call(std::move(tile)),
+                task_chain());
 }
 
 template <class T, Device D>
@@ -146,8 +147,7 @@ hpx::future<matrix::Tile<const T, D>> recv_tile(hpx::execution::parallel_executo
       },
       "recv_tile");
 
-  return detail::handle_recv_tile<D>::call(
-      hpx::dataflow(ex, std::move(recv_bcast_f), mpi_task_chain()));
+  return detail::handle_recv_tile<D>::call(hpx::dataflow(ex, std::move(recv_bcast_f), mpi_task_chain()));
 }
 }
 }

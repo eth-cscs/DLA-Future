@@ -235,19 +235,19 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
        // Reset W2 to zero
        matrix::util::set(mat_w2, [](auto&&){return 0;});
        
-       auto kk = LocalTileIndex{local_k_row, local_k_col};
        hpx::shared_future<ConstTileType> matt_kk_tile; 
+       auto kk = LocalTileIndex{local_k_row, local_k_col};
        
        // Broadcast Tkk column-wise
        if (mat_t.rankIndex().col() == rank_k_col) {
 	 if (mat_t.rankIndex().row() == rank_k_row) {
 	   matt_kk_tile = mat_t.read(kk);
 	   comm::send_tile(executor_mpi, serial_comm, Coord::Col, mat_t.read(kk));
-	   std::cout << "send T(" << kk << ") = " << matt_kk_tile.get()({0,0}) << std::endl;
+	   //std::cout << "send T" << kk << " (" << k << ") [" << mat_t.rankIndex().row() << ", " << mat_t.rankIndex().col() << "] = " << matt_kk_tile.get()({0,0}) << std::endl;
 	 }
 	 else {
 	   matt_kk_tile = comm::recv_tile<T>(executor_mpi, serial_comm, Coord::Col, mat_t.tileSize(GlobalTileIndex(k, k)), rank_k_row);
-	   std::cout << "recv T(" << kk << ") = " << matt_kk_tile.get()({0,0}) << std::endl;
+	   //std::cout << "recv T" << kk << " (" << k << ") [" << mat_t.rankIndex().row() << ", " << mat_t.rankIndex().col() << "] = " << matt_kk_tile.get()({0,0}) << std::endl;
 	 }
        }
 

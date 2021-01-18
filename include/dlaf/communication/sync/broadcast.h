@@ -75,13 +75,10 @@ struct prepare_send_tile<Device::GPU> {
     // enumerations. Duplicate would not have to be a custom wrapper.
     // Forwarding a mix of type and nontype template parameters is
     // difficult/impossible(?).
-    auto gpu_cpu_tile =
+    return dlaf::matrix::getReturnValue(
         hpx::dataflow(getCopyExecutor<Device::GPU, Device::CPU>(),
                       dlaf::matrix::unwrapExtendTiles(dlaf::matrix::Duplicate<const T, Device::CPU>{}),
-                      tile);
-    // TODO: Nicer API for getting only the result?
-    auto split_tile = hpx::split_future(std::move(gpu_cpu_tile));
-    return std::move(hpx::get<0>(split_tile));
+                      tile));
   }
 };
 #endif

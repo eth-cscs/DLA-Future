@@ -283,6 +283,15 @@ auto unwrapExtendTiles(F&& f) {
   return internal::UnwrapExtendTiles<std::decay_t<F>>{std::forward<F>(f)};
 }
 
+template <typename T>
+void getReturnValue(hpx::future<hpx::tuple<T>>&& f) {}
+
+template <typename R, typename T>
+auto getReturnValue(hpx::future<hpx::tuple<R, T>>&& f) {
+  auto split_f = hpx::split_future(std::move(f));
+  return std::move(hpx::get<0>(split_f));
+}
+
 /// ---- ETI
 
 #define DLAF_TILE_ETI(KWORD, DATATYPE, DEVICE) \

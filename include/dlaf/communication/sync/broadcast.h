@@ -71,6 +71,10 @@ struct prepare_send_tile<Device::GPU> {
   template <typename T>
   static auto call(hpx::shared_future<matrix::Tile<const T, Device::GPU>> tile) {
     // TODO: Nicer API for Duplicate?
+    // This could benefit from having Device::CPU/GPU be types instead of
+    // enumerations. Duplicate would not have to be a custom wrapper.
+    // Forwarding a mix of type and nontype template parameters is
+    // difficult/impossible(?).
     auto gpu_cpu_tile =
         hpx::dataflow(getCopyExecutor<Device::GPU, Device::CPU>(),
                       dlaf::matrix::unwrapExtendTiles(dlaf::matrix::Duplicate<const T, Device::CPU>{}),

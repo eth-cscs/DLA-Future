@@ -24,12 +24,16 @@ if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Build Type" FORCE)
 endif()
 
+include(CMakeDependentOption)
+
 option(BUILD_SHARED_LIBS "Build shared libraries." OFF)
 option(DLAF_WITH_MKL "Enable MKL as provider for LAPACK" OFF)
 option(DLAF_WITH_CUDA "Enable CUDA support" OFF)
+cmake_dependent_option(DLAF_WITH_CUDA_MPI_RDMA "Enable MPI CUDA RDMA" OFF "DLAF_WITH_CUDA" OFF)
 option(DLAF_BUILD_MINIAPPS "Build miniapps" ON)
 option(DLAF_BUILD_TESTING "Build tests" ON)
 option(DLAF_BUILD_DOC "Build documentation" OFF)
+option(DLAF_WITH_UMPIRE "Enable Umpire support" ON)
 
 # ---------------------------------------------------------------------------
 # Languages
@@ -45,9 +49,6 @@ set(CMAKE_CXX_STANDARD 14)
 if (DLAF_WITH_CUDA)
   find_package(CUDALIBS REQUIRED)
 endif()
-
-# TODO: use option?
-set(DLAF_WITH_CUDA_MPI_RDMA OFF CACHE BOOL "Enable MPI CUDA RDMA")
 
 # ---------------------------------------------------------------------------
 # Libraries configuration
@@ -78,7 +79,6 @@ find_package(blaspp REQUIRED)
 find_package(lapackpp REQUIRED)
 
 # ----- UMPIRE
-set(DLAF_WITH_UMPIRE OFF CACHE BOOL "Enable Umpire support")
 if (DLAF_WITH_UMPIRE)
   find_package(Umpire REQUIRED)
 endif()

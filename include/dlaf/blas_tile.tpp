@@ -17,8 +17,9 @@ void gemm(const blas::Op op_a, const blas::Op op_b, const T alpha, const Tile<co
 }
 
 template <class T>
-void hemm(const blas::Side side, const blas::Uplo uplo, const T alpha, const Tile<const T, Device::CPU>& a,
-          const Tile<const T, Device::CPU>& b, const T beta, const Tile<T, Device::CPU>& c) {
+void hemm(const blas::Side side, const blas::Uplo uplo, const T alpha,
+          const Tile<const T, Device::CPU>& a, const Tile<const T, Device::CPU>& b, const T beta,
+          const Tile<T, Device::CPU>& c) {
   auto s = tile::internal::getHemmSizes(side, a, b, c);
   blas::hemm(blas::Layout::ColMajor, side, uplo, s.m, s.n, alpha, a.ptr(), a.ld(), b.ptr(), b.ld(), beta,
              c.ptr(), c.ld());
@@ -34,7 +35,8 @@ void her2k(const blas::Uplo uplo, const blas::Op op, const T alpha, const Tile<c
 
 template <class T>
 void herk(const blas::Uplo uplo, const blas::Op op, const BaseType<T> alpha,
-          const Tile<const T, Device::CPU>& a, const BaseType<T> beta, const Tile<T, Device::CPU>& c) noexcept {
+          const Tile<const T, Device::CPU>& a, const BaseType<T> beta,
+          const Tile<T, Device::CPU>& c) noexcept {
   auto s = tile::internal::getHerkSizes(op, a, c);
   blas::herk(blas::Layout::ColMajor, uplo, op, s.n, s.k, alpha, a.ptr(), a.ld(), beta, c.ptr(), c.ld());
 }

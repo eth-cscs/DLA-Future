@@ -48,8 +48,7 @@ void initializeUmpireHostAllocator(std::size_t initial_bytes) {
 #endif
 }
 
-void finalizeUmpireHostAllocator() {
-}
+void finalizeUmpireHostAllocator() {}
 
 #ifdef DLAF_WITH_CUDA
 void initializeUmpireDeviceAllocator(std::size_t initial_bytes) {
@@ -73,8 +72,7 @@ void initializeUmpireDeviceAllocator(std::size_t initial_bytes) {
   }
 }
 
-void finalizeUmpireDeviceAllocator() {
-}
+void finalizeUmpireDeviceAllocator() {}
 #endif
 }
 }

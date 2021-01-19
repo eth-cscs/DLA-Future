@@ -271,10 +271,11 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 
 	   auto ij = LocalTileIndex{i_local, j_local};
 	   
+	   
 	   if (mat_c.rankIndex().row() == rank_i_row) {
 	     if (mat_c.rankIndex().col() == rank_j_col) {
 
-	       hpx::future<TileType> tile_w2 = mat_w2(LocalTileIndex{0,0});
+	       hpx::future<TileType> tile_w2 = mat_w2(LocalTileIndex{0,j_local});
 	       const T beta = (k == i) ? 0 : 1;
 		 
 	       // Compute Wki Ckj = W2kj, local on W2ki
@@ -289,12 +290,14 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
        } // end loop on i_local (rows)
 
 	 
-       hpx::future<TileType> tile_w2 = mat_w2(LocalTileIndex{0,0});
-       auto all_reduce_w2_func = unwrapping([](auto&& tile_w2, auto&& comm_wrapper) {
-	   comm::sync::all_reduce(comm_wrapper.ref().colCommunicator(), MPI_SUM, make_data(tile_w2), make_data(tile_w2));
-	 });
-
-       hpx::dataflow(std::move(all_reduce_w2_func), std::move(tile_w2), serial_comm());
+	 for (SizeType j_local = distrib.template nextLocalTileFromGlobalTile<Coord::Col>(k); j_local < local_cols; ++j_local) {
+	   hpx::future<TileType> tile_w2 = mat_w2(LocalTileIndex{0,j_local});
+	   auto all_reduce_w2_func = unwrapping([](auto&& tile_w2, auto&& comm_wrapper) {
+	       comm::sync::all_reduce(comm_wrapper.ref().colCommunicator(), MPI_SUM, make_data(tile_w2), make_data(tile_w2));
+	     });
+	   
+	   hpx::dataflow(std::move(all_reduce_w2_func), std::move(tile_w2), serial_comm());
+	 }
 
 //       for (SizeType i_local = distrib.template nextLocalTileFromGlobalTile<Coord::Row>(k); i_local < local_rows; ++i_local) {
 //	 auto i = distrib.template globalTileFromLocalTile<Coord::Row>(i_local);
@@ -306,7 +309,7 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 //	 	   
 //	   auto ij = LocalTileIndex{i_local, j_local};
 //	 
-//	   std::cout << " W2 (" <<  i << ", " << j << ") " << mat_w2(LocalTileIndex{0,0}).get()({0,0}) << " [k = " << k << "]" << std::endl;
+//	   std::cout << " W2 (" <<  i << ", " << j << ") " << mat_w2(ij).get()({0,0}) << " [k = " << k << "]" << std::endl;
 //	 }
 //       }
 
@@ -342,8 +345,8 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 	     if (mat_c.rankIndex().col() == rank_j_col) {
 		 
 	       // Compute C = C - V W2
-	       hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans, NoTrans, -1.0, vik_tile, mat_w2(LocalTileIndex{0,0}), 1.0, std::move(mat_c(ij)));
-	       // std::cout << " ij " << i << " " << j << " Vik " << vik_tile.get()({0,0}) << " W2 " << mat_w2(LocalTileIndex{0,0}).get()({0,0}) <<  " C " << mat_c.read(ij).get()({0,0}) << std::endl;
+	       hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans, NoTrans, -1.0, vik_tile, mat_w2(LocalTileIndex{0,j_local}), 1.0, std::move(mat_c(ij)));
+	       //	       std::cout << " ij " << i << " " << j << " Vik " << vik_tile.get()({0,0}) << " W2 " << mat_w2(LocalTileIndex{0,j_local}).get()({0,0}) <<  " C " << mat_c.read(ij).get()({0,0}) << std::endl;
 	     }
 	   }
 

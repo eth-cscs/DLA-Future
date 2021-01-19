@@ -69,58 +69,105 @@ const std::vector<blas::Diag> blas_diags({blas::Diag::NonUnit, blas::Diag::Unit}
 
 // TODO: for now there are 3 test cases for matrices of size 3x3, 4x4, 20x20; all with nb = 1 --> extend to general, using computeTfactor routines
 
-TYPED_TEST(BackTransformationSolverLocalTest, Correctness_n3_nb1) {
-  const SizeType m = 3;
-  const SizeType n = 3;
-  const SizeType mb = 1;
+//TYPED_TEST(BackTransformationSolverLocalTest, Correctness_n3_nb1) {
+//  const SizeType m = 3;
+//  const SizeType n = 3;
+//  const SizeType mb = 1;
+//  const SizeType nb = 1;
+//  
+//  // DATA
+//  auto el_C = [](const GlobalElementIndex& index) {
+//    // ColMajor
+//    static const double values[] = {12, 6, -4, -51, 167, 24, 4, -68, -41};
+//    return values[index.row() + 3 * index.col()];
+//  };
+//
+//  auto el_V = [](const GlobalElementIndex& index) {
+//    // ColMajor
+//    static const double values[] = {1, 0.23077, -0.15385, 0, 1, 0.055556, 0, 0, 0};
+//    return values[index.row() + 3 * index.col()];
+//  };
+//
+//  auto el_T = [](const GlobalElementIndex& index) {
+//    // ColMajor
+//    static const double values[] = {1.8571, 0.0, 0.0, -0.82, 1.9938, 0.0, 0., 0., 0.};
+//    return values[index.row() + 3 * index.col()];
+//  };
+//
+//  // RESULT
+//  auto res = [](const GlobalElementIndex& index) {
+//    // ColMajor
+//    static const double values[] = {-14., 0., 0., -21., -175., 0., 14., 70., -35.};
+//    return values[index.row() + 3 * index.col()];
+//  };
+//
+//  LocalElementSize sizeC(m, n);
+//  TileElementSize blockSizeC(mb, nb);
+//  Matrix<double, Device::CPU> mat_c(sizeC, blockSizeC);
+//  set(mat_c, el_C);
+//
+//  LocalElementSize sizeV(m, n);
+//  TileElementSize blockSizeV(mb, nb);
+//  Matrix<double, Device::CPU> mat_v(sizeV, blockSizeV);
+//  set(mat_v, el_V);
+//
+//  LocalElementSize sizeT(m, n);
+//  TileElementSize blockSizeT(mb, nb);
+//  Matrix<double, Device::CPU> mat_t(sizeT, blockSizeT);
+//  set(mat_t, el_T);
+//
+//
+//  std::cout << "C " << mat_c << std::endl;
+//  std::cout << "V " << mat_v << std::endl;
+//  std::cout << "T " << mat_t << std::endl;
+//  
+//  solver::backTransformation<Backend::MC>(mat_c, mat_v, mat_t);
+//
+//  double error = 0.1;
+//  CHECK_MATRIX_NEAR(res, mat_c, error, error);
+//}
+
+
+TYPED_TEST(BackTransformationSolverLocalTest, Correctness_n4_n1) {
+  const SizeType n = 4;
   const SizeType nb = 2;
-  
-  // DATA
+
   auto el_C = [](const GlobalElementIndex& index) {
-    // ColMajor
-    static const double values[] = {12, 6, -4, -51, 167, 24, 4, -68, -41};
-    return values[index.row() + 3 * index.col()];
+    static const double values[] = {17.00000, 86.00000, 148.00000, 111.00000 , 1.00000, 160.00000, 155.00000, 170.00000 , 190.00000, 58.00000, 81.00000, 64.00000 , 118.00000, 176.00000, 30.00000, 105.00000 };
+    return values[index.row() + 4 * index.col()];
   };
 
   auto el_V = [](const GlobalElementIndex& index) {
-    // ColMajor
-    static const double values[] = {1, 0.23077, -0.15385, 0, 1, 0.055556, 0, 0, 0};
-    return values[index.row() + 3 * index.col()];
+    static const double values[] = {1.00000, 0.38788, 0.66751, 0.50063 , 0.00000, 1.00000, -0.21782, 0.27163 , 0.00000, 0.00000, 1.00000, 0.19976 , 0.00000, 0.00000, 0.00000, 0.00000 };
+    return values[index.row() + 4 * index.col()];
   };
 
   auto el_T = [](const GlobalElementIndex& index) {
-    // ColMajor
-    static const double values[] = {1.8571, 0.0, 0.0, -0.82, 1.9938, 0.0, 0., 0., 0.};
-    return values[index.row() + 3 * index.col()];
+    static const double values[] = {1.08304, 0.00000, 0.00000, 0.00000 , -0.73116, 1.78376, 0.00000, 0.00000 , -1.82870, 0.56111, 1.92325, 0.00000 , 0.00000, 0.00000, 0.00000, 0.00000 };
+    return values[index.row() + 4 * index.col()];
   };
 
-  // RESULT
   auto res = [](const GlobalElementIndex& index) {
-    // ColMajor
-    static const double values[] = {-14., 0., 0., -21., -175., 0., 14., 70., -35.};
-    return values[index.row() + 3 * index.col()];
+    static const double values[] = {-204.71896, 0.00002, -0.00063, 0.00075 , -271.52747, -69.27218, -0.00027, 0.00078 , -133.40188, 47.89095, 173.29409, 0.00092 , -162.35393, -96.63778, 142.80510, -27.08661 };
+    return values[index.row() + 4 * index.col()];
   };
 
-  LocalElementSize sizeC(m, n);
-  TileElementSize blockSizeC(mb, nb);
+
+  LocalElementSize sizeC(n, n);
+  TileElementSize blockSizeC(nb, nb);
   Matrix<double, Device::CPU> mat_c(sizeC, blockSizeC);
   set(mat_c, el_C);
 
-  LocalElementSize sizeV(m, n);
-  TileElementSize blockSizeV(mb, nb);
+  LocalElementSize sizeV(n, n);
+  TileElementSize blockSizeV(nb, nb);
   Matrix<double, Device::CPU> mat_v(sizeV, blockSizeV);
   set(mat_v, el_V);
 
-  LocalElementSize sizeT(m, n);
-  TileElementSize blockSizeT(mb, nb);
+  LocalElementSize sizeT(n, n);
+  TileElementSize blockSizeT(nb, nb);
   Matrix<double, Device::CPU> mat_t(sizeT, blockSizeT);
   set(mat_t, el_T);
 
-
-  std::cout << "C " << mat_c << std::endl;
-  std::cout << "V " << mat_v << std::endl;
-  std::cout << "T " << mat_t << std::endl;
-  
   solver::backTransformation<Backend::MC>(mat_c, mat_v, mat_t);
 
   double error = 0.1;
@@ -128,53 +175,6 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_n3_nb1) {
 }
 
 
-//TYPED_TEST(BackTransformationSolverLocalTest, Correctness_n4_n1) {
-//  const SizeType n = 4;
-//  const SizeType nb = 2;
-//
-//  auto el_C = [](const GlobalElementIndex& index) {
-//    static const double values[] = {17.00000, 86.00000, 148.00000, 111.00000 , 1.00000, 160.00000, 155.00000, 170.00000 , 190.00000, 58.00000, 81.00000, 64.00000 , 118.00000, 176.00000, 30.00000, 105.00000 };
-//    return values[index.row() + 4 * index.col()];
-//  };
-//
-//  auto el_V = [](const GlobalElementIndex& index) {
-//    static const double values[] = {1.00000, 0.38788, 0.66751, 0.50063 , 0.00000, 1.00000, -0.21782, 0.27163 , 0.00000, 0.00000, 1.00000, 0.19976 , 0.00000, 0.00000, 0.00000, 0.00000 };
-//    return values[index.row() + 4 * index.col()];
-//  };
-//
-//  auto el_T = [](const GlobalElementIndex& index) {
-//    static const double values[] = {1.08304, 0.00000, 0.00000, 0.00000 , -0.73116, 1.78376, 0.00000, 0.00000 , -1.82870, 0.56111, 1.92325, 0.00000 , 0.00000, 0.00000, 0.00000, 0.00000 };
-//    return values[index.row() + 4 * index.col()];
-//  };
-//
-//  auto res = [](const GlobalElementIndex& index) {
-//    static const double values[] = {-204.71896, 0.00002, -0.00063, 0.00075 , -271.52747, -69.27218, -0.00027, 0.00078 , -133.40188, 47.89095, 173.29409, 0.00092 , -162.35393, -96.63778, 142.80510, -27.08661 };
-//    return values[index.row() + 4 * index.col()];
-//  };
-//
-//
-//  LocalElementSize sizeC(n, n);
-//  TileElementSize blockSizeC(nb, nb);
-//  Matrix<double, Device::CPU> mat_c(sizeC, blockSizeC);
-//  set(mat_c, el_C);
-//
-//  LocalElementSize sizeV(n, n);
-//  TileElementSize blockSizeV(nb, nb);
-//  Matrix<double, Device::CPU> mat_v(sizeV, blockSizeV);
-//  set(mat_v, el_V);
-//
-//  LocalElementSize sizeT(n, n);
-//  TileElementSize blockSizeT(nb, nb);
-//  Matrix<double, Device::CPU> mat_t(sizeT, blockSizeT);
-//  set(mat_t, el_T);
-//
-//  solver::backTransformation<Backend::MC>(mat_c, mat_v, mat_t);
-//
-//  double error = 0.1;
-//  CHECK_MATRIX_NEAR(res, mat_c, error, error);
-//}
-//
-//
 //TYPED_TEST(BackTransformationSolverLocalTest, Correctness_n20_n1) {
 //  const SizeType n = 20;
 //  const SizeType nb = 1;
@@ -284,60 +284,60 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_n3_nb1) {
 //
 
 
-// TYPED_TEST(BackTransformationSolverDistributedTest, Correctness_n4_nb1_distrib) {
-//  
-//  const SizeType n = 4;
-//  const SizeType nb = 3;
-//
-//  auto el_C = [](const GlobalElementIndex& index) {
-//    static const double values[] = {17.00000, 86.00000, 148.00000, 111.00000 , 1.00000, 160.00000, 155.00000, 170.00000 , 190.00000, 58.00000, 81.00000, 64.00000 , 118.00000, 176.00000, 30.00000, 105.00000 };
-//    return values[index.row() + 4 * index.col()];
-//  };
-//
-//  auto el_V = [](const GlobalElementIndex& index) {
-//    static const double values[] = {1.00000, 0.38788, 0.66751, 0.50063 , 0.00000, 1.00000, -0.21782, 0.27163 , 0.00000, 0.00000, 1.00000, 0.19976 , 0.00000, 0.00000, 0.00000, 0.00000 };
-//    return values[index.row() + 4 * index.col()];
-//  };
-//
-//  auto el_T = [](const GlobalElementIndex& index) {
-//    static const double values[] = {1.08304, 0.00000, 0.00000, 0.00000 , -0.73116, 1.78376, 0.00000, 0.00000 , -1.82870, 0.56111, 1.92325, 0.00000 , 0.00000, 0.00000, 0.00000, 0.00000 };
-//    return values[index.row() + 4 * index.col()];
-//  };
-//
-//  auto res = [](const GlobalElementIndex& index) {
-//    static const double values[] = {-204.71896, 0.00002, -0.00063, 0.00075 , -271.52747, -69.27218, -0.00027, 0.00078 , -133.40188, 47.89095, 173.29409, 0.00092 , -162.35393, -96.63778, 142.80510, -27.08661 };
-//    return values[index.row() + 4 * index.col()];
-//  };
-//
-//  for (const auto& comm_grid : this->commGrids()) {
-//    Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
-//			   std::min(1, comm_grid.size().cols() - 1));
-//    
-//    LocalElementSize sizeC(n, n);
-//    TileElementSize blockSizeC(nb, nb);
-//    GlobalElementSize szC = globalTestSize(sizeC);
-//    Distribution distributionC(szC, blockSizeC, comm_grid.size(), comm_grid.rank(), src_rank_index);
-//    Matrix<double, Device::CPU> mat_c(std::move(distributionC));
-//    set(mat_c, el_C);
-//
-//    LocalElementSize sizeV(n, n);
-//    TileElementSize blockSizeV(nb, nb);
-//    GlobalElementSize szV = globalTestSize(sizeV);
-//    Distribution distributionV(szV, blockSizeV, comm_grid.size(), comm_grid.rank(), src_rank_index);
-//    Matrix<double, Device::CPU> mat_v(std::move(distributionV));
-//    set(mat_v, el_V);
-//
-//    LocalElementSize sizeT(n, n);
-//    TileElementSize blockSizeT(nb, nb);
-//    GlobalElementSize szT = globalTestSize(sizeT);
-//    Distribution distributionT(szT, blockSizeT, comm_grid.size(), comm_grid.rank(), src_rank_index);
-//    Matrix<double, Device::CPU> mat_t(std::move(distributionT));
-//    set(mat_t, el_T);
-//        
-//    solver::backTransformation<Backend::MC>(comm_grid, mat_c, mat_v, mat_t);
-//    
-//    double error = 0.1;
-//    CHECK_MATRIX_NEAR(res, mat_c, error, error);
-//  }
-//}
-//
+ TYPED_TEST(BackTransformationSolverDistributedTest, Correctness_n4_nb1_distrib) {
+  
+  const SizeType n = 4;
+  const SizeType nb = 1;
+
+  auto el_C = [](const GlobalElementIndex& index) {
+    static const double values[] = {17.00000, 86.00000, 148.00000, 111.00000 , 1.00000, 160.00000, 155.00000, 170.00000 , 190.00000, 58.00000, 81.00000, 64.00000 , 118.00000, 176.00000, 30.00000, 105.00000 };
+    return values[index.row() + 4 * index.col()];
+  };
+
+  auto el_V = [](const GlobalElementIndex& index) {
+    static const double values[] = {1.00000, 0.38788, 0.66751, 0.50063 , 0.00000, 1.00000, -0.21782, 0.27163 , 0.00000, 0.00000, 1.00000, 0.19976 , 0.00000, 0.00000, 0.00000, 0.00000 };
+    return values[index.row() + 4 * index.col()];
+  };
+
+  auto el_T = [](const GlobalElementIndex& index) {
+    static const double values[] = {1.08304, 0.00000, 0.00000, 0.00000 , -0.73116, 1.78376, 0.00000, 0.00000 , -1.82870, 0.56111, 1.92325, 0.00000 , 0.00000, 0.00000, 0.00000, 0.00000 };
+    return values[index.row() + 4 * index.col()];
+  };
+
+  auto res = [](const GlobalElementIndex& index) {
+    static const double values[] = {-204.71896, 0.00002, -0.00063, 0.00075 , -271.52747, -69.27218, -0.00027, 0.00078 , -133.40188, 47.89095, 173.29409, 0.00092 , -162.35393, -96.63778, 142.80510, -27.08661 };
+    return values[index.row() + 4 * index.col()];
+  };
+
+  for (const auto& comm_grid : this->commGrids()) {
+    Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
+			   std::min(1, comm_grid.size().cols() - 1));
+    
+    LocalElementSize sizeC(n, n);
+    TileElementSize blockSizeC(nb, nb);
+    GlobalElementSize szC = globalTestSize(sizeC);
+    Distribution distributionC(szC, blockSizeC, comm_grid.size(), comm_grid.rank(), src_rank_index);
+    Matrix<double, Device::CPU> mat_c(std::move(distributionC));
+    set(mat_c, el_C);
+
+    LocalElementSize sizeV(n, n);
+    TileElementSize blockSizeV(nb, nb);
+    GlobalElementSize szV = globalTestSize(sizeV);
+    Distribution distributionV(szV, blockSizeV, comm_grid.size(), comm_grid.rank(), src_rank_index);
+    Matrix<double, Device::CPU> mat_v(std::move(distributionV));
+    set(mat_v, el_V);
+
+    LocalElementSize sizeT(n, n);
+    TileElementSize blockSizeT(nb, nb);
+    GlobalElementSize szT = globalTestSize(sizeT);
+    Distribution distributionT(szT, blockSizeT, comm_grid.size(), comm_grid.rank(), src_rank_index);
+    Matrix<double, Device::CPU> mat_t(std::move(distributionT));
+    set(mat_t, el_T);
+        
+    solver::backTransformation<Backend::MC>(comm_grid, mat_c, mat_v, mat_t);
+    
+    double error = 0.1;
+    CHECK_MATRIX_NEAR(res, mat_c, error, error);
+  }
+}
+

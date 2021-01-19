@@ -27,7 +27,7 @@ endif()
 option(BUILD_SHARED_LIBS "Build shared libraries." OFF)
 option(DLAF_WITH_CUDA "Enable CUDA support" OFF)
 option(DLAF_BUILD_MINIAPPS "Build miniapps" ON)
-option(BUILD_DOC "Build documentation" OFF)
+option(DLAF_BUILD_DOC "Build documentation" OFF)
 
 # ---------------------------------------------------------------------------
 # Languages
@@ -89,13 +89,13 @@ endif()
 # ---------------------------------------------------------------------------
 # Test
 # ---------------------------------------------------------------------------
-if (BUILD_TESTING)
+if (DLAF_BUILD_TESTING)
   add_subdirectory(test)
 endif()
 
 # ---------------------------------------------------------------------------
 # Docs
 # ---------------------------------------------------------------------------
-if (BUILD_DOC)
+if (DLAF_BUILD_DOC)
   add_subdirectory(doc)
 endif()

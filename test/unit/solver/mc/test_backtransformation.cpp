@@ -91,7 +91,6 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_n3_nb1) {
   auto el_T = [](const GlobalElementIndex& index) {
     // ColMajor
     static const double values[] = {1.8571, 0.0, 0.0, -0.82, 1.9938, 0.0, 0., 0., 0.};
-    //static const double values[] = {1.8571, 1.8571, 1.8571, 0.0, 1.9938, 1.9938, 0, 0, 0};
     return values[index.row() + 3 * index.col()];
   };
 

@@ -136,9 +136,7 @@ template <typename T, Device device>
                        const dlaf::matrix::Tile<T, device>& b) {
   trmmSizes s{b.size().rows(), b.size().cols()};
 
-  DLAF_ASSERT(a.size().rows() == a.size().cols(), "`a` is not square!", a);
-
-  const auto left_side = (side == blas::Side::Left ? s.m : s.n);
+  const auto left_side = (side == blas::Side::Left ? s.n : s.m);
   DLAF_ASSERT(a.size().rows() == left_side, "`a` has an invalid size!", a, left_side);
 
   return s;

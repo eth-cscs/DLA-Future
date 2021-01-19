@@ -34,10 +34,10 @@ namespace dlaf {
 namespace tile {
 using matrix::Tile;
 
-/// Returns true if the tile is square.
-template <class T, Device D>
-bool square_size(const Tile<T, D>& t) noexcept {
-  return t.size().rows() == t.size().cols();
+/// Returns true if the matrix-like is square.
+template <class T, template <class, Device, Device...> class MatrixLike, Device D, Device... Ds>
+bool square_size(const MatrixLike<const T, D, Ds...>& m) noexcept {
+  return m.size().rows() == m.size().cols();
 }
 
 template <class T>

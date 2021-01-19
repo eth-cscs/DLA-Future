@@ -28,51 +28,57 @@ constexpr double M_PI = 3.141592;
 #include "dlaf/common/range2d.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
+#include "dlaf/util_tile.h"
 
 /// @file
 
 namespace dlaf {
 namespace matrix {
-
-/// Returns true if the matrix is square.
-template <class T, Device D>
-bool square_size(const Matrix<const T, D>& m) noexcept {
-  return m.size().rows() == m.size().cols();
-}
+using tile::square_size;
 
 /// Returns true if the matrix block size is square.
-template <class T, Device D>
-bool square_blocksize(const Matrix<const T, D>& m) noexcept {
+template <class T, template <class, Device, Device...> class MatrixLike, Device D, Device... Ds>
+bool square_blocksize(const MatrixLike<const T, D, Ds...>& m) noexcept {
   return m.blockSize().rows() == m.blockSize().cols();
 }
 
 /// Returns true if matrices have equal sizes.
-template <class T, Device D1, Device D2>
-bool equal_size(const Matrix<const T, D1>& lhs, Matrix<const T, D2>& rhs) noexcept {
+template <template <class, Device, Device...> class MatrixLike1,
+          template <class, Device, Device...> class MatrixLike2, class T, Device D1, Device D2,
+          Device... D1s, Device... D2s>
+bool equal_size(const MatrixLike1<const T, D1, D1s...>& lhs,
+                MatrixLike2<const T, D2, D2s...>& rhs) noexcept {
   return lhs.size() == rhs.size();
 }
 
 /// Returns true if matrices have equal blocksizes.
-template <class T, Device D1, Device D2>
-bool equal_blocksize(const Matrix<const T, D1>& lhs, Matrix<const T, D2>& rhs) noexcept {
+template <template <class, Device, Device...> class MatrixLike1,
+          template <class, Device, Device...> class MatrixLike2, class T, Device D1, Device D2,
+          Device... D1s, Device... D2s>
+bool equal_blocksize(const MatrixLike1<const T, D1, D1s...>& lhs,
+                     MatrixLike2<const T, D2, D2s...>& rhs) noexcept {
   return lhs.blockSize() == rhs.blockSize();
 }
 
 /// Returns true if the matrix is local to a process.
-template <class T, Device D>
-bool local_matrix(const Matrix<const T, D>& m) noexcept {
+template <class T, template <class, Device, Device...> class MatrixLike, Device D, Device... Ds>
+bool local_matrix(const MatrixLike<const T, D, Ds...>& m) noexcept {
   return m.commGridSize() == comm::Size2D(1, 1);
 }
 
 /// Returns true if the matrix is distributed on the communication grid.
-template <class T, Device D>
-bool equal_process_grid(const Matrix<const T, D>& m, comm::CommunicatorGrid const& g) noexcept {
+template <class T, template <class, Device, Device...> class MatrixLike, Device D, Device... Ds>
+bool equal_process_grid(const MatrixLike<const T, D, Ds...>& m,
+                        comm::CommunicatorGrid const& g) noexcept {
   return m.commGridSize() == g.size() && m.rankIndex() == g.rank();
 }
 
 /// Returns true if the matrices are distributed the same way.
-template <class T, Device D1, Device D2>
-bool equal_distributions(const Matrix<const T, D1>& lhs, const Matrix<const T, D2>& rhs) noexcept {
+template <template <class, Device, Device...> class MatrixLike1,
+          template <class, Device, Device...> class MatrixLike2, class T, Device D1, Device D2,
+          Device... D1s, Device... D2s>
+bool equal_distributions(const MatrixLike1<const T, D1, D1s...>& lhs,
+                         MatrixLike2<const T, D2, D2s...>& rhs) noexcept {
   return lhs.distribution() == rhs.distribution();
 }
 
@@ -140,8 +146,9 @@ public:
 /// @param el a copy is given to each tile,
 /// @pre el argument is an index of type const GlobalElementIndex&,
 /// @pre el return type should be T.
-template <class T, class ElementGetter>
-void set(Matrix<T, Device::CPU>& matrix, const ElementGetter& el_f) {
+template <template <class, Device, Device...> class MatrixLike, class T, class ElementGetter,
+          Device... devices>
+void set(MatrixLike<T, Device::CPU, devices...>& matrix, const ElementGetter& el_f) {
   const Distribution& dist = matrix.distribution();
   for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
     GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);

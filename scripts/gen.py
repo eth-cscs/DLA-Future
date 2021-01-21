@@ -13,7 +13,7 @@ m_sz_arr = [10240, 20480, 40960]
 b_sz_arr = [256, 512]
 
 for nodes in nodes_arr:
-    job_text = mp.init_job_text(run_name, build_dir, nodes, time_min)
+    job_text = mp.init_job_text(run_name, nodes, time_min)
 
     for queue, mech, pool in mp.product(
         ["shared", "default"], ["polling", "yielding"], ["mpi", "default"]

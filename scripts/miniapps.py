@@ -16,7 +16,7 @@ def sq_factor(n):
 # --------------
 
 
-def init_job_text(run_name, build_dir, nodes, time_min):
+def init_job_text(run_name, nodes, time_min):
     job_text = f"""
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}
@@ -29,7 +29,6 @@ def init_job_text(run_name, build_dir, nodes, time_min):
 #SBATCH --error=error.txt
 
 # Env
-source {build_dir}/.envrc
 export CRAYPE_LINK_TYPE=dynamic
 export MPICH_MAX_THREAD_SAFETY=multiple
 

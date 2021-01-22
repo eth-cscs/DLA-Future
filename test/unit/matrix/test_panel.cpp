@@ -89,7 +89,11 @@ TYPED_TEST(PanelTest, AssignToConstRef) {
       EXPECT_EQ(exp_indices, ref_indices);
 
       for (const auto& idx : exp_indices) {
-        CHECK_TILE_EQ(panel.read(idx).get(), ref.read(idx).get());
+        const auto& exp_tile = panel.read(idx).get();
+        auto get_element_ptr = [&exp_tile](const TileElementIndex& index) {
+          return exp_tile.ptr(index);
+        };
+        CHECK_TILE_PTR(get_element_ptr, ref.read(idx).get());
       }
     }
   }

@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -246,10 +246,8 @@ Index2D<IndexT, Tag> computeCoordsRowMajor(SizeType linear_index,
 
   // `linear_index` is wrapped with `std::to_string` because uint8_t or int8_t are interpreted as chars,
   // so the equivalent ASCII mapping is printed instead of the numeric value.
-  DLAF_ASSERT_MODERATE(linear_index >= 0, "The linear index cannot be negative!",
-                       std::to_string(linear_index));
-  DLAF_ASSERT_MODERATE(linear_index < mul(dims.rows(), dims.cols()),
-                       "Linear index does not fit into grid!", std::to_string(linear_index), dims);
+  DLAF_ASSERT_MODERATE(linear_index >= 0, std::to_string(linear_index));
+  DLAF_ASSERT_MODERATE(linear_index < mul(dims.rows(), dims.cols()), std::to_string(linear_index), dims);
 
   SizeType leading_size = dims.cols();
   return {to_signed<IndexT>(linear_index / leading_size),
@@ -268,8 +266,7 @@ Index2D<IndexT, Tag> computeCoordsColMajor(SizeType linear_index,
   using dlaf::util::ptrdiff_t::mul;
 
   DLAF_ASSERT_MODERATE(linear_index >= 0, linear_index);
-  DLAF_ASSERT_MODERATE(linear_index < mul(dims.rows(), dims.cols()),
-                       "Linear index does not fit into grid!", std::to_string(linear_index), dims);
+  DLAF_ASSERT_MODERATE(linear_index < mul(dims.rows(), dims.cols()), std::to_string(linear_index), dims);
 
   SizeType leading_size = dims.rows();
   return {to_signed<IndexT>(linear_index % leading_size),

@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -32,9 +32,6 @@ using dlaf::util::size_t::mul;
 template <class T, class CT = const T>
 void testHemm(const blas::Side side, const blas::Uplo uplo, const SizeType m, const SizeType n,
               const SizeType extra_lda, const SizeType extra_ldb, const SizeType extra_ldc) {
-  DLAF_ASSERT(side == blas::Side::Left || side == blas::Side::Right,
-              "Only Left and Right side supported", side);
-
   const SizeType k = (side == blas::Side::Left) ? m : n;
 
   const TileElementSize size_a(k, k);

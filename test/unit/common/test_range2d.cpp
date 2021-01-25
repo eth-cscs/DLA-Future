@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -32,7 +32,7 @@ void test_single_arg() {
   };
 
   std::vector<Index> act_values;
-  act_values.reserve(act_values.size());
+  act_values.reserve(exp_values.size());
   for (Index i : iterate_range2d(sz)) {
     act_values.push_back(i);
   }
@@ -49,7 +49,7 @@ void test_double_arg(TypeParam end) {
                                    Index(3, 3), Index(4, 3), Index(5, 3), Index(6, 3)};
 
   std::vector<Index> act_values;
-  act_values.reserve(act_values.size());
+  act_values.reserve(exp_values.size());
   for (Index i : iterate_range2d(begin, end)) {
     act_values.push_back(i);
   }

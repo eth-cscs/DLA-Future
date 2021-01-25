@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2020, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -15,6 +15,7 @@
 #include <dlaf/common/assert.h>
 #include <dlaf/matrix/tile.h>
 #include <dlaf/types.h>
+#include <dlaf/util_tile.h>
 
 namespace dlaf {
 namespace tile {
@@ -53,9 +54,9 @@ gemmSizes getGemmSizes(blas::Op op_a, blas::Op op_b, const dlaf::matrix::Tile<co
     n = b.size().rows();
   }
 
-  DLAF_ASSERT(m == c.size().rows(), "`m` cannot be determined!", m, c);
-  DLAF_ASSERT(n == c.size().cols(), "`n` cannot be determined!", n, c);
-  DLAF_ASSERT(k == k2, "`k` cannot be determined!", k, k2);
+  DLAF_ASSERT(m == c.size().rows(), op_a, a, c);
+  DLAF_ASSERT(n == c.size().cols(), op_b, b, c);
+  DLAF_ASSERT(k == k2, op_a, a, op_b, b);
 
   return {m, n, k};
 }
@@ -72,16 +73,14 @@ hemmSizes getHemmSizes(blas::Side side, const dlaf::matrix::Tile<const T, device
   const hemmSizes s{c.size().rows(), c.size().cols()};
 
   if (side == blas::Side::Left) {
-    DLAF_ASSERT(s.m == a.size().rows(), "`m` cannot be determined!", s.m, a);
-    DLAF_ASSERT(s.n == b.size().cols(), "`n` cannot be determined!", s.n, b);
-    DLAF_ASSERT(a.size().cols() == b.size().rows(),
-                "columns of matrix `a` does not correspond to rows of matrix `b`", a, b);
+    DLAF_ASSERT(s.m == a.size().rows(), c, a);
+    DLAF_ASSERT(s.n == b.size().cols(), c, b);
+    DLAF_ASSERT(a.size().cols() == b.size().rows(), a, b);
   }
   else if (side == blas::Side::Right) {
-    DLAF_ASSERT(s.m == b.size().rows(), "`m` cannot be determined!", s.m, b);
-    DLAF_ASSERT(s.n == a.size().cols(), "`n` cannot be determined!", s.n, a);
-    DLAF_ASSERT(a.size().rows() == b.size().cols(),
-                "rows of matrix `a` does not correspond to columns of matrix `b`", a, b);
+    DLAF_ASSERT(s.m == b.size().rows(), c, b);
+    DLAF_ASSERT(s.n == a.size().cols(), c, a);
+    DLAF_ASSERT(a.size().rows() == b.size().cols(), a, b);
   }
 
   return s;
@@ -100,10 +99,10 @@ her2kSizes getHer2kSizes(blas::Op op, const dlaf::matrix::Tile<const T, device>&
   const SizeType cols = a.size().cols();
   const auto s = (op == blas::Op::NoTrans) ? her2kSizes{rows, cols} : her2kSizes{cols, rows};
 
-  DLAF_ASSERT((!std::is_same<T, ComplexType<T>>::value || op != blas::Op::Trans),
-              "`op = Trans` is not allowed in complex HER2K.");
-  DLAF_ASSERT(c.size().rows() == c.size().cols(), "`c` is not square!", c);
-  DLAF_ASSERT(c.size().rows() == s.n, "`c` has an invalid size!", c, s.n);
+  DLAF_ASSERT(tile_complex_trans<T>(op), op);
+
+  DLAF_ASSERT(square_size(c), c);
+  DLAF_ASSERT(c.size().rows() == s.n, c, op, a);
 
   return s;
 }
@@ -120,10 +119,9 @@ herkSizes getHerkSizes(blas::Op op, const dlaf::matrix::Tile<const T, device>& a
   const SizeType cols = a.size().cols();
   const auto s = (op == blas::Op::NoTrans) ? herkSizes{rows, cols} : herkSizes{cols, rows};
 
-  DLAF_ASSERT((!std::is_same<T, ComplexType<T>>::value || op != blas::Op::Trans),
-              "op = Trans is not allowed for Complex values!");
-  DLAF_ASSERT(c.size().rows() == c.size().cols(), "`c` is not square!", c);
-  DLAF_ASSERT(c.size().rows() == s.n, "`c` has an invalid size!", c, s.n);
+  DLAF_ASSERT(tile_complex_trans<T>(op), op);
+  DLAF_ASSERT(square_size(c), c);
+  DLAF_ASSERT(c.size().rows() == s.n, c, op, a);
 
   return s;
 }
@@ -138,10 +136,10 @@ trsmSizes getTrsmSizes(blas::Side side, const dlaf::matrix::Tile<const T, device
                        const dlaf::matrix::Tile<T, device>& b) {
   trsmSizes s{b.size().rows(), b.size().cols()};
 
-  DLAF_ASSERT(a.size().rows() == a.size().cols(), "`a` is not square!", a);
+  DLAF_ASSERT(square_size(a), a);
 
   const auto left_side = (side == blas::Side::Left ? s.m : s.n);
-  DLAF_ASSERT(a.size().rows() == left_side, "`a` has an invalid size!", a, left_side);
+  DLAF_ASSERT(a.size().rows() == left_side, a, side, b);
 
   return s;
 }

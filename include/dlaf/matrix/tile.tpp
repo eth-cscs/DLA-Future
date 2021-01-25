@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -15,11 +15,10 @@ template <class T, Device device>
 Tile<const T, device>::Tile(const TileElementSize& size,
                             memory::MemoryView<ElementType, device>&& memory_view, SizeType ld) noexcept
     : size_(size), memory_view_(std::move(memory_view)), ld_(ld) {
-  DLAF_ASSERT(size.isValid(), "Invalid Tile sizes!", size);
-  DLAF_ASSERT(ld_ >= std::max<SizeType>(1, size_.rows()), "Invalid leading dimension!", ld,
-              size_.rows());
-  DLAF_ASSERT(size.isEmpty() || size_.rows() + ld_ * (size_.cols() - 1) <= memory_view_.size(),
-              "Tile exceeds the MemoryView limits!", size, memory_view_.size());
+  DLAF_ASSERT(size.isValid(), size);
+  DLAF_ASSERT(ld_ >= std::max<SizeType>(1, size_.rows()), ld, size_.rows());
+  DLAF_ASSERT(size.isEmpty() || size_.rows() + ld_ * (size_.cols() - 1) <= memory_view_.size(), size,
+              size_, ld_, memory_view_.size());
 }
 
 template <class T, Device device>

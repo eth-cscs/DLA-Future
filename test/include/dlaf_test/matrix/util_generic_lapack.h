@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -52,8 +52,7 @@ template <class ElementIndex, class T>
 auto getGenToStdElementSetters(SizeType n, int itype, blas::Uplo uplo, T alpha, T beta, T gamma) {
   using dlaf::test::TypeUtilities;
 
-  DLAF_ASSERT(uplo == blas::Uplo::Lower || uplo == blas::Uplo::Upper, "Only Upper and Lower supported",
-              uplo);
+  DLAF_ASSERT(uplo == blas::Uplo::Lower || uplo == blas::Uplo::Upper, uplo);
   DLAF_ASSERT(itype >= 1 && itype <= 3, itype);
 
   std::function<T(const ElementIndex&)> el_t = [itype, uplo, alpha, beta](const ElementIndex& index) {

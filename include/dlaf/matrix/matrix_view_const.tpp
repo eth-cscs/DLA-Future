@@ -1,12 +1,14 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
+
+#include "dlaf/blas/enum_output.h"
 
 namespace dlaf {
 namespace matrix {
@@ -16,7 +18,8 @@ template <template <class, Device> class MatrixType, class T2,
           std::enable_if_t<std::is_same<T, std::remove_const_t<T2>>::value, int>>
 MatrixView<const T, device>::MatrixView(blas::Uplo uplo, MatrixType<T2, device>& matrix)
     : MatrixBase(matrix) {
-  DLAF_ASSERT(uplo == blas::Uplo::General, "uplo != General not implemented yet.");
+  if (uplo != blas::Uplo::General)
+    DLAF_UNIMPLEMENTED(uplo);
   setUpTiles(matrix);
 }
 

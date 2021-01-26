@@ -75,17 +75,17 @@ def _calc_metrics(cols, df):
 def _parse_line_based(lib, fout, bench_name, nodes):
     if lib == "dlaf":
         pstr_arr = [ "[{run_index:d}] {time:f}s {perf:f}GFlop/s ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}" ]
-    elif lib == "slate_chol":
+    elif lib == "chol_slate":
         pstr_arr = [ "d host task column lower {matrix_rows:d} {:d} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:f} {perf:f} NA NA no check" ]
-    elif lib == "slate_trsm":
+    elif lib == "trsm_slate":
         pstr_arr = [ "d host task {:d} left lower notrans nonunit {matrix_rows:d} {matrix_cols:d} {:f} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:f} {perf:f} NA NA no check" ]
-    elif lib == "dplasma_chol":
+    elif lib == "chol_dplasma":
         pstr_arr = [
             "#+++++ M x N x K|NRHS : {matrix_rows:d} x {matrix_cols:d} x {:d}",
             "#+++++ MB x NB : {block_rows:d} x {block_cols:d}",
             "[****] TIME(s) {time:f} : dpotrf PxQ= {grid_rows:d} {grid_cols:d} NB= {:d} N= {:d} : {perf:f} gflops - ENQ&PROG&DEST 1.07285 : 2669.068799 gflops - ENQ 0.00252 - DEST 0.00011",
         ]
-    elif lib == "dplasma_trsm":
+    elif lib == "trsm_dplasma":
         pstr_arr = [
             "#+++++ M x N x K|NRHS : {matrix_rows:d} x {matrix_cols:d} x {:d}",
             "#+++++ MB x NB : {block_rows:d} x {block_cols:d}",
@@ -106,10 +106,10 @@ def _parse_line_based(lib, fout, bench_name, nodes):
             rd["bench_name"] = bench_name
             rd["nodes"] = nodes
             rd["perf_per_node"] = rd["perf"] / nodes
-            if lib == "slate_chol":
+            if lib == "chol_slate":
                 rd["block_cols"] = rd["block_rows"]
                 rd["matrix_cols"] = rd["matrix_rows"]
-            elif lib == "slate_trsm":
+            elif lib == "trsm_slate":
                 rd["block_cols"] = rd["block_rows"]
 
             # makes _calc_metrics work
@@ -138,14 +138,16 @@ def _parse_line_based(lib, fout, bench_name, nodes):
 # │   ├── <bench_name_2>.out
 # |   ...
 #
-def parse_jobs(data_dir):
+# lib: dlaf|chol_slate|chol_dplasma|trsm_slate|trsm_dplasma
+#
+def parse_jobs(lib, data_dir):
     data = []
     for subdir, dirs, files in os.walk(os.path.expanduser(data_dir)):
         for f in files:
             if f.endswith(".out"):
                 nodes = int(os.path.basename(subdir))
                 with open(os.path.join(subdir, f), "r") as fout:
-                    data.extend(_parse_line_based("dlaf", fout, f[:-4], nodes))
+                    data.extend(_parse_line_based(lib, fout, f[:-4], nodes))
 
     return pd.DataFrame(data)
 

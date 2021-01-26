@@ -36,31 +36,16 @@ class MatrixMirror;
 /// This specialization makes no copies of the source matrix, and acts only as
 /// a reference to the source matrix.
 template <class T, Device SourceTarget>
-class MatrixMirror<const T, SourceTarget, SourceTarget> : public internal::MatrixBase {
+class MatrixMirror<const T, SourceTarget, SourceTarget> {
 protected:
   Matrix<const T, SourceTarget>& mat_source;
 
 public:
-  using ElementType = T;
-  using TileType = Tile<ElementType, SourceTarget>;
-  using ConstTileType = Tile<const ElementType, SourceTarget>;
-
   /// Create a matrix mirror of the source matrix @p mat_source.
-  MatrixMirror(Matrix<const T, SourceTarget>& mat_source)
-      : internal::MatrixBase(mat_source.distribution()), mat_source(mat_source) {}
+  MatrixMirror(Matrix<const T, SourceTarget>& mat_source) : mat_source(mat_source) {}
 
   Matrix<const T, SourceTarget>& get() {
     return mat_source;
-  }
-
-  /// See @c Matrix::read()
-  auto read(const LocalTileIndex& index) noexcept {
-    return mat_source.read(index);
-  }
-
-  /// See @c Matrix::read()
-  auto read(const GlobalTileIndex& index) {
-    return mat_source.read(index);
   }
 };
 
@@ -77,10 +62,6 @@ class MatrixMirror<T, SourceTarget, SourceTarget>
   Matrix<T, SourceTarget>& mat_source;
 
 public:
-  using ElementType = T;
-  using TileType = Tile<ElementType, SourceTarget>;
-  using ConstTileType = Tile<const ElementType, SourceTarget>;
-
   /// Create a mirror of the source matrix @p mat_source.
   MatrixMirror(Matrix<T, SourceTarget>& mat_source) : base_type(mat_source), mat_source(mat_source) {}
 
@@ -95,16 +76,6 @@ public:
   /// Copies the target to the source matrix. Since the source and target
   /// devices are the same, this is a no-op.
   void syncTargetToSource() {}
-
-  /// See @c Matrix::operator()()
-  auto operator()(const LocalTileIndex& index) noexcept {
-    return mat_source(index);
-  }
-
-  /// See @c Matrix::operator()()
-  auto operator()(const GlobalTileIndex& index) {
-    return mat_source(index);
-  }
 };
 
 /// A mirror of a source matrix on the target device, where the source and
@@ -114,21 +85,16 @@ public:
 /// construction. It does not copy the target matrix back to the source matrix on
 /// destruction.
 template <class T, Device Target, Device Source>
-class MatrixMirror<const T, Target, Source> : public internal::MatrixBase {
+class MatrixMirror<const T, Target, Source> {
 protected:
   Matrix<T, Target> mat_target;
   Matrix<const T, Source>& mat_source;
 
 public:
-  using ElementType = T;
-  using TileType = Tile<ElementType, Target>;
-  using ConstTileType = Tile<const ElementType, Target>;
-
   /// Create a mirror of the source matrix @p mat_source. Creates a copy of the
   /// source matrix on the target device.
   MatrixMirror(Matrix<const T, Source>& mat_source)
-      : internal::MatrixBase(mat_source.distribution()), mat_target(mat_source.distribution()),
-        mat_source(mat_source) {
+      : mat_target(mat_source.distribution()), mat_source(mat_source) {
     copy(mat_source, mat_target);
   }
 
@@ -137,16 +103,6 @@ public:
 
   Matrix<const T, Target>& get() {
     return mat_target;
-  }
-
-  /// See @c Matrix::read()
-  auto read(const LocalTileIndex& index) noexcept {
-    return mat_target.read(index);
-  }
-
-  /// See @c Matrix::read()
-  auto read(const GlobalTileIndex& index) {
-    return mat_target.read(index);
   }
 };
 
@@ -165,10 +121,6 @@ class MatrixMirror : public MatrixMirror<const T, Target, Source> {
   Matrix<T, Source>& mat_source;
 
 public:
-  using ElementType = T;
-  using TileType = Tile<ElementType, Target>;
-  using ConstTileType = Tile<const ElementType, Target>;
-
   /// Create a mirror of the source matrix @p mat_source. Creates a copy of the
   /// source matrix on the target device.
   MatrixMirror(Matrix<T, Source>& mat_source) : base_type(mat_source), mat_source(mat_source) {}
@@ -191,16 +143,6 @@ public:
   /// Copies the target to the source matrix.
   void syncTargetToSource() {
     copy(mat_target, mat_source);
-  }
-
-  /// See @c Matrix::operator()()
-  auto operator()(const LocalTileIndex& index) noexcept {
-    return mat_target(index);
-  }
-
-  /// See @c Matrix::operator()()
-  auto operator()(const GlobalTileIndex& index) {
-    return mat_target(index);
   }
 };
 

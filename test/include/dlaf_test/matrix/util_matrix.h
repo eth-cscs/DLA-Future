@@ -36,8 +36,8 @@ namespace test {
 template <class MatrixType>
 struct matrix_traits;
 
-template <template <class, Device...> class MatrixLike, class T, Device... devices>
-struct matrix_traits<MatrixLike<T, devices...>> {
+template <template <class, Device> class MatrixLike, class T, Device device>
+struct matrix_traits<MatrixLike<T, device>> {
   using ElementT = std::remove_cv_t<T>;
 };
 
@@ -81,9 +81,9 @@ namespace internal {
 /// @pre expected return type should be the same as the type of the first argument of comp and of err_message,
 /// @pre The second argument of comp should be either T, T& or const T&,
 /// @pre The second argument of err_message should be either T, T& or const T&.
-template <template <class, Device, Device...> class MatrixLike, class T, class ElementGetter,
-          class ComparisonOp, class ErrorMessageGetter, Device... devices>
-void check(ElementGetter expected, MatrixLike<const T, Device::CPU, devices...>& mat, ComparisonOp comp,
+template <template <class, Device> class MatrixType, class T, class ElementGetter, class ComparisonOp,
+          class ErrorMessageGetter>
+void check(ElementGetter expected, MatrixType<const T, Device::CPU>& mat, ComparisonOp comp,
            ErrorMessageGetter err_message, const char* file, const int line) {
   const matrix::Distribution& dist = mat.distribution();
   for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {
@@ -172,11 +172,12 @@ void checkPtr(PointerGetter exp_ptr, MatrixType& mat, const char* file, const in
 /// @pre rel_err >= 0,
 /// @pre abs_err >= 0,
 /// @pre rel_err > 0 || abs_err > 0.
-template <template <class, Device...> class MatrixLike, class T, class ElementGetter, Device... devices>
-void checkNear(ElementGetter&& expected, MatrixLike<T, devices...>& mat,
-               BaseType<typename matrix_traits<MatrixLike<T, devices...>>::ElementT> rel_err,
-               BaseType<typename matrix_traits<MatrixLike<T, devices...>>::ElementT> abs_err,
-               const char* file, const int line) {
+template <class MatrixType, class ElementGetter>
+void checkNear(ElementGetter&& expected, MatrixType& mat,
+               BaseType<typename matrix_traits<MatrixType>::ElementT> rel_err,
+               BaseType<typename matrix_traits<MatrixType>::ElementT> abs_err, const char* file,
+               const int line) {
+  using T = typename matrix_traits<MatrixType>::ElementT;
   ASSERT_GE(rel_err, 0);
   ASSERT_GE(abs_err, 0);
   ASSERT_TRUE(rel_err > 0 || abs_err > 0);

@@ -64,7 +64,7 @@ void basicsTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
   GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
   Matrix<T, Source> mat(size, test.block_size, comm_grid);
   MatrixMirror<T, Target, Source> mat_mirror(mat);
-  EXPECT_EQ(mat.distribution(), mat_mirror.distribution());
+  EXPECT_EQ(mat.distribution(), mat_mirror.get().distribution());
 }
 
 TYPED_TEST(MatrixMirrorTest, Basics) {
@@ -105,7 +105,7 @@ void syncTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
 
     copy(mat, mat_source_cpu);
     CHECK_MATRIX_EQ(el, mat_source_cpu);
-    copy(mat_mirror, mat_target_cpu);
+    copy(mat_mirror.get(), mat_target_cpu);
     CHECK_MATRIX_EQ(el, mat_target_cpu);
 
     offset = 1.0;
@@ -114,12 +114,12 @@ void syncTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
 
     mat_mirror.syncSourceToTarget();
 
-    copy(mat_mirror, mat_target_cpu);
+    copy(mat_mirror.get(), mat_target_cpu);
     CHECK_MATRIX_EQ(el, mat_target_cpu);
 
     offset = 2.0;
     set(mat_target_cpu, el);
-    copy(mat_target_cpu, mat_mirror);
+    copy(mat_target_cpu, mat_mirror.get());
 
     mat_mirror.syncTargetToSource();
 
@@ -128,7 +128,7 @@ void syncTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
 
     offset = 3.0;
     set(mat_target_cpu, el);
-    copy(mat_target_cpu, mat_mirror);
+    copy(mat_target_cpu, mat_mirror.get());
   }
 
   copy(mat, mat_source_cpu);
@@ -173,7 +173,7 @@ void syncConstTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
 
   copy(mat, mat_source_cpu);
   CHECK_MATRIX_EQ(el, mat_source_cpu);
-  copy(mat_mirror, mat_target_cpu);
+  copy(mat_mirror.get(), mat_target_cpu);
   CHECK_MATRIX_EQ(el, mat_target_cpu);
 }
 
@@ -206,7 +206,7 @@ void sameDeviceTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
   for (SizeType j = 0; j < local_tile_cols; ++j) {
     for (SizeType i = 0; i < local_tile_rows; ++i) {
       LocalTileIndex idx(i, j);
-      EXPECT_EQ(mat.read(idx).get().ptr(), mat_mirror.read(idx).get().ptr());
+      EXPECT_EQ(mat.read(idx).get().ptr(), mat_mirror.get().read(idx).get().ptr());
     }
   }
 }
@@ -238,7 +238,7 @@ void differentDeviceTest(CommunicatorGrid const& comm_grid, TestSizes const& tes
   for (SizeType j = 0; j < local_tile_cols; ++j) {
     for (SizeType i = 0; i < local_tile_rows; ++i) {
       LocalTileIndex idx(i, j);
-      EXPECT_NE(mat.read(idx).get().ptr(), mat_mirror.read(idx).get().ptr());
+      EXPECT_NE(mat.read(idx).get().ptr(), mat_mirror.get().read(idx).get().ptr());
     }
   }
 }

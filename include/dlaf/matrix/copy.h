@@ -25,11 +25,8 @@ namespace matrix {
 ///
 /// Given a matrix with the same geometries and distribution, this function submits tasks that will
 /// perform the copy of each tile.
-template <template <class, Device, Device...> class MatrixLikeSource,
-          template <class, Device, Device...> class MatrixLikeDestination, class T, Device Source,
-          Device Destination, Device... SourceAdditionalDevices, Device... DestinationAdditionalDevices>
-void copy(MatrixLikeSource<const T, Source, SourceAdditionalDevices...>& source,
-          MatrixLikeDestination<T, Destination, DestinationAdditionalDevices...>& dest) {
+template <class T, Device Source, Device Destination>
+void copy(Matrix<const T, Source>& source, Matrix<T, Destination>& dest) {
   const auto& distribution = source.distribution();
 
   DLAF_ASSERT(matrix::equal_size(source, dest), source, dest);

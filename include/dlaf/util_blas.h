@@ -132,14 +132,21 @@ struct trmmSizes {
 };
 
 template <typename T, Device device>
-  trmmSizes getTrmmSizes(blas::Side side, const dlaf::matrix::Tile<const T, device>& a,
+  trmmSizes getTrmmSizes(const blas::Side side, const blas::Op op, const dlaf::matrix::Tile<const T, device>& a,
                        const dlaf::matrix::Tile<T, device>& b) {
-  trmmSizes s{b.size().rows(), b.size().cols()};
+  const SizeType rows_a = a.size().rows();
+  const SizeType cols_a = a.size().cols();
+  const auto s_a = (op == blas::Op::NoTrans) ? trmmSizes{rows_a, cols_a} : trmmSizes{cols_a, rows_a};
+  const SizeType rows_b = b.size().rows();
+  const SizeType cols_b = b.size().cols();
+  const auto s_b = trmmSizes{rows_b, cols_b};
 
-  const auto left_side = (side == blas::Side::Left ? s.m : s.n);
-  DLAF_ASSERT(a.size().rows() == left_side, a, left_side);
+  const auto a_side = (side == blas::Side::Left ? s_a.m : s_a.n);
+  const auto b_side = (side == blas::Side::Left ? s_b.n : s_b.m);
+  
+  DLAF_ASSERT(a_side == b_side, a, side, b, a_side, b_side);
 
-  return s;
+  return s_b;
 }
 
 struct trsmSizes {
@@ -148,7 +155,7 @@ struct trsmSizes {
 };
 
  template <typename T, Device device>
-trsmSizes getTrsmSizes(blas::Side side, const dlaf::matrix::Tile<const T, device>& a,
+trsmSizes getTrsmSizes(const blas::Side side, const dlaf::matrix::Tile<const T, device>& a,
                        const dlaf::matrix::Tile<T, device>& b) {
   trsmSizes s{b.size().rows(), b.size().cols()};
 

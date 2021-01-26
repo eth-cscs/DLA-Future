@@ -1,4 +1,3 @@
-from itertools import product
 from os import system, makedirs
 from os.path import expanduser
 from re import sub
@@ -6,14 +5,38 @@ from re import sub
 # Finds two factors of `n` that are as close to each other as possible.
 #
 # Note: the second factor is larger or equal to the first factor
-def sq_factor(n):
+def _sq_factor(n):
     for i in range(1, int(n ** 0.5) + 1):
         if n % i == 0:
             f = (i, n // i)
     return f
 
 
-# --------------
+def _check_ranks_per_node(rpn):
+    if not (rpn == 1 or rpn == 2):
+        raise ValueError(f"Wrong value rpn = {rpn}!")
+
+
+# parse dlaf_nb_[1|0][1|0][1|0]
+#       dlaf_nb_<hpx queue><non-blocking mechanism><mpi pool>
+#       dlaf
+def _dlaf_flags(lib):
+    if lib == "dlaf":
+        return ""
+
+    q, p, m = tuple(lib[8:])
+    return "{} {} {}".format(
+        "--hpx:queuing=shared-priority" if q == "1" else "",
+        "--polling" if p == "1" else "",
+        "--mpipool --hpx:ini=hpx.max_idle_backoff_time=0" if m == "1" else "",
+    )
+
+
+def _err_msg(lib):
+    return f"No such `lib`: {lib}! Allowed values are : `dlaf|dlaf_nb_[0|1][0|1][0|1]`, `slate` and `dplasma`."
+
+
+# ---------- MINIAPPS ---------------
 
 
 def init_job_text(run_name, nodes, time_min):
@@ -50,123 +73,90 @@ def submit_job(run_dir, nodes, job_text):
     system(f"sbatch --chdir={job_path} {job_file}")
 
 
-def chol_ldd(build_dir):
-    return f"\n\nldd {build_dir}/miniapp/miniapp_cholesky >> libs.txt"
-
-
-def trsm_ldd(build_dir):
-    return f"\n\nldd {build_dir}/miniapp/miniapp_triangular_solver >> libs.txt"
-
-
-def _get_queue_flag(queue):
-    if queue == "shared":
-        return "--hpx:queuing=shared-priority"
-    elif queue == "default":
-        return ""
-    else:
-        raise ValueError(f"Wrong value: queue = {queue}!")
-
-
-def _get_mech_flag(mech):
-    if mech == "polling":
-        return "--polling "
-    elif mech == "yielding" or mech == "na":
-        return ""
-    else:
-        raise ValueError(f"Wrong value: mech = {mech}!")
-
-
-def _get_pool_flag(pool):
-    if pool == "mpi":
-        return "--mpipool --hpx:ini=hpx.max_idle_backoff_time=0"
-    elif pool == "default" or pool == "na":
-        return ""
-    else:
-        raise ValueError(f"Wrong value: pool = {pool}!")
-
-
-def _check_ranks_per_node(rpn):
-    if not (rpn == 1 or rpn == 2):
-        raise ValueError(f"Wrong value rpn = {rpn}!")
-
-
-# ---------- MINIAPPS ---------------
-
-
-def chol(
-    build_dir,
-    nodes,
-    rpn,
-    nruns,
-    matrix_size_arr,
-    block_size_arr,
-    queue,
-    mech,
-    pool,
-    suffix,
-):
+def chol(lib, build_dir, nodes, rpn, m_sz, mb_sz, nruns):
     _check_ranks_per_node(rpn)
-    queue_flag = _get_queue_flag(queue)
-    mech_flag = _get_mech_flag(mech)
-    pool_flag = _get_pool_flag(pool)
-    cmds = "\n"
-    for matrix_size, block_size in product(
-        matrix_size_arr,
-        block_size_arr,
-    ):
-        total_ranks = nodes * rpn
-        cpus_per_rank = 72 // rpn
-        grid_cols, grid_rows = sq_factor(total_ranks)
-        cmds += (
+
+    total_ranks = nodes * rpn
+    cpus_per_rank = 72 // rpn
+    grid_cols, grid_rows = _sq_factor(total_ranks)
+
+    if lib.startswith("dlaf"):
+        extra_flags = _dlaf_flags(lib)
+        cmds = (
             "\nsrun "
             f"-n {total_ranks} "
             f"-c {cpus_per_rank} "
             f"{build_dir}/miniapp/miniapp_cholesky "
-            f"--matrix-size {matrix_size} "
-            f"--block-size {block_size} "
+            f"--matrix-size {m_sz} "
+            f"--block-size {mb_sz} "
             f"--grid-rows {grid_rows} "
             f"--grid-cols {grid_cols} "
             f"--nruns {nruns} "
-            "--hpx:use-process-mask "
-            f"{queue_flag} "
-            f"{mech_flag} "
-            f"{pool_flag} "
-            f">> chol_{suffix}.out"
+            f"--hpx:use-process-mask {extra_flags}"
+            f">> chol_{lib}.out"
         )
+        return sub(" +", " ", cmds)
+    elif lib == "slate":
+        return ""  # TODO
+    elif lib == "slate":
+        return ""  # TODO
+    else:
+        raise ValueError(_err_msg(lib))
 
-    return sub(" +", " ", cmds)
 
-
-def trsm(
-    build_dir,
-    nodes,
-    rpn,
-    nruns,
-    m_arr,
-    b_arr,
-    suffix,
-):
+def trsm(lib, build_dir, nodes, rpn, m_sz, n_sz, mb_sz, nruns):
     _check_ranks_per_node(rpn)
-    n_arr = [x // 2 for x in m_arr]
-    cmds = "\n"
-    for m, n, b in product(m_arr, n_arr, b_arr):
-        total_ranks = nodes * rpn
-        cpus_per_rank = 72 // rpn
-        gr, gc = sq_factor(total_ranks)
-        cmds += (
+
+    total_ranks = nodes * rpn
+    cpus_per_rank = 72 // rpn
+    gr, gc = _sq_factor(total_ranks)
+
+    if lib.startswith("dlaf"):
+        extra_flags = _dlaf_flags(lib)
+        cmds = (
             "\nsrun "
             f"-n {total_ranks} "
             f"-c {cpus_per_rank} "
             f"{build_dir}/miniapp/miniapp_triangular_solver "
-            f"--m {m} "
-            f"--n {n} "
-            f"--mb {b} "
-            f"--nb {b} "
+            f"--m {m_sz} "
+            f"--n {n_sz} "
+            f"--mb {mb_sz} "
+            f"--nb {mb_sz} "
             f"--grid-rows {gr} "
             f"--grid-cols {gc} "
             f"--nruns {nruns} "
-            "--hpx:use-process-mask "
-            f">> trsm_{suffix}.out"
+            f"--hpx:use-process-mask {extra_flags}"
+            f">> trsm_{lib}.out"
         )
-
-    return sub(" +", " ", cmds)
+        return sub(" +", " ", cmds)
+    elif lib == "slate":
+        return (
+            "\nsrun "
+            f"-n {total_ranks} "
+            f"-c {cpus_per_rank} "
+            f"{build_dir}/test/slate_test trsm "
+            f"--dim {m_sz}x{n_sz}x0 "
+            f"--nb {mb_sz} "
+            f"--p {gr} "
+            f"--q {gc} "
+            f"--repeat {nruns} "
+            "--alpha 2 --check n --ref n --type d "
+            f">> trsm_{lib}.out"
+        )
+    elif lib == "dplasma":
+        return (
+            "\nsrun "
+            f"-n {total_ranks} "
+            f"-c {cpus_per_rank} "
+            f"{build_dir}/tests/testing_dtrsm "
+            f"-M {m_sz} "
+            f"-N {n_sz} "
+            f"--MB {mb_sz} "
+            f"--NB {mb_sz} "
+            f"--grid-rows {gr} "
+            f"--grid-cols {gc} "
+            "-c 36 -v "
+            f">> trsm_{lib}.out"
+        )
+    else:
+        raise ValueError(_err_msg(lib))

@@ -105,9 +105,33 @@ def chol(lib, build_dir, nodes, rpn, m_sz, mb_sz, nruns):
         )
         return sub(" +", " ", cmds)
     elif lib == "slate":
-        return ""  # TODO
-    elif lib == "slate":
-        return ""  # TODO
+        return (
+            "\nsrun "
+            f"-n {total_ranks} "
+            f"-c {cpus_per_rank} "
+            f"{build_dir}/test/slate_test potrf "
+            f"--dim {m_sz}x${m_sz}x0 "
+            f"--nb {mb_sz} "
+            f"--p {grid_rows} "
+            f"--q {grid_cols} "
+            f"--repeat {nruns} "
+            "--check n --ref n --type d "
+            f">> chol_{lib}.out"
+        )
+    elif lib == "dplasma":
+        return (
+            "\nsrun "
+            f"-n {total_ranks} "
+            f"-c {cpus_per_rank} "
+            f"{build_dir}/tests/testing_dpotrf "
+            f"-N ${m_sz} "
+            f"--MB ${mb_sz} "
+            f"--NB ${mb_sz} "
+            f"--grid-rows ${grid_rows} "
+            f"--grid-cols ${grid_cols} "
+            "-c 36 -v "
+            f">> chol_{lib}.out"
+        )
     else:
         raise ValueError(_err_msg(lib))
 

@@ -73,7 +73,7 @@ def _calc_metrics(cols, df):
 #     "nodes":
 # }
 def _parse_line_based(fout, bench_name, nodes):
-    if bench_name.startswith("dlaf"):
+    if "dlaf" in bench_name:
         pstr_arr = [
             "[{run_index:d}] {time:f}s {perf:f}GFlop/s ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}"
         ]
@@ -119,7 +119,7 @@ def _parse_line_based(fout, bench_name, nodes):
                 rd["block_cols"] = rd["block_rows"]
 
             # makes _calc_metrics work
-            if not bench_name.startswith("dlaf"):
+            if not "dlaf" in bench_name:
                 rd["run_index"] = 1
 
             data.append(rd)

@@ -28,7 +28,7 @@ struct gemmSizes {
 };
 
 template <typename T, Device device>
-gemmSizes getGemmSizes(blas::Op op_a, blas::Op op_b, const dlaf::matrix::Tile<const T, device>& a,
+gemmSizes getGemmSizes(const blas::Op op_a, const blas::Op op_b, const dlaf::matrix::Tile<const T, device>& a,
                        const dlaf::matrix::Tile<const T, device>& b,
                        const dlaf::matrix::Tile<T, device>& c) {
   SizeType m;
@@ -67,7 +67,7 @@ struct hemmSizes {
 };
 
 template <typename T, Device device>
-hemmSizes getHemmSizes(blas::Side side, const dlaf::matrix::Tile<const T, device>& a,
+hemmSizes getHemmSizes(const blas::Side side, const dlaf::matrix::Tile<const T, device>& a,
                        const dlaf::matrix::Tile<const T, device>& b,
                        const dlaf::matrix::Tile<T, device>& c) {
   const hemmSizes s{c.size().rows(), c.size().cols()};
@@ -92,7 +92,7 @@ struct her2kSizes {
 };
 
 template <typename T, Device device>
-her2kSizes getHer2kSizes(blas::Op op, const dlaf::matrix::Tile<const T, device>& a,
+her2kSizes getHer2kSizes(const blas::Op op, const dlaf::matrix::Tile<const T, device>& a,
                          const dlaf::matrix::Tile<const T, device>&,
                          const dlaf::matrix::Tile<T, device>& c) {
   const SizeType rows = a.size().rows();
@@ -113,7 +113,7 @@ struct herkSizes {
 };
 
 template <typename T, Device device>
-herkSizes getHerkSizes(blas::Op op, const dlaf::matrix::Tile<const T, device>& a,
+herkSizes getHerkSizes(const blas::Op op, const dlaf::matrix::Tile<const T, device>& a,
                        const dlaf::matrix::Tile<T, device>& c) {
   const SizeType rows = a.size().rows();
   const SizeType cols = a.size().cols();

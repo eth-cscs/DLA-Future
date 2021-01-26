@@ -152,21 +152,31 @@ public:
 
 /// ---- ETI
 
-// TODO
+#define DLAF_MATRIX_MIRROR_ETI(KWORD, DATATYPE, TARGETDEVICE, SOURCEDEVICE) \
+  KWORD template class MatrixMirror<DATATYPE, TARGETDEVICE, SOURCEDEVICE>; \
+  KWORD template class MatrixMirror<const DATATYPE, TARGETDEVICE, SOURCEDEVICE>;
 
-// #define DLAF_MATRIX_ETI(KWORD, DATATYPE, DEVICE) \
-//   KWORD template class Matrix<DATATYPE, DEVICE>; \
-//   KWORD template class Matrix<const DATATYPE, DEVICE>;
-//
-// DLAF_MATRIX_ETI(extern, float, Device::CPU)
-// DLAF_MATRIX_ETI(extern, double, Device::CPU)
-// DLAF_MATRIX_ETI(extern, std::complex<float>, Device::CPU)
-// DLAF_MATRIX_ETI(extern, std::complex<double>, Device::CPU)
+DLAF_MATRIX_MIRROR_ETI(extern, float, Device::CPU, Device::CPU)
+DLAF_MATRIX_MIRROR_ETI(extern, double, Device::CPU, Device::CPU)
+DLAF_MATRIX_MIRROR_ETI(extern, std::complex<float>, Device::CPU, Device::CPU)
+DLAF_MATRIX_MIRROR_ETI(extern, std::complex<double>, Device::CPU, Device::CPU)
 
-// DLAF_MATRIX_ETI(extern, float, Device::GPU)
-// DLAF_MATRIX_ETI(extern, double, Device::GPU)
-// DLAF_MATRIX_ETI(extern, std::complex<float>, Device::GPU)
-// DLAF_MATRIX_ETI(extern, std::complex<double>, Device::GPU)
+#ifdef DLAF_WITH_CUDA
+DLAF_MATRIX_MIRROR_ETI(extern, float, Device::CPU, Device::GPU)
+DLAF_MATRIX_MIRROR_ETI(extern, double, Device::CPU, Device::GPU)
+DLAF_MATRIX_MIRROR_ETI(extern, std::complex<float>, Device::CPU, Device::GPU)
+DLAF_MATRIX_MIRROR_ETI(extern, std::complex<double>, Device::CPU, Device::GPU)
+
+DLAF_MATRIX_MIRROR_ETI(extern, float, Device::GPU, Device::CPU)
+DLAF_MATRIX_MIRROR_ETI(extern, double, Device::GPU, Device::CPU)
+DLAF_MATRIX_MIRROR_ETI(extern, std::complex<float>, Device::GPU, Device::CPU)
+DLAF_MATRIX_MIRROR_ETI(extern, std::complex<double>, Device::GPU, Device::CPU)
+
+DLAF_MATRIX_MIRROR_ETI(extern, float, Device::GPU, Device::GPU)
+DLAF_MATRIX_MIRROR_ETI(extern, double, Device::GPU, Device::GPU)
+DLAF_MATRIX_MIRROR_ETI(extern, std::complex<float>, Device::GPU, Device::GPU)
+DLAF_MATRIX_MIRROR_ETI(extern, std::complex<double>, Device::GPU, Device::GPU)
+#endif
 
 }
 }

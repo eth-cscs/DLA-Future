@@ -11,6 +11,7 @@ nruns = 10
 ranks_per_node = 2
 nodes_arr = [8, 16, 32, 64]
 m_sz_arr = [10240, 20480]
+n_sz_arr = [x // 2 for x in m_sz_arr]
 mb_sz_arr = [256, 512]
 
 for nodes in nodes_arr:
@@ -29,7 +30,6 @@ for nodes in nodes_arr:
             nruns,
         )
 
-    n_sz_arr = [x // 2 for x in m_sz_arr]
     for m_sz, n_sz, mb_sz in product(m_sz_arr, n_sz_arr, mb_sz_arr):
         job_text += mp.trsm(
             "slate",
@@ -46,4 +46,4 @@ for nodes in nodes_arr:
     print(job_text)
     break
 
-    #mp.submit_job(run_dir, nodes, job_text)
+    #mp.submit_jobs(run_dir, nodes, job_text)

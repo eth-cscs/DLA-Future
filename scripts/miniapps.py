@@ -36,9 +36,8 @@ def _err_msg(lib):
     return f"No such `lib`: {lib}! Allowed values are : `dlaf|dlaf_nb_[0|1][0|1][0|1]`, `slate` and `dplasma`."
 
 
-# ---------- MINIAPPS ---------------
-
-
+# Job preamble
+#
 def init_job_text(run_name, nodes, time_min):
     job_text = f"""
 #!/bin/bash -l
@@ -62,7 +61,9 @@ printenv > env.txt
     return job_text[1:-1]
 
 
-def submit_job(run_dir, nodes, job_text):
+# Create the job directory tree and submit jobs.
+#
+def submit_jobs(run_dir, nodes, job_text):
     job_path = expanduser(f"{run_dir}/{nodes}")
     makedirs(job_path, exist_ok=False)
     job_file = f"{job_path}/job.sh"
@@ -73,6 +74,13 @@ def submit_job(run_dir, nodes, job_text):
     system(f"sbatch --chdir={job_path} {job_file}")
 
 
+# lib: allowed libraries are dlaf|dlaf_nb_[0|1][0|1][0|1]|slate|dplasma
+#
+# where `dlaf_nb_[0|1][0|1][0|1]` is `dlaf_nb_<hpx queue><non-blocking mechanism><mpi pool>`, for example
+#       `dlaf_nb_111` : dlaf with non-blocking MPI(nb), shared priority queue(1), polling (1) and a dedicated core for an MPI pool (1).
+#
+# rpn: ranks per node
+#
 def chol(lib, build_dir, nodes, rpn, m_sz, mb_sz, nruns):
     _check_ranks_per_node(rpn)
 
@@ -104,6 +112,13 @@ def chol(lib, build_dir, nodes, rpn, m_sz, mb_sz, nruns):
         raise ValueError(_err_msg(lib))
 
 
+# lib: allowed libraries are dlaf|dlaf_nb_[0|1][0|1][0|1]|slate|dplasma
+#
+# where `dlaf_nb_[0|1][0|1][0|1]` is `dlaf_nb_<hpx queue><non-blocking mechanism><mpi pool>`, for example
+#       `dlaf_nb_111` : dlaf with non-blocking MPI(nb), shared priority queue(1), polling (1) and a dedicated core for an MPI pool (1).
+#
+# rpn: ranks per node
+#
 def trsm(lib, build_dir, nodes, rpn, m_sz, n_sz, mb_sz, nruns):
     _check_ranks_per_node(rpn)
 

@@ -44,6 +44,7 @@ public:
   /// Create a matrix mirror of the source matrix @p mat_source.
   MatrixMirror(Matrix<const T, SourceTarget>& mat_source) : mat_source(mat_source) {}
 
+  /// Return a reference to the mirror matrix on the target device.
   Matrix<const T, SourceTarget>& get() {
     return mat_source;
   }
@@ -65,6 +66,7 @@ public:
   /// Create a mirror of the source matrix @p mat_source.
   MatrixMirror(Matrix<T, SourceTarget>& mat_source) : base_type(mat_source), mat_source(mat_source) {}
 
+  /// Return a reference to the mirror matrix on the target device.
   Matrix<T, SourceTarget>& get() {
     return mat_source;
   }
@@ -101,6 +103,7 @@ public:
   /// Release the target matrix.
   virtual ~MatrixMirror() = default;
 
+  /// Return a reference to the mirror matrix on the target device.
   Matrix<const T, Target>& get() {
     return mat_target;
   }
@@ -131,6 +134,7 @@ public:
     syncTargetToSource();
   }
 
+  /// Return a reference to the mirror matrix on the target device.
   Matrix<T, Target>& get() {
     return mat_target;
   }

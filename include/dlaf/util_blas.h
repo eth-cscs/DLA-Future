@@ -141,8 +141,8 @@ template <typename T, Device device>
   const SizeType cols_b = b.size().cols();
   const auto s_b = trmmSizes{rows_b, cols_b};
 
-  const auto a_side = (side == blas::Side::Left ? s_a.m : s_a.n);
-  const auto b_side = (side == blas::Side::Left ? s_b.n : s_b.m);
+  const auto a_side = (side == blas::Side::Left ? s_a.n : s_a.m);
+  const auto b_side = (side == blas::Side::Left ? s_b.m : s_b.n);
   
   DLAF_ASSERT(a_side == b_side, a, side, b, a_side, b_side);
 

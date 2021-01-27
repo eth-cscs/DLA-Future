@@ -222,6 +222,7 @@ TYPED_TEST(MatrixMirrorTest, SameDevicesSameMemory) {
   }
 }
 
+#ifdef DLAF_WITH_CUDA
 template <typename T, Device Target, Device Source>
 void differentDeviceTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
   GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
@@ -247,9 +248,8 @@ TYPED_TEST(MatrixMirrorTest, DifferentDevicesDifferentMemory) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       differentDeviceTest<TypeParam, Device::CPU, Device::GPU>(comm_grid, test);
-#ifdef DLAF_WITH_CUDA
       differentDeviceTest<TypeParam, Device::GPU, Device::CPU>(comm_grid, test);
-#endif
     }
   }
 }
+#endif

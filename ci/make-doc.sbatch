@@ -21,11 +21,11 @@ rm -rf $DIR
 mkdir -p $DIR
 cd $DIR
 cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-      -DDLAF_WITH_MKL=1                 \
+      -DDLAF_WITH_MKL=1                \
       -DHPX_DIR=$EBROOTHPX             \
       -Dblaspp_DIR=$EBROOTBLASPP       \
       -Dlapackpp_DIR=$EBROOTLAPACKPP   \
-      -DBUILD_DOC=1                    \
+      -DDLAF_BUILD_DOC=1               \
       ../
 make doc -j 50 VERBOSE=1
 

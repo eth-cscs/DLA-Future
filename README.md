@@ -67,12 +67,12 @@ CMake option | Values | Note
 `DLAF_ASSERT_HEAVY_ENABLE` | `{ON,OFF}` (default: `ON` in Debug, `OFF` otherwise) | enable/disable heavy assertions
 `DLAF_WITH_CUDA` | `{ON,OFF}` (default: `OFF`) | enable CUDA support
 `DLAF_BUILD_MINIAPPS` | `{ON,OFF}` (default: `ON`) | enable/disable building miniapps
-`DLAF_WITH_TEST` | `{ON,OFF}` (default: `ON`) | enable/disable building tests
+`DLAF_BUILD_TESTING` | `{ON,OFF}` (default: `ON`) | enable/disable building tests
 `DLAF_INSTALL_TESTS` | `{ON,OFF}` (default: `OFF`) | enable/disable installing tests
 `DLAF_MPI_PRESET` | `{plain-mpi, slurm, custom}` (default `plain-mpi`) | presets for MPI configuration for tests. See [CMake Doc](https://cmake.org/cmake/help/latest/module/FindMPI.html?highlight=mpiexec_executable#usage-of-mpiexec) for additional information
 `DLAF_TEST_RUNALL_WITH_MPIEXEC` | `{ON, OFF}` (default: `OFF`) | Use mpi runner also for non-MPI based tests
 `DLAF_HPXTEST_EXTRA_ARGS` | CMAKE:STRING | Additional HPX command-line options for tests
-`BUILD_DOC` | `{ON,OFF}` (default: `OFF`) | enable/disable documentation generation
+`DLAF_BUILD_DOC` | `{ON,OFF}` (default: `OFF`) | enable/disable documentation generation
 
 ### Link your program/library with DLAF
 
@@ -104,11 +104,11 @@ target_link_libraries(<your_target> PRIVATE DLAF::DLAF)
 
 ### How to generate the documentation
 
-The documentation can be built together with the project by enabling its generation with the flag `BUILD_DOC=on` and then use the `doc` target to eventually generate it.
+The documentation can be built together with the project by enabling its generation with the flag `DLAF_BUILD_DOC=on` and then use the `doc` target to eventually generate it.
 
 ```bash
 # from the build folder, if you have already configured the CMake project
-cmake -DBUILD_DOC=on .
+cmake -DDLAF_BUILD_DOC=on .
 make doc
 ```
 

@@ -1,7 +1,7 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2019, ETH Zurich
+# Copyright (c) 2018-2021, ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
@@ -17,6 +17,7 @@ project(DLAF VERSION 0.1.0)
 # ---------------------------------------------------------------------------
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
+include(CTest)
 include(DLAF)
 
 if (NOT CMAKE_BUILD_TYPE)
@@ -24,6 +25,9 @@ if (NOT CMAKE_BUILD_TYPE)
 endif()
 
 option(BUILD_SHARED_LIBS "Build shared libraries." OFF)
+option(DLAF_WITH_CUDA "Enable CUDA support" OFF)
+option(DLAF_BUILD_MINIAPPS "Build miniapps" ON)
+option(DLAF_BUILD_DOC "Build documentation" OFF)
 
 # ---------------------------------------------------------------------------
 # Languages
@@ -36,7 +40,6 @@ enable_language(CXX)
 set(CMAKE_CXX_STANDARD 14)
 
 # ---- CUDA
-set(DLAF_WITH_CUDA OFF CACHE BOOL "Enable CUDA support")
 if (DLAF_WITH_CUDA)
   #enable_language(CUDA)
   find_package(CUDALIBS REQUIRED)
@@ -80,7 +83,6 @@ add_subdirectory(src)
 # ---------------------------------------------------------------------------
 # mini Apps
 # ---------------------------------------------------------------------------
-set(DLAF_BUILD_MINIAPPS ON CACHE BOOL "Build miniapps")
 if (DLAF_BUILD_MINIAPPS)
   add_subdirectory(miniapp)
 endif()
@@ -88,18 +90,13 @@ endif()
 # ---------------------------------------------------------------------------
 # Test
 # ---------------------------------------------------------------------------
-set(DLAF_WITH_TEST ON CACHE BOOL "Enables tests")
-if (DLAF_WITH_TEST)
-  include(CTest)
-  enable_testing()
-
+if (DLAF_BUILD_TESTING)
   add_subdirectory(test)
 endif()
 
 # ---------------------------------------------------------------------------
 # Docs
 # ---------------------------------------------------------------------------
-option(BUILD_DOC "Build documentation" OFF)
-if (BUILD_DOC)
+if (DLAF_BUILD_DOC)
   add_subdirectory(doc)
 endif()

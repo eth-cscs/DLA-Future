@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -43,7 +43,7 @@ public:
             class = typename std::enable_if_t<!std::is_const<U>::value && std::is_same<T, U>::value>>
   explicit MemoryView(SizeType size)
       : memory_(std::make_shared<MemoryChunk<ElementType, device>>(size)), offset_(0), size_(size) {
-    DLAF_ASSERT(size >= 0, "");
+    DLAF_ASSERT(size >= 0, size);
   }
 
   /// Creates a MemoryView object from an existing memory allocation.
@@ -54,7 +54,7 @@ public:
   MemoryView(T* ptr, SizeType size)
       : memory_(std::make_shared<MemoryChunk<ElementType, device>>(const_cast<ElementType*>(ptr), size)),
         offset_(0), size_(size) {
-    DLAF_ASSERT(size >= 0, "");
+    DLAF_ASSERT(size >= 0, size);
   }
 
   MemoryView(const MemoryView&) = default;
@@ -87,16 +87,14 @@ public:
   MemoryView(const MemoryView& memory_view, SizeType offset, SizeType size)
       : memory_(size > 0 ? memory_view.memory_ : std::make_shared<MemoryChunk<ElementType, device>>()),
         offset_(size > 0 ? offset + memory_view.offset_ : 0), size_(size) {
-    DLAF_ASSERT(offset + size <= memory_view.size_,
-                "Sub MemoryView exceeds the limits of the base MemoryView!");
+    DLAF_ASSERT(offset + size <= memory_view.size_, offset + size, memory_view.size_);
   }
   template <class U = T,
             class = typename std::enable_if_t<std::is_const<U>::value && std::is_same<T, U>::value>>
   MemoryView(const MemoryView<ElementType, device>& memory_view, SizeType offset, SizeType size)
       : memory_(size > 0 ? memory_view.memory_ : std::make_shared<MemoryChunk<ElementType, device>>()),
         offset_(size > 0 ? offset + memory_view.offset_ : 0), size_(size) {
-    DLAF_ASSERT(offset + size <= memory_view.size_,
-                "Sub MemoryView exceeds the limits of the base MemoryView!");
+    DLAF_ASSERT(offset + size <= memory_view.size_, offset + size, memory_view.size_);
   }
 
   MemoryView& operator=(const MemoryView&) = default;
@@ -140,7 +138,7 @@ public:
   /// @param index index of the position,
   /// @pre @p index < @p size.
   T* operator()(SizeType index) const {
-    DLAF_ASSERT_HEAVY(index < size_, "", index, size_);
+    DLAF_ASSERT_HEAVY(index < size_, index, size_);
     return memory_->operator()(offset_ + index);
   }
 

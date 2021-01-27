@@ -28,12 +28,12 @@ RUN mkdir ${BUILD} && cd ${BUILD} && \
     CC=/usr/local/mpich/bin/mpicc CXX=/usr/local/mpich/bin/mpicxx cmake ${SOURCE} \
       -DMKL_ROOT=/opt/intel/compilers_and_libraries/linux/mkl \
       -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-      -DCMAKE_CXX_FLAGS="-Werror" \
+      -DCMAKE_CXX_FLAGS="-Werror -DHPX_HAVE_DEPRECATION_WARNINGS_V1_6=0" \
       -DDLAF_WITH_CUDA=${DLAF_WITH_CUDA} \
       -DCMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES=/usr/local/cuda/targets/x86_64-linux/include \
       -DCMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES="/usr/local/cuda/targets/x86_64-linux/lib/stubs;/usr/local/cuda/targets/x86_64-linux/lib;/usr/lib/gcc/x86_64-linux-gnu/7;/usr/lib/x86_64-linux-gnu;/usr/lib;/lib/x86_64-linux-gnu;/lib;/usr/local/cuda/lib64/stubs" \
       -DDLAF_WITH_MKL=ON \
-      -DDLAF_WITH_TEST=ON \
+      -DDLAF_BUILD_TESTING=ON \
       -DDLAF_BUILD_MINIAPPS=ON \
       -DMPIEXEC_EXECUTABLE=srun \
       -DDLAF_CI_RUNNER_USES_MPIRUN=1 && \

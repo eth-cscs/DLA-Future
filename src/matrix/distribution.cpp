@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -19,8 +19,8 @@ Distribution::Distribution() noexcept
 Distribution::Distribution(const LocalElementSize& size, const TileElementSize& block_size)
     : size_(0, 0), local_size_(size), global_nr_tiles_(0, 0), local_nr_tiles_(0, 0),
       block_size_(block_size), rank_index_(0, 0), grid_size_(1, 1), source_rank_index_(0, 0) {
-  DLAF_ASSERT(local_size_.isValid(), "Invalid Matrix size!");
-  DLAF_ASSERT(!block_size_.isEmpty(), "Invalid Block size!");
+  DLAF_ASSERT(local_size_.isValid(), local_size_);
+  DLAF_ASSERT(!block_size_.isEmpty(), block_size_);
 
   computeLocalNrTiles(local_size_, block_size_);
   computeGlobalSizeForNonDistr(local_size_);
@@ -33,11 +33,11 @@ Distribution::Distribution(const GlobalElementSize& size, const TileElementSize&
     : size_(size), local_size_(0, 0), global_nr_tiles_(0, 0), local_nr_tiles_(0, 0),
       block_size_(block_size), rank_index_(rank_index), grid_size_(grid_size),
       source_rank_index_(source_rank_index) {
-  DLAF_ASSERT(size_.isValid(), "Invalid Matrix size!");
-  DLAF_ASSERT(!block_size_.isEmpty(), "Invalid Block size!");
-  DLAF_ASSERT(!grid_size_.isEmpty(), "Invalid Communicator size!");
-  DLAF_ASSERT(rank_index.isIn(grid_size_), "Invalid Rank Index!");
-  DLAF_ASSERT(source_rank_index.isIn(grid_size_), "Invalid Matrix Source Rank Index!");
+  DLAF_ASSERT(size_.isValid(), size_);
+  DLAF_ASSERT(!block_size_.isEmpty(), block_size_);
+  DLAF_ASSERT(!grid_size_.isEmpty(), grid_size_);
+  DLAF_ASSERT(rank_index.isIn(grid_size_), rank_index, grid_size_);
+  DLAF_ASSERT(source_rank_index.isIn(grid_size_), source_rank_index, grid_size_);
 
   computeGlobalAndLocalNrTilesAndLocalSize(size_, block_size_, grid_size_, rank_index_,
                                            source_rank_index_);

@@ -22,11 +22,12 @@ class DlaFuture(CMakePackage, CudaPackage):
 
     depends_on("cmake@3.14:", type="build")
     depends_on("doxygen", type="build", when="+doc")
-
     depends_on("mpi")
     depends_on("blaspp")
     depends_on("lapackpp")
-    depends_on("hpx@1.5.0 cxxstd=14 networking=none")
+    depends_on("hpx cxxstd=14 networking=none")
+    depends_on("hpx@1.5.0", when="~cuda")
+    depends_on("hpx@master +cuda", when="+cuda")
 
     depends_on("hpx build_type=Debug", when="build_type=Debug")
     depends_on("hpx build_type=Release", when="build_type=Release")
@@ -52,10 +53,10 @@ class DlaFuture(CMakePackage, CudaPackage):
         args.append(self.define_from_variant("DLAF_WITH_CUDA", "cuda"))
 
         # DOC
-        args.append(self.define_from_variant("BUILD_DOC", "doc"))
+        args.append(self.define_from_variant("DLAF_BUILD_DOC", "doc"))
 
         # TESTs
-        args.append(self.define("DLAF_WITH_TEST", self.run_tests))
+        args.append(self.define("DLAF_BUILD_TESTING", self.run_tests))
 
         # MINIAPPS
         args.append(self.define_from_variant("DLAF_BUILD_MINIAPPS", "miniapps"))

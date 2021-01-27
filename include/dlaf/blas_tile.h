@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -15,6 +15,7 @@
 #include "blas.hh"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/types.h"
+#include "dlaf/util_blas.h"
 
 namespace dlaf {
 namespace tile {

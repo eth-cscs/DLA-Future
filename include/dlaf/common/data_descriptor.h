@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -63,9 +63,9 @@ struct DataDescriptor {
   /// @pre stride >= blocksize if num_blocks > 1.
   DataDescriptor(T* ptr, SizeType num_blocks, SizeType blocksize, SizeType stride) noexcept
       : data_(ptr), nblocks_(num_blocks), blocksize_(blocksize), stride_(num_blocks == 1 ? 0 : stride) {
-    DLAF_ASSERT(num_blocks >= 0, "");
-    DLAF_ASSERT(blocksize >= 0, "");
-    DLAF_ASSERT(stride >= 0, "");
+    DLAF_ASSERT(num_blocks >= 0, num_blocks);
+    DLAF_ASSERT(blocksize >= 0, blocksize);
+    DLAF_ASSERT(stride >= 0, stride);
 
     if (blocksize_ == stride_) {
       blocksize_ = num_blocks * blocksize_;

@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -71,7 +71,7 @@ public:
   ///
   /// @pre index.isIn(nr_tiles_).
   TileElementSize tileSize(const LocalTileIndex& index) const noexcept {
-    DLAF_ASSERT_HEAVY(index.isIn(nr_tiles_), "");
+    DLAF_ASSERT_HEAVY(index.isIn(nr_tiles_), index, nr_tiles_);
     SizeType m = std::min(block_size_.rows(), size_.rows() - index.row() * block_size_.rows());
     SizeType n = std::min(block_size_.cols(), size_.cols() - index.col() * block_size_.cols());
     return {m, n};
@@ -83,7 +83,7 @@ public:
   /// @pre 0 < @p index.col() < nrTiles().cols(),
   /// @pre index.isIn(nr_tiles_).
   SizeType minTileMemSize(const LocalTileIndex& index) const noexcept {
-    DLAF_ASSERT_HEAVY(index.isIn(nr_tiles_), "");
+    DLAF_ASSERT_HEAVY(index.isIn(nr_tiles_), index, nr_tiles_);
     return minTileMemSize(tileSize(index));
   }
 

@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -41,8 +41,7 @@ Matrix<T, device>::Matrix(Distribution distribution, const LayoutInfo& layout) n
   DLAF_ASSERT(this->distribution().localSize() == layout.size(),
               "Size of distribution does not match layout size!", distribution.localSize(),
               layout.size());
-  DLAF_ASSERT(this->distribution().blockSize() == layout.blockSize(),
-              "Block size of distribution does not match layout block size!", distribution.blockSize(),
+  DLAF_ASSERT(this->distribution().blockSize() == layout.blockSize(), distribution.blockSize(),
               layout.blockSize());
 
   memory::MemoryView<ElementType, device> mem(layout.minMemSize());

@@ -153,7 +153,7 @@ public:
 /// ---- ETI
 
 #define DLAF_MATRIX_MIRROR_ETI(KWORD, DATATYPE, TARGETDEVICE, SOURCEDEVICE) \
-  KWORD template class MatrixMirror<DATATYPE, TARGETDEVICE, SOURCEDEVICE>; \
+  KWORD template class MatrixMirror<DATATYPE, TARGETDEVICE, SOURCEDEVICE>;  \
   KWORD template class MatrixMirror<const DATATYPE, TARGETDEVICE, SOURCEDEVICE>;
 
 DLAF_MATRIX_MIRROR_ETI(extern, float, Device::CPU, Device::CPU)

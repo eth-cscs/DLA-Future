@@ -53,35 +53,66 @@ struct Cholesky<Backend::MC, Device::CPU, T, MPIExecutor> {
 template <class T>
 void potrf_diag_tile(hpx::threads::executors::pool_executor executor_hp,
                      hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
-  hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::potrf<T, Device::CPU>), blas::Uplo::Lower,
-                std::move(matrix_tile));
+  auto kern_f = hpx::util::
+      annotated_function([](hpx::future<matrix::Tile<T, Device::CPU>>
+                                mtile) { tile::potrf<T, Device::CPU>(blas::Uplo::Lower, mtile.get()); },
+                         "potrf");
+  hpx::dataflow(executor_hp, std::move(kern_f), std::move(matrix_tile));
+  // hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::potrf<T, Device::CPU>), blas::Uplo::Lower,
+  //                    std::move(matrix_tile));
 }
 
 template <class T>
 void trsm_panel_tile(hpx::threads::executors::pool_executor executor_hp,
                      hpx::shared_future<matrix::Tile<const T, Device::CPU>> kk_tile,
                      hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
-  hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), blas::Side::Right,
-                blas::Uplo::Lower, blas::Op::ConjTrans, blas::Diag::NonUnit, 1.0, std::move(kk_tile),
-                std::move(matrix_tile));
+  auto kern_f = hpx::util::annotated_function(
+      [](hpx::shared_future<matrix::Tile<const T, Device::CPU>> kk_tile,
+         hpx::future<matrix::Tile<T, Device::CPU>> mtile) {
+        tile::trsm<T, Device::CPU>(blas::Side::Right, blas::Uplo::Lower, blas::Op::ConjTrans,
+                                   blas::Diag::NonUnit, 1.0, kk_tile.get(), mtile.get());
+      },
+      "trsm");
+  hpx::dataflow(executor_hp, std::move(kern_f), std::move(kk_tile), std::move(matrix_tile));
+  // hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trsm<T, Device::CPU>), blas::Side::Right,
+  //              blas::Uplo::Lower, blas::Op::ConjTrans, blas::Diag::NonUnit, 1.0, std::move(kk_tile),
+  //              std::move(matrix_tile));
 }
 
 template <class T>
-void herk_trailing_diag_tile(hpx::threads::executors::pool_executor trailing_matrix_executor,
+void herk_trailing_diag_tile(hpx::threads::executors::pool_executor ex,
                              hpx::shared_future<matrix::Tile<const T, Device::CPU>> panel_tile,
                              hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
-  hpx::dataflow(trailing_matrix_executor, hpx::util::unwrapping(tile::herk<T, Device::CPU>),
-                blas::Uplo::Lower, blas::Op::NoTrans, -1.0, panel_tile, 1.0, std::move(matrix_tile));
+  auto kern_f = hpx::util::annotated_function(
+      [](hpx::shared_future<matrix::Tile<const T, Device::CPU>> panel_tile,
+         hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
+        tile::herk<T, Device::CPU>(blas::Uplo::Lower, blas::Op::NoTrans, -1.0, panel_tile.get(), 1.0,
+                                   matrix_tile.get());
+      },
+      "herk");
+  hpx::dataflow(ex, std::move(kern_f), std::move(panel_tile), std::move(matrix_tile));
+  // hpx::dataflow(ex, hpx::util::unwrapping(tile::herk<T, Device::CPU>),
+  //              blas::Uplo::Lower, blas::Op::NoTrans, -1.0, panel_tile, 1.0, std::move(matrix_tile));
 }
 
 template <class T>
-void gemm_trailing_matrix_tile(hpx::threads::executors::pool_executor trailing_matrix_executor,
+void gemm_trailing_matrix_tile(hpx::threads::executors::pool_executor ex,
                                hpx::shared_future<matrix::Tile<const T, Device::CPU>> panel_tile,
                                hpx::shared_future<matrix::Tile<const T, Device::CPU>> col_panel,
                                hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
-  hpx::dataflow(trailing_matrix_executor, hpx::util::unwrapping(tile::gemm<T, Device::CPU>),
-                blas::Op::NoTrans, blas::Op::ConjTrans, -1.0, std::move(panel_tile),
-                std::move(col_panel), 1.0, std::move(matrix_tile));
+  auto kern_f = hpx::util::annotated_function(
+      [](hpx::shared_future<matrix::Tile<const T, Device::CPU>> panel_tile,
+         hpx::shared_future<matrix::Tile<const T, Device::CPU>> col_panel,
+         hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
+        tile::gemm<T, Device::CPU>(blas::Op::NoTrans, blas::Op::ConjTrans, -1.0, panel_tile.get(),
+                                   col_panel.get(), 1.0, matrix_tile.get());
+      },
+      "gemm");
+  hpx::dataflow(ex, std::move(kern_f), std::move(panel_tile), std::move(col_panel),
+                std::move(matrix_tile));
+  // hpx::dataflow(ex, hpx::util::unwrapping(tile::gemm<T, Device::CPU>),
+  //              blas::Op::NoTrans, blas::Op::ConjTrans, -1.0, std::move(panel_tile),
+  //              std::move(col_panel), 1.0, std::move(matrix_tile));
 }
 
 // Local implementation of Lower Cholesky factorization.

@@ -102,11 +102,20 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
      Matrix<T, Device::CPU> mat_w({mat_v.size().rows(), nb}, mat_v.blockSize());
      Matrix<T, Device::CPU> mat_w2({mb, mat_v.size().cols()}, mat_v.blockSize());
 
-     const SizeType last_nb = (mat_v.blockSize().cols() == 1) ? 1 : mat_v.size().cols()%mat_v.blockSize().cols();
+     SizeType last_nb;
+     if (mat_v.blockSize().cols() == 1) {
+       last_nb = 1;
+     }
+     else {
+       if (mat_v.size().cols()%mat_v.blockSize().cols() == 0) 
+	 last_nb = mat_v.blockSize().cols();
+       else 
+	 last_nb =mat_v.size().cols()%mat_v.blockSize().cols();
+     }
      Matrix<T, Device::CPU> mat_w_last({mat_v.size().rows(), last_nb}, {mat_v.blockSize().rows(), last_nb});
      Matrix<T, Device::CPU> mat_w2_last({last_nb, mat_v.size().cols()}, {last_nb, mat_v.blockSize().cols()});
 
-     SizeType reflectors = (last_nb == 1) ? n-1 : n;
+     const SizeType reflectors = (last_nb == 1) ? n-1 : n;
      
      for (SizeType k = 0; k < reflectors; ++k) {
        bool is_last = (k == n-1) ? true : false;

@@ -12,16 +12,7 @@ HPX_DIR=<FIXME: path to the root installation directory of HPX>
 blaspp_DIR=<FIXME: path to the root installation directory of BLASPP>
 lapackpp_DIR=<FIXME: path to the root installation directory of LAPACKPP>
 
-# CMAKE_BUILD_TYPE := Release | RelWithDebugInfo | Debug
-#
-# DLAF_WITH_CUDA   := ON | OFF (default)
-#
-# DLAF_WITH_MKL    := ON | OFF (default)
-#
-# BUILD_DOC        := ON | OFF (default)
-#
-# DLAF_WITH_TEST   := ON (default) | OFF
-#
+# See README.md for all available options
 cmake <FIXME: path to DLA-Future src directory> \
   -D DLAF_WITH_MKL=ON \
   -D CMAKE_BUILD_TYPE=RelWithDebugInfo \

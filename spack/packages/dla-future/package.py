@@ -57,10 +57,10 @@ class DlaFuture(CMakePackage, CudaPackage):
         args.append(self.define_from_variant("DLAF_WITH_CUDA", "cuda"))
 
         # DOC
-        args.append(self.define_from_variant("BUILD_DOC", "doc"))
+        args.append(self.define_from_variant("DLAF_BUILD_DOC", "doc"))
 
         # TESTs
-        args.append(self.define("DLAF_WITH_TEST", self.run_tests))
+        args.append(self.define("DLAF_BUILD_TESTING", self.run_tests))
 
         # MINIAPPS
         args.append(self.define_from_variant("DLAF_BUILD_MINIAPPS", "miniapps"))

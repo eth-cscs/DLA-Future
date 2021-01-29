@@ -43,7 +43,7 @@ namespace internal {
   using namespace dlaf::matrix;
   //  using namespace dlaf::tile;
 
- template <class T>
+  template <class T>
   void print_mat(dlaf::Matrix<T, dlaf::Device::CPU>& matrix) {
     using dlaf::common::iterate_range2d;
 
@@ -102,24 +102,14 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
      Matrix<T, Device::CPU> mat_w({mat_v.size().rows(), nb}, mat_v.blockSize());
      Matrix<T, Device::CPU> mat_w2({mb, mat_v.size().cols()}, mat_v.blockSize());
 
-     
-     SizeType last_nb;
-     if (mat_v.blockSize().cols() == 1) {
-       last_nb = 1;
-     }
-     else {
-       if (mat_v.size().cols()%mat_v.blockSize().cols() == 0) 
-	 last_nb = mat_v.blockSize().cols();
-       else 
-	 last_nb =mat_v.size().cols()%mat_v.blockSize().cols();
-     }
+     const SizeType last_nb = (mat_v.blockSize().cols() == 1) ? 1 : mat_v.size().cols()%mat_v.blockSize().cols();
      Matrix<T, Device::CPU> mat_w_last({mat_v.size().rows(), last_nb}, {mat_v.blockSize().rows(), last_nb});
      Matrix<T, Device::CPU> mat_w2_last({last_nb, mat_v.size().cols()}, {last_nb, mat_v.blockSize().cols()});
 
-     const SizeType reflectors = (last_nb == 1) ? n-1 : n;
+     SizeType reflectors = (last_nb == 1) ? n-1 : n;
      
      for (SizeType k = 0; k < reflectors; ++k) {
-       const bool is_last = (k == n-1) ? true : false;
+       bool is_last = (k == n-1) ? true : false;
        
        void (&cpy)(const matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T, Device::CPU>&) = copy<T>;
        // Copy V panel into WH
@@ -154,7 +144,7 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 
        for (SizeType j = k; j < n; ++j) {
 	 auto kj = LocalTileIndex{0, j};
-	 for (SizeType i = k; i < n; ++i) {
+	 for (SizeType i = k; i < m; ++i) {
 	   auto ik = LocalTileIndex{i, 0};
 	   auto ij = LocalTileIndex{i, j};
 	   // W2 = W C
@@ -167,7 +157,7 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 	 }	 
        }
        
-       for (SizeType i = k; i < n; ++i) {
+       for (SizeType i = k; i < m; ++i) {
 	 auto ik = LocalTileIndex{i, k};
 	 for (SizeType j = k; j < n; ++j) {
 	   auto kj = LocalTileIndex{0, j};
@@ -227,29 +217,11 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
      auto local_rows = distrib.localNrTiles().rows();
      auto local_cols = distrib.localNrTiles().cols();     
 
-     //     LocalElementSize size_matW(mat_c.size().rows(), nb);
-//     TileElementSize blockSize_matW = mat_v.blockSize();
-//     GlobalElementSize sz_matW(size_matW.rows(), size_matW.cols());
-//     Distribution distrib_matW(sz_matW, blockSize_matW, grid.size(), grid.rank(), src_rank_index);
-//    Matrix<double, Device::CPU> mat_c(std::move(distributionC));
-    
-     Matrix<T, Device::CPU> mat_w({mat_v.size().rows(), nb}, mat_v.blockSize());
-     Matrix<T, Device::CPU> mat_w2({mb, mat_v.size().cols()}, mat_v.blockSize());
-
-     const SizeType last_nb = (mat_v.blockSize().cols() == 1) ? 1 : mat_v.size().cols()%mat_v.blockSize().cols();
-     Matrix<T, Device::CPU> mat_w_last({mat_v.size().rows(), last_nb}, {mat_v.blockSize().rows(), last_nb});
-     Matrix<T, Device::CPU> mat_w2_last({last_nb, mat_v.size().cols()}, {last_nb, mat_v.blockSize().cols()});
-     std::cout << "mat_v "  << mat_v << std::endl;
-     std::cout << "mat_w "  << mat_w << std::endl;
-     std::cout << "mat_w2 " << mat_w2 << std::endl;
-     std::cout << "mat_w "  << mat_w_last << std::endl;
-     std::cout << "mat_w2 " << mat_w2_last << std::endl;
-
-     const SizeType reflectors = (last_nb == 1) ? n-1 : n;
+     Matrix<T, Device::CPU> mat_w({mat_c.size().rows(), nb}, mat_v.blockSize());
+     Matrix<T, Device::CPU> mat_w2({mb, mat_c.size().cols()}, mat_c.blockSize());
      
-     for (SizeType k = 0; k < reflectors; ++k) {
-       const bool is_last = (k == n-1) ? true : false;
-       
+     for (SizeType k = 0; k < n; ++k) {
+
        const IndexT_MPI rank_k_col = distrib.template rankGlobalTile<Coord::Col>(k); 
        const IndexT_MPI rank_k_row = distrib.template rankGlobalTile<Coord::Row>(k); 
 	 
@@ -263,25 +235,15 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 	 hpx::shared_future<ConstTileType> tmp_tile;
 	   
 	 if (mat_v.rankIndex().col() == rank_k_col) {
-	   if (is_last == true) {
-	     hpx::dataflow(executor_hp, hpx::util::unwrapping(cpy), mat_v.read(ik), mat_w_last(LocalTileIndex(i_local, 0)));
-	   }
-	   else {
-	     //std::cout << " k " << k << " i_local " << i_local << " i " << ik << " ";
-	     hpx::dataflow(executor_hp, hpx::util::unwrapping(cpy), mat_v.read(ik), mat_w(LocalTileIndex(i_local, 0)));
-	     //std::cout << "mat_w " << mat_w(LocalTileIndex(i_local, 0)).get()({0,0}) << std::endl;
-	   }
+	   //std::cout << " k " << k << " i_local " << i_local << " i " << ik << " ";
+	   hpx::dataflow(executor_hp, hpx::util::unwrapping(cpy), mat_v.read(ik), mat_w(LocalTileIndex(i_local, 0)));
+	   //std::cout << "mat_w " << mat_w(LocalTileIndex(i_local, 0)).get()({0,0}) << std::endl;
 	 }
 
        }
        
        // Reset W2 to zero
-       if (is_last == true) {
-	 matrix::util::set(mat_w2_last, [](auto&&){return 0;});
-       }
-       else {
-	 matrix::util::set(mat_w2, [](auto&&){return 0;});
-       }
+       matrix::util::set(mat_w2, [](auto&&){return 0;});
        
        hpx::shared_future<ConstTileType> matt_kk_tile; 
        auto kk = LocalTileIndex{local_k_row, local_k_col};

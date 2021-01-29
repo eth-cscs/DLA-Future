@@ -269,76 +269,47 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 	 
 	 if (mat_v.rankIndex().col() == rank_k_col) {
 	   // Compute W = V T
-	   if (is_last == true) {
-	     hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper, NoTrans, NonUnit, 1.0, matt_kk_tile, std::move(mat_w_last(ik)));
-	   }
-	   else {
-	     hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper, NoTrans, NonUnit, 1.0, matt_kk_tile, std::move(mat_w(ik)));
-	     // std::cout << " W (" << ik << ") [" << rank_i_row << ", "  << rank_k_col << "] " << " i,k " << i << " " << k << " " << mat_w(ik).get()({0,0}) << " Tkk " << matt_kk_tile.get()({0,0}) << std::endl;
-	   }
+	   hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper, NoTrans,
+			 NonUnit, 1.0, matt_kk_tile, std::move(mat_w(ik)));
+	   // std::cout << " W (" << ik << ") [" << rank_i_row << ", "  << rank_k_col << "] " << " i,k " << i << " " << k << " " << mat_w(ik).get()({0,0}) << " Tkk " << matt_kk_tile.get()({0,0}) << std::endl; 
 	 }
 
 	 // Broadcast Wik row-wise
 	 hpx::shared_future<ConstTileType> wik_tile;
 	 //	 if (mat_v.rankIndex().row() == rank_i_row) {
 	 if (mat_v.rankIndex().col() == rank_k_col) {
-	   if (is_last == true) {
-	     comm::send_tile(executor_mpi, serial_comm, Coord::Row, mat_w_last.read(ik));
-	     wik_tile = mat_w_last.read(ik);
-	   }
-	   else {
-	     comm::send_tile(executor_mpi, serial_comm, Coord::Row, mat_w.read(ik));
-	     wik_tile = mat_w.read(ik);
-	     //	       std::cout << "send " << i << " (" << k << ") rank " << mat_v.rankIndex().row() << ", " << mat_v.rankIndex().col() << " Wik " << wik_tile.get()({0,0}) <<  std::endl;
-	   }
+	   comm::send_tile(executor_mpi, serial_comm, Coord::Row, mat_w.read(ik));
+	   wik_tile = mat_w.read(ik);
+	   //	       std::cout << "send " << i << " (" << k << ") rank " << mat_v.rankIndex().row() << ", " << mat_v.rankIndex().col() << " Wik " << wik_tile.get()({0,0}) <<  std::endl;
 	 }
 	 else {
-	   if (is_last == true) {
-	     wik_tile = comm::recv_tile<T>(executor_mpi, serial_comm, Coord::Row, mat_w_last.tileSize(GlobalTileIndex(i, 0)), rank_k_col);
-	   }
-	   else {
-	     wik_tile = comm::recv_tile<T>(executor_mpi, serial_comm, Coord::Row, mat_w.tileSize(GlobalTileIndex(i, 0)), rank_k_col);		   
-	     //	       std::cout << "recv " << i  << " (" << k << ") rank " << mat_v.rankIndex().row() << ", " << mat_v.rankIndex().col() << " Wik " << wik_tile.get()({0,0})  << std::endl;
-	   }
+	   wik_tile = comm::recv_tile<T>(executor_mpi, serial_comm, Coord::Row, mat_w.tileSize(GlobalTileIndex(i, 0)), rank_k_col);		   
+	   //	       std::cout << "recv " << i  << " (" << k << ") rank " << mat_v.rankIndex().row() << ", " << mat_v.rankIndex().col() << " Wik " << wik_tile.get()({0,0})  << std::endl;
 	 }
 	 //	 }
 
 	 for (SizeType j_local = distrib.template nextLocalTileFromGlobalTile<Coord::Col>(k); j_local < local_cols; ++j_local) {
 	   auto ij = LocalTileIndex{i_local, j_local};
-
-	   hpx::future<TileType> tile_w2;
-	   if (is_last == true) {
-	     tile_w2 = mat_w2_last(LocalTileIndex{0,j_local});
-	   }
-	   else {
-	     tile_w2 = mat_w2(LocalTileIndex{0,j_local});
-	   }
-	     const T beta = (k == i) ? 0 : 1;
+	   
+	   hpx::future<TileType> tile_w2 = mat_w2(LocalTileIndex{0,j_local});
+	   const T beta = (k == i) ? 0 : 1;
 		 
 	   // Compute Wki Ckj = W2kj, local on W2ki
-	     hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), ConjTrans, NoTrans, static_cast<T>(1), wik_tile, std::move(mat_c.read(ij)), beta, std::move(tile_w2));
-	     //	       std::cout << "w2 local: " << i << " " << j << " (" << k << ") Wik " << wik_tile.get()({0,0}) << " Ckj " << mat_c.read(ij).get()({0,0}) << " W2 " << mat_w2(LocalTileIndex{0,0}).get()({0,0}) << " rank " << rank_i_row << ", " << rank_j_col << " beta " << beta << std::endl;
-	   
+	   hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), ConjTrans, NoTrans, static_cast<T>(1), wik_tile, std::move(mat_c.read(ij)), beta, std::move(tile_w2));
+	   //	       std::cout << "w2 local: " << i << " " << j << " (" << k << ") Wik " << wik_tile.get()({0,0}) << " Ckj " << mat_c.read(ij).get()({0,0}) << " W2 " << mat_w2(LocalTileIndex{0,0}).get()({0,0}) << " rank " << rank_i_row << ", " << rank_j_col << " beta " << beta << std::endl;
+	  
 	 } // end loop on j_local (cols)
 	 
        } // end loop on i_local (rows)
 
 	 
-       for (SizeType j_local = distrib.template nextLocalTileFromGlobalTile<Coord::Col>(k); j_local < local_cols; ++j_local) {	
-	 hpx::future<TileType> tile_w2;
-	 if (is_last == true) {
-	   tile_w2 = mat_w2_last(LocalTileIndex{0,j_local});
-	 }
-	 else {
-	   tile_w2 = mat_w2(LocalTileIndex{0,j_local});
-	 }
-	 
+       for (SizeType j_local = distrib.template nextLocalTileFromGlobalTile<Coord::Col>(k); j_local < local_cols; ++j_local) {
+	 hpx::future<TileType> tile_w2 = mat_w2(LocalTileIndex{0,j_local});
 	 auto all_reduce_w2_func = unwrapping([](auto&& tile_w2, auto&& comm_wrapper) {
 	     comm::sync::all_reduce(comm_wrapper.ref().colCommunicator(), MPI_SUM, make_data(tile_w2), make_data(tile_w2));
 	   });
 	   
 	 hpx::dataflow(std::move(all_reduce_w2_func), std::move(tile_w2), serial_comm());
-
        }
 
        //       for (SizeType i_local = distrib.template nextLocalTileFromGlobalTile<Coord::Row>(k); i_local < local_rows; ++i_local) {
@@ -355,41 +326,37 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
        //	 }
        //       }
 
-//       for (SizeType i_local = distrib.template nextLocalTileFromGlobalTile<Coord::Row>(k); i_local < local_rows; ++i_local) { 
-//	 auto i = distrib.template globalTileFromLocalTile<Coord::Row>(i_local);
-//	 const IndexT_MPI rank_i_row = distrib.template rankGlobalTile<Coord::Row>(i);
-//	 
-//	 hpx::shared_future<ConstTileType> vik_tile;
-//
-//	 auto ik = LocalTileIndex{i_local, local_k_col};
-//	   
-//	 // Broadcast Vki row-wise
-//	 if (mat_v.rankIndex().col() == rank_k_col) {
-//	   comm::send_tile(executor_mpi, serial_comm, Coord::Row, mat_v.read(ik));
-//	   vik_tile = mat_v.read(ik);
-//	   // std::cout << "send " << i << " " << k<< " rank " << mat_v.rankIndex().row() << " " << mat_v.rankIndex().col() << " Vik " << vik_tile.get()({0,0}) <<  std::endl;
-//	 }
-//	 else {
-//	   vik_tile = comm::recv_tile<T>(executor_mpi, serial_comm, Coord::Row, mat_v.tileSize(GlobalTileIndex(i, k)), rank_k_col);
-//	   //std::cout << "recv " << i << " " << k << " rank " << mat_v.rankIndex().row() << " " << mat_v.rankIndex().col() << " Vik " << vik_tile.get()({0,0})  << std::endl;
-//	 }
-//
-//
-//	 for (SizeType j_local = distrib.template nextLocalTileFromGlobalTile<Coord::Col>(k); j_local < local_cols; ++j_local) {
-//
-//	   auto ij = LocalTileIndex{i_local, j_local};
-//
-//	   // Compute C = C - V W2
-//	   if (is_last == true) {
-//	     hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans, NoTrans, -1.0, vik_tile, mat_w2_last(LocalTileIndex{0,j_local}), 1.0, std::move(mat_c(ij)));
-//	   //	       std::cout << " ij " << i << " " << j << " Vik " << vik_tile.get()({0,0}) << " W2 " << mat_w2(LocalTileIndex{0,j_local}).get()({0,0}) <<  " C " << mat_c.read(ij).get()({0,0}) << std::endl;
-//	   }
-//	   else {
-//	     hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans, NoTrans, -1.0, vik_tile, mat_w2(LocalTileIndex{0,j_local}), 1.0, std::move(mat_c(ij)));
-//	   }
-//	 } // end loop on j_local (cols)
-//	   
-//       } // end loop on i_local (rows)
+       for (SizeType i_local = distrib.template nextLocalTileFromGlobalTile<Coord::Row>(k); i_local < local_rows; ++i_local) { 
+	 auto i = distrib.template globalTileFromLocalTile<Coord::Row>(i_local);
+	 const IndexT_MPI rank_i_row = distrib.template rankGlobalTile<Coord::Row>(i);
+	 
+	 hpx::shared_future<ConstTileType> vik_tile;
+
+	 auto ik = LocalTileIndex{i_local, local_k_col};
+	   
+	 // Broadcast Vki row-wise
+	 if (mat_v.rankIndex().col() == rank_k_col) {
+	   comm::send_tile(executor_mpi, serial_comm, Coord::Row, mat_v.read(ik));
+	   vik_tile = mat_v.read(ik);
+	   // std::cout << "send " << i << " " << k<< " rank " << mat_v.rankIndex().row() << " " << mat_v.rankIndex().col() << " Vik " << vik_tile.get()({0,0}) <<  std::endl;
+	 }
+	 else {
+	   vik_tile = comm::recv_tile<T>(executor_mpi, serial_comm, Coord::Row, mat_v.tileSize(GlobalTileIndex(i, k)), rank_k_col);
+	   //std::cout << "recv " << i << " " << k << " rank " << mat_v.rankIndex().row() << " " << mat_v.rankIndex().col() << " Vik " << vik_tile.get()({0,0})  << std::endl;
+	 }
+
+
+	 for (SizeType j_local = distrib.template nextLocalTileFromGlobalTile<Coord::Col>(k); j_local < local_cols; ++j_local) {
+
+	   auto ij = LocalTileIndex{i_local, j_local};
+
+	   // Compute C = C - V W2
+	   hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans, NoTrans, -1.0, vik_tile, mat_w2(LocalTileIndex{0,j_local}), 1.0, std::move(mat_c(ij)));
+	   //	       std::cout << " ij " << i << " " << j << " Vik " << vik_tile.get()({0,0}) << " W2 " << mat_w2(LocalTileIndex{0,j_local}).get()({0,0}) <<  " C " << mat_c.read(ij).get()({0,0}) << std::endl;
+
+	 } // end loop on j_local (cols)
+	   
+       } // end loop on i_local (rows)
 
      } // loop on k
 

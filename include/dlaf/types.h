@@ -161,8 +161,6 @@ auto to_int(const T unsigned_value) {
   return to_signed<int>(unsigned_value);
 }
 
-// auto to_int = [](const auto unsigned_value) { return to_signed<int>(unsigned_value); };
-
 /// Helper function for casting from signed to std::size_t.
 ///
 /// Useful for interaction between std, but not only, with other interfaces that does not use usigned
@@ -171,7 +169,5 @@ template <class T>
 auto to_sizet(const T signed_value) {
   return to_unsigned<std::size_t>(signed_value);
 }
-
-// auto to_sizet = [](const auto signed_value) { return to_unsigned<std::size_t>(signed_value); };
 
 }

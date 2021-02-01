@@ -62,10 +62,11 @@ printenv > env.txt
 
 # Create the job directory tree and submit jobs.
 #
-def submit_jobs(run_dir, nodes, job_text):
+def submit_jobs(run_dir, nodes, job_text, suffix = ""):
+    job_fname = "job.sh" if suffix == "" else "job_{suffix}.sh"
     job_path = expanduser(f"{run_dir}/{nodes}")
     makedirs(job_path, exist_ok=False)
-    job_file = f"{job_path}/job.sh"
+    job_file = f"{job_path}/{job_fname}"
     with open(job_file, "w") as f:
         f.write(job_text)
 

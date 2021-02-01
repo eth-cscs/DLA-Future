@@ -63,10 +63,9 @@ printenv > env.txt
 # Create the job directory tree and submit jobs.
 #
 def submit_jobs(run_dir, nodes, job_text, suffix = ""):
-    job_fname = "job.sh" if suffix == "" else "job_{suffix}.sh"
     job_path = expanduser(f"{run_dir}/{nodes}")
     makedirs(job_path, exist_ok=False)
-    job_file = f"{job_path}/{job_fname}"
+    job_file = f"{job_path}/job{suffix}.sh"
     with open(job_file, "w") as f:
         f.write(job_text)
 
@@ -123,6 +122,8 @@ def trsm(lib, build_dir, nodes, rpn, m_sz, n_sz, mb_sz, nruns):
     elif lib == "slate":
         cmd = f"{build_dir}/test/slate_test trsm --dim {m_sz}x{n_sz}x0 --nb {mb_sz} --p {gr} --q {gc} --repeat {nruns} --alpha 2 --check n --ref n --type d >> trsm_{lib}.out"
     elif lib == "dplasma":
+        if rpn != 1:
+            ValueError("DPLASMA can only run with 1 rank per node!")
         cmd = f"{build_dir}/tests/testing_dtrsm -M {m_sz} -N {n_sz} --MB {mb_sz} --NB {mb_sz} --grid-rows {gr} --grid-cols {gc} -c 36 -v >> trsm_{lib}.out"
     else:
         raise ValueError(_err_msg(lib))

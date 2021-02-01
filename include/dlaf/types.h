@@ -152,21 +152,26 @@ To integral_cast(const From value) {
   return to_signed<To, From>(value);
 }
 
-/// Helper function for casting from unsigned to dlaf::SizeType.
-///
-/// Useful when passing parameter to the BLAS/LAPACK interface,
-/// see dlaf::to_signed.
-auto to_SizeType = [](const auto unsigned_value) { return to_signed<SizeType>(unsigned_value); };
-
 /// Helper function for casting from unsigned to int.
 ///
 /// Useful when passing parameters to the MPI interface,
 /// see dlaf::to_signed.
-auto to_int = [](const auto unsigned_value) { return to_signed<int>(unsigned_value); };
+template <class T>
+auto to_int(const T unsigned_value) {
+  return to_signed<int>(unsigned_value);
+}
+
+// auto to_int = [](const auto unsigned_value) { return to_signed<int>(unsigned_value); };
 
 /// Helper function for casting from signed to std::size_t.
 ///
 /// Useful for interaction between std, but not only, with other interfaces that does not use usigned
 /// types (e.g. MPI, BLAS, ...) see dlaf::to_unsigned.
-auto to_sizet = [](const auto signed_value) { return to_unsigned<std::size_t>(signed_value); };
+template <class T>
+auto to_sizet(const T signed_value) {
+  return to_unsigned<std::size_t>(signed_value);
+}
+
+// auto to_sizet = [](const auto signed_value) { return to_unsigned<std::size_t>(signed_value); };
+
 }

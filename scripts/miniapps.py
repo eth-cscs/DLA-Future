@@ -93,6 +93,8 @@ def chol(lib, build_dir, nodes, rpn, m_sz, mb_sz, nruns):
     elif lib == "slate":
         cmd = f"{build_dir}/test/slate_test potrf --dim {m_sz}x${m_sz}x0 --nb {mb_sz} --p {grid_rows} --q {grid_cols} --repeat {nruns} --check n --ref n --type d"
     elif lib == "dplasma":
+        if rpn != 1:
+            ValueError("DPLASMA can only run with 1 rank per node!")
         cmd = f"{build_dir}/tests/testing_dpotrf -N ${m_sz} --MB ${mb_sz} --NB ${mb_sz} --grid-rows ${grid_rows} --grid-cols ${grid_cols} -c 36 -v"
     else:
         raise ValueError(_err_msg(lib))

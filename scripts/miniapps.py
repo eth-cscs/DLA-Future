@@ -51,7 +51,6 @@ def init_job_text(run_name, nodes, time_min):
 #SBATCH --error=error.txt
 
 # Env
-export CRAYPE_LINK_TYPE=dynamic
 export MPICH_MAX_THREAD_SAFETY=multiple
 
 # Debug

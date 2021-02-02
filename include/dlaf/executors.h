@@ -23,6 +23,7 @@
 
 #ifdef DLAF_WITH_CUDA
 #include <dlaf/cublas/executor.h>
+#include <dlaf/cusolver/executor.h>
 #endif
 
 namespace dlaf {
@@ -92,6 +93,11 @@ template <Backend B>
 auto getHpExecutor() {
   return hpx::execution::parallel_executor{&hpx::resource::get_thread_pool("default"),
                                            hpx::threads::thread_priority::high};
+}
+
+// TODO
+inline auto getLapackExecutor() {
+  return dlaf::cusolver::Executor{internal::getNpCudaStreamPool(), internal::getCusolverHandlePool()};
 }
 
 #ifdef DLAF_WITH_CUDA

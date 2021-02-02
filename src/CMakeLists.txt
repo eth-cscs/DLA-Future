@@ -71,6 +71,7 @@ target_link_libraries(dlaf.prop
     umpire
     $<TARGET_NAME_IF_EXISTS:dlaf::cublas>
     $<TARGET_NAME_IF_EXISTS:dlaf::cudart>
+    $<TARGET_NAME_IF_EXISTS:dlaf::cusolver>
 )
 target_compile_features(dlaf.prop
   INTERFACE

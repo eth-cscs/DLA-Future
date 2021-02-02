@@ -27,6 +27,7 @@
 #include "dlaf/init.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
@@ -49,11 +50,19 @@ using dlaf::common::Ordering;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
 
-using T = double;
+using T = std::complex<double>;
 using MatrixType = dlaf::Matrix<T, Device::CPU>;
 using ConstMatrixType = dlaf::Matrix<const T, Device::CPU>;
 using TileType = MatrixType::TileType;
 using ConstTileType = MatrixType::ConstTileType;
+// TODO: Some generic typedefs would probably be good to have in a common location.
+#if DLAF_WITH_CUDA
+constexpr Backend B = Backend::GPU;
+constexpr Device D = Device::GPU;
+#else
+constexpr Backend B = Backend::MC;
+constexpr Device D = Device::CPU;
+#endif
 
 /// Check Cholesky Factorization results
 ///
@@ -106,29 +115,34 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     if (0 == world.rank() && run_index >= 0)
       std::cout << "[" << run_index << "]" << std::endl;
 
-    MatrixType matrix(matrix_size, block_size, comm_grid);
-    copy(matrix_ref, matrix);
+    MatrixType matrix_host(matrix_size, block_size, comm_grid);
+    copy(matrix_ref, matrix_host);
 
     // wait all setup tasks before starting benchmark
     matrix.waitLocalTiles();
     DLAF_MPI_CALL(MPI_Barrier(world));
 
-    dlaf::common::Timer<> timeit;
-    dlaf::factorization::cholesky<Backend::MC, Device::CPU, T>(comm_grid, blas::Uplo::Lower, matrix);
-
-    // wait for last task and barrier for all ranks
+    double elapsed_time;
     {
-      GlobalTileIndex last_tile(matrix.nrTiles().rows() - 1, matrix.nrTiles().cols() - 1);
-      if (matrix.rankIndex() == distribution.rankGlobalTile(last_tile))
-        matrix(last_tile).get();
+      dlaf::matrix::MatrixMirror<T, D, Device::CPU> matrix(matrix_host);
 
-      DLAF_MPI_CALL(MPI_Barrier(world));
+      dlaf::common::Timer<> timeit;
+      dlaf::factorization::cholesky<B, D, T>(comm_grid, blas::Uplo::Lower, matrix.get());
+
+      // wait for last task and barrier for all ranks
+      {
+        GlobalTileIndex last_tile(matrix.get().nrTiles().rows() - 1, matrix.get().nrTiles().cols() - 1);
+        if (matrix.get().rankIndex() == distribution.rankGlobalTile(last_tile))
+          matrix.get()(last_tile).get();
+
+        DLAF_MPI_CALL(MPI_Barrier(world));
+      }
+      elapsed_time = timeit.elapsed();
     }
-    auto elapsed_time = timeit.elapsed();
 
     double gigaflops;
     {
-      double n = matrix.size().rows();
+      double n = matrix_host.size().rows();
       auto add_mul = n * n * n / 6;
       gigaflops = dlaf::total_ops<T>(add_mul, add_mul) / elapsed_time / 1e9;
     }
@@ -138,7 +152,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       std::cout << "[" << run_index << "]"
                 << " " << elapsed_time << "s"
                 << " " << gigaflops << "GFlop/s"
-                << " " << matrix.size() << " " << matrix.blockSize() << " " << comm_grid.size() << " "
+                << " " << matrix_host.size() << " " << matrix_host.blockSize() << " " << comm_grid.size() << " "
                 << hpx::get_os_thread_count() << std::endl;
 
     // (optional) run test
@@ -146,7 +160,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
         opts.do_check == CholCheckIterFreq::All) {
       MatrixType original(matrix_size, block_size, comm_grid);
       copy(matrix_ref, original);
-      check_cholesky(original, matrix, comm_grid);
+      check_cholesky(original, matrix_host, comm_grid);
     }
   }
 
@@ -370,7 +384,8 @@ void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
   if (comm_grid.rank() != rank_result)
     return;
 
-  constexpr auto eps = std::numeric_limits<T>::epsilon();
+  // TODO: Using BaseType<T> here is OK?
+  constexpr auto eps = std::numeric_limits<dlaf::BaseType<T>>::epsilon();
   const auto n = A.size().rows();
 
   const auto diff_ratio = norm_diff / norm_A;

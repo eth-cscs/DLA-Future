@@ -12,28 +12,15 @@ def _sq_factor(n):
     return f
 
 
-def _check_ranks_per_node(rpn):
+def _check_ranks_per_node(lib, rpn):
     if not (rpn == 1 or rpn == 2):
         raise ValueError(f"Wrong value rpn = {rpn}!")
-
-
-# parse dlaf_nb_[1|0][1|0][1|0]
-#       dlaf_nb_<hpx queue><non-blocking mechanism><mpi pool>
-#       dlaf
-def _dlaf_flags(lib):
-    if lib == "dlaf":
-        return ""
-
-    q, p, m = tuple(lib[8:])
-    return "{} {} {}".format(
-        "--hpx:queuing=shared-priority" if q == "1" else "",
-        "--polling" if p == "1" else "",
-        "--mpipool --hpx:ini=hpx.max_idle_backoff_time=0" if m == "1" else "",
-    )
+    if rpn != 1 and lib == "dplasma":
+        raise ValueError("DPLASMA can only run with 1 rank per node!")
 
 
 def _err_msg(lib):
-    return f"No such `lib`: {lib}! Allowed values are : `dlaf|dlaf_nb_[0|1][0|1][0|1]`, `slate` and `dplasma`."
+    return f"No such `lib`: {lib}! Allowed values are : `dlaf`, `slate` and `dplasma`."
 
 
 # Job preamble
@@ -56,16 +43,18 @@ export MPICH_MAX_THREAD_SAFETY=multiple
 # Debug
 module list &> modules.txt
 printenv > env.txt
+
+# Commands
 """
     return job_text[1:-1]
 
 
 # Create the job directory tree and submit jobs.
 #
-def submit_jobs(run_dir, nodes, job_text, suffix = ""):
+def submit_jobs(run_dir, nodes, job_text, suffix="na"):
     job_path = expanduser(f"{run_dir}/{nodes}")
     makedirs(job_path, exist_ok=False)
-    job_file = f"{job_path}/job{suffix}.sh"
+    job_file = f"{job_path}/job_{suffix}.sh"
     with open(job_file, "w") as f:
         f.write(job_text)
 
@@ -80,26 +69,25 @@ def submit_jobs(run_dir, nodes, job_text, suffix = ""):
 #
 # rpn: ranks per node
 #
-def chol(lib, build_dir, nodes, rpn, m_sz, mb_sz, nruns):
-    _check_ranks_per_node(rpn)
+def chol(lib, build_dir, nodes, rpn, m_sz, mb_sz, nruns, suffix="na", extra_flags=""):
+    _check_ranks_per_node(lib, rpn)
 
     total_ranks = nodes * rpn
     cpus_per_rank = 72 // rpn
     grid_cols, grid_rows = _sq_factor(total_ranks)
 
     if lib.startswith("dlaf"):
-        extra_flags = _dlaf_flags(lib)
         cmd = f"{build_dir}/miniapp/miniapp_cholesky --matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} --hpx:use-process-mask {extra_flags}"
     elif lib == "slate":
-        cmd = f"{build_dir}/test/slate_test potrf --dim {m_sz}x${m_sz}x0 --nb {mb_sz} --p {grid_rows} --q {grid_cols} --repeat {nruns} --check n --ref n --type d"
+        cmd = f"{build_dir}/test/slate_test potrf --dim {m_sz}x${m_sz}x0 --nb {mb_sz} --p {grid_rows} --q {grid_cols} --repeat {nruns} --check n --ref n --type d {extra_flags}"
     elif lib == "dplasma":
-        if rpn != 1:
-            ValueError("DPLASMA can only run with 1 rank per node!")
-        cmd = f"{build_dir}/tests/testing_dpotrf -N ${m_sz} --MB ${mb_sz} --NB ${mb_sz} --grid-rows ${grid_rows} --grid-cols ${grid_cols} -c 36 -v"
+        cmd = f"{build_dir}/tests/testing_dpotrf -N ${m_sz} --MB ${mb_sz} --NB ${mb_sz} --grid-rows ${grid_rows} --grid-cols ${grid_cols} -c 36 -v {extra_flags}"
     else:
         raise ValueError(_err_msg(lib))
 
-    return f"\nsrun -n {total_ranks} -c {cpus_per_rank} {cmd} >> chol_{lib}.out"
+    return (
+        f"\nsrun -n {total_ranks} -c {cpus_per_rank} {cmd} >> chol_{lib}_{suffix}.out"
+    )
 
 
 # lib: allowed libraries are dlaf|dlaf_nb_[0|1][0|1][0|1]|slate|dplasma
@@ -109,23 +97,24 @@ def chol(lib, build_dir, nodes, rpn, m_sz, mb_sz, nruns):
 #
 # rpn: ranks per node
 #
-def trsm(lib, build_dir, nodes, rpn, m_sz, n_sz, mb_sz, nruns):
-    _check_ranks_per_node(rpn)
+def trsm(
+    lib, build_dir, nodes, rpn, m_sz, n_sz, mb_sz, nruns, suffix="na", extra_flags=""
+):
+    _check_ranks_per_node(lib, rpn)
 
     total_ranks = nodes * rpn
     cpus_per_rank = 72 // rpn
     gr, gc = _sq_factor(total_ranks)
 
     if lib.startswith("dlaf"):
-        extra_flags = _dlaf_flags(lib)
         cmd = f"{build_dir}/miniapp/miniapp_triangular_solver --m {m_sz} --n {n_sz} --mb {mb_sz} --nb {mb_sz} --grid-rows {gr} --grid-cols {gc} --nruns {nruns} --hpx:use-process-mask {extra_flags}"
     elif lib == "slate":
-        cmd = f"{build_dir}/test/slate_test trsm --dim {m_sz}x{n_sz}x0 --nb {mb_sz} --p {gr} --q {gc} --repeat {nruns} --alpha 2 --check n --ref n --type d >> trsm_{lib}.out"
+        cmd = f"{build_dir}/test/slate_test trsm --dim {m_sz}x{n_sz}x0 --nb {mb_sz} --p {gr} --q {gc} --repeat {nruns} --alpha 2 --check n --ref n --type d {extra_flags}"
     elif lib == "dplasma":
-        if rpn != 1:
-            ValueError("DPLASMA can only run with 1 rank per node!")
-        cmd = f"{build_dir}/tests/testing_dtrsm -M {m_sz} -N {n_sz} --MB {mb_sz} --NB {mb_sz} --grid-rows {gr} --grid-cols {gc} -c 36 -v >> trsm_{lib}.out"
+        cmd = f"{build_dir}/tests/testing_dtrsm -M {m_sz} -N {n_sz} --MB {mb_sz} --NB {mb_sz} --grid-rows {gr} --grid-cols {gc} -c 36 -v {extra_flags}"
     else:
         raise ValueError(_err_msg(lib))
 
-    return f"\nsrun -n {total_ranks} -c {cpus_per_rank} {cmd} >> trsm_{lib}.out"
+    return (
+        f"\nsrun -n {total_ranks} -c {cpus_per_rank} {cmd} >> trsm_{lib}_{suffix}.out"
+    )

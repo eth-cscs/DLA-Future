@@ -20,14 +20,22 @@ for nodes in nodes_arr:
     for m_sz, mb_sz, queue, mech, pool in product(
         m_sz_arr, mb_sz_arr, ["0", "1"], ["0", "1"], ["0", "1"]
     ):
+        extra_flags = "{} {} {}".format(
+            "--hpx:queuing=shared-priority" if queue == "1" else "",
+            "--polling" if mech == "1" else "",
+            "--mpipool --hpx:ini=hpx.max_idle_backoff_time=0" if pool == "1" else "",
+        )
+        suffix = f"nb_{queue}{mech}{pool}"
         job_text += mp.chol(
-            f"dlaf_nb_{queue}{mech}{pool}",
+            "dlaf",
             build_dir,
             nodes,
             ranks_per_node,
             m_sz,
             mb_sz,
             nruns,
+            suffix,
+            extra_flags,
         )
 
     for m_sz, n_sz, mb_sz in product(m_sz_arr, n_sz_arr, mb_sz_arr):
@@ -46,4 +54,4 @@ for nodes in nodes_arr:
     print(job_text)
     break
 
-    #mp.submit_jobs(run_dir, nodes, job_text)
+    # mp.submit_jobs(run_dir, nodes, job_text)

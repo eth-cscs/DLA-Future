@@ -62,11 +62,7 @@ def submit_jobs(run_dir, nodes, job_text, suffix="na"):
     system(f"sbatch --chdir={job_path} {job_file}")
 
 
-# lib: allowed libraries are dlaf|dlaf_nb_[0|1][0|1][0|1]|slate|dplasma
-#
-# where `dlaf_nb_[0|1][0|1][0|1]` is `dlaf_nb_<hpx queue><non-blocking mechanism><mpi pool>`, for example
-#       `dlaf_nb_111` : dlaf with non-blocking MPI(nb), shared priority queue(1), polling (1) and a dedicated core for an MPI pool (1).
-#
+# lib: allowed libraries are dlaf|slate|dplasma
 # rpn: ranks per node
 #
 def chol(lib, build_dir, nodes, rpn, m_sz, mb_sz, nruns, suffix="na", extra_flags=""):
@@ -90,11 +86,7 @@ def chol(lib, build_dir, nodes, rpn, m_sz, mb_sz, nruns, suffix="na", extra_flag
     )
 
 
-# lib: allowed libraries are dlaf|dlaf_nb_[0|1][0|1][0|1]|slate|dplasma
-#
-# where `dlaf_nb_[0|1][0|1][0|1]` is `dlaf_nb_<hpx queue><non-blocking mechanism><mpi pool>`, for example
-#       `dlaf_nb_111` : dlaf with non-blocking MPI(nb), shared priority queue(1), polling (1) and a dedicated core for an MPI pool (1).
-#
+# lib: allowed libraries are dlaf|slate|dplasma
 # rpn: ranks per node
 #
 def trsm(

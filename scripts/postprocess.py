@@ -35,6 +35,7 @@ def _gen_nodes_plot(plt_type, title, ylabel, file_name, df):
     ax.legend(loc="upper right", prop={"size": 6})
     ax.set_title(title)
     fig.savefig(f"{file_name}.png", dpi=300)
+    plt.close(fig)
 
 
 # Calculate mean,max,avg perf and time

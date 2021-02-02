@@ -32,6 +32,7 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/executor.h"
 #include "dlaf/communication/kernels.h"
+#include "dlaf/communication/sync/broadcast.h"
 #include "dlaf/factorization/cholesky/api.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/copy_tile.h"
@@ -44,8 +45,8 @@ namespace dlaf {
 namespace factorization {
 namespace internal {
 
-template <class T, class MPIExecutor>
-struct Cholesky<Backend::MC, Device::CPU, T, MPIExecutor> {
+template <class T>
+struct Cholesky<Backend::MC, Device::CPU, T> {
   static void call_L(Matrix<T, Device::CPU>& mat_a);
   static void call_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a);
 };
@@ -116,8 +117,8 @@ void gemm_trailing_matrix_tile(hpx::threads::executors::pool_executor ex,
 }
 
 // Local implementation of Lower Cholesky factorization.
-template <class T, class MPIExecutor>
-void Cholesky<Backend::MC, Device::CPU, T, MPIExecutor>::call_L(Matrix<T, Device::CPU>& mat_a) {
+template <class T>
+void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a) {
   using hpx::threads::executors::pool_executor;
   using hpx::threads::thread_priority_high;
   using hpx::threads::thread_priority_default;
@@ -159,10 +160,102 @@ void Cholesky<Backend::MC, Device::CPU, T, MPIExecutor>::call_L(Matrix<T, Device
   }
 }
 
+template <class T>
+void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
+                                                   Matrix<T, Device::CPU>& mat_a) {
+  using hpx::threads::executors::pool_executor;
+  using hpx::threads::thread_priority_high;
+  using hpx::threads::thread_priority_default;
+  using ConstTile_t = matrix::Tile<const T, Device::CPU>;
+
+  // Set up executor on the default queue with high priority.
+  pool_executor executor_hp("default", thread_priority_high);
+  // Set up executor on the default queue with default priority.
+  pool_executor executor_normal("default", thread_priority_default);
+
+  // Set up MPI executor
+  comm::Index2D this_rank = grid.rank();
+  std::string mpi_pool = (hpx::resource::pool_exists("mpi")) ? "mpi" : "default";
+  pool_executor executor_mpi(mpi_pool, thread_priority_high);
+  common::Pipeline<comm::CommunicatorGrid> mpi_task_chain(std::move(grid));
+
+  matrix::Distribution const& distr = mat_a.distribution();
+  SizeType nrtile = mat_a.nrTiles().cols();
+
+  for (SizeType k = 0; k < nrtile; ++k) {
+    // Create a placeholder that will store the shared futures representing the panel
+    std::unordered_map<SizeType, hpx::shared_future<ConstTile_t>> panel;
+
+    GlobalTileIndex kk_idx(k, k);
+    comm::Index2D kk_rank = distr.rankGlobalTile(kk_idx);
+
+    // Broadcast the diagonal tile along the `k`-th column
+    if (this_rank == kk_rank) {
+      potrf_diag_tile(executor_hp, mat_a(kk_idx));
+      panel[k] = mat_a.read(kk_idx);
+      if (k != nrtile - 1)
+        comm::send_tile(executor_mpi, mpi_task_chain, Coord::Col, panel[k]);
+    }
+    else if (this_rank.col() == kk_rank.col()) {
+      if (k != nrtile - 1)
+        panel[k] = comm::recv_tile<T>(executor_mpi, mpi_task_chain, Coord::Col, mat_a.tileSize(kk_idx),
+                                      kk_rank.row());
+    }
+
+    // Iterate over the k-th column
+    for (SizeType i = k + 1; i < nrtile; ++i) {
+      GlobalTileIndex ik_idx(i, k);
+      comm::Index2D ik_rank = mat_a.rankGlobalTile(ik_idx);
+
+      if (this_rank == ik_rank) {
+        trsm_panel_tile(executor_hp, panel[k], mat_a(ik_idx));
+        panel[i] = mat_a.read(ik_idx);
+        comm::send_tile(executor_mpi, mpi_task_chain, Coord::Row, panel[i]);
+      }
+      else if (this_rank.row() == ik_rank.row()) {
+        panel[i] = comm::recv_tile<T>(executor_mpi, mpi_task_chain, Coord::Row, mat_a.tileSize(ik_idx),
+                                      ik_rank.col());
+      }
+    }
+
+    // Iterate over the trailing matrix
+    for (SizeType j = k + 1; j < nrtile; ++j) {
+      GlobalTileIndex jj_idx(j, j);
+      comm::Index2D jj_rank = mat_a.rankGlobalTile(jj_idx);
+
+      if (this_rank.col() != jj_rank.col())
+        continue;
+
+      // Broadcast the jk-tile along the j-th column and update the jj-tile
+      if (this_rank.row() == jj_rank.row()) {
+        pool_executor trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_normal;
+        herk_trailing_diag_tile(trailing_matrix_executor, panel[j], mat_a(jj_idx));
+        if (j != nrtile - 1)
+          comm::send_tile(executor_mpi, mpi_task_chain, Coord::Col, panel[j]);
+      }
+      else {
+        GlobalTileIndex jk_idx(j, k);
+        if (j != nrtile - 1)
+          panel[j] = comm::recv_tile<T>(executor_mpi, mpi_task_chain, Coord::Col, mat_a.tileSize(jk_idx),
+                                        jj_rank.row());
+      }
+
+      for (SizeType i = j + 1; i < nrtile; ++i) {
+        // Update the ij-tile using the ik-tile and jk-tile
+        if (this_rank.row() == distr.rankGlobalTile<Coord::Row>(i)) {
+          GlobalTileIndex ij_idx(i, j);
+          gemm_trailing_matrix_tile(executor_normal, panel[i], panel[j], mat_a(ij_idx));
+        }
+      }
+    }
+  }
+}
+
+// --- NBMPI ---
+
 // Distributed implementation of Lower Cholesky factorization.
 template <class T, class MPIExecutor>
-void Cholesky<Backend::MC, Device::CPU, T, MPIExecutor>::call_L(comm::CommunicatorGrid grid,
-                                                                Matrix<T, Device::CPU>& mat_a) {
+void chol_nb(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
   using hpx::threads::executors::pool_executor;
   using hpx::threads::thread_priority_high;
   using hpx::threads::thread_priority_default;
@@ -362,7 +455,7 @@ void recv_batch(
 
 // Distributed implementation of Lower Cholesky factorization.
 template <class T, class MPIExecutor>
-void batchedCholesky(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
+void chol_batched(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
   using hpx::threads::executors::pool_executor;
   using hpx::threads::thread_priority_high;
   using hpx::threads::thread_priority_default;

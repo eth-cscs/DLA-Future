@@ -23,6 +23,7 @@
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/communication/init.h"
 #include "dlaf/factorization/cholesky.h"
+#include "dlaf/factorization/cholesky/mc.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
@@ -61,7 +62,7 @@ void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid);
 
 enum class CHECK_RESULT { NONE, LAST, ALL };
 
-enum class exec_backend { polling, yielding, batched_polling, batched_yielding };
+enum class exec_backend { blocking, polling, yielding, batched_polling, batched_yielding };
 
 struct options_t {
   SizeType m;
@@ -116,25 +117,21 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     }
 
     dlaf::common::Timer<> timeit;
-    if (opts.exec == exec_backend::yielding) {
-      dlaf::factorization::cholesky<Backend::MC, Device::CPU, T, dlaf::comm::executor>(comm_grid,
-                                                                                       blas::Uplo::Lower,
-                                                                                       matrix);
+    if (opts.exec == exec_backend::blocking) {
+      dlaf::factorization::cholesky<Backend::MC, Device::CPU, T>(comm_grid, blas::Uplo::Lower, matrix);
+    }
+    else if (opts.exec == exec_backend::yielding) {
+      dlaf::factorization::internal::chol_nb<T, dlaf::comm::executor>(comm_grid, matrix);
     }
     else if (opts.exec == exec_backend::polling) {
-      dlaf::factorization::cholesky<Backend::MC, Device::CPU, T,
-                                    dlaf::comm::mpi_polling_executor>(comm_grid, blas::Uplo::Lower,
-                                                                      matrix);
+      dlaf::factorization::internal::chol_nb<T, dlaf::comm::mpi_polling_executor>(comm_grid, matrix);
     }
     else if (opts.exec == exec_backend::batched_yielding) {
-      dlaf::factorization::batchedCholesky<Device::CPU, T, dlaf::comm::executor>(comm_grid,
-                                                                                 blas::Uplo::Lower,
-                                                                                 matrix);
+      dlaf::factorization::internal::chol_batched<T, dlaf::comm::executor>(comm_grid, matrix);
     }
     else if (opts.exec == exec_backend::batched_polling) {
-      dlaf::factorization::batchedCholesky<Device::CPU, T,
-                                           dlaf::comm::mpi_polling_executor>(comm_grid,
-                                                                             blas::Uplo::Lower, matrix);
+      dlaf::factorization::internal::chol_batched<T, dlaf::comm::mpi_polling_executor>(comm_grid,
+                                                                                       matrix);
     }
 
     // wait for last task and barrier for all ranks
@@ -191,6 +188,7 @@ int main(int argc, char** argv) {
     ("nruns",        value<int64_t>()    ->default_value(   1),                        "Number of runs to compute the cholesky")
     ("nwarmups",     value<int64_t>()    ->default_value(   1),                        "Number of warmup runs")
     ("check-result", value<std::string>()->default_value(  "")->implicit_value("all"), "Enable result check ('all', 'last')")
+    ("blocking",     bool_switch()       ->default_value(false),                       "Use blocking MPI integration.")
     ("polling",      bool_switch()       ->default_value(false),                       "Use the MPI polling mechanism.")
     ("batched",      bool_switch()       ->default_value(false),                       "Use batched version.")
     ("mpipool",      bool_switch()       ->default_value(false),                       "Dedicate a core to MPI if available.")
@@ -199,23 +197,20 @@ int main(int argc, char** argv) {
 
   variables_map vm;
   store(command_line_parser(argc, argv).allow_unregistered().options(desc_commandline).run(), vm);
+  bool use_blocking_mpi = vm["blocking"].as<bool>();
   bool use_mpi_pool = vm["mpipool"].as<bool>();
 
   // Create a thread pool with a single core that we will use for all
   // communication related tasks
   hpx::init_params p;
   p.desc_cmdline = desc_commandline;
-  if (use_mpi_pool) {
-    // p.rp_mode = hpx::resource::mode_allow_oversubscription;
+  if (use_blocking_mpi || use_mpi_pool) {
     p.rp_callback = [](auto& rp) {
       int ntasks;
       DLAF_MPI_CALL(MPI_Comm_size(MPI_COMM_WORLD, &ntasks));
       if (ntasks > 1) {
-        // bool exclusive = false; // mode has to be hpx::resource::mode_allow_dynamic_pools
-        // std::size_t num_threads = 2; // only makes sense with hpx::resource::mode_allow_oversubscription
         std::string pool_name = "mpi";
         rp.create_thread_pool(pool_name, hpx::resource::scheduling_policy::local_priority_fifo);
-        // rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], pool_name, exclusive, num_threads);
         rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], pool_name);
       }
     };
@@ -460,9 +455,14 @@ options_t check_options(hpx::program_options::variables_map& vm) {
     opts.do_check = CHECK_RESULT::NONE;
   }
 
+  bool blocking_mpi_flag = vm["blocking"].as<bool>();
   bool polling_flag = vm["polling"].as<bool>();
   bool batched_flag = vm["batched"].as<bool>();
-  if (polling_flag) {
+
+  if (blocking_mpi_flag) {
+    opts.exec = exec_backend::blocking;
+  }
+  else if (polling_flag) {
     if (batched_flag) {
       opts.exec = exec_backend::batched_polling;
     }

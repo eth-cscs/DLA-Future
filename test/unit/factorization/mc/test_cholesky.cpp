@@ -12,6 +12,7 @@
 
 #include "gtest/gtest.h"
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/factorization/cholesky/mc.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"
@@ -86,8 +87,7 @@ TYPED_TEST(CholeskyLocalTest, Correctness) {
       Matrix<TypeParam, Device::CPU> mat(size, block_size);
       set(mat, el);
 
-      factorization::cholesky<Backend::MC, Device::CPU, TypeParam, comm::executor>(blas::Uplo::Lower,
-                                                                                   mat);
+      factorization::cholesky<Backend::MC, Device::CPU, TypeParam>(blas::Uplo::Lower, mat);
 
       CHECK_MATRIX_NEAR(res, mat, 4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error,
                         4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);
@@ -142,21 +142,16 @@ void testDistCholesky(CholeskyDistributedTest<TypeParam>& test, DistCholeskyVari
         set(mat, el);
 
         if (var == DistCholeskyVariant::Yielding) {
-          factorization::cholesky<Backend::MC, Device::CPU, TypeParam, comm::executor>(comm_grid,
-                                                                                       blas::Uplo::Lower,
-                                                                                       mat);
+          factorization::internal::chol_nb<TypeParam, comm::executor>(comm_grid, mat);
         }
         else if (var == DistCholeskyVariant::Polling) {
-          factorization::cholesky<Backend::MC, Device::CPU, TypeParam,
-                                  comm::mpi_polling_executor>(comm_grid, blas::Uplo::Lower, mat);
+          factorization::internal::chol_nb<TypeParam, comm::mpi_polling_executor>(comm_grid, mat);
         }
         else if (var == DistCholeskyVariant::BatchedPolling) {
-          factorization::batchedCholesky<Device::CPU, TypeParam,
-                                         comm::mpi_polling_executor>(comm_grid, blas::Uplo::Lower, mat);
+          factorization::internal::chol_batched<TypeParam, comm::mpi_polling_executor>(comm_grid, mat);
         }
         else if (var == DistCholeskyVariant::BatchedYielding) {
-          factorization::batchedCholesky<Device::CPU, TypeParam, comm::executor>(comm_grid,
-                                                                                 blas::Uplo::Lower, mat);
+          factorization::internal::chol_batched<TypeParam, comm::executor>(comm_grid, mat);
         }
 
         CHECK_MATRIX_NEAR(res, mat, 4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error,

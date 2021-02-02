@@ -15,7 +15,7 @@ namespace dlaf {
 namespace factorization {
 namespace internal {
 
-template <Backend backend, Device device, class T, class MPIExecutor>
+template <Backend backend, Device device, class T>
 struct Cholesky {};
 
 }

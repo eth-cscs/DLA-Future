@@ -27,6 +27,7 @@ endif()
 option(BUILD_SHARED_LIBS "Build shared libraries." OFF)
 option(DLAF_WITH_CUDA "Enable CUDA support" OFF)
 option(DLAF_BUILD_MINIAPPS "Build miniapps" ON)
+option(DLAF_BUILD_TESTING "Build tests" ON)
 option(DLAF_BUILD_DOC "Build documentation" OFF)
 
 # ---------------------------------------------------------------------------

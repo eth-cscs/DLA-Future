@@ -12,8 +12,8 @@ def _sq_factor(n):
     return f
 
 
-def _check_ranks_per_node(lib, rpn):
-    if not (rpn == 1 or rpn == 2):
+def _check_ranks_per_node(system, lib, rpn):
+    if not rpn in system["Allowed rpns"]:
         raise ValueError(f"Wrong value rpn = {rpn}!")
     if rpn != 1 and lib == "dplasma":
         raise ValueError("DPLASMA can only run with 1 rank per node!")
@@ -25,28 +25,15 @@ def _err_msg(lib):
 
 # Job preamble
 #
-def init_job_text(run_name, nodes, time_min):
-    job_text = f"""
-#!/bin/bash -l
-#SBATCH --job-name={run_name}_{nodes}
-#SBATCH --time={time_min}
-#SBATCH --nodes={nodes}
-#SBATCH --partition=normal
-#SBATCH --account=csstaff
-#SBATCH --constraint=mc
-#SBATCH --output=output.txt
-#SBATCH --error=error.txt
+def init_job_text(system, run_name, nodes, time_min):
+    return system["Batch preamble"].format(run_name=run_name, nodes=nodes, time_min=time_min).strip()
 
-# Env
-export MPICH_MAX_THREAD_SAFETY=multiple
 
-# Debug
-module list &> modules.txt
-printenv > env.txt
-
-# Commands
-"""
-    return job_text[1:-1]
+# Run command with options
+#
+def run_command(system, total_ranks, cpus_per_rank):
+    threads_per_rank = system["Threads per core"] * cpus_per_rank
+    return system["Run command"].format(total_ranks=total_ranks, cpus_per_rank=cpus_per_rank, threads_per_rank=threads_per_rank)
 
 
 # Create the job directory tree and submit jobs.
@@ -65,11 +52,11 @@ def submit_jobs(run_dir, nodes, job_text, suffix="na"):
 # lib: allowed libraries are dlaf|slate|dplasma
 # rpn: ranks per node
 #
-def chol(lib, build_dir, nodes, rpn, m_sz, mb_sz, nruns, suffix="na", extra_flags=""):
-    _check_ranks_per_node(lib, rpn)
+def chol(system, lib, build_dir, nodes, rpn, m_sz, mb_sz, nruns, suffix="na", extra_flags=""):
+    _check_ranks_per_node(system, lib, rpn)
 
     total_ranks = nodes * rpn
-    cpus_per_rank = 72 // rpn
+    cpus_per_rank = system["Cores"] // rpn
     grid_cols, grid_rows = _sq_factor(total_ranks)
 
     if lib.startswith("dlaf"):
@@ -81,8 +68,9 @@ def chol(lib, build_dir, nodes, rpn, m_sz, mb_sz, nruns, suffix="na", extra_flag
     else:
         raise ValueError(_err_msg(lib))
 
+    run_cmd = run_command(system, total_ranks, cpus_per_rank)
     return (
-        f"\nsrun -n {total_ranks} -c {cpus_per_rank} {cmd} >> chol_{lib}_{suffix}.out"
+        f"\n{run_cmd} {cmd} >> chol_{lib}_{suffix}.out"
     )
 
 
@@ -90,12 +78,12 @@ def chol(lib, build_dir, nodes, rpn, m_sz, mb_sz, nruns, suffix="na", extra_flag
 # rpn: ranks per node
 #
 def trsm(
-    lib, build_dir, nodes, rpn, m_sz, n_sz, mb_sz, nruns, suffix="na", extra_flags=""
+    system, lib, build_dir, nodes, rpn, m_sz, n_sz, mb_sz, nruns, suffix="na", extra_flags=""
 ):
-    _check_ranks_per_node(lib, rpn)
+    _check_ranks_per_node(system, lib, rpn)
 
     total_ranks = nodes * rpn
-    cpus_per_rank = 72 // rpn
+    cpus_per_rank = system["Cores"] // rpn
     gr, gc = _sq_factor(total_ranks)
 
     if lib.startswith("dlaf"):
@@ -107,6 +95,7 @@ def trsm(
     else:
         raise ValueError(_err_msg(lib))
 
+    run_cmd = run_command(system, total_ranks, cpus_per_rank)
     return (
-        f"\nsrun -n {total_ranks} -c {cpus_per_rank} {cmd} >> trsm_{lib}_{suffix}.out"
+        f"\n{run_cmd} {cmd} >> trsm_{lib}_{suffix}.out"
     )

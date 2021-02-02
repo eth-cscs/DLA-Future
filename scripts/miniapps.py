@@ -60,17 +60,20 @@ def chol(system, lib, build_dir, nodes, rpn, m_sz, mb_sz, nruns, suffix="na", ex
     grid_cols, grid_rows = _sq_factor(total_ranks)
 
     if lib.startswith("dlaf"):
+        env = ""
         cmd = f"{build_dir}/miniapp/miniapp_cholesky --matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} --hpx:use-process-mask {extra_flags}"
     elif lib == "slate":
+        env = f"OMP_NUM_THREADS={cpus_per_rank}"
         cmd = f"{build_dir}/test/slate_test potrf --dim {m_sz}x${m_sz}x0 --nb {mb_sz} --p {grid_rows} --q {grid_cols} --repeat {nruns} --check n --ref n --type d {extra_flags}"
     elif lib == "dplasma":
+        env = ""
         cmd = f"{build_dir}/tests/testing_dpotrf -N ${m_sz} --MB ${mb_sz} --NB ${mb_sz} --grid-rows ${grid_rows} --grid-cols ${grid_cols} -c 36 -v {extra_flags}"
     else:
         raise ValueError(_err_msg(lib))
 
     run_cmd = run_command(system, total_ranks, cpus_per_rank)
     return (
-        f"\n{run_cmd} {cmd} >> chol_{lib}_{suffix}.out"
+        "\n" + f"{env} {run_cmd} {cmd} >> chol_{lib}_{suffix}.out".strip()
     )
 
 
@@ -87,15 +90,18 @@ def trsm(
     gr, gc = _sq_factor(total_ranks)
 
     if lib.startswith("dlaf"):
+        env = ""
         cmd = f"{build_dir}/miniapp/miniapp_triangular_solver --m {m_sz} --n {n_sz} --mb {mb_sz} --nb {mb_sz} --grid-rows {gr} --grid-cols {gc} --nruns {nruns} --hpx:use-process-mask {extra_flags}"
     elif lib == "slate":
+        env = f"OMP_NUM_THREADS={cpus_per_rank}"
         cmd = f"{build_dir}/test/slate_test trsm --dim {m_sz}x{n_sz}x0 --nb {mb_sz} --p {gr} --q {gc} --repeat {nruns} --alpha 2 --check n --ref n --type d {extra_flags}"
     elif lib == "dplasma":
+        env = ""
         cmd = f"{build_dir}/tests/testing_dtrsm -M {m_sz} -N {n_sz} --MB {mb_sz} --NB {mb_sz} --grid-rows {gr} --grid-cols {gc} -c 36 -v {extra_flags}"
     else:
         raise ValueError(_err_msg(lib))
 
     run_cmd = run_command(system, total_ranks, cpus_per_rank)
     return (
-        f"\n{run_cmd} {cmd} >> trsm_{lib}_{suffix}.out"
+        "\n" + f"{env} {run_cmd} {cmd} >> trsm_{lib}_{suffix}.out".strip()
     )

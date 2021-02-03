@@ -77,6 +77,8 @@ struct Cholesky<Backend::GPU, Device::GPU, T> {
 
 template <class T>
 void Cholesky<Backend::GPU, Device::GPU, T>::call_L(Matrix<T, Device::GPU>& mat_a) {
+  // TODO: The HP executor should just work for cuSOLVER as well.
+  auto executor_lapack = dlaf::getLapackExecutor();
   auto executor_hp = dlaf::getHpExecutor<Backend::GPU>();
   auto executor_np = dlaf::getNpExecutor<Backend::GPU>();
 
@@ -86,7 +88,7 @@ void Cholesky<Backend::GPU, Device::GPU, T>::call_L(Matrix<T, Device::GPU>& mat_
   for (SizeType k = 0; k < nrtile; ++k) {
     auto kk = LocalTileIndex{k, k};
 
-    potrf_diag_tile(executor_hp, mat_a(kk));
+    potrf_diag_tile(executor_lapack, mat_a(kk));
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
       // Update panel mat_a(i,k) with trsm (blas operation), using data mat_a.read(k,k)
@@ -117,6 +119,7 @@ void Cholesky<Backend::GPU, Device::GPU, T>::call_L(comm::CommunicatorGrid grid,
                                                    Matrix<T, Device::GPU>& mat_a) {
   using ConstTileType = typename Matrix<T, Device::GPU>::ConstTileType;
 
+  // TODO: The HP executor should just work for cuSOLVER as well.
   auto executor_lapack = dlaf::getLapackExecutor();
   auto executor_hp = dlaf::getHpExecutor<Backend::GPU>();
   auto executor_np = dlaf::getNpExecutor<Backend::GPU>();

@@ -9,3 +9,7 @@
 #
 
 add_subdirectory(mc)
+
+if(DLAF_WITH_CUDA)
+  add_subdirectory(gpu)
+endif()

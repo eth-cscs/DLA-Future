@@ -92,7 +92,7 @@ auto potrf(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<
   int workspace_size;
   internal::CublasPotrf<T>::callBufferSize(handle, util::blasToCublas(uplo), n,
                                            util::blasToCublasCast(a.ptr()), a.ld(), &workspace_size);
-  // TODO: Combine buffers? Reuse upper/lower part of matrix?
+  // TODO: Combine buffers? Reuse upper/lower part of matrix? Workspace only size 1?
   memory::MemoryView<T, Device::GPU> workspace(workspace_size);
   memory::MemoryView<int, Device::GPU> info(1);
   internal::CublasPotrf<T>::call(handle, util::blasToCublas(uplo), n, util::blasToCublasCast(a.ptr()),

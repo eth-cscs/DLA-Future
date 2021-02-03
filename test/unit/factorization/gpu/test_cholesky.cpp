@@ -30,10 +30,7 @@ using namespace testing;
 template <typename Type>
 class CholeskyLocalTest : public ::testing::Test {};
 
-// TODO: herk is only available for complex types in cuBLAS. CPU fallback? Will
-// it have non-complex support? When and if the MC and GPU backends conincide in
-// their type support, combine this with the mc test.
-TYPED_TEST_SUITE(CholeskyLocalTest, ComplexMatrixElementTypes);
+TYPED_TEST_SUITE(CholeskyLocalTest, MatrixElementTypes);
 
 template <typename Type>
 class CholeskyDistributedTest : public ::testing::Test {
@@ -43,7 +40,7 @@ public:
   }
 };
 
-TYPED_TEST_SUITE(CholeskyDistributedTest, ComplexMatrixElementTypes);
+TYPED_TEST_SUITE(CholeskyDistributedTest, MatrixElementTypes);
 
 const std::vector<LocalElementSize> square_sizes({{10, 10}, {25, 25}, {12, 12}, {0, 0}});
 const std::vector<TileElementSize> square_block_sizes({{3, 3}, {5, 5}});

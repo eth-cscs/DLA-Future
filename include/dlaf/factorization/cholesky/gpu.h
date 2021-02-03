@@ -205,9 +205,8 @@ void Cholesky<Backend::GPU, Device::GPU, T>::call_L(comm::CommunicatorGrid grid,
 #define DLAF_CHOLESKY_GPU_ETI(KWORD, DATATYPE) \
   KWORD template struct Cholesky<Backend::GPU, Device::GPU, DATATYPE>;
 
-// TODO: Not available due to herk.
-// DLAF_CHOLESKY_GPU_ETI(extern, float)
-// DLAF_CHOLESKY_GPU_ETI(extern, double)
+DLAF_CHOLESKY_GPU_ETI(extern, float)
+DLAF_CHOLESKY_GPU_ETI(extern, double)
 DLAF_CHOLESKY_GPU_ETI(extern, std::complex<float>)
 DLAF_CHOLESKY_GPU_ETI(extern, std::complex<double>)
 }

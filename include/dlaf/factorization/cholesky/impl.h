@@ -9,10 +9,14 @@
 //
 #pragma once
 
-#include <hpx/include/parallel_executors.hpp>
-#include <hpx/include/resource_partitioner.hpp>
-#include <hpx/include/threads.hpp>
 #include <hpx/include/util.hpp>
+#include <hpx/local/future.hpp>
+
+#include <algorithm>
+#include <limits>
+#include <sstream>
+#include <type_traits>
+#include <unordered_map>
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
@@ -37,50 +41,53 @@ namespace dlaf {
 namespace factorization {
 namespace internal {
 
-template <class T>
-void potrf_diag_tile(hpx::execution::parallel_executor executor_hp,
-                     hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
-  hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::potrf<T, Device::CPU>), blas::Uplo::Lower,
+template <class Executor, Device device, class T>
+void potrf_diag_tile(Executor&& exec, hpx::future<matrix::Tile<T, device>> matrix_tile) {
+  hpx::dataflow(exec, matrix::unwrapExtendTiles(tile::potrf_o), blas::Uplo::Lower,
                 std::move(matrix_tile));
 }
 
-template <class T>
-void trsm_panel_tile(hpx::execution::parallel_executor executor_hp,
-                     hpx::shared_future<matrix::Tile<const T, Device::CPU>> kk_tile,
-                     hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
+template <class Executor, Device device, class T>
+void trsm_panel_tile(Executor&& executor_hp,
+                     hpx::shared_future<matrix::Tile<const T, device>> kk_tile,
+                     hpx::future<matrix::Tile<T, device>> matrix_tile) {
   hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Right,
                 blas::Uplo::Lower, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), std::move(kk_tile),
                 std::move(matrix_tile));
 }
 
-template <class T>
-void herk_trailing_diag_tile(hpx::execution::parallel_executor ex,
-                             hpx::shared_future<matrix::Tile<const T, Device::CPU>> panel_tile,
-                             hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
-  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::herk_o), blas::Uplo::Lower, blas::Op::NoTrans,
-                BaseType<T>(-1.0), panel_tile, BaseType<T>(1.0), std::move(matrix_tile));
+template <class Executor, Device device, class T>
+void herk_trailing_diag_tile(Executor&& trailing_matrix_executor,
+                             hpx::shared_future<matrix::Tile<const T, device>> panel_tile,
+                             hpx::future<matrix::Tile<T, device>> matrix_tile) {
+  hpx::dataflow(trailing_matrix_executor, matrix::unwrapExtendTiles(tile::herk_o), blas::Uplo::Lower,
+                blas::Op::NoTrans, BaseType<T>(-1.0), panel_tile, BaseType<T>(1.0),
+                std::move(matrix_tile));
 }
 
-template <class T>
-void gemm_trailing_matrix_tile(hpx::execution::parallel_executor ex,
-                               hpx::shared_future<matrix::Tile<const T, Device::CPU>> panel_tile,
-                               hpx::shared_future<matrix::Tile<const T, Device::CPU>> col_panel,
-                               hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
-  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans,
-                T(-1.0), std::move(panel_tile), std::move(col_panel), T(1.0), std::move(matrix_tile));
+template <class Executor, Device device, class T>
+void gemm_trailing_matrix_tile(Executor&& trailing_matrix_executor,
+                               hpx::shared_future<matrix::Tile<const T, device>> panel_tile,
+                               hpx::shared_future<matrix::Tile<const T, device>> col_panel,
+                               hpx::future<matrix::Tile<T, device>> matrix_tile) {
+  hpx::dataflow(trailing_matrix_executor, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans,
+                blas::Op::ConjTrans, T(-1.0), std::move(panel_tile), std::move(col_panel), T(1.0),
+                std::move(matrix_tile));
 }
 
-template <class T>
-struct Cholesky<Backend::MC, Device::CPU, T> {
-  static void call_L(Matrix<T, Device::CPU>& mat_a);
-  static void call_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a);
+template <Backend backend, Device device, class T>
+struct Cholesky {
+  static void call_L(Matrix<T, device>& mat_a);
+  static void call_L(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a);
 };
 
 // Local implementation of Lower Cholesky factorization.
-template <class T>
-void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a) {
-  auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
-  auto executor_np = dlaf::getNpExecutor<Backend::MC>();
+template <Backend backend, Device device, class T>
+void Cholesky<backend, device, T>::call_L(Matrix<T, device>& mat_a) {
+  // TODO
+  auto executor_lapack = dlaf::getLapackExecutor<backend>();
+  auto executor_hp = dlaf::getHpExecutor<backend>();
+  auto executor_np = dlaf::getNpExecutor<backend>();
 
   // Number of tile (rows = cols)
   SizeType nrtile = mat_a.nrTiles().cols();
@@ -89,7 +96,7 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
     // Cholesky decomposition on mat_a(k,k) r/w potrf (lapack operation)
     auto kk = LocalTileIndex{k, k};
 
-    potrf_diag_tile(executor_hp, mat_a(kk));
+    potrf_diag_tile(executor_lapack, mat_a(kk));
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
       // Update panel mat_a(i,k) with trsm (blas operation), using data mat_a.read(k,k)
@@ -114,14 +121,16 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
   }
 }
 
-template <class T>
-void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
-                                                   Matrix<T, Device::CPU>& mat_a) {
+template <Backend backend, Device device, class T>
+void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a) {
   using hpx::util::unwrapping;
   using hpx::dataflow;
 
-  auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
-  auto executor_np = dlaf::getNpExecutor<Backend::MC>();
+  // TODO
+  auto executor_lapack = dlaf::getLapackExecutor<backend>();
+  auto executor_hp = dlaf::getHpExecutor<backend>();
+  auto executor_np = dlaf::getNpExecutor<backend>();
+  auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   // Set up MPI executor pipelines
   comm::Executor executor_mpi;
@@ -134,8 +143,8 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
   const SizeType nrtile = mat_a.nrTiles().cols();
 
   constexpr std::size_t n_workspaces = 2;
-  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panels(n_workspaces, distr);
-  common::RoundRobin<matrix::Panel<Coord::Row, T, Device::CPU>> panelsT(n_workspaces, distr);
+  common::RoundRobin<matrix::Panel<Coord::Col, T, device>> panels(n_workspaces, distr);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, device>> panelsT(n_workspaces, distr);
 
   for (SizeType k = 0; k < nrtile; ++k) {
     const GlobalTileIndex kk_idx(k, k);
@@ -231,13 +240,20 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
 }
 
 /// ---- ETI
-#define DLAF_CHOLESKY_MC_ETI(KWORD, DATATYPE) \
-  KWORD template struct Cholesky<Backend::MC, Device::CPU, DATATYPE>;
+#define DLAF_FACTORIZATION_CHOLESKY_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
+  KWORD template struct Cholesky<BACKEND, DEVICE, DATATYPE>;
 
-DLAF_CHOLESKY_MC_ETI(extern, float)
-DLAF_CHOLESKY_MC_ETI(extern, double)
-DLAF_CHOLESKY_MC_ETI(extern, std::complex<float>)
-DLAF_CHOLESKY_MC_ETI(extern, std::complex<double>)
+DLAF_FACTORIZATION_CHOLESKY_ETI(extern, Backend::MC, Device::CPU, float)
+DLAF_FACTORIZATION_CHOLESKY_ETI(extern, Backend::MC, Device::CPU, double)
+DLAF_FACTORIZATION_CHOLESKY_ETI(extern, Backend::MC, Device::CPU, std::complex<float>)
+DLAF_FACTORIZATION_CHOLESKY_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
+
+#ifdef DLAF_WITH_CUDA
+DLAF_FACTORIZATION_CHOLESKY_ETI(extern, Backend::GPU, Device::GPU, float)
+DLAF_FACTORIZATION_CHOLESKY_ETI(extern, Backend::GPU, Device::GPU, double)
+DLAF_FACTORIZATION_CHOLESKY_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)
+DLAF_FACTORIZATION_CHOLESKY_ETI(extern, Backend::GPU, Device::GPU, std::complex<double>)
+#endif
 
 }
 }

@@ -9,9 +9,6 @@
 //
 #pragma once
 
-#include <hpx/include/parallel_executors.hpp>
-#include <hpx/include/threads.hpp>
-#include <hpx/include/util.hpp>
 #include <hpx/local/future.hpp>
 
 #include "dlaf/blas/tile.h"

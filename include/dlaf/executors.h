@@ -68,6 +68,20 @@ auto getMPIExecutor() {
   return dlaf::comm::Executor{};
 }
 
+// TODO: Combine with NP/HP executor.
+template <Backend B>
+auto getLapackExecutor() {
+  return hpx::execution::parallel_executor{&hpx::resource::get_thread_pool("default"),
+                                           hpx::threads::thread_priority::high};
+}
+
+#ifdef DLAF_WITH_CUDA
+template <>
+inline auto getLapackExecutor<Backend::GPU>() {
+  return dlaf::cusolver::Executor{internal::getHpCudaStreamPool(), internal::getCusolverHandlePool()};
+}
+#endif
+
 /// Returns a normal priority executor appropriate for use with the given
 /// backend.
 ///
@@ -93,11 +107,6 @@ template <Backend B>
 auto getHpExecutor() {
   return hpx::execution::parallel_executor{&hpx::resource::get_thread_pool("default"),
                                            hpx::threads::thread_priority::high};
-}
-
-// TODO
-inline auto getLapackExecutor() {
-  return dlaf::cusolver::Executor{internal::getNpCudaStreamPool(), internal::getCusolverHandlePool()};
 }
 
 #ifdef DLAF_WITH_CUDA

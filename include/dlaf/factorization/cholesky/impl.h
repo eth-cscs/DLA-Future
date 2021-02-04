@@ -84,8 +84,6 @@ struct Cholesky {
 // Local implementation of Lower Cholesky factorization.
 template <Backend backend, Device device, class T>
 void Cholesky<backend, device, T>::call_L(Matrix<T, device>& mat_a) {
-  // TODO
-  auto executor_lapack = dlaf::getLapackExecutor<backend>();
   auto executor_hp = dlaf::getHpExecutor<backend>();
   auto executor_np = dlaf::getNpExecutor<backend>();
 
@@ -96,7 +94,7 @@ void Cholesky<backend, device, T>::call_L(Matrix<T, device>& mat_a) {
     // Cholesky decomposition on mat_a(k,k) r/w potrf (lapack operation)
     auto kk = LocalTileIndex{k, k};
 
-    potrf_diag_tile(executor_lapack, mat_a(kk));
+    potrf_diag_tile(executor_hp, mat_a(kk));
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
       // Update panel mat_a(i,k) with trsm (blas operation), using data mat_a.read(k,k)
@@ -126,8 +124,6 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
   using hpx::util::unwrapping;
   using hpx::dataflow;
 
-  // TODO
-  auto executor_lapack = dlaf::getLapackExecutor<backend>();
   auto executor_hp = dlaf::getHpExecutor<backend>();
   auto executor_np = dlaf::getNpExecutor<backend>();
   auto executor_mpi = dlaf::getMPIExecutor<backend>();

@@ -163,7 +163,7 @@ int main(int argc, char** argv) {
 
   hpx::init_params p;
   p.desc_cmdline = desc_commandline;
-  p.rp_callback = [](auto& rp) {
+  p.rp_callback = [](auto& rp, auto) {
     int ntasks;
     DLAF_MPI_CALL(MPI_Comm_size(MPI_COMM_WORLD, &ntasks));
     // if the user has asked for special thread pools for communication

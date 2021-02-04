@@ -40,7 +40,7 @@ def run_command(system, total_ranks, cpus_per_rank):
 #
 def submit_jobs(run_dir, nodes, job_text, suffix="na"):
     job_path = expanduser(f"{run_dir}/{nodes}")
-    makedirs(job_path, exist_ok=False)
+    makedirs(job_path, exist_ok=True)
     job_file = f"{job_path}/job_{suffix}.sh"
     with open(job_file, "w") as f:
         f.write(job_text)
@@ -64,10 +64,10 @@ def chol(system, lib, build_dir, nodes, rpn, m_sz, mb_sz, nruns, suffix="na", ex
         cmd = f"{build_dir}/miniapp/miniapp_cholesky --matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} --hpx:use-process-mask {extra_flags}"
     elif lib == "slate":
         env = f"OMP_NUM_THREADS={cpus_per_rank}"
-        cmd = f"{build_dir}/test/slate_test potrf --dim {m_sz}x${m_sz}x0 --nb {mb_sz} --p {grid_rows} --q {grid_cols} --repeat {nruns} --check n --ref n --type d {extra_flags}"
+        cmd = f"{build_dir}/test/slate_test potrf --dim {m_sz}x{m_sz}x0 --nb {mb_sz} --p {grid_rows} --q {grid_cols} --repeat {nruns} --check n --ref n --type d {extra_flags}"
     elif lib == "dplasma":
-        env = ""
-        cmd = f"{build_dir}/tests/testing_dpotrf -N ${m_sz} --MB ${mb_sz} --NB ${mb_sz} --grid-rows ${grid_rows} --grid-cols ${grid_cols} -c 36 -v {extra_flags}"
+        env = "OMP_NUM_THREADS=1"
+        cmd = f"{build_dir}/tests/testing_dpotrf -N {m_sz} --MB {mb_sz} --NB {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} -c {cpus_per_rank} -v {extra_flags}"
     else:
         raise ValueError(_err_msg(lib))
 
@@ -96,8 +96,8 @@ def trsm(
         env = f"OMP_NUM_THREADS={cpus_per_rank}"
         cmd = f"{build_dir}/test/slate_test trsm --dim {m_sz}x{n_sz}x0 --nb {mb_sz} --p {gr} --q {gc} --repeat {nruns} --alpha 2 --check n --ref n --type d {extra_flags}"
     elif lib == "dplasma":
-        env = ""
-        cmd = f"{build_dir}/tests/testing_dtrsm -M {m_sz} -N {n_sz} --MB {mb_sz} --NB {mb_sz} --grid-rows {gr} --grid-cols {gc} -c 36 -v {extra_flags}"
+        env = "OMP_NUM_THREADS=1"
+        cmd = f"{build_dir}/tests/testing_dtrsm -M {m_sz} -N {n_sz} --MB {mb_sz} --NB {mb_sz} --grid-rows {gr} --grid-cols {gc} -c {cpus_per_rank} -v {extra_flags}"
     else:
         raise ValueError(_err_msg(lib))
 

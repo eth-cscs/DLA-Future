@@ -27,11 +27,12 @@
 #include <hpx/modules/async_cuda.hpp>
 #include <hpx/mutex.hpp>
 #include <hpx/tuple.hpp>
+#include <hpx/type_traits.hpp>
 
 #include "dlaf/common/assert.h"
-#include "dlaf/cusolver/error.h"
+#include "dlaf/cublas/executor.h"
 #include "dlaf/cuda/error.h"
-#include "dlaf/cuda/executor.h"
+#include "dlaf/cusolver/error.h"
 
 namespace dlaf {
 namespace cusolver {
@@ -73,13 +74,34 @@ public:
     return device_;
   }
 };
+
+template <bool IsCallable, typename F, typename... Ts>
+struct isAsyncCusolverCallableImpl : std::false_type {
+  struct dummy_type {};
+  using return_type = dummy_type;
+};
+
+template <typename F, typename... Ts>
+struct isAsyncCusolverCallableImpl<true, F, Ts...> : std::true_type {
+  using return_type = hpx::future<typename hpx::invoke_result<F, cusolverDnHandle_t&, Ts...>::type>;
+};
+
+template <typename F, typename... Ts>
+struct isAsyncCusolverCallable
+    : isAsyncCusolverCallableImpl<hpx::is_invocable_v<F, cusolverDnHandle_t&, Ts...>, F, Ts...> {};
+
+template <typename F, typename Futures>
+struct isDataflowCusolverCallable
+    : hpx::is_invocable<hpx::util::functional::invoke_fused, F,
+                        decltype(hpx::tuple_cat(hpx::tie(std::declval<cusolverDnHandle_t&>()),
+                                                std::declval<Futures>()))> {};
 }
 
-/// A pool of cuBLAS handles with reference semantics (copying points to the
-/// same underlying cuBLAS handles, last reference destroys the references).
-/// Allows access to cuBLAS handles associated with a particular stream. The
+/// A pool of cuSOLVER handles with reference semantics (copying points to the
+/// same underlying cuSOLVER handles, last reference destroys the references).
+/// Allows access to cuSOLVER handles associated with a particular stream. The
 /// user must ensure that the handle pool and the stream use the same device.
-/// Each HPX worker thread is assigned thread local cuBLAS handle.
+/// Each HPX worker thread is assigned thread local cuSOLVER handle.
 class HandlePool {
   std::shared_ptr<internal::HandlePoolImpl> handles_ptr_;
 
@@ -111,13 +133,15 @@ public:
 /// that takes a cuSOLVER handle as the first argument. The executor inserts a
 /// cuSOLVER handle into the argument list, i.e. a handle should not be
 /// provided at the apply/async/dataflow invocation site.
-class Executor : public cuda::Executor {
-  using base = cuda::Executor;
+class Executor : public cublas::Executor {
+  using base = cublas::Executor;
   HandlePool handle_pool_;
 
 public:
-  Executor(cuda::StreamPool stream_pool, HandlePool handle_pool)
-      : base(stream_pool), handle_pool_(handle_pool) {
+  Executor(cuda::StreamPool stream_pool, cublas::HandlePool cublas_handle_pool, HandlePool handle_pool)
+      : base(stream_pool, cublas_handle_pool), handle_pool_(handle_pool) {
+    DLAF_ASSERT(base::handle_pool_.getDevice() == handle_pool_.getDevice(),
+                base::handle_pool_.getDevice(), handle_pool_.getDevice());
     DLAF_ASSERT(stream_pool_.getDevice() == handle_pool_.getDevice(), stream_pool_.getDevice(),
                 handle_pool_.getDevice());
   }
@@ -135,7 +159,9 @@ public:
   }
 
   template <typename F, typename... Ts>
-  auto async_execute(F&& f, Ts&&... ts) {
+  std::enable_if_t<internal::isAsyncCusolverCallable<F, Ts...>::value,
+                   typename internal::isAsyncCusolverCallable<F, Ts...>::return_type>
+  async_execute(F&& f, Ts&&... ts) {
     cudaStream_t stream = stream_pool_.getNextStream();
     cusolverDnHandle_t handle = handle_pool_.getNextHandle(stream);
     auto r = hpx::invoke(std::forward<F>(f), handle, std::forward<Ts>(ts)...);
@@ -146,7 +172,8 @@ public:
   }
 
   template <class Frame, class F, class Futures>
-  void dataflow_finalize(Frame&& frame, F&& f, Futures&& futures) {
+  std::enable_if_t<internal::isDataflowCusolverCallable<F, Futures>::value> dataflow_finalize(
+      Frame&& frame, F&& f, Futures&& futures) {
     // Ensure the dataflow frame stays alive long enough.
     hpx::intrusive_ptr<typename std::remove_pointer<typename std::decay<Frame>::type>::type> frame_p(
         frame);
@@ -159,6 +186,20 @@ public:
 
     fut.then(hpx::launch::sync, [r = std::move(r), frame_p = std::move(frame_p)](
                                     hpx::future<void>&&) mutable { frame_p->set_data(std::move(r)); });
+  }
+
+  template <typename F, typename... Ts>
+  std::enable_if_t<cublas::internal::isAsyncCublasCallable<F, Ts...>::value,
+                   typename cublas::internal::isAsyncCublasCallable<F, Ts...>::return_type>
+  async_execute(F&& f, Ts&&... ts) {
+    return base::async_execute(std::forward<F>(f), std::forward<Ts>(ts)...);
+  }
+
+  template <class Frame, class F, class Futures>
+  std::enable_if_t<cublas::internal::isDataflowCublasCallable<F, Futures>::value> dataflow_finalize(
+      Frame&& frame, F&& f, Futures&& futures) {
+    base::dataflow_finalize(std::forward<Frame>(frame), std::forward<F>(f),
+                            std::forward<Futures>(futures));
   }
 };
 }

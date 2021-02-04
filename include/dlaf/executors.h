@@ -78,7 +78,8 @@ auto getLapackExecutor() {
 #ifdef DLAF_WITH_CUDA
 template <>
 inline auto getLapackExecutor<Backend::GPU>() {
-  return dlaf::cusolver::Executor{internal::getHpCudaStreamPool(), internal::getCusolverHandlePool()};
+  return dlaf::cusolver::Executor{internal::getHpCudaStreamPool(), internal::getCublasHandlePool(),
+                                  internal::getCusolverHandlePool()};
 }
 #endif
 

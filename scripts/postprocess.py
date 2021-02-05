@@ -78,26 +78,28 @@ def _parse_line_based(fout, bench_name, nodes):
         pstr_arr = [
             "[{run_index:d}] {time:f}s {perf:f}GFlop/s ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}"
         ]
-    elif bench_name == "chol_slate":
+    elif bench_name.startswith("chol_slate"):
         pstr_arr = [
-            "d host task column lower {matrix_rows:d} {:d} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:f} {perf:f} NA NA no check"
+            "d {} {} column lower {matrix_rows:d} {:d} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:f} {perf:f} NA NA no check"
         ]
-    elif bench_name == "trsm_slate":
+    elif bench_name.startswith("trsm_slate"):
         pstr_arr = [
-            "d host task {:d} left lower notrans nonunit {matrix_rows:d} {matrix_cols:d} {:f} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:f} {perf:f} NA NA no check"
+            "d {} {} {:d} left lower notrans nonunit {matrix_rows:d} {matrix_cols:d} {:f} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:f} {perf:f} NA NA no check"
         ]
-    elif bench_name == "chol_dplasma":
+    elif bench_name.startswith("chol_dplasma"):
         pstr_arr = [
             "#+++++ M x N x K|NRHS : {matrix_rows:d} x {matrix_cols:d} x {:d}",
             "#+++++ MB x NB : {block_rows:d} x {block_cols:d}",
             "[****] TIME(s) {time:f} : dpotrf PxQ= {grid_rows:d} {grid_cols:d} NB= {:d} N= {:d} : {perf:f} gflops - ENQ&PROG&DEST {:f} : {:f} gflops - ENQ {:f} - DEST {:f}",
         ]
-    elif bench_name == "trsm_dplasma":
+    elif bench_name.startswith("trsm_dplasma"):
         pstr_arr = [
             "#+++++ M x N x K|NRHS : {matrix_rows:d} x {matrix_cols:d} x {:d}",
             "#+++++ MB x NB : {block_rows:d} x {block_cols:d}",
             "[****] TIME(s) {time:f} : dtrsm PxQ= {grid_rows:d} {grid_cols:d} NB= {block_rows:d} N= {:d} : {perf:f} gflops",
         ]
+    else:
+        raise ValueError("Unknown bench_name: " + bench_name)
 
     data = []
     rd = {}

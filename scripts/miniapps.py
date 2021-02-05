@@ -64,7 +64,7 @@ def chol(system, lib, build_dir, nodes, rpn, m_sz, mb_sz, nruns, suffix="na", ex
         cmd = f"{build_dir}/miniapp/miniapp_cholesky --matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} --hpx:use-process-mask {extra_flags}"
     elif lib == "slate":
         env = f"OMP_NUM_THREADS={cpus_per_rank}"
-        cmd = f"{build_dir}/test/slate_test potrf --dim {m_sz}x{m_sz}x0 --nb {mb_sz} --p {grid_rows} --q {grid_cols} --repeat {nruns} --check n --ref n --type d {extra_flags}"
+        cmd = f"{build_dir}/test/tester potrf --dim {m_sz}x{m_sz}x0 --nb {mb_sz} --p {grid_rows} --q {grid_cols} --repeat {nruns} --check n --ref n --type d {extra_flags}"
     elif lib == "dplasma":
         env = "OMP_NUM_THREADS=1"
         cmd = f"{build_dir}/tests/testing_dpotrf -N {m_sz} --MB {mb_sz} --NB {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} -c {cpus_per_rank} -v {extra_flags}"
@@ -73,7 +73,7 @@ def chol(system, lib, build_dir, nodes, rpn, m_sz, mb_sz, nruns, suffix="na", ex
 
     run_cmd = run_command(system, total_ranks, cpus_per_rank)
     return (
-        "\n" + f"{env} {run_cmd} {cmd} >> chol_{lib}_{suffix}.out".strip()
+        "\n" + f"{env} {run_cmd} {cmd} >> chol_{lib}_{suffix}.out 2>&1".strip()
     )
 
 
@@ -94,7 +94,7 @@ def trsm(
         cmd = f"{build_dir}/miniapp/miniapp_triangular_solver --m {m_sz} --n {n_sz} --mb {mb_sz} --nb {mb_sz} --grid-rows {gr} --grid-cols {gc} --nruns {nruns} --hpx:use-process-mask {extra_flags}"
     elif lib == "slate":
         env = f"OMP_NUM_THREADS={cpus_per_rank}"
-        cmd = f"{build_dir}/test/slate_test trsm --dim {m_sz}x{n_sz}x0 --nb {mb_sz} --p {gr} --q {gc} --repeat {nruns} --alpha 2 --check n --ref n --type d {extra_flags}"
+        cmd = f"{build_dir}/test/tester trsm --dim {m_sz}x{n_sz}x0 --nb {mb_sz} --p {gr} --q {gc} --repeat {nruns} --alpha 2 --check n --ref n --type d {extra_flags}"
     elif lib == "dplasma":
         env = "OMP_NUM_THREADS=1"
         cmd = f"{build_dir}/tests/testing_dtrsm -M {m_sz} -N {n_sz} --MB {mb_sz} --NB {mb_sz} --grid-rows {gr} --grid-cols {gc} -c {cpus_per_rank} -v {extra_flags}"

@@ -42,14 +42,25 @@ for nodes in nodes_arr:
         )
 
     for m_sz, n_sz, mb_sz in product(m_sz_arr, n_sz_arr, mb_sz_arr):
-        job_text += mp.trsm(
+        job_text += mp.chol(
             system,
             "slate",
-            build_dir,
+            slate_build_dir,
             nodes,
             ranks_per_node,
             m_sz,
-            n_sz,
+            mb_sz,
+            nruns,
+        )
+
+    for m_sz, n_sz, mb_sz in product(m_sz_arr, n_sz_arr, mb_sz_arr):
+        job_text += mp.chol(
+            system,
+            "dplasma",
+            dplasma_build_dir,
+            nodes,
+            ranks_per_node,
+            m_sz,
             mb_sz,
             nruns,
         )

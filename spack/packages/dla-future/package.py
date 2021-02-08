@@ -26,7 +26,7 @@ class DlaFuture(CMakePackage, CudaPackage):
     depends_on("blaspp")
     depends_on("lapackpp")
     depends_on("hpx cxxstd=14 networking=none")
-    depends_on("hpx@1.5.0", when="~cuda")
+    depends_on("hpx@1.5.0:1.5.99", when="~cuda")
     depends_on("hpx@master +cuda", when="+cuda")
 
     depends_on("hpx build_type=Debug", when="build_type=Debug")

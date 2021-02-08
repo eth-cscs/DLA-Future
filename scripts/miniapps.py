@@ -1,6 +1,7 @@
 from os import system, makedirs
 from os.path import expanduser
 from re import sub
+from time import sleep
 
 # Finds two factors of `n` that are as close to each other as possible.
 #
@@ -49,7 +50,7 @@ def submit_jobs(run_dir, nodes, job_text, suffix="na", submissions=1):
     for i in range(submissions):
         system(f"sbatch --chdir={job_path} {job_file}")
         # sleep to not overload the scheduler
-        time.sleep(1)
+        sleep(1)
 
 
 # lib: allowed libraries are dlaf|slate|dplasma

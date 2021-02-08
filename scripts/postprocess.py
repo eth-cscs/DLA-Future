@@ -148,14 +148,17 @@ def _parse_line_based(fout, bench_name, nodes):
 # │   ├── <bench_name_2>.out
 # |   ...
 #
-def parse_jobs(data_dir):
+def parse_jobs(data_dirs):
+    if not isinstance(data_dirs, list):
+        data_dirs = [data_dirs]
     data = []
-    for subdir, dirs, files in os.walk(os.path.expanduser(data_dir)):
-        for f in files:
-            if f.endswith(".out"):
-                nodes = int(os.path.basename(subdir))
-                with open(os.path.join(subdir, f), "r") as fout:
-                    data.extend(_parse_line_based(fout, f[:-4], nodes))
+    for data_dir in data_dirs:
+        for subdir, dirs, files in os.walk(os.path.expanduser(data_dir)):
+            for f in files:
+                if f.endswith(".out"):
+                    nodes = int(os.path.basename(subdir))
+                    with open(os.path.join(subdir, f), "r") as fout:
+                        data.extend(_parse_line_based(fout, f[:-4], nodes))
 
     return pd.DataFrame(data)
 

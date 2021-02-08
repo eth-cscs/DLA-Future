@@ -11,7 +11,7 @@ from parse import parse
 sns.set_theme()
 
 # plt_type : ppn | time
-def _gen_nodes_plot(plt_type, title, ylabel, file_name, df):
+def _gen_nodes_plot(plt_type, title, ylabel, file_name, df, logx):
     fig, ax = plt.subplots()
     for bench_name, lib_data in df.groupby(["bench_name"]):
         lib_data.plot(
@@ -30,6 +30,7 @@ def _gen_nodes_plot(plt_type, title, ylabel, file_name, df):
         )
 
     ax.set_ylabel(ylabel)
+    ax.set_xscale("log", base=2)
     ax.set_xlabel("nodes")
     ax.set_xticks(df["nodes"].sort_values().unique())
     ax.legend(loc="upper right", prop={"size": 6})
@@ -169,7 +170,7 @@ def calc_trsm_metrics(df):
     )
 
 
-def gen_chol_plots(df):
+def gen_chol_plots(df, logx=False):
     for (m, mb), grp_data in df.groupby(["matrix_rows", "block_rows"]):
         title = f"Cholesky: matrix_size = {m} x {m}, block_size = {mb} x {mb}"
         _gen_nodes_plot(
@@ -178,6 +179,7 @@ def gen_chol_plots(df):
             "GFlops/node",
             f"chol_ppn_{m}_{mb}",
             grp_data,
+            logx
         )
         _gen_nodes_plot(
             "time",
@@ -185,10 +187,10 @@ def gen_chol_plots(df):
             "Time [s]",
             f"chol_time_{m}_{mb}",
             grp_data,
+            logx
         )
 
-
-def gen_trsm_plots(df):
+def gen_trsm_plots(df, logx=False):
     for (m, n, mb), grp_data in df.groupby(
         ["matrix_rows", "matrix_cols", "block_rows"]
     ):
@@ -199,6 +201,7 @@ def gen_trsm_plots(df):
             "GFlops/node",
             f"trsm_ppn_{m}_{n}_{mb}",
             grp_data,
+            logx
         )
         _gen_nodes_plot(
             "time",
@@ -206,4 +209,5 @@ def gen_trsm_plots(df):
             "Time [s]",
             f"trsm_time_{m}_{n}_{mb}",
             grp_data,
+            logx
         )

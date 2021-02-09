@@ -29,7 +29,7 @@ class DlaFuture(CMakePackage, CudaPackage):
     # it would have been "more correct" specifying @1.5 as constraint but, if clingo
     # solver works as expected, the default solver has problems with that.
     # Eventually, we opted for specifying the range more explicitly, so it works with both
-    depends_on("hpx@1.5.0:1.5.1", when="~cuda")
+    depends_on("hpx@1.5.0:1.5.999", when="~cuda")
     depends_on("hpx@master +cuda", when="+cuda")
 
     depends_on("hpx build_type=Debug", when="build_type=Debug")

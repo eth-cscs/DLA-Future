@@ -34,7 +34,7 @@
 #include "dlaf/matrix/layout_info.h"
 #include "dlaf/util_matrix.h"
 
-#include "dlaf/matrix_output.h"
+#include "dlaf/matrix/matrix_output.h"
 
 namespace dlaf {
 namespace solver {

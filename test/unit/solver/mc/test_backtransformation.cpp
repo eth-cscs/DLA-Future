@@ -16,7 +16,7 @@
 //#include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix_output.h"
+#include "dlaf/matrix/matrix_output.h"
 #include "dlaf/util_matrix.h"
 //#include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"

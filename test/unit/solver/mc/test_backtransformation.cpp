@@ -13,7 +13,7 @@
 #include <sstream>
 #include <tuple>
 #include "gtest/gtest.h"
-//#include "dlaf/communication/communicator_grid.h"
+#include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_output.h"
@@ -21,6 +21,7 @@
 //#include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/matrix/util_matrix_blas.h"
+#include "dlaf_test/matrix/util_matrix_local.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
@@ -135,45 +136,34 @@ void larft(const lapack::Direction direction, const lapack::StoreV storeV, const
 }
   
 TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
-  const SizeType m = 3;
-  const SizeType n = 3;
+  const SizeType m = 4;
+  const SizeType n = 4;
   const SizeType mb = 2;
   const SizeType nb = 2;
 
+  // TODO: only for DOUBLE so far!!!
   LocalElementSize sizeC(m, n);
   TileElementSize blockSizeC(mb, nb);
   Matrix<double, Device::CPU> mat_c(sizeC, blockSizeC);
-  dlaf::matrix::util::set_random_seed(mat_c);
+  dlaf::matrix::util::set_random(mat_c);
   std::cout << "Random matrix C" << std::endl;
   printElements(mat_c);
 
   LocalElementSize sizeV(m, n);
   TileElementSize blockSizeV(mb, nb);
   Matrix<double, Device::CPU> mat_v(sizeV, blockSizeV);
-  dlaf::matrix::util::set_random_seed_lower(mat_v);
+  dlaf::matrix::util::set_random(mat_v);
   std::cout << "Random matrix V" << std::endl;
   printElements(mat_v);
 
   // Impose orthogonality: Q = I - v tau v^H is orthogonal (Q Q^H = I)
-  // leads to tau = 2/(vT v)
+  // leads to tau = 2/(vT v) for real 
   LocalElementSize sizeTau(m, 1);
   TileElementSize blockSizeTau(1, 1);
   Matrix<double, Device::CPU> mat_tau(sizeTau, blockSizeTau);
-  dlaf::matrix::util::set_random_seed(mat_tau);
+  dlaf::matrix::util::set_random(mat_tau);
   std::cout << "Random matrix Tau" << std::endl;
   printElements(mat_tau);
-
-  for (SizeType j = 0; j < n; ++j) {
-    for (SizeType i = 0; i < m; ++i) {
-      LocalElementSize szV(m, 1);
-      const LocalTileIndex ij{i, j};
-      const LocalTileIndex ji{j, i};
-      const auto& tileij = mat_v(LocalTileIndex{i,j}).get()({0,0});
-      //    const auto& tileji = dlaf::conj(mat_v.read(ji));
-//      std::cout << "tileij " << tileij.get().size();
-      //      auto tau = blas::dot(1, tileij.get().ptr(), 1, tileji.get().ptr(), 1); 
-    }
-  }
 
   
   LocalElementSize sizeT(m, n);
@@ -183,13 +173,24 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
   std::cout << "Zero matrix T" << std::endl;
   printElements(mat_t);
 
-  
-  //  hpx::dataflow(hpx::util::unwrapping(larft<TypeParam, Device::CPU>), lapack::Direction::Forward, lapack::StoreV::Columnwise, m-1, m-1, mat_v.read(LocalTileIndex{0,0}).get().ptr(), mat_v.read(LocalTileIndex{0,0}).get().ld(), mat_tau.read(LocalTileIndex{0,0}).get().ptr(), mat_t(LocalTileIndex{0,0}).get().ptr(), mat_t(LocalTileIndex{0,0}).get().ld());
+  comm::CommunicatorGrid comm_grid(MPI_COMM_WORLD, 1, 1, common::Ordering::ColumnMajor);
 
-  //for (SizeType i = 0; i < m; ++i) {
-  //hpx::dataflow(executor_hp, hpx::util::unwrapping(cpy), mat_v.read(LocalTileIndex(i, k)), mat_w_last(LocalTileIndex(i, 0)));
-	   
-  lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise, m-1, m-1, mat_v.read(LocalTileIndex{0,0}).get().ptr(), mat_v.read(LocalTileIndex{0,0}).get().ld(), mat_tau.read(LocalTileIndex{0,0}).get().ptr(), mat_t(LocalTileIndex{0,0}).get().ptr(), mat_t(LocalTileIndex{0,0}).get().ld());
+  // Copy C matrix locally
+  auto mat_c_loc = dlaf::matrix::test::all_gather<double>(mat_c, comm_grid);
+
+  // Copy V matrix locally
+  auto mat_v_loc = dlaf::matrix::test::all_gather<double>(mat_c, comm_grid);
+  //dlaf::matrix::test::print(format::numpy{}, "mat Vloc ", mat_v_loc, std::cout);
+
+  // Reset diagonal and upper values of V
+  lapack::laset(lapack::MatrixType::Upper, mat_v_loc.size().rows(), mat_v_loc.size().cols(),
+		0, 1,
+		mat_v_loc.ptr(), mat_v_loc.ld());
+  dlaf::matrix::test::print(format::numpy{}, "mat Vloc ", mat_v_loc, std::cout);
+
+
+  
+  //lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise, m-1, m-1, mat_v.read(LocalTileIndex{0,0}).get().ptr(), mat_v.read(LocalTileIndex{0,0}).get().ld(), mat_tau.read(LocalTileIndex{0,0}).get().ptr(), mat_t(LocalTileIndex{0,0}).get().ptr(), mat_t(LocalTileIndex{0,0}).get().ld());
   
 //  solver::backTransformation<Backend::MC>(mat_c, mat_v, mat_t);
 //  std::cout << "Output " << std::endl;

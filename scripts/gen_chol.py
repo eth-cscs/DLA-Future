@@ -39,7 +39,7 @@ for nodes in nodes_arr:
         # print(job_text)
         # break
 
-        # mp.submit_jobs(run_dir, nodes, job_text, suffix = ranks_per_node, submissions=2)
+        # mp.submit_jobs(run_dir, nodes, job_text, suffix = ranks_per_node)
 
         job_text = mp.init_job_text(system, run_name, nodes, time_min)
 
@@ -62,7 +62,7 @@ for nodes in nodes_arr:
         # print(job_text)
         # break
 
-        # mp.submit_jobs(run_dir, nodes, job_text, suffix = f"sl_{ranks_per_node}", submissions=2)
+        # mp.submit_jobs(run_dir, nodes, job_text, suffix = f"sl_{ranks_per_node}")
 
     job_text = mp.init_job_text(system, run_name, nodes, time_min)
     for m_sz, mb_sz in product(m_sz_arr, mb_sz_arr):
@@ -83,4 +83,4 @@ for nodes in nodes_arr:
     # print(job_text)
     # break
 
-    # mp.submit_jobs(run_dir, nodes, job_text, suffix = "dp", submissions=2)
+    # mp.submit_jobs(run_dir, nodes, job_text, suffix = "dp")

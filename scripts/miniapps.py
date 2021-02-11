@@ -39,7 +39,7 @@ def run_command(system, total_ranks, cpus_per_rank):
 
 # Create the job directory tree and submit jobs.
 #
-def submit_jobs(run_dir, nodes, job_text, suffix="na", submissions=1):
+def submit_jobs(run_dir, nodes, job_text, suffix="na"):
     job_path = expanduser(f"{run_dir}/{nodes}")
     makedirs(job_path, exist_ok=True)
     job_file = f"{job_path}/job_{suffix}.sh"
@@ -47,10 +47,9 @@ def submit_jobs(run_dir, nodes, job_text, suffix="na", submissions=1):
         f.write(job_text)
 
     print(f"Submitting : {job_file}")
-    for i in range(submissions):
-        system(f"sbatch --chdir={job_path} {job_file}")
-        # sleep to not overload the scheduler
-        sleep(1)
+    system(f"sbatch --chdir={job_path} {job_file}")
+    # sleep to not overload the scheduler
+    sleep(1)
 
 
 # lib: allowed libraries are dlaf|slate|dplasma

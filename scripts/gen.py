@@ -7,6 +7,8 @@ import systems
 system = systems.cscs["daint-mc"]
 run_name = "extended_mpi"
 build_dir = "~/build/dlaf/r2lupte/nbmpi"
+slate_build_dir = "~/build/slate"
+dplasma_build_dir = "~/build/dplasma"
 run_dir = f"~/code/dlaf/scripts/{run_name}"
 time_min = 60
 nruns = 10
@@ -41,7 +43,7 @@ for nodes in nodes_arr:
             extra_flags,
         )
 
-    for m_sz, n_sz, mb_sz in product(m_sz_arr, n_sz_arr, mb_sz_arr):
+    for m_sz, mb_sz in product(m_sz_arr, mb_sz_arr):
         job_text += mp.chol(
             system,
             "slate",
@@ -53,7 +55,7 @@ for nodes in nodes_arr:
             nruns,
         )
 
-    for m_sz, n_sz, mb_sz in product(m_sz_arr, n_sz_arr, mb_sz_arr):
+    for m_sz, mb_sz in product(m_sz_arr, mb_sz_arr):
         job_text += mp.chol(
             system,
             "dplasma",

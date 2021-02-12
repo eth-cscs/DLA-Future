@@ -165,10 +165,6 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
   LocalElementSize sizeTau(m, 1);
   TileElementSize blockSizeTau(1, 1);
   Matrix<double, Device::CPU> mat_tau(sizeTau, blockSizeTau);
-  dlaf::matrix::util::set_random(mat_tau);
-  std::cout << "Random matrix Tau" << std::endl;
-  printElements(mat_tau);
-
   
   LocalElementSize sizeT(m, n);
   TileElementSize blockSizeT(mb, nb);
@@ -193,27 +189,51 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
   lapack::laset(lapack::MatrixType::Upper, mat_v_loc.size().rows(), mat_v_loc.size().cols(),
 		0, 1,
 		mat_v_loc.ptr(), mat_v_loc.ld());
-  //  dlaf::matrix::test::print(format::numpy{}, "mat Vloc ", mat_v_loc, std::cout);
+  dlaf::matrix::test::print(format::numpy{}, "mat Vloc ", mat_v_loc, std::cout);
 
   //std::cout << " TAUS " << std::endl;
-  common::internal::vector<hpx::shared_future<TypeParam>> taus;
-  taus.reserve(m);
+  //common::internal::vector<hpx::shared_future<TypeParam>> taus;
+  //taus.reserve(m);
+  //std::vector<double> taus;
   
+  MatrixLocal<double> taus({m, 1}, {1, 1});
+  MatrixLocal<double> work({m, 1}, {1, 1});
   // Compute taus (as tau = 2 / v^H v)
-  for (SizeType i = 0; i < n; ++i) {
+  for (SizeType i = 0; i < n-1; ++i) {
     const GlobalElementIndex v_offset{0, i};
     auto tau = blas::dot(m, mat_v_loc.ptr(v_offset), 1, mat_v_loc.ptr(v_offset), 1);
-    //std::cout << " tau (" << i << "): " << tau << std::endl;
-    taus.push_back(hpx::make_ready_future<double>(tau));
+    std::cout << " tau (" << i << "): " << tau << std::endl;
+    //taus.push_back(hpx::make_ready_future<double>(tau));
     //taus.push_back(tau);
+    taus({i,0}) = tau;
+
+    lapack::larf(lapack::Side::Left, m, n, mat_v_loc.ptr(v_offset), 1, tau, mat_c_loc.ptr(), mat_c_loc.ld());
+    dlaf::matrix::test::print(format::numpy{}, "mat Cloc ", mat_c_loc, std::cout);
   }
 
+  std::cout << " " << std::endl;
+  std::cout << " Result simple way " << std::endl;
+  dlaf::matrix::test::print(format::numpy{}, "mat Cloc ", mat_c_loc, std::cout);
+  std::cout << " " << std::endl;
+  
+  //hpx::wait_all(taus);
+  //auto local_taus = hpx::util::unwrap(taus);
   //for (SizeType i = 0; i < n; ++i) {
   //  lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise, m-1, m-1, mat_v_loc.tile_read({0,i}).ptr(), mat_v_loc.ld(), taus[i], mat_t_loc.tile({0,i}).ptr(), mat_t_loc.ld());
   //}
-  lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise, m-1, m-1, mat_v_loc.ptr(), mat_v_loc.ld(), taus, mat_t_loc.ptr(), mat_t_loc.ld());
-    
-//  solver::backTransformation<Backend::MC>(mat_c, mat_v, mat_t);
+  
+  lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise, m-1, m-1, mat_v_loc.ptr(), mat_v_loc.ld(), taus.ptr(), mat_t_loc.ptr(), mat_t_loc.ld());
+  dlaf::matrix::test::print(format::numpy{}, "mat Tloc", mat_t_loc, std::cout);
+
+  for (int i = 0; i < mat_t.nrTiles().cols(); ++i) {
+    //    copy(mat_t_loc.tile_read({0,i}), mat_t(GlobalElementInde{0,i}));
+    //mat_t(LocalTileIndex{0,i}) = mat_t_loc.tile_read({0,i});
+    std::cout << " i " << i << std::endl;
+  }
+
+
+  
+  //  solver::backTransformation<Backend::MC>(mat_c, mat_v, mat_t);
 //  std::cout << "Output " << std::endl;
 //  printElements(mat_t);
   

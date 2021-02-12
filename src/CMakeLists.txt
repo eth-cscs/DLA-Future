@@ -144,7 +144,7 @@ install(DIRECTORY ../include/
 
 # install custom FindModules
 install(DIRECTORY ../cmake/
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME}
   FILES_MATCHING PATTERN "Find*.cmake"
   PATTERN "template" EXCLUDE
 )
@@ -160,17 +160,17 @@ include(CMakePackageConfigHelpers)
 install(EXPORT
   DLAF-Targets
   NAMESPACE DLAF::
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME}
 )
 
 # Config-file preparation and install
 configure_package_config_file(
   ${CMAKE_CURRENT_LIST_DIR}/../cmake/template/DLAFConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/DLAFConfig.cmake
-  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME}
 )
 
 install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/DLAFConfig.cmake
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME}
 )

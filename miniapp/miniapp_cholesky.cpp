@@ -121,17 +121,17 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       dlaf::factorization::cholesky<Backend::MC, Device::CPU, T>(comm_grid, blas::Uplo::Lower, matrix);
     }
     else if (opts.exec == exec_backend::yielding) {
-      dlaf::factorization::internal::chol_nb<T, dlaf::comm::executor>(comm_grid, matrix);
+      dlaf::factorization::internal::chol_nb<T, dlaf::comm::MPIMech::Yielding>(comm_grid, matrix);
     }
     else if (opts.exec == exec_backend::polling) {
-      dlaf::factorization::internal::chol_nb<T, dlaf::comm::mpi_polling_executor>(comm_grid, matrix);
+      dlaf::factorization::internal::chol_nb<T, dlaf::comm::MPIMech::Polling>(comm_grid, matrix);
     }
     else if (opts.exec == exec_backend::batched_yielding) {
-      dlaf::factorization::internal::chol_batched<T, dlaf::comm::executor>(comm_grid, matrix);
+      // dlaf::factorization::internal::chol_batched<T, dlaf::comm::MPIMech::Yielding>(comm_grid, matrix);
     }
     else if (opts.exec == exec_backend::batched_polling) {
-      dlaf::factorization::internal::chol_batched<T, dlaf::comm::mpi_polling_executor>(comm_grid,
-                                                                                       matrix);
+      // dlaf::factorization::internal::chol_batched<T, dlaf::comm::mpi_polling_executor>(comm_grid,
+      //                                                                                 matrix);
     }
 
     // wait for last task and barrier for all ranks

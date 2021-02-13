@@ -409,15 +409,17 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid gr
   using hpx::threads::thread_priority_default;
   using common::internal::vector;
   using ConstTileType = typename Matrix<T, Device::CPU>::ConstTileType;
+  using comm::MPIMech;
+  using MPIExecutor = comm::Executor<MPIMech::Yielding>;
 
   pool_executor executor_hp("default", thread_priority_high);
   pool_executor executor_normal("default", thread_priority_default);
 
   // Set up MPI
-  comm::executor executor_mpi_col(grid.colCommunicator());
-  comm::executor executor_mpi_row(grid.rowCommunicator());
-  common::Pipeline<comm::executor> mpi_col_task_chain(std::move(executor_mpi_col));
-  common::Pipeline<comm::executor> mpi_row_task_chain(std::move(executor_mpi_row));
+  MPIExecutor executor_mpi_col("default", grid.colCommunicator());
+  MPIExecutor executor_mpi_row("default", grid.rowCommunicator());
+  common::Pipeline<MPIExecutor> mpi_col_task_chain(std::move(executor_mpi_col));
+  common::Pipeline<MPIExecutor> mpi_row_task_chain(std::move(executor_mpi_row));
 
   const matrix::Distribution& distr_a = mat_a.distribution();
   const matrix::Distribution& distr_b = mat_b.distribution();
@@ -445,9 +447,9 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid gr
         comm::bcast_send_tile(executor_hp, mpi_row_task_chain, mat_a.read(kk));
       }
       else {
-        kk_tile =
-            comm::bcast_recv_tile<comm::executor, T>(executor_hp, mpi_row_task_chain,
-                                                     mat_a.tileSize(GlobalTileIndex(k, k)), k_rank_col);
+        kk_tile = comm::bcast_recv_tile<T, MPIMech::Yielding>(executor_hp, mpi_row_task_chain,
+                                                              mat_a.tileSize(GlobalTileIndex(k, k)),
+                                                              k_rank_col);
       }
     }
 
@@ -467,9 +469,9 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid gr
       else {
         if (k != (mat_b.nrTiles().rows() - 1)) {
           panel[j_local] =
-              comm::bcast_recv_tile<comm::executor, T>(executor_hp, mpi_col_task_chain,
-                                                       mat_b.tileSize(GlobalTileIndex(k, j)),
-                                                       k_rank_row);
+              comm::bcast_recv_tile<T, MPIMech::Yielding>(executor_hp, mpi_col_task_chain,
+                                                          mat_b.tileSize(GlobalTileIndex(k, j)),
+                                                          k_rank_row);
         }
       }
     }
@@ -491,9 +493,9 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid gr
         comm::bcast_send_tile(executor_hp, mpi_row_task_chain, mat_a.read(ik));
       }
       else {
-        ik_tile =
-            comm::bcast_recv_tile<comm::executor, T>(executor_hp, mpi_row_task_chain,
-                                                     mat_a.tileSize(GlobalTileIndex(i, k)), k_rank_col);
+        ik_tile = comm::bcast_recv_tile<T, MPIMech::Yielding>(executor_hp, mpi_row_task_chain,
+                                                              mat_a.tileSize(GlobalTileIndex(i, k)),
+                                                              k_rank_col);
       }
 
       // Update trailing matrix

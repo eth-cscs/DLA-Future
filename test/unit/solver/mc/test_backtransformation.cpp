@@ -189,7 +189,7 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
   lapack::laset(lapack::MatrixType::Upper, mat_v_loc.size().rows(), mat_v_loc.size().cols(),
 		0, 1,
 		mat_v_loc.ptr(), mat_v_loc.ld());
-  dlaf::matrix::test::print(format::numpy{}, "mat Vloc ", mat_v_loc, std::cout);
+  //  dlaf::matrix::test::print(format::numpy{}, "mat Vloc ", mat_v_loc, std::cout);
 
   //std::cout << " TAUS " << std::endl;
   //common::internal::vector<hpx::shared_future<TypeParam>> taus;
@@ -199,7 +199,7 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
   MatrixLocal<double> taus({m, 1}, {1, 1});
   MatrixLocal<double> work({m, 1}, {1, 1});
   // Compute taus (as tau = 2 / v^H v)
-  for (SizeType i = 0; i < n-1; ++i) {
+  for (SizeType i = n-2; i > -1; --i) {
     const GlobalElementIndex v_offset{0, i};
     auto tau = blas::dot(m, mat_v_loc.ptr(v_offset), 1, mat_v_loc.ptr(v_offset), 1);
     std::cout << " tau (" << i << "): " << tau << std::endl;
@@ -208,7 +208,7 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
     taus({i,0}) = tau;
 
     lapack::larf(lapack::Side::Left, m, n, mat_v_loc.ptr(v_offset), 1, tau, mat_c_loc.ptr(), mat_c_loc.ld());
-    dlaf::matrix::test::print(format::numpy{}, "mat Cloc ", mat_c_loc, std::cout);
+    //    dlaf::matrix::test::print(format::numpy{}, "mat Cloc ", mat_c_loc, std::cout);
   }
 
   std::cout << " " << std::endl;

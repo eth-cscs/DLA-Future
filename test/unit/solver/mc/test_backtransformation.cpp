@@ -208,36 +208,50 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
     taus({i,0}) = tau;
 
     lapack::larf(lapack::Side::Left, m, n, mat_v_loc.ptr(v_offset), 1, tau, mat_c_loc.ptr(), mat_c_loc.ld());
-    //    dlaf::matrix::test::print(format::numpy{}, "mat Cloc ", mat_c_loc, std::cout);
+    dlaf::matrix::test::print(format::numpy{}, "mat Cloc ", mat_c_loc, std::cout);
   }
 
   std::cout << " " << std::endl;
   std::cout << " Result simple way " << std::endl;
   dlaf::matrix::test::print(format::numpy{}, "mat Cloc ", mat_c_loc, std::cout);
   std::cout << " " << std::endl;
-  
-  //hpx::wait_all(taus);
-  //auto local_taus = hpx::util::unwrap(taus);
-  //for (SizeType i = 0; i < n; ++i) {
-  //  lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise, m-1, m-1, mat_v_loc.tile_read({0,i}).ptr(), mat_v_loc.ld(), taus[i], mat_t_loc.tile({0,i}).ptr(), mat_t_loc.ld());
-  //}
-  
-  lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise, m-1, m-1, mat_v_loc.ptr(), mat_v_loc.ld(), taus.ptr(), mat_t_loc.ptr(), mat_t_loc.ld());
-  dlaf::matrix::test::print(format::numpy{}, "mat Tloc", mat_t_loc, std::cout);
 
-  for (int i = 0; i < mat_t.nrTiles().cols(); ++i) {
-    //    copy(mat_t_loc.tile_read({0,i}), mat_t(GlobalElementInde{0,i}));
-    //mat_t(LocalTileIndex{0,i}) = mat_t_loc.tile_read({0,i});
-    std::cout << " i " << i << std::endl;
+  std::cout << " " << std::endl;
+  std::cout << " Mat Tloc start " << std::endl;
+  dlaf::matrix::test::print(format::numpy{}, "mat Tloc ", mat_t_loc, std::cout);
+  std::cout << " " << std::endl;
+  
+  for (SizeType i = 0; i < mat_t.nrTiles().cols(); ++i) {
+      std::cout << " i " << i  << std::endl;
+      const GlobalElementIndex offset{0, i};
+      const GlobalElementIndex tau_offset{i, 0};
+      lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise, nb-1, nb-1, mat_v_loc.ptr(offset), mat_v_loc.ld(), taus.ptr(tau_offset), mat_t(LocalTileIndex{0,i}).get().ptr(), mat_t(LocalTileIndex{0,i}).get().ld());
+      std::cout << " " << std::endl;
+      std::cout << " Mat Tloc " << std::endl;
+      dlaf::matrix::test::print(format::numpy{}, "mat Tloc ", mat_t_loc, std::cout);
+      std::cout << " " << std::endl;   
   }
+  
+
+  //  lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise, m-1, m-1, mat_v_loc.ptr(), mat_v_loc.ld(), taus.ptr(), mat_t_loc.ptr(), mat_t_loc.ld());
+//  dlaf::matrix::test::print(format::numpy{}, "mat Tloc", mat_t_loc, std::cout);
+//  std::cout << " " << std::endl;
+  
+  //mat_t = dlaf::matrix::test::all_gather<double>(mat_t_loc, comm_grid);
+//  for (int i = 0; i < mat_t.nrTiles().cols(); ++i) {
+//    //std::copy(mat_t_loc.tile_read({0,i}).ptr(), mat_t(LocalTileIndex{0,i}).get());
+//    //mat_t(LocalTileIndex{0,i}) = mat_t_loc.tile_read({0,i});
+//    //std::cout << " i " << i << std::endl;
+//  }
 
 
   
-  //  solver::backTransformation<Backend::MC>(mat_c, mat_v, mat_t);
-//  std::cout << "Output " << std::endl;
-//  printElements(mat_t);
+  std::cout << " " << std::endl;
+  solver::backTransformation<Backend::MC>(mat_c, mat_vv, mat_tt);
+  std::cout << "Output " << std::endl;
+  printElements(mat_c);
   
 //  double error = 0.1;
-//  CHECK_MATRIX_NEAR(res, mat_c, error, error);
+//  CHECK_MATRIX_NEAR(mat_c, mat_c_loc, error, error);
 }
 

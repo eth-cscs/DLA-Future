@@ -178,7 +178,7 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
   TileElementSize blockSizeTau(1, 1);
   Matrix<double, Device::CPU> mat_tau(sizeTau, blockSizeTau);
   
-  LocalElementSize sizeT(1, n);
+  LocalElementSize sizeT(mb, n);
   TileElementSize blockSizeT(mb, nb);
   Matrix<double, Device::CPU> mat_t(sizeT, blockSizeT);
   set_zero(mat_t);
@@ -186,20 +186,6 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
   std::cout << "Zero matrix T" << std::endl;
   printElements(mat_t);
 
-  LocalElementSize sizeTt(1, n);
-  TileElementSize blockSizeTt(mb, nb);
-  Matrix<double, Device::CPU> mat_tt(sizeTt, blockSizeTt);
-  auto el_T = [](const GlobalElementIndex& index) {
-    // ColMajor
-    //static const double values[] = {2.66741, 0.0, 0.0, 0.0, -5.24026, 2.04362, 0.0, 0.0, 6.53947, 2.49471, 1.68461, 0.0, 0., 0., 0., 0.};
-    //static const double values[] = {2.66741, 0.0, 0.0, 0.0, -5.36555, 2.04362, 0.0, 0.0, -3.4427, 1.68461, 0.0, 0.0, 0., 0., 0., 0.};
-    static const double values[] = {2.66741, 2.04362, 1.68461, 0.0, 0.0, 0., 0., 0., 0.};
-    return values[index.row() + 4 * index.col()];
-  };
-  set(mat_tt, el_T);
-  std::cout << " " << std::endl;
-  std::cout << "matrix Tt " << std::endl;
-  printElements(mat_tt);
 
   comm::CommunicatorGrid comm_grid(MPI_COMM_WORLD, 1, 1, common::Ordering::ColumnMajor);
 
@@ -253,32 +239,17 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
       std::cout << " i " << i  << std::endl;
       const GlobalElementIndex offset{0, i};
       const GlobalElementIndex tau_offset{i, 0};
-      lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise, nb-1, nb-1, mat_v_loc.ptr(offset), mat_v_loc.ld(), taus.ptr(tau_offset), mat_t(LocalTileIndex{0,i}).get().ptr(), mat_t(LocalTileIndex{0,i}).get().ld());
-      std::cout << " " << std::endl;
-      std::cout << " Mat Tloc " << std::endl;
-      dlaf::matrix::test::print(format::numpy{}, "mat Tloc ", mat_t_loc, std::cout);
-      std::cout << " " << std::endl;   
+      auto tile_t = mat_t(LocalTileIndex{0,i}).get();
+      lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise, nb, nb, mat_v_loc.ptr(offset), mat_v_loc.ld(), taus.ptr(tau_offset), tile_t.ptr(), tile_t.ld());
   }
+  std::cout << "Matrix T" << std::endl;
+  printElements(mat_t);
   
-
-  //  lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise, m-1, m-1, mat_v_loc.ptr(), mat_v_loc.ld(), taus.ptr(), mat_t_loc.ptr(), mat_t_loc.ld());
-//  dlaf::matrix::test::print(format::numpy{}, "mat Tloc", mat_t_loc, std::cout);
 //  std::cout << " " << std::endl;
-  
-  //mat_t = dlaf::matrix::test::all_gather<double>(mat_t_loc, comm_grid);
-//  for (int i = 0; i < mat_t.nrTiles().cols(); ++i) {
-//    //std::copy(mat_t_loc.tile_read({0,i}).ptr(), mat_t(LocalTileIndex{0,i}).get());
-//    //mat_t(LocalTileIndex{0,i}) = mat_t_loc.tile_read({0,i});
-//    //std::cout << " i " << i << std::endl;
-//  }
-
-
-  
-  std::cout << " " << std::endl;
-  solver::backTransformation<Backend::MC>(mat_c, mat_vv, mat_tt);
-  std::cout << "Output " << std::endl;
-  printElements(mat_c);
-  
+//  solver::backTransformation<Backend::MC>(mat_c, mat_vv, mat_tt);
+//  std::cout << "Output " << std::endl;
+//  printElements(mat_c);
+//  
 //  double error = 0.1;
 //  CHECK_MATRIX_NEAR(mat_c, mat_c_loc, error, error);
 }

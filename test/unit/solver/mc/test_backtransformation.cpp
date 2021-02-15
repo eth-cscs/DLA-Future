@@ -160,18 +160,46 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
   std::cout << "Random matrix V" << std::endl;
   printElements(mat_v);
 
+  LocalElementSize sizeVv(m, n);
+  TileElementSize blockSizeVv(mb, nb);
+  Matrix<double, Device::CPU> mat_vv(sizeVv, blockSizeVv);
+  auto el_V = [](const GlobalElementIndex& index) {
+    // ColMajor
+    static const double values[] = {1.0, 0.98429, -0.0317176, 0.835213, 0.0, 1.0, 0.724638, 0.720084, 0.0, 0.0, 1.0, 0.827409, 0.0, 0.0, 0.0, 1.0};
+    return values[index.row() + 4 * index.col()];
+  };
+  set(mat_vv, el_V);
+  std::cout << "Matrix Vv" << std::endl;
+  printElements(mat_vv);
+  
   // Impose orthogonality: Q = I - v tau v^H is orthogonal (Q Q^H = I)
   // leads to tau = 2/(vT v) for real 
   LocalElementSize sizeTau(m, 1);
   TileElementSize blockSizeTau(1, 1);
   Matrix<double, Device::CPU> mat_tau(sizeTau, blockSizeTau);
   
-  LocalElementSize sizeT(m, n);
+  LocalElementSize sizeT(1, n);
   TileElementSize blockSizeT(mb, nb);
   Matrix<double, Device::CPU> mat_t(sizeT, blockSizeT);
   set_zero(mat_t);
+//  set(mat_t, el_T);
   std::cout << "Zero matrix T" << std::endl;
   printElements(mat_t);
+
+  LocalElementSize sizeTt(1, n);
+  TileElementSize blockSizeTt(mb, nb);
+  Matrix<double, Device::CPU> mat_tt(sizeTt, blockSizeTt);
+  auto el_T = [](const GlobalElementIndex& index) {
+    // ColMajor
+    //static const double values[] = {2.66741, 0.0, 0.0, 0.0, -5.24026, 2.04362, 0.0, 0.0, 6.53947, 2.49471, 1.68461, 0.0, 0., 0., 0., 0.};
+    //static const double values[] = {2.66741, 0.0, 0.0, 0.0, -5.36555, 2.04362, 0.0, 0.0, -3.4427, 1.68461, 0.0, 0.0, 0., 0., 0., 0.};
+    static const double values[] = {2.66741, 2.04362, 1.68461, 0.0, 0.0, 0., 0., 0., 0.};
+    return values[index.row() + 4 * index.col()];
+  };
+  set(mat_tt, el_T);
+  std::cout << " " << std::endl;
+  std::cout << "matrix Tt " << std::endl;
+  printElements(mat_tt);
 
   comm::CommunicatorGrid comm_grid(MPI_COMM_WORLD, 1, 1, common::Ordering::ColumnMajor);
 

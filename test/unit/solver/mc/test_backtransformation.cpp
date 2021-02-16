@@ -203,22 +203,15 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
   lapack::laset(lapack::MatrixType::Upper, mat_v_loc.size().rows(), mat_v_loc.size().cols(),
 		0, 1,
 		mat_v_loc.ptr(), mat_v_loc.ld());
-  //  dlaf::matrix::test::print(format::numpy{}, "mat Vloc ", mat_v_loc, std::cout);
+  dlaf::matrix::test::print(format::numpy{}, "mat Vloc ", mat_v_loc, std::cout);
 
   //std::cout << " TAUS " << std::endl;
-  //common::internal::vector<hpx::shared_future<TypeParam>> taus;
-  //taus.reserve(m);
-  //std::vector<double> taus;
-  
   MatrixLocal<double> taus({m, 1}, {1, 1});
-  MatrixLocal<double> work({m, 1}, {1, 1});
-  // Compute taus (as tau = 2 / v^H v)
+  // Compute taus (real case: tau = 2 / v^H v)
   for (SizeType i = n-2; i > -1; --i) {
     const GlobalElementIndex v_offset{0, i};
     auto tau = blas::dot(m, mat_v_loc.ptr(v_offset), 1, mat_v_loc.ptr(v_offset), 1);
     std::cout << " tau (" << i << "): " << tau << std::endl;
-    //taus.push_back(hpx::make_ready_future<double>(tau));
-    //taus.push_back(tau);
     taus({i,0}) = tau;
 
     lapack::larf(lapack::Side::Left, m, n, mat_v_loc.ptr(v_offset), 1, tau, mat_c_loc.ptr(), mat_c_loc.ld());
@@ -236,11 +229,14 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
   std::cout << " " << std::endl;
   
   for (SizeType i = mat_t.nrTiles().cols()-1; i > -1; --i) {
+  //  for (SizeType i = 0; i < mat_t.nrTiles().cols()-1; ++i) {
       std::cout << " i " << i  << std::endl;
-      const GlobalElementIndex offset{0, i};
-      const GlobalElementIndex tau_offset{i, 0};
+      const GlobalElementIndex offset{i*nb, i*nb};
+      const GlobalElementIndex tau_offset{i*nb, 0};
       auto tile_t = mat_t(LocalTileIndex{0,i}).get();
-      lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise, mat_v.size().rows(), nb, mat_v_loc.ptr(offset), mat_v_loc.ld(), taus.ptr(tau_offset), tile_t.ptr(), tile_t.ld());  }
+      lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise, mat_v.size().rows()-i*nb, nb, mat_v_loc.ptr(offset), mat_v_loc.ld(), taus.ptr(tau_offset), tile_t.ptr(), tile_t.ld());
+      std::cout << " i " <<  i << " n "  << mat_v.size().rows()-i*nb << " k " << nb  << " - " << i*nb << " offset " << offset << std::endl;
+  }
   std::cout << "FINAL Matrix T" << std::endl;
   printElements(mat_t);
   

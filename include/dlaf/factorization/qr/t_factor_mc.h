@@ -78,8 +78,10 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
   DLAF_ASSERT(k <= panel_width, k, panel_width);
   DLAF_ASSERT(taus.size() == k, taus.size(), k);
 
-  DLAF_ASSERT(k <= t.blockSize().rows(), k, t.blockSize());
-  DLAF_ASSERT(k <= t.blockSize().cols(), k, t.blockSize());
+  const GlobalTileIndex t_idx(0, 0);
+  const auto t_size = t.tileSize(t_idx);
+  DLAF_ASSERT(k <= t_size.rows(), k, t_size);
+  DLAF_ASSERT(k <= t_size.cols(), k, t_size);
 
   if (rank.col() != rank_v0.col())
     return;
@@ -90,7 +92,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
   };
   const LocalTileIndex v_end_loc{dist.localNrTiles().rows(), v_start_loc.col() + 1};
 
-  t(LocalTileIndex{0, 0}).then(unwrapping([](auto&& tile) {
+  t(t_idx).then(unwrapping([](auto&& tile) {
     lapack::laset(lapack::MatrixType::General, tile.size().rows(), tile.size().cols(), 0, 0, tile.ptr(),
                   tile.ld());
   }));
@@ -151,7 +153,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
         }
       });
 
-      hpx::dataflow(gemv_func, v.read(v_i_loc), taus[j], t(LocalTileIndex{0, 0}));
+      hpx::dataflow(gemv_func, v.read(v_i_loc), taus[j], t(t_idx));
     }
   }
 
@@ -162,7 +164,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
       all_reduce(comm_wrapper.ref().colCommunicator(), MPI_SUM, input_t, input_t);
     });
 
-    hpx::dataflow(reduce_t_func, t(LocalTileIndex{0, 0}), serial_comm());
+    hpx::dataflow(reduce_t_func, t(t_idx), serial_comm());
   }
 
   // 2B Second Step TRMV
@@ -181,7 +183,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
       // clang-format on
     });
 
-    hpx::dataflow(trmv_func, t(LocalTileIndex{0, 0}), t_start, t_size);
+    hpx::dataflow(trmv_func, t(t_idx), t_start, t_size);
   }
 }
 }

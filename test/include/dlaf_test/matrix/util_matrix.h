@@ -186,7 +186,7 @@ void checkNear(ElementGetter&& expected, MatrixType& mat,
     auto diff = std::abs(expected - value);
     auto abs_max = std::max(std::abs(expected), std::abs(value));
 
-    return (diff <= abs_err) || (diff / abs_max <= rel_err);
+    return (diff < abs_err) || (diff / abs_max < rel_err);
   };
   auto err_message = [rel_err, abs_err](T expected, T value) {
     auto diff = std::abs(expected - value);

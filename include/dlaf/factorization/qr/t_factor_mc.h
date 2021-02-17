@@ -34,6 +34,27 @@ namespace internal {
 
 template <class T>
 struct QR_Tfactor<Backend::MC, Device::CPU, T> {
+  /// Forms the triangular factor T of a block of reflectors H, which is defined as a product of k
+  /// elementary reflectors.
+  ///
+  /// It is similar to what xLARFT in LAPACK does.
+  /// Given @p k elementary reflectors stored in the column of @p v starting at tile @p v_start,
+  /// together with related tau values in @p taus, in @p t will be formed the triangular factor for the H
+  /// block of reflector, such that
+  ///
+  /// H = I - V . T . V*
+  ///
+  /// where H = H1 . H2 . ... . Hk
+  ///
+  /// in which Hi represents a single elementary reflector transformation
+  ///
+  /// @param k the number of elementary reflectors to use (from the beginning of the tile)
+  /// @param v where the elemenary reflectors are stored
+  /// @param v_start tile in @p v where the column of reflectors starts
+  /// @param taus array of taus, associated with the related elementary reflector
+  /// @param t a matrix where the triangular factor will be stored (in tile {0, 0}) for all ranks in the
+  /// column of the reflectors
+  /// @param serial_comm where internal communications are issued
   static void call(const SizeType k, Matrix<const T, Device::CPU>& v, const GlobalTileIndex v_start,
                    common::internal::vector<hpx::shared_future<T>> taus, Matrix<T, Device::CPU>& t,
                    common::Pipeline<comm::CommunicatorGrid>& serial_comm);

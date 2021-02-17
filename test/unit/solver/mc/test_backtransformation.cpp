@@ -153,24 +153,38 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
   std::cout << "Random matrix C" << std::endl;
   printElements(mat_c);
 
+//  auto el_V = [](const GlobalElementIndex& index) {
+//    // ColMajor
+//    static const double values[] = {1.0, -0.459949982, 0.01482153, -0.390287623, 0., 1., -0.449086158, 0.007670623, 0., 0., 1., 0.474856991, 0.0, 0.0, 0.0, 0.0};
+//    return values[index.row() + 4 * index.col()];
+//  };
+
   LocalElementSize sizeV(m, n);
   TileElementSize blockSizeV(mb, nb);
   Matrix<double, Device::CPU> mat_v(sizeV, blockSizeV);
-  dlaf::matrix::util::set_random(mat_v);
+  // set(mat_v, el_V);
+    dlaf::matrix::util::set_random(mat_v);
   std::cout << "Random matrix V" << std::endl;
   printElements(mat_v);
-
-  LocalElementSize sizeVv(m, n);
-  TileElementSize blockSizeVv(mb, nb);
-  Matrix<double, Device::CPU> mat_vv(sizeVv, blockSizeVv);
-  auto el_V = [](const GlobalElementIndex& index) {
-    // ColMajor
-    static const double values[] = {1.0, 0.98429, -0.0317176, 0.835213, 0.0, 1.0, 0.724638, 0.720084, 0.0, 0.0, 1.0, 0.827409, 0.0, 0.0, 0.0, 1.0};
-    return values[index.row() + 4 * index.col()];
-  };
-  set(mat_vv, el_V);
-  std::cout << "Matrix Vv" << std::endl;
-  printElements(mat_vv);
+  // Reset diagonal and upper values of V
+  for (int i = 0; i < mat_v.nrTiles().rows(); ++i) {
+    for (int j = 0; j < mat_v.nrTiles().cols(); ++j) {
+      auto ij = LocalTileIndex(i,j);
+      auto tile_v = mat_v(ij).get();
+      if (i == j) {
+	lapack::laset(lapack::MatrixType::Upper, tile_v.size().rows(), tile_v.size().cols(),
+		      0, 1,
+		      tile_v.ptr(), tile_v.ld());
+      }
+      else if (j > i) {
+	lapack::laset(lapack::MatrixType::General, tile_v.size().rows(), tile_v.size().cols(),
+		      0, 0,
+		      tile_v.ptr(), tile_v.ld());
+      }
+    }
+  }
+  std::cout << "Random matrix V after laset" << std::endl;
+  printElements(mat_v);
   
   // Impose orthogonality: Q = I - v tau v^H is orthogonal (Q Q^H = I)
   // leads to tau = 2/(vT v) for real 
@@ -196,13 +210,13 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
   auto mat_t_loc = dlaf::matrix::test::all_gather<double>(mat_t, comm_grid);
 
   // Copy V matrix locally
-  auto mat_v_loc = dlaf::matrix::test::all_gather<double>(mat_c, comm_grid);
+  auto mat_v_loc = dlaf::matrix::test::all_gather<double>(mat_v, comm_grid);
   //dlaf::matrix::test::print(format::numpy{}, "mat Vloc ", mat_v_loc, std::cout);
 
   // Reset diagonal and upper values of V
-  lapack::laset(lapack::MatrixType::Upper, mat_v_loc.size().rows(), mat_v_loc.size().cols(),
-		0, 1,
-		mat_v_loc.ptr(), mat_v_loc.ld());
+//  lapack::laset(lapack::MatrixType::Upper, mat_v_loc.size().rows(), mat_v_loc.size().cols(),
+//		0, 1,
+//		mat_v_loc.ptr(), mat_v_loc.ld());
   dlaf::matrix::test::print(format::numpy{}, "mat Vloc ", mat_v_loc, std::cout);
 
   //std::cout << " TAUS " << std::endl;
@@ -210,7 +224,8 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
   // Compute taus (real case: tau = 2 / v^H v)
   for (SizeType i = n-2; i > -1; --i) {
     const GlobalElementIndex v_offset{0, i};
-    auto tau = blas::dot(m, mat_v_loc.ptr(v_offset), 1, mat_v_loc.ptr(v_offset), 1);
+    auto dotprod = blas::dot(m, mat_v_loc.ptr(v_offset), 1, mat_v_loc.ptr(v_offset), 1);
+    auto tau = 2.0/dotprod;
     std::cout << " tau (" << i << "): " << tau << std::endl;
     taus({i,0}) = tau;
 
@@ -229,7 +244,6 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
   std::cout << " " << std::endl;
   
   for (SizeType i = mat_t.nrTiles().cols()-1; i > -1; --i) {
-  //  for (SizeType i = 0; i < mat_t.nrTiles().cols()-1; ++i) {
       std::cout << " i " << i  << std::endl;
       const GlobalElementIndex offset{i*nb, i*nb};
       const GlobalElementIndex tau_offset{i*nb, 0};
@@ -241,11 +255,18 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
   printElements(mat_t);
   
   std::cout << " " << std::endl;
-  solver::backTransformation<Backend::MC>(mat_c, mat_vv, mat_t);
+  solver::backTransformation<Backend::MC>(mat_c, mat_v, mat_t);
   std::cout << "Output " << std::endl;
   printElements(mat_c);
+
+  auto result = [& dist = mat_c.distribution(),
+		 &mat_local = mat_c_loc](const GlobalElementIndex& element) {
+    const auto tile_index = dist.globalTileIndex(element);
+    const auto tile_element = dist.tileElementIndex(element);
+    return mat_local.tile_read(tile_index)(tile_element);
+  };
   
-//  double error = 0.1;
-//  CHECK_MATRIX_NEAR(mat_c_loc, mat_c, error, error);
+  double error = 0.01;
+  CHECK_MATRIX_NEAR(result, mat_c, error, error);
 }
 

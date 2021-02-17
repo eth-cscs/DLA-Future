@@ -55,13 +55,10 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
   const auto panel_width = v.tileSize(v_start).cols();
 
   DLAF_ASSERT(k <= panel_width, k, panel_width);
+  DLAF_ASSERT(taus.size() == k, taus.size(), k);
 
-  DLAF_ASSERT(t.nrTiles() == GlobalTileSize(1, 1), t);
-  // TODO assertion about t.blocksize() == v.blocksize()?
-  // TODO assertion about t.size() is compatible with k/panel_width?
-  // DLAF_ASSERT(t.size() == GlobalElementSize(k, k), t.size(), k);
-
-  // TODO assumption: no empty grid
+  DLAF_ASSERT(k <= t.blockSize().rows(), k, t.blockSize());
+  DLAF_ASSERT(k <= t.blockSize().cols(), k, t.blockSize());
 
   if (rank.col() != rank_v0.col())
     return;
@@ -72,7 +69,6 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
   };
   const LocalTileIndex v_end_loc{dist.localNrTiles().rows(), v_start_loc.col() + 1};
 
-  // TODO it would be better to embed this reset inside a bigger task
   t(LocalTileIndex{0, 0}).then(unwrapping([](auto&& tile) {
     lapack::laset(lapack::MatrixType::General, tile.size().rows(), tile.size().cols(), 0, 0, tile.ptr(),
                   tile.ld());

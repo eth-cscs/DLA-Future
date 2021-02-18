@@ -23,7 +23,7 @@ stages:
     - docker login -u $CSCS_REGISTRY_USER -p $CSCS_REGISTRY_PASSWORD $CSCS_REGISTRY
   script:
     - TAG=`sha256sum $BUILD_DOCKER_FILE | head -c 64`
-    - docker build -t $BUILD_IMAGE:$TAG -t $BUILD_IMAGE:latest --cache-from $BUILD_IMAGE:$TAG --cache-from $BUILD_IMAGE:latest --build-arg BASE_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg HPX_VERSION --build-arg HPX_WITH_CUDA -f $BUILD_DOCKER_FILE --network=host .
+    - docker build -t $BUILD_IMAGE:$TAG -t $BUILD_IMAGE:latest --cache-from $BUILD_IMAGE:$TAG --cache-from $BUILD_IMAGE:latest --build-arg BASE_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg HPX_WITH_CUDA -f $BUILD_DOCKER_FILE --network=host .
     - docker push $BUILD_IMAGE:$TAG
     - docker push $BUILD_IMAGE:latest
     - docker build -t $DEPLOY_IMAGE --build-arg BUILD_IMAGE=$BUILD_IMAGE:$TAG --build-arg DLAF_WITH_CUDA -f $DEPLOY_DOCKER_FILE --network=host .
@@ -46,7 +46,6 @@ cpu release build:
     SLURM_CONSTRAINT: mc
     CORES_PER_NODE: 36
     USE_CODECOV: "false"
-    HPX_VERSION: "4d1f768f5bd96f2a880d618efa78d10ebba27743"
     HPX_WITH_CUDA: "OFF"
 
 cpu codecov build:
@@ -61,7 +60,6 @@ cpu codecov build:
     SLURM_CONSTRAINT: mc
     CORES_PER_NODE: 36
     USE_CODECOV: "true"
-    HPX_VERSION: "4d1f768f5bd96f2a880d618efa78d10ebba27743"
     HPX_WITH_CUDA: "OFF"
 
 gpu release build:
@@ -76,7 +74,6 @@ gpu release build:
     SLURM_CONSTRAINT: gpu
     CORES_PER_NODE: 12
     USE_CODECOV: "false"
-    HPX_VERSION: "4d1f768f5bd96f2a880d618efa78d10ebba27743"
     HPX_WITH_CUDA: "ON"
 
 gpu codecov build:
@@ -91,7 +88,6 @@ gpu codecov build:
     SLURM_CONSTRAINT: gpu
     CORES_PER_NODE: 12
     USE_CODECOV: "true"
-    HPX_VERSION: "4d1f768f5bd96f2a880d618efa78d10ebba27743"
     HPX_WITH_CUDA: "ON"
 
 notify_github_start:

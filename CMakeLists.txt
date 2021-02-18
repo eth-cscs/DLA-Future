@@ -25,6 +25,7 @@ if (NOT CMAKE_BUILD_TYPE)
 endif()
 
 option(BUILD_SHARED_LIBS "Build shared libraries." OFF)
+option(DLAF_WITH_MKL "Enable MKL as provider for LAPACK" OFF)
 option(DLAF_WITH_CUDA "Enable CUDA support" OFF)
 option(DLAF_BUILD_MINIAPPS "Build miniapps" ON)
 option(DLAF_BUILD_TESTING "Build tests" ON)
@@ -54,12 +55,10 @@ find_package(MPI REQUIRED)
 
 # ----- LAPACK/SCALAPACK
 set(LAPACK_TARGET "")
-set(DLAF_WITH_MKL OFF CACHE BOOL "Enable MKL as provider for LAPACK")
 if (DLAF_WITH_MKL)
   set(MKL_CUSTOM_THREADING "Sequential")
-  find_package(MKL REQUIRED COMPONENTS BLAS_32BIT_SEQ)
-
-  set(LAPACK_TARGET "mkl::blas_32bit_seq")
+  find_package(MKL REQUIRED)
+  set(LAPACK_TARGET "mkl::mkl_intel_32bit_seq_dyn")
 else()
   set(LAPACK_TARGET "lapack::lapack")
   find_package(LAPACK REQUIRED)

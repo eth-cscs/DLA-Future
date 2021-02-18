@@ -20,7 +20,7 @@ stages:
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
   before_script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker login -u $CSCS_REGISTRY_USER -p $CSCS_REGISTRY_PASSWORD $CSCS_REGISTRY
   script:
     - TAG=`sha256sum $BUILD_DOCKER_FILE | head -c 64`
     - docker build -t $BUILD_IMAGE:$TAG -t $BUILD_IMAGE:latest --cache-from $BUILD_IMAGE:$TAG --cache-from $BUILD_IMAGE:latest --build-arg BASE_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg HPX_VERSION --build-arg HPX_WITH_CUDA -f $BUILD_DOCKER_FILE --network=host .
@@ -39,8 +39,8 @@ cpu release build:
   variables:
     BUILD_DOCKER_FILE: ci/docker/release/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/release/deploy.Dockerfile
-    BUILD_IMAGE: $CI_REGISTRY_IMAGE/release-cpu/build
-    DEPLOY_IMAGE: $CI_REGISTRY_IMAGE/release-cpu/deploy:$CI_COMMIT_SHA
+    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu/deploy:$CI_COMMIT_SHA
     DLAF_WITH_CUDA: 'OFF'
     BASE_IMAGE: ubuntu:18.04
     SLURM_CONSTRAINT: mc
@@ -54,8 +54,8 @@ cpu codecov build:
   variables:
     BUILD_DOCKER_FILE: ci/docker/codecov/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/codecov/deploy.Dockerfile
-    BUILD_IMAGE: $CI_REGISTRY_IMAGE/codecov-cpu/build
-    DEPLOY_IMAGE: $CI_REGISTRY_IMAGE/codecov-cpu/deploy:$CI_COMMIT_SHA
+    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-cpu/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-cpu/deploy:$CI_COMMIT_SHA
     DLAF_WITH_CUDA: 'OFF'
     BASE_IMAGE: ubuntu:18.04
     SLURM_CONSTRAINT: mc
@@ -69,8 +69,8 @@ gpu release build:
   variables:
     BUILD_DOCKER_FILE: ci/docker/release/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/release/deploy.Dockerfile
-    BUILD_IMAGE: $CI_REGISTRY_IMAGE/release-gpu/build
-    DEPLOY_IMAGE: $CI_REGISTRY_IMAGE/release-gpu/deploy:$CI_COMMIT_SHA
+    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-gpu/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-gpu/deploy:$CI_COMMIT_SHA
     DLAF_WITH_CUDA: 'ON'
     BASE_IMAGE: nvidia/cuda:10.2-devel-ubuntu18.04
     SLURM_CONSTRAINT: gpu
@@ -85,8 +85,8 @@ gpu codecov build:
   variables:
     BUILD_DOCKER_FILE: ci/docker/codecov/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/codecov/deploy.Dockerfile
-    BUILD_IMAGE: $CI_REGISTRY_IMAGE/codecov-gpu/build
-    DEPLOY_IMAGE: $CI_REGISTRY_IMAGE/codecov-gpu/deploy:$CI_COMMIT_SHA
+    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-gpu/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-gpu/deploy:$CI_COMMIT_SHA
     DLAF_WITH_CUDA: 'ON'
     BASE_IMAGE: nvidia/cuda:10.2-devel-ubuntu18.04
     SLURM_CONSTRAINT: gpu

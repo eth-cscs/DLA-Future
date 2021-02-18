@@ -195,7 +195,7 @@ template <class T, Device device, Coord panel_type>
 void broadcast(hpx::threads::executors::pool_executor ex, comm::IndexT_MPI rank_root,
                Panel<panel_type, T, device>& ws, common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
   using namespace comm::sync::broadcast;
-  using hpx::util::unwrapping;
+  using hpx::dataflow;
 
   constexpr auto comm_dir = transposed(panel_type);
 
@@ -207,9 +207,9 @@ void broadcast(hpx::threads::executors::pool_executor ex, comm::IndexT_MPI rank_
 
   for (const auto& index : ws) {
     if (rank == rank_root)
-      comm::send_tile(ex, serial_comm, comm_dir, ws.read(index));
+      dataflow(ex, comm::send_tile_o, serial_comm(), comm_dir, ws.read(index));
     else
-      comm::recv_tile(ex, serial_comm, comm_dir, ws(index), rank_root);
+      dataflow(ex, comm::recv_tile_o, serial_comm(), comm_dir, ws(index), rank_root);
   }
 }
 
@@ -229,6 +229,9 @@ void broadcast(hpx::threads::executors::pool_executor ex, comm::IndexT_MPI rank_
                common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
   static_assert(from_dir == transposed(to_dir), "this method broadcasts and transposes coordinates");
 
+  using namespace dlaf::comm::sync::broadcast;
+  using hpx::dataflow;
+
   DLAF_ASSERT(ws_from.distribution_matrix() == ws_to.distribution_matrix(),
               "they must refer to the same matrix");
 
@@ -237,9 +240,6 @@ void broadcast(hpx::threads::executors::pool_executor ex, comm::IndexT_MPI rank_
   //            "sizes", ws_from.localNrTiles(), ws_to.localNrTiles());
 
   // TODO do I have to check for offset?!
-
-  using namespace dlaf::comm::sync::broadcast;
-  using hpx::util::unwrapping;
 
   constexpr Coord from_coord = component(from_dir);
   constexpr Coord to_coord = component(to_dir);
@@ -261,11 +261,11 @@ void broadcast(hpx::threads::executors::pool_executor ex, comm::IndexT_MPI rank_
       const auto idx_src = dist.template localTileFromGlobalTile<from_coord>(idx_cross);
       ws_to.set_tile(idx_dst, ws_from.read({from_coord, idx_src}));
       // TODO if (grid_size.get(component(comm_dir)) > 1)
-      comm::send_tile(ex, serial_comm, comm_dir, ws_to.read(idx_dst));
+      dataflow(ex, comm::send_tile_o, serial_comm(), comm_dir, ws_to.read(idx_dst));
     }
     else {
       // TODO if (grid_size.get(component(comm_dir)) > 1)
-      comm::recv_tile(ex, serial_comm, comm_dir, ws_to(idx_dst), owner);
+      dataflow(ex, comm::recv_tile_o, serial_comm(), comm_dir, ws_to(idx_dst), owner);
     }
   }
 }

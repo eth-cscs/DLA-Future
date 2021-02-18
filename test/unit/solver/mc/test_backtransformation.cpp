@@ -166,25 +166,8 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
     dlaf::matrix::util::set_random(mat_v);
   std::cout << "Random matrix V" << std::endl;
   printElements(mat_v);
-  // Reset diagonal and upper values of V
-  for (int i = 0; i < mat_v.nrTiles().rows(); ++i) {
-    for (int j = 0; j < mat_v.nrTiles().cols(); ++j) {
-      auto ij = LocalTileIndex(i,j);
-      auto tile_v = mat_v(ij).get();
-      if (i == j) {
-	lapack::laset(lapack::MatrixType::Upper, tile_v.size().rows(), tile_v.size().cols(),
-		      0, 1,
-		      tile_v.ptr(), tile_v.ld());
-      }
-      else if (j > i) {
-	lapack::laset(lapack::MatrixType::General, tile_v.size().rows(), tile_v.size().cols(),
-		      0, 0,
-		      tile_v.ptr(), tile_v.ld());
-      }
-    }
-  }
-  std::cout << "Random matrix V after laset" << std::endl;
-  printElements(mat_v);
+//  std::cout << "Random matrix V after laset" << std::endl;
+//  printElements(mat_v);
   
   // Impose orthogonality: Q = I - v tau v^H is orthogonal (Q Q^H = I)
   // leads to tau = 2/(vT v) for real 
@@ -210,19 +193,48 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
   auto mat_t_loc = dlaf::matrix::test::all_gather<double>(mat_t, comm_grid);
 
   // Copy V matrix locally
+  //MatrixLocal<double> mat_v_loc; 
   auto mat_v_loc = dlaf::matrix::test::all_gather<double>(mat_v, comm_grid);
+  // Reset diagonal and upper values of V
+//  for (int i = 0; i < mat_v_loc.nrTiles().rows(); ++i) {
+//    for (int j = 0; j < mat_v_loc.nrTiles().cols(); ++j) {
+//      auto ij = GlobalTileIndex{i,j};
+//      auto tile_v = mat_v_loc.tile(ij);
+//      if (i <= j) {
+//	lapack::laset(lapack::MatrixType::General, tile_v.size().rows(), tile_v.size().cols(),
+//		      0, 0,
+//		      tile_v.ptr({0,0}), tile_v.ld());
+//      }
+//      else if (i == j+1) {
+//	lapack::laset(lapack::MatrixType::Upper, tile_v.size().rows(), tile_v.size().cols(),
+//		      0, 1,
+//		      tile_v.ptr({0,0}), tile_v.ld());
+//      }
+//    }
+//  }
+
   //dlaf::matrix::test::print(format::numpy{}, "mat Vloc ", mat_v_loc, std::cout);
 
-  // Reset diagonal and upper values of V
-//  lapack::laset(lapack::MatrixType::Upper, mat_v_loc.size().rows(), mat_v_loc.size().cols(),
-//		0, 1,
-//		mat_v_loc.ptr(), mat_v_loc.ld());
+//  // Reset diagonal and upper values of V
+//  for (int i = 0; i < mat_v_loc.nrTiles().rows(); ++i) {
+//    for (int j = 0; j < mat_v_loc.nrTiles().cols(); ++j) {
+//      auto ij = GlobalTileIndex{i,j};
+//      lapack::laset(lapack::MatrixType::Upper, mat_v_loc.size().rows()-mb, mat_v_loc.size().cols(), 0, 1, mat_v_loc.ptr(GlobalElementIndex{mb, 0}), mat_v_loc.ld());
+//    }
+//  }
+//  
+
+  lapack::laset(lapack::MatrixType::General, mb, mat_v_loc.size().cols(), 0, 0, mat_v_loc.ptr(), mat_v_loc.ld());
+  if (m != mb) {
+    lapack::laset(lapack::MatrixType::Upper, mat_v_loc.size().rows()-mb, mat_v_loc.size().cols(), 0, 1, mat_v_loc.ptr(GlobalElementIndex{mb, 0}), mat_v_loc.ld());
+  }
+  
   dlaf::matrix::test::print(format::numpy{}, "mat Vloc ", mat_v_loc, std::cout);
 
   //std::cout << " TAUS " << std::endl;
   MatrixLocal<double> taus({m, 1}, {1, 1});
   // Compute taus (real case: tau = 2 / v^H v)
-  for (SizeType i = n-2; i > -1; --i) {
+  for (SizeType i = n-nb-1; i > -1; --i) {
     const GlobalElementIndex v_offset{0, i};
     auto dotprod = blas::dot(m, mat_v_loc.ptr(v_offset), 1, mat_v_loc.ptr(v_offset), 1);
     auto tau = 2.0/dotprod;
@@ -269,4 +281,3 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
   double error = 0.01;
   CHECK_MATRIX_NEAR(result, mat_c, error, error);
 }
-

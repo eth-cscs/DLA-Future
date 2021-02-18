@@ -14,7 +14,7 @@
 
 #include <gtest/gtest.h>
 #include <hpx/future.hpp>
-#include <hpx/hpx_main.hpp>
+#include <hpx/include/parallel_executors.hpp>
 
 #include "dlaf/common/range2d.h"
 #include "dlaf/communication/communicator.h"
@@ -378,6 +378,9 @@ TYPED_TEST(PanelTest, BroadcastCol) {
   using hpx::util::unwrapping;
   using TypeUtil = TypeUtilities<TypeParam>;
 
+  using hpx::threads::thread_priority_default;
+  hpx::threads::executors::pool_executor ex("default", thread_priority_default);
+
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& params : test_params) {
       const auto cfg = configure(params);
@@ -416,7 +419,7 @@ TYPED_TEST(PanelTest, BroadcastCol) {
       // test it!
       common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
 
-      broadcast(root_col, ws_v, serial_comm);
+      broadcast(ex, root_col, ws_v, serial_comm);
 
       // check all panel are equal on all ranks
       for (const auto i_w : ws_v)
@@ -432,6 +435,9 @@ TYPED_TEST(PanelTest, BroadcastRow) {
   using namespace dlaf;
   using hpx::util::unwrapping;
   using TypeUtil = TypeUtilities<TypeParam>;
+
+  using hpx::threads::thread_priority_default;
+  hpx::threads::executors::pool_executor ex("default", thread_priority_default);
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& params : test_params) {
@@ -471,7 +477,7 @@ TYPED_TEST(PanelTest, BroadcastRow) {
       // test it!
       common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
 
-      broadcast(root_row, ws_h, serial_comm);
+      broadcast(ex, root_row, ws_h, serial_comm);
 
       // check all panel are equal on all ranks
       for (const auto i_w : ws_h)
@@ -495,6 +501,9 @@ TYPED_TEST(PanelTest, BroadcastCol2Row) {
   using namespace dlaf;
   using hpx::util::unwrapping;
   using TypeUtil = TypeUtilities<TypeParam>;
+
+  using hpx::threads::thread_priority_default;
+  hpx::threads::executors::pool_executor ex("default", thread_priority_default);
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& params : test_params_bcast_transpose) {
@@ -524,7 +533,8 @@ TYPED_TEST(PanelTest, BroadcastCol2Row) {
 
       // select a "random" col which will be the source for the data
       const comm::IndexT_MPI owner = comm_grid.size().cols() / 2;
-      broadcast(owner, ws_v, ws_h, serial_comm);
+
+      broadcast(ex, owner, ws_v, ws_h, serial_comm);
 
       // check that all destination row panels got the value from the right rank
       for (const auto i_w : ws_h) {
@@ -540,6 +550,9 @@ TYPED_TEST(PanelTest, BroadcastRow2Col) {
   using namespace dlaf;
   using hpx::util::unwrapping;
   using TypeUtil = TypeUtilities<TypeParam>;
+
+  using hpx::threads::thread_priority_default;
+  hpx::threads::executors::pool_executor ex("default", thread_priority_default);
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& params : test_params_bcast_transpose) {
@@ -570,7 +583,8 @@ TYPED_TEST(PanelTest, BroadcastRow2Col) {
 
       // select a "random" row which will be the source for the data
       const comm::IndexT_MPI owner = comm_grid.size().rows() / 2;
-      broadcast(owner, ws_h, ws_v, serial_comm);
+
+      broadcast(ex, owner, ws_h, ws_v, serial_comm);
 
       // check that all destination column panels got the value from the right rank
       for (const auto i_w : ws_v) {

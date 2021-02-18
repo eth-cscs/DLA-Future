@@ -179,45 +179,38 @@ protected:
 
 namespace internal {
 
-// Generic implementation of the broadcast row-wise or col-wise
-template <Coord dir, class T, Device device, Coord panel_type>
-void bcast_panel(const comm::IndexT_MPI rank_root, Panel<panel_type, T, device>& ws,
-                 common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
-  using namespace comm::sync::broadcast;
-  using hpx::util::unwrapping;
-
-  const auto rank = ws.rankIndex().get(component(dir));
-
-  for (const auto& index : ws) {
-    if (rank == rank_root)
-      comm::send_tile(serial_comm, dir, ws.read(index));
-    else
-      comm::recv_tile(serial_comm, dir, ws(index), rank_root);
-  }
-}
-
 // helper function that identifies the owner of a transposed coordinate,
 // it returns both the component of the rank in the transposed dimension and
 // its global cross coordinate (i.e. row == col in the global frame of reference)
-template <Coord component>
+template <Coord dst_coord>
 std::pair<SizeType, comm::IndexT_MPI> transposed_owner(const Distribution& dist,
                                                        const LocalTileIndex idx) {
-  const auto idx_cross = dist.template globalTileFromLocalTile<component>(idx.get(component));
-  const auto rank_owner = dist.template rankGlobalTile<transposed(component)>(idx_cross);
+  const auto idx_cross = dist.template globalTileFromLocalTile<dst_coord>(idx.get(dst_coord));
+  const auto rank_owner = dist.template rankGlobalTile<transposed(dst_coord)>(idx_cross);
   return std::make_pair(idx_cross, rank_owner);
 }
 }
 
-template <class T, Device device>
-void broadcast(comm::IndexT_MPI root_col, Panel<Coord::Col, T, device>& ws,
-               common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
-  internal::bcast_panel<Coord::Row>(root_col, ws, serial_comm);
-}
+template <class T, Device device, Coord panel_type>
+void broadcast(hpx::threads::executors::pool_executor ex, comm::IndexT_MPI rank_root,
+               Panel<panel_type, T, device>& ws, common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
+  using namespace comm::sync::broadcast;
+  using hpx::util::unwrapping;
 
-template <class T, Device device>
-void broadcast(comm::IndexT_MPI root_row, Panel<Coord::Row, T, device>& ws,
-               common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
-  internal::bcast_panel<Coord::Col>(root_row, ws, serial_comm);
+  constexpr auto comm_dir = transposed(panel_type);
+
+  // TODO
+  //if (grid_size.get(component(comm_dir)) < 1)
+  //  return;
+
+  const auto rank = ws.rankIndex().get(component(comm_dir));
+
+  for (const auto& index : ws) {
+    if (rank == rank_root)
+      comm::send_tile(ex, serial_comm, comm_dir, ws.read(index));
+    else
+      comm::recv_tile(ex, serial_comm, comm_dir, ws(index), rank_root);
+  }
 }
 
 /// Broadcast
@@ -231,8 +224,9 @@ void broadcast(comm::IndexT_MPI root_row, Panel<Coord::Row, T, device>& ws,
 /// - linked as external tile to the corresponding one in the column panel, if current rank owns it
 /// - received from the owning rank, which broadcasts the tile from the row panel along the column
 template <class T, Device device, Coord from_dir, Coord to_dir>
-void broadcast(comm::IndexT_MPI root, Panel<from_dir, T, device>& ws_from,
-               Panel<to_dir, T, device>& ws_to, common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
+void broadcast(hpx::threads::executors::pool_executor ex, comm::IndexT_MPI rank_root,
+               Panel<from_dir, T, device>& ws_from, Panel<to_dir, T, device>& ws_to,
+               common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
   static_assert(from_dir == transposed(to_dir), "this method broadcasts and transposes coordinates");
 
   DLAF_ASSERT(ws_from.distribution_matrix() == ws_to.distribution_matrix(),
@@ -253,8 +247,8 @@ void broadcast(comm::IndexT_MPI root, Panel<from_dir, T, device>& ws_from,
   // communicate each tile orthogonally to the direction of the destination panel
   constexpr Coord comm_dir = transposed(to_dir);
 
-  // TODO I think this can be replaced with a smarter strategy for owner selection in next loop
-  broadcast(root, ws_from, serial_comm);
+  // share the main panel, so that it can be used as source for orthogonal communications
+  broadcast(ex, rank_root, ws_from, serial_comm);
 
   const auto& dist = ws_from.distribution_matrix();
   for (const auto& idx_dst : ws_to) {
@@ -266,10 +260,12 @@ void broadcast(comm::IndexT_MPI root, Panel<from_dir, T, device>& ws_from,
     if (dist.rankIndex().get(from_coord) == owner) {
       const auto idx_src = dist.template localTileFromGlobalTile<from_coord>(idx_cross);
       ws_to.set_tile(idx_dst, ws_from.read({from_coord, idx_src}));
-      comm::send_tile(serial_comm, comm_dir, ws_to.read(idx_dst));
+      // TODO if (grid_size.get(component(comm_dir)) > 1)
+      comm::send_tile(ex, serial_comm, comm_dir, ws_to.read(idx_dst));
     }
     else {
-      comm::recv_tile(serial_comm, comm_dir, ws_to(idx_dst), owner);
+      // TODO if (grid_size.get(component(comm_dir)) > 1)
+      comm::recv_tile(ex, serial_comm, comm_dir, ws_to(idx_dst), owner);
     }
   }
 }

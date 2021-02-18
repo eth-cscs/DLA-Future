@@ -69,7 +69,7 @@ void is_orthogonal(const MatrixLocal<const T>& matrix) {
     return m;
   }();
 
-  constexpr auto error = 2 * dlaf::test::TypeUtilities<T>::error;
+  const auto error = 2 * matrix.size().cols() * dlaf::test::TypeUtilities<T>::error;
   CHECK_MATRIX_NEAR(eye, ortho, error, error);
 }
 

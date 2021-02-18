@@ -117,7 +117,6 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 
      const SizeType reflectors = (last_nb == 1) ? n-1 : n;
      
-     //for (SizeType k = 0; k < reflectors; ++k) {
      for (SizeType k = reflectors-1; k > -1; --k) {
        bool is_last = (k == n-1) ? true : false;
        std::cout << " k " << k << " vs n " << n << std::endl;
@@ -140,16 +139,10 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
        else {
 	 matrix::util::set(mat_w2, [](auto&&){return 0;});
        }
-//       std::cout << "Matrix W at beggining of step " << k << std::endl;
-//       printElements(mat_w);
        std::cout << "Matrix T " << k << std::endl;
        printElements(mat_t);
 	 
        for (SizeType i = k; i < n; ++i) {
-       //for (SizeType i = n-1; i > k-1; --i) {
-       //for (SizeType i = 0; i < n-k; ++i) {
-       //for (SizeType i = n-k-1; i > -1; --i) {
-       //for (SizeType i = 0; i < n; ++i) {
 	 // WH = V T
 	 auto ik = LocalTileIndex{i, 0};
 	 auto kk = LocalTileIndex{0, k};
@@ -165,19 +158,9 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 	 }
        }
        
-       //for (SizeType j = k; j < n; ++j) {
-       //for (SizeType j = n-1; j > k-1; --j) {
-       //for (SizeType j = 0; j < n-k; ++j) {
-       //for (SizeType j = n-k-1; j < -1; --j) {
        for (SizeType j = 0; j < n; ++j) {
-       //for (SizeType j = n-1; j > -1; --j) {
 	 auto kj = LocalTileIndex{0, j};
-	 //for (SizeType i = k; i < m; ++i) {
-	 //for (SizeType i = m-1; i > k-1; --i) {	   
-	 //for (SizeType i = 0; i < m-k; ++i) {
-	 //for (SizeType i = m-k-1; i > 0; --i) {
 	 for (SizeType i = k; i < m; ++i) {
-	 //for (SizeType i = m-1; i > -1; --i) {
 	   auto ik = LocalTileIndex{i, 0};
 	   auto ij = LocalTileIndex{i, j};
 	   // W2 = W C
@@ -194,15 +177,8 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 	 }	 
        }
        
-	 //for (SizeType i = k; i < m; ++i) {
-	 //for (SizeType i = m-1; i > k-1; --i) {
-	 //for (SizeType i = 0; i < m-k; ++i) {
-	 //for (SizeType i = m-k-1; i > -1; --i) {
 	 for (SizeType i = 0; i < m; ++i) {
 	   auto ik = LocalTileIndex{i, k};
-	   //for (SizeType j = k; j < n; ++j) {
-	   //for (SizeType j = n-1; j > k-1; --j) {
-	   //for (SizeType j = 0; j < n-k; ++j) {
 	   for (SizeType j = 0; j < n; ++j) {
 	     auto kj = LocalTileIndex{0, j};
 	     auto ij = LocalTileIndex{i, j};

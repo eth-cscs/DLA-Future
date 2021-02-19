@@ -84,6 +84,26 @@ struct CublasPotrf<std::complex<double>> {
 };
 }
 
+namespace internal {
+template <class T>
+class CusolverPotrfInfo {
+  // TODO: Combine buffers? Reuse upper/lower part of matrix? Workspace
+  // only size 1?
+  memory::MemoryView<T, Device::GPU> workspace_;
+  memory::MemoryView<int, Device::GPU> info_;
+
+public:
+  CusolverPotrfInfo(int workspace_size) : workspace_(workspace_size), info_() {}
+
+  T* workspace() {
+    return workspace_();
+  }
+  int* info() {
+    return info_();
+  }
+};
+}
+
 template <class T>
 auto potrf(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<T, Device::GPU>& a) {
   DLAF_ASSERT(square_size(a), a);
@@ -92,12 +112,13 @@ auto potrf(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<
   int workspace_size;
   internal::CublasPotrf<T>::callBufferSize(handle, util::blasToCublas(uplo), n,
                                            util::blasToCublasCast(a.ptr()), a.ld(), &workspace_size);
-  // TODO: Combine buffers? Reuse upper/lower part of matrix? Workspace only size 1?
-  memory::MemoryView<T, Device::GPU> workspace(workspace_size);
-  memory::MemoryView<int, Device::GPU> info(1);
+  internal::CusolverPotrfInfo<T> info{workspace_size};
   internal::CublasPotrf<T>::call(handle, util::blasToCublas(uplo), n, util::blasToCublasCast(a.ptr()),
-                                 a.ld(), util::blasToCublasCast(workspace()), workspace_size, info());
-  return std::make_tuple<>(info, workspace);
+                                 a.ld(), util::blasToCublasCast(info.workspace()), workspace_size,
+                                 info.info());
+
+  // TODO: When and where to check the result?
+  return info;
 }
 }
 }

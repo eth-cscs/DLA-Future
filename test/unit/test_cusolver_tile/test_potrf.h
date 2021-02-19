@@ -89,7 +89,7 @@ void testPotrf(const blas::Uplo uplo, const SizeType n, const SizeType extra_lda
   copy(ad, a);
 
   memory::MemoryView<int, Device::CPU> info_host(1);
-  DLAF_CUDA_CALL(cudaMemcpy(info_host(), std::get<0>(result)(), sizeof(int), cudaMemcpyDeviceToHost));
+  DLAF_CUDA_CALL(cudaMemcpy(info_host(), result.info(), sizeof(int), cudaMemcpyDeviceToHost));
   EXPECT_EQ(0, *(info_host()));
 
   // Check result against analytical result.
@@ -124,7 +124,7 @@ void testPotrfNonPosDef(const blas::Uplo uplo, SizeType n, SizeType extra_lda) {
   copy(ad, a);
 
   memory::MemoryView<int, Device::CPU> info_host(1);
-  DLAF_CUDA_CALL(cudaMemcpy(info_host(), std::get<0>(result)(), sizeof(int), cudaMemcpyDeviceToHost));
+  DLAF_CUDA_CALL(cudaMemcpy(info_host(), result.info(), sizeof(int), cudaMemcpyDeviceToHost));
   EXPECT_EQ(1, *(info_host()));
 }
 

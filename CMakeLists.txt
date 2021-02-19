@@ -64,7 +64,7 @@ else()
 endif()
 
 # ----- HPX
-find_package(HPX 1.5.0 REQUIRED)
+find_package(HPX 1.6.0 REQUIRED)
 
 # ----- BLASPP/LAPACKPP
 find_package(OpenMP REQUIRED)

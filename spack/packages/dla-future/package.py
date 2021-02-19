@@ -14,7 +14,7 @@ class DlaFuture(CMakePackage, CudaPackage):
 
     maintainers = ["teonnik", "albestro", "Sely85"]
 
-    version("develop", branch="master")
+    version("develop", branch="porting_hpx1.6.0")
 
     variant("doc", default=False, description="Build documentation.")
 
@@ -26,11 +26,8 @@ class DlaFuture(CMakePackage, CudaPackage):
     depends_on("blaspp")
     depends_on("lapackpp")
     depends_on("hpx cxxstd=14 networking=none")
-    # it would have been "more correct" specifying @1.5 as constraint but, if clingo
-    # solver works as expected, the default solver has problems with that.
-    # Eventually, we opted for specifying the range more explicitly, so it works with both
-    depends_on("hpx@1.5.0:1.5.999", when="~cuda")
-    depends_on("hpx@master +cuda", when="+cuda")
+    depends_on("hpx@1.6.0:")
+    depends_on("hpx +cuda", when="+cuda")
 
     depends_on("hpx build_type=Debug", when="build_type=Debug")
     depends_on("hpx build_type=Release", when="build_type=Release")

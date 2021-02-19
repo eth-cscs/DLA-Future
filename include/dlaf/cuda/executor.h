@@ -47,13 +47,13 @@ struct StreamPoolImpl {
         current_stream_idxs_(num_worker_threads_, {std::size_t(0)}) {
     DLAF_CUDA_CALL(cudaSetDevice(device));
 
-    // We map hpx::threads::thread_priority_high to the highest CUDA stream
+    // We map hpx::threads::thread_priority::high to the highest CUDA stream
     // priority, and the rest to the lowest. Typically CUDA streams will only
     // have two priorities.
     int least_priority, greatest_priority;
     DLAF_CUDA_CALL(cudaDeviceGetStreamPriorityRange(&least_priority, &greatest_priority));
     int stream_priority = least_priority;
-    if (hpx_thread_priority == hpx::threads::thread_priority_high) {
+    if (hpx_thread_priority == hpx::threads::thread_priority::high) {
       stream_priority = greatest_priority;
     }
 

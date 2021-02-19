@@ -13,7 +13,7 @@
 /// @file
 
 #include <hpx/include/parallel_executors.hpp>
-#include <hpx/util/annotated_function.hpp>
+#include <hpx/modules/threading_base.hpp>
 
 #include <mpi.h>
 
@@ -64,7 +64,7 @@ hpx::future<void> bcast(Executor<M>& ex, int root_rank, DataIn& tile) {
 }
 
 template <class T, MPIMech M>
-void bcast_send_tile(hpx::threads::executors::pool_executor executor_hp,
+void bcast_send_tile(hpx::execution::parallel_executor executor_hp,
                      common::Pipeline<Executor<M>>& mpi_task_chain,
                      hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile) {
   using ConstTile_t = matrix::Tile<const T, Device::CPU>;
@@ -87,7 +87,7 @@ void bcast_send_tile(hpx::threads::executors::pool_executor executor_hp,
 
 template <class T, MPIMech M>
 hpx::future<matrix::Tile<const T, Device::CPU>> bcast_recv_tile(
-    hpx::threads::executors::pool_executor executor_hp, common::Pipeline<Executor<M>>& mpi_task_chain,
+    hpx::execution::parallel_executor executor_hp, common::Pipeline<Executor<M>>& mpi_task_chain,
     TileElementSize tile_size, int rank) {
   using ConstTile_t = matrix::Tile<const T, Device::CPU>;
   using PromiseExec_t = common::PromiseGuard<Executor<M>>;

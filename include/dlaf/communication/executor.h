@@ -23,7 +23,6 @@
 #include <hpx/future.hpp>
 #include <hpx/include/async.hpp>
 #include <hpx/include/parallel_executors.hpp>
-#include <hpx/include/thread_executors.hpp>
 #include <hpx/modules/execution_base.hpp>
 
 #include "dlaf/communication/communicator.h"
@@ -50,8 +49,9 @@ struct executor_launch_impl<MPIMech::Polling> {
 
 template <>
 struct executor_launch_impl<MPIMech::Yielding> {
-  hpx::threads::executors::pool_executor ex_;
-  executor_launch_impl(const std::string& pool) : ex_(pool, hpx::threads::thread_priority_high) {}
+  hpx::execution::parallel_executor ex_;
+  executor_launch_impl(const std::string& pool)
+      : ex_(&hpx::resource::get_thread_pool(pool), hpx::threads::thread_priority::high) {}
   hpx::future<void> get_future(MPI_Request req) noexcept {
     return hpx::async(ex_, [req]() mutable {
       // Yield until non-blocking communication completes.
@@ -72,9 +72,6 @@ class Executor {
   Communicator comm_;
 
 public:
-  // Associate the parallel_execution_tag executor tag type as a default with this executor.
-  using execution_category = hpx::parallel::execution::parallel_execution_tag;
-
   Executor(const std::string& pool, Communicator comm) : launcher_(pool), comm_(std::move(comm)) {}
 
   bool operator==(const Executor& rhs) const noexcept {

@@ -12,10 +12,11 @@
 #include <hpx/async_combinators/split_future.hpp>
 #include <hpx/futures/future_fwd.hpp>
 #include <hpx/include/parallel_executors.hpp>
+#include <hpx/include/resource_partitioner.hpp>
 #include <hpx/include/threads.hpp>
 #include <hpx/lcos_fwd.hpp>
 #include <hpx/runtime_local/thread_pool_helpers.hpp>
-#include <hpx/util/annotated_function.hpp>
+#include <hpx/modules/threading_base.hpp>
 
 #include <algorithm>
 #include <limits>
@@ -52,7 +53,7 @@ struct Cholesky<Backend::MC, Device::CPU, T> {
 };
 
 template <class T>
-void potrf_diag_tile(hpx::threads::executors::pool_executor executor_hp,
+void potrf_diag_tile(hpx::execution::parallel_executor executor_hp,
                      hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
   auto kern_f = hpx::util::
       annotated_function([](hpx::future<matrix::Tile<T, Device::CPU>>
@@ -64,7 +65,7 @@ void potrf_diag_tile(hpx::threads::executors::pool_executor executor_hp,
 }
 
 template <class T>
-void trsm_panel_tile(hpx::threads::executors::pool_executor executor_hp,
+void trsm_panel_tile(hpx::execution::parallel_executor executor_hp,
                      hpx::shared_future<matrix::Tile<const T, Device::CPU>> kk_tile,
                      hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
   auto kern_f = hpx::util::annotated_function(
@@ -81,7 +82,7 @@ void trsm_panel_tile(hpx::threads::executors::pool_executor executor_hp,
 }
 
 template <class T>
-void herk_trailing_diag_tile(hpx::threads::executors::pool_executor ex,
+void herk_trailing_diag_tile(hpx::execution::parallel_executor ex,
                              hpx::shared_future<matrix::Tile<const T, Device::CPU>> panel_tile,
                              hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
   auto kern_f = hpx::util::annotated_function(
@@ -97,7 +98,7 @@ void herk_trailing_diag_tile(hpx::threads::executors::pool_executor ex,
 }
 
 template <class T>
-void gemm_trailing_matrix_tile(hpx::threads::executors::pool_executor ex,
+void gemm_trailing_matrix_tile(hpx::execution::parallel_executor ex,
                                hpx::shared_future<matrix::Tile<const T, Device::CPU>> panel_tile,
                                hpx::shared_future<matrix::Tile<const T, Device::CPU>> col_panel,
                                hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
@@ -119,14 +120,12 @@ void gemm_trailing_matrix_tile(hpx::threads::executors::pool_executor ex,
 // Local implementation of Lower Cholesky factorization.
 template <class T>
 void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a) {
-  using hpx::threads::executors::pool_executor;
-  using hpx::threads::thread_priority_high;
-  using hpx::threads::thread_priority_default;
+  using hpx::execution::parallel_executor;
+  using hpx::resource::get_thread_pool;
+  using hpx::threads::thread_priority;
 
-  // Set up executor on the default queue with high priority.
-  pool_executor executor_hp("default", thread_priority_high);
-  // Set up executor on the default queue with default priority.
-  pool_executor executor_normal("default", thread_priority_default);
+  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
+  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
 
   // Number of tile (rows = cols)
   SizeType nrtile = mat_a.nrTiles().cols();
@@ -163,28 +162,28 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
 template <class T>
 void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
                                                    Matrix<T, Device::CPU>& mat_a) {
-  using hpx::threads::executors::pool_executor;
-  using hpx::threads::thread_priority_high;
-  using hpx::threads::thread_priority_default;
-  using ConstTile_t = matrix::Tile<const T, Device::CPU>;
+  using hpx::execution::parallel_executor;
+  using hpx::resource::get_thread_pool;
+  using hpx::resource::pool_exists;
+  using hpx::threads::thread_priority;
+  using common::internal::vector;
+  using ConstTileType = typename Matrix<T, Device::CPU>::ConstTileType;
 
-  // Set up executor on the default queue with high priority.
-  pool_executor executor_hp("default", thread_priority_high);
-  // Set up executor on the default queue with default priority.
-  pool_executor executor_normal("default", thread_priority_default);
+  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
+  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
 
-  // Set up MPI executor
-  comm::Index2D this_rank = grid.rank();
+  // Set up MPI
   std::string mpi_pool = (hpx::resource::pool_exists("mpi")) ? "mpi" : "default";
-  pool_executor executor_mpi(mpi_pool, thread_priority_high);
+  parallel_executor executor_mpi(&get_thread_pool(mpi_pool), thread_priority::high);
   common::Pipeline<comm::CommunicatorGrid> mpi_task_chain(std::move(grid));
 
   matrix::Distribution const& distr = mat_a.distribution();
   SizeType nrtile = mat_a.nrTiles().cols();
+  comm::Index2D this_rank = grid.rank();
 
   for (SizeType k = 0; k < nrtile; ++k) {
     // Create a placeholder that will store the shared futures representing the panel
-    std::unordered_map<SizeType, hpx::shared_future<ConstTile_t>> panel;
+    std::unordered_map<SizeType, hpx::shared_future<ConstTileType>> panel;
 
     GlobalTileIndex kk_idx(k, k);
     comm::Index2D kk_rank = distr.rankGlobalTile(kk_idx);
@@ -228,7 +227,7 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
 
       // Broadcast the jk-tile along the j-th column and update the jj-tile
       if (this_rank.row() == jj_rank.row()) {
-        pool_executor trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_normal;
+        parallel_executor trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_normal;
         herk_trailing_diag_tile(trailing_matrix_executor, panel[j], mat_a(jj_idx));
         if (j != nrtile - 1)
           comm::send_tile(executor_mpi, mpi_task_chain, Coord::Col, panel[j]);
@@ -256,21 +255,19 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
 // Distributed implementation of Lower Cholesky factorization.
 template <class T, comm::MPIMech M>
 void chol_nb(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
-  using hpx::threads::executors::pool_executor;
-  using hpx::threads::thread_priority_high;
-  using hpx::threads::thread_priority_default;
-
-  using ConstTile_t = matrix::Tile<const T, Device::CPU>;
+  using hpx::execution::parallel_executor;
+  using hpx::resource::get_thread_pool;
+  using hpx::resource::pool_exists;
+  using hpx::threads::thread_priority;
+  using common::internal::vector;
+  using ConstTileType = typename Matrix<T, Device::CPU>::ConstTileType;
   using MPIExecutor = comm::Executor<M>;
 
-  // Set up executor on the default queue with high priority.
-  pool_executor executor_hp("default", thread_priority_high);
-  // Set up executor on the default queue with default priority.
-  pool_executor executor_normal("default", thread_priority_default);
-
-  std::string mpi_pool = (hpx::resource::pool_exists("mpi")) ? "mpi" : "default";
+  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
+  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
 
   // Set up MPI executor pipelines
+  std::string mpi_pool = (hpx::resource::pool_exists("mpi")) ? "mpi" : "default";
   MPIExecutor executor_mpi_col(mpi_pool, grid.colCommunicator());
   MPIExecutor executor_mpi_row(mpi_pool, grid.rowCommunicator());
   common::Pipeline<MPIExecutor> mpi_col_task_chain(std::move(executor_mpi_col));
@@ -282,7 +279,7 @@ void chol_nb(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
 
   for (SizeType k = 0; k < nrtile; ++k) {
     // Create a placeholder that will store the shared futures representing the panel
-    std::unordered_map<SizeType, hpx::shared_future<ConstTile_t>> panel;
+    std::unordered_map<SizeType, hpx::shared_future<ConstTileType>> panel;
 
     GlobalTileIndex kk_idx(k, k);
     comm::Index2D kk_rank = distr.rankGlobalTile(kk_idx);
@@ -318,7 +315,7 @@ void chol_nb(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
 
     // Iterate over the trailing matrix
     for (SizeType j = k + 1; j < nrtile; ++j) {
-      pool_executor trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_normal;
+      parallel_executor trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_normal;
       GlobalTileIndex jj_idx(j, j);
       comm::Index2D jj_rank = mat_a.rankGlobalTile(jj_idx);
 

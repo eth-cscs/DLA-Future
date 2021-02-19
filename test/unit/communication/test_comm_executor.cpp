@@ -16,13 +16,13 @@
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/executor.h"
 
-TEST(Comm, SendRecv) {
-  // A send-recv cycle between 4 processes
-
+// A send-recv cycle between 4 processes
+template <dlaf::comm::MPIMech M>
+void test_exec() {
   auto comm = dlaf::comm::Communicator(MPI_COMM_WORLD);
   int rank = comm.rank();
   int nprocs = comm.size();
-  dlaf::comm::executor ex(comm);
+  dlaf::comm::Executor<M> ex("default", comm);
 
   int size = 1000;
   MPI_Datatype dtype = MPI_DOUBLE;
@@ -32,11 +32,20 @@ TEST(Comm, SendRecv) {
   int recv_rank = (rank != 0) ? rank - 1 : nprocs - 1;
   int tag = 0;
 
-  auto send_fut = ex.async_execute(MPI_Isend, send_buf.data(), size, dtype, send_rank, tag);
-  auto recv_fut = ex.async_execute(MPI_Irecv, recv_buf.data(), size, dtype, recv_rank, tag);
+  auto send_fut = hpx::async(ex, MPI_Isend, send_buf.data(), size, dtype, send_rank, tag);
+  auto recv_fut = hpx::async(ex, MPI_Irecv, recv_buf.data(), size, dtype, recv_rank, tag);
   hpx::wait_all(send_fut, recv_fut);
 
   std::vector<double> expected_recv_buf(static_cast<std::size_t>(size), recv_rank);
 
   ASSERT_TRUE(expected_recv_buf == recv_buf);
+}
+
+TEST(SendRecv, Yielding) {
+  test_exec<dlaf::comm::MPIMech::Yielding>();
+}
+
+TEST(SendRecv, Polling) {
+  hpx::mpi::experimental::enable_user_polling internal_helper("default");
+  test_exec<dlaf::comm::MPIMech::Polling>();
 }

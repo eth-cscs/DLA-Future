@@ -162,7 +162,7 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
   LocalElementSize sizeV(m, m);
   TileElementSize blockSizeV(mb, mb);
   Matrix<double, Device::CPU> mat_v(sizeV, blockSizeV);
-    dlaf::matrix::util::set_random(mat_v);
+  dlaf::matrix::util::set_random(mat_v);
   std::cout << "Random matrix V" << std::endl;
   printElements(mat_v);
   

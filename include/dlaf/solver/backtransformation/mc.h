@@ -23,6 +23,7 @@
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/communication/executor.h"
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/communication/init.h"
 #include "dlaf/lapack_tile.h"
@@ -83,15 +84,16 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
      constexpr auto ConjTrans = blas::Op::ConjTrans;
      constexpr auto NonUnit = blas::Diag::NonUnit;
 
-     using hpx::execution::parallel_executor;
-     using hpx::resource::get_thread_pool;
-     using hpx::threads::thread_priority;
-
-     parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
-     parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
-
+     using hpx::threads::executors::pool_executor;
+     using hpx::threads::thread_priority_high;
+     using hpx::threads::thread_priority_default;
      using hpx::util::unwrapping;
      
+     // Set up executor on the default queue with high priority.
+     pool_executor executor_hp("default", thread_priority_high);
+     // Set up executor on the default queue with default priority.
+     pool_executor executor_normal("default", thread_priority_default);
+
      const SizeType m = mat_c.nrTiles().rows();
      const SizeType n = mat_c.nrTiles().cols();
      const SizeType mb = mat_c.blockSize().rows();
@@ -99,13 +101,8 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 
      Matrix<T, Device::CPU> mat_w({mat_v.size().rows(), nb}, mat_v.blockSize());
      Matrix<T, Device::CPU> mat_w2({mb, mat_v.size().cols()}, mat_v.blockSize());
-     Matrix<T, Device::CPU> mat_u({mb, nb}, mat_v.blockSize());
-
-     // Set U to one
-     matrix::util::set(mat_u, [](auto&&){return 1;});     
 
      SizeType last_nb;
-     // TODO: in this case band reduction has no effect
      if (mat_v.blockSize().cols() == 1) {
        last_nb = 1;
      }
@@ -118,21 +115,15 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
      Matrix<T, Device::CPU> mat_w_last({mat_v.size().rows(), last_nb}, {mat_v.blockSize().rows(), last_nb});
      Matrix<T, Device::CPU> mat_w2_last({last_nb, mat_v.size().cols()}, {last_nb, mat_v.blockSize().cols()});
 
-     const SizeType reflectors = (last_nb == 1) ? n-1 : n-1;
+     const SizeType reflectors = (last_nb == 1) ? mat_v.size().cols()/mat_v.blockSize().cols()-1 : mat_v.size().cols()/mat_v.blockSize().cols();
      
      for (SizeType k = reflectors-1; k > -1; --k) {
        bool is_last = (k == n-1) ? true : false;
+       std::cout << " k " << k << " vs n " << n << std::endl;
        
-       // Reset W to zero
-       if (is_last == true) {
-	 matrix::util::set(mat_w_last, [](auto&&){return 0;});
-       }
-       else {
-	 matrix::util::set(mat_w, [](auto&&){return 0;});
-       }
        void (&cpy)(const matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T, Device::CPU>&) = copy<T>;
        // Copy V panel into WH
-       for (SizeType i = k+1; i < m; ++i) {
+       for (SizeType i = 0; i < m; ++i) {
 	 if (is_last == true) {
 	   hpx::dataflow(executor_hp, hpx::util::unwrapping(cpy), mat_v.read(LocalTileIndex(i, k)), mat_w_last(LocalTileIndex(i, 0)));
 	 }
@@ -148,63 +139,61 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
        else {
 	 matrix::util::set(mat_w2, [](auto&&){return 0;});
        }
-
-       for (SizeType i = k+1; i < n; ++i) {
+       std::cout << "Matrix T " << k << std::endl;
+       printElements(mat_t);
+	 
+       for (SizeType i = k; i < n; ++i) {
 	 // WH = V T
 	 auto ik = LocalTileIndex{i, 0};
 	 auto kk = LocalTileIndex{0, k};
 	 if (is_last == true) {
-	   if (i = k+1) {
-	     hpx::dataflow(executor_hp, hpx::util::unwrapping(cpy), mat_t.read(kk), mat_w_last(LocalTileIndex(i, 0))); 
-	   }
-	   else {
-	     hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper, NoTrans, NonUnit, 1.0, mat_t.read(kk), std::move(mat_w_last(ik)));
-	   }
+	   hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper, NoTrans, NonUnit, 1.0, mat_t.read(kk), std::move(mat_w_last(ik)));
+	   std::cout << "Matrix W at step " << k << std::endl;
+	   printElements(mat_w_last);
 	 }
 	 else {
-	   if (i == k+1) {
-	     hpx::dataflow(executor_hp, hpx::util::unwrapping(cpy), mat_t.read(kk), mat_w(LocalTileIndex(i, 0))); 
-	   }
-	   else {
-	     hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper, NoTrans, NonUnit, 1.0, mat_t.read(kk), std::move(mat_w(ik)));
-	   }
+	   hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper, NoTrans, NonUnit, 1.0, mat_t.read(kk), std::move(mat_w(ik)));
+	   std::cout << "Matrix W at step " << k << std::endl;
+	   printElements(mat_w);
 	 }
        }
        
        for (SizeType j = 0; j < n; ++j) {
 	 auto kj = LocalTileIndex{0, j};
-	 for (SizeType i = k+1; i < m; ++i) {
+	 for (SizeType i = k; i < m; ++i) {
 	   auto ik = LocalTileIndex{i, 0};
 	   auto ij = LocalTileIndex{i, j};
 	   // W2 = W C
 	   if (is_last == true) {
 	     hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), ConjTrans, NoTrans, 1.0, std::move(mat_w_last(ik)), mat_c.read(ij), 1.0, std::move(mat_w2_last(kj)));	     
+	     std::cout << "Matrix W2 at step " << k << " (" << i << ") " << std::endl;
+	     printElements(mat_w2_last);
 	   }
 	   else {
 	     hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), ConjTrans, NoTrans, 1.0, std::move(mat_w(ik)), mat_c.read(ij), 1.0, std::move(mat_w2(kj)));
+	     std::cout << "Matrix W2 at step " << k << " (" << i << ") " << std::endl;
+	     printElements(mat_w2);
 	   }
 	 }	 
        }
        
-       for (SizeType j = 0; j < n; ++j) {
-	 for (SizeType i = k+1; i < m; ++i) {
+	 for (SizeType i = 0; i < m; ++i) {
 	   auto ik = LocalTileIndex{i, k};
-	   auto kj = LocalTileIndex{0, j};
-	   auto ij = LocalTileIndex{i, j};
-	   // C = C - V W2
-	   if (is_last == true) {
-	     hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans, NoTrans, -1.0, mat_v.read(ik), mat_w2_last.read(kj), 1.0, std::move(mat_c(ij)));
-	   }
-	   else {
-	     if (i == k+1) {
-	       hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans, NoTrans, -1.0, mat_u.read(LocalTileIndex{0,0}), mat_w2.read(kj), 1.0, std::move(mat_c(ij)));
+	   for (SizeType j = 0; j < n; ++j) {
+	     auto kj = LocalTileIndex{0, j};
+	     auto ij = LocalTileIndex{i, j};
+	     // C = C - V W2
+	     if (is_last == true) {
+	       hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans, NoTrans, -1.0, mat_v.read(ik), mat_w2_last.read(kj), 1.0, std::move(mat_c(ij)));
 	     }
 	     else {
 	       hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans, NoTrans, -1.0, mat_v.read(ik), mat_w2.read(kj), 1.0, std::move(mat_c(ij)));
 	     }
 	   }
 	 }
-       }
+
+	 std::cout << "Matrix C at step " << k << std::endl;
+	 printElements(mat_c);
      }
    }
 

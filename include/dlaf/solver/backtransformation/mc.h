@@ -101,8 +101,13 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
 
      Matrix<T, Device::CPU> mat_w({mat_v.size().rows(), nb}, mat_v.blockSize());
      Matrix<T, Device::CPU> mat_w2({mb, mat_v.size().cols()}, mat_v.blockSize());
+     Matrix<T, Device::CPU> mat_u({mb, nb}, mat_v.blockSize());
+
+     // Set U to one
+     matrix::util::set(mat_u, [](auto&&){return 1;});     
 
      SizeType last_nb;
+     // TODO: in this case band reduction has no effect
      if (mat_v.blockSize().cols() == 1) {
        last_nb = 1;
      }

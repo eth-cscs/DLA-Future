@@ -188,20 +188,21 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
   // Copy V matrix locally
   auto mat_v_loc = dlaf::matrix::test::all_gather<double>(mat_v, comm_grid);
   // Reset diagonal and upper values of V
-  lapack::laset(lapack::MatrixType::General, mb, mat_v_loc.size().cols(), 0, 0, mat_v_loc.ptr(), mat_v_loc.ld());
-  if (m != mb) {
+  lapack::laset(lapack::MatrixType::General, std::min(m,mb), mat_v_loc.size().cols(), 0, 0, mat_v_loc.ptr(), mat_v_loc.ld());
+  if (m > mb) {
     lapack::laset(lapack::MatrixType::Upper, mat_v_loc.size().rows()-mb, mat_v_loc.size().cols(), 0, 1, mat_v_loc.ptr(GlobalElementIndex{mb, 0}), mat_v_loc.ld());
   }
   
   MatrixLocal<double> taus({m, 1}, {1, 1});
   // Compute taus (real case: tau = 2 / v^H v)
+  //CHECK
   for (SizeType i = n-2; i > -1; --i) {
-    const GlobalElementIndex v_offset{0, i};
-    auto dotprod = blas::dot(m, mat_v_loc.ptr(v_offset), 1, mat_v_loc.ptr(v_offset), 1);
+    const GlobalElementIndex v_offset{i, i};
+    auto dotprod = blas::dot(m-i, mat_v_loc.ptr(v_offset), 1, mat_v_loc.ptr(v_offset), 1);
     auto tau = 2.0/dotprod;
     taus({i,0}) = tau;
 
-    lapack::larf(lapack::Side::Left, m, n, mat_v_loc.ptr(v_offset), 1, tau, mat_c_loc.ptr(), mat_c_loc.ld());
+    lapack::larf(lapack::Side::Left, m-i, n, mat_v_loc.ptr(v_offset), 1, tau, mat_c_loc.ptr(GlobalElementIndex{i,0}), mat_c_loc.ld());
   }
 
   std::cout << " " << std::endl;

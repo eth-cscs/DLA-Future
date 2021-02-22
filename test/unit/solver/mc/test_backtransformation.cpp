@@ -142,8 +142,8 @@ void larft(const lapack::Direction direction, const lapack::StoreV storeV, const
 TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
   const SizeType m = 4;
   const SizeType n = 4;
-  const SizeType mb = 2;
-  const SizeType nb = 2;
+  const SizeType mb = 1;
+  const SizeType nb = 1;
 
   // TODO: only for DOUBLE so far!!!
   LocalElementSize sizeC(m, n);
@@ -162,12 +162,9 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
   LocalElementSize sizeV(m, n);
   TileElementSize blockSizeV(mb, nb);
   Matrix<double, Device::CPU> mat_v(sizeV, blockSizeV);
-  // set(mat_v, el_V);
     dlaf::matrix::util::set_random(mat_v);
   std::cout << "Random matrix V" << std::endl;
   printElements(mat_v);
-//  std::cout << "Random matrix V after laset" << std::endl;
-//  printElements(mat_v);
   
   // Impose orthogonality: Q = I - v tau v^H is orthogonal (Q Q^H = I)
   // leads to tau = 2/(vT v) for real 
@@ -179,10 +176,6 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
   TileElementSize blockSizeT(mb, nb);
   Matrix<double, Device::CPU> mat_t(sizeT, blockSizeT);
   set_zero(mat_t);
-//  set(mat_t, el_T);
-  std::cout << "Zero matrix T" << std::endl;
-  printElements(mat_t);
-
 
   comm::CommunicatorGrid comm_grid(MPI_COMM_WORLD, 1, 1, common::Ordering::ColumnMajor);
 
@@ -193,78 +186,35 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
   auto mat_t_loc = dlaf::matrix::test::all_gather<double>(mat_t, comm_grid);
 
   // Copy V matrix locally
-  //MatrixLocal<double> mat_v_loc; 
   auto mat_v_loc = dlaf::matrix::test::all_gather<double>(mat_v, comm_grid);
   // Reset diagonal and upper values of V
-//  for (int i = 0; i < mat_v_loc.nrTiles().rows(); ++i) {
-//    for (int j = 0; j < mat_v_loc.nrTiles().cols(); ++j) {
-//      auto ij = GlobalTileIndex{i,j};
-//      auto tile_v = mat_v_loc.tile(ij);
-//      if (i <= j) {
-//	lapack::laset(lapack::MatrixType::General, tile_v.size().rows(), tile_v.size().cols(),
-//		      0, 0,
-//		      tile_v.ptr({0,0}), tile_v.ld());
-//      }
-//      else if (i == j+1) {
-//	lapack::laset(lapack::MatrixType::Upper, tile_v.size().rows(), tile_v.size().cols(),
-//		      0, 1,
-//		      tile_v.ptr({0,0}), tile_v.ld());
-//      }
-//    }
-//  }
-
-  //dlaf::matrix::test::print(format::numpy{}, "mat Vloc ", mat_v_loc, std::cout);
-
-//  // Reset diagonal and upper values of V
-//  for (int i = 0; i < mat_v_loc.nrTiles().rows(); ++i) {
-//    for (int j = 0; j < mat_v_loc.nrTiles().cols(); ++j) {
-//      auto ij = GlobalTileIndex{i,j};
-//      lapack::laset(lapack::MatrixType::Upper, mat_v_loc.size().rows()-mb, mat_v_loc.size().cols(), 0, 1, mat_v_loc.ptr(GlobalElementIndex{mb, 0}), mat_v_loc.ld());
-//    }
-//  }
-//  
-
   lapack::laset(lapack::MatrixType::General, mb, mat_v_loc.size().cols(), 0, 0, mat_v_loc.ptr(), mat_v_loc.ld());
   if (m != mb) {
     lapack::laset(lapack::MatrixType::Upper, mat_v_loc.size().rows()-mb, mat_v_loc.size().cols(), 0, 1, mat_v_loc.ptr(GlobalElementIndex{mb, 0}), mat_v_loc.ld());
   }
   
-  dlaf::matrix::test::print(format::numpy{}, "mat Vloc ", mat_v_loc, std::cout);
-
-  //std::cout << " TAUS " << std::endl;
   MatrixLocal<double> taus({m, 1}, {1, 1});
   // Compute taus (real case: tau = 2 / v^H v)
-  for (SizeType i = n-nb-1; i > -1; --i) {
+  for (SizeType i = n-2; i > -1; --i) {
     const GlobalElementIndex v_offset{0, i};
     auto dotprod = blas::dot(m, mat_v_loc.ptr(v_offset), 1, mat_v_loc.ptr(v_offset), 1);
     auto tau = 2.0/dotprod;
-    std::cout << " tau (" << i << "): " << tau << std::endl;
     taus({i,0}) = tau;
 
     lapack::larf(lapack::Side::Left, m, n, mat_v_loc.ptr(v_offset), 1, tau, mat_c_loc.ptr(), mat_c_loc.ld());
-    dlaf::matrix::test::print(format::numpy{}, "mat Cloc ", mat_c_loc, std::cout);
   }
 
   std::cout << " " << std::endl;
   std::cout << " Result simple way " << std::endl;
   dlaf::matrix::test::print(format::numpy{}, "mat Cloc ", mat_c_loc, std::cout);
   std::cout << " " << std::endl;
-
-  std::cout << " " << std::endl;
-  std::cout << " Mat Tloc start " << std::endl;
-  dlaf::matrix::test::print(format::numpy{}, "mat Tloc ", mat_t_loc, std::cout);
-  std::cout << " " << std::endl;
   
   for (SizeType i = mat_t.nrTiles().cols()-1; i > -1; --i) {
-      std::cout << " i " << i  << std::endl;
       const GlobalElementIndex offset{i*nb, i*nb};
       const GlobalElementIndex tau_offset{i*nb, 0};
       auto tile_t = mat_t(LocalTileIndex{0,i}).get();
       lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise, mat_v.size().rows()-i*nb, nb, mat_v_loc.ptr(offset), mat_v_loc.ld(), taus.ptr(tau_offset), tile_t.ptr(), tile_t.ld());
-      std::cout << " i " <<  i << " n "  << mat_v.size().rows()-i*nb << " k " << nb  << " - " << i*nb << " offset " << offset << std::endl;
   }
-  std::cout << "FINAL Matrix T" << std::endl;
-  printElements(mat_t);
   
   std::cout << " " << std::endl;
   solver::backTransformation<Backend::MC>(mat_c, mat_v, mat_t);

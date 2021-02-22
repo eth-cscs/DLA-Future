@@ -23,7 +23,6 @@
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/executor.h"
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/communication/init.h"
 #include "dlaf/lapack_tile.h"
@@ -84,16 +83,15 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
      constexpr auto ConjTrans = blas::Op::ConjTrans;
      constexpr auto NonUnit = blas::Diag::NonUnit;
 
-     using hpx::threads::executors::pool_executor;
-     using hpx::threads::thread_priority_high;
-     using hpx::threads::thread_priority_default;
+     using hpx::execution::parallel_executor;
+     using hpx::resource::get_thread_pool;
+     using hpx::threads::thread_priority;
+
+     parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
+     parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
+
      using hpx::util::unwrapping;
      
-     // Set up executor on the default queue with high priority.
-     pool_executor executor_hp("default", thread_priority_high);
-     // Set up executor on the default queue with default priority.
-     pool_executor executor_normal("default", thread_priority_default);
-
      const SizeType m = mat_c.nrTiles().rows();
      const SizeType n = mat_c.nrTiles().cols();
      const SizeType mb = mat_c.blockSize().rows();

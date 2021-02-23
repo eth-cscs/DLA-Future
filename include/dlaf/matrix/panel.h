@@ -192,7 +192,7 @@ std::pair<SizeType, comm::IndexT_MPI> transposed_owner(const Distribution& dist,
 }
 
 template <class T, Device device, Coord panel_type>
-void broadcast(hpx::threads::executors::pool_executor ex, comm::IndexT_MPI rank_root,
+void broadcast(hpx::execution::parallel_executor ex, comm::IndexT_MPI rank_root,
                Panel<panel_type, T, device>& ws, common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
   using namespace comm::sync::broadcast;
   using hpx::dataflow;
@@ -200,7 +200,7 @@ void broadcast(hpx::threads::executors::pool_executor ex, comm::IndexT_MPI rank_
   constexpr auto comm_dir = transposed(panel_type);
 
   // TODO
-  //if (grid_size.get(component(comm_dir)) < 1)
+  // if (grid_size.get(component(comm_dir)) < 1)
   //  return;
 
   const auto rank = ws.rankIndex().get(component(comm_dir));
@@ -224,7 +224,7 @@ void broadcast(hpx::threads::executors::pool_executor ex, comm::IndexT_MPI rank_
 /// - linked as external tile to the corresponding one in the column panel, if current rank owns it
 /// - received from the owning rank, which broadcasts the tile from the row panel along the column
 template <class T, Device device, Coord from_dir, Coord to_dir>
-void broadcast(hpx::threads::executors::pool_executor ex, comm::IndexT_MPI rank_root,
+void broadcast(hpx::execution::parallel_executor ex, comm::IndexT_MPI rank_root,
                Panel<from_dir, T, device>& ws_from, Panel<to_dir, T, device>& ws_to,
                common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
   static_assert(from_dir == transposed(to_dir), "this method broadcasts and transposes coordinates");

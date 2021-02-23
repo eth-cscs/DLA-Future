@@ -378,8 +378,10 @@ TYPED_TEST(PanelTest, BroadcastCol) {
   using hpx::util::unwrapping;
   using TypeUtil = TypeUtilities<TypeParam>;
 
-  using hpx::threads::thread_priority_default;
-  hpx::threads::executors::pool_executor ex("default", thread_priority_default);
+  using hpx::execution::parallel_executor;
+  using hpx::resource::get_thread_pool;
+  using hpx::threads::thread_priority;
+  parallel_executor ex(&get_thread_pool("default"), thread_priority::default_);
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& params : test_params) {
@@ -436,8 +438,10 @@ TYPED_TEST(PanelTest, BroadcastRow) {
   using hpx::util::unwrapping;
   using TypeUtil = TypeUtilities<TypeParam>;
 
-  using hpx::threads::thread_priority_default;
-  hpx::threads::executors::pool_executor ex("default", thread_priority_default);
+  using hpx::execution::parallel_executor;
+  using hpx::resource::get_thread_pool;
+  using hpx::threads::thread_priority;
+  parallel_executor ex(&get_thread_pool("default"), thread_priority::default_);
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& params : test_params) {
@@ -502,8 +506,10 @@ TYPED_TEST(PanelTest, BroadcastCol2Row) {
   using hpx::util::unwrapping;
   using TypeUtil = TypeUtilities<TypeParam>;
 
-  using hpx::threads::thread_priority_default;
-  hpx::threads::executors::pool_executor ex("default", thread_priority_default);
+  using hpx::execution::parallel_executor;
+  using hpx::resource::get_thread_pool;
+  using hpx::threads::thread_priority;
+  parallel_executor ex(&get_thread_pool("default"), thread_priority::default_);
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& params : test_params_bcast_transpose) {
@@ -551,8 +557,10 @@ TYPED_TEST(PanelTest, BroadcastRow2Col) {
   using hpx::util::unwrapping;
   using TypeUtil = TypeUtilities<TypeParam>;
 
-  using hpx::threads::thread_priority_default;
-  hpx::threads::executors::pool_executor ex("default", thread_priority_default);
+  using hpx::execution::parallel_executor;
+  using hpx::resource::get_thread_pool;
+  using hpx::threads::thread_priority;
+  parallel_executor ex(&get_thread_pool("default"), thread_priority::default_);
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& params : test_params_bcast_transpose) {

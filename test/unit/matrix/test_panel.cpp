@@ -48,7 +48,8 @@ TYPED_TEST_SUITE(PanelTest, MatrixElementTypes);
 using test_params_t = std::tuple<GlobalElementSize, TileElementSize, GlobalElementIndex>;
 
 std::vector<test_params_t> test_params{
-    test_params_t({5, 10}, {1, 1}, {2, 2}),
+    //test_params_t({5, 10}, {3, 3}, {1, 2}),
+    test_params_t({26, 13}, {3, 3}, {1, 2}),
 };
 
 struct config_t {
@@ -367,6 +368,92 @@ TYPED_TEST(PanelTest, ExternalTilesRow) {
         }
         else {
           CHECK_TILE_EQ(matrix.read(idx).get(), ws_h.read(idx).get());
+        }
+      }
+    }
+  }
+}
+
+TYPED_TEST(PanelTest, OffsetCol) {
+  using namespace dlaf;
+  using hpx::util::unwrapping;
+  using TypeUtil = TypeUtilities<TypeParam>;
+
+  for (auto& comm_grid : this->commGrids()) {
+    for (const auto& params : test_params) {
+      const auto cfg = configure(params);
+
+      Matrix<TypeParam, dlaf::Device::CPU> matrix(cfg.sz, cfg.blocksz, comm_grid);
+      const auto& dist = matrix.distribution();
+
+      // setup the panel
+      const LocalTileIndex at_offset{
+          dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
+          dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
+      };
+
+      Panel<Coord::Col, TypeParam, dlaf::Device::CPU> ws_v(dist, at_offset);
+
+      for (SizeType i = at_offset.row(); i < matrix.distribution().localNrTiles().rows(); ++i)
+        ws_v({i, 0}).get()({0, 0}) = i;
+
+      for (SizeType i = at_offset.row(); i < matrix.distribution().localNrTiles().rows(); ++i) {
+        ws_v.set_offset({i, 0});
+
+        for (SizeType k = i; k < matrix.distribution().localNrTiles().rows(); ++k) {
+          const LocalTileIndex idx(k, 0);
+          auto& tile = ws_v.read(idx).get();
+          EXPECT_EQ(tile({0, 0}), TypeUtil::element(k, 0));
+          EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
+        }
+
+        for (const auto &idx : ws_v) {
+          auto& tile = ws_v.read(idx).get();
+          EXPECT_EQ(tile({0, 0}), TypeUtil::element(idx.row(), 0));
+          EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
+        }
+      }
+    }
+  }
+}
+
+TYPED_TEST(PanelTest, OffsetRow) {
+  using namespace dlaf;
+  using hpx::util::unwrapping;
+  using TypeUtil = TypeUtilities<TypeParam>;
+
+  for (auto& comm_grid : this->commGrids()) {
+    for (const auto& params : test_params) {
+      const auto cfg = configure(params);
+
+      Matrix<TypeParam, dlaf::Device::CPU> matrix(cfg.sz, cfg.blocksz, comm_grid);
+      const auto& dist = matrix.distribution();
+
+      // setup the panel
+      const LocalTileIndex at_offset{
+          dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
+          dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
+      };
+
+      Panel<Coord::Row, TypeParam, dlaf::Device::CPU> ws_h(dist, at_offset);
+
+      for (SizeType j = at_offset.col(); j < matrix.distribution().localNrTiles().cols(); ++j)
+        ws_h({0, j}).get()({0, 0}) = j;
+
+      for (SizeType j = at_offset.col(); j < matrix.distribution().localNrTiles().cols(); ++j) {
+        ws_h.set_offset({0, j});
+
+        for (SizeType k = j; k < matrix.distribution().localNrTiles().cols(); ++k) {
+          const LocalTileIndex idx(0, k);
+          auto& tile = ws_h.read(idx).get();
+          EXPECT_EQ(tile({0, 0}), TypeUtil::element(k, 0));
+          EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
+        }
+
+        for (const auto &idx : ws_h) {
+          auto& tile = ws_h.read(idx).get();
+          EXPECT_EQ(tile({0, 0}), TypeUtil::element(idx.col(), 0));
+          EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
         }
       }
     }

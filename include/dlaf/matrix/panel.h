@@ -28,10 +28,14 @@ namespace matrix {
 template <Coord panel_type, class T, Device device>
 struct Panel;
 
-// TODO it works just for tile layout
-// TODO the matrix always occupies memory entirely
+/// Panel with read-only access to its tiles
+///
+/// A row or column panel, strictly related to a given Matrix (from the coords point of view)
+/// not really useful, it is just the base for the RW version
 template <Coord dir, class T, Device device>
 struct Panel<dir, const T, device> : protected Matrix<T, device> {
+  // TODO it works just for tile layout
+  // TODO the matrix always occupies memory entirely
   using TileT = Tile<T, device>;
   using ConstTileT = Tile<const T, device>;
   using BaseT = Matrix<T, device>;
@@ -61,63 +65,79 @@ struct Panel<dir, const T, device> : protected Matrix<T, device> {
   void set_tile(const LocalTileIndex& index, hpx::shared_future<ConstTileT> new_tile_fut) {
     DLAF_ASSERT(index.isIn(dist_matrix_.localNrTiles()), index, dist_matrix_.localNrTiles());
     DLAF_ASSERT(internal_.count(panel_index(index)) == 0, "internal tile have been already used", index);
-    DLAF_ASSERT(!is_masked(index), "already set to external", index);
+    DLAF_ASSERT(!is_external(index), "already set to external", index);
 
     external_[panel_index(index)] = std::move(new_tile_fut);
   }
 
   // index w.r.t. the matrix coordinates system, not in the workspace (so it takes into account the offset)
   hpx::shared_future<ConstTileT> read(const LocalTileIndex& index) {
-    DLAF_ASSERT(index.isIn(dist_matrix_.localNrTiles()), index, dist_matrix_.localNrTiles());
+    //DLAF_ASSERT(index.isIn(dist_matrix_.localNrTiles()), index, dist_matrix_.localNrTiles());
 
-    if (is_masked(index)) {
-      return external_[panel_index(index)];
+    const SizeType internal_linear_idx = panel_index(index);
+    if (is_external(index)) {
+      return external_[internal_linear_idx];
     }
     else {
-      internal_.insert(panel_index(index));
+      internal_.insert(internal_linear_idx);
       return BaseT::read(full_index(index));
     }
   }
 
+  // Set the panel to a new offset with respect to the matrix
+  void set_offset(LocalTileIndex offset) noexcept {
+    DLAF_ASSERT(offset.get(component(dir)) >= bias_, offset, bias_);
+
+    offset_ = offset.get(component(dir)) - bias_;
+
+    range_ =
+        iterate_range2d(LocalTileIndex(component(dir), offset_ + bias_),
+                        LocalTileSize(component(dir),
+                                      dist_matrix_.localNrTiles().get(component(dir)) - (offset_ + bias_), 1));
+  }
+
   // it is possible to reset masks, so that memory can be easily re-used
   void reset() noexcept {
-    for (auto& e : external_) {
+    for (auto& e : external_)
       e = {};
-    }
     internal_.clear();
   }
 
 protected:
-  static Distribution compute_size(const Distribution& dist_matrix, const LocalTileIndex start) {
+  /// Create the internal matrix used for storing tiles
+  ///
+  /// It allocates just the memory needed for the part of matrix that it works with,
+  /// i.e. starting from `start`, so skippiing the first start tiles
+  static Matrix<T, device> setup_matrix(const Distribution& dist_matrix, const LocalTileIndex start) {
     const auto mb = dist_matrix.blockSize().rows();
     const auto nb = dist_matrix.blockSize().cols();
 
     const auto panel_size = [&]() -> LocalElementSize {
-      const auto mat_size = dist_matrix.localNrTiles().get(component(dir));
+      const auto mat_size = dist_matrix.localSize().get(component(dir));
       const auto i_tile = start.get(component(dir));
 
       switch (dir) {
-        case Coord::Col: {
-          return {(mat_size - i_tile) * mb, nb};
-        }
-        case Coord::Row: {
-          return {mb, (mat_size - i_tile) * nb};
-        }
+        case Coord::Col:
+          return {mat_size - i_tile * mb, nb};
+        case Coord::Row:
+          return {mb, mat_size - i_tile * nb};
       }
     }();
 
-    return {panel_size, dist_matrix.blockSize()};
+    Distribution dist{panel_size, dist_matrix.blockSize()};
+    auto layout = tileLayout(dist);
+    return {std::move(dist), layout};
   }
 
   // TODO think about passing a reference to the matrix instead of the distribution (useful for tilesize)
   Panel(matrix::Distribution dist_matrix, LocalTileIndex offset)
-      : BaseT(compute_size(dist_matrix, offset)), dist_matrix_(dist_matrix),
-        offset_(offset.get(component(dir))),
-        range_(iterate_range2d(LocalTileIndex(component(dir), offset_),
-                               BaseT::distribution().localNrTiles())) {
-    // TODO remove this and enable util::set (for setting to zero for red2band)
-    util::set(static_cast<Matrix<T, device>&>(*this), [](const auto&) { return 0; });
-
+      : BaseT(setup_matrix(dist_matrix, offset)), dist_matrix_(dist_matrix),
+        bias_(offset.get(component(dir))),
+        offset_(0),
+        range_(iterate_range2d(LocalTileIndex(component(dir), bias_ + offset_),
+                               LocalTileSize(component(dir),
+                                             dist_matrix_.localNrTiles().get(component(dir)) - (bias_ + offset_),
+                                             1))) {
     DLAF_ASSERT_MODERATE(BaseT::nrTiles().get(dir) == 1, BaseT::nrTiles());
 
     external_.resize(BaseT::nrTiles().get(component(dir)));
@@ -126,26 +146,30 @@ protected:
                       BaseT::distribution().localNrTiles().linear_size(), external_.size());
   }
 
-  SizeType panel_index(const LocalTileIndex& index) const noexcept {
-    return index.get(component(dir)) - offset_;
+  /// Given a matrix index, compute the internal linear index
+  SizeType panel_index(const LocalTileIndex& index) const {
+    // TODO check that index is more than offset
+    return index.get(component(dir)) - bias_;
   }
 
-  LocalTileIndex full_index(LocalTileIndex index) const noexcept {
-    DLAF_ASSERT_MODERATE(index.row() == 0 || index.col() == 0, index);
+  LocalTileIndex full_index(LocalTileIndex index) const {
+    //DLAF_ASSERT_MODERATE(index.row() == 0 || index.col() == 0, index);
 
-    index = LocalTileIndex(component(dir), index.get(component(dir)) - offset_);
+    index = LocalTileIndex(component(dir), panel_index(index));
 
-    DLAF_ASSERT_MODERATE(index.isIn(BaseT::distribution().localNrTiles()), index);
+    DLAF_ASSERT_MODERATE(index.isIn(BaseT::distribution().localNrTiles()), index, BaseT::distribution().localNrTiles());
     return index;
   }
 
-  bool is_masked(const LocalTileIndex linear_index) const noexcept {
-    return external_[panel_index(linear_index)].valid();
+  /// Given a matrix index, check if the corresponding tile in the panel is external or not
+  bool is_external(const LocalTileIndex idx_matrix) const {
+    return external_[panel_index(idx_matrix)].valid();
   }
 
   using iter2d_t = decltype(iterate_range2d(LocalTileIndex{0, 0}, LocalTileSize{0, 0}));
 
   Distribution dist_matrix_;
+  SizeType bias_;
   SizeType offset_;
   iter2d_t range_;
 
@@ -154,6 +178,7 @@ protected:
 
   std::set<SizeType> internal_;
 };
+
 
 template <Coord panel_type, class T, Device device>
 struct Panel : public Panel<panel_type, const T, device> {
@@ -164,9 +189,9 @@ struct Panel : public Panel<panel_type, const T, device> {
       : Panel<panel_type, const T, device>(std::move(distribution), std::move(start)) {}
 
   hpx::future<TileT> operator()(const LocalTileIndex& index) {
-    DLAF_ASSERT(index.isIn(BaseT::dist_matrix_.localNrTiles()), index,
-                BaseT::dist_matrix_.localNrTiles());
-    DLAF_ASSERT(!is_masked(index), "read-only access on external tiles", index);
+    // DLAF_ASSERT(index.isIn(BaseT::dist_matrix_.localNrTiles()), index,
+    //            BaseT::dist_matrix_.localNrTiles());
+    DLAF_ASSERT(!is_external(index), "read-only access on external tiles", index);
 
     BaseT::internal_.insert(BaseT::panel_index(index));
     return BaseT::operator()(BaseT::full_index(index));
@@ -174,8 +199,9 @@ struct Panel : public Panel<panel_type, const T, device> {
 
 protected:
   using BaseT = Panel<panel_type, const T, device>;
-  using BaseT::is_masked;
+  using BaseT::is_external;
 };
+
 
 namespace internal {
 

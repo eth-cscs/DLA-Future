@@ -69,13 +69,13 @@ public:
   ///
   /// @param component specifies which component has to be set,
   /// @param value index along the @p component (0-based).
-  basic_coords(Coord component, IndexT value) noexcept {
+  basic_coords(Coord component, IndexT value, IndexT fixed = 0) noexcept {
     switch (component) {
       case Coord::Row:
-        *this = basic_coords(value, 0);
+        *this = basic_coords(value, fixed);
         break;
       case Coord::Col:
-        *this = basic_coords(0, value);
+        *this = basic_coords(fixed, value);
         break;
     }
   }

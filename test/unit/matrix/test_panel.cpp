@@ -48,7 +48,7 @@ TYPED_TEST_SUITE(PanelTest, MatrixElementTypes);
 using test_params_t = std::tuple<GlobalElementSize, TileElementSize, GlobalElementIndex>;
 
 std::vector<test_params_t> test_params{
-    //test_params_t({5, 10}, {3, 3}, {1, 2}),
+    // test_params_t({5, 10}, {3, 3}, {1, 2}),
     test_params_t({26, 13}, {3, 3}, {1, 2}),
 };
 
@@ -407,7 +407,7 @@ TYPED_TEST(PanelTest, OffsetCol) {
           EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
         }
 
-        for (const auto &idx : ws_v) {
+        for (const auto& idx : ws_v) {
           auto& tile = ws_v.read(idx).get();
           EXPECT_EQ(tile({0, 0}), TypeUtil::element(idx.row(), 0));
           EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
@@ -450,7 +450,7 @@ TYPED_TEST(PanelTest, OffsetRow) {
           EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
         }
 
-        for (const auto &idx : ws_h) {
+        for (const auto& idx : ws_h) {
           auto& tile = ws_h.read(idx).get();
           EXPECT_EQ(tile({0, 0}), TypeUtil::element(idx.col(), 0));
           EXPECT_EQ(tile.size(), matrix.read(idx).get().size());

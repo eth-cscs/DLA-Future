@@ -72,7 +72,7 @@ struct Panel<dir, const T, device> : protected Matrix<T, device> {
 
   // index w.r.t. the matrix coordinates system, not in the workspace (so it takes into account the offset)
   hpx::shared_future<ConstTileT> read(const LocalTileIndex& index) {
-    //DLAF_ASSERT(index.isIn(dist_matrix_.localNrTiles()), index, dist_matrix_.localNrTiles());
+    // DLAF_ASSERT(index.isIn(dist_matrix_.localNrTiles()), index, dist_matrix_.localNrTiles());
 
     const SizeType internal_linear_idx = panel_index(index);
     if (is_external(index)) {
@@ -90,10 +90,11 @@ struct Panel<dir, const T, device> : protected Matrix<T, device> {
 
     offset_ = offset.get(component(dir)) - bias_;
 
-    range_ =
-        iterate_range2d(LocalTileIndex(component(dir), offset_ + bias_),
-                        LocalTileSize(component(dir),
-                                      dist_matrix_.localNrTiles().get(component(dir)) - (offset_ + bias_), 1));
+    range_ = iterate_range2d(LocalTileIndex(component(dir), offset_ + bias_),
+                             LocalTileSize(component(dir),
+                                           dist_matrix_.localNrTiles().get(component(dir)) -
+                                               (offset_ + bias_),
+                                           1));
   }
 
   // it is possible to reset masks, so that memory can be easily re-used
@@ -132,11 +133,11 @@ protected:
   // TODO think about passing a reference to the matrix instead of the distribution (useful for tilesize)
   Panel(matrix::Distribution dist_matrix, LocalTileIndex offset)
       : BaseT(setup_matrix(dist_matrix, offset)), dist_matrix_(dist_matrix),
-        bias_(offset.get(component(dir))),
-        offset_(0),
+        bias_(offset.get(component(dir))), offset_(0),
         range_(iterate_range2d(LocalTileIndex(component(dir), bias_ + offset_),
                                LocalTileSize(component(dir),
-                                             dist_matrix_.localNrTiles().get(component(dir)) - (bias_ + offset_),
+                                             dist_matrix_.localNrTiles().get(component(dir)) -
+                                                 (bias_ + offset_),
                                              1))) {
     DLAF_ASSERT_MODERATE(BaseT::nrTiles().get(dir) == 1, BaseT::nrTiles());
 
@@ -153,11 +154,12 @@ protected:
   }
 
   LocalTileIndex full_index(LocalTileIndex index) const {
-    //DLAF_ASSERT_MODERATE(index.row() == 0 || index.col() == 0, index);
+    // DLAF_ASSERT_MODERATE(index.row() == 0 || index.col() == 0, index);
 
     index = LocalTileIndex(component(dir), panel_index(index));
 
-    DLAF_ASSERT_MODERATE(index.isIn(BaseT::distribution().localNrTiles()), index, BaseT::distribution().localNrTiles());
+    DLAF_ASSERT_MODERATE(index.isIn(BaseT::distribution().localNrTiles()), index,
+                         BaseT::distribution().localNrTiles());
     return index;
   }
 
@@ -178,7 +180,6 @@ protected:
 
   std::set<SizeType> internal_;
 };
-
 
 template <Coord panel_type, class T, Device device>
 struct Panel : public Panel<panel_type, const T, device> {
@@ -201,7 +202,6 @@ protected:
   using BaseT = Panel<panel_type, const T, device>;
   using BaseT::is_external;
 };
-
 
 namespace internal {
 

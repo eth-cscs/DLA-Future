@@ -130,8 +130,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
       else {
 	hpx::dataflow(executor_hp, hpx::util::unwrapping(cpy), mat_v.read(LocalTileIndex(i, k)), mat_vv(LocalTileIndex(i, 0)));
       }
-
-
+      
       // Fixing elements of VV and copying them into WH
       if (is_last == true) {
 	auto tile_v = mat_vv_last(LocalTileIndex{i, 0}).get();
@@ -141,7 +140,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
 	else if (i == k+1) { 
 	  lapack::laset(lapack::MatrixType::Upper, tile_v.size().rows(), tile_v.size().cols(), 0, 1, tile_v.ptr(), tile_v.ld());
 	}
-	hpx::dataflow(executor_hp, hpx::util::unwrapping(cpy), mat_vv.read(LocalTileIndex(i, 0)), mat_w_last(LocalTileIndex(i, 0)));
+	hpx::dataflow(executor_hp, hpx::util::unwrapping(cpy), mat_vv_last.read(LocalTileIndex(i, 0)), mat_w_last(LocalTileIndex(i, 0)));
 
       }
       else {

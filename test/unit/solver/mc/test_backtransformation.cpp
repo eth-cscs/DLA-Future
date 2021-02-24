@@ -135,8 +135,8 @@ MatrixLocal<T> makeLocal(const Matrix<const T, Device::CPU>& matrix) {
 }
 
 TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
-  const SizeType m = 4;
-  const SizeType n = 4;
+  const SizeType m = 6;
+  const SizeType n = 1;
   const SizeType mb = 1;
   const SizeType nb = 1;
 
@@ -161,7 +161,7 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
   TileElementSize blockSizeTau(1, 1);
   Matrix<double, Device::CPU> mat_tau(sizeTau, blockSizeTau);
   
-  LocalElementSize sizeT(mb, n);
+  LocalElementSize sizeT(mb, m);
   TileElementSize blockSizeT(mb, nb);
   Matrix<double, Device::CPU> mat_t(sizeT, blockSizeT);
   set_zero(mat_t);
@@ -184,12 +184,12 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
   
   MatrixLocal<double> taus({m, 1}, {1, 1});
   // Compute taus (real case: tau = 2 / v^H v)
-  for (SizeType i = n-2; i > -1; --i) {
+  for (SizeType i = m-2; i > -1; --i) {
     const GlobalElementIndex v_offset{i, i};
     auto dotprod = blas::dot(m-i, mat_v_loc.ptr(v_offset), 1, mat_v_loc.ptr(v_offset), 1);
     auto tau = 2.0/dotprod;
     taus({i,0}) = tau;
-
+    
     lapack::larf(lapack::Side::Left, m-i, n, mat_v_loc.ptr(v_offset), 1, tau, mat_c_loc.ptr(GlobalElementIndex{i,0}), mat_c_loc.ld());
   }
 
@@ -204,6 +204,10 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
       auto tile_t = mat_t(LocalTileIndex{0,i}).get();
       lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise, mat_v.size().rows()-i*nb, nb, mat_v_loc.ptr(offset), mat_v_loc.ld(), taus.ptr(tau_offset), tile_t.ptr(), tile_t.ld());
   }
+
+  std::cout << " " << std::endl;
+  std::cout << "Matrix T" << std::endl;
+  printElements(mat_t);
   
   std::cout << " " << std::endl;
   solver::backTransformation<Backend::MC>(mat_c, mat_v, mat_t);

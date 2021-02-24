@@ -115,11 +115,11 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
   Matrix<T, Device::CPU> mat_w_last({mat_v.size().rows(), last_nb}, {mat_v.blockSize().rows(), last_nb});
   Matrix<T, Device::CPU> mat_w2_last({last_nb, mat_v.size().cols()}, {last_nb, mat_v.blockSize().cols()});
 
-  const SizeType reflectors = (last_nb == 1) ? mat_v.size().cols()/mat_v.blockSize().cols()-1 : mat_v.size().cols()/mat_v.blockSize().cols();
+  const SizeType reflectors = mat_v.size().cols()/mat_v.blockSize().cols()-1;
      
   for (SizeType k = reflectors-1; k > -1; --k) {
-    bool is_last = (k == n-1) ? true : false;
-       
+    bool is_last = (k == reflectors-1) ? true : false;
+    
     void (&cpy)(const matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T, Device::CPU>&) = copy<T>;
 
     // Copy V panel into VV

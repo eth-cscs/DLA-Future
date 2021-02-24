@@ -28,6 +28,18 @@
 namespace dlaf {
 namespace comm {
 
+template <class T>
+void bcast(matrix::Tile<const T, Device::CPU>& tile, int snd_rank, Communicator comm, MPI_Request* req) {
+  auto message = comm::make_message(common::make_data(tile));
+  MPI_Ibcast(const_cast<T*>(message.data()), message.count(), message.mpi_type(), snd_rank, comm, req);
+}
+
+template <class T>
+void bcast(matrix::Tile<T, Device::CPU>& tile, Communicator comm, MPI_Request* req) {
+  auto message = comm::make_message(common::make_data(tile));
+  MPI_Ibcast(message.data(), message.count(), message.mpi_type(), comm.rank(), comm, req);
+}
+
 /// MPI_Isend wrapper
 ///
 /// For more information, see the Data concept in "dlaf/common/data.h"

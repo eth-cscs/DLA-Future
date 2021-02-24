@@ -12,21 +12,20 @@
 /// @file
 
 #include <atomic>
-#include <hpx/coroutines/thread_enums.hpp>
-#include <hpx/schedulers/shared_priority_queue_scheduler.hpp>
-#include <hpx/synchronization/mutex.hpp>
 #include <memory>
 #include <mutex>
 #include <type_traits>
 #include <utility>
 
-#include <mpi.h>
-
 #include <hpx/async_mpi/mpi_future.hpp>
 #include <hpx/execution.hpp>
+#include <hpx/execution_base/this_thread.hpp>
 #include <hpx/functional.hpp>
 #include <hpx/future.hpp>
 #include <hpx/include/parallel_executors.hpp>
+#include <hpx/synchronization/mutex.hpp>
+
+#include <mpi.h>
 
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/init.h"
@@ -34,13 +33,26 @@
 namespace dlaf {
 namespace comm {
 
+enum class MPIMech { Blocking, Polling, Yielding };
+
+namespace detail {
+
 struct pool_hints_manager {
   std::string name;
-  int nthreads;
+  std::size_t nthreads;
   std::unique_ptr<bool[]> hints_arr;
   hpx::lcos::local::mutex mtx;
 
-  // returns the local thread number of the first free thread, if no such thread is found, returns -1
+  pool_hints_manager(std::string pool_name)
+      : name{pool_name}, nthreads{hpx::resource::get_num_threads(pool_name)},
+        hints_arr(new bool[nthreads]) {
+    for (int i = 0; i < nthreads; ++i) {
+      hints_arr[i] = true;  // mark all pool threads as available
+    }
+    // TODO: check that task stealing is disabled
+  }
+
+  // return the local thread number of the first free thread, if no such thread is found, return -1
   int get_free_thread() {
     std::lock_guard<hpx::lcos::local::mutex> lk(mtx);
     for (int i = 0; i < nthreads; ++i) {
@@ -53,17 +65,40 @@ struct pool_hints_manager {
   }
 };
 
-//pool_hints_manager* get_pool_hints(const std::string& pool_name) {
-//  static std::vector<pool_hints_manager> managers_arr;  // TODO: init
-//  for (auto& manager : managers_arr) {
-//
-//  }
-//  // TODO: find pool_name
-//}
+inline pool_hints_manager* get_pool_hints() {
+  static pool_hints_manager mgr((hpx::resource::pool_exists("mpi")) ? "mpi" : "default");
+  return &mgr;
+}
 
-enum class MPIMech { Blocking, Polling, Yielding };
+template <MPIMech M>
+struct hint_manager {};
 
-namespace detail {
+template <>
+struct hint_manager<MPIMech::Blocking> {
+  pool_hints_manager* mgr;
+  int thread_num;
+
+  hint_manager() {
+    mgr = get_pool_hints();
+    hpx::util::yield_while([this]() {
+      thread_num = mgr->get_free_thread();
+      return thread_num == -1;
+    });
+  }
+  hint_manager(const hint_manager& o) = default;
+  hint_manager& operator=(const hint_manager& o) = default;
+  hint_manager(hint_manager&&) = default;
+  hint_manager& operator=(hint_manager&&) = default;
+  ~hint_manager() {
+    std::lock_guard<hpx::lcos::local::mutex> lk(mgr->mtx);
+    mgr->hints_arr[thread_num] = true;
+  }
+
+  // get a hint
+  hpx::threads::thread_schedule_hint get_hint() const {
+    return hpx::threads::thread_schedule_hint{static_cast<std::int16_t>(thread_num)};
+  }
+};
 
 template <MPIMech mech>
 struct nbmpi_internal_mech {};
@@ -109,19 +144,7 @@ struct executor_launch_impl<MPIMech::Blocking, F, Ts...> {
 };
 
 template <MPIMech M>
-struct hint_manager {};
-
-// TODO: change hints
-template <>
-struct hint_manager<MPIMech::Blocking> {
-  // get a hint
-  hpx::threads::thread_schedule_hint get_hint() const {
-    return hpx::threads::thread_schedule_hint{0};
-  }
-};
-
-template <MPIMech M>
-hpx::execution::parallel_executor init_exec(const std::string& pool, hint_manager<M>) {
+hpx::execution::parallel_executor init_exec(const std::string& pool, const hint_manager<M>&) {
   return hpx::execution::parallel_executor(&hpx::resource::get_thread_pool(pool));
 }
 
@@ -180,6 +203,8 @@ public:
 
   template <typename F, typename... Ts>
   decltype(auto) async_execute(F f, Ts... ts) noexcept {
+    // Note:: `ts...` and `f` are value parameters to avoid compilation issues with forwarding universal
+    // references (i.e. `std::forward<>()` a &&) in `hpx::dataflow()`.
     hpx::lcos::local::promise<void> promise_next;
     auto before_last = std::move(tail_);
     tail_ = promise_next.get_future();

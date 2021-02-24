@@ -16,7 +16,6 @@
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/executor.h"
 
-// A send-recv cycle between 4 processes
 template <dlaf::comm::MPIMech M>
 void test_exec() {
   auto comm = dlaf::comm::Communicator(MPI_COMM_WORLD);
@@ -48,4 +47,21 @@ TEST(SendRecv, Yielding) {
 TEST(SendRecv, Polling) {
   hpx::mpi::experimental::enable_user_polling internal_helper("default");
   test_exec<dlaf::comm::MPIMech::Polling>();
+}
+
+TEST(SendRecv, Blocking) {
+  auto comm = dlaf::comm::Communicator(MPI_COMM_WORLD);
+  dlaf::comm::Executor<dlaf::comm::MPIMech::Blocking> ex("default", comm);
+
+  int root_rank = 0;
+  MPI_Datatype dtype = MPI_DOUBLE;
+  int size = 1000;
+  double val = 4.2;
+  std::vector<double> buf(static_cast<std::size_t>(size), val);
+
+  hpx::async(ex, MPI_Bcast, buf.data(), size, dtype, root_rank).get();
+
+  std::vector<double> expected_buf(static_cast<std::size_t>(size), val);
+
+  ASSERT_TRUE(expected_buf == buf);
 }

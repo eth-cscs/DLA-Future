@@ -184,12 +184,13 @@ TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
   
   MatrixLocal<double> taus({m, 1}, {1, 1});
   // Compute taus (real case: tau = 2 / v^H v)
-  for (SizeType i = m-2; i > -1; --i) {
+  const int tottaus = (m/mb-1)*mb-1;
+  for (SizeType i = tottaus; i > -1; --i) {
     const GlobalElementIndex v_offset{i, i};
     auto dotprod = blas::dot(m-i, mat_v_loc.ptr(v_offset), 1, mat_v_loc.ptr(v_offset), 1);
     auto tau = 2.0/dotprod;
     taus({i,0}) = tau;
-    
+    std::cout << "tau (" << i << ") " << tau << std::endl;
     lapack::larf(lapack::Side::Left, m-i, n, mat_v_loc.ptr(v_offset), 1, tau, mat_c_loc.ptr(GlobalElementIndex{i,0}), mat_c_loc.ld());
   }
 

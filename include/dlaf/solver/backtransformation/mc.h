@@ -163,8 +163,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
     else {
       matrix::util::set(mat_w2, [](auto&&){return 0;});
     }
-       	 
-    for (SizeType i = k+1; i < n; ++i) {
+
+    for (SizeType i = k; i < m; ++i) {
       // WH = V T
       auto ik = LocalTileIndex{i, 0};
       auto kk = LocalTileIndex{0, k};
@@ -175,7 +175,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
 	hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper, NoTrans, NonUnit, 1.0, mat_t.read(kk), std::move(mat_w(ik)));
       }
     }
-       
+
     for (SizeType j = 0; j < n; ++j) {
       auto kj = LocalTileIndex{0, j};
       for (SizeType i = k+1; i < m; ++i) {
@@ -190,7 +190,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
 	}
       }	 
     }
-       
+
     for (SizeType i = k+1; i < m; ++i) {
       auto ik = LocalTileIndex{i, 0};
       for (SizeType j = 0; j < n; ++j) {
@@ -198,14 +198,14 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
 	auto ij = LocalTileIndex{i, j};
 	// C = C - V W2
 	if (is_last == true) {
-	  hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans, NoTrans, -1.0, mat_vv.read(ik), mat_w2_last.read(kj), 1.0, std::move(mat_c(ij)));
+	  hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans, NoTrans, -1.0, mat_vv_last.read(ik), mat_w2_last.read(kj), 1.0, std::move(mat_c(ij)));
 	}
 	else {
 	  hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans, NoTrans, -1.0, mat_vv.read(ik), mat_w2.read(kj), 1.0, std::move(mat_c(ij)));
 	}
       }
     }
-
+    
   }
  }
 

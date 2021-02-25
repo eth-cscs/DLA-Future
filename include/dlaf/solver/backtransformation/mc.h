@@ -169,10 +169,10 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
       auto ik = LocalTileIndex{i, 0};
       auto kk = LocalTileIndex{0, k};
       if (is_last == true) {
-	hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper, NoTrans, NonUnit, 1.0, mat_t.read(kk), std::move(mat_w_last(ik)));
+	hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper, ConjTrans, NonUnit, 1.0, mat_t.read(kk), std::move(mat_w_last(ik)));
       }
       else {
-	hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper, NoTrans, NonUnit, 1.0, mat_t.read(kk), std::move(mat_w(ik)));
+	hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper, ConjTrans, NonUnit, 1.0, mat_t.read(kk), std::move(mat_w(ik)));
       }
     }
 
@@ -205,7 +205,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
 	}
       }
     }
-    
+
   }
  }
 

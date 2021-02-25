@@ -61,13 +61,17 @@ void set_zero(Matrix<T, Device::CPU>& mat) {
 }
 
 const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
+  
     {3, 3, 1, 1}, {3, 3, 3, 3},
-    {4, 4, 1, 1}, {4, 4, 4, 4}, {4, 4, 2, 2}, {4, 2, 2, 2}, //{4, 1, 1, 1}, 
-    {6, 6, 3, 3}, {6, 3, 3, 3},   // {6, 1, 3, 3},
-    {12, 2, 2, 2}, // {12, 2, 4, 4}, {12, 2, 3, 3},
+    {4, 4, 1, 1}, {4, 4, 4, 4}, {4, 4, 2, 2}, {4, 2, 2, 2}, 
+    {4, 1, 2, 2}, {4, 1, 1, 1}, 
+    {6, 6, 3, 3}, {6, 3, 3, 3}, {6, 1, 3, 3},
+    {12, 2, 2, 2}, {12, 2, 3, 3}, {12, 2, 4, 4},
     {12, 12, 2, 2}, {12, 12, 3, 3}, {12, 12, 4, 4},
-    //{12, 24, 2, 2}, {12, 24, 3, 3}, {12, 24, 4, 4},
-    //{24, 12, 4, 4}
+    {12, 24, 2, 2}, {12, 24, 3, 3}, {12, 24, 4, 4},
+    {24, 12, 4, 4}, {24, 12, 6, 6},
+    {24, 24, 4, 4}, {24, 24, 6, 6},
+    {24, 36, 4, 4}, {24, 36, 6, 6},
 };
 
 template<class T>
@@ -132,10 +136,10 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
     lapack::larf(lapack::Side::Left, m-i, n, mat_v_loc.ptr(v_offset), 1, tau, mat_c_loc.ptr(GlobalElementIndex{i,0}), mat_c_loc.ld());
   }
 
-//  std::cout << " " << std::endl;
-//  std::cout << " Result simple way " << std::endl;
-//  dlaf::matrix::test::print(format::numpy{}, "mat Cloc ", mat_c_loc, std::cout);
-//  std::cout << " " << std::endl;
+  //std::cout << " " << std::endl;
+  //std::cout << " Result simple way " << std::endl;
+  //dlaf::matrix::test::print(format::numpy{}, "mat Cloc ", mat_c_loc, std::cout);
+  //std::cout << " " << std::endl;
   
   for (SizeType i = mat_t.nrTiles().cols()-1; i > -1; --i) {
       const GlobalElementIndex offset{i*nb, i*nb};

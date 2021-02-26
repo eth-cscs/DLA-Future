@@ -97,21 +97,38 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
                   tile.ld());
   }));
 
+  // Note:
+  // T factor is an upper triangular square matrix, built column by column
+  // with taus values on the diagonal
+  //
+  // T(j,j) = tau(j)
+  //
+  // and in the upper triangular part the following formula applies
+  //
   // T(0:j, j) = T(0:j, 0:j) . -tau(j) . V(j:, 0:j)* . V(j:, j)
-  for (SizeType j = 0; j < k; ++j) {
-    // this is the x0 element of the reflector j
-    const TileElementIndex x0{j, j};
+  //
+  //
+  // The result is achieved in two main steps:
+  // 1) t = -tau(j) . V(j:, 0:j)* . V(j:, j)
+  // 2) T(0:j, j) = T(0:j, 0:j) . t
 
-    const TileElementIndex t_start{0, x0.col()};
-    const TileElementSize t_size{x0.row(), 1};
+  // 1st step: compute the column partial result `t`
+  // First we compute the matrix vector multiplication for each column
+  // -tau(j) . V(j:, 0:j)* . V(j:, j)
+  for (const auto& v_i_loc : iterate_range2d(v_start_loc, v_end_loc)) {
+    const SizeType v_i = dist.template globalTileFromLocalTile<Coord::Row>(v_i_loc.row());
 
-    // 2A First step GEMV
-    for (const auto& v_i_loc : iterate_range2d(v_start_loc, v_end_loc)) {
-      const SizeType v_i = dist.template globalTileFromLocalTile<Coord::Row>(v_i_loc.row());
+    const bool is_v0 = (v_i == v_start.row());
 
-      const bool is_v0 = (v_i == v_start.row());
+    auto gemv_func = unwrapping([=](const auto& tile_v, const auto& taus, auto&& tile_t) {
+      for (SizeType j = 0; j < k; ++j) {
+        const T tau = taus[j];
+        // this is the x0 element of the reflector j
+        const TileElementIndex x0{j, j};
 
-      auto gemv_func = unwrapping([=](const auto& tile_v, const T tau, auto&& tile_t) {
+        const TileElementIndex t_start{0, x0.col()};
+        const TileElementSize t_size{x0.row(), 1};
+
         const SizeType first_element_in_tile = is_v0 ? x0.row() : 0;
 
         // T(0:j, j) = -tau . V(j:, 0:j)* . V(j:, j)
@@ -151,13 +168,19 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
               1, tile_t.ptr(t_start), 1);
           // clang-format on
         }
-      });
+      }
+    });
 
-      hpx::dataflow(gemv_func, v.read(v_i_loc), taus[j], t(t_idx));
-    }
+    // TODO
+    // Note:
+    // Since we are writing always on the same t, the gemv are serialized
+    // A possible solution to this would be to have multiple places where to store partial
+    // results, and then locally reduce them just before the reduce over ranks
+    hpx::dataflow(gemv_func, v.read(v_i_loc), taus, t(t_idx));
   }
 
-  // REDUCE after GEMV
+  // at this point each rank has its partial result for each column
+  // so, let's reduce the results (on all ranks, so that everyone can independently compute T factor)
   if (true) {  // TODO if the column communicator has more than 1 tile...but I just have the pipeline
     auto reduce_t_func = unwrapping([=](auto&& tile_t, auto&& comm_wrapper) {
       auto&& input_t = make_data(tile_t);
@@ -167,12 +190,15 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
     hpx::dataflow(reduce_t_func, t(t_idx), serial_comm());
   }
 
-  // 2B Second Step TRMV
+  // 2nd step: compute the T factor, by performing the last step on each column
+  // each column depends on the previous part (all reflectors that comes before)
+  // so it is performed sequentially
   for (SizeType j = 0; j < k; ++j) {
     const TileElementIndex t_start{0, j};
     const TileElementSize t_size{j, 1};
 
-    // TRMV t = T . t
+    // Update each column (in order) t = T . t
+    // remember that T is upper triangular, so it is possible to use TRMV
     auto trmv_func = unwrapping([](auto&& tile_t, TileElementIndex t_start, TileElementSize t_size) {
       // clang-format off
       blas::trmv(blas::Layout::ColMajor,

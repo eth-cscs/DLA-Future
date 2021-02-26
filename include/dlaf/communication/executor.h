@@ -31,11 +31,10 @@
 #include "dlaf/common/assert.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/init.h"
+#include "dlaf/communication/mech.h"
 
 namespace dlaf {
 namespace comm {
-
-enum class MPIMech { Blocking, Polling, Yielding };
 
 namespace detail {
 
@@ -114,6 +113,19 @@ public:
   }
 };
 
+template <MPIMech M>
+hpx::execution::parallel_executor init_exec(const std::string& pool, const hint_manager<M>&) {
+  return hpx::execution::parallel_executor(&hpx::resource::get_thread_pool(pool));
+}
+
+inline hpx::execution::parallel_executor init_exec(const std::string& pool,
+                                                   const hint_manager<MPIMech::Blocking>& mgr) {
+  return hpx::execution::parallel_executor(&hpx::resource::get_thread_pool(pool),
+                                           hpx::threads::thread_priority::default_,
+                                           hpx::threads::thread_stacksize::nostack,
+                                           hpx::threads::thread_schedule_hint(mgr.get_thread_index()));
+}
+
 template <MPIMech mech>
 struct nbmpi_internal_mech {};
 
@@ -138,37 +150,40 @@ struct nbmpi_internal_mech<MPIMech::Yielding> {
 // Non-blocking
 template <MPIMech M, class F, class... Ts>
 struct executor_launch_impl {
-  void operator()(hpx::future<void>, hpx::lcos::local::promise<void> p, Communicator comm, F f,
-                  Ts... ts) noexcept {
+  using result_t = typename hpx::util::invoke_result<F, Ts..., Communicator, MPI_Request*>::type;
+  void operator()(std::true_type, hpx::future<void>, hpx::lcos::local::promise<void> p,
+                  Communicator comm, F&& f, Ts&&... ts) noexcept {
     MPI_Request req;
-    hpx::invoke(std::move(f), std::move(ts)..., comm, &req);
+    hpx::invoke(std::forward<F>(f), std::forward<Ts>(ts)..., comm, &req);
     p.set_value();
     nbmpi_internal_mech<M>{}(req);
+  }
+  decltype(auto) operator()(std::false_type, hpx::future<void>, hpx::lcos::local::promise<void> p,
+                            Communicator comm, F&& f, Ts&&... ts) noexcept {
+    MPI_Request req;
+    auto r = hpx::invoke(std::forward<F>(f), std::forward<Ts>(ts)..., comm, &req);
+    p.set_value();
+    nbmpi_internal_mech<M>{}(req);
+    return r;
   }
 };
 
 // Blocking
 template <class F, class... Ts>
 struct executor_launch_impl<MPIMech::Blocking, F, Ts...> {
-  void operator()(hpx::future<void>, hpx::lcos::local::promise<void> p, Communicator comm, F f,
-                  Ts... ts) noexcept {
-    hpx::invoke(std::move(f), std::move(ts)..., comm);
+  using result_t = typename hpx::util::invoke_result<F, Ts..., Communicator>::type;
+  void operator()(std::true_type, hpx::future<void>, hpx::lcos::local::promise<void> p,
+                  Communicator comm, F&& f, Ts&&... ts) noexcept {
+    hpx::invoke(std::forward<F>(f), std::forward<Ts>(ts)..., comm);
     p.set_value();
   }
+  decltype(auto) operator()(std::false_type, hpx::future<void>, hpx::lcos::local::promise<void> p,
+                            Communicator comm, F&& f, Ts&&... ts) noexcept {
+    auto r = hpx::invoke(std::forward<F>(f), std::forward<Ts>(ts)..., comm);
+    p.set_value();
+    return r;
+  }
 };
-
-template <MPIMech M>
-hpx::execution::parallel_executor init_exec(const std::string& pool, const hint_manager<M>&) {
-  return hpx::execution::parallel_executor(&hpx::resource::get_thread_pool(pool));
-}
-
-inline hpx::execution::parallel_executor init_exec(const std::string& pool,
-                                                   const hint_manager<MPIMech::Blocking>& mgr) {
-  return hpx::execution::parallel_executor(&hpx::resource::get_thread_pool(pool),
-                                           hpx::threads::thread_priority::default_,
-                                           hpx::threads::thread_stacksize::nostack,
-                                           hpx::threads::thread_schedule_hint(mgr.get_thread_index()));
-}
 
 }
 
@@ -217,14 +232,18 @@ public:
   }
 
   template <typename F, typename... Ts>
-  decltype(auto) async_execute(F f, Ts... ts) noexcept {
-    // Note:: `ts...` and `f` are value parameters to avoid compilation issues with forwarding universal
-    // references (i.e. `std::forward<>()` a &&) in `hpx::dataflow()`.
+  auto async_execute(F&& f, Ts&&... ts) noexcept {
+    // TODO: need to add Communicator and MPI_Request* potentially to the list
+    using is_void =
+        typename std::is_void<typename detail::executor_launch_impl<M, F, Ts...>::result_t>::type;
     hpx::lcos::local::promise<void> promise_next;
     auto before_last = std::move(tail_);
     tail_ = promise_next.get_future();
-    return hpx::dataflow(ex_, detail::executor_launch_impl<M, F, Ts...>{}, std::move(before_last),
-                         std::move(promise_next), comm_, std::move(f), std::move(ts)...);
+    return hpx::dataflow(ex_,
+                         detail::executor_launch_impl<M, typename std::decay<F>::type,
+                                                      typename std::decay<Ts>::type...>{},
+                         is_void{}, std::move(before_last), std::move(promise_next), comm_,
+                         std::forward<F>(f), std::forward<Ts>(ts)...);
   }
 };
 }

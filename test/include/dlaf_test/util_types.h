@@ -18,8 +18,7 @@ namespace test {
 
 using ElementTypes =
     ::testing::Types<int, long long, float, double, std::complex<float>, std::complex<double>>;
-//using MatrixElementTypes = ::testing::Types<float, double, std::complex<float>, std::complex<double>>;
- using MatrixElementTypes = ::testing::Types<float, double>;
+using MatrixElementTypes = ::testing::Types<float, double, std::complex<float>, std::complex<double>>;
  
 template <class T>
 struct TypeUtilities {

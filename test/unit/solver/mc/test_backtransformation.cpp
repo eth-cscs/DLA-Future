@@ -43,50 +43,44 @@ template <typename Type>
 class BackTransformationSolverLocalTest : public ::testing::Test {};
 TYPED_TEST_SUITE(BackTransformationSolverLocalTest, MatrixElementTypes);
 
-//template <typename Type>
-//class BackTransformationSolverDistributedTest : public ::testing::Test {
-//public:
+// template <typename Type>
+// class BackTransformationSolverDistributedTest : public ::testing::Test {
+// public:
 //  const std::vector<CommunicatorGrid>& commGrids() {
 //    return comm_grids;
 //}
 //};
-//TYPED_TEST_SUITE(BackTransformationSolverDistributedTest, double);
+// TYPED_TEST_SUITE(BackTransformationSolverDistributedTest, double);
 
 GlobalElementSize globalTestSize(const LocalElementSize& size) {
   return {size.rows(), size.cols()};
 }
 
-template<class T>
+template <class T>
 void set_zero(Matrix<T, Device::CPU>& mat) {
-  set(mat, [](auto&&){return static_cast<T>(0.0);});
+  set(mat, [](auto&&) { return static_cast<T>(0.0); });
 }
 
 const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
-  {3, 3, 1, 1}, {3, 3, 3, 3},
-  {4, 4, 1, 1}, {4, 4, 4, 4}, {4, 4, 2, 2}, {4, 2, 2, 2}, 
-  {4, 1, 2, 2}, {4, 1, 1, 1}, 
-  {6, 6, 3, 3}, {6, 3, 3, 3}, {6, 1, 3, 3},
-  {12, 2, 2, 2}, {12, 2, 3, 3}, {12, 2, 4, 4},
-  {12, 12, 2, 2}, {12, 12, 3, 3}, {12, 12, 4, 4},
-  {12, 24, 2, 2}, {12, 24, 3, 3}, {12, 24, 4, 4},
-  {24, 12, 4, 4}, {24, 12, 6, 6},
-  {24, 24, 4, 4}, {24, 24, 6, 6},
-  {24, 36, 4, 4}, {24, 36, 6, 6},
+    {3, 3, 1, 1},   {3, 3, 3, 3},   {4, 4, 1, 1},   {4, 4, 4, 4},   {4, 4, 2, 2},   {4, 2, 2, 2},
+    {4, 1, 2, 2},   {4, 1, 1, 1},   {6, 6, 3, 3},   {6, 3, 3, 3},   {6, 1, 3, 3},   {12, 2, 2, 2},
+    {12, 2, 3, 3},  {12, 2, 4, 4},  {12, 12, 2, 2}, {12, 12, 3, 3}, {12, 12, 4, 4}, {12, 24, 2, 2},
+    {12, 24, 3, 3}, {12, 24, 4, 4}, {24, 12, 4, 4}, {24, 12, 6, 6}, {24, 24, 4, 4}, {24, 24, 6, 6},
+    {24, 36, 4, 4}, {24, 36, 6, 6},
 };
 
-template<class T>
+template <class T>
 MatrixLocal<T> makeLocal(const Matrix<const T, Device::CPU>& matrix) {
   return {matrix.size(), matrix.distribution().blockSize()};
 }
 
-template<class T>
+template <class T>
 T computeTau() {
   return static_cast<T>(0.0);
 }
 
 template <class T>
 void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType nb) {
-
   LocalElementSize sizeC(m, n);
   TileElementSize blockSizeC(mb, nb);
   Matrix<T, Device::CPU> mat_c(sizeC, blockSizeC);
@@ -96,13 +90,13 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
   TileElementSize blockSizeV(mb, mb);
   Matrix<T, Device::CPU> mat_v(sizeV, blockSizeV);
   dlaf::matrix::util::set_random(mat_v);
-  
+
   // Impose orthogonality: Q = I - v tau v^H is orthogonal (Q Q^H = I)
-  // leads to tau = [1 + sqrt(1 - vH v taui^2)]/(vH v) for real 
+  // leads to tau = [1 + sqrt(1 - vH v taui^2)]/(vH v) for real
   LocalElementSize sizeTau(m, 1);
   TileElementSize blockSizeTau(1, 1);
   Matrix<T, Device::CPU> mat_tau(sizeTau, blockSizeTau);
-  
+
   LocalElementSize sizeT(mb, m);
   TileElementSize blockSizeT(mb, nb);
   Matrix<T, Device::CPU> mat_t(sizeT, blockSizeT);
@@ -116,58 +110,60 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
   auto mat_v_loc = dlaf::matrix::test::all_gather<T>(mat_v, comm_grid);
 
   // Reset diagonal and upper values of V
-  lapack::laset(lapack::MatrixType::General, std::min(m,mb), mat_v_loc.size().cols(), 0, 0, mat_v_loc.ptr(), mat_v_loc.ld());
+  lapack::laset(lapack::MatrixType::General, std::min(m, mb), mat_v_loc.size().cols(), 0, 0,
+                mat_v_loc.ptr(), mat_v_loc.ld());
   if (m > mb) {
-    lapack::laset(lapack::MatrixType::Upper, mat_v_loc.size().rows()-mb, mat_v_loc.size().cols(), 0, 1, mat_v_loc.ptr(GlobalElementIndex{mb, 0}), mat_v_loc.ld());
+    lapack::laset(lapack::MatrixType::Upper, mat_v_loc.size().rows() - mb, mat_v_loc.size().cols(), 0, 1,
+                  mat_v_loc.ptr(GlobalElementIndex{mb, 0}), mat_v_loc.ld());
   }
 
   MatrixLocal<T> taus({m, 1}, {1, 1});
-  const int tottaus = (m/mb-1)*mb-1;
+  const int tottaus = (m / mb - 1) * mb - 1;
   for (SizeType i = tottaus; i > -1; --i) {
     const GlobalElementIndex v_offset{i, i};
-    auto dotprod = blas::dot(m-i, mat_v_loc.ptr(v_offset), 1, mat_v_loc.ptr(v_offset), 1);
+    auto dotprod = blas::dot(m - i, mat_v_loc.ptr(v_offset), 1, mat_v_loc.ptr(v_offset), 1);
     T taui;
     if (std::is_same<T, ComplexType<T>>::value) {
-      auto seed = 10000*i+1;
+      auto seed = 10000 * i + 1;
       dlaf::matrix::util::internal::getter_random<T> random_value(seed);
       taui = random_value();
     }
     else {
       taui = static_cast<T>(0.0);
     }
-    auto tau = (static_cast<T>(1.0)+ sqrt(static_cast<T>(1.0) - dotprod*taui*taui))/dotprod;
-    taus({i,0}) = tau;
-    lapack::larf(lapack::Side::Left, m-i, n, mat_v_loc.ptr(v_offset), 1, tau, mat_c_loc.ptr(GlobalElementIndex{i,0}), mat_c_loc.ld());
+    auto tau = (static_cast<T>(1.0) + sqrt(static_cast<T>(1.0) - dotprod * taui * taui)) / dotprod;
+    taus({i, 0}) = tau;
+    lapack::larf(lapack::Side::Left, m - i, n, mat_v_loc.ptr(v_offset), 1, tau,
+                 mat_c_loc.ptr(GlobalElementIndex{i, 0}), mat_c_loc.ld());
   }
 
-  for (SizeType i = mat_t.nrTiles().cols()-1; i > -1; --i) {
-      const GlobalElementIndex offset{i*nb, i*nb};
-      const GlobalElementIndex tau_offset{i*nb, 0};
-      auto tile_t = mat_t(LocalTileIndex{0,i}).get();
-      lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise, mat_v.size().rows()-i*nb, nb, mat_v_loc.ptr(offset), mat_v_loc.ld(), taus.ptr(tau_offset), tile_t.ptr(), tile_t.ld());
+  for (SizeType i = mat_t.nrTiles().cols() - 1; i > -1; --i) {
+    const GlobalElementIndex offset{i * nb, i * nb};
+    const GlobalElementIndex tau_offset{i * nb, 0};
+    auto tile_t = mat_t(LocalTileIndex{0, i}).get();
+    lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise, mat_v.size().rows() - i * nb,
+                  nb, mat_v_loc.ptr(offset), mat_v_loc.ld(), taus.ptr(tau_offset), tile_t.ptr(),
+                  tile_t.ld());
   }
-  
+
   solver::backTransformation<Backend::MC>(mat_c, mat_v, mat_t);
 
   auto result = [& dist = mat_c.distribution(),
-		 &mat_local = mat_c_loc](const GlobalElementIndex& element) {
+                 &mat_local = mat_c_loc](const GlobalElementIndex& element) {
     const auto tile_index = dist.globalTileIndex(element);
     const auto tile_element = dist.tileElementIndex(element);
     return mat_local.tile_read(tile_index)(tile_element);
   };
-  
+
   double error = 0.01;
   CHECK_MATRIX_NEAR(result, mat_c, error, error);
 }
 
-
 TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
-
   SizeType m, n, mb, nb;
 
   for (auto sz : sizes) {
     std::tie(m, n, mb, nb) = sz;
     testBacktransformationEigenv<TypeParam>(m, n, mb, nb);
   }
-    
 }

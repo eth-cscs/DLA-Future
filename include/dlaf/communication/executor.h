@@ -12,6 +12,7 @@
 /// @file
 
 #include <atomic>
+#include <hpx/runtime_local/thread_pool_helpers.hpp>
 #include <memory>
 #include <mutex>
 #include <type_traits>
@@ -27,6 +28,7 @@
 
 #include <mpi.h>
 
+#include "dlaf/common/assert.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/init.h"
 
@@ -37,66 +39,78 @@ enum class MPIMech { Blocking, Polling, Yielding };
 
 namespace detail {
 
-struct pool_hints_manager {
-  std::string name;
-  std::size_t nthreads;
-  std::unique_ptr<bool[]> hints_arr;
-  hpx::lcos::local::mutex mtx;
-
-  pool_hints_manager(std::string pool_name)
-      : name{pool_name}, nthreads{hpx::resource::get_num_threads(pool_name)},
-        hints_arr(new bool[nthreads]) {
+inline std::atomic<bool>* get_hints_mask() {
+  using hints_arr_t = std::unique_ptr<std::atomic<bool>[]>;
+  static hints_arr_t hints_mask = []() {
+    std::size_t nthreads = hpx::resource::get_num_threads();
+    hints_arr_t hints(new std::atomic<bool>[nthreads]);
     for (int i = 0; i < nthreads; ++i) {
-      hints_arr[i] = true;  // mark all pool threads as available
+      hints[i].store(true);
     }
-    // TODO: check that task stealing is disabled
-  }
+    return hints;
+  }();
+  return hints_mask.get();
+}
 
-  // return the local thread number of the first free thread, if no such thread is found, return -1
-  int get_free_thread() {
-    std::lock_guard<hpx::lcos::local::mutex> lk(mtx);
-    for (int i = 0; i < nthreads; ++i) {
-      if (hints_arr[i]) {
-        hints_arr[i] = false;
-        return i;
-      }
+inline int get_free_thread_index(const std::string& pool_name) {
+  int thread_offset = 0;
+  for (int i_pool = 0; i_pool < hpx::resource::get_pool_index(pool_name); ++i_pool) {
+    thread_offset += hpx::resource::get_num_threads(i_pool);
+  };
+
+  std::atomic<bool>* hints_mask = get_hints_mask();
+  for (int i_thd = 0; i_thd < hpx::resource::get_num_threads(pool_name); ++i_thd) {
+    int index = i_thd + thread_offset;
+    if (hints_mask[index].load()) {
+      hints_mask[index].store(false);
+      return index;
     }
-    return -1;
   }
-};
+  return -1;
+}
 
-inline pool_hints_manager* get_pool_hints() {
-  static pool_hints_manager mgr((hpx::resource::pool_exists("mpi")) ? "mpi" : "default");
-  return &mgr;
+inline bool is_stealing_enabled(const std::string& pool_name) {
+  return hpx::resource::get_thread_pool(pool_name).get_scheduler()->has_scheduler_mode(
+      hpx::threads::policies::scheduler_mode(
+          hpx::threads::policies::scheduler_mode::enable_stealing |
+          hpx::threads::policies::scheduler_mode::enable_stealing_numa));
 }
 
 template <MPIMech M>
-struct hint_manager {};
+struct hint_manager {
+  hint_manager(const std::string&) {}
+};
 
 template <>
 struct hint_manager<MPIMech::Blocking> {
-  pool_hints_manager* mgr;
-  int thread_num;
+  int index_;
 
-  hint_manager() {
-    mgr = get_pool_hints();
-    hpx::util::yield_while([this]() {
-      thread_num = mgr->get_free_thread();
-      return thread_num == -1;
+public:
+  hint_manager(const std::string& pool_name) {
+    using hpx::resource::get_num_threads;
+    // Assert that the pool has task stealing disabled
+    DLAF_ASSERT(!is_stealing_enabled(pool_name) || get_num_threads(pool_name) == 1, pool_name);
+    hpx::util::yield_while([this, &pool_name] {
+      index_ = get_free_thread_index(pool_name);
+      return index_ == -1;
     });
   }
-  hint_manager(const hint_manager& o) = default;
-  hint_manager& operator=(const hint_manager& o) = default;
-  hint_manager(hint_manager&&) = default;
-  hint_manager& operator=(hint_manager&&) = default;
+  hint_manager& operator=(hint_manager&& o) {
+    index_ = o.index_;
+    o.index_ = -1;
+    return *this;
+  }
+  hint_manager(hint_manager&& o) {
+    *this = std::move(o);
+  }
   ~hint_manager() {
-    std::lock_guard<hpx::lcos::local::mutex> lk(mgr->mtx);
-    mgr->hints_arr[thread_num] = true;
+    if (index_ != -1) {
+      get_hints_mask()[index_].store(true);
+    }
   }
 
-  // get a hint
-  hpx::threads::thread_schedule_hint get_hint() const {
-    return hpx::threads::thread_schedule_hint{static_cast<std::int16_t>(thread_num)};
+  int get_thread_index() const {
+    return index_;
   }
 };
 
@@ -152,7 +166,8 @@ inline hpx::execution::parallel_executor init_exec(const std::string& pool,
                                                    const hint_manager<MPIMech::Blocking>& mgr) {
   return hpx::execution::parallel_executor(&hpx::resource::get_thread_pool(pool),
                                            hpx::threads::thread_priority::default_,
-                                           hpx::threads::thread_stacksize::nostack, mgr.get_hint());
+                                           hpx::threads::thread_stacksize::nostack,
+                                           hpx::threads::thread_schedule_hint(mgr.get_thread_index()));
 }
 
 }
@@ -169,7 +184,7 @@ public:
   //   1. `comm` should not be used by other executors
   //   2. MPI event polling has to be enabled for `MPIMech::Polling`.
   Executor(const std::string& pool, Communicator comm)
-      : comm_(std::move(comm)), tail_(hpx::make_ready_future<void>()), mgr_{},
+      : comm_(std::move(comm)), tail_(hpx::make_ready_future<void>()), mgr_(pool),
         ex_(detail::init_exec(pool, mgr_)) {
     ;
   }

@@ -51,7 +51,7 @@ TEST(SendRecv, Polling) {
 
 TEST(SendRecv, Blocking) {
   auto comm = dlaf::comm::Communicator(MPI_COMM_WORLD);
-  dlaf::comm::Executor<dlaf::comm::MPIMech::Blocking> ex("default", comm);
+  dlaf::comm::Executor<dlaf::comm::MPIMech::Blocking> ex("mpi", comm);
 
   int root_rank = 0;
   MPI_Datatype dtype = MPI_DOUBLE;

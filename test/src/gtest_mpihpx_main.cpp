@@ -40,6 +40,8 @@
 #include <cstdio>
 
 #include <gtest/gtest.h>
+
+#include <hpx/include/resource_partitioner.hpp>
 #include <hpx/init.hpp>
 
 #include "gtest_mpi_listener.h"
@@ -67,6 +69,18 @@ GTEST_API_ int main(int argc, char** argv) {
 
   MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
 
+  hpx::init_params p;
+  p.rp_mode = hpx::resource::mode_allow_oversubscription;
+  p.rp_callback = [](auto& rp, auto) {
+    bool exclusive = true;
+    std::size_t num_threads = 2;
+    std::string pool_name = "mpi";
+
+    // static: no task stealing
+    rp.create_thread_pool(pool_name, hpx::resource::scheduling_policy::static_);
+    rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], pool_name, exclusive, num_threads);
+  };
+
   // Gets hold of the event listener list.
   ::testing::TestEventListeners& listeners = ::testing::UnitTest::GetInstance()->listeners();
 
@@ -75,7 +89,7 @@ GTEST_API_ int main(int argc, char** argv) {
   listeners.Append(new MPIListener(argc, argv, default_listener));
 
   // Initialize HPX
-  auto ret = hpx::init(test_main, argc, argv);
+  auto ret = hpx::init(test_main, argc, argv, p);
 
   MPI_Finalize();
 

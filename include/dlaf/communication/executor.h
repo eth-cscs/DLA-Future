@@ -12,6 +12,7 @@
 /// @file
 
 #include <atomic>
+#include <hpx/futures/future.hpp>
 #include <hpx/runtime_local/thread_pool_helpers.hpp>
 #include <memory>
 #include <mutex>
@@ -94,6 +95,8 @@ public:
       return index_ == -1;
     });
   }
+  hint_manager(const hint_manager& o) = default;
+  hint_manager& operator=(const hint_manager& o) = default;
   hint_manager& operator=(hint_manager&& o) {
     index_ = o.index_;
     o.index_ = -1;
@@ -189,30 +192,37 @@ struct executor_launch_impl<MPIMech::Blocking, F, Ts...> {
 
 template <MPIMech M>
 class Executor {
+  struct task_chain; // forward declaration
+
   Communicator comm_;
-  hpx::future<void> tail_;
+  std::shared_ptr<task_chain> tc_ptr;
   detail::hint_manager<M> mgr_;
   hpx::execution::parallel_executor ex_;
+
+  struct task_chain {
+    hpx::future<void> tail;
+    mutable hpx::lcos::local::mutex mt;
+
+    task_chain() : tail(hpx::make_ready_future<void>()) {}
+  };
+
+  struct task_chain_deleter {
+    void operator()(task_chain* tc) {
+      if (tc->tail.valid()) {
+        tc->tail.get();
+      }
+    }
+  };
 
 public:
   // Notes:
   //   1. `comm` should not be used by other executors
   //   2. MPI event polling has to be enabled for `MPIMech::Polling`.
   Executor(const std::string& pool, Communicator comm)
-      : comm_(std::move(comm)), tail_(hpx::make_ready_future<void>()), mgr_(pool),
+      : comm_(std::move(comm)),
+        tc_ptr(std::shared_ptr<task_chain>(new task_chain(), task_chain_deleter())), mgr_(pool),
         ex_(detail::init_exec(pool, mgr_)) {
     ;
-  }
-
-  Executor(const Executor& o) = delete;
-  Executor& operator=(const Executor& o) = delete;
-
-  Executor(Executor&&) = default;
-  Executor& operator=(Executor&&) = default;
-
-  ~Executor() {
-    if (tail_.valid())
-      tail_.get();
   }
 
   bool operator==(const Executor& rhs) const noexcept {
@@ -233,18 +243,36 @@ public:
 
   template <typename F, typename... Ts>
   auto async_execute(F&& f, Ts&&... ts) noexcept {
-    // TODO: need to add Communicator and MPI_Request* potentially to the list
     using is_void =
         typename std::is_void<typename detail::executor_launch_impl<M, F, Ts...>::result_t>::type;
+    hpx::future<void> before_last;
     hpx::lcos::local::promise<void> promise_next;
-    auto before_last = std::move(tail_);
-    tail_ = promise_next.get_future();
+    {
+      std::lock_guard<hpx::lcos::local::mutex> lk(tc_ptr->mt);
+      before_last = std::move(tc_ptr->tail);
+      tc_ptr->tail = promise_next.get_future();
+    }
     return hpx::dataflow(ex_,
                          detail::executor_launch_impl<M, typename std::decay<F>::type,
                                                       typename std::decay<Ts>::type...>{},
                          is_void{}, std::move(before_last), std::move(promise_next), comm_,
                          std::forward<F>(f), std::forward<Ts>(ts)...);
   }
+
+  // template <class Frame, class F, class Futures>
+  // void dataflow_finalize(Frame&& frame, F&& f, Futures&& futures) {
+  //  // Ensure the dataflow frame stays alive long enough.
+  //  hpx::intrusive_ptr<typename std::remove_pointer<typename std::decay<Frame>::type>::type> frame_p(
+  //      frame);
+
+  //  // cudaStream_t stream = stream_pool_.getNextStream();
+  //  // auto r = hpx::invoke_fused(std::forward<F>(f),
+  //  //                           hpx::tuple_cat(std::forward<Futures>(futures), hpx::tie(comm_)));
+  //  // hpx::future<void> fut = hpx::cuda::experimental::detail::get_future_with_event(stream);
+
+  //  // fut.then(hpx::launch::sync, [r = std::move(r), frame_p = std::move(frame_p)](
+  //  //                                hpx::future<void>&&) mutable { frame_p->set_data(std::move(r)); });
+  //}
 };
 }
 }

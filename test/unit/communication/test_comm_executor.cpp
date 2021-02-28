@@ -63,5 +63,7 @@ TEST(SendRecv, Blocking) {
 
   std::vector<double> expected_buf(static_cast<std::size_t>(size), val);
 
+  //hpx::dataflow(ex, MPI_Bcast, buf.data(), size, dtype, root_rank).get();
+
   ASSERT_TRUE(expected_buf == buf);
 }

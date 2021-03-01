@@ -139,25 +139,28 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
 protected:
   using iter2d_t = decltype(iterate_range2d(LocalTileSize{0, 0}));
 
+  static LocalElementSize compute_panel_size(LocalElementSize size, TileElementSize blocksize,
+                                             LocalTileIndex start) {
+    const auto mb = blocksize.rows();
+    const auto nb = blocksize.cols();
+
+    const auto mat_size = size.get(component(axis));
+    const auto i_tile = start.get(component(axis));
+
+    switch (axis) {
+      case Coord::Col:
+        return {mat_size - i_tile * mb, nb};
+      case Coord::Row:
+        return {mb, mat_size - i_tile * nb};
+    }
+  }
+
   /// Create the internal matrix, with tile layout, used for storing tiles
   ///
   /// It allocates just the memory needed for the part of matrix used, so
   /// starting from @p start
   static Matrix<T, device> setup_matrix(const Distribution& dist_matrix, const LocalTileIndex start) {
-    const auto mb = dist_matrix.blockSize().rows();
-    const auto nb = dist_matrix.blockSize().cols();
-
-    const auto panel_size = [&]() -> LocalElementSize {
-      const auto mat_size = dist_matrix.localSize().get(component(axis));
-      const auto i_tile = start.get(component(axis));
-
-      switch (axis) {
-        case Coord::Col:
-          return {mat_size - i_tile * mb, nb};
-        case Coord::Row:
-          return {mb, mat_size - i_tile * nb};
-      }
-    }();
+    const auto panel_size = compute_panel_size(dist_matrix.localSize(), dist_matrix.blockSize(), start);
 
     Distribution dist{panel_size, dist_matrix.blockSize()};
     auto layout = tileLayout(dist);

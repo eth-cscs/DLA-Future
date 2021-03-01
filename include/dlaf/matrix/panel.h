@@ -67,10 +67,12 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
     return range_.end();
   }
 
+  /// Return the rank which this (local) panel belongs to
   auto rankIndex() const noexcept {
     return dist_matrix_.rankIndex();
   }
 
+  /// Return the Distribution of the parent matrix
   auto parent_distribution() const noexcept {
     return dist_matrix_;
   }

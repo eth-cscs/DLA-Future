@@ -71,7 +71,7 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
     return dist_matrix_.rankIndex();
   }
 
-  auto distribution_matrix() const noexcept {
+  auto parent_distribution() const noexcept {
     return dist_matrix_;
   }
 
@@ -296,7 +296,7 @@ void broadcast(hpx::execution::parallel_executor ex, comm::IndexT_MPI rank_root,
   using namespace dlaf::comm::sync::broadcast;
   using hpx::dataflow;
 
-  DLAF_ASSERT(ws_from.distribution_matrix() == ws_to.distribution_matrix(),
+  DLAF_ASSERT(ws_from.parent_distribution() == ws_to.parent_distribution(),
               "they must refer to the same matrix");
 
   // TODO add check about sizes?!
@@ -314,7 +314,7 @@ void broadcast(hpx::execution::parallel_executor ex, comm::IndexT_MPI rank_root,
   // share the main panel, so that it can be used as source for orthogonal communications
   broadcast(ex, rank_root, ws_from, serial_comm);
 
-  const auto& dist = ws_from.distribution_matrix();
+  const auto& dist = ws_from.parent_distribution();
   for (const auto& idx_dst : ws_to) {
     SizeType idx_cross;
     comm::IndexT_MPI owner;

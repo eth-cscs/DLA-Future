@@ -112,7 +112,7 @@ void print(format::numpy, std::string sym, Panel<panel_type, const T, device>& w
            std::ostream& os = std::cout) {
   using common::iterate_range2d;
 
-  const auto& distribution = workspace.distribution_matrix();
+  const auto& distribution = workspace.parent_distribution();
 
   os << sym << " = np.zeros(" << workspace.size() << ", dtype=np."
      << internal::numpy_datatype<T>::typestring << ")\n";

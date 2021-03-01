@@ -113,7 +113,6 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
 }
 
 template <class T>
-
 void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
                                                    Matrix<T, Device::CPU>& mat_a) {
   using ConstTileType = typename Matrix<T, Device::CPU>::ConstTileType;

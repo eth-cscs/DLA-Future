@@ -81,7 +81,7 @@ DLAF_MAKE_CALLABLE_OBJECT(recv_tile);
 
 /// Task for broadcasting (receiving endpoint) a Tile ("JIT" allocation) in a direction over a CommunicatorGrid
 template <class T>
-auto recv_tile_with_alloc(hpx::future<common::PromiseGuard<comm::CommunicatorGrid>> mpi_task_chain,
+matrix::Tile<const T, Device::CPU> recv_tile_with_alloc(hpx::future<common::PromiseGuard<comm::CommunicatorGrid>> mpi_task_chain,
                           Coord rc_comm, TileElementSize tile_size, comm::IndexT_MPI rank) {
   using ConstTile_t = matrix::Tile<const T, Device::CPU>;
   using PromiseComm_t = common::PromiseGuard<comm::CommunicatorGrid>;

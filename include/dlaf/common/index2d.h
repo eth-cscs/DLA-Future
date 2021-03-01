@@ -26,8 +26,8 @@ namespace dlaf {
 
 enum class Coord { Row, Col };
 
-// Given a Coord direction, returns its transposed
-constexpr Coord transposed(const Coord rc) {
+// Given a Coord direction, returns its orthogonal
+constexpr Coord orthogonal(const Coord rc) {
   return rc == Coord::Row ? Coord::Col : Coord::Row;
 }
 

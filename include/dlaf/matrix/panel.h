@@ -25,30 +25,28 @@
 namespace dlaf {
 namespace matrix {
 
+/// Panel (1D array of tiles)
+///
+/// 1D array of tiles, i.e. a Row or Column panel strictly related to a given dlaf::Matrix (from the
+/// coords point of view)
 template <Coord axis, class T, Device device>
 struct Panel;
 
-/// Panel (1D array of tiles)
-///
-/// It can be seen as a 1D array of tiles, so a Row or Column panel,
-/// strictly related to a given Matrix (from the coords point of view)
 template <Coord axis, class T, Device device>
 struct Panel<axis, const T, device> : protected Matrix<T, device> {
   // Note:
-  // This specialization is not really useful by itself, but it acts as base for
-  // the RW version of the panel.
+  // This specialization acts as base for the RW version of the panel,
+  // moreover allows the casting between references (i.e. Panel<const T>& = Panel<T>)
 
-  // TODO it works just for tile layout
-  // TODO the matrix always occupies memory entirely
   using TileT = Tile<T, device>;
   using ConstTileT = Tile<const T, device>;
   using BaseT = Matrix<T, device>;
 
+  Panel(Panel&&) = default;
+
   virtual ~Panel() noexcept {
     reset();
   }
-
-  Panel(Panel&&) = default;
 
   // Note:
   // begin() and end() allows to loop over the tiles of the panel with a for range loop.
@@ -100,7 +98,7 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
   ///
   /// @p index is in the coordinate system of the matrix which this panel is related to
   hpx::shared_future<ConstTileT> read(const LocalTileIndex& index) {
-    // DLAF_ASSERT(index.isIn(dist_matrix_.localNrTiles()), index, dist_matrix_.localNrTiles());
+    DLAF_ASSERT_HEAVY(index.isIn(dist_matrix_.localNrTiles()), index, dist_matrix_.localNrTiles());
 
     const SizeType internal_linear_idx = linear_index(index);
     if (is_external(index)) {
@@ -108,11 +106,13 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
     }
     else {
       internal_.insert(internal_linear_idx);
-      return BaseT::read(project_index(index));
+      return BaseT::read(full_index(index));
     }
   }
 
   /// Set the panel to a new offset (with respect to the "parent" matrix)
+  ///
+  /// @pre offset cannot be less than the offset has been specifed on construction
   void set_offset(LocalTileIndex offset) noexcept {
     DLAF_ASSERT(offset.get(component(axis)) >= bias_, offset, bias_);
 
@@ -139,10 +139,10 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
 protected:
   using iter2d_t = decltype(iterate_range2d(LocalTileSize{0, 0}));
 
-  /// Create the internal matrix used for storing tiles
+  /// Create the internal matrix, with tile layout, used for storing tiles
   ///
-  /// It allocates just the memory needed for the part of matrix that it works with,
-  /// i.e. starting from `start`, so skippiing the first start tiles
+  /// It allocates just the memory needed for the part of matrix used, so
+  /// starting from @p start
   static Matrix<T, device> setup_matrix(const Distribution& dist_matrix, const LocalTileIndex start) {
     const auto mb = dist_matrix.blockSize().rows();
     const auto nb = dist_matrix.blockSize().cols();
@@ -173,7 +173,6 @@ protected:
   /// e.g. a 4x5 matrix with an offset 2x1 will have either:
   /// - a Panel<Col> 2x1
   /// - or a Panel<Row> 4x1
-  // TODO think about passing a reference to the matrix instead of the distribution (useful for tilesize)
   Panel(matrix::Distribution dist_matrix, LocalTileIndex offset)
       : BaseT(setup_matrix(dist_matrix, offset)), dist_matrix_(dist_matrix),
         bias_(offset.get(component(axis))), range_(iterate_range2d(LocalTileSize{0, 0})) {
@@ -189,17 +188,20 @@ protected:
 
   /// Given a matrix index, compute the internal linear index
   SizeType linear_index(const LocalTileIndex& index) const noexcept {
-    // TODO check that index is more than offset
-    return index.get(component(axis)) - bias_;
+    const auto idx = index.get(component(axis));
+
+    DLAF_ASSERT_MODERATE(idx > offset_, idx, offset_);
+
+    return idx - bias_;
   }
 
-  /// Project an index of the Matrix to the Panel
+  /// Given a matrix index, compute the projected internal index
   ///
-  /// It means zeroing the not-used component in the 1D panel
-  /// i.e. the index (3,2)
-  /// - for a Panel<Col> becomes (3,0)
-  /// - for a Panel<Row> becomes (0,2)
-  LocalTileIndex project_index(LocalTileIndex index) const {
+  /// It is similar to what linear_index does, so it takes into account the @p offset_,
+  /// but it computes a 2D index instead of a linear one.
+  /// The 2D index is the projection of the given index, i.e. in a Panel<Col> the Col for index
+  /// will always be 0 (and relatively for a Panel<Row>)
+  LocalTileIndex full_index(LocalTileIndex index) const {
     index = LocalTileIndex(component(axis), linear_index(index));
 
     DLAF_ASSERT_HEAVY(index.isIn(BaseT::distribution().localNrTiles()), index,
@@ -243,12 +245,12 @@ struct Panel : public Panel<axis, const T, device> {
   ///
   /// @pre index must point to a tile which is internally managed by the panel
   hpx::future<TileT> operator()(const LocalTileIndex& index) {
-    // DLAF_ASSERT(index.isIn(BaseT::dist_matrix_.localNrTiles()), index,
-    //            BaseT::dist_matrix_.localNrTiles());
+    DLAF_ASSERT_HEAVY(index.isIn(BaseT::dist_matrix_.localNrTiles()), index,
+                      BaseT::dist_matrix_.localNrTiles());
     DLAF_ASSERT(!is_external(index), "read-only access on external tiles", index);
 
     BaseT::internal_.insert(BaseT::linear_index(index));
-    return BaseT::operator()(BaseT::project_index(index));
+    return BaseT::operator()(BaseT::full_index(index));
   }
 
 protected:

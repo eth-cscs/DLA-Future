@@ -108,7 +108,7 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
     }
     else {
       internal_.insert(internal_linear_idx);
-      return BaseT::read(LocalTileIndex(component(axis), linear_index(index)));
+      return BaseT::read(project_index(index));
     }
   }
 
@@ -193,6 +193,21 @@ protected:
     return index.get(component(axis)) - bias_;
   }
 
+  /// Project an index of the Matrix to the Panel
+  ///
+  /// It means zeroing the not-used component in the 1D panel
+  /// i.e. the index (3,2)
+  /// - for a Panel<Col> becomes (3,0)
+  /// - for a Panel<Row> becomes (0,2)
+  LocalTileIndex project_index(LocalTileIndex index) const {
+    index = LocalTileIndex(component(axis), linear_index(index));
+
+    DLAF_ASSERT_HEAVY(index.isIn(BaseT::distribution().localNrTiles()), index,
+                      BaseT::distribution().localNrTiles());
+
+    return index;
+  }
+
   /// Given a matrix index, check if the corresponding tile in the panel is external or not
   bool is_external(const LocalTileIndex idx_matrix) const noexcept {
     return external_[linear_index(idx_matrix)].valid();
@@ -232,8 +247,8 @@ struct Panel : public Panel<axis, const T, device> {
     //            BaseT::dist_matrix_.localNrTiles());
     DLAF_ASSERT(!is_external(index), "read-only access on external tiles", index);
 
-    BaseT::internal_.insert(BaseT::panel_index(index));
-    return BaseT::operator()(BaseT::full_index(index));
+    BaseT::internal_.insert(BaseT::linear_index(index));
+    return BaseT::operator()(BaseT::project_index(index));
   }
 
 protected:

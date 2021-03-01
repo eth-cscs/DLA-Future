@@ -63,7 +63,7 @@ if (DLAF_WITH_MKL)
   add_library(LAPACK::LAPACK ALIAS ${LAPACK_TARGET})
 else()
   find_package(LAPACK REQUIRED)
-  add_library(LAPACK::LAPACK ALIAS ${LAPACK_TARGET})
+  add_library(LAPACK::LAPACK ALIAS lapack::lapack)
 endif()
 
 # ----- HPX

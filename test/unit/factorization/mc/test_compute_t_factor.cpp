@@ -267,8 +267,8 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
 
       // Note:
       // Few considerations about the error threshold. It must be highlighted that `n * nb * error` means
-      // that n * nb muladd ops errors are admitted. It is a (stricter) approximation of how big the
-      // error can be after the construction of the H obtained using the block algorithm.
+      // that n * nb muladd ops errors are admitted. It is a approximation of how big the error can be
+      // after the construction of the H obtained using the block algorithm.
       SCOPED_TRACE("Comparison test");
       const auto error =
           h_result.size().rows() * t.size().rows() * test::TypeUtilities<TypeParam>::error;

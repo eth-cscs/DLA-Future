@@ -49,7 +49,7 @@ struct QR_Tfactor<Backend::MC, Device::CPU, T> {
   /// in which Hi represents a single elementary reflector transformation
   ///
   /// @param k the number of elementary reflectors to use (from the beginning of the tile)
-  /// @param v where the elemenary reflectors are stored
+  /// @param v where the elementary reflectors are stored
   /// @param v_start tile in @p v where the column of reflectors starts
   /// @param taus array of taus, associated with the related elementary reflector
   /// @param t a matrix where the triangular factor will be stored (in tile {0, 0}) for all ranks in the

@@ -55,15 +55,15 @@ find_package(MPI REQUIRED)
 # ----- LAPACK/SCALAPACK
 set(LAPACK_TARGET "")
 if (DLAF_WITH_MKL)
+  set(MKL_CUSTOM_THREADING "Sequential")
   find_package(MKL REQUIRED)
   set(LAPACK_TARGET "mkl::mkl_intel_32bit_seq_dyn")
   if (NOT TARGET ${LAPACK_TARGET})
     message(FATAL_ERROR "MKL target ${LAPACK_TARGET} has not been found")
   endif()
-  add_library(LAPACK::LAPACK ALIAS ${LAPACK_TARGET})
 else()
+  set(LAPACK_TARGET "lapack::lapack")
   find_package(LAPACK REQUIRED)
-  add_library(LAPACK::LAPACK ALIAS lapack::lapack)
 endif()
 
 # ----- HPX

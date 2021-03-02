@@ -69,8 +69,11 @@ void is_orthogonal(const MatrixLocal<const T>& matrix) {
     return m;
   }();
 
-  const auto error = 2 * matrix.size().cols() * dlaf::test::TypeUtilities<T>::error;
-  CHECK_MATRIX_NEAR(eye, ortho, error, error);
+  // Note:
+  // This is an even more strict approximation compared to the "comparison" one.
+  SCOPED_TRACE("Orthogonality test");
+  const auto error = matrix.size().rows() * dlaf::test::TypeUtilities<T>::error;
+  CHECK_MATRIX_NEAR(eye, ortho, 0, error);
 }
 
 std::vector<std::tuple<dlaf::SizeType, dlaf::SizeType, dlaf::SizeType, dlaf::SizeType, dlaf::SizeType>>
@@ -108,8 +111,6 @@ std::vector<std::tuple<dlaf::SizeType, dlaf::SizeType, dlaf::SizeType, dlaf::Siz
 // Which we expect to be the equal to the one computed previously.
 TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
   using namespace dlaf;
-
-  constexpr auto error = test::TypeUtilities<TypeParam>::error;
 
   SizeType a_m, a_n, mb, nb, k;
 
@@ -264,7 +265,13 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
 
       is_orthogonal(h_result);
 
-      CHECK_MATRIX_NEAR(h_expected, h_result, error, error);
+      // Note:
+      // Few considerations about the error threshold. It must be highlighted that `n * nb * error` means that
+      // n * nb muladd ops errors are admitted. It is a (stricter) approximation of how big the error can be
+      // after the construction of the H obtained using the block algorithm.
+      SCOPED_TRACE("Comparison test");
+      const auto error = h_result.size().rows() * t.size().rows() * test::TypeUtilities<TypeParam>::error;
+      CHECK_MATRIX_NEAR(h_expected, h_result, 0, error);
     }
   }
 }

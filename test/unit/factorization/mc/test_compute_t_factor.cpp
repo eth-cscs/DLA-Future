@@ -70,7 +70,7 @@ void is_orthogonal(const MatrixLocal<const T>& matrix) {
   }();
 
   // Note:
-  // This is an even more strict approximation compared to the "comparison" one.
+  // Orthogonality requires a strict error test, => n * error
   SCOPED_TRACE("Orthogonality test");
   const auto error = matrix.size().rows() * dlaf::test::TypeUtilities<T>::error;
   CHECK_MATRIX_NEAR(eye, ortho, 0, error);
@@ -266,9 +266,9 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
       is_orthogonal(h_result);
 
       // Note:
-      // Few considerations about the error threshold. It must be highlighted that `n * nb * error` means
-      // that n * nb muladd ops errors are admitted. It is a approximation of how big the error can be
-      // after the construction of the H obtained using the block algorithm.
+      // The error threshold has been determined considering that ~2*n*nb arithmetic operations (n*nb
+      // multiplications and n*nb addition) are needed to compute each of the element of the matrix `h_result`,
+      // and that TypeUtilities<TypeParam>::error indicates maximum error for a multiplication + addition.
       SCOPED_TRACE("Comparison test");
       const auto error =
           h_result.size().rows() * t.size().rows() * test::TypeUtilities<TypeParam>::error;

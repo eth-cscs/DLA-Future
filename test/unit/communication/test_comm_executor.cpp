@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <hpx/futures/future.hpp>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -59,11 +60,12 @@ TEST(SendRecv, Blocking) {
   double val = 4.2;
   std::vector<double> buf(static_cast<std::size_t>(size), val);
 
-  hpx::async(ex, MPI_Bcast, buf.data(), size, dtype, root_rank).get();
+  // Tests the handling of futures in a dataflow
+  hpx::dataflow(ex, hpx::util::unwrapping(MPI_Bcast), buf.data(), hpx::make_ready_future<int>(size),
+                dtype, root_rank, hpx::make_ready_future<void>())
+      .get();
 
   std::vector<double> expected_buf(static_cast<std::size_t>(size), val);
-
-  //hpx::dataflow(ex, MPI_Bcast, buf.data(), size, dtype, root_rank).get();
 
   ASSERT_TRUE(expected_buf == buf);
 }

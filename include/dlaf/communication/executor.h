@@ -12,8 +12,11 @@
 /// @file
 
 #include <atomic>
+#include <hpx/functional/invoke_fused.hpp>
+#include <hpx/functional/invoke_result.hpp>
 #include <hpx/futures/future.hpp>
 #include <hpx/runtime_local/thread_pool_helpers.hpp>
+#include <hpx/type_support/unused.hpp>
 #include <memory>
 #include <mutex>
 #include <type_traits>
@@ -150,21 +153,67 @@ struct nbmpi_internal_mech<MPIMech::Yielding> {
   }
 };
 
+template <>
+struct nbmpi_internal_mech<MPIMech::Blocking> {
+  void operator()(MPI_Request) {}
+};
+
+template <MPIMech M>
+struct extra_params {
+  hpx::tuple<Communicator, MPI_Request*> operator()(Communicator comm, MPI_Request* req_ptr) {
+    return hpx::make_tuple(std::move(comm), req_ptr);
+  }
+};
+
+template <>
+struct extra_params<MPIMech::Blocking> {
+  hpx::tuple<Communicator> operator()(Communicator comm, MPI_Request*) {
+    return hpx::make_tuple(std::move(comm));
+  }
+};
+
+template <class R>
+struct invoke_fused_wrapper {
+  R val;
+  template <class F, class TupleArgs>
+  invoke_fused_wrapper(F&& f, TupleArgs&& ts) {
+    val = hpx::invoke_fused(std::forward<F>(f), std::forward<TupleArgs>(ts));
+  }
+  R async_return() {
+    return std::move(val);
+  }
+  R dataflow_return() {
+    return std::move(val);
+  }
+};
+
+template <>
+struct invoke_fused_wrapper<void> {
+  template <class F, class TupleArgs>
+  invoke_fused_wrapper(F&& f, TupleArgs&& ts) {
+    hpx::invoke_fused(std::forward<F>(f), std::forward<TupleArgs>(ts));
+  }
+  void async_return() {}
+  auto dataflow_return() {
+    return hpx::util::unused;
+  }
+};
+
 // Non-blocking
 template <MPIMech M, class F, class... Ts>
-struct executor_launch_impl {
+struct async_helper_fn {
   using result_t = typename hpx::util::invoke_result<F, Ts..., Communicator, MPI_Request*>::type;
   void operator()(std::true_type, hpx::future<void>, hpx::lcos::local::promise<void> p,
                   Communicator comm, F&& f, Ts&&... ts) noexcept {
     MPI_Request req;
-    hpx::invoke(std::forward<F>(f), std::forward<Ts>(ts)..., comm, &req);
+    hpx::invoke(std::forward<F>(f), std::forward<Ts>(ts)..., std::move(comm), &req);
     p.set_value();
     nbmpi_internal_mech<M>{}(req);
   }
-  decltype(auto) operator()(std::false_type, hpx::future<void>, hpx::lcos::local::promise<void> p,
-                            Communicator comm, F&& f, Ts&&... ts) noexcept {
+  auto operator()(std::false_type, hpx::future<void>, hpx::lcos::local::promise<void> p,
+                  Communicator comm, F&& f, Ts&&... ts) noexcept {
     MPI_Request req;
-    auto r = hpx::invoke(std::forward<F>(f), std::forward<Ts>(ts)..., comm, &req);
+    auto r = hpx::invoke(std::forward<F>(f), std::forward<Ts>(ts)..., std::move(comm), &req);
     p.set_value();
     nbmpi_internal_mech<M>{}(req);
     return r;
@@ -173,7 +222,7 @@ struct executor_launch_impl {
 
 // Blocking
 template <class F, class... Ts>
-struct executor_launch_impl<MPIMech::Blocking, F, Ts...> {
+struct async_helper_fn<MPIMech::Blocking, F, Ts...> {
   using result_t = typename hpx::util::invoke_result<F, Ts..., Communicator>::type;
   void operator()(std::true_type, hpx::future<void>, hpx::lcos::local::promise<void> p,
                   Communicator comm, F&& f, Ts&&... ts) noexcept {
@@ -192,7 +241,7 @@ struct executor_launch_impl<MPIMech::Blocking, F, Ts...> {
 
 template <MPIMech M>
 class Executor {
-  struct task_chain; // forward declaration
+  struct task_chain;  // forward declaration
 
   Communicator comm_;
   std::shared_ptr<task_chain> tc_ptr;
@@ -243,8 +292,7 @@ public:
 
   template <typename F, typename... Ts>
   auto async_execute(F&& f, Ts&&... ts) noexcept {
-    using is_void =
-        typename std::is_void<typename detail::executor_launch_impl<M, F, Ts...>::result_t>::type;
+    using is_void = typename std::is_void<typename detail::async_helper_fn<M, F, Ts...>::result_t>::type;
     hpx::future<void> before_last;
     hpx::lcos::local::promise<void> promise_next;
     {
@@ -253,26 +301,41 @@ public:
       tc_ptr->tail = promise_next.get_future();
     }
     return hpx::dataflow(ex_,
-                         detail::executor_launch_impl<M, typename std::decay<F>::type,
-                                                      typename std::decay<Ts>::type...>{},
+                         detail::async_helper_fn<M, typename std::decay<F>::type,
+                                                 typename std::decay<Ts>::type...>(),
                          is_void{}, std::move(before_last), std::move(promise_next), comm_,
                          std::forward<F>(f), std::forward<Ts>(ts)...);
   }
 
-  // template <class Frame, class F, class Futures>
-  // void dataflow_finalize(Frame&& frame, F&& f, Futures&& futures) {
-  //  // Ensure the dataflow frame stays alive long enough.
-  //  hpx::intrusive_ptr<typename std::remove_pointer<typename std::decay<Frame>::type>::type> frame_p(
-  //      frame);
+  template <class Frame, class F, class TupleArgs>
+  void dataflow_finalize(Frame&& frame, F&& f, TupleArgs&& args) {
+    hpx::future<void> before_last;
+    hpx::lcos::local::promise<void> promise_next;
+    {
+      std::lock_guard<hpx::lcos::local::mutex> lk(tc_ptr->mt);
+      before_last = std::move(tc_ptr->tail);
+      tc_ptr->tail = promise_next.get_future();
+    }
 
-  //  // cudaStream_t stream = stream_pool_.getNextStream();
-  //  // auto r = hpx::invoke_fused(std::forward<F>(f),
-  //  //                           hpx::tuple_cat(std::forward<Futures>(futures), hpx::tie(comm_)));
-  //  // hpx::future<void> fut = hpx::cuda::experimental::detail::get_future_with_event(stream);
+    // Ensure the dataflow frame stays alive long enough.
+    using FramePtr =
+        hpx::intrusive_ptr<typename std::remove_pointer<typename std::decay<Frame>::type>::type>;
+    FramePtr frame_p(frame);
+    auto fn = [frame_p = std::move(frame_p), p = std::move(promise_next), comm = comm_,
+               f = std::forward<F>(f), args = std::forward<TupleArgs>(args)](hpx::future<void>) mutable {
+      MPI_Request req;
+      auto all_args = hpx::tuple_cat(std::move(args), detail::extra_params<M>()(comm, &req));
 
-  //  // fut.then(hpx::launch::sync, [r = std::move(r), frame_p = std::move(frame_p)](
-  //  //                                hpx::future<void>&&) mutable { frame_p->set_data(std::move(r)); });
-  //}
+      using result_t = decltype(hpx::util::invoke_fused(f, all_args));
+      detail::invoke_fused_wrapper<result_t> wrapper(std::move(f), std::move(all_args));
+
+      p.set_value();
+      detail::nbmpi_internal_mech<M>{}(req);
+      frame_p->set_data(wrapper.dataflow_return());
+    };
+
+    before_last.then(ex_, std::move(fn));
+  }
 };
 }
 }

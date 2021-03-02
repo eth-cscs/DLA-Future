@@ -112,9 +112,8 @@ template <class R>
 struct invoke_fused_wrapper {
   R val;
   template <class F, class TupleArgs>
-  invoke_fused_wrapper(F&& f, TupleArgs&& ts) {
-    val = hpx::invoke_fused(std::forward<F>(f), std::forward<TupleArgs>(ts));
-  }
+  invoke_fused_wrapper(F&& f, TupleArgs&& ts)
+      : val(hpx::invoke_fused(std::forward<F>(f), std::forward<TupleArgs>(ts))) {}
   R async_return() {
     return std::move(val);
   }

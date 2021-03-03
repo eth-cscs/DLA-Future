@@ -100,30 +100,31 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
   Matrix<T, Device::CPU> mat_w_last({mat_v.size().rows(), last_nb}, {mat_v.blockSize().rows(), last_nb});
   Matrix<T, Device::CPU> mat_w2_last({last_nb, mat_c.size().cols()},
                                      {last_nb, mat_c.blockSize().cols()});
-  
+
   const SizeType reflectors = mat_v.size().cols() / mat_v.blockSize().cols() - 1;
-  
+
   for (SizeType k = reflectors; k > -1; --k) {
     bool is_last = (k == reflectors) ? true : false;
-    
-    void (&cpyReg)(TileElementSize, TileElementIndex, const matrix::Tile<const T, Device::CPU>&, TileElementIndex, const matrix::Tile<T, Device::CPU>&) =
-        copy<T>;
+
+    void (&cpyReg)(TileElementSize, TileElementIndex, const matrix::Tile<const T, Device::CPU>&,
+                   TileElementIndex, const matrix::Tile<T, Device::CPU>&) = copy<T>;
     void (&cpy)(const matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T, Device::CPU>&) =
         copy<T>;
-    
+
     // Copy V panel into VV
     for (SizeType i = 0; i < mat_v.nrTiles().rows(); ++i) {
       if (is_last == true) {
-	TileElementSize region = mat_vv_last.read(LocalTileIndex(i,0)).get().size();
-	TileElementIndex idx_in(0,0);
-	TileElementIndex idx_out(0,0);
-        hpx::dataflow(executor_hp, hpx::util::unwrapping(cpyReg), region, idx_in, mat_v.read(LocalTileIndex(i, k)), idx_out, mat_vv_last(LocalTileIndex(i, 0)));
+        TileElementSize region = mat_vv_last.read(LocalTileIndex(i, 0)).get().size();
+        TileElementIndex idx_in(0, 0);
+        TileElementIndex idx_out(0, 0);
+        hpx::dataflow(executor_hp, hpx::util::unwrapping(cpyReg), region, idx_in,
+                      mat_v.read(LocalTileIndex(i, k)), idx_out, mat_vv_last(LocalTileIndex(i, 0)));
       }
       else {
         hpx::dataflow(executor_hp, hpx::util::unwrapping(cpy), mat_v.read(LocalTileIndex(i, k)),
                       mat_vv(LocalTileIndex(i, 0)));
       }
-      
+
       // Fixing elements of VV and copying them into WH
       if (is_last == true) {
         auto tile_v = mat_vv_last(LocalTileIndex{i, 0}).get();
@@ -135,7 +136,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
           lapack::laset(lapack::MatrixType::Upper, tile_v.size().rows(), tile_v.size().cols(), 0, 1,
                         tile_v.ptr(), tile_v.ld());
         }
-	hpx::dataflow(executor_hp, hpx::util::unwrapping(cpy), mat_vv_last.read(LocalTileIndex(i, 0)),
+        hpx::dataflow(executor_hp, hpx::util::unwrapping(cpy), mat_vv_last.read(LocalTileIndex(i, 0)),
                       mat_w_last(LocalTileIndex(i, 0)));
       }
       else {
@@ -149,7 +150,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
                         tile_v.ptr(), tile_v.ld());
         }
         hpx::dataflow(executor_hp, hpx::util::unwrapping(cpy), mat_vv.read(LocalTileIndex(i, 0)),
-	             mat_w(LocalTileIndex(i, 0)));
+                      mat_w(LocalTileIndex(i, 0)));
       }
     }
 
@@ -174,7 +175,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
                       ConjTrans, NonUnit, 1.0, mat_t.read(kk), std::move(mat_w(ik)));
       }
     }
-    
+
     for (SizeType j = 0; j < n; ++j) {
       auto kj = LocalTileIndex{0, j};
       for (SizeType i = k + 1; i < m; ++i) {
@@ -210,7 +211,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
         }
       }
     }
-
   }
 }
 

@@ -47,7 +47,6 @@ using namespace dlaf::matrix;
 // Systematic Energy and Time to Solution Analysis" presented by Raffaele Solcà (2016)
 // 2. Report "Gep + back-transformation", Alberto Invernizzi (2020)
 // 3. Report "Reduction to band + back-transformation", Raffaele Solcà (2020)
-
 template <class T>
 struct BackTransformation<Backend::MC, Device::CPU, T> {
   static void call_FC(Matrix<T, Device::CPU>& mat_c, Matrix<const T, Device::CPU>& mat_v,
@@ -101,26 +100,30 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
   Matrix<T, Device::CPU> mat_w_last({mat_v.size().rows(), last_nb}, {mat_v.blockSize().rows(), last_nb});
   Matrix<T, Device::CPU> mat_w2_last({last_nb, mat_c.size().cols()},
                                      {last_nb, mat_c.blockSize().cols()});
-
+  
   const SizeType reflectors = mat_v.size().cols() / mat_v.blockSize().cols() - 1;
-
-  for (SizeType k = reflectors - 1; k > -1; --k) {
-    bool is_last = (k == reflectors - 1) ? true : false;
-
+  
+  for (SizeType k = reflectors; k > -1; --k) {
+    bool is_last = (k == reflectors) ? true : false;
+    
+    void (&cpyReg)(TileElementSize, TileElementIndex, const matrix::Tile<const T, Device::CPU>&, TileElementIndex, const matrix::Tile<T, Device::CPU>&) =
+        copy<T>;
     void (&cpy)(const matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T, Device::CPU>&) =
         copy<T>;
-
+    
     // Copy V panel into VV
     for (SizeType i = 0; i < mat_v.nrTiles().rows(); ++i) {
       if (is_last == true) {
-        hpx::dataflow(executor_hp, hpx::util::unwrapping(cpy), mat_v.read(LocalTileIndex(i, k)),
-                      mat_vv_last(LocalTileIndex(i, 0)));
+	TileElementSize region = mat_vv_last.read(LocalTileIndex(i,0)).get().size();
+	TileElementIndex idx_in(0,0);
+	TileElementIndex idx_out(0,0);
+        hpx::dataflow(executor_hp, hpx::util::unwrapping(cpyReg), region, idx_in, mat_v.read(LocalTileIndex(i, k)), idx_out, mat_vv_last(LocalTileIndex(i, 0)));
       }
       else {
         hpx::dataflow(executor_hp, hpx::util::unwrapping(cpy), mat_v.read(LocalTileIndex(i, k)),
                       mat_vv(LocalTileIndex(i, 0)));
       }
-
+      
       // Fixing elements of VV and copying them into WH
       if (is_last == true) {
         auto tile_v = mat_vv_last(LocalTileIndex{i, 0}).get();
@@ -132,7 +135,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
           lapack::laset(lapack::MatrixType::Upper, tile_v.size().rows(), tile_v.size().cols(), 0, 1,
                         tile_v.ptr(), tile_v.ld());
         }
-        hpx::dataflow(executor_hp, hpx::util::unwrapping(cpy), mat_vv_last.read(LocalTileIndex(i, 0)),
+	hpx::dataflow(executor_hp, hpx::util::unwrapping(cpy), mat_vv_last.read(LocalTileIndex(i, 0)),
                       mat_w_last(LocalTileIndex(i, 0)));
       }
       else {
@@ -146,23 +149,9 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
                         tile_v.ptr(), tile_v.ld());
         }
         hpx::dataflow(executor_hp, hpx::util::unwrapping(cpy), mat_vv.read(LocalTileIndex(i, 0)),
-                      mat_w(LocalTileIndex(i, 0)));
+	             mat_w(LocalTileIndex(i, 0)));
       }
     }
-
-    // std::cout << "STEP " << k << std::endl;
-    // std::cout << " "  << std::endl;
-    //
-    // std::cout << "MAT VV" << std::endl;
-    // if (is_last)
-    //  printElements(mat_vv_last);
-    // else
-    //  printElements(mat_vv);
-    // std::cout << "MAT W" << std::endl;
-    // if (is_last)
-    //  printElements(mat_w_last);
-    // else
-    //  printElements(mat_w);
 
     // Reset W2 to zero
     if (is_last == true) {
@@ -172,24 +161,20 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
       matrix::util::set(mat_w2, [](auto&&) { return 0; });
     }
 
-    for (SizeType i = k; i < m; ++i) {
+    for (SizeType i = k + 1; i < m; ++i) {
       // WH = V T
       auto ik = LocalTileIndex{i, 0};
-      auto kk = LocalTileIndex{0, k};
+      auto kk = LocalTileIndex{k, k};
       if (is_last == true) {
-        // std::cout << "TRMM last: k " << k << " i " << i << " T " << mat_t.read(kk).get().size() << " W
-        // " << mat_w_last.read(ik).get().size() << std::endl;;
-        hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper,
+        hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper,
                       ConjTrans, NonUnit, 1.0, mat_t.read(kk), std::move(mat_w_last(ik)));
       }
       else {
-        // std::cout << "TRMM: k " << k << " i " << i << " T " << mat_t.read(kk).get().size() << " W " <<
-        // mat_w.read(ik).get().size() << std::endl;;
-        hpx::dataflow(executor_hp, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper,
+        hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper,
                       ConjTrans, NonUnit, 1.0, mat_t.read(kk), std::move(mat_w(ik)));
       }
     }
-
+    
     for (SizeType j = 0; j < n; ++j) {
       auto kj = LocalTileIndex{0, j};
       for (SizeType i = k + 1; i < m; ++i) {
@@ -197,16 +182,11 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
         auto ij = LocalTileIndex{i, j};
         // W2 = W C
         if (is_last == true) {
-          // std::cout << "GEMM1 last: k " << k << " i " << i << " j " << j << " T " <<
-          // mat_w_last.read(ik).get().size() << " C " << mat_c.read(ij).get().size() << " W2 " <<
-          // mat_w2_last.read(kj).get().size() << std::endl;;
           hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), ConjTrans,
                         NoTrans, 1.0, std::move(mat_w_last(ik)), mat_c.read(ij), 1.0,
                         std::move(mat_w2_last(kj)));
         }
         else {
-          // std::cout << "GEMM1: k " << k << " i " << i << " j " << j << " T " << mat_w.read(ik).get().size()
-          // << " C " << mat_c.read(ij).get().size() << " W2 " << mat_w2.read(kj).get().size() << std::endl;;
           hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), ConjTrans,
                         NoTrans, 1.0, std::move(mat_w(ik)), mat_c.read(ij), 1.0, std::move(mat_w2(kj)));
         }
@@ -220,21 +200,17 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
         auto ij = LocalTileIndex{i, j};
         // C = C - V W2
         if (is_last == true) {
-          // std::cout << "GEMM2 last: k " << k << " i " << i << " j " << j << " V " <<
-          // mat_vv_last.read(ik).get().size() << " W2 " << mat_w2_last.read(kj).get().size() << " C " <<
-          // mat_c.read(kj).get().size() << std::endl;;
           hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans,
                         NoTrans, -1.0, mat_vv_last.read(ik), mat_w2_last.read(kj), 1.0,
                         std::move(mat_c(ij)));
         }
         else {
-          // std::cout << "GEMM2: k " << k << " i " << i << " j " << j << " V " << mat_vv.read(ik).get().size()
-          // << " W2 " << mat_w2.read(kj).get().size() << " C " << mat_c.read(kj).get().size() << std::endl;;
           hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans,
                         NoTrans, -1.0, mat_vv.read(ik), mat_w2.read(kj), 1.0, std::move(mat_c(ij)));
         }
       }
     }
+
   }
 }
 

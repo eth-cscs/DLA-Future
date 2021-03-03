@@ -62,21 +62,22 @@ void set_zero(Matrix<T, Device::CPU>& mat) {
 }
 
 const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
-    {3, 3, 1, 1},   {3, 3, 3, 3},   {4, 4, 1, 1},   {4, 4, 4, 4},   {4, 4, 2, 2},   {4, 2, 2, 2},
+    {3, 3, 1, 1},   {4, 4, 1, 1},   {4, 4, 2, 2},   {4, 2, 2, 2},
     {4, 1, 2, 2},   {4, 1, 1, 1},   {6, 6, 3, 3},   {6, 3, 3, 3},   {6, 1, 3, 3},   {12, 2, 2, 2},
     {12, 2, 3, 3},  {12, 2, 4, 4},  {12, 12, 2, 2}, {12, 12, 3, 3}, {12, 12, 4, 4}, {12, 24, 2, 2},
     {12, 24, 3, 3}, {12, 24, 4, 4}, {24, 12, 4, 4}, {24, 12, 6, 6}, {24, 24, 4, 4}, {24, 24, 6, 6},
     {24, 36, 4, 4}, {24, 36, 6, 6},
+    {3, 5, 2, 2}, {3, 7, 2, 2}, 
+    {5, 5, 2, 2}, {5, 5, 3, 3},
+    {5, 8, 3, 3}, {8, 5, 2, 2},
+    {13, 8, 3, 3}, {8, 27, 2, 2},
+    {5, 8, 3, 2}, {4, 6, 2, 3},
+    {5, 8, 3, 3}
 };
 
 template <class T>
 MatrixLocal<T> makeLocal(const Matrix<const T, Device::CPU>& matrix) {
   return {matrix.size(), matrix.distribution().blockSize()};
-}
-
-template <class T>
-T computeTau() {
-  return static_cast<T>(0.0);
 }
 
 template <class T>
@@ -90,18 +91,19 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
   TileElementSize blockSizeV(mb, mb);
   Matrix<T, Device::CPU> mat_v(sizeV, blockSizeV);
   dlaf::matrix::util::set_random(mat_v);
-
   // Impose orthogonality: Q = I - v tau v^H is orthogonal (Q Q^H = I)
   // leads to tau = [1 + sqrt(1 - vH v taui^2)]/(vH v) for real
   LocalElementSize sizeTau(m, 1);
   TileElementSize blockSizeTau(1, 1);
   Matrix<T, Device::CPU> mat_tau(sizeTau, blockSizeTau);
 
-  LocalElementSize sizeT(mb, m);
+  const int tottaus = (m%mb == 0) ? (m / mb - 1) * mb : (m / mb - 1) * mb + m % mb;
+  // TODO: creating a whole matrix, solves issues on the last tile when m%mb != 0 ==> find out how to use only a panel
+  LocalElementSize sizeT(tottaus, tottaus);
   TileElementSize blockSizeT(mb, nb);
   Matrix<T, Device::CPU> mat_t(sizeT, blockSizeT);
   set_zero(mat_t);
-
+  
   comm::CommunicatorGrid comm_grid(MPI_COMM_WORLD, 1, 1, common::Ordering::ColumnMajor);
 
   // Copy matrices locally
@@ -118,8 +120,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
   }
 
   MatrixLocal<T> taus({m, 1}, {1, 1});
-  const int tottaus = (m / mb - 1) * mb - 1;
-  for (SizeType i = tottaus; i > -1; --i) {
+  for (SizeType i = tottaus - 1; i > -1; --i) {
     const GlobalElementIndex v_offset{i, i};
     auto dotprod = blas::dot(m - i, mat_v_loc.ptr(v_offset), 1, mat_v_loc.ptr(v_offset), 1);
     T taui;
@@ -140,12 +141,13 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
   for (SizeType i = mat_t.nrTiles().cols() - 1; i > -1; --i) {
     const GlobalElementIndex offset{i * nb, i * nb};
     const GlobalElementIndex tau_offset{i * nb, 0};
-    auto tile_t = mat_t(LocalTileIndex{0, i}).get();
+    auto tile_t = mat_t(LocalTileIndex{i, i}).get();
+    auto numcol = tile_t.size().cols();
     lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise, mat_v.size().rows() - i * nb,
-                  nb, mat_v_loc.ptr(offset), mat_v_loc.ld(), taus.ptr(tau_offset), tile_t.ptr(),
+                  numcol, mat_v_loc.ptr(offset), mat_v_loc.ld(), taus.ptr(tau_offset), tile_t.ptr(),
                   tile_t.ld());
   }
-
+  
   solver::backTransformation<Backend::MC>(mat_c, mat_v, mat_t);
 
   auto result = [& dist = mat_c.distribution(),

@@ -53,11 +53,10 @@ TEST(SendRecv, Polling) {
 TEST(SendRecv, Blocking) {
   auto comm = dlaf::comm::Communicator(MPI_COMM_WORLD);
   dlaf::comm::Executor<dlaf::comm::MPIMech::Blocking> ex("mpi", comm);
-
-  int root_rank = 0;
+  int root_rank = 1;
   MPI_Datatype dtype = MPI_DOUBLE;
   int size = 1000;
-  double val = 4.2;
+  double val = (comm.rank() == root_rank) ? 4.2 : 1.2;
   std::vector<double> buf(static_cast<std::size_t>(size), val);
 
   // Tests the handling of futures in a dataflow
@@ -65,7 +64,6 @@ TEST(SendRecv, Blocking) {
                 dtype, root_rank, hpx::make_ready_future<void>())
       .get();
 
-  std::vector<double> expected_buf(static_cast<std::size_t>(size), val);
-
+  std::vector<double> expected_buf(static_cast<std::size_t>(size), 4.2);
   ASSERT_TRUE(expected_buf == buf);
 }

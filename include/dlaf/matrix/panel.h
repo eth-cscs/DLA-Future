@@ -183,7 +183,7 @@ protected:
   Panel(matrix::Distribution dist_matrix, LocalTileIndex offset)
       : BaseT(setup_matrix(dist_matrix, offset)), dist_matrix_(dist_matrix),
         bias_(offset.get(component(axis))), range_(iterate_range2d(LocalTileSize{0, 0})) {
-    DLAF_ASSERT_HEAVY(BaseT::nrTiles().get(dir) == 1, BaseT::nrTiles());
+    DLAF_ASSERT_HEAVY(BaseT::nrTiles().get(axis) == 1, BaseT::nrTiles());
 
     set_offset(offset);
 
@@ -197,7 +197,7 @@ protected:
   SizeType linear_index(const LocalTileIndex& index) const noexcept {
     const auto idx = index.get(component(axis));
 
-    DLAF_ASSERT_MODERATE(idx > offset_, idx, offset_);
+    DLAF_ASSERT_MODERATE(idx >= offset_, idx, offset_);
 
     return idx - bias_;
   }

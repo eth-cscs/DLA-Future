@@ -62,12 +62,10 @@ void set_zero(Matrix<T, Device::CPU>& mat) {
 }
 
 const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
-  {3, 0, 1, 1}, {0, 5, 2, 3},    // m, n = 0
-  {2, 2, 3, 3}, {3, 4, 6, 7},    // m < mb
-  {3, 3, 1, 1}, {4, 4, 2, 2}, {6, 3, 3, 3},
-  {12, 2, 4, 4}, {12, 24, 3, 3}, {24, 36, 6, 6},
-  {5, 8, 3, 2}, {4, 6, 2, 3}, {5, 5, 2, 3},
-  {8, 27, 3, 4}, {15, 34, 4, 6}, 
+    {3, 0, 1, 1}, {0, 5, 2, 3},  // m, n = 0
+    {2, 2, 3, 3}, {3, 4, 6, 7},  // m < mb
+    {3, 3, 1, 1}, {4, 4, 2, 2}, {6, 3, 3, 3}, {12, 2, 4, 4}, {12, 24, 3, 3}, {24, 36, 6, 6},
+    {5, 8, 3, 2}, {4, 6, 2, 3}, {5, 5, 2, 3}, {8, 27, 3, 4}, {15, 34, 4, 6},
 };
 
 template <class T>
@@ -77,7 +75,6 @@ MatrixLocal<T> makeLocal(const Matrix<const T, Device::CPU>& matrix) {
 
 template <class T>
 void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType nb) {
-  
   comm::CommunicatorGrid comm_grid(MPI_COMM_WORLD, 1, 1, common::Ordering::ColumnMajor);
 
   LocalElementSize sizeC(m, n);
@@ -97,7 +94,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
   else {
     tottaus = (m / mb - 1) * mb + m % mb;
   }
-  
+
   if (tottaus > 0) {
     // Copy matrices locally
     auto mat_c_loc = dlaf::matrix::test::all_gather<T>(mat_c, comm_grid);
@@ -109,17 +106,16 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
     TileElementSize blockSizeTau(1, 1);
     Matrix<T, Device::CPU> mat_tau(sizeTau, blockSizeTau);
 
-  
     // Reset diagonal and upper values of V
     lapack::laset(lapack::MatrixType::General, std::min(m, mb), mat_v_loc.size().cols(), 0, 0,
-		  mat_v_loc.ptr(), mat_v_loc.ld());
+                  mat_v_loc.ptr(), mat_v_loc.ld());
     if (m > mb) {
-      lapack::laset(lapack::MatrixType::Upper, mat_v_loc.size().rows() - mb, mat_v_loc.size().cols(), 0, 1,
-		    mat_v_loc.ptr(GlobalElementIndex{mb, 0}), mat_v_loc.ld());
+      lapack::laset(lapack::MatrixType::Upper, mat_v_loc.size().rows() - mb, mat_v_loc.size().cols(), 0,
+                    1, mat_v_loc.ptr(GlobalElementIndex{mb, 0}), mat_v_loc.ld());
     }
 
-    
-    // TODO: creating a whole matrix, solves issues on the last tile when m%mb != 0 ==> find out how to use only a panel
+    // TODO: creating a whole matrix, solves issues on the last tile when m%mb != 0 ==> find out how to
+    // use only a panel
     LocalElementSize sizeT(tottaus, tottaus);
     TileElementSize blockSizeT(mb, mb);
     Matrix<T, Device::CPU> mat_t(sizeT, blockSizeT);
@@ -132,17 +128,17 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
       auto dotprod = blas::dot(m - i, mat_v_loc.ptr(v_offset), 1, mat_v_loc.ptr(v_offset), 1);
       T taui;
       if (std::is_same<T, ComplexType<T>>::value) {
-	auto seed = 10000 * i + 1;
-	dlaf::matrix::util::internal::getter_random<T> random_value(seed);
-	taui = random_value();
+        auto seed = 10000 * i + 1;
+        dlaf::matrix::util::internal::getter_random<T> random_value(seed);
+        taui = random_value();
       }
       else {
-	taui = static_cast<T>(0.0);
+        taui = static_cast<T>(0.0);
       }
       auto tau = (static_cast<T>(1.0) + sqrt(static_cast<T>(1.0) - dotprod * taui * taui)) / dotprod;
       taus({i, 0}) = tau;
       lapack::larf(lapack::Side::Left, m - i, n, mat_v_loc.ptr(v_offset), 1, tau,
-		   mat_c_loc.ptr(GlobalElementIndex{i, 0}), mat_c_loc.ld());
+                   mat_c_loc.ptr(GlobalElementIndex{i, 0}), mat_c_loc.ld());
     }
 
     for (SizeType i = mat_t.nrTiles().cols() - 1; i > -1; --i) {
@@ -151,21 +147,21 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
       auto tile_t = mat_t(LocalTileIndex{i, i}).get();
       auto numcol = tile_t.size().cols();
       lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise, mat_v.size().rows() - i * mb,
-		    numcol, mat_v_loc.ptr(offset), mat_v_loc.ld(), taus.ptr(tau_offset), tile_t.ptr(),
-		    tile_t.ld());
+                    numcol, mat_v_loc.ptr(offset), mat_v_loc.ld(), taus.ptr(tau_offset), tile_t.ptr(),
+                    tile_t.ld());
     }
-    
-    solver::backTransformation<Backend::MC>(mat_c, mat_v, mat_t);
-    
-    auto result = [& dist = mat_c.distribution(),
-		 &mat_local = mat_c_loc](const GlobalElementIndex& element) {
-    const auto tile_index = dist.globalTileIndex(element);
-    const auto tile_element = dist.tileElementIndex(element);
-    return mat_local.tile_read(tile_index)(tile_element);
-  };
 
-  double error = 0.01;
-  CHECK_MATRIX_NEAR(result, mat_c, error, error);
+    solver::backTransformation<Backend::MC>(mat_c, mat_v, mat_t);
+
+    auto result = [& dist = mat_c.distribution(),
+                   &mat_local = mat_c_loc](const GlobalElementIndex& element) {
+      const auto tile_index = dist.globalTileIndex(element);
+      const auto tile_element = dist.tileElementIndex(element);
+      return mat_local.tile_read(tile_index)(tile_element);
+    };
+
+    double error = 0.01;
+    CHECK_MATRIX_NEAR(result, mat_c, error, error);
   }
 }
 

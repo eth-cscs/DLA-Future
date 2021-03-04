@@ -81,26 +81,27 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
   const SizeType mb = mat_c.blockSize().rows();
   const SizeType nb = mat_c.blockSize().cols();
 
-  Matrix<T, Device::CPU> mat_vv({mat_v.size().rows(), nb}, mat_v.blockSize());
-  Matrix<T, Device::CPU> mat_w({mat_v.size().rows(), nb}, mat_v.blockSize());
+  Matrix<T, Device::CPU> mat_vv({mat_v.size().rows(), mb}, mat_v.blockSize());
+  Matrix<T, Device::CPU> mat_w({mat_v.size().rows(), mb}, mat_v.blockSize());
   Matrix<T, Device::CPU> mat_w2({mb, mat_c.size().cols()}, mat_c.blockSize());
 
-  SizeType last_nb;
+  SizeType last_mb;
+
   if (mat_v.blockSize().cols() == 1) {
-    last_nb = 1;
+    last_mb = 1;
   }
   else {
     if (mat_v.size().cols() % mat_v.blockSize().cols() == 0)
-      last_nb = mat_v.blockSize().cols();
+      last_mb = mat_v.blockSize().cols();
     else
-      last_nb = mat_v.size().cols() % mat_v.blockSize().cols();
+      last_mb = mat_v.size().cols() % mat_v.blockSize().cols();
   }
-  Matrix<T, Device::CPU> mat_vv_last({mat_v.size().rows(), last_nb},
-                                     {mat_v.blockSize().rows(), last_nb});
-  Matrix<T, Device::CPU> mat_w_last({mat_v.size().rows(), last_nb}, {mat_v.blockSize().rows(), last_nb});
-  Matrix<T, Device::CPU> mat_w2_last({last_nb, mat_c.size().cols()},
-                                     {last_nb, mat_c.blockSize().cols()});
-
+ 
+  Matrix<T, Device::CPU> mat_vv_last({mat_v.size().rows(), last_mb},
+                                     mat_v.blockSize());
+  Matrix<T, Device::CPU> mat_w_last({mat_v.size().rows(), last_mb}, mat_v.blockSize());
+  Matrix<T, Device::CPU> mat_w2_last({last_mb, mat_c.size().cols()}, mat_c.blockSize());
+  
   const SizeType reflectors = mat_v.size().cols() / mat_v.blockSize().cols() - 1;
 
   for (SizeType k = reflectors; k > -1; --k) {
@@ -125,7 +126,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
                       mat_vv(LocalTileIndex(i, 0)));
       }
 
-      // Fixing elements of VV and copying them into WH
+     // Fixing elements of VV and copying them into WH
       if (is_last == true) {
         auto tile_v = mat_vv_last(LocalTileIndex{i, 0}).get();
         if (i <= k) {
@@ -153,7 +154,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
                       mat_w(LocalTileIndex(i, 0)));
       }
     }
-
+    
     // Reset W2 to zero
     if (is_last == true) {
       matrix::util::set(mat_w2_last, [](auto&&) { return 0; });

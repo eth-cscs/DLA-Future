@@ -243,7 +243,7 @@ struct Panel : public Panel<axis, const T, device> {
   using TileT = Tile<T, device>;
   using ConstTileT = Tile<const T, device>;
 
-  Panel(matrix::Distribution distribution, LocalTileIndex start)
+  explicit Panel(matrix::Distribution distribution, LocalTileIndex start = {0, 0})
       : Panel<axis, const T, device>(std::move(distribution), std::move(start)) {}
 
   /// Access tile at specified index in readwrite mode

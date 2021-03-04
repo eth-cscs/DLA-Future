@@ -113,7 +113,7 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
   /// Set the panel to a new offset (with respect to the "parent" matrix)
   ///
   /// @pre offset cannot be less than the offset has been specifed on construction
-  void set_offset(LocalTileIndex offset) noexcept {
+  void set_offset(LocalTileIndex offset, bool reset_values = false) noexcept {
     DLAF_ASSERT(offset.get(component(axis)) >= bias_, offset, bias_);
 
     offset_ = offset.get(component(axis)) - bias_;
@@ -123,6 +123,10 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
                                    dist_matrix_.localNrTiles().get(component(axis)) - (offset_ + bias_),
                                    1);
     range_ = iterate_range2d(panel_start, panel_size);
+
+    // TODO It would be enough to set to zero just the part of matrix used (considering offset)
+    if (reset_values)
+      util::set(*(static_cast<Matrix<T, device>*>(this)), [](auto&&) { return 0; });
   }
 
   /// Reset the internal usage status of the panel.

@@ -61,13 +61,14 @@ void set_zero(Matrix<T, Device::CPU>& mat) {
   set(mat, [](auto&&) { return static_cast<T>(0.0); });
 }
 
-const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes =
-    {{3, 3, 1, 1},   {4, 4, 1, 1},   {4, 4, 2, 2},   {4, 2, 2, 2},   {4, 1, 2, 2},   {4, 1, 1, 1},
-     {6, 6, 3, 3},   {6, 3, 3, 3},   {6, 1, 3, 3},   {12, 2, 2, 2},  {12, 2, 3, 3},  {12, 2, 4, 4},
-     {12, 12, 2, 2}, {12, 12, 3, 3}, {12, 12, 4, 4}, {12, 24, 2, 2}, {12, 24, 3, 3}, {12, 24, 4, 4},
-     {24, 12, 4, 4}, {24, 12, 6, 6}, {24, 24, 4, 4}, {24, 24, 6, 6}, {24, 36, 4, 4}, {24, 36, 6, 6},
-     {3, 5, 2, 2},   {3, 7, 2, 2},   {5, 5, 2, 2},   {5, 5, 3, 3},   {5, 8, 3, 3},   {8, 5, 2, 2},
-     {13, 8, 3, 3},  {8, 27, 2, 2},  {5, 8, 3, 2},   {4, 6, 2, 3},   {5, 8, 3, 3}};
+const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
+  {3, 0, 1, 1}, {0, 5, 2, 3},    // m, n = 0
+  {2, 2, 3, 3}, {3, 4, 6, 7},    // m < mb
+  {3, 3, 1, 1}, {4, 4, 2, 2}, {6, 3, 3, 3},
+  {12, 2, 4, 4}, {12, 24, 3, 3}, {24, 36, 6, 6},
+  {5, 8, 3, 2}, {4, 6, 2, 3}, {5, 5, 2, 3},
+  {8, 27, 3, 4}, {15, 34, 4, 6}, 
+};
 
 template <class T>
 MatrixLocal<T> makeLocal(const Matrix<const T, Device::CPU>& matrix) {
@@ -76,6 +77,9 @@ MatrixLocal<T> makeLocal(const Matrix<const T, Device::CPU>& matrix) {
 
 template <class T>
 void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType nb) {
+  
+  comm::CommunicatorGrid comm_grid(MPI_COMM_WORLD, 1, 1, common::Ordering::ColumnMajor);
+
   LocalElementSize sizeC(m, n);
   TileElementSize blockSizeC(mb, nb);
   Matrix<T, Device::CPU> mat_c(sizeC, blockSizeC);

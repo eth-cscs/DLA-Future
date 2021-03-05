@@ -63,7 +63,8 @@ void collector(Communicator& communicator, MPI_Op reduce_op, const DataIn input,
 /// @param rank_root  the rank that will collect the result in output,
 /// @param reduce_op MPI_Op to perform on @p input data coming from ranks in @p communicator.
 template <class DataIn>
-void participant(IndexT_MPI rank_root, Communicator& communicator, MPI_Op reduce_op, const DataIn input) {
+void participant(IndexT_MPI rank_root, Communicator& communicator, MPI_Op reduce_op,
+                 const DataIn input) {
   using T = std::remove_const_t<typename common::data_traits<DataIn>::element_t>;
 
   // Buffers not allocated, just placeholders in case we need to allocate them
@@ -121,19 +122,19 @@ void reduce(Communicator& communicator, MPI_Op reduce_op, const DataInOut inout)
     return;
   }
 
-  // Buffers not allocated, just placeholders in case we need to allocate them
+  // Buffer not allocated, just a placeholder in case we need to allocate it
   common::Buffer<T> buffer_inout;
 
   auto message_inout = comm::make_message(make_contiguous(inout, buffer_inout));
 
-  // if the input buffer has been used, initialize it with input values
+  // if the buffer has been used, initialize it with input values
   if (buffer_inout)
     common::copy(inout, buffer_inout);
 
   DLAF_MPI_CALL(MPI_Reduce(MPI_IN_PLACE, message_inout.data(), message_inout.count(),
                            message_inout.mpi_type(), reduce_op, communicator.rank(), communicator));
 
-  // if the output buffer has been used, copy-back output values
+  // if the buffer has been used, copy-back output values
   if (buffer_inout)
     common::copy(buffer_inout, inout);
 }

@@ -17,7 +17,6 @@
 #include "dlaf/common/data_descriptor.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/message.h"
-#include "dlaf/communication/sync/broadcast.h"
 #include "dlaf/communication/sync/reduce.h"
 
 namespace dlaf {

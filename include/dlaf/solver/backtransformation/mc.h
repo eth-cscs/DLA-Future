@@ -113,7 +113,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
 
     // Copy V panel into VV
     for (SizeType i = 0; i < mat_v.nrTiles().rows(); ++i) {
-      if (is_last == true) {
+      if (is_last) {
         TileElementSize region = mat_vv_last.read(LocalTileIndex(i, 0)).get().size();
         TileElementIndex idx_in(0, 0);
         TileElementIndex idx_out(0, 0);
@@ -126,7 +126,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
       }
 
       // Fixing elements of VV and copying them into WH
-      if (is_last == true) {
+      if (is_last) {
         auto tile_v = mat_vv_last(LocalTileIndex{i, 0}).get();
         if (i <= k) {
           lapack::laset(lapack::MatrixType::General, tile_v.size().rows(), tile_v.size().cols(), 0, 0,
@@ -155,7 +155,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
     }
 
     // Reset W2 to zero
-    if (is_last == true) {
+    if (is_last) {
       matrix::util::set(mat_w2_last, [](auto&&) { return 0; });
     }
     else {
@@ -166,7 +166,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
       // WH = V T
       auto ik = LocalTileIndex{i, 0};
       auto kk = LocalTileIndex{k, k};
-      if (is_last == true) {
+      if (is_last) {
         hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper,
                       ConjTrans, NonUnit, 1.0, mat_t.read(kk), std::move(mat_w_last(ik)));
       }
@@ -182,7 +182,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
         auto ik = LocalTileIndex{i, 0};
         auto ij = LocalTileIndex{i, j};
         // W2 = W C
-        if (is_last == true) {
+        if (is_last) {
           hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), ConjTrans,
                         NoTrans, 1.0, std::move(mat_w_last(ik)), mat_c.read(ij), 1.0,
                         std::move(mat_w2_last(kj)));
@@ -200,7 +200,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
         auto kj = LocalTileIndex{0, j};
         auto ij = LocalTileIndex{i, j};
         // C = C - V W2
-        if (is_last == true) {
+        if (is_last) {
           hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans,
                         NoTrans, -1.0, mat_vv_last.read(ik), mat_w2_last.read(kj), 1.0,
                         std::move(mat_c(ij)));

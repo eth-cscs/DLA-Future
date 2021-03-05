@@ -163,7 +163,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
   }
 }
 
-TYPED_TEST(BackTransformationSolverLocalTest, Correctness_random) {
+TYPED_TEST(BackTransformationSolverLocalTest, Correctness) {
   SizeType m, n, mb, nb;
 
   for (auto sz : sizes) {

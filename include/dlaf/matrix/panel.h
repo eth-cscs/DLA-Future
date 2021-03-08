@@ -113,7 +113,7 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
   /// Set the panel to a new offset (with respect to the "parent" matrix)
   ///
   /// @pre offset cannot be less than the offset has been specifed on construction
-  void set_offset(LocalTileIndex offset, bool reset_values = false) noexcept {
+  void set_offset(LocalTileSize offset, bool reset_values = false) noexcept {
     DLAF_ASSERT(offset.get(component(axis)) >= bias_, offset, bias_);
 
     offset_ = offset.get(component(axis)) - bias_;
@@ -144,7 +144,7 @@ protected:
   using iter2d_t = decltype(iterate_range2d(LocalTileSize{0, 0}));
 
   static LocalElementSize compute_panel_size(LocalElementSize size, TileElementSize blocksize,
-                                             LocalTileIndex start) {
+                                             LocalTileSize start) {
     const auto mb = blocksize.rows();
     const auto nb = blocksize.cols();
 
@@ -163,7 +163,7 @@ protected:
   ///
   /// It allocates just the memory needed for the part of matrix used, so
   /// starting from @p start
-  static Matrix<T, device> setup_matrix(const Distribution& dist_matrix, const LocalTileIndex start) {
+  static Matrix<T, device> setup_matrix(const Distribution& dist_matrix, const LocalTileSize start) {
     const auto panel_size = compute_panel_size(dist_matrix.localSize(), dist_matrix.blockSize(), start);
 
     Distribution dist{panel_size, dist_matrix.blockSize()};
@@ -180,7 +180,7 @@ protected:
   /// e.g. a 4x5 matrix with an offset 2x1 will have either:
   /// - a Panel<Col> 2x1
   /// - or a Panel<Row> 4x1
-  Panel(matrix::Distribution dist_matrix, LocalTileIndex offset)
+  Panel(matrix::Distribution dist_matrix, LocalTileSize offset)
       : BaseT(setup_matrix(dist_matrix, offset)), dist_matrix_(dist_matrix),
         bias_(offset.get(component(axis))), range_(iterate_range2d(LocalTileSize{0, 0})) {
     DLAF_ASSERT_HEAVY(BaseT::nrTiles().get(axis) == 1, BaseT::nrTiles());
@@ -243,7 +243,7 @@ struct Panel : public Panel<axis, const T, device> {
   using TileT = Tile<T, device>;
   using ConstTileT = Tile<const T, device>;
 
-  explicit Panel(matrix::Distribution distribution, LocalTileIndex start = {0, 0})
+  explicit Panel(matrix::Distribution distribution, LocalTileSize start = {0, 0})
       : Panel<axis, const T, device>(std::move(distribution), std::move(start)) {}
 
   /// Access tile at specified index in readwrite mode

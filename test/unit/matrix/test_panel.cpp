@@ -111,10 +111,10 @@ TYPED_TEST(PanelTest, IteratorCol) {
       const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
 
       // setup the panel
-      const LocalTileIndex at_offset(dist.template nextLocalTileFromGlobalTile<Coord::Row>(
-                                         cfg.offset.row()),
-                                     dist.template nextLocalTileFromGlobalTile<Coord::Col>(
-                                         cfg.offset.col()));
+      const LocalTileSize at_offset(dist.template nextLocalTileFromGlobalTile<Coord::Row>(
+                                        cfg.offset.row()),
+                                    dist.template nextLocalTileFromGlobalTile<Coord::Col>(
+                                        cfg.offset.col()));
 
       Panel<Coord::Col, TypeParam, dlaf::Device::CPU> ws_v(dist, at_offset);
 
@@ -122,7 +122,7 @@ TYPED_TEST(PanelTest, IteratorCol) {
 
       std::vector<LocalTileIndex> exp_indices;
       exp_indices.reserve(static_cast<size_t>(exp_nrTiles));
-      for (auto index = at_offset.row(); index < exp_nrTiles; ++index) {
+      for (auto index = at_offset.rows(); index < exp_nrTiles; ++index) {
         exp_indices.emplace_back(index, 0);
       }
 
@@ -148,10 +148,10 @@ TYPED_TEST(PanelTest, IteratorRow) {
       const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
 
       // setup the panel
-      const LocalTileIndex at_offset(dist.template nextLocalTileFromGlobalTile<Coord::Row>(
-                                         cfg.offset.row()),
-                                     dist.template nextLocalTileFromGlobalTile<Coord::Col>(
-                                         cfg.offset.col()));
+      const LocalTileSize at_offset(dist.template nextLocalTileFromGlobalTile<Coord::Row>(
+                                        cfg.offset.row()),
+                                    dist.template nextLocalTileFromGlobalTile<Coord::Col>(
+                                        cfg.offset.col()));
 
       Panel<Coord::Row, TypeParam, dlaf::Device::CPU> ws_h(dist, at_offset);
 
@@ -159,7 +159,7 @@ TYPED_TEST(PanelTest, IteratorRow) {
 
       std::vector<LocalTileIndex> exp_indices;
       exp_indices.reserve(static_cast<size_t>(exp_nrTiles));
-      for (auto index = at_offset.col(); index < exp_nrTiles; ++index) {
+      for (auto index = at_offset.cols(); index < exp_nrTiles; ++index) {
         exp_indices.emplace_back(0, index);
       }
 
@@ -186,10 +186,10 @@ TYPED_TEST(PanelTest, AccessCol) {
       const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
 
       // setup the panel
-      const LocalTileIndex at_offset(dist.template nextLocalTileFromGlobalTile<Coord::Row>(
-                                         cfg.offset.row()),
-                                     dist.template nextLocalTileFromGlobalTile<Coord::Col>(
-                                         cfg.offset.col()));
+      const LocalTileSize at_offset(dist.template nextLocalTileFromGlobalTile<Coord::Row>(
+                                        cfg.offset.row()),
+                                    dist.template nextLocalTileFromGlobalTile<Coord::Col>(
+                                        cfg.offset.col()));
 
       Panel<Coord::Col, TypeParam, dlaf::Device::CPU> ws_v(dist, at_offset);
 
@@ -220,10 +220,10 @@ TYPED_TEST(PanelTest, AccessRow) {
       const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
 
       // setup the panel
-      const LocalTileIndex at_offset(dist.template nextLocalTileFromGlobalTile<Coord::Row>(
-                                         cfg.offset.row()),
-                                     dist.template nextLocalTileFromGlobalTile<Coord::Col>(
-                                         cfg.offset.col()));
+      const LocalTileSize at_offset(dist.template nextLocalTileFromGlobalTile<Coord::Row>(
+                                        cfg.offset.row()),
+                                    dist.template nextLocalTileFromGlobalTile<Coord::Col>(
+                                        cfg.offset.col()));
 
       Panel<Coord::Row, TypeParam, dlaf::Device::CPU> ws_h(dist, at_offset);
 
@@ -257,7 +257,7 @@ TYPED_TEST(PanelTest, ExternalTilesCol) {
       matrix::test::set(matrix, [](const auto& index) { return TypeUtil::element(index.row(), 26); });
 
       // setup the panel
-      const LocalTileIndex at_offset{
+      const LocalTileSize at_offset{
           dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
           dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
       };
@@ -323,7 +323,7 @@ TYPED_TEST(PanelTest, ExternalTilesRow) {
       matrix::test::set(matrix, [](const auto& index) { return TypeUtil::element(index.row(), 26); });
 
       // setup the panel
-      const LocalTileIndex at_offset{
+      const LocalTileSize at_offset{
           dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
           dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
       };
@@ -387,17 +387,17 @@ TYPED_TEST(PanelTest, OffsetCol) {
       const auto& dist = matrix.distribution();
 
       // setup the panel
-      const LocalTileIndex at_offset{
+      const LocalTileSize at_offset{
           dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
           dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
       };
 
       Panel<Coord::Col, TypeParam, dlaf::Device::CPU> ws_v(dist, at_offset);
 
-      for (SizeType i = at_offset.row(); i < matrix.distribution().localNrTiles().rows(); ++i)
+      for (SizeType i = at_offset.rows(); i < matrix.distribution().localNrTiles().rows(); ++i)
         ws_v({i, 0}).get()({0, 0}) = i;
 
-      for (SizeType i = at_offset.row(); i < matrix.distribution().localNrTiles().rows(); ++i) {
+      for (SizeType i = at_offset.rows(); i < matrix.distribution().localNrTiles().rows(); ++i) {
         ws_v.set_offset({i, 0});
 
         for (SizeType k = i; k < matrix.distribution().localNrTiles().rows(); ++k) {
@@ -430,17 +430,17 @@ TYPED_TEST(PanelTest, OffsetRow) {
       const auto& dist = matrix.distribution();
 
       // setup the panel
-      const LocalTileIndex at_offset{
+      const LocalTileSize at_offset{
           dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
           dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
       };
 
       Panel<Coord::Row, TypeParam, dlaf::Device::CPU> ws_h(dist, at_offset);
 
-      for (SizeType j = at_offset.col(); j < matrix.distribution().localNrTiles().cols(); ++j)
+      for (SizeType j = at_offset.cols(); j < matrix.distribution().localNrTiles().cols(); ++j)
         ws_h({0, j}).get()({0, 0}) = j;
 
-      for (SizeType j = at_offset.col(); j < matrix.distribution().localNrTiles().cols(); ++j) {
+      for (SizeType j = at_offset.cols(); j < matrix.distribution().localNrTiles().cols(); ++j) {
         ws_h.set_offset({0, j});
 
         for (SizeType k = j; k < matrix.distribution().localNrTiles().cols(); ++k) {
@@ -480,7 +480,7 @@ TYPED_TEST(PanelTest, BroadcastCol) {
       matrix::test::set(matrix, [](const auto& index) { return TypeUtil::element(index.row(), 26); });
 
       // setup the panel
-      const LocalTileIndex at_offset{
+      const LocalTileSize at_offset{
           dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
           dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
       };
@@ -540,7 +540,7 @@ TYPED_TEST(PanelTest, BroadcastRow) {
       matrix::test::set(matrix, [](const auto& index) { return TypeUtil::element(index.row(), 26); });
 
       // setup the panel
-      const LocalTileIndex at_offset{
+      const LocalTileSize at_offset{
           dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
           dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
       };
@@ -606,7 +606,7 @@ TYPED_TEST(PanelTest, BroadcastCol2Row) {
       const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
       const auto rank_col = dist.rankIndex().col();
 
-      const LocalTileIndex at_offset{
+      const LocalTileSize at_offset{
           dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
           dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
       };
@@ -657,7 +657,7 @@ TYPED_TEST(PanelTest, BroadcastRow2Col) {
       const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
       const auto rank_row = dist.rankIndex().row();
 
-      const LocalTileIndex at_offset{
+      const LocalTileSize at_offset{
           dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
           dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
       };

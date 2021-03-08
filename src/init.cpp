@@ -106,7 +106,7 @@ void Init<Backend::GPU>::finalize() {
 
 template <typename T>
 void updateConfigurationValue(hpx::program_options::variables_map const& vm, T& var,
-                              std::string const& cmdline_option, std::string const& env_var);
+                              std::string const& env_var, std::string const& cmdline_option);
 
 template <>
 void updateConfigurationValue(hpx::program_options::variables_map const& vm, std::size_t& var,

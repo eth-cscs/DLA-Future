@@ -34,6 +34,8 @@ void all_reduce(Communicator& communicator, MPI_Op reduce_operation, const DataI
 
   using T = std::remove_const_t<typename common::data_traits<DataIn>::element_t>;
 
+  DLAF_ASSERT_MODERATE(input != output, "input and output should not equal (use in-pace)");
+
   // Wayout for single rank communicator, just copy data
   if (communicator.size() == 1) {
     common::copy(input, output);

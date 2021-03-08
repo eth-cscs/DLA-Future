@@ -30,7 +30,7 @@ template <class DataIn, class DataOut>
 void reduce(Communicator& communicator, MPI_Op reduce_op, const DataIn input, const DataOut output) {
   using T = std::remove_const_t<typename common::data_traits<DataIn>::element_t>;
 
-  DLAF_ASSERT_MODERATE(input != output, "input and output should not equal");
+  DLAF_ASSERT_MODERATE(input != output, "input and output should not equal (use in-place)");
 
   // Wayout for single rank communicator, just copy data
   if (communicator.size() == 1) {

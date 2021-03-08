@@ -42,9 +42,13 @@
 #include <gtest/gtest.h>
 #include <hpx/init.hpp>
 
-GTEST_API_ int test_main(int, char**) {
+#include <dlaf/init.h>
+
+GTEST_API_ int test_main(int argc, char** argv) {
   std::printf("Running main() from gtest_hpx_main.cpp\n");
+  dlaf::initialize(argc, argv);
   auto ret = RUN_ALL_TESTS();
+  dlaf::finalize();
   hpx::finalize();
   return ret;
 }

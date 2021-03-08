@@ -18,6 +18,7 @@
 #include "dlaf/communication/error.h"
 #include "dlaf/communication/init.h"
 #include "dlaf/factorization/cholesky.h"
+#include "dlaf/init.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
@@ -74,6 +75,8 @@ options_t check_options(hpx::program_options::variables_map& vm);
 }
 
 int hpx_main(hpx::program_options::variables_map& vm) {
+  dlaf::initialize(vm);
+
   options_t opts = check_options(vm);
 
   Communicator world(MPI_COMM_WORLD);
@@ -146,6 +149,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       check_cholesky(original, matrix, comm_grid);
     }
   }
+
+  dlaf::finalize();
 
   return hpx::finalize();
 }

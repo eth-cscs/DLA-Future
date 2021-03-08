@@ -57,7 +57,7 @@ struct GetCopyExecutor<Device::GPU, Device::GPU> {
 #endif
 }
 
-/// Returns an MPI executor approprate for use with the given backend.
+/// Returns an MPI executor appropriate for use with the given backend.
 ///
 /// @tparam B backend with which the executor should be used.
 template <Backend B>
@@ -67,7 +67,7 @@ auto getMPIExecutor() {
                                            hpx::threads::thread_priority::high};
 }
 
-/// Returns a normal priority executor approprate for use with the given
+/// Returns a normal priority executor appropriate for use with the given
 /// backend.
 ///
 /// @tparam B backend with which the executor should be used.
@@ -84,7 +84,7 @@ inline auto getNpExecutor<Backend::GPU>() {
 }
 #endif
 
-/// Returns a high priority executor approprate for use with the given
+/// Returns a high priority executor appropriate for use with the given
 /// backend.
 ///
 /// @tparam B backend with which the executor should be used.

@@ -13,6 +13,7 @@
 /// @file
 
 #include <mpi.h>
+
 #include "dlaf/common/assert.h"
 #include "dlaf/common/data_descriptor.h"
 #include "dlaf/communication/communicator.h"
@@ -60,6 +61,36 @@ void all_reduce(Communicator& communicator, MPI_Op reduce_operation, const DataI
     common::copy(buffer_out, output);
 }
 
+/// MPI_AllReduce wrapper (in-place)
+///
+/// MPI AllReduce(see MPI documentation for additional info).
+/// @param reduce_operation MPI_Op to perform on @p input data coming from ranks in @p communicator,
+template <class DataInOut>
+void all_reduce(Communicator& communicator, MPI_Op reduce_operation, const DataInOut inout) {
+  using common::make_contiguous;
+
+  using T = std::remove_const_t<typename common::data_traits<DataInOut>::element_t>;
+
+  // Wayout for single rank communicator, just copy data
+  if (communicator.size() == 1)
+    return;
+
+  // Buffers not allocated, just placeholders in case we need to allocate them
+  common::Buffer<T> buffer_inout;
+
+  auto message_inout = comm::make_message(make_contiguous(inout, buffer_inout));
+
+  // if the input buffer has been used, initialize it with input values
+  if (buffer_inout)
+    common::copy(inout, buffer_inout);
+
+  DLAF_MPI_CALL(MPI_Allreduce(MPI_IN_PLACE, message_inout.data(), message_inout.count(),
+                              message_inout.mpi_type(), reduce_operation, communicator));
+
+  // if the output buffer has been used, copy-back output values
+  if (buffer_inout)
+    common::copy(buffer_inout, inout);
+}
 }
 }
 }

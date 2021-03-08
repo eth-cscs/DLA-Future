@@ -123,12 +123,12 @@ void reduce(IndexT_MPI rank_root, Communicator& communicator, MPI_Op reduce_op, 
 /// MPI Reduce(see MPI documentation for additional info).
 /// @param rank_root the rank that will collect the result in output,
 /// @param reduce_op MPI_Op to perform on @p input data coming from ranks in @p communicator,
-/// @pre @p rank_root < @p communicator.size(),
+/// @pre @p 0 <= rank_root < @p communicator.size(),
 /// @pre @p rank_root != MPI_UNDEFINED.
 template <class DataIn, class DataOut>
 void reduce(const IndexT_MPI rank_root, Communicator& communicator, MPI_Op reduce_op, const DataIn input,
             const DataOut output) {
-  DLAF_ASSERT(rank_root < communicator.size() && rank_root != MPI_UNDEFINED, rank_root,
+  DLAF_ASSERT(0 <= rank_root && rank_root < communicator.size() && rank_root != MPI_UNDEFINED, rank_root,
               communicator.size());
 
   if (rank_root == communicator.rank())

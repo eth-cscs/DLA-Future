@@ -168,11 +168,14 @@ class Executor {
   };
 
 public:
+  // TODO: REMOVE! THIS IS ONLY FOR DEBUGGING
+  std::string msg;
+
   // Notes:
   //   - MPI event polling has to be enabled for `MPIMech::Polling`.
   Executor(const std::string& pool, Communicator comm)
       : comm_(std::move(comm)),
-        tc_ptr(std::shared_ptr<TaskChain>(new TaskChain(), task_chain_deleter())) {
+        tc_ptr(std::shared_ptr<TaskChain>(new TaskChain(), task_chain_deleter())), msg("") {
     detail::init_parallel_executor_with_hint(pool, mgr_, ex_);
   }
 
@@ -198,7 +201,7 @@ public:
     hpx::lcos::local::promise<void> promise_next;
     tc_ptr->chain(before_last, promise_next);
 
-    auto fn = [p = std::move(promise_next), comm = comm_, f = std::forward<F>(f),
+    auto fn = [msg = msg, p = std::move(promise_next), comm = comm_, f = std::forward<F>(f),
                args = hpx::make_tuple(std::forward<Ts>(ts)...)](hpx::future<void>) mutable {
       MPI_Request req;
       auto all_args =
@@ -207,6 +210,7 @@ public:
       detail::invoke_fused_wrapper<result_t> wrapper(std::move(f), std::move(all_args));
       p.set_value();
       detail::request_handler<M>::call(req);
+      std::cout << "ASYNC : " << msg << std::endl;
       return wrapper.async_return();
     };
     return before_last.then(ex_, std::move(fn));
@@ -222,7 +226,7 @@ public:
     using FramePtr =
         hpx::intrusive_ptr<typename std::remove_pointer<typename std::decay<Frame>::type>::type>;
     FramePtr frame_p(std::forward<Frame>(frame));
-    auto fn = [frame_p = std::move(frame_p), p = std::move(promise_next), comm = comm_,
+    auto fn = [msg = msg, frame_p = std::move(frame_p), p = std::move(promise_next), comm = comm_,
                f = std::forward<F>(f), args = std::forward<TupleArgs>(args)](hpx::future<void>) mutable {
       MPI_Request req;
       auto all_args =
@@ -231,6 +235,7 @@ public:
       detail::invoke_fused_wrapper<result_t> wrapper(std::move(f), std::move(all_args));
       p.set_value();
       detail::request_handler<M>::call(req);
+      std::cout << "DATAFLOW : " << msg << std::endl;
       frame_p->set_data(wrapper.dataflow_return());
     };
     before_last.then(ex_, std::move(fn));

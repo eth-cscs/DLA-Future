@@ -90,6 +90,7 @@ GTEST_API_ int main(int argc, char** argv) {
 
   // Initialize HPX
   auto ret = hpx::init(test_main, argc, argv, p);
+  // auto ret = hpx::init(test_main, argc, argv);
 
   MPI_Finalize();
 

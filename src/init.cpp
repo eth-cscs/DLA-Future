@@ -16,12 +16,13 @@
 #include <dlaf/cuda/executor.h>
 #endif
 
+#include <cstdlib>
 #include <memory>
 
 namespace dlaf {
 std::ostream& operator<<(std::ostream& os, configuration const& cfg) {
-  os << "num_np_cuda_streams_per_thread = " << cfg.num_np_cuda_streams_per_thread << std::endl;
-  os << "num_hp_cuda_streams_per_thread = " << cfg.num_hp_cuda_streams_per_thread;
+  os << "  num_np_cuda_streams_per_thread = " << cfg.num_np_cuda_streams_per_thread << std::endl;
+  os << "  num_hp_cuda_streams_per_thread = " << cfg.num_hp_cuda_streams_per_thread;
 
   return os;
 }
@@ -150,7 +151,9 @@ hpx::program_options::options_description getOptionsDescription() {
 }
 
 void initialize(hpx::program_options::variables_map const& vm, configuration const& user_cfg) {
+  bool should_exit = false;
   if (vm.count("dlaf:help") > 0) {
+    should_exit = true;
     std::cout << getOptionsDescription() << std::endl;
   }
 
@@ -159,7 +162,13 @@ void initialize(hpx::program_options::variables_map const& vm, configuration con
   internal::getConfiguration() = cfg;
 
   if (vm.count("dlaf:print-config") > 0) {
+    std::cout << "DLA-Future configuration options:" << std::endl;
     std::cout << cfg << std::endl;
+    std::cout << std::endl;
+  }
+
+  if (should_exit) {
+    std::exit(0);
   }
 
   DLAF_ASSERT(!internal::initialized(), "");

@@ -174,6 +174,8 @@ int main(int argc, char** argv) {
   ;
   // clang-format on
 
+  desc_commandline.add(dlaf::getOptionsDescription());
+
   hpx::init_params p;
   p.desc_cmdline = desc_commandline;
   p.rp_callback = [](auto& rp, auto) {

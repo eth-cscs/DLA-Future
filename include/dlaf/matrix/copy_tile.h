@@ -18,6 +18,7 @@
 #include "dlaf/cuda/error.h"
 #endif
 
+#include "dlaf/common/callable_object.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/tile.h"
 
@@ -46,6 +47,16 @@ struct CopyTile<T, Device::CPU, Device::GPU> {
     DLAF_CUDA_CALL(cudaMemcpy2D(destination.ptr(), destination.ld() * sizeof(T), source.ptr(),
                                 source.ld() * sizeof(T), m * sizeof(T), n, cudaMemcpyDefault));
   }
+
+  static void call(const matrix::Tile<const T, Device::CPU>& source,
+                   const matrix::Tile<T, Device::GPU>& destination, cudaStream_t stream) {
+    SizeType m = source.size().rows();
+    SizeType n = source.size().cols();
+
+    DLAF_CUDA_CALL(cudaMemcpy2DAsync(destination.ptr(), destination.ld() * sizeof(T), source.ptr(),
+                                     source.ld() * sizeof(T), m * sizeof(T), n, cudaMemcpyDefault,
+                                     stream));
+  }
 };
 
 template <typename T>
@@ -57,6 +68,16 @@ struct CopyTile<T, Device::GPU, Device::CPU> {
 
     DLAF_CUDA_CALL(cudaMemcpy2D(destination.ptr(), destination.ld() * sizeof(T), source.ptr(),
                                 source.ld() * sizeof(T), m * sizeof(T), n, cudaMemcpyDefault));
+  }
+
+  static void call(const matrix::Tile<const T, Device::GPU>& source,
+                   const matrix::Tile<T, Device::CPU>& destination, cudaStream_t stream) {
+    SizeType m = source.size().rows();
+    SizeType n = source.size().cols();
+
+    DLAF_CUDA_CALL(cudaMemcpy2DAsync(destination.ptr(), destination.ld() * sizeof(T), source.ptr(),
+                                     source.ld() * sizeof(T), m * sizeof(T), n, cudaMemcpyDefault,
+                                     stream));
   }
 };
 
@@ -70,17 +91,24 @@ struct CopyTile<T, Device::GPU, Device::GPU> {
     DLAF_CUDA_CALL(cudaMemcpy2D(destination.ptr(), destination.ld() * sizeof(T), source.ptr(),
                                 source.ld() * sizeof(T), m * sizeof(T), n, cudaMemcpyDefault));
   }
+
+  static void call(const matrix::Tile<const T, Device::GPU>& source,
+                   const matrix::Tile<T, Device::GPU>& destination, cudaStream_t stream) {
+    SizeType m = source.size().rows();
+    SizeType n = source.size().cols();
+
+    DLAF_CUDA_CALL(cudaMemcpy2DAsync(destination.ptr(), destination.ld() * sizeof(T), source.ptr(),
+                                     source.ld() * sizeof(T), m * sizeof(T), n, cudaMemcpyDefault,
+                                     stream));
+  }
 };
 #endif
 }
 
-template <typename T, Device Source, Device Destination>
-void copy(const Tile<const T, Source>& source, const Tile<T, Destination>& destination) {
-  DLAF_ASSERT_HEAVY(source.size().rows() == destination.size().rows(),
-                    "number of rows in source and destination tiles must be equal for tile copy");
-  DLAF_ASSERT_HEAVY(source.size().cols() == destination.size().cols(),
-                    "number of columns in source and destination tiles must be equal for tile copy");
-  internal::CopyTile<T, Source, Destination>::call(source, destination);
+template <typename T, Device Source, Device Destination, typename... Ts>
+void copy(const Tile<const T, Source>& source, const Tile<T, Destination>& destination, Ts&&... ts) {
+  DLAF_ASSERT_HEAVY(source.size() == destination.size(), source.size(), destination.size());
+  internal::CopyTile<T, Source, Destination>::call(source, destination, std::forward<Ts>(ts)...);
 }
 
 template <class T>
@@ -89,5 +117,6 @@ void copy(TileElementSize region, TileElementIndex in_idx, const matrix::Tile<co
   dlaf::tile::lacpy<T>(region, in_idx, in, out_idx, out);
 }
 
+DLAF_MAKE_CALLABLE_OBJECT(copy);
 }
 }

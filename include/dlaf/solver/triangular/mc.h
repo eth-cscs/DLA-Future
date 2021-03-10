@@ -21,6 +21,7 @@
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/functions_sync.h"
+#include "dlaf/executors.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/matrix.h"
@@ -77,12 +78,8 @@ template <class T>
 void Triangular<Backend::MC, Device::CPU, T>::call_LLN(blas::Diag diag, T alpha,
                                                        Matrix<const T, Device::CPU>& mat_a,
                                                        Matrix<T, Device::CPU>& mat_b) {
-  using hpx::execution::parallel_executor;
-  using hpx::resource::get_thread_pool;
-  using hpx::threads::thread_priority;
-
-  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
-  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
+  auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
+  auto executor_np = dlaf::getNpExecutor<Backend::MC>();
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -96,7 +93,7 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLN(blas::Diag diag, T alpha,
 
       for (SizeType i = k + 1; i < m; ++i) {
         // Choose queue priority
-        auto trailing_executor = (i == k + 1) ? executor_hp : executor_normal;
+        auto& trailing_executor = (i == k + 1) ? executor_hp : executor_np;
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
         lln::gemm_trailing_matrix_tile(trailing_executor, beta, mat_a.read(LocalTileIndex{i, k}),
@@ -114,12 +111,8 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLT(blas::Op op, blas::Diag d
   constexpr auto Lower = blas::Uplo::Lower;
   constexpr auto NoTrans = blas::Op::NoTrans;
 
-  using hpx::execution::parallel_executor;
-  using hpx::resource::get_thread_pool;
-  using hpx::threads::thread_priority;
-
-  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
-  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
+  auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
+  auto executor_np = dlaf::getNpExecutor<Backend::MC>();
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -133,7 +126,7 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLT(blas::Op op, blas::Diag d
 
       for (SizeType i = k - 1; i > -1; --i) {
         // Choose queue priority
-        auto trailing_executor = (i == k - 1) ? executor_hp : executor_normal;
+        auto& trailing_executor = (i == k - 1) ? executor_hp : executor_np;
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
@@ -153,12 +146,8 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LUN(blas::Diag diag, T alpha,
   constexpr auto Upper = blas::Uplo::Upper;
   constexpr auto NoTrans = blas::Op::NoTrans;
 
-  using hpx::execution::parallel_executor;
-  using hpx::resource::get_thread_pool;
-  using hpx::threads::thread_priority;
-
-  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
-  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
+  auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
+  auto executor_np = dlaf::getNpExecutor<Backend::MC>();
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -172,7 +161,7 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LUN(blas::Diag diag, T alpha,
 
       for (SizeType i = k - 1; i > -1; --i) {
         // Choose queue priority
-        auto trailing_executor = (i == k - 1) ? executor_hp : executor_normal;
+        auto& trailing_executor = (i == k - 1) ? executor_hp : executor_np;
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
@@ -192,12 +181,8 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LUT(blas::Op op, blas::Diag d
   constexpr auto Upper = blas::Uplo::Upper;
   constexpr auto NoTrans = blas::Op::NoTrans;
 
-  using hpx::execution::parallel_executor;
-  using hpx::resource::get_thread_pool;
-  using hpx::threads::thread_priority;
-
-  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
-  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
+  auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
+  auto executor_np = dlaf::getNpExecutor<Backend::MC>();
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -212,7 +197,7 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LUT(blas::Op op, blas::Diag d
 
       for (SizeType i = k + 1; i < m; ++i) {
         // Choose queue priority
-        auto trailing_executor = (i == k + 1) ? executor_hp : executor_normal;
+        auto& trailing_executor = (i == k + 1) ? executor_hp : executor_np;
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
@@ -232,12 +217,8 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RLN(blas::Diag diag, T alpha,
   constexpr auto Lower = blas::Uplo::Lower;
   constexpr auto NoTrans = blas::Op::NoTrans;
 
-  using hpx::execution::parallel_executor;
-  using hpx::resource::get_thread_pool;
-  using hpx::threads::thread_priority;
-
-  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
-  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
+  auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
+  auto executor_np = dlaf::getNpExecutor<Backend::MC>();
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -252,7 +233,7 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RLN(blas::Diag diag, T alpha,
 
       for (SizeType j = k - 1; j > -1; --j) {
         // Choose queue priority
-        auto trailing_executor = (j == k - 1) ? executor_hp : executor_normal;
+        auto& trailing_executor = (j == k - 1) ? executor_hp : executor_np;
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
@@ -272,12 +253,8 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RLT(blas::Op op, blas::Diag d
   constexpr auto Lower = blas::Uplo::Lower;
   constexpr auto NoTrans = blas::Op::NoTrans;
 
-  using hpx::execution::parallel_executor;
-  using hpx::resource::get_thread_pool;
-  using hpx::threads::thread_priority;
-
-  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
-  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
+  auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
+  auto executor_np = dlaf::getNpExecutor<Backend::MC>();
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -292,7 +269,7 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RLT(blas::Op op, blas::Diag d
 
       for (SizeType j = k + 1; j < n; ++j) {
         // Choose queue priority
-        auto trailing_executor = (j == k + 1) ? executor_hp : executor_normal;
+        auto& trailing_executor = (j == k + 1) ? executor_hp : executor_np;
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
@@ -312,12 +289,8 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RUN(blas::Diag diag, T alpha,
   constexpr auto Upper = blas::Uplo::Upper;
   constexpr auto NoTrans = blas::Op::NoTrans;
 
-  using hpx::execution::parallel_executor;
-  using hpx::resource::get_thread_pool;
-  using hpx::threads::thread_priority;
-
-  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
-  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
+  auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
+  auto executor_np = dlaf::getNpExecutor<Backend::MC>();
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -332,7 +305,7 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RUN(blas::Diag diag, T alpha,
 
       for (SizeType j = k + 1; j < n; ++j) {
         // Choose queue priority
-        auto trailing_executor = (j == k + 1) ? executor_hp : executor_normal;
+        auto& trailing_executor = (j == k + 1) ? executor_hp : executor_np;
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
@@ -352,12 +325,8 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RUT(blas::Op op, blas::Diag d
   constexpr auto Upper = blas::Uplo::Upper;
   constexpr auto NoTrans = blas::Op::NoTrans;
 
-  using hpx::execution::parallel_executor;
-  using hpx::resource::get_thread_pool;
-  using hpx::threads::thread_priority;
-
-  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
-  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
+  auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
+  auto executor_np = dlaf::getNpExecutor<Backend::MC>();
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -372,7 +341,7 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RUT(blas::Op op, blas::Diag d
 
       for (SizeType j = k - 1; j > -1; --j) {
         // Choose queue priority
-        auto trailing_executor = (j == k - 1) ? executor_hp : executor_normal;
+        auto& trailing_executor = (j == k - 1) ? executor_hp : executor_np;
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
@@ -388,20 +357,13 @@ template <class T>
 void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid grid, blas::Diag diag,
                                                        T alpha, Matrix<const T, Device::CPU>& mat_a,
                                                        Matrix<T, Device::CPU>& mat_b) {
-  using hpx::execution::parallel_executor;
-  using hpx::resource::get_thread_pool;
-  using hpx::resource::pool_exists;
-  using hpx::threads::thread_priority;
   using common::internal::vector;
   using ConstTileType = typename Matrix<T, Device::CPU>::ConstTileType;
 
-  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
-  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
+  auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
+  auto executor_np = dlaf::getNpExecutor<Backend::MC>();
+  auto executor_mpi = dlaf::getMPIExecutor<Backend::MC>();
 
-  // Set up MPI
-  auto executor_mpi = (pool_exists("mpi"))
-                          ? parallel_executor(&get_thread_pool("mpi"), thread_priority::high)
-                          : executor_hp;
   common::Pipeline<comm::CommunicatorGrid> serial_comm(std::move(grid));
 
   const matrix::Distribution& distr_a = mat_a.distribution();
@@ -462,7 +424,7 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid gr
       auto i = distr_a.globalTileFromLocalTile<Coord::Row>(i_local);
 
       // Choose queue priority
-      auto trailing_executor = (i == k + 1) ? executor_hp : executor_normal;
+      auto& trailing_executor = (i == k + 1) ? executor_hp : executor_np;
 
       hpx::shared_future<ConstTileType> ik_tile;
 

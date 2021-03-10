@@ -13,7 +13,9 @@
 #include <exception>
 #include <ostream>
 
+#include <hpx/functional.hpp>
 #include <hpx/local/future.hpp>
+#include <hpx/tuple.hpp>
 
 #include "dlaf/common/data_descriptor.h"
 #include "dlaf/matrix/index.h"
@@ -197,6 +199,61 @@ private:
 template <class T, Device device>
 auto create_data(const Tile<T, device>& tile) {
   return common::DataDescriptor<T>(tile.ptr({0, 0}), tile.size().cols(), tile.size().rows(), tile.ld());
+}
+
+namespace internal {
+/// Gets the value from future<Tile>, and forwards all other types unchanged.
+template <typename T>
+struct UnwrapFuture {
+  template <typename U>
+  static decltype(auto) call(U&& u) {
+    return std::forward<U>(u);
+  }
+};
+
+template <typename T, Device D>
+struct UnwrapFuture<hpx::future<Tile<T, D>>> {
+  template <typename U>
+  static auto call(U&& u) {
+    auto t = u.get();
+    return t;
+  }
+};
+
+/// Callable object used for the unwrapExtendTiles function below.
+template <typename F>
+struct UnwrapExtendTiles {
+  F f;
+
+  template <typename... Ts>
+  auto operator()(Ts&&... ts) {
+    // Extract values from futures (not shared_futures).
+    auto t = hpx::make_tuple<>(UnwrapFuture<std::decay_t<Ts>>::call(std::forward<Ts>(ts))...);
+
+    // Call f with all futures (not just future<Tile>) unwrapped.
+    hpx::invoke_fused(hpx::util::unwrapping(f), t);
+
+    // Finally, we extend the lifetime of read-write tiles directly and
+    // read-only tiles wrapped in shared_futures by returning them here in a
+    // tuple.
+    return t;
+  }
+};
+}
+
+/// Custom version of hpx::util::unwrapping for tile lifetime management.
+///
+/// Unwraps and forwards all arguments to the function f, but also returns all
+/// arguments as they are with the exception of future<Tile> arguments.
+/// future<Tile> arguments are returned unwrapped (as getting the value from the
+/// future leaves the future empty).  The return value of f is ignored. This
+/// wrapper is useful for extending the lifetimes of tiles with custom executors
+/// such as the CUDA/cuBLAS executors, where f returns immediately, but the
+/// tiles must be kept alive until the completion of the operation. The wrapper
+/// can be used with "normal" blocking host-side operations as well.
+template <typename F>
+auto unwrapExtendTiles(F&& f) {
+  return internal::UnwrapExtendTiles<std::decay_t<F>>{std::forward<F>(f)};
 }
 
 /// ---- ETI

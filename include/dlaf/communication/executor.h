@@ -95,15 +95,17 @@ struct request_handler<MPIMech::Blocking> {
 // Makes a tuple of the required additional arguments for blocking and non-blocking versions of comm::Executor
 template <MPIMech M>
 struct make_mpi_tuple {
-  static hpx::tuple<Communicator, MPI_Request*> call(Communicator comm, MPI_Request* req_ptr) {
-    return hpx::make_tuple(std::move(comm), req_ptr);
+  template <class Tuple>
+  static auto call(Tuple t, MPI_Request* req_ptr) {
+    return hpx::tuple_cat(std::move(t), hpx::make_tuple(req_ptr));
   }
 };
 
 template <>
 struct make_mpi_tuple<MPIMech::Blocking> {
-  static hpx::tuple<Communicator> call(Communicator comm, MPI_Request*) {
-    return hpx::make_tuple(std::move(comm));
+  template <class Tuple>
+  static auto call(Tuple t, MPI_Request*) {
+    return std::move(t);
   }
 };
 
@@ -138,49 +140,18 @@ struct invoke_fused_wrapper<void> {
 
 template <MPIMech M>
 class Executor {
-  class TaskChain;  // forward declaration
-
-  Communicator comm_;
-  std::shared_ptr<TaskChain> tc_ptr;
   detail::hint_manager_wrapper<M> mgr_;
   hpx::execution::parallel_executor ex_;
 
-  class TaskChain {
-    hpx::future<void> tail_;
-    hpx::lcos::local::mutex mt_;
-
-  public:
-    TaskChain() : tail_(hpx::make_ready_future<void>()) {}
-
-    void chain(hpx::future<void>& before_last, hpx::lcos::local::promise<void>& promise_next) {
-      std::lock_guard<hpx::lcos::local::mutex> lk(mt_);
-      before_last = std::move(tail_);
-      tail_ = promise_next.get_future();
-    }
-  };
-
-  struct task_chain_deleter {
-    void operator()(TaskChain* /*tc*/) {
-      // if (tc->tail.valid()) {
-      //  tc->tail.get();
-      //}
-    }
-  };
-
 public:
-  // TODO: REMOVE! THIS IS ONLY FOR DEBUGGING
-  std::string msg;
-
   // Notes:
   //   - MPI event polling has to be enabled for `MPIMech::Polling`.
-  Executor(const std::string& pool, Communicator comm)
-      : comm_(std::move(comm)),
-        tc_ptr(std::shared_ptr<TaskChain>(new TaskChain(), task_chain_deleter())), msg("") {
+  Executor(const std::string& pool) {
     detail::init_parallel_executor_with_hint(pool, mgr_, ex_);
   }
 
   bool operator==(const Executor& rhs) const noexcept {
-    return comm_ == rhs.comm_;
+    return ex_ == rhs.ex_;
   }
 
   bool operator!=(const Executor& rhs) const noexcept {
@@ -191,54 +162,35 @@ public:
     return *this;
   }
 
-  Communicator comm() const noexcept {
-    return comm_;
-  }
-
   template <typename F, typename... Ts>
   auto async_execute(F&& f, Ts&&... ts) noexcept {
-    hpx::future<void> before_last;
-    hpx::lcos::local::promise<void> promise_next;
-    tc_ptr->chain(before_last, promise_next);
-
-    auto fn = [msg = msg, p = std::move(promise_next), comm = comm_, f = std::forward<F>(f),
-               args = hpx::make_tuple(std::forward<Ts>(ts)...)](hpx::future<void>) mutable {
+    auto fn = [f = std::forward<F>(f), args = hpx::make_tuple(std::forward<Ts>(ts)...)]() mutable {
       MPI_Request req;
-      auto all_args =
-          hpx::tuple_cat(std::move(args), detail::make_mpi_tuple<M>::call(std::move(comm), &req));
+      auto all_args = detail::make_mpi_tuple<M>::call(std::move(args), &req);
       using result_t = decltype(hpx::util::invoke_fused(f, all_args));
       detail::invoke_fused_wrapper<result_t> wrapper(std::move(f), std::move(all_args));
-      p.set_value();
       detail::request_handler<M>::call(req);
-      std::cout << "ASYNC : " << msg << std::endl;
       return wrapper.async_return();
     };
-    return before_last.then(ex_, std::move(fn));
+    return hpx::async(ex_, std::move(fn));
   }
 
   template <class Frame, class F, class TupleArgs>
   void dataflow_finalize(Frame&& frame, F&& f, TupleArgs&& args) {
-    hpx::future<void> before_last;
-    hpx::lcos::local::promise<void> promise_next;
-    tc_ptr->chain(before_last, promise_next);
-
     // Ensure the dataflow frame stays alive long enough.
     using FramePtr =
         hpx::intrusive_ptr<typename std::remove_pointer<typename std::decay<Frame>::type>::type>;
     FramePtr frame_p(std::forward<Frame>(frame));
-    auto fn = [msg = msg, frame_p = std::move(frame_p), p = std::move(promise_next), comm = comm_,
-               f = std::forward<F>(f), args = std::forward<TupleArgs>(args)](hpx::future<void>) mutable {
+    auto fn = [frame_p = std::move(frame_p), f = std::forward<F>(f),
+               args = std::forward<TupleArgs>(args)]() mutable {
       MPI_Request req;
-      auto all_args =
-          hpx::tuple_cat(std::move(args), detail::make_mpi_tuple<M>::call(std::move(comm), &req));
+      auto all_args = detail::make_mpi_tuple<M>::call(std::move(args), &req);
       using result_t = decltype(hpx::util::invoke_fused(f, all_args));
       detail::invoke_fused_wrapper<result_t> wrapper(std::move(f), std::move(all_args));
-      p.set_value();
       detail::request_handler<M>::call(req);
-      std::cout << "DATAFLOW : " << msg << std::endl;
       frame_p->set_data(wrapper.dataflow_return());
     };
-    before_last.then(ex_, std::move(fn));
+    hpx::async(ex_, std::move(fn));
   }
 };
 }

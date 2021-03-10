@@ -175,19 +175,14 @@ void CholeskyDistr<Backend::MC, Device::CPU, T, M>::call_L(comm::CommunicatorGri
 
   // Set up MPI executor pipelines
   std::string mpi_pool = (hpx::resource::pool_exists("mpi")) ? "mpi" : "default";
-  MPIExecutor executor_mpi_col(mpi_pool, grid.colCommunicator());
-  MPIExecutor executor_mpi_row(mpi_pool, grid.rowCommunicator());
-  // common::Pipeline<MPIExecutor> mpi_col_task_chain(std::move(executor_mpi_col));
-  // common::Pipeline<MPIExecutor> mpi_row_task_chain(std::move(executor_mpi_row));
+  MPIExecutor executor_mpi_col(mpi_pool);
+  MPIExecutor executor_mpi_row(mpi_pool);
+  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
+  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
 
   const matrix::Distribution& distr = mat_a.distribution();
   SizeType nrtile = mat_a.nrTiles().cols();
   comm::Index2D this_rank = grid.rank();
-
-  std::cout << "Process coordinates : " << this_rank << std::endl;
-  // std::cout << "Row rank : " << grid.rowCommunicator().rank() << std::endl;
-  // std::cout << "Column rank : " << grid.colCommunicator().rank() << std::endl;
-  // std::cout << "Worker thread number : " << hpx::get_worker_thread_num() << std::endl;
 
   for (SizeType k = 0; k < nrtile; ++k) {
     // Create a placeholder that will store the shared futures representing the panel
@@ -201,19 +196,14 @@ void CholeskyDistr<Backend::MC, Device::CPU, T, M>::call_L(comm::CommunicatorGri
       potrf_diag_tile(executor_hp, mat_a(kk_idx));
       panel[k] = mat_a.read(kk_idx);
       if (k != nrtile - 1) {
-        std::stringstream ss;
-        ss << "COL SEND diagonal tile " << kk_idx;
-        executor_mpi_col.msg = ss.str();
-        hpx::dataflow(executor_mpi_col, unwrapping(comm::bcast<T, M>::send), panel[k]);
+        hpx::dataflow(executor_mpi_col, unwrapping(comm::bcast<T, M>::send), panel[k],
+                      mpi_col_task_chain());
       }
     }
     else if (this_rank.col() == kk_rank.col()) {
       if (k != nrtile - 1) {
-        std::stringstream ss;
-        ss << "COL RECV diagonal tile " << kk_idx << " from " << kk_rank;
-        executor_mpi_col.msg = ss.str();
         panel[k] = hpx::dataflow(executor_mpi_col, unwrapping(comm::bcast<T, M>::recv),
-                                 mat_a.tileSize(kk_idx), kk_rank.row());
+                                 mat_a.tileSize(kk_idx), kk_rank.row(), mpi_col_task_chain());
       }
     }
 
@@ -225,17 +215,12 @@ void CholeskyDistr<Backend::MC, Device::CPU, T, M>::call_L(comm::CommunicatorGri
       if (this_rank == ik_rank) {
         trsm_panel_tile(executor_hp, panel[k], mat_a(ik_idx));
         panel[i] = mat_a.read(ik_idx);
-        std::stringstream ss;
-        ss << "ROW SEND column tile " << ik_idx;
-        executor_mpi_row.msg = ss.str();
-        hpx::dataflow(executor_mpi_row, unwrapping(comm::bcast<T, M>::send), panel[i]);
+        hpx::dataflow(executor_mpi_row, unwrapping(comm::bcast<T, M>::send), panel[i],
+                      mpi_row_task_chain());
       }
       else if (this_rank.row() == ik_rank.row()) {
-        std::stringstream ss;
-        ss << "ROW RECV column tile " << ik_idx << " from " << ik_rank;
-        executor_mpi_row.msg = ss.str();
         panel[i] = hpx::dataflow(executor_mpi_row, unwrapping(comm::bcast<T, M>::recv),
-                                 mat_a.tileSize(ik_idx), ik_rank.col());
+                                 mat_a.tileSize(ik_idx), ik_rank.col(), mpi_row_task_chain());
       }
     }
 
@@ -251,20 +236,15 @@ void CholeskyDistr<Backend::MC, Device::CPU, T, M>::call_L(comm::CommunicatorGri
       if (this_rank.row() == jj_rank.row()) {
         herk_trailing_diag_tile(trailing_matrix_executor, panel[j], mat_a(jj_idx));
         if (j != nrtile - 1) {
-          std::stringstream ss;
-          ss << "COL SEND trailing tile " << jj_idx;
-          executor_mpi_col.msg = ss.str();
-          hpx::dataflow(executor_mpi_col, unwrapping(comm::bcast<T, M>::send), panel[j]);
+          hpx::dataflow(executor_mpi_col, unwrapping(comm::bcast<T, M>::send), panel[j],
+                        mpi_col_task_chain());
         }
       }
       else {
         GlobalTileIndex jk_idx(j, k);
         if (j != nrtile - 1) {
-          std::stringstream ss;
-          ss << "COL RECV trailing tile " << jj_idx << " from " << jj_rank;
-          executor_mpi_col.msg = ss.str();
           panel[j] = hpx::dataflow(executor_mpi_col, unwrapping(comm::bcast<T, M>::recv),
-                                   mat_a.tileSize(jk_idx), jj_rank.row());
+                                   mat_a.tileSize(jk_idx), jj_rank.row(), mpi_col_task_chain());
         }
       }
 

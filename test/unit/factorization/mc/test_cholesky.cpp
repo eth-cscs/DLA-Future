@@ -142,7 +142,6 @@ void testDistCholesky(CholeskyDistributedTest<TypeParam>& test) {
                                                                         mat);
         CHECK_MATRIX_NEAR(res, mat, 4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error,
                           4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);
-        std::cout << "ALIVE" << std::endl;
       }
     }
   }
@@ -152,11 +151,11 @@ TYPED_TEST(CholeskyDistributedTest, DistCholesky_Yielding) {
   testDistCholesky<TypeParam, MPIMech::Yielding>(*this);
 }
 
-// TYPED_TEST(CholeskyDistributedTest, DistCholesky_Polling) {
-//  hpx::mpi::experimental::enable_user_polling internal_helper("mpi");
-//  testDistCholesky<TypeParam, MPIMech::Polling>(*this);
-//}
-//
-// TYPED_TEST(CholeskyDistributedTest, DistCholesky_Blocking) {
-//  testDistCholesky<TypeParam, MPIMech::Blocking>(*this);
-//}
+TYPED_TEST(CholeskyDistributedTest, DistCholesky_Polling) {
+  hpx::mpi::experimental::enable_user_polling internal_helper("mpi");
+  testDistCholesky<TypeParam, MPIMech::Polling>(*this);
+}
+
+TYPED_TEST(CholeskyDistributedTest, DistCholesky_Blocking) {
+  testDistCholesky<TypeParam, MPIMech::Blocking>(*this);
+}

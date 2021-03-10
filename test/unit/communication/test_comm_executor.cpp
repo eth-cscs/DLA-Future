@@ -22,7 +22,7 @@ void test_exec() {
   auto comm = dlaf::comm::Communicator(MPI_COMM_WORLD);
   int rank = comm.rank();
   int nprocs = comm.size();
-  dlaf::comm::Executor<M> ex("default", comm);
+  dlaf::comm::Executor<M> ex("default");
 
   int size = 1000;
   MPI_Datatype dtype = MPI_DOUBLE;
@@ -32,8 +32,8 @@ void test_exec() {
   int recv_rank = (rank != 0) ? rank - 1 : nprocs - 1;
   int tag = 0;
 
-  auto send_fut = hpx::async(ex, MPI_Isend, send_buf.data(), size, dtype, send_rank, tag);
-  auto recv_fut = hpx::async(ex, MPI_Irecv, recv_buf.data(), size, dtype, recv_rank, tag);
+  auto send_fut = hpx::async(ex, MPI_Isend, send_buf.data(), size, dtype, send_rank, tag, comm);
+  auto recv_fut = hpx::async(ex, MPI_Irecv, recv_buf.data(), size, dtype, recv_rank, tag, comm);
   hpx::wait_all(send_fut, recv_fut);
 
   std::vector<double> expected_recv_buf(static_cast<std::size_t>(size), recv_rank);
@@ -52,7 +52,7 @@ TEST(SendRecv, Polling) {
 
 TEST(SendRecv, Blocking) {
   auto comm = dlaf::comm::Communicator(MPI_COMM_WORLD);
-  dlaf::comm::Executor<dlaf::comm::MPIMech::Blocking> ex("mpi", comm);
+  dlaf::comm::Executor<dlaf::comm::MPIMech::Blocking> ex("mpi");
   int root_rank = 1;
   MPI_Datatype dtype = MPI_DOUBLE;
   int size = 1000;
@@ -61,7 +61,7 @@ TEST(SendRecv, Blocking) {
 
   // Tests the handling of futures in a dataflow
   hpx::dataflow(ex, hpx::util::unwrapping(MPI_Bcast), buf.data(), hpx::make_ready_future<int>(size),
-                dtype, root_rank, hpx::make_ready_future<void>())
+                dtype, root_rank, comm, hpx::make_ready_future<void>())
       .get();
 
   std::vector<double> expected_buf(static_cast<std::size_t>(size), 4.2);

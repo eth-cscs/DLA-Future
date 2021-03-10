@@ -107,10 +107,7 @@ struct CopyTile<T, Device::GPU, Device::GPU> {
 
 template <typename T, Device Source, Device Destination, typename... Ts>
 void copy(const Tile<const T, Source>& source, const Tile<T, Destination>& destination, Ts&&... ts) {
-  DLAF_ASSERT_HEAVY(source.size().rows() == destination.size().rows(),
-                    "number of rows in source and destination tiles must be equal for tile copy");
-  DLAF_ASSERT_HEAVY(source.size().cols() == destination.size().cols(),
-                    "number of columns in source and destination tiles must be equal for tile copy");
+  DLAF_ASSERT_HEAVY(source.size() == destination.size(), source.size(), destination.size());
   internal::CopyTile<T, Source, Destination>::call(source, destination, std::forward<Ts>(ts)...);
 }
 

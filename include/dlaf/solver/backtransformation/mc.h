@@ -48,7 +48,7 @@ using namespace dlaf::matrix;
 // 2. Report "Gep + back-transformation", Alberto Invernizzi (2020)
 // 3. Report "Reduction to band + back-transformation", Raffaele Solcà (2020)
 // 4. G. H. Golub and C. F. Van Loan, Matrix Computations, chapter 5, The Johns Hopkins University Press
- template <class T>
+template <class T>
 struct BackTransformation<Backend::MC, Device::CPU, T> {
   static void call_FC(Matrix<T, Device::CPU>& mat_c, Matrix<const T, Device::CPU>& mat_v,
                       Matrix<T, Device::CPU>& mat_t);

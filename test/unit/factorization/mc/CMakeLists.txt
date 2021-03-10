@@ -14,3 +14,10 @@ DLAF_addTest(test_cholesky
   USE_MAIN MPIHPX
   MPIRANKS 6
 )
+
+DLAF_addTest(test_compute_t_factor
+  SOURCES test_compute_t_factor.cpp
+  LIBRARIES dlaf.factorization dlaf.core
+  USE_MAIN MPIHPX
+  MPIRANKS 6
+)

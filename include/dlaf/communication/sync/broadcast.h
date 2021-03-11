@@ -57,31 +57,31 @@ void receive_from(const int broadcaster_rank, Communicator& communicator, DataOu
 
 /// Task for broadcasting (send endpoint) a Tile in a direction over a CommunicatorGrid
 template <class T>
-void send_tile(hpx::future<common::PromiseGuard<comm::CommunicatorGrid>> mpi_task_chain, Coord rc_comm,
-               hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile) {
+void sendTile(hpx::future<common::PromiseGuard<comm::CommunicatorGrid>> mpi_task_chain, Coord rc_comm,
+              hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile) {
   using PromiseComm_t = common::PromiseGuard<comm::CommunicatorGrid>;
 
   PromiseComm_t pcomm = mpi_task_chain.get();
   comm::sync::broadcast::send(pcomm.ref().subCommunicator(rc_comm), tile.get());
 }
 
-DLAF_MAKE_CALLABLE_OBJECT(send_tile);
+DLAF_MAKE_CALLABLE_OBJECT(sendTile);
 
 /// Task for broadcasting (receiving endpoint) a Tile in a direction over a CommunicatorGrid
 template <class T>
-void recv_tile(hpx::future<common::PromiseGuard<comm::CommunicatorGrid>> mpi_task_chain, Coord rc_comm,
-               hpx::future<matrix::Tile<T, Device::CPU>> tile, comm::IndexT_MPI rank) {
+void recvTile(hpx::future<common::PromiseGuard<comm::CommunicatorGrid>> mpi_task_chain, Coord rc_comm,
+              hpx::future<matrix::Tile<T, Device::CPU>> tile, comm::IndexT_MPI rank) {
   using PromiseComm_t = common::PromiseGuard<comm::CommunicatorGrid>;
 
   PromiseComm_t pcomm = mpi_task_chain.get();
   comm::sync::broadcast::receive_from(rank, pcomm.ref().subCommunicator(rc_comm), tile.get());
 }
 
-DLAF_MAKE_CALLABLE_OBJECT(recv_tile);
+DLAF_MAKE_CALLABLE_OBJECT(recvTile);
 
 /// Task for broadcasting (receiving endpoint) a Tile ("JIT" allocation) in a direction over a CommunicatorGrid
 template <class T>
-matrix::Tile<const T, Device::CPU> recv_tile_with_alloc(
+matrix::Tile<const T, Device::CPU> recvAllocTile(
     hpx::future<common::PromiseGuard<comm::CommunicatorGrid>> mpi_task_chain, Coord rc_comm,
     TileElementSize tile_size, comm::IndexT_MPI rank) {
   using ConstTile_t = matrix::Tile<const T, Device::CPU>;

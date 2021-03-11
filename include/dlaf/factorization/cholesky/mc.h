@@ -140,11 +140,11 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
       potrf_diag_tile(executor_hp, mat_a(kk_idx));
       panel[k] = mat_a.read(kk_idx);
       if (k != nrtile - 1)
-        dataflow(executor_mpi, comm::send_tile_o, mpi_task_chain(), Coord::Col, panel[k]);
+        dataflow(executor_mpi, comm::sendTile_o, mpi_task_chain(), Coord::Col, panel[k]);
     }
     else if (this_rank.col() == kk_rank.col()) {
       if (k != nrtile - 1)
-        panel[k] = dataflow(executor_mpi, comm::recv_tile_with_alloc<T>, mpi_task_chain(), Coord::Col,
+        panel[k] = dataflow(executor_mpi, comm::recvAllocTile<T>, mpi_task_chain(), Coord::Col,
                             mat_a.tileSize(kk_idx), kk_rank.row());
     }
 
@@ -156,10 +156,10 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
       if (this_rank == ik_rank) {
         trsm_panel_tile(executor_hp, panel[k], mat_a(ik_idx));
         panel[i] = mat_a.read(ik_idx);
-        dataflow(executor_mpi, comm::send_tile_o, mpi_task_chain(), Coord::Row, panel[i]);
+        dataflow(executor_mpi, comm::sendTile_o, mpi_task_chain(), Coord::Row, panel[i]);
       }
       else if (this_rank.row() == ik_rank.row()) {
-        panel[i] = dataflow(executor_mpi, comm::recv_tile_with_alloc<T>, mpi_task_chain(), Coord::Row,
+        panel[i] = dataflow(executor_mpi, comm::recvAllocTile<T>, mpi_task_chain(), Coord::Row,
                             mat_a.tileSize(ik_idx), ik_rank.col());
       }
     }
@@ -177,12 +177,12 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
         auto& trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_np;
         herk_trailing_diag_tile(trailing_matrix_executor, panel[j], mat_a(jj_idx));
         if (j != nrtile - 1)
-          dataflow(executor_mpi, comm::send_tile_o, mpi_task_chain(), Coord::Col, panel[j]);
+          dataflow(executor_mpi, comm::sendTile_o, mpi_task_chain(), Coord::Col, panel[j]);
       }
       else {
         GlobalTileIndex jk_idx(j, k);
         if (j != nrtile - 1)
-          panel[j] = dataflow(executor_mpi, comm::recv_tile_with_alloc<T>, mpi_task_chain(), Coord::Col,
+          panel[j] = dataflow(executor_mpi, comm::recvAllocTile<T>, mpi_task_chain(), Coord::Col,
                               mat_a.tileSize(jk_idx), jj_rank.row());
       }
 

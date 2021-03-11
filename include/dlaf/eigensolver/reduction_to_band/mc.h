@@ -25,6 +25,7 @@
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/functions_sync.h"
+#include "dlaf/executors.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/index.h"
@@ -94,6 +95,8 @@ hpx::shared_future<T> compute_reflector(
 
   using x0_and_squares_t = std::pair<T, T>;
 
+  auto executor_mpi = dlaf::getMPIExecutor<Backend::MC>();
+
   const auto& dist = a.distribution();
   const comm::Index2D rank = dist.rankIndex();
   const comm::Index2D rank_v0 = dist.rankGlobalTile(ai_start);
@@ -144,7 +147,7 @@ hpx::shared_future<T> compute_reflector(
     return std::move(local_data);
   });
 
-  x0_and_squares = hpx::dataflow(reduce_norm_func, x0_and_squares, serial_comm());
+  x0_and_squares = hpx::dataflow(executor_mpi, reduce_norm_func, x0_and_squares, serial_comm());
 
   /*
    * rank_v0 will compute params that will be used for next computation of reflector components
@@ -179,7 +182,7 @@ hpx::shared_future<T> compute_reflector(
       broadcast::send(comm_wrapper.ref().colCommunicator(), make_data(data, 3));
     });
 
-    hpx::dataflow(bcast_params_func, reflector_params, tau, serial_comm());
+    hpx::dataflow(executor_mpi, bcast_params_func, reflector_params, tau, serial_comm());
   }
   else {
     auto bcast_params_func = unwrapping([rank = rank_v0.row()](auto&& comm_wrapper) {
@@ -192,7 +195,8 @@ hpx::shared_future<T> compute_reflector(
       return hpx::make_tuple(params, tau);
     });
 
-    hpx::tie(reflector_params, tau) = hpx::split_future(hpx::dataflow(bcast_params_func, serial_comm()));
+    hpx::tie(reflector_params, tau) =
+        hpx::split_future(hpx::dataflow(executor_mpi, bcast_params_func, serial_comm()));
   }
 
   // 1A/3 COMPUTE REFLECTOR COMPONENTs
@@ -230,6 +234,8 @@ void update_trailing_panel(MatrixT<T>& a,
   using hpx::util::unwrapping;
   using common::make_data;
   using namespace comm::sync;
+
+  auto executor_mpi = dlaf::getMPIExecutor<Backend::MC>();
 
   const auto& dist = a.distribution();
 
@@ -306,7 +312,7 @@ void update_trailing_panel(MatrixT<T>& a,
     all_reduce(comm_wrapper.ref().colCommunicator(), MPI_SUM, make_data(tile_w));
   });
 
-  hpx::dataflow(reduce_w_func, w(LocalTileIndex{0, 0}), serial_comm());
+  hpx::dataflow(executor_mpi, reduce_w_func, w(LocalTileIndex{0, 0}), serial_comm());
 
   // 1B/2 UPDATE TRAILING PANEL
   for (const LocalTileIndex& index_a_loc : ai_panel) {
@@ -399,6 +405,8 @@ void compute_x(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT<Co
   using hpx::util::unwrapping;
   using dlaf::common::make_data;
   using dlaf::comm::sync::reduce;
+
+  auto executor_mpi = dlaf::getMPIExecutor<Backend::MC>();
 
   const auto dist = a.distribution();
   const auto rank = dist.rankIndex();
@@ -513,7 +521,7 @@ void compute_x(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT<Co
       const auto i = dist.template localTileFromGlobalTile<Coord::Row>(index_k);
       FutureTile<T> tile_x = x({i, 0});
 
-      hpx::dataflow(reduce_x_func, std::move(tile_x), serial_comm());
+      hpx::dataflow(executor_mpi, reduce_x_func, std::move(tile_x), serial_comm());
     }
     else {
       auto reduce_x_func = unwrapping([=](auto&& tile_x_conj, auto&& comm_wrapper) {
@@ -524,7 +532,7 @@ void compute_x(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT<Co
 
       FutureConstTile<T> tile_x = xt.read(index_xt);
 
-      hpx::dataflow(reduce_x_func, std::move(tile_x), serial_comm());
+      hpx::dataflow(executor_mpi, reduce_x_func, std::move(tile_x), serial_comm());
     }
   }
 
@@ -543,7 +551,7 @@ void compute_x(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT<Co
 
   // TODO readonly tile management
   for (const auto& index_x_loc : x)
-    hpx::dataflow(reduce_x_func, x(index_x_loc), serial_comm());
+    hpx::dataflow(executor_mpi, reduce_x_func, x(index_x_loc), serial_comm());
 }
 
 template <class T>
@@ -552,6 +560,8 @@ void compute_w2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Coord
   using hpx::util::unwrapping;
   using common::make_data;
   using namespace comm::sync;
+
+  auto executor_mpi = dlaf::getMPIExecutor<Backend::MC>();
 
   // GEMM W2 = W* . X
   for (const auto& index_tile : w) {
@@ -574,7 +584,7 @@ void compute_w2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Coord
 
   FutureTile<T> tile_w2 = w2(LocalTileIndex{0, 0});
 
-  hpx::dataflow(std::move(all_reduce_w2), std::move(tile_w2), serial_comm());
+  hpx::dataflow(executor_mpi, std::move(all_reduce_w2), std::move(tile_w2), serial_comm());
 }
 
 template <class T, class MatrixLikeT>
@@ -688,12 +698,7 @@ std::vector<hpx::shared_future<std::vector<T>>> ReductionToBand<Backend::MC, Dev
   DLAF_ASSERT(square_size(mat_a), mat_a.size());
   DLAF_ASSERT(square_blocksize(mat_a), mat_a.blockSize());
 
-  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
-  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
-
-  auto executor_mpi = (pool_exists("mpi"))
-                          ? parallel_executor(&get_thread_pool("mpi"), thread_priority::high)
-                          : executor_hp;
+  auto executor_mpi = dlaf::getMPIExecutor<Backend::MC>();
 
   const auto& dist = mat_a.distribution();
   const comm::Index2D rank = dist.rankIndex();

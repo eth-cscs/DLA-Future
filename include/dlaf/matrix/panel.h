@@ -295,9 +295,9 @@ void broadcast(hpx::execution::parallel_executor ex, comm::IndexT_MPI rank_root,
 
   for (const auto& index : ws) {
     if (rank == rank_root)
-      dataflow(ex, comm::send_tile_o, serial_comm(), comm_dir, ws.read(index));
+      dataflow(ex, comm::sendTile_o, serial_comm(), comm_dir, ws.read(index));
     else
-      dataflow(ex, comm::recv_tile_o, serial_comm(), comm_dir, ws(index), rank_root);
+      dataflow(ex, comm::recvTile_o, serial_comm(), comm_dir, ws(index), rank_root);
   }
 }
 
@@ -349,11 +349,11 @@ void broadcast(hpx::execution::parallel_executor ex, comm::IndexT_MPI rank_root,
       const auto idx_src = dist.template localTileFromGlobalTile<coord_from>(idx_cross);
       ws_to.set_tile(idx_dst, ws_from.read({coord_from, idx_src}));
       // TODO if (grid_size.get(component(comm_dir)) > 1)
-      dataflow(ex, comm::send_tile_o, serial_comm(), comm_dir, ws_to.read(idx_dst));
+      dataflow(ex, comm::sendTile_o, serial_comm(), comm_dir, ws_to.read(idx_dst));
     }
     else {
       // TODO if (grid_size.get(component(comm_dir)) > 1)
-      dataflow(ex, comm::recv_tile_o, serial_comm(), comm_dir, ws_to(idx_dst), owner);
+      dataflow(ex, comm::recvTile_o, serial_comm(), comm_dir, ws_to(idx_dst), owner);
     }
   }
 }

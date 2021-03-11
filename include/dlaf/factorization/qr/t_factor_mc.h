@@ -23,6 +23,7 @@
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/functions_sync.h"
+#include "dlaf/executors.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
@@ -70,6 +71,8 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
   using hpx::util::unwrapping;
   using common::make_data;
   using namespace comm::sync;
+
+  auto executor_mpi = dlaf::getMPIExecutor<Backend::MC>();
 
   const auto& dist = v.distribution();
   const comm::Index2D rank = dist.rankIndex();
@@ -191,7 +194,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
       return std::move(tile_t);
     });
 
-    t = hpx::dataflow(reduce_t_func, t, serial_comm());
+    t = hpx::dataflow(executor_mpi, reduce_t_func, t, serial_comm());
   }
 
   // 2nd step: compute the T factor, by performing the last step on each column

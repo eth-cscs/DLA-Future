@@ -252,8 +252,6 @@ struct Panel : public Panel<axis, const T, device> {
   ///
   /// @pre index must point to a tile which is internally managed by the panel
   hpx::future<TileT> operator()(const LocalTileIndex& index) {
-    DLAF_ASSERT_HEAVY(index.isIn(BaseT::dist_matrix_.localNrTiles()), index,
-                      BaseT::dist_matrix_.localNrTiles());
     DLAF_ASSERT(!is_external(index), "read-only access on external tiles", index);
 
     BaseT::internal_.insert(BaseT::linear_index(index));

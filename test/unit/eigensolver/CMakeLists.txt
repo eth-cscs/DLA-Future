@@ -14,3 +14,10 @@ DLAF_addTest(test_gen_to_std
   USE_MAIN MPIHPX
   MPIRANKS 6
 )
+
+DLAF_addTest(test_reduction_to_band
+  SOURCES test_reduction_to_band.cpp
+  LIBRARIES dlaf.eigensolver dlaf.core
+  USE_MAIN MPIHPX
+  MPIRANKS 6
+)

@@ -12,6 +12,7 @@
 
 #include <gtest/gtest.h>
 #include <blas.hh>
+#include <hpx/futures/future.hpp>
 
 #include "dlaf/common/range2d.h"
 #include "dlaf/communication/communicator_grid.h"
@@ -165,8 +166,8 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
       const SizeType m = v.size().rows();
 
       // compute taus and H_exp
-      common::internal::vector<hpx::shared_future<TypeParam>> taus_input;
-      taus_input.reserve(k);
+      common::internal::vector<TypeParam> taus;
+      taus.reserve(k);
 
       MatrixLocal<TypeParam> h_expected({m, m}, block_size);
       set(h_expected, preset_eye<TypeParam>);
@@ -178,7 +179,7 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
         const auto norm = blas::nrm2(reflector_size, data_ptr, 1);
         const TypeParam tau = 2 / std::pow(norm, 2);
 
-        taus_input.push_back(hpx::make_ready_future<TypeParam>(tau));
+        taus.push_back(tau);
 
         MatrixLocal<TypeParam> h_i({reflector_size, reflector_size}, block_size);
         set(h_i, preset_eye<TypeParam>);
@@ -209,14 +210,17 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
         std::copy(workspace.ptr(), workspace.ptr() + workspace.size().linear_size(),
                   h_expected.ptr(h_offset));
       }
+      hpx::shared_future<decltype(taus)> taus_input = hpx::make_ready_future(taus);
 
       is_orthogonal(h_expected);
 
       common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
-      Matrix<TypeParam, Device::CPU> t_output(LocalElementSize{k, k}, block_size);
+
+      Matrix<TypeParam, Device::CPU> t_output({k, k}, block_size);
+      const LocalTileIndex t_idx(0, 0);
 
       dlaf::factorization::internal::computeTFactor<Backend::MC>(k, v_input, v_start, taus_input,
-                                                                 t_output, serial_comm);
+                                                                 t_output(t_idx), serial_comm);
 
       const auto column_involved = dist_v.rankGlobalTile(v_start).col();
       if (dist_v.rankIndex().col() != column_involved)
@@ -232,7 +236,7 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
       //
       // is computed and compared to the one previously obtained by applying reflectors sequentially
 
-      const auto& t = t_output.read(LocalTileIndex{0, 0}).get();
+      const auto& t = t_output.read(t_idx).get();
 
       // TV* = (VT*)* = W
       MatrixLocal<TypeParam> w({m, k}, block_size);

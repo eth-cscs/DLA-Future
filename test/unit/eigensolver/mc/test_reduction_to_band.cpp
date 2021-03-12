@@ -160,7 +160,7 @@ void setup_sym_band(MatrixLocal<T>& matrix, const SizeType& band_size) {
 
 template <class T>
 auto all_gather_taus(const SizeType k, const SizeType chunk_size, const SizeType band_size,
-                     std::vector<hpx::shared_future<std::vector<T>>> fut_local_taus,
+                     std::vector<hpx::shared_future<common::internal::vector<T>>> fut_local_taus,
                      comm::CommunicatorGrid comm_grid) {
   using namespace dlaf::comm::sync;
 

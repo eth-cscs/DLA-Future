@@ -42,7 +42,7 @@ namespace internal {
 
 template <class T>
 struct ReductionToBand<Backend::MC, Device::CPU, T> {
-  static std::vector<hpx::shared_future<std::vector<T>>> call(comm::CommunicatorGrid grid,
+  static std::vector<hpx::shared_future<common::internal::vector<T>>> call(comm::CommunicatorGrid grid,
                                                               Matrix<T, Device::CPU>& mat_a);
 };
 
@@ -676,7 +676,7 @@ void update_a(const LocalTileSize& at_start, MatrixT<T>& a, ConstPanelT<Coord::C
 /// Distributed implementation of reduction to band
 /// @return a list of shared futures of vectors, where each vector contains a block of taus
 template <class T>
-std::vector<hpx::shared_future<std::vector<T>>> ReductionToBand<Backend::MC, Device::CPU, T>::call(
+std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<Backend::MC, Device::CPU, T>::call(
     comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
   using hpx::execution::parallel_executor;
   using hpx::resource::get_thread_pool;
@@ -710,7 +710,7 @@ std::vector<hpx::shared_future<std::vector<T>>> ReductionToBand<Backend::MC, Dev
 
   common::Pipeline<comm::CommunicatorGrid> serial_comm(std::move(grid));
 
-  std::vector<hpx::shared_future<std::vector<T>>> taus;
+  std::vector<hpx::shared_future<common::internal::vector<T>>> taus;
 
   PanelT<Coord::Col, T> v(dist);
   PanelT<Coord::Row, T> vt(dist);
@@ -750,25 +750,25 @@ std::vector<hpx::shared_future<std::vector<T>>> ReductionToBand<Backend::MC, Dev
         return std::min(v0_size.cols(), v0_size.rows());
       }();
 
-      common::internal::vector<hpx::shared_future<T>> taus_panel;
-
       // Note:
       // for each column in the panel, compute reflector and update panel
       // if this block has the last reflector, that would be just the first 1, skip the last column
+      using hpx::util::unwrap;
+      using TausInternal_t = common::internal::vector<hpx::shared_future<T>>;
+
+      TausInternal_t taus_panel;
       for (SizeType j_reflector = 0; j_reflector < k_reflectors; ++j_reflector) {
         const TileElementIndex index_el_x0{j_reflector, j_reflector};
 
-        auto tau = compute_reflector(mat_a, ai_panel, ai_start, index_el_x0, serial_comm);
-        taus_panel.push_back(tau);
-        update_trailing_panel(mat_a, ai_panel, ai_start, index_el_x0, tau, serial_comm);
+        taus_panel.emplace_back(compute_reflector(mat_a, ai_panel, ai_start, index_el_x0, serial_comm));
+        update_trailing_panel(mat_a, ai_panel, ai_start, index_el_x0, *taus_panel.rbegin(), serial_comm);
       }
 
-      taus.emplace_back(hpx::when_all(taus_panel)
-                            .then(unwrapping(hpx::util::unwrap<std::vector<hpx::shared_future<T>>>)));
+      taus.emplace_back(hpx::when_all(taus_panel).then(unwrapping(unwrap<TausInternal_t>)));
 
       // Prepare T and V for the next step
 
-      computeTFactor<Backend::MC>(k_reflectors, mat_a, ai_start, taus_panel, t, serial_comm);
+      computeTFactor<Backend::MC>(k_reflectors, mat_a, ai_start, *taus.rbegin(), t, serial_comm);
 
       // Note:
       // Reflectors are stored in the lower triangular part of the A matrix leading to sharing memory

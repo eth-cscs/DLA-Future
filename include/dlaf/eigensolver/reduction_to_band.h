@@ -12,6 +12,7 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/util_matrix.h"
+#include "dlaf/common/vector.h"
 
 #include "dlaf/eigensolver/reduction_to_band/mc.h"
 
@@ -20,7 +21,7 @@ namespace eigensolver {
 
 /// TODO Documentation
 template <Backend backend, Device device, class T>
-std::vector<hpx::shared_future<std::vector<T>>> reductionToBand(comm::CommunicatorGrid grid,
+std::vector<hpx::shared_future<common::internal::vector<T>>> reductionToBand(comm::CommunicatorGrid grid,
                                                                 Matrix<T, device>& mat_a) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);

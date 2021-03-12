@@ -89,6 +89,17 @@ std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, dlaf::G
     {26, 39, 6, 6, 2, {0, 6}},  // all reflectors (incomplete tile)
     {26, 39, 6, 6, 4, {0, 5}},  // k reflectors (complete tile)
     {26, 39, 6, 6, 1, {0, 6}},  // k reflectors (incomplete tile)
+
+    // non-square tiles
+    {39, 26, 10, 4, 4, {0, 5}},  // all reflectors (complete tile)
+    {39, 26, 10, 4, 2, {0, 6}},  // all reflectors (incomplete tile)
+    {39, 26, 10, 4, 3, {0, 5}},  // k reflectors (complete tile)
+    {39, 26, 10, 4, 1, {0, 6}},  // k reflectors (incomplete tile)
+
+    {26, 39, 10, 6, 6, {0, 5}},  // all reflectors (complete tile)
+    {26, 39, 10, 6, 2, {0, 6}},  // all reflectors (incomplete tile)
+    {26, 39, 10, 6, 4, {0, 5}},  // k reflectors (complete tile)
+    {26, 39, 10, 6, 1, {0, 6}},  // k reflectors (incomplete tile)
 };
 
 // Note:
@@ -126,6 +137,8 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
   for (auto comm_grid : this->commGrids()) {
     for (auto config : configs) {
       std::tie(a_m, a_n, mb, nb, k, v_start) = config;
+
+      ASSERT_LE(k, nb);
 
       const TileElementSize block_size(mb, nb);
 

@@ -164,7 +164,6 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
         const auto v_size_el = v_end_el - v_start_el;
 
         MatrixLocal<TypeParam> v(v_size_el, a.blockSize());
-        DLAF_ASSERT_HEAVY(v.size().rows() > v.size().cols(), v.size());
 
         // copy only the panel
         const GlobalTileSize v_offset{v_start.row(), v_start.col()};

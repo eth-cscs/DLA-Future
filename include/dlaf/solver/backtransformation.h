@@ -26,18 +26,17 @@ namespace solver {
 ///
 /// @param mat_c contains the square matrix C,
 /// @param mat_v contains the lower triangular matrix of reflectors,
-/// @param mat_t contains the upper triangular matrix of T factors.
+/// @param taus is an array of taus, associated with the related elementary reflector.
 template <Backend backend, Device device, class T>
 void backTransformation(Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
-                        Matrix<T, device>& mat_t) {
+                        common::internal::vector<hpx::shared_future<T>> taus) {
   //// TODO preconditions are enough?
   //// TODO blocksize? So far should be one
   DLAF_ASSERT(matrix::local_matrix(mat_c), mat_c);
   DLAF_ASSERT(matrix::local_matrix(mat_v), mat_v);
-  DLAF_ASSERT(matrix::local_matrix(mat_t), mat_t);
   DLAF_ASSERT(mat_c.blockSize().rows() == mat_v.blockSize().rows(), mat_c, mat_v);
 
-  internal::BackTransformation<backend, device, T>::call_FC(mat_c, mat_v, mat_t);
+  internal::BackTransformation<backend, device, T>::call_FC(mat_c, mat_v, taus);
 }
 
 /// Eigenvalue back-transformation implementation on distributed memory
@@ -47,10 +46,10 @@ void backTransformation(Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v
 ///
 /// @param mat_c contains the square matrix C,
 /// @param mat_v contains the lower triangular matrix of reflectors,
-/// @param mat_t contains the upper triangular matrix of T factors.
+/// @param taus is an array of taus, associated with the related elementary reflector.
 template <Backend backend, Device device, class T>
 void backTransformation(comm::CommunicatorGrid grid, Matrix<T, device>& mat_c,
-                        Matrix<const T, device>& mat_v, Matrix<T, device>& mat_t) {
+                        Matrix<const T, device>& mat_v, common::internal::vector<hpx::shared_future<T>> taus) {
   // TODO preconditions are enough?
   // TODO blocksize? So far should be one
   //    DLAF_ASSERT(matrix::square_size(mat_c), mat_c);
@@ -60,9 +59,8 @@ void backTransformation(comm::CommunicatorGrid grid, Matrix<T, device>& mat_c,
   DLAF_ASSERT(mat_c.blockSize().rows() == mat_v.blockSize().rows(), mat_c, mat_v);
   DLAF_ASSERT(matrix::equal_process_grid(mat_c, grid), mat_c, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_v, grid), mat_v, grid);
-  DLAF_ASSERT(matrix::equal_process_grid(mat_t, grid), mat_t, grid);
 
-  internal::BackTransformation<backend, device, T>::call_FC(grid, mat_c, mat_v, mat_t);
+  internal::BackTransformation<backend, device, T>::call_FC(grid, mat_c, mat_v, taus);
 }
 
 }

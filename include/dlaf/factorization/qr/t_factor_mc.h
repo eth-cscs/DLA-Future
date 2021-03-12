@@ -52,9 +52,10 @@ struct QR_Tfactor<Backend::MC, Device::CPU, T> {
   /// @param v where the elementary reflectors are stored
   /// @param v_start tile in @p v where the column of reflectors starts
   /// @param taus array of taus, associated with the related elementary reflector
-  /// @param t a matrix where the triangular factor will be stored (in tile {0, 0}) for all ranks in the
-  /// column of the reflectors
+  /// @param t tile where the resulting T factor will be stored
   /// @param serial_comm where internal communications are issued
+  ///
+  /// @pre k <= t.get().size().rows && k <= t.get().size().cols()
   static void call(const SizeType k, Matrix<const T, Device::CPU>& v, const GlobalTileIndex v_start,
                    hpx::shared_future<common::internal::vector<T>> taus,
                    hpx::future<matrix::Tile<T, Device::CPU>> t,

@@ -56,21 +56,23 @@ GlobalElementSize globalTestSize(const LocalElementSize& size) {
   return {size.rows(), size.cols()};
 }
 
-template <class T>
-void set_zero(Matrix<T, Device::CPU>& mat) {
-  set(mat, [](auto&&) { return static_cast<T>(0.0); });
-}
-
 const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
-    {3, 0, 1, 1}, {0, 5, 2, 3},  // m, n = 0
-    {2, 2, 3, 3}, {3, 4, 6, 7},  // m < mb
-    {3, 3, 1, 1}, {4, 4, 2, 2}, {6, 3, 3, 3}, {12, 2, 4, 4}, {12, 24, 3, 3}, {24, 36, 6, 6},
-    {5, 8, 3, 2}, {4, 6, 2, 3}, {5, 5, 2, 3}, {8, 27, 3, 4}, {15, 34, 4, 6},
+//    {3, 0, 1, 1}, {0, 5, 2, 3},  // m, n = 0
+//    {2, 2, 3, 3}, {3, 4, 6, 7},  // m < mb
+//    {3, 3, 1, 1}, {4, 4, 2, 2}, {6, 3, 3, 3}, {12, 2, 4, 4}, {12, 24, 3, 3}, {24, 36, 6, 6},
+//    {5, 8, 3, 2}, {4, 6, 2, 3}, {5, 5, 2, 3}, {8, 27, 3, 4}, {15, 34, 4, 6},
+  //{3, 3, 1, 1},
+  {4, 4, 2, 2}
 };
 
 template <class T>
 MatrixLocal<T> makeLocal(const Matrix<const T, Device::CPU>& matrix) {
   return {matrix.size(), matrix.distribution().blockSize()};
+}
+
+template <class T>
+void set_zero(Matrix<T, Device::CPU>& mat) {
+  dlaf::matrix::util::set(mat, [](auto&&) { return static_cast<T>(0.0); });
 }
 
 template <class T>
@@ -81,7 +83,8 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
   TileElementSize blockSizeC(mb, nb);
   Matrix<T, Device::CPU> mat_c(sizeC, blockSizeC);
   dlaf::matrix::util::set_random(mat_c);
-
+  printElements(mat_c);
+  
   LocalElementSize sizeV(m, m);
   TileElementSize blockSizeV(mb, mb);
   Matrix<T, Device::CPU> mat_v(sizeV, blockSizeV);
@@ -120,7 +123,8 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
     set_zero(mat_t);
     auto mat_t_loc = dlaf::matrix::test::all_gather<T>(mat_t, comm_grid);
 
-    MatrixLocal<T> taus({m, 1}, {1, 1});
+    common::internal::vector<hpx::shared_future<T>> taus;
+    MatrixLocal<T> tausloc({m,1},{1,1});
     for (SizeType i = tottaus - 1; i > -1; --i) {
       const GlobalElementIndex v_offset{i, i};
       auto dotprod = blas::dot(m - i, mat_v_loc.ptr(v_offset), 1, mat_v_loc.ptr(v_offset), 1);
@@ -134,30 +138,34 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
         taui = static_cast<T>(0.0);
       }
       auto tau = (static_cast<T>(1.0) + sqrt(static_cast<T>(1.0) - dotprod * taui * taui)) / dotprod;
-      taus({i, 0}) = tau;
+      std::cout << " i " << i << ", tau " <<tau << std::endl;
+      taus.push_back(hpx::make_ready_future<T>(tau));
+      tausloc({i, 0}) = tau;
       lapack::larf(lapack::Side::Left, m - i, n, mat_v_loc.ptr(v_offset), 1, tau,
                    mat_c_loc.ptr(GlobalElementIndex{i, 0}), mat_c_loc.ld());
     }
 
-    for (SizeType i = mat_t.nrTiles().cols() - 1; i > -1; --i) {
+    for (SizeType i = 0; i < mat_t.nrTiles().cols(); ++i) {
       const GlobalElementIndex offset{i * mb, i * mb};
       const GlobalElementIndex tau_offset{i * mb, 0};
       auto tile_t = mat_t(LocalTileIndex{i, i}).get();
       auto numcol = tile_t.size().cols();
       lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise, mat_v.size().rows() - i * mb,
-                    numcol, mat_v_loc.ptr(offset), mat_v_loc.ld(), taus.ptr(tau_offset), tile_t.ptr(),
+                    numcol, mat_v_loc.ptr(offset), mat_v_loc.ld(), tausloc.ptr(tau_offset), tile_t.ptr(),
                     tile_t.ld());
     }
+    printElements(mat_t);
 
-    solver::backTransformation<Backend::MC>(mat_c, mat_v, mat_t);
+    solver::backTransformation<Backend::MC>(mat_c, mat_v, taus);
 
-    auto result = [& dist = mat_c.distribution(),
+    auto result = [&dist = mat_c.distribution(),
                    &mat_local = mat_c_loc](const GlobalElementIndex& element) {
       const auto tile_index = dist.globalTileIndex(element);
       const auto tile_element = dist.tileElementIndex(element);
       return mat_local.tile_read(tile_index)(tile_element);
     };
-
+    print(format::numpy{}, "result", mat_c_loc, std::cout);
+    
     double error = 0.01;
     CHECK_MATRIX_NEAR(result, mat_c, error, error);
   }

@@ -32,6 +32,8 @@ using namespace dlaf::comm;
 using namespace dlaf::test;
 using namespace testing;
 
+using hpx::util::unwrapping;
+
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
@@ -1235,34 +1237,38 @@ const auto WAIT_GUARD = std::chrono::milliseconds(10);
 const auto device = dlaf::Device::CPU;
 using TypeParam = std::complex<float>;  // randomly chosen element type for matrix
 
+// Create a single-element matrix
 template <class T>
 auto createMatrix() -> Matrix<T, device> {
   return {{1, 1}, {1, 1}};
 }
 
+// Create a single-element matrix with user-provided memory
 template <class T>
-auto createConstMatrix() {
-  LayoutInfo layout({1, 1}, {1, 1}, 1, 1, 1);
-  memory::MemoryView<T, device> mem(layout.minMemSize());
-  const T* p = mem();
+auto createMatrix(T& data) -> Matrix<T, device> {
+  return createMatrixFromColMajor<Device::CPU>({1, 1}, {1, 1}, 1, &data);
+}
 
-  return Matrix<const T, device>{layout, p};
+// Create a single-element const matrix with user-provided memory
+template <class T>
+auto createConstMatrix(const T& data) {
+  return createMatrixFromColMajor<Device::CPU>({1, 1}, {1, 1}, 1, &data);
 }
 
 TEST(MatrixDestructorFutures, NonConstAfterRead) {
   hpx::future<void> last_task;
 
-  std::atomic<bool> guard{false};
+  std::atomic<bool> is_exited_from_scope{false};
   {
     auto matrix = createMatrix<TypeParam>();
 
     auto shared_future = matrix.read(LocalTileIndex(0, 0));
-    last_task = shared_future.then(hpx::launch::async, [&guard](auto&&) {
+    last_task = shared_future.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
       hpx::this_thread::sleep_for(WAIT_GUARD);
-      EXPECT_FALSE(guard);
+      EXPECT_TRUE(is_exited_from_scope);
     });
   }
-  guard = true;
+  is_exited_from_scope = true;
 
   last_task.get();
 }
@@ -1270,17 +1276,55 @@ TEST(MatrixDestructorFutures, NonConstAfterRead) {
 TEST(MatrixDestructorFutures, NonConstAfterReadWrite) {
   hpx::future<void> last_task;
 
-  std::atomic<bool> guard{0};
+  std::atomic<bool> is_exited_from_scope{false};
   {
     auto matrix = createMatrix<TypeParam>();
 
     auto future = matrix(LocalTileIndex(0, 0));
-    last_task = future.then(hpx::launch::async, [&guard](auto&&) {
+    last_task = future.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
       hpx::this_thread::sleep_for(WAIT_GUARD);
-      EXPECT_FALSE(guard);
+      EXPECT_TRUE(is_exited_from_scope);
     });
   }
-  guard = true;
+  is_exited_from_scope = true;
+
+  last_task.get();
+}
+
+TEST(MatrixDestructorFutures, NonConstAfterRead_UserMemory) {
+  hpx::future<void> last_task;
+
+  std::atomic<bool> is_exited_from_scope{false};
+  {
+    TypeParam data;
+    auto matrix = createMatrix<TypeParam>(data);
+
+    auto shared_future = matrix.read(LocalTileIndex(0, 0));
+    last_task = shared_future.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
+      hpx::this_thread::sleep_for(WAIT_GUARD);
+      EXPECT_FALSE(is_exited_from_scope);
+    });
+  }
+  is_exited_from_scope = true;
+
+  last_task.get();
+}
+
+TEST(MatrixDestructorFutures, NonConstAfterReadWrite_UserMemory) {
+  hpx::future<void> last_task;
+
+  std::atomic<bool> is_exited_from_scope{false};
+  {
+    TypeParam data;
+    auto matrix = createMatrix<TypeParam>(data);
+
+    auto future = matrix(LocalTileIndex(0, 0));
+    last_task = future.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
+      hpx::this_thread::sleep_for(WAIT_GUARD);
+      EXPECT_FALSE(is_exited_from_scope);
+    });
+  }
+  is_exited_from_scope = true;
 
   last_task.get();
 }
@@ -1288,17 +1332,18 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWrite) {
 TEST(MatrixDestructorFutures, ConstAfterRead) {
   hpx::future<void> last_task;
 
-  std::atomic<bool> guard{0};
+  std::atomic<bool> is_exited_from_scope{false};
   {
-    auto matrix = createConstMatrix<TypeParam>();
+    TypeParam data;
+    auto matrix = createConstMatrix<TypeParam>(data);
 
     auto sf = matrix.read(LocalTileIndex(0, 0));
-    last_task = sf.then(hpx::launch::async, [&guard](auto&&) {
+    last_task = sf.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
       hpx::this_thread::sleep_for(WAIT_GUARD);
-      EXPECT_FALSE(guard);
+      EXPECT_FALSE(is_exited_from_scope);
     });
   }
-  guard = true;
+  is_exited_from_scope = true;
 
   last_task.get();
 }
@@ -1308,8 +1353,7 @@ struct CustomException final : public std::exception {};
 TEST(MatrixExceptionPropagation, RWPropagatesInRWAccess) {
   auto matrix = createMatrix<TypeParam>();
 
-  auto f =
-      matrix(LocalTileIndex(0, 0)).then(hpx::util::unwrapping([](auto&&) { throw CustomException{}; }));
+  auto f = matrix(LocalTileIndex(0, 0)).then(unwrapping([](auto&&) { throw CustomException{}; }));
 
   EXPECT_THROW(matrix(LocalTileIndex(0, 0)).get(), dlaf::ContinuationException);
   EXPECT_THROW(f.get(), CustomException);
@@ -1318,8 +1362,7 @@ TEST(MatrixExceptionPropagation, RWPropagatesInRWAccess) {
 TEST(MatrixExceptionPropagation, RWPropagatesInReadAccess) {
   auto matrix = createMatrix<TypeParam>();
 
-  auto f =
-      matrix(LocalTileIndex(0, 0)).then(hpx::util::unwrapping([](auto&&) { throw CustomException{}; }));
+  auto f = matrix(LocalTileIndex(0, 0)).then(unwrapping([](auto&&) { throw CustomException{}; }));
 
   EXPECT_THROW(matrix.read(LocalTileIndex(0, 0)).get(), dlaf::ContinuationException);
   EXPECT_THROW(f.get(), CustomException);
@@ -1328,9 +1371,7 @@ TEST(MatrixExceptionPropagation, RWPropagatesInReadAccess) {
 TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInRWAccess) {
   auto matrix = createMatrix<TypeParam>();
 
-  auto f = matrix.read(LocalTileIndex(0, 0)).then(hpx::util::unwrapping([](auto&&) {
-    throw CustomException{};
-  }));
+  auto f = matrix.read(LocalTileIndex(0, 0)).then(unwrapping([](auto&&) { throw CustomException{}; }));
 
   EXPECT_NO_THROW(matrix(LocalTileIndex(0, 0)).get());
   EXPECT_THROW(f.get(), CustomException);
@@ -1339,9 +1380,7 @@ TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInRWAccess) {
 TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInReadAccess) {
   auto matrix = createMatrix<TypeParam>();
 
-  auto f = matrix.read(LocalTileIndex(0, 0)).then(hpx::util::unwrapping([](auto&&) {
-    throw CustomException{};
-  }));
+  auto f = matrix.read(LocalTileIndex(0, 0)).then(unwrapping([](auto&&) { throw CustomException{}; }));
 
   EXPECT_NO_THROW(matrix.read(LocalTileIndex(0, 0)).get());
   EXPECT_THROW(f.get(), CustomException);

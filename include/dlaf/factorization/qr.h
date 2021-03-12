@@ -25,11 +25,10 @@ namespace internal {
 // SIAM Journal on Scientific and Statistical Computing. 10. 10.1137/0910005.
 template <Backend backend, Device device, class T>
 void computeTFactor(const SizeType k, Matrix<const T, device>& v, const GlobalTileIndex v_start,
-                    common::internal::vector<hpx::shared_future<T>> taus, Matrix<T, device>& t,
+                    hpx::shared_future<common::internal::vector<T>> taus, Matrix<T, device>& t,
                     common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
   QR_Tfactor<backend, device, T>::call(k, v, v_start, taus, t, serial_comm);
 }
-
 }
 
 }

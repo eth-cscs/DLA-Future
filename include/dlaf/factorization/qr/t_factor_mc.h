@@ -56,14 +56,14 @@ struct QR_Tfactor<Backend::MC, Device::CPU, T> {
   /// column of the reflectors
   /// @param serial_comm where internal communications are issued
   static void call(const SizeType k, Matrix<const T, Device::CPU>& v, const GlobalTileIndex v_start,
-                   common::internal::vector<hpx::shared_future<T>> taus, Matrix<T, Device::CPU>& t,
+                   hpx::shared_future<common::internal::vector<T>> taus, Matrix<T, Device::CPU>& t,
                    common::Pipeline<comm::CommunicatorGrid>& serial_comm);
 };
 
 template <class T>
 void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
     const SizeType k, Matrix<const T, Device::CPU>& v, const GlobalTileIndex v_start,
-    common::internal::vector<hpx::shared_future<T>> taus, Matrix<T, Device::CPU>& t,
+    hpx::shared_future<common::internal::vector<T>> taus, Matrix<T, Device::CPU>& t,
     common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
   using hpx::util::unwrapping;
   using common::make_data;
@@ -76,7 +76,6 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
   const auto panel_width = v.tileSize(v_start).cols();
 
   DLAF_ASSERT(k <= panel_width, k, panel_width);
-  DLAF_ASSERT(taus.size() == k, taus.size(), k);
 
   const GlobalTileIndex t_idx(0, 0);
   const auto t_size = t.tileSize(t_idx);
@@ -121,6 +120,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
     const bool is_v0 = (v_i == v_start.row());
 
     auto gemv_func = unwrapping([=](const auto& tile_v, const auto& taus, auto&& tile_t) {
+      DLAF_ASSERT(taus.size() == k, taus.size(), k);
       for (SizeType j = 0; j < k; ++j) {
         const T tau = taus[j];
         // this is the x0 element of the reflector j

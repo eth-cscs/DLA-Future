@@ -368,7 +368,7 @@ void update_trailing_panel(MatrixT<T>& a,
 }
 
 template <class T, class MatrixLikeT>
-void compute_w(PanelT<Coord::Col, T>& w, MatrixLikeT& v, ConstMatrixT<T>& t) {
+void compute_w(PanelT<Coord::Col, T>& w, MatrixLikeT& v, FutureConstTile<T> tile_t) {
   auto trmm_func =
       hpx::util::unwrapping([](auto&& tile_w, const auto& tile_v, const auto& tile_t) -> void {
         dlaf::tile::lacpy(tile_v, tile_w);
@@ -388,10 +388,9 @@ void compute_w(PanelT<Coord::Col, T>& w, MatrixLikeT& v, ConstMatrixT<T>& t) {
     // clang-format off
     FutureTile<T>      tile_w = w(index_tile_w);
     FutureConstTile<T> tile_v = v.read(index_tile_w);
-    FutureConstTile<T> tile_t = t.read(LocalTileIndex{0, 0});
     // clang-format on
 
-    hpx::dataflow(trmm_func, std::move(tile_w), std::move(tile_v), std::move(tile_t));
+    hpx::dataflow(trmm_func, std::move(tile_w), std::move(tile_v), tile_t);
   }
 }
 
@@ -720,7 +719,8 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<Bac
   PanelT<Coord::Row, T> xt(dist);
 
   for (SizeType j_panel = 0; j_panel < (dist.nrTiles().cols() - 1); ++j_panel) {
-    MatrixT<T> t(dist_block);  // used just by the column
+    const LocalTileIndex t_idx(0, 0);
+    MatrixT<T> t(dist_block);  // TODO used just by the column, maybe we can re-use a panel tile?
 
     const GlobalTileIndex ai_start{GlobalTileIndex{j_panel, j_panel} + GlobalTileSize{1, 0}};
     const GlobalTileIndex at_start{ai_start + GlobalTileSize{0, 1}};
@@ -768,7 +768,7 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<Bac
 
       // Prepare T and V for the next step
 
-      computeTFactor<Backend::MC>(k_reflectors, mat_a, ai_start, *taus.rbegin(), t, serial_comm);
+      computeTFactor<Backend::MC>(k_reflectors, mat_a, ai_start, *taus.rbegin(), t(t_idx), serial_comm);
 
       // Note:
       // Reflectors are stored in the lower triangular part of the A matrix leading to sharing memory
@@ -814,7 +814,7 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<Bac
     w.set_offset(at_offset);
 
     if (is_panel_rank_col)
-      compute_w(w, v, t);
+      compute_w(w, v, t.read(t_idx));
 
     wt.set_offset(at_offset);
     matrix::broadcast(executor_mpi, rank_v0.col(), w, wt, serial_comm);

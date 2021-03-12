@@ -28,6 +28,7 @@
 
 using dlaf::Device;
 using dlaf::Matrix;
+using dlaf::SizeType;
 using dlaf::comm::CommunicatorGrid;
 using dlaf::matrix::test::MatrixLocal;
 
@@ -77,12 +78,18 @@ void is_orthogonal(const MatrixLocal<const T>& matrix) {
   CHECK_MATRIX_NEAR(eye, ortho, 0, error);
 }
 
-std::vector<std::tuple<dlaf::SizeType, dlaf::SizeType, dlaf::SizeType, dlaf::SizeType, dlaf::SizeType>>
-    configs{
-        // m, n, mb, nb, k
-        {39, 26, 6, 6, 6},  // all reflectors
-        {39, 26, 6, 6, 4},  // k reflectors
-    };
+std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, dlaf::GlobalTileIndex>> configs{
+    // m, n, mb, nb, k
+    {39, 26, 6, 6, 6, {0, 3}},  // all reflectors (complete tile)
+    {39, 26, 6, 6, 2, {0, 4}},  // all reflectors (incomplete tile)
+    {39, 26, 6, 6, 4, {0, 3}},  // k reflectors (complete tile)
+    {39, 26, 6, 6, 1, {0, 4}},  // k reflectors (incomplete tile)
+
+    {26, 39, 6, 6, 6, {0, 5}},  // all reflectors (complete tile)
+    {26, 39, 6, 6, 2, {0, 6}},  // all reflectors (incomplete tile)
+    {26, 39, 6, 6, 4, {0, 5}},  // k reflectors (complete tile)
+    {26, 39, 6, 6, 1, {0, 6}},  // k reflectors (incomplete tile)
+};
 
 // Note:
 // Testing this function requires next input values:
@@ -114,10 +121,11 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
   using namespace dlaf;
 
   SizeType a_m, a_n, mb, nb, k;
+  GlobalTileIndex v_start;
 
   for (auto comm_grid : this->commGrids()) {
     for (auto config : configs) {
-      std::tie(a_m, a_n, mb, nb, k) = config;
+      std::tie(a_m, a_n, mb, nb, k, v_start) = config;
 
       const TileElementSize block_size(mb, nb);
 
@@ -125,8 +133,6 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
                                       std::min(1, comm_grid.size().cols() - 1));
       const matrix::Distribution dist_v({a_m, a_n}, block_size, comm_grid.size(), comm_grid.rank(),
                                         source_rank_index);
-
-      const GlobalTileIndex v_start{dist_v.nrTiles().rows() / 2, dist_v.nrTiles().cols() / 2};
 
       Matrix<const TypeParam, Device::CPU> v_input = [&]() {
         Matrix<TypeParam, Device::CPU> V(dist_v);

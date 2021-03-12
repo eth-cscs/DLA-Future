@@ -239,17 +239,16 @@ void update_trailing_panel(MatrixT<T>& a,
 
   const auto& dist = a.distribution();
 
-  const SizeType nb = a.blockSize().rows();
+  const SizeType pt_cols = a.blockSize().cols() - (index_el_x0.col() + 1);
 
   // 1B UPDATE TRAILING PANEL
   // for each tile in the panel, consider just the trailing panel
   // i.e. all rows (height = reflector), just columns to the right of the current reflector
-  if (!(index_el_x0.col() + 1 < nb))
+  if (!(pt_cols > 0))
     return;
 
   // 1B/1 Compute W
-  // TODO it should be panel.cols() instead of nb
-  MatrixT<T> w({nb, 1}, dist.blockSize());
+  MatrixT<T> w({pt_cols, 1}, dist.blockSize());
   set_to_zero(w);
 
   for (const LocalTileIndex& index_a_loc : ai_panel) {
@@ -263,7 +262,7 @@ void update_trailing_panel(MatrixT<T>& a,
 
       // clang-format off
       TileElementIndex        pt_start  {first_element, index_el_x0.col() + 1};
-      TileElementSize         pt_size   {tile_a.size().rows() - pt_start.row(), tile_a.size().cols() - pt_start.col()};
+      TileElementSize         pt_size   {tile_a.size().rows() - pt_start.row(), pt_cols};
 
       TileElementIndex        v_start   {first_element, index_el_x0.col()};
       const TileElementIndex  w_start   {0, 0};

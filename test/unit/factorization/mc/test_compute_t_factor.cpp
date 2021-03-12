@@ -215,10 +215,12 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
       is_orthogonal(h_expected);
 
       common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
-      Matrix<TypeParam, Device::CPU> t_output(LocalElementSize{k, k}, block_size);
+
+      Matrix<TypeParam, Device::CPU> t_output({k, k}, block_size);
+      const LocalTileIndex t_idx(0, 0);
 
       dlaf::factorization::internal::computeTFactor<Backend::MC>(k, v_input, v_start, taus_input,
-                                                                 t_output, serial_comm);
+                                                                 t_output(t_idx), serial_comm);
 
       const auto column_involved = dist_v.rankGlobalTile(v_start).col();
       if (dist_v.rankIndex().col() != column_involved)
@@ -234,7 +236,7 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
       //
       // is computed and compared to the one previously obtained by applying reflectors sequentially
 
-      const auto& t = t_output.read(LocalTileIndex{0, 0}).get();
+      const auto& t = t_output.read(t_idx).get();
 
       // TV* = (VT*)* = W
       MatrixLocal<TypeParam> w({m, k}, block_size);

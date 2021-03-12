@@ -56,14 +56,15 @@ struct QR_Tfactor<Backend::MC, Device::CPU, T> {
   /// column of the reflectors
   /// @param serial_comm where internal communications are issued
   static void call(const SizeType k, Matrix<const T, Device::CPU>& v, const GlobalTileIndex v_start,
-                   hpx::shared_future<common::internal::vector<T>> taus, Matrix<T, Device::CPU>& t,
+                   hpx::shared_future<common::internal::vector<T>> taus,
+                   hpx::future<matrix::Tile<T, Device::CPU>> t,
                    common::Pipeline<comm::CommunicatorGrid>& serial_comm);
 };
 
 template <class T>
 void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
     const SizeType k, Matrix<const T, Device::CPU>& v, const GlobalTileIndex v_start,
-    hpx::shared_future<common::internal::vector<T>> taus, Matrix<T, Device::CPU>& t,
+    hpx::shared_future<common::internal::vector<T>> taus, hpx::future<matrix::Tile<T, Device::CPU>> t,
     common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
   using hpx::util::unwrapping;
   using common::make_data;
@@ -77,11 +78,6 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
 
   DLAF_ASSERT(k <= panel_width, k, panel_width);
 
-  const GlobalTileIndex t_idx(0, 0);
-  const auto t_size = t.tileSize(t_idx);
-  DLAF_ASSERT(k <= t_size.rows(), k, t_size);
-  DLAF_ASSERT(k <= t_size.cols(), k, t_size);
-
   if (rank.col() != rank_v0.col())
     return;
 
@@ -91,9 +87,14 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
   };
   const LocalTileIndex v_end_loc{dist.localNrTiles().rows(), v_start_loc.col() + 1};
 
-  t(t_idx).then(unwrapping([](auto&& tile) {
-    lapack::laset(lapack::MatrixType::General, tile.size().rows(), tile.size().cols(), 0, 0, tile.ptr(),
+  t = t.then(unwrapping([k](auto&& tile) {
+    const auto t_size = tile.size();
+    DLAF_ASSERT(k <= t_size.rows(), k, t_size);
+    DLAF_ASSERT(k <= t_size.cols(), k, t_size);
+
+    lapack::laset(lapack::MatrixType::General, t_size.rows(), t_size.cols(), 0, 0, tile.ptr(),
                   tile.ld());
+    return std::move(tile);
   }));
 
   // Note:
@@ -121,6 +122,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
 
     auto gemv_func = unwrapping([=](const auto& tile_v, const auto& taus, auto&& tile_t) {
       DLAF_ASSERT(taus.size() == k, taus.size(), k);
+
       for (SizeType j = 0; j < k; ++j) {
         const T tau = taus[j];
         // this is the x0 element of the reflector j
@@ -169,6 +171,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
           // clang-format on
         }
       }
+      return std::move(tile_t);
     });
 
     // TODO
@@ -176,7 +179,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
     // Since we are writing always on the same t, the gemv are serialized
     // A possible solution to this would be to have multiple places where to store partial
     // results, and then locally reduce them just before the reduce over ranks
-    hpx::dataflow(gemv_func, v.read(v_i_loc), taus, t(t_idx));
+    t = hpx::dataflow(gemv_func, v.read(v_i_loc), taus, t);
   }
 
   // at this point each rank has its partial result for each column
@@ -185,9 +188,10 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
     auto reduce_t_func = unwrapping([=](auto&& tile_t, auto&& comm_wrapper) {
       auto&& input_t = make_data(tile_t);
       all_reduce(comm_wrapper.ref().colCommunicator(), MPI_SUM, input_t, input_t);
+      return std::move(tile_t);
     });
 
-    hpx::dataflow(reduce_t_func, t(t_idx), serial_comm());
+    t = hpx::dataflow(reduce_t_func, t, serial_comm());
   }
 
   // 2nd step: compute the T factor, by performing the last step on each column
@@ -207,9 +211,11 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
           tile_t.ptr(), tile_t.ld(),
           tile_t.ptr(t_start), 1);
       // clang-format on
+
+      return std::move(tile_t);
     });
 
-    hpx::dataflow(trmv_func, t(t_idx), t_start, t_size);
+    t = hpx::dataflow(trmv_func, t, t_start, t_size);
   }
 }
 }

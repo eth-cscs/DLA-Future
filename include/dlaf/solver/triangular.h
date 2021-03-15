@@ -11,6 +11,7 @@
 
 #include <blas.hh>
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/communication/mech.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/solver/triangular/mc.h"
 #include "dlaf/types.h"
@@ -115,7 +116,7 @@ void triangular(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, 
 /// @pre matrix A has a square block size,
 /// @pre matrix A and matrix B are distributed according to the grid,
 /// @pre matrix A and matrix B are multipliable.
-template <Backend backend, Device device, class T>
+template <Backend backend, Device device, class T, comm::MPIMech M>
 void triangular(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, blas::Op op,
                 blas::Diag diag, T alpha, Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
@@ -130,7 +131,7 @@ void triangular(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, b
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
         // Left Lower NoTrans
-        internal::Triangular<backend, device, T>::call_LLN(grid, diag, alpha, mat_a, mat_b);
+        internal::TriangularDistr<backend, device, T, M>::call_LLN(grid, diag, alpha, mat_a, mat_b);
       }
       else {
         // Left Lower Trans/ConjTrans

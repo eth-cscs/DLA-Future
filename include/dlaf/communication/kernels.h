@@ -100,65 +100,6 @@ struct bcast<T, MPIMech::Blocking> {
 //                          tag);
 //}
 
-/// MPI_Ibcast wrapper
-///
-/// For more information, see the Data concept in "dlaf/common/data.h"
-// template <class DataIn, MPIMech M>
-// hpx::future<void> bcast(Executor<M>& ex, int root_rank, DataIn& tile) {
-//  auto data = common::make_data(tile);
-//  using DataT = std::remove_const_t<typename common::data_traits<decltype(data)>::element_t>;
-//
-//  auto message = comm::make_message(common::make_data(data));
-//  return ex.async_execute(MPI_Ibcast, const_cast<DataT*>(message.data()), message.count(),
-//                          message.mpi_type(), root_rank);
-//}
-
-// template <class T, MPIMech M>
-// void bcast_send_tile(hpx::execution::parallel_executor executor_hp,
-//                     common::Pipeline<Executor<M>>& mpi_task_chain,
-//                     hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile) {
-//  using ConstTile_t = matrix::Tile<const T, Device::CPU>;
-//  using PromiseExec_t = common::PromiseGuard<Executor<M>>;
-//
-//  // Broadcast the (trailing) panel column-wise
-//  auto send_bcast_f = hpx::util::annotated_function(
-//      [](hpx::shared_future<ConstTile_t> ftile, hpx::future<PromiseExec_t> fpex) {
-//        const ConstTile_t& tile = ftile.get();
-//        hpx::future<void> comm_fut;
-//        {
-//          PromiseExec_t pex = fpex.get();
-//          comm_fut = comm::bcast(pex.ref(), pex.ref().comm().rank(), tile);
-//        }
-//        comm_fut.get();
-//      },
-//      "send_tile");
-//  hpx::dataflow(executor_hp, std::move(send_bcast_f), tile, mpi_task_chain());
-//}
-//
-// template <class T, MPIMech M>
-// hpx::future<matrix::Tile<const T, Device::CPU>> bcast_recv_tile(
-//    hpx::execution::parallel_executor executor_hp, common::Pipeline<Executor<M>>& mpi_task_chain,
-//    TileElementSize tile_size, int rank) {
-//  using ConstTile_t = matrix::Tile<const T, Device::CPU>;
-//  using PromiseExec_t = common::PromiseGuard<Executor<M>>;
-//  using MemView_t = memory::MemoryView<T, Device::CPU>;
-//  using Tile_t = matrix::Tile<T, Device::CPU>;
-//
-//  // Update the (trailing) panel column-wise
-//  auto recv_bcast_f = hpx::util::annotated_function(
-//      [rank, tile_size](hpx::future<PromiseExec_t> fpex) {
-//        MemView_t mem_view(util::size_t::mul(tile_size.rows(), tile_size.cols()));
-//        Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
-//        PromiseExec_t pex = fpex.get();
-//        return comm::bcast(pex.ref(), rank, tile)
-//            .then(hpx::launch::sync, [t = std::move(tile)](hpx::future<void>) mutable -> ConstTile_t {
-//              return std::move(t);
-//            });
-//      },
-//      "recv_tile");
-//  return hpx::dataflow(executor_hp, std::move(recv_bcast_f), mpi_task_chain());
-//}
-
 /// MPI_Ireduce wrapper
 ///
 /// @param reduce_operation MPI_Op to perform on @p input data coming from ranks in @p communicator

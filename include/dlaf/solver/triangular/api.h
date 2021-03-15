@@ -9,6 +9,7 @@
 //
 #pragma once
 
+#include "dlaf/communication/mech.h"
 #include "dlaf/types.h"
 
 namespace dlaf {
@@ -17,6 +18,9 @@ namespace internal {
 
 template <Backend backend, Device device, class T>
 struct Triangular {};
+
+template <Backend backend, Device device, class T, comm::MPIMech M>
+struct TriangularDistr {};
 
 }
 }

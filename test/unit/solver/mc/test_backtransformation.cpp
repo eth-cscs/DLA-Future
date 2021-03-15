@@ -61,8 +61,8 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
 //    {2, 2, 3, 3}, {3, 4, 6, 7},  // m < mb
 //    {3, 3, 1, 1}, {4, 4, 2, 2}, {6, 3, 3, 3}, {12, 2, 4, 4}, {12, 24, 3, 3}, {24, 36, 6, 6},
 //    {5, 8, 3, 2}, {4, 6, 2, 3}, {5, 5, 2, 3}, {8, 27, 3, 4}, {15, 34, 4, 6},
-  {3, 3, 1, 1},
-  //  {4, 4, 2, 2}
+//  {3, 3, 1, 1},
+  {4, 4, 2, 2}
 };
 
 template <class T>
@@ -124,27 +124,48 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
     auto mat_t_loc = dlaf::matrix::test::all_gather<T>(mat_t, comm_grid);
 
     common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus;
+    std::cout << " tottaus " << tottaus << std::endl;
 
-    MatrixLocal<T> tausloc({m,1},{1,1});
+    MatrixLocal<T> tausloc({tottaus,1},{mb,mb});
+    auto tau_rows = tausloc.nrTiles().rows();
+    std::cout << " tau rows " << tau_rows << " blocksize " << tausloc.blockSize().rows() << std::endl;
+    
+    //    for (SizeType i = tottaus - 1; i > -1; --i) {
+    //    for (SizeType i = 0; i < tottaus; ++i) {
+    auto nt = 0;
+    for (SizeType i = 0; i < tau_rows; ++i) {
+      common::internal::vector<T> t_tile;
+      for (SizeType t = 0; t < mb && nt < tottaus; ++t) {
+	const GlobalElementIndex v_offset{i*mb+t, i*mb+t};
+	auto dotprod = blas::dot(m - t, mat_v_loc.ptr(v_offset), 1, mat_v_loc.ptr(v_offset), 1);
+	T taui;
+	if (std::is_same<T, ComplexType<T>>::value) {
+	  auto seed = 10000 * i + 1;
+	  dlaf::matrix::util::internal::getter_random<T> random_value(seed);
+	  taui = random_value();
+	}
+	else {
+	  taui = static_cast<T>(0.0);
+	}
+	auto tau = (static_cast<T>(1.0) + sqrt(static_cast<T>(1.0) - dotprod * taui * taui)) / dotprod;
+	std::cout << " i " << i << ", t " << t  << ", tau " <<tau << std::endl;
+	tausloc({nt, 0}) = tau;
+	t_tile.push_back(tau);
+	++nt;
+      }
+      taus.push_back(hpx::make_ready_future(t_tile));
+    }
+
+    print(format::numpy{}, "tausloc ", tausloc, std::cout);
+    
     for (SizeType i = tottaus - 1; i > -1; --i) {
       const GlobalElementIndex v_offset{i, i};
-      auto dotprod = blas::dot(m - i, mat_v_loc.ptr(v_offset), 1, mat_v_loc.ptr(v_offset), 1);
-      T taui;
-      if (std::is_same<T, ComplexType<T>>::value) {
-        auto seed = 10000 * i + 1;
-        dlaf::matrix::util::internal::getter_random<T> random_value(seed);
-        taui = random_value();
-      }
-      else {
-        taui = static_cast<T>(0.0);
-      }
-      auto tau = (static_cast<T>(1.0) + sqrt(static_cast<T>(1.0) - dotprod * taui * taui)) / dotprod;
-      std::cout << " i " << i << ", tau " <<tau << std::endl;
-      tausloc({i, 0}) = tau;
-      taus = tausloc({i,0});
+      auto tau = tausloc({i, 0});
       lapack::larf(lapack::Side::Left, m - i, n, mat_v_loc.ptr(v_offset), 1, tau,
                    mat_c_loc.ptr(GlobalElementIndex{i, 0}), mat_c_loc.ld());
-    }
+      std::cout << "i " << i  <<  " m " << m << " n " << n << std::endl;
+      print(format::numpy{}, "mat_c", mat_c_loc, std::cout);
+  }
     
     for (SizeType i = 0; i < mat_t.nrTiles().cols(); ++i) {
       const GlobalElementIndex offset{i * mb, i * mb};

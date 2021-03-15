@@ -355,7 +355,7 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
   auto executor_np = dlaf::getNpExecutor<backend>();
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
-  common::Pipeline<comm::CommunicatorGrid> serial_comm(std::move(grid));
+  common::Pipeline<comm::CommunicatorGrid> mpi_task_chain(std::move(grid));
 
   const matrix::Distribution& distr_a = mat_a.distribution();
   const matrix::Distribution& distr_b = mat_b.distribution();
@@ -381,11 +381,13 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
         auto kk = LocalTileIndex{k_local_row, k_local_col};
 
         kk_tile = mat_a.read(kk);
-        comm::send_tile(executor_mpi, serial_comm, Coord::Row, mat_a.read(kk));
+        auto comm_tile = comm::prepareSendTile(mat_a.read(kk));
+        dataflow(executor_mpi, comm::sendTile_o, mpi_task_chain(), Coord::Row, std::move(comm_tile));
       }
       else {
-        kk_tile = comm::recv_tile<T, device>(executor_mpi, serial_comm, Coord::Row,
-                                             mat_a.tileSize(GlobalTileIndex(k, k)), k_rank_col);
+        auto comm_tile = dataflow(executor_mpi, comm::recvAllocTile<T, device>, mpi_task_chain(),
+                                  Coord::Row, mat_a.tileSize(GlobalTileIndex(k, k)), k_rank_col);
+        kk_tile = comm::handleRecvTile<device>(std::move(comm_tile));
       }
     }
 
@@ -399,13 +401,15 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
         lln::trsm_B_panel_tile(executor_hp, diag, alpha, kk_tile, mat_b(kj));
         panel[j_local] = mat_b.read(kj);
         if (k != (mat_b.nrTiles().rows() - 1)) {
-          comm::send_tile(executor_mpi, serial_comm, Coord::Col, panel[j_local]);
+          auto comm_tile = comm::prepareSendTile(panel[j_local]);
+          dataflow(executor_mpi, comm::sendTile_o, mpi_task_chain(), Coord::Col, std::move(comm_tile));
         }
       }
       else {
         if (k != (mat_b.nrTiles().rows() - 1)) {
-          panel[j_local] = comm::recv_tile<T, device>(executor_mpi, serial_comm, Coord::Col,
-                                                      mat_b.tileSize(GlobalTileIndex(k, j)), k_rank_row);
+          auto comm_tile = dataflow(executor_mpi, comm::recvAllocTile<T, device>, mpi_task_chain(),
+                                    Coord::Col, mat_b.tileSize(GlobalTileIndex(k, j)), k_rank_row);
+          panel[j_local] = comm::handleRecvTile<device>(std::move(comm_tile));
         }
       }
     }
@@ -425,11 +429,13 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
         auto ik = LocalTileIndex{i_local, k_local_col};
 
         ik_tile = mat_a.read(ik);
-        comm::send_tile(executor_mpi, serial_comm, Coord::Row, mat_a.read(ik));
+        auto comm_tile = comm::prepareSendTile(mat_a.read(ik));
+        dataflow(executor_mpi, comm::sendTile_o, mpi_task_chain(), Coord::Row, std::move(comm_tile));
       }
       else {
-        ik_tile = comm::recv_tile<T, device>(executor_mpi, serial_comm, Coord::Row,
-                                             mat_a.tileSize(GlobalTileIndex(i, k)), k_rank_col);
+        auto comm_tile = dataflow(executor_mpi, comm::recvAllocTile<T, device>, mpi_task_chain(),
+                                  Coord::Row, mat_a.tileSize(GlobalTileIndex(i, k)), k_rank_col);
+        ik_tile = comm::handleRecvTile<device>(std::move(comm_tile));
       }
 
       // Update trailing matrix

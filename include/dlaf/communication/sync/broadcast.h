@@ -27,6 +27,19 @@
 
 namespace dlaf {
 namespace comm {
+
+template <Device D>
+struct CommunicationDevice {
+  static constexpr Device value = D;
+};
+
+#if defined(DLAF_WITH_CUDA) && !defined(DLAF_WITH_CUDA_RDMA)
+template <>
+struct CommunicationDevice<Device::GPU> {
+  static constexpr Device value = Device::CPU;
+};
+#endif
+
 namespace sync {
 namespace broadcast {
 
@@ -57,98 +70,89 @@ void receive_from(const int broadcaster_rank, Communicator& communicator, DataOu
 }
 
 namespace detail {
-template <Device D>
-struct prepare_send_tile {
+template <Device Source, Device Destination>
+struct DuplicateIfNeeded {
   template <typename T>
-  static auto call(hpx::shared_future<matrix::Tile<const T, D>> tile) {
-    return tile;
-  }
-};
-
-#if defined(DLAF_WITH_CUDA) && !defined(DLAF_WITH_CUDA_RDMA)
-template <>
-struct prepare_send_tile<Device::GPU> {
-  template <typename T>
-  static auto call(hpx::shared_future<matrix::Tile<const T, Device::GPU>> tile) {
-    // TODO: Nicer API for Duplicate?
-    // This could benefit from having Device::CPU/GPU be types instead of
-    // enumerations. Duplicate would not have to be a custom wrapper.
-    // Forwarding a mix of type and nontype template parameters is
-    // difficult/impossible(?).
+  static auto call(hpx::future<matrix::Tile<const T, Source>> tile) {
     return dlaf::matrix::getReturnValue(
-        hpx::dataflow(getCopyExecutor<Device::GPU, Device::CPU>(),
-                      dlaf::matrix::unwrapExtendTiles(dlaf::matrix::Duplicate<const T, Device::CPU>{}),
+        hpx::dataflow(getCopyExecutor<Source, Destination>(),
+                      dlaf::matrix::unwrapExtendTiles(dlaf::matrix::Duplicate<const T, Destination>{}),
+                      tile));
+  }
+
+  template <typename T>
+  static auto call(hpx::shared_future<matrix::Tile<const T, Source>> tile) {
+    return dlaf::matrix::getReturnValue(
+        hpx::dataflow(getCopyExecutor<Source, Destination>(),
+                      dlaf::matrix::unwrapExtendTiles(dlaf::matrix::Duplicate<const T, Destination>{}),
                       tile));
   }
 };
-#endif
 
-template <Device DOut>
-struct handle_recv_tile {
-  template <typename T, Device D>
-  static auto call(hpx::future<matrix::Tile<const T, D>> tile) {
+template <Device SourceDestination>
+struct DuplicateIfNeeded<SourceDestination, SourceDestination> {
+  template <typename T>
+  static auto call(hpx::future<matrix::Tile<const T, SourceDestination>> tile) {
+    return tile;
+  }
+
+  template <typename T>
+  static auto call(hpx::shared_future<matrix::Tile<const T, SourceDestination>> tile) {
     return tile;
   }
 };
-
-#if defined(DLAF_WITH_CUDA) && !defined(DLAF_WITH_CUDA_RDMA)
-template <>
-struct handle_recv_tile<Device::GPU> {
-  template <typename T>
-  static auto call(hpx::future<matrix::Tile<const T, Device::CPU>> tile) {
-    auto gpu_cpu_tile =
-        hpx::dataflow(getCopyExecutor<Device::CPU, Device::GPU>(),
-                      dlaf::matrix::unwrapExtendTiles(dlaf::matrix::Duplicate<const T, Device::GPU>{}),
-                      tile);
-    auto split_tile = hpx::split_future(std::move(gpu_cpu_tile));
-    return std::move(hpx::get<0>(split_tile));
-  }
-};
-#endif
 }
 
-template <class T, Device D>
-void send_tile(hpx::execution::parallel_executor ex,
-               common::Pipeline<comm::CommunicatorGrid>& task_chain, Coord rc_comm,
-               hpx::shared_future<matrix::Tile<const T, D>> tile) {
-  using PromiseComm_t = common::PromiseGuard<comm::CommunicatorGrid>;
-
-  auto send_bcast_f = hpx::util::annotated_function(
-      [rc_comm](auto ftile, hpx::future<PromiseComm_t> fpcomm) {
-        PromiseComm_t pcomm = fpcomm.get();
-        comm::sync::broadcast::send(pcomm.ref().subCommunicator(rc_comm), ftile.get());
-      },
-      "send_tile");
-
-  hpx::dataflow(ex, std::move(send_bcast_f), detail::prepare_send_tile<D>::call(std::move(tile)),
-                task_chain());
+template <typename T, Device D>
+auto prepareSendTile(hpx::shared_future<matrix::Tile<const T, D>> tile) {
+  return detail::DuplicateIfNeeded<D, CommunicationDevice<D>::value>::call(std::move(tile));
 }
 
-template <class T, Device D>
-hpx::future<matrix::Tile<const T, D>> recv_tile(hpx::execution::parallel_executor ex,
-                                                common::Pipeline<comm::CommunicatorGrid>& mpi_task_chain,
-                                                Coord rc_comm, TileElementSize tile_size, int rank) {
+template <Device D, typename T>
+auto handleRecvTile(hpx::future<matrix::Tile<const T, CommunicationDevice<D>::value>> tile) {
+  return detail::DuplicateIfNeeded<CommunicationDevice<D>::value, D>::call(std::move(tile));
+}
+
+/// Task for broadcasting (send endpoint) a Tile in a direction over a CommunicatorGrid
+template <class TileFuture>
+void sendTile(hpx::future<common::PromiseGuard<comm::CommunicatorGrid>> mpi_task_chain, Coord rc_comm,
+              TileFuture&& tile) {
   using PromiseComm_t = common::PromiseGuard<comm::CommunicatorGrid>;
 
-#if defined(DLAF_WITH_CUDA) && !defined(DLAF_WITH_CUDA_RDMA)
-  constexpr Device device = Device::CPU;
-#else
-  constexpr Device device = D;
-#endif
-  using ConstTile_t = matrix::Tile<const T, device>;
-  using MemView_t = memory::MemoryView<T, device>;
-  using Tile_t = matrix::Tile<T, device>;
+  PromiseComm_t pcomm = mpi_task_chain.get();
+  comm::sync::broadcast::send(pcomm.ref().subCommunicator(rc_comm), tile.get());
+}
 
-  auto recv_bcast_f = hpx::util::annotated_function(
-      [rank, tile_size, rc_comm](hpx::future<PromiseComm_t> fpcomm) -> ConstTile_t {
-        PromiseComm_t pcomm = fpcomm.get();
-        Tile_t tile(tile_size, MemView_t(tile_size.linear_size()), tile_size.rows());
-        comm::sync::broadcast::receive_from(rank, pcomm.ref().subCommunicator(rc_comm), tile);
-        return ConstTile_t(std::move(tile));
-      },
-      "recv_tile");
+DLAF_MAKE_CALLABLE_OBJECT(sendTile);
 
-  return detail::handle_recv_tile<D>::call(hpx::dataflow(ex, std::move(recv_bcast_f), mpi_task_chain()));
+/// Task for broadcasting (receiving endpoint) a Tile in a direction over a CommunicatorGrid
+template <class T, Device D>
+void recvTile(hpx::future<common::PromiseGuard<comm::CommunicatorGrid>> mpi_task_chain, Coord rc_comm,
+              hpx::future<matrix::Tile<T, CommunicationDevice<D>::value>> tile, comm::IndexT_MPI rank) {
+  using PromiseComm_t = common::PromiseGuard<comm::CommunicatorGrid>;
+
+  PromiseComm_t pcomm = mpi_task_chain.get();
+  comm::sync::broadcast::receive_from(rank, pcomm.ref().subCommunicator(rc_comm), tile.get());
+}
+
+DLAF_MAKE_CALLABLE_OBJECT(recvTile);
+
+/// Task for broadcasting (receiving endpoint) a Tile ("JIT" allocation) in a direction over a CommunicatorGrid
+template <class T, Device D>
+matrix::Tile<const T, CommunicationDevice<D>::value> recvAllocTile(
+    hpx::future<common::PromiseGuard<comm::CommunicatorGrid>> mpi_task_chain, Coord rc_comm,
+    TileElementSize tile_size, comm::IndexT_MPI rank) {
+  constexpr Device comm_device = CommunicationDevice<D>::value;
+  using ConstTile_t = matrix::Tile<const T, comm_device>;
+  using PromiseComm_t = common::PromiseGuard<comm::CommunicatorGrid>;
+  using MemView_t = memory::MemoryView<T, comm_device>;
+  using Tile_t = matrix::Tile<T, comm_device>;
+
+  PromiseComm_t pcomm = mpi_task_chain.get();
+  MemView_t mem_view(tile_size.linear_size());
+  Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
+  comm::sync::broadcast::receive_from(rank, pcomm.ref().subCommunicator(rc_comm), tile);
+  return ConstTile_t(std::move(tile));
 }
 }
 }

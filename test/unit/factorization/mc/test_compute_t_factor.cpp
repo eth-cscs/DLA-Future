@@ -311,7 +311,8 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
       // The error threshold has been determined considering that ~2*n*nb arithmetic operations (n*nb
       // multiplications and n*nb addition) are needed to compute each of the element of the matrix `h_result`,
       // and that TypeUtilities<TypeParam>::error indicates maximum error for a multiplication + addition.
-      SCOPED_TRACE("Comparison test");
+      SCOPED_TRACE(::testing::Message() << "Comparison test m = " << a_m << " n=" << a_n << " mb=" << mb
+                                        << " nb=" << nb << " k=" << k << " v_start=" << v_start);
       const auto error = h_result.size().rows() * k * test::TypeUtilities<TypeParam>::error;
       CHECK_MATRIX_NEAR(h_expected, h_result, 0, error);
     }

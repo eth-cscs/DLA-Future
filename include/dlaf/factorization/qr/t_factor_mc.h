@@ -53,10 +53,13 @@ struct QR_Tfactor<Backend::MC, Device::CPU, T> {
   /// @param v where the elementary reflectors are stored
   /// @param v_start tile in @p v where the column of reflectors starts
   /// @param taus array of taus, associated with the related elementary reflector
-  /// @param t tile where the resulting T factor will be stored
+  /// @param t tile where the resulting T factor will be stored in its top-left sub-matrix of size
+  /// TileElementSize(k, k)
   /// @param serial_comm where internal communications are issued
   ///
   /// @pre k <= t.get().size().rows && k <= t.get().size().cols()
+  /// @pre k >= 0
+  /// @pre v_start.isIn(v.nrTiles())
   static void call(const SizeType k, Matrix<const T, Device::CPU>& v, const GlobalTileIndex v_start,
                    hpx::shared_future<common::internal::vector<T>> taus,
                    hpx::future<matrix::Tile<T, Device::CPU>> t,
@@ -74,14 +77,19 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
 
   auto executor_mpi = dlaf::getMPIExecutor<Backend::MC>();
 
+  // Fast return in case of no reflectors
+  if (k == 0)
+    return;
+
+  const auto panel_width = v.tileSize(v_start).cols();
+  DLAF_ASSERT(0 <= k && k <= panel_width, k, panel_width);
+
+  DLAF_ASSERT_MODERATE(v_start.isIn(v.nrTiles()), v_start, v.nrTiles());
   const auto& dist = v.distribution();
   const comm::Index2D rank = dist.rankIndex();
   const comm::Index2D rank_v0 = dist.rankGlobalTile(v_start);
 
-  const auto panel_width = v.tileSize(v_start).cols();
-
-  DLAF_ASSERT(k <= panel_width, k, panel_width);
-
+  // Just the column of ranks with the reflectors participates
   if (rank.col() != rank_v0.col())
     return;
 
@@ -96,8 +104,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
     DLAF_ASSERT(k <= t_size.rows(), k, t_size);
     DLAF_ASSERT(k <= t_size.cols(), k, t_size);
 
-    lapack::laset(lapack::MatrixType::General, t_size.rows(), t_size.cols(), 0, 0, tile.ptr(),
-                  tile.ld());
+    lapack::laset(lapack::MatrixType::General, k, k, 0, 0, tile.ptr(), tile.ld());
     return std::move(tile);
   }));
 
@@ -133,7 +140,6 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
         const TileElementIndex x0{j, j};
 
         const TileElementIndex t_start{0, x0.col()};
-        const TileElementSize t_size{x0.row(), 1};
 
         const SizeType first_element_in_tile = is_v0 ? x0.row() : 0;
 
@@ -150,9 +156,6 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
           for (SizeType r = 0; !va_size.isEmpty() && r < va_size.cols(); ++r) {
             const TileElementIndex i_v{va_start.row(), r + va_start.col()};
             const TileElementIndex i_t{r + t_start.row(), t_start.col()};
-
-            DLAF_ASSERT_HEAVY(i_t.isIn(tile_t.size()), i_t, t_size);
-            DLAF_ASSERT_HEAVY(i_v.isIn(tile_v.size()), i_v, tile_v.size());
 
             tile_t(i_t) = -tau * dlaf::conj(tile_v(i_v));
           }

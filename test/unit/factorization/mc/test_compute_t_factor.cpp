@@ -234,11 +234,16 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
 
       common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
 
-      Matrix<TypeParam, Device::CPU> t_output({k, k}, block_size);
+      const auto max_k = std::min(mb, nb);
+      Matrix<TypeParam, Device::CPU> t_output({max_k, max_k}, block_size);
       const LocalTileIndex t_idx(0, 0);
 
       dlaf::factorization::internal::computeTFactor<Backend::MC>(k, v_input, v_start, taus_input,
                                                                  t_output(t_idx), serial_comm);
+
+      // No reflectors, so nothing to check
+      if (k == 0)
+        continue;
 
       const auto column_involved = dist_v.rankGlobalTile(v_start).col();
       if (dist_v.rankIndex().col() != column_involved)

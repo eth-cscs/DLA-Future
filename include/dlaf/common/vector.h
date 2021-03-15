@@ -17,7 +17,7 @@ namespace dlaf {
 namespace common {
 namespace internal {
 
-/// Alias for std::vector with overloads for signed indexes.
+/// Alias for std::vector with overloads for signed indeces.
 ///
 /// It is an std::vector with overloads for working seamlessly with unsigned integers as parameters.
 template <typename T>

@@ -8,6 +8,12 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+DLAF_addTest(test_band_to_tridiag
+  SOURCES test_band_to_tridiag.cpp
+  LIBRARIES dlaf.eigensolver dlaf.core
+  USE_MAIN HPX
+)
+
 DLAF_addTest(test_gen_to_std
   SOURCES test_gen_to_std.cpp
   LIBRARIES dlaf.eigensolver dlaf.core

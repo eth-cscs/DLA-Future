@@ -23,6 +23,7 @@
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/print_numpy.h"
+#include "dlaf/util_matrix.h"
 
 #include "dlaf_test/matrix/matrix_local.h"
 
@@ -52,11 +53,31 @@ void copy(const MatrixLocal<const T>& source, MatrixLocal<T>& dest) {
   std::copy(source.ptr(), source.ptr() + linear_size, dest.ptr());
 }
 
-/// Given a (possibly) distributed Matrix, collect all data full-size local matrix
+/// Given a non-distributed Matrix, copy to a lapack layout matrix
+///
+/// Optionally, it is possible to specify the type of the return MatrixLocal (useful for const correctness)
+template <class T>
+MatrixLocal<T> allGather(Matrix<const T, Device::CPU>& source) {
+  DLAF_ASSERT(matrix::local_matrix(source), source);
+
+  MatrixLocal<std::remove_const_t<T>> dest(source.size(), source.blockSize());
+
+  for (const auto& ij_tile : iterate_range2d(source.nrTiles())) {
+    auto& dest_tile = dest.tile(ij_tile);
+    const auto& source_tile = source.read(ij_tile).get();
+    copy(source_tile, dest_tile);
+  }
+
+  return MatrixLocal<T>(std::move(dest));
+}
+
+/// Given a distributed Matrix, collect all data full-size local lapack layout matrix
 ///
 /// Optionally, it is possible to specify the type of the return MatrixLocal (useful for const correctness)
 template <class T>
 MatrixLocal<T> allGather(Matrix<const T, Device::CPU>& source, comm::CommunicatorGrid comm_grid) {
+  DLAF_ASSERT(matrix::equal_process_grid(source, comm_grid), source, comm_grid);
+
   MatrixLocal<std::remove_const_t<T>> dest(source.size(), source.blockSize());
 
   const auto& dist_source = source.distribution();

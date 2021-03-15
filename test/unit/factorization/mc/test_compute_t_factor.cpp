@@ -305,8 +305,7 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
       // multiplications and n*nb addition) are needed to compute each of the element of the matrix `h_result`,
       // and that TypeUtilities<TypeParam>::error indicates maximum error for a multiplication + addition.
       SCOPED_TRACE("Comparison test");
-      const auto error =
-          h_result.size().rows() * t.size().rows() * test::TypeUtilities<TypeParam>::error;
+      const auto error = h_result.size().rows() * k * test::TypeUtilities<TypeParam>::error;
       CHECK_MATRIX_NEAR(h_expected, h_result, 0, error);
     }
   }

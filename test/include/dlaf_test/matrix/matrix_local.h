@@ -54,9 +54,12 @@ struct MatrixLocal<const T> {
   /// @pre !sz.isEmpty()
   /// @pre !blocksize.isEmpty()
   MatrixLocal(GlobalElementSize sz, TileElementSize blocksize) noexcept
-      : layout_{colMajorLayout({sz.rows(), sz.cols()}, blocksize, sz.rows())} {
-    DLAF_ASSERT(!sz.isEmpty(), sz);
+      : layout_{colMajorLayout({sz.rows(), sz.cols()}, blocksize, std::max(sz.rows(), SizeType(1)))} {
     DLAF_ASSERT(!blocksize.isEmpty(), blocksize);
+
+    if (sz.isEmpty())
+      return;
+
     memory_ = MemoryT{layout_.minMemSize()};
 
     for (const auto& tile_index : iterate_range2d(layout_.nrTiles()))

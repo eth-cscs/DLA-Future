@@ -51,6 +51,9 @@ T preset_eye(const dlaf::GlobalElementIndex& index) {
 
 template <class T>
 void is_orthogonal(const MatrixLocal<const T>& matrix) {
+  if (matrix.size().isEmpty())
+    return;
+
   MatrixLocal<T> ortho(matrix.size(), matrix.blockSize());
 
   // ortho = matrix . matrix*
@@ -159,11 +162,15 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
         auto a = matrix::test::allGather<TypeParam>(v_input, comm_grid);
 
         // panel shape
-        const auto v_start_el = dist_v.globalElementIndex(v_start, {0, 0});
-        const auto v_end_el = GlobalElementIndex{a_m, std::min(v_start_el.col() + nb, a_n)};
-        const auto v_size_el = v_end_el - v_start_el;
+        GlobalElementSize v_size = dist_v.size();
 
-        MatrixLocal<TypeParam> v(v_size_el, a.blockSize());
+        if (not v_size.isEmpty()) {
+          const auto v_start_el = dist_v.globalElementIndex(v_start, {0, 0});
+          const auto v_end_el = GlobalElementIndex{a_m, std::min(v_start_el.col() + nb, a_n)};
+          v_size = v_end_el - v_start_el;
+        }
+
+        MatrixLocal<TypeParam> v(v_size, a.blockSize());
 
         // copy only the panel
         const GlobalTileSize v_offset{v_start.row(), v_start.col()};
@@ -171,11 +178,12 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
           copy(a.tile_read(ij + v_offset), v.tile(ij));
 
         // clean reflectors
-        // clang-format off
-        lapack::laset(lapack::MatrixType::Upper,
-            v.size().rows(), v.size().cols(),
-            0, 1,
-            v.ptr(), v.ld());
+        if (not v_size.isEmpty())
+          // clang-format off
+          lapack::laset(lapack::MatrixType::Upper,
+              v.size().rows(), v.size().cols(),
+              0, 1,
+              v.ptr(), v.ld());
         // clang-format on
 
         return v;
@@ -190,7 +198,7 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
       MatrixLocal<TypeParam> h_expected({m, m}, block_size);
       set(h_expected, preset_eye<TypeParam>);
 
-      for (auto j = 0; j < k; ++j) {
+      for (auto j = 0; !v.size().isEmpty() and j < k; ++j) {
         const SizeType reflector_size = m - j;
 
         const TypeParam* data_ptr = v.ptr({j, j});

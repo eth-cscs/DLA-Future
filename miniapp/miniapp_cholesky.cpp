@@ -22,6 +22,7 @@
 #include "dlaf/communication/executor.h"
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/communication/init.h"
+#include "dlaf/communication/mech.h"
 #include "dlaf/factorization/cholesky.h"
 #include "dlaf/factorization/cholesky/mc.h"
 #include "dlaf/matrix/copy.h"
@@ -47,6 +48,7 @@ using dlaf::TileElementSize;
 using dlaf::common::Ordering;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
+using dlaf::comm::MPIMech;
 
 using T = double;
 using MatrixType = dlaf::Matrix<T, Device::CPU>;
@@ -60,9 +62,7 @@ using ConstTileType = MatrixType::ConstTileType;
 /// this function checks that A == L * L'
 void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid);
 
-enum class CHECK_RESULT { NONE, LAST, ALL };
-
-enum class exec_backend { blocking, polling, yielding, batched_polling, batched_yielding };
+enum class CholCheckIterFreq { None, Last, All };
 
 struct options_t {
   SizeType m;
@@ -71,17 +71,21 @@ struct options_t {
   int grid_cols;
   int64_t nruns;
   int64_t nwarmups;
-  CHECK_RESULT do_check;
-  exec_backend exec;
+  CholCheckIterFreq do_check;
+  MPIMech mech;
 };
 
 /// Handle CLI options
-options_t check_options(hpx::program_options::variables_map& vm);
+options_t parse_options(hpx::program_options::variables_map&);
+
+MPIMech parse_mech(const std::string&);
+
+CholCheckIterFreq parse_chol_check(const std::string&);
 
 }
 
 int hpx_main(hpx::program_options::variables_map& vm) {
-  options_t opts = check_options(vm);
+  options_t opts = parse_options(vm);
 
   // Only needed for the `polling` approach
   std::string mpi_pool = (hpx::resource::pool_exists("mpi")) ? "mpi" : "default";
@@ -117,21 +121,20 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     }
 
     dlaf::common::Timer<> timeit;
-    if (opts.exec == exec_backend::blocking) {
-      dlaf::factorization::cholesky<Backend::MC, Device::CPU, T>(comm_grid, blas::Uplo::Lower, matrix);
+    if (opts.mech == MPIMech::Blocking) {
+      dlaf::factorization::cholesky<Backend::MC, Device::CPU, T, MPIMech::Blocking>(comm_grid,
+                                                                                    blas::Uplo::Lower,
+                                                                                    matrix);
     }
-    else if (opts.exec == exec_backend::yielding) {
-      dlaf::factorization::internal::chol_nb<T, dlaf::comm::MPIMech::Yielding>(comm_grid, matrix);
+    else if (opts.mech == MPIMech::Yielding) {
+      dlaf::factorization::cholesky<Backend::MC, Device::CPU, T, MPIMech::Yielding>(comm_grid,
+                                                                                    blas::Uplo::Lower,
+                                                                                    matrix);
     }
-    else if (opts.exec == exec_backend::polling) {
-      dlaf::factorization::internal::chol_nb<T, dlaf::comm::MPIMech::Polling>(comm_grid, matrix);
-    }
-    else if (opts.exec == exec_backend::batched_yielding) {
-      // dlaf::factorization::internal::chol_batched<T, dlaf::comm::MPIMech::Yielding>(comm_grid, matrix);
-    }
-    else if (opts.exec == exec_backend::batched_polling) {
-      // dlaf::factorization::internal::chol_batched<T, dlaf::comm::mpi_polling_executor>(comm_grid,
-      //                                                                                 matrix);
+    else if (opts.mech == MPIMech::Polling) {
+      dlaf::factorization::cholesky<Backend::MC, Device::CPU, T, MPIMech::Polling>(comm_grid,
+                                                                                   blas::Uplo::Lower,
+                                                                                   matrix);
     }
 
     // wait for last task and barrier for all ranks
@@ -160,8 +163,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
                 << " " << hpx::get_os_thread_count() << std::endl;
 
     // (optional) run test
-    if ((opts.do_check == CHECK_RESULT::LAST && run_index == (opts.nruns - 1)) ||
-        opts.do_check == CHECK_RESULT::ALL) {
+    if ((opts.do_check == CholCheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
+        opts.do_check == CholCheckIterFreq::All) {
       MatrixType original(matrix_size, block_size, comm_grid);
       copy(matrix_ref, original);
       check_cholesky(original, matrix, comm_grid);
@@ -181,40 +184,29 @@ int main(int argc, char** argv) {
 
   // clang-format off
   desc_commandline.add_options()
-    ("matrix-size",  value<SizeType>()   ->default_value(4096),                        "Matrix size")
-    ("block-size",   value<SizeType>()   ->default_value( 256),                        "Block cyclic distribution size")
-    ("grid-rows",    value<int>()        ->default_value(   1),                        "Number of row processes in the 2D communicator")
-    ("grid-cols",    value<int>()        ->default_value(   1),                        "Number of column processes in the 2D communicator")
-    ("nruns",        value<int64_t>()    ->default_value(   1),                        "Number of runs to compute the cholesky")
-    ("nwarmups",     value<int64_t>()    ->default_value(   1),                        "Number of warmup runs")
-    ("check-result", value<std::string>()->default_value(  "")->implicit_value("all"), "Enable result check ('all', 'last')")
-    ("blocking",     bool_switch()       ->default_value(false),                       "Use blocking MPI integration.")
-    ("polling",      bool_switch()       ->default_value(false),                       "Use the MPI polling mechanism.")
-    ("batched",      bool_switch()       ->default_value(false),                       "Use batched version.")
-    ("mpipool",      bool_switch()       ->default_value(false),                       "Dedicate a core to MPI if available.")
+    ("matrix-size",  value<SizeType>()   ->default_value(4096),       "Matrix size")
+    ("block-size",   value<SizeType>()   ->default_value( 256),       "Block cyclic distribution size")
+    ("grid-rows",    value<int>()        ->default_value(   1),       "Number of row processes in the 2D communicator")
+    ("grid-cols",    value<int>()        ->default_value(   1),       "Number of column processes in the 2D communicator")
+    ("nruns",        value<int64_t>()    ->default_value(   1),       "Number of runs to compute the cholesky")
+    ("nwarmups",     value<int64_t>()    ->default_value(   1),       "Number of warmup runs")
+    ("check-result", value<std::string>()->default_value("none"),     "Enable result checking ('none', 'all', 'last')")
+    ("mech",         value<std::string>()->default_value("yielding"), "MPI mechanism ('yielding', 'polling', 'blocking')")
   ;
   // clang-format on
-
-  variables_map vm;
-  store(command_line_parser(argc, argv).allow_unregistered().options(desc_commandline).run(), vm);
-  bool use_blocking_mpi = vm["blocking"].as<bool>();
-  bool use_mpi_pool = vm["mpipool"].as<bool>();
 
   // Create a thread pool with a single core that we will use for all
   // communication related tasks
   hpx::init_params p;
   p.desc_cmdline = desc_commandline;
-  if (use_blocking_mpi || use_mpi_pool) {
-    p.rp_callback = [](auto& rp, auto) {
-      int ntasks;
-      DLAF_MPI_CALL(MPI_Comm_size(MPI_COMM_WORLD, &ntasks));
-      if (ntasks > 1) {
-        std::string pool_name = "mpi";
-        rp.create_thread_pool(pool_name, hpx::resource::scheduling_policy::local_priority_fifo);
-        rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], pool_name);
-      }
-    };
-  }
+  p.rp_mode = hpx::resource::mode_allow_oversubscription;
+  p.rp_callback = [](auto& rp, auto) {
+    bool exclusive = true;
+    std::size_t num_threads = 2;
+    std::string pool_name = "mpi";
+    rp.create_thread_pool(pool_name, hpx::resource::scheduling_policy::static_);
+    rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], pool_name, exclusive, num_threads);
+  };
   return hpx::init(argc, argv, p);
 }
 
@@ -418,7 +410,7 @@ void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
   std::cout << "Max Diff / Max A: " << diff_ratio << std::endl;
 }
 
-options_t check_options(hpx::program_options::variables_map& vm) {
+options_t parse_options(hpx::program_options::variables_map& vm) {
   // clang-format off
   options_t opts = {
       vm["matrix-size"].as<SizeType>(),
@@ -427,8 +419,8 @@ options_t check_options(hpx::program_options::variables_map& vm) {
       vm["grid-cols"].as<int>(),
       vm["nruns"].as<int64_t>(),
       vm["nwarmups"].as<int64_t>(),
-      CHECK_RESULT::NONE,
-      exec_backend::yielding
+      parse_chol_check(vm["check-result"].as<std::string>()),
+      parse_mech(vm["mech"].as<std::string>())
   };
   // clang-format on
 
@@ -439,47 +431,36 @@ options_t check_options(hpx::program_options::variables_map& vm) {
   DLAF_ASSERT(opts.nruns > 0, opts.nruns);
   DLAF_ASSERT(opts.nwarmups >= 0, opts.nwarmups);
 
-  const std::string check_type = vm["check-result"].as<std::string>();
-
-  if (check_type.compare("all") == 0)
-    opts.do_check = CHECK_RESULT::ALL;
-  else if (check_type.compare("last") == 0)
-    opts.do_check = CHECK_RESULT::LAST;
-  else if (check_type.compare("") != 0)
-    throw std::runtime_error(check_type + " is not a valid value for check-result");
-
-  if (opts.do_check != CHECK_RESULT::NONE && opts.m % opts.mb) {
+  if (opts.do_check != CholCheckIterFreq::None && opts.m % opts.mb) {
     std::cerr
         << "Warning! At the moment result checking works just with matrix sizes that are multiple of the block size."
         << std::endl;
-    opts.do_check = CHECK_RESULT::NONE;
-  }
-
-  bool blocking_mpi_flag = vm["blocking"].as<bool>();
-  bool polling_flag = vm["polling"].as<bool>();
-  bool batched_flag = vm["batched"].as<bool>();
-
-  if (blocking_mpi_flag) {
-    opts.exec = exec_backend::blocking;
-  }
-  else if (polling_flag) {
-    if (batched_flag) {
-      opts.exec = exec_backend::batched_polling;
-    }
-    else {
-      opts.exec = exec_backend::polling;
-    }
-  }
-  else {
-    if (batched_flag) {
-      opts.exec = exec_backend::batched_yielding;
-    }
-    else {
-      opts.exec = exec_backend::yielding;
-    }
+    opts.do_check = CholCheckIterFreq::None;
   }
 
   return opts;
+}
+
+MPIMech parse_mech(const std::string& mech) {
+  if (mech == "blocking")
+    return MPIMech::Blocking;
+  else if (mech == "yielding")
+    return MPIMech::Yielding;
+  else if (mech == "polling")
+    return MPIMech::Polling;
+  DLAF_ASSERT(false, mech);
+  return MPIMech::Yielding;  // unreachable
+}
+
+CholCheckIterFreq parse_chol_check(const std::string& check) {
+  if (check == "all")
+    return CholCheckIterFreq::All;
+  else if (check == "last")
+    return CholCheckIterFreq::Last;
+  else if (check == "none")
+    return CholCheckIterFreq::None;
+  DLAF_ASSERT(false, check);
+  return CholCheckIterFreq::None;  // unreachable
 }
 
 }

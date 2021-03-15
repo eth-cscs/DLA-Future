@@ -103,6 +103,13 @@ std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, dlaf::G
     {26, 39, 10, 6, 2, {0, 6}},  // all reflectors (incomplete tile)
     {26, 39, 10, 6, 4, {0, 5}},  // k reflectors (complete tile)
     {26, 39, 10, 6, 1, {0, 6}},  // k reflectors (incomplete tile)
+
+    {26, 39, 10, 6, 0, {0, 6}},  // 0 reflectors
+
+    // empty matrices
+    {0, 0, 10, 6, 0, {0, 0}},
+    {39, 0, 10, 6, 0, {0, 0}},
+    {0, 26, 10, 6, 0, {0, 0}},
 };
 
 // Note:

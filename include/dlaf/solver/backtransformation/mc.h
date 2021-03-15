@@ -57,15 +57,15 @@ void set_zero(Matrix<T, Device::CPU>& mat) {
 template <class T>
 struct BackTransformation<Backend::MC, Device::CPU, T> {
   static void call_FC(Matrix<T, Device::CPU>& mat_c, Matrix<const T, Device::CPU>& mat_v,
-                      common::internal::vector<hpx::shared_future<T>> taus);
+                      common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus);
   static void call_FC(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_c,
-                      Matrix<const T, Device::CPU>& mat_v, common::internal::vector<hpx::shared_future<T>> taus);
+                      Matrix<const T, Device::CPU>& mat_v, common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus);
 };
 
 template <class T>
 void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::CPU>& mat_c,
                                                               Matrix<const T, Device::CPU>& mat_v,
-                                                              common::internal::vector<hpx::shared_future<T>> taus) {
+                                                              common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
   constexpr auto Left = blas::Side::Left;
   constexpr auto Right = blas::Side::Right;
   constexpr auto Upper = blas::Uplo::Upper;
@@ -88,28 +88,21 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
   const SizeType mb = mat_c.blockSize().rows();
   const SizeType nb = mat_c.blockSize().cols();
 
-//  // Matrix T
-//  comm::CommunicatorGrid comm_grid(MPI_COMM_WORLD, 1, 1, common::Ordering::ColumnMajor);
-//  common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
-//  int tottaus;
-//  if (m < mb || m == 0 || n == 0)
-//    tottaus = 0;
-//  else
-//    tottaus = (m / mb - 1) * mb + m % mb;
-//  LocalElementSize sizeT(tottaus, tottaus);
-//  TileElementSize blockSizeT(mb, mb);
-//  Matrix<T, Device::CPU> mat_t(sizeT, blockSizeT);
-//  set_zero(mat_t);
-//  const auto& dist_v = mat_v.distribution();
-//  const GlobalTileIndex v_start{dist_v.nrTiles().rows() / 2, dist_v.nrTiles().cols() / 2};
-//  //const GlobalTileIndex v_start{0, 0};
-//  std::cout << "mat_v "  << mat_v << std::endl;
-//  std::cout << " v_start " << v_start << std::endl;
-//  const SizeType reflectors = mat_v.size().cols() / mat_v.blockSize().cols() - 1;
-//  std::cout << " reflectors " << reflectors << std::endl;
-//  
-//  dlaf::factorization::internal::computeTFactor<Backend::MC>(reflectors, mat_v, v_start, taus, mat_t, serial_comm);
-
+  // Matrix T
+  comm::CommunicatorGrid comm_grid(MPI_COMM_WORLD, 1, 1, common::Ordering::ColumnMajor);
+  common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
+  int tottaus;
+  if (m < mb || m == 0 || n == 0)
+    tottaus = 0;
+  else
+    tottaus = (m / mb - 1) * mb + m % mb;
+  
+  LocalElementSize sizeT(tottaus, tottaus);
+  TileElementSize blockSizeT(mb, mb);
+  Matrix<T, Device::CPU> mat_t(sizeT, blockSizeT);
+  set_zero(mat_t);
+  std::cout << "matrix T " << mat_t << std::endl; 
+  std::cout << "tottaus " << tottaus << std::endl;
   
   Matrix<T, Device::CPU> mat_vv({mat_v.size().rows(), mb}, mat_v.blockSize());
   Matrix<T, Device::CPU> mat_w({mat_v.size().rows(), mb}, mat_v.blockSize());
@@ -186,59 +179,31 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
       }
     }
 
+    int taupan;
     // Reset W2 to zero
     if (is_last) {
       matrix::util::set(mat_w2_last, [](auto&&) { return 0; });
+      taupan = last_mb;
     }
     else {
       matrix::util::set(mat_w2, [](auto&&) { return 0; });
+      taupan = mat_v.blockSize().cols();
     }
-
-  // Matrix T
+    
+    // Matrix T
   comm::CommunicatorGrid comm_grid(MPI_COMM_WORLD, 1, 1, common::Ordering::ColumnMajor);
   common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
 
-  int tottaus;
-  if (is_last) 
-    tottaus = mat_w_last.blockSize().cols();
-  else
-    tottaus = mat_w.blockSize().cols();
+  const GlobalTileIndex v_start{0, k};
+  std::cout << " v start " << v_start << " taupan " << taupan << std::endl;
+  std::cout << "mat_v " << mat_v << std::endl;
   
-  std::cout << "k " << k << " tottaus " << tottaus << " is_last? " << is_last << std::endl; 
-  //  if (m < mb || m == 0 || n == 0)
-//    tottaus = 0;
-//  else
-//    tottaus = (m / mb - 1) * mb + m % mb;
-  LocalElementSize sizeT(tottaus, tottaus);
-  TileElementSize blockSizeT(mb, mb);
-  Matrix<T, Device::CPU> mat_t(sizeT, blockSizeT);
-  set_zero(mat_t);
-  const auto& dist_v = mat_v.distribution();
-  const GlobalTileIndex v_start{dist_v.nrTiles().rows() / 2, dist_v.nrTiles().cols() / 2};
-//  //const GlobalTileIndex v_start{0, 0};
-//  std::cout << "mat_v "  << mat_v << std::endl;
-//  std::cout << " v_start " << v_start << std::endl;
-//  std::cout << " reflectors " << reflectors << std::endl;
-//  
-
-  common::internal::vector<hpx::shared_future<T>> taus_panel;
-  taus_panel.reserve(tottaus);
-  auto tstart = taus.size()-(k)*mb-mb;
-  auto tstop = taus.size()-(k)*mb;
-  std::cout << "start " << tstart << " end " << tstop << " taus.size " << taus.size() << " tottaus " << tottaus << std::endl;
-  for (SizeType i = tstop-1; i > tstart-1; --i) { 
-    taus_panel.push_back(taus[i]);
-  }
-  
-
-  dlaf::factorization::internal::computeTFactor<Backend::MC>(tottaus, mat_v, v_start, taus_panel, mat_t, serial_comm);
-  std::cout << "mat t" << std::endl;
-  printElements(mat_t);
+  dlaf::factorization::internal::computeTFactor<Backend::MC>(taupan, mat_v, v_start, taus[k], mat_t(LocalTileIndex{k,k}), serial_comm);
   
     for (SizeType i = k + 1; i < m; ++i) {
+      auto kk = LocalTileIndex{k, k};
       // WH = V T
       auto ik = LocalTileIndex{i, 0};
-      auto kk = LocalTileIndex{0, 0};
       if (is_last) {
 	std::cout << "trmm last" << std::endl;
         hpx::dataflow(executor_normal, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper,
@@ -300,7 +265,7 @@ template <class T>
 void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(comm::CommunicatorGrid grid,
                                                               Matrix<T, Device::CPU>& mat_c,
                                                               Matrix<const T, Device::CPU>& mat_v,
-                                                              common::internal::vector<hpx::shared_future<T>> taus) {
+                                                              common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
   DLAF_UNIMPLEMENTED(grid);
 }
 

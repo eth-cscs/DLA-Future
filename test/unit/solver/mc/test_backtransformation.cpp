@@ -61,8 +61,8 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
 //    {2, 2, 3, 3}, {3, 4, 6, 7},  // m < mb
 //    {3, 3, 1, 1}, {4, 4, 2, 2}, {6, 3, 3, 3}, {12, 2, 4, 4}, {12, 24, 3, 3}, {24, 36, 6, 6},
 //    {5, 8, 3, 2}, {4, 6, 2, 3}, {5, 5, 2, 3}, {8, 27, 3, 4}, {15, 34, 4, 6},
-  //{3, 3, 1, 1},
-  {4, 4, 2, 2}
+  {3, 3, 1, 1},
+  //  {4, 4, 2, 2}
 };
 
 template <class T>
@@ -123,7 +123,8 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
     set_zero(mat_t);
     auto mat_t_loc = dlaf::matrix::test::all_gather<T>(mat_t, comm_grid);
 
-    common::internal::vector<hpx::shared_future<T>> taus;
+    common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus;
+
     MatrixLocal<T> tausloc({m,1},{1,1});
     for (SizeType i = tottaus - 1; i > -1; --i) {
       const GlobalElementIndex v_offset{i, i};
@@ -139,12 +140,12 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
       }
       auto tau = (static_cast<T>(1.0) + sqrt(static_cast<T>(1.0) - dotprod * taui * taui)) / dotprod;
       std::cout << " i " << i << ", tau " <<tau << std::endl;
-      taus.push_back(hpx::make_ready_future<T>(tau));
       tausloc({i, 0}) = tau;
+      taus = tausloc({i,0});
       lapack::larf(lapack::Side::Left, m - i, n, mat_v_loc.ptr(v_offset), 1, tau,
                    mat_c_loc.ptr(GlobalElementIndex{i, 0}), mat_c_loc.ld());
     }
-
+    
     for (SizeType i = 0; i < mat_t.nrTiles().cols(); ++i) {
       const GlobalElementIndex offset{i * mb, i * mb};
       const GlobalElementIndex tau_offset{i * mb, 0};

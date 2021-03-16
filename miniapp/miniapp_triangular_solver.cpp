@@ -20,6 +20,7 @@
 #include "dlaf/common/timer.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/init.h"
+#include "dlaf/communication/mech.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/solver/triangular.h"
@@ -39,6 +40,7 @@ using dlaf::TileElementSize;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
 using dlaf::common::Ordering;
+using dlaf::comm::MPIMech;
 
 using T = double;
 using MatrixType = dlaf::Matrix<T, Device::CPU>;
@@ -53,9 +55,12 @@ struct options_t {
   int64_t nruns;
   int64_t nwarmups;
   bool do_check;
+  MPIMech mech;
 };
 
 options_t check_options(hpx::program_options::variables_map& vm);
+
+MPIMech parse_mech(const std::string&);
 
 void waitall_tiles(MatrixType& matrix);
 
@@ -66,6 +71,10 @@ linear_system_t sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T al
 
 int hpx_main(hpx::program_options::variables_map& vm) {
   options_t opts = check_options(vm);
+
+  // Only needed for the `polling` approach
+  std::string mpi_pool = (hpx::resource::pool_exists("mpi")) ? "mpi" : "default";
+  hpx::mpi::experimental::enable_user_polling internal_helper(mpi_pool);
 
   Communicator world(MPI_COMM_WORLD);
   CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
@@ -106,7 +115,18 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     sync_barrier();
 
     dlaf::common::Timer<> timeit;
-    dlaf::solver::triangular<Backend::MC>(comm_grid, side, uplo, op, diag, alpha, a, b);
+    if (opts.mech == MPIMech::Blocking) {
+      dlaf::solver::triangular<Backend::MC, Device::CPU, T, MPIMech::Blocking>(comm_grid, side, uplo, op,
+                                                                               diag, alpha, a, b);
+    }
+    else if (opts.mech == MPIMech::Yielding) {
+      dlaf::solver::triangular<Backend::MC, Device::CPU, T, MPIMech::Yielding>(comm_grid, side, uplo, op,
+                                                                               diag, alpha, a, b);
+    }
+    else if (opts.mech == MPIMech::Polling) {
+      dlaf::solver::triangular<Backend::MC, Device::CPU, T, MPIMech::Polling>(comm_grid, side, uplo, op,
+                                                                              diag, alpha, a, b);
+    }
 
     sync_barrier();
 
@@ -149,20 +169,31 @@ int main(int argc, char** argv) {
 
   // clang-format off
   desc_commandline.add_options()
-    ("m",             value<SizeType>()->default_value(4096),  "Matrix b rows")
-    ("n",             value<SizeType>()->default_value(512),   "Matrix b columns")
-    ("mb",            value<SizeType>()->default_value(256),   "Matrix b block rows")
-    ("nb",            value<SizeType>()->default_value(512),   "Matrix b block columns")
-    ("grid-rows",     value<int>()     ->default_value(1),     "Number of row processes in the 2D communicator.")
-    ("grid-cols",     value<int>()     ->default_value(1),     "Number of column processes in the 2D communicator.")
-    ("nruns",         value<int64_t>() ->default_value(1),     "Number of runs to compute the cholesky")
-    ("nwarmups",      value<int64_t>() ->default_value(1),     "Number of warmup runs")
-    ("check-result",  bool_switch()    ->default_value(false), "Check the triangular system solution (for each run)")
+    ("m",             value<SizeType>()  ->default_value(4096),       "Matrix b rows")
+    ("n",             value<SizeType>()  ->default_value(512),        "Matrix b columns")
+    ("mb",            value<SizeType>()  ->default_value(256),        "Matrix b block rows")
+    ("nb",            value<SizeType>()  ->default_value(512),        "Matrix b block columns")
+    ("grid-rows",     value<int>()       ->default_value(1),          "Number of row processes in the 2D communicator.")
+    ("grid-cols",     value<int>()       ->default_value(1),          "Number of column processes in the 2D communicator.")
+    ("nruns",         value<int64_t>()   ->default_value(1),          "Number of runs to compute the cholesky")
+    ("nwarmups",      value<int64_t>()   ->default_value(1),          "Number of warmup runs")
+    ("check-result",  bool_switch()      ->default_value(false),      "Check the triangular system solution (for each run)")
+    ("mech",         value<std::string>()->default_value("yielding"), "MPI mechanism ('yielding', 'polling', 'blocking')")
   ;
   // clang-format on
 
+  // Create a thread pool with a single core that we will use for all
+  // communication related tasks
   hpx::init_params p;
   p.desc_cmdline = desc_commandline;
+  p.rp_mode = hpx::resource::mode_allow_oversubscription;
+  p.rp_callback = [](auto& rp, auto) {
+    bool exclusive = true;
+    std::size_t num_threads = 2;
+    std::string pool_name = "mpi";
+    rp.create_thread_pool(pool_name, hpx::resource::scheduling_policy::static_);
+    rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], pool_name, exclusive, num_threads);
+  };
   return hpx::init(argc, argv, p);
 }
 
@@ -178,6 +209,7 @@ options_t check_options(hpx::program_options::variables_map& vm) {
     vm["nruns"].as<int64_t>(),
     vm["nwarmups"].as<int64_t>(),
     vm["check-result"].as<bool>(),
+    parse_mech(vm["mech"].as<std::string>())
   };
   // clang-format on
 
@@ -257,4 +289,16 @@ linear_system_t sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T al
 
   return {el_op_a, el_b, el_x};
 }
+
+MPIMech parse_mech(const std::string& mech) {
+  if (mech == "blocking")
+    return MPIMech::Blocking;
+  else if (mech == "yielding")
+    return MPIMech::Yielding;
+  else if (mech == "polling")
+    return MPIMech::Polling;
+  DLAF_ASSERT(false, mech);
+  return MPIMech::Yielding;  // unreachable
+}
+
 }

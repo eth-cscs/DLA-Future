@@ -192,15 +192,10 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
   comm::CommunicatorGrid comm_grid(MPI_COMM_WORLD, 1, 1, common::Ordering::ColumnMajor);
   common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
 
-  //  const GlobalTileIndex v_start{0, k};
-    const GlobalTileIndex v_start{0, k*nb+nb-1};
-  std::cout << "K " << k << std::endl;
-  std::cout << " v start " << v_start << " taupan " << taupan << std::endl;
+  const GlobalTileIndex v_start{k+1, k};
   auto taus_panel = taus[k];
   
   dlaf::factorization::internal::computeTFactor<Backend::MC>(taupan, mat_v, v_start, taus_panel, mat_t(LocalTileIndex{k,k}), serial_comm);
-  std::cout << " mat t " << std::endl;
-  printElements(mat_t);
   
     for (SizeType i = k + 1; i < m; ++i) {
       auto kk = LocalTileIndex{k, k};
@@ -252,8 +247,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
       }
     }
 
-    std::cout << "eigenv BT result" << std::endl;
-    printElements(mat_c);
   }
 }
 

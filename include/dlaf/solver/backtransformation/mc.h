@@ -124,7 +124,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
   Matrix<T, Device::CPU> mat_w_last({mat_v.size().rows(), last_mb}, mat_v.blockSize());
   Matrix<T, Device::CPU> mat_w2_last({last_mb, mat_c.size().cols()}, mat_c.blockSize());
 
-  const SizeType reflectors = mat_v.size().cols() / mat_v.blockSize().cols() - 2;
+  const SizeType reflectors = (mat_v.size().cols() < mat_v.size().rows()) ? mat_v.nrTiles().rows() - 2 : mat_v.nrTiles().cols() - 2;
   
   for (SizeType k = reflectors; k > -1; --k) {
     bool is_last = (k == reflectors) ? true : false;

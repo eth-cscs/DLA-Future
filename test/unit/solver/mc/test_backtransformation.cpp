@@ -83,7 +83,6 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
   TileElementSize blockSizeC(mb, nb);
   Matrix<T, Device::CPU> mat_c(sizeC, blockSizeC);
   dlaf::matrix::util::set_random(mat_c);
-  printElements(mat_c);
   
   LocalElementSize sizeV(m, m);
   TileElementSize blockSizeV(mb, mb);
@@ -124,11 +123,9 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
     auto mat_t_loc = dlaf::matrix::test::all_gather<T>(mat_t, comm_grid);
 
     common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus;
-    std::cout << " tottaus " << tottaus << std::endl;
 
     MatrixLocal<T> tausloc({tottaus,1},{mb,mb});
     auto tau_rows = tausloc.nrTiles().rows();
-    std::cout << " tau rows " << tau_rows << " blocksize " << tausloc.blockSize().rows() << std::endl;
     
     //    for (SizeType i = tottaus - 1; i > -1; --i) {
     //    for (SizeType i = 0; i < tottaus; ++i) {
@@ -155,16 +152,12 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
       }
       taus.push_back(hpx::make_ready_future(t_tile));
     }
-
-    print(format::numpy{}, "tausloc ", tausloc, std::cout);
     
     for (SizeType i = tottaus - 1; i > -1; --i) {
       const GlobalElementIndex v_offset{i, i};
       auto tau = tausloc({i, 0});
       lapack::larf(lapack::Side::Left, m - i, n, mat_v_loc.ptr(v_offset), 1, tau,
                    mat_c_loc.ptr(GlobalElementIndex{i, 0}), mat_c_loc.ld());
-      std::cout << "i " << i  <<  " m " << m << " n " << n << std::endl;
-      print(format::numpy{}, "mat_c", mat_c_loc, std::cout);
   }
     
     for (SizeType i = 0; i < mat_t.nrTiles().cols(); ++i) {
@@ -176,6 +169,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
                     numcol, mat_v_loc.ptr(offset), mat_v_loc.ld(), tausloc.ptr(tau_offset), tile_t.ptr(),
                     tile_t.ld());
     }
+    std::cout << "Matrix T with LARFT" << std::endl;
     printElements(mat_t);
 
     solver::backTransformation<Backend::MC>(mat_c, mat_v, taus);
@@ -186,7 +180,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
       const auto tile_element = dist.tileElementIndex(element);
       return mat_local.tile_read(tile_index)(tile_element);
     };
-    print(format::numpy{}, "result", mat_c_loc, std::cout);
+    print(format::numpy{}, "result from larf ", mat_c_loc, std::cout);
     
     double error = 0.01;
     CHECK_MATRIX_NEAR(result, mat_c, error, error);

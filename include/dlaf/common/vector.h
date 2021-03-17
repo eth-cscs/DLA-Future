@@ -42,7 +42,7 @@ struct vector : public std::vector<T> {
     return std::vector<T>::operator[](to_sizet(index));
   }
 
-  SizeType size() const {
+  SizeType size() const noexcept {
     return static_cast<SizeType>(std::vector<T>::size());
   }
 };

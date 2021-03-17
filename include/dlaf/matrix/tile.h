@@ -311,10 +311,12 @@ DLAF_TILE_ETI(extern, double, Device::CPU)
 DLAF_TILE_ETI(extern, std::complex<float>, Device::CPU)
 DLAF_TILE_ETI(extern, std::complex<double>, Device::CPU)
 
-// DLAF_TILE_ETI(extern, float, Device::GPU)
-// DLAF_TILE_ETI(extern, double, Device::GPU)
-// DLAF_TILE_ETI(extern, std::complex<float>, Device::GPU)
-// DLAF_TILE_ETI(extern, std::complex<double>, Device::GPU)
+#if defined(DLAF_WITH_CUDA)
+DLAF_TILE_ETI(extern, float, Device::GPU)
+DLAF_TILE_ETI(extern, double, Device::GPU)
+DLAF_TILE_ETI(extern, std::complex<float>, Device::GPU)
+DLAF_TILE_ETI(extern, std::complex<double>, Device::GPU)
+#endif
 
 }
 }

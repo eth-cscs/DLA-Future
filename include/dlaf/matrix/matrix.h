@@ -23,6 +23,8 @@
 #include "dlaf/matrix/tile.h"
 #include "dlaf/types.h"
 
+#include "dlaf/common/range2d.h"
+
 namespace dlaf {
 namespace matrix {
 
@@ -331,6 +333,38 @@ Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const Tile
                                        SizeType ld_tile, SizeType tiles_per_col,
                                        const comm::CommunicatorGrid& comm, T* ptr) {
   return createMatrixFromTile<device>(size, block_size, ld_tile, tiles_per_col, comm, {0, 0}, ptr);
+}
+
+namespace internal {
+template <class RetT, class T, dlaf::Device d, class RangeTile>
+auto select_generic(Matrix<T, d>& matrix, RangeTile range,
+                    RetT (Matrix<T, d>::*f)(const typename RangeTile::index2d_t&)) {
+  std::vector<RetT> tiles;
+  std::transform(range.begin(), range.end(), std::back_inserter(tiles),
+                 [&matrix, f](const auto&& idx) { return ((&matrix)->*f)(idx); });
+  return tiles;
+}
+}
+
+template <class T, dlaf::Device d, class RangeTile>
+std::vector<hpx::shared_future<dlaf::matrix::Tile<const T, d>>> select_read(Matrix<T, d>& matrix,
+                                                                            RangeTile range) {
+  using RetT = hpx::shared_future<typename Matrix<T, d>::ConstTileType>;
+  using ArgT = const typename RangeTile::index2d_t&;
+
+  RetT (Matrix<T, d>::*read_func)(ArgT) = &Matrix<T, d>::read;
+
+  return internal::select_generic(matrix, range, read_func);
+}
+
+template <class T, dlaf::Device d, class RangeTile>
+std::vector<hpx::future<dlaf::matrix::Tile<T, d>>> select(Matrix<T, d>& matrix, RangeTile range) {
+  using RetT = hpx::future<typename Matrix<T, d>::TileType>;
+  using ArgT = const typename RangeTile::index2d_t&;
+
+  RetT (Matrix<T, d>::*readwrite_func)(ArgT) = &Matrix<T, d>::operator();
+
+  return internal::select_generic(matrix, range, readwrite_func);
 }
 
 /// ---- ETI

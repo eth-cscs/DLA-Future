@@ -30,10 +30,9 @@ template <class DataIn, class DataOut>
 void reduceRecv(Communicator& communicator, MPI_Op reduce_op, const DataIn input, const DataOut output) {
   using T = std::remove_const_t<typename common::data_traits<DataIn>::element_t>;
 
-  DLAF_ASSERT_MODERATE(input != output, "input and output should not equal (use in-place)");
-
   // Wayout for single rank communicator, just copy data
   if (communicator.size() == 1) {
+    DLAF_ASSERT_MODERATE(input != output, "input and output should not equal (use in-place)");
     common::copy(input, output);
     return;
   }
@@ -43,6 +42,9 @@ void reduceRecv(Communicator& communicator, MPI_Op reduce_op, const DataIn input
 
   auto message_input = comm::make_message(make_contiguous(input, buffer_in));
   auto message_output = comm::make_message(make_contiguous(output, buffer_out));
+
+  DLAF_ASSERT_MODERATE((buffer_in || buffer_out) || (input != output),
+                       "input and output should not equal (use in-place)");
 
   // if the input buffer has been used, initialize it with input values
   if (buffer_in)

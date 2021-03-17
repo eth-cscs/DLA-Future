@@ -27,7 +27,7 @@ namespace sync {
 /// MPI Reduce(see MPI documentation for additional info).
 /// @param reduce_op MPI_Op to perform on @p input data coming from ranks in @p communicator.
 template <class DataIn, class DataOut>
-void reduce(Communicator& communicator, MPI_Op reduce_op, const DataIn input, const DataOut output) {
+void reduceRecv(Communicator& communicator, MPI_Op reduce_op, const DataIn input, const DataOut output) {
   using T = std::remove_const_t<typename common::data_traits<DataIn>::element_t>;
 
   DLAF_ASSERT_MODERATE(input != output, "input and output should not equal (use in-place)");
@@ -69,7 +69,7 @@ void reduce(Communicator& communicator, MPI_Op reduce_op, const DataIn input, co
 /// @param reduce_op MPI_Op to perform on @p inout data coming from ranks in @p communicator,
 /// @pre @p rank_root < @p communicator.size(),
 template <class DataInOut>
-void reduce(Communicator& communicator, MPI_Op reduce_op, const DataInOut inout) {
+void reduceRecvInPlace(Communicator& communicator, MPI_Op reduce_op, const DataInOut inout) {
   using T = std::remove_const_t<typename common::data_traits<DataInOut>::element_t>;
 
   // Wayout for single rank communicator, just copy data
@@ -102,7 +102,7 @@ void reduce(Communicator& communicator, MPI_Op reduce_op, const DataInOut inout)
 /// @param rank_root  the rank that will collect the result in output,
 /// @param reduce_op MPI_Op to perform on @p input data coming from ranks in @p communicator.
 template <class DataIn>
-void reduce(IndexT_MPI rank_root, Communicator& communicator, MPI_Op reduce_op, const DataIn input) {
+void reduceSend(IndexT_MPI rank_root, Communicator& communicator, MPI_Op reduce_op, const DataIn input) {
   using T = std::remove_const_t<typename common::data_traits<DataIn>::element_t>;
 
   // Buffers not allocated, just placeholders in case we need to allocate them
@@ -132,9 +132,28 @@ void reduce(const IndexT_MPI rank_root, Communicator& communicator, MPI_Op reduc
               communicator.size());
 
   if (rank_root == communicator.rank())
-    reduce(communicator, reduce_op, input, output);
+    reduceRecv(communicator, reduce_op, input, output);
   else
-    reduce(rank_root, communicator, reduce_op, input);
+    reduceSend(rank_root, communicator, reduce_op, input);
+}
+
+/// MPI_Reduce wrapper (both sides, in-place).
+///
+/// MPI Reduce(see MPI documentation for additional info).
+/// @param rank_root the rank that will collect the result in output,
+/// @param reduce_op MPI_Op to perform on @p input data coming from ranks in @p communicator,
+/// @pre @p 0 <= rank_root < @p communicator.size(),
+/// @pre @p rank_root != MPI_UNDEFINED.
+template <class DataInOut>
+void reduceInPlace(const IndexT_MPI rank_root, Communicator& communicator, MPI_Op reduce_op,
+                   const DataInOut inout) {
+  DLAF_ASSERT(0 <= rank_root && rank_root < communicator.size() && rank_root != MPI_UNDEFINED, rank_root,
+              communicator.size());
+
+  if (rank_root == communicator.rank())
+    reduceRecvInPlace(communicator, reduce_op, inout);
+  else
+    reduceSend(rank_root, communicator, reduce_op, inout);
 }
 }
 }

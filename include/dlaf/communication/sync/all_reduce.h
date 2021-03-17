@@ -29,8 +29,8 @@ namespace sync {
 /// MPI AllReduce(see MPI documentation for additional info).
 /// @param reduce_operation MPI_Op to perform on @p input data coming from ranks in @p communicator,
 template <class DataIn, class DataOut>
-void all_reduce(Communicator& communicator, MPI_Op reduce_operation, const DataIn input,
-                const DataOut output) {
+void allReduce(Communicator& communicator, MPI_Op reduce_operation, const DataIn input,
+               const DataOut output) {
   using common::make_contiguous;
 
   using T = std::remove_const_t<typename common::data_traits<DataIn>::element_t>;
@@ -66,7 +66,7 @@ void all_reduce(Communicator& communicator, MPI_Op reduce_operation, const DataI
 /// MPI AllReduce(see MPI documentation for additional info).
 /// @param reduce_operation MPI_Op to perform on @p input data coming from ranks in @p communicator,
 template <class DataInOut>
-void all_reduce(Communicator& communicator, MPI_Op reduce_operation, const DataInOut inout) {
+void allReduceInPlace(Communicator& communicator, MPI_Op reduce_operation, const DataInOut inout) {
   using common::make_contiguous;
 
   using T = std::remove_const_t<typename common::data_traits<DataInOut>::element_t>;

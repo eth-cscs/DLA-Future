@@ -42,7 +42,7 @@ TEST_F(AllReduceTest, ValueOnSingleRank) {
 
   ASSERT_EQ(alone_world.rank(), root);
 
-  sync::all_reduce(alone_world, MPI_SUM, common::make_data(&value, 1), common::make_data(&result, 1));
+  sync::allReduce(alone_world, MPI_SUM, common::make_data(&value, 1), common::make_data(&result, 1));
 
   EXPECT_LE(std::abs(value - result), TypeUtilities<TypeParam>::error);
 }
@@ -65,7 +65,7 @@ TEST_F(AllReduceTest, CArrayOnSingleRank) {
 
   ASSERT_EQ(alone_world.rank(), root);
 
-  sync::all_reduce(alone_world, MPI_SUM, common::make_data(input, N), common::make_data(reduced, N));
+  sync::allReduce(alone_world, MPI_SUM, common::make_data(input, N), common::make_data(reduced, N));
 
   for (SizeType index = 0; index < N; ++index)
     EXPECT_LE(std::abs(input[index] - reduced[index]), TypeUtilities<TypeParam>::error);
@@ -75,7 +75,7 @@ TEST_F(AllReduceTest, Value) {
   constexpr TypeParam value = TypeUtilities<TypeParam>::element(13, 26);
   TypeParam result = 0;
 
-  sync::all_reduce(world, MPI_SUM, common::make_data(&value, 1), common::make_data(&result, 1));
+  sync::allReduce(world, MPI_SUM, common::make_data(&value, 1), common::make_data(&result, 1));
 
   EXPECT_LE(std::abs(value * static_cast<TypeParam>(NUM_MPI_RANKS) - result),
             NUM_MPI_RANKS * TypeUtilities<TypeParam>::error);
@@ -90,7 +90,7 @@ TEST_F(AllReduceTest, CArray) {
                                   TypeUtilities<TypeParam>::element(2, 3)};
   TypeParam reduced[N];
 
-  sync::all_reduce(world, MPI_SUM, common::make_data(input, N), common::make_data(reduced, N));
+  sync::allReduce(world, MPI_SUM, common::make_data(input, N), common::make_data(reduced, N));
 
   for (SizeType index = 0; index < N; ++index)
     EXPECT_LE(std::abs(input[index] * static_cast<TypeParam>(NUM_MPI_RANKS) - reduced[index]),
@@ -114,7 +114,7 @@ TEST_F(AllReduceTest, ContiguousToContiguous) {
   auto&& message_output = common::make_data(data_B, N);
   MPI_Op op = MPI_SUM;
 
-  sync::all_reduce(communicator, op, std::move(message_input), std::move(message_output));
+  sync::allReduce(communicator, op, std::move(message_input), std::move(message_output));
 
   for (auto i = 0; i < N; ++i)
     EXPECT_LE(std::abs(value * static_cast<TypeParam>(NUM_MPI_RANKS) - data_B[i]),
@@ -149,7 +149,7 @@ TEST_F(AllReduceTest, StridedToContiguous) {
 
   auto& communicator = world;
   MPI_Op op = MPI_SUM;
-  sync::all_reduce(communicator, op, std::move(message_input), std::move(message_output));
+  sync::allReduce(communicator, op, std::move(message_input), std::move(message_output));
 
   for (auto i = 0; i < N; ++i)
     EXPECT_LE(std::abs(value * static_cast<TypeParam>(NUM_MPI_RANKS) - data_contiguous[i]),
@@ -180,7 +180,7 @@ TEST_F(AllReduceTest, ContiguousToStrided) {
 
   auto& communicator = world;
   MPI_Op op = MPI_SUM;
-  sync::all_reduce(communicator, op, std::move(message_input), std::move(message_output));
+  sync::allReduce(communicator, op, std::move(message_input), std::move(message_output));
 
   for (SizeType i_block = 0; i_block < nblocks; ++i_block)
     for (SizeType i_element = 0; i_element < block_size; ++i_element) {

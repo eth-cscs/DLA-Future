@@ -283,11 +283,19 @@ auto unwrapExtendTiles(F&& f) {
   return internal::UnwrapExtendTiles<std::decay_t<F>>{std::forward<F>(f)};
 }
 
+/// Access the return value of the function wrapped by unwrapExtendTiles.
+///
+/// Because of the lifetime management that uwnrapExtendTiles does it will
+/// return a tuple where the first element is the return value of the wrapped
+/// function and the second element contains the arguments that have their
+/// lifetime extended. This helper function extracts the return value of the
+/// wrapped function. When the return type of the wrapped function is void, this
+/// also returns void.
 template <typename T>
-void getReturnValue(hpx::future<hpx::tuple<T>>&& f) {}
+void getUnwrapReturnValue(hpx::future<hpx::tuple<T>>&& f) {}
 
 template <typename R, typename T>
-auto getReturnValue(hpx::future<hpx::tuple<R, T>>&& f) {
+auto getUnwrapReturnValue(hpx::future<hpx::tuple<R, T>>&& f) {
   auto split_f = hpx::split_future(std::move(f));
   return std::move(hpx::get<0>(split_f));
 }

@@ -20,6 +20,7 @@
 #include "dlaf/common/pipeline.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/communication/device.h"
 #include "dlaf/communication/message.h"
 #include "dlaf/executors.h"
 #include "dlaf/matrix/copy_tile.h"
@@ -27,19 +28,6 @@
 
 namespace dlaf {
 namespace comm {
-
-template <Device D>
-struct CommunicationDevice {
-  static constexpr Device value = D;
-};
-
-#if defined(DLAF_WITH_CUDA) && !defined(DLAF_WITH_CUDA_RDMA)
-template <>
-struct CommunicationDevice<Device::GPU> {
-  static constexpr Device value = Device::CPU;
-};
-#endif
-
 namespace sync {
 namespace broadcast {
 
@@ -69,54 +57,29 @@ void receive_from(const int broadcaster_rank, Communicator& communicator, DataOu
 }
 }
 
-namespace detail {
-template <Device Source, Device Destination>
-struct DuplicateIfNeeded {
-  template <typename T>
-  static auto call(hpx::future<matrix::Tile<const T, Source>> tile) {
-    return dlaf::matrix::getReturnValue(
-        hpx::dataflow(getCopyExecutor<Source, Destination>(),
-                      dlaf::matrix::unwrapExtendTiles(dlaf::matrix::Duplicate<const T, Destination>{}),
-                      tile));
-  }
-
-  template <typename T>
-  static auto call(hpx::shared_future<matrix::Tile<const T, Source>> tile) {
-    return dlaf::matrix::getReturnValue(
-        hpx::dataflow(getCopyExecutor<Source, Destination>(),
-                      dlaf::matrix::unwrapExtendTiles(dlaf::matrix::Duplicate<const T, Destination>{}),
-                      tile));
-  }
-};
-
-template <Device SourceDestination>
-struct DuplicateIfNeeded<SourceDestination, SourceDestination> {
-  template <typename T>
-  static auto call(hpx::future<matrix::Tile<const T, SourceDestination>> tile) {
-    return tile;
-  }
-
-  template <typename T>
-  static auto call(hpx::shared_future<matrix::Tile<const T, SourceDestination>> tile) {
-    return tile;
-  }
-};
-}
-
-template <typename T, Device D>
-auto prepareSendTile(hpx::shared_future<matrix::Tile<const T, D>> tile) {
-  return detail::DuplicateIfNeeded<D, CommunicationDevice<D>::value>::call(std::move(tile));
-}
-
+/// Helper function for preparing a tile for sending.
+///
+/// Duplicates the tile to CPU memory if CUDA RDMA is not enabled for MPI.
+/// Returns the tile unmodified otherwise.
 template <Device D, typename T>
-auto handleRecvTile(hpx::future<matrix::Tile<const T, CommunicationDevice<D>::value>> tile) {
-  return detail::DuplicateIfNeeded<CommunicationDevice<D>::value, D>::call(std::move(tile));
+auto prepareSendTile(hpx::shared_future<matrix::Tile<T, D>> tile) {
+  return matrix::duplicateIfNeeded<CommunicationDevice<D>::value>(std::move(tile));
+}
+
+/// Helper function for handling a tile after sending.
+///
+/// If CUDA RDMA is disabled, the tile returned from recvTile will always be on
+/// the CPU. This helper duplicates to the GPU if the first template parameter
+/// is a GPU device. The first template parameter must be given.
+template <Device D, typename T>
+auto handleRecvTile(hpx::future<matrix::Tile<T, CommunicationDevice<D>::value>> tile) {
+  return matrix::duplicateIfNeeded<D>(std::move(tile));
 }
 
 /// Task for broadcasting (send endpoint) a Tile in a direction over a CommunicatorGrid
-template <class TileFuture>
+template <typename T, Device D, template <class> class Future>
 void sendTile(hpx::future<common::PromiseGuard<comm::CommunicatorGrid>> mpi_task_chain, Coord rc_comm,
-              TileFuture&& tile) {
+              Future<matrix::Tile<T, D>> tile) {
   using PromiseComm_t = common::PromiseGuard<comm::CommunicatorGrid>;
 
   PromiseComm_t pcomm = mpi_task_chain.get();

@@ -160,10 +160,11 @@ protected:
 template <typename IndexT, class Tag>
 class IterableRange2D {
   using size2d_t = Size2D<IndexT, Tag>;
-  using index2d_t = Index2D<IndexT, Tag>;
   using iter2d_t = IteratorRange2D<IndexT, Tag>;
 
 public:
+  using index2d_t = Index2D<IndexT, Tag>;
+
   IterableRange2D(index2d_t begin_idx, size2d_t sz)
       : begin_idx_(begin_idx), ld_(sz.rows()), i_max_(sz.rows() * sz.cols()) {}
 

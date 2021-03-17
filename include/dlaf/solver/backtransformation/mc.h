@@ -99,6 +99,9 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
   else
     tottaus = (ms / mb - 1) * mb + ms % mb;
   
+  if (tottaus == 0)
+    return;
+
   LocalElementSize sizeT(tottaus, tottaus);
   TileElementSize blockSizeT(mb, mb);
   Matrix<T, Device::CPU> mat_t(sizeT, blockSizeT);

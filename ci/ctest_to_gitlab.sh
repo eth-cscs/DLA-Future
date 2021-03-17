@@ -2,7 +2,7 @@
 
 IMAGE="$1"
 USE_CODECOV="$2"
-CORES_PER_NODE="$3"
+THREADS_PER_NODE="$3"
 SLURM_CONSTRAINT="$4"
 
 if [ "$USE_CODECOV" = true ]; then
@@ -113,7 +113,7 @@ JOBS=""
 
 for label in `ctest --print-labels | egrep -o "RANK_[1-9][0-9]?"`; do
     N=`echo "$label" | sed "s/RANK_//"`
-    C=$(( CORES_PER_NODE / N ))
+    C=$(( THREADS_PER_NODE / N ))
 
     JOB=`echo "$JOB_TEMPLATE" | sed "s|{{LABEL}}|$label|g" \
                               | sed "s|{{NTASKS}}|$N|g" \

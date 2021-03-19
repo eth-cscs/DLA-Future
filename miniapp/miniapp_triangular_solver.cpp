@@ -46,8 +46,6 @@ using dlaf::common::Ordering;
 using dlaf::comm::MPIMech;
 
 using T = double;
-constexpr Backend B = Backend::Default;
-constexpr Device D = Device::Default;
 
 struct options_t {
   SizeType m;
@@ -84,8 +82,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   dlaf::matrix::Matrix<T, Device::CPU> bh(GlobalElementSize{opts.m, opts.n},
                                           TileElementSize{opts.mb, opts.nb}, comm_grid);
 
-  dlaf::matrix::MatrixMirror<T, D, Device::CPU> a(ah);
-  dlaf::matrix::MatrixMirror<T, D, Device::CPU> b(bh);
+  dlaf::matrix::MatrixMirror<T, Device::Default, Device::CPU> a(ah);
+  dlaf::matrix::MatrixMirror<T, Device::Default, Device::CPU> b(bh);
 
   auto sync_barrier = [&]() {
     ::waitall_tiles(a.get());
@@ -121,7 +119,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     sync_barrier();
 
     dlaf::common::Timer<> timeit;
-    dlaf::solver::triangular<B, D, T>(comm_grid, side, uplo, op, diag, alpha, a, b);
+    dlaf::solver::triangular<Backend::Default, Device::Default, T>(comm_grid, side, uplo, op, diag, alpha, a.get(), b.get());
 
     sync_barrier();
 

@@ -226,14 +226,14 @@ void set_random_seed_lower(Matrix<T, Device::CPU>& matrix) {
     auto rnd_f = hpx::util::unwrapping([seed, tl_index, nrows, ncols](auto&& tile) {
       internal::getter_random<T> random_value(seed);
       for (auto el_idx : iterate_range2d(tile.size())) {
-	auto tilerow = tl_index.row()/nrows;
-	auto tilecol = tl_index.col()/ncols;
-	auto elrow = tilerow*nrows + el_idx.row();
-	auto elcol = tilecol*ncols + el_idx.col();
-	if (elrow >= elcol)
-	  tile(el_idx) = random_value();
-	else
-	  tile(el_idx) = static_cast<T>(0.0);
+        auto tilerow = tl_index.row() / nrows;
+        auto tilecol = tl_index.col() / ncols;
+        auto elrow = tilerow * nrows + el_idx.row();
+        auto elcol = tilecol * ncols + el_idx.col();
+        if (elrow >= elcol)
+          tile(el_idx) = random_value();
+        else
+          tile(el_idx) = static_cast<T>(0.0);
       }
     });
     hpx::dataflow(std::move(rnd_f), matrix(tile_wrt_local));

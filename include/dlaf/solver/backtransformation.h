@@ -49,7 +49,8 @@ void backTransformation(Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v
 /// @param taus is an array of taus, associated with the related elementary reflector.
 template <Backend backend, Device device, class T>
 void backTransformation(comm::CommunicatorGrid grid, Matrix<T, device>& mat_c,
-                        Matrix<const T, device>& mat_v, common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
+                        Matrix<const T, device>& mat_v,
+                        common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
   // TODO preconditions are enough?
   // TODO blocksize? So far should be one
   //    DLAF_ASSERT(matrix::square_size(mat_c), mat_c);

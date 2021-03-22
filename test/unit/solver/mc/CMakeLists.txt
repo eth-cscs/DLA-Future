@@ -21,4 +21,3 @@ DLAF_addTest(test_backtransformation
   USE_MAIN MPIHPX
   MPIRANKS 1
 )
-

@@ -28,7 +28,8 @@ struct gemmSizes {
 };
 
 template <typename T, Device device>
-gemmSizes getGemmSizes(const blas::Op op_a, const blas::Op op_b, const dlaf::matrix::Tile<const T, device>& a,
+gemmSizes getGemmSizes(const blas::Op op_a, const blas::Op op_b,
+                       const dlaf::matrix::Tile<const T, device>& a,
                        const dlaf::matrix::Tile<const T, device>& b,
                        const dlaf::matrix::Tile<T, device>& c) {
   SizeType m;
@@ -132,7 +133,8 @@ struct trmmSizes {
 };
 
 template <typename T, Device device>
-  trmmSizes getTrmmSizes(const blas::Side side, const blas::Op op, const dlaf::matrix::Tile<const T, device>& a,
+trmmSizes getTrmmSizes(const blas::Side side, const blas::Op op,
+                       const dlaf::matrix::Tile<const T, device>& a,
                        const dlaf::matrix::Tile<T, device>& b) {
   const SizeType rows_a = a.size().rows();
   const SizeType cols_a = a.size().cols();
@@ -143,7 +145,7 @@ template <typename T, Device device>
 
   const auto a_side = (side == blas::Side::Left ? s_a.n : s_a.m);
   const auto b_side = (side == blas::Side::Left ? s_b.m : s_b.n);
-  
+
   DLAF_ASSERT(a_side == b_side, a, side, b, a_side, b_side);
 
   return s_b;
@@ -154,7 +156,7 @@ struct trsmSizes {
   const SizeType n;
 };
 
- template <typename T, Device device>
+template <typename T, Device device>
 trsmSizes getTrsmSizes(const blas::Side side, const dlaf::matrix::Tile<const T, device>& a,
                        const dlaf::matrix::Tile<T, device>& b) {
   trsmSizes s{b.size().rows(), b.size().cols()};

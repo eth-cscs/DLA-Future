@@ -46,7 +46,7 @@ template <class T>
 void set_zero(Matrix<T, Device::CPU>& mat) {
   dlaf::matrix::util::set(mat, [](auto&&) { return static_cast<T>(0.0); });
 }
- 
+
 // Implementation based on:
 // 1. Part of algorithm 6 "LAPACK Algorithm for the eigenvector back-transformation", page 15, PhD thesis
 // "GPU Accelerated Implementations of a Generalized Eigenvalue Solver for Hermitian Matrices with
@@ -59,13 +59,14 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
   static void call_FC(Matrix<T, Device::CPU>& mat_c, Matrix<const T, Device::CPU>& mat_v,
                       common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus);
   static void call_FC(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_c,
-                      Matrix<const T, Device::CPU>& mat_v, common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus);
+                      Matrix<const T, Device::CPU>& mat_v,
+                      common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus);
 };
 
 template <class T>
-void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::CPU>& mat_c,
-                                                              Matrix<const T, Device::CPU>& mat_v,
-                                                              common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
+void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
+    Matrix<T, Device::CPU>& mat_c, Matrix<const T, Device::CPU>& mat_v,
+    common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
   constexpr auto Left = blas::Side::Left;
   constexpr auto Right = blas::Side::Right;
   constexpr auto Upper = blas::Uplo::Upper;
@@ -98,7 +99,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
     tottaus = 0;
   else
     tottaus = (ms / mb - 1) * mb + ms % mb;
-  
+
   if (tottaus == 0)
     return;
 
@@ -106,7 +107,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
   TileElementSize blockSizeT(mb, mb);
   Matrix<T, Device::CPU> mat_t(sizeT, blockSizeT);
   set_zero(mat_t);
-  
+
   Matrix<T, Device::CPU> mat_vv({mat_v.size().rows(), mb}, mat_v.blockSize());
   Matrix<T, Device::CPU> mat_w({mat_v.size().rows(), mb}, mat_v.blockSize());
   Matrix<T, Device::CPU> mat_w2({mb, mat_c.size().cols()}, mat_c.blockSize());
@@ -122,13 +123,14 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
     else
       last_mb = mat_v.size().cols() % mat_v.blockSize().cols();
   }
-  
+
   Matrix<T, Device::CPU> mat_vv_last({mat_v.size().rows(), last_mb}, mat_v.blockSize());
   Matrix<T, Device::CPU> mat_w_last({mat_v.size().rows(), last_mb}, mat_v.blockSize());
   Matrix<T, Device::CPU> mat_w2_last({last_mb, mat_c.size().cols()}, mat_c.blockSize());
 
-  const SizeType reflectors = (mat_v.size().cols() < mat_v.size().rows()) ? mat_v.nrTiles().rows() - 2 : mat_v.nrTiles().cols() - 2;
-  
+  const SizeType reflectors = (mat_v.size().cols() < mat_v.size().rows()) ? mat_v.nrTiles().rows() - 2
+                                                                          : mat_v.nrTiles().cols() - 2;
+
   for (SizeType k = reflectors; k > -1; --k) {
     bool is_last = (k == reflectors) ? true : false;
 
@@ -190,16 +192,17 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
       matrix::util::set(mat_w2, [](auto&&) { return 0; });
       taupan = mat_v.blockSize().cols();
     }
-    
-    // Matrix T
-  comm::CommunicatorGrid comm_grid(MPI_COMM_WORLD, 1, 1, common::Ordering::ColumnMajor);
-  common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
 
-  const GlobalTileIndex v_start{k+1, k};
-  auto taus_panel = taus[k];
-  
-  dlaf::factorization::internal::computeTFactor<Backend::MC>(taupan, mat_v, v_start, taus_panel, mat_t(LocalTileIndex{k,k}), serial_comm);
-  
+    // Matrix T
+    comm::CommunicatorGrid comm_grid(MPI_COMM_WORLD, 1, 1, common::Ordering::ColumnMajor);
+    common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
+
+    const GlobalTileIndex v_start{k + 1, k};
+    auto taus_panel = taus[k];
+
+    dlaf::factorization::internal::computeTFactor<Backend::MC>(taupan, mat_v, v_start, taus_panel,
+                                                               mat_t(LocalTileIndex{k, k}), serial_comm);
+
     for (SizeType i = k + 1; i < m; ++i) {
       auto kk = LocalTileIndex{k, k};
       // WH = V T
@@ -249,15 +252,13 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
         }
       }
     }
-
   }
 }
 
 template <class T>
-void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(comm::CommunicatorGrid grid,
-                                                              Matrix<T, Device::CPU>& mat_c,
-                                                              Matrix<const T, Device::CPU>& mat_v,
-                                                              common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
+void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
+    comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_c, Matrix<const T, Device::CPU>& mat_v,
+    common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
   DLAF_UNIMPLEMENTED(grid);
 }
 

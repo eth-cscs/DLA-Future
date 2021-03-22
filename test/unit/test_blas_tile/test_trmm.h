@@ -25,7 +25,7 @@
 
 namespace dlaf {
 namespace test {
-  
+
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
 using namespace testing;
@@ -33,9 +33,10 @@ using namespace testing;
 using dlaf::util::size_t::mul;
 
 template <class ElementIndex, class T, class CT = const T>
-void testTrmm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const blas::Diag diag, const SizeType m, const SizeType n,
-              const SizeType extra_lda, const SizeType extra_ldb) {
-  const TileElementSize size_a = side == blas::Side::Left ? TileElementSize(m, m) : TileElementSize(n, n);
+void testTrmm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const blas::Diag diag,
+              const SizeType m, const SizeType n, const SizeType extra_lda, const SizeType extra_ldb) {
+  const TileElementSize size_a =
+      side == blas::Side::Left ? TileElementSize(m, m) : TileElementSize(n, n);
   const TileElementSize size_b(m, n);
 
   const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
@@ -59,7 +60,7 @@ void testTrmm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, c
 
   auto a = createTile<CT>(el_op_a, size_a, lda, op);
   auto b = createTile<T>(el_b, size_b, ldb);
-  
+
   tile::trmm(side, uplo, op, diag, alpha, a, b);
 
   CHECK_TILE_NEAR(res_b, b, 10 * (m + 1) * TypeUtilities<T>::error,

@@ -198,8 +198,7 @@ auto getLeftTriangularMMSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T 
     return TypeUtilities<T>::polar((k + .5) / (j + 2), k + j);
   };
 
-  auto el_x = [m, alpha, diag, op_a_lower,
-                                                el_b](const ElementIndex& index) {
+  auto el_x = [m, alpha, diag, op_a_lower, el_b](const ElementIndex& index) {
     BaseType<T> kk = op_a_lower ? index.row() + 1 : m - index.row();
 
     double i = index.row();
@@ -276,7 +275,7 @@ auto getRightTriangularMMSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T
 
   return std::make_tuple(el_op_a, el_b, el_x);
 }
- 
+
 }
 }
 }

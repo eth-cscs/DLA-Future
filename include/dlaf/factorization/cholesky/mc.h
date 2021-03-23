@@ -23,12 +23,11 @@
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/range2d.h"
-#include "dlaf/common/vector.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/executor.h"
 #include "dlaf/communication/kernels.h"
-#include "dlaf/communication/sync/broadcast.h"
+#include "dlaf/executors.h"
 #include "dlaf/factorization/cholesky/api.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/copy_tile.h"
@@ -115,12 +114,8 @@ void gemm_trailing_matrix_tile(hpx::execution::parallel_executor ex,
 // Local implementation of Lower Cholesky factorization.
 template <class T>
 void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a) {
-  using hpx::execution::parallel_executor;
-  using hpx::resource::get_thread_pool;
-  using hpx::threads::thread_priority;
-
-  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
-  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
+  auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
+  auto executor_np = dlaf::getNpExecutor<Backend::MC>();
 
   // Number of tile (rows = cols)
   SizeType nrtile = mat_a.nrTiles().cols();
@@ -137,8 +132,8 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
     }
 
     for (SizeType j = k + 1; j < nrtile; ++j) {
-      // Choose queue priority
-      auto trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_normal;
+      // first trailing panel gets high priority (look ahead).
+      auto& trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_np;
 
       // Update trailing matrix: diagonal element mat_a(j,j), reading mat_a.read(j,k), using herk (blas operation)
       herk_trailing_diag_tile(trailing_matrix_executor, mat_a.read(LocalTileIndex{j, k}),
@@ -157,16 +152,13 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
 template <class T>
 void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
                                                    Matrix<T, Device::CPU>& mat_a, comm::MPIMech mech) {
-  using hpx::execution::parallel_executor;
-  using hpx::resource::get_thread_pool;
   using hpx::resource::pool_exists;
   using hpx::threads::thread_priority;
-  using common::internal::vector;
   using ConstTileType = typename Matrix<T, Device::CPU>::ConstTileType;
   using hpx::util::unwrapping;
 
-  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
-  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
+  auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
+  auto executor_np = dlaf::getNpExecutor<Backend::MC>();
 
   // Set up MPI executor pipelines
   std::string mpi_pool = (hpx::resource::pool_exists("mpi")) ? "mpi" : "default";
@@ -176,6 +168,7 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
 
   const matrix::Distribution& distr = mat_a.distribution();
+
   SizeType nrtile = mat_a.nrTiles().cols();
   comm::Index2D this_rank = grid.rank();
 
@@ -219,7 +212,7 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
 
     // Iterate over the trailing matrix
     for (SizeType j = k + 1; j < nrtile; ++j) {
-      parallel_executor trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_normal;
+      auto& trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_np;
       GlobalTileIndex jj_idx(j, j);
       comm::Index2D jj_rank = mat_a.rankGlobalTile(jj_idx);
 
@@ -245,7 +238,7 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
         // Update the ij-tile using the ik-tile and jk-tile
         if (this_rank.row() == distr.rankGlobalTile<Coord::Row>(i)) {
           GlobalTileIndex ij_idx(i, j);
-          gemm_trailing_matrix_tile(executor_normal, panel[i], panel[j], mat_a(ij_idx));
+          gemm_trailing_matrix_tile(executor_np, panel[i], panel[j], mat_a(ij_idx));
         }
       }
     }

@@ -21,6 +21,7 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/init.h"
 #include "dlaf/communication/mech.h"
+#include "dlaf/init.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/solver/triangular.h"
@@ -70,6 +71,8 @@ linear_system_t sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T al
 }
 
 int hpx_main(hpx::program_options::variables_map& vm) {
+  dlaf::initialize(vm);
+
   options_t opts = check_options(vm);
 
   // Only needed for the `polling` approach
@@ -144,6 +147,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     }
   }
 
+  dlaf::finalize();
+
   return hpx::finalize();
 }
 
@@ -172,17 +177,21 @@ int main(int argc, char** argv) {
   ;
   // clang-format on
 
-  // Create a thread pool with a single core that we will use for all
-  // communication related tasks
+  desc_commandline.add(dlaf::getOptionsDescription());
+
   hpx::init_params p;
   p.desc_cmdline = desc_commandline;
-  p.rp_mode = hpx::resource::mode_allow_oversubscription;
   p.rp_callback = [](auto& rp, auto) {
-    bool exclusive = true;
-    std::size_t num_threads = 2;
-    std::string pool_name = "mpi";
-    rp.create_thread_pool(pool_name, hpx::resource::scheduling_policy::static_);
-    rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], pool_name, exclusive, num_threads);
+    int ntasks;
+    DLAF_MPI_CALL(MPI_Comm_size(MPI_COMM_WORLD, &ntasks));
+    // if the user has asked for special thread pools for communication
+    // then set them up
+    if (ntasks > 1) {
+      // Create a thread pool with a single core that we will use for all
+      // communication related tasks
+      rp.create_thread_pool("mpi", hpx::resource::scheduling_policy::local_priority_fifo);
+      rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], "mpi");
+    }
   };
   return hpx::init(argc, argv, p);
 }

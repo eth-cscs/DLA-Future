@@ -37,6 +37,10 @@ struct vector : public std::vector<T> {
   const T& operator[](SizeType index) const {
     return std::vector<T>::operator[](to_sizet(index));
   }
+
+  SizeType size() const noexcept {
+    return to_SizeType(std::vector<T>::size());
+  }
 };
 
 }

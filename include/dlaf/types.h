@@ -170,4 +170,12 @@ auto to_sizet(const T signed_value) {
   return to_unsigned<std::size_t>(signed_value);
 }
 
+/// Helper function for casting from unsigned to dlaf::SizeType.
+///
+/// Useful when passing parameter to the BLAS/LAPACK interface,
+/// see dlaf::to_signed.
+template <class T>
+auto to_SizeType(const T unsigned_value) {
+  return to_signed<SizeType>(unsigned_value);
+}
 }

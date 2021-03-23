@@ -21,6 +21,7 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/eigensolver/gen_to_std/api.h"
+#include "dlaf/executors.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/matrix.h"
@@ -52,8 +53,8 @@ void GenToStd<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
   using hpx::threads::thread_priority;
   using hpx::util::unwrapping;
 
-  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
-  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
+  auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
+  auto executor_np = dlaf::getNpExecutor<Backend::MC>();
 
   const SizeType m = mat_a.nrTiles().rows();
   const SizeType n = mat_a.nrTiles().cols();
@@ -70,9 +71,9 @@ void GenToStd<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
       const auto ai_panel = dlaf::common::iterate_range2d(ai_start, ai_end);
 
       for (const auto& ik : ai_panel) {
-        hpx::dataflow(executor_normal, unwrapping(tile::trsm<T, Device::CPU>), Right, Lower, ConjTrans,
+        hpx::dataflow(executor_np, unwrapping(tile::trsm<T, Device::CPU>), Right, Lower, ConjTrans,
                       NonUnit, 1.0, mat_l.read(kk), mat_a(ik));
-        hpx::dataflow(executor_normal, unwrapping(tile::hemm<T, Device::CPU>), Right, Lower, -0.5,
+        hpx::dataflow(executor_np, unwrapping(tile::hemm<T, Device::CPU>), Right, Lower, -0.5,
                       mat_a.read(kk), mat_l.read(ik), 1.0, mat_a(ik));
       }
 
@@ -88,10 +89,10 @@ void GenToStd<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
                         mat_a.read(jk), mat_l.read(jk), 1.0, mat_a(ij));
         }
         else if (ij.row() > ij.col()) {
-          hpx::dataflow(executor_normal, unwrapping(tile::gemm<T, Device::CPU>), NoTrans, ConjTrans,
-                        -1.0, mat_a.read(ik), mat_l.read(jk), 1.0, mat_a(ij));
-          hpx::dataflow(executor_normal, unwrapping(tile::gemm<T, Device::CPU>), NoTrans, ConjTrans,
-                        -1.0, mat_l.read(ik), mat_a.read(jk), 1.0, mat_a(ij));
+          hpx::dataflow(executor_np, unwrapping(tile::gemm<T, Device::CPU>), NoTrans, ConjTrans, -1.0,
+                        mat_a.read(ik), mat_l.read(jk), 1.0, mat_a(ij));
+          hpx::dataflow(executor_np, unwrapping(tile::gemm<T, Device::CPU>), NoTrans, ConjTrans, -1.0,
+                        mat_l.read(ik), mat_a.read(jk), 1.0, mat_a(ij));
         }
       }
 
@@ -109,7 +110,7 @@ void GenToStd<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
         for (SizeType i = j + 1; i < m; ++i) {
           const auto ij = LocalTileIndex{i, j};
           const auto ik = LocalTileIndex{i, k};
-          hpx::dataflow(executor_normal, unwrapping(tile::gemm<T, Device::CPU>), NoTrans, NoTrans, -1.0,
+          hpx::dataflow(executor_np, unwrapping(tile::gemm<T, Device::CPU>), NoTrans, NoTrans, -1.0,
                         mat_l.read(ij), mat_a.read(jk), 1.0, mat_a(ik));
         }
       }

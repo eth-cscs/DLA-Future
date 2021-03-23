@@ -64,8 +64,8 @@ target_include_directories(dlaf.prop
 target_link_libraries(dlaf.prop
   INTERFACE
     MPI::MPI_CXX
-    HPX::hpx
     ${LAPACK_TARGET}
+    HPX::hpx
     lapackpp
     blaspp
     $<TARGET_NAME_IF_EXISTS:dlaf::cublas>
@@ -91,6 +91,7 @@ add_library(dlaf.core
     communication/communicator.cpp
     communication/communicator_grid.cpp
     communication/datatypes.cpp
+    init.cpp
     matrix/distribution.cpp
     matrix/layout_info.cpp
     matrix/tile.cpp

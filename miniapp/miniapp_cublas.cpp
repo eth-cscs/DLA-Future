@@ -20,18 +20,13 @@
 #include <hpx/modules/async_cuda.hpp>
 #include <hpx/thread.hpp>
 
-#include "dlaf/cublas/executor.h"
+#include "dlaf/executors.h"
+#include "dlaf/init.h"
 
-int hpx_main() {
-  constexpr int device = 0;
-  constexpr std::size_t num_streams_per_worker_thread = 10;
+int hpx_main(int argc, char* argv[]) {
+  dlaf::initialize(argc, argv);
 
-  dlaf::cuda::StreamPool stream_pool{device, num_streams_per_worker_thread,
-                                     hpx::threads::thread_priority::high};
-  dlaf::cublas::HandlePool handle_pool{device, CUBLAS_POINTER_MODE_HOST};
-  dlaf::cublas::Executor cublas_exec{stream_pool, handle_pool};
-
-  hpx::cuda::experimental::enable_user_polling p;
+  auto exec = dlaf::getHpExecutor<dlaf::Backend::GPU>();
 
   constexpr int n = 10000;
   constexpr int incx = 1;
@@ -50,8 +45,8 @@ int hpx_main() {
     return &alpha;
   });
 
-  hpx::future<cublasStatus_t> f1 = hpx::dataflow(cublas_exec, hpx::util::unwrapping(cublasDaxpy), n,
-                                                 alpha_f, x.data().get(), incx, y.data().get(), incy);
+  hpx::future<cublasStatus_t> f1 = hpx::dataflow(exec, hpx::util::unwrapping(cublasDaxpy), n, alpha_f,
+                                                 x.data().get(), incx, y.data().get(), incy);
 
   hpx::future<void> f2 = f1.then([&y](hpx::future<cublasStatus_t> s) {
     DLAF_CUBLAS_CALL(s.get());
@@ -68,7 +63,10 @@ int hpx_main() {
 
   f2.get();
 
-  return hpx::finalize();
+  dlaf::finalize();
+  hpx::finalize();
+
+  return 0;
 }
 
 int main(int argc, char** argv) {

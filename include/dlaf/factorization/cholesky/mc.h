@@ -44,11 +44,7 @@ namespace internal {
 template <class T>
 struct Cholesky<Backend::MC, Device::CPU, T> {
   static void call_L(Matrix<T, Device::CPU>& mat_a);
-};
-
-template <class T, comm::MPIMech M>
-struct CholeskyDistr<Backend::MC, Device::CPU, T, M> {
-  static void call_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a);
+  static void call_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a, comm::MPIMech mech);
 };
 
 template <class T>
@@ -158,16 +154,15 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
   }
 }
 
-template <class T, comm::MPIMech M>
-void CholeskyDistr<Backend::MC, Device::CPU, T, M>::call_L(comm::CommunicatorGrid grid,
-                                                           Matrix<T, Device::CPU>& mat_a) {
+template <class T>
+void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
+                                                   Matrix<T, Device::CPU>& mat_a, comm::MPIMech mech) {
   using hpx::execution::parallel_executor;
   using hpx::resource::get_thread_pool;
   using hpx::resource::pool_exists;
   using hpx::threads::thread_priority;
   using common::internal::vector;
   using ConstTileType = typename Matrix<T, Device::CPU>::ConstTileType;
-  using MPIExecutor = comm::Executor<M>;
   using hpx::util::unwrapping;
 
   parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
@@ -175,8 +170,8 @@ void CholeskyDistr<Backend::MC, Device::CPU, T, M>::call_L(comm::CommunicatorGri
 
   // Set up MPI executor pipelines
   std::string mpi_pool = (hpx::resource::pool_exists("mpi")) ? "mpi" : "default";
-  MPIExecutor executor_mpi_col(mpi_pool);
-  MPIExecutor executor_mpi_row(mpi_pool);
+  comm::Executor executor_mpi_col(mpi_pool, mech);
+  comm::Executor executor_mpi_row(mpi_pool, mech);
   common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
 
@@ -196,13 +191,12 @@ void CholeskyDistr<Backend::MC, Device::CPU, T, M>::call_L(comm::CommunicatorGri
       potrf_diag_tile(executor_hp, mat_a(kk_idx));
       panel[k] = mat_a.read(kk_idx);
       if (k != nrtile - 1) {
-        hpx::dataflow(executor_mpi_col, unwrapping(comm::bcast<T, M>::send), panel[k],
-                      mpi_col_task_chain());
+        hpx::dataflow(executor_mpi_col, unwrapping(comm::bcast_send<T>), panel[k], mpi_col_task_chain());
       }
     }
     else if (this_rank.col() == kk_rank.col()) {
       if (k != nrtile - 1) {
-        panel[k] = hpx::dataflow(executor_mpi_col, unwrapping(comm::bcast<T, M>::recv),
+        panel[k] = hpx::dataflow(executor_mpi_col, unwrapping(comm::bcast_recv<T>),
                                  mat_a.tileSize(kk_idx), kk_rank.row(), mpi_col_task_chain());
       }
     }
@@ -215,11 +209,10 @@ void CholeskyDistr<Backend::MC, Device::CPU, T, M>::call_L(comm::CommunicatorGri
       if (this_rank == ik_rank) {
         trsm_panel_tile(executor_hp, panel[k], mat_a(ik_idx));
         panel[i] = mat_a.read(ik_idx);
-        hpx::dataflow(executor_mpi_row, unwrapping(comm::bcast<T, M>::send), panel[i],
-                      mpi_row_task_chain());
+        hpx::dataflow(executor_mpi_row, unwrapping(comm::bcast_send<T>), panel[i], mpi_row_task_chain());
       }
       else if (this_rank.row() == ik_rank.row()) {
-        panel[i] = hpx::dataflow(executor_mpi_row, unwrapping(comm::bcast<T, M>::recv),
+        panel[i] = hpx::dataflow(executor_mpi_row, unwrapping(comm::bcast_recv<T>),
                                  mat_a.tileSize(ik_idx), ik_rank.col(), mpi_row_task_chain());
       }
     }
@@ -236,14 +229,14 @@ void CholeskyDistr<Backend::MC, Device::CPU, T, M>::call_L(comm::CommunicatorGri
       if (this_rank.row() == jj_rank.row()) {
         herk_trailing_diag_tile(trailing_matrix_executor, panel[j], mat_a(jj_idx));
         if (j != nrtile - 1) {
-          hpx::dataflow(executor_mpi_col, unwrapping(comm::bcast<T, M>::send), panel[j],
+          hpx::dataflow(executor_mpi_col, unwrapping(comm::bcast_send<T>), panel[j],
                         mpi_col_task_chain());
         }
       }
       else {
         GlobalTileIndex jk_idx(j, k);
         if (j != nrtile - 1) {
-          panel[j] = hpx::dataflow(executor_mpi_col, unwrapping(comm::bcast<T, M>::recv),
+          panel[j] = hpx::dataflow(executor_mpi_col, unwrapping(comm::bcast_recv<T>),
                                    mat_a.tileSize(jk_idx), jj_rank.row(), mpi_col_task_chain());
         }
       }

@@ -19,9 +19,6 @@ namespace internal {
 template <Backend backend, Device device, class T>
 struct Cholesky {};
 
-template <Backend backend, Device device, class T, comm::MPIMech M>
-struct CholeskyDistr {};
-
 }
 }
 }

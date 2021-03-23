@@ -115,18 +115,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     sync_barrier();
 
     dlaf::common::Timer<> timeit;
-    if (opts.mech == MPIMech::Blocking) {
-      dlaf::solver::triangular<Backend::MC, Device::CPU, T, MPIMech::Blocking>(comm_grid, side, uplo, op,
-                                                                               diag, alpha, a, b);
-    }
-    else if (opts.mech == MPIMech::Yielding) {
-      dlaf::solver::triangular<Backend::MC, Device::CPU, T, MPIMech::Yielding>(comm_grid, side, uplo, op,
-                                                                               diag, alpha, a, b);
-    }
-    else if (opts.mech == MPIMech::Polling) {
-      dlaf::solver::triangular<Backend::MC, Device::CPU, T, MPIMech::Polling>(comm_grid, side, uplo, op,
-                                                                              diag, alpha, a, b);
-    }
+    dlaf::solver::triangular<Backend::MC, Device::CPU, T>(comm_grid, side, uplo, op, diag, alpha, a, b,
+                                                          opts.mech);
 
     sync_barrier();
 
@@ -291,14 +281,16 @@ linear_system_t sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T al
 }
 
 MPIMech parse_mech(const std::string& mech) {
-  if (mech == "blocking")
-    return MPIMech::Blocking;
-  else if (mech == "yielding")
+  if (mech == "yielding") {
     return MPIMech::Yielding;
-  else if (mech == "polling")
+  }
+  else if (mech == "polling") {
     return MPIMech::Polling;
-  DLAF_ASSERT(false, mech);
-  return MPIMech::Yielding;  // unreachable
+  }
+  else {
+    DLAF_ASSERT(false, mech);
+    return MPIMech::Yielding;  // unreachable
+  }
 }
 
 }

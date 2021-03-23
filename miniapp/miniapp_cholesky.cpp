@@ -121,21 +121,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     }
 
     dlaf::common::Timer<> timeit;
-    if (opts.mech == MPIMech::Blocking) {
-      dlaf::factorization::cholesky<Backend::MC, Device::CPU, T, MPIMech::Blocking>(comm_grid,
-                                                                                    blas::Uplo::Lower,
-                                                                                    matrix);
-    }
-    else if (opts.mech == MPIMech::Yielding) {
-      dlaf::factorization::cholesky<Backend::MC, Device::CPU, T, MPIMech::Yielding>(comm_grid,
-                                                                                    blas::Uplo::Lower,
-                                                                                    matrix);
-    }
-    else if (opts.mech == MPIMech::Polling) {
-      dlaf::factorization::cholesky<Backend::MC, Device::CPU, T, MPIMech::Polling>(comm_grid,
-                                                                                   blas::Uplo::Lower,
-                                                                                   matrix);
-    }
+    dlaf::factorization::cholesky<Backend::MC, Device::CPU, T>(comm_grid, blas::Uplo::Lower, matrix,
+                                                               opts.mech);
 
     // wait for last task and barrier for all ranks
     {
@@ -442,14 +429,16 @@ options_t parse_options(hpx::program_options::variables_map& vm) {
 }
 
 MPIMech parse_mech(const std::string& mech) {
-  if (mech == "blocking")
-    return MPIMech::Blocking;
-  else if (mech == "yielding")
+  if (mech == "yielding") {
     return MPIMech::Yielding;
-  else if (mech == "polling")
+  }
+  else if (mech == "polling") {
     return MPIMech::Polling;
-  DLAF_ASSERT(false, mech);
-  return MPIMech::Yielding;  // unreachable
+  }
+  else {
+    DLAF_ASSERT(false, mech);
+    return MPIMech::Yielding;  // unreachable
+  }
 }
 
 CholCheckIterFreq parse_chol_check(const std::string& check) {

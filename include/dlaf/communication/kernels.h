@@ -28,55 +28,30 @@
 namespace dlaf {
 namespace comm {
 
-template <class T, MPIMech M>
-struct bcast {
-  // Non-blocking sender broadcast
-  static void send(matrix::Tile<const T, Device::CPU> const& tile,
-                   common::PromiseGuard<Communicator> pcomm, MPI_Request* req) {
-    auto msg = comm::make_message(common::make_data(tile));
-    MPI_Ibcast(const_cast<T*>(msg.data()), msg.count(), msg.mpi_type(), pcomm.ref().rank(), pcomm.ref(),
-               req);
-  }
-
-  // Non-blocking receiver broadcast
-  static auto recv(TileElementSize tile_size, int root_rank, common::PromiseGuard<Communicator> pcomm,
-                   MPI_Request* req) {
-    using Tile_t = matrix::Tile<T, Device::CPU>;
-    using ConstTile_t = matrix::Tile<const T, Device::CPU>;
-    using MemView_t = memory::MemoryView<T, Device::CPU>;
-
-    MemView_t mem_view(util::size_t::mul(tile_size.rows(), tile_size.cols()));
-    Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
-
-    auto msg = comm::make_message(common::make_data(tile));
-    MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, pcomm.ref(), req);
-    return ConstTile_t(std::move(tile));
-  }
-};
-
+// Non-blocking sender broadcast
 template <class T>
-struct bcast<T, MPIMech::Blocking> {
-  // Blocking sender broadcast
-  static void send(matrix::Tile<const T, Device::CPU> const& tile,
-                   common::PromiseGuard<Communicator> pcomm) {
-    auto msg = comm::make_message(common::make_data(tile));
-    MPI_Bcast(const_cast<T*>(msg.data()), msg.count(), msg.mpi_type(), pcomm.ref().rank(), pcomm.ref());
-  }
+static void bcast_send(matrix::Tile<const T, Device::CPU> const& tile,
+                       common::PromiseGuard<Communicator> pcomm, MPI_Request* req) {
+  auto msg = comm::make_message(common::make_data(tile));
+  MPI_Ibcast(const_cast<T*>(msg.data()), msg.count(), msg.mpi_type(), pcomm.ref().rank(), pcomm.ref(),
+             req);
+}
 
-  // Blocking receiver broadcast
-  static auto recv(TileElementSize tile_size, int root_rank, common::PromiseGuard<Communicator> pcomm) {
-    using Tile_t = matrix::Tile<T, Device::CPU>;
-    using ConstTile_t = matrix::Tile<const T, Device::CPU>;
-    using MemView_t = memory::MemoryView<T, Device::CPU>;
+// Non-blocking receiver broadcast
+template <class T>
+static auto bcast_recv(TileElementSize tile_size, int root_rank,
+                       common::PromiseGuard<Communicator> pcomm, MPI_Request* req) {
+  using Tile_t = matrix::Tile<T, Device::CPU>;
+  using ConstTile_t = matrix::Tile<const T, Device::CPU>;
+  using MemView_t = memory::MemoryView<T, Device::CPU>;
 
-    MemView_t mem_view(util::size_t::mul(tile_size.rows(), tile_size.cols()));
-    Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
+  MemView_t mem_view(util::size_t::mul(tile_size.rows(), tile_size.cols()));
+  Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
 
-    auto msg = comm::make_message(common::make_data(tile));
-    MPI_Bcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, pcomm.ref());
-    return ConstTile_t(std::move(tile));
-  }
-};
+  auto msg = comm::make_message(common::make_data(tile));
+  MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, pcomm.ref(), req);
+  return ConstTile_t(std::move(tile));
+}
 
 /// MPI_Isend wrapper
 ///

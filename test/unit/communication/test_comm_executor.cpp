@@ -17,12 +17,11 @@
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/executor.h"
 
-template <dlaf::comm::MPIMech M>
-void test_exec() {
+void test_exec(dlaf::comm::MPIMech mech) {
   auto comm = dlaf::comm::Communicator(MPI_COMM_WORLD);
   int rank = comm.rank();
   int nprocs = comm.size();
-  dlaf::comm::Executor<M> ex("default");
+  dlaf::comm::Executor ex("default", mech);
 
   int size = 1000;
   MPI_Datatype dtype = MPI_DOUBLE;
@@ -42,17 +41,17 @@ void test_exec() {
 }
 
 TEST(SendRecv, Yielding) {
-  test_exec<dlaf::comm::MPIMech::Yielding>();
+  test_exec(dlaf::comm::MPIMech::Yielding);
 }
 
 TEST(SendRecv, Polling) {
   hpx::mpi::experimental::enable_user_polling internal_helper("default");
-  test_exec<dlaf::comm::MPIMech::Polling>();
+  test_exec(dlaf::comm::MPIMech::Polling);
 }
 
-TEST(SendRecv, Blocking) {
+TEST(Bcast, Dataflow) {
   auto comm = dlaf::comm::Communicator(MPI_COMM_WORLD);
-  dlaf::comm::Executor<dlaf::comm::MPIMech::Blocking> ex("mpi");
+  dlaf::comm::Executor ex("default", dlaf::comm::MPIMech::Yielding);
   int root_rank = 1;
   MPI_Datatype dtype = MPI_DOUBLE;
   int size = 1000;
@@ -60,7 +59,7 @@ TEST(SendRecv, Blocking) {
   std::vector<double> buf(static_cast<std::size_t>(size), val);
 
   // Tests the handling of futures in a dataflow
-  hpx::dataflow(ex, hpx::util::unwrapping(MPI_Bcast), buf.data(), hpx::make_ready_future<int>(size),
+  hpx::dataflow(ex, hpx::util::unwrapping(MPI_Ibcast), buf.data(), hpx::make_ready_future<int>(size),
                 dtype, root_rank, comm, hpx::make_ready_future<void>())
       .get();
 

@@ -96,8 +96,8 @@ TYPED_TEST(CholeskyLocalTest, Correctness) {
   }
 }
 
-template <class TypeParam, comm::MPIMech M>
-void testDistCholesky(CholeskyDistributedTest<TypeParam>& test) {
+template <class TypeParam>
+void testDistCholesky(CholeskyDistributedTest<TypeParam>& test, comm::MPIMech mech) {
   // Note: The tile elements are chosen such that:
   // - res_ij = 1 / 2^(|i-j|) * exp(I*(-i+j)),
   // where I = 0 for real types or I is the complex unit for complex types.
@@ -138,8 +138,8 @@ void testDistCholesky(CholeskyDistributedTest<TypeParam>& test) {
         Distribution distribution(sz, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
         Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
         set(mat, el);
-        factorization::cholesky<Backend::MC, Device::CPU, TypeParam, M>(comm_grid, blas::Uplo::Lower,
-                                                                        mat);
+        factorization::cholesky<Backend::MC, Device::CPU, TypeParam>(comm_grid, blas::Uplo::Lower, mat,
+                                                                     mech);
         CHECK_MATRIX_NEAR(res, mat, 4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error,
                           4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);
       }
@@ -148,14 +148,10 @@ void testDistCholesky(CholeskyDistributedTest<TypeParam>& test) {
 }
 
 TYPED_TEST(CholeskyDistributedTest, DistCholesky_Yielding) {
-  testDistCholesky<TypeParam, MPIMech::Yielding>(*this);
+  testDistCholesky<TypeParam>(*this, comm::MPIMech::Yielding);
 }
 
-TYPED_TEST(CholeskyDistributedTest, DistCholesky_Polling) {
-  hpx::mpi::experimental::enable_user_polling internal_helper("mpi");
-  testDistCholesky<TypeParam, MPIMech::Polling>(*this);
-}
-
-TYPED_TEST(CholeskyDistributedTest, DistCholesky_Blocking) {
-  testDistCholesky<TypeParam, MPIMech::Blocking>(*this);
-}
+// TYPED_TEST(CholeskyDistributedTest, DistCholesky_Polling) {
+//  hpx::mpi::experimental::enable_user_polling internal_helper("default");
+//  testDistCholesky<TypeParam>(*this, comm::MPIMech::Polling);
+//}

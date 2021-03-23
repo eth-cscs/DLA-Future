@@ -12,7 +12,7 @@
 namespace dlaf {
 namespace comm {
 
-enum class MPIMech { Blocking, Polling, Yielding };
+enum class MPIMech { Polling, Yielding };
 
 }
 }

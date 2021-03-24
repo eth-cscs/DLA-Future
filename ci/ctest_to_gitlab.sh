@@ -2,7 +2,7 @@
 
 IMAGE="$1"
 USE_CODECOV="$2"
-CORES_PER_NODE="$3"
+THREADS_PER_NODE="$3"
 SLURM_CONSTRAINT="$4"
 
 if [ "$USE_CODECOV" = true ]; then
@@ -14,7 +14,7 @@ image: $IMAGE
 
 stages:
   - allocate
-  - test
+{{TEST_STAGES}}
   - upload
   - cleanup
 
@@ -50,7 +50,7 @@ deallocate:
 JOB_TEMPLATE="
 
 {{LABEL}}:
-  stage: test
+  stage: test_{{LABEL}}
   extends: .daint
   variables:
     SLURM_CPUS_PER_TASK: {{CPUS_PER_TASK}}
@@ -72,7 +72,7 @@ image: $IMAGE
 
 stages:
   - allocate
-  - test
+{{TEST_STAGES}}
   - cleanup
 
 variables:
@@ -97,7 +97,7 @@ deallocate:
 
 JOB_TEMPLATE="
 {{LABEL}}:
-  stage: test
+  stage: test_{{LABEL}}
   extends: .daint
   variables:
     SLURM_CPUS_PER_TASK: {{CPUS_PER_TASK}}
@@ -109,17 +109,25 @@ JOB_TEMPLATE="
   script: mpi-ctest -L {{LABEL}}"
 fi
 
+TEST_STAGE_TEMPLATE="
+  - test_{{LABEL}}
+"
+
 JOBS=""
+TEST_STAGES=""
 
 for label in `ctest --print-labels | egrep -o "RANK_[1-9][0-9]?"`; do
     N=`echo "$label" | sed "s/RANK_//"`
-    C=$(( CORES_PER_NODE / N ))
+    C=$(( THREADS_PER_NODE / N ))
 
     JOB=`echo "$JOB_TEMPLATE" | sed "s|{{LABEL}}|$label|g" \
                               | sed "s|{{NTASKS}}|$N|g" \
                               | sed "s|{{CPUS_PER_TASK}}|$C|g"`
+    TEST_STAGE=`echo "$TEST_STAGE_TEMPLATE" | sed "s|{{LABEL}}|$label|g"`
 
     JOBS="$JOBS$JOB"
+    TEST_STAGES="$TEST_STAGES$TEST_STAGE"
 done
 
-echo "${BASE_TEMPLATE/'{{JOBS}}'/$JOBS}"
+TMP_JOB=`echo "${BASE_TEMPLATE/'{{JOBS}}'/$JOBS}"`
+echo "${TMP_JOB/'{{TEST_STAGES}}'/$TEST_STAGES}"

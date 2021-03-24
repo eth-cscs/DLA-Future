@@ -70,7 +70,7 @@ def chol(system, lib, build_dir, nodes, rpn, m_sz, mb_sz, nruns, suffix="na", ex
         cmd = f"{build_dir}/test/tester --dim {m_sz}x{m_sz}x0 --nb {mb_sz} --p {grid_rows} --q {grid_cols} --repeat {nruns} --check n --ref n --type d {extra_flags} potrf"
     elif lib == "dplasma":
         env += " OMP_NUM_THREADS=1"
-        cmd = f"{build_dir}/tests/testing_dpotrf -N {m_sz} --MB {mb_sz} --NB {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} -c {cpus_per_rank} -v {extra_flags}"
+        cmd = f"{build_dir}/tests/testing_dpotrf -N {m_sz} --MB {mb_sz} --NB {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} -c {cpus_per_rank} --nruns {nruns} -v {extra_flags}"
     else:
         raise ValueError(_err_msg(lib))
 

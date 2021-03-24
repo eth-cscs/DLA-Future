@@ -92,10 +92,10 @@ def _parse_line_based(fout, bench_name, nodes):
         pstr_arr = []
         pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}"
     elif bench_name.startswith("chol_slate"):
-        pstr_arr = []
+        pstr_arr = ["input:{}potrf"]
         pstr_res = "d {} {} column lower {matrix_rows:d} {:d} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:g} {perf:g} NA NA no check"
     elif bench_name.startswith("trsm_slate"):
-        pstr_arr = []
+        pstr_arr = ["input:{}trsm"]
         pstr_res = "d {} {} {:d} left lower notrans nonunit {matrix_rows:d} {matrix_cols:d} {:f} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:g} {perf:g} NA NA no check"
     elif bench_name.startswith("chol_dplasma"):
         pstr_arr = [
@@ -114,11 +114,14 @@ def _parse_line_based(fout, bench_name, nodes):
 
     data = []
     rd = {}
+    # used for slate and dplasma
+    run_index = 0
     for line in fout:
         for pstr in pstr_arr:
             pdata = parse(pstr, " ".join(line.split()))
             if pdata:
                 rd.update(pdata.named)
+                run_index = 0
 
         pdata = parse(pstr_res, " ".join(line.split()))
         if pdata:
@@ -134,7 +137,8 @@ def _parse_line_based(fout, bench_name, nodes):
 
             # makes _calc_metrics work
             if not "dlaf" in bench_name:
-                rd["run_index"] = 1
+                rd["run_index"] = run_index
+                run_index += 1
 
             data.append(dict(rd))
 

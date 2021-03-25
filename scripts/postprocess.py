@@ -20,6 +20,8 @@ def _gen_nodes_plot(plt_type, title, ylabel, file_name, df, logx, logy=False, co
     else:
         it_space = df.groupby(["bench_name"])
 
+    plotted = False
+
     for x, lib_data in it_space:
         if combine_mb:
             mb = x[0]
@@ -58,17 +60,20 @@ def _gen_nodes_plot(plt_type, title, ylabel, file_name, df, logx, logy=False, co
             lib_data[f"{plt_type}_max"],
             alpha=0.2,
         )
+        plotted = True
 
-    ax.set_ylabel(ylabel)
-    if logx:
-      ax.set_xscale("log", base=2)
-    if logy:
-      ax.set_yscale("log", base=10)
-    ax.set_xlabel("nodes")
-    ax.set_xticks(df["nodes"].sort_values().unique())
-    ax.legend(loc="upper right", prop={"size": 6})
-    ax.set_title(title)
-    fig.savefig(f"{file_name}.png", dpi=300)
+    if plotted:
+        ax.set_ylabel(ylabel)
+        if logx:
+          ax.set_xscale("log", base=2)
+        if logy:
+          ax.set_yscale("log", base=10)
+        ax.set_xlabel("nodes")
+        ax.set_xticks(df["nodes"].sort_values().unique())
+        ax.legend(loc="upper right", prop={"size": 6})
+        ax.set_title(title)
+        fig.savefig(f"{file_name}.png", dpi=300)
+
     plt.close(fig)
 
 
@@ -129,6 +134,11 @@ def _parse_line_based(fout, bench_name, nodes):
             "#+++++ MB x NB : {block_rows:d} x {block_cols:d}",
         ]
         pstr_res = "[****] TIME(s) {time:g} : dtrsm PxQ= {grid_rows:d} {grid_cols:d} NB= {block_rows:d} N= {:d} : {perf:g} gflops"
+    elif bench_name.startswith("chol_scalapack"):
+        pstr_arr = [
+          "PROBLEM PARAMETERS:"
+        ]
+        pstr_res = "{time_ms:g}ms {perf:g}GFlop/s {matrix_rows:d} ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d})"
     else:
         raise ValueError("Unknown bench_name: " + bench_name)
 
@@ -149,11 +159,14 @@ def _parse_line_based(fout, bench_name, nodes):
             rd["bench_name"] = bench_name
             rd["nodes"] = nodes
             rd["perf_per_node"] = rd["perf"] / nodes
-            if bench_name == "chol_slate":
+            if bench_name.startswith("chol_slate"):
                 rd["block_cols"] = rd["block_rows"]
                 rd["matrix_cols"] = rd["matrix_rows"]
-            elif bench_name == "trsm_slate":
+            elif bench_name.startswith("trsm_slate"):
                 rd["block_cols"] = rd["block_rows"]
+            elif bench_name.startswith("chol_scalapack"):
+                rd["time"] = rd["time_ms"] / 1000
+                rd["matrix_cols"] = rd["matrix_rows"]
 
             # makes _calc_metrics work
             if not "dlaf" in bench_name:

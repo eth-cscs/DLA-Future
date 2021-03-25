@@ -29,7 +29,7 @@ macro(target_add_warnings target_name)
       -Wswitch-enum
       # Conversions
       $<${IS_COMPILER_GCC}:
-        #-Wsign-conversion
+        -Wsign-conversion
         -Wfloat-conversion>
       $<${IS_COMPILER_CLANG}:
         -Wbitfield-enum-conversion
@@ -42,8 +42,7 @@ macro(target_add_warnings target_name)
         -Wnon-literal-null-conversion
         -Wnull-conversion
         -Wshorten-64-to-32
-        #-Wsign-conversion
-        -Wno-sign-compare
+        -Wsign-conversion
         -Wstring-conversion>
       -pedantic-errors
 

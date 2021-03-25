@@ -111,6 +111,9 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   const auto& distribution = matrix_ref.distribution();
 
   for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
+    if (0 == world.rank() && run_index >= 0)
+      std::cout << "[" << run_index << "]" << std::endl;
+
     MatrixType matrix(matrix_size, block_size, comm_grid);
     copy(matrix_ref, matrix);
 
@@ -148,7 +151,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
                 << " " << elapsed_time << "s"
                 << " " << gigaflops << "GFlop/s"
                 << " " << matrix.size() << " " << matrix.blockSize() << " " << comm_grid.size() << " "
-                << " " << hpx::get_os_thread_count() << std::endl;
+                << hpx::get_os_thread_count() << std::endl;
 
     // (optional) run test
     if ((opts.do_check == CholCheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
@@ -181,7 +184,7 @@ int main(int argc, char** argv) {
     ("nruns",        value<int64_t>()    ->default_value(   1),       "Number of runs to compute the cholesky")
     ("nwarmups",     value<int64_t>()    ->default_value(   1),       "Number of warmup runs")
     ("check-result", value<std::string>()->default_value("none"),     "Enable result checking ('none', 'all', 'last')")
-    ("mech",         value<std::string>()->default_value("yielding"), "MPI mechanism ('yielding', 'polling', 'blocking')")
+    ("mech",         value<std::string>()->default_value("yielding"), "MPI mechanism ('yielding', 'polling')")
   ;
   // clang-format on
 

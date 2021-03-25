@@ -41,12 +41,6 @@ namespace factorization {
 namespace internal {
 
 template <class T>
-struct Cholesky<Backend::MC, Device::CPU, T> {
-  static void call_L(Matrix<T, Device::CPU>& mat_a);
-  static void call_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a, comm::MPIMech mech);
-};
-
-template <class T>
 void potrf_diag_tile(hpx::execution::parallel_executor executor_hp,
                      hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
   auto kern_f = hpx::util::
@@ -110,6 +104,12 @@ void gemm_trailing_matrix_tile(hpx::execution::parallel_executor ex,
   //              blas::Op::NoTrans, blas::Op::ConjTrans, -1.0, std::move(panel_tile),
   //              std::move(col_panel), 1.0, std::move(matrix_tile));
 }
+
+template <class T>
+struct Cholesky<Backend::MC, Device::CPU, T> {
+  static void call_L(Matrix<T, Device::CPU>& mat_a);
+  static void call_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a, comm::MPIMech mech);
+};
 
 // Local implementation of Lower Cholesky factorization.
 template <class T>
@@ -249,10 +249,10 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
 #define DLAF_CHOLESKY_MC_ETI(KWORD, DATATYPE) \
   KWORD template struct Cholesky<Backend::MC, Device::CPU, DATATYPE>;
 
-// DLAF_CHOLESKY_MC_ETI(extern, float)
-// DLAF_CHOLESKY_MC_ETI(extern, double)
-// DLAF_CHOLESKY_MC_ETI(extern, std::complex<float>)
-// DLAF_CHOLESKY_MC_ETI(extern, std::complex<double>)
+DLAF_CHOLESKY_MC_ETI(extern, float)
+DLAF_CHOLESKY_MC_ETI(extern, double)
+DLAF_CHOLESKY_MC_ETI(extern, std::complex<float>)
+DLAF_CHOLESKY_MC_ETI(extern, std::complex<double>)
 
 }
 }

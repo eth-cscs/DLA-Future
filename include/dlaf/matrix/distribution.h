@@ -292,32 +292,6 @@ public:
     return util::matrix::tileElementFromElement(global_element, block_size_.get<rc>());
   }
 
-  /// Returns true if tile `i` is the last tile of rank `r`.
-  template <Coord rc>
-  bool islastTile(comm::IndexT_MPI r, SizeType i) const noexcept {
-    SizeType n = global_nr_tiles_.get<rc>();
-    comm::IndexT_MPI g = grid_size_.get<rc>();
-    comm::IndexT_MPI s = source_rank_index_.get<rc>();
-    return n - i <= g && r == util::matrix::rankGlobalTile(i, g, s);
-  }
-
-  template <Coord rc>
-  bool islastTile(SizeType global_element) const noexcept {
-    return islastTile<rc>(rank_index_.get<rc>(), global_element);
-  }
-
-  // Returns true only if the `(i, i)` tile is the last diagonal tile belonging to `rank`
-  bool isLastDiagTile(comm::Index2D rank, SizeType i) const noexcept {
-    SizeType n = std::min(global_nr_tiles_.rows(), global_nr_tiles_.cols());
-    if (i >= n || rank != rankGlobalTile(GlobalTileIndex(i, i)))
-      return false;
-    for (SizeType k = i + 1; k < n; ++k) {
-      if (rank == rankGlobalTile(GlobalTileIndex(k, k)))
-        return false;
-    }
-    return true;
-  }
-
   /// Returns the size of the Tile with global index @p index.
   TileElementSize tileSize(const GlobalTileIndex& index) const noexcept {
     return {std::min(block_size_.rows(), size_.rows() - index.row() * block_size_.rows()),

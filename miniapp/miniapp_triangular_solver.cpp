@@ -173,7 +173,7 @@ int main(int argc, char** argv) {
     ("nruns",         value<int64_t>()   ->default_value(1),          "Number of runs to compute the cholesky")
     ("nwarmups",      value<int64_t>()   ->default_value(1),          "Number of warmup runs")
     ("check-result",  bool_switch()      ->default_value(false),      "Check the triangular system solution (for each run)")
-    ("mech",         value<std::string>()->default_value("yielding"), "MPI mechanism ('yielding', 'polling', 'blocking')")
+    ("mech",         value<std::string>()->default_value("yielding"), "MPI mechanism ('yielding', 'polling')")
   ;
   // clang-format on
 

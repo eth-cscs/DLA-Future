@@ -281,20 +281,3 @@ TEST(DistributionTest, Index2DConversions) {
     }
   }
 }
-
-TEST(DistributionTest, IsLastTile) {
-  GlobalElementSize size(23, 23);
-  TileElementSize block_size(4, 4);
-  comm::Size2D grid_size(3, 2);
-  comm::Index2D rank_index(1, 0);
-  comm::Index2D source_rank_index(2, 1);
-  Distribution distr(size, block_size, grid_size, rank_index, source_rank_index);
-
-  EXPECT_TRUE((distr.islastTile<Coord::Row>(5)));
-  EXPECT_FALSE((distr.islastTile<Coord::Row>(4)));
-  EXPECT_TRUE((distr.islastTile<Coord::Row>(0, 4)));
-  EXPECT_TRUE((distr.islastTile<Coord::Row>(1, 5)));
-  EXPECT_TRUE((distr.islastTile<Coord::Row>(2, 3)));
-  EXPECT_FALSE((distr.islastTile<Coord::Row>(2, 5)));
-  EXPECT_FALSE((distr.islastTile<Coord::Row>(3)));
-}

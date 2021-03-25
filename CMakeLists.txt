@@ -43,7 +43,6 @@ set(CMAKE_CXX_STANDARD 14)
 
 # ---- CUDA
 if (DLAF_WITH_CUDA)
-  #enable_language(CUDA)
   find_package(CUDALIBS REQUIRED)
 endif()
 

@@ -12,7 +12,7 @@ from parse import parse
 sns.set_theme()
 
 # plt_type : ppn | time
-def _gen_nodes_plot(plt_type, title, ylabel, file_name, df, logx, combine_mb=False):
+def _gen_nodes_plot(plt_type, title, ylabel, file_name, df, logx, logy=False, combine_mb=False, filts=None, replaces=None):
     fig, ax = plt.subplots()
 
     if combine_mb:
@@ -26,6 +26,23 @@ def _gen_nodes_plot(plt_type, title, ylabel, file_name, df, logx, combine_mb=Fal
             bench_name = x[1] + f"_{mb}"
         else:
             bench_name = x
+
+        # filter series by name
+        if filts != None:
+            flag = False
+            for filt in filts:
+                if filt in bench_name:
+                    flag = True
+                    break
+            if not flag:
+                continue
+
+        # remove routine prefix
+        bench_name = bench_name[bench_name.find("_") + 1:]
+
+        if replaces != None:
+            for replace in replaces:
+                bench_name = re.sub(replace[0], replace[1], bench_name)
 
         lib_data.plot(
             ax=ax,
@@ -43,7 +60,10 @@ def _gen_nodes_plot(plt_type, title, ylabel, file_name, df, logx, combine_mb=Fal
         )
 
     ax.set_ylabel(ylabel)
-    ax.set_xscale("log", base=2)
+    if logx:
+      ax.set_xscale("log", base=2)
+    if logy:
+      ax.set_yscale("log", base=10)
     ax.set_xlabel("nodes")
     ax.set_xticks(df["nodes"].sort_values().unique())
     ax.legend(loc="upper right", prop={"size": 6})
@@ -185,7 +205,7 @@ def calc_trsm_metrics(df):
     )
 
 
-def gen_chol_plots(df, logx=False):
+def gen_chol_plots(df, logx=False, filts=None, replaces=None):
     for (m, mb), grp_data in df.groupby(["matrix_rows", "block_rows"]):
         title = f"Cholesky: matrix_size = {m} x {m}, block_size = {mb} x {mb}"
         _gen_nodes_plot(
@@ -194,7 +214,9 @@ def gen_chol_plots(df, logx=False):
             "GFlops/node",
             f"chol_ppn_{m}_{mb}",
             grp_data,
-            logx
+            logx,
+            filts=filts,
+            replaces=replaces
         )
         _gen_nodes_plot(
             "time",
@@ -202,9 +224,11 @@ def gen_chol_plots(df, logx=False):
             "Time [s]",
             f"chol_time_{m}_{mb}",
             grp_data,
-            logx
+            logx,
+            filts=filts,
+            replaces=replaces
         )
-def gen_chol_plots_weak(df, weak_rt_approx, logx=False, combine_mb=False):
+def gen_chol_plots_weak(df, weak_rt_approx, logx=False, combine_mb=False, filts=None, replaces=None):
     df = df.assign(weak_rt=[int(round(x[0] / math.sqrt(x[1]) / weak_rt_approx)) * weak_rt_approx for x in zip(df['matrix_rows'], df['nodes'])])
 
     if combine_mb:
@@ -234,7 +258,9 @@ def gen_chol_plots_weak(df, weak_rt_approx, logx=False, combine_mb=False):
             filename_ppn,
             grp_data,
             logx,
-            combine_mb
+            combine_mb=combine_mb,
+            filts=filts,
+            replaces=replaces
         )
         _gen_nodes_plot(
             "time",
@@ -243,10 +269,13 @@ def gen_chol_plots_weak(df, weak_rt_approx, logx=False, combine_mb=False):
             filename_time,
             grp_data,
             logx,
-            combine_mb
+            logy=True,
+            combine_mb=combine_mb,
+            filts=filts,
+            replaces=replaces
         )
 
-def gen_trsm_plots(df, logx=False):
+def gen_trsm_plots(df, logx=False, filts=None, replaces=None):
     for (m, n, mb), grp_data in df.groupby(
         ["matrix_rows", "matrix_cols", "block_rows"]
     ):
@@ -257,7 +286,9 @@ def gen_trsm_plots(df, logx=False):
             "GFlops/node",
             f"trsm_ppn_{m}_{n}_{mb}",
             grp_data,
-            logx
+            logx,
+            filts=filts,
+            replaces=replaces
         )
         _gen_nodes_plot(
             "time",
@@ -265,5 +296,7 @@ def gen_trsm_plots(df, logx=False):
             "Time [s]",
             f"trsm_time_{m}_{n}_{mb}",
             grp_data,
-            logx
+            logx,
+            filts=filts,
+            replaces=replaces
         )

@@ -205,14 +205,21 @@ def calc_trsm_metrics(df):
     )
 
 
-def gen_chol_plots(df, logx=False, filts=None, replaces=None):
+def gen_chol_plots(df, logx=False, filts=None, replaces=None, filename_suffix=None):
     for (m, mb), grp_data in df.groupby(["matrix_rows", "block_rows"]):
         title = f"Cholesky: matrix_size = {m} x {m}, block_size = {mb} x {mb}"
+
+        filename_ppn = f"chol_ppn_{m}_{mb}"
+        filename_time = f"chol_time_{m}_{mb}"
+        if filename_suffix != None:
+            filename_ppn += f"_{filename_suffix}"
+            filename_time += f"_{filename_suffix}"
+
         _gen_nodes_plot(
             "ppn",
             title,
             "GFlops/node",
-            f"chol_ppn_{m}_{mb}",
+            filename_ppn,
             grp_data,
             logx,
             filts=filts,
@@ -222,13 +229,13 @@ def gen_chol_plots(df, logx=False, filts=None, replaces=None):
             "time",
             title,
             "Time [s]",
-            f"chol_time_{m}_{mb}",
+            filename_time,
             grp_data,
             logx,
             filts=filts,
             replaces=replaces
         )
-def gen_chol_plots_weak(df, weak_rt_approx, logx=False, combine_mb=False, filts=None, replaces=None):
+def gen_chol_plots_weak(df, weak_rt_approx, logx=False, combine_mb=False, filts=None, replaces=None, filename_suffix=None):
     df = df.assign(weak_rt=[int(round(x[0] / math.sqrt(x[1]) / weak_rt_approx)) * weak_rt_approx for x in zip(df['matrix_rows'], df['nodes'])])
 
     if combine_mb:
@@ -250,6 +257,9 @@ def gen_chol_plots_weak(df, weak_rt_approx, logx=False, combine_mb=False, filts=
             title += f", block_size = {mb} x {mb}"
             filename_ppn += f"_{mb}"
             filename_time += f"_{mb}"
+        if filename_suffix != None:
+            filename_ppn += f"_{filename_suffix}"
+            filename_time += f"_{filename_suffix}"
 
         _gen_nodes_plot(
             "ppn",
@@ -275,16 +285,23 @@ def gen_chol_plots_weak(df, weak_rt_approx, logx=False, combine_mb=False, filts=
             replaces=replaces
         )
 
-def gen_trsm_plots(df, logx=False, filts=None, replaces=None):
+def gen_trsm_plots(df, logx=False, filts=None, replaces=None, filename_suffix=None):
     for (m, n, mb), grp_data in df.groupby(
         ["matrix_rows", "matrix_cols", "block_rows"]
     ):
         title = f"TRSM: matrix_size = {m} x {n}, block_size = {mb} x {mb}"
+
+        filename_ppn = f"trsm_ppn_{m}_{n}_{mb}"
+        filename_time = f"trsm_time_{m}_{n}_{mb}"
+        if filename_suffix != None:
+            filename_ppn += f"_{filename_suffix}"
+            filename_time += f"_{filename_suffix}"
+
         _gen_nodes_plot(
             "ppn",
             title,
             "GFlops/node",
-            f"trsm_ppn_{m}_{n}_{mb}",
+            filename_ppn,
             grp_data,
             logx,
             filts=filts,
@@ -294,7 +311,7 @@ def gen_trsm_plots(df, logx=False, filts=None, replaces=None):
             "time",
             title,
             "Time [s]",
-            f"trsm_time_{m}_{n}_{mb}",
+            filename_time,
             grp_data,
             logx,
             filts=filts,

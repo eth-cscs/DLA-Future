@@ -1,5 +1,6 @@
 import os
 import re
+import math
 
 import pandas as pd
 import numpy as np
@@ -11,9 +12,21 @@ from parse import parse
 sns.set_theme()
 
 # plt_type : ppn | time
-def _gen_nodes_plot(plt_type, title, ylabel, file_name, df, logx):
+def _gen_nodes_plot(plt_type, title, ylabel, file_name, df, logx, combine_mb=False):
     fig, ax = plt.subplots()
-    for bench_name, lib_data in df.groupby(["bench_name"]):
+
+    if combine_mb:
+        it_space = df.groupby(["block_rows", "bench_name"])
+    else:
+        it_space = df.groupby(["bench_name"])
+
+    for x, lib_data in it_space:
+        if combine_mb:
+            mb = x[0]
+            bench_name = x[1] + f"_{mb}"
+        else:
+            bench_name = x
+
         lib_data.plot(
             ax=ax,
             x="nodes",
@@ -76,43 +89,43 @@ def _calc_metrics(cols, df):
 # }
 def _parse_line_based(fout, bench_name, nodes):
     if "dlaf" in bench_name:
-        pstr_arr = [
-            "[{run_index:d}] {time:f}s {perf:f}GFlop/s ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}"
-        ]
+        pstr_arr = []
+        pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}"
     elif bench_name.startswith("chol_slate"):
-        pstr_arr = [
-            "d {} {} column lower {matrix_rows:d} {:d} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:f} {perf:f} NA NA no check"
-        ]
+        pstr_arr = ["input:{}potrf"]
+        pstr_res = "d {} {} column lower {matrix_rows:d} {:d} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:g} {perf:g} NA NA no check"
     elif bench_name.startswith("trsm_slate"):
-        pstr_arr = [
-            "d {} {} {:d} left lower notrans nonunit {matrix_rows:d} {matrix_cols:d} {:f} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:f} {perf:f} NA NA no check"
-        ]
+        pstr_arr = ["input:{}trsm"]
+        pstr_res = "d {} {} {:d} left lower notrans nonunit {matrix_rows:d} {matrix_cols:d} {:f} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:g} {perf:g} NA NA no check"
     elif bench_name.startswith("chol_dplasma"):
         pstr_arr = [
             "#+++++ M x N x K|NRHS : {matrix_rows:d} x {matrix_cols:d} x {:d}",
             "#+++++ MB x NB : {block_rows:d} x {block_cols:d}",
-            "[****] TIME(s) {time:f} : dpotrf PxQ= {grid_rows:d} {grid_cols:d} NB= {:d} N= {:d} : {perf:f} gflops - ENQ&PROG&DEST {:f} : {:f} gflops - ENQ {:f} - DEST {:f}",
         ]
+        pstr_res = "[****] TIME(s) {time:g} : dpotrf PxQ= {grid_rows:d} {grid_cols:d} NB= {:d} N= {:d} : {perf:g} gflops - ENQ&PROG&DEST {:g} : {:g} gflops - ENQ {:g} - DEST {:g}"
     elif bench_name.startswith("trsm_dplasma"):
         pstr_arr = [
             "#+++++ M x N x K|NRHS : {matrix_rows:d} x {matrix_cols:d} x {:d}",
             "#+++++ MB x NB : {block_rows:d} x {block_cols:d}",
-            "[****] TIME(s) {time:f} : dtrsm PxQ= {grid_rows:d} {grid_cols:d} NB= {block_rows:d} N= {:d} : {perf:f} gflops",
         ]
+        pstr_res = "[****] TIME(s) {time:g} : dtrsm PxQ= {grid_rows:d} {grid_cols:d} NB= {block_rows:d} N= {:d} : {perf:g} gflops"
     else:
         raise ValueError("Unknown bench_name: " + bench_name)
 
     data = []
     rd = {}
-    i_pstr = 0
+    # used for slate and dplasma
+    run_index = 0
     for line in fout:
-        pdata = parse(pstr_arr[i_pstr], " ".join(line.split()))
+        for pstr in pstr_arr:
+            pdata = parse(pstr, " ".join(line.split()))
+            if pdata:
+                rd.update(pdata.named)
+                run_index = 0
+
+        pdata = parse(pstr_res, " ".join(line.split()))
         if pdata:
             rd.update(pdata.named)
-            i_pstr += 1
-
-        # if all lines are matched, add the data entry
-        if i_pstr == len(pstr_arr):
             rd["bench_name"] = bench_name
             rd["nodes"] = nodes
             rd["perf_per_node"] = rd["perf"] / nodes
@@ -124,11 +137,10 @@ def _parse_line_based(fout, bench_name, nodes):
 
             # makes _calc_metrics work
             if not "dlaf" in bench_name:
-                rd["run_index"] = 1
+                rd["run_index"] = run_index
+                run_index += 1
 
-            data.append(rd)
-            i_pstr = 0
-            rd = {}
+            data.append(dict(rd))
 
     return data
 
@@ -191,6 +203,47 @@ def gen_chol_plots(df, logx=False):
             f"chol_time_{m}_{mb}",
             grp_data,
             logx
+        )
+def gen_chol_plots_weak(df, weak_rt_approx, logx=False, combine_mb=False):
+    df = df.assign(weak_rt=[int(round(x[0] / math.sqrt(x[1]) / weak_rt_approx)) * weak_rt_approx for x in zip(df['matrix_rows'], df['nodes'])])
+
+    if combine_mb:
+        it_space = df.groupby(["weak_rt"])
+    else:
+        it_space = df.groupby(["weak_rt", "block_rows"])
+
+    for x, grp_data in it_space:
+        if combine_mb:
+            weak_rt = x
+        else:
+            weak_rt = x[0]
+            mb = x[1]
+
+        title = f"Cholesky: weak scaling ({weak_rt} x {weak_rt})"
+        filename_ppn = f"chol_ppn_{weak_rt}"
+        filename_time = f"chol_time_{weak_rt}"
+        if not combine_mb:
+            title += f", block_size = {mb} x {mb}"
+            filename_ppn += f"_{mb}"
+            filename_time += f"_{mb}"
+
+        _gen_nodes_plot(
+            "ppn",
+            title,
+            "GFlops/node",
+            filename_ppn,
+            grp_data,
+            logx,
+            combine_mb
+        )
+        _gen_nodes_plot(
+            "time",
+            title,
+            "Time [s]",
+            filename_time,
+            grp_data,
+            logx,
+            combine_mb
         )
 
 def gen_trsm_plots(df, logx=False):

@@ -28,7 +28,7 @@ stages:
     - docker push $BUILD_IMAGE:latest
     - docker build -t $DEPLOY_IMAGE --build-arg BUILD_IMAGE=$BUILD_IMAGE:$TAG --build-arg DLAF_WITH_CUDA -f $DEPLOY_DOCKER_FILE --network=host .
     - docker push $DEPLOY_IMAGE
-    - docker run -v $PWD/ci/ctest_to_gitlab.sh:/ctest_to_gitlab.sh $DEPLOY_IMAGE /ctest_to_gitlab.sh "$DEPLOY_IMAGE" "$USE_CODECOV" "$CORES_PER_NODE" "$SLURM_CONSTRAINT" > pipeline.yml
+    - docker run -v $PWD/ci/ctest_to_gitlab.sh:/ctest_to_gitlab.sh $DEPLOY_IMAGE /ctest_to_gitlab.sh "$DEPLOY_IMAGE" "$USE_CODECOV" "$THREADS_PER_NODE" "$SLURM_CONSTRAINT" > pipeline.yml
   artifacts:
     paths:
       - pipeline.yml
@@ -44,7 +44,7 @@ cpu release build:
     DLAF_WITH_CUDA: 'OFF'
     BASE_IMAGE: ubuntu:18.04
     SLURM_CONSTRAINT: mc
-    CORES_PER_NODE: 36
+    THREADS_PER_NODE: 72
     USE_CODECOV: "false"
     HPX_WITH_CUDA: "OFF"
 
@@ -58,7 +58,7 @@ cpu codecov build:
     DLAF_WITH_CUDA: 'OFF'
     BASE_IMAGE: ubuntu:18.04
     SLURM_CONSTRAINT: mc
-    CORES_PER_NODE: 36
+    THREADS_PER_NODE: 72
     USE_CODECOV: "true"
     HPX_WITH_CUDA: "OFF"
 
@@ -72,7 +72,7 @@ gpu release build:
     DLAF_WITH_CUDA: 'ON'
     BASE_IMAGE: nvidia/cuda:10.2-devel-ubuntu18.04
     SLURM_CONSTRAINT: gpu
-    CORES_PER_NODE: 12
+    THREADS_PER_NODE: 24
     USE_CODECOV: "false"
     HPX_WITH_CUDA: "ON"
 
@@ -86,7 +86,7 @@ gpu codecov build:
     DLAF_WITH_CUDA: 'ON'
     BASE_IMAGE: nvidia/cuda:10.2-devel-ubuntu18.04
     SLURM_CONSTRAINT: gpu
-    CORES_PER_NODE: 12
+    THREADS_PER_NODE: 24
     USE_CODECOV: "true"
     HPX_WITH_CUDA: "ON"
 

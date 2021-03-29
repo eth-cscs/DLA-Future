@@ -381,13 +381,13 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
         auto kk = LocalTileIndex{k_local_row, k_local_col};
 
         kk_tile = mat_a.read(kk);
-        auto comm_tile = comm::prepareSendTile(mat_a.read(kk));
+        auto comm_tile = comm::internal::prepareSendTile(mat_a.read(kk));
         dataflow(executor_mpi, comm::sendTile_o, mpi_task_chain(), Coord::Row, std::move(comm_tile));
       }
       else {
         auto comm_tile = dataflow(executor_mpi, comm::recvAllocTile<T, device>, mpi_task_chain(),
                                   Coord::Row, mat_a.tileSize(GlobalTileIndex(k, k)), k_rank_col);
-        kk_tile = comm::handleRecvTile<device>(std::move(comm_tile));
+        kk_tile = comm::internal::handleRecvTile<device>(std::move(comm_tile));
       }
     }
 
@@ -401,7 +401,7 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
         lln::trsm_B_panel_tile(executor_hp, diag, alpha, kk_tile, mat_b(kj));
         panel[j_local] = mat_b.read(kj);
         if (k != (mat_b.nrTiles().rows() - 1)) {
-          auto comm_tile = comm::prepareSendTile(panel[j_local]);
+          auto comm_tile = comm::internal::prepareSendTile(panel[j_local]);
           dataflow(executor_mpi, comm::sendTile_o, mpi_task_chain(), Coord::Col, std::move(comm_tile));
         }
       }
@@ -409,7 +409,7 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
         if (k != (mat_b.nrTiles().rows() - 1)) {
           auto comm_tile = dataflow(executor_mpi, comm::recvAllocTile<T, device>, mpi_task_chain(),
                                     Coord::Col, mat_b.tileSize(GlobalTileIndex(k, j)), k_rank_row);
-          panel[j_local] = comm::handleRecvTile<device>(std::move(comm_tile));
+          panel[j_local] = comm::internal::handleRecvTile<device>(std::move(comm_tile));
         }
       }
     }
@@ -429,13 +429,13 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
         auto ik = LocalTileIndex{i_local, k_local_col};
 
         ik_tile = mat_a.read(ik);
-        auto comm_tile = comm::prepareSendTile(mat_a.read(ik));
+        auto comm_tile = comm::internal::prepareSendTile(mat_a.read(ik));
         dataflow(executor_mpi, comm::sendTile_o, mpi_task_chain(), Coord::Row, std::move(comm_tile));
       }
       else {
         auto comm_tile = dataflow(executor_mpi, comm::recvAllocTile<T, device>, mpi_task_chain(),
                                   Coord::Row, mat_a.tileSize(GlobalTileIndex(i, k)), k_rank_col);
-        ik_tile = comm::handleRecvTile<device>(std::move(comm_tile));
+        ik_tile = comm::internal::handleRecvTile<device>(std::move(comm_tile));
       }
 
       // Update trailing matrix

@@ -223,9 +223,7 @@ struct UnwrapFuture<hpx::future<Tile<T, D>>> {
 
 /// Callable object used for the unwrapExtendTiles function below.
 template <typename F>
-struct UnwrapExtendTiles {
-  F f;
-
+class UnwrapExtendTiles {
   template <typename... Ts>
   auto call_helper(std::true_type, Ts&&... ts) {
     // Extract values from futures (not shared_futures).
@@ -254,6 +252,15 @@ struct UnwrapExtendTiles {
     return hpx::make_tuple<>(std::forward<decltype(r)>(r), std::move(t));
   }
 
+public:
+  template <typename F_,
+            typename = std::enable_if_t<!std::is_same<UnwrapExtendTiles, std::decay_t<F_>>::value>>
+  UnwrapExtendTiles(F_&& f_) : f(std::forward<F_>(f_)) {}
+  UnwrapExtendTiles(UnwrapExtendTiles&&) = default;
+  UnwrapExtendTiles& operator=(UnwrapExtendTiles&&) = default;
+  UnwrapExtendTiles(UnwrapExtendTiles const&) = default;
+  UnwrapExtendTiles& operator=(UnwrapExtendTiles const&) = default;
+
   // We use trailing decltype for SFINAE. This ensures that this does not
   // become a candidate when F is not callable with the given arguments.
   template <typename... Ts>
@@ -265,6 +272,9 @@ struct UnwrapExtendTiles {
                                                          std::declval<Ts>()...))>{},
                        std::forward<Ts>(ts)...);
   }
+
+private:
+  F f;
 };
 }
 
@@ -278,6 +288,11 @@ struct UnwrapExtendTiles {
 /// such as the CUDA/cuBLAS executors, where f returns immediately, but the
 /// tiles must be kept alive until the completion of the operation. The wrapper
 /// can be used with "normal" blocking host-side operations as well.
+///
+/// The wrapper returns a tuple of the input arguments for void functions, and
+/// a tuple of the result and a tuple of the input arguments for non-void
+/// functions. getUnwrapReturnValue should be used to extract the return value of
+/// the wrapped function.
 template <typename F>
 auto unwrapExtendTiles(F&& f) {
   return internal::UnwrapExtendTiles<std::decay_t<F>>{std::forward<F>(f)};
@@ -291,11 +306,11 @@ auto unwrapExtendTiles(F&& f) {
 /// lifetime extended. This helper function extracts the return value of the
 /// wrapped function. When the return type of the wrapped function is void, this
 /// also returns void.
-template <typename T>
-void getUnwrapReturnValue(hpx::future<hpx::tuple<T>>&& f) {}
+template <typename... Ts>
+void getUnwrapReturnValue(hpx::future<hpx::tuple<Ts...>>&& f) {}
 
-template <typename R, typename T>
-auto getUnwrapReturnValue(hpx::future<hpx::tuple<R, T>>&& f) {
+template <typename R, typename... Ts>
+auto getUnwrapReturnValue(hpx::future<hpx::tuple<R, hpx::tuple<Ts...>>>&& f) {
   auto split_f = hpx::split_future(std::move(f));
   return std::move(hpx::get<0>(split_f));
 }

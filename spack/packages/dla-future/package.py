@@ -16,6 +16,8 @@ class DlaFuture(CMakePackage, CudaPackage):
 
     version("develop", branch="master")
 
+    variant("umpire", default=True, description="Enable Umpire support.")
+
     variant("doc", default=False, description="Build documentation.")
 
     variant("miniapps", default=False, description="Build miniapps.")
@@ -25,8 +27,8 @@ class DlaFuture(CMakePackage, CudaPackage):
     depends_on("mpi")
     depends_on("blaspp")
     depends_on("lapackpp")
-    depends_on("umpire~examples")
-    depends_on("umpire+cuda~shared", when="+cuda")
+    depends_on("umpire~examples", when="+umpire")
+    depends_on("umpire+cuda~shared", when="+cuda+umpire")
     depends_on("hpx cxxstd=14 networking=none")
     depends_on("hpx@1.6.0:")
     depends_on("hpx +cuda", when="+cuda")
@@ -57,6 +59,9 @@ class DlaFuture(CMakePackage, CudaPackage):
 
         # CUDA
         args.append(self.define_from_variant("DLAF_WITH_CUDA", "cuda"))
+
+        # Umpire
+        args.append(self.define_from_variant("DLAF_WITH_UMPIRE", "umpire"))
 
         # DOC
         args.append(self.define_from_variant("DLAF_BUILD_DOC", "doc"))

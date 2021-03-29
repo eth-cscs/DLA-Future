@@ -57,6 +57,7 @@ void receive_from(const int broadcaster_rank, Communicator& communicator, DataOu
 }
 }
 
+namespace internal {
 /// Helper function for preparing a tile for sending.
 ///
 /// Duplicates the tile to CPU memory if CUDA RDMA is not enabled for MPI.
@@ -66,7 +67,7 @@ auto prepareSendTile(hpx::shared_future<matrix::Tile<T, D>> tile) {
   return matrix::duplicateIfNeeded<CommunicationDevice<D>::value>(std::move(tile));
 }
 
-/// Helper function for handling a tile after sending.
+/// Helper function for handling a tile after receiving.
 ///
 /// If CUDA RDMA is disabled, the tile returned from recvTile will always be on
 /// the CPU. This helper duplicates to the GPU if the first template parameter
@@ -74,6 +75,7 @@ auto prepareSendTile(hpx::shared_future<matrix::Tile<T, D>> tile) {
 template <Device D, typename T>
 auto handleRecvTile(hpx::future<matrix::Tile<T, CommunicationDevice<D>::value>> tile) {
   return matrix::duplicateIfNeeded<D>(std::move(tile));
+}
 }
 
 /// Task for broadcasting (send endpoint) a Tile in a direction over a CommunicatorGrid

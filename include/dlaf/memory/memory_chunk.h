@@ -41,7 +41,7 @@ umpire::Allocator& getUmpireDeviceAllocator();
 }
 #endif
 
-/// The class @c MemoryChunk represents a layer of abstraction over the underlying host memory.
+/// The class @c MemoryChunk represents a layer of abstraction over the underlying device memory.
 template <class T, Device device>
 class MemoryChunk {
 public:

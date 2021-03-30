@@ -63,7 +63,7 @@ namespace internal {
 /// Duplicates the tile to CPU memory if CUDA RDMA is not enabled for MPI.
 /// Returns the tile unmodified otherwise.
 template <Device D, typename T>
-auto prepareSendTile(hpx::shared_future<matrix::Tile<T, D>> tile) {
+auto prepareSendTile(hpx::shared_future<matrix::Tile<const T, D>> tile) {
   return matrix::duplicateIfNeeded<CommunicationDevice<D>::value>(std::move(tile));
 }
 
@@ -73,7 +73,7 @@ auto prepareSendTile(hpx::shared_future<matrix::Tile<T, D>> tile) {
 /// the CPU. This helper duplicates to the GPU if the first template parameter
 /// is a GPU device. The first template parameter must be given.
 template <Device D, typename T>
-auto handleRecvTile(hpx::future<matrix::Tile<T, CommunicationDevice<D>::value>> tile) {
+auto handleRecvTile(hpx::future<matrix::Tile<const T, CommunicationDevice<D>::value>> tile) {
   return matrix::duplicateIfNeeded<D>(std::move(tile));
 }
 }
@@ -81,7 +81,7 @@ auto handleRecvTile(hpx::future<matrix::Tile<T, CommunicationDevice<D>::value>> 
 /// Task for broadcasting (send endpoint) a Tile in a direction over a CommunicatorGrid
 template <typename T, Device D, template <class> class Future>
 void sendTile(hpx::future<common::PromiseGuard<comm::CommunicatorGrid>> mpi_task_chain, Coord rc_comm,
-              Future<matrix::Tile<T, D>> tile) {
+              Future<matrix::Tile<const T, D>> tile) {
   using PromiseComm_t = common::PromiseGuard<comm::CommunicatorGrid>;
 
   PromiseComm_t pcomm = mpi_task_chain.get();

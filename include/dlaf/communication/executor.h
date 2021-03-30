@@ -22,8 +22,7 @@
 #include <hpx/execution.hpp>
 #include <hpx/functional.hpp>
 #include <hpx/future.hpp>
-#include <hpx/include/parallel_executors.hpp>
-#include <hpx/synchronization/mutex.hpp>
+#include <hpx/mutex.hpp>
 #include <hpx/type_support/unused.hpp>
 
 #include <mpi.h>
@@ -144,7 +143,7 @@ public:
       detail::handle_request(mech, req);
       frame_p->set_data(wrapper.dataflow_return());
     };
-    hpx::async(ex_, std::move(fn));
+    hpx::apply(ex_, std::move(fn));
   }
 };
 }

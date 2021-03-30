@@ -12,9 +12,6 @@
 
 /// @file
 
-#include <hpx/include/parallel_executors.hpp>
-#include <hpx/modules/threading_base.hpp>
-
 #include <mpi.h>
 
 #include "dlaf/common/assert.h"

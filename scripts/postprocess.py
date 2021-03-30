@@ -33,7 +33,7 @@ def _gen_nodes_plot(plt_type, title, ylabel, file_name, df, logx, logy=False, co
         if filts != None:
             flag = False
             for filt in filts:
-                if filt in bench_name:
+                if re.search(filt, bench_name):
                     flag = True
                     break
             if not flag:
@@ -69,7 +69,9 @@ def _gen_nodes_plot(plt_type, title, ylabel, file_name, df, logx, logy=False, co
         if logy:
           ax.set_yscale("log", base=10)
         ax.set_xlabel("nodes")
-        ax.set_xticks(df["nodes"].sort_values().unique())
+        nodes = df["nodes"].sort_values().unique()
+        ax.set_xticks(nodes)
+        ax.set_xticklabels([f"{x:d}" for x in nodes])
         ax.legend(loc="upper right", prop={"size": 6})
         ax.set_title(title)
         fig.savefig(f"{file_name}.png", dpi=300)

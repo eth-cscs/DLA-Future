@@ -151,7 +151,7 @@ TYPED_TEST(CholeskyDistributedTest, DistCholesky_Yielding) {
   testDistCholesky<TypeParam>(*this, comm::MPIMech::Yielding);
 }
 
-// TYPED_TEST(CholeskyDistributedTest, DistCholesky_Polling) {
-//  hpx::mpi::experimental::enable_user_polling internal_helper("default");
-//  testDistCholesky<TypeParam>(*this, comm::MPIMech::Polling);
-//}
+TYPED_TEST(CholeskyDistributedTest, DistCholesky_Polling) {
+  hpx::mpi::experimental::init(false, "default");
+  testDistCholesky<TypeParam>(*this, comm::MPIMech::Polling);
+}

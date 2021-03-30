@@ -80,7 +80,6 @@ GTEST_API_ int main(int argc, char** argv) {
   listeners.Append(new MPIListener(argc, argv, default_listener));
 
   // Initialize HPX
-  // auto ret = hpx::init(test_main, argc, argv, p);
   auto ret = hpx::init(test_main, argc, argv);
 
   MPI_Finalize();

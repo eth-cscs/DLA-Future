@@ -297,10 +297,10 @@ MPIMech parse_mech(const std::string& mech) {
   else if (mech == "polling") {
     return MPIMech::Polling;
   }
-  else {
-    DLAF_ASSERT(false, mech);
-    return MPIMech::Yielding;  // unreachable
-  }
+
+  std::cout << "Parsing is not implemented for --mech=" << mech << "!" << std::endl;
+  std::terminate();
+  return MPIMech::Yielding;  // unreachable
 }
 
 }

@@ -34,7 +34,7 @@
 
 namespace dlaf {
 namespace comm {
-namespace detail {
+namespace internal {
 
 // Requests are only handled for the non-blocking version of comm::Executor
 template <MPIMech mech>
@@ -119,10 +119,10 @@ public:
     auto fn = [mech = mech_, f = std::forward<F>(f),
                args = hpx::make_tuple(std::forward<Ts>(ts)...)]() mutable {
       MPI_Request req;
-      auto all_args = detail::make_mpi_tuple(std::move(args), &req);
+      auto all_args = internal::make_mpi_tuple(std::move(args), &req);
       using result_t = decltype(hpx::util::invoke_fused(f, all_args));
-      detail::invoke_fused_wrapper<result_t> wrapper(std::move(f), std::move(all_args));
-      detail::handle_request(mech, req);
+      internal::invoke_fused_wrapper<result_t> wrapper(std::move(f), std::move(all_args));
+      internal::handle_request(mech, req);
       return wrapper.async_return();
     };
     return hpx::async(ex_, std::move(fn));
@@ -137,10 +137,10 @@ public:
     auto fn = [mech = mech_, frame_p = std::move(frame_p), f = std::forward<F>(f),
                args = std::forward<TupleArgs>(args)]() mutable {
       MPI_Request req;
-      auto all_args = detail::make_mpi_tuple(std::move(args), &req);
+      auto all_args = internal::make_mpi_tuple(std::move(args), &req);
       using result_t = decltype(hpx::util::invoke_fused(f, all_args));
-      detail::invoke_fused_wrapper<result_t> wrapper(std::move(f), std::move(all_args));
-      detail::handle_request(mech, req);
+      internal::invoke_fused_wrapper<result_t> wrapper(std::move(f), std::move(all_args));
+      internal::handle_request(mech, req);
       frame_p->set_data(wrapper.dataflow_return());
     };
     hpx::apply(ex_, std::move(fn));

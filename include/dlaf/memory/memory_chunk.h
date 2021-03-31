@@ -16,9 +16,7 @@
 #include <cuda_runtime.h>
 #endif
 
-#ifdef DLAF_WITH_UMPIRE
 #include <umpire/Allocator.hpp>
-#endif
 
 #include "dlaf/types.h"
 #ifdef DLAF_WITH_CUDA
@@ -28,18 +26,17 @@
 namespace dlaf {
 namespace memory {
 
-#ifdef DLAF_WITH_UMPIRE
 namespace internal {
 umpire::Allocator& getUmpireHostAllocator();
 void initializeUmpireHostAllocator(std::size_t initial_bytes);
 void finalizeUmpireHostAllocator();
+
 #ifdef DLAF_WITH_CUDA
 void initializeUmpireDeviceAllocator(std::size_t initial_bytes);
 void finalizeUmpireDeviceAllocator();
 umpire::Allocator& getUmpireDeviceAllocator();
 #endif
 }
-#endif
 
 /// The class @c MemoryChunk represents a layer of abstraction over the underlying device memory.
 template <class T, Device device>
@@ -64,26 +61,14 @@ public:
     std::size_t mem_size = static_cast<std::size_t>(size_) * sizeof(T);
 #ifdef DLAF_WITH_CUDA
     if (device == Device::CPU) {
-#if DLAF_WITH_UMPIRE
       ptr_ = static_cast<T*>(internal::getUmpireHostAllocator().allocate(mem_size));
-#else
-      DLAF_CUDA_CALL(cudaMallocHost(&ptr_, mem_size));
-#endif
     }
     else {
-#ifdef DLAF_WITH_UMPIRE
       ptr_ = static_cast<T*>(internal::getUmpireDeviceAllocator().allocate(mem_size));
-#else
-      DLAF_CUDA_CALL(cudaMalloc(&ptr_, mem_size));
-#endif
     }
 #else
     if (device == Device::CPU) {
-#if DLAF_WITH_UMPIRE
       ptr_ = static_cast<T*>(internal::getUmpireHostAllocator().allocate(mem_size));
-#else
-      ptr_ = static_cast<T*>(std::malloc(mem_size));
-#endif
     }
     else {
       std::cout << "[ERROR] CUDA code was requested but the `DLAF_WITH_CUDA` flag was not passed!";
@@ -164,26 +149,14 @@ private:
     if (allocated_) {
 #ifdef DLAF_WITH_CUDA
       if (device == Device::CPU) {
-#if DLAF_WITH_UMPIRE
         internal::getUmpireHostAllocator().deallocate(ptr_);
-#else
-        DLAF_CUDA_CALL(cudaFreeHost(ptr_));
-#endif
       }
       else {
-#ifdef DLAF_WITH_UMPIRE
         internal::getUmpireDeviceAllocator().deallocate(ptr_);
-#else
-        DLAF_CUDA_CALL(cudaFree(ptr_));
-#endif
       }
 #else
       if (device == Device::CPU) {
-#if DLAF_WITH_UMPIRE
         internal::getUmpireHostAllocator().deallocate(ptr_);
-#else
-        std::free(ptr_);
-#endif
       }
 #endif
     }

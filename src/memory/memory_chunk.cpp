@@ -1,6 +1,5 @@
 #include <dlaf/memory/memory_chunk.h>
 
-#ifdef DLAF_WITH_UMPIRE
 #include <umpire/ResourceManager.hpp>
 #include <umpire/strategy/DynamicPool.hpp>
 #include <umpire/strategy/ThreadSafeAllocator.hpp>
@@ -77,5 +76,3 @@ void finalizeUmpireDeviceAllocator() {}
 }
 }
 }
-
-#endif

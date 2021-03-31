@@ -39,16 +39,12 @@ bool& initialized() {
 
 template <>
 void Init<Backend::MC>::initialize(configuration const& cfg) {
-#ifdef DLAF_WITH_UMPIRE
   memory::internal::initializeUmpireHostAllocator(cfg.umpire_host_memory_pool_initial_bytes);
-#endif
 }
 
 template <>
 void Init<Backend::MC>::finalize() {
-#ifdef DLAF_WITH_UMPIRE
   memory::internal::finalizeUmpireHostAllocator();
-#endif
 }
 
 #ifdef DLAF_WITH_CUDA
@@ -108,9 +104,7 @@ cublas::HandlePool getCublasHandlePool() {
 template <>
 void Init<Backend::GPU>::initialize(configuration const& cfg) {
   const int device = 0;
-#ifdef DLAF_WITH_UMPIRE
   memory::internal::initializeUmpireDeviceAllocator(cfg.umpire_device_memory_pool_initial_bytes);
-#endif
   initializeNpCudaStreamPool(device, cfg.num_np_cuda_streams_per_thread);
   initializeHpCudaStreamPool(device, cfg.num_hp_cuda_streams_per_thread);
   initializeCublasHandlePool();
@@ -119,9 +113,7 @@ void Init<Backend::GPU>::initialize(configuration const& cfg) {
 
 template <>
 void Init<Backend::GPU>::finalize() {
-#ifdef DLAF_WITH_UMPIRE
   memory::internal::finalizeUmpireDeviceAllocator();
-#endif
   finalizeNpCudaStreamPool();
   finalizeHpCudaStreamPool();
   finalizeCublasHandlePool();

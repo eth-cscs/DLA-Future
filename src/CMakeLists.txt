@@ -68,9 +68,9 @@ target_link_libraries(dlaf.prop
     HPX::hpx
     lapackpp
     blaspp
+    umpire
     $<TARGET_NAME_IF_EXISTS:dlaf::cublas>
     $<TARGET_NAME_IF_EXISTS:dlaf::cudart>
-    $<$<BOOL:${DLAF_WITH_UMPIRE}>:umpire>
 )
 target_compile_features(dlaf.prop
   INTERFACE
@@ -84,7 +84,6 @@ target_compile_definitions(dlaf.prop
     DLAF_FUNCTION_NAME=$<IF:$<BOOL:is_pretty_function_available>,__PRETTY_FUNCTION__,__func__>
     $<$<BOOL:${DLAF_WITH_CUDA}>:DLAF_WITH_CUDA>
     $<$<BOOL:${DLAF_WITH_CUDA_MPI_RDMA}>:DLAF_WITH_CUDA_MPI_RDMA>
-    $<$<BOOL:${DLAF_WITH_UMPIRE}>:DLAF_WITH_UMPIRE>
 )
 
 # Define DLAF's CORE library

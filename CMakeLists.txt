@@ -30,11 +30,9 @@ option(BUILD_SHARED_LIBS "Build shared libraries." OFF)
 option(DLAF_WITH_MKL "Enable MKL as provider for LAPACK" OFF)
 option(DLAF_WITH_CUDA "Enable CUDA support" OFF)
 cmake_dependent_option(DLAF_WITH_CUDA_MPI_RDMA "Enable MPI CUDA RDMA" OFF "DLAF_WITH_CUDA" OFF)
-cmake_dependent_option(DLAF_WITH_UMPIRE "Enable Umpire support" ON "DLAF_WITH_CUDA" OFF)
 option(DLAF_BUILD_MINIAPPS "Build miniapps" ON)
 option(DLAF_BUILD_TESTING "Build tests" ON)
 option(DLAF_BUILD_DOC "Build documentation" OFF)
-option(DLAF_WITH_UMPIRE "Enable Umpire support" ON)
 
 # ---------------------------------------------------------------------------
 # Languages
@@ -80,9 +78,7 @@ find_package(blaspp REQUIRED)
 find_package(lapackpp REQUIRED)
 
 # ----- UMPIRE
-if (DLAF_WITH_UMPIRE)
-  find_package(Umpire REQUIRED)
-endif()
+find_package(Umpire REQUIRED)
 
 # ----- EXTERNAL
 add_subdirectory(external)

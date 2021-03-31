@@ -225,7 +225,7 @@ struct UnwrapFuture<hpx::future<Tile<T, D>>> {
 template <typename F>
 class UnwrapExtendTiles {
   template <typename... Ts>
-  auto call_helper(std::true_type, Ts&&... ts) {
+  auto callHelper(std::true_type, Ts&&... ts) {
     // Extract values from futures (not shared_futures).
     auto t = hpx::make_tuple<>(UnwrapFuture<std::decay_t<Ts>>::call(std::forward<Ts>(ts))...);
 
@@ -239,7 +239,7 @@ class UnwrapExtendTiles {
   }
 
   template <typename... Ts>
-  auto call_helper(std::false_type, Ts&&... ts) {
+  auto callHelper(std::false_type, Ts&&... ts) {
     // Extract values from futures (not shared_futures).
     auto t = hpx::make_tuple<>(UnwrapFuture<std::decay_t<Ts>>::call(std::forward<Ts>(ts))...);
 
@@ -265,12 +265,12 @@ public:
   // become a candidate when F is not callable with the given arguments.
   template <typename... Ts>
   auto operator()(Ts&&... ts)
-      -> decltype(call_helper(std::is_void<decltype(hpx::invoke(hpx::util::unwrapping(std::declval<F>()),
-                                                                std::declval<Ts>()...))>{},
-                              std::forward<Ts>(ts)...)) {
-    return call_helper(std::is_void<decltype(hpx::invoke(hpx::util::unwrapping(std::declval<F>()),
-                                                         std::declval<Ts>()...))>{},
-                       std::forward<Ts>(ts)...);
+      -> decltype(callHelper(std::is_void<decltype(hpx::invoke(hpx::util::unwrapping(std::declval<F>()),
+                                                               std::declval<Ts>()...))>{},
+                             std::forward<Ts>(ts)...)) {
+    return callHelper(std::is_void<decltype(hpx::invoke(hpx::util::unwrapping(std::declval<F>()),
+                                                        std::declval<Ts>()...))>{},
+                      std::forward<Ts>(ts)...);
   }
 
 private:

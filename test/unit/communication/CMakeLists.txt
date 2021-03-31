@@ -32,7 +32,7 @@ DLAF_addTest(test_communicator_grid
 DLAF_addTest(test_broadcast
   SOURCES test_broadcast.cpp
   LIBRARIES dlaf.core
-  MPIRANKS 5
+  MPIRANKS 4
   USE_MAIN MPI
 )
 

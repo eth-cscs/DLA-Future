@@ -92,12 +92,18 @@ DLAF_MAKE_CALLABLE_OBJECT(sendTile);
 
 /// Task for broadcasting (receiving endpoint) a Tile in a direction over a CommunicatorGrid
 template <class T, Device D>
-void recvTile(hpx::future<common::PromiseGuard<comm::CommunicatorGrid>> mpi_task_chain, Coord rc_comm,
-              hpx::future<matrix::Tile<T, CommunicationDevice<D>::value>> tile, comm::IndexT_MPI rank) {
+matrix::Tile<const T, CommunicationDevice<D>::value> recvTile(
+    hpx::future<common::PromiseGuard<comm::CommunicatorGrid>> mpi_task_chain, Coord rc_comm,
+    hpx::future<matrix::Tile<T, CommunicationDevice<D>::value>> tile_fut, comm::IndexT_MPI rank) {
+  constexpr Device comm_device = CommunicationDevice<D>::value;
+  using ConstTile_t = matrix::Tile<const T, comm_device>;
   using PromiseComm_t = common::PromiseGuard<comm::CommunicatorGrid>;
+  using Tile_t = matrix::Tile<T, comm_device>;
 
   PromiseComm_t pcomm = mpi_task_chain.get();
-  comm::sync::broadcast::receive_from(rank, pcomm.ref().subCommunicator(rc_comm), tile.get());
+  Tile_t tile = tile.get();
+  comm::sync::broadcast::receive_from(rank, pcomm.ref().subCommunicator(rc_comm), tile);
+  return ConstTile_t(std::move(tile));
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(recvTile);
@@ -118,6 +124,33 @@ matrix::Tile<const T, CommunicationDevice<D>::value> recvAllocTile(
   Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
   comm::sync::broadcast::receive_from(rank, pcomm.ref().subCommunicator(rc_comm), tile);
   return ConstTile_t(std::move(tile));
+}
+
+template <class T, Device D, class Executor, template <class> class Future>
+void sendTileDumbName(Executor&& executor_mpi,
+                      hpx::future<common::PromiseGuard<comm::CommunicatorGrid>> mpi_task_chain,
+                      Coord rc_comm, Future<matrix::Tile<const T, D>> tile_fut) {
+  dataflow(executor_mpi, comm::sendTile_o, std::move(mpi_task_chain), rc_comm,
+           internal::prepareSendTile(std::move(tile_fut)));
+}
+
+template <class T, Device D, class Executor>
+hpx::future<matrix::Tile<const T, D>> recvTileDumbName(
+    Executor&& executor_mpi, hpx::future<common::PromiseGuard<comm::CommunicatorGrid>> mpi_task_chain,
+    Coord rc_comm, hpx::future<matrix::Tile<T, CommunicationDevice<D>::value>> tile,
+    comm::IndexT_MPI rank) {
+  return internal::handleRecvTile<D>(dataflow(std::forward<Executor>(executor_mpi), comm::recvTile<T, D>,
+                                              std::move(mpi_task_chain), rc_comm, std::move(tile),
+                                              rank));
+}
+
+template <class T, Device D, class Executor>
+hpx::future<matrix::Tile<const T, D>> recvAllocTileDumbName(
+    Executor&& executor_mpi, hpx::future<common::PromiseGuard<comm::CommunicatorGrid>> mpi_task_chain,
+    Coord rc_comm, TileElementSize tile_size, comm::IndexT_MPI rank) {
+  return internal::handleRecvTile<D>(dataflow(std::forward<Executor>(executor_mpi),
+                                              comm::recvAllocTile<T, D>, std::move(mpi_task_chain),
+                                              rc_comm, tile_size, rank));
 }
 }
 }

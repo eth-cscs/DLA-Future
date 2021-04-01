@@ -14,8 +14,8 @@
 #include <sstream>
 #include "gtest/gtest.h"
 #include "dlaf/blas/enum_output.h"
+#include "dlaf/blas/tile.h"
 #include "dlaf/cublas/error.h"
-#include "dlaf/cublas_tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/memory/memory_view.h"

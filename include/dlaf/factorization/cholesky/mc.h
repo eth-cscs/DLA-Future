@@ -16,6 +16,7 @@
 
 #include <unordered_map>
 
+#include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/range2d.h"
@@ -26,7 +27,6 @@
 #include "dlaf/factorization/cholesky/api.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/distribution.h"
-#include "dlaf/tile.h"
 
 #include "dlaf/memory/memory_view.h"
 #include "dlaf/util_matrix.h"

@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/cublas_tile.h"
+#include "dlaf/blas/tile.h"
 
 #include "gtest/gtest.h"
 #include "dlaf_test/util_types.h"

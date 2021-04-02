@@ -94,6 +94,9 @@ void Init<Backend::GPU>::initialize(configuration const& cfg) {
   initializeHpCudaStreamPool(device, cfg.num_hp_cuda_streams_per_thread);
   initializeCublasHandlePool();
   hpx::cuda::experimental::detail::register_polling(hpx::resource::get_thread_pool("default"));
+  // TODO: only needed for the polling approach
+  std::string mpi_pool = (hpx::resource::pool_exists("mpi")) ? "mpi" : "default";
+  hpx::mpi::experimental::init(false, mpi_pool);
 }
 
 template <>

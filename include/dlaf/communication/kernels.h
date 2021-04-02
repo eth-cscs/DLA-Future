@@ -27,8 +27,8 @@ namespace comm {
 
 // Non-blocking sender broadcast
 template <class T>
-void bcast_send(matrix::Tile<const T, Device::CPU> const& tile, common::PromiseGuard<Communicator> pcomm,
-                MPI_Request* req) {
+void sendBcast(matrix::Tile<const T, Device::CPU> const& tile, common::PromiseGuard<Communicator> pcomm,
+               MPI_Request* req) {
   auto msg = comm::make_message(common::make_data(tile));
   MPI_Ibcast(const_cast<T*>(msg.data()), msg.count(), msg.mpi_type(), pcomm.ref().rank(), pcomm.ref(),
              req);
@@ -36,9 +36,9 @@ void bcast_send(matrix::Tile<const T, Device::CPU> const& tile, common::PromiseG
 
 // Non-blocking receiver broadcast
 template <class T>
-matrix::Tile<const T, Device::CPU> bcast_recv(TileElementSize tile_size, int root_rank,
-                                              common::PromiseGuard<Communicator> pcomm,
-                                              MPI_Request* req) {
+matrix::Tile<const T, Device::CPU> recvBcastAlloc(TileElementSize tile_size, int root_rank,
+                                                  common::PromiseGuard<Communicator> pcomm,
+                                                  MPI_Request* req) {
   using Tile_t = matrix::Tile<T, Device::CPU>;
   using ConstTile_t = matrix::Tile<const T, Device::CPU>;
   using MemView_t = memory::MemoryView<T, Device::CPU>;

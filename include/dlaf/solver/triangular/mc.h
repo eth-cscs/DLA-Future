@@ -400,11 +400,11 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid gr
         auto k_local_col = distr_a.localTileFromGlobalTile<Coord::Col>(k);
         auto kk = LocalTileIndex{k_local_row, k_local_col};
         kk_tile = mat_a.read(kk);
-        hpx::dataflow(executor_mpi_row, unwrapping(comm::bcast_send<T>), mat_a.read(kk),
+        hpx::dataflow(executor_mpi_row, unwrapping(comm::sendBcast<T>), mat_a.read(kk),
                       mpi_row_task_chain());
       }
       else {
-        kk_tile = hpx::dataflow(executor_mpi_row, unwrapping(comm::bcast_recv<T>),
+        kk_tile = hpx::dataflow(executor_mpi_row, unwrapping(comm::recvBcastAlloc<T>),
                                 mat_a.tileSize(GlobalTileIndex(k, k)), k_rank_col, mpi_row_task_chain());
       }
     }
@@ -419,14 +419,14 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid gr
         lln::trsm_B_panel_tile(executor_hp, diag, alpha, kk_tile, mat_b(kj));
         panel[j_local] = mat_b.read(kj);
         if (k != (mat_b.nrTiles().rows() - 1)) {
-          hpx::dataflow(executor_mpi_col, unwrapping(comm::bcast_send<T>), panel[j_local],
+          hpx::dataflow(executor_mpi_col, unwrapping(comm::sendBcast<T>), panel[j_local],
                         mpi_col_task_chain());
         }
       }
       else {
         if (k != (mat_b.nrTiles().rows() - 1)) {
           panel[j_local] =
-              hpx::dataflow(executor_mpi_col, unwrapping(comm::bcast_recv<T>),
+              hpx::dataflow(executor_mpi_col, unwrapping(comm::recvBcastAlloc<T>),
                             mat_b.tileSize(GlobalTileIndex(k, j)), k_rank_row, mpi_col_task_chain());
         }
       }
@@ -446,11 +446,11 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid gr
         auto k_local_col = distr_a.localTileFromGlobalTile<Coord::Col>(k);
         auto ik = LocalTileIndex{i_local, k_local_col};
         ik_tile = mat_a.read(ik);
-        hpx::dataflow(executor_mpi_row, unwrapping(comm::bcast_send<T>), mat_a.read(ik),
+        hpx::dataflow(executor_mpi_row, unwrapping(comm::sendBcast<T>), mat_a.read(ik),
                       mpi_row_task_chain());
       }
       else {
-        ik_tile = hpx::dataflow(executor_mpi_row, unwrapping(comm::bcast_recv<T>),
+        ik_tile = hpx::dataflow(executor_mpi_row, unwrapping(comm::recvBcastAlloc<T>),
                                 mat_a.tileSize(GlobalTileIndex(i, k)), k_rank_col, mpi_row_task_chain());
       }
 

@@ -187,8 +187,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
   // so, let's reduce the results (on all ranks, so that everyone can independently compute T factor)
   if (true) {  // TODO if the column communicator has more than 1 tile...but I just have the pipeline
     auto reduce_t_func = unwrapping([=](auto&& tile_t, auto&& comm_wrapper) {
-      auto&& input_t = make_data(tile_t);
-      all_reduce(comm_wrapper.ref().colCommunicator(), MPI_SUM, input_t, input_t);
+      allReduceInPlace(comm_wrapper.ref().colCommunicator(), MPI_SUM, make_data(tile_t));
       return std::move(tile_t);
     });
 

@@ -16,6 +16,9 @@
 namespace dlaf {
 namespace comm {
 
+/// Type used for indexes in MPI API.
+using IndexT_MPI = int;
+
 class CommunicatorImpl;
 
 /// MPI-compatible wrapper for the MPI_Comm.
@@ -57,9 +60,9 @@ public:
   const MPI_Comm* operator&() const noexcept;
 
   /// Return the rank of the current process in the Communicator.
-  int rank() const noexcept;
+  IndexT_MPI rank() const noexcept;
   /// Return the number of ranks in the Communicator.
-  int size() const noexcept;
+  IndexT_MPI size() const noexcept;
 
 private:
   /// Tag to give to constructor in order to give MPI_Comm ownership to Communicator.

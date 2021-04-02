@@ -73,7 +73,7 @@ RUN source /opt/intel/compilers_and_libraries/linux/mkl/bin/mklvars.sh intel64 &
     ${MKL_LIB}/libmkl_vml_mc.so \
     ${MKL_LIB}/libmkl_vml_mc3.so
 
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND noninteractive
 

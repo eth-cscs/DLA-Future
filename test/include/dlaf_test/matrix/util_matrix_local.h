@@ -78,7 +78,7 @@ MatrixLocal<T> allGather(Matrix<const T, Device::CPU>& source, comm::Communicato
     }
   }
 
-  return std::move(dest);
+  return MatrixLocal<T>(std::move(dest));
 }
 
 template <class T>

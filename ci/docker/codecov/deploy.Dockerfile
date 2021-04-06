@@ -73,6 +73,8 @@ ARG DEPLOY
 RUN apt-get update -qq && \
     apt-get install -qq -y --no-install-recommends \
       perl \
+      libperlio-gzip-perl \
+      libjson-perl \
       curl \
       ca-certificates \
       git \

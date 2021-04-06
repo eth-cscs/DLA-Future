@@ -86,7 +86,7 @@ T conj(const T number) {
   return number;
 }
 
-/// Cast from unisgned to signed integer types.
+/// Cast from unsigned to signed integer types.
 ///
 /// It performs the cast checking if the given unsigned value can be stored in the destination type.
 template <class S, class U,
@@ -94,8 +94,8 @@ template <class S, class U,
                                std::is_integral<S>::value && std::is_signed<S>::value,
                            int> = 0>
 S to_signed(const U unsigned_value) {
-  DLAF_ASSERT_MODERATE(std::numeric_limits<S>::max() >= unsigned_value, std::numeric_limits<S>::max(),
-                       unsigned_value);
+  DLAF_ASSERT_MODERATE(static_cast<std::size_t>(std::numeric_limits<S>::max()) >= unsigned_value,
+                       std::numeric_limits<S>::max(), unsigned_value);
   return static_cast<S>(unsigned_value);
 }
 

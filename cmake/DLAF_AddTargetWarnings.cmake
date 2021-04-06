@@ -16,7 +16,7 @@ macro(target_add_warnings target_name)
   endif()
 
   set(IS_COMPILER_CLANG $<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>)
-  set(IS_COMPILER_GCC $<CXX_COMPILER_ID:GCC>)
+  set(IS_COMPILER_GCC $<CXX_COMPILER_ID:GNU>)
 
   target_compile_options(${target_name}
     PRIVATE

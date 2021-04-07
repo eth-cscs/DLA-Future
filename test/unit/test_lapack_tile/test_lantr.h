@@ -109,7 +109,7 @@ void test_lantr(const lapack::Norm norm, const blas::Uplo uplo, const blas::Diag
   SCOPED_TRACE(::testing::Message() << "LANTR: " << norm << ", " << a.size() << ", ld = " << a.ld()
                                     << " uplo = " << uplo << " diag = " << diag);
 
-  EXPECT_FLOAT_EQ(norm_expected, lantr(norm, uplo, diag, a));
+  EXPECT_NEAR(norm_expected, lantr(norm, uplo, diag, a), TypeUtilities<T>::error);
 }
 
 template <class T>

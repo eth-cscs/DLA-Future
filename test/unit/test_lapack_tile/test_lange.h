@@ -83,7 +83,7 @@ void test_lange(const lapack::Norm norm, const Tile<T, Device::CPU>& a, NormT<T>
 
   SCOPED_TRACE(::testing::Message() << "LANGE: " << norm << ", " << a.size() << ", ld = " << a.ld());
 
-  EXPECT_NEAR(norm_expected, lange(norm, a), TypeUtilities<T>::error);
+  EXPECT_NEAR(norm_expected, lange(norm, a), norm_expected * TypeUtilities<T>::error);
 }
 
 template <class T>

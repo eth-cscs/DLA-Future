@@ -30,8 +30,6 @@ using namespace dlaf::matrix::test;
 using namespace dlaf::tile;
 using namespace testing;
 
-using dlaf::util::size_t::mul;
-
 template <class T, class CT = const T>
 void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType extra_lda,
               SizeType extra_ldc) {
@@ -85,8 +83,8 @@ void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType e
   auto a = createTile<CT>(el_op_a, size_a, lda, op_a);
   auto c = createTile<T>(el_c, size_c, ldc);
 
-  Tile<T, Device::GPU> a0d(size_a, memory::MemoryView<T, Device::GPU>(mul(lda, size_a.cols())), lda);
-  Tile<T, Device::GPU> cd(size_c, memory::MemoryView<T, Device::GPU>(mul(ldc, size_c.cols())), ldc);
+  Tile<T, Device::GPU> a0d(size_a, memory::MemoryView<T, Device::GPU>(lda * size_a.cols()), lda);
+  Tile<T, Device::GPU> cd(size_c, memory::MemoryView<T, Device::GPU>(ldc * size_c.cols()), ldc);
 
   copy(a, a0d);
   copy(c, cd);

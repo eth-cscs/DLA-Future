@@ -14,6 +14,5 @@ DLAF_TILE_ETI(, double, Device::GPU)
 DLAF_TILE_ETI(, std::complex<float>, Device::GPU)
 DLAF_TILE_ETI(, std::complex<double>, Device::GPU)
 #endif
-
 }
 }

@@ -350,7 +350,6 @@ DLAF_MATRIX_ETI(extern, double, Device::GPU)
 DLAF_MATRIX_ETI(extern, std::complex<float>, Device::GPU)
 DLAF_MATRIX_ETI(extern, std::complex<double>, Device::GPU)
 #endif
-
 }
 #ifndef DLAF_DOXYGEN
 // Note: Doxygen doesn't deal correctly with template specialized inheritance,

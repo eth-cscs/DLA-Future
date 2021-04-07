@@ -332,7 +332,6 @@ DLAF_TILE_ETI(extern, double, Device::GPU)
 DLAF_TILE_ETI(extern, std::complex<float>, Device::GPU)
 DLAF_TILE_ETI(extern, std::complex<double>, Device::GPU)
 #endif
-
 }
 }
 

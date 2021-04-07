@@ -381,11 +381,11 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
         auto kk = LocalTileIndex{k_local_row, k_local_col};
 
         kk_tile = mat_a.read(kk);
-        comm::sendTileDumbName(executor_mpi, mpi_task_chain(), Coord::Row, kk_tile);
+        comm::scheduleSendTile(executor_mpi, mpi_task_chain(), Coord::Row, kk_tile);
       }
       else {
         kk_tile =
-            comm::recvAllocTileDumbName<T, device>(executor_mpi, mpi_task_chain(), Coord::Row,
+            comm::scheduleRecvAllocTile<T, device>(executor_mpi, mpi_task_chain(), Coord::Row,
                                                    mat_a.tileSize(GlobalTileIndex(k, k)), k_rank_col);
       }
     }
@@ -400,13 +400,13 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
         lln::trsm_B_panel_tile(executor_hp, diag, alpha, kk_tile, mat_b(kj));
         panel[j_local] = mat_b.read(kj);
         if (k != (mat_b.nrTiles().rows() - 1)) {
-          comm::sendTileDumbName(executor_mpi, mpi_task_chain(), Coord::Col, panel[j_local]);
+          comm::scheduleSendTile(executor_mpi, mpi_task_chain(), Coord::Col, panel[j_local]);
         }
       }
       else {
         if (k != (mat_b.nrTiles().rows() - 1)) {
           panel[j_local] =
-              comm::recvAllocTileDumbName<T, device>(executor_mpi, mpi_task_chain(), Coord::Col,
+              comm::scheduleRecvAllocTile<T, device>(executor_mpi, mpi_task_chain(), Coord::Col,
                                                      mat_b.tileSize(GlobalTileIndex(k, j)), k_rank_row);
         }
       }
@@ -427,11 +427,11 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
         auto ik = LocalTileIndex{i_local, k_local_col};
 
         ik_tile = mat_a.read(ik);
-        comm::sendTileDumbName(executor_mpi, mpi_task_chain(), Coord::Row, ik_tile);
+        comm::scheduleSendTile(executor_mpi, mpi_task_chain(), Coord::Row, ik_tile);
       }
       else {
         ik_tile =
-            comm::recvAllocTileDumbName<T, device>(executor_mpi, mpi_task_chain(), Coord::Row,
+            comm::scheduleRecvAllocTile<T, device>(executor_mpi, mpi_task_chain(), Coord::Row,
                                                    mat_a.tileSize(GlobalTileIndex(i, k)), k_rank_col);
       }
 

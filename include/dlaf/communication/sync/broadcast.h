@@ -127,30 +127,29 @@ matrix::Tile<const T, CommunicationDevice<D>::value> recvAllocTile(
 }
 
 template <class T, Device D, class Executor, template <class> class Future>
-void sendTileDumbName(Executor&& executor_mpi,
+void scheduleSendTile(Executor&& executor_mpi,
                       hpx::future<common::PromiseGuard<comm::CommunicatorGrid>> mpi_task_chain,
                       Coord rc_comm, Future<matrix::Tile<const T, D>> tile_fut) {
-  dataflow(executor_mpi, comm::sendTile_o, std::move(mpi_task_chain), rc_comm,
+  dataflow(executor_mpi, sendTile_o, std::move(mpi_task_chain), rc_comm,
            internal::prepareSendTile(std::move(tile_fut)));
 }
 
 template <class T, Device D, class Executor>
-hpx::future<matrix::Tile<const T, D>> recvTileDumbName(
+hpx::future<matrix::Tile<const T, D>> scheduleRecvTile(
     Executor&& executor_mpi, hpx::future<common::PromiseGuard<comm::CommunicatorGrid>> mpi_task_chain,
     Coord rc_comm, hpx::future<matrix::Tile<T, CommunicationDevice<D>::value>> tile,
     comm::IndexT_MPI rank) {
-  return internal::handleRecvTile<D>(dataflow(std::forward<Executor>(executor_mpi), comm::recvTile<T, D>,
+  return internal::handleRecvTile<D>(dataflow(std::forward<Executor>(executor_mpi), recvTile<T, D>,
                                               std::move(mpi_task_chain), rc_comm, std::move(tile),
                                               rank));
 }
 
 template <class T, Device D, class Executor>
-hpx::future<matrix::Tile<const T, D>> recvAllocTileDumbName(
+hpx::future<matrix::Tile<const T, D>> scheduleRecvAllocTile(
     Executor&& executor_mpi, hpx::future<common::PromiseGuard<comm::CommunicatorGrid>> mpi_task_chain,
     Coord rc_comm, TileElementSize tile_size, comm::IndexT_MPI rank) {
-  return internal::handleRecvTile<D>(dataflow(std::forward<Executor>(executor_mpi),
-                                              comm::recvAllocTile<T, D>, std::move(mpi_task_chain),
-                                              rc_comm, tile_size, rank));
+  return internal::handleRecvTile<D>(dataflow(std::forward<Executor>(executor_mpi), recvAllocTile<T, D>,
+                                              std::move(mpi_task_chain), rc_comm, tile_size, rank));
 }
 }
 }

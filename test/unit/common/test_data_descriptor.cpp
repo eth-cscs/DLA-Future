@@ -124,7 +124,7 @@ TYPED_TEST(DataDescriptorTest, MakeFromPointerConst) {
 }
 
 TYPED_TEST(DataDescriptorTest, MakeFromCArray) {
-  const int N = 13;
+  const std::size_t N = 13;
   TypeParam value_array[N]{};
 
   auto data = common::make_data(value_array, N);
@@ -142,7 +142,7 @@ TYPED_TEST(DataDescriptorTest, MakeFromCArray) {
 }
 
 TYPED_TEST(DataDescriptorTest, MakeFromCArrayConst) {
-  const int N = 13;
+  const std::size_t N = 13;
   const TypeParam value_array[N]{};
 
   auto data = common::make_data(value_array, N);
@@ -319,7 +319,7 @@ TYPED_TEST(DataDescriptorTest, CtorFromPointerConst) {
 }
 
 TYPED_TEST(DataDescriptorTest, CtorFromCArray) {
-  const int N = 13;
+  const std::size_t N = 13;
   TypeParam value_array[N]{};
 
   auto data = common::DataDescriptor<decltype(value_array)>{value_array};
@@ -337,7 +337,7 @@ TYPED_TEST(DataDescriptorTest, CtorFromCArray) {
 }
 
 TYPED_TEST(DataDescriptorTest, CtorFromCArrayConst) {
-  const int N = 13;
+  const std::size_t N = 13;
   const TypeParam value_array[N]{};
 
   auto data = common::DataDescriptor<decltype(value_array)>{value_array};
@@ -502,7 +502,7 @@ TYPED_TEST(DataDescriptorTest, CopyCtorFromPointer) {
 }
 
 TYPED_TEST(DataDescriptorTest, CopyCtorFromCArray) {
-  const int N = 13;
+  const std::size_t N = 13;
   TypeParam value_array[N]{};
 
   auto data = common::make_data(value_array, N);
@@ -603,7 +603,7 @@ TYPED_TEST(DataDescriptorTest, CreateTemporaryFromPointer) {
 }
 
 TYPED_TEST(DataDescriptorTest, CreateTemporaryFromCArray) {
-  const int N = 13;
+  const std::size_t N = 13;
   TypeParam value_array[N]{};
 
   auto data = common::make_data(value_array, N);
@@ -667,7 +667,7 @@ auto create_const_data_from_memory(memory_data<T>& memory) {
 }
 
 TYPED_TEST(DataDescriptorTest, CopyDataCArrays) {
-  const int N = 13;
+  const std::size_t N = 13;
   TypeParam memory_src[N];
   TypeParam memory_dst[N];
 

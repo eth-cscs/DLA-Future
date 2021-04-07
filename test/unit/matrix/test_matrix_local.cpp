@@ -192,7 +192,7 @@ TYPED_TEST(MatrixLocalWithCommTest, AllGather) {
       Matrix<TypeParam, Device::CPU> source(std::move(distribution));
       set(source, value_preset<TypeParam>);
 
-      auto dest = all_gather<const TypeParam>(source, comm_grid);
+      auto dest = allGather<const TypeParam>(source, comm_grid);
 
       const auto& dist_src = source.distribution();
       for (const auto& ij_local : iterate_range2d(dist_src.localNrTiles())) {

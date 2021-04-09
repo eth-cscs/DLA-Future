@@ -95,8 +95,8 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
 
   if (tottaus > 0) {
     // Copy matrices locally
-    auto mat_c_loc = dlaf::matrix::test::all_gather<T>(mat_c, comm_grid);
-    auto mat_v_loc = dlaf::matrix::test::all_gather<T>(mat_v, comm_grid);
+    auto mat_c_loc = dlaf::matrix::test::allGather<T>(mat_c, comm_grid);
+    auto mat_v_loc = dlaf::matrix::test::allGather<T>(mat_v, comm_grid);
 
     // Impose orthogonality: Q = I - v tau v^H is orthogonal (Q Q^H = I)
     // leads to tau = [1 + sqrt(1 - vH v taui^2)]/(vH v) for real
@@ -118,7 +118,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
     TileElementSize blockSizeT(mb, mb);
     Matrix<T, Device::CPU> mat_t(sizeT, blockSizeT);
     set_zero(mat_t);
-    auto mat_t_loc = dlaf::matrix::test::all_gather<T>(mat_t, comm_grid);
+    auto mat_t_loc = dlaf::matrix::test::allGather<T>(mat_t, comm_grid);
 
     common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus;
 

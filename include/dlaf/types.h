@@ -26,9 +26,25 @@ static_assert(std::is_signed<SizeType>::value && std::is_integral<SizeType>::val
               "SizeType should be a signed integral type");
 static_assert(sizeof(SizeType) >= 4, "SizeType should be >= 32bit");
 
-enum class Device { CPU, GPU };
+enum class Device {
+  CPU,
+  GPU,
+#ifdef DLAF_WITH_CUDA
+  Default = GPU
+#else
+  Default = CPU
+#endif
+};
 
-enum class Backend { MC, GPU };
+enum class Backend {
+  MC,
+  GPU,
+#ifdef DLAF_WITH_CUDA
+  Default = GPU
+#else
+  Default = MC
+#endif
+};
 
 template <class T>
 struct TypeInfo;

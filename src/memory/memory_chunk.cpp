@@ -56,16 +56,17 @@ void initializeUmpireDeviceAllocator(std::size_t initial_bytes) {
   // Umpire pools cannot be released, so we keep the pools around even when
   // DLA-Future is reinitialized.
   if (!initialized) {
-    auto host_allocator = umpire::ResourceManager::getInstance().getAllocator("DEVICE");
-    auto pooled_host_allocator =
+    auto device_allocator = umpire::ResourceManager::getInstance().getAllocator("DEVICE");
+    auto pooled_device_allocator =
         umpire::ResourceManager::getInstance()
-            .makeAllocator<umpire::strategy::DynamicPool>("DEVICE_pool", host_allocator, initial_bytes);
-    auto thread_safe_pooled_host_allocator =
+            .makeAllocator<umpire::strategy::DynamicPool>("DEVICE_pool", device_allocator,
+                                                          initial_bytes);
+    auto thread_safe_pooled_device_allocator =
         umpire::ResourceManager::getInstance()
             .makeAllocator<umpire::strategy::ThreadSafeAllocator>("DEVICE_thread_safe_pool",
-                                                                  pooled_host_allocator);
+                                                                  pooled_device_allocator);
 
-    memory::internal::getUmpireDeviceAllocator() = thread_safe_pooled_host_allocator;
+    memory::internal::getUmpireDeviceAllocator() = thread_safe_pooled_device_allocator;
 
     initialized = true;
   }

@@ -42,7 +42,7 @@ cpu release build:
     BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu/build
     DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu/deploy:$CI_COMMIT_SHA
     DLAF_WITH_CUDA: 'OFF'
-    BASE_IMAGE: ubuntu:18.04
+    BASE_IMAGE: ubuntu:20.04
     SLURM_CONSTRAINT: mc
     THREADS_PER_NODE: 72
     USE_CODECOV: "false"
@@ -56,7 +56,7 @@ cpu codecov build:
     BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-cpu/build
     DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-cpu/deploy:$CI_COMMIT_SHA
     DLAF_WITH_CUDA: 'OFF'
-    BASE_IMAGE: ubuntu:18.04
+    BASE_IMAGE: ubuntu:20.04
     SLURM_CONSTRAINT: mc
     THREADS_PER_NODE: 72
     USE_CODECOV: "true"
@@ -70,7 +70,7 @@ gpu release build:
     BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-gpu/build
     DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-gpu/deploy:$CI_COMMIT_SHA
     DLAF_WITH_CUDA: 'ON'
-    BASE_IMAGE: nvidia/cuda:10.2-devel-ubuntu18.04
+    BASE_IMAGE: nvidia/cuda:11.0.3-devel-ubuntu20.04
     SLURM_CONSTRAINT: gpu
     THREADS_PER_NODE: 24
     USE_CODECOV: "false"
@@ -84,7 +84,7 @@ gpu codecov build:
     BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-gpu/build
     DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-gpu/deploy:$CI_COMMIT_SHA
     DLAF_WITH_CUDA: 'ON'
-    BASE_IMAGE: nvidia/cuda:10.2-devel-ubuntu18.04
+    BASE_IMAGE: nvidia/cuda:11.0.3-devel-ubuntu20.04
     SLURM_CONSTRAINT: gpu
     THREADS_PER_NODE: 24
     USE_CODECOV: "true"

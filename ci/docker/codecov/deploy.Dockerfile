@@ -57,7 +57,7 @@ RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
     mv ${BUILD}-tmp ${BUILD}
 
 # Multistage build, this is the final small image
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND noninteractive
 
@@ -73,6 +73,8 @@ ARG DEPLOY
 RUN apt-get update -qq && \
     apt-get install -qq -y --no-install-recommends \
       perl \
+      libperlio-gzip-perl \
+      libjson-perl \
       curl \
       ca-certificates \
       git \

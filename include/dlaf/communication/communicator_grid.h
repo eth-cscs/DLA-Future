@@ -23,9 +23,6 @@ namespace comm {
 /// TAG for strong-typing basic_coords.
 struct TAG_MPI;
 
-/// Type used for indexes in MPI API.
-using IndexT_MPI = int;
-
 /// 2D index strong-typed for MPI.
 using Index2D = common::Index2D<IndexT_MPI, TAG_MPI>;
 /// 2D size strong-typed for MPI.

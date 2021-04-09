@@ -122,6 +122,15 @@ struct DataDescriptor {
     return nblocks_ == 1 || stride_ == blocksize_;
   }
 
+  bool operator==(const DataDescriptor& rhs) const noexcept {
+    return this == &rhs || (this->data_ == rhs.data_ && this->nblocks_ == rhs.nblocks_ &&
+                            this->blocksize_ == rhs.blocksize_ && this->stride_ == rhs.stride_);
+  }
+
+  bool operator!=(const DataDescriptor& rhs) const noexcept {
+    return !(*this == rhs);
+  }
+
 protected:
   T* data_;
   SizeType nblocks_;

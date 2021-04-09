@@ -14,13 +14,14 @@ image: $IMAGE
 
 stages:
   - allocate
-{{TEST_STAGES}}
+  - test
   - upload
   - cleanup
 
 variables:
   ALLOCATION_NAME: dlaf-ci-job-\$CI_PIPELINE_ID
   SLURM_EXCLUSIVE: ''
+  SLURM_EXACT: ''
   SLURM_CONSTRAINT: $SLURM_CONSTRAINT
   CRAY_CUDA_MPS: 1
 
@@ -50,7 +51,7 @@ deallocate:
 JOB_TEMPLATE="
 
 {{LABEL}}:
-  stage: test_{{LABEL}}
+  stage: test
   extends: .daint
   variables:
     SLURM_CPUS_PER_TASK: {{CPUS_PER_TASK}}
@@ -72,12 +73,13 @@ image: $IMAGE
 
 stages:
   - allocate
-{{TEST_STAGES}}
+  - test
   - cleanup
 
 variables:
   ALLOCATION_NAME: dlaf-ci-job-\$CI_PIPELINE_ID
   SLURM_EXCLUSIVE: ''
+  SLURM_EXACT: ''
   SLURM_CONSTRAINT: $SLURM_CONSTRAINT
   CRAY_CUDA_MPS: 1
 
@@ -97,7 +99,7 @@ deallocate:
 
 JOB_TEMPLATE="
 {{LABEL}}:
-  stage: test_{{LABEL}}
+  stage: test
   extends: .daint
   variables:
     SLURM_CPUS_PER_TASK: {{CPUS_PER_TASK}}
@@ -109,12 +111,7 @@ JOB_TEMPLATE="
   script: mpi-ctest -L {{LABEL}}"
 fi
 
-TEST_STAGE_TEMPLATE="
-  - test_{{LABEL}}
-"
-
 JOBS=""
-TEST_STAGES=""
 
 for label in `ctest --print-labels | egrep -o "RANK_[1-9][0-9]?"`; do
     N=`echo "$label" | sed "s/RANK_//"`
@@ -123,11 +120,8 @@ for label in `ctest --print-labels | egrep -o "RANK_[1-9][0-9]?"`; do
     JOB=`echo "$JOB_TEMPLATE" | sed "s|{{LABEL}}|$label|g" \
                               | sed "s|{{NTASKS}}|$N|g" \
                               | sed "s|{{CPUS_PER_TASK}}|$C|g"`
-    TEST_STAGE=`echo "$TEST_STAGE_TEMPLATE" | sed "s|{{LABEL}}|$label|g"`
 
     JOBS="$JOBS$JOB"
-    TEST_STAGES="$TEST_STAGES$TEST_STAGE"
 done
 
-TMP_JOB=`echo "${BASE_TEMPLATE/'{{JOBS}}'/$JOBS}"`
-echo "${TMP_JOB/'{{TEST_STAGES}}'/$TEST_STAGES}"
+echo "${BASE_TEMPLATE/'{{JOBS}}'/$JOBS}"

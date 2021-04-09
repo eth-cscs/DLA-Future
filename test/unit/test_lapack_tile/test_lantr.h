@@ -146,13 +146,13 @@ void run(const lapack::Norm norm, const blas::Uplo uplo, const blas::Diag diag,
       switch (diag) {
         case blas::Diag::Unit:
           norm_expected =
-              NormT<T>(size != TileElementSize{1, 1}
+              static_cast<NormT<T>>(size != TileElementSize{1, 1}
                            ? std::sqrt(std::pow(3 * value, 2) + std::min(size.rows(), size.cols()))
                            : 1);
           break;
         case blas::Diag::NonUnit:
           norm_expected =
-              NormT<T>(size != TileElementSize{1, 1} ? std::sqrt(17) * value : std::sqrt(4) * value);
+              static_cast<NormT<T>>(size != TileElementSize{1, 1} ? std::sqrt(17) * value : std::sqrt(4) * value);
           break;
       }
       break;

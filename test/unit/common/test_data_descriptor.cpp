@@ -125,7 +125,7 @@ TYPED_TEST(DataDescriptorTest, MakeFromPointerConst) {
 
 TYPED_TEST(DataDescriptorTest, MakeFromCArray) {
   const SizeType N = 13;
-  TypeParam value_array[std::size_t(N)]{};
+  TypeParam value_array[static_cast<std::size_t>(N)]{};
 
   auto data = common::make_data(value_array, N);
 
@@ -143,7 +143,7 @@ TYPED_TEST(DataDescriptorTest, MakeFromCArray) {
 
 TYPED_TEST(DataDescriptorTest, MakeFromCArrayConst) {
   const SizeType N = 13;
-  const TypeParam value_array[std::size_t(N)]{};
+  const TypeParam value_array[static_cast<std::size_t>(N)]{};
 
   auto data = common::make_data(value_array, N);
 
@@ -320,7 +320,7 @@ TYPED_TEST(DataDescriptorTest, CtorFromPointerConst) {
 
 TYPED_TEST(DataDescriptorTest, CtorFromCArray) {
   const SizeType N = 13;
-  TypeParam value_array[std::size_t(N)]{};
+  TypeParam value_array[static_cast<std::size_t>(N)]{};
 
   auto data = common::DataDescriptor<decltype(value_array)>{value_array};
 
@@ -338,7 +338,7 @@ TYPED_TEST(DataDescriptorTest, CtorFromCArray) {
 
 TYPED_TEST(DataDescriptorTest, CtorFromCArrayConst) {
   const SizeType N = 13;
-  const TypeParam value_array[std::size_t(N)]{};
+  const TypeParam value_array[static_cast<std::size_t>(N)]{};
 
   auto data = common::DataDescriptor<decltype(value_array)>{value_array};
 
@@ -503,12 +503,12 @@ TYPED_TEST(DataDescriptorTest, CopyCtorFromPointer) {
 
 TYPED_TEST(DataDescriptorTest, CopyCtorFromCArray) {
   const SizeType N = 13;
-  TypeParam value_array[std::size_t(N)]{};
+  TypeParam value_array[static_cast<std::size_t>(N)]{};
 
   auto data = common::make_data(value_array, N);
   check_copy_ctor<TypeParam>(data);
 
-  const TypeParam value_array_const[std::size_t(N)]{};
+  const TypeParam value_array_const[static_cast<std::size_t>(N)]{};
   auto data_const = common::make_data(value_array_const, N);
   check_copy_ctor<const TypeParam>(data_const);
 }
@@ -604,13 +604,13 @@ TYPED_TEST(DataDescriptorTest, CreateTemporaryFromPointer) {
 
 TYPED_TEST(DataDescriptorTest, CreateTemporaryFromCArray) {
   const SizeType N = 13;
-  TypeParam value_array[std::size_t(N)]{};
+  TypeParam value_array[static_cast<std::size_t>(N)]{};
 
   auto data = common::make_data(value_array, N);
   EXPECT_TRUE(checkCreateTemporaryBuffer((data)));
   EXPECT_TRUE(checkMakeContiguous(data));
 
-  const TypeParam value_array_const[std::size_t(N)]{};
+  const TypeParam value_array_const[static_cast<std::size_t>(N)]{};
   auto data_const = common::make_data(value_array_const, N);
   EXPECT_TRUE(checkCreateTemporaryBuffer((data_const)));
   EXPECT_TRUE(checkMakeContiguous(data_const));
@@ -668,8 +668,8 @@ auto create_const_data_from_memory(memory_data<T>& memory) {
 
 TYPED_TEST(DataDescriptorTest, CopyDataCArrays) {
   const SizeType N = 13;
-  TypeParam memory_src[std::size_t(N)];
-  TypeParam memory_dst[std::size_t(N)];
+  TypeParam memory_src[static_cast<std::size_t>(N)];
+  TypeParam memory_dst[static_cast<std::size_t>(N)];
 
   for (int i = 0; i < N; ++i)
     memory_src[i] = TypeUtilities<TypeParam>::element(i, 0);
@@ -720,7 +720,7 @@ TYPED_TEST(DataDescriptorTest, CopyDataHeterogeneous) {
 
   // CArray as source
   for (auto& memory_dest : memory_types) {
-    TypeParam memory_array[std::size_t(N)];
+    TypeParam memory_array[static_cast<std::size_t>(N)];
     for (SizeType i = 0; i < N; ++i)
       memory_array[i] = TypeUtilities<TypeParam>::element(i, 0);
 
@@ -738,7 +738,7 @@ TYPED_TEST(DataDescriptorTest, CopyDataHeterogeneous) {
 
   // CArray as destination
   for (auto& memory_src : memory_types) {
-    TypeParam memory_array[std::size_t(N)];
+    TypeParam memory_array[static_cast<std::size_t>(N)];
     for (SizeType i = 0; i < N; ++i)
       memory_array[i] = 0;
 

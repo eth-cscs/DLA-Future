@@ -104,7 +104,7 @@ void run(const lapack::Norm norm, const Tile<T, Device::CPU>& a) {
       norm_expected = size != TileElementSize{1, 1} ? 4 : 2;
       break;
     case lapack::Norm::Fro:
-      norm_expected = NormT<T>(size != TileElementSize{1, 1} ? std::sqrt(17) : std::sqrt(4));
+      norm_expected = static_cast<NormT<T>>(size != TileElementSize{1, 1} ? std::sqrt(17) : std::sqrt(4));
       break;
     case lapack::Norm::Two:
       FAIL() << "norm " << norm << " is not supported by lange";

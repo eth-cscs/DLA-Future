@@ -109,7 +109,7 @@ void test_lantr(const lapack::Norm norm, const blas::Uplo uplo, const blas::Diag
   SCOPED_TRACE(::testing::Message() << "LANTR: " << norm << ", " << a.size() << ", ld = " << a.ld()
                                     << " uplo = " << uplo << " diag = " << diag);
 
-  EXPECT_FLOAT_EQ(norm_expected, lantr(norm, uplo, diag, a));
+  EXPECT_NEAR(norm_expected, lantr(norm, uplo, diag, a), norm_expected * TypeUtilities<T>::error);
 }
 
 template <class T>
@@ -145,12 +145,14 @@ void run(const lapack::Norm norm, const blas::Uplo uplo, const blas::Diag diag,
     case lapack::Norm::Fro:
       switch (diag) {
         case blas::Diag::Unit:
-          norm_expected = size != TileElementSize{1, 1}
-                              ? std::sqrt(std::pow(3 * value, 2) + std::min(size.rows(), size.cols()))
-                              : 1;
+          norm_expected = static_cast<NormT<T>>(
+              size != TileElementSize{1, 1}
+                  ? std::sqrt(std::pow(3 * value, 2) + std::min(size.rows(), size.cols()))
+                  : 1);
           break;
         case blas::Diag::NonUnit:
-          norm_expected = size != TileElementSize{1, 1} ? std::sqrt(17) * value : std::sqrt(4) * value;
+          norm_expected = static_cast<NormT<T>>(size != TileElementSize{1, 1} ? std::sqrt(17) * value
+                                                                              : std::sqrt(4) * value);
           break;
       }
       break;

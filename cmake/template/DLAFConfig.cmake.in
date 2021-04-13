@@ -5,7 +5,7 @@ if (NOT TARGET DLAF)
 endif()
 
 # enable custom modules to be used
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 
 # ===== VARIABLES
 set(DLAF_WITH_MKL @DLAF_WITH_MKL@)

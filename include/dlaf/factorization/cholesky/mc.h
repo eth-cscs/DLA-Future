@@ -77,7 +77,7 @@ void gemm_trailing_matrix_tile(hpx::execution::parallel_executor ex,
 template <class T>
 struct Cholesky<Backend::MC, Device::CPU, T> {
   static void call_L(Matrix<T, Device::CPU>& mat_a);
-  static void call_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a, comm::MPIMech mech);
+  static void call_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a);
 };
 
 // Local implementation of Lower Cholesky factorization.
@@ -120,7 +120,7 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
 
 template <class T>
 void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
-                                                   Matrix<T, Device::CPU>& mat_a, comm::MPIMech mech) {
+                                                   Matrix<T, Device::CPU>& mat_a) {
   using hpx::resource::pool_exists;
   using hpx::threads::thread_priority;
   using ConstTileType = typename Matrix<T, Device::CPU>::ConstTileType;
@@ -130,9 +130,8 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
   auto executor_np = dlaf::getNpExecutor<Backend::MC>();
 
   // Set up MPI executor pipelines
-  std::string mpi_pool = (hpx::resource::pool_exists("mpi")) ? "mpi" : "default";
-  comm::Executor executor_mpi_col(mpi_pool, mech);
-  comm::Executor executor_mpi_row(mpi_pool, mech);
+  comm::Executor executor_mpi_col{};
+  comm::Executor executor_mpi_row{};
   common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
 

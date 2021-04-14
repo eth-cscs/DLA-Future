@@ -56,12 +56,9 @@ struct options_t {
   int64_t nruns;
   int64_t nwarmups;
   bool do_check;
-  MPIMech mech;
 };
 
 options_t check_options(hpx::program_options::variables_map& vm);
-
-MPIMech parse_mech(const std::string&);
 
 void waitall_tiles(MatrixType& matrix);
 
@@ -113,8 +110,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     sync_barrier();
 
     dlaf::common::Timer<> timeit;
-    dlaf::solver::triangular<Backend::MC, Device::CPU, T>(comm_grid, side, uplo, op, diag, alpha, a, b,
-                                                          opts.mech);
+    dlaf::solver::triangular<Backend::MC, Device::CPU, T>(comm_grid, side, uplo, op, diag, alpha, a, b);
 
     sync_barrier();
 
@@ -168,7 +164,6 @@ int main(int argc, char** argv) {
     ("nruns",         value<int64_t>()   ->default_value(1),          "Number of runs to compute the cholesky")
     ("nwarmups",      value<int64_t>()   ->default_value(1),          "Number of warmup runs")
     ("check-result",  bool_switch()      ->default_value(false),      "Check the triangular system solution (for each run)")
-    ("mech",         value<std::string>()->default_value("yielding"), "MPI mechanism ('yielding', 'polling')")
   ;
   // clang-format on
 
@@ -176,18 +171,7 @@ int main(int argc, char** argv) {
 
   hpx::init_params p;
   p.desc_cmdline = desc_commandline;
-  p.rp_callback = [](auto& rp, auto) {
-    int ntasks;
-    DLAF_MPI_CALL(MPI_Comm_size(MPI_COMM_WORLD, &ntasks));
-    // if the user has asked for special thread pools for communication
-    // then set them up
-    if (ntasks > 1) {
-      // Create a thread pool with a single core that we will use for all
-      // communication related tasks
-      rp.create_thread_pool("mpi", hpx::resource::scheduling_policy::local_priority_fifo);
-      rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], "mpi");
-    }
-  };
+  p.rp_callback = dlaf::initResourcePartitionerHandler;
   return hpx::init(argc, argv, p);
 }
 
@@ -203,7 +187,6 @@ options_t check_options(hpx::program_options::variables_map& vm) {
     vm["nruns"].as<int64_t>(),
     vm["nwarmups"].as<int64_t>(),
     vm["check-result"].as<bool>(),
-    parse_mech(vm["mech"].as<std::string>())
   };
   // clang-format on
 
@@ -282,19 +265,6 @@ linear_system_t sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T al
   };
 
   return {el_op_a, el_b, el_x};
-}
-
-MPIMech parse_mech(const std::string& mech) {
-  if (mech == "yielding") {
-    return MPIMech::Yielding;
-  }
-  else if (mech == "polling") {
-    return MPIMech::Polling;
-  }
-
-  std::cout << "Parsing is not implemented for --mech=" << mech << "!" << std::endl;
-  std::terminate();
-  return MPIMech::Yielding;  // unreachable
 }
 
 }

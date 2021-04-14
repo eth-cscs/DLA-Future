@@ -8,7 +8,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <hpx/async_mpi/mpi_future.hpp>
+
 #include <dlaf/common/assert.h>
+#include <dlaf/communication/error.h>
 #include <dlaf/init.h>
 
 #ifdef DLAF_WITH_CUDA
@@ -17,13 +20,20 @@
 #endif
 
 #include <cstdlib>
+#include <iostream>
 #include <memory>
 
 namespace dlaf {
 std::ostream& operator<<(std::ostream& os, configuration const& cfg) {
   os << "  num_np_cuda_streams_per_thread = " << cfg.num_np_cuda_streams_per_thread << std::endl;
-  os << "  num_hp_cuda_streams_per_thread = " << cfg.num_hp_cuda_streams_per_thread;
-
+  os << "  num_hp_cuda_streams_per_thread = " << cfg.num_hp_cuda_streams_per_thread << std::endl;
+  os << "  mpi_pool = " << cfg.mpi_pool << std::endl;
+  if (cfg.mpi_mech == comm::MPIMech::Polling) {
+    os << "  mpi_mech = polling" << std::endl;
+  }
+  else if (cfg.mpi_mech == comm::MPIMech::Yielding) {
+    os << "  mpi_mech = yielding" << std::endl;
+  }
   return os;
 }
 
@@ -94,9 +104,6 @@ void Init<Backend::GPU>::initialize(configuration const& cfg) {
   initializeHpCudaStreamPool(device, cfg.num_hp_cuda_streams_per_thread);
   initializeCublasHandlePool();
   hpx::cuda::experimental::detail::register_polling(hpx::resource::get_thread_pool("default"));
-  // TODO: only needed for the polling approach
-  std::string mpi_pool = (hpx::resource::pool_exists("mpi")) ? "mpi" : "default";
-  hpx::mpi::experimental::init(false, mpi_pool);
 }
 
 template <>
@@ -108,22 +115,45 @@ void Init<Backend::GPU>::finalize() {
 }
 #endif
 
-template <typename T>
-void updateConfigurationValue(hpx::program_options::variables_map const& vm, T& var,
-                              std::string const& env_var, std::string const& cmdline_option);
+template <>
+void Init<Backend::MC>::initialize(configuration const& cfg) {
+  // TODO: Consider disabling polling in finalize()
+  if (cfg.mpi_mech == comm::MPIMech::Polling) {
+    hpx::mpi::experimental::init(false, cfg.mpi_pool);
+  }
+}
+
+template <class T>
+struct convertFromString {
+  static T call(const std::string&){};
+};
 
 template <>
-void updateConfigurationValue(hpx::program_options::variables_map const& vm, std::size_t& var,
+struct convertFromString<std::size_t> {
+  static std::size_t call(const std::string& val) {
+    return std::stoul(val);
+  };
+};
+
+template <>
+struct convertFromString<std::string> {
+  static std::string call(const std::string& val) {
+    return val;
+  };
+};
+
+template <class T>
+void updateConfigurationValue(hpx::program_options::variables_map const& vm, T& var,
                               std::string const& env_var, std::string const& cmdline_option) {
   const std::string dlaf_env_var = "DLAF_" + env_var;
   char* env_var_value = std::getenv(dlaf_env_var.c_str());
   if (env_var_value) {
-    var = std::stoul(env_var_value);
+    var = convertFromString<T>::call(env_var_value);
   }
 
   const std::string dlaf_cmdline_option = "dlaf:" + cmdline_option;
   if (vm.count(dlaf_cmdline_option)) {
-    var = vm[dlaf_cmdline_option].as<std::size_t>();
+    var = vm[dlaf_cmdline_option].as<T>();
   }
 }
 
@@ -132,6 +162,21 @@ void updateConfiguration(hpx::program_options::variables_map const& vm, configur
                            "num-np-cuda-streams-per-thread");
   updateConfigurationValue(vm, cfg.num_hp_cuda_streams_per_thread, "NUM_HP_CUDA_STREAMS_PER_THREAD",
                            "num-hp-cuda-streams-per-thread");
+
+  std::string mpi_mech_str = "";
+  updateConfigurationValue(vm, mpi_mech_str, "MPI_MECH", "mpi-mech");
+  if (mpi_mech_str == "yielding") {
+    cfg.mpi_mech = comm::MPIMech::Yielding;
+  }
+  else if (mpi_mech_str == "polling") {
+    cfg.mpi_mech = comm::MPIMech::Polling;
+  }
+  else if (mpi_mech_str != "") {
+    std::cout << "Unknown value for --mech=" << mpi_mech_str << "!" << std::endl;
+    std::terminate();
+  }
+
+  cfg.mpi_pool = (hpx::resource::pool_exists("mpi")) ? "mpi" : "default";
 }
 
 configuration& getConfiguration() {
@@ -149,6 +194,10 @@ hpx::program_options::options_description getOptionsDescription() {
                      "Number of normal priority CUDA streams per worker thread");
   desc.add_options()("dlaf:num-hp-cuda-streams-per-thread", hpx::program_options::value<std::size_t>(),
                      "Number of high priority CUDA streams per worker thread");
+  desc.add_options()("dlaf:mpi-mech",
+                     hpx::program_options::value<std::string>()->default_value("yielding"),
+                     "MPI mechanism ('yielding', 'polling')");
+  desc.add_options()("dlaf:no-mpi-pool", hpx::program_options::bool_switch(), "Disable the MPI pool.");
 
   return desc;
 }
@@ -201,4 +250,28 @@ void finalize() {
   internal::getConfiguration() = {};
   internal::initialized() = false;
 }
+
+void initResourcePartitionerHandler(hpx::resource::partitioner& rp,
+                                    hpx::program_options::variables_map const& vm) {
+  // Don't create the MPI pool if the user disabled it
+  if (vm["no-mpi-pool"].as<bool>())
+    return;
+
+  // Don't create the MPI pool if there is a single process
+  int ntasks;
+  DLAF_MPI_CALL(MPI_Comm_size(MPI_COMM_WORLD, &ntasks));
+  if (ntasks == 1)
+    return;
+
+  // Disable idle backoff on the MPI pool
+  using hpx::threads::policies::scheduler_mode;
+  auto mode = scheduler_mode::default_mode;
+  mode = scheduler_mode(mode & ~scheduler_mode::enable_idle_backoff);
+
+  // Create a thread pool with a single core that we will use for all
+  // communication related tasks
+  rp.create_thread_pool("mpi", hpx::resource::scheduling_policy::local_priority_fifo, mode);
+  rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], "mpi");
+}
+
 }

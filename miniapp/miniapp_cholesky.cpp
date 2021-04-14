@@ -48,7 +48,6 @@ using dlaf::TileElementSize;
 using dlaf::common::Ordering;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
-using dlaf::comm::MPIMech;
 
 using T = double;
 using MatrixType = dlaf::Matrix<T, Device::CPU>;
@@ -72,13 +71,10 @@ struct options_t {
   int64_t nruns;
   int64_t nwarmups;
   CholCheckIterFreq do_check;
-  MPIMech mech;
 };
 
 /// Handle CLI options
 options_t parse_options(hpx::program_options::variables_map&);
-
-MPIMech parse_mech(const std::string&);
 
 CholCheckIterFreq parse_chol_check(const std::string&);
 
@@ -121,8 +117,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     }
 
     dlaf::common::Timer<> timeit;
-    dlaf::factorization::cholesky<Backend::MC, Device::CPU, T>(comm_grid, blas::Uplo::Lower, matrix,
-                                                               opts.mech);
+    dlaf::factorization::cholesky<Backend::MC, Device::CPU, T>(comm_grid, blas::Uplo::Lower, matrix);
 
     // wait for last task and barrier for all ranks
     {
@@ -170,6 +165,7 @@ int main(int argc, char** argv) {
   // options
   using namespace hpx::program_options;
   options_description desc_commandline("Usage: " HPX_APPLICATION_STRING " [options]");
+  desc_commandline.add(dlaf::getOptionsDescription());
 
   // clang-format off
   desc_commandline.add_options()
@@ -180,26 +176,12 @@ int main(int argc, char** argv) {
     ("nruns",        value<int64_t>()    ->default_value(   1),       "Number of runs to compute the cholesky")
     ("nwarmups",     value<int64_t>()    ->default_value(   1),       "Number of warmup runs")
     ("check-result", value<std::string>()->default_value("none"),     "Enable result checking ('none', 'all', 'last')")
-    ("mech",         value<std::string>()->default_value("yielding"), "MPI mechanism ('yielding', 'polling')")
   ;
   // clang-format on
 
-  desc_commandline.add(dlaf::getOptionsDescription());
-
   hpx::init_params p;
   p.desc_cmdline = desc_commandline;
-  p.rp_callback = [](auto& rp, auto) {
-    int ntasks;
-    DLAF_MPI_CALL(MPI_Comm_size(MPI_COMM_WORLD, &ntasks));
-    // if the user has asked for special thread pools for communication
-    // then set them up
-    if (ntasks > 1) {
-      // Create a thread pool with a single core that we will use for all
-      // communication related tasks
-      rp.create_thread_pool("mpi", hpx::resource::scheduling_policy::local_priority_fifo);
-      rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], "mpi");
-    }
-  };
+  p.rp_callback = dlaf::initResourcePartitionerHandler;
   return hpx::init(argc, argv, p);
 }
 
@@ -413,7 +395,6 @@ options_t parse_options(hpx::program_options::variables_map& vm) {
       vm["nruns"].as<int64_t>(),
       vm["nwarmups"].as<int64_t>(),
       parse_chol_check(vm["check-result"].as<std::string>()),
-      parse_mech(vm["mech"].as<std::string>())
   };
   // clang-format on
 
@@ -432,19 +413,6 @@ options_t parse_options(hpx::program_options::variables_map& vm) {
   }
 
   return opts;
-}
-
-MPIMech parse_mech(const std::string& mech) {
-  if (mech == "yielding") {
-    return MPIMech::Yielding;
-  }
-  else if (mech == "polling") {
-    return MPIMech::Polling;
-  }
-
-  std::cout << "Parsing is not implemented for --mech=" << mech << "!" << std::endl;
-  std::terminate();
-  return MPIMech::Yielding;  // unreachable
 }
 
 CholCheckIterFreq parse_chol_check(const std::string& check) {

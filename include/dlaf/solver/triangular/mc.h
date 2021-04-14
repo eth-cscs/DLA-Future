@@ -23,7 +23,6 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/executor.h"
 #include "dlaf/communication/kernels.h"
-#include "dlaf/communication/mech.h"
 #include "dlaf/executors.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/distribution.h"
@@ -54,8 +53,7 @@ struct Triangular<Backend::MC, Device::CPU, T> {
   static void call_RUT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, Device::CPU>& mat_a,
                        Matrix<T, Device::CPU>& mat_b);
   static void call_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
-                       Matrix<const T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_b,
-                       comm::MPIMech mech);
+                       Matrix<const T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_b);
 };
 
 namespace lln {
@@ -360,8 +358,7 @@ void Triangular<Backend::MC, Device::CPU, T>::call_RUT(blas::Op op, blas::Diag d
 template <class T>
 void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid grid, blas::Diag diag,
                                                        T alpha, Matrix<const T, Device::CPU>& mat_a,
-                                                       Matrix<T, Device::CPU>& mat_b,
-                                                       comm::MPIMech mech) {
+                                                       Matrix<T, Device::CPU>& mat_b) {
   using hpx::resource::pool_exists;
   using common::internal::vector;
   using ConstTileType = typename Matrix<T, Device::CPU>::ConstTileType;
@@ -371,9 +368,8 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid gr
   auto executor_np = dlaf::getNpExecutor<Backend::MC>();
 
   // Set up MPI
-  std::string mpi_pool = (hpx::resource::pool_exists("mpi")) ? "mpi" : "default";
-  comm::Executor executor_mpi_col(mpi_pool, mech);
-  comm::Executor executor_mpi_row(mpi_pool, mech);
+  comm::Executor executor_mpi_col{};
+  comm::Executor executor_mpi_row{};
   common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
 

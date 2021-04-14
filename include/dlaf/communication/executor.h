@@ -31,6 +31,7 @@
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/init.h"
 #include "dlaf/communication/mech.h"
+#include "dlaf/init.h"
 
 namespace dlaf {
 namespace comm {
@@ -40,7 +41,8 @@ namespace internal {
 template <MPIMech mech>
 struct request_handler {};
 
-inline void handle_request(MPIMech mech, MPI_Request req) {
+inline void handle_request(MPI_Request req) {
+  MPIMech mech = dlaf::internal::getConfiguration().mpi_mech;
   if (mech == MPIMech::Yielding) {
     hpx::util::yield_while([&req] {
       int flag;
@@ -94,13 +96,11 @@ struct invoke_fused_wrapper<void> {
 
 class Executor {
   hpx::execution::parallel_executor ex_;
-  MPIMech mech_;
 
 public:
   // Notes:
   //   - MPI event polling has to be enabled for `MPIMech::Polling`.
-  Executor(const std::string& pool, MPIMech mech = MPIMech::Yielding)
-      : ex_(&hpx::resource::get_thread_pool(pool)), mech_(mech) {}
+  Executor() : ex_(&hpx::resource::get_thread_pool(dlaf::internal::getConfiguration().mpi_pool)) {}
 
   bool operator==(const Executor& rhs) const noexcept {
     return ex_ == rhs.ex_;
@@ -116,13 +116,12 @@ public:
 
   template <typename F, typename... Ts>
   auto async_execute(F&& f, Ts&&... ts) noexcept {
-    auto fn = [mech = mech_, f = std::forward<F>(f),
-               args = hpx::make_tuple(std::forward<Ts>(ts)...)]() mutable {
+    auto fn = [f = std::forward<F>(f), args = hpx::make_tuple(std::forward<Ts>(ts)...)]() mutable {
       MPI_Request req;
       auto all_args = internal::make_mpi_tuple(std::move(args), &req);
       using result_t = decltype(hpx::util::invoke_fused(f, all_args));
       internal::invoke_fused_wrapper<result_t> wrapper(std::move(f), std::move(all_args));
-      internal::handle_request(mech, req);
+      internal::handle_request(req);
       return wrapper.async_return();
     };
     return hpx::async(ex_, std::move(fn));
@@ -134,13 +133,13 @@ public:
     using FramePtr =
         hpx::intrusive_ptr<typename std::remove_pointer<typename std::decay<Frame>::type>::type>;
     FramePtr frame_p(std::forward<Frame>(frame));
-    auto fn = [mech = mech_, frame_p = std::move(frame_p), f = std::forward<F>(f),
+    auto fn = [frame_p = std::move(frame_p), f = std::forward<F>(f),
                args = std::forward<TupleArgs>(args)]() mutable {
       MPI_Request req;
       auto all_args = internal::make_mpi_tuple(std::move(args), &req);
       using result_t = decltype(hpx::util::invoke_fused(f, all_args));
       internal::invoke_fused_wrapper<result_t> wrapper(std::move(f), std::move(all_args));
-      internal::handle_request(mech, req);
+      internal::handle_request(req);
       frame_p->set_data(wrapper.dataflow_return());
     };
     hpx::apply(ex_, std::move(fn));

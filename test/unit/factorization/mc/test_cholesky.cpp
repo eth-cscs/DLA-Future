@@ -8,7 +8,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 #include "dlaf/communication/executor.h"
-#include "dlaf/communication/mech.h"
 #include "dlaf/factorization/cholesky.h"
 
 #include "gtest/gtest.h"
@@ -97,7 +96,7 @@ TYPED_TEST(CholeskyLocalTest, Correctness) {
 }
 
 template <class TypeParam>
-void testDistCholesky(CholeskyDistributedTest<TypeParam>& test, comm::MPIMech mech) {
+void testDistCholesky(CholeskyDistributedTest<TypeParam>& test) {
   // Note: The tile elements are chosen such that:
   // - res_ij = 1 / 2^(|i-j|) * exp(I*(-i+j)),
   // where I = 0 for real types or I is the complex unit for complex types.
@@ -138,8 +137,7 @@ void testDistCholesky(CholeskyDistributedTest<TypeParam>& test, comm::MPIMech me
         Distribution distribution(sz, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
         Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
         set(mat, el);
-        factorization::cholesky<Backend::MC, Device::CPU, TypeParam>(comm_grid, blas::Uplo::Lower, mat,
-                                                                     mech);
+        factorization::cholesky<Backend::MC, Device::CPU, TypeParam>(comm_grid, blas::Uplo::Lower, mat);
         CHECK_MATRIX_NEAR(res, mat, 4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error,
                           4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);
       }
@@ -148,9 +146,9 @@ void testDistCholesky(CholeskyDistributedTest<TypeParam>& test, comm::MPIMech me
 }
 
 TYPED_TEST(CholeskyDistributedTest, DistCholesky_Yielding) {
-  testDistCholesky<TypeParam>(*this, comm::MPIMech::Yielding);
+  testDistCholesky<TypeParam>(*this);
 }
 
 TYPED_TEST(CholeskyDistributedTest, DistCholesky_Polling) {
-  testDistCholesky<TypeParam>(*this, comm::MPIMech::Polling);
+  testDistCholesky<TypeParam>(*this);
 }

@@ -97,8 +97,7 @@ void testTriangularSolver(blas::Side side, blas::Uplo uplo, blas::Op op, blas::D
 
 template <class T>
 void testTriangularSolver(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, blas::Op op,
-                          blas::Diag diag, T alpha, SizeType m, SizeType n, SizeType mb, SizeType nb,
-                          comm::MPIMech mech) {
+                          blas::Diag diag, T alpha, SizeType m, SizeType n, SizeType mb, SizeType nb) {
   std::function<T(const GlobalElementIndex&)> el_op_a, el_b, res_b;
 
   LocalElementSize size_a(m, m);
@@ -129,7 +128,7 @@ void testTriangularSolver(comm::CommunicatorGrid grid, blas::Side side, blas::Up
   set(mat_a, el_op_a, op);
   set(mat_b, el_b);
 
-  solver::triangular<Backend::MC, Device::CPU, T>(grid, side, uplo, op, diag, alpha, mat_a, mat_b, mech);
+  solver::triangular<Backend::MC, Device::CPU, T>(grid, side, uplo, op, diag, alpha, mat_a, mat_b);
 
   CHECK_MATRIX_NEAR(res_b, mat_b, 20 * (mat_b.size().rows() + 1) * TypeUtilities<T>::error,
                     20 * (mat_b.size().rows() + 1) * TypeUtilities<T>::error);
@@ -170,8 +169,7 @@ TYPED_TEST(TriangularSolverDistributedTest, Correctness) {
               std::tie(m, n, mb, nb) = sz;
               TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
 
-              testTriangularSolver<TypeParam>(comm_grid, side, uplo, op, diag, alpha, m, n, mb, nb,
-                                              comm::MPIMech::Yielding);
+              testTriangularSolver<TypeParam>(comm_grid, side, uplo, op, diag, alpha, m, n, mb, nb);
             }
           }
         }

@@ -17,11 +17,11 @@
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/executor.h"
 
-void test_exec(dlaf::comm::MPIMech mech) {
+void test_exec() {
   auto comm = dlaf::comm::Communicator(MPI_COMM_WORLD);
   int rank = comm.rank();
   int nprocs = comm.size();
-  dlaf::comm::Executor ex("default", mech);
+  dlaf::comm::Executor ex{};
 
   int size = 1000;
   MPI_Datatype dtype = MPI_DOUBLE;
@@ -40,18 +40,18 @@ void test_exec(dlaf::comm::MPIMech mech) {
   ASSERT_TRUE(expected_recv_buf == recv_buf);
 }
 
-TEST(SendRecv, Yielding) {
-  test_exec(dlaf::comm::MPIMech::Yielding);
-}
+// TEST(SendRecv, Yielding) {
+//  dlaf::internal::getConfiguration().mpi_mech = dlaf::comm::MPIMech::Yielding;
+//  test_exec();
+//}
 
 TEST(SendRecv, Polling) {
-  hpx::mpi::experimental::enable_user_polling internal_helper("default");
-  test_exec(dlaf::comm::MPIMech::Polling);
+  test_exec();
 }
 
 TEST(Bcast, Dataflow) {
   auto comm = dlaf::comm::Communicator(MPI_COMM_WORLD);
-  dlaf::comm::Executor ex("default", dlaf::comm::MPIMech::Yielding);
+  dlaf::comm::Executor ex{};
   int root_rank = 1;
   MPI_Datatype dtype = MPI_DOUBLE;
   int size = 1000;

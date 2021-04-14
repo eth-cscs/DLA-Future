@@ -124,22 +124,47 @@ void Init<Backend::MC>::initialize(configuration const& cfg) {
 }
 
 template <class T>
-struct convertFromString {
-  static T call(const std::string&){};
-};
-
-template <>
-struct convertFromString<std::size_t> {
-  static std::size_t call(const std::string& val) {
-    return std::stoul(val);
-  };
-};
-
-template <>
-struct convertFromString<std::string> {
-  static std::string call(const std::string& val) {
+struct parseFromString {
+  static T call(const std::string& val) {
     return val;
   };
+};
+
+template <>
+struct parseFromString<std::size_t> {
+  static std::size_t call(const std::string& var) {
+    return std::stoul(var);
+  };
+};
+
+template <>
+struct parseFromString<comm::MPIMech> {
+  static comm::MPIMech call(const std::string& var) {
+    if (var == "yielding") {
+      return comm::MPIMech::Yielding;
+    }
+    else if (var == "polling") {
+      return comm::MPIMech::Polling;
+    }
+
+    std::cout << "Unknown value for --mech=" << var << "!" << std::endl;
+    std::terminate();
+    return comm::MPIMech::Polling;  // unreachable
+  };
+};
+
+template <class T>
+struct parseFromCommandLine {
+  static T call(hpx::program_options::variables_map const& vm, const std::string& cmd_val) {
+    return vm[cmd_val].as<T>();
+  }
+};
+
+template <>
+struct parseFromCommandLine<comm::MPIMech> {
+  static comm::MPIMech call(hpx::program_options::variables_map const& vm, const std::string& cmd_val) {
+    return parseFromString<comm::MPIMech>::call(vm[cmd_val].as<std::string>());
+  }
 };
 
 template <class T>
@@ -148,12 +173,12 @@ void updateConfigurationValue(hpx::program_options::variables_map const& vm, T& 
   const std::string dlaf_env_var = "DLAF_" + env_var;
   char* env_var_value = std::getenv(dlaf_env_var.c_str());
   if (env_var_value) {
-    var = convertFromString<T>::call(env_var_value);
+    var = parseFromString<T>::call(env_var_value);
   }
 
   const std::string dlaf_cmdline_option = "dlaf:" + cmdline_option;
   if (vm.count(dlaf_cmdline_option)) {
-    var = vm[dlaf_cmdline_option].as<T>();
+    var = parseFromCommandLine<T>::call(vm, dlaf_cmdline_option);
   }
 }
 
@@ -162,20 +187,7 @@ void updateConfiguration(hpx::program_options::variables_map const& vm, configur
                            "num-np-cuda-streams-per-thread");
   updateConfigurationValue(vm, cfg.num_hp_cuda_streams_per_thread, "NUM_HP_CUDA_STREAMS_PER_THREAD",
                            "num-hp-cuda-streams-per-thread");
-
-  std::string mpi_mech_str = "";
-  updateConfigurationValue(vm, mpi_mech_str, "MPI_MECH", "mpi-mech");
-  if (mpi_mech_str == "yielding") {
-    cfg.mpi_mech = comm::MPIMech::Yielding;
-  }
-  else if (mpi_mech_str == "polling") {
-    cfg.mpi_mech = comm::MPIMech::Polling;
-  }
-  else if (mpi_mech_str != "") {
-    std::cout << "Unknown value for --mech=" << mpi_mech_str << "!" << std::endl;
-    std::terminate();
-  }
-
+  updateConfigurationValue(vm, cfg.mpi_mech, "MPI_MECH", "mpi-mech");
   cfg.mpi_pool = (hpx::resource::pool_exists("mpi")) ? "mpi" : "default";
 }
 

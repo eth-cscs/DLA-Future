@@ -53,7 +53,7 @@ endif()
 find_package(MPI REQUIRED)
 
 # ----- LAPACK/SCALAPACK
-if (DLAI_WITH_MKL)
+if (DLAF_WITH_MKL)
   find_package(MKL REQUIRED)
 
   set(MKL_LAPACK_TARGET "mkl::mkl_intel_32bit_seq_dyn"

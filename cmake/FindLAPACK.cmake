@@ -81,9 +81,8 @@ if (LAPACK_FOUND)
     add_library(LAPACK::LAPACK INTERFACE IMPORTED GLOBAL)
   endif()
 
-    target_link_libraries(LAPACK::LAPACK INTERFACE
-      "${LAPACK_LIBRARY}"
-      "${_DEPS}"
-    )
-  endif()
+  target_link_libraries(LAPACK::LAPACK INTERFACE
+    "${LAPACK_LIBRARY}"
+    "${_DEPS}"
+  )
 endif()

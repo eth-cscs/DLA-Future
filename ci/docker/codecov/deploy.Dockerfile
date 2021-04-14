@@ -31,9 +31,7 @@ RUN mkdir ${BUILD} && cd ${BUILD} && \
       -DCMAKE_BUILD_TYPE=Debug \
       -DCMAKE_CXX_FLAGS="-O0 -Werror -fprofile-arcs -ftest-coverage" \
       -DCMAKE_EXE_LINKER_FLAGS="-fprofile-arcs -ftest-coverage" \
-      -DLAPACK_CUSTOM_TYPE=Custom \
-      -DLAPACK_CUSTOM_INCLUDE_DIR=/usr/local/include \
-      -DLAPACK_CUSTOM_LIBRARY=openblas \
+      -DLAPACK_LIBRARY=openblas \
       -DDLAF_WITH_CUDA=${DLAF_WITH_CUDA} \
       -DCUDALIBS_ROOT=/usr/local/cuda/targets/x86_64-linux \
       -DDLAF_WITH_MKL=OFF \

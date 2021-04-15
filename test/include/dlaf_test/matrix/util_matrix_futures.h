@@ -118,21 +118,24 @@ std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingGlob
   return result;
 }
 
-/// Returns true if only the first @p futures are ready.
+/// Returns true if only the @p first_n futures are ready (or the opposite).
+///
+/// @param invert if set to true it checks that all futures are ready except the first_n
 ///
 /// @pre Future should be a future or shared_future,
 /// @pre 0 <= ready <= futures.size().
 template <class Future>
-bool checkFuturesStep(size_t ready, const std::vector<Future>& futures) {
-  DLAF_ASSERT_HEAVY(ready >= 0, ready);
-  DLAF_ASSERT_HEAVY(ready <= futures.size(), ready, futures.size());
+bool checkFuturesStep(size_t first_n, const std::vector<Future>& futures, bool invert = false) {
+  DLAF_ASSERT_HEAVY(first_n <= futures.size(), first_n, futures.size());
 
-  for (std::size_t index = 0; index < ready; ++index) {
-    if (!futures[index].is_ready())
+  const bool first_n_status = !invert;
+
+  for (std::size_t index = 0; index < first_n; ++index) {
+    if (futures[index].is_ready() != first_n_status)
       return false;
   }
-  for (std::size_t index = ready; index < futures.size(); ++index) {
-    if (futures[index].is_ready())
+  for (std::size_t index = first_n; index < futures.size(); ++index) {
+    if (futures[index].is_ready() == first_n_status)
       return false;
   }
   return true;

@@ -220,12 +220,26 @@ def calc_trsm_metrics(df):
     )
 
 
-def gen_chol_plots(df, logx=False, filts=None, replaces=None, filename_suffix=None):
-    for (m, mb), grp_data in df.groupby(["matrix_rows", "block_rows"]):
-        title = f"Cholesky: matrix_size = {m} x {m}, block_size = {mb} x {mb}"
+def gen_chol_plots(df, logx=False, combine_mb=False, filts=None, replaces=None, filename_suffix=None):
+    if combine_mb:
+        it_space = df.groupby(["matrix_rows"])
+    else:
+        it_space = df.groupby(["matrix_rows", "block_rows"])
 
-        filename_ppn = f"chol_ppn_{m}_{mb}"
-        filename_time = f"chol_time_{m}_{mb}"
+    for x, grp_data in it_space:
+        if combine_mb:
+            m = x
+        else:
+            m = x[0]
+            mb = x[1]
+
+        title = f"Cholesky: matrix_size = {m} x {m}"
+        filename_ppn = f"chol_ppn_{m}"
+        filename_time = f"chol_time_{m}"
+        if not combine_mb:
+            title += f", block_size = {mb} x {mb}"
+            filename_ppn += f"_{mb}"
+            filename_time += f"_{mb}"
         if filename_suffix != None:
             filename_ppn += f"_{filename_suffix}"
             filename_time += f"_{filename_suffix}"
@@ -237,6 +251,7 @@ def gen_chol_plots(df, logx=False, filts=None, replaces=None, filename_suffix=No
             filename_ppn,
             grp_data,
             logx,
+            combine_mb=combine_mb,
             filts=filts,
             replaces=replaces
         )
@@ -247,9 +262,11 @@ def gen_chol_plots(df, logx=False, filts=None, replaces=None, filename_suffix=No
             filename_time,
             grp_data,
             logx,
+            combine_mb=combine_mb,
             filts=filts,
             replaces=replaces
         )
+
 def gen_chol_plots_weak(df, weak_rt_approx, logx=False, combine_mb=False, filts=None, replaces=None, filename_suffix=None):
     df = df.assign(weak_rt=[int(round(x[0] / math.sqrt(x[1]) / weak_rt_approx)) * weak_rt_approx for x in zip(df['matrix_rows'], df['nodes'])])
 

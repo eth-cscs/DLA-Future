@@ -336,9 +336,14 @@ Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const Tile
 }
 
 namespace internal {
-template <class RetT, class T, dlaf::Device d, class RangeTile>
-auto select_generic(Matrix<T, d>& matrix, RangeTile range,
-                    RetT (Matrix<T, d>::*f)(const typename RangeTile::index2d_t&)) {
+
+/// Helper function returning a vector with the results of applying a given function to a matrix
+///
+/// @tparam RetT type of the value returned by calling @p f (the element_type of the resulting vector)
+/// @param f is a function that accepts as parameter a const LocalTileIndex&
+template <class RetT, class T, dlaf::Device d>
+auto selectGeneric(Matrix<T, d>& matrix, common::IterableRange2D<SizeType, LocalTile_TAG> range,
+                   RetT (Matrix<T, d>::*f)(const LocalTileIndex&)) {
   std::vector<RetT> tiles;
   std::transform(range.begin(), range.end(), std::back_inserter(tiles),
                  [&matrix, f](const auto&& idx) { return ((&matrix)->*f)(idx); });
@@ -346,25 +351,32 @@ auto select_generic(Matrix<T, d>& matrix, RangeTile range,
 }
 }
 
-template <class T, dlaf::Device d, class RangeTile>
-std::vector<hpx::shared_future<dlaf::matrix::Tile<const T, d>>> select_read(Matrix<T, d>& matrix,
-                                                                            RangeTile range) {
+/// Returns a container grouping all the tiles retrieved using Matrix::read
+///
+/// @pre @p range must be a valid range for @p matrix
+template <class T, dlaf::Device d>
+std::vector<hpx::shared_future<dlaf::matrix::Tile<const T, d>>> selectRead(
+    Matrix<T, d>& matrix, common::IterableRange2D<SizeType, LocalTile_TAG> range) {
   using RetT = hpx::shared_future<typename Matrix<T, d>::ConstTileType>;
-  using ArgT = const typename RangeTile::index2d_t&;
+  using ArgT = const LocalTileIndex&;
 
   RetT (Matrix<T, d>::*read_func)(ArgT) = &Matrix<T, d>::read;
 
-  return internal::select_generic(matrix, range, read_func);
+  return internal::selectGeneric(matrix, range, read_func);
 }
 
-template <class T, dlaf::Device d, class RangeTile>
-std::vector<hpx::future<dlaf::matrix::Tile<T, d>>> select(Matrix<T, d>& matrix, RangeTile range) {
+/// Returns a container grouping all the tiles retrieved using Matrix::operator()
+///
+/// @pre @p range must be a valid range for @p matrix
+template <class T, dlaf::Device d>
+std::vector<hpx::future<dlaf::matrix::Tile<T, d>>> select(
+    Matrix<T, d>& matrix, common::IterableRange2D<SizeType, LocalTile_TAG> range) {
   using RetT = hpx::future<typename Matrix<T, d>::TileType>;
-  using ArgT = const typename RangeTile::index2d_t&;
+  using ArgT = const LocalTileIndex&;
 
   RetT (Matrix<T, d>::*readwrite_func)(ArgT) = &Matrix<T, d>::operator();
 
-  return internal::select_generic(matrix, range, readwrite_func);
+  return internal::selectGeneric(matrix, range, readwrite_func);
 }
 
 /// ---- ETI

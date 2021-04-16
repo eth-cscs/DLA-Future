@@ -114,76 +114,52 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   Matrix<T, Device::CPU> mat_w({mat_v.size().rows(), mb}, mat_v.blockSize());
   Matrix<T, Device::CPU> mat_w2({mb, mat_c.size().cols()}, mat_c.blockSize());
 
-  SizeType last_mb;
-
-  if (mat_v.blockSize().cols() == 1) {
-    last_mb = 1;
-  }
-  else {
-    if (mat_v.size().cols() % mat_v.blockSize().cols() == 0)
-      last_mb = mat_v.blockSize().cols();
-    else
-      last_mb = mat_v.size().cols() % mat_v.blockSize().cols();
-  }
-
-  Matrix<T, Device::CPU> mat_vv_last({mat_v.size().rows(), last_mb}, mat_v.blockSize());
-  Matrix<T, Device::CPU> mat_w_last({mat_v.size().rows(), last_mb}, mat_v.blockSize());
-  Matrix<T, Device::CPU> mat_w2_last({last_mb, mat_c.size().cols()}, mat_c.blockSize());
-
-  const SizeType last_reflector_idx = (mat_v.size().cols() < mat_v.size().rows())
-                                          ? mat_v.nrTiles().rows() - 2
-                                          : mat_v.nrTiles().cols() - 2;
+//  SizeType last_mb;
+//  if (mat_v.blockSize().cols() == 1) {
+//    last_mb = 1;
+//  }
+//  else if (mat_v.size().cols()) {
+//    if (mat_v.size().cols() % mat_v.blockSize().cols() == 0)
+//      last_mb = mat_v.blockSize().cols();
+//    else
+//      last_mb = mat_v.size().cols() % mat_v.blockSize().cols();
+//  }
+//
+//  Matrix<T, Device::CPU> mat_vv_last({mat_v.size().rows(), last_mb}, mat_v.blockSize());
+//  Matrix<T, Device::CPU> mat_w_last({mat_v.size().rows(), last_mb}, mat_v.blockSize());
+//  Matrix<T, Device::CPU> mat_w2_last({last_mb, mat_c.size().cols()}, mat_c.blockSize());
+ 
+  const SizeType last_reflector_idx = mat_v.nrTiles().cols() - 2;
+//  void (&cpyReg)(TileElementSize, TileElementIndex, const matrix::Tile<const T, Device::CPU>&,
+//		 TileElementIndex, const matrix::Tile<T, Device::CPU>&) = copy<T>;
 
   for (SizeType k = last_reflector_idx; k > -1; --k) {
     bool is_last = (k == last_reflector_idx) ? true : false;
 
     for (SizeType i = 0; i < mat_v.nrTiles().rows(); ++i) {
+
       // Copy V panel into VV
       auto copy_v_into_vv = unwrapping([=](auto&& tile_v, auto&& tile_vv, TileElementSize region) {
-        void (&cpyReg)(TileElementSize, TileElementIndex, const matrix::Tile<const T, Device::CPU>&,
-                       TileElementIndex, const matrix::Tile<T, Device::CPU>&) = copy<T>;
-        void (&cpy)(const matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T, Device::CPU>&) =
-            copy<T>;
-
-        if (is_last) {
-          TileElementIndex idx_in(0, 0);
-          TileElementIndex idx_out(0, 0);
-          cpyReg(region, idx_in, tile_v, idx_out, tile_vv);
-        }
-        else {
-          cpy(tile_v, tile_vv);
-        }
-      });
+	  void (&cpy)(const matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T, Device::CPU>&) =
+	  copy<T>;
+	    cpy(tile_v, tile_vv);
+	});
       hpx::dataflow(executor_hp, copy_v_into_vv, mat_v.read(LocalTileIndex(i, k)),
-                    is_last ? mat_vv_last(LocalTileIndex(i, 0)) : mat_vv(LocalTileIndex(i, 0)),
-                    is_last ? mat_vv_last.tileSize(GlobalTileIndex(i, 0))
-                            : mat_vv.tileSize(GlobalTileIndex(i, 0)));
+                    mat_vv(LocalTileIndex(i, 0)),  mat_vv.tileSize(GlobalTileIndex(i, 0)));
+
 
       // Setting VV
       auto setting_vv = unwrapping([=](auto&& tile) {
-        if (is_last) {
-          if (i <= k) {
-            lapack::laset(lapack::MatrixType::General, tile.size().rows(), tile.size().cols(), 0, 0,
-                          tile.ptr(), tile.ld());
-          }
-          else if (i == k + 1) {
-            lapack::laset(lapack::MatrixType::Upper, tile.size().rows(), tile.size().cols(), 0, 1,
-                          tile.ptr(), tile.ld());
-          }
+        if (i <= k) {
+          lapack::laset(lapack::MatrixType::General, tile.size().rows(), tile.size().cols(), 0, 0,
+                        tile.ptr(), tile.ld());
         }
-        else {
-          if (i <= k) {
-            lapack::laset(lapack::MatrixType::General, tile.size().rows(), tile.size().cols(), 0, 0,
-                          tile.ptr(), tile.ld());
-          }
-          else if (i == k + 1) {
-            lapack::laset(lapack::MatrixType::Upper, tile.size().rows(), tile.size().cols(), 0, 1,
-                          tile.ptr(), tile.ld());
-          }
+        else if (i == k + 1) {
+          lapack::laset(lapack::MatrixType::Upper, tile.size().rows(), tile.size().cols(), 0, 1,
+                        tile.ptr(), tile.ld());
         }
       });
-      hpx::dataflow(executor_hp, setting_vv,
-                    is_last ? mat_vv_last(LocalTileIndex(i, 0)) : mat_vv(LocalTileIndex(i, 0)));
+      hpx::dataflow(executor_hp, setting_vv, mat_vv(LocalTileIndex(i, 0)));
 
       // Copy VV into W
       auto copy_vv_into_w = unwrapping([=](auto&& tile_vv, auto&& tile_w) {

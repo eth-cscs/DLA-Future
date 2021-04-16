@@ -28,12 +28,7 @@ std::ostream& operator<<(std::ostream& os, configuration const& cfg) {
   os << "  num_np_cuda_streams_per_thread = " << cfg.num_np_cuda_streams_per_thread << std::endl;
   os << "  num_hp_cuda_streams_per_thread = " << cfg.num_hp_cuda_streams_per_thread << std::endl;
   os << "  mpi_pool = " << cfg.mpi_pool << std::endl;
-  if (cfg.mpi_mech == comm::MPIMech::Polling) {
-    os << "  mpi_mech = polling" << std::endl;
-  }
-  else if (cfg.mpi_mech == comm::MPIMech::Yielding) {
-    os << "  mpi_mech = yielding" << std::endl;
-  }
+  os << "  mpi_mech = " << cfg.mpi_mech << std::endl;
   return os;
 }
 

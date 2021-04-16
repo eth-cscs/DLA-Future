@@ -114,39 +114,37 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   Matrix<T, Device::CPU> mat_w({mat_v.size().rows(), mb}, mat_v.blockSize());
   Matrix<T, Device::CPU> mat_w2({mb, mat_c.size().cols()}, mat_c.blockSize());
 
-//  SizeType last_mb;
-//  if (mat_v.blockSize().cols() == 1) {
-//    last_mb = 1;
-//  }
-//  else if (mat_v.size().cols()) {
-//    if (mat_v.size().cols() % mat_v.blockSize().cols() == 0)
-//      last_mb = mat_v.blockSize().cols();
-//    else
-//      last_mb = mat_v.size().cols() % mat_v.blockSize().cols();
-//  }
-//
-//  Matrix<T, Device::CPU> mat_vv_last({mat_v.size().rows(), last_mb}, mat_v.blockSize());
-//  Matrix<T, Device::CPU> mat_w_last({mat_v.size().rows(), last_mb}, mat_v.blockSize());
-//  Matrix<T, Device::CPU> mat_w2_last({last_mb, mat_c.size().cols()}, mat_c.blockSize());
- 
+  SizeType last_mb;
+  if (mat_v.blockSize().cols() == 1) {
+    last_mb = 1;
+  }
+  else if (mat_v.size().cols()) {
+    if (mat_v.size().cols() % mat_v.blockSize().cols() == 0)
+      last_mb = mat_v.blockSize().cols();
+    else
+      last_mb = mat_v.size().cols() % mat_v.blockSize().cols();
+  }
+
+  //  Matrix<T, Device::CPU> mat_vv_last({mat_v.size().rows(), last_mb}, mat_v.blockSize());
+  //  Matrix<T, Device::CPU> mat_w_last({mat_v.size().rows(), last_mb}, mat_v.blockSize());
+  //  Matrix<T, Device::CPU> mat_w2_last({last_mb, mat_c.size().cols()}, mat_c.blockSize());
+
   const SizeType last_reflector_idx = mat_v.nrTiles().cols() - 2;
-//  void (&cpyReg)(TileElementSize, TileElementIndex, const matrix::Tile<const T, Device::CPU>&,
-//		 TileElementIndex, const matrix::Tile<T, Device::CPU>&) = copy<T>;
+  //  void (&cpyReg)(TileElementSize, TileElementIndex, const matrix::Tile<const T, Device::CPU>&,
+  //		 TileElementIndex, const matrix::Tile<T, Device::CPU>&) = copy<T>;
 
   for (SizeType k = last_reflector_idx; k >= 0; --k) {
     bool is_last = (k == last_reflector_idx) ? true : false;
 
     for (SizeType i = 0; i < mat_v.nrTiles().rows(); ++i) {
-
       // Copy V panel into VV
       auto copy_v_into_vv = unwrapping([=](auto&& tile_v, auto&& tile_vv, TileElementSize region) {
-	  void (&cpy)(const matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T, Device::CPU>&) =
-	  copy<T>;
-	    cpy(tile_v, tile_vv);
-	});
+        void (&cpy)(const matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T, Device::CPU>&) =
+            copy<T>;
+        cpy(tile_v, tile_vv);
+      });
       hpx::dataflow(executor_hp, copy_v_into_vv, mat_v.read(LocalTileIndex(i, k)),
-                    mat_vv(LocalTileIndex(i, 0)),  mat_vv.tileSize(GlobalTileIndex(i, 0)));
-
+                    mat_vv(LocalTileIndex(i, 0)), mat_vv.tileSize(GlobalTileIndex(i, 0)));
 
       // Setting VV
       auto setting_vv = unwrapping([=](auto&& tile) {

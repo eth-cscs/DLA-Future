@@ -23,6 +23,7 @@ variables:
   SLURM_EXCLUSIVE: ''
   SLURM_CONSTRAINT: $SLURM_CONSTRAINT
   CRAY_CUDA_MPS: 1
+  MPICH_MAX_THREAD_SAFETY: multiple
 
 allocate:
   stage: allocate
@@ -80,6 +81,7 @@ variables:
   SLURM_EXCLUSIVE: ''
   SLURM_CONSTRAINT: $SLURM_CONSTRAINT
   CRAY_CUDA_MPS: 1
+  MPICH_MAX_THREAD_SAFETY: multiple
 
 allocate:
   stage: allocate

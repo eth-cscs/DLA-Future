@@ -133,7 +133,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 //  void (&cpyReg)(TileElementSize, TileElementIndex, const matrix::Tile<const T, Device::CPU>&,
 //		 TileElementIndex, const matrix::Tile<T, Device::CPU>&) = copy<T>;
 
-  for (SizeType k = last_reflector_idx; k > -1; --k) {
+  for (SizeType k = last_reflector_idx; k >= 0; --k) {
     bool is_last = (k == last_reflector_idx) ? true : false;
 
     for (SizeType i = 0; i < mat_v.nrTiles().rows(); ++i) {

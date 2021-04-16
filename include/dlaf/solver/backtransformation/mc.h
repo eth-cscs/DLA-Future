@@ -81,22 +81,24 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   using hpx::resource::get_thread_pool;
   using hpx::threads::thread_priority;
 
-  parallel_executor executor_hp(&get_thread_pool("default"), thread_priority::high);
-  parallel_executor executor_normal(&get_thread_pool("default"), thread_priority::default_);
+  auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
+  auto executor_np = dlaf::getNpExecutor<Backend::MC>();
 
   const SizeType m = mat_c.nrTiles().rows();
   const SizeType n = mat_c.nrTiles().cols();
-  const SizeType mb = mat_c.blockSize().rows();
-  const SizeType nb = mat_c.blockSize().cols();
-  const SizeType ms = mat_c.size().rows();
-  const SizeType ns = mat_c.size().cols();
+  const SizeType mv = mat_v.nrTiles().rows();
+  const SizeType nv = mat_v.nrTiles().cols();
+  const SizeType mb = mat_v.blockSize().rows();
+  const SizeType nb = mat_v.blockSize().cols();
+  const SizeType ms = mat_v.size().rows();
+  const SizeType ns = mat_v.size().cols();
 
   // Matrix T
   comm::CommunicatorGrid comm_grid(MPI_COMM_WORLD, 1, 1, common::Ordering::ColumnMajor);
   common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
 
   int tottaus;
-  if (ms < mb || ms == 0 || ns == 0)
+  if (ms < mb || ms == 0 || nv == 0)
     tottaus = 0;
   else
     tottaus = (ms / mb - 1) * mb + ms % mb;

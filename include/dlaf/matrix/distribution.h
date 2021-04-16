@@ -176,8 +176,8 @@ public:
   /// @pre 0 <= global_tile < nrTiles().get<rc>(),
   /// @pre 0 <= tile_element < blockSize.get<rc>().
   template <Coord rc>
-  SizeType globalElementFromGlobalTileAndTileElement(SizeType global_tile,
-                                                     SizeType tile_element) const noexcept {
+  SizeType globalElementFromGlobalTileAndTileElement(SizeType global_tile, SizeType tile_element) const
+      noexcept {
     DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>(), global_tile,
                       global_nr_tiles_.get<rc>());
     DLAF_ASSERT_HEAVY(0 <= tile_element && tile_element < block_size_.get<rc>(), tile_element,
@@ -191,8 +191,8 @@ public:
   /// @pre 0 <= local_tile < localNrTiles().get<rc>(),
   /// @pre 0 <= tile_element < blockSize.get<rc>().
   template <Coord rc>
-  SizeType globalElementFromLocalTileAndTileElement(SizeType local_tile,
-                                                    SizeType tile_element) const noexcept {
+  SizeType globalElementFromLocalTileAndTileElement(SizeType local_tile, SizeType tile_element) const
+      noexcept {
     return globalElementFromGlobalTileAndTileElement<rc>(globalTileFromLocalTile<rc>(local_tile),
                                                          tile_element);
   }

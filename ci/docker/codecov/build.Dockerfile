@@ -15,7 +15,7 @@ RUN apt-get update -qq && apt-get install -qq -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 RUN cd /usr/local/bin && \
-  wget -Ls https://codecov.io/bash > codecov.sh && \
+  curl -Ls https://codecov.io/bash > codecov.sh && \
   echo "89c658e261d5f25533598a222fd96cf17a5fa0eb3772f2defac754d9970b2ec8 codecov.sh" | sha256sum --check --quiet && \
   chmod +x codecov.sh
 

@@ -96,6 +96,7 @@ RUN wget -q https://github.com/${HPX_FORK}/hpx/archive/${HPX_VERSION}.tar.gz -O 
       -DCMAKE_INSTALL_PREFIX=$HPX_PATH \
       -DHPX_WITH_MAX_CPU_COUNT=128 \
       -DHPX_WITH_NETWORKING=OFF \
+      -DHPX_WITH_ASYNC_MPI=ON \
       -DHPX_WITH_CUDA=$HPX_WITH_CUDA \
       -DHPX_WITH_TESTS=OFF \
       -DHPX_WITH_EXAMPLES=OFF && \

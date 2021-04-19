@@ -175,6 +175,22 @@ public:
     return read(distribution().localTileIndex(index));
   }
 
+  /// Synchronization barrier for all tiles in the matrix
+  void syncAll() noexcept {
+    // Note:
+    // Using a readwrite access to the tile ensures that the access is exclusive and not shared
+    // among multiple tasks.
+
+    auto readwrite_f = [this](const LocalTileIndex& index) {
+      std::size_t i = tileLinearIndex(index);
+      return this->tile_managers_[i].getRWTileFuture();
+    };
+
+    const auto range_local = common::iterate_range2d(distribution().localNrTiles());
+    auto all_local_tiles_rw = internal::selectGeneric(readwrite_f, range_local);
+    hpx::when_all(std::move(all_local_tiles_rw)).get();
+  }
+
 protected:
   Matrix(Distribution distribution) : internal::MatrixBase{std::move(distribution)} {}
 

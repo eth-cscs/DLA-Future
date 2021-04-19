@@ -1232,6 +1232,11 @@ TEST_F(MatrixGenericTest, SelectTilesReadwrite) {
 // after going out-of-scope. This duration must be kept as low as possible in order to not waste time
 // during tests, but at the same time it must be enough to let the "main" to arrive to the end of the
 // scope.
+//
+// Note 3:
+// The tests about lifetime of a Matrix built with user provided memory are not examples of good
+// usage, but they are just meant to test that the Matrix does not wait on destruction for any left
+// task on one of its tiles.
 
 const auto WAIT_GUARD = std::chrono::milliseconds(10);
 const auto device = dlaf::Device::CPU;
@@ -1302,7 +1307,7 @@ TEST(MatrixDestructorFutures, NonConstAfterRead_UserMemory) {
     auto shared_future = matrix.read(LocalTileIndex(0, 0));
     last_task = shared_future.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
       hpx::this_thread::sleep_for(WAIT_GUARD);
-      EXPECT_FALSE(is_exited_from_scope);
+      EXPECT_TRUE(is_exited_from_scope);
     });
   }
   is_exited_from_scope = true;
@@ -1321,7 +1326,7 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWrite_UserMemory) {
     auto future = matrix(LocalTileIndex(0, 0));
     last_task = future.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
       hpx::this_thread::sleep_for(WAIT_GUARD);
-      EXPECT_FALSE(is_exited_from_scope);
+      EXPECT_TRUE(is_exited_from_scope);
     });
   }
   is_exited_from_scope = true;
@@ -1329,7 +1334,7 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWrite_UserMemory) {
   last_task.get();
 }
 
-TEST(MatrixDestructorFutures, ConstAfterRead) {
+TEST(MatrixDestructorFutures, ConstAfterRead_UserMemory) {
   hpx::future<void> last_task;
 
   std::atomic<bool> is_exited_from_scope{false};

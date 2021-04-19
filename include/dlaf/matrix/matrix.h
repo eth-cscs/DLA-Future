@@ -28,6 +28,21 @@
 namespace dlaf {
 namespace matrix {
 
+namespace internal {
+
+/// Helper function returning a vector with the results of calling a function over a IterableRange2D
+///
+/// @param f non-void function accepting LocalTileIndex as parameter
+template <class Func>
+auto selectGeneric(Func&& f, common::IterableRange2D<SizeType, LocalTile_TAG> range) {
+  using RetT = decltype(f(LocalTileIndex{}));
+
+  std::vector<RetT> tiles;
+  std::transform(range.begin(), range.end(), std::back_inserter(tiles), [&](auto idx) { return f(idx); });
+  return tiles;
+}
+}
+
 /// A @c Matrix object represents a collection of tiles which contain all the elements of a matrix.
 ///
 /// The tiles are distributed according to a distribution (see @c Matrix::distribution()),
@@ -335,34 +350,13 @@ Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const Tile
   return createMatrixFromTile<device>(size, block_size, ld_tile, tiles_per_col, comm, {0, 0}, ptr);
 }
 
-namespace internal {
-
-/// Helper function returning a vector with the results of applying a given function to a matrix
-///
-/// @tparam RetT type of the value returned by calling @p f (the element_type of the resulting vector)
-/// @param f is a function that accepts as parameter a const LocalTileIndex&
-template <class RetT, class T, dlaf::Device d>
-auto selectGeneric(Matrix<T, d>& matrix, common::IterableRange2D<SizeType, LocalTile_TAG> range,
-                   RetT (Matrix<T, d>::*f)(const LocalTileIndex&)) {
-  std::vector<RetT> tiles;
-  std::transform(range.begin(), range.end(), std::back_inserter(tiles),
-                 [&matrix, f](const auto&& idx) { return ((&matrix)->*f)(idx); });
-  return tiles;
-}
-}
-
 /// Returns a container grouping all the tiles retrieved using Matrix::read
 ///
 /// @pre @p range must be a valid range for @p matrix
 template <class T, dlaf::Device d>
 std::vector<hpx::shared_future<dlaf::matrix::Tile<const T, d>>> selectRead(
     Matrix<T, d>& matrix, common::IterableRange2D<SizeType, LocalTile_TAG> range) {
-  using RetT = hpx::shared_future<typename Matrix<T, d>::ConstTileType>;
-  using ArgT = const LocalTileIndex&;
-
-  RetT (Matrix<T, d>::*read_func)(ArgT) = &Matrix<T, d>::read;
-
-  return internal::selectGeneric(matrix, range, read_func);
+  return internal::selectGeneric([&](auto index) { return matrix.read(index); }, range);
 }
 
 /// Returns a container grouping all the tiles retrieved using Matrix::operator()
@@ -371,12 +365,7 @@ std::vector<hpx::shared_future<dlaf::matrix::Tile<const T, d>>> selectRead(
 template <class T, dlaf::Device d>
 std::vector<hpx::future<dlaf::matrix::Tile<T, d>>> select(
     Matrix<T, d>& matrix, common::IterableRange2D<SizeType, LocalTile_TAG> range) {
-  using RetT = hpx::future<typename Matrix<T, d>::TileType>;
-  using ArgT = const LocalTileIndex&;
-
-  RetT (Matrix<T, d>::*readwrite_func)(ArgT) = &Matrix<T, d>::operator();
-
-  return internal::selectGeneric(matrix, range, readwrite_func);
+  return internal::selectGeneric([&](auto index) { return matrix(index); }, range);
 }
 
 /// ---- ETI

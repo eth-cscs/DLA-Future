@@ -1345,7 +1345,7 @@ TEST(MatrixDestructorFutures, ConstAfterRead_UserMemory) {
     auto sf = matrix.read(LocalTileIndex(0, 0));
     last_task = sf.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
       hpx::this_thread::sleep_for(WAIT_GUARD);
-      EXPECT_FALSE(is_exited_from_scope);
+      EXPECT_TRUE(is_exited_from_scope);
     });
   }
   is_exited_from_scope = true;

@@ -157,8 +157,6 @@ public:
   Matrix(const Matrix& rhs) = delete;
   Matrix(Matrix&& rhs) = default;
 
-  virtual ~Matrix();
-
   Matrix& operator=(const Matrix& rhs) = delete;
   Matrix& operator=(Matrix&& rhs) = default;
 

@@ -31,9 +31,7 @@ RUN mkdir ${BUILD} && cd ${BUILD} && \
       -DCMAKE_BUILD_TYPE=Debug \
       -DCMAKE_CXX_FLAGS="-O0 -Werror -fprofile-arcs -ftest-coverage" \
       -DCMAKE_EXE_LINKER_FLAGS="-fprofile-arcs -ftest-coverage" \
-      -DLAPACK_CUSTOM_TYPE=Custom \
-      -DLAPACK_CUSTOM_INCLUDE_DIR=/usr/local/include \
-      -DLAPACK_CUSTOM_LIBRARY=openblas \
+      -DLAPACK_LIBRARY=openblas \
       -DDLAF_WITH_CUDA=${DLAF_WITH_CUDA} \
       -DCUDALIBS_ROOT=/usr/local/cuda/targets/x86_64-linux \
       -DDLAF_WITH_MKL=OFF \
@@ -54,7 +52,8 @@ RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
     echo "$TEST_BINARIES" | xargs -I{file} find -samefile {file} -exec cp --parents '{}' ${BUILD}-tmp ';' && \
     find '(' -name CTestTestfile.cmake -o -iname "*.gcno" ')' -exec cp --parent '{}' ${BUILD}-tmp ';' && \
     rm -rf ${BUILD} && \
-    mv ${BUILD}-tmp ${BUILD}
+    mv ${BUILD}-tmp ${BUILD} && \
+    rm -rf ${SOURCE}/.git
 
 # Multistage build, this is the final small image
 FROM ubuntu:20.04
@@ -68,8 +67,6 @@ ARG DEPLOY
 # Install perl to make lcov happy
 # codecov upload needs curl + ca-certificates
 # tzdata is needed to print correct time
-# TODO: remove git after https://github.com/codecov/codecov-bash/pull/291
-#       or https://github.com/codecov/codecov-bash/pull/265 is merged
 RUN apt-get update -qq && \
     apt-get install -qq -y --no-install-recommends \
       perl \
@@ -77,7 +74,6 @@ RUN apt-get update -qq && \
       libjson-perl \
       curl \
       ca-certificates \
-      git \
       tzdata && \
     rm -rf /var/lib/apt/lists/*
 
@@ -89,9 +85,10 @@ COPY --from=builder ${DEPLOY} ${DEPLOY}
 # This is necessary for code coverage of MPI tests: gcov has to have write temporary
 # data into the source folder. In distributed applications we can therefore not mount
 # the git repo folder at runtime in the container, because it is shared and would
-# cause race conditions in gcov. When PR #291 or #265 (see above) is merged
-# we can at the very least remove all remnants of git, in particular the `.git` folder...
+# cause race conditions in gcov.
 COPY --from=builder ${SOURCE} ${SOURCE}
+
+COPY --from=builder /usr/local/bin/codecov.sh /usr/local/bin/codecov.sh
 
 # Make it easy to call our binaries.
 ENV PATH="${DEPLOY}/usr/bin:$PATH"

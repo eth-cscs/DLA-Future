@@ -53,16 +53,23 @@ endif()
 find_package(MPI REQUIRED)
 
 # ----- LAPACK/SCALAPACK
-set(LAPACK_TARGET "")
 if (DLAF_WITH_MKL)
-  set(MKL_CUSTOM_THREADING "Sequential")
   find_package(MKL REQUIRED)
-  set(LAPACK_TARGET "mkl::mkl_intel_32bit_seq_dyn")
-  if (NOT TARGET ${LAPACK_TARGET})
-    message(FATAL_ERROR "MKL target ${LAPACK_TARGET} has not been found")
+
+  set(MKL_LAPACK_TARGET "mkl::mkl_intel_32bit_seq_dyn"
+    CACHE STRING "MKL LAPACK target (see FindMKL for details)")
+
+  # Note:
+  # If specified targets are found, "standardize" them
+
+  if (TARGET ${MKL_LAPACK_TARGET})
+    set(LAPACK_FOUND TRUE)
+    add_library(LAPACK::LAPACK INTERFACE IMPORTED GLOBAL)
+    target_link_libraries(LAPACK::LAPACK INTERFACE ${MKL_LAPACK_TARGET})
+  else()
+    message(FATAL_ERROR "${MKL_LAPACK_TARGET} as LAPACK target has not been found")
   endif()
 else()
-  set(LAPACK_TARGET "lapack::lapack")
   find_package(LAPACK REQUIRED)
 endif()
 

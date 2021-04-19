@@ -14,6 +14,8 @@ def _sq_factor(n):
 
 
 def _check_ranks_per_node(system, lib, rpn):
+    if lib == "scalapack":
+        return
     if not rpn in system["Allowed rpns"]:
         raise ValueError(f"Wrong value rpn = {rpn}!")
     if rpn != 1 and lib == "dplasma":
@@ -21,7 +23,7 @@ def _check_ranks_per_node(system, lib, rpn):
 
 
 def _err_msg(lib):
-    return f"No such `lib`: {lib}! Allowed values are : `dlaf`, `slate` and `dplasma`."
+    return f"No such `lib`: {lib}! Allowed values are : `dlaf`, `slate`, `dplasma` and `scalapack` (cholesky only)."
 
 
 # Job preamble
@@ -71,6 +73,9 @@ def chol(system, lib, build_dir, nodes, rpn, m_sz, mb_sz, nruns, suffix="na", ex
     elif lib == "dplasma":
         env += " OMP_NUM_THREADS=1"
         cmd = f"{build_dir}/tests/testing_dpotrf -N {m_sz} --MB {mb_sz} --NB {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} -c {cpus_per_rank} --nruns {nruns} -v {extra_flags}"
+    elif lib == "scalapack":
+        env += f" OMP_NUM_THREADS={cpus_per_rank}"
+        cmd = f"{build_dir}/cholesky -N {m_sz} -b {mb_sz} --p_grid={grid_rows},{grid_cols} -r {nruns} {extra_flags}"
     else:
         raise ValueError(_err_msg(lib))
 

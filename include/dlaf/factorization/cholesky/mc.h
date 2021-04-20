@@ -138,7 +138,7 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
   const matrix::Distribution& distr = mat_a.distribution();
 
   SizeType nrtile = mat_a.nrTiles().cols();
-  comm::Index2D this_rank = grid.rank();
+  const comm::Index2D this_rank = grid.rank();
 
   for (SizeType k = 0; k < nrtile; ++k) {
     // Create a placeholder that will store the shared futures representing the panel

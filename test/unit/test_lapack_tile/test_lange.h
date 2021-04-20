@@ -83,7 +83,7 @@ void test_lange(const lapack::Norm norm, const Tile<T, Device::CPU>& a, NormT<T>
 
   SCOPED_TRACE(::testing::Message() << "LANGE: " << norm << ", " << a.size() << ", ld = " << a.ld());
 
-  EXPECT_FLOAT_EQ(norm_expected, lange(norm, a));
+  EXPECT_NEAR(norm_expected, lange(norm, a), norm_expected * TypeUtilities<T>::error);
 }
 
 template <class T>
@@ -104,7 +104,8 @@ void run(const lapack::Norm norm, const Tile<T, Device::CPU>& a) {
       norm_expected = size != TileElementSize{1, 1} ? 4 : 2;
       break;
     case lapack::Norm::Fro:
-      norm_expected = size != TileElementSize{1, 1} ? std::sqrt(17) : std::sqrt(4);
+      norm_expected =
+          static_cast<NormT<T>>(size != TileElementSize{1, 1} ? std::sqrt(17) : std::sqrt(4));
       break;
     case lapack::Norm::Two:
       FAIL() << "norm " << norm << " is not supported by lange";

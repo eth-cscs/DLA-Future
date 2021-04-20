@@ -93,7 +93,7 @@ RUN wget -q https://github.com/${HPX_FORK}/hpx/archive/${HPX_VERSION}.tar.gz -O 
     cd hpx-${HPX_VERSION} && \
     mkdir build && \
     cd build && \
-    cmake .. \
+    CXX=${MPICH_PATH}/bin/mpicxx CC=${MPICH_PATH}/bin/mpicc cmake .. \
       -DCMAKE_INSTALL_PREFIX=$HPX_PATH \
       -DBOOST_ROOT=$BOOST_PATH \
       -DHWLOC_ROOT=$HWLOC_PATH \
@@ -104,6 +104,7 @@ RUN wget -q https://github.com/${HPX_FORK}/hpx/archive/${HPX_VERSION}.tar.gz -O 
       -DHPX_WITH_STACK_OVERFLOW_DETECTION=OFF \
       -DHPX_WITH_MAX_CPU_COUNT=128 \
       -DHPX_WITH_NETWORKING=OFF \
+      -DHPX_WITH_ASYNC_MPI=ON \
       -DHPX_WITH_CUDA=$HPX_WITH_CUDA \
       -DHPX_WITH_TESTS=OFF \
       -DHPX_WITH_EXAMPLES=OFF && \

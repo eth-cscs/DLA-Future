@@ -66,8 +66,7 @@ public:
 
   /// Returns the size of the Tile with global index @p index.
   TileElementSize tileSize(const GlobalTileIndex& index) noexcept {
-    return {std::min(blockSize().rows(), size().rows() - index.row() * blockSize().rows()),
-            std::min(blockSize().cols(), size().cols() - index.col() * blockSize().cols())};
+    return distribution_->tileSize(index);
   }
 
 protected:

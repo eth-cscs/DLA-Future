@@ -177,7 +177,7 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
 
         const TypeParam* data_ptr = v.ptr({j, j});
         const auto norm = blas::nrm2(reflector_size, data_ptr, 1);
-        const TypeParam tau = 2 / std::pow(norm, 2);
+        const TypeParam tau = 2 / std::pow(norm, static_cast<decltype(norm)>(2));
 
         taus.push_back(tau);
 

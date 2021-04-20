@@ -7,10 +7,12 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
+#include "dlaf/communication/executor.h"
 #include "dlaf/factorization/cholesky.h"
 
 #include "gtest/gtest.h"
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/factorization/cholesky/mc.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"
@@ -85,7 +87,7 @@ TYPED_TEST(CholeskyLocalTest, Correctness) {
       Matrix<TypeParam, Device::CPU> mat(size, block_size);
       set(mat, el);
 
-      factorization::cholesky<Backend::MC>(blas::Uplo::Lower, mat);
+      factorization::cholesky<Backend::MC, Device::CPU, TypeParam>(blas::Uplo::Lower, mat);
 
       CHECK_MATRIX_NEAR(res, mat, 4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error,
                         4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);
@@ -93,7 +95,8 @@ TYPED_TEST(CholeskyLocalTest, Correctness) {
   }
 }
 
-TYPED_TEST(CholeskyDistributedTest, Correctness) {
+template <class TypeParam>
+void testDistCholesky(CholeskyDistributedTest<TypeParam>& test) {
   // Note: The tile elements are chosen such that:
   // - res_ij = 1 / 2^(|i-j|) * exp(I*(-i+j)),
   // where I = 0 for real types or I is the complex unit for complex types.
@@ -124,7 +127,7 @@ TYPED_TEST(CholeskyDistributedTest, Correctness) {
     return TypeUtilities<TypeParam>::polar(std::exp2(-std::abs(i - j)), -i + j);
   };
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (const auto& comm_grid : test.commGrids()) {
     for (const auto& size : square_sizes) {
       for (const auto& block_size : square_block_sizes) {
         // Matrix to undergo Cholesky decomposition
@@ -134,12 +137,18 @@ TYPED_TEST(CholeskyDistributedTest, Correctness) {
         Distribution distribution(sz, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
         Matrix<TypeParam, Device::CPU> mat(std::move(distribution));
         set(mat, el);
-
-        factorization::cholesky<Backend::MC>(comm_grid, blas::Uplo::Lower, mat);
-
+        factorization::cholesky<Backend::MC, Device::CPU, TypeParam>(comm_grid, blas::Uplo::Lower, mat);
         CHECK_MATRIX_NEAR(res, mat, 4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error,
                           4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);
       }
     }
   }
+}
+
+TYPED_TEST(CholeskyDistributedTest, DistCholesky_Yielding) {
+  testDistCholesky<TypeParam>(*this);
+}
+
+TYPED_TEST(CholeskyDistributedTest, DistCholesky_Polling) {
+  testDistCholesky<TypeParam>(*this);
 }

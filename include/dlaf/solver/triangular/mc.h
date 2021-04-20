@@ -19,8 +19,10 @@
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/vector.h"
+#include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/functions_sync.h"
+#include "dlaf/communication/executor.h"
+#include "dlaf/communication/kernels.h"
 #include "dlaf/executors.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/distribution.h"
@@ -357,14 +359,19 @@ template <class T>
 void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid grid, blas::Diag diag,
                                                        T alpha, Matrix<const T, Device::CPU>& mat_a,
                                                        Matrix<T, Device::CPU>& mat_b) {
+  using hpx::resource::pool_exists;
   using common::internal::vector;
   using ConstTileType = typename Matrix<T, Device::CPU>::ConstTileType;
+  using hpx::util::unwrapping;
 
   auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
   auto executor_np = dlaf::getNpExecutor<Backend::MC>();
-  auto executor_mpi = dlaf::getMPIExecutor<Backend::MC>();
 
-  common::Pipeline<comm::CommunicatorGrid> serial_comm(std::move(grid));
+  // Set up MPI
+  comm::Executor executor_mpi_col{};
+  comm::Executor executor_mpi_row{};
+  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
+  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
 
   const matrix::Distribution& distr_a = mat_a.distribution();
   const matrix::Distribution& distr_b = mat_b.distribution();
@@ -388,13 +395,13 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid gr
         // Broadcast A(kk) row-wise
         auto k_local_col = distr_a.localTileFromGlobalTile<Coord::Col>(k);
         auto kk = LocalTileIndex{k_local_row, k_local_col};
-
         kk_tile = mat_a.read(kk);
-        dataflow(executor_mpi, comm::sendTile_o, serial_comm(), Coord::Row, mat_a.read(kk));
+        hpx::dataflow(executor_mpi_row, unwrapping(comm::sendBcast<T>), mat_a.read(kk),
+                      mpi_row_task_chain());
       }
       else {
-        kk_tile = dataflow(executor_mpi, comm::recvAllocTile<T>, serial_comm(), Coord::Row,
-                           mat_a.tileSize(GlobalTileIndex(k, k)), k_rank_col);
+        kk_tile = hpx::dataflow(executor_mpi_row, unwrapping(comm::recvBcastAlloc<T>),
+                                mat_a.tileSize(GlobalTileIndex(k, k)), k_rank_col, mpi_row_task_chain());
       }
     }
 
@@ -408,13 +415,15 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid gr
         lln::trsm_B_panel_tile(executor_hp, diag, alpha, kk_tile, mat_b(kj));
         panel[j_local] = mat_b.read(kj);
         if (k != (mat_b.nrTiles().rows() - 1)) {
-          dataflow(executor_mpi, comm::sendTile_o, serial_comm(), Coord::Col, panel[j_local]);
+          hpx::dataflow(executor_mpi_col, unwrapping(comm::sendBcast<T>), panel[j_local],
+                        mpi_col_task_chain());
         }
       }
       else {
         if (k != (mat_b.nrTiles().rows() - 1)) {
-          panel[j_local] = dataflow(executor_mpi, comm::recvAllocTile<T>, serial_comm(), Coord::Col,
-                                    mat_b.tileSize(GlobalTileIndex(k, j)), k_rank_row);
+          panel[j_local] =
+              hpx::dataflow(executor_mpi_col, unwrapping(comm::recvBcastAlloc<T>),
+                            mat_b.tileSize(GlobalTileIndex(k, j)), k_rank_row, mpi_col_task_chain());
         }
       }
     }
@@ -432,13 +441,13 @@ void Triangular<Backend::MC, Device::CPU, T>::call_LLN(comm::CommunicatorGrid gr
       if (mat_a.rankIndex().col() == k_rank_col) {
         auto k_local_col = distr_a.localTileFromGlobalTile<Coord::Col>(k);
         auto ik = LocalTileIndex{i_local, k_local_col};
-
         ik_tile = mat_a.read(ik);
-        dataflow(executor_mpi, comm::sendTile_o, serial_comm(), Coord::Row, mat_a.read(ik));
+        hpx::dataflow(executor_mpi_row, unwrapping(comm::sendBcast<T>), mat_a.read(ik),
+                      mpi_row_task_chain());
       }
       else {
-        ik_tile = dataflow(executor_mpi, comm::recvAllocTile<T>, serial_comm(), Coord::Row,
-                           mat_a.tileSize(GlobalTileIndex(i, k)), k_rank_col);
+        ik_tile = hpx::dataflow(executor_mpi_row, unwrapping(comm::recvBcastAlloc<T>),
+                                mat_a.tileSize(GlobalTileIndex(i, k)), k_rank_col, mpi_row_task_chain());
       }
 
       // Update trailing matrix

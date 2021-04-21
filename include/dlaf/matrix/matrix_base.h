@@ -85,8 +85,8 @@ protected:
   /// Returns the position in the vector of the index Tile.
   ///
   /// @pre index.isIn(localNrTiles()).
-  SizeType tileLinearIndex(const LocalTileIndex& index) const noexcept {
-    return index.row() + distribution_->localNrTiles().rows() * static_cast<SizeType>(index.col());
+  std::size_t tileLinearIndex(const LocalTileIndex& index) const noexcept {
+    return to_sizet(index.row() + distribution_->localNrTiles().rows() * static_cast<SizeType>(index.col()));
   }
 
   /// Prints information about the matrix.

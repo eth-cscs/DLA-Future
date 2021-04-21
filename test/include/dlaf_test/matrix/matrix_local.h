@@ -83,7 +83,7 @@ struct MatrixLocal<const T> {
 
   /// Access tiles
   const ConstTileT& tile_read(const GlobalTileIndex& index) const noexcept {
-    return tiles_[static_cast<size_t>(tileLinearIndex(index))];
+    return tiles_[tileLinearIndex(index)];
   }
 
   SizeType ld() const noexcept {
@@ -109,11 +109,11 @@ protected:
     return index.row() + index.col() * layout_.ldTile();
   }
 
-  SizeType tileLinearIndex(const GlobalTileIndex& index) const noexcept {
+  std::size_t tileLinearIndex(const GlobalTileIndex& index) const noexcept {
     DLAF_ASSERT(LocalTileIndex(index.row(), index.col()).isIn(layout_.nrTiles()), index,
                 layout_.nrTiles());
 
-    return index.row() + index.col() * layout_.nrTiles().rows();
+    return to_sizet(index.row() + index.col() * layout_.nrTiles().rows());
   }
 
   dlaf::matrix::LayoutInfo layout_;
@@ -150,7 +150,7 @@ struct MatrixLocal : public MatrixLocal<const T> {
 
   /// Access tiles
   const TileT& tile(const GlobalTileIndex& index) const noexcept {
-    return tiles_[static_cast<size_t>(tileLinearIndex(index))];
+    return tiles_[tileLinearIndex(index)];
   }
 
 protected:

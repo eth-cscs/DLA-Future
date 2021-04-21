@@ -182,7 +182,7 @@ public:
     // among multiple tasks.
 
     auto readwrite_f = [this](const LocalTileIndex& index) {
-      std::size_t i = tileLinearIndex(index);
+      const auto i = tileLinearIndex(index);
       return this->tile_managers_[i].getRWTileFuture();
     };
 

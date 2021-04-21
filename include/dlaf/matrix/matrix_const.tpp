@@ -34,7 +34,7 @@ Matrix<const T, device>::Matrix(Distribution distribution, const matrix::LayoutI
 template <class T, Device device>
 hpx::shared_future<Tile<const T, device>> Matrix<const T, device>::read(
     const LocalTileIndex& index) noexcept {
-  std::size_t i = to_sizet(tileLinearIndex(index));
+  const auto i = tileLinearIndex(index);
   return tile_managers_[i].getReadTileSharedFuture();
 }
 

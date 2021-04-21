@@ -9,7 +9,9 @@
 //
 #pragma once
 
+#include <hpx/local/execution.hpp>
 #include <hpx/local/future.hpp>
+#include <hpx/local/thread.hpp>
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
@@ -26,94 +28,154 @@
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/panel.h"
 #include "dlaf/matrix/tile.h"
+#include "dlaf/sender/when_all_lift.h"
 #include "dlaf/solver/triangular/api.h"
 #include "dlaf/util_matrix.h"
 
 namespace dlaf {
 namespace solver {
 namespace internal {
-
 namespace triangular_lln {
-template <class Executor, class T, Device D>
-void trsm_B_panel_tile(Executor&& ex, blas::Diag diag, T alpha,
-                       hpx::shared_future<matrix::Tile<const T, D>> in_tile,
-                       hpx::future<matrix::Tile<T, D>> out_tile) {
-  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Left,
-                blas::Uplo::Lower, blas::Op::NoTrans, diag, alpha, std::move(in_tile),
-                std::move(out_tile));
+template <Backend backend, class T, typename InSender, typename OutSender>
+void trsmBPanelTile(blas::Diag diag, T alpha, InSender&& in_tile, OutSender&& out_tile) {
+  dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, blas::Op::NoTrans, diag, alpha,
+                              std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
+      tile::trsm(dlaf::internal::Policy<backend>(hpx::threads::thread_priority::high)) |
+      hpx::execution::experimental::detach();
 }
 
-template <class Executor, class T, Device D>
-void gemm_trailing_matrix_tile(Executor&& ex, T beta,
-                               hpx::shared_future<matrix::Tile<const T, D>> a_tile,
-                               hpx::shared_future<matrix::Tile<const T, D>> b_tile,
-                               hpx::future<matrix::Tile<T, D>> c_tile) {
-  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans,
-                blas::Op::NoTrans, beta, std::move(a_tile), std::move(b_tile), T(1.0),
-                std::move(c_tile));
+template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
+void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, T beta, ASender&& a_tile,
+                            BSender&& b_tile, CSender&& c_tile) {
+  dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, beta, std::forward<ASender>(a_tile),
+                              std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
+      tile::gemm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+}
+}
+
+namespace triangular_llt {
+template <Backend backend, class T, typename InSender, typename OutSender>
+void trsmBPanelTile(blas::Op op, blas::Diag diag, T alpha, InSender&& in_tile, OutSender&& out_tile) {
+  dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, op, diag, alpha,
+                              std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
+      tile::trsm(dlaf::internal::Policy<backend>(hpx::threads::thread_priority::high)) |
+      hpx::execution::experimental::detach();
+}
+
+template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
+void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, blas::Op op, T beta,
+                            ASender&& a_tile, BSender&& b_tile, CSender&& c_tile) {
+  dlaf::internal::whenAllLift(op, blas::Op::NoTrans, beta, std::forward<ASender>(a_tile),
+                              std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
+      tile::gemm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
 }
 }
 
 namespace triangular_lun {
-template <class Executor, class T, Device D>
-void trsm_B_panel_tile(Executor&& ex, blas::Diag diag, T alpha,
-                       hpx::shared_future<matrix::Tile<const T, D>> in_tile,
-                       hpx::future<matrix::Tile<T, D>> out_tile) {
-  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Left,
-                blas::Uplo::Upper, blas::Op::NoTrans, diag, alpha, std::move(in_tile),
-                std::move(out_tile));
+template <Backend backend, class T, typename InSender, typename OutSender>
+void trsmBPanelTile(blas::Diag diag, T alpha, InSender&& in_tile, OutSender&& out_tile) {
+  dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, blas::Op::NoTrans, diag, alpha,
+                              std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
+      tile::trsm(dlaf::internal::Policy<backend>(hpx::threads::thread_priority::high)) |
+      hpx::execution::experimental::detach();
 }
 
-template <class Executor, class T, Device D>
-void gemm_trailing_matrix_tile(Executor&& ex, T beta,
-                               hpx::shared_future<matrix::Tile<const T, D>> a_tile,
-                               hpx::shared_future<matrix::Tile<const T, D>> b_tile,
-                               hpx::future<matrix::Tile<T, D>> c_tile) {
-  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans,
-                blas::Op::NoTrans, beta, std::move(a_tile), std::move(b_tile), T(1.0),
-                std::move(c_tile));
+template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
+void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, T beta, ASender&& a_tile,
+                            BSender&& b_tile, CSender&& c_tile) {
+  dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, beta, std::forward<ASender>(a_tile),
+                              std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
+      tile::gemm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+}
+}
+
+namespace triangular_lut {
+template <Backend backend, class T, typename InSender, typename OutSender>
+void trsmBPanelTile(blas::Op op, blas::Diag diag, T alpha, InSender&& in_tile, OutSender&& out_tile) {
+  dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, op, diag, alpha,
+                              std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
+      tile::trsm(dlaf::internal::Policy<backend>(hpx::threads::thread_priority::high)) |
+      hpx::execution::experimental::detach();
+}
+
+template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
+void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, blas::Op op, T beta,
+                            ASender&& a_tile, BSender&& b_tile, CSender&& c_tile) {
+  dlaf::internal::whenAllLift(op, blas::Op::NoTrans, beta, std::forward<ASender>(a_tile),
+                              std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
+      tile::gemm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
 }
 }
 
 namespace triangular_rln {
-template <class Executor, class T, Device D>
-void trsm_B_panel_tile(Executor&& ex, blas::Diag diag, T alpha,
-                       hpx::shared_future<matrix::Tile<const T, D>> in_tile,
-                       hpx::future<matrix::Tile<T, D>> out_tile) {
-  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Right,
-                blas::Uplo::Lower, blas::Op::NoTrans, diag, alpha, std::move(in_tile),
-                std::move(out_tile));
+template <Backend backend, class T, typename InSender, typename OutSender>
+void trsmBPanelTile(blas::Diag diag, T alpha, InSender&& in_tile, OutSender&& out_tile) {
+  dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Lower, blas::Op::NoTrans, diag, alpha,
+                              std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
+      tile::trsm(dlaf::internal::Policy<backend>(hpx::threads::thread_priority::high)) |
+      hpx::execution::experimental::detach();
 }
 
-template <class Executor, class T, Device D>
-void gemm_trailing_matrix_tile(Executor&& ex, T beta,
-                               hpx::shared_future<matrix::Tile<const T, D>> a_tile,
-                               hpx::shared_future<matrix::Tile<const T, D>> b_tile,
-                               hpx::future<matrix::Tile<T, D>> c_tile) {
-  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans,
-                blas::Op::NoTrans, beta, std::move(a_tile), std::move(b_tile), T(1.0),
-                std::move(c_tile));
+template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
+void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, T beta, ASender&& a_tile,
+                            BSender&& b_tile, CSender&& c_tile) {
+  dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, beta, std::forward<ASender>(a_tile),
+                              std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
+      tile::gemm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+}
+}
+
+namespace triangular_rlt {
+template <Backend backend, class T, typename InSender, typename OutSender>
+void trsmBPanelTile(blas::Op op, blas::Diag diag, T alpha, InSender&& in_tile, OutSender&& out_tile) {
+  dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Lower, op, diag, alpha,
+                              std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
+      tile::trsm(dlaf::internal::Policy<backend>(hpx::threads::thread_priority::high)) |
+      hpx::execution::experimental::detach();
+}
+
+template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
+void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, blas::Op op, T beta,
+                            ASender&& a_tile, BSender&& b_tile, CSender&& c_tile) {
+  dlaf::internal::whenAllLift(blas::Op::NoTrans, op, beta, std::forward<ASender>(a_tile),
+                              std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
+      tile::gemm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
 }
 }
 
 namespace triangular_run {
-template <class Executor, class T, Device D>
-void trsm_B_panel_tile(Executor&& ex, blas::Diag diag, T alpha,
-                       hpx::shared_future<matrix::Tile<const T, D>> in_tile,
-                       hpx::future<matrix::Tile<T, D>> out_tile) {
-  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Right,
-                blas::Uplo::Upper, blas::Op::NoTrans, diag, alpha, std::move(in_tile),
-                std::move(out_tile));
+template <Backend backend, class T, typename InSender, typename OutSender>
+void trsmBPanelTile(blas::Diag diag, T alpha, InSender&& in_tile, OutSender&& out_tile) {
+  dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Upper, blas::Op::NoTrans, diag, alpha,
+                              std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
+      tile::trsm(dlaf::internal::Policy<backend>(hpx::threads::thread_priority::high)) |
+      hpx::execution::experimental::detach();
 }
 
-template <class Executor, class T, Device D>
-void gemm_trailing_matrix_tile(Executor&& ex, T beta,
-                               hpx::shared_future<matrix::Tile<const T, D>> a_tile,
-                               hpx::shared_future<matrix::Tile<const T, D>> b_tile,
-                               hpx::future<matrix::Tile<T, D>> c_tile) {
-  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans,
-                blas::Op::NoTrans, beta, std::move(a_tile), std::move(b_tile), T(1.0),
-                std::move(c_tile));
+template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
+void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, T beta, ASender&& a_tile,
+                            BSender&& b_tile, CSender&& c_tile) {
+  dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, beta, std::forward<ASender>(a_tile),
+                              std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
+      tile::gemm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+}
+}
+
+namespace triangular_rut {
+template <Backend backend, class T, typename InSender, typename OutSender>
+void trsmBPanelTile(blas::Op op, blas::Diag diag, T alpha, InSender&& in_tile, OutSender&& out_tile) {
+  dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Upper, op, diag, alpha,
+                              std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
+      tile::trsm(dlaf::internal::Policy<backend>(hpx::threads::thread_priority::high)) |
+      hpx::execution::experimental::detach();
+}
+
+template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
+void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, blas::Op op, T beta,
+                            ASender&& a_tile, BSender&& b_tile, CSender&& c_tile) {
+  dlaf::internal::whenAllLift(blas::Op::NoTrans, op, beta, std::forward<ASender>(a_tile),
+                              std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
+      tile::gemm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
 }
 }
 
@@ -121,8 +183,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LLN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
                                               Matrix<T, device>& mat_b) {
   using namespace triangular_lln;
-  auto executor_hp = dlaf::getHpExecutor<backend>();
-  auto executor_np = dlaf::getNpExecutor<backend>();
+  using hpx::threads::thread_priority;
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -132,15 +193,18 @@ void Triangular<backend, device, T>::call_LLN(blas::Diag diag, T alpha, Matrix<c
       auto kj = LocalTileIndex{k, j};
 
       // Triangular solve of k-th row Panel of B
-      trsm_B_panel_tile(executor_hp, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(kj));
+      trsmBPanelTile<backend>(diag, alpha, mat_a.read_sender(LocalTileIndex{k, k}),
+                              mat_b.readwrite_sender(kj));
 
       for (SizeType i = k + 1; i < m; ++i) {
         // Choose queue priority
-        auto& trailing_executor = (i == k + 1) ? executor_hp : executor_np;
+        const auto priority = (i == k - 1) ? thread_priority::high : thread_priority::normal;
+
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        gemm_trailing_matrix_tile(trailing_executor, beta, mat_a.read(LocalTileIndex{i, k}),
-                                  mat_b.read(kj), mat_b(LocalTileIndex{i, j}));
+        gemmTrailingMatrixTile<backend>(priority, beta, mat_a.read_sender(LocalTileIndex{i, k}),
+                                        mat_b.read_sender(kj),
+                                        mat_b.readwrite_sender(LocalTileIndex{i, j}));
       }
     }
   }
@@ -149,12 +213,8 @@ void Triangular<backend, device, T>::call_LLN(blas::Diag diag, T alpha, Matrix<c
 template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LLT(blas::Op op, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
-  constexpr auto Left = blas::Side::Left;
-  constexpr auto Lower = blas::Uplo::Lower;
-  constexpr auto NoTrans = blas::Op::NoTrans;
-
-  auto executor_hp = dlaf::getHpExecutor<backend>();
-  auto executor_np = dlaf::getNpExecutor<backend>();
+  using namespace triangular_llt;
+  using hpx::threads::thread_priority;
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -163,18 +223,19 @@ void Triangular<backend, device, T>::call_LLT(blas::Op op, blas::Diag diag, T al
     for (SizeType j = n - 1; j >= 0; --j) {
       auto kj = LocalTileIndex{k, j};
       // Triangular solve of k-th row Panel of B
-      hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), Left, Lower, op, diag, alpha,
-                    mat_a.read(LocalTileIndex{k, k}), mat_b(kj));
+      trsmBPanelTile<backend>(op, diag, alpha, mat_a.read_sender(LocalTileIndex{k, k}),
+                              mat_b.readwrite_sender(kj));
 
       for (SizeType i = k - 1; i >= 0; --i) {
         // Choose queue priority
-        auto& trailing_executor = (i == k - 1) ? executor_hp : executor_np;
+        const auto priority = (i == k - 1) ? thread_priority::high : thread_priority::normal;
 
         auto beta = static_cast<T>(-1.0) / alpha;
+
         // Update trailing matrix
-        hpx::dataflow(trailing_executor, matrix::unwrapExtendTiles(tile::gemm_o), op, NoTrans, beta,
-                      mat_a.read(LocalTileIndex{k, i}), mat_b.read(kj), T(1.0),
-                      mat_b(LocalTileIndex{i, j}));
+        gemmTrailingMatrixTile<backend>(priority, op, beta, mat_a.read_sender(LocalTileIndex{k, i}),
+                                        mat_b.read_sender(kj),
+                                        mat_b.readwrite_sender(LocalTileIndex{i, j}));
       }
     }
   }
@@ -184,8 +245,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LUN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
                                               Matrix<T, device>& mat_b) {
   using namespace triangular_lun;
-  auto executor_hp = dlaf::getHpExecutor<backend>();
-  auto executor_np = dlaf::getNpExecutor<backend>();
+  using hpx::threads::thread_priority;
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -194,15 +254,17 @@ void Triangular<backend, device, T>::call_LUN(blas::Diag diag, T alpha, Matrix<c
     for (SizeType j = n - 1; j >= 0; --j) {
       auto kj = LocalTileIndex{k, j};
       // Triangular solve of k-th row Panel of B
-      trsm_B_panel_tile(executor_hp, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(kj));
+      trsmBPanelTile<backend>(diag, alpha, mat_a.read_sender(LocalTileIndex{k, k}),
+                              mat_b.readwrite_sender(kj));
 
       for (SizeType i = k - 1; i >= 0; --i) {
         // Choose queue priority
-        auto& trailing_executor = (i == k - 1) ? executor_hp : executor_np;
+        const auto priority = (i == k - 1) ? thread_priority::high : thread_priority::normal;
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        gemm_trailing_matrix_tile(trailing_executor, beta, mat_a.read(LocalTileIndex{i, k}),
-                                  mat_b.read(kj), mat_b(LocalTileIndex{i, j}));
+        gemmTrailingMatrixTile<backend>(priority, beta, mat_a.read_sender(LocalTileIndex{i, k}),
+                                        mat_b.read_sender(kj),
+                                        mat_b.readwrite_sender(LocalTileIndex{i, j}));
       }
     }
   }
@@ -211,12 +273,8 @@ void Triangular<backend, device, T>::call_LUN(blas::Diag diag, T alpha, Matrix<c
 template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LUT(blas::Op op, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
-  constexpr auto Left = blas::Side::Left;
-  constexpr auto Upper = blas::Uplo::Upper;
-  constexpr auto NoTrans = blas::Op::NoTrans;
-
-  auto executor_hp = dlaf::getHpExecutor<backend>();
-  auto executor_np = dlaf::getNpExecutor<backend>();
+  using namespace triangular_lut;
+  using hpx::threads::thread_priority;
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -226,18 +284,18 @@ void Triangular<backend, device, T>::call_LUT(blas::Op op, blas::Diag diag, T al
       auto kj = LocalTileIndex{k, j};
 
       // Triangular solve of k-th row Panel of B
-      hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), Left, Upper, op, diag, alpha,
-                    mat_a.read(LocalTileIndex{k, k}), mat_b(kj));
+      trsmBPanelTile<backend>(op, diag, alpha, mat_a.read_sender(LocalTileIndex{k, k}),
+                              mat_b.readwrite_sender(kj));
 
       for (SizeType i = k + 1; i < m; ++i) {
         // Choose queue priority
-        auto& trailing_executor = (i == k + 1) ? executor_hp : executor_np;
+        const auto priority = (i == k - 1) ? thread_priority::high : thread_priority::normal;
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        hpx::dataflow(trailing_executor, matrix::unwrapExtendTiles(tile::gemm_o), op, NoTrans, beta,
-                      mat_a.read(LocalTileIndex{k, i}), mat_b.read(kj), T(1.0),
-                      mat_b(LocalTileIndex{i, j}));
+        gemmTrailingMatrixTile<backend>(priority, op, beta, mat_a.read_sender(LocalTileIndex{k, i}),
+                                        mat_b.read_sender(kj),
+                                        mat_b.readwrite_sender(LocalTileIndex{i, j}));
       }
     }
   }
@@ -247,8 +305,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_RLN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
                                               Matrix<T, device>& mat_b) {
   using namespace triangular_rln;
-  auto executor_hp = dlaf::getHpExecutor<backend>();
-  auto executor_np = dlaf::getNpExecutor<backend>();
+  using hpx::threads::thread_priority;
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -258,15 +315,17 @@ void Triangular<backend, device, T>::call_RLN(blas::Diag diag, T alpha, Matrix<c
       auto ik = LocalTileIndex{i, k};
 
       // Triangular solve of k-th col Panel of B
-      trsm_B_panel_tile(executor_hp, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(ik));
+      trsmBPanelTile<backend>(diag, alpha, mat_a.read_sender(LocalTileIndex{k, k}),
+                              mat_b.readwrite_sender(ik));
+
       for (SizeType j = k - 1; j >= 0; --j) {
         // Choose queue priority
-        auto& trailing_executor = (j == k - 1) ? executor_hp : executor_np;
-
+        const auto priority = (i == k - 1) ? thread_priority::high : thread_priority::normal;
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        gemm_trailing_matrix_tile(trailing_executor, beta, mat_b.read(ik),
-                                  mat_a.read(LocalTileIndex{k, j}), mat_b(LocalTileIndex{i, j}));
+        gemmTrailingMatrixTile<backend>(priority, beta, mat_b.read_sender(ik),
+                                        mat_a.read_sender(LocalTileIndex{k, j}),
+                                        mat_b.readwrite_sender(LocalTileIndex{i, j}));
       }
     }
   }
@@ -275,12 +334,8 @@ void Triangular<backend, device, T>::call_RLN(blas::Diag diag, T alpha, Matrix<c
 template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_RLT(blas::Op op, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
-  constexpr auto Right = blas::Side::Right;
-  constexpr auto Lower = blas::Uplo::Lower;
-  constexpr auto NoTrans = blas::Op::NoTrans;
-
-  auto executor_hp = dlaf::getHpExecutor<backend>();
-  auto executor_np = dlaf::getNpExecutor<backend>();
+  using namespace triangular_rlt;
+  using hpx::threads::thread_priority;
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -290,18 +345,18 @@ void Triangular<backend, device, T>::call_RLT(blas::Op op, blas::Diag diag, T al
       auto ik = LocalTileIndex{i, k};
 
       // Triangular solve of k-th col Panel of B
-      hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), Right, Lower, op, diag, alpha,
-                    mat_a.read(LocalTileIndex{k, k}), mat_b(ik));
+      trsmBPanelTile<backend>(op, diag, alpha, mat_a.read_sender(LocalTileIndex{k, k}),
+                              mat_b.readwrite_sender(ik));
 
       for (SizeType j = k + 1; j < n; ++j) {
         // Choose queue priority
-        auto& trailing_executor = (j == k + 1) ? executor_hp : executor_np;
+        const auto priority = (i == k - 1) ? thread_priority::high : thread_priority::normal;
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        hpx::dataflow(trailing_executor, matrix::unwrapExtendTiles(tile::gemm_o), NoTrans, op, beta,
-                      mat_b.read(ik), mat_a.read(LocalTileIndex{j, k}), T(1.0),
-                      mat_b(LocalTileIndex{i, j}));
+        gemmTrailingMatrixTile<backend>(priority, op, beta, mat_b.read_sender(ik),
+                                        mat_a.read_sender(LocalTileIndex{j, k}),
+                                        mat_b.readwrite_sender(LocalTileIndex{i, j}));
       }
     }
   }
@@ -311,8 +366,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_RUN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
                                               Matrix<T, device>& mat_b) {
   using namespace triangular_run;
-  auto executor_hp = dlaf::getHpExecutor<backend>();
-  auto executor_np = dlaf::getNpExecutor<backend>();
+  using hpx::threads::thread_priority;
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -322,16 +376,17 @@ void Triangular<backend, device, T>::call_RUN(blas::Diag diag, T alpha, Matrix<c
       auto ik = LocalTileIndex{i, k};
 
       // Triangular solve of k-th col Panel of B
-      trsm_B_panel_tile(executor_hp, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(ik));
+      trsmBPanelTile<backend>(diag, alpha, mat_a.read_sender(LocalTileIndex{k, k}),
+                              mat_b.readwrite_sender(ik));
 
       for (SizeType j = k + 1; j < n; ++j) {
         // Choose queue priority
-        auto& trailing_executor = (j == k + 1) ? executor_hp : executor_np;
-
+        const auto priority = (i == k - 1) ? thread_priority::high : thread_priority::normal;
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        gemm_trailing_matrix_tile(trailing_executor, beta, mat_b.read(ik),
-                                  mat_a.read(LocalTileIndex{k, j}), mat_b(LocalTileIndex{i, j}));
+        gemmTrailingMatrixTile<backend>(priority, beta, mat_b.read_sender(ik),
+                                        mat_a.read_sender(LocalTileIndex{k, j}),
+                                        mat_b.readwrite_sender(LocalTileIndex{i, j}));
       }
     }
   }
@@ -340,12 +395,8 @@ void Triangular<backend, device, T>::call_RUN(blas::Diag diag, T alpha, Matrix<c
 template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_RUT(blas::Op op, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
-  constexpr auto Right = blas::Side::Right;
-  constexpr auto Upper = blas::Uplo::Upper;
-  constexpr auto NoTrans = blas::Op::NoTrans;
-
-  auto executor_hp = dlaf::getHpExecutor<backend>();
-  auto executor_np = dlaf::getNpExecutor<backend>();
+  using namespace triangular_rut;
+  using hpx::threads::thread_priority;
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -355,18 +406,18 @@ void Triangular<backend, device, T>::call_RUT(blas::Op op, blas::Diag diag, T al
       auto ik = LocalTileIndex{i, k};
 
       // Triangular solve of k-th col Panel of B
-      hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), Right, Upper, op, diag, alpha,
-                    mat_a.read(LocalTileIndex{k, k}), mat_b(ik));
+      trsmBPanelTile<backend>(op, diag, alpha, mat_a.read_sender(LocalTileIndex{k, k}),
+                              mat_b.readwrite_sender(ik));
 
       for (SizeType j = k - 1; j >= 0; --j) {
         // Choose queue priority
-        auto& trailing_executor = (j == k - 1) ? executor_hp : executor_np;
+        const auto priority = (i == k - 1) ? thread_priority::high : thread_priority::normal;
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        hpx::dataflow(trailing_executor, matrix::unwrapExtendTiles(tile::gemm_o), NoTrans, op, beta,
-                      mat_b.read(ik), mat_a.read(LocalTileIndex{j, k}), T(1.0),
-                      mat_b(LocalTileIndex{i, j}));
+        gemmTrailingMatrixTile<backend>(priority, op, beta, mat_b.read_sender(ik),
+                                        mat_a.read_sender(LocalTileIndex{j, k}),
+                                        mat_b.readwrite_sender(LocalTileIndex{i, j}));
       }
     }
   }
@@ -376,9 +427,10 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_lln;
+  using hpx::threads::thread_priority;
 
-  auto executor_hp = dlaf::getHpExecutor<backend>();
-  auto executor_np = dlaf::getNpExecutor<backend>();
+  using common::internal::vector;
+
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   // Set up MPI executor pipelines
@@ -434,7 +486,7 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
         const LocalTileIndex kj(k_local_row, j_local);
         const LocalTileIndex kj_panel(Coord::Col, j_local);
 
-        trsm_B_panel_tile(executor_hp, diag, alpha, a_panel.read(kk_panel), mat_b(kj));
+        trsmBPanelTile<backend>(diag, alpha, a_panel.read_sender(kk_panel), mat_b.readwrite_sender(kj));
         b_panel.setTile(kj_panel, mat_b.read(kj));
       }
     }
@@ -447,7 +499,7 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
     for (SizeType i_local = bt_offset.row(); i_local < distr_a.localNrTiles().rows(); ++i_local) {
       // Choose queue priority
       auto i = distr_a.globalTileFromLocalTile<Coord::Row>(i_local);
-      auto& trailing_executor = (i == k + 1) ? executor_hp : executor_np;
+      const auto trailing_priority = (i == k - 1) ? thread_priority::high : thread_priority::normal;
 
       const LocalTileIndex ik_panel(Coord::Row, i_local);
 
@@ -457,8 +509,8 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
         const LocalTileIndex ij(i_local, j_local);
         const T beta = T(-1.0) / alpha;
 
-        gemm_trailing_matrix_tile(trailing_executor, beta, a_panel.read(ik_panel),
-                                  b_panel.read(kj_panel), mat_b(ij));
+        gemmTrailingMatrixTile<backend>(trailing_priority, beta, a_panel.read_sender(ik_panel),
+                                        b_panel.read_sender(kj_panel), mat_b.readwrite_sender(ij));
       }
     }
     a_panel.reset();
@@ -470,9 +522,8 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_lun;
+  using hpx::threads::thread_priority;
 
-  auto executor_hp = dlaf::getHpExecutor<backend>();
-  auto executor_np = dlaf::getNpExecutor<backend>();
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   // Set up MPI executor pipelines
@@ -527,7 +578,7 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
         const LocalTileIndex kj(k_local_row, j_local);
         const LocalTileIndex kj_panel(Coord::Col, j_local);
 
-        trsm_B_panel_tile(executor_hp, diag, alpha, a_panel.read(kk_panel), mat_b(kj));
+        trsmBPanelTile<backend>(diag, alpha, a_panel.read_sender(kk_panel), mat_b.readwrite_sender(kj));
         b_panel.setTile(kj_panel, mat_b.read(kj));
       }
     }
@@ -540,7 +591,7 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
     for (SizeType i_local = bt_offset.row() - 1; i_local >= 0; --i_local) {
       // Choose queue priority
       auto i = distr_a.globalTileFromLocalTile<Coord::Row>(i_local);
-      auto& trailing_executor = (i == k - 1) ? executor_hp : executor_np;
+      const auto trailing_priority = (i == k - 1) ? thread_priority::high : thread_priority::normal;
 
       const LocalTileIndex ik_panel(Coord::Row, i_local);
 
@@ -550,8 +601,8 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
         const LocalTileIndex ij(i_local, j_local);
         const T beta = T(-1.0) / alpha;
 
-        gemm_trailing_matrix_tile(trailing_executor, beta, a_panel.read(ik_panel),
-                                  b_panel.read(kj_panel), mat_b(ij));
+        gemmTrailingMatrixTile<backend>(trailing_priority, beta, a_panel.read_sender(ik_panel),
+                                        b_panel.read_sender(kj_panel), mat_b.readwrite_sender(ij));
       }
     }
     a_panel.reset();
@@ -563,9 +614,8 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_rln;
+  using hpx::threads::thread_priority;
 
-  auto executor_hp = dlaf::getHpExecutor<backend>();
-  auto executor_np = dlaf::getNpExecutor<backend>();
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   // Set up MPI executor pipelines
@@ -620,7 +670,7 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
         const LocalTileIndex ik(i_local, k_local_col);
         const LocalTileIndex ik_panel(Coord::Row, i_local);
 
-        trsm_B_panel_tile(executor_hp, diag, alpha, a_panel.read(kk_panel), mat_b(ik));
+        trsmBPanelTile<backend>(diag, alpha, a_panel.read_sender(kk_panel), mat_b.readwrite_sender(ik));
         b_panel.setTile(ik_panel, mat_b.read(ik));
       }
     }
@@ -633,7 +683,7 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
     for (SizeType j_local = bt_offset.col() - 1; j_local >= 0; --j_local) {
       // Choose queue priority
       auto j = distr_a.globalTileFromLocalTile<Coord::Col>(j_local);
-      auto& trailing_executor = (j == k - 1) ? executor_hp : executor_np;
+      const auto trailing_priority = (j == k - 1) ? thread_priority::high : thread_priority::normal;
 
       const LocalTileIndex kj_panel(Coord::Col, j_local);
 
@@ -643,8 +693,8 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
         const LocalTileIndex ij(i_local, j_local);
         const T beta = T(-1.0) / alpha;
 
-        gemm_trailing_matrix_tile(trailing_executor, beta, b_panel.read(ik_panel),
-                                  a_panel.read(kj_panel), mat_b(ij));
+        gemmTrailingMatrixTile<backend>(trailing_priority, beta, b_panel.read_sender(ik_panel),
+                                        a_panel.read_sender(kj_panel), mat_b.readwrite_sender(ij));
       }
     }
     a_panel.reset();
@@ -656,9 +706,8 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_run;
+  using hpx::threads::thread_priority;
 
-  auto executor_hp = dlaf::getHpExecutor<backend>();
-  auto executor_np = dlaf::getNpExecutor<backend>();
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   // Set up MPI executor pipelines
@@ -714,7 +763,7 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
         const LocalTileIndex ik(i_local, k_local_col);
         const LocalTileIndex ik_panel(Coord::Row, i_local);
 
-        trsm_B_panel_tile(executor_hp, diag, alpha, a_panel.read(kk_panel), mat_b(ik));
+        trsmBPanelTile<backend>(diag, alpha, a_panel.read_sender(kk_panel), mat_b.readwrite_sender(ik));
         b_panel.setTile(ik_panel, mat_b.read(ik));
       }
     }
@@ -727,7 +776,7 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
     for (SizeType j_local = bt_offset.col(); j_local < distr_a.localNrTiles().cols(); ++j_local) {
       // Choose queue priority
       auto j = distr_a.globalTileFromLocalTile<Coord::Col>(j_local);
-      auto& trailing_executor = (j == k + 1) ? executor_hp : executor_np;
+      const auto trailing_priority = (j == k + 1) ? thread_priority::high : thread_priority::normal;
 
       const LocalTileIndex kj_panel(Coord::Col, j_local);
 
@@ -737,8 +786,8 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
         const LocalTileIndex ij(i_local, j_local);
         const T beta = T(-1.0) / alpha;
 
-        gemm_trailing_matrix_tile(trailing_executor, beta, b_panel.read(ik_panel),
-                                  a_panel.read(kj_panel), mat_b(ij));
+        gemmTrailingMatrixTile<backend>(trailing_priority, beta, b_panel.read_sender(ik_panel),
+                                        a_panel.read_sender(kj_panel), mat_b.readwrite_sender(ij));
       }
     }
     a_panel.reset();

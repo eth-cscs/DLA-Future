@@ -30,6 +30,10 @@
 #include "dlaf/lapack/enum_output.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/tile.h"
+#include "dlaf/sender/make_sender_algorithm_overloads.h"
+#include "dlaf/sender/partial_transform.h"
+#include "dlaf/sender/policy.h"
+#include "dlaf/sender/transform.h"
 #include "dlaf/types.h"
 #include "dlaf/util_tile.h"
 
@@ -45,31 +49,6 @@ namespace tile {
 using matrix::Tile;
 
 // See LAPACK documentation for more details.
-
-/// Reduce a Hermitian definite generalized eigenproblem to standard form.
-///
-/// If @p itype = 1, the problem is A*x = lambda*B*x,
-/// and A is overwritten by inv(U**H)*A*inv(U) or inv(L)*A*inv(L**H).
-///
-/// If @p itype = 2 or 3, the problem is A*B*x = lambda*x or
-/// B*A*x = lambda*x, and A is overwritten by U*A*(U**H) or (L**H)*A*L.
-/// B must have been previously factorized as (U**H)*U or L*(L**H) by potrf().
-///
-/// @pre a must be a complex Hermitian matrix or a symmetric real matrix (A),
-/// @pre b must be the triangular factor from the Cholesky factorization of B,
-/// @throw std::runtime_error if the tile was not positive definite.
-template <class T>
-void hegst(const int itype, const blas::Uplo uplo, const Tile<T, Device::CPU>& a,
-           const Tile<T, Device::CPU>& b) {
-  DLAF_ASSERT(square_size(a), a);
-  DLAF_ASSERT(square_size(b), b);
-  DLAF_ASSERT(a.size() == b.size(), a, b);
-  DLAF_ASSERT(itype >= 1 && itype <= 3, itype);
-
-  auto info = lapack::hegst(itype, uplo, a.size().cols(), a.ptr(), a.ld(), b.ptr(), b.ld());
-
-  DLAF_ASSERT(info == 0, info);
-}
 
 /// Copies all elements from Tile a to Tile b.
 ///
@@ -134,10 +113,125 @@ dlaf::BaseType<T> lantr(const lapack::Norm norm, const blas::Uplo uplo, const bl
   return lapack::lantr(norm, uplo, diag, a.size().rows(), a.size().cols(), a.ptr(), a.ld());
 }
 
+/// Set off-diagonal (@param alpha) and diagonal (@param betea) elements of Tile @param tile.
+template <class T>
+void laset(const lapack::MatrixType type, T alpha, T beta, const Tile<T, Device::CPU>& tile) {
+  DLAF_ASSERT((type == lapack::MatrixType::General || type == lapack::MatrixType::Lower ||
+               type == lapack::MatrixType::Upper),
+              type);
+
+  const SizeType m = tile.size().rows();
+  const SizeType n = tile.size().cols();
+
+  lapack::laset(type, m, n, alpha, beta, tile.ptr(), tile.ld());
+}
+
+/// Set zero all the elements of Tile @param tile.
+template <class T>
+void set0(const Tile<T, Device::CPU>& tile) {
+  tile::laset(lapack::MatrixType::General, static_cast<T>(0.0), static_cast<T>(0.0), tile);
+}
+
+#ifdef DLAF_DOXYGEN
+
+/// Reduce a Hermitian definite generalized eigenproblem to standard form.
+///
+/// If @p itype = 1, the problem is A*x = lambda*B*x,
+/// and A is overwritten by inv(U**H)*A*inv(U) or inv(L)*A*inv(L**H).
+///
+/// If @p itype = 2 or 3, the problem is A*B*x = lambda*x or
+/// B*A*x = lambda*x, and A is overwritten by U*A*(U**H) or (L**H)*A*L.
+/// B must have been previously factorized as (U**H)*U or L*(L**H) by potrf().
+///
+/// @pre a must be a complex Hermitian matrix or a symmetric real matrix (A),
+/// @pre b must be the triangular factor from the Cholesky factorization of B,
+/// @throw std::runtime_error if the tile was not positive definite.
+///
+/// This overload blocks until completion of the algorithm.
+template <Backend B, class T, Device D>
+void hegst(const dlaf::internal::Policy<B>&, const int itype, const blas::Uplo uplo, const Tile<T, D>& a,
+           const Tile<T, D>& b);
+
+/// \overload hegst
+///
+/// This overload takes a policy argument and a sender which must send all required arguments for the
+/// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
+template <Backend B, typename Sender,
+          typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+auto hegst(const dlaf::internal::Policy<B>& p, Sender&& s);
+
+/// \overload hegst
+///
+/// This overload partially applies the algorithm with a policy for later use with operator| with a
+/// sender on the left-hand side.
+template <Backend B>
+auto hegst(const dlaf::internal::Policy<B>& p);
+
 /// Compute the cholesky decomposition of a (with return code).
 ///
 /// Only the upper or lower triangular elements are referenced according to @p uplo.
 /// @returns info = 0 on success or info > 0 if the tile is not positive definite.
+///
+/// This overload blocks until completion of the algorithm.
+template <Backend B, class T, Device D>
+auto potrfInfo(const dlaf::internal::Policy<B>&, const blas::Uplo uplo, const Tile<T, D>& a);
+
+/// \overload potrfInfo
+///
+/// This overload takes a policy argument and a sender which must send all required arguments for the
+/// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
+template <Backend B, typename Sender,
+          typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+auto potrfInfo(const dlaf::internal::Policy<B>& p, Sender&& s);
+
+/// \overload potrfInfo
+///
+/// This overload partially applies the algorithm with a policy for later use with operator| with a
+/// sender on the left-hand side.
+template <Backend B>
+auto potrfInfo(const dlaf::internal::Policy<B>& p);
+
+/// Compute the cholesky decomposition of a.
+///
+/// Only the upper or lower triangular elements are referenced according to @p uplo.
+/// @pre matrix @p a is square,
+/// @pre matrix @p a is positive definite.
+///
+/// This overload blocks until completion of the algorithm.
+template <Backend B, class T, Device D>
+void potrf(const dlaf::internal::Policy<B>& p, const blas::Uplo uplo, const Tile<T, D>& a);
+
+/// \overload potrf
+///
+/// This overload takes a policy argument and a sender which must send all required arguments for the
+/// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
+template <Backend B, typename Sender,
+          typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+auto potrf(const dlaf::internal::Policy<B>& p, Sender&& s);
+
+/// \overload potrf
+///
+/// This overload partially applies the algorithm with a policy for later use with operator| with a
+/// sender on the left-hand side.
+template <Backend B>
+auto potrf(const dlaf::internal::Policy<B>& p);
+
+#else
+
+namespace internal {
+template <class T>
+void hegst(const int itype, const blas::Uplo uplo, const Tile<T, Device::CPU>& a,
+           const Tile<T, Device::CPU>& b) {
+  DLAF_ASSERT(square_size(a), a);
+  DLAF_ASSERT(square_size(b), b);
+  DLAF_ASSERT(a.size() == b.size(), a, b);
+  DLAF_ASSERT(itype >= 1 && itype <= 3, itype);
+
+  auto info = lapack::hegst(itype, uplo, a.size().cols(), a.ptr(), a.ld(), b.ptr(), b.ld());
+
+  DLAF_ASSERT(info == 0, info);
+}
+
 template <class T>
 long long potrfInfo(const blas::Uplo uplo, const Tile<T, Device::CPU>& a) {
   DLAF_ASSERT(square_size(a), a);
@@ -148,11 +242,6 @@ long long potrfInfo(const blas::Uplo uplo, const Tile<T, Device::CPU>& a) {
   return info;
 }
 
-/// Compute the cholesky decomposition of a.
-///
-/// Only the upper or lower triangular elements are referenced according to @p uplo.
-/// @pre matrix @p a is square,
-/// @pre matrix @p a is positive definite.
 template <class T>
 void potrf(const blas::Uplo uplo, const Tile<T, Device::CPU>& a) noexcept {
   auto info = potrfInfo(uplo, a);
@@ -265,28 +354,15 @@ void potrf(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<
 }
 #endif
 
-/// Set off-diagonal (@param alpha) and diagonal (@param betea) elements of Tile @param tile.
-template <class T>
-void laset(const lapack::MatrixType type, T alpha, T beta, const Tile<T, Device::CPU>& tile) {
-  DLAF_ASSERT((type == lapack::MatrixType::General || type == lapack::MatrixType::Lower ||
-               type == lapack::MatrixType::Upper),
-              type);
-
-  const SizeType m = tile.size().rows();
-  const SizeType n = tile.size().cols();
-
-  lapack::laset(type, m, n, alpha, beta, tile.ptr(), tile.ld());
-}
-
-/// Set zero all the elements of Tile @param tile.
-template <class T>
-void set0(const Tile<T, Device::CPU>& tile) {
-  tile::laset(lapack::MatrixType::General, static_cast<T>(0.0), static_cast<T>(0.0), tile);
-}
-
 DLAF_MAKE_CALLABLE_OBJECT(hegst);
 DLAF_MAKE_CALLABLE_OBJECT(potrf);
 DLAF_MAKE_CALLABLE_OBJECT(potrfInfo);
+}
 
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(hegst, internal::hegst_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(potrf, internal::potrf_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(potrfInfo, internal::potrfInfo_o)
+
+#endif
 }
 }

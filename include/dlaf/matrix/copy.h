@@ -36,10 +36,16 @@ void copy(Matrix<const T, Source>& source, Matrix<T, Destination>& dest) {
   const SizeType local_tile_rows = distribution.localNrTiles().rows();
   const SizeType local_tile_cols = distribution.localNrTiles().cols();
 
-  for (SizeType j = 0; j < local_tile_cols; ++j)
-    for (SizeType i = 0; i < local_tile_rows; ++i)
-      hpx::dataflow(dlaf::getCopyExecutor<Source, Destination>(), unwrapExtendTiles(copy_o),
-                    source.read(LocalTileIndex(i, j)), dest(LocalTileIndex(i, j)));
+  namespace ex = hpx::execution::experimental;
+
+  for (SizeType j = 0; j < local_tile_cols; ++j) {
+    for (SizeType i = 0; i < local_tile_rows; ++i) {
+      ex::when_all(source.read_sender(LocalTileIndex(i, j)),
+                   dest.readwrite_sender(LocalTileIndex(i, j))) |
+          copy(dlaf::internal::Policy<internal::CopyBackend<Source, Destination>::value>{}) |
+          ex::detach();
+    }
+  }
 }
 }
 }

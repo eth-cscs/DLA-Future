@@ -32,7 +32,7 @@ class DlaFuture(CMakePackage, CudaPackage):
     # https://github.com/eth-cscs/DLA-Future/issues/420
     conflicts("umpire@6:")
 
-    depends_on("hpx cxxstd=14 networking=none +async_mpi")
+    depends_on("hpx cxxstd=17 networking=none +async_mpi")
     depends_on("hpx@1.7.0:")
     depends_on("hpx +cuda", when="+cuda")
 

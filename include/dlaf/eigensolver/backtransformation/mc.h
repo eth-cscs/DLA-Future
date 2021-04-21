@@ -44,24 +44,24 @@ void copySingleTile(hpx::shared_future<matrix::Tile<const T, Device::CPU>> in,
 template <class Executor, Device device, class T>
 void trmmPanel(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> t,
                hpx::future<matrix::Tile<T, device>> w) {
-  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::trmm_o), blas::Side::Right, blas::Uplo::Upper,
-                blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), t, std::move(w));
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::trmm_o), blas::Side::Right,
+                blas::Uplo::Upper, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), t, std::move(w));
 }
 
 template <class Executor, Device device, class T>
 void gemmUpdateW2(Executor&& ex, hpx::future<matrix::Tile<T, device>> w,
                   hpx::shared_future<matrix::Tile<const T, device>> c,
                   hpx::future<matrix::Tile<T, device>> w2) {
-  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans,
-                T(1.0), w, c, T(1.0), std::move(w2));
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::gemm_o), blas::Op::ConjTrans,
+                blas::Op::NoTrans, T(1.0), w, c, T(1.0), std::move(w2));
 }
 
 template <class Executor, Device device, class T>
 void gemmTrailingMatrix(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> v,
                         hpx::shared_future<matrix::Tile<const T, device>> w2,
                         hpx::future<matrix::Tile<T, device>> c) {
-  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::NoTrans,
-                T(-1.0), v, w2, T(1.0), std::move(c));
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::gemm_o), blas::Op::NoTrans,
+                blas::Op::NoTrans, T(-1.0), v, w2, T(1.0), std::move(c));
 }
 
 // Implementation based on:

@@ -122,6 +122,10 @@ struct Panel<axis, const T, D> {
     }
   }
 
+  auto read_sender(const LocalTileIndex& index) {
+    return hpx::execution::experimental::keep_future(read(index));
+  }
+
   /// Set the panel to enable access to the range of tiles [start, end)
   ///
   /// With respect to the parent matrix.
@@ -383,11 +387,14 @@ struct Panel : public Panel<axis, const T, device> {
       return splitTile(tile, {{0, 0}, tileSize(index)});
   }
 
+  auto readwrite_sender(const LocalTileIndex& index) {
+    return hpx::execution::experimental::keep_future(this->operator()(index));
+  }
+
 protected:
   using BaseT = Panel<axis, const T, device>;
   using BaseT::dim_;
   using BaseT::tileSize;
 };
-
 }
 }

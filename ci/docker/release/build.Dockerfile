@@ -94,6 +94,7 @@ RUN wget -q https://github.com/${HPX_FORK}/hpx/archive/${HPX_VERSION}.tar.gz -O 
       -DTCMALLOC_ROOT=$GPERFTOOLS_PATH \
       -DCMAKE_BUILD_TYPE=RelWithDebInfo \
       -DCMAKE_INSTALL_PREFIX=$HPX_PATH \
+      -DHPX_WITH_CXX17=On \
       -DHPX_WITH_MAX_CPU_COUNT=128 \
       -DHPX_WITH_NETWORKING=OFF \
       -DHPX_WITH_ASYNC_MPI=ON \

@@ -1353,6 +1353,59 @@ TEST(MatrixDestructorFutures, ConstAfterRead_UserMemory) {
   last_task.get();
 }
 
+TEST_F(MatrixGenericTest, SyncBarrier) {
+  using TypeParam = double;
+  using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
+  using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
+
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+
+      MemoryViewT mem(layout.minMemSize());
+      MatrixT matrix = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid,
+                                                         static_cast<TypeParam*>(mem()));
+
+      const auto local_size = distribution.localNrTiles();
+      const LocalTileIndex tile_tl(0, 0);
+      const LocalTileIndex tile_br(
+          std::max(SizeType(0), local_size.rows() - 1),
+          std::max(SizeType(0), local_size.cols() - 1));
+
+      const bool has_local = !local_size.isEmpty();
+
+      // Note:
+      // the guard is used to check that tasks before and after the barrier run sequentially and not
+      // in parallel.
+      // Indeed, two read calls one after the other would result in a parallel execution of their
+      // tasks, while a barrier between them must assure that they will be run sequentially.
+      std::atomic<bool> guard(false);
+
+      // start a task (if it has at least a local part...otherwise there is no tile to work on)
+      if (has_local)
+        matrix.read(tile_tl).then(hpx::launch::async, [&guard](auto&&) {
+          hpx::this_thread::sleep_for(WAIT_GUARD);
+          guard = true;
+        });
+
+      // everyone wait on its local part...
+      // this means that it is possible to call it also on empty local matrices, they just don't
+      // have anything to wait for
+      matrix.syncAll();
+
+      // after the sync barrier, start a task on a tile (another one/the same) expecting that
+      // the previous task has been fully completed (and the future mechanism still works)
+      if (has_local) {
+        matrix.read(tile_tl).then([&guard](auto&&) { EXPECT_TRUE(guard); }).get();
+        matrix.read(tile_br).then([&guard](auto&&) { EXPECT_TRUE(guard); }).get();
+      }
+    }
+  }
+}
+
 struct CustomException final : public std::exception {};
 
 TEST(MatrixExceptionPropagation, RWPropagatesInRWAccess) {

@@ -23,11 +23,15 @@ using dlaf::common::internal::source_location;
 
 const char* ERROR_MESSAGE = "\\[ERROR\\]";
 
-template <class T, class C = T>
-const auto LOWER_BOUND = []() { return static_cast<C>(std::numeric_limits<T>::min()); };
+template <class Type, class ContainerType = Type>
+const ContainerType LOWER_BOUND() {
+  return static_cast<ContainerType>(std::numeric_limits<Type>::min());
+}
 
-template <class T, class C = T>
-const auto UPPER_BOUND = []() { return static_cast<C>(std::numeric_limits<T>::max()); };
+template <class Type, class ContainerType = Type>
+const ContainerType UPPER_BOUND() {
+  return static_cast<ContainerType>(std::numeric_limits<Type>::max());
+}
 
 /// Check that no alteration happens during cast From -> To with @param cast_func and dlaf::integral_cast.
 ///

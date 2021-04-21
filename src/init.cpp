@@ -42,15 +42,28 @@ bool& initialized() {
   return i;
 }
 
-template <>
-void Init<Backend::MC>::initialize(configuration const& cfg) {
-  memory::internal::initializeUmpireHostAllocator(cfg.umpire_host_memory_pool_initial_bytes);
-}
+template <Backend D>
+struct Init {
+  // Initialization and finalization does nothing by default. Behaviour can be
+  // overridden for backends.
+  static void initialize(configuration const&) {}
+  static void finalize() {}
+};
 
 template <>
-void Init<Backend::MC>::finalize() {
-  memory::internal::finalizeUmpireHostAllocator();
-}
+struct Init<Backend::MC> {
+  static void initialize(configuration const& cfg) {
+    memory::internal::initializeUmpireHostAllocator(cfg.umpire_host_memory_pool_initial_bytes);
+    // TODO: Consider disabling polling in finalize()
+    if (cfg.mpi_mech == comm::MPIMech::Polling) {
+      hpx::mpi::experimental::init(false, cfg.mpi_pool);
+    }
+  }
+
+  static void finalize() {
+    memory::internal::finalizeUmpireHostAllocator();
+  }
+};
 
 #ifdef DLAF_WITH_CUDA
 static std::unique_ptr<cuda::StreamPool> np_stream_pool{nullptr};
@@ -107,32 +120,25 @@ cublas::HandlePool getCublasHandlePool() {
 }
 
 template <>
-void Init<Backend::GPU>::initialize(configuration const& cfg) {
-  const int device = 0;
-  memory::internal::initializeUmpireDeviceAllocator(cfg.umpire_device_memory_pool_initial_bytes);
-  initializeNpCudaStreamPool(device, cfg.num_np_cuda_streams_per_thread);
-  initializeHpCudaStreamPool(device, cfg.num_hp_cuda_streams_per_thread);
-  initializeCublasHandlePool();
-  hpx::cuda::experimental::detail::register_polling(hpx::resource::get_thread_pool("default"));
-}
-
-template <>
-void Init<Backend::GPU>::finalize() {
-  memory::internal::finalizeUmpireDeviceAllocator();
-  finalizeNpCudaStreamPool();
-  finalizeHpCudaStreamPool();
-  finalizeCublasHandlePool();
-  hpx::cuda::experimental::detail::unregister_polling(hpx::resource::get_thread_pool("default"));
-}
-#endif
-
-template <>
-void Init<Backend::MC>::initialize(configuration const& cfg) {
-  // TODO: Consider disabling polling in finalize()
-  if (cfg.mpi_mech == comm::MPIMech::Polling) {
-    hpx::mpi::experimental::init(false, cfg.mpi_pool);
+struct Init<Backend::GPU> {
+  static void initialize(configuration const& cfg) {
+    const int device = 0;
+    memory::internal::initializeUmpireDeviceAllocator(cfg.umpire_device_memory_pool_initial_bytes);
+    initializeNpCudaStreamPool(device, cfg.num_np_cuda_streams_per_thread);
+    initializeHpCudaStreamPool(device, cfg.num_hp_cuda_streams_per_thread);
+    initializeCublasHandlePool();
+    hpx::cuda::experimental::detail::register_polling(hpx::resource::get_thread_pool("default"));
   }
-}
+
+  static void finalize() {
+    memory::internal::finalizeUmpireDeviceAllocator();
+    finalizeNpCudaStreamPool();
+    finalizeHpCudaStreamPool();
+    finalizeCublasHandlePool();
+    hpx::cuda::experimental::detail::unregister_polling(hpx::resource::get_thread_pool("default"));
+  }
+};
+#endif
 
 template <class T>
 struct parseFromString {
@@ -308,5 +314,4 @@ void initResourcePartitionerHandler(hpx::resource::partitioner& rp,
   rp.create_thread_pool("mpi", hpx::resource::scheduling_policy::local_priority_fifo, mode);
   rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], "mpi");
 }
-
 }

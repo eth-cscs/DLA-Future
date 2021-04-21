@@ -42,30 +42,9 @@ struct configuration {
 std::ostream& operator<<(std::ostream& os, configuration const& cfg);
 
 namespace internal {
-bool& initialized();
 configuration& getConfiguration();
 
-template <Backend D>
-struct Init {
-  // Initialization and finalization does nothing by default. Behaviour can be
-  // overridden for backends.
-  static void initialize(configuration const&) {}
-  static void finalize() {}
-};
-
-template <>
-void Init<Backend::MC>::initialize(configuration const&);
-template <>
-void Init<Backend::MC>::finalize();
-extern template struct Init<Backend::MC>;
-
 #ifdef DLAF_WITH_CUDA
-template <>
-void Init<Backend::GPU>::initialize(configuration const&);
-template <>
-void Init<Backend::GPU>::finalize();
-extern template struct Init<Backend::GPU>;
-
 cuda::StreamPool getNpCudaStreamPool();
 cuda::StreamPool getHpCudaStreamPool();
 cublas::HandlePool getCublasHandlePool();

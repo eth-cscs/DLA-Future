@@ -465,12 +465,9 @@ TYPED_TEST(PanelTest, BroadcastCol) {
   using hpx::util::unwrapping;
   using TypeUtil = TypeUtilities<TypeParam>;
 
-  using hpx::execution::parallel_executor;
-  using hpx::resource::get_thread_pool;
-  using hpx::threads::thread_priority;
-  parallel_executor ex(&get_thread_pool("default"), thread_priority::default_);
+  comm::Executor executor_mpi;
 
-  for (auto& comm_grid : this->commGrids()) {
+  for (auto comm_grid : this->commGrids()) {
     for (const auto& params : test_params) {
       const auto cfg = configure(params);
 
@@ -506,9 +503,9 @@ TYPED_TEST(PanelTest, BroadcastCol) {
                       ws_v.read(i_w));
 
       // test it!
-      common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
+      common::Pipeline<comm::Communicator> mpi_row_task_chain(comm_grid.rowCommunicator());
 
-      broadcast(ex, root_col, ws_v, serial_comm);
+      broadcast(executor_mpi, root_col, ws_v, mpi_row_task_chain, comm_grid.size());
 
       // check all panel are equal on all ranks
       for (const auto i_w : ws_v)
@@ -525,12 +522,9 @@ TYPED_TEST(PanelTest, BroadcastRow) {
   using hpx::util::unwrapping;
   using TypeUtil = TypeUtilities<TypeParam>;
 
-  using hpx::execution::parallel_executor;
-  using hpx::resource::get_thread_pool;
-  using hpx::threads::thread_priority;
-  parallel_executor ex(&get_thread_pool("default"), thread_priority::default_);
+  comm::Executor executor_mpi;
 
-  for (auto& comm_grid : this->commGrids()) {
+  for (auto comm_grid : this->commGrids()) {
     for (const auto& params : test_params) {
       const auto cfg = configure(params);
 
@@ -566,9 +560,9 @@ TYPED_TEST(PanelTest, BroadcastRow) {
                       ws_h.read(i_w));
 
       // test it!
-      common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
+      common::Pipeline<comm::Communicator> mpi_col_task_chain(comm_grid.colCommunicator());
 
-      broadcast(ex, root_row, ws_h, serial_comm);
+      broadcast(executor_mpi, root_row, ws_h, mpi_col_task_chain, comm_grid.size());
 
       // check all panel are equal on all ranks
       for (const auto i_w : ws_h)
@@ -593,12 +587,9 @@ TYPED_TEST(PanelTest, BroadcastCol2Row) {
   using hpx::util::unwrapping;
   using TypeUtil = TypeUtilities<TypeParam>;
 
-  using hpx::execution::parallel_executor;
-  using hpx::resource::get_thread_pool;
-  using hpx::threads::thread_priority;
-  parallel_executor ex(&get_thread_pool("default"), thread_priority::default_);
+  comm::Executor executor_mpi;
 
-  for (auto& comm_grid : this->commGrids()) {
+  for (auto comm_grid : this->commGrids()) {
     for (const auto& params : test_params_bcast_transpose) {
       const auto cfg = configure_bcast_transpose(params, comm_grid);
 
@@ -622,12 +613,13 @@ TYPED_TEST(PanelTest, BroadcastCol2Row) {
                       ws_v(i_w));
 
       // test it!
-      common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
+      common::Pipeline<comm::Communicator> row_task_chain(comm_grid.rowCommunicator());
+      common::Pipeline<comm::Communicator> col_task_chain(comm_grid.colCommunicator());
 
       // select a "random" col which will be the source for the data
       const comm::IndexT_MPI owner = comm_grid.size().cols() / 2;
 
-      broadcast(ex, owner, ws_v, ws_h, serial_comm);
+      broadcast(executor_mpi, owner, ws_v, ws_h, row_task_chain, col_task_chain, comm_grid.size());
 
       // check that all destination row panels got the value from the right rank
       for (const auto i_w : ws_h) {
@@ -644,12 +636,9 @@ TYPED_TEST(PanelTest, BroadcastRow2Col) {
   using hpx::util::unwrapping;
   using TypeUtil = TypeUtilities<TypeParam>;
 
-  using hpx::execution::parallel_executor;
-  using hpx::resource::get_thread_pool;
-  using hpx::threads::thread_priority;
-  parallel_executor ex(&get_thread_pool("default"), thread_priority::default_);
+  comm::Executor executor_mpi;
 
-  for (auto& comm_grid : this->commGrids()) {
+  for (auto comm_grid : this->commGrids()) {
     for (const auto& params : test_params_bcast_transpose) {
       const auto cfg = configure_bcast_transpose(params, comm_grid);
 
@@ -674,12 +663,13 @@ TYPED_TEST(PanelTest, BroadcastRow2Col) {
                       ws_h(i_w));
 
       // test it!
-      common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
+      common::Pipeline<comm::Communicator> col_task_chain(comm_grid.colCommunicator());
+      common::Pipeline<comm::Communicator> row_task_chain(comm_grid.rowCommunicator());
 
       // select a "random" row which will be the source for the data
       const comm::IndexT_MPI owner = comm_grid.size().rows() / 2;
 
-      broadcast(ex, owner, ws_h, ws_v, serial_comm);
+      broadcast(executor_mpi, owner, ws_h, ws_v, row_task_chain, col_task_chain, comm_grid.size());
 
       // check that all destination column panels got the value from the right rank
       for (const auto i_w : ws_v) {

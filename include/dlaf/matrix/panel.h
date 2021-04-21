@@ -15,7 +15,8 @@
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/sync/broadcast.h"
+#include "dlaf/communication/executor.h"
+#include "dlaf/communication/kernels.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_base.h"
@@ -280,24 +281,24 @@ std::pair<SizeType, comm::IndexT_MPI> transposed_owner(const Distribution& dist,
 
 /// Broadcast a panel in the direction orthogonal to its axis
 template <class T, Device device, Coord axis>
-void broadcast(hpx::execution::parallel_executor ex, comm::IndexT_MPI rank_root,
-               Panel<axis, T, device>& ws, common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
-  using namespace comm::sync::broadcast;
+void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis, T, device>& ws,
+               common::Pipeline<comm::Communicator>& serial_comm, const comm::Size2D grid_size) {
   using hpx::dataflow;
+  using hpx::util::unwrapping;
 
   constexpr auto comm_dir = orthogonal(axis);
 
   // TODO
-  // if (grid_size.get(component(comm_dir)) < 1)
-  //  return;
+  if (grid_size.get(component(comm_dir)) <= 1)
+    return;
 
   const auto rank = ws.rankIndex().get(component(comm_dir));
 
   for (const auto& index : ws) {
     if (rank == rank_root)
-      dataflow(ex, comm::sendTile_o, serial_comm(), comm_dir, ws.read(index));
+      dataflow(ex, unwrapping(comm::sendBcast<T>), ws.read(index), serial_comm());
     else
-      dataflow(ex, comm::recvTile_o, serial_comm(), comm_dir, ws(index), rank_root);
+      dataflow(ex, unwrapping(comm::recvBcast<T>), ws(index), rank_root, serial_comm());
   }
 }
 
@@ -312,13 +313,14 @@ void broadcast(hpx::execution::parallel_executor ex, comm::IndexT_MPI rank_root,
 /// - linked as external tile to the corresponding one in the column panel, if current rank owns it
 /// - received from the owning rank, which broadcasts the tile from the row panel along the column
 template <class T, Device device, Coord axis_from, Coord axis_to>
-void broadcast(hpx::execution::parallel_executor ex, comm::IndexT_MPI rank_root,
+void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
                Panel<axis_from, T, device>& ws_from, Panel<axis_to, T, device>& ws_to,
-               common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
+               common::Pipeline<comm::Communicator>& row_task_chain,
+               common::Pipeline<comm::Communicator>& col_task_chain, comm::Size2D grid_size) {
   static_assert(axis_from == orthogonal(axis_to), "this method broadcasts and transposes coordinates");
 
-  using namespace dlaf::comm::sync::broadcast;
   using hpx::dataflow;
+  using hpx::util::unwrapping;
 
   DLAF_ASSERT(ws_from.parent_distribution() == ws_to.parent_distribution(),
               "they must refer to the same matrix");
@@ -329,16 +331,27 @@ void broadcast(hpx::execution::parallel_executor ex, comm::IndexT_MPI rank_root,
 
   // TODO do I have to check for offset?!
 
+  auto get_taskchain = [&](Coord dir) -> auto& {
+    return dir == Coord::Row ? row_task_chain : col_task_chain;
+  };
+
+  // STEP 1
+  // communicate each tile orthogonally to the direction of the destination panel
+  constexpr auto comm_dir_step1 = orthogonal(axis_from);
+  auto& chain_step1 = get_taskchain(comm_dir_step1);
+
+  // share the main panel, so that it can be used as source for orthogonal communications
+  broadcast(ex, rank_root, ws_from, chain_step1, grid_size);
+
+  // STEP 2
   constexpr Coord coord_from = component(axis_from);
   constexpr Coord coord_to = component(axis_to);
 
-  // communicate each tile orthogonally to the direction of the destination panel
-  constexpr Coord comm_dir = orthogonal(axis_to);
-
-  // share the main panel, so that it can be used as source for orthogonal communications
-  broadcast(ex, rank_root, ws_from, serial_comm);
+  constexpr auto comm_dir_step2 = orthogonal(axis_to);
+  auto& chain_step2 = get_taskchain(comm_dir_step2);
 
   const auto& dist = ws_from.parent_distribution();
+
   for (const auto& idx_dst : ws_to) {
     SizeType idx_cross;
     comm::IndexT_MPI owner;
@@ -348,15 +361,16 @@ void broadcast(hpx::execution::parallel_executor ex, comm::IndexT_MPI rank_root,
     if (dist.rankIndex().get(coord_from) == owner) {
       const auto idx_src = dist.template localTileFromGlobalTile<coord_from>(idx_cross);
       ws_to.set_tile(idx_dst, ws_from.read({coord_from, idx_src}));
-      // TODO if (grid_size.get(component(comm_dir)) > 1)
-      dataflow(ex, comm::sendTile_o, serial_comm(), comm_dir, ws_to.read(idx_dst));
+      // TODO
+      if (grid_size.get(component(comm_dir_step2)) > 1)
+        dataflow(ex, unwrapping(comm::sendBcast<T>), ws_to.read(idx_dst), chain_step2());
     }
     else {
-      // TODO if (grid_size.get(component(comm_dir)) > 1)
-      dataflow(ex, comm::recvTile_o, serial_comm(), comm_dir, ws_to(idx_dst), owner);
+      // TODO
+      if (grid_size.get(component(comm_dir_step2)) > 1)
+        dataflow(ex, unwrapping(comm::recvBcast<T>), ws_to(idx_dst), owner, chain_step2());
     }
   }
 }
-
 }
 }

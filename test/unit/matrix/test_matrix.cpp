@@ -1371,9 +1371,8 @@ TEST_F(MatrixGenericTest, SyncBarrier) {
 
       const auto local_size = distribution.localNrTiles();
       const LocalTileIndex tile_tl(0, 0);
-      const LocalTileIndex tile_br(
-          std::max(SizeType(0), local_size.rows() - 1),
-          std::max(SizeType(0), local_size.cols() - 1));
+      const LocalTileIndex tile_br(std::max(SizeType(0), local_size.rows() - 1),
+                                   std::max(SizeType(0), local_size.cols() - 1));
 
       const bool has_local = !local_size.isEmpty();
 

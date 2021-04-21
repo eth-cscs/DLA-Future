@@ -38,6 +38,21 @@ hpx::shared_future<Tile<const T, device>> Matrix<const T, device>::read(
   return tile_managers_[i].getReadTileSharedFuture();
 }
 
+void Matrix<const T, device>::syncAll() noexcept {
+  // Note:
+  // Using a readwrite access to the tile ensures that the access is exclusive and not shared
+  // among multiple tasks.
+
+  auto readwrite_f = [this](const LocalTileIndex& index) {
+    const auto i = tileLinearIndex(index);
+    return this->tile_managers_[i].getRWTileFuture();
+  };
+
+  const auto range_local = common::iterate_range2d(distribution().localNrTiles());
+  auto all_local_tiles_rw = internal::selectGeneric(readwrite_f, range_local);
+  hpx::when_all(std::move(all_local_tiles_rw)).get();
+}
+
 template <class T, Device device>
 void Matrix<const T, device>::setUpTiles(const memory::MemoryView<ElementType, device>& mem,
                                          const LayoutInfo& layout) noexcept {

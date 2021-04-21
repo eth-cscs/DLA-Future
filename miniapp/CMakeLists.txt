@@ -9,7 +9,7 @@
 #
 
 add_executable(miniapp_cholesky miniapp_cholesky.cpp)
-target_link_libraries(miniapp_cholesky PRIVATE DLAF)
+target_link_libraries(miniapp_cholesky PRIVATE dlaf.core dlaf.auxiliary dlaf.factorization)
 target_add_warnings(miniapp_cholesky)
 
 if (DLAF_BUILD_TESTING)

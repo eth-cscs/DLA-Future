@@ -25,12 +25,12 @@ const char* ERROR_MESSAGE = "\\[ERROR\\]";
 
 template <class Type, class ContainerType = Type>
 const ContainerType LOWER_BOUND() {
- return static_cast<ContainerType>(std::numeric_limits<Type>::min());
+  return static_cast<ContainerType>(std::numeric_limits<Type>::min());
 }
 
 template <class Type, class ContainerType = Type>
 const ContainerType UPPER_BOUND() {
- return static_cast<ContainerType>(std::numeric_limits<Type>::max());
+  return static_cast<ContainerType>(std::numeric_limits<Type>::max());
 }
 
 /// Check that no alteration happens during cast From -> To with @param cast_func and dlaf::integral_cast.

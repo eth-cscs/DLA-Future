@@ -112,7 +112,7 @@ RUN wget -q https://github.com/${HPX_FORK}/hpx/archive/${HPX_VERSION}.tar.gz -O 
     make install && \
     rm -rf /root/hpx.tar.gz /root/hpx-${HPX_VERSION}
 
-ARG UMPIRE_VERSION=4.2.2
+ARG UMPIRE_VERSION=5.0.1
 ARG UMPIRE_PATH=/usr/local/umpire
 ARG UMPIRE_ENABLE_CUDA=ON
 RUN git clone --recursive --depth 1 --branch v${UMPIRE_VERSION} https://github.com/LLNL/Umpire.git Umpire-${UMPIRE_VERSION} && \

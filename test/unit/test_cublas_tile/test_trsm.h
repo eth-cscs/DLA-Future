@@ -34,8 +34,6 @@ using namespace dlaf::matrix::test;
 using namespace dlaf::tile;
 using namespace testing;
 
-using dlaf::util::size_t::mul;
-
 template <class ElementIndex, class T, class CT = const T>
 void testTrsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, SizeType m, SizeType n,
               SizeType extra_lda, SizeType extra_ldb) {
@@ -63,8 +61,8 @@ void testTrsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, Si
   auto a = createTile<CT>(el_op_a, size_a, lda, op);
   auto b = createTile<T>(el_b, size_b, ldb);
 
-  Tile<T, Device::GPU> a0d(size_a, memory::MemoryView<T, Device::GPU>(mul(lda, size_a.cols())), lda);
-  Tile<T, Device::GPU> bd(size_b, memory::MemoryView<T, Device::GPU>(mul(ldb, size_b.cols())), ldb);
+  Tile<T, Device::GPU> a0d(size_a, memory::MemoryView<T, Device::GPU>(lda * size_a.cols()), lda);
+  Tile<T, Device::GPU> bd(size_b, memory::MemoryView<T, Device::GPU>(ldb * size_b.cols()), ldb);
 
   copy(a, a0d);
   copy(b, bd);

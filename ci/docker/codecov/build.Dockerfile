@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=ubuntu:18.04
+ARG BASE_IMAGE=ubuntu:20.04
 
 FROM $BASE_IMAGE
 
@@ -13,6 +13,11 @@ RUN apt-get update -qq && apt-get install -qq -y --no-install-recommends \
     build-essential gfortran binutils lcov \
     git tar wget curl gpg-agent jq tzdata && \
     rm -rf /var/lib/apt/lists/*
+
+RUN cd /usr/local/bin && \
+  curl -Ls https://codecov.io/bash > codecov.sh && \
+  echo "89c658e261d5f25533598a222fd96cf17a5fa0eb3772f2defac754d9970b2ec8 codecov.sh" | sha256sum --check --quiet && \
+  chmod +x codecov.sh
 
 # Install cmake
 RUN wget -qO- "https://cmake.org/files/v3.17/cmake-3.17.0-Linux-x86_64.tar.gz" | tar --strip-components=1 -xz -C /usr/local
@@ -88,7 +93,7 @@ RUN wget -q https://github.com/${HPX_FORK}/hpx/archive/${HPX_VERSION}.tar.gz -O 
     cd hpx-${HPX_VERSION} && \
     mkdir build && \
     cd build && \
-    cmake .. \
+    CXX=${MPICH_PATH}/bin/mpicxx CC=${MPICH_PATH}/bin/mpicc cmake .. \
       -DCMAKE_INSTALL_PREFIX=$HPX_PATH \
       -DBOOST_ROOT=$BOOST_PATH \
       -DHWLOC_ROOT=$HWLOC_PATH \
@@ -99,6 +104,7 @@ RUN wget -q https://github.com/${HPX_FORK}/hpx/archive/${HPX_VERSION}.tar.gz -O 
       -DHPX_WITH_STACK_OVERFLOW_DETECTION=OFF \
       -DHPX_WITH_MAX_CPU_COUNT=128 \
       -DHPX_WITH_NETWORKING=OFF \
+      -DHPX_WITH_ASYNC_MPI=ON \
       -DHPX_WITH_CUDA=$HPX_WITH_CUDA \
       -DHPX_WITH_TESTS=OFF \
       -DHPX_WITH_EXAMPLES=OFF && \

@@ -32,7 +32,7 @@ DLAF_addTest(test_communicator_grid
 DLAF_addTest(test_broadcast
   SOURCES test_broadcast.cpp
   LIBRARIES dlaf.core
-  MPIRANKS 5
+  MPIRANKS 4
   USE_MAIN MPI
 )
 
@@ -53,12 +53,19 @@ DLAF_addTest(test_all_reduce
 DLAF_addTest(test_broadcast_tile
   SOURCES test_broadcast_tile.cpp
   LIBRARIES dlaf.core
-  MPIRANKS 5
+  MPIRANKS 4
   USE_MAIN MPI
 )
 
 DLAF_addTest(test_broadcast_matrix
   SOURCES test_broadcast_matrix.cpp
+  LIBRARIES dlaf.core
+  MPIRANKS 4
+  USE_MAIN MPIHPX
+)
+
+DLAF_addTest(test_comm_executor
+  SOURCES test_comm_executor.cpp
   LIBRARIES dlaf.core
   MPIRANKS 4
   USE_MAIN MPIHPX

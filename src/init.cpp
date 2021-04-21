@@ -8,7 +8,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <hpx/async_mpi/mpi_future.hpp>
+
 #include <dlaf/common/assert.h>
+#include <dlaf/communication/error.h>
 #include <dlaf/init.h>
 #include <dlaf/memory/memory_chunk.h>
 
@@ -18,6 +21,7 @@
 #endif
 
 #include <cstdlib>
+#include <iostream>
 #include <memory>
 
 namespace dlaf {
@@ -27,7 +31,8 @@ std::ostream& operator<<(std::ostream& os, configuration const& cfg) {
   os << "  umpire_host_memory_pool_initial_bytes = " << cfg.umpire_host_memory_pool_initial_bytes
      << std::endl;
   os << "  umpire_device_memory_pool_initial_bytes = " << cfg.umpire_device_memory_pool_initial_bytes;
-
+  os << "  mpi_pool = " << cfg.mpi_pool << std::endl;
+  os << "  mpi_mech = " << cfg.mpi_mech << std::endl;
   return os;
 }
 
@@ -121,22 +126,70 @@ void Init<Backend::GPU>::finalize() {
 }
 #endif
 
-template <typename T>
-void updateConfigurationValue(hpx::program_options::variables_map const& vm, T& var,
-                              std::string const& env_var, std::string const& cmdline_option);
+template <>
+void Init<Backend::MC>::initialize(configuration const& cfg) {
+  // TODO: Consider disabling polling in finalize()
+  if (cfg.mpi_mech == comm::MPIMech::Polling) {
+    hpx::mpi::experimental::init(false, cfg.mpi_pool);
+  }
+}
+
+template <class T>
+struct parseFromString {
+  static T call(const std::string& val) {
+    return val;
+  };
+};
 
 template <>
-void updateConfigurationValue(hpx::program_options::variables_map const& vm, std::size_t& var,
+struct parseFromString<std::size_t> {
+  static std::size_t call(const std::string& var) {
+    return std::stoul(var);
+  };
+};
+
+template <>
+struct parseFromString<comm::MPIMech> {
+  static comm::MPIMech call(const std::string& var) {
+    if (var == "yielding") {
+      return comm::MPIMech::Yielding;
+    }
+    else if (var == "polling") {
+      return comm::MPIMech::Polling;
+    }
+
+    std::cout << "Unknown value for --mech=" << var << "!" << std::endl;
+    std::terminate();
+    return comm::MPIMech::Polling;  // unreachable
+  };
+};
+
+template <class T>
+struct parseFromCommandLine {
+  static T call(hpx::program_options::variables_map const& vm, const std::string& cmd_val) {
+    return vm[cmd_val].as<T>();
+  }
+};
+
+template <>
+struct parseFromCommandLine<comm::MPIMech> {
+  static comm::MPIMech call(hpx::program_options::variables_map const& vm, const std::string& cmd_val) {
+    return parseFromString<comm::MPIMech>::call(vm[cmd_val].as<std::string>());
+  }
+};
+
+template <class T>
+void updateConfigurationValue(hpx::program_options::variables_map const& vm, T& var,
                               std::string const& env_var, std::string const& cmdline_option) {
   const std::string dlaf_env_var = "DLAF_" + env_var;
   char* env_var_value = std::getenv(dlaf_env_var.c_str());
   if (env_var_value) {
-    var = std::stoul(env_var_value);
+    var = parseFromString<T>::call(env_var_value);
   }
 
   const std::string dlaf_cmdline_option = "dlaf:" + cmdline_option;
   if (vm.count(dlaf_cmdline_option)) {
-    var = vm[dlaf_cmdline_option].as<std::size_t>();
+    var = parseFromCommandLine<T>::call(vm, dlaf_cmdline_option);
   }
 }
 
@@ -151,6 +204,8 @@ void updateConfiguration(hpx::program_options::variables_map const& vm, configur
   updateConfigurationValue(vm, cfg.umpire_device_memory_pool_initial_bytes,
                            "UMPIRE_DEVICE_MEMORY_POOL_INITIAL_BYTES",
                            "umpire-device-memory-pool-initial-bytes");
+  updateConfigurationValue(vm, cfg.mpi_mech, "MPI_MECH", "mpi-mech");
+  cfg.mpi_pool = (hpx::resource::pool_exists("mpi")) ? "mpi" : "default";
 }
 
 configuration& getConfiguration() {
@@ -174,6 +229,10 @@ hpx::program_options::options_description getOptionsDescription() {
   desc.add_options()("dlaf:umpire-device-memory-pool-initial-bytes",
                      hpx::program_options::value<std::size_t>(),
                      "Number of bytes to preallocate for device memory pool");
+  desc.add_options()("dlaf:mpi-mech",
+                     hpx::program_options::value<std::string>()->default_value("yielding"),
+                     "MPI mechanism ('yielding', 'polling')");
+  desc.add_options()("dlaf:no-mpi-pool", hpx::program_options::bool_switch(), "Disable the MPI pool.");
 
   return desc;
 }
@@ -226,4 +285,28 @@ void finalize() {
   internal::getConfiguration() = {};
   internal::initialized() = false;
 }
+
+void initResourcePartitionerHandler(hpx::resource::partitioner& rp,
+                                    hpx::program_options::variables_map const& vm) {
+  // Don't create the MPI pool if the user disabled it
+  if (vm["no-mpi-pool"].as<bool>())
+    return;
+
+  // Don't create the MPI pool if there is a single process
+  int ntasks;
+  DLAF_MPI_CALL(MPI_Comm_size(MPI_COMM_WORLD, &ntasks));
+  if (ntasks == 1)
+    return;
+
+  // Disable idle backoff on the MPI pool
+  using hpx::threads::policies::scheduler_mode;
+  auto mode = scheduler_mode::default_mode;
+  mode = scheduler_mode(mode & ~scheduler_mode::enable_idle_backoff);
+
+  // Create a thread pool with a single core that we will use for all
+  // communication related tasks
+  rp.create_thread_pool("mpi", hpx::resource::scheduling_policy::local_priority_fifo, mode);
+  rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], "mpi");
+}
+
 }

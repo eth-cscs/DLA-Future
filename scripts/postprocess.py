@@ -1,5 +1,6 @@
 import os
 import re
+import math
 
 import pandas as pd
 import numpy as np
@@ -11,9 +12,40 @@ from parse import parse
 sns.set_theme()
 
 # plt_type : ppn | time
-def _gen_nodes_plot(plt_type, title, ylabel, file_name, df, logx):
+def _gen_nodes_plot(plt_type, title, ylabel, file_name, df, logx, logy=False, combine_mb=False, filts=None, replaces=None):
     fig, ax = plt.subplots()
-    for bench_name, lib_data in df.groupby(["bench_name"]):
+
+    if combine_mb:
+        it_space = df.groupby(["block_rows", "bench_name"])
+    else:
+        it_space = df.groupby(["bench_name"])
+
+    plotted = False
+
+    for x, lib_data in it_space:
+        if combine_mb:
+            mb = x[0]
+            bench_name = x[1] + f"_{mb}"
+        else:
+            bench_name = x
+
+        # filter series by name
+        if filts != None:
+            flag = False
+            for filt in filts:
+                if re.search(filt, bench_name):
+                    flag = True
+                    break
+            if not flag:
+                continue
+
+        # remove routine prefix
+        bench_name = bench_name[bench_name.find("_") + 1:]
+
+        if replaces != None:
+            for replace in replaces:
+                bench_name = re.sub(replace[0], replace[1], bench_name)
+
         lib_data.plot(
             ax=ax,
             x="nodes",
@@ -28,14 +60,22 @@ def _gen_nodes_plot(plt_type, title, ylabel, file_name, df, logx):
             lib_data[f"{plt_type}_max"],
             alpha=0.2,
         )
+        plotted = True
 
-    ax.set_ylabel(ylabel)
-    ax.set_xscale("log", base=2)
-    ax.set_xlabel("nodes")
-    ax.set_xticks(df["nodes"].sort_values().unique())
-    ax.legend(loc="upper right", prop={"size": 6})
-    ax.set_title(title)
-    fig.savefig(f"{file_name}.png", dpi=300)
+    if plotted:
+        ax.set_ylabel(ylabel)
+        if logx:
+          ax.set_xscale("log", base=2)
+        if logy:
+          ax.set_yscale("log", base=10)
+        ax.set_xlabel("nodes")
+        nodes = df["nodes"].sort_values().unique()
+        ax.set_xticks(nodes)
+        ax.set_xticklabels([f"{x:d}" for x in nodes])
+        ax.legend(loc="upper right", prop={"size": 6})
+        ax.set_title(title)
+        fig.savefig(f"{file_name}.png", dpi=300)
+
     plt.close(fig)
 
 
@@ -76,59 +116,66 @@ def _calc_metrics(cols, df):
 # }
 def _parse_line_based(fout, bench_name, nodes):
     if "dlaf" in bench_name:
-        pstr_arr = [
-            "[{run_index:d}] {time:f}s {perf:f}GFlop/s ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}"
-        ]
+        pstr_arr = []
+        pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}"
     elif bench_name.startswith("chol_slate"):
-        pstr_arr = [
-            "d {} {} column lower {matrix_rows:d} {:d} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:f} {perf:f} NA NA no check"
-        ]
+        pstr_arr = ["input:{}potrf"]
+        pstr_res = "d {} {} column lower {matrix_rows:d} {:d} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:g} {perf:g} NA NA no check"
     elif bench_name.startswith("trsm_slate"):
-        pstr_arr = [
-            "d {} {} {:d} left lower notrans nonunit {matrix_rows:d} {matrix_cols:d} {:f} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:f} {perf:f} NA NA no check"
-        ]
+        pstr_arr = ["input:{}trsm"]
+        pstr_res = "d {} {} {:d} left lower notrans nonunit {matrix_rows:d} {matrix_cols:d} {:f} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:g} {perf:g} NA NA no check"
     elif bench_name.startswith("chol_dplasma"):
         pstr_arr = [
             "#+++++ M x N x K|NRHS : {matrix_rows:d} x {matrix_cols:d} x {:d}",
             "#+++++ MB x NB : {block_rows:d} x {block_cols:d}",
-            "[****] TIME(s) {time:f} : dpotrf PxQ= {grid_rows:d} {grid_cols:d} NB= {:d} N= {:d} : {perf:f} gflops - ENQ&PROG&DEST {:f} : {:f} gflops - ENQ {:f} - DEST {:f}",
         ]
+        pstr_res = "[****] TIME(s) {time:g} : dpotrf PxQ= {grid_rows:d} {grid_cols:d} NB= {:d} N= {:d} : {perf:g} gflops - ENQ&PROG&DEST {:g} : {:g} gflops - ENQ {:g} - DEST {:g}"
     elif bench_name.startswith("trsm_dplasma"):
         pstr_arr = [
             "#+++++ M x N x K|NRHS : {matrix_rows:d} x {matrix_cols:d} x {:d}",
             "#+++++ MB x NB : {block_rows:d} x {block_cols:d}",
-            "[****] TIME(s) {time:f} : dtrsm PxQ= {grid_rows:d} {grid_cols:d} NB= {block_rows:d} N= {:d} : {perf:f} gflops",
         ]
+        pstr_res = "[****] TIME(s) {time:g} : dtrsm PxQ= {grid_rows:d} {grid_cols:d} NB= {block_rows:d} N= {:d} : {perf:g} gflops"
+    elif bench_name.startswith("chol_scalapack"):
+        pstr_arr = [
+          "PROBLEM PARAMETERS:"
+        ]
+        pstr_res = "{time_ms:g}ms {perf:g}GFlop/s {matrix_rows:d} ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d})"
     else:
         raise ValueError("Unknown bench_name: " + bench_name)
 
     data = []
     rd = {}
-    i_pstr = 0
+    # used for slate and dplasma
+    run_index = 0
     for line in fout:
-        pdata = parse(pstr_arr[i_pstr], " ".join(line.split()))
+        for pstr in pstr_arr:
+            pdata = parse(pstr, " ".join(line.split()))
+            if pdata:
+                rd.update(pdata.named)
+                run_index = 0
+
+        pdata = parse(pstr_res, " ".join(line.split()))
         if pdata:
             rd.update(pdata.named)
-            i_pstr += 1
-
-        # if all lines are matched, add the data entry
-        if i_pstr == len(pstr_arr):
             rd["bench_name"] = bench_name
             rd["nodes"] = nodes
             rd["perf_per_node"] = rd["perf"] / nodes
-            if bench_name == "chol_slate":
+            if bench_name.startswith("chol_slate"):
                 rd["block_cols"] = rd["block_rows"]
                 rd["matrix_cols"] = rd["matrix_rows"]
-            elif bench_name == "trsm_slate":
+            elif bench_name.startswith("trsm_slate"):
                 rd["block_cols"] = rd["block_rows"]
+            elif bench_name.startswith("chol_scalapack"):
+                rd["time"] = rd["time_ms"] / 1000
+                rd["matrix_cols"] = rd["matrix_rows"]
 
             # makes _calc_metrics work
             if not "dlaf" in bench_name:
-                rd["run_index"] = 1
+                rd["run_index"] = run_index
+                run_index += 1
 
-            data.append(rd)
-            i_pstr = 0
-            rd = {}
+            data.append(dict(rd))
 
     return data
 
@@ -173,44 +220,132 @@ def calc_trsm_metrics(df):
     )
 
 
-def gen_chol_plots(df, logx=False):
-    for (m, mb), grp_data in df.groupby(["matrix_rows", "block_rows"]):
-        title = f"Cholesky: matrix_size = {m} x {m}, block_size = {mb} x {mb}"
+def gen_chol_plots(df, logx=False, combine_mb=False, filts=None, replaces=None, filename_suffix=None):
+    if combine_mb:
+        it_space = df.groupby(["matrix_rows"])
+    else:
+        it_space = df.groupby(["matrix_rows", "block_rows"])
+
+    for x, grp_data in it_space:
+        if combine_mb:
+            m = x
+        else:
+            m = x[0]
+            mb = x[1]
+
+        title = f"Cholesky: matrix_size = {m} x {m}"
+        filename_ppn = f"chol_ppn_{m}"
+        filename_time = f"chol_time_{m}"
+        if not combine_mb:
+            title += f", block_size = {mb} x {mb}"
+            filename_ppn += f"_{mb}"
+            filename_time += f"_{mb}"
+        if filename_suffix != None:
+            filename_ppn += f"_{filename_suffix}"
+            filename_time += f"_{filename_suffix}"
+
         _gen_nodes_plot(
             "ppn",
             title,
             "GFlops/node",
-            f"chol_ppn_{m}_{mb}",
+            filename_ppn,
             grp_data,
-            logx
+            logx,
+            combine_mb=combine_mb,
+            filts=filts,
+            replaces=replaces
         )
         _gen_nodes_plot(
             "time",
             title,
             "Time [s]",
-            f"chol_time_{m}_{mb}",
+            filename_time,
             grp_data,
-            logx
+            logx,
+            combine_mb=combine_mb,
+            filts=filts,
+            replaces=replaces
         )
 
-def gen_trsm_plots(df, logx=False):
+def gen_chol_plots_weak(df, weak_rt_approx, logx=False, combine_mb=False, filts=None, replaces=None, filename_suffix=None):
+    df = df.assign(weak_rt=[int(round(x[0] / math.sqrt(x[1]) / weak_rt_approx)) * weak_rt_approx for x in zip(df['matrix_rows'], df['nodes'])])
+
+    if combine_mb:
+        it_space = df.groupby(["weak_rt"])
+    else:
+        it_space = df.groupby(["weak_rt", "block_rows"])
+
+    for x, grp_data in it_space:
+        if combine_mb:
+            weak_rt = x
+        else:
+            weak_rt = x[0]
+            mb = x[1]
+
+        title = f"Cholesky: weak scaling ({weak_rt} x {weak_rt})"
+        filename_ppn = f"chol_ppn_{weak_rt}"
+        filename_time = f"chol_time_{weak_rt}"
+        if not combine_mb:
+            title += f", block_size = {mb} x {mb}"
+            filename_ppn += f"_{mb}"
+            filename_time += f"_{mb}"
+        if filename_suffix != None:
+            filename_ppn += f"_{filename_suffix}"
+            filename_time += f"_{filename_suffix}"
+
+        _gen_nodes_plot(
+            "ppn",
+            title,
+            "GFlops/node",
+            filename_ppn,
+            grp_data,
+            logx,
+            combine_mb=combine_mb,
+            filts=filts,
+            replaces=replaces
+        )
+        _gen_nodes_plot(
+            "time",
+            title,
+            "Time [s]",
+            filename_time,
+            grp_data,
+            logx,
+            logy=True,
+            combine_mb=combine_mb,
+            filts=filts,
+            replaces=replaces
+        )
+
+def gen_trsm_plots(df, logx=False, filts=None, replaces=None, filename_suffix=None):
     for (m, n, mb), grp_data in df.groupby(
         ["matrix_rows", "matrix_cols", "block_rows"]
     ):
         title = f"TRSM: matrix_size = {m} x {n}, block_size = {mb} x {mb}"
+
+        filename_ppn = f"trsm_ppn_{m}_{n}_{mb}"
+        filename_time = f"trsm_time_{m}_{n}_{mb}"
+        if filename_suffix != None:
+            filename_ppn += f"_{filename_suffix}"
+            filename_time += f"_{filename_suffix}"
+
         _gen_nodes_plot(
             "ppn",
             title,
             "GFlops/node",
-            f"trsm_ppn_{m}_{n}_{mb}",
+            filename_ppn,
             grp_data,
-            logx
+            logx,
+            filts=filts,
+            replaces=replaces
         )
         _gen_nodes_plot(
             "time",
             title,
             "Time [s]",
-            f"trsm_time_{m}_{n}_{mb}",
+            filename_time,
             grp_data,
-            logx
+            logx,
+            filts=filts,
+            replaces=replaces
         )

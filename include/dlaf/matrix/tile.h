@@ -235,7 +235,7 @@ class UnwrapExtendTiles {
     // Finally, we extend the lifetime of read-write tiles directly and
     // read-only tiles wrapped in shared_futures by returning them here in a
     // tuple.
-    return std::move(t);
+    return t;
   }
 
   template <typename... Ts>
@@ -307,7 +307,7 @@ auto unwrapExtendTiles(F&& f) {
 /// wrapped function. When the return type of the wrapped function is void, this
 /// also returns void.
 template <typename... Ts>
-void getUnwrapReturnValue(hpx::future<hpx::tuple<Ts...>>&& f) {}
+void getUnwrapReturnValue(hpx::future<hpx::tuple<Ts...>>&&) {}
 
 template <typename R, typename... Ts>
 auto getUnwrapReturnValue(hpx::future<hpx::tuple<R, hpx::tuple<Ts...>>>&& f) {

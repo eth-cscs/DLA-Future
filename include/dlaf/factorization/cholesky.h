@@ -11,6 +11,7 @@
 
 #include <blas.hh>
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/factorization/cholesky/api.h"
 #include "dlaf/factorization/cholesky/mc.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"

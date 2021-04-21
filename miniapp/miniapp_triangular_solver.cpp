@@ -42,16 +42,19 @@ using dlaf::TileElementSize;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
 using dlaf::common::Ordering;
+using dlaf::comm::MPIMech;
 
 using T = float;
 #if DLAF_WITH_CUDA
 constexpr Backend B = Backend::GPU;
+constexpr Device D = Device::GPU;
 using HostMatrixType = dlaf::Matrix<T, Device::CPU>;
-using MatrixType = dlaf::Matrix<T, Device::GPU>;
 #else
 constexpr Backend B = Backend::MC;
-using MatrixType = dlaf::Matrix<T, Device::CPU>;
+constexpr Device D = Device::CPU;
 #endif
+
+using MatrixType = dlaf::Matrix<T, D>;
 
 struct options_t {
   SizeType m;
@@ -77,7 +80,6 @@ linear_system_t sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T al
 
 int hpx_main(hpx::program_options::variables_map& vm) {
   dlaf::initialize(vm);
-
   options_t opts = check_options(vm);
 
   Communicator world(MPI_COMM_WORLD);
@@ -135,7 +137,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     sync_barrier();
 
     dlaf::common::Timer<> timeit;
-    dlaf::solver::triangular<B>(comm_grid, side, uplo, op, diag, alpha, a, b);
+    dlaf::solver::triangular<B, D, T>(comm_grid, side, uplo, op, diag, alpha, a, b);
 
     sync_barrier();
 
@@ -177,7 +179,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 }
 
 int main(int argc, char** argv) {
-  dlaf::comm::mpi_init mpi_initter(argc, argv, dlaf::comm::mpi_thread_level::serialized);
+  dlaf::comm::mpi_init mpi_initter(argc, argv, dlaf::comm::mpi_thread_level::multiple);
 
   // options
   using namespace hpx::program_options;
@@ -188,15 +190,15 @@ int main(int argc, char** argv) {
 
   // clang-format off
   desc_commandline.add_options()
-    ("m",             value<SizeType>()->default_value(4096),  "Matrix b rows")
-    ("n",             value<SizeType>()->default_value(512),   "Matrix b columns")
-    ("mb",            value<SizeType>()->default_value(256),   "Matrix b block rows")
-    ("nb",            value<SizeType>()->default_value(512),   "Matrix b block columns")
-    ("grid-rows",     value<int>()     ->default_value(1),     "Number of row processes in the 2D communicator.")
-    ("grid-cols",     value<int>()     ->default_value(1),     "Number of column processes in the 2D communicator.")
-    ("nruns",         value<int64_t>() ->default_value(1),     "Number of runs to compute the cholesky")
-    ("nwarmups",      value<int64_t>() ->default_value(1),     "Number of warmup runs")
-    ("check-result",  bool_switch()    ->default_value(false), "Check the triangular system solution (for each run)")
+    ("m",             value<SizeType>()  ->default_value(4096),       "Matrix b rows")
+    ("n",             value<SizeType>()  ->default_value(512),        "Matrix b columns")
+    ("mb",            value<SizeType>()  ->default_value(256),        "Matrix b block rows")
+    ("nb",            value<SizeType>()  ->default_value(512),        "Matrix b block columns")
+    ("grid-rows",     value<int>()       ->default_value(1),          "Number of row processes in the 2D communicator.")
+    ("grid-cols",     value<int>()       ->default_value(1),          "Number of column processes in the 2D communicator.")
+    ("nruns",         value<int64_t>()   ->default_value(1),          "Number of runs to compute the cholesky")
+    ("nwarmups",      value<int64_t>()   ->default_value(1),          "Number of warmup runs")
+    ("check-result",  bool_switch()      ->default_value(false),      "Check the triangular system solution (for each run)")
   ;
   // clang-format on
 
@@ -204,22 +206,8 @@ int main(int argc, char** argv) {
 
   hpx::init_params p;
   p.desc_cmdline = desc_commandline;
-  p.rp_callback = [](auto& rp, auto) {
-    int ntasks;
-    DLAF_MPI_CALL(MPI_Comm_size(MPI_COMM_WORLD, &ntasks));
-    // if the user has asked for special thread pools for communication
-    // then set them up
-    if (ntasks > 1) {
-      // Create a thread pool with a single core that we will use for all
-      // communication related tasks
-      rp.create_thread_pool("mpi", hpx::resource::scheduling_policy::local_priority_fifo);
-      rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], "mpi");
-    }
-  };
-
-  auto ret_code = hpx::init(argc, argv, p);
-
-  return ret_code;
+  p.rp_callback = dlaf::initResourcePartitionerHandler;
+  return hpx::init(argc, argv, p);
 }
 
 namespace {
@@ -314,4 +302,5 @@ linear_system_t sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T al
 
   return {el_op_a, el_b, el_x};
 }
+
 }

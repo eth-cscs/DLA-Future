@@ -33,9 +33,7 @@ class DlaFuture(CMakePackage, CudaPackage):
 
     depends_on("hpx build_type=Debug", when="build_type=Debug")
     depends_on("hpx build_type=Release", when="build_type=Release")
-    depends_on(
-        "hpx build_type=RelWithDebInfo", when="build_type=RelWithDebInfo"
-    )
+    depends_on("hpx build_type=RelWithDebInfo", when="build_type=RelWithDebInfo")
 
     def cmake_args(self):
         spec = self.spec
@@ -49,9 +47,7 @@ class DlaFuture(CMakePackage, CudaPackage):
                 self.define("LAPACK_TYPE", "Custom"),
                 self.define(
                     "LAPACK_LIBRARY",
-                    " ".join(
-                        [spec[dep].libs.ld_flags for dep in ["blas", "lapack"]]
-                    ),
+                    " ".join([spec[dep].libs.ld_flags for dep in ["blas", "lapack"]]),
                 ),
             ]
 

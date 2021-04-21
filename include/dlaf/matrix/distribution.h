@@ -292,6 +292,12 @@ public:
     return util::matrix::tileElementFromElement(global_element, block_size_.get<rc>());
   }
 
+  /// Returns the size of the Tile with global index @p index.
+  TileElementSize tileSize(const GlobalTileIndex& index) const noexcept {
+    return {std::min(block_size_.rows(), size_.rows() - index.row() * block_size_.rows()),
+            std::min(block_size_.cols(), size_.cols() - index.col() * block_size_.cols())};
+  }
+
 private:
   /// Computes and sets @p size_.
   ///

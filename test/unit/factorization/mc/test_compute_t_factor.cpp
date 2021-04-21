@@ -137,7 +137,7 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
       const MatrixLocal<const TypeParam> v = [&v_input, &dist_v, &comm_grid, a_m, a_n, nb, v_start] {
         // TODO this can be improved by communicating just the interesting part
         // gather the entire A matrix
-        auto a = matrix::test::all_gather<TypeParam>(v_input, comm_grid);
+        auto a = matrix::test::allGather<TypeParam>(v_input, comm_grid);
 
         // panel shape
         const auto v_start_el = dist_v.globalElementIndex(v_start, {0, 0});
@@ -177,7 +177,7 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
 
         const TypeParam* data_ptr = v.ptr({j, j});
         const auto norm = blas::nrm2(reflector_size, data_ptr, 1);
-        const TypeParam tau = 2 / std::pow(norm, 2);
+        const TypeParam tau = 2 / std::pow(norm, static_cast<decltype(norm)>(2));
 
         taus.push_back(tau);
 

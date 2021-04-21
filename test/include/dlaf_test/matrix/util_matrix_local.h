@@ -56,7 +56,7 @@ void copy(const MatrixLocal<const T>& source, MatrixLocal<T>& dest) {
 ///
 /// Optionally, it is possible to specify the type of the return MatrixLocal (useful for const correctness)
 template <class T>
-MatrixLocal<T> all_gather(Matrix<const T, Device::CPU>& source, comm::CommunicatorGrid comm_grid) {
+MatrixLocal<T> allGather(Matrix<const T, Device::CPU>& source, comm::CommunicatorGrid comm_grid) {
   MatrixLocal<std::remove_const_t<T>> dest(source.size(), source.blockSize());
 
   const auto& dist_source = source.distribution();
@@ -78,7 +78,7 @@ MatrixLocal<T> all_gather(Matrix<const T, Device::CPU>& source, comm::Communicat
     }
   }
 
-  return std::move(dest);
+  return MatrixLocal<T>(std::move(dest));
 }
 
 template <class T>

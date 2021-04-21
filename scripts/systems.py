@@ -4,7 +4,7 @@ cscs["daint-mc"] = {
   "Cores": 36,
   "Threads per core": 2,
   "Allowed rpns": [1, 2],
-  "Run command": "srun -n {total_ranks} -c {threads_per_rank}",
+  "Run command": "srun -u -n {total_ranks} -c {threads_per_rank}",
   "Batch preamble": """
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}
@@ -31,7 +31,7 @@ cscs["daint-gpu"] = {
   "Cores": 12,
   "Threads per core": 2,
   "Allowed rpns": [1],
-  "Run command": "srun -n {total_ranks} -c {threads_per_rank}",
+  "Run command": "srun -u -n {total_ranks} -c {threads_per_rank}",
   "Batch preamble": """
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}
@@ -58,7 +58,7 @@ cscs["eiger"] = {
   "Cores": 128,
   "Threads per core": 2,
   "Allowed rpns": [1, 2, 4, 8],
-  "Run command": "srun -n {total_ranks} --cpu-bind=core -c {threads_per_rank}",
+  "Run command": "srun -u -n {total_ranks} --cpu-bind=core -c {threads_per_rank}",
   "Batch preamble": """
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}

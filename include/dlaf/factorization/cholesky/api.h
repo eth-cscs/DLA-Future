@@ -9,6 +9,7 @@
 //
 #pragma once
 
+#include "dlaf/communication/mech.h"
 #include "dlaf/types.h"
 
 namespace dlaf {

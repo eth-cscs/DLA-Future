@@ -7,6 +7,7 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
+#include "dlaf/communication/mech.h"
 #include "dlaf/solver/triangular.h"
 
 #include <functional>
@@ -127,7 +128,7 @@ void testTriangularSolver(comm::CommunicatorGrid grid, blas::Side side, blas::Up
   set(mat_a, el_op_a, op);
   set(mat_b, el_b);
 
-  solver::triangular<Backend::MC>(grid, side, uplo, op, diag, alpha, mat_a, mat_b);
+  solver::triangular<Backend::MC, Device::CPU, T>(grid, side, uplo, op, diag, alpha, mat_a, mat_b);
 
   CHECK_MATRIX_NEAR(res_b, mat_b, 20 * (mat_b.size().rows() + 1) * TypeUtilities<T>::error,
                     20 * (mat_b.size().rows() + 1) * TypeUtilities<T>::error);
@@ -168,7 +169,7 @@ TYPED_TEST(TriangularSolverDistributedTest, Correctness) {
               std::tie(m, n, mb, nb) = sz;
               TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
 
-              testTriangularSolver(comm_grid, side, uplo, op, diag, alpha, m, n, mb, nb);
+              testTriangularSolver<TypeParam>(comm_grid, side, uplo, op, diag, alpha, m, n, mb, nb);
             }
           }
         }

@@ -18,6 +18,7 @@
 #include <hpx/modules/async_cuda.hpp>
 #endif
 
+#include <dlaf/communication/mech.h>
 #include <dlaf/types.h>
 
 #ifdef DLAF_WITH_CUDA
@@ -34,6 +35,8 @@ struct configuration {
   std::size_t num_hp_cuda_streams_per_thread = 3;
   std::size_t umpire_host_memory_pool_initial_bytes = 1 << 30;
   std::size_t umpire_device_memory_pool_initial_bytes = 1 << 30;
+  std::string mpi_pool = "mpi";
+  comm::MPIMech mpi_mech = comm::MPIMech::Polling;
 };
 
 std::ostream& operator<<(std::ostream& os, configuration const& cfg);
@@ -99,4 +102,10 @@ void initialize(int argc, const char* const argv[], configuration const& user_cf
 ///
 /// Should be called once after every dlaf::initialize call.
 void finalize();
+
+/// Initialize the MPI pool.
+///
+///
+void initResourcePartitionerHandler(hpx::resource::partitioner& rp,
+                                    hpx::program_options::variables_map const& vm);
 }

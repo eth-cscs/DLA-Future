@@ -2,7 +2,7 @@
 
 IMAGE="$1"
 USE_CODECOV="$2"
-CORES_PER_NODE="$3"
+THREADS_PER_NODE="$3"
 SLURM_CONSTRAINT="$4"
 
 if [ "$USE_CODECOV" = true ]; then
@@ -21,15 +21,17 @@ stages:
 variables:
   ALLOCATION_NAME: dlaf-ci-job-\$CI_PIPELINE_ID
   SLURM_EXCLUSIVE: ''
+  SLURM_EXACT: ''
   SLURM_CONSTRAINT: $SLURM_CONSTRAINT
   CRAY_CUDA_MPS: 1
+  MPICH_MAX_THREAD_SAFETY: multiple
 
 allocate:
   stage: allocate
   extends: .daint_alloc
   variables:
     PULL_IMAGE: 'YES'
-    SLURM_TIMELIMIT: '15:00'
+    SLURM_TIMELIMIT: '20:00'
 
 {{JOBS}}
 
@@ -39,7 +41,7 @@ upload_reports:
   variables:
     PULL_IMAGE: 'NO'
     SLURM_NTASKS: 1
-    SLURM_TIMELIMIT: '15:00'
+    SLURM_TIMELIMIT: '5:00'
     DISABLE_AFTER_SCRIPT: 'YES'
   script: upload_codecov
 
@@ -55,7 +57,7 @@ JOB_TEMPLATE="
   variables:
     SLURM_CPUS_PER_TASK: {{CPUS_PER_TASK}}
     SLURM_NTASKS: {{NTASKS}}
-    SLURM_TIMELIMIT: '15:00'
+    SLURM_TIMELIMIT: '5:00'
     PULL_IMAGE: 'NO'
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
@@ -78,8 +80,10 @@ stages:
 variables:
   ALLOCATION_NAME: dlaf-ci-job-\$CI_PIPELINE_ID
   SLURM_EXCLUSIVE: ''
+  SLURM_EXACT: ''
   SLURM_CONSTRAINT: $SLURM_CONSTRAINT
   CRAY_CUDA_MPS: 1
+  MPICH_MAX_THREAD_SAFETY: multiple
 
 allocate:
   stage: allocate
@@ -102,7 +106,7 @@ JOB_TEMPLATE="
   variables:
     SLURM_CPUS_PER_TASK: {{CPUS_PER_TASK}}
     SLURM_NTASKS: {{NTASKS}}
-    SLURM_TIMELIMIT: '15:00'
+    SLURM_TIMELIMIT: '5:00'
     PULL_IMAGE: 'NO'
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
@@ -113,7 +117,7 @@ JOBS=""
 
 for label in `ctest --print-labels | egrep -o "RANK_[1-9][0-9]?"`; do
     N=`echo "$label" | sed "s/RANK_//"`
-    C=$(( CORES_PER_NODE / N ))
+    C=$(( THREADS_PER_NODE / N ))
 
     JOB=`echo "$JOB_TEMPLATE" | sed "s|{{LABEL}}|$label|g" \
                               | sed "s|{{NTASKS}}|$N|g" \

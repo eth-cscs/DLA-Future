@@ -40,6 +40,8 @@
 #include <cstdio>
 
 #include <gtest/gtest.h>
+
+#include <hpx/include/resource_partitioner.hpp>
 #include <hpx/init.hpp>
 
 #include <dlaf/init.h>
@@ -59,7 +61,7 @@ GTEST_API_ int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
 
   // Initialize MPI
-  int threading_required = MPI_THREAD_SERIALIZED;
+  int threading_required = MPI_THREAD_MULTIPLE;
   int threading_provided;
   MPI_Init_thread(&argc, &argv, threading_required, &threading_provided);
 

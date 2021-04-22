@@ -279,96 +279,135 @@ std::pair<SizeType, comm::IndexT_MPI> transposed_owner(const Distribution& dist,
 
 }
 
-/// Broadcast a panel in the direction orthogonal to its axis
-template <class T, Device device, Coord axis>
-void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis, T, device>& ws,
+/// Broadcast
+///
+/// Given a source panel on a rank, it gets broadcasted to make it available to all other ranks.
+///
+/// It does not give access to all the tiles, but just the ones of interest for each rank.
+///
+/// @param rank_root    on which rank the @p panel contains data to be broadcasted
+/// @param panel        on @p rank_root it is the source panel
+///                     on other ranks it is the destination panel
+/// @param serial_comm  where to pipeline the tasks for communications.
+/// @pre Communicator in @p serial_comm must be orthogonal to panel axis
+template <class T, Device device, Coord axis, class = std::enable_if_t<!std::is_const<T>::value>>
+void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis, T, device>& panel,
                common::Pipeline<comm::Communicator>& serial_comm, const comm::Size2D grid_size) {
   using hpx::dataflow;
   using hpx::util::unwrapping;
 
   constexpr auto comm_dir = orthogonal(axis);
 
-  // TODO
+  // do not schedule communication tasks if there is no reason to do so...
   if (grid_size.get(component(comm_dir)) <= 1)
     return;
 
-  const auto rank = ws.rankIndex().get(component(comm_dir));
+  const auto rank = panel.rankIndex().get(component(comm_dir));
 
-  for (const auto& index : ws) {
+  for (const auto& index : panel) {
     if (rank == rank_root)
-      dataflow(ex, unwrapping(comm::sendBcast<T>), ws.read(index), serial_comm());
+      dataflow(ex, unwrapping(comm::sendBcast<T>), panel.read(index), serial_comm());
     else
-      dataflow(ex, unwrapping(comm::recvBcast<T>), ws(index), rank_root, serial_comm());
+      dataflow(ex, unwrapping(comm::recvBcast<T>), panel(index), rank_root, serial_comm());
   }
 }
 
 /// Broadcast
 ///
-/// This communication pattern enables access to the tile in the column panel which shares
-/// the same index in the row panel (with transposed coordinate)
+/// Given a source panel on a rank, this communication pattern makes every rank access tiles of both:
+/// a. the source panel
+/// b. it's tranposed variant (just tile coordinates, data is not transposed)
+//
+/// In particular, it does not give access to all the tiles, but just the ones of interest for
+/// each rank, i.e. the rows and columns of a distributed matrix that the ranks stores locally.
 ///
-/// For each tile in the row panel the rank owning the corresponding tile in the column panel
-/// is identified, then each tile is either:
+/// This is achieved by either:
+/// - linking as external tile, if the tile is already available locally for the rank
+/// - receiving the tile from the owning rank (via a broadcast)
 ///
-/// - linked as external tile to the corresponding one in the column panel, if current rank owns it
-/// - received from the owning rank, which broadcasts the tile from the row panel along the column
-template <class T, Device device, Coord axis_from, Coord axis_to>
-void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
-               Panel<axis_from, T, device>& ws_from, Panel<axis_to, T, device>& ws_to,
+/// @param rank_root specifies on which rank the @p panel is the source of the data
+/// @param panel
+///   on rank_root it is the source panel (a)
+///   on others it represents the destination for the broadcast (b)
+/// @param panelT it represents the destination panel for the "transposed" variant of the panel
+/// @param row_task_chain where to pipeline the tasks for row-wise communications
+/// @param col_task_chain where to pipeline the tasks for col-wise communications
+/// @param grid_size shape of the grid of row and col communicators from @p row_task_chain and @p col_task_chain
+template <class T, Device device, Coord axis, class = std::enable_if_t<!std::is_const<T>::value>>
+void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis, T, device>& panel,
+               Panel<orthogonal(axis), T, device>& panelT,
                common::Pipeline<comm::Communicator>& row_task_chain,
                common::Pipeline<comm::Communicator>& col_task_chain, comm::Size2D grid_size) {
-  static_assert(axis_from == orthogonal(axis_to), "this method broadcasts and transposes coordinates");
-
   using hpx::dataflow;
   using hpx::util::unwrapping;
 
-  DLAF_ASSERT(ws_from.parent_distribution() == ws_to.parent_distribution(),
+  constexpr Coord axisT = orthogonal(axis);
+
+  auto get_taskchain = [&](Coord comm_dir) -> auto& {
+    return comm_dir == Coord::Row ? row_task_chain : col_task_chain;
+  };
+
+  // Note:
+  // Given a source panel, this communication pattern makes every rank access tiles of both the
+  // source panel and it's tranposed variant (just tile coordinates, data is not transposed).
+  // In particular, it does not give access to all the tiles, but just the ones of interest for
+  // each rank, i.e. the rows and columns of a distributed matrix that the ranks stores locally.
+  //
+  // This happens in two steps (for the sake of example, let's consider a column -> row broadcast,
+  // the opposite is dual):
+  //
+  // 1. broadcast the source panel to panel with the same shape on other ranks
+  // 2. populate the transposed destination panel
+  //
+  // Once the source panel is share by all ranks, the transposed panel can be easily populated,
+  // because each destination tile can be populated with data from the rank owning the diagonal one,
+  // the point of contact between the row and the column (row == col).
+  //
+  // If it is already available locally, the tile is not copied and it just gets "linked", in order
+  // to easily access it via panel coordinates with minimal (to null) overhead.
+  // For this reason, the destination panel will depend on the source panel (as the source panel
+  // may already depend on the matrix).
+
+  DLAF_ASSERT(panel.parent_distribution() == panelT.parent_distribution(),
               "they must refer to the same matrix");
 
   // TODO add check about sizes?!
-  // DLAF_ASSERT(ws_from.localNrTiles() >= ws_to.localNrTiles(),
-  //            "sizes", ws_from.localNrTiles(), ws_to.localNrTiles());
+  // DLAF_ASSERT(panel.localNrTiles() >= panelT.localNrTiles(),
+  //            "sizes", panel.localNrTiles(), panelT.localNrTiles());
 
   // TODO do I have to check for offset?!
 
-  auto get_taskchain = [&](Coord dir) -> auto& {
-    return dir == Coord::Row ? row_task_chain : col_task_chain;
-  };
-
   // STEP 1
-  // communicate each tile orthogonally to the direction of the destination panel
-  constexpr auto comm_dir_step1 = orthogonal(axis_from);
+  constexpr auto comm_dir_step1 = orthogonal(axis);
   auto& chain_step1 = get_taskchain(comm_dir_step1);
 
-  // share the main panel, so that it can be used as source for orthogonal communications
-  broadcast(ex, rank_root, ws_from, chain_step1, grid_size);
+  broadcast(ex, rank_root, panel, chain_step1, grid_size);
 
   // STEP 2
-  constexpr Coord coord_from = component(axis_from);
-  constexpr Coord coord_to = component(axis_to);
+  constexpr Coord coord = component(axis);
+  constexpr Coord coordT = component(axisT);
 
-  constexpr auto comm_dir_step2 = orthogonal(axis_to);
+  constexpr auto comm_dir_step2 = orthogonal(axisT);
   auto& chain_step2 = get_taskchain(comm_dir_step2);
 
-  const auto& dist = ws_from.parent_distribution();
+  const auto& dist = panel.parent_distribution();
 
-  for (const auto& idx_dst : ws_to) {
-    SizeType idx_cross;
-    comm::IndexT_MPI owner;
+  for (const auto& indexT : panelT) {
+    SizeType index_diag;
+    comm::IndexT_MPI owner_diag;
 
-    std::tie(idx_cross, owner) = internal::transposed_owner<coord_to>(dist, idx_dst);
+    std::tie(index_diag, owner_diag) = internal::transposed_owner<coordT>(dist, indexT);
 
-    if (dist.rankIndex().get(coord_from) == owner) {
-      const auto idx_src = dist.template localTileFromGlobalTile<coord_from>(idx_cross);
-      ws_to.set_tile(idx_dst, ws_from.read({coord_from, idx_src}));
-      // TODO
+    if (dist.rankIndex().get(coord) == owner_diag) {
+      const auto index_diag_local = dist.template localTileFromGlobalTile<coord>(index_diag);
+      panelT.set_tile(indexT, panel.read({coord, index_diag_local}));
+
       if (grid_size.get(component(comm_dir_step2)) > 1)
-        dataflow(ex, unwrapping(comm::sendBcast<T>), ws_to.read(idx_dst), chain_step2());
+        dataflow(ex, unwrapping(comm::sendBcast<T>), panelT.read(indexT), chain_step2());
     }
     else {
-      // TODO
       if (grid_size.get(component(comm_dir_step2)) > 1)
-        dataflow(ex, unwrapping(comm::recvBcast<T>), ws_to(idx_dst), owner, chain_step2());
+        dataflow(ex, unwrapping(comm::recvBcast<T>), panelT(indexT), owner_diag, chain_step2());
     }
   }
 }

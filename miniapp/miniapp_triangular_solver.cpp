@@ -44,7 +44,7 @@ using dlaf::comm::CommunicatorGrid;
 using dlaf::common::Ordering;
 using dlaf::comm::MPIMech;
 
-using T = float;
+using T = double;
 #if DLAF_WITH_CUDA
 constexpr Backend B = Backend::GPU;
 constexpr Device D = Device::GPU;

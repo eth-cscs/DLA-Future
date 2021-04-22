@@ -64,6 +64,11 @@ public:
                      begin_.col() + static_cast<IndexT>(i_ / ld_));
   }
 
+  SizeType operator-(const IteratorRange2D& rhs) const {
+    DLAF_ASSERT_MODERATE(i_ <= rhs.i_, "");
+    return i_ - rhs.i_;
+  }
+
 protected:
   index2d_t begin_;
   IndexT ld_;
@@ -93,6 +98,9 @@ public:
   }
   iter2d_t end() const noexcept {
     return iter2d_t(begin_idx_, ld_, i_max_);
+  }
+  SizeType size() const noexcept {
+    return end() - begin();
   }
 
 private:

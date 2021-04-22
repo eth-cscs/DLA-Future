@@ -33,11 +33,14 @@ void test_single_arg() {
 
   std::vector<Index> act_values;
   act_values.reserve(exp_values.size());
-  for (Index i : iterate_range2d(sz)) {
+  const auto range = iterate_range2d(sz);
+  for (Index i : range) {
     act_values.push_back(i);
   }
 
-  ASSERT_TRUE(act_values == exp_values);
+  EXPECT_EQ(exp_values, act_values);
+  EXPECT_EQ(exp_values.size(), range.size());
+  EXPECT_EQ(exp_values.size(), range.end() - range.begin());
 }
 
 // `end` is either `Index(7, 4)` or `Size(4, 2)`
@@ -50,11 +53,14 @@ void test_double_arg(TypeParam end) {
 
   std::vector<Index> act_values;
   act_values.reserve(exp_values.size());
-  for (Index i : iterate_range2d(begin, end)) {
+  const auto range = iterate_range2d(begin, end);
+  for (Index i : range) {
     act_values.push_back(i);
   }
 
-  ASSERT_TRUE(act_values == exp_values);
+  EXPECT_EQ(exp_values, act_values);
+  EXPECT_EQ(exp_values.size(), range.size());
+  EXPECT_EQ(exp_values.size(), range.end() - range.begin());
 }
 
 }

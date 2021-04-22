@@ -362,11 +362,9 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis,
   DLAF_ASSERT(panel.parent_distribution() == panelT.parent_distribution(),
               "they must refer to the same matrix");
 
-  // TODO add check about sizes?!
-  // DLAF_ASSERT(panel.localNrTiles() >= panelT.localNrTiles(),
-  //            "sizes", panel.localNrTiles(), panelT.localNrTiles());
-
-  // TODO do I have to check for offset?!
+  // TODO they must have the same size (globally, not locally)
+  // TODO the matrix must be square (because it is a transposition)
+  // TODO the offset must be considered for the squareness
 
   // STEP 1
   constexpr auto comm_dir_step1 = orthogonal(axis);

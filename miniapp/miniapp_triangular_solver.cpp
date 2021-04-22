@@ -164,7 +164,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       static_assert(std::is_arithmetic<T>::value, "mul/add error is valid just for arithmetic types");
       constexpr T muladd_error = 2 * std::numeric_limits<T>::epsilon();
 
-      const double max_error = 20 * (b.size().rows() + 1) * muladd_error;
+      const T max_error = 20 * (b.size().rows() + 1) * muladd_error;
 #if DLAF_WITH_CUDA
       CHECK_MATRIX_NEAR(ref_x, bh, max_error, 0);
 #else
@@ -273,26 +273,26 @@ linear_system_t sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T al
   auto el_op_a = [op_a_lower, diag](const GlobalElementIndex& index) -> T {
     if ((op_a_lower && index.row() < index.col()) || (!op_a_lower && index.row() > index.col()) ||
         (diag == blas::Diag::Unit && index.row() == index.col()))
-      return -9.9;
+      return static_cast<T>(-9.9);
 
-    const double i = index.row();
-    const double k = index.col();
+    const T i = index.row();
+    const T k = index.col();
 
-    return (i + 1) / (k + .5);
+    return (i + static_cast<T>(1)) / (k + static_cast<T>(.5));
   };
 
   auto el_x = [](const GlobalElementIndex& index) -> T {
-    const double k = index.row();
-    const double j = index.col();
+    const T k = index.row();
+    const T j = index.col();
 
-    return (k + .5) / (j + 2);
+    return (k + static_cast<T>(.5)) / (j + static_cast<T>(2));
   };
 
   auto el_b = [m, alpha, diag, op_a_lower, el_x](const GlobalElementIndex& index) -> T {
     const dlaf::BaseType<T> kk = op_a_lower ? index.row() + 1 : m - index.row();
 
-    const double i = index.row();
-    const double j = index.col();
+    const T i = index.row();
+    const T j = index.col();
     const T gamma = (i + 1) / (j + 2);
     if (diag == blas::Diag::Unit)
       return ((kk - 1) * gamma + el_x(index)) / alpha;

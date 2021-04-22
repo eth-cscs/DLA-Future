@@ -16,7 +16,7 @@ RUN apt-get update -qq && apt-get install -qq -y --no-install-recommends \
 
 RUN cd /usr/local/bin && \
   curl -Ls https://codecov.io/bash > codecov.sh && \
-  echo "89c658e261d5f25533598a222fd96cf17a5fa0eb3772f2defac754d9970b2ec8 codecov.sh" | sha256sum --check --quiet && \
+  echo "d6aa3207c4908d123bd8af62ec0538e3f2b9f257c3de62fad4e29cd3b59b41d9 codecov.sh" | sha256sum --check --quiet && \
   chmod +x codecov.sh
 
 # Install cmake

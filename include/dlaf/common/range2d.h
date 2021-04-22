@@ -36,6 +36,7 @@
 /// ```
 
 #include <cstddef>
+#include <iterator>
 
 #include "dlaf/common/assert.h"
 #include "dlaf/common/index2d.h"
@@ -45,29 +46,63 @@ namespace common {
 
 /// An Iterator returning indices in column-major order.
 template <typename IndexT, class Tag>
-class IteratorRange2D {
-  using index2d_t = Index2D<IndexT, Tag>;
+struct IteratorRange2D {
+  using difference_type = SizeType;
+  using value_type = Index2D<IndexT, Tag>;
+  using reference = const Index2D<IndexT, Tag>&;
+  using pointer = const Index2D<IndexT, Tag>*;
+  using iterator_category = std::input_iterator_tag;
 
-public:
-  IteratorRange2D(index2d_t begin, IndexT ld, SizeType i) : begin_(begin), ld_(ld), i_(i) {}
-
-  void operator++() noexcept {
-    ++i_;
+  IteratorRange2D(value_type begin, IndexT ld, SizeType i) : begin_(begin), i_(i), ld_(ld) {
+    current_ = computeIndex2D();
   }
 
+  // LegacyIterator
+  // LegacyInputIterator
+  IteratorRange2D& operator++() noexcept {
+    current_ = (++i_, computeIndex2D());
+    return *this;
+  }
+
+  // LegacyIterator
+  // LegacyInputIterator
+  // Postfix
+  IteratorRange2D& operator++(int) noexcept {
+    auto tmp = *this;
+    current_ = (++i_, computeIndex2D());
+    return tmp;
+  }
+
+  // EqualityComparable
+  bool operator==(const IteratorRange2D& o) const noexcept {
+    return i_ == o.i_;
+  }
+
+  // LegacyInputIterator
   bool operator!=(const IteratorRange2D& o) const noexcept {
-    return i_ != o.i_;
+    return !(*this == o);
   }
 
-  index2d_t operator*() const noexcept {
-    return index2d_t(begin_.row() + static_cast<IndexT>(i_ % ld_),
-                     begin_.col() + static_cast<IndexT>(i_ / ld_));
+  // LegacyIterator
+  // LegacyInputIterator
+  reference operator*() const noexcept {
+    return current_;
+  }
+
+  // LegacyInputIterator
+  pointer operator->() const noexcept {
+    return &current_;
   }
 
 protected:
-  index2d_t begin_;
-  IndexT ld_;
+  value_type computeIndex2D() {
+    return {begin_.row() + static_cast<IndexT>(i_ % ld_), begin_.col() + static_cast<IndexT>(i_ / ld_)};
+  }
+
+  value_type current_;
+  value_type begin_;
   SizeType i_;
+  SizeType ld_;
 };
 
 /// An Iterable representing a 2D range.

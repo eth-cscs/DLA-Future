@@ -78,12 +78,12 @@ TYPED_TEST(PanelTest, AssignToConstRef) {
       Panel<Coord::Col, const TypeParam, dlaf::Device::CPU>& ref = panel;
 
       std::vector<LocalTileIndex> exp_indices;
-      for (const auto& idx : panel) {
+      for (const auto& idx : panel.iterator()) {
         exp_indices.push_back(idx);
       }
 
       std::vector<LocalTileIndex> ref_indices;
-      for (const auto& idx : ref) {
+      for (const auto& idx : ref.iterator()) {
         ref_indices.push_back(idx);
       }
 
@@ -128,7 +128,7 @@ TYPED_TEST(PanelTest, IteratorCol) {
 
       std::vector<LocalTileIndex> indices;
       indices.reserve(static_cast<size_t>(exp_nrTiles));
-      for (const auto& idx : ws_v) {
+      for (const auto& idx : ws_v.iterator()) {
         indices.push_back(idx);
       }
 
@@ -165,7 +165,7 @@ TYPED_TEST(PanelTest, IteratorRow) {
 
       std::vector<LocalTileIndex> indices;
       indices.reserve(static_cast<size_t>(exp_nrTiles));
-      for (const auto& idx : ws_h) {
+      for (const auto& idx : ws_h.iterator()) {
         indices.push_back(idx);
       }
 
@@ -194,13 +194,13 @@ TYPED_TEST(PanelTest, AccessCol) {
       Panel<Coord::Col, TypeParam, dlaf::Device::CPU> ws_v(dist, at_offset);
 
       // rw-access
-      for (const auto& idx : ws_v) {
+      for (const auto& idx : ws_v.iterator()) {
         ws_v(idx).then(unwrapping(
             [idx](auto&& tile) { matrix::test::set(tile, TypeUtil::element(idx.row(), 26)); }));
       }
 
       // ro-access
-      for (const auto& idx : ws_v) {
+      for (const auto& idx : ws_v.iterator()) {
         ws_v.read(idx).then(
             unwrapping([idx](auto&& tile) { CHECK_MATRIX_EQ(TypeUtil::element(idx.row(), 26), tile); }));
       }
@@ -228,13 +228,13 @@ TYPED_TEST(PanelTest, AccessRow) {
       Panel<Coord::Row, TypeParam, dlaf::Device::CPU> ws_h(dist, at_offset);
 
       // rw-access
-      for (const auto& idx : ws_h) {
+      for (const auto& idx : ws_h.iterator()) {
         ws_h(idx).then(unwrapping(
             [idx](auto&& tile) { matrix::test::set(tile, TypeUtil::element(idx.col(), 26)); }));
       }
 
       // ro-access
-      for (const auto& idx : ws_h) {
+      for (const auto& idx : ws_h.iterator()) {
         ws_h.read(idx).then(
             unwrapping([idx](auto&& tile) { CHECK_MATRIX_EQ(TypeUtil::element(idx.col(), 26), tile); }));
       }
@@ -265,7 +265,7 @@ TYPED_TEST(PanelTest, ExternalTilesCol) {
       Panel<Coord::Col, TypeParam, dlaf::Device::CPU> ws_v(dist, at_offset);
 
       // even in panel, odd linked to matrix first column
-      for (const auto& idx : ws_v) {
+      for (const auto& idx : ws_v.iterator()) {
         if (idx.row() % 2 == 0) {
           ws_v(idx).then(unwrapping(
               [idx](auto&& tile) { matrix::test::set(tile, TypeUtil::element(-idx.row(), 13)); }));
@@ -275,7 +275,7 @@ TYPED_TEST(PanelTest, ExternalTilesCol) {
         }
       }
 
-      for (const auto& idx : ws_v) {
+      for (const auto& idx : ws_v.iterator()) {
         if (idx.row() % 2 == 0) {
           CHECK_TILE_EQ(TypeUtil::element(-idx.row(), 13), ws_v.read(idx).get());
         }
@@ -286,7 +286,7 @@ TYPED_TEST(PanelTest, ExternalTilesCol) {
 
       ws_v.reset();
 
-      for (const auto& idx : ws_v) {
+      for (const auto& idx : ws_v.iterator()) {
         if (idx.row() % 2 == 1) {
           ws_v(idx).then(unwrapping(
               [idx](auto&& tile) { matrix::test::set(tile, TypeUtil::element(-idx.row(), 13)); }));
@@ -296,7 +296,7 @@ TYPED_TEST(PanelTest, ExternalTilesCol) {
         }
       }
 
-      for (const auto& idx : ws_v) {
+      for (const auto& idx : ws_v.iterator()) {
         if (idx.row() % 2 == 1) {
           CHECK_TILE_EQ(TypeUtil::element(-idx.row(), 13), ws_v.read(idx).get());
         }
@@ -331,7 +331,7 @@ TYPED_TEST(PanelTest, ExternalTilesRow) {
       Panel<Coord::Row, TypeParam, dlaf::Device::CPU> ws_h(dist, at_offset);
 
       // even in panel, odd linked to matrix first row
-      for (const auto& idx : ws_h) {
+      for (const auto& idx : ws_h.iterator()) {
         if (idx.col() % 2 == 0) {
           ws_h(idx).then(unwrapping(
               [idx](auto&& tile) { matrix::test::set(tile, TypeUtil::element(-idx.col(), 13)); }));
@@ -341,7 +341,7 @@ TYPED_TEST(PanelTest, ExternalTilesRow) {
         }
       }
 
-      for (const auto& idx : ws_h) {
+      for (const auto& idx : ws_h.iterator()) {
         if (idx.col() % 2 == 0) {
           CHECK_TILE_EQ(TypeUtil::element(-idx.col(), 13), ws_h.read(idx).get());
         }
@@ -352,7 +352,7 @@ TYPED_TEST(PanelTest, ExternalTilesRow) {
 
       ws_h.reset();
 
-      for (const auto& idx : ws_h) {
+      for (const auto& idx : ws_h.iterator()) {
         if (idx.col() % 2 == 1) {
           ws_h(idx).then(unwrapping(
               [idx](auto&& tile) { matrix::test::set(tile, TypeUtil::element(-idx.col(), 13)); }));
@@ -362,7 +362,7 @@ TYPED_TEST(PanelTest, ExternalTilesRow) {
         }
       }
 
-      for (const auto& idx : ws_h) {
+      for (const auto& idx : ws_h.iterator()) {
         if (idx.col() % 2 == 1) {
           CHECK_TILE_EQ(TypeUtil::element(-idx.col(), 13), ws_h.read(idx).get());
         }
@@ -407,7 +407,7 @@ TYPED_TEST(PanelTest, OffsetCol) {
           EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
         }
 
-        for (const auto& idx : ws_v) {
+        for (const auto& idx : ws_v.iterator()) {
           auto& tile = ws_v.read(idx).get();
           EXPECT_EQ(tile({0, 0}), TypeUtil::element(idx.row(), 0));
           EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
@@ -450,7 +450,7 @@ TYPED_TEST(PanelTest, OffsetRow) {
           EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
         }
 
-        for (const auto& idx : ws_h) {
+        for (const auto& idx : ws_h.iterator()) {
           auto& tile = ws_h.read(idx).get();
           EXPECT_EQ(tile({0, 0}), TypeUtil::element(idx.col(), 0));
           EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
@@ -489,14 +489,14 @@ TYPED_TEST(PanelTest, BroadcastCol) {
       const auto rank_col = dist.rankIndex().col();
 
       // set all panels
-      for (const auto i_w : ws_v)
+      for (const auto i_w : ws_v.iterator())
         hpx::dataflow(unwrapping([rank_col](auto&& tile) {
                         matrix::test::set(tile, TypeUtil::element(rank_col, 26));
                       }),
                       ws_v(i_w));
 
       // check that all panels have been set
-      for (const auto i_w : ws_v)
+      for (const auto i_w : ws_v.iterator())
         hpx::dataflow(unwrapping([rank_col](auto&& tile) {
                         CHECK_TILE_EQ(TypeUtil::element(rank_col, 26), tile);
                       }),
@@ -508,7 +508,7 @@ TYPED_TEST(PanelTest, BroadcastCol) {
       broadcast(executor_mpi, root_col, ws_v, mpi_row_task_chain, comm_grid.size());
 
       // check all panel are equal on all ranks
-      for (const auto i_w : ws_v)
+      for (const auto i_w : ws_v.iterator())
         hpx::dataflow(unwrapping([root_col](auto&& tile) {
                         CHECK_TILE_EQ(TypeUtil::element(root_col, 26), tile);
                       }),
@@ -546,14 +546,14 @@ TYPED_TEST(PanelTest, BroadcastRow) {
       const auto rank_row = dist.rankIndex().row();
 
       // set all panels
-      for (const auto i_w : ws_h)
+      for (const auto i_w : ws_h.iterator())
         hpx::dataflow(unwrapping([rank_row](auto&& tile) {
                         matrix::test::set(tile, TypeUtil::element(rank_row, 26));
                       }),
                       ws_h(i_w));
 
       // check that all panels have been set
-      for (const auto i_w : ws_h)
+      for (const auto i_w : ws_h.iterator())
         hpx::dataflow(unwrapping([rank_row](auto&& tile) {
                         CHECK_TILE_EQ(TypeUtil::element(rank_row, 26), tile);
                       }),
@@ -565,7 +565,7 @@ TYPED_TEST(PanelTest, BroadcastRow) {
       broadcast(executor_mpi, root_row, ws_h, mpi_col_task_chain, comm_grid.size());
 
       // check all panel are equal on all ranks
-      for (const auto i_w : ws_h)
+      for (const auto i_w : ws_h.iterator())
         hpx::dataflow(unwrapping([root_row](auto&& tile) {
                         CHECK_TILE_EQ(TypeUtil::element(root_row, 26), tile);
                       }),
@@ -606,7 +606,7 @@ TYPED_TEST(PanelTest, BroadcastCol2Row) {
       Panel<Coord::Col, TypeParam, dlaf::Device::CPU> ws_v(dist, at_offset);
       Panel<Coord::Row, TypeParam, dlaf::Device::CPU> ws_h(dist, at_offset);
 
-      for (const auto i_w : ws_v)
+      for (const auto i_w : ws_v.iterator())
         hpx::dataflow(unwrapping([rank_col](auto&& tile) {
                         matrix::test::set(tile, TypeUtil::element(rank_col, 26));
                       }),
@@ -622,7 +622,7 @@ TYPED_TEST(PanelTest, BroadcastCol2Row) {
       broadcast(executor_mpi, owner, ws_v, ws_h, row_task_chain, col_task_chain, comm_grid.size());
 
       // check that all destination row panels got the value from the right rank
-      for (const auto i_w : ws_h) {
+      for (const auto i_w : ws_h.iterator()) {
         hpx::dataflow(unwrapping(
                           [owner](auto&& tile) { CHECK_TILE_EQ(TypeUtil::element(owner, 26), tile); }),
                       ws_h.read(i_w));
@@ -656,7 +656,7 @@ TYPED_TEST(PanelTest, BroadcastRow2Col) {
       Panel<Coord::Col, TypeParam, dlaf::Device::CPU> ws_v(dist, at_offset);
 
       // each row panel is initialized with a value identifying the row of the rank
-      for (const auto i_w : ws_h)
+      for (const auto i_w : ws_h.iterator())
         hpx::dataflow(unwrapping([rank_row](auto&& tile) {
                         matrix::test::set(tile, TypeUtil::element(rank_row, 26));
                       }),
@@ -672,7 +672,7 @@ TYPED_TEST(PanelTest, BroadcastRow2Col) {
       broadcast(executor_mpi, owner, ws_h, ws_v, row_task_chain, col_task_chain, comm_grid.size());
 
       // check that all destination column panels got the value from the right rank
-      for (const auto i_w : ws_v) {
+      for (const auto i_w : ws_v.iterator()) {
         hpx::dataflow(unwrapping(
                           [owner](auto&& tile) { CHECK_TILE_EQ(TypeUtil::element(owner, 26), tile); }),
                       ws_v.read(i_w));

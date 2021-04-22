@@ -45,25 +45,16 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
 
   Panel(Panel&&) = default;
 
+  /// On destruction, reset the panel
+  ///
+  /// Resetting the panel implies removing external dependencies
   virtual ~Panel() noexcept {
     reset();
   }
 
-  // Note:
-  // begin() and end() allows to loop over the tiles of the panel with a for range loop.
-  //
-  // for (auto& idx_tile : panel) {
-  //   panel.read(idx_tile);
-  // }
-
-  /// Return an IteratorRange2D pointing at the first tile part of the panel
-  auto begin() const noexcept {
-    return range_.begin();
-  }
-
-  /// Return an IteratorRange2D pointing just after the last tile in the panel
-  auto end() const noexcept {
-    return range_.end();
+  /// Return an IterableRange2D with a range over all tiles of the panel (considering the offset)
+  auto iterator() const noexcept {
+    return range_;
   }
 
   /// Return the rank which this (local) panel belongs to
@@ -304,7 +295,7 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis,
 
   const auto rank = panel.rankIndex().get(component(comm_dir));
 
-  for (const auto& index : panel) {
+  for (const auto& index : panel.iterator()) {
     if (rank == rank_root)
       dataflow(ex, unwrapping(comm::sendBcast<T>), panel.read(index), serial_comm());
     else
@@ -392,7 +383,7 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis,
 
   const auto& dist = panel.parent_distribution();
 
-  for (const auto& indexT : panelT) {
+  for (const auto& indexT : panelT.iterator()) {
     SizeType index_diag;
     comm::IndexT_MPI owner_diag;
 

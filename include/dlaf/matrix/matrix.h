@@ -38,6 +38,7 @@ auto selectGeneric(Func&& f, common::IterableRange2D<SizeType, LocalTile_TAG> ra
   using RetT = decltype(f(LocalTileIndex{}));
 
   std::vector<RetT> tiles;
+  tiles.resize(to_sizet(range.size()));
   std::transform(range.begin(), range.end(), std::back_inserter(tiles),
                  [&](auto idx) { return f(idx); });
   return tiles;

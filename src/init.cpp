@@ -261,7 +261,7 @@ void finalize() {
 void initResourcePartitionerHandler(hpx::resource::partitioner& rp,
                                     hpx::program_options::variables_map const& vm) {
   // Don't create the MPI pool if the user disabled it
-  if (vm["no-mpi-pool"].as<bool>())
+  if (vm["dlaf:no-mpi-pool"].as<bool>())
     return;
 
   // Don't create the MPI pool if there is a single process

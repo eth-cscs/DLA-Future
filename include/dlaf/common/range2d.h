@@ -69,7 +69,7 @@ struct IteratorRange2D {
   // Postfix
   IteratorRange2D& operator++(int) noexcept {
     auto tmp = *this;
-    current_ = (++i_, computeIndex2D());
+    operator++();
     return tmp;
   }
 

@@ -112,4 +112,3 @@ WORKDIR ${BUILD}
 ENV LOCAL_REPORTS /codecov-reports
 RUN mkdir -p ${LOCAL_REPORTS} && \
     lcov --no-external --capture --initial --base-directory /DLA-Future --directory /DLA-Future-build --output-file "${LOCAL_REPORTS}/baseline-codecov.info"
-

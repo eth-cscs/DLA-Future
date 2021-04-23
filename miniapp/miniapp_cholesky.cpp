@@ -110,11 +110,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     copy(matrix_ref, matrix);
 
     // wait all setup tasks before starting benchmark
-    {
-      for (const auto tile_idx : dlaf::common::iterate_range2d(distribution.localNrTiles()))
-        matrix(tile_idx).get();
-      DLAF_MPI_CALL(MPI_Barrier(world));
-    }
+    matrix.syncAll();
+    DLAF_MPI_CALL(MPI_Barrier(world));
 
     dlaf::common::Timer<> timeit;
     dlaf::factorization::cholesky<Backend::MC, Device::CPU, T>(comm_grid, blas::Uplo::Lower, matrix);

@@ -88,7 +88,15 @@ COPY --from=builder ${DEPLOY} ${DEPLOY}
 # cause race conditions in gcov.
 COPY --from=builder ${SOURCE} ${SOURCE}
 
-COPY --from=builder /usr/local/bin/codecov.sh /usr/local/bin/codecov.sh
+ENV LOCAL_REPORTS /codecov-reports
+
+RUN mkdir -p "$LOCAL_REPORTS" && \
+    lcov --no-external --capture --initial --base-directory /DLA-Future --directory /DLA-Future-build --output-file "$LOCAL_REPORTS/baseline-codecov.info" &> /dev/null
+
+RUN cd /usr/local/bin && \
+  curl -Ls https://codecov.io/bash > codecov.sh && \
+  echo "d6aa3207c4908d123bd8af62ec0538e3f2b9f257c3de62fad4e29cd3b59b41d9 codecov.sh" | sha256sum --check --quiet && \
+  chmod +x codecov.sh
 
 # Make it easy to call our binaries.
 ENV PATH="${DEPLOY}/usr/bin:$PATH"

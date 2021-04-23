@@ -70,3 +70,10 @@ DLAF_addTest(test_comm_executor
   MPIRANKS 4
   USE_MAIN MPIHPX
 )
+
+DLAF_addTest(test_comm_matrix
+  SOURCES test_comm_matrix.cpp
+  LIBRARIES dlaf.core
+  MPIRANKS 2
+  USE_MAIN MPIHPX
+)

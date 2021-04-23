@@ -47,56 +47,106 @@ namespace common {
 /// An Iterator returning indices in column-major order.
 template <typename IndexT, class Tag>
 struct IteratorRange2D {
+  using iterator_category = std::random_access_iterator_tag;
   using difference_type = SizeType;
   using value_type = Index2D<IndexT, Tag>;
   using reference = const Index2D<IndexT, Tag>&;
   using pointer = const Index2D<IndexT, Tag>*;
-  using iterator_category = std::input_iterator_tag;
+
+  IteratorRange2D() = default;
+
+  IteratorRange2D(const IteratorRange2D&) = default;
+  IteratorRange2D& operator=(const IteratorRange2D&) = default;
 
   IteratorRange2D(value_type begin, IndexT ld, SizeType i) : begin_(begin), i_(i), ld_(ld) {
-    current_ = computeIndex2D();
+    current_ = computeIndex2D(i_);
   }
 
-  // LegacyIterator
-  // LegacyInputIterator
+  reference operator*() const noexcept {
+    return current_;
+  }
+
+  pointer operator->() const noexcept {
+    return &current_;
+  }
+
+  reference operator[](difference_type n) const noexcept {
+    return computeIndex2D(n);
+  }
+
   IteratorRange2D& operator++() noexcept {
-    current_ = (++i_, computeIndex2D());
+    current_ = (++i_, computeIndex2D(i_));
     return *this;
   }
 
-  // LegacyIterator
-  // LegacyInputIterator
-  // Postfix
   IteratorRange2D& operator++(int) noexcept {
     auto tmp = *this;
     operator++();
     return tmp;
   }
 
-  // EqualityComparable
-  bool operator==(const IteratorRange2D& o) const noexcept {
-    return i_ == o.i_;
+  IteratorRange2D& operator--() noexcept {
+    current_ = (--i_, computeIndex2D(i_));
+    return *this;
   }
 
-  // LegacyInputIterator
-  bool operator!=(const IteratorRange2D& o) const noexcept {
-    return !(*this == o);
+  IteratorRange2D& operator--(int) noexcept {
+    auto tmp = *this;
+    operator--();
+    return tmp;
   }
 
-  // LegacyIterator
-  // LegacyInputIterator
-  reference operator*() const noexcept {
-    return current_;
+  IteratorRange2D& operator+=(difference_type n) noexcept {
+    return i_ += n, *this;
   }
 
-  // LegacyInputIterator
-  pointer operator->() const noexcept {
-    return &current_;
+  IteratorRange2D& operator-=(difference_type n) noexcept {
+    return i_ -= n, *this;
+  }
+
+  friend IteratorRange2D operator+(IteratorRange2D a, difference_type n) noexcept {
+    return a += n;
+  }
+
+  friend IteratorRange2D operator+(difference_type n, const IteratorRange2D& a) noexcept {
+    return a + n;
+  }
+
+  friend IteratorRange2D operator-(IteratorRange2D i, difference_type n) noexcept {
+    return i -= n;
+  }
+
+  friend difference_type operator-(const IteratorRange2D& a, const IteratorRange2D& b) noexcept {
+    return a.i_ - b.i_;
+  }
+
+  friend bool operator==(const IteratorRange2D& a, const IteratorRange2D& b) noexcept {
+    return a.i_ == b.i_;
+  }
+
+  friend bool operator!=(const IteratorRange2D& a, const IteratorRange2D& b) noexcept {
+    return !(a == b);
+  }
+
+  friend bool operator<(const IteratorRange2D& a, const IteratorRange2D& b) noexcept {
+    return a.i_ < b.i_;
+  }
+
+  friend bool operator<=(const IteratorRange2D& a, const IteratorRange2D& b) noexcept {
+    return a.i_ <= b.i_;
+  }
+
+  friend bool operator>(const IteratorRange2D& a, const IteratorRange2D& b) noexcept {
+    return a.i_ > b.i_;
+  }
+
+  friend bool operator>=(const IteratorRange2D& a, const IteratorRange2D& b) noexcept {
+    return a.i_ >= b.i_;
   }
 
 protected:
-  value_type computeIndex2D() {
-    return {begin_.row() + static_cast<IndexT>(i_ % ld_), begin_.col() + static_cast<IndexT>(i_ / ld_)};
+  value_type computeIndex2D(difference_type n) {
+    return {begin_.row() + static_cast<IndexT>(n % ld_), begin_.col() + static_cast<IndexT>(n / ld_)};
   }
 
   value_type current_;

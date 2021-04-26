@@ -176,7 +176,7 @@ public:
   }
 
   /// Synchronization barrier for all local tiles in the matrix
-  void syncAll() noexcept;
+  void waitLocalTiles() noexcept;
 
 protected:
   Matrix(Distribution distribution) : internal::MatrixBase{std::move(distribution)} {}

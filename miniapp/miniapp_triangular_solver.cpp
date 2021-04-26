@@ -83,8 +83,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   dlaf::matrix::MatrixMirror<T, Device::Default, Device::CPU> b(bh);
 
   auto sync_barrier = [&]() {
-    a.syncAll();
-    b.syncAll();
+    a.waitLocalTiles();
+    b.waitLocalTiles();
     DLAF_MPI_CALL(MPI_Barrier(world));
   };
 

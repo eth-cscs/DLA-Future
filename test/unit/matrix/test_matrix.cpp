@@ -1393,7 +1393,7 @@ TEST_F(MatrixGenericTest, SyncBarrier) {
       // everyone wait on its local part...
       // this means that it is possible to call it also on empty local matrices, they just don't
       // have anything to wait for
-      matrix.syncAll();
+      matrix.waitLocalTiles();
 
       // after the sync barrier, start a task on a tile (another one/the same) expecting that
       // the previous task has been fully completed (and the future mechanism still works)

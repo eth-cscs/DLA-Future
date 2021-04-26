@@ -39,7 +39,7 @@ hpx::shared_future<Tile<const T, device>> Matrix<const T, device>::read(
 }
 
 template <class T, Device device>
-void Matrix<const T, device>::syncAll() noexcept {
+void Matrix<const T, device>::waitLocalTiles() noexcept {
   // Note:
   // Using a readwrite access to the tile ensures that the access is exclusive and not shared
   // among multiple tasks.

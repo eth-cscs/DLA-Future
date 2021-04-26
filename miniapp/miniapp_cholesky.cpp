@@ -110,7 +110,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     copy(matrix_ref, matrix);
 
     // wait all setup tasks before starting benchmark
-    matrix.syncAll();
+    matrix.waitLocalTiles();
     DLAF_MPI_CALL(MPI_Barrier(world));
 
     dlaf::common::Timer<> timeit;

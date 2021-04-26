@@ -18,6 +18,7 @@
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/range2d.h"
+#include "dlaf/common/round_robin.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/executor.h"
@@ -27,7 +28,6 @@
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/panel.h"
-
 #include "dlaf/memory/memory_view.h"
 #include "dlaf/util_matrix.h"
 
@@ -113,24 +113,6 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
 }
 
 template <class T>
-struct RoundRobin {
-  template <class... Args>
-  RoundRobin(std::size_t n, Args&&... args) : next_index_(0) {
-    for (std::size_t i = 0; i < n; ++i)
-      pool_.emplace_back(std::forward<Args>(args)...);
-  }
-
-  T& next_resource() {
-    auto idx = (next_index_ + 1) % pool_.size();
-    std::swap(idx, next_index_);
-    return pool_[idx];
-  }
-
-  std::size_t next_index_;
-  std::vector<T> pool_;
-};
-
-template <class T>
 void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
                                                    Matrix<T, Device::CPU>& mat_a) {
   using hpx::util::unwrapping;
@@ -151,8 +133,8 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
   const SizeType nrtile = mat_a.nrTiles().cols();
 
   constexpr std::size_t N_WORKSPACES = 2;
-  RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panel_cols(N_WORKSPACES, distr);
-  RoundRobin<matrix::Panel<Coord::Row, T, Device::CPU>> panel_cols_t(N_WORKSPACES, distr);
+  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panel_cols(N_WORKSPACES, distr);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, Device::CPU>> panel_cols_t(N_WORKSPACES, distr);
 
   for (SizeType k = 0; k < nrtile; ++k) {
     const GlobalTileIndex kk_idx(k, k);
@@ -165,18 +147,18 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
 
     const LocalTileIndex diag_wp_idx{0, kk_offset.cols()};
 
-    auto& panel_col = panel_cols.next_resource();
-    auto& panel_col_t = panel_cols_t.next_resource();
+    auto& panel_col = panel_cols.nextResource();
+    auto& panel_col_t = panel_cols_t.nextResource();
 
-    panel_col.set_offset(kk_offset);
-    panel_col_t.set_offset(kk_offset);
+    panel_col.setOffset(kk_offset);
+    panel_col_t.setOffset(kk_offset);
 
     // Factorization of diagonal tile and broadcast it along the `k-th column
     if (kk_rank.col() == this_rank.col()) {
       if (kk_rank.row() == this_rank.row()) {
         potrf_diag_tile(executor_hp, mat_a(kk_idx));
         if (k != nrtile - 1) {
-          panel_col_t.set_tile(diag_wp_idx, mat_a.read(kk_idx));
+          panel_col_t.setTile(diag_wp_idx, mat_a.read(kk_idx));
           dataflow(executor_mpi, matrix::unwrapExtendTiles(comm::sendBcast<T>), panel_col_t.read(diag_wp_idx),
                    mpi_col_task_chain());
         }
@@ -201,7 +183,7 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
       if (kk_rank.col() == this_rank.col()) {
         trsm_panel_tile(executor_hp, panel_col_t.read(diag_wp_idx), mat_a(ik_idx));
 
-        panel_col.set_tile(local_idx, mat_a.read(ik_idx));
+        panel_col.setTile(local_idx, mat_a.read(ik_idx));
       }
     }
 

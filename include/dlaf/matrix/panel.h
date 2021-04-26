@@ -63,7 +63,7 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
   }
 
   /// Return the Distribution of the parent matrix
-  auto parent_distribution() const noexcept {
+  auto parentDistribution() const noexcept {
     return dist_matrix_;
   }
 
@@ -75,13 +75,12 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
   /// - has not been already set to an external tile
   ///
   /// @pre @p index must be a valid index for the current panel size
-  void set_tile(const LocalTileIndex& index, hpx::shared_future<ConstTileT> new_tile_fut) {
+  void setTile(const LocalTileIndex& index, hpx::shared_future<ConstTileT> new_tile_fut) {
     DLAF_ASSERT(index.isIn(dist_matrix_.localNrTiles()), index, dist_matrix_.localNrTiles());
-    DLAF_ASSERT(internal_.count(linear_index(index)) == 0, "internal tile have been already used",
-                index);
-    DLAF_ASSERT(!is_external(index), "already set to external", index);
+    DLAF_ASSERT(internal_.count(linearIndex(index)) == 0, "internal tile have been already used", index);
+    DLAF_ASSERT(!isExternal(index), "already set to external", index);
 
-    external_[linear_index(index)] = std::move(new_tile_fut);
+    external_[linearIndex(index)] = std::move(new_tile_fut);
   }
 
   /// Access a Tile of the panel in read-only mode
@@ -92,20 +91,20 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
   hpx::shared_future<ConstTileT> read(const LocalTileIndex& index) {
     DLAF_ASSERT_HEAVY(index.isIn(dist_matrix_.localNrTiles()), index, dist_matrix_.localNrTiles());
 
-    const SizeType internal_linear_idx = linear_index(index);
-    if (is_external(index)) {
+    const SizeType internal_linear_idx = linearIndex(index);
+    if (isExternal(index)) {
       return external_[internal_linear_idx];
     }
     else {
       internal_.insert(internal_linear_idx);
-      return BaseT::read(full_index(index));
+      return BaseT::read(fullIndex(index));
     }
   }
 
   /// Set the panel to a new offset (with respect to the "parent" matrix)
   ///
   /// @pre offset cannot be less than the offset has been specifed on construction
-  void set_offset(LocalTileSize offset, bool reset_values = false) noexcept {
+  void setOffset(LocalTileSize offset) noexcept {
     DLAF_ASSERT(offset.get(component(axis)) >= bias_, offset, bias_);
 
     offset_ = offset.get(component(axis)) - bias_;
@@ -115,10 +114,11 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
                                    dist_matrix_.localNrTiles().get(component(axis)) - (offset_ + bias_),
                                    1);
     range_ = iterate_range2d(panel_start, panel_size);
+  }
 
-    // TODO It would be enough to set to zero just the part of matrix used (considering offset)
-    if (reset_values)
-      util::set(*(static_cast<Matrix<T, device>*>(this)), [](auto&&) { return 0; });
+  /// Return the current set offset (1D)
+  SizeType offset() const noexcept {
+    return offset_;
   }
 
   /// Reset the internal usage status of the panel.
@@ -135,8 +135,8 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
 protected:
   using iter2d_t = decltype(iterate_range2d(LocalTileSize{0, 0}));
 
-  static LocalElementSize compute_panel_size(LocalElementSize size, TileElementSize blocksize,
-                                             LocalTileSize start) {
+  static LocalElementSize computePanelSize(LocalElementSize size, TileElementSize blocksize,
+                                           LocalTileSize start) {
     const auto mb = blocksize.rows();
     const auto nb = blocksize.cols();
 
@@ -155,8 +155,8 @@ protected:
   ///
   /// It allocates just the memory needed for the part of matrix used, so
   /// starting from @p start
-  static Matrix<T, device> setup_matrix(const Distribution& dist_matrix, const LocalTileSize start) {
-    const auto panel_size = compute_panel_size(dist_matrix.localSize(), dist_matrix.blockSize(), start);
+  static Matrix<T, device> setupMatrix(const Distribution& dist_matrix, const LocalTileSize start) {
+    const auto panel_size = computePanelSize(dist_matrix.localSize(), dist_matrix.blockSize(), start);
 
     Distribution dist{panel_size, dist_matrix.blockSize()};
     auto layout = tileLayout(dist);
@@ -173,11 +173,11 @@ protected:
   /// - a Panel<Col> 2x1
   /// - or a Panel<Row> 4x1
   Panel(matrix::Distribution dist_matrix, LocalTileSize offset)
-      : BaseT(setup_matrix(dist_matrix, offset)), dist_matrix_(dist_matrix),
+      : BaseT(setupMatrix(dist_matrix, offset)), dist_matrix_(dist_matrix),
         bias_(offset.get(component(axis))), range_(iterate_range2d(LocalTileSize{0, 0})) {
     DLAF_ASSERT_HEAVY(BaseT::nrTiles().get(axis) == 1, BaseT::nrTiles());
 
-    set_offset(offset);
+    setOffset(offset);
 
     external_.resize(BaseT::nrTiles().get(component(axis)));
 
@@ -186,7 +186,7 @@ protected:
   }
 
   /// Given a matrix index, compute the internal linear index
-  SizeType linear_index(const LocalTileIndex& index) const noexcept {
+  SizeType linearIndex(const LocalTileIndex& index) const noexcept {
     const auto idx = index.get(component(axis));
 
     DLAF_ASSERT_MODERATE(idx >= offset_, idx, offset_);
@@ -200,8 +200,8 @@ protected:
   /// but it computes a 2D index instead of a linear one.
   /// The 2D index is the projection of the given index, i.e. in a Panel<Col> the Col for index
   /// will always be 0 (and relatively for a Panel<Row>)
-  LocalTileIndex full_index(LocalTileIndex index) const {
-    index = LocalTileIndex(component(axis), linear_index(index));
+  LocalTileIndex fullIndex(LocalTileIndex index) const {
+    index = LocalTileIndex(component(axis), linearIndex(index));
 
     DLAF_ASSERT_HEAVY(index.isIn(BaseT::distribution().localNrTiles()), index,
                       BaseT::distribution().localNrTiles());
@@ -210,8 +210,8 @@ protected:
   }
 
   /// Given a matrix index, check if the corresponding tile in the panel is external or not
-  bool is_external(const LocalTileIndex idx_matrix) const noexcept {
-    return external_[linear_index(idx_matrix)].valid();
+  bool isExternal(const LocalTileIndex idx_matrix) const noexcept {
+    return external_[linearIndex(idx_matrix)].valid();
   }
 
   ///> Parent matrix which this panel is related to
@@ -244,15 +244,15 @@ struct Panel : public Panel<axis, const T, device> {
   ///
   /// @pre index must point to a tile which is internally managed by the panel
   hpx::future<TileT> operator()(const LocalTileIndex& index) {
-    DLAF_ASSERT(!is_external(index), "read-only access on external tiles", index);
+    DLAF_ASSERT(!isExternal(index), "read-only access on external tiles", index);
 
-    BaseT::internal_.insert(BaseT::linear_index(index));
-    return BaseT::operator()(BaseT::full_index(index));
+    BaseT::internal_.insert(BaseT::linearIndex(index));
+    return BaseT::operator()(BaseT::fullIndex(index));
   }
 
 protected:
   using BaseT = Panel<axis, const T, device>;
-  using BaseT::is_external;
+  using BaseT::isExternal;
 };
 
 namespace internal {
@@ -261,13 +261,12 @@ namespace internal {
 // it returns both the component of the rank in the transposed dimension and
 // its global cross coordinate (i.e. row == col in the global frame of reference)
 template <Coord dst_coord>
-std::pair<SizeType, comm::IndexT_MPI> transposed_owner(const Distribution& dist,
-                                                       const LocalTileIndex idx) {
+std::pair<SizeType, comm::IndexT_MPI> transposedOwner(const Distribution& dist,
+                                                      const LocalTileIndex idx) {
   const auto idx_cross = dist.template globalTileFromLocalTile<dst_coord>(idx.get(dst_coord));
   const auto rank_owner = dist.template rankGlobalTile<orthogonal(dst_coord)>(idx_cross);
   return std::make_pair(idx_cross, rank_owner);
 }
-
 }
 
 /// Broadcast
@@ -359,7 +358,7 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis,
   // For this reason, the destination panel will depend on the source panel (as the source panel
   // may already depend on the matrix).
 
-  DLAF_ASSERT(panel.parent_distribution() == panelT.parent_distribution(),
+  DLAF_ASSERT(panel.parentDistribution() == panelT.parentDistribution(),
               "they must refer to the same matrix");
 
   // TODO they must have the same size (globally, not locally)
@@ -379,17 +378,17 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis,
   constexpr auto comm_dir_step2 = orthogonal(axisT);
   auto& chain_step2 = get_taskchain(comm_dir_step2);
 
-  const auto& dist = panel.parent_distribution();
+  const auto& dist = panel.parentDistribution();
 
   for (const auto& indexT : panelT.iterator()) {
     SizeType index_diag;
     comm::IndexT_MPI owner_diag;
 
-    std::tie(index_diag, owner_diag) = internal::transposed_owner<coordT>(dist, indexT);
+    std::tie(index_diag, owner_diag) = internal::transposedOwner<coordT>(dist, indexT);
 
     if (dist.rankIndex().get(coord) == owner_diag) {
       const auto index_diag_local = dist.template localTileFromGlobalTile<coord>(index_diag);
-      panelT.set_tile(indexT, panel.read({coord, index_diag_local}));
+      panelT.setTile(indexT, panel.read({coord, index_diag_local}));
 
       if (grid_size.get(component(comm_dir_step2)) > 1)
         dataflow(ex, unwrapping(comm::sendBcast<T>), panelT.read(indexT), chain_step2());

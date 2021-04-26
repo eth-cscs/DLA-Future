@@ -271,7 +271,7 @@ TYPED_TEST(PanelTest, ExternalTilesCol) {
               [idx](auto&& tile) { matrix::test::set(tile, TypeUtil::element(-idx.row(), 13)); }));
         }
         else {
-          ws_v.set_tile(idx, matrix.read(idx));
+          ws_v.setTile(idx, matrix.read(idx));
         }
       }
 
@@ -292,7 +292,7 @@ TYPED_TEST(PanelTest, ExternalTilesCol) {
               [idx](auto&& tile) { matrix::test::set(tile, TypeUtil::element(-idx.row(), 13)); }));
         }
         else {
-          ws_v.set_tile(idx, matrix.read(idx));
+          ws_v.setTile(idx, matrix.read(idx));
         }
       }
 
@@ -337,7 +337,7 @@ TYPED_TEST(PanelTest, ExternalTilesRow) {
               [idx](auto&& tile) { matrix::test::set(tile, TypeUtil::element(-idx.col(), 13)); }));
         }
         else {
-          ws_h.set_tile(idx, matrix.read(idx));
+          ws_h.setTile(idx, matrix.read(idx));
         }
       }
 
@@ -358,7 +358,7 @@ TYPED_TEST(PanelTest, ExternalTilesRow) {
               [idx](auto&& tile) { matrix::test::set(tile, TypeUtil::element(-idx.col(), 13)); }));
         }
         else {
-          ws_h.set_tile(idx, matrix.read(idx));
+          ws_h.setTile(idx, matrix.read(idx));
         }
       }
 
@@ -398,7 +398,7 @@ TYPED_TEST(PanelTest, OffsetCol) {
         ws_v({i, 0}).get()({0, 0}) = i;
 
       for (SizeType i = at_offset.rows(); i < matrix.distribution().localNrTiles().rows(); ++i) {
-        ws_v.set_offset({i, 0});
+        ws_v.setOffset({i, 0});
 
         for (SizeType k = i; k < matrix.distribution().localNrTiles().rows(); ++k) {
           const LocalTileIndex idx(k, 0);
@@ -441,7 +441,7 @@ TYPED_TEST(PanelTest, OffsetRow) {
         ws_h({0, j}).get()({0, 0}) = j;
 
       for (SizeType j = at_offset.cols(); j < matrix.distribution().localNrTiles().cols(); ++j) {
-        ws_h.set_offset({0, j});
+        ws_h.setOffset({0, j});
 
         for (SizeType k = j; k < matrix.distribution().localNrTiles().cols(); ++k) {
           const LocalTileIndex idx(0, k);

@@ -32,6 +32,7 @@
 #include "dlaf/factorization/cholesky/api.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/distribution.h"
+#include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/panel.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/memory/memory_view.h"
@@ -74,12 +75,6 @@ void gemm_trailing_matrix_tile(Executor&& trailing_matrix_executor,
                 blas::Op::ConjTrans, T(-1.0), std::move(panel_tile), std::move(col_panel), T(1.0),
                 std::move(matrix_tile));
 }
-
-template <Backend backend, Device device, class T>
-struct Cholesky {
-  static void call_L(Matrix<T, device>& mat_a);
-  static void call_L(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a);
-};
 
 // Local implementation of Lower Cholesky factorization.
 template <Backend backend, Device device, class T>
@@ -234,22 +229,6 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
     panelT.reset();
   }
 }
-
-/// ---- ETI
-#define DLAF_FACTORIZATION_CHOLESKY_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
-  KWORD template struct Cholesky<BACKEND, DEVICE, DATATYPE>;
-
-DLAF_FACTORIZATION_CHOLESKY_ETI(extern, Backend::MC, Device::CPU, float)
-DLAF_FACTORIZATION_CHOLESKY_ETI(extern, Backend::MC, Device::CPU, double)
-DLAF_FACTORIZATION_CHOLESKY_ETI(extern, Backend::MC, Device::CPU, std::complex<float>)
-DLAF_FACTORIZATION_CHOLESKY_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
-
-#ifdef DLAF_WITH_CUDA
-DLAF_FACTORIZATION_CHOLESKY_ETI(extern, Backend::GPU, Device::GPU, float)
-DLAF_FACTORIZATION_CHOLESKY_ETI(extern, Backend::GPU, Device::GPU, double)
-DLAF_FACTORIZATION_CHOLESKY_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)
-DLAF_FACTORIZATION_CHOLESKY_ETI(extern, Backend::GPU, Device::GPU, std::complex<double>)
-#endif
 
 }
 }

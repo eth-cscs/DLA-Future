@@ -9,6 +9,9 @@
 //
 #pragma once
 
+#include "blas.hh"
+
+#include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 
 namespace dlaf {

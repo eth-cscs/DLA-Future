@@ -16,6 +16,7 @@
 #include <hpx/init.hpp>
 
 #include "dlaf/auxiliary/norm.h"
+#include "dlaf/blas/tile.h"
 #include "dlaf/common/timer.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/error.h"

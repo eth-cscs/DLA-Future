@@ -68,6 +68,7 @@ target_link_libraries(dlaf.prop
     HPX::hpx
     lapackpp
     blaspp
+    umpire
     $<TARGET_NAME_IF_EXISTS:dlaf::cublas>
     $<TARGET_NAME_IF_EXISTS:dlaf::cudart>
 )
@@ -82,6 +83,7 @@ target_compile_definitions(dlaf.prop
     $<$<BOOL:${DLAF_ASSERT_HEAVY_ENABLE}>:DLAF_ASSERT_HEAVY_ENABLE>
     DLAF_FUNCTION_NAME=$<IF:$<BOOL:is_pretty_function_available>,__PRETTY_FUNCTION__,__func__>
     $<$<BOOL:${DLAF_WITH_CUDA}>:DLAF_WITH_CUDA>
+    $<$<BOOL:${DLAF_WITH_CUDA_MPI_RDMA}>:DLAF_WITH_CUDA_MPI_RDMA>
 )
 
 # Define DLAF's CORE library
@@ -97,6 +99,7 @@ add_library(dlaf.core
     matrix/tile.cpp
     matrix.cpp
     memory/memory_view.cpp
+    memory/memory_chunk.cpp
 )
 target_link_libraries(dlaf.core PUBLIC dlaf.prop)
 
@@ -109,7 +112,7 @@ add_library(dlaf.factorization OBJECT factorization/cholesky/mc.cpp)
 target_link_libraries(dlaf.factorization PUBLIC dlaf.prop)
 
 # Define DLAF's solver library
-add_library(dlaf.solver OBJECT solver/triangular/mc.cpp)
+add_library(dlaf.solver OBJECT solver/triangular/mc.cpp $<$<BOOL:${DLAF_WITH_CUDA}>:solver/triangular/gpu.cpp>)
 target_link_libraries(dlaf.solver PUBLIC dlaf.prop)
 
 # Define DLAF's auxiliary library

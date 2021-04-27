@@ -10,12 +10,14 @@
 #pragma once
 
 #include <hpx/execution.hpp>
+#include <hpx/include/resource_partitioner.hpp>
 #include <hpx/thread.hpp>
 
 #ifdef DLAF_WITH_CUDA
 #include <hpx/modules/async_cuda.hpp>
 #endif
 
+#include <dlaf/communication/executor.h>
 #include <dlaf/init.h>
 #include <dlaf/types.h>
 
@@ -62,9 +64,7 @@ struct GetCopyExecutor<Device::GPU, Device::GPU> {
 /// @tparam B backend with which the executor should be used.
 template <Backend B>
 auto getMPIExecutor() {
-  return hpx::execution::parallel_executor{&hpx::resource::get_thread_pool(
-                                               hpx::resource::pool_exists("mpi") ? "mpi" : "default"),
-                                           hpx::threads::thread_priority::high};
+  return dlaf::comm::Executor{};
 }
 
 /// Returns a normal priority executor appropriate for use with the given

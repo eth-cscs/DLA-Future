@@ -15,7 +15,7 @@
 #include <tuple>
 #include "gtest/gtest.h"
 #include "dlaf/blas/enum_output.h"
-#include "dlaf/blas_tile.h"
+#include "dlaf/blas/tile.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/memory/memory_view.h"
 #include "dlaf_test/matrix/util_tile.h"

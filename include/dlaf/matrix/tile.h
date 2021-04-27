@@ -12,6 +12,7 @@
 
 #include <exception>
 #include <ostream>
+#include <type_traits>
 
 #include <hpx/functional.hpp>
 #include <hpx/local/future.hpp>
@@ -222,11 +223,9 @@ struct UnwrapFuture<hpx::future<Tile<T, D>>> {
 
 /// Callable object used for the unwrapExtendTiles function below.
 template <typename F>
-struct UnwrapExtendTiles {
-  F f;
-
+class UnwrapExtendTiles {
   template <typename... Ts>
-  auto operator()(Ts&&... ts) {
+  auto callHelper(std::true_type, Ts&&... ts) {
     // Extract values from futures (not shared_futures).
     auto t = hpx::make_tuple<>(UnwrapFuture<std::decay_t<Ts>>::call(std::forward<Ts>(ts))...);
 
@@ -238,6 +237,44 @@ struct UnwrapExtendTiles {
     // tuple.
     return t;
   }
+
+  template <typename... Ts>
+  auto callHelper(std::false_type, Ts&&... ts) {
+    // Extract values from futures (not shared_futures).
+    auto t = hpx::make_tuple<>(UnwrapFuture<std::decay_t<Ts>>::call(std::forward<Ts>(ts))...);
+
+    // Call f with all futures (not just future<Tile>) unwrapped.
+    auto&& r = hpx::invoke_fused(hpx::util::unwrapping(f), t);
+
+    // Finally, we extend the lifetime of read-write tiles directly and
+    // read-only tiles wrapped in shared_futures by returning them here in a
+    // tuple.
+    return hpx::make_tuple<>(std::forward<decltype(r)>(r), std::move(t));
+  }
+
+public:
+  template <typename F_,
+            typename = std::enable_if_t<!std::is_same<UnwrapExtendTiles, std::decay_t<F_>>::value>>
+  UnwrapExtendTiles(F_&& f_) : f(std::forward<F_>(f_)) {}
+  UnwrapExtendTiles(UnwrapExtendTiles&&) = default;
+  UnwrapExtendTiles& operator=(UnwrapExtendTiles&&) = default;
+  UnwrapExtendTiles(UnwrapExtendTiles const&) = default;
+  UnwrapExtendTiles& operator=(UnwrapExtendTiles const&) = default;
+
+  // We use trailing decltype for SFINAE. This ensures that this does not
+  // become a candidate when F is not callable with the given arguments.
+  template <typename... Ts>
+  auto operator()(Ts&&... ts)
+      -> decltype(callHelper(std::is_void<decltype(hpx::invoke(hpx::util::unwrapping(std::declval<F>()),
+                                                               std::declval<Ts>()...))>{},
+                             std::forward<Ts>(ts)...)) {
+    return callHelper(std::is_void<decltype(hpx::invoke(hpx::util::unwrapping(std::declval<F>()),
+                                                        std::declval<Ts>()...))>{},
+                      std::forward<Ts>(ts)...);
+  }
+
+private:
+  F f;
 };
 }
 
@@ -251,9 +288,31 @@ struct UnwrapExtendTiles {
 /// such as the CUDA/cuBLAS executors, where f returns immediately, but the
 /// tiles must be kept alive until the completion of the operation. The wrapper
 /// can be used with "normal" blocking host-side operations as well.
+///
+/// The wrapper returns a tuple of the input arguments for void functions, and
+/// a tuple of the result and a tuple of the input arguments for non-void
+/// functions. getUnwrapReturnValue should be used to extract the return value of
+/// the wrapped function.
 template <typename F>
 auto unwrapExtendTiles(F&& f) {
   return internal::UnwrapExtendTiles<std::decay_t<F>>{std::forward<F>(f)};
+}
+
+/// Access the return value of the function wrapped by unwrapExtendTiles.
+///
+/// Because of the lifetime management that uwnrapExtendTiles does it will
+/// return a tuple where the first element is the return value of the wrapped
+/// function and the second element contains the arguments that have their
+/// lifetime extended. This helper function extracts the return value of the
+/// wrapped function. When the return type of the wrapped function is void, this
+/// also returns void.
+template <typename... Ts>
+void getUnwrapReturnValue(hpx::future<hpx::tuple<Ts...>>&&) {}
+
+template <typename R, typename... Ts>
+auto getUnwrapReturnValue(hpx::future<hpx::tuple<R, hpx::tuple<Ts...>>>&& f) {
+  auto split_f = hpx::split_future(std::move(f));
+  return std::move(hpx::get<0>(split_f));
 }
 
 /// ---- ETI
@@ -267,11 +326,12 @@ DLAF_TILE_ETI(extern, double, Device::CPU)
 DLAF_TILE_ETI(extern, std::complex<float>, Device::CPU)
 DLAF_TILE_ETI(extern, std::complex<double>, Device::CPU)
 
-// DLAF_TILE_ETI(extern, float, Device::GPU)
-// DLAF_TILE_ETI(extern, double, Device::GPU)
-// DLAF_TILE_ETI(extern, std::complex<float>, Device::GPU)
-// DLAF_TILE_ETI(extern, std::complex<double>, Device::GPU)
-
+#if defined(DLAF_WITH_CUDA)
+DLAF_TILE_ETI(extern, float, Device::GPU)
+DLAF_TILE_ETI(extern, double, Device::GPU)
+DLAF_TILE_ETI(extern, std::complex<float>, Device::GPU)
+DLAF_TILE_ETI(extern, std::complex<double>, Device::GPU)
+#endif
 }
 }
 

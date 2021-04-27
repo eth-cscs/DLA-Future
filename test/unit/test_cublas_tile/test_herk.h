@@ -13,7 +13,7 @@
 #include <sstream>
 #include "gtest/gtest.h"
 #include "dlaf/blas/enum_output.h"
-#include "dlaf/cublas_tile.h"
+#include "dlaf/blas/tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/memory/memory_view.h"
@@ -93,7 +93,7 @@ void testHerk(blas::Uplo uplo, blas::Op op_a, SizeType n, SizeType k, SizeType e
 
   cublasHandle_t handle;
   DLAF_CUBLAS_CALL(cublasCreate(&handle));
-  cublasHerk(handle, uplo, op_a, alpha, ad, beta, cd);
+  herk(handle, uplo, op_a, alpha, ad, beta, cd);
   DLAF_CUDA_CALL(cudaDeviceSynchronize());
   DLAF_CUBLAS_CALL(cublasDestroy(handle));
 

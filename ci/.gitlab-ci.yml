@@ -23,7 +23,7 @@ stages:
     - docker login -u $CSCS_REGISTRY_USER -p $CSCS_REGISTRY_PASSWORD $CSCS_REGISTRY
   script:
     - TAG=`sha256sum $BUILD_DOCKER_FILE | head -c 64`
-    - docker build -t $BUILD_IMAGE:$TAG -t $BUILD_IMAGE:latest --cache-from $BUILD_IMAGE:$TAG --cache-from $BUILD_IMAGE:latest --build-arg BASE_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg HPX_WITH_CUDA -f $BUILD_DOCKER_FILE --network=host .
+    - docker build -t $BUILD_IMAGE:$TAG -t $BUILD_IMAGE:latest --cache-from $BUILD_IMAGE:$TAG --cache-from $BUILD_IMAGE:latest --build-arg BASE_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg HPX_WITH_CUDA --build-arg UMPIRE_ENABLE_CUDA -f $BUILD_DOCKER_FILE --network=host .
     - docker push $BUILD_IMAGE:$TAG
     - docker push $BUILD_IMAGE:latest
     - docker build -t $DEPLOY_IMAGE --build-arg BUILD_IMAGE=$BUILD_IMAGE:$TAG --build-arg DLAF_WITH_CUDA -f $DEPLOY_DOCKER_FILE --network=host .
@@ -47,6 +47,7 @@ cpu release build:
     THREADS_PER_NODE: 72
     USE_CODECOV: "false"
     HPX_WITH_CUDA: "OFF"
+    UMPIRE_ENABLE_CUDA: "OFF"
 
 cpu codecov build:
   extends: .build_common
@@ -61,6 +62,7 @@ cpu codecov build:
     THREADS_PER_NODE: 72
     USE_CODECOV: "true"
     HPX_WITH_CUDA: "OFF"
+    UMPIRE_ENABLE_CUDA: "OFF"
 
 gpu release build:
   extends: .build_common
@@ -75,6 +77,7 @@ gpu release build:
     THREADS_PER_NODE: 24
     USE_CODECOV: "false"
     HPX_WITH_CUDA: "ON"
+    UMPIRE_ENABLE_CUDA: "ON"
 
 gpu codecov build:
   extends: .build_common
@@ -89,6 +92,7 @@ gpu codecov build:
     THREADS_PER_NODE: 24
     USE_CODECOV: "true"
     HPX_WITH_CUDA: "ON"
+    UMPIRE_ENABLE_CUDA: "ON"
 
 notify_github_start:
   stage: build

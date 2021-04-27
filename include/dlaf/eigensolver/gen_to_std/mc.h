@@ -13,7 +13,7 @@
 #include <hpx/include/resource_partitioner.hpp>
 #include <hpx/include/threads.hpp>
 
-#include "dlaf/blas_tile.h"
+#include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/range2d.h"
@@ -48,9 +48,6 @@ void GenToStd<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
   constexpr auto NoTrans = blas::Op::NoTrans;
   constexpr auto ConjTrans = blas::Op::ConjTrans;
 
-  using hpx::execution::parallel_executor;
-  using hpx::resource::get_thread_pool;
-  using hpx::threads::thread_priority;
   using hpx::util::unwrapping;
 
   auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
@@ -71,10 +68,10 @@ void GenToStd<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
       const auto ai_panel = dlaf::common::iterate_range2d(ai_start, ai_end);
 
       for (const auto& ik : ai_panel) {
-        hpx::dataflow(executor_np, unwrapping(tile::trsm<T, Device::CPU>), Right, Lower, ConjTrans,
-                      NonUnit, 1.0, mat_l.read(kk), mat_a(ik));
-        hpx::dataflow(executor_np, unwrapping(tile::hemm<T, Device::CPU>), Right, Lower, -0.5,
-                      mat_a.read(kk), mat_l.read(ik), 1.0, mat_a(ik));
+        hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::trsm_o), Right, Lower, ConjTrans,
+                      NonUnit, T(1.0), mat_l.read(kk), mat_a(ik));
+        hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::hemm_o), Right, Lower, T(-0.5),
+                      mat_a.read(kk), mat_l.read(ik), T(1.0), mat_a(ik));
       }
 
       const LocalTileIndex ti_start(k + 1, k + 1);
@@ -85,33 +82,33 @@ void GenToStd<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
         const auto ik = LocalTileIndex{ij.row(), k};
 
         if (ij.row() == ij.col()) {
-          hpx::dataflow(executor_hp, unwrapping(tile::her2k<T, Device::CPU>), Lower, NoTrans, -1.0,
-                        mat_a.read(jk), mat_l.read(jk), 1.0, mat_a(ij));
+          hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::her2k_o), Lower, NoTrans, T(-1.0),
+                        mat_a.read(jk), mat_l.read(jk), BaseType<T>(1.0), mat_a(ij));
         }
         else if (ij.row() > ij.col()) {
-          hpx::dataflow(executor_np, unwrapping(tile::gemm<T, Device::CPU>), NoTrans, ConjTrans, -1.0,
-                        mat_a.read(ik), mat_l.read(jk), 1.0, mat_a(ij));
-          hpx::dataflow(executor_np, unwrapping(tile::gemm<T, Device::CPU>), NoTrans, ConjTrans, -1.0,
-                        mat_l.read(ik), mat_a.read(jk), 1.0, mat_a(ij));
+          hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::gemm_o), NoTrans, ConjTrans,
+                        T(-1.0), mat_a.read(ik), mat_l.read(jk), T(1.0), mat_a(ij));
+          hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::gemm_o), NoTrans, ConjTrans,
+                        T(-1.0), mat_l.read(ik), mat_a.read(jk), T(1.0), mat_a(ij));
         }
       }
 
       for (const auto& ik : ai_panel) {
-        hpx::dataflow(executor_hp, unwrapping(tile::hemm<T, Device::CPU>), Right, Lower, -0.5,
-                      mat_a.read(kk), mat_l.read(ik), 1.0, mat_a(ik));
+        hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::hemm_o), Right, Lower, T(-0.5),
+                      mat_a.read(kk), mat_l.read(ik), T(1.0), mat_a(ik));
       }
 
       for (SizeType j = k + 1; j < n; ++j) {
         const auto jj = LocalTileIndex{j, j};
         const auto jk = LocalTileIndex{j, k};
-        hpx::dataflow(executor_hp, unwrapping(tile::trsm<T, Device::CPU>), Left, Lower, NoTrans, NonUnit,
-                      1.0, mat_l.read(jj), mat_a(jk));
+        hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), Left, Lower, NoTrans,
+                      NonUnit, T(1.0), mat_l.read(jj), mat_a(jk));
 
         for (SizeType i = j + 1; i < m; ++i) {
           const auto ij = LocalTileIndex{i, j};
           const auto ik = LocalTileIndex{i, k};
-          hpx::dataflow(executor_np, unwrapping(tile::gemm<T, Device::CPU>), NoTrans, NoTrans, -1.0,
-                        mat_l.read(ij), mat_a.read(jk), 1.0, mat_a(ik));
+          hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::gemm_o), NoTrans, NoTrans, T(-1.0),
+                        mat_l.read(ij), mat_a.read(jk), T(1.0), mat_a(ik));
         }
       }
     }

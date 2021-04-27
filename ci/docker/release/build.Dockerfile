@@ -104,6 +104,23 @@ RUN wget -q https://github.com/${HPX_FORK}/hpx/archive/${HPX_VERSION}.tar.gz -O 
     make install && \
     rm -rf /root/hpx.tar.gz /root/hpx-${HPX_VERSION}
 
+ARG UMPIRE_VERSION=5.0.1
+ARG UMPIRE_PATH=/usr/local/umpire
+ARG UMPIRE_ENABLE_CUDA=ON
+RUN git clone --recursive --depth 1 --branch v${UMPIRE_VERSION} https://github.com/LLNL/Umpire.git Umpire-${UMPIRE_VERSION} && \
+    cd Umpire-${UMPIRE_VERSION} && \
+    mkdir build && \
+    cd build && \
+    cmake .. \
+      -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+      -DCMAKE_INSTALL_PREFIX=$UMPIRE_PATH \
+      -DENABLE_CUDA=$UMPIRE_ENABLE_CUDA \
+      -DENABLE_BENCHMARKS=OFF \
+      -DENABLE_TESTS=OFF && \
+    make -j$(nproc) && \
+    make install && \
+    rm -rf /root/umpire.tar.gz /root/Umpire-${UMPIRE_VERSION}
+
 # Install BLASPP
 ARG BLASPP_VERSION=2020.10.02
 ARG BLASPP_PATH=/usr/local/blaspp

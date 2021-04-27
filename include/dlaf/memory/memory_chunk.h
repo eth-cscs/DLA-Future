@@ -16,6 +16,8 @@
 #include <cuda_runtime.h>
 #endif
 
+#include <umpire/Allocator.hpp>
+
 #include "dlaf/types.h"
 #ifdef DLAF_WITH_CUDA
 #include "dlaf/cuda/error.h"
@@ -24,8 +26,19 @@
 namespace dlaf {
 namespace memory {
 
-/// The class @c MemoryChunk represents a layer of abstraction over the underlying host memory.
+namespace internal {
+umpire::Allocator& getUmpireHostAllocator();
+void initializeUmpireHostAllocator(std::size_t initial_bytes);
+void finalizeUmpireHostAllocator();
 
+#ifdef DLAF_WITH_CUDA
+void initializeUmpireDeviceAllocator(std::size_t initial_bytes);
+void finalizeUmpireDeviceAllocator();
+umpire::Allocator& getUmpireDeviceAllocator();
+#endif
+}
+
+/// The class @c MemoryChunk represents a layer of abstraction over the underlying device memory.
 template <class T, Device device>
 class MemoryChunk {
 public:
@@ -48,14 +61,14 @@ public:
     std::size_t mem_size = static_cast<std::size_t>(size_) * sizeof(T);
 #ifdef DLAF_WITH_CUDA
     if (device == Device::CPU) {
-      DLAF_CUDA_CALL(cudaMallocHost(&ptr_, mem_size));
+      ptr_ = static_cast<T*>(internal::getUmpireHostAllocator().allocate(mem_size));
     }
     else {
-      DLAF_CUDA_CALL(cudaMalloc(&ptr_, mem_size));
+      ptr_ = static_cast<T*>(internal::getUmpireDeviceAllocator().allocate(mem_size));
     }
 #else
     if (device == Device::CPU) {
-      ptr_ = static_cast<T*>(std::malloc(mem_size));
+      ptr_ = static_cast<T*>(internal::getUmpireHostAllocator().allocate(mem_size));
     }
     else {
       std::cout << "[ERROR] CUDA code was requested but the `DLAF_WITH_CUDA` flag was not passed!";
@@ -136,14 +149,14 @@ private:
     if (allocated_) {
 #ifdef DLAF_WITH_CUDA
       if (device == Device::CPU) {
-        DLAF_CUDA_CALL(cudaFreeHost(ptr_));
+        internal::getUmpireHostAllocator().deallocate(ptr_);
       }
       else {
-        DLAF_CUDA_CALL(cudaFree(ptr_));
+        internal::getUmpireDeviceAllocator().deallocate(ptr_);
       }
 #else
       if (device == Device::CPU) {
-        std::free(ptr_);
+        internal::getUmpireHostAllocator().deallocate(ptr_);
       }
 #endif
     }

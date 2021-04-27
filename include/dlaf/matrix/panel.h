@@ -306,7 +306,8 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis,
 ///
 /// Given a source panel on a rank, this communication pattern makes every rank access tiles of both:
 /// a. the source panel
-/// b. it's tranposed variant (just tile coordinates, data is not transposed)
+/// b. it's tranposed variant (just tile coordinates, data is not transposed) w.r.t. the main diagonal of
+/// the parent matrix
 //
 /// In particular, it does not give access to all the tiles, but just the ones of interest for
 /// each rank, i.e. the rows and columns of a distributed matrix that the ranks stores locally.
@@ -323,6 +324,10 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis,
 /// @param row_task_chain where to pipeline the tasks for row-wise communications
 /// @param col_task_chain where to pipeline the tasks for col-wise communications
 /// @param grid_size shape of the grid of row and col communicators from @p row_task_chain and @p col_task_chain
+///
+/// @pre both panels are child of a matrix (even not the same) with the same Distribution
+/// @pre both panels parent matrices should be square matrices with square blocksizes
+/// @pre both panels offsets should lay on the main diagonal of the parent matrix
 template <class T, Device device, Coord axis, class = std::enable_if_t<!std::is_const<T>::value>>
 void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis, T, device>& panel,
                Panel<orthogonal(axis), T, device>& panelT,
@@ -361,9 +366,53 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis,
   DLAF_ASSERT(panel.parentDistribution() == panelT.parentDistribution(),
               "they must refer to the same matrix");
 
-  // TODO they must have the same size (globally, not locally)
-  // TODO the matrix must be square (because it is a transposition)
-  // TODO the offset must be considered for the squareness
+  const auto& dist = panel.parentDistribution();
+
+  // Note:
+  // This algorithm allow to broadcast panel to panelT using as mirror the parent matrix main diagonal.
+  // This means that it is possible to broadcast panels with different axes just if their global offset
+  // lie on the diaognal.
+  // In order to verify this, a check is performed by verifying on each rank what are the possible
+  // indices for the global offset, starting from the local one.
+  //
+  // Given the distribution and the local offset, a set of possible indices is built, considering
+  // the follow inequalty:
+  // globalFromLocal(offset_local) - grid_size < offset_global <= globalFromLocal(offset_local)
+  // and producing a list of `grid_size` possible values in each panel direction
+  //
+  // At this point, the check verifies that there is at least a match among the two sets.
+  // If all ranks have at least a matching global offset among the two different directions,
+  // it means that the global offset for the panels is on the main diagonal.
+  //
+  // credits: @rasolca
+  DLAF_ASSERT(square_size(dist), dist.size());
+  DLAF_ASSERT(square_blocksize(dist), dist.blockSize());
+  DLAF_ASSERT_MODERATE(
+      [&]() {
+        const auto offset = dist.template globalTileFromLocalTile<component(axis)>(panel.offset());
+        const auto offsetT = dist.template globalTileFromLocalTile<component(axisT)>(panelT.offset());
+
+        const auto grid_size = dist.commGridSize().get(component(axis));
+        const auto gridT_size = dist.commGridSize().get(component(axisT));
+
+        auto generate_indices = [](SizeType offset, SizeType grid_size) {
+          std::vector<SizeType> indices(to_sizet(grid_size));
+          std::iota(indices.begin(), indices.end(), offset - grid_size + 1);
+          return indices;
+        };
+
+        std::vector<SizeType> indices = generate_indices(offset, grid_size);
+        std::vector<SizeType> indicesT = generate_indices(offsetT, gridT_size);
+
+        std::vector<SizeType> common_indices(std::min(indices.size(), indicesT.size()));
+        const auto chances =
+            std::distance(common_indices.begin(),
+                          std::set_intersection(indices.begin(), indices.end(), indicesT.begin(),
+                                                indicesT.end(), common_indices.begin()));
+
+        return chances > 0;
+      }(),
+      panel.offset(), panelT.offset(), "broadcast can mirror just on the parent matrix main diagonal");
 
   // STEP 1
   constexpr auto comm_dir_step1 = orthogonal(axis);
@@ -377,8 +426,6 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis,
 
   constexpr auto comm_dir_step2 = orthogonal(axisT);
   auto& chain_step2 = get_taskchain(comm_dir_step2);
-
-  const auto& dist = panel.parentDistribution();
 
   for (const auto& indexT : panelT.iterator()) {
     SizeType index_diag;

@@ -86,8 +86,7 @@ protected:
   ///
   /// @pre index.isIn(localNrTiles()).
   std::size_t tileLinearIndex(const LocalTileIndex& index) const noexcept {
-    return to_sizet(index.row() +
-                    distribution_->localNrTiles().rows() * static_cast<SizeType>(index.col()));
+    return to_sizet(index.row() + distribution_->localNrTiles().rows() * index.col());
   }
 
   /// Prints information about the matrix.

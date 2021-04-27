@@ -31,8 +31,6 @@ using namespace dlaf::matrix::test;
 using namespace dlaf::tile;
 using namespace testing;
 
-using dlaf::util::size_t::mul;
-
 template <class T>
 void testPotrf(const blas::Uplo uplo, const SizeType n, const SizeType extra_lda) {
   const TileElementSize size_a = TileElementSize(n, n);
@@ -76,7 +74,7 @@ void testPotrf(const blas::Uplo uplo, const SizeType n, const SizeType extra_lda
   };
 
   auto a = createTile<T>(el_a, size_a, lda);
-  Tile<T, Device::GPU> ad(size_a, memory::MemoryView<T, Device::GPU>(mul(lda, size_a.cols())), lda);
+  Tile<T, Device::GPU> ad(size_a, memory::MemoryView<T, Device::GPU>(lda * size_a.cols()), lda);
 
   copy(a, ad);
 
@@ -111,7 +109,7 @@ void testPotrfNonPosDef(const blas::Uplo uplo, SizeType n, SizeType extra_lda) {
   auto el_a = [](const TileElementIndex&) { return TypeUtilities<T>::element(0, 0); };
 
   auto a = createTile<T>(el_a, size_a, lda);
-  Tile<T, Device::GPU> ad(size_a, memory::MemoryView<T, Device::GPU>(mul(lda, size_a.cols())), lda);
+  Tile<T, Device::GPU> ad(size_a, memory::MemoryView<T, Device::GPU>(lda * size_a.cols()), lda);
 
   copy(a, ad);
 

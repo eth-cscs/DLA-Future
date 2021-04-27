@@ -12,7 +12,7 @@
 
 #include "gtest/gtest.h"
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/factorization/cholesky/mc.h"
+#include "dlaf/factorization/cholesky.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"

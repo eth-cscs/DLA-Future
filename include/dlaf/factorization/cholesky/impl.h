@@ -30,7 +30,7 @@
 #include "dlaf/communication/kernels.h"
 #include "dlaf/executors.h"
 #include "dlaf/factorization/cholesky/api.h"
-#include "dlaf/lapack_tile.h"
+#include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/panel.h"
 #include "dlaf/matrix/tile.h"

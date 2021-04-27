@@ -12,7 +12,7 @@
 
 #include <gtest/gtest.h>
 #include <blas.hh>
-#include <hpx/futures/future.hpp>
+#include <hpx/local/future.hpp>
 
 #include "dlaf/common/range2d.h"
 #include "dlaf/communication/communicator_grid.h"

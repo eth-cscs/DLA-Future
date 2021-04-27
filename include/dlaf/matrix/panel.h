@@ -116,7 +116,7 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
     range_ = iterate_range2d(panel_start, panel_size);
   }
 
-  /// Return the current set offset (1D)
+  /// Return the current offset (1D)
   SizeType offset() const noexcept {
     return offset_;
   }

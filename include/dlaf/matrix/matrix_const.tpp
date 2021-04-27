@@ -50,8 +50,7 @@ void Matrix<const T, device>::waitLocalTiles() noexcept {
   };
 
   const auto range_local = common::iterate_range2d(distribution().localNrTiles());
-  auto all_local_tiles_rw = internal::selectGeneric(readwrite_f, range_local);
-  hpx::wait_all(std::move(all_local_tiles_rw));
+  hpx::wait_all(internal::selectGeneric(readwrite_f, range_local));
 }
 
 template <class T, Device device>

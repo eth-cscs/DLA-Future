@@ -14,11 +14,6 @@ RUN apt-get update -qq && apt-get install -qq -y --no-install-recommends \
     git tar wget curl gpg-agent jq tzdata && \
     rm -rf /var/lib/apt/lists/*
 
-RUN cd /usr/local/bin && \
-  curl -Ls https://codecov.io/bash > codecov.sh && \
-  echo "d6aa3207c4908d123bd8af62ec0538e3f2b9f257c3de62fad4e29cd3b59b41d9 codecov.sh" | sha256sum --check --quiet && \
-  chmod +x codecov.sh
-
 # Install cmake
 RUN wget -qO- "https://cmake.org/files/v3.17/cmake-3.17.0-Linux-x86_64.tar.gz" | tar --strip-components=1 -xz -C /usr/local
 

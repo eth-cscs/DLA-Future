@@ -20,7 +20,7 @@
 #include "dlaf/communication/executor.h"
 #include "dlaf/communication/kernels.h"
 #include "dlaf/executors.h"
-#include "dlaf/lapack_tile.h"
+#include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/solver/triangular/api.h"

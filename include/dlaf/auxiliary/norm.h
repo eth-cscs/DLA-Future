@@ -14,7 +14,7 @@
 #include "dlaf/common/assert.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/lapack/enum_output.h"
-#include "dlaf/lapack_tile.h"
+#include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"

@@ -15,7 +15,7 @@
 #include "dlaf/blas/enum_output.h"
 #include "dlaf/cuda/error.h"
 #include "dlaf/cusolver/error.h"
-#include "dlaf/cusolver_tile.h"
+#include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/memory/memory_view.h"

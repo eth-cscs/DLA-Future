@@ -14,7 +14,7 @@
 #include <hpx/include/threads.hpp>
 #include <hpx/include/util.hpp>
 
-#include "dlaf/blas_tile.h"
+#include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/range2d.h"
@@ -28,6 +28,7 @@
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/panel.h"
+#include "dlaf/matrix/tile.h"
 #include "dlaf/memory/memory_view.h"
 #include "dlaf/util_matrix.h"
 
@@ -159,13 +160,13 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
         potrf_diag_tile(executor_hp, mat_a(kk_idx));
         if (k != nrtile - 1) {
           panel_col_t.setTile(diag_wp_idx, mat_a.read(kk_idx));
-          dataflow(executor_mpi, matrix::unwrapExtendTiles(comm::sendBcast<T>), panel_col_t.read(diag_wp_idx),
+          dataflow(executor_mpi, matrix::unwrapExtendTiles(comm::sendBcast_o), panel_col_t.read(diag_wp_idx),
                    mpi_col_task_chain());
         }
       }
       else {
         if (k != nrtile - 1) {
-          dataflow(executor_mpi, unwrapping(comm::recvBcast<T>), panel_col_t(diag_wp_idx), kk_rank.row(),
+          dataflow(executor_mpi, unwrapping(comm::recvBcast_o), panel_col_t(diag_wp_idx), kk_rank.row(),
                    mpi_col_task_chain());
         }
       }

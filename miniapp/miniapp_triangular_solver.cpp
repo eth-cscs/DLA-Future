@@ -144,7 +144,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       static_assert(std::is_arithmetic<T>::value, "mul/add error is valid just for arithmetic types");
       constexpr T muladd_error = 2 * std::numeric_limits<T>::epsilon();
 
-      const T max_error = 20 * (b.size().rows() + 1) * muladd_error;
+      const T max_error = 20 * (bh.size().rows() + 1) * muladd_error;
       CHECK_MATRIX_NEAR(ref_x, bh, max_error, 0);
     }
   }

@@ -34,13 +34,14 @@ TEST(BcastMatrixTest, DataflowFuture) {
     LocalTileIndex index(0, 0);
     dlaf::Matrix<double, Device::CPU> mat({sz, 1}, {sz, 1});
     mat(index).get()({sz - 1, 0}) = 1.;
-    hpx::dataflow(ex, hpx::util::unwrapping(comm::sendBcast<double>), mat(index), ccomm());
+    hpx::dataflow(ex, matrix::unwrapExtendTiles(comm::sendBcast_o), mat(index), ccomm());
+    //hpx::dataflow(ex, hpx::util::unwrapping(comm::sendBcast_o), mat(index), ccomm());
     hpx::dataflow(hpx::util::unwrapping([sz](auto tile) { tile({sz - 1, 0}) = 2.; }), mat(index));
     EXPECT_EQ(2., mat(index).get()({sz - 1, 0}));
   }
   else {
     std::this_thread::sleep_for(50ms);
-    auto tile_f = hpx::dataflow(ex, hpx::util::unwrapping(comm::recvBcastAlloc<double>),
+    auto tile_f = hpx::dataflow(ex, hpx::util::unwrapping(comm::recvBcastAlloc<double, Device::CPU>),
                                 TileElementSize{sz, 1}, root, ccomm());
     EXPECT_EQ(1., tile_f.get()({sz - 1, 0}));
   }
@@ -60,13 +61,14 @@ TEST(BcastMatrixTest, DataflowSharedFuture) {
     LocalTileIndex index(0, 0);
     dlaf::Matrix<double, Device::CPU> mat({sz, 1}, {sz, 1});
     mat(index).get()({sz - 1, 0}) = 1.;
-    hpx::dataflow(ex, hpx::util::unwrapping(comm::sendBcast<double>), mat.read(index), ccomm());
+    hpx::dataflow(ex, matrix::unwrapExtendTiles(comm::sendBcast_o), mat.read(index), ccomm());
+    //hpx::dataflow(ex, hpx::util::unwrapping(comm::sendBcast_o), mat.read(index), ccomm());
     hpx::dataflow(hpx::util::unwrapping([sz](auto tile) { tile({sz - 1, 0}) = 2.; }), mat(index));
     EXPECT_EQ(2., mat(index).get()({sz - 1, 0}));
   }
   else {
     std::this_thread::sleep_for(50ms);
-    auto tile_f = hpx::dataflow(ex, hpx::util::unwrapping(comm::recvBcastAlloc<double>),
+    auto tile_f = hpx::dataflow(ex, hpx::util::unwrapping(comm::recvBcastAlloc<double, Device::CPU>),
                                 TileElementSize{sz, 1}, root, ccomm());
     EXPECT_EQ(1., tile_f.get()({sz - 1, 0}));
   }

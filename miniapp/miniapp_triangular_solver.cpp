@@ -119,7 +119,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     sync_barrier();
 
     dlaf::common::Timer<> timeit;
-    dlaf::solver::triangular<Backend::Default, Device::Default, T>(comm_grid, side, uplo, op, diag, alpha, a.get(), b.get());
+    dlaf::solver::triangular<Backend::Default, Device::Default, T>(comm_grid, side, uplo, op, diag,
+                                                                   alpha, a.get(), b.get());
 
     sync_barrier();
 

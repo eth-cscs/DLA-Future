@@ -355,18 +355,18 @@ Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const Tile
 /// Returns a container grouping all the tiles retrieved using Matrix::read
 ///
 /// @pre @p range must be a valid range for @p matrix
-template <class T, dlaf::Device d>
-std::vector<hpx::shared_future<dlaf::matrix::Tile<const T, d>>> selectRead(
-    Matrix<T, d>& matrix, common::IterableRange2D<SizeType, LocalTile_TAG> range) {
+template <class MatrixLike>
+std::vector<hpx::shared_future<typename MatrixLike::ConstTileType>> selectRead(
+    MatrixLike& matrix, common::IterableRange2D<SizeType, LocalTile_TAG> range) {
   return internal::selectGeneric([&](auto index) { return matrix.read(index); }, range);
 }
 
 /// Returns a container grouping all the tiles retrieved using Matrix::operator()
 ///
 /// @pre @p range must be a valid range for @p matrix
-template <class T, dlaf::Device d>
-std::vector<hpx::future<dlaf::matrix::Tile<T, d>>> select(
-    Matrix<T, d>& matrix, common::IterableRange2D<SizeType, LocalTile_TAG> range) {
+template <class MatrixLike>
+std::vector<hpx::future<typename MatrixLike::TileType>> select(
+    MatrixLike& matrix, common::IterableRange2D<SizeType, LocalTile_TAG> range) {
   return internal::selectGeneric([&](auto index) { return matrix(index); }, range);
 }
 

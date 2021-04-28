@@ -39,9 +39,6 @@ inline std::string cusolverGetErrorString(cusolverStatus_t st) {
     case CUSOLVER_STATUS_EXECUTION_FAILED:                        return "CUSOLVER_STATUS_EXECUTION_FAILED";
     case CUSOLVER_STATUS_INTERNAL_ERROR:                          return "CUSOLVER_STATUS_INTERNAL_ERROR";
     case CUSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED:               return "CUSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED";
-    // TODO: From which version onwards are these available? The documentation
-    // only lists the above. Additional statuses are mentioned spread out
-    // through the documentation. The below comes from -Wswitch.
     case CUSOLVER_STATUS_MAPPING_ERROR:                           return "CUSOLVER_STATUS_MAPPING_ERROR";
     case CUSOLVER_STATUS_NOT_SUPPORTED:                           return "CUSOLVER_STATUS_NOT_SUPPORTED";
     case CUSOLVER_STATUS_ZERO_PIVOT:                              return "CUSOLVER_STATUS_ZERO_PIVOT";
@@ -53,7 +50,6 @@ inline std::string cusolverGetErrorString(cusolverStatus_t st) {
     case CUSOLVER_STATUS_IRS_OUT_OF_RANGE:                        return "CUSOLVER_STATUS_IRS_OUT_OF_RANGE";
     case CUSOLVER_STATUS_IRS_NRHS_NOT_SUPPORTED_FOR_REFINE_GMRES: return "CUSOLVER_STATUS_IRS_NRHS_NOT_SUPPORTED_FOR_REFINE_GMRES";
     case CUSOLVER_STATUS_IRS_INFOS_NOT_INITIALIZED:               return "CUSOLVER_STATUS_IRS_INFOS_NOT_INITIALIZED";
-    // TODO: Cuda 11 onwards?
     case CUSOLVER_STATUS_IRS_PARAMS_INVALID_PREC:                 return "CUSOLVER_STATUS_IRS_PARAMS_INVALID_PREC";
     case CUSOLVER_STATUS_IRS_PARAMS_INVALID_REFINE:               return "CUSOLVER_STATUS_IRS_PARAMS_INVALID_REFINE";
     case CUSOLVER_STATUS_IRS_PARAMS_INVALID_MAXITER:              return "CUSOLVER_STATUS_IRS_PARAMS_INVALID_MAXITER";

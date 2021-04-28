@@ -7,7 +7,6 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
-#include "dlaf/communication/mech.h"
 #include "dlaf/factorization/cholesky.h"
 
 #include "gtest/gtest.h"

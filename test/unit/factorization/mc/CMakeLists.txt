@@ -8,13 +8,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-DLAF_addTest(test_cholesky_mc
-  SOURCES test_cholesky.cpp
-  LIBRARIES dlaf.factorization dlaf.core
-  USE_MAIN MPIHPX
-  MPIRANKS 6
-)
-
 DLAF_addTest(test_compute_t_factor
   SOURCES test_compute_t_factor.cpp
   LIBRARIES dlaf.factorization dlaf.core

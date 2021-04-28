@@ -384,7 +384,6 @@ void check_cholesky(HostMatrixType& A, HostMatrixType& L, CommunicatorGrid comm_
   if (comm_grid.rank() != rank_result)
     return;
 
-  // TODO: Using BaseType<T> here is OK?
   constexpr auto eps = std::numeric_limits<dlaf::BaseType<T>>::epsilon();
   const auto n = A.size().rows();
 

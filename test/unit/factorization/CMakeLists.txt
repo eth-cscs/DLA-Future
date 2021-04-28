@@ -8,6 +8,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+add_subdirectory(mc)
+
 DLAF_addTest(test_cholesky
   SOURCES test_cholesky.cpp
   LIBRARIES dlaf.factorization dlaf.core

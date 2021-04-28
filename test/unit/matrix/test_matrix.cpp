@@ -1238,9 +1238,16 @@ TEST_F(MatrixGenericTest, SelectTilesReadwrite) {
 // usage, but they are just meant to test that the Matrix does not wait on destruction for any left
 // task on one of its tiles.
 
-const auto wait_guard = std::chrono::milliseconds(100);
 const auto device = dlaf::Device::CPU;
 using TypeParam = std::complex<float>;  // randomly chosen element type for matrix
+
+// wait for guard to become true
+auto try_waiting_guard = [](auto& guard) {
+  const auto wait_guard = std::chrono::milliseconds(20);
+
+  for (int i = 0; i < 100 && !guard; ++i)
+    hpx::this_thread::sleep_for(wait_guard);
+};
 
 // Create a single-element matrix
 template <class T>
@@ -1269,7 +1276,7 @@ TEST(MatrixDestructorFutures, NonConstAfterRead) {
 
     auto shared_future = matrix.read(LocalTileIndex(0, 0));
     last_task = shared_future.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
-      hpx::this_thread::sleep_for(wait_guard);
+      try_waiting_guard(is_exited_from_scope);
       EXPECT_TRUE(is_exited_from_scope);
     });
   }
@@ -1287,7 +1294,7 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWrite) {
 
     auto future = matrix(LocalTileIndex(0, 0));
     last_task = future.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
-      hpx::this_thread::sleep_for(wait_guard);
+      try_waiting_guard(is_exited_from_scope);
       EXPECT_TRUE(is_exited_from_scope);
     });
   }
@@ -1306,7 +1313,7 @@ TEST(MatrixDestructorFutures, NonConstAfterRead_UserMemory) {
 
     auto shared_future = matrix.read(LocalTileIndex(0, 0));
     last_task = shared_future.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
-      hpx::this_thread::sleep_for(wait_guard);
+      try_waiting_guard(is_exited_from_scope);
       EXPECT_TRUE(is_exited_from_scope);
     });
   }
@@ -1325,7 +1332,7 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWrite_UserMemory) {
 
     auto future = matrix(LocalTileIndex(0, 0));
     last_task = future.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
-      hpx::this_thread::sleep_for(wait_guard);
+      try_waiting_guard(is_exited_from_scope);
       EXPECT_TRUE(is_exited_from_scope);
     });
   }
@@ -1344,7 +1351,7 @@ TEST(MatrixDestructorFutures, ConstAfterRead_UserMemory) {
 
     auto sf = matrix.read(LocalTileIndex(0, 0));
     last_task = sf.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
-      hpx::this_thread::sleep_for(wait_guard);
+      try_waiting_guard(is_exited_from_scope);
       EXPECT_TRUE(is_exited_from_scope);
     });
   }
@@ -1386,7 +1393,7 @@ TEST_F(MatrixGenericTest, SyncBarrier) {
       // start a task (if it has at least a local part...otherwise there is no tile to work on)
       if (has_local)
         matrix.read(tile_tl).then(hpx::launch::async, [&guard](auto&&) {
-          hpx::this_thread::sleep_for(wait_guard);
+          hpx::this_thread::sleep_for(std::chrono::milliseconds(100));
           guard = true;
         });
 

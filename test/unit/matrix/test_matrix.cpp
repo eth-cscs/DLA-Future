@@ -12,6 +12,7 @@
 #include "dlaf/matrix/matrix.h"
 
 #include <atomic>
+#include <chrono>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -24,6 +25,8 @@
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/matrix/util_matrix_futures.h"
 #include "dlaf_test/util_types.h"
+
+using namespace std::chrono_literals;
 
 using namespace dlaf;
 using namespace dlaf::matrix;
@@ -1243,7 +1246,7 @@ using TypeParam = std::complex<float>;  // randomly chosen element type for matr
 
 // wait for guard to become true
 auto try_waiting_guard = [](auto& guard) {
-  const auto wait_guard = std::chrono::milliseconds(20);
+  const auto wait_guard = 20ms;
 
   for (int i = 0; i < 100 && !guard; ++i)
     hpx::this_thread::sleep_for(wait_guard);
@@ -1393,7 +1396,7 @@ TEST_F(MatrixGenericTest, SyncBarrier) {
       // start a task (if it has at least a local part...otherwise there is no tile to work on)
       if (has_local)
         matrix.read(tile_tl).then(hpx::launch::async, [&guard](auto&&) {
-          hpx::this_thread::sleep_for(std::chrono::milliseconds(100));
+          hpx::this_thread::sleep_for(100ms);
           guard = true;
         });
 

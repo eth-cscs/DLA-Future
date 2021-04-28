@@ -675,18 +675,13 @@ void update_a(const LocalTileSize& at_start, MatrixT<T>& a, ConstPanelT<Coord::C
 template <class T>
 std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
     Backend::MC, Device::CPU, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
-  using hpx::execution::parallel_executor;
-  using hpx::resource::get_thread_pool;
-  using hpx::resource::pool_exists;
-  using hpx::threads::thread_priority;
-
   using namespace comm;
   using namespace comm::sync;
 
+  using hpx::util::unwrapping;
+
   using common::iterate_range2d;
   using common::make_data;
-  using hpx::util::unwrapping;
-  using matrix::Distribution;
 
   using factorization::internal::computeTFactor;
 
@@ -696,6 +691,11 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
 
   auto executor_mpi = dlaf::getMPIExecutor<Backend::MC>();
 
+  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
+  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
+  // TODO this is going to be removed
+  common::Pipeline<comm::CommunicatorGrid> serial_comm(grid);
+
   const auto& dist = mat_a.distribution();
   const comm::Index2D rank = dist.rankIndex();
 
@@ -703,9 +703,7 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
   // TODO not yet implemented for the moment the panel is tile-wide
   // const SizeType band_size = nb;
 
-  const Distribution dist_block(LocalElementSize{nb, nb}, dist.blockSize());
-
-  common::Pipeline<comm::CommunicatorGrid> serial_comm(std::move(grid));
+  const matrix::Distribution dist_block(LocalElementSize{nb, nb}, dist.blockSize());
 
   std::vector<hpx::shared_future<common::internal::vector<T>>> taus;
 
@@ -803,7 +801,7 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
     }
 
     vt.setOffset(at_offset);
-    matrix::broadcast(executor_mpi, rank_v0.col(), v, vt, serial_comm);
+    matrix::broadcast(executor_mpi, rank_v0.col(), v, vt, mpi_row_task_chain, mpi_col_task_chain);
 
     // UPDATE TRAILING MATRIX
 
@@ -815,7 +813,7 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
       compute_w(w, v, t.read(t_idx));
 
     wt.setOffset(at_offset);
-    matrix::broadcast(executor_mpi, rank_v0.col(), w, wt, serial_comm);
+    matrix::broadcast(executor_mpi, rank_v0.col(), w, wt, mpi_row_task_chain, mpi_col_task_chain);
 
     // COMPUTE X
     // X = At . W
@@ -858,7 +856,7 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
       update_x(x, w2, v);
     }
 
-    matrix::broadcast(executor_mpi, rank_v0.col(), x, xt, serial_comm);
+    matrix::broadcast(executor_mpi, rank_v0.col(), x, xt, mpi_row_task_chain, mpi_col_task_chain);
 
     // UPDATE
     // At = At - X . V* + V . X*

@@ -40,11 +40,13 @@ DLAF_MAKE_CALLABLE_OBJECT(sendBcast);
 
 // Non-blocking receiver broadcast
 template <class T, Device D>
-matrix::Tile<T, D> recvBcast(matrix::Tile<T, D> tile, int root_rank,
-                             common::PromiseGuard<Communicator> pcomm, MPI_Request* req) {
+matrix::Tile<const T, D> recvBcast(matrix::Tile<T, D> tile, int root_rank,
+                                   common::PromiseGuard<Communicator> pcomm, MPI_Request* req) {
+  using ConstTile_t = matrix::Tile<const T, D>;
+
   auto msg = comm::make_message(common::make_data(tile));
   MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, pcomm.ref(), req);
-  return std::move(tile);
+  return ConstTile_t(std::move(tile));
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(recvBcast);

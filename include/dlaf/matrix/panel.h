@@ -39,8 +39,8 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
   // This specialization acts as base for the RW version of the panel,
   // moreover allows the casting between references (i.e. Panel<const T>& = Panel<T>)
 
-  using TileT = Tile<T, device>;
-  using ConstTileT = Tile<const T, device>;
+  using TileType = Tile<T, device>;
+  using ConstTileType = Tile<const T, device>;
   using BaseT = Matrix<T, device>;
 
   Panel(Panel&&) = default;
@@ -75,7 +75,7 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
   /// - has not been already set to an external tile
   ///
   /// @pre @p index must be a valid index for the current panel size
-  void setTile(const LocalTileIndex& index, hpx::shared_future<ConstTileT> new_tile_fut) {
+  void setTile(const LocalTileIndex& index, hpx::shared_future<ConstTileType> new_tile_fut) {
     DLAF_ASSERT(index.isIn(dist_matrix_.localNrTiles()), index, dist_matrix_.localNrTiles());
     DLAF_ASSERT(internal_.count(linearIndex(index)) == 0, "internal tile have been already used", index);
     DLAF_ASSERT(!isExternal(index), "already set to external", index);
@@ -88,7 +88,7 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
   /// This method is very similar to the one available in dlaf::Matrix.
   ///
   /// @p index is in the coordinate system of the matrix which this panel is related to
-  hpx::shared_future<ConstTileT> read(const LocalTileIndex& index) {
+  hpx::shared_future<ConstTileType> read(const LocalTileIndex& index) {
     DLAF_ASSERT_HEAVY(index.isIn(dist_matrix_.localNrTiles()), index, dist_matrix_.localNrTiles());
 
     const SizeType internal_linear_idx = linearIndex(index);
@@ -225,15 +225,15 @@ protected:
   iter2d_t range_;
 
   ///> Container for references to external tiles
-  common::internal::vector<hpx::shared_future<ConstTileT>> external_;
+  common::internal::vector<hpx::shared_future<ConstTileType>> external_;
   ///> Keep track of usage status of internal tiles (accessed or not)
   std::set<SizeType> internal_;
 };
 
 template <Coord axis, class T, Device device>
 struct Panel : public Panel<axis, const T, device> {
-  using TileT = Tile<T, device>;
-  using ConstTileT = Tile<const T, device>;
+  using TileType = Tile<T, device>;
+  using ConstTileType = Tile<const T, device>;
 
   explicit Panel(matrix::Distribution distribution, LocalTileSize start = {0, 0})
       : Panel<axis, const T, device>(std::move(distribution), std::move(start)) {}
@@ -243,7 +243,7 @@ struct Panel : public Panel<axis, const T, device> {
   /// It is possible to access just internal tiles in RW mode.
   ///
   /// @pre index must point to a tile which is internally managed by the panel
-  hpx::future<TileT> operator()(const LocalTileIndex& index) {
+  hpx::future<TileType> operator()(const LocalTileIndex& index) {
     DLAF_ASSERT(!isExternal(index), "read-only access on external tiles", index);
 
     BaseT::internal_.insert(BaseT::linearIndex(index));

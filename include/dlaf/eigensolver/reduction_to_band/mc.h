@@ -829,12 +829,10 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
     x.setOffset(at_offset);
     xt.setOffset(at_offset);
 
-    auto set_tiles_to_zero = unwrapping([](std::vector<FutureTile<T>> fut_tiles) {
-      for (auto&& fut_tile : fut_tiles) {
-        auto tile = fut_tile.get();
+    auto set_tiles_to_zero = hpx::util::unwrapping_all([](auto tiles) {
+      for (auto& tile : tiles)
         for (auto idx : iterate_range2d(tile.size()))
           tile(idx) = T(0);
-      }
     });
 
     hpx::when_all(matrix::select(x, x.iterator())).then(set_tiles_to_zero);

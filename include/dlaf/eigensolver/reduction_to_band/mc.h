@@ -16,7 +16,7 @@
 #include <hpx/include/util.hpp>
 #include <hpx/tuple.hpp>
 
-#include "dlaf/blas_tile.h"
+#include "dlaf/blas/tile.h"
 #include "dlaf/common/data.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
@@ -42,8 +42,8 @@ namespace internal {
 
 template <class T>
 struct ReductionToBand<Backend::MC, Device::CPU, T> {
-  static std::vector<hpx::shared_future<common::internal::vector<T>>> call(comm::CommunicatorGrid grid,
-                                                              Matrix<T, Device::CPU>& mat_a);
+  static std::vector<hpx::shared_future<common::internal::vector<T>>> call(
+      comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a);
 };
 
 namespace {
@@ -384,7 +384,7 @@ void compute_w(PanelT<Coord::Col, T>& w, MatrixLikeT& v, FutureConstTile<T> tile
         // clang-format on
       });
 
-  for (const auto& index_tile_w : w) {
+  for (const auto& index_tile_w : w.iterator()) {
     // clang-format off
     FutureTile<T>      tile_w = w(index_tile_w);
     FutureConstTile<T> tile_v = v.read(index_tile_w);
@@ -430,7 +430,7 @@ void compute_x(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT<Co
         FutureConstTile<T>  tile_w = w.read(index_w);
         // clang-format on
 
-        hpx::dataflow(unwrapping(dlaf::tile::hemm<T, Device::CPU>), blas::Side::Left, blas::Uplo::Lower,
+        hpx::dataflow(unwrapping(dlaf::tile::hemm<T>), blas::Side::Left, blas::Uplo::Lower,
                       static_cast<T>(1), std::move(tile_a), std::move(tile_w),
                       static_cast<T>(is_first ? 0 : 1), std::move(tile_x));
       }
@@ -452,8 +452,8 @@ void compute_x(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT<Co
           FutureConstTile<T>  tile_w = wt.read(index_wt);
           // clang-format on
 
-          hpx::dataflow(unwrapping(dlaf::tile::gemm<T, Device::CPU>), blas::Op::NoTrans,
-                        blas::Op::NoTrans, static_cast<T>(1), std::move(tile_a), std::move(tile_w),
+          hpx::dataflow(unwrapping(dlaf::tile::gemm<T>), blas::Op::NoTrans, blas::Op::NoTrans,
+                        static_cast<T>(1), std::move(tile_a), std::move(tile_w),
                         static_cast<T>(is_first ? 0 : 1), std::move(tile_x));
         }
 
@@ -483,8 +483,8 @@ void compute_x(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT<Co
           FutureConstTile<T>  tile_w = w.read(index_w);
           // clang-format on
 
-          hpx::dataflow(unwrapping(dlaf::tile::gemm<T, Device::CPU>), blas::Op::ConjTrans,
-                        blas::Op::NoTrans, static_cast<T>(1), std::move(tile_a), std::move(tile_w),
+          hpx::dataflow(unwrapping(dlaf::tile::gemm<T>), blas::Op::ConjTrans, blas::Op::NoTrans,
+                        static_cast<T>(1), std::move(tile_a), std::move(tile_w),
                         static_cast<T>(is_first_xt ? 0 : 1), std::move(tile_x));
         }
       }
@@ -501,7 +501,7 @@ void compute_x(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT<Co
   // panel Xt col-wise, by collecting all Xt results on the rank which can "mirror" the result on its
   // rows (i.e. diagonal). So, for each tile of the row panel, select who is the "diagonal" rank that can
   // mirror and reduce on it.
-  for (const auto& index_xt : xt) {
+  for (const auto& index_xt : xt.iterator()) {
     const auto index_k = dist.template globalTileFromLocalTile<Coord::Col>(index_xt.col());
     const auto rank_owner_row = dist.template rankGlobalTile<Coord::Row>(index_k);
 
@@ -562,7 +562,7 @@ void compute_w2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Coord
   auto executor_mpi = dlaf::getMPIExecutor<Backend::MC>();
 
   // GEMM W2 = W* . X
-  for (const auto& index_tile : w) {
+  for (const auto& index_tile : w.iterator()) {
     const T beta = (index_tile.row() == 0) ? 0 : 1;
 
     // clang-format off
@@ -571,7 +571,7 @@ void compute_w2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Coord
     FutureConstTile<T>  tile_x  = x.read(index_tile);
     // clang-format on
 
-    hpx::dataflow(unwrapping(dlaf::tile::gemm<T, Device::CPU>), blas::Op::ConjTrans, blas::Op::NoTrans,
+    hpx::dataflow(unwrapping(dlaf::tile::gemm<T>), blas::Op::ConjTrans, blas::Op::NoTrans,
                   static_cast<T>(1), std::move(tile_w), std::move(tile_x), beta, std::move(tile_w2));
   }
 
@@ -590,14 +590,14 @@ void update_x(PanelT<Coord::Col, T>& x, ConstMatrixT<T>& w2, MatrixLikeT& v) {
   using hpx::util::unwrapping;
 
   // GEMM X = X - 0.5 . V . W2
-  for (const auto& index_row : v) {
+  for (const auto& index_row : v.iterator()) {
     // clang-format off
     FutureTile<T>       tile_x  = x(index_row);
     FutureConstTile<T>  tile_v  = v.read(index_row);
     FutureConstTile<T>  tile_w2 = w2.read(LocalTileIndex{0, 0});
     // clang-format on
 
-    hpx::dataflow(unwrapping(dlaf::tile::gemm<T, Device::CPU>), blas::Op::NoTrans, blas::Op::NoTrans,
+    hpx::dataflow(unwrapping(dlaf::tile::gemm<T>), blas::Op::NoTrans, blas::Op::NoTrans,
                   static_cast<T>(-0.5), std::move(tile_v), std::move(tile_w2), static_cast<T>(1),
                   std::move(tile_x));
   }
@@ -631,8 +631,8 @@ void update_a(const LocalTileSize& at_start, MatrixT<T>& a, ConstPanelT<Coord::C
         // clang-format on
 
         const T alpha = -1;  // TODO T must be a signed type
-        hpx::dataflow(unwrapping(dlaf::tile::her2k<T, Device::CPU>), blas::Uplo::Lower,
-                      blas::Op::NoTrans, alpha, std::move(tile_v), std::move(tile_x),
+        hpx::dataflow(unwrapping(dlaf::tile::her2k<T>), blas::Uplo::Lower, blas::Op::NoTrans, alpha,
+                      std::move(tile_v), std::move(tile_x),
                       static_cast<typename TypeInfo<T>::BaseType>(1), std::move(tile_a));
       }
       else {
@@ -647,9 +647,8 @@ void update_a(const LocalTileSize& at_start, MatrixT<T>& a, ConstPanelT<Coord::C
           // clang-format on
 
           const T alpha = -1;  // TODO T must be a sigend type
-          hpx::dataflow(unwrapping(dlaf::tile::gemm<T, Device::CPU>), blas::Op::NoTrans,
-                        blas::Op::ConjTrans, alpha, std::move(tile_x), std::move(tile_v),
-                        static_cast<T>(1), std::move(tile_a));
+          hpx::dataflow(unwrapping(dlaf::tile::gemm<T>), blas::Op::NoTrans, blas::Op::ConjTrans, alpha,
+                        std::move(tile_x), std::move(tile_v), static_cast<T>(1), std::move(tile_a));
         }
 
         // GEMM A: V . X*
@@ -661,9 +660,8 @@ void update_a(const LocalTileSize& at_start, MatrixT<T>& a, ConstPanelT<Coord::C
           // clang-format on
 
           const T alpha = -1;  // TODO T must be a sigend type
-          hpx::dataflow(unwrapping(dlaf::tile::gemm<T, Device::CPU>), blas::Op::NoTrans,
-                        blas::Op::ConjTrans, alpha, std::move(tile_v), std::move(tile_x),
-                        static_cast<T>(1), std::move(tile_a));
+          hpx::dataflow(unwrapping(dlaf::tile::gemm<T>), blas::Op::NoTrans, blas::Op::ConjTrans, alpha,
+                        std::move(tile_v), std::move(tile_x), static_cast<T>(1), std::move(tile_a));
         }
       }
     }
@@ -675,8 +673,8 @@ void update_a(const LocalTileSize& at_start, MatrixT<T>& a, ConstPanelT<Coord::C
 /// Distributed implementation of reduction to band
 /// @return a list of shared futures of vectors, where each vector contains a block of taus
 template <class T>
-std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<Backend::MC, Device::CPU, T>::call(
-    comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
+std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
+    Backend::MC, Device::CPU, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
   using hpx::execution::parallel_executor;
   using hpx::resource::get_thread_pool;
   using hpx::resource::pool_exists;
@@ -742,7 +740,7 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<Bac
 
     const bool is_panel_rank_col = rank_v0.col() == rank.col();
 
-    v.set_offset(at_offset);
+    v.setOffset(at_offset);
 
     // 1. PANEL
     if (is_panel_rank_col) {
@@ -800,23 +798,23 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<Bac
       for (auto row = dist.template nextLocalTileFromGlobalTile<Coord::Row>(ai_start.row() + 1);
            row < dist.localNrTiles().rows(); ++row) {
         const LocalTileIndex idx{row, ai_offset.cols()};
-        v.set_tile(idx, mat_a.read(idx));
+        v.setTile(idx, mat_a.read(idx));
       }
     }
 
-    vt.set_offset(at_offset);
+    vt.setOffset(at_offset);
     matrix::broadcast(executor_mpi, rank_v0.col(), v, vt, serial_comm);
 
     // UPDATE TRAILING MATRIX
 
     // COMPUTE W
     // W = V . T
-    w.set_offset(at_offset);
+    w.setOffset(at_offset);
 
     if (is_panel_rank_col)
       compute_w(w, v, t.read(t_idx));
 
-    wt.set_offset(at_offset);
+    wt.setOffset(at_offset);
     matrix::broadcast(executor_mpi, rank_v0.col(), w, wt, serial_comm);
 
     // COMPUTE X
@@ -828,8 +826,19 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<Bac
 
     // They have to be set to zero, because all tiles are going to be reduced, and some tiles may not get
     // "initialized" during computation, so they should not contribute with any spurious value to the final result
-    x.set_offset(at_offset, true);
-    xt.set_offset(at_offset, true);
+    x.setOffset(at_offset);
+    xt.setOffset(at_offset);
+
+    auto set_tiles_to_zero = unwrapping([](std::vector<FutureTile<T>> fut_tiles) {
+      for (auto&& fut_tile : fut_tiles) {
+        auto tile = fut_tile.get();
+        for (auto idx : iterate_range2d(tile.size()))
+          tile(idx) = T(0);
+      }
+    });
+
+    hpx::when_all(matrix::select(x, x.iterator())).then(set_tiles_to_zero);
+    hpx::when_all(matrix::select(xt, xt.iterator())).then(set_tiles_to_zero);
 
     compute_x(rank_v0.col(), x, xt, at_offset, mat_a, w, wt, serial_comm);
 

@@ -505,7 +505,7 @@ TYPED_TEST(PanelTest, BroadcastCol) {
       // test it!
       common::Pipeline<comm::Communicator> mpi_row_task_chain(comm_grid.rowCommunicator());
 
-      broadcast(executor_mpi, root_col, ws_v, mpi_row_task_chain, comm_grid.size());
+      broadcast(executor_mpi, root_col, ws_v, mpi_row_task_chain);
 
       // check all panel are equal on all ranks
       for (const auto i_w : ws_v.iterator())
@@ -562,7 +562,7 @@ TYPED_TEST(PanelTest, BroadcastRow) {
       // test it!
       common::Pipeline<comm::Communicator> mpi_col_task_chain(comm_grid.colCommunicator());
 
-      broadcast(executor_mpi, root_row, ws_h, mpi_col_task_chain, comm_grid.size());
+      broadcast(executor_mpi, root_row, ws_h, mpi_col_task_chain);
 
       // check all panel are equal on all ranks
       for (const auto i_w : ws_h.iterator())
@@ -619,7 +619,7 @@ TYPED_TEST(PanelTest, BroadcastCol2Row) {
       // select a "random" col which will be the source for the data
       const comm::IndexT_MPI owner = comm_grid.size().cols() / 2;
 
-      broadcast(executor_mpi, owner, ws_v, ws_h, row_task_chain, col_task_chain, comm_grid.size());
+      broadcast(executor_mpi, owner, ws_v, ws_h, row_task_chain, col_task_chain);
 
       // check that all destination row panels got the value from the right rank
       for (const auto i_w : ws_h.iterator()) {
@@ -669,7 +669,7 @@ TYPED_TEST(PanelTest, BroadcastRow2Col) {
       // select a "random" row which will be the source for the data
       const comm::IndexT_MPI owner = comm_grid.size().rows() / 2;
 
-      broadcast(executor_mpi, owner, ws_h, ws_v, row_task_chain, col_task_chain, comm_grid.size());
+      broadcast(executor_mpi, owner, ws_h, ws_v, row_task_chain, col_task_chain);
 
       // check that all destination column panels got the value from the right rank
       for (const auto i_w : ws_v.iterator()) {

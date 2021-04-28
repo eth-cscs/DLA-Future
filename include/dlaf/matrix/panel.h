@@ -282,14 +282,14 @@ std::pair<SizeType, comm::IndexT_MPI> transposedOwner(const Distribution& dist,
 /// @pre Communicator in @p serial_comm must be orthogonal to panel axis
 template <class T, Device device, Coord axis, class = std::enable_if_t<!std::is_const<T>::value>>
 void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis, T, device>& panel,
-               common::Pipeline<comm::Communicator>& serial_comm, const comm::Size2D grid_size) {
+               common::Pipeline<comm::Communicator>& serial_comm) {
   using hpx::dataflow;
   using hpx::util::unwrapping;
 
   constexpr auto comm_dir = orthogonal(axis);
 
   // do not schedule communication tasks if there is no reason to do so...
-  if (grid_size.get(component(comm_dir)) <= 1)
+  if (panel.parentDistribution().commGridSize().get(component(comm_dir)) <= 1)
     return;
 
   const auto rank = panel.rankIndex().get(component(comm_dir));
@@ -332,7 +332,7 @@ template <class T, Device device, Coord axis, class = std::enable_if_t<!std::is_
 void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis, T, device>& panel,
                Panel<orthogonal(axis), T, device>& panelT,
                common::Pipeline<comm::Communicator>& row_task_chain,
-               common::Pipeline<comm::Communicator>& col_task_chain, comm::Size2D grid_size) {
+               common::Pipeline<comm::Communicator>& col_task_chain) {
   using hpx::dataflow;
   using hpx::util::unwrapping;
 
@@ -418,7 +418,7 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis,
   constexpr auto comm_dir_step1 = orthogonal(axis);
   auto& chain_step1 = get_taskchain(comm_dir_step1);
 
-  broadcast(ex, rank_root, panel, chain_step1, grid_size);
+  broadcast(ex, rank_root, panel, chain_step1);
 
   // STEP 2
   constexpr Coord coord = component(axis);
@@ -437,11 +437,11 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis,
       const auto index_diag_local = dist.template localTileFromGlobalTile<coord>(index_diag);
       panelT.setTile(indexT, panel.read({coord, index_diag_local}));
 
-      if (grid_size.get(component(comm_dir_step2)) > 1)
+      if (dist.commGridSize().get(component(comm_dir_step2)) > 1)
         dataflow(ex, unwrapping(comm::sendBcast_o), panelT.read(indexT), chain_step2());
     }
     else {
-      if (grid_size.get(component(comm_dir_step2)) > 1)
+      if (dist.commGridSize().get(component(comm_dir_step2)) > 1)
         dataflow(ex, unwrapping(comm::recvBcast_o), panelT(indexT), owner_diag, chain_step2());
     }
   }

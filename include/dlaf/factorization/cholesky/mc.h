@@ -149,7 +149,7 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
       potrf_diag_tile(executor_hp, mat_a(kk_idx));
       panel[k] = mat_a.read(kk_idx);
       if (k != nrtile - 1) {
-        hpx::dataflow(executor_mpi_col, unwrapping(comm::sendBcast<T, Device::CPU>), panel[k],
+        hpx::dataflow(executor_mpi_col, matrix::unwrapExtendTiles(comm::sendBcast<T, Device::CPU>), panel[k],
                       mpi_col_task_chain());
       }
     }
@@ -168,7 +168,7 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
       if (this_rank == ik_rank) {
         trsm_panel_tile(executor_hp, panel[k], mat_a(ik_idx));
         panel[i] = mat_a.read(ik_idx);
-        hpx::dataflow(executor_mpi_row, unwrapping(comm::sendBcast<T, Device::CPU>), panel[i],
+        hpx::dataflow(executor_mpi_row, matrix::unwrapExtendTiles(comm::sendBcast<T, Device::CPU>), panel[i],
                       mpi_row_task_chain());
       }
       else if (this_rank.row() == ik_rank.row()) {
@@ -189,7 +189,7 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
       if (this_rank.row() == jj_rank.row()) {
         herk_trailing_diag_tile(trailing_matrix_executor, panel[j], mat_a(jj_idx));
         if (j != nrtile - 1) {
-          hpx::dataflow(executor_mpi_col, unwrapping(comm::sendBcast<T, Device::CPU>), panel[j],
+          hpx::dataflow(executor_mpi_col, matrix::unwrapExtendTiles(comm::sendBcast<T, Device::CPU>), panel[j],
                         mpi_col_task_chain());
         }
       }

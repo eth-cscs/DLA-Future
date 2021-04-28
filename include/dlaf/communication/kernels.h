@@ -57,7 +57,7 @@ matrix::Tile<const T, D> recvBcastAlloc(TileElementSize tile_size, int root_rank
 template <class T, Device D, class Executor, template <class> class Future>
 void scheduleSendBcast(Executor&& ex, Future<matrix::Tile<const T, D>> tile,
                        hpx::future<common::PromiseGuard<comm::Communicator>> pcomm) {
-  hpx::dataflow(std::forward<Executor>(ex), hpx::util::unwrapping(sendBcast_o),
+  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(sendBcast_o),
                 internal::prepareSendTile(std::move(tile)), std::move(pcomm));
 }
 

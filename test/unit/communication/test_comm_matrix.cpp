@@ -35,7 +35,6 @@ TEST(BcastMatrixTest, DataflowFuture) {
     dlaf::Matrix<double, Device::CPU> mat({sz, 1}, {sz, 1});
     mat(index).get()({sz - 1, 0}) = 1.;
     hpx::dataflow(ex, matrix::unwrapExtendTiles(comm::sendBcast_o), mat(index), ccomm());
-    //hpx::dataflow(ex, hpx::util::unwrapping(comm::sendBcast_o), mat(index), ccomm());
     hpx::dataflow(hpx::util::unwrapping([sz](auto tile) { tile({sz - 1, 0}) = 2.; }), mat(index));
     EXPECT_EQ(2., mat(index).get()({sz - 1, 0}));
   }
@@ -62,7 +61,6 @@ TEST(BcastMatrixTest, DataflowSharedFuture) {
     dlaf::Matrix<double, Device::CPU> mat({sz, 1}, {sz, 1});
     mat(index).get()({sz - 1, 0}) = 1.;
     hpx::dataflow(ex, matrix::unwrapExtendTiles(comm::sendBcast_o), mat.read(index), ccomm());
-    //hpx::dataflow(ex, hpx::util::unwrapping(comm::sendBcast_o), mat.read(index), ccomm());
     hpx::dataflow(hpx::util::unwrapping([sz](auto tile) { tile({sz - 1, 0}) = 2.; }), mat(index));
     EXPECT_EQ(2., mat(index).get()({sz - 1, 0}));
   }

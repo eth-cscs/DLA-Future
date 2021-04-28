@@ -119,7 +119,7 @@ public:
     auto fn = [f = std::forward<F>(f), args = hpx::make_tuple(std::forward<Ts>(ts)...)]() mutable {
       MPI_Request req;
       auto all_args = internal::make_mpi_tuple(std::move(args), &req);
-      using result_t = decltype(hpx::util::invoke_fused(f, all_args));
+      using result_t = decltype(hpx::util::invoke_fused(f, std::move(all_args)));
       internal::invoke_fused_wrapper<result_t> wrapper(std::move(f), std::move(all_args));
       internal::handle_request(req);
       return wrapper.async_return();
@@ -137,7 +137,7 @@ public:
                args = std::forward<TupleArgs>(args)]() mutable {
       MPI_Request req;
       auto all_args = internal::make_mpi_tuple(std::move(args), &req);
-      using result_t = decltype(hpx::util::invoke_fused(f, all_args));
+      using result_t = decltype(hpx::util::invoke_fused(f, std::move(all_args)));
       internal::invoke_fused_wrapper<result_t> wrapper(std::move(f), std::move(all_args));
       internal::handle_request(req);
       frame_p->set_data(wrapper.dataflow_return());

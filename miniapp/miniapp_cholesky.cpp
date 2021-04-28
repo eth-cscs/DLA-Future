@@ -151,8 +151,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       std::cout << "[" << run_index << "]"
                 << " " << elapsed_time << "s"
                 << " " << gigaflops << "GFlop/s"
-                << " " << matrix_host.size() << " " << matrix_host.blockSize() << " " << comm_grid.size() << " "
-                << hpx::get_os_thread_count() << std::endl;
+                << " " << matrix_host.size() << " " << matrix_host.blockSize() << " " << comm_grid.size()
+                << " " << hpx::get_os_thread_count() << std::endl;
 
     // (optional) run test
     if ((opts.do_check == CholCheckIterFreq::Last && run_index == (opts.nruns - 1)) ||

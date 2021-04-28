@@ -18,8 +18,8 @@
 #include <memory>
 #include <utility>
 
-#include <cusolverDn.h>
 #include <cuda_runtime.h>
+#include <cusolverDn.h>
 
 #include <hpx/execution.hpp>
 #include <hpx/functional.hpp>
@@ -43,8 +43,7 @@ class HandlePoolImpl {
   std::vector<cusolverDnHandle_t> handles_;
 
 public:
-  HandlePoolImpl(int device)
-      : device_(device), handles_(num_worker_threads_) {
+  HandlePoolImpl(int device) : device_(device), handles_(num_worker_threads_) {
     DLAF_CUDA_CALL(cudaSetDevice(device_));
 
     for (auto& h : handles_) {
@@ -106,8 +105,7 @@ class HandlePool {
   std::shared_ptr<internal::HandlePoolImpl> handles_ptr_;
 
 public:
-  HandlePool(int device = 0)
-      : handles_ptr_(std::make_shared<internal::HandlePoolImpl>(device)) {}
+  HandlePool(int device = 0) : handles_ptr_(std::make_shared<internal::HandlePoolImpl>(device)) {}
 
   cusolverDnHandle_t getNextHandle(cudaStream_t stream) {
     DLAF_ASSERT(bool(handles_ptr_), "");

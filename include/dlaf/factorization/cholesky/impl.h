@@ -49,8 +49,7 @@ void potrf_diag_tile(Executor&& exec, hpx::future<matrix::Tile<T, device>> matri
 }
 
 template <class Executor, Device device, class T>
-void trsm_panel_tile(Executor&& executor_hp,
-                     hpx::shared_future<matrix::Tile<const T, device>> kk_tile,
+void trsm_panel_tile(Executor&& executor_hp, hpx::shared_future<matrix::Tile<const T, device>> kk_tile,
                      hpx::future<matrix::Tile<T, device>> matrix_tile) {
   hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Right,
                 blas::Uplo::Lower, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), std::move(kk_tile),

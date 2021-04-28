@@ -81,7 +81,8 @@ auto getNpExecutor() {
 #ifdef DLAF_WITH_CUDA
 template <>
 inline auto getNpExecutor<Backend::GPU>() {
-  return dlaf::cusolver::Executor{internal::getNpCudaStreamPool(), internal::getCublasHandlePool(), internal::getCusolverHandlePool()};
+  return dlaf::cusolver::Executor{internal::getNpCudaStreamPool(), internal::getCublasHandlePool(),
+                                  internal::getCusolverHandlePool()};
 }
 #endif
 
@@ -98,7 +99,8 @@ auto getHpExecutor() {
 #ifdef DLAF_WITH_CUDA
 template <>
 inline auto getHpExecutor<Backend::GPU>() {
-  return dlaf::cusolver::Executor{internal::getHpCudaStreamPool(), internal::getCublasHandlePool(), internal::getCusolverHandlePool()};
+  return dlaf::cusolver::Executor{internal::getHpCudaStreamPool(), internal::getCublasHandlePool(),
+                                  internal::getCusolverHandlePool()};
 }
 #endif
 

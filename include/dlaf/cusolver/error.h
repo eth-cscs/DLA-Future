@@ -61,7 +61,8 @@ inline std::string cusolverGetErrorString(cusolverStatus_t st) {
   return "UNKNOWN";
 }
 
-inline void cusolverCall(cusolverStatus_t st, const dlaf::common::internal::source_location& info) noexcept {
+inline void cusolverCall(cusolverStatus_t st,
+                         const dlaf::common::internal::source_location& info) noexcept {
   if (st != CUSOLVER_STATUS_SUCCESS) {
     std::cout << "[CUSOLVER ERROR] " << info << std::endl << cusolverGetErrorString(st) << std::endl;
     std::terminate();

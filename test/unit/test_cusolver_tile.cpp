@@ -43,7 +43,11 @@ TYPED_TEST(TileOperationsTest, Potrf) {
     for (const auto& size : sizes) {
       std::tie(n, extra_lda) = size;
 
-      testPotrf<Type>(uplo, n, extra_lda);
+      // Test version non returning info
+      testPotrf<Type, false>(uplo, n, extra_lda);
+
+      // Test version returning info
+      testPotrf<Type, true>(uplo, n, extra_lda);
     }
   }
 }
@@ -59,7 +63,11 @@ TYPED_TEST(TileOperationsTest, PotrfNonPositiveDefinite) {
     for (const auto& size : sizes) {
       std::tie(n, extra_lda) = size;
 
-      testPotrfNonPosDef<Type>(uplo, n, extra_lda);
+      // Test version non returning info
+      testPotrfNonPosDef<Type, false>(uplo, n, extra_lda);
+
+      // Test version returning info
+      testPotrfNonPosDef<Type, true>(uplo, n, extra_lda);
     }
   }
 }

@@ -31,15 +31,10 @@ using namespace dlaf::matrix::test;
 using namespace dlaf::tile;
 using namespace testing;
 
-template <class T>
+template <class T, bool return_info>
 void testPotrf(const blas::Uplo uplo, const SizeType n, const SizeType extra_lda) {
   const TileElementSize size_a = TileElementSize(n, n);
   const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
-
-  std::stringstream s;
-  s << "POTRF: " << uplo;
-  s << ", n = " << n << ", lda = " << lda;
-  SCOPED_TRACE(s.str());
 
   // Note: The tile elements are chosen such that:
   // - res_ij = 1 / 2^(|i-j|) * exp(I*(-i+j)),
@@ -80,23 +75,36 @@ void testPotrf(const blas::Uplo uplo, const SizeType n, const SizeType extra_lda
 
   cusolverDnHandle_t handle;
   DLAF_CUSOLVER_CALL(cusolverDnCreate(&handle));
-  auto result = tile::potrf(handle, uplo, ad);
-  DLAF_CUDA_CALL(cudaDeviceSynchronize());
-  DLAF_CUSOLVER_CALL(cusolverDnDestroy(handle));
+  if (return_info) {
+    auto result = tile::potrfInfo(handle, uplo, ad);
+
+    memory::MemoryView<int, Device::CPU> info_host(1);
+    // The copy will happen on the same (default) stream as the potrf, and
+    // since this is a blocking call, we can access info_host without further
+    // synchronization.
+    DLAF_CUDA_CALL(cudaMemcpy(info_host(), result.info(), sizeof(int), cudaMemcpyDefault));
+    EXPECT_EQ(0, *(info_host()));
+  }
+  else {
+    tile::potrf(handle, uplo, ad);
+
+    DLAF_CUDA_CALL(cudaDeviceSynchronize());
+  }
 
   copy(ad, a);
-
-  memory::MemoryView<int, Device::CPU> info_host(1);
-  DLAF_CUDA_CALL(cudaMemcpy(info_host(), result.info(), sizeof(int), cudaMemcpyDeviceToHost));
-  EXPECT_EQ(0, *(info_host()));
 
   // Check result against analytical result.
   CHECK_TILE_NEAR(res_a, a, 4 * (n + 1) * TypeUtilities<T>::error,
                   4 * (n + 1) * TypeUtilities<T>::error);
+
+  DLAF_CUSOLVER_CALL(cusolverDnDestroy(handle));
 }
 
-template <class T>
+template <class T, bool return_info>
 void testPotrfNonPosDef(const blas::Uplo uplo, SizeType n, SizeType extra_lda) {
+  if (!return_info) {
+    return;
+  }
   const TileElementSize size_a = TileElementSize(n, n);
   const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
 
@@ -115,16 +123,16 @@ void testPotrfNonPosDef(const blas::Uplo uplo, SizeType n, SizeType extra_lda) {
 
   cusolverDnHandle_t handle;
   DLAF_CUSOLVER_CALL(cusolverDnCreate(&handle));
-  auto result = tile::potrf(handle, uplo, ad);
-  DLAF_CUDA_CALL(cudaDeviceSynchronize());
-  DLAF_CUSOLVER_CALL(cusolverDnDestroy(handle));
-
-  copy(ad, a);
+  auto result = tile::potrfInfo(handle, uplo, ad);
 
   memory::MemoryView<int, Device::CPU> info_host(1);
+  // The copy will happen on the same (default) stream as the potrf, and since
+  // this is a blocking call, we can access info_host without further
+  // synchronization.
   DLAF_CUDA_CALL(cudaMemcpy(info_host(), result.info(), sizeof(int), cudaMemcpyDeviceToHost));
   EXPECT_EQ(1, *(info_host()));
-}
 
+  DLAF_CUSOLVER_CALL(cusolverDnDestroy(handle));
+}
 }
 }

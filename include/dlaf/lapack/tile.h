@@ -21,6 +21,8 @@
 
 #ifdef DLAF_WITH_CUDA
 #include <cusolverDn.h>
+
+#include <hpx/modules/async_cuda.hpp>
 #endif
 
 #include "dlaf/common/assert.h"
@@ -213,13 +215,11 @@ struct CublasPotrf<std::complex<double>> {
 namespace internal {
 template <class T>
 class CusolverPotrfInfo {
-  // TODO: Combine buffers? Reuse upper/lower part of matrix? Workspace
-  // only size 1?
   memory::MemoryView<T, Device::GPU> workspace_;
   memory::MemoryView<int, Device::GPU> info_;
 
 public:
-  CusolverPotrfInfo(int workspace_size) : workspace_(workspace_size), info_() {}
+  CusolverPotrfInfo(int workspace_size) : workspace_(workspace_size), info_(1) {}
 
   T* workspace() {
     return workspace_();
@@ -231,7 +231,8 @@ public:
 }
 
 template <class T>
-auto potrf(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<T, Device::GPU>& a) {
+internal::CusolverPotrfInfo<T> potrfInfo(cusolverDnHandle_t handle, const blas::Uplo uplo,
+                                         const matrix::Tile<T, Device::GPU>& a) {
   DLAF_ASSERT(square_size(a), a);
   const int n = a.size().rows();
 
@@ -243,8 +244,31 @@ auto potrf(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<
                                  a.ld(), util::blasToCublasCast(info.workspace()), workspace_size,
                                  info.info());
 
-  // TODO: When and where to check the result?
   return info;
+}
+
+template <class T>
+void potrf(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<T, Device::GPU>& a) {
+  auto info = potrfInfo(handle, uplo, a);
+
+#ifdef DLAF_ASSERT_HEAVY_ENABLE
+  // info does not yet have the correct result, so we manually insert a copy
+  // operation from device to host which will happen once the potrf completes
+  // (because we use the same stream), and a continuation after the copy to
+  // check the value.
+  cudaStream_t stream;
+  DLAF_CUSOLVER_CALL(cusolverDnGetStream(handle, &stream));
+  auto f = hpx::cuda::experimental::detail::get_future_with_event(stream);
+
+  memory::MemoryView<int, Device::CPU> info_host(1);
+  DLAF_CUDA_CALL(cudaMemcpyAsync(info_host(), info.info(), sizeof(int), cudaMemcpyDeviceToHost, stream));
+
+  hpx::cuda::experimental::detail::get_future_with_event(stream)
+      .then(hpx::launch::sync,
+            [info = std::move(info), info_host = std::move(info_host)](hpx::future<void>&&) {
+              DLAF_ASSERT_HEAVY(*(info_host()) == 0, *(info_host()));
+            });
+#endif
 }
 #endif
 

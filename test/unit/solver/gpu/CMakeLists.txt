@@ -8,5 +8,11 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-add_subdirectory(mc)
-add_subdirectory(gpu)
+if(DLAF_WITH_CUDA)
+  DLAF_addTest(test_triangular_gpu
+    SOURCES test_triangular.cpp
+    LIBRARIES dlaf.solver dlaf.core
+    USE_MAIN MPIHPX
+    MPIRANKS 6
+  )
+endif()

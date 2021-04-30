@@ -33,6 +33,8 @@ namespace dlaf {
 struct configuration {
   std::size_t num_np_cuda_streams_per_thread = 3;
   std::size_t num_hp_cuda_streams_per_thread = 3;
+  std::size_t umpire_host_memory_pool_initial_bytes = 1 << 30;
+  std::size_t umpire_device_memory_pool_initial_bytes = 1 << 30;
   std::string mpi_pool = "mpi";
   comm::MPIMech mpi_mech = comm::MPIMech::Polling;
 };
@@ -40,24 +42,9 @@ struct configuration {
 std::ostream& operator<<(std::ostream& os, configuration const& cfg);
 
 namespace internal {
-bool& initialized();
 configuration& getConfiguration();
 
-template <Backend D>
-struct Init {
-  // Initialization and finalization does nothing by default. Behaviour can be
-  // overridden for backends.
-  static void initialize(configuration const&) {}
-  static void finalize() {}
-};
-
 #ifdef DLAF_WITH_CUDA
-template <>
-void Init<Backend::GPU>::initialize(configuration const&);
-template <>
-void Init<Backend::GPU>::finalize();
-extern template struct Init<Backend::GPU>;
-
 cuda::StreamPool getNpCudaStreamPool();
 cuda::StreamPool getHpCudaStreamPool();
 cublas::HandlePool getCublasHandlePool();

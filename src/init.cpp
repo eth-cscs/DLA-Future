@@ -13,6 +13,7 @@
 #include <dlaf/common/assert.h>
 #include <dlaf/communication/error.h>
 #include <dlaf/init.h>
+#include <dlaf/memory/memory_chunk.h>
 
 #ifdef DLAF_WITH_CUDA
 #include <dlaf/cublas/executor.h>
@@ -27,6 +28,9 @@ namespace dlaf {
 std::ostream& operator<<(std::ostream& os, configuration const& cfg) {
   os << "  num_np_cuda_streams_per_thread = " << cfg.num_np_cuda_streams_per_thread << std::endl;
   os << "  num_hp_cuda_streams_per_thread = " << cfg.num_hp_cuda_streams_per_thread << std::endl;
+  os << "  umpire_host_memory_pool_initial_bytes = " << cfg.umpire_host_memory_pool_initial_bytes
+     << std::endl;
+  os << "  umpire_device_memory_pool_initial_bytes = " << cfg.umpire_device_memory_pool_initial_bytes;
   os << "  mpi_pool = " << cfg.mpi_pool << std::endl;
   os << "  mpi_mech = " << cfg.mpi_mech << std::endl;
   return os;
@@ -37,6 +41,29 @@ bool& initialized() {
   static bool i = false;
   return i;
 }
+
+template <Backend D>
+struct Init {
+  // Initialization and finalization does nothing by default. Behaviour can be
+  // overridden for backends.
+  static void initialize(configuration const&) {}
+  static void finalize() {}
+};
+
+template <>
+struct Init<Backend::MC> {
+  static void initialize(configuration const& cfg) {
+    memory::internal::initializeUmpireHostAllocator(cfg.umpire_host_memory_pool_initial_bytes);
+    // TODO: Consider disabling polling in finalize()
+    if (cfg.mpi_mech == comm::MPIMech::Polling) {
+      hpx::mpi::experimental::init(false, cfg.mpi_pool);
+    }
+  }
+
+  static void finalize() {
+    memory::internal::finalizeUmpireHostAllocator();
+  }
+};
 
 #ifdef DLAF_WITH_CUDA
 static std::unique_ptr<cuda::StreamPool> np_stream_pool{nullptr};
@@ -93,30 +120,25 @@ cublas::HandlePool getCublasHandlePool() {
 }
 
 template <>
-void Init<Backend::GPU>::initialize(configuration const& cfg) {
-  const int device = 0;
-  initializeNpCudaStreamPool(device, cfg.num_np_cuda_streams_per_thread);
-  initializeHpCudaStreamPool(device, cfg.num_hp_cuda_streams_per_thread);
-  initializeCublasHandlePool();
-  hpx::cuda::experimental::detail::register_polling(hpx::resource::get_thread_pool("default"));
-}
-
-template <>
-void Init<Backend::GPU>::finalize() {
-  finalizeNpCudaStreamPool();
-  finalizeHpCudaStreamPool();
-  finalizeCublasHandlePool();
-  hpx::cuda::experimental::detail::unregister_polling(hpx::resource::get_thread_pool("default"));
-}
-#endif
-
-template <>
-void Init<Backend::MC>::initialize(configuration const& cfg) {
-  // TODO: Consider disabling polling in finalize()
-  if (cfg.mpi_mech == comm::MPIMech::Polling) {
-    hpx::mpi::experimental::init(false, cfg.mpi_pool);
+struct Init<Backend::GPU> {
+  static void initialize(configuration const& cfg) {
+    const int device = 0;
+    memory::internal::initializeUmpireDeviceAllocator(cfg.umpire_device_memory_pool_initial_bytes);
+    initializeNpCudaStreamPool(device, cfg.num_np_cuda_streams_per_thread);
+    initializeHpCudaStreamPool(device, cfg.num_hp_cuda_streams_per_thread);
+    initializeCublasHandlePool();
+    hpx::cuda::experimental::detail::register_polling(hpx::resource::get_thread_pool("default"));
   }
-}
+
+  static void finalize() {
+    memory::internal::finalizeUmpireDeviceAllocator();
+    finalizeNpCudaStreamPool();
+    finalizeHpCudaStreamPool();
+    finalizeCublasHandlePool();
+    hpx::cuda::experimental::detail::unregister_polling(hpx::resource::get_thread_pool("default"));
+  }
+};
+#endif
 
 template <class T>
 struct parseFromString {
@@ -182,6 +204,12 @@ void updateConfiguration(hpx::program_options::variables_map const& vm, configur
                            "num-np-cuda-streams-per-thread");
   updateConfigurationValue(vm, cfg.num_hp_cuda_streams_per_thread, "NUM_HP_CUDA_STREAMS_PER_THREAD",
                            "num-hp-cuda-streams-per-thread");
+  updateConfigurationValue(vm, cfg.umpire_host_memory_pool_initial_bytes,
+                           "UMPIRE_HOST_MEMORY_POOL_INITIAL_BYTES",
+                           "umpire-host-memory-pool-initial-bytes");
+  updateConfigurationValue(vm, cfg.umpire_device_memory_pool_initial_bytes,
+                           "UMPIRE_DEVICE_MEMORY_POOL_INITIAL_BYTES",
+                           "umpire-device-memory-pool-initial-bytes");
   updateConfigurationValue(vm, cfg.mpi_mech, "MPI_MECH", "mpi-mech");
   cfg.mpi_pool = (hpx::resource::pool_exists("mpi")) ? "mpi" : "default";
 }
@@ -201,6 +229,12 @@ hpx::program_options::options_description getOptionsDescription() {
                      "Number of normal priority CUDA streams per worker thread");
   desc.add_options()("dlaf:num-hp-cuda-streams-per-thread", hpx::program_options::value<std::size_t>(),
                      "Number of high priority CUDA streams per worker thread");
+  desc.add_options()("dlaf:umpire-host-memory-pool-initial-bytes",
+                     hpx::program_options::value<std::size_t>(),
+                     "Number of bytes to preallocate for pinned host memory pool");
+  desc.add_options()("dlaf:umpire-device-memory-pool-initial-bytes",
+                     hpx::program_options::value<std::size_t>(),
+                     "Number of bytes to preallocate for device memory pool");
   desc.add_options()("dlaf:mpi-mech",
                      hpx::program_options::value<std::string>()->default_value("yielding"),
                      "MPI mechanism ('yielding', 'polling')");
@@ -261,7 +295,7 @@ void finalize() {
 void initResourcePartitionerHandler(hpx::resource::partitioner& rp,
                                     hpx::program_options::variables_map const& vm) {
   // Don't create the MPI pool if the user disabled it
-  if (vm["no-mpi-pool"].as<bool>())
+  if (vm["dlaf:no-mpi-pool"].as<bool>())
     return;
 
   // Don't create the MPI pool if there is a single process
@@ -280,5 +314,4 @@ void initResourcePartitionerHandler(hpx::resource::partitioner& rp,
   rp.create_thread_pool("mpi", hpx::resource::scheduling_policy::local_priority_fifo, mode);
   rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], "mpi");
 }
-
 }

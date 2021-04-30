@@ -8,10 +8,11 @@ DLAF_MATRIX_ETI(, double, Device::CPU)
 DLAF_MATRIX_ETI(, std::complex<float>, Device::CPU)
 DLAF_MATRIX_ETI(, std::complex<double>, Device::CPU)
 
-// DLAF_MATRIX_ETI(, float, Device::GPU)
-// DLAF_MATRIX_ETI(, double, Device::GPU)
-// DLAF_MATRIX_ETI(, std::complex<float>, Device::GPU)
-// DLAF_MATRIX_ETI(, std::complex<double>, Device::GPU)
-
+#if defined(DLAF_WITH_CUDA)
+DLAF_MATRIX_ETI(, float, Device::GPU)
+DLAF_MATRIX_ETI(, double, Device::GPU)
+DLAF_MATRIX_ETI(, std::complex<float>, Device::GPU)
+DLAF_MATRIX_ETI(, std::complex<double>, Device::GPU)
+#endif
 }
 }

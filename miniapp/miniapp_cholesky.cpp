@@ -231,8 +231,8 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
   // compute tile * tile_to_transpose' with the option to cumulate the result
   auto gemm_f =
       unwrapping([](auto&& tile, auto&& tile_to_transpose, auto&& result, const bool accumulate_result) {
-        dlaf::tile::gemm<T, Device::CPU>(blas::Op::NoTrans, blas::Op::ConjTrans, 1.0, tile,
-                                         tile_to_transpose, accumulate_result ? 0.0 : 1.0, result);
+        dlaf::tile::gemm<T>(blas::Op::NoTrans, blas::Op::ConjTrans, 1.0, tile, tile_to_transpose,
+                            accumulate_result ? 0.0 : 1.0, result);
       });
 
   // compute a = abs(a - b)

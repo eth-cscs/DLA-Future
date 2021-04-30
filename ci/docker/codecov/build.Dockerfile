@@ -14,11 +14,6 @@ RUN apt-get update -qq && apt-get install -qq -y --no-install-recommends \
     git tar wget curl gpg-agent jq tzdata && \
     rm -rf /var/lib/apt/lists/*
 
-RUN cd /usr/local/bin && \
-  curl -Ls https://codecov.io/bash > codecov.sh && \
-  echo "d6aa3207c4908d123bd8af62ec0538e3f2b9f257c3de62fad4e29cd3b59b41d9 codecov.sh" | sha256sum --check --quiet && \
-  chmod +x codecov.sh
-
 # Install cmake
 RUN wget -qO- "https://cmake.org/files/v3.17/cmake-3.17.0-Linux-x86_64.tar.gz" | tar --strip-components=1 -xz -C /usr/local
 
@@ -111,6 +106,23 @@ RUN wget -q https://github.com/${HPX_FORK}/hpx/archive/${HPX_VERSION}.tar.gz -O 
     make -j$(nproc) && \
     make install && \
     rm -rf /root/hpx.tar.gz /root/hpx-${HPX_VERSION}
+
+ARG UMPIRE_VERSION=5.0.1
+ARG UMPIRE_PATH=/usr/local/umpire
+ARG UMPIRE_ENABLE_CUDA=ON
+RUN git clone --recursive --depth 1 --branch v${UMPIRE_VERSION} https://github.com/LLNL/Umpire.git Umpire-${UMPIRE_VERSION} && \
+    cd Umpire-${UMPIRE_VERSION} && \
+    mkdir build && \
+    cd build && \
+    cmake .. \
+      -DCMAKE_BUILD_TYPE=Debug \
+      -DCMAKE_INSTALL_PREFIX=$UMPIRE_PATH \
+      -DENABLE_CUDA=$UMPIRE_ENABLE_CUDA \
+      -DENABLE_BENCHMARKS=OFF \
+      -DENABLE_TESTS=OFF && \
+    make -j$(nproc) && \
+    make install && \
+    rm -rf /root/umpire.tar.gz /root/Umpire-${UMPIRE_VERSION}
 
 RUN ldconfig
 

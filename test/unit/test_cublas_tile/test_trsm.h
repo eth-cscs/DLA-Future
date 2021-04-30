@@ -16,8 +16,8 @@
 #include <tuple>
 #include "gtest/gtest.h"
 #include "dlaf/blas/enum_output.h"
+#include "dlaf/blas/tile.h"
 #include "dlaf/cublas/error.h"
-#include "dlaf/cublas_tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/memory/memory_view.h"
@@ -71,7 +71,7 @@ void testTrsm(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, Si
 
   cublasHandle_t handle;
   DLAF_CUBLAS_CALL(cublasCreate(&handle));
-  cublasTrsm(handle, side, uplo, op, diag, alpha, ad, bd);
+  trsm(handle, side, uplo, op, diag, alpha, ad, bd);
   DLAF_CUDA_CALL(cudaDeviceSynchronize());
   DLAF_CUBLAS_CALL(cublasDestroy(handle));
 

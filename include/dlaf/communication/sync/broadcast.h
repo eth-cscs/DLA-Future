@@ -12,7 +12,6 @@
 
 /// @file
 
-#include <hpx/include/parallel_executors.hpp>
 #include <hpx/local/future.hpp>
 
 #include "dlaf/common/assert.h"
@@ -22,6 +21,8 @@
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/message.h"
+#include "dlaf/executors.h"
+#include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/tile.h"
 
 namespace dlaf {

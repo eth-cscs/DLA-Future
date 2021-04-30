@@ -81,3 +81,35 @@ TEST(DoubleArgRange2D, Index2D) {
 TEST(DoubleArgRange2D, Size2D) {
   ::test_double_arg(Size(4, 2));
 }
+
+template <class TypeParam>
+void test_single_arg_empty() {
+  TypeParam sz(0, 0);
+  const auto range = iterate_range2d(sz);
+
+  EXPECT_EQ(range.begin(), range.end());
+}
+
+template <class TypeParam>
+void test_double_arg_empty(TypeParam end) {
+  const ::Index begin(3, 2);
+  const auto range = iterate_range2d(begin, end);
+
+  EXPECT_EQ(range.begin(), range.end());
+}
+
+TEST(SingleArgEmptyRange2D, Size2D) {
+  ::test_single_arg_empty<::Size>();
+}
+
+TEST(SingleArgEmptyRange2D, Index2D) {
+  ::test_single_arg_empty<::Index>();
+}
+
+TEST(DoubleArgEmptyRange2D, Index2D) {
+  ::test_double_arg_empty(Index(3, 2));
+}
+
+TEST(DoubleArgEmptyRange2D, Size2D) {
+  ::test_double_arg_empty(Size(0, 0));
+}

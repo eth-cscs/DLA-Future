@@ -58,7 +58,8 @@ struct IteratorRange2D {
   IteratorRange2D(const IteratorRange2D&) = default;
   IteratorRange2D& operator=(const IteratorRange2D&) = default;
 
-  IteratorRange2D(value_type begin, IndexT ld, SizeType i) : begin_(begin), i_(i), ld_(ld) {
+  IteratorRange2D(value_type begin, IndexT ld, SizeType i)
+      : begin_(begin), i_(i), ld_(std::max(ld, IndexT(1))) {
     current_ = computeIndex2D(i_);
   }
 

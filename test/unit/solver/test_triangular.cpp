@@ -32,17 +32,22 @@ using namespace testing;
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
 template <typename Type>
-class TriangularSolverLocalTest : public ::testing::Test {};
-TYPED_TEST_SUITE(TriangularSolverLocalTest, MatrixElementTypes);
-
-template <typename Type>
-class TriangularSolverDistributedTest : public ::testing::Test {
+class TriangularSolverTestMC : public ::testing::Test {
 public:
   const std::vector<CommunicatorGrid>& commGrids() {
     return comm_grids;
   }
 };
-TYPED_TEST_SUITE(TriangularSolverDistributedTest, MatrixElementTypes);
+TYPED_TEST_SUITE(TriangularSolverTestMC, MatrixElementTypes);
+
+template <typename Type>
+class TriangularSolverTestGPU : public ::testing::Test {
+public:
+  const std::vector<CommunicatorGrid>& commGrids() {
+    return comm_grids;
+  }
+};
+TYPED_TEST_SUITE(TriangularSolverTestGPU, MatrixElementTypes);
 
 const std::vector<blas::Side> blas_sides({blas::Side::Left, blas::Side::Right});
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
@@ -145,7 +150,7 @@ void testTriangularSolver(comm::CommunicatorGrid grid, blas::Side side, blas::Up
                     20 * (mat_bh.size().rows() + 1) * TypeUtilities<T>::error);
 }
 
-TYPED_TEST(TriangularSolverLocalTest, Correctness) {
+TYPED_TEST(TriangularSolverTestMC, CorrectnessLocal) {
   SizeType m, n, mb, nb;
 
   for (auto side : blas_sides) {
@@ -158,10 +163,6 @@ TYPED_TEST(TriangularSolverLocalTest, Correctness) {
 
             testTriangularSolver<TypeParam, Backend::MC, Device::CPU>(side, uplo, op, diag, alpha, m, n,
                                                                       mb, nb);
-#ifdef DLAF_WITH_CUDA
-            testTriangularSolver<TypeParam, Backend::GPU, Device::GPU>(side, uplo, op, diag, alpha, m, n,
-                                                                       mb, nb);
-#endif
           }
         }
       }
@@ -169,7 +170,7 @@ TYPED_TEST(TriangularSolverLocalTest, Correctness) {
   }
 }
 
-TYPED_TEST(TriangularSolverDistributedTest, Correctness) {
+TYPED_TEST(TriangularSolverTestMC, CorrectnessDistributed) {
   SizeType m, n, mb, nb;
 
   for (const auto& comm_grid : this->commGrids()) {
@@ -187,10 +188,6 @@ TYPED_TEST(TriangularSolverDistributedTest, Correctness) {
 
               testTriangularSolver<TypeParam, Backend::MC, Device::CPU>(comm_grid, side, uplo, op, diag,
                                                                         alpha, m, n, mb, nb);
-#ifdef DLAF_WITH_CUDA
-              testTriangularSolver<TypeParam, Backend::GPU, Device::GPU>(comm_grid, side, uplo, op, diag,
-                                                                         alpha, m, n, mb, nb);
-#endif
             }
           }
         }
@@ -198,3 +195,51 @@ TYPED_TEST(TriangularSolverDistributedTest, Correctness) {
     }
   }
 }
+
+#ifdef DLAF_WITH_CUDA
+TYPED_TEST(TriangularSolverTestGPU, CorrectnessLocal) {
+  SizeType m, n, mb, nb;
+
+  for (auto side : blas_sides) {
+    for (auto uplo : blas_uplos) {
+      for (auto op : blas_ops) {
+        for (auto diag : blas_diags) {
+          for (auto sz : sizes) {
+            std::tie(m, n, mb, nb) = sz;
+            TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
+
+            testTriangularSolver<TypeParam, Backend::GPU, Device::GPU>(side, uplo, op, diag, alpha, m, n,
+                                                                       mb, nb);
+          }
+        }
+      }
+    }
+  }
+}
+
+TYPED_TEST(TriangularSolverTestGPU, CorrectnessDistributed) {
+  SizeType m, n, mb, nb;
+
+  for (const auto& comm_grid : this->commGrids()) {
+    for (auto side : blas_sides) {
+      for (auto uplo : blas_uplos) {
+        for (auto op : blas_ops) {
+          for (auto diag : blas_diags) {
+            // Currently only Left Lower Notrans case is implemented
+            if (!(op == blas::Op::NoTrans && side == blas::Side::Left && uplo == blas::Uplo::Lower))
+              continue;
+
+            for (auto sz : sizes) {
+              std::tie(m, n, mb, nb) = sz;
+              TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
+
+              testTriangularSolver<TypeParam, Backend::GPU, Device::GPU>(comm_grid, side, uplo, op, diag,
+                                                                         alpha, m, n, mb, nb);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+#endif

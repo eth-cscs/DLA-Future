@@ -172,7 +172,7 @@ TYPED_TEST(TriangularSolverLocalTest, Correctness) {
 TYPED_TEST(TriangularSolverDistributedTest, Correctness) {
   SizeType m, n, mb, nb;
 
-  for (const auto& comm_grid : {this->commGrids()[0]}) {
+  for (const auto& comm_grid : this->commGrids()) {
     for (auto side : blas_sides) {
       for (auto uplo : blas_uplos) {
         for (auto op : blas_ops) {

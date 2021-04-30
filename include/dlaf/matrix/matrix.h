@@ -23,8 +23,27 @@
 #include "dlaf/matrix/tile.h"
 #include "dlaf/types.h"
 
+#include "dlaf/common/range2d.h"
+
 namespace dlaf {
 namespace matrix {
+
+namespace internal {
+
+/// Helper function returning a vector with the results of calling a function over a IterableRange2D
+///
+/// @param f non-void function accepting LocalTileIndex as parameter
+template <class Func>
+auto selectGeneric(Func&& f, common::IterableRange2D<SizeType, LocalTile_TAG> range) {
+  using RetT = decltype(f(LocalTileIndex{}));
+
+  std::vector<RetT> tiles;
+  tiles.reserve(to_sizet(std::distance(range.begin(), range.end())));
+  std::transform(range.begin(), range.end(), std::back_inserter(tiles),
+                 [&](auto idx) { return f(idx); });
+  return tiles;
+}
+}
 
 /// A @c Matrix object represents a collection of tiles which contain all the elements of a matrix.
 ///
@@ -331,6 +350,24 @@ Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const Tile
                                        SizeType ld_tile, SizeType tiles_per_col,
                                        const comm::CommunicatorGrid& comm, T* ptr) {
   return createMatrixFromTile<device>(size, block_size, ld_tile, tiles_per_col, comm, {0, 0}, ptr);
+}
+
+/// Returns a container grouping all the tiles retrieved using Matrix::read
+///
+/// @pre @p range must be a valid range for @p matrix
+template <class MatrixLike>
+std::vector<hpx::shared_future<typename MatrixLike::ConstTileType>> selectRead(
+    MatrixLike& matrix, common::IterableRange2D<SizeType, LocalTile_TAG> range) {
+  return internal::selectGeneric([&](auto index) { return matrix.read(index); }, range);
+}
+
+/// Returns a container grouping all the tiles retrieved using Matrix::operator()
+///
+/// @pre @p range must be a valid range for @p matrix
+template <class MatrixLike>
+std::vector<hpx::future<typename MatrixLike::TileType>> select(
+    MatrixLike& matrix, common::IterableRange2D<SizeType, LocalTile_TAG> range) {
+  return internal::selectGeneric([&](auto index) { return matrix(index); }, range);
 }
 
 /// ---- ETI

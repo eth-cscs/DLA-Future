@@ -25,6 +25,7 @@
 #include "dlaf/init.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/index.h"
+#include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf/solver.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
@@ -45,16 +46,6 @@ using dlaf::common::Ordering;
 using dlaf::comm::MPIMech;
 
 using T = double;
-#if DLAF_WITH_CUDA
-constexpr Backend B = Backend::GPU;
-constexpr Device D = Device::GPU;
-using HostMatrixType = dlaf::Matrix<T, Device::CPU>;
-#else
-constexpr Backend B = Backend::MC;
-constexpr Device D = Device::CPU;
-#endif
-
-using MatrixType = dlaf::Matrix<T, D>;
 
 struct options_t {
   SizeType m;
@@ -86,21 +77,17 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
 
   // Allocate memory for the matrices
-  MatrixType a(GlobalElementSize{opts.m, opts.m}, TileElementSize{opts.mb, opts.mb}, comm_grid);
-  MatrixType b(GlobalElementSize{opts.m, opts.n}, TileElementSize{opts.mb, opts.nb}, comm_grid);
+  dlaf::matrix::Matrix<T, Device::CPU> ah(GlobalElementSize{opts.m, opts.m},
+                                          TileElementSize{opts.mb, opts.mb}, comm_grid);
+  dlaf::matrix::Matrix<T, Device::CPU> bh(GlobalElementSize{opts.m, opts.n},
+                                          TileElementSize{opts.mb, opts.nb}, comm_grid);
 
-#if DLAF_WITH_CUDA
-  HostMatrixType ah(GlobalElementSize{opts.m, opts.m}, TileElementSize{opts.mb, opts.mb}, comm_grid);
-  HostMatrixType bh(GlobalElementSize{opts.m, opts.n}, TileElementSize{opts.mb, opts.nb}, comm_grid);
-#endif
+  dlaf::matrix::MatrixMirror<T, Device::Default, Device::CPU> a(ah);
+  dlaf::matrix::MatrixMirror<T, Device::Default, Device::CPU> b(bh);
 
   auto sync_barrier = [&]() {
-    ::waitall_tiles(a);
-    ::waitall_tiles(b);
-#if DLAF_WITH_CUDA
-    ::waitall_tiles(ah);
-    ::waitall_tiles(bh);
-#endif
+    ::waitall_tiles(a.get());
+    ::waitall_tiles(b.get());
     DLAF_MPI_CALL(MPI_Barrier(world));
   };
 
@@ -110,13 +97,13 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   const auto diag = blas::Diag::NonUnit;
   const T alpha = 2.0;
 
-  double m = a.size().rows();
-  double n = b.size().cols();
+  double m = ah.size().rows();
+  double n = bh.size().cols();
   auto add_mul = n * m * m / 2;
   const double total_ops = dlaf::total_ops<T>(add_mul, add_mul);
 
   matrix_values_t ref_a, ref_b, ref_x;
-  std::tie(ref_a, ref_b, ref_x) = ::sampleLeftTr(uplo, op, diag, alpha, a.size().rows());
+  std::tie(ref_a, ref_b, ref_x) = ::sampleLeftTr(uplo, op, diag, alpha, ah.size().rows());
 
   for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
     if (0 == world.rank() && run_index >= 0)
@@ -124,20 +111,16 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 
     // setup matrix A and b
     using dlaf::matrix::util::set;
-#if DLAF_WITH_CUDA
     set(ah, ref_a);
     set(bh, ref_b);
-    copy(ah, a);
-    copy(bh, b);
-#else
-    set(a, ref_a);
-    set(b, ref_b);
-#endif
+    a.syncSourceToTarget();
+    b.syncSourceToTarget();
 
     sync_barrier();
 
     dlaf::common::Timer<> timeit;
-    dlaf::solver::triangular<B, D, T>(comm_grid, side, uplo, op, diag, alpha, a, b);
+    dlaf::solver::triangular<Backend::Default, Device::Default, T>(comm_grid, side, uplo, op, diag,
+                                                                   alpha, a.get(), b.get());
 
     sync_barrier();
 
@@ -149,13 +132,11 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       std::cout << "[" << run_index << "]"
                 << " " << elapsed_time << "s"
                 << " " << gigaflops << "GFlop/s"
-                << " " << b.size() << " " << b.blockSize() << " " << comm_grid.size() << " "
+                << " " << bh.size() << " " << bh.blockSize() << " " << comm_grid.size() << " "
                 << hpx::get_os_thread_count() << std::endl;
     }
 
-#if DLAF_WITH_CUDA
-    copy(b, bh);
-#endif
+    b.syncTargetToSource();
 
     // (optional) run test
     if (opts.do_check) {
@@ -164,12 +145,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       static_assert(std::is_arithmetic<T>::value, "mul/add error is valid just for arithmetic types");
       constexpr T muladd_error = 2 * std::numeric_limits<T>::epsilon();
 
-      const T max_error = 20 * (b.size().rows() + 1) * muladd_error;
-#if DLAF_WITH_CUDA
+      const T max_error = 20 * (bh.size().rows() + 1) * muladd_error;
       CHECK_MATRIX_NEAR(ref_x, bh, max_error, 0);
-#else
-      CHECK_MATRIX_NEAR(ref_x, b, max_error, 0);
-#endif
     }
   }
 

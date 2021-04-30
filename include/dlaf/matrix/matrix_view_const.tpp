@@ -46,7 +46,7 @@ void MatrixView<const T, device>::setUpTiles(MatrixType<T2, device>& matrix) noe
   for (SizeType j = 0; j < nr_tiles.cols(); ++j) {
     for (SizeType i = 0; i < nr_tiles.rows(); ++i) {
       LocalTileIndex ind(i, j);
-      tile_shared_futures_.emplace_back(std::move(matrix.read(ind)));
+      tile_shared_futures_.emplace_back(matrix.read(ind));
     }
   }
 }

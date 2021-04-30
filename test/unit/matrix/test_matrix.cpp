@@ -1122,6 +1122,97 @@ TYPED_TEST(MatrixTest, GPUCopy) {
 }
 #endif
 
+class MatrixGenericTest : public ::testing::Test {
+public:
+  const std::vector<CommunicatorGrid>& commGrids() {
+    return comm_grids;
+  }
+};
+
+TEST_F(MatrixGenericTest, SelectTilesReadonly) {
+  using TypeParam = double;
+  using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
+  using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
+
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+
+      MemoryViewT mem(layout.minMemSize());
+      MatrixT mat = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid,
+                                                      static_cast<TypeParam*>(mem()));
+
+      // if this rank has no tiles locally, there's nothing interesting to do...
+      if (distribution.localNrTiles().isEmpty())
+        continue;
+
+      const auto ncols = to_sizet(distribution.localNrTiles().cols());
+      const LocalTileSize local_row_size{1, to_SizeType(ncols)};
+      auto row0_range = common::iterate_range2d(local_row_size);
+
+      // top left tile is selected in rw (i.e. exclusive access)
+      auto fut_tl = mat(LocalTileIndex{0, 0});
+
+      // the entire first row is selected in ro
+      auto futs_row = selectRead(mat, row0_range);
+      EXPECT_EQ(ncols, futs_row.size());
+
+      // Since the top left tile has been selected two times, the group selection
+      // would have all but the first tile ready...
+      EXPECT_TRUE(checkFuturesStep(1, futs_row, true));
+
+      // ... until the first one will be released.
+      fut_tl.get();
+      EXPECT_TRUE(checkFuturesStep(ncols, futs_row));
+    }
+  }
+}
+
+TEST_F(MatrixGenericTest, SelectTilesReadwrite) {
+  using TypeParam = double;
+  using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
+  using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
+
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+
+      MemoryViewT mem(layout.minMemSize());
+      MatrixT mat = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid,
+                                                      static_cast<TypeParam*>(mem()));
+
+      // if this rank has no tiles locally, there's nothing interesting to do...
+      if (distribution.localNrTiles().isEmpty())
+        continue;
+
+      const auto ncols = to_sizet(distribution.localNrTiles().cols());
+      const LocalTileSize local_row_size{1, to_SizeType(ncols)};
+      auto row0_range = common::iterate_range2d(local_row_size);
+
+      // top left tile is selected in rw (i.e. exclusive access)
+      auto fut_tl = mat(LocalTileIndex{0, 0});
+
+      // the entire first row is selected in rw
+      auto futs_row = select(mat, row0_range);
+      EXPECT_EQ(ncols, futs_row.size());
+
+      // Since the top left tile has been selected two times, the group selection
+      // would have all but the first tile ready...
+      EXPECT_TRUE(checkFuturesStep(1, futs_row, true));
+
+      // ... until the first one will be released.
+      fut_tl.get();
+      EXPECT_TRUE(checkFuturesStep(ncols, futs_row));
+    }
+  }
+}
+
 // MatrixDestructorFutures
 //
 // These tests checks that futures management on destruction is performed correctly. The behaviour is

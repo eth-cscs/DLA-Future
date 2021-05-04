@@ -40,7 +40,7 @@ DLAF_MAKE_CALLABLE_OBJECT(sendBcast);
 
 // Non-blocking receiver broadcast
 template <class T, Device D>
-matrix::Tile<const T, D> recvBcast(matrix::Tile<T, D> tile, int root_rank,
+matrix::Tile<const T, D> recvBcast(matrix::Tile<T, D> tile, comm::IndexT_MPI root_rank,
                                    common::PromiseGuard<Communicator> pcomm, MPI_Request* req) {
   using ConstTile_t = matrix::Tile<const T, D>;
 
@@ -85,7 +85,7 @@ hpx::future<matrix::Tile<T, D>> scheduleRecvBcast(Executor&& ex, hpx::future<mat
 
 template <class T, Device D, class Executor>
 hpx::future<matrix::Tile<const T, D>> scheduleRecvBcastAlloc(
-    Executor&& ex, TileElementSize tile_size, int root_rank,
+    Executor&& ex, TileElementSize tile_size, comm::IndexT_MPI root_rank,
     hpx::future<common::PromiseGuard<comm::Communicator>> pcomm) {
   return internal::handleRecvTile<D>(
       hpx::dataflow(std::forward<Executor>(ex),

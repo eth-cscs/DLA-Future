@@ -113,6 +113,19 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
     end_ = dist_matrix_.localNrTiles().get(component(axis)) - bias_;
   }
 
+  /// Set the panel to a new offset (with respect to the "parent" matrix)
+  ///
+  /// @pre offset cannot be less than the offset has been specifed on construction
+  void setEnd(LocalTileSize end) noexcept {
+    DLAF_ASSERT(
+        end.get(component(axis)) > 0
+        and
+        end.get(component(axis)) <= dist_matrix_.localNrTiles().get(component(axis)),
+        end, dist_matrix_.localNrTiles().get(component(axis)));
+
+    end_ = dist_matrix_.localNrTiles().get(component(axis)) - bias_;
+  }
+
   /// Return the current offset (1D)
   SizeType start() const noexcept {
     return start_;
@@ -175,6 +188,7 @@ protected:
     DLAF_ASSERT_HEAVY(BaseT::nrTiles().get(axis) == 1, BaseT::nrTiles());
 
     setStart(start);
+    setEnd(dist_matrix_.localNrTiles());
 
     external_.resize(BaseT::nrTiles().get(component(axis)));
 

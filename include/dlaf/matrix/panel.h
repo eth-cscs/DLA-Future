@@ -55,8 +55,8 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
   /// Return an IterableRange2D with a range over all tiles of the panel (considering the offset)
   auto iterator() const noexcept {
     return common::iterate_range2d(
-        LocalTileIndex(component(axis), start_ + bias_),
-        LocalTileIndex(component(axis), end_ + bias_, 1));
+        LocalTileIndex(component(axis), start_),
+        LocalTileIndex(component(axis), end_, 1));
   }
 
   /// Return the rank which this (local) panel belongs to
@@ -103,32 +103,59 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
     }
   }
 
+  void setRange(LocalTileSize start, LocalTileSize end) noexcept {
+    const auto start_loc = start.get(component(axis));
+    const auto end_loc = end.get(component(axis));
+
+    DLAF_ASSERT(start_loc < end_loc, start_loc, end_loc);
+
+    DLAF_ASSERT(
+        start_loc >= bias_,
+        start, bias_);
+    DLAF_ASSERT(
+        end_loc <= dist_matrix_.localNrTiles().get(component(axis)),
+        end, dist_matrix_.localNrTiles().get(component(axis)));
+
+    start_ = start_loc;
+    end_ = end_loc;
+  }
+
   /// Set the panel to a new offset (with respect to the "parent" matrix)
   ///
   /// @pre offset cannot be less than the offset has been specifed on construction
   void setStart(LocalTileSize start) noexcept {
-    DLAF_ASSERT(start.get(component(axis)) >= bias_, start, bias_); // TODO add start < max_size
+    const auto start_loc = start.get(component(axis));
+    DLAF_ASSERT(
+        start_loc >= bias_
+        and
+        start_loc < end_,
+        start, end_, bias_);
 
-    start_ = start.get(component(axis)) - bias_;
-    end_ = dist_matrix_.localNrTiles().get(component(axis)) - bias_;
+    start_ = start_loc;
   }
 
   /// Set the panel to a new offset (with respect to the "parent" matrix)
   ///
   /// @pre offset cannot be less than the offset has been specifed on construction
   void setEnd(LocalTileSize end) noexcept {
+    const auto end_loc = end.get(component(axis));
     DLAF_ASSERT(
-        end.get(component(axis)) > 0
+        end_loc > start_
         and
-        end.get(component(axis)) <= dist_matrix_.localNrTiles().get(component(axis)),
-        end, dist_matrix_.localNrTiles().get(component(axis)));
+        end_loc <= dist_matrix_.localNrTiles().get(component(axis)),
+        start_, end, dist_matrix_.localNrTiles().get(component(axis)));
 
-    end_ = dist_matrix_.localNrTiles().get(component(axis)) - bias_;
+    end_ = end_loc;
   }
 
-  /// Return the current offset (1D)
+  /// Return the current start (1D)
   SizeType start() const noexcept {
     return start_;
+  }
+
+  /// Return the current end (1D)
+  SizeType end() const noexcept {
+    return end_;
   }
 
   /// Reset the internal usage status of the panel.
@@ -182,13 +209,14 @@ protected:
   /// e.g. a 4x5 matrix with an offset 2x1 will have either:
   /// - a Panel<Col> 2x1
   /// - or a Panel<Row> 4x1
-  Panel(matrix::Distribution dist_matrix, LocalTileSize start)
+  Panel(matrix::Distribution dist_matrix, LocalTileSize start, LocalTileSize end)
       : BaseT(setupMatrix(dist_matrix, start)), dist_matrix_(dist_matrix),
         bias_(start.get(component(axis))) {
     DLAF_ASSERT_HEAVY(BaseT::nrTiles().get(axis) == 1, BaseT::nrTiles());
 
-    setStart(start);
-    setEnd(dist_matrix_.localNrTiles());
+    if (!end.isValid())
+      end = dist_matrix_.localNrTiles();
+    setRange(start, end);
 
     external_.resize(BaseT::nrTiles().get(component(axis)));
 
@@ -214,8 +242,8 @@ protected:
   LocalTileIndex fullIndex(LocalTileIndex index) const {
     index = LocalTileIndex(component(axis), linearIndex(index));
 
-    DLAF_ASSERT_HEAVY(index.isIn(BaseT::distribution().localNrTiles()), index,
-                      BaseT::distribution().localNrTiles());
+    DLAF_ASSERT_HEAVY(index.isIn(LocalTileSize(component(axis), end_, 1)), index,
+                      LocalTileSize(component(axis), end_));
 
     return index;
   }
@@ -246,8 +274,8 @@ struct Panel : public Panel<axis, const T, device> {
   using TileType = Tile<T, device>;
   using ConstTileType = Tile<const T, device>;
 
-  explicit Panel(matrix::Distribution distribution, LocalTileSize start = {0, 0})
-      : Panel<axis, const T, device>(std::move(distribution), std::move(start)) {}
+  explicit Panel(matrix::Distribution distribution, LocalTileSize start = {0, 0}, LocalTileSize end = {-1, -1})
+      : Panel<axis, const T, device>(std::move(distribution), std::move(start), std::move(end)) {}
 
   /// Access tile at specified index in readwrite mode
   ///

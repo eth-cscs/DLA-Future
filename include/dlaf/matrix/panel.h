@@ -54,9 +54,8 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
 
   /// Return an IterableRange2D with a range over all tiles of the panel (considering the offset)
   auto iterator() const noexcept {
-    return common::iterate_range2d(
-        LocalTileIndex(component(axis), start_),
-        LocalTileIndex(component(axis), end_, 1));
+    return common::iterate_range2d(LocalTileIndex(component(axis), start_),
+                                   LocalTileIndex(component(axis), end_, 1));
   }
 
   /// Return the rank which this (local) panel belongs to
@@ -109,12 +108,9 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
 
     DLAF_ASSERT(start_loc < end_loc, start_loc, end_loc);
 
-    DLAF_ASSERT(
-        start_loc >= bias_,
-        start, bias_);
-    DLAF_ASSERT(
-        end_loc <= dist_matrix_.localNrTiles().get(component(axis)),
-        end, dist_matrix_.localNrTiles().get(component(axis)));
+    DLAF_ASSERT(start_loc >= bias_, start, bias_);
+    DLAF_ASSERT(end_loc <= dist_matrix_.localNrTiles().get(component(axis)), end,
+                dist_matrix_.localNrTiles().get(component(axis)));
 
     start_ = start_loc;
     end_ = end_loc;
@@ -125,11 +121,7 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
   /// @pre offset cannot be less than the offset has been specifed on construction
   void setStart(LocalTileSize start) noexcept {
     const auto start_loc = start.get(component(axis));
-    DLAF_ASSERT(
-        start_loc >= bias_
-        and
-        start_loc < end_,
-        start, end_, bias_);
+    DLAF_ASSERT(start_loc >= bias_ && start_loc < end_, start, end_, bias_);
 
     start_ = start_loc;
   }
@@ -139,11 +131,8 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
   /// @pre offset cannot be less than the offset has been specifed on construction
   void setEnd(LocalTileSize end) noexcept {
     const auto end_loc = end.get(component(axis));
-    DLAF_ASSERT(
-        end_loc > start_
-        and
-        end_loc <= dist_matrix_.localNrTiles().get(component(axis)),
-        start_, end, dist_matrix_.localNrTiles().get(component(axis)));
+    DLAF_ASSERT(end_loc > start_ && end_loc <= dist_matrix_.localNrTiles().get(component(axis)), start_,
+                end, dist_matrix_.localNrTiles().get(component(axis)));
 
     end_ = end_loc;
   }
@@ -274,7 +263,8 @@ struct Panel : public Panel<axis, const T, device> {
   using TileType = Tile<T, device>;
   using ConstTileType = Tile<const T, device>;
 
-  explicit Panel(matrix::Distribution distribution, LocalTileSize start = {0, 0}, LocalTileSize end = {-1, -1})
+  explicit Panel(matrix::Distribution distribution, LocalTileSize start = {0, 0},
+                 LocalTileSize end = {-1, -1})
       : Panel<axis, const T, device>(std::move(distribution), std::move(start), std::move(end)) {}
 
   /// Access tile at specified index in readwrite mode

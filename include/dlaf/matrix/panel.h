@@ -119,7 +119,7 @@ struct Panel<axis, const T, D> {
   /// Set the panel to a new offset (with respect to the "parent" matrix)
   ///
   /// @pre offset cannot be less than the offset has been specifed on construction
-  void setStart(LocalTileSize start) noexcept {
+  void setRangeStart(LocalTileSize start) noexcept {
     const auto start_loc = start.get(component(axis));
     DLAF_ASSERT(start_loc >= bias_ && start_loc < end_, start, end_, bias_);
 
@@ -129,7 +129,7 @@ struct Panel<axis, const T, D> {
   /// Set the panel to a new offset (with respect to the "parent" matrix)
   ///
   /// @pre offset cannot be less than the offset has been specifed on construction
-  void setEnd(LocalTileSize end) noexcept {
+  void setRangeEnd(LocalTileSize end) noexcept {
     const auto end_loc = end.get(component(axis));
     DLAF_ASSERT(end_loc > start_ && end_loc <= dist_matrix_.localNrTiles().get(component(axis)), start_,
                 end, dist_matrix_.localNrTiles().get(component(axis)));
@@ -138,12 +138,12 @@ struct Panel<axis, const T, D> {
   }
 
   /// Return the current start (1D)
-  SizeType start() const noexcept {
+  SizeType rangeStart() const noexcept {
     return start_;
   }
 
   /// Return the current end (1D)
-  SizeType end() const noexcept {
+  SizeType rangeEnd() const noexcept {
     return end_;
   }
 
@@ -416,8 +416,9 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis,
   DLAF_ASSERT(square_blocksize(dist), dist.blockSize());
   DLAF_ASSERT_MODERATE(
       [&]() {
-        const auto offset = dist.template globalTileFromLocalTile<component(axis)>(panel.start());
-        const auto offsetT = dist.template globalTileFromLocalTile<component(axisT)>(panelT.start());
+        const auto offset = dist.template globalTileFromLocalTile<component(axis)>(panel.rangeStart());
+        const auto offsetT =
+            dist.template globalTileFromLocalTile<component(axisT)>(panelT.rangeStart());
 
         const auto grid_size = dist.commGridSize().get(component(axis));
         const auto gridT_size = dist.commGridSize().get(component(axisT));
@@ -439,7 +440,8 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis,
 
         return chances > 0;
       }(),
-      panel.start(), panelT.start(), "broadcast can mirror just on the parent matrix main diagonal");
+      panel.rangeStart(), panelT.rangeStart(),
+      "broadcast can mirror just on the parent matrix main diagonal");
 
   // STEP 1
   constexpr auto comm_dir_step1 = orthogonal(axis);

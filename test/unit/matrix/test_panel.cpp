@@ -398,7 +398,7 @@ TYPED_TEST(PanelTest, ShrinkCol) {
         ws_v({i, 0}).get()({0, 0}) = i;
 
       for (SizeType i = at_offset.rows(); i < dist.localNrTiles().rows(); ++i) {
-        ws_v.setStart({i, 0});
+        ws_v.setRangeStart({i, 0});
 
         for (SizeType k = i; k < dist.localNrTiles().rows(); ++k) {
           const LocalTileIndex idx(k, 0);
@@ -414,10 +414,10 @@ TYPED_TEST(PanelTest, ShrinkCol) {
         }
       }
 
-      ws_v.setStart(at_offset);
+      ws_v.setRangeStart(at_offset);
 
       for (SizeType i = dist.localNrTiles().rows(); i > at_offset.rows(); --i) {
-        ws_v.setEnd({i, 0});
+        ws_v.setRangeEnd({i, 0});
 
         for (SizeType k = at_offset.rows(); k < i; ++k) {
           const LocalTileIndex idx(k, 0);
@@ -460,7 +460,7 @@ TYPED_TEST(PanelTest, ShrinkRow) {
         ws_h({0, j}).get()({0, 0}) = j;
 
       for (SizeType j = at_offset.cols(); j < dist.localNrTiles().cols(); ++j) {
-        ws_h.setStart({0, j});
+        ws_h.setRangeStart({0, j});
 
         for (SizeType k = j; k < dist.localNrTiles().cols(); ++k) {
           const LocalTileIndex idx(0, k);
@@ -476,10 +476,10 @@ TYPED_TEST(PanelTest, ShrinkRow) {
         }
       }
 
-      ws_h.setStart(at_offset);
+      ws_h.setRangeStart(at_offset);
 
       for (SizeType j = dist.localNrTiles().cols(); j > at_offset.cols(); --j) {
-        ws_h.setEnd({0, j});
+        ws_h.setRangeEnd({0, j});
 
         for (SizeType k = at_offset.cols(); k < j; ++k) {
           const LocalTileIndex idx(0, k);

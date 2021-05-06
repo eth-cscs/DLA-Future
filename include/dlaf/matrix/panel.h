@@ -30,18 +30,18 @@ namespace matrix {
 ///
 /// 1D array of tiles, i.e. a Row or Column panel strictly related to a given dlaf::Matrix (from the
 /// coords point of view)
-template <Coord axis, class T, Device device>
+template <Coord axis, class T, Device D>
 struct Panel;
 
-template <Coord axis, class T, Device device>
-struct Panel<axis, const T, device> : protected Matrix<T, device> {
+template <Coord axis, class T, Device D>
+struct Panel<axis, const T, D> {
   // Note:
   // This specialization acts as base for the RW version of the panel,
   // moreover allows the casting between references (i.e. Panel<const T>& = Panel<T>)
 
-  using TileType = Tile<T, device>;
-  using ConstTileType = Tile<const T, device>;
-  using BaseT = Matrix<T, device>;
+  using TileType = Tile<T, D>;
+  using ConstTileType = Tile<const T, D>;
+  using BaseT = Matrix<T, D>;
 
   Panel(Panel&&) = default;
 
@@ -98,7 +98,7 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
     }
     else {
       internal_.insert(internal_linear_idx);
-      return BaseT::read(fullIndex(index));
+      return data_.read(fullIndex(index));
     }
   }
 
@@ -159,8 +159,6 @@ struct Panel<axis, const T, device> : protected Matrix<T, device> {
   }
 
 protected:
-  using iter2d_t = decltype(iterate_range2d(LocalTileSize{0, 0}));
-
   static LocalElementSize computePanelSize(LocalElementSize size, TileElementSize blocksize,
                                            LocalTileSize start) {
     const auto mb = blocksize.rows();
@@ -181,7 +179,7 @@ protected:
   ///
   /// It allocates just the memory needed for the part of matrix used, so
   /// starting from @p start
-  static Matrix<T, device> setupMatrix(const Distribution& dist_matrix, const LocalTileSize start) {
+  static Matrix<T, D> setupMatrix(const Distribution& dist_matrix, const LocalTileSize start) {
     const auto panel_size = computePanelSize(dist_matrix.localSize(), dist_matrix.blockSize(), start);
 
     Distribution dist{panel_size, dist_matrix.blockSize()};
@@ -199,18 +197,18 @@ protected:
   /// - a Panel<Col> 2x1
   /// - or a Panel<Row> 4x1
   Panel(matrix::Distribution dist_matrix, LocalTileSize start, LocalTileSize end)
-      : BaseT(setupMatrix(dist_matrix, start)), dist_matrix_(dist_matrix),
+      : data_(setupMatrix(dist_matrix, start)), dist_matrix_(dist_matrix),
         bias_(start.get(component(axis))) {
-    DLAF_ASSERT_HEAVY(BaseT::nrTiles().get(axis) == 1, BaseT::nrTiles());
+    DLAF_ASSERT_HEAVY(data_.nrTiles().get(axis) == 1, data_.nrTiles());
 
     if (!end.isValid())
       end = dist_matrix_.localNrTiles();
     setRange(start, end);
 
-    external_.resize(BaseT::nrTiles().get(component(axis)));
+    external_.resize(data_.nrTiles().get(component(axis)));
 
-    DLAF_ASSERT_HEAVY(BaseT::distribution().localNrTiles().linear_size() == external_.size(),
-                      BaseT::distribution().localNrTiles().linear_size(), external_.size());
+    DLAF_ASSERT_HEAVY(data_.distribution().localNrTiles().linear_size() == external_.size(),
+                      data_.distribution().localNrTiles().linear_size(), external_.size());
   }
 
   /// Given a matrix index, compute the internal linear index
@@ -241,6 +239,9 @@ protected:
   bool isExternal(const LocalTileIndex idx_matrix) const noexcept {
     return external_[linearIndex(idx_matrix)].valid();
   }
+
+  ///> Local matrix used for storing the panel data
+  matrix::Matrix<T, D> data_;
 
   ///> Parent matrix which this panel is related to
   Distribution dist_matrix_;
@@ -273,15 +274,14 @@ struct Panel : public Panel<axis, const T, device> {
   ///
   /// @pre index must point to a tile which is internally managed by the panel
   hpx::future<TileType> operator()(const LocalTileIndex& index) {
-    DLAF_ASSERT(!isExternal(index), "read-only access on external tiles", index);
+    DLAF_ASSERT(!BaseT::isExternal(index), "read-only access on external tiles", index);
 
     BaseT::internal_.insert(BaseT::linearIndex(index));
-    return BaseT::operator()(BaseT::fullIndex(index));
+    return BaseT::data_(BaseT::fullIndex(index));
   }
 
 protected:
   using BaseT = Panel<axis, const T, device>;
-  using BaseT::isExternal;
 };
 
 namespace internal {

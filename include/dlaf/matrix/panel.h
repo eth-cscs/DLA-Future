@@ -196,13 +196,12 @@ protected:
   /// e.g. a 4x5 matrix with an offset 2x1 will have either:
   /// - a Panel<Col> 2x1
   /// - or a Panel<Row> 4x1
-  Panel(matrix::Distribution dist_matrix, LocalTileSize start, LocalTileSize end)
+  Panel(matrix::Distribution dist_matrix, LocalTileSize start)
       : data_(setupMatrix(dist_matrix, start)), dist_matrix_(dist_matrix),
         bias_(start.get(component(axis))) {
     DLAF_ASSERT_HEAVY(data_.nrTiles().get(axis) == 1, data_.nrTiles());
 
-    if (!end.isValid())
-      end = dist_matrix_.localNrTiles();
+    const LocalTileSize end = dist_matrix_.localNrTiles();
     setRange(start, end);
 
     external_.resize(data_.nrTiles().get(component(axis)));
@@ -230,7 +229,7 @@ protected:
     index = LocalTileIndex(component(axis), linearIndex(index));
 
     DLAF_ASSERT_HEAVY(index.isIn(LocalTileSize(component(axis), end_, 1)), index,
-                      LocalTileSize(component(axis), end_));
+                      LocalTileSize(component(axis), end_, 1));
 
     return index;
   }
@@ -264,9 +263,8 @@ struct Panel : public Panel<axis, const T, device> {
   using TileType = Tile<T, device>;
   using ConstTileType = Tile<const T, device>;
 
-  explicit Panel(matrix::Distribution distribution, LocalTileSize start = {0, 0},
-                 LocalTileSize end = {-1, -1})
-      : Panel<axis, const T, device>(std::move(distribution), std::move(start), std::move(end)) {}
+  explicit Panel(matrix::Distribution distribution, LocalTileSize start = {0, 0})
+      : Panel<axis, const T, device>(std::move(distribution), std::move(start)) {}
 
   /// Access tile at specified index in readwrite mode
   ///

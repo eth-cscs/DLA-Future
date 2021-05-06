@@ -199,8 +199,6 @@ public:
   /// @see Index2D::Index2D(IndexT row, IndexT col).
   ///
   /// @param coords where coords[0] is the row index and coords[1] is the column index,
-  /// @pre coords[0] >= 0,
-  /// @pre coords[1] >= 0.
   Index2D(const std::array<IndexT, 2>& coords) noexcept : Index2D(coords[0], coords[1]) {}
 
   IndexT row() const noexcept {

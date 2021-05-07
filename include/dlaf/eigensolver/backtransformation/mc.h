@@ -214,10 +214,10 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 #define DLAF_SOLVER_BACKTRANSFORMATION_MC_ETI(KWORD, DATATYPE) \
   KWORD template struct BackTransformation<Backend::MC, Device::CPU, DATATYPE>;
 
-DLAF_SOLVER_BACKTRANSFORMATION_MC_ETI(extern, float)
-DLAF_SOLVER_BACKTRANSFORMATION_MC_ETI(extern, double)
-DLAF_SOLVER_BACKTRANSFORMATION_MC_ETI(extern, std::complex<float>)
-DLAF_SOLVER_BACKTRANSFORMATION_MC_ETI(extern, std::complex<double>)
+DLAF_EIGENSOLVER_BACKTRANSFORMATION_MC_ETI(extern, float)
+DLAF_EIGENSOLVER_BACKTRANSFORMATION_MC_ETI(extern, double)
+DLAF_EIGENSOLVER_BACKTRANSFORMATION_MC_ETI(extern, std::complex<float>)
+DLAF_EIGENSOLVER_BACKTRANSFORMATION_MC_ETI(extern, std::complex<double>)
 
 }
 }

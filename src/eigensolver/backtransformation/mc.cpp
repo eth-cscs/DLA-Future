@@ -1,13 +1,13 @@
 #include "dlaf/eigensolver/backtransformation/mc.h"
 
 namespace dlaf {
-namespace solver {
+namespace eigensolver {
 namespace internal {
 
-DLAF_SOLVER_BACKTRANSFORMATION_MC_ETI(, float)
-DLAF_SOLVER_BACKTRANSFORMATION_MC_ETI(, double)
-DLAF_SOLVER_BACKTRANSFORMATION_MC_ETI(, std::complex<float>)
-DLAF_SOLVER_BACKTRANSFORMATION_MC_ETI(, std::complex<double>)
+DLAF_EIGENSOLVER_BACKTRANSFORMATION_MC_ETI(, float)
+DLAF_EIGENSOLVER_BACKTRANSFORMATION_MC_ETI(, double)
+DLAF_EIGENSOLVER_BACKTRANSFORMATION_MC_ETI(, std::complex<float>)
+DLAF_EIGENSOLVER_BACKTRANSFORMATION_MC_ETI(, std::complex<double>)
 
 }
 }

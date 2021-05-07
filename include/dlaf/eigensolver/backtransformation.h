@@ -11,8 +11,8 @@
 
 #include <blas.hh>
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/matrix/matrix.h"
 #include "dlaf/eigensolver/backtransformation/mc.h"
+#include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 

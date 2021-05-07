@@ -173,8 +173,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       auto kk = LocalTileIndex{k, k};
       // WH = V T
       auto ik = LocalTileIndex{i, 0};
-      //hpx::dataflow(executor_np, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper, ConjTrans, NonUnit, 1.0, mat_t.read(kk), std::move(mat_w(ik)));
-      hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::trmm_o), Right, Upper, ConjTrans, NonUnit, T(1.0), mat_t.read(kk), std::move(mat_w(ik)));
+      hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::trmm_o), Right, Upper, ConjTrans,
+                    NonUnit, T(1.0), mat_t.read(kk), std::move(mat_w(ik)));
     }
 
     for (SizeType j = 0; j < n; ++j) {
@@ -183,8 +183,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         auto ik = LocalTileIndex{i, 0};
         auto ij = LocalTileIndex{i, j};
         // W2 = W C
-	//        hpx::dataflow(executor_np, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), ConjTrans, NoTrans, 1.0, std::move(mat_w(ik)), mat_c.read(ij), 1.0, std::move(mat_w2(kj)));
-	hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::gemm_o), ConjTrans, NoTrans, T(1.0), std::move(mat_w(ik)), mat_c.read(ij), T(1.0), std::move(mat_w2(kj)));
+        hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::gemm_o), ConjTrans, NoTrans, T(1.0),
+                      std::move(mat_w(ik)), mat_c.read(ij), T(1.0), std::move(mat_w2(kj)));
       }
     }
 
@@ -194,9 +194,9 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         auto kj = LocalTileIndex{0, j};
         auto ij = LocalTileIndex{i, j};
         // C = C - V W2
-        //hpx::dataflow(executor_np, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans, NoTrans, -1.0, mat_vv.read(ik), mat_w2.read(kj), 1.0, std::move(mat_c(ij)));
-	hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::gemm_o), NoTrans, NoTrans, T(-1.0), mat_vv.read(ik), mat_w2.read(kj), T(1.0), std::move(mat_c(ij)));
-      }      
+        hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::gemm_o), NoTrans, NoTrans, T(-1.0),
+                      mat_vv.read(ik), mat_w2.read(kj), T(1.0), std::move(mat_c(ij)));
+      }
     }
   }
 }

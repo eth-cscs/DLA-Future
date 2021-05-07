@@ -14,10 +14,3 @@ DLAF_addTest(test_triangular
   USE_MAIN MPIHPX
   MPIRANKS 6
 )
-
-DLAF_addTest(test_backtransformation
-  SOURCES test_backtransformation.cpp
-  LIBRARIES dlaf.solver dlaf.core
-  USE_MAIN MPIHPX
-  MPIRANKS 1
-)

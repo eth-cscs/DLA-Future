@@ -20,4 +20,3 @@ DLAF_addTest(test_gen_to_std
   LIBRARIES dlaf.eigensolver dlaf.core
   USE_MAIN HPX
 )
-

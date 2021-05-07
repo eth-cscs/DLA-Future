@@ -374,7 +374,7 @@ TYPED_TEST(PanelTest, ExternalTilesRow) {
   }
 }
 
-TYPED_TEST(PanelTest, OffsetCol) {
+TYPED_TEST(PanelTest, ShrinkCol) {
   using namespace dlaf;
   using hpx::util::unwrapping;
   using TypeUtil = TypeUtilities<TypeParam>;
@@ -394,13 +394,32 @@ TYPED_TEST(PanelTest, OffsetCol) {
 
       Panel<Coord::Col, TypeParam, dlaf::Device::CPU> ws_v(dist, at_offset);
 
-      for (SizeType i = at_offset.rows(); i < matrix.distribution().localNrTiles().rows(); ++i)
+      for (SizeType i = at_offset.rows(); i < dist.localNrTiles().rows(); ++i)
         ws_v({i, 0}).get()({0, 0}) = i;
 
-      for (SizeType i = at_offset.rows(); i < matrix.distribution().localNrTiles().rows(); ++i) {
-        ws_v.setOffset({i, 0});
+      for (SizeType i = at_offset.rows(); i < dist.localNrTiles().rows(); ++i) {
+        ws_v.setRangeStart({i, 0});
 
-        for (SizeType k = i; k < matrix.distribution().localNrTiles().rows(); ++k) {
+        for (SizeType k = i; k < dist.localNrTiles().rows(); ++k) {
+          const LocalTileIndex idx(k, 0);
+          auto& tile = ws_v.read(idx).get();
+          EXPECT_EQ(tile({0, 0}), TypeUtil::element(k, 0));
+          EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
+        }
+
+        for (const auto& idx : ws_v.iterator()) {
+          auto& tile = ws_v.read(idx).get();
+          EXPECT_EQ(tile({0, 0}), TypeUtil::element(idx.row(), 0));
+          EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
+        }
+      }
+
+      ws_v.setRangeStart(at_offset);
+
+      for (SizeType i = dist.localNrTiles().rows(); i > at_offset.rows(); --i) {
+        ws_v.setRangeEnd({i, 0});
+
+        for (SizeType k = at_offset.rows(); k < i; ++k) {
           const LocalTileIndex idx(k, 0);
           auto& tile = ws_v.read(idx).get();
           EXPECT_EQ(tile({0, 0}), TypeUtil::element(k, 0));
@@ -417,7 +436,7 @@ TYPED_TEST(PanelTest, OffsetCol) {
   }
 }
 
-TYPED_TEST(PanelTest, OffsetRow) {
+TYPED_TEST(PanelTest, ShrinkRow) {
   using namespace dlaf;
   using hpx::util::unwrapping;
   using TypeUtil = TypeUtilities<TypeParam>;
@@ -437,13 +456,32 @@ TYPED_TEST(PanelTest, OffsetRow) {
 
       Panel<Coord::Row, TypeParam, dlaf::Device::CPU> ws_h(dist, at_offset);
 
-      for (SizeType j = at_offset.cols(); j < matrix.distribution().localNrTiles().cols(); ++j)
+      for (SizeType j = at_offset.cols(); j < dist.localNrTiles().cols(); ++j)
         ws_h({0, j}).get()({0, 0}) = j;
 
-      for (SizeType j = at_offset.cols(); j < matrix.distribution().localNrTiles().cols(); ++j) {
-        ws_h.setOffset({0, j});
+      for (SizeType j = at_offset.cols(); j < dist.localNrTiles().cols(); ++j) {
+        ws_h.setRangeStart({0, j});
 
-        for (SizeType k = j; k < matrix.distribution().localNrTiles().cols(); ++k) {
+        for (SizeType k = j; k < dist.localNrTiles().cols(); ++k) {
+          const LocalTileIndex idx(0, k);
+          auto& tile = ws_h.read(idx).get();
+          EXPECT_EQ(tile({0, 0}), TypeUtil::element(k, 0));
+          EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
+        }
+
+        for (const auto& idx : ws_h.iterator()) {
+          auto& tile = ws_h.read(idx).get();
+          EXPECT_EQ(tile({0, 0}), TypeUtil::element(idx.col(), 0));
+          EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
+        }
+      }
+
+      ws_h.setRangeStart(at_offset);
+
+      for (SizeType j = dist.localNrTiles().cols(); j > at_offset.cols(); --j) {
+        ws_h.setRangeEnd({0, j});
+
+        for (SizeType k = at_offset.cols(); k < j; ++k) {
           const LocalTileIndex idx(0, k);
           auto& tile = ws_h.read(idx).get();
           EXPECT_EQ(tile({0, 0}), TypeUtil::element(k, 0));

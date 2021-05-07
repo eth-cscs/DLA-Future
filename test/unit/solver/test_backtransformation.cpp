@@ -18,7 +18,6 @@
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_base.h"
-#include "dlaf/matrix/matrix_output.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 //#include "dlaf_test/comm_grids/grids_6_ranks.h"
@@ -57,10 +56,10 @@ GlobalElementSize globalTestSize(const LocalElementSize& size) {
 }
 
 const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
-//    {3, 0, 1, 1}, {0, 5, 2, 3},  // m, n = 0
-//    {2, 2, 3, 3}, {3, 4, 6, 7},  // m < mb
-//    {3, 3, 1, 1}, {4, 4, 2, 2}, {6, 3, 3, 3}, {12, 2, 4, 4}, {12, 24, 3, 3}, {24, 36, 6, 6},
-  {5, 8, 3, 2}, // {4, 6, 2, 3}, {5, 5, 2, 3},  //{8, 27, 3, 4}, {15, 34, 4, 6},
+    {3, 0, 1, 1}, {0, 5, 2, 3},  // m, n = 0
+    {2, 2, 3, 3}, {3, 4, 6, 7},  // m < mb
+    {3, 3, 1, 1}, {4, 4, 2, 2}, {6, 3, 3, 3}, {12, 2, 4, 4}, {12, 24, 3, 3}, {24, 36, 6, 6},
+    //  {5, 8, 3, 2}, // {4, 6, 2, 3}, {5, 5, 2, 3},  //{8, 27, 3, 4}, {15, 34, 4, 6},
 };
 
 template <class T>

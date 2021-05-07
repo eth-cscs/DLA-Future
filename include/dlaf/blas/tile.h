@@ -49,6 +49,11 @@ void hemm(const blas::Side side, const blas::Uplo uplo, const T alpha,
              c.ptr(), c.ld());
 }
 
+/// Performs a matrix-matrix multiplication, involving a triangular matrix.
+template <class T, Device device>
+void trmm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const blas::Diag diag,
+          const T alpha, const Tile<const T, device>& a, const Tile<T, device>& b) noexcept;
+
 /// Performs a rank 2k update of hermitian (symmetric if T is real) tile a.
 template <class T>
 void her2k(const blas::Uplo uplo, const blas::Op op, const T alpha, const Tile<const T, Device::CPU>& a,

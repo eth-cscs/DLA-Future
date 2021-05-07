@@ -9,5 +9,4 @@
 //
 #pragma once
 
-#include "dlaf/solver/backtransformation.h"
 #include "dlaf/solver/triangular.h"

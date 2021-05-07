@@ -138,6 +138,42 @@ struct CublasHerk<std::complex<double>> {
 };
 
 template <typename T>
+struct CublasTrmm;
+
+template <>
+struct CublasTrmm<float> {
+  template <typename... Args>
+  static void call(Args&&... args) {
+    DLAF_CUBLAS_CALL(cublasStrsm(std::forward<Args>(args)...));
+  }
+};
+
+template <>
+struct CublasTrmm<double> {
+  template <typename... Args>
+  static void call(Args&&... args) {
+    DLAF_CUBLAS_CALL(cublasDtrsm(std::forward<Args>(args)...));
+  }
+};
+
+template <>
+struct CublasTrmm<std::complex<float>> {
+  template <typename... Args>
+  static void call(Args&&... args) {
+    DLAF_CUBLAS_CALL(cublasCtrsm(std::forward<Args>(args)...));
+  }
+};
+
+template <>
+struct CublasTrmm<std::complex<double>> {
+  template <typename... Args>
+  static void call(Args&&... args) {
+    DLAF_CUBLAS_CALL(cublasZtrsm(std::forward<Args>(args)...));
+  }
+};
+}
+
+template <typename T>
 struct CublasTrsm;
 
 template <>

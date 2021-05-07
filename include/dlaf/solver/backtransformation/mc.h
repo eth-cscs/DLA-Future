@@ -18,7 +18,7 @@
 
 #include "dlaf/solver/backtransformation/api.h"
 
-#include "dlaf/blas_tile.h"
+#include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/vector.h"

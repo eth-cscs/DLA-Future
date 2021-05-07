@@ -16,7 +16,7 @@ DLAF_addTest(test_gen_to_std
 
 DLAF_addTest(test_backtransformation
   SOURCES test_backtransformation.cpp
-  LIBRARIES dlaf.solver dlaf.core
+  LIBRARIES dlaf.eigensolver dlaf.core
   USE_MAIN MPIHPX
   MPIRANKS 1
 )

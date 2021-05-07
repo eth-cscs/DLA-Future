@@ -14,8 +14,6 @@
 #include <hpx/include/util.hpp>
 #include <hpx/local/future.hpp>
 
-#include <blas.hh>
-
 #include "dlaf/eigensolver/backtransformation/api.h"
 
 #include "dlaf/blas/tile.h"
@@ -211,7 +209,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 }
 
 /// ---- ETI
-#define DLAF_SOLVER_BACKTRANSFORMATION_MC_ETI(KWORD, DATATYPE) \
+#define DLAF_EIGENSOLVER_BACKTRANSFORMATION_MC_ETI(KWORD, DATATYPE) \
   KWORD template struct BackTransformation<Backend::MC, Device::CPU, DATATYPE>;
 
 DLAF_EIGENSOLVER_BACKTRANSFORMATION_MC_ETI(extern, float)

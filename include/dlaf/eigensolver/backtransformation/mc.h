@@ -35,7 +35,7 @@
 #include "dlaf/util_matrix.h"
 
 namespace dlaf {
-namespace solver {
+namespace eigensolver {
 namespace internal {
 
 using namespace dlaf::matrix;

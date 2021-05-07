@@ -39,17 +39,17 @@ using namespace testing;
 //    ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
 template <typename Type>
-class BackTransformationSolverLocalTest : public ::testing::Test {};
-TYPED_TEST_SUITE(BackTransformationSolverLocalTest, MatrixElementTypes);
+class BackTransformationEigenSolverLocalTest : public ::testing::Test {};
+TYPED_TEST_SUITE(BackTransformationEigenSolverLocalTest, MatrixElementTypes);
 
 // template <typename Type>
-// class BackTransformationSolverDistributedTest : public ::testing::Test {
+// class BackTransformationEigenSolverDistributedTest : public ::testing::Test {
 // public:
 //  const std::vector<CommunicatorGrid>& commGrids() {
 //    return comm_grids;
 //}
 //};
-// TYPED_TEST_SUITE(BackTransformationSolverDistributedTest, double);
+// TYPED_TEST_SUITE(BackTransformationEigenSolverDistributedTest, double);
 
 GlobalElementSize globalTestSize(const LocalElementSize& size) {
   return {size.rows(), size.cols()};
@@ -154,7 +154,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
                    mat_c_loc.ptr(GlobalElementIndex{i, 0}), mat_c_loc.ld());
     }
 
-    solver::backTransformation<Backend::MC>(mat_c, mat_v, taus);
+    eigensolver::backTransformation<Backend::MC>(mat_c, mat_v, taus);
 
     auto result = [& dist = mat_c.distribution(),
                    &mat_local = mat_c_loc](const GlobalElementIndex& element) {
@@ -168,7 +168,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
   }
 }
 
-TYPED_TEST(BackTransformationSolverLocalTest, Correctness) {
+TYPED_TEST(BackTransformationEigenSolverLocalTest, Correctness) {
   SizeType m, n, mb, nb;
 
   for (auto sz : sizes) {

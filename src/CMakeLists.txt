@@ -98,7 +98,6 @@ add_library(dlaf.core
     matrix/layout_info.cpp
     matrix/tile.cpp
     matrix.cpp
-    matrix_mirror.cpp
     memory/memory_view.cpp
     memory/memory_chunk.cpp
 )

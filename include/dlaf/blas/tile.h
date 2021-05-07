@@ -69,9 +69,9 @@ void herk(const blas::Uplo uplo, const blas::Op op, const BaseType<T> alpha,
 }
 
 /// Performs a matrix-matrix multiplication, involving a triangular matrix.
-template <class T, Device device>
+template <class T>
 void trmm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const blas::Diag diag,
-          const T alpha, const Tile<const T, device>& a, const Tile<T, device>& b) noexcept {
+          const T alpha, const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b) noexcept {
   auto s = tile::internal::getTrmmSizes(side, op, a, b);
   blas::trmm(blas::Layout::ColMajor, side, uplo, op, diag, s.m, s.n, alpha, a.ptr(), a.ld(), b.ptr(),
              b.ld());
@@ -238,7 +238,7 @@ void herk(cublasHandle_t handle, const blas::Uplo uplo, const blas::Op op, const
 }
 
 /// Performs a matrix-matrix multiplication, involving a triangular matrix.
-template <class T, Device device>
+template <class T>
 void trmm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const blas::Diag diag,
           const T alpha, const Tile<const T, device>& a, const Tile<T, device>& b) noexcept {
   auto s = tile::internal::getTrmmSizes(side, op, a, b);
@@ -264,6 +264,7 @@ DLAF_MAKE_CALLABLE_OBJECT(gemm);
 DLAF_MAKE_CALLABLE_OBJECT(hemm);
 DLAF_MAKE_CALLABLE_OBJECT(her2k);
 DLAF_MAKE_CALLABLE_OBJECT(herk);
+DLAF_MAKE_CALLABLE_OBJECT(trmm);
 DLAF_MAKE_CALLABLE_OBJECT(trsm);
 
 }

@@ -175,8 +175,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       auto kk = LocalTileIndex{k, k};
       // WH = V T
       auto ik = LocalTileIndex{i, 0};
-      hpx::dataflow(executor_np, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper,
-                    ConjTrans, NonUnit, 1.0, mat_t.read(kk), std::move(mat_w(ik)));
+      //hpx::dataflow(executor_np, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper, ConjTrans, NonUnit, 1.0, mat_t.read(kk), std::move(mat_w(ik)));
+      hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::trmm_o), Right, Upper, ConjTrans, NonUnit, T(1.0), mat_t.read(kk), std::move(mat_w(ik)));
     }
 
     for (SizeType j = 0; j < n; ++j) {

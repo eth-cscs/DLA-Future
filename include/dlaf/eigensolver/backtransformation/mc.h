@@ -16,7 +16,7 @@
 
 #include <blas.hh>
 
-#include "dlaf/solver/backtransformation/api.h"
+#include "dlaf/eigensolver/backtransformation/api.h"
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"

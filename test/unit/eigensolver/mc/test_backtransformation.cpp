@@ -7,7 +7,7 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
-#include "dlaf/solver/backtransformation.h"
+#include "dlaf/eigensolver/backtransformation.h"
 
 #include <functional>
 #include <sstream>

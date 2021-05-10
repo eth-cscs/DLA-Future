@@ -18,6 +18,8 @@
 
 #include "dlaf/common/range2d.h"
 #include "dlaf/communication/communicator.h"
+#include "dlaf/communication/communicator_grid.h"
+#include "dlaf/communication/executor.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/util_matrix.h"
 
@@ -45,47 +47,29 @@ struct PanelTest : public ::testing::Test {
 
 TYPED_TEST_SUITE(PanelTest, MatrixElementTypes);
 
-using test_params_t = std::tuple<GlobalElementSize, TileElementSize, GlobalElementIndex>;
-
-std::vector<test_params_t> test_params{
-    // test_params_t({5, 10}, {3, 3}, {1, 2}),
-    test_params_t({26, 13}, {3, 3}, {1, 2}),
-};
-
 struct config_t {
   const GlobalElementSize sz;
   const TileElementSize blocksz;
   const GlobalElementIndex offset;
 };
 
-config_t configure(const test_params_t& params) {
-  return {std::get<0>(params), std::get<1>(params), std::get<2>(params)};
-}
+std::vector<config_t> test_params{
+  {{26, 13}, {3, 3}, {1, 2}},
+};
 
 TYPED_TEST(PanelTest, AssignToConstRef) {
   using namespace dlaf;
   using hpx::util::unwrapping;
 
   for (auto& comm_grid : this->commGrids()) {
-    for (const auto& params : test_params) {
-      const auto cfg = configure(params);
-
+    for (const auto& cfg : test_params) {
       const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
 
-      // TODO a good idea would be to set a matrix, than set externals, then change matrix
-      // and check that the ref points correctly
-      Panel<Coord::Col, TypeParam, dlaf::Device::CPU> panel(dist, {0, 0});
+      Panel<Coord::Col, TypeParam, dlaf::Device::CPU> panel(dist);
       Panel<Coord::Col, const TypeParam, dlaf::Device::CPU>& ref = panel;
 
-      std::vector<LocalTileIndex> exp_indices;
-      for (const auto& idx : panel.iterator()) {
-        exp_indices.push_back(idx);
-      }
-
-      std::vector<LocalTileIndex> ref_indices;
-      for (const auto& idx : ref.iterator()) {
-        ref_indices.push_back(idx);
-      }
+      std::vector<LocalTileIndex> exp_indices(panel.iterator().begin(), panel.iterator().end());
+      std::vector<LocalTileIndex> ref_indices(ref.iterator().begin(), ref.iterator().end());
 
       EXPECT_EQ(exp_indices, ref_indices);
 
@@ -100,621 +84,318 @@ TYPED_TEST(PanelTest, AssignToConstRef) {
   }
 }
 
-TYPED_TEST(PanelTest, IteratorCol) {
-  using namespace dlaf;
-  using hpx::util::unwrapping;
+template <class TypeParam, Coord panel_axis>
+void testIterator(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
+  constexpr Coord coord1D = component(panel_axis);
 
+  const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
+
+  const LocalTileSize at_offset(dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
+                                dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()));
+
+  Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, at_offset);
+
+  const auto exp_nrTiles = dist.localNrTiles().get<coord1D>();
+
+  std::vector<LocalTileIndex> exp_indices;
+  exp_indices.reserve(static_cast<size_t>(exp_nrTiles));
+  for (auto index = at_offset.get<coord1D>(); index < exp_nrTiles; ++index)
+    exp_indices.emplace_back(coord1D, index, 0);
+
+  std::vector<LocalTileIndex> indices(panel.iterator().begin(), panel.iterator().end());
+
+  EXPECT_EQ(exp_indices, indices);
+}
+
+TYPED_TEST(PanelTest, Iterator) {
   for (auto& comm_grid : this->commGrids()) {
-    for (const auto& params : test_params) {
-      const auto cfg = configure(params);
-
-      const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
-
-      // setup the panel
-      const LocalTileSize at_offset(dist.template nextLocalTileFromGlobalTile<Coord::Row>(
-                                        cfg.offset.row()),
-                                    dist.template nextLocalTileFromGlobalTile<Coord::Col>(
-                                        cfg.offset.col()));
-
-      Panel<Coord::Col, TypeParam, dlaf::Device::CPU> ws_v(dist, at_offset);
-
-      const auto exp_nrTiles = dist.localNrTiles().rows();
-
-      std::vector<LocalTileIndex> exp_indices;
-      exp_indices.reserve(static_cast<size_t>(exp_nrTiles));
-      for (auto index = at_offset.rows(); index < exp_nrTiles; ++index) {
-        exp_indices.emplace_back(index, 0);
-      }
-
-      std::vector<LocalTileIndex> indices;
-      indices.reserve(static_cast<size_t>(exp_nrTiles));
-      for (const auto& idx : ws_v.iterator()) {
-        indices.push_back(idx);
-      }
-
-      EXPECT_EQ(exp_indices, indices);
+    for (const auto& cfg : test_params) {
+      testIterator<TypeParam, Coord::Col>(cfg, comm_grid);
+      testIterator<TypeParam, Coord::Row>(cfg, comm_grid);
     }
   }
 }
 
-TYPED_TEST(PanelTest, IteratorRow) {
-  using namespace dlaf;
-  using hpx::util::unwrapping;
-
-  for (auto& comm_grid : this->commGrids()) {
-    for (const auto& params : test_params) {
-      const auto cfg = configure(params);
-
-      const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
-
-      // setup the panel
-      const LocalTileSize at_offset(dist.template nextLocalTileFromGlobalTile<Coord::Row>(
-                                        cfg.offset.row()),
-                                    dist.template nextLocalTileFromGlobalTile<Coord::Col>(
-                                        cfg.offset.col()));
-
-      Panel<Coord::Row, TypeParam, dlaf::Device::CPU> ws_h(dist, at_offset);
-
-      const auto exp_nrTiles = dist.localNrTiles().cols();
-
-      std::vector<LocalTileIndex> exp_indices;
-      exp_indices.reserve(static_cast<size_t>(exp_nrTiles));
-      for (auto index = at_offset.cols(); index < exp_nrTiles; ++index) {
-        exp_indices.emplace_back(0, index);
-      }
-
-      std::vector<LocalTileIndex> indices;
-      indices.reserve(static_cast<size_t>(exp_nrTiles));
-      for (const auto& idx : ws_h.iterator()) {
-        indices.push_back(idx);
-      }
-
-      EXPECT_EQ(exp_indices, indices);
-    }
-  }
-}
-
-TYPED_TEST(PanelTest, AccessCol) {
-  using namespace dlaf;
-  using hpx::util::unwrapping;
+template <class TypeParam, Coord panel_axis>
+void testAccess(const config_t& cfg, const comm::CommunicatorGrid comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
+  using hpx::util::unwrapping;
 
+  constexpr Coord coord1D = component(panel_axis);
+
+  const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
+
+  const LocalTileSize at_offset(dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
+                                dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()));
+
+  Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, at_offset);
+
+  // rw-access
+  for (const auto& idx : panel.iterator()) {
+    panel(idx).then(unwrapping(
+        [idx](auto&& tile) { matrix::test::set(tile, TypeUtil::element(idx.get(coord1D), 26)); }));
+  }
+
+  // ro-access
+  for (const auto& idx : panel.iterator()) {
+    panel.read(idx).then(unwrapping(
+        [idx](auto&& tile) { CHECK_MATRIX_EQ(TypeUtil::element(idx.get(coord1D), 26), tile); }));
+  }
+}
+
+TYPED_TEST(PanelTest, AccessTile) {
   for (auto& comm_grid : this->commGrids()) {
-    for (const auto& params : test_params) {
-      const auto cfg = configure(params);
-
-      const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
-
-      // setup the panel
-      const LocalTileSize at_offset(dist.template nextLocalTileFromGlobalTile<Coord::Row>(
-                                        cfg.offset.row()),
-                                    dist.template nextLocalTileFromGlobalTile<Coord::Col>(
-                                        cfg.offset.col()));
-
-      Panel<Coord::Col, TypeParam, dlaf::Device::CPU> ws_v(dist, at_offset);
-
-      // rw-access
-      for (const auto& idx : ws_v.iterator()) {
-        ws_v(idx).then(unwrapping(
-            [idx](auto&& tile) { matrix::test::set(tile, TypeUtil::element(idx.row(), 26)); }));
-      }
-
-      // ro-access
-      for (const auto& idx : ws_v.iterator()) {
-        ws_v.read(idx).then(
-            unwrapping([idx](auto&& tile) { CHECK_MATRIX_EQ(TypeUtil::element(idx.row(), 26), tile); }));
-      }
+    for (const auto& cfg : test_params) {
+      testAccess<TypeParam, Coord::Col>(cfg, comm_grid);
+      testAccess<TypeParam, Coord::Row>(cfg, comm_grid);
     }
   }
 }
 
-TYPED_TEST(PanelTest, AccessRow) {
-  using namespace dlaf;
-  using hpx::util::unwrapping;
+template <class TypeParam, Coord panel_axis>
+void testExternalTile(const config_t& cfg, const comm::CommunicatorGrid comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
+  using hpx::util::unwrapping;
 
+  constexpr Coord coord1D = component(panel_axis);
+
+  Matrix<TypeParam, dlaf::Device::CPU> matrix(cfg.sz, cfg.blocksz, comm_grid);
+  const auto& dist = matrix.distribution();
+
+  matrix::test::set(matrix, [](const auto& index) { return TypeUtil::element(index.get(coord1D), 26); });
+
+  const LocalTileSize at_offset{
+      dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
+      dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
+  };
+
+  Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, at_offset);
+
+  // Note:
+  // - Even indexed tiles in panel, odd indexed linked to the matrix first column
+  // - Even indexed, i.e. the one using panle memory, are set to a different value
+  for (const auto& idx : panel.iterator()) {
+    if (idx.row() % 2 == 0)
+      panel(idx).then(unwrapping(
+          [idx](auto&& tile) { matrix::test::set(tile, TypeUtil::element(-idx.get(coord1D), 13)); }));
+    else
+      panel.setTile(idx, matrix.read(idx));
+  }
+
+  // Check that the values are correct, both for internal and externally linked tiles
+  for (const auto& idx : panel.iterator()) {
+    if (idx.row() % 2 == 0)
+      CHECK_TILE_EQ(TypeUtil::element(-idx.get(coord1D), 13), panel.read(idx).get());
+    else
+      CHECK_TILE_EQ(matrix.read(idx).get(), panel.read(idx).get());
+  }
+
+  // Reset external tiles links
+  panel.reset();
+
+  // Invert the "logic" of external tiles: even are linked to matrix, odd are in-panel
+  for (const auto& idx : panel.iterator()) {
+    if (idx.row() % 2 == 1)
+      panel(idx).then(unwrapping(
+          [idx](auto&& tile) { matrix::test::set(tile, TypeUtil::element(-idx.get(coord1D), 5)); }));
+    else
+      panel.setTile(idx, matrix.read(idx));
+  }
+
+  for (const auto& idx : panel.iterator()) {
+    if (idx.row() % 2 == 1)
+      CHECK_TILE_EQ(TypeUtil::element(-idx.get(coord1D), 5), panel.read(idx).get());
+    else
+      CHECK_TILE_EQ(matrix.read(idx).get(), panel.read(idx).get());
+  }
+}
+
+TYPED_TEST(PanelTest, ExternalTiles) {
   for (auto& comm_grid : this->commGrids()) {
-    for (const auto& params : test_params) {
-      const auto cfg = configure(params);
-
-      const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
-
-      // setup the panel
-      const LocalTileSize at_offset(dist.template nextLocalTileFromGlobalTile<Coord::Row>(
-                                        cfg.offset.row()),
-                                    dist.template nextLocalTileFromGlobalTile<Coord::Col>(
-                                        cfg.offset.col()));
-
-      Panel<Coord::Row, TypeParam, dlaf::Device::CPU> ws_h(dist, at_offset);
-
-      // rw-access
-      for (const auto& idx : ws_h.iterator()) {
-        ws_h(idx).then(unwrapping(
-            [idx](auto&& tile) { matrix::test::set(tile, TypeUtil::element(idx.col(), 26)); }));
-      }
-
-      // ro-access
-      for (const auto& idx : ws_h.iterator()) {
-        ws_h.read(idx).then(
-            unwrapping([idx](auto&& tile) { CHECK_MATRIX_EQ(TypeUtil::element(idx.col(), 26), tile); }));
-      }
+    for (const auto& cfg : test_params) {
+      testExternalTile<TypeParam, Coord::Col>(cfg, comm_grid);
+      testExternalTile<TypeParam, Coord::Row>(cfg, comm_grid);
     }
   }
 }
 
-TYPED_TEST(PanelTest, ExternalTilesCol) {
-  using namespace dlaf;
-  using hpx::util::unwrapping;
+template <class TypeParam, Coord panel_axis>
+void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
+  using hpx::util::unwrapping;
 
-  for (auto& comm_grid : this->commGrids()) {
-    for (const auto& params : test_params) {
-      const auto cfg = configure(params);
+  constexpr Coord coord1D = component(panel_axis);
 
-      Matrix<TypeParam, dlaf::Device::CPU> matrix(cfg.sz, cfg.blocksz, comm_grid);
-      const auto& dist = matrix.distribution();
+  Matrix<TypeParam, dlaf::Device::CPU> matrix(cfg.sz, cfg.blocksz, comm_grid);
+  const auto& dist = matrix.distribution();
 
-      matrix::test::set(matrix, [](const auto& index) { return TypeUtil::element(index.row(), 26); });
+  // setup the panel
+  const LocalTileSize at_offset{
+      dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
+      dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
+  };
 
-      // setup the panel
-      const LocalTileSize at_offset{
-          dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
-          dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
-      };
+  Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, at_offset);
 
-      Panel<Coord::Col, TypeParam, dlaf::Device::CPU> ws_v(dist, at_offset);
+  for (SizeType i = at_offset.get(coord1D); i < dist.localNrTiles().get(coord1D); ++i)
+    panel(LocalTileIndex(coord1D, i)).get()({0, 0}) = i;
 
-      // even in panel, odd linked to matrix first column
-      for (const auto& idx : ws_v.iterator()) {
-        if (idx.row() % 2 == 0) {
-          ws_v(idx).then(unwrapping(
-              [idx](auto&& tile) { matrix::test::set(tile, TypeUtil::element(-idx.row(), 13)); }));
-        }
-        else {
-          ws_v.setTile(idx, matrix.read(idx));
-        }
-      }
+  for (SizeType i = at_offset.get(coord1D); i < dist.localNrTiles().get(coord1D); ++i) {
+    panel.setRangeStart(LocalTileSize(coord1D, i));
 
-      for (const auto& idx : ws_v.iterator()) {
-        if (idx.row() % 2 == 0) {
-          CHECK_TILE_EQ(TypeUtil::element(-idx.row(), 13), ws_v.read(idx).get());
-        }
-        else {
-          CHECK_TILE_EQ(matrix.read(idx).get(), ws_v.read(idx).get());
-        }
-      }
+    for (SizeType k = i; k < dist.localNrTiles().get(coord1D); ++k) {
+      const LocalTileIndex idx(coord1D, k);
+      auto& tile = panel.read(idx).get();
+      EXPECT_EQ(tile({0, 0}), TypeUtil::element(k, 0));
+      EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
+    }
 
-      ws_v.reset();
+    for (const auto& idx : panel.iterator()) {
+      auto& tile = panel.read(idx).get();
+      EXPECT_EQ(tile({0, 0}), TypeUtil::element(idx.get(coord1D), 0));
+      EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
+    }
+  }
 
-      for (const auto& idx : ws_v.iterator()) {
-        if (idx.row() % 2 == 1) {
-          ws_v(idx).then(unwrapping(
-              [idx](auto&& tile) { matrix::test::set(tile, TypeUtil::element(-idx.row(), 13)); }));
-        }
-        else {
-          ws_v.setTile(idx, matrix.read(idx));
-        }
-      }
+  panel.setRangeStart(at_offset);
 
-      for (const auto& idx : ws_v.iterator()) {
-        if (idx.row() % 2 == 1) {
-          CHECK_TILE_EQ(TypeUtil::element(-idx.row(), 13), ws_v.read(idx).get());
-        }
-        else {
-          CHECK_TILE_EQ(matrix.read(idx).get(), ws_v.read(idx).get());
-        }
-      }
+  for (SizeType i = dist.localNrTiles().get(coord1D); i > at_offset.get(coord1D); --i) {
+    panel.setRangeEnd(LocalTileSize(coord1D, i));
+
+    for (SizeType k = at_offset.get(coord1D); k < i; ++k) {
+      const LocalTileIndex idx(coord1D, k);
+      auto& tile = panel.read(idx).get();
+      EXPECT_EQ(tile({0, 0}), TypeUtil::element(k, 0));
+      EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
+    }
+
+    for (const auto& idx : panel.iterator()) {
+      auto& tile = panel.read(idx).get();
+      EXPECT_EQ(tile({0, 0}), TypeUtil::element(idx.get(coord1D), 0));
+      EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
     }
   }
 }
 
-TYPED_TEST(PanelTest, ExternalTilesRow) {
-  using namespace dlaf;
-  using hpx::util::unwrapping;
-  using TypeUtil = TypeUtilities<TypeParam>;
-
+TYPED_TEST(PanelTest, Shrink) {
   for (auto& comm_grid : this->commGrids()) {
-    for (const auto& params : test_params) {
-      const auto cfg = configure(params);
-
-      Matrix<TypeParam, dlaf::Device::CPU> matrix(cfg.sz, cfg.blocksz, comm_grid);
-      const auto& dist = matrix.distribution();
-
-      matrix::test::set(matrix, [](const auto& index) { return TypeUtil::element(index.row(), 26); });
-
-      // setup the panel
-      const LocalTileSize at_offset{
-          dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
-          dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
-      };
-
-      Panel<Coord::Row, TypeParam, dlaf::Device::CPU> ws_h(dist, at_offset);
-
-      // even in panel, odd linked to matrix first row
-      for (const auto& idx : ws_h.iterator()) {
-        if (idx.col() % 2 == 0) {
-          ws_h(idx).then(unwrapping(
-              [idx](auto&& tile) { matrix::test::set(tile, TypeUtil::element(-idx.col(), 13)); }));
-        }
-        else {
-          ws_h.setTile(idx, matrix.read(idx));
-        }
-      }
-
-      for (const auto& idx : ws_h.iterator()) {
-        if (idx.col() % 2 == 0) {
-          CHECK_TILE_EQ(TypeUtil::element(-idx.col(), 13), ws_h.read(idx).get());
-        }
-        else {
-          CHECK_TILE_EQ(matrix.read(idx).get(), ws_h.read(idx).get());
-        }
-      }
-
-      ws_h.reset();
-
-      for (const auto& idx : ws_h.iterator()) {
-        if (idx.col() % 2 == 1) {
-          ws_h(idx).then(unwrapping(
-              [idx](auto&& tile) { matrix::test::set(tile, TypeUtil::element(-idx.col(), 13)); }));
-        }
-        else {
-          ws_h.setTile(idx, matrix.read(idx));
-        }
-      }
-
-      for (const auto& idx : ws_h.iterator()) {
-        if (idx.col() % 2 == 1) {
-          CHECK_TILE_EQ(TypeUtil::element(-idx.col(), 13), ws_h.read(idx).get());
-        }
-        else {
-          CHECK_TILE_EQ(matrix.read(idx).get(), ws_h.read(idx).get());
-        }
-      }
+    for (const auto& cfg : test_params) {
+      testShrink<TypeParam, Coord::Col>(cfg, comm_grid);
+      testShrink<TypeParam, Coord::Row>(cfg, comm_grid);
     }
   }
 }
 
-TYPED_TEST(PanelTest, ShrinkCol) {
-  using namespace dlaf;
-  using hpx::util::unwrapping;
+template <class TypeParam, Coord panel_axis>
+void testBroadcast(comm::Executor& executor_mpi, const config_t& cfg, comm::CommunicatorGrid comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
+  using hpx::util::unwrapping;
 
-  for (auto& comm_grid : this->commGrids()) {
-    for (const auto& params : test_params) {
-      const auto cfg = configure(params);
+  constexpr Coord coord1D = component(panel_axis);
 
-      Matrix<TypeParam, dlaf::Device::CPU> matrix(cfg.sz, cfg.blocksz, comm_grid);
-      const auto& dist = matrix.distribution();
+  Matrix<TypeParam, dlaf::Device::CPU> matrix(cfg.sz, cfg.blocksz, comm_grid);
+  const auto& dist = matrix.distribution();
 
-      // setup the panel
-      const LocalTileSize at_offset{
-          dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
-          dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
-      };
+  matrix::test::set(matrix, [](const auto& index) { return TypeUtil::element(index.get(coord1D), 26); });
 
-      Panel<Coord::Col, TypeParam, dlaf::Device::CPU> ws_v(dist, at_offset);
+  // setup the panel
+  const LocalTileSize at_offset{
+      dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
+      dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
+  };
 
-      for (SizeType i = at_offset.rows(); i < dist.localNrTiles().rows(); ++i)
-        ws_v({i, 0}).get()({0, 0}) = i;
+  Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, at_offset);
 
-      for (SizeType i = at_offset.rows(); i < dist.localNrTiles().rows(); ++i) {
-        ws_v.setRangeStart({i, 0});
+  // select the last available rank as root rank, i.e. it owns the panel to be broadcasted
+  const comm::IndexT_MPI root = std::max(0, comm_grid.size().get(panel_axis) - 1);
+  const auto rank = dist.rankIndex().get(panel_axis);
 
-        for (SizeType k = i; k < dist.localNrTiles().rows(); ++k) {
-          const LocalTileIndex idx(k, 0);
-          auto& tile = ws_v.read(idx).get();
-          EXPECT_EQ(tile({0, 0}), TypeUtil::element(k, 0));
-          EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
-        }
+  // set all panels
+  for (const auto i_w : panel.iterator())
+    hpx::dataflow(unwrapping(
+                      [rank](auto&& tile) { matrix::test::set(tile, TypeUtil::element(rank, 26)); }),
+                  panel(i_w));
 
-        for (const auto& idx : ws_v.iterator()) {
-          auto& tile = ws_v.read(idx).get();
-          EXPECT_EQ(tile({0, 0}), TypeUtil::element(idx.row(), 0));
-          EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
-        }
-      }
+  // check that all panels have been set
+  for (const auto i_w : panel.iterator())
+    hpx::dataflow(unwrapping([rank](auto&& tile) { CHECK_TILE_EQ(TypeUtil::element(rank, 26), tile); }),
+                  panel.read(i_w));
 
-      ws_v.setRangeStart(at_offset);
+  // test it!
+  constexpr Coord comm_dir = orthogonal(panel_axis);
+  common::Pipeline<comm::Communicator> mpi_task_chain(comm_grid.subCommunicator(comm_dir));
 
-      for (SizeType i = dist.localNrTiles().rows(); i > at_offset.rows(); --i) {
-        ws_v.setRangeEnd({i, 0});
+  broadcast(executor_mpi, root, panel, mpi_task_chain);
 
-        for (SizeType k = at_offset.rows(); k < i; ++k) {
-          const LocalTileIndex idx(k, 0);
-          auto& tile = ws_v.read(idx).get();
-          EXPECT_EQ(tile({0, 0}), TypeUtil::element(k, 0));
-          EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
-        }
-
-        for (const auto& idx : ws_v.iterator()) {
-          auto& tile = ws_v.read(idx).get();
-          EXPECT_EQ(tile({0, 0}), TypeUtil::element(idx.row(), 0));
-          EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
-        }
-      }
-    }
-  }
+  // check all panel are equal on all ranks
+  for (const auto i_w : panel.iterator())
+    hpx::dataflow(unwrapping([root](auto&& tile) { CHECK_TILE_EQ(TypeUtil::element(root, 26), tile); }),
+                  panel.read(i_w));
 }
 
-TYPED_TEST(PanelTest, ShrinkRow) {
-  using namespace dlaf;
-  using hpx::util::unwrapping;
-  using TypeUtil = TypeUtilities<TypeParam>;
-
-  for (auto& comm_grid : this->commGrids()) {
-    for (const auto& params : test_params) {
-      const auto cfg = configure(params);
-
-      Matrix<TypeParam, dlaf::Device::CPU> matrix(cfg.sz, cfg.blocksz, comm_grid);
-      const auto& dist = matrix.distribution();
-
-      // setup the panel
-      const LocalTileSize at_offset{
-          dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
-          dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
-      };
-
-      Panel<Coord::Row, TypeParam, dlaf::Device::CPU> ws_h(dist, at_offset);
-
-      for (SizeType j = at_offset.cols(); j < dist.localNrTiles().cols(); ++j)
-        ws_h({0, j}).get()({0, 0}) = j;
-
-      for (SizeType j = at_offset.cols(); j < dist.localNrTiles().cols(); ++j) {
-        ws_h.setRangeStart({0, j});
-
-        for (SizeType k = j; k < dist.localNrTiles().cols(); ++k) {
-          const LocalTileIndex idx(0, k);
-          auto& tile = ws_h.read(idx).get();
-          EXPECT_EQ(tile({0, 0}), TypeUtil::element(k, 0));
-          EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
-        }
-
-        for (const auto& idx : ws_h.iterator()) {
-          auto& tile = ws_h.read(idx).get();
-          EXPECT_EQ(tile({0, 0}), TypeUtil::element(idx.col(), 0));
-          EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
-        }
-      }
-
-      ws_h.setRangeStart(at_offset);
-
-      for (SizeType j = dist.localNrTiles().cols(); j > at_offset.cols(); --j) {
-        ws_h.setRangeEnd({0, j});
-
-        for (SizeType k = at_offset.cols(); k < j; ++k) {
-          const LocalTileIndex idx(0, k);
-          auto& tile = ws_h.read(idx).get();
-          EXPECT_EQ(tile({0, 0}), TypeUtil::element(k, 0));
-          EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
-        }
-
-        for (const auto& idx : ws_h.iterator()) {
-          auto& tile = ws_h.read(idx).get();
-          EXPECT_EQ(tile({0, 0}), TypeUtil::element(idx.col(), 0));
-          EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
-        }
-      }
-    }
-  }
-}
-
-TYPED_TEST(PanelTest, BroadcastCol) {
-  using namespace dlaf;
-  using hpx::util::unwrapping;
-  using TypeUtil = TypeUtilities<TypeParam>;
-
+TYPED_TEST(PanelTest, Broadcast) {
   comm::Executor executor_mpi;
 
   for (auto comm_grid : this->commGrids()) {
-    for (const auto& params : test_params) {
-      const auto cfg = configure(params);
-
-      Matrix<TypeParam, dlaf::Device::CPU> matrix(cfg.sz, cfg.blocksz, comm_grid);
-      const auto& dist = matrix.distribution();
-
-      matrix::test::set(matrix, [](const auto& index) { return TypeUtil::element(index.row(), 26); });
-
-      // setup the panel
-      const LocalTileSize at_offset{
-          dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
-          dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
-      };
-
-      Panel<Coord::Col, TypeParam, dlaf::Device::CPU> ws_v(dist, at_offset);
-
-      // select the last available rank as root rank, i.e. it owns the panel to be broadcasted
-      const comm::IndexT_MPI root_col = std::max(0, comm_grid.size().cols() - 1);
-      const auto rank_col = dist.rankIndex().col();
-
-      // set all panels
-      for (const auto i_w : ws_v.iterator())
-        hpx::dataflow(unwrapping([rank_col](auto&& tile) {
-                        matrix::test::set(tile, TypeUtil::element(rank_col, 26));
-                      }),
-                      ws_v(i_w));
-
-      // check that all panels have been set
-      for (const auto i_w : ws_v.iterator())
-        hpx::dataflow(unwrapping([rank_col](auto&& tile) {
-                        CHECK_TILE_EQ(TypeUtil::element(rank_col, 26), tile);
-                      }),
-                      ws_v.read(i_w));
-
-      // test it!
-      common::Pipeline<comm::Communicator> mpi_row_task_chain(comm_grid.rowCommunicator());
-
-      broadcast(executor_mpi, root_col, ws_v, mpi_row_task_chain);
-
-      // check all panel are equal on all ranks
-      for (const auto i_w : ws_v.iterator())
-        hpx::dataflow(unwrapping([root_col](auto&& tile) {
-                        CHECK_TILE_EQ(TypeUtil::element(root_col, 26), tile);
-                      }),
-                      ws_v.read(i_w));
+    for (const auto& cfg : test_params) {
+      testBroadcast<TypeParam, Coord::Col>(executor_mpi, cfg, comm_grid);
+      testBroadcast<TypeParam, Coord::Row>(executor_mpi, cfg, comm_grid);
     }
   }
 }
 
-TYPED_TEST(PanelTest, BroadcastRow) {
-  using namespace dlaf;
-  using hpx::util::unwrapping;
-  using TypeUtil = TypeUtilities<TypeParam>;
-
-  comm::Executor executor_mpi;
-
-  for (auto comm_grid : this->commGrids()) {
-    for (const auto& params : test_params) {
-      const auto cfg = configure(params);
-
-      Matrix<TypeParam, dlaf::Device::CPU> matrix(cfg.sz, cfg.blocksz, comm_grid);
-      const auto& dist = matrix.distribution();
-
-      matrix::test::set(matrix, [](const auto& index) { return TypeUtil::element(index.row(), 26); });
-
-      // setup the panel
-      const LocalTileSize at_offset{
-          dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
-          dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
-      };
-
-      Panel<Coord::Row, TypeParam, dlaf::Device::CPU> ws_h(dist, at_offset);
-
-      // select the last available rank as root rank, i.e. it owns the panel to be broadcasted
-      const comm::IndexT_MPI root_row = std::max(0, comm_grid.size().rows() - 1);
-      const auto rank_row = dist.rankIndex().row();
-
-      // set all panels
-      for (const auto i_w : ws_h.iterator())
-        hpx::dataflow(unwrapping([rank_row](auto&& tile) {
-                        matrix::test::set(tile, TypeUtil::element(rank_row, 26));
-                      }),
-                      ws_h(i_w));
-
-      // check that all panels have been set
-      for (const auto i_w : ws_h.iterator())
-        hpx::dataflow(unwrapping([rank_row](auto&& tile) {
-                        CHECK_TILE_EQ(TypeUtil::element(rank_row, 26), tile);
-                      }),
-                      ws_h.read(i_w));
-
-      // test it!
-      common::Pipeline<comm::Communicator> mpi_col_task_chain(comm_grid.colCommunicator());
-
-      broadcast(executor_mpi, root_row, ws_h, mpi_col_task_chain);
-
-      // check all panel are equal on all ranks
-      for (const auto i_w : ws_h.iterator())
-        hpx::dataflow(unwrapping([root_row](auto&& tile) {
-                        CHECK_TILE_EQ(TypeUtil::element(root_row, 26), tile);
-                      }),
-                      ws_h.read(i_w));
-    }
-  }
-}
-
-std::vector<test_params_t> test_params_bcast_transpose{
-    test_params_t({10, 10}, {3, 3}, {1, 1}),
+std::vector<config_t> test_params_bcast_transpose{
+    {{10, 10}, {3, 3}, {1, 1}},
 };
 
-config_t configure_bcast_transpose(const test_params_t& params, const CommunicatorGrid&) {
-  return {std::get<0>(params), std::get<1>(params), std::get<2>(params)};
-}
-
-TYPED_TEST(PanelTest, BroadcastCol2Row) {
-  using namespace dlaf;
-  using hpx::util::unwrapping;
+template <class TypeParam, Coord PANEL_SRC_AXIS>
+void testBrodcastTranspose(comm::Executor& executor_mpi, const config_t& cfg,
+                           comm::CommunicatorGrid comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
+  using hpx::util::unwrapping;
 
-  comm::Executor executor_mpi;
+  const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
+  const auto rank = dist.rankIndex().get(PANEL_SRC_AXIS);
 
-  for (auto comm_grid : this->commGrids()) {
-    for (const auto& params : test_params_bcast_transpose) {
-      const auto cfg = configure_bcast_transpose(params, comm_grid);
+  const LocalTileSize at_offset{
+      dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
+      dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
+  };
 
-      // TODO use config size
-      const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
-      const auto rank_col = dist.rankIndex().col();
+  // It is important to keep the order of initialization to avoid deadlocks!
+  constexpr Coord PANEL_DST_AXIS = orthogonal(PANEL_SRC_AXIS);
+  Panel<PANEL_SRC_AXIS, TypeParam, dlaf::Device::CPU> panel_src(dist, at_offset);
+  Panel<PANEL_DST_AXIS, TypeParam, dlaf::Device::CPU> panel_dst(dist, at_offset);
 
-      const LocalTileSize at_offset{
-          dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
-          dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
-      };
+  for (const auto i_w : panel_src.iterator())
+    hpx::dataflow(unwrapping(
+                      [rank](auto&& tile) { matrix::test::set(tile, TypeUtil::element(rank, 26)); }),
+                  panel_src(i_w));
 
-      // TODO It is important to keep the order of initialization to avoid deadlocks!
-      Panel<Coord::Col, TypeParam, dlaf::Device::CPU> ws_v(dist, at_offset);
-      Panel<Coord::Row, TypeParam, dlaf::Device::CPU> ws_h(dist, at_offset);
+  // test it!
+  common::Pipeline<comm::Communicator> row_task_chain(comm_grid.rowCommunicator());
+  common::Pipeline<comm::Communicator> col_task_chain(comm_grid.colCommunicator());
 
-      for (const auto i_w : ws_v.iterator())
-        hpx::dataflow(unwrapping([rank_col](auto&& tile) {
-                        matrix::test::set(tile, TypeUtil::element(rank_col, 26));
-                      }),
-                      ws_v(i_w));
+  // select a "random" source rank which will be the source for the data
+  const comm::IndexT_MPI owner = comm_grid.size().get(PANEL_SRC_AXIS) / 2;
 
-      // test it!
-      common::Pipeline<comm::Communicator> row_task_chain(comm_grid.rowCommunicator());
-      common::Pipeline<comm::Communicator> col_task_chain(comm_grid.colCommunicator());
+  broadcast(executor_mpi, owner, panel_src, panel_dst, row_task_chain, col_task_chain);
 
-      // select a "random" col which will be the source for the data
-      const comm::IndexT_MPI owner = comm_grid.size().cols() / 2;
-
-      broadcast(executor_mpi, owner, ws_v, ws_h, row_task_chain, col_task_chain);
-
-      // check that all destination row panels got the value from the right rank
-      for (const auto i_w : ws_h.iterator()) {
-        hpx::dataflow(unwrapping(
-                          [owner](auto&& tile) { CHECK_TILE_EQ(TypeUtil::element(owner, 26), tile); }),
-                      ws_h.read(i_w));
-      }
-    }
+  // check that all destination tiles got the value from the right rank
+  for (const auto i_w : panel_dst.iterator()) {
+    hpx::dataflow(unwrapping(
+                      [owner](auto&& tile) { CHECK_TILE_EQ(TypeUtil::element(owner, 26), tile); }),
+                  panel_dst.read(i_w));
   }
 }
 
-TYPED_TEST(PanelTest, BroadcastRow2Col) {
-  using namespace dlaf;
-  using hpx::util::unwrapping;
-  using TypeUtil = TypeUtilities<TypeParam>;
-
+TYPED_TEST(PanelTest, BroadcastTranspose) {
   comm::Executor executor_mpi;
 
   for (auto comm_grid : this->commGrids()) {
-    for (const auto& params : test_params_bcast_transpose) {
-      const auto cfg = configure_bcast_transpose(params, comm_grid);
-
-      // TODO use config size
-      const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
-      const auto rank_row = dist.rankIndex().row();
-
-      const LocalTileSize at_offset{
-          dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
-          dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
-      };
-
-      // TODO It is important to keep the order of initialization to avoid deadlocks!
-      Panel<Coord::Row, TypeParam, dlaf::Device::CPU> ws_h(dist, at_offset);
-      Panel<Coord::Col, TypeParam, dlaf::Device::CPU> ws_v(dist, at_offset);
-
-      // each row panel is initialized with a value identifying the row of the rank
-      for (const auto i_w : ws_h.iterator())
-        hpx::dataflow(unwrapping([rank_row](auto&& tile) {
-                        matrix::test::set(tile, TypeUtil::element(rank_row, 26));
-                      }),
-                      ws_h(i_w));
-
-      // test it!
-      common::Pipeline<comm::Communicator> col_task_chain(comm_grid.colCommunicator());
-      common::Pipeline<comm::Communicator> row_task_chain(comm_grid.rowCommunicator());
-
-      // select a "random" row which will be the source for the data
-      const comm::IndexT_MPI owner = comm_grid.size().rows() / 2;
-
-      broadcast(executor_mpi, owner, ws_h, ws_v, row_task_chain, col_task_chain);
-
-      // check that all destination column panels got the value from the right rank
-      for (const auto i_w : ws_v.iterator()) {
-        hpx::dataflow(unwrapping(
-                          [owner](auto&& tile) { CHECK_TILE_EQ(TypeUtil::element(owner, 26), tile); }),
-                      ws_v.read(i_w));
-      }
+    for (const auto& cfg : test_params_bcast_transpose) {
+      testBrodcastTranspose<TypeParam, Coord::Col>(executor_mpi, cfg, comm_grid);
+      testBrodcastTranspose<TypeParam, Coord::Row>(executor_mpi, cfg, comm_grid);
     }
   }
 }

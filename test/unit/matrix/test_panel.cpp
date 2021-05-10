@@ -249,7 +249,7 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
   for (SizeType i = at_offset.get(coord1D); i < dist.localNrTiles().get(coord1D); ++i)
     panel(LocalTileIndex(coord1D, i)).get()({0, 0}) = i;
 
-  for (SizeType i = at_offset.get(coord1D); i < dist.localNrTiles().get(coord1D); ++i) {
+  for (SizeType i = at_offset.get(coord1D); i <= dist.localNrTiles().get(coord1D); ++i) {
     panel.setRangeStart(LocalTileSize(coord1D, i));
 
     for (SizeType k = i; k < dist.localNrTiles().get(coord1D); ++k) {
@@ -268,7 +268,7 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
 
   panel.setRangeStart(at_offset);
 
-  for (SizeType i = dist.localNrTiles().get(coord1D); i > at_offset.get(coord1D); --i) {
+  for (SizeType i = dist.localNrTiles().get(coord1D); i >= at_offset.get(coord1D); --i) {
     panel.setRangeEnd(LocalTileSize(coord1D, i));
 
     for (SizeType k = at_offset.get(coord1D); k < i; ++k) {

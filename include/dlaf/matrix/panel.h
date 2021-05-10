@@ -108,7 +108,7 @@ struct Panel<axis, const T, D> {
     const auto start_loc = start.get(CoordType);
     const auto end_loc = end.get(CoordType);
 
-    DLAF_ASSERT(start_loc < end_loc, start_loc, end_loc);
+    DLAF_ASSERT(start_loc <= end_loc, start_loc, end_loc);
 
     DLAF_ASSERT(start_loc >= bias_, start, bias_);
     DLAF_ASSERT(end_loc <= dist_matrix_.localNrTiles().get(CoordType), end,
@@ -123,7 +123,7 @@ struct Panel<axis, const T, D> {
   /// @pre offset cannot be less than the offset has been specifed on construction
   void setRangeStart(LocalTileSize start) noexcept {
     const auto start_loc = start.get(CoordType);
-    DLAF_ASSERT(start_loc >= bias_ && start_loc < end_, start, end_, bias_);
+    DLAF_ASSERT(start_loc >= bias_ && start_loc <= end_, start, end_, bias_);
 
     start_ = start_loc;
   }
@@ -133,7 +133,7 @@ struct Panel<axis, const T, D> {
   /// @pre offset cannot be less than the offset has been specifed on construction
   void setRangeEnd(LocalTileSize end) noexcept {
     const auto end_loc = end.get(CoordType);
-    DLAF_ASSERT(end_loc > start_ && end_loc <= dist_matrix_.localNrTiles().get(CoordType), start_, end,
+    DLAF_ASSERT(end_loc >= start_ && end_loc <= dist_matrix_.localNrTiles().get(CoordType), start_, end,
                 dist_matrix_.localNrTiles().get(CoordType));
 
     end_ = end_loc;
@@ -420,8 +420,13 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis,
   DLAF_ASSERT(square_blocksize(dist), dist.blockSize());
   DLAF_ASSERT_MODERATE(
       [&]() {
-        const auto offset = dist.template globalTileFromLocalTile<coord>(panel.rangeStart());
-        const auto offsetT = dist.template globalTileFromLocalTile<coordT>(panelT.rangeStart());
+        const auto offset = (panel.rangeStart() == dist.localNrTiles().get(coord))
+                                ? dist.nrTiles().get(coord)
+                                : dist.template globalTileFromLocalTile<coord>(panel.rangeStart());
+
+        const auto offsetT = (panelT.rangeStart() == dist.localNrTiles().get(coordT))
+                                 ? dist.nrTiles().get(coordT)
+                                 : dist.template globalTileFromLocalTile<coordT>(panelT.rangeStart());
 
         const auto grid_size = dist.commGridSize().get(coord);
         const auto gridT_size = dist.commGridSize().get(coordT);

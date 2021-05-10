@@ -131,10 +131,10 @@ TYPED_TEST(TileOperationsTest, Potrf) {
       std::tie(n, extra_lda) = size;
 
       // Test version non returning info
-      testPotrf<Type, false>(uplo, n, extra_lda);
+      testPotrf<TileElementIndex, Type, false>(uplo, n, extra_lda);
 
       // Test version returning info
-      testPotrf<Type, true>(uplo, n, extra_lda);
+      testPotrf<TileElementIndex, Type, true>(uplo, n, extra_lda);
     }
   }
 }

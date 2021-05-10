@@ -152,3 +152,48 @@ TYPED_TEST(CholeskyDistributedTest, DistCholesky_Yielding) {
 TYPED_TEST(CholeskyDistributedTest, DistCholesky_Polling) {
   testDistCholesky<TypeParam>(*this);
 }
+
+TYPED_TEST(CholeskyLocalTest, CorrectnessUpper) {
+  // Note: The tile elements are chosen such that:
+  // - res_ij = 1 / 2^(|i-j|) * exp(I*(-i+j)),
+  // where I = 0 for real types or I is the complex unit for complex types.
+  // Therefore the result should be:
+  // a_ij = Sum_k(res_ik * ConjTrans(res)_kj) =
+  //      = Sum_k(1 / 2^(|i-k| + |j-k|) * exp(I*(-i+j))),
+  // where k = 0 .. min(i,j)
+  // Therefore,
+  // a_ij = (4^(min(i,j)+1) - 1) / (3 * 2^(i+j)) * exp(I*(-i+j))
+  auto el = [](const GlobalElementIndex& index) {
+    SizeType i = index.row();
+    SizeType j = index.col();
+    if (i > j)
+      return TypeUtilities<TypeParam>::element(-9.9, 0.0);
+
+    return TypeUtilities<TypeParam>::polar(std::exp2(-(i + j)) / 3 *
+                                               (std::exp2(2 * (std::min(i, j) + 1)) - 1),
+                                           i - j);
+  };
+
+  // Analytical results
+  auto res = [](const GlobalElementIndex& index) {
+    SizeType i = index.row();
+    SizeType j = index.col();
+    if (i > j)
+      return TypeUtilities<TypeParam>::element(-9.9, 0.0);
+
+    return TypeUtilities<TypeParam>::polar(std::exp2(-std::abs(-i + j)), i - j);
+  };
+
+  for (const auto& size : square_sizes) {
+    for (const auto& block_size : square_block_sizes) {
+      // Matrix to undergo Cholesky decomposition
+      Matrix<TypeParam, Device::CPU> mat(size, block_size);
+      set(mat, el);
+
+      factorization::cholesky<Backend::MC, Device::CPU, TypeParam>(blas::Uplo::Upper, mat);
+
+      CHECK_MATRIX_NEAR(res, mat, 4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error,
+                        4 * (mat.size().rows() + 1) * TypeUtilities<TypeParam>::error);
+    }
+  }
+}

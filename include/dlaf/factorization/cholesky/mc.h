@@ -48,55 +48,55 @@ void potrf_diag_tile(hpx::execution::parallel_executor executor_hp, blas::Uplo u
 }
 
 template <class T>
-void trsm_panel_tile(hpx::execution::parallel_executor executor_hp, 
+void trsm_panel_tile(hpx::execution::parallel_executor executor_hp,
                      hpx::shared_future<matrix::Tile<const T, Device::CPU>> kk_tile,
                      hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
-    hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Right,
-                  blas::Uplo::Lower, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0),
-                  std::move(kk_tile), std::move(matrix_tile));
- }
-
-template <class T>
-void trsm_panel_tile_U(hpx::execution::parallel_executor executor_hp, 
-                     hpx::shared_future<matrix::Tile<const T, Device::CPU>> kk_tile,
-                     hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
-  hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Left,
-                  blas::Uplo::Upper, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0),
-                  std::move(kk_tile), std::move(matrix_tile));
+  hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Right,
+                blas::Uplo::Lower, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), std::move(kk_tile),
+                std::move(matrix_tile));
 }
 
 template <class T>
-void herk_trailing_diag_tile(hpx::execution::parallel_executor ex, 
+void trsm_panel_tile_U(hpx::execution::parallel_executor executor_hp,
+                       hpx::shared_future<matrix::Tile<const T, Device::CPU>> kk_tile,
+                       hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
+  hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Left,
+                blas::Uplo::Upper, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), std::move(kk_tile),
+                std::move(matrix_tile));
+}
+
+template <class T>
+void herk_trailing_diag_tile(hpx::execution::parallel_executor ex,
                              hpx::shared_future<matrix::Tile<const T, Device::CPU>> panel_tile,
                              hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
-    hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::herk_o), blas::Uplo::Lower, blas::Op::NoTrans,
-                  BaseType<T>(-1.0), panel_tile, BaseType<T>(1.0), std::move(matrix_tile));
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::herk_o), blas::Uplo::Lower, blas::Op::NoTrans,
+                BaseType<T>(-1.0), panel_tile, BaseType<T>(1.0), std::move(matrix_tile));
 }
 
 template <class T>
 void herk_trailing_diag_tile_U(hpx::execution::parallel_executor ex,
-                             hpx::shared_future<matrix::Tile<const T, Device::CPU>> panel_tile,
-                             hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
-    hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::herk_o), blas::Uplo::Upper, blas::Op::ConjTrans,
-                  BaseType<T>(-1.0), panel_tile, BaseType<T>(1.0), std::move(matrix_tile));
+                               hpx::shared_future<matrix::Tile<const T, Device::CPU>> panel_tile,
+                               hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::herk_o), blas::Uplo::Upper, blas::Op::ConjTrans,
+                BaseType<T>(-1.0), panel_tile, BaseType<T>(1.0), std::move(matrix_tile));
 }
 
 template <class T>
-void gemm_trailing_matrix_tile(hpx::execution::parallel_executor ex, 
+void gemm_trailing_matrix_tile(hpx::execution::parallel_executor ex,
                                hpx::shared_future<matrix::Tile<const T, Device::CPU>> panel_tile,
                                hpx::shared_future<matrix::Tile<const T, Device::CPU>> col_panel,
                                hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
-    hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans,
-                  T(-1.0), std::move(panel_tile), std::move(col_panel), T(1.0), std::move(matrix_tile));
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans,
+                T(-1.0), std::move(panel_tile), std::move(col_panel), T(1.0), std::move(matrix_tile));
 }
 
 template <class T>
-void gemm_trailing_matrix_tile_U(hpx::execution::parallel_executor ex, 
-                               hpx::shared_future<matrix::Tile<const T, Device::CPU>> panel_tile,
-                               hpx::shared_future<matrix::Tile<const T, Device::CPU>> col_panel,
-                               hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
-    hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans,
-                  T(-1.0), std::move(panel_tile), std::move(col_panel), T(1.0), std::move(matrix_tile));
+void gemm_trailing_matrix_tile_U(hpx::execution::parallel_executor ex,
+                                 hpx::shared_future<matrix::Tile<const T, Device::CPU>> panel_tile,
+                                 hpx::shared_future<matrix::Tile<const T, Device::CPU>> col_panel,
+                                 hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans,
+                T(-1.0), std::move(panel_tile), std::move(col_panel), T(1.0), std::move(matrix_tile));
 }
 
 template <class T>
@@ -267,11 +267,11 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_U(Matrix<T, Device::CPU>& mat_a
       auto& trailing_matrix_executor = (i == k + 1) ? executor_hp : executor_np;
 
       herk_trailing_diag_tile_U(trailing_matrix_executor, mat_a.read(LocalTileIndex{k, i}),
-                              mat_a(LocalTileIndex{i, i}));
+                                mat_a(LocalTileIndex{i, i}));
 
       for (SizeType j = i + 1; j < nrtile; ++j) {
         gemm_trailing_matrix_tile_U(trailing_matrix_executor, mat_a.read(LocalTileIndex{k, i}),
-                                  mat_a.read(LocalTileIndex{k, j}), mat_a(LocalTileIndex{i, j}));
+                                    mat_a.read(LocalTileIndex{k, j}), mat_a(LocalTileIndex{i, j}));
       }
     }
   }

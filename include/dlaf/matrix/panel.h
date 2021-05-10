@@ -39,6 +39,8 @@ struct Panel<axis, const T, D> {
   // This specialization acts as base for the RW version of the panel,
   // moreover allows the casting between references (i.e. Panel<const T>& = Panel<T>)
 
+  constexpr static Coord CoordType = axis == Coord::Col ? Coord::Row : Coord::Col;
+
   using TileType = Tile<T, D>;
   using ConstTileType = Tile<const T, D>;
   using BaseT = Matrix<T, D>;
@@ -54,8 +56,8 @@ struct Panel<axis, const T, D> {
 
   /// Return an IterableRange2D with a range over all tiles of the panel (considering the offset)
   auto iterator() const noexcept {
-    return common::iterate_range2d(LocalTileIndex(component(axis), start_),
-                                   LocalTileIndex(component(axis), end_, 1));
+    return common::iterate_range2d(LocalTileIndex(CoordType, start_),
+                                   LocalTileIndex(CoordType, end_, 1));
   }
 
   /// Return the rank which this (local) panel belongs to
@@ -103,14 +105,14 @@ struct Panel<axis, const T, D> {
   }
 
   void setRange(LocalTileSize start, LocalTileSize end) noexcept {
-    const auto start_loc = start.get(component(axis));
-    const auto end_loc = end.get(component(axis));
+    const auto start_loc = start.get(CoordType);
+    const auto end_loc = end.get(CoordType);
 
     DLAF_ASSERT(start_loc < end_loc, start_loc, end_loc);
 
     DLAF_ASSERT(start_loc >= bias_, start, bias_);
-    DLAF_ASSERT(end_loc <= dist_matrix_.localNrTiles().get(component(axis)), end,
-                dist_matrix_.localNrTiles().get(component(axis)));
+    DLAF_ASSERT(end_loc <= dist_matrix_.localNrTiles().get(CoordType), end,
+                dist_matrix_.localNrTiles().get(CoordType));
 
     start_ = start_loc;
     end_ = end_loc;
@@ -120,7 +122,7 @@ struct Panel<axis, const T, D> {
   ///
   /// @pre offset cannot be less than the offset has been specifed on construction
   void setRangeStart(LocalTileSize start) noexcept {
-    const auto start_loc = start.get(component(axis));
+    const auto start_loc = start.get(CoordType);
     DLAF_ASSERT(start_loc >= bias_ && start_loc < end_, start, end_, bias_);
 
     start_ = start_loc;
@@ -130,9 +132,9 @@ struct Panel<axis, const T, D> {
   ///
   /// @pre offset cannot be less than the offset has been specifed on construction
   void setRangeEnd(LocalTileSize end) noexcept {
-    const auto end_loc = end.get(component(axis));
-    DLAF_ASSERT(end_loc > start_ && end_loc <= dist_matrix_.localNrTiles().get(component(axis)), start_,
-                end, dist_matrix_.localNrTiles().get(component(axis)));
+    const auto end_loc = end.get(CoordType);
+    DLAF_ASSERT(end_loc > start_ && end_loc <= dist_matrix_.localNrTiles().get(CoordType), start_, end,
+                dist_matrix_.localNrTiles().get(CoordType));
 
     end_ = end_loc;
   }
@@ -164,8 +166,8 @@ protected:
     const auto mb = blocksize.rows();
     const auto nb = blocksize.cols();
 
-    const auto mat_size = size.get(component(axis));
-    const auto i_tile = start.get(component(axis));
+    const auto mat_size = size.get(CoordType);
+    const auto i_tile = start.get(CoordType);
 
     switch (axis) {
       case Coord::Col:
@@ -197,14 +199,13 @@ protected:
   /// - a Panel<Col> 2x1
   /// - or a Panel<Row> 4x1
   Panel(matrix::Distribution dist_matrix, LocalTileSize start)
-      : data_(setupMatrix(dist_matrix, start)), dist_matrix_(dist_matrix),
-        bias_(start.get(component(axis))) {
+      : data_(setupMatrix(dist_matrix, start)), dist_matrix_(dist_matrix), bias_(start.get(CoordType)) {
     DLAF_ASSERT_HEAVY(data_.nrTiles().get(axis) == 1, data_.nrTiles());
 
     const LocalTileSize end = dist_matrix_.localNrTiles();
     setRange(start, end);
 
-    external_.resize(data_.nrTiles().get(component(axis)));
+    external_.resize(data_.nrTiles().get(CoordType));
 
     DLAF_ASSERT_HEAVY(data_.distribution().localNrTiles().linear_size() == external_.size(),
                       data_.distribution().localNrTiles().linear_size(), external_.size());
@@ -212,7 +213,7 @@ protected:
 
   /// Given a matrix index, compute the internal linear index
   SizeType linearIndex(const LocalTileIndex& index) const noexcept {
-    const auto idx = index.get(component(axis));
+    const auto idx = index.get(CoordType);
 
     DLAF_ASSERT_MODERATE(idx >= start_, idx, start_);
 
@@ -226,10 +227,10 @@ protected:
   /// The 2D index is the projection of the given index, i.e. in a Panel<Col> the Col for index
   /// will always be 0 (and relatively for a Panel<Row>)
   LocalTileIndex fullIndex(LocalTileIndex index) const {
-    index = LocalTileIndex(component(axis), linearIndex(index));
+    index = LocalTileIndex(CoordType, linearIndex(index));
 
-    DLAF_ASSERT_HEAVY(index.isIn(LocalTileSize(component(axis), end_, 1)), index,
-                      LocalTileSize(component(axis), end_, 1));
+    DLAF_ASSERT_HEAVY(index.isIn(LocalTileSize(CoordType, end_, 1)), index,
+                      LocalTileSize(CoordType, end_, 1));
 
     return index;
   }
@@ -313,13 +314,13 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis,
   using hpx::dataflow;
   using hpx::util::unwrapping;
 
-  constexpr auto comm_dir = orthogonal(axis);
+  constexpr auto comm_coord = axis;
 
   // do not schedule communication tasks if there is no reason to do so...
-  if (panel.parentDistribution().commGridSize().get(component(comm_dir)) <= 1)
+  if (panel.parentDistribution().commGridSize().get(comm_coord) <= 1)
     return;
 
-  const auto rank = panel.rankIndex().get(component(comm_dir));
+  const auto rank = panel.rankIndex().get(comm_coord);
 
   for (const auto& index : panel.iterator()) {
     if (rank == rank_root)
@@ -364,6 +365,9 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis,
   using hpx::util::unwrapping;
 
   constexpr Coord axisT = orthogonal(axis);
+
+  constexpr Coord coord = std::decay_t<decltype(panel)>::CoordType;
+  constexpr Coord coordT = std::decay_t<decltype(panelT)>::CoordType;
 
   auto get_taskchain = [&](Coord comm_dir) -> auto& {
     return comm_dir == Coord::Row ? row_task_chain : col_task_chain;
@@ -416,12 +420,11 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis,
   DLAF_ASSERT(square_blocksize(dist), dist.blockSize());
   DLAF_ASSERT_MODERATE(
       [&]() {
-        const auto offset = dist.template globalTileFromLocalTile<component(axis)>(panel.rangeStart());
-        const auto offsetT =
-            dist.template globalTileFromLocalTile<component(axisT)>(panelT.rangeStart());
+        const auto offset = dist.template globalTileFromLocalTile<coord>(panel.rangeStart());
+        const auto offsetT = dist.template globalTileFromLocalTile<coordT>(panelT.rangeStart());
 
-        const auto grid_size = dist.commGridSize().get(component(axis));
-        const auto gridT_size = dist.commGridSize().get(component(axisT));
+        const auto grid_size = dist.commGridSize().get(coord);
+        const auto gridT_size = dist.commGridSize().get(coordT);
 
         auto generate_indices = [](SizeType offset, SizeType grid_size) {
           std::vector<SizeType> indices(to_sizet(grid_size));
@@ -450,10 +453,9 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis,
   broadcast(ex, rank_root, panel, chain_step1);
 
   // STEP 2
-  constexpr Coord coord = component(axis);
-  constexpr Coord coordT = component(axisT);
-
   constexpr auto comm_dir_step2 = orthogonal(axisT);
+  constexpr auto comm_coord_step2 = axisT;
+
   auto& chain_step2 = get_taskchain(comm_dir_step2);
 
   for (const auto& indexT : panelT.iterator()) {
@@ -466,11 +468,11 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis,
       const auto index_diag_local = dist.template localTileFromGlobalTile<coord>(index_diag);
       panelT.setTile(indexT, panel.read({coord, index_diag_local}));
 
-      if (dist.commGridSize().get(component(comm_dir_step2)) > 1)
+      if (dist.commGridSize().get(comm_coord_step2) > 1)
         dataflow(ex, unwrapping(comm::sendBcast_o), panelT.read(indexT), chain_step2());
     }
     else {
-      if (dist.commGridSize().get(component(comm_dir_step2)) > 1)
+      if (dist.commGridSize().get(comm_coord_step2) > 1)
         dataflow(ex, unwrapping(comm::recvBcast_o), panelT(indexT), owner_diag, chain_step2());
     }
   }

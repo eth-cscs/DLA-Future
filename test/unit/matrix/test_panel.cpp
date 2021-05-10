@@ -54,7 +54,7 @@ struct config_t {
 };
 
 std::vector<config_t> test_params{
-  {{26, 13}, {3, 3}, {1, 2}},
+    {{26, 13}, {3, 3}, {1, 2}},
 };
 
 TYPED_TEST(PanelTest, AssignToConstRef) {
@@ -86,14 +86,13 @@ TYPED_TEST(PanelTest, AssignToConstRef) {
 
 template <class TypeParam, Coord panel_axis>
 void testIterator(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
-  constexpr Coord coord1D = component(panel_axis);
-
   const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
 
   const LocalTileSize at_offset(dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
                                 dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()));
 
   Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, at_offset);
+  constexpr Coord coord1D = decltype(panel)::CoordType;
 
   const auto exp_nrTiles = dist.localNrTiles().get<coord1D>();
 
@@ -121,14 +120,13 @@ void testAccess(const config_t& cfg, const comm::CommunicatorGrid comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
   using hpx::util::unwrapping;
 
-  constexpr Coord coord1D = component(panel_axis);
-
   const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
 
   const LocalTileSize at_offset(dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
                                 dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()));
 
   Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, at_offset);
+  constexpr Coord coord1D = decltype(panel)::CoordType;
 
   // rw-access
   for (const auto& idx : panel.iterator()) {
@@ -157,7 +155,7 @@ void testExternalTile(const config_t& cfg, const comm::CommunicatorGrid comm_gri
   using TypeUtil = TypeUtilities<TypeParam>;
   using hpx::util::unwrapping;
 
-  constexpr Coord coord1D = component(panel_axis);
+  constexpr Coord coord1D = orthogonal(panel_axis);
 
   Matrix<TypeParam, dlaf::Device::CPU> matrix(cfg.sz, cfg.blocksz, comm_grid);
   const auto& dist = matrix.distribution();
@@ -170,6 +168,7 @@ void testExternalTile(const config_t& cfg, const comm::CommunicatorGrid comm_gri
   };
 
   Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, at_offset);
+  static_assert(coord1D == decltype(panel)::CoordType, "coord types mismatch");
 
   // Note:
   // - Even indexed tiles in panel, odd indexed linked to the matrix first column
@@ -224,7 +223,7 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
   using hpx::util::unwrapping;
 
-  constexpr Coord coord1D = component(panel_axis);
+  constexpr Coord coord1D = orthogonal(panel_axis);
 
   Matrix<TypeParam, dlaf::Device::CPU> matrix(cfg.sz, cfg.blocksz, comm_grid);
   const auto& dist = matrix.distribution();
@@ -236,6 +235,7 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
   };
 
   Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, at_offset);
+  static_assert(coord1D == decltype(panel)::CoordType, "coord types mismatch");
 
   for (SizeType i = at_offset.get(coord1D); i < dist.localNrTiles().get(coord1D); ++i)
     panel(LocalTileIndex(coord1D, i)).get()({0, 0}) = i;
@@ -291,7 +291,7 @@ void testBroadcast(comm::Executor& executor_mpi, const config_t& cfg, comm::Comm
   using TypeUtil = TypeUtilities<TypeParam>;
   using hpx::util::unwrapping;
 
-  constexpr Coord coord1D = component(panel_axis);
+  constexpr Coord coord1D = orthogonal(panel_axis);
 
   Matrix<TypeParam, dlaf::Device::CPU> matrix(cfg.sz, cfg.blocksz, comm_grid);
   const auto& dist = matrix.distribution();
@@ -305,6 +305,7 @@ void testBroadcast(comm::Executor& executor_mpi, const config_t& cfg, comm::Comm
   };
 
   Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, at_offset);
+  static_assert(coord1D == decltype(panel)::CoordType, "coord types mismatch");
 
   // select the last available rank as root rank, i.e. it owns the panel to be broadcasted
   const comm::IndexT_MPI root = std::max(0, comm_grid.size().get(panel_axis) - 1);

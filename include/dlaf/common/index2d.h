@@ -26,13 +26,8 @@ namespace dlaf {
 
 enum class Coord { Row, Col };
 
-// Given a Coord direction, returns its orthogonal
+// Given a Coord, returns its orthogonal
 constexpr Coord orthogonal(const Coord rc) {
-  return rc == Coord::Row ? Coord::Col : Coord::Row;
-}
-
-// Given a Coord direction, return the component that varies
-constexpr Coord component(const Coord rc) {
   return rc == Coord::Row ? Coord::Col : Coord::Row;
 }
 

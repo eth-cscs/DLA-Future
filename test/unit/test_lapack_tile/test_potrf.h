@@ -39,7 +39,7 @@ void testPotrf(const blas::Uplo uplo, const SizeType n, const SizeType extra_lda
   SCOPED_TRACE(s.str());
 
   std::tie(el_a, res_a) = getCholesky<ElementIndex, T>(uplo);
-    
+
   auto a = createTile<T>(el_a, size_a, lda);
 
   if (return_info) {

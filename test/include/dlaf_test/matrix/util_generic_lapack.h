@@ -24,7 +24,7 @@ namespace matrix {
 namespace test {
 
 /// Returns a tuple of element generators of two matrices A (n x n) and L/U (n x n),
-/// for which: 
+/// for which:
 /// A = U^H U, if @p uplo == Upper,
 /// A = L L^H, if @p uplo == Lower;
 ///
@@ -55,16 +55,14 @@ auto getCholesky(blas::Uplo uplo) {
     const double i = index.row();
     const double j = index.col();
     if (uplo == blas::Uplo::Lower)
-      return TypeUtilities<T>::polar(std::exp2(-(i + j)) / 3 *
-					     (std::exp2(2 * (std::min(i, j) + 1)) - 1),
-					     -i + j);
+      return TypeUtilities<T>::polar(std::exp2(-(i + j)) / 3 * (std::exp2(2 * (std::min(i, j) + 1)) - 1),
+                                     -i + j);
     else
-      return TypeUtilities<T>::polar(std::exp2(-(i + j)) / 3 *
-					     (std::exp2(2 * (std::min(i, j) + 1)) - 1),
-					     i - j);
+      return TypeUtilities<T>::polar(std::exp2(-(i + j)) / 3 * (std::exp2(2 * (std::min(i, j) + 1)) - 1),
+                                     i - j);
   };
 
-    std::function<T(const ElementIndex&)> res_a = [uplo](const ElementIndex& index) {
+  std::function<T(const ElementIndex&)> res_a = [uplo](const ElementIndex& index) {
     if ((uplo == blas::Uplo::Lower && index.row() < index.col()) ||
         (uplo == blas::Uplo::Upper && index.row() > index.col()))
       return TypeUtilities<T>::element(-9.9, 0);
@@ -75,11 +73,11 @@ auto getCholesky(blas::Uplo uplo) {
       return TypeUtilities<T>::polar(std::exp2(-std::abs(i - j)), -i + j);
     else
       return TypeUtilities<T>::polar(std::exp2(-std::abs(-i + j)), i - j);
-    };
+  };
 
-    return std::make_tuple(el_a, res_a);
+  return std::make_tuple(el_a, res_a);
 }
-  
+
 /// Returns a tuple of element generators of three matrices T (n x n), A(n x n) and B (n x n).
 /// It holds, for @p itype == 1
 /// B = U^(-H) A U^(-1), if @p uplo == Upper,

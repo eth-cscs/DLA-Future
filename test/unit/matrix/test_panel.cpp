@@ -106,13 +106,16 @@ void testIterator(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) 
   EXPECT_EQ(exp_indices, indices);
 }
 
-TYPED_TEST(PanelTest, Iterator) {
-  for (auto& comm_grid : this->commGrids()) {
-    for (const auto& cfg : test_params) {
+TYPED_TEST(PanelTest, IteratorCol) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& cfg : test_params)
       testIterator<TypeParam, Coord::Col>(cfg, comm_grid);
+}
+
+TYPED_TEST(PanelTest, IteratorRow) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& cfg : test_params)
       testIterator<TypeParam, Coord::Row>(cfg, comm_grid);
-    }
-  }
 }
 
 template <class TypeParam, Coord panel_axis>
@@ -141,13 +144,16 @@ void testAccess(const config_t& cfg, const comm::CommunicatorGrid comm_grid) {
   }
 }
 
-TYPED_TEST(PanelTest, AccessTile) {
-  for (auto& comm_grid : this->commGrids()) {
-    for (const auto& cfg : test_params) {
+TYPED_TEST(PanelTest, AccessTileCol) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& cfg : test_params)
       testAccess<TypeParam, Coord::Col>(cfg, comm_grid);
+}
+
+TYPED_TEST(PanelTest, AccessTileRow) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& cfg : test_params)
       testAccess<TypeParam, Coord::Row>(cfg, comm_grid);
-    }
-  }
 }
 
 template <class TypeParam, Coord panel_axis>
@@ -209,13 +215,16 @@ void testExternalTile(const config_t& cfg, const comm::CommunicatorGrid comm_gri
   }
 }
 
-TYPED_TEST(PanelTest, ExternalTiles) {
-  for (auto& comm_grid : this->commGrids()) {
-    for (const auto& cfg : test_params) {
+TYPED_TEST(PanelTest, ExternalTilesCol) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& cfg : test_params)
       testExternalTile<TypeParam, Coord::Col>(cfg, comm_grid);
+}
+
+TYPED_TEST(PanelTest, ExternalTilesRow) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& cfg : test_params)
       testExternalTile<TypeParam, Coord::Row>(cfg, comm_grid);
-    }
-  }
 }
 
 template <class TypeParam, Coord panel_axis>
@@ -277,13 +286,16 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
   }
 }
 
-TYPED_TEST(PanelTest, Shrink) {
-  for (auto& comm_grid : this->commGrids()) {
-    for (const auto& cfg : test_params) {
+TYPED_TEST(PanelTest, ShrinkCol) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& cfg : test_params)
       testShrink<TypeParam, Coord::Col>(cfg, comm_grid);
+}
+
+TYPED_TEST(PanelTest, ShrinkRow) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& cfg : test_params)
       testShrink<TypeParam, Coord::Row>(cfg, comm_grid);
-    }
-  }
 }
 
 template <class TypeParam, Coord panel_axis>
@@ -334,15 +346,20 @@ void testBroadcast(comm::Executor& executor_mpi, const config_t& cfg, comm::Comm
                   panel.read(i_w));
 }
 
-TYPED_TEST(PanelTest, Broadcast) {
+TYPED_TEST(PanelTest, BroadcastCol) {
   comm::Executor executor_mpi;
 
-  for (auto comm_grid : this->commGrids()) {
-    for (const auto& cfg : test_params) {
+  for (auto comm_grid : this->commGrids())
+    for (const auto& cfg : test_params)
       testBroadcast<TypeParam, Coord::Col>(executor_mpi, cfg, comm_grid);
+}
+
+TYPED_TEST(PanelTest, BroadcastRow) {
+  comm::Executor executor_mpi;
+
+  for (auto comm_grid : this->commGrids())
+    for (const auto& cfg : test_params)
       testBroadcast<TypeParam, Coord::Row>(executor_mpi, cfg, comm_grid);
-    }
-  }
 }
 
 std::vector<config_t> test_params_bcast_transpose{
@@ -390,13 +407,18 @@ void testBrodcastTranspose(comm::Executor& executor_mpi, const config_t& cfg,
   }
 }
 
-TYPED_TEST(PanelTest, BroadcastTranspose) {
+TYPED_TEST(PanelTest, BroadcastCol2Row) {
   comm::Executor executor_mpi;
 
-  for (auto comm_grid : this->commGrids()) {
-    for (const auto& cfg : test_params_bcast_transpose) {
+  for (auto comm_grid : this->commGrids())
+    for (const auto& cfg : test_params_bcast_transpose)
       testBrodcastTranspose<TypeParam, Coord::Col>(executor_mpi, cfg, comm_grid);
+}
+
+TYPED_TEST(PanelTest, BroadcastRow2Col) {
+  comm::Executor executor_mpi;
+
+  for (auto comm_grid : this->commGrids())
+    for (const auto& cfg : test_params_bcast_transpose)
       testBrodcastTranspose<TypeParam, Coord::Row>(executor_mpi, cfg, comm_grid);
-    }
-  }
 }

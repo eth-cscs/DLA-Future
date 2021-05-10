@@ -124,22 +124,29 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
 
   // Set up MPI executor pipelines
   comm::Executor executor_mpi;
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
+  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
 
   const comm::Index2D this_rank = grid.rank();
-  const comm::Size2D grid_size = grid.size();
 
   const matrix::Distribution& distr = mat_a.distribution();
   const SizeType nrtile = mat_a.nrTiles().cols();
 
   constexpr std::size_t N_WORKSPACES = 2;
-  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panel_cols(N_WORKSPACES, distr);
-  common::RoundRobin<matrix::Panel<Coord::Row, T, Device::CPU>> panel_cols_t(N_WORKSPACES, distr);
+  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panels(N_WORKSPACES, distr);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, Device::CPU>> panelsT(N_WORKSPACES, distr);
 
   for (SizeType k = 0; k < nrtile; ++k) {
     const GlobalTileIndex kk_idx(k, k);
     const comm::Index2D kk_rank = distr.rankGlobalTile(kk_idx);
+
+    // Factorization of diagonal tile and broadcast it along the k-th column
+    if (kk_rank == this_rank)
+      potrf_diag_tile(executor_hp, mat_a(kk_idx));
+
+    // If there is no trailing matrix anymore...
+    if (k == nrtile - 1)
+      continue;
 
     const LocalTileSize kk_offset{
         distr.nextLocalTileFromGlobalTile<Coord::Row>(k),
@@ -148,52 +155,40 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
 
     const LocalTileIndex diag_wp_idx{0, kk_offset.cols()};
 
-    auto& panel_col = panel_cols.nextResource();
-    auto& panel_col_t = panel_cols_t.nextResource();
+    auto& panel = panels.nextResource();
+    auto& panelT = panelsT.nextResource();
 
-    panel_col.setOffset(kk_offset);
-    panel_col_t.setOffset(kk_offset);
+    panel.setRangeStart(kk_offset);
+    panelT.setRangeStart(kk_offset);
 
-    // Factorization of diagonal tile and broadcast it along the `k-th column
     if (kk_rank.col() == this_rank.col()) {
       if (kk_rank.row() == this_rank.row()) {
-        potrf_diag_tile(executor_hp, mat_a(kk_idx));
-        if (k != nrtile - 1) {
-          panel_col_t.setTile(diag_wp_idx, mat_a.read(kk_idx));
-          dataflow(executor_mpi, matrix::unwrapExtendTiles(comm::sendBcast_o), panel_col_t.read(diag_wp_idx),
-                   mpi_col_task_chain());
-        }
+        panelT.setTile(diag_wp_idx, mat_a.read(kk_idx));
+        dataflow(executor_mpi, matrix::unwrapExtendTiles(comm::sendBcast_o), panelT.read(diag_wp_idx),
+                 mpi_col_task_chain());
       }
       else {
-        if (k != nrtile - 1) {
-          dataflow(executor_mpi, unwrapping(comm::recvBcast_o), panel_col_t(diag_wp_idx), kk_rank.row(),
-                   mpi_col_task_chain());
-        }
+        dataflow(executor_mpi, unwrapping(comm::recvBcast_o), panelT(diag_wp_idx), kk_rank.row(),
+                 mpi_col_task_chain());
       }
-    }
 
-    if (k == nrtile - 1)
-      continue;
+      // COLUMN UPDATE
+      for (SizeType i = distr.nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
+           i < distr.localNrTiles().rows(); ++i) {
+        const LocalTileIndex local_idx(Coord::Row, i);
+        const LocalTileIndex ik_idx(i, distr.localTileFromGlobalTile<Coord::Col>(k));
 
-    // COLUMN UPDATE
-    for (SizeType i = distr.nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
-         i < distr.localNrTiles().rows(); ++i) {
-      const LocalTileIndex local_idx(Coord::Row, i);
-      const LocalTileIndex ik_idx(i, distr.localTileFromGlobalTile<Coord::Col>(k));
+        trsm_panel_tile(executor_hp, panelT.read(diag_wp_idx), mat_a(ik_idx));
 
-      if (kk_rank.col() == this_rank.col()) {
-        trsm_panel_tile(executor_hp, panel_col_t.read(diag_wp_idx), mat_a(ik_idx));
-
-        panel_col.setTile(local_idx, mat_a.read(ik_idx));
+        panel.setTile(local_idx, mat_a.read(ik_idx));
       }
-    }
 
-    // row panel has been used for temporary storage of diagonal panel for column update
-    panel_col_t.reset();
+      // row panel has been used for temporary storage of diagonal panel for column update
+      panelT.reset();
+    }
 
     // TODO skip last step tile
-    broadcast(executor_mpi, kk_rank.col(), panel_col, panel_col_t, mpi_row_task_chain,
-              mpi_col_task_chain, grid_size);
+    broadcast(executor_mpi, kk_rank.col(), panel, panelT, mpi_row_task_chain, mpi_col_task_chain);
 
     // TRAILING MATRIX
     for (SizeType jt_idx = k + 1; jt_idx < nrtile; ++jt_idx) {
@@ -207,7 +202,7 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
       if (this_rank.row() == owner.row()) {
         const auto i = distr.localTileFromGlobalTile<Coord::Row>(jt_idx);
 
-        herk_trailing_diag_tile(trailing_matrix_executor, panel_col.read({Coord::Row, i}),
+        herk_trailing_diag_tile(trailing_matrix_executor, panel.read({Coord::Row, i}),
                                 mat_a(LocalTileIndex{i, j}));
       }
 
@@ -218,13 +213,13 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
           continue;
 
         const auto i = distr.localTileFromGlobalTile<Coord::Row>(i_idx);
-        gemm_trailing_matrix_tile(executor_np, panel_col.read({Coord::Row, i}),
-                                  panel_col_t.read({Coord::Col, j}), mat_a(LocalTileIndex{i, j}));
+        gemm_trailing_matrix_tile(executor_np, panel.read({Coord::Row, i}), panelT.read({Coord::Col, j}),
+                                  mat_a(LocalTileIndex{i, j}));
       }
     }
 
-    panel_col.reset();
-    panel_col_t.reset();
+    panel.reset();
+    panelT.reset();
   }
 }
 

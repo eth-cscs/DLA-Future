@@ -48,40 +48,53 @@ void potrf_diag_tile(hpx::execution::parallel_executor executor_hp, blas::Uplo u
 }
 
 template <class T>
-void trsm_panel_tile(hpx::execution::parallel_executor executor_hp, blas::Uplo uplo,
+void trsm_panel_tile(hpx::execution::parallel_executor executor_hp, 
                      hpx::shared_future<matrix::Tile<const T, Device::CPU>> kk_tile,
                      hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
-  if (uplo == blas::Uplo::Lower)
     hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Right,
                   blas::Uplo::Lower, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0),
                   std::move(kk_tile), std::move(matrix_tile));
-  if (uplo == blas::Uplo::Upper)
-    hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Left,
+ }
+
+template <class T>
+void trsm_panel_tile_U(hpx::execution::parallel_executor executor_hp, 
+                     hpx::shared_future<matrix::Tile<const T, Device::CPU>> kk_tile,
+                     hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
+  hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Left,
                   blas::Uplo::Upper, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0),
                   std::move(kk_tile), std::move(matrix_tile));
 }
 
 template <class T>
-void herk_trailing_diag_tile(hpx::execution::parallel_executor ex, blas::Uplo uplo,
+void herk_trailing_diag_tile(hpx::execution::parallel_executor ex, 
                              hpx::shared_future<matrix::Tile<const T, Device::CPU>> panel_tile,
                              hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
-  if (uplo == blas::Uplo::Lower)
     hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::herk_o), blas::Uplo::Lower, blas::Op::NoTrans,
                   BaseType<T>(-1.0), panel_tile, BaseType<T>(1.0), std::move(matrix_tile));
-  if (uplo == blas::Uplo::Upper)
+}
+
+template <class T>
+void herk_trailing_diag_tile_U(hpx::execution::parallel_executor ex,
+                             hpx::shared_future<matrix::Tile<const T, Device::CPU>> panel_tile,
+                             hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
     hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::herk_o), blas::Uplo::Upper, blas::Op::ConjTrans,
                   BaseType<T>(-1.0), panel_tile, BaseType<T>(1.0), std::move(matrix_tile));
 }
 
 template <class T>
-void gemm_trailing_matrix_tile(hpx::execution::parallel_executor ex, blas::Uplo uplo,
+void gemm_trailing_matrix_tile(hpx::execution::parallel_executor ex, 
                                hpx::shared_future<matrix::Tile<const T, Device::CPU>> panel_tile,
                                hpx::shared_future<matrix::Tile<const T, Device::CPU>> col_panel,
                                hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
-  if (uplo == blas::Uplo::Lower)
     hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans,
                   T(-1.0), std::move(panel_tile), std::move(col_panel), T(1.0), std::move(matrix_tile));
-  if (uplo == blas::Uplo::Upper)
+}
+
+template <class T>
+void gemm_trailing_matrix_tile_U(hpx::execution::parallel_executor ex, 
+                               hpx::shared_future<matrix::Tile<const T, Device::CPU>> panel_tile,
+                               hpx::shared_future<matrix::Tile<const T, Device::CPU>> col_panel,
+                               hpx::future<matrix::Tile<T, Device::CPU>> matrix_tile) {
     hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans,
                   T(-1.0), std::move(panel_tile), std::move(col_panel), T(1.0), std::move(matrix_tile));
 }
@@ -112,7 +125,7 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
       // Update panel mat_a(i,k) with trsm (blas operation), using data mat_a.read(k,k)
-      trsm_panel_tile(executor_hp, lower, mat_a.read(kk), mat_a(LocalTileIndex{i, k}));
+      trsm_panel_tile(executor_hp, mat_a.read(kk), mat_a(LocalTileIndex{i, k}));
     }
 
     for (SizeType j = k + 1; j < nrtile; ++j) {
@@ -120,13 +133,13 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
       auto& trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_np;
 
       // Update trailing matrix: diagonal element mat_a(j,j), reading mat_a.read(j,k), using herk (blas operation)
-      herk_trailing_diag_tile(trailing_matrix_executor, lower, mat_a.read(LocalTileIndex{j, k}),
+      herk_trailing_diag_tile(trailing_matrix_executor, mat_a.read(LocalTileIndex{j, k}),
                               mat_a(LocalTileIndex{j, j}));
 
       for (SizeType i = j + 1; i < nrtile; ++i) {
         // Update remaining trailing matrix mat_a(i,j), reading mat_a.read(i,k) and mat_a.read(j,k),
         // using gemm (blas operation)
-        gemm_trailing_matrix_tile(trailing_matrix_executor, lower, mat_a.read(LocalTileIndex{i, k}),
+        gemm_trailing_matrix_tile(trailing_matrix_executor, mat_a.read(LocalTileIndex{i, k}),
                                   mat_a.read(LocalTileIndex{j, k}), mat_a(LocalTileIndex{i, j}));
       }
     }
@@ -184,7 +197,7 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
       comm::Index2D ik_rank = mat_a.rankGlobalTile(ik_idx);
 
       if (this_rank == ik_rank) {
-        trsm_panel_tile(executor_hp, lower, panel[k], mat_a(ik_idx));
+        trsm_panel_tile(executor_hp, panel[k], mat_a(ik_idx));
         panel[i] = mat_a.read(ik_idx);
         hpx::dataflow(executor_mpi_row, unwrapping(comm::sendBcast<T, Device::CPU>), panel[i],
                       mpi_row_task_chain());
@@ -205,7 +218,7 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
         continue;
 
       if (this_rank.row() == jj_rank.row()) {
-        herk_trailing_diag_tile(trailing_matrix_executor, lower, panel[j], mat_a(jj_idx));
+        herk_trailing_diag_tile(trailing_matrix_executor, panel[j], mat_a(jj_idx));
         if (j != nrtile - 1) {
           hpx::dataflow(executor_mpi_col, unwrapping(comm::sendBcast<T, Device::CPU>), panel[j],
                         mpi_col_task_chain());
@@ -223,7 +236,7 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
         // Update the ij-tile using the ik-tile and jk-tile
         if (this_rank.row() == distr.rankGlobalTile<Coord::Row>(i)) {
           GlobalTileIndex ij_idx(i, j);
-          gemm_trailing_matrix_tile(executor_np, lower, panel[i], panel[j], mat_a(ij_idx));
+          gemm_trailing_matrix_tile(executor_np, panel[i], panel[j], mat_a(ij_idx));
         }
       }
     }
@@ -247,17 +260,17 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_U(Matrix<T, Device::CPU>& mat_a
     potrf_diag_tile(executor_hp, upper, mat_a(kk));
 
     for (SizeType j = k + 1; j < nrtile; ++j) {
-      trsm_panel_tile(executor_hp, upper, mat_a.read(kk), mat_a(LocalTileIndex{k, j}));
+      trsm_panel_tile_U(executor_hp, mat_a.read(kk), mat_a(LocalTileIndex{k, j}));
     }
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
       auto& trailing_matrix_executor = (i == k + 1) ? executor_hp : executor_np;
 
-      herk_trailing_diag_tile(trailing_matrix_executor, upper, mat_a.read(LocalTileIndex{k, i}),
+      herk_trailing_diag_tile_U(trailing_matrix_executor, mat_a.read(LocalTileIndex{k, i}),
                               mat_a(LocalTileIndex{i, i}));
 
       for (SizeType j = i + 1; j < nrtile; ++j) {
-        gemm_trailing_matrix_tile(trailing_matrix_executor, upper, mat_a.read(LocalTileIndex{k, i}),
+        gemm_trailing_matrix_tile_U(trailing_matrix_executor, mat_a.read(LocalTileIndex{k, i}),
                                   mat_a.read(LocalTileIndex{k, j}), mat_a(LocalTileIndex{i, j}));
       }
     }

@@ -81,7 +81,7 @@ TYPED_TEST(MatrixMirrorTest, Basics) {
 }
 
 template <typename T, Device Target, Device Source>
-void syncTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
+void copyTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
   BaseType<T> offset = 0.0;
   auto el = [&offset](const GlobalElementIndex& index) {
     SizeType i = index.row();
@@ -112,7 +112,7 @@ void syncTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
     set(mat_source_cpu, el);
     copy(mat_source_cpu, mat);
 
-    mat_mirror.syncSourceToTarget();
+    mat_mirror.copySourceToTarget();
 
     copy(mat_mirror.get(), mat_target_cpu);
     CHECK_MATRIX_EQ(el, mat_target_cpu);
@@ -121,7 +121,7 @@ void syncTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
     set(mat_target_cpu, el);
     copy(mat_target_cpu, mat_mirror.get());
 
-    mat_mirror.syncTargetToSource();
+    mat_mirror.copyTargetToSource();
 
     copy(mat, mat_source_cpu);
     CHECK_MATRIX_EQ(el, mat_source_cpu);
@@ -135,21 +135,21 @@ void syncTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
   CHECK_MATRIX_EQ(el, mat_source_cpu);
 }
 
-TYPED_TEST(MatrixMirrorTest, Sync) {
+TYPED_TEST(MatrixMirrorTest, Copy) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
-      syncTest<TypeParam, Device::CPU, Device::CPU>(comm_grid, test);
+      copyTest<TypeParam, Device::CPU, Device::CPU>(comm_grid, test);
 #ifdef DLAF_WITH_CUDA
-      syncTest<TypeParam, Device::CPU, Device::GPU>(comm_grid, test);
-      syncTest<TypeParam, Device::GPU, Device::CPU>(comm_grid, test);
-      syncTest<TypeParam, Device::GPU, Device::GPU>(comm_grid, test);
+      copyTest<TypeParam, Device::CPU, Device::GPU>(comm_grid, test);
+      copyTest<TypeParam, Device::GPU, Device::CPU>(comm_grid, test);
+      copyTest<TypeParam, Device::GPU, Device::GPU>(comm_grid, test);
 #endif
     }
   }
 }
 
 template <typename T, Device Target, Device Source>
-void syncConstTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
+void copyConstTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
   BaseType<T> offset = 0.0;
   auto el = [&offset](const GlobalElementIndex& index) {
     SizeType i = index.row();
@@ -177,14 +177,14 @@ void syncConstTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
   CHECK_MATRIX_EQ(el, mat_target_cpu);
 }
 
-TYPED_TEST(MatrixMirrorTest, SyncConst) {
+TYPED_TEST(MatrixMirrorTest, CopyConst) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
-      syncTest<TypeParam, Device::CPU, Device::CPU>(comm_grid, test);
+      copyTest<TypeParam, Device::CPU, Device::CPU>(comm_grid, test);
 #ifdef DLAF_WITH_CUDA
-      syncTest<TypeParam, Device::CPU, Device::GPU>(comm_grid, test);
-      syncTest<TypeParam, Device::GPU, Device::CPU>(comm_grid, test);
-      syncTest<TypeParam, Device::GPU, Device::GPU>(comm_grid, test);
+      copyTest<TypeParam, Device::CPU, Device::GPU>(comm_grid, test);
+      copyTest<TypeParam, Device::GPU, Device::CPU>(comm_grid, test);
+      copyTest<TypeParam, Device::GPU, Device::GPU>(comm_grid, test);
 #endif
     }
   }

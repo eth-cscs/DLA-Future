@@ -145,10 +145,6 @@ void testDistCholesky(CholeskyDistributedTest<TypeParam>& test) {
   }
 }
 
-TYPED_TEST(CholeskyDistributedTest, DistCholesky_Yielding) {
-  testDistCholesky<TypeParam>(*this);
-}
-
 TYPED_TEST(CholeskyDistributedTest, DistCholesky_Polling) {
   testDistCholesky<TypeParam>(*this);
 }

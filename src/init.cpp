@@ -135,7 +135,6 @@ struct Init<Backend::GPU> {
     finalizeNpCudaStreamPool();
     finalizeHpCudaStreamPool();
     finalizeCublasHandlePool();
-    hpx::cuda::experimental::detail::unregister_polling(hpx::resource::get_thread_pool("default"));
   }
 };
 #endif

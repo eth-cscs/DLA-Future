@@ -143,8 +143,11 @@ public:
     auto r = hpx::invoke(std::forward<F>(f), handle, std::forward<Ts>(ts)...);
     hpx::future<void> fut = hpx::cuda::experimental::detail::get_future_with_event(stream);
 
+    // The handle and stream pools are captured by value to ensure that the
+    // streams live at least until the event has completed.
     return fut.then(hpx::launch::sync,
-                    [r = std::move(r)](hpx::future<void>&&) mutable { return std::move(r); });
+                    [r = std::move(r), stream_pool = stream_pool_,
+                     handle_pool = handle_pool_](hpx::future<void>&&) mutable { return std::move(r); });
   }
 
   template <class Frame, class F, class Futures>
@@ -159,7 +162,10 @@ public:
                                hpx::tuple_cat(hpx::tie(handle), std::forward<Futures>(futures)));
     hpx::future<void> fut = hpx::cuda::experimental::detail::get_future_with_event(stream);
 
-    fut.then(hpx::launch::sync, [r = std::move(r), frame_p = std::move(frame_p)](
+    // The handle and stream pools are captured by value to ensure that the
+    // streams live at least until the event has completed.
+    fut.then(hpx::launch::sync, [r = std::move(r), frame_p = std::move(frame_p),
+                                 stream_pool = stream_pool_, handle_pool = handle_pool_](
                                     hpx::future<void>&&) mutable { frame_p->set_data(std::move(r)); });
   }
 };

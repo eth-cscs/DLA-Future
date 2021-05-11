@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <hpx/futures/future.hpp>
+#include <hpx/local/future.hpp>
 #include <vector>
 
 #include <gtest/gtest.h>

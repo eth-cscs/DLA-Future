@@ -12,6 +12,10 @@ add_executable(miniapp_cholesky miniapp_cholesky.cpp)
 target_link_libraries(miniapp_cholesky PRIVATE DLAF)
 target_add_warnings(miniapp_cholesky)
 
+add_executable(miniapp_tsgemm miniapp_tsgemm.cpp)
+target_link_libraries(miniapp_tsgemm PRIVATE DLAF)
+target_add_warnings(miniapp_tsgemm)
+
 if (DLAF_BUILD_TESTING)
   # TODO it depends on DLAF_TEST exclusively for the check part (uses CHECK_MATRIX_NEAR)
   add_executable(miniapp_triangular_solver miniapp_triangular_solver.cpp)

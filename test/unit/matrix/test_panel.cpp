@@ -247,10 +247,11 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
   for (SizeType i = at_offset.get(coord1D); i < dist.localNrTiles().get(coord1D); ++i)
     panel(LocalTileIndex(coord1D, i)).get()({0, 0}) = i;
 
-  for (SizeType i = at_offset.get(coord1D); i <= dist.localNrTiles().get(coord1D); ++i) {
-    panel.setRangeStart(LocalTileSize(coord1D, i));
+  // Shrink from head
+  for (SizeType head = at_offset.get(coord1D); head <= dist.localNrTiles().get(coord1D); ++head) {
+    panel.setRangeStart(LocalTileSize(coord1D, head));
 
-    for (SizeType k = i; k < dist.localNrTiles().get(coord1D); ++k) {
+    for (SizeType k = head; k < dist.localNrTiles().get(coord1D); ++k) {
       const LocalTileIndex idx(coord1D, k);
       auto& tile = panel.read(idx).get();
       EXPECT_EQ(tile({0, 0}), TypeUtil::element(k, 0));
@@ -262,14 +263,17 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
       EXPECT_EQ(tile({0, 0}), TypeUtil::element(idx.get(coord1D), 0));
       EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
     }
+    EXPECT_EQ(dist.localNrTiles().get(coord1D) - head,
+              std::distance(panel.iterator().begin(), panel.iterator().end()));
   }
 
+  // Shrink from tail
   panel.setRangeStart(at_offset);
 
-  for (SizeType i = dist.localNrTiles().get(coord1D); i >= at_offset.get(coord1D); --i) {
-    panel.setRangeEnd(LocalTileSize(coord1D, i));
+  for (SizeType tail = dist.localNrTiles().get(coord1D); at_offset.get(coord1D) <= tail; --tail) {
+    panel.setRangeEnd(LocalTileSize(coord1D, tail));
 
-    for (SizeType k = at_offset.get(coord1D); k < i; ++k) {
+    for (SizeType k = at_offset.get(coord1D); k < tail; ++k) {
       const LocalTileIndex idx(coord1D, k);
       auto& tile = panel.read(idx).get();
       EXPECT_EQ(tile({0, 0}), TypeUtil::element(k, 0));
@@ -281,6 +285,30 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
       EXPECT_EQ(tile({0, 0}), TypeUtil::element(idx.get(coord1D), 0));
       EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
     }
+    EXPECT_EQ(tail - at_offset.get(coord1D),
+              std::distance(panel.iterator().begin(), panel.iterator().end()));
+  }
+
+  // Shrink from both ends
+  panel.setRangeEnd(dist.localNrTiles());
+
+  for (SizeType head = at_offset.get(coord1D), tail = dist.localNrTiles().get(coord1D); head <= tail;
+       ++head, --tail) {
+    panel.setRange(LocalTileSize(coord1D, head), LocalTileSize(coord1D, tail));
+
+    for (SizeType k = head; k < tail; ++k) {
+      const LocalTileIndex idx(coord1D, k);
+      auto& tile = panel.read(idx).get();
+      EXPECT_EQ(tile({0, 0}), TypeUtil::element(k, 0));
+      EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
+    }
+
+    for (const auto& idx : panel.iterator()) {
+      auto& tile = panel.read(idx).get();
+      EXPECT_EQ(tile({0, 0}), TypeUtil::element(idx.get(coord1D), 0));
+      EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
+    }
+    EXPECT_EQ(tail - head, std::distance(panel.iterator().begin(), panel.iterator().end()));
   }
 }
 

@@ -46,7 +46,7 @@ matrix::Tile<const T, D> recvBcastAlloc(TileElementSize tile_size, int root_rank
   using ConstTile_t = matrix::Tile<const T, D>;
   using MemView_t = memory::MemoryView<T, D>;
 
-  MemView_t mem_view(util::size_t::mul(tile_size.rows(), tile_size.cols()));
+  MemView_t mem_view(tile_size.rows() * tile_size.cols());
   Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
 
   auto msg = comm::make_message(common::make_data(tile));
@@ -57,7 +57,7 @@ matrix::Tile<const T, D> recvBcastAlloc(TileElementSize tile_size, int root_rank
 template <class T, Device D, class Executor, template <class> class Future>
 void scheduleSendBcast(Executor&& ex, Future<matrix::Tile<const T, D>> tile,
                        hpx::future<common::PromiseGuard<comm::Communicator>> pcomm) {
-  hpx::dataflow(std::forward<Executor>(ex), hpx::util::unwrapping(sendBcast_o),
+  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(sendBcast_o),
                 internal::prepareSendTile(std::move(tile)), std::move(pcomm));
 }
 

@@ -42,7 +42,7 @@ namespace test {
 /// A_ij = (4^(min(i,j)+1) - 1) / (3 * 2^(i+j)) * exp(I*(-i+j))
 ///
 template <class ElementIndex, class T>
-auto getCholesky(blas::Uplo uplo) {
+auto getCholeskyElementSetters(blas::Uplo uplo) {
   using dlaf::test::TypeUtilities;
 
   DLAF_ASSERT(uplo == blas::Uplo::Lower || uplo == blas::Uplo::Upper, uplo);
@@ -54,12 +54,9 @@ auto getCholesky(blas::Uplo uplo) {
 
     const double i = index.row();
     const double j = index.col();
-    if (uplo == blas::Uplo::Lower)
-      return TypeUtilities<T>::polar(std::exp2(-(i + j)) / 3 * (std::exp2(2 * (std::min(i, j) + 1)) - 1),
-                                     -i + j);
-    else
-      return TypeUtilities<T>::polar(std::exp2(-(i + j)) / 3 * (std::exp2(2 * (std::min(i, j) + 1)) - 1),
-                                     i - j);
+
+    return TypeUtilities<T>::polar(std::exp2(-(i + j)) / 3 * (std::exp2(2 * (std::min(i, j) + 1)) - 1),
+                                   -i + j);
   };
 
   std::function<T(const ElementIndex&)> res_a = [uplo](const ElementIndex& index) {
@@ -69,10 +66,8 @@ auto getCholesky(blas::Uplo uplo) {
 
     const double i = index.row();
     const double j = index.col();
-    if (uplo == blas::Uplo::Lower)
-      return TypeUtilities<T>::polar(std::exp2(-std::abs(i - j)), -i + j);
-    else
-      return TypeUtilities<T>::polar(std::exp2(-std::abs(-i + j)), i - j);
+
+    return TypeUtilities<T>::polar(std::exp2(-std::abs(i - j)), -i + j);
   };
 
   return std::make_tuple(el_a, res_a);

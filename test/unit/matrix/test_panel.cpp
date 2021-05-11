@@ -54,7 +54,7 @@ struct config_t {
 };
 
 std::vector<config_t> test_params{
-    {{0, 0}, {3, 3}, {0, 0}},
+    {{0, 0}, {3, 3}, {0, 0}},  // empty matrix
     {{26, 13}, {3, 3}, {1, 2}},
 };
 
@@ -387,8 +387,8 @@ TYPED_TEST(PanelTest, BroadcastRow) {
 }
 
 std::vector<config_t> test_params_bcast_transpose{
-    {{0, 0}, {1, 1}, {0, 0}},
-    {{9, 9}, {3, 3}, {3, 3}},
+    {{0, 0}, {1, 1}, {0, 0}},  // empty matrix
+    {{9, 9}, {3, 3}, {3, 3}},  // empty panel (due to offset)
     {{10, 10}, {3, 3}, {1, 1}},
 };
 

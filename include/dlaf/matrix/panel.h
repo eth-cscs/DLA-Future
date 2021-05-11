@@ -324,9 +324,9 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis,
 
   for (const auto& index : panel.iterator()) {
     if (rank == rank_root)
-      dataflow(ex, unwrapping(comm::sendBcast_o), panel.read(index), serial_comm());
+      scheduleSendBcast(ex, panel.read(index), serial_comm());
     else
-      dataflow(ex, unwrapping(comm::recvBcast_o), panel(index), rank_root, serial_comm());
+      scheduleRecvBcast(ex, panel(index), rank_root, serial_comm());
   }
 }
 
@@ -474,11 +474,11 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis,
       panelT.setTile(indexT, panel.read({coord, index_diag_local}));
 
       if (dist.commGridSize().get(comm_coord_step2) > 1)
-        dataflow(ex, unwrapping(comm::sendBcast_o), panelT.read(indexT), chain_step2());
+        scheduleSendBcast(ex, panelT.read(indexT), chain_step2());
     }
     else {
       if (dist.commGridSize().get(comm_coord_step2) > 1)
-        dataflow(ex, unwrapping(comm::recvBcast_o), panelT(indexT), owner_diag, chain_step2());
+        scheduleRecvBcast(ex, panelT(indexT), owner_diag, chain_step2());
     }
   }
 }

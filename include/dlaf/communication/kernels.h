@@ -75,9 +75,9 @@ void scheduleSendBcast(Executor&& ex, Future<matrix::Tile<const T, D>> tile,
 }
 
 template <class T, Device D, class Executor>
-hpx::future<matrix::Tile<T, D>> scheduleRecvBcast(Executor&& ex, hpx::future<matrix::Tile<T, D>> tile,
-                                                  comm::IndexT_MPI root_rank,
-                                                  hpx::future<common::PromiseGuard<Communicator>> pcomm) {
+hpx::future<matrix::Tile<const T, D>> scheduleRecvBcast(
+    Executor&& ex, hpx::future<matrix::Tile<T, D>> tile, comm::IndexT_MPI root_rank,
+    hpx::future<common::PromiseGuard<Communicator>> pcomm) {
   return internal::handleRecvTile<D>(hpx::dataflow(std::forward<Executor>(ex),
                                                    hpx::util::unwrapping(recvBcast_o), std::move(tile),
                                                    root_rank, std::move(pcomm)));

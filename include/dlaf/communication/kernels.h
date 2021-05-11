@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -40,7 +40,20 @@ DLAF_MAKE_CALLABLE_OBJECT(sendBcast);
 
 // Non-blocking receiver broadcast
 template <class T, Device D>
-matrix::Tile<const T, D> recvBcastAlloc(TileElementSize tile_size, int root_rank,
+matrix::Tile<const T, D> recvBcast(matrix::Tile<T, D> tile, comm::IndexT_MPI root_rank,
+                                   common::PromiseGuard<Communicator> pcomm, MPI_Request* req) {
+  using ConstTile_t = matrix::Tile<const T, D>;
+
+  auto msg = comm::make_message(common::make_data(tile));
+  MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, pcomm.ref(), req);
+  return ConstTile_t(std::move(tile));
+}
+
+DLAF_MAKE_CALLABLE_OBJECT(recvBcast);
+
+// Non-blocking receiver broadcast (with Alloc)
+template <class T, Device D>
+matrix::Tile<const T, D> recvBcastAlloc(TileElementSize tile_size, comm::IndexT_MPI root_rank,
                                         common::PromiseGuard<Communicator> pcomm, MPI_Request* req) {
   using Tile_t = matrix::Tile<T, D>;
   using ConstTile_t = matrix::Tile<const T, D>;
@@ -62,8 +75,17 @@ void scheduleSendBcast(Executor&& ex, Future<matrix::Tile<const T, D>> tile,
 }
 
 template <class T, Device D, class Executor>
+hpx::future<matrix::Tile<const T, D>> scheduleRecvBcast(
+    Executor&& ex, hpx::future<matrix::Tile<T, D>> tile, comm::IndexT_MPI root_rank,
+    hpx::future<common::PromiseGuard<Communicator>> pcomm) {
+  return internal::handleRecvTile<D>(hpx::dataflow(std::forward<Executor>(ex),
+                                                   hpx::util::unwrapping(recvBcast_o), std::move(tile),
+                                                   root_rank, std::move(pcomm)));
+}
+
+template <class T, Device D, class Executor>
 hpx::future<matrix::Tile<const T, D>> scheduleRecvBcastAlloc(
-    Executor&& ex, TileElementSize tile_size, int root_rank,
+    Executor&& ex, TileElementSize tile_size, comm::IndexT_MPI root_rank,
     hpx::future<common::PromiseGuard<comm::Communicator>> pcomm) {
   return internal::handleRecvTile<D>(
       hpx::dataflow(std::forward<Executor>(ex),

@@ -138,10 +138,8 @@ void testAccess(const config_t& cfg, const comm::CommunicatorGrid comm_grid) {
   }
 
   // ro-access
-  for (const auto& idx : panel.iterator()) {
-    panel.read(idx).then(unwrapping(
-        [idx](auto&& tile) { CHECK_MATRIX_EQ(TypeUtil::element(idx.get(coord1D), 26), tile); }));
-  }
+  for (const auto& idx : panel.iterator())
+    CHECK_MATRIX_EQ(TypeUtil::element(idx.get(coord1D), 26), panel.read(idx).get());
 }
 
 TYPED_TEST(PanelTest, AccessTileCol) {
@@ -230,7 +228,6 @@ TYPED_TEST(PanelTest, ExternalTilesRow) {
 template <class TypeParam, Coord panel_axis>
 void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
-  using hpx::util::unwrapping;
 
   constexpr Coord coord1D = orthogonal(panel_axis);
 
@@ -331,8 +328,7 @@ void testBroadcast(comm::Executor& executor_mpi, const config_t& cfg, comm::Comm
 
   // check that all panels have been set
   for (const auto i_w : panel.iterator())
-    hpx::dataflow(unwrapping([rank](auto&& tile) { CHECK_TILE_EQ(TypeUtil::element(rank, 26), tile); }),
-                  panel.read(i_w));
+    CHECK_TILE_EQ(TypeUtil::element(rank, 26), panel.read(i_w).get());
 
   // test it!
   constexpr Coord comm_dir = orthogonal(panel_axis);
@@ -342,8 +338,7 @@ void testBroadcast(comm::Executor& executor_mpi, const config_t& cfg, comm::Comm
 
   // check all panel are equal on all ranks
   for (const auto i_w : panel.iterator())
-    hpx::dataflow(unwrapping([root](auto&& tile) { CHECK_TILE_EQ(TypeUtil::element(root, 26), tile); }),
-                  panel.read(i_w));
+    CHECK_TILE_EQ(TypeUtil::element(root, 26), panel.read(i_w).get());
 }
 
 TYPED_TEST(PanelTest, BroadcastCol) {
@@ -401,9 +396,7 @@ void testBrodcastTranspose(comm::Executor& executor_mpi, const config_t& cfg,
 
   // check that all destination tiles got the value from the right rank
   for (const auto i_w : panel_dst.iterator()) {
-    hpx::dataflow(unwrapping(
-                      [owner](auto&& tile) { CHECK_TILE_EQ(TypeUtil::element(owner, 26), tile); }),
-                  panel_dst.read(i_w));
+    CHECK_TILE_EQ(TypeUtil::element(owner, 26), panel_dst.read(i_w).get());
   }
 }
 

@@ -164,12 +164,10 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
     if (kk_rank.col() == this_rank.col()) {
       if (kk_rank.row() == this_rank.row()) {
         panelT.setTile(diag_wp_idx, mat_a.read(kk_idx));
-        dataflow(executor_mpi, matrix::unwrapExtendTiles(comm::sendBcast_o), panelT.read(diag_wp_idx),
-                 mpi_col_task_chain());
+        comm::scheduleSendBcast(executor_mpi, panelT.read(diag_wp_idx), mpi_col_task_chain());
       }
       else {
-        dataflow(executor_mpi, unwrapping(comm::recvBcast_o), panelT(diag_wp_idx), kk_rank.row(),
-                 mpi_col_task_chain());
+        comm::scheduleRecvBcast(executor_mpi, panelT(diag_wp_idx), kk_rank.row(), mpi_col_task_chain());
       }
 
       // COLUMN UPDATE

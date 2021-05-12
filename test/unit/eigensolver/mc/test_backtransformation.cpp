@@ -130,16 +130,18 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
       for (SizeType t = 0; t < mb && nt < tottaus; ++t) {
         const GlobalElementIndex v_offset{i * mb + t, i * mb + t};
         auto dotprod = blas::dot(m - t, mat_v_loc.ptr(v_offset), 1, mat_v_loc.ptr(v_offset), 1);
-        T taui;
+        BaseType<T> tau_i;
         if (std::is_same<T, ComplexType<T>>::value) {
           auto seed = 10000 * i + 1;
-          dlaf::matrix::util::internal::getter_random<T> random_value(seed);
-          taui = random_value();
+          dlaf::matrix::util::internal::getter_random<BaseType<T>> random_value(seed);
+          tau_i = random_value();
         }
         else {
-          taui = static_cast<T>(0.0);
+          tau_i = static_cast<BaseType<T>>(0.0);
         }
-        auto tau = (static_cast<T>(1.0) + sqrt(static_cast<T>(1.0) - dotprod * taui * taui)) / dotprod;
+        auto tau_r =
+            (static_cast<T>(1.0) + sqrt(static_cast<T>(1.0) - dotprod * tau_i * tau_i)) / dotprod;
+        auto tau = tau_r + i * tau_i;
         tausloc({nt, 0}) = tau;
         t_tile.push_back(tau);
         ++nt;

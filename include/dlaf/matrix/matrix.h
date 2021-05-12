@@ -176,6 +176,9 @@ public:
   }
 
   /// Synchronization barrier for all local tiles in the matrix
+  ///
+  /// This blocking call does not return until all operations, i.e. both RO and RW,
+  /// involving any of the locally available tiles are completed.
   void waitLocalTiles() noexcept;
 
 protected:

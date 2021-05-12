@@ -1,7 +1,7 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2019, ETH Zurich
+# Copyright (c) 2018-2021, ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
@@ -25,23 +25,20 @@ DLAF_addTest(test_blas_tile
   LIBRARIES dlaf.core
   USE_MAIN HPX
 )
+
 DLAF_addTest(test_lapack_tile
   SOURCES test_lapack_tile.cpp
   LIBRARIES dlaf.core
   USE_MAIN HPX
 )
-DLAF_addTest(test_tile
-  SOURCES test_tile.cpp
-  LIBRARIES dlaf.core
-  USE_MAIN HPX
-)
 
-DLAF_addTest(test_matrix
-  SOURCES test_matrix.cpp
-  LIBRARIES dlaf.core
-  USE_MAIN MPIHPX
-  MPIRANKS 6
-)
+if(DLAF_WITH_CUDA)
+  DLAF_addTest(test_cublas_tile
+    SOURCES test_cublas_tile.cpp
+    LIBRARIES dlaf.core
+    USE_MAIN HPX
+  )
+endif()
 
 DLAF_addTest(test_matrix_output
   SOURCES test_matrix_output.cpp
@@ -52,6 +49,8 @@ DLAF_addTest(test_matrix_output
 # Generic libraries
 add_subdirectory(common)
 add_subdirectory(communication)
+add_subdirectory(eigensolver)
+add_subdirectory(init)
 add_subdirectory(matrix)
 add_subdirectory(memory)
 

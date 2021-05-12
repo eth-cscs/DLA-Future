@@ -1,28 +1,34 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <blas/util.hh>
 #include <iostream>
 
 #include <mpi.h>
+#include <hpx/include/resource_partitioner.hpp>
 #include <hpx/init.hpp>
 
-#include "dlaf/auxiliary/mc.h"
+#include "dlaf/auxiliary/norm.h"
+#include "dlaf/common/timer.h"
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/communication/error.h"
+#include "dlaf/communication/executor.h"
+#include "dlaf/communication/functions_sync.h"
 #include "dlaf/communication/init.h"
-#include "dlaf/factorization/mc.h"
-#include "dlaf/matrix.h"
+#include "dlaf/communication/mech.h"
+#include "dlaf/factorization/cholesky.h"
+#include "dlaf/init.h"
 #include "dlaf/matrix/copy.h"
+#include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
-
-#include "dlaf/common/timer.h"
 
 namespace {
 
@@ -46,8 +52,8 @@ using dlaf::comm::CommunicatorGrid;
 using T = double;
 using MatrixType = dlaf::Matrix<T, Device::CPU>;
 using ConstMatrixType = dlaf::Matrix<const T, Device::CPU>;
-using TileType = dlaf::Tile<T, Device::CPU>;
-using ConstTileType = dlaf::Tile<const T, Device::CPU>;
+using TileType = MatrixType::TileType;
+using ConstTileType = MatrixType::ConstTileType;
 
 /// Check Cholesky Factorization results
 ///
@@ -55,7 +61,7 @@ using ConstTileType = dlaf::Tile<const T, Device::CPU>;
 /// this function checks that A == L * L'
 void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid);
 
-enum class CHECK_RESULT { NONE, LAST, ALL };
+enum class CholCheckIterFreq { None, Last, All };
 
 struct options_t {
   SizeType m;
@@ -63,16 +69,20 @@ struct options_t {
   int grid_rows;
   int grid_cols;
   int64_t nruns;
-  CHECK_RESULT do_check;
+  int64_t nwarmups;
+  CholCheckIterFreq do_check;
 };
 
 /// Handle CLI options
-options_t check_options(hpx::program_options::variables_map& vm);
+options_t parse_options(hpx::program_options::variables_map&);
+
+CholCheckIterFreq parse_chol_check(const std::string&);
 
 }
 
 int hpx_main(hpx::program_options::variables_map& vm) {
-  options_t opts = check_options(vm);
+  dlaf::initialize(vm);
+  options_t opts = parse_options(vm);
 
   Communicator world(MPI_COMM_WORLD);
   CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
@@ -92,22 +102,22 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 
   const auto& distribution = matrix_ref.distribution();
 
-  for (auto run_index = 0; run_index < opts.nruns; ++run_index) {
-    if (0 == world.rank())
+  for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
+    if (0 == world.rank() && run_index >= 0)
       std::cout << "[" << run_index << "]" << std::endl;
 
     MatrixType matrix(matrix_size, block_size, comm_grid);
-    dlaf::copy(matrix_ref, matrix);
+    copy(matrix_ref, matrix);
 
     // wait all setup tasks before starting benchmark
     {
       for (const auto tile_idx : dlaf::common::iterate_range2d(distribution.localNrTiles()))
         matrix(tile_idx).get();
-      MPI_Barrier(world);
+      DLAF_MPI_CALL(MPI_Barrier(world));
     }
 
     dlaf::common::Timer<> timeit;
-    dlaf::Factorization<Backend::MC>::cholesky(comm_grid, blas::Uplo::Lower, matrix);
+    dlaf::factorization::cholesky<Backend::MC, Device::CPU, T>(comm_grid, blas::Uplo::Lower, matrix);
 
     // wait for last task and barrier for all ranks
     {
@@ -115,7 +125,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       if (matrix.rankIndex() == distribution.rankGlobalTile(last_tile))
         matrix(last_tile).get();
 
-      MPI_Barrier(world);
+      DLAF_MPI_CALL(MPI_Barrier(world));
     }
     auto elapsed_time = timeit.elapsed();
 
@@ -127,7 +137,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     }
 
     // print benchmark results
-    if (0 == world.rank())
+    if (0 == world.rank() && run_index >= 0)
       std::cout << "[" << run_index << "]"
                 << " " << elapsed_time << "s"
                 << " " << gigaflops << "GFlop/s"
@@ -135,55 +145,44 @@ int hpx_main(hpx::program_options::variables_map& vm) {
                 << hpx::get_os_thread_count() << std::endl;
 
     // (optional) run test
-    if (opts.do_check != CHECK_RESULT::NONE) {
-      if (opts.do_check == CHECK_RESULT::LAST && run_index != (opts.nruns - 1))
-        continue;
-
+    if ((opts.do_check == CholCheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
+        opts.do_check == CholCheckIterFreq::All) {
       MatrixType original(matrix_size, block_size, comm_grid);
-      dlaf::copy(matrix_ref, original);
+      copy(matrix_ref, original);
       check_cholesky(original, matrix, comm_grid);
     }
   }
+
+  dlaf::finalize();
 
   return hpx::finalize();
 }
 
 int main(int argc, char** argv) {
-  dlaf::comm::mpi_init mpi_initter(argc, argv, dlaf::comm::mpi_thread_level::serialized);
+  // Init MPI
+  dlaf::comm::mpi_init mpi_initter(argc, argv, dlaf::comm::mpi_thread_level::multiple);
 
   // options
   using namespace hpx::program_options;
   options_description desc_commandline("Usage: " HPX_APPLICATION_STRING " [options]");
+  desc_commandline.add(dlaf::getOptionsDescription());
 
   // clang-format off
   desc_commandline.add_options()
-    ("matrix-size",  value<SizeType>()   ->default_value(4096),                        "Matrix size")
-    ("block-size",   value<SizeType>()   ->default_value( 256),                        "Block cyclic distribution size")
-    ("grid-rows",    value<int>()        ->default_value(   1),                        "Number of row processes in the 2D communicator")
-    ("grid-cols",    value<int>()        ->default_value(   1),                        "Number of column processes in the 2D communicator")
-    ("nruns",        value<int64_t>()    ->default_value(   1),                        "Number of runs to compute the cholesky")
-    ("check-result", value<std::string>()->default_value(  "")->implicit_value("all"), "Enable result check ('all', 'last')")
+    ("matrix-size",  value<SizeType>()   ->default_value(4096),       "Matrix size")
+    ("block-size",   value<SizeType>()   ->default_value( 256),       "Block cyclic distribution size")
+    ("grid-rows",    value<int>()        ->default_value(   1),       "Number of row processes in the 2D communicator")
+    ("grid-cols",    value<int>()        ->default_value(   1),       "Number of column processes in the 2D communicator")
+    ("nruns",        value<int64_t>()    ->default_value(   1),       "Number of runs to compute the cholesky")
+    ("nwarmups",     value<int64_t>()    ->default_value(   1),       "Number of warmup runs")
+    ("check-result", value<std::string>()->default_value("none"),     "Enable result checking ('none', 'all', 'last')")
   ;
   // clang-format on
 
   hpx::init_params p;
   p.desc_cmdline = desc_commandline;
-  p.rp_callback = [](auto& rp) {
-    int ntasks;
-    MPI_Comm_size(MPI_COMM_WORLD, &ntasks);
-    // if the user has asked for special thread pools for communication
-    // then set them up
-    if (ntasks > 1) {
-      // Create a thread pool with a single core that we will use for all
-      // communication related tasks
-      rp.create_thread_pool("mpi", hpx::resource::scheduling_policy::local_priority_fifo);
-      rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], "mpi");
-    }
-  };
-
-  auto ret_code = hpx::init(argc, argv, p);
-
-  return ret_code;
+  p.rp_callback = dlaf::initResourcePartitionerHandler;
+  return hpx::init(argc, argv, p);
 }
 
 namespace {
@@ -194,7 +193,7 @@ namespace {
 /// part of each tile, diagonal excluded, are set to zero.
 /// Tiles that are not on the diagonal (i.e. row != col) will not be touched or referenced
 void setUpperToZeroForDiagonalTiles(MatrixType& matrix) {
-  DLAF_ASSERT(dlaf::matrix::square_blocksize(matrix), "");
+  DLAF_ASSERT(dlaf::matrix::square_blocksize(matrix), matrix);
 
   const auto& distribution = matrix.distribution();
 
@@ -228,13 +227,12 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
   // TODO A and L must be different
 
   using dlaf::common::make_data;
-  using dlaf::util::size_t::mul;
 
   // compute tile * tile_to_transpose' with the option to cumulate the result
   auto gemm_f =
       unwrapping([](auto&& tile, auto&& tile_to_transpose, auto&& result, const bool accumulate_result) {
-        dlaf::tile::gemm<T, Device::CPU>(blas::Op::NoTrans, blas::Op::ConjTrans, 1.0, tile,
-                                         tile_to_transpose, accumulate_result ? 0.0 : 1.0, result);
+        dlaf::tile::gemm<T>(blas::Op::NoTrans, blas::Op::ConjTrans, 1.0, tile, tile_to_transpose,
+                            accumulate_result ? 0.0 : 1.0, result);
       });
 
   // compute a = abs(a - b)
@@ -243,11 +241,11 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
       a(el_idx) = std::abs(a(el_idx) - b(el_idx));
   });
 
-  DLAF_ASSERT(dlaf::matrix::square_size(A), "");
-  DLAF_ASSERT(dlaf::matrix::square_blocksize(A), "");
+  DLAF_ASSERT(dlaf::matrix::square_size(A), A);
+  DLAF_ASSERT(dlaf::matrix::square_blocksize(A), A);
 
-  DLAF_ASSERT(dlaf::matrix::square_size(L), "");
-  DLAF_ASSERT(dlaf::matrix::square_blocksize(L), "");
+  DLAF_ASSERT(dlaf::matrix::square_size(L), L);
+  DLAF_ASSERT(dlaf::matrix::square_blocksize(L), L);
 
   const auto& distribution = L.distribution();
   const auto current_rank = distribution.rankIndex();
@@ -277,7 +275,7 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
       const auto owner_transposed = distribution.rankGlobalTile(transposed_wrt_global);
 
       // collect the 2nd operand, receving it from others if not available locally
-      hpx::shared_future<dlaf::Tile<const T, Device::CPU>> tile_to_transpose;
+      hpx::shared_future<ConstTileType> tile_to_transpose;
 
       if (owner_transposed == current_rank) {  // current rank already has what it needs
         tile_to_transpose = L.read(transposed_wrt_global);
@@ -291,11 +289,10 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
         // by construction: this rank has the 1st operand, so if it does not have the 2nd one,
         // for sure another rank in the same column will have it (thanks to the regularity of the
         // distribution given by the 2D grid)
-        DLAF_ASSERT_HEAVY(owner_transposed.col() == current_rank.col(), "");
+        DLAF_ASSERT_HEAVY(owner_transposed.col() == current_rank.col(), owner_transposed, current_rank);
 
         TileType workspace(L.blockSize(),
-                           dlaf::memory::MemoryView<T, Device::CPU>(
-                               mul(L.blockSize().rows(), L.blockSize().cols())),
+                           dlaf::memory::MemoryView<T, Device::CPU>(L.blockSize().linear_size()),
                            L.blockSize().rows());
 
         dlaf::comm::sync::broadcast::receive_from(owner_transposed.row(), comm_grid.colCommunicator(),
@@ -353,7 +350,7 @@ void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
   const Index2D rank_result{0, 0};
 
   // 1. Compute the max norm of the original matrix in A
-  const auto norm_A = dlaf::Auxiliary<dlaf::Backend::MC>::norm(comm_grid, rank_result, lapack::Norm::Max,
+  const auto norm_A = dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max,
                                                                blas::Uplo::Lower, A);
 
   // 2.
@@ -367,7 +364,7 @@ void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
 
   // 3. Compute the max norm of the difference (it has been compute in-place in A)
   const auto norm_diff =
-      dlaf::Auxiliary<dlaf::Backend::MC>::norm(comm_grid, rank_result, lapack::Norm::Max,
+      dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max,
                                                blas::Uplo::Lower, A);
 
   // 4.
@@ -388,36 +385,47 @@ void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
   std::cout << "Max Diff / Max A: " << diff_ratio << std::endl;
 }
 
-options_t check_options(hpx::program_options::variables_map& vm) {
+options_t parse_options(hpx::program_options::variables_map& vm) {
+  // clang-format off
   options_t opts = {
-      vm["matrix-size"].as<SizeType>(), vm["block-size"].as<SizeType>(),
-      vm["grid-rows"].as<int>(),        vm["grid-cols"].as<int>(),
-
-      vm["nruns"].as<int64_t>(),        CHECK_RESULT::NONE,
+      vm["matrix-size"].as<SizeType>(),
+      vm["block-size"].as<SizeType>(),
+      vm["grid-rows"].as<int>(),
+      vm["grid-cols"].as<int>(),
+      vm["nruns"].as<int64_t>(),
+      vm["nwarmups"].as<int64_t>(),
+      parse_chol_check(vm["check-result"].as<std::string>()),
   };
+  // clang-format on
 
-  DLAF_ASSERT(opts.m > 0, "matrix size must be a positive number!", opts.m);
-  DLAF_ASSERT(opts.mb > 0, "block size must be a positive number!", opts.mb);
-  DLAF_ASSERT(opts.grid_rows > 0, "number of grid rows must be a positive number!", opts.grid_rows);
-  DLAF_ASSERT(opts.grid_cols > 0, "number of grid columns must be a positive number!", opts.grid_cols);
+  DLAF_ASSERT(opts.m > 0, opts.m);
+  DLAF_ASSERT(opts.mb > 0, opts.mb);
+  DLAF_ASSERT(opts.grid_rows > 0, opts.grid_rows);
+  DLAF_ASSERT(opts.grid_cols > 0, opts.grid_cols);
+  DLAF_ASSERT(opts.nruns > 0, opts.nruns);
+  DLAF_ASSERT(opts.nwarmups >= 0, opts.nwarmups);
 
-  const std::string check_type = vm["check-result"].as<std::string>();
-
-  if (check_type.compare("all") == 0)
-    opts.do_check = CHECK_RESULT::ALL;
-  else if (check_type.compare("last") == 0)
-    opts.do_check = CHECK_RESULT::LAST;
-  else if (check_type.compare("") != 0)
-    throw std::runtime_error(check_type + " is not a valid value for check-result");
-
-  if (opts.do_check != CHECK_RESULT::NONE && opts.m % opts.mb) {
+  if (opts.do_check != CholCheckIterFreq::None && opts.m % opts.mb) {
     std::cerr
         << "Warning! At the moment result checking works just with matrix sizes that are multiple of the block size."
         << std::endl;
-    opts.do_check = CHECK_RESULT::NONE;
+    opts.do_check = CholCheckIterFreq::None;
   }
 
   return opts;
+}
+
+CholCheckIterFreq parse_chol_check(const std::string& check) {
+  if (check == "all")
+    return CholCheckIterFreq::All;
+  else if (check == "last")
+    return CholCheckIterFreq::Last;
+  else if (check == "none")
+    return CholCheckIterFreq::None;
+
+  std::cout << "Parsing is not implemented for --check-result=" << check << "!" << std::endl;
+  std::terminate();
+  return CholCheckIterFreq::None;  // unreachable
 }
 
 }

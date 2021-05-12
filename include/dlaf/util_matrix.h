@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -22,11 +22,11 @@ constexpr double M_PI = 3.141592;
 #include <hpx/include/util.hpp>
 #include <hpx/local/future.hpp>
 
-#include "dlaf/blaspp/enums.h"
+#include "dlaf/blas/enum_output.h"
 #include "dlaf/common/assert.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/range2d.h"
-#include "dlaf/matrix.h"
+#include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 
 /// @file
@@ -35,26 +35,26 @@ namespace dlaf {
 namespace matrix {
 
 /// Returns true if the matrix is square.
-template <class T, Device D>
-bool square_size(const Matrix<const T, D>& m) noexcept {
+template <class MatrixLike>
+bool square_size(const MatrixLike& m) noexcept {
   return m.size().rows() == m.size().cols();
 }
 
 /// Returns true if the matrix block size is square.
-template <class T, Device D>
-bool square_blocksize(const Matrix<const T, D>& m) noexcept {
+template <class MatrixLike>
+bool square_blocksize(const MatrixLike& m) noexcept {
   return m.blockSize().rows() == m.blockSize().cols();
 }
 
 /// Returns true if matrices have equal sizes.
-template <class T, Device D>
-bool equal_size(const Matrix<const T, D>& lhs, Matrix<const T, D>& rhs) noexcept {
+template <class MatrixLikeA, class MatrixLikeB>
+bool equal_size(const MatrixLikeA& lhs, const MatrixLikeB& rhs) noexcept {
   return lhs.size() == rhs.size();
 }
 
 /// Returns true if matrices have equal blocksizes.
-template <class T, Device D>
-bool equal_blocksize(const Matrix<const T, D>& lhs, Matrix<const T, D>& rhs) noexcept {
+template <class T, Device D1, Device D2>
+bool equal_blocksize(const Matrix<const T, D1>& lhs, Matrix<const T, D2>& rhs) noexcept {
   return lhs.blockSize() == rhs.blockSize();
 }
 
@@ -71,8 +71,8 @@ bool equal_process_grid(const Matrix<const T, D>& m, comm::CommunicatorGrid cons
 }
 
 /// Returns true if the matrices are distributed the same way.
-template <class T, Device D>
-bool equal_distributions(const Matrix<const T, D>& lhs, const Matrix<const T, D>& rhs) noexcept {
+template <class T, Device D1, Device D2>
+bool equal_distributions(const Matrix<const T, D1>& lhs, const Matrix<const T, D2>& rhs) noexcept {
   return lhs.distribution() == rhs.distribution();
 }
 
@@ -106,7 +106,10 @@ class getter_random {
                 "T is not compatible with random generator used.");
 
 public:
-  getter_random(const unsigned long seed = std::minstd_rand::default_seed) : random_engine_(seed) {}
+  getter_random() : random_engine_(std::minstd_rand::default_seed) {}
+  getter_random(SizeType seed) : random_engine_(static_cast<std::size_t>(seed)) {
+    DLAF_ASSERT(seed >= 0, "");
+  }
 
   T operator()() {
     return random_sampler_(random_engine_);
@@ -165,12 +168,11 @@ void set(Matrix<T, Device::CPU>& matrix, const ElementGetter& el_f) {
 /// will have the same set of values.
 template <class T>
 void set_random(Matrix<T, Device::CPU>& matrix) {
-  using namespace dlaf::util::size_t;
   const Distribution& dist = matrix.distribution();
   for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
     GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
     auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
-    auto seed = sum(tl_index.col(), mul(tl_index.row(), matrix.size().cols()));
+    auto seed = tl_index.col() + tl_index.row() * matrix.size().cols();
     auto rnd_f = hpx::util::unwrapping([seed](auto&& tile) {
       internal::getter_random<T> random_value(seed);
       for (auto el_idx : iterate_range2d(tile.size())) {
@@ -185,7 +187,7 @@ namespace internal {
 
 template <class T>
 void set_diagonal_tile(Tile<T, Device::CPU>& tile, internal::getter_random<T>& random_value,
-                       std::size_t offset_value) {
+                       SizeType offset_value) {
   // DIAGONAL
   // for diagonal tiles get just lower matrix values and set value for both
   // straight and transposed indices
@@ -242,14 +244,12 @@ void set_lower_and_upper_tile(Tile<T, Device::CPU>& tile, internal::getter_rando
 /// @pre @param matrix is a square matrix,
 /// @pre @param matrix has a square blocksize.
 template <class T>
-void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const std::size_t offset_value) {
+void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const SizeType offset_value) {
   // note:
   // By assuming square blocksizes, it is easier to locate elements. In fact:
   // - Elements on the diagonal are stored in the diagonal of the diagonal tiles
   // - Tiles under the diagonal store elements of the lower triangular matrix
   // - Tiles over the diagonal store elements of the upper triangular matrix
-
-  using namespace dlaf::util::size_t;
 
   const Distribution& dist = matrix.distribution();
 
@@ -266,11 +266,11 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const std:
     // compute the same seed for original and "transposed" tiles, so transposed ones will know the
     // values of the original one without the need of accessing real values (nor communication in case
     // of distributed matrices)
-    size_t seed;
+    SizeType seed;
     if (tile_wrt_global.row() >= tile_wrt_global.col())  // LOWER or DIAGONAL
-      seed = sum(tl_index.col(), mul(tl_index.row(), matrix.size().cols()));
+      seed = tl_index.col() + tl_index.row() * matrix.size().cols();
     else
-      seed = sum(tl_index.row(), mul(tl_index.col(), matrix.size().rows()));
+      seed = tl_index.row() + tl_index.col() * matrix.size().rows();
 
     auto set_hp_f = hpx::util::unwrapping([=](auto&& tile) {
       internal::getter_random<T> random_value(seed);
@@ -322,8 +322,7 @@ void set_random_hermitian(Matrix<T, Device::CPU>& matrix) {
 /// @pre @param matrix has a square blocksize.
 template <class T>
 void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
-  const auto offset_value = dlaf::util::size_t::mul(2, to_sizet(matrix.size().rows()));
-  internal::set_random_hermitian_with_offset(matrix, offset_value);
+  internal::set_random_hermitian_with_offset(matrix, 2 * matrix.size().rows());
 }
 
 }

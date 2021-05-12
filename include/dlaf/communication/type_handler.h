@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -35,16 +35,17 @@ struct type_handler {
   /// @param nblocks      number of blocks,
   /// @param block_size   number of contiguous elements of type @p T in each block,
   /// @param stride       stride (in elements) between starts of adjacent blocks.
-  type_handler(std::size_t nblocks, std::size_t block_size, std::size_t stride) {
+  type_handler(SizeType nblocks, SizeType block_size, SizeType stride) {
     MPI_Datatype element_type = dlaf::comm::mpi_datatype<std::remove_pointer_t<T>>::type;
-    MPI_Type_vector(to_int(nblocks), to_int(block_size), to_int(stride), element_type, &custom_type_);
-    MPI_Type_commit(&custom_type_);
+    DLAF_MPI_CALL(MPI_Type_vector(to_int(nblocks), to_int(block_size), to_int(stride), element_type,
+                                  &custom_type_));
+    DLAF_MPI_CALL(MPI_Type_commit(&custom_type_));
   }
 
   /// Release the custom MPI_Datatype.
   ~type_handler() {
     if (static_cast<bool>(*this))
-      MPI_Type_free(&custom_type_);
+      DLAF_MPI_CALL(MPI_Type_free(&custom_type_));
   }
 
   // movable

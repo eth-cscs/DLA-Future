@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -17,8 +17,7 @@
 using namespace dlaf;
 using namespace testing;
 
-const std::vector<
-    std::tuple<LocalElementSize, TileElementSize, SizeType, std::size_t, std::size_t, std::size_t>>
+const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, SizeType, SizeType, SizeType>>
     values({{{31, 17}, {7, 11}, 31, 7, 341, 527},      // Scalapack like layout
             {{31, 17}, {32, 11}, 31, 31, 341, 527},    // only one row of tiles
             {{31, 17}, {7, 11}, 33, 7, 363, 559},      // with padding (ld)
@@ -31,8 +30,8 @@ const std::vector<
             {{29, 41}, {13, 11}, 13, 143, 419, 1637},  // compressed col_offset
             {{0, 0}, {1, 1}, 1, 1, 1, 0}});
 
-const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, std::size_t, std::size_t>>
-    wrong_values({
+const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, SizeType, SizeType>> wrong_values(
+    {
         {{31, 17}, {7, 11}, 30, 7, 341},     // ld, row_offset combo is wrong
         {{31, 17}, {32, 11}, 30, 7, 341},    // ld is wrong
         {{31, 17}, {7, 11}, 31, 6, 341},     // row_offset is wrong
@@ -50,9 +49,6 @@ const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, std::s
     });
 
 TEST(LayoutInfoTest, Constructor) {
-  using util::size_t::mul;
-  using util::size_t::sum;
-
   for (const auto& v : values) {
     auto size = std::get<0>(v);
     auto block_size = std::get<1>(v);
@@ -78,10 +74,10 @@ TEST(LayoutInfoTest, Constructor) {
         LocalTileIndex tile_index(i, j);
         TileElementSize tile_size(ib, jb);
 
-        std::size_t offset = mul(i, row_offset) + mul(j, col_offset);
+        SizeType offset = i * row_offset + j * col_offset;
         EXPECT_EQ(offset, layout.tileOffset(tile_index));
         EXPECT_EQ(tile_size, layout.tileSize(tile_index));
-        std::size_t min_mem = sum(ib, mul(ld, jb - 1));
+        SizeType min_mem = ib + ld * (jb - 1);
         EXPECT_EQ(min_mem, layout.minTileMemSize(tile_index));
         EXPECT_EQ(min_mem, layout.minTileMemSize(tile_size));
       }
@@ -89,7 +85,7 @@ TEST(LayoutInfoTest, Constructor) {
   }
 }
 
-const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, std::size_t, std::size_t, bool>>
+const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, SizeType, SizeType, bool>>
     comp_values({
         {{25, 25}, {5, 5}, 50, 8, 1000, true},   // Original
         {{23, 25}, {5, 5}, 50, 8, 1000, false},  // different size
@@ -123,8 +119,7 @@ TEST(LayoutInfoTest, ComparisonOperator) {
   }
 }
 
-const std::vector<
-    std::tuple<LocalElementSize, TileElementSize, SizeType, std::size_t, std::size_t, std::size_t>>
+const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, SizeType, SizeType, SizeType>>
     col_major_values({
         {{31, 17}, {7, 11}, 31, 7, 341, 527},     // packed ld
         {{31, 17}, {7, 11}, 33, 7, 363, 559},     // padded ld
@@ -152,8 +147,8 @@ TEST(LayoutInfoTest, ColMajorLayout) {
   }
 }
 
-const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, SizeType, std::size_t,
-                             std::size_t, std::size_t, bool>>
+const std::vector<
+    std::tuple<LocalElementSize, TileElementSize, SizeType, SizeType, SizeType, SizeType, SizeType, bool>>
     tile_values({
         {{31, 17}, {7, 11}, 7, 5, 77, 385, 731, true},       // basic tile layout
         {{31, 17}, {7, 11}, 11, 5, 121, 605, 1147, false},   // padded ld

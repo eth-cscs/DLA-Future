@@ -1,4 +1,6 @@
-FROM ubuntu:18.04
+ARG BASE_IMAGE=ubuntu:20.04
+
+FROM $BASE_IMAGE
 
 WORKDIR /root
 
@@ -78,14 +80,15 @@ RUN wget -q https://github.com/gperftools/gperftools/releases/download/gperftool
 
 # Install HPX
 ARG HPX_FORK=STEllAR-GROUP
-ARG HPX_VERSION=1.5.0
+ARG HPX_VERSION=1.6.0
+ARG HPX_WITH_CUDA=OFF
 ARG HPX_PATH=/usr/local/hpx
 RUN wget -q https://github.com/${HPX_FORK}/hpx/archive/${HPX_VERSION}.tar.gz -O hpx.tar.gz && \
     tar -xzf hpx.tar.gz && \
     cd hpx-${HPX_VERSION} && \
     mkdir build && \
     cd build && \
-    cmake .. \
+    CXX=${MPICH_PATH}/bin/mpicxx CC=${MPICH_PATH}/bin/mpicc cmake .. \
       -DBOOST_ROOT=$BOOST_PATH \
       -DHWLOC_ROOT=$HWLOC_PATH \
       -DTCMALLOC_ROOT=$GPERFTOOLS_PATH \
@@ -93,48 +96,68 @@ RUN wget -q https://github.com/${HPX_FORK}/hpx/archive/${HPX_VERSION}.tar.gz -O 
       -DCMAKE_INSTALL_PREFIX=$HPX_PATH \
       -DHPX_WITH_MAX_CPU_COUNT=128 \
       -DHPX_WITH_NETWORKING=OFF \
+      -DHPX_WITH_ASYNC_MPI=ON \
+      -DHPX_WITH_CUDA=$HPX_WITH_CUDA \
       -DHPX_WITH_TESTS=OFF \
       -DHPX_WITH_EXAMPLES=OFF && \
     make -j$(nproc) && \
     make install && \
     rm -rf /root/hpx.tar.gz /root/hpx-${HPX_VERSION}
 
-# Install BLASPP
-ARG BLASPP_VERSION=c090b5738c8e
-ARG BLASPP_PATH=/usr/local/blaspp
-RUN source /opt/intel/compilers_and_libraries/linux/mkl/bin/mklvars.sh intel64 && \
-    wget -q https://bitbucket.org/icl/blaspp/get/${BLASPP_VERSION}.tar.gz -O blaspp.tar.gz && \
-    tar -xzf blaspp.tar.gz && \
-    cd icl-blaspp-${BLASPP_VERSION} && \
+ARG UMPIRE_VERSION=5.0.1
+ARG UMPIRE_PATH=/usr/local/umpire
+ARG UMPIRE_ENABLE_CUDA=ON
+RUN git clone --recursive --depth 1 --branch v${UMPIRE_VERSION} https://github.com/LLNL/Umpire.git Umpire-${UMPIRE_VERSION} && \
+    cd Umpire-${UMPIRE_VERSION} && \
     mkdir build && \
     cd build && \
     cmake .. \
-      -DBLASPP_BUILD_TESTS=OFF \
       -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-      -DUSE_OPENMP=OFF \
-      -DBLAS_LIBRARY='Intel MKL' \
-      -DBLAS_LIBRARY_THREADING=sequential \
+      -DCMAKE_INSTALL_PREFIX=$UMPIRE_PATH \
+      -DENABLE_CUDA=$UMPIRE_ENABLE_CUDA \
+      -DENABLE_BENCHMARKS=OFF \
+      -DENABLE_TESTS=OFF && \
+    make -j$(nproc) && \
+    make install && \
+    rm -rf /root/umpire.tar.gz /root/Umpire-${UMPIRE_VERSION}
+
+# Install BLASPP
+ARG BLASPP_VERSION=2020.10.02
+ARG BLASPP_PATH=/usr/local/blaspp
+RUN source /opt/intel/compilers_and_libraries/linux/mkl/bin/mklvars.sh intel64 && \
+    wget -q https://bitbucket.org/icl/blaspp/downloads/blaspp-${BLASPP_VERSION}.tar.gz -O blaspp.tar.gz && \
+    tar -xzf blaspp.tar.gz && \
+    cd blaspp-${BLASPP_VERSION} && \
+    mkdir build && \
+    cd build && \
+    cmake .. \
+      -Dbuild_tests=OFF \
+      -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+      -Duse_openmp=OFF \
+      -Duse_cuda=OFF \
+      -Dblas='Intel MKL' \
+      -Dblas_threaded=OFF \
       -DCMAKE_INSTALL_PREFIX=$BLASPP_PATH && \
     make -j$(nproc) && \
     make install && \
-    rm -rf /root/blaspp.tar.gz /root/icl-blaspp-${BLASPP_VERSION}
+    rm -rf /root/blaspp.tar.gz /root/blaspp-${BLASPP_VERSION}
 
-ARG LAPACKPP_VERSION=f878fada3765
+ARG LAPACKPP_VERSION=2020.10.02
 ARG LAPACKPP_PATH=/usr/local/lapackpp
 RUN source /opt/intel/compilers_and_libraries/linux/mkl/bin/mklvars.sh intel64 && \
-    wget -q https://bitbucket.org/icl/lapackpp/get/${LAPACKPP_VERSION}.tar.gz -O lapackpp.tar.gz && \
+    wget -q https://bitbucket.org/icl/lapackpp/downloads/lapackpp-$LAPACKPP_VERSION.tar.gz -O lapackpp.tar.gz && \
     tar -xzf lapackpp.tar.gz && \
-    cd icl-lapackpp-${LAPACKPP_VERSION} && \
+    cd lapackpp-${LAPACKPP_VERSION} && \
     mkdir build && \
     cd build && \
     cmake .. \
-      -DBUILD_LAPACKPP_TESTS=OFF \
+      -Dbuild_tests=OFF \
       -DCMAKE_INSTALL_PREFIX=$LAPACKPP_PATH && \
     make -j$(nproc) install && \
-    rm -rf /root/lapackpp.tar.gz /root/icl-lapackpp-${LAPACKPP_VERSION}
+    rm -rf /root/lapackpp.tar.gz /root/lapackpp-${LAPACKPP_VERSION}
 
 # Add deployment tooling
-RUN wget -q https://github.com/haampie/libtree/releases/download/v1.1.2/libtree_x86_64.tar.gz && \
+RUN wget -q https://github.com/haampie/libtree/releases/download/v1.2.0/libtree_x86_64.tar.gz && \
     tar -xzf libtree_x86_64.tar.gz && \
     rm libtree_x86_64.tar.gz && \
     ln -s /root/libtree/libtree /usr/local/bin/libtree

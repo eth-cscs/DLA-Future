@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -25,6 +25,7 @@ using dlaf::common::iterate_range2d;
 template <typename TypeParam>
 void test_single_arg() {
   TypeParam sz(7, 2);
+  const auto range = iterate_range2d(sz);
 
   std::vector<Index> exp_values = {
       Index(0, 0), Index(1, 0), Index(2, 0), Index(3, 0), Index(4, 0), Index(5, 0), Index(6, 0),
@@ -32,29 +33,35 @@ void test_single_arg() {
   };
 
   std::vector<Index> act_values;
-  act_values.reserve(act_values.size());
-  for (Index i : iterate_range2d(sz)) {
+  act_values.reserve(exp_values.size());
+  for (Index i : range) {
     act_values.push_back(i);
   }
 
-  ASSERT_TRUE(act_values == exp_values);
+  EXPECT_EQ(exp_values.size(), std::distance(range.begin(), range.end()));
+  EXPECT_EQ(act_values, exp_values);
 }
 
 // `end` is either `Index(7, 4)` or `Size(4, 2)`
 template <typename TypeParam>
 void test_double_arg(TypeParam end) {
   Index begin(3, 2);
+  const auto range = iterate_range2d(begin, end);
+
+  EXPECT_EQ(3, range.begin()->row());
+  EXPECT_EQ(2, range.begin()->col());
 
   std::vector<Index> exp_values = {Index(3, 2), Index(4, 2), Index(5, 2), Index(6, 2),
                                    Index(3, 3), Index(4, 3), Index(5, 3), Index(6, 3)};
 
   std::vector<Index> act_values;
-  act_values.reserve(act_values.size());
-  for (Index i : iterate_range2d(begin, end)) {
+  act_values.reserve(exp_values.size());
+  for (Index i : range) {
     act_values.push_back(i);
   }
 
-  ASSERT_TRUE(act_values == exp_values);
+  EXPECT_EQ(exp_values.size(), std::distance(range.begin(), range.end()));
+  EXPECT_EQ(act_values, exp_values);
 }
 
 }
@@ -73,4 +80,36 @@ TEST(DoubleArgRange2D, Index2D) {
 
 TEST(DoubleArgRange2D, Size2D) {
   ::test_double_arg(Size(4, 2));
+}
+
+template <class TypeParam>
+void test_single_arg_empty() {
+  TypeParam sz(0, 0);
+  const auto range = iterate_range2d(sz);
+
+  EXPECT_EQ(range.begin(), range.end());
+}
+
+template <class TypeParam>
+void test_double_arg_empty(TypeParam end) {
+  const ::Index begin(3, 2);
+  const auto range = iterate_range2d(begin, end);
+
+  EXPECT_EQ(range.begin(), range.end());
+}
+
+TEST(SingleArgEmptyRange2D, Size2D) {
+  ::test_single_arg_empty<::Size>();
+}
+
+TEST(SingleArgEmptyRange2D, Index2D) {
+  ::test_single_arg_empty<::Index>();
+}
+
+TEST(DoubleArgEmptyRange2D, Index2D) {
+  ::test_double_arg_empty(Index(3, 2));
+}
+
+TEST(DoubleArgEmptyRange2D, Size2D) {
+  ::test_double_arg_empty(Size(0, 0));
 }

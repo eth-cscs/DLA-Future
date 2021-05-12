@@ -1,7 +1,7 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2019, ETH Zurich
+# Copyright (c) 2018-2021, ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
@@ -142,6 +142,10 @@ function(DLAF_addTest test_target_name)
     # APPLE platform does not support thread binding
     if (NOT APPLE)
       list(APPEND _TEST_ARGUMENTS "--hpx:use-process-mask")
+    endif()
+
+    if(NOT DLAF_TEST_THREAD_BINDING_ENABLED)
+      list(APPEND _TEST_ARGUMENTS "--hpx:bind=none")
     endif()
 
     list(APPEND _TEST_ARGUMENTS ${_HPX_EXTRA_ARGS_LIST})

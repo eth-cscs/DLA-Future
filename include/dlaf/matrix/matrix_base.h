@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <ostream>
 
 #include "dlaf/matrix/distribution.h"
@@ -20,7 +21,7 @@ namespace internal {
 
 class MatrixBase {
 public:
-  MatrixBase(Distribution&& distribution)
+  MatrixBase(Distribution distribution)
       : distribution_(std::make_shared<Distribution>(std::move(distribution))) {}
 
   MatrixBase(const MatrixBase& rhs) = default;
@@ -65,8 +66,7 @@ public:
 
   /// Returns the size of the Tile with global index @p index.
   TileElementSize tileSize(const GlobalTileIndex& index) noexcept {
-    return {std::min(blockSize().rows(), size().rows() - index.row() * blockSize().rows()),
-            std::min(blockSize().cols(), size().cols() - index.col() * blockSize().cols())};
+    return distribution_->tileSize(index);
   }
 
 protected:
@@ -79,17 +79,14 @@ protected:
   MatrixBase& operator=(MatrixBase&& rhs) = default;
 
   static std::size_t futureVectorSize(const LocalTileSize& local_nr_tiles) noexcept {
-    return util::size_t::mul(local_nr_tiles.rows(), local_nr_tiles.cols());
+    return static_cast<std::size_t>(local_nr_tiles.linear_size());
   }
 
   /// Returns the position in the vector of the index Tile.
   ///
   /// @pre index.isIn(localNrTiles()).
-  std::size_t tileLinearIndex(const LocalTileIndex& index) const noexcept {
-    DLAF_ASSERT_HEAVY(index.isIn(distribution_->localNrTiles()), "");
-    using util::size_t::sum;
-    using util::size_t::mul;
-    return sum(index.row(), mul(distribution_->localNrTiles().rows(), index.col()));
+  SizeType tileLinearIndex(const LocalTileIndex& index) const noexcept {
+    return index.row() + distribution_->localNrTiles().rows() * static_cast<SizeType>(index.col());
   }
 
   /// Prints information about the matrix.

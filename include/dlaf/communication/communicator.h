@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -15,6 +15,9 @@
 
 namespace dlaf {
 namespace comm {
+
+/// Type used for indexes in MPI API.
+using IndexT_MPI = int;
 
 class CommunicatorImpl;
 
@@ -57,9 +60,9 @@ public:
   const MPI_Comm* operator&() const noexcept;
 
   /// Return the rank of the current process in the Communicator.
-  int rank() const noexcept;
+  IndexT_MPI rank() const noexcept;
   /// Return the number of ranks in the Communicator.
-  int size() const noexcept;
+  IndexT_MPI size() const noexcept;
 
 private:
   /// Tag to give to constructor in order to give MPI_Comm ownership to Communicator.

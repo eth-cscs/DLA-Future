@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -11,10 +11,11 @@
 #pragma once
 
 #include "dlaf/communication/communicator.h"
+#include "dlaf/communication/error.h"
 
-namespace dlaf_test {
-
-using dlaf::comm::Communicator;
+namespace dlaf {
+namespace comm {
+namespace test {
 
 /// Test fixture that split even/odd ranks (wrt rank id) in two separate communicators.
 class SplittedCommunicatorsTest : public ::testing::Test {
@@ -28,7 +29,7 @@ protected:
     key = world.rank() / 2;
 
     MPI_Comm mpi_splitted_comm;
-    MPI_Comm_split(world, color, key, &mpi_splitted_comm);
+    DLAF_MPI_CALL(MPI_Comm_split(world, color, key, &mpi_splitted_comm));
 
     ASSERT_NE(MPI_COMM_NULL, mpi_splitted_comm);
     splitted_comm = Communicator(mpi_splitted_comm);
@@ -36,7 +37,7 @@ protected:
 
   void TearDown() override {
     if (MPI_COMM_NULL != splitted_comm)
-      MPI_Comm_free(&splitted_comm);
+      DLAF_MPI_CALL(MPI_Comm_free(&splitted_comm));
   }
 
   Communicator world;          ///< the world communicator
@@ -46,4 +47,6 @@ protected:
   int key = MPI_UNDEFINED;    ///< key is the rank id in @p splitted_comm
 };
 
+}
+}
 }

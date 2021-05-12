@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -19,7 +19,7 @@
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/layout_info.h"
 #include "dlaf/matrix/matrix_base.h"
-#include "dlaf/tile.h"
+#include "dlaf/matrix/tile.h"
 #include "dlaf/types.h"
 
 namespace dlaf {
@@ -29,7 +29,7 @@ template <class T, Device device>
 class MatrixView;
 
 template <class T, Device device>
-class MatrixView<const T, device> : public matrix::internal::MatrixBase {
+class MatrixView<const T, device> : public internal::MatrixBase {
 public:
   using ElementType = T;
   using TileType = Tile<ElementType, device>;
@@ -49,6 +49,7 @@ public:
   /// Returns a read-only shared_future of the Tile with local index @p index.
   ///
   /// TODO: Sync details.
+  ///
   /// @pre index.isIn(distribution().localNrTiles()).
   hpx::shared_future<ConstTileType> read(const LocalTileIndex& index) noexcept;
 
@@ -58,7 +59,7 @@ public:
   ///
   /// @pre index.isIn(globalNrTiles()),
   /// @pre global tile stored in current process.
-  hpx::shared_future<ConstTileType> read(const GlobalTileIndex& index) {
+  hpx::shared_future<ConstTileType> read(const GlobalTileIndex& index) noexcept {
     return read(distribution().localTileIndex(index));
   }
 
@@ -66,14 +67,14 @@ public:
   ///
   /// The tile of the original matrix gets ready.
   /// @pre index.isIn(distribution().localNrTiles()),
-  /// @post any call to read() with index or the equivalent GlobalTileIndex return an invalid future.
+  /// @post any call to read() with index or the equivalent GlobalTileIndex returns an invalid future.
   void done(const LocalTileIndex& index) noexcept;
 
   /// Notify that all the operation on the @p index tile has been performed.
   ///
   /// The tile of the original matrix gets ready.
   /// @pre index.isIn(globalNrTiles()),
-  /// @post any call to read() with index or the equivalent LocalTileIndex return an invalid future.
+  /// @post any call to read() with index or the equivalent LocalTileIndex returns an invalid future.
   void done(const GlobalTileIndex& index) noexcept {
     done(distribution().localTileIndex(index));
   }
@@ -96,7 +97,7 @@ MatrixView<std::add_const_t<T>, device> getConstView(MatrixType<T, device>& matr
   return getConstView(blas::Uplo::General, matrix);
 }
 
-#include "dlaf/matrix/matrix_view_const.tpp"
+}
+}
 
-}
-}
+#include "dlaf/matrix/matrix_view_const.tpp"

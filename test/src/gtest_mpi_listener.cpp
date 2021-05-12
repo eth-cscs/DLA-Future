@@ -1,6 +1,6 @@
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -21,7 +21,7 @@ void mpi_send_string(const std::string& message, int to_rank);
 std::string mpi_receive_string(int from_rank);
 }
 
-MPIListener::MPIListener(int argc, char** argv, ::testing::TestEventListener* other)
+MPIListener::MPIListener(int, char**, ::testing::TestEventListener* other)
     : listener_(std::move(other)) {
   MPI_Comm_size(MPI_COMM_WORLD, &world_size_);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank_);
@@ -64,8 +64,8 @@ void MPIListener::OnTestPartResult(const ::testing::TestPartResult& test_part_re
 }
 
 void MPIListener::OnTestEnd(const ::testing::TestInfo& test_info) {
-  auto print_partial_results = [this](int rank, int total_results,
-                                      std::function<std::string(int)> get_result) {
+  auto print_partial_results = [](int rank, int total_results,
+                                  std::function<std::string(int)> get_result) {
     if (total_results <= 0)
       return;
 

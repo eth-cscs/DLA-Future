@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -13,7 +13,7 @@
 /// @file
 
 #include "blas.hh"
-#include "dlaf/matrix.h"
+#include "dlaf/matrix/matrix.h"
 #include "dlaf_test/matrix/util_generic_blas.h"
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/util_types.h"
@@ -21,7 +21,6 @@
 namespace dlaf {
 namespace matrix {
 namespace test {
-using namespace dlaf_test;
 
 /// Sets the elements of the matrix.
 ///
@@ -49,7 +48,7 @@ void set(MatrixType<T, Device::CPU>& mat, ElementGetter el, blas::Op op) {
     case blas::Op::ConjTrans: {
       auto op_el = [&el](GlobalElementIndex i) {
         i.transpose();
-        return TypeUtilities<T>::conj(el(i));
+        return dlaf::test::TypeUtilities<T>::conj(el(i));
       };
       set(mat, op_el);
       break;

@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -10,13 +10,12 @@
 
 #include "gtest/gtest.h"
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/communication/error.h"
 
-namespace dlaf_test {
+namespace dlaf {
+namespace test {
 
-using namespace dlaf;
-using namespace dlaf::comm;
-
-std::vector<CommunicatorGrid> comm_grids;
+std::vector<comm::CommunicatorGrid> comm_grids;
 
 class CommunicatorGrid6RanksEnvironment : public ::testing::Environment {
   static_assert(NUM_MPI_RANKS == 6, "Exactly 6 ranks are required");
@@ -24,7 +23,7 @@ class CommunicatorGrid6RanksEnvironment : public ::testing::Environment {
 public:
   virtual void SetUp() override {
     if (comm_grids.empty()) {
-      Communicator world(MPI_COMM_WORLD);
+      comm::Communicator world(MPI_COMM_WORLD);
       comm_grids.emplace_back(world, 3, 2, common::Ordering::RowMajor);
       comm_grids.emplace_back(world, 2, 3, common::Ordering::ColumnMajor);
 
@@ -47,9 +46,9 @@ public:
         color = 3;
       }
       MPI_Comm split_comm;
-      MPI_Comm_split(world, color, world.rank(), &split_comm);
+      DLAF_MPI_CALL(MPI_Comm_split(world, color, world.rank(), &split_comm));
 
-      Communicator comm(split_comm);
+      comm::Communicator comm(split_comm);
       comm_grids.emplace_back(comm, rows, cols, common::Ordering::ColumnMajor);
     }
   }
@@ -59,4 +58,5 @@ public:
   }
 };
 
+}
 }

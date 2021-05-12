@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -113,3 +113,5 @@ inline void do_assert(bool expr, const common::internal::source_location& loc, c
 #else
 #define DLAF_ASSERT_HEAVY(Expr, ...)
 #endif
+
+#define DLAF_UNIMPLEMENTED(...) DLAF_ASSERT(false, "Not yet implemented!", __VA_ARGS__)

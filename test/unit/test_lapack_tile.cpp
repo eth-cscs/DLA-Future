@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -13,6 +13,7 @@
 #include "gtest/gtest.h"
 #include "dlaf_test/util_types.h"
 
+#include "test_lapack_tile/test_hegst.h"
 #include "test_lapack_tile/test_lange.h"
 #include "test_lapack_tile/test_lantr.h"
 #include "test_lapack_tile/test_potrf.h"
@@ -20,7 +21,7 @@
 using namespace dlaf;
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
-using namespace dlaf_test;
+using namespace dlaf::test;
 using namespace testing;
 
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
@@ -34,7 +35,7 @@ Tile<T, Device::CPU> allocate_tile(TileElementSize size, SizeType extra_lda) {
 
   SizeType lda = std::max<SizeType>(1, size.rows()) + extra_lda;
 
-  MemoryView<T, Device::CPU> mem_a(mul(lda, size.cols()));
+  MemoryView<T, Device::CPU> mem_a(lda * size.cols());
   return {size, std::move(mem_a), lda};
 }
 
@@ -42,6 +43,26 @@ template <typename Type>
 class TileOperationsTest : public ::testing::Test {};
 
 TYPED_TEST_SUITE(TileOperationsTest, MatrixElementTypes);
+
+TYPED_TEST(TileOperationsTest, Hegst) {
+  using Type = TypeParam;
+
+  SizeType m, extra_ld;
+
+  std::vector<std::tuple<SizeType, SizeType>> sizes = {{0, 0},  {3, 0},  {5, 3},  {9, 0}, {9, 1},
+                                                       {17, 0}, {17, 7}, {32, 0}, {32, 4}};
+
+  std::vector<int> itypes = {1, 2, 3};
+
+  for (const auto& size : sizes) {
+    for (const auto& uplo : blas_uplos) {
+      for (const auto& itype : itypes) {
+        std::tie(m, extra_ld) = size;
+        testHegst<TileElementIndex, Type>(itype, uplo, m, extra_ld);
+      }
+    }
+  }
+}
 
 TYPED_TEST(TileOperationsTest, lange) {
   SizeType m, n, extra_lda;
@@ -136,4 +157,33 @@ TYPED_TEST(TileOperationsTest, PotrfNonPositiveDefinite) {
       testPotrfNonPosDef<Type, true>(uplo, n, extra_lda);
     }
   }
+}
+
+TYPED_TEST(TileOperationsTest, Lacpy) {
+  using Scalar = TypeParam;
+  using Tile_t = Tile<Scalar, Device::CPU>;
+  using ConstTile_t = Tile<const Scalar, Device::CPU>;
+
+  TileElementSize region(3, 3);
+  TileElementIndex in_idx(1, 2);
+  ConstTile_t in_tile = createTile<Scalar>([](TileElementIndex idx) { return idx.row() + idx.col(); },
+                                           TileElementSize(5, 5), 5);
+  TileElementIndex out_idx(2, 3);
+  Tile_t out_tile = createTile<Scalar>([](TileElementIndex) { return 2; }, TileElementSize(7, 7), 7);
+
+  tile::lacpy(region, in_idx, in_tile, out_idx, out_tile);
+
+  double eps = std::numeric_limits<double>::epsilon();
+
+  ASSERT_TRUE(std::abs(Scalar(1 + 2) - out_tile(TileElementIndex(2, 3))) < eps);
+  ASSERT_TRUE(std::abs(Scalar(2 + 2) - out_tile(TileElementIndex(3, 3))) < eps);
+  ASSERT_TRUE(std::abs(Scalar(3 + 2) - out_tile(TileElementIndex(4, 3))) < eps);
+
+  ASSERT_TRUE(std::abs(Scalar(1 + 3) - out_tile(TileElementIndex(2, 4))) < eps);
+  ASSERT_TRUE(std::abs(Scalar(2 + 3) - out_tile(TileElementIndex(3, 4))) < eps);
+  ASSERT_TRUE(std::abs(Scalar(3 + 3) - out_tile(TileElementIndex(4, 4))) < eps);
+
+  ASSERT_TRUE(std::abs(Scalar(1 + 4) - out_tile(TileElementIndex(2, 5))) < eps);
+  ASSERT_TRUE(std::abs(Scalar(2 + 4) - out_tile(TileElementIndex(3, 5))) < eps);
+  ASSERT_TRUE(std::abs(Scalar(3 + 4) - out_tile(TileElementIndex(4, 5))) < eps);
 }

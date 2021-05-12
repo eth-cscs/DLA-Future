@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -36,6 +36,7 @@
 /// ```
 
 #include <cstddef>
+#include <iterator>
 
 #include "dlaf/common/assert.h"
 #include "dlaf/common/index2d.h"
@@ -45,29 +46,114 @@ namespace common {
 
 /// An Iterator returning indices in column-major order.
 template <typename IndexT, class Tag>
-class IteratorRange2D {
-  using index2d_t = Index2D<IndexT, Tag>;
+struct IteratorRange2D {
+  using iterator_category = std::random_access_iterator_tag;
+  using difference_type = SizeType;
+  using value_type = Index2D<IndexT, Tag>;
+  using reference = const Index2D<IndexT, Tag>&;
+  using pointer = const Index2D<IndexT, Tag>*;
 
-public:
-  IteratorRange2D(index2d_t begin, IndexT ld, std::ptrdiff_t i) : begin_(begin), ld_(ld), i_(i) {}
+  IteratorRange2D() = default;
 
-  void operator++() noexcept {
-    ++i_;
+  IteratorRange2D(const IteratorRange2D&) = default;
+  IteratorRange2D& operator=(const IteratorRange2D&) = default;
+
+  IteratorRange2D(value_type begin, IndexT ld, SizeType i)
+      : begin_(begin), i_(i), ld_(std::max(ld, IndexT(1))) {
+    current_ = computeIndex2D(i_);
   }
 
-  bool operator!=(const IteratorRange2D& o) const noexcept {
-    return i_ != o.i_;
+  reference operator*() const noexcept {
+    return current_;
   }
 
-  index2d_t operator*() const noexcept {
-    return index2d_t(begin_.row() + static_cast<IndexT>(i_ % ld_),
-                     begin_.col() + static_cast<IndexT>(i_ / ld_));
+  pointer operator->() const noexcept {
+    return &current_;
+  }
+
+  reference operator[](difference_type n) const noexcept {
+    return computeIndex2D(n);
+  }
+
+  IteratorRange2D& operator++() noexcept {
+    current_ = (++i_, computeIndex2D(i_));
+    return *this;
+  }
+
+  IteratorRange2D& operator++(int) noexcept {
+    auto tmp = *this;
+    operator++();
+    return tmp;
+  }
+
+  IteratorRange2D& operator--() noexcept {
+    current_ = (--i_, computeIndex2D(i_));
+    return *this;
+  }
+
+  IteratorRange2D& operator--(int) noexcept {
+    auto tmp = *this;
+    operator--();
+    return tmp;
+  }
+
+  IteratorRange2D& operator+=(difference_type n) noexcept {
+    return i_ += n, *this;
+  }
+
+  IteratorRange2D& operator-=(difference_type n) noexcept {
+    return i_ -= n, *this;
+  }
+
+  friend IteratorRange2D operator+(IteratorRange2D a, difference_type n) noexcept {
+    return a += n;
+  }
+
+  friend IteratorRange2D operator+(difference_type n, const IteratorRange2D& a) noexcept {
+    return a + n;
+  }
+
+  friend IteratorRange2D operator-(IteratorRange2D i, difference_type n) noexcept {
+    return i -= n;
+  }
+
+  friend difference_type operator-(const IteratorRange2D& a, const IteratorRange2D& b) noexcept {
+    return a.i_ - b.i_;
+  }
+
+  friend bool operator==(const IteratorRange2D& a, const IteratorRange2D& b) noexcept {
+    return a.i_ == b.i_;
+  }
+
+  friend bool operator!=(const IteratorRange2D& a, const IteratorRange2D& b) noexcept {
+    return !(a == b);
+  }
+
+  friend bool operator<(const IteratorRange2D& a, const IteratorRange2D& b) noexcept {
+    return a.i_ < b.i_;
+  }
+
+  friend bool operator<=(const IteratorRange2D& a, const IteratorRange2D& b) noexcept {
+    return a.i_ <= b.i_;
+  }
+
+  friend bool operator>(const IteratorRange2D& a, const IteratorRange2D& b) noexcept {
+    return a.i_ > b.i_;
+  }
+
+  friend bool operator>=(const IteratorRange2D& a, const IteratorRange2D& b) noexcept {
+    return a.i_ >= b.i_;
   }
 
 protected:
-  index2d_t begin_;
-  IndexT ld_;
-  std::ptrdiff_t i_;
+  value_type computeIndex2D(difference_type n) {
+    return {begin_.row() + static_cast<IndexT>(n % ld_), begin_.col() + static_cast<IndexT>(n / ld_)};
+  }
+
+  value_type current_;
+  value_type begin_;
+  SizeType i_;
+  SizeType ld_;
 };
 
 /// An Iterable representing a 2D range.
@@ -84,8 +170,8 @@ public:
   IterableRange2D(index2d_t begin_idx, index2d_t end_idx)
       : begin_idx_(begin_idx), ld_(end_idx.row() - begin_idx.row()),
         i_max_(ld_ * (end_idx.col() - begin_idx_.col())) {
-    DLAF_ASSERT(begin_idx.row() < end_idx.row(), begin_idx, end_idx);
-    DLAF_ASSERT(begin_idx.col() < end_idx.col(), begin_idx, end_idx);
+    DLAF_ASSERT(begin_idx.row() <= end_idx.row(), begin_idx, end_idx);
+    DLAF_ASSERT(begin_idx.col() <= end_idx.col(), begin_idx, end_idx);
   }
 
   iter2d_t begin() const noexcept {
@@ -98,7 +184,7 @@ public:
 private:
   index2d_t begin_idx_;
   IndexT ld_;
-  std::ptrdiff_t i_max_;  // the maximum linear index
+  SizeType i_max_;  // the maximum linear index
 };
 
 /// Function wrappers to deduce types in constructor calls to IterableRange2D.

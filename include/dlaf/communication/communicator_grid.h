@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -22,9 +22,6 @@ namespace comm {
 
 /// TAG for strong-typing basic_coords.
 struct TAG_MPI;
-
-/// Type used for indexes in MPI API.
-using IndexT_MPI = int;
 
 /// 2D index strong-typed for MPI.
 using Index2D = common::Index2D<IndexT_MPI, TAG_MPI>;
@@ -85,6 +82,13 @@ public:
   /// Return a Communicator grouping all ranks in the column (that includes the current process).
   Communicator& colCommunicator() noexcept {
     return col_;
+  }
+
+  Communicator& subCommunicator(Coord cr) noexcept {
+    if (cr == Coord::Row)
+      return row_;
+    else
+      return col_;
   }
 
   /// Prints information about the CommunicationGrid.

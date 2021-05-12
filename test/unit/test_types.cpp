@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -23,11 +23,15 @@ using dlaf::common::internal::source_location;
 
 const char* ERROR_MESSAGE = "\\[ERROR\\]";
 
-template <class T>
-const auto LOWER_BOUND = std::numeric_limits<T>::min;
+template <class Type, class ContainerType = Type>
+const ContainerType LOWER_BOUND() {
+  return static_cast<ContainerType>(std::numeric_limits<Type>::min());
+}
 
-template <class T>
-const auto UPPER_BOUND = std::numeric_limits<T>::max;
+template <class Type, class ContainerType = Type>
+const ContainerType UPPER_BOUND() {
+  return static_cast<ContainerType>(std::numeric_limits<Type>::max());
+}
 
 /// Check that no alteration happens during cast From -> To with @param cast_func and dlaf::integral_cast.
 ///
@@ -73,7 +77,7 @@ TEST(ToSigned, FromUnsigned) {
   // |-----|-----|
   DLAF_TEST_CAST(uint16_t, To, to_signed, 13);
   DLAF_TEST_CAST(uint16_t, To, to_signed, LOWER_BOUND<uint16_t>());
-  DLAF_TEST_CAST(uint16_t, To, to_signed, UPPER_BOUND<To>());
+  DLAF_TEST_CAST(uint16_t, To, to_signed, UPPER_BOUND<To, uint16_t>());
   DLAF_TEST_CAST_FAIL(uint16_t, To, to_signed, UPPER_BOUND<uint16_t>());
 
   // DOWN CAST
@@ -81,7 +85,7 @@ TEST(ToSigned, FromUnsigned) {
   // |-----|-----|
   DLAF_TEST_CAST(uint32_t, To, to_signed, 13);
   DLAF_TEST_CAST(uint32_t, To, to_signed, LOWER_BOUND<uint32_t>());
-  DLAF_TEST_CAST(uint32_t, To, to_signed, UPPER_BOUND<To>());
+  DLAF_TEST_CAST(uint32_t, To, to_signed, UPPER_BOUND<To, uint32_t>());
   DLAF_TEST_CAST_FAIL(uint32_t, To, to_signed, UPPER_BOUND<uint32_t>());
 }
 
@@ -127,7 +131,7 @@ TEST(ToUnsigned, FromSigned) {
   // |-----|-----|
   //       |-----------|
   DLAF_TEST_CAST(int16_t, To, to_unsigned, 13);
-  DLAF_TEST_CAST(int16_t, To, to_unsigned, LOWER_BOUND<To>());
+  DLAF_TEST_CAST(int16_t, To, to_unsigned, LOWER_BOUND<To, int16_t>());
   DLAF_TEST_CAST_FAIL(int16_t, To, to_unsigned, LOWER_BOUND<int16_t>());
   DLAF_TEST_CAST(int16_t, To, to_unsigned, UPPER_BOUND<int16_t>());
 

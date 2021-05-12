@@ -1,13 +1,14 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include "dlaf/common/data.h"
 #include "dlaf/common/data_descriptor.h"
 
 #include <memory>
@@ -19,15 +20,16 @@
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
+using namespace dlaf::test;
 
 template <typename T>
 struct memory_data {
   std::unique_ptr<T[]> data;
-  std::size_t num_blocks;
-  std::size_t block_size;
-  std::size_t stride;
+  SizeType num_blocks;
+  SizeType block_size;
+  SizeType stride;
 
-  T& operator[](std::size_t index) {
+  T& operator[](SizeType index) {
     auto i_block = index / block_size;
     auto i_element = index % block_size;
     return data.get()[i_block * stride + i_element];
@@ -35,19 +37,20 @@ struct memory_data {
 };
 
 template <class T>
-memory_data<T> create_memory(const std::size_t num_blocks, const std::size_t blocksize,
-                             const std::size_t stride) {
-  DLAF_ASSERT_HEAVY(num_blocks > 0, "");
-  DLAF_ASSERT_HEAVY(blocksize <= stride || stride == 0, "");
+memory_data<T> create_memory(const SizeType num_blocks, const SizeType blocksize,
+                             const SizeType stride) {
+  DLAF_ASSERT_HEAVY(num_blocks > 0, num_blocks);
+  DLAF_ASSERT_HEAVY(blocksize <= stride || stride == 0, blocksize, stride);
 
   if (num_blocks == 1)
-    return {std::make_unique<T[]>(blocksize), num_blocks, blocksize, stride};
+    return {std::make_unique<T[]>(static_cast<std::size_t>(blocksize)), num_blocks, blocksize, stride};
 
   // the last element does not have additional padding
   // no additional padding to the next (non-existing) element
   auto distance = std::max(blocksize, stride);
   auto memory_footprint = (num_blocks - 1) * distance + blocksize;
-  return {std::make_unique<T[]>(memory_footprint), num_blocks, blocksize, stride};
+  return {std::make_unique<T[]>(static_cast<std::size_t>(memory_footprint)), num_blocks, blocksize,
+          stride};
 }
 
 enum class MEMORY_TYPE { ARRAY_CONTIGUOUS, ARRAY_STRIDED, ARRAY_CONTIGUOUS_AS_STRIDED };
@@ -81,7 +84,7 @@ memory_data<T> create_memory(MEMORY_TYPE type) noexcept {
 template <class Type>
 class DataDescriptorTest : public ::testing::Test {};
 
-TYPED_TEST_SUITE(DataDescriptorTest, dlaf_test::ElementTypes);
+TYPED_TEST_SUITE(DataDescriptorTest, ElementTypes);
 
 TYPED_TEST(DataDescriptorTest, MakeFromPointer) {
   TypeParam value = 26;
@@ -121,8 +124,8 @@ TYPED_TEST(DataDescriptorTest, MakeFromPointerConst) {
 }
 
 TYPED_TEST(DataDescriptorTest, MakeFromCArray) {
-  const int N = 13;
-  TypeParam value_array[N]{};
+  const SizeType N = 13;
+  TypeParam value_array[static_cast<std::size_t>(N)]{};
 
   auto data = common::make_data(value_array, N);
 
@@ -139,8 +142,8 @@ TYPED_TEST(DataDescriptorTest, MakeFromCArray) {
 }
 
 TYPED_TEST(DataDescriptorTest, MakeFromCArrayConst) {
-  const int N = 13;
-  const TypeParam value_array[N]{};
+  const SizeType N = 13;
+  const TypeParam value_array[static_cast<std::size_t>(N)]{};
 
   auto data = common::make_data(value_array, N);
 
@@ -268,7 +271,7 @@ TYPED_TEST(DataDescriptorTest, MakeFromStridedArrayConst) {
 }
 
 TYPED_TEST(DataDescriptorTest, MakeBufferUniquePtr) {
-  const std::size_t N = 13;
+  const SizeType N = 13;
   auto data = common::Buffer<TypeParam>(N);
 
   EXPECT_NE(nullptr, data_pointer(data));
@@ -316,8 +319,8 @@ TYPED_TEST(DataDescriptorTest, CtorFromPointerConst) {
 }
 
 TYPED_TEST(DataDescriptorTest, CtorFromCArray) {
-  const int N = 13;
-  TypeParam value_array[N]{};
+  const SizeType N = 13;
+  TypeParam value_array[static_cast<std::size_t>(N)]{};
 
   auto data = common::DataDescriptor<decltype(value_array)>{value_array};
 
@@ -334,8 +337,8 @@ TYPED_TEST(DataDescriptorTest, CtorFromCArray) {
 }
 
 TYPED_TEST(DataDescriptorTest, CtorFromCArrayConst) {
-  const int N = 13;
-  const TypeParam value_array[N]{};
+  const SizeType N = 13;
+  const TypeParam value_array[static_cast<std::size_t>(N)]{};
 
   auto data = common::DataDescriptor<decltype(value_array)>{value_array};
 
@@ -461,7 +464,7 @@ TYPED_TEST(DataDescriptorTest, CtorFromStridedArrayConst) {
 }
 
 TYPED_TEST(DataDescriptorTest, CtorBufferUniquePtr) {
-  const std::size_t N = 13;
+  const SizeType N = 13;
   auto data = common::Buffer<TypeParam>(N);
 
   EXPECT_NE(nullptr, data_pointer(data));
@@ -499,13 +502,13 @@ TYPED_TEST(DataDescriptorTest, CopyCtorFromPointer) {
 }
 
 TYPED_TEST(DataDescriptorTest, CopyCtorFromCArray) {
-  const int N = 13;
-  TypeParam value_array[N]{};
+  const SizeType N = 13;
+  TypeParam value_array[static_cast<std::size_t>(N)]{};
 
   auto data = common::make_data(value_array, N);
   check_copy_ctor<TypeParam>(data);
 
-  const TypeParam value_array_const[N]{};
+  const TypeParam value_array_const[static_cast<std::size_t>(N)]{};
   auto data_const = common::make_data(value_array_const, N);
   check_copy_ctor<const TypeParam>(data_const);
 }
@@ -543,68 +546,113 @@ TYPED_TEST(DataDescriptorTest, CopyCtorFromStridedArray) {
   check_copy_ctor<const TypeParam>(data_const);
 }
 
-template <class TypeParam, class Buffer>
-void check_temporary(Buffer& data) {
+template <class Data>
+::testing::AssertionResult checkCreateTemporaryBuffer(const Data& data) {
   auto data_temp = create_temporary_buffer(data);
 
-  EXPECT_NE(common::data_pointer(data), common::data_pointer(data_temp));
-  EXPECT_EQ(common::data_count(data), common::data_count(data_temp));
-  EXPECT_TRUE(common::data_iscontiguous(data_temp));
+  if (common::data_pointer(data) == common::data_pointer(data_temp))
+    return ::testing::AssertionFailure() << "temporary buffer points to the same memory location";
+  if (common::data_count(data) != common::data_count(data_temp))
+    return ::testing::AssertionFailure() << "temporary buffer does not have the same number of elements";
+  if (!common::data_iscontiguous(data_temp))
+    return ::testing::AssertionFailure() << "temporary buffer is not contiguous";
+
+  return ::testing::AssertionSuccess();
+}
+
+template <class Data>
+::testing::AssertionResult checkMakeContiguous(const Data& data) {
+  using T = std::remove_const_t<typename common::data_traits<Data>::element_t>;
+
+  common::Buffer<T> temp_buffer;
+  auto data_contiguous = common::make_contiguous(data, temp_buffer);
+
+  EXPECT_EQ(common::data_count(data), common::data_count(data_contiguous));
+  EXPECT_TRUE(common::data_iscontiguous(data_contiguous));
+
+  if (common::data_iscontiguous(data)) {
+    if (temp_buffer)
+      return ::testing::AssertionFailure()
+             << "A temporary buffer has been allocated, when it was not needed";
+    if (common::data_pointer(data) != common::data_pointer(data_contiguous))
+      return ::testing::AssertionFailure()
+             << "The returned buffer is different from the original one, which was already contiguous!";
+  }
+  else {
+    if (!temp_buffer)
+      return ::testing::AssertionFailure() << "No temporary buffer allocated, but it is needed";
+    if (common::data_pointer(temp_buffer) != common::data_pointer(data_contiguous))
+      return ::testing::AssertionFailure()
+             << "Returned buffer is not the temporary one, when it should be!";
+  }
+  return ::testing::AssertionSuccess();
 }
 
 TYPED_TEST(DataDescriptorTest, CreateTemporaryFromPointer) {
   TypeParam value = 26;
   auto data = common::make_data(&value, 1);
-  check_temporary<TypeParam>(data);
+
+  EXPECT_TRUE(checkCreateTemporaryBuffer((data)));
+  EXPECT_TRUE(checkMakeContiguous((data)));
 
   const TypeParam value_const = value;
   auto data_const = common::make_data(&value_const, 1);
-  check_temporary<const TypeParam>(data_const);
+
+  EXPECT_TRUE(checkCreateTemporaryBuffer((data_const)));
+  EXPECT_TRUE(checkMakeContiguous(data_const));
 }
 
 TYPED_TEST(DataDescriptorTest, CreateTemporaryFromCArray) {
-  const int N = 13;
-  TypeParam value_array[N]{};
+  const SizeType N = 13;
+  TypeParam value_array[static_cast<std::size_t>(N)]{};
 
   auto data = common::make_data(value_array, N);
-  check_temporary<TypeParam>(data);
+  EXPECT_TRUE(checkCreateTemporaryBuffer((data)));
+  EXPECT_TRUE(checkMakeContiguous(data));
 
-  const TypeParam value_array_const[N]{};
+  const TypeParam value_array_const[static_cast<std::size_t>(N)]{};
   auto data_const = common::make_data(value_array_const, N);
-  check_temporary<const TypeParam>(data_const);
+  EXPECT_TRUE(checkCreateTemporaryBuffer((data_const)));
+  EXPECT_TRUE(checkMakeContiguous(data_const));
 }
 
 TYPED_TEST(DataDescriptorTest, CreateTemporaryFromContiguousArray) {
   auto memory = create_memory<TypeParam>(MEMORY_TYPE::ARRAY_CONTIGUOUS);
 
   auto data = common::make_data(memory.data.get(), memory.num_blocks, memory.block_size, memory.stride);
-  check_temporary<TypeParam>(data);
+  EXPECT_TRUE(checkCreateTemporaryBuffer((data)));
+  EXPECT_TRUE(checkMakeContiguous(data));
 
   auto data_const = common::make_data(static_cast<const TypeParam*>(memory.data.get()),
                                       memory.num_blocks, memory.block_size, memory.stride);
-  check_temporary<const TypeParam>(data_const);
+  EXPECT_TRUE(checkCreateTemporaryBuffer((data_const)));
+  EXPECT_TRUE(checkMakeContiguous(data_const));
 }
 
 TYPED_TEST(DataDescriptorTest, CreateTemporaryFromContiguousAsStridedArray) {
   auto memory = create_memory<TypeParam>(MEMORY_TYPE::ARRAY_CONTIGUOUS_AS_STRIDED);
 
   auto data = common::make_data(memory.data.get(), memory.num_blocks, memory.block_size, memory.stride);
-  check_temporary<TypeParam>(data);
+  EXPECT_TRUE(checkCreateTemporaryBuffer((data)));
+  EXPECT_TRUE(checkMakeContiguous(data));
 
   auto data_const = common::make_data(static_cast<const TypeParam*>(memory.data.get()),
                                       memory.num_blocks, memory.block_size, memory.stride);
-  check_temporary<const TypeParam>(data_const);
+  EXPECT_TRUE(checkCreateTemporaryBuffer((data_const)));
+  EXPECT_TRUE(checkMakeContiguous(data_const));
 }
 
 TYPED_TEST(DataDescriptorTest, CreateTemporaryFromStridedArray) {
   auto memory = create_memory<TypeParam>(MEMORY_TYPE::ARRAY_STRIDED);
 
   auto data = common::make_data(memory.data.get(), memory.num_blocks, memory.block_size, memory.stride);
-  check_temporary<TypeParam>(data);
+  EXPECT_TRUE(checkCreateTemporaryBuffer((data)));
+  EXPECT_TRUE(checkMakeContiguous(data));
 
   auto data_const = common::make_data(const_cast<const TypeParam*>(memory.data.get()), memory.num_blocks,
                                       memory.block_size, memory.stride);
-  check_temporary<const TypeParam>(data_const);
+  EXPECT_TRUE(checkCreateTemporaryBuffer((data_const)));
+  EXPECT_TRUE(checkMakeContiguous(data_const));
 }
 
 template <class T>
@@ -619,12 +667,12 @@ auto create_const_data_from_memory(memory_data<T>& memory) {
 }
 
 TYPED_TEST(DataDescriptorTest, CopyDataCArrays) {
-  const int N = 13;
-  TypeParam memory_src[N];
-  TypeParam memory_dst[N];
+  const SizeType N = 13;
+  TypeParam memory_src[static_cast<std::size_t>(N)];
+  TypeParam memory_dst[static_cast<std::size_t>(N)];
 
   for (int i = 0; i < N; ++i)
-    memory_src[i] = dlaf_test::TypeUtilities<TypeParam>::element(i, 0);
+    memory_src[i] = TypeUtilities<TypeParam>::element(i, 0);
 
   auto data_src = common::make_data(const_cast<const TypeParam*>(memory_src), N);
   auto data_dest = common::make_data(memory_dst, N);
@@ -632,7 +680,7 @@ TYPED_TEST(DataDescriptorTest, CopyDataCArrays) {
   common::copy(data_src, data_dest);
 
   for (int i = 0; i < N; ++i)
-    EXPECT_EQ(dlaf_test::TypeUtilities<TypeParam>::element(i, 0), memory_dst[i]);
+    EXPECT_EQ(TypeUtilities<TypeParam>::element(i, 0), memory_dst[i]);
 }
 
 TYPED_TEST(DataDescriptorTest, CopyDataArrays) {
@@ -643,22 +691,22 @@ TYPED_TEST(DataDescriptorTest, CopyDataArrays) {
     auto memory_src = create_memory<TypeParam>(memory_type);
     auto memory_dest = create_memory<TypeParam>(memory_type);
 
-    for (std::size_t i = 0; i < memory_src.num_blocks * memory_src.block_size; ++i)
-      memory_src[i] = dlaf_test::TypeUtilities<TypeParam>::element(i, 0);
+    for (SizeType i = 0; i < memory_src.num_blocks * memory_src.block_size; ++i)
+      memory_src[i] = TypeUtilities<TypeParam>::element(i, 0);
 
     auto data_src = create_const_data_from_memory(memory_src);
     auto data_dest = create_data_from_memory(memory_dest);
 
     common::copy(data_src, data_dest);
 
-    for (std::size_t i = 0; i < memory_src.num_blocks * memory_src.block_size; ++i)
-      EXPECT_EQ(dlaf_test::TypeUtilities<TypeParam>::element(i, 0), memory_dest[i]);
+    for (SizeType i = 0; i < memory_src.num_blocks * memory_src.block_size; ++i)
+      EXPECT_EQ(TypeUtilities<TypeParam>::element(i, 0), memory_dest[i]);
   }
 }
 
 TYPED_TEST(DataDescriptorTest, CopyDataHeterogeneous) {
-  const std::size_t N = 26;
-  const std::size_t N_GROUPS = 2;
+  const SizeType N = 26;
+  const SizeType N_GROUPS = 2;
   static_assert(N % N_GROUPS == 0, "Incompatible geometry");
 
   std::vector<memory_data<TypeParam>> memory_types;
@@ -672,11 +720,11 @@ TYPED_TEST(DataDescriptorTest, CopyDataHeterogeneous) {
 
   // CArray as source
   for (auto& memory_dest : memory_types) {
-    TypeParam memory_array[N];
-    for (std::size_t i = 0; i < N; ++i)
-      memory_array[i] = dlaf_test::TypeUtilities<TypeParam>::element(i, 0);
+    TypeParam memory_array[static_cast<std::size_t>(N)];
+    for (SizeType i = 0; i < N; ++i)
+      memory_array[i] = TypeUtilities<TypeParam>::element(i, 0);
 
-    for (std::size_t i = 0; i < N; ++i)
+    for (SizeType i = 0; i < N; ++i)
       memory_dest[i] = 0;
 
     auto data_array = common::make_data(memory_array, N);
@@ -684,26 +732,26 @@ TYPED_TEST(DataDescriptorTest, CopyDataHeterogeneous) {
 
     copy(data_array, data_dest);
 
-    for (std::size_t i = 0; i < N; ++i)
-      EXPECT_EQ(dlaf_test::TypeUtilities<TypeParam>::element(i, 0), memory_dest[i]);
+    for (SizeType i = 0; i < N; ++i)
+      EXPECT_EQ(TypeUtilities<TypeParam>::element(i, 0), memory_dest[i]);
   }
 
   // CArray as destination
   for (auto& memory_src : memory_types) {
-    TypeParam memory_array[N];
-    for (std::size_t i = 0; i < N; ++i)
+    TypeParam memory_array[static_cast<std::size_t>(N)];
+    for (SizeType i = 0; i < N; ++i)
       memory_array[i] = 0;
 
-    for (std::size_t i = 0; i < N; ++i)
-      memory_src[i] = dlaf_test::TypeUtilities<TypeParam>::element(i, 0);
+    for (SizeType i = 0; i < N; ++i)
+      memory_src[i] = TypeUtilities<TypeParam>::element(i, 0);
 
     auto data_src = create_const_data_from_memory(memory_src);
     auto data_array = common::make_data(memory_array, N);
 
     copy(data_src, data_array);
 
-    for (std::size_t i = 0; i < N; ++i)
-      EXPECT_EQ(dlaf_test::TypeUtilities<TypeParam>::element(i, 0), memory_array[i]);
+    for (SizeType i = 0; i < N; ++i)
+      EXPECT_EQ(TypeUtilities<TypeParam>::element(i, 0), memory_array[i]);
   }
 
   // Other combinations
@@ -712,10 +760,10 @@ TYPED_TEST(DataDescriptorTest, CopyDataHeterogeneous) {
       if (&memory_src == &memory_dest)
         continue;
 
-      for (std::size_t i = 0; i < N; ++i)
-        memory_src[i] = dlaf_test::TypeUtilities<TypeParam>::element(i, 0);
+      for (SizeType i = 0; i < N; ++i)
+        memory_src[i] = TypeUtilities<TypeParam>::element(i, 0);
 
-      for (std::size_t i = 0; i < N; ++i)
+      for (SizeType i = 0; i < N; ++i)
         memory_dest[i] = 0;
 
       auto data_src = create_const_data_from_memory(memory_src);
@@ -723,8 +771,8 @@ TYPED_TEST(DataDescriptorTest, CopyDataHeterogeneous) {
 
       copy(data_src, data_dest);
 
-      for (std::size_t i = 0; i < N; ++i)
-        EXPECT_EQ(dlaf_test::TypeUtilities<TypeParam>::element(i, 0), memory_dest[i]);
+      for (SizeType i = 0; i < N; ++i)
+        EXPECT_EQ(TypeUtilities<TypeParam>::element(i, 0), memory_dest[i]);
     }
   }
 }

@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -16,15 +16,15 @@
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/util_types.h"
 
-#include "dlaf/matrix.h"
+#include "dlaf/matrix/matrix.h"
 
 using namespace dlaf;
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
-using namespace dlaf_test;
+using namespace dlaf::test;
 using namespace dlaf::comm;
 
-using BroadcastMatrixTest = dlaf_test::SplittedCommunicatorsTest;
+using BroadcastMatrixTest = dlaf::comm::test::SplittedCommunicatorsTest;
 
 template <class T>
 T message_values(const TileElementIndex& index) {

@@ -1,4 +1,4 @@
-ARG BUILD_ENV
+ARG BUILD_IMAGE
 
 # This is the folder where the project is built
 ARG BUILD=/DLA-Future-build
@@ -9,12 +9,14 @@ ARG SOURCE=/DLA-Future
 # Where a bunch of shared libs live
 ARG DEPLOY=/root/DLA-Future.bundle
 
-FROM $BUILD_ENV as builder
+FROM $BUILD_IMAGE as builder
 
 ARG BUILD
 ARG SOURCE
 ARG DEPLOY
-ARG DEPLOY_IMAGE
+
+# With or without CUDA
+ARG DLAF_WITH_CUDA=OFF
 
 # Build DLA-Future
 COPY . ${SOURCE}
@@ -27,9 +29,11 @@ RUN mkdir ${BUILD} && cd ${BUILD} && \
       -DMKL_ROOT=/opt/intel/compilers_and_libraries/linux/mkl \
       -DCMAKE_BUILD_TYPE=RelWithDebInfo \
       -DCMAKE_CXX_FLAGS="-Werror" \
-      -DDLAF_WITH_CUDA=OFF \
+      -DDLAF_WITH_CUDA=${DLAF_WITH_CUDA} \
+      -DCMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES=/usr/local/cuda/targets/x86_64-linux/include \
+      -DCMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES="/usr/local/cuda/targets/x86_64-linux/lib/stubs;/usr/local/cuda/targets/x86_64-linux/lib;/usr/lib/gcc/x86_64-linux-gnu/7;/usr/lib/x86_64-linux-gnu;/usr/lib;/lib/x86_64-linux-gnu;/lib;/usr/local/cuda/lib64/stubs" \
       -DDLAF_WITH_MKL=ON \
-      -DDLAF_WITH_TEST=ON \
+      -DDLAF_BUILD_TESTING=ON \
       -DDLAF_BUILD_MINIAPPS=ON \
       -DMPIEXEC_EXECUTABLE=srun \
       -DDLAF_CI_RUNNER_USES_MPIRUN=1 && \
@@ -69,11 +73,7 @@ RUN source /opt/intel/compilers_and_libraries/linux/mkl/bin/mklvars.sh intel64 &
     ${MKL_LIB}/libmkl_vml_mc.so \
     ${MKL_LIB}/libmkl_vml_mc3.so
 
-# Generate the gitlab-ci yml file
-RUN cd ${BUILD} && \
-    ${SOURCE}/ci/ctest_to_gitlab.sh "${DEPLOY_IMAGE}" > ${DEPLOY}/pipeline.yml
-
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND noninteractive
 
@@ -91,6 +91,9 @@ COPY --from=builder ${DEPLOY} ${DEPLOY}
 
 # Make it easy to call our binaries.
 ENV PATH="${DEPLOY}/usr/bin:$PATH"
+ENV NVIDIA_VISIBLE_DEVICES all
+ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
+ENV NVIDIA_REQUIRE_CUDA "cuda>=10.2"
 
 # Automatically print stacktraces on segfault
 ENV LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so

@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -18,7 +18,7 @@
 #include <hpx/local/future.hpp>
 
 #include "gtest/gtest.h"
-#include "dlaf/matrix.h"
+#include "dlaf/matrix/matrix.h"
 
 namespace dlaf {
 namespace matrix {
@@ -30,12 +30,10 @@ namespace test {
 /// Note: This function is interchangeable with getFuturesUsingGlobalIndex.
 template <template <class, Device> class MatrixType, class T, Device device>
 std::vector<hpx::future<Tile<T, device>>> getFuturesUsingLocalIndex(MatrixType<T, device>& mat) {
-  using dlaf::util::size_t::mul;
-
   const matrix::Distribution& dist = mat.distribution();
 
   std::vector<hpx::future<Tile<T, device>>> result;
-  result.reserve(mul(dist.localNrTiles().rows(), dist.localNrTiles().cols()));
+  result.reserve(static_cast<std::size_t>(dist.localNrTiles().linear_size()));
 
   for (SizeType j = 0; j < dist.localNrTiles().cols(); ++j) {
     for (SizeType i = 0; i < dist.localNrTiles().rows(); ++i) {
@@ -52,12 +50,10 @@ std::vector<hpx::future<Tile<T, device>>> getFuturesUsingLocalIndex(MatrixType<T
 /// Note: This function is interchangeable with getFuturesUsingLocalIndex.
 template <template <class, Device> class MatrixType, class T, Device device>
 std::vector<hpx::future<Tile<T, device>>> getFuturesUsingGlobalIndex(MatrixType<T, device>& mat) {
-  using dlaf::util::size_t::mul;
-
   const matrix::Distribution& dist = mat.distribution();
 
   std::vector<hpx::future<Tile<T, device>>> result;
-  result.reserve(mul(dist.localNrTiles().rows(), dist.localNrTiles().cols()));
+  result.reserve(static_cast<std::size_t>(dist.localNrTiles().linear_size()));
 
   for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
     for (SizeType i = 0; i < dist.nrTiles().rows(); ++i) {
@@ -80,12 +76,10 @@ std::vector<hpx::future<Tile<T, device>>> getFuturesUsingGlobalIndex(MatrixType<
 template <template <class, Device> class MatrixType, class T, Device device>
 std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingLocalIndex(
     MatrixType<T, device>& mat) {
-  using dlaf::util::size_t::mul;
-
   const matrix::Distribution& dist = mat.distribution();
 
   std::vector<hpx::shared_future<Tile<const T, device>>> result;
-  result.reserve(mul(dist.localNrTiles().rows(), dist.localNrTiles().cols()));
+  result.reserve(static_cast<std::size_t>(dist.localNrTiles().linear_size()));
 
   for (SizeType j = 0; j < dist.localNrTiles().cols(); ++j) {
     for (SizeType i = 0; i < dist.localNrTiles().rows(); ++i) {
@@ -104,12 +98,10 @@ std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingLoca
 template <template <class, Device> class MatrixType, class T, Device device>
 std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingGlobalIndex(
     MatrixType<T, device>& mat) {
-  using dlaf::util::size_t::mul;
-
   const matrix::Distribution& dist = mat.distribution();
 
   std::vector<hpx::shared_future<Tile<const T, device>>> result;
-  result.reserve(mul(dist.localNrTiles().rows(), dist.localNrTiles().cols()));
+  result.reserve(static_cast<std::size_t>(dist.localNrTiles().linear_size()));
 
   for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
     for (SizeType i = 0; i < dist.nrTiles().rows(); ++i) {
@@ -126,21 +118,24 @@ std::vector<hpx::shared_future<Tile<const T, device>>> getSharedFuturesUsingGlob
   return result;
 }
 
-/// Returns true if only the first @p futures are ready.
+/// Returns true if only the @p first_n futures are ready (or the opposite).
+///
+/// @param invert if set to true it checks that all futures are ready except the first_n
 ///
 /// @pre Future should be a future or shared_future,
 /// @pre 0 <= ready <= futures.size().
 template <class Future>
-bool checkFuturesStep(size_t ready, const std::vector<Future>& futures) {
-  DLAF_ASSERT_HEAVY(ready >= 0, "");
-  DLAF_ASSERT_HEAVY(ready <= futures.size(), "");
+bool checkFuturesStep(size_t first_n, const std::vector<Future>& futures, bool invert = false) {
+  DLAF_ASSERT_HEAVY(first_n <= futures.size(), first_n, futures.size());
 
-  for (std::size_t index = 0; index < ready; ++index) {
-    if (!futures[index].is_ready())
+  const bool first_n_status = !invert;
+
+  for (std::size_t index = 0; index < first_n; ++index) {
+    if (futures[index].is_ready() != first_n_status)
       return false;
   }
-  for (std::size_t index = ready; index < futures.size(); ++index) {
-    if (futures[index].is_ready())
+  for (std::size_t index = first_n; index < futures.size(); ++index) {
+    if (futures[index].is_ready() == first_n_status)
       return false;
   }
   return true;
@@ -153,7 +148,7 @@ bool checkFuturesStep(size_t ready, const std::vector<Future>& futures) {
 /// @pre Future[1,2] should be a future or shared_future.
 template <class Future1, class Future2>
 void checkFutures(bool get_ready, const std::vector<Future1>& current, std::vector<Future2>& previous) {
-  DLAF_ASSERT_HEAVY(current.size() == previous.size(), "");
+  DLAF_ASSERT_HEAVY(current.size() == previous.size(), current.size(), previous.size());
 
   for (std::size_t index = 0; index < current.size(); ++index) {
     EXPECT_TRUE(checkFuturesStep(get_ready ? index : 0, current));
@@ -175,13 +170,12 @@ void checkFutures(bool get_ready, const std::vector<Future1>& current, std::vect
 /// where index = LocalTileIndex(i % mat_view.localNrTiles.rows(), i / mat_view.localNrTiles.rows())
 /// If get_ready == true it checks if current[i] is ready after the call to mat_view.done(i).
 /// If get_ready == false it checks if current[i] is not ready after the call to mat_view.done(i).
-/// @pre Future1 should be a future or shared_future.
-template <class Future1, class MatrixViewType>
-void checkFuturesDone(bool get_ready, const std::vector<Future1>& current, MatrixViewType& mat_view) {
-  using dlaf::util::size_t::mul;
-
+/// @pre Future should be a future or shared_future.
+template <class Future, class MatrixViewType>
+void checkFuturesDone(bool get_ready, const std::vector<Future>& current, MatrixViewType& mat_view) {
   const auto& nr_tiles = mat_view.distribution().localNrTiles();
-  DLAF_ASSERT(current.size() == mul(nr_tiles.rows(), nr_tiles.cols()), "");
+  DLAF_ASSERT(static_cast<SizeType>(current.size()) == nr_tiles.linear_size(), current.size(),
+              nr_tiles.linear_size());
 
   for (std::size_t index = 0; index < current.size(); ++index) {
     EXPECT_TRUE(checkFuturesStep(get_ready ? index : 0, current));

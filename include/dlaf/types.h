@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -13,20 +13,38 @@
 /// @file
 
 #include <complex>
+#include <cstddef>
 #include <limits>
 
 #include "dlaf/common/assert.h"
 
 namespace dlaf {
 
-using SizeType = int;
+using SizeType = std::ptrdiff_t;
+
 static_assert(std::is_signed<SizeType>::value && std::is_integral<SizeType>::value,
               "SizeType should be a signed integral type");
 static_assert(sizeof(SizeType) >= 4, "SizeType should be >= 32bit");
 
-enum class Device { CPU, GPU };
+enum class Device {
+  CPU,
+  GPU,
+#ifdef DLAF_WITH_CUDA
+  Default = GPU
+#else
+  Default = CPU
+#endif
+};
 
-enum class Backend { MC, GPU };
+enum class Backend {
+  MC,
+  GPU,
+#ifdef DLAF_WITH_CUDA
+  Default = GPU
+#else
+  Default = MC
+#endif
+};
 
 template <class T>
 struct TypeInfo;
@@ -84,7 +102,7 @@ T conj(const T number) {
   return number;
 }
 
-/// Cast from unisgned to signed integer types.
+/// Cast from unsigned to signed integer types.
 ///
 /// It performs the cast checking if the given unsigned value can be stored in the destination type.
 template <class S, class U,
@@ -92,7 +110,8 @@ template <class S, class U,
                                std::is_integral<S>::value && std::is_signed<S>::value,
                            int> = 0>
 S to_signed(const U unsigned_value) {
-  DLAF_ASSERT_MODERATE(std::numeric_limits<S>::max() >= unsigned_value, "");
+  DLAF_ASSERT_MODERATE(static_cast<std::size_t>(std::numeric_limits<S>::max()) >= unsigned_value,
+                       std::numeric_limits<S>::max(), unsigned_value);
   return static_cast<S>(unsigned_value);
 }
 
@@ -102,8 +121,8 @@ template <class S, class SB,
                                std::is_integral<S>::value && std::is_signed<S>::value,
                            int> = 0>
 S to_signed(const SB value) {
-  DLAF_ASSERT_MODERATE(std::numeric_limits<S>::max() >= value, "");
-  DLAF_ASSERT_MODERATE(std::numeric_limits<S>::min() <= value, "");
+  DLAF_ASSERT_MODERATE(std::numeric_limits<S>::max() >= value, std::numeric_limits<S>::max(), value);
+  DLAF_ASSERT_MODERATE(std::numeric_limits<S>::min() <= value, std::numeric_limits<S>::min(), value);
   return static_cast<S>(value);
 }
 
@@ -116,8 +135,9 @@ template <class U, class S,
                                std::is_integral<S>::value && std::is_signed<S>::value,
                            int> = 0>
 U to_unsigned(const S signed_value) {
-  DLAF_ASSERT_MODERATE(signed_value >= 0, "");
-  DLAF_ASSERT_MODERATE(std::numeric_limits<U>::max() >= static_cast<std::size_t>(signed_value), "");
+  DLAF_ASSERT_MODERATE(signed_value >= 0, signed_value);
+  DLAF_ASSERT_MODERATE(std::numeric_limits<U>::max() >= static_cast<std::size_t>(signed_value),
+                       std::numeric_limits<U>::max(), static_cast<std::size_t>(signed_value));
   return static_cast<U>(signed_value);
 }
 
@@ -127,7 +147,8 @@ template <class U, class UB,
                                std::is_integral<UB>::value && std::is_unsigned<UB>::value,
                            int> = 0>
 U to_unsigned(const UB unsigned_value) {
-  DLAF_ASSERT_MODERATE(std::numeric_limits<U>::max() >= static_cast<std::size_t>(unsigned_value), "");
+  DLAF_ASSERT_MODERATE(std::numeric_limits<U>::max() >= static_cast<std::size_t>(unsigned_value),
+                       std::numeric_limits<U>::max(), static_cast<std::size_t>(unsigned_value));
   return static_cast<U>(unsigned_value);
 }
 
@@ -147,21 +168,30 @@ To integral_cast(const From value) {
   return to_signed<To, From>(value);
 }
 
-/// Helper function for casting from unsigned to dlaf::SizeType.
-///
-/// Useful when passing parameter to the BLAS/LAPACK interface,
-/// see dlaf::to_signed.
-auto to_SizeType = [](const auto unsigned_value) { return to_signed<SizeType>(unsigned_value); };
-
 /// Helper function for casting from unsigned to int.
 ///
 /// Useful when passing parameters to the MPI interface,
 /// see dlaf::to_signed.
-auto to_int = [](const auto unsigned_value) { return to_signed<int>(unsigned_value); };
+template <class T>
+auto to_int(const T unsigned_value) {
+  return to_signed<int>(unsigned_value);
+}
 
 /// Helper function for casting from signed to std::size_t.
 ///
 /// Useful for interaction between std, but not only, with other interfaces that does not use usigned
 /// types (e.g. MPI, BLAS, ...) see dlaf::to_unsigned.
-auto to_sizet = [](const auto signed_value) { return to_unsigned<std::size_t>(signed_value); };
+template <class T>
+auto to_sizet(const T signed_value) {
+  return to_unsigned<std::size_t>(signed_value);
+}
+
+/// Helper function for casting from unsigned to dlaf::SizeType.
+///
+/// Useful when passing parameter to the BLAS/LAPACK interface,
+/// see dlaf::to_signed.
+template <class T>
+auto to_SizeType(const T unsigned_value) {
+  return to_signed<SizeType>(unsigned_value);
+}
 }

@@ -30,7 +30,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -42,9 +42,13 @@
 #include <gtest/gtest.h>
 #include <hpx/init.hpp>
 
+#include <dlaf/init.h>
+
 GTEST_API_ int test_main(int argc, char** argv) {
   std::printf("Running main() from gtest_hpx_main.cpp\n");
+  dlaf::initialize(argc, argv);
   auto ret = RUN_ALL_TESTS();
+  dlaf::finalize();
   hpx::finalize();
   return ret;
 }

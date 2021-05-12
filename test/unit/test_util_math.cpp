@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -132,10 +132,10 @@ TYPED_TEST(MathUtilTest, size_t_Arithmetic_SumMul) {
 }
 
 TYPED_TEST(MathUtilTest, ptrdiff_t_Arithmetic_Sum) {
-  using ArithmeticT = std::ptrdiff_t;
+  using ArithmeticT = SizeType;
 
   constexpr auto type_size = sizeof(TypeParam);
-  constexpr auto arithmetic_size = sizeof(std::ptrdiff_t);
+  constexpr auto arithmetic_size = sizeof(SizeType);
 
   TypeParam a, b;
 
@@ -160,7 +160,7 @@ TYPED_TEST(MathUtilTest, ptrdiff_t_Arithmetic_Sum) {
 }
 
 TYPED_TEST(MathUtilTest, ptrdiff_t_Arithmetic_Mul) {
-  using ArithmeticT = std::ptrdiff_t;
+  using ArithmeticT = SizeType;
 
   constexpr auto type_size = sizeof(TypeParam);
   constexpr auto arithmetic_size = sizeof(ArithmeticT);
@@ -188,7 +188,7 @@ TYPED_TEST(MathUtilTest, ptrdiff_t_Arithmetic_Mul) {
 }
 
 TYPED_TEST(MathUtilTest, ptrdiff_t_Arithmetic_SumMul) {
-  using ArithmeticT = std::ptrdiff_t;
+  using ArithmeticT = SizeType;
 
   constexpr auto type_size = sizeof(TypeParam);
   constexpr auto arithmetic_size = sizeof(ArithmeticT);

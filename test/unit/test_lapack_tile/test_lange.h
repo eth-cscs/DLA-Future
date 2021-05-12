@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -12,10 +12,11 @@
 
 #include <gtest/gtest.h>
 
+#include "dlaf/lapack/enum_output.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/index.h"
+#include "dlaf/matrix/tile.h"
 #include "dlaf/memory/memory_view.h"
-#include "dlaf/tile.h"
 #include "dlaf/types.h"
 
 #include "dlaf_test/matrix/util_tile.h"
@@ -28,11 +29,10 @@ namespace lange {
 using dlaf::SizeType;
 using dlaf::TileElementSize;
 using dlaf::TileElementIndex;
-using dlaf::Tile;
 using dlaf::Device;
+using dlaf::matrix::Tile;
 
 using dlaf::tile::lange;
-using dlaf::util::size_t::mul;
 using dlaf::matrix::test::set;
 
 template <class T>
@@ -75,20 +75,19 @@ private:
 };
 
 template <class T>
-const T TileSetter<T>::value = dlaf_test::TypeUtilities<T>::element(13, -13);
+const T TileSetter<T>::value = TypeUtilities<T>::element(13, -13);
 
 template <class T>
-void test_lange(lapack::Norm norm, const Tile<T, Device::CPU>& a, NormT<T> norm_expected) {
+void test_lange(const lapack::Norm norm, const Tile<T, Device::CPU>& a, NormT<T> norm_expected) {
   set(a, TileSetter<T>{a.size()});
 
-  SCOPED_TRACE(::testing::Message() << "LANGE: " << lapack::norm2str(norm) << ", " << a.size()
-                                    << ", ld = " << a.ld());
+  SCOPED_TRACE(::testing::Message() << "LANGE: " << norm << ", " << a.size() << ", ld = " << a.ld());
 
-  EXPECT_FLOAT_EQ(norm_expected, lange(norm, a));
+  EXPECT_NEAR(norm_expected, lange(norm, a), norm_expected * TypeUtilities<T>::error);
 }
 
 template <class T>
-void run(lapack::Norm norm, const Tile<T, Device::CPU>& a) {
+void run(const lapack::Norm norm, const Tile<T, Device::CPU>& a) {
   const TileElementSize size = a.size();
 
   NormT<T> value = std::abs(TileSetter<T>::value);
@@ -105,10 +104,11 @@ void run(lapack::Norm norm, const Tile<T, Device::CPU>& a) {
       norm_expected = size != TileElementSize{1, 1} ? 4 : 2;
       break;
     case lapack::Norm::Fro:
-      norm_expected = size != TileElementSize{1, 1} ? std::sqrt(17) : std::sqrt(4);
+      norm_expected =
+          static_cast<NormT<T>>(size != TileElementSize{1, 1} ? std::sqrt(17) : std::sqrt(4));
       break;
     case lapack::Norm::Two:
-      FAIL() << "norm " << lapack::norm2str(norm) << " is not supported by lange";
+      FAIL() << "norm " << norm << " is not supported by lange";
   }
 
   norm_expected *= value;

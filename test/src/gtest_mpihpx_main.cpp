@@ -30,7 +30,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -40,13 +40,19 @@
 #include <cstdio>
 
 #include <gtest/gtest.h>
+
+#include <hpx/include/resource_partitioner.hpp>
 #include <hpx/init.hpp>
+
+#include <dlaf/init.h>
 
 #include "gtest_mpi_listener.h"
 
 GTEST_API_ int test_main(int argc, char** argv) {
   std::printf("Running main() from gtest_mpihpx_main.cpp\n");
+  dlaf::initialize(argc, argv);
   auto ret = RUN_ALL_TESTS();
+  dlaf::finalize();
   hpx::finalize();
   return ret;
 }
@@ -55,7 +61,7 @@ GTEST_API_ int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
 
   // Initialize MPI
-  int threading_required = MPI_THREAD_SERIALIZED;
+  int threading_required = MPI_THREAD_MULTIPLE;
   int threading_provided;
   MPI_Init_thread(&argc, &argv, threading_required, &threading_provided);
 
@@ -64,6 +70,8 @@ GTEST_API_ int main(int argc, char** argv) {
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
 
+  MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
+
   // Gets hold of the event listener list.
   ::testing::TestEventListeners& listeners = ::testing::UnitTest::GetInstance()->listeners();
 
@@ -71,8 +79,16 @@ GTEST_API_ int main(int argc, char** argv) {
   auto default_listener = listeners.Release(listeners.default_result_printer());
   listeners.Append(new MPIListener(argc, argv, default_listener));
 
+  using namespace hpx::program_options;
+  options_description desc_commandline("Usage: " HPX_APPLICATION_STRING " [options]");
+  desc_commandline.add(dlaf::getOptionsDescription());
+
+  hpx::init_params p;
+  p.desc_cmdline = desc_commandline;
+  p.rp_callback = dlaf::initResourcePartitionerHandler;
+
   // Initialize HPX
-  auto ret = hpx::init(test_main, argc, argv);
+  auto ret = hpx::init(test_main, argc, argv, p);
 
   MPI_Finalize();
 

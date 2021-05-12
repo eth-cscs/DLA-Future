@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -22,114 +22,140 @@ namespace dlaf {
 namespace comm {
 namespace sync {
 
-namespace internal {
-namespace reduce {
-
-/// MPI_Reduce wrapper (sender side).
+/// MPI_Reduce wrapper (collector side, i.e. send and receive).
 ///
 /// MPI Reduce(see MPI documentation for additional info).
-/// @param reduce_operation MPI_Op to perform on @p input data coming from ranks in @p communicator.
+/// @param reduce_op MPI_Op to perform on @p input data coming from ranks in @p communicator.
 template <class DataIn, class DataOut>
-void collector(Communicator& communicator, MPI_Op reduce_operation, const DataIn input,
-               const DataOut output) {
+void reduceRecv(Communicator& communicator, MPI_Op reduce_op, const DataIn input, const DataOut output) {
   using T = std::remove_const_t<typename common::data_traits<DataIn>::element_t>;
 
   // Wayout for single rank communicator, just copy data
   if (communicator.size() == 1) {
+    DLAF_ASSERT_MODERATE(input != output, "input and output should not equal (use in-place)");
     common::copy(input, output);
     return;
   }
 
-  // Data descriptors used internally, initialized with Data given as parameters,
-  // but they may be replaced internally by contiguous Buffers in case of need
-  common::DataDescriptor<const T> internal_input = input;
-  common::DataDescriptor<T> internal_output = output;
-
   // Buffers not allocated, just placeholders in case we need to allocate them
-  common::Buffer<T> temporary_buffer_in;
-  common::Buffer<T> temporary_buffer_out;
+  common::Buffer<T> buffer_in, buffer_out;
 
-  // if input is not contiguous, copy it in a contiguous temporary buffer
-  if (!input.is_contiguous()) {
-    // allocate the temporary buffer
-    temporary_buffer_in = common::create_temporary_buffer(internal_input);
-    // set it as internal intermediate input
-    internal_input = temporary_buffer_in;
-    // copy the data to the internal intermediate buffer
-    common::copy(input, temporary_buffer_in);
-  }
+  auto message_input = comm::make_message(make_contiguous(input, buffer_in));
+  auto message_output = comm::make_message(make_contiguous(output, buffer_out));
 
-  // if output is not contiguous, create an intermediate buffer
-  if (!output.is_contiguous()) {
-    // allocate the temporary buffer
-    temporary_buffer_out = common::create_temporary_buffer(internal_output);
-    // and set it as internal intermediate output
-    internal_output = temporary_buffer_out;
-  }
+  DLAF_ASSERT_MODERATE((buffer_in || buffer_out) || (input != output),
+                       "input and output should not equal (use in-place)");
 
-  auto message_input = comm::make_message(std::move(internal_input));
-  auto message_output = comm::make_message(DataOut(internal_output));
+  // if the input buffer has been used, initialize it with input values
+  if (buffer_in)
+    common::copy(input, buffer_in);
 
-  MPI_Reduce(message_input.data(), message_output.data(), message_input.count(),
-             message_input.mpi_type(), reduce_operation, communicator.rank(), communicator);
+  DLAF_MPI_CALL(MPI_Reduce(message_input.data(), message_output.data(), message_input.count(),
+                           message_input.mpi_type(), reduce_op, communicator.rank(), communicator));
 
-  // if output was not contiguous, copy it back!
-  if (!output.is_contiguous())
-    common::copy(internal_output, output);
+  // if the output buffer has been used, copy-back output values
+  if (buffer_out)
+    common::copy(buffer_out, output);
 }
 
-/// MPI_Reduce wrapper (receiver side).
+/// MPI_Reduce wrapper (collector-side, in-place).
 ///
 /// MPI Reduce(see MPI documentation for additional info).
+/// It uses the MPI_IN_PLACE option, so the result of the reduce is stored in the same buffer
+/// used for the input, i.e. @p inout
+///
+/// It must be highlighted that if the buffer is not contiguous, it will get copied to a support
+/// buffer, and then copied back. From the user perspective it is still in-place, but in that specific
+/// case there will be internal memory copies.
+///
+/// @param reduce_op MPI_Op to perform on @p inout data coming from ranks in @p communicator,
+/// @pre @p rank_root < @p communicator.size(),
+template <class DataInOut>
+void reduceRecvInPlace(Communicator& communicator, MPI_Op reduce_op, const DataInOut inout) {
+  using T = std::remove_const_t<typename common::data_traits<DataInOut>::element_t>;
+
+  // Wayout for single rank communicator, just copy data
+  if (communicator.size() == 1)
+    return;
+
+  // Buffer not allocated, just a placeholder in case we need to allocate it
+  common::Buffer<T> buffer_inout;
+
+  auto message_inout = comm::make_message(make_contiguous(inout, buffer_inout));
+
+  // if the buffer has been used, initialize it with input values
+  if (buffer_inout)
+    common::copy(inout, buffer_inout);
+
+  DLAF_MPI_CALL(MPI_Reduce(MPI_IN_PLACE, message_inout.data(), message_inout.count(),
+                           message_inout.mpi_type(), reduce_op, communicator.rank(), communicator));
+
+  // if the buffer has been used, copy-back output values
+  if (buffer_inout)
+    common::copy(buffer_inout, inout);
+}
+
+/// MPI_Reduce wrapper (sender side).
+///
+/// MPI Reduce(see MPI documentation for additional info).
+///
+/// This is an helper function for the sender side, with just needed arguments (i.e. output parameter
+/// is meaningful just on the sender side).
 /// @param rank_root  the rank that will collect the result in output,
-/// @param reduce_operation MPI_Op to perform on @p input data coming from ranks in @p communicator.
+/// @param reduce_op MPI_Op to perform on @p input data coming from ranks in @p communicator.
 template <class DataIn>
-void participant(int rank_root, Communicator& communicator, MPI_Op reduce_operation,
-                 const DataIn input) {
+void reduceSend(IndexT_MPI rank_root, Communicator& communicator, MPI_Op reduce_op, const DataIn input) {
   using T = std::remove_const_t<typename common::data_traits<DataIn>::element_t>;
 
-  // Data descritpr used internally, initialized from Data given as parameter
-  // it may be switched to the internal temporary buffer in case of need
-  common::DataDescriptor<const T> internal_input = input;
+  // Buffers not allocated, just placeholders in case we need to allocate them
+  common::Buffer<T> buffer_in;
 
-  // Placeholder for a temporary buffer
-  common::Buffer<T> temporary_buffer_in;
+  auto message_input = comm::make_message(make_contiguous(input, buffer_in));
 
-  // if input is not contiguous, copy it in a contiguous temporary buffer
-  if (!input.is_contiguous()) {
-    // allocate the temporary buffer
-    temporary_buffer_in = common::create_temporary_buffer(internal_input);
-    // set it as internal intermediate input
-    internal_input = temporary_buffer_in;
-    // copy the data to the internal intermediate buffer
-    common::copy(input, temporary_buffer_in);
-  }
+  // if the input buffer has been used, initialize it with input values
+  if (buffer_in)
+    common::copy(input, buffer_in);
 
-  auto message_input = comm::make_message(std::move(internal_input));
-
-  MPI_Reduce(message_input.data(), nullptr, message_input.count(), message_input.mpi_type(),
-             reduce_operation, rank_root, communicator);
-}
-}
+  DLAF_MPI_CALL(MPI_Reduce(message_input.data(), nullptr, message_input.count(),
+                           message_input.mpi_type(), reduce_op, rank_root, communicator));
 }
 
-/// MPI_Reduce wrapper.
+/// MPI_Reduce wrapper (both sides).
 ///
 /// MPI Reduce(see MPI documentation for additional info).
 /// @param rank_root the rank that will collect the result in output,
-/// @param reduce_operation MPI_Op to perform on @p input data coming from ranks in @p communicator,
-/// @pre @p rank_root < @p communicator.size(),
+/// @param reduce_op MPI_Op to perform on @p input data coming from ranks in @p communicator,
+/// @pre @p 0 <= rank_root < @p communicator.size(),
 /// @pre @p rank_root != MPI_UNDEFINED.
 template <class DataIn, class DataOut>
-void reduce(const int rank_root, Communicator& communicator, MPI_Op reduce_operation, const DataIn input,
+void reduce(const IndexT_MPI rank_root, Communicator& communicator, MPI_Op reduce_op, const DataIn input,
             const DataOut output) {
-  DLAF_ASSERT(rank_root < communicator.size() && rank_root != MPI_UNDEFINED, "The rank is not valid!",
-              rank_root, communicator.size());
+  DLAF_ASSERT(0 <= rank_root && rank_root < communicator.size() && rank_root != MPI_UNDEFINED, rank_root,
+              communicator.size());
 
   if (rank_root == communicator.rank())
-    internal::reduce::collector(communicator, reduce_operation, input, output);
+    reduceRecv(communicator, reduce_op, input, output);
   else
-    internal::reduce::participant(rank_root, communicator, reduce_operation, input);
+    reduceSend(rank_root, communicator, reduce_op, input);
+}
+
+/// MPI_Reduce wrapper (both sides, in-place).
+///
+/// MPI Reduce(see MPI documentation for additional info).
+/// @param rank_root the rank that will collect the result in output,
+/// @param reduce_op MPI_Op to perform on @p input data coming from ranks in @p communicator,
+/// @pre @p 0 <= rank_root < @p communicator.size(),
+/// @pre @p rank_root != MPI_UNDEFINED.
+template <class DataInOut>
+void reduceInPlace(const IndexT_MPI rank_root, Communicator& communicator, MPI_Op reduce_op,
+                   const DataInOut inout) {
+  DLAF_ASSERT(0 <= rank_root && rank_root < communicator.size() && rank_root != MPI_UNDEFINED, rank_root,
+              communicator.size());
+
+  if (rank_root == communicator.rank())
+    reduceRecvInPlace(communicator, reduce_op, inout);
+  else
+    reduceSend(rank_root, communicator, reduce_op, inout);
 }
 }
 }

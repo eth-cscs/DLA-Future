@@ -30,7 +30,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -46,6 +46,8 @@ GTEST_API_ int main(int argc, char* argv[]) {
   ::testing::InitGoogleTest(&argc, argv);
 
   MPI_Init(&argc, &argv);
+
+  MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
 
   // Gets hold of the event listener list.
   ::testing::TestEventListeners& listeners = ::testing::UnitTest::GetInstance()->listeners();

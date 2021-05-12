@@ -1,17 +1,10 @@
 #!/bin/bash -e
 
 if [[ "$ENABLE_COVERAGE" == "YES" ]]; then
-    TZ=CET date +"Start initialization of codecov reports from rank $SLURM_PROCID at: %H:%M:%S %z"
-
-    LOCAL_REPORTS="/codecov-reports"
     SHARED_REPORTS="$CI_PROJECT_DIR/codecov-reports"
     REPORT_NAME=`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1`
 
-    mkdir -p "$LOCAL_REPORTS"
     mkdir -p "$SHARED_REPORTS"
-    lcov --no-external --capture --initial --base-directory /DLA-Future --directory /DLA-Future-build --output-file "$LOCAL_REPORTS/baseline-codecov.info" &> /dev/null
-
-    TZ=CET date +"Done initialization of codecov reports from rank $SLURM_PROCID at: %H:%M:%S %z"
 fi;
 
 pushd /DLA-Future-build > /dev/null

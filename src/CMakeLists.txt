@@ -1,7 +1,7 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2019, ETH Zurich
+# Copyright (c) 2018-2021, ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
@@ -64,10 +64,11 @@ target_include_directories(dlaf.prop
 target_link_libraries(dlaf.prop
   INTERFACE
     MPI::MPI_CXX
+    LAPACK::LAPACK
     HPX::hpx
-    ${LAPACK_TARGET}
     lapackpp
     blaspp
+    umpire
     $<TARGET_NAME_IF_EXISTS:dlaf::cublas>
     $<TARGET_NAME_IF_EXISTS:dlaf::cudart>
 )
@@ -82,6 +83,7 @@ target_compile_definitions(dlaf.prop
     $<$<BOOL:${DLAF_ASSERT_HEAVY_ENABLE}>:DLAF_ASSERT_HEAVY_ENABLE>
     DLAF_FUNCTION_NAME=$<IF:$<BOOL:is_pretty_function_available>,__PRETTY_FUNCTION__,__func__>
     $<$<BOOL:${DLAF_WITH_CUDA}>:DLAF_WITH_CUDA>
+    $<$<BOOL:${DLAF_WITH_CUDA_MPI_RDMA}>:DLAF_WITH_CUDA_MPI_RDMA>
 )
 
 # Define DLAF's CORE library
@@ -91,29 +93,37 @@ add_library(dlaf.core
     communication/communicator.cpp
     communication/communicator_grid.cpp
     communication/datatypes.cpp
+    init.cpp
     matrix/distribution.cpp
     matrix/layout_info.cpp
+    matrix/tile.cpp
     matrix.cpp
+    matrix_mirror.cpp
     memory/memory_view.cpp
-    tile.cpp
+    memory/memory_chunk.cpp
 )
 target_link_libraries(dlaf.core PUBLIC dlaf.prop)
 
+# Define DLAF's eigensolver library
+add_library(dlaf.eigensolver OBJECT eigensolver/gen_to_std/mc.cpp)
+target_link_libraries(dlaf.eigensolver PUBLIC dlaf.prop)
+
 # Define DLAF's factorization library
-add_library(dlaf.factorization OBJECT factorization/mc.cpp)
+add_library(dlaf.factorization OBJECT factorization/cholesky/mc.cpp)
 target_link_libraries(dlaf.factorization PUBLIC dlaf.prop)
 
 # Define DLAF's solver library
-add_library(dlaf.solver OBJECT solver/mc.cpp)
+add_library(dlaf.solver OBJECT solver/triangular/mc.cpp $<$<BOOL:${DLAF_WITH_CUDA}>:solver/triangular/gpu.cpp>)
 target_link_libraries(dlaf.solver PUBLIC dlaf.prop)
 
 # Define DLAF's auxiliary library
-add_library(dlaf.auxiliary OBJECT auxiliary/mc.cpp)
+add_library(dlaf.auxiliary OBJECT auxiliary/norm/mc.cpp)
 target_link_libraries(dlaf.auxiliary PUBLIC dlaf.prop)
 
 # Define DLAF's complete library
 add_library(DLAF
   $<TARGET_OBJECTS:dlaf.core>
+  $<TARGET_OBJECTS:dlaf.eigensolver>
   $<TARGET_OBJECTS:dlaf.factorization>
   $<TARGET_OBJECTS:dlaf.solver>
   $<TARGET_OBJECTS:dlaf.auxiliary>
@@ -137,7 +147,7 @@ install(DIRECTORY ../include/
 
 # install custom FindModules
 install(DIRECTORY ../cmake/
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME}
   FILES_MATCHING PATTERN "Find*.cmake"
   PATTERN "template" EXCLUDE
 )
@@ -153,17 +163,17 @@ include(CMakePackageConfigHelpers)
 install(EXPORT
   DLAF-Targets
   NAMESPACE DLAF::
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME}
 )
 
 # Config-file preparation and install
 configure_package_config_file(
   ${CMAKE_CURRENT_LIST_DIR}/../cmake/template/DLAFConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/DLAFConfig.cmake
-  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME}
 )
 
 install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/DLAFConfig.cmake
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME}
 )

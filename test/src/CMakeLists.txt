@@ -1,7 +1,7 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2019, ETH Zurich
+# Copyright (c) 2018-2021, ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
@@ -13,6 +13,7 @@ target_link_libraries(DLAF_gtest_hpx_main
   PUBLIC
     gtest
   PRIVATE
+    dlaf.core
     HPX::hpx
 )
 
@@ -29,6 +30,7 @@ target_link_libraries(DLAF_gtest_mpihpx_main
   PUBLIC
     gtest
   PRIVATE
+    dlaf.core
     MPI::MPI_CXX
     HPX::hpx
 )

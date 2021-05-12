@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -26,16 +26,15 @@ namespace internal {
 
 #ifdef DLAF_WITH_CUDA
 
-inline void cuda_call(cudaError_t err, const common::internal::source_location& info) noexcept {
+inline void cudaCall(cudaError_t err, const dlaf::common::internal::source_location& info) noexcept {
   if (err != cudaSuccess) {
     std::cout << "[CUDA ERROR] " << info << std::endl << cudaGetErrorString(err) << std::endl;
     std::terminate();
   }
 }
 
-#define DLAF_CUDA_CALL(cuda_f) dlaf::internal::cuda_call((cuda_f), SOURCE_LOCATION())
+#define DLAF_CUDA_CALL(cuda_f) dlaf::internal::cudaCall((cuda_f), SOURCE_LOCATION())
 
 #endif
-
 }
 }

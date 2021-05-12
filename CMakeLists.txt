@@ -1,7 +1,7 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2019, ETH Zurich
+# Copyright (c) 2018-2021, ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
@@ -17,13 +17,22 @@ project(DLAF VERSION 0.1.0)
 # ---------------------------------------------------------------------------
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
+include(CTest)
 include(DLAF)
 
 if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Build Type" FORCE)
 endif()
 
+include(CMakeDependentOption)
+
 option(BUILD_SHARED_LIBS "Build shared libraries." OFF)
+option(DLAF_WITH_MKL "Enable MKL as provider for LAPACK" OFF)
+option(DLAF_WITH_CUDA "Enable CUDA support" OFF)
+cmake_dependent_option(DLAF_WITH_CUDA_MPI_RDMA "Enable MPI CUDA RDMA" OFF "DLAF_WITH_CUDA" OFF)
+option(DLAF_BUILD_MINIAPPS "Build miniapps" ON)
+option(DLAF_BUILD_TESTING "Build tests" ON)
+option(DLAF_BUILD_DOC "Build documentation" OFF)
 
 # ---------------------------------------------------------------------------
 # Languages
@@ -36,7 +45,6 @@ enable_language(CXX)
 set(CMAKE_CXX_STANDARD 14)
 
 # ---- CUDA
-set(DLAF_WITH_CUDA OFF CACHE BOOL "Enable CUDA support")
 if (DLAF_WITH_CUDA)
   find_package(CUDALIBS REQUIRED)
 endif()
@@ -48,25 +56,36 @@ endif()
 find_package(MPI REQUIRED)
 
 # ----- LAPACK/SCALAPACK
-set(LAPACK_TARGET "")
-set(DLAF_WITH_MKL OFF CACHE BOOL "Enable MKL as provider for LAPACK")
 if (DLAF_WITH_MKL)
-  set(MKL_CUSTOM_THREADING "Sequential")
-  find_package(MKL REQUIRED COMPONENTS BLAS_32BIT_SEQ)
+  find_package(MKL REQUIRED)
 
-  set(LAPACK_TARGET "mkl::blas_32bit_seq")
+  set(MKL_LAPACK_TARGET "mkl::mkl_intel_32bit_seq_dyn"
+    CACHE STRING "MKL LAPACK target (see FindMKL for details)")
+
+  # Note:
+  # If specified targets are found, "standardize" them
+
+  if (TARGET ${MKL_LAPACK_TARGET})
+    set(LAPACK_FOUND TRUE)
+    add_library(LAPACK::LAPACK INTERFACE IMPORTED GLOBAL)
+    target_link_libraries(LAPACK::LAPACK INTERFACE ${MKL_LAPACK_TARGET})
+  else()
+    message(FATAL_ERROR "${MKL_LAPACK_TARGET} as LAPACK target has not been found")
+  endif()
 else()
-  set(LAPACK_TARGET "lapack::lapack")
   find_package(LAPACK REQUIRED)
 endif()
 
 # ----- HPX
-find_package(HPX 1.5.0 REQUIRED)
+find_package(HPX 1.6.0 REQUIRED)
 
 # ----- BLASPP/LAPACKPP
 find_package(OpenMP REQUIRED)
 find_package(blaspp REQUIRED)
 find_package(lapackpp REQUIRED)
+
+# ----- UMPIRE
+find_package(Umpire REQUIRED)
 
 # ----- EXTERNAL
 add_subdirectory(external)
@@ -79,7 +98,6 @@ add_subdirectory(src)
 # ---------------------------------------------------------------------------
 # mini Apps
 # ---------------------------------------------------------------------------
-set(DLAF_BUILD_MINIAPPS ON CACHE BOOL "Build miniapps")
 if (DLAF_BUILD_MINIAPPS)
   add_subdirectory(miniapp)
 endif()
@@ -87,18 +105,13 @@ endif()
 # ---------------------------------------------------------------------------
 # Test
 # ---------------------------------------------------------------------------
-set(DLAF_WITH_TEST ON CACHE BOOL "Enables tests")
-if (DLAF_WITH_TEST)
-  include(CTest)
-  enable_testing()
-
+if (DLAF_BUILD_TESTING)
   add_subdirectory(test)
 endif()
 
 # ---------------------------------------------------------------------------
 # Docs
 # ---------------------------------------------------------------------------
-option(BUILD_DOC "Build documentation" OFF)
-if (BUILD_DOC)
+if (DLAF_BUILD_DOC)
   add_subdirectory(doc)
 endif()

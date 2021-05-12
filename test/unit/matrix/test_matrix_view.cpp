@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -13,7 +13,7 @@
 #include <vector>
 #include "gtest/gtest.h"
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/matrix.h"
+#include "dlaf/matrix/matrix.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/matrix/util_matrix_futures.h"
@@ -23,7 +23,7 @@ using namespace dlaf;
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
 using namespace dlaf::comm;
-using namespace dlaf_test;
+using namespace dlaf::test;
 using namespace testing;
 
 ::testing::Environment* const comm_grids_env =

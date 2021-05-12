@@ -183,63 +183,6 @@ void set_random(Matrix<T, Device::CPU>& matrix) {
   }
 }
 
-/// Set the matrix with random values whose absolute values are less than 1.
-///
-/// Values will be random numbers in:
-/// - real:     [-1, 1]
-/// - complex:  a circle of radius 1 centered at origin.
-///
-/// Each tile creates its own random generator engine with a unique random seed.
-template <class T>
-void set_random_seed(Matrix<T, Device::CPU>& matrix) {
-  const Distribution& dist = matrix.distribution();
-  for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
-    GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
-    auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
-    auto seed = rand() % 100;
-    auto rnd_f = hpx::util::unwrapping([seed](auto&& tile) {
-      internal::getter_random<T> random_value(seed);
-      for (auto el_idx : iterate_range2d(tile.size())) {
-        tile(el_idx) = random_value();
-      }
-    });
-    hpx::dataflow(std::move(rnd_f), matrix(tile_wrt_local));
-  }
-}
-
-/// Set a lower triangular matrix with random values whose absolute values are less than 1.
-///
-/// Values will be random numbers in:
-/// - real:     [-1, 1]
-/// - complex:  a circle of radius 1 centered at origin.
-///
-/// Each tile creates its own random generator engine with a unique random seed.
-template <class T>
-void set_random_seed_lower(Matrix<T, Device::CPU>& matrix) {
-  const Distribution& dist = matrix.distribution();
-  for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
-    GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
-    auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
-    auto seed = rand() % 100;
-    auto nrows = matrix.blockSize().rows();
-    auto ncols = matrix.blockSize().cols();
-    auto rnd_f = hpx::util::unwrapping([seed, tl_index, nrows, ncols](auto&& tile) {
-      internal::getter_random<T> random_value(seed);
-      for (auto el_idx : iterate_range2d(tile.size())) {
-        auto tilerow = tl_index.row() / nrows;
-        auto tilecol = tl_index.col() / ncols;
-        auto elrow = tilerow * nrows + el_idx.row();
-        auto elcol = tilecol * ncols + el_idx.col();
-        if (elrow >= elcol)
-          tile(el_idx) = random_value();
-        else
-          tile(el_idx) = static_cast<T>(0.0);
-      }
-    });
-    hpx::dataflow(std::move(rnd_f), matrix(tile_wrt_local));
-  }
-}
-
 namespace internal {
 
 template <class T>

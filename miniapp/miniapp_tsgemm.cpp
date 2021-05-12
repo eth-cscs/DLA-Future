@@ -12,6 +12,7 @@
 #include <hpx/include/resource_partitioner.hpp>
 #include <hpx/init.hpp>
 
+#include "dlaf/common/timer.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/error.h"
 #include "dlaf/communication/executor.h"
@@ -64,35 +65,38 @@ using dlaf::LocalTileSize;
 using ScalarType = std::complex<double>;
 using MatrixType = dlaf::Matrix<ScalarType, dlaf::Device::CPU>;
 using ConstMatrixType = dlaf::Matrix<const ScalarType, dlaf::Device::CPU>;
+using TileType = dlaf::matrix::Tile<ScalarType, dlaf::Device::CPU>;
+using ConstTileType = dlaf::matrix::Tile<const ScalarType, dlaf::Device::CPU>;
 
 // void sirius_gemm(int batch_size, ExecutorType const& mpi_executor, CommunicatorGrid& comm_grid,
 //                 ConstMatrixType& a_mat, ConstMatrixType& b_mat, MatrixType& cini_mat,
 //                 MatrixType& cfin_mat);
 
 // Initialize matrix
-void init_matrix(MatrixType& matrix, ScalarType val);
+void setMatrix(MatrixType& matrix, ScalarType val);
 
 // Wait for all tiles of the matrix.
-// void waitall_tiles(MatrixType& matrix);
+void waitallTiles(MatrixType& matrix);
 
 // Sum the elements of the matrix. Useful for debugging.
-// ScalarType sum_matrix(Communicator const& comm, MatrixType& matrix);
+ScalarType sumMatrixElements(Communicator const& comm, MatrixType& matrix);
 
 struct options_t {
-  SizeType len_m;
-  SizeType len_n;
-  SizeType len_k;
-  SizeType tile_m;
-  SizeType tile_n;
-  int pgrid_rows;
-  int pgrid_cols;
+  SizeType m;
+  SizeType n;
+  SizeType k;
+  SizeType mb;
+  SizeType nb;
+  int grid_rows;
+  int grid_cols;
   // int batch_size;
-  int nruns;
-  bool check;
+  int64_t nruns;
+  int64_t nwarmups;
+  bool do_check;
 };
 
 /// Handle CLI options
-options_t parse_options(hpx::program_options::variables_map&);
+options_t parseOptions(hpx::program_options::variables_map&);
 
 }  // end namespace
 
@@ -102,72 +106,80 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   using seconds_t = std::chrono::duration<double>;
 
   // Input
-  options_t opts = parse_options(vm);
+  options_t opts = parseOptions(vm);
 
   // Communicators
   Communicator world(MPI_COMM_WORLD);
-  CommunicatorGrid comm_grid(world, opts.pgrid_rows, opts.pgrid_cols, Ordering::ColumnMajor);
+  CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
 
   // Matrices `A` and `B`
   // The matrices are distributed only along the `k` dimension. In SIRIUS, the sections assigned to each
   // process are not exactly equal, they differ by a little in non-trivial ways. SIRIUS's distribution
   // for A and B is NOT a special case of block cyclic distribution. In this miniapp, the distribution is
   // emulated by DLAF local matrices.
-  int num_procs = world.size();
+  int nprocs = world.size();
   int rank = world.rank();
-  SizeType k_loc = opts.len_k / num_procs + ((rank < opts.len_k % num_procs) ? 1 : 0);
-  ::MatrixType a_mat(LocalElementSize(k_loc, opts.len_m), TileElementSize(k_loc, opts.tile_m));
-  ::MatrixType b_mat(LocalElementSize(k_loc, opts.len_n), TileElementSize(k_loc, opts.tile_n));
+  SizeType k_loc = opts.k / nprocs + ((rank < opts.k % nprocs) ? 1 : 0);
+  MatrixType a_mat(LocalElementSize(k_loc, opts.m), TileElementSize(k_loc, opts.mb));
+  MatrixType b_mat(LocalElementSize(k_loc, opts.n), TileElementSize(k_loc, opts.nb));
 
   // Matrices `C`-initial and `C`-final
   using dlaf::matrix::tileLayout;
-  MatrixType cini_mat(Distribution(LocalElementSize(opts.len_m, opts.len_n),
-                                   TileElementSize(opts.tile_m, opts.tile_n)),
-                      tileLayout(LocalElementSize(opts.len_m, opts.len_n),
-                                 TileElementSize(opts.tile_m, opts.tile_n)));
-  MatrixType cfin_mat(GlobalElementSize(opts.len_m, opts.len_n), TileElementSize(opts.tile_m, opts.tile_n),
-                      comm_grid);
+  MatrixType cini_mat(Distribution(LocalElementSize(opts.m, opts.n), TileElementSize(opts.mb, opts.nb)),
+                      tileLayout(LocalElementSize(opts.m, opts.n), TileElementSize(opts.mb, opts.nb)));
+  MatrixType cfin_mat(GlobalElementSize(opts.m, opts.n), TileElementSize(opts.mb, opts.nb), comm_grid);
 
-  // Initialize matrices
-  init_matrix(a_mat, ::ScalarType(1));
-  init_matrix(b_mat, ::ScalarType(2));
+  // Benchmark calls of `sirius_gemm`
+  //
+  for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
+    if (0 == world.rank() && run_index >= 0) {
+      std::cout << "[" << run_index << "]" << std::endl;
+    }
 
+    setMatrix(a_mat, ScalarType(1));
+    setMatrix(b_mat, ScalarType(2));
 
-  //  // Benchmark calls of `sirius_gemm`
-  //  //
-  //  for (int i = 0; i < opts.nruns; ++i) {
-  //    MPI_Barrier(MPI_COMM_WORLD);
-  //    auto t_start = clock_t::now();
-  //
-  //    sirius_gemm(ps.batch_size, mpi_executor, comm_grid, a_mat, b_mat, cini_mat, cfin_mat);
-  //    waitall_tiles(cfin_mat);
-  //
-  //    MPI_Barrier(MPI_COMM_WORLD);
-  //    auto t_end = clock_t::now();
-  //
-  //    if (rank == 0) {
-  //      std::printf("%d: t_tot  [s] = %.5f\n", i, seconds_t(t_end - t_start).count());
-  //    }
-  //
-  //    // Simple check
-  //    if (ps.check) {
-  //      ScalarType cfin_sum = sum_matrix(comm_world, cfin_mat);
-  //      if (rank == 0) {
-  //        std::cout << cfin_sum << '\n';
-  //      }
-  //    }
-  //  }
+    waitallTiles(cfin_mat);
+    MPI_Barrier(world);
 
-  // Upon exit the mpi/user polling RAII object will stop polling
+    dlaf::common::Timer<> timeit;
+    // sirius_gemm(ps.batch_size, mpi_executor, comm_grid, a_mat, b_mat, cini_mat, cfin_mat);
+
+    waitallTiles(cfin_mat);
+    MPI_Barrier(world);
+
+    if (rank == 0 && run_index >= 0) {
+      auto elapsed_time = timeit.elapsed();
+      double total_ops = 0.0;  // TODO
+      double gigaflops = total_ops / elapsed_time / 1e9;
+
+      // clang-format off
+      std::cout << "[" << run_index << "]"
+                << " " << elapsed_time << "s"
+                << " " << gigaflops << "GFlop/s"
+                << " " << opts.m
+                << " " << opts.n
+                << " " << opts.k
+                << " " << opts.mb
+                << " " << opts.nb
+                << " " << opts.grid_rows
+                << " " << opts.grid_cols
+                << " " << hpx::get_os_thread_count()
+                << std::endl;
+      // clang-format on
+    }
+
+    // Simple check
+    if (opts.do_check) {
+      ScalarType cfin_sum = sumMatrixElements(world, cfin_mat);
+      // TODO: provide a check
+    }
+  }
+
+  dlaf::finalize();
   return hpx::finalize();
 }
 
-// Example usage:
-//
-//   mpirun -np 1 tsgemm --len_m      100  --len_n      100  --len_k  10000
-//                       --tile_m      32  --tile_n      32
-//                       --pgrid_rows   1  --pgrid_cols   1
-//
 int main(int argc, char** argv) {
   // Init MPI
   dlaf::comm::mpi_init mpi_initter(argc, argv, dlaf::comm::mpi_thread_level::multiple);
@@ -175,22 +187,24 @@ int main(int argc, char** argv) {
   // Options
   using namespace hpx::program_options;
   options_description desc_commandline("Usage: " HPX_APPLICATION_STRING " [options]");
-  desc_commandline.add(dlaf::getOptionsDescription());
 
   // clang-format off
   desc_commandline.add_options()
-     ("check",      bool_switch()    ->default_value(false), "Print the sum of elements of the resulting matrix.")
-     ("nruns",      value<int>()     ->default_value(   5),  "number of iterations")
-     ("len_m",      value<SizeType>()->default_value( 100),  "m dimension")
-     ("len_n",      value<SizeType>()->default_value( 100),  "n dimension")
-     ("len_k",      value<SizeType>()->default_value(1000),  "k dimension")
-     ("tile_m",     value<SizeType>()->default_value(  32),  "tile m dimension")
-     ("tile_n",     value<SizeType>()->default_value(  32),  "tile n dimension")
-     ("pgrid_rows", value<int>()     ->default_value(   1),  "process grid rows")
-     ("pgrid_cols", value<int>()     ->default_value(   1),  "process grid columns")
-     //("batch_size", value<int>()    ->default_value(  16), "number of tiles batched for computation/communication")
+     ("m",            value<SizeType>()->default_value( 100),  "m dimension")
+     ("n",            value<SizeType>()->default_value( 100),  "n dimension")
+     ("k",            value<SizeType>()->default_value(1000),  "k dimension")
+     ("mb",           value<SizeType>()->default_value(  32),  "tile m dimension")
+     ("nb",           value<SizeType>()->default_value(  32),  "tile n dimension")
+     ("grid-rows",    value<int>()     ->default_value(   1),  "process grid rows")
+     ("grid-cols",    value<int>()     ->default_value(   1),  "process grid columns")
+     //("batch_size",   value<int>()     ->default_value(  16), "number of tiles batched for computation/communication")
+     ("nruns",        value<int64_t>() ->default_value(   1),  "number of iterations")
+     ("nwarmups",     value<int64_t>() ->default_value(   1),  "number of iterations")
+     ("check-result", bool_switch()    ->default_value(false), "Print the sum of elements of the resulting matrix.")
   ;
   // clang-format on
+
+  desc_commandline.add(dlaf::getOptionsDescription());
 
   hpx::init_params p;
   p.desc_cmdline = desc_commandline;
@@ -201,9 +215,6 @@ int main(int argc, char** argv) {
 namespace {
 
 // using dlaf::common::iterateRange2D;
-
-// using TileType = dlaf::Tile<ScalarType, dlaf::Device::CPU>;
-// using ConstTileType = dlaf::Tile<const ScalarType, dlaf::Device::CPU>;
 
 // Send Cini tile to the process it belongs (`tile_rank`)
 // void send_tile(ConstTileType const& c_tile, SizeType tile_rank, SizeType tag, MPI_Comm comm) {
@@ -323,64 +334,64 @@ namespace {
 //  }
 //}
 
-// void init_matrix(MatrixType& matrix, ScalarType val) {
-//  for (auto tile_idx : iterateRange2D(matrix.distribution().localNrTiles())) {
-//    TileType tile = matrix(tile_idx).get();
-//    for (auto el_idx : iterateRange2D(tile.size())) {
-//      tile(el_idx) = val;
-//    }
-//  }
-//}
+void setMatrix(MatrixType& matrix, ScalarType val) {
+  for (auto tile_idx : iterate_range2d(matrix.distribution().localNrTiles())) {
+    TileType tile = matrix(tile_idx).get();
+    for (auto el_idx : iterate_range2d(tile.size())) {
+      tile(el_idx) = val;
+    }
+  }
+}
 
-// void waitall_tiles(MatrixType& matrix) {
-//  for (auto tile_idx : iterateRange2D(matrix.distribution().localNrTiles())) {
-//    matrix(tile_idx).get();
-//  }
-//}
+void waitallTiles(MatrixType& matrix) {
+  for (const auto tile_idx : dlaf::common::iterate_range2d(matrix.distribution().localNrTiles()))
+    matrix(tile_idx).get();
+}
 
 // Sums the distributed matrix and returns the result to process 0.
-// ScalarType sum_matrix(Communicator const& comm, MatrixType& matrix) {
-//  ScalarType local_sum = 0;
-//
-//  for (auto tile_idx : iterateRange2D(matrix.distribution().localNrTiles())) {
-//    TileType tile = matrix(tile_idx).get();
-//    for (auto el_idx : iterateRange2D(tile.size())) {
-//      local_sum += tile(el_idx);
-//    }
-//  }
-//
-//  ScalarType global_sum = 0;
-//  MPI_Datatype mpi_type = dlaf::comm::mpi_datatype<ScalarType>::type;
-//  MPI_Reduce(&local_sum, &global_sum, 1, mpi_type, MPI_SUM, 0, comm);
-//
-//  return global_sum;
-//}
+ScalarType sumMatrixElements(Communicator const& comm, MatrixType& matrix) {
+  ScalarType local_sum = 0;
 
-options_t parse_options(hpx::program_options::variables_map& vm) {
+  for (auto tile_idx : iterate_range2d(matrix.distribution().localNrTiles())) {
+    TileType tile = matrix(tile_idx).get();
+    for (auto el_idx : iterate_range2d(tile.size())) {
+      local_sum += tile(el_idx);
+    }
+  }
+
+  ScalarType global_sum = 0;
+  MPI_Datatype mpi_type = dlaf::comm::mpi_datatype<ScalarType>::type;
+  DLAF_MPI_CALL(MPI_Reduce(&local_sum, &global_sum, 1, mpi_type, MPI_SUM, 0, comm));
+
+  return global_sum;
+}
+
+options_t parseOptions(hpx::program_options::variables_map& vm) {
   // using dlaf::util::ceilDiv;
 
   // clang-format off
   options_t opts = {
-      vm["len_m"].as<SizeType>(),
-      vm["len_n"].as<SizeType>(),
-      vm["len_k"].as<SizeType>(),
-      vm["tile_m"].as<SizeType>(),
-      vm["tile_n"].as<SizeType>(),
-      vm["pgrid_rows"].as<int>(),
-      vm["pgrid_cols"].as<int>(),
+      vm["m"].as<SizeType>(),
+      vm["n"].as<SizeType>(),
+      vm["k"].as<SizeType>(),
+      vm["mb"].as<SizeType>(),
+      vm["nb"].as<SizeType>(),
+      vm["grid-rows"].as<int>(),
+      vm["grid-cols"].as<int>(),
       //vm["batch_size"].as<int>()
-      vm["nruns"].as<int>(),
-      vm["check"].as<bool>(),
+      vm["nruns"].as<int64_t>(),
+      vm["nwarmups"].as<int64_t>(),
+      vm["check-result"].as<bool>(),
   };
   // clang-format on
 
-  DLAF_ASSERT(opts.len_m > 0, opts.len_m);
-  DLAF_ASSERT(opts.len_n > 0, opts.len_n);
-  DLAF_ASSERT(opts.len_k > 0, opts.len_k);
-  DLAF_ASSERT(opts.pgrid_rows > 0, opts.pgrid_rows);
-  DLAF_ASSERT(opts.pgrid_cols > 0, opts.pgrid_cols);
-  DLAF_ASSERT(opts.tile_m > 0, opts.tile_m);
-  DLAF_ASSERT(opts.tile_n > 0, opts.tile_n);
+  DLAF_ASSERT(opts.m > 0, opts.m);
+  DLAF_ASSERT(opts.n > 0, opts.n);
+  DLAF_ASSERT(opts.k > 0, opts.k);
+  DLAF_ASSERT(opts.grid_rows > 0, opts.grid_rows);
+  DLAF_ASSERT(opts.grid_cols > 0, opts.grid_cols);
+  DLAF_ASSERT(opts.mb > 0, opts.mb);
+  DLAF_ASSERT(opts.nb > 0, opts.nb);
   DLAF_ASSERT(opts.nruns > 0, opts.nruns);
   // DLAF_ASSERT(opts.nwarmups >= 0, opts.nwarmups);
 

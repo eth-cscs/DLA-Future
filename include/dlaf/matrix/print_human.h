@@ -47,9 +47,9 @@ void print(format::human, Matrix<T, Device::CPU>& mat) {
 
       std::cout << tile({elrow, elcol}) << " ";
     }
-    std::cout << " " << std::endl;
+    std::cout << std::endl;
   }
-  std::cout << " " << std::endl;
+  std::cout << std::endl;
 }
 
 /// Print a tile in a human readable format to standard output
@@ -59,9 +59,9 @@ void print(format::human, const Tile<T, Device::CPU>& tile) {
     for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
       std::cout << std::setprecision(5) << tile({ii, jj}) << " ";
     }
-    std::cout << " " << std::endl;
+    std::cout << std::endl;
   }
-  std::cout << " " << std::endl;
+  std::cout << std::endl;
 }
 
 }

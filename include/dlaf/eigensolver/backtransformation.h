@@ -20,7 +20,7 @@ namespace dlaf {
 namespace eigensolver {
 
 /// Eigenvalue back-transformation implementation on local memory
-/// Solves the equation: C = C - V T V^H A
+/// Solves the equation: C = C - V T V^H C
 /// where C is a square matrix, T an upper triangular matrix (T factors) and V a lower triangular matrix
 /// (reflectors).
 ///

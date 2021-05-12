@@ -74,7 +74,7 @@ void print(format::numpy, const Tile<const T, Device::CPU>& tile, std::ostream& 
   os << "]"
      << ", dtype=np." << internal::numpy_datatype<T>::typestring << ")"
      << ".reshape" << transposed(tile.size()) << ".T\n";
-}
+ }
 
 template <class T, Device device, template <class, Device> class MatrixLikeT>
 void print(format::numpy, std::string sym, MatrixLikeT<const T, device>& matrix,

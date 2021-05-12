@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include "dlaf/matrix/print_human.h"
 #include "dlaf/matrix/print_numpy.h"
 
 #include <sstream>
@@ -24,6 +25,8 @@
 
 using namespace dlaf;
 using namespace dlaf::matrix;
+using namespace dlaf::matrix::test;
+using namespace dlaf::test;
 
 using matrix::test::createTile;
 
@@ -307,5 +310,35 @@ TYPED_TEST(MatrixOutputTest, NumpyFormatMatrixDist) {
     print(format::numpy{}, "M", config.first, stream_matrix_output);
 
     EXPECT_EQ(config.second, stream_matrix_output.str());
+  }
+}
+
+struct TestSizes {
+  LocalElementSize size;
+  TileElementSize block_size;
+};
+const std::vector<TestSizes> sizes({
+    {{6, 6}, {2, 2}},
+    {{6, 6}, {3, 3}},
+    {{8, 8}, {3, 3}},
+});
+
+TYPED_TEST(MatrixOutputTest, printMatrixElements) {
+  using Type = float;
+  auto el = [](const GlobalElementIndex& index) {
+    SizeType i = index.row();
+    SizeType j = index.col();
+    return TypeUtilities<Type>::element(i + j, j - i);
+  };
+
+  for (const auto& sz : sizes) {
+    Matrix<Type, Device::CPU> mat(sz.size, sz.block_size);
+    EXPECT_EQ(Distribution(sz.size, sz.block_size), mat.distribution());
+
+    set(mat, el);
+
+    std::cout << "Matrix mat " << mat << std::endl;
+    std::cout << "Printing elements" << std::endl;
+    print(format::human{}, mat);
   }
 }

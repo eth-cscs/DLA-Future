@@ -80,7 +80,7 @@ void set_to_zero(MatrixT<Type>& matrix) {
 
 template <class T>
 hpx::shared_future<T> compute_reflector(
-    MatrixT<T>& a, const common::IterableRange2D<SizeType, dlaf::matrix::LocalTile_TAG> ai_panel,
+    MatrixT<T>& a, const common::IterableRange2D<SizeType, dlaf::matrix::LocalTile_TAG> ai_panel_range,
     const GlobalTileIndex ai_start, const TileElementIndex index_el_x0,
     common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
   using hpx::util::unwrapping;
@@ -105,7 +105,7 @@ hpx::shared_future<T> compute_reflector(
   // Extract x0 and compute local cumulative sum of squares of the reflector column
   auto x0_and_squares = hpx::make_ready_future<x0_and_squares_t>(static_cast<T>(0), static_cast<T>(0));
 
-  for (const LocalTileIndex& index_x_loc : ai_panel) {
+  for (const LocalTileIndex& index_x_loc : ai_panel_range) {
     const SizeType index_x_row = dist.template globalTileFromLocalTile<Coord::Row>(index_x_loc.row());
 
     const bool has_first_component = (index_x_row == ai_start.row());
@@ -200,7 +200,7 @@ hpx::shared_future<T> compute_reflector(
   }
 
   // 1A/3 COMPUTE REFLECTOR COMPONENTs
-  for (const LocalTileIndex& index_v_loc : ai_panel) {
+  for (const LocalTileIndex& index_v_loc : ai_panel_range) {
     const SizeType index_v_row = dist.template globalTileFromLocalTile<Coord::Row>(index_v_loc.row());
 
     const bool has_first_component = (index_v_row == ai_start.row());
@@ -226,11 +226,10 @@ hpx::shared_future<T> compute_reflector(
 }
 
 template <class T>
-void update_trailing_panel(MatrixT<T>& a,
-                           const common::IterableRange2D<SizeType, dlaf::matrix::LocalTile_TAG> ai_panel,
-                           const GlobalTileIndex ai_start, const TileElementIndex index_el_x0,
-                           hpx::shared_future<T> tau,
-                           common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
+void update_trailing_panel(
+    MatrixT<T>& a, const common::IterableRange2D<SizeType, dlaf::matrix::LocalTile_TAG> ai_panel_range,
+    const GlobalTileIndex ai_start, const TileElementIndex index_el_x0, hpx::shared_future<T> tau,
+    common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
   using hpx::util::unwrapping;
   using common::make_data;
   using namespace comm::sync;
@@ -251,7 +250,7 @@ void update_trailing_panel(MatrixT<T>& a,
   MatrixT<T> w({pt_cols, 1}, dist.blockSize());
   set_to_zero(w);
 
-  for (const LocalTileIndex& index_a_loc : ai_panel) {
+  for (const LocalTileIndex& index_a_loc : ai_panel_range) {
     const SizeType index_a_row = dist.template globalTileFromLocalTile<Coord::Row>(index_a_loc.row());
 
     const bool has_first_component = (index_a_row == ai_start.row());
@@ -314,7 +313,7 @@ void update_trailing_panel(MatrixT<T>& a,
   hpx::dataflow(executor_mpi, reduce_w_func, w(LocalTileIndex{0, 0}), serial_comm());
 
   // 1B/2 UPDATE TRAILING PANEL
-  for (const LocalTileIndex& index_a_loc : ai_panel) {
+  for (const LocalTileIndex& index_a_loc : ai_panel_range) {
     const SizeType index_a_row = dist.template globalTileFromLocalTile<Coord::Row>(index_a_loc.row());
 
     const bool has_first_component = (index_a_row == ai_start.row());
@@ -548,7 +547,7 @@ void compute_x(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT<Co
   });
 
   // TODO readonly tile management
-  for (const auto& index_x_loc : x)
+  for (const auto& index_x_loc : x.iterator())
     hpx::dataflow(executor_mpi, reduce_x_func, x(index_x_loc), serial_comm());
 }
 
@@ -738,7 +737,7 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
 
     const bool is_panel_rank_col = rank_v0.col() == rank.col();
 
-    v.setOffset(at_offset);
+    v.setRangeStart(at_offset);
 
     // 1. PANEL
     if (is_panel_rank_col) {
@@ -800,19 +799,19 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
       }
     }
 
-    vt.setOffset(at_offset);
+    vt.setRangeStart(at_offset);
     matrix::broadcast(executor_mpi, rank_v0.col(), v, vt, mpi_row_task_chain, mpi_col_task_chain);
 
     // UPDATE TRAILING MATRIX
 
     // COMPUTE W
     // W = V . T
-    w.setOffset(at_offset);
+    w.setRangeStart(at_offset);
 
     if (is_panel_rank_col)
       compute_w(w, v, t.read(t_idx));
 
-    wt.setOffset(at_offset);
+    wt.setRangeStart(at_offset);
     matrix::broadcast(executor_mpi, rank_v0.col(), w, wt, mpi_row_task_chain, mpi_col_task_chain);
 
     // COMPUTE X
@@ -824,8 +823,8 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
 
     // They have to be set to zero, because all tiles are going to be reduced, and some tiles may not get
     // "initialized" during computation, so they should not contribute with any spurious value to the final result
-    x.setOffset(at_offset);
-    xt.setOffset(at_offset);
+    x.setRangeStart(at_offset);
+    xt.setRangeStart(at_offset);
 
     auto set_tiles_to_zero = hpx::util::unwrapping_all([](auto tiles) {
       for (auto& tile : tiles)

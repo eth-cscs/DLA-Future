@@ -72,7 +72,7 @@ void herk(const blas::Uplo uplo, const blas::Op op, const BaseType<T> alpha,
 template <class T>
 void trmm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const blas::Diag diag,
           const T alpha, const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b) noexcept {
-  auto s = tile::internal::getTrmmSizes(side, op, a, b);
+  auto s = tile::internal::getTrmmSizes(side, a, b);
   blas::trmm(blas::Layout::ColMajor, side, uplo, op, diag, s.m, s.n, alpha, a.ptr(), a.ld(), b.ptr(),
              b.ld());
 }

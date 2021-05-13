@@ -337,8 +337,7 @@ TYPED_TEST(MatrixOutputTest, printMatrixElements) {
 
     set(mat, el);
 
-    std::cout << "Matrix mat " << mat << std::endl;
-    std::cout << "Printing elements" << std::endl;
-    print(format::human{}, mat);
+    //std::ostringstream stream_matrix_output;
+    print(format::human{}, "Matrix", mat, std::cout);
   }
 }

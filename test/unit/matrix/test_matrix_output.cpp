@@ -324,15 +324,15 @@ const std::vector<TestSizes> sizes({
 });
 
 TYPED_TEST(MatrixOutputTest, printMatrixElements) {
-  using Type = float;
+
   auto el = [](const GlobalElementIndex& index) {
     SizeType i = index.row();
     SizeType j = index.col();
-    return TypeUtilities<Type>::element(i + j, j - i);
+    return TypeUtilities<TypeParam>::element(i + j, j - i);
   };
 
   for (const auto& sz : sizes) {
-    Matrix<Type, Device::CPU> mat(sz.size, sz.block_size);
+    Matrix<TypeParam, Device::CPU> mat(sz.size, sz.block_size);
     EXPECT_EQ(Distribution(sz.size, sz.block_size), mat.distribution());
 
     set(mat, el);

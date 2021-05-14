@@ -31,7 +31,7 @@ template <class T>
 void print(format::human, const Tile<const T, Device::CPU>& tile, std::ostream& os = std::cout) {
   for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
     for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
-      os << std::setprecision(5) << tile({ii, jj}) << " ";
+      os << std::setprecision(5) << tile({ii, jj}) << ",";
     }
     os << std::endl;
   }
@@ -65,7 +65,7 @@ void print(format::human, std::string sym, Matrix<const T, Device::CPU>& mat,
       const LocalTileIndex idx = {tilerow, tilecol};
       auto& tile = mat.read(idx).get();
 
-      os << tile({elrow, elcol}) << " ";
+      os << tile({elrow, elcol}) << ",";
     }
     os << std::endl;
   }

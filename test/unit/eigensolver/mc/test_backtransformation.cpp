@@ -141,7 +141,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
         }
         auto tau_r =
             (static_cast<T>(1.0) + sqrt(static_cast<T>(1.0) - dotprod * tau_i * tau_i)) / dotprod;
-        auto tau = tau_r + i * tau_i;
+        auto tau = (tau_r, tau_i);
         tausloc({nt, 0}) = tau;
         t_tile.push_back(tau);
         ++nt;

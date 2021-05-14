@@ -19,16 +19,16 @@
 namespace dlaf {
 
 namespace format {
-struct human {};
+struct csv {};
 }
 
 namespace matrix {
 
 namespace internal {
 
-/// Print a tile in a human readable format to standard output
+/// Print a tile in csv format to standard output
 template <class T>
-void print(format::human, const Tile<const T, Device::CPU>& tile, std::ostream& os = std::cout) {
+void print(format::csv, const Tile<const T, Device::CPU>& tile, std::ostream& os = std::cout) {
   for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {
     for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
       os << std::setprecision(5) << tile({ii, jj}) << ",";
@@ -38,9 +38,9 @@ void print(format::human, const Tile<const T, Device::CPU>& tile, std::ostream& 
   os << std::endl;
 }
 
-/// Print a matrix in a human readable format to standard output
+/// Print a matrix in csv format to standard output
 template <class T>
-void print(format::human, std::string sym, Matrix<const T, Device::CPU>& mat,
+void print(format::csv, std::string sym, Matrix<const T, Device::CPU>& mat,
            std::ostream& os = std::cout) {
   if (!local_matrix(mat)) {
     os << mat << std::endl;

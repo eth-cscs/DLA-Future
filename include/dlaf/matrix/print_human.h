@@ -40,7 +40,8 @@ void print(format::human, const Tile<const T, Device::CPU>& tile, std::ostream& 
 
 /// Print a matrix in a human readable format to standard output
 template <class T>
-  void print(format::human, std::string sym, Matrix<const T, Device::CPU>& mat, std::ostream& os = std::cout) {
+void print(format::human, std::string sym, Matrix<const T, Device::CPU>& mat,
+           std::ostream& os = std::cout) {
   if (!local_matrix(mat)) {
     os << mat << std::endl;
     return;
@@ -52,7 +53,7 @@ template <class T>
   SizeType blockcol = mat.blockSize().cols();
 
   os << sym << std::endl;
-  
+
   for (SizeType irow = 0; irow < nrow; ++irow) {
     SizeType tilerow = irow / blockrow;
     SizeType elrow = irow % blockrow;

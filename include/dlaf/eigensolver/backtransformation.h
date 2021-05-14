@@ -22,14 +22,16 @@ namespace eigensolver {
 /// Eigenvalue back-transformation implementation on local memory.
 ///
 /// It solves C = C - V T V^H C
-/// where C is a generic matrix, T an upper triangular matrix (triangular factor T) and V a lower triangular matrix (reflectors).
-/// Triangular factor T is computed from values of taus and block reflector (in V) using @see computeTFactor() method.
+/// where C is a generic matrix, T an upper triangular matrix (triangular factor T) and V a lower
+/// triangular matrix (reflectors). Triangular factor T is computed from values of taus and block
+/// reflector (in V) using @see computeTFactor() method.
 ///
 /// @param mat_c contains on entry the generic matrix C, while on exit it contains the upper matrix
 /// resulting from the eigenvalue back-transformation.
 /// @param mat_v is a lower triangular matrix, containing Householder vectors (reflectors).
 /// @param taus is a vectors of scalar, associated with the related elementary reflector.
-/// The last two paramteres (@param mat_v and @param taus) are used to compute the T factor matrix (compact WY representation of the Householder reflectors).
+/// The last two paramteres (@param mat_v and @param taus) are used to compute the T factor matrix
+/// (compact WY representation of the Householder reflectors).
 /// @pre mat_c is not distributed,
 /// @pre mat_v is not distributed.
 template <Backend backend, Device device, class T>
@@ -45,14 +47,16 @@ void backTransformation(Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v
 /// Eigenvalue back-transformation implementation on distributed memory.
 ///
 /// It solves C = C - V T V^H C
-/// where C is a generic matrix, T an upper triangular matrix (triangular factor T) and V a lower triangular matrix (reflectors).
-/// Triangular factor T is computed from values of taus and block reflector (in V) using @see computeTFactor() method.
+/// where C is a generic matrix, T an upper triangular matrix (triangular factor T) and V a lower
+/// triangular matrix (reflectors). Triangular factor T is computed from values of taus and block
+/// reflector (in V) using @see computeTFactor() method.
 ///
 /// @param mat_c contains on entry the generic matrix C, while on exit it contains the upper matrix
 /// resulting from the eigenvalue back-transformation.
 /// @param mat_v is a lower triangular matrix, containing Householder vectors (reflectors).
 /// @param taus is a vectors of scalar, associated with the related elementary reflector.
-/// The last two paramteres (@param mat_v and @param taus) are used to compute the T factor matrix (compact WY representation of the Householder reflectors).
+/// The last two paramteres (@param mat_v and @param taus) are used to compute the T factor matrix
+/// (compact WY representation of the Householder reflectors).
 /// @pre mat_c is distributed,
 /// @pre mat_v is distributed according to grid.
 template <Backend backend, Device device, class T>

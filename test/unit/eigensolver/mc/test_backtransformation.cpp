@@ -59,7 +59,8 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
     {3, 0, 1, 1}, {0, 5, 2, 3},  // m, n = 0
     {2, 2, 3, 3}, {3, 4, 6, 7},  // m < mb
     {3, 3, 1, 1}, {4, 4, 2, 2}, {6, 3, 3, 3}, {12, 2, 4, 4}, {12, 24, 3, 3}, {24, 36, 6, 6},
-    //  {5, 8, 3, 2}, {4, 6, 2, 3}, {5, 5, 2, 3},  {8, 27, 3, 4}, {15, 34, 4, 6},   // These cases lead to operations between incomplete tiles where sizes are not detected correctly.
+    //  {5, 8, 3, 2}, {4, 6, 2, 3}, {5, 5, 2, 3},  {8, 27, 3, 4}, {15, 34, 4, 6},   // These cases lead
+    //  to operations between incomplete tiles where sizes are not detected correctly.
 };
 
 template <class T>
@@ -132,7 +133,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
         auto dotprod = blas::dot(m - t, mat_v_loc.ptr(v_offset), 1, mat_v_loc.ptr(v_offset), 1);
         BaseType<T> tau_i;
         if (std::is_same<T, ComplexType<T>>::value) {
-          auto seed = 10000 * i/mb + 1;
+          auto seed = 10000 * i / mb + 1;
           dlaf::matrix::util::internal::getter_random<BaseType<T>> random_value(seed);
           tau_i = random_value();
         }

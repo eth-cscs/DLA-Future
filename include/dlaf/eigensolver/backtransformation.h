@@ -19,14 +19,19 @@
 namespace dlaf {
 namespace eigensolver {
 
-/// Eigenvalue back-transformation implementation on local memory
-/// Solves the equation: C = C - V T V^H C
-/// where C is a square matrix, T an upper triangular matrix (T factors) and V a lower triangular matrix
-/// (reflectors).
+/// Eigenvalue back-transformation implementation on local memory.
 ///
-/// @param mat_c contains the square matrix C,
-/// @param mat_v contains the lower triangular matrix of reflectors,
-/// @param taus is an array of taus, associated with the related elementary reflector.
+/// It solves C = C - V T V^H C
+/// where C is a generic matrix, T an upper triangular matrix (triangular factor T) and V a lower triangular matrix (reflectors).
+/// Triangular factor T is computed from values of taus and block reflector (in V) using @see computeTFactor() method.
+///
+/// @param mat_c contains on entry the generic matrix C, while on exit it contains the upper matrix
+/// resulting from the eigenvalue back-transformation.
+/// @param mat_v is a lower triangular matrix, containing Householder vectors (reflectors).
+/// @param taus is a vectors of scalar, associated with the related elementary reflector.
+/// The last two paramteres (@param mat_v and @param taus) are used to compute the T factor matrix (compact WY representation of the Householder reflectors).
+/// @pre mat_c is not distributed,
+/// @pre mat_v is not distributed.
 template <Backend backend, Device device, class T>
 void backTransformation(Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
                         common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
@@ -37,24 +42,23 @@ void backTransformation(Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v
   internal::BackTransformation<backend, device, T>::call_FC(mat_c, mat_v, taus);
 }
 
-/// Eigenvalue back-transformation implementation on distributed memory
-/// Solves the equation: C = C - V T V^H A
-/// where C is a square matrix, T an upper triangular matrix (T factors) and V a lower triangular matrix
-/// (reflectors).
+/// Eigenvalue back-transformation implementation on distributed memory.
 ///
-/// @param mat_c contains the square matrix C,
-/// @param mat_v contains the lower triangular matrix of reflectors,
-/// @param taus is an array of taus, associated with the related elementary reflector.
+/// It solves C = C - V T V^H C
+/// where C is a generic matrix, T an upper triangular matrix (triangular factor T) and V a lower triangular matrix (reflectors).
+/// Triangular factor T is computed from values of taus and block reflector (in V) using @see computeTFactor() method.
+///
+/// @param mat_c contains on entry the generic matrix C, while on exit it contains the upper matrix
+/// resulting from the eigenvalue back-transformation.
+/// @param mat_v is a lower triangular matrix, containing Householder vectors (reflectors).
+/// @param taus is a vectors of scalar, associated with the related elementary reflector.
+/// The last two paramteres (@param mat_v and @param taus) are used to compute the T factor matrix (compact WY representation of the Householder reflectors).
+/// @pre mat_c is distributed,
+/// @pre mat_v is distributed according to grid.
 template <Backend backend, Device device, class T>
 void backTransformation(comm::CommunicatorGrid grid, Matrix<T, device>& mat_c,
                         Matrix<const T, device>& mat_v,
                         common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
-  // TODO preconditions are enough?
-  // TODO blocksize? So far should be one
-  //    DLAF_ASSERT(matrix::square_size(mat_c), mat_c);
-  //    DLAF_ASSERT(matrix::square_size(mat_v), mat_v);
-  //    DLAF_ASSERT(matrix::square_size(mat_t), mat_t);
-  //   DLAF_ASSERT(matrix::square_blocksize(mat_c), mat_c);
   DLAF_ASSERT(mat_c.blockSize().rows() == mat_v.blockSize().rows(), mat_c, mat_v);
   DLAF_ASSERT(matrix::equal_process_grid(mat_c, grid), mat_c, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_v, grid), mat_v, grid);

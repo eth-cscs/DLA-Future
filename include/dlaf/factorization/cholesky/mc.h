@@ -144,7 +144,7 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
     if (kk_rank == this_rank)
       potrf_diag_tile(executor_hp, mat_a(kk_idx));
 
-    // If there is no trailing matrix anymore...
+    // If there is no trailing matrix
     if (k == nrtile - 1)
       continue;
 

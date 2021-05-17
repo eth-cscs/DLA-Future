@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/matrix/panel.h"
+#include "dlaf/communication/panel.h"
 
 #include <vector>
 
@@ -21,6 +21,7 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/executor.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/matrix/panel.h"
 #include "dlaf/util_matrix.h"
 
 #include "dlaf_test/comm_grids/grids_6_ranks.h"

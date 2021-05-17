@@ -23,6 +23,7 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/executor.h"
 #include "dlaf/communication/kernels.h"
+#include "dlaf/communication/panel.h"
 #include "dlaf/executors.h"
 #include "dlaf/factorization/cholesky/api.h"
 #include "dlaf/lapack_tile.h"
@@ -236,6 +237,7 @@ DLAF_CHOLESKY_MC_ETI(extern, float)
 DLAF_CHOLESKY_MC_ETI(extern, double)
 DLAF_CHOLESKY_MC_ETI(extern, std::complex<float>)
 DLAF_CHOLESKY_MC_ETI(extern, std::complex<double>)
+
 }
 }
 }

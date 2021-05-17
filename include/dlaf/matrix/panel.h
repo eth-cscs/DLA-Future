@@ -129,7 +129,6 @@ struct Panel<axis, const T, D> {
     end_ = end_loc;
   }
 
-
   /// Change the start boundary of the range of tiles to which the panel allows access to
   ///
   /// With respect to the parent matrix.

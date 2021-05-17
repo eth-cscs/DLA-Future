@@ -22,14 +22,14 @@
 #include "dlaf/types.h"
 
 namespace dlaf {
-namespace matrix {
+namespace comm {
 namespace internal {
 
 // helper function that identifies the owner of a transposed coordinate,
 // it returns both the component of the rank in the transposed dimension and
 // its global cross coordinate (i.e. row == col in the global frame of reference)
 template <Coord dst_coord>
-std::pair<SizeType, comm::IndexT_MPI> transposedOwner(const Distribution& dist,
+std::pair<SizeType, comm::IndexT_MPI> transposedOwner(const matrix::Distribution& dist,
                                                       const LocalTileIndex idx) {
   const auto idx_cross = dist.template globalTileFromLocalTile<dst_coord>(idx.get(dst_coord));
   const auto rank_owner = dist.template rankGlobalTile<orthogonal(dst_coord)>(idx_cross);
@@ -49,7 +49,8 @@ std::pair<SizeType, comm::IndexT_MPI> transposedOwner(const Distribution& dist,
 /// @param serial_comm  where to pipeline the tasks for communications.
 /// @pre Communicator in @p serial_comm must be orthogonal to panel axis
 template <class T, Device device, Coord axis, class = std::enable_if_t<!std::is_const<T>::value>>
-void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis, T, device>& panel,
+void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
+               matrix::Panel<axis, T, device>& panel,
                common::Pipeline<comm::Communicator>& serial_comm) {
   using hpx::dataflow;
   using hpx::util::unwrapping;
@@ -97,8 +98,8 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis,
 /// @pre both panels parent matrices should be square matrices with square blocksizes
 /// @pre both panels offsets should lay on the main diagonal of the parent matrix
 template <class T, Device device, Coord axis, class = std::enable_if_t<!std::is_const<T>::value>>
-void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root, Panel<axis, T, device>& panel,
-               Panel<orthogonal(axis), T, device>& panelT,
+void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
+               matrix::Panel<axis, T, device>& panel, matrix::Panel<orthogonal(axis), T, device>& panelT,
                common::Pipeline<comm::Communicator>& row_task_chain,
                common::Pipeline<comm::Communicator>& col_task_chain) {
   using hpx::dataflow;

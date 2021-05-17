@@ -104,6 +104,17 @@ struct Panel<axis, const T, D> {
     }
   }
 
+  /// Set the panel to enable access to the range of tiles [start, end)
+  ///
+  /// With respect to the parent matrix.
+  ///
+  /// @pre this can be called as first operation after construction or after reset()
+  /// @pre (just the index relevant for the axis of the panel)
+  /// @pre start <= end
+  /// @pre panel offset on construction <= start
+  /// @pre panel offset on construction <= end
+  /// @pre start <= 1 past the panel last tile
+  /// @pre end <= 1 past the panel last tile
   void setRange(LocalTileSize start, LocalTileSize end) noexcept {
     const auto start_loc = start.get(CoordType);
     const auto end_loc = end.get(CoordType);
@@ -118,9 +129,15 @@ struct Panel<axis, const T, D> {
     end_ = end_loc;
   }
 
-  /// Set the panel to a new offset (with respect to the "parent" matrix)
+
+  /// Change the start boundary of the range of tiles to which the panel allows access to
   ///
-  /// @pre offset cannot be less than the offset has been specifed on construction
+  /// With respect to the parent matrix.
+  ///
+  /// @pre this can be called as first operation after construction or after reset()
+  /// @pre (just the index relevant for the axis of the panel)
+  /// @pre start <= current end range of the panel
+  /// @pre panel offset on construction <= start
   void setRangeStart(LocalTileSize start) noexcept {
     const auto start_loc = start.get(CoordType);
     DLAF_ASSERT(start_loc >= bias_ && start_loc <= end_, start, end_, bias_);
@@ -128,9 +145,14 @@ struct Panel<axis, const T, D> {
     start_ = start_loc;
   }
 
-  /// Set the panel to a new offset (with respect to the "parent" matrix)
+  /// Change the end boundary of the range of tiles to which the panel allows access to
   ///
-  /// @pre offset cannot be less than the offset has been specifed on construction
+  /// With respect to the parent matrix.
+  ///
+  /// @pre this can be called as first operation after construction or after reset()
+  /// @pre (just the index relevant for the axis of the panel)
+  /// @pre current end range of the panel <= end
+  /// @pre end <= 1 past the panel last tile
   void setRangeEnd(LocalTileSize end) noexcept {
     const auto end_loc = end.get(CoordType);
     DLAF_ASSERT(end_loc >= start_ && end_loc <= dist_matrix_.localNrTiles().get(CoordType), start_, end,

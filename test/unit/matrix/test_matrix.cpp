@@ -12,6 +12,7 @@
 #include "dlaf/matrix/matrix.h"
 
 #include <atomic>
+#include <chrono>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -25,12 +26,16 @@
 #include "dlaf_test/matrix/util_matrix_futures.h"
 #include "dlaf_test/util_types.h"
 
+using namespace std::chrono_literals;
+
 using namespace dlaf;
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
 using namespace dlaf::comm;
 using namespace dlaf::test;
 using namespace testing;
+
+using hpx::util::unwrapping;
 
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
@@ -1226,43 +1231,59 @@ TEST_F(MatrixGenericTest, SelectTilesReadwrite) {
 // already finished (and in case of failure it may not be presented correctly)
 //
 // Note 2:
-// WAIT_GUARD is the time to wait in the launched task for assuring that Matrix d'tor has been called
+// wait_guard is the time to wait in the launched task for assuring that Matrix d'tor has been called
 // after going out-of-scope. This duration must be kept as low as possible in order to not waste time
 // during tests, but at the same time it must be enough to let the "main" to arrive to the end of the
 // scope.
+//
+// Note 3:
+// The tests about lifetime of a Matrix built with user provided memory are not examples of good
+// usage, but they are just meant to test that the Matrix does not wait on destruction for any left
+// task on one of its tiles.
 
-const auto WAIT_GUARD = std::chrono::milliseconds(10);
 const auto device = dlaf::Device::CPU;
 using TypeParam = std::complex<float>;  // randomly chosen element type for matrix
 
+// wait for guard to become true
+auto try_waiting_guard = [](auto& guard) {
+  const auto wait_guard = 20ms;
+
+  for (int i = 0; i < 100 && !guard; ++i)
+    hpx::this_thread::sleep_for(wait_guard);
+};
+
+// Create a single-element matrix
 template <class T>
 auto createMatrix() -> Matrix<T, device> {
   return {{1, 1}, {1, 1}};
 }
 
+// Create a single-element matrix with user-provided memory
 template <class T>
-auto createConstMatrix() {
-  LayoutInfo layout({1, 1}, {1, 1}, 1, 1, 1);
-  memory::MemoryView<T, device> mem(layout.minMemSize());
-  const T* p = mem();
+auto createMatrix(T& data) -> Matrix<T, device> {
+  return createMatrixFromColMajor<Device::CPU>({1, 1}, {1, 1}, 1, &data);
+}
 
-  return Matrix<const T, device>{layout, p};
+// Create a single-element const matrix with user-provided memory
+template <class T>
+auto createConstMatrix(const T& data) {
+  return createMatrixFromColMajor<Device::CPU>({1, 1}, {1, 1}, 1, &data);
 }
 
 TEST(MatrixDestructorFutures, NonConstAfterRead) {
   hpx::future<void> last_task;
 
-  std::atomic<bool> guard{false};
+  std::atomic<bool> is_exited_from_scope{false};
   {
     auto matrix = createMatrix<TypeParam>();
 
     auto shared_future = matrix.read(LocalTileIndex(0, 0));
-    last_task = shared_future.then(hpx::launch::async, [&guard](auto&&) {
-      hpx::this_thread::sleep_for(WAIT_GUARD);
-      EXPECT_FALSE(guard);
+    last_task = shared_future.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
+      try_waiting_guard(is_exited_from_scope);
+      EXPECT_TRUE(is_exited_from_scope);
     });
   }
-  guard = true;
+  is_exited_from_scope = true;
 
   last_task.get();
 }
@@ -1270,37 +1291,128 @@ TEST(MatrixDestructorFutures, NonConstAfterRead) {
 TEST(MatrixDestructorFutures, NonConstAfterReadWrite) {
   hpx::future<void> last_task;
 
-  std::atomic<bool> guard{0};
+  std::atomic<bool> is_exited_from_scope{false};
   {
     auto matrix = createMatrix<TypeParam>();
 
     auto future = matrix(LocalTileIndex(0, 0));
-    last_task = future.then(hpx::launch::async, [&guard](auto&&) {
-      hpx::this_thread::sleep_for(WAIT_GUARD);
-      EXPECT_FALSE(guard);
+    last_task = future.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
+      try_waiting_guard(is_exited_from_scope);
+      EXPECT_TRUE(is_exited_from_scope);
     });
   }
-  guard = true;
+  is_exited_from_scope = true;
 
   last_task.get();
 }
 
-TEST(MatrixDestructorFutures, ConstAfterRead) {
+TEST(MatrixDestructorFutures, NonConstAfterRead_UserMemory) {
   hpx::future<void> last_task;
 
-  std::atomic<bool> guard{0};
+  std::atomic<bool> is_exited_from_scope{false};
   {
-    auto matrix = createConstMatrix<TypeParam>();
+    TypeParam data;
+    auto matrix = createMatrix<TypeParam>(data);
 
-    auto sf = matrix.read(LocalTileIndex(0, 0));
-    last_task = sf.then(hpx::launch::async, [&guard](auto&&) {
-      hpx::this_thread::sleep_for(WAIT_GUARD);
-      EXPECT_FALSE(guard);
+    auto shared_future = matrix.read(LocalTileIndex(0, 0));
+    last_task = shared_future.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
+      try_waiting_guard(is_exited_from_scope);
+      EXPECT_TRUE(is_exited_from_scope);
     });
   }
-  guard = true;
+  is_exited_from_scope = true;
 
   last_task.get();
+}
+
+TEST(MatrixDestructorFutures, NonConstAfterReadWrite_UserMemory) {
+  hpx::future<void> last_task;
+
+  std::atomic<bool> is_exited_from_scope{false};
+  {
+    TypeParam data;
+    auto matrix = createMatrix<TypeParam>(data);
+
+    auto future = matrix(LocalTileIndex(0, 0));
+    last_task = future.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
+      try_waiting_guard(is_exited_from_scope);
+      EXPECT_TRUE(is_exited_from_scope);
+    });
+  }
+  is_exited_from_scope = true;
+
+  last_task.get();
+}
+
+TEST(MatrixDestructorFutures, ConstAfterRead_UserMemory) {
+  hpx::future<void> last_task;
+
+  std::atomic<bool> is_exited_from_scope{false};
+  {
+    TypeParam data;
+    auto matrix = createConstMatrix<TypeParam>(data);
+
+    auto sf = matrix.read(LocalTileIndex(0, 0));
+    last_task = sf.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
+      try_waiting_guard(is_exited_from_scope);
+      EXPECT_TRUE(is_exited_from_scope);
+    });
+  }
+  is_exited_from_scope = true;
+
+  last_task.get();
+}
+
+TEST_F(MatrixGenericTest, SyncBarrier) {
+  using TypeParam = double;
+  using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
+  using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
+
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+
+      MemoryViewT mem(layout.minMemSize());
+      MatrixT matrix = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid,
+                                                         static_cast<TypeParam*>(mem()));
+
+      const auto local_size = distribution.localNrTiles();
+      const LocalTileIndex tile_tl(0, 0);
+      const LocalTileIndex tile_br(std::max(SizeType(0), local_size.rows() - 1),
+                                   std::max(SizeType(0), local_size.cols() - 1));
+
+      const bool has_local = !local_size.isEmpty();
+
+      // Note:
+      // the guard is used to check that tasks before and after the barrier run sequentially and not
+      // in parallel.
+      // Indeed, two read calls one after the other would result in a parallel execution of their
+      // tasks, while a barrier between them must assure that they will be run sequentially.
+      std::atomic<bool> guard(false);
+
+      // start a task (if it has at least a local part...otherwise there is no tile to work on)
+      if (has_local)
+        matrix.read(tile_tl).then(hpx::launch::async, [&guard](auto&&) {
+          hpx::this_thread::sleep_for(100ms);
+          guard = true;
+        });
+
+      // everyone wait on its local part...
+      // this means that it is possible to call it also on empty local matrices, they just don't
+      // have anything to wait for
+      matrix.waitLocalTiles();
+
+      // after the sync barrier, start a task on a tile (another one/the same) expecting that
+      // the previous task has been fully completed (and the future mechanism still works)
+      if (has_local) {
+        matrix.read(tile_tl).then([&guard](auto&&) { EXPECT_TRUE(guard); }).get();
+        matrix.read(tile_br).then([&guard](auto&&) { EXPECT_TRUE(guard); }).get();
+      }
+    }
+  }
 }
 
 struct CustomException final : public std::exception {};
@@ -1308,8 +1420,7 @@ struct CustomException final : public std::exception {};
 TEST(MatrixExceptionPropagation, RWPropagatesInRWAccess) {
   auto matrix = createMatrix<TypeParam>();
 
-  auto f =
-      matrix(LocalTileIndex(0, 0)).then(hpx::util::unwrapping([](auto&&) { throw CustomException{}; }));
+  auto f = matrix(LocalTileIndex(0, 0)).then(unwrapping([](auto&&) { throw CustomException{}; }));
 
   EXPECT_THROW(matrix(LocalTileIndex(0, 0)).get(), dlaf::ContinuationException);
   EXPECT_THROW(f.get(), CustomException);
@@ -1318,8 +1429,7 @@ TEST(MatrixExceptionPropagation, RWPropagatesInRWAccess) {
 TEST(MatrixExceptionPropagation, RWPropagatesInReadAccess) {
   auto matrix = createMatrix<TypeParam>();
 
-  auto f =
-      matrix(LocalTileIndex(0, 0)).then(hpx::util::unwrapping([](auto&&) { throw CustomException{}; }));
+  auto f = matrix(LocalTileIndex(0, 0)).then(unwrapping([](auto&&) { throw CustomException{}; }));
 
   EXPECT_THROW(matrix.read(LocalTileIndex(0, 0)).get(), dlaf::ContinuationException);
   EXPECT_THROW(f.get(), CustomException);
@@ -1328,9 +1438,7 @@ TEST(MatrixExceptionPropagation, RWPropagatesInReadAccess) {
 TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInRWAccess) {
   auto matrix = createMatrix<TypeParam>();
 
-  auto f = matrix.read(LocalTileIndex(0, 0)).then(hpx::util::unwrapping([](auto&&) {
-    throw CustomException{};
-  }));
+  auto f = matrix.read(LocalTileIndex(0, 0)).then(unwrapping([](auto&&) { throw CustomException{}; }));
 
   EXPECT_NO_THROW(matrix(LocalTileIndex(0, 0)).get());
   EXPECT_THROW(f.get(), CustomException);
@@ -1339,9 +1447,7 @@ TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInRWAccess) {
 TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInReadAccess) {
   auto matrix = createMatrix<TypeParam>();
 
-  auto f = matrix.read(LocalTileIndex(0, 0)).then(hpx::util::unwrapping([](auto&&) {
-    throw CustomException{};
-  }));
+  auto f = matrix.read(LocalTileIndex(0, 0)).then(unwrapping([](auto&&) { throw CustomException{}; }));
 
   EXPECT_NO_THROW(matrix.read(LocalTileIndex(0, 0)).get());
   EXPECT_THROW(f.get(), CustomException);

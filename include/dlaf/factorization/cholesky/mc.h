@@ -132,9 +132,9 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
   const matrix::Distribution& distr = mat_a.distribution();
   const SizeType nrtile = mat_a.nrTiles().cols();
 
-  constexpr std::size_t N_WORKSPACES = 2;
-  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panels(N_WORKSPACES, distr);
-  common::RoundRobin<matrix::Panel<Coord::Row, T, Device::CPU>> panelsT(N_WORKSPACES, distr);
+  constexpr std::size_t n_workspaces = 2;
+  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panels(n_workspaces, distr);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, Device::CPU>> panelsT(n_workspaces, distr);
 
   for (SizeType k = 0; k < nrtile; ++k) {
     const GlobalTileIndex kk_idx(k, k);

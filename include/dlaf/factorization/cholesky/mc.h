@@ -153,22 +153,27 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
         distr.nextLocalTileFromGlobalTile<Coord::Col>(k),
     };
 
+    const LocalTileSize at_offset{
+        distr.nextLocalTileFromGlobalTile<Coord::Row>(k + 1),
+        distr.nextLocalTileFromGlobalTile<Coord::Col>(k + 1),
+    };
+
     const LocalTileIndex diag_wp_idx{0, kk_offset.cols()};
 
     auto& panel = panels.nextResource();
     auto& panelT = panelsT.nextResource();
 
-    panel.setRangeStart(kk_offset);
-    panelT.setRangeStart(kk_offset);
+    panel.setRangeStart(at_offset);
 
     if (kk_rank.col() == this_rank.col()) {
-      if (kk_rank.row() == this_rank.row()) {
+      // Note:
+      // panelT shrinked to a single tile for temporarly storing and communicating the diagonal
+      // tile used for the column update
+      panelT.setRange(kk_offset, at_offset);
+
+      if (kk_rank.row() == this_rank.row())
         panelT.setTile(diag_wp_idx, mat_a.read(kk_idx));
-        comm::scheduleSendBcast(executor_mpi, panelT.read(diag_wp_idx), mpi_col_task_chain());
-      }
-      else {
-        comm::scheduleRecvBcast(executor_mpi, panelT(diag_wp_idx), kk_rank.row(), mpi_col_task_chain());
-      }
+      broadcast(executor_mpi, kk_rank.row(), panelT, mpi_col_task_chain);
 
       // COLUMN UPDATE
       for (SizeType i = distr.nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
@@ -184,6 +189,8 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
       // row panel has been used for temporary storage of diagonal panel for column update
       panelT.reset();
     }
+
+    panelT.setRange(at_offset, distr.localNrTiles());
 
     // TODO skip last step tile
     broadcast(executor_mpi, kk_rank.col(), panel, panelT, mpi_row_task_chain, mpi_col_task_chain);

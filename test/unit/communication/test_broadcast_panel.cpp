@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/communication/panel_bcast.h"
+#include "dlaf/communication/broadcast_panel.h"
 
 #include <gtest/gtest.h>
 

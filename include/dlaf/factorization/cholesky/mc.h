@@ -23,7 +23,7 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/executor.h"
 #include "dlaf/communication/kernels.h"
-#include "dlaf/communication/panel.h"
+#include "dlaf/communication/panel_bcast.h"
 #include "dlaf/executors.h"
 #include "dlaf/factorization/cholesky/api.h"
 #include "dlaf/lapack_tile.h"

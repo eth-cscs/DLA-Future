@@ -54,7 +54,7 @@ auto prepareSendTile(hpx::shared_future<matrix::Tile<const T, D>> tile) {
 /// the CPU. This helper duplicates to the GPU if the first template parameter
 /// is a GPU device. The first template parameter must be given.
 template <Device D, typename T>
-auto handleRecvTile(hpx::future<matrix::Tile<const T, CommunicationDevice<D>::value>> tile) {
+auto handleRecvTile(hpx::future<matrix::Tile<T, CommunicationDevice<D>::value>> tile) {
   return matrix::duplicateIfNeeded<D>(std::move(tile));
 }
 }

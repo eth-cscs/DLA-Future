@@ -40,13 +40,11 @@ DLAF_MAKE_CALLABLE_OBJECT(sendBcast);
 
 // Non-blocking receiver broadcast
 template <class T, Device D>
-matrix::Tile<const T, D> recvBcast(matrix::Tile<T, D> tile, comm::IndexT_MPI root_rank,
-                                   common::PromiseGuard<Communicator> pcomm, MPI_Request* req) {
-  using ConstTile_t = matrix::Tile<const T, D>;
-
+matrix::Tile<T, D> recvBcast(matrix::Tile<T, D> tile, comm::IndexT_MPI root_rank,
+                             common::PromiseGuard<Communicator> pcomm, MPI_Request* req) {
   auto msg = comm::make_message(common::make_data(tile));
   MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, pcomm.ref(), req);
-  return ConstTile_t(std::move(tile));
+  return std::move(tile);
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(recvBcast);
@@ -67,30 +65,28 @@ matrix::Tile<const T, D> recvBcastAlloc(TileElementSize tile_size, comm::IndexT_
   return ConstTile_t(std::move(tile));
 }
 
-template <class T, Device D, class Executor, template <class> class Future>
-void scheduleSendBcast(Executor&& ex, Future<matrix::Tile<const T, D>> tile,
+template <class T, Device D, template <class> class Future>
+void scheduleSendBcast(const comm::Executor& ex, Future<matrix::Tile<const T, D>> tile,
                        hpx::future<common::PromiseGuard<comm::Communicator>> pcomm) {
-  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(sendBcast_o),
-                internal::prepareSendTile(std::move(tile)), std::move(pcomm));
+  hpx::dataflow(ex, hpx::util::unwrapping(sendBcast_o), internal::prepareSendTile(std::move(tile)),
+                std::move(pcomm));
 }
 
-template <class T, Device D, class Executor>
-hpx::future<matrix::Tile<const T, D>> scheduleRecvBcast(
-    Executor&& ex, hpx::future<matrix::Tile<T, D>> tile, comm::IndexT_MPI root_rank,
+template <class T, Device D>
+hpx::future<matrix::Tile<T, D>> scheduleRecvBcast(
+    const comm::Executor& ex, hpx::future<matrix::Tile<T, D>> tile, comm::IndexT_MPI root_rank,
     hpx::future<common::PromiseGuard<Communicator>> pcomm) {
-  return internal::handleRecvTile<D>(hpx::dataflow(std::forward<Executor>(ex),
-                                                   hpx::util::unwrapping(recvBcast_o), std::move(tile),
-                                                   root_rank, std::move(pcomm)));
+  return internal::handleRecvTile<D>(hpx::dataflow(ex, hpx::util::unwrapping(recvBcast_o),
+                                                   std::move(tile), root_rank, std::move(pcomm)));
 }
 
-template <class T, Device D, class Executor>
+template <class T, Device D>
 hpx::future<matrix::Tile<const T, D>> scheduleRecvBcastAlloc(
-    Executor&& ex, TileElementSize tile_size, comm::IndexT_MPI root_rank,
+    const comm::Executor& ex, TileElementSize tile_size, comm::IndexT_MPI root_rank,
     hpx::future<common::PromiseGuard<comm::Communicator>> pcomm) {
   return internal::handleRecvTile<D>(
-      hpx::dataflow(std::forward<Executor>(ex),
-                    hpx::util::unwrapping(recvBcastAlloc<T, CommunicationDevice<D>::value>), tile_size,
-                    root_rank, std::move(pcomm)));
+      hpx::dataflow(ex, hpx::util::unwrapping(recvBcastAlloc<T, CommunicationDevice<D>::value>),
+                    tile_size, root_rank, std::move(pcomm)));
 }
 }
 }

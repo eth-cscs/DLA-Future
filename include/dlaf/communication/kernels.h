@@ -44,7 +44,7 @@ matrix::Tile<T, D> recvBcast(matrix::Tile<T, D> tile, comm::IndexT_MPI root_rank
                              common::PromiseGuard<Communicator> pcomm, MPI_Request* req) {
   auto msg = comm::make_message(common::make_data(tile));
   MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, pcomm.ref(), req);
-  return {std::move(tile)};
+  return tile;
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(recvBcast);

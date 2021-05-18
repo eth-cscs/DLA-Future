@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/matrix/print_human.h"
+#include "dlaf/matrix/print_csv.h"
 #include "dlaf/matrix/print_numpy.h"
 
 #include <sstream>
@@ -47,7 +47,7 @@ struct test_tile_output {
 
     const std::string output{"np.array([], dtype=np.single).reshape(0, 0).T\n"};
 
-    const std::string output_csv{"\n"};
+    const std::string output_csv{""};
 
     return std::make_tuple(std::move(mat), output, output_csv);
   }
@@ -66,7 +66,7 @@ struct test_tile_output {
 
     const std::string output_csv{"0,-3,\n"
                                  "-1,4,\n"
-                                 "2,-5,\n\n"};
+                                 "2,-5,\n"};
 
     return std::make_tuple(std::move(mat), output, output_csv);
   }
@@ -82,7 +82,7 @@ struct test_tile_output<std::complex<T>> {
 
     const std::string output{"np.array([], dtype=np.csingle).reshape(0, 0).T\n"};
 
-    const std::string output_csv{"\n"};
+    const std::string output_csv{""};
 
     return std::make_tuple(std::move(mat), output, output_csv);
   }
@@ -100,7 +100,7 @@ struct test_tile_output<std::complex<T>> {
 
     const std::string output_csv{"(0,0),(0,-1),\n"
                                  "(1,0),(1,-1),\n"
-                                 "(2,0),(2,-1),\n\n"};
+                                 "(2,0),(2,-1),\n"};
 
     return std::make_tuple(std::move(mat), output, output_csv);
   }
@@ -146,7 +146,7 @@ struct test_matrix_output {
 
     const std::string output{"mat = np.zeros((0, 0), dtype=np.single)\n"};
 
-    const std::string output_csv{"mat\n\n"};
+    const std::string output_csv{"mat\n"};
 
     return std::make_tuple(std::move(mat), output, output_csv);
   }
@@ -175,7 +175,7 @@ struct test_matrix_output {
                                  "-1,6,-11,16,\n"
                                  "2,-7,12,-17,\n"
                                  "-3,8,-13,18,\n"
-                                 "4,-9,14,-19,\n\n"};
+                                 "4,-9,14,-19,\n"};
 
     return std::make_tuple(std::move(mat), output, output_csv);
   }
@@ -193,7 +193,7 @@ struct test_matrix_output<std::complex<T>> {
 
     const std::string output{"mat = np.zeros((0, 0), dtype=np.csingle)\n"};
 
-    const std::string output_csv{"mat\n\n"};
+    const std::string output_csv{"mat\n"};
 
     return std::make_tuple(std::move(mat), output, output_csv);
   }
@@ -221,7 +221,7 @@ struct test_matrix_output<std::complex<T>> {
                                  "(1,0),(1,-1),(1,2),(1,-3),\n"
                                  "(2,0),(2,-1),(2,2),(2,-3),\n"
                                  "(3,0),(3,-1),(3,2),(3,-3),\n"
-                                 "(4,0),(4,-1),(4,2),(4,-3),\n\n"};
+                                 "(4,0),(4,-1),(4,2),(4,-3),\n"};
 
     return std::make_tuple(std::move(mat), output, output_csv);
   }

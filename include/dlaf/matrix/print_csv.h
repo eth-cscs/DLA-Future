@@ -35,7 +35,6 @@ void print(format::csv, const Tile<const T, Device::CPU>& tile, std::ostream& os
     }
     os << std::endl;
   }
-  os << std::endl;
 }
 
 /// Print a matrix in csv format to standard output
@@ -69,7 +68,6 @@ void print(format::csv, std::string sym, Matrix<const T, Device::CPU>& mat,
     }
     os << std::endl;
   }
-  os << std::endl;
 }
 
 }

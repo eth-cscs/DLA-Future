@@ -272,11 +272,9 @@ struct test_matrix_dist_output {
 
     const std::string output{"M = np.zeros((0, 0), dtype=np.single)\n"};
 
-    std::string output_csv{"size=(0, 0), block_size=(2, 3), tiles_grid=(0, 0), rank_index=(" +
-                           std::to_string(comm_grid_.rank().row()) + ", " +
-                           std::to_string(comm_grid_.rank().col()) + "), comm_grid=(3, 2)\n"};
-
-    return std::make_tuple(std::move(mat), output, output_csv);
+    std::stringstream output_csv;
+    output_csv << mat << std::endl;
+    return std::make_tuple(std::move(mat), output, output_csv.str());
   }
 
   auto nonempty() const {
@@ -309,11 +307,9 @@ struct test_matrix_dist_output {
     else if (5 == linear_rank)
       output += "M[4:5,3:4] = np.array([-19,], dtype=np.single).reshape(1, 1).T\n";
 
-    std::string output_csv{"size=(5, 4), block_size=(2, 3), tiles_grid=(3, 2), rank_index=(" +
-                           std::to_string(comm_grid_.rank().row()) + ", " +
-                           std::to_string(comm_grid_.rank().col()) + "), comm_grid=(3, 2)\n"};
-
-    return std::make_tuple(std::move(mat), output, output_csv);
+    std::stringstream output_csv;
+    output_csv << mat << std::endl;
+    return std::make_tuple(std::move(mat), output, output_csv.str());
   }
 };
 
@@ -334,11 +330,9 @@ struct test_matrix_dist_output<std::complex<T>> {
 
     const std::string output{"M = np.zeros((0, 0), dtype=np.csingle)\n"};
 
-    std::string output_csv{"size=(0, 0), block_size=(2, 3), tiles_grid=(0, 0), rank_index=(" +
-                           std::to_string(comm_grid_.rank().row()) + ", " +
-                           std::to_string(comm_grid_.rank().col()) + "), comm_grid=(3, 2)\n"};
-
-    return std::make_tuple(std::move(mat), output, output_csv);
+    std::stringstream output_csv;
+    output_csv << mat << std::endl;
+    return std::make_tuple(std::move(mat), output, output_csv.str());
   }
 
   auto nonempty() {
@@ -370,11 +364,9 @@ struct test_matrix_dist_output<std::complex<T>> {
     else if (5 == linear_rank)
       o += "M[4:5,3:4] = np.array([4-3j,], dtype=np.csingle).reshape(1, 1).T\n";
 
-    std::string output_csv{"size=(5, 4), block_size=(2, 3), tiles_grid=(3, 2), rank_index=(" +
-                           std::to_string(comm_grid_.rank().row()) + ", " +
-                           std::to_string(comm_grid_.rank().col()) + "), comm_grid=(3, 2)\n"};
-
-    return std::make_tuple(std::move(mat), o, output_csv);
+    std::stringstream output_csv;
+    output_csv << mat << std::endl;
+    return std::make_tuple(std::move(mat), o, output_csv.str());
   }
 };
 

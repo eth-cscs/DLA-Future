@@ -20,9 +20,9 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/error.h"
 #include "dlaf/communication/executor.h"
-#include "dlaf/communication/functions_sync.h"
 #include "dlaf/communication/init.h"
 #include "dlaf/communication/mech.h"
+#include "dlaf/communication/sync/broadcast.h"
 #include "dlaf/factorization/cholesky.h"
 #include "dlaf/init.h"
 #include "dlaf/matrix/copy.h"
@@ -202,8 +202,9 @@ void setUpperToZeroForDiagonalTiles(MatrixType& matrix) {
       continue;
 
     auto tile_set = unwrapping([](auto&& tile) {
-      lapack::laset(lapack::MatrixType::Upper, tile.size().rows() - 1, tile.size().cols() - 1, 0, 0,
-                    tile.ptr({0, 1}), tile.ld());
+      if (tile.size().rows() > 1)
+        lapack::laset(lapack::MatrixType::Upper, tile.size().rows() - 1, tile.size().cols() - 1, 0, 0,
+                      tile.ptr({0, 1}), tile.ld());
     });
 
     matrix(diag_tile).then(tile_set);

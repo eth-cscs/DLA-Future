@@ -64,6 +64,13 @@ DLAF_addTest(test_broadcast_matrix
   USE_MAIN MPIHPX
 )
 
+DLAF_addTest(test_broadcast_panel
+  SOURCES test_broadcast_panel.cpp
+  LIBRARIES dlaf.core
+  MPIRANKS 6
+  USE_MAIN MPIHPX
+)
+
 DLAF_addTest(test_comm_executor
   SOURCES test_comm_executor.cpp
   LIBRARIES dlaf.core

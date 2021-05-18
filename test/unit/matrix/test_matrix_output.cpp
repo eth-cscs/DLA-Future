@@ -272,11 +272,10 @@ struct test_matrix_dist_output {
 
     const std::string output{"M = np.zeros((0, 0), dtype=np.single)\n"};
 
-    std::string output_csv{"size=(0, 0), block_size=(2, 3), tiles_grid=(0, 0), rank_index=(" +
-                           std::to_string(comm_grid_.rank().row()) + ", " +
-                           std::to_string(comm_grid_.rank().col()) + "), comm_grid=(3, 2)\n"};
+    std::stringstream output_csv;
+    output_csv << mat << std::endl;
 
-    return std::make_tuple(std::move(mat), output, output_csv);
+    return std::make_tuple(std::move(mat), output, output_csv.str());
   }
 
   auto nonempty() const {

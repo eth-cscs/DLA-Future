@@ -274,6 +274,7 @@ struct test_matrix_dist_output {
 
     std::stringstream output_csv;
     output_csv << mat << std::endl;
+
     return std::make_tuple(std::move(mat), output, output_csv.str());
   }
 
@@ -309,6 +310,7 @@ struct test_matrix_dist_output {
 
     std::stringstream output_csv;
     output_csv << mat << std::endl;
+
     return std::make_tuple(std::move(mat), output, output_csv.str());
   }
 };
@@ -332,6 +334,7 @@ struct test_matrix_dist_output<std::complex<T>> {
 
     std::stringstream output_csv;
     output_csv << mat << std::endl;
+
     return std::make_tuple(std::move(mat), output, output_csv.str());
   }
 
@@ -366,6 +369,7 @@ struct test_matrix_dist_output<std::complex<T>> {
 
     std::stringstream output_csv;
     output_csv << mat << std::endl;
+
     return std::make_tuple(std::move(mat), o, output_csv.str());
   }
 };

@@ -35,20 +35,20 @@ namespace dlaf {
 namespace matrix {
 
 /// Returns true if the matrix is square.
-template <class T, Device D>
-bool square_size(const Matrix<const T, D>& m) noexcept {
+template <class MatrixLike>
+bool square_size(const MatrixLike& m) noexcept {
   return m.size().rows() == m.size().cols();
 }
 
 /// Returns true if the matrix block size is square.
-template <class T, Device D>
-bool square_blocksize(const Matrix<const T, D>& m) noexcept {
+template <class MatrixLike>
+bool square_blocksize(const MatrixLike& m) noexcept {
   return m.blockSize().rows() == m.blockSize().cols();
 }
 
 /// Returns true if matrices have equal sizes.
-template <class T, Device D1, Device D2>
-bool equal_size(const Matrix<const T, D1>& lhs, Matrix<const T, D2>& rhs) noexcept {
+template <class MatrixLikeA, class MatrixLikeB>
+bool equal_size(const MatrixLikeA& lhs, const MatrixLikeB& rhs) noexcept {
   return lhs.size() == rhs.size();
 }
 

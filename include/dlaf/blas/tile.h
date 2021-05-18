@@ -243,8 +243,8 @@ void trmm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const
           const T alpha, const Tile<const T, device>& a, const Tile<T, device>& b) noexcept {
   auto s = tile::internal::getTrmmSizes(side, op, a, b);
   internal::CublasTrmm(util::blasToCublas(side), util::blasToCublas(uplo), util::blasToCublas(op),
-                   util::blasToCublas(diag), s.m, s.n, util::blasToCublasCast(&alpha),
-                   util::blasToCublasCast(a.ptr()), a.ld(), util::blasToCublasCast(b.ptr()), b.ld());
+                       util::blasToCublas(diag), s.m, s.n, util::blasToCublasCast(&alpha),
+                       util::blasToCublasCast(a.ptr()), a.ld(), util::blasToCublasCast(b.ptr()), b.ld());
 }
 
 /// Performs a triangular solve.

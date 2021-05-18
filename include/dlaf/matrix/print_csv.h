@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -38,6 +38,8 @@ void print(format::csv, const Tile<const T, Device::CPU>& tile, std::ostream& os
 }
 
 /// Print a matrix in csv format to standard output
+///
+/// If the matrix is distributed, the basic matrix info will be printed instead.
 template <class T>
 void print(format::csv, std::string sym, Matrix<const T, Device::CPU>& mat,
            std::ostream& os = std::cout) {

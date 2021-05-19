@@ -10,5 +10,6 @@
 
 #pragma once
 
+#include "dlaf/communication/kernels/all_reduce.h"
 #include "dlaf/communication/kernels/broadcast.h"
 #include "dlaf/communication/kernels/reduce.h"

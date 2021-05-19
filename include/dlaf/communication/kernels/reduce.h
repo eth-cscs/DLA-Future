@@ -14,6 +14,7 @@
 
 #include <mpi.h>
 
+#include "dlaf/common/bag.h"
 #include "dlaf/common/callable_object.h"
 #include "dlaf/common/data.h"
 #include "dlaf/common/pipeline.h"
@@ -30,48 +31,12 @@ namespace internal {
 
 // Note:
 //
-// A bag:
-// - owns the temporary buffer (optionally allocated)
-// - contains a data descriptor to the contiguous data to be used for communication (being it the
-//    original tile or the temporary buffer)
-//
-// The bag can be create with the `makeItContiguous` helper function by passing the original tile
-// and in case of a RW tile, it is possible to `copyBack` the memory from the temporary buffer to
-// the original tile.
-
-template <class T>
-using Bag = hpx::tuple<common::Buffer<std::remove_const_t<T>>, common::DataDescriptor<T>>;
-
-template <class T>
-auto makeItContiguous(const matrix::Tile<T, Device::CPU>& tile) {
-  common::Buffer<std::remove_const_t<T>> buffer;
-  auto tile_data = common::make_data(tile);
-  auto what_to_use = common::make_contiguous(tile_data, buffer);
-  if (buffer)
-    common::copy(tile_data, buffer);
-  return Bag<T>(std::move(buffer), std::move(what_to_use));
-}
-
-DLAF_MAKE_CALLABLE_OBJECT(makeItContiguous);
-
-template <class T>
-auto copyBack(matrix::Tile<T, Device::CPU> tile, Bag<T> bag) {
-  auto buffer_used = std::move(hpx::get<0>(bag));
-  if (buffer_used)
-    common::copy(buffer_used, common::make_data(tile));
-  return std::move(tile);
-}
-
-DLAF_MAKE_CALLABLE_OBJECT(copyBack);
-
-// Note:
-//
 // A couple of kernels for MPI collectives which represents relevant use-cases
 // - reduceRecvInPlace
 // - reduceSend
 template <class T>
 auto reduceRecvInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
-                       internal::Bag<T> bag, MPI_Request* req) {
+                       common::internal::Bag<T> bag, MPI_Request* req) {
   auto message = comm::make_message(hpx::get<1>(bag));
   auto& communicator = pcomm.ref();
 
@@ -85,8 +50,8 @@ DLAF_MAKE_CALLABLE_OBJECT(reduceRecvInPlace);
 
 template <class T>
 auto reduceSend(comm::IndexT_MPI rank_root, common::PromiseGuard<comm::Communicator> pcomm,
-                MPI_Op reduce_op, internal::Bag<const T> bag, matrix::Tile<const T, Device::CPU> const&,
-                MPI_Request* req) {
+                MPI_Op reduce_op, common::internal::Bag<const T> bag,
+                matrix::Tile<const T, Device::CPU> const&, MPI_Request* req) {
   auto message = comm::make_message(hpx::get<1>(bag));
   auto& communicator = pcomm.ref();
 
@@ -99,7 +64,7 @@ DLAF_MAKE_CALLABLE_OBJECT(reduceSend);
 }
 
 template <class T>
-auto scheduleReduceRecvInPlace(comm::Executor& ex,
+auto scheduleReduceRecvInPlace(const comm::Executor& ex,
                                hpx::future<common::PromiseGuard<comm::Communicator>> pcomm,
                                MPI_Op reduce_op, hpx::future<matrix::Tile<T, Device::CPU>> tile) {
   // Note:
@@ -109,10 +74,10 @@ auto scheduleReduceRecvInPlace(comm::Executor& ex,
   //
   // The latter one is based on unwrapExtendTiles, that extends the lifetime of the future<Tile>
   // and allows to get back the ownership of the tile from the return tuple <ret_value, args>
-  hpx::future<internal::Bag<T>> bag;
+  hpx::future<common::internal::Bag<T>> bag;
   {
     auto wrapped_res = hpx::split_future(
-        hpx::dataflow(matrix::unwrapExtendTiles(internal::makeItContiguous_o), std::move(tile)));
+        hpx::dataflow(matrix::unwrapExtendTiles(common::internal::makeItContiguous_o), std::move(tile)));
     bag = std::move(hpx::get<0>(wrapped_res));
     auto args = hpx::split_future(std::move(hpx::get<1>(wrapped_res)));
     tile = std::move(hpx::get<0>(args));
@@ -132,7 +97,8 @@ auto scheduleReduceRecvInPlace(comm::Executor& ex,
   //
   // ... indeed the tile together with the future value of Bag after the async operation are "merged"
   // with the dataflow, mathing the two lifetimes.
-  tile = hpx::dataflow(hpx::util::unwrapping(internal::copyBack_o), std::move(tile), std::move(bag));
+  tile = hpx::dataflow(hpx::util::unwrapping(common::internal::copyBack_o), std::move(tile),
+                       std::move(bag));
 
   // Note:
   //
@@ -143,7 +109,7 @@ auto scheduleReduceRecvInPlace(comm::Executor& ex,
 }
 
 template <class T>
-auto scheduleReduceSend(comm::Executor& ex, comm::IndexT_MPI rank_root,
+auto scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
                         hpx::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
                         hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile) {
   // Note:
@@ -152,8 +118,8 @@ auto scheduleReduceSend(comm::Executor& ex, comm::IndexT_MPI rank_root,
   // with a temporary buffer if needed
   //
   // TODO shared_future<Tile> as assumption, it requires changes for future<Tile>
-  hpx::future<internal::Bag<const T>> bag =
-      hpx::dataflow(hpx::util::unwrapping(internal::makeItContiguous_o), tile);
+  hpx::future<common::internal::Bag<const T>> bag =
+      hpx::dataflow(hpx::util::unwrapping(common::internal::makeItContiguous_o), tile);
 
   // Note:
   //
@@ -169,6 +135,5 @@ auto scheduleReduceSend(comm::Executor& ex, comm::IndexT_MPI rank_root,
   // this tile won't be released before the MPI async operation is completed.
   return tile;
 }
-
 }
 }

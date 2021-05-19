@@ -76,11 +76,10 @@ auto scheduleReduceRecvInPlace(const comm::Executor& ex,
   // and allows to get back the ownership of the tile from the return tuple <ret_value, args>
   hpx::future<common::internal::Bag<T>> bag;
   {
-    auto wrapped_res = hpx::split_future(
+    auto wrapped = getUnwrapRetValAndArgs(
         hpx::dataflow(matrix::unwrapExtendTiles(common::internal::makeItContiguous_o), std::move(tile)));
-    bag = std::move(hpx::get<0>(wrapped_res));
-    auto args = hpx::split_future(std::move(hpx::get<1>(wrapped_res)));
-    tile = std::move(hpx::get<0>(args));
+    bag = std::move(hpx::get<0>(wrapped));
+    tile = std::move(hpx::get<0>(std::move(hpx::get<1>(wrapped))));
   }
 
   // Note:

@@ -670,8 +670,7 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
   auto executor_mpi = dlaf::getMPIExecutor<Backend::MC>();
 
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
-  // TODO this is going to be removed
+  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
   common::Pipeline<comm::CommunicatorGrid> serial_comm(grid);
 
   const auto& dist = mat_a.distribution();

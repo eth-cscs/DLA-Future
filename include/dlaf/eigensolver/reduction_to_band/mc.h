@@ -805,14 +805,8 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
     x.setRangeStart(at_offset);
     xt.setRangeStart(at_offset);
 
-    auto set_tiles_to_zero = hpx::util::unwrapping_all([](auto tiles) {
-      for (auto& tile : tiles)
-        for (auto idx : iterate_range2d(tile.size()))
-          tile(idx) = T(0);
-    });
-
-    hpx::when_all(matrix::select(x, x.iterator())).then(set_tiles_to_zero);
-    hpx::when_all(matrix::select(xt, xt.iterator())).then(set_tiles_to_zero);
+    x.clear();
+    xt.clear();
 
     compute_x(rank_v0.col(), x, xt, at_offset, mat_a, w, wt, mpi_row_task_chain, mpi_col_task_chain);
 

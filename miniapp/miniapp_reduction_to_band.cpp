@@ -73,11 +73,8 @@ int miniapp(hpx::program_options::variables_map& vm) {
     copy(matrix_ref, matrix);
 
     // wait all setup tasks before starting benchmark
-    {
-      for (const auto tile_idx : dlaf::common::iterate_range2d(distribution.localNrTiles()))
-        matrix(tile_idx).get();
-      DLAF_MPI_CALL(MPI_Barrier(world));
-    }
+    matrix.waitLocalTiles();
+    DLAF_MPI_CALL(MPI_Barrier(world));
 
     dlaf::common::Timer<> timeit;
     auto taus = dlaf::eigensolver::reductionToBand<dlaf::Backend::MC>(comm_grid, matrix);

@@ -25,6 +25,7 @@
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/functions_sync.h"
+#include "dlaf/communication/broadcast_panel.h"
 #include "dlaf/executors.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/distribution.h"
@@ -800,7 +801,7 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
     }
 
     vt.setRangeStart(at_offset);
-    matrix::broadcast(executor_mpi, rank_v0.col(), v, vt, mpi_row_task_chain, mpi_col_task_chain);
+    comm::broadcast(executor_mpi, rank_v0.col(), v, vt, mpi_row_task_chain, mpi_col_task_chain);
 
     // UPDATE TRAILING MATRIX
 
@@ -812,7 +813,7 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
       compute_w(w, v, t.read(t_idx));
 
     wt.setRangeStart(at_offset);
-    matrix::broadcast(executor_mpi, rank_v0.col(), w, wt, mpi_row_task_chain, mpi_col_task_chain);
+    comm::broadcast(executor_mpi, rank_v0.col(), w, wt, mpi_row_task_chain, mpi_col_task_chain);
 
     // COMPUTE X
     // X = At . W
@@ -855,7 +856,7 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
       update_x(x, w2, v);
     }
 
-    matrix::broadcast(executor_mpi, rank_v0.col(), x, xt, mpi_row_task_chain, mpi_col_task_chain);
+    comm::broadcast(executor_mpi, rank_v0.col(), x, xt, mpi_row_task_chain, mpi_col_task_chain);
 
     // UPDATE
     // At = At - X . V* + V . X*

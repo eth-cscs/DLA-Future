@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include "dlaf/communication/kernels/all_reduce.h"
 #include "dlaf/communication/kernels/reduce.h"
 
 #include <gtest/gtest.h>
@@ -70,4 +71,52 @@ TEST(Reduce, NotContiguous) {
     auto t = scheduleReduceSend(ex_mpi, root, chain(), MPI_SUM, matrix.read(index));
     EXPECT_EQ(3, t.get()({0, 0}));
   }
+}
+
+TEST(AllReduce, Contiguous) {
+  using namespace dlaf;
+  using namespace std::literals;
+
+  comm::Communicator comm(MPI_COMM_WORLD);
+  comm::CommunicatorGrid grid(comm, 1, 2, common::Ordering::ColumnMajor);
+  common::Pipeline<comm::Communicator> chain(comm);
+
+  auto ex_mpi = getMPIExecutor<Backend::MC>();
+
+  int sz = 4;
+
+  LocalTileIndex index_out(0, 0);
+  LocalTileIndex index_in(0, 1);
+  dlaf::Matrix<double, Device::CPU> matrix({sz, 2}, {sz, 1});
+  matrix(index_in).get()({0, 0}) = comm.rank() == 0 ? 1 : 3;
+  const double result = 4.0;
+  {
+    auto t = scheduleAllReduce(ex_mpi, chain(), MPI_SUM, matrix.read(index_in), matrix(index_out));
+    EXPECT_EQ(result, t.get()({0, 0}));
+  }
+  EXPECT_EQ(result, matrix.read(index_out).get()({0, 0}));
+}
+
+TEST(AllReduce, NotContiguous) {
+  using namespace dlaf;
+  using namespace std::literals;
+
+  comm::Communicator comm(MPI_COMM_WORLD);
+  comm::CommunicatorGrid grid(comm, 1, 2, common::Ordering::ColumnMajor);
+  common::Pipeline<comm::Communicator> chain(comm);
+
+  auto ex_mpi = getMPIExecutor<Backend::MC>();
+
+  int sz = 4;
+
+  LocalTileIndex index_out(0, 0);
+  LocalTileIndex index_in(1, 0);
+  dlaf::Matrix<double, Device::CPU> matrix({2, sz}, {1, sz});
+  matrix(index_in).get()({0, 0}) = comm.rank() == 0 ? 1 : 3;
+  const double result = 4.0;
+  {
+    auto t = scheduleAllReduce(ex_mpi, chain(), MPI_SUM, matrix.read(index_in), matrix(index_out));
+    EXPECT_EQ(result, t.get()({0, 0}));
+  }
+  EXPECT_EQ(result, matrix.read(index_out).get()({0, 0}));
 }

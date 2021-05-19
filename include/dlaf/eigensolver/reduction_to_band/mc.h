@@ -22,10 +22,12 @@
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/vector.h"
+#include "dlaf/communication/broadcast_panel.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/functions_sync.h"
-#include "dlaf/communication/broadcast_panel.h"
+#include "dlaf/communication/kernels/all_reduce.h"
+#include "dlaf/communication/kernels/reduce.h"
 #include "dlaf/executors.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/distribution.h"
@@ -399,7 +401,8 @@ void compute_w(PanelT<Coord::Col, T>& w, MatrixLikeT& v, FutureConstTile<T> tile
 template <class T>
 void compute_x(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT<Coord::Row, T>& xt,
                const LocalTileSize at_offset, ConstMatrixT<T>& a, ConstPanelT<Coord::Col, T>& w,
-               ConstPanelT<Coord::Row, T>& wt, common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
+               ConstPanelT<Coord::Row, T>& wt, common::Pipeline<comm::Communicator>& mpi_row_task_chain,
+               common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
   using hpx::util::unwrapping;
   using dlaf::common::make_data;
   using dlaf::comm::sync::reduce;
@@ -509,28 +512,13 @@ void compute_x(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT<Co
       // Note:
       // Since it is the owner, it has to perform the "mirroring" of the results from columns to
       // rows.
-      auto reduce_x_func = unwrapping([=](auto&& tile_x, auto&& comm_wrapper) {
-        auto comm_grid = comm_wrapper.ref();
-
-        // TODO here the IN-PLACE is happening (because Xt is not used for this tile on this rank)
-        reduce(comm_grid.colCommunicator(), MPI_SUM, make_data(tile_x));
-      });
-
       const auto i = dist.template localTileFromGlobalTile<Coord::Row>(index_k);
-      FutureTile<T> tile_x = x({i, 0});
-
-      hpx::dataflow(executor_mpi, reduce_x_func, std::move(tile_x), serial_comm());
+      // TODO here the IN-PLACE is happening (because Xt is not used for this tile on this rank)
+      comm::scheduleReduceRecvInPlace(executor_mpi, mpi_col_task_chain(), MPI_SUM, x({i, 0}));
     }
     else {
-      auto reduce_x_func = unwrapping([=](auto&& tile_x_conj, auto&& comm_wrapper) {
-        auto comm_grid = comm_wrapper.ref();
-
-        reduce(rank_owner_row, comm_grid.colCommunicator(), MPI_SUM, make_data(tile_x_conj));
-      });
-
-      FutureConstTile<T> tile_x = xt.read(index_xt);
-
-      hpx::dataflow(executor_mpi, reduce_x_func, std::move(tile_x), serial_comm());
+      comm::scheduleReduceSend(executor_mpi, rank_owner_row, mpi_col_task_chain(), MPI_SUM,
+                               xt.read(index_xt));
     }
   }
 
@@ -538,23 +526,18 @@ void compute_x(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT<Co
   // At this point partial results are all collected in X (Xt has been embedded in previous step),
   // so the last step needed is to reduce these last partial results in the final results.
   // The result is needed just on the column with reflectors.
-  auto reduce_x_func = unwrapping([reducer_col](auto&& tile_x, auto&& comm_wrapper) {
-    // TODO Again, here the IN-PLACE is happening
-    auto comm = comm_wrapper.ref().rowCommunicator();
-    if (comm.rank() == reducer_col)
-      reduce(comm, MPI_SUM, make_data(tile_x));
+  for (const auto& index_x_loc : x.iterator()) {
+    if (reducer_col == rank.col())
+      comm::scheduleReduceRecvInPlace(executor_mpi, mpi_row_task_chain(), MPI_SUM, x(index_x_loc));
     else
-      reduce(reducer_col, comm, MPI_SUM, make_data(tile_x));
-  });
-
-  // TODO readonly tile management
-  for (const auto& index_x_loc : x.iterator())
-    hpx::dataflow(executor_mpi, reduce_x_func, x(index_x_loc), serial_comm());
+      comm::scheduleReduceSend(executor_mpi, reducer_col, mpi_row_task_chain(), MPI_SUM,
+                               x.read(index_x_loc));
+  }
 }
 
 template <class T>
 void compute_w2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Coord::Col, T>& x,
-                common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
+                common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
   using hpx::util::unwrapping;
   using common::make_data;
   using namespace comm::sync;
@@ -576,13 +559,8 @@ void compute_w2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Coord
   }
 
   // all-reduce instead of computing it on each node, everyone in the panel should have it
-  auto all_reduce_w2 = unwrapping([](auto&& tile_w2, auto&& comm_wrapper) {
-    all_reduce(comm_wrapper.ref().colCommunicator(), MPI_SUM, make_data(tile_w2));
-  });
-
   FutureTile<T> tile_w2 = w2(LocalTileIndex{0, 0});
-
-  hpx::dataflow(executor_mpi, std::move(all_reduce_w2), std::move(tile_w2), serial_comm());
+  comm::scheduleAllReduceInPlace(executor_mpi, mpi_col_task_chain(), MPI_SUM, std::move(tile_w2));
 }
 
 template <class T, class MatrixLikeT>
@@ -836,7 +814,7 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
     hpx::when_all(matrix::select(x, x.iterator())).then(set_tiles_to_zero);
     hpx::when_all(matrix::select(xt, xt.iterator())).then(set_tiles_to_zero);
 
-    compute_x(rank_v0.col(), x, xt, at_offset, mat_a, w, wt, serial_comm);
+    compute_x(rank_v0.col(), x, xt, at_offset, mat_a, w, wt, mpi_row_task_chain, mpi_col_task_chain);
 
     // Now the intermediate result for X is available on the panel column rank,
     // which has locally all the needed stuff for updating X and finalize the result
@@ -851,7 +829,7 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
       // partial result W2 to zero.
       set_to_zero(w2);
 
-      compute_w2(w2, w, x, serial_comm);
+      compute_w2(w2, w, x, mpi_col_task_chain);
 
       update_x(x, w2, v);
     }

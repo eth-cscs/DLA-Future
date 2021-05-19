@@ -35,6 +35,7 @@ template <class T, Device device>
 hpx::shared_future<Tile<const T, device>> Matrix<const T, device>::read(
     const LocalTileIndex& index) noexcept {
   const auto i = tileLinearIndex(index);
+  DLAF_ASSERT_MODERATE(i < tile_managers_.size(), i, tile_managers_.size());
   return tile_managers_[i].getReadTileSharedFuture();
 }
 
@@ -46,6 +47,7 @@ void Matrix<const T, device>::waitLocalTiles() noexcept {
 
   auto readwrite_f = [this](const LocalTileIndex& index) {
     const auto i = tileLinearIndex(index);
+    DLAF_ASSERT_MODERATE(i < tile_managers_.size(), i, tile_managers_.size());
     return this->tile_managers_[i].getRWTileFuture();
   };
 

@@ -10,6 +10,7 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/init.h"
 #include "dlaf/eigensolver/reduction_to_band.h"
+#include "dlaf/init.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
@@ -43,6 +44,7 @@ int miniapp(hpx::program_options::variables_map& vm) {
   using dlaf::comm::Communicator;
   using dlaf::comm::CommunicatorGrid;
 
+  dlaf::initialize(vm);
   options_t opts = check_options(vm);
 
   Communicator world(MPI_COMM_WORLD);
@@ -106,13 +108,14 @@ int miniapp(hpx::program_options::variables_map& vm) {
                 << hpx::get_os_thread_count() << std::endl;
   }
 
+  dlaf::finalize();
   return hpx::finalize();
 }
 
 int main(int argc, char** argv) {
   using dlaf::SizeType;
 
-  dlaf::comm::mpi_init mpi_initter(argc, argv, dlaf::comm::mpi_thread_level::serialized);
+  dlaf::comm::mpi_init mpi_initter(argc, argv, dlaf::comm::mpi_thread_level::multiple);
 
   // options
   using namespace hpx::program_options;
@@ -128,24 +131,12 @@ int main(int argc, char** argv) {
     ("nwarmups",    value<int64_t>()  ->default_value(1), "Number of warmup runs");
   // clang-format on
 
+  desc_commandline.add(dlaf::getOptionsDescription());
+
   hpx::init_params p;
   p.desc_cmdline = desc_commandline;
-  p.rp_callback = [](auto& rp, auto) {
-    int ntasks;
-    DLAF_MPI_CALL(MPI_Comm_size(MPI_COMM_WORLD, &ntasks));
-    // if the user has asked for special thread pools for communication
-    // then set them up
-    if (ntasks > 1) {
-      // Create a thread pool with a single core that we will use for all
-      // communication related tasks
-      rp.create_thread_pool("mpi", hpx::resource::scheduling_policy::local_priority_fifo);
-      rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], "mpi");
-    }
-  };
-
-  auto ret_code = hpx::init(miniapp, argc, argv, p);
-
-  return ret_code;
+  p.rp_callback = dlaf::initResourcePartitionerHandler;
+  return hpx::init(miniapp, argc, argv, p);
 }
 
 namespace {

@@ -308,7 +308,7 @@ void update_trailing_panel(
 
   // all-reduce W
   auto reduce_w_func = unwrapping([](auto&& tile_w, auto&& comm_wrapper) {
-    all_reduce(comm_wrapper.ref().colCommunicator(), MPI_SUM, make_data(tile_w));
+    allReduceInPlace(comm_wrapper.ref().colCommunicator(), MPI_SUM, make_data(tile_w));
   });
 
   hpx::dataflow(executor_mpi, reduce_w_func, w(LocalTileIndex{0, 0}), serial_comm());

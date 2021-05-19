@@ -181,6 +181,10 @@ struct Panel<axis, const T, D> {
     internal_.clear();
   }
 
+  void clear() noexcept {
+    matrix::util::set(data_, [](auto) { return 0; });
+  }
+
 protected:
   static LocalElementSize computePanelSize(LocalElementSize size, TileElementSize blocksize,
                                            LocalTileSize start) {

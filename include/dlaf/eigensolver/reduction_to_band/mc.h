@@ -96,7 +96,7 @@ hpx::shared_future<T> compute_reflector(
 
   using x0_and_squares_t = std::pair<T, T>;
 
-  auto executor_mpi = dlaf::getMPIExecutor<Backend::MC>();
+  auto executor_mpi = dlaf::getHpExecutor<Backend::MC>();
 
   const auto& dist = a.distribution();
   const comm::Index2D rank = dist.rankIndex();
@@ -235,7 +235,7 @@ void update_trailing_panel(
   using common::make_data;
   using namespace comm::sync;
 
-  auto executor_mpi = dlaf::getMPIExecutor<Backend::MC>();
+  auto executor_mpi = dlaf::getHpExecutor<Backend::MC>();
 
   const auto& dist = a.distribution();
 

@@ -44,6 +44,19 @@ auto allReduce(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
 
 DLAF_MAKE_CALLABLE_OBJECT(allReduce);
 
+template <class T>
+auto allReduceInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
+                      common::internal::Bag<T> bag, MPI_Request* req) {
+  auto& communicator = pcomm.ref();
+  auto message = comm::make_message(hpx::get<1>(bag));
+
+  DLAF_MPI_CALL(MPI_Iallreduce(MPI_IN_PLACE, message.data(), message.count(), message.mpi_type(),
+                               reduce_op, communicator, req));
+
+  return std::move(bag);
+}
+
+DLAF_MAKE_CALLABLE_OBJECT(allReduceInPlace);
 }
 
 template <class T>
@@ -72,5 +85,25 @@ auto scheduleAllReduce(const comm::Executor& ex,
   return tile_out;
 }
 
+template <class T>
+auto scheduleAllReduceInPlace(const comm::Executor& ex,
+                              hpx::future<common::PromiseGuard<comm::Communicator>> pcomm,
+                              MPI_Op reduce_op, hpx::future<matrix::Tile<T, Device::CPU>> tile) {
+  hpx::future<common::internal::Bag<T>> bag;
+  {
+    auto wrapped = getUnwrapRetValAndArgs(
+        hpx::dataflow(matrix::unwrapExtendTiles(common::internal::makeItContiguous_o), std::move(tile)));
+    bag = std::move(hpx::get<0>(wrapped));
+    tile = std::move(hpx::get<0>(std::move(hpx::get<1>(wrapped))));
+  }
+
+  bag = hpx::dataflow(ex, hpx::util::unwrapping(internal::allReduceInPlace_o), std::move(pcomm),
+                      reduce_op, std::move(bag));
+
+  tile = hpx::dataflow(hpx::util::unwrapping(common::internal::copyBack_o), std::move(tile),
+                       std::move(bag));
+
+  return tile;
+}
 }
 }

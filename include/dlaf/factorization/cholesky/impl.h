@@ -123,7 +123,6 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   // Set up MPI executor pipelines
-  comm::Executor executor_mpi;
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
   common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
 

@@ -124,6 +124,9 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     {
       MatrixMirrorType matrix(matrix_host);
 
+      // Wait for matrix to be copied to GPU (if necessary)
+      matrix.get().waitLocalTiles();
+
       dlaf::common::Timer<> timeit;
       dlaf::factorization::cholesky<Backend::Default, Device::Default, T>(comm_grid, blas::Uplo::Lower,
                                                                           matrix.get());

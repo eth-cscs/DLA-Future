@@ -176,7 +176,6 @@ struct CublasTrmm<std::complex<double>> {
     DLAF_CUBLAS_CALL(cublasZtrmm(std::forward<Args>(args)...));
   }
 };
-}
 
 template <typename T>
 struct CublasTrsm;

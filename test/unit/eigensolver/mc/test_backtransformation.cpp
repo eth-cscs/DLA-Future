@@ -157,7 +157,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
                    mat_c_loc.ptr(GlobalElementIndex{i, 0}), mat_c_loc.ld());
     }
 
-    eigensolver::backTransformation<Backend::MC, Device::CPU, T>(mat_c, mat_v, taus);
+    eigensolver::backTransformation<Backend::MC>(mat_c, mat_v, taus);
 
     auto result = [& dist = mat_c.distribution(),
                    &mat_local = mat_c_loc](const GlobalElementIndex& element) {

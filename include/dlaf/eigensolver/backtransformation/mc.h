@@ -12,9 +12,6 @@
 #include <hpx/include/parallel_executors.hpp>
 #include <hpx/include/threads.hpp>
 #include <hpx/include/util.hpp>
-#include <hpx/local/future.hpp>
-
-#include "dlaf/eigensolver/backtransformation/api.h"
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
@@ -23,6 +20,7 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/communication/init.h"
+#include "dlaf/eigensolver/backtransformation/api.h"
 #include "dlaf/factorization/qr.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/copy.h"
@@ -35,8 +33,6 @@
 namespace dlaf {
 namespace eigensolver {
 namespace internal {
-
-using namespace dlaf::matrix;
 
 template <class T>
 void set_zero(Matrix<T, Device::CPU>& mat) {
@@ -131,7 +127,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       // Copy V panel into VV
       auto copy_v_into_vv = unwrapping([=](auto&& tile_v, auto&& tile_vv, TileElementSize region) {
         void (&cpy)(const matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T, Device::CPU>&) =
-            copy<T>;
+            dlaf::matrix::copy<T>;
         cpy(tile_v, tile_vv);
       });
       hpx::dataflow(executor_hp, copy_v_into_vv, mat_v.read(LocalTileIndex(i, k)),
@@ -153,7 +149,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       // Copy VV into W
       auto copy_vv_into_w = unwrapping([=](auto&& tile_vv, auto&& tile_w) {
         void (&cpy)(const matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T, Device::CPU>&) =
-            copy<T>;
+            dlaf::matrix::copy<T>;
         cpy(tile_vv, tile_w);
       });
       hpx::dataflow(executor_hp, copy_vv_into_w, mat_vv.read(LocalTileIndex(i, 0)),

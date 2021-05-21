@@ -61,9 +61,6 @@ struct options_t {
 
 options_t check_options(hpx::program_options::variables_map& vm);
 
-template <typename T, Device D>
-void waitall_tiles(dlaf::Matrix<T, D>& matrix);
-
 using matrix_values_t = std::function<T(const GlobalElementIndex&)>;
 using linear_system_t = std::tuple<matrix_values_t, matrix_values_t, matrix_values_t>;  // A, B, X
 linear_system_t sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType m);
@@ -86,8 +83,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   dlaf::matrix::MatrixMirror<T, Device::Default, Device::CPU> b(bh);
 
   auto sync_barrier = [&]() {
-    ::waitall_tiles(a.get());
-    ::waitall_tiles(b.get());
+    a.get().waitLocalTiles();
+    b.get().waitLocalTiles();
     DLAF_MPI_CALL(MPI_Barrier(world));
   };
 
@@ -209,13 +206,6 @@ options_t check_options(hpx::program_options::variables_map& vm) {
   DLAF_ASSERT(opts.nwarmups >= 0, opts.nwarmups);
 
   return opts;
-}
-
-template <typename T, Device D>
-void waitall_tiles(dlaf::Matrix<T, D>& matrix) {
-  using dlaf::common::iterate_range2d;
-  for (const auto tile_idx : iterate_range2d(matrix.distribution().localNrTiles()))
-    matrix(tile_idx).get();
 }
 
 /// Returns a tuple of element generators of three matrices A(m x m), B (m x n), X (m x n), for which it

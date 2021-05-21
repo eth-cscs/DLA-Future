@@ -15,6 +15,7 @@
 
 #include "test_cublas_tile/test_gemm.h"
 #include "test_cublas_tile/test_herk.h"
+#include "test_cublas_tile/test_trmm.h"
 #include "test_cublas_tile/test_trsm.h"
 
 using namespace dlaf;

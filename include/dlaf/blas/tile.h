@@ -245,7 +245,7 @@ void trmm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, c
   internal::CublasTrmm<T>::call(handle, util::blasToCublas(side), util::blasToCublas(uplo),
                                 util::blasToCublas(op), util::blasToCublas(diag), s.m, s.n,
                                 util::blasToCublasCast(&alpha), util::blasToCublasCast(a.ptr()), a.ld(),
-                                util::blasToCublasCast(b.ptr()), b.ld(), util::blasToCublasCast(b.ptr()), b.ld()));
+                                util::blasToCublasCast(b.ptr()), b.ld(), util::blasToCublasCast(b.ptr()), b.ld());
 }
 
 /// Performs a triangular solve.

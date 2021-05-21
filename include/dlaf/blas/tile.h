@@ -239,8 +239,9 @@ void herk(cublasHandle_t handle, const blas::Uplo uplo, const blas::Op op, const
 
 /// Performs a matrix-matrix multiplication, involving a triangular matrix.
 template <class T>
-void trmm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const blas::Diag diag,
-          const T alpha, const Tile<const T, device>& a, const Tile<T, device>& b) noexcept {
+void trmm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, const blas::Op op,
+          const blas::Diag diag, const T alpha, const matrix::Tile<const T, Device::GPU>& a,
+          const matrix::Tile<T, Device::GPU>& b) noexcept {
   auto s = tile::internal::getTrmmSizes(side, op, a, b);
   internal::CublasTrmm<T>(util::blasToCublas(side), util::blasToCublas(uplo), util::blasToCublas(op),
                           util::blasToCublas(diag), s.m, s.n, util::blasToCublasCast(&alpha),

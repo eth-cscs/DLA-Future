@@ -110,37 +110,39 @@ void GenToStd<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
   SizeType nrtile = mat_a.nrTiles().cols();
 
   for (SizeType k = 0; k < nrtile; ++k) {
-    const auto kk = LocalTileIndex{k, k};
+    const LocalTileIndex kk{k, k};
 
     // Direct transformation to standard eigenvalue problem of the diagonal tile
     hegst_diag_tile(executor_hp, mat_a(kk), mat_l(kk));
 
-    const LocalTileIndex ai_start(k + 1, k);
-    const LocalTileIndex ai_end(nrtile, k + 1);
-    auto ai_panel = common::iterate_range2d(ai_start, ai_end);
+    // If there is no trailing matrix
+    if (k == nrtile - 1)
+      continue;
 
-    for (const auto& ik : ai_panel) {
+    for (SizeType i = k + 1; i < nrtile; ++i) {
+      const LocalTileIndex ik{i, k};
       trsm_panel_tile(executor_hp, mat_l.read(kk), mat_a(ik));
       hemm_panel_tile(executor_hp, mat_a.read(kk), mat_l.read(ik), mat_a(ik));
     }
 
-    const LocalTileIndex ti_start(k + 1, k + 1);
-    const LocalTileIndex ti_end(nrtile, nrtile);
-    for (const auto& ij : common::iterate_range2d(ti_start, ti_end)) {
-      const auto jk = LocalTileIndex{ij.col(), k};
-      const auto ik = LocalTileIndex{ij.row(), k};
-      auto& trailing_matrix_executor = (ij.col() == k + 1) ? executor_hp : executor_np;
+    for (SizeType j = k + 1; j < nrtile; ++j) {
+      const LocalTileIndex jk{j, k};
+      // first trailing panel gets high priority (look ahead).
+      auto& trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_np;
 
-      if (ij.row() == ij.col()) {
-        her2k_trailing_diag_tile(trailing_matrix_executor, mat_a.read(ik), mat_l.read(jk), mat_a(ij));
-      }
-      else if (ij.row() > ij.col()) {
+      her2k_trailing_diag_tile(trailing_matrix_executor, mat_a.read(jk), mat_l.read(jk),
+                               mat_a(LocalTileIndex{j, j}));
+
+      for (SizeType i = j + 1; i < nrtile; ++i) {
+        const LocalTileIndex ik{i, k};
+        const LocalTileIndex ij{i, j};
         gemm_trailing_matrix_tile(trailing_matrix_executor, mat_a.read(ik), mat_l.read(jk), mat_a(ij));
         gemm_trailing_matrix_tile(trailing_matrix_executor, mat_l.read(ik), mat_a.read(jk), mat_a(ij));
       }
     }
 
-    for (const auto& ik : ai_panel) {
+    for (SizeType i = k + 1; i < nrtile; ++i) {
+      const LocalTileIndex ik{i, k};
       hemm_panel_tile(executor_np, mat_a.read(kk), mat_l.read(ik), mat_a(ik));
     }
 

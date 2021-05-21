@@ -53,5 +53,28 @@ void genToStd(blas::Uplo uplo, Matrix<T, device>& mat_a, Matrix<T, device>& mat_
   }
 }
 
+template <Backend backend, Device device, class T>
+void genToStd(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, device>& mat_a,
+              Matrix<T, device>& mat_b) {
+  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
+  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(matrix::square_size(mat_b), mat_b);
+  DLAF_ASSERT(matrix::square_blocksize(mat_b), mat_b);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
+
+  switch (uplo) {
+    case blas::Uplo::Lower:
+      internal::GenToStd<backend, device, T>::call_L(grid, mat_a, mat_b);
+      break;
+    case blas::Uplo::Upper:
+      DLAF_UNIMPLEMENTED(uplo);
+      break;
+    case blas::Uplo::General:
+      DLAF_UNIMPLEMENTED(uplo);
+      break;
+  }
+}
+
 }
 }

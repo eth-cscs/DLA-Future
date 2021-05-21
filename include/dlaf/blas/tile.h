@@ -243,7 +243,7 @@ void trmm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, c
           const blas::Diag diag, const T alpha, const matrix::Tile<const T, Device::GPU>& a,
           const matrix::Tile<T, Device::GPU>& b) {
   auto s = tile::internal::getTrmmSizes(side, op, a, b);
-  internal::CublasTrmm<T>::call(util::blasToCublas(side), util::blasToCublas(uplo),
+  internal::CublasTrmm<T>::call(handle, util::blasToCublas(side), util::blasToCublas(uplo),
                                 util::blasToCublas(op), util::blasToCublas(diag), s.m, s.n,
                                 util::blasToCublasCast(&alpha), util::blasToCublasCast(a.ptr()), a.ld(),
                                 util::blasToCublasCast(b.ptr()), b.ld());

@@ -166,7 +166,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
       return mat_local.tile_read(tile_index)(tile_element);
     };
 
-    double error = (mat_c.size().rows() + 1) * dlaf::test::TypeUtilities<T>::error;
+    const auto error = (mat_c.size().rows() + 1) * dlaf::test::TypeUtilities<T>::error;
     CHECK_MATRIX_NEAR(result, mat_c, error, error);
   }
 }

@@ -74,6 +74,16 @@ void set_zero(Matrix<T, Device::CPU>& mat) {
 }
 
 template <class T>
+void getTau(T& tau, T dotprod, BaseType<T> /*tau_i*/) {
+  tau = static_cast<T>(2.0) / dotprod;
+}
+
+template <class T>
+void getTau(std::complex<T>& tau, T dotprod, BaseType<T> tau_i) {
+  tau = {(static_cast<T>(1.0) + sqrt(static_cast<T>(1.0) - dotprod * tau_i * tau_i)) / dotprod, tau_i};
+}
+
+template <class T>
 void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType nb) {
   comm::CommunicatorGrid comm_grid(MPI_COMM_WORLD, 1, 1, common::Ordering::ColumnMajor);
 
@@ -128,21 +138,17 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
     auto nt = 0;
     for (SizeType i = 0; i < tau_rows; ++i) {
       common::internal::vector<T> t_tile;
+      auto seed = 10000 * i / mb + 1;
+      dlaf::matrix::util::internal::getter_random<BaseType<T>> random_value(seed);
       for (SizeType t = 0; t < mb && nt < tottaus; ++t) {
         const GlobalElementIndex v_offset{i * mb + t, i * mb + t};
         auto dotprod = blas::dot(m - t, mat_v_loc.ptr(v_offset), 1, mat_v_loc.ptr(v_offset), 1);
-        BaseType<T> tau_i;
+        BaseType<T> tau_i = 0;
         if (std::is_same<T, ComplexType<T>>::value) {
-          auto seed = 10000 * i / mb + 1;
-          dlaf::matrix::util::internal::getter_random<BaseType<T>> random_value(seed);
           tau_i = random_value();
         }
-        else {
-          tau_i = static_cast<BaseType<T>>(0.0);
-        }
-        auto tau_r =
-            (static_cast<T>(1.0) + sqrt(static_cast<T>(1.0) - dotprod * tau_i * tau_i)) / dotprod;
-        auto tau = tau_r + tau_i;
+        T tau;
+        getTau(tau, dotprod, tau_i);
         tausloc({nt, 0}) = static_cast<T>(tau);
         t_tile.push_back(static_cast<T>(tau));
         ++nt;

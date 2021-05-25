@@ -197,14 +197,15 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
     broadcast(executor_mpi, kk_rank.col(), panel, panelT, mpi_row_task_chain, mpi_col_task_chain);
 
     // TRAILING MATRIX
-    for (SizeType jt_idx = k + 1; jt_idx < nrtile; ++jt_idx) {
+    const SizeType kt = k + 1;
+    for (SizeType jt_idx = kt; jt_idx < nrtile; ++jt_idx) {
       const auto owner = distr.rankGlobalTile({jt_idx, jt_idx});
 
       if (owner.col() != this_rank.col())
         continue;
 
       const auto j = distr.localTileFromGlobalTile<Coord::Col>(jt_idx);
-      auto& trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_np;
+      auto& trailing_matrix_executor = (jt_idx == kt) ? executor_hp : executor_np;
       if (this_rank.row() == owner.row()) {
         const auto i = distr.localTileFromGlobalTile<Coord::Row>(jt_idx);
 

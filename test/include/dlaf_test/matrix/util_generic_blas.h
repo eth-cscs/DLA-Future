@@ -41,7 +41,7 @@ namespace test {
 ///      = (op(A)_ii * X_ij + (kk-1) * gamma) / alpha,
 /// where gamma = (i+1) / (j+2) * exp(I*(2*i+j)),
 ///       kk = i+1 if op(a) is an lower triangular matrix, or
-///       kk = m-i if op(a) is an lower triangular matrix.
+///       kk = m-i if op(a) is an upper triangular matrix.
 /// Therefore
 /// B_ij = (X_ij + (kk-1) * gamma) / alpha, if diag == Unit,
 /// B_ij = kk * gamma / alpha, otherwise.
@@ -105,7 +105,7 @@ auto getLeftTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T al
 ///      = (X_ij * op(A)_jj + (kk-1) * gamma) / alpha,
 /// where gamma = (j+1) / (i+2) * exp(I*(i+2*j)),
 ///       kk = j+1 if op(a) is an upper triangular matrix, or
-///       kk = m-j if op(a) is an upper triangular matrix.
+///       kk = m-j if op(a) is an lower triangular matrix.
 /// Therefore
 /// B_ij = (X_ij + (kk-1) * gamma) / alpha, if diag == Unit,
 /// B_ij = kk * gamma / alpha, otherwise.

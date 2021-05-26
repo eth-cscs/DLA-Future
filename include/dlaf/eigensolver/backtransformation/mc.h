@@ -69,10 +69,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
   using hpx::util::unwrapping;
 
-  using hpx::execution::parallel_executor;
-  using hpx::resource::get_thread_pool;
-  using hpx::threads::thread_priority;
-
   auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
   auto executor_np = dlaf::getNpExecutor<Backend::MC>();
 

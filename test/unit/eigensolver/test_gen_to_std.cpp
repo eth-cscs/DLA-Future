@@ -110,6 +110,7 @@ void testGenToStdEigensolver(comm::CommunicatorGrid grid, const blas::Uplo uplo,
   }
 
   CHECK_MATRIX_NEAR(res_a, mat_ah, 0, 10 * (mat_ah.size().rows() + 1) * TypeUtilities<T>::error);
+  CHECK_MATRIX_NEAR(el_t, mat_th, 0, TypeUtilities<T>::error);
 }
 
 TYPED_TEST(EigensolverGenToStdTestMC, CorrectnessLocal) {

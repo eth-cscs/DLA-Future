@@ -12,17 +12,14 @@
 #include <hpx/include/parallel_executors.hpp>
 #include <hpx/include/resource_partitioner.hpp>
 #include <hpx/include/threads.hpp>
-
-#include <algorithm>
-#include <limits>
-#include <sstream>
-#include <type_traits>
-#include <unordered_map>
+#include <hpx/include/util.hpp>
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/range2d.h"
+#include "dlaf/common/round_robin.h"
+#include "dlaf/communication/broadcast_panel.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/executor.h"
@@ -30,9 +27,9 @@
 #include "dlaf/executors.h"
 #include "dlaf/factorization/cholesky/api.h"
 #include "dlaf/lapack_tile.h"
-#include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/distribution.h"
-
+#include "dlaf/matrix/panel.h"
+#include "dlaf/matrix/tile.h"
 #include "dlaf/memory/memory_view.h"
 #include "dlaf/util_matrix.h"
 
@@ -149,8 +146,8 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
 template <class T>
 void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
                                                    Matrix<T, Device::CPU>& mat_a) {
-  using ConstTileType = typename Matrix<T, Device::CPU>::ConstTileType;
   using hpx::util::unwrapping;
+  using hpx::dataflow;
 
   auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
   auto executor_np = dlaf::getNpExecutor<Backend::MC>();
@@ -158,88 +155,108 @@ void Cholesky<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
   auto lower = blas::Uplo::Lower;
 
   // Set up MPI executor pipelines
-  comm::Executor executor_mpi_col{};
-  comm::Executor executor_mpi_row{};
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
+  comm::Executor executor_mpi;
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
+  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
 
-  const matrix::Distribution& distr = mat_a.distribution();
-
-  SizeType nrtile = mat_a.nrTiles().cols();
   const comm::Index2D this_rank = grid.rank();
 
+  const matrix::Distribution& distr = mat_a.distribution();
+  const SizeType nrtile = mat_a.nrTiles().cols();
+
+  constexpr std::size_t n_workspaces = 2;
+  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panels(n_workspaces, distr);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, Device::CPU>> panelsT(n_workspaces, distr);
+
   for (SizeType k = 0; k < nrtile; ++k) {
-    // Create a placeholder that will store the shared futures representing the panel
-    std::unordered_map<SizeType, hpx::shared_future<ConstTileType>> panel;
+    const GlobalTileIndex kk_idx(k, k);
+    const comm::Index2D kk_rank = distr.rankGlobalTile(kk_idx);
 
-    GlobalTileIndex kk_idx(k, k);
-    comm::Index2D kk_rank = distr.rankGlobalTile(kk_idx);
-
-    // Broadcast the diagonal tile along the `k`-th column
-    if (this_rank == kk_rank) {
+    // Factorization of diagonal tile and broadcast it along the k-th column
+    if (kk_rank == this_rank)
       potrf_diag_tile(executor_hp, lower, mat_a(kk_idx));
-      panel[k] = mat_a.read(kk_idx);
-      if (k != nrtile - 1) {
-        hpx::dataflow(executor_mpi_col, unwrapping(comm::sendBcast<T, Device::CPU>), panel[k],
-                      mpi_col_task_chain());
+
+    // If there is no trailing matrix
+    if (k == nrtile - 1)
+      continue;
+
+    const LocalTileSize kk_offset{
+        distr.nextLocalTileFromGlobalTile<Coord::Row>(k),
+        distr.nextLocalTileFromGlobalTile<Coord::Col>(k),
+    };
+
+    const LocalTileSize at_offset{
+        distr.nextLocalTileFromGlobalTile<Coord::Row>(k + 1),
+        distr.nextLocalTileFromGlobalTile<Coord::Col>(k + 1),
+    };
+
+    const LocalTileIndex diag_wp_idx{0, kk_offset.cols()};
+
+    auto& panel = panels.nextResource();
+    auto& panelT = panelsT.nextResource();
+
+    panel.setRangeStart(at_offset);
+
+    if (kk_rank.col() == this_rank.col()) {
+      // Note:
+      // panelT shrinked to a single tile for temporarly storing and communicating the diagonal
+      // tile used for the column update
+      panelT.setRange(kk_offset, at_offset);
+
+      if (kk_rank.row() == this_rank.row())
+        panelT.setTile(diag_wp_idx, mat_a.read(kk_idx));
+      broadcast(executor_mpi, kk_rank.row(), panelT, mpi_col_task_chain);
+
+      // COLUMN UPDATE
+      for (SizeType i = distr.nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
+           i < distr.localNrTiles().rows(); ++i) {
+        const LocalTileIndex local_idx(Coord::Row, i);
+        const LocalTileIndex ik_idx(i, distr.localTileFromGlobalTile<Coord::Col>(k));
+
+        trsm_panel_tile(executor_hp, panelT.read(diag_wp_idx), mat_a(ik_idx));
+
+        panel.setTile(local_idx, mat_a.read(ik_idx));
       }
+
+      // row panel has been used for temporary storage of diagonal panel for column update
+      panelT.reset();
     }
-    else if (this_rank.col() == kk_rank.col()) {
-      if (k != nrtile - 1) {
-        panel[k] = hpx::dataflow(executor_mpi_col, unwrapping(comm::recvBcastAlloc<T, Device::CPU>),
-                                 mat_a.tileSize(kk_idx), kk_rank.row(), mpi_col_task_chain());
-      }
-    }
 
-    // Iterate over the k-th column
-    for (SizeType i = k + 1; i < nrtile; ++i) {
-      GlobalTileIndex ik_idx(i, k);
-      comm::Index2D ik_rank = mat_a.rankGlobalTile(ik_idx);
+    panelT.setRange(at_offset, distr.localNrTiles());
 
-      if (this_rank == ik_rank) {
-        trsm_panel_tile(executor_hp, panel[k], mat_a(ik_idx));
-        panel[i] = mat_a.read(ik_idx);
-        hpx::dataflow(executor_mpi_row, unwrapping(comm::sendBcast<T, Device::CPU>), panel[i],
-                      mpi_row_task_chain());
-      }
-      else if (this_rank.row() == ik_rank.row()) {
-        panel[i] = hpx::dataflow(executor_mpi_row, unwrapping(comm::recvBcastAlloc<T, Device::CPU>),
-                                 mat_a.tileSize(ik_idx), ik_rank.col(), mpi_row_task_chain());
-      }
-    }
+    // TODO skip last step tile
+    broadcast(executor_mpi, kk_rank.col(), panel, panelT, mpi_row_task_chain, mpi_col_task_chain);
 
-    // Iterate over the trailing matrix
-    for (SizeType j = k + 1; j < nrtile; ++j) {
-      auto& trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_np;
-      GlobalTileIndex jj_idx(j, j);
-      comm::Index2D jj_rank = mat_a.rankGlobalTile(jj_idx);
+    // TRAILING MATRIX
+    for (SizeType jt_idx = k + 1; jt_idx < nrtile; ++jt_idx) {
+      const auto owner = distr.rankGlobalTile({jt_idx, jt_idx});
 
-      if (this_rank.col() != jj_rank.col())
+      if (owner.col() != this_rank.col())
         continue;
 
-      if (this_rank.row() == jj_rank.row()) {
-        herk_trailing_diag_tile(trailing_matrix_executor, panel[j], mat_a(jj_idx));
-        if (j != nrtile - 1) {
-          hpx::dataflow(executor_mpi_col, unwrapping(comm::sendBcast<T, Device::CPU>), panel[j],
-                        mpi_col_task_chain());
-        }
-      }
-      else {
-        GlobalTileIndex jk_idx(j, k);
-        if (j != nrtile - 1) {
-          panel[j] = hpx::dataflow(executor_mpi_col, unwrapping(comm::recvBcastAlloc<T, Device::CPU>),
-                                   mat_a.tileSize(jk_idx), jj_rank.row(), mpi_col_task_chain());
-        }
+      const auto j = distr.localTileFromGlobalTile<Coord::Col>(jt_idx);
+      auto& trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_np;
+      if (this_rank.row() == owner.row()) {
+        const auto i = distr.localTileFromGlobalTile<Coord::Row>(jt_idx);
+
+        herk_trailing_diag_tile(trailing_matrix_executor, panel.read({Coord::Row, i}),
+                                mat_a(LocalTileIndex{i, j}));
       }
 
-      for (SizeType i = j + 1; i < nrtile; ++i) {
-        // Update the ij-tile using the ik-tile and jk-tile
-        if (this_rank.row() == distr.rankGlobalTile<Coord::Row>(i)) {
-          GlobalTileIndex ij_idx(i, j);
-          gemm_trailing_matrix_tile(executor_np, panel[i], panel[j], mat_a(ij_idx));
-        }
+      for (SizeType i_idx = jt_idx + 1; i_idx < nrtile; ++i_idx) {
+        const auto owner_row = distr.rankGlobalTile<Coord::Row>(i_idx);
+
+        if (owner_row != this_rank.row())
+          continue;
+
+        const auto i = distr.localTileFromGlobalTile<Coord::Row>(i_idx);
+        gemm_trailing_matrix_tile(executor_np, panel.read({Coord::Row, i}), panelT.read({Coord::Col, j}),
+                                  mat_a(LocalTileIndex{i, j}));
       }
     }
+
+    panel.reset();
+    panelT.reset();
   }
 }
 

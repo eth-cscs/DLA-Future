@@ -149,10 +149,6 @@ TYPED_TEST(CholeskyDistributedTest, DistCholesky_Yielding) {
   testDistCholesky<TypeParam>(*this);
 }
 
-TYPED_TEST(CholeskyDistributedTest, DistCholesky_Polling) {
-  testDistCholesky<TypeParam>(*this);
-}
-
 TYPED_TEST(CholeskyLocalTest, CorrectnessUpper) {
   // Note: The tile elements are chosen such that:
   // - res_ij = 1 / 2^(|i-j|) * exp(I*(-i+j)),

@@ -79,8 +79,16 @@ GTEST_API_ int main(int argc, char** argv) {
   auto default_listener = listeners.Release(listeners.default_result_printer());
   listeners.Append(new MPIListener(argc, argv, default_listener));
 
+  using namespace hpx::program_options;
+  options_description desc_commandline("Usage: " HPX_APPLICATION_STRING " [options]");
+  desc_commandline.add(dlaf::getOptionsDescription());
+
+  hpx::init_params p;
+  p.desc_cmdline = desc_commandline;
+  p.rp_callback = dlaf::initResourcePartitionerHandler;
+
   // Initialize HPX
-  auto ret = hpx::init(test_main, argc, argv);
+  auto ret = hpx::init(test_main, argc, argv, p);
 
   MPI_Finalize();
 

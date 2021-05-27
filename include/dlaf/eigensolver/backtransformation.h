@@ -17,8 +17,7 @@
 #include "dlaf/util_matrix.h"
 
 namespace dlaf {
-namespace solver {
-
+namespace eigensolver {
 
 /// Eigenvalue back-transformation implementation on local memory.
 ///

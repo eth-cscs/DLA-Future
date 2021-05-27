@@ -20,7 +20,6 @@
 #include "dlaf/matrix/matrix_base.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
-//#include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/matrix/util_matrix_blas.h"
 #include "dlaf_test/matrix/util_matrix_local.h"
@@ -35,21 +34,9 @@ using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 using namespace testing;
 
-//::testing::Environment* const comm_grids_env =
-//    ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
-
 template <typename Type>
 class BackTransformationEigenSolverLocalTest : public ::testing::Test {};
 TYPED_TEST_SUITE(BackTransformationEigenSolverLocalTest, MatrixElementTypes);
-
-// template <typename Type>
-// class BackTransformationEigenSolverDistributedTest : public ::testing::Test {
-// public:
-//  const std::vector<CommunicatorGrid>& commGrids() {
-//    return comm_grids;
-//}
-//};
-// TYPED_TEST_SUITE(BackTransformationEigenSolverDistributedTest, double);
 
 GlobalElementSize globalTestSize(const LocalElementSize& size) {
   return {size.rows(), size.cols()};

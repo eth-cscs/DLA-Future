@@ -9,8 +9,6 @@
 //
 #pragma once
 
-#include <hpx/include/parallel_executors.hpp>
-#include <hpx/include/threads.hpp>
 #include <hpx/include/util.hpp>
 
 #include "dlaf/blas/tile.h"
@@ -121,13 +119,9 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
     for (SizeType i = 0; i < mat_v.nrTiles().rows(); ++i) {
       // Copy V panel into VV
-      auto copy_v_into_vv = unwrapping([=](auto&& tile_v, auto&& tile_vv, TileElementSize region) {
-        void (&cpy)(const matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T, Device::CPU>&) =
-            dlaf::matrix::copy<T>;
-        cpy(tile_v, tile_vv);
-      });
-      hpx::dataflow(executor_hp, copy_v_into_vv, mat_v.read(LocalTileIndex(i, k)),
-                    mat_vv(LocalTileIndex(i, 0)), mat_vv.tileSize(GlobalTileIndex(i, 0)));
+      hpx::dataflow(dlaf::getCopyExecutor<Device::CPU, Device::CPU>(),
+                    matrix::unwrapExtendTiles(dlaf::matrix::copy_o), mat_v.read(LocalTileIndex(i, k)),
+                    mat_vv(LocalTileIndex(i, 0)));
 
       // Setting VV
       auto setting_vv = unwrapping([=](auto&& tile) {
@@ -143,12 +137,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       hpx::dataflow(executor_hp, setting_vv, mat_vv(LocalTileIndex(i, 0)));
 
       // Copy VV into W
-      auto copy_vv_into_w = unwrapping([=](auto&& tile_vv, auto&& tile_w) {
-        void (&cpy)(const matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T, Device::CPU>&) =
-            dlaf::matrix::copy<T>;
-        cpy(tile_vv, tile_w);
-      });
-      hpx::dataflow(executor_hp, copy_vv_into_w, mat_vv.read(LocalTileIndex(i, 0)),
+      hpx::dataflow(dlaf::getCopyExecutor<Device::CPU, Device::CPU>(),
+                    matrix::unwrapExtendTiles(matrix::copy_o), mat_vv.read(LocalTileIndex(i, 0)),
                     mat_w(LocalTileIndex(i, 0)));
     }
 

@@ -12,7 +12,7 @@
 #include "dlaf/types.h"
 
 namespace dlaf {
-namespace solver {
+namespace eigensolver {
 namespace internal {
 
 template <Backend backend, Device device, class T>

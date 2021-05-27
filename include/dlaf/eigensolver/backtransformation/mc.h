@@ -10,16 +10,10 @@
 #pragma once
 
 #include <hpx/include/parallel_executors.hpp>
-#include <hpx/include/resource_partitioner.hpp>
 #include <hpx/include/threads.hpp>
 #include <hpx/include/util.hpp>
-#include <hpx/local/future.hpp>
 
-#include <blas.hh>
-
-#include "dlaf/solver/backtransformation/api.h"
-
-#include "dlaf/blas_tile.h"
+#include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/vector.h"
@@ -29,6 +23,7 @@
 #include "dlaf/communication/kernels.h"
 #include "dlaf/executors.h"
 #include "dlaf/factorization/qr.h"
+#include "dlaf/eigensolver/backtransformation/api.h"
 #include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/copy_tile.h"
@@ -37,13 +32,9 @@
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/util_matrix.h"
 
-#include "dlaf/matrix/matrix_output.h"
-
 namespace dlaf {
-namespace solver {
+namespace eigensolver {
 namespace internal {
-
-using namespace dlaf::matrix;
 
 template <class T>
 void set_zero(Matrix<T, Device::CPU>& mat) {
@@ -62,13 +53,14 @@ struct BackTransformation<Backend::MC, Device::CPU, T> {
   static void call_FC(Matrix<T, Device::CPU>& mat_c, Matrix<const T, Device::CPU>& mat_v,
                       common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus);
   static void call_FC(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_c,
-                      Matrix<const T, Device::CPU>& mat_v, common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus);
+                      Matrix<const T, Device::CPU>& mat_v,
+                      common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus);
 };
 
 template <class T>
-void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::CPU>& mat_c,
-                                                              Matrix<const T, Device::CPU>& mat_v,
-                                                              common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
+void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
+    Matrix<T, Device::CPU>& mat_c, Matrix<const T, Device::CPU>& mat_v,
+    common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
   constexpr auto Left = blas::Side::Left;
   constexpr auto Right = blas::Side::Right;
   constexpr auto Upper = blas::Uplo::Upper;
@@ -137,7 +129,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
       // Copy V panel into VV
       auto copy_v_into_vv = unwrapping([=](auto&& tile_v, auto&& tile_vv, TileElementSize region) {
         void (&cpy)(const matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T, Device::CPU>&) =
-            copy<T>;
+            dlaf::matrix::copy<T>;
         cpy(tile_v, tile_vv);
       });
       hpx::dataflow(executor_hp, copy_v_into_vv, mat_v.read(LocalTileIndex(i, k)),
@@ -159,7 +151,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
       // Copy VV into W
       auto copy_vv_into_w = unwrapping([=](auto&& tile_vv, auto&& tile_w) {
         void (&cpy)(const matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T, Device::CPU>&) =
-            copy<T>;
+            dlaf::matrix::copy<T>;
         cpy(tile_vv, tile_w);
       });
       hpx::dataflow(executor_hp, copy_vv_into_w, mat_vv.read(LocalTileIndex(i, 0)),
@@ -179,8 +171,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
       auto kk = LocalTileIndex{k, k};
       // WH = V T
       auto ik = LocalTileIndex{i, 0};
-      hpx::dataflow(executor_np, hpx::util::unwrapping(tile::trmm<T, Device::CPU>), Right, Upper,
-                    ConjTrans, NonUnit, 1.0, mat_t.read(kk), std::move(mat_w(ik)));
+      hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::trmm_o), Right, Upper, ConjTrans,
+                    NonUnit, T(1.0), mat_t.read(kk), std::move(mat_w(ik)));
     }
 
     for (SizeType j = 0; j < n; ++j) {
@@ -189,8 +181,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
         auto ik = LocalTileIndex{i, 0};
         auto ij = LocalTileIndex{i, j};
         // W2 = W C
-        hpx::dataflow(executor_np, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), ConjTrans, NoTrans,
-                      1.0, std::move(mat_w(ik)), mat_c.read(ij), 1.0, std::move(mat_w2(kj)));
+        hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::gemm_o), ConjTrans, NoTrans, T(1.0),
+                      std::move(mat_w(ik)), mat_c.read(ij), T(1.0), std::move(mat_w2(kj)));
       }
     }
 
@@ -200,8 +192,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(Matrix<T, Device::
         auto kj = LocalTileIndex{0, j};
         auto ij = LocalTileIndex{i, j};
         // C = C - V W2
-        hpx::dataflow(executor_np, hpx::util::unwrapping(tile::gemm<T, Device::CPU>), NoTrans, NoTrans,
-                      -1.0, mat_vv.read(ik), mat_w2.read(kj), 1.0, std::move(mat_c(ij)));
+        hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::gemm_o), NoTrans, NoTrans, T(-1.0),
+                      mat_vv.read(ik), mat_w2.read(kj), T(1.0), std::move(mat_c(ij)));
       }
     }
   }
@@ -525,13 +517,13 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(comm::Communicator
  }
 
 /// ---- ETI
-#define DLAF_SOLVER_BACKTRANSFORMATION_MC_ETI(KWORD, DATATYPE) \
+#define DLAF_EIGENSOLVER_BACKTRANSFORMATION_MC_ETI(KWORD, DATATYPE) \
   KWORD template struct BackTransformation<Backend::MC, Device::CPU, DATATYPE>;
 
-DLAF_SOLVER_BACKTRANSFORMATION_MC_ETI(extern, float)
-DLAF_SOLVER_BACKTRANSFORMATION_MC_ETI(extern, double)
-DLAF_SOLVER_BACKTRANSFORMATION_MC_ETI(extern, std::complex<float>)
-DLAF_SOLVER_BACKTRANSFORMATION_MC_ETI(extern, std::complex<double>)
+DLAF_EIGENSOLVER_BACKTRANSFORMATION_MC_ETI(extern, float)
+DLAF_EIGENSOLVER_BACKTRANSFORMATION_MC_ETI(extern, double)
+DLAF_EIGENSOLVER_BACKTRANSFORMATION_MC_ETI(extern, std::complex<float>)
+DLAF_EIGENSOLVER_BACKTRANSFORMATION_MC_ETI(extern, std::complex<double>)
 
 }
 }

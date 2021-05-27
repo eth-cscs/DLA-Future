@@ -157,8 +157,6 @@ public:
   Matrix(const Matrix& rhs) = delete;
   Matrix(Matrix&& rhs) = default;
 
-  virtual ~Matrix();
-
   Matrix& operator=(const Matrix& rhs) = delete;
   Matrix& operator=(Matrix&& rhs) = default;
 
@@ -176,6 +174,12 @@ public:
   hpx::shared_future<ConstTileType> read(const GlobalTileIndex& index) {
     return read(distribution().localTileIndex(index));
   }
+
+  /// Synchronization barrier for all local tiles in the matrix
+  ///
+  /// This blocking call does not return until all operations, i.e. both RO and RW,
+  /// involving any of the locally available tiles are completed.
+  void waitLocalTiles() noexcept;
 
 protected:
   Matrix(Distribution distribution) : internal::MatrixBase{std::move(distribution)} {}

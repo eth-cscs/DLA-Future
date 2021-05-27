@@ -8,9 +8,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include "dlaf/matrix/print_csv.h"
 #include "dlaf/matrix/print_numpy.h"
 
 #include <sstream>
+#include <tuple>
 
 #include <gtest/gtest.h>
 #include <hpx/include/util.hpp>
@@ -24,6 +26,8 @@
 
 using namespace dlaf;
 using namespace dlaf::matrix;
+using namespace dlaf::matrix::test;
+using namespace dlaf::test;
 
 using matrix::test::createTile;
 
@@ -43,7 +47,9 @@ struct test_tile_output {
 
     const std::string output{"np.array([], dtype=np.single).reshape(0, 0).T\n"};
 
-    return std::make_pair(std::move(mat), output);
+    const std::string output_csv{""};
+
+    return std::make_tuple(std::move(mat), output, output_csv);
   }
 
   static auto nonempty() {
@@ -58,7 +64,11 @@ struct test_tile_output {
 
     const std::string output{"np.array([0,-1,2,-3,4,-5,], dtype=np.single).reshape(2, 3).T\n"};
 
-    return std::make_pair(std::move(mat), output);
+    const std::string output_csv{"0,-3,\n"
+                                 "-1,4,\n"
+                                 "2,-5,\n"};
+
+    return std::make_tuple(std::move(mat), output, output_csv);
   }
 };
 
@@ -72,7 +82,9 @@ struct test_tile_output<std::complex<T>> {
 
     const std::string output{"np.array([], dtype=np.csingle).reshape(0, 0).T\n"};
 
-    return std::make_pair(std::move(mat), output);
+    const std::string output_csv{""};
+
+    return std::make_tuple(std::move(mat), output, output_csv);
   }
 
   static auto nonempty() {
@@ -86,7 +98,11 @@ struct test_tile_output<std::complex<T>> {
     const std::string output{
         "np.array([0+0j,1+0j,2+0j,0-1j,1-1j,2-1j,], dtype=np.csingle).reshape(2, 3).T\n"};
 
-    return std::make_pair(std::move(mat), output);
+    const std::string output_csv{"(0,0),(0,-1),\n"
+                                 "(1,0),(1,-1),\n"
+                                 "(2,0),(2,-1),\n"};
+
+    return std::make_tuple(std::move(mat), output, output_csv);
   }
 };
 
@@ -94,11 +110,27 @@ TYPED_TEST(MatrixOutputTest, NumpyFormatTile) {
   using test_output = test_tile_output<TypeParam>;
   for (auto get_test_config : {test_output::empty, test_output::nonempty}) {
     const auto config = get_test_config();
+    auto& tile = std::get<0>(config);
+    std::string output_np = std::get<1>(config);
 
     std::ostringstream stream_tile_output;
-    print(format::numpy{}, config.first, stream_tile_output);
+    print(format::numpy{}, tile, stream_tile_output);
 
-    EXPECT_EQ(config.second, stream_tile_output.str());
+    EXPECT_EQ(output_np, stream_tile_output.str());
+  }
+}
+
+TYPED_TEST(MatrixOutputTest, CsvFormatTile) {
+  using test_output = test_tile_output<TypeParam>;
+  for (auto get_test_config : {test_output::empty, test_output::nonempty}) {
+    const auto config = get_test_config();
+    auto& tile = std::get<0>(config);
+    std::string output_csv = std::get<2>(config);
+
+    std::ostringstream stream_tile_output;
+    dlaf::matrix::internal::print(format::csv{}, tile, stream_tile_output);
+
+    EXPECT_EQ(output_csv, stream_tile_output.str());
   }
 }
 
@@ -114,7 +146,9 @@ struct test_matrix_output {
 
     const std::string output{"mat = np.zeros((0, 0), dtype=np.single)\n"};
 
-    return std::make_pair(std::move(mat), output);
+    const std::string output_csv{"mat\n"};
+
+    return std::make_tuple(std::move(mat), output, output_csv);
   }
 
   static auto nonempty() {
@@ -136,7 +170,14 @@ struct test_matrix_output {
         "mat[2:4,3:4] = np.array([-17,18,], dtype=np.single).reshape(1, 2).T\n"
         "mat[4:5,3:4] = np.array([-19,], dtype=np.single).reshape(1, 1).T\n"};
 
-    return std::make_pair(std::move(mat), output);
+    const std::string output_csv{"mat\n"
+                                 "0,-5,10,-15,\n"
+                                 "-1,6,-11,16,\n"
+                                 "2,-7,12,-17,\n"
+                                 "-3,8,-13,18,\n"
+                                 "4,-9,14,-19,\n"};
+
+    return std::make_tuple(std::move(mat), output, output_csv);
   }
 };
 
@@ -152,7 +193,9 @@ struct test_matrix_output<std::complex<T>> {
 
     const std::string output{"mat = np.zeros((0, 0), dtype=np.csingle)\n"};
 
-    return std::make_pair(std::move(mat), output);
+    const std::string output_csv{"mat\n"};
+
+    return std::make_tuple(std::move(mat), output, output_csv);
   }
 
   static auto nonempty() {
@@ -173,7 +216,14 @@ struct test_matrix_output<std::complex<T>> {
         "mat[2:4,3:4] = np.array([2-3j,3-3j,], dtype=np.csingle).reshape(1, 2).T\n"
         "mat[4:5,3:4] = np.array([4-3j,], dtype=np.csingle).reshape(1, 1).T\n"};
 
-    return std::make_pair(std::move(mat), output);
+    const std::string output_csv{"mat\n"
+                                 "(0,0),(0,-1),(0,2),(0,-3),\n"
+                                 "(1,0),(1,-1),(1,2),(1,-3),\n"
+                                 "(2,0),(2,-1),(2,2),(2,-3),\n"
+                                 "(3,0),(3,-1),(3,2),(3,-3),\n"
+                                 "(4,0),(4,-1),(4,2),(4,-3),\n"};
+
+    return std::make_tuple(std::move(mat), output, output_csv);
   }
 };
 
@@ -181,11 +231,27 @@ TYPED_TEST(MatrixOutputTest, NumpyFormatMatrix) {
   using test_output = test_matrix_output<TypeParam>;
   for (auto get_test_config : {test_output::empty, test_output::nonempty}) {
     auto config = get_test_config();
+    auto& matrix = std::get<0>(config);
+    std::string output_np = std::get<1>(config);
 
     std::ostringstream stream_matrix_output;
-    print(format::numpy{}, "mat", config.first, stream_matrix_output);
+    print(format::numpy{}, "mat", matrix, stream_matrix_output);
 
-    EXPECT_EQ(config.second, stream_matrix_output.str());
+    EXPECT_EQ(output_np, stream_matrix_output.str());
+  }
+}
+
+TYPED_TEST(MatrixOutputTest, CsvFormatMatrix) {
+  using test_output = test_matrix_output<TypeParam>;
+  for (auto get_test_config : {test_output::empty, test_output::nonempty}) {
+    auto config = get_test_config();
+    auto& matrix = std::get<0>(config);
+    std::string output_csv = std::get<2>(config);
+
+    std::ostringstream stream_matrix_output;
+    print(format::csv{}, "mat", matrix, stream_matrix_output);
+
+    EXPECT_EQ(output_csv, stream_matrix_output.str());
   }
 }
 
@@ -206,7 +272,10 @@ struct test_matrix_dist_output {
 
     const std::string output{"M = np.zeros((0, 0), dtype=np.single)\n"};
 
-    return std::make_pair(std::move(mat), output);
+    std::stringstream output_csv;
+    output_csv << mat << std::endl;
+
+    return std::make_tuple(std::move(mat), output, output_csv.str());
   }
 
   auto nonempty() const {
@@ -239,7 +308,10 @@ struct test_matrix_dist_output {
     else if (5 == linear_rank)
       output += "M[4:5,3:4] = np.array([-19,], dtype=np.single).reshape(1, 1).T\n";
 
-    return std::make_pair(std::move(mat), output);
+    std::stringstream output_csv;
+    output_csv << mat << std::endl;
+
+    return std::make_tuple(std::move(mat), output, output_csv.str());
   }
 };
 
@@ -260,7 +332,10 @@ struct test_matrix_dist_output<std::complex<T>> {
 
     const std::string output{"M = np.zeros((0, 0), dtype=np.csingle)\n"};
 
-    return std::make_pair(std::move(mat), output);
+    std::stringstream output_csv;
+    output_csv << mat << std::endl;
+
+    return std::make_tuple(std::move(mat), output, output_csv.str());
   }
 
   auto nonempty() {
@@ -292,7 +367,10 @@ struct test_matrix_dist_output<std::complex<T>> {
     else if (5 == linear_rank)
       o += "M[4:5,3:4] = np.array([4-3j,], dtype=np.csingle).reshape(1, 1).T\n";
 
-    return std::make_pair(std::move(mat), o);
+    std::stringstream output_csv;
+    output_csv << mat << std::endl;
+
+    return std::make_tuple(std::move(mat), o, output_csv.str());
   }
 };
 
@@ -302,10 +380,28 @@ TYPED_TEST(MatrixOutputTest, NumpyFormatMatrixDist) {
 
   for (auto get_test_config : {&test_output_t::empty, &test_output_t::nonempty}) {
     auto config = (instance.*get_test_config)();
+    auto& matrix = std::get<0>(config);
+    std::string output_np = std::get<1>(config);
 
     std::ostringstream stream_matrix_output;
-    print(format::numpy{}, "M", config.first, stream_matrix_output);
+    print(format::numpy{}, "M", matrix, stream_matrix_output);
 
-    EXPECT_EQ(config.second, stream_matrix_output.str());
+    EXPECT_EQ(output_np, stream_matrix_output.str());
+  }
+}
+
+TYPED_TEST(MatrixOutputTest, CsvFormatMatrixDist) {
+  using test_output_t = test_matrix_dist_output<TypeParam>;
+  test_output_t instance;
+
+  for (auto get_test_config : {&test_output_t::empty, &test_output_t::nonempty}) {
+    auto config = (instance.*get_test_config)();
+    auto& matrix = std::get<0>(config);
+    std::string output_csv = std::get<2>(config);
+
+    std::ostringstream stream_matrix_output;
+    print(format::csv{}, "M", matrix, stream_matrix_output);
+
+    EXPECT_EQ(output_csv, stream_matrix_output.str());
   }
 }

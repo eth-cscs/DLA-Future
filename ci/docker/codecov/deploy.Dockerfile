@@ -90,7 +90,7 @@ COPY --from=builder ${SOURCE} ${SOURCE}
 
 RUN cd /usr/local/bin && \
   curl -Ls https://codecov.io/bash > codecov.sh && \
-  echo "d6aa3207c4908d123bd8af62ec0538e3f2b9f257c3de62fad4e29cd3b59b41d9 codecov.sh" | sha256sum --check --quiet && \
+  echo "b94776192b31a359d8c12fe2692c95b576d1526c07c219893cf9299542faf67c codecov.sh" | sha256sum --check --quiet && \
   chmod +x codecov.sh
 
 # Make it easy to call our binaries.

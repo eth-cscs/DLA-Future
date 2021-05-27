@@ -167,8 +167,8 @@ void checkEQ(ElementGetter&& exp_el, const Tile<const T, Device::CPU>& tile, con
 template <class T, class PointerGetter>
 void checkPtr(PointerGetter exp_ptr, const Tile<const T, Device::CPU>& tile, const char* file,
               const int line) {
-  auto comp = [](T* ptr, const T& value) { return ptr == &value; };
-  auto err_message = [](T* expected, const T& value) {
+  auto comp = [](const T* ptr, const T& value) { return ptr == &value; };
+  auto err_message = [](const T* expected, const T& value) {
     std::stringstream s;
     s << "expected " << expected << " == " << &value;
     return s.str();

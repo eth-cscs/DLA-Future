@@ -59,7 +59,7 @@ Matrix<T, device>::Matrix(const LayoutInfo& layout, ElementType* ptr)
 
 template <class T, Device device>
 hpx::future<Tile<T, device>> Matrix<T, device>::operator()(const LocalTileIndex& index) noexcept {
-  std::size_t i = to_sizet(tileLinearIndex(index));
+  const auto i = tileLinearIndex(index);
   return tile_managers_[i].getRWTileFuture();
 }
 

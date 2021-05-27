@@ -20,9 +20,9 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/error.h"
 #include "dlaf/communication/executor.h"
-#include "dlaf/communication/functions_sync.h"
 #include "dlaf/communication/init.h"
 #include "dlaf/communication/mech.h"
+#include "dlaf/communication/sync/broadcast.h"
 #include "dlaf/factorization/cholesky.h"
 #include "dlaf/init.h"
 #include "dlaf/matrix/copy.h"
@@ -110,11 +110,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     copy(matrix_ref, matrix);
 
     // wait all setup tasks before starting benchmark
-    {
-      for (const auto tile_idx : dlaf::common::iterate_range2d(distribution.localNrTiles()))
-        matrix(tile_idx).get();
-      DLAF_MPI_CALL(MPI_Barrier(world));
-    }
+    matrix.waitLocalTiles();
+    DLAF_MPI_CALL(MPI_Barrier(world));
 
     dlaf::common::Timer<> timeit;
     dlaf::factorization::cholesky<Backend::MC, Device::CPU, T>(comm_grid, blas::Uplo::Lower, matrix);
@@ -205,8 +202,9 @@ void setUpperToZeroForDiagonalTiles(MatrixType& matrix) {
       continue;
 
     auto tile_set = unwrapping([](auto&& tile) {
-      lapack::laset(lapack::MatrixType::Upper, tile.size().rows() - 1, tile.size().cols() - 1, 0, 0,
-                    tile.ptr({0, 1}), tile.ld());
+      if (tile.size().rows() > 1)
+        lapack::laset(lapack::MatrixType::Upper, tile.size().rows() - 1, tile.size().cols() - 1, 0, 0,
+                      tile.ptr({0, 1}), tile.ld());
     });
 
     matrix(diag_tile).then(tile_set);

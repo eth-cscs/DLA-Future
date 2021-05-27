@@ -32,22 +32,25 @@ Matrix<const T, device>::Matrix(Distribution distribution, const matrix::LayoutI
 }
 
 template <class T, Device device>
-Matrix<const T, device>::~Matrix() {
-  for (auto&& tile_manager : tile_managers_) {
-    try {
-      tile_manager.clearSync();
-    }
-    catch (...) {
-      // TODO WARNING
-    }
-  }
+hpx::shared_future<Tile<const T, device>> Matrix<const T, device>::read(
+    const LocalTileIndex& index) noexcept {
+  const auto i = tileLinearIndex(index);
+  return tile_managers_[i].getReadTileSharedFuture();
 }
 
 template <class T, Device device>
-hpx::shared_future<Tile<const T, device>> Matrix<const T, device>::read(
-    const LocalTileIndex& index) noexcept {
-  std::size_t i = to_sizet(tileLinearIndex(index));
-  return tile_managers_[i].getReadTileSharedFuture();
+void Matrix<const T, device>::waitLocalTiles() noexcept {
+  // Note:
+  // Using a readwrite access to the tile ensures that the access is exclusive and not shared
+  // among multiple tasks.
+
+  auto readwrite_f = [this](const LocalTileIndex& index) {
+    const auto i = tileLinearIndex(index);
+    return this->tile_managers_[i].getRWTileFuture();
+  };
+
+  const auto range_local = common::iterate_range2d(distribution().localNrTiles());
+  hpx::wait_all(internal::selectGeneric(readwrite_f, range_local));
 }
 
 template <class T, Device device>

@@ -39,11 +39,19 @@ struct matrix_traits;
 template <template <class, Device> class MatrixLike, class T, Device device>
 struct matrix_traits<MatrixLike<T, device>> {
   using ElementT = std::remove_cv_t<T>;
+  using has_distribution = std::true_type;
+};
+
+template <class T, Device device>
+struct matrix_traits<Tile<T, device>> {
+  using ElementT = std::remove_cv_t<T>;
+  using has_distribution = std::false_type;
 };
 
 template <class T>
 struct matrix_traits<MatrixLocal<T>> {
   using ElementT = std::remove_cv_t<T>;
+  using has_distribution = std::false_type;
 };
 
 /// Sets the elements of the matrix.
@@ -51,7 +59,8 @@ struct matrix_traits<MatrixLocal<T>> {
 /// The (i, j)-element of the matrix is set to el({i, j}).
 /// @pre el argument is an index of type const GlobalElementIndex& or GlobalElementIndex,
 /// @pre el return type should be T.
-template <template <class, Device> class MatrixType, class T, class ElementGetter>
+template <template <class, Device> class MatrixType, class T, class ElementGetter,
+          class = std::enable_if_t<matrix_traits<MatrixType<T, Device::CPU>>::has_distribution::value>>
 void set(MatrixType<T, Device::CPU>& mat, ElementGetter el) {
   const matrix::Distribution& dist = mat.distribution();
   for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {

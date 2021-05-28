@@ -55,13 +55,14 @@ GlobalElementSize globalTestSize(const LocalElementSize& size) {
   return {size.rows(), size.cols()};
 }
 
-const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
-  {3, 0, 1, 1}, {0, 5, 2, 3},  // m, n = 0
-  {2, 2, 3, 3}, {3, 4, 6, 7},  // m < mb
-  //{3, 3, 1, 1}, {4, 4, 2, 2}, {6, 3, 3, 3}, {12, 2, 4, 4}, {12, 24, 3, 3}, {24, 36, 6, 6},
-  //  {5, 8, 3, 2}, {4, 6, 2, 3}, {5, 5, 2, 3}, {8, 27, 3, 4}, {15, 34, 4, 6},
-  {12, 24, 12, 12}
-};
+const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes =
+    {{3, 0, 1, 1},
+     {0, 5, 2, 3},  // m, n = 0
+     {2, 2, 3, 3},
+     {3, 4, 6, 7},  // m < mb
+     //{3, 3, 1, 1}, {4, 4, 2, 2}, {6, 3, 3, 3}, {12, 2, 4, 4}, {12, 24, 3, 3}, {24, 36, 6, 6},
+     //  {5, 8, 3, 2}, {4, 6, 2, 3}, {5, 5, 2, 3}, {8, 27, 3, 4}, {15, 34, 4, 6},
+     {12, 24, 12, 12}};
 
 template <class T>
 MatrixLocal<T> makeLocal(const Matrix<const T, Device::CPU>& matrix) {
@@ -91,7 +92,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
   TileElementSize blockSizeC(mb, nb);
   Matrix<T, Device::CPU> mat_c(sizeC, blockSizeC);
   dlaf::matrix::util::set_random(mat_c);
-  
+
   LocalElementSize sizeV(m, m);
   TileElementSize blockSizeV(mb, mb);
   Matrix<T, Device::CPU> mat_v(sizeV, blockSizeV);
@@ -178,8 +179,9 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
 }
 
 template <class T>
-void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeType n, SizeType mb, SizeType nb) {
-    //comm::Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
+void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeType n, SizeType mb,
+                                  SizeType nb) {
+  // comm::Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
   comm::Index2D src_rank_index(0, 0);
 
   LocalElementSize sizeC(m, n);
@@ -188,7 +190,7 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
   Distribution distrC(szC, blockSizeC, grid.size(), grid.rank(), src_rank_index);
   Matrix<T, Device::CPU> mat_c(std::move(distrC));
   dlaf::matrix::util::set_random(mat_c);
-  
+
   LocalElementSize sizeV(m, m);
   TileElementSize blockSizeV(mb, mb);
   GlobalElementSize szV = globalTestSize(sizeV);
@@ -204,7 +206,6 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
     tottaus = (m / mb - 1) * mb + m % mb;
   }
 
-  
   if (tottaus > 0) {
     // Copy matrices locally
     auto mat_c_loc = dlaf::matrix::test::allGather<T>(mat_c, grid);
@@ -236,9 +237,9 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
 
     common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus;
 
-    MatrixLocal<T> tausloc({tottaus,1},{mb,mb});
+    MatrixLocal<T> tausloc({tottaus, 1}, {mb, mb});
     auto tau_rows = tausloc.nrTiles().rows();
-    
+
     auto nt = 0;
     for (SizeType i = 0; i < tau_rows; ++i) {
       common::internal::vector<T> t_tile;
@@ -259,14 +260,13 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
       }
       taus.push_back(hpx::make_ready_future(t_tile));
     }
-    
+
     for (SizeType i = tottaus - 1; i > -1; --i) {
       const GlobalElementIndex v_offset{i, i};
       auto tau = tausloc({i, 0});
       lapack::larf(lapack::Side::Left, m - i, n, mat_v_loc.ptr(v_offset), 1, tau,
                    mat_c_loc.ptr(GlobalElementIndex{i, 0}), mat_c_loc.ld());
     }
-
 
     eigensolver::backTransformation<Backend::MC>(grid, mat_c, mat_v, taus);
 
@@ -283,7 +283,7 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
 }
 
 //// Not working on a 6 procs grid
-//TYPED_TEST(BackTransformationEigenSolverLocalTest, Correctness) {
+// TYPED_TEST(BackTransformationEigenSolverLocalTest, Correctness) {
 //  SizeType m, n, mb, nb;
 //
 //  for (auto sz : sizes) {

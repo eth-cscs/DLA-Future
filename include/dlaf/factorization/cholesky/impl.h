@@ -43,33 +43,33 @@ namespace factorization {
 namespace internal {
 
 template <class Executor, Device device, class T>
-void potrf_diag_tile(Executor&& exec, hpx::future<matrix::Tile<T, device>> matrix_tile) {
+void potrfDiagTile(Executor&& exec, hpx::future<matrix::Tile<T, device>> matrix_tile) {
   hpx::dataflow(exec, matrix::unwrapExtendTiles(tile::potrf_o), blas::Uplo::Lower,
                 std::move(matrix_tile));
 }
 
 template <class Executor, Device device, class T>
-void trsm_panel_tile(Executor&& executor_hp, hpx::shared_future<matrix::Tile<const T, device>> kk_tile,
-                     hpx::future<matrix::Tile<T, device>> matrix_tile) {
+void trsmPanelTile(Executor&& executor_hp, hpx::shared_future<matrix::Tile<const T, device>> kk_tile,
+                   hpx::future<matrix::Tile<T, device>> matrix_tile) {
   hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Right,
                 blas::Uplo::Lower, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), std::move(kk_tile),
                 std::move(matrix_tile));
 }
 
 template <class Executor, Device device, class T>
-void herk_trailing_diag_tile(Executor&& trailing_matrix_executor,
-                             hpx::shared_future<matrix::Tile<const T, device>> panel_tile,
-                             hpx::future<matrix::Tile<T, device>> matrix_tile) {
+void herkTrailingDiagTile(Executor&& trailing_matrix_executor,
+                          hpx::shared_future<matrix::Tile<const T, device>> panel_tile,
+                          hpx::future<matrix::Tile<T, device>> matrix_tile) {
   hpx::dataflow(trailing_matrix_executor, matrix::unwrapExtendTiles(tile::herk_o), blas::Uplo::Lower,
                 blas::Op::NoTrans, BaseType<T>(-1.0), panel_tile, BaseType<T>(1.0),
                 std::move(matrix_tile));
 }
 
 template <class Executor, Device device, class T>
-void gemm_trailing_matrix_tile(Executor&& trailing_matrix_executor,
-                               hpx::shared_future<matrix::Tile<const T, device>> panel_tile,
-                               hpx::shared_future<matrix::Tile<const T, device>> col_panel,
-                               hpx::future<matrix::Tile<T, device>> matrix_tile) {
+void gemmTrailingMatrixTile(Executor&& trailing_matrix_executor,
+                            hpx::shared_future<matrix::Tile<const T, device>> panel_tile,
+                            hpx::shared_future<matrix::Tile<const T, device>> col_panel,
+                            hpx::future<matrix::Tile<T, device>> matrix_tile) {
   hpx::dataflow(trailing_matrix_executor, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans,
                 blas::Op::ConjTrans, T(-1.0), std::move(panel_tile), std::move(col_panel), T(1.0),
                 std::move(matrix_tile));
@@ -88,11 +88,11 @@ void Cholesky<backend, device, T>::call_L(Matrix<T, device>& mat_a) {
     // Cholesky decomposition on mat_a(k,k) r/w potrf (lapack operation)
     auto kk = LocalTileIndex{k, k};
 
-    potrf_diag_tile(executor_hp, mat_a(kk));
+    potrfDiagTile(executor_hp, mat_a(kk));
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
       // Update panel mat_a(i,k) with trsm (blas operation), using data mat_a.read(k,k)
-      trsm_panel_tile(executor_hp, mat_a.read(kk), mat_a(LocalTileIndex{i, k}));
+      trsmPanelTile(executor_hp, mat_a.read(kk), mat_a(LocalTileIndex{i, k}));
     }
 
     for (SizeType j = k + 1; j < nrtile; ++j) {
@@ -100,14 +100,14 @@ void Cholesky<backend, device, T>::call_L(Matrix<T, device>& mat_a) {
       auto& trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_np;
 
       // Update trailing matrix: diagonal element mat_a(j,j), reading mat_a.read(j,k), using herk (blas operation)
-      herk_trailing_diag_tile(trailing_matrix_executor, mat_a.read(LocalTileIndex{j, k}),
-                              mat_a(LocalTileIndex{j, j}));
+      herkTrailingDiagTile(trailing_matrix_executor, mat_a.read(LocalTileIndex{j, k}),
+                           mat_a(LocalTileIndex{j, j}));
 
       for (SizeType i = j + 1; i < nrtile; ++i) {
         // Update remaining trailing matrix mat_a(i,j), reading mat_a.read(i,k) and mat_a.read(j,k),
         // using gemm (blas operation)
-        gemm_trailing_matrix_tile(trailing_matrix_executor, mat_a.read(LocalTileIndex{i, k}),
-                                  mat_a.read(LocalTileIndex{j, k}), mat_a(LocalTileIndex{i, j}));
+        gemmTrailingMatrixTile(trailing_matrix_executor, mat_a.read(LocalTileIndex{i, k}),
+                               mat_a.read(LocalTileIndex{j, k}), mat_a(LocalTileIndex{i, j}));
       }
     }
   }
@@ -141,7 +141,7 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 
     // Factorization of diagonal tile and broadcast it along the k-th column
     if (kk_rank == this_rank)
-      potrf_diag_tile(executor_hp, mat_a(kk_idx));
+      potrfDiagTile(executor_hp, mat_a(kk_idx));
 
     // If there is no trailing matrix
     if (k == nrtile - 1)
@@ -180,7 +180,7 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex local_idx(Coord::Row, i);
         const LocalTileIndex ik_idx(i, distr.localTileFromGlobalTile<Coord::Col>(k));
 
-        trsm_panel_tile(executor_hp, panelT.read(diag_wp_idx), mat_a(ik_idx));
+        trsmPanelTile(executor_hp, panelT.read(diag_wp_idx), mat_a(ik_idx));
 
         panel.setTile(local_idx, mat_a.read(ik_idx));
       }
@@ -207,8 +207,8 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
       if (this_rank.row() == owner.row()) {
         const auto i = distr.localTileFromGlobalTile<Coord::Row>(jt_idx);
 
-        herk_trailing_diag_tile(trailing_matrix_executor, panel.read({Coord::Row, i}),
-                                mat_a(LocalTileIndex{i, j}));
+        herkTrailingDiagTile(trailing_matrix_executor, panel.read({Coord::Row, i}),
+                             mat_a(LocalTileIndex{i, j}));
       }
 
       for (SizeType i_idx = jt_idx + 1; i_idx < nrtile; ++i_idx) {
@@ -218,8 +218,8 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
           continue;
 
         const auto i = distr.localTileFromGlobalTile<Coord::Row>(i_idx);
-        gemm_trailing_matrix_tile(executor_np, panel.read({Coord::Row, i}), panelT.read({Coord::Col, j}),
-                                  mat_a(LocalTileIndex{i, j}));
+        gemmTrailingMatrixTile(executor_np, panel.read({Coord::Row, i}), panelT.read({Coord::Col, j}),
+                               mat_a(LocalTileIndex{i, j}));
       }
     }
 

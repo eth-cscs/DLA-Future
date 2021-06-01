@@ -180,11 +180,11 @@ void copyConstTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
 TYPED_TEST(MatrixMirrorTest, CopyConst) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
-      copyTest<TypeParam, Device::CPU, Device::CPU>(comm_grid, test);
+      copyConstTest<TypeParam, Device::CPU, Device::CPU>(comm_grid, test);
 #ifdef DLAF_WITH_CUDA
-      copyTest<TypeParam, Device::CPU, Device::GPU>(comm_grid, test);
-      copyTest<TypeParam, Device::GPU, Device::CPU>(comm_grid, test);
-      copyTest<TypeParam, Device::GPU, Device::GPU>(comm_grid, test);
+      copyConstTest<TypeParam, Device::CPU, Device::GPU>(comm_grid, test);
+      copyConstTest<TypeParam, Device::GPU, Device::CPU>(comm_grid, test);
+      copyConstTest<TypeParam, Device::GPU, Device::GPU>(comm_grid, test);
 #endif
     }
   }

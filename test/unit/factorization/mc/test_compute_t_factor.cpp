@@ -12,11 +12,14 @@
 
 #include <gtest/gtest.h>
 #include <blas.hh>
+#include <hpx/include/util.hpp>
 #include <hpx/local/future.hpp>
 
 #include "dlaf/common/range2d.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/lapack_tile.h"  // workaround for importing lapack.hh
+#include "dlaf/matrix/copy.h"
+#include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/util_matrix.h"
 
@@ -33,6 +36,11 @@ using dlaf::matrix::test::MatrixLocal;
 
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new dlaf::test::CommunicatorGrid6RanksEnvironment);
+
+template <typename Type>
+struct ComputeTFactorLocalTest : public ::testing::Test {};
+
+TYPED_TEST_SUITE(ComputeTFactorLocalTest, dlaf::test::MatrixElementTypes);
 
 template <typename Type>
 struct ComputeTFactorDistributedTest : public ::testing::Test {
@@ -110,6 +118,168 @@ std::vector<std::tuple<dlaf::SizeType, dlaf::SizeType, dlaf::SizeType, dlaf::Siz
 // H = I - V . T . V*
 //
 // Which we expect to be the equal to the one computed previously.
+TYPED_TEST(ComputeTFactorLocalTest, Correctness) {
+  using namespace dlaf;
+  SizeType a_m, a_n, mb, nb, k;
+
+  for (auto config : configs) {
+    std::tie(a_m, a_n, mb, nb, k) = config;
+
+    const TileElementSize block_size(mb, nb);
+
+    Matrix<const TypeParam, Device::CPU> v_input = [&]() {
+      Matrix<TypeParam, Device::CPU> V({a_m, a_n}, block_size);
+      dlaf::matrix::util::set_random(V);
+      return V;
+    }();
+
+    MatrixLocal<TypeParam> v({a_m, a_n}, block_size);
+    for (const auto& ij_tile : iterate_range2d(v_input.nrTiles())) {
+      auto& dest_tile = v.tile(ij_tile);
+      const auto& source_tile = v_input.read(ij_tile).get();
+      copy(source_tile, dest_tile);
+    }
+
+    // clean reflectors
+    // clang-format off
+    lapack::laset(lapack::MatrixType::Upper,
+		  v.size().rows(), v.size().cols(),
+		  0, 1,
+		  v.ptr(), v.ld());
+    // clang-format on
+
+    const SizeType m = v.size().rows();
+
+    // compute taus and H_exp
+    common::internal::vector<TypeParam> taus;
+    taus.reserve(k);
+
+    MatrixLocal<TypeParam> h_expected({m, m}, block_size);
+    set(h_expected, preset_eye<TypeParam>);
+
+    for (auto j = 0; j < k; ++j) {
+      const SizeType reflector_size = m - j;
+
+      const TypeParam* data_ptr = v.ptr({j, j});
+      const auto norm = blas::nrm2(reflector_size, data_ptr, 1);
+      const TypeParam tau = 2 / std::pow(norm, static_cast<decltype(norm)>(2));
+
+      taus.push_back(tau);
+      MatrixLocal<TypeParam> h_i({reflector_size, reflector_size}, block_size);
+      set(h_i, preset_eye<TypeParam>);
+
+      // Hi = (I - tau . v . v*)
+      // clang-format off
+      blas::ger(blas::Layout::ColMajor,
+		reflector_size, reflector_size,
+		-tau,
+		v.ptr({j, j}), 1,
+		v.ptr({j, j}), 1,
+		h_i.ptr(), h_i.ld());
+      // clang-format on
+
+      // H_exp[:, j:] = H_exp[:, j:] . Hi
+      // clang-format off
+      const GlobalElementIndex h_offset{0, j};
+      MatrixLocal<TypeParam> workspace({h_expected.size().rows(), h_i.size().cols()}, h_i.blockSize());
+      blas::gemm(blas::Layout::ColMajor,
+		 blas::Op::NoTrans, blas::Op::NoTrans,
+		 h_expected.size().rows(), h_i.size().cols(), h_i.size().rows(),
+		 1,
+		 h_expected.ptr(h_offset), h_expected.ld(),
+		 h_i.ptr(), h_i.ld(),
+		 0,
+		 workspace.ptr(), workspace.ld());
+      // clang-format on
+      std::copy(workspace.ptr(), workspace.ptr() + workspace.size().linear_size(),
+                h_expected.ptr(h_offset));
+    }
+    hpx::shared_future<decltype(taus)> taus_input = hpx::make_ready_future(taus);
+
+    is_orthogonal(h_expected);
+
+    Matrix<TypeParam, Device::CPU> t_output({k, k}, block_size);
+    const LocalTileIndex t_idx(0, 0);
+
+    const LocalTileIndex v_start{v.nrTiles().rows() / 2, v.nrTiles().cols() / 2};
+
+    dlaf::factorization::internal::computeTFactor<Backend::MC>(k, v_input, v_start, taus_input,
+                                                               t_output(t_idx));
+
+    // Note:
+    // In order to check T correctness, the test will compute the H transformation matrix
+    // that will results from using it with the V panel.
+    //
+    // In particular
+    //
+    // H_res = I - V T V*
+    //
+    // is computed and compared to the one previously obtained by applying reflectors sequentially
+    const auto& t = t_output.read(t_idx).get();
+
+    // TV* = (VT*)* = W
+    MatrixLocal<TypeParam> w({m, k}, block_size);
+    std::copy(v.ptr(), v.ptr() + w.size().linear_size(), w.ptr());
+
+    // clang-format off
+    blas::trmm(blas::Layout::ColMajor,
+	       blas::Side::Right, blas::Uplo::Upper,
+	       blas::Op::ConjTrans, blas::Diag::NonUnit,
+	       m, k,
+	       1,
+	       t.ptr(), t.ld(),
+	       w.ptr(), w.ld());
+    // clang-format on
+
+    // H_result = I - V W*
+    MatrixLocal<TypeParam> h_result(h_expected.size(), block_size);
+    set(h_result, preset_eye<TypeParam>);
+
+    // clang-format off
+    blas::gemm(blas::Layout::ColMajor,
+	       blas::Op::NoTrans, blas::Op::ConjTrans,
+	       m, m, k,
+	       -1,
+	       v.ptr(), v.ld(),
+	       w.ptr(), w.ld(),
+	       1,
+	       h_result.ptr(), h_result.ld());
+    // clang-format on
+
+    is_orthogonal(h_result);
+
+    //      const auto error =
+    //          h_result.size().rows() * t.size().rows() * test::TypeUtilities<TypeParam>::error;
+    //      CHECK_MATRIX_NEAR(h_expected, h_result, 0, error);
+  }
+}
+
+// Note:
+// Testing this function requires next input values:
+// - V      the matrix with the elementary reflectors (columns)
+// - taus   the set of tau coefficients, one for each reflector
+//
+// V is generated randomly and the related tau values are computed, and at the same time they are used to
+// compute the expected resulting Householder transformation by applying one at a time the reflectors in
+// V, by applying on each one the equation
+//
+// Hi = I - tau . v . v*
+//
+// and updating the final expected Householder transformation with
+//
+// H_exp = H_exp * Hi
+//
+// resulting in
+//
+// H = H1 . H2 . ... . Hk
+//
+// On the other side, from the function, by providing V and taus we get back a T factor, that we
+// can use to compute the Householder transformation by applying all reflectors in block.
+// This Householder transformation is obtained with the equation
+//
+// H = I - V . T . V*
+//
+// Which we expect to be the equal to the one computed previously.
 TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
   using namespace dlaf;
 
@@ -149,8 +319,9 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
 
         // copy only the panel
         const GlobalTileSize v_offset{v_start.row(), v_start.col()};
-        for (const auto& ij : iterate_range2d(v.nrTiles()))
+        for (const auto& ij : iterate_range2d(v.nrTiles())) {
           copy(a.tile_read(ij + v_offset), v.tile(ij));
+        }
 
         // clean reflectors
         // clang-format off

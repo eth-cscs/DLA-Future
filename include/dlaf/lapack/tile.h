@@ -55,8 +55,9 @@ using matrix::Tile;
 /// @pre a must be a complex Hermitian matrix or a symmetric real matrix (A),
 /// @pre b must be the triangular factor from the Cholesky factorization of B,
 /// @throw std::runtime_error if the tile was not positive definite.
-template <class T, Device device>
-void hegst(const int itype, const blas::Uplo uplo, const Tile<T, device>& a, const Tile<T, device>& b) {
+template <class T>
+void hegst(const int itype, const blas::Uplo uplo, const Tile<T, Device::CPU>& a,
+           const Tile<T, Device::CPU>& b) {
   DLAF_ASSERT(square_size(a), a);
   DLAF_ASSERT(itype >= 1 && itype <= 3, itype);
 
@@ -99,8 +100,8 @@ void lacpy(TileElementSize region, TileElementIndex in_idx, const Tile<const T, 
 /// element, of a general rectangular matrix.
 ///
 /// @pre a.size().isValid().
-template <class T, Device device>
-dlaf::BaseType<T> lange(const lapack::Norm norm, const Tile<T, device>& a) noexcept {
+template <class T>
+dlaf::BaseType<T> lange(const lapack::Norm norm, const Tile<T, Device::CPU>& a) noexcept {
   return lapack::lange(norm, a.size().rows(), a.size().cols(), a.ptr(), a.ld());
 }
 
@@ -111,9 +112,9 @@ dlaf::BaseType<T> lange(const lapack::Norm norm, const Tile<T, device>& a) noexc
 /// @pre a.size().isValid(),
 /// @pre a.size().rows() >= a.size().cols() if uplo == blas::Uplo::Lower,
 /// @pre a.size().rows() <= a.size().cols() if uplo == blas::Uplo::Upper.
-template <class T, Device device>
+template <class T>
 dlaf::BaseType<T> lantr(const lapack::Norm norm, const blas::Uplo uplo, const blas::Diag diag,
-                        const Tile<T, device>& a) noexcept {
+                        const Tile<T, Device::CPU>& a) noexcept {
   switch (uplo) {
     case blas::Uplo::Lower:
       DLAF_ASSERT(a.size().rows() >= a.size().cols(), a);
@@ -132,8 +133,8 @@ dlaf::BaseType<T> lantr(const lapack::Norm norm, const blas::Uplo uplo, const bl
 ///
 /// Only the upper or lower triangular elements are referenced according to @p uplo.
 /// @returns info = 0 on success or info > 0 if the tile is not positive definite.
-template <class T, Device device>
-long long potrfInfo(const blas::Uplo uplo, const Tile<T, device>& a) {
+template <class T>
+long long potrfInfo(const blas::Uplo uplo, const Tile<T, Device::CPU>& a) {
   DLAF_ASSERT(square_size(a), a);
 
   auto info = lapack::potrf(uplo, a.size().rows(), a.ptr(), a.ld());
@@ -147,8 +148,8 @@ long long potrfInfo(const blas::Uplo uplo, const Tile<T, device>& a) {
 /// Only the upper or lower triangular elements are referenced according to @p uplo.
 /// @pre matrix @p a is square,
 /// @pre matrix @p a is positive definite.
-template <class T, Device device>
-void potrf(const blas::Uplo uplo, const Tile<T, device>& a) noexcept {
+template <class T>
+void potrf(const blas::Uplo uplo, const Tile<T, Device::CPU>& a) noexcept {
   auto info = potrfInfo(uplo, a);
 
   DLAF_ASSERT(info == 0, info);

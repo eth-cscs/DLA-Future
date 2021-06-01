@@ -15,7 +15,7 @@
 #include "dlaf/blas/enum_output.h"
 #include "dlaf/blas/tile.h"
 #include "dlaf/matrix/tile.h"
-#include "dlaf/memory/memory_view.h"
+#include "dlaf_test/blas/invoke.h"
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/matrix/util_tile_blas.h"
 #include "dlaf_test/util_types.h"
@@ -29,7 +29,7 @@ using namespace testing;
 
 using dlaf::util::size_t::mul;
 
-template <class T, class CT = const T>
+template <Device D, class T, class CT = const T>
 void testHer2k(const blas::Uplo uplo, const blas::Op op, const SizeType n, const SizeType k,
                const SizeType extra_lda, const SizeType extra_ldc) {
   const TileElementSize size_a =
@@ -83,18 +83,17 @@ void testHer2k(const blas::Uplo uplo, const blas::Op op, const SizeType n, const
     T tmp = TypeUtilities<T>::element(0, 0);
     // Compute result of cij
     for (SizeType kk = 0; kk < k; ++kk) {
-      tmp += alpha * el_op_a({index.row(), kk}) * TypeUtilities<T>::conj(el_op_b({index.col(), kk})) +
-             TypeUtilities<T>::conj(alpha) * el_op_b({index.row(), kk}) *
-                 TypeUtilities<T>::conj(el_op_a({index.col(), kk}));
+      tmp += alpha * el_op_a({index.row(), kk}) * dlaf::conj(el_op_b({index.col(), kk})) +
+             dlaf::conj(alpha) * el_op_b({index.row(), kk}) * dlaf::conj(el_op_a({index.col(), kk}));
     }
     return beta * el_c(index) + tmp;
   };
 
-  auto a = createTile<CT>(el_op_a, size_a, lda, op);
-  auto b = createTile<CT>(el_op_b, size_b, ldb, op);
-  auto c = createTile<T>(el_c, size_c, ldc);
+  auto a = createTile<CT, D>(el_op_a, size_a, lda, op);
+  auto b = createTile<CT, D>(el_op_b, size_b, ldb, op);
+  auto c = createTile<T, D>(el_c, size_c, ldc);
 
-  tile::her2k(uplo, op, alpha, a, b, beta, c);
+  invokeBlas<D>(tile::her2k_o, uplo, op, alpha, a, b, beta, c);
 
   CHECK_TILE_NEAR(res_c, c, (k + 1) * TypeUtilities<T>::error, (k + 1) * TypeUtilities<T>::error);
 }

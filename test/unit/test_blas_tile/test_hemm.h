@@ -15,7 +15,7 @@
 #include "dlaf/blas/enum_output.h"
 #include "dlaf/blas/tile.h"
 #include "dlaf/matrix/tile.h"
-#include "dlaf/memory/memory_view.h"
+#include "dlaf_test/blas/invoke.h"
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/matrix/util_tile_blas.h"
 #include "dlaf_test/util_types.h"
@@ -29,7 +29,7 @@ using namespace testing;
 
 using dlaf::util::size_t::mul;
 
-template <class T, class CT = const T>
+template <Device D, class T, class CT = const T>
 void testHemm(const blas::Side side, const blas::Uplo uplo, const SizeType m, const SizeType n,
               const SizeType extra_lda, const SizeType extra_ldb, const SizeType extra_ldc) {
   const SizeType k = (side == blas::Side::Left) ? m : n;
@@ -116,11 +116,11 @@ void testHemm(const blas::Side side, const blas::Uplo uplo, const SizeType m, co
   };
 
   // Read-only tiles become constant if CT is const T.
-  auto a = createTile<CT>(el_a, size_a, lda);
-  auto b = createTile<CT>(el_b, size_b, ldb);
-  auto c = createTile<T>(el_c, size_c, ldc);
+  auto a = createTile<CT, D>(el_a, size_a, lda);
+  auto b = createTile<CT, D>(el_b, size_b, ldb);
+  auto c = createTile<T, D>(el_c, size_c, ldc);
 
-  tile::hemm(side, uplo, alpha, a, b, beta, c);
+  invokeBlas<D>(tile::hemm_o, side, uplo, alpha, a, b, beta, c);
 
   // Check result against analytical result.
   CHECK_TILE_NEAR(res_c, c, 2 * (k + 1) * TypeUtilities<T>::error,

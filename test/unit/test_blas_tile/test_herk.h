@@ -15,7 +15,7 @@
 #include "dlaf/blas/enum_output.h"
 #include "dlaf/blas/tile.h"
 #include "dlaf/matrix/tile.h"
-#include "dlaf/memory/memory_view.h"
+#include "dlaf_test/blas/invoke.h"
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/matrix/util_tile_blas.h"
 #include "dlaf_test/util_types.h"
@@ -27,7 +27,7 @@ using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
 using namespace testing;
 
-template <class T, class CT = const T>
+template <Device D, class T, class CT = const T>
 void testHerk(const blas::Uplo uplo, const blas::Op op_a, const SizeType n, const SizeType k,
               const SizeType extra_lda, const SizeType extra_ldc) {
   const TileElementSize size_a =
@@ -72,15 +72,15 @@ void testHerk(const blas::Uplo uplo, const blas::Op op_a, const SizeType n, cons
     T tmp = TypeUtilities<T>::element(0, 0);
     // Compute result of cij
     for (SizeType kk = 0; kk < k; ++kk) {
-      tmp += el_op_a({index.row(), kk}) * TypeUtilities<T>::conj(el_op_a({index.col(), kk}));
+      tmp += el_op_a({index.row(), kk}) * dlaf::conj(el_op_a({index.col(), kk}));
     }
     return beta * el_c(index) + alpha * tmp;
   };
 
-  auto a = createTile<CT>(el_op_a, size_a, lda, op_a);
-  auto c = createTile<T>(el_c, size_c, ldc);
+  auto a = createTile<CT, D>(el_op_a, size_a, lda, op_a);
+  auto c = createTile<T, D>(el_c, size_c, ldc);
 
-  tile::herk(uplo, op_a, alpha, a, beta, c);
+  invokeBlas<D>(tile::herk_o, uplo, op_a, alpha, a, beta, c);
 
   CHECK_TILE_NEAR(res_c, c, (k + 1) * TypeUtilities<T>::error, (k + 1) * TypeUtilities<T>::error);
 }

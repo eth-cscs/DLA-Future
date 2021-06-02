@@ -157,60 +157,30 @@ void potrf(const blas::Uplo uplo, const Tile<T, Device::CPU>& a) noexcept {
 
 #ifdef DLAF_WITH_CUDA
 namespace internal {
-template <typename T>
-struct CublasPotrf;
+#define DLAF_DECLARE_CUSOLVER_OP(Name) \
+  template <typename T>                \
+  struct Name
 
-template <>
-struct CublasPotrf<float> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUSOLVER_CALL(cusolverDnSpotrf(std::forward<Args>(args)...));
+#define DLAF_CREATE_SOLVER_OP_BUFFER(Name, Type, f, f_buf)    \
+  template <>                                                 \
+  struct Name<Type> {                                         \
+    template <typename... Args>                               \
+    static void call(Args&&... args) {                        \
+      DLAF_CUSOLVER_CALL(f(std::forward<Args>(args)...));     \
+    }                                                         \
+    template <typename... Args>                               \
+    static void callBufferSize(Args&&... args) {              \
+      DLAF_CUSOLVER_CALL(f_buf(std::forward<Args>(args)...)); \
+    }                                                         \
   }
 
-  template <typename... Args>
-  static void callBufferSize(Args&&... args) {
-    DLAF_CUSOLVER_CALL(cusolverDnSpotrf_bufferSize(std::forward<Args>(args)...));
-  }
-};
-
-template <>
-struct CublasPotrf<double> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUSOLVER_CALL(cusolverDnDpotrf(std::forward<Args>(args)...));
-  }
-
-  template <typename... Args>
-  static void callBufferSize(Args&&... args) {
-    DLAF_CUSOLVER_CALL(cusolverDnDpotrf_bufferSize(std::forward<Args>(args)...));
-  }
-};
-
-template <>
-struct CublasPotrf<std::complex<float>> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUSOLVER_CALL(cusolverDnCpotrf(std::forward<Args>(args)...));
-  }
-
-  template <typename... Args>
-  static void callBufferSize(Args&&... args) {
-    DLAF_CUSOLVER_CALL(cusolverDnCpotrf_bufferSize(std::forward<Args>(args)...));
-  }
-};
-
-template <>
-struct CublasPotrf<std::complex<double>> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUSOLVER_CALL(cusolverDnZpotrf(std::forward<Args>(args)...));
-  }
-
-  template <typename... Args>
-  static void callBufferSize(Args&&... args) {
-    DLAF_CUSOLVER_CALL(cusolverDnZpotrf_bufferSize(std::forward<Args>(args)...));
-  }
-};
+DLAF_DECLARE_CUSOLVER_OP(CusolverPotrf);
+DLAF_CREATE_CUSOLVER_OP(CusolverPotrf, float, cusolverDnSpotrf, cusolverDnSpotrf_bufferSize);
+DLAF_CREATE_CUSOLVER_OP(CusolverPotrf, double, cusolverDnDpotrf, cusolverDnDpotrf_bufferSize);
+DLAF_CREATE_CUSOLVER_OP(CusolverPotrf, std::complex<float>, cusolverDnCpotrf,
+                        cusolverDnCpotrf_bufferSize);
+DLAF_CREATE_CUSOLVER_OP(CusolverPotrf, std::complex<double>, cusolverDnZpotrf,
+                        cusolverDnZpotrf_bufferSize);
 }
 
 namespace internal {
@@ -238,12 +208,12 @@ internal::CusolverPotrfInfo<T> potrfInfo(cusolverDnHandle_t handle, const blas::
   const int n = a.size().rows();
 
   int workspace_size;
-  internal::CublasPotrf<T>::callBufferSize(handle, util::blasToCublas(uplo), n,
-                                           util::blasToCublasCast(a.ptr()), a.ld(), &workspace_size);
+  internal::CusolverPotrf<T>::callBufferSize(handle, util::blasToCublas(uplo), n,
+                                             util::blasToCublasCast(a.ptr()), a.ld(), &workspace_size);
   internal::CusolverPotrfInfo<T> info{workspace_size};
-  internal::CublasPotrf<T>::call(handle, util::blasToCublas(uplo), n, util::blasToCublasCast(a.ptr()),
-                                 a.ld(), util::blasToCublasCast(info.workspace()), workspace_size,
-                                 info.info());
+  internal::CusolverPotrf<T>::call(handle, util::blasToCublas(uplo), n, util::blasToCublasCast(a.ptr()),
+                                   a.ld(), util::blasToCublasCast(info.workspace()), workspace_size,
+                                   info.info());
 
   return info;
 }
@@ -274,6 +244,7 @@ void potrf(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<
 #endif
 
 DLAF_MAKE_CALLABLE_OBJECT(potrf);
+DLAF_MAKE_CALLABLE_OBJECT(potrfInfo);
 
 }
 }

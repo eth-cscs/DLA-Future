@@ -30,14 +30,17 @@ using namespace testing;
 
 using dlaf::util::size_t::mul;
 
-template <class ElementIndex, class T>
-void testHegst(const int itype, const blas::Uplo uplo, const SizeType m, const SizeType extra_ld) {
+template <class T>
+void testHegst(const int itype, const blas::Uplo uplo, const SizeType m, const SizeType extra_lda,
+               const SizeType extra_ldb) {
   const TileElementSize size(m, m);
 
-  const SizeType ld = std::max<SizeType>(1, size.rows()) + extra_ld;
+  const SizeType lda = std::max<SizeType>(1, size.rows()) + extra_lda;
+  const SizeType ldb = std::max<SizeType>(1, size.rows()) + extra_ldb;
 
   std::stringstream s;
-  s << "HEGST: itype = " << itype << ", uplo = " << uplo << ", m = " << m << ", ld = " << ld;
+  s << "HEGST: itype = " << itype << ", uplo = " << uplo << ", m = " << m << ", lda = " << lda
+    << ", ldb = " << ldb;
   SCOPED_TRACE(s.str());
 
   const BaseType<T> alpha = 1.2f;
@@ -47,10 +50,10 @@ void testHegst(const int itype, const blas::Uplo uplo, const SizeType m, const S
   std::function<T(const TileElementIndex&)> el_t, el_a, res_a;
 
   std::tie(el_t, el_a, res_a) =
-      getGenToStdElementSetters<ElementIndex, BaseType<T>>(m, itype, uplo, alpha, beta, gamma);
+      getGenToStdElementSetters<TileElementIndex, BaseType<T>>(m, itype, uplo, alpha, beta, gamma);
 
-  auto a = createTile<T>(el_a, size, ld);
-  auto t = createTile<T>(el_t, size, ld);
+  auto a = createTile<T>(el_a, size, lda);
+  auto t = createTile<T>(el_t, size, ldb);
 
   tile::hegst(itype, uplo, a, t);
 

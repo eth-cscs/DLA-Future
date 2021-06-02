@@ -74,7 +74,7 @@ void set(Tile<T, Device::CPU>& tile, ElementGetter val, const blas::Op op) {
 /// @pre ld is the leading dimension of the tile to be created,
 /// @pre op is the blas::Op to be applied to the tile.
 template <class T, Device D = Device::CPU, class ElementGetter>
-Tile<T, Device::CPU> createTile(ElementGetter val, const TileElementSize size, const SizeType ld,
+Tile<T, D> createTile(ElementGetter val, const TileElementSize size, const SizeType ld,
                                 const blas::Op op) {
   auto op_val = internal::opValFunc(val, op);
   return createTile<T, D>(op_val, size, ld);

@@ -169,7 +169,7 @@ TYPED_TEST(TileOperationsTestMC, Her2k) {
 }
 
 #ifdef DLAF_WITH_CUDA
-TYPED_TEST(TileOperationsTestMC, Her2k) {
+TYPED_TEST(TileOperationsTestGPU, Her2k) {
   using Type = TypeParam;
 
   auto her2k_blas_ops = blas_ops;

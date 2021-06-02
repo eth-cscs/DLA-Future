@@ -102,7 +102,7 @@ struct CreateTile<T, Device::CPU> {
 template <class T>
 struct CreateTile<T, Device::GPU> {
   template <class ElementGetter>
-  static Tile<T, Device::CPU> createAndSet(ElementGetter val, const TileElementSize size,
+  static Tile<T, Device::GPU> createAndSet(ElementGetter val, const TileElementSize size,
                                            const SizeType ld) {
     auto tile_host = CreateTile<T, Device::CPU>::createAndSet(val, size, ld);
     auto tile = createTile<std::remove_const_t<T>, Device::GPU>(size, ld);
@@ -119,7 +119,7 @@ struct CreateTile<T, Device::GPU> {
 /// @pre size is the dimension of the tile to be created (type: TileElementSize);
 /// @pre ld is the leading dimension of the tile to be created.
 template <class T, Device D = Device::CPU, class ElementGetter>
-Tile<T, Device::CPU> createTile(ElementGetter val, const TileElementSize size, const SizeType ld) {
+Tile<T, D> createTile(ElementGetter val, const TileElementSize size, const SizeType ld) {
   return internal::CreateTile<T, D>::createAndSet(val, size, ld);
 }
 
@@ -169,7 +169,7 @@ void check(ElementGetter&& expected, const Tile<const T, Device::GPU>& tile, Com
            ErrorMessageGetter err_message, const char* file, const int line) {
   auto tile_host = createTile<std::remove_const_t<T>, Device::CPU>(tile.size(), tile.ld());
   copy(tile, tile_host);
-  check(std::forward(expected), tile_host, comp, err_message, file, line);
+  check(std::forward<ElementGetter>(expected), tile_host, comp, err_message, file, line);
 }
 #endif
 

@@ -41,9 +41,9 @@ struct InvokeBlas<Device::GPU> {
   static void call(F&& f, Args&&... args) {
     cublasHandle_t handle;
     DLAF_CUBLAS_CALL(cublasCreate(&handle));
-  DLAF_CUBLAS_CALL(f(handle, std::forward<Args>(args)...);
-  DLAF_CUDA_CALL(cudaDeviceSynchronize());
-  DLAF_CUBLAS_CALL(cublasDestroy(handle));
+    f(handle, std::forward<Args>(args)...);
+    DLAF_CUDA_CALL(cudaDeviceSynchronize());
+    DLAF_CUBLAS_CALL(cublasDestroy(handle));
   }
 };
 #endif

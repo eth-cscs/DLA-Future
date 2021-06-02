@@ -60,7 +60,7 @@ struct InvokeLapack<Device::GPU> {
     // The copy will happen on the same (default) stream as the potrf, and since
     // this is a blocking call, we can access info_host without further
     // synchronization.
-    DLAF_CUDA_CALL(cudaMemcpy(*info_host, result.info(), sizeof(int), cudaMemcpyDeviceToHost));
+    DLAF_CUDA_CALL(cudaMemcpy(&info_host, result.info(), sizeof(int), cudaMemcpyDeviceToHost));
     DLAF_CUSOLVER_CALL(cusolverDnDestroy(handle));
 
     return info_host;

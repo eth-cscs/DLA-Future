@@ -161,7 +161,7 @@ namespace internal {
   template <typename T>                \
   struct Name
 
-#define DLAF_CREATE_SOLVER_OP_BUFFER(Name, Type, f, f_buf)    \
+#define DLAF_CREATE_CUSOLVER_OP_BUFFER(Name, Type, f, f_buf)  \
   template <>                                                 \
   struct Name<Type> {                                         \
     template <typename... Args>                               \
@@ -175,12 +175,12 @@ namespace internal {
   }
 
 DLAF_DECLARE_CUSOLVER_OP(CusolverPotrf);
-DLAF_CREATE_CUSOLVER_OP(CusolverPotrf, float, cusolverDnSpotrf, cusolverDnSpotrf_bufferSize);
-DLAF_CREATE_CUSOLVER_OP(CusolverPotrf, double, cusolverDnDpotrf, cusolverDnDpotrf_bufferSize);
-DLAF_CREATE_CUSOLVER_OP(CusolverPotrf, std::complex<float>, cusolverDnCpotrf,
-                        cusolverDnCpotrf_bufferSize);
-DLAF_CREATE_CUSOLVER_OP(CusolverPotrf, std::complex<double>, cusolverDnZpotrf,
-                        cusolverDnZpotrf_bufferSize);
+DLAF_CREATE_CUSOLVER_OP_BUFFER(CusolverPotrf, float, cusolverDnSpotrf, cusolverDnSpotrf_bufferSize);
+DLAF_CREATE_CUSOLVER_OP_BUFFER(CusolverPotrf, double, cusolverDnDpotrf, cusolverDnDpotrf_bufferSize);
+DLAF_CREATE_CUSOLVER_OP_BUFFER(CusolverPotrf, std::complex<float>, cusolverDnCpotrf,
+                               cusolverDnCpotrf_bufferSize);
+DLAF_CREATE_CUSOLVER_OP_BUFFER(CusolverPotrf, std::complex<double>, cusolverDnZpotrf,
+                               cusolverDnZpotrf_bufferSize);
 }
 
 namespace internal {

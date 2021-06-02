@@ -78,40 +78,25 @@ void trsm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const
 
 #ifdef DLAF_WITH_CUDA
 namespace internal {
-template <typename T>
-struct CublasGemm;
 
-template <>
-struct CublasGemm<float> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasSgemm(std::forward<Args>(args)...));
-  }
-};
+#define DLAF_DECLARE_CUBLAS_OP(Name) \
+  template <typename T>              \
+  struct Name
 
-template <>
-struct CublasGemm<double> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasDgemm(std::forward<Args>(args)...));
+#define DLAF_CREATE_CUBLAS_OP(Name, Type, f)            \
+  template <>                                           \
+  struct Name<Type> {                                   \
+    template <typename... Args>                         \
+    static void call(Args&&... args) {                  \
+      DLAF_CUBLAS_CALL(f(std::forward<Args>(args)...)); \
+    }                                                   \
   }
-};
 
-template <>
-struct CublasGemm<std::complex<float>> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasCgemm(std::forward<Args>(args)...));
-  }
-};
-
-template <>
-struct CublasGemm<std::complex<double>> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasZgemm(std::forward<Args>(args)...));
-  }
-};
+DLAF_DECLARE_CUBLAS_OP(CublasGemm);
+DLAF_CREATE_CUBLAS_OP(CublasGemm, float, cublasSgemm);
+DLAF_CREATE_CUBLAS_OP(CublasGemm, double, cublasDgemm);
+DLAF_CREATE_CUBLAS_OP(CublasGemm, std::complex<float>, cublasCgemm);
+DLAF_CREATE_CUBLAS_OP(CublasGemm, std::complex<double>, cublasZgemm);
 
 template <typename T>
 struct CublasHemm;

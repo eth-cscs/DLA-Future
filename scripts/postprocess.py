@@ -12,10 +12,19 @@ from parse import parse
 sns.set_theme()
 
 # plt_type : ppn | time
-def _gen_nodes_plot(plt_type, title, df, combine_mb=False,
-        filts=None, replaces=None, styles=None, subplot_args=None):
+def _gen_nodes_plot(
+    plt_type,
+    title,
+    df,
+    combine_mb=False,
+    filts=None,
+    replaces=None,
+    styles=None,
+    subplot_args=None,
+):
 
-    if subplot_args is None: subplot_args = dict()
+    if subplot_args is None:
+        subplot_args = dict()
     fig, ax = plt.subplots(**subplot_args)
 
     if combine_mb:
@@ -44,16 +53,16 @@ def _gen_nodes_plot(plt_type, title, df, combine_mb=False,
 
         # setup style applying each config in order as they appear in the list
         # i.e. the last overwrites the first (in case of regex match)
-        bench_style = dict(linestyle='-', marker='.') # default style
+        bench_style = dict(linestyle="-", marker=".")  # default style
         if styles != None:
             for (bench_regex, style) in styles:
-                if re.search(bench_regex, bench_name): 
+                if re.search(bench_regex, bench_name):
                     bench_style |= style
 
         # benchmark name update happens just before plotting
 
         # remove routine prefix
-        bench_name = bench_name[bench_name.find("_") + 1:]
+        bench_name = bench_name[bench_name.find("_") + 1 :]
 
         # benchmark name replacement as specified by the user
         if replaces != None:
@@ -65,7 +74,7 @@ def _gen_nodes_plot(plt_type, title, df, combine_mb=False,
             lib_data[f"{plt_type}_mean"],
             label=bench_name,
             **bench_style,
-            )[0].get_color()
+        )[0].get_color()
         ax.fill_between(
             lib_data["nodes"],
             lib_data[f"{plt_type}_min"],
@@ -84,8 +93,8 @@ def _gen_nodes_plot(plt_type, title, df, combine_mb=False,
         nodes = df["nodes"].sort_values().unique()
         ax.set_xticks(nodes)
         ax.set_xticklabels([f"{x:d}" for x in nodes])
-        
-        ax.grid(axis='y', linewidth=0.5, alpha=0.5)
+
+        ax.grid(axis="y", linewidth=0.5, alpha=0.5)
 
     return fig, ax
 
@@ -111,11 +120,12 @@ class NodePlotWriter:
 
     See `_gen_nodes_plot` for details about parameters.
     """
+
     def __init__(self, filename, plt_type, title, df, **gen_plot_args):
         self.filename = filename
 
         self.fig, self.ax = _gen_nodes_plot(plt_type, title, df, **gen_plot_args)
-                   
+
     def __enter__(self):
         return (self.fig, self.ax)
 
@@ -182,9 +192,7 @@ def _parse_line_based(fout, bench_name, nodes):
         ]
         pstr_res = "[****] TIME(s) {time:g} : dtrsm PxQ= {grid_rows:d} {grid_cols:d} NB= {block_rows:d} N= {:d} : {perf:g} gflops"
     elif bench_name.startswith("chol_scalapack"):
-        pstr_arr = [
-          "PROBLEM PARAMETERS:"
-        ]
+        pstr_arr = ["PROBLEM PARAMETERS:"]
         pstr_res = "{time_ms:g}ms {perf:g}GFlop/s {matrix_rows:d} ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d})"
     else:
         raise ValueError("Unknown bench_name: " + bench_name)
@@ -266,8 +274,15 @@ def calc_trsm_metrics(df):
 
 
 # customize_* functions should accept fig and ax as parameters
-def gen_chol_plots(df, logx=False, combine_mb=False, filename_suffix=None,
-        customize_ppn=None, customize_time=None, **proxy_args):
+def gen_chol_plots(
+    df,
+    logx=False,
+    combine_mb=False,
+    filename_suffix=None,
+    customize_ppn=None,
+    customize_time=None,
+    **proxy_args,
+):
     if combine_mb:
         it_space = df.groupby(["matrix_rows"])
     else:
@@ -291,20 +306,40 @@ def gen_chol_plots(df, logx=False, combine_mb=False, filename_suffix=None,
             filename_ppn += f"_{filename_suffix}"
             filename_time += f"_{filename_suffix}"
 
-        with NodePlotWriter(filename_ppn, "ppn", title, grp_data,
-                combine_mb=combine_mb, **proxy_args) as (fig, ax):
-            if customize_ppn: customize_ppn(fig, ax)
-            if logx: ax.set_xscale("log", base=2)
+        with NodePlotWriter(
+            filename_ppn, "ppn", title, grp_data, combine_mb=combine_mb, **proxy_args
+        ) as (fig, ax):
+            if customize_ppn:
+                customize_ppn(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
 
-        with NodePlotWriter(filename_time, "time", title, grp_data,
-                combine_mb=combine_mb, **proxy_args) as (fig, ax):
-            if customize_time: customize_time(fig, ax)
-            if logx: ax.set_xscale("log", base=2)
+        with NodePlotWriter(
+            filename_time, "time", title, grp_data, combine_mb=combine_mb, **proxy_args
+        ) as (fig, ax):
+            if customize_time:
+                customize_time(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+
 
 # customize_* functions should accept fig and ax as parameters
-def gen_chol_plots_weak(df, weak_rt_approx, logx=False, combine_mb=False, filename_suffix=None,
-        customize_ppn=None, customize_time=None, **proxy_args):
-    df = df.assign(weak_rt=[int(round(x[0] / math.sqrt(x[1]) / weak_rt_approx)) * weak_rt_approx for x in zip(df['matrix_rows'], df['nodes'])])
+def gen_chol_plots_weak(
+    df,
+    weak_rt_approx,
+    logx=False,
+    combine_mb=False,
+    filename_suffix=None,
+    customize_ppn=None,
+    customize_time=None,
+    **proxy_args,
+):
+    df = df.assign(
+        weak_rt=[
+            int(round(x[0] / math.sqrt(x[1]) / weak_rt_approx)) * weak_rt_approx
+            for x in zip(df["matrix_rows"], df["nodes"])
+        ]
+    )
 
     if combine_mb:
         it_space = df.groupby(["weak_rt"])
@@ -329,22 +364,36 @@ def gen_chol_plots_weak(df, weak_rt_approx, logx=False, combine_mb=False, filena
             filename_ppn += f"_{filename_suffix}"
             filename_time += f"_{filename_suffix}"
 
-        with NodePlotWriter(filename_ppn, "ppn", title, grp_data,
-                combine_mb=combine_mb, **proxy_args) as (fig, ax):
-            if customize_ppn: customize_ppn(fig, ax)
-            if logx: ax.set_xscale("log", base=2)
+        with NodePlotWriter(
+            filename_ppn, "ppn", title, grp_data, combine_mb=combine_mb, **proxy_args
+        ) as (fig, ax):
+            if customize_ppn:
+                customize_ppn(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
 
-        with NodePlotWriter(filename_time, "time", title, grp_data,
-                combine_mb=combine_mb, **proxy_args) as (fig, ax):
-            if customize_time: customize_time(fig, ax)
-            if logx: ax.set_xscale("log", base=2)
+        with NodePlotWriter(
+            filename_time, "time", title, grp_data, combine_mb=combine_mb, **proxy_args
+        ) as (fig, ax):
+            if customize_time:
+                customize_time(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
             ax.set_yscale("log", base=10)
 
 
 # customize_* functions should accept fig and ax as parameters
-def gen_trsm_plots(df, logx=False, filename_suffix=None,
-        customize_ppn=None, customize_time=None, **proxy_args):
-    for (m, n, mb), grp_data in df.groupby(["matrix_rows", "matrix_cols", "block_rows"]):
+def gen_trsm_plots(
+    df,
+    logx=False,
+    filename_suffix=None,
+    customize_ppn=None,
+    customize_time=None,
+    **proxy_args,
+):
+    for (m, n, mb), grp_data in df.groupby(
+        ["matrix_rows", "matrix_cols", "block_rows"]
+    ):
         title = f"TRSM: matrix_size = {m} x {n}, block_size = {mb} x {mb}"
 
         filename_ppn = f"trsm_ppn_{m}_{n}_{mb}"
@@ -353,10 +402,20 @@ def gen_trsm_plots(df, logx=False, filename_suffix=None,
             filename_ppn += f"_{filename_suffix}"
             filename_time += f"_{filename_suffix}"
 
-        with NodePlotWriter("ppn", title, filename_ppn, grp_data, **proxy_args) as (fig, ax):
-            if customize_ppn: customize_ppn(fig, ax)
-            if logx: ax.set_xscale("log", base=2)
+        with NodePlotWriter("ppn", title, filename_ppn, grp_data, **proxy_args) as (
+            fig,
+            ax,
+        ):
+            if customize_ppn:
+                customize_ppn(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
 
-        with NodePlotWriter("time", title, filename_time, grp_data, **proxy_args) as (fig, ax):
-            if customize_time: customize_time(fig, ax)
-            if logx: ax.set_xscale("log", base=2)
+        with NodePlotWriter("time", title, filename_time, grp_data, **proxy_args) as (
+            fig,
+            ax,
+        ):
+            if customize_time:
+                customize_time(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)

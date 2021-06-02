@@ -55,9 +55,9 @@ auto opValFunc(ElementGetter& val, const blas::Op op) {
 
 /// Sets the elements of the tile.
 ///
-/// The (i, j)-element of the tile is set to el({i, j}) if op == NoTrans,
-///                                          el({j, i}) if op == Trans,
-///                                          conj(el({j, i})) if op == ConjTrans.
+/// The (i, j)-element of the tile is set to val({i, j}) if op == NoTrans,
+///                                          val({j, i}) if op == Trans,
+///                                          conj(val({j, i})) if op == ConjTrans.
 /// @pre el argument is an index of type const TileElementIndex& or TileElementIndex,
 /// @pre el return type should be T.
 template <class T, class ElementGetter>

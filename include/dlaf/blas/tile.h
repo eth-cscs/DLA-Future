@@ -98,145 +98,29 @@ DLAF_CREATE_CUBLAS_OP(CublasGemm, double, cublasDgemm);
 DLAF_CREATE_CUBLAS_OP(CublasGemm, std::complex<float>, cublasCgemm);
 DLAF_CREATE_CUBLAS_OP(CublasGemm, std::complex<double>, cublasZgemm);
 
-template <typename T>
-struct CublasHemm;
+DLAF_DECLARE_CUBLAS_OP(CublasHemm);
+DLAF_CREATE_CUBLAS_OP(CublasHemm, float, cublasSsymm);
+DLAF_CREATE_CUBLAS_OP(CublasHemm, double, cublasDsymm);
+DLAF_CREATE_CUBLAS_OP(CublasHemm, std::complex<float>, cublasChemm);
+DLAF_CREATE_CUBLAS_OP(CublasHemm, std::complex<double>, cublasZhemm);
 
-template <>
-struct CublasHemm<float> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasSsymm(std::forward<Args>(args)...));
-  }
-};
+DLAF_DECLARE_CUBLAS_OP(CublasHer2k);
+DLAF_CREATE_CUBLAS_OP(CublasHer2k, float, cublasSsyr2k);
+DLAF_CREATE_CUBLAS_OP(CublasHer2k, double, cublasDsyr2k);
+DLAF_CREATE_CUBLAS_OP(CublasHer2k, std::complex<float>, cublasCher2k);
+DLAF_CREATE_CUBLAS_OP(CublasHer2k, std::complex<double>, cublasZher2k);
 
-template <>
-struct CublasHemm<double> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasDsymm(std::forward<Args>(args)...));
-  }
-};
+DLAF_DECLARE_CUBLAS_OP(CublasHerk);
+DLAF_CREATE_CUBLAS_OP(CublasHerk, float, cublasSsyrk);
+DLAF_CREATE_CUBLAS_OP(CublasHerk, double, cublasDsyrk);
+DLAF_CREATE_CUBLAS_OP(CublasHerk, std::complex<float>, cublasCherk);
+DLAF_CREATE_CUBLAS_OP(CublasHerk, std::complex<double>, cublasZherk);
 
-template <>
-struct CublasHemm<std::complex<float>> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasChemm(std::forward<Args>(args)...));
-  }
-};
-
-template <>
-struct CublasHemm<std::complex<double>> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasZhemm(std::forward<Args>(args)...));
-  }
-};
-
-template <typename T>
-struct CublasHer2k;
-
-template <>
-struct CublasHer2k<float> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasSsyr2k(std::forward<Args>(args)...));
-  }
-};
-
-template <>
-struct CublasHer2k<double> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasDsyr2k(std::forward<Args>(args)...));
-  }
-};
-
-template <>
-struct CublasHer2k<std::complex<float>> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasCher2k(std::forward<Args>(args)...));
-  }
-};
-
-template <>
-struct CublasHer2k<std::complex<double>> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasZher2k(std::forward<Args>(args)...));
-  }
-};
-
-template <typename T>
-struct CublasHerk;
-
-template <>
-struct CublasHerk<float> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasSsyrk(std::forward<Args>(args)...));
-  }
-};
-
-template <>
-struct CublasHerk<double> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasDsyrk(std::forward<Args>(args)...));
-  }
-};
-
-template <>
-struct CublasHerk<std::complex<float>> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasCherk(std::forward<Args>(args)...));
-  }
-};
-
-template <>
-struct CublasHerk<std::complex<double>> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasZherk(std::forward<Args>(args)...));
-  }
-};
-
-template <typename T>
-struct CublasTrsm;
-
-template <>
-struct CublasTrsm<float> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasStrsm(std::forward<Args>(args)...));
-  }
-};
-
-template <>
-struct CublasTrsm<double> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasDtrsm(std::forward<Args>(args)...));
-  }
-};
-
-template <>
-struct CublasTrsm<std::complex<float>> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasCtrsm(std::forward<Args>(args)...));
-  }
-};
-
-template <>
-struct CublasTrsm<std::complex<double>> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasZtrsm(std::forward<Args>(args)...));
-  }
-};
+DLAF_DECLARE_CUBLAS_OP(CublasTrsm);
+DLAF_CREATE_CUBLAS_OP(CublasTrsm, float, cublasStrsm);
+DLAF_CREATE_CUBLAS_OP(CublasTrsm, double, cublasDtrsm);
+DLAF_CREATE_CUBLAS_OP(CublasTrsm, std::complex<float>, cublasCtrsm);
+DLAF_CREATE_CUBLAS_OP(CublasTrsm, std::complex<double>, cublasZtrsm);
 }
 
 /// Computes general matrix matrix multiplication.

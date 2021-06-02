@@ -26,7 +26,7 @@ namespace test {
 
 namespace internal {
 template <class ElementGetter>
-auto opValFunc(ElementGetter val, const blas::Op op) {
+auto opValFunc(ElementGetter& val, const blas::Op op) {
   std::function<decltype(val(std::declval<TileElementIndex>()))(TileElementIndex)> op_val;
   switch (op) {
     case blas::Op::NoTrans:

@@ -21,6 +21,7 @@ def _gen_nodes_plot(
     replaces=None,
     styles=None,
     subplot_args=None,
+    fill_area=True,
 ):
 
     if subplot_args is None:
@@ -75,13 +76,15 @@ def _gen_nodes_plot(
             label=bench_name,
             **bench_style,
         )[0].get_color()
-        ax.fill_between(
-            lib_data["nodes"],
-            lib_data[f"{plt_type}_min"],
-            lib_data[f"{plt_type}_max"],
-            alpha=0.2,
-            color=line_color,
-        )
+
+        if fill_area:
+            ax.fill_between(
+                    lib_data["nodes"],
+                    lib_data[f"{plt_type}_min"],
+                    lib_data[f"{plt_type}_max"],
+                    alpha=0.2,
+                    color=line_color,
+                    )
         plotted = True
 
     if plotted:

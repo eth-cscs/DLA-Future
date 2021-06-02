@@ -110,8 +110,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     using dlaf::matrix::util::set;
     set(ah, ref_a);
     set(bh, ref_b);
-    a.syncSourceToTarget();
-    b.syncSourceToTarget();
+    a.copySourceToTarget();
+    b.copySourceToTarget();
 
     sync_barrier();
 
@@ -133,7 +133,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
                 << hpx::get_os_thread_count() << std::endl;
     }
 
-    b.syncTargetToSource();
+    b.copyTargetToSource();
 
     // (optional) run test
     if (opts.do_check) {

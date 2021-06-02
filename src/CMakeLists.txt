@@ -71,6 +71,7 @@ target_link_libraries(dlaf.prop
     umpire
     $<TARGET_NAME_IF_EXISTS:dlaf::cublas>
     $<TARGET_NAME_IF_EXISTS:dlaf::cudart>
+    $<TARGET_NAME_IF_EXISTS:dlaf::cusolver>
 )
 target_compile_features(dlaf.prop
   INTERFACE
@@ -109,11 +110,15 @@ add_library(dlaf.eigensolver OBJECT eigensolver/gen_to_std/mc.cpp)
 target_link_libraries(dlaf.eigensolver PUBLIC dlaf.prop)
 
 # Define DLAF's factorization library
-add_library(dlaf.factorization OBJECT factorization/cholesky/mc.cpp)
+add_library(dlaf.factorization OBJECT
+  factorization/cholesky/mc.cpp
+  $<$<BOOL:${DLAF_WITH_CUDA}>:factorization/cholesky/gpu.cpp>)
 target_link_libraries(dlaf.factorization PUBLIC dlaf.prop)
 
 # Define DLAF's solver library
-add_library(dlaf.solver OBJECT solver/triangular/mc.cpp $<$<BOOL:${DLAF_WITH_CUDA}>:solver/triangular/gpu.cpp>)
+add_library(dlaf.solver OBJECT
+  solver/triangular/mc.cpp
+  $<$<BOOL:${DLAF_WITH_CUDA}>:solver/triangular/gpu.cpp>)
 target_link_libraries(dlaf.solver PUBLIC dlaf.prop)
 
 # Define DLAF's auxiliary library

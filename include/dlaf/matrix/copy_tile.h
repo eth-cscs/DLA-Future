@@ -20,7 +20,7 @@
 
 #include "dlaf/common/callable_object.h"
 #include "dlaf/executors.h"
-#include "dlaf/lapack_tile.h"
+#include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/tile.h"
 
 namespace dlaf {

@@ -272,8 +272,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     //    TileElementIndex, const matrix::Tile<T, Device::CPU>&) = copy<T>; void (&cpy)(const
     //    matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T, Device::CPU>&) = copy<T>;
 
-    for (SizeType i_local = mat_v.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(0);
-         i_local < c_local_rows; ++i_local) {
+    for (SizeType i_local = 0; i_local < c_local_rows; ++i_local) {
       auto i = mat_v.distribution().template globalTileFromLocalTile<Coord::Row>(i_local);
 
       // Copy V panel into VV
@@ -292,7 +291,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       //	});
       //      if (this_rank.col() == k_rank_col) {
       //	hpx::dataflow(executor_hp, copy_v_into_vv, mat_v.read(ik), mat_vv(i0),
-      //mat_vv.tileSize(GlobalTileIndex(i, 0)));
+      // mat_vv.tileSize(GlobalTileIndex(i, 0)));
       //      }
 
       // Setting VV
@@ -314,7 +313,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       // Copy VV into W
       //      auto copy_vv_into_w = unwrapping([=](auto&& tile_vv, auto&& tile_w) {
       //	  void (&cpy)(const matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T,
-      //Device::CPU>&) = copy<T>; 	  cpy(tile_vv, tile_w);
+      // Device::CPU>&) = copy<T>; 	  cpy(tile_vv, tile_w);
       //	});
       //      if (this_rank.col() == k_rank_col) {
       //	hpx::dataflow(executor_hp, copy_vv_into_w, mat_vv.read(i0), mat_w(i0));
@@ -420,8 +419,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         // rank " << this_rank << std::endl;
       }
 
-      for (SizeType j_local = mat_c.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(0);
-           j_local < c_local_cols; ++j_local) {
+      for (SizeType j_local = 0; j_local < c_local_cols; ++j_local) {
         // W2 = W C
         auto i_c = mat_c.distribution().template globalTileFromLocalTile<Coord::Row>(i_local);
         auto j_c = mat_c.distribution().template globalTileFromLocalTile<Coord::Col>(j_local);
@@ -431,7 +429,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
         auto kj = LocalTileIndex(0, j_local);
         auto ij = LocalTileIndex(i_local, j_local);
-        std::cout << " j_c " << i_c << ", " << j_c << std::endl;
 
         if (this_rank.row() == i_c_rank_row && this_rank.col() == j_c_rank_col) {
           // std::cout << "GEMM #1: "<< k  << " w2 " << mat_w2.read(kj).get().size()<< " w_tile " <<
@@ -447,8 +444,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       }  // end loop on j_local (cols)
     }    // end loop on i_local (rows)
 
-    for (SizeType j_local = mat_c.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(0);
-         j_local < c_local_cols; ++j_local) {
+    for (SizeType j_local = 0; j_local < c_local_cols; ++j_local) {
       hpx::shared_future<matrix::Tile<T, Device::CPU>> tile_w2;
       auto j_c = mat_c.distribution().template globalTileFromLocalTile<Coord::Col>(j_local);
       auto kj = LocalTileIndex(0, j_local);
@@ -498,8 +494,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         // rank " << this_rank << std::endl;
       }
 
-      for (SizeType j_local = mat_c.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(0);
-           j_local < c_local_cols; ++j_local) {
+      for (SizeType j_local = 0; j_local < c_local_cols; ++j_local) {
         auto i_c = mat_c.distribution().template globalTileFromLocalTile<Coord::Row>(i_local);
         auto j_c = mat_c.distribution().template globalTileFromLocalTile<Coord::Col>(j_local);
         auto i_c_rank_row = mat_c.distribution().template rankGlobalTile<Coord::Row>(i_c);

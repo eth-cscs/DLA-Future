@@ -453,7 +453,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       auto all_reduce_w2_func = unwrapping([](auto&& tile_w2, auto&& comm_wrapper) {
         auto&& tile = common::make_data(tile_w2);
         dlaf::comm::sync::allReduceInPlace(comm_wrapper.ref().colCommunicator(), MPI_SUM, tile);
-        return std::move(tile);
       });
 
       hpx::dataflow(all_reduce_w2_func, tile_w2, serial_comm());

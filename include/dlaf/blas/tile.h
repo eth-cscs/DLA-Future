@@ -81,46 +81,46 @@ namespace internal {
 
 #define DLAF_DECLARE_CUBLAS_OP(Name) \
   template <typename T>              \
-  struct Name
+  struct Cublas##Name
 
-#define DLAF_CREATE_CUBLAS_OP(Name, Type, f)            \
-  template <>                                           \
-  struct Name<Type> {                                   \
-    template <typename... Args>                         \
-    static void call(Args&&... args) {                  \
-      DLAF_CUBLAS_CALL(f(std::forward<Args>(args)...)); \
-    }                                                   \
+#define DLAF_DEFINE_CUBLAS_OP(Name, Type, f)                    \
+  template <>                                                   \
+  struct Cublas##Name<Type> {                                   \
+    template <typename... Args>                                 \
+    static void call(Args&&... args) {                          \
+      DLAF_CUBLAS_CALL(cublas##f(std::forward<Args>(args)...)); \
+    }                                                           \
   }
 
-DLAF_DECLARE_CUBLAS_OP(CublasGemm);
-DLAF_CREATE_CUBLAS_OP(CublasGemm, float, cublasSgemm);
-DLAF_CREATE_CUBLAS_OP(CublasGemm, double, cublasDgemm);
-DLAF_CREATE_CUBLAS_OP(CublasGemm, std::complex<float>, cublasCgemm);
-DLAF_CREATE_CUBLAS_OP(CublasGemm, std::complex<double>, cublasZgemm);
+DLAF_DECLARE_CUBLAS_OP(Gemm);
+DLAF_DEFINE_CUBLAS_OP(Gemm, float, Sgemm);
+DLAF_DEFINE_CUBLAS_OP(Gemm, double, Dgemm);
+DLAF_DEFINE_CUBLAS_OP(Gemm, std::complex<float>, Cgemm);
+DLAF_DEFINE_CUBLAS_OP(Gemm, std::complex<double>, Zgemm);
 
-DLAF_DECLARE_CUBLAS_OP(CublasHemm);
-DLAF_CREATE_CUBLAS_OP(CublasHemm, float, cublasSsymm);
-DLAF_CREATE_CUBLAS_OP(CublasHemm, double, cublasDsymm);
-DLAF_CREATE_CUBLAS_OP(CublasHemm, std::complex<float>, cublasChemm);
-DLAF_CREATE_CUBLAS_OP(CublasHemm, std::complex<double>, cublasZhemm);
+DLAF_DECLARE_CUBLAS_OP(Hemm);
+DLAF_DEFINE_CUBLAS_OP(Hemm, float, Ssymm);
+DLAF_DEFINE_CUBLAS_OP(Hemm, double, Dsymm);
+DLAF_DEFINE_CUBLAS_OP(Hemm, std::complex<float>, Chemm);
+DLAF_DEFINE_CUBLAS_OP(Hemm, std::complex<double>, Zhemm);
 
-DLAF_DECLARE_CUBLAS_OP(CublasHer2k);
-DLAF_CREATE_CUBLAS_OP(CublasHer2k, float, cublasSsyr2k);
-DLAF_CREATE_CUBLAS_OP(CublasHer2k, double, cublasDsyr2k);
-DLAF_CREATE_CUBLAS_OP(CublasHer2k, std::complex<float>, cublasCher2k);
-DLAF_CREATE_CUBLAS_OP(CublasHer2k, std::complex<double>, cublasZher2k);
+DLAF_DECLARE_CUBLAS_OP(Her2k);
+DLAF_DEFINE_CUBLAS_OP(Her2k, float, Ssyr2k);
+DLAF_DEFINE_CUBLAS_OP(Her2k, double, Dsyr2k);
+DLAF_DEFINE_CUBLAS_OP(Her2k, std::complex<float>, Cher2k);
+DLAF_DEFINE_CUBLAS_OP(Her2k, std::complex<double>, Zher2k);
 
-DLAF_DECLARE_CUBLAS_OP(CublasHerk);
-DLAF_CREATE_CUBLAS_OP(CublasHerk, float, cublasSsyrk);
-DLAF_CREATE_CUBLAS_OP(CublasHerk, double, cublasDsyrk);
-DLAF_CREATE_CUBLAS_OP(CublasHerk, std::complex<float>, cublasCherk);
-DLAF_CREATE_CUBLAS_OP(CublasHerk, std::complex<double>, cublasZherk);
+DLAF_DECLARE_CUBLAS_OP(Herk);
+DLAF_DEFINE_CUBLAS_OP(Herk, float, Ssyrk);
+DLAF_DEFINE_CUBLAS_OP(Herk, double, Dsyrk);
+DLAF_DEFINE_CUBLAS_OP(Herk, std::complex<float>, Cherk);
+DLAF_DEFINE_CUBLAS_OP(Herk, std::complex<double>, Zherk);
 
-DLAF_DECLARE_CUBLAS_OP(CublasTrsm);
-DLAF_CREATE_CUBLAS_OP(CublasTrsm, float, cublasStrsm);
-DLAF_CREATE_CUBLAS_OP(CublasTrsm, double, cublasDtrsm);
-DLAF_CREATE_CUBLAS_OP(CublasTrsm, std::complex<float>, cublasCtrsm);
-DLAF_CREATE_CUBLAS_OP(CublasTrsm, std::complex<double>, cublasZtrsm);
+DLAF_DECLARE_CUBLAS_OP(Trsm);
+DLAF_DEFINE_CUBLAS_OP(Trsm, float, Strsm);
+DLAF_DEFINE_CUBLAS_OP(Trsm, double, Dtrsm);
+DLAF_DEFINE_CUBLAS_OP(Trsm, std::complex<float>, Ctrsm);
+DLAF_DEFINE_CUBLAS_OP(Trsm, std::complex<double>, Ztrsm);
 }
 
 /// Computes general matrix matrix multiplication.

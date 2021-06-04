@@ -159,28 +159,26 @@ void potrf(const blas::Uplo uplo, const Tile<T, Device::CPU>& a) noexcept {
 namespace internal {
 #define DLAF_DECLARE_CUSOLVER_OP(Name) \
   template <typename T>                \
-  struct Name
+  struct Cusolver##Name
 
-#define DLAF_CREATE_CUSOLVER_OP_BUFFER(Name, Type, f, f_buf)  \
-  template <>                                                 \
-  struct Name<Type> {                                         \
-    template <typename... Args>                               \
-    static void call(Args&&... args) {                        \
-      DLAF_CUSOLVER_CALL(f(std::forward<Args>(args)...));     \
-    }                                                         \
-    template <typename... Args>                               \
-    static void callBufferSize(Args&&... args) {              \
-      DLAF_CUSOLVER_CALL(f_buf(std::forward<Args>(args)...)); \
-    }                                                         \
+#define DLAF_DEFINE_CUSOLVER_OP_BUFFER(Name, Type, f)                              \
+  template <>                                                                      \
+  struct Cusolver##Name<Type> {                                                    \
+    template <typename... Args>                                                    \
+    static void call(Args&&... args) {                                             \
+      DLAF_CUSOLVER_CALL(cusolverDn##f(std::forward<Args>(args)...));              \
+    }                                                                              \
+    template <typename... Args>                                                    \
+    static void callBufferSize(Args&&... args) {                                   \
+      DLAF_CUSOLVER_CALL(cusolverDn##f##_bufferSize(std::forward<Args>(args)...)); \
+    }                                                                              \
   }
 
-DLAF_DECLARE_CUSOLVER_OP(CusolverPotrf);
-DLAF_CREATE_CUSOLVER_OP_BUFFER(CusolverPotrf, float, cusolverDnSpotrf, cusolverDnSpotrf_bufferSize);
-DLAF_CREATE_CUSOLVER_OP_BUFFER(CusolverPotrf, double, cusolverDnDpotrf, cusolverDnDpotrf_bufferSize);
-DLAF_CREATE_CUSOLVER_OP_BUFFER(CusolverPotrf, std::complex<float>, cusolverDnCpotrf,
-                               cusolverDnCpotrf_bufferSize);
-DLAF_CREATE_CUSOLVER_OP_BUFFER(CusolverPotrf, std::complex<double>, cusolverDnZpotrf,
-                               cusolverDnZpotrf_bufferSize);
+DLAF_DECLARE_CUSOLVER_OP(Potrf);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, float, Spotrf);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, double, Dpotrf);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<float>, Cpotrf);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<double>, Zpotrf);
 }
 
 namespace internal {

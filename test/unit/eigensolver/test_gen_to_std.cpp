@@ -10,15 +10,14 @@
 #include "dlaf/eigensolver/gen_to_std.h"
 
 #include <functional>
-#include <sstream>
 #include <tuple>
 #include "gtest/gtest.h"
+#include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_generic_lapack.h"
 #include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_matrix_blas.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
@@ -40,6 +39,17 @@ public:
 };
 TYPED_TEST_SUITE(EigensolverGenToStdTestMC, MatrixElementTypes);
 
+#ifdef DLAF_WITH_CUDA
+template <typename Type>
+class EigensolverGenToStdTestGPU : public ::testing::Test {
+public:
+  const std::vector<CommunicatorGrid>& commGrids() {
+    return comm_grids;
+  }
+};
+TYPED_TEST_SUITE(EigensolverGenToStdTestGPU, MatrixElementTypes);
+#endif
+
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
 
 const std::vector<std::tuple<SizeType, SizeType>> sizes = {
@@ -47,10 +57,6 @@ const std::vector<std::tuple<SizeType, SizeType>> sizes = {
     {5, 8}, {34, 34},                    // m <= mb
     {4, 3}, {16, 10}, {34, 13}, {32, 5}  // m > mb
 };
-
-GlobalElementSize globalTestSize(const LocalElementSize& size) {
-  return {size.rows(), size.cols()};
-}
 
 template <class T, Backend B, Device D>
 void testGenToStdEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb) {
@@ -84,15 +90,14 @@ void testGenToStdEigensolver(comm::CommunicatorGrid grid, const blas::Uplo uplo,
                              const SizeType mb) {
   std::function<T(const GlobalElementIndex&)> el_t, el_a, res_a;
 
-  const LocalElementSize size(m, m);
+  const GlobalElementSize size(m, m);
   const TileElementSize block_size(mb, mb);
-
   Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
-  GlobalElementSize sz = globalTestSize(size);
-  Distribution distr_a(sz, block_size, grid.size(), grid.rank(), src_rank_index);
+
+  Distribution distr_a(size, block_size, grid.size(), grid.rank(), src_rank_index);
   Matrix<T, Device::CPU> mat_ah(std::move(distr_a));
 
-  Distribution distr_t(sz, block_size, grid.size(), grid.rank(), src_rank_index);
+  Distribution distr_t(size, block_size, grid.size(), grid.rank(), src_rank_index);
   Matrix<T, Device::CPU> mat_th(std::move(distr_t));
 
   std::tie(el_t, el_a, res_a) =
@@ -115,22 +120,50 @@ void testGenToStdEigensolver(comm::CommunicatorGrid grid, const blas::Uplo uplo,
 
 TYPED_TEST(EigensolverGenToStdTestMC, CorrectnessLocal) {
   SizeType m, mb;
-  const blas::Uplo uplo = blas::Uplo::Lower;
 
-  for (auto sz : sizes) {
-    std::tie(m, mb) = sz;
-    testGenToStdEigensolver<TypeParam, Backend::MC, Device::CPU>(uplo, m, mb);
+  for (auto uplo : blas_uplos) {
+    for (auto sz : sizes) {
+      std::tie(m, mb) = sz;
+      testGenToStdEigensolver<TypeParam, Backend::MC, Device::CPU>(uplo, m, mb);
+    }
   }
 }
 
 TYPED_TEST(EigensolverGenToStdTestMC, CorrectnessDistributed) {
   SizeType m, mb;
-  const blas::Uplo uplo = blas::Uplo::Lower;
 
   for (const auto& comm_grid : this->commGrids()) {
-    for (auto sz : sizes) {
-      std::tie(m, mb) = sz;
-      testGenToStdEigensolver<TypeParam, Backend::MC, Device::CPU>(comm_grid, uplo, m, mb);
+    for (auto uplo : blas_uplos) {
+      for (auto sz : sizes) {
+        std::tie(m, mb) = sz;
+        testGenToStdEigensolver<TypeParam, Backend::MC, Device::CPU>(comm_grid, uplo, m, mb);
+      }
     }
   }
 }
+
+#ifdef DLAF_WITH_CUDA
+TYPED_TEST(EigensolverGenToStdTestGPU, CorrectnessLocal) {
+  SizeType m, mb;
+
+  for (auto uplo : blas_uplos) {
+    for (auto sz : sizes) {
+      std::tie(m, mb) = sz;
+      testGenToStdEigensolver<TypeParam, Backend::GPU, Device::GPU>(uplo, m, mb);
+    }
+  }
+}
+
+TYPED_TEST(EigensolverGenToStdTestGPU, CorrectnessDistributed) {
+  SizeType m, mb;
+
+  for (const auto& comm_grid : this->commGrids()) {
+    for (auto uplo : blas_uplos) {
+      for (auto sz : sizes) {
+        std::tie(m, mb) = sz;
+        testGenToStdEigensolver<TypeParam, Backend::GPU, Device::GPU>(comm_grid, uplo, m, mb);
+      }
+    }
+  }
+}
+#endif

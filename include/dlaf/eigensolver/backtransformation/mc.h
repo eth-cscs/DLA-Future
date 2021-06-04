@@ -268,10 +268,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   for (SizeType k = last_reflector_idx; k >= 0; --k) {
     bool is_last = (k == last_reflector_idx) ? true : false;
 
-    //    void (&cpyReg)(TileElementSize, TileElementIndex, const matrix::Tile<const T, Device::CPU>&,
-    //    TileElementIndex, const matrix::Tile<T, Device::CPU>&) = copy<T>; void (&cpy)(const
-    //    matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T, Device::CPU>&) = copy<T>;
-
     for (SizeType i_local = 0; i_local < c_local_rows; ++i_local) {
       auto i = mat_v.distribution().template globalTileFromLocalTile<Coord::Row>(i_local);
 
@@ -284,15 +280,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         hpx::dataflow(dlaf::getCopyExecutor<Device::CPU, Device::CPU>(),
                       matrix::unwrapExtendTiles(dlaf::matrix::copy_o), mat_v.read(ik), mat_vv(i0));
       }
-
-      //      auto copy_v_into_vv = unwrapping([=](auto&& tile_v, auto&& tile_vv, TileElementSize region) {
-      //	  void (&cpy)(const matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T, Device::CPU>&)
-      //= copy<T>; 	  cpy(tile_v, tile_vv);
-      //	});
-      //      if (this_rank.col() == k_rank_col) {
-      //	hpx::dataflow(executor_hp, copy_v_into_vv, mat_v.read(ik), mat_vv(i0),
-      // mat_vv.tileSize(GlobalTileIndex(i, 0)));
-      //      }
 
       // Setting VV
       // Fixing elements of VV and copying them into WH
@@ -311,26 +298,12 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       }
 
       // Copy VV into W
-      //      auto copy_vv_into_w = unwrapping([=](auto&& tile_vv, auto&& tile_w) {
-      //	  void (&cpy)(const matrix::Tile<const T, Device::CPU>&, const matrix::Tile<T,
-      // Device::CPU>&) = copy<T>; 	  cpy(tile_vv, tile_w);
-      //	});
-      //      if (this_rank.col() == k_rank_col) {
-      //	hpx::dataflow(executor_hp, copy_vv_into_w, mat_vv.read(i0), mat_w(i0));
-      //      }
       if (this_rank.col() == k_rank_col) {
         hpx::dataflow(dlaf::getCopyExecutor<Device::CPU, Device::CPU>(),
                       matrix::unwrapExtendTiles(matrix::copy_o), mat_vv.read(i0), mat_w(i0));
       }
     }
 
-    // Reset W2 to zero
-    //    auto set_w2_zero = unwrapping([=] (auto&& mat) {
-    //	matrix::util::set(mat, []() {
-    //	    return 0;
-    //	  });
-    //      });
-    //    hpx::dataflow(executor_hp, set_zero, mat_w2);
     matrix::util::set(mat_w2, [](auto&&) { return 0; });
 
     int taupan = (is_last) ? last_mb : mat_v.blockSize().cols();

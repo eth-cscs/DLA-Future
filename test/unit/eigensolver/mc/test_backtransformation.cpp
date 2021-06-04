@@ -62,7 +62,7 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes =
      {3, 4, 6, 7},  // m < mb
      {3, 3, 1, 1}, {4, 4, 1, 1}, {4, 4, 2, 2}, {6, 3, 3, 3},
      {12, 2, 4, 4}, {12, 24, 3, 3}, {24, 36, 6, 6},
-     //{5, 8, 3, 2}, {4, 6, 2, 3}, {5, 5, 2, 3}, {8, 27, 3, 4}, {15, 34, 4, 6},
+     //{5, 8, 3, 2}, {4, 6, 2, 3}, {5, 5, 2, 3}, {8, 27, 3, 4}, {15, 34, 4, 6}, // TODO: operations with incomplete tiles are not correct yet
     };
 
 template <class T>

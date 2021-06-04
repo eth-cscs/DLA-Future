@@ -9,107 +9,93 @@
 //
 #pragma once
 
-#include <hpx/include/parallel_executors.hpp>
-#include <hpx/include/resource_partitioner.hpp>
-#include <hpx/include/threads.hpp>
+#include <hpx/include/util.hpp>
+#include <hpx/local/future.hpp>
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/round_robin.h"
-#include "dlaf/common/vector.h"
 #include "dlaf/communication/broadcast_panel.h"
+#include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/functions_sync.h"
+#include "dlaf/communication/executor.h"
+#include "dlaf/communication/kernels.h"
 #include "dlaf/eigensolver/gen_to_std/api.h"
 #include "dlaf/executors.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/panel.h"
+#include "dlaf/matrix/tile.h"
 #include "dlaf/util_matrix.h"
 
 namespace dlaf {
 namespace eigensolver {
 namespace internal {
 
-template <class T>
-void hegstDiagTile(hpx::execution::parallel_executor executor_hp,
-                   hpx::future<matrix::Tile<T, Device::CPU>> a_kk,
-                   hpx::future<matrix::Tile<T, Device::CPU>> l_kk) {
+template <class Executor, Device device, class T>
+void hegstDiagTile(Executor&& executor_hp, hpx::future<matrix::Tile<T, device>> a_kk,
+                   hpx::future<matrix::Tile<T, device>> l_kk) {
   hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::hegst_o), 1, blas::Uplo::Lower,
                 std::move(a_kk), std::move(l_kk));
 }
 
-template <class T>
-void trsmPanelTile(hpx::execution::parallel_executor executor_hp,
-                   hpx::shared_future<matrix::Tile<const T, Device::CPU>> l_kk,
-                   hpx::future<matrix::Tile<T, Device::CPU>> a_ik) {
+template <class Executor, Device device, class T>
+void trsmPanelTile(Executor&& executor_hp, hpx::shared_future<matrix::Tile<const T, device>> l_kk,
+                   hpx::future<matrix::Tile<T, device>> a_ik) {
   hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Right,
                 blas::Uplo::Lower, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), l_kk,
                 std::move(a_ik));
 }
 
-template <class T>
-void hemmPanelTile(hpx::execution::parallel_executor executor_hp,
-                   hpx::shared_future<matrix::Tile<const T, Device::CPU>> a_kk,
-                   hpx::shared_future<matrix::Tile<const T, Device::CPU>> l_ik,
-                   hpx::future<matrix::Tile<T, Device::CPU>> a_ik) {
+template <class Executor, Device device, class T>
+void hemmPanelTile(Executor&& executor_hp, hpx::shared_future<matrix::Tile<const T, device>> a_kk,
+                   hpx::shared_future<matrix::Tile<const T, device>> l_ik,
+                   hpx::future<matrix::Tile<T, device>> a_ik) {
   hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::hemm_o), blas::Side::Right,
                 blas::Uplo::Lower, T(-0.5), a_kk, l_ik, T(1.0), std::move(a_ik));
 }
 
-template <class T>
-void her2kTrailingDiagTile(hpx::execution::parallel_executor ex,
-                           hpx::shared_future<matrix::Tile<const T, Device::CPU>> a_jk,
-                           hpx::shared_future<matrix::Tile<const T, Device::CPU>> l_jk,
-                           hpx::future<matrix::Tile<T, Device::CPU>> a_kk) {
+template <class Executor, Device device, class T>
+void her2kTrailingDiagTile(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> a_jk,
+                           hpx::shared_future<matrix::Tile<const T, device>> l_jk,
+                           hpx::future<matrix::Tile<T, device>> a_kk) {
   hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::her2k_o), blas::Uplo::Lower, blas::Op::NoTrans,
                 T(-1.0), a_jk, l_jk, BaseType<T>(1.0), std::move(a_kk));
 }
 
-template <class T>
-void gemmTrailingMatrixTile(hpx::execution::parallel_executor ex,
-                            hpx::shared_future<matrix::Tile<const T, Device::CPU>> mat_ik,
-                            hpx::shared_future<matrix::Tile<const T, Device::CPU>> mat_jk,
-                            hpx::future<matrix::Tile<T, Device::CPU>> a_ij) {
+template <class Executor, Device device, class T>
+void gemmTrailingMatrixTile(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> mat_ik,
+                            hpx::shared_future<matrix::Tile<const T, device>> mat_jk,
+                            hpx::future<matrix::Tile<T, device>> a_ij) {
   hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans,
                 T(-1.0), mat_ik, mat_jk, T(1.0), std::move(a_ij));
 }
 
-template <class T>
-void trsmPanelUpdateTile(hpx::execution::parallel_executor executor_hp,
-                         hpx::shared_future<matrix::Tile<const T, Device::CPU>> l_jj,
-                         hpx::future<matrix::Tile<T, Device::CPU>> a_jk) {
+template <class Executor, Device device, class T>
+void trsmPanelUpdateTile(Executor&& executor_hp, hpx::shared_future<matrix::Tile<const T, device>> l_jj,
+                         hpx::future<matrix::Tile<T, device>> a_jk) {
   hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Left,
                 blas::Uplo::Lower, blas::Op::NoTrans, blas::Diag::NonUnit, T(1.0), l_jj,
                 std::move(a_jk));
 }
 
-template <class T>
-void gemmPanelUpdateTile(hpx::execution::parallel_executor ex,
-                         hpx::shared_future<matrix::Tile<const T, Device::CPU>> l_ij,
-                         hpx::shared_future<matrix::Tile<const T, Device::CPU>> a_jk,
-                         hpx::future<matrix::Tile<T, Device::CPU>> a_ik) {
+template <class Executor, Device device, class T>
+void gemmPanelUpdateTile(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> l_ij,
+                         hpx::shared_future<matrix::Tile<const T, device>> a_jk,
+                         hpx::future<matrix::Tile<T, device>> a_ik) {
   hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::NoTrans,
                 T(-1.0), l_ij, a_jk, T(1.0), std::move(a_ik));
 }
 
 // Implementation based on LAPACK Algorithm for the transformation from generalized to standard
 // eigenproblem (xHEGST)
-template <class T>
-struct GenToStd<Backend::MC, Device::CPU, T> {
-  static void call_L(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_l);
-  static void call_L(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a,
-                     Matrix<T, Device::CPU>& mat_l);
-};
-
-template <class T>
-void GenToStd<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a,
-                                                   Matrix<T, Device::CPU>& mat_l) {
-  auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
-  auto executor_np = dlaf::getNpExecutor<Backend::MC>();
+template <Backend backend, Device device, class T>
+void GenToStd<backend, device, T>::call_L(Matrix<T, device>& mat_a, Matrix<T, device>& mat_l) {
+  auto executor_hp = dlaf::getHpExecutor<backend>();
+  auto executor_np = dlaf::getNpExecutor<backend>();
 
   // Number of tile (rows = cols)
   SizeType nrtile = mat_a.nrTiles().cols();
@@ -162,15 +148,14 @@ void GenToStd<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
   }
 }
 
-template <class T>
-void GenToStd<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
-                                                   Matrix<T, Device::CPU>& mat_a,
-                                                   Matrix<T, Device::CPU>& mat_l) {
-  auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
-  auto executor_np = dlaf::getNpExecutor<Backend::MC>();
+template <Backend backend, Device device, class T>
+void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a,
+                                          Matrix<T, device>& mat_l) {
+  auto executor_hp = dlaf::getHpExecutor<backend>();
+  auto executor_np = dlaf::getNpExecutor<backend>();
+  auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   // Set up MPI executor pipelines
-  comm::Executor executor_mpi;
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
   common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
 
@@ -181,10 +166,10 @@ void GenToStd<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
   SizeType nrtile = mat_a.nrTiles().cols();
 
   constexpr std::size_t n_workspaces = 2;
-  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> a_panels(n_workspaces, distr);
-  common::RoundRobin<matrix::Panel<Coord::Row, T, Device::CPU>> a_panelsT(n_workspaces, distr);
-  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> l_panels(n_workspaces, distr);
-  common::RoundRobin<matrix::Panel<Coord::Row, T, Device::CPU>> l_panelsT(n_workspaces, distr);
+  common::RoundRobin<matrix::Panel<Coord::Col, T, device>> a_panels(n_workspaces, distr);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, device>> a_panelsT(n_workspaces, distr);
+  common::RoundRobin<matrix::Panel<Coord::Col, T, device>> l_panels(n_workspaces, distr);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, device>> l_panelsT(n_workspaces, distr);
 
   for (SizeType k = 0; k < nrtile; ++k) {
     const GlobalTileIndex kk{k, k};
@@ -241,16 +226,16 @@ void GenToStd<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
     // TODO: With incomplete panel support this branch will disappears.
     else {
       if (kk_rank.row() == this_rank.row()) {
-        hpx::shared_future<matrix::Tile<const T, Device::CPU>> l_kk;
+        hpx::shared_future<matrix::Tile<const T, device>> l_kk;
         if (kk_rank.col() == this_rank.col()) {
           const GlobalTileIndex kk(k, k);
           l_kk = mat_l.read(kk);
           comm::scheduleSendBcast(executor_mpi, l_kk, mpi_row_task_chain());
         }
         else {
-          l_kk = comm::scheduleRecvBcastAlloc<T, Device::CPU>(executor_mpi,
-                                                              mat_l.tileSize(GlobalTileIndex{k, k}),
-                                                              kk_rank.col(), mpi_row_task_chain());
+          l_kk = comm::scheduleRecvBcastAlloc<T, device>(executor_mpi,
+                                                         mat_l.tileSize(GlobalTileIndex{k, k}),
+                                                         kk_rank.col(), mpi_row_task_chain());
         }
         for (SizeType j_local = 0; j_local < kk_offset.cols(); ++j_local) {
           const LocalTileIndex kj(kk_offset.rows(), j_local);
@@ -288,7 +273,7 @@ void GenToStd<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
 
     a_panel.setRangeStart(at_offset);
 
-    hpx::shared_future<matrix::Tile<const T, Device::CPU>> a_diag;
+    hpx::shared_future<matrix::Tile<const T, device>> a_diag;
     if (kk_rank.col() == this_rank.col()) {
       // Note:
       // [a,l]_panelT shrinked to a single tile for temporarly storing and communicating the diagonal
@@ -374,14 +359,6 @@ void GenToStd<Backend::MC, Device::CPU, T>::call_L(comm::CommunicatorGrid grid,
   }
 }
 
-/// ---- ETI
-#define DLAF_GENTOSTD_MC_ETI(KWORD, DATATYPE) \
-  KWORD template struct GenToStd<Backend::MC, Device::CPU, DATATYPE>;
-
-DLAF_GENTOSTD_MC_ETI(extern, float)
-DLAF_GENTOSTD_MC_ETI(extern, double)
-DLAF_GENTOSTD_MC_ETI(extern, std::complex<float>)
-DLAF_GENTOSTD_MC_ETI(extern, std::complex<double>)
 }
 }
 }

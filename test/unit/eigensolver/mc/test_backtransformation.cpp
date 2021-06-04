@@ -60,9 +60,10 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes =
      {0, 5, 2, 3},  // m, n = 0
      {2, 2, 3, 3},
      {3, 4, 6, 7},  // m < mb
-     //{3, 3, 1, 1}, {4, 4, 2, 2}, {6, 3, 3, 3}, {12, 2, 4, 4}, {12, 24, 3, 3}, {24, 36, 6, 6},
-     //  {5, 8, 3, 2}, {4, 6, 2, 3}, {5, 5, 2, 3}, {8, 27, 3, 4}, {15, 34, 4, 6},
-     {12, 24, 12, 12}};
+     {3, 3, 1, 1}, {4, 4, 1, 1}, {4, 4, 2, 2}, {6, 3, 3, 3},
+     {12, 2, 4, 4}, {12, 24, 3, 3}, {24, 36, 6, 6},
+     //{5, 8, 3, 2}, {4, 6, 2, 3}, {5, 5, 2, 3}, {8, 27, 3, 4}, {15, 34, 4, 6},
+    };
 
 template <class T>
 MatrixLocal<T> makeLocal(const Matrix<const T, Device::CPU>& matrix) {
@@ -97,7 +98,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
   TileElementSize blockSizeV(mb, mb);
   Matrix<T, Device::CPU> mat_v(sizeV, blockSizeV);
   dlaf::matrix::util::set_random(mat_v);
-
+  
   int tottaus;
   if (m < mb || m == 0 || n == 0)
     tottaus = 0;

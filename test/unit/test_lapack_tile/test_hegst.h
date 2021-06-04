@@ -16,7 +16,7 @@
 #include "dlaf/blas/enum_output.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/tile.h"
-#include "dlaf/memory/memory_view.h"
+#include "dlaf_test/lapack/invoke.h"
 #include "dlaf_test/matrix/util_generic_lapack.h"
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/util_types.h"
@@ -28,34 +28,27 @@ using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
 using namespace testing;
 
-using dlaf::util::size_t::mul;
-
-template <class T>
+template <class T, Device D>
 void testHegst(const int itype, const blas::Uplo uplo, const SizeType m, const SizeType extra_lda,
                const SizeType extra_ldb) {
   const TileElementSize size(m, m);
-
   const SizeType lda = std::max<SizeType>(1, size.rows()) + extra_lda;
   const SizeType ldb = std::max<SizeType>(1, size.rows()) + extra_ldb;
 
   std::stringstream s;
-  s << "HEGST: itype = " << itype << ", uplo = " << uplo << ", m = " << m << ", lda = " << lda
-    << ", ldb = " << ldb;
+  s << "HEGST: itype = " << itype << ", uplo = " << uplo;
+  s << ", m = " << m << ", lda = " << lda << ", ldb = " << ldb;
   SCOPED_TRACE(s.str());
-
-  const BaseType<T> alpha = 1.2f;
-  const BaseType<T> beta = 1.5f;
-  const BaseType<T> gamma = 1.1f;
 
   std::function<T(const TileElementIndex&)> el_t, el_a, res_a;
 
   std::tie(el_t, el_a, res_a) =
-      getGenToStdElementSetters<TileElementIndex, T>(m, itype, uplo, alpha, beta, gamma);
+      getGenToStdElementSetters<TileElementIndex, T>(m, itype, uplo, 1.2f, 1.5f, 1.1f);
 
-  auto a = createTile<T>(el_a, size, lda);
-  auto t = createTile<T>(el_t, size, ldb);
+  auto a = createTile<T, D>(el_a, size, lda);
+  auto t = createTile<T, D>(el_t, size, ldb);
 
-  tile::hegst(itype, uplo, a, t);
+  invokeLapack<D>(tile::hegst_o, itype, uplo, a, t);
 
   CHECK_TILE_NEAR(res_a, a, 10 * (m + 1) * TypeUtilities<T>::error,
                   10 * (m + 1) * TypeUtilities<T>::error);

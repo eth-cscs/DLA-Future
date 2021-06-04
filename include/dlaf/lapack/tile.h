@@ -34,6 +34,7 @@
 
 #ifdef DLAF_WITH_CUDA
 #include "dlaf/cusolver/error.h"
+#include "dlaf/cusolver/hegst.h"
 #include "dlaf/util_cublas.h"
 #endif
 
@@ -59,6 +60,8 @@ template <class T>
 void hegst(const int itype, const blas::Uplo uplo, const Tile<T, Device::CPU>& a,
            const Tile<T, Device::CPU>& b) {
   DLAF_ASSERT(square_size(a), a);
+  DLAF_ASSERT(square_size(b), b);
+  DLAF_ASSERT(a.size() == b.size(), a, b);
   DLAF_ASSERT(itype >= 1 && itype <= 3, itype);
 
   auto info = lapack::hegst(itype, uplo, a.size().cols(), a.ptr(), a.ld(), b.ptr(), b.ld());
@@ -174,6 +177,12 @@ namespace internal {
     }                                                                              \
   }
 
+DLAF_DECLARE_CUSOLVER_OP(Hegst);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, float, Ssygst);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, double, Dsygst);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, std::complex<float>, Chegst);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, std::complex<double>, Zhegst);
+
 DLAF_DECLARE_CUSOLVER_OP(Potrf);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, float, Spotrf);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, double, Dpotrf);
@@ -183,12 +192,12 @@ DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<double>, Zpotrf);
 
 namespace internal {
 template <class T>
-class CusolverPotrfInfo {
+class CusolverInfo {
   memory::MemoryView<T, Device::GPU> workspace_;
   memory::MemoryView<int, Device::GPU> info_;
 
 public:
-  CusolverPotrfInfo(int workspace_size) : workspace_(workspace_size), info_(1) {}
+  CusolverInfo(int workspace_size) : workspace_(workspace_size), info_(1) {}
 
   T* workspace() {
     return workspace_();
@@ -200,15 +209,37 @@ public:
 }
 
 template <class T>
-internal::CusolverPotrfInfo<T> potrfInfo(cusolverDnHandle_t handle, const blas::Uplo uplo,
-                                         const matrix::Tile<T, Device::GPU>& a) {
+internal::CusolverInfo<T> hegst(cusolverDnHandle_t handle, const int itype, const blas::Uplo uplo,
+                                const matrix::Tile<T, Device::GPU>& a,
+                                const matrix::Tile<T, Device::GPU>& b) {
+  DLAF_ASSERT(square_size(a), a);
+  DLAF_ASSERT(square_size(b), b);
+  DLAF_ASSERT(a.size() == b.size(), a, b);
+  const int n = a.size().rows();
+
+  int workspace_size;
+  internal::CusolverHegst<T>::callBufferSize(handle, itype, util::blasToCublas(uplo), n,
+                                             util::blasToCublasCast(a.ptr()), a.ld(),
+                                             util::blasToCublasCast(b.ptr()), b.ld(), &workspace_size);
+  internal::CusolverInfo<T> info{std::max(1, workspace_size)};
+  internal::CusolverHegst<T>::call(handle, itype, util::blasToCublas(uplo), n,
+                                   util::blasToCublasCast(a.ptr()), a.ld(),
+                                   util::blasToCublasCast(b.ptr()), b.ld(),
+                                   util::blasToCublasCast(info.workspace()), info.info());
+
+  return info;
+}
+
+template <class T>
+internal::CusolverInfo<T> potrfInfo(cusolverDnHandle_t handle, const blas::Uplo uplo,
+                                    const matrix::Tile<T, Device::GPU>& a) {
   DLAF_ASSERT(square_size(a), a);
   const int n = a.size().rows();
 
   int workspace_size;
   internal::CusolverPotrf<T>::callBufferSize(handle, util::blasToCublas(uplo), n,
                                              util::blasToCublasCast(a.ptr()), a.ld(), &workspace_size);
-  internal::CusolverPotrfInfo<T> info{workspace_size};
+  internal::CusolverInfo<T> info{workspace_size};
   internal::CusolverPotrf<T>::call(handle, util::blasToCublas(uplo), n, util::blasToCublasCast(a.ptr()),
                                    a.ld(), util::blasToCublasCast(info.workspace()), workspace_size,
                                    info.info());
@@ -241,6 +272,7 @@ void potrf(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<
 }
 #endif
 
+DLAF_MAKE_CALLABLE_OBJECT(hegst);
 DLAF_MAKE_CALLABLE_OBJECT(potrf);
 DLAF_MAKE_CALLABLE_OBJECT(potrfInfo);
 

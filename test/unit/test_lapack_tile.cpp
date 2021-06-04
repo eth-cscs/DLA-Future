@@ -53,11 +53,29 @@ TYPED_TEST(TileOperationsTestMC, Hegst) {
     for (const auto& itype : itypes) {
       for (const auto& size : hegst_sizes) {
         std::tie(m, extra_lda, extra_ldb) = size;
-        testHegst<Type>(itype, uplo, m, extra_lda, extra_ldb);
+        testHegst<Type, Device::CPU>(itype, uplo, m, extra_lda, extra_ldb);
       }
     }
   }
 }
+
+#ifdef DLAF_WITH_CUDA
+TYPED_TEST(TileOperationsTestGPU, Hegst) {
+  using Type = TypeParam;
+  SizeType m, extra_lda, extra_ldb;
+
+  std::vector<int> itypes = {1, 2, 3};
+
+  for (const auto& uplo : blas_uplos) {
+    for (const auto& itype : itypes) {
+      for (const auto& size : hegst_sizes) {
+        std::tie(m, extra_lda, extra_ldb) = size;
+        testHegst<Type, Device::GPU>(itype, uplo, m, extra_lda, extra_ldb);
+      }
+    }
+  }
+}
+#endif
 
 TYPED_TEST(TileOperationsTestMC, lange) {
   SizeType m, n, extra_lda;

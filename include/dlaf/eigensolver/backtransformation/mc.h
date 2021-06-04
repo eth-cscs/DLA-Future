@@ -170,7 +170,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         auto ij = LocalTileIndex{i, j};
         // W2 = W C
         hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::gemm_o), ConjTrans, NoTrans, T(1.0),
-                      std::move(mat_w(ik)), mat_c.read(ij), T(1.0), std::move(mat_w2(kj)));
+                      mat_w.read(ik), mat_c.read(ij), T(1.0), std::move(mat_w2(kj)));
       }
     }
 

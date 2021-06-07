@@ -21,6 +21,7 @@
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/range2d.h"
+#include "dlaf/common/round_robin.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/broadcast_panel.h"
 #include "dlaf/communication/communicator.h"
@@ -684,14 +685,24 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
 
   std::vector<hpx::shared_future<common::internal::vector<T>>> taus;
 
-  PanelT<Coord::Col, T> v(dist);
-  PanelT<Coord::Row, T> vt(dist);
-  PanelT<Coord::Col, T> w(dist);
-  PanelT<Coord::Row, T> wt(dist);
-  PanelT<Coord::Col, T> x(dist);
-  PanelT<Coord::Row, T> xt(dist);
+  constexpr std::size_t n_workspaces = 1;
+  common::RoundRobin<PanelT<Coord::Col, T>> panels_v(n_workspaces, dist);
+  common::RoundRobin<PanelT<Coord::Row, T>> panels_vt(n_workspaces, dist);
+
+  common::RoundRobin<PanelT<Coord::Col, T>> panels_w(n_workspaces, dist);
+  common::RoundRobin<PanelT<Coord::Row, T>> panels_wt(n_workspaces, dist);
+
+  common::RoundRobin<PanelT<Coord::Col, T>> panels_x(n_workspaces, dist);
+  common::RoundRobin<PanelT<Coord::Row, T>> panels_xt(n_workspaces, dist);
 
   for (SizeType j_panel = 0; j_panel < (dist.nrTiles().cols() - 1); ++j_panel) {
+    PanelT<Coord::Col, T>& v = panels_v.nextResource();
+    PanelT<Coord::Row, T>& vt = panels_vt.nextResource();
+    PanelT<Coord::Col, T>& w = panels_w.nextResource();
+    PanelT<Coord::Row, T>& wt = panels_wt.nextResource();
+    PanelT<Coord::Col, T>& x = panels_x.nextResource();
+    PanelT<Coord::Row, T>& xt = panels_xt.nextResource();
+
     const LocalTileIndex t_idx(0, 0);
     MatrixT<T> t(dist_block);  // TODO used just by the column, maybe we can re-use a panel tile?
 

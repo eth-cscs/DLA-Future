@@ -52,8 +52,7 @@ void hemm(const blas::Side side, const blas::Uplo uplo, const T alpha,
 /// Performs a rank 2k update of hermitian (symmetric if T is real) tile a.
 template <class T>
 void her2k(const blas::Uplo uplo, const blas::Op op, const T alpha, const Tile<const T, Device::CPU>& a,
-           const Tile<const T, Device::CPU>& b, const BaseType<T> beta,
-           const Tile<T, Device::CPU>& c) noexcept {
+           const Tile<const T, Device::CPU>& b, const BaseType<T> beta, const Tile<T, Device::CPU>& c) {
   auto s = tile::internal::getHer2kSizes(op, a, b, c);
   blas::her2k(blas::Layout::ColMajor, uplo, op, s.n, s.k, alpha, a.ptr(), a.ld(), b.ptr(), b.ld(), beta,
               c.ptr(), c.ld());
@@ -66,15 +65,6 @@ void herk(const blas::Uplo uplo, const blas::Op op, const BaseType<T> alpha,
           const Tile<T, Device::CPU>& c) noexcept {
   auto s = tile::internal::getHerkSizes(op, a, c);
   blas::herk(blas::Layout::ColMajor, uplo, op, s.n, s.k, alpha, a.ptr(), a.ld(), beta, c.ptr(), c.ld());
-}
-
-/// Performs a matrix-matrix multiplication, involving a triangular matrix.
-template <class T>
-void trmm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const blas::Diag diag,
-          const T alpha, const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b) noexcept {
-  auto s = tile::internal::getTrmmSizes(side, a, b);
-  blas::trmm(blas::Layout::ColMajor, side, uplo, op, diag, s.m, s.n, alpha, a.ptr(), a.ld(), b.ptr(),
-             b.ld());
 }
 
 /// Performs a triangular solve.
@@ -159,41 +149,6 @@ struct CublasHerk<std::complex<double>> {
 };
 
 template <typename T>
-struct CublasTrmm;
-
-template <>
-struct CublasTrmm<float> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasStrmm(std::forward<Args>(args)...));
-  }
-};
-
-template <>
-struct CublasTrmm<double> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasDtrmm(std::forward<Args>(args)...));
-  }
-};
-
-template <>
-struct CublasTrmm<std::complex<float>> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasCtrmm(std::forward<Args>(args)...));
-  }
-};
-
-template <>
-struct CublasTrmm<std::complex<double>> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasZtrmm(std::forward<Args>(args)...));
-  }
-};
-
-template <typename T>
 struct CublasTrsm;
 
 template <>
@@ -252,19 +207,6 @@ void herk(cublasHandle_t handle, const blas::Uplo uplo, const blas::Op op, const
                                 util::blasToCublasCast(&beta), util::blasToCublasCast(c.ptr()), c.ld());
 }
 
-/// Performs a matrix-matrix multiplication, involving a triangular matrix.
-template <class T>
-void trmm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, const blas::Op op,
-          const blas::Diag diag, const T alpha, const matrix::Tile<const T, Device::GPU>& a,
-          const matrix::Tile<T, Device::GPU>& b) {
-  auto s = tile::internal::getTrmmSizes(side, a, b);
-  internal::CublasTrmm<T>::call(handle, util::blasToCublas(side), util::blasToCublas(uplo),
-                                util::blasToCublas(op), util::blasToCublas(diag), s.m, s.n,
-                                util::blasToCublasCast(&alpha), util::blasToCublasCast(a.ptr()), a.ld(),
-                                util::blasToCublasCast(b.ptr()), b.ld(), util::blasToCublasCast(b.ptr()),
-                                b.ld());
-}
-
 /// Performs a triangular solve.
 template <class T>
 void trsm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, const blas::Op op,
@@ -282,7 +224,6 @@ DLAF_MAKE_CALLABLE_OBJECT(gemm);
 DLAF_MAKE_CALLABLE_OBJECT(hemm);
 DLAF_MAKE_CALLABLE_OBJECT(her2k);
 DLAF_MAKE_CALLABLE_OBJECT(herk);
-DLAF_MAKE_CALLABLE_OBJECT(trmm);
 DLAF_MAKE_CALLABLE_OBJECT(trsm);
 
 }

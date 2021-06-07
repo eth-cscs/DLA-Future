@@ -33,6 +33,7 @@
 #include "dlaf/util_tile.h"
 
 #ifdef DLAF_WITH_CUDA
+#include "dlaf/cusolver/assert_info.h"
 #include "dlaf/cusolver/error.h"
 #include "dlaf/cusolver/hegst.h"
 #include "dlaf/util_cublas.h"
@@ -206,12 +207,21 @@ public:
     return info_();
   }
 };
+
+template <class F, class T>
+void assertExtendInfo(F assertFunc, cusolverDnHandle_t handle, CusolverInfo<T>&& info) {
+  cudaStream_t stream;
+  DLAF_CUSOLVER_CALL(cusolverDnGetStream(handle, &stream));
+  assertFunc(stream, info.info());
+  // Extend info scope to the end of the kernel execution
+  hpx::cuda::experimental::detail::get_future_with_event(stream)  //
+      .then(hpx::launch::sync, [info = std::move(info)](hpx::future<void>&&) {});
+}
 }
 
 template <class T>
-internal::CusolverInfo<T> hegst(cusolverDnHandle_t handle, const int itype, const blas::Uplo uplo,
-                                const matrix::Tile<T, Device::GPU>& a,
-                                const matrix::Tile<T, Device::GPU>& b) {
+void hegst(cusolverDnHandle_t handle, const int itype, const blas::Uplo uplo,
+           const matrix::Tile<T, Device::GPU>& a, const matrix::Tile<T, Device::GPU>& b) {
   DLAF_ASSERT(square_size(a), a);
   DLAF_ASSERT(square_size(b), b);
   DLAF_ASSERT(a.size() == b.size(), a, b);
@@ -227,7 +237,7 @@ internal::CusolverInfo<T> hegst(cusolverDnHandle_t handle, const int itype, cons
                                    util::blasToCublasCast(b.ptr()), b.ld(),
                                    util::blasToCublasCast(info.workspace()), info.info());
 
-  return info;
+  assertExtendInfo(dlaf::cusolver::assertInfoHegst, handle, std::move(info));
 }
 
 template <class T>
@@ -250,25 +260,7 @@ internal::CusolverInfo<T> potrfInfo(cusolverDnHandle_t handle, const blas::Uplo 
 template <class T>
 void potrf(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<T, Device::GPU>& a) {
   auto info = potrfInfo(handle, uplo, a);
-
-#ifdef DLAF_ASSERT_HEAVY_ENABLE
-  // info does not yet have the correct result, so we manually insert a copy
-  // operation from device to host which will happen once the potrf completes
-  // (because we use the same stream), and a continuation after the copy to
-  // check the value.
-  cudaStream_t stream;
-  DLAF_CUSOLVER_CALL(cusolverDnGetStream(handle, &stream));
-  auto f = hpx::cuda::experimental::detail::get_future_with_event(stream);
-
-  memory::MemoryView<int, Device::CPU> info_host(1);
-  DLAF_CUDA_CALL(cudaMemcpyAsync(info_host(), info.info(), sizeof(int), cudaMemcpyDeviceToHost, stream));
-
-  hpx::cuda::experimental::detail::get_future_with_event(stream)
-      .then(hpx::launch::sync,
-            [info = std::move(info), info_host = std::move(info_host)](hpx::future<void>&&) {
-              DLAF_ASSERT_HEAVY(*(info_host()) == 0, *(info_host()));
-            });
-#endif
+  assertExtendInfo(dlaf::cusolver::assertInfoHegst, handle, std::move(info));
 }
 #endif
 

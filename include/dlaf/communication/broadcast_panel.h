@@ -85,6 +85,9 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
 /// - linking as external tile, if the tile is already available locally for the rank
 /// - receiving the tile from the owning rank (via a broadcast)
 ///
+/// Be aware that the last tile will just be available on @p panel, but it won't be transposed to
+/// @p panelT.
+///
 /// @param rank_root specifies on which rank the @p panel is the source of the data
 /// @param panel
 ///   on rank_root it is the source panel (a)

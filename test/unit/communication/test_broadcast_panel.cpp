@@ -144,7 +144,6 @@ void testBrodcastTranspose(comm::Executor& executor_mpi, const config_t& cfg,
   // check that all destination tiles got the value from the right rank
   for (const auto i_w : panel_dst.iteratorLocal()) {
     CHECK_TILE_EQ(TypeUtil::element(owner, 26), panel_dst.read(i_w).get());
-  }
 }
 
 TYPED_TEST(PanelBcastTest, BroadcastCol2Row) {

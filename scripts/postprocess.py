@@ -71,20 +71,17 @@ def _gen_nodes_plot(
                 bench_name = re.sub(replace[0], replace[1], bench_name)
 
         line_color = ax.plot(
-            lib_data["nodes"],
-            lib_data[f"{plt_type}_mean"],
-            label=bench_name,
-            **bench_style,
+            lib_data["nodes"], lib_data[f"{plt_type}_mean"], label=bench_name, **bench_style,
         )[0].get_color()
 
         if fill_area:
             ax.fill_between(
-                    lib_data["nodes"],
-                    lib_data[f"{plt_type}_min"],
-                    lib_data[f"{plt_type}_max"],
-                    alpha=0.2,
-                    color=line_color,
-                    )
+                lib_data["nodes"],
+                lib_data[f"{plt_type}_min"],
+                lib_data[f"{plt_type}_max"],
+                alpha=0.2,
+                color=line_color,
+            )
         plotted = True
 
     if plotted:
@@ -271,9 +268,7 @@ def calc_chol_metrics(df):
 
 
 def calc_trsm_metrics(df):
-    return _calc_metrics(
-        ["matrix_rows", "matrix_cols", "block_rows", "nodes", "bench_name"], df
-    )
+    return _calc_metrics(["matrix_rows", "matrix_cols", "block_rows", "nodes", "bench_name"], df)
 
 
 # customize_* functions should accept fig and ax as parameters
@@ -387,16 +382,9 @@ def gen_chol_plots_weak(
 
 # customize_* functions should accept fig and ax as parameters
 def gen_trsm_plots(
-    df,
-    logx=False,
-    filename_suffix=None,
-    customize_ppn=None,
-    customize_time=None,
-    **proxy_args,
+    df, logx=False, filename_suffix=None, customize_ppn=None, customize_time=None, **proxy_args,
 ):
-    for (m, n, mb), grp_data in df.groupby(
-        ["matrix_rows", "matrix_cols", "block_rows"]
-    ):
+    for (m, n, mb), grp_data in df.groupby(["matrix_rows", "matrix_cols", "block_rows"]):
         title = f"TRSM: matrix_size = {m} x {n}, block_size = {mb} x {mb}"
 
         filename_ppn = f"trsm_ppn_{m}_{n}_{mb}"

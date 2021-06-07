@@ -11,7 +11,7 @@ from parse import parse
 
 sns.set_theme()
 
-# plt_type : ppn | time
+
 def _gen_nodes_plot(
     plt_type,
     title,
@@ -23,7 +23,18 @@ def _gen_nodes_plot(
     subplot_args=None,
     fill_area=True,
 ):
-
+    """
+    Args:
+        plt_type:       ppn | time
+        title:          title of the plot
+        df:             the pandas.DataFrame with the data for the plot
+        combine_mb:     group also by mb sizes
+        filts:          [regex] for matching benchmark names to filter from the plot
+        replaces:       [(regex_replace_rule, newtext)] to apply to benchmark names for the legend
+        styles:         [(regex, dict())] where dict() contains kwargs valid for the plot
+        subplot_args:   kwargs to pass to pyplot.subplots
+        fill_area:      switch on/off the min-max area on plots
+    """
     if subplot_args is None:
         subplot_args = dict()
     fig, ax = plt.subplots(**subplot_args)
@@ -321,7 +332,6 @@ def gen_chol_plots(
                 ax.set_xscale("log", base=2)
 
 
-# customize_* functions should accept fig and ax as parameters
 def gen_chol_plots_weak(
     df,
     weak_rt_approx,
@@ -332,6 +342,11 @@ def gen_chol_plots_weak(
     customize_time=None,
     **proxy_args,
 ):
+    """
+    Args:
+        customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
+        customize_time: function accepting the two arguments fig and ax for time plot customization
+    """
     df = df.assign(
         weak_rt=[
             int(round(x[0] / math.sqrt(x[1]) / weak_rt_approx)) * weak_rt_approx
@@ -380,10 +395,14 @@ def gen_chol_plots_weak(
             ax.set_yscale("log", base=10)
 
 
-# customize_* functions should accept fig and ax as parameters
 def gen_trsm_plots(
     df, logx=False, filename_suffix=None, customize_ppn=None, customize_time=None, **proxy_args,
 ):
+    """
+    Args:
+        customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
+        customize_time: function accepting the two arguments fig and ax for time plot customization
+    """
     for (m, n, mb), grp_data in df.groupby(["matrix_rows", "matrix_cols", "block_rows"]):
         title = f"TRSM: matrix_size = {m} x {n}, block_size = {mb} x {mb}"
 

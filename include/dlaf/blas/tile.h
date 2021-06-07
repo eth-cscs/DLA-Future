@@ -127,6 +127,22 @@ template <typename T>
 struct CublasHerk;
 
 template <>
+struct CublasHerk<float> {
+  template <typename... Args>
+  static void call(Args&&... args) {
+    DLAF_CUBLAS_CALL(cublasSsyrk(std::forward<Args>(args)...));
+  }
+};
+
+template <>
+struct CublasHerk<double> {
+  template <typename... Args>
+  static void call(Args&&... args) {
+    DLAF_CUBLAS_CALL(cublasDsyrk(std::forward<Args>(args)...));
+  }
+};
+
+template <>
 struct CublasHerk<std::complex<float>> {
   template <typename... Args>
   static void call(Args&&... args) {

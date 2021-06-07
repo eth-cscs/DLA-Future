@@ -22,7 +22,7 @@
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/eigensolver/gen_to_std/api.h"
 #include "dlaf/executors.h"
-#include "dlaf/lapack_tile.h"
+#include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/util_matrix.h"
@@ -60,7 +60,7 @@ void GenToStd<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
     const auto kk = LocalTileIndex{k, k};
 
     // Direct transformation to standard eigenvalue problem of the diagonal tile
-    hpx::dataflow(executor_hp, unwrapping(tile::hegst<T, Device::CPU>), 1, Lower, mat_a(kk), mat_l(kk));
+    hpx::dataflow(executor_hp, unwrapping(tile::hegst<T>), 1, Lower, mat_a(kk), mat_l(kk));
 
     if (k != (n - 1)) {
       const LocalTileIndex ai_start(k + 1, k);

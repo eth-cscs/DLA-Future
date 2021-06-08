@@ -1,14 +1,13 @@
-#include "dlaf/factorization/cholesky/mc.h"
+#include "dlaf/factorization/cholesky/impl.h"
 
 namespace dlaf {
 namespace factorization {
 namespace internal {
 
-DLAF_CHOLESKY_MC_ETI(, float)
-DLAF_CHOLESKY_MC_ETI(, double)
-DLAF_CHOLESKY_MC_ETI(, std::complex<float>)
-DLAF_CHOLESKY_MC_ETI(, std::complex<double>)
-
+DLAF_FACTORIZATION_CHOLESKY_ETI(, Backend::MC, Device::CPU, float)
+DLAF_FACTORIZATION_CHOLESKY_ETI(, Backend::MC, Device::CPU, double)
+DLAF_FACTORIZATION_CHOLESKY_ETI(, Backend::MC, Device::CPU, std::complex<float>)
+DLAF_FACTORIZATION_CHOLESKY_ETI(, Backend::MC, Device::CPU, std::complex<double>)
 }
 }
 }

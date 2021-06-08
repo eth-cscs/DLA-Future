@@ -12,7 +12,7 @@
 
 #include <gtest/gtest.h>
 
-#include "dlaf/lapack_tile.h"
+#include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/memory/memory_view.h"

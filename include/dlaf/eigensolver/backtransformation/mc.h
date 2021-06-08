@@ -26,7 +26,6 @@
 #include "dlaf/eigensolver/backtransformation/api.h"
 #include "dlaf/executors.h"
 #include "dlaf/factorization/qr.h"
-#include "dlaf/lapack_tile.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/distribution.h"

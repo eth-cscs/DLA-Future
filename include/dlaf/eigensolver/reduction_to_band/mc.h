@@ -439,7 +439,7 @@ void compute_x(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT<Co
                       static_cast<T>(is_first ? 0 : 1), std::move(tile_x));
       }
       else {
-        // A  . W
+        // A . W*
         {
           // Note:
           // Since it is not a diagonal tile, otherwise it would have been managed in the previous
@@ -844,13 +844,14 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
     // At = At - X . V* + V . X*
     update_a(at_offset, mat_a, x, vt, v, xt);
 
-    w.reset();
-    wt.reset();
-
-    v.reset();
-    vt.reset();
-    x.reset();
     xt.reset();
+    x.reset();
+
+    wt.reset();
+    w.reset();
+
+    vt.reset();
+    v.reset();
   }
 
   return taus;

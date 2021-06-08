@@ -32,8 +32,8 @@ template <class T, Device D>
 void sendBcast(matrix::Tile<const T, D> const& tile, common::PromiseGuard<Communicator> pcomm,
                MPI_Request* req) {
   auto msg = comm::make_message(common::make_data(tile));
-  MPI_Ibcast(const_cast<T*>(msg.data()), msg.count(), msg.mpi_type(), pcomm.ref().rank(), pcomm.ref(),
-             req);
+  DLAF_MPI_CALL(MPI_Ibcast(const_cast<T*>(msg.data()), msg.count(), msg.mpi_type(), pcomm.ref().rank(),
+                           pcomm.ref(), req));
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(sendBcast);
@@ -43,7 +43,7 @@ template <class T, Device D>
 matrix::Tile<T, D> recvBcast(matrix::Tile<T, D> tile, comm::IndexT_MPI root_rank,
                              common::PromiseGuard<Communicator> pcomm, MPI_Request* req) {
   auto msg = comm::make_message(common::make_data(tile));
-  MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, pcomm.ref(), req);
+  DLAF_MPI_CALL(MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, pcomm.ref(), req));
   return tile;
 }
 
@@ -61,7 +61,7 @@ matrix::Tile<const T, D> recvBcastAlloc(TileElementSize tile_size, comm::IndexT_
   Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
 
   auto msg = comm::make_message(common::make_data(tile));
-  MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, pcomm.ref(), req);
+  DLAF_MPI_CALL(MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, pcomm.ref(), req));
   return ConstTile_t(std::move(tile));
 }
 

@@ -64,7 +64,7 @@ DLAF_MAKE_CALLABLE_OBJECT(reduceSend);
 }
 
 template <class T>
-auto scheduleReduceRecvInPlace(const comm::Executor& ex,
+void scheduleReduceRecvInPlace(const comm::Executor& ex,
                                hpx::future<common::PromiseGuard<comm::Communicator>> pcomm,
                                MPI_Op reduce_op, hpx::future<matrix::Tile<T, Device::CPU>> tile) {
   // Note:
@@ -98,17 +98,10 @@ auto scheduleReduceRecvInPlace(const comm::Executor& ex,
   // with the dataflow, mathing the two lifetimes.
   tile = hpx::dataflow(hpx::util::unwrapping(common::internal::copyBack_o), std::move(tile),
                        std::move(bag));
-
-  // Note:
-  //
-  // The returned future<Tile> is a RW tile of the original operation after the MPI Async operation
-  // is fully completed (even if original tile is not used because it gets copied, it won't be
-  // released)
-  return std::move(tile);
 }
 
 template <class T>
-auto scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
+void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
                         hpx::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
                         hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile) {
   // Note:
@@ -127,12 +120,6 @@ auto scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
   // execution
   hpx::dataflow(ex, hpx::util::unwrapping(internal::reduceSend_o), rank_root, std::move(pcomm),
                 reduce_op, std::move(bag), tile);
-
-  // Note:
-  //
-  // The returned tile is exactly the original one, because the shared ownerhsip ensures that
-  // this tile won't be released before the MPI async operation is completed.
-  return tile;
 }
 }
 }

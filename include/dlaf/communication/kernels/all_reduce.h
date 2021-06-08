@@ -60,7 +60,7 @@ DLAF_MAKE_CALLABLE_OBJECT(allReduceInPlace);
 }
 
 template <class T>
-auto scheduleAllReduce(const comm::Executor& ex,
+void scheduleAllReduce(const comm::Executor& ex,
                        hpx::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
                        hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_in,
                        hpx::future<matrix::Tile<T, Device::CPU>> tile_out) {
@@ -79,14 +79,12 @@ auto scheduleAllReduce(const comm::Executor& ex,
   bag_out = hpx::dataflow(ex, hpx::util::unwrapping(internal::allReduce_o), std::move(pcomm), reduce_op,
                           std::move(bag_in), std::move(bag_out), tile_in);
 
-  tile_out = hpx::dataflow(hpx::util::unwrapping(common::internal::copyBack_o), std::move(tile_out),
-                           std::move(bag_out));
-
-  return tile_out;
+  hpx::dataflow(hpx::util::unwrapping(common::internal::copyBack_o), std::move(tile_out),
+                std::move(bag_out));
 }
 
 template <class T>
-auto scheduleAllReduceInPlace(const comm::Executor& ex,
+void scheduleAllReduceInPlace(const comm::Executor& ex,
                               hpx::future<common::PromiseGuard<comm::Communicator>> pcomm,
                               MPI_Op reduce_op, hpx::future<matrix::Tile<T, Device::CPU>> tile) {
   hpx::future<common::internal::Bag<T>> bag;
@@ -103,7 +101,6 @@ auto scheduleAllReduceInPlace(const comm::Executor& ex,
   tile = hpx::dataflow(hpx::util::unwrapping(common::internal::copyBack_o), std::move(tile),
                        std::move(bag));
 
-  return tile;
 }
 }
 }

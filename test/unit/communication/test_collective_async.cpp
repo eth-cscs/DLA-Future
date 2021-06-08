@@ -37,12 +37,12 @@ TEST(Reduce, Contiguous) {
   matrix(index).get()({0, 0}) = comm.rank() == 0 ? 1 : 3;
 
   if (comm.rank() == root) {
-    auto t = scheduleReduceRecvInPlace(ex_mpi, chain(), MPI_SUM, matrix(index));
-    EXPECT_EQ(4, t.get()({0, 0}));
+    scheduleReduceRecvInPlace(ex_mpi, chain(), MPI_SUM, matrix(index));
+    EXPECT_EQ(4, matrix.read(index).get()({0, 0}));
   }
   else {
-    auto t = scheduleReduceSend(ex_mpi, root, chain(), MPI_SUM, matrix.read(index));
-    EXPECT_EQ(3, t.get()({0, 0}));
+    scheduleReduceSend(ex_mpi, root, chain(), MPI_SUM, matrix.read(index));
+    EXPECT_EQ(3, matrix.read(index).get()({0, 0}));
   }
 }
 
@@ -64,12 +64,12 @@ TEST(Reduce, NotContiguous) {
   matrix(index).get()({0, 0}) = comm.rank() == 0 ? 1 : 3;
 
   if (comm.rank() == root) {
-    auto t = scheduleReduceRecvInPlace(ex_mpi, chain(), MPI_SUM, matrix(index));
-    EXPECT_EQ(4, t.get()({0, 0}));
+    scheduleReduceRecvInPlace(ex_mpi, chain(), MPI_SUM, matrix(index));
+    EXPECT_EQ(4, matrix.read(index).get()({0, 0}));
   }
   else {
-    auto t = scheduleReduceSend(ex_mpi, root, chain(), MPI_SUM, matrix.read(index));
-    EXPECT_EQ(3, t.get()({0, 0}));
+    scheduleReduceSend(ex_mpi, root, chain(), MPI_SUM, matrix.read(index));
+    EXPECT_EQ(3, matrix.read(index).get()({0, 0}));
   }
 }
 
@@ -90,10 +90,7 @@ TEST(AllReduce, Contiguous) {
   dlaf::Matrix<double, Device::CPU> matrix({sz, 2}, {sz, 1});
   matrix(index_in).get()({0, 0}) = comm.rank() == 0 ? 1 : 3;
   const double result = 4.0;
-  {
-    auto t = scheduleAllReduce(ex_mpi, chain(), MPI_SUM, matrix.read(index_in), matrix(index_out));
-    EXPECT_EQ(result, t.get()({0, 0}));
-  }
+  scheduleAllReduce(ex_mpi, chain(), MPI_SUM, matrix.read(index_in), matrix(index_out));
   EXPECT_EQ(result, matrix.read(index_out).get()({0, 0}));
 }
 
@@ -114,10 +111,7 @@ TEST(AllReduce, NotContiguous) {
   dlaf::Matrix<double, Device::CPU> matrix({2, sz}, {1, sz});
   matrix(index_in).get()({0, 0}) = comm.rank() == 0 ? 1 : 3;
   const double result = 4.0;
-  {
-    auto t = scheduleAllReduce(ex_mpi, chain(), MPI_SUM, matrix.read(index_in), matrix(index_out));
-    EXPECT_EQ(result, t.get()({0, 0}));
-  }
+  scheduleAllReduce(ex_mpi, chain(), MPI_SUM, matrix.read(index_in), matrix(index_out));
   EXPECT_EQ(result, matrix.read(index_out).get()({0, 0}));
 }
 
@@ -137,10 +131,7 @@ TEST(AllReduceInPlace, Contiguous) {
   dlaf::Matrix<double, Device::CPU> matrix({sz, 1}, {sz, 1});
   matrix(index).get()({0, 0}) = comm.rank() == 0 ? 1 : 3;
   const double result = 4.0;
-  {
-    auto t = scheduleAllReduceInPlace(ex_mpi, chain(), MPI_SUM, matrix(index));
-    EXPECT_EQ(result, t.get()({0, 0}));
-  }
+  scheduleAllReduceInPlace(ex_mpi, chain(), MPI_SUM, matrix(index));
   EXPECT_EQ(result, matrix.read(index).get()({0, 0}));
 }
 
@@ -160,9 +151,6 @@ TEST(AllReduceInPlace, NotContiguous) {
   dlaf::Matrix<double, Device::CPU> matrix({1, sz}, {1, sz});
   matrix(index).get()({0, 0}) = comm.rank() == 0 ? 1 : 3;
   const double result = 4.0;
-  {
-    auto t = scheduleAllReduceInPlace(ex_mpi, chain(), MPI_SUM, matrix(index));
-    EXPECT_EQ(result, t.get()({0, 0}));
-  }
+  scheduleAllReduceInPlace(ex_mpi, chain(), MPI_SUM, matrix(index));
   EXPECT_EQ(result, matrix.read(index).get()({0, 0}));
 }

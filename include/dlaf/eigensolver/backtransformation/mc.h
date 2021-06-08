@@ -37,6 +37,28 @@ void set_zero(Matrix<T, Device::CPU>& mat) {
   dlaf::matrix::util::set(mat, [](auto&&) { return static_cast<T>(0.0); });
 }
 
+template <Device device, class T>
+void copySingleTile(hpx::shared_future<matrix::Tile<const T, device>> in,
+                   hpx::future<matrix::Tile<T, device>> out) {
+      hpx::dataflow(dlaf::getCopyExecutor<Device::CPU, Device::CPU>(), matrix::unwrapExtendTiles(matrix::copy_o), in, out);
+}
+
+template <class Executor, Device device, class T>
+void trmmPanel(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> t,
+                   hpx::future<matrix::Tile<T, device>> w) {
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::trmm_o), blas::Side::Right, blas::Uplo::Upper, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), t, w);
+}
+
+template <class Executor, Device device, class T>
+void gemmUpdateW2(Executor&& ex, hpx::future<matrix::Tile<T, device>> w, hpx::shared_future<matrix::Tile<const T, device>> c, hpx::future<matrix::Tile<T, device>> w2) {
+   hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans, T(1.0), w, c, T(1.0), std::move(w2));
+}
+
+template <class Executor, Device device, class T>
+void gemmTrailingMatrix(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> v, hpx::shared_future<matrix::Tile<const T, device>> w2, hpx::future<matrix::Tile<T, device>> c) {
+   hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::NoTrans, T(-1.0), v, w2, T(1.0), std::move(c));
+}
+
 // Implementation based on:
 // 1. Part of algorithm 6 "LAPACK Algorithm for the eigenvector back-transformation", page 15, PhD thesis
 // "GPU Accelerated Implementations of a Generalized Eigenvalue Solver for Hermitian Matrices with
@@ -57,14 +79,6 @@ template <class T>
 void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     Matrix<T, Device::CPU>& mat_c, Matrix<const T, Device::CPU>& mat_v,
     common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
-  constexpr auto Left = blas::Side::Left;
-  constexpr auto Right = blas::Side::Right;
-  constexpr auto Upper = blas::Uplo::Upper;
-  constexpr auto Lower = blas::Uplo::Lower;
-  constexpr auto NoTrans = blas::Op::NoTrans;
-  constexpr auto ConjTrans = blas::Op::ConjTrans;
-  constexpr auto NonUnit = blas::Diag::NonUnit;
-
   using hpx::util::unwrapping;
 
   auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
@@ -119,9 +133,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
     for (SizeType i = 0; i < mat_v.nrTiles().rows(); ++i) {
       // Copy V panel into VV
-      hpx::dataflow(dlaf::getCopyExecutor<Device::CPU, Device::CPU>(),
-                    matrix::unwrapExtendTiles(dlaf::matrix::copy_o), mat_v.read(LocalTileIndex(i, k)),
-                    mat_vv(LocalTileIndex(i, 0)));
+      copySingleTile(mat_v.read(LocalTileIndex(i, k)), mat_vv(LocalTileIndex(i, 0)));
 
       // Setting VV
       auto setting_vv = unwrapping([=](auto&& tile) {
@@ -137,9 +149,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       hpx::dataflow(executor_hp, setting_vv, mat_vv(LocalTileIndex(i, 0)));
 
       // Copy VV into W
-      hpx::dataflow(dlaf::getCopyExecutor<Device::CPU, Device::CPU>(),
-                    matrix::unwrapExtendTiles(matrix::copy_o), mat_vv.read(LocalTileIndex(i, 0)),
-                    mat_w(LocalTileIndex(i, 0)));
+      copySingleTile(mat_vv.read(LocalTileIndex(i, 0)), mat_w(LocalTileIndex(i, 0)));
     }
 
     // Reset W2 to zero
@@ -155,8 +165,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       auto kk = LocalTileIndex{k, k};
       // WH = V T
       auto ik = LocalTileIndex{i, 0};
-      hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::trmm_o), Right, Upper, ConjTrans,
-                    NonUnit, T(1.0), mat_t.read(kk), std::move(mat_w(ik)));
+      trmmPanel(executor_np, mat_t.read(kk), mat_w(ik));
     }
 
     for (SizeType j = 0; j < n; ++j) {
@@ -165,8 +174,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         auto ik = LocalTileIndex{i, 0};
         auto ij = LocalTileIndex{i, j};
         // W2 = W C
-        hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::gemm_o), ConjTrans, NoTrans, T(1.0),
-                      std::move(mat_w(ik)), mat_c.read(ij), T(1.0), std::move(mat_w2(kj)));
+	gemmUpdateW2(executor_np, mat_w(ik), mat_c.read(ij), mat_w2(kj));
       }
     }
 
@@ -176,8 +184,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         auto kj = LocalTileIndex{0, j};
         auto ij = LocalTileIndex{i, j};
         // C = C - V W2
-        hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::gemm_o), NoTrans, NoTrans, T(-1.0),
-                      mat_vv.read(ik), mat_w2.read(kj), T(1.0), std::move(mat_c(ij)));
+	gemmTrailingMatrix(executor_np, mat_vv.read(ik), mat_w2.read(kj), mat_c(ij));
       }
     }
   }

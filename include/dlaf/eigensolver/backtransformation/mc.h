@@ -39,24 +39,32 @@ void set_zero(Matrix<T, Device::CPU>& mat) {
 
 template <Device device, class T>
 void copySingleTile(hpx::shared_future<matrix::Tile<const T, device>> in,
-                   hpx::future<matrix::Tile<T, device>> out) {
-      hpx::dataflow(dlaf::getCopyExecutor<Device::CPU, Device::CPU>(), matrix::unwrapExtendTiles(matrix::copy_o), in, out);
+                    hpx::future<matrix::Tile<T, device>> out) {
+  hpx::dataflow(dlaf::getCopyExecutor<Device::CPU, Device::CPU>(),
+                matrix::unwrapExtendTiles(matrix::copy_o), in, out);
 }
 
 template <class Executor, Device device, class T>
 void trmmPanel(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> t,
-                   hpx::future<matrix::Tile<T, device>> w) {
-  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::trmm_o), blas::Side::Right, blas::Uplo::Upper, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), t, w);
+               hpx::future<matrix::Tile<T, device>> w) {
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::trmm_o), blas::Side::Right, blas::Uplo::Upper,
+                blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), t, w);
 }
 
 template <class Executor, Device device, class T>
-void gemmUpdateW2(Executor&& ex, hpx::future<matrix::Tile<T, device>> w, hpx::shared_future<matrix::Tile<const T, device>> c, hpx::future<matrix::Tile<T, device>> w2) {
-   hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans, T(1.0), w, c, T(1.0), std::move(w2));
+void gemmUpdateW2(Executor&& ex, hpx::future<matrix::Tile<T, device>> w,
+                  hpx::shared_future<matrix::Tile<const T, device>> c,
+                  hpx::future<matrix::Tile<T, device>> w2) {
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans,
+                T(1.0), w, c, T(1.0), std::move(w2));
 }
 
 template <class Executor, Device device, class T>
-void gemmTrailingMatrix(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> v, hpx::shared_future<matrix::Tile<const T, device>> w2, hpx::future<matrix::Tile<T, device>> c) {
-   hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::NoTrans, T(-1.0), v, w2, T(1.0), std::move(c));
+void gemmTrailingMatrix(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> v,
+                        hpx::shared_future<matrix::Tile<const T, device>> w2,
+                        hpx::future<matrix::Tile<T, device>> c) {
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::NoTrans,
+                T(-1.0), v, w2, T(1.0), std::move(c));
 }
 
 // Implementation based on:
@@ -174,7 +182,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         auto ik = LocalTileIndex{i, 0};
         auto ij = LocalTileIndex{i, j};
         // W2 = W C
-	gemmUpdateW2(executor_np, mat_w(ik), mat_c.read(ij), mat_w2(kj));
+        gemmUpdateW2(executor_np, mat_w(ik), mat_c.read(ij), mat_w2(kj));
       }
     }
 
@@ -184,7 +192,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         auto kj = LocalTileIndex{0, j};
         auto ij = LocalTileIndex{i, j};
         // C = C - V W2
-	gemmTrailingMatrix(executor_np, mat_vv.read(ik), mat_w2.read(kj), mat_c(ij));
+        gemmTrailingMatrix(executor_np, mat_vv.read(ik), mat_w2.read(kj), mat_c(ij));
       }
     }
   }

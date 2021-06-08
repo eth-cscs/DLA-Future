@@ -133,6 +133,8 @@ public:
     using FramePtr =
         hpx::intrusive_ptr<typename std::remove_pointer<typename std::decay<Frame>::type>::type>;
     FramePtr frame_p(std::forward<Frame>(frame));
+
+    char const* annotation = hpx::traits::get_function_annotation<F>::call(f);
     auto fn = [frame_p = std::move(frame_p), f = std::forward<F>(f),
                args = std::forward<TupleArgs>(args)]() mutable {
       MPI_Request req;
@@ -142,7 +144,7 @@ public:
       internal::handle_request(req);
       frame_p->set_data(wrapper.dataflow_return());
     };
-    hpx::apply(ex_, std::move(fn));
+    hpx::apply(ex_, hpx::util::annotated_function(std::move(fn), annotation));
   }
 };
 }

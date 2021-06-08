@@ -46,7 +46,7 @@ ARG BOOST_MINOR=72
 ARG BOOST_PATCH=0
 ARG BOOST_PATH=/usr/local/boost
 
-RUN wget -q https://dl.bintray.com/boostorg/release/${BOOST_MAJOR}.${BOOST_MINOR}.${BOOST_PATCH}/source/boost_${BOOST_MAJOR}_${BOOST_MINOR}_${BOOST_PATCH}.tar.gz -O boost.tar.gz && \
+RUN wget -q https://boostorg.jfrog.io/artifactory/main/release/${BOOST_MAJOR}.${BOOST_MINOR}.${BOOST_PATCH}/source/boost_${BOOST_MAJOR}_${BOOST_MINOR}_${BOOST_PATCH}.tar.gz -O boost.tar.gz && \
     tar -xzf boost.tar.gz && \
     cd boost_${BOOST_MAJOR}_${BOOST_MINOR}_${BOOST_PATCH} && \
     ./bootstrap.sh --prefix=$BOOST_PATH && \

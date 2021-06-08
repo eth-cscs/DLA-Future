@@ -16,6 +16,7 @@
 #include <hpx/init.hpp>
 
 #include "dlaf/auxiliary/norm.h"
+#include "dlaf/blas/tile.h"
 #include "dlaf/common/timer.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/error.h"
@@ -27,6 +28,7 @@
 #include "dlaf/init.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
@@ -50,16 +52,21 @@ using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
 
 using T = double;
-using MatrixType = dlaf::Matrix<T, Device::CPU>;
-using ConstMatrixType = dlaf::Matrix<const T, Device::CPU>;
+using MatrixType = dlaf::Matrix<T, Device::Default>;
+using HostMatrixType = dlaf::Matrix<T, Device::CPU>;
+using ConstMatrixType = dlaf::Matrix<const T, Device::Default>;
+using ConstHostMatrixType = dlaf::Matrix<const T, Device::CPU>;
+using MatrixMirrorType = dlaf::matrix::MatrixMirror<T, Device::Default, Device::CPU>;
 using TileType = MatrixType::TileType;
+using HostTileType = HostMatrixType::TileType;
 using ConstTileType = MatrixType::ConstTileType;
+using ConstHostTileType = HostMatrixType::ConstTileType;
 
 /// Check Cholesky Factorization results
 ///
 /// Given a matrix A (Hermitian Positive Definite) and its Cholesky factorization in L,
 /// this function checks that A == L * L'
-void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid);
+void check_cholesky(HostMatrixType& A, HostMatrixType& L, CommunicatorGrid comm_grid);
 
 enum class CholCheckIterFreq { None, Last, All };
 
@@ -91,10 +98,10 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   GlobalElementSize matrix_size(opts.m, opts.m);
   TileElementSize block_size(opts.mb, opts.mb);
 
-  ConstMatrixType matrix_ref = [matrix_size, block_size, comm_grid]() {
+  ConstHostMatrixType matrix_ref = [matrix_size, block_size, comm_grid]() {
     using dlaf::matrix::util::set_random_hermitian_positive_definite;
 
-    MatrixType hermitian_pos_def(matrix_size, block_size, comm_grid);
+    HostMatrixType hermitian_pos_def(matrix_size, block_size, comm_grid);
     set_random_hermitian_positive_definite(hermitian_pos_def);
 
     return hermitian_pos_def;
@@ -106,29 +113,38 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     if (0 == world.rank() && run_index >= 0)
       std::cout << "[" << run_index << "]" << std::endl;
 
-    MatrixType matrix(matrix_size, block_size, comm_grid);
-    copy(matrix_ref, matrix);
+    HostMatrixType matrix_host(matrix_size, block_size, comm_grid);
+    copy(matrix_ref, matrix_host);
 
     // wait all setup tasks before starting benchmark
-    matrix.waitLocalTiles();
+    matrix_host.waitLocalTiles();
     DLAF_MPI_CALL(MPI_Barrier(world));
 
-    dlaf::common::Timer<> timeit;
-    dlaf::factorization::cholesky<Backend::MC, Device::CPU, T>(comm_grid, blas::Uplo::Lower, matrix);
-
-    // wait for last task and barrier for all ranks
+    double elapsed_time;
     {
-      GlobalTileIndex last_tile(matrix.nrTiles().rows() - 1, matrix.nrTiles().cols() - 1);
-      if (matrix.rankIndex() == distribution.rankGlobalTile(last_tile))
-        matrix(last_tile).get();
+      MatrixMirrorType matrix(matrix_host);
 
-      DLAF_MPI_CALL(MPI_Barrier(world));
+      // Wait for matrix to be copied to GPU (if necessary)
+      matrix.get().waitLocalTiles();
+
+      dlaf::common::Timer<> timeit;
+      dlaf::factorization::cholesky<Backend::Default, Device::Default, T>(comm_grid, blas::Uplo::Lower,
+                                                                          matrix.get());
+
+      // wait for last task and barrier for all ranks
+      {
+        GlobalTileIndex last_tile(matrix.get().nrTiles().rows() - 1, matrix.get().nrTiles().cols() - 1);
+        if (matrix.get().rankIndex() == distribution.rankGlobalTile(last_tile))
+          matrix.get()(last_tile).get();
+
+        DLAF_MPI_CALL(MPI_Barrier(world));
+      }
+      elapsed_time = timeit.elapsed();
     }
-    auto elapsed_time = timeit.elapsed();
 
     double gigaflops;
     {
-      double n = matrix.size().rows();
+      double n = matrix_host.size().rows();
       auto add_mul = n * n * n / 6;
       gigaflops = dlaf::total_ops<T>(add_mul, add_mul) / elapsed_time / 1e9;
     }
@@ -138,15 +154,15 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       std::cout << "[" << run_index << "]"
                 << " " << elapsed_time << "s"
                 << " " << gigaflops << "GFlop/s"
-                << " " << matrix.size() << " " << matrix.blockSize() << " " << comm_grid.size() << " "
-                << hpx::get_os_thread_count() << std::endl;
+                << " " << matrix_host.size() << " " << matrix_host.blockSize() << " " << comm_grid.size()
+                << " " << hpx::get_os_thread_count() << std::endl;
 
     // (optional) run test
     if ((opts.do_check == CholCheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
         opts.do_check == CholCheckIterFreq::All) {
-      MatrixType original(matrix_size, block_size, comm_grid);
+      HostMatrixType original(matrix_size, block_size, comm_grid);
       copy(matrix_ref, original);
-      check_cholesky(original, matrix, comm_grid);
+      check_cholesky(original, matrix_host, comm_grid);
     }
   }
 
@@ -189,7 +205,7 @@ namespace {
 /// For the tiles on the diagonal (i.e. row == col), the elements in the upper triangular
 /// part of each tile, diagonal excluded, are set to zero.
 /// Tiles that are not on the diagonal (i.e. row != col) will not be touched or referenced
-void setUpperToZeroForDiagonalTiles(MatrixType& matrix) {
+void setUpperToZeroForDiagonalTiles(HostMatrixType& matrix) {
   DLAF_ASSERT(dlaf::matrix::square_blocksize(matrix), matrix);
 
   const auto& distribution = matrix.distribution();
@@ -221,7 +237,7 @@ void setUpperToZeroForDiagonalTiles(MatrixType& matrix) {
 ///
 /// It is used to get the difference matrix between the matrix computed starting from the
 /// cholesky factorization and the original one
-void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
+void cholesky_diff(HostMatrixType& A, HostMatrixType& L, CommunicatorGrid comm_grid) {
   // TODO A and L must be different
 
   using dlaf::common::make_data;
@@ -248,7 +264,7 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
   const auto& distribution = L.distribution();
   const auto current_rank = distribution.rankIndex();
 
-  MatrixType mul_result(L.size(), L.blockSize(), comm_grid);
+  HostMatrixType mul_result(L.size(), L.blockSize(), comm_grid);
 
   // k is a global index that keeps track of the diagonal tile
   // it is useful mainly for two reasons:
@@ -259,7 +275,8 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
 
     // workspace for storing the partial results for all the rows in the current rank
     // TODO this size can be reduced to just the part below the current diagonal tile
-    MatrixType partial_result({distribution.localSize().rows(), L.blockSize().cols()}, L.blockSize());
+    HostMatrixType partial_result({distribution.localSize().rows(), L.blockSize().cols()},
+                                  L.blockSize());
 
     // it has to be set to zero, because ranks may not be able to contribute for each row at each step
     // so when the result will be reduced along the rows, they will not alter the final result
@@ -273,7 +290,7 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
       const auto owner_transposed = distribution.rankGlobalTile(transposed_wrt_global);
 
       // collect the 2nd operand, receving it from others if not available locally
-      hpx::shared_future<ConstTileType> tile_to_transpose;
+      hpx::shared_future<ConstHostTileType> tile_to_transpose;
 
       if (owner_transposed == current_rank) {  // current rank already has what it needs
         tile_to_transpose = L.read(transposed_wrt_global);
@@ -289,14 +306,14 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
         // distribution given by the 2D grid)
         DLAF_ASSERT_HEAVY(owner_transposed.col() == current_rank.col(), owner_transposed, current_rank);
 
-        TileType workspace(L.blockSize(),
-                           dlaf::memory::MemoryView<T, Device::CPU>(L.blockSize().linear_size()),
-                           L.blockSize().rows());
+        HostTileType workspace(L.blockSize(),
+                               dlaf::memory::MemoryView<T, Device::CPU>(L.blockSize().linear_size()),
+                               L.blockSize().rows());
 
         dlaf::comm::sync::broadcast::receive_from(owner_transposed.row(), comm_grid.colCommunicator(),
                                                   workspace);
 
-        tile_to_transpose = hpx::make_ready_future<ConstTileType>(std::move(workspace));
+        tile_to_transpose = hpx::make_ready_future<ConstHostTileType>(std::move(workspace));
       }
 
       // compute the part of results available locally, for each row this rank has in local
@@ -344,7 +361,7 @@ void cholesky_diff(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
 /// "":        check ok
 /// "ERROR":   error is high, there is an error in the factorization
 /// "WARNING": error is slightly high, there can be an error in the factorization
-void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
+void check_cholesky(HostMatrixType& A, HostMatrixType& L, CommunicatorGrid comm_grid) {
   const Index2D rank_result{0, 0};
 
   // 1. Compute the max norm of the original matrix in A
@@ -370,7 +387,7 @@ void check_cholesky(MatrixType& A, MatrixType& L, CommunicatorGrid comm_grid) {
   if (comm_grid.rank() != rank_result)
     return;
 
-  constexpr auto eps = std::numeric_limits<T>::epsilon();
+  constexpr auto eps = std::numeric_limits<dlaf::BaseType<T>>::epsilon();
   const auto n = A.size().rows();
 
   const auto diff_ratio = norm_diff / norm_A;

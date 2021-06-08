@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/lapack_tile.h"
+#include "dlaf/lapack/tile.h"
 
 #include "gtest/gtest.h"
 #include "dlaf_test/util_types.h"

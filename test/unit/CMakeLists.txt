@@ -38,6 +38,12 @@ if(DLAF_WITH_CUDA)
     LIBRARIES dlaf.core
     USE_MAIN HPX
   )
+
+  DLAF_addTest(test_cusolver_tile
+    SOURCES test_cusolver_tile.cpp
+    LIBRARIES dlaf.core
+    USE_MAIN HPX
+  )
 endif()
 
 # Generic libraries

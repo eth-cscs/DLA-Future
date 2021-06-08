@@ -23,6 +23,7 @@
 
 #ifdef DLAF_WITH_CUDA
 #include <dlaf/cublas/executor.h>
+#include <dlaf/cusolver/executor.h>
 #endif
 
 namespace dlaf {
@@ -48,6 +49,7 @@ configuration& getConfiguration();
 cuda::StreamPool getNpCudaStreamPool();
 cuda::StreamPool getHpCudaStreamPool();
 cublas::HandlePool getCublasHandlePool();
+cusolver::HandlePool getCusolverHandlePool();
 #endif
 }
 

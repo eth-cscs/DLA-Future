@@ -73,11 +73,11 @@ public:
 
   /// Copies the source to the target matrix. Since the source and target
   /// devices are the same, this is a no-op.
-  void syncSourceToTarget() {}
+  void copySourceToTarget() {}
 
   /// Copies the target to the source matrix. Since the source and target
   /// devices are the same, this is a no-op.
-  void syncTargetToSource() {}
+  void copyTargetToSource() {}
 };
 
 /// A mirror of a source matrix on the target device, where the source and
@@ -131,7 +131,7 @@ public:
   /// Copy the target matrix back to the source matrix and release the target
   /// matrix.
   ~MatrixMirror() {
-    syncTargetToSource();
+    copyTargetToSource();
   }
 
   /// Return a reference to the mirror matrix on the target device.
@@ -140,12 +140,12 @@ public:
   }
 
   /// Copies the source to the target matrix.
-  void syncSourceToTarget() {
+  void copySourceToTarget() {
     copy(mat_source, mat_target);
   }
 
   /// Copies the target to the source matrix.
-  void syncTargetToSource() {
+  void copyTargetToSource() {
     copy(mat_target, mat_source);
   }
 };

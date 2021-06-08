@@ -16,7 +16,7 @@
 
 #include "dlaf/common/range2d.h"
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/lapack_tile.h"  // workaround for importing lapack.hh
+#include "dlaf/lapack/tile.h"  // workaround for importing lapack.hh
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/util_matrix.h"
 

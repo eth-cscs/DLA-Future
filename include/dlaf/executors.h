@@ -23,6 +23,7 @@
 
 #ifdef DLAF_WITH_CUDA
 #include <dlaf/cublas/executor.h>
+#include <dlaf/cusolver/executor.h>
 #endif
 
 namespace dlaf {
@@ -80,7 +81,8 @@ auto getNpExecutor() {
 #ifdef DLAF_WITH_CUDA
 template <>
 inline auto getNpExecutor<Backend::GPU>() {
-  return dlaf::cublas::Executor{internal::getNpCudaStreamPool(), internal::getCublasHandlePool()};
+  return dlaf::cusolver::Executor{internal::getNpCudaStreamPool(), internal::getCublasHandlePool(),
+                                  internal::getCusolverHandlePool()};
 }
 #endif
 
@@ -97,7 +99,8 @@ auto getHpExecutor() {
 #ifdef DLAF_WITH_CUDA
 template <>
 inline auto getHpExecutor<Backend::GPU>() {
-  return dlaf::cublas::Executor{internal::getHpCudaStreamPool(), internal::getCublasHandlePool()};
+  return dlaf::cusolver::Executor{internal::getHpCudaStreamPool(), internal::getCublasHandlePool(),
+                                  internal::getCusolverHandlePool()};
 }
 #endif
 

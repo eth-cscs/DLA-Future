@@ -68,16 +68,53 @@ matrix::Tile<const T, D> recvBcastAlloc(TileElementSize tile_size, comm::IndexT_
 template <class T, Device D, template <class> class Future>
 void scheduleSendBcast(const comm::Executor& ex, Future<matrix::Tile<const T, D>> tile,
                        hpx::future<common::PromiseGuard<comm::Communicator>> pcomm) {
-  hpx::dataflow(ex, hpx::util::unwrapping(sendBcast_o), internal::prepareSendTile(std::move(tile)),
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(sendBcast_o), internal::prepareSendTile(std::move(tile)),
                 std::move(pcomm));
 }
 
+// This implements scheduleRecvBcast for when the device of the given tile and
+// the communication device are different. In that case we make use of
+// recvBcastAlloc, which will allocate a tile on the correct device for
+// communication, receive the data, and return the tile. When communication is
+// ready, we copy the data from the tile on the communication device to the tile
+// passed into scheduleRecvBcast.
+template <Device D, Device CommunicationD>
+struct scheduleRecvBcastImpl {
+  template <class T>
+  static void call(const comm::Executor& ex, hpx::future<matrix::Tile<T, D>> tile,
+                   comm::IndexT_MPI root_rank, hpx::future<common::PromiseGuard<Communicator>> pcomm) {
+    auto tile_shared = tile.share();
+    auto tile_size =
+        hpx::dataflow(hpx::launch::sync,
+                      hpx::util::unwrapping([](matrix::Tile<T, D> const& tile) { return tile.size(); }),
+                      tile_shared);
+    auto comm_tile =
+        hpx::dataflow(ex, hpx::util::unwrapping(recvBcastAlloc<T, CommunicationDevice<D>::value>),
+                      tile_size, root_rank, std::move(pcomm));
+    hpx::dataflow(dlaf::getCopyExecutor<CommunicationDevice<D>::value, D>(),
+                  matrix::unwrapExtendTiles(matrix::copy_o), std::move(comm_tile),
+                  std::move(tile_shared));
+  }
+};
+
+// This specialization is used when the communication device and the device used
+// for the input tile are the same. In this case we don't need to do anything
+// special and just launch a task that receives into the given tile.
+template <Device D>
+struct scheduleRecvBcastImpl<D, D> {
+  template <class T>
+  static void call(const comm::Executor& ex, hpx::future<matrix::Tile<T, D>> tile,
+                   comm::IndexT_MPI root_rank, hpx::future<common::PromiseGuard<Communicator>> pcomm) {
+    hpx::dataflow(ex, hpx::util::unwrapping(recvBcast_o), std::move(tile), root_rank, std::move(pcomm));
+  }
+};
+
 template <class T, Device D>
-hpx::future<matrix::Tile<T, D>> scheduleRecvBcast(
-    const comm::Executor& ex, hpx::future<matrix::Tile<T, D>> tile, comm::IndexT_MPI root_rank,
-    hpx::future<common::PromiseGuard<Communicator>> pcomm) {
-  return internal::handleRecvTile<D>(hpx::dataflow(ex, hpx::util::unwrapping(recvBcast_o),
-                                                   std::move(tile), root_rank, std::move(pcomm)));
+void scheduleRecvBcast(const comm::Executor& ex, hpx::future<matrix::Tile<T, D>> tile,
+                       comm::IndexT_MPI root_rank,
+                       hpx::future<common::PromiseGuard<Communicator>> pcomm) {
+  scheduleRecvBcastImpl<D, CommunicationDevice<D>::value>::call(ex, std::move(tile), root_rank,
+                                                                std::move(pcomm));
 }
 
 template <class T, Device D>

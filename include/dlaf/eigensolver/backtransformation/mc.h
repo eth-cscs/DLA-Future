@@ -138,7 +138,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   for (SizeType k = last_reflector_idx; k >= 0; --k) {
     bool is_last = (k == last_reflector_idx) ? true : false;
 
-    for (SizeType i = 0; i < mat_v.nrTiles().rows(); ++i) {
+    for (SizeType i = k+1; i < mat_v.nrTiles().rows(); ++i) {
       // Copy V panel into VV
       copySingleTile(mat_v.read(LocalTileIndex(i, k)), mat_vv(LocalTileIndex(i, 0)));
 

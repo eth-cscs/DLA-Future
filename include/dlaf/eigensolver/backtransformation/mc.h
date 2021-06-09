@@ -276,7 +276,21 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     auto& panelW = panelsW.nextResource();
     auto& panelW2 = panelsW2.nextResource();
     auto& panelT = panelsT.nextResource();
-    
+
+    const LocalTileSize kkv_offset{
+        mat_v.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k),
+        mat_v.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(k),
+    };    
+
+    const LocalTileSize kkc_offset{
+        mat_c.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k),
+        mat_c.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(k),
+    }; 
+
+    panelVV.setRangeStart(kkv_offset);
+    panelW.setRangeStart(kkv_offset);
+    panelW2.setRangeStart(kkc_offset);
+
     for (SizeType i_local = 0; i_local < c_local_rows; ++i_local) {
       auto i = mat_v.distribution().template globalTileFromLocalTile<Coord::Row>(i_local);
 
@@ -328,16 +342,16 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
                                                                mat_t(kk), serial_comm);
     std::cout << "mat T " << mat_t(kk).get()({0,0}) << " rank: " << this_rank << " k: " << k << std::endl;
 
-    const LocalTileSize kk_offset{
-        mat_v.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k),
-        mat_v.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(k),
+    const LocalTileSize kkt_offset{
+        mat_t.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k),
+        mat_t.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(k),
     };    
-    const LocalTileSize at_offset{
-        mat_v.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k + 1),
-        mat_v.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(k + 1),
+    const LocalTileSize att_offset{
+        mat_t.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k + 1),
+        mat_t.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(k + 1),
     };
-    panelT.setRange(kk_offset, at_offset);    
-    const LocalTileIndex diag_wp_idx{0, kk_offset.cols()};
+    panelT.setRange(kkt_offset, att_offset);    
+    const LocalTileIndex diag_wp_idx{0, kkt_offset.cols()};
     if (this_rank.col() == k_v_rank_col) {
       panelT.setTile(diag_wp_idx, mat_t.read(kk));
     }

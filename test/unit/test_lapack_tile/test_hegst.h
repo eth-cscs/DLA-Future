@@ -35,11 +35,6 @@ void testHegst(const int itype, const blas::Uplo uplo, const SizeType m, const S
   const SizeType lda = std::max<SizeType>(1, size.rows()) + extra_lda;
   const SizeType ldb = std::max<SizeType>(1, size.rows()) + extra_ldb;
 
-  std::stringstream s;
-  s << "HEGST: itype = " << itype << ", uplo = " << uplo;
-  s << ", m = " << m << ", lda = " << lda << ", ldb = " << ldb;
-  SCOPED_TRACE(s.str());
-
   std::function<T(const TileElementIndex&)> el_t, el_a, res_a;
 
   std::tie(el_t, el_a, res_a) =
@@ -49,6 +44,11 @@ void testHegst(const int itype, const blas::Uplo uplo, const SizeType m, const S
   auto t = createTile<T, D>(el_t, size, ldb);
 
   invokeLapack<D>(tile::hegst_o, itype, uplo, a, t);
+
+  std::stringstream s;
+  s << "HEGST: itype = " << itype << ", uplo = " << uplo;
+  s << ", m = " << m << ", lda = " << lda << ", ldb = " << ldb;
+  SCOPED_TRACE(s.str());
 
   CHECK_TILE_NEAR(res_a, a, 10 * (m + 1) * TypeUtilities<T>::error,
                   10 * (m + 1) * TypeUtilities<T>::error);

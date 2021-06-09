@@ -42,12 +42,6 @@ void testHemm(const blas::Side side, const blas::Uplo uplo, const SizeType m, co
   const SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
   const SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
 
-  std::stringstream s;
-  s << "HEMM: " << side << ", " << uplo;
-  s << ", m = " << m << ", n = " << n;
-  s << ", lda = " << lda << ", ldb = " << ldb << ", ldc = " << ldc;
-  SCOPED_TRACE(s.str());
-
   const T alpha = TypeUtilities<T>::element(1.2, .7);
   const T beta = TypeUtilities<T>::element(1.1, .4);
   const BaseType<T> gamma = 1.3f;
@@ -121,6 +115,12 @@ void testHemm(const blas::Side side, const blas::Uplo uplo, const SizeType m, co
   auto c = createTile<T, D>(el_c, size_c, ldc);
 
   invokeBlas<D>(tile::hemm_o, side, uplo, alpha, a, b, beta, c);
+
+  std::stringstream s;
+  s << "HEMM: " << side << ", " << uplo;
+  s << ", m = " << m << ", n = " << n;
+  s << ", lda = " << lda << ", ldb = " << ldb << ", ldc = " << ldc;
+  SCOPED_TRACE(s.str());
 
   // Check result against analytical result.
   CHECK_TILE_NEAR(res_c, c, 2 * (k + 1) * TypeUtilities<T>::error,

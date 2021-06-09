@@ -41,12 +41,6 @@ void testGemm(const blas::Op op_a, const blas::Op op_b, const SizeType m, const 
   const SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
   const SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
 
-  std::stringstream s;
-  s << "GEMM: " << op_a << ", " << op_b;
-  s << ", m = " << m << ", n = " << n << ", k = " << k;
-  s << ", lda = " << lda << ", ldb = " << ldb << ", ldc = " << ldc;
-  SCOPED_TRACE(s.str());
-
   // Note: The tile elements are chosen such that:
   // - op_a(a)_ik = .9 * (i+1) / (k+.5) * exp(I*(2*i-k)),
   // - op_b(b)_kj = .8 * (k+.5) / (j+2) * exp(I*(k+j)),
@@ -87,6 +81,12 @@ void testGemm(const blas::Op op_a, const blas::Op op_b, const SizeType m, const 
   auto c = createTile<T, D>(el_c, size_c, ldc);
 
   invokeBlas<D>(tile::gemm_o, op_a, op_b, alpha, a, b, beta, c);
+
+  std::stringstream s;
+  s << "GEMM: " << op_a << ", " << op_b;
+  s << ", m = " << m << ", n = " << n << ", k = " << k;
+  s << ", lda = " << lda << ", ldb = " << ldb << ", ldc = " << ldc;
+  SCOPED_TRACE(s.str());
 
   // Check result against analytical result.
   CHECK_TILE_NEAR(res_c, c, 2 * (k + 1) * TypeUtilities<T>::error,

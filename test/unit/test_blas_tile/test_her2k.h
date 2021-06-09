@@ -42,12 +42,6 @@ void testHer2k(const blas::Uplo uplo, const blas::Op op, const SizeType n, const
   const SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_lda;
   const SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
 
-  std::stringstream s;
-  s << "HER2K: " << uplo << ", " << op;
-  s << ", n = " << n << ", k = " << k;
-  s << ", lda = " << lda << ", ldb = " << ldb << ", ldc = " << ldc;
-  SCOPED_TRACE(s.str());
-
   // Returns op(a)_ik
   auto el_op_a = [](const TileElementIndex& index) {
     const double i = index.row();
@@ -94,6 +88,12 @@ void testHer2k(const blas::Uplo uplo, const blas::Op op, const SizeType n, const
   auto c = createTile<T, D>(el_c, size_c, ldc);
 
   invokeBlas<D>(tile::her2k_o, uplo, op, alpha, a, b, beta, c);
+
+  std::stringstream s;
+  s << "HER2K: " << uplo << ", " << op;
+  s << ", n = " << n << ", k = " << k;
+  s << ", lda = " << lda << ", ldb = " << ldb << ", ldc = " << ldc;
+  SCOPED_TRACE(s.str());
 
   CHECK_TILE_NEAR(res_c, c, (k + 1) * TypeUtilities<T>::error, (k + 1) * TypeUtilities<T>::error);
 }

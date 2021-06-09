@@ -37,12 +37,6 @@ void testHerk(const blas::Uplo uplo, const blas::Op op_a, const SizeType n, cons
   const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
   const SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
 
-  std::stringstream s;
-  s << "HERK: " << uplo << ", " << op_a;
-  s << ", n = " << n << ", k = " << k;
-  s << ", lda = " << lda << ", ldc = " << ldc;
-  SCOPED_TRACE(s.str());
-
   // Returns op_a(a)_ik
   auto el_op_a = [](const TileElementIndex& index) {
     const double i = index.row();
@@ -81,6 +75,12 @@ void testHerk(const blas::Uplo uplo, const blas::Op op_a, const SizeType n, cons
   auto c = createTile<T, D>(el_c, size_c, ldc);
 
   invokeBlas<D>(tile::herk_o, uplo, op_a, alpha, a, beta, c);
+
+  std::stringstream s;
+  s << "HERK: " << uplo << ", " << op_a;
+  s << ", n = " << n << ", k = " << k;
+  s << ", lda = " << lda << ", ldc = " << ldc;
+  SCOPED_TRACE(s.str());
 
   CHECK_TILE_NEAR(res_c, c, (k + 1) * TypeUtilities<T>::error, (k + 1) * TypeUtilities<T>::error);
 }

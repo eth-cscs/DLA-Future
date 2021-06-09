@@ -32,11 +32,6 @@ void testPotrf(const blas::Uplo uplo, const SizeType n, const SizeType extra_lda
   const TileElementSize size_a = TileElementSize(n, n);
   const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
 
-  std::stringstream s;
-  s << "POTRF: " << uplo;
-  s << ", n = " << n << ", lda = " << lda;
-  SCOPED_TRACE(s.str());
-
   std::function<T(const TileElementIndex&)> el_a, res_a;
 
   std::tie(el_a, res_a) = getCholeskySetters<TileElementIndex, T>(uplo);
@@ -50,6 +45,11 @@ void testPotrf(const blas::Uplo uplo, const SizeType n, const SizeType extra_lda
     invokeLapack<D>(tile::potrf_o, uplo, a);
   }
 
+  std::stringstream s;
+  s << "POTRF: " << uplo;
+  s << ", n = " << n << ", lda = " << lda;
+  SCOPED_TRACE(s.str());
+
   // Check result against analytical result.
   CHECK_TILE_NEAR(res_a, a, 4 * (n + 1) * TypeUtilities<T>::error,
                   4 * (n + 1) * TypeUtilities<T>::error);
@@ -60,17 +60,19 @@ void testPotrfNonPosDef(const blas::Uplo uplo, SizeType n, SizeType extra_lda) {
   const TileElementSize size_a = TileElementSize(n, n);
   const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
 
-  std::stringstream s;
-  s << "POTRF Non Positive Definite: " << uplo;
-  s << ", n = " << n << ", lda = " << lda;
-  SCOPED_TRACE(s.str());
-
   // Use null matrix
   auto el_a = [](const TileElementIndex&) { return TypeUtilities<T>::element(0, 0); };
 
   auto a = createTile<T, D>(el_a, size_a, lda);
 
-  EXPECT_EQ(1, invokeLapackInfo<D>(tile::potrfInfo_o, uplo, a));
+  auto info = invokeLapackInfo<D>(tile::potrfInfo_o, uplo, a);
+
+  std::stringstream s;
+  s << "POTRF Non Positive Definite: " << uplo;
+  s << ", n = " << n << ", lda = " << lda;
+  SCOPED_TRACE(s.str());
+
+  EXPECT_EQ(1, info);
 }
 
 }

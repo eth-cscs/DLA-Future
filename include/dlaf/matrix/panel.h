@@ -83,7 +83,7 @@ struct Panel<axis, const T, D> {
     DLAF_ASSERT(internal_.count(linearIndex(index)) == 0, "internal tile have been already used", index);
     DLAF_ASSERT(!isExternal(index), "already set to external", index);
 
-#if defined DLAF_ASSERT_MODERATE
+#if defined DLAF_ASSERT_MODERATE_ENABLE
     {
       const auto panel_tile_size = dist_matrix_.tileSize(dist_matrix_.globalTileIndex(index));
       new_tile_fut.then(hpx::launch::sync, hpx::util::unwrapping([panel_tile_size](const auto& tile) {

@@ -202,7 +202,6 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
         }
       }
 
-      // TODO skip last step tile
       broadcast(executor_mpi, kk_rank.col(), l_panel, l_panelT, mpi_row_task_chain, mpi_col_task_chain);
 
       a_panelT.setRange({0, 0}, kk_offset);
@@ -305,7 +304,6 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 
     a_panelT.setRange(at_offset, distr.localNrTiles());
 
-    // TODO skip last step tile
     broadcast(executor_mpi, kk_rank.col(), a_panel, a_panelT, mpi_row_task_chain, mpi_col_task_chain);
 
     // trailing matrix update

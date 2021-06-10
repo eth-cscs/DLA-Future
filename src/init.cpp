@@ -18,6 +18,7 @@
 #ifdef DLAF_WITH_CUDA
 #include <dlaf/cublas/executor.h>
 #include <dlaf/cuda/executor.h>
+#include <dlaf/cusolver/executor.h>
 #endif
 
 #include <cstdlib>
@@ -102,21 +103,38 @@ cuda::StreamPool getHpCudaStreamPool() {
   return *hp_stream_pool;
 }
 
-static std::unique_ptr<cublas::HandlePool> handle_pool{nullptr};
+static std::unique_ptr<cublas::HandlePool> cublas_handle_pool{nullptr};
 
 void initializeCublasHandlePool() {
-  DLAF_ASSERT(!handle_pool, "");
-  handle_pool = std::make_unique<cublas::HandlePool>(0, CUBLAS_POINTER_MODE_HOST);
+  DLAF_ASSERT(!cublas_handle_pool, "");
+  cublas_handle_pool = std::make_unique<cublas::HandlePool>(0, CUBLAS_POINTER_MODE_HOST);
 }
 
 void finalizeCublasHandlePool() {
-  DLAF_ASSERT(bool(handle_pool), "");
-  handle_pool.reset();
+  DLAF_ASSERT(bool(cublas_handle_pool), "");
+  cublas_handle_pool.reset();
 }
 
 cublas::HandlePool getCublasHandlePool() {
-  DLAF_ASSERT(bool(handle_pool), "");
-  return *handle_pool;
+  DLAF_ASSERT(bool(cublas_handle_pool), "");
+  return *cublas_handle_pool;
+}
+
+static std::unique_ptr<cusolver::HandlePool> cusolver_handle_pool{nullptr};
+
+void initializeCusolverHandlePool() {
+  DLAF_ASSERT(!cusolver_handle_pool, "");
+  cusolver_handle_pool = std::make_unique<cusolver::HandlePool>(0);
+}
+
+void finalizeCusolverHandlePool() {
+  DLAF_ASSERT(bool(cusolver_handle_pool), "");
+  cusolver_handle_pool.reset();
+}
+
+cusolver::HandlePool getCusolverHandlePool() {
+  DLAF_ASSERT(bool(cusolver_handle_pool), "");
+  return *cusolver_handle_pool;
 }
 
 template <>
@@ -127,6 +145,7 @@ struct Init<Backend::GPU> {
     initializeNpCudaStreamPool(device, cfg.num_np_cuda_streams_per_thread);
     initializeHpCudaStreamPool(device, cfg.num_hp_cuda_streams_per_thread);
     initializeCublasHandlePool();
+    initializeCusolverHandlePool();
     hpx::cuda::experimental::detail::register_polling(hpx::resource::get_thread_pool("default"));
   }
 
@@ -135,6 +154,7 @@ struct Init<Backend::GPU> {
     finalizeNpCudaStreamPool();
     finalizeHpCudaStreamPool();
     finalizeCublasHandlePool();
+    finalizeCusolverHandlePool();
   }
 };
 #endif

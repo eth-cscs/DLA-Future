@@ -17,8 +17,7 @@
 #include "dlaf/blas/enum_output.h"
 #include "dlaf/blas/tile.h"
 #include "dlaf/matrix/tile.h"
-#include "dlaf/memory/memory_view.h"
-#include "dlaf/util_blas.h"
+#include "dlaf_test/blas/invoke.h"
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/matrix/util_tile_blas.h"
 #include "dlaf_test/util_types.h"
@@ -32,7 +31,7 @@ using namespace testing;
 
 using dlaf::util::size_t::mul;
 
-template <class ElementIndex, class T, class CT = const T>
+template <Device D, class T, class CT = const T>
 void testTrmm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const blas::Diag diag,
               const SizeType m, const SizeType n, const SizeType extra_lda, const SizeType extra_ldb) {
   const TileElementSize size_a =
@@ -53,10 +52,10 @@ void testTrmm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, c
 
   if (side == blas::Side::Left)
     std::tie(el_op_a, res_b, el_b) =
-        getLeftTriangularSystem<ElementIndex, T>(uplo, op, diag, static_cast<T>(1.0) / alpha, m);
+        getLeftTriangularSystem<TileElementIndex, T>(uplo, op, diag, static_cast<T>(1.0) / alpha, m);
   else
     std::tie(el_op_a, res_b, el_b) =
-        getRightTriangularSystem<ElementIndex, T>(uplo, op, diag, static_cast<T>(1.0) / alpha, n);
+        getRightTriangularSystem<TileElementIndex, T>(uplo, op, diag, static_cast<T>(1.0) / alpha, n);
 
   auto a = createTile<CT>(el_op_a, size_a, lda, op);
   auto b = createTile<T>(el_b, size_b, ldb);

@@ -17,6 +17,7 @@
 #include <iostream>
 #include <sstream>
 #include "gtest/gtest.h"
+#include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/traits.h"
 
@@ -77,10 +78,38 @@ void print(const Tile<T, Device::CPU>& tile, int precision = 4, std::ostream& ou
 ///
 /// @pre size is the dimension of the tile to be created (type: TileElementSize);
 /// @pre ld is the leading dimension of the tile to be created.
+template <class T, Device D = Device::CPU>
+Tile<T, D> createTile(const TileElementSize size, const SizeType ld) {
+  memory::MemoryView<T, D> support_mem(ld * size.cols());
+  return Tile<T, D>(size, std::move(support_mem), ld);
+}
+
+namespace internal {
+template <class T, Device D>
+struct CreateTile;
+
 template <class T>
-Tile<T, Device::CPU> createTile(const TileElementSize size, const SizeType ld) {
-  memory::MemoryView<T, Device::CPU> support_mem(ld * size.cols());
-  return Tile<T, Device::CPU>(size, std::move(support_mem), ld);
+struct CreateTile<T, Device::CPU> {
+  template <class ElementGetter>
+  static Tile<T, Device::CPU> createAndSet(ElementGetter val, const TileElementSize size,
+                                           const SizeType ld) {
+    auto tile = createTile<std::remove_const_t<T>, Device::CPU>(size, ld);
+    set(tile, val);
+    return Tile<T, Device::CPU>(std::move(tile));
+  }
+};
+
+template <class T>
+struct CreateTile<T, Device::GPU> {
+  template <class ElementGetter>
+  static Tile<T, Device::GPU> createAndSet(ElementGetter val, const TileElementSize size,
+                                           const SizeType ld) {
+    auto tile_host = CreateTile<T, Device::CPU>::createAndSet(val, size, ld);
+    auto tile = createTile<std::remove_const_t<T>, Device::GPU>(size, ld);
+    copy(tile_host, tile);
+    return Tile<T, Device::GPU>(std::move(tile));
+  }
+};
 }
 
 /// Create a tile and fill with selected values
@@ -89,11 +118,9 @@ Tile<T, Device::CPU> createTile(const TileElementSize size, const SizeType ld) {
 /// @pre val return type should be T;
 /// @pre size is the dimension of the tile to be created (type: TileElementSize);
 /// @pre ld is the leading dimension of the tile to be created.
-template <class T, class ElementGetter>
-Tile<T, Device::CPU> createTile(ElementGetter val, const TileElementSize size, const SizeType ld) {
-  auto tile = createTile<std::remove_const_t<T>>(size, ld);
-  set(tile, val);
-  return Tile<T, Device::CPU>(std::move(tile));
+template <class T, Device D = Device::CPU, class ElementGetter>
+Tile<T, D> createTile(ElementGetter val, const TileElementSize size, const SizeType ld) {
+  return internal::CreateTile<T, D>::createAndSet(val, size, ld);
 }
 
 namespace internal {
@@ -124,6 +151,28 @@ void check(ElementGetter&& expected, const Tile<const T, Device::CPU>& tile, Com
   }
 }
 
+#ifdef DLAF_WITH_CUDA
+/// Checks the elements of the tile.
+///
+/// comp(expected({i, j}), (i, j)-element) is used to compare the elements.
+/// err_message(expected({i, j}), (i, j)-element) is printed for the first element which does not fulfill
+/// the comparison.
+/// @pre expected argument is an index of type const TileElementIndex&,
+/// @pre comp should have two arguments and return true if the comparison is fulfilled and false otherwise,
+/// @pre err_message should have two arguments and return a string,
+/// @pre expected return type should be the same as the type of the first argument of comp and of err_message,
+/// @pre The second argument of comp should be either T, T& or const T&,
+/// @pre The second argument of err_message should be either T, T& or const T&.
+template <class T, class ElementGetter, class ComparisonOp, class ErrorMessageGetter,
+          std::enable_if_t<!std::is_convertible<ElementGetter, T>::value, int> = 0>
+void check(ElementGetter&& expected, const Tile<const T, Device::GPU>& tile, ComparisonOp comp,
+           ErrorMessageGetter err_message, const char* file, const int line) {
+  auto tile_host = createTile<std::remove_const_t<T>, Device::CPU>(tile.size(), tile.ld());
+  copy(tile, tile_host);
+  check(std::forward<ElementGetter>(expected), tile_host, comp, err_message, file, line);
+}
+#endif
+
 /// Checks the elements of the tile w.r.t. a fixed value.
 ///
 /// comp(expected, (i, j)-element) is used to compare the elements.
@@ -134,10 +183,10 @@ void check(ElementGetter&& expected, const Tile<const T, Device::CPU>& tile, Com
 /// @pre expected type should be the same as the type of the first argument of comp and of err_message,
 /// @pre the second argument of comp should be either T, T& or const T&,
 /// @pre the second argument of err_message should be either T, T& or const T&.
-template <class T, class U, class ComparisonOp, class ErrorMessageGetter,
+template <class T, Device D, class U, class ComparisonOp, class ErrorMessageGetter,
           enable_if_convertible_t<U, T, int> = 0>
-void check(U expected, const Tile<const T, Device::CPU>& tile, ComparisonOp comp,
-           ErrorMessageGetter err_message, const char* file, const int line) {
+void check(U expected, const Tile<const T, D>& tile, ComparisonOp comp, ErrorMessageGetter err_message,
+           const char* file, const int line) {
   check([expected](TileElementIndex) { return expected; }, tile, comp, err_message, file, line);
 }
 }
@@ -147,9 +196,8 @@ void check(U expected, const Tile<const T, Device::CPU>& tile, ComparisonOp comp
 /// The (i, j)-element of the tile is compared to exp_el({i, j}).
 /// @pre exp_el argument is an index of type const TileElementIndex&,
 /// @pre exp_el return type should be T.
-template <class T, class ElementGetter>
-void checkEQ(ElementGetter&& exp_el, const Tile<const T, Device::CPU>& tile, const char* file,
-             const int line) {
+template <class T, Device D, class ElementGetter>
+void checkEQ(ElementGetter&& exp_el, const Tile<const T, D>& tile, const char* file, const int line) {
   auto err_message = [](T expected, T value) {
     std::stringstream s;
     s << "expected " << expected << " == " << value;
@@ -164,9 +212,8 @@ void checkEQ(ElementGetter&& exp_el, const Tile<const T, Device::CPU>& tile, con
 /// The pointer to (i, j)-element of the matrix is compared to exp_ptr({i, j}).
 /// @pre exp_ptr argument is an index of type const TileElementIndex&,
 /// @pre exp_ptr return type should be T*.
-template <class T, class PointerGetter>
-void checkPtr(PointerGetter exp_ptr, const Tile<const T, Device::CPU>& tile, const char* file,
-              const int line) {
+template <class T, Device D, class PointerGetter>
+void checkPtr(PointerGetter exp_ptr, const Tile<const T, D>& tile, const char* file, const int line) {
   auto comp = [](const T* ptr, const T& value) { return ptr == &value; };
   auto err_message = [](const T* expected, const T& value) {
     std::stringstream s;
@@ -185,8 +232,8 @@ void checkPtr(PointerGetter exp_ptr, const Tile<const T, Device::CPU>& tile, con
 /// @pre rel_err >= 0,
 /// @pre abs_err >= 0,
 /// @pre rel_err > 0 || abs_err > 0.
-template <class T, class ElementGetter>
-void checkNear(ElementGetter&& expected, const Tile<const T, Device::CPU>& tile, BaseType<T> rel_err,
+template <class T, Device D, class ElementGetter>
+void checkNear(ElementGetter&& expected, const Tile<const T, D>& tile, BaseType<T> rel_err,
                BaseType<T> abs_err, const char* file, const int line) {
   ASSERT_GE(rel_err, 0);
   ASSERT_GE(abs_err, 0);

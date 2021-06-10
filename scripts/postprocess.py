@@ -29,9 +29,9 @@ def _gen_nodes_plot(
         title:          title of the plot
         df:             the pandas.DataFrame with the data for the plot
         combine_mb:     bool indicates if different mb has to be included in the same plot
-        filts:          [regex] for matching benchmark names to filter from the plot
-        replaces:       [(regex_replace_rule, newtext)] to apply to benchmark names for the legend
-        styles:         [(regex, dict())] where dict() contains kwargs valid for the plot
+        filts:          list of regex for selecting benchmark names to plot
+        replaces:       list of (regex_replace_rule, newtext) to apply to benchmark names for the legend
+        styles:         list of (regex, dict()) where dict() contains kwargs valid for the plot
         subplot_args:   kwargs to pass to pyplot.subplots
         fill_area:      switch on/off the min-max area on plots
     """

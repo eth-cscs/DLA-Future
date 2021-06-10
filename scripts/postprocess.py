@@ -28,7 +28,7 @@ def _gen_nodes_plot(
         plt_type:       ppn | time
         title:          title of the plot
         df:             the pandas.DataFrame with the data for the plot
-        combine_mb:     group also by mb sizes
+        combine_mb:     bool indicates if different mb has to be included in the same plot
         filts:          [regex] for matching benchmark names to filter from the plot
         replaces:       [(regex_replace_rule, newtext)] to apply to benchmark names for the legend
         styles:         [(regex, dict())] where dict() contains kwargs valid for the plot

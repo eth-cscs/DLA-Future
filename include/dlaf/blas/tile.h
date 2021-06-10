@@ -78,110 +78,49 @@ void trsm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const
 
 #ifdef DLAF_WITH_CUDA
 namespace internal {
-template <typename T>
-struct CublasGemm;
 
-template <>
-struct CublasGemm<float> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasSgemm(std::forward<Args>(args)...));
+#define DLAF_DECLARE_CUBLAS_OP(Name) \
+  template <typename T>              \
+  struct Cublas##Name
+
+#define DLAF_DEFINE_CUBLAS_OP(Name, Type, f)                    \
+  template <>                                                   \
+  struct Cublas##Name<Type> {                                   \
+    template <typename... Args>                                 \
+    static void call(Args&&... args) {                          \
+      DLAF_CUBLAS_CALL(cublas##f(std::forward<Args>(args)...)); \
+    }                                                           \
   }
-};
 
-template <>
-struct CublasGemm<double> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasDgemm(std::forward<Args>(args)...));
-  }
-};
+DLAF_DECLARE_CUBLAS_OP(Gemm);
+DLAF_DEFINE_CUBLAS_OP(Gemm, float, Sgemm);
+DLAF_DEFINE_CUBLAS_OP(Gemm, double, Dgemm);
+DLAF_DEFINE_CUBLAS_OP(Gemm, std::complex<float>, Cgemm);
+DLAF_DEFINE_CUBLAS_OP(Gemm, std::complex<double>, Zgemm);
 
-template <>
-struct CublasGemm<std::complex<float>> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasCgemm(std::forward<Args>(args)...));
-  }
-};
+DLAF_DECLARE_CUBLAS_OP(Hemm);
+DLAF_DEFINE_CUBLAS_OP(Hemm, float, Ssymm);
+DLAF_DEFINE_CUBLAS_OP(Hemm, double, Dsymm);
+DLAF_DEFINE_CUBLAS_OP(Hemm, std::complex<float>, Chemm);
+DLAF_DEFINE_CUBLAS_OP(Hemm, std::complex<double>, Zhemm);
 
-template <>
-struct CublasGemm<std::complex<double>> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasZgemm(std::forward<Args>(args)...));
-  }
-};
+DLAF_DECLARE_CUBLAS_OP(Her2k);
+DLAF_DEFINE_CUBLAS_OP(Her2k, float, Ssyr2k);
+DLAF_DEFINE_CUBLAS_OP(Her2k, double, Dsyr2k);
+DLAF_DEFINE_CUBLAS_OP(Her2k, std::complex<float>, Cher2k);
+DLAF_DEFINE_CUBLAS_OP(Her2k, std::complex<double>, Zher2k);
 
-template <typename T>
-struct CublasHerk;
+DLAF_DECLARE_CUBLAS_OP(Herk);
+DLAF_DEFINE_CUBLAS_OP(Herk, float, Ssyrk);
+DLAF_DEFINE_CUBLAS_OP(Herk, double, Dsyrk);
+DLAF_DEFINE_CUBLAS_OP(Herk, std::complex<float>, Cherk);
+DLAF_DEFINE_CUBLAS_OP(Herk, std::complex<double>, Zherk);
 
-template <>
-struct CublasHerk<float> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasSsyrk(std::forward<Args>(args)...));
-  }
-};
-
-template <>
-struct CublasHerk<double> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasDsyrk(std::forward<Args>(args)...));
-  }
-};
-
-template <>
-struct CublasHerk<std::complex<float>> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasCherk(std::forward<Args>(args)...));
-  }
-};
-
-template <>
-struct CublasHerk<std::complex<double>> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasZherk(std::forward<Args>(args)...));
-  }
-};
-
-template <typename T>
-struct CublasTrsm;
-
-template <>
-struct CublasTrsm<float> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasStrsm(std::forward<Args>(args)...));
-  }
-};
-
-template <>
-struct CublasTrsm<double> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasDtrsm(std::forward<Args>(args)...));
-  }
-};
-
-template <>
-struct CublasTrsm<std::complex<float>> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasCtrsm(std::forward<Args>(args)...));
-  }
-};
-
-template <>
-struct CublasTrsm<std::complex<double>> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUBLAS_CALL(cublasZtrsm(std::forward<Args>(args)...));
-  }
-};
+DLAF_DECLARE_CUBLAS_OP(Trsm);
+DLAF_DEFINE_CUBLAS_OP(Trsm, float, Strsm);
+DLAF_DEFINE_CUBLAS_OP(Trsm, double, Dtrsm);
+DLAF_DEFINE_CUBLAS_OP(Trsm, std::complex<float>, Ctrsm);
+DLAF_DEFINE_CUBLAS_OP(Trsm, std::complex<double>, Ztrsm);
 }
 
 /// Computes general matrix matrix multiplication.
@@ -194,6 +133,30 @@ void gemm(cublasHandle_t handle, const blas::Op op_a, const blas::Op op_b, const
                                 s.k, util::blasToCublasCast(&alpha), util::blasToCublasCast(a.ptr()),
                                 a.ld(), util::blasToCublasCast(b.ptr()), b.ld(),
                                 util::blasToCublasCast(&beta), util::blasToCublasCast(c.ptr()), c.ld());
+}
+
+/// Computes matrix matrix multiplication where matrix @p a is hermitian (symmetric if T is real).
+template <class T>
+void hemm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, const T alpha,
+          const Tile<const T, Device::GPU>& a, const Tile<const T, Device::GPU>& b, const T beta,
+          const Tile<T, Device::GPU>& c) {
+  auto s = tile::internal::getHemmSizes(side, a, b, c);
+  internal::CublasHemm<T>::call(handle, util::blasToCublas(side), util::blasToCublas(uplo), s.m, s.n,
+                                util::blasToCublasCast(&alpha), util::blasToCublasCast(a.ptr()), a.ld(),
+                                util::blasToCublasCast(b.ptr()), b.ld(), util::blasToCublasCast(&beta),
+                                util::blasToCublasCast(c.ptr()), c.ld());
+}
+
+/// Performs a rank 2k update of hermitian (symmetric if T is real) tile @p a.
+template <class T>
+void her2k(cublasHandle_t handle, const blas::Uplo uplo, const blas::Op op, const T alpha,
+           const matrix::Tile<const T, Device::GPU>& a, const Tile<const T, Device::GPU>& b,
+           const BaseType<T> beta, const matrix::Tile<T, Device::GPU>& c) {
+  auto s = tile::internal::getHer2kSizes(op, a, b, c);
+  internal::CublasHer2k<T>::call(handle, util::blasToCublas(uplo), util::blasToCublas(op), s.n, s.k,
+                                 util::blasToCublasCast(&alpha), util::blasToCublasCast(a.ptr()), a.ld(),
+                                 util::blasToCublasCast(b.ptr()), b.ld(), util::blasToCublasCast(&beta),
+                                 util::blasToCublasCast(c.ptr()), c.ld());
 }
 
 /// Performs a rank k update of hermitian (symmetric if T is real) tile @p a.

@@ -93,7 +93,7 @@ struct her2kSizes {
 
 template <typename T, Device device>
 her2kSizes getHer2kSizes(blas::Op op, const dlaf::matrix::Tile<const T, device>& a,
-                         const dlaf::matrix::Tile<const T, device>&,
+                         const dlaf::matrix::Tile<const T, device>& b,
                          const dlaf::matrix::Tile<T, device>& c) {
   const SizeType rows = a.size().rows();
   const SizeType cols = a.size().cols();
@@ -102,6 +102,7 @@ her2kSizes getHer2kSizes(blas::Op op, const dlaf::matrix::Tile<const T, device>&
   DLAF_ASSERT(tile_complex_trans<T>(op), op);
 
   DLAF_ASSERT(square_size(c), c);
+  DLAF_ASSERT(a.size() == b.size(), a, b);
   DLAF_ASSERT(c.size().rows() == s.n, c, op, a);
 
   return s;

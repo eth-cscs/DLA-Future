@@ -160,7 +160,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     }
 
     // Reset W2 to zero
-    matrix::util::set(mat_w2, [](auto&&) { return 0; });
+    set_zero(mat_w2);
 
     const GlobalTileIndex v_start{k + 1, k};
     auto taus_panel = taus[k];

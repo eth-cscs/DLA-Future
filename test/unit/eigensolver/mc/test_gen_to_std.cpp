@@ -69,7 +69,7 @@ TYPED_TEST(EigensolverGenToStdLocalTest, Correctness) {
     std::tie(m, mb) = sz;
     const BaseType<TypeParam> alpha = 1.2f;
     const BaseType<TypeParam> beta = 1.5f;
-    const BaseType<TypeParam> gamma = -1.1f;
+    const BaseType<TypeParam> gamma = 1.1f;
 
     testGenToStdEigensolver(uplo, alpha, beta, gamma, m, mb);
   }

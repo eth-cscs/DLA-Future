@@ -33,7 +33,9 @@
 #include "dlaf/util_tile.h"
 
 #ifdef DLAF_WITH_CUDA
+#include "dlaf/cusolver/assert_info.h"
 #include "dlaf/cusolver/error.h"
+#include "dlaf/cusolver/hegst.h"
 #include "dlaf/util_cublas.h"
 #endif
 
@@ -59,6 +61,8 @@ template <class T>
 void hegst(const int itype, const blas::Uplo uplo, const Tile<T, Device::CPU>& a,
            const Tile<T, Device::CPU>& b) {
   DLAF_ASSERT(square_size(a), a);
+  DLAF_ASSERT(square_size(b), b);
+  DLAF_ASSERT(a.size() == b.size(), a, b);
   DLAF_ASSERT(itype >= 1 && itype <= 3, itype);
 
   auto info = lapack::hegst(itype, uplo, a.size().cols(), a.ptr(), a.ld(), b.ptr(), b.ld());
@@ -157,70 +161,44 @@ void potrf(const blas::Uplo uplo, const Tile<T, Device::CPU>& a) noexcept {
 
 #ifdef DLAF_WITH_CUDA
 namespace internal {
-template <typename T>
-struct CublasPotrf;
+#define DLAF_DECLARE_CUSOLVER_OP(Name) \
+  template <typename T>                \
+  struct Cusolver##Name
 
-template <>
-struct CublasPotrf<float> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUSOLVER_CALL(cusolverDnSpotrf(std::forward<Args>(args)...));
+#define DLAF_DEFINE_CUSOLVER_OP_BUFFER(Name, Type, f)                              \
+  template <>                                                                      \
+  struct Cusolver##Name<Type> {                                                    \
+    template <typename... Args>                                                    \
+    static void call(Args&&... args) {                                             \
+      DLAF_CUSOLVER_CALL(cusolverDn##f(std::forward<Args>(args)...));              \
+    }                                                                              \
+    template <typename... Args>                                                    \
+    static void callBufferSize(Args&&... args) {                                   \
+      DLAF_CUSOLVER_CALL(cusolverDn##f##_bufferSize(std::forward<Args>(args)...)); \
+    }                                                                              \
   }
 
-  template <typename... Args>
-  static void callBufferSize(Args&&... args) {
-    DLAF_CUSOLVER_CALL(cusolverDnSpotrf_bufferSize(std::forward<Args>(args)...));
-  }
-};
+DLAF_DECLARE_CUSOLVER_OP(Hegst);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, float, Ssygst);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, double, Dsygst);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, std::complex<float>, Chegst);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, std::complex<double>, Zhegst);
 
-template <>
-struct CublasPotrf<double> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUSOLVER_CALL(cusolverDnDpotrf(std::forward<Args>(args)...));
-  }
-
-  template <typename... Args>
-  static void callBufferSize(Args&&... args) {
-    DLAF_CUSOLVER_CALL(cusolverDnDpotrf_bufferSize(std::forward<Args>(args)...));
-  }
-};
-
-template <>
-struct CublasPotrf<std::complex<float>> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUSOLVER_CALL(cusolverDnCpotrf(std::forward<Args>(args)...));
-  }
-
-  template <typename... Args>
-  static void callBufferSize(Args&&... args) {
-    DLAF_CUSOLVER_CALL(cusolverDnCpotrf_bufferSize(std::forward<Args>(args)...));
-  }
-};
-
-template <>
-struct CublasPotrf<std::complex<double>> {
-  template <typename... Args>
-  static void call(Args&&... args) {
-    DLAF_CUSOLVER_CALL(cusolverDnZpotrf(std::forward<Args>(args)...));
-  }
-
-  template <typename... Args>
-  static void callBufferSize(Args&&... args) {
-    DLAF_CUSOLVER_CALL(cusolverDnZpotrf_bufferSize(std::forward<Args>(args)...));
-  }
-};
+DLAF_DECLARE_CUSOLVER_OP(Potrf);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, float, Spotrf);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, double, Dpotrf);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<float>, Cpotrf);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<double>, Zpotrf);
 }
 
 namespace internal {
 template <class T>
-class CusolverPotrfInfo {
+class CusolverInfo {
   memory::MemoryView<T, Device::GPU> workspace_;
   memory::MemoryView<int, Device::GPU> info_;
 
 public:
-  CusolverPotrfInfo(int workspace_size) : workspace_(workspace_size), info_(1) {}
+  CusolverInfo(int workspace_size) : workspace_(workspace_size), info_(1) {}
 
   T* workspace() {
     return workspace_();
@@ -229,21 +207,52 @@ public:
     return info_();
   }
 };
+
+template <class F, class T>
+void assertExtendInfo(F assertFunc, cusolverDnHandle_t handle, CusolverInfo<T>&& info) {
+  cudaStream_t stream;
+  DLAF_CUSOLVER_CALL(cusolverDnGetStream(handle, &stream));
+  assertFunc(stream, info.info());
+  // Extend info scope to the end of the kernel execution
+  hpx::cuda::experimental::detail::get_future_with_event(stream)  //
+      .then(hpx::launch::sync, [info = std::move(info)](hpx::future<void>&&) {});
+}
 }
 
 template <class T>
-internal::CusolverPotrfInfo<T> potrfInfo(cusolverDnHandle_t handle, const blas::Uplo uplo,
-                                         const matrix::Tile<T, Device::GPU>& a) {
+void hegst(cusolverDnHandle_t handle, const int itype, const blas::Uplo uplo,
+           const matrix::Tile<T, Device::GPU>& a, const matrix::Tile<T, Device::GPU>& b) {
+  DLAF_ASSERT(square_size(a), a);
+  DLAF_ASSERT(square_size(b), b);
+  DLAF_ASSERT(a.size() == b.size(), a, b);
+  const int n = a.size().rows();
+
+  int workspace_size;
+  internal::CusolverHegst<T>::callBufferSize(handle, itype, util::blasToCublas(uplo), n,
+                                             util::blasToCublasCast(a.ptr()), a.ld(),
+                                             util::blasToCublasCast(b.ptr()), b.ld(), &workspace_size);
+  internal::CusolverInfo<T> info{std::max(1, workspace_size)};
+  internal::CusolverHegst<T>::call(handle, itype, util::blasToCublas(uplo), n,
+                                   util::blasToCublasCast(a.ptr()), a.ld(),
+                                   util::blasToCublasCast(b.ptr()), b.ld(),
+                                   util::blasToCublasCast(info.workspace()), info.info());
+
+  assertExtendInfo(dlaf::cusolver::assertInfoHegst, handle, std::move(info));
+}
+
+template <class T>
+internal::CusolverInfo<T> potrfInfo(cusolverDnHandle_t handle, const blas::Uplo uplo,
+                                    const matrix::Tile<T, Device::GPU>& a) {
   DLAF_ASSERT(square_size(a), a);
   const int n = a.size().rows();
 
   int workspace_size;
-  internal::CublasPotrf<T>::callBufferSize(handle, util::blasToCublas(uplo), n,
-                                           util::blasToCublasCast(a.ptr()), a.ld(), &workspace_size);
-  internal::CusolverPotrfInfo<T> info{workspace_size};
-  internal::CublasPotrf<T>::call(handle, util::blasToCublas(uplo), n, util::blasToCublasCast(a.ptr()),
-                                 a.ld(), util::blasToCublasCast(info.workspace()), workspace_size,
-                                 info.info());
+  internal::CusolverPotrf<T>::callBufferSize(handle, util::blasToCublas(uplo), n,
+                                             util::blasToCublasCast(a.ptr()), a.ld(), &workspace_size);
+  internal::CusolverInfo<T> info{workspace_size};
+  internal::CusolverPotrf<T>::call(handle, util::blasToCublas(uplo), n, util::blasToCublasCast(a.ptr()),
+                                   a.ld(), util::blasToCublasCast(info.workspace()), workspace_size,
+                                   info.info());
 
   return info;
 }
@@ -251,29 +260,13 @@ internal::CusolverPotrfInfo<T> potrfInfo(cusolverDnHandle_t handle, const blas::
 template <class T>
 void potrf(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<T, Device::GPU>& a) {
   auto info = potrfInfo(handle, uplo, a);
-
-#ifdef DLAF_ASSERT_HEAVY_ENABLE
-  // info does not yet have the correct result, so we manually insert a copy
-  // operation from device to host which will happen once the potrf completes
-  // (because we use the same stream), and a continuation after the copy to
-  // check the value.
-  cudaStream_t stream;
-  DLAF_CUSOLVER_CALL(cusolverDnGetStream(handle, &stream));
-  auto f = hpx::cuda::experimental::detail::get_future_with_event(stream);
-
-  memory::MemoryView<int, Device::CPU> info_host(1);
-  DLAF_CUDA_CALL(cudaMemcpyAsync(info_host(), info.info(), sizeof(int), cudaMemcpyDeviceToHost, stream));
-
-  hpx::cuda::experimental::detail::get_future_with_event(stream)
-      .then(hpx::launch::sync,
-            [info = std::move(info), info_host = std::move(info_host)](hpx::future<void>&&) {
-              DLAF_ASSERT_HEAVY(*(info_host()) == 0, *(info_host()));
-            });
-#endif
+  assertExtendInfo(dlaf::cusolver::assertInfoHegst, handle, std::move(info));
 }
 #endif
 
+DLAF_MAKE_CALLABLE_OBJECT(hegst);
 DLAF_MAKE_CALLABLE_OBJECT(potrf);
+DLAF_MAKE_CALLABLE_OBJECT(potrfInfo);
 
 }
 }

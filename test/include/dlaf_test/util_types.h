@@ -34,11 +34,6 @@ struct TypeUtilities {
     return static_cast<T>(r);
   }
 
-  /// Returns val.
-  static constexpr T conj(T val) {
-    return val;
-  }
-
   /// Relative maximum error for a multiplication + addition.
   static constexpr T error = 2 * std::numeric_limits<T>::epsilon();
 };
@@ -58,11 +53,6 @@ struct TypeUtilities<std::complex<T>> {
   /// @pre r > 0.
   static constexpr std::complex<T> polar(double r, double theta) {
     return std::polar<T>(static_cast<T>(r), static_cast<T>(theta));
-  }
-
-  /// Returns std::conj(val).
-  static constexpr std::complex<T> conj(std::complex<T> val) {
-    return std::conj(val);
   }
 
   /// Relative maximum error for a multiplication + addition.

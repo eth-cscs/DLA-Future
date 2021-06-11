@@ -275,11 +275,11 @@ protected:
     return external_[linearIndex(idx_matrix)].valid();
   }
 
-  ///> Local matrix used for storing the panel data
-  matrix::Matrix<T, D> data_;
-
   ///> Parent matrix which this panel is related to
   Distribution dist_matrix_;
+
+  ///> Local matrix used for storing the panel data
+  matrix::Matrix<T, D> data_;
 
   ///> It represents from where it is necessary to allocate memory (fixed at construction time)
   SizeType bias_;

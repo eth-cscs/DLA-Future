@@ -12,6 +12,8 @@
 
 /// @file
 
+#include <utility>
+
 #include "blas.hh"
 #include "dlaf/matrix/tile.h"
 #include "dlaf_test/matrix/util_generic_blas.h"
@@ -22,38 +24,46 @@ namespace dlaf {
 namespace matrix {
 namespace test {
 
-/// Sets the elements of the tile.
-///
-/// The (i, j)-element of the tile is set to el({i, j}) if op == NoTrans,
-///                                          el({j, i}) if op == Trans,
-///                                          conj(el({j, i})) if op == ConjTrans.
-/// @pre el argument is an index of type const TileElementIndex& or TileElementIndex,
-/// @pre el return type should be T.
-template <class T, class Func>
-void set(Tile<T, Device::CPU>& tile, Func el, blas::Op op) {
+namespace internal {
+template <class ElementGetter>
+auto opValFunc(ElementGetter& val, const blas::Op op) {
+  std::function<decltype(val(std::declval<TileElementIndex>()))(TileElementIndex)> op_val;
   switch (op) {
     case blas::Op::NoTrans:
-      set(tile, el);
+      op_val = [&val](TileElementIndex i) { return val(i); };
       break;
 
     case blas::Op::Trans: {
-      auto op_el = [&el](TileElementIndex i) {
+      op_val = [&val](TileElementIndex i) {
         i.transpose();
-        return el(i);
+        return val(i);
       };
-      set(tile, op_el);
       break;
     }
 
     case blas::Op::ConjTrans: {
-      auto op_el = [&el](TileElementIndex i) {
+      op_val = [&val](TileElementIndex i) {
         i.transpose();
-        return dlaf::test::TypeUtilities<T>::conj(el(i));
+        return dlaf::conj(val(i));
       };
-      set(tile, op_el);
       break;
     }
   }
+  return op_val;
+}
+}
+
+/// Sets the elements of the tile.
+///
+/// The (i, j)-element of the tile is set to val({i, j}) if op == NoTrans,
+///                                          val({j, i}) if op == Trans,
+///                                          conj(val({j, i})) if op == ConjTrans.
+/// @pre el argument is an index of type const TileElementIndex& or TileElementIndex,
+/// @pre el return type should be T.
+template <class T, class ElementGetter>
+void set(Tile<T, Device::CPU>& tile, ElementGetter val, const blas::Op op) {
+  auto op_val = internal::opValFunc(val, op);
+  set(tile, op_val);
 }
 
 /// Create a read-only tile and fill with selected values
@@ -63,12 +73,11 @@ void set(Tile<T, Device::CPU>& tile, Func el, blas::Op op) {
 /// @pre size is the dimension of the tile to be created (type: TileElementSize);
 /// @pre ld is the leading dimension of the tile to be created,
 /// @pre op is the blas::Op to be applied to the tile.
-template <class T, class ElementGetter>
-Tile<T, Device::CPU> createTile(ElementGetter val, const TileElementSize size, const SizeType ld,
-                                const blas::Op op) {
-  auto tile = createTile<std::remove_const_t<T>>(size, ld);
-  set(tile, val, op);
-  return Tile<T, Device::CPU>(std::move(tile));
+template <class T, Device D = Device::CPU, class ElementGetter>
+Tile<T, D> createTile(ElementGetter val, const TileElementSize size, const SizeType ld,
+                      const blas::Op op) {
+  auto op_val = internal::opValFunc(val, op);
+  return createTile<T, D>(op_val, size, ld);
 }
 
 }

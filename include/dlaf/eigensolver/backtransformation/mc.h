@@ -287,11 +287,14 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         mat_c.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(k+1),
     }; 
 
-    panelVV.setRangeStart(kkv_offset);
-    panelW.setRangeStart(kkv_offset);
-    panelW2.setRangeStart(kkc_offset);
+//    panelVV.setRangeStart(kkv_offset);
+//    panelW.setRangeStart(kkv_offset);
+//    panelW2.setRangeStart(kkc_offset);
+    panelVV.setRange(kkv_offset, mat_v.distribution().template localNrTiles());
+    panelW.setRange(kkv_offset, mat_v.distribution().template localNrTiles());
+    panelW2.setRange(kkc_offset, mat_c.distribution().template localNrTiles());
     
-    for (SizeType i_local = 0; i_local < c_local_rows; ++i_local) {
+    for (SizeType i_local = mat_c.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k+1); i_local < c_local_rows; ++i_local) {
       auto i = mat_v.distribution().template globalTileFromLocalTile<Coord::Row>(i_local);
 
       // Copy V panel into VV

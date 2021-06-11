@@ -48,7 +48,7 @@ void set(MatrixType<T, Device::CPU>& mat, ElementGetter el, blas::Op op) {
     case blas::Op::ConjTrans: {
       auto op_el = [&el](GlobalElementIndex i) {
         i.transpose();
-        return dlaf::test::TypeUtilities<T>::conj(el(i));
+        return dlaf::conj(el(i));
       };
       set(mat, op_el);
       break;

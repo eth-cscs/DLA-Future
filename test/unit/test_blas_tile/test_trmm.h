@@ -32,7 +32,7 @@ using namespace testing;
 
 using dlaf::util::size_t::mul;
 
-template <class ElementIndex, class T, class CT = const T>
+template <Device D, class T, class CT = const T>
 void testTrmm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const blas::Diag diag, const SizeType m, const SizeType n,
               const SizeType extra_lda, const SizeType extra_ldb) {
   const TileElementSize size_a = side == blas::Side::Left ? TileElementSize(m, m) : TileElementSize(n, n);
@@ -41,26 +41,26 @@ void testTrmm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, c
   const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
   const SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
 
-  std::stringstream s;
-  s << "TRMM: " << side << ", " << uplo << ", " << op << ", " << diag << ", m = " << m << ", n = " << n
-    << ", lda = " << lda << ", ldb = " << ldb;
-  SCOPED_TRACE(s.str());
-
   const T alpha = TypeUtilities<T>::element(-1.2, .7);
 
   std::function<T(const TileElementIndex&)> el_op_a, el_b, res_b;
 
   if (side == blas::Side::Left)
     std::tie(el_op_a, el_b, res_b) =
-        getLeftTriangularMMSystem<ElementIndex, T>(uplo, op, diag, alpha, m);
+        getLeftTriangularMMSystem<TileElementIndex, T>(uplo, op, diag, alpha, m);
   else
     std::tie(el_op_a, el_b, res_b) =
-        getRightTriangularMMSystem<ElementIndex, T>(uplo, op, diag, alpha, n);
+        getRightTriangularMMSystem<TileElementIndex, T>(uplo, op, diag, alpha, n);
 
   auto a = createTile<CT>(el_op_a, size_a, lda, op);
   auto b = createTile<T>(el_b, size_b, ldb);
   
-  tile::trmm(side, uplo, op, diag, alpha, a, b);
+  invokeBlas<D>(tile::trmm_o, side, uplo, op, diag, alpha, a, b);
+
+  std::stringstream s;
+  s << "TRMM: " << side << ", " << uplo << ", " << op << ", " << diag << ", m = " << m << ", n = " << n
+    << ", lda = " << lda << ", ldb = " << ldb;
+  SCOPED_TRACE(s.str());
 
   CHECK_TILE_NEAR(res_b, b, 10 * (m + 1) * TypeUtilities<T>::error,
                   10 * (m + 1) * TypeUtilities<T>::error);

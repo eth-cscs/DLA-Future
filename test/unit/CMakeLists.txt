@@ -32,20 +32,6 @@ DLAF_addTest(test_lapack_tile
   USE_MAIN HPX
 )
 
-if(DLAF_WITH_CUDA)
-  DLAF_addTest(test_cublas_tile
-    SOURCES test_cublas_tile.cpp
-    LIBRARIES dlaf.core
-    USE_MAIN HPX
-  )
-
-  DLAF_addTest(test_cusolver_tile
-    SOURCES test_cusolver_tile.cpp
-    LIBRARIES dlaf.core
-    USE_MAIN HPX
-  )
-endif()
-
 # Generic libraries
 add_subdirectory(common)
 add_subdirectory(communication)

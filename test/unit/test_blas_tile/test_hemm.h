@@ -15,7 +15,7 @@
 #include "dlaf/blas/enum_output.h"
 #include "dlaf/blas/tile.h"
 #include "dlaf/matrix/tile.h"
-#include "dlaf/memory/memory_view.h"
+#include "dlaf_test/blas/invoke.h"
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/matrix/util_tile_blas.h"
 #include "dlaf_test/util_types.h"
@@ -29,7 +29,7 @@ using namespace testing;
 
 using dlaf::util::size_t::mul;
 
-template <class T, class CT = const T>
+template <Device D, class T, class CT = const T>
 void testHemm(const blas::Side side, const blas::Uplo uplo, const SizeType m, const SizeType n,
               const SizeType extra_lda, const SizeType extra_ldb, const SizeType extra_ldc) {
   const SizeType k = (side == blas::Side::Left) ? m : n;
@@ -41,12 +41,6 @@ void testHemm(const blas::Side side, const blas::Uplo uplo, const SizeType m, co
   const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
   const SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
   const SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
-
-  std::stringstream s;
-  s << "HEMM: " << side << ", " << uplo;
-  s << ", m = " << m << ", n = " << n;
-  s << ", lda = " << lda << ", ldb = " << ldb << ", ldc = " << ldc;
-  SCOPED_TRACE(s.str());
 
   const T alpha = TypeUtilities<T>::element(1.2, .7);
   const T beta = TypeUtilities<T>::element(1.1, .4);
@@ -116,11 +110,17 @@ void testHemm(const blas::Side side, const blas::Uplo uplo, const SizeType m, co
   };
 
   // Read-only tiles become constant if CT is const T.
-  auto a = createTile<CT>(el_a, size_a, lda);
-  auto b = createTile<CT>(el_b, size_b, ldb);
-  auto c = createTile<T>(el_c, size_c, ldc);
+  auto a = createTile<CT, D>(el_a, size_a, lda);
+  auto b = createTile<CT, D>(el_b, size_b, ldb);
+  auto c = createTile<T, D>(el_c, size_c, ldc);
 
-  tile::hemm(side, uplo, alpha, a, b, beta, c);
+  invokeBlas<D>(tile::hemm_o, side, uplo, alpha, a, b, beta, c);
+
+  std::stringstream s;
+  s << "HEMM: " << side << ", " << uplo;
+  s << ", m = " << m << ", n = " << n;
+  s << ", lda = " << lda << ", ldb = " << ldb << ", ldc = " << ldc;
+  SCOPED_TRACE(s.str());
 
   // Check result against analytical result.
   CHECK_TILE_NEAR(res_c, c, 2 * (k + 1) * TypeUtilities<T>::error,

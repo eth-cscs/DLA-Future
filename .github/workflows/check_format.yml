@@ -25,7 +25,7 @@ jobs:
             fi
 
             case $FILE in
-              *.cpp|*.h|*.hpp|*.tpp|*.ipp)
+              *.cpp|*.h|*.hpp|*.tpp|*.ipp|*.cu)
                 clang-format-8 -i --style=file $FILE
                 ;;
               *.pdf|*.hdf5|*.jpg|*.png|*.ppt|*.pptx|*.ipe)

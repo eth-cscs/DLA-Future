@@ -46,6 +46,10 @@ set(CMAKE_CXX_STANDARD 14)
 
 # ---- CUDA
 if (DLAF_WITH_CUDA)
+  if (NOT CMAKE_CUDA_ARCHITECTURES)
+    set(CMAKE_CUDA_ARCHITECTURES "60;70;80" CACHE STRING "Cuda architectures" FORCE)
+  endif()
+  enable_language(CUDA)
   find_package(CUDALIBS REQUIRED)
 endif()
 

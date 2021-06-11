@@ -15,7 +15,7 @@
 #include "dlaf/blas/enum_output.h"
 #include "dlaf/blas/tile.h"
 #include "dlaf/matrix/tile.h"
-#include "dlaf/memory/memory_view.h"
+#include "dlaf_test/blas/invoke.h"
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/matrix/util_tile_blas.h"
 #include "dlaf_test/util_types.h"
@@ -27,7 +27,7 @@ using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
 using namespace testing;
 
-template <class T, class CT = const T>
+template <Device D, class T, class CT = const T>
 void testGemm(const blas::Op op_a, const blas::Op op_b, const SizeType m, const SizeType n,
               const SizeType k, const SizeType extra_lda, const SizeType extra_ldb,
               const SizeType extra_ldc) {
@@ -40,12 +40,6 @@ void testGemm(const blas::Op op_a, const blas::Op op_b, const SizeType m, const 
   const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
   const SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
   const SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
-
-  std::stringstream s;
-  s << "GEMM: " << op_a << ", " << op_b;
-  s << ", m = " << m << ", n = " << n << ", k = " << k;
-  s << ", lda = " << lda << ", ldb = " << ldb << ", ldc = " << ldc;
-  SCOPED_TRACE(s.str());
 
   // Note: The tile elements are chosen such that:
   // - op_a(a)_ik = .9 * (i+1) / (k+.5) * exp(I*(2*i-k)),
@@ -82,11 +76,17 @@ void testGemm(const blas::Op op_a, const blas::Op op_b, const SizeType m, const 
     return beta * el_c(index) + gamma * TypeUtilities<T>::polar((i + 1) / (j + 2), 2 * i + j);
   };
 
-  auto a = createTile<CT>(el_op_a, size_a, lda, op_a);
-  auto b = createTile<CT>(el_op_b, size_b, ldb, op_b);
-  auto c = createTile<T>(el_c, size_c, ldc);
+  auto a = createTile<CT, D>(el_op_a, size_a, lda, op_a);
+  auto b = createTile<CT, D>(el_op_b, size_b, ldb, op_b);
+  auto c = createTile<T, D>(el_c, size_c, ldc);
 
-  tile::gemm(op_a, op_b, alpha, a, b, beta, c);
+  invokeBlas<D>(tile::gemm_o, op_a, op_b, alpha, a, b, beta, c);
+
+  std::stringstream s;
+  s << "GEMM: " << op_a << ", " << op_b;
+  s << ", m = " << m << ", n = " << n << ", k = " << k;
+  s << ", lda = " << lda << ", ldb = " << ldb << ", ldc = " << ldc;
+  SCOPED_TRACE(s.str());
 
   // Check result against analytical result.
   CHECK_TILE_NEAR(res_c, c, 2 * (k + 1) * TypeUtilities<T>::error,

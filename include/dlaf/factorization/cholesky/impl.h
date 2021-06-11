@@ -115,7 +115,6 @@ void Cholesky<backend, device, T>::call_L(Matrix<T, device>& mat_a) {
 
 template <Backend backend, Device device, class T>
 void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a) {
-  using hpx::util::unwrapping;
   using hpx::dataflow;
 
   auto executor_hp = dlaf::getHpExecutor<backend>();

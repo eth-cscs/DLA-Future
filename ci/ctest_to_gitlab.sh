@@ -31,7 +31,7 @@ allocate:
   extends: .daint_alloc
   variables:
     PULL_IMAGE: 'YES'
-    SLURM_TIMELIMIT: '30:00'
+    SLURM_TIMELIMIT: '40:00'
 
 {{JOBS}}
 
@@ -41,7 +41,7 @@ upload_reports:
   variables:
     PULL_IMAGE: 'NO'
     SLURM_NTASKS: 1
-    SLURM_TIMELIMIT: '6:00'
+    SLURM_TIMELIMIT: '10:00'
     DISABLE_AFTER_SCRIPT: 'YES'
   script: upload_codecov
 

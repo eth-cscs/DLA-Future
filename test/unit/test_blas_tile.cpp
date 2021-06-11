@@ -246,10 +246,10 @@ TYPED_TEST(TileOperationsTestGPU, Herk) {
 #endif
 
 std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> trmm_trsm_sizes =
-  {{0, 0, 0, 0},                 // all 0 sizes
-   {0, 5, 1, 0},  {7, 0, 1, 2},  // one 0 size
-   {1, 1, 0, 3},  {1, 12, 1, 0},  {17, 12, 1, 3}, {11, 23, 0, 3},
-   {9, 12, 1, 1}, {32, 32, 0, 0}, {32, 32, 4, 7}};
+    {{0, 0, 0, 0},                 // all 0 sizes
+     {0, 5, 1, 0},  {7, 0, 1, 2},  // one 0 size
+     {1, 1, 0, 3},  {1, 12, 1, 0},  {17, 12, 1, 3}, {11, 23, 0, 3},
+     {9, 12, 1, 1}, {32, 32, 0, 0}, {32, 32, 4, 7}};
 
 TYPED_TEST(TileOperationsTestMC, Trmm) {
   using Type = TypeParam;
@@ -274,7 +274,6 @@ TYPED_TEST(TileOperationsTestMC, Trmm) {
     }
   }
 }
-
 
 #ifdef DLAF_WITH_CUDA
 TYPED_TEST(TileOperationsTestGPU, Trmm) {

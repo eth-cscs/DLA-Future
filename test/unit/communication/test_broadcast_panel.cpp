@@ -141,9 +141,16 @@ void testBrodcastTranspose(comm::Executor& executor_mpi, const config_t& cfg,
 
   broadcast(executor_mpi, owner, panel_src, panel_dst, row_task_chain, col_task_chain);
 
-  // check that all destination tiles got the value from the right rank
-  for (const auto i_w : panel_dst.iteratorLocal()) {
-    CHECK_TILE_EQ(TypeUtil::element(owner, 26), panel_dst.read(i_w).get());
+  // Note:
+  // all source panels will have access to the same data available on the root rank,
+  // while the destination panels will have access to the corresponding "transposed" tile, except
+  // for the last global tile in the range.
+  for (const auto idx : panel_src.iteratorLocal()) {
+    constexpr auto CT = decltype(panel_src)::CoordType;
+    const auto i = dist.template globalTileFromLocalTile<CT>(idx.get(CT));
+    if (i == panel_src.rangeEnd() - 1) continue;
+    CHECK_TILE_EQ(TypeUtil::element(owner, 26), panel_src.read(idx).get());
+  }
 }
 
 TYPED_TEST(PanelBcastTest, BroadcastCol2Row) {

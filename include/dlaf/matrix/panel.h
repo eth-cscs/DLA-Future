@@ -285,10 +285,10 @@ protected:
   SizeType bias_;
   ///> It represents from where the panel gives access to tiles
   SizeType start_;
-  SizeType start_local_;
-  ///> It represents the last
+  SizeType start_local_;  // local version of @p start_
+  ///> It represents the last tile which this panel gives access to
   SizeType end_;
-  SizeType end_local_;
+  SizeType end_local_;  // local version of @p end_
 
   ///> Container for references to external tiles
   common::internal::vector<hpx::shared_future<ConstTileType>> external_;

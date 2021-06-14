@@ -20,7 +20,7 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/communication/sync/broadcast.h"
-#include "dlaf/lapack_tile.h"  // Just for lapack.hh workaround
+#include "dlaf/lapack/tile.h"  // Just for lapack.hh workaround
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/memory/memory_view.h"

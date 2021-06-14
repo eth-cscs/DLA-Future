@@ -148,7 +148,8 @@ void testBrodcastTranspose(comm::Executor& executor_mpi, const config_t& cfg,
   for (const auto idx : panel_src.iteratorLocal()) {
     constexpr auto CT = decltype(panel_src)::CoordType;
     const auto i = dist.template globalTileFromLocalTile<CT>(idx.get(CT));
-    if (i == panel_src.rangeEnd() - 1) continue;
+    if (i == panel_src.rangeEnd() - 1)
+      continue;
     CHECK_TILE_EQ(TypeUtil::element(owner, 26), panel_src.read(idx).get());
   }
 }

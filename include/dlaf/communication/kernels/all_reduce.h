@@ -80,10 +80,10 @@ void scheduleAllReduce(const comm::Executor& ex,
   }
 
   // clang-format off
-  bag_out = hpx::dataflow(
+  bag_out = getUnwrapReturnValue(hpx::dataflow(
       ex,
-      hpx::util::unwrapping(internal::allReduce_o),
-      std::move(pcomm), reduce_op, std::move(bag_in), std::move(bag_out), tile_in);
+      matrix::unwrapExtendTiles(internal::allReduce_o),
+      std::move(pcomm), reduce_op, std::move(bag_in), std::move(bag_out), tile_in));
   // clang-format on
 
   // clang-format off

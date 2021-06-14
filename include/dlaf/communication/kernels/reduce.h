@@ -22,6 +22,7 @@
 #include "dlaf/communication/executor.h"
 #include "dlaf/communication/message.h"
 #include "dlaf/communication/rdma.h"
+#include "dlaf/executors.h"
 #include "dlaf/matrix/tile.h"
 
 namespace dlaf {
@@ -79,6 +80,7 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
     // clang-format off
     auto wrapped = getUnwrapRetValAndArgs(
         hpx::dataflow(
+          dlaf::getHpExecutor<Backend::MC>(),
           matrix::unwrapExtendTiles(common::internal::makeItContiguous_o),
           std::move(tile)));
     // clang-format on
@@ -106,6 +108,7 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
   // with the dataflow, mathing the two lifetimes.
   // clang-format off
   hpx::dataflow(
+      dlaf::getHpExecutor<Backend::MC>(),
       hpx::util::unwrapping(common::internal::copyBack_o),
       std::move(tile), std::move(bag));
   // clang-format on
@@ -124,6 +127,7 @@ void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
   // clang-format off
   hpx::future<common::internal::Bag<const T>> bag =
       hpx::dataflow(
+          dlaf::getHpExecutor<Backend::MC>(),
           hpx::util::unwrapping(common::internal::makeItContiguous_o),
           tile);
   // clang-format on

@@ -21,6 +21,7 @@
 #include "dlaf/communication/executor.h"
 #include "dlaf/communication/message.h"
 #include "dlaf/communication/rdma.h"
+#include "dlaf/executors.h"
 #include "dlaf/matrix/tile.h"
 
 namespace dlaf {
@@ -72,6 +73,7 @@ void scheduleAllReduce(const comm::Executor& ex,
     // clang-format off
     auto wrapped = getUnwrapRetValAndArgs(
         hpx::dataflow(
+          dlaf::getHpExecutor<Backend::MC>(),
           matrix::unwrapExtendTiles(common::internal::makeItContiguous_o),
           std::move(tile_out)));
     // clang-format on
@@ -88,6 +90,7 @@ void scheduleAllReduce(const comm::Executor& ex,
 
   // clang-format off
   hpx::dataflow(
+      dlaf::getHpExecutor<Backend::MC>(),
       hpx::util::unwrapping(common::internal::copyBack_o),
       std::move(tile_out), std::move(bag_out));
   // clang-format on
@@ -102,6 +105,7 @@ void scheduleAllReduceInPlace(const comm::Executor& ex,
     // clang-format off
     auto wrapped = getUnwrapRetValAndArgs(
         hpx::dataflow(
+          dlaf::getHpExecutor<Backend::MC>(),
           matrix::unwrapExtendTiles(common::internal::makeItContiguous_o),
           std::move(tile)));
     // clang-format on
@@ -118,6 +122,7 @@ void scheduleAllReduceInPlace(const comm::Executor& ex,
 
   // clang-format off
   hpx::dataflow(
+      dlaf::getHpExecutor<Backend::MC>(),
       hpx::util::unwrapping(common::internal::copyBack_o),
       std::move(tile), std::move(bag));
   // clang-format on

@@ -172,7 +172,18 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
 
   auto& chain_step2 = get_taskchain(comm_dir_step2);
 
-  for (const auto& indexT : panelT.iteratorLocal()) {
+  const auto range_last_excluded =
+      common::iterate_range2d(LocalTileIndex(coordT, panelT.rangeStartLocal()),
+                              LocalTileIndex(coordT,
+                                             std::max(panelT.rangeStartLocal(),
+                                                      panelT.rangeEndLocal() - 1),
+                                             1));
+
+  const SizeType last_tile = std::max(panelT.rangeStart(), panelT.rangeEnd() - 1);
+  const auto owner = dist.template rankGlobalTile<coordT>(last_tile);
+  const bool is_owner_of_last_tile = dist.rankIndex().get(coordT) == owner;
+
+  for (const auto& indexT : is_owner_of_last_tile ? range_last_excluded : panelT.iteratorLocal()) {
     SizeType index_diag;
     comm::IndexT_MPI owner_diag;
 

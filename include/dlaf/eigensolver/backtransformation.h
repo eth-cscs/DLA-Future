@@ -11,8 +11,8 @@
 
 #include <blas.hh>
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/matrix/matrix.h"
 #include "dlaf/eigensolver/backtransformation/mc.h"
+#include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
@@ -61,7 +61,8 @@ void backTransformation(Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v
 /// @pre mat_v is distributed according to grid.
 template <Backend backend, Device device, class T>
 void backTransformation(comm::CommunicatorGrid grid, Matrix<T, device>& mat_c,
-                        Matrix<const T, device>& mat_v, common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
+                        Matrix<const T, device>& mat_v,
+                        common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
   DLAF_ASSERT(mat_c.blockSize().rows() == mat_v.blockSize().rows(), mat_c, mat_v);
   DLAF_ASSERT(matrix::equal_process_grid(mat_c, grid), mat_c, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_v, grid), mat_v, grid);

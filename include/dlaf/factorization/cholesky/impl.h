@@ -144,38 +144,29 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
       potrfDiagTile(executor_hp, mat_a(kk_idx));
 
     // If there is no trailing matrix
-    if (k == nrtile - 1)
+    const SizeType kt = k + 1;
+    if (kt == nrtile)
       continue;
-
-    const LocalTileSize kk_offset{
-        distr.nextLocalTileFromGlobalTile<Coord::Row>(k),
-        distr.nextLocalTileFromGlobalTile<Coord::Col>(k),
-    };
-
-    const LocalTileSize at_offset{
-        distr.nextLocalTileFromGlobalTile<Coord::Row>(k + 1),
-        distr.nextLocalTileFromGlobalTile<Coord::Col>(k + 1),
-    };
-
-    const LocalTileIndex diag_wp_idx{0, kk_offset.cols()};
 
     auto& panel = panels.nextResource();
     auto& panelT = panelsT.nextResource();
 
-    panel.setRangeStart(at_offset);
+    panel.setRangeStart({kt, kt});
 
     if (kk_rank.col() == this_rank.col()) {
+      const LocalTileIndex diag_wp_idx{0, distr.localTileFromGlobalTile<Coord::Col>(k)};
+
       // Note:
       // panelT shrinked to a single tile for temporarly storing and communicating the diagonal
       // tile used for the column update
-      panelT.setRange(kk_offset, at_offset);
+      panelT.setRange({k, k}, {kt, kt});
 
       if (kk_rank.row() == this_rank.row())
         panelT.setTile(diag_wp_idx, mat_a.read(kk_idx));
       broadcast(executor_mpi, kk_rank.row(), panelT, mpi_col_task_chain);
 
       // COLUMN UPDATE
-      for (SizeType i = distr.nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
+      for (SizeType i = distr.nextLocalTileFromGlobalTile<Coord::Row>(kt);
            i < distr.localNrTiles().rows(); ++i) {
         const LocalTileIndex local_idx(Coord::Row, i);
         const LocalTileIndex ik_idx(i, distr.localTileFromGlobalTile<Coord::Col>(k));
@@ -189,13 +180,12 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
       panelT.reset();
     }
 
-    panelT.setRange(at_offset, distr.localNrTiles());
+    panelT.setRange({kt, kt}, distr.nrTiles());
 
     // TODO skip last step tile
     broadcast(executor_mpi, kk_rank.col(), panel, panelT, mpi_row_task_chain, mpi_col_task_chain);
 
     // TRAILING MATRIX
-    const SizeType kt = k + 1;
     for (SizeType jt_idx = kt; jt_idx < nrtile; ++jt_idx) {
       const auto owner = distr.rankGlobalTile({jt_idx, jt_idx});
 

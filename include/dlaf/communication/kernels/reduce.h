@@ -140,7 +140,7 @@ void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
   // clang-format off
   hpx::dataflow(
       ex,
-      hpx::util::unwrapping(internal::reduceSend_o),
+      matrix::unwrapExtendTiles(internal::reduceSend_o),
       rank_root, std::move(pcomm), reduce_op, std::move(bag), tile);
   // clang-format on
 }

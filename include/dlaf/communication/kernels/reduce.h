@@ -76,8 +76,12 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
   // and allows to get back the ownership of the tile from the return tuple <ret_value, args>
   hpx::future<common::internal::Bag<T>> bag;
   {
+    // clang-format off
     auto wrapped = getUnwrapRetValAndArgs(
-        hpx::dataflow(matrix::unwrapExtendTiles(common::internal::makeItContiguous_o), std::move(tile)));
+        hpx::dataflow(
+          matrix::unwrapExtendTiles(common::internal::makeItContiguous_o),
+          std::move(tile)));
+    // clang-format on
     bag = std::move(hpx::get<0>(wrapped));
     tile = std::move(hpx::get<0>(std::move(hpx::get<1>(wrapped))));
   }
@@ -89,15 +93,22 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
   // is completed.
   // If the temporary buffer has not been used, the tile is not kept alive since its lifetime is not
   // extended, but it is kept alive by the next step...
-  bag = hpx::dataflow(ex, hpx::util::unwrapping(internal::reduceRecvInPlace_o), std::move(pcomm),
-                      reduce_op, std::move(bag));
+  // clang-format off
+  bag = hpx::dataflow(
+      ex,
+      hpx::util::unwrapping(internal::reduceRecvInPlace_o),
+      std::move(pcomm), reduce_op, std::move(bag));
+  // clang-format on
 
   // Note:
   //
   // ... indeed the tile together with the future value of Bag after the async operation are "merged"
   // with the dataflow, mathing the two lifetimes.
-  tile = hpx::dataflow(hpx::util::unwrapping(common::internal::copyBack_o), std::move(tile),
-                       std::move(bag));
+  // clang-format off
+  hpx::dataflow(
+      hpx::util::unwrapping(common::internal::copyBack_o),
+      std::move(tile), std::move(bag));
+  // clang-format on
 }
 
 template <class T>
@@ -110,16 +121,24 @@ void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
   // with a temporary buffer if needed
   //
   // TODO shared_future<Tile> as assumption, it requires changes for future<Tile>
+  // clang-format off
   hpx::future<common::internal::Bag<const T>> bag =
-      hpx::dataflow(hpx::util::unwrapping(common::internal::makeItContiguous_o), tile);
+      hpx::dataflow(
+          hpx::util::unwrapping(common::internal::makeItContiguous_o),
+          tile);
+  // clang-format on
 
   // Note:
   //
   // Since there is no other step after the kernel, the shared_future<Tile> has to be
   // passed to the kernel so that its lifetime gets extended during the async operation
   // execution
-  hpx::dataflow(ex, hpx::util::unwrapping(internal::reduceSend_o), rank_root, std::move(pcomm),
-                reduce_op, std::move(bag), tile);
+  // clang-format off
+  hpx::dataflow(
+      ex,
+      hpx::util::unwrapping(internal::reduceSend_o),
+      rank_root, std::move(pcomm), reduce_op, std::move(bag), tile);
+  // clang-format on
 }
 }
 }

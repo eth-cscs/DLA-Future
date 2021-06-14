@@ -69,18 +69,28 @@ void scheduleAllReduce(const comm::Executor& ex,
 
   hpx::future<common::internal::Bag<T>> bag_out;
   {
+    // clang-format off
     auto wrapped = getUnwrapRetValAndArgs(
-        hpx::dataflow(matrix::unwrapExtendTiles(common::internal::makeItContiguous_o),
-                      std::move(tile_out)));
+        hpx::dataflow(
+          matrix::unwrapExtendTiles(common::internal::makeItContiguous_o),
+          std::move(tile_out)));
+    // clang-format on
     bag_out = std::move(hpx::get<0>(wrapped));
     tile_out = std::move(hpx::get<0>(std::move(hpx::get<1>(wrapped))));
   }
 
-  bag_out = hpx::dataflow(ex, hpx::util::unwrapping(internal::allReduce_o), std::move(pcomm), reduce_op,
-                          std::move(bag_in), std::move(bag_out), tile_in);
+  // clang-format off
+  bag_out = hpx::dataflow(
+      ex,
+      hpx::util::unwrapping(internal::allReduce_o),
+      std::move(pcomm), reduce_op, std::move(bag_in), std::move(bag_out), tile_in);
+  // clang-format on
 
-  hpx::dataflow(hpx::util::unwrapping(common::internal::copyBack_o), std::move(tile_out),
-                std::move(bag_out));
+  // clang-format off
+  hpx::dataflow(
+      hpx::util::unwrapping(common::internal::copyBack_o),
+      std::move(tile_out), std::move(bag_out));
+  // clang-format on
 }
 
 template <class T>
@@ -89,17 +99,28 @@ void scheduleAllReduceInPlace(const comm::Executor& ex,
                               MPI_Op reduce_op, hpx::future<matrix::Tile<T, Device::CPU>> tile) {
   hpx::future<common::internal::Bag<T>> bag;
   {
+    // clang-format off
     auto wrapped = getUnwrapRetValAndArgs(
-        hpx::dataflow(matrix::unwrapExtendTiles(common::internal::makeItContiguous_o), std::move(tile)));
+        hpx::dataflow(
+          matrix::unwrapExtendTiles(common::internal::makeItContiguous_o),
+          std::move(tile)));
+    // clang-format on
     bag = std::move(hpx::get<0>(wrapped));
     tile = std::move(hpx::get<0>(std::move(hpx::get<1>(wrapped))));
   }
 
-  bag = hpx::dataflow(ex, hpx::util::unwrapping(internal::allReduceInPlace_o), std::move(pcomm),
-                      reduce_op, std::move(bag));
+  // clang-format off
+  bag = hpx::dataflow(
+      ex,
+      hpx::util::unwrapping(internal::allReduceInPlace_o),
+      std::move(pcomm), reduce_op, std::move(bag));
+  // clang-format on
 
-  tile = hpx::dataflow(hpx::util::unwrapping(common::internal::copyBack_o), std::move(tile),
-                       std::move(bag));
+  // clang-format off
+  hpx::dataflow(
+      hpx::util::unwrapping(common::internal::copyBack_o),
+      std::move(tile), std::move(bag));
+  // clang-format on
 }
 }
 }

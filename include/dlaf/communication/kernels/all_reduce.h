@@ -100,7 +100,6 @@ void scheduleAllReduceInPlace(const comm::Executor& ex,
 
   tile = hpx::dataflow(hpx::util::unwrapping(common::internal::copyBack_o), std::move(tile),
                        std::move(bag));
-
 }
 }
 }

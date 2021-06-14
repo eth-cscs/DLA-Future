@@ -30,7 +30,7 @@
 #include "dlaf/communication/kernels/all_reduce.h"
 #include "dlaf/communication/kernels/reduce.h"
 #include "dlaf/executors.h"
-#include "dlaf/lapack_tile.h"
+#include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"

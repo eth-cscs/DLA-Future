@@ -9,5 +9,5 @@
 //
 #pragma once
 
-#include "dlaf/solver/backtransformation.h"
+#include "dlaf/eigensolver/backtransformation.h"
 #include "dlaf/eigensolver/gen_to_std.h"

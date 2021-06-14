@@ -99,7 +99,8 @@ hpx::shared_future<T> compute_reflector(
 
   using x0_and_squares_t = std::pair<T, T>;
 
-  auto executor_mpi = dlaf::getHpExecutor<Backend::MC>();
+  const auto ex = dlaf::getHpExecutor<Backend::MC>();
+  const auto ex_mpi = dlaf::getHpExecutor<Backend::MC>();
 
   const auto& dist = a.distribution();
   const comm::Index2D rank = dist.rankIndex();
@@ -125,7 +126,8 @@ hpx::shared_future<T> compute_reflector(
             return std::move(data);
           });
 
-      x0_and_squares = hpx::dataflow(compute_x0_and_squares_func, a.read(index_x_loc), x0_and_squares);
+      x0_and_squares =
+          hpx::dataflow(ex, compute_x0_and_squares_func, a.read(index_x_loc), x0_and_squares);
     }
     else {
       auto cumsum_squares_func = unwrapping([index_el_x0](const auto& tile_x, x0_and_squares_t&& data) {
@@ -134,7 +136,7 @@ hpx::shared_future<T> compute_reflector(
         return std::move(data);
       });
 
-      x0_and_squares = hpx::dataflow(cumsum_squares_func, a.read(index_x_loc), x0_and_squares);
+      x0_and_squares = hpx::dataflow(ex, cumsum_squares_func, a.read(index_x_loc), x0_and_squares);
     }
   }
 
@@ -151,7 +153,7 @@ hpx::shared_future<T> compute_reflector(
     return std::move(local_data);
   });
 
-  x0_and_squares = hpx::dataflow(executor_mpi, reduce_norm_func, x0_and_squares, serial_comm());
+  x0_and_squares = hpx::dataflow(ex_mpi, reduce_norm_func, x0_and_squares, serial_comm());
 
   /*
    * rank_v0 will compute params that will be used for next computation of reflector components
@@ -179,14 +181,14 @@ hpx::shared_future<T> compute_reflector(
     });
 
     hpx::tie(reflector_params, tau) =
-        hpx::split_future(hpx::dataflow(compute_parameters_func, x0_and_squares));
+        hpx::split_future(hpx::dataflow(ex, compute_parameters_func, x0_and_squares));
 
     auto bcast_params_func = unwrapping([](const auto& params, const T tau, auto&& comm_wrapper) {
       const T data[3] = {params.x0, params.y, tau};
       broadcast::send(comm_wrapper.ref().colCommunicator(), make_data(data, 3));
     });
 
-    hpx::dataflow(executor_mpi, bcast_params_func, reflector_params, tau, serial_comm());
+    hpx::dataflow(ex_mpi, bcast_params_func, reflector_params, tau, serial_comm());
   }
   else {
     auto bcast_params_func = unwrapping([rank = rank_v0.row()](auto&& comm_wrapper) {
@@ -200,7 +202,7 @@ hpx::shared_future<T> compute_reflector(
     });
 
     hpx::tie(reflector_params, tau) =
-        hpx::split_future(hpx::dataflow(executor_mpi, bcast_params_func, serial_comm()));
+        hpx::split_future(hpx::dataflow(ex_mpi, bcast_params_func, serial_comm()));
   }
 
   // 1A/3 COMPUTE REFLECTOR COMPONENTs
@@ -223,7 +225,7 @@ hpx::shared_future<T> compute_reflector(
                  typename TypeInfo<T>::BaseType(1) / (params.x0 - params.y), v, 1);
     });
 
-    hpx::dataflow(compute_reflector_func, a(index_v_loc), reflector_params);
+    hpx::dataflow(ex, compute_reflector_func, a(index_v_loc), reflector_params);
   }
 
   return tau;
@@ -238,7 +240,8 @@ void update_trailing_panel(
   using common::make_data;
   using namespace comm::sync;
 
-  auto executor_mpi = dlaf::getHpExecutor<Backend::MC>();
+  const auto ex = dlaf::getHpExecutor<Backend::MC>();
+  const auto ex_mpi = dlaf::getHpExecutor<Backend::MC>();
 
   const auto& dist = a.distribution();
 
@@ -306,7 +309,7 @@ void update_trailing_panel(
       }
     });
 
-    hpx::dataflow(compute_w_func, w(LocalTileIndex{0, 0}), a.read(index_a_loc));
+    hpx::dataflow(ex, compute_w_func, w(LocalTileIndex{0, 0}), a.read(index_a_loc));
   }
 
   // all-reduce W
@@ -314,7 +317,7 @@ void update_trailing_panel(
     allReduceInPlace(comm_wrapper.ref().colCommunicator(), MPI_SUM, make_data(tile_w));
   });
 
-  hpx::dataflow(executor_mpi, reduce_w_func, w(LocalTileIndex{0, 0}), serial_comm());
+  hpx::dataflow(ex_mpi, reduce_w_func, w(LocalTileIndex{0, 0}), serial_comm());
 
   // 1B/2 UPDATE TRAILING PANEL
   for (const LocalTileIndex& index_a_loc : ai_panel_range) {
@@ -366,12 +369,14 @@ void update_trailing_panel(
       }
     });
 
-    hpx::dataflow(apply_reflector_func, a(index_a_loc), tau, w.read(LocalTileIndex{0, 0}));
+    hpx::dataflow(ex, apply_reflector_func, a(index_a_loc), tau, w.read(LocalTileIndex{0, 0}));
   }
 }
 
 template <class T, class MatrixLikeT>
 void compute_w(PanelT<Coord::Col, T>& w, MatrixLikeT& v, FutureConstTile<T> tile_t) {
+  const auto ex = dlaf::getHpExecutor<Backend::MC>();
+
   auto trmm_func =
       hpx::util::unwrapping([](auto&& tile_w, const auto& tile_v, const auto& tile_t) -> void {
         dlaf::tile::lacpy(tile_v, tile_w);
@@ -393,7 +398,7 @@ void compute_w(PanelT<Coord::Col, T>& w, MatrixLikeT& v, FutureConstTile<T> tile
     FutureConstTile<T> tile_v = v.read(index_tile_w);
     // clang-format on
 
-    hpx::dataflow(trmm_func, std::move(tile_w), std::move(tile_v), tile_t);
+    hpx::dataflow(ex, trmm_func, std::move(tile_w), std::move(tile_v), tile_t);
   }
 }
 
@@ -408,7 +413,8 @@ void compute_x(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT<Co
   using dlaf::common::make_data;
   using dlaf::comm::sync::reduce;
 
-  auto executor_mpi = dlaf::getMPIExecutor<Backend::MC>();
+  const auto ex = dlaf::getHpExecutor<Backend::MC>();
+  const auto ex_mpi = dlaf::getMPIExecutor<Backend::MC>();
 
   const auto dist = a.distribution();
   const auto rank = dist.rankIndex();
@@ -434,7 +440,7 @@ void compute_x(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT<Co
         FutureConstTile<T>  tile_w = w.read(index_w);
         // clang-format on
 
-        hpx::dataflow(unwrapping(dlaf::tile::hemm<T>), blas::Side::Left, blas::Uplo::Lower,
+        hpx::dataflow(ex, unwrapping(dlaf::tile::hemm<T>), blas::Side::Left, blas::Uplo::Lower,
                       static_cast<T>(1), std::move(tile_a), std::move(tile_w),
                       static_cast<T>(is_first ? 0 : 1), std::move(tile_x));
       }
@@ -456,7 +462,7 @@ void compute_x(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT<Co
           FutureConstTile<T>  tile_w = wt.read(index_wt);
           // clang-format on
 
-          hpx::dataflow(unwrapping(dlaf::tile::gemm<T>), blas::Op::NoTrans, blas::Op::NoTrans,
+          hpx::dataflow(ex, unwrapping(dlaf::tile::gemm<T>), blas::Op::NoTrans, blas::Op::NoTrans,
                         static_cast<T>(1), std::move(tile_a), std::move(tile_w),
                         static_cast<T>(is_first ? 0 : 1), std::move(tile_x));
         }
@@ -487,7 +493,7 @@ void compute_x(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT<Co
           FutureConstTile<T>  tile_w = w.read(index_w);
           // clang-format on
 
-          hpx::dataflow(unwrapping(dlaf::tile::gemm<T>), blas::Op::ConjTrans, blas::Op::NoTrans,
+          hpx::dataflow(ex, unwrapping(dlaf::tile::gemm<T>), blas::Op::ConjTrans, blas::Op::NoTrans,
                         static_cast<T>(1), std::move(tile_a), std::move(tile_w),
                         static_cast<T>(is_first_xt ? 0 : 1), std::move(tile_x));
         }
@@ -515,11 +521,10 @@ void compute_x(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT<Co
       // rows.
       const auto i = dist.template localTileFromGlobalTile<Coord::Row>(index_k);
       // TODO here the IN-PLACE is happening (because Xt is not used for this tile on this rank)
-      comm::scheduleReduceRecvInPlace(executor_mpi, mpi_col_task_chain(), MPI_SUM, x({i, 0}));
+      comm::scheduleReduceRecvInPlace(ex_mpi, mpi_col_task_chain(), MPI_SUM, x({i, 0}));
     }
     else {
-      comm::scheduleReduceSend(executor_mpi, rank_owner_row, mpi_col_task_chain(), MPI_SUM,
-                               xt.read(index_xt));
+      comm::scheduleReduceSend(ex_mpi, rank_owner_row, mpi_col_task_chain(), MPI_SUM, xt.read(index_xt));
     }
   }
 
@@ -529,10 +534,9 @@ void compute_x(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT<Co
   // The result is needed just on the column with reflectors.
   for (const auto& index_x_loc : x.iterator()) {
     if (reducer_col == rank.col())
-      comm::scheduleReduceRecvInPlace(executor_mpi, mpi_row_task_chain(), MPI_SUM, x(index_x_loc));
+      comm::scheduleReduceRecvInPlace(ex_mpi, mpi_row_task_chain(), MPI_SUM, x(index_x_loc));
     else
-      comm::scheduleReduceSend(executor_mpi, reducer_col, mpi_row_task_chain(), MPI_SUM,
-                               x.read(index_x_loc));
+      comm::scheduleReduceSend(ex_mpi, reducer_col, mpi_row_task_chain(), MPI_SUM, x.read(index_x_loc));
   }
 }
 
@@ -543,7 +547,8 @@ void compute_w2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Coord
   using common::make_data;
   using namespace comm::sync;
 
-  auto executor_mpi = dlaf::getMPIExecutor<Backend::MC>();
+  const auto ex = dlaf::getHpExecutor<Backend::MC>();
+  const auto ex_mpi = dlaf::getMPIExecutor<Backend::MC>();
 
   // GEMM W2 = W* . X
   for (const auto& index_tile : w.iterator()) {
@@ -555,18 +560,20 @@ void compute_w2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Coord
     FutureConstTile<T>  tile_x  = x.read(index_tile);
     // clang-format on
 
-    hpx::dataflow(unwrapping(dlaf::tile::gemm<T>), blas::Op::ConjTrans, blas::Op::NoTrans,
+    hpx::dataflow(ex, unwrapping(dlaf::tile::gemm<T>), blas::Op::ConjTrans, blas::Op::NoTrans,
                   static_cast<T>(1), std::move(tile_w), std::move(tile_x), beta, std::move(tile_w2));
   }
 
   // all-reduce instead of computing it on each node, everyone in the panel should have it
   FutureTile<T> tile_w2 = w2(LocalTileIndex{0, 0});
-  comm::scheduleAllReduceInPlace(executor_mpi, mpi_col_task_chain(), MPI_SUM, std::move(tile_w2));
+  comm::scheduleAllReduceInPlace(ex_mpi, mpi_col_task_chain(), MPI_SUM, std::move(tile_w2));
 }
 
 template <class T, class MatrixLikeT>
 void update_x(PanelT<Coord::Col, T>& x, ConstMatrixT<T>& w2, MatrixLikeT& v) {
   using hpx::util::unwrapping;
+
+  const auto ex = dlaf::getHpExecutor<Backend::MC>();
 
   // GEMM X = X - 0.5 . V . W2
   for (const auto& index_row : v.iterator()) {
@@ -576,7 +583,7 @@ void update_x(PanelT<Coord::Col, T>& x, ConstMatrixT<T>& w2, MatrixLikeT& v) {
     FutureConstTile<T>  tile_w2 = w2.read(LocalTileIndex{0, 0});
     // clang-format on
 
-    hpx::dataflow(unwrapping(dlaf::tile::gemm<T>), blas::Op::NoTrans, blas::Op::NoTrans,
+    hpx::dataflow(ex, unwrapping(dlaf::tile::gemm<T>), blas::Op::NoTrans, blas::Op::NoTrans,
                   static_cast<T>(-0.5), std::move(tile_v), std::move(tile_w2), static_cast<T>(1),
                   std::move(tile_x));
   }
@@ -589,6 +596,8 @@ void update_a(const LocalTileSize& at_start, MatrixT<T>& a, ConstPanelT<Coord::C
   using hpx::util::unwrapping;
 
   const auto dist = a.distribution();
+
+  const auto ex = dlaf::getNpExecutor<Backend::MC>();
 
   for (SizeType i = at_start.rows(); i < dist.localNrTiles().rows(); ++i) {
     const auto limit = dist.template nextLocalTileFromGlobalTile<Coord::Col>(
@@ -610,7 +619,7 @@ void update_a(const LocalTileSize& at_start, MatrixT<T>& a, ConstPanelT<Coord::C
         // clang-format on
 
         const T alpha = -1;  // TODO T must be a signed type
-        hpx::dataflow(unwrapping(dlaf::tile::her2k<T>), blas::Uplo::Lower, blas::Op::NoTrans, alpha,
+        hpx::dataflow(ex, unwrapping(dlaf::tile::her2k<T>), blas::Uplo::Lower, blas::Op::NoTrans, alpha,
                       std::move(tile_v), std::move(tile_x),
                       static_cast<typename TypeInfo<T>::BaseType>(1), std::move(tile_a));
       }
@@ -626,8 +635,9 @@ void update_a(const LocalTileSize& at_start, MatrixT<T>& a, ConstPanelT<Coord::C
           // clang-format on
 
           const T alpha = -1;  // TODO T must be a sigend type
-          hpx::dataflow(unwrapping(dlaf::tile::gemm<T>), blas::Op::NoTrans, blas::Op::ConjTrans, alpha,
-                        std::move(tile_x), std::move(tile_v), static_cast<T>(1), std::move(tile_a));
+          hpx::dataflow(ex, unwrapping(dlaf::tile::gemm<T>), blas::Op::NoTrans, blas::Op::ConjTrans,
+                        alpha, std::move(tile_x), std::move(tile_v), static_cast<T>(1),
+                        std::move(tile_a));
         }
 
         // GEMM A: V . X*
@@ -639,8 +649,9 @@ void update_a(const LocalTileSize& at_start, MatrixT<T>& a, ConstPanelT<Coord::C
           // clang-format on
 
           const T alpha = -1;  // TODO T must be a sigend type
-          hpx::dataflow(unwrapping(dlaf::tile::gemm<T>), blas::Op::NoTrans, blas::Op::ConjTrans, alpha,
-                        std::move(tile_v), std::move(tile_x), static_cast<T>(1), std::move(tile_a));
+          hpx::dataflow(ex, unwrapping(dlaf::tile::gemm<T>), blas::Op::NoTrans, blas::Op::ConjTrans,
+                        alpha, std::move(tile_v), std::move(tile_x), static_cast<T>(1),
+                        std::move(tile_a));
         }
       }
     }
@@ -668,7 +679,7 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
   DLAF_ASSERT(square_size(mat_a), mat_a.size());
   DLAF_ASSERT(square_blocksize(mat_a), mat_a.blockSize());
 
-  auto executor_mpi = dlaf::getMPIExecutor<Backend::MC>();
+  const auto ex_mpi = dlaf::getMPIExecutor<Backend::MC>();
 
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
   common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
@@ -776,7 +787,8 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
         });
 
         const LocalTileIndex v0_index(ai_offset.rows(), ai_offset.cols());
-        hpx::dataflow(setup_V0_func, v(v0_index), mat_a.read(v0_index));
+        hpx::dataflow(dlaf::getHpExecutor<Backend::MC>(), setup_V0_func, v(v0_index),
+                      mat_a.read(v0_index));
       }
 
       // The rest of the V panel of reflectors can just point to the values in A, since they are
@@ -789,7 +801,7 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
     }
 
     vt.setRangeStart(at_offset);
-    comm::broadcast(executor_mpi, rank_v0.col(), v, vt, mpi_row_task_chain, mpi_col_task_chain);
+    comm::broadcast(ex_mpi, rank_v0.col(), v, vt, mpi_row_task_chain, mpi_col_task_chain);
 
     // UPDATE TRAILING MATRIX
 
@@ -801,7 +813,7 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
       compute_w(w, v, t.read(t_idx));
 
     wt.setRangeStart(at_offset);
-    comm::broadcast(executor_mpi, rank_v0.col(), w, wt, mpi_row_task_chain, mpi_col_task_chain);
+    comm::broadcast(ex_mpi, rank_v0.col(), w, wt, mpi_row_task_chain, mpi_col_task_chain);
 
     // COMPUTE X
     // X = At . W
@@ -838,7 +850,7 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
       update_x(x, w2, v);
     }
 
-    comm::broadcast(executor_mpi, rank_v0.col(), x, xt, mpi_row_task_chain, mpi_col_task_chain);
+    comm::broadcast(ex_mpi, rank_v0.col(), x, xt, mpi_row_task_chain, mpi_col_task_chain);
 
     // UPDATE
     // At = At - X . V* + V . X*

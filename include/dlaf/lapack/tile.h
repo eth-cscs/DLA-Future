@@ -108,7 +108,6 @@ template <class T>
 dlaf::BaseType<T> lange(const lapack::Norm norm, const Tile<T, Device::CPU>& a) noexcept {
   return lapack::lange(norm, a.size().rows(), a.size().cols(), a.ptr(), a.ld());
 }
-
 /// Compute the value of the 1-norm, Frobenius norm, infinity-norm, or the largest absolute value of any
 /// element, of a triangular matrix.
 ///
@@ -263,6 +262,29 @@ void potrf(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<
   assertExtendInfo(dlaf::cusolver::assertInfoHegst, handle, std::move(info));
 }
 #endif
+
+/// Set off-diagonal (@param alpha) and diagonal (@param betea) elements of Tile @param tile.
+///
+template <class T>
+void laset(const lapack::MatrixType type, T alpha, T beta, const Tile<T, Device::CPU>& tile) {
+  DLAF_ASSERT((type == lapack::MatrixType::Lower || type == lapack::MatrixType::Upper), type);
+
+  const SizeType m = tile.size().rows();
+  const SizeType n = tile.size().cols();
+
+  lapack::laset(type, m, n, alpha, beta, tile.ptr(), tile.ld());
+}
+
+/// Set zero all the elements of Tile @param tile.
+///
+template <class T>
+void set0(const Tile<T, Device::CPU>& tile) {
+  const SizeType m = tile.size().rows();
+  const SizeType n = tile.size().cols();
+
+  lapack::laset(lapack::MatrixType::General, m, n, static_cast<T>(0.0), static_cast<T>(0.0), tile.ptr(),
+                tile.ld());
+}
 
 DLAF_MAKE_CALLABLE_OBJECT(hegst);
 DLAF_MAKE_CALLABLE_OBJECT(potrf);

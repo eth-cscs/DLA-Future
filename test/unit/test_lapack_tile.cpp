@@ -16,6 +16,7 @@
 #include "test_lapack_tile/test_lange.h"
 #include "test_lapack_tile/test_lantr.h"
 #include "test_lapack_tile/test_potrf.h"
+#include "dlaf_test/matrix/util_tile.h"
 
 using namespace dlaf;
 using namespace dlaf::test;
@@ -23,6 +24,8 @@ using namespace testing;
 
 const std::vector<blas::Diag> blas_diags({blas::Diag::Unit, blas::Diag::NonUnit});
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
+const std::vector<lapack::MatrixType> lapack_matrices({lapack::MatrixType::Lower,
+                                                       lapack::MatrixType::Upper});
 const std::vector<lapack::Norm> lapack_norms({lapack::Norm::Fro, lapack::Norm::Inf, lapack::Norm::Max,
                                               lapack::Norm::One, lapack::Norm::Two});
 
@@ -234,4 +237,61 @@ TYPED_TEST(TileOperationsTestMC, Lacpy) {
   ASSERT_TRUE(std::abs(Scalar(1 + 4) - out_tile(TileElementIndex(2, 5))) < eps);
   ASSERT_TRUE(std::abs(Scalar(2 + 4) - out_tile(TileElementIndex(3, 5))) < eps);
   ASSERT_TRUE(std::abs(Scalar(3 + 4) - out_tile(TileElementIndex(4, 5))) < eps);
+}
+
+std::vector<std::tuple<SizeType, SizeType, SizeType>> setsizes = {{0, 0, 0},   {0, 0, 2},  // 0 size
+                                                                  {1, 1, 0},   {17, 11, 3}, {17, 11, 0},
+                                                                  {17, 17, 3}, {17, 17, 3}, {11, 11, 0}};
+
+TYPED_TEST(TileOperationsTestMC, Laset) {
+  SizeType m, n, extra_lda;
+
+  for (const auto& size : setsizes) {
+    std::tie(m, n, extra_lda) = size;
+    const SizeType lda = std::max<SizeType>(1, m) + extra_lda;
+    Tile<TypeParam, Device::CPU> tile =
+        createTile<TypeParam>([](TileElementIndex idx) { return idx.row() + idx.col(); },
+                              TileElementSize(m, n), lda);
+
+    for (const auto mtype : lapack_matrices) {
+      auto res = [mtype](const TileElementIndex& index) {
+        const double i = index.row();
+        const double j = index.col();
+        if ((mtype == lapack::MatrixType::Lower && i < j) ||
+            (mtype == lapack::MatrixType::Upper && i > j))
+          return TypeUtilities<TypeParam>::element(0.0, 0.0);
+
+        if (i == j)
+          return TypeUtilities<TypeParam>::element(1.0, 0.0);
+
+        return TypeUtilities<TypeParam>::element(i + j, 0.0);
+      };
+
+      // tile::laset(mtype, static_cast<TypeParam>(0.0), static_cast<TypeParam>(1.0), tile);
+      // CHECK_TILE_NEAR(res, tile, 4 * (n + 1) * TypeUtilities<TypeParam>::error,	4 * (n + 1) *
+      // TypeUtilities<TypeParam>::error);
+    }
+  }
+}
+
+TYPED_TEST(TileOperationsTestMC, Set0) {
+  SizeType m, n, extra_lda;
+
+  for (const auto& size : setsizes) {
+    std::tie(m, n, extra_lda) = size;
+    const SizeType lda = std::max<SizeType>(1, m) + extra_lda;
+    Tile<TypeParam, Device::CPU> tile =
+        createTile<TypeParam>([](TileElementIndex idx) { return idx.row() + idx.col(); },
+                              TileElementSize(m, n), lda);
+
+    for (const auto mtype : lapack_matrices) {
+      auto res = [mtype](const TileElementIndex& index) {
+        return TypeUtilities<TypeParam>::element(0.0, 0.0);
+      };
+
+      tile::set0(tile);
+      CHECK_TILE_NEAR(res, tile, 4 * (n + 1) * TypeUtilities<TypeParam>::error,
+                      4 * (n + 1) * TypeUtilities<TypeParam>::error);
+    }
+  }
 }

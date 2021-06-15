@@ -28,6 +28,7 @@
 
 using dlaf::Device;
 using dlaf::Matrix;
+using dlaf::SizeType;
 using dlaf::comm::CommunicatorGrid;
 using dlaf::matrix::test::MatrixLocal;
 
@@ -50,6 +51,9 @@ T preset_eye(const dlaf::GlobalElementIndex& index) {
 
 template <class T>
 void is_orthogonal(const MatrixLocal<const T>& matrix) {
+  if (matrix.size().isEmpty())
+    return;
+
   MatrixLocal<T> ortho(matrix.size(), matrix.blockSize());
 
   // ortho = matrix . matrix*
@@ -77,12 +81,36 @@ void is_orthogonal(const MatrixLocal<const T>& matrix) {
   CHECK_MATRIX_NEAR(eye, ortho, 0, error);
 }
 
-std::vector<std::tuple<dlaf::SizeType, dlaf::SizeType, dlaf::SizeType, dlaf::SizeType, dlaf::SizeType>>
-    configs{
-        // m, n, mb, nb, k
-        {39, 26, 6, 6, 6},  // all reflectors
-        {39, 26, 6, 6, 4},  // k reflectors
-    };
+std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, dlaf::GlobalTileIndex>> configs{
+    // m, n, mb, nb, k
+    {39, 26, 6, 6, 6, {0, 3}},  // all reflectors (complete tile)
+    {39, 26, 6, 6, 2, {0, 4}},  // all reflectors (incomplete tile)
+    {39, 26, 6, 6, 4, {0, 3}},  // k reflectors (complete tile)
+    {39, 26, 6, 6, 1, {0, 4}},  // k reflectors (incomplete tile)
+
+    {26, 39, 6, 6, 6, {0, 5}},  // all reflectors (complete tile)
+    {26, 39, 6, 6, 2, {0, 6}},  // all reflectors (incomplete tile)
+    {26, 39, 6, 6, 4, {0, 5}},  // k reflectors (complete tile)
+    {26, 39, 6, 6, 1, {0, 6}},  // k reflectors (incomplete tile)
+
+    // non-square tiles
+    {39, 26, 10, 4, 4, {0, 5}},  // all reflectors (complete tile)
+    {39, 26, 10, 4, 2, {0, 6}},  // all reflectors (incomplete tile)
+    {39, 26, 10, 4, 3, {0, 5}},  // k reflectors (complete tile)
+    {39, 26, 10, 4, 1, {0, 6}},  // k reflectors (incomplete tile)
+
+    {26, 39, 10, 6, 6, {0, 5}},  // all reflectors (complete tile)
+    {26, 39, 10, 6, 2, {0, 6}},  // all reflectors (incomplete tile)
+    {26, 39, 10, 6, 4, {0, 5}},  // k reflectors (complete tile)
+    {26, 39, 10, 6, 1, {0, 6}},  // k reflectors (incomplete tile)
+
+    {26, 39, 10, 6, 0, {0, 6}},  // 0 reflectors
+
+    // empty matrices
+    {0, 0, 10, 6, 0, {0, 0}},
+    {39, 0, 10, 6, 0, {0, 0}},
+    {0, 26, 10, 6, 0, {0, 0}},
+};
 
 // Note:
 // Testing this function requires next input values:
@@ -114,10 +142,13 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
   using namespace dlaf;
 
   SizeType a_m, a_n, mb, nb, k;
+  GlobalTileIndex v_start;
 
   for (auto comm_grid : this->commGrids()) {
     for (auto config : configs) {
-      std::tie(a_m, a_n, mb, nb, k) = config;
+      std::tie(a_m, a_n, mb, nb, k, v_start) = config;
+
+      ASSERT_LE(k, nb);
 
       const TileElementSize block_size(mb, nb);
 
@@ -125,8 +156,6 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
                                       std::min(1, comm_grid.size().cols() - 1));
       const matrix::Distribution dist_v({a_m, a_n}, block_size, comm_grid.size(), comm_grid.rank(),
                                         source_rank_index);
-
-      const GlobalTileIndex v_start{dist_v.nrTiles().rows() / 2, dist_v.nrTiles().cols() / 2};
 
       Matrix<const TypeParam, Device::CPU> v_input = [&]() {
         Matrix<TypeParam, Device::CPU> V(dist_v);
@@ -140,12 +169,15 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
         auto a = matrix::test::allGather<TypeParam>(v_input, comm_grid);
 
         // panel shape
-        const auto v_start_el = dist_v.globalElementIndex(v_start, {0, 0});
-        const auto v_end_el = GlobalElementIndex{a_m, std::min(v_start_el.col() + nb, a_n)};
-        const auto v_size_el = v_end_el - v_start_el;
+        GlobalElementSize v_size = dist_v.size();
 
-        MatrixLocal<TypeParam> v(v_size_el, a.blockSize());
-        DLAF_ASSERT_HEAVY(v.size().rows() > v.size().cols(), v.size());
+        if (not v_size.isEmpty()) {
+          const auto v_start_el = dist_v.globalElementIndex(v_start, {0, 0});
+          const auto v_end_el = GlobalElementIndex{a_m, std::min(v_start_el.col() + nb, a_n)};
+          v_size = v_end_el - v_start_el;
+        }
+
+        MatrixLocal<TypeParam> v(v_size, a.blockSize());
 
         // copy only the panel
         const GlobalTileSize v_offset{v_start.row(), v_start.col()};
@@ -153,11 +185,12 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
           copy(a.tile_read(ij + v_offset), v.tile(ij));
 
         // clean reflectors
-        // clang-format off
-        lapack::laset(lapack::MatrixType::Upper,
-            v.size().rows(), v.size().cols(),
-            0, 1,
-            v.ptr(), v.ld());
+        if (not v_size.isEmpty())
+          // clang-format off
+          lapack::laset(lapack::MatrixType::Upper,
+              v.size().rows(), v.size().cols(),
+              0, 1,
+              v.ptr(), v.ld());
         // clang-format on
 
         return v;
@@ -172,7 +205,7 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
       MatrixLocal<TypeParam> h_expected({m, m}, block_size);
       set(h_expected, preset_eye<TypeParam>);
 
-      for (auto j = 0; j < k; ++j) {
+      for (auto j = 0; !v.size().isEmpty() and j < k; ++j) {
         const SizeType reflector_size = m - j;
 
         const TypeParam* data_ptr = v.ptr({j, j});
@@ -214,13 +247,18 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
 
       is_orthogonal(h_expected);
 
-      common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
+      common::Pipeline<comm::Communicator> serial_comm(comm_grid.colCommunicator());
 
-      Matrix<TypeParam, Device::CPU> t_output({k, k}, block_size);
+      const auto max_k = std::min(mb, nb);
+      Matrix<TypeParam, Device::CPU> t_output({max_k, max_k}, block_size);
       const LocalTileIndex t_idx(0, 0);
 
       dlaf::factorization::internal::computeTFactor<Backend::MC>(k, v_input, v_start, taus_input,
                                                                  t_output(t_idx), serial_comm);
+
+      // No reflectors, so nothing to check
+      if (k == 0)
+        continue;
 
       const auto column_involved = dist_v.rankGlobalTile(v_start).col();
       if (dist_v.rankIndex().col() != column_involved)
@@ -273,9 +311,9 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
       // The error threshold has been determined considering that ~2*n*nb arithmetic operations (n*nb
       // multiplications and n*nb addition) are needed to compute each of the element of the matrix `h_result`,
       // and that TypeUtilities<TypeParam>::error indicates maximum error for a multiplication + addition.
-      SCOPED_TRACE("Comparison test");
-      const auto error =
-          h_result.size().rows() * t.size().rows() * test::TypeUtilities<TypeParam>::error;
+      SCOPED_TRACE(::testing::Message() << "Comparison test m = " << a_m << " n=" << a_n << " mb=" << mb
+                                        << " nb=" << nb << " k=" << k << " v_start=" << v_start);
+      const auto error = h_result.size().rows() * k * test::TypeUtilities<TypeParam>::error;
       CHECK_MATRIX_NEAR(h_expected, h_result, 0, error);
     }
   }

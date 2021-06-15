@@ -86,7 +86,7 @@ template <class T>
 hpx::shared_future<T> compute_reflector(
     MatrixT<T>& a, const common::IterableRange2D<SizeType, dlaf::matrix::LocalTile_TAG> ai_panel_range,
     const GlobalTileIndex ai_start, const TileElementIndex index_el_x0,
-    common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
+    common::Pipeline<comm::Communicator>& bmpi_col_task_chain) {
   using hpx::util::unwrapping;
   using common::make_data;
 
@@ -147,13 +147,12 @@ hpx::shared_future<T> compute_reflector(
   auto reduce_norm_func = unwrapping([rank_v0](x0_and_squares_t&& local_data, auto&& comm_wrapper) {
     const T local_sum = local_data.second;
     T norm = local_data.second;
-    reduce(rank_v0.row(), comm_wrapper.ref().colCommunicator(), MPI_SUM, make_data(&local_sum, 1),
-           make_data(&norm, 1));
+    reduce(rank_v0.row(), comm_wrapper.ref(), MPI_SUM, make_data(&local_sum, 1), make_data(&norm, 1));
     local_data.second = norm;
     return std::move(local_data);
   });
 
-  x0_and_squares = hpx::dataflow(ex_mpi, reduce_norm_func, x0_and_squares, serial_comm());
+  x0_and_squares = hpx::dataflow(ex_mpi, reduce_norm_func, x0_and_squares, bmpi_col_task_chain());
 
   /*
    * rank_v0 will compute params that will be used for next computation of reflector components
@@ -185,15 +184,15 @@ hpx::shared_future<T> compute_reflector(
 
     auto bcast_params_func = unwrapping([](const auto& params, const T tau, auto&& comm_wrapper) {
       const T data[3] = {params.x0, params.y, tau};
-      broadcast::send(comm_wrapper.ref().colCommunicator(), make_data(data, 3));
+      broadcast::send(comm_wrapper.ref(), make_data(data, 3));
     });
 
-    hpx::dataflow(ex_mpi, bcast_params_func, reflector_params, tau, serial_comm());
+    hpx::dataflow(ex_mpi, bcast_params_func, reflector_params, tau, bmpi_col_task_chain());
   }
   else {
     auto bcast_params_func = unwrapping([rank = rank_v0.row()](auto&& comm_wrapper) {
       T data[3];
-      broadcast::receive_from(rank, comm_wrapper.ref().colCommunicator(), make_data(data, 3));
+      broadcast::receive_from(rank, comm_wrapper.ref(), make_data(data, 3));
       params_reflector_t params;
       params.x0 = data[0];
       params.y = data[1];
@@ -202,7 +201,7 @@ hpx::shared_future<T> compute_reflector(
     });
 
     hpx::tie(reflector_params, tau) =
-        hpx::split_future(hpx::dataflow(ex_mpi, bcast_params_func, serial_comm()));
+        hpx::split_future(hpx::dataflow(ex_mpi, bcast_params_func, bmpi_col_task_chain()));
   }
 
   // 1A/3 COMPUTE REFLECTOR COMPONENTs
@@ -235,7 +234,7 @@ template <class T>
 void update_trailing_panel(
     MatrixT<T>& a, const common::IterableRange2D<SizeType, dlaf::matrix::LocalTile_TAG> ai_panel_range,
     const GlobalTileIndex ai_start, const TileElementIndex index_el_x0, hpx::shared_future<T> tau,
-    common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
+    common::Pipeline<comm::Communicator>& bmpi_col_task_chain) {
   using hpx::util::unwrapping;
   using common::make_data;
   using namespace comm::sync;
@@ -314,10 +313,10 @@ void update_trailing_panel(
 
   // all-reduce W
   auto reduce_w_func = unwrapping([](auto&& tile_w, auto&& comm_wrapper) {
-    allReduceInPlace(comm_wrapper.ref().colCommunicator(), MPI_SUM, make_data(tile_w));
+    allReduceInPlace(comm_wrapper.ref(), MPI_SUM, make_data(tile_w));
   });
 
-  hpx::dataflow(ex_mpi, reduce_w_func, w(LocalTileIndex{0, 0}), serial_comm());
+  hpx::dataflow(ex_mpi, reduce_w_func, w(LocalTileIndex{0, 0}), bmpi_col_task_chain());
 
   // 1B/2 UPDATE TRAILING PANEL
   for (const LocalTileIndex& index_a_loc : ai_panel_range) {
@@ -681,9 +680,9 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
 
   const auto ex_mpi = dlaf::getMPIExecutor<Backend::MC>();
 
+  common::Pipeline<comm::Communicator> bmpi_col_task_chain(grid.colCommunicator());
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
   common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
-  common::Pipeline<comm::CommunicatorGrid> serial_comm(grid);
 
   const auto& dist = mat_a.distribution();
   const comm::Index2D rank = dist.rankIndex();
@@ -755,15 +754,18 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
       for (SizeType j_reflector = 0; j_reflector < k_reflectors; ++j_reflector) {
         const TileElementIndex index_el_x0{j_reflector, j_reflector};
 
-        taus_panel.emplace_back(compute_reflector(mat_a, ai_panel, ai_start, index_el_x0, serial_comm));
-        update_trailing_panel(mat_a, ai_panel, ai_start, index_el_x0, *taus_panel.rbegin(), serial_comm);
+        taus_panel.emplace_back(
+            compute_reflector(mat_a, ai_panel, ai_start, index_el_x0, bmpi_col_task_chain));
+        update_trailing_panel(mat_a, ai_panel, ai_start, index_el_x0, *taus_panel.rbegin(),
+                              bmpi_col_task_chain);
       }
 
       taus.emplace_back(hpx::when_all(taus_panel).then(unwrapping(unwrap<TausInternal_t>)));
 
       // Prepare T and V for the next step
 
-      computeTFactor<Backend::MC>(k_reflectors, mat_a, ai_start, *taus.rbegin(), t(t_idx), serial_comm);
+      computeTFactor<Backend::MC>(k_reflectors, mat_a, ai_start, *taus.rbegin(), t(t_idx),
+                                  mpi_col_task_chain);
 
       // Note:
       // Reflectors are stored in the lower triangular part of the A matrix leading to sharing memory

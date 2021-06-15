@@ -267,7 +267,7 @@ TYPED_TEST(TileOperationsTestMC, Laset) {
         return TypeUtilities<TypeParam>::element(i + j, 0.0);
       };
 
-      // tile::laset(mtype, static_cast<TypeParam>(0.0), static_cast<TypeParam>(1.0), tile);
+      tile::laset(mtype, static_cast<T>(0.0, 0.0), static_cast<T>(1.0, 0.0), tile);
       // CHECK_TILE_NEAR(res, tile, 4 * (n + 1) * TypeUtilities<TypeParam>::error,	4 * (n + 1) *
       // TypeUtilities<TypeParam>::error);
     }

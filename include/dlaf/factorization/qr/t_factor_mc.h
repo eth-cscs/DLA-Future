@@ -77,8 +77,6 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
   const auto ex = dlaf::getHpExecutor<Backend::MC>();
   const auto ex_mpi = dlaf::getMPIExecutor<Backend::MC>();
 
-  auto executor_mpi = dlaf::getMPIExecutor<Backend::MC>();
-
   // Fast return in case of no reflectors
   if (k == 0)
     return;

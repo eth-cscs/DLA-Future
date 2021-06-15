@@ -97,7 +97,7 @@ void scheduleAllReduce(const comm::Executor& ex,
 }
 
 template <class T>
-void scheduleAllReduceInPlace(const comm::Executor& ex,
+auto scheduleAllReduceInPlace(const comm::Executor& ex,
                               hpx::future<common::PromiseGuard<comm::Communicator>> pcomm,
                               MPI_Op reduce_op, hpx::future<matrix::Tile<T, Device::CPU>> tile) {
   hpx::future<common::internal::Bag<T>> bag;
@@ -121,7 +121,7 @@ void scheduleAllReduceInPlace(const comm::Executor& ex,
   // clang-format on
 
   // clang-format off
-  hpx::dataflow(
+  return hpx::dataflow(
       dlaf::getHpExecutor<Backend::MC>(),
       hpx::util::unwrapping(common::internal::copyBack_o),
       std::move(tile), std::move(bag));

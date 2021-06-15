@@ -247,7 +247,7 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
 
       is_orthogonal(h_expected);
 
-      common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
+      common::Pipeline<comm::Communicator> serial_comm(comm_grid.colCommunicator());
 
       const auto max_k = std::min(mb, nb);
       Matrix<TypeParam, Device::CPU> t_output({max_k, max_k}, block_size);

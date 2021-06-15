@@ -14,6 +14,7 @@
 #include <hpx/include/util.hpp>
 
 #include <blas.hh>
+#include <lapack/util.hh>
 
 #include "dlaf/factorization/qr/api.h"
 
@@ -22,7 +23,7 @@
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/vector.h"
-#include "dlaf/communication/functions_sync.h"
+#include "dlaf/communication/kernels/all_reduce.h"
 #include "dlaf/executors.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/matrix.h"
@@ -55,7 +56,7 @@ struct QR_Tfactor<Backend::MC, Device::CPU, T> {
   /// @param taus array of taus, associated with the related elementary reflector
   /// @param t tile where the resulting T factor will be stored in its top-left sub-matrix of size
   /// TileElementSize(k, k)
-  /// @param serial_comm where internal communications are issued
+  /// @param mpi_col_task_chain where internal communications are issued
   ///
   /// @pre k <= t.get().size().rows && k <= t.get().size().cols()
   /// @pre k >= 0
@@ -63,17 +64,18 @@ struct QR_Tfactor<Backend::MC, Device::CPU, T> {
   static void call(const SizeType k, Matrix<const T, Device::CPU>& v, const GlobalTileIndex v_start,
                    hpx::shared_future<common::internal::vector<T>> taus,
                    hpx::future<matrix::Tile<T, Device::CPU>> t,
-                   common::Pipeline<comm::CommunicatorGrid>& serial_comm);
+                   common::Pipeline<comm::Communicator>& mpi_col_task_chain);
 };
 
 template <class T>
 void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
     const SizeType k, Matrix<const T, Device::CPU>& v, const GlobalTileIndex v_start,
     hpx::shared_future<common::internal::vector<T>> taus, hpx::future<matrix::Tile<T, Device::CPU>> t,
-    common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
+    common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
   using hpx::util::unwrapping;
-  using common::make_data;
-  using namespace comm::sync;
+
+  const auto ex = dlaf::getHpExecutor<Backend::MC>();
+  const auto ex_mpi = dlaf::getMPIExecutor<Backend::MC>();
 
   auto executor_mpi = dlaf::getMPIExecutor<Backend::MC>();
 
@@ -99,14 +101,15 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
   };
   const LocalTileIndex v_end_loc{dist.localNrTiles().rows(), v_start_loc.col() + 1};
 
-  t = t.then(unwrapping([k](auto&& tile) {
-    const auto t_size = tile.size();
-    DLAF_ASSERT(k <= t_size.rows(), k, t_size);
-    DLAF_ASSERT(k <= t_size.cols(), k, t_size);
+  t = t.then(ex, unwrapping([k](auto&& tile) {
+               const auto t_size = tile.size();
+               DLAF_ASSERT(k <= t_size.rows(), k, t_size);
+               DLAF_ASSERT(k <= t_size.cols(), k, t_size);
 
-    lapack::laset(lapack::MatrixType::General, k, k, 0, 0, tile.ptr(), tile.ld());
-    return std::move(tile);
-  }));
+               constexpr auto laset_type = lapack::MatrixType::General;
+               lapack::laset(laset_type, k, k, 0, 0, tile.ptr(), tile.ld());
+               return std::move(tile);
+             }));
 
   // Note:
   // T factor is an upper triangular square matrix, built column by column
@@ -186,19 +189,13 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
     // Since we are writing always on the same t, the gemv are serialized
     // A possible solution to this would be to have multiple places where to store partial
     // results, and then locally reduce them just before the reduce over ranks
-    t = hpx::dataflow(gemv_func, v.read(v_i_loc), taus, t);
+    t = hpx::dataflow(ex, gemv_func, v.read(v_i_loc), taus, t);
   }
 
   // at this point each rank has its partial result for each column
   // so, let's reduce the results (on all ranks, so that everyone can independently compute T factor)
-  if (true) {  // TODO if the column communicator has more than 1 tile...but I just have the pipeline
-    auto reduce_t_func = unwrapping([=](auto&& tile_t, auto&& comm_wrapper) {
-      allReduceInPlace(comm_wrapper.ref().colCommunicator(), MPI_SUM, make_data(tile_t));
-      return std::move(tile_t);
-    });
-
-    t = hpx::dataflow(executor_mpi, reduce_t_func, t, serial_comm());
-  }
+  if (true)  // TODO if the column communicator has more than 1 tile...but I just have the pipeline
+    t = scheduleAllReduceInPlace(ex_mpi, mpi_col_task_chain(), MPI_SUM, std::move(t));
 
   // 2nd step: compute the T factor, by performing the last step on each column
   // each column depends on the previous part (all reflectors that comes before)
@@ -221,7 +218,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
       return std::move(tile_t);
     });
 
-    t = hpx::dataflow(trmv_func, t, t_start, t_size);
+    t = hpx::dataflow(ex, trmv_func, t, t_start, t_size);
   }
 }
 }

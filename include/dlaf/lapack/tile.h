@@ -266,8 +266,10 @@ void potrf(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<
 /// Set off-diagonal (@param alpha) and diagonal (@param betea) elements of Tile @param tile.
 ///
 template <class T>
-  void laset(const lapack::MatrixType type, std::static_cast<T>(alpha), std::static_cast<T>(beta), const Tile<T, Device::CPU>& tile) {
-  DLAF_ASSERT((type == lapack::MatrixType::Lower || type == lapack::MatrixType::Upper), type);
+void laset(const lapack::MatrixType type, T alpha, T beta, const Tile<T, Device::CPU>& tile) {
+  DLAF_ASSERT((type == lapack::MatrixType::General || type == lapack::MatrixType::Lower ||
+               type == lapack::MatrixType::Upper),
+              type);
 
   const SizeType m = tile.size().rows();
   const SizeType n = tile.size().cols();

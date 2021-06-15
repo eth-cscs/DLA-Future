@@ -7,7 +7,6 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
-
 #include "dlaf/lapack/tile.h"
 
 #include "gtest/gtest.h"
@@ -24,7 +23,8 @@ using namespace testing;
 
 const std::vector<blas::Diag> blas_diags({blas::Diag::Unit, blas::Diag::NonUnit});
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
-const std::vector<lapack::MatrixType> lapack_matrices({lapack::MatrixType::Lower,
+const std::vector<lapack::MatrixType> lapack_matrices({lapack::MatrixType::General,
+                                                       lapack::MatrixType::Lower,
                                                        lapack::MatrixType::Upper});
 const std::vector<lapack::Norm> lapack_norms({lapack::Norm::Fro, lapack::Norm::Inf, lapack::Norm::Max,
                                               lapack::Norm::One, lapack::Norm::Two});
@@ -247,18 +247,19 @@ TYPED_TEST(TileOperationsTestMC, Laset) {
   SizeType m, n, extra_lda;
 
   for (const auto& size : setsizes) {
-    std::tie(m, n, extra_lda) = size;
-    const SizeType lda = std::max<SizeType>(1, m) + extra_lda;
-    Tile<TypeParam, Device::CPU> tile =
-        createTile<TypeParam>([](TileElementIndex idx) { return idx.row() + idx.col(); },
-                              TileElementSize(m, n), lda);
-
     for (const auto mtype : lapack_matrices) {
+      std::tie(m, n, extra_lda) = size;
+      const SizeType lda = std::max<SizeType>(1, m) + extra_lda;
+      Tile<TypeParam, Device::CPU> tile =
+          createTile<TypeParam>([](TileElementIndex idx) { return idx.row() + idx.col(); },
+                                TileElementSize(m, n), lda);
+
       auto res = [mtype](const TileElementIndex& index) {
         const double i = index.row();
         const double j = index.col();
-        if ((mtype == lapack::MatrixType::Lower && i < j) ||
-            (mtype == lapack::MatrixType::Upper && i > j))
+        if ((mtype == lapack::MatrixType::Lower && i > j) ||
+            (mtype == lapack::MatrixType::Upper && i < j) ||
+            (mtype == lapack::MatrixType::General && i != j))
           return TypeUtilities<TypeParam>::element(0.0, 0.0);
 
         if (i == j)
@@ -267,9 +268,9 @@ TYPED_TEST(TileOperationsTestMC, Laset) {
         return TypeUtilities<TypeParam>::element(i + j, 0.0);
       };
 
-      tile::laset(mtype, static_cast<T>(0.0, 0.0), static_cast<T>(1.0, 0.0), tile);
-      // CHECK_TILE_NEAR(res, tile, 4 * (n + 1) * TypeUtilities<TypeParam>::error,	4 * (n + 1) *
-      // TypeUtilities<TypeParam>::error);
+      tile::laset<TypeParam>(mtype, 0.f, 1.f, tile);
+      CHECK_TILE_NEAR(res, tile, 4 * (n + 1) * TypeUtilities<TypeParam>::error,
+                      4 * (n + 1) * TypeUtilities<TypeParam>::error);
     }
   }
 }

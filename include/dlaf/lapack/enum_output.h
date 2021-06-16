@@ -38,17 +38,7 @@ inline std::ostream& operator<<(std::ostream& out, const Norm& norm) {
 }
 
 inline std::ostream& operator<<(std::ostream& out, const lapack::MatrixType& mtype) {
-  switch (mtype) {
-    case lapack::MatrixType::General:
-      out << "General";
-      break;
-    case lapack::MatrixType::Lower:
-      out << "Lower";
-      break;
-    case lapack::MatrixType::Upper:
-      out << "Upper";
-      break;
-  }
+  out << lapack::matrixtype2str(mtype);
   return out;
 }
 

@@ -17,12 +17,14 @@
 
 #include "dlaf/factorization/qr/api.h"
 
+#include "dlaf/common/assert.h"
 #include "dlaf/common/data.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/functions_sync.h"
+#include "dlaf/lapack/enum_output.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
@@ -89,6 +91,87 @@ struct QR_Tfactor<Backend::MC, Device::CPU, T> {
 };
 
 template <class T>
+void gemvColumnT(const bool& is_v0, const SizeType& k,
+                 hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_vi,
+                 hpx::shared_future<common::internal::vector<T>>& taus,
+                 hpx::future<matrix::Tile<T, Device::CPU>>& tile_t) {
+  auto gemv_func = hpx::util::unwrapping([=](const auto& vi, const auto& taus, auto&& t) {
+    DLAF_ASSERT(taus.size() == k, taus.size(), k);
+
+    for (SizeType j = 0; j < k; ++j) {
+      const T tau = taus[j];
+      // this is the x0 element of the reflector j
+      const TileElementIndex x0{j, j};
+
+      const TileElementIndex t_start{0, x0.col()};
+      const TileElementSize t_size{x0.row(), 1};
+
+      const SizeType first_element_in_tile = is_v0 ? x0.row() : 0;
+
+      // T(0:j, j) = -tau . V(j:, 0:j)* . V(j:, j)
+      // [j x 1] = [(n-j) x j]* . [(n-j) x 1]
+      TileElementSize va_size{vi.size().rows() - first_element_in_tile, x0.col()};
+      TileElementIndex va_start{first_element_in_tile, 0};
+      TileElementIndex vb_start{first_element_in_tile, x0.col()};
+
+      if (is_v0) {
+        t(x0) = tau;
+
+        // use implicit 1 for the 2nd operand
+        for (SizeType r = 0; !va_size.isEmpty() && r < va_size.cols(); ++r) {
+          const TileElementIndex i_v{va_start.row(), r + va_start.col()};
+          const TileElementIndex i_t{r + t_start.row(), t_start.col()};
+
+          DLAF_ASSERT_HEAVY(i_t.isIn(t.size()), i_t, t_size);
+          DLAF_ASSERT_HEAVY(i_v.isIn(vi.size()), i_v, vi.size());
+
+          t(i_t) = -tau * dlaf::conj(vi(i_v));
+        }
+
+        // skip alredy managed computations with implicit 1
+        va_start = va_start + TileElementSize{1, 0};
+        vb_start = vb_start + TileElementSize{1, 0};
+        va_size = {va_size.rows() - 1, va_size.cols()};
+      }
+
+      if (!va_size.isEmpty()) {
+        // clang-format off
+          blas::gemv(blas::Layout::ColMajor,
+              blas::Op::ConjTrans,
+              va_size.rows(), va_size.cols(),
+              -tau,
+              vi.ptr(va_start), vi.ld(),
+              vi.ptr(vb_start), 1,
+              1, t.ptr(t_start), 1);
+        // clang-format on
+      }
+    }
+    return std::move(t);
+  });
+  hpx::dataflow(gemv_func, tile_vi, taus, tile_t);
+}
+
+template <class T>
+void trmvUpdateColumn(const TileElementIndex t_start, const TileElementSize t_size,
+                      hpx::future<matrix::Tile<T, Device::CPU>>& tile_t) {
+  // Update each column (in order) t = T . t
+  // remember that T is upper triangular, so it is possible to use TRMV
+  auto trmv_func =
+      hpx::util::unwrapping([](auto&& tile_t, TileElementIndex t_start, TileElementSize t_size) {
+        // clang-format off
+      blas::trmv(blas::Layout::ColMajor,
+          blas::Uplo::Upper, blas::Op::NoTrans, blas::Diag::NonUnit,
+          t_size.rows(),
+          tile_t.ptr(), tile_t.ld(),
+          tile_t.ptr(t_start), 1);
+        // clang-format on
+
+        return std::move(tile_t);
+      });
+  hpx::dataflow(trmv_func, tile_t, t_start, t_size);
+}
+
+template <class T>
 void QR_Tfactor<Backend::MC, Device::CPU, T>::call(const SizeType k, Matrix<const T, Device::CPU>& v,
                                                    const LocalTileIndex v_start,
                                                    hpx::shared_future<common::internal::vector<T>> taus,
@@ -113,8 +196,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(const SizeType k, Matrix<cons
     DLAF_ASSERT(k <= t_size.rows(), k, t_size);
     DLAF_ASSERT(k <= t_size.cols(), k, t_size);
 
-    lapack::laset(lapack::MatrixType::General, t_size.rows(), t_size.cols(), 0, 0, tile.ptr(),
-                  tile.ld());
+    tile::set0<T>(tile);
     return std::move(tile);
   }));
 
@@ -139,66 +221,13 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(const SizeType k, Matrix<cons
   for (const auto& v_i : iterate_range2d(v_start, v_end)) {
     const bool is_v0 = (v_i.row() == v_start.row());
 
-    auto gemv_func = unwrapping([=](const auto& tile_v, const auto& taus, auto&& tile_t) {
-      DLAF_ASSERT(taus.size() == k, taus.size(), k);
-
-      for (SizeType j = 0; j < k; ++j) {
-        const T tau = taus[j];
-        // this is the x0 element of the reflector j
-        const TileElementIndex x0{j, j};
-
-        const TileElementIndex t_start{0, x0.col()};
-        const TileElementSize t_size{x0.row(), 1};
-
-        const SizeType first_element_in_tile = is_v0 ? x0.row() : 0;
-
-        // T(0:j, j) = -tau . V(j:, 0:j)* . V(j:, j)
-        // [j x 1] = [(n-j) x j]* . [(n-j) x 1]
-        TileElementSize va_size{tile_v.size().rows() - first_element_in_tile, x0.col()};
-        TileElementIndex va_start{first_element_in_tile, 0};
-        TileElementIndex vb_start{first_element_in_tile, x0.col()};
-
-        if (is_v0) {
-          tile_t(x0) = tau;
-
-          // use implicit 1 for the 2nd operand
-          for (SizeType r = 0; !va_size.isEmpty() && r < va_size.cols(); ++r) {
-            const TileElementIndex i_v{va_start.row(), r + va_start.col()};
-            const TileElementIndex i_t{r + t_start.row(), t_start.col()};
-
-            DLAF_ASSERT_HEAVY(i_t.isIn(tile_t.size()), i_t, t_size);
-            DLAF_ASSERT_HEAVY(i_v.isIn(tile_v.size()), i_v, tile_v.size());
-
-            tile_t(i_t) = -tau * dlaf::conj(tile_v(i_v));
-          }
-
-          // skip alredy managed computations with implicit 1
-          va_start = va_start + TileElementSize{1, 0};
-          vb_start = vb_start + TileElementSize{1, 0};
-          va_size = {va_size.rows() - 1, va_size.cols()};
-        }
-
-        if (!va_size.isEmpty()) {
-          // clang-format off
-          blas::gemv(blas::Layout::ColMajor,
-              blas::Op::ConjTrans,
-              va_size.rows(), va_size.cols(),
-              -tau,
-              tile_v.ptr(va_start), tile_v.ld(),
-              tile_v.ptr(vb_start), 1,
-              1, tile_t.ptr(t_start), 1);
-          // clang-format on
-        }
-      }
-      return std::move(tile_t);
-    });
-
     // TODO
     // Note:
     // Since we are writing always on the same t, the gemv are serialized
     // A possible solution to this would be to have multiple places where to store partial
     // results, and then locally reduce them just before the reduce over ranks
-    t = hpx::dataflow(gemv_func, v.read(v_i), taus, t);
+    // t = gemvColumnT(is_v0, k, v.read(v_i), taus, &t);
+    gemvColumnT(is_v0, k, v.read(v_i), taus, t);
   }
 
   // 2nd step: compute the T factor, by performing the last step on each column
@@ -207,22 +236,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(const SizeType k, Matrix<cons
   for (SizeType j = 0; j < k; ++j) {
     const TileElementIndex t_start{0, j};
     const TileElementSize t_size{j, 1};
-
-    // Update each column (in order) t = T . t
-    // remember that T is upper triangular, so it is possible to use TRMV
-    auto trmv_func = unwrapping([](auto&& tile_t, TileElementIndex t_start, TileElementSize t_size) {
-      // clang-format off
-      blas::trmv(blas::Layout::ColMajor,
-          blas::Uplo::Upper, blas::Op::NoTrans, blas::Diag::NonUnit,
-          t_size.rows(),
-          tile_t.ptr(), tile_t.ld(),
-          tile_t.ptr(t_start), 1);
-      // clang-format on
-
-      return std::move(tile_t);
-    });
-
-    t = hpx::dataflow(trmv_func, t, t_start, t_size);
+    trmvUpdateColumn(t_start, t_size, t);
   }
 }
 
@@ -257,8 +271,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
     DLAF_ASSERT(k <= t_size.rows(), k, t_size);
     DLAF_ASSERT(k <= t_size.cols(), k, t_size);
 
-    lapack::laset(lapack::MatrixType::General, t_size.rows(), t_size.cols(), 0, 0, tile.ptr(),
-                  tile.ld());
+    tile::set0<T>(tile);
     return std::move(tile);
   }));
 
@@ -282,69 +295,15 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
   // -tau(j) . V(j:, 0:j)* . V(j:, j)
   for (const auto& v_i_loc : iterate_range2d(v_start_loc, v_end_loc)) {
     const SizeType v_i = dist.template globalTileFromLocalTile<Coord::Row>(v_i_loc.row());
-
     const bool is_v0 = (v_i == v_start.row());
-
-    auto gemv_func = unwrapping([=](const auto& tile_v, const auto& taus, auto&& tile_t) {
-      DLAF_ASSERT(taus.size() == k, taus.size(), k);
-
-      for (SizeType j = 0; j < k; ++j) {
-        const T tau = taus[j];
-        // this is the x0 element of the reflector j
-        const TileElementIndex x0{j, j};
-
-        const TileElementIndex t_start{0, x0.col()};
-        const TileElementSize t_size{x0.row(), 1};
-
-        const SizeType first_element_in_tile = is_v0 ? x0.row() : 0;
-
-        // T(0:j, j) = -tau . V(j:, 0:j)* . V(j:, j)
-        // [j x 1] = [(n-j) x j]* . [(n-j) x 1]
-        TileElementSize va_size{tile_v.size().rows() - first_element_in_tile, x0.col()};
-        TileElementIndex va_start{first_element_in_tile, 0};
-        TileElementIndex vb_start{first_element_in_tile, x0.col()};
-
-        if (is_v0) {
-          tile_t(x0) = tau;
-
-          // use implicit 1 for the 2nd operand
-          for (SizeType r = 0; !va_size.isEmpty() && r < va_size.cols(); ++r) {
-            const TileElementIndex i_v{va_start.row(), r + va_start.col()};
-            const TileElementIndex i_t{r + t_start.row(), t_start.col()};
-
-            DLAF_ASSERT_HEAVY(i_t.isIn(tile_t.size()), i_t, t_size);
-            DLAF_ASSERT_HEAVY(i_v.isIn(tile_v.size()), i_v, tile_v.size());
-
-            tile_t(i_t) = -tau * dlaf::conj(tile_v(i_v));
-          }
-
-          // skip alredy managed computations with implicit 1
-          va_start = va_start + TileElementSize{1, 0};
-          vb_start = vb_start + TileElementSize{1, 0};
-          va_size = {va_size.rows() - 1, va_size.cols()};
-        }
-
-        if (!va_size.isEmpty()) {
-          // clang-format off
-          blas::gemv(blas::Layout::ColMajor,
-              blas::Op::ConjTrans,
-              va_size.rows(), va_size.cols(),
-              -tau,
-              tile_v.ptr(va_start), tile_v.ld(),
-              tile_v.ptr(vb_start), 1,
-              1, tile_t.ptr(t_start), 1);
-          // clang-format on
-        }
-      }
-      return std::move(tile_t);
-    });
 
     // TODO
     // Note:
     // Since we are writing always on the same t, the gemv are serialized
     // A possible solution to this would be to have multiple places where to store partial
     // results, and then locally reduce them just before the reduce over ranks
-    t = hpx::dataflow(gemv_func, v.read(v_i_loc), taus, t);
+    // t = hpx::dataflow(gemv_func, v.read(v_i_loc), taus, t);
+    gemvColumnT(is_v0, k, v.read(v_i_loc), taus, t);
   }
 
   // at this point each rank has its partial result for each column
@@ -365,21 +324,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
     const TileElementIndex t_start{0, j};
     const TileElementSize t_size{j, 1};
 
-    // Update each column (in order) t = T . t
-    // remember that T is upper triangular, so it is possible to use TRMV
-    auto trmv_func = unwrapping([](auto&& tile_t, TileElementIndex t_start, TileElementSize t_size) {
-      // clang-format off
-      blas::trmv(blas::Layout::ColMajor,
-          blas::Uplo::Upper, blas::Op::NoTrans, blas::Diag::NonUnit,
-          t_size.rows(),
-          tile_t.ptr(), tile_t.ld(),
-          tile_t.ptr(t_start), 1);
-      // clang-format on
-
-      return std::move(tile_t);
-    });
-
-    t = hpx::dataflow(trmv_func, t, t_start, t_size);
+    trmvUpdateColumn(t_start, t_size, t);
   }
 }
 }

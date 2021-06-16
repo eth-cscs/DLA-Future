@@ -91,10 +91,10 @@ struct QR_Tfactor<Backend::MC, Device::CPU, T> {
 };
 
 template <class T>
-void gemvColumnT(const bool& is_v0, const SizeType& k,
-                 hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_vi,
-                 hpx::shared_future<common::internal::vector<T>>& taus,
-                 hpx::future<matrix::Tile<T, Device::CPU>>& tile_t) {
+hpx::future<matrix::Tile<T, Device::CPU>> gemvColumnT(
+    const bool& is_v0, const SizeType& k, hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_vi,
+    hpx::shared_future<common::internal::vector<T>>& taus,
+    hpx::future<matrix::Tile<T, Device::CPU>>& tile_t) {
   auto gemv_func = hpx::util::unwrapping([=](const auto& vi, const auto& taus, auto&& t) {
     DLAF_ASSERT(taus.size() == k, taus.size(), k);
 
@@ -148,12 +148,13 @@ void gemvColumnT(const bool& is_v0, const SizeType& k,
     }
     return std::move(t);
   });
-  hpx::dataflow(gemv_func, tile_vi, taus, tile_t);
+  return hpx::dataflow(gemv_func, tile_vi, taus, tile_t);
 }
 
 template <class T>
-void trmvUpdateColumn(const TileElementIndex t_start, const TileElementSize t_size,
-                      hpx::future<matrix::Tile<T, Device::CPU>>& tile_t) {
+hpx::future<matrix::Tile<T, Device::CPU>> trmvUpdateColumn(
+    const TileElementIndex t_start, const TileElementSize t_size,
+    hpx::future<matrix::Tile<T, Device::CPU>>& tile_t) {
   // Update each column (in order) t = T . t
   // remember that T is upper triangular, so it is possible to use TRMV
   auto trmv_func =
@@ -168,7 +169,7 @@ void trmvUpdateColumn(const TileElementIndex t_start, const TileElementSize t_si
 
         return std::move(tile_t);
       });
-  hpx::dataflow(trmv_func, tile_t, t_start, t_size);
+  return hpx::dataflow(trmv_func, tile_t, t_start, t_size);
 }
 
 template <class T>
@@ -227,7 +228,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(const SizeType k, Matrix<cons
     // A possible solution to this would be to have multiple places where to store partial
     // results, and then locally reduce them just before the reduce over ranks
     // t = gemvColumnT(is_v0, k, v.read(v_i), taus, &t);
-    gemvColumnT(is_v0, k, v.read(v_i), taus, t);
+    t = gemvColumnT(is_v0, k, v.read(v_i), taus, t);
   }
 
   // 2nd step: compute the T factor, by performing the last step on each column
@@ -236,7 +237,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(const SizeType k, Matrix<cons
   for (SizeType j = 0; j < k; ++j) {
     const TileElementIndex t_start{0, j};
     const TileElementSize t_size{j, 1};
-    trmvUpdateColumn(t_start, t_size, t);
+    t = trmvUpdateColumn(t_start, t_size, t);
   }
 }
 
@@ -303,7 +304,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
     // A possible solution to this would be to have multiple places where to store partial
     // results, and then locally reduce them just before the reduce over ranks
     // t = hpx::dataflow(gemv_func, v.read(v_i_loc), taus, t);
-    gemvColumnT(is_v0, k, v.read(v_i_loc), taus, t);
+    t = gemvColumnT(is_v0, k, v.read(v_i_loc), taus, t);
   }
 
   // at this point each rank has its partial result for each column
@@ -313,7 +314,6 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
       allReduceInPlace(comm_wrapper.ref().colCommunicator(), MPI_SUM, make_data(tile_t));
       return std::move(tile_t);
     });
-
     t = hpx::dataflow(reduce_t_func, t, serial_comm());
   }
 
@@ -324,7 +324,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
     const TileElementIndex t_start{0, j};
     const TileElementSize t_size{j, 1};
 
-    trmvUpdateColumn(t_start, t_size, t);
+    t = trmvUpdateColumn(t_start, t_size, t);
   }
 }
 }

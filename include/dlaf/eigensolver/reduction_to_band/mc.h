@@ -378,13 +378,23 @@ void compute_w(PanelT<Coord::Col, T>& w, MatrixLikeT& v, FutureConstTile<T> tile
 
   auto trmm_func =
       hpx::util::unwrapping([](auto&& tile_w, const auto& tile_v, const auto& tile_t) -> void {
+        // Note:
+        // Since T can be smaller then the entire block, here its size is used to update potentially
+        // just a sub-part of the resulting W tile, which currently still works as an entire block.
+        // T can be of reduced-size when there are less reflectors than columns, so when the V tile
+        // is also reduced in the number of rows, which currently happens just when working on the
+        // last tile fully containing a reflector. This, together with the fact that V0 is well-formed
+        // implies that by copying V0 to W we are also resetting W where the matrix is not going to
+        // be computed.
+        // TODO check this when number of reflectors is changed (i.e. skip last single-element reflector)
+
         dlaf::tile::lacpy(tile_v, tile_w);
 
         // W = V . T
         // clang-format off
         blas::trmm(blas::Layout::ColMajor,
             blas::Side::Right, blas::Uplo::Upper, blas::Op::NoTrans, blas::Diag::NonUnit,
-            tile_w.size().rows(), tile_w.size().cols(),
+            tile_w.size().rows(), tile_t.size().rows(),
             static_cast<T>(1),
             tile_t.ptr(), tile_t.ld(),
             tile_w.ptr(), tile_w.ld());
@@ -691,8 +701,6 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
   // TODO not yet implemented for the moment the panel is tile-wide
   // const SizeType band_size = nb;
 
-  const matrix::Distribution dist_block(LocalElementSize{nb, nb}, dist.blockSize());
-
   std::vector<hpx::shared_future<common::internal::vector<T>>> taus;
 
   constexpr std::size_t n_workspaces = 1;
@@ -712,9 +720,6 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
     PanelT<Coord::Row, T>& wt = panels_wt.nextResource();
     PanelT<Coord::Col, T>& x = panels_x.nextResource();
     PanelT<Coord::Row, T>& xt = panels_xt.nextResource();
-
-    const LocalTileIndex t_idx(0, 0);
-    MatrixT<T> t(dist_block);  // TODO used just by the column, maybe we can re-use a panel tile?
 
     const GlobalTileIndex ai_start{GlobalTileIndex{j_panel, j_panel} + GlobalTileSize{1, 0}};
     const GlobalTileIndex at_start{ai_start + GlobalTileSize{0, 1}};
@@ -738,12 +743,17 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
 
     v.setRangeStart(at_offset);
 
+    // TODO it can be improved, because the very last reflector of size 1 is not worth the effort
+    const SizeType k_reflectors = [v0_size = mat_a.tileSize(ai_start)]() {
+      return std::min(v0_size.cols(), v0_size.rows());
+    }();
+
+    const LocalTileIndex t_idx(0, 0);
+    // TODO used just by the column, maybe we can re-use a panel tile?
+    MatrixT<T> t({k_reflectors, k_reflectors}, dist.blockSize());
+
     // 1. PANEL
     if (is_panel_rank_col) {
-      const SizeType k_reflectors = [v0_size = mat_a.tileSize(ai_start)]() {
-        return std::min(v0_size.cols(), v0_size.rows());
-      }();
-
       // Note:
       // for each column in the panel, compute reflector and update panel
       // if this block has the last reflector, that would be just the first 1, skip the last column
@@ -839,7 +849,11 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
 
     // W2 can be computed by the panel column rank only, it is the only one that has the X
     if (is_panel_rank_col) {
-      MatrixT<T> w2 = std::move(t);
+      // Note:
+      // w2 could in theory re-use T-factor tile, but currently T may have a different size.
+      // Indeed, T size depends on the number of the reflectors in this step, while W2 is still
+      // working on the full size tile (it can be improved in the future)
+      MatrixT<T> w2({nb, nb}, dist.blockSize());
 
       // Note:
       // Not all ranks in the column always hold at least a tile in the panel Ai, but all ranks in

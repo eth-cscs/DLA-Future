@@ -16,8 +16,8 @@
 #include "dlaf/types.h"
 
 namespace dlaf {
-namespace util {
 namespace matrix {
+namespace util {
 
 /// Returns the index of the tile which contains the element with index @p element.
 ///

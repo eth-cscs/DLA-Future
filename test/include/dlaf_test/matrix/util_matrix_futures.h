@@ -192,6 +192,35 @@ void checkFuturesDone(bool get_ready, const std::vector<Future>& current, Matrix
     SCOPED_TRACE("");                                                     \
     ::dlaf::matrix::test::checkFuturesDone(get_ready, current, mat_view); \
   } while (0)
+
+/// Checks if current[i] depends correctly on mat_view.doneWrite(index),
+///
+/// where index = LocalTileIndex(i % mat_view.localNrTiles.rows(), i / mat_view.localNrTiles.rows())
+/// If get_ready == true it checks if current[i] is ready after the call to mat_view.doneWrite(i).
+/// If get_ready == false it checks if current[i] is not ready after the call to mat_view.doneWrite(i).
+/// @pre Future1 should be a future or shared_future
+/// @pre mat_view should be a non-const matrix view
+template <class Future1, class MatrixViewType>
+void checkFuturesDoneWrite(bool get_ready, const std::vector<Future1>& current,
+                           MatrixViewType& mat_view) {
+  const auto& nr_tiles = mat_view.distribution().localNrTiles();
+  assert(current.size() == static_cast<size_t>(nr_tiles.rows() * nr_tiles.cols()));
+
+  for (std::size_t index = 0; index < current.size(); ++index) {
+    EXPECT_TRUE(checkFuturesStep(get_ready ? index : 0, current));
+    auto tile_index =
+        common::computeCoordsColMajor(to_signed<LocalTileIndex::IndexType>(index), nr_tiles);
+    mat_view.doneWrite(tile_index);
+  }
+
+  EXPECT_TRUE(checkFuturesStep(get_ready ? current.size() : 0, current));
+}
+
+#define CHECK_MATRIX_FUTURES_DONE_WRITE(get_ready, current, mat_view)          \
+  do {                                                                         \
+    SCOPED_TRACE("");                                                          \
+    ::dlaf::matrix::test::checkFuturesDoneWrite(get_ready, current, mat_view); \
+  } while (0)
 }
 }
 }

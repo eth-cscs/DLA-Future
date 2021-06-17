@@ -34,6 +34,11 @@ struct ContinuationException final : public std::runtime_error {
 };
 
 namespace matrix {
+namespace internal {
+template <class T, Device device>
+class ViewTileFutureManager;
+}
+
 template <class T, Device device>
 class Tile;
 
@@ -53,6 +58,7 @@ class Tile<const T, device>;
 template <class T, Device device>
 class Tile<const T, device> {
   friend Tile<T, device>;
+  friend internal::ViewTileFutureManager<T, device>;
 
   template <class PT>
   using promise_t = hpx::lcos::local::promise<PT>;
@@ -102,7 +108,7 @@ public:
   /// @pre index.isIn(size()).
   const T* ptr(const TileElementIndex& index) const noexcept {
     DLAF_ASSERT_HEAVY(index.isIn(size_), index, size_);
-    return memory_view_(index.row() + static_cast<SizeType>(ld_) * index.col());
+    return memory_view_(index.row() + ld_ * index.col());
   }
 
   /// Returns the size of the Tile.

@@ -70,8 +70,8 @@ void Distribution::computeGlobalSizeForNonDistr(const LocalElementSize& local_si
 
 void Distribution::computeGlobalNrTiles(const GlobalElementSize& size,
                                         const TileElementSize& block_size) noexcept {
-  global_nr_tiles_ = {util::ceilDiv(size.rows(), block_size.rows()),
-                      util::ceilDiv(size.cols(), block_size.cols())};
+  using dlaf::util::ceilDiv;
+  global_nr_tiles_ = {ceilDiv(size.rows(), block_size.rows()), ceilDiv(size.cols(), block_size.cols())};
 }
 
 void Distribution::computeGlobalAndLocalNrTilesAndLocalSize(
@@ -80,10 +80,10 @@ void Distribution::computeGlobalAndLocalNrTilesAndLocalSize(
   // Set global_nr_tiles_.
   computeGlobalNrTiles(size, block_size);
 
-  auto tile_row = util::matrix::nextLocalTileFromGlobalTile(global_nr_tiles_.rows(), grid_size.rows(),
-                                                            rank_index.row(), source_rank_index.row());
-  auto tile_col = util::matrix::nextLocalTileFromGlobalTile(global_nr_tiles_.cols(), grid_size.cols(),
-                                                            rank_index.col(), source_rank_index.col());
+  auto tile_row = util::nextLocalTileFromGlobalTile(global_nr_tiles_.rows(), grid_size.rows(),
+                                                    rank_index.row(), source_rank_index.row());
+  auto tile_col = util::nextLocalTileFromGlobalTile(global_nr_tiles_.cols(), grid_size.cols(),
+                                                    rank_index.col(), source_rank_index.col());
 
   // Set local_nr_tiles_.
   local_nr_tiles_ = {tile_row, tile_col};
@@ -95,8 +95,8 @@ void Distribution::computeGlobalAndLocalNrTilesAndLocalSize(
   //   local_size = local_nr_tiles * block_size
   SizeType row = 0;
   if (size.rows() > 0) {
-    if (rank_index.row() == util::matrix::rankGlobalTile(global_nr_tiles_.rows() - 1, grid_size.rows(),
-                                                         source_rank_index.row())) {
+    if (rank_index.row() ==
+        util::rankGlobalTile(global_nr_tiles_.rows() - 1, grid_size.rows(), source_rank_index.row())) {
       auto last_tile_rows = (size.rows() - 1) % block_size.rows() + 1;
       row = (tile_row - 1) * block_size.rows() + last_tile_rows;
     }
@@ -106,8 +106,8 @@ void Distribution::computeGlobalAndLocalNrTilesAndLocalSize(
   }
   SizeType col = 0;
   if (size.cols() > 0) {
-    if (rank_index.col() == util::matrix::rankGlobalTile(global_nr_tiles_.cols() - 1, grid_size.cols(),
-                                                         source_rank_index.col())) {
+    if (rank_index.col() ==
+        util::rankGlobalTile(global_nr_tiles_.cols() - 1, grid_size.cols(), source_rank_index.col())) {
       auto last_tile_cols = (size.cols() - 1) % block_size.cols() + 1;
       col = (tile_col - 1) * block_size.cols() + last_tile_cols;
     }
@@ -122,8 +122,9 @@ void Distribution::computeGlobalAndLocalNrTilesAndLocalSize(
 
 void Distribution::computeLocalNrTiles(const LocalElementSize& local_size,
                                        const TileElementSize& block_size) noexcept {
-  local_nr_tiles_ = {util::ceilDiv(local_size.rows(), block_size.rows()),
-                     util::ceilDiv(local_size.cols(), block_size.cols())};
+  using dlaf::util::ceilDiv;
+  local_nr_tiles_ = {ceilDiv(local_size.rows(), block_size.rows()),
+                     ceilDiv(local_size.cols(), block_size.cols())};
 }
 
 void Distribution::setDefaultSizes() noexcept {

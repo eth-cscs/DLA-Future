@@ -80,11 +80,6 @@ using FutureConstTile = hpx::shared_future<ConstTileT<Type>>;
 template <class Type>
 using MemViewT = memory::MemoryView<Type, Device::CPU>;
 
-template <class Type>
-void set_to_zero(MatrixT<Type>& matrix) {
-  dlaf::matrix::util::set(matrix, [](...) { return 0; });
-}
-
 template <class T>
 T computeReflector(const comm::IndexT_MPI rank_v0, comm::Communicator& communicator,
                    const std::vector<TileT<T>>& panel, SizeType j) {
@@ -498,6 +493,12 @@ void compute_w2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Coord
   const auto ex = dlaf::getHpExecutor<Backend::MC>();
   const auto ex_mpi = dlaf::getMPIExecutor<Backend::MC>();
 
+  // Note:
+  // Not all ranks in the column always hold at least a tile in the panel Ai, but all ranks in
+  // the column are going to participate to the reduce. For them, it is important to set the
+  // partial result W2 to zero.
+  dlaf::matrix::util::set(w2, [](...) { return 0; });
+
   // GEMM W2 = W* . X
   for (const auto& index_tile : w.iterator()) {
     const T beta = (index_tile.row() == 0) ? 0 : 1;
@@ -783,12 +784,6 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
       // Indeed, T size depends on the number of the reflectors in this step, while W2 is still
       // working on the full size tile (it can be improved in the future)
       MatrixT<T> w2({nb, nb}, dist.blockSize());
-
-      // Note:
-      // Not all ranks in the column always hold at least a tile in the panel Ai, but all ranks in
-      // the column are going to participate to the reduce. For them, it is important to set the
-      // partial result W2 to zero.
-      set_to_zero(w2);
 
       compute_w2(w2, w, x, mpi_col_task_chain);
 

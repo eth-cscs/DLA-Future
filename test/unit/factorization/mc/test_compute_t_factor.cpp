@@ -9,6 +9,7 @@
 //
 
 #include "dlaf/factorization/qr.h"
+#include "dlaf/matrix/print_csv.h"
 
 #include <gtest/gtest.h>
 #include <blas.hh>
@@ -84,6 +85,85 @@ void is_orthogonal(const MatrixLocal<const T>& matrix) {
   CHECK_MATRIX_NEAR(eye, ortho, 0, error);
 }
 
+template <class T>
+void computeTauHi(const dlaf::SizeType m, const dlaf::SizeType j, const dlaf::TileElementSize block_size,
+                  const MatrixLocal<T>& v, dlaf::common::internal::vector<T>& taus,
+                  MatrixLocal<T>& h_expected) {
+  const dlaf::SizeType reflector_size = m - j;
+
+  const T* data_ptr = v.ptr({j, j});
+  const auto norm = blas::nrm2(reflector_size, data_ptr, 1);
+  const T tau = 2 / std::pow(norm, static_cast<decltype(norm)>(2));
+
+  taus.push_back(tau);
+  MatrixLocal<T> h_i({reflector_size, reflector_size}, block_size);
+  set(h_i, preset_eye<T>);
+
+  // Hi = (I - tau . v . v*)
+  // clang-format off
+  blas::ger(blas::Layout::ColMajor,
+	    reflector_size, reflector_size,
+	    -tau,
+	    v.ptr({j, j}), 1,
+	    v.ptr({j, j}), 1,
+	    h_i.ptr(), h_i.ld());
+  // clang-format on
+
+  // H_exp[:, j:] = H_exp[:, j:] . Hi
+  // clang-format off
+  const dlaf::GlobalElementIndex h_offset{0, j};
+  MatrixLocal<T> workspace({h_expected.size().rows(), h_i.size().cols()}, h_i.blockSize());
+  blas::gemm(blas::Layout::ColMajor,
+	     blas::Op::NoTrans, blas::Op::NoTrans,
+	     h_expected.size().rows(), h_i.size().cols(), h_i.size().rows(),
+	     1,
+	     h_expected.ptr(h_offset), h_expected.ld(),
+	     h_i.ptr(), h_i.ld(),
+	     0,
+	     workspace.ptr(), workspace.ld());
+  // clang-format on
+  std::copy(workspace.ptr(), workspace.ptr() + workspace.size().linear_size(), h_expected.ptr(h_offset));
+}
+
+template <class T>
+MatrixLocal<T> computeHres(const dlaf::SizeType m, const dlaf::SizeType k,
+                           const dlaf::TileElementSize block_size,
+                           const dlaf::GlobalElementSize tile_size, Matrix<T, Device::CPU>& t_output,
+                           const dlaf::LocalTileIndex t_idx, const MatrixLocal<T>& v) {
+  const auto& t = t_output.read(t_idx).get();
+
+  // TV* = (VT*)* = W
+  MatrixLocal<T> w({m, k}, block_size);
+  std::copy(v.ptr(), v.ptr() + w.size().linear_size(), w.ptr());
+
+  // clang-format off
+      blas::trmm(blas::Layout::ColMajor,
+          blas::Side::Right, blas::Uplo::Upper,
+          blas::Op::ConjTrans, blas::Diag::NonUnit,
+          m, k,
+          1,
+          t.ptr(), t.ld(),
+          w.ptr(), w.ld());
+  // clang-format on
+
+  // H_result = I - V W*
+  MatrixLocal<T> h_result(tile_size, block_size);
+  set(h_result, preset_eye<T>);
+
+  // clang-format off
+      blas::gemm(blas::Layout::ColMajor,
+          blas::Op::NoTrans, blas::Op::ConjTrans,
+          m, m, k,
+          -1,
+          v.ptr(), v.ld(),
+          w.ptr(), w.ld(),
+          1,
+          h_result.ptr(), h_result.ld());
+  // clang-format on
+
+  return h_result;
+}
+
 std::vector<std::tuple<dlaf::SizeType, dlaf::SizeType, dlaf::SizeType, dlaf::SizeType, dlaf::SizeType>>
     configs{
         // m, n, mb, nb, k
@@ -132,11 +212,21 @@ TYPED_TEST(ComputeTFactorLocalTest, Correctness) {
       return V;
     }();
 
-    MatrixLocal<TypeParam> v({a_m, a_n}, block_size);
-    for (const auto& ij_tile : iterate_range2d(v_input.nrTiles())) {
-      auto& dest_tile = v.tile(ij_tile);
-      const auto& source_tile = v_input.read(ij_tile).get();
-      copy(source_tile, dest_tile);
+    const LocalTileIndex v_start{v_input.nrTiles().rows() / 2, v_input.nrTiles().cols() / 2};
+
+    const auto v_start_el = GlobalElementIndex(v_start.row() * nb, v_start.col() * nb);
+    const auto v_end_el = GlobalElementIndex{a_m, std::min((v_start.col() + 1) * nb, a_n)};
+    const auto v_size_el = v_end_el - v_start_el;
+    // const GlobalElementSize v_size_el{a_m - v_start.row(), a_n - v_start.col()};
+
+    MatrixLocal<TypeParam> v(v_size_el, block_size);
+    DLAF_ASSERT_HEAVY(v.size().rows() > v.size().cols(), v.size());
+
+    const GlobalTileSize v_offset{v_start.row(), v_start.col()};
+    for (const auto& ij_tile : iterate_range2d(v.nrTiles())) {
+      // copy only the panel
+      const auto& source_tile = v_input.read(ij_tile + v_offset).get();
+      copy(source_tile, v.tile(ij_tile));
     }
 
     // clean reflectors
@@ -145,6 +235,7 @@ TYPED_TEST(ComputeTFactorLocalTest, Correctness) {
 		  v.size().rows(), v.size().cols(),
 		  0, 1,
 		  v.ptr(), v.ld());
+    //tile::laset(lapack::MatrixType::Upper, 0.f, 1.f, v);
     // clang-format on
 
     const SizeType m = v.size().rows();
@@ -157,41 +248,7 @@ TYPED_TEST(ComputeTFactorLocalTest, Correctness) {
     set(h_expected, preset_eye<TypeParam>);
 
     for (auto j = 0; j < k; ++j) {
-      const SizeType reflector_size = m - j;
-
-      const TypeParam* data_ptr = v.ptr({j, j});
-      const auto norm = blas::nrm2(reflector_size, data_ptr, 1);
-      const TypeParam tau = 2 / std::pow(norm, static_cast<decltype(norm)>(2));
-
-      taus.push_back(tau);
-      MatrixLocal<TypeParam> h_i({reflector_size, reflector_size}, block_size);
-      set(h_i, preset_eye<TypeParam>);
-
-      // Hi = (I - tau . v . v*)
-      // clang-format off
-      blas::ger(blas::Layout::ColMajor,
-		reflector_size, reflector_size,
-		-tau,
-		v.ptr({j, j}), 1,
-		v.ptr({j, j}), 1,
-		h_i.ptr(), h_i.ld());
-      // clang-format on
-
-      // H_exp[:, j:] = H_exp[:, j:] . Hi
-      // clang-format off
-      const GlobalElementIndex h_offset{0, j};
-      MatrixLocal<TypeParam> workspace({h_expected.size().rows(), h_i.size().cols()}, h_i.blockSize());
-      blas::gemm(blas::Layout::ColMajor,
-		 blas::Op::NoTrans, blas::Op::NoTrans,
-		 h_expected.size().rows(), h_i.size().cols(), h_i.size().rows(),
-		 1,
-		 h_expected.ptr(h_offset), h_expected.ld(),
-		 h_i.ptr(), h_i.ld(),
-		 0,
-		 workspace.ptr(), workspace.ld());
-      // clang-format on
-      std::copy(workspace.ptr(), workspace.ptr() + workspace.size().linear_size(),
-                h_expected.ptr(h_offset));
+      computeTauHi(m, j, block_size, v, taus, h_expected);
     }
     hpx::shared_future<decltype(taus)> taus_input = hpx::make_ready_future(taus);
 
@@ -199,8 +256,6 @@ TYPED_TEST(ComputeTFactorLocalTest, Correctness) {
 
     Matrix<TypeParam, Device::CPU> t_output({k, k}, block_size);
     const LocalTileIndex t_idx(0, 0);
-
-    const LocalTileIndex v_start{v.nrTiles().rows() / 2, v.nrTiles().cols() / 2};
 
     dlaf::factorization::internal::computeTFactor<Backend::MC>(k, v_input, v_start, taus_input,
                                                                t_output(t_idx));
@@ -214,42 +269,14 @@ TYPED_TEST(ComputeTFactorLocalTest, Correctness) {
     // H_res = I - V T V*
     //
     // is computed and compared to the one previously obtained by applying reflectors sequentially
-    const auto& t = t_output.read(t_idx).get();
-
-    // TV* = (VT*)* = W
-    MatrixLocal<TypeParam> w({m, k}, block_size);
-    std::copy(v.ptr(), v.ptr() + w.size().linear_size(), w.ptr());
-
-    // clang-format off
-    blas::trmm(blas::Layout::ColMajor,
-	       blas::Side::Right, blas::Uplo::Upper,
-	       blas::Op::ConjTrans, blas::Diag::NonUnit,
-	       m, k,
-	       1,
-	       t.ptr(), t.ld(),
-	       w.ptr(), w.ld());
-    // clang-format on
-
-    // H_result = I - V W*
-    MatrixLocal<TypeParam> h_result(h_expected.size(), block_size);
-    set(h_result, preset_eye<TypeParam>);
-
-    // clang-format off
-    blas::gemm(blas::Layout::ColMajor,
-	       blas::Op::NoTrans, blas::Op::ConjTrans,
-	       m, m, k,
-	       -1,
-	       v.ptr(), v.ld(),
-	       w.ptr(), w.ld(),
-	       1,
-	       h_result.ptr(), h_result.ld());
-    // clang-format on
+    MatrixLocal<TypeParam> h_result =
+        computeHres(m, k, block_size, h_expected.size(), t_output, t_idx, v);
 
     is_orthogonal(h_result);
 
-    //      const auto error =
-    //          h_result.size().rows() * t.size().rows() * test::TypeUtilities<TypeParam>::error;
-    //      CHECK_MATRIX_NEAR(h_expected, h_result, 0, error);
+    const auto error =
+        h_result.size().rows() * h_expected.size().rows() * test::TypeUtilities<TypeParam>::error;
+    CHECK_MATRIX_NEAR(h_expected, h_result, 0, error);
   }
 }
 
@@ -303,7 +330,7 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
         return V;
       }();
 
-      const MatrixLocal<const TypeParam> v = [&v_input, &dist_v, &comm_grid, a_m, a_n, nb, v_start] {
+      const MatrixLocal<TypeParam> v = [&v_input, &dist_v, &comm_grid, a_m, a_n, nb, v_start] {
         // TODO this can be improved by communicating just the interesting part
         // gather the entire A matrix
         auto a = matrix::test::allGather<TypeParam>(v_input, comm_grid);
@@ -343,42 +370,7 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
       set(h_expected, preset_eye<TypeParam>);
 
       for (auto j = 0; j < k; ++j) {
-        const SizeType reflector_size = m - j;
-
-        const TypeParam* data_ptr = v.ptr({j, j});
-        const auto norm = blas::nrm2(reflector_size, data_ptr, 1);
-        const TypeParam tau = 2 / std::pow(norm, static_cast<decltype(norm)>(2));
-
-        taus.push_back(tau);
-
-        MatrixLocal<TypeParam> h_i({reflector_size, reflector_size}, block_size);
-        set(h_i, preset_eye<TypeParam>);
-
-        // Hi = (I - tau . v . v*)
-        // clang-format off
-        blas::ger(blas::Layout::ColMajor,
-            reflector_size, reflector_size,
-            -tau,
-            v.ptr({j, j}), 1,
-            v.ptr({j, j}), 1,
-            h_i.ptr(), h_i.ld());
-        // clang-format on
-
-        // H_exp[:, j:] = H_exp[:, j:] . Hi
-        // clang-format off
-        const GlobalElementIndex h_offset{0, j};
-        MatrixLocal<TypeParam> workspace({h_expected.size().rows(), h_i.size().cols()}, h_i.blockSize());
-        blas::gemm(blas::Layout::ColMajor,
-            blas::Op::NoTrans, blas::Op::NoTrans,
-            h_expected.size().rows(), h_i.size().cols(), h_i.size().rows(),
-            1,
-            h_expected.ptr(h_offset), h_expected.ld(),
-            h_i.ptr(), h_i.ld(),
-            0,
-            workspace.ptr(), workspace.ld());
-        // clang-format on
-        std::copy(workspace.ptr(), workspace.ptr() + workspace.size().linear_size(),
-                  h_expected.ptr(h_offset));
+        computeTauHi(m, j, block_size, v, taus, h_expected);
       }
       hpx::shared_future<decltype(taus)> taus_input = hpx::make_ready_future(taus);
 
@@ -405,37 +397,8 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
       // H_res = I - V T V*
       //
       // is computed and compared to the one previously obtained by applying reflectors sequentially
-
-      const auto& t = t_output.read(t_idx).get();
-
-      // TV* = (VT*)* = W
-      MatrixLocal<TypeParam> w({m, k}, block_size);
-      std::copy(v.ptr(), v.ptr() + w.size().linear_size(), w.ptr());
-
-      // clang-format off
-      blas::trmm(blas::Layout::ColMajor,
-          blas::Side::Right, blas::Uplo::Upper,
-          blas::Op::ConjTrans, blas::Diag::NonUnit,
-          m, k,
-          1,
-          t.ptr(), t.ld(),
-          w.ptr(), w.ld());
-      // clang-format on
-
-      // H_result = I - V W*
-      MatrixLocal<TypeParam> h_result(h_expected.size(), block_size);
-      set(h_result, preset_eye<TypeParam>);
-
-      // clang-format off
-      blas::gemm(blas::Layout::ColMajor,
-          blas::Op::NoTrans, blas::Op::ConjTrans,
-          m, m, k,
-          -1,
-          v.ptr(), v.ld(),
-          w.ptr(), w.ld(),
-          1,
-          h_result.ptr(), h_result.ld());
-      // clang-format on
+      MatrixLocal<TypeParam> h_result =
+          computeHres(m, k, block_size, h_expected.size(), t_output, t_idx, v);
 
       is_orthogonal(h_result);
 
@@ -445,7 +408,7 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
       // and that TypeUtilities<TypeParam>::error indicates maximum error for a multiplication + addition.
       SCOPED_TRACE("Comparison test");
       const auto error =
-          h_result.size().rows() * t.size().rows() * test::TypeUtilities<TypeParam>::error;
+          h_result.size().rows() * h_expected.size().rows() * test::TypeUtilities<TypeParam>::error;
       CHECK_MATRIX_NEAR(h_expected, h_result, 0, error);
     }
   }

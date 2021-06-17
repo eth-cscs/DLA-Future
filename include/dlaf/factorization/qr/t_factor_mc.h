@@ -190,7 +190,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(const SizeType k, Matrix<cons
   DLAF_ASSERT(k <= panel_width, k, panel_width);
 
   // TODO: check
-  const LocalTileIndex v_end{v.nrTiles().rows() - 1, v_start.col()};
+  const LocalTileIndex v_end{v.nrTiles().rows(), (v_start.col() + 1)};
 
   t = t.then(unwrapping([k](auto&& tile) {
     const auto t_size = tile.size();

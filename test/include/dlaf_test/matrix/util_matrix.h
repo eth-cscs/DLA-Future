@@ -92,7 +92,7 @@ namespace internal {
 /// @pre The second argument of err_message should be either T, T& or const T&.
 template <template <class, Device> class MatrixType, class T, class ElementGetter, class ComparisonOp,
           class ErrorMessageGetter>
-void check(ElementGetter expected, MatrixType<const T, Device::CPU>& mat, ComparisonOp comp,
+void check(ElementGetter expected, MatrixType<T, Device::CPU>& mat, ComparisonOp comp,
            ErrorMessageGetter err_message, const char* file, const int line) {
   const matrix::Distribution& dist = mat.distribution();
   for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {

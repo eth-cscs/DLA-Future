@@ -7,9 +7,7 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
-
 #include "dlaf/factorization/qr.h"
-#include "dlaf/matrix/print_csv.h"
 
 #include <gtest/gtest.h>
 #include <blas.hh>

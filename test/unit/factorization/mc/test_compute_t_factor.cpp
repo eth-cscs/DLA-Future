@@ -215,7 +215,6 @@ TYPED_TEST(ComputeTFactorLocalTest, Correctness) {
     const auto v_start_el = GlobalElementIndex(v_start.row() * nb, v_start.col() * nb);
     const auto v_end_el = GlobalElementIndex{a_m, std::min((v_start.col() + 1) * nb, a_n)};
     const auto v_size_el = v_end_el - v_start_el;
-    // const GlobalElementSize v_size_el{a_m - v_start.row(), a_n - v_start.col()};
 
     MatrixLocal<TypeParam> v(v_size_el, block_size);
     DLAF_ASSERT_HEAVY(v.size().rows() > v.size().cols(), v.size());
@@ -225,16 +224,10 @@ TYPED_TEST(ComputeTFactorLocalTest, Correctness) {
       // copy only the panel
       const auto& source_tile = v_input.read(ij_tile + v_offset).get();
       copy(source_tile, v.tile(ij_tile));
+      if (ij_tile.row() == 0) {
+        tile::laset<TypeParam>(lapack::MatrixType::Upper, 0.f, 1.f, v.tile(ij_tile));
+      }
     }
-
-    // clean reflectors
-    // clang-format off
-    lapack::laset(lapack::MatrixType::Upper,
-		  v.size().rows(), v.size().cols(),
-		  0, 1,
-		  v.ptr(), v.ld());
-    //tile::laset(lapack::MatrixType::Upper, 0.f, 1.f, v);
-    // clang-format on
 
     const SizeType m = v.size().rows();
 
@@ -345,6 +338,9 @@ TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
         const GlobalTileSize v_offset{v_start.row(), v_start.col()};
         for (const auto& ij : iterate_range2d(v.nrTiles())) {
           copy(a.tile_read(ij + v_offset), v.tile(ij));
+          if (ij.row() == 0) {
+            tile::laset<TypeParam>(lapack::MatrixType::Upper, 0.f, 1.f, v.tile(ij));
+          }
         }
 
         // clean reflectors

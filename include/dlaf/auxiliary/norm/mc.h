@@ -49,7 +49,7 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
 
   using dlaf::common::internal::vector;
   using dlaf::common::make_data;
-  using hpx::util::unwrapping;
+  using hpx::unwrapping;
 
   using dlaf::tile::lange;
   using dlaf::tile::lantr;

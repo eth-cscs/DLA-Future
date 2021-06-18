@@ -45,7 +45,7 @@ int hpx_main(int argc, char* argv[]) {
     return &alpha;
   });
 
-  hpx::future<cublasStatus_t> f1 = hpx::dataflow(exec, hpx::util::unwrapping(cublasDaxpy), n, alpha_f,
+  hpx::future<cublasStatus_t> f1 = hpx::dataflow(exec, hpx::unwrapping(cublasDaxpy), n, alpha_f,
                                                  x.data().get(), incx, y.data().get(), incy);
 
   hpx::future<void> f2 = f1.then([&y](hpx::future<cublasStatus_t> s) {

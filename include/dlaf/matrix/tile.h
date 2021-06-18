@@ -14,9 +14,10 @@
 #include <ostream>
 #include <type_traits>
 
-#include <hpx/functional.hpp>
+#include <hpx/local/functional.hpp>
 #include <hpx/local/future.hpp>
-#include <hpx/tuple.hpp>
+#include <hpx/local/tuple.hpp>
+#include <hpx/local/unwrap.hpp>
 
 #include "dlaf/common/data_descriptor.h"
 #include "dlaf/matrix/index.h"
@@ -363,8 +364,7 @@ hpx::shared_future<Tile<T, D>> splitTileInsertFutureInChain(hpx::future<Tile<T, 
     // Note: C++17 std::variant can be used.
     return hpx::make_tuple(std::move(tile), std::make_tuple(std::move(p), std::move(sf)));
   };
-  auto tmp =
-      hpx::split_future(tile.then(hpx::launch::sync, hpx::util::unwrapping(std::move(swap_promise))));
+  auto tmp = hpx::split_future(tile.then(hpx::launch::sync, hpx::unwrapping(std::move(swap_promise))));
   // old_tile = F1(PN) and will be used to create the subtiles
   hpx::shared_future<Tile<T, D>> old_tile = std::move(hpx::get<0>(tmp));
   // 3. Set P2 or SF(P2) into FN to restore the chain:  F1(PN)  FN(*) ...
@@ -379,7 +379,7 @@ hpx::shared_future<Tile<T, D>> splitTileInsertFutureInChain(hpx::future<Tile<T, 
     return tile;
   };
   // tile = FN(*) (out argument) can be used to access the full tile after the subtiles tasks completed.
-  tile = hpx::dataflow(hpx::launch::sync, hpx::util::unwrapping(set_promise_or_shfuture), tmp_tile,
+  tile = hpx::dataflow(hpx::launch::sync, hpx::unwrapping(set_promise_or_shfuture), tmp_tile,
                        std::move(hpx::get<1>(tmp)));
 
   return old_tile;
@@ -515,7 +515,7 @@ class UnwrapExtendTiles {
     auto t = hpx::make_tuple<>(UnwrapFuture<std::decay_t<Ts>>::call(std::forward<Ts>(ts))...);
 
     // Call f with all futures (not just future<Tile>) unwrapped.
-    hpx::invoke_fused(hpx::util::unwrapping(f), t);
+    hpx::invoke_fused(hpx::unwrapping(f), t);
 
     // Finally, we extend the lifetime of read-write tiles directly and
     // read-only tiles wrapped in shared_futures by returning them here in a
@@ -529,7 +529,7 @@ class UnwrapExtendTiles {
     auto t = hpx::make_tuple<>(UnwrapFuture<std::decay_t<Ts>>::call(std::forward<Ts>(ts))...);
 
     // Call f with all futures (not just future<Tile>) unwrapped.
-    auto&& r = hpx::invoke_fused(hpx::util::unwrapping(f), t);
+    auto&& r = hpx::invoke_fused(hpx::unwrapping(f), t);
 
     // Finally, we extend the lifetime of read-write tiles directly and
     // read-only tiles wrapped in shared_futures by returning them here in a
@@ -549,12 +549,11 @@ public:
   // We use trailing decltype for SFINAE. This ensures that this does not
   // become a candidate when F is not callable with the given arguments.
   template <typename... Ts>
-  auto operator()(Ts&&... ts)
-      -> decltype(callHelper(std::is_void<decltype(hpx::invoke(hpx::util::unwrapping(std::declval<F>()),
-                                                               std::declval<Ts>()...))>{},
-                             std::forward<Ts>(ts)...)) {
-    return callHelper(std::is_void<decltype(hpx::invoke(hpx::util::unwrapping(std::declval<F>()),
-                                                        std::declval<Ts>()...))>{},
+  auto operator()(Ts&&... ts) -> decltype(callHelper(
+      std::is_void<decltype(hpx::invoke(hpx::unwrapping(std::declval<F>()), std::declval<Ts>()...))>{},
+      std::forward<Ts>(ts)...)) {
+    return callHelper(std::is_void<decltype(
+                          hpx::invoke(hpx::unwrapping(std::declval<F>()), std::declval<Ts>()...))>{},
                       std::forward<Ts>(ts)...);
   }
 
@@ -563,7 +562,7 @@ private:
 };
 }
 
-/// Custom version of hpx::util::unwrapping for tile lifetime management.
+/// Custom version of hpx::unwrapping for tile lifetime management.
 ///
 /// Unwraps and forwards all arguments to the function f, but also returns all
 /// arguments as they are with the exception of future<Tile> arguments.

@@ -35,7 +35,7 @@ using namespace dlaf::comm;
 using namespace dlaf::test;
 using namespace testing;
 
-using hpx::util::unwrapping;
+using hpx::unwrapping;
 
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);

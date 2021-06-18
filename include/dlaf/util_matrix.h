@@ -146,7 +146,7 @@ void set(Matrix<T, Device::CPU>& matrix, const ElementGetter& el_f) {
   for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
     GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
     auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
-    auto set_f = hpx::util::unwrapping([tl_index, el_f = el_f](auto&& tile) {
+    auto set_f = hpx::unwrapping([tl_index, el_f = el_f](auto&& tile) {
       for (auto el_idx_l : iterate_range2d(tile.size())) {
         GlobalElementIndex el_idx_g(el_idx_l.row() + tl_index.row(), el_idx_l.col() + tl_index.col());
         tile(el_idx_l) = el_f(el_idx_g);
@@ -173,7 +173,7 @@ void set_random(Matrix<T, Device::CPU>& matrix) {
     GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
     auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
     auto seed = tl_index.col() + tl_index.row() * matrix.size().cols();
-    auto rnd_f = hpx::util::unwrapping([seed](auto&& tile) {
+    auto rnd_f = hpx::unwrapping([seed](auto&& tile) {
       internal::getter_random<T> random_value(seed);
       for (auto el_idx : iterate_range2d(tile.size())) {
         tile(el_idx) = random_value();
@@ -272,7 +272,7 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const Size
     else
       seed = tl_index.row() + tl_index.col() * matrix.size().rows();
 
-    auto set_hp_f = hpx::util::unwrapping([=](auto&& tile) {
+    auto set_hp_f = hpx::unwrapping([=](auto&& tile) {
       internal::getter_random<T> random_value(seed);
       if (tile_wrt_global.row() == tile_wrt_global.col())
         internal::set_diagonal_tile(tile, random_value, offset_value);

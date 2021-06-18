@@ -330,6 +330,10 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_lln;
+  using hpx::unwrapping;
+
+  using common::internal::vector;
+  using ConstTileType = typename Matrix<T, device>::ConstTileType;
 
   auto executor_hp = dlaf::getHpExecutor<backend>();
   auto executor_np = dlaf::getNpExecutor<backend>();

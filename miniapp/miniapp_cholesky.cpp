@@ -34,7 +34,7 @@
 
 namespace {
 
-using hpx::util::unwrapping;
+using hpx::unwrapping;
 
 using dlaf::Device;
 using dlaf::Coord;

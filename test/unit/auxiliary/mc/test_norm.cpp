@@ -88,7 +88,7 @@ void modify_element(Matrix<T, Device::CPU>& matrix, GlobalElementIndex index, co
     return;
 
   const TileElementIndex index_wrt_local = distribution.tileElementIndex(index);
-  matrix(tile_index).then(hpx::util::unwrapping([value, index_wrt_local](auto&& tile) {
+  matrix(tile_index).then(hpx::unwrapping([value, index_wrt_local](auto&& tile) {
     tile(index_wrt_local) = value;
   }));
 }

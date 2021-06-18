@@ -285,7 +285,7 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
   }
 
   // Shrink from both ends
-  panel.setRangeEnd(GlobalTileIndex(dist.nrTiles()));
+  panel.setRangeEnd(indexFromOrigin(dist.nrTiles()));
 
   for (SizeType head = cfg.offset.get<coord1D>(), tail = dist.nrTiles().get(coord1D); head <= tail;
        ++head, --tail) {

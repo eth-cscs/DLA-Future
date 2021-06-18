@@ -134,10 +134,6 @@ protected:
 
 }
 
-// forward declaration due to the cross dependency between Index2D and Size2D
-template <typename IndexT, class Tag>
-class Index2D;
-
 /// A strong-type for 2D sizes.
 ///
 /// @tparam IndexT type for row and column coordinates,
@@ -148,10 +144,6 @@ class Size2D : public internal::basic_coords<IndexT> {
 
 public:
   using BaseT::basic_coords;
-
-  explicit operator Index2D<IndexT, Tag>() const noexcept {
-    return {rows(), cols()};
-  }
 
   IndexT rows() const noexcept {
     return BaseT::row_;
@@ -267,6 +259,16 @@ template <class Coords2DType, std::enable_if_t<internal::is_coord<Coords2DType>:
 Coords2DType transposed(Coords2DType coords) {
   coords.transpose();
   return coords;
+}
+
+template <class IndexT, class TAG>
+Index2D<IndexT, TAG> indexFromOrigin(const Size2D<IndexT, TAG>& size) noexcept {
+  return {size.rows(), size.cols()};
+}
+
+template <class IndexT, class TAG>
+Size2D<IndexT, TAG> sizeFromOrigin(const Index2D<IndexT, TAG>& size) noexcept {
+  return {size.row(), size.col()};
 }
 
 /// Compute coords of the @p index -th cell in a row-major ordered 2D grid with size @p dims.

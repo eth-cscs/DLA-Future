@@ -248,7 +248,7 @@ protected:
 
     bias_ = dist_matrix_.template nextLocalTileFromGlobalTile<CoordType>(start.get(CoordType));
 
-    setRange(start, GlobalTileIndex(dist_matrix_.nrTiles()));
+    setRange(start, indexFromOrigin(dist_matrix_.nrTiles()));
 
     external_.resize(data_.nrTiles().get(CoordType));
 

@@ -134,6 +134,10 @@ protected:
 
 }
 
+// forward declaration due to the cross dependency between Index2D and Size2D
+template <typename IndexT, class Tag>
+class Index2D;
+
 /// A strong-type for 2D sizes.
 ///
 /// @tparam IndexT type for row and column coordinates,
@@ -144,6 +148,10 @@ class Size2D : public internal::basic_coords<IndexT> {
 
 public:
   using BaseT::basic_coords;
+
+  explicit operator Index2D<IndexT, Tag>() const noexcept {
+    return {rows(), cols()};
+  }
 
   IndexT rows() const noexcept {
     return BaseT::row_;

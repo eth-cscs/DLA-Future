@@ -50,7 +50,7 @@ TYPED_TEST_SUITE(PanelTest, MatrixElementTypes);
 struct config_t {
   const GlobalElementSize sz;
   const TileElementSize blocksz;
-  const GlobalTileSize offset;
+  const GlobalTileIndex offset;
 };
 
 std::vector<config_t> test_params{
@@ -236,7 +236,7 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
 
   // Shrink from head
   for (SizeType head = cfg.offset.get<coord1D>(); head <= dist.nrTiles().get(coord1D); ++head) {
-    panel.setRangeStart(GlobalTileSize(coord1D, head));
+    panel.setRangeStart(GlobalTileIndex(coord1D, head));
 
     const auto head_loc = dist.template nextLocalTileFromGlobalTile<coord1D>(head);
     const auto tail_loc = dist.localNrTiles().get(coord1D);
@@ -262,7 +262,7 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
   panel.setRangeStart(cfg.offset);
 
   for (SizeType tail = dist.nrTiles().get(coord1D); cfg.offset.get<coord1D>() <= tail; --tail) {
-    panel.setRangeEnd(GlobalTileSize(coord1D, tail));
+    panel.setRangeEnd(GlobalTileIndex(coord1D, tail));
 
     const auto head_loc = dist.template nextLocalTileFromGlobalTile<coord1D>(cfg.offset.get<coord1D>());
     const auto tail_loc = dist.template nextLocalTileFromGlobalTile<coord1D>(tail);
@@ -285,11 +285,11 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
   }
 
   // Shrink from both ends
-  panel.setRangeEnd(dist.nrTiles());
+  panel.setRangeEnd(GlobalTileIndex(dist.nrTiles()));
 
   for (SizeType head = cfg.offset.get<coord1D>(), tail = dist.nrTiles().get(coord1D); head <= tail;
        ++head, --tail) {
-    panel.setRange(GlobalTileSize(coord1D, head), GlobalTileSize(coord1D, tail));
+    panel.setRange(GlobalTileIndex(coord1D, head), GlobalTileIndex(coord1D, tail));
 
     const auto head_loc = dist.template nextLocalTileFromGlobalTile<coord1D>(head);
     const auto tail_loc = dist.template nextLocalTileFromGlobalTile<coord1D>(tail);

@@ -43,7 +43,7 @@ TYPED_TEST_SUITE(PanelBcastTest, MatrixElementTypes);
 struct config_t {
   const GlobalElementSize sz;
   const TileElementSize blocksz;
-  const GlobalTileSize offset;
+  const GlobalTileIndex offset;
 };
 
 std::vector<config_t> test_params{

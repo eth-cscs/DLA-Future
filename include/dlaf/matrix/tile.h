@@ -34,11 +34,21 @@ struct ContinuationException final : public std::runtime_error {
 };
 
 namespace matrix {
+// forward declarations
 template <class T, Device device>
 class Tile;
 
 template <class T, Device device>
 class Tile<const T, device>;
+
+template <class T, Device D>
+std::vector<hpx::shared_future<Tile<const T, D>>> splitTile(
+    hpx::shared_future<Tile<const T, D>>& tile,
+    std::vector<std::tuple<TileElementIndex, TileElementSize>> specs);
+
+template <class T, Device D>
+std::vector<hpx::future<Tile<T, D>>> splitTile(
+    hpx::future<Tile<T, D>>& tile, std::vector<std::tuple<TileElementIndex, TileElementSize>> specs);
 
 /// The Tile object aims to provide an effective way to access the memory as a two dimensional
 /// array. It does not allocate any memory, but it references the memory given by a @c MemoryView object.
@@ -52,10 +62,16 @@ class Tile<const T, device>;
 /// the tile of const elements ensure that the memory will not be modified.
 template <class T, Device device>
 class Tile<const T, device> {
-  friend Tile<T, device>;
+  using TileType = Tile<T, device>;
+  using ConstTileType = Tile<const T, device>;
 
   template <class PT>
   using promise_t = hpx::lcos::local::promise<PT>;
+
+  friend TileType;
+  friend std::vector<hpx::shared_future<ConstTileType>> splitTile<>(
+      hpx::shared_future<ConstTileType>& tile,
+      std::vector<std::tuple<TileElementIndex, TileElementSize>> specs);
 
 public:
   using ElementType = T;
@@ -101,8 +117,7 @@ public:
   ///
   /// @pre index.isIn(size()).
   const T* ptr(const TileElementIndex& index) const noexcept {
-    DLAF_ASSERT_HEAVY(index.isIn(size_), index, size_);
-    return memory_view_(index.row() + static_cast<SizeType>(ld_) * index.col());
+    return memory_view_(linearIndex(index));
   }
 
   /// Returns the size of the Tile.
@@ -121,21 +136,113 @@ public:
 
 private:
   /// Sets size to {0, 0} and ld to 1.
-  void setDefaultSizes() noexcept;
+  void setDefaultSize() noexcept {
+    size_ = {0, 0};
+    ld_ = 1;
+  }
+
+  SizeType linearIndex(const TileElementIndex& index) const noexcept {
+    DLAF_ASSERT_HEAVY(index.isIn(size_), index, size_);
+    return index.row() + ld_ * index.col();
+  }
+
+  SizeType linearSize(const TileElementSize& size) const noexcept {
+    DLAF_ASSERT_HEAVY(size.isValid(), size);
+    DLAF_ASSERT_HEAVY(size.rows() <= size_.rows(), size, size_);
+    DLAF_ASSERT_HEAVY(size.cols() <= size_.cols(), size, size_);
+    if (size.isEmpty())
+      return 0;
+    return size.rows() + ld_ * (size.cols() - 1);
+  }
+
+  // Creates an untracked subtile.
+  // Dependencies are not influenced by the new created object therefore race-conditions
+  // might happen if used improperly.
+  Tile(const Tile& tile, TileElementIndex origin, TileElementSize size) noexcept;
+
+  // Creates a read-only subtile keeping the dependencies.
+  // It calls tile.get(), therefore it should be used when tile is guaranteed to be ready:
+  // e.g. in dataflow, .then, ...
+  Tile(hpx::shared_future<ConstTileType> tile, TileElementIndex origin, TileElementSize size)
+      : Tile<const T, device>(tile.get(), origin, size) {
+    sfc_ = tile;
+  }
 
   TileElementSize size_;
   memory::MemoryView<ElementType, device> memory_view_;
   SizeType ld_;
 
-  std::unique_ptr<promise_t<Tile<ElementType, device>>> p_;
+  // With C++17 the following objects can be joined in a variant.
+  std::unique_ptr<promise_t<TileType>> p_;
+  hpx::shared_future<TileType> sf_;
+  hpx::shared_future<ConstTileType> sfc_;
 };
 
 template <class T, Device device>
+Tile<const T, device>::Tile(const TileElementSize& size,
+                            memory::MemoryView<ElementType, device>&& memory_view, SizeType ld) noexcept
+    : size_(size), memory_view_(std::move(memory_view)), ld_(ld) {
+  DLAF_ASSERT(size.isValid(), size);
+  DLAF_ASSERT(ld_ >= std::max<SizeType>(1, size_.rows()), ld, size_.rows());
+  DLAF_ASSERT(size.isEmpty() || size_.rows() + ld_ * (size_.cols() - 1) <= memory_view_.size(), size,
+              size_, ld_, memory_view_.size());
+}
+
+template <class T, Device device>
+Tile<const T, device>::Tile(Tile&& rhs) noexcept
+    : size_(rhs.size_), memory_view_(std::move(rhs.memory_view_)), ld_(rhs.ld_), p_(std::move(rhs.p_)),
+      sf_(std::move(rhs.sf_)), sfc_(std::move(rhs.sfc_)) {
+  rhs.setDefaultSize();
+}
+
+template <class T, Device device>
+Tile<const T, device>::~Tile() {
+  if (p_) {
+    if (std::uncaught_exception())
+      p_->set_exception(std::make_exception_ptr(ContinuationException{}));
+    else
+      p_->set_value(Tile<ElementType, device>(size_, std::move(memory_view_), ld_));
+  }
+}
+
+template <class T, Device device>
+Tile<const T, device>& Tile<const T, device>::operator=(Tile<const T, device>&& rhs) noexcept {
+  size_ = rhs.size_;
+  memory_view_ = std::move(rhs.memory_view_);
+  ld_ = rhs.ld_;
+  p_ = std::move(rhs.p_);
+  sf_ = std::move(rhs.sf_);
+  sfc_ = std::move(rhs.sfc_);
+  rhs.setDefaultSize();
+
+  return *this;
+}
+
+template <class T, Device device>
+Tile<const T, device>::Tile(const Tile<const T, device>& tile, TileElementIndex origin,
+                            TileElementSize size) noexcept
+    : Tile<const T, device>(size,
+                            memory::MemoryView<T, device>(tile.memory_view_,
+                                                          size.isEmpty() ? 0 : tile.linearIndex(origin),
+                                                          tile.linearSize(size)),
+                            tile.ld()) {
+  DLAF_ASSERT(origin.isValid(), origin);
+  DLAF_ASSERT(origin.isInOrOn(tile.size()), origin, tile.size());
+  DLAF_ASSERT(size.isValid(), size);
+  DLAF_ASSERT((origin + size).isInOrOn(tile.size_), origin, size, tile.size_);
+}
+
+template <class T, Device device>
 class Tile : public Tile<const T, device> {
+  using TileType = Tile<T, device>;
+  using ConstTileType = Tile<const T, device>;
+
   template <class PT>
   using promise_t = hpx::lcos::local::promise<PT>;
 
-  friend Tile<const T, device>;
+  friend ConstTileType;
+  friend std::vector<hpx::future<TileType>> splitTile<>(
+      hpx::future<TileType>& tile, std::vector<std::tuple<TileElementIndex, TileElementSize>> specs);
 
 public:
   using ElementType = T;
@@ -177,29 +284,138 @@ public:
   /// @pre index.isIn(size()).
   T* ptr(const TileElementIndex& index) const noexcept {
     DLAF_ASSERT_HEAVY(index.isIn(size_), index, size_);
-    return memory_view_(index.row() + ld_ * index.col());
+    return memory_view_(linearIndex(index));
   }
 
   /// Sets the promise to which this Tile will be moved on destruction.
   ///
   /// @c setPromise can be called only once per object.
-  Tile& setPromise(promise_t<Tile<T, device>>&& p) {
+  Tile& setPromise(promise_t<TileType>&& p) {
     DLAF_ASSERT(!p_, "setPromise has been already used on this object!");
-    p_ = std::make_unique<promise_t<Tile<T, device>>>(std::move(p));
+    p_ = std::make_unique<promise_t<TileType>>(std::move(p));
     return *this;
   }
 
 private:
-  using Tile<const T, device>::size_;
-  using Tile<const T, device>::memory_view_;
-  using Tile<const T, device>::ld_;
-  using Tile<const T, device>::p_;
+  // Creates a writable subtile keeping the dependencies.
+  // It calls old_tile.get(), therefore it should be used when old_tile is guaranteed to be ready:
+  // e.g. in dataflow, .then, ...
+  Tile(hpx::shared_future<TileType> tile, TileElementIndex origin, TileElementSize size)
+      : ConstTileType(tile.get(), origin, size) {
+    sf_ = tile;
+  }
+
+  using ConstTileType::linearIndex;
+  using ConstTileType::size_;
+  using ConstTileType::memory_view_;
+  using ConstTileType::ld_;
+  using ConstTileType::p_;
+  using ConstTileType::sf_;
 };
 
 /// Create a common::Buffer from a Tile.
 template <class T, Device device>
 auto create_data(const Tile<T, device>& tile) {
   return common::DataDescriptor<T>(tile.ptr({0, 0}), tile.size().cols(), tile.size().rows(), tile.ld());
+}
+
+/// Create SubTiles:
+/// TODO
+template <class T, Device D>
+std::vector<hpx::shared_future<Tile<const T, D>>> splitTile(
+    hpx::shared_future<Tile<const T, D>>& tile,
+    std::vector<std::tuple<TileElementIndex, TileElementSize>> specs) {
+  std::vector<hpx::shared_future<Tile<const T, D>>> ret;
+  ret.reserve(specs.size());
+  for (const auto& spec : specs) {
+    ret.emplace_back(hpx::dataflow(
+        hpx::launch::sync,
+        [](auto tile, auto origin, auto size) { return Tile<const T, D>(tile, origin, size); }, tile,
+        std::get<0>(spec), std::get<1>(spec)));
+  }
+
+  return ret;
+}
+
+/// Create SubTiles:
+/// TODO
+template <class T, Device D>
+std::vector<hpx::future<Tile<T, D>>> splitTile(
+    hpx::future<Tile<T, D>>& tile, std::vector<std::tuple<TileElementIndex, TileElementSize>> specs) {
+  using hpx::lcos::local::promise;
+
+  if (specs.size() == 0)
+    return {};
+
+#ifdef DLAF_ASSERT_MODERATE_ENABLE
+  // Check if subtiles overlap.
+  auto overlap = [](const auto& spec1, const auto& spec2) {
+    const auto& size1 = std::get<1>(spec1);
+    const auto& size2 = std::get<1>(spec2);
+    // no overlap if either of the sizes is empty.
+    if (size1.isEmpty() || size2.isEmpty())
+      return false;
+
+    const auto& start1 = std::get<0>(spec1);
+    const auto end1 = start1 + size1;
+    const auto& start2 = std::get<0>(spec2);
+    const auto end2 = start2 + size2;
+
+    // no overlap if rows do not overlap.
+    if (end1.row() <= start2.row() || end2.row() <= start1.row())
+      return false;
+    // no overlap if cols do not overlap.
+    if (end1.col() <= start2.col() || end2.col() <= start1.col())
+      return false;
+
+    return true;
+  };
+  for (auto it = std::cbegin(specs); it < std::cend(specs); ++it) {
+    // no overlap possible if size is empty.
+    if (std::get<1>(*it).isEmpty())
+      continue;
+
+    for (auto it2 = std::cbegin(specs); it2 < it; ++it2) {
+      DLAF_ASSERT_MODERATE(!overlap(*it, *it2), std::get<0>(*it), std::get<1>(*it), std::get<0>(*it2),
+                           std::get<1>(*it2));
+    }
+  }
+#endif
+
+  // Insert a Tile in the tile dependency chain:  F1(P2)  F2(P3) ...
+  // where Pi, Fi is a promise future pair (Pi sets Fi),
+  // and F1(P2) means that the Tile in F1 will set promise P2.
+  // 1. Create a new promise + tile pair PN, FN
+  promise<Tile<T, D>> p;
+  auto tmp_tile = p.get_future();
+  // 2. Break the dependency chain swapping P2 with PN:  F1(PN)  FN()  F2(P3)
+  auto swap_promise = [p = std::move(p)](auto tile) mutable {
+    std::swap(p, *tile.p_);
+    return hpx::make_tuple(std::move(tile), std::move(p));
+  };
+  auto tmp =
+      hpx::split_future(tile.then(hpx::launch::sync, hpx::util::unwrapping(std::move(swap_promise))));
+  // old_tile = F1(PN) and will be used to create the subtiles
+  hpx::shared_future<Tile<T, D>> old_tile = std::move(hpx::get<0>(tmp));
+  // 3. Set P2 into FN to restore the chain:  F1(PN)  FN(P2)  F2(P3)
+  auto set_promise = [](auto tile, auto p) {
+    tile.setPromise(std::move(p));
+    return std::move(tile);
+  };
+  // tile = FN(P2) (out argument) can be used to access the full tile after the subtiles tasks completed.
+  tile = hpx::dataflow(hpx::launch::sync, hpx::util::unwrapping(set_promise), tmp_tile,
+                       std::move(hpx::get<1>(tmp)));
+
+  std::vector<hpx::future<Tile<T, D>>> ret;
+  ret.reserve(specs.size());
+  for (const auto& spec : specs) {
+    ret.emplace_back(hpx::dataflow(
+        hpx::launch::sync,
+        [](auto tile, auto origin, auto size) { return Tile<T, D>(tile, origin, size); }, old_tile,
+        std::get<0>(spec), std::get<1>(spec)));
+  }
+
+  return ret;
 }
 
 namespace internal {
@@ -334,5 +550,3 @@ DLAF_TILE_ETI(extern, std::complex<double>, Device::GPU)
 #endif
 }
 }
-
-#include <dlaf/matrix/tile.tpp>

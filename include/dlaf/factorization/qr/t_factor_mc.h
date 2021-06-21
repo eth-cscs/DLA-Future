@@ -198,26 +198,23 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
   // 2nd step: compute the T factor, by performing the last step on each column
   // each column depends on the previous part (all reflectors that comes before)
   // so it is performed sequentially
-  for (SizeType j = 0; j < k; ++j) {
-    const TileElementIndex t_start{0, j};
-    const TileElementSize t_size{j, 1};
+  hpx::dataflow(ex, unwrapping([k](auto&& tile_t) {
+                  for (SizeType j = 0; j < k; ++j) {
+                    const TileElementIndex t_start{0, j};
+                    const TileElementSize t_size{j, 1};
 
-    // Update each column (in order) t = T . t
-    // remember that T is upper triangular, so it is possible to use TRMV
-    auto trmv_func = unwrapping([](auto&& tile_t, TileElementIndex t_start, TileElementSize t_size) {
-      // clang-format off
-      blas::trmv(blas::Layout::ColMajor,
-          blas::Uplo::Upper, blas::Op::NoTrans, blas::Diag::NonUnit,
-          t_size.rows(),
-          tile_t.ptr(), tile_t.ld(),
-          tile_t.ptr(t_start), 1);
-      // clang-format on
-
-      return std::move(tile_t);
-    });
-
-    t = hpx::dataflow(ex, trmv_func, t, t_start, t_size);
-  }
+                    // Update each column (in order) t = T . t
+                    // remember that T is upper triangular, so it is possible to use TRMV
+                    // clang-format off
+                    blas::trmv(blas::Layout::ColMajor,
+                        blas::Uplo::Upper, blas::Op::NoTrans, blas::Diag::NonUnit,
+                        t_size.rows(),
+                        tile_t.ptr(), tile_t.ld(),
+                        tile_t.ptr(t_start), 1);
+                    // clang-format on
+                  }
+                }),
+                t);
 }
 }
 }

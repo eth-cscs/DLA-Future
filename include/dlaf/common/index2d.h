@@ -267,8 +267,8 @@ Index2D<IndexT, TAG> indexFromOrigin(const Size2D<IndexT, TAG>& size) noexcept {
 }
 
 template <class IndexT, class TAG>
-Size2D<IndexT, TAG> sizeFromOrigin(const Index2D<IndexT, TAG>& size) noexcept {
-  return {size.row(), size.col()};
+Size2D<IndexT, TAG> sizeFromOrigin(const Index2D<IndexT, TAG>& index) noexcept {
+  return {index.row(), index.col()};
 }
 
 /// Compute coords of the @p index -th cell in a row-major ordered 2D grid with size @p dims.

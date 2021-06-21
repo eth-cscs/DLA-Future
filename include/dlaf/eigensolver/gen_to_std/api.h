@@ -31,10 +31,10 @@ DLAF_GENTOSTD_ETI(extern, Backend::MC, Device::CPU, std::complex<float>)
 DLAF_GENTOSTD_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
 
 #ifdef DLAF_WITH_CUDA
-DLAF_GENTOSTD_ETI(extern, Backend::MC, Device::GPU, float)
-DLAF_GENTOSTD_ETI(extern, Backend::MC, Device::GPU, double)
-DLAF_GENTOSTD_ETI(extern, Backend::MC, Device::GPU, std::complex<float>)
-DLAF_GENTOSTD_ETI(extern, Backend::MC, Device::GPU, std::complex<double>)
+DLAF_GENTOSTD_ETI(extern, Backend::GPU, Device::GPU, float)
+DLAF_GENTOSTD_ETI(extern, Backend::GPU, Device::GPU, double)
+DLAF_GENTOSTD_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)
+DLAF_GENTOSTD_ETI(extern, Backend::GPU, Device::GPU, std::complex<double>)
 #endif
 }
 }

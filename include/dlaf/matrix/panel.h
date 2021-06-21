@@ -115,7 +115,7 @@ struct Panel<axis, const T, D> {
   /// @pre panel offset on construction <= end
   /// @pre start <= 1 past the panel last tile
   /// @pre end <= 1 past the panel last tile
-  void setRange(GlobalTileSize start_idx, GlobalTileSize end_idx) noexcept {
+  void setRange(GlobalTileIndex start_idx, GlobalTileIndex end_idx) noexcept {
     start_ = start_idx.get(CoordType);
     start_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<CoordType>(start_);
 
@@ -136,7 +136,7 @@ struct Panel<axis, const T, D> {
   /// @pre (just the index relevant for the axis of the panel)
   /// @pre start <= current end range of the panel
   /// @pre panel offset on construction <= start
-  void setRangeStart(GlobalTileSize start_idx) noexcept {
+  void setRangeStart(GlobalTileIndex start_idx) noexcept {
     start_ = start_idx.get(CoordType);
     start_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<CoordType>(start_);
 
@@ -152,7 +152,7 @@ struct Panel<axis, const T, D> {
   /// @pre (just the index relevant for the axis of the panel)
   /// @pre current end range of the panel <= end
   /// @pre end <= 1 past the panel last tile
-  void setRangeEnd(GlobalTileSize end_idx) noexcept {
+  void setRangeEnd(GlobalTileIndex end_idx) noexcept {
     end_ = end_idx.get(CoordType);
     end_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<CoordType>(end_);
 
@@ -193,7 +193,7 @@ struct Panel<axis, const T, D> {
 
 protected:
   static LocalElementSize computePanelSize(LocalElementSize size, TileElementSize blocksize,
-                                           LocalTileSize start) {
+                                           LocalTileIndex start) {
     const auto mb = blocksize.rows();
     const auto nb = blocksize.cols();
 
@@ -212,10 +212,10 @@ protected:
   ///
   /// It allocates just the memory needed for the part of matrix used, so
   /// starting from @p start
-  static Matrix<T, D> setupInternalMatrix(const Distribution& dist, const GlobalTileSize start) {
+  static Matrix<T, D> setupInternalMatrix(const Distribution& dist, const GlobalTileIndex start) {
     constexpr auto CT = CoordType;
 
-    const LocalTileSize start_loc(CT, dist.template nextLocalTileFromGlobalTile<CT>(start.get(CT)));
+    const LocalTileIndex start_loc(CT, dist.template nextLocalTileFromGlobalTile<CT>(start.get(CT)));
     const auto panel_size = computePanelSize(dist.localSize(), dist.blockSize(), start_loc);
 
     Distribution dist_internal{panel_size, dist.blockSize()};
@@ -232,13 +232,13 @@ protected:
   /// e.g. a 4x5 matrix with an offset 2x1 will have either:
   /// - a Panel<Col> 2x1
   /// - or a Panel<Row> 4x1
-  Panel(matrix::Distribution dist_matrix, GlobalTileSize start)
+  Panel(matrix::Distribution dist_matrix, GlobalTileIndex start)
       : dist_matrix_(dist_matrix), data_(setupInternalMatrix(dist_matrix, start)) {
     DLAF_ASSERT_HEAVY(data_.nrTiles().get(axis) == 1, data_.nrTiles());
 
     bias_ = dist_matrix_.template nextLocalTileFromGlobalTile<CoordType>(start.get(CoordType));
 
-    setRange(start, dist_matrix_.nrTiles());
+    setRange(start, indexFromOrigin(dist_matrix_.nrTiles()));
 
     external_.resize(data_.nrTiles().get(CoordType));
 
@@ -301,7 +301,7 @@ struct Panel : public Panel<axis, const T, device> {
   using TileType = Tile<T, device>;
   using ConstTileType = Tile<const T, device>;
 
-  explicit Panel(matrix::Distribution distribution, GlobalTileSize start = {0, 0})
+  explicit Panel(matrix::Distribution distribution, GlobalTileIndex start = {0, 0})
       : Panel<axis, const T, device>(std::move(distribution), std::move(start)) {}
 
   /// Access tile at specified index in readwrite mode

@@ -146,7 +146,7 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
   // Note:
   // This algorithm allow to broadcast panel to panelT using as mirror the parent matrix main diagonal.
   // This means that it is possible to broadcast panels with different axes just if their global offset
-  // lie on the diaognal.
+  // lie on the diagonal.
   DLAF_ASSERT(panel.rangeStart() == panelT.rangeStart(), panel.rangeStart(), panelT.rangeStart());
 
   const auto panelSize = panel.rangeEnd() - panel.rangeStart();

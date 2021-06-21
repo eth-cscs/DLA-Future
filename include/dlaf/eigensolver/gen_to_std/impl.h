@@ -189,8 +189,8 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
     auto& l_panelT = l_panelsT.nextResource();
     auto& a_panel = a_panels.nextResource();
     auto& a_panelT = a_panelsT.nextResource();
-    l_panel.setRangeStart(kk_offset);
-    l_panelT.setRangeStart(kk_offset);
+    l_panel.setRangeStart({k, k});
+    l_panelT.setRangeStart({k, k});
 
     // TODO: Need incomplete panel to simplify the code.
     if (k < nrtile - 1) {
@@ -204,7 +204,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 
       broadcast(executor_mpi, kk_rank.col(), l_panel, l_panelT, mpi_row_task_chain, mpi_col_task_chain);
 
-      a_panelT.setRange({0, 0}, kk_offset);
+      a_panelT.setRange({0, 0}, {k, k});
       // continue update previous panels
       // Note: The tasks of the final huge TRSM of the HEGST step have been reshuffled to avoid extra
       //       communication of the matrix L.
@@ -270,14 +270,14 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 
     const LocalTileIndex diag_wp_idx{0, kk_offset.cols()};
 
-    a_panel.setRangeStart(at_offset);
+    a_panel.setRangeStart({k + 1, k + 1});
 
     hpx::shared_future<matrix::Tile<const T, device>> a_diag;
     if (kk_rank.col() == this_rank.col()) {
       // Note:
       // [a,l]_panelT shrinked to a single tile for temporarly storing and communicating the diagonal
       // tile used for the column update
-      a_panelT.setRange(kk_offset, at_offset);
+      a_panelT.setRange({k, k}, {k + 1, k + 1});
 
       if (kk_rank.row() == this_rank.row()) {
         a_panelT.setTile(diag_wp_idx, mat_a.read(kk));
@@ -302,7 +302,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
       a_panelT.reset();
     }
 
-    a_panelT.setRange(at_offset, distr.localNrTiles());
+    a_panelT.setRange({k + 1, k + 1}, common::indexFromOrigin(distr.nrTiles()));
 
     broadcast(executor_mpi, kk_rank.col(), a_panel, a_panelT, mpi_row_task_chain, mpi_col_task_chain);
 

@@ -546,8 +546,6 @@ void update_a(const LocalTileSize& at_start, MatrixT<T>& a, ConstPanelT<Coord::C
 
   const auto dist = a.distribution();
 
-  const auto ex = dlaf::getNpExecutor<Backend::MC>();
-
   for (SizeType i = at_start.rows(); i < dist.localNrTiles().rows(); ++i) {
     const auto limit = dist.template nextLocalTileFromGlobalTile<Coord::Col>(
         dist.template globalTileFromLocalTile<Coord::Row>(i) + 1);
@@ -556,6 +554,11 @@ void update_a(const LocalTileSize& at_start, MatrixT<T>& a, ConstPanelT<Coord::C
 
       const GlobalTileIndex index_a = dist.globalTileIndex(index_at);  // TODO possible FIXME
       const bool is_diagonal_tile = (index_a.row() == index_a.col());
+
+      // The first column of the trailing matrix (except for the very first global tile) has to be
+      // updated first, in order to unlock the next iteration as soon as possible.
+      const auto& ex = (j == at_start.cols()) ? dlaf::getHpExecutor<Backend::MC>()
+                                              : dlaf::getNpExecutor<Backend::MC>();
 
       if (is_diagonal_tile) {
         // HER2K

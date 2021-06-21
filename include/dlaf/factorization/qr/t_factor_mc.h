@@ -58,7 +58,7 @@ struct QR_Tfactor<Backend::MC, Device::CPU, T> {
   /// @param serial_comm where internal communications are issued
   ///
   /// @pre k <= t.get().size().rows && k <= t.get().size().cols()
-  static void call(const SizeType k, Matrix<const T, Device::CPU>& v, const LocalTileIndex v_start,
+  static void call(const SizeType k, Matrix<const T, Device::CPU>& v, const GlobalTileIndex v_start,
                    hpx::shared_future<common::internal::vector<T>> taus,
                    hpx::future<matrix::Tile<T, Device::CPU>> t);
 
@@ -174,23 +174,18 @@ hpx::future<matrix::Tile<T, Device::CPU>> trmvUpdateColumn(
 
 template <class T>
 void QR_Tfactor<Backend::MC, Device::CPU, T>::call(const SizeType k, Matrix<const T, Device::CPU>& v,
-                                                   const LocalTileIndex v_start,
+                                                   const GlobalTileIndex v_start,
                                                    hpx::shared_future<common::internal::vector<T>> taus,
                                                    hpx::future<matrix::Tile<T, Device::CPU>> t) {
   using hpx::util::unwrapping;
   using common::make_data;
 
-  auto v_n = v.size().cols();
-  auto v_start_col = v_start.col();
-  auto v_nb = v.blockSize().cols();
-  auto v_col = v.nrTiles().cols();
-  // TODO: check
-  const SizeType panel_width = (v_start_col != v_col - 1) ? v_nb : v_n % v_nb;
-
+  const auto panel_width = v.tileSize(v_start).cols();
+  
   DLAF_ASSERT(k <= panel_width, k, panel_width);
 
   // TODO: check
-  const LocalTileIndex v_end{v.nrTiles().rows(), (v_start.col() + 1)};
+  const GlobalTileIndex v_end{v.nrTiles().rows(), (v_start.col() + 1)};
 
   t = t.then(unwrapping([k](auto&& tile) {
     const auto t_size = tile.size();

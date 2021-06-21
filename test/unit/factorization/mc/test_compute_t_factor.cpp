@@ -222,7 +222,7 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
       return V;
     }();
 
-    const LocalTileIndex v_start{v_input.nrTiles().rows() / 2, v_input.nrTiles().cols() / 2};
+    const GlobalTileIndex v_start{v_input.nrTiles().rows() / 2, v_input.nrTiles().cols() / 2};
 
     const auto v_start_el = GlobalElementIndex(v_start.row() * nb, v_start.col() * nb);
     const auto v_end_el = GlobalElementIndex{a_m, std::min((v_start.col() + 1) * nb, a_n)};

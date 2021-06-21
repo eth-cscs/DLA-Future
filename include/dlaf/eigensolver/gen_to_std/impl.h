@@ -207,7 +207,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
       a_panelT.setRange({0, 0}, kk_offset);
       // continue update previous panels
       // Note: The tasks of the final huge TRSM of the HEGST step have been reshuffled to avoid extra
-      // communication of the matrix L.
+      //       communication of the matrix L.
       //       During k-th iteration only the tasks involving the k-th panel of L are executed.
       //       Therefore, all previous panel have to be updated at each step.
       if (kk_rank.row() == this_rank.row()) {

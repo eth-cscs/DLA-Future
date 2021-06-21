@@ -9,6 +9,8 @@
 //
 #include "dlaf/factorization/qr.h"
 
+#include <tuple>
+
 #include <gtest/gtest.h>
 #include <blas.hh>
 #include <hpx/include/util.hpp>
@@ -79,50 +81,65 @@ void is_orthogonal(const MatrixLocal<const T>& matrix) {
 }
 
 template <class T>
-void computeTauHi(const dlaf::SizeType m, const dlaf::SizeType j, const dlaf::TileElementSize block_size,
-                  const MatrixLocal<T>& v, dlaf::common::internal::vector<T>& taus,
-                  MatrixLocal<T>& h_expected) {
-  const dlaf::SizeType reflector_size = m - j;
+std::tuple<hpx::shared_future<dlaf::common::internal::vector<T>>, MatrixLocal<T>> computeTauH(
+    const dlaf::SizeType k, const dlaf::TileElementSize block_size, const MatrixLocal<T>& v) {
+  const dlaf::SizeType m = v.size().rows();
 
-  const T* data_ptr = v.ptr({j, j});
-  const auto norm = blas::nrm2(reflector_size, data_ptr, 1);
-  const T tau = 2 / std::pow(norm, static_cast<decltype(norm)>(2));
+  // compute taus and H_exp
+  dlaf::common::internal::vector<T> taus;
+  taus.reserve(k);
 
-  taus.push_back(tau);
-  MatrixLocal<T> h_i({reflector_size, reflector_size}, block_size);
-  set(h_i, preset_eye<T>);
+  MatrixLocal<T> h_expected({m, m}, block_size);
+  set(h_expected, preset_eye<T>);
 
-  // Hi = (I - tau . v . v*)
-  // clang-format off
-  blas::ger(blas::Layout::ColMajor,
-	    reflector_size, reflector_size,
-	    -tau,
-	    v.ptr({j, j}), 1,
-	    v.ptr({j, j}), 1,
-	    h_i.ptr(), h_i.ld());
-  // clang-format on
+  for (auto j = 0; j < k; ++j) {
+    const dlaf::SizeType reflector_size = m - j;
 
-  // H_exp[:, j:] = H_exp[:, j:] . Hi
-  // clang-format off
-  const dlaf::GlobalElementIndex h_offset{0, j};
-  MatrixLocal<T> workspace({h_expected.size().rows(), h_i.size().cols()}, h_i.blockSize());
-  blas::gemm(blas::Layout::ColMajor,
-	     blas::Op::NoTrans, blas::Op::NoTrans,
-	     h_expected.size().rows(), h_i.size().cols(), h_i.size().rows(),
-	     1,
-	     h_expected.ptr(h_offset), h_expected.ld(),
-	     h_i.ptr(), h_i.ld(),
-	     0,
-	     workspace.ptr(), workspace.ld());
-  // clang-format on
-  std::copy(workspace.ptr(), workspace.ptr() + workspace.size().linear_size(), h_expected.ptr(h_offset));
+    const T* data_ptr = v.ptr({j, j});
+    const auto norm = blas::nrm2(reflector_size, data_ptr, 1);
+    const T tau = 2 / std::pow(norm, static_cast<decltype(norm)>(2));
+
+    taus.push_back(tau);
+    MatrixLocal<T> h_i({reflector_size, reflector_size}, block_size);
+    set(h_i, preset_eye<T>);
+
+    // Hi = (I - tau . v . v*)
+    // clang-format off
+    blas::ger(blas::Layout::ColMajor,
+        reflector_size, reflector_size,
+        -tau,
+        v.ptr({j, j}), 1,
+        v.ptr({j, j}), 1,
+        h_i.ptr(), h_i.ld());
+    // clang-format on
+
+    // H_exp[:, j:] = H_exp[:, j:] . Hi
+    const dlaf::GlobalElementIndex h_offset{0, j};
+    MatrixLocal<T> workspace({h_expected.size().rows(), h_i.size().cols()}, h_i.blockSize());
+
+    // clang-format off
+    blas::gemm(blas::Layout::ColMajor,
+	blas::Op::NoTrans, blas::Op::NoTrans,
+	h_expected.size().rows(), h_i.size().cols(), h_i.size().rows(),
+	1,
+	h_expected.ptr(h_offset), h_expected.ld(),
+	h_i.ptr(), h_i.ld(),
+	0,
+	workspace.ptr(), workspace.ld());
+    // clang-format on
+    std::copy(workspace.ptr(), workspace.ptr() + workspace.size().linear_size(),
+              h_expected.ptr(h_offset));
+  }
+  hpx::shared_future<dlaf::common::internal::vector<T>> taus_input = hpx::make_ready_future(taus);
+
+  return std::make_tuple(taus_input, std::move(h_expected));
 }
 
 template <class T>
-MatrixLocal<T> computeHres(const dlaf::SizeType m, const dlaf::SizeType k,
-                           const dlaf::TileElementSize block_size,
+MatrixLocal<T> computeHres(const dlaf::SizeType k, const dlaf::TileElementSize block_size,
                            const dlaf::GlobalElementSize tile_size, Matrix<T, Device::CPU>& t_output,
                            const dlaf::LocalTileIndex t_idx, const MatrixLocal<T>& v) {
+  const dlaf::SizeType m = v.size().rows();
   const auto& t = t_output.read(t_idx).get();
 
   // TV* = (VT*)* = W
@@ -224,19 +241,9 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
       }
     }
 
-    const SizeType m = v.size().rows();
-
-    // compute taus and H_exp
-    common::internal::vector<TypeParam> taus;
-    taus.reserve(k);
-
-    MatrixLocal<TypeParam> h_expected({m, m}, block_size);
-    set(h_expected, preset_eye<TypeParam>);
-
-    for (auto j = 0; j < k; ++j) {
-      computeTauHi(m, j, block_size, v, taus, h_expected);
-    }
-    hpx::shared_future<decltype(taus)> taus_input = hpx::make_ready_future(taus);
+    auto tmp = computeTauH(k, block_size, v);
+    auto taus_input = std::move(std::get<0>(tmp));
+    auto h_expected = std::move(std::get<1>(tmp));
 
     is_orthogonal(h_expected);
 
@@ -255,8 +262,7 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
     // H_res = I - V T V*
     //
     // is computed and compared to the one previously obtained by applying reflectors sequentially
-    MatrixLocal<TypeParam> h_result =
-        computeHres(m, k, block_size, h_expected.size(), t_output, t_idx, v);
+    MatrixLocal<TypeParam> h_result = computeHres(k, block_size, h_expected.size(), t_output, t_idx, v);
 
     is_orthogonal(h_result);
 
@@ -338,30 +344,12 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
           }
         }
 
-        // clean reflectors
-        // clang-format off
-        lapack::laset(lapack::MatrixType::Upper,
-            v.size().rows(), v.size().cols(),
-            0, 1,
-            v.ptr(), v.ld());
-        // clang-format on
-
         return v;
       }();
 
-      const SizeType m = v.size().rows();
-
-      // compute taus and H_exp
-      common::internal::vector<TypeParam> taus;
-      taus.reserve(k);
-
-      MatrixLocal<TypeParam> h_expected({m, m}, block_size);
-      set(h_expected, preset_eye<TypeParam>);
-
-      for (auto j = 0; j < k; ++j) {
-        computeTauHi(m, j, block_size, v, taus, h_expected);
-      }
-      hpx::shared_future<decltype(taus)> taus_input = hpx::make_ready_future(taus);
+      auto tmp = computeTauH(k, block_size, v);
+      auto taus_input = std::move(std::get<0>(tmp));
+      auto h_expected = std::move(std::get<1>(tmp));
 
       is_orthogonal(h_expected);
 
@@ -387,7 +375,7 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
       //
       // is computed and compared to the one previously obtained by applying reflectors sequentially
       MatrixLocal<TypeParam> h_result =
-          computeHres(m, k, block_size, h_expected.size(), t_output, t_idx, v);
+          computeHres(k, block_size, h_expected.size(), t_output, t_idx, v);
 
       is_orthogonal(h_result);
 

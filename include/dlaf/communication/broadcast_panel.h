@@ -140,7 +140,7 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
 
   const auto& dist = panel.parentDistribution();
 
-  DLAF_ASSERT(square_size(dist), dist.size());  // TODO this can be relaxed
+  DLAF_ASSERT(square_size(dist), dist.size());
   DLAF_ASSERT(square_blocksize(dist), dist.blockSize());
 
   // Note:
@@ -148,14 +148,7 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
   // This means that it is possible to broadcast panels with different axes just if their global offset
   // lie on the diaognal.
   DLAF_ASSERT(panel.rangeStart() == panelT.rangeStart(), panel.rangeStart(), panelT.rangeStart());
-
-  const auto panelSize = panel.rangeEnd() - panel.rangeStart();
-  const auto panelTSize = panelT.rangeEnd() - panelT.rangeStart();
-
-  DLAF_ASSERT(panelSize == panelTSize, panelSize, panelTSize);
-
-  if (panelSize == 0)
-    return;
+  DLAF_ASSERT_MODERATE(panel.rangeEnd() == panelT.rangeEnd(), panel.rangeEnd(), panelT.rangeEnd());
 
   // STEP 1
   constexpr auto comm_dir_step1 = orthogonal(axis);

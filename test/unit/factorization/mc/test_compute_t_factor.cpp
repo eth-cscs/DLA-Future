@@ -36,18 +36,13 @@ using dlaf::matrix::test::MatrixLocal;
     ::testing::AddGlobalTestEnvironment(new dlaf::test::CommunicatorGrid6RanksEnvironment);
 
 template <typename Type>
-struct ComputeTFactorLocalTest : public ::testing::Test {};
-
-TYPED_TEST_SUITE(ComputeTFactorLocalTest, dlaf::test::MatrixElementTypes);
-
-template <typename Type>
-struct ComputeTFactorDistributedTest : public ::testing::Test {
+struct ComputeTFactorTestMC : public ::testing::Test {
   const std::vector<dlaf::comm::CommunicatorGrid>& commGrids() {
     return dlaf::test::comm_grids;
   }
 };
 
-TYPED_TEST_SUITE(ComputeTFactorDistributedTest, dlaf::test::MatrixElementTypes);
+TYPED_TEST_SUITE(ComputeTFactorTestMC, dlaf::test::MatrixElementTypes);
 
 template <class T>
 T preset_eye(const dlaf::GlobalElementIndex& index) {
@@ -195,7 +190,7 @@ std::vector<std::tuple<dlaf::SizeType, dlaf::SizeType, dlaf::SizeType, dlaf::Siz
 // H = I - V . T . V*
 //
 // Which we expect to be the equal to the one computed previously.
-TYPED_TEST(ComputeTFactorLocalTest, Correctness) {
+TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
   using namespace dlaf;
   SizeType a_m, a_n, mb, nb, k;
 
@@ -297,7 +292,7 @@ TYPED_TEST(ComputeTFactorLocalTest, Correctness) {
 // H = I - V . T . V*
 //
 // Which we expect to be the equal to the one computed previously.
-TYPED_TEST(ComputeTFactorDistributedTest, Correctness) {
+TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
   using namespace dlaf;
 
   SizeType a_m, a_n, mb, nb, k;

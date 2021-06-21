@@ -285,14 +285,10 @@ TYPED_TEST(TileOperationsTestMC, Set0) {
         createTile<TypeParam>([](TileElementIndex idx) { return idx.row() + idx.col(); },
                               TileElementSize(m, n), lda);
 
-    for (const auto mtype : lapack_matrices) {
-      auto res = [mtype](const TileElementIndex& index) {
-        return TypeUtilities<TypeParam>::element(0.0, 0.0);
-      };
+    auto res = [](const TileElementIndex& index) { return TypeUtilities<TypeParam>::element(0.0, 0.0); };
 
-      tile::set0(tile);
-      CHECK_TILE_NEAR(res, tile, 4 * (n + 1) * TypeUtilities<TypeParam>::error,
-                      4 * (n + 1) * TypeUtilities<TypeParam>::error);
-    }
+    tile::set0(tile);
+    CHECK_TILE_NEAR(res, tile, 4 * (n + 1) * TypeUtilities<TypeParam>::error,
+                    4 * (n + 1) * TypeUtilities<TypeParam>::error);
   }
 }

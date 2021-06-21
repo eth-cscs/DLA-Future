@@ -55,7 +55,6 @@ struct QR_Tfactor<Backend::MC, Device::CPU, T> {
   /// @param v_start tile in @p v where the column of reflectors starts
   /// @param taus array of taus, associated with the related elementary reflector
   /// @param t tile where the resulting T factor will be stored
-  /// @param serial_comm where internal communications are issued
   ///
   /// @pre k <= t.get().size().rows && k <= t.get().size().cols()
   static void call(const SizeType k, Matrix<const T, Device::CPU>& v, const GlobalTileIndex v_start,

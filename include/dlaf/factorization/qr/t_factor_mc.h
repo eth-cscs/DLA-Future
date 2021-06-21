@@ -180,7 +180,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(const SizeType k, Matrix<cons
   using common::make_data;
 
   const auto panel_width = v.tileSize(v_start).cols();
-  
+
   DLAF_ASSERT(k <= panel_width, k, panel_width);
 
   // TODO: check

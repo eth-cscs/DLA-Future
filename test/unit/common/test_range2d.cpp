@@ -114,6 +114,15 @@ TEST(DoubleArgEmptyRange2D, Size2D) {
   ::test_double_arg_empty(Size(0, 0));
 }
 
+/// This is a very trivial test fixture that creates the following range2D
+///
+/// +---------+--------+---------+
+/// | (1, 1)B | (1, 2) | (1, 3)E |
+/// | (2, 1)  | (2, 2) |         |
+/// | (3, 1)  | (3, 2) |         |
+/// +---------+--------+---------+
+///
+/// {(1, 1) == range.begin(), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2), (1, 3) == range.end()}
 struct IteratorTest : public ::testing::Test {
   using range2D_t = decltype(iterate_range2d(::Index{0, 0}, ::Size{0, 0}));
 

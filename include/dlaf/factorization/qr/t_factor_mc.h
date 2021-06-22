@@ -14,7 +14,6 @@
 #include <hpx/include/util.hpp>
 
 #include <blas.hh>
-#include <lapack/util.hh>
 
 #include "dlaf/factorization/qr/api.h"
 

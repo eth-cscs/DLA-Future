@@ -72,7 +72,9 @@ struct IteratorRange2D {
   }
 
   reference operator[](difference_type n) const noexcept {
-    return computeIndex2D(n);
+    auto it = *this;
+    it += n;
+    return *it;
   }
 
   IteratorRange2D& operator++() noexcept {
@@ -80,7 +82,7 @@ struct IteratorRange2D {
     return *this;
   }
 
-  IteratorRange2D& operator++(int) noexcept {
+  IteratorRange2D operator++(int) noexcept {
     auto tmp = *this;
     operator++();
     return tmp;
@@ -91,18 +93,20 @@ struct IteratorRange2D {
     return *this;
   }
 
-  IteratorRange2D& operator--(int) noexcept {
+  IteratorRange2D operator--(int) noexcept {
     auto tmp = *this;
     operator--();
     return tmp;
   }
 
   IteratorRange2D& operator+=(difference_type n) noexcept {
-    return i_ += n, *this;
+    current_ = (i_ += n, computeIndex2D(i_));
+    return *this;
   }
 
   IteratorRange2D& operator-=(difference_type n) noexcept {
-    return i_ -= n, *this;
+    current_ = (i_ -= n, computeIndex2D(i_));
+    return *this;
   }
 
   friend IteratorRange2D operator+(IteratorRange2D a, difference_type n) noexcept {

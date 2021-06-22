@@ -113,3 +113,68 @@ TEST(DoubleArgEmptyRange2D, Index2D) {
 TEST(DoubleArgEmptyRange2D, Size2D) {
   ::test_double_arg_empty(Size(0, 0));
 }
+
+struct IteratorTest : public ::testing::Test {
+  using range2D_t = decltype(iterate_range2d(::Index{0, 0}, ::Size{0, 0}));
+
+  const range2D_t range = iterate_range2d(::Index{1, 1}, ::Size{3, 2});
+};
+
+TEST_F(IteratorTest, IndexAccess) {
+  dlaf::SizeType i = 0;
+  for (auto it = range.begin(); it != range.end(); ++it, ++i)
+    EXPECT_EQ(*it, range.begin()[i]);
+}
+
+TEST_F(IteratorTest, IncrementPrefix) {
+  auto it = range.begin();
+  auto it2 = ++it;
+  EXPECT_EQ(*it, *it2);
+}
+
+TEST_F(IteratorTest, IncrementPostfix) {
+  auto it = range.begin();
+  auto it2 = it++;
+  EXPECT_NE(*it, *it2);
+}
+
+TEST_F(IteratorTest, DecrementPrefix) {
+  auto it = range.end();
+  auto it2 = --it;
+  EXPECT_EQ(*it, *it2);
+}
+
+TEST_F(IteratorTest, DecrementPostfix) {
+  auto it = range.end();
+  auto it2 = it--;
+  EXPECT_NE(*it, *it2);
+}
+
+TEST_F(IteratorTest, Addition) {
+  const auto it = range.begin();
+  EXPECT_EQ(::Index(1, 2), *(it + 3));
+}
+
+TEST_F(IteratorTest, AdditionAssigment) {
+  auto it = range.begin();
+  auto it2 = it;
+  it += 2;
+  EXPECT_EQ(*(++(++it2)), *it);
+}
+
+TEST_F(IteratorTest, Subtraction) {
+  const auto it = range.end();
+  EXPECT_EQ(::Index(1, 2), *(it - 3));
+}
+
+TEST_F(IteratorTest, SubtractionAssignment) {
+  auto it = range.end();
+  auto it2 = it;
+  it -= 2;
+  EXPECT_EQ(*(--(--it2)), *it);
+}
+
+TEST_F(IteratorTest, DeltaIterators) {
+  const dlaf::SizeType delta = range.end() - range.begin();
+  EXPECT_EQ(6, delta);
+}

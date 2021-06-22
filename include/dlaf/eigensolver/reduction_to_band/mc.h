@@ -11,6 +11,7 @@
 
 #include <cmath>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include <hpx/future.hpp>
@@ -539,7 +540,10 @@ template <class T>
 void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a, ConstPanelT<Coord::Col, T>& x,
                           ConstPanelT<Coord::Row, T>& vt, ConstPanelT<Coord::Col, T>& v,
                           ConstPanelT<Coord::Row, T>& xt) {
+  static_assert(std::is_signed<BaseType<T>>::value, "alpha in computations requires to be -1");
+
   using hpx::util::unwrapping;
+  using hpx::dataflow;
 
   const auto dist = a.distribution();
 
@@ -558,49 +562,38 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a, Con
                                               : dlaf::getNpExecutor<Backend::MC>();
 
       if (is_diagonal_tile) {
-        // HER2K
-        const LocalTileIndex index_x{index_at.row(), 0};
-
         // clang-format off
         FutureTile<T>       tile_a = a(index_at);
-        FutureConstTile<T>  tile_v = v.read(index_x);
-        FutureConstTile<T>  tile_x = x.read(index_x);
+        FutureConstTile<T>  tile_v = v.read(index_at);
+        FutureConstTile<T>  tile_x = x.read(index_at);
         // clang-format on
 
-        const T alpha = -1;  // TODO T must be a signed type
-        hpx::dataflow(ex, unwrapping(dlaf::tile::her2k<T>), blas::Uplo::Lower, blas::Op::NoTrans, alpha,
-                      std::move(tile_v), std::move(tile_x),
-                      static_cast<typename TypeInfo<T>::BaseType>(1), std::move(tile_a));
+        dataflow(ex, unwrapping(dlaf::tile::her2k<T>), blas::Uplo::Lower, blas::Op::NoTrans, T(-1),
+                 std::move(tile_v), std::move(tile_x), BaseType<T>(1), std::move(tile_a));
       }
       else {
         // GEMM A: X . V*
         {
-          const LocalTileIndex index_x{index_at.row(), 0};
-
           // clang-format off
           FutureTile<T>       tile_a = a(index_at);
-          FutureConstTile<T>  tile_x = x.read(index_x);
-          FutureConstTile<T>  tile_v = vt.read({0, index_at.col()});
+          FutureConstTile<T>  tile_x = x.read(index_at);
+          FutureConstTile<T>  tile_v = vt.read(index_at);
           // clang-format on
 
-          const T alpha = -1;  // TODO T must be a sigend type
-          hpx::dataflow(ex, unwrapping(dlaf::tile::gemm<T>), blas::Op::NoTrans, blas::Op::ConjTrans,
-                        alpha, std::move(tile_x), std::move(tile_v), static_cast<T>(1),
-                        std::move(tile_a));
+          dataflow(ex, unwrapping(dlaf::tile::gemm<T>), blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
+                   std::move(tile_x), std::move(tile_v), T(1), std::move(tile_a));
         }
 
         // GEMM A: V . X*
         {
           // clang-format off
           FutureTile<T>       tile_a = a(index_at);
-          FutureConstTile<T>  tile_v = v.read({index_at.row(), 0});
-          FutureConstTile<T>  tile_x = xt.read({0, index_at.col()});
+          FutureConstTile<T>  tile_v = v.read(index_at);
+          FutureConstTile<T>  tile_x = xt.read(index_at);
           // clang-format on
 
-          const T alpha = -1;  // TODO T must be a sigend type
-          hpx::dataflow(ex, unwrapping(dlaf::tile::gemm<T>), blas::Op::NoTrans, blas::Op::ConjTrans,
-                        alpha, std::move(tile_v), std::move(tile_x), static_cast<T>(1),
-                        std::move(tile_a));
+          dataflow(ex, unwrapping(dlaf::tile::gemm<T>), blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
+                   std::move(tile_v), std::move(tile_x), T(1), std::move(tile_a));
         }
       }
     }

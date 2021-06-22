@@ -391,9 +391,10 @@ void trmmComputeW(PanelT<Coord::Col, T>& w, MatrixLikeT& v, FutureConstTile<T> t
 // otherwise it directly compute also gemm2 inside Xrows
 template <class T>
 void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT<Coord::Row, T>& xt,
-              const LocalTileSize at_offset, ConstMatrixT<T>& a, ConstPanelT<Coord::Col, T>& w,
-              ConstPanelT<Coord::Row, T>& wt, common::Pipeline<comm::Communicator>& mpi_row_task_chain,
-              common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
+                  const LocalTileSize at_offset, ConstMatrixT<T>& a, ConstPanelT<Coord::Col, T>& w,
+                  ConstPanelT<Coord::Row, T>& wt,
+                  common::Pipeline<comm::Communicator>& mpi_row_task_chain,
+                  common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
   using hpx::util::unwrapping;
   using dlaf::common::make_data;
   using dlaf::comm::sync::reduce;
@@ -527,7 +528,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
 
 template <class T>
 void gemmComputeW2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Coord::Col, T>& x,
-               common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
+                   common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
   using hpx::util::unwrapping;
   using common::make_data;
   using namespace comm::sync;
@@ -581,9 +582,9 @@ void gemmUpdateX(PanelT<Coord::Col, T>& x, ConstMatrixT<T>& w2, MatrixLikeT& v) 
 }
 
 template <class T>
-void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a, ConstPanelT<Coord::Col, T>& x,
-                          ConstPanelT<Coord::Row, T>& vt, ConstPanelT<Coord::Col, T>& v,
-                          ConstPanelT<Coord::Row, T>& xt) {
+void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
+                               ConstPanelT<Coord::Col, T>& x, ConstPanelT<Coord::Row, T>& vt,
+                               ConstPanelT<Coord::Col, T>& v, ConstPanelT<Coord::Row, T>& xt) {
   static_assert(std::is_signed<BaseType<T>>::value, "alpha in computations requires to be -1");
 
   using hpx::util::unwrapping;

@@ -10,9 +10,9 @@
 #include "dlaf/solver/triangular.h"
 
 #include <functional>
-#include <sstream>
 #include <tuple>
 #include "gtest/gtest.h"
+#include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
@@ -39,6 +39,7 @@ public:
 };
 TYPED_TEST_SUITE(TriangularSolverTestMC, MatrixElementTypes);
 
+#ifdef DLAF_WITH_CUDA
 template <typename Type>
 class TriangularSolverTestGPU : public ::testing::Test {
 public:
@@ -47,6 +48,7 @@ public:
   }
 };
 TYPED_TEST_SUITE(TriangularSolverTestGPU, MatrixElementTypes);
+#endif
 
 const std::vector<blas::Side> blas_sides({blas::Side::Left, blas::Side::Right});
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});

@@ -128,26 +128,26 @@ TEST_F(IteratorTest, IndexAccess) {
 
 TEST_F(IteratorTest, IncrementPrefix) {
   auto it = range.begin();
-  auto it2 = ++it;
+  const auto it2 = ++it;
   EXPECT_EQ(*it, *it2);
 }
 
 TEST_F(IteratorTest, IncrementPostfix) {
   auto it = range.begin();
-  auto it2 = it++;
+  const auto it2 = it++;
   EXPECT_EQ(range.begin(), it2);
   EXPECT_EQ(::Index(2, 1), *it);
 }
 
 TEST_F(IteratorTest, DecrementPrefix) {
   auto it = range.end();
-  auto it2 = --it;
+  const auto it2 = --it;
   EXPECT_EQ(it, it2);
 }
 
 TEST_F(IteratorTest, DecrementPostfix) {
   auto it = range.end();
-  auto it2 = it--;
+  const auto it2 = it--;
   EXPECT_EQ(range.end(), it2);
   EXPECT_EQ(::Index(3, 2), *it);
 }
@@ -159,9 +159,10 @@ TEST_F(IteratorTest, Addition) {
 
 TEST_F(IteratorTest, AdditionAssigment) {
   auto it = range.begin();
-  auto it2 = it;
+  const auto it2 = it;
   it += 2;
-  EXPECT_EQ(*(++(++it2)), *it);
+  EXPECT_EQ(it2, range.begin());
+  EXPECT_EQ(::Index(3, 1), *it);
 }
 
 TEST_F(IteratorTest, Subtraction) {
@@ -171,9 +172,10 @@ TEST_F(IteratorTest, Subtraction) {
 
 TEST_F(IteratorTest, SubtractionAssignment) {
   auto it = range.end();
-  auto it2 = it;
+  const auto it2 = it;
   it -= 2;
-  EXPECT_EQ(*(--(--it2)), *it);
+  EXPECT_EQ(it2, range.end());
+  EXPECT_EQ(::Index(2, 2), *it);
 }
 
 TEST_F(IteratorTest, DeltaIterators) {

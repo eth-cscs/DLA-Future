@@ -117,12 +117,12 @@ void GenToStd<backend, device, T>::call_L(Matrix<T, device>& mat_a, Matrix<T, de
     }
 
     for (SizeType j = k + 1; j < nrtile; ++j) {
+      const LocalTileIndex jj{j, j};
       const LocalTileIndex jk{j, k};
       // first trailing panel gets high priority (look ahead).
       auto& trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_np;
 
-      her2kTrailingDiagTile(trailing_matrix_executor, mat_a.read(jk), mat_l.read(jk),
-                            mat_a(LocalTileIndex{j, j}));
+      her2kTrailingDiagTile(trailing_matrix_executor, mat_a.read(jk), mat_l.read(jk), mat_a(jj));
 
       for (SizeType i = j + 1; i < nrtile; ++i) {
         const LocalTileIndex ik{i, k};
@@ -138,11 +138,14 @@ void GenToStd<backend, device, T>::call_L(Matrix<T, device>& mat_a, Matrix<T, de
     }
 
     for (SizeType j = k + 1; j < nrtile; ++j) {
-      trsmPanelUpdateTile(executor_hp, mat_l.read(LocalTileIndex{j, j}), mat_a(LocalTileIndex{j, k}));
+      const LocalTileIndex jj{j, j};
+      const LocalTileIndex jk{j, k};
+      trsmPanelUpdateTile(executor_hp, mat_l.read(jj), mat_a(jk));
 
       for (SizeType i = j + 1; i < nrtile; ++i) {
-        gemmPanelUpdateTile(executor_np, mat_l.read(LocalTileIndex{i, j}),
-                            mat_a.read(LocalTileIndex{j, k}), mat_a(LocalTileIndex{i, k}));
+        const LocalTileIndex ij{i, j};
+        const LocalTileIndex ik{i, k};
+        gemmPanelUpdateTile(executor_np, mat_l.read(ij), mat_a.read(jk), mat_a(ik));
       }
     }
   }

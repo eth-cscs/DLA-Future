@@ -291,9 +291,9 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         mat_c.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(0),
     };
 
-    panelVV.setRangeStart(kkv_offset);
-    panelW.setRangeStart(kkv_offset);
-    panelW2.setRangeStart(kkc_offset);
+    panelVV.setRangeStart({k+1, k+1});
+    panelW.setRangeStart({k+1, k+1});
+    panelW2.setRangeStart({0, 0});
 
     for (SizeType i_local = mat_c.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
          i_local < c_local_rows; ++i_local) {
@@ -334,7 +334,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
     // Reset W2 to zero
     // rw-access
-    for (const auto& idx : panelW2.iterator()) {
+    for (const auto& idx : panelW2.iteratorLocal()) {
       panelW2(idx).then(unwrapping([](auto&& tile) {
         for (SizeType j = 0; j < tile.size().cols(); ++j) {
           for (SizeType i = 0; i < tile.size().rows(); ++i) {
@@ -368,7 +368,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         mat_t.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(k + 1),
     };
 
-    panelT.setRange(kkt_offset, att_offset);
+    panelT.setRange({k, k}, {k+1, k+1});
 
     const LocalTileIndex diag_wp_idx{0, kkt_offset.cols()};
     if (this_rank.col() == k_v_rank_col) {

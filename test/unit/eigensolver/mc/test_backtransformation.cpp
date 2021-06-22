@@ -39,17 +39,13 @@ using namespace testing;
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
 template <typename Type>
-class BackTransformationEigenSolverLocalTest : public ::testing::Test {};
-TYPED_TEST_SUITE(BackTransformationEigenSolverLocalTest, MatrixElementTypes);
-
-template <typename Type>
-class BackTransformationEigenSolverDistributedTest : public ::testing::Test {
+class BackTransformationEigenSolverTest : public ::testing::Test {
 public:
   const std::vector<CommunicatorGrid>& commGrids() {
     return comm_grids;
   }
 };
-TYPED_TEST_SUITE(BackTransformationEigenSolverDistributedTest, MatrixElementTypes);
+TYPED_TEST_SUITE(BackTransformationEigenSolverTest, MatrixElementTypes);
 
 GlobalElementSize globalTestSize(const LocalElementSize& size) {
   return {size.rows(), size.cols()};
@@ -283,7 +279,7 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
 }
 
 //// Not working on a 6 procs grid
-// TYPED_TEST(BackTransformationEigenSolverLocalTest, Correctness) {
+// TYPED_TEST(BackTransformationEigenSolverTest, CorrectnessLocal) {
 //  SizeType m, n, mb, nb;
 //
 //  for (auto sz : sizes) {
@@ -292,7 +288,7 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
 //  }
 //}
 
-TYPED_TEST(BackTransformationEigenSolverDistributedTest, Correctness) {
+TYPED_TEST(BackTransformationEigenSolverTest, CorrectnessDistributed) {
   SizeType m, n, mb, nb;
 
   for (const auto& comm_grid : {this->commGrids()[0]}) {

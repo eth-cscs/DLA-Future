@@ -153,6 +153,10 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
   DLAF_ASSERT(panel.rangeStart() == panelT.rangeStart(), panel.rangeStart(), panelT.rangeStart());
   DLAF_ASSERT_MODERATE(panel.rangeEnd() == panelT.rangeEnd(), panel.rangeEnd(), panelT.rangeEnd());
 
+  // if no panel tiles, just skip it
+  if (panel.rangeStart() == panel.rangeEnd())
+    return;
+
   // STEP 1
   constexpr auto comm_dir_step1 = orthogonal(axis);
   auto& chain_step1 = get_taskchain(comm_dir_step1);

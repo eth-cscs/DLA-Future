@@ -303,7 +303,7 @@ void setupReflectorPanelV(comm::IndexT_MPI rank_v0, const LocalTileSize& ai_offs
   auto it_end = v.iterator().end();
 
   if (rank_v0 == rank) {
-    auto setupV0 = hpx::util::unwrapping([](auto&& tile_v, const auto& tile_a) {
+    auto setupV0 = hpx::unwrapping([](auto&& tile_v, const auto& tile_a) {
       dlaf::tile::lacpy(tile_a, tile_v);
 
       // set upper part to zero and 1 on diagonal (reflectors)
@@ -335,30 +335,29 @@ template <class T, class MatrixLikeT>
 void trmmComputeW(PanelT<Coord::Col, T>& w, MatrixLikeT& v, FutureConstTile<T> tile_t) {
   const auto ex = dlaf::getHpExecutor<Backend::MC>();
 
-  auto trmm_func =
-      hpx::util::unwrapping([](auto&& tile_w, const auto& tile_v, const auto& tile_t) -> void {
-        // Note:
-        // Since T can be smaller then the entire block, here its size is used to update potentially
-        // just a sub-part of the resulting W tile, which currently still works as an entire block.
-        // T can be of reduced-size when there are less reflectors than columns, so when the V tile
-        // is also reduced in the number of rows, which currently happens just when working on the
-        // last tile fully containing a reflector. This, together with the fact that V0 is well-formed
-        // implies that by copying V0 to W we are also resetting W where the matrix is not going to
-        // be computed.
-        // TODO check this when number of reflectors is changed (i.e. skip last single-element reflector)
+  auto trmm_func = hpx::unwrapping([](auto&& tile_w, const auto& tile_v, const auto& tile_t) -> void {
+    // Note:
+    // Since T can be smaller then the entire block, here its size is used to update potentially
+    // just a sub-part of the resulting W tile, which currently still works as an entire block.
+    // T can be of reduced-size when there are less reflectors than columns, so when the V tile
+    // is also reduced in the number of rows, which currently happens just when working on the
+    // last tile fully containing a reflector. This, together with the fact that V0 is well-formed
+    // implies that by copying V0 to W we are also resetting W where the matrix is not going to
+    // be computed.
+    // TODO check this when number of reflectors is changed (i.e. skip last single-element reflector)
 
-        dlaf::tile::lacpy(tile_v, tile_w);
+    dlaf::tile::lacpy(tile_v, tile_w);
 
-        // W = V . T
-        // clang-format off
+    // W = V . T
+    // clang-format off
         blas::trmm(blas::Layout::ColMajor,
             blas::Side::Right, blas::Uplo::Upper, blas::Op::NoTrans, blas::Diag::NonUnit,
             tile_w.size().rows(), tile_t.size().rows(),
             static_cast<T>(1),
             tile_t.ptr(), tile_t.ld(),
             tile_w.ptr(), tile_w.ld());
-        // clang-format on
-      });
+    // clang-format on
+  });
 
   for (const auto& index_tile_w : w.iterator()) {
     // clang-format off
@@ -530,7 +529,7 @@ void gemmComputeW2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Co
 
 template <class T, class MatrixLikeT>
 void gemmUpdateX(PanelT<Coord::Col, T>& x, ConstMatrixT<T>& w2, MatrixLikeT& v) {
-  using hpx::util::unwrapping;
+  using hpx::unwrapping;
 
   const auto ex = dlaf::getHpExecutor<Backend::MC>();
 
@@ -553,7 +552,7 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
                                ConstPanelT<Coord::Col, T>& v, ConstPanelT<Coord::Row, T>& xt) {
   static_assert(std::is_signed<BaseType<T>>::value, "alpha in computations requires to be -1");
 
-  using hpx::util::unwrapping;
+  using hpx::unwrapping;
   using hpx::dataflow;
 
   const auto dist = a.distribution();

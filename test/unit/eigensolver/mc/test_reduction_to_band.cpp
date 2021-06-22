@@ -168,7 +168,7 @@ auto all_gather_taus(const SizeType k, const SizeType chunk_size, const SizeType
   taus.reserve(to_sizet(k));
 
   hpx::wait_all(fut_local_taus);
-  auto local_taus = hpx::util::unwrap(fut_local_taus);
+  auto local_taus = hpx::unwrap(fut_local_taus);
 
   DLAF_ASSERT(band_size == chunk_size, band_size, chunk_size);
 

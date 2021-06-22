@@ -78,7 +78,7 @@ struct IteratorRange2D {
   }
 
   IteratorRange2D& operator++() noexcept {
-    current_ = (++i_, computeIndex2D(i_));
+    current_ = computeIndex2D(++i_);
     return *this;
   }
 
@@ -89,7 +89,7 @@ struct IteratorRange2D {
   }
 
   IteratorRange2D& operator--() noexcept {
-    current_ = (--i_, computeIndex2D(i_));
+    current_ = computeIndex2D(--i_);
     return *this;
   }
 
@@ -100,12 +100,12 @@ struct IteratorRange2D {
   }
 
   IteratorRange2D& operator+=(difference_type n) noexcept {
-    current_ = (i_ += n, computeIndex2D(i_));
+    current_ = computeIndex2D(i_ += n);
     return *this;
   }
 
   IteratorRange2D& operator-=(difference_type n) noexcept {
-    current_ = (i_ -= n, computeIndex2D(i_));
+    current_ = computeIndex2D(i_ -= n);
     return *this;
   }
 

@@ -36,7 +36,7 @@ using namespace testing;
 
 template <typename Type>
 class BackTransformationEigenSolverLocalTest : public ::testing::Test {};
-TYPED_TEST_SUITE(BackTransformationEigenSolverLocalTest, MatrixElementTypes);
+TYPED_TEST_SUITE(BackTransformationEigenSolverTest, MatrixElementTypes);
 
 GlobalElementSize globalTestSize(const LocalElementSize& size) {
   return {size.rows(), size.cols()};
@@ -164,7 +164,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
   }
 }
 
-TYPED_TEST(BackTransformationEigenSolverLocalTest, Correctness) {
+TYPED_TEST(BackTransformationEigenSolverTest, CorrectnessLocal) {
   SizeType m, n, mb, nb;
 
   for (auto sz : sizes) {

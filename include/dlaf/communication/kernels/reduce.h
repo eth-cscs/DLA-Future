@@ -44,7 +44,7 @@ auto reduceRecvInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op re
   DLAF_MPI_CALL(MPI_Ireduce(MPI_IN_PLACE, message.data(), message.count(), message.mpi_type(), reduce_op,
                             communicator.rank(), communicator, req));
 
-  return std::move(bag);
+  return bag;
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(reduceRecvInPlace);

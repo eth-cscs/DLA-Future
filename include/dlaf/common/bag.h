@@ -54,7 +54,7 @@ auto copyBack(matrix::Tile<T, Device::CPU> tile, Bag<T> bag) {
   auto buffer_used = std::move(hpx::get<0>(bag));
   if (buffer_used)
     common::copy(buffer_used, common::make_data(tile));
-  return std::move(tile);
+  return tile;
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(copyBack);

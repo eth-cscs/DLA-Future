@@ -40,7 +40,7 @@ auto allReduce(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
   DLAF_MPI_CALL(MPI_Iallreduce(message_in.data(), message_out.data(), message_in.count(),
                                message_in.mpi_type(), reduce_op, communicator, req));
 
-  return std::move(bag_out);
+  return bag_out;
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(allReduce);
@@ -54,7 +54,7 @@ auto allReduceInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op red
   DLAF_MPI_CALL(MPI_Iallreduce(MPI_IN_PLACE, message.data(), message.count(), message.mpi_type(),
                                reduce_op, communicator, req));
 
-  return std::move(bag);
+  return bag;
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(allReduceInPlace);

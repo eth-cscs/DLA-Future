@@ -304,6 +304,50 @@ hpx::shared_future<common::internal::vector<T>> computeAndUpdatePanel(
   // clang-format on
 }
 
+template <class T>
+void setupReflectorPanelV(comm::IndexT_MPI rank_v0, const LocalTileSize& ai_offset,
+                          PanelT<Coord::Col, T>& v, MatrixT<const T>& mat_a) {
+  const auto rank = mat_a.rankIndex().row();
+
+  // Note:
+  // Reflectors are stored in the lower triangular part of the A matrix leading to sharing memory
+  // between reflectors and results, which are in the upper triangular part. The problem exists only
+  // for the first tile (of the V, i.e. band excluded). Since refelectors will be used in next
+  // computations, they should be well-formed, i.e. a unit lower trapezoidal matrix. For this reason,
+  // a support tile is used, where just the reflectors values are copied, the diagonal is set to 1
+  // and the rest is zeroed out.
+  auto it_begin = v.iterator().begin();
+  auto it_end = v.iterator().end();
+
+  if (rank_v0 == rank) {
+    auto setupV0 = hpx::util::unwrapping([](auto&& tile_v, const auto& tile_a) {
+      dlaf::tile::lacpy(tile_a, tile_v);
+
+      // set upper part to zero and 1 on diagonal (reflectors)
+      // clang-format off
+        lapack::laset(lapack::MatrixType::Upper,
+            tile_v.size().rows(), tile_v.size().cols(),
+            T(0), // off diag
+            T(1), // on  diag
+            tile_v.ptr(), tile_v.ld());
+      // clang-format on
+    });
+
+    const LocalTileIndex v0_index(ai_offset.rows(), ai_offset.cols());
+    hpx::dataflow(dlaf::getHpExecutor<Backend::MC>(), std::move(setupV0), v(v0_index),
+                  mat_a.read(v0_index));
+
+    ++it_begin;
+  }
+
+  // The rest of the V panel of reflectors can just point to the values in A, since they are
+  // well formed in-place.
+  for (auto it = it_begin; it < it_end; ++it) {
+    const LocalTileIndex idx(it->row(), ai_offset.cols());
+    v.setTile(idx, mat_a.read(idx));
+  }
+}
+
 template <class T, class MatrixLikeT>
 void trmmComputeW(PanelT<Coord::Col, T>& w, MatrixLikeT& v, FutureConstTile<T> tile_t) {
   const auto ex = dlaf::getHpExecutor<Backend::MC>();
@@ -695,39 +739,7 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
       computeTFactor<Backend::MC>(k_reflectors, mat_a, ai_start, taus_panel, t(t_idx),
                                   mpi_col_task_chain);
 
-      // Note:
-      // Reflectors are stored in the lower triangular part of the A matrix leading to sharing memory
-      // between reflectors and results, which are in the upper triangular part. The problem exists only
-      // for the first tile (of the V, i.e. band excluded). Since refelectors will be used in next
-      // computations, they should be well-formed, i.e. a unit lower trapezoidal matrix. For this reason,
-      // a support tile is used, where just the reflectors values are copied, the diagonal is set to 1
-      // and the rest is zeroed out.
-      if (rank_v0 == rank) {
-        auto setupV0 = hpx::util::unwrapping([](auto&& tile_v, const auto& tile_a) {
-          dlaf::tile::lacpy(tile_a, tile_v);
-
-          // set upper part to zero and 1 on diagonal (reflectors)
-          // clang-format off
-          lapack::laset(lapack::MatrixType::Upper,
-              tile_v.size().rows(), tile_v.size().cols(),
-              T(0), // off diag
-              T(1), // on  diag
-              tile_v.ptr(), tile_v.ld());
-          // clang-format on
-        });
-
-        const LocalTileIndex v0_index(ai_offset.rows(), ai_offset.cols());
-        hpx::dataflow(dlaf::getHpExecutor<Backend::MC>(), std::move(setupV0), v(v0_index),
-                      mat_a.read(v0_index));
-      }
-
-      // The rest of the V panel of reflectors can just point to the values in A, since they are
-      // well formed in-place.
-      for (auto row = dist.template nextLocalTileFromGlobalTile<Coord::Row>(ai_start.row() + 1);
-           row < dist.localNrTiles().rows(); ++row) {
-        const LocalTileIndex idx{row, ai_offset.cols()};
-        v.setTile(idx, mat_a.read(idx));
-      }
+      setupReflectorPanelV(rank_v0.row(), ai_offset, v, mat_a);
     }
 
     comm::broadcast(ex_mpi, rank_v0.col(), v, vt, mpi_row_task_chain, mpi_col_task_chain);

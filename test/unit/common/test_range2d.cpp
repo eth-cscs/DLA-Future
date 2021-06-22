@@ -135,19 +135,21 @@ TEST_F(IteratorTest, IncrementPrefix) {
 TEST_F(IteratorTest, IncrementPostfix) {
   auto it = range.begin();
   auto it2 = it++;
-  EXPECT_NE(*it, *it2);
+  EXPECT_EQ(range.begin(), it2);
+  EXPECT_EQ(::Index(2, 1), *it);
 }
 
 TEST_F(IteratorTest, DecrementPrefix) {
   auto it = range.end();
   auto it2 = --it;
-  EXPECT_EQ(*it, *it2);
+  EXPECT_EQ(it, it2);
 }
 
 TEST_F(IteratorTest, DecrementPostfix) {
   auto it = range.end();
   auto it2 = it--;
-  EXPECT_NE(*it, *it2);
+  EXPECT_EQ(range.end(), it2);
+  EXPECT_EQ(::Index(3, 2), *it);
 }
 
 TEST_F(IteratorTest, Addition) {

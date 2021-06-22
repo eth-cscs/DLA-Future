@@ -41,7 +41,7 @@ struct ExtraBuffers {
   }
 
   void reduce() {
-    using hpx::util::unwrapping;
+    using hpx::unwrapping;
     using hpx::util::annotated_function;
 
     for (const auto& idx_buffer : iterate_range2d(extra_.nrTiles()))

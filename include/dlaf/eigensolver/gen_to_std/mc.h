@@ -48,7 +48,7 @@ void GenToStd<Backend::MC, Device::CPU, T>::call_L(Matrix<T, Device::CPU>& mat_a
   constexpr auto NoTrans = blas::Op::NoTrans;
   constexpr auto ConjTrans = blas::Op::ConjTrans;
 
-  using hpx::util::unwrapping;
+  using hpx::unwrapping;
 
   auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
   auto executor_np = dlaf::getNpExecutor<Backend::MC>();

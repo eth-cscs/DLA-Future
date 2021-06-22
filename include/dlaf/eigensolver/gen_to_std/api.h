@@ -17,7 +17,6 @@ namespace internal {
 
 template <Backend backend, Device device, class T>
 struct GenToStd {};
-
 }
 }
 }

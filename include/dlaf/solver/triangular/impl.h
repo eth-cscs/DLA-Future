@@ -325,7 +325,7 @@ void Triangular<backend, device, T>::call_RUT(blas::Op op, blas::Diag diag, T al
 template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
-  using hpx::util::unwrapping;
+  using hpx::unwrapping;
 
   using common::internal::vector;
   using ConstTileType = typename Matrix<T, device>::ConstTileType;

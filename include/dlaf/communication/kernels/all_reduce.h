@@ -66,7 +66,7 @@ void scheduleAllReduce(const comm::Executor& ex,
                        hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_in,
                        hpx::future<matrix::Tile<T, Device::CPU>> tile_out) {
   hpx::future<common::internal::Bag<const T>> bag_in =
-      hpx::dataflow(hpx::util::unwrapping(common::internal::makeItContiguous_o), tile_in);
+      hpx::dataflow(hpx::unwrapping(common::internal::makeItContiguous_o), tile_in);
 
   hpx::future<common::internal::Bag<T>> bag_out;
   {
@@ -91,7 +91,7 @@ void scheduleAllReduce(const comm::Executor& ex,
   // clang-format off
   hpx::dataflow(
       dlaf::getHpExecutor<Backend::MC>(),
-      hpx::util::unwrapping(common::internal::copyBack_o),
+      hpx::unwrapping(common::internal::copyBack_o),
       std::move(tile_out), std::move(bag_out));
   // clang-format on
 }
@@ -116,14 +116,14 @@ auto scheduleAllReduceInPlace(const comm::Executor& ex,
   // clang-format off
   bag = hpx::dataflow(
       ex,
-      hpx::util::unwrapping(internal::allReduceInPlace_o),
+      hpx::unwrapping(internal::allReduceInPlace_o),
       std::move(pcomm), reduce_op, std::move(bag));
   // clang-format on
 
   // clang-format off
   return hpx::dataflow(
       dlaf::getHpExecutor<Backend::MC>(),
-      hpx::util::unwrapping(common::internal::copyBack_o),
+      hpx::unwrapping(common::internal::copyBack_o),
       std::move(tile), std::move(bag));
   // clang-format on
 }

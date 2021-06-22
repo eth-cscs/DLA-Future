@@ -98,7 +98,7 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
   // clang-format off
   bag = hpx::dataflow(
       ex,
-      hpx::util::unwrapping(internal::reduceRecvInPlace_o),
+      hpx::unwrapping(internal::reduceRecvInPlace_o),
       std::move(pcomm), reduce_op, std::move(bag));
   // clang-format on
 
@@ -109,7 +109,7 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
   // clang-format off
   hpx::dataflow(
       dlaf::getHpExecutor<Backend::MC>(),
-      hpx::util::unwrapping(common::internal::copyBack_o),
+      hpx::unwrapping(common::internal::copyBack_o),
       std::move(tile), std::move(bag));
   // clang-format on
 }
@@ -128,7 +128,7 @@ void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
   hpx::future<common::internal::Bag<const T>> bag =
       hpx::dataflow(
           dlaf::getHpExecutor<Backend::MC>(),
-          hpx::util::unwrapping(common::internal::makeItContiguous_o),
+          hpx::unwrapping(common::internal::makeItContiguous_o),
           tile);
   // clang-format on
 

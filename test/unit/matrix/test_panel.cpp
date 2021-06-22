@@ -60,7 +60,7 @@ std::vector<config_t> test_params{
 
 TYPED_TEST(PanelTest, AssignToConstRef) {
   using namespace dlaf;
-  using hpx::util::unwrapping;
+  using hpx::unwrapping;
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& cfg : test_params) {
@@ -122,7 +122,7 @@ TYPED_TEST(PanelTest, IteratorRow) {
 template <class TypeParam, Coord panel_axis>
 void testAccess(const config_t& cfg, const comm::CommunicatorGrid comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
-  using hpx::util::unwrapping;
+  using hpx::unwrapping;
 
   const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
 
@@ -158,7 +158,7 @@ TYPED_TEST(PanelTest, AccessTileRow) {
 template <class TypeParam, Coord panel_axis>
 void testExternalTile(const config_t& cfg, const comm::CommunicatorGrid comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
-  using hpx::util::unwrapping;
+  using hpx::unwrapping;
 
   constexpr Coord coord1D = orthogonal(panel_axis);
 

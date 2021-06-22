@@ -86,11 +86,10 @@ struct scheduleRecvBcastImpl {
     auto tile_shared = tile.share();
     auto tile_size =
         hpx::dataflow(hpx::launch::sync,
-                      hpx::util::unwrapping([](matrix::Tile<T, D> const& tile) { return tile.size(); }),
+                      hpx::unwrapping([](matrix::Tile<T, D> const& tile) { return tile.size(); }),
                       tile_shared);
-    auto comm_tile =
-        hpx::dataflow(ex, hpx::util::unwrapping(recvBcastAlloc<T, CommunicationDevice<D>::value>),
-                      tile_size, root_rank, std::move(pcomm));
+    auto comm_tile = hpx::dataflow(ex, hpx::unwrapping(recvBcastAlloc<T, CommunicationDevice<D>::value>),
+                                   tile_size, root_rank, std::move(pcomm));
     hpx::dataflow(dlaf::getCopyExecutor<CommunicationDevice<D>::value, D>(),
                   matrix::unwrapExtendTiles(matrix::copy_o), std::move(comm_tile),
                   std::move(tile_shared));
@@ -105,7 +104,7 @@ struct scheduleRecvBcastImpl<D, D> {
   template <class T>
   static void call(const comm::Executor& ex, hpx::future<matrix::Tile<T, D>> tile,
                    comm::IndexT_MPI root_rank, hpx::future<common::PromiseGuard<Communicator>> pcomm) {
-    hpx::dataflow(ex, hpx::util::unwrapping(recvBcast_o), std::move(tile), root_rank, std::move(pcomm));
+    hpx::dataflow(ex, hpx::unwrapping(recvBcast_o), std::move(tile), root_rank, std::move(pcomm));
   }
 };
 
@@ -122,8 +121,8 @@ hpx::future<matrix::Tile<const T, D>> scheduleRecvBcastAlloc(
     const comm::Executor& ex, TileElementSize tile_size, comm::IndexT_MPI root_rank,
     hpx::future<common::PromiseGuard<comm::Communicator>> pcomm) {
   return internal::handleRecvTile<D>(
-      hpx::dataflow(ex, hpx::util::unwrapping(recvBcastAlloc<T, CommunicationDevice<D>::value>),
-                    tile_size, root_rank, std::move(pcomm)));
+      hpx::dataflow(ex, hpx::unwrapping(recvBcastAlloc<T, CommunicationDevice<D>::value>), tile_size,
+                    root_rank, std::move(pcomm)));
 }
 }
 }

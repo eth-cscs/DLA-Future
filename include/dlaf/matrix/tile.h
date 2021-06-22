@@ -230,7 +230,7 @@ class UnwrapExtendTiles {
     auto t = hpx::make_tuple<>(UnwrapFuture<std::decay_t<Ts>>::call(std::forward<Ts>(ts))...);
 
     // Call f with all futures (not just future<Tile>) unwrapped.
-    hpx::invoke_fused(hpx::util::unwrapping(f), t);
+    hpx::invoke_fused(hpx::unwrapping(f), t);
 
     // Finally, we extend the lifetime of read-write tiles directly and
     // read-only tiles wrapped in shared_futures by returning them here in a
@@ -244,7 +244,7 @@ class UnwrapExtendTiles {
     auto t = hpx::make_tuple<>(UnwrapFuture<std::decay_t<Ts>>::call(std::forward<Ts>(ts))...);
 
     // Call f with all futures (not just future<Tile>) unwrapped.
-    auto&& r = hpx::invoke_fused(hpx::util::unwrapping(f), t);
+    auto&& r = hpx::invoke_fused(hpx::unwrapping(f), t);
 
     // Finally, we extend the lifetime of read-write tiles directly and
     // read-only tiles wrapped in shared_futures by returning them here in a
@@ -264,12 +264,11 @@ public:
   // We use trailing decltype for SFINAE. This ensures that this does not
   // become a candidate when F is not callable with the given arguments.
   template <typename... Ts>
-  auto operator()(Ts&&... ts)
-      -> decltype(callHelper(std::is_void<decltype(hpx::invoke(hpx::util::unwrapping(std::declval<F>()),
-                                                               std::declval<Ts>()...))>{},
-                             std::forward<Ts>(ts)...)) {
-    return callHelper(std::is_void<decltype(hpx::invoke(hpx::util::unwrapping(std::declval<F>()),
-                                                        std::declval<Ts>()...))>{},
+  auto operator()(Ts&&... ts) -> decltype(callHelper(
+      std::is_void<decltype(hpx::invoke(hpx::unwrapping(std::declval<F>()), std::declval<Ts>()...))>{},
+      std::forward<Ts>(ts)...)) {
+    return callHelper(std::is_void<decltype(
+                          hpx::invoke(hpx::unwrapping(std::declval<F>()), std::declval<Ts>()...))>{},
                       std::forward<Ts>(ts)...);
   }
 
@@ -278,7 +277,7 @@ private:
 };
 }
 
-/// Custom version of hpx::util::unwrapping for tile lifetime management.
+/// Custom version of hpx::unwrapping for tile lifetime management.
 ///
 /// Unwraps and forwards all arguments to the function f, but also returns all
 /// arguments as they are with the exception of future<Tile> arguments.

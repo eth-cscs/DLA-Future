@@ -71,7 +71,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
     const SizeType k, Matrix<const T, Device::CPU>& v, const GlobalTileIndex v_start,
     hpx::shared_future<common::internal::vector<T>> taus, hpx::future<matrix::Tile<T, Device::CPU>> t,
     common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
-  using hpx::util::unwrapping;
+  using hpx::unwrapping;
 
   const auto ex = dlaf::getHpExecutor<Backend::MC>();
   const auto ex_mpi = dlaf::getMPIExecutor<Backend::MC>();

@@ -63,7 +63,7 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
 
   const auto rank = panel.rankIndex().get(comm_coord);
 
-  for (const auto& index : panel.iterator()) {
+  for (const auto& index : panel.iteratorLocal()) {
     if (rank == rank_root)
       scheduleSendBcast(ex, panel.read(index), serial_comm());
     else
@@ -140,57 +140,15 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
 
   const auto& dist = panel.parentDistribution();
 
+  DLAF_ASSERT(square_size(dist), dist.size());
+  DLAF_ASSERT(square_blocksize(dist), dist.blockSize());
+
   // Note:
   // This algorithm allow to broadcast panel to panelT using as mirror the parent matrix main diagonal.
   // This means that it is possible to broadcast panels with different axes just if their global offset
-  // lie on the diaognal.
-  // In order to verify this, a check is performed by verifying on each rank what are the possible
-  // indices for the global offset, starting from the local one.
-  //
-  // Given the distribution and the local offset, a set of possible indices is built, considering
-  // the follow inequalty:
-  // globalFromLocal(start_local) - grid_size < start_global <= globalFromLocal(start_local)
-  // and producing a list of `grid_size` possible values in each panel direction
-  //
-  // At this point, the check verifies that there is at least a match among the two sets.
-  // If all ranks have at least a matching global offset among the two different directions,
-  // it means that the global offset for the panels is on the main diagonal.
-  //
-  // credits: @rasolca
-  DLAF_ASSERT(square_size(dist), dist.size());
-  DLAF_ASSERT(square_blocksize(dist), dist.blockSize());
-  DLAF_ASSERT_MODERATE(
-      [&]() {
-        const auto offset = (panel.rangeStart() == dist.localNrTiles().get(coord))
-                                ? dist.nrTiles().get(coord)
-                                : dist.template globalTileFromLocalTile<coord>(panel.rangeStart());
-
-        const auto offsetT = (panelT.rangeStart() == dist.localNrTiles().get(coordT))
-                                 ? dist.nrTiles().get(coordT)
-                                 : dist.template globalTileFromLocalTile<coordT>(panelT.rangeStart());
-
-        const auto grid_size = dist.commGridSize().get(coord);
-        const auto gridT_size = dist.commGridSize().get(coordT);
-
-        auto generate_indices = [](SizeType offset, SizeType grid_size) {
-          std::vector<SizeType> indices(to_sizet(grid_size));
-          std::iota(indices.begin(), indices.end(), offset - grid_size + 1);
-          return indices;
-        };
-
-        std::vector<SizeType> indices = generate_indices(offset, grid_size);
-        std::vector<SizeType> indicesT = generate_indices(offsetT, gridT_size);
-
-        std::vector<SizeType> common_indices(std::min(indices.size(), indicesT.size()));
-        const auto chances =
-            std::distance(common_indices.begin(),
-                          std::set_intersection(indices.begin(), indices.end(), indicesT.begin(),
-                                                indicesT.end(), common_indices.begin()));
-
-        return chances > 0;
-      }(),
-      panel.rangeStart(), panelT.rangeStart(),
-      "broadcast can mirror just on the parent matrix main diagonal");
+  // lie on the diagonal.
+  DLAF_ASSERT(panel.rangeStart() == panelT.rangeStart(), panel.rangeStart(), panelT.rangeStart());
+  DLAF_ASSERT_MODERATE(panel.rangeEnd() == panelT.rangeEnd(), panel.rangeEnd(), panelT.rangeEnd());
 
   // STEP 1
   constexpr auto comm_dir_step1 = orthogonal(axis);
@@ -204,7 +162,7 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
 
   auto& chain_step2 = get_taskchain(comm_dir_step2);
 
-  for (const auto& indexT : panelT.iterator()) {
+  for (const auto& indexT : panelT.iteratorLocal()) {
     SizeType index_diag;
     comm::IndexT_MPI owner_diag;
 

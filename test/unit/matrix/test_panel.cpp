@@ -50,7 +50,7 @@ TYPED_TEST_SUITE(PanelTest, MatrixElementTypes);
 struct config_t {
   const GlobalElementSize sz;
   const TileElementSize blocksz;
-  const GlobalElementIndex offset;
+  const GlobalTileIndex offset;
 };
 
 std::vector<config_t> test_params{
@@ -69,8 +69,9 @@ TYPED_TEST(PanelTest, AssignToConstRef) {
       Panel<Coord::Col, TypeParam, dlaf::Device::CPU> panel(dist);
       Panel<Coord::Col, const TypeParam, dlaf::Device::CPU>& ref = panel;
 
-      std::vector<LocalTileIndex> exp_indices(panel.iterator().begin(), panel.iterator().end());
-      std::vector<LocalTileIndex> ref_indices(ref.iterator().begin(), ref.iterator().end());
+      std::vector<LocalTileIndex> exp_indices(panel.iteratorLocal().begin(),
+                                              panel.iteratorLocal().end());
+      std::vector<LocalTileIndex> ref_indices(ref.iteratorLocal().begin(), ref.iteratorLocal().end());
 
       EXPECT_EQ(exp_indices, ref_indices);
 
@@ -89,20 +90,18 @@ template <class TypeParam, Coord panel_axis>
 void testIterator(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
   const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
 
-  const LocalTileSize at_offset(dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
-                                dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()));
+  Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, cfg.offset);
+  constexpr auto CT = decltype(panel)::CoordType;
 
-  Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, at_offset);
-  constexpr Coord coord1D = decltype(panel)::CoordType;
-
-  const auto exp_nrTiles = dist.localNrTiles().get<coord1D>();
+  const auto offset_loc = dist.template nextLocalTileFromGlobalTile<CT>(cfg.offset.get<CT>());
+  const auto exp_nrTiles = dist.localNrTiles().get<CT>();
 
   std::vector<LocalTileIndex> exp_indices;
   exp_indices.reserve(static_cast<size_t>(exp_nrTiles));
-  for (auto index = at_offset.get<coord1D>(); index < exp_nrTiles; ++index)
-    exp_indices.emplace_back(coord1D, index, 0);
+  for (auto index = offset_loc; index < exp_nrTiles; ++index)
+    exp_indices.emplace_back(CT, index, 0);
 
-  std::vector<LocalTileIndex> indices(panel.iterator().begin(), panel.iterator().end());
+  std::vector<LocalTileIndex> indices(panel.iteratorLocal().begin(), panel.iteratorLocal().end());
 
   EXPECT_EQ(exp_indices, indices);
 }
@@ -126,20 +125,17 @@ void testAccess(const config_t& cfg, const comm::CommunicatorGrid comm_grid) {
 
   const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
 
-  const LocalTileSize at_offset(dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
-                                dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()));
-
-  Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, at_offset);
+  Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, cfg.offset);
   constexpr Coord coord1D = decltype(panel)::CoordType;
 
   // rw-access
-  for (const auto& idx : panel.iterator()) {
+  for (const auto& idx : panel.iteratorLocal()) {
     panel(idx).then(unwrapping(
         [idx](auto&& tile) { matrix::test::set(tile, TypeUtil::element(idx.get(coord1D), 26)); }));
   }
 
   // ro-access
-  for (const auto& idx : panel.iterator())
+  for (const auto& idx : panel.iteratorLocal())
     CHECK_MATRIX_EQ(TypeUtil::element(idx.get(coord1D), 26), panel.read(idx).get());
 }
 
@@ -167,18 +163,13 @@ void testExternalTile(const config_t& cfg, const comm::CommunicatorGrid comm_gri
 
   matrix::test::set(matrix, [](const auto& index) { return TypeUtil::element(index.get(coord1D), 26); });
 
-  const LocalTileSize at_offset{
-      dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
-      dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
-  };
-
-  Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, at_offset);
+  Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, cfg.offset);
   static_assert(coord1D == decltype(panel)::CoordType, "coord types mismatch");
 
   // Note:
   // - Even indexed tiles in panel, odd indexed linked to the matrix first column
-  // - Even indexed, i.e. the one using panle memory, are set to a different value
-  for (const auto& idx : panel.iterator()) {
+  // - Even indexed, i.e. the one using panel memory, are set to a different value
+  for (const auto& idx : panel.iteratorLocal()) {
     if (idx.row() % 2 == 0)
       panel(idx).then(unwrapping(
           [idx](auto&& tile) { matrix::test::set(tile, TypeUtil::element(-idx.get(coord1D), 13)); }));
@@ -187,7 +178,7 @@ void testExternalTile(const config_t& cfg, const comm::CommunicatorGrid comm_gri
   }
 
   // Check that the values are correct, both for internal and externally linked tiles
-  for (const auto& idx : panel.iterator()) {
+  for (const auto& idx : panel.iteratorLocal()) {
     if (idx.row() % 2 == 0)
       CHECK_TILE_EQ(TypeUtil::element(-idx.get(coord1D), 13), panel.read(idx).get());
     else
@@ -198,7 +189,7 @@ void testExternalTile(const config_t& cfg, const comm::CommunicatorGrid comm_gri
   panel.reset();
 
   // Invert the "logic" of external tiles: even are linked to matrix, odd are in-panel
-  for (const auto& idx : panel.iterator()) {
+  for (const auto& idx : panel.iteratorLocal()) {
     if (idx.row() % 2 == 1)
       panel(idx).then(unwrapping(
           [idx](auto&& tile) { matrix::test::set(tile, TypeUtil::element(-idx.get(coord1D), 5)); }));
@@ -206,7 +197,7 @@ void testExternalTile(const config_t& cfg, const comm::CommunicatorGrid comm_gri
       panel.setTile(idx, matrix.read(idx));
   }
 
-  for (const auto& idx : panel.iterator()) {
+  for (const auto& idx : panel.iteratorLocal()) {
     if (idx.row() % 2 == 1)
       CHECK_TILE_EQ(TypeUtil::element(-idx.get(coord1D), 5), panel.read(idx).get());
     else
@@ -235,80 +226,89 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
   Matrix<TypeParam, dlaf::Device::CPU> matrix(cfg.sz, cfg.blocksz, comm_grid);
   const auto& dist = matrix.distribution();
 
-  // setup the panel
-  const LocalTileSize at_offset{
-      dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
-      dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
-  };
+  const auto head_loc = dist.template nextLocalTileFromGlobalTile<coord1D>(cfg.offset.get<coord1D>());
 
-  Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, at_offset);
+  Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, cfg.offset);
   static_assert(coord1D == decltype(panel)::CoordType, "coord types mismatch");
 
-  for (SizeType i = at_offset.get(coord1D); i < dist.localNrTiles().get(coord1D); ++i)
+  for (SizeType i = head_loc; i < dist.localNrTiles().get(coord1D); ++i)
     panel(LocalTileIndex(coord1D, i)).get()({0, 0}) = i;
 
   // Shrink from head
-  for (SizeType head = at_offset.get(coord1D); head <= dist.localNrTiles().get(coord1D); ++head) {
-    panel.setRangeStart(LocalTileSize(coord1D, head));
+  for (SizeType head = cfg.offset.get<coord1D>(); head <= dist.nrTiles().get(coord1D); ++head) {
+    panel.setRangeStart(GlobalTileIndex(coord1D, head));
 
-    for (SizeType k = head; k < dist.localNrTiles().get(coord1D); ++k) {
+    const auto head_loc = dist.template nextLocalTileFromGlobalTile<coord1D>(head);
+    const auto tail_loc = dist.localNrTiles().get(coord1D);
+
+    EXPECT_EQ(tail_loc - head_loc,
+              std::distance(panel.iteratorLocal().begin(), panel.iteratorLocal().end()));
+
+    for (SizeType k = head_loc; k < tail_loc; ++k) {
       const LocalTileIndex idx(coord1D, k);
       auto& tile = panel.read(idx).get();
       EXPECT_EQ(tile({0, 0}), TypeUtil::element(k, 0));
       EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
     }
 
-    for (const auto& idx : panel.iterator()) {
+    for (const auto& idx : panel.iteratorLocal()) {
       auto& tile = panel.read(idx).get();
       EXPECT_EQ(tile({0, 0}), TypeUtil::element(idx.get(coord1D), 0));
       EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
     }
-    EXPECT_EQ(dist.localNrTiles().get(coord1D) - head,
-              std::distance(panel.iterator().begin(), panel.iterator().end()));
   }
 
   // Shrink from tail
-  panel.setRangeStart(at_offset);
+  panel.setRangeStart(cfg.offset);
 
-  for (SizeType tail = dist.localNrTiles().get(coord1D); at_offset.get(coord1D) <= tail; --tail) {
-    panel.setRangeEnd(LocalTileSize(coord1D, tail));
+  for (SizeType tail = dist.nrTiles().get(coord1D); cfg.offset.get<coord1D>() <= tail; --tail) {
+    panel.setRangeEnd(GlobalTileIndex(coord1D, tail));
 
-    for (SizeType k = at_offset.get(coord1D); k < tail; ++k) {
+    const auto head_loc = dist.template nextLocalTileFromGlobalTile<coord1D>(cfg.offset.get<coord1D>());
+    const auto tail_loc = dist.template nextLocalTileFromGlobalTile<coord1D>(tail);
+
+    EXPECT_EQ(tail_loc - head_loc,
+              std::distance(panel.iteratorLocal().begin(), panel.iteratorLocal().end()));
+
+    for (SizeType k = head_loc; k < tail_loc; ++k) {
       const LocalTileIndex idx(coord1D, k);
       auto& tile = panel.read(idx).get();
       EXPECT_EQ(tile({0, 0}), TypeUtil::element(k, 0));
       EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
     }
 
-    for (const auto& idx : panel.iterator()) {
+    for (const auto& idx : panel.iteratorLocal()) {
       auto& tile = panel.read(idx).get();
       EXPECT_EQ(tile({0, 0}), TypeUtil::element(idx.get(coord1D), 0));
       EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
     }
-    EXPECT_EQ(tail - at_offset.get(coord1D),
-              std::distance(panel.iterator().begin(), panel.iterator().end()));
   }
 
   // Shrink from both ends
-  panel.setRangeEnd(dist.localNrTiles());
+  panel.setRangeEnd(indexFromOrigin(dist.nrTiles()));
 
-  for (SizeType head = at_offset.get(coord1D), tail = dist.localNrTiles().get(coord1D); head <= tail;
+  for (SizeType head = cfg.offset.get<coord1D>(), tail = dist.nrTiles().get(coord1D); head <= tail;
        ++head, --tail) {
-    panel.setRange(LocalTileSize(coord1D, head), LocalTileSize(coord1D, tail));
+    panel.setRange(GlobalTileIndex(coord1D, head), GlobalTileIndex(coord1D, tail));
 
-    for (SizeType k = head; k < tail; ++k) {
+    const auto head_loc = dist.template nextLocalTileFromGlobalTile<coord1D>(head);
+    const auto tail_loc = dist.template nextLocalTileFromGlobalTile<coord1D>(tail);
+
+    EXPECT_EQ(tail_loc - head_loc,
+              std::distance(panel.iteratorLocal().begin(), panel.iteratorLocal().end()));
+
+    for (SizeType k = head_loc; k < tail_loc; ++k) {
       const LocalTileIndex idx(coord1D, k);
       auto& tile = panel.read(idx).get();
       EXPECT_EQ(tile({0, 0}), TypeUtil::element(k, 0));
       EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
     }
 
-    for (const auto& idx : panel.iterator()) {
+    for (const auto& idx : panel.iteratorLocal()) {
       auto& tile = panel.read(idx).get();
       EXPECT_EQ(tile({0, 0}), TypeUtil::element(idx.get(coord1D), 0));
       EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
     }
-    EXPECT_EQ(tail - head, std::distance(panel.iterator().begin(), panel.iterator().end()));
   }
 }
 

@@ -18,7 +18,6 @@
 #include <hpx/futures/future.hpp>
 #include <hpx/include/util.hpp>
 #include <hpx/tuple.hpp>
-#include <lapack/util.hh>
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/data.h"

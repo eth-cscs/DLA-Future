@@ -394,8 +394,6 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
                   common::Pipeline<comm::Communicator>& mpi_row_task_chain,
                   common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
   using hpx::unwrapping;
-  using dlaf::common::make_data;
-  using dlaf::comm::sync::reduce;
 
   const auto ex = dlaf::getHpExecutor<Backend::MC>();
   const auto ex_mpi = dlaf::getMPIExecutor<Backend::MC>();
@@ -528,8 +526,6 @@ template <class T>
 void gemmComputeW2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Coord::Col, T>& x,
                    common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
   using hpx::unwrapping;
-  using common::make_data;
-  using namespace comm::sync;
 
   const auto ex = dlaf::getHpExecutor<Backend::MC>();
   const auto ex_mpi = dlaf::getMPIExecutor<Backend::MC>();

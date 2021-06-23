@@ -83,8 +83,7 @@ T computeReflector(const comm::IndexT_MPI rank_v0, comm::Communicator& communica
   const bool is_head_rank = rank_v0 == communicator.rank();
 
   // Extract x0 and compute local cumulative sum of squares of the reflector column
-  T x0 = 0;
-  T squares = 0;
+  std::array<T, 2> x0_and_squares{0, 0};
   auto it_begin = panel.begin();
   auto it_end = panel.end();
 
@@ -92,42 +91,32 @@ T computeReflector(const comm::IndexT_MPI rank_v0, comm::Communicator& communica
     auto& tile_v0 = *it_begin++;
 
     const TileElementIndex idx_x0(j, j);
-    x0 = tile_v0(idx_x0);
+    x0_and_squares[0] = tile_v0(idx_x0);
 
     T* reflector_ptr = tile_v0.ptr({idx_x0});
-    squares = blas::dot(tile_v0.size().rows() - idx_x0.row(), reflector_ptr, 1, reflector_ptr, 1);
+    x0_and_squares[1] =
+        blas::dot(tile_v0.size().rows() - idx_x0.row(), reflector_ptr, 1, reflector_ptr, 1);
   }
 
   for (auto it = it_begin; it != it_end; ++it) {
     auto& tile = *it;
 
     T* reflector_ptr = tile.ptr({0, j});
-    squares += blas::dot(tile.size().rows(), reflector_ptr, 1, reflector_ptr, 1);
+    x0_and_squares[1] += blas::dot(tile.size().rows(), reflector_ptr, 1, reflector_ptr, 1);
   }
 
-  // reduce local cumulative sums
-  // rank_v0 will have the x0 and the total cumulative sum of squares
-  comm::sync::reduceInPlace(rank_v0, communicator, MPI_SUM, common::make_data(&squares, 1));
+  // allReduce squares and x0. Since x0 is initialized just on rank_v0, just for it this is a bcast
+  comm::sync::allReduceInPlace(communicator, MPI_SUM,
+                               common::make_data(x0_and_squares.data(), x0_and_squares.size()));
 
   // rank_v0 will compute params that will be used for next computation of reflector components
   // FIXME in this case just one compute and the other will receive it
   // it may be better to compute on each one, in order to avoid a communication of few values
   // but it would benefit if all_reduce of the norm and x0 is faster than communicating params
-  std::array<T, 3> params;
-  if (is_head_rank) {
-    const T norm = std::sqrt(squares);
-    const T y = std::signbit(std::real(x0)) ? norm : -norm;
-    const T tau = (y - x0) / y;
-
-    params = {x0, y, tau};
-  }
-
-  // broadcast params
-  auto params_data = common::make_data(params.data(), params.size());
-  if (is_head_rank)
-    comm::sync::broadcast::send(communicator, params_data);
-  else
-    comm::sync::broadcast::receive_from(rank_v0, communicator, params_data);
+  const T norm = std::sqrt(x0_and_squares[1]);
+  const T x0 = x0_and_squares[0];
+  const T y = std::signbit(std::real(x0_and_squares[0])) ? norm : -norm;
+  const T tau = (y - x0) / y;
 
   // compute reflector
   it_begin = panel.begin();
@@ -137,22 +126,21 @@ T computeReflector(const comm::IndexT_MPI rank_v0, comm::Communicator& communica
     auto& tile_v0 = *it_begin++;
 
     const TileElementIndex idx_x0(j, j);
-    tile_v0(idx_x0) = params[1];
+    tile_v0(idx_x0) = y;
 
     if (j + 1 < tile_v0.size().rows()) {
       T* v = tile_v0.ptr({j + 1, j});
-      blas::scal(tile_v0.size().rows() - (j + 1),
-                 typename TypeInfo<T>::BaseType(1) / (params[0] - params[1]), v, 1);
+      blas::scal(tile_v0.size().rows() - (j + 1), typename TypeInfo<T>::BaseType(1) / (x0 - y), v, 1);
     }
   }
 
   for (auto it = it_begin; it != it_end; ++it) {
     auto& tile_v = *it;
     T* v = tile_v.ptr({0, j});
-    blas::scal(tile_v.size().rows(), typename TypeInfo<T>::BaseType(1) / (params[0] - params[1]), v, 1);
+    blas::scal(tile_v.size().rows(), typename TypeInfo<T>::BaseType(1) / (x0 - y), v, 1);
   }
 
-  return params[2];
+  return tau;
 }
 
 template <class T>

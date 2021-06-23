@@ -13,11 +13,13 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include <hpx/include/util.hpp>
 
 #include "dlaf/matrix/matrix.h"
 
-#include "dlaf_test/util_types.h"
 #include "dlaf_test/matrix/util_matrix.h"
+#include "dlaf_test/matrix/util_tile.h"
+#include "dlaf_test/util_types.h"
 
 using namespace dlaf;
 using namespace dlaf::test;
@@ -28,6 +30,29 @@ template <typename Type>
 class ExtraBuffersTest : public ::testing::Test {};
 
 TYPED_TEST_SUITE(ExtraBuffersTest, MatrixElementTypes);
+
+TYPED_TEST(ExtraBuffersTest, AccessBuffers) {
+  using TypeUtils = TypeUtilities<TypeParam>;
+
+  Matrix<TypeParam, Device::CPU> matrix({1, 1}, {1, 1});
+  matrix::test::set(matrix, [](auto&&) { return TypeUtils::element(1, 0); });
+
+  const SizeType tot_buffers = 10;
+  ExtraBuffers<TypeParam> buffers(matrix, tot_buffers - 1);
+
+  for (auto i = 0; i < tot_buffers; ++i) {
+    buffers.get_buffer(i).then(hpx::unwrapping([i](const auto& tile) {
+      matrix::test::set(tile, [i](auto&&) { return TypeUtils::element(i, 0); });
+    }));
+  }
+
+  for (auto i = 0; i < tot_buffers; ++i) {
+    auto value_func = [i, tot_buffers](const TileElementIndex&) {
+      return TypeUtils::element((i % tot_buffers), 0);
+    };
+    CHECK_TILE_EQ(std::move(value_func), buffers.get_buffer(i).get());
+  }
+}
 
 TYPED_TEST(ExtraBuffersTest, Basic) {
   Matrix<TypeParam, Device::CPU> matrix({1, 1}, {1, 1});

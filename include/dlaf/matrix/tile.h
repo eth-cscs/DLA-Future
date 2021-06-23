@@ -34,6 +34,12 @@ struct ContinuationException final : public std::runtime_error {
 };
 
 namespace matrix {
+/// Contains the information to create a subtile.
+struct SubTileSpec {
+  TileElementIndex origin;
+  TileElementSize size;
+};
+
 // forward declarations
 template <class T, Device device>
 class Tile;
@@ -41,14 +47,14 @@ class Tile;
 template <class T, Device device>
 class Tile<const T, device>;
 
+namespace internal {
 template <class T, Device D>
-std::vector<hpx::shared_future<Tile<const T, D>>> splitTile(
-    hpx::shared_future<Tile<const T, D>>& tile,
-    std::vector<std::tuple<TileElementIndex, TileElementSize>> specs);
+hpx::shared_future<Tile<T, D>> splitTileInsertFutureInChain(hpx::future<Tile<T, D>>& tile);
 
 template <class T, Device D>
-std::vector<hpx::future<Tile<T, D>>> splitTile(
-    hpx::future<Tile<T, D>>& tile, std::vector<std::tuple<TileElementIndex, TileElementSize>> specs);
+hpx::future<Tile<T, D>> createSubTile(const hpx::shared_future<Tile<T, D>>& tile,
+                                      const SubTileSpec& spec);
+}
 
 /// The Tile object aims to provide an effective way to access the memory as a two dimensional
 /// array. It does not allocate any memory, but it references the memory given by a @c MemoryView object.
@@ -69,9 +75,10 @@ class Tile<const T, device> {
   using promise_t = hpx::lcos::local::promise<PT>;
 
   friend TileType;
-  friend std::vector<hpx::shared_future<ConstTileType>> splitTile<>(
-      hpx::shared_future<ConstTileType>& tile,
-      std::vector<std::tuple<TileElementIndex, TileElementSize>> specs);
+  friend hpx::shared_future<Tile<T, device>> internal::splitTileInsertFutureInChain<>(
+      hpx::future<Tile<T, device>>& tile);
+  friend hpx::future<Tile<const T, device>> internal::createSubTile<>(
+      const hpx::shared_future<Tile<const T, device>>& tile, const SubTileSpec& spec);
 
 public:
   using ElementType = T;
@@ -165,7 +172,7 @@ private:
   // e.g. in dataflow, .then, ...
   Tile(hpx::shared_future<ConstTileType> tile, TileElementIndex origin, TileElementSize size)
       : Tile<const T, device>(tile.get(), origin, size) {
-    sfc_ = tile;
+    sfc_ = std::move(tile);
   }
 
   TileElementSize size_;
@@ -241,8 +248,8 @@ class Tile : public Tile<const T, device> {
   using promise_t = hpx::lcos::local::promise<PT>;
 
   friend ConstTileType;
-  friend std::vector<hpx::future<TileType>> splitTile<>(
-      hpx::future<TileType>& tile, std::vector<std::tuple<TileElementIndex, TileElementSize>> specs);
+  friend hpx::future<Tile<T, device>> internal::createSubTile<>(
+      const hpx::shared_future<Tile<T, device>>& tile, const SubTileSpec& spec);
 
 public:
   using ElementType = T;
@@ -302,7 +309,7 @@ private:
   // e.g. in dataflow, .then, ...
   Tile(hpx::shared_future<TileType> tile, TileElementIndex origin, TileElementSize size)
       : ConstTileType(tile.get(), origin, size) {
-    sf_ = tile;
+    sf_ = std::move(tile);
   }
 
   using ConstTileType::linearIndex;
@@ -319,72 +326,25 @@ auto create_data(const Tile<T, device>& tile) {
   return common::DataDescriptor<T>(tile.ptr({0, 0}), tile.size().cols(), tile.size().rows(), tile.ld());
 }
 
-/// Create SubTiles:
-/// TODO
+namespace internal {
 template <class T, Device D>
-std::vector<hpx::shared_future<Tile<const T, D>>> splitTile(
-    hpx::shared_future<Tile<const T, D>>& tile,
-    std::vector<std::tuple<TileElementIndex, TileElementSize>> specs) {
-  std::vector<hpx::shared_future<Tile<const T, D>>> ret;
-  ret.reserve(specs.size());
-  for (const auto& spec : specs) {
-    ret.emplace_back(hpx::dataflow(
-        hpx::launch::sync,
-        [](auto tile, auto origin, auto size) { return Tile<const T, D>(tile, origin, size); }, tile,
-        std::get<0>(spec), std::get<1>(spec)));
-  }
-
-  return ret;
+hpx::future<Tile<T, D>> createSubTile(const hpx::shared_future<Tile<T, D>>& tile,
+                                      const SubTileSpec& spec) {
+  return hpx::dataflow(
+      hpx::launch::sync,
+      [](auto tile, auto origin, auto size) { return Tile<T, D>(tile, origin, size); }, tile,
+      spec.origin, spec.size);
 }
 
-/// Create SubTiles:
-/// TODO
 template <class T, Device D>
-std::vector<hpx::future<Tile<T, D>>> splitTile(
-    hpx::future<Tile<T, D>>& tile, std::vector<std::tuple<TileElementIndex, TileElementSize>> specs) {
-  using hpx::lcos::local::promise;
-
-  if (specs.size() == 0)
-    return {};
-
-#ifdef DLAF_ASSERT_MODERATE_ENABLE
-  // Check if subtiles overlap.
-  auto overlap = [](const auto& spec1, const auto& spec2) {
-    const auto& size1 = std::get<1>(spec1);
-    const auto& size2 = std::get<1>(spec2);
-    // no overlap if either of the sizes is empty.
-    if (size1.isEmpty() || size2.isEmpty())
-      return false;
-
-    const auto& start1 = std::get<0>(spec1);
-    const auto end1 = start1 + size1;
-    const auto& start2 = std::get<0>(spec2);
-    const auto end2 = start2 + size2;
-
-    // no overlap if rows do not overlap.
-    if (end1.row() <= start2.row() || end2.row() <= start1.row())
-      return false;
-    // no overlap if cols do not overlap.
-    if (end1.col() <= start2.col() || end2.col() <= start1.col())
-      return false;
-
-    return true;
-  };
-  for (auto it = std::cbegin(specs); it < std::cend(specs); ++it) {
-    // no overlap possible if size is empty.
-    if (std::get<1>(*it).isEmpty())
-      continue;
-
-    for (auto it2 = std::cbegin(specs); it2 < it; ++it2) {
-      DLAF_ASSERT_MODERATE(!overlap(*it, *it2), std::get<0>(*it), std::get<1>(*it), std::get<0>(*it2),
-                           std::get<1>(*it2));
-    }
-  }
-#endif
-
+hpx::shared_future<Tile<T, D>> splitTileInsertFutureInChain(hpx::future<Tile<T, D>>& tile) {
   // Insert a Tile in the tile dependency chain:  F1(P2)  F2(P3) ...
   // where Pi, Fi is a promise future pair (Pi sets Fi),
   // and F1(P2) means that the Tile in F1 will set promise P2.
+  // On input tile is F1(P2), on output tile is FN(P2).
+  // The shared future F1(PN) is returned and will be used to create subtiles.
+  using hpx::lcos::local::promise;
+
   // 1. Create a new promise + tile pair PN, FN
   promise<Tile<T, D>> p;
   auto tmp_tile = p.get_future();
@@ -406,13 +366,91 @@ std::vector<hpx::future<Tile<T, D>>> splitTile(
   tile = hpx::dataflow(hpx::launch::sync, hpx::util::unwrapping(set_promise), tmp_tile,
                        std::move(hpx::get<1>(tmp)));
 
+  return std::move(old_tile);
+}
+}
+
+/// Create SubTiles:
+/// TODO
+template <class T, Device D>
+hpx::shared_future<Tile<const T, D>> splitTile(hpx::shared_future<Tile<const T, D>>& tile,
+                                               const SubTileSpec& spec) {
+  return internal::createSubTile(tile, spec);
+}
+
+/// Create SubTiles:
+/// TODO
+template <class T, Device D>
+std::vector<hpx::shared_future<Tile<const T, D>>> splitTile(hpx::shared_future<Tile<const T, D>>& tile,
+                                                            const std::vector<SubTileSpec>& specs) {
+  std::vector<hpx::shared_future<Tile<const T, D>>> ret;
+  ret.reserve(specs.size());
+  for (const auto& spec : specs) {
+    ret.emplace_back(internal::createSubTile(tile, spec));
+  }
+
+  return ret;
+}
+
+/// Create SubTiles:
+/// TODO
+template <class T, Device D>
+hpx::future<Tile<T, D>> splitTile(hpx::future<Tile<T, D>>& tile, const SubTileSpec& spec) {
+  auto old_tile = internal::splitTileInsertFutureInChain(tile);
+  // tile is now the new element of the dependency chain which will be ready
+  // when the subtile will go out of scope.
+
+  return internal::createSubTile(old_tile, spec);
+}
+
+/// Create SubTiles:
+/// TODO
+template <class T, Device D>
+std::vector<hpx::future<Tile<T, D>>> splitTileDisjoint(hpx::future<Tile<T, D>>& tile,
+                                                       const std::vector<SubTileSpec>& specs) {
+  if (specs.size() == 0)
+    return {};
+
+#ifdef DLAF_ASSERT_MODERATE_ENABLE
+  // Check if subtiles overlap.
+  auto overlap = [](const auto& spec1, const auto& spec2) {
+    // no overlap if either of the sizes is empty.
+    if (spec1.size.isEmpty() || spec2.size.isEmpty())
+      return false;
+
+    const auto& start1 = spec1.origin;
+    const auto end1 = start1 + spec1.size;
+    const auto& start2 = spec2.origin;
+    const auto end2 = start2 + spec2.size;
+
+    // no overlap if rows do not overlap.
+    if (end1.row() <= start2.row() || end2.row() <= start1.row())
+      return false;
+    // no overlap if cols do not overlap.
+    if (end1.col() <= start2.col() || end2.col() <= start1.col())
+      return false;
+
+    return true;
+  };
+  for (auto it = std::cbegin(specs); it < std::cend(specs); ++it) {
+    // no overlap possible if size is empty.
+    if (it->size.isEmpty())
+      continue;
+
+    for (auto it2 = std::cbegin(specs); it2 < it; ++it2) {
+      DLAF_ASSERT_MODERATE(!overlap(*it, *it2), it->origin, it->size, it2->origin, it2->size);
+    }
+  }
+#endif
+
+  auto old_tile = internal::splitTileInsertFutureInChain(tile);
+  // tile is now the new element of the dependency chain which will be ready
+  // when all subtiles will go out of scope.
+
   std::vector<hpx::future<Tile<T, D>>> ret;
   ret.reserve(specs.size());
   for (const auto& spec : specs) {
-    ret.emplace_back(hpx::dataflow(
-        hpx::launch::sync,
-        [](auto tile, auto origin, auto size) { return Tile<T, D>(tile, origin, size); }, old_tile,
-        std::get<0>(spec), std::get<1>(spec)));
+    ret.emplace_back(internal::createSubTile(old_tile, spec));
   }
 
   return ret;

@@ -388,8 +388,7 @@ void checkFullTile(F&& ptr, T&& tile, TileElementSize size) {
 
 template <class T, Device D>
 void testSubtileConst(std::string name, TileElementSize size, SizeType ld,
-                      std::vector<std::tuple<TileElementIndex, TileElementSize>> subs,
-                      std::size_t last_dep) {
+                      const std::vector<SubTileSpec>& subs, std::size_t last_dep) {
   SCOPED_TRACE(name);
   ASSERT_LE(last_dep, subs.size());
 
@@ -428,13 +427,13 @@ void testSubtileConst(std::string name, TileElementSize size, SizeType ld,
   // return the origin of the subtile or (0, 0) for the original tile.
   auto get_origin = [&subs](std::size_t i) {
     if (i < subs.size())
-      return std::get<0>(subs[i]);
+      return subs[i].origin;
     return TileElementIndex(0, 0);
   };
   // return the size of the subtile or the size of the original tile.
   auto get_size = [&subs, size](std::size_t i) {
     if (i < subs.size())
-      return std::get<1>(subs[i]);
+      return subs[i].size;
     return size;
   };
 
@@ -479,7 +478,7 @@ TYPED_TEST(TileTest, SubtileConst) {
 
 template <class T, Device D>
 void testSubtile(std::string name, TileElementSize size, SizeType ld,
-                 std::vector<std::tuple<TileElementIndex, TileElementSize>> subs, std::size_t last_dep) {
+                 const std::vector<SubTileSpec>& subs, std::size_t last_dep) {
   SCOPED_TRACE(name);
   if (subs.size() > 0) {
     ASSERT_LT(last_dep, subs.size());
@@ -497,7 +496,7 @@ void testSubtile(std::string name, TileElementSize size, SizeType ld,
   ASSERT_TRUE(next_tile_f.valid() && !next_tile_f.is_ready());
 
   // create subtiles
-  auto subtiles = splitTile(tile_f, subs);
+  auto subtiles = splitTileDisjoint(tile_f, subs);
   ASSERT_TRUE(tile_f.valid());
   EXPECT_FALSE(tile_f.is_ready());
   EXPECT_EQ(subs.size(), subtiles.size());
@@ -520,9 +519,9 @@ void testSubtile(std::string name, TileElementSize size, SizeType ld,
     EXPECT_FALSE(next_tile_f.is_ready());
 
     // return the origin of the subtile.
-    auto get_origin = [&subs](std::size_t i) { return std::get<0>(subs[i]); };
+    auto get_origin = [&subs](std::size_t i) { return subs[i].origin; };
     // return the size of the subtile.
-    auto get_size = [&subs](std::size_t i) { return std::get<1>(subs[i]); };
+    auto get_size = [&subs](std::size_t i) { return subs[i].size; };
 
     // Check pointer of subtiles (all apart from last_dep) and clear them.
     // As one subtile (last_dep) is still alive next_tile is still locked.

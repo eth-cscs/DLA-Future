@@ -33,7 +33,7 @@ struct ExtraBuffers {
   }
 
   auto get_buffer(const SizeType index) {
-    const auto idx = num_extra_buffers_ != 0 ? index % num_extra_buffers_ : 0;
+    const SizeType idx = num_extra_buffers_ != 0 ? index % (num_extra_buffers_ + 1) : 0;
     if (idx == 0)
       return base_(LocalTileIndex(0, 0));
     else

@@ -80,3 +80,9 @@ DLAF_addTest(test_panel
   USE_MAIN MPIHPX
   MPIRANKS 6
 )
+
+DLAF_addTest(test_extra_buffers
+  SOURCES test_extra_buffers.cpp
+  LIBRARIES dlaf.core
+  USE_MAIN HPX
+)

@@ -157,16 +157,14 @@ T computeReflector(const comm::IndexT_MPI rank_v0, comm::Communicator& communica
 
 template <class T>
 void updateTrailingPanelWithReflector(comm::IndexT_MPI rank_v0, comm::Communicator& communicator,
-                                      TileT<T>& tile_w, const std::vector<TileT<T>>& panel, SizeType j,
-                                      const T tau) {
-  const SizeType pt_cols = tile_w.size().cols() - (j + 1);
-
+                                      const std::vector<TileT<T>>& panel, SizeType j,
+                                      const SizeType pt_cols, const T tau) {
   // for each tile in the panel, consider just the trailing panel
   // i.e. all rows (height = reflector), just columns to the right of the current reflector
   if (!(pt_cols > 0))
     return;
 
-  lapack::laset(lapack::MatrixType::General, pt_cols, 1, 0, 0, tile_w.ptr(), tile_w.ld());
+  std::vector<T> w(pt_cols, 0);
 
   const bool is_head_rank = rank_v0 == communicator.rank();
 
@@ -175,7 +173,7 @@ void updateTrailingPanelWithReflector(comm::IndexT_MPI rank_v0, comm::Communicat
 
   const TileElementIndex index_el_x0(j, j);
 
-  // W = Pt * W
+  // W = Pt * V
   for (auto& tile_a : panel) {
     const bool has_first_component = has_first(tile_a);
     const SizeType first_element = has_first_component ? index_el_x0.row() : 0;
@@ -185,7 +183,6 @@ void updateTrailingPanelWithReflector(comm::IndexT_MPI rank_v0, comm::Communicat
     TileElementSize         pt_size   {tile_a.size().rows() - pt_start.row(), pt_cols};
 
     TileElementIndex        v_start   {first_element, index_el_x0.col()};
-    const TileElementIndex  w_start   {0, 0};
     // clang-format on
 
     if (has_first_component) {
@@ -200,7 +197,7 @@ void updateTrailingPanelWithReflector(comm::IndexT_MPI rank_v0, comm::Communicat
           tile_a.ptr(pt_start), tile_a.ld(),
           &fake_v, 1,
           static_cast<T>(0),
-          tile_w.ptr(w_start), 1);
+          w.data(), 1);
       // clang-format on
 
       pt_start = pt_start + offset;
@@ -218,12 +215,12 @@ void updateTrailingPanelWithReflector(comm::IndexT_MPI rank_v0, comm::Communicat
           tile_a.ptr(pt_start), tile_a.ld(),
           tile_a.ptr(v_start), 1,
           1,
-          tile_w.ptr(w_start), 1);
+          w.data(), 1);
       // clang-format on
     }
   }
 
-  comm::sync::allReduceInPlace(communicator, MPI_SUM, common::make_data(tile_w));
+  comm::sync::allReduceInPlace(communicator, MPI_SUM, common::make_data(w.data(), pt_cols));
 
   // update trailing panel
   // GER Pt = Pt - tau . v . w*
@@ -236,7 +233,6 @@ void updateTrailingPanelWithReflector(comm::IndexT_MPI rank_v0, comm::Communicat
     TileElementSize         pt_size {tile_a.size().rows() - pt_start.row(), tile_a.size().cols() - pt_start.col()};
 
     TileElementIndex        v_start {first_element, index_el_x0.col()};
-    const TileElementIndex  w_start {0, 0};
     // clang-format on
 
     if (has_first_component) {
@@ -249,7 +245,7 @@ void updateTrailingPanelWithReflector(comm::IndexT_MPI rank_v0, comm::Communicat
           1, pt_size.cols(),
           -dlaf::conj(tau),
           &fake_v, 1,
-          tile_w.ptr(w_start), 1,
+          w.data(), 1,
           tile_a.ptr(pt_start), tile_a.ld());
       // clang-format on
 
@@ -265,7 +261,7 @@ void updateTrailingPanelWithReflector(comm::IndexT_MPI rank_v0, comm::Communicat
           pt_size.rows(), pt_size.cols(),
           -dlaf::conj(tau),
           tile_a.ptr(v_start), 1,
-          tile_w.ptr(w_start), 1,
+          w.data(), 1,
           tile_a.ptr(pt_start), tile_a.ld());
       // clang-format on
     }
@@ -280,25 +276,26 @@ hpx::shared_future<common::internal::vector<T>> computePanelReflectors(
     SizeType nrefls) {
   using hpx::unwrapping;
 
-  auto panel_task = unwrapping([rank_v0, nrefls](auto fut_panel_tiles, auto communicator, auto tile_w) {
-    const auto panel_tiles = hpx::unwrap(fut_panel_tiles);
+  auto panel_task = unwrapping(
+      [rank_v0, nrefls, cols = mat_a.blockSize().cols()](auto fut_panel_tiles, auto communicator) {
+        const auto panel_tiles = hpx::unwrap(fut_panel_tiles);
 
-    common::internal::vector<T> taus;
-    taus.reserve(nrefls);
-    for (SizeType j = 0; j < nrefls; ++j) {
-      taus.emplace_back(computeReflector(rank_v0, communicator.ref(), panel_tiles, j));
-      updateTrailingPanelWithReflector(rank_v0, communicator.ref(), tile_w, panel_tiles, j, taus.back());
-    }
-    return taus;
-  });
+        common::internal::vector<T> taus;
+        taus.reserve(nrefls);
+        for (SizeType j = 0; j < nrefls; ++j) {
+          taus.emplace_back(computeReflector(rank_v0, communicator.ref(), panel_tiles, j));
+          updateTrailingPanelWithReflector(rank_v0, communicator.ref(), panel_tiles, j, cols - (j + 1),
+                                           taus.back());
+        }
+        return taus;
+      });
 
-  MatrixT<T> w({mat_a.blockSize().rows(), mat_a.blockSize().cols()}, mat_a.blockSize());
   auto panel_tiles = hpx::when_all(dlaf::matrix::select(mat_a, ai_panel_range));
 
   // clang-format off
   return hpx::dataflow(
       dlaf::getHpExecutor<Backend::MC>(),
-      std::move(panel_task), std::move(panel_tiles), bmpi_col_chain, w(LocalTileIndex{0, 0}));
+      std::move(panel_task), std::move(panel_tiles), bmpi_col_chain);
   // clang-format on
 }
 

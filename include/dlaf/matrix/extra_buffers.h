@@ -23,7 +23,7 @@ namespace matrix {
 
 template <class T>
 struct ExtraBuffers {
-  ExtraBuffers(Matrix<T, Device::CPU>& mat, std::size_t num_extra_buffers)
+  ExtraBuffers(Matrix<T, Device::CPU>& mat, SizeType num_extra_buffers)
       : num_extra_buffers_(num_extra_buffers), base_(mat),
         extra_(LocalElementSize(mat.blockSize().rows() * num_extra_buffers, mat.blockSize().cols()),
                mat.blockSize()) {
@@ -62,7 +62,7 @@ struct ExtraBuffers {
     dlaf::matrix::util::set(extra_, [](...) { return 0; });
   }
 
-  std::size_t num_extra_buffers_;
+  const SizeType num_extra_buffers_;
   Matrix<T, Device::CPU>& base_;
   Matrix<T, Device::CPU> extra_;
 };

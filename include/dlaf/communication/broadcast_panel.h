@@ -173,7 +173,7 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
   const auto owner = dist.template rankGlobalTile<coordT>(last_tile);
   const auto range = dist.rankIndex().get(coordT) == owner
                          ? common::iterate_range2d(*panelT.iteratorLocal().begin(),
-                                                   *std::prev(panelT.iteratorLocal().end()))
+                                                   LocalTileIndex(coordT, panelT.rangeEndLocal() - 1, 1))
                          : panelT.iteratorLocal();
 
   for (const auto& indexT : range) {

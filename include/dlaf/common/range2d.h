@@ -71,7 +71,7 @@ struct IteratorRange2D {
     return &current_;
   }
 
-  reference operator[](difference_type n) const noexcept {
+  value_type operator[](difference_type n) const noexcept {
     auto it = *this;
     it += n;
     return *it;

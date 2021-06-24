@@ -370,19 +370,25 @@ hpx::shared_future<Tile<T, D>> splitTileInsertFutureInChain(hpx::future<Tile<T, 
 }
 }
 
-/// Create SubTiles:
-/// TODO
+/// Create a read-only subtile of a given read-only tile.
+///
+/// The returned subtile will get ready, at the same time as @p tile gets ready.
+/// The next dependency in the dependency chain will become ready only when @p tile
+/// and the returned subtile go out of scope.
 template <class T, Device D>
-hpx::shared_future<Tile<const T, D>> splitTile(hpx::shared_future<Tile<const T, D>>& tile,
+hpx::shared_future<Tile<const T, D>> splitTile(const hpx::shared_future<Tile<const T, D>>& tile,
                                                const SubTileSpec& spec) {
   return internal::createSubTile(tile, spec);
 }
 
-/// Create SubTiles:
-/// TODO
+/// Create read-only subtiles of a given read-only tile.
+///
+/// The returned subtiles will get ready, at the same time as @p tile gets ready.
+/// The next dependency in the dependency chain will become ready only when @p tile
+/// and all the returned subtiles go out of scope.
 template <class T, Device D>
-std::vector<hpx::shared_future<Tile<const T, D>>> splitTile(hpx::shared_future<Tile<const T, D>>& tile,
-                                                            const std::vector<SubTileSpec>& specs) {
+std::vector<hpx::shared_future<Tile<const T, D>>> splitTile(
+    const hpx::shared_future<Tile<const T, D>>& tile, const std::vector<SubTileSpec>& specs) {
   std::vector<hpx::shared_future<Tile<const T, D>>> ret;
   ret.reserve(specs.size());
   for (const auto& spec : specs) {
@@ -392,8 +398,11 @@ std::vector<hpx::shared_future<Tile<const T, D>>> splitTile(hpx::shared_future<T
   return ret;
 }
 
-/// Create SubTiles:
-/// TODO
+/// Create a writeable subtile of a given tile.
+///
+/// The returned subtile will get ready, when the original tile was supposed to get ready.
+/// @p tile is replaced with the (full) tile which will get ready when the subtile goes out of scope.
+/// The next dependency in the dependency chain will become ready only when @p tile goes out of scope.
 template <class T, Device D>
 hpx::future<Tile<T, D>> splitTile(hpx::future<Tile<T, D>>& tile, const SubTileSpec& spec) {
   auto old_tile = internal::splitTileInsertFutureInChain(tile);
@@ -403,8 +412,14 @@ hpx::future<Tile<T, D>> splitTile(hpx::future<Tile<T, D>>& tile, const SubTileSp
   return internal::createSubTile(old_tile, spec);
 }
 
-/// Create SubTiles:
-/// TODO
+/// Create a writeable subtile of a given tile.
+///
+/// All the returned subtiles will get ready, when the original tile was supposed to get ready
+/// (therefore the returned subtiles should be disjoint, otherwise race conditions might occour).
+/// @p tile is replaced with the (full) tile which will get ready when the all the subtiles go out of scope.
+/// The next dependency in the dependency chain will become ready only when @p tile goes out of scope.
+/// @pre The subtiles described with specs should be disjoint
+///      (i.e. two different subtile cannot access thesame element).
 template <class T, Device D>
 std::vector<hpx::future<Tile<T, D>>> splitTileDisjoint(hpx::future<Tile<T, D>>& tile,
                                                        const std::vector<SubTileSpec>& specs) {

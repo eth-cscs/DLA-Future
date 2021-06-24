@@ -12,12 +12,6 @@
 #include <hpx/include/util.hpp>
 #include <hpx/local/future.hpp>
 
-#include <algorithm>
-#include <limits>
-#include <sstream>
-#include <type_traits>
-#include <unordered_map>
-
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
@@ -35,7 +29,6 @@
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/panel.h"
 #include "dlaf/matrix/tile.h"
-#include "dlaf/memory/memory_view.h"
 #include "dlaf/util_matrix.h"
 
 namespace dlaf {
@@ -115,8 +108,6 @@ void Cholesky<backend, device, T>::call_L(Matrix<T, device>& mat_a) {
 
 template <Backend backend, Device device, class T>
 void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a) {
-  using hpx::dataflow;
-
   auto executor_hp = dlaf::getHpExecutor<backend>();
   auto executor_np = dlaf::getNpExecutor<backend>();
   auto executor_mpi = dlaf::getMPIExecutor<backend>();

@@ -108,10 +108,10 @@ TYPED_TEST(PanelBcastTest, BroadcastRow) {
 }
 
 std::vector<config_t> test_params_bcast_transpose{
-    {{0, 0}, {1, 1}, {0, 0}},  // empty matrix
-    {{9, 9}, {3, 3}, {3, 3}},  // empty panel (due to offset)
-    {{9, 9}, {3, 3}, {2, 2}},  // empty panel (due to offset + skip last tile)
-    {{10, 10}, {3, 3}, {1, 1}},
+    {{0, 0}, {1, 1}, {0, 0}},    // empty matrix
+    {{10, 10}, {2, 2}, {5, 5}},  // empty panel (due to offset)
+    {{20, 20}, {2, 2}, {9, 9}},  // just last tile (communicate without transpose)
+    {{25, 25}, {5, 5}, {1, 1}},
 };
 
 template <class TypeParam, Coord PANEL_SRC_AXIS>

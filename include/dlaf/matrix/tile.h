@@ -34,6 +34,7 @@ struct ContinuationException final : public std::runtime_error {
 };
 
 namespace matrix {
+
 template <class T, Device device>
 class Tile;
 
@@ -132,13 +133,40 @@ private:
 
 template <class T, Device device>
 class Tile : public Tile<const T, device> {
-  template <class PT>
-  using promise_t = hpx::lcos::local::promise<PT>;
+  using tile_t = Tile<T, device>;
+  using promise_tile_t = hpx::lcos::local::promise<tile_t>;
 
   friend Tile<const T, device>;
 
 public:
   using ElementType = T;
+
+  /// !!! WARNING !!!
+  /// This function is dangerous and must be used just in very specific circumstances
+  /// It is a 2-way split of the DAG, where the returned futures, one in-place and the other one as
+  /// return value, are valid at the same time. This means potential race-conditions, which is the
+  /// main dangerous thing (and their use should be mutually exclusive to not incur in such problems),
+  /// but it allows the developer to create interesting patterns.
+  /// In particular, the developer can keep alive (without using its value) the original one,
+  /// so keeping on hold the part of the DAG that comes after that, and at the same time it can create
+  /// a "sub" pipeline in the DAG using the other one. Once the sub-pipeline is completed, the
+  /// two futures has to be merged together before continuing the work that comes after the original
+  /// one (e.g. `when_all(original, splitted)`);
+  friend hpx::future<tile_t> splitAndHold(hpx::future<tile_t>& original) noexcept {
+    promise_tile_t p;
+    auto tile0 = p.get_future();
+
+    original =
+        original.then(hpx::launch::sync, hpx::unwrapping([p = std::move(p)](auto original_tile) mutable {
+                        auto memory_view_copy = original_tile.memory_view_;
+                        tile_t tile(original_tile.size_, std::move(memory_view_copy), original_tile.ld_);
+                        tile.setPromise(std::move(p));
+                        // TODO exceptions: if I don't set promise values, I don't have to manage excpetions
+                        return std::move(original_tile);
+                      }));
+
+    return std::move(tile0);
+  }
 
   /// Constructs a (@p size.rows() x @p size.cols()) Tile.
   ///
@@ -183,9 +211,9 @@ public:
   /// Sets the promise to which this Tile will be moved on destruction.
   ///
   /// @c setPromise can be called only once per object.
-  Tile& setPromise(promise_t<Tile<T, device>>&& p) {
+  Tile& setPromise(promise_tile_t p) {
     DLAF_ASSERT(!p_, "setPromise has been already used on this object!");
-    p_ = std::make_unique<promise_t<Tile<T, device>>>(std::move(p));
+    p_ = std::make_unique<promise_tile_t>(std::move(p));
     return *this;
   }
 

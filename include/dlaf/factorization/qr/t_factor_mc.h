@@ -29,6 +29,8 @@
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
+#include "dlaf/matrix/extra_buffers.h"
+
 namespace dlaf {
 namespace factorization {
 namespace internal {
@@ -126,6 +128,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
   // 1st step: compute the column partial result `t`
   // First we compute the matrix vector multiplication for each column
   // -tau(j) . V(j:, 0:j)* . V(j:, j)
+  matrix::ExtraBuffers<T> buffers(std::move(t), 3, dist.blockSize());
   for (const auto& v_i_loc : iterate_range2d(v_start_loc, v_end_loc)) {
     const SizeType v_i = dist.template globalTileFromLocalTile<Coord::Row>(v_i_loc.row());
 
@@ -178,7 +181,6 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
           // clang-format on
         }
       }
-      return std::move(tile_t);
     });
 
     // TODO
@@ -186,8 +188,10 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
     // Since we are writing always on the same t, the gemv are serialized
     // A possible solution to this would be to have multiple places where to store partial
     // results, and then locally reduce them just before the reduce over ranks
-    t = hpx::dataflow(ex, gemv_func, v.read(v_i_loc), taus, t);
+    hpx::dataflow(ex, gemv_func, v.read(v_i_loc), taus, buffers.get_buffer(v_i_loc.row()));
   }
+
+  t = buffers.reduce();
 
   // at this point each rank has its partial result for each column
   // so, let's reduce the results (on all ranks, so that everyone can independently compute T factor)

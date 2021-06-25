@@ -34,6 +34,11 @@ struct ContinuationException final : public std::runtime_error {
 };
 
 namespace matrix {
+
+// forward declaration
+template <class T>
+class ExtraBuffers;
+
 template <class T, Device device>
 class Tile;
 
@@ -136,6 +141,7 @@ class Tile : public Tile<const T, device> {
   using promise_t = hpx::lcos::local::promise<PT>;
 
   friend Tile<const T, device>;
+  friend ExtraBuffers<T>;
 
 public:
   using ElementType = T;

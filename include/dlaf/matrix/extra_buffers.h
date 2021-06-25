@@ -34,14 +34,11 @@ public:
   ExtraBuffers(hpx::future<tile_t> tile, SizeType num_extra_buffers, TileElementSize tile_size)
       : num_extra_buffers_(num_extra_buffers), orig_base_tile_(std::move(tile)),
         extra_(LocalElementSize(tile_size.rows() * num_extra_buffers, tile_size.cols()), tile_size) {
+    clear();
     setup();
   }
 
-  ~ExtraBuffers() {
-    unlock_base();
-  }
-
-  auto get_buffer(const SizeType index) {
+  future_t get_buffer(const SizeType index) {
     const SizeType idx = num_extra_buffers_ != 0 ? index % (num_extra_buffers_ + 1) : 0;
     if (idx == 0)
       return get_base();
@@ -49,7 +46,7 @@ public:
       return extra_(LocalTileIndex(idx - 1, 0));
   }
 
-  void reduce() {
+  future_t reduce() {
     using hpx::unwrapping;
     using hpx::util::annotated_function;
 
@@ -65,17 +62,11 @@ public:
                       }
                     }),
                     get_base(), extra_.read(idx_buffer));
-    unlock_base();
+    return unlock_base();
   }
 
   void clear() {
     dlaf::matrix::util::set(extra_, [](...) { return 0; });
-  }
-
-  void unlock_base() {
-    if (orig_base_tile_.valid())
-      hpx::dataflow(hpx::unwrapping([](auto, auto) {}), std::move(orig_base_tile_),
-                    std::move(base_tile_));
   }
 
   // void set_base() {
@@ -85,7 +76,7 @@ public:
   //}
 
 protected:
-  auto setup() {
+  void setup() {
     promise_t p;
     base_tile_ = p.get_future();
 
@@ -109,6 +100,12 @@ protected:
                     tile.setPromise(std::move(p));
                     return std::move(tile);
                   }));
+  }
+
+  future_t unlock_base() {
+    DLAF_ASSERT(orig_base_tile_.valid(), "");
+    return hpx::dataflow(hpx::unwrapping([](auto tile, auto) { return std::move(tile); }), std::move(orig_base_tile_),
+        std::move(base_tile_));
   }
 
   const SizeType num_extra_buffers_;

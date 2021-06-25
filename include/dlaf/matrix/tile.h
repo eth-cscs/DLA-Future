@@ -42,6 +42,9 @@ struct SubTileSpec {
 };
 
 // forward declarations
+template <class T>
+class ExtraBuffers;
+
 template <class T, Device device>
 class Tile;
 
@@ -246,6 +249,7 @@ class Tile : public Tile<const T, device> {
   using promise_t = hpx::lcos::local::promise<PT>;
 
   friend ConstTileType;
+  friend ExtraBuffers<T>;
   friend hpx::future<Tile<T, device>> internal::createSubTile<>(
       const hpx::shared_future<Tile<T, device>>& tile, const SubTileSpec& spec);
   friend hpx::shared_future<Tile<T, device>> internal::splitTileInsertFutureInChain<>(

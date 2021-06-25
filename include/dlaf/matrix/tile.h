@@ -258,6 +258,33 @@ class Tile : public Tile<const T, device> {
 public:
   using ElementType = T;
 
+  /// !!! WARNING !!!
+  /// This function is dangerous and must be used just in very specific circumstances
+  /// It is a 2-way split of the DAG, where the returned futures, one in-place and the other one as
+  /// return value, are valid at the same time. This means potential race-conditions, which is the
+  /// main dangerous thing (and their use should be mutually exclusive to not incur in such problems),
+  /// but it allows the developer to create interesting patterns.
+  /// In particular, the developer can keep alive (without using its value) the original one,
+  /// so keeping on hold the part of the DAG that comes after that, and at the same time it can create
+  /// a "sub" pipeline in the DAG using the other one. Once the sub-pipeline is completed, the
+  /// two futures has to be merged together before continuing the work that comes after the original
+  /// one (e.g. `when_all(original, splitted)`);
+  friend hpx::future<TileType> splitAndHold(hpx::future<TileType>& original) noexcept {
+    promise_t<TileType> p;
+    auto tile0 = p.get_future();
+
+    original =
+        original.then(hpx::launch::sync, hpx::unwrapping([p = std::move(p)](auto original_tile) mutable {
+                        auto memory_view_copy = original_tile.memory_view_;
+                        TileType tile(original_tile.size_, std::move(memory_view_copy), original_tile.ld_);
+                        tile.setPromise(std::move(p));
+                        // TODO exceptions: if I don't set promise values, I don't have to manage excpetions
+                        return std::move(original_tile);
+                      }));
+
+    return std::move(tile0);
+  }
+
   /// Constructs a (@p size.rows() x @p size.cols()) Tile.
   ///
   /// @pre size.isValid(),

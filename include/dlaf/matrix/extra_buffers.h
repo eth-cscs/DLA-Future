@@ -32,10 +32,10 @@ class ExtraBuffers {
 public:
   // TODO check if there is a way to get blocksize info from the tile without asking to the user
   ExtraBuffers(hpx::future<tile_t> tile, SizeType num_extra_buffers, TileElementSize tile_size)
-      : num_extra_buffers_(num_extra_buffers), orig_base_tile_(std::move(tile)),
+      : orig_base_tile_(std::move(tile)), base_tile_(splitAndHold(orig_base_tile_)),
+        num_extra_buffers_(num_extra_buffers),
         extra_(LocalElementSize(tile_size.rows() * num_extra_buffers, tile_size.cols()), tile_size) {
     clear();
-    setup();
   }
 
   ~ExtraBuffers() {
@@ -83,22 +83,6 @@ public:
   //}
 
 protected:
-  void setup() {
-    promise_t p;
-    base_tile_ = p.get_future();
-
-    orig_base_tile_ =
-        orig_base_tile_.then(hpx::launch::sync,
-                             hpx::unwrapping([p = std::move(p)](auto original_tile) mutable {
-                               auto memory_view_copy = original_tile.memory_view_;
-                               tile_t tile(original_tile.size_, std::move(memory_view_copy),
-                                           original_tile.ld_);
-                               tile.setPromise(std::move(p));
-                               // TODO exceptions: if I don't set promise values, I don't have to manage excpetions
-                               return std::move(original_tile);
-                             }));
-  }
-
   future_t get_base() {
     promise_t p;
     future_t f = p.get_future();
@@ -111,15 +95,15 @@ protected:
 
   future_t unlock_base() {
     DLAF_ASSERT(orig_base_tile_.valid(), "");
-    return hpx::dataflow(hpx::unwrapping([](auto tile, auto) { return std::move(tile); }), std::move(orig_base_tile_),
-        std::move(base_tile_));
+    return hpx::dataflow(hpx::unwrapping([](auto tile, auto) { return std::move(tile); }),
+                         std::move(orig_base_tile_), std::move(base_tile_));
   }
 
-  const SizeType num_extra_buffers_;
   future_t orig_base_tile_;
-  Matrix<T, Device::CPU> extra_;
-
   future_t base_tile_;
+
+  const SizeType num_extra_buffers_;
+  Matrix<T, Device::CPU> extra_;
 };
 }
 }

@@ -281,7 +281,7 @@ void Cholesky<backend, device, T>::call_U(Matrix<T, device>& mat_a) {
                             mat_a(LocalTileIndex{i, i}));
 
       for (SizeType j = i + 1; j < nrtile; ++j) {
-        gemmTrailingMatrixTileU(trailing_matrix_executor, mat_a.read(LocalTileIndex{k, i}),
+        gemmTrailingMatrixTileU(executor_np, mat_a.read(LocalTileIndex{k, i}),
                                 mat_a.read(LocalTileIndex{k, j}), mat_a(LocalTileIndex{i, j}));
       }
     }
@@ -290,7 +290,122 @@ void Cholesky<backend, device, T>::call_U(Matrix<T, device>& mat_a) {
 
 template <Backend backend, Device device, class T>
 void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a) {
-  DLAF_UNIMPLEMENTED(blas::Uplo::Upper, grid);
+  using hpx::util::unwrapping;
+  using hpx::dataflow;
+
+  auto executor_hp = dlaf::getHpExecutor<backend>();
+  auto executor_np = dlaf::getNpExecutor<backend>();
+  auto executor_mpi = dlaf::getMPIExecutor<backend>();
+
+  auto upper = blas::Uplo::Upper;
+
+  // Set up MPI executor pipelines
+  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
+  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
+
+  const comm::Index2D this_rank = grid.rank();
+
+  const matrix::Distribution& distr = mat_a.distribution();
+  const SizeType nrtile = mat_a.nrTiles().cols();
+
+  constexpr std::size_t n_workspaces = 2;
+  common::RoundRobin<matrix::Panel<Coord::Row, T, device>> panels(n_workspaces, distr);
+  common::RoundRobin<matrix::Panel<Coord::Col, T, device>> panelsT(n_workspaces, distr);
+
+  for (SizeType k = 0; k < nrtile; ++k) {
+    const GlobalTileIndex kk_idx(k, k);
+    const comm::Index2D kk_rank = distr.rankGlobalTile(kk_idx);
+
+    // Factorization of diagonal tile and broadcast it along the k-th column
+    if (kk_rank == this_rank) {
+      potrfDiagTile(executor_hp, blas::Uplo::Upper, mat_a(kk_idx));
+    }
+
+    // If there is no trailing matrix
+    if (k == nrtile - 1)
+      continue;
+
+    const LocalTileSize kk_offset{
+        distr.nextLocalTileFromGlobalTile<Coord::Row>(k),
+        distr.nextLocalTileFromGlobalTile<Coord::Col>(k),
+    };
+
+    const LocalTileSize at_offset{
+        distr.nextLocalTileFromGlobalTile<Coord::Row>(k + 1),
+        distr.nextLocalTileFromGlobalTile<Coord::Col>(k + 1),
+    };
+
+    const LocalTileIndex diag_wp_idx{kk_offset.rows(), 0};
+
+    auto& panel = panels.nextResource();
+    auto& panelT = panelsT.nextResource();
+
+    panel.setRangeStart(at_offset);
+
+    if (kk_rank.row() == this_rank.row()) {
+      // Note:
+      // panel shrinked to a single tile for temporarly storing and communicating the diagonal
+      // tile used for the row update
+      panelT.setRange(kk_offset, at_offset);
+
+      if (kk_rank.col() == this_rank.col())
+        panelT.setTile(diag_wp_idx, mat_a.read(kk_idx));
+      broadcast(executor_mpi, kk_rank.col(), panelT, mpi_row_task_chain);
+
+      // ROW UPDATE
+      for (SizeType j = distr.nextLocalTileFromGlobalTile<Coord::Col>(k + 1);
+           j < distr.localNrTiles().cols(); ++j) {
+        const LocalTileIndex local_idx(Coord::Col, j);
+        const LocalTileIndex kj_idx(distr.localTileFromGlobalTile<Coord::Row>(k), j);
+
+        trsmPanelTileU(executor_hp, panelT.read(diag_wp_idx), mat_a(kj_idx));
+
+        panel.setTile(local_idx, mat_a.read(kj_idx));
+      }
+
+      // col panel has been used for temporary storage of diagonal panel for column update
+      panelT.reset();
+    }
+
+    panelT.setRange(at_offset, distr.localNrTiles());
+
+    // TODO skip last step tile
+    broadcast(executor_mpi, kk_rank.row(), panel, panelT, mpi_row_task_chain, mpi_col_task_chain);
+
+    // TRAILING MATRIX
+    const SizeType kt = k + 1;
+    for (SizeType it_idx = kt; it_idx < nrtile; ++it_idx) {
+      const auto owner = distr.rankGlobalTile({it_idx, it_idx});
+
+      if (owner.row() != this_rank.row())
+        continue;
+
+      const auto i = distr.localTileFromGlobalTile<Coord::Row>(it_idx);
+
+      auto& trailing_matrix_executor = (it_idx == kt) ? executor_hp : executor_np;
+      if (this_rank.col() == owner.col()) {
+        const auto j = distr.localTileFromGlobalTile<Coord::Col>(it_idx);
+
+        herkTrailingDiagTileU(trailing_matrix_executor, panelT.read({Coord::Row, i}),
+                              mat_a(LocalTileIndex{i, j}));
+      }
+
+      for (SizeType j_idx = it_idx + 1; j_idx < nrtile; ++j_idx) {
+        const auto owner_col = distr.rankGlobalTile<Coord::Col>(j_idx);
+
+        if (owner_col != this_rank.col())
+          continue;
+
+        const auto j = distr.localTileFromGlobalTile<Coord::Col>(j_idx);
+
+        gemmTrailingMatrixTileU(executor_np, panelT.read({Coord::Row, i}), panel.read({Coord::Col, j}),
+                                mat_a(LocalTileIndex{i, j}));
+      }
+    }
+
+    panel.reset();
+    panelT.reset();
+  }
 }
 /// ---- ETI
 #define DLAF_CHOLESKY_MC_ETI(KWORD, DATATYPE) \

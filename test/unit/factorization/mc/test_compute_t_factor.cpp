@@ -29,25 +29,26 @@
 #include "dlaf_test/matrix/util_matrix_local.h"
 #include "dlaf_test/util_types.h"
 
-using dlaf::Device;
-using dlaf::Matrix;
+using namespace dlaf;
+using namespace dlaf::matrix;
+using namespace dlaf::test;
 using dlaf::comm::CommunicatorGrid;
 using dlaf::matrix::test::MatrixLocal;
 
 ::testing::Environment* const comm_grids_env =
-    ::testing::AddGlobalTestEnvironment(new dlaf::test::CommunicatorGrid6RanksEnvironment);
+    ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
 template <typename Type>
 struct ComputeTFactorTestMC : public ::testing::Test {
   const std::vector<dlaf::comm::CommunicatorGrid>& commGrids() {
-    return dlaf::test::comm_grids;
+    return comm_grids;
   }
 };
 
-TYPED_TEST_SUITE(ComputeTFactorTestMC, dlaf::test::MatrixElementTypes);
+TYPED_TEST_SUITE(ComputeTFactorTestMC, MatrixElementTypes);
 
 template <class T>
-T preset_eye(const dlaf::GlobalElementIndex& index) {
+T preset_eye(const GlobalElementIndex& index) {
   return index.row() == index.col() ? 1 : 0;
 }
 
@@ -93,7 +94,7 @@ std::tuple<hpx::shared_future<dlaf::common::internal::vector<T>>, MatrixLocal<T>
   set(h_expected, preset_eye<T>);
 
   for (auto j = 0; j < k; ++j) {
-    const dlaf::SizeType reflector_size = m - j;
+    const SizeType reflector_size = m - j;
 
     const T* data_ptr = v.ptr({j, j});
     const auto norm = blas::nrm2(reflector_size, data_ptr, 1);
@@ -114,7 +115,7 @@ std::tuple<hpx::shared_future<dlaf::common::internal::vector<T>>, MatrixLocal<T>
     // clang-format on
 
     // H_exp[:, j:] = H_exp[:, j:] . Hi
-    const dlaf::GlobalElementIndex h_offset{0, j};
+    const GlobalElementIndex h_offset{0, j};
     MatrixLocal<T> workspace({h_expected.size().rows(), h_i.size().cols()}, h_i.blockSize());
 
     // clang-format off
@@ -208,7 +209,6 @@ std::vector<std::tuple<dlaf::SizeType, dlaf::SizeType, dlaf::SizeType, dlaf::Siz
 //
 // Which we expect to be the equal to the one computed previously.
 TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
-  using namespace dlaf;
   SizeType a_m, a_n, mb, nb, k;
 
   for (auto config : configs) {

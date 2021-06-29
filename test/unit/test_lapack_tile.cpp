@@ -288,7 +288,6 @@ TYPED_TEST(TileOperationsTestMC, Set0) {
     auto res = [](const TileElementIndex& index) { return TypeUtilities<TypeParam>::element(0.0, 0.0); };
 
     tile::set0(tile);
-    CHECK_TILE_NEAR(res, tile, 4 * (n + 1) * TypeUtilities<TypeParam>::error,
-                    4 * (n + 1) * TypeUtilities<TypeParam>::error);
+    CHECK_TILE_EQ(res, tile);
   }
 }

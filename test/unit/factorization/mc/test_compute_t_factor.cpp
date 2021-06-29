@@ -261,12 +261,13 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
     // H_res = I - V T V*
     //
     // is computed and compared to the one previously obtained by applying reflectors sequentially
-    MatrixLocal<TypeParam> h_result = computeHres(k, block_size, h_expected.size(), t_output, t_idx, v);
+    const auto& t = t_output.read(t_idx).get();
+    MatrixLocal<TypeParam> h_result = computeHres(k, t, v);
 
     is_orthogonal(h_result);
 
     const auto error =
-        h_result.size().rows() * h_expected.size().rows() * test::TypeUtilities<TypeParam>::error;
+        h_result.size().rows() * t.size().rows() * dlaf::test::TypeUtilities<TypeParam>::error;
     CHECK_MATRIX_NEAR(h_expected, h_result, 0, error);
   }
 }

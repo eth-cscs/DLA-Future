@@ -42,7 +42,6 @@ TYPED_TEST_SUITE(CholeskyTestMC, MatrixElementTypes);
 #ifdef DLAF_WITH_CUDA
 template <typename Type>
 class CholeskyTestGPU : public ::testing::Test {
-
 public:
   const std::vector<CommunicatorGrid>& commGrids() {
     return comm_grids;

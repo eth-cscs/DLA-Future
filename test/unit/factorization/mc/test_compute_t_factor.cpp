@@ -83,8 +83,9 @@ void is_orthogonal(const MatrixLocal<const T>& matrix) {
 
 template <class T>
 std::tuple<hpx::shared_future<dlaf::common::internal::vector<T>>, MatrixLocal<T>> computeTauH(
-    const dlaf::SizeType k, const dlaf::TileElementSize block_size, const MatrixLocal<T>& v) {
-  const dlaf::SizeType m = v.size().rows();
+    const SizeType k, const MatrixLocal<const T>& v) {
+  const SizeType m = v.size().rows();
+  const TileElementSize block_size = v.blockSize();
 
   // compute taus and H_exp
   dlaf::common::internal::vector<T> taus;
@@ -137,11 +138,10 @@ std::tuple<hpx::shared_future<dlaf::common::internal::vector<T>>, MatrixLocal<T>
 }
 
 template <class T>
-MatrixLocal<T> computeHres(const dlaf::SizeType k, const dlaf::TileElementSize block_size,
-                           const dlaf::GlobalElementSize tile_size, Matrix<T, Device::CPU>& t_output,
-                           const dlaf::LocalTileIndex t_idx, const MatrixLocal<T>& v) {
-  const dlaf::SizeType m = v.size().rows();
-  const auto& t = t_output.read(t_idx).get();
+MatrixLocal<T> computeHres(const SizeType k, const Tile<const T, Device::CPU>& t,
+                           const MatrixLocal<const T>& v) {
+  const SizeType m = v.size().rows();
+  const TileElementSize block_size = v.blockSize();
 
   // TV* = (VT*)* = W
   MatrixLocal<T> w({m, k}, block_size);
@@ -158,7 +158,7 @@ MatrixLocal<T> computeHres(const dlaf::SizeType k, const dlaf::TileElementSize b
   // clang-format on
 
   // H_result = I - V W*
-  MatrixLocal<T> h_result(tile_size, block_size);
+  MatrixLocal<T> h_result({m, m}, block_size);
   set(h_result, preset_eye<T>);
 
   // clang-format off
@@ -241,7 +241,7 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
       }
     }
 
-    auto tmp = computeTauH(k, block_size, v);
+    auto tmp = computeTauH(k, v);
     auto taus_input = std::move(std::get<0>(tmp));
     auto h_expected = std::move(std::get<1>(tmp));
 
@@ -322,7 +322,7 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
         return V;
       }();
 
-      const MatrixLocal<TypeParam> v = [&v_input, &dist_v, &comm_grid, a_m, a_n, nb, v_start] {
+      const MatrixLocal<const TypeParam> v = [&v_input, &dist_v, &comm_grid, a_m, a_n, nb, v_start] {
         // TODO this can be improved by communicating just the interesting part
         // gather the entire A matrix
         auto a = matrix::test::allGather<TypeParam>(v_input, comm_grid);
@@ -347,7 +347,7 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
         return v;
       }();
 
-      auto tmp = computeTauH(k, block_size, v);
+      auto tmp = computeTauH(k, v);
       auto taus_input = std::move(std::get<0>(tmp));
       auto h_expected = std::move(std::get<1>(tmp));
 
@@ -374,8 +374,8 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
       // H_res = I - V T V*
       //
       // is computed and compared to the one previously obtained by applying reflectors sequentially
-      MatrixLocal<TypeParam> h_result =
-          computeHres(k, block_size, h_expected.size(), t_output, t_idx, v);
+      const auto& t = t_output.read(t_idx).get();
+      MatrixLocal<TypeParam> h_result = computeHres(k, t, v);
 
       is_orthogonal(h_result);
 
@@ -385,7 +385,7 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
       // and that TypeUtilities<TypeParam>::error indicates maximum error for a multiplication + addition.
       SCOPED_TRACE("Comparison test");
       const auto error =
-          h_result.size().rows() * h_expected.size().rows() * test::TypeUtilities<TypeParam>::error;
+          h_result.size().rows() * t.size().rows() * dlaf::test::TypeUtilities<TypeParam>::error;
       CHECK_MATRIX_NEAR(h_expected, h_result, 0, error);
     }
   }

@@ -175,12 +175,11 @@ MatrixLocal<T> computeHres(const SizeType k, const Tile<const T, Device::CPU>& t
   return h_result;
 }
 
-std::vector<std::tuple<dlaf::SizeType, dlaf::SizeType, dlaf::SizeType, dlaf::SizeType, dlaf::SizeType>>
-    configs{
-        // m, n, mb, nb, k
-        {39, 26, 6, 6, 6},  // all reflectors
-        {39, 26, 6, 6, 4},  // k reflectors
-    };
+std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType>> configs{
+    // m, n, mb, nb, k
+    {39, 26, 6, 6, 6},  // all reflectors
+    {39, 26, 6, 6, 4},  // k reflectors
+};
 
 // Note:
 // Testing this function requires next input values:

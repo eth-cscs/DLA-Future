@@ -250,27 +250,28 @@ TYPED_TEST(TileOperationsTestMC, Laset) {
     for (const auto mtype : lapack_matrices) {
       std::tie(m, n, extra_lda) = size;
       const SizeType lda = std::max<SizeType>(1, m) + extra_lda;
-      Tile<TypeParam, Device::CPU> tile =
-          createTile<TypeParam>([](TileElementIndex idx) { return idx.row() + idx.col(); },
-                                TileElementSize(m, n), lda);
 
-      auto res = [mtype](const TileElementIndex& index) {
-        const double i = index.row();
-        const double j = index.col();
-        if ((mtype == lapack::MatrixType::Lower && i > j) ||
-            (mtype == lapack::MatrixType::Upper && i < j) ||
-            (mtype == lapack::MatrixType::General && i != j))
-          return TypeUtilities<TypeParam>::element(0.0, 0.0);
+      const auto alpha = TypeUtilities<TypeParam>::element(-3.5, 8.72);
+      const auto beta = TypeUtilities<TypeParam>::element(-1.25, -7.21);
 
+      auto el = [](const TileElementIndex& idx) {
+        return TypeUtilities<TypeParam>::element(idx.row() + idx.col(), idx.row() - idx.col());
+      };
+      auto res = [mtype, alpha, beta, el](const TileElementIndex& idx) {
+        const double i = idx.row();
+        const double j = idx.col();
         if (i == j)
-          return TypeUtilities<TypeParam>::element(1.0, 0.0);
-
-        return TypeUtilities<TypeParam>::element(i + j, 0.0);
+          return beta;
+        else if (mtype == lapack::MatrixType::General || (mtype == lapack::MatrixType::Lower && i > j) ||
+                 (mtype == lapack::MatrixType::Upper && i < j))
+          return alpha;
+        return el(idx);
       };
 
-      tile::laset<TypeParam>(mtype, 0.f, 1.f, tile);
-      CHECK_TILE_NEAR(res, tile, 4 * (n + 1) * TypeUtilities<TypeParam>::error,
-                      4 * (n + 1) * TypeUtilities<TypeParam>::error);
+      auto tile = createTile<TypeParam>(el, TileElementSize(m, n), lda);
+
+      tile::laset<TypeParam>(mtype, alpha, beta, tile);
+      CHECK_TILE_EQ(res, tile);
     }
   }
 }

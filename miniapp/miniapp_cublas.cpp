@@ -14,11 +14,11 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-#include <hpx/future.hpp>
-#include <hpx/include/util.hpp>
 #include <hpx/init.hpp>
+#include <hpx/local/future.hpp>
+#include <hpx/local/thread.hpp>
+#include <hpx/local/unwrap.hpp>
 #include <hpx/modules/async_cuda.hpp>
-#include <hpx/thread.hpp>
 
 #include "dlaf/executors.h"
 #include "dlaf/init.h"

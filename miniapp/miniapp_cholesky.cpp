@@ -12,8 +12,11 @@
 #include <iostream>
 
 #include <mpi.h>
-#include <hpx/include/resource_partitioner.hpp>
 #include <hpx/init.hpp>
+#include <hpx/local/future.hpp>
+#include <hpx/local/runtime.hpp>
+#include <hpx/local/unwrap.hpp>
+#include <hpx/program_options.hpp>
 
 #include "dlaf/auxiliary/norm.h"
 #include "dlaf/blas/tile.h"

@@ -13,8 +13,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include <hpx/future.hpp>
-#include <hpx/include/parallel_executors.hpp>
+#include <hpx/local/unwrap.hpp>
 
 #include "dlaf/common/range2d.h"
 #include "dlaf/communication/communicator.h"

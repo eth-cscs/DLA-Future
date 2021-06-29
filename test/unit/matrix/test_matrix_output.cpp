@@ -15,8 +15,6 @@
 #include <tuple>
 
 #include <gtest/gtest.h>
-#include <hpx/include/util.hpp>
-#include <hpx/local/future.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
 

@@ -29,9 +29,10 @@ using namespace testing;
 
 template <class T, Device D, bool return_info>
 void testPotrf(const blas::Uplo uplo, const SizeType n, const SizeType extra_lda) {
-  std::function<T(const TileElementIndex&)> el_a, res_a;
   const TileElementSize size_a = TileElementSize(n, n);
   const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
+
+  std::function<T(const TileElementIndex&)> el_a, res_a;
 
   std::tie(el_a, res_a) = getCholeskySetters<TileElementIndex, T>(uplo);
 

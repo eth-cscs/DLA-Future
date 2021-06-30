@@ -138,8 +138,6 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
   auto executor_np = dlaf::getNpExecutor<backend>();
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
-  auto lower = blas::Uplo::Lower;
-
   // Set up MPI executor pipelines
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
   common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
@@ -276,8 +274,6 @@ void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
   auto executor_hp = dlaf::getHpExecutor<backend>();
   auto executor_np = dlaf::getNpExecutor<backend>();
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
-
-  auto upper = blas::Uplo::Upper;
 
   // Set up MPI executor pipelines
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());

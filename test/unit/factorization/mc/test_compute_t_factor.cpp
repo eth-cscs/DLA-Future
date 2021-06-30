@@ -77,7 +77,7 @@ void is_orthogonal(const MatrixLocal<const T>& matrix) {
   // Note:
   // Orthogonality requires a strict error test, => n * error
   SCOPED_TRACE("Orthogonality test");
-  const auto error = matrix.size().rows() * dlaf::test::TypeUtilities<T>::error;
+  const auto error = matrix.size().rows() * TypeUtilities<T>::error;
   CHECK_MATRIX_NEAR(eye, ortho, 0, error);
 }
 
@@ -266,8 +266,7 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
 
     is_orthogonal(h_result);
 
-    const auto error =
-        h_result.size().rows() * t.size().rows() * dlaf::test::TypeUtilities<TypeParam>::error;
+    const auto error = h_result.size().rows() * t.size().rows() * TypeUtilities<TypeParam>::error;
     CHECK_MATRIX_NEAR(h_expected, h_result, 0, error);
   }
 }
@@ -384,8 +383,7 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
       // multiplications and n*nb addition) are needed to compute each of the element of the matrix `h_result`,
       // and that TypeUtilities<TypeParam>::error indicates maximum error for a multiplication + addition.
       SCOPED_TRACE("Comparison test");
-      const auto error =
-          h_result.size().rows() * t.size().rows() * dlaf::test::TypeUtilities<TypeParam>::error;
+      const auto error = h_result.size().rows() * t.size().rows() * TypeUtilities<TypeParam>::error;
       CHECK_MATRIX_NEAR(h_expected, h_result, 0, error);
     }
   }

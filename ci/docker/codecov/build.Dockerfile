@@ -11,7 +11,7 @@ ENV FORCE_UNSAFE_CONFIGURE 1
 RUN apt-get update -qq && apt-get install -qq -y --no-install-recommends \
     software-properties-common \
     build-essential gfortran binutils lcov \
-    git tar wget curl gpg-agent jq tzdata && \
+    git tar wget curl gpg-agent jq tzdata libasio-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # Install cmake

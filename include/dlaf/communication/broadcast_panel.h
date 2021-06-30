@@ -85,6 +85,9 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
 /// - linking as external tile, if the tile is already available locally for the rank
 /// - receiving the tile from the owning rank (via a broadcast)
 ///
+/// Be aware that the last tile will just be available on @p panel, but it won't be transposed to
+/// @p panelT.
+///
 /// @param rank_root specifies on which rank the @p panel is the source of the data
 /// @param panel
 ///   on rank_root it is the source panel (a)
@@ -150,6 +153,10 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
   DLAF_ASSERT(panel.rangeStart() == panelT.rangeStart(), panel.rangeStart(), panelT.rangeStart());
   DLAF_ASSERT_MODERATE(panel.rangeEnd() == panelT.rangeEnd(), panel.rangeEnd(), panelT.rangeEnd());
 
+  // if no panel tiles, just skip it
+  if (panel.rangeStart() == panel.rangeEnd())
+    return;
+
   // STEP 1
   constexpr auto comm_dir_step1 = orthogonal(axis);
   auto& chain_step1 = get_taskchain(comm_dir_step1);
@@ -162,7 +169,14 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
 
   auto& chain_step2 = get_taskchain(comm_dir_step2);
 
-  for (const auto& indexT : panelT.iteratorLocal()) {
+  const SizeType last_tile = std::max(panelT.rangeStart(), panelT.rangeEnd() - 1);
+  const auto owner = dist.template rankGlobalTile<coordT>(last_tile);
+  const auto range = dist.rankIndex().get(coordT) == owner
+                         ? common::iterate_range2d(*panelT.iteratorLocal().begin(),
+                                                   LocalTileIndex(coordT, panelT.rangeEndLocal() - 1, 1))
+                         : panelT.iteratorLocal();
+
+  for (const auto& indexT : range) {
     SizeType index_diag;
     comm::IndexT_MPI owner_diag;
 

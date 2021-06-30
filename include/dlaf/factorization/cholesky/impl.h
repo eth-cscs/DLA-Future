@@ -35,9 +35,11 @@ namespace dlaf {
 namespace factorization {
 namespace internal {
 
+namespace cholesky_l {
 template <class Executor, Device device, class T>
-void potrfDiagTile(Executor&& exec, blas::Uplo uplo, hpx::future<matrix::Tile<T, device>> matrix_tile) {
-  hpx::dataflow(exec, matrix::unwrapExtendTiles(tile::potrf_o), uplo, std::move(matrix_tile));
+void potrfDiagTile(Executor&& exec, hpx::future<matrix::Tile<T, device>> matrix_tile) {
+  hpx::dataflow(exec, matrix::unwrapExtendTiles(tile::potrf_o), blas::Uplo::Lower,
+                std::move(matrix_tile));
 }
 
 template <class Executor, Device device, class T>
@@ -66,37 +68,48 @@ void gemmTrailingMatrixTile(Executor&& trailing_matrix_executor,
                 blas::Op::ConjTrans, T(-1.0), std::move(panel_tile), std::move(col_panel), T(1.0),
                 std::move(matrix_tile));
 }
+}
+
+namespace cholesky_u {
+template <class Executor, Device device, class T>
+void potrfDiagTile(Executor&& exec, hpx::future<matrix::Tile<T, device>> matrix_tile) {
+  hpx::dataflow(exec, matrix::unwrapExtendTiles(tile::potrf_o), blas::Uplo::Upper,
+                std::move(matrix_tile));
+}
 
 template <class Executor, Device device, class T>
-void trsmPanelTileU(Executor&& executor_hp, hpx::shared_future<matrix::Tile<const T, device>> kk_tile,
-                    hpx::future<matrix::Tile<T, device>> matrix_tile) {
+void trsmPanelTile(Executor&& executor_hp, hpx::shared_future<matrix::Tile<const T, device>> kk_tile,
+                   hpx::future<matrix::Tile<T, device>> matrix_tile) {
   hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Left,
                 blas::Uplo::Upper, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), std::move(kk_tile),
                 std::move(matrix_tile));
 }
 
 template <class Executor, Device device, class T>
-void herkTrailingDiagTileU(Executor&& trailing_matrix_executor,
-                           hpx::shared_future<matrix::Tile<const T, device>> panel_tile,
-                           hpx::future<matrix::Tile<T, device>> matrix_tile) {
+void herkTrailingDiagTile(Executor&& trailing_matrix_executor,
+                          hpx::shared_future<matrix::Tile<const T, device>> panel_tile,
+                          hpx::future<matrix::Tile<T, device>> matrix_tile) {
   hpx::dataflow(trailing_matrix_executor, matrix::unwrapExtendTiles(tile::herk_o), blas::Uplo::Upper,
                 blas::Op::ConjTrans, BaseType<T>(-1.0), panel_tile, BaseType<T>(1.0),
                 std::move(matrix_tile));
 }
 
 template <class Executor, Device device, class T>
-void gemmTrailingMatrixTileU(Executor&& trailing_matrix_executor,
-                             hpx::shared_future<matrix::Tile<const T, device>> panel_tile,
-                             hpx::shared_future<matrix::Tile<const T, device>> col_panel,
-                             hpx::future<matrix::Tile<T, device>> matrix_tile) {
+void gemmTrailingMatrixTile(Executor&& trailing_matrix_executor,
+                            hpx::shared_future<matrix::Tile<const T, device>> panel_tile,
+                            hpx::shared_future<matrix::Tile<const T, device>> col_panel,
+                            hpx::future<matrix::Tile<T, device>> matrix_tile) {
   hpx::dataflow(trailing_matrix_executor, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::ConjTrans,
                 blas::Op::NoTrans, T(-1.0), std::move(panel_tile), std::move(col_panel), T(1.0),
                 std::move(matrix_tile));
+}
 }
 
 // Local implementation of Lower Cholesky factorization.
 template <Backend backend, Device device, class T>
 void Cholesky<backend, device, T>::call_L(Matrix<T, device>& mat_a) {
+  using namespace cholesky_l;
+
   auto executor_hp = dlaf::getHpExecutor<backend>();
   auto executor_np = dlaf::getNpExecutor<backend>();
 
@@ -107,7 +120,7 @@ void Cholesky<backend, device, T>::call_L(Matrix<T, device>& mat_a) {
     // Cholesky decomposition on mat_a(k,k) r/w potrf (lapack operation)
     auto kk = LocalTileIndex{k, k};
 
-    potrfDiagTile(executor_hp, blas::Uplo::Lower, mat_a(kk));
+    potrfDiagTile(executor_hp, mat_a(kk));
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
       // Update panel mat_a(i,k) with trsm (blas operation), using data mat_a.read(k,k)
@@ -134,6 +147,8 @@ void Cholesky<backend, device, T>::call_L(Matrix<T, device>& mat_a) {
 
 template <Backend backend, Device device, class T>
 void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a) {
+  using namespace cholesky_l;
+
   auto executor_hp = dlaf::getHpExecutor<backend>();
   auto executor_np = dlaf::getNpExecutor<backend>();
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
@@ -157,7 +172,7 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 
     // Factorization of diagonal tile and broadcast it along the k-th column
     if (kk_rank == this_rank)
-      potrfDiagTile(executor_hp, blas::Uplo::Lower, mat_a(kk_idx));
+      potrfDiagTile(executor_hp, mat_a(kk_idx));
 
     // If there is no trailing matrix
     const SizeType kt = k + 1;
@@ -236,6 +251,8 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 // Local implementation of Upper Cholesky factorization.
 template <Backend backend, Device device, class T>
 void Cholesky<backend, device, T>::call_U(Matrix<T, device>& mat_a) {
+  using namespace cholesky_u;
+
   auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
   auto executor_np = dlaf::getNpExecutor<Backend::MC>();
 
@@ -245,21 +262,21 @@ void Cholesky<backend, device, T>::call_U(Matrix<T, device>& mat_a) {
   for (SizeType k = 0; k < nrtile; ++k) {
     auto kk = LocalTileIndex{k, k};
 
-    potrfDiagTile(executor_hp, blas::Uplo::Upper, mat_a(kk));
+    potrfDiagTile(executor_hp, mat_a(kk));
 
     for (SizeType j = k + 1; j < nrtile; ++j) {
-      trsmPanelTileU(executor_hp, mat_a.read(kk), mat_a(LocalTileIndex{k, j}));
+      trsmPanelTile(executor_hp, mat_a.read(kk), mat_a(LocalTileIndex{k, j}));
     }
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
       auto& trailing_matrix_executor = (i == k + 1) ? executor_hp : executor_np;
 
-      herkTrailingDiagTileU(trailing_matrix_executor, mat_a.read(LocalTileIndex{k, i}),
-                            mat_a(LocalTileIndex{i, i}));
+      herkTrailingDiagTile(trailing_matrix_executor, mat_a.read(LocalTileIndex{k, i}),
+                           mat_a(LocalTileIndex{i, i}));
 
       for (SizeType j = i + 1; j < nrtile; ++j) {
-        gemmTrailingMatrixTileU(executor_np, mat_a.read(LocalTileIndex{k, i}),
-                                mat_a.read(LocalTileIndex{k, j}), mat_a(LocalTileIndex{i, j}));
+        gemmTrailingMatrixTile(executor_np, mat_a.read(LocalTileIndex{k, i}),
+                               mat_a.read(LocalTileIndex{k, j}), mat_a(LocalTileIndex{i, j}));
       }
     }
   }
@@ -267,6 +284,8 @@ void Cholesky<backend, device, T>::call_U(Matrix<T, device>& mat_a) {
 
 template <Backend backend, Device device, class T>
 void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a) {
+  using namespace cholesky_u;
+
   using hpx::util::unwrapping;
   using hpx::dataflow;
 
@@ -293,7 +312,7 @@ void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
 
     // Factorization of diagonal tile and broadcast it along the k-th column
     if (kk_rank == this_rank) {
-      potrfDiagTile(executor_hp, blas::Uplo::Upper, mat_a(kk_idx));
+      potrfDiagTile(executor_hp, mat_a(kk_idx));
     }
 
     // If there is no trailing matrix
@@ -323,7 +342,7 @@ void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex local_idx(Coord::Col, j);
         const LocalTileIndex kj_idx(distr.localTileFromGlobalTile<Coord::Row>(k), j);
 
-        trsmPanelTileU(executor_hp, panelT.read(diag_wp_idx), mat_a(kj_idx));
+        trsmPanelTile(executor_hp, panelT.read(diag_wp_idx), mat_a(kj_idx));
 
         panel.setTile(local_idx, mat_a.read(kj_idx));
       }
@@ -350,8 +369,8 @@ void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
       if (this_rank.col() == owner.col()) {
         const auto j = distr.localTileFromGlobalTile<Coord::Col>(it_idx);
 
-        herkTrailingDiagTileU(trailing_matrix_executor, panel.read({Coord::Col, j}),
-                              mat_a(LocalTileIndex{i, j}));
+        herkTrailingDiagTile(trailing_matrix_executor, panel.read({Coord::Col, j}),
+                             mat_a(LocalTileIndex{i, j}));
       }
 
       for (SizeType j_idx = it_idx + 1; j_idx < nrtile; ++j_idx) {
@@ -362,8 +381,8 @@ void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
 
         const auto j = distr.localTileFromGlobalTile<Coord::Col>(j_idx);
 
-        gemmTrailingMatrixTileU(executor_np, panelT.read({Coord::Row, i}), panel.read({Coord::Col, j}),
-                                mat_a(LocalTileIndex{i, j}));
+        gemmTrailingMatrixTile(executor_np, panelT.read({Coord::Row, i}), panel.read({Coord::Col, j}),
+                               mat_a(LocalTileIndex{i, j}));
       }
     }
 

@@ -290,7 +290,6 @@ public:
   ///
   /// @pre index.isIn(size()).
   T* ptr(const TileElementIndex& index) const noexcept {
-    DLAF_ASSERT_HEAVY(index.isIn(size_), index, size_);
     return memory_view_(linearIndex(index));
   }
 

@@ -13,7 +13,7 @@ ENV FORCE_UNSAFE_CONFIGURE 1
 RUN apt-get update -qq && apt-get install -qq --no-install-recommends \
     software-properties-common \
     build-essential \
-    git tar wget curl gpg-agent jq tzdata && \
+    git tar wget curl gpg-agent jq tzdata libasio-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # Install cmake

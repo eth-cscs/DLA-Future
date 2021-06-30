@@ -350,7 +350,7 @@ void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
       if (this_rank.col() == owner.col()) {
         const auto j = distr.localTileFromGlobalTile<Coord::Col>(it_idx);
 
-        herkTrailingDiagTileU(trailing_matrix_executor, panelT.read({Coord::Row, i}),
+        herkTrailingDiagTileU(trailing_matrix_executor, panel.read({Coord::Col, j}),
                               mat_a(LocalTileIndex{i, j}));
       }
 

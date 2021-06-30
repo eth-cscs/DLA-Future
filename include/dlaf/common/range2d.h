@@ -60,7 +60,7 @@ struct IteratorRange2D {
 
   IteratorRange2D(value_type begin, IndexT ld, SizeType i)
       : begin_(begin), i_(i), ld_(std::max(ld, IndexT(1))) {
-    current_ = computeIndex2D(i_);
+    updateIndex2D();
   }
 
   reference operator*() const noexcept {
@@ -71,38 +71,46 @@ struct IteratorRange2D {
     return &current_;
   }
 
-  reference operator[](difference_type n) const noexcept {
-    return computeIndex2D(n);
+  value_type operator[](difference_type n) const noexcept {
+    auto it = *this;
+    it += n;
+    return *it;
   }
 
   IteratorRange2D& operator++() noexcept {
-    current_ = (++i_, computeIndex2D(i_));
+    ++i_;
+    updateIndex2D();
     return *this;
   }
 
-  IteratorRange2D& operator++(int) noexcept {
+  IteratorRange2D operator++(int) noexcept {
     auto tmp = *this;
     operator++();
     return tmp;
   }
 
   IteratorRange2D& operator--() noexcept {
-    current_ = (--i_, computeIndex2D(i_));
+    --i_;
+    updateIndex2D();
     return *this;
   }
 
-  IteratorRange2D& operator--(int) noexcept {
+  IteratorRange2D operator--(int) noexcept {
     auto tmp = *this;
     operator--();
     return tmp;
   }
 
   IteratorRange2D& operator+=(difference_type n) noexcept {
-    return i_ += n, *this;
+    i_ += n;
+    updateIndex2D();
+    return *this;
   }
 
   IteratorRange2D& operator-=(difference_type n) noexcept {
-    return i_ -= n, *this;
+    i_ -= n;
+    updateIndex2D();
+    return *this;
   }
 
   friend IteratorRange2D operator+(IteratorRange2D a, difference_type n) noexcept {
@@ -146,8 +154,9 @@ struct IteratorRange2D {
   }
 
 protected:
-  value_type computeIndex2D(difference_type n) {
-    return {begin_.row() + static_cast<IndexT>(n % ld_), begin_.col() + static_cast<IndexT>(n / ld_)};
+  void updateIndex2D() {
+    current_ = {begin_.row() + static_cast<IndexT>(i_ % ld_),
+                begin_.col() + static_cast<IndexT>(i_ / ld_)};
   }
 
   value_type current_;

@@ -504,6 +504,50 @@ void testSubtileConst(std::string name, TileElementSize size, SizeType ld,
   checkFullTile(tile_ptr, next_tile_f.get(), size);
 }
 
+template <class T, Device D>
+void testSubOfSubtileConst(std::string name, TileElementSize size, SizeType ld,
+                           std::vector<SubTileSpec> specs, const SubTileSpec& subspec,
+                           std::size_t last_dep) {
+  SCOPED_TRACE(name);
+  ASSERT_LE(1, specs.size());  // Need at least a subtile to create a subsubtile
+  ASSERT_LE(last_dep, specs.size() + 1);
+  // specs.size() -> subsubtile
+  // specs.size() + 1 -> full tile
+
+  auto tmp = createTileAndPtrChecker<T, D>(size, ld);
+  auto tile = std::move(std::get<0>(tmp));
+  auto tile_ptr = std::move(std::get<1>(tmp));
+
+  hpx::lcos::local::promise<Tile<T, D>> tile_p;
+  hpx::shared_future<Tile<const T, D>> tile_sf;
+  hpx::future<Tile<T, D>> next_tile_f;
+  std::tie(tile_p, tile_sf, next_tile_f) = createTileChain<const T, D>();
+  ASSERT_TRUE(tile_sf.valid() && !tile_sf.is_ready());
+  ASSERT_TRUE(next_tile_f.valid() && !next_tile_f.is_ready());
+
+  // create subtiles
+  auto subtiles = splitTile(tile_sf, specs);
+  ASSERT_EQ(specs.size(), subtiles.size());
+
+  // create sub tile of subtiles[0]
+  auto subsubtile = splitTile(subtiles[0], subspec);
+
+  // append the subsubtile and the full tile to the end of the subtile vector and add its specs to full_specs.
+  subtiles.emplace_back(std::move(subsubtile));
+  subtiles.emplace_back(std::move(tile_sf));
+  specs.push_back({specs[0].origin + common::sizeFromOrigin(subspec.origin), subspec.size});
+  specs.push_back({{0, 0}, size});
+
+  checkValidNonReady(subtiles);
+  ASSERT_FALSE(next_tile_f.is_ready());
+
+  // Make subtiles ready and check them
+  tile_p.set_value(std::move(tile));
+
+  checkReadyAndDependencyChain(tile_ptr, subtiles, specs, last_dep, next_tile_f);
+  checkFullTile(tile_ptr, next_tile_f.get(), size);
+}
+
 TYPED_TEST(TileTest, SubtileConst) {
   using Type = TypeParam;
 
@@ -523,6 +567,15 @@ TYPED_TEST(TileTest, SubtileConst) {
                                       2);
   testSubtileConst<Type, Device::CPU>("Test Vector 4", {5, 7}, 8,
                                       {{{5, 7}, {0, 0}}, {{5, 4}, {0, 3}}, {{2, 7}, {3, 0}}}, 1);
+
+  testSubOfSubtileConst<Type, Device::CPU>("Test SubSub 1", {6, 7}, 6,
+                                           {{{2, 3}, {3, 3}}, {{4, 6}, {1, 1}}}, {{0, 2}, {2, 1}}, 0);
+  testSubOfSubtileConst<Type, Device::CPU>("Test SubSub 2", {6, 7}, 6,
+                                           {{{2, 3}, {3, 3}}, {{4, 6}, {1, 1}}}, {{0, 2}, {2, 1}}, 1);
+  testSubOfSubtileConst<Type, Device::CPU>("Test SubSub 2", {6, 7}, 6,
+                                           {{{2, 3}, {3, 3}}, {{4, 6}, {1, 1}}}, {{0, 2}, {2, 1}}, 2);
+  testSubOfSubtileConst<Type, Device::CPU>("Test SubSub 3", {6, 7}, 6,
+                                           {{{2, 3}, {3, 3}}, {{4, 6}, {1, 1}}}, {{0, 2}, {2, 1}}, 3);
 }
 
 template <class T, Device D>
@@ -614,6 +667,74 @@ void testSubtileDisjoint(std::string name, TileElementSize size, SizeType ld,
   checkFullTile(tile_ptr, next_tile_f.get(), size);
 }
 
+template <class T, Device D>
+void testSubOfSubtile(std::string name, TileElementSize size, SizeType ld,
+                      std::vector<SubTileSpec> specs, const SubTileSpec& subspec) {
+  SCOPED_TRACE(name);
+  ASSERT_LE(1, specs.size());  // Need at least a subtile to create a subsubtile
+  // last_dep = 0 -> subsubtile
+
+  auto tmp = createTileAndPtrChecker<T, D>(size, ld);
+  auto tile = std::move(std::get<0>(tmp));
+  auto tile_ptr = std::move(std::get<1>(tmp));
+
+  hpx::lcos::local::promise<Tile<T, D>> tile_p;
+  hpx::future<Tile<T, D>> tile_f;
+  hpx::future<Tile<T, D>> next_tile_f;
+  std::tie(tile_p, tile_f, next_tile_f) = createTileChain<T, D>();
+  ASSERT_TRUE(tile_f.valid() && !tile_f.is_ready());
+  ASSERT_TRUE(next_tile_f.valid() && !next_tile_f.is_ready());
+
+  // create subtiles
+  auto subtiles = splitTileDisjoint(tile_f, specs);
+  ASSERT_TRUE(tile_f.valid());
+  ASSERT_FALSE(tile_f.is_ready());
+  ASSERT_EQ(specs.size(), subtiles.size());
+
+  // extract subtile from which we will create the subsubtile
+  auto subtile_f = std::move(subtiles[0]);
+  // create subsubtile
+  auto subsubtile = splitTile(subtile_f, subspec);
+  ASSERT_TRUE(subtile_f.valid());
+
+  // replace the subtile with its subsubtile and update specs
+  auto spec0 = specs[0];
+  subtiles[0] = std::move(subsubtile);
+  specs[0] = {spec0.origin + common::sizeFromOrigin(subspec.origin), subspec.size};
+
+  checkValidNonReady(subtiles);
+  ASSERT_FALSE(subtile_f.is_ready());
+  ASSERT_FALSE(tile_f.is_ready());
+  ASSERT_FALSE(next_tile_f.is_ready());
+
+  // The dependencies are currently in the following way
+
+  // ---> subtiles[0] (the subsubtile) -> subtile_f ---> tile_f -> next_tile_f
+  //  |-> subtiles[1] -------------------------------|
+  //  |-> subtiles[2] -------------------------------|
+  // ...
+
+  // Make subtiles ready and check them
+  tile_p.set_value(std::move(tile));
+
+  checkReadyAndDependencyChain(tile_ptr, subtiles, specs, 0, subtile_f);
+  ASSERT_TRUE(subtile_f.is_ready());
+  EXPECT_FALSE(tile_f.is_ready());
+  EXPECT_FALSE(next_tile_f.is_ready());
+  // check subtile pointer and unlock tile.
+  // tile_f should be ready.
+  checkSubtile(tile_ptr, subtile_f.get(), spec0);
+
+  ASSERT_TRUE(tile_f.is_ready());
+  EXPECT_FALSE(next_tile_f.is_ready());
+  // check tile pointer and unlock next_tile.
+  // next_tile_f should be ready.
+  checkFullTile(tile_ptr, tile_f.get(), size);
+
+  ASSERT_TRUE(next_tile_f.is_ready());
+  checkFullTile(tile_ptr, next_tile_f.get(), size);
+}
+
 TYPED_TEST(TileTest, Subtile) {
   using Type = TypeParam;
 
@@ -632,6 +753,9 @@ TYPED_TEST(TileTest, Subtile) {
                                           {{0, 0}, {1, 4}},
                                           {{0, 4}, {3, 3}}},
                                          2);
-  testSubtileDisjoint<Type, Device::CPU>("Test Vector 3", {5, 7}, 8,
+  testSubtileDisjoint<Type, Device::CPU>("Test Vector 4", {5, 7}, 8,
                                          {{{5, 7}, {0, 0}}, {{5, 4}, {0, 3}}, {{2, 7}, {3, 0}}}, 1);
+
+  testSubOfSubtile<Type, Device::CPU>("Test SubSub 1", {6, 7}, 6, {{{2, 3}, {3, 3}}, {{4, 6}, {1, 1}}},
+                                      {{0, 2}, {2, 1}});
 }

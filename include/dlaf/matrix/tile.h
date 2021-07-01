@@ -228,7 +228,7 @@ Tile<const T, device>::Tile(const Tile<const T, device>& tile, const SubTileSpec
           spec.size,
           memory::MemoryView<T, device>(tile.memory_view_,
                                         spec.size.isEmpty() ? 0 : tile.linearIndex(spec.origin),
-                                        tile.linearSize(spec.size, ld_)),
+                                        tile.linearSize(spec.size, tile.ld())),
           tile.ld()) {
   DLAF_ASSERT(spec.origin.isValid(), spec.origin);
   DLAF_ASSERT(spec.origin.isInOrOn(tile.size()), spec.origin, tile.size());
@@ -293,8 +293,11 @@ public:
   /// Sets the promise to which this Tile will be moved on destruction.
   ///
   /// @c setPromise can be called only once per object.
+  /// @pre this Tile should not be a subtile.
   Tile& setPromise(promise_t<TileType>&& p) {
     DLAF_ASSERT(!p_, "setPromise has been already used on this object!");
+    DLAF_ASSERT_HEAVY(!sf_.valid(), "setPromise cannot be used on subtiles!");
+    DLAF_ASSERT_HEAVY(!sfc_.valid(), "setPromise cannot be used on subtiles!");
     p_ = std::make_unique<promise_t<TileType>>(std::move(p));
     return *this;
   }
@@ -313,6 +316,7 @@ private:
   using ConstTileType::ld_;
   using ConstTileType::p_;
   using ConstTileType::sf_;
+  using ConstTileType::sfc_;
 };
 
 /// Create a common::Buffer from a Tile.
@@ -331,32 +335,51 @@ hpx::future<Tile<T, D>> createSubTile(const hpx::shared_future<Tile<T, D>>& tile
 
 template <class T, Device D>
 hpx::shared_future<Tile<T, D>> splitTileInsertFutureInChain(hpx::future<Tile<T, D>>& tile) {
-  // Insert a Tile in the tile dependency chain:  F1(P2)  F2(P3) ...
+  // Insert a Tile in the tile dependency chains. 3 different cases are supported:
+  // 1)  F1(P2)  F2(P3) ...      =>  F1(PN)  FN(P2)  F2(P3) ...
+  // 2)  F1(SF(P2))  F2(P3) ...  =>  F1(PN)  FN(SF(P2))  F2(P3) ...
+  // 3)  F1()                    =>  F1(PN)  FN()
   // where Pi, Fi is a promise future pair (Pi sets Fi),
-  // and F1(P2) means that the Tile in F1 will set promise P2.
-  // On input tile is F1(P2), on output tile is FN(P2).
+  // F1(P2) means that the Tile in F1 will set promise P2.
+  // and F1(SF(P2)) means that the shared future which will set promise P2 will be released.
+  // On input tile is F1(*), on output tile is FN(*).
   // The shared future F1(PN) is returned and will be used to create subtiles.
   using hpx::lcos::local::promise;
 
   // 1. Create a new promise + tile pair PN, FN
   promise<Tile<T, D>> p;
   auto tmp_tile = p.get_future();
-  // 2. Break the dependency chain swapping P2 with PN:  F1(PN)  FN()  F2(P3)
-  auto swap_promise = [p = std::move(p)](auto tile) mutable {
-    std::swap(p, *tile.p_);
-    return hpx::make_tuple(std::move(tile), std::move(p));
+  // 2. Break the dependency chain inserting PN and storing P2 or SF(P2):  F1(PN)  FN()  F2(P3)
+  auto swap_promise = [promise = std::move(p)](auto tile) mutable {
+    // sfc_ should not be valid here, as it should be set only for const Tiles.
+    DLAF_ASSERT_HEAVY(tile.sfc_.valid() == 0, "Internal Dependency Error");
+    // Similarly p_ and sf_ should not be set at the same time.
+    DLAF_ASSERT_HEAVY(!(tile.p_ && tile.sf_.valid()), "Internal Dependency Error");
+
+    auto p = std::move(tile.p_);
+    auto sf = std::move(tile.sf_);
+
+    tile.setPromise(std::move(promise));
+    // Note: C++17 std::variant can be used.
+    return hpx::make_tuple(std::move(tile), std::make_tuple(std::move(p), std::move(sf)));
   };
   auto tmp =
       hpx::split_future(tile.then(hpx::launch::sync, hpx::util::unwrapping(std::move(swap_promise))));
   // old_tile = F1(PN) and will be used to create the subtiles
   hpx::shared_future<Tile<T, D>> old_tile = std::move(hpx::get<0>(tmp));
-  // 3. Set P2 into FN to restore the chain:  F1(PN)  FN(P2)  F2(P3)
-  auto set_promise = [](auto tile, auto p) {
-    tile.setPromise(std::move(p));
+  // 3. Set P2 or SF(P2) into FN to restore the chain:  F1(PN)  FN(*) ...
+  auto set_promise_or_shfuture = [](auto tile, auto p_sf_tuple) {
+    auto& p = std::get<0>(p_sf_tuple);
+    auto& sf = std::get<1>(p_sf_tuple);
+    if (p)
+      tile.setPromise(std::move(*p));
+    else if (sf.valid())
+      tile.sf_ = std::move(sf);
+
     return std::move(tile);
   };
-  // tile = FN(P2) (out argument) can be used to access the full tile after the subtiles tasks completed.
-  tile = hpx::dataflow(hpx::launch::sync, hpx::util::unwrapping(set_promise), tmp_tile,
+  // tile = FN(*) (out argument) can be used to access the full tile after the subtiles tasks completed.
+  tile = hpx::dataflow(hpx::launch::sync, hpx::util::unwrapping(set_promise_or_shfuture), tmp_tile,
                        std::move(hpx::get<1>(tmp)));
 
   return std::move(old_tile);

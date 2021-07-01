@@ -75,10 +75,10 @@ class Tile<const T, device> {
   using promise_t = hpx::lcos::local::promise<PT>;
 
   friend TileType;
-  friend hpx::shared_future<Tile<T, device>> internal::splitTileInsertFutureInChain<>(
-      hpx::future<Tile<T, device>>& tile);
   friend hpx::future<Tile<const T, device>> internal::createSubTile<>(
       const hpx::shared_future<Tile<const T, device>>& tile, const SubTileSpec& spec);
+  friend hpx::shared_future<Tile<T, device>> internal::splitTileInsertFutureInChain<>(
+      hpx::future<Tile<T, device>>& tile);
 
 public:
   using ElementType = T;
@@ -247,6 +247,8 @@ class Tile : public Tile<const T, device> {
   friend ConstTileType;
   friend hpx::future<Tile<T, device>> internal::createSubTile<>(
       const hpx::shared_future<Tile<T, device>>& tile, const SubTileSpec& spec);
+  friend hpx::shared_future<Tile<T, device>> internal::splitTileInsertFutureInChain<>(
+      hpx::future<Tile<T, device>>& tile);
 
 public:
   using ElementType = T;
@@ -376,13 +378,13 @@ hpx::shared_future<Tile<T, D>> splitTileInsertFutureInChain(hpx::future<Tile<T, 
     else if (sf.valid())
       tile.sf_ = std::move(sf);
 
-    return std::move(tile);
+    return tile;
   };
   // tile = FN(*) (out argument) can be used to access the full tile after the subtiles tasks completed.
   tile = hpx::dataflow(hpx::launch::sync, hpx::util::unwrapping(set_promise_or_shfuture), tmp_tile,
                        std::move(hpx::get<1>(tmp)));
 
-  return std::move(old_tile);
+  return old_tile;
 }
 }
 

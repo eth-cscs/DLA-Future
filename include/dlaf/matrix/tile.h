@@ -153,25 +153,22 @@ private:
     return index.row() + ld_ * index.col();
   }
 
-  SizeType linearSize(const TileElementSize& size) const noexcept {
-    DLAF_ASSERT_HEAVY(size.isValid(), size);
-    DLAF_ASSERT_HEAVY(size.rows() <= size_.rows(), size, size_);
-    DLAF_ASSERT_HEAVY(size.cols() <= size_.cols(), size, size_);
+  static SizeType linearSize(const TileElementSize& size, SizeType ld) noexcept {
     if (size.isEmpty())
       return 0;
-    return size.rows() + ld_ * (size.cols() - 1);
+    return size.rows() + ld * (size.cols() - 1);
   }
 
   // Creates an untracked subtile.
   // Dependencies are not influenced by the new created object therefore race-conditions
   // might happen if used improperly.
-  Tile(const Tile& tile, TileElementIndex origin, TileElementSize size) noexcept;
+  Tile(const Tile& tile, const SubTileSpec& spec) noexcept;
 
   // Creates a read-only subtile keeping the dependencies.
   // It calls tile.get(), therefore it should be used when tile is guaranteed to be ready:
   // e.g. in dataflow, .then, ...
-  Tile(hpx::shared_future<ConstTileType> tile, TileElementIndex origin, TileElementSize size)
-      : Tile<const T, device>(tile.get(), origin, size) {
+  Tile(hpx::shared_future<ConstTileType> tile, const SubTileSpec& spec)
+      : Tile<const T, device>(tile.get(), spec) {
     sfc_ = std::move(tile);
   }
 
@@ -189,10 +186,10 @@ template <class T, Device device>
 Tile<const T, device>::Tile(const TileElementSize& size,
                             memory::MemoryView<ElementType, device>&& memory_view, SizeType ld) noexcept
     : size_(size), memory_view_(std::move(memory_view)), ld_(ld) {
-  DLAF_ASSERT(size.isValid(), size);
+  DLAF_ASSERT(size_.isValid(), size_);
   DLAF_ASSERT(ld_ >= std::max<SizeType>(1, size_.rows()), ld, size_.rows());
-  DLAF_ASSERT(size.isEmpty() || size_.rows() + ld_ * (size_.cols() - 1) <= memory_view_.size(), size,
-              size_, ld_, memory_view_.size());
+  DLAF_ASSERT(size_.isEmpty() || linearSize(size_, ld_) <= memory_view_.size(), size_, ld_,
+              memory_view_.size());
 }
 
 template <class T, Device device>
@@ -226,17 +223,17 @@ Tile<const T, device>& Tile<const T, device>::operator=(Tile<const T, device>&& 
 }
 
 template <class T, Device device>
-Tile<const T, device>::Tile(const Tile<const T, device>& tile, TileElementIndex origin,
-                            TileElementSize size) noexcept
-    : Tile<const T, device>(size,
-                            memory::MemoryView<T, device>(tile.memory_view_,
-                                                          size.isEmpty() ? 0 : tile.linearIndex(origin),
-                                                          tile.linearSize(size)),
-                            tile.ld()) {
-  DLAF_ASSERT(origin.isValid(), origin);
-  DLAF_ASSERT(origin.isInOrOn(tile.size()), origin, tile.size());
-  DLAF_ASSERT(size.isValid(), size);
-  DLAF_ASSERT((origin + size).isInOrOn(tile.size_), origin, size, tile.size_);
+Tile<const T, device>::Tile(const Tile<const T, device>& tile, const SubTileSpec& spec) noexcept
+    : Tile<const T, device>(  //
+          spec.size,
+          memory::MemoryView<T, device>(tile.memory_view_,
+                                        spec.size.isEmpty() ? 0 : tile.linearIndex(spec.origin),
+                                        tile.linearSize(spec.size, ld_)),
+          tile.ld()) {
+  DLAF_ASSERT(spec.origin.isValid(), spec.origin);
+  DLAF_ASSERT(spec.origin.isInOrOn(tile.size()), spec.origin, tile.size());
+  DLAF_ASSERT(spec.size.isValid(), spec.size);
+  DLAF_ASSERT((spec.origin + spec.size).isInOrOn(tile.size_), spec.origin, spec.size, tile.size_);
 }
 
 template <class T, Device device>
@@ -306,8 +303,7 @@ private:
   // Creates a writable subtile keeping the dependencies.
   // It calls old_tile.get(), therefore it should be used when old_tile is guaranteed to be ready:
   // e.g. in dataflow, .then, ...
-  Tile(hpx::shared_future<TileType> tile, TileElementIndex origin, TileElementSize size)
-      : ConstTileType(tile.get(), origin, size) {
+  Tile(hpx::shared_future<TileType> tile, const SubTileSpec& spec) : ConstTileType(tile.get(), spec) {
     sf_ = std::move(tile);
   }
 
@@ -330,9 +326,7 @@ template <class T, Device D>
 hpx::future<Tile<T, D>> createSubTile(const hpx::shared_future<Tile<T, D>>& tile,
                                       const SubTileSpec& spec) {
   return hpx::dataflow(
-      hpx::launch::sync,
-      [](auto tile, auto origin, auto size) { return Tile<T, D>(tile, origin, size); }, tile,
-      spec.origin, spec.size);
+      hpx::launch::sync, [](auto tile, auto spec) { return Tile<T, D>(tile, spec); }, tile, spec);
 }
 
 template <class T, Device D>
@@ -418,7 +412,7 @@ hpx::future<Tile<T, D>> splitTile(hpx::future<Tile<T, D>>& tile, const SubTileSp
 /// @p tile is replaced with the (full) tile which will get ready when the all the subtiles go out of scope.
 /// The next dependency in the dependency chain will become ready only when @p tile goes out of scope.
 /// @pre The subtiles described with specs should be disjoint
-///      (i.e. two different subtile cannot access thesame element).
+///      (i.e. two different subtile cannot access the same element).
 template <class T, Device D>
 std::vector<hpx::future<Tile<T, D>>> splitTileDisjoint(hpx::future<Tile<T, D>>& tile,
                                                        const std::vector<SubTileSpec>& specs) {

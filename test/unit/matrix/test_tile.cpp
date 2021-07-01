@@ -374,7 +374,7 @@ auto createTileChain() {
 template <class F, class T>
 void checkSubtile(F&& ptr, T&& tile, SubTileSpec spec) {
   auto subtile_ptr = [&ptr, origin = spec.origin](const TileElementIndex& index) {
-    return ptr(index + (origin - TileElementIndex(0, 0)));
+    return ptr(index + common::sizeFromOrigin(origin));
   };
   EXPECT_EQ(spec.size, tile.size());
   CHECK_TILE_PTR(subtile_ptr, tile);
@@ -471,7 +471,7 @@ void testSubtileConst(std::string name, TileElementSize size, SizeType ld, const
 
 template <class T, Device D>
 void testSubtileConst(std::string name, TileElementSize size, SizeType ld,
-                      const std::vector<SubTileSpec>& specs, std::size_t last_dep) {
+                      std::vector<SubTileSpec> specs, std::size_t last_dep) {
   SCOPED_TRACE(name);
   ASSERT_LE(last_dep, specs.size());
 
@@ -492,8 +492,7 @@ void testSubtileConst(std::string name, TileElementSize size, SizeType ld,
 
   // append the full tile to the end of the subtile vector and add its specs to full_specs.
   subtiles.emplace_back(std::move(tile_sf));
-  auto full_specs = specs;
-  full_specs.push_back({{0, 0}, size});
+  specs.push_back({{0, 0}, size});
 
   checkValidNonReady(subtiles);
   ASSERT_FALSE(next_tile_f.is_ready());
@@ -501,7 +500,7 @@ void testSubtileConst(std::string name, TileElementSize size, SizeType ld,
   // Make subtiles ready and check them
   tile_p.set_value(std::move(tile));
 
-  checkReadyAndDependencyChain(tile_ptr, subtiles, full_specs, last_dep, next_tile_f);
+  checkReadyAndDependencyChain(tile_ptr, subtiles, specs, last_dep, next_tile_f);
   checkFullTile(tile_ptr, next_tile_f.get(), size);
 }
 

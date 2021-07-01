@@ -352,7 +352,7 @@ hpx::shared_future<Tile<T, D>> splitTileInsertFutureInChain(hpx::future<Tile<T, 
   // 2. Break the dependency chain inserting PN and storing P2 or SF(P2):  F1(PN)  FN()  F2(P3)
   auto swap_promise = [promise = std::move(p)](auto tile) mutable {
     // sfc_ should not be valid here, as it should be set only for const Tiles.
-    DLAF_ASSERT_HEAVY(tile.sfc_.valid() == 0, "Internal Dependency Error");
+    DLAF_ASSERT_HEAVY(!tile.sfc_.valid(), "Internal Dependency Error");
     // Similarly p_ and sf_ should not be set at the same time.
     DLAF_ASSERT_HEAVY(!(tile.p_ && tile.sf_.valid()), "Internal Dependency Error");
 

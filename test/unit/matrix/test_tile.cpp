@@ -470,8 +470,8 @@ void testSubtileConst(std::string name, TileElementSize size, SizeType ld, const
 }
 
 template <class T, Device D>
-void testSubtileConst(std::string name, TileElementSize size, SizeType ld,
-                      std::vector<SubTileSpec> specs, std::size_t last_dep) {
+void testSubtilesConst(std::string name, TileElementSize size, SizeType ld,
+                       std::vector<SubTileSpec> specs, std::size_t last_dep) {
   SCOPED_TRACE(name);
   ASSERT_LE(last_dep, specs.size());
 
@@ -555,18 +555,18 @@ TYPED_TEST(TileTest, SubtileConst) {
   testSubtileConst<Type, Device::CPU>("Test 2", {5, 7}, 8, {{4, 6}, {1, 1}}, 1);
   testSubtileConst<Type, Device::CPU>("Test 3", {5, 7}, 8, {{0, 0}, {5, 7}}, 0);
 
-  testSubtileConst<Type, Device::CPU>("Test Vector Empty", {5, 7}, 8, {}, 0);
-  testSubtileConst<Type, Device::CPU>("Test Vector 1", {5, 7}, 8, {{{3, 4}, {2, 3}}}, 1);
-  testSubtileConst<Type, Device::CPU>("Test Vector 2", {5, 7}, 8, {{{4, 3}, {0, 0}}, {{4, 6}, {1, 1}}},
-                                      2);
-  testSubtileConst<Type, Device::CPU>("Test Vector 3", {5, 7}, 8,
-                                      {{{5, 7}, {0, 0}},
-                                       {{2, 2}, {2, 2}},
-                                       {{3, 0}, {2, 7}},
-                                       {{0, 0}, {5, 7}}},
-                                      2);
-  testSubtileConst<Type, Device::CPU>("Test Vector 4", {5, 7}, 8,
-                                      {{{5, 7}, {0, 0}}, {{5, 4}, {0, 3}}, {{2, 7}, {3, 0}}}, 1);
+  testSubtilesConst<Type, Device::CPU>("Test Vector Empty", {5, 7}, 8, {}, 0);
+  testSubtilesConst<Type, Device::CPU>("Test Vector 1", {5, 7}, 8, {{{3, 4}, {2, 3}}}, 1);
+  testSubtilesConst<Type, Device::CPU>("Test Vector 2", {5, 7}, 8, {{{4, 3}, {0, 0}}, {{4, 6}, {1, 1}}},
+                                       2);
+  testSubtilesConst<Type, Device::CPU>("Test Vector 3", {5, 7}, 8,
+                                       {{{5, 7}, {0, 0}},
+                                        {{2, 2}, {2, 2}},
+                                        {{3, 0}, {2, 7}},
+                                        {{0, 0}, {5, 7}}},
+                                       2);
+  testSubtilesConst<Type, Device::CPU>("Test Vector 4", {5, 7}, 8,
+                                       {{{5, 7}, {0, 0}}, {{5, 4}, {0, 3}}, {{2, 7}, {3, 0}}}, 1);
 
   testSubOfSubtileConst<Type, Device::CPU>("Test SubSub 1", {6, 7}, 6,
                                            {{{2, 3}, {3, 3}}, {{4, 6}, {1, 1}}}, {{0, 2}, {2, 1}}, 0);
@@ -623,8 +623,8 @@ void testSubtile(std::string name, TileElementSize size, SizeType ld, const SubT
 }
 
 template <class T, Device D>
-void testSubtileDisjoint(std::string name, TileElementSize size, SizeType ld,
-                         const std::vector<SubTileSpec>& specs, std::size_t last_dep) {
+void testSubtilesDisjoint(std::string name, TileElementSize size, SizeType ld,
+                          const std::vector<SubTileSpec>& specs, std::size_t last_dep) {
   SCOPED_TRACE(name);
   if (specs.size() > 0) {
     ASSERT_LT(last_dep, specs.size());
@@ -742,19 +742,19 @@ TYPED_TEST(TileTest, Subtile) {
   testSubtile<Type, Device::CPU>("Test 2", {5, 7}, 8, {{4, 6}, {1, 1}});
   testSubtile<Type, Device::CPU>("Test 3", {5, 7}, 8, {{0, 0}, {5, 7}});
 
-  testSubtileDisjoint<Type, Device::CPU>("Test Vector Empty", {5, 7}, 8, {}, 0);
-  testSubtileDisjoint<Type, Device::CPU>("Test Vector 1", {5, 7}, 8, {{{3, 4}, {2, 3}}}, 0);
-  testSubtileDisjoint<Type, Device::CPU>("Test Vector 2", {5, 7}, 8,
-                                         {{{4, 3}, {0, 0}}, {{4, 6}, {1, 1}}}, 1);
-  testSubtileDisjoint<Type, Device::CPU>("Test Vector 3", {5, 7}, 8,
-                                         {{{5, 7}, {0, 0}},
-                                          {{1, 2}, {2, 2}},
-                                          {{3, 0}, {2, 7}},
-                                          {{0, 0}, {1, 4}},
-                                          {{0, 4}, {3, 3}}},
-                                         2);
-  testSubtileDisjoint<Type, Device::CPU>("Test Vector 4", {5, 7}, 8,
-                                         {{{5, 7}, {0, 0}}, {{5, 4}, {0, 3}}, {{2, 7}, {3, 0}}}, 1);
+  testSubtilesDisjoint<Type, Device::CPU>("Test Vector Empty", {5, 7}, 8, {}, 0);
+  testSubtilesDisjoint<Type, Device::CPU>("Test Vector 1", {5, 7}, 8, {{{3, 4}, {2, 3}}}, 0);
+  testSubtilesDisjoint<Type, Device::CPU>("Test Vector 2", {5, 7}, 8,
+                                          {{{4, 3}, {0, 0}}, {{4, 6}, {1, 1}}}, 1);
+  testSubtilesDisjoint<Type, Device::CPU>("Test Vector 3", {5, 7}, 8,
+                                          {{{5, 7}, {0, 0}},
+                                           {{1, 2}, {2, 2}},
+                                           {{3, 0}, {2, 7}},
+                                           {{0, 0}, {1, 4}},
+                                           {{0, 4}, {3, 3}}},
+                                          2);
+  testSubtilesDisjoint<Type, Device::CPU>("Test Vector 4", {5, 7}, 8,
+                                          {{{5, 7}, {0, 0}}, {{5, 4}, {0, 3}}, {{2, 7}, {3, 0}}}, 1);
 
   testSubOfSubtile<Type, Device::CPU>("Test SubSub 1", {6, 7}, 6, {{{2, 3}, {3, 3}}, {{4, 6}, {1, 1}}},
                                       {{0, 2}, {2, 1}});

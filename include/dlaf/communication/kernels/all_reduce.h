@@ -107,14 +107,18 @@ void scheduleAllReduce(const comm::Executor& ex,
 }
 
 template <class T>
-auto scheduleAllReduceInPlace(const comm::Executor& ex,
-                              hpx::future<common::PromiseGuard<comm::Communicator>> pcomm,
-                              MPI_Op reduce_op, hpx::future<matrix::Tile<T, Device::CPU>> tile) {
+hpx::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
+    const comm::Executor& ex, hpx::future<common::PromiseGuard<comm::Communicator>> pcomm,
+    MPI_Op reduce_op, hpx::future<matrix::Tile<T, Device::CPU>> tile) {
   // Note:
   //
   // TILE ---> makeContiguous --+--> BAG ----> mpi_call ---> BAG --+
   //                            |                                  |
-  //                            +-------------> TILE --------------+-> copyBack
+  //                            +-------------> TILE --------------+-> copyBack ---> TILE
+  //
+  //
+  // The last TILE after the copyBack is returned so that other task can be attached to it,
+  // AFTER the asynchronous MPI_AllReduce has completed
 
   hpx::future<common::internal::Bag<T>> bag;
   {

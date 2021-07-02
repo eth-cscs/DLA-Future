@@ -114,9 +114,10 @@ void testAllReduceInPlace(comm::Communicator world, matrix::Matrix<T, device> ma
   auto input_tile = fixedValueTile(world.rank() + 1);
   matrix::test::set(matrix(idx).get(), input_tile);
 
-  scheduleAllReduceInPlace(ex_mpi, chain(), MPI_SUM, matrix(idx));
+  auto after = scheduleAllReduceInPlace(ex_mpi, chain(), MPI_SUM, matrix(idx));
 
   auto exp_tile = fixedValueTile(world.size() * (world.size() + 1) / 2);
+  CHECK_TILE_EQ(exp_tile, after.get());
   CHECK_TILE_EQ(exp_tile, matrix.read(idx).get());
 }
 
@@ -126,7 +127,8 @@ TEST_F(CollectiveTest, AllReduceInPlace) {
 }
 
 template <class T, Device device>
-void testAllReduce(comm::Communicator world, matrix::Matrix<T, device> matA, matrix::Matrix<T, device> matB) {
+void testAllReduce(comm::Communicator world, matrix::Matrix<T, device> matA,
+                   matrix::Matrix<T, device> matB) {
   common::Pipeline<comm::Communicator> chain(world);
 
   const auto root_rank = world.size() - 1;

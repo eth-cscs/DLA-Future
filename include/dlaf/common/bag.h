@@ -23,20 +23,23 @@ namespace common {
 
 namespace internal {
 
-// Note:
-//
-// A bag:
-// - owns the temporary buffer (optionally allocated)
-// - contains a data descriptor to the contiguous data to be used for communication (being it the
-//    original tile or the temporary buffer)
-//
-// The bag can be create with the `makeItContiguous` helper function by passing the original tile
-// and in case of a RW tile, it is possible to `copyBack` the memory from the temporary buffer to
-// the original tile.
-
+/// A Bag:
+/// - owns the temporary buffer (optionally allocated)
+/// - contains a data descriptor to the contiguous data to be used for communication
+///   (being it the aforementioned temporary buffer if allocated, otherwise an externally managed memory,
+///   e.g. a tile)
+///
+/// It is up to the user to guarantee the integrity of the Bag and its properties
 template <class T>
 using Bag = hpx::tuple<common::Buffer<std::remove_const_t<T>>, common::DataDescriptor<T>>;
 
+/// It returns a Bag starting from a Tile, where the Bag will be either:
+//
+/// - if (data_iscontiguous(make_data(tile))) => Bag<NULL_BUFFER, DATA_DESCRIPTOR(TILE)>
+/// - otherwise                               => Bag<TEMP_BUFFER, DATA_DESCRIPTOR(TEMP_BUFFER>>
+//
+/// so ensuring that the data_descriptor stored in the returned bag refers to a contiguous memory
+/// chunk able to store all the data contained in @p tile.
 template <class T>
 auto makeItContiguous(const matrix::Tile<T, Device::CPU>& tile) {
   common::Buffer<std::remove_const_t<T>> buffer;
@@ -49,6 +52,8 @@ auto makeItContiguous(const matrix::Tile<T, Device::CPU>& tile) {
 
 DLAF_MAKE_CALLABLE_OBJECT(makeItContiguous);
 
+/// It returns @p tile, ensuring that if the given @p bag owns a temporary buffer, it copies data from
+/// this latter one to @p tile before returning it. Otherwise it is a no-op.
 template <class T>
 auto copyBack(matrix::Tile<T, Device::CPU> tile, Bag<T> bag) {
   auto buffer_used = std::move(hpx::get<0>(bag));

@@ -33,12 +33,12 @@ template <class T>
 auto allReduce(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
                common::internal::Bag<const T> bag_in, common::internal::Bag<T> bag_out,
                matrix::Tile<const T, Device::CPU> const&, MPI_Request* req) {
-  auto& communicator = pcomm.ref();
-  auto message_in = comm::make_message(hpx::get<1>(bag_in));
-  auto message_out = comm::make_message(hpx::get<1>(bag_out));
+  auto& comm = pcomm.ref();
+  auto msg_in = comm::make_message(hpx::get<1>(bag_in));
+  auto msg_out = comm::make_message(hpx::get<1>(bag_out));
 
-  DLAF_MPI_CALL(MPI_Iallreduce(message_in.data(), message_out.data(), message_in.count(),
-                               message_in.mpi_type(), reduce_op, communicator, req));
+  DLAF_MPI_CALL(MPI_Iallreduce(msg_in.data(), msg_out.data(), msg_in.count(), msg_in.mpi_type(),
+                               reduce_op, comm, req));
 
   return bag_out;
 }
@@ -48,11 +48,11 @@ DLAF_MAKE_CALLABLE_OBJECT(allReduce);
 template <class T>
 auto allReduceInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
                       common::internal::Bag<T> bag, MPI_Request* req) {
-  auto& communicator = pcomm.ref();
-  auto message = comm::make_message(hpx::get<1>(bag));
+  auto& comm = pcomm.ref();
+  auto msg = comm::make_message(hpx::get<1>(bag));
 
-  DLAF_MPI_CALL(MPI_Iallreduce(MPI_IN_PLACE, message.data(), message.count(), message.mpi_type(),
-                               reduce_op, communicator, req));
+  DLAF_MPI_CALL(
+      MPI_Iallreduce(MPI_IN_PLACE, msg.data(), msg.count(), msg.mpi_type(), reduce_op, comm, req));
 
   return bag;
 }
@@ -65,6 +65,16 @@ void scheduleAllReduce(const comm::Executor& ex,
                        hpx::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
                        hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_in,
                        hpx::future<matrix::Tile<T, Device::CPU>> tile_out) {
+  // Note:
+  //
+  //         +---------------------------------+
+  //         |                                 |
+  // TILE_I -+-> makeContiguous -----> BAG_I --+--> mpi_call --> BAG_O --+
+  //                                           |                         |
+  // TILE_O ---> makeContiguous --+--> BAG_O --+                         |
+  //                              |                                      |
+  //                              +----------------> TILE_O -------------+-> copyBack
+
   hpx::future<common::internal::Bag<const T>> bag_in =
       hpx::dataflow(hpx::util::unwrapping(common::internal::makeItContiguous_o), tile_in);
 
@@ -100,6 +110,12 @@ template <class T>
 auto scheduleAllReduceInPlace(const comm::Executor& ex,
                               hpx::future<common::PromiseGuard<comm::Communicator>> pcomm,
                               MPI_Op reduce_op, hpx::future<matrix::Tile<T, Device::CPU>> tile) {
+  // Note:
+  //
+  // TILE ---> makeContiguous --+--> BAG ----> mpi_call ---> BAG --+
+  //                            |                                  |
+  //                            +-------------> TILE --------------+-> copyBack
+
   hpx::future<common::internal::Bag<T>> bag;
   {
     // clang-format off

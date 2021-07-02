@@ -158,13 +158,13 @@ hpx::future<matrix::Tile<T, Device::CPU>> trmvUpdateColumn(
   // remember that T is upper triangular, so it is possible to use TRMV
   auto trmv_func =
       hpx::util::unwrapping([](auto&& tile_t, TileElementIndex t_start, TileElementSize t_size) {
-	  // clang-format off
-	  blas::trmv(blas::Layout::ColMajor,
-              blas::Uplo::Upper, blas::Op::NoTrans, blas::Diag::NonUnit,
-              t_size.rows(),
-              tile_t.ptr(), tile_t.ld(),
-              tile_t.ptr(t_start), 1);
-	  // clang-format on
+        // clang-format off
+        blas::trmv(blas::Layout::ColMajor,
+            blas::Uplo::Upper, blas::Op::NoTrans, blas::Diag::NonUnit,
+            t_size.rows(),
+            tile_t.ptr(), tile_t.ld(),
+            tile_t.ptr(t_start), 1);
+        // clang-format on
 
         return std::move(tile_t);
       });

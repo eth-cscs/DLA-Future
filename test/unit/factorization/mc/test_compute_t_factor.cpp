@@ -40,7 +40,7 @@ using dlaf::matrix::test::MatrixLocal;
 
 template <typename Type>
 struct ComputeTFactorTestMC : public ::testing::Test {
-  const std::vector<dlaf::comm::CommunicatorGrid>& commGrids() {
+  const std::vector<CommunicatorGrid>& commGrids() {
     return comm_grids;
   }
 };
@@ -148,13 +148,13 @@ MatrixLocal<T> computeHres(const SizeType k, const Tile<const T, Device::CPU>& t
   std::copy(v.ptr(), v.ptr() + w.size().linear_size(), w.ptr());
 
   // clang-format off
-      blas::trmm(blas::Layout::ColMajor,
-          blas::Side::Right, blas::Uplo::Upper,
-          blas::Op::ConjTrans, blas::Diag::NonUnit,
-          m, k,
-          1,
-          t.ptr(), t.ld(),
-          w.ptr(), w.ld());
+  blas::trmm(blas::Layout::ColMajor,
+      blas::Side::Right, blas::Uplo::Upper,
+      blas::Op::ConjTrans, blas::Diag::NonUnit,
+      m, k,
+      1,
+      t.ptr(), t.ld(),
+      w.ptr(), w.ld());
   // clang-format on
 
   // H_result = I - V W*
@@ -162,14 +162,14 @@ MatrixLocal<T> computeHres(const SizeType k, const Tile<const T, Device::CPU>& t
   set(h_result, preset_eye<T>);
 
   // clang-format off
-      blas::gemm(blas::Layout::ColMajor,
-          blas::Op::NoTrans, blas::Op::ConjTrans,
-          m, m, k,
-          -1,
-          v.ptr(), v.ld(),
-          w.ptr(), w.ld(),
-          1,
-          h_result.ptr(), h_result.ld());
+  blas::gemm(blas::Layout::ColMajor,
+      blas::Op::NoTrans, blas::Op::ConjTrans,
+      m, m, k,
+      -1,
+      v.ptr(), v.ld(),
+      w.ptr(), w.ld(),
+      1,
+      h_result.ptr(), h_result.ld());
   // clang-format on
 
   return h_result;
@@ -271,32 +271,6 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
   }
 }
 
-// Note:
-// Testing this function requires next input values:
-// - V      the matrix with the elementary reflectors (columns)
-// - taus   the set of tau coefficients, one for each reflector
-//
-// V is generated randomly and the related tau values are computed, and at the same time they are used to
-// compute the expected resulting Householder transformation by applying one at a time the reflectors in
-// V, by applying on each one the equation
-//
-// Hi = I - tau . v . v*
-//
-// and updating the final expected Householder transformation with
-//
-// H_exp = H_exp * Hi
-//
-// resulting in
-//
-// H = H1 . H2 . ... . Hk
-//
-// On the other side, from the function, by providing V and taus we get back a T factor, that we
-// can use to compute the Householder transformation by applying all reflectors in block.
-// This Householder transformation is obtained with the equation
-//
-// H = I - V . T . V*
-//
-// Which we expect to be the equal to the one computed previously.
 TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
   using namespace dlaf;
 

@@ -213,7 +213,7 @@ void checkEQ(ElementGetter&& exp_el, const Tile<const T, D>& tile, const char* f
 /// @pre exp_ptr argument is an index of type const TileElementIndex&,
 /// @pre exp_ptr return type should be T*.
 template <class T, Device D, class PointerGetter>
-void checkPtr(PointerGetter exp_ptr, const Tile<const T, D>& tile, const char* file, const int line) {
+void checkPtr(PointerGetter&& exp_ptr, const Tile<const T, D>& tile, const char* file, const int line) {
   auto comp = [](const T* ptr, const T& value) { return ptr == &value; };
   auto err_message = [](const T* expected, const T& value) {
     std::stringstream s;

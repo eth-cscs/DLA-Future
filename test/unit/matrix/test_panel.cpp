@@ -323,3 +323,77 @@ TYPED_TEST(PanelTest, ShrinkRow) {
     for (const auto& cfg : test_params)
       testShrink<TypeParam, Coord::Row>(cfg, comm_grid);
 }
+
+// For a col panel dim is the panel width.
+// For a row panel dim is the panel height.
+template <Coord panel_axis, class T, Device D>
+void checkPanelTileSize(SizeType dim, Panel<panel_axis, T, D>& panel) {
+  constexpr auto coord = std::decay_t<decltype(panel)>::CoordType;
+  const Distribution& dist = panel.parentDistribution();
+  for (SizeType i = panel.rangeStartLocal(); i < panel.rangeEndLocal(); ++i) {
+    // Define the correct tile_size
+    auto dim_perp = dist.blockSize().get<coord>();
+    if (dist.globalTileFromLocalTile<coord>(i) == dist.nrTiles().get<coord>() - 1)
+      dim_perp = dist.size().get<coord>() % dist.blockSize().get<coord>();
+    const auto tile_size = [](auto dim, auto dim_perp) -> TileElementSize {
+      if (panel_axis == Coord::Row)
+        return {dim, dim_perp};
+      return {dim_perp, dim};
+    }(dim, dim_perp);
+
+    EXPECT_EQ(tile_size, panel(LocalTileIndex{coord, i}).get().size());
+    EXPECT_EQ(tile_size, panel.read(LocalTileIndex{coord, i}).get().size());
+  }
+}
+
+TYPED_TEST(PanelTest, SetWidth) {
+  for (auto& comm_grid : this->commGrids()) {
+    const config_t cfg = {{26, 13}, {4, 5}, {0, 0}};
+
+    Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
+    Panel<Coord::Col, TypeParam, dlaf::Device::CPU> panel(dist, cfg.offset);
+
+    const auto default_dim = cfg.blocksz.cols();
+
+    checkPanelTileSize(default_dim, panel);
+    // Check twice as size shouldn't change
+    checkPanelTileSize(default_dim, panel);
+    for (const auto dim : {default_dim / 2, default_dim}) {
+      panel.reset();
+      panel.setWidth(dim);
+      checkPanelTileSize(dim, panel);
+      // Check twice as size shouldn't change
+      checkPanelTileSize(dim, panel);
+    }
+    panel.reset();
+    checkPanelTileSize(default_dim, panel);
+    // Check twice as size shouldn't change
+    checkPanelTileSize(default_dim, panel);
+  }
+}
+
+TYPED_TEST(PanelTest, SetHeight) {
+  for (auto& comm_grid : this->commGrids()) {
+    config_t cfg = {{26, 13}, {4, 5}, {0, 0}};
+
+    Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
+    Panel<Coord::Row, TypeParam, dlaf::Device::CPU> panel(dist, cfg.offset);
+
+    const auto default_dim = cfg.blocksz.rows();
+
+    checkPanelTileSize(default_dim, panel);
+    // Check twice as size shouldn't change
+    checkPanelTileSize(default_dim, panel);
+    for (const auto dim : {default_dim / 2, default_dim}) {
+      panel.reset();
+      panel.setHeight(dim);
+      checkPanelTileSize(dim, panel);
+      // Check twice as size shouldn't change
+      checkPanelTileSize(dim, panel);
+    }
+    panel.reset();
+    checkPanelTileSize(default_dim, panel);
+    // Check twice as size shouldn't change
+    checkPanelTileSize(default_dim, panel);
+  }
+}

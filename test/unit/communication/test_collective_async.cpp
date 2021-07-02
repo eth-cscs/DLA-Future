@@ -40,7 +40,7 @@ protected:
 template <class T>
 auto fixedValueTile(const T value) {
   return [value](TileElementIndex const&) { return value; };
-};
+}
 
 template <class T, Device device>
 auto newBlockMatrixContiguous() {

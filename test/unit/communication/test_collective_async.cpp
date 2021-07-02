@@ -14,143 +14,144 @@
 #include <gtest/gtest.h>
 #include <mpi.h>
 
+#include "dlaf/common/data.h"
+#include "dlaf/common/pipeline.h"
 #include "dlaf/communication/communicator.h"
-#include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/executor.h"
+#include "dlaf/executors.h"
+#include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/memory/memory_view.h"
 
-TEST(Reduce, Contiguous) {
-  using namespace dlaf;
-  using namespace std::literals;
+#include "dlaf_test/matrix/util_tile.h"
 
-  comm::Communicator comm(MPI_COMM_WORLD);
-  comm::CommunicatorGrid grid(comm, 1, 2, common::Ordering::ColumnMajor);
-  common::Pipeline<comm::Communicator> chain(comm);
+using namespace dlaf;
 
-  auto ex_mpi = getMPIExecutor<Backend::MC>();
+class CollectiveTest : public ::testing::Test {
+  static_assert(NUM_MPI_RANKS >= 2, "at least 2 ranks are required");
 
-  int root = 0;
-  int sz = 4;
+protected:
+  using T = int;
+  static constexpr auto device = Device::CPU;
 
-  LocalTileIndex index(0, 0);
-  dlaf::Matrix<double, Device::CPU> matrix({sz, 1}, {sz, 1});
-  matrix(index).get()({0, 0}) = comm.rank() == 0 ? 1 : 3;
+  comm::Communicator world = MPI_COMM_WORLD;
+};
 
-  if (comm.rank() == root) {
-    scheduleReduceRecvInPlace(ex_mpi, chain(), MPI_SUM, matrix(index));
-    EXPECT_EQ(4, matrix.read(index).get()({0, 0}));
+template <class T>
+auto fixedValueTile(const T value) {
+  return [value](TileElementIndex const&) { return value; };
+};
+
+template <class T, Device device>
+auto newBlockMatrixContiguous() {
+  auto layout = matrix::colMajorLayout({13, 13}, {13, 13}, 13);
+  auto dist = matrix::Distribution({13, 13}, {13, 13});
+
+  auto matrix = matrix::Matrix<T, device>(dist, layout);
+
+  EXPECT_TRUE(data_iscontiguous(common::make_data(matrix.read(LocalTileIndex(0, 0)).get())));
+
+  return matrix;
+}
+
+template <class T, Device device>
+auto newBlockMatrixStrided() {
+  auto layout = matrix::colMajorLayout({13, 13}, {13, 13}, 26);
+  auto dist = matrix::Distribution({13, 13}, {13, 13});
+
+  auto matrix = matrix::Matrix<T, device>(dist, layout);
+
+  EXPECT_FALSE(data_iscontiguous(common::make_data(matrix.read(LocalTileIndex(0, 0)).get())));
+
+  return matrix;
+}
+
+template <class T, Device device>
+void testReduceInPlace(comm::Communicator world, matrix::Matrix<T, device> matrix) {
+  common::Pipeline<comm::Communicator> chain(world);
+
+  const auto root_rank = world.size() - 1;
+  const auto ex_mpi = dlaf::getMPIExecutor<Backend::MC>();
+
+  const LocalTileIndex idx(0, 0);
+
+  auto input_tile = fixedValueTile(world.rank() + 1);
+  matrix::test::set(matrix(idx).get(), input_tile);
+
+  if (root_rank == world.rank()) {
+    // use -> read
+    scheduleReduceRecvInPlace(ex_mpi, chain(), MPI_SUM, matrix(idx));
+
+    auto exp_tile = fixedValueTile(world.size() * (world.size() + 1) / 2);
+    CHECK_TILE_EQ(exp_tile, matrix.read(idx).get());
   }
   else {
-    scheduleReduceSend(ex_mpi, root, chain(), MPI_SUM, matrix.read(index));
-    EXPECT_EQ(3, matrix.read(index).get()({0, 0}));
+    // use -> read -> set -> read
+    scheduleReduceSend(ex_mpi, root_rank, chain(), MPI_SUM, matrix.read(idx));
+
+    CHECK_TILE_EQ(input_tile, matrix.read(idx).get());
+
+    auto new_tile = fixedValueTile(26);
+    matrix::test::set(matrix(idx).get(), new_tile);
+    CHECK_TILE_EQ(new_tile, matrix.read(idx).get());
   }
 }
 
-TEST(Reduce, NotContiguous) {
-  using namespace dlaf;
-  using namespace std::literals;
-
-  comm::Communicator comm(MPI_COMM_WORLD);
-  comm::CommunicatorGrid grid(comm, 1, 2, common::Ordering::ColumnMajor);
-  common::Pipeline<comm::Communicator> chain(comm);
-
-  auto ex_mpi = getMPIExecutor<Backend::MC>();
-
-  int root = 0;
-  int sz = 4;
-
-  LocalTileIndex index(0, 0);
-  dlaf::Matrix<double, Device::CPU> matrix({1, sz}, {1, sz});
-  matrix(index).get()({0, 0}) = comm.rank() == 0 ? 1 : 3;
-
-  if (comm.rank() == root) {
-    scheduleReduceRecvInPlace(ex_mpi, chain(), MPI_SUM, matrix(index));
-    EXPECT_EQ(4, matrix.read(index).get()({0, 0}));
-  }
-  else {
-    scheduleReduceSend(ex_mpi, root, chain(), MPI_SUM, matrix.read(index));
-    EXPECT_EQ(3, matrix.read(index).get()({0, 0}));
-  }
+TEST_F(CollectiveTest, ReduceInPlace) {
+  testReduceInPlace(world, newBlockMatrixContiguous<T, device>());
+  testReduceInPlace(world, newBlockMatrixStrided<T, device>());
 }
 
-TEST(AllReduce, Contiguous) {
-  using namespace dlaf;
-  using namespace std::literals;
+template <class T, Device device>
+void testAllReduceInPlace(comm::Communicator world, matrix::Matrix<T, device> matrix) {
+  common::Pipeline<comm::Communicator> chain(world);
 
-  comm::Communicator comm(MPI_COMM_WORLD);
-  comm::CommunicatorGrid grid(comm, 1, 2, common::Ordering::ColumnMajor);
-  common::Pipeline<comm::Communicator> chain(comm);
+  const auto ex_mpi = dlaf::getMPIExecutor<Backend::MC>();
 
-  auto ex_mpi = getMPIExecutor<Backend::MC>();
+  const LocalTileIndex idx(0, 0);
 
-  int sz = 4;
+  // set -> use -> read
+  auto input_tile = fixedValueTile(world.rank() + 1);
+  matrix::test::set(matrix(idx).get(), input_tile);
 
-  LocalTileIndex index_out(0, 0);
-  LocalTileIndex index_in(0, 1);
-  dlaf::Matrix<double, Device::CPU> matrix({sz, 2}, {sz, 1});
-  matrix(index_in).get()({0, 0}) = comm.rank() == 0 ? 1 : 3;
-  const double result = 4.0;
-  scheduleAllReduce(ex_mpi, chain(), MPI_SUM, matrix.read(index_in), matrix(index_out));
-  EXPECT_EQ(result, matrix.read(index_out).get()({0, 0}));
+  scheduleAllReduceInPlace(ex_mpi, chain(), MPI_SUM, matrix(idx));
+
+  auto exp_tile = fixedValueTile(world.size() * (world.size() + 1) / 2);
+  CHECK_TILE_EQ(exp_tile, matrix.read(idx).get());
 }
 
-TEST(AllReduce, NotContiguous) {
-  using namespace dlaf;
-  using namespace std::literals;
-
-  comm::Communicator comm(MPI_COMM_WORLD);
-  comm::CommunicatorGrid grid(comm, 1, 2, common::Ordering::ColumnMajor);
-  common::Pipeline<comm::Communicator> chain(comm);
-
-  auto ex_mpi = getMPIExecutor<Backend::MC>();
-
-  int sz = 4;
-
-  LocalTileIndex index_out(0, 0);
-  LocalTileIndex index_in(1, 0);
-  dlaf::Matrix<double, Device::CPU> matrix({2, sz}, {1, sz});
-  matrix(index_in).get()({0, 0}) = comm.rank() == 0 ? 1 : 3;
-  const double result = 4.0;
-  scheduleAllReduce(ex_mpi, chain(), MPI_SUM, matrix.read(index_in), matrix(index_out));
-  EXPECT_EQ(result, matrix.read(index_out).get()({0, 0}));
+TEST_F(CollectiveTest, AllReduceInPlace) {
+  testAllReduceInPlace(world, newBlockMatrixContiguous<T, device>());
+  testAllReduceInPlace(world, newBlockMatrixStrided<T, device>());
 }
 
-TEST(AllReduceInPlace, Contiguous) {
-  using namespace dlaf;
-  using namespace std::literals;
+template <class T, Device device>
+void testAllReduce(comm::Communicator world, matrix::Matrix<T, device> matA, matrix::Matrix<T, device> matB) {
+  common::Pipeline<comm::Communicator> chain(world);
 
-  comm::Communicator comm(MPI_COMM_WORLD);
-  comm::CommunicatorGrid grid(comm, 1, 2, common::Ordering::ColumnMajor);
-  common::Pipeline<comm::Communicator> chain(comm);
+  const auto root_rank = world.size() - 1;
+  const auto ex_mpi = dlaf::getMPIExecutor<Backend::MC>();
 
-  auto ex_mpi = getMPIExecutor<Backend::MC>();
+  const LocalTileIndex idx(0, 0);
+  matrix::Matrix<T, device>& mat_in = root_rank % 2 == 0 ? matA : matB;
+  matrix::Matrix<T, device>& mat_out = root_rank % 2 == 0 ? matB : matA;
 
-  int sz = 4;
+  // set -> use -> read
+  auto input_tile = fixedValueTile(world.rank() + 1);
+  matrix::test::set(mat_in(idx).get(), input_tile);
 
-  LocalTileIndex index(0, 0);
-  dlaf::Matrix<double, Device::CPU> matrix({sz, 1}, {sz, 1});
-  matrix(index).get()({0, 0}) = comm.rank() == 0 ? 1 : 3;
-  const double result = 4.0;
-  scheduleAllReduceInPlace(ex_mpi, chain(), MPI_SUM, matrix(index));
-  EXPECT_EQ(result, matrix.read(index).get()({0, 0}));
+  scheduleAllReduce(ex_mpi, chain(), MPI_SUM, mat_in.read(idx), mat_out(idx));
+
+  CHECK_TILE_EQ(input_tile, mat_in.read(idx).get());
+
+  auto exp_tile = fixedValueTile(world.size() * (world.size() + 1) / 2);
+  CHECK_TILE_EQ(exp_tile, mat_out.read(idx).get());
 }
 
-TEST(AllReduceInPlace, NotContiguous) {
-  using namespace dlaf;
-  using namespace std::literals;
-
-  comm::Communicator comm(MPI_COMM_WORLD);
-  comm::CommunicatorGrid grid(comm, 1, 2, common::Ordering::ColumnMajor);
-  common::Pipeline<comm::Communicator> chain(comm);
-
-  auto ex_mpi = getMPIExecutor<Backend::MC>();
-
-  int sz = 4;
-
-  LocalTileIndex index(0, 0);
-  dlaf::Matrix<double, Device::CPU> matrix({1, sz}, {1, sz});
-  matrix(index).get()({0, 0}) = comm.rank() == 0 ? 1 : 3;
-  const double result = 4.0;
-  scheduleAllReduceInPlace(ex_mpi, chain(), MPI_SUM, matrix(index));
-  EXPECT_EQ(result, matrix.read(index).get()({0, 0}));
+TEST_F(CollectiveTest, AllReduce) {
+  testAllReduce(world, newBlockMatrixContiguous<T, device>(), newBlockMatrixContiguous<T, device>());
+  testAllReduce(world, newBlockMatrixStrided<T, device>(), newBlockMatrixStrided<T, device>());
+  testAllReduce(world, newBlockMatrixContiguous<T, device>(), newBlockMatrixStrided<T, device>());
 }
+
+// TODO TEST AllReduce -> AllReduceInPlace Mixed

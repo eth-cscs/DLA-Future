@@ -77,8 +77,6 @@ class Tile<const T, device> {
   friend TileType;
   friend hpx::future<Tile<const T, device>> internal::createSubTile<>(
       const hpx::shared_future<Tile<const T, device>>& tile, const SubTileSpec& spec);
-  friend hpx::shared_future<Tile<T, device>> internal::splitTileInsertFutureInChain<>(
-      hpx::future<Tile<T, device>>& tile);
 
 public:
   using ElementType = T;

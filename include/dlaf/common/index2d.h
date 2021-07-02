@@ -215,6 +215,17 @@ public:
            boundary.isValid();
   }
 
+  /// Check if it is a valid position inside or on the border of the grid size specified by @p boundary.
+  ///
+  /// @param boundary size of the grid,
+  /// @return true if the current index is in the range [0, @p boundary] for both row and column.
+  /// @pre Index2D.isValid,
+  /// @pre boundary.isValid().
+  bool isInOrOn(const Size2D<IndexT, Tag>& boundary) const noexcept {
+    return this->row() <= boundary.rows() && this->col() <= boundary.cols() && (this->isValid()) &&
+           boundary.isValid();
+  }
+
   /// @return true if `this` and `rhs` have the same row and column.
   bool operator==(const Index2D& rhs) const noexcept {
     return BaseT::operator==(rhs);

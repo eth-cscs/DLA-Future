@@ -113,7 +113,7 @@ struct Panel<axis, const T, D> {
       auto tile = data_.read(fullIndex(index));
 
       if (dim_ < 0)
-        return std::move(tile);
+        return tile;
       else
         return splitTile(tile, {{0, 0}, tileSize(index)});
     }
@@ -379,7 +379,7 @@ struct Panel : public Panel<axis, const T, device> {
     BaseT::internal_.insert(BaseT::linearIndex(index));
     auto tile = BaseT::data_(BaseT::fullIndex(index));
     if (dim_ < 0)
-      return std::move(tile);
+      return tile;
     else
       return splitTile(tile, {{0, 0}, tileSize(index)});
   }

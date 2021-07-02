@@ -213,7 +213,7 @@ struct Panel<axis, const T, D> {
 
   /// Set the height of the row panel.
   ///
-  /// By default the  oghtf the panel is parentDistribution().block_size().rows().
+  /// By default the height of the panel is parentDistribution().block_size().rows().
   /// This method allows to reduce this value.
   ///
   /// @pre this can be called as first operation after range setting.

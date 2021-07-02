@@ -87,8 +87,8 @@ void scheduleAllReduce(const comm::Executor& ex,
           matrix::unwrapExtendTiles(common::internal::makeItContiguous_o),
           std::move(tile_out)));
     // clang-format on
-    bag_out = std::move(hpx::get<0>(wrapped));
-    tile_out = std::move(hpx::get<0>(std::move(hpx::get<1>(wrapped))));
+    bag_out = std::move(wrapped.first);
+    tile_out = std::move(hpx::get<0>(wrapped.second));
   }
 
   // clang-format off
@@ -129,8 +129,8 @@ hpx::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
           matrix::unwrapExtendTiles(common::internal::makeItContiguous_o),
           std::move(tile)));
     // clang-format on
-    bag = std::move(hpx::get<0>(wrapped));
-    tile = std::move(hpx::get<0>(std::move(hpx::get<1>(wrapped))));
+    bag = std::move(wrapped.first);
+    tile = std::move(hpx::get<0>(wrapped.second));
   }
 
   // clang-format off

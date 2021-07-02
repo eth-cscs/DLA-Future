@@ -79,8 +79,8 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
           std::move(tile)));
     // clang-format on
 
-    bag = std::move(hpx::get<0>(wrapped));
-    tile = std::move(hpx::get<0>(std::move(hpx::get<1>(wrapped))));
+    bag = std::move(wrapped.first);
+    tile = std::move(hpx::get<0>(wrapped.second));
   }
 
   // clang-format off

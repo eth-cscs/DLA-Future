@@ -253,8 +253,8 @@ template <Backend backend, Device device, class T>
 void Cholesky<backend, device, T>::call_U(Matrix<T, device>& mat_a) {
   using namespace cholesky_u;
 
-  auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
-  auto executor_np = dlaf::getNpExecutor<Backend::MC>();
+  auto executor_hp = dlaf::getHpExecutor<backend>();
+  auto executor_np = dlaf::getNpExecutor<backend>();
 
   // Number of tile (rows = cols)
   SizeType nrtile = mat_a.nrTiles().cols();
@@ -285,9 +285,6 @@ void Cholesky<backend, device, T>::call_U(Matrix<T, device>& mat_a) {
 template <Backend backend, Device device, class T>
 void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a) {
   using namespace cholesky_u;
-
-  using hpx::util::unwrapping;
-  using hpx::dataflow;
 
   auto executor_hp = dlaf::getHpExecutor<backend>();
   auto executor_np = dlaf::getNpExecutor<backend>();

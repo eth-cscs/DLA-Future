@@ -41,7 +41,7 @@ void cholesky(blas::Uplo uplo, Matrix<T, device>& mat_a) {
   if (uplo == blas::Uplo::Lower)
     internal::Cholesky<backend, device, T>::call_L(mat_a);
   else
-    DLAF_UNIMPLEMENTED(uplo);
+    internal::Cholesky<backend, device, T>::call_U(mat_a);
 }
 
 /// Cholesky factorization which computes the factorization of an Hermitian positive
@@ -68,7 +68,7 @@ void cholesky(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, device>& m
   if (uplo == blas::Uplo::Lower)
     internal::Cholesky<backend, device, T>::call_L(grid, mat_a);
   else
-    DLAF_UNIMPLEMENTED(uplo);
+    internal::Cholesky<backend, device, T>::call_U(grid, mat_a);
 }
 
 }

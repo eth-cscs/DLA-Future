@@ -12,10 +12,13 @@ jobs:
         run: sudo apt-get install --no-install-recommends clang-format-8
       - name: Checkout
         uses: actions/checkout@v2
+
+         # Fails if there are tabs in source files.
       - name: Check formatting
         run: |
           git fetch --no-tags --depth=1 origin +refs/heads/master:refs/heads/master
           FILES_CHANGED=`git diff --name-only origin/master`
+          TAB_FOUND=0
 
           for FILE in $FILES_CHANGED
           do
@@ -27,6 +30,9 @@ jobs:
             case $FILE in
               *.cpp|*.h|*.hpp|*.tpp|*.ipp|*.cu)
                 clang-format-8 -i --style=file $FILE
+                # The following is needed for regions in which clang-format is disabled.
+                # Check if tab are present.
+                egrep -Hn $'\\t' $FILE && TAB_FOUND=1
                 ;;
               *.pdf|*.hdf5|*.jpg|*.png|*.ppt|*.pptx|*.ipe)
                 # Exclude some binary files types,
@@ -34,7 +40,7 @@ jobs:
                 ;;
               *)
                 # Remove trailing whitespaces.
-                sed -i "s/\\s\\+$//g" $FILE
+                egrep -q "\\s\\+$" $FILE && sed -i "s/\\s\\+$//g" $FILE
 
                 # Count number of trailing newlines at the end of the file.
                 # For performance reason we limit the search (max is 32).
@@ -51,6 +57,14 @@ jobs:
                 ;;
             esac
           done
+          # Fail if there are tabs in source files.
+          if [ $TAB_FOUND -eq 1 ]
+          then
+            echo "Error: Tabs have been found in source files"
+            false
+          else
+            true
+          fi
 
          # Fails if there are differences.
       - name: Formatting issues

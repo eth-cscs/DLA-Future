@@ -121,13 +121,13 @@ std::tuple<hpx::shared_future<dlaf::common::internal::vector<T>>, MatrixLocal<T>
 
     // clang-format off
     blas::gemm(blas::Layout::ColMajor,
-	blas::Op::NoTrans, blas::Op::NoTrans,
-	h_expected.size().rows(), h_i.size().cols(), h_i.size().rows(),
-	1,
-	h_expected.ptr(h_offset), h_expected.ld(),
-	h_i.ptr(), h_i.ld(),
-	0,
-	workspace.ptr(), workspace.ld());
+        blas::Op::NoTrans, blas::Op::NoTrans,
+        h_expected.size().rows(), h_i.size().cols(), h_i.size().rows(),
+        1,
+        h_expected.ptr(h_offset), h_expected.ld(),
+        h_i.ptr(), h_i.ld(),
+        0,
+        workspace.ptr(), workspace.ld());
     // clang-format on
     std::copy(workspace.ptr(), workspace.ptr() + workspace.size().linear_size(),
               h_expected.ptr(h_offset));

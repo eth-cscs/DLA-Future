@@ -12,60 +12,14 @@ jobs:
         run: sudo apt-get install --no-install-recommends clang-format-8
       - name: Checkout
         uses: actions/checkout@v2
+      - name: Checkout master
+        run: git fetch --no-tags --depth=1 origin +refs/heads/master:refs/heads/master
 
          # Fails if there are tabs in source files.
       - name: Check formatting
-        run: |
-          git fetch --no-tags --depth=1 origin +refs/heads/master:refs/heads/master
-          FILES_CHANGED=`git diff --name-only origin/master`
-          TAB_FOUND=0
-
-          for FILE in $FILES_CHANGED
-          do
-            if [[ ! -f $FILE ]]
-            then
-              continue
-            fi
-
-            case $FILE in
-              *.cpp|*.h|*.hpp|*.tpp|*.ipp|*.cu)
-                clang-format-8 -i --style=file $FILE
-                # The following is needed for regions in which clang-format is disabled.
-                # Check if tab are present.
-                egrep -Hn $'\\t' $FILE && TAB_FOUND=1
-                ;;
-              *.pdf|*.hdf5|*.jpg|*.png|*.ppt|*.pptx|*.ipe)
-                # Exclude some binary files types,
-                # others can be excluded as needed.
-                ;;
-              *)
-                # Remove trailing whitespaces.
-                egrep -q "\\s\\+$" $FILE && sed -i "s/\\s\\+$//g" $FILE
-
-                # Count number of trailing newlines at the end of the file.
-                # For performance reason we limit the search (max is 32).
-                n_newlines=`tail -c 32 $FILE | xxd -p -c 32 | egrep -o "(0a)+$" | grep -o 0a | wc -l`
-
-                # Add or remove trailing newlines if needed.
-                if [[ $n_newlines -eq 0 ]]
-                then
-                  echo "" >> $FILE
-                elif [[ $n_newlines -gt 1 ]]
-                then
-                  truncate -s -$(($n_newlines-1)) $FILE
-                fi
-                ;;
-            esac
-          done
-          # Fail if there are tabs in source files.
-          if [ $TAB_FOUND -eq 1 ]
-          then
-            echo "Error: Tabs have been found in source files"
-            false
-          else
-            true
-          fi
+        run: ./.github/format.sh
 
          # Fails if there are differences.
       - name: Formatting issues
+        if: always()
         run: git diff --color --exit-code

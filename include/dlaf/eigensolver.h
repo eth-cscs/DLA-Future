@@ -9,6 +9,4 @@
 //
 #pragma once
 
-// This is simply wrongly formatted.
-
 #include "dlaf/eigensolver/gen_to_std.h"

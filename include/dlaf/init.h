@@ -26,10 +26,6 @@
 #include <dlaf/cusolver/executor.h>
 #endif
 
-// clang-format off
-  // This is a tab...
-// clang-format on
-
 namespace dlaf {
 /// DLA-Future configuration.
 ///

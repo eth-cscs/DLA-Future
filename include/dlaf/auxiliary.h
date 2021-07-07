@@ -9,8 +9,4 @@
 //
 #pragma once
 
-// clang-format off
-// This has trailing whitespaces
-// clang-format on
-
 #include "dlaf/auxiliary/norm.h"

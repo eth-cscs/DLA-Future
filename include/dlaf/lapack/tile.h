@@ -281,11 +281,7 @@ void laset(const lapack::MatrixType type, T alpha, T beta, const Tile<T, Device:
 ///
 template <class T>
 void set0(const Tile<T, Device::CPU>& tile) {
-  const SizeType m = tile.size().rows();
-  const SizeType n = tile.size().cols();
-
-  lapack::laset(lapack::MatrixType::General, m, n, static_cast<T>(0.0), static_cast<T>(0.0), tile.ptr(),
-                tile.ld());
+  tile::laset(lapack::MatrixType::General, static_cast<T>(0.0), static_cast<T>(0.0), tile);
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(hegst);

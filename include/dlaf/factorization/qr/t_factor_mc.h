@@ -24,7 +24,6 @@
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/functions_sync.h"
-#include "dlaf/lapack/enum_output.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
@@ -183,7 +182,6 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(const SizeType k, Matrix<cons
 
   DLAF_ASSERT(k <= panel_width, k, panel_width);
 
-  // TODO: check
   const GlobalTileIndex v_end{v.nrTiles().rows(), (v_start.col() + 1)};
 
   t = t.then(unwrapping([k](auto&& tile) {

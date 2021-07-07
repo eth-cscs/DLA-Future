@@ -27,6 +27,7 @@
 
 #include "dlaf/common/assert.h"
 #include "dlaf/common/callable_object.h"
+#include "dlaf/lapack/enum_output.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/types.h"

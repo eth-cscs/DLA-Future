@@ -15,7 +15,6 @@
 #include <lapack/util.hh>
 
 namespace lapack {
-
 inline std::ostream& operator<<(std::ostream& out, const Norm& norm) {
   switch (norm) {
     case Norm::One:

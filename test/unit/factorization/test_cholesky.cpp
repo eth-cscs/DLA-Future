@@ -50,7 +50,9 @@ public:
 TYPED_TEST_SUITE(CholeskyTestGPU, MatrixElementTypes);
 #endif
 
-const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
+TYPED_TEST_SUITE(CholeskyTest, MatrixElementTypes);
+
+const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
 
 const std::vector<std::tuple<SizeType, SizeType>> sizes = {
     {0, 2},                              // m = 0

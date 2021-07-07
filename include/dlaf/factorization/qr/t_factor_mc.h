@@ -297,7 +297,6 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
     // Since we are writing always on the same t, the gemv are serialized
     // A possible solution to this would be to have multiple places where to store partial
     // results, and then locally reduce them just before the reduce over ranks
-    // t = hpx::dataflow(gemv_func, v.read(v_i_loc), taus, t);
     t = gemvColumnT(is_v0, k, v.read(v_i_loc), taus, t);
   }
 

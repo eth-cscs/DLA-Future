@@ -82,7 +82,7 @@ void is_orthogonal(const MatrixLocal<const T>& matrix) {
 }
 
 template <class T>
-std::tuple<hpx::shared_future<dlaf::common::internal::vector<T>>, MatrixLocal<T>> computeTauH(
+std::tuple<dlaf::common::internal::vector<T>, MatrixLocal<T>> computeTauH(
     const SizeType k, const MatrixLocal<const T>& v) {
   const SizeType m = v.size().rows();
   const TileElementSize block_size = v.blockSize();
@@ -132,9 +132,8 @@ std::tuple<hpx::shared_future<dlaf::common::internal::vector<T>>, MatrixLocal<T>
     std::copy(workspace.ptr(), workspace.ptr() + workspace.size().linear_size(),
               h_expected.ptr(h_offset));
   }
-  hpx::shared_future<dlaf::common::internal::vector<T>> taus_input = hpx::make_ready_future(taus);
 
-  return std::make_tuple(taus_input, std::move(h_expected));
+  return std::make_tuple(taus, std::move(h_expected));
 }
 
 template <class T>
@@ -241,7 +240,7 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
     }
 
     auto tmp = computeTauH(k, v);
-    auto taus_input = std::move(std::get<0>(tmp));
+    hpx::shared_future<dlaf::common::internal::vector<TypeParam>> taus_input = hpx::make_ready_future<dlaf::common::internal::vector<TypeParam>>(std::move(std::get<0>(tmp)));
     auto h_expected = std::move(std::get<1>(tmp));
 
     is_orthogonal(h_expected);
@@ -321,7 +320,7 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
       }();
 
       auto tmp = computeTauH(k, v);
-      auto taus_input = std::move(std::get<0>(tmp));
+      hpx::shared_future<dlaf::common::internal::vector<TypeParam>> taus_input = hpx::make_ready_future<dlaf::common::internal::vector<TypeParam>>(std::move(std::get<0>(tmp)));
       auto h_expected = std::move(std::get<1>(tmp));
 
       is_orthogonal(h_expected);

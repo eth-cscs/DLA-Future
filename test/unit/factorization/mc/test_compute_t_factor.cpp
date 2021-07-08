@@ -240,7 +240,8 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
     }
 
     auto tmp = computeTauH(k, v);
-    hpx::shared_future<dlaf::common::internal::vector<TypeParam>> taus_input = hpx::make_ready_future<dlaf::common::internal::vector<TypeParam>>(std::move(std::get<0>(tmp)));
+    hpx::shared_future<dlaf::common::internal::vector<TypeParam>> taus_input =
+        hpx::make_ready_future<dlaf::common::internal::vector<TypeParam>>(std::move(std::get<0>(tmp)));
     auto h_expected = std::move(std::get<1>(tmp));
 
     is_orthogonal(h_expected);
@@ -320,7 +321,8 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
       }();
 
       auto tmp = computeTauH(k, v);
-      hpx::shared_future<dlaf::common::internal::vector<TypeParam>> taus_input = hpx::make_ready_future<dlaf::common::internal::vector<TypeParam>>(std::move(std::get<0>(tmp)));
+      hpx::shared_future<dlaf::common::internal::vector<TypeParam>> taus_input =
+          hpx::make_ready_future<dlaf::common::internal::vector<TypeParam>>(std::move(std::get<0>(tmp)));
       auto h_expected = std::move(std::get<1>(tmp));
 
       is_orthogonal(h_expected);

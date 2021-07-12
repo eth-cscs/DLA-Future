@@ -67,7 +67,8 @@ auto newBlockMatrixStrided() {
 }
 
 template <class T, Device device>
-void testReduceInPlace(comm::Communicator world, matrix::Matrix<T, device> matrix) {
+void testReduceInPlace(comm::Communicator world, matrix::Matrix<T, device> matrix,
+                       std::string test_name) {
   common::Pipeline<comm::Communicator> chain(world);
 
   const auto root_rank = world.size() - 1;
@@ -78,12 +79,12 @@ void testReduceInPlace(comm::Communicator world, matrix::Matrix<T, device> matri
   auto input_tile = fixedValueTile(world.rank() + 1);
   matrix::test::set(matrix(idx).get(), input_tile);
 
+  std::function<T(TileElementIndex)> exp_tile;
   if (root_rank == world.rank()) {
     // use -> read
     scheduleReduceRecvInPlace(ex_mpi, chain(), MPI_SUM, matrix(idx));
 
-    auto exp_tile = fixedValueTile(world.size() * (world.size() + 1) / 2);
-    CHECK_TILE_EQ(exp_tile, matrix.read(idx).get());
+    exp_tile = fixedValueTile(world.size() * (world.size() + 1) / 2);
   }
   else {
     // use -> read -> set -> read
@@ -93,17 +94,24 @@ void testReduceInPlace(comm::Communicator world, matrix::Matrix<T, device> matri
 
     auto new_tile = fixedValueTile(26);
     matrix::test::set(matrix(idx).get(), new_tile);
-    CHECK_TILE_EQ(new_tile, matrix.read(idx).get());
+
+    exp_tile = new_tile;
   }
+
+  const auto& tile = matrix.read(idx).get();
+  SCOPED_TRACE(test_name);
+
+  CHECK_TILE_EQ(exp_tile, tile);
 }
 
 TEST_F(CollectiveTest, ReduceInPlace) {
-  testReduceInPlace(world, newBlockMatrixContiguous<T, device>());
-  testReduceInPlace(world, newBlockMatrixStrided<T, device>());
+  testReduceInPlace(world, newBlockMatrixContiguous<T, device>(), "Contiguous");
+  testReduceInPlace(world, newBlockMatrixStrided<T, device>(), "Strided");
 }
 
 template <class T, Device device>
-void testAllReduceInPlace(comm::Communicator world, matrix::Matrix<T, device> matrix) {
+void testAllReduceInPlace(comm::Communicator world, matrix::Matrix<T, device> matrix,
+                          std::string test_name) {
   common::Pipeline<comm::Communicator> chain(world);
 
   const auto ex_mpi = dlaf::getMPIExecutor<Backend::MC>();
@@ -116,19 +124,31 @@ void testAllReduceInPlace(comm::Communicator world, matrix::Matrix<T, device> ma
 
   auto after = scheduleAllReduceInPlace(ex_mpi, chain(), MPI_SUM, matrix(idx));
 
+  // Note:
+  // The call `after.get()` waits for any scheduled task with the aim to ensure that no other task
+  // will yield after it, so `SCOPED_TRACE` can be called safely.
+  //
+  // Moreover, the code block is needed in order to limit the lifetime of `tile`, so that just after
+  // it, it is possible to check the read operation (which implicitly depends on it)
   auto exp_tile = fixedValueTile(world.size() * (world.size() + 1) / 2);
-  CHECK_TILE_EQ(exp_tile, after.get());
+  {
+    auto tile = after.get();
+    SCOPED_TRACE(test_name);
+
+    CHECK_TILE_EQ(exp_tile, tile);
+  }
+
   CHECK_TILE_EQ(exp_tile, matrix.read(idx).get());
 }
 
 TEST_F(CollectiveTest, AllReduceInPlace) {
-  testAllReduceInPlace(world, newBlockMatrixContiguous<T, device>());
-  testAllReduceInPlace(world, newBlockMatrixStrided<T, device>());
+  testAllReduceInPlace(world, newBlockMatrixContiguous<T, device>(), "Contiguous");
+  testAllReduceInPlace(world, newBlockMatrixStrided<T, device>(), "Strided");
 }
 
 template <class T, Device device>
 void testAllReduce(comm::Communicator world, matrix::Matrix<T, device> matA,
-                   matrix::Matrix<T, device> matB) {
+                   matrix::Matrix<T, device> matB, std::string test_name) {
   common::Pipeline<comm::Communicator> chain(world);
 
   const auto root_rank = world.size() - 1;
@@ -144,16 +164,23 @@ void testAllReduce(comm::Communicator world, matrix::Matrix<T, device> matA,
 
   scheduleAllReduce(ex_mpi, chain(), MPI_SUM, mat_in.read(idx), mat_out(idx));
 
-  CHECK_TILE_EQ(input_tile, mat_in.read(idx).get());
+  const auto& tile_in = mat_in.read(idx).get();
+  const auto& tile_out = mat_out.read(idx).get();
+  SCOPED_TRACE(test_name);
+
+  CHECK_TILE_EQ(input_tile, tile_in);
 
   auto exp_tile = fixedValueTile(world.size() * (world.size() + 1) / 2);
-  CHECK_TILE_EQ(exp_tile, mat_out.read(idx).get());
+  CHECK_TILE_EQ(exp_tile, tile_out);
 }
 
 TEST_F(CollectiveTest, AllReduce) {
-  testAllReduce(world, newBlockMatrixContiguous<T, device>(), newBlockMatrixContiguous<T, device>());
-  testAllReduce(world, newBlockMatrixStrided<T, device>(), newBlockMatrixStrided<T, device>());
-  testAllReduce(world, newBlockMatrixContiguous<T, device>(), newBlockMatrixStrided<T, device>());
+  testAllReduce(world, newBlockMatrixContiguous<T, device>(), newBlockMatrixContiguous<T, device>(),
+                "Contiguous<->Contiguous");
+  testAllReduce(world, newBlockMatrixStrided<T, device>(), newBlockMatrixStrided<T, device>(),
+                "Strided<->Strided");
+  testAllReduce(world, newBlockMatrixContiguous<T, device>(), newBlockMatrixStrided<T, device>(),
+                "Contiguous<->Strided");
 }
 
 // TODO TEST AllReduce -> AllReduceInPlace Mixed

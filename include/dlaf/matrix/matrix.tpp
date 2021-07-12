@@ -60,7 +60,6 @@ Matrix<T, device>::Matrix(const LayoutInfo& layout, ElementType* ptr)
 template <class T, Device device>
 hpx::future<Tile<T, device>> Matrix<T, device>::operator()(const LocalTileIndex& index) noexcept {
   const auto i = tileLinearIndex(index);
-  DLAF_ASSERT_MODERATE(i < tile_managers_.size(), i, tile_managers_.size());
   return tile_managers_[i].getRWTileFuture();
 }
 

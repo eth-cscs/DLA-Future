@@ -111,10 +111,10 @@ void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
   // TODO shared_future<Tile> as assumption, it requires changes for future<Tile>
   // clang-format off
   hpx::future<common::internal::Bag<const T>> bag =
-      hpx::dataflow(
-          dlaf::getHpExecutor<Backend::MC>(),
-          hpx::util::unwrapping(common::internal::makeItContiguous_o),
-          tile);
+    hpx::dataflow(
+        dlaf::getHpExecutor<Backend::MC>(),
+        hpx::util::unwrapping(common::internal::makeItContiguous_o),
+        tile);
   // clang-format on
 
   // clang-format off

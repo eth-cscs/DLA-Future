@@ -335,10 +335,8 @@ void checkPanelTileSize(SizeType dim, Panel<panel_axis, T, D>& panel) {
     auto dim_perp = dist.blockSize().get<coord>();
     if (dist.globalTileFromLocalTile<coord>(i) == dist.nrTiles().get<coord>() - 1)
       dim_perp = dist.size().get<coord>() % dist.blockSize().get<coord>();
-    const auto tile_size = [](auto dim, auto dim_perp) -> TileElementSize {
-      if (panel_axis == Coord::Row)
-        return {dim, dim_perp};
-      return {dim_perp, dim};
+    const auto tile_size = [](auto dim, auto dim_perp) {
+      return TileElementSize(panel_axis, dim, dim_perp);
     }(dim, dim_perp);
 
     EXPECT_EQ(tile_size, panel(LocalTileIndex{coord, i}).get().size());

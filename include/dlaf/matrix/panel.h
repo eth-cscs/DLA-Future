@@ -249,12 +249,7 @@ protected:
     const auto size_coord = dist_matrix_.tileSize(panel_index).get<CoordType>();
     const auto size_axis = dim_ < 0 ? dist_matrix_.blockSize().get<axis>() : dim_;
 
-    switch (axis) {
-      case Coord::Col:
-        return {size_coord, size_axis};
-      case Coord::Row:
-        return {size_axis, size_coord};
-    }
+    return {axis, size_axis, size_coord};
   }
 
   static LocalElementSize computePanelSize(LocalElementSize size, TileElementSize blocksize,

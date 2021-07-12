@@ -9,8 +9,8 @@
 //
 #pragma once
 
-#include <hpx/local/future.hp:p>
-#include <hpx/local/unwrap.hp:p>
+#include <hpx/local/future.hpp>
+#include <hpx/local/unwrap.hpp>
 
 #include "dlaf/common/assert.h"
 #include "dlaf/common/index2d.h"

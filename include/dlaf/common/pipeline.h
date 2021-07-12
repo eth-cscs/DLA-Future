@@ -24,8 +24,8 @@ template <class T>
 class PromiseGuard {
 public:
   /// Create a wrapper.
-  /// @param object	the resource to wrap (the wrapper becomes the owner of the resource),
-  /// @param next	the promise that has to be set on destruction.
+  /// @param object the resource to wrap (the wrapper becomes the owner of the resource),
+  /// @param next the promise that has to be set on destruction.
   PromiseGuard(T object, hpx::lcos::local::promise<T> next)
       : object_(std::move(object)), promise_(std::move(next)) {}
 

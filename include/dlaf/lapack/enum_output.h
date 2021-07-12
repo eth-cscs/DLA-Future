@@ -15,7 +15,6 @@
 #include <lapack/util.hh>
 
 namespace lapack {
-
 inline std::ostream& operator<<(std::ostream& out, const Norm& norm) {
   switch (norm) {
     case Norm::One:
@@ -34,6 +33,11 @@ inline std::ostream& operator<<(std::ostream& out, const Norm& norm) {
       out << "MaxNorm";
       break;
   }
+  return out;
+}
+
+inline std::ostream& operator<<(std::ostream& out, const lapack::MatrixType& mtype) {
+  out << lapack::matrixtype2str(mtype);
   return out;
 }
 

@@ -7,7 +7,6 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
-
 #include "dlaf/lapack/tile.h"
 
 #include "gtest/gtest.h"
@@ -16,6 +15,7 @@
 #include "test_lapack_tile/test_lange.h"
 #include "test_lapack_tile/test_lantr.h"
 #include "test_lapack_tile/test_potrf.h"
+#include "dlaf_test/matrix/util_tile.h"
 
 using namespace dlaf;
 using namespace dlaf::test;
@@ -23,6 +23,9 @@ using namespace testing;
 
 const std::vector<blas::Diag> blas_diags({blas::Diag::Unit, blas::Diag::NonUnit});
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
+const std::vector<lapack::MatrixType> lapack_matrices({lapack::MatrixType::General,
+                                                       lapack::MatrixType::Lower,
+                                                       lapack::MatrixType::Upper});
 const std::vector<lapack::Norm> lapack_norms({lapack::Norm::Fro, lapack::Norm::Inf, lapack::Norm::Max,
                                               lapack::Norm::One, lapack::Norm::Two});
 
@@ -234,4 +237,58 @@ TYPED_TEST(TileOperationsTestMC, Lacpy) {
   ASSERT_TRUE(std::abs(Scalar(1 + 4) - out_tile(TileElementIndex(2, 5))) < eps);
   ASSERT_TRUE(std::abs(Scalar(2 + 4) - out_tile(TileElementIndex(3, 5))) < eps);
   ASSERT_TRUE(std::abs(Scalar(3 + 4) - out_tile(TileElementIndex(4, 5))) < eps);
+}
+
+std::vector<std::tuple<SizeType, SizeType, SizeType>> setsizes = {{0, 0, 0},   {0, 0, 2},  // 0 size
+                                                                  {1, 1, 0},   {17, 11, 3}, {17, 11, 0},
+                                                                  {17, 17, 3}, {17, 17, 3}, {11, 11, 0}};
+
+TYPED_TEST(TileOperationsTestMC, Laset) {
+  SizeType m, n, extra_lda;
+
+  for (const auto& size : setsizes) {
+    for (const auto mtype : lapack_matrices) {
+      std::tie(m, n, extra_lda) = size;
+      const SizeType lda = std::max<SizeType>(1, m) + extra_lda;
+
+      const auto alpha = TypeUtilities<TypeParam>::element(-3.5, 8.72);
+      const auto beta = TypeUtilities<TypeParam>::element(-1.25, -7.21);
+
+      auto el = [](const TileElementIndex& idx) {
+        return TypeUtilities<TypeParam>::element(idx.row() + idx.col(), idx.row() - idx.col());
+      };
+      auto res = [mtype, alpha, beta, el](const TileElementIndex& idx) {
+        const double i = idx.row();
+        const double j = idx.col();
+        if (i == j)
+          return beta;
+        else if (mtype == lapack::MatrixType::General || (mtype == lapack::MatrixType::Lower && i > j) ||
+                 (mtype == lapack::MatrixType::Upper && i < j))
+          return alpha;
+        return el(idx);
+      };
+
+      auto tile = createTile<TypeParam>(el, TileElementSize(m, n), lda);
+
+      tile::laset<TypeParam>(mtype, alpha, beta, tile);
+      CHECK_TILE_EQ(res, tile);
+    }
+  }
+}
+
+TYPED_TEST(TileOperationsTestMC, Set0) {
+  SizeType m, n, extra_lda;
+
+  for (const auto& size : setsizes) {
+    std::tie(m, n, extra_lda) = size;
+    const SizeType lda = std::max<SizeType>(1, m) + extra_lda;
+    Tile<TypeParam, Device::CPU> tile =
+        createTile<TypeParam>([](TileElementIndex idx) { return idx.row() + idx.col(); },
+                              TileElementSize(m, n), lda);
+
+    auto res = [](const TileElementIndex&) { return TypeUtilities<TypeParam>::element(0.0, 0.0); };
+
+    tile::set0(tile);
+    CHECK_TILE_EQ(res, tile);
+  }
 }

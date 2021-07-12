@@ -182,5 +182,3 @@ TEST_F(CollectiveTest, AllReduce) {
   testAllReduce(world, newBlockMatrixContiguous<T, device>(), newBlockMatrixStrided<T, device>(),
                 "Contiguous<->Strided");
 }
-
-// TODO TEST AllReduce -> AllReduceInPlace Mixed

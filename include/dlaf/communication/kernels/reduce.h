@@ -14,8 +14,8 @@
 
 #include <mpi.h>
 
-#include "dlaf/common/bag.h"
 #include "dlaf/common/callable_object.h"
+#include "dlaf/common/contiguous_buffer_holder.h"
 #include "dlaf/common/data.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/communication/communicator.h"
@@ -32,8 +32,8 @@ namespace internal {
 
 template <class T>
 auto reduceRecvInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
-                       common::internal::Bag<T> bag, MPI_Request* req) {
-  auto msg = comm::make_message(hpx::get<1>(bag));
+                       common::internal::ContiguousBufferHolder<T> bag, MPI_Request* req) {
+  auto msg = comm::make_message(bag.descriptor);
   auto& comm = pcomm.ref();
 
   DLAF_MPI_CALL(MPI_Ireduce(MPI_IN_PLACE, msg.data(), msg.count(), msg.mpi_type(), reduce_op,
@@ -46,9 +46,9 @@ DLAF_MAKE_CALLABLE_OBJECT(reduceRecvInPlace);
 
 template <class T>
 auto reduceSend(comm::IndexT_MPI rank_root, common::PromiseGuard<comm::Communicator> pcomm,
-                MPI_Op reduce_op, common::internal::Bag<const T> bag,
+                MPI_Op reduce_op, common::internal::ContiguousBufferHolder<const T> bag,
                 matrix::Tile<const T, Device::CPU> const&, MPI_Request* req) {
-  auto msg = comm::make_message(hpx::get<1>(bag));
+  auto msg = comm::make_message(bag.descriptor);
   auto& comm = pcomm.ref();
 
   DLAF_MPI_CALL(
@@ -69,7 +69,7 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
   //                            |                                  |
   //                            +-------------> TILE --------------+-> copyBack
 
-  hpx::future<common::internal::Bag<T>> bag;
+  hpx::future<common::internal::ContiguousBufferHolder<T>> bag;
   {
     // clang-format off
     auto wrapped = getUnwrapRetValAndArgs(
@@ -110,7 +110,7 @@ void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
 
   // TODO shared_future<Tile> as assumption, it requires changes for future<Tile>
   // clang-format off
-  hpx::future<common::internal::Bag<const T>> bag =
+  hpx::future<common::internal::ContiguousBufferHolder<const T>> bag =
     hpx::dataflow(
         dlaf::getHpExecutor<Backend::MC>(),
         hpx::util::unwrapping(common::internal::makeItContiguous_o),

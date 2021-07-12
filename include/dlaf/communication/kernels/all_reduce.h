@@ -14,8 +14,8 @@
 
 #include <mpi.h>
 
-#include "dlaf/common/bag.h"
 #include "dlaf/common/callable_object.h"
+#include "dlaf/common/contiguous_buffer_holder.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/executor.h"
@@ -31,11 +31,12 @@ namespace internal {
 
 template <class T>
 auto allReduce(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
-               common::internal::Bag<const T> bag_in, common::internal::Bag<T> bag_out,
+               common::internal::ContiguousBufferHolder<const T> bag_in,
+               common::internal::ContiguousBufferHolder<T> bag_out,
                matrix::Tile<const T, Device::CPU> const&, MPI_Request* req) {
   auto& comm = pcomm.ref();
-  auto msg_in = comm::make_message(hpx::get<1>(bag_in));
-  auto msg_out = comm::make_message(hpx::get<1>(bag_out));
+  auto msg_in = comm::make_message(bag_in.descriptor);
+  auto msg_out = comm::make_message(bag_out.descriptor);
 
   DLAF_MPI_CALL(MPI_Iallreduce(msg_in.data(), msg_out.data(), msg_in.count(), msg_in.mpi_type(),
                                reduce_op, comm, req));
@@ -47,9 +48,9 @@ DLAF_MAKE_CALLABLE_OBJECT(allReduce);
 
 template <class T>
 auto allReduceInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
-                      common::internal::Bag<T> bag, MPI_Request* req) {
+                      common::internal::ContiguousBufferHolder<T> bag, MPI_Request* req) {
   auto& comm = pcomm.ref();
-  auto msg = comm::make_message(hpx::get<1>(bag));
+  auto msg = comm::make_message(bag.descriptor);
 
   DLAF_MPI_CALL(
       MPI_Iallreduce(MPI_IN_PLACE, msg.data(), msg.count(), msg.mpi_type(), reduce_op, comm, req));
@@ -75,10 +76,10 @@ void scheduleAllReduce(const comm::Executor& ex,
   //                              |                                      |
   //                              +----------------> TILE_O -------------+-> copyBack
 
-  hpx::future<common::internal::Bag<const T>> bag_in =
+  hpx::future<common::internal::ContiguousBufferHolder<const T>> bag_in =
       hpx::dataflow(hpx::util::unwrapping(common::internal::makeItContiguous_o), tile_in);
 
-  hpx::future<common::internal::Bag<T>> bag_out;
+  hpx::future<common::internal::ContiguousBufferHolder<T>> bag_out;
   {
     // clang-format off
     auto wrapped = getUnwrapRetValAndArgs(
@@ -120,7 +121,7 @@ hpx::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
   // The last TILE after the copyBack is returned so that other task can be attached to it,
   // AFTER the asynchronous MPI_AllReduce has completed
 
-  hpx::future<common::internal::Bag<T>> bag;
+  hpx::future<common::internal::ContiguousBufferHolder<T>> bag;
   {
     // clang-format off
     auto wrapped = getUnwrapRetValAndArgs(

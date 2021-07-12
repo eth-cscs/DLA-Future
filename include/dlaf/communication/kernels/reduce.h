@@ -104,9 +104,9 @@ void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
                         hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile) {
   // Note:
   //
-  // TILE ---> makeContiguous --+--> BAG ---+--> mpi_call
-  //                            |           |
-  //                            +--> TILE --+
+  // TILE -+-> makeContiguous --+--> BAG ---+--> mpi_call
+  //       |                                |
+  //       +--------------> TILE -----------+
 
   // TODO shared_future<Tile> as assumption, it requires changes for future<Tile>
   // clang-format off

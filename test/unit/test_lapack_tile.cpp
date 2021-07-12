@@ -286,7 +286,7 @@ TYPED_TEST(TileOperationsTestMC, Set0) {
         createTile<TypeParam>([](TileElementIndex idx) { return idx.row() + idx.col(); },
                               TileElementSize(m, n), lda);
 
-    auto res = [](const TileElementIndex& index) { return TypeUtilities<TypeParam>::element(0.0, 0.0); };
+    auto res = [](const TileElementIndex&) { return TypeUtilities<TypeParam>::element(0.0, 0.0); };
 
     tile::set0(tile);
     CHECK_TILE_EQ(res, tile);

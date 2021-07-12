@@ -32,23 +32,22 @@ namespace internal {
 
 template <class T>
 auto reduceRecvInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
-                       common::internal::ContiguousBufferHolder<T> bag, MPI_Request* req) {
-  auto msg = comm::make_message(bag.descriptor);
+                       common::internal::ContiguousBufferHolder<T> cont_buf, MPI_Request* req) {
+  auto msg = comm::make_message(cont_buf.descriptor);
   auto& comm = pcomm.ref();
 
   DLAF_MPI_CALL(MPI_Ireduce(MPI_IN_PLACE, msg.data(), msg.count(), msg.mpi_type(), reduce_op,
                             comm.rank(), comm, req));
-
-  return bag;
+  return cont_buf;
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(reduceRecvInPlace);
 
 template <class T>
 auto reduceSend(comm::IndexT_MPI rank_root, common::PromiseGuard<comm::Communicator> pcomm,
-                MPI_Op reduce_op, common::internal::ContiguousBufferHolder<const T> bag,
+                MPI_Op reduce_op, common::internal::ContiguousBufferHolder<const T> cont_buf,
                 matrix::Tile<const T, Device::CPU> const&, MPI_Request* req) {
-  auto msg = comm::make_message(bag.descriptor);
+  auto msg = comm::make_message(cont_buf.descriptor);
   auto& comm = pcomm.ref();
 
   DLAF_MPI_CALL(
@@ -72,25 +71,25 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
 
   // Note:
   //
-  // TILE ---> makeContiguous --+--> BAG ----> mpi_call ---> BAG --+
-  //                            |                                  |
-  //                            +-------------> TILE --------------+-> copyBack
+  // TILE ---> makeContiguous --+--> CONT_BUF ----> mpi_call ---> CONT_BUF --+
+  //                            |                                            |
+  //                            +-------------------> TILE ------------------+-> copyBack
 
   auto ex_copy = getHpExecutor<Backend::MC>();
 
-  hpx::future<common::internal::ContiguousBufferHolder<T>> bag;
+  hpx::future<common::internal::ContiguousBufferHolder<T>> cont_buf;
   {
     auto wrapped = getUnwrapRetValAndArgs(
         dataflow(ex_copy, unwrapExtendTiles(makeItContiguous_o), std::move(tile)));
 
-    bag = std::move(wrapped.first);
+    cont_buf = std::move(wrapped.first);
     tile = std::move(hpx::get<0>(wrapped.second));
   }
 
-  bag = dataflow(ex, unwrapping(internal::reduceRecvInPlace_o), std::move(pcomm), reduce_op,
-                 std::move(bag));
+  cont_buf = dataflow(ex, unwrapping(internal::reduceRecvInPlace_o), std::move(pcomm), reduce_op,
+                      std::move(cont_buf));
 
-  dataflow(ex_copy, unwrapping(copyBack_o), std::move(tile), std::move(bag));
+  dataflow(ex_copy, unwrapping(copyBack_o), std::move(tile), std::move(cont_buf));
 }
 
 template <class T>
@@ -105,18 +104,18 @@ void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
 
   // Note:
   //
-  // TILE -+-> makeContiguous --+--> BAG ---+--> mpi_call
-  //       |                                |
-  //       +--------------> TILE -----------+
+  // TILE -+-> makeContiguous --+--> CONT_BUF ---+--> mpi_call
+  //       |                                     |
+  //       +--------------> TILE ----------------+
 
   auto ex_copy = getHpExecutor<Backend::MC>();
 
   // TODO shared_future<Tile> as assumption, it requires changes for future<Tile>
-  hpx::future<common::internal::ContiguousBufferHolder<const T>> bag =
+  hpx::future<common::internal::ContiguousBufferHolder<const T>> cont_buf =
       dataflow(ex_copy, unwrapping(makeItContiguous_o), tile);
 
   dataflow(ex, unwrapExtendTiles(internal::reduceSend_o), rank_root, std::move(pcomm), reduce_op,
-           std::move(bag), tile);
+           std::move(cont_buf), tile);
 }
 }
 }

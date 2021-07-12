@@ -66,6 +66,14 @@ void scheduleAllReduce(const comm::Executor& ex,
                        hpx::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
                        hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_in,
                        hpx::future<matrix::Tile<T, Device::CPU>> tile_out) {
+  using hpx::dataflow;
+  using hpx::util::unwrapping;
+
+  using common::internal::ContiguousBufferHolder;
+  using common::internal::copyBack_o;
+  using common::internal::makeItContiguous_o;
+  using matrix::unwrapExtendTiles;
+
   // Note:
   //
   //         +---------------------------------+
@@ -76,41 +84,36 @@ void scheduleAllReduce(const comm::Executor& ex,
   //                              |                                      |
   //                              +----------------> TILE_O -------------+-> copyBack
 
-  hpx::future<common::internal::ContiguousBufferHolder<const T>> bag_in =
-      hpx::dataflow(hpx::util::unwrapping(common::internal::makeItContiguous_o), tile_in);
+  auto ex_copy = getHpExecutor<Backend::MC>();
 
-  hpx::future<common::internal::ContiguousBufferHolder<T>> bag_out;
+  hpx::future<ContiguousBufferHolder<const T>> bag_in =
+      dataflow(unwrapping(makeItContiguous_o), tile_in);
+
+  hpx::future<ContiguousBufferHolder<T>> bag_out;
   {
-    // clang-format off
     auto wrapped = getUnwrapRetValAndArgs(
-        hpx::dataflow(
-          dlaf::getHpExecutor<Backend::MC>(),
-          matrix::unwrapExtendTiles(common::internal::makeItContiguous_o),
-          std::move(tile_out)));
-    // clang-format on
+        dataflow(ex_copy, unwrapExtendTiles(makeItContiguous_o), std::move(tile_out)));
     bag_out = std::move(wrapped.first);
     tile_out = std::move(hpx::get<0>(wrapped.second));
   }
 
-  // clang-format off
-  bag_out = getUnwrapReturnValue(hpx::dataflow(
-      ex,
-      matrix::unwrapExtendTiles(internal::allReduce_o),
-      std::move(pcomm), reduce_op, std::move(bag_in), std::move(bag_out), tile_in));
-  // clang-format on
+  bag_out = getUnwrapReturnValue(dataflow(ex, unwrapExtendTiles(internal::allReduce_o), std::move(pcomm),
+                                          reduce_op, std::move(bag_in), std::move(bag_out), tile_in));
 
-  // clang-format off
-  hpx::dataflow(
-      dlaf::getHpExecutor<Backend::MC>(),
-      hpx::util::unwrapping(common::internal::copyBack_o),
-      std::move(tile_out), std::move(bag_out));
-  // clang-format on
+  hpx::dataflow(ex_copy, unwrapping(copyBack_o), std::move(tile_out), std::move(bag_out));
 }
 
 template <class T>
 hpx::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
     const comm::Executor& ex, hpx::future<common::PromiseGuard<comm::Communicator>> pcomm,
     MPI_Op reduce_op, hpx::future<matrix::Tile<T, Device::CPU>> tile) {
+  using hpx::dataflow;
+  using hpx::util::unwrapping;
+
+  using common::internal::copyBack_o;
+  using common::internal::makeItContiguous_o;
+  using matrix::unwrapExtendTiles;
+
   // Note:
   //
   // TILE ---> makeContiguous --+--> BAG ----> mpi_call ---> BAG --+
@@ -121,32 +124,20 @@ hpx::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
   // The last TILE after the copyBack is returned so that other task can be attached to it,
   // AFTER the asynchronous MPI_AllReduce has completed
 
+  auto ex_copy = getHpExecutor<Backend::MC>();
+
   hpx::future<common::internal::ContiguousBufferHolder<T>> bag;
   {
-    // clang-format off
     auto wrapped = getUnwrapRetValAndArgs(
-        hpx::dataflow(
-          dlaf::getHpExecutor<Backend::MC>(),
-          matrix::unwrapExtendTiles(common::internal::makeItContiguous_o),
-          std::move(tile)));
-    // clang-format on
+        dataflow(ex_copy, unwrapExtendTiles(makeItContiguous_o), std::move(tile)));
     bag = std::move(wrapped.first);
     tile = std::move(hpx::get<0>(wrapped.second));
   }
 
-  // clang-format off
-  bag = hpx::dataflow(
-      ex,
-      hpx::util::unwrapping(internal::allReduceInPlace_o),
-      std::move(pcomm), reduce_op, std::move(bag));
-  // clang-format on
+  bag = dataflow(ex, unwrapping(internal::allReduceInPlace_o), std::move(pcomm), reduce_op,
+                 std::move(bag));
 
-  // clang-format off
-  return hpx::dataflow(
-      dlaf::getHpExecutor<Backend::MC>(),
-      hpx::util::unwrapping(common::internal::copyBack_o),
-      std::move(tile), std::move(bag));
-  // clang-format on
+  return dataflow(ex_copy, unwrapping(copyBack_o), std::move(tile), std::move(bag));
 }
 }
 }

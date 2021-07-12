@@ -109,6 +109,7 @@ template <class T>
 dlaf::BaseType<T> lange(const lapack::Norm norm, const Tile<T, Device::CPU>& a) noexcept {
   return lapack::lange(norm, a.size().rows(), a.size().cols(), a.ptr(), a.ld());
 }
+
 /// Compute the value of the 1-norm, Frobenius norm, infinity-norm, or the largest absolute value of any
 /// element, of a triangular matrix.
 ///

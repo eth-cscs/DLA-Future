@@ -82,7 +82,7 @@ void is_orthogonal(const MatrixLocal<const T>& matrix) {
 }
 
 template <class T>
-std::tuple<dlaf::common::internal::vector<T>, MatrixLocal<T>> computeTauH(
+std::tuple<dlaf::common::internal::vector<T>, MatrixLocal<T>> computeHAndTFactor(
     const SizeType k, const MatrixLocal<const T>& v) {
   const SizeType m = v.size().rows();
   const TileElementSize block_size = v.blockSize();
@@ -137,8 +137,8 @@ std::tuple<dlaf::common::internal::vector<T>, MatrixLocal<T>> computeTauH(
 }
 
 template <class T>
-MatrixLocal<T> computeHres(const SizeType k, const Tile<const T, Device::CPU>& t,
-                           const MatrixLocal<const T>& v) {
+MatrixLocal<T> computeHFromTFactor(const SizeType k, const Tile<const T, Device::CPU>& t,
+                                   const MatrixLocal<const T>& v) {
   const SizeType m = v.size().rows();
   const TileElementSize block_size = v.blockSize();
 
@@ -239,7 +239,7 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
       }
     }
 
-    auto tmp = computeTauH(k, v);
+    auto tmp = computeHAndTFactor(k, v);
     hpx::shared_future<dlaf::common::internal::vector<TypeParam>> taus_input =
         hpx::make_ready_future<dlaf::common::internal::vector<TypeParam>>(std::move(std::get<0>(tmp)));
     auto h_expected = std::move(std::get<1>(tmp));
@@ -262,7 +262,7 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
     //
     // is computed and compared to the one previously obtained by applying reflectors sequentially
     const auto& t = t_output.read(t_idx).get();
-    MatrixLocal<TypeParam> h_result = computeHres(k, t, v);
+    MatrixLocal<TypeParam> h_result = computeHFromTFactor(k, t, v);
 
     is_orthogonal(h_result);
 
@@ -320,7 +320,7 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
         return v;
       }();
 
-      auto tmp = computeTauH(k, v);
+      auto tmp = computeHAndTFactor(k, v);
       hpx::shared_future<dlaf::common::internal::vector<TypeParam>> taus_input =
           hpx::make_ready_future<dlaf::common::internal::vector<TypeParam>>(std::move(std::get<0>(tmp)));
       auto h_expected = std::move(std::get<1>(tmp));
@@ -349,7 +349,7 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
       //
       // is computed and compared to the one previously obtained by applying reflectors sequentially
       const auto& t = t_output.read(t_idx).get();
-      MatrixLocal<TypeParam> h_result = computeHres(k, t, v);
+      MatrixLocal<TypeParam> h_result = computeHFromTFactor(k, t, v);
 
       is_orthogonal(h_result);
 

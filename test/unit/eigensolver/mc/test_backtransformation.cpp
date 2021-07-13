@@ -102,10 +102,10 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
       const auto& source_tile = mat_v.read(ij_tile).get();
       copy(source_tile, v.tile(ij_tile));
       if (ij_tile.row() <= ij_tile.col()) {
-          tile::set0<T>(v.tile(ij_tile));
-        }
+        tile::set0<T>(v.tile(ij_tile));
+      }
       else if (ij_tile.row() == ij_tile.col() + 1) {
-	  tile::laset<T>(lapack::MatrixType::Upper, 0.f, 1.f, v.tile(ij_tile));
+        tile::laset<T>(lapack::MatrixType::Upper, 0.f, 1.f, v.tile(ij_tile));
       }
     }
 
@@ -159,8 +159,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
 
     eigensolver::backTransformation<Backend::MC>(mat_c, mat_v, taus);
 
-    auto result = [& dist = mat_c.distribution(),
-                   &mat_local = c](const GlobalElementIndex& element) {
+    auto result = [& dist = mat_c.distribution(), &mat_local = c](const GlobalElementIndex& element) {
       const auto tile_index = dist.globalTileIndex(element);
       const auto tile_element = dist.tileElementIndex(element);
       return mat_local.tile_read(tile_index)(tile_element);

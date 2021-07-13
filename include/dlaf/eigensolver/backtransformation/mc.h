@@ -142,12 +142,10 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       // Setting VV
       auto setting_vv = unwrapping([=](auto&& tile) {
         if (i <= k) {
-          lapack::laset(lapack::MatrixType::General, tile.size().rows(), tile.size().cols(), 0, 0,
-                        tile.ptr(), tile.ld());
+          tile::set0<T>(tile);
         }
         else if (i == k + 1) {
-          lapack::laset(lapack::MatrixType::Upper, tile.size().rows(), tile.size().cols(), 0, 1,
-                        tile.ptr(), tile.ld());
+	  tile::laset<T>(lapack::MatrixType::Upper, 0.f, 1.f, tile);
         }
       });
       hpx::dataflow(executor_hp, setting_vv, mat_vv(LocalTileIndex(i, 0)));

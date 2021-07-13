@@ -167,7 +167,18 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       auto kk = LocalTileIndex{k, k};
       // WH = V T
       auto ik = LocalTileIndex{i, 0};
-      trmmPanel(executor_np, mat_t.read(kk), mat_w(ik));
+      auto tile_t = mat_t.read(kk);
+      auto tile_w = mat_w.read(ik);
+
+      if (tile_t.get().size().rows() != tile_w.get().size().cols()) {
+	std::cout << " k " << k << " t size " << tile_t.get().size() << " w " << tile_w.get().size() << std::endl;
+	TileElementIndex origin(0, 0);
+	TileElementSize size(tile_t.get().size().rows(), tile_t.get().size().cols());
+	auto subtile_w = splitTile(tile_w, {origin, size});
+	trmmPanel(executor_np, tile_t, subtile_w);
+      }
+      else
+	trmmPanel(executor_np, mat_t.read(kk), mat_w(ik));
     }
 
     for (SizeType j = 0; j < n; ++j) {

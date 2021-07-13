@@ -166,7 +166,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     auto taus_panel = taus[k];
     int taupan = (is_last) ? last_mb : mat_v.blockSize().cols();
     dlaf::factorization::internal::computeTFactor<Backend::MC>(taupan, mat_v, v_start, taus_panel,
-                                                               mat_t(LocalTileIndex{k, k}), serial_comm);
+                                                               mat_t(LocalTileIndex{k, k}));
 
     for (SizeType i = k + 1; i < m; ++i) {
       auto kk = LocalTileIndex{k, k};

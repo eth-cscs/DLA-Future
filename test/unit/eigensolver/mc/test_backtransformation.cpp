@@ -35,8 +35,8 @@ using namespace dlaf::test;
 using namespace testing;
 
 template <typename Type>
-class BackTransformationEigenSolverTest : public ::testing::Test {};
-TYPED_TEST_SUITE(BackTransformationEigenSolverTest, MatrixElementTypes);
+class BackTransformationEigenSolverTestMC : public ::testing::Test {};
+TYPED_TEST_SUITE(BackTransformationEigenSolverTestMC, MatrixElementTypes);
 
 GlobalElementSize globalTestSize(const LocalElementSize& size) {
   return {size.rows(), size.cols()};
@@ -164,7 +164,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
   }
 }
 
-TYPED_TEST(BackTransformationEigenSolverTest, CorrectnessLocal) {
+TYPED_TEST(BackTransformationEigenSolverTestMC, CorrectnessLocal) {
   SizeType m, n, mb, nb;
 
   for (auto sz : sizes) {

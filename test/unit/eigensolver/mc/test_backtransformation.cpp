@@ -14,24 +14,24 @@
 #include <tuple>
 #include "gtest/gtest.h"
 #include "dlaf/common/index2d.h"
-#include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_base.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
+#include "dlaf_test/matrix/matrix_local.h"
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/matrix/util_matrix_blas.h"
 #include "dlaf_test/matrix/util_matrix_local.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
-using namespace dlaf::comm;
 using namespace dlaf::common;
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::internal;
 using namespace dlaf::matrix::test;
 using namespace dlaf::test;
+using dlaf::matrix::test::MatrixLocal;
 using namespace testing;
 
 template <typename Type>
@@ -72,8 +72,6 @@ void getTau(std::complex<T>& tau, T dotprod, BaseType<T> tau_i) {
 
 template <class T>
 void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType nb) {
-  comm::CommunicatorGrid comm_grid(MPI_COMM_WORLD, 1, 1, common::Ordering::ColumnMajor);
-
   LocalElementSize sizeC(m, n);
   TileElementSize blockSizeC(mb, nb);
   Matrix<T, Device::CPU> mat_c(sizeC, blockSizeC);
@@ -91,10 +89,6 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
     tottaus = (m / mb - 1) * mb + m % mb;
 
   if (tottaus > 0) {
-    // Copy matrices locally
-    auto mat_c_loc = dlaf::matrix::test::allGather<T>(mat_c, comm_grid);
-    auto mat_v_loc = dlaf::matrix::test::allGather<T>(mat_v, comm_grid);
-
     // Impose orthogonality: Q = I - v tau v^H is orthogonal (Q Q^H = I)
     // leads to tau = [1 + sqrt(1 - vH v taui^2)]/(vH v) for real
     LocalElementSize sizeTau(m, 1);
@@ -102,11 +96,25 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
     Matrix<T, Device::CPU> mat_tau(sizeTau, blockSizeTau);
 
     // Reset diagonal and upper values of V
-    lapack::laset(lapack::MatrixType::General, std::min(m, mb), mat_v_loc.size().cols(), 0, 0,
-                  mat_v_loc.ptr(), mat_v_loc.ld());
-    if (m > mb) {
-      lapack::laset(lapack::MatrixType::Upper, mat_v_loc.size().rows() - mb, mat_v_loc.size().cols(), 0,
-                    1, mat_v_loc.ptr(GlobalElementIndex{mb, 0}), mat_v_loc.ld());
+    MatrixLocal<T> v({m, m}, blockSizeV);
+    for (const auto& ij_tile : iterate_range2d(v.nrTiles())) {
+      // copy only the panel
+      const auto& source_tile = mat_v.read(ij_tile).get();
+      copy(source_tile, v.tile(ij_tile));
+      if (ij_tile.row() <= ij_tile.col()) {
+          tile::set0<T>(v.tile(ij_tile));
+        }
+      else if (ij_tile.row() == ij_tile.col() + 1) {
+	  tile::laset<T>(lapack::MatrixType::Upper, 0.f, 1.f, v.tile(ij_tile));
+      }
+    }
+
+    // Create C local
+    MatrixLocal<T> c({m, n}, blockSizeC);
+    for (const auto& ij_tile : iterate_range2d(c.nrTiles())) {
+      // copy only the panel
+      const auto& source_tile = mat_c.read(ij_tile).get();
+      copy(source_tile, c.tile(ij_tile));
     }
 
     // TODO: creating a whole matrix, solves issues on the last tile when m%mb != 0 ==> find out how to
@@ -115,7 +123,6 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
     TileElementSize blockSizeT(mb, mb);
     Matrix<T, Device::CPU> mat_t(sizeT, blockSizeT);
     set_zero(mat_t);
-    auto mat_t_loc = dlaf::matrix::test::allGather<T>(mat_t, comm_grid);
 
     common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus;
 
@@ -129,7 +136,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
       dlaf::matrix::util::internal::getter_random<BaseType<T>> random_value(seed);
       for (SizeType t = 0; t < mb && nt < tottaus; ++t) {
         const GlobalElementIndex v_offset{i * mb + t, i * mb + t};
-        auto dotprod = blas::dot(m - t, mat_v_loc.ptr(v_offset), 1, mat_v_loc.ptr(v_offset), 1);
+        auto dotprod = blas::dot(m - t, v.ptr(v_offset), 1, v.ptr(v_offset), 1);
         BaseType<T> tau_i = 0;
         if (std::is_same<T, ComplexType<T>>::value) {
           tau_i = random_value();
@@ -146,14 +153,14 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
     for (SizeType i = tottaus - 1; i > -1; --i) {
       const GlobalElementIndex v_offset{i, i};
       auto tau = tausloc({i, 0});
-      lapack::larf(lapack::Side::Left, m - i, n, mat_v_loc.ptr(v_offset), 1, tau,
-                   mat_c_loc.ptr(GlobalElementIndex{i, 0}), mat_c_loc.ld());
+      lapack::larf(lapack::Side::Left, m - i, n, v.ptr(v_offset), 1, tau,
+                   c.ptr(GlobalElementIndex{i, 0}), c.ld());
     }
 
     eigensolver::backTransformation<Backend::MC>(mat_c, mat_v, taus);
 
     auto result = [& dist = mat_c.distribution(),
-                   &mat_local = mat_c_loc](const GlobalElementIndex& element) {
+                   &mat_local = c](const GlobalElementIndex& element) {
       const auto tile_index = dist.globalTileIndex(element);
       const auto tile_element = dist.tileElementIndex(element);
       return mat_local.tile_read(tile_index)(tile_element);

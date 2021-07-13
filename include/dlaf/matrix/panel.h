@@ -309,7 +309,8 @@ protected:
   /// Given a matrix index, compute the internal linear index
   SizeType linearIndex(const LocalTileIndex& index) const noexcept {
     const auto idx = index.get(CoordType);
-    DLAF_ASSERT_MODERATE(idx >= rangeStartLocal(), idx, rangeStartLocal());
+    DLAF_ASSERT_MODERATE(rangeStartLocal() <= idx && idx < rangeEndLocal(), idx, rangeStartLocal(),
+                         rangeEndLocal());
 
     return idx - bias_;
   }

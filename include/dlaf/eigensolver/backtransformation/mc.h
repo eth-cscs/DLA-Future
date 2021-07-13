@@ -101,9 +101,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   const SizeType ns = mat_v.size().cols();
 
   // Matrix T
-  comm::CommunicatorGrid comm_grid(MPI_COMM_WORLD, 1, 1, common::Ordering::ColumnMajor);
-  common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
-
   int tottaus;
   if (ms < mb || ms == 0 || nv == 0)
     tottaus = 0;

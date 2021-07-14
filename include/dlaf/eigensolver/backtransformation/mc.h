@@ -167,14 +167,17 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       auto kk = LocalTileIndex{k, k};
       // WH = V T
       auto ik = LocalTileIndex{i, 0};
-      auto tile_t = mat_t.read(kk);
-      auto tile_w = mat_w.read(ik);
-
-      if (tile_t.get().size().rows() != tile_w.get().size().cols()) {
-	std::cout << " k " << k << " t size " << tile_t.get().size() << " w " << tile_w.get().size() << std::endl;
+      hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_t = mat_t.read(kk);
+      auto tile_w = mat_w(ik);
+      //hpx::future<matrix::Tile<T, Device::CPU>> tile_w;
+      //copySingleTile(mat_w.read(ik), tile_w);
+      
+      if (mat_t.tileSize(GlobalTileIndex{k,k}).rows() != mat_w.tileSize(GlobalTileIndex{i,k}).cols()) {
+	//std::cout << " k " << k << " t size " << tile_t.get().size() << " w " << tile_w.get().size() << std::endl;
 	TileElementIndex origin(0, 0);
 	TileElementSize size(tile_t.get().size().rows(), tile_t.get().size().cols());
-	auto subtile_w = splitTile(tile_w, {origin, size});
+	const matrix::SubTileSpec spec({origin, size});
+	auto subtile_w = splitTile(tile_w, spec);
 	trmmPanel(executor_np, tile_t, subtile_w);
       }
       else

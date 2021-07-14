@@ -106,7 +106,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     tottaus = 0;
   else
     tottaus = (ms / mb - 1) * mb + ms % mb;
-
+  
   if (tottaus == 0)
     return;
 
@@ -157,31 +157,31 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     // Reset W2 to zero
     set_zero(mat_w2);
 
+    // TODO: instead of using a full matrix, choose a "column" matrix. The problem is that last tile should be square but may have different size.
     const GlobalTileIndex v_start{k + 1, k};
     auto taus_panel = taus[k];
     const SizeType taupan = (is_last) ? last_mb : mat_v.blockSize().cols();
     dlaf::factorization::internal::computeTFactor<Backend::MC>(taupan, mat_v, v_start, taus_panel,
                                                                mat_t(LocalTileIndex{k, k}));
 
+    
     for (SizeType i = k + 1; i < m; ++i) {
       auto kk = LocalTileIndex{k, k};
       // WH = V T
       auto ik = LocalTileIndex{i, 0};
       hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_t = mat_t.read(kk);
       auto tile_w = mat_w(ik);
-      //hpx::future<matrix::Tile<T, Device::CPU>> tile_w;
-      //copySingleTile(mat_w.read(ik), tile_w);
       
-      if (mat_t.tileSize(GlobalTileIndex{k,k}).rows() != mat_w.tileSize(GlobalTileIndex{i,k}).cols()) {
-	//std::cout << " k " << k << " t size " << tile_t.get().size() << " w " << tile_w.get().size() << std::endl;
+      if (mat_t.tileSize(GlobalTileIndex{k, k}).rows() != mat_w.tileSize(GlobalTileIndex{i, 0}).cols()) {
 	TileElementIndex origin(0, 0);
-	TileElementSize size(mat_t.tileSize(GlobalTileIndex{k,k}).rows(), mat_t.tileSize(GlobalTileIndex{k,k}).cols());
+	TileElementSize size(mat_t.tileSize(GlobalTileIndex{k, k}).rows(), mat_t.tileSize(GlobalTileIndex{k, k}).cols());
 	const matrix::SubTileSpec spec({origin, size});
 	auto subtile_w = splitTile(tile_w, spec);
-	trmmPanel(executor_np, tile_t, subtile_w);
+	trmmPanel(executor_np, tile_t, std::move(subtile_w));
       }
       else
-	trmmPanel(executor_np, mat_t.read(kk), mat_w(ik));
+	trmmPanel(executor_np, mat_t.read(kk), std::move(tile_w));
+
     }
 
     for (SizeType j = 0; j < n; ++j) {

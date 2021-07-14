@@ -600,6 +600,19 @@ auto getUnwrapReturnValue(hpx::future<hpx::tuple<R, hpx::tuple<Ts...>>>&& f) {
   return std::move(hpx::get<0>(split_f));
 }
 
+/// Access return value and arguments of the function wrapped by unwrapExtendTiles
+///
+/// This helper function works as the similar getUnwrapReturnValue, but instead of returning just
+/// the return value of the function, it returns also the tuple with all the parameters used in the
+/// call.
+template <class R, class... Ts>
+auto getUnwrapRetValAndArgs(hpx::future<hpx::tuple<R, hpx::tuple<Ts...>>>&& f) {
+  auto wrapped_res = hpx::split_future(std::move(f));
+  auto ret_value = std::move(hpx::get<0>(wrapped_res));
+  auto args = hpx::split_future(std::move(hpx::get<1>(wrapped_res)));
+  return std::make_pair(std::move(ret_value), std::move(args));
+}
+
 /// ---- ETI
 
 #define DLAF_TILE_ETI(KWORD, DATATYPE, DEVICE) \

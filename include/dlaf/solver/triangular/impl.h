@@ -14,7 +14,8 @@
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
-#include "dlaf/common/vector.h"
+#include "dlaf/common/round_robin.h"
+#include "dlaf/communication/broadcast_panel.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/executor.h"
@@ -23,6 +24,8 @@
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/matrix/panel.h"
+#include "dlaf/matrix/tile.h"
 #include "dlaf/solver/triangular/api.h"
 #include "dlaf/util_matrix.h"
 
@@ -30,7 +33,7 @@ namespace dlaf {
 namespace solver {
 namespace internal {
 
-namespace lln {
+namespace triangular_lln {
 template <class Executor, class T, Device D>
 void trsm_B_panel_tile(Executor&& ex, blas::Diag diag, T alpha,
                        hpx::shared_future<matrix::Tile<const T, D>> in_tile,
@@ -54,6 +57,7 @@ void gemm_trailing_matrix_tile(Executor&& ex, T beta,
 template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LLN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
                                               Matrix<T, device>& mat_b) {
+  using namespace triangular_lln;
   auto executor_hp = dlaf::getHpExecutor<backend>();
   auto executor_np = dlaf::getNpExecutor<backend>();
 
@@ -65,15 +69,15 @@ void Triangular<backend, device, T>::call_LLN(blas::Diag diag, T alpha, Matrix<c
       auto kj = LocalTileIndex{k, j};
 
       // Triangular solve of k-th row Panel of B
-      lln::trsm_B_panel_tile(executor_hp, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(kj));
+      trsm_B_panel_tile(executor_hp, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(kj));
 
       for (SizeType i = k + 1; i < m; ++i) {
         // Choose queue priority
         auto& trailing_executor = (i == k + 1) ? executor_hp : executor_np;
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        lln::gemm_trailing_matrix_tile(trailing_executor, beta, mat_a.read(LocalTileIndex{i, k}),
-                                       mat_b.read(kj), mat_b(LocalTileIndex{i, j}));
+        gemm_trailing_matrix_tile(trailing_executor, beta, mat_a.read(LocalTileIndex{i, k}),
+                                  mat_b.read(kj), mat_b(LocalTileIndex{i, j}));
       }
     }
   }
@@ -325,102 +329,98 @@ void Triangular<backend, device, T>::call_RUT(blas::Op op, blas::Diag diag, T al
 template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
-  using hpx::util::unwrapping;
-
-  using common::internal::vector;
-  using ConstTileType = typename Matrix<T, device>::ConstTileType;
+  using namespace triangular_lln;
 
   auto executor_hp = dlaf::getHpExecutor<backend>();
   auto executor_np = dlaf::getNpExecutor<backend>();
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
-  // Set up MPI
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
+  // Set up MPI executor pipelines
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
+  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
+
+  const comm::Index2D this_rank = grid.rank();
 
   const matrix::Distribution& distr_a = mat_a.distribution();
   const matrix::Distribution& distr_b = mat_b.distribution();
-  SizeType a_rows = mat_a.nrTiles().rows();
-  auto a_local_rows = distr_a.localNrTiles().rows();
+  auto a_rows = mat_a.nrTiles().rows();
+  auto local_rows = distr_a.localNrTiles().rows();
   auto b_local_cols = distr_b.localNrTiles().cols();
 
+  // If mat_b is empty return immediately
+  if (mat_b.size().isEmpty())
+    return;
+
+  constexpr std::size_t n_workspaces = 2;
+  common::RoundRobin<matrix::Panel<Coord::Col, T, device>> a_panels(n_workspaces, distr_a);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, device>> a_panels_T(n_workspaces, distr_a);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, device>> b_panels(n_workspaces, distr_b);
+
   for (SizeType k = 0; k < a_rows; ++k) {
-    // Create a placeholder that will store the shared futures representing the panel
-    vector<hpx::shared_future<ConstTileType>> panel(distr_b.localNrTiles().cols());
+    const GlobalTileIndex kk(k, k);
+    auto kk_rank = distr_a.rankGlobalTile(kk);
 
-    auto k_rank_row = distr_a.rankGlobalTile<Coord::Row>(k);
-    auto k_rank_col = distr_a.rankGlobalTile<Coord::Col>(k);
+    const LocalTileIndex kk_offset{
+        distr_a.nextLocalTileFromGlobalTile<Coord::Row>(k),
+        distr_a.nextLocalTileFromGlobalTile<Coord::Col>(k),
+    };
 
-    hpx::shared_future<ConstTileType> kk_tile;
+    const LocalTileIndex bt_offset{distr_b.nextLocalTileFromGlobalTile<Coord::Row>(k + 1), 0};
 
-    if (mat_a.rankIndex().row() == k_rank_row) {
-      auto k_local_row = distr_a.localTileFromGlobalTile<Coord::Row>(k);
+    auto& a_panel = a_panels.nextResource();
+    auto& b_panel = b_panels.nextResource();
+    a_panel.setRangeStart(kk);
+    if (k == a_rows - 1)
+      a_panel.setWidth(mat_a.tileSize(kk).rows());
+    b_panel.setHeight(mat_a.tileSize(kk).cols());
 
-      if (mat_a.rankIndex().col() == k_rank_col) {
-        // Broadcast A(kk) row-wise
-        auto k_local_col = distr_a.localTileFromGlobalTile<Coord::Col>(k);
-        auto kk = LocalTileIndex{k_local_row, k_local_col};
-        kk_tile = mat_a.read(kk);
-        comm::scheduleSendBcast(executor_mpi, kk_tile, mpi_row_task_chain());
-      }
-      else {
-        kk_tile =
-            comm::scheduleRecvBcastAlloc<T, device>(executor_mpi, mat_a.tileSize(GlobalTileIndex(k, k)),
-                                                    k_rank_col, mpi_row_task_chain());
+    if (kk_rank.col() == this_rank.col()) {
+      for (SizeType i_local = kk_offset.row(); i_local < local_rows; ++i_local) {
+        const LocalTileIndex ik_panel(Coord::Row, i_local);
+        const LocalTileIndex ik(i_local, kk_offset.col());
+
+        a_panel.setTile(ik_panel, mat_a.read(ik));
       }
     }
+    broadcast(executor_mpi, kk_rank.col(), a_panel, mpi_row_task_chain);
 
     for (SizeType j_local = 0; j_local < b_local_cols; ++j_local) {
-      auto j = distr_b.globalTileFromLocalTile<Coord::Col>(j_local);
-
       // Triangular solve B's k-th row panel and broadcast B(kj) column-wise
-      if (mat_b.rankIndex().row() == k_rank_row) {
+      if (kk_rank.row() == this_rank.row()) {
         auto k_local_row = distr_b.localTileFromGlobalTile<Coord::Row>(k);
-        auto kj = LocalTileIndex{k_local_row, j_local};
-        lln::trsm_B_panel_tile(executor_hp, diag, alpha, kk_tile, mat_b(kj));
-        panel[j_local] = mat_b.read(kj);
-        if (k != (mat_b.nrTiles().rows() - 1)) {
-          comm::scheduleSendBcast(executor_mpi, panel[j_local], mpi_col_task_chain());
-        }
-      }
-      else {
-        if (k != (mat_b.nrTiles().rows() - 1)) {
-          panel[j_local] = comm::scheduleRecvBcastAlloc<T, device>(executor_mpi,
-                                                                   mat_b.tileSize(GlobalTileIndex(k, j)),
-                                                                   k_rank_row, mpi_col_task_chain());
-        }
+        const LocalTileIndex kk_panel(Coord::Row, k_local_row);
+        const LocalTileIndex kj(k_local_row, j_local);
+        const LocalTileIndex kj_panel(Coord::Col, j_local);
+
+        trsm_B_panel_tile(executor_hp, diag, alpha, a_panel.read(kk_panel), mat_b(kj));
+        b_panel.setTile(kj_panel, mat_b.read(kj));
       }
     }
+    // Nothing else to do if the trailing matrix is empty.
+    if (k == a_rows - 1)
+      continue;
 
-    for (SizeType i_local = distr_a.nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
-         i_local < a_local_rows; ++i_local) {
-      auto i = distr_a.globalTileFromLocalTile<Coord::Row>(i_local);
+    broadcast(executor_mpi, kk_rank.row(), b_panel, mpi_col_task_chain);
 
+    for (SizeType i_local = bt_offset.row(); i_local < local_rows; ++i_local) {
       // Choose queue priority
+      auto i = distr_a.globalTileFromLocalTile<Coord::Row>(i_local);
       auto& trailing_executor = (i == k + 1) ? executor_hp : executor_np;
 
-      hpx::shared_future<ConstTileType> ik_tile;
-
-      // Broadcast A(ik) row-wise
-      if (mat_a.rankIndex().col() == k_rank_col) {
-        auto k_local_col = distr_a.localTileFromGlobalTile<Coord::Col>(k);
-        auto ik = LocalTileIndex{i_local, k_local_col};
-        ik_tile = mat_a.read(ik);
-        comm::scheduleSendBcast(executor_mpi, ik_tile, mpi_row_task_chain());
-      }
-      else {
-        ik_tile =
-            comm::scheduleRecvBcastAlloc<T, device>(executor_mpi, mat_a.tileSize(GlobalTileIndex(i, k)),
-                                                    k_rank_col, mpi_row_task_chain());
-      }
+      const LocalTileIndex ik_panel(Coord::Row, i_local);
 
       // Update trailing matrix
       for (SizeType j_local = 0; j_local < b_local_cols; ++j_local) {
-        T beta = T(-1.0) / alpha;
-        lln::gemm_trailing_matrix_tile(trailing_executor, beta, ik_tile, panel[j_local],
-                                       mat_b(LocalTileIndex{i_local, j_local}));
+        const LocalTileIndex kj_panel(Coord::Col, j_local);
+        const LocalTileIndex ij(i_local, j_local);
+        const T beta = T(-1.0) / alpha;
+
+        gemm_trailing_matrix_tile(trailing_executor, beta, a_panel.read(ik_panel),
+                                  b_panel.read(kj_panel), mat_b(ij));
       }
     }
+    a_panel.reset();
+    b_panel.reset();
   }
 }
 

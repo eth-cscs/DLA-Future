@@ -157,6 +157,18 @@ private:
     return size.rows() + ld * (size.cols() - 1);
   }
 
+  static memory::MemoryView<T, device> createMemoryViewForSubtile(const Tile<const T, device>& tile,
+                                                                  const SubTileSpec& spec) {
+    DLAF_ASSERT(spec.origin.isValid(), spec.origin);
+    DLAF_ASSERT(spec.origin.isInOrOn(tile.size()), spec.origin, tile.size());
+    DLAF_ASSERT(spec.size.isValid(), spec.size);
+    DLAF_ASSERT((spec.origin + spec.size).isInOrOn(tile.size_), spec.origin, spec.size, tile.size_);
+
+    return memory::MemoryView<T, device>(tile.memory_view_,
+                                         spec.size.isEmpty() ? 0 : tile.linearIndex(spec.origin),
+                                         tile.linearSize(spec.size, tile.ld()));
+  };
+
   // Creates an untracked subtile.
   // Dependencies are not influenced by the new created object therefore race-conditions
   // might happen if used improperly.
@@ -222,17 +234,7 @@ Tile<const T, device>& Tile<const T, device>::operator=(Tile<const T, device>&& 
 
 template <class T, Device device>
 Tile<const T, device>::Tile(const Tile<const T, device>& tile, const SubTileSpec& spec) noexcept
-    : Tile<const T, device>(  //
-          spec.size,
-          memory::MemoryView<T, device>(tile.memory_view_,
-                                        spec.size.isEmpty() ? 0 : tile.linearIndex(spec.origin),
-                                        tile.linearSize(spec.size, tile.ld())),
-          tile.ld()) {
-  DLAF_ASSERT(spec.origin.isValid(), spec.origin);
-  DLAF_ASSERT(spec.origin.isInOrOn(tile.size()), spec.origin, tile.size());
-  DLAF_ASSERT(spec.size.isValid(), spec.size);
-  DLAF_ASSERT((spec.origin + spec.size).isInOrOn(tile.size_), spec.origin, spec.size, tile.size_);
-}
+    : Tile<const T, device>(spec.size, Tile::createMemoryViewForSubtile(tile, spec), tile.ld()) {}
 
 template <class T, Device device>
 class Tile : public Tile<const T, device> {

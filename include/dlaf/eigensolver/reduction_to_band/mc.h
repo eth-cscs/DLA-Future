@@ -299,8 +299,8 @@ void setupReflectorPanelV(comm::IndexT_MPI rank_v0, const LocalTileSize& ai_offs
   // computations, they should be well-formed, i.e. a unit lower trapezoidal matrix. For this reason,
   // a support tile is used, where just the reflectors values are copied, the diagonal is set to 1
   // and the rest is zeroed out.
-  auto it_begin = v.iterator().begin();
-  auto it_end = v.iterator().end();
+  auto it_begin = v.iteratorLocal().begin();
+  auto it_end = v.iteratorLocal().end();
 
   if (rank_v0 == rank) {
     auto setupV0 = hpx::unwrapping([](auto&& tile_v, const auto& tile_a) {
@@ -359,7 +359,7 @@ void trmmComputeW(PanelT<Coord::Col, T>& w, MatrixLikeT& v, FutureConstTile<T> t
     // clang-format on
   });
 
-  for (const auto& index_tile_w : w.iterator()) {
+  for (const auto& index_tile_w : w.iteratorLocal()) {
     // clang-format off
     FutureTile<T>      tile_w = w(index_tile_w);
     FutureConstTile<T> tile_v = v.read(index_tile_w);
@@ -465,7 +465,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
   // panel Xt col-wise, by collecting all Xt results on the rank which can "mirror" the result on its
   // rows (i.e. diagonal). So, for each tile of the row panel, select who is the "diagonal" rank that can
   // mirror and reduce on it.
-  for (const auto& index_xt : xt.iterator()) {
+  for (const auto& index_xt : xt.iteratorLocal()) {
     const auto index_k = dist.template globalTileFromLocalTile<Coord::Col>(index_xt.col());
     const auto rank_owner_row = dist.template rankGlobalTile<Coord::Row>(index_k);
 
@@ -486,7 +486,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
   // At this point partial results are all collected in X (Xt has been embedded in previous step),
   // so the last step needed is to reduce these last partial results in the final results.
   // The result is needed just on the column with reflectors.
-  for (const auto& index_x_loc : x.iterator()) {
+  for (const auto& index_x_loc : x.iteratorLocal()) {
     if (reducer_col == rank.col())
       comm::scheduleReduceRecvInPlace(ex_mpi, mpi_row_chain(), MPI_SUM, x(index_x_loc));
     else
@@ -509,7 +509,7 @@ void gemmComputeW2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Co
   dlaf::matrix::util::set(w2, [](...) { return 0; });
 
   // GEMM W2 = W* . X
-  for (const auto& index_tile : w.iterator()) {
+  for (const auto& index_tile : w.iteratorLocal()) {
     const T beta = (index_tile.row() == 0) ? 0 : 1;
 
     // clang-format off
@@ -534,7 +534,7 @@ void gemmUpdateX(PanelT<Coord::Col, T>& x, ConstMatrixT<T>& w2, MatrixLikeT& v) 
   const auto ex = dlaf::getHpExecutor<Backend::MC>();
 
   // GEMM X = X - 0.5 . V . W2
-  for (const auto& index_row : v.iterator()) {
+  for (const auto& index_row : v.iteratorLocal()) {
     // clang-format off
     FutureTile<T>       tile_x  = x(index_row);
     FutureConstTile<T>  tile_v  = v.read(index_row);
@@ -682,12 +682,12 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
     PanelT<Coord::Col, T>& x = panels_x.nextResource();
     PanelT<Coord::Row, T>& xt = panels_xt.nextResource();
 
-    v.setRangeStart(at_offset);
-    vt.setRangeStart(at_offset);
-    w.setRangeStart(at_offset);
-    wt.setRangeStart(at_offset);
-    x.setRangeStart(at_offset);
-    xt.setRangeStart(at_offset);
+    v.setRangeStart(at_start);
+    vt.setRangeStart(at_start);
+    w.setRangeStart(at_start);
+    wt.setRangeStart(at_start);
+    x.setRangeStart(at_start);
+    xt.setRangeStart(at_start);
 
     const LocalTileIndex t_idx(0, 0);
     // TODO used just by the column, maybe we can re-use a panel tile?

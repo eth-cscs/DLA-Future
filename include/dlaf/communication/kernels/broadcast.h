@@ -90,9 +90,8 @@ struct scheduleRecvBcastImpl {
         hpx::dataflow(hpx::launch::sync,
                       hpx::unwrapping([](matrix::Tile<T, D> const& tile) { return tile.size(); }),
                       tile_shared);
-    auto comm_tile =
-        hpx::dataflow(ex, hpx::unwrapping(recvBcastAlloc<T, CommunicationDevice<D>::value>),
-                      tile_size, root_rank, std::move(pcomm));
+    auto comm_tile = hpx::dataflow(ex, hpx::unwrapping(recvBcastAlloc<T, CommunicationDevice<D>::value>),
+                                   tile_size, root_rank, std::move(pcomm));
     hpx::dataflow(dlaf::getCopyExecutor<CommunicationDevice<D>::value, D>(),
                   matrix::unwrapExtendTiles(matrix::copy_o), std::move(comm_tile),
                   std::move(tile_shared));
@@ -124,8 +123,8 @@ hpx::future<matrix::Tile<const T, D>> scheduleRecvBcastAlloc(
     const comm::Executor& ex, TileElementSize tile_size, comm::IndexT_MPI root_rank,
     hpx::future<common::PromiseGuard<comm::Communicator>> pcomm) {
   return internal::handleRecvTile<D>(
-      hpx::dataflow(ex, hpx::unwrapping(recvBcastAlloc<T, CommunicationDevice<D>::value>),
-                    tile_size, root_rank, std::move(pcomm)));
+      hpx::dataflow(ex, hpx::unwrapping(recvBcastAlloc<T, CommunicationDevice<D>::value>), tile_size,
+                    root_rank, std::move(pcomm)));
 }
 }
 }

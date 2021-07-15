@@ -184,8 +184,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
 template <class T>
 void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeType n, SizeType mb,
                                   SizeType nb) {
-  // comm::Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
-  comm::Index2D src_rank_index(0, 0);
+   comm::Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
 
   LocalElementSize sizeC(m, n);
   TileElementSize blockSizeC(mb, nb);
@@ -229,13 +228,6 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
         tile::laset<T>(lapack::MatrixType::Upper, 0.f, 1.f, mat_v_loc.tile(ij_tile));
       }
     }
-
-	//lapack::laset(lapack::MatrixType::General, std::min(m, mb), mat_v_loc.size().cols(), 0, 0,
-//                  mat_v_loc.ptr(), mat_v_loc.ld());
-//    if (m > mb) {
-//      lapack::laset(lapack::MatrixType::Upper, mat_v_loc.size().rows() - mb, mat_v_loc.size().cols(), 0,
-//                    1, mat_v_loc.ptr(GlobalElementIndex{mb, 0}), mat_v_loc.ld());
-//    }
 
     // TODO: creating a whole matrix, solves issues on the last tile when m%mb != 0 ==> find out how to
     // use only a panel
@@ -303,16 +295,6 @@ TYPED_TEST(BackTransformationEigenSolverTestMC, CorrectnessLocal) {
     testBacktransformationEigenv<TypeParam>(m, n, mb, nb);
   }
 }
-
-//// Not working on a 6 procs grid
-// TYPED_TEST(BackTransformationEigenSolverTest, CorrectnessLocal) {
-//  SizeType m, n, mb, nb;
-//
-//  for (auto sz : sizes) {
-//    std::tie(m, n, mb, nb) = sz;
-//    testBacktransformationEigenv<TypeParam>(m, n, mb, nb);
-//  }
-//}
 
 TYPED_TEST(BackTransformationEigenSolverTestMC, CorrectnessDistributed) {
   SizeType m, n, mb, nb;

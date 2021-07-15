@@ -412,7 +412,10 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         auto ij = LocalTileIndex(i_local, j_local);
 
         if (this_rank.row() == i_c_rank_row && this_rank.col() == j_c_rank_col) {
-          panelW.setWidth(mat_v.tileSize(GlobalTileIndex{k, k}).cols());
+          if (mat_t.tileSize(GlobalTileIndex{k, k}).rows() !=
+              mat_v.tileSize(GlobalTileIndex{i, k}).cols()) {
+            panelW.setWidth(mat_v.tileSize(GlobalTileIndex{k, k}).cols());
+          }
           gemmUpdateW2(executor_np, panelW(ik), mat_c.read(ij), std::move(panelW2(kj)));
         }
 

@@ -53,7 +53,7 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
                matrix::Panel<axis, T, device>& panel,
                common::Pipeline<comm::Communicator>& serial_comm) {
   using hpx::dataflow;
-  using hpx::util::unwrapping;
+  using hpx::unwrapping;
 
   constexpr auto comm_coord = axis;
 
@@ -106,7 +106,7 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
                common::Pipeline<comm::Communicator>& row_task_chain,
                common::Pipeline<comm::Communicator>& col_task_chain) {
   using hpx::dataflow;
-  using hpx::util::unwrapping;
+  using hpx::unwrapping;
 
   constexpr Coord axisT = orthogonal(axis);
 

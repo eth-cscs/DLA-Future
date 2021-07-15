@@ -9,9 +9,9 @@
 //
 #pragma once
 
-#include <hpx/execution.hpp>
 #include <hpx/include/resource_partitioner.hpp>
-#include <hpx/thread.hpp>
+#include <hpx/local/execution.hpp>
+#include <hpx/local/thread.hpp>
 
 #ifdef DLAF_WITH_CUDA
 #include <hpx/modules/async_cuda.hpp>

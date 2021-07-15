@@ -14,6 +14,7 @@
 
 #include <gtest/gtest.h>
 #include <hpx/local/future.hpp>
+#include <hpx/local/unwrap.hpp>
 
 #include "dlaf/matrix/index.h"
 #include "dlaf/memory/memory_view.h"
@@ -363,7 +364,7 @@ auto createTileChain() {
 
   hpx::future<Tile<T, D>> tile_f =
       tmp_tile_f.then(hpx::launch::sync,
-                      hpx::util::unwrapping([p = std::move(next_tile_p)](auto tile) mutable {
+                      hpx::unwrapping([p = std::move(next_tile_p)](auto tile) mutable {
                         tile.setPromise(std::move(p));
                         return Tile<T, D>(std::move(tile));
                       }));

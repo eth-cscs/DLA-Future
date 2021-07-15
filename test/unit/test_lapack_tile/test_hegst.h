@@ -43,7 +43,7 @@ void testHegst(const int itype, const blas::Uplo uplo, const SizeType m, const S
   auto a = createTile<T, D>(el_a, size, lda);
   auto t = createTile<T, D>(el_t, size, ldb);
 
-  invokeLapack<D>(tile::hegst_o, itype, uplo, a, t);
+  invokeLapack<D>(tile::internal::hegst_o, itype, uplo, a, t);
 
   std::stringstream s;
   s << "HEGST: itype = " << itype << ", uplo = " << uplo;

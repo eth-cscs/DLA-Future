@@ -12,8 +12,11 @@
 #include <iostream>
 
 #include <mpi.h>
-#include <hpx/include/resource_partitioner.hpp>
 #include <hpx/init.hpp>
+#include <hpx/local/future.hpp>
+#include <hpx/local/runtime.hpp>
+#include <hpx/local/unwrap.hpp>
+#include <hpx/program_options.hpp>
 
 #include "dlaf/auxiliary/norm.h"
 #include "dlaf/blas/tile.h"
@@ -34,7 +37,7 @@
 
 namespace {
 
-using hpx::util::unwrapping;
+using hpx::unwrapping;
 
 using dlaf::Device;
 using dlaf::Coord;
@@ -243,12 +246,6 @@ void cholesky_diff(HostMatrixType& A, HostMatrixType& L, CommunicatorGrid comm_g
   using dlaf::common::make_data;
 
   // compute tile * tile_to_transpose' with the option to cumulate the result
-  auto gemm_f =
-      unwrapping([](auto&& tile, auto&& tile_to_transpose, auto&& result, const bool accumulate_result) {
-        dlaf::tile::gemm<T>(blas::Op::NoTrans, blas::Op::ConjTrans, 1.0, tile, tile_to_transpose,
-                            accumulate_result ? 0.0 : 1.0, result);
-      });
-
   // compute a = abs(a - b)
   auto tile_abs_diff = unwrapping([](auto&& a, auto&& b) {
     for (const auto el_idx : dlaf::common::iterate_range2d(a.size()))
@@ -321,8 +318,13 @@ void cholesky_diff(HostMatrixType& A, HostMatrixType& L, CommunicatorGrid comm_g
       for (; i_loc < distribution.localNrTiles().rows(); ++i_loc) {
         const LocalTileIndex tile_wrt_local{i_loc, j_loc};
 
-        hpx::dataflow(gemm_f, L.read(tile_wrt_local), tile_to_transpose,
-                      partial_result(LocalTileIndex{i_loc, 0}), j_loc == 0);
+        dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, 1.0,
+                                    L.read_sender(tile_wrt_local),
+                                    hpx::execution::experimental::keep_future(tile_to_transpose),
+                                    j_loc == 0 ? 0.0 : 1.0,
+                                    partial_result.readwrite_sender(LocalTileIndex{i_loc, 0})) |
+            dlaf::tile::gemm(dlaf::internal::Policy<dlaf::Backend::MC>()) |
+            hpx::execution::experimental::detach();
       }
     }
 

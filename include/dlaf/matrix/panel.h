@@ -9,6 +9,9 @@
 //
 #pragma once
 
+#include <hpx/local/future.hpp>
+#include <hpx/local/unwrap.hpp>
+
 #include "dlaf/common/assert.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
@@ -86,7 +89,7 @@ struct Panel<axis, const T, D> {
 #if defined DLAF_ASSERT_MODERATE_ENABLE
     {
       const auto panel_tile_size = tileSize(index);
-      new_tile_fut.then(hpx::launch::sync, hpx::util::unwrapping([panel_tile_size](const auto& tile) {
+      new_tile_fut.then(hpx::launch::sync, hpx::unwrapping([panel_tile_size](const auto& tile) {
                           DLAF_ASSERT_MODERATE(panel_tile_size == tile.size(), panel_tile_size,
                                                tile.size());
                         }));
@@ -117,6 +120,10 @@ struct Panel<axis, const T, D> {
       else
         return splitTile(tile, {{0, 0}, tileSize(index)});
     }
+  }
+
+  auto read_sender(const LocalTileIndex& index) {
+    return hpx::execution::experimental::keep_future(read(index));
   }
 
   /// Set the panel to enable access to the range of tiles [start, end)
@@ -380,11 +387,14 @@ struct Panel : public Panel<axis, const T, device> {
       return splitTile(tile, {{0, 0}, tileSize(index)});
   }
 
+  auto readwrite_sender(const LocalTileIndex& index) {
+    return hpx::execution::experimental::keep_future(this->operator()(index));
+  }
+
 protected:
   using BaseT = Panel<axis, const T, device>;
   using BaseT::dim_;
   using BaseT::tileSize;
 };
-
 }
 }

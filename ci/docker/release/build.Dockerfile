@@ -13,7 +13,7 @@ ENV FORCE_UNSAFE_CONFIGURE 1
 RUN apt-get update -qq && apt-get install -qq --no-install-recommends \
     software-properties-common \
     build-essential \
-    git tar wget curl gpg-agent jq tzdata && \
+    git tar wget curl gpg-agent jq tzdata libasio-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # Install cmake
@@ -80,7 +80,7 @@ RUN wget -q https://github.com/gperftools/gperftools/releases/download/gperftool
 
 # Install HPX
 ARG HPX_FORK=STEllAR-GROUP
-ARG HPX_VERSION=1.6.0
+ARG HPX_VERSION=1.7.0
 ARG HPX_WITH_CUDA=OFF
 ARG HPX_PATH=/usr/local/hpx
 RUN wget -q https://github.com/${HPX_FORK}/hpx/archive/${HPX_VERSION}.tar.gz -O hpx.tar.gz && \
@@ -94,6 +94,7 @@ RUN wget -q https://github.com/${HPX_FORK}/hpx/archive/${HPX_VERSION}.tar.gz -O 
       -DTCMALLOC_ROOT=$GPERFTOOLS_PATH \
       -DCMAKE_BUILD_TYPE=RelWithDebInfo \
       -DCMAKE_INSTALL_PREFIX=$HPX_PATH \
+      -DHPX_WITH_CXX17=On \
       -DHPX_WITH_MAX_CPU_COUNT=128 \
       -DHPX_WITH_NETWORKING=OFF \
       -DHPX_WITH_ASYNC_MPI=ON \

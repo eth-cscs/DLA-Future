@@ -39,8 +39,38 @@ namespace eigensolver {
 namespace internal {
 
 template <class T>
-void set_zero(Matrix<T, Device::CPU>& mat) {
+void set0(Matrix<T, Device::CPU>& mat) {
   dlaf::matrix::util::set(mat, [](auto&&) { return static_cast<T>(0.0); });
+}
+
+template <Device device, class T>
+void copySingleTile(hpx::shared_future<matrix::Tile<const T, device>> in,
+                    hpx::future<matrix::Tile<T, device>> out) {
+  hpx::dataflow(dlaf::getCopyExecutor<Device::CPU, Device::CPU>(),
+                matrix::unwrapExtendTiles(matrix::copy_o), in, out);
+}
+
+template <class Executor, Device device, class T>
+void trmmPanel(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> t,
+               hpx::future<matrix::Tile<T, device>> w) {
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::trmm_o), blas::Side::Right, blas::Uplo::Upper,
+                blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), t, w);
+}
+
+template <class Executor, Device device, class T>
+void gemmUpdateW2(Executor&& ex, hpx::future<matrix::Tile<T, device>> w,
+                  hpx::shared_future<matrix::Tile<const T, device>> c,
+                  hpx::future<matrix::Tile<T, device>> w2) {
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans,
+                T(1.0), w, c, T(1.0), std::move(w2));
+}
+
+template <class Executor, Device device, class T>
+void gemmTrailingMatrix(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> v,
+                        hpx::shared_future<matrix::Tile<const T, device>> w2,
+                        hpx::future<matrix::Tile<T, device>> c) {
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::NoTrans,
+                T(-1.0), v, w2, T(1.0), std::move(c));
 }
 
 // Implementation based on:
@@ -63,14 +93,6 @@ template <class T>
 void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     Matrix<T, Device::CPU>& mat_c, Matrix<const T, Device::CPU>& mat_v,
     common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
-  constexpr auto Left = blas::Side::Left;
-  constexpr auto Right = blas::Side::Right;
-  constexpr auto Upper = blas::Uplo::Upper;
-  constexpr auto Lower = blas::Uplo::Lower;
-  constexpr auto NoTrans = blas::Op::NoTrans;
-  constexpr auto ConjTrans = blas::Op::ConjTrans;
-  constexpr auto NonUnit = blas::Diag::NonUnit;
-
   using hpx::util::unwrapping;
 
   auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
@@ -86,9 +108,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   const SizeType ns = mat_v.size().cols();
 
   // Matrix T
-  comm::CommunicatorGrid comm_grid(MPI_COMM_WORLD, 1, 1, common::Ordering::ColumnMajor);
-  common::Pipeline<comm::CommunicatorGrid> serial_comm(comm_grid);
-
   int tottaus;
   if (ms < mb || ms == 0 || nv == 0)
     tottaus = 0;
@@ -125,44 +144,51 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
     for (SizeType i = k + 1; i < mat_v.nrTiles().rows(); ++i) {
       // Copy V panel into VV
-      hpx::dataflow(dlaf::getCopyExecutor<Device::CPU, Device::CPU>(),
-                    matrix::unwrapExtendTiles(dlaf::matrix::copy_o), mat_v.read(LocalTileIndex(i, k)),
-                    mat_vv(LocalTileIndex(i, 0)));
+      copySingleTile(mat_v.read(LocalTileIndex(i, k)), mat_vv(LocalTileIndex(i, 0)));
 
       // Setting VV
       auto setting_vv = unwrapping([=](auto&& tile) {
         if (i <= k) {
-          lapack::laset(lapack::MatrixType::General, tile.size().rows(), tile.size().cols(), 0, 0,
-                        tile.ptr(), tile.ld());
+          tile::set0<T>(tile);
         }
         else if (i == k + 1) {
-          lapack::laset(lapack::MatrixType::Upper, tile.size().rows(), tile.size().cols(), 0, 1,
-                        tile.ptr(), tile.ld());
+          tile::laset<T>(lapack::MatrixType::Upper, 0.f, 1.f, tile);
         }
       });
       hpx::dataflow(executor_hp, setting_vv, mat_vv(LocalTileIndex(i, 0)));
 
       // Copy VV into W
-      hpx::dataflow(dlaf::getCopyExecutor<Device::CPU, Device::CPU>(),
-                    matrix::unwrapExtendTiles(matrix::copy_o), mat_vv.read(LocalTileIndex(i, 0)),
-                    mat_w(LocalTileIndex(i, 0)));
+      copySingleTile(mat_vv.read(LocalTileIndex(i, 0)), mat_w(LocalTileIndex(i, 0)));
     }
 
     // Reset W2 to zero
-    set_zero(mat_w2);
+    set0(mat_w2);
 
+    // TODO: instead of using a full matrix, choose a "column" matrix. The problem is that last tile
+    // should be square but may have different size.
     const GlobalTileIndex v_start{k + 1, k};
     auto taus_panel = taus[k];
-    int taupan = (is_last) ? last_mb : mat_v.blockSize().cols();
+    const SizeType taupan = (is_last) ? last_mb : mat_v.blockSize().cols();
     dlaf::factorization::internal::computeTFactor<Backend::MC>(taupan, mat_v, v_start, taus_panel,
-                                                               mat_t(LocalTileIndex{k, k}), serial_comm);
+                                                               mat_t(LocalTileIndex{k, k}));
 
     for (SizeType i = k + 1; i < m; ++i) {
       auto kk = LocalTileIndex{k, k};
       // WH = V T
       auto ik = LocalTileIndex{i, 0};
-      hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::trmm_o), Right, Upper, ConjTrans,
-                    NonUnit, T(1.0), mat_t.read(kk), std::move(mat_w(ik)));
+      hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_t = mat_t.read(kk);
+      auto tile_w = mat_w(ik);
+
+      if (mat_t.tileSize(GlobalTileIndex{k, k}).rows() != mat_w.tileSize(GlobalTileIndex{i, 0}).cols()) {
+        TileElementIndex origin(0, 0);
+        TileElementSize size(mat_t.tileSize(GlobalTileIndex{k, k}).rows(),
+                             mat_t.tileSize(GlobalTileIndex{k, k}).cols());
+        const matrix::SubTileSpec spec({origin, size});
+        auto subtile_w = splitTile(tile_w, spec);
+        trmmPanel(executor_np, tile_t, std::move(subtile_w));
+      }
+      else
+        trmmPanel(executor_np, mat_t.read(kk), std::move(tile_w));
     }
 
     for (SizeType j = 0; j < n; ++j) {
@@ -171,8 +197,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         auto ik = LocalTileIndex{i, 0};
         auto ij = LocalTileIndex{i, j};
         // W2 = W C
-        hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::gemm_o), ConjTrans, NoTrans, T(1.0),
-                      mat_w.read(ik), mat_c.read(ij), T(1.0), std::move(mat_w2(kj)));
+        gemmUpdateW2(executor_np, mat_w(ik), mat_c.read(ij), mat_w2(kj));
       }
     }
 
@@ -182,8 +207,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         auto kj = LocalTileIndex{0, j};
         auto ij = LocalTileIndex{i, j};
         // C = C - V W2
-        hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::gemm_o), NoTrans, NoTrans, T(-1.0),
-                      mat_vv.read(ik), mat_w2.read(kj), T(1.0), std::move(mat_c(ij)));
+        gemmTrailingMatrix(executor_np, mat_vv.read(ik), mat_w2.read(kj), mat_c(ij));
       }
     }
   }
@@ -193,14 +217,6 @@ template <class T>
 void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_c, Matrix<const T, Device::CPU>& mat_v,
     common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
-  constexpr auto Left = blas::Side::Left;
-  constexpr auto Right = blas::Side::Right;
-  constexpr auto Upper = blas::Uplo::Upper;
-  constexpr auto Lower = blas::Uplo::Lower;
-  constexpr auto NoTrans = blas::Op::NoTrans;
-  constexpr auto ConjTrans = blas::Op::ConjTrans;
-  constexpr auto NonUnit = blas::Diag::NonUnit;
-
   using hpx::util::unwrapping;
 
   using hpx::execution::parallel_executor;
@@ -256,7 +272,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
                                                                         mat_t.distribution());
 
   SizeType last_mb;
-
   if (mat_v.blockSize().cols() == 1) {
     last_mb = 1;
   }
@@ -281,15 +296,15 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     auto& panelW2 = panelsW2.nextResource();
     auto& panelT = panelsT.nextResource();
 
-    const LocalTileSize kkv_offset{
-        mat_v.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k + 1),
-        mat_v.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(k + 1),
-    };
-
-    const LocalTileSize kkc_offset{
-        mat_c.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(0),
-        mat_c.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(0),
-    };
+//    const LocalTileSize kkv_offset{
+//        mat_v.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k + 1),
+//        mat_v.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(k + 1),
+//    };
+//
+//    const LocalTileSize kkc_offset{
+//        mat_c.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(0),
+//        mat_c.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(0),
+//    };
 
     panelVV.setRangeStart({k + 1, k + 1});
     panelW.setRangeStart({k + 1, k + 1});
@@ -305,20 +320,23 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       auto ik = LocalTileIndex{i_local, k_local_col};
       auto i0 = LocalTileIndex(i_local, 0);
       if (this_rank.col() == k_rank_col) {
-        hpx::dataflow(dlaf::getCopyExecutor<Device::CPU, Device::CPU>(),
-                      matrix::unwrapExtendTiles(dlaf::matrix::copy_o), mat_v.read(ik), panelVV(i0));
+	copySingleTile(mat_v.read(ik), panelVV(i0));
+//        hpx::dataflow(dlaf::getCopyExecutor<Device::CPU, Device::CPU>(),
+//                      matrix::unwrapExtendTiles(dlaf::matrix::copy_o), mat_v.read(ik), panelVV(i0));
       }
 
       // Setting VV
       // Fixing elements of VV and copying them into WH
       auto setting_vv = unwrapping([=](auto&& tile) {
         if (i <= k) {
-          lapack::laset(lapack::MatrixType::General, tile.size().rows(), tile.size().cols(), 0, 0,
-                        tile.ptr(), tile.ld());
+          tile::set0<T>(tile);
+//          lapack::laset(lapack::MatrixType::General, tile.size().rows(), tile.size().cols(), 0, 0,
+//                        tile.ptr(), tile.ld());
         }
         else if (i == k + 1) {
-          lapack::laset(lapack::MatrixType::Upper, tile.size().rows(), tile.size().cols(), 0, 1,
-                        tile.ptr(), tile.ld());
+          tile::laset<T>(lapack::MatrixType::Upper, 0.f, 1.f, tile);
+  //        lapack::laset(lapack::MatrixType::Upper, tile.size().rows(), tile.size().cols(), 0, 1,
+  //                      tile.ptr(), tile.ld());
         }
       });
       if (this_rank.col() == k_rank_col) {
@@ -327,13 +345,13 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
       // Copy VV into W
       if (this_rank.col() == k_rank_col) {
-        hpx::dataflow(dlaf::getCopyExecutor<Device::CPU, Device::CPU>(),
-                      matrix::unwrapExtendTiles(matrix::copy_o), panelVV.read(i0), panelW(i0));
+	copySingleTile(panelVV.read(i0), panelW(i0));
+        //hpx::dataflow(dlaf::getCopyExecutor<Device::CPU, Device::CPU>(),
+        //              matrix::unwrapExtendTiles(matrix::copy_o), panelVV.read(i0), panelW(i0));
       }
     }
 
-    // Reset W2 to zero
-    // rw-access
+    // Reset W2 to zero (rw-access)
     for (const auto& idx : panelW2.iteratorLocal()) {
       panelW2(idx).then(unwrapping([](auto&& tile) {
         for (SizeType j = 0; j < tile.size().cols(); ++j) {
@@ -343,7 +361,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         }
       }));
     }
-
+    
     int taupan = (is_last) ? last_mb : mat_v.blockSize().cols();
 
     // Matrix T
@@ -370,7 +388,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
     panelT.setRange({k, k}, {k + 1, k + 1});
 
-    const LocalTileIndex diag_wp_idx{0, kkt_offset.cols()};
+    //    const LocalTileIndex diag_wp_idx{0, kkt_offset.cols()};
+    const LocalTileIndex diag_wp_idx{Coord::Row, 0};
     if (this_rank.col() == k_v_rank_col) {
       panelT.setTile(diag_wp_idx, mat_t.read(kk));
     }
@@ -387,8 +406,9 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
       // WH = V T
       if (this_rank.row() == i_rank_row && this_rank.col() == k_rank_col) {
-        hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::trmm_o), Right, Upper, ConjTrans,
-                      NonUnit, T(1.0), panelT.read(diag_wp_idx), std::move(panelW(ik)));
+        trmmPanel(executor_np, panelT.read(diag_wp_idx), std::move(panelW(ik)));
+//        hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::trmm_o), blas::Side::Right, blas::Uplo::Upper, blas::Op::ConjTrans,
+//                      blas::Diag::NonUnit, T(1.0), panelT.read(diag_wp_idx), std::move(panelW(ik)));
       }
 
     }  // end loop on i_local row
@@ -416,8 +436,9 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         auto ij = LocalTileIndex(i_local, j_local);
 
         if (this_rank.row() == i_c_rank_row && this_rank.col() == j_c_rank_col) {
-          hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::gemm_o), ConjTrans, NoTrans, T(1.0),
-                        panelW.read(ik), mat_c.read(ij), T(0.0), std::move(panelW2(kj)));
+	  gemmUpdateW2(executor_np, panelW(ik), mat_c.read(ij), panelW2(kj));
+//          hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans, T(1.0),
+//                        panelW.read(ik), mat_c.read(ij), T(0.0), std::move(panelW2(kj)));
         }
 
       }  // end loop on j_local (cols)
@@ -457,8 +478,9 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
         // C = C - V W2
         if (this_rank.row() == i_c_rank_row && this_rank.col() == j_c_rank_col) {
-          hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::gemm_o), NoTrans, NoTrans, T(-1.0),
-                        panelVV.read(ik), panelW2.read(kj), T(1.0), std::move(mat_c(ij)));
+	  gemmTrailingMatrix(executor_np, panelVV.read(ik), panelW2.read(kj), mat_c(ij));
+          //hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::NoTrans, T(-1.0),
+          //              panelVV.read(ik), panelW2.read(kj), T(1.0), std::move(mat_c(ij)));
         }
 
       }  // end of j_local loop on cols

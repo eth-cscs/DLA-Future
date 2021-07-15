@@ -80,7 +80,6 @@ void getTau(std::complex<T>& tau, T dotprod, BaseType<T> tau_i) {
   tau = {(static_cast<T>(1.0) + sqrt(static_cast<T>(1.0) - dotprod * tau_i * tau_i)) / dotprod, tau_i};
 }
 
-
 template <class T>
 void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType nb) {
   LocalElementSize sizeC(m, n);
@@ -184,7 +183,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
 template <class T>
 void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeType n, SizeType mb,
                                   SizeType nb) {
-   comm::Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
+  comm::Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
 
   LocalElementSize sizeC(m, n);
   TileElementSize blockSizeC(mb, nb);
@@ -285,7 +284,6 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
     CHECK_MATRIX_NEAR(result, mat_c, error, error);
   }
 }
-
 
 TYPED_TEST(BackTransformationEigenSolverTestMC, CorrectnessLocal) {
   SizeType m, n, mb, nb;

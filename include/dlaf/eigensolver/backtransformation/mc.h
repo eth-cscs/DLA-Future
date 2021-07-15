@@ -307,7 +307,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       auto ik = LocalTileIndex{i_local, k_local_col};
       auto i0 = LocalTileIndex(i_local, 0);
       if (this_rank.col() == k_rank_col) {
-	copySingleTile(mat_v.read(ik), panelVV(i0));
+        copySingleTile(mat_v.read(ik), panelVV(i0));
       }
 
       // Setting VV
@@ -326,7 +326,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
       // Copy VV into W
       if (this_rank.col() == k_rank_col) {
-	copySingleTile(panelVV.read(i0), panelW(i0));
+        copySingleTile(panelVV.read(i0), panelW(i0));
       }
     }
 
@@ -340,7 +340,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         }
       }));
     }
-    
+
     int taupan = (is_last) ? last_mb : mat_v.blockSize().cols();
 
     // Matrix T
@@ -412,7 +412,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         auto ij = LocalTileIndex(i_local, j_local);
 
         if (this_rank.row() == i_c_rank_row && this_rank.col() == j_c_rank_col) {
-	  gemmUpdateW2(executor_np, panelW(ik), mat_c.read(ij), panelW2(kj));
+          gemmUpdateW2(executor_np, panelW(ik), mat_c.read(ij), panelW2(kj));
         }
 
       }  // end loop on j_local (cols)
@@ -452,7 +452,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
         // C = C - V W2
         if (this_rank.row() == i_c_rank_row && this_rank.col() == j_c_rank_col) {
-	  gemmTrailingMatrix(executor_np, panelVV.read(ik), panelW2.read(kj), mat_c(ij));
+          gemmTrailingMatrix(executor_np, panelVV.read(ik), panelW2.read(kj), mat_c(ij));
         }
 
       }  // end of j_local loop on cols

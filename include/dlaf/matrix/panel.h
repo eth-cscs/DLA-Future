@@ -246,8 +246,8 @@ protected:
     const auto panel_coord = dist_matrix_.globalTileFromLocalTile<CoordType>(index.get<CoordType>());
     const GlobalTileIndex panel_index(CoordType, panel_coord);
 
-    const auto size_coord = dist_matrix_.tileSize(panel_index).get<CoordType>();
-    const auto size_axis = dim_ < 0 ? dist_matrix_.blockSize().get<axis>() : dim_;
+    const auto size_coord = dist_matrix_.tileSize(panel_index).template get<CoordType>();
+    const auto size_axis = dim_ < 0 ? dist_matrix_.blockSize().template get<axis>() : dim_;
 
     return {axis, size_axis, size_coord};
   }

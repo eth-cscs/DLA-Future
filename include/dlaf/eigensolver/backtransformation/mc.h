@@ -284,9 +284,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
   // Specific for V matrix layout where last column of tiles is empty
   const SizeType last_reflector_idx = mat_v.nrTiles().cols() - 2;
-  //  Compute number of last_reflector_idx
-  //  const SizeType last_reflector_idx = (mat_v.size().cols() < mat_v.size().rows()) ?
-  //  mat_v.nrTiles().rows() - 2 : mat_v.nrTiles().cols() - 2;
 
   for (SizeType k = last_reflector_idx; k >= 0; --k) {
     bool is_last = (k == last_reflector_idx) ? true : false;
@@ -295,16 +292,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     auto& panelW = panelsW.nextResource();
     auto& panelW2 = panelsW2.nextResource();
     auto& panelT = panelsT.nextResource();
-
-//    const LocalTileSize kkv_offset{
-//        mat_v.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k + 1),
-//        mat_v.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(k + 1),
-//    };
-//
-//    const LocalTileSize kkc_offset{
-//        mat_c.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(0),
-//        mat_c.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(0),
-//    };
 
     panelVV.setRangeStart({k + 1, k + 1});
     panelW.setRangeStart({k + 1, k + 1});
@@ -321,8 +308,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       auto i0 = LocalTileIndex(i_local, 0);
       if (this_rank.col() == k_rank_col) {
 	copySingleTile(mat_v.read(ik), panelVV(i0));
-//        hpx::dataflow(dlaf::getCopyExecutor<Device::CPU, Device::CPU>(),
-//                      matrix::unwrapExtendTiles(dlaf::matrix::copy_o), mat_v.read(ik), panelVV(i0));
       }
 
       // Setting VV
@@ -330,13 +315,9 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       auto setting_vv = unwrapping([=](auto&& tile) {
         if (i <= k) {
           tile::set0<T>(tile);
-//          lapack::laset(lapack::MatrixType::General, tile.size().rows(), tile.size().cols(), 0, 0,
-//                        tile.ptr(), tile.ld());
         }
         else if (i == k + 1) {
           tile::laset<T>(lapack::MatrixType::Upper, 0.f, 1.f, tile);
-  //        lapack::laset(lapack::MatrixType::Upper, tile.size().rows(), tile.size().cols(), 0, 1,
-  //                      tile.ptr(), tile.ld());
         }
       });
       if (this_rank.col() == k_rank_col) {
@@ -346,8 +327,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       // Copy VV into W
       if (this_rank.col() == k_rank_col) {
 	copySingleTile(panelVV.read(i0), panelW(i0));
-        //hpx::dataflow(dlaf::getCopyExecutor<Device::CPU, Device::CPU>(),
-        //              matrix::unwrapExtendTiles(matrix::copy_o), panelVV.read(i0), panelW(i0));
       }
     }
 
@@ -388,7 +367,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
     panelT.setRange({k, k}, {k + 1, k + 1});
 
-    //    const LocalTileIndex diag_wp_idx{0, kkt_offset.cols()};
     const LocalTileIndex diag_wp_idx{Coord::Row, 0};
     if (this_rank.col() == k_v_rank_col) {
       panelT.setTile(diag_wp_idx, mat_t.read(kk));
@@ -407,8 +385,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       // WH = V T
       if (this_rank.row() == i_rank_row && this_rank.col() == k_rank_col) {
         trmmPanel(executor_np, panelT.read(diag_wp_idx), std::move(panelW(ik)));
-//        hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::trmm_o), blas::Side::Right, blas::Uplo::Upper, blas::Op::ConjTrans,
-//                      blas::Diag::NonUnit, T(1.0), panelT.read(diag_wp_idx), std::move(panelW(ik)));
       }
 
     }  // end loop on i_local row
@@ -437,8 +413,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
         if (this_rank.row() == i_c_rank_row && this_rank.col() == j_c_rank_col) {
 	  gemmUpdateW2(executor_np, panelW(ik), mat_c.read(ij), panelW2(kj));
-//          hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans, T(1.0),
-//                        panelW.read(ik), mat_c.read(ij), T(0.0), std::move(panelW2(kj)));
         }
 
       }  // end loop on j_local (cols)
@@ -479,8 +453,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         // C = C - V W2
         if (this_rank.row() == i_c_rank_row && this_rank.col() == j_c_rank_col) {
 	  gemmTrailingMatrix(executor_np, panelVV.read(ik), panelW2.read(kj), mat_c(ij));
-          //hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::NoTrans, T(-1.0),
-          //              panelVV.read(ik), panelW2.read(kj), T(1.0), std::move(mat_c(ij)));
         }
 
       }  // end of j_local loop on cols

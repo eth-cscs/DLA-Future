@@ -188,7 +188,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         trmmPanel(executor_np, tile_t, std::move(subtile_w));
       }
       else
-        trmmPanel(executor_np, mat_t.read(kk), std::move(tile_w));
+        trmmPanel(executor_np, tile_t, std::move(tile_w));
     }
 
     for (SizeType j = 0; j < n; ++j) {
@@ -356,15 +356,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     dlaf::factorization::internal::computeTFactor<Backend::MC>(taupan, mat_v, v_start, taus_panel,
                                                                mat_t(kk), serial_comm);
 
-    const LocalTileSize kkt_offset{
-        mat_t.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k),
-        mat_t.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(k),
-    };
-    const LocalTileSize att_offset{
-        mat_t.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k + 1),
-        mat_t.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(k + 1),
-    };
-
     panelT.setRange({k, k}, {k + 1, k + 1});
 
     const LocalTileIndex diag_wp_idx{Coord::Row, 0};
@@ -384,7 +375,16 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
       // WH = V T
       if (this_rank.row() == i_rank_row && this_rank.col() == k_rank_col) {
-        trmmPanel(executor_np, panelT.read(diag_wp_idx), std::move(panelW(ik)));
+        hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_t = panelT.read(diag_wp_idx);
+
+        if (mat_t.tileSize(GlobalTileIndex{k, k}).rows() !=
+            mat_v.tileSize(GlobalTileIndex{i, k}).cols()) {
+          panelW.setWidth(mat_t.tileSize(GlobalTileIndex{k, k}).cols());
+          trmmPanel(executor_np, tile_t, std::move(panelW(ik)));
+        }
+        else {
+          trmmPanel(executor_np, tile_t, std::move(panelW(ik)));
+        }
       }
 
     }  // end loop on i_local row
@@ -412,7 +412,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         auto ij = LocalTileIndex(i_local, j_local);
 
         if (this_rank.row() == i_c_rank_row && this_rank.col() == j_c_rank_col) {
-          gemmUpdateW2(executor_np, panelW(ik), mat_c.read(ij), panelW2(kj));
+          panelW.setWidth(mat_v.tileSize(GlobalTileIndex{k, k}).cols());
+          gemmUpdateW2(executor_np, panelW(ik), mat_c.read(ij), std::move(panelW2(kj)));
         }
 
       }  // end loop on j_local (cols)

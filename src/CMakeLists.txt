@@ -106,10 +106,12 @@ add_library(dlaf.core
 )
 target_compile_options(dlaf.core PRIVATE $<$<COMPILE_LANG_AND_ID:CUDA,NVIDIA>:--extended-lambda>)
 target_link_libraries(dlaf.core PUBLIC dlaf.prop)
+target_add_warnings(dlaf.core)
 
 # Define DLAF's auxiliary library
 add_library(dlaf.auxiliary OBJECT auxiliary/norm/mc.cpp)
 target_link_libraries(dlaf.auxiliary PUBLIC dlaf.prop)
+target_add_warnings(dlaf.auxiliary)
 
 # Define DLAF's eigensolver library
 add_library(dlaf.eigensolver OBJECT
@@ -118,18 +120,21 @@ add_library(dlaf.eigensolver OBJECT
   $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/gen_to_std/gpu.cpp>
   eigensolver/reduction_to_band/mc.cpp)
 target_link_libraries(dlaf.eigensolver PUBLIC dlaf.prop)
+target_add_warnings(dlaf.eigensolver)
 
 # Define DLAF's factorization library
 add_library(dlaf.factorization OBJECT
   factorization/cholesky/mc.cpp
   $<$<BOOL:${DLAF_WITH_CUDA}>:factorization/cholesky/gpu.cpp>)
 target_link_libraries(dlaf.factorization PUBLIC dlaf.prop)
+target_add_warnings(dlaf.factorization)
 
 # Define DLAF's solver library
 add_library(dlaf.solver OBJECT
   solver/triangular/mc.cpp
   $<$<BOOL:${DLAF_WITH_CUDA}>:solver/triangular/gpu.cpp>)
 target_link_libraries(dlaf.solver PUBLIC dlaf.prop)
+target_add_warnings(dlaf.solver)
 
 # Define DLAF's complete library
 add_library(DLAF

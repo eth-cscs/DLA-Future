@@ -24,6 +24,7 @@ macro(target_add_warnings target_name)
       -Wextra
       -Wnon-virtual-dtor
       -Wunused
+      -Wunused-local-typedefs
       -Woverloaded-virtual
       -Wdangling-else
       -Wswitch-enum

@@ -23,7 +23,8 @@
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/vector.h"
-#include "dlaf/communication/functions_sync.h"
+#include "dlaf/communication/kernels/all_reduce.h"
+#include "dlaf/executors.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
@@ -53,9 +54,12 @@ struct QR_Tfactor<Backend::MC, Device::CPU, T> {
   /// @param v where the elementary reflectors are stored
   /// @param v_start tile in @p v where the column of reflectors starts
   /// @param taus array of taus, associated with the related elementary reflector
-  /// @param t tile where the resulting T factor will be stored
+  /// @param t tile where the resulting T factor will be stored in its top-left sub-matrix of size
+  /// TileElementSize(k, k)
   ///
   /// @pre k <= t.get().size().rows && k <= t.get().size().cols()
+  /// @pre k >= 0
+  /// @pre v_start.isIn(v.nrTiles())
   static void call(const SizeType k, Matrix<const T, Device::CPU>& v, const GlobalTileIndex v_start,
                    hpx::shared_future<common::internal::vector<T>> taus,
                    hpx::future<matrix::Tile<T, Device::CPU>> t);
@@ -78,22 +82,26 @@ struct QR_Tfactor<Backend::MC, Device::CPU, T> {
   /// @param v where the elementary reflectors are stored
   /// @param v_start tile in @p v where the column of reflectors starts
   /// @param taus array of taus, associated with the related elementary reflector
-  /// @param t tile where the resulting T factor will be stored
-  /// @param serial_comm where internal communications are issued
+  /// @param t tile where the resulting T factor will be stored in its top-left sub-matrix of size
+  /// TileElementSize(k, k)
+  /// @param mpi_col_task_chain where internal communications are issued
   ///
   /// @pre k <= t.get().size().rows && k <= t.get().size().cols()
+  /// @pre k >= 0
+  /// @pre v_start.isIn(v.nrTiles())
   static void call(const SizeType k, Matrix<const T, Device::CPU>& v, const GlobalTileIndex v_start,
                    hpx::shared_future<common::internal::vector<T>> taus,
                    hpx::future<matrix::Tile<T, Device::CPU>> t,
-                   common::Pipeline<comm::CommunicatorGrid>& serial_comm);
+                   common::Pipeline<comm::Communicator>& mpi_col_task_chain);
 };
 
 template <class T>
 hpx::future<matrix::Tile<T, Device::CPU>> gemvColumnT(
-    const bool& is_v0, const SizeType& k, hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_vi,
+    bool is_v0, hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_vi,
     hpx::shared_future<common::internal::vector<T>>& taus,
     hpx::future<matrix::Tile<T, Device::CPU>>& tile_t) {
-  auto gemv_func = hpx::unwrapping([=](const auto& vi, const auto& taus, auto&& t) {
+  auto gemv_func = hpx::unwrapping([is_v0](const auto& tile_v, const auto& taus, auto&& tile_t) {
+    const SizeType k = tile_t.size().cols();
     DLAF_ASSERT(taus.size() == k, taus.size(), k);
 
     for (SizeType j = 0; j < k; ++j) {
@@ -102,31 +110,27 @@ hpx::future<matrix::Tile<T, Device::CPU>> gemvColumnT(
       const TileElementIndex x0{j, j};
 
       const TileElementIndex t_start{0, x0.col()};
-      const TileElementSize t_size{x0.row(), 1};
 
       const SizeType first_element_in_tile = is_v0 ? x0.row() : 0;
 
       // T(0:j, j) = -tau . V(j:, 0:j)* . V(j:, j)
       // [j x 1] = [(n-j) x j]* . [(n-j) x 1]
-      TileElementSize va_size{vi.size().rows() - first_element_in_tile, x0.col()};
+      TileElementSize va_size{tile_v.size().rows() - first_element_in_tile, x0.col()};
       TileElementIndex va_start{first_element_in_tile, 0};
       TileElementIndex vb_start{first_element_in_tile, x0.col()};
 
       if (is_v0) {
-        t(x0) = tau;
+        tile_t(x0) = tau;
 
         // use implicit 1 for the 2nd operand
         for (SizeType r = 0; !va_size.isEmpty() && r < va_size.cols(); ++r) {
           const TileElementIndex i_v{va_start.row(), r + va_start.col()};
           const TileElementIndex i_t{r + t_start.row(), t_start.col()};
 
-          DLAF_ASSERT_HEAVY(i_t.isIn(t.size()), i_t, t_size);
-          DLAF_ASSERT_HEAVY(i_v.isIn(vi.size()), i_v, vi.size());
-
-          t(i_t) = -tau * dlaf::conj(vi(i_v));
+          tile_t(i_t) = -tau * dlaf::conj(tile_v(i_v));
         }
 
-        // skip alredy managed computations with implicit 1
+        // skip already managed computations with implicit 1
         va_start = va_start + TileElementSize{1, 0};
         vb_start = vb_start + TileElementSize{1, 0};
         va_size = {va_size.rows() - 1, va_size.cols()};
@@ -134,27 +138,31 @@ hpx::future<matrix::Tile<T, Device::CPU>> gemvColumnT(
 
       if (!va_size.isEmpty()) {
         blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, va_size.rows(), va_size.cols(), -tau,
-                   vi.ptr(va_start), vi.ld(), vi.ptr(vb_start), 1, 1, t.ptr(t_start), 1);
+                   tile_v.ptr(va_start), tile_v.ld(), tile_v.ptr(vb_start), 1, 1, tile_t.ptr(t_start),
+                   1);
       }
     }
-    return std::move(t);
+    return std::move(tile_t);
   });
-  return hpx::dataflow(gemv_func, tile_vi, taus, tile_t);
+  return hpx::dataflow(getHpExecutor<Backend::MC>(), gemv_func, tile_vi, taus, tile_t);
 }
 
 template <class T>
 hpx::future<matrix::Tile<T, Device::CPU>> trmvUpdateColumn(
-    const TileElementIndex t_start, const TileElementSize t_size,
     hpx::future<matrix::Tile<T, Device::CPU>>& tile_t) {
   // Update each column (in order) t = T . t
   // remember that T is upper triangular, so it is possible to use TRMV
-  auto trmv_func = hpx::unwrapping([](auto&& tile_t, TileElementIndex t_start, TileElementSize t_size) {
-    blas::trmv(blas::Layout::ColMajor, blas::Uplo::Upper, blas::Op::NoTrans, blas::Diag::NonUnit,
-               t_size.rows(), tile_t.ptr(), tile_t.ld(), tile_t.ptr(t_start), 1);
+  auto trmv_func = hpx::util::unwrapping([](auto&& tile_t) {
+    for (SizeType j = 0; j < tile_t.size().cols(); ++j) {
+      const TileElementIndex t_start{0, j};
+      const TileElementSize t_size{j, 1};
 
+      blas::trmv(blas::Layout::ColMajor, blas::Uplo::Upper, blas::Op::NoTrans, blas::Diag::NonUnit,
+                 t_size.rows(), tile_t.ptr(), tile_t.ld(), tile_t.ptr(t_start), 1);
+    }
     return std::move(tile_t);
   });
-  return hpx::dataflow(trmv_func, tile_t, t_start, t_size);
+  return hpx::dataflow(getHpExecutor<Backend::MC>(), trmv_func, tile_t);
 }
 
 template <class T>
@@ -162,23 +170,17 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(const SizeType k, Matrix<cons
                                                    const GlobalTileIndex v_start,
                                                    hpx::shared_future<common::internal::vector<T>> taus,
                                                    hpx::future<matrix::Tile<T, Device::CPU>> t) {
-  using hpx::unwrapping;
-  using common::make_data;
-
+  t = splitTile(t, {{0, 0}, {k, k}});
   const auto panel_width = v.tileSize(v_start).cols();
 
   DLAF_ASSERT(k <= panel_width, k, panel_width);
 
-  const GlobalTileIndex v_end{v.nrTiles().rows(), (v_start.col() + 1)};
+  const GlobalTileIndex v_end{v.nrTiles().rows(), std::min(v.nrTiles().cols(), v_start.col() + 1)};
 
-  t = t.then(unwrapping([k](auto&& tile) {
-    const auto t_size = tile.size();
-    DLAF_ASSERT(k <= t_size.rows(), k, t_size);
-    DLAF_ASSERT(k <= t_size.cols(), k, t_size);
-
-    tile::set0<T>(tile);
-    return std::move(tile);
-  }));
+  t = t.then(getHpExecutor<Backend::MC>(), hpx::unwrapping([](auto&& tile) {
+               tile::set0<T>(tile);
+               return std::move(tile);
+             }));
 
   // Note:
   // T factor is an upper triangular square matrix, built column by column
@@ -206,37 +208,35 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(const SizeType k, Matrix<cons
     // Since we are writing always on the same t, the gemv are serialized
     // A possible solution to this would be to have multiple places where to store partial
     // results, and then locally reduce them just before the reduce over ranks
-    // t = gemvColumnT(is_v0, k, v.read(v_i), taus, &t);
-    t = gemvColumnT(is_v0, k, v.read(v_i), taus, t);
+    t = gemvColumnT(is_v0, v.read(v_i), taus, t);
   }
 
   // 2nd step: compute the T factor, by performing the last step on each column
   // each column depends on the previous part (all reflectors that comes before)
   // so it is performed sequentially
-  for (SizeType j = 0; j < k; ++j) {
-    const TileElementIndex t_start{0, j};
-    const TileElementSize t_size{j, 1};
-    t = trmvUpdateColumn(t_start, t_size, t);
-  }
+  t = trmvUpdateColumn(t);
 }
 
 template <class T>
 void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
     const SizeType k, Matrix<const T, Device::CPU>& v, const GlobalTileIndex v_start,
     hpx::shared_future<common::internal::vector<T>> taus, hpx::future<matrix::Tile<T, Device::CPU>> t,
-    common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
-  using hpx::unwrapping;
-  using common::make_data;
-  using namespace comm::sync;
+    common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
+  t = splitTile(t, {{0, 0}, {k, k}});
 
+  // Fast return in case of no reflectors
+  if (k == 0)
+    return;
+
+  const auto panel_width = v.tileSize(v_start).cols();
+  DLAF_ASSERT(0 <= k && k <= panel_width, k, panel_width);
+
+  DLAF_ASSERT_MODERATE(v_start.isIn(v.nrTiles()), v_start, v.nrTiles());
   const auto& dist = v.distribution();
   const comm::Index2D rank = dist.rankIndex();
   const comm::Index2D rank_v0 = dist.rankGlobalTile(v_start);
 
-  const auto panel_width = v.tileSize(v_start).cols();
-
-  DLAF_ASSERT(k <= panel_width, k, panel_width);
-
+  // Just the column of ranks with the reflectors participates
   if (rank.col() != rank_v0.col())
     return;
 
@@ -246,14 +246,10 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
   };
   const LocalTileIndex v_end_loc{dist.localNrTiles().rows(), v_start_loc.col() + 1};
 
-  t = t.then(unwrapping([k](auto&& tile) {
-    const auto t_size = tile.size();
-    DLAF_ASSERT(k <= t_size.rows(), k, t_size);
-    DLAF_ASSERT(k <= t_size.cols(), k, t_size);
-
-    tile::set0<T>(tile);
-    return std::move(tile);
-  }));
+  t = t.then(getHpExecutor<Backend::MC>(), hpx::unwrapping([](auto&& tile) {
+               tile::set0<T>(tile);
+               return std::move(tile);
+             }));
 
   // Note:
   // T factor is an upper triangular square matrix, built column by column
@@ -282,28 +278,19 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
     // Since we are writing always on the same t, the gemv are serialized
     // A possible solution to this would be to have multiple places where to store partial
     // results, and then locally reduce them just before the reduce over ranks
-    t = gemvColumnT(is_v0, k, v.read(v_i_loc), taus, t);
+    t = gemvColumnT(is_v0, v.read(v_i_loc), taus, t);
   }
 
   // at this point each rank has its partial result for each column
   // so, let's reduce the results (on all ranks, so that everyone can independently compute T factor)
-  if (true) {  // TODO if the column communicator has more than 1 tile...but I just have the pipeline
-    auto reduce_t_func = unwrapping([=](auto&& tile_t, auto&& comm_wrapper) {
-      allReduceInPlace(comm_wrapper.ref().colCommunicator(), MPI_SUM, make_data(tile_t));
-      return std::move(tile_t);
-    });
-    t = hpx::dataflow(reduce_t_func, t, serial_comm());
-  }
+  if (true)  // TODO if the column communicator has more than 1 tile...but I just have the pipeline
+    t = scheduleAllReduceInPlace(getMPIExecutor<Backend::MC>(), mpi_col_task_chain(), MPI_SUM,
+                                 std::move(t));
 
   // 2nd step: compute the T factor, by performing the last step on each column
   // each column depends on the previous part (all reflectors that comes before)
   // so it is performed sequentially
-  for (SizeType j = 0; j < k; ++j) {
-    const TileElementIndex t_start{0, j};
-    const TileElementSize t_size{j, 1};
-
-    t = trmvUpdateColumn(t_start, t_size, t);
-  }
+  t = trmvUpdateColumn(t);
 }
 }
 }

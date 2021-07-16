@@ -350,7 +350,6 @@ void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
 
     panelT.setRange({kt, kt}, indexFromOrigin(distr.nrTiles()));
 
-    // TODO skip last step tile
     broadcast(executor_mpi, kk_rank.row(), panel, panelT, mpi_row_task_chain, mpi_col_task_chain);
 
     // TRAILING MATRIX

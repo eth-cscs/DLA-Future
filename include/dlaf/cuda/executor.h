@@ -20,11 +20,11 @@
 
 #include <cuda_runtime.h>
 
-#include <hpx/execution.hpp>
-#include <hpx/functional.hpp>
-#include <hpx/future.hpp>
-#include <hpx/include/util.hpp>
-#include <hpx/tuple.hpp>
+#include <hpx/local/execution.hpp>
+#include <hpx/local/functional.hpp>
+#include <hpx/local/future.hpp>
+#include <hpx/local/tuple.hpp>
+#include <hpx/local/unwrap.hpp>
 
 #include "dlaf/common/assert.h"
 #include "dlaf/cuda/error.h"

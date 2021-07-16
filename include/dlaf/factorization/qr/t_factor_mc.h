@@ -10,8 +10,8 @@
 
 #pragma once
 
-#include <hpx/future.hpp>
-#include <hpx/include/util.hpp>
+#include <hpx/local/future.hpp>
+#include <hpx/local/unwrap.hpp>
 
 #include <blas.hh>
 
@@ -93,7 +93,7 @@ hpx::future<matrix::Tile<T, Device::CPU>> gemvColumnT(
     const bool& is_v0, const SizeType& k, hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_vi,
     hpx::shared_future<common::internal::vector<T>>& taus,
     hpx::future<matrix::Tile<T, Device::CPU>>& tile_t) {
-  auto gemv_func = hpx::util::unwrapping([=](const auto& vi, const auto& taus, auto&& t) {
+  auto gemv_func = hpx::unwrapping([=](const auto& vi, const auto& taus, auto&& t) {
     DLAF_ASSERT(taus.size() == k, taus.size(), k);
 
     for (SizeType j = 0; j < k; ++j) {
@@ -133,15 +133,8 @@ hpx::future<matrix::Tile<T, Device::CPU>> gemvColumnT(
       }
 
       if (!va_size.isEmpty()) {
-        // clang-format off
-        blas::gemv(blas::Layout::ColMajor,
-            blas::Op::ConjTrans,
-            va_size.rows(), va_size.cols(),
-            -tau,
-            vi.ptr(va_start), vi.ld(),
-            vi.ptr(vb_start), 1,
-            1, t.ptr(t_start), 1);
-        // clang-format on
+        blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, va_size.rows(), va_size.cols(), -tau,
+                   vi.ptr(va_start), vi.ld(), vi.ptr(vb_start), 1, 1, t.ptr(t_start), 1);
       }
     }
     return std::move(t);
@@ -155,18 +148,12 @@ hpx::future<matrix::Tile<T, Device::CPU>> trmvUpdateColumn(
     hpx::future<matrix::Tile<T, Device::CPU>>& tile_t) {
   // Update each column (in order) t = T . t
   // remember that T is upper triangular, so it is possible to use TRMV
-  auto trmv_func =
-      hpx::util::unwrapping([](auto&& tile_t, TileElementIndex t_start, TileElementSize t_size) {
-        // clang-format off
-        blas::trmv(blas::Layout::ColMajor,
-            blas::Uplo::Upper, blas::Op::NoTrans, blas::Diag::NonUnit,
-            t_size.rows(),
-            tile_t.ptr(), tile_t.ld(),
-            tile_t.ptr(t_start), 1);
-        // clang-format on
+  auto trmv_func = hpx::unwrapping([](auto&& tile_t, TileElementIndex t_start, TileElementSize t_size) {
+    blas::trmv(blas::Layout::ColMajor, blas::Uplo::Upper, blas::Op::NoTrans, blas::Diag::NonUnit,
+               t_size.rows(), tile_t.ptr(), tile_t.ld(), tile_t.ptr(t_start), 1);
 
-        return std::move(tile_t);
-      });
+    return std::move(tile_t);
+  });
   return hpx::dataflow(trmv_func, tile_t, t_start, t_size);
 }
 
@@ -175,7 +162,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(const SizeType k, Matrix<cons
                                                    const GlobalTileIndex v_start,
                                                    hpx::shared_future<common::internal::vector<T>> taus,
                                                    hpx::future<matrix::Tile<T, Device::CPU>> t) {
-  using hpx::util::unwrapping;
+  using hpx::unwrapping;
   using common::make_data;
 
   const auto panel_width = v.tileSize(v_start).cols();
@@ -238,7 +225,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
     const SizeType k, Matrix<const T, Device::CPU>& v, const GlobalTileIndex v_start,
     hpx::shared_future<common::internal::vector<T>> taus, hpx::future<matrix::Tile<T, Device::CPU>> t,
     common::Pipeline<comm::CommunicatorGrid>& serial_comm) {
-  using hpx::util::unwrapping;
+  using hpx::unwrapping;
   using common::make_data;
   using namespace comm::sync;
 

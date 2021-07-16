@@ -152,7 +152,7 @@ hpx::future<matrix::Tile<T, Device::CPU>> trmvUpdateColumn(
     hpx::future<matrix::Tile<T, Device::CPU>>& tile_t) {
   // Update each column (in order) t = T . t
   // remember that T is upper triangular, so it is possible to use TRMV
-  auto trmv_func = hpx::util::unwrapping([](auto&& tile_t) {
+  auto trmv_func = hpx::unwrapping([](auto&& tile_t) {
     for (SizeType j = 0; j < tile_t.size().cols(); ++j) {
       const TileElementIndex t_start{0, j};
       const TileElementSize t_size{j, 1};

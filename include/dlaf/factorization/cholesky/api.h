@@ -18,7 +18,9 @@ namespace internal {
 template <Backend backend, Device device, class T>
 struct Cholesky {
   static void call_L(Matrix<T, device>& mat_a);
+  static void call_U(Matrix<T, device>& mat_a);
   static void call_L(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a);
+  static void call_U(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a);
 };
 
 /// ---- ETI

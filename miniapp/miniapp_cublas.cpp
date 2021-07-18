@@ -14,11 +14,11 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-#include <hpx/future.hpp>
-#include <hpx/include/util.hpp>
 #include <hpx/init.hpp>
+#include <hpx/local/future.hpp>
+#include <hpx/local/thread.hpp>
+#include <hpx/local/unwrap.hpp>
 #include <hpx/modules/async_cuda.hpp>
-#include <hpx/thread.hpp>
 
 #include "dlaf/executors.h"
 #include "dlaf/init.h"
@@ -45,7 +45,7 @@ int hpx_main(int argc, char* argv[]) {
     return &alpha;
   });
 
-  hpx::future<cublasStatus_t> f1 = hpx::dataflow(exec, hpx::util::unwrapping(cublasDaxpy), n, alpha_f,
+  hpx::future<cublasStatus_t> f1 = hpx::dataflow(exec, hpx::unwrapping(cublasDaxpy), n, alpha_f,
                                                  x.data().get(), incx, y.data().get(), incy);
 
   hpx::future<void> f2 = f1.then([&y](hpx::future<cublasStatus_t> s) {

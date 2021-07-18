@@ -9,6 +9,8 @@
 //
 #include "dlaf/factorization/cholesky.h"
 
+#include <functional>
+#include <tuple>
 #include "gtest/gtest.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/matrix.h"
@@ -29,38 +31,51 @@ using namespace testing;
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
 template <typename Type>
-class CholeskyLocalTest : public ::testing::Test {};
-
-TYPED_TEST_SUITE(CholeskyLocalTest, MatrixElementTypes);
-
-template <typename Type>
-class CholeskyDistributedTest : public ::testing::Test {
+class CholeskyTestMC : public ::testing::Test {
 public:
   const std::vector<CommunicatorGrid>& commGrids() {
     return comm_grids;
   }
 };
+TYPED_TEST_SUITE(CholeskyTestMC, MatrixElementTypes);
 
-TYPED_TEST_SUITE(CholeskyDistributedTest, MatrixElementTypes);
+#ifdef DLAF_WITH_CUDA
+template <typename Type>
+class CholeskyTestGPU : public ::testing::Test {
+public:
+  const std::vector<CommunicatorGrid>& commGrids() {
+    return comm_grids;
+  }
+};
+TYPED_TEST_SUITE(CholeskyTestGPU, MatrixElementTypes);
+#endif
 
-const std::vector<LocalElementSize> square_sizes({{10, 10}, {25, 25}, {12, 12}, {0, 0}});
-const std::vector<TileElementSize> square_block_sizes({{3, 3}, {5, 5}});
+TYPED_TEST_SUITE(CholeskyTest, MatrixElementTypes);
 
-GlobalElementSize globalTestSize(const LocalElementSize& size) {
-  return {size.rows(), size.cols()};
-}
+const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
+
+const std::vector<std::tuple<SizeType, SizeType>> sizes = {
+    {0, 2},                              // m = 0
+    {5, 8}, {34, 34},                    // m <= mb
+    {4, 3}, {16, 10}, {34, 13}, {32, 5}  // m > mb
+};
 
 template <class T, Backend B, Device D>
-void testCholesky(LocalElementSize size, TileElementSize block_size) {
+void testCholesky(const blas::Uplo uplo, const SizeType m, const SizeType mb) {
   std::function<T(const GlobalElementIndex&)> el, res;
-  std::tie(el, res) = getCholeskySetters<GlobalElementIndex, T>(blas::Uplo::Lower);
+
+  const LocalElementSize size(m, m);
+  const TileElementSize block_size(mb, mb);
 
   Matrix<T, Device::CPU> mat_h(size, block_size);
+
+  std::tie(el, res) = getCholeskySetters<GlobalElementIndex, T>(uplo);
+
   set(mat_h, el);
 
   {
     MatrixMirror<T, D, Device::CPU> mat(mat_h);
-    factorization::cholesky<B, D, T>(blas::Uplo::Lower, mat.get());
+    factorization::cholesky<B, D, T>(uplo, mat.get());
   }
 
   CHECK_MATRIX_NEAR(res, mat_h, 4 * (mat_h.size().rows() + 1) * TypeUtilities<T>::error,
@@ -68,47 +83,76 @@ void testCholesky(LocalElementSize size, TileElementSize block_size) {
 }
 
 template <class T, Backend B, Device D>
-void testCholesky(comm::CommunicatorGrid comm_grid, LocalElementSize size, TileElementSize block_size) {
+void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const SizeType m,
+                  const SizeType mb) {
   std::function<T(const GlobalElementIndex&)> el, res;
-  std::tie(el, res) = getCholeskySetters<GlobalElementIndex, T>(blas::Uplo::Lower);
 
-  // Matrix to undergo Cholesky decomposition
-  Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
-                         std::min(1, comm_grid.size().cols() - 1));
-  GlobalElementSize sz = globalTestSize(size);
-  Distribution distribution(sz, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
+  const GlobalElementSize size(m, m);
+  const TileElementSize block_size(mb, mb);
+  Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
+
+  Distribution distribution(size, block_size, grid.size(), grid.rank(), src_rank_index);
   Matrix<T, Device::CPU> mat_h(std::move(distribution));
+
+  std::tie(el, res) = getCholeskySetters<GlobalElementIndex, T>(uplo);
+
   set(mat_h, el);
 
   {
     MatrixMirror<T, D, Device::CPU> mat(mat_h);
-    factorization::cholesky<B, D, T>(comm_grid, blas::Uplo::Lower, mat.get());
+    factorization::cholesky<B, D, T>(grid, uplo, mat.get());
   }
 
   CHECK_MATRIX_NEAR(res, mat_h, 4 * (mat_h.size().rows() + 1) * TypeUtilities<T>::error,
                     4 * (mat_h.size().rows() + 1) * TypeUtilities<T>::error);
 }
 
-TYPED_TEST(CholeskyLocalTest, Correctness) {
-  for (const auto& size : square_sizes) {
-    for (const auto& block_size : square_block_sizes) {
-      testCholesky<TypeParam, Backend::MC, Device::CPU>(size, block_size);
-#ifdef DLAF_WITH_CUDA
-      testCholesky<TypeParam, Backend::GPU, Device::GPU>(size, block_size);
-#endif
+TYPED_TEST(CholeskyTestMC, CorrectnessLocal) {
+  SizeType m, mb;
+
+  for (auto uplo : blas_uplos) {
+    for (auto sz : sizes) {
+      std::tie(m, mb) = sz;
+      testCholesky<TypeParam, Backend::MC, Device::CPU>(uplo, m, mb);
     }
   }
 }
 
-TYPED_TEST(CholeskyDistributedTest, Correctness) {
+TYPED_TEST(CholeskyTestMC, CorrectnessDistributed) {
+  SizeType m, mb;
+
   for (const auto& comm_grid : this->commGrids()) {
-    for (const auto& size : square_sizes) {
-      for (const auto& block_size : square_block_sizes) {
-        testCholesky<TypeParam, Backend::MC, Device::CPU>(comm_grid, size, block_size);
-#ifdef DLAF_WITH_CUDA
-        testCholesky<TypeParam, Backend::GPU, Device::GPU>(comm_grid, size, block_size);
-#endif
+    for (auto uplo : blas_uplos) {
+      for (auto sz : sizes) {
+        std::tie(m, mb) = sz;
+        testCholesky<TypeParam, Backend::MC, Device::CPU>(comm_grid, uplo, m, mb);
       }
     }
   }
 }
+
+#ifdef DLAF_WITH_CUDA
+TYPED_TEST(CholeskyTestGPU, CorrectnessLocal) {
+  SizeType m, mb;
+
+  for (auto uplo : blas_uplos) {
+    for (auto sz : sizes) {
+      std::tie(m, mb) = sz;
+      testCholesky<TypeParam, Backend::GPU, Device::GPU>(uplo, m, mb);
+    }
+  }
+}
+
+TYPED_TEST(CholeskyTestGPU, CorrectnessDistributed) {
+  SizeType m, mb;
+
+  for (const auto& comm_grid : this->commGrids()) {
+    for (auto uplo : blas_uplos) {
+      for (auto sz : sizes) {
+        std::tie(m, mb) = sz;
+        testCholesky<TypeParam, Backend::GPU, Device::GPU>(comm_grid, uplo, m, mb);
+      }
+    }
+  }
+}
+#endif

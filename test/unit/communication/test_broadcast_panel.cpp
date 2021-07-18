@@ -43,7 +43,7 @@ TYPED_TEST_SUITE(PanelBcastTest, MatrixElementTypes);
 struct config_t {
   const GlobalElementSize sz;
   const TileElementSize blocksz;
-  const GlobalElementIndex offset;
+  const GlobalTileIndex offset;
 };
 
 std::vector<config_t> test_params{
@@ -54,7 +54,7 @@ std::vector<config_t> test_params{
 template <class TypeParam, Coord panel_axis>
 void testBroadcast(comm::Executor& executor_mpi, const config_t& cfg, comm::CommunicatorGrid comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
-  using hpx::util::unwrapping;
+  using hpx::unwrapping;
 
   constexpr Coord coord1D = orthogonal(panel_axis);
 
@@ -63,13 +63,7 @@ void testBroadcast(comm::Executor& executor_mpi, const config_t& cfg, comm::Comm
 
   matrix::test::set(matrix, [](const auto& index) { return TypeUtil::element(index.get(coord1D), 26); });
 
-  // setup the panel
-  const LocalTileSize at_offset{
-      dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
-      dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
-  };
-
-  Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, at_offset);
+  Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, cfg.offset);
   static_assert(coord1D == decltype(panel)::CoordType, "coord types mismatch");
 
   // select the last available rank as root rank, i.e. it owns the panel to be broadcasted
@@ -77,13 +71,13 @@ void testBroadcast(comm::Executor& executor_mpi, const config_t& cfg, comm::Comm
   const auto rank = dist.rankIndex().get(panel_axis);
 
   // set all panels
-  for (const auto i_w : panel.iterator())
+  for (const auto i_w : panel.iteratorLocal())
     hpx::dataflow(unwrapping(
                       [rank](auto&& tile) { matrix::test::set(tile, TypeUtil::element(rank, 26)); }),
                   panel(i_w));
 
   // check that all panels have been set
-  for (const auto i_w : panel.iterator())
+  for (const auto i_w : panel.iteratorLocal())
     CHECK_TILE_EQ(TypeUtil::element(rank, 26), panel.read(i_w).get());
 
   // test it!
@@ -93,7 +87,7 @@ void testBroadcast(comm::Executor& executor_mpi, const config_t& cfg, comm::Comm
   broadcast(executor_mpi, root, panel, mpi_task_chain);
 
   // check all panel are equal on all ranks
-  for (const auto i_w : panel.iterator())
+  for (const auto i_w : panel.iteratorLocal())
     CHECK_TILE_EQ(TypeUtil::element(root, 26), panel.read(i_w).get());
 }
 
@@ -114,31 +108,27 @@ TYPED_TEST(PanelBcastTest, BroadcastRow) {
 }
 
 std::vector<config_t> test_params_bcast_transpose{
-    {{0, 0}, {1, 1}, {0, 0}},  // empty matrix
-    {{9, 9}, {3, 3}, {3, 3}},  // empty panel (due to offset)
-    {{10, 10}, {3, 3}, {1, 1}},
+    {{0, 0}, {1, 1}, {0, 0}},    // empty matrix
+    {{10, 10}, {2, 2}, {5, 5}},  // empty panel (due to offset)
+    {{20, 20}, {2, 2}, {9, 9}},  // just last tile (communicate without transpose)
+    {{25, 25}, {5, 5}, {1, 1}},
 };
 
 template <class TypeParam, Coord PANEL_SRC_AXIS>
 void testBrodcastTranspose(comm::Executor& executor_mpi, const config_t& cfg,
                            comm::CommunicatorGrid comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
-  using hpx::util::unwrapping;
+  using hpx::unwrapping;
 
   const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
   const auto rank = dist.rankIndex().get(PANEL_SRC_AXIS);
 
-  const LocalTileSize at_offset{
-      dist.template nextLocalTileFromGlobalTile<Coord::Row>(cfg.offset.row()),
-      dist.template nextLocalTileFromGlobalTile<Coord::Col>(cfg.offset.col()),
-  };
-
   // It is important to keep the order of initialization to avoid deadlocks!
   constexpr Coord PANEL_DST_AXIS = orthogonal(PANEL_SRC_AXIS);
-  Panel<PANEL_SRC_AXIS, TypeParam, dlaf::Device::CPU> panel_src(dist, at_offset);
-  Panel<PANEL_DST_AXIS, TypeParam, dlaf::Device::CPU> panel_dst(dist, at_offset);
+  Panel<PANEL_SRC_AXIS, TypeParam, dlaf::Device::CPU> panel_src(dist, cfg.offset);
+  Panel<PANEL_DST_AXIS, TypeParam, dlaf::Device::CPU> panel_dst(dist, cfg.offset);
 
-  for (const auto i_w : panel_src.iterator())
+  for (const auto i_w : panel_src.iteratorLocal())
     hpx::dataflow(unwrapping(
                       [rank](auto&& tile) { matrix::test::set(tile, TypeUtil::element(rank, 26)); }),
                   panel_src(i_w));
@@ -152,9 +142,19 @@ void testBrodcastTranspose(comm::Executor& executor_mpi, const config_t& cfg,
 
   broadcast(executor_mpi, owner, panel_src, panel_dst, row_task_chain, col_task_chain);
 
-  // check that all destination tiles got the value from the right rank
-  for (const auto i_w : panel_dst.iterator()) {
-    CHECK_TILE_EQ(TypeUtil::element(owner, 26), panel_dst.read(i_w).get());
+  // Note:
+  // all source panels will have access to the same data available on the root rank,
+  // while the destination panels will have access to the corresponding "transposed" tile, except
+  // for the last global tile in the range.
+  for (const auto idx : panel_src.iteratorLocal())
+    CHECK_TILE_EQ(TypeUtil::element(owner, 26), panel_src.read(idx).get());
+
+  for (const auto idx : panel_dst.iteratorLocal()) {
+    constexpr auto CT = decltype(panel_dst)::CoordType;
+    const auto i = dist.template globalTileFromLocalTile<CT>(idx.get(CT));
+    if (i == panel_dst.rangeEnd() - 1)
+      continue;
+    CHECK_TILE_EQ(TypeUtil::element(owner, 26), panel_dst.read(idx).get());
   }
 }
 

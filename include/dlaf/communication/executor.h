@@ -18,11 +18,11 @@
 #include <utility>
 
 #include <hpx/async_mpi/mpi_future.hpp>
-#include <hpx/datastructures/tuple.hpp>
-#include <hpx/execution.hpp>
-#include <hpx/functional.hpp>
-#include <hpx/future.hpp>
-#include <hpx/mutex.hpp>
+#include <hpx/local/execution.hpp>
+#include <hpx/local/functional.hpp>
+#include <hpx/local/future.hpp>
+#include <hpx/local/mutex.hpp>
+#include <hpx/local/tuple.hpp>
 #include <hpx/type_support/unused.hpp>
 
 #include <mpi.h>
@@ -133,6 +133,8 @@ public:
     using FramePtr =
         hpx::intrusive_ptr<typename std::remove_pointer<typename std::decay<Frame>::type>::type>;
     FramePtr frame_p(std::forward<Frame>(frame));
+
+    char const* annotation = hpx::traits::get_function_annotation<F>::call(f);
     auto fn = [frame_p = std::move(frame_p), f = std::forward<F>(f),
                args = std::forward<TupleArgs>(args)]() mutable {
       MPI_Request req;
@@ -142,7 +144,7 @@ public:
       internal::handle_request(req);
       frame_p->set_data(wrapper.dataflow_return());
     };
-    hpx::apply(ex_, std::move(fn));
+    hpx::apply(ex_, hpx::util::annotated_function(std::move(fn), annotation));
   }
 };
 }

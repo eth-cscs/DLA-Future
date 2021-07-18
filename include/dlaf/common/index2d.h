@@ -215,6 +215,17 @@ public:
            boundary.isValid();
   }
 
+  /// Check if it is a valid position inside or on the border of the grid size specified by @p boundary.
+  ///
+  /// @param boundary size of the grid,
+  /// @return true if the current index is in the range [0, @p boundary] for both row and column.
+  /// @pre Index2D.isValid,
+  /// @pre boundary.isValid().
+  bool isInOrOn(const Size2D<IndexT, Tag>& boundary) const noexcept {
+    return this->row() <= boundary.rows() && this->col() <= boundary.cols() && (this->isValid()) &&
+           boundary.isValid();
+  }
+
   /// @return true if `this` and `rhs` have the same row and column.
   bool operator==(const Index2D& rhs) const noexcept {
     return BaseT::operator==(rhs);
@@ -259,6 +270,16 @@ template <class Coords2DType, std::enable_if_t<internal::is_coord<Coords2DType>:
 Coords2DType transposed(Coords2DType coords) {
   coords.transpose();
   return coords;
+}
+
+template <class IndexT, class TAG>
+Index2D<IndexT, TAG> indexFromOrigin(const Size2D<IndexT, TAG>& size) noexcept {
+  return {size.rows(), size.cols()};
+}
+
+template <class IndexT, class TAG>
+Size2D<IndexT, TAG> sizeFromOrigin(const Index2D<IndexT, TAG>& index) noexcept {
+  return {index.row(), index.col()};
 }
 
 /// Compute coords of the @p index -th cell in a row-major ordered 2D grid with size @p dims.

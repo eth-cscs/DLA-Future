@@ -169,8 +169,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
       if (mat_t.tileSize(GlobalTileIndex{k, k}).rows() != mat_w.tileSize(GlobalTileIndex{i, 0}).cols()) {
         TileElementIndex origin(0, 0);
-        TileElementSize size(mat_t.tileSize(GlobalTileIndex{k, k}).rows(),
-                             mat_t.tileSize(GlobalTileIndex{k, k}).cols());
+        TileElementSize size(mat_t.tileSize(GlobalTileIndex{k, k}));
         const matrix::SubTileSpec spec({origin, size});
         auto subtile_w = splitTile(tile_w, spec);
         trmmPanel(executor_np, tile_t, std::move(subtile_w));

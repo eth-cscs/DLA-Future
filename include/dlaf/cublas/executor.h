@@ -21,13 +21,13 @@
 #include <cublas_v2.h>
 #include <cuda_runtime.h>
 
-#include <hpx/execution.hpp>
-#include <hpx/functional.hpp>
-#include <hpx/future.hpp>
+#include <hpx/local/execution.hpp>
+#include <hpx/local/functional.hpp>
+#include <hpx/local/future.hpp>
+#include <hpx/local/mutex.hpp>
+#include <hpx/local/tuple.hpp>
+#include <hpx/local/type_traits.hpp>
 #include <hpx/modules/async_cuda.hpp>
-#include <hpx/mutex.hpp>
-#include <hpx/tuple.hpp>
-#include <hpx/type_traits.hpp>
 
 #include "dlaf/common/assert.h"
 #include "dlaf/cublas/error.h"

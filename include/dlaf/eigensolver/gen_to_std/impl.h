@@ -9,8 +9,8 @@
 //
 #pragma once
 
-#include <hpx/include/util.hpp>
 #include <hpx/local/future.hpp>
+#include <hpx/local/unwrap.hpp>
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"

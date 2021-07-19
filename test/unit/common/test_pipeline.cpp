@@ -12,8 +12,8 @@
 
 #include <gtest/gtest.h>
 
-#include <hpx/include/util.hpp>
 #include <hpx/local/future.hpp>
+#include <hpx/local/unwrap.hpp>
 
 using namespace dlaf;
 using dlaf::common::Pipeline;
@@ -24,7 +24,7 @@ TEST(Pipeline, Basic) {
   auto checkpoint0 = serial();
   auto checkpoint1 =
       checkpoint0.then(hpx::launch::sync,
-                       hpx::util::unwrapping([](auto&& wrapper) { return std::move(wrapper); }));
+                       hpx::unwrapping([](auto&& wrapper) { return std::move(wrapper); }));
 
   auto guard0 = serial();
   auto guard1 = serial();

@@ -94,12 +94,15 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
     for (const auto& ij_tile : iterate_range2d(v.nrTiles())) {
       // copy only the panel
       const auto& source_tile = mat_v.read(ij_tile).get();
-      copy(source_tile, v.tile(ij_tile));
       if (ij_tile.row() <= ij_tile.col()) {
         tile::set0<T>(v.tile(ij_tile));
       }
       else if (ij_tile.row() == ij_tile.col() + 1) {
+	copy(source_tile, v.tile(ij_tile));
         tile::laset<T>(lapack::MatrixType::Upper, 0.f, 1.f, v.tile(ij_tile));
+      }
+      else {
+	copy(source_tile, v.tile(ij_tile));
       }
     }
 

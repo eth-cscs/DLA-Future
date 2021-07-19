@@ -34,6 +34,7 @@
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
+using namespace dlaf::test;
 using namespace dlaf::comm;
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
@@ -242,7 +243,7 @@ TYPED_TEST(ReductionToBandTest, Correctness) {
           else
             return reference.read(ij_tile).get()(ij_element_wrt_tile);
         };
-        CHECK_MATRIX_NEAR(check_rest_unchanged, matrix_a, 0, 1e-3);
+        CHECK_MATRIX_NEAR(check_rest_unchanged, matrix_a, 0, TypeUtilities<TypeParam>::error);
 
         // The distributed result of reduction to band has the following characteristics:
         // - just lower part is relevant (diagonal is included)
@@ -311,7 +312,7 @@ TYPED_TEST(ReductionToBandTest, Correctness) {
           const auto tile_element = dist.tileElementIndex(element);
           return mat_local.tile_read(tile_index)(tile_element);
         };
-        CHECK_MATRIX_NEAR(result, reference, 1e-3, 1e-3);
+        CHECK_MATRIX_NEAR(result, reference, 0, mat_b.size().linear_size() * TypeUtilities<TypeParam>::error);
       }
     }
   }

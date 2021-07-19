@@ -89,12 +89,9 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
   const SizeType m = mat_c.nrTiles().rows();
   const SizeType n = mat_c.nrTiles().cols();
-  const SizeType mv = mat_v.nrTiles().rows();
   const SizeType nv = mat_v.nrTiles().cols();
   const SizeType mb = mat_v.blockSize().rows();
-  const SizeType nb = mat_v.blockSize().cols();
   const SizeType ms = mat_v.size().rows();
-  const SizeType ns = mat_v.size().cols();
 
   // Matrix T
   int tottaus;

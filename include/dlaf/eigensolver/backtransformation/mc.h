@@ -142,8 +142,9 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     dlaf::factorization::internal::computeTFactor<Backend::MC>(taupan, mat_v, v_start, taus_panel,
                                                                mat_t(LocalTileIndex{k, k}));
 
+    auto kk = LocalTileIndex{k, k};
+
     for (SizeType i = k + 1; i < m; ++i) {
-      auto kk = LocalTileIndex{k, k};
       // WH = V T
       auto ik = LocalTileIndex{i, 0};
       hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_t = mat_t.read(kk);

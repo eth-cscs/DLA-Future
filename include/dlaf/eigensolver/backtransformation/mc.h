@@ -106,8 +106,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   Matrix<T, Device::CPU> mat_w({mat_v.size().rows(), mb}, mat_v.blockSize());
   Matrix<T, Device::CPU> mat_w2({mb, mat_c.size().cols()}, mat_c.blockSize());
 
-  SizeType last_mb = mat_v.tileSize(GlobalTileIndex(0, nv-1)).cols();
-  
+  SizeType last_mb = mat_v.tileSize(GlobalTileIndex(0, nv - 1)).cols();
+
   // Specific for V matrix layout where last column of tiles is empty
   const SizeType last_panel_reflector_idx = mat_v.nrTiles().cols() - 2;
 

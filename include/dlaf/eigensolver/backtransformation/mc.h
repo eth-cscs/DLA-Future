@@ -32,7 +32,7 @@ namespace eigensolver {
 namespace internal {
 
 template <class T>
-void set_zero(Matrix<T, Device::CPU>& mat) {
+void setZero(Matrix<T, Device::CPU>& mat) {
   dlaf::matrix::util::set(mat, [](auto&&) { return static_cast<T>(0.0); });
 }
 
@@ -155,7 +155,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     }
 
     // Reset W2 to zero
-    set_zero(mat_w2);
+    setZero(mat_w2);
 
     // TODO: instead of using a full matrix, choose a "column" matrix. The problem is that last tile
     // should be square but may have different size.

@@ -140,15 +140,13 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       copySingleTile(mat_v.read(LocalTileIndex(i, k)), mat_vv(LocalTileIndex(i, 0)));
 
       // Setting VV
-      auto setting_vv = unwrapping([=](auto&& tile) {
-        if (i <= k) {
-          tile::set0<T>(tile);
-        }
-        else if (i == k + 1) {
-          tile::laset<T>(lapack::MatrixType::Upper, 0.f, 1.f, tile);
-        }
-      });
-      hpx::dataflow(executor_hp, setting_vv, mat_vv(LocalTileIndex(i, 0)));
+      auto tile_i0 = mat_vv(LocalTileIndex(i, 0));
+      if (i <= k) {
+        hpx::dataflow(hpx::launch::sync, unwrapping(tile::set0<T>), std::move(tile_i0));
+      }
+      else if (i == k + 1) {
+        hpx::dataflow(hpx::launch::sync, unwrapping(tile::laset<T>), lapack::MatrixType::Upper, 0.f, 1.f, std::move(tile_i0));
+      }
 
       // Copy VV into W
       copySingleTile(mat_vv.read(LocalTileIndex(i, 0)), mat_w(LocalTileIndex(i, 0)));

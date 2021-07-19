@@ -20,13 +20,16 @@ namespace eigensolver {
 
 /// Eigenvalue back-transformation implementation on local memory.
 ///
-/// It solves C = C - V T V^H C
-/// where C is a generic matrix, T an upper triangular matrix (triangular factor T) and V a lower
-/// triangular matrix (reflectors). Triangular factor T is computed from values of taus and block
-/// reflector (in V) using @see computeTFactor() method.
+/// It computes Q C, where Q = HH(1) HH(2) ... HH(m-b) (HH(j) is the House-Holder transformation defined
+/// by the j-th element of tau and the HH reflector stored in the j-th column.
 ///
-/// @param mat_c contains on entry the generic matrix C, while on exit it contains the upper matrix
-/// resulting from the eigenvalue back-transformation.
+/// The HH reflector are computed using the @see computeTFactor() method, starting from a matrix
+/// containing the elementary reflectors (@param mat_v) and an array of taus, associated with each
+/// reflector (@param taus). For a generic matrix @param mat_c (mxn), @param mat_v has size (mxm) and
+/// @param taus corresponds to the total number of reflectors (i.e. the number of non zero columns of
+/// @param mat_v).
+///
+/// @param mat_c contains the matrix C, while on exit it contains Q C.
 /// @param mat_v is a lower triangular matrix, containing Householder vectors (reflectors).
 /// @param taus is a vectors of scalar, associated with the related elementary reflector.
 /// The last two paramteres (@param mat_v and @param taus) are used to compute the T factor matrix

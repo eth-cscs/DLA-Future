@@ -128,16 +128,15 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
     common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus;
 
     MatrixLocal<T> tausloc({tottaus, 1}, {mb, mb});
-    auto tau_rows = tausloc.nrTiles().rows();
 
     auto nt = 0;
-    for (SizeType i = 0; i < tau_rows; ++i) {
+    for (SizeType k = 0; k < tottaus; k+=mb) {
       common::internal::vector<T> t_tile;
-      auto seed = 10000 * i / mb + 1;
+      auto seed = 10000 * k / mb + 1;
       dlaf::matrix::util::internal::getter_random<BaseType<T>> random_value(seed);
-      for (SizeType t = 0; t < mb && nt < tottaus; ++t) {
-        const GlobalElementIndex v_offset{i * mb + t, i * mb + t};
-        auto dotprod = blas::dot(m - t, v.ptr(v_offset), 1, v.ptr(v_offset), 1);
+      for (SizeType j = k; j < std::min(k + mb, tottaus); ++j) {
+        const GlobalElementIndex v_offset{j + mb, j};
+        auto dotprod = blas::dot(tottaus - j, v.ptr(v_offset), 1, v.ptr(v_offset), 1);
         BaseType<T> tau_i = 0;
         if (std::is_same<T, ComplexType<T>>::value) {
           tau_i = random_value();

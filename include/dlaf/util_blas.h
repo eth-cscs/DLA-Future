@@ -136,12 +136,10 @@ struct trmmSizes {
 template <typename T, Device device>
 trmmSizes getTrmmSizes(const blas::Side side, const dlaf::matrix::Tile<const T, device>& a,
                        const dlaf::matrix::Tile<T, device>& b) {
-  DLAF_ASSERT(square_size(a), a);
-
   trmmSizes s{b.size().rows(), b.size().cols()};
-
   const auto b_side = (side == blas::Side::Left ? s.m : s.n);
 
+  DLAF_ASSERT(square_size(a), a);
   DLAF_ASSERT(a.size().rows() == b_side, a, side, b);
 
   return s;

@@ -312,7 +312,8 @@ TYPED_TEST(ReductionToBandTest, Correctness) {
           const auto tile_element = dist.tileElementIndex(element);
           return mat_local.tile_read(tile_index)(tile_element);
         };
-        CHECK_MATRIX_NEAR(result, reference, 0, mat_b.size().linear_size() * TypeUtilities<TypeParam>::error);
+        CHECK_MATRIX_NEAR(result, reference, 0,
+                          mat_b.size().linear_size() * TypeUtilities<TypeParam>::error);
       }
     }
   }

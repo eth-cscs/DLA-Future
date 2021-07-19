@@ -73,9 +73,6 @@ template <class T>
 struct BackTransformation<Backend::MC, Device::CPU, T> {
   static void call_FC(Matrix<T, Device::CPU>& mat_c, Matrix<const T, Device::CPU>& mat_v,
                       common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus);
-  static void call_FC(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_c,
-                      Matrix<const T, Device::CPU>& mat_v,
-                      common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus);
 };
 
 template <class T>
@@ -195,13 +192,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       }
     }
   }
-}
-
-template <class T>
-void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
-    comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_c, Matrix<const T, Device::CPU>& mat_v,
-    common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
-  DLAF_UNIMPLEMENTED(grid);
 }
 
 /// ---- ETI

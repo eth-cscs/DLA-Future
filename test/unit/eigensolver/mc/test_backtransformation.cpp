@@ -116,13 +116,11 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
 
     common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus;
 
-    MatrixLocal<T> tausloc({tottaus, 1}, {mb, mb});
-
+    common::internal::vector<T> tausloc;
+    
     // Impose orthogonality: Q = I - v tau vH is orthogonal (Q QH = I).
     // Real case: tau = 2 / (vH v)
     // Complex case: real part of tau = [1 + sqrt(1 - vH v taui^2)]/(vH v)
-
-    auto nt = 0;
     for (SizeType k = 0; k < tottaus; k+=mb) {
       common::internal::vector<T> t_tile;
       auto seed = 10000 * k / mb + 1;
@@ -136,16 +134,15 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
         }
         T tau;
         getTau(tau, dotprod, tau_i);
-        tausloc({nt, 0}) = static_cast<T>(tau);
+	tausloc.push_back(static_cast<T>(tau));
         t_tile.push_back(static_cast<T>(tau));
-        ++nt;
       }
       taus.push_back(hpx::make_ready_future(t_tile));
     }
 
     for (SizeType i = tottaus - 1; i > -1; --i) {
       const GlobalElementIndex v_offset{i, i};
-      auto tau = tausloc({i, 0});
+      auto tau = tausloc[i];
       lapack::larf(lapack::Side::Left, m - i, n, v.ptr(v_offset), 1, tau,
                    c.ptr(GlobalElementIndex{i, 0}), c.ld());
     }

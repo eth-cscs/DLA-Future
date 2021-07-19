@@ -18,11 +18,11 @@
 #include <utility>
 
 #include <hpx/async_mpi/mpi_future.hpp>
-#include <hpx/datastructures/tuple.hpp>
-#include <hpx/execution.hpp>
-#include <hpx/functional.hpp>
-#include <hpx/future.hpp>
-#include <hpx/mutex.hpp>
+#include <hpx/local/execution.hpp>
+#include <hpx/local/functional.hpp>
+#include <hpx/local/future.hpp>
+#include <hpx/local/mutex.hpp>
+#include <hpx/local/tuple.hpp>
 #include <hpx/type_support/unused.hpp>
 
 #include <mpi.h>

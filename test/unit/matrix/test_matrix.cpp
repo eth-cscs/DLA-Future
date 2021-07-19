@@ -16,8 +16,8 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include <hpx/include/util.hpp>
 #include <hpx/local/future.hpp>
+#include <hpx/local/unwrap.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/util_matrix.h"
@@ -35,7 +35,7 @@ using namespace dlaf::comm;
 using namespace dlaf::test;
 using namespace testing;
 
-using hpx::util::unwrapping;
+using hpx::unwrapping;
 
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);

@@ -28,7 +28,7 @@ class DlaFuture(CMakePackage, CudaPackage):
     depends_on("umpire~examples")
     depends_on("umpire+cuda~shared", when="+cuda")
     depends_on("hpx cxxstd=14 networking=none +async_mpi")
-    depends_on("hpx@1.6.0:")
+    depends_on("hpx@1.7.0:")
     depends_on("hpx +cuda", when="+cuda")
 
     depends_on("hpx build_type=Debug", when="build_type=Debug")

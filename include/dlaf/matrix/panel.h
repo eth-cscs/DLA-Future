@@ -9,6 +9,9 @@
 //
 #pragma once
 
+#include <hpx/local/future.hpp>
+#include <hpx/local/unwrap.hpp>
+
 #include "dlaf/common/assert.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
@@ -86,7 +89,7 @@ struct Panel<axis, const T, D> {
 #if defined DLAF_ASSERT_MODERATE_ENABLE
     {
       const auto panel_tile_size = tileSize(index);
-      new_tile_fut.then(hpx::launch::sync, hpx::util::unwrapping([panel_tile_size](const auto& tile) {
+      new_tile_fut.then(hpx::launch::sync, hpx::unwrapping([panel_tile_size](const auto& tile) {
                           DLAF_ASSERT_MODERATE(panel_tile_size == tile.size(), panel_tile_size,
                                                tile.size());
                         }));
@@ -246,8 +249,8 @@ protected:
     const auto panel_coord = dist_matrix_.globalTileFromLocalTile<CoordType>(index.get<CoordType>());
     const GlobalTileIndex panel_index(CoordType, panel_coord);
 
-    const auto size_coord = dist_matrix_.tileSize(panel_index).get<CoordType>();
-    const auto size_axis = dim_ < 0 ? dist_matrix_.blockSize().get<axis>() : dim_;
+    const auto size_coord = dist_matrix_.tileSize(panel_index).template get<CoordType>();
+    const auto size_axis = dim_ < 0 ? dist_matrix_.blockSize().template get<axis>() : dim_;
 
     return {axis, size_axis, size_coord};
   }

@@ -14,6 +14,8 @@
 
 #include <mpi.h>
 
+#include <hpx/local/unwrap.hpp>
+
 #include "dlaf/common/callable_object.h"
 #include "dlaf/common/contiguous_buffer_holder.h"
 #include "dlaf/common/data.h"
@@ -63,7 +65,7 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
                                hpx::future<common::PromiseGuard<comm::Communicator>> pcomm,
                                MPI_Op reduce_op, hpx::future<matrix::Tile<T, Device::CPU>> tile) {
   using hpx::dataflow;
-  using hpx::util::unwrapping;
+  using hpx::unwrapping;
 
   using common::internal::copyBack_o;
   using common::internal::makeItContiguous_o;
@@ -97,7 +99,7 @@ void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
                         hpx::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
                         hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile) {
   using hpx::dataflow;
-  using hpx::util::unwrapping;
+  using hpx::unwrapping;
 
   using common::internal::makeItContiguous_o;
   using matrix::unwrapExtendTiles;

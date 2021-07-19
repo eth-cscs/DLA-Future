@@ -9,8 +9,8 @@
 //
 #pragma once
 
-#include <hpx/include/util.hpp>
 #include <hpx/local/future.hpp>
+#include <hpx/local/unwrap.hpp>
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
@@ -350,7 +350,6 @@ void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
 
     panelT.setRange({kt, kt}, indexFromOrigin(distr.nrTiles()));
 
-    // TODO skip last step tile
     broadcast(executor_mpi, kk_rank.row(), panel, panelT, mpi_row_task_chain, mpi_col_task_chain);
 
     // TRAILING MATRIX

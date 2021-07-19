@@ -8,7 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <hpx/hpx.hpp>
+#include <hpx/local/future.hpp>
+
 #include "dlaf/matrix/tile.h"
 
 namespace dlaf {

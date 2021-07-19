@@ -41,8 +41,8 @@
 
 #include <gtest/gtest.h>
 
-#include <hpx/include/resource_partitioner.hpp>
 #include <hpx/init.hpp>
+#include <hpx/program_options.hpp>
 
 #include <dlaf/init.h>
 

@@ -122,10 +122,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
       // Setting VV
       auto tile_i0 = mat_vv(LocalTileIndex(i, 0));
-      if (i <= k) {
-        hpx::dataflow(hpx::launch::sync, unwrapping(tile::set0<T>), std::move(tile_i0));
-      }
-      else if (i == k + 1) {
+      if (i == k + 1) {
         hpx::dataflow(hpx::launch::sync, unwrapping(tile::laset<T>), lapack::MatrixType::Upper, 0.f, 1.f,
                       std::move(tile_i0));
       }

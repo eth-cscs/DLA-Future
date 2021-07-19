@@ -145,7 +145,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         hpx::dataflow(hpx::launch::sync, unwrapping(tile::set0<T>), std::move(tile_i0));
       }
       else if (i == k + 1) {
-        hpx::dataflow(hpx::launch::sync, unwrapping(tile::laset<T>), lapack::MatrixType::Upper, 0.f, 1.f, std::move(tile_i0));
+        hpx::dataflow(hpx::launch::sync, unwrapping(tile::laset<T>), lapack::MatrixType::Upper, 0.f, 1.f,
+                      std::move(tile_i0));
       }
 
       // Copy VV into W

@@ -108,22 +108,13 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   Matrix<T, Device::CPU> mat_w({mat_v.size().rows(), mb}, mat_v.blockSize());
   Matrix<T, Device::CPU> mat_w2({mb, mat_c.size().cols()}, mat_c.blockSize());
 
-  SizeType last_mb;
-  if (mat_v.blockSize().cols() == 1) {
-    last_mb = 1;
-  }
-  else if (mat_v.size().cols()) {
-    if (mat_v.size().cols() % mat_v.blockSize().cols() == 0)
-      last_mb = mat_v.blockSize().cols();
-    else
-      last_mb = mat_v.size().cols() % mat_v.blockSize().cols();
-  }
-
+  SizeType last_mb = mat_v.tileSize(GlobalTileIndex(0, nv-1)).cols();
+  
   // Specific for V matrix layout where last column of tiles is empty
-  const SizeType last_reflector_idx = mat_v.nrTiles().cols() - 2;
+  const SizeType last_panel_reflector_idx = mat_v.nrTiles().cols() - 2;
 
-  for (SizeType k = last_reflector_idx; k >= 0; --k) {
-    bool is_last = (k == last_reflector_idx) ? true : false;
+  for (SizeType k = last_panel_reflector_idx; k >= 0; --k) {
+    bool is_last = (k == last_panel_reflector_idx) ? true : false;
 
     for (SizeType i = k + 1; i < mat_v.nrTiles().rows(); ++i) {
       // Copy V panel into VV

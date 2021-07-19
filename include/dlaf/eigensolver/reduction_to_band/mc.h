@@ -401,7 +401,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
         FutureConstTile<T>  tile_w = w.read(ij_local);
         // clang-format on
 
-        hpx::dataflow(ex, unwrapping(dlaf::tile::hemm<T>), blas::Side::Left, blas::Uplo::Lower, T(1),
+        hpx::dataflow(ex, unwrapping(dlaf::tile::hemm_o), blas::Side::Left, blas::Uplo::Lower, T(1),
                       std::move(tile_a), std::move(tile_w), T(is_first ? 0 : 1), std::move(tile_x));
       }
       else {
@@ -420,7 +420,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
           FutureConstTile<T>  tile_w = wt.read(ij_local);
           // clang-format on
 
-          hpx::dataflow(ex, unwrapping(dlaf::tile::gemm<T>), blas::Op::NoTrans, blas::Op::NoTrans, T(1),
+          hpx::dataflow(ex, unwrapping(dlaf::tile::gemm_o), blas::Op::NoTrans, blas::Op::NoTrans, T(1),
                         std::move(tile_a), std::move(tile_w), T(is_first ? 0 : 1), std::move(tile_x));
         }
 
@@ -447,9 +447,8 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
           FutureConstTile<T>  tile_w = w.read(ij_local);
           // clang-format on
 
-          hpx::dataflow(ex, unwrapping(dlaf::tile::gemm<T>), blas::Op::ConjTrans, blas::Op::NoTrans,
-                        T(1), std::move(tile_a), std::move(tile_w), T(is_first_xt ? 0 : 1),
-                        std::move(tile_x));
+          hpx::dataflow(ex, unwrapping(dlaf::tile::gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans, T(1),
+                        std::move(tile_a), std::move(tile_w), T(is_first_xt ? 0 : 1), std::move(tile_x));
         }
       }
     }
@@ -518,7 +517,7 @@ void gemmComputeW2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Co
     FutureConstTile<T>  tile_x  = x.read(index_tile);
     // clang-format on
 
-    hpx::dataflow(ex, unwrapping(dlaf::tile::gemm<T>), blas::Op::ConjTrans, blas::Op::NoTrans, T(1),
+    hpx::dataflow(ex, unwrapping(dlaf::tile::gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans, T(1),
                   std::move(tile_w), std::move(tile_x), beta, std::move(tile_w2));
   }
 
@@ -541,7 +540,7 @@ void gemmUpdateX(PanelT<Coord::Col, T>& x, ConstMatrixT<T>& w2, MatrixLikeT& v) 
     FutureConstTile<T>  tile_w2 = w2.read(LocalTileIndex{0, 0});
     // clang-format on
 
-    hpx::dataflow(ex, unwrapping(dlaf::tile::gemm<T>), blas::Op::NoTrans, blas::Op::NoTrans, T(-0.5),
+    hpx::dataflow(ex, unwrapping(dlaf::tile::gemm_o), blas::Op::NoTrans, blas::Op::NoTrans, T(-0.5),
                   std::move(tile_v), std::move(tile_w2), T(1), std::move(tile_x));
   }
 }
@@ -578,7 +577,7 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
         FutureConstTile<T>  tile_x = x.read(ij_local);
         // clang-format on
 
-        dataflow(ex, unwrapping(dlaf::tile::her2k<T>), blas::Uplo::Lower, blas::Op::NoTrans, T(-1),
+        dataflow(ex, unwrapping(dlaf::tile::her2k_o), blas::Uplo::Lower, blas::Op::NoTrans, T(-1),
                  std::move(tile_v), std::move(tile_x), BaseType<T>(1), std::move(tile_a));
       }
       else {
@@ -590,7 +589,7 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
           FutureConstTile<T>  tile_v = vt.read(ij_local);
           // clang-format on
 
-          dataflow(ex, unwrapping(dlaf::tile::gemm<T>), blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
+          dataflow(ex, unwrapping(dlaf::tile::gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
                    std::move(tile_x), std::move(tile_v), T(1), std::move(tile_a));
         }
 
@@ -602,7 +601,7 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
           FutureConstTile<T>  tile_x = xt.read(ij_local);
           // clang-format on
 
-          dataflow(ex, unwrapping(dlaf::tile::gemm<T>), blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
+          dataflow(ex, unwrapping(dlaf::tile::gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
                    std::move(tile_v), std::move(tile_x), T(1), std::move(tile_a));
         }
       }

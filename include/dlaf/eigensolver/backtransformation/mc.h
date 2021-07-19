@@ -94,7 +94,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   const SizeType ms = mat_v.size().rows();
 
   // Matrix T
-  int tottaus;
+  SizeType tottaus;
   if (ms < mb || ms == 0 || nv == 0)
     tottaus = 0;
   else

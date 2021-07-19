@@ -82,15 +82,16 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
   Matrix<T, Device::CPU> mat_v(sizeV, blockSizeV);
   dlaf::matrix::util::set_random(mat_v);
 
-  int tottaus;
+  SizeType tottaus;
   if (m < mb || m == 0 || n == 0)
     tottaus = 0;
   else
     tottaus = m - mb;
 
   if (tottaus > 0) {
-    // Impose orthogonality: Q = I - v tau vH is orthogonal (Q QH = I)
-    // Real part of tau = [1 + sqrt(1 - vH v taui^2)]/(vH v) 
+    // Impose orthogonality: Q = I - v tau vH is orthogonal (Q QH = I).
+    // Real case: tau = 2 / (vH v)
+    // Complex case: real part of tau = [1 + sqrt(1 - vH v taui^2)]/(vH v)
     LocalElementSize sizeTau(m, 1);
     TileElementSize blockSizeTau(1, 1);
     Matrix<T, Device::CPU> mat_tau(sizeTau, blockSizeTau);

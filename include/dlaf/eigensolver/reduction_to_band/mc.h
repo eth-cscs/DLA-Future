@@ -258,8 +258,8 @@ void updateTrailingPanelWithReflector(comm::IndexT_MPI rank_v0, comm::Communicat
 
 template <class T>
 hpx::shared_future<common::internal::vector<T>> computePanelReflectors(
-    comm::IndexT_MPI rank_v0, hpx::future<common::PromiseGuard<comm::Communicator>> bmpi_col_chain,
-    MatrixT<T>& mat_a,
+    hpx::future<void> trigger, comm::IndexT_MPI rank_v0,
+    hpx::future<common::PromiseGuard<comm::Communicator>> bmpi_col_chain, MatrixT<T>& mat_a,
     const common::IterableRange2D<SizeType, dlaf::matrix::LocalTile_TAG> ai_panel_range,
     SizeType nrefls) {
   using hpx::unwrapping;
@@ -283,7 +283,7 @@ hpx::shared_future<common::internal::vector<T>> computePanelReflectors(
   // clang-format off
   return hpx::dataflow(
       dlaf::getHpExecutor<Backend::MC>(),
-      std::move(panel_task), std::move(panel_tiles), bmpi_col_chain);
+      std::move(panel_task), std::move(panel_tiles), bmpi_col_chain, std::move(trigger));
   // clang-format on
 }
 
@@ -648,6 +648,7 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
   common::RoundRobin<PanelT<Coord::Col, T>> panels_x(n_workspaces, dist);
   common::RoundRobin<PanelT<Coord::Row, T>> panels_xt(n_workspaces, dist);
 
+  hpx::future<void> trigger_panel = hpx::make_ready_future<void>();
   for (SizeType j_panel = 0; j_panel < (dist.nrTiles().cols() - 1); ++j_panel) {
     const GlobalTileIndex ai_start{GlobalTileIndex{j_panel, j_panel} + GlobalTileSize{1, 0}};
     const GlobalTileIndex at_start{ai_start + GlobalTileSize{0, 1}};
@@ -695,8 +696,8 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
 
     // PANEL
     if (is_panel_rank_col) {
-      taus.emplace_back(
-          computePanelReflectors(rank_v0.row(), bmpi_col_chain(), mat_a, ai_panel, nrefls));
+      taus.emplace_back(computePanelReflectors(std::move(trigger_panel), rank_v0.row(), bmpi_col_chain(),
+                                               mat_a, ai_panel, nrefls));
       computeTFactor<Backend::MC>(nrefls, mat_a, ai_start, taus.back(), t(t_idx), mpi_col_chain);
       setupReflectorPanelV(rank_v0.row(), ai_offset, v, mat_a);
     }
@@ -737,6 +738,21 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
     }
 
     comm::broadcast(ex_mpi, rank_v0.col(), x, xt, mpi_row_chain, mpi_col_chain);
+
+    // Note:
+    // This is a checkpoint that it is used to trigger the computation of the next iteration.
+    //
+    // It is a checkpoint to ensure advancements in specific edge cases, due to the usage of
+    // blocking MPI calls inside the panel computation.
+    // If there is just a single worker thread (MPI excluded) per rank, and one of the ranks ends up
+    // having an empty panel, it does not have any dependency so it is ready to start the computation
+    // of this empty panel, but at the same time, since it has to partecipate to the collective blocking
+    // calls, it may start and block the only worker thread available. If it starts before this point of
+    // the previous iteration is reached, then a deadlock is created. Indeed, the offending rank is
+    // blocked waiting to do nothing on the next iteration (computePanel), while other ranks would be
+    // stuck waiting for it for completing steps of the previous iteration, needed for the update of the
+    // trailing matrix that will unlock the next iteration.
+    trigger_panel = hpx::when_all(selectRead(x, x.iteratorLocal()), selectRead(xt, xt.iteratorLocal()));
 
     her2kUpdateTrailingMatrix(at_offset, mat_a, x, vt, v, xt);
 

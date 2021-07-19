@@ -36,8 +36,6 @@ namespace eigensolver {
 /// @param mat_c contains the matrix C, while on exit it contains Q C.
 /// @param mat_v is a lower triangular matrix, containing Householder vectors (reflectors).
 /// @param taus is a vectors of scalar, associated with the related elementary reflector.
-/// The last two paramteres (@param mat_v and @param taus) are used to compute the T factor matrix
-/// (compact WY representation of the Householder reflectors).
 /// @pre mat_c is not distributed,
 /// @pre mat_v is not distributed.
 template <Backend backend, Device device, class T>

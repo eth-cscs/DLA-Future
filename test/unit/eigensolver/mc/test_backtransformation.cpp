@@ -89,8 +89,8 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
     tottaus = (m / mb - 1) * mb + m % mb;
 
   if (tottaus > 0) {
-    // Impose orthogonality: Q = I - v tau v^H is orthogonal (Q Q^H = I)
-    // leads to tau = [1 + sqrt(1 - vH v taui^2)]/(vH v) for real
+    // Impose orthogonality: Q = I - v tau vH is orthogonal (Q QH = I)
+    // Real part of tau = [1 + sqrt(1 - vH v taui^2)]/(vH v) 
     LocalElementSize sizeTau(m, 1);
     TileElementSize blockSizeTau(1, 1);
     Matrix<T, Device::CPU> mat_tau(sizeTau, blockSizeTau);

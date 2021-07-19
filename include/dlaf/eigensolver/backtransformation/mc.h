@@ -13,11 +13,7 @@
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
-#include "dlaf/common/pipeline.h"
 #include "dlaf/common/vector.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/functions_sync.h"
-#include "dlaf/communication/init.h"
 #include "dlaf/eigensolver/backtransformation/api.h"
 #include "dlaf/factorization/qr.h"
 #include "dlaf/matrix/copy.h"

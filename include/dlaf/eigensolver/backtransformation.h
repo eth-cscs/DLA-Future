@@ -29,6 +29,10 @@ namespace eigensolver {
 /// @param taus corresponds to the total number of reflectors (i.e. the number of non zero columns of
 /// @param mat_v).
 ///
+/// Each tau is computed selecting a column of @param mat_v (called @p v). In case of real number, tau =
+/// 2 / (vH v), while in the complex case the real part of tau corresponds to  [1 + sqrt(1 - vH v
+/// taui^2)]/(vH v), where @p taui is complex part (random value).
+///
 /// @param mat_c contains the matrix C, while on exit it contains Q C.
 /// @param mat_v is a lower triangular matrix, containing Householder vectors (reflectors).
 /// @param taus is a vectors of scalar, associated with the related elementary reflector.

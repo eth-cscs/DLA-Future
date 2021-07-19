@@ -89,13 +89,6 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
     tottaus = m - mb;
 
   if (tottaus > 0) {
-    // Impose orthogonality: Q = I - v tau vH is orthogonal (Q QH = I).
-    // Real case: tau = 2 / (vH v)
-    // Complex case: real part of tau = [1 + sqrt(1 - vH v taui^2)]/(vH v)
-    LocalElementSize sizeTau(m, 1);
-    TileElementSize blockSizeTau(1, 1);
-    Matrix<T, Device::CPU> mat_tau(sizeTau, blockSizeTau);
-
     // Reset diagonal and upper values of V
     MatrixLocal<T> v({m, m}, blockSizeV);
     for (const auto& ij_tile : iterate_range2d(v.nrTiles())) {
@@ -118,16 +111,13 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
       copy(source_tile, c.tile(ij_tile));
     }
 
-    // TODO: creating a whole matrix, solves issues on the last tile when m%mb != 0 ==> find out how to
-    // use only a panel
-    LocalElementSize sizeT(tottaus, tottaus);
-    TileElementSize blockSizeT(mb, mb);
-    Matrix<T, Device::CPU> mat_t(sizeT, blockSizeT);
-    set_zero(mat_t);
-
     common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus;
 
     MatrixLocal<T> tausloc({tottaus, 1}, {mb, mb});
+
+    // Impose orthogonality: Q = I - v tau vH is orthogonal (Q QH = I).
+    // Real case: tau = 2 / (vH v)
+    // Complex case: real part of tau = [1 + sqrt(1 - vH v taui^2)]/(vH v)
 
     auto nt = 0;
     for (SizeType k = 0; k < tottaus; k+=mb) {

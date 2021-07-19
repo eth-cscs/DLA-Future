@@ -86,7 +86,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
   if (m < mb || m == 0 || n == 0)
     tottaus = 0;
   else
-    tottaus = (m / mb - 1) * mb + m % mb;
+    tottaus = m - mb;
 
   if (tottaus > 0) {
     // Impose orthogonality: Q = I - v tau vH is orthogonal (Q QH = I)

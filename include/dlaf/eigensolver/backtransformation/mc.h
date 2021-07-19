@@ -93,7 +93,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   if (ms < mb || ms == 0 || nv == 0)
     tottaus = 0;
   else
-    tottaus = (ms / mb - 1) * mb + ms % mb;
+    tottaus = ms - mb;
 
   if (tottaus == 0)
     return;

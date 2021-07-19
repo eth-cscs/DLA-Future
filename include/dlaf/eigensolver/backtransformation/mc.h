@@ -144,8 +144,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
     auto kk = LocalTileIndex{k, k};
 
+    // WH = V T
     for (SizeType i = k + 1; i < m; ++i) {
-      // WH = V T
       auto ik = LocalTileIndex{i, 0};
       hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_t = mat_t.read(kk);
       auto tile_w = mat_w(ik);
@@ -161,22 +161,22 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         trmmPanel(executor_np, mat_t.read(kk), std::move(tile_w));
     }
 
+    // W2 = W C
     for (SizeType j = 0; j < n; ++j) {
       auto kj = LocalTileIndex{0, j};
       for (SizeType i = k + 1; i < m; ++i) {
         auto ik = LocalTileIndex{i, 0};
         auto ij = LocalTileIndex{i, j};
-        // W2 = W C
         gemmUpdateW2(executor_np, mat_w(ik), mat_c.read(ij), mat_w2(kj));
       }
     }
 
+    // C = C - V W2
     for (SizeType i = k + 1; i < m; ++i) {
       auto ik = LocalTileIndex{i, 0};
       for (SizeType j = 0; j < n; ++j) {
         auto kj = LocalTileIndex{0, j};
         auto ij = LocalTileIndex{i, j};
-        // C = C - V W2
         gemmTrailingMatrix(executor_np, mat_vv.read(ik), mat_w2.read(kj), mat_c(ij));
       }
     }

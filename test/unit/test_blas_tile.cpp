@@ -245,6 +245,7 @@ TYPED_TEST(TileOperationsTestGPU, Herk) {
 }
 #endif
 
+// Tuple elements:  m, n, extra_lda, extra_ldb
 std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> trmm_trsm_sizes =
     {{0, 0, 0, 0},                 // all 0 sizes
      {0, 5, 1, 0},  {7, 0, 1, 2},  // one 0 size

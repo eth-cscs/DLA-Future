@@ -41,11 +41,6 @@ void testTrmm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, c
   const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
   const SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
 
-  std::stringstream s;
-  s << "TRMM: " << side << ", " << uplo << ", " << op << ", " << diag << ", m = " << m << ", n = " << n
-    << ", lda = " << lda << ", ldb = " << ldb;
-  SCOPED_TRACE(s.str());
-
   const T alpha = TypeUtilities<T>::element(-1.2, .7);
 
   std::function<T(const TileElementIndex&)> el_op_a, el_b, res_b;
@@ -60,7 +55,12 @@ void testTrmm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, c
   auto a = createTile<CT>(el_op_a, size_a, lda, op);
   auto b = createTile<T>(el_b, size_b, ldb);
 
-  tile::trmm(side, uplo, op, diag, alpha, a, b);
+  invokeBlas<D>(tile::trmm_o, side, uplo, op, diag, alpha, a, b);
+
+  std::stringstream s;
+  s << "TRMM: " << side << ", " << uplo << ", " << op << ", " << diag << ", m = " << m << ", n = " << n
+    << ", lda = " << lda << ", ldb = " << ldb;
+  SCOPED_TRACE(s.str());
 
   CHECK_TILE_NEAR(res_b, b, 10 * (m + 1) * TypeUtilities<T>::error,
                   10 * (m + 1) * TypeUtilities<T>::error);

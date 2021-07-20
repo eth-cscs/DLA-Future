@@ -109,6 +109,7 @@ target_link_libraries(dlaf.core PUBLIC dlaf.prop)
 
 # Define DLAF's eigensolver library
 add_library(dlaf.eigensolver OBJECT
+  eigensolver/backtransformation/mc.cpp
   eigensolver/gen_to_std/mc.cpp
   $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/gen_to_std/gpu.cpp>)
 target_link_libraries(dlaf.eigensolver PUBLIC dlaf.prop)

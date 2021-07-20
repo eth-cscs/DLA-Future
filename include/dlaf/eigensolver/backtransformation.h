@@ -20,22 +20,14 @@ namespace eigensolver {
 
 /// Eigenvalue back-transformation implementation on local memory.
 ///
-/// It computes Q C, where Q = HH(1) HH(2) ... HH(m-b) (HH(j) is the House-Holder transformation defined
-/// by the j-th element of tau and the HH reflector stored in the j-th column.
+/// It computes Q C, where Q = HH(1) HH(2) ... HH(m-mb) (HH(j) is the House-Holder transformation (I - v
+/// tau vH) defined by the j-th element of tau and the HH reflector stored in the j-th column of the matrix V.
 ///
-/// The HH reflector are computed using the @see computeTFactor() method, starting from a matrix
-/// containing the elementary reflectors (@param mat_v) and an array of taus, associated with each
-/// reflector (@param taus). For a generic matrix @param mat_c (mxn), @param mat_v has size (mxm) and
-/// @param taus corresponds to the total number of reflectors (i.e. the number of non zero columns of
-/// @param mat_v).
-///
-/// Each tau is computed selecting a column of @param mat_v (called @p v). In case of real number, tau =
-/// 2 / (vH v), while in the complex case the real part of tau corresponds to  [1 + sqrt(1 - vH v
-/// taui^2)]/(vH v), where @p taui is complex part (random value).
-///
-/// @param mat_c contains the matrix C, while on exit it contains Q C.
-/// @param mat_v is a lower triangular matrix, containing Householder vectors (reflectors).
-/// @param taus is a vectors of scalar, associated with the related elementary reflector.
+/// @param mat_c contains the (mxn) matrix C (blocksize (mbxnb)), while on exit it contains Q C.
+/// @param mat_v is (mxm) matrix with blocksize (mbxmb), which contains the Householder reflectors. The
+/// j-th HH reflector is v_j = (1, V(mb : n, j)).
+/// @param taus is a (blocked) vector of size m (blocksize mb). The j-th element is the scaling factor for
+/// the j-th HH tranformation.
 /// @pre mat_c is not distributed,
 /// @pre mat_v is not distributed.
 template <Backend backend, Device device, class T>

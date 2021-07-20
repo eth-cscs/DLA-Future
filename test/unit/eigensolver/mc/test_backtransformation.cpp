@@ -117,12 +117,14 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
     common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus;
 
     common::internal::vector<T> tausloc;
+    tausloc.reserve(m);
 
     // Impose orthogonality: Q = I - v tau vH is orthogonal (Q QH = I).
     // Real case: tau = 2 / (vH v)
     // Complex case: real part of tau = [1 + sqrt(1 - vH v taui^2)]/(vH v)
     for (SizeType k = 0; k < tottaus; k += mb) {
-      common::internal::vector<T> t_tile;
+      common::internal::vector<T> tau_tile;
+      tau_tile.reserve(mb);
       auto seed = 10000 * k / mb + 1;
       dlaf::matrix::util::internal::getter_random<BaseType<T>> random_value(seed);
       for (SizeType j = k; j < std::min(k + mb, tottaus); ++j) {
@@ -135,9 +137,9 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
         T tau;
         getTau(tau, dotprod, tau_i);
         tausloc.push_back(tau);
-        t_tile.push_back(tau);
+        tau_tile.push_back(tau);
       }
-      taus.push_back(hpx::make_ready_future(t_tile));
+      taus.push_back(hpx::make_ready_future(tau_tile));
     }
 
     for (SizeType j = tottaus - 1; j > -1; --j) {

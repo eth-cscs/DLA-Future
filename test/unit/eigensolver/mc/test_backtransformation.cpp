@@ -141,10 +141,10 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
     }
 
     for (SizeType j = tottaus - 1; j > -1; --j) {
-      const GlobalElementIndex v_offset{j, j};
+      const GlobalElementIndex v_offset{j + mb, j};
       auto tau = tausloc[j];
-      lapack::larf(lapack::Side::Left, m - j, n, v.ptr(v_offset), 1, tau,
-                   c.ptr(GlobalElementIndex{j, 0}), c.ld());
+      lapack::larf(lapack::Side::Left, tottaus - j, n, v.ptr(v_offset), 1, tau,
+                   c.ptr(GlobalElementIndex{j + mb, 0}), c.ld());
     }
 
     eigensolver::backTransformation<Backend::MC>(mat_c, mat_v, taus);

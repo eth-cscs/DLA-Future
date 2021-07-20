@@ -141,7 +141,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
     }
 
     for (SizeType i = tottaus - 1; i > -1; --i) {
-      const GlobalElementIndex v_offset{i, i};
+      const GlobalElementIndex v_offset{i + mb, i};
       auto tau = tausloc[i];
       lapack::larf(lapack::Side::Left, m - i, n, v.ptr(v_offset), 1, tau,
                    c.ptr(GlobalElementIndex{i, 0}), c.ld());

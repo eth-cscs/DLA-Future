@@ -134,8 +134,8 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
         }
         T tau;
         getTau(tau, dotprod, tau_i);
-        tausloc.push_back(static_cast<T>(tau));
-        t_tile.push_back(static_cast<T>(tau));
+        tausloc.push_back(tau);
+        t_tile.push_back(tau);
       }
       taus.push_back(hpx::make_ready_future(t_tile));
     }

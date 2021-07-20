@@ -13,6 +13,7 @@
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
+#include "dlaf/common/round_robin.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/eigensolver/backtransformation/api.h"
 #include "dlaf/factorization/qr.h"
@@ -21,6 +22,7 @@
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/layout_info.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/matrix/panel.h"
 #include "dlaf/util_matrix.h"
 
 namespace dlaf {
@@ -101,15 +103,18 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   if (tottaus == 0)
     return;
 
-  // TODO: instead of using a full matrix, choose a "column" matrix. The problem is that last tile
-  // should be square but may have different size.
   LocalElementSize sizeT(tottaus, tottaus);
   TileElementSize blockSizeT(mb, mb);
-  Matrix<T, Device::CPU> mat_t(sizeT, blockSizeT);
+  dlaf::matrix::Distribution dist_tau(sizeT, blockSizeT);
 
-  Matrix<T, Device::CPU> mat_vv({mat_v.size().rows(), mb}, mat_v.blockSize());
-  Matrix<T, Device::CPU> mat_w({mat_v.size().rows(), mb}, mat_v.blockSize());
-  Matrix<T, Device::CPU> mat_w2({mb, mat_c.size().cols()}, mat_c.blockSize());
+  constexpr std::size_t n_workspaces = 2;
+  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panelsVV(n_workspaces,
+                                                                         mat_v.distribution());
+  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panelsW(n_workspaces,
+                                                                        mat_v.distribution());
+  common::RoundRobin<matrix::Panel<Coord::Row, T, Device::CPU>> panelsW2(n_workspaces,
+                                                                         mat_c.distribution());
+  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panelsT(n_workspaces, dist_tau);
 
   SizeType last_mb = mat_v.tileSize(GlobalTileIndex(0, nv - 1)).cols();
 
@@ -119,44 +124,49 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   for (SizeType k = last_panel_reflector_idx; k >= 0; --k) {
     bool is_last = (k == last_panel_reflector_idx) ? true : false;
 
+    auto& panelVV = panelsVV.nextResource();
+    auto& panelW = panelsW.nextResource();
+    auto& panelW2 = panelsW2.nextResource();
+    auto& panelT = panelsT.nextResource();
+
+    panelVV.setRangeStart({k + 1, k + 1});
+    panelW.setRangeStart({k + 1, k + 1});
+    panelW2.setRangeStart({0, 0});
+
     for (SizeType i = k + 1; i < mat_v.nrTiles().rows(); ++i) {
       // Copy V panel into VV
-      copySingleTile(mat_v.read(LocalTileIndex(i, k)), mat_vv(LocalTileIndex(i, 0)));
+      auto ik = LocalTileIndex{i, k};
+      auto i0 = LocalTileIndex{i, 0};
+      copySingleTile(mat_v.read(ik), panelVV(i0));
 
       // Setting VV
-      auto tile_i0 = mat_vv(LocalTileIndex(i, 0));
+      auto tile_i0 = panelVV(i0);
       if (i == k + 1) {
         hpx::dataflow(hpx::launch::sync, unwrapping(tile::laset<T>), lapack::MatrixType::Upper, 0.f, 1.f,
                       std::move(tile_i0));
       }
 
       // Copy VV into W
-      copySingleTile(mat_vv.read(LocalTileIndex(i, 0)), mat_w(LocalTileIndex(i, 0)));
+      copySingleTile(panelVV.read(i0), panelW(i0));
     }
 
     const GlobalTileIndex v_start{k + 1, k};
     auto taus_panel = taus[k];
     const SizeType taupan = (is_last) ? last_mb : mat_v.blockSize().cols();
-    dlaf::factorization::internal::computeTFactor<Backend::MC>(taupan, mat_v, v_start, taus_panel,
-                                                               mat_t(LocalTileIndex{k, k}));
-
     auto kk = LocalTileIndex{k, k};
+    panelT.setRange({k, k}, {k + 1, k + 1});
+    const LocalTileIndex diag_wp_idx{Coord::Row, k};
+    panelT.setWidth(dist_tau.tileSize(GlobalTileIndex{k, k}).cols());
+    dlaf::factorization::internal::computeTFactor<Backend::MC>(taupan, mat_v, v_start, taus_panel,
+                                                               panelT(diag_wp_idx));
 
     // WH = V T
     for (SizeType i = k + 1; i < m; ++i) {
       auto ik = LocalTileIndex{i, 0};
-      hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_t = mat_t.read(kk);
-      auto tile_w = mat_w(ik);
+      hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_t = panelT.read(diag_wp_idx);
 
-      if (mat_t.tileSize(GlobalTileIndex{k, k}).rows() != mat_w.tileSize(GlobalTileIndex{i, 0}).cols()) {
-        TileElementIndex origin(0, 0);
-        TileElementSize size(mat_t.tileSize(GlobalTileIndex{k, k}));
-        const matrix::SubTileSpec spec({origin, size});
-        auto subtile_w = splitTile(tile_w, spec);
-        trmmPanel(executor_np, tile_t, std::move(subtile_w));
-      }
-      else
-        trmmPanel(executor_np, mat_t.read(kk), std::move(tile_w));
+      panelW.setWidth(dist_tau.tileSize(GlobalTileIndex{k, k}).cols());
+      trmmPanel(executor_np, tile_t, std::move(panelW(ik)));
     }
 
     // W2 = W C
@@ -165,11 +175,12 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       for (SizeType i = k + 1; i < m; ++i) {
         auto ik = LocalTileIndex{i, 0};
         auto ij = LocalTileIndex{i, j};
+        panelW.setWidth(mat_v.tileSize(GlobalTileIndex{i, k}).cols());
         if ((i == k + 1)) {
-          gemmUpdateW2Start(executor_np, mat_w(ik), mat_c.read(ij), mat_w2(kj));
+          gemmUpdateW2Start(executor_np, panelW(ik), mat_c.read(ij), panelW2(kj));
         }
         else {
-          gemmUpdateW2(executor_np, mat_w(ik), mat_c.read(ij), mat_w2(kj));
+          gemmUpdateW2(executor_np, panelW(ik), mat_c.read(ij), panelW2(kj));
         }
       }
     }
@@ -180,7 +191,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       for (SizeType j = 0; j < n; ++j) {
         auto kj = LocalTileIndex{0, j};
         auto ij = LocalTileIndex{i, j};
-        gemmTrailingMatrix(executor_np, mat_vv.read(ik), mat_w2.read(kj), mat_c(ij));
+        gemmTrailingMatrix(executor_np, panelVV.read(ik), panelW2.read(kj), mat_c(ij));
       }
     }
   }

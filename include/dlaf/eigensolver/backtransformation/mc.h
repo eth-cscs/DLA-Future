@@ -27,11 +27,6 @@ namespace dlaf {
 namespace eigensolver {
 namespace internal {
 
-template <class T>
-void setZero(Matrix<T, Device::CPU>& mat) {
-  dlaf::matrix::util::set(mat, [](auto&&) { return static_cast<T>(0.0); });
-}
-
 template <Device device, class T>
 void copySingleTile(hpx::shared_future<matrix::Tile<const T, device>> in,
                     hpx::future<matrix::Tile<T, device>> out) {
@@ -44,6 +39,14 @@ void trmmPanel(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> 
                hpx::future<matrix::Tile<T, device>> w) {
   hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::trmm_o), blas::Side::Right, blas::Uplo::Upper,
                 blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), t, w);
+}
+
+template <class Executor, Device device, class T>
+void gemmUpdateW2Start(Executor&& ex, hpx::future<matrix::Tile<T, device>> w,
+                  hpx::shared_future<matrix::Tile<const T, device>> c,
+                  hpx::future<matrix::Tile<T, device>> w2) {
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans,
+                T(1.0), w, c, T(0.0), std::move(w2));
 }
 
 template <class Executor, Device device, class T>
@@ -98,6 +101,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   if (tottaus == 0)
     return;
 
+  // TODO: instead of using a full matrix, choose a "column" matrix. The problem is that last tile
+  // should be square but may have different size.
   LocalElementSize sizeT(tottaus, tottaus);
   TileElementSize blockSizeT(mb, mb);
   Matrix<T, Device::CPU> mat_t(sizeT, blockSizeT);
@@ -129,11 +134,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       copySingleTile(mat_vv.read(LocalTileIndex(i, 0)), mat_w(LocalTileIndex(i, 0)));
     }
 
-    // Reset W2 to zero
-    setZero(mat_w2);
-
-    // TODO: instead of using a full matrix, choose a "column" matrix. The problem is that last tile
-    // should be square but may have different size.
     const GlobalTileIndex v_start{k + 1, k};
     auto taus_panel = taus[k];
     const SizeType taupan = (is_last) ? last_mb : mat_v.blockSize().cols();
@@ -165,7 +165,12 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       for (SizeType i = k + 1; i < m; ++i) {
         auto ik = LocalTileIndex{i, 0};
         auto ij = LocalTileIndex{i, j};
-        gemmUpdateW2(executor_np, mat_w(ik), mat_c.read(ij), mat_w2(kj));
+	if ((i == k + 1)) {
+	  gemmUpdateW2Start(executor_np, mat_w(ik), mat_c.read(ij), mat_w2(kj));
+	}
+	else {
+	  gemmUpdateW2(executor_np, mat_w(ik), mat_c.read(ij), mat_w2(kj));
+	}
       }
     }
 

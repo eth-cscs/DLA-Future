@@ -140,11 +140,11 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
       taus.push_back(hpx::make_ready_future(t_tile));
     }
 
-    for (SizeType i = tottaus - 1; i > -1; --i) {
-      const GlobalElementIndex v_offset{i + mb, i};
-      auto tau = tausloc[i];
-      lapack::larf(lapack::Side::Left, m - i, n, v.ptr(v_offset), 1, tau,
-                   c.ptr(GlobalElementIndex{i, 0}), c.ld());
+    for (SizeType j = tottaus - 1; j > -1; --j) {
+      const GlobalElementIndex v_offset{j, j};
+      auto tau = tausloc[j];
+      lapack::larf(lapack::Side::Left, m - j, n, v.ptr(v_offset), 1, tau,
+                   c.ptr(GlobalElementIndex{j, 0}), c.ld());
     }
 
     eigensolver::backTransformation<Backend::MC>(mat_c, mat_v, taus);

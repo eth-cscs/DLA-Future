@@ -136,18 +136,18 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     for (SizeType i = k + 1; i < mat_v.nrTiles().rows(); ++i) {
       // Copy V panel into VV
       auto ik = LocalTileIndex{i, k};
-      auto i0 = LocalTileIndex{i, 0};
-      copySingleTile(mat_v.read(ik), panelVV(i0));
+      auto i_row = LocalTileIndex{Coord::Row, i};
+      copySingleTile(mat_v.read(ik), panelVV(i_row));
 
       // Setting VV
-      auto tile_i0 = panelVV(i0);
+      auto tile_i_row = panelVV(i_row);
       if (i == k + 1) {
         hpx::dataflow(hpx::launch::sync, unwrapping(tile::laset<T>), lapack::MatrixType::Upper, 0.f, 1.f,
-                      std::move(tile_i0));
+                      std::move(tile_i_row));
       }
 
       // Copy VV into W
-      copySingleTile(panelVV.read(i0), panelW(i0));
+      copySingleTile(panelVV.read(i_row), panelW(i_row));
     }
 
     const GlobalTileIndex v_start{k + 1, k};
@@ -162,36 +162,36 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
     // WH = V T
     for (SizeType i = k + 1; i < m; ++i) {
-      auto ik = LocalTileIndex{i, 0};
+      auto i_row = LocalTileIndex{Coord::Row, i};
       hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_t = panelT.read(diag_wp_idx);
 
       panelW.setWidth(dist_tau.tileSize(GlobalTileIndex{k, k}).cols());
-      trmmPanel(executor_np, tile_t, std::move(panelW(ik)));
+      trmmPanel(executor_np, tile_t, std::move(panelW(i_row)));
     }
 
     // W2 = W C
     for (SizeType j = 0; j < n; ++j) {
-      auto kj = LocalTileIndex{0, j};
+      auto j_col = LocalTileIndex{Coord::Col, j};
       for (SizeType i = k + 1; i < m; ++i) {
-        auto ik = LocalTileIndex{i, 0};
+	auto i_row = LocalTileIndex{Coord::Row, i};
         auto ij = LocalTileIndex{i, j};
         panelW.setWidth(mat_v.tileSize(GlobalTileIndex{i, k}).cols());
         if ((i == k + 1)) {
-          gemmUpdateW2Start(executor_np, panelW(ik), mat_c.read(ij), panelW2(kj));
+          gemmUpdateW2Start(executor_np, panelW(i_row), mat_c.read(ij), panelW2(j_col));
         }
         else {
-          gemmUpdateW2(executor_np, panelW(ik), mat_c.read(ij), panelW2(kj));
+          gemmUpdateW2(executor_np, panelW(i_row), mat_c.read(ij), panelW2(j_col));
         }
       }
     }
 
     // C = C - V W2
     for (SizeType i = k + 1; i < m; ++i) {
-      auto ik = LocalTileIndex{i, 0};
+      auto i_row = LocalTileIndex{Coord::Row, i};
       for (SizeType j = 0; j < n; ++j) {
-        auto kj = LocalTileIndex{0, j};
+	auto j_col = LocalTileIndex{Coord::Col, j};
         auto ij = LocalTileIndex{i, j};
-        gemmTrailingMatrix(executor_np, panelVV.read(ik), panelW2.read(kj), mat_c(ij));
+        gemmTrailingMatrix(executor_np, panelVV.read(i_row), panelW2.read(j_col), mat_c(ij));
       }
     }
   }

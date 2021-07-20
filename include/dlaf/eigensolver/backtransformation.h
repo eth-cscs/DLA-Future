@@ -66,7 +66,10 @@ void backTransformation(comm::CommunicatorGrid grid, Matrix<T, device>& mat_c,
   DLAF_ASSERT(mat_c.blockSize().rows() == mat_v.blockSize().rows(), mat_c, mat_v);
   DLAF_ASSERT(matrix::equal_process_grid(mat_c, grid), mat_c, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_v, grid), mat_v, grid);
+  //TO DO check that taus and mat_v have a compatible number of blocks
+  //DLAF_ASSERT(mat_v.size().cols() == taus.size.cols(), mat_v, tausxs);
 
+  
   internal::BackTransformation<backend, device, T>::call_FC(grid, mat_c, mat_v, taus);
 }
 

@@ -47,7 +47,7 @@ template <class Executor, Device device, class T>
 void trsmPanelTile(Executor&& executor_hp, hpx::shared_future<matrix::Tile<const T, device>> l_kk,
                    hpx::future<matrix::Tile<T, device>> a_ik) {
   hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Right,
-                blas::Uplo::Lower, blas::Op::NoTrans, blas::Diag::NonUnit, T(1.0), l_kk,
+                blas::Uplo::Lower, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), l_kk,
                 std::move(a_ik));
 }
 
@@ -87,7 +87,7 @@ template <class Executor, Device device, class T>
 void gemmPanelUpdateTile(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> l_ij,
                          hpx::shared_future<matrix::Tile<const T, device>> a_jk,
                          hpx::future<matrix::Tile<T, device>> a_ik) {
-  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans,
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::NoTrans,
                 T(-1.0), l_ij, a_jk, T(1.0), std::move(a_ik));
 }
 }
@@ -109,60 +109,43 @@ void trsmPanelTile(Executor&& executor_hp, hpx::shared_future<matrix::Tile<const
 }
 
 template <class Executor, Device device, class T>
-void gemmPanelTile(Executor&& executor_hp, hpx::shared_future<matrix::Tile<const T, device>> a_kk,
+void hemmPanelTile(Executor&& executor_hp, hpx::shared_future<matrix::Tile<const T, device>> a_kk,
                    hpx::shared_future<matrix::Tile<const T, device>> u_ki,
                    hpx::future<matrix::Tile<T, device>> a_ki) {
-  hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans,
-                blas::Op::NoTrans, T(-0.5), a_kk, u_ki, T(1.0), std::move(a_ki));
+  hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::hemm_o), blas::Side::Left,
+                blas::Uplo::Upper, T(-0.5), a_kk, u_ki, T(1.0), std::move(a_ki));
 }
 
 template <class Executor, Device device, class T>
-void her2kTrailingDiagTile(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> a_kj,
-                           hpx::shared_future<matrix::Tile<const T, device>> u_kj,
-                           hpx::future<matrix::Tile<T, device>> a_kk) {
+void her2kTrailingDiagTile(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> a_ki,
+                           hpx::shared_future<matrix::Tile<const T, device>> u_ki,
+                           hpx::future<matrix::Tile<T, device>> a_ii) {
   hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::her2k_o), blas::Uplo::Upper, blas::Op::ConjTrans,
-                T(-1.0), a_kj, u_kj, BaseType<T>(1.0), std::move(a_kk));
+                T(-1.0), a_ki, u_ki, BaseType<T>(1.0), std::move(a_ii));
 }
 
-
 template <class Executor, Device device, class T>
-void gemmTrailingMatrixTile(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> mat_ik,
-                            hpx::shared_future<matrix::Tile<const T, device>> mat_jk,
+void gemmTrailingMatrixTile(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> mat_ki,
+                            hpx::shared_future<matrix::Tile<const T, device>> mat_kj,
                             hpx::future<matrix::Tile<T, device>> a_ij) {
-  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans,
-                T(-1.0), mat_ik, mat_jk, T(1.0), std::move(a_ij));
-}
-
- template <class Executor, Device device, class T>
-void gemmTrailingMatrixTileCT(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> mat_ki,
-                            hpx::shared_future<matrix::Tile<const T, device>> mat_kj,
-                            hpx::future<matrix::Tile<T, device>> a_ji) {
-  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::NoTrans,
-                T(-1.0), mat_ki, mat_kj, T(1.0), std::move(a_ji));
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans,
+                T(-1.0), mat_ki, mat_kj, T(1.0), std::move(a_ij));
 }
 
 template <class Executor, Device device, class T>
-void gemmTrailingMatrixTileNT(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> mat_ki,
-                            hpx::shared_future<matrix::Tile<const T, device>> mat_kj,
-                            hpx::future<matrix::Tile<T, device>> a_ji) {
-  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::ConjTrans, blas::Op::ConjTrans,
-                T(-1.0), mat_ki, mat_kj, T(1.0), std::move(a_ji));
-}
-
-template <class Executor, Device device, class T>
-void trsmPanelUpdateTile(Executor&& executor_hp, hpx::shared_future<matrix::Tile<const T, device>> u_jj,
-                         hpx::future<matrix::Tile<T, device>> a_kj) {
-  hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Right,
-                blas::Uplo::Upper, blas::Op::NoTrans, blas::Diag::NonUnit, T(1.0), u_jj,
-                std::move(a_kj));
-}
-
-template <class Executor, Device device, class T>
-void gemmPanelUpdateTile(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> u_ji,
-                         hpx::shared_future<matrix::Tile<const T, device>> a_kj,
+void trsmPanelUpdateTile(Executor&& executor_hp, hpx::shared_future<matrix::Tile<const T, device>> u_ii,
                          hpx::future<matrix::Tile<T, device>> a_ki) {
+  hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Right,
+                blas::Uplo::Upper, blas::Op::NoTrans, blas::Diag::NonUnit, T(1.0), u_ii,
+                std::move(a_ki));
+}
+
+template <class Executor, Device device, class T>
+void gemmPanelUpdateTile(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> a_ki,
+                         hpx::shared_future<matrix::Tile<const T, device>> u_ij,
+                         hpx::future<matrix::Tile<T, device>> a_kj) {
   hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::NoTrans,
-                T(-1.0), a_kj, u_ji, T(1.0), std::move(a_ki));
+                T(-1.0), a_ki, u_ij, T(1.0), std::move(a_kj));
 }
 }
 
@@ -442,43 +425,39 @@ void GenToStd<backend, device, T>::call_U(Matrix<T, device>& mat_a, Matrix<T, de
     for (SizeType i = k + 1; i < nrtile; ++i) {
       const LocalTileIndex ki{k, i};
       trsmPanelTile(executor_hp, mat_u.read(kk), mat_a(ki));
-      gemmPanelTile(executor_hp, mat_a.read(kk), mat_u.read(ki), mat_a(ki));
+      hemmPanelTile(executor_hp, mat_a.read(kk), mat_u.read(ki), mat_a(ki));
     }
 
-    for (SizeType j = k + 1; j < nrtile; ++j) {
-      const LocalTileIndex jj{j, j};
-      const LocalTileIndex kj{k, j};
+    for (SizeType i = k + 1; i < nrtile; ++i) {
+      const LocalTileIndex ii{i, i};
+      const LocalTileIndex ki{k, i};
       // first trailing panel gets high priority (look ahead).
-      auto& trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_np;
+      auto& trailing_matrix_executor = (i == k + 1) ? executor_hp : executor_np;
 
-      her2kTrailingDiagTile(trailing_matrix_executor, mat_a.read(kj), mat_u.read(kj), mat_a(jj));
+      her2kTrailingDiagTile(trailing_matrix_executor, mat_a.read(ki), mat_u.read(ki), mat_a(ii));
 
-//        gemmTrailingMatrixTileNT(trailing_matrix_executor, mat_a.read(kj), mat_u.read(kj), mat_a(jj));
-//        gemmTrailingMatrixTileCT(trailing_matrix_executor, mat_u.read(kj), mat_a.read(kj), mat_a(jj));
-
-
-      for (SizeType i = j + 1; i < nrtile; ++i) {
-        const LocalTileIndex ki{k, i};
-        const LocalTileIndex ji{j, i};
-        gemmTrailingMatrixTile(trailing_matrix_executor, mat_a.read(ki), mat_u.read(kj), mat_a(ji));
-        gemmTrailingMatrixTile(trailing_matrix_executor, mat_u.read(ki), mat_a.read(kj), mat_a(ji));
+      for (SizeType j = i + 1; j < nrtile; ++j) {
+        const LocalTileIndex kj{k, j};
+        const LocalTileIndex ij{i, j};
+        gemmTrailingMatrixTile(trailing_matrix_executor, mat_a.read(ki), mat_u.read(kj), mat_a(ij));
+        gemmTrailingMatrixTile(trailing_matrix_executor, mat_u.read(ki), mat_a.read(kj), mat_a(ij));
       }
     }
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
       const LocalTileIndex ki{k, i};
-      gemmPanelTile(executor_np, mat_a.read(kk), mat_u.read(ki), mat_a(ki));
+      hemmPanelTile(executor_np, mat_a.read(kk), mat_u.read(ki), mat_a(ki));
     }
 
-    for (SizeType j = k + 1; j < nrtile; ++j) {
-      const LocalTileIndex jj{j, j};
-      const LocalTileIndex kj{k, j};
-      trsmPanelUpdateTile(executor_hp, mat_u.read(jj), mat_a(kj));
+    for (SizeType i = k + 1; i < nrtile; ++i) {
+      const LocalTileIndex ii{i, i};
+      const LocalTileIndex ki{k, i};
+      trsmPanelUpdateTile(executor_hp, mat_u.read(ii), mat_a(ki));
 
-      for (SizeType i = j + 1; i < nrtile; ++i) {
-        const LocalTileIndex ji{j, i};
-        const LocalTileIndex ki{k, i};
-	gemmPanelUpdateTile(executor_np, mat_u.read(ji), mat_a.read(kj), mat_a(ki));
+      for (SizeType j = i + 1; j < nrtile; ++j) {
+        const LocalTileIndex ij{i, j};
+        const LocalTileIndex kj{k, j};
+        gemmPanelUpdateTile(executor_np, mat_a.read(ki), mat_u.read(ij), mat_a(kj));
       }
     }
   }

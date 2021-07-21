@@ -26,6 +26,10 @@ struct vector : public std::vector<T> {
 
   vector(SizeType size) : std::vector<T>(to_sizet(size)) {}
 
+  void resize(SizeType size) {
+    std::vector<T>::resize(to_sizet(size));
+  }
+
   void reserve(SizeType size) {
     std::vector<T>::reserve(to_sizet(size));
   }

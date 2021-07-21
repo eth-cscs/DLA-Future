@@ -50,5 +50,33 @@ auto bandToTridiag(blas::Uplo uplo, SizeType band_size, Matrix<T, device>& mat_a
   return std::tuple<RetVec, RetVec>();
 }
 
+template <Backend backend, Device device, class T>
+auto bandToTridiag(comm::CommunicatorGrid grid, blas::Uplo uplo, SizeType band_size,
+                   Matrix<T, device>& mat_a) {
+  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
+  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
+
+  // If the grid contains only one rank force local implementation.
+  if (grid.size() == comm::Size2D(1, 1))
+    return bandToTridiag<backend, device, T>(uplo, band_size, mat_a);
+
+  switch (uplo) {
+    case blas::Uplo::Lower:
+      return internal::BandToTridiag<backend, device, T>::call_L(grid, band_size, mat_a);
+      break;
+    case blas::Uplo::Upper:
+      DLAF_UNIMPLEMENTED(uplo);
+      break;
+    case blas::Uplo::General:
+      DLAF_UNIMPLEMENTED(uplo);
+      break;
+  }
+
+  using dlaf::common::internal::vector;
+  using RetVec = vector<hpx::shared_future<vector<BaseType<T>>>>;
+  return std::tuple<RetVec, RetVec>();
+}
+
 }
 }

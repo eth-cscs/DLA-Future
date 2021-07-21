@@ -11,7 +11,8 @@
 DLAF_addTest(test_band_to_tridiag
   SOURCES test_band_to_tridiag.cpp
   LIBRARIES dlaf.eigensolver dlaf.core
-  USE_MAIN HPX
+  USE_MAIN MPIHPX
+  MPIRANKS 6
 )
 
 DLAF_addTest(test_gen_to_std

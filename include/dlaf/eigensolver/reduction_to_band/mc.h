@@ -648,8 +648,9 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
 
     const bool is_panel_rank_col = rank_v0.col() == rank.col();
 
-    // TODO FIXME it can be improved, because the very last reflector of size 1 is not worth the effort
-    const SizeType nrefls = [v0_size = mat_a.tileSize(ai_start)]() {
+    const auto v0_size = mat_a.tileSize(ai_start);
+    const SizeType nrefls = [v0_size]() {
+      // TODO FIXME it can be improved, because the very last reflector of size 1 is not worth the effort
       return std::min(v0_size.cols(), v0_size.rows());
     }();
 
@@ -666,6 +667,13 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
     wt.setRangeStart(at_start);
     x.setRangeStart(at_start);
     xt.setRangeStart(at_start);
+
+    v.setWidth(v0_size.cols());
+    vt.setHeight(v0_size.cols());
+    w.setWidth(v0_size.cols());
+    wt.setHeight(v0_size.cols());
+    x.setWidth(v0_size.cols());
+    xt.setHeight(v0_size.cols());
 
     const LocalTileIndex t_idx(0, 0);
     // TODO used just by the column, maybe we can re-use a panel tile?

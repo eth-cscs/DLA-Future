@@ -89,7 +89,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
   const SizeType m = mat_c.nrTiles().rows();
   const SizeType n = mat_c.nrTiles().cols();
-  const SizeType nv = mat_v.nrTiles().cols();
   const SizeType mb = mat_v.blockSize().rows();
   const SizeType ms = mat_v.size().rows();
 
@@ -110,7 +109,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
                                                                          mat_c.distribution());
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panelsT(n_workspaces, dist_t);
 
-  SizeType last_mb = mat_v.tileSize(GlobalTileIndex(0, nv - 1)).cols();
+  SizeType last_mb = mat_v.tileSize(GlobalTileIndex(0, m - 1)).cols();
 
   // Specific for V matrix layout where last column of tiles is empty
   const SizeType last_panel_reflector_idx = mat_v.nrTiles().cols() - 2;

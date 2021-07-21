@@ -38,20 +38,19 @@ using namespace dlaf::test;
 using namespace dlaf::comm;
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
-using namespace testing;
 
 ::testing::Environment* const comm_grids_env =
-    ::testing::AddGlobalTestEnvironment(new dlaf::test::CommunicatorGrid6RanksEnvironment);
+    ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
 template <typename Type>
-class ReductionToBandTest : public ::testing::Test {
+class ReductionToBandTestMC : public ::testing::Test {
 public:
   const std::vector<CommunicatorGrid>& commGrids() {
-    return dlaf::test::comm_grids;
+    return comm_grids;
   }
 };
 
-TYPED_TEST_SUITE(ReductionToBandTest, dlaf::test::MatrixElementTypes);
+TYPED_TEST_SUITE(ReductionToBandTestMC, MatrixElementTypes);
 
 const std::vector<LocalElementSize> square_sizes{{3, 3}, {13, 13}, {12, 12}, {24, 24}};
 const std::vector<TileElementSize> square_block_sizes{{3, 3}};
@@ -145,8 +144,8 @@ void setup_sym_band(MatrixLocal<T>& matrix, const SizeType& band_size) {
       if (!ij.isIn(matrix.nrTiles()))
         continue;
 
-      dlaf::matrix::test::set(matrix.tile(ij), 0);
-      dlaf::matrix::test::set(matrix.tile(common::transposed(ij)), 0);
+      set(matrix.tile(ij), 0);
+      set(matrix.tile(common::transposed(ij)), 0);
     }
   }
 
@@ -163,8 +162,6 @@ template <class T>
 auto all_gather_taus(const SizeType k, const SizeType chunk_size, const SizeType band_size,
                      std::vector<hpx::shared_future<common::internal::vector<T>>> fut_local_taus,
                      comm::CommunicatorGrid comm_grid) {
-  using namespace dlaf::comm::sync;
-
   std::vector<T> taus;
   taus.reserve(to_sizet(k));
 
@@ -185,14 +182,15 @@ auto all_gather_taus(const SizeType k, const SizeType chunk_size, const SizeType
     if (is_owner) {
       const auto index_chunk_local = to_sizet(index_chunk / comm_grid.size().cols());
       chunk_data = local_taus[index_chunk_local];
-      broadcast::send(comm_grid.rowCommunicator(),
-                      common::make_data(chunk_data.data(), static_cast<SizeType>(chunk_data.size())));
+      sync::broadcast::send(comm_grid.rowCommunicator(),
+                            common::make_data(chunk_data.data(),
+                                              static_cast<SizeType>(chunk_data.size())));
     }
     else {
       chunk_data.resize(to_sizet(this_chunk_size));
-      broadcast::receive_from(owner, comm_grid.rowCommunicator(),
-                              common::make_data(chunk_data.data(),
-                                                static_cast<SizeType>(chunk_data.size())));
+      sync::broadcast::receive_from(owner, comm_grid.rowCommunicator(),
+                                    common::make_data(chunk_data.data(),
+                                                      static_cast<SizeType>(chunk_data.size())));
     }
 
     // copy each chunk contiguously
@@ -202,7 +200,7 @@ auto all_gather_taus(const SizeType k, const SizeType chunk_size, const SizeType
   return taus;
 }
 
-TYPED_TEST(ReductionToBandTest, Correctness) {
+TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributed) {
   constexpr Device device = Device::CPU;
 
   for (auto&& comm_grid : this->commGrids()) {
@@ -228,7 +226,7 @@ TYPED_TEST(ReductionToBandTest, Correctness) {
         // Apply reduction-to-band
         DLAF_ASSERT(band_size == matrix_a.blockSize().rows(), "not yet implemented");
 
-        auto local_taus = dlaf::eigensolver::reductionToBand<Backend::MC>(comm_grid, matrix_a);
+        auto local_taus = eigensolver::reductionToBand<Backend::MC>(comm_grid, matrix_a);
 
         // First basic check: the reduction should not affect the strictly upper part of the input
         auto check_rest_unchanged = [&reference, &matrix_a](const GlobalElementIndex& index) {

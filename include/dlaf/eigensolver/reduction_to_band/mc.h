@@ -220,12 +220,8 @@ void updateTrailingPanelWithReflector(comm::IndexT_MPI rank_v0, comm::Communicat
 
       // Pt = Pt - tau * v[0] * w*
       const T fake_v = 1;
-      blas::ger(blas::Layout::ColMajor,
-          1, pt_size.cols(),
-          -dlaf::conj(tau),
-          &fake_v, 1,
-          w.data(), 1,
-          tile_a.ptr(pt_start), tile_a.ld());
+      blas::ger(blas::Layout::ColMajor, 1, pt_size.cols(), -dlaf::conj(tau), &fake_v, 1, w.data(), 1,
+                tile_a.ptr(pt_start), tile_a.ld());
 
       pt_start = pt_start + offset;
       v_start = v_start + offset;
@@ -234,12 +230,8 @@ void updateTrailingPanelWithReflector(comm::IndexT_MPI rank_v0, comm::Communicat
 
     if (pt_start.isIn(tile_a.size())) {
       // Pt = Pt - tau * v * w*
-      blas::ger(blas::Layout::ColMajor,
-          pt_size.rows(), pt_size.cols(),
-          -dlaf::conj(tau),
-          tile_a.ptr(v_start), 1,
-          w.data(), 1,
-          tile_a.ptr(pt_start), tile_a.ld());
+      blas::ger(blas::Layout::ColMajor, pt_size.rows(), pt_size.cols(), -dlaf::conj(tau),
+                tile_a.ptr(v_start), 1, w.data(), 1, tile_a.ptr(pt_start), tile_a.ld());
     }
   }
 }
@@ -607,14 +599,13 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
   const auto& dist = mat_a.distribution();
   const comm::Index2D rank = dist.rankIndex();
 
-  const SizeType nb = mat_a.blockSize().rows();
   // TODO not yet implemented for the moment the panel is tile-wide
   // const SizeType band_size = nb;
 
   std::vector<hpx::shared_future<common::internal::vector<T>>> taus;
   // TODO taus.reserve(); it's a minor optimization
 
-  constexpr std::size_t n_workspaces = 1;
+  constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<PanelT<Coord::Col, T>> panels_v(n_workspaces, dist);
   common::RoundRobin<PanelT<Coord::Row, T>> panels_vt(n_workspaces, dist);
 
@@ -654,24 +645,12 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
 
     PanelT<Coord::Col, T>& v = panels_v.nextResource();
     PanelT<Coord::Row, T>& vt = panels_vt.nextResource();
-    PanelT<Coord::Col, T>& w = panels_w.nextResource();
-    PanelT<Coord::Row, T>& wt = panels_wt.nextResource();
-    PanelT<Coord::Col, T>& x = panels_x.nextResource();
-    PanelT<Coord::Row, T>& xt = panels_xt.nextResource();
 
     v.setRangeStart(at_start);
     vt.setRangeStart(at_start);
-    w.setRangeStart(at_start);
-    wt.setRangeStart(at_start);
-    x.setRangeStart(at_start);
-    xt.setRangeStart(at_start);
 
     v.setWidth(nrefls);
     vt.setHeight(nrefls);
-    w.setWidth(nrefls);
-    wt.setHeight(nrefls);
-    x.setWidth(nrefls);
-    xt.setHeight(nrefls);
 
     const LocalTileIndex t_idx(0, 0);
     // TODO used just by the column, maybe we can re-use a panel tile?
@@ -690,10 +669,29 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
     comm::broadcast(ex_mpi, rank_v0.col(), v, vt, mpi_row_chain, mpi_col_chain);
 
     // W = V . T
+    PanelT<Coord::Col, T>& w = panels_w.nextResource();
+    PanelT<Coord::Row, T>& wt = panels_wt.nextResource();
+
+    w.setRangeStart(at_start);
+    wt.setRangeStart(at_start);
+
+    w.setWidth(nrefls);
+    wt.setHeight(nrefls);
+
     if (is_panel_rank_col)
       trmmComputeW(w, v, t.read(t_idx));
 
     comm::broadcast(ex_mpi, rank_v0.col(), w, wt, mpi_row_chain, mpi_col_chain);
+
+    // X = At . W
+    PanelT<Coord::Col, T>& x = panels_x.nextResource();
+    PanelT<Coord::Row, T>& xt = panels_xt.nextResource();
+
+    x.setRangeStart(at_start);
+    xt.setRangeStart(at_start);
+
+    x.setWidth(nrefls);
+    xt.setHeight(nrefls);
 
     // Note:
     // Since At is hermitian, just the lower part is referenced.
@@ -706,8 +704,11 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
     x.clear();
     xt.clear();
 
-    // X = At . W
     hemmComputeX(rank_v0.col(), x, xt, at_offset, mat_a, w, wt, mpi_row_chain, mpi_col_chain);
+
+    // In the next section the next two operations are performed
+    // A) W2 = W* . X
+    // B) X -= 1/2 . V . W2
 
     // Note:
     // Now the intermediate result for X is available on the panel column ranks,
@@ -717,10 +718,8 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
       // T can be re-used because it is not needed anymore in this step and it has the same shape
       MatrixT<T> w2 = std::move(t);
 
-      // W2 = W* . X
       gemmComputeW2(w2, w, x, mpi_col_chain);
 
-      // X -= 1/2 . V . W2
       gemmUpdateX(x, w2, v);
     }
 

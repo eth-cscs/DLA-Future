@@ -103,9 +103,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   if (tottaus == 0)
     return;
 
-  LocalElementSize sizeT(tottaus, tottaus);
-  TileElementSize blockSizeT(mb, mb);
-  dlaf::matrix::Distribution dist_tau(sizeT, blockSizeT);
+  dlaf::matrix::Distribution dist_t({tottaus, tottaus}, {mb, mb});
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panelsVV(n_workspaces,
@@ -114,7 +112,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
                                                                         mat_v.distribution());
   common::RoundRobin<matrix::Panel<Coord::Row, T, Device::CPU>> panelsW2(n_workspaces,
                                                                          mat_c.distribution());
-  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panelsT(n_workspaces, dist_tau);
+  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panelsT(n_workspaces, dist_t);
 
   SizeType last_mb = mat_v.tileSize(GlobalTileIndex(0, nv - 1)).cols();
 
@@ -152,7 +150,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     auto kk = LocalTileIndex{k, k};
     panelT.setRange({k, k}, {k + 1, k + 1});
     const LocalTileIndex diag_wp_idx{Coord::Row, k};
-    panelT.setWidth(dist_tau.tileSize(GlobalTileIndex{k, k}).cols());
+    panelT.setWidth(dist_t.tileSize(GlobalTileIndex{k, k}).cols());
     dlaf::factorization::internal::computeTFactor<Backend::MC>(taupan, mat_v, v_start, taus_panel,
                                                                panelT(diag_wp_idx));
 
@@ -161,7 +159,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       auto i_row = LocalTileIndex{Coord::Row, i};
       hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_t = panelT.read(diag_wp_idx);
 
-      panelW.setWidth(dist_tau.tileSize(GlobalTileIndex{k, k}).cols());
+      panelW.setWidth(dist_t.tileSize(GlobalTileIndex{k, k}).cols());
       trmmPanel(executor_np, tile_t, std::move(panelW(i_row)));
     }
 

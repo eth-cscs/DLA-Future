@@ -59,8 +59,8 @@ TEST(Bcast, Dataflow) {
   std::vector<double> buf(static_cast<std::size_t>(size), val);
 
   // Tests the handling of futures in a dataflow
-  hpx::dataflow(ex, hpx::util::unwrapping(MPI_Ibcast), buf.data(), hpx::make_ready_future<int>(size),
-                dtype, root_rank, comm, hpx::make_ready_future<void>())
+  hpx::dataflow(ex, hpx::unwrapping(MPI_Ibcast), buf.data(), hpx::make_ready_future<int>(size), dtype,
+                root_rank, comm, hpx::make_ready_future<void>())
       .get();
 
   std::vector<double> expected_buf(static_cast<std::size_t>(size), 4.2);

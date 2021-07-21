@@ -10,8 +10,8 @@
 
 #pragma once
 
-#include <hpx/include/util.hpp>
 #include <hpx/local/future.hpp>
+#include <hpx/local/unwrap.hpp>
 
 namespace dlaf {
 namespace common {
@@ -24,8 +24,8 @@ template <class T>
 class PromiseGuard {
 public:
   /// Create a wrapper.
-  /// @param object	the resource to wrap (the wrapper becomes the owner of the resource),
-  /// @param next	the promise that has to be set on destruction.
+  /// @param object the resource to wrap (the wrapper becomes the owner of the resource),
+  /// @param next the promise that has to be set on destruction.
   PromiseGuard(T object, hpx::lcos::local::promise<T> next)
       : object_(std::move(object)), promise_(std::move(next)) {}
 
@@ -87,11 +87,10 @@ public:
     hpx::lcos::local::promise<T> promise_next;
     future_ = promise_next.get_future();
 
-    return before_last.then(hpx::launch::sync,
-                            hpx::util::unwrapping(
-                                [promise_next = std::move(promise_next)](T&& object) mutable {
-                                  return PromiseGuard<T>{std::move(object), std::move(promise_next)};
-                                }));
+    return before_last.then(hpx::launch::sync, hpx::unwrapping([promise_next = std::move(promise_next)](
+                                                                   T&& object) mutable {
+                              return PromiseGuard<T>{std::move(object), std::move(promise_next)};
+                            }));
   }
 
 private:

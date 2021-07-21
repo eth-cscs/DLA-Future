@@ -9,6 +9,9 @@
 //
 #pragma once
 
+#include <hpx/local/future.hpp>
+#include <hpx/local/unwrap.hpp>
+
 #include "dlaf/common/assert.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
@@ -79,14 +82,14 @@ struct Panel<axis, const T, D> {
   ///
   /// @pre @p index must be a valid index for the current panel size
   void setTile(const LocalTileIndex& index, hpx::shared_future<ConstTileType> new_tile_fut) {
-    DLAF_ASSERT(index.isIn(dist_matrix_.localNrTiles()), index, dist_matrix_.localNrTiles());
     DLAF_ASSERT(internal_.count(linearIndex(index)) == 0, "internal tile have been already used", index);
     DLAF_ASSERT(!isExternal(index), "already set to external", index);
+    // Note assertion on index done by linearIndex method.
 
 #if defined DLAF_ASSERT_MODERATE_ENABLE
     {
-      const auto panel_tile_size = dist_matrix_.tileSize(dist_matrix_.globalTileIndex(index));
-      new_tile_fut.then(hpx::launch::sync, hpx::util::unwrapping([panel_tile_size](const auto& tile) {
+      const auto panel_tile_size = tileSize(index);
+      new_tile_fut.then(hpx::launch::sync, hpx::unwrapping([panel_tile_size](const auto& tile) {
                           DLAF_ASSERT_MODERATE(panel_tile_size == tile.size(), panel_tile_size,
                                                tile.size());
                         }));
@@ -100,9 +103,9 @@ struct Panel<axis, const T, D> {
   ///
   /// This method is very similar to the one available in dlaf::Matrix.
   ///
-  /// @p index is in the coordinate system of the matrix which this panel is related to
+  /// @pre @p index must be a valid index for the current panel size
   hpx::shared_future<ConstTileType> read(const LocalTileIndex& index) {
-    DLAF_ASSERT_HEAVY(index.isIn(dist_matrix_.localNrTiles()), index, dist_matrix_.localNrTiles());
+    // Note assertion on index done by linearIndex method.
 
     const SizeType internal_linear_idx = linearIndex(index);
     if (isExternal(index)) {
@@ -110,7 +113,12 @@ struct Panel<axis, const T, D> {
     }
     else {
       internal_.insert(internal_linear_idx);
-      return data_.read(fullIndex(index));
+      auto tile = data_.read(fullIndex(index));
+
+      if (dim_ < 0)
+        return tile;
+      else
+        return splitTile(tile, {{0, 0}, tileSize(index)});
     }
   }
 
@@ -190,18 +198,63 @@ struct Panel<axis, const T, D> {
     return end_local_;
   }
 
+  /// Set the width of the col panel.
+  ///
+  /// By default the width of the panel is parentDistribution().block_size().cols().
+  /// This method allows to reduce this value.
+  ///
+  /// @pre this can be called as first operation after range setting.
+  /// @pre @param 0 < width <= parentDistribution().block_size().cols()
+  template <Coord A = axis, std::enable_if_t<A == axis && Coord::Col == axis, int> = 0>
+  void setWidth(SizeType width) noexcept {
+    DLAF_ASSERT(width > 0, width);
+    DLAF_ASSERT(width <= parentDistribution().blockSize().cols(), width,
+                parentDistribution().blockSize().cols());
+
+    dim_ = width;
+  }
+
+  /// Set the height of the row panel.
+  ///
+  /// By default the height of the panel is parentDistribution().block_size().rows().
+  /// This method allows to reduce this value.
+  ///
+  /// @pre this can be called as first operation after range setting.
+  /// @pre @param 0 < height <= parentDistribution().block_size().rows()
+  template <Coord A = axis, std::enable_if_t<A == axis && Coord::Row == axis, int> = 0>
+  void setHeight(SizeType height) noexcept {
+    DLAF_ASSERT(height > 0, height);
+    DLAF_ASSERT(height <= parentDistribution().blockSize().rows(), height,
+                parentDistribution().blockSize().rows());
+
+    dim_ = height;
+  }
+
   /// Reset the internal usage status of the panel.
   ///
   /// In particular:
   /// - usage status of each tile is reset
   /// - external tiles references are dropped and internal ones are set back
+  /// - The width (Col Panel) or the height (Row panel) are reset.
   void reset() noexcept {
     for (auto& e : external_)
       e = {};
     internal_.clear();
+    dim_ = -1;
   }
 
 protected:
+  TileElementSize tileSize(const LocalTileIndex& index) {
+    // Transform to global panel index.
+    const auto panel_coord = dist_matrix_.globalTileFromLocalTile<CoordType>(index.get<CoordType>());
+    const GlobalTileIndex panel_index(CoordType, panel_coord);
+
+    const auto size_coord = dist_matrix_.tileSize(panel_index).template get<CoordType>();
+    const auto size_axis = dim_ < 0 ? dist_matrix_.blockSize().template get<axis>() : dim_;
+
+    return {axis, size_axis, size_coord};
+  }
+
   static LocalElementSize computePanelSize(LocalElementSize size, TileElementSize blocksize,
                                            LocalTileIndex start) {
     const auto mb = blocksize.rows();
@@ -259,8 +312,8 @@ protected:
   /// Given a matrix index, compute the internal linear index
   SizeType linearIndex(const LocalTileIndex& index) const noexcept {
     const auto idx = index.get(CoordType);
-
-    DLAF_ASSERT_MODERATE(idx >= rangeStartLocal(), idx, rangeStartLocal());
+    DLAF_ASSERT_MODERATE(rangeStartLocal() <= idx && idx < rangeEndLocal(), idx, rangeStartLocal(),
+                         rangeEndLocal());
 
     return idx - bias_;
   }
@@ -273,9 +326,6 @@ protected:
   /// will always be 0 (and relatively for a Panel<Row>)
   LocalTileIndex fullIndex(LocalTileIndex index) const {
     index = LocalTileIndex(CoordType, linearIndex(index));
-
-    DLAF_ASSERT_HEAVY(index.isIn(LocalTileSize(CoordType, rangeEndLocal(), 1)), index,
-                      LocalTileSize(CoordType, rangeEndLocal(), 1));
 
     return index;
   }
@@ -299,6 +349,8 @@ protected:
   ///> It represents the last tile which this panel gives access to
   SizeType end_;
   SizeType end_local_;  // local version of @p end_
+  ///> It represent the width or height of the panel. Negatives means not set, i.e. block_size.
+  SizeType dim_ = -1;
 
   ///> Container for references to external tiles
   common::internal::vector<hpx::shared_future<ConstTileType>> external_;
@@ -320,14 +372,21 @@ struct Panel : public Panel<axis, const T, device> {
   ///
   /// @pre index must point to a tile which is internally managed by the panel
   hpx::future<TileType> operator()(const LocalTileIndex& index) {
+    // Note assertion on index done by linearIndex method.
     DLAF_ASSERT(!BaseT::isExternal(index), "read-only access on external tiles", index);
 
     BaseT::internal_.insert(BaseT::linearIndex(index));
-    return BaseT::data_(BaseT::fullIndex(index));
+    auto tile = BaseT::data_(BaseT::fullIndex(index));
+    if (dim_ < 0)
+      return tile;
+    else
+      return splitTile(tile, {{0, 0}, tileSize(index)});
   }
 
 protected:
   using BaseT = Panel<axis, const T, device>;
+  using BaseT::dim_;
+  using BaseT::tileSize;
 };
 
 }

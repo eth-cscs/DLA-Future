@@ -9,8 +9,8 @@
 //
 #pragma once
 
-#include <hpx/include/util.hpp>
 #include <hpx/local/future.hpp>
+#include <hpx/local/unwrap.hpp>
 
 #include "dlaf/auxiliary/norm/api.h"
 #include "dlaf/common/range2d.h"
@@ -49,7 +49,7 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
 
   using dlaf::common::internal::vector;
   using dlaf::common::make_data;
-  using hpx::util::unwrapping;
+  using hpx::unwrapping;
 
   using dlaf::tile::lange;
   using dlaf::tile::lantr;

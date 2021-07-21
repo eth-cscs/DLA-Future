@@ -54,7 +54,7 @@ std::vector<config_t> test_params{
 template <class TypeParam, Coord panel_axis>
 void testBroadcast(comm::Executor& executor_mpi, const config_t& cfg, comm::CommunicatorGrid comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
-  using hpx::util::unwrapping;
+  using hpx::unwrapping;
 
   constexpr Coord coord1D = orthogonal(panel_axis);
 
@@ -118,7 +118,7 @@ template <class TypeParam, Coord PANEL_SRC_AXIS>
 void testBrodcastTranspose(comm::Executor& executor_mpi, const config_t& cfg,
                            comm::CommunicatorGrid comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
-  using hpx::util::unwrapping;
+  using hpx::unwrapping;
 
   const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
   const auto rank = dist.rankIndex().get(PANEL_SRC_AXIS);

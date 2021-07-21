@@ -86,6 +86,8 @@ protected:
   ///
   /// @pre index.isIn(localNrTiles()).
   std::size_t tileLinearIndex(const LocalTileIndex& index) const noexcept {
+    DLAF_ASSERT_MODERATE(index.isIn(distribution_->localNrTiles()), index,
+                         distribution_->localNrTiles());
     return to_sizet(index.row() + distribution_->localNrTiles().rows() * index.col());
   }
 

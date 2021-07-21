@@ -129,10 +129,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     auto& panelW2 = panelsW2.nextResource();
     auto& panelT = panelsT.nextResource();
 
-    panelVV.setRangeStart({k + 1, k + 1});
-    panelW.setRangeStart({k + 1, k + 1});
-    panelW2.setRangeStart({0, 0});
-
     for (SizeType i = k + 1; i < mat_v.nrTiles().rows(); ++i) {
       // Copy V panel into VV
       auto ik = LocalTileIndex{i, k};

@@ -38,6 +38,7 @@
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/panel.h"
+#include "dlaf/matrix/tile.h"
 #include "dlaf/util_matrix.h"
 
 #include "dlaf/eigensolver/reduction_to_band/api.h"
@@ -99,20 +100,27 @@ T computeReflector(const comm::IndexT_MPI rank_v0, comm::Communicator& communica
   }
 
   for (auto it = it_begin; it != it_end; ++it) {
-    auto& tile = *it;
+    const auto& tile = *it;
 
     T* reflector_ptr = tile.ptr({0, j});
     x0_and_squares[1] += blas::dot(tile.size().rows(), reflector_ptr, 1, reflector_ptr, 1);
   }
 
-  // allReduce squares and x0. Since x0 is initialized just on rank_v0, just for it this is a bcast
+  // Note:
+  // This is an optimization for grouping two separate low bandwidth communications, respectively
+  // bcast(x0) and reduce(norm), where the latency was degrading performances.
+  //
+  // In particular this allReduce allows to:
+  // - bcast x0, since for all ranks is 0 and just the root rank has the real value;
+  // - allReduce squares for the norm computation.
+  //
+  // Moreover, by all-reducing squares and broadcasting x0, all ranks have all the information to
+  // update locally the reflectors (section they have). This is more efficient than computing params
+  // (e.g. norm, y, tau) just on the root rank and then having to broadcast them (i.e. additional
+  // communication).
   comm::sync::allReduceInPlace(communicator, MPI_SUM,
                                common::make_data(x0_and_squares.data(), x0_and_squares.size()));
 
-  // rank_v0 will compute params that will be used for next computation of reflector components
-  // FIXME in this case just one compute and the other will receive it
-  // it may be better to compute on each one, in order to avoid a communication of few values
-  // but it would benefit if all_reduce of the norm and x0 is faster than communicating params
   const T norm = std::sqrt(x0_and_squares[1]);
   const T x0 = x0_and_squares[0];
   const T y = std::signbit(std::real(x0_and_squares[0])) ? norm : -norm;
@@ -123,21 +131,21 @@ T computeReflector(const comm::IndexT_MPI rank_v0, comm::Communicator& communica
   it_end = panel.end();
 
   if (is_head_rank) {
-    auto& tile_v0 = *it_begin++;
+    const auto& tile_v0 = *it_begin++;
 
     const TileElementIndex idx_x0(j, j);
     tile_v0(idx_x0) = y;
 
     if (j + 1 < tile_v0.size().rows()) {
       T* v = tile_v0.ptr({j + 1, j});
-      blas::scal(tile_v0.size().rows() - (j + 1), typename TypeInfo<T>::BaseType(1) / (x0 - y), v, 1);
+      blas::scal(tile_v0.size().rows() - (j + 1), T(1) / (x0 - y), v, 1);
     }
   }
 
   for (auto it = it_begin; it != it_end; ++it) {
     auto& tile_v = *it;
     T* v = tile_v.ptr({0, j});
-    blas::scal(tile_v.size().rows(), typename TypeInfo<T>::BaseType(1) / (x0 - y), v, 1);
+    blas::scal(tile_v.size().rows(), T(1) / (x0 - y), v, 1);
   }
 
   return tau;
@@ -156,7 +164,7 @@ void updateTrailingPanelWithReflector(comm::IndexT_MPI rank_v0, comm::Communicat
 
   const bool is_head_rank = rank_v0 == communicator.rank();
 
-  // TODO this is a workaround for detecing index 0 on global tile 0
+  // TODO this is a workaround for detecting index 0 on global tile 0
   auto has_first = [&](const auto& tile) { return is_head_rank and &tile == &panel[0]; };
 
   const TileElementIndex index_el_x0(j, j);
@@ -177,16 +185,8 @@ void updateTrailingPanelWithReflector(comm::IndexT_MPI rank_v0, comm::Communicat
       const TileElementSize offset{1, 0};
 
       const T fake_v = 1;
-      // clang-format off
-      blas::gemv(blas::Layout::ColMajor,
-          blas::Op::ConjTrans,
-          offset.rows(), pt_size.cols(),
-          static_cast<T>(1),
-          tile_a.ptr(pt_start), tile_a.ld(),
-          &fake_v, 1,
-          static_cast<T>(0),
-          w.data(), 1);
-      // clang-format on
+      blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, offset.rows(), pt_size.cols(), T(1),
+                 tile_a.ptr(pt_start), tile_a.ld(), &fake_v, 1, T(0), w.data(), 1);
 
       pt_start = pt_start + offset;
       v_start = v_start + offset;
@@ -195,16 +195,8 @@ void updateTrailingPanelWithReflector(comm::IndexT_MPI rank_v0, comm::Communicat
 
     if (pt_start.isIn(tile_a.size())) {
       // W += 1 . A* . V
-      // clang-format off
-      blas::gemv(blas::Layout::ColMajor,
-          blas::Op::ConjTrans,
-          pt_size.rows(), pt_size.cols(),
-          static_cast<T>(1),
-          tile_a.ptr(pt_start), tile_a.ld(),
-          tile_a.ptr(v_start), 1,
-          1,
-          w.data(), 1);
-      // clang-format on
+      blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, pt_size.rows(), pt_size.cols(), T(1),
+                 tile_a.ptr(pt_start), tile_a.ld(), tile_a.ptr(v_start), 1, T(1), w.data(), 1);
     }
   }
 
@@ -227,7 +219,6 @@ void updateTrailingPanelWithReflector(comm::IndexT_MPI rank_v0, comm::Communicat
       const TileElementSize offset{1, 0};
 
       // Pt = Pt - tau * v[0] * w*
-      // clang-format off
       const T fake_v = 1;
       blas::ger(blas::Layout::ColMajor,
           1, pt_size.cols(),
@@ -235,7 +226,6 @@ void updateTrailingPanelWithReflector(comm::IndexT_MPI rank_v0, comm::Communicat
           &fake_v, 1,
           w.data(), 1,
           tile_a.ptr(pt_start), tile_a.ld());
-      // clang-format on
 
       pt_start = pt_start + offset;
       v_start = v_start + offset;
@@ -244,14 +234,12 @@ void updateTrailingPanelWithReflector(comm::IndexT_MPI rank_v0, comm::Communicat
 
     if (pt_start.isIn(tile_a.size())) {
       // Pt = Pt - tau * v * w*
-      // clang-format off
       blas::ger(blas::Layout::ColMajor,
           pt_size.rows(), pt_size.cols(),
           -dlaf::conj(tau),
           tile_a.ptr(v_start), 1,
           w.data(), 1,
           tile_a.ptr(pt_start), tile_a.ld());
-      // clang-format on
     }
   }
 }
@@ -259,12 +247,9 @@ void updateTrailingPanelWithReflector(comm::IndexT_MPI rank_v0, comm::Communicat
 template <class T>
 hpx::shared_future<common::internal::vector<T>> computePanelReflectors(
     hpx::future<void> trigger, comm::IndexT_MPI rank_v0,
-    hpx::future<common::PromiseGuard<comm::Communicator>> bmpi_col_chain, MatrixT<T>& mat_a,
-    const common::IterableRange2D<SizeType, dlaf::matrix::LocalTile_TAG> ai_panel_range,
-    SizeType nrefls) {
-  using hpx::unwrapping;
-
-  auto panel_task = unwrapping(
+    hpx::future<common::PromiseGuard<comm::Communicator>> mpi_col_chain_panel, MatrixT<T>& mat_a,
+    const common::IterableRange2D<SizeType, matrix::LocalTile_TAG> ai_panel_range, SizeType nrefls) {
+  auto panel_task = hpx::unwrapping(
       [rank_v0, nrefls, cols = mat_a.blockSize().cols()](auto fut_panel_tiles, auto communicator) {
         const auto panel_tiles = hpx::unwrap(fut_panel_tiles);
 
@@ -278,13 +263,10 @@ hpx::shared_future<common::internal::vector<T>> computePanelReflectors(
         return taus;
       });
 
-  auto panel_tiles = hpx::when_all(dlaf::matrix::select(mat_a, ai_panel_range));
+  auto panel_tiles = hpx::when_all(matrix::select(mat_a, ai_panel_range));
 
-  // clang-format off
-  return hpx::dataflow(
-      dlaf::getHpExecutor<Backend::MC>(),
-      std::move(panel_task), std::move(panel_tiles), bmpi_col_chain, std::move(trigger));
-  // clang-format on
+  return hpx::dataflow(getHpExecutor<Backend::MC>(), std::move(panel_task), std::move(panel_tiles),
+                       mpi_col_chain_panel, std::move(trigger));
 }
 
 template <class T>
@@ -304,21 +286,12 @@ void setupReflectorPanelV(comm::IndexT_MPI rank_v0, const LocalTileSize& ai_offs
 
   if (rank_v0 == rank) {
     auto setupV0 = hpx::unwrapping([](auto&& tile_v, const auto& tile_a) {
-      dlaf::tile::lacpy(tile_a, tile_v);
-
-      // set upper part to zero and 1 on diagonal (reflectors)
-      // clang-format off
-        lapack::laset(lapack::MatrixType::Upper,
-            tile_v.size().rows(), tile_v.size().cols(),
-            T(0), // off diag
-            T(1), // on  diag
-            tile_v.ptr(), tile_v.ld());
-      // clang-format on
+      copy(tile_a, tile_v);
+      tile::laset(lapack::MatrixType::Upper, T(0), T(1), tile_v);
     });
 
-    const LocalTileIndex v0_index(ai_offset.rows(), ai_offset.cols());
-    hpx::dataflow(dlaf::getHpExecutor<Backend::MC>(), std::move(setupV0), v(v0_index),
-                  mat_a.read(v0_index));
+    const auto v0_index = indexFromOrigin(ai_offset);
+    hpx::dataflow(getHpExecutor<Backend::MC>(), std::move(setupV0), v(v0_index), mat_a.read(v0_index));
 
     ++it_begin;
   }
@@ -333,7 +306,7 @@ void setupReflectorPanelV(comm::IndexT_MPI rank_v0, const LocalTileSize& ai_offs
 
 template <class T, class MatrixLikeT>
 void trmmComputeW(PanelT<Coord::Col, T>& w, MatrixLikeT& v, FutureConstTile<T> tile_t) {
-  const auto ex = dlaf::getHpExecutor<Backend::MC>();
+  const auto ex = getHpExecutor<Backend::MC>();
 
   auto trmm_func = hpx::unwrapping([](auto&& tile_w, const auto& tile_v, const auto& tile_t) -> void {
     // Note:
@@ -346,17 +319,12 @@ void trmmComputeW(PanelT<Coord::Col, T>& w, MatrixLikeT& v, FutureConstTile<T> t
     // be computed.
     // TODO check this when number of reflectors is changed (i.e. skip last single-element reflector)
 
-    dlaf::tile::lacpy(tile_v, tile_w);
+    copy(tile_v, tile_w);
 
     // W = V . T
-    // clang-format off
-        blas::trmm(blas::Layout::ColMajor,
-            blas::Side::Right, blas::Uplo::Upper, blas::Op::NoTrans, blas::Diag::NonUnit,
-            tile_w.size().rows(), tile_t.size().rows(),
-            static_cast<T>(1),
-            tile_t.ptr(), tile_t.ld(),
-            tile_w.ptr(), tile_w.ld());
-    // clang-format on
+    blas::trmm(blas::Layout::ColMajor, blas::Side::Right, blas::Uplo::Upper, blas::Op::NoTrans,
+               blas::Diag::NonUnit, tile_w.size().rows(), tile_t.size().rows(), T(1), tile_t.ptr(),
+               tile_t.ld(), tile_w.ptr(), tile_w.ld());
   });
 
   for (const auto& index_tile_w : w.iteratorLocal()) {
@@ -376,10 +344,12 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
                   const LocalTileSize at_offset, ConstMatrixT<T>& a, ConstPanelT<Coord::Col, T>& w,
                   ConstPanelT<Coord::Row, T>& wt, common::Pipeline<comm::Communicator>& mpi_row_chain,
                   common::Pipeline<comm::Communicator>& mpi_col_chain) {
-  using hpx::unwrapping;
+  using matrix::unwrapExtendTiles;
+  using tile::hemm_o;
+  using tile::gemm_o;
 
-  const auto ex = dlaf::getHpExecutor<Backend::MC>();
-  const auto ex_mpi = dlaf::getMPIExecutor<Backend::MC>();
+  const auto ex = getHpExecutor<Backend::MC>();
+  const auto ex_mpi = getMPIExecutor<Backend::MC>();
 
   const auto dist = a.distribution();
   const auto rank = dist.rankIndex();
@@ -401,7 +371,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
         FutureConstTile<T>  tile_w = w.read(ij_local);
         // clang-format on
 
-        hpx::dataflow(ex, unwrapping(dlaf::tile::hemm_o), blas::Side::Left, blas::Uplo::Lower, T(1),
+        hpx::dataflow(ex, unwrapExtendTiles(hemm_o), blas::Side::Left, blas::Uplo::Lower, T(1),
                       std::move(tile_a), std::move(tile_w), T(is_first ? 0 : 1), std::move(tile_x));
       }
       else {
@@ -420,7 +390,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
           FutureConstTile<T>  tile_w = wt.read(ij_local);
           // clang-format on
 
-          hpx::dataflow(ex, unwrapping(dlaf::tile::gemm_o), blas::Op::NoTrans, blas::Op::NoTrans, T(1),
+          hpx::dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::NoTrans, blas::Op::NoTrans, T(1),
                         std::move(tile_a), std::move(tile_w), T(is_first ? 0 : 1), std::move(tile_x));
         }
 
@@ -447,7 +417,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
           FutureConstTile<T>  tile_w = w.read(ij_local);
           // clang-format on
 
-          hpx::dataflow(ex, unwrapping(dlaf::tile::gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans, T(1),
+          hpx::dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans, T(1),
                         std::move(tile_a), std::move(tile_w), T(is_first_xt ? 0 : 1), std::move(tile_x));
         }
       }
@@ -496,16 +466,17 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
 template <class T>
 void gemmComputeW2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Coord::Col, T>& x,
                    common::Pipeline<comm::Communicator>& mpi_col_chain) {
-  using hpx::unwrapping;
+  using matrix::unwrapExtendTiles;
+  using tile::gemm_o;
 
-  const auto ex = dlaf::getHpExecutor<Backend::MC>();
-  const auto ex_mpi = dlaf::getMPIExecutor<Backend::MC>();
+  const auto ex = getHpExecutor<Backend::MC>();
+  const auto ex_mpi = getMPIExecutor<Backend::MC>();
 
   // Note:
   // Not all ranks in the column always hold at least a tile in the panel Ai, but all ranks in
   // the column are going to participate to the reduce. For them, it is important to set the
   // partial result W2 to zero.
-  dlaf::matrix::util::set(w2, [](...) { return 0; });
+  matrix::util::set(w2, [](...) { return 0; });
 
   // GEMM W2 = W* . X
   for (const auto& index_tile : w.iteratorLocal()) {
@@ -517,20 +488,20 @@ void gemmComputeW2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Co
     FutureConstTile<T>  tile_x  = x.read(index_tile);
     // clang-format on
 
-    hpx::dataflow(ex, unwrapping(dlaf::tile::gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans, T(1),
+    hpx::dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans, T(1),
                   std::move(tile_w), std::move(tile_x), beta, std::move(tile_w2));
   }
 
-  // all-reduce instead of computing it on each node, everyone in the panel should have it
   FutureTile<T> tile_w2 = w2(LocalTileIndex{0, 0});
   comm::scheduleAllReduceInPlace(ex_mpi, mpi_col_chain(), MPI_SUM, std::move(tile_w2));
 }
 
 template <class T, class MatrixLikeT>
 void gemmUpdateX(PanelT<Coord::Col, T>& x, ConstMatrixT<T>& w2, MatrixLikeT& v) {
-  using hpx::unwrapping;
+  using matrix::unwrapExtendTiles;
+  using tile::gemm_o;
 
-  const auto ex = dlaf::getHpExecutor<Backend::MC>();
+  const auto ex = getHpExecutor<Backend::MC>();
 
   // GEMM X = X - 0.5 . V . W2
   for (const auto& index_row : v.iteratorLocal()) {
@@ -540,7 +511,7 @@ void gemmUpdateX(PanelT<Coord::Col, T>& x, ConstMatrixT<T>& w2, MatrixLikeT& v) 
     FutureConstTile<T>  tile_w2 = w2.read(LocalTileIndex{0, 0});
     // clang-format on
 
-    hpx::dataflow(ex, unwrapping(dlaf::tile::gemm_o), blas::Op::NoTrans, blas::Op::NoTrans, T(-0.5),
+    hpx::dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::NoTrans, blas::Op::NoTrans, T(-0.5),
                   std::move(tile_v), std::move(tile_w2), T(1), std::move(tile_x));
   }
 }
@@ -551,8 +522,10 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
                                ConstPanelT<Coord::Col, T>& v, ConstPanelT<Coord::Row, T>& xt) {
   static_assert(std::is_signed<BaseType<T>>::value, "alpha in computations requires to be -1");
 
-  using hpx::unwrapping;
   using hpx::dataflow;
+  using matrix::unwrapExtendTiles;
+  using tile::her2k_o;
+  using tile::gemm_o;
 
   const auto dist = a.distribution();
 
@@ -567,8 +540,8 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
 
       // The first column of the trailing matrix (except for the very first global tile) has to be
       // updated first, in order to unlock the next iteration as soon as possible.
-      const auto& ex = (j == at_start.cols()) ? dlaf::getHpExecutor<Backend::MC>()
-                                              : dlaf::getNpExecutor<Backend::MC>();
+      const auto& ex =
+          (j == at_start.cols()) ? getHpExecutor<Backend::MC>() : getNpExecutor<Backend::MC>();
 
       if (is_diagonal_tile) {
         // clang-format off
@@ -577,7 +550,7 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
         FutureConstTile<T>  tile_x = x.read(ij_local);
         // clang-format on
 
-        dataflow(ex, unwrapping(dlaf::tile::her2k_o), blas::Uplo::Lower, blas::Op::NoTrans, T(-1),
+        dataflow(ex, unwrapExtendTiles(her2k_o), blas::Uplo::Lower, blas::Op::NoTrans, T(-1),
                  std::move(tile_v), std::move(tile_x), BaseType<T>(1), std::move(tile_a));
       }
       else {
@@ -589,7 +562,7 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
           FutureConstTile<T>  tile_v = vt.read(ij_local);
           // clang-format on
 
-          dataflow(ex, unwrapping(dlaf::tile::gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
+          dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
                    std::move(tile_x), std::move(tile_v), T(1), std::move(tile_a));
         }
 
@@ -601,7 +574,7 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
           FutureConstTile<T>  tile_x = xt.read(ij_local);
           // clang-format on
 
-          dataflow(ex, unwrapping(dlaf::tile::gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
+          dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
                    std::move(tile_v), std::move(tile_x), T(1), std::move(tile_a));
         }
       }
@@ -611,7 +584,7 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
 }
 
 /// Distributed implementation of reduction to band
-/// @return a list of shared futures of vectors, where each vector contains a block of taus
+/// @return a vector of shared futures of vectors, where each inner vector contains a block of taus
 template <class T>
 std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
     Backend::MC, Device::CPU, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
@@ -622,9 +595,9 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
   DLAF_ASSERT(square_size(mat_a), mat_a.size());
   DLAF_ASSERT(square_blocksize(mat_a), mat_a.blockSize());
 
-  const auto ex_mpi = dlaf::getMPIExecutor<Backend::MC>();
+  const auto ex_mpi = getMPIExecutor<Backend::MC>();
 
-  common::Pipeline<comm::Communicator> bmpi_col_chain(grid.colCommunicator());
+  common::Pipeline<comm::Communicator> mpi_col_chain_panel(grid.colCommunicator());
   common::Pipeline<comm::Communicator> mpi_row_chain(grid.rowCommunicator());
   common::Pipeline<comm::Communicator> mpi_col_chain(grid.colCommunicator().clone());
 
@@ -696,21 +669,21 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
 
     // PANEL
     if (is_panel_rank_col) {
-      taus.emplace_back(computePanelReflectors(std::move(trigger_panel), rank_v0.row(), bmpi_col_chain(),
-                                               mat_a, ai_panel, nrefls));
+      taus.emplace_back(computePanelReflectors(std::move(trigger_panel), rank_v0.row(),
+                                               mpi_col_chain_panel(), mat_a, ai_panel, nrefls));
       computeTFactor<Backend::MC>(nrefls, mat_a, ai_start, taus.back(), t(t_idx), mpi_col_chain);
       setupReflectorPanelV(rank_v0.row(), ai_offset, v, mat_a);
     }
 
     comm::broadcast(ex_mpi, rank_v0.col(), v, vt, mpi_row_chain, mpi_col_chain);
 
+    // W = V . T
     if (is_panel_rank_col)
       trmmComputeW(w, v, t.read(t_idx));
 
     comm::broadcast(ex_mpi, rank_v0.col(), w, wt, mpi_row_chain, mpi_col_chain);
 
     // Note:
-    // X = At . W
     // Since At is hermitian, just the lower part is referenced.
     // When the tile is not part of the main diagonal, the same tile has to be used for two computations
     // that will contribute to two different rows of X: the ones indexed with row and col.
@@ -721,6 +694,7 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
     x.clear();
     xt.clear();
 
+    // X = At . W
     hemmComputeX(rank_v0.col(), x, xt, at_offset, mat_a, w, wt, mpi_row_chain, mpi_col_chain);
 
     // Note:
@@ -733,7 +707,10 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
       // working on the full size tile (TODO it can be improved in the future)
       MatrixT<T> w2({nb, nb}, dist.blockSize());
 
+      // W2 = W* . X
       gemmComputeW2(w2, w, x, mpi_col_chain);
+
+      // X -= 1/2 . V . W2
       gemmUpdateX(x, w2, v);
     }
 
@@ -754,6 +731,7 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
     // trailing matrix that will unlock the next iteration.
     trigger_panel = hpx::when_all(selectRead(x, x.iteratorLocal()), selectRead(xt, xt.iteratorLocal()));
 
+    // At -= X . V* + V . X*
     her2kUpdateTrailingMatrix(at_offset, mat_a, x, vt, v, xt);
 
     xt.reset();

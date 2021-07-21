@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2021, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -13,6 +13,7 @@
 #include <cmath>
 
 #include <gtest/gtest.h>
+#include <lapack/util.hh>
 
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
@@ -20,7 +21,7 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/communication/sync/broadcast.h"
-#include "dlaf/lapack/tile.h"  // Just for lapack.hh workaround
+#include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/memory/memory_view.h"
@@ -60,13 +61,36 @@ MatrixLocal<T> makeLocal(const Matrix<const T, Device::CPU>& matrix) {
   return {matrix.size(), matrix.distribution().blockSize()};
 }
 
-template <class T, Device device>  // TODO add tile_selector predicate
-void all_gather(Matrix<const T, device>& source, MatrixLocal<T>& dest,
-                comm::CommunicatorGrid comm_grid) {
+template <class T, Device device>
+void allGather(lapack::MatrixType mat_type, Matrix<const T, device>& source, MatrixLocal<T>& dest,
+               comm::CommunicatorGrid comm_grid) {
+  using lapack::MatrixType;
+
   const auto& dist_source = source.distribution();
   const auto rank = dist_source.rankIndex();
 
+  auto targeted_tile = [mat_type](const GlobalTileIndex idx) {
+    switch (mat_type) {
+      case MatrixType::General:
+        return true;
+      case MatrixType::Lower:
+        return idx.row() >= idx.col();
+      case MatrixType::Upper:
+        return idx.row() <= idx.col();
+      case MatrixType::Band:
+      case MatrixType::Hessenberg:
+      case MatrixType::LowerBand:
+      case MatrixType::UpperBand:
+      default:
+        DLAF_UNIMPLEMENTED(lapack::matrixtype2str(mat_type));
+        return false;
+    }
+  };
+
   for (const auto& ij_tile : iterate_range2d(dist_source.nrTiles())) {
+    if (!targeted_tile(ij_tile))
+      continue;
+
     const auto owner = dist_source.rankGlobalTile(ij_tile);
 
     auto& dest_tile = dest.tile(ij_tile);
@@ -84,7 +108,7 @@ void all_gather(Matrix<const T, device>& source, MatrixLocal<T>& dest,
 }
 
 template <class T>
-void mirror_on_diag(const Tile<T, Device::CPU>& tile) {
+void mirrorLowerOnDiag(const Tile<T, Device::CPU>& tile) {
   DLAF_ASSERT(square_size(tile), tile.size());
 
   for (SizeType j = 0; j < tile.size().cols(); j++)
@@ -93,7 +117,7 @@ void mirror_on_diag(const Tile<T, Device::CPU>& tile) {
 }
 
 template <class T>
-void copy_transposed(const Tile<const T, Device::CPU>& from, const Tile<T, Device::CPU>& to) {
+void copyConjTrans(const Tile<const T, Device::CPU>& from, const Tile<T, Device::CPU>& to) {
   DLAF_ASSERT(from.size() == transposed(to.size()), from.size(), to.size());
 
   for (SizeType j = 0; j < from.size().cols(); j++)
@@ -101,13 +125,10 @@ void copy_transposed(const Tile<const T, Device::CPU>& from, const Tile<T, Devic
       to({j, i}) = dlaf::conj(from({i, j}));
 }
 
-// band_size in elements
 template <class T>
-void setup_sym_band(MatrixLocal<T>& matrix, const SizeType& band_size) {
-  DLAF_ASSERT(band_size == matrix.blockSize().rows(), "not yet implemented", band_size,
-              matrix.blockSize().rows());
-  DLAF_ASSERT(band_size % matrix.blockSize().rows() == 0, "not yet implemented", band_size,
-              matrix.blockSize().rows());
+void setupHermitianBand(MatrixLocal<T>& matrix, const SizeType& band_size) {
+  DLAF_ASSERT(band_size == matrix.blockSize().rows(), band_size, matrix.blockSize().rows());
+  DLAF_ASSERT(band_size % matrix.blockSize().rows() == 0, band_size, matrix.blockSize().rows());
 
   DLAF_ASSERT(square_blocksize(matrix), matrix.blockSize());
   DLAF_ASSERT(square_size(matrix), matrix.blockSize());
@@ -125,16 +146,11 @@ void setup_sym_band(MatrixLocal<T>& matrix, const SizeType& band_size) {
 
     // setup the strictly lower to zero (if there is any)
     if (std::min(tile_lo.size().rows(), tile_lo.size().cols()) - 1 > 0) {
-      // clang-format off
-      lapack::laset(
-          lapack::MatrixType::Lower,
-          tile_lo.size().rows() - 1, tile_lo.size().cols() - 1,
-          0, 0,
-          tile_lo.ptr({1, 0}), tile_lo.ld());
-      // clang-format on
+      lapack::laset(lapack::MatrixType::Lower, tile_lo.size().rows() - 1, tile_lo.size().cols() - 1, 0,
+                    0, tile_lo.ptr({1, 0}), tile_lo.ld());
     }
 
-    copy_transposed(matrix.tile_read(ij), matrix.tile(common::transposed(ij)));
+    copyConjTrans(matrix.tile_read(ij), matrix.tile(common::transposed(ij)));
   }
 
   // setup zeros in both lower and upper out-of-band
@@ -144,8 +160,8 @@ void setup_sym_band(MatrixLocal<T>& matrix, const SizeType& band_size) {
       if (!ij.isIn(matrix.nrTiles()))
         continue;
 
-      set(matrix.tile(ij), 0);
-      set(matrix.tile(common::transposed(ij)), 0);
+      tile::set0(matrix.tile(ij));
+      tile::set0(matrix.tile(common::transposed(ij)));
     }
   }
 
@@ -154,14 +170,31 @@ void setup_sym_band(MatrixLocal<T>& matrix, const SizeType& band_size) {
     const GlobalTileIndex kk{k, k};
     const auto& tile = matrix.tile(kk);
 
-    mirror_on_diag(tile);
+    mirrorLowerOnDiag(tile);
   }
 }
 
 template <class T>
-auto all_gather_taus(const SizeType k, const SizeType chunk_size, const SizeType band_size,
-                     std::vector<hpx::shared_future<common::internal::vector<T>>> fut_local_taus,
-                     comm::CommunicatorGrid comm_grid) {
+void splitReflectorsAndBand(MatrixLocal<T>& mat_v, MatrixLocal<T>& mat_b, const SizeType band_size) {
+  DLAF_ASSERT_HEAVY(square_size(mat_v), mat_v.size());
+  DLAF_ASSERT_HEAVY(square_size(mat_b), mat_b.size());
+
+  DLAF_ASSERT(equal_size(mat_v, mat_b), mat_v.size(), mat_b.size());
+
+  for (SizeType diag = 0; diag <= 1; ++diag) {
+    for (SizeType i = diag; i < mat_v.nrTiles().rows(); ++i) {
+      const GlobalTileIndex idx(i, i - diag);
+      copy(mat_v.tile(idx), mat_b.tile(idx));
+    }
+  }
+
+  setupHermitianBand(mat_b, band_size);
+}
+
+template <class T>
+auto allGatherTaus(const SizeType k, const SizeType chunk_size, const SizeType band_size,
+                   std::vector<hpx::shared_future<common::internal::vector<T>>> fut_local_taus,
+                   comm::CommunicatorGrid comm_grid) {
   std::vector<T> taus;
   taus.reserve(to_sizet(k));
 
@@ -253,17 +286,17 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributed) {
         //    existing part of the band
         // - the V matrix, whose relevant part is the submatrix underneath the band
 
-        auto mat_b = makeLocal(matrix_a);
-        all_gather(matrix_a, mat_b, comm_grid);
-        setup_sym_band(mat_b, mat_b.blockSize().rows());
-
         auto mat_v = makeLocal(matrix_a);
-        all_gather(matrix_a, mat_v, comm_grid);
-        // TODO FIXME mat_v can be smaller, but then all_gather must copy a submatrix
+        auto mat_b = makeLocal(matrix_a);
+
+        allGather(lapack::MatrixType::Lower, matrix_a, mat_v, comm_grid);
+        splitReflectorsAndBand(mat_v, mat_b, band_size);
+
+        // TODO FIXME mat_v can be smaller, but then allGather must copy a submatrix
         const GlobalTileIndex v_offset{band_size_tiles, 0};
 
         // Finally, collect locally tau values, which together with V allow to apply the Q transformation
-        auto taus = all_gather_taus(k_reflectors, block_size.rows(), band_size, local_taus, comm_grid);
+        auto taus = allGatherTaus(k_reflectors, block_size.rows(), band_size, local_taus, comm_grid);
         DLAF_ASSERT(to_SizeType(taus.size()) == k_reflectors, taus.size(), k_reflectors);
 
         // Now that all input are collected locally, it's time to apply the transformation,
@@ -283,24 +316,17 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributed) {
           // apply from left...
           const GlobalTileIndex left_offset{band_size_tiles, 0};
           const GlobalElementSize left_size{mat_b.size().rows() - band_size, mat_b.size().cols()};
-          // clang-format off
-          lapack::unmqr(lapack::Side::Left, lapack::Op::NoTrans,
-            left_size.rows(), left_size.cols(), k_reflectors,
-            mat_v.tile_read(v_offset).ptr(), mat_v.ld(),
-            taus.data(),
-            mat_b.tile(left_offset).ptr(), mat_b.ld());
-          // clang-format on
+          lapack::unmqr(lapack::Side::Left, lapack::Op::NoTrans, left_size.rows(), left_size.cols(),
+                        k_reflectors, mat_v.tile_read(v_offset).ptr(), mat_v.ld(), taus.data(),
+                        mat_b.tile(left_offset).ptr(), mat_b.ld());
 
           // ... and from right
           const GlobalTileIndex right_offset = common::transposed(left_offset);
           const GlobalElementSize right_size = common::transposed(left_size);
-          // clang-format off
-          lapack::unmqr(lapack::Side::Right, lapack::Op::ConjTrans,
-            right_size.rows(), right_size.cols(), k_reflectors,
-            mat_v.tile_read(v_offset).ptr(), mat_v.ld(),
-            taus.data(),
-            mat_b.tile(right_offset).ptr(), mat_b.ld());
-          // clang-format on
+
+          lapack::unmqr(lapack::Side::Right, lapack::Op::ConjTrans, right_size.rows(), right_size.cols(),
+                        k_reflectors, mat_v.tile_read(v_offset).ptr(), mat_v.ld(), taus.data(),
+                        mat_b.tile(right_offset).ptr(), mat_b.ld());
         }
 
         // Eventually, check the result obtained by applying the inverse transformation equals the original matrix

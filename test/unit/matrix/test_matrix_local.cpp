@@ -152,7 +152,7 @@ struct test_output<std::complex<T>> {
   }
 };
 
-TYPED_TEST(MatrixLocalTest, OutputNumpyForamt) {
+TYPED_TEST(MatrixLocalTest, OutputNumpyFormat) {
   const auto test_config = test_output<TypeParam>{}();
 
   std::ostringstream stream_matrix_output;

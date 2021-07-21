@@ -94,16 +94,12 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   const SizeType ms = mat_v.size().rows();
 
   // Matrix T
-  SizeType tottaus;
-  if (ms < mb || ms == 0 || nv == 0)
-    tottaus = 0;
-  else
-    tottaus = ms - mb;
-
-  if (tottaus == 0)
+  if (m <= 1 || n == 0)
     return;
 
-  dlaf::matrix::Distribution dist_t({tottaus, tottaus}, {mb, mb});
+  const SizeType nr_reflector = mat_v.size().rows() - mb;
+
+  dlaf::matrix::Distribution dist_t({nr_reflector, nr_reflector}, {mb, mb});
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panelsVV(n_workspaces,

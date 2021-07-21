@@ -271,7 +271,7 @@ hpx::shared_future<common::internal::vector<T>> computePanelReflectors(
 
 template <class T>
 void setupReflectorPanelV(comm::IndexT_MPI rank_v0, const LocalTileSize& ai_offset,
-                          PanelT<Coord::Col, T>& v, MatrixT<const T>& mat_a) {
+                          const SizeType nrefls, PanelT<Coord::Col, T>& v, MatrixT<const T>& mat_a) {
   const auto rank = mat_a.rankIndex().row();
 
   // Note:
@@ -290,8 +290,13 @@ void setupReflectorPanelV(comm::IndexT_MPI rank_v0, const LocalTileSize& ai_offs
       tile::laset(lapack::MatrixType::Upper, T(0), T(1), tile_v);
     });
 
+    // Note:
+    // If the number of reflectors are limited by height (|reflector| > 1), the panel is narrower than
+    // the blocksize, leading to just using a part of A
     const auto v0_index = indexFromOrigin(ai_offset);
-    hpx::dataflow(getHpExecutor<Backend::MC>(), std::move(setupV0), v(v0_index), mat_a.read(v0_index));
+    const auto& tile_a = splitTile(mat_a.read(v0_index), {{0, 0}, {nrefls, nrefls}});
+
+    hpx::dataflow(getHpExecutor<Backend::MC>(), std::move(setupV0), v(v0_index), tile_a);
 
     ++it_begin;
   }
@@ -310,21 +315,14 @@ void trmmComputeW(PanelT<Coord::Col, T>& w, MatrixLikeT& v, FutureConstTile<T> t
 
   auto trmm_func = hpx::unwrapping([](auto&& tile_w, const auto& tile_v, const auto& tile_t) -> void {
     // Note:
-    // Since T can be smaller then the entire block, here its size is used to update potentially
-    // just a sub-part of the resulting W tile, which currently still works as an entire block.
-    // T can be of reduced-size when there are less reflectors than columns, so when the V tile
-    // is also reduced in the number of rows, which currently happens just when working on the
-    // last tile fully containing a reflector. This, together with the fact that V0 is well-formed
-    // implies that by copying V0 to W we are also resetting W where the matrix is not going to
-    // be computed.
+    // Since V0 is well-formed, by copying V0 to W we are also resetting W where the matrix is not going
+    // to be computed.
     // TODO check this when number of reflectors is changed (i.e. skip last single-element reflector)
-
     copy(tile_v, tile_w);
 
     // W = V . T
-    blas::trmm(blas::Layout::ColMajor, blas::Side::Right, blas::Uplo::Upper, blas::Op::NoTrans,
-               blas::Diag::NonUnit, tile_w.size().rows(), tile_t.size().rows(), T(1), tile_t.ptr(),
-               tile_t.ld(), tile_w.ptr(), tile_w.ld());
+    using namespace blas;
+    tile::trmm(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1), tile_t, tile_w);
   });
 
   for (const auto& index_tile_w : w.iteratorLocal()) {
@@ -668,12 +666,12 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
     x.setRangeStart(at_start);
     xt.setRangeStart(at_start);
 
-    v.setWidth(v0_size.cols());
-    vt.setHeight(v0_size.cols());
-    w.setWidth(v0_size.cols());
-    wt.setHeight(v0_size.cols());
-    x.setWidth(v0_size.cols());
-    xt.setHeight(v0_size.cols());
+    v.setWidth(nrefls);
+    vt.setHeight(nrefls);
+    w.setWidth(nrefls);
+    wt.setHeight(nrefls);
+    x.setWidth(nrefls);
+    xt.setHeight(nrefls);
 
     const LocalTileIndex t_idx(0, 0);
     // TODO used just by the column, maybe we can re-use a panel tile?
@@ -685,9 +683,10 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
       taus.emplace_back(computePanelReflectors(std::move(trigger_panel), rank_v0.row(),
                                                mpi_col_chain_panel(), mat_a, ai_panel, nrefls));
       computeTFactor<Backend::MC>(nrefls, mat_a, ai_start, taus.back(), t(t_idx), mpi_col_chain);
-      setupReflectorPanelV(rank_v0.row(), ai_offset, v, mat_a);
+      setupReflectorPanelV(rank_v0.row(), ai_offset, nrefls, v, mat_a);
     }
 
+    // PREPARATION FOR TRAILING MATRIX UPDATE
     comm::broadcast(ex_mpi, rank_v0.col(), v, vt, mpi_row_chain, mpi_col_chain);
 
     // W = V . T
@@ -715,10 +714,8 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
     // which have locally all the needed stuff for updating X and finalize the result
     if (is_panel_rank_col) {
       // Note:
-      // W2 could in theory re-use T-factor tile, but currently T may have a different size.
-      // Indeed, T size depends on the number of the reflectors in this step, while W2 is still
-      // working on the full size tile (TODO it can be improved in the future)
-      MatrixT<T> w2({nb, nb}, dist.blockSize());
+      // T can be re-used because it is not needed anymore in this step and it has the same shape
+      MatrixT<T> w2 = std::move(t);
 
       // W2 = W* . X
       gemmComputeW2(w2, w, x, mpi_col_chain);
@@ -728,6 +725,8 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
     }
 
     comm::broadcast(ex_mpi, rank_v0.col(), x, xt, mpi_row_chain, mpi_col_chain);
+
+    // TRAILING MATRIX UPDATE
 
     // Note:
     // This is a checkpoint that it is used to trigger the computation of the next iteration.

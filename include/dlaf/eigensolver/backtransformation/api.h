@@ -9,5 +9,15 @@
 //
 #pragma once
 
-#include "dlaf/eigensolver/backtransformation.h"
-#include "dlaf/eigensolver/gen_to_std.h"
+#include "dlaf/types.h"
+
+namespace dlaf {
+namespace eigensolver {
+namespace internal {
+
+template <Backend backend, Device device, class T>
+struct BackTransformation {};
+
+}
+}
+}

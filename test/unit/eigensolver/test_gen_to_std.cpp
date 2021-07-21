@@ -129,18 +129,18 @@ TYPED_TEST(EigensolverGenToStdTestMC, CorrectnessLocal) {
   }
 }
 
-TYPED_TEST(EigensolverGenToStdTestMC, CorrectnessDistributed) {
-  SizeType m, mb;
-
-  for (const auto& comm_grid : this->commGrids()) {
-    for (auto uplo : blas_uplos) {
-      for (auto sz : sizes) {
-        std::tie(m, mb) = sz;
-        testGenToStdEigensolver<TypeParam, Backend::MC, Device::CPU>(comm_grid, uplo, m, mb);
-      }
-    }
-  }
-}
+//TYPED_TEST(EigensolverGenToStdTestMC, CorrectnessDistributed) {
+//  SizeType m, mb;
+//
+//  for (const auto& comm_grid : this->commGrids()) {
+//    for (auto uplo : blas_uplos) {
+//      for (auto sz : sizes) {
+//        std::tie(m, mb) = sz;
+//        testGenToStdEigensolver<TypeParam, Backend::MC, Device::CPU>(comm_grid, uplo, m, mb);
+//      }
+//    }
+//  }
+//}
 
 #ifdef DLAF_WITH_CUDA
 TYPED_TEST(EigensolverGenToStdTestGPU, CorrectnessLocal) {
@@ -154,16 +154,16 @@ TYPED_TEST(EigensolverGenToStdTestGPU, CorrectnessLocal) {
   }
 }
 
-TYPED_TEST(EigensolverGenToStdTestGPU, CorrectnessDistributed) {
-  SizeType m, mb;
-
-  for (const auto& comm_grid : this->commGrids()) {
-    for (auto uplo : blas_uplos) {
-      for (auto sz : sizes) {
-        std::tie(m, mb) = sz;
-        testGenToStdEigensolver<TypeParam, Backend::GPU, Device::GPU>(comm_grid, uplo, m, mb);
-      }
-    }
-  }
-}
+//TYPED_TEST(EigensolverGenToStdTestGPU, CorrectnessDistributed) {
+//  SizeType m, mb;
+//
+//  for (const auto& comm_grid : this->commGrids()) {
+//    for (auto uplo : blas_uplos) {
+//      for (auto sz : sizes) {
+//        std::tie(m, mb) = sz;
+//        testGenToStdEigensolver<TypeParam, Backend::GPU, Device::GPU>(comm_grid, uplo, m, mb);
+//      }
+//    }
+//  }
+//}
 #endif

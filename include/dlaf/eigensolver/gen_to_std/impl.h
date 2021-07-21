@@ -35,6 +35,7 @@ namespace dlaf {
 namespace eigensolver {
 namespace internal {
 
+namespace gentostd_l {
 template <class Executor, Device device, class T>
 void hegstDiagTile(Executor&& executor_hp, hpx::future<matrix::Tile<T, device>> a_kk,
                    hpx::future<matrix::Tile<T, device>> l_kk) {
@@ -46,7 +47,7 @@ template <class Executor, Device device, class T>
 void trsmPanelTile(Executor&& executor_hp, hpx::shared_future<matrix::Tile<const T, device>> l_kk,
                    hpx::future<matrix::Tile<T, device>> a_ik) {
   hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Right,
-                blas::Uplo::Lower, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), l_kk,
+                blas::Uplo::Lower, blas::Op::NoTrans, blas::Diag::NonUnit, T(1.0), l_kk,
                 std::move(a_ik));
 }
 
@@ -86,14 +87,90 @@ template <class Executor, Device device, class T>
 void gemmPanelUpdateTile(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> l_ij,
                          hpx::shared_future<matrix::Tile<const T, device>> a_jk,
                          hpx::future<matrix::Tile<T, device>> a_ik) {
-  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::NoTrans,
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans,
                 T(-1.0), l_ij, a_jk, T(1.0), std::move(a_ik));
+}
+}
+
+namespace gentostd_u {
+template <class Executor, Device device, class T>
+void hegstDiagTile(Executor&& executor_hp, hpx::future<matrix::Tile<T, device>> a_kk,
+                   hpx::future<matrix::Tile<T, device>> u_kk) {
+  hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::hegst_o), 1, blas::Uplo::Upper,
+                std::move(a_kk), std::move(u_kk));
+}
+
+template <class Executor, Device device, class T>
+void trsmPanelTile(Executor&& executor_hp, hpx::shared_future<matrix::Tile<const T, device>> u_kk,
+                   hpx::future<matrix::Tile<T, device>> a_ki) {
+  hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Left,
+                blas::Uplo::Upper, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), u_kk,
+                std::move(a_ki));
+}
+
+template <class Executor, Device device, class T>
+void gemmPanelTile(Executor&& executor_hp, hpx::shared_future<matrix::Tile<const T, device>> a_kk,
+                   hpx::shared_future<matrix::Tile<const T, device>> u_ki,
+                   hpx::future<matrix::Tile<T, device>> a_ki) {
+  hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans,
+                blas::Op::NoTrans, T(-0.5), a_kk, u_ki, T(1.0), std::move(a_ki));
+}
+
+template <class Executor, Device device, class T>
+void her2kTrailingDiagTile(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> a_kj,
+                           hpx::shared_future<matrix::Tile<const T, device>> u_kj,
+                           hpx::future<matrix::Tile<T, device>> a_kk) {
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::her2k_o), blas::Uplo::Upper, blas::Op::ConjTrans,
+                T(-1.0), a_kj, u_kj, BaseType<T>(1.0), std::move(a_kk));
+}
+
+
+template <class Executor, Device device, class T>
+void gemmTrailingMatrixTile(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> mat_ik,
+                            hpx::shared_future<matrix::Tile<const T, device>> mat_jk,
+                            hpx::future<matrix::Tile<T, device>> a_ij) {
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans,
+                T(-1.0), mat_ik, mat_jk, T(1.0), std::move(a_ij));
+}
+
+ template <class Executor, Device device, class T>
+void gemmTrailingMatrixTileCT(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> mat_ki,
+                            hpx::shared_future<matrix::Tile<const T, device>> mat_kj,
+                            hpx::future<matrix::Tile<T, device>> a_ji) {
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::NoTrans,
+                T(-1.0), mat_ki, mat_kj, T(1.0), std::move(a_ji));
+}
+
+template <class Executor, Device device, class T>
+void gemmTrailingMatrixTileNT(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> mat_ki,
+                            hpx::shared_future<matrix::Tile<const T, device>> mat_kj,
+                            hpx::future<matrix::Tile<T, device>> a_ji) {
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::ConjTrans, blas::Op::ConjTrans,
+                T(-1.0), mat_ki, mat_kj, T(1.0), std::move(a_ji));
+}
+
+template <class Executor, Device device, class T>
+void trsmPanelUpdateTile(Executor&& executor_hp, hpx::shared_future<matrix::Tile<const T, device>> u_jj,
+                         hpx::future<matrix::Tile<T, device>> a_kj) {
+  hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Right,
+                blas::Uplo::Upper, blas::Op::NoTrans, blas::Diag::NonUnit, T(1.0), u_jj,
+                std::move(a_kj));
+}
+
+template <class Executor, Device device, class T>
+void gemmPanelUpdateTile(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> u_ji,
+                         hpx::shared_future<matrix::Tile<const T, device>> a_kj,
+                         hpx::future<matrix::Tile<T, device>> a_ki) {
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::NoTrans,
+                T(-1.0), a_kj, u_ji, T(1.0), std::move(a_ki));
+}
 }
 
 // Implementation based on LAPACK Algorithm for the transformation from generalized to standard
 // eigenproblem (xHEGST)
 template <Backend backend, Device device, class T>
 void GenToStd<backend, device, T>::call_L(Matrix<T, device>& mat_a, Matrix<T, device>& mat_l) {
+  using namespace gentostd_l;
   auto executor_hp = dlaf::getHpExecutor<backend>();
   auto executor_np = dlaf::getNpExecutor<backend>();
 
@@ -154,6 +231,7 @@ void GenToStd<backend, device, T>::call_L(Matrix<T, device>& mat_a, Matrix<T, de
 template <Backend backend, Device device, class T>
 void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a,
                                           Matrix<T, device>& mat_l) {
+  using namespace gentostd_l;
   auto executor_hp = dlaf::getHpExecutor<backend>();
   auto executor_np = dlaf::getNpExecutor<backend>();
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
@@ -355,6 +433,70 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex ik(i_local, distr.localTileFromGlobalTile<Coord::Col>(k));
 
         hemmPanelTile(executor_hp, a_diag, mat_l.read(ik), mat_a(ik));
+      }
+    }
+  }
+}
+
+template <Backend backend, Device device, class T>
+void GenToStd<backend, device, T>::call_U(Matrix<T, device>& mat_a, Matrix<T, device>& mat_u) {
+  using namespace gentostd_u;
+  auto executor_hp = dlaf::getHpExecutor<backend>();
+  auto executor_np = dlaf::getNpExecutor<backend>();
+
+  // Number of tile (rows = cols)
+  SizeType nrtile = mat_a.nrTiles().cols();
+
+  for (SizeType k = 0; k < nrtile; ++k) {
+    const LocalTileIndex kk{k, k};
+
+    // Direct transformation to standard eigenvalue problem of the diagonal tile
+    hegstDiagTile(executor_hp, mat_a(kk), mat_u(kk));
+
+    // If there is no trailing matrix
+    if (k == nrtile - 1)
+      continue;
+
+    for (SizeType i = k + 1; i < nrtile; ++i) {
+      const LocalTileIndex ki{k, i};
+      trsmPanelTile(executor_hp, mat_u.read(kk), mat_a(ki));
+      gemmPanelTile(executor_hp, mat_a.read(kk), mat_u.read(ki), mat_a(ki));
+    }
+
+    for (SizeType j = k + 1; j < nrtile; ++j) {
+      const LocalTileIndex jj{j, j};
+      const LocalTileIndex kj{k, j};
+      // first trailing panel gets high priority (look ahead).
+      auto& trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_np;
+
+      her2kTrailingDiagTile(trailing_matrix_executor, mat_a.read(kj), mat_u.read(kj), mat_a(jj));
+
+//        gemmTrailingMatrixTileNT(trailing_matrix_executor, mat_a.read(kj), mat_u.read(kj), mat_a(jj));
+//        gemmTrailingMatrixTileCT(trailing_matrix_executor, mat_u.read(kj), mat_a.read(kj), mat_a(jj));
+
+
+      for (SizeType i = j + 1; i < nrtile; ++i) {
+        const LocalTileIndex ki{k, i};
+        const LocalTileIndex ji{j, i};
+        gemmTrailingMatrixTile(trailing_matrix_executor, mat_a.read(ki), mat_u.read(kj), mat_a(ji));
+        gemmTrailingMatrixTile(trailing_matrix_executor, mat_u.read(ki), mat_a.read(kj), mat_a(ji));
+      }
+    }
+
+    for (SizeType i = k + 1; i < nrtile; ++i) {
+      const LocalTileIndex ki{k, i};
+      gemmPanelTile(executor_np, mat_a.read(kk), mat_u.read(ki), mat_a(ki));
+    }
+
+    for (SizeType j = k + 1; j < nrtile; ++j) {
+      const LocalTileIndex jj{j, j};
+      const LocalTileIndex kj{k, j};
+      trsmPanelUpdateTile(executor_hp, mat_u.read(jj), mat_a(kj));
+
+      for (SizeType i = j + 1; i < nrtile; ++i) {
+        const LocalTileIndex ji{j, i};
+        const LocalTileIndex ki{k, i};
+	gemmPanelUpdateTile(executor_np, mat_u.read(ji), mat_a.read(kj), mat_a(ki));
       }
     }
   }

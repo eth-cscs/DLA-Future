@@ -22,7 +22,11 @@
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
+#include "dlaf/common/round_robin.h"
 #include "dlaf/common/vector.h"
+#include "dlaf/communication/communicator.h"
+#include "dlaf/communication/communicator_grid.h"
+#include "dlaf/communication/kernels.h"
 #include "dlaf/eigensolver/band_to_tridiag/api.h"
 #include "dlaf/lapack/gpu/lacpy.h"
 #include "dlaf/lapack/gpu/laset.h"
@@ -89,15 +93,92 @@ void applyHHRight(const SizeType m, const SizeType n, const T tau, const T* v, T
   blas::ger(ColMaj, m, n, -tau, w, 1, v, 1, a, lda);
 }
 
+// split versions of the previous operations
 template <class T>
-struct BandBlock {
+void applyHHLeftRightHerm(const SizeType n1, const SizeType n2, const T tau, const T* v, T* a1, T* a2,
+                          const SizeType lda, T* w) {
+  DLAF_ASSERT_HEAVY(n1 > 0, n1);
+  DLAF_ASSERT_HEAVY(n2 > 0, n2);
+  const auto n = n1 + n2;
+
+  constexpr auto Lower = blas::Uplo::Lower;
+  constexpr auto ColMaj = blas::Layout::ColMajor;
+  constexpr auto NoTrans = blas::Op::NoTrans;
+  constexpr auto ConjTrans = blas::Op::ConjTrans;
+
+  blas::hemv(ColMaj, Lower, n1, tau, a1, lda, v, 1, 0., w, 1);
+  blas::hemv(ColMaj, Lower, n2, tau, a2, lda, v + n1, 1, 0., w + n1, 1);
+  blas::gemv(ColMaj, ConjTrans, n2, n1, tau, a1 + n1, lda, v + n1, 1, 1., w, 1);
+  blas::gemv(ColMaj, NoTrans, n2, n1, tau, a1 + n1, lda, v, 1, 1., w + n1, 1);
+
+  const T tmp = -blas::dot(n, w, 1, v, 1) * tau / BaseType<T>{2.};
+  blas::axpy(n, tmp, v, 1, w, 1);
+  blas::her2(ColMaj, Lower, n1, -1., w, 1, v, 1, a1, lda);
+  blas::ger(ColMaj, n2, n1, -1., w + n1, 1, v, 1, a1 + n1, lda);
+  blas::ger(ColMaj, n2, n1, -1., v + n1, 1, w, 1, a1 + n1, lda);
+  blas::her2(ColMaj, Lower, n2, -1., w + n1, 1, v + n1, 1, a2, lda);
+}
+
+template <class T>
+void applyHHLeft(const SizeType m, const SizeType n1, const SizeType n2, const T tau, const T* v, T* a1,
+                 T* a2, const SizeType lda, T* w) {
+  applyHHLeft(m, n1, tau, v, a1, lda, w);
+  applyHHLeft(m, n2, tau, v, a2, lda, w);
+}
+
+template <class T>
+void applyHHRight(const SizeType m, const SizeType n1, const SizeType n2, const T tau, const T* v, T* a1,
+                  T* a2, const SizeType lda, T* w) {
+  DLAF_ASSERT_HEAVY(m >= 0, m);
+  DLAF_ASSERT_HEAVY(n1 > 0, n1);
+  DLAF_ASSERT_HEAVY(n2 > 0, n2);
+
+  constexpr auto NoTrans = blas::Op::NoTrans;
+  constexpr auto ColMaj = blas::Layout::ColMajor;
+
+  blas::gemv(ColMaj, NoTrans, m, n1, 1., a1, lda, v, 1, 0., w, 1);
+  blas::gemv(ColMaj, NoTrans, m, n2, 1., a2, lda, v + n1, 1, 1., w, 1);
+  blas::ger(ColMaj, m, n1, -tau, w, 1, v, 1, a1, lda);
+  blas::ger(ColMaj, m, n2, -tau, w, 1, v + n1, 1, a2, lda);
+}
+
+template <class T, bool dist = false>
+class BandBlock {
+  using MatrixType = Matrix<T, Device::CPU>;
+  using ConstTileType = typename MatrixType::ConstTileType;
+
+public:
+  // Local constructor
+  template <bool dist2 = dist, std::enable_if_t<!dist2 && dist == dist2, int> = 0>
   BandBlock(SizeType n, SizeType band_size)
-      : size_(n), band_size_(band_size), ld_(2 * band_size_ - 1), mem_(n * (ld_ + 1)) {}
+      : size_(n), band_size_(band_size), ld_(2 * band_size_ - 1), id_(0), block_size_(n),
+        mem_size_col_(n), mem_(mem_size_col_ * (ld_ + 1)) {}
+
+  // Distributed constructor
+  // TODO document size of allocated memory
+  template <bool dist2 = dist, std::enable_if_t<dist2 && dist == dist2, int> = 0>
+  BandBlock(SizeType n, SizeType band_size, SizeType id, SizeType block_size)
+      : size_(n), band_size_(band_size), ld_(2 * band_size_ - 1), id_(id), block_size_(block_size),
+        mem_size_col_(2 + block_size + (id == 0 ? block_size : 0)), mem_(mem_size_col_ * (ld_ + 1)) {
+    using util::ceilDiv;
+    DLAF_ASSERT(0 <= n, n);
+    // Note: band_size_ = 1 means already tridiagonal.
+    DLAF_ASSERT(2 <= band_size, band_size_);
+    DLAF_ASSERT(2 <= block_size_, block_size_);
+    DLAF_ASSERT(block_size_ % band_size_ == 0, block_size_, band_size_);
+    DLAF_ASSERT(0 <= id && id < ceilDiv(size_, block_size_), id, ceilDiv(size_, block_size_));
+  }
 
   T* ptr(SizeType offset, SizeType j) noexcept {
     DLAF_ASSERT_HEAVY(0 <= offset && offset < ld_ + 1, offset, ld_);
     DLAF_ASSERT_HEAVY(0 <= j && j < size_, j, size_);
-    return mem_(j * (ld_ + 1) + offset);
+
+    if (dist) {
+      return mem_(memoryIndex(j) * (ld_ + 1) + offset);
+    }
+    else {
+      return mem_(j * (ld_ + 1) + offset);
+    }
   }
 
   SizeType ld() const noexcept {
@@ -251,6 +332,10 @@ struct BandBlock {
     }
   }
 
+  SizeType nextSplit(SizeType j) {
+    return mem_size_col_ - memoryIndex(j);
+  }
+
 private:
 #ifdef DLAF_WITH_GPU
   bool isAccessibleFromGPU() const {
@@ -269,11 +354,69 @@ private:
   }
 #endif
 
+  SizeType memoryIndex(SizeType j) {
+    if (dist) {
+      DLAF_ASSERT_HEAVY(block_size_ * id_ <= j && j < size_, j, id_, block_size_, size_);
+      return (j - block_size_ * id_) % mem_size_col_;
+    }
+    else {
+      DLAF_ASSERT_HEAVY(0 <= j && j < size_, j, size_);
+      return j;
+    }
+  }
+
   SizeType size_;
   SizeType band_size_;
   SizeType ld_;
+
+  SizeType id_;
+  SizeType block_size_;
+  SizeType mem_size_col_;
+
   memory::MemoryView<T, Device::CPU> mem_;
 };
+
+template <class CommSender, class T, class DepSender>
+[[nodiscard]] auto scheduleSendCol(CommSender&& pcomm, comm::IndexT_MPI dest, comm::IndexT_MPI tag,
+                                   SizeType b, std::shared_ptr<BandBlock<T, true>> a_block, SizeType j,
+                                   DepSender&& dep) {
+  using dlaf::comm::internal::transformMPI;
+  using dlaf::internal::whenAllLift;
+
+  namespace ex = pika::execution::experimental;
+
+  auto send = [dest, tag, b, j](const comm::Communicator& comm,
+                                std::shared_ptr<BandBlock<T, true>> a_block, MPI_Request* req) {
+    DLAF_MPI_CHECK_ERROR(MPI_Isend(a_block->ptr(0, j), to_int(2 * b), dlaf::comm::mpi_datatype<T>::type,
+                                   dest, tag, comm, req));
+  };
+
+  auto comm_sender =
+      whenAllLift(std::forward<CommSender>(pcomm), a_block, std::forward<DepSender>(dep)) |
+      transformMPI(send);
+  // Ensure lifetime shared pointer.
+  return whenAllLift(std::move(a_block), std::move(comm_sender)) | ex::then([](auto) {});
+}
+
+template <class CommSender, class T, class DepSender>
+[[nodiscard]] auto scheduleRecvCol(CommSender&& pcomm, comm::IndexT_MPI src, comm::IndexT_MPI tag,
+                                   SizeType b, std::shared_ptr<BandBlock<T, true>> a_block, SizeType j,
+                                   DepSender&& dep) {
+  using dlaf::comm::internal::transformMPI;
+  using dlaf::internal::whenAllLift;
+
+  auto recv = [src, tag, b, j](const comm::Communicator& comm,
+                               std::shared_ptr<BandBlock<T, true>> a_block, MPI_Request* req) {
+    DLAF_MPI_CHECK_ERROR(MPI_Irecv(a_block->ptr(0, j), to_int(2 * b), dlaf::comm::mpi_datatype<T>::type,
+                                   src, tag, comm, req));
+  };
+
+  return whenAllLift(std::forward<CommSender>(pcomm), std::move(a_block), std::forward<DepSender>(dep)) |
+         transformMPI(recv);
+}
+
+template <class T>
+using BandBlockDist = BandBlock<T, true>;
 
 template <class T>
 class SweepWorker {
@@ -284,7 +427,7 @@ public:
   SweepWorker(const SweepWorker&) = delete;
   SweepWorker(SweepWorker&&) = default;
 
-  SweepWorker& operator=(const SweepWorker&&) = delete;
+  SweepWorker& operator=(const SweepWorker&) = delete;
   SweepWorker& operator=(SweepWorker&&) = default;
 
   void startSweep(SizeType sweep, BandBlock<T>& a) noexcept {
@@ -341,7 +484,7 @@ protected:
   }
 
   T& tau() noexcept {
-    return *data_(0);
+    return *data_();
   }
   const T& tau() const noexcept {
     return *data_(0);
@@ -363,6 +506,124 @@ protected:
   SizeType sweep_ = 0;
   SizeType step_ = 0;
   memory::MemoryView<T, Device::CPU> data_;
+};
+
+template <class T>
+class SweepWorkerDist : private SweepWorker<T> {
+public:
+  SweepWorkerDist(SizeType size, SizeType band_size) : SweepWorker<T>(size, band_size) {}
+
+  void startSweep(SizeType sweep, BandBlockDist<T>& a) {
+    this->startSweepInternal(sweep, a);
+  }
+
+  void doStep(BandBlockDist<T>& a) noexcept {
+    SizeType j = this->firstRowHHR();
+    SizeType n = this->sizeHHR();  // size diagonal tile and width off-diag tile
+
+    const auto n1 = a.nextSplit(j);
+    if (n1 < n) {
+      doStepSplit(a, n1);
+    }
+    else {
+      this->doStepFull(a);
+    }
+  }
+
+  void send(const comm::Communicator& comm, comm::IndexT_MPI dest, comm::IndexT_MPI tag,
+            MPI_Request* req) const noexcept {
+    DLAF_MPI_CHECK_ERROR(MPI_Isend(const_cast<T*>(data_()), to_int(band_size_ + 1),
+                                   comm::mpi_datatype<T>::type, dest, tag, comm, req));
+  }
+
+  void recv(SizeType sweep, SizeType step, const comm::Communicator& comm, comm::IndexT_MPI src,
+            comm::IndexT_MPI tag, MPI_Request* req) noexcept {
+    SweepWorker<T>::setId(sweep, step);
+    *data_(0) = T{9};
+    *data_(1) = T{9};
+    DLAF_MPI_CHECK_ERROR(
+        MPI_Irecv(data_(), to_int(band_size_ + 1), comm::mpi_datatype<T>::type, src, tag, comm, req));
+  }
+
+private:
+  void doStepSplit(BandBlockDist<T>& a, SizeType n1) noexcept {
+    SizeType j = this->firstRowHHR();
+    SizeType n = this->sizeHHR();  // size diagonal tile and width off-diag tile
+    SizeType m = std::min(band_size_, size_ - band_size_ - j);  // height off diagonal tile
+    const auto n2 = n - n1;
+
+    applyHHLeftRightHerm(n1, n2, tau(), v(), a.ptr(0, j), a.ptr(0, j + n1), a.ld(), w());
+    if (m > 0) {
+      applyHHRight(m, n1, n2, tau(), v(), a.ptr(n, j), a.ptr(n2, j + n1), a.ld(), w());
+    }
+    if (m > 1) {
+      HHReflector(m, tau(), v(), a.ptr(n, j));
+      applyHHLeft(m, n1 - 1, n2, tau(), v(), a.ptr(n - 1, j + 1), a.ptr(n2, j + n1), a.ld(), w());
+    }
+    step_ += 1;
+    // Note: the sweep is completed if m <= 1.
+  }
+
+  using SweepWorker<T>::size_;
+  using SweepWorker<T>::band_size_;
+  using SweepWorker<T>::sweep_;
+  using SweepWorker<T>::step_;
+  using SweepWorker<T>::data_;
+  using SweepWorker<T>::tau;
+  using SweepWorker<T>::v;
+  using SweepWorker<T>::w;
+};
+
+template <class CommSender, class PromiseSender>
+[[nodiscard]] auto scheduleSendWorker(CommSender&& pcomm, comm::IndexT_MPI dest, comm::IndexT_MPI tag,
+                                      PromiseSender&& worker) {
+  using dlaf::comm::internal::transformMPI;
+  using dlaf::internal::whenAllLift;
+
+  auto send = [dest, tag](const comm::Communicator& comm, const auto& worker, MPI_Request* req) {
+    worker.send(comm, dest, tag, req);
+  };
+
+  return whenAllLift(std::forward<CommSender>(pcomm), std::forward<PromiseSender>(worker)) |
+         transformMPI(send);
+}
+
+template <class CommSender, class PromiseSender>
+[[nodiscard]] auto scheduleRecvWorker(SizeType sweep, SizeType step, CommSender&& pcomm,
+                                      comm::IndexT_MPI src, comm::IndexT_MPI tag,
+                                      PromiseSender&& worker) {
+  using dlaf::comm::internal::transformMPI;
+  using dlaf::internal::whenAllLift;
+
+  auto recv = [sweep, step, src, tag](const comm::Communicator& comm, auto& worker, MPI_Request* req) {
+    worker.recv(sweep, step, comm, src, tag, req);
+  };
+
+  return whenAllLift(std::forward<CommSender>(pcomm), std::forward<PromiseSender>(worker)) |
+         transformMPI(recv);
+}
+
+template <class T>
+class vector2D {
+public:
+  vector2D(SizeType nr, SizeType size) : data_(nr * size), ld_(size) {}
+
+  T& operator()(SizeType block, SizeType index) noexcept {
+    return data_[id(block, index)];
+  }
+  const T& operator()(SizeType block, SizeType index) const noexcept {
+    return data_[id(block, index)];
+  }
+
+private:
+  SizeType id(SizeType block, SizeType index) {
+    DLAF_ASSERT_HEAVY(index < ld_, index, ld_);
+    DLAF_ASSERT_HEAVY(block < data_.size() / ld_, block, data_.size(), ld_);
+    return ld_ * block + index;
+  }
+
+  common::internal::vector<T> data_;
+  SizeType ld_;
 };
 
 template <Device D, class T>
@@ -491,7 +752,6 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   const SizeType steps_per_task = nb / b;
   const SizeType sweeps = nrSweeps<T>(size);
   for (SizeType sweep = 0; sweep < sweeps; ++sweep) {
-    // Create the first max_workers workers and then reuse them.
     auto& w_pipeline = workers[sweep % max_workers];
 
     auto dep = dlaf::internal::whenAllLift(sweep, w_pipeline(), deps[0]) |
@@ -531,6 +791,346 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     copy_tridiag(size - 2, deps[0]);
   }
   copy_tridiag(size - 1, std::move(deps[0]));
+
+  return {std::move(mat_trid), std::move(mat_v)};
+}
+
+// Distributed implementation of bandToTridiag.
+template <Device D, class T>
+TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
+    comm::CommunicatorGrid grid, const SizeType b, Matrix<const T, D>& mat_a) noexcept {
+  using MatrixType = Matrix<T, Device::CPU>;
+  using ConstTileType = typename MatrixType::ConstTileType;
+  using common::iterate_range2d;
+  using common::Pipeline;
+  using common::PromiseGuard;
+  using common::RoundRobin;
+  using common::internal::vector;
+  using util::ceilDiv;
+
+  using pika::resource::get_num_threads;
+
+  namespace ex = pika::execution::experimental;
+
+  // Should be dispatched to local implementation if (1x1) grid.
+  DLAF_ASSERT(grid.size() != comm::Size2D(1, 1), grid);
+
+  // note: A is square and has square blocksize
+  SizeType size = mat_a.size().cols();
+  SizeType nrtile = mat_a.nrTiles().cols();
+  SizeType nb = mat_a.blockSize().cols();
+  auto& dist_a = mat_a.distribution();
+
+  Matrix<BaseType<T>, Device::CPU> mat_trid({size, 2}, {nb, 2});
+  Matrix<T, Device::CPU> mat_v({size, size}, {nb, nb});
+  // TODO // const auto& dist_v = mat_v.distribution();
+
+  if (size == 0) {
+    return {std::move(mat_trid), std::move(mat_v)};
+  }
+
+  auto comm = ex::just(grid.fullCommunicator().clone());
+  // Need a pipeline of comm for broadcasts.
+  common::Pipeline<comm::Communicator> comm_bcast(grid.fullCommunicator().clone());
+
+  const auto rank = grid.rankFullCommunicator(grid.rank());
+  const auto ranks = static_cast<comm::IndexT_MPI>(grid.size().linear_size());
+  const auto prev_rank = (rank == 0 ? ranks - 1 : rank - 1);
+  const auto next_rank = (rank + 1 == ranks ? 0 : rank + 1);
+
+  SizeType tiles_per_block = 1;
+  matrix::Distribution dist({1, size}, {1, nb * tiles_per_block}, {1, ranks}, {0, rank}, {0, 0});
+  SizeType nb_band = dist.blockSize().cols();
+
+  // Maximum block_size / (2b-1) sweeps per block can be executed in parallel + 1 communication buffer.
+  const auto workers_per_block = 1 + ceilDiv(dist.blockSize().cols(), 2 * b - 1);
+
+  // Point to point communication happens in three ways:
+  // - when copying the band matrix in compact form             -> compute_copy_tag
+  // - when sending the Worker to the next rank                 -> compute_worker_tag
+  // - when sending a column of the matrix to the previous rank -> compute_col_tag
+  // and to avoid communication mixing of the different phases tags have to be different.
+  // Note: when ranks > 2 compute_worker_tag and compute_col_tag can have the same value
+  //       as one communication flows to the left and one to the right.
+  auto compute_copy_tag = [](SizeType j, bool is_offdiag) {
+    return static_cast<comm::IndexT_MPI>(2 * j + (is_offdiag ? 1 : 0));
+  };
+  // The offset is set to the first unused tag by compute_copy_tag.
+  const comm::IndexT_MPI offset_col_tag = compute_copy_tag(nrtile, false);
+
+  auto compute_col_tag = [offset_col_tag, ranks](SizeType block_id) {
+    // By construction the communication from block j+1 to block j are dependent, therefore a tag per
+    // block is enough. Moreover block_id is divided by the number of ranks as only the local index is
+    // needed.
+    // Note: Passing the local_block_id is not an option as the sender local index might be different
+    //       from the receiver index.
+    return offset_col_tag + static_cast<comm::IndexT_MPI>(block_id / ranks);
+  };
+
+  // Same offset if ranks > 2, otherwise add the first unused tag of compute_col_tag.
+  const comm::IndexT_MPI offset_worker_tag =
+      offset_col_tag + (ranks == 2 ? compute_col_tag(dist.nrTiles().cols() - 1) + 1 : 0);
+  ;
+
+  auto compute_worker_tag = [offset_worker_tag, workers_per_block, ranks](SizeType sweep,
+                                                                          SizeType block_id) {
+    // As only workers_per_block are available a dependency is introduced by reusing it, therefore
+    // a different tag for all sweeps is not needed.
+    // Moreover block_id is divided by the number of ranks as only the local index is needed.
+    // Note: Passing the local_block_id is not an option as the sender local index might be different
+    //       from the receiver index.
+    return offset_worker_tag + static_cast<comm::IndexT_MPI>(sweep % workers_per_block +
+                                                             block_id / ranks * workers_per_block);
+  };
+
+  // Need shared pointer to keep the allocation until all the tasks are executed.
+  vector<std::shared_ptr<BandBlock<T, true>>> a_ws;
+  for (SizeType i = 0; i < dist.localNrTiles().cols(); ++i) {
+    a_ws.emplace_back(std::make_shared<BandBlock<T, true>>(size, b, rank + i * ranks, nb_band));
+  }
+
+  vector<vector<ex::any_sender<>>> deps(dist.localNrTiles().cols());
+  for (auto& dep : deps) {
+    dep.reserve(nb_band / nb);
+  }
+
+  {
+    constexpr std::size_t n_workspaces = 4;
+    RoundRobin<Matrix<T, D>> temps(n_workspaces, LocalElementSize{nb, nb}, TileElementSize{nb, nb});
+
+    auto copy_diag = [](std::shared_ptr<BandBlock<T, true>> a_block, SizeType j, auto source) {
+      return a_block->template copyDiag<D>(j, std::move(source));
+    };
+
+    auto copy_offdiag = [](std::shared_ptr<BandBlock<T, true>> a_block, SizeType j, auto source) {
+      return a_block->template copyOffDiag<D>(j, std::move(source));
+    };
+
+    // Copy the band matrix
+    for (SizeType k = 0; k < nrtile; ++k) {
+      const auto id_block = k / tiles_per_block;
+      const GlobalTileIndex index_diag{k, k};
+      const GlobalTileIndex index_offdiag{k + 1, k};
+      const auto rank_block = dist.rankGlobalTile<Coord::Col>(id_block);
+      const auto rank_diag = grid.rankFullCommunicator(dist_a.rankGlobalTile(index_diag));
+      const auto rank_offdiag =
+          (k == nrtile - 1 ? -1 : grid.rankFullCommunicator(dist_a.rankGlobalTile(index_offdiag)));
+      const auto tag_diag = compute_copy_tag(k, false);
+      const auto tag_offdiag = compute_copy_tag(k, true);
+
+      if (rank == rank_block) {
+        ex::any_sender<> dep;
+        const auto id_block_local = dist.localTileFromGlobalTile<Coord::Col>(id_block);
+
+        if (rank == rank_diag) {
+          dep = copy_diag(a_ws[id_block_local], k * nb, mat_a.read_sender(index_diag)) | ex::split();
+        }
+        else {
+          auto& temp = temps.nextResource();
+          auto diag_tile = comm::scheduleRecv(comm, rank_diag, tag_diag,
+                                              splitTile(temp(LocalTileIndex{0, 0}),
+                                                        {{0, 0}, dist_a.tileSize(index_diag)}));
+          dep = copy_diag(a_ws[id_block_local], k * nb, std::move(diag_tile)) | ex::split();
+        }
+
+        if (k < nrtile - 1) {
+          if (rank == rank_offdiag) {
+            dep = copy_offdiag(a_ws[id_block_local], k * nb,
+                               ex::when_all(std::move(dep), mat_a.read_sender(index_offdiag))) |
+                  ex::split();
+          }
+          else {
+            auto& temp = temps.nextResource();
+            auto offdiag_tile = comm::scheduleRecv(comm, rank_offdiag, tag_offdiag,
+                                                   splitTile(temp(LocalTileIndex{0, 0}),
+                                                             {{0, 0}, dist_a.tileSize(index_offdiag)}));
+            dep = copy_offdiag(a_ws[id_block_local], k * nb,
+                               ex::when_all(std::move(dep), std::move(offdiag_tile))) |
+                  ex::split();
+          }
+        }
+
+        deps[id_block_local].push_back(dep);
+      }
+      else {
+        if (rank == rank_diag) {
+          ex::start_detached(
+              comm::scheduleSend(comm, rank_block, tag_diag, mat_a.read_sender(index_diag)));
+        }
+        if (k < nrtile - 1) {
+          if (rank == rank_offdiag) {
+            ex::start_detached(
+                comm::scheduleSend(comm, rank_block, tag_offdiag, mat_a.read_sender(index_offdiag)));
+          }
+        }
+      }
+    }
+  }
+
+  vector<vector<Pipeline<SweepWorkerDist<T>>>> workers(dist.localNrTiles().cols());
+  for (auto& workers_block : workers) {
+    workers_block.reserve(workers_per_block);
+    for (SizeType i = 0; i < workers_per_block; ++i)
+      workers_block.emplace_back(SweepWorkerDist<T>(size, b));
+  }
+
+  auto init_sweep = [](std::shared_ptr<BandBlock<T, true>> a_block, SizeType sweep,
+                       PromiseGuard<SweepWorkerDist<T>> worker) {
+    worker.ref().startSweep(sweep, *a_block);
+  };
+  auto cont_sweep = [](std::shared_ptr<BandBlock<T, true>> a_block, SizeType nr_steps,
+                              PromiseGuard<SweepWorkerDist<T>> worker /*,
+                              matrix::Tile<T, Device::CPU>&& tile_v, TileElementIndex index*/) {
+    for (SizeType j = 0; j < nr_steps; ++j) {
+      //worker.ref().compactCopyToTile(tile_v, index + TileElementSize(j * b, 0));
+      worker.ref().doStep(*a_block);
+    }
+  };
+
+  auto policy_hp = dlaf::internal::Policy<Backend::MC>(pika::execution::thread_priority::high);
+  auto copy_tridiag = [policy_hp, &mat_trid](std::shared_ptr<BandBlock<T, true>> a_block, SizeType sweep,
+                                             auto&& dep) {
+    auto copy_tridiag_task = [](std::shared_ptr<BandBlock<T, true>> a_block, SizeType start,
+                                SizeType n_d, SizeType n_e, auto tile_t) {
+      DLAF_ASSERT_HEAVY(n_e >= 0 && (n_e == n_d || n_e == n_d - 1), n_e, n_d);
+      DLAF_ASSERT_HEAVY(tile_t.size().cols() == 2, tile_t);
+      DLAF_ASSERT_HEAVY(tile_t.size().rows() >= n_d, tile_t, n_d);
+
+      auto inc = a_block->ld() + 1;
+      if (isComplex_v<T>)
+        // skip imaginary part if Complex.
+        inc *= 2;
+
+      if (auto n1 = a_block->nextSplit(start); n1 < n_d) {
+        blas::copy(n1, (BaseType<T>*) a_block->ptr(0, start), inc, tile_t.ptr({0, 0}), 1);
+        blas::copy(n_d - n1, (BaseType<T>*) a_block->ptr(0, start + n1), inc, tile_t.ptr({n1, 0}), 1);
+        blas::copy(n1, (BaseType<T>*) a_block->ptr(1, start), inc, tile_t.ptr({0, 1}), 1);
+        blas::copy(n_e - n1, (BaseType<T>*) a_block->ptr(1, start + n1), inc, tile_t.ptr({n1, 1}), 1);
+      }
+      else {
+        blas::copy(n_d, (BaseType<T>*) a_block->ptr(0, start), inc, tile_t.ptr({0, 0}), 1);
+        blas::copy(n_e, (BaseType<T>*) a_block->ptr(1, start), inc, tile_t.ptr({0, 1}), 1);
+      }
+    };
+
+    const auto size = mat_trid.size().rows();
+    const auto nb = mat_trid.blockSize().rows();
+    if (sweep % nb == nb - 1 || sweep == size - 1) {
+      const auto tile_index = sweep / nb;
+      const auto start = tile_index * nb;
+      dlaf::internal::whenAllLift(std::move(a_block), start, std::min(nb, size - start),
+                                  std::min(nb, size - 1 - start),
+                                  mat_trid.readwrite_sender(GlobalTileIndex{tile_index, 0}),
+                                  std::forward<decltype(dep)>(dep)) |
+          dlaf::internal::transformDetach(policy_hp, copy_tridiag_task);
+    }
+    else {
+      ex::start_detached(std::forward<decltype(dep)>(dep));
+    }
+  };
+
+  const SizeType steps_per_block = nb_band / b;
+  const SizeType steps_per_task = nb / b;
+  const SizeType sweeps = nrSweeps<T>(size);
+
+  for (SizeType sweep = 0; sweep < sweeps; ++sweep) {
+    const SizeType steps = nrStepsForSweep(sweep, size, b);
+
+    SizeType last_step = 0;
+    for (SizeType init_step = 0; init_step < steps; init_step += steps_per_block) {
+      auto block_id = dist.globalTileIndex(GlobalElementIndex{0, init_step * b});
+      auto rank_block = dist.rankGlobalTile(block_id).col();
+      if (prev_rank == rank_block) {
+        SizeType next_j = sweep + (init_step + steps_per_block) * b;
+        if (next_j < size) {
+          auto block_local_id = dist.localTileIndex(block_id + GlobalTileSize{0, 1}).col();
+          auto a_block = a_ws[block_local_id];
+          auto& deps_block = deps[block_local_id];
+          ex::start_detached(scheduleSendCol(comm, prev_rank, compute_col_tag(block_id.col()), b,
+                                             a_block, next_j, deps_block[0]));
+        }
+      }
+      else if (rank == rank_block) {
+        auto block_local_id = dist.localTileIndex(block_id).col();
+        auto a_block = a_ws[block_local_id];
+        auto& w_pipeline = workers[block_local_id][sweep % workers_per_block];
+        auto& deps_block = deps[block_local_id];
+
+        // Sweep initialization
+        if (init_step == 0) {
+          auto dep = dlaf::internal::whenAllLift(a_block, sweep, w_pipeline(), deps_block[0]) |
+                     dlaf::internal::transform(policy_hp, init_sweep);
+
+          copy_tridiag(a_block, sweep, std::move(dep));
+        }
+        else {
+          ex::start_detached(scheduleRecvWorker(sweep, init_step, comm, prev_rank,
+                                                compute_worker_tag(sweep, block_id.col()),
+                                                w_pipeline()));
+        }
+
+        // Index of the first column (currently) after this block (if exists).
+        SizeType next_j = sweep + (init_step + steps_per_block) * b;
+        if (next_j < size) {
+          // The dependency on the operation of the previous sweep is real as the Worker cannot be sent
+          // before deps_block.back() gets ready, and the Worker is needed in the next rank to update the
+          // column before is sent here.
+          deps_block.push_back(scheduleRecvCol(comm, next_rank, compute_col_tag(block_id.col()), b,
+                                               a_block, next_j, deps_block.back()) |
+                               ex::split());
+        }
+
+        SizeType block_steps = std::min(steps_per_block, steps - init_step);
+
+        for (SizeType block_step = 0; block_step < block_steps;) {
+          // Last task only applies the remaining steps to the block boundary
+          SizeType nr_steps = std::min(steps_per_task, block_steps - block_step);
+
+          auto dep_index =
+              std::min(ceilDiv(block_step + nr_steps, steps_per_task), deps_block.size() - 1);
+
+          // TODO const GlobalElementIndex index_v((sweep / b + step) * b, sweep);
+
+          deps_block.at(ceilDiv(block_step, steps_per_task)) =
+              dlaf::internal::whenAllLift(a_block, nr_steps, w_pipeline(),
+                                          /*mat_v.readwrite_sender(dist_v.globalTileIndex(index_v)),
+                                          dist_v.tileElementIndex(index_v),*/
+                                          deps_block[dep_index]) |
+              dlaf::internal::transform(policy_hp, cont_sweep) | ex::split();
+
+          last_step = block_step;
+          block_step += nr_steps;
+        }
+
+        // Shrink the dependency vector to only include the futures generated by this block in this sweep.
+        deps_block.resize(ceilDiv(last_step, steps_per_task) + 1);
+
+        if (init_step + block_steps < steps) {
+          ex::start_detached(scheduleSendWorker(comm, next_rank,
+                                                compute_worker_tag(sweep, block_id.col() + 1),
+                                                w_pipeline()));
+        }
+      }
+    }
+  }
+
+  // Rank 0 (owner of the first band matrix block) copies the last parts of the tridiag. matrix.
+  if (rank == 0) {
+    // copy the last elements of the diagonals
+    if (!isComplex_v<T>) {
+      // only needed for real types as they don't perform sweep size-2
+      copy_tridiag(a_ws[0], size - 2, deps[0][0]);
+    }
+    copy_tridiag(a_ws[0], size - 1, std::move(deps[0][0]));
+  }
+
+  // only rank0 has mat_trid -> bcast to everyone.
+  for (const auto& index : iterate_range2d(mat_trid.nrTiles())) {
+    if (rank == 0)
+      ex::start_detached(comm::scheduleSendBcast(comm_bcast(), mat_trid.read_sender(index)));
+    else
+      ex::start_detached(comm::scheduleRecvBcast(comm_bcast(), 0, mat_trid.readwrite_sender(index)));
+  }
 
   return {std::move(mat_trid), std::move(mat_v)};
 }

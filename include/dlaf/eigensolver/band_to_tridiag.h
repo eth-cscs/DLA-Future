@@ -89,5 +89,32 @@ TridiagResult<T, Device::CPU> bandToTridiag(blas::Uplo uplo, SizeType band_size,
 
   return DLAF_UNREACHABLE(TridiagResult<T, Device::CPU>);
 }
+
+template <Backend backend, Device device, class T>
+TridiagResult<T, Device::CPU> bandToTridiag(comm::CommunicatorGrid grid, blas::Uplo uplo,
+                                            SizeType band_size, Matrix<const T, device>& mat_a) {
+  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
+  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
+
+  // If the grid contains only one rank force local implementation.
+  if (grid.size() == comm::Size2D(1, 1))
+    return bandToTridiag<backend, device, T>(uplo, band_size, mat_a);
+
+  switch (uplo) {
+    case blas::Uplo::Lower:
+      return internal::BandToTridiag<backend, device, T>::call_L(grid, band_size, mat_a);
+      break;
+    case blas::Uplo::Upper:
+      DLAF_UNIMPLEMENTED(uplo);
+      break;
+    case blas::Uplo::General:
+      DLAF_UNIMPLEMENTED(uplo);
+      break;
+  }
+
+  return DLAF_UNREACHABLE(TridiagResult<T, Device::CPU>);
+}
+
 }
 }

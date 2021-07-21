@@ -20,13 +20,25 @@
 namespace dlaf::comm::internal {
 
 template <class T>
+struct IsPromiseGuard : std::false_type {};
+
+template <class T>
+struct IsPromiseGuard<dlaf::common::PromiseGuard<T>> : std::true_type {};
+
+template <class T>
+inline constexpr bool IsPromiseGuard_v = IsPromiseGuard<T>::value;
+
+template <class T>
 struct IsPromiseGuardCommunicator : std::is_same<T, dlaf::common::PromiseGuard<Communicator>> {};
 
-/// This helper unwraps a PromiseGuard<Communicator> and returns the reference to the Communicator
+template <class T>
+inline constexpr bool IsPromiseGuardCommunicator_v = IsPromiseGuardCommunicator<T>::value;
+
+/// This helper unwraps a PromiseGuard<T> and returns the reference to the object of type T
 /// inside. Lifetime of the PromiseGuard has to be ensured by the caller.
 template <typename T>
-decltype(auto) unwrapPromiseGuardCommunicator(T& t) {
-  if constexpr (IsPromiseGuardCommunicator<std::decay_t<T>>::value) {
+decltype(auto) unwrapPromiseGuard(T& t) {
+  if constexpr (IsPromiseGuard_v<std::decay_t<T>>) {
     return t.ref();
   }
   else {
@@ -38,7 +50,7 @@ decltype(auto) unwrapPromiseGuardCommunicator(T& t) {
 /// passed as argument gets destroyed.
 template <typename T>
 void consumePromiseGuardCommunicator(T& t) {
-  if constexpr (IsPromiseGuardCommunicator<std::decay_t<T>>::value) {
+  if constexpr (IsPromiseGuardCommunicator_v<std::decay_t<T>>) {
     [[maybe_unused]] auto t_local = std::move(t);
   }
 }
@@ -58,8 +70,7 @@ struct MPICallHelper {
   std::decay_t<F> f;
   template <typename... Ts>
   auto operator()(Ts&&... ts) -> decltype(pika::unwrapping(std::move(f))(
-      unwrapPromiseGuardCommunicator(dlaf::internal::getReferenceWrapper(ts))...,
-      std::declval<MPI_Request*>())) {
+      unwrapPromiseGuard(dlaf::internal::getReferenceWrapper(ts))..., std::declval<MPI_Request*>())) {
     MPI_Request req;
     auto is_request_completed = [&req] {
       int flag;
@@ -73,20 +84,20 @@ struct MPICallHelper {
     // whereas we are only looking to guard the submission of the MPI operation.
     // Moreover, the callable requires a Communicator to make its job, and it should be agnostic of
     // it being wrapped in a PromiseGuard or not.
-    // We therefore use unwrapPromiseGuardCommunicator to pass the Communicator& into a transformMPI
+    // We therefore use unwrapPromiseGuard to pass the Communicator& into a transformMPI
     // callables, then after returning from the callable, the PromiseGuard<Communicator> gets explicitly
-    // released using the helper consumePromiseGuard.
+    // released using the helper consumePromiseGuardCommunicator.
     using result_type = decltype(pika::unwrapping(
-        std::move(f))(unwrapPromiseGuardCommunicator(dlaf::internal::getReferenceWrapper(ts))..., &req));
+        std::move(f))(unwrapPromiseGuard(dlaf::internal::getReferenceWrapper(ts))..., &req));
     if constexpr (std::is_void_v<result_type>) {
-      pika::unwrapping(std::move(
-          f))(unwrapPromiseGuardCommunicator(dlaf::internal::getReferenceWrapper(ts))..., &req);
+      pika::unwrapping(std::move(f))(unwrapPromiseGuard(dlaf::internal::getReferenceWrapper(ts))...,
+                                     &req);
       (internal::consumePromiseGuardCommunicator(dlaf::internal::getReferenceWrapper(ts)), ...);
       pika::util::yield_while(is_request_completed);
     }
     else {
-      auto r = pika::unwrapping(std::move(
-          f))(unwrapPromiseGuardCommunicator(dlaf::internal::getReferenceWrapper(ts))..., &req);
+      auto r = pika::unwrapping(
+          std::move(f))(unwrapPromiseGuard(dlaf::internal::getReferenceWrapper(ts))..., &req);
       (internal::consumePromiseGuardCommunicator(dlaf::internal::getReferenceWrapper(ts)), ...);
       pika::util::yield_while(is_request_completed);
       return r;

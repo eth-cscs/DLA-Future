@@ -115,11 +115,20 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       // Copy V panel into VV
       auto ik = LocalTileIndex{i, k};
 
-      copySingleTile(mat_v.read(ik), panelVV(ik));
 	// Setting VV
       if (i == k + 1) {
+	copySingleTile(mat_v.read(ik), panelVV(ik));
         hpx::dataflow(hpx::launch::sync, unwrapping(tile::laset<T>), lapack::MatrixType::Upper, 0.f, 1.f,
                       std::move(panelVV(ik)));
+      }
+      else {
+	hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v = mat_v.read(ik);
+
+	if (is_last) {
+	  tile_v = splitTile(tile_v, {{0, 0}, dist_t.tileSize(GlobalTileIndex(k, k))});
+	}
+	
+	panelVV.setTile(ik, mat_v.read(ik));
       }
 
       // Copy VV into W

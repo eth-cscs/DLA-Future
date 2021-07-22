@@ -82,11 +82,10 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
   Matrix<T, Device::CPU> mat_v(sizeV, blockSizeV);
   dlaf::matrix::util::set_random(mat_v);
 
-  SizeType tottaus;
   if (m == 0 || n == 0)
     return;
 
-  const SizeType nr_reflector = std::max(0, m - mb);
+  const SizeType nr_reflector = std::max(static_cast<SizeType>(0), m - mb);
 
   // Reset diagonal and upper values of V
   MatrixLocal<T> v({m, m}, blockSizeV);

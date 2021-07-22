@@ -91,7 +91,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   dlaf::matrix::Distribution dist_t({mb, nr_reflector}, {mb, mb});
 
   constexpr std::size_t n_workspaces = 2;
-  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panelsVV(n_workspaces,
+  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panelsV(n_workspaces,
                                                                          mat_v.distribution());
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panelsW(n_workspaces,
                                                                         mat_v.distribution());
@@ -105,12 +105,12 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   for (SizeType k = num_panel_refls - 1; k >= 0; --k) {
     bool is_last = (k == num_panel_refls - 1) ? true : false;
 
-    auto& panelVV = panelsVV.nextResource();
+    auto& panelV = panelsV.nextResource();
     auto& panelW = panelsW.nextResource();
     auto& panelW2 = panelsW2.nextResource();
     auto& panelT = panelsT.nextResource();
 
-    panelVV.setRangeStart({k + 1, k});
+    panelV.setRangeStart({k + 1, k});
     panelW.setRangeStart({k + 1, k});
 
     for (SizeType i = k + 1; i < mat_v.nrTiles().rows(); ++i) {
@@ -119,9 +119,9 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
       // Setting VV
       if (i == k + 1) {
-        copySingleTile(mat_v.read(ik), panelVV(ik));
+        copySingleTile(mat_v.read(ik), panelV(ik));
         hpx::dataflow(hpx::launch::sync, unwrapping(tile::laset<T>), lapack::MatrixType::Upper, 0.f, 1.f,
-                      std::move(panelVV(ik)));
+                      std::move(panelV(ik)));
       }
       else {
         hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v = mat_v.read(ik);
@@ -130,11 +130,11 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
           tile_v = splitTile(tile_v, {{0, 0}, dist_t.tileSize(GlobalTileIndex(k, k))});
         }
 
-        panelVV.setTile(ik, mat_v.read(ik));
+        panelV.setTile(ik, mat_v.read(ik));
       }
 
       // Copy VV into W
-      copySingleTile(panelVV.read(ik), panelW(ik));
+      copySingleTile(panelV.read(ik), panelW(ik));
     }
 
     const GlobalTileIndex v_start{k + 1, k};
@@ -177,11 +177,11 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       for (SizeType j = 0; j < n; ++j) {
         auto kj = LocalTileIndex{k, j};
         auto ij = LocalTileIndex{i, j};
-        gemmTrailingMatrix(executor_np, panelVV.read(ik), panelW2.read(kj), mat_c(ij));
+        gemmTrailingMatrix(executor_np, panelV.read(ik), panelW2.read(kj), mat_c(ij));
       }
     }
 
-    panelVV.reset();
+    panelV.reset();
     panelW.reset();
     panelW2.reset();
     panelT.reset();

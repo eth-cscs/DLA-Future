@@ -115,20 +115,20 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       // Copy V panel into VV
       auto ik = LocalTileIndex{i, k};
 
-	// Setting VV
+      // Setting VV
       if (i == k + 1) {
-	copySingleTile(mat_v.read(ik), panelVV(ik));
+        copySingleTile(mat_v.read(ik), panelVV(ik));
         hpx::dataflow(hpx::launch::sync, unwrapping(tile::laset<T>), lapack::MatrixType::Upper, 0.f, 1.f,
                       std::move(panelVV(ik)));
       }
       else {
-	hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v = mat_v.read(ik);
+        hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v = mat_v.read(ik);
 
-	if (is_last) {
-	  tile_v = splitTile(tile_v, {{0, 0}, dist_t.tileSize(GlobalTileIndex(k, k))});
-	}
-	
-	panelVV.setTile(ik, mat_v.read(ik));
+        if (is_last) {
+          tile_v = splitTile(tile_v, {{0, 0}, dist_t.tileSize(GlobalTileIndex(k, k))});
+        }
+
+        panelVV.setTile(ik, mat_v.read(ik));
       }
 
       // Copy VV into W
@@ -137,7 +137,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
     const GlobalTileIndex v_start{k + 1, k};
     auto taus_panel = taus[k];
-    const SizeType taupan = (is_last) ? mat_v.tileSize(GlobalTileIndex(0, m - 1)).cols() : mat_v.blockSize().cols();
+    const SizeType taupan =
+        (is_last) ? mat_v.tileSize(GlobalTileIndex(0, m - 1)).cols() : mat_v.blockSize().cols();
     auto kk = LocalTileIndex{k, k};
     const LocalTileIndex diag_wp_idx{Coord::Col, k};
 
@@ -147,7 +148,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     }
 
     dlaf::factorization::internal::computeTFactor<Backend::MC>(taupan, mat_v, v_start, taus_panel,
-							        panelT(diag_wp_idx));
+                                                               panelT(diag_wp_idx));
 
     // WH = V T
     for (SizeType i = k + 1; i < m; ++i) {
@@ -164,7 +165,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         auto ik = LocalTileIndex{i, k};
         auto ij = LocalTileIndex{i, j};
         panelW.setWidth(mat_v.tileSize(GlobalTileIndex{i, k}).cols());
-	gemmUpdateW2(executor_np, panelW(ik), mat_c.read(ij), (i == k + 1) ? T(0) : T(1), panelW2(kj));
+        gemmUpdateW2(executor_np, panelW(ik), mat_c.read(ij), (i == k + 1) ? T(0) : T(1), panelW2(kj));
       }
     }
 
@@ -178,10 +179,10 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       }
     }
 
-    panelVV.reset(); 
-    panelW.reset(); 
-    panelW2.reset(); 
-    panelT.reset(); 
+    panelVV.reset();
+    panelW.reset();
+    panelW2.reset();
+    panelT.reset();
   }
 }
 

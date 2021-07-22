@@ -44,19 +44,11 @@ void trmmPanel(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> 
 }
 
 template <class Executor, Device device, class T>
-void gemmUpdateW2Start(Executor&& ex, hpx::future<matrix::Tile<T, device>> w,
-                       hpx::shared_future<matrix::Tile<const T, device>> c,
-                       hpx::future<matrix::Tile<T, device>> w2) {
-  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans,
-                T(1.0), w, c, T(0.0), std::move(w2));
-}
-
-template <class Executor, Device device, class T>
 void gemmUpdateW2(Executor&& ex, hpx::future<matrix::Tile<T, device>> w,
-                  hpx::shared_future<matrix::Tile<const T, device>> c,
+                  hpx::shared_future<matrix::Tile<const T, device>> c, T alpha,
                   hpx::future<matrix::Tile<T, device>> w2) {
   hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans,
-                T(1.0), w, c, T(1.0), std::move(w2));
+                T(1.0), w, c, alpha, std::move(w2));
 }
 
 template <class Executor, Device device, class T>
@@ -167,12 +159,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         auto ik = LocalTileIndex{i, k};
         auto ij = LocalTileIndex{i, j};
         panelW.setWidth(mat_v.tileSize(GlobalTileIndex{i, k}).cols());
-        if ((i == k + 1)) {
-          gemmUpdateW2Start(executor_np, panelW(ik), mat_c.read(ij), panelW2(kj));
-        }
-        else {
-          gemmUpdateW2(executor_np, panelW(ik), mat_c.read(ij), panelW2(kj));
-        }
+	gemmUpdateW2(executor_np, panelW(ik), mat_c.read(ij), (i == k + 1) ? T(0) : T(1), panelW2(kj));
       }
     }
 

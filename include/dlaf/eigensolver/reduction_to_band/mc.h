@@ -605,8 +605,9 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
   const auto& dist = mat_a.distribution();
   const comm::Index2D rank = dist.rankIndex();
 
+  const SizeType nblocks = dist.nrTiles().cols() - 1;
   std::vector<hpx::shared_future<common::internal::vector<T>>> taus;
-  // TODO taus.reserve(); it's a minor optimization
+  taus.reserve(nblocks);
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<PanelT<Coord::Col, T>> panels_v(n_workspaces, dist);
@@ -619,8 +620,8 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
   common::RoundRobin<PanelT<Coord::Row, T>> panels_xt(n_workspaces, dist);
 
   hpx::future<void> trigger_panel = hpx::make_ready_future<void>();
-  for (SizeType j_panel = 0; j_panel < (dist.nrTiles().cols() - 1); ++j_panel) {
-    const GlobalTileIndex ai_start{GlobalTileIndex{j_panel, j_panel} + GlobalTileSize{1, 0}};
+  for (SizeType j_block = 0; j_block < nblocks; ++j_block) {
+    const GlobalTileIndex ai_start{GlobalTileIndex{j_block, j_block} + GlobalTileSize{1, 0}};
     const GlobalTileIndex at_start{ai_start + GlobalTileSize{0, 1}};
 
     const comm::Index2D rank_v0 = dist.rankGlobalTile(ai_start);
@@ -635,8 +636,8 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
     };
 
     const auto ai_panel =
-        iterate_range2d(LocalTileIndex{0, 0} + ai_offset,
-                        LocalTileSize{dist.localNrTiles().rows() - ai_offset.rows(), 1});
+        iterate_range2d(indexFromOrigin(ai_offset),
+                        LocalTileSize(dist.localNrTiles().rows() - ai_offset.rows(), 1));
 
     const bool is_panel_rank_col = rank_v0.col() == rank.col();
 

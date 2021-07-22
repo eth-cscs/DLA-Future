@@ -257,7 +257,7 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributed) {
         copy(reference, matrix_a);
 
         // Apply reduction-to-band
-        DLAF_ASSERT(band_size == matrix_a.blockSize().rows(), "not yet implemented");
+        DLAF_ASSERT(band_size == matrix_a.blockSize().rows(), band_size, matrix_a.blockSize().rows());
 
         auto local_taus = eigensolver::reductionToBand<Backend::MC>(comm_grid, matrix_a);
 

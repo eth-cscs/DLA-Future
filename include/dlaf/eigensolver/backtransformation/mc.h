@@ -83,7 +83,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   const SizeType n = mat_c.nrTiles().cols();
   const SizeType mb = mat_v.blockSize().rows();
 
-  // Matrix T
   if (m <= 1 || n == 0)
     return;
 

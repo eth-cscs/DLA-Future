@@ -97,7 +97,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
   const SizeType nr_reflector = mat_v.size().rows() - mb;
 
-  dlaf::matrix::Distribution dist_t({nr_reflector, nr_reflector}, {mb, mb});
+  dlaf::matrix::Distribution dist_t({mb, nr_reflector}, {mb, mb});
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panelsVV(n_workspaces,
@@ -145,17 +145,18 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     const LocalTileIndex diag_wp_idx{Coord::Col, k};
 
     if (is_last) {
-      panelT.setHeight(dist_t.tileSize(GlobalTileIndex{k, k}).rows());
+      panelT.setHeight(dist_t.tileSize(GlobalTileIndex{0, k}).cols());
       panelW.setWidth(dist_t.tileSize(GlobalTileIndex{k, k}).cols());
     }
 
     dlaf::factorization::internal::computeTFactor<Backend::MC>(taupan, mat_v, v_start, taus_panel,
-                                                               panelT(diag_wp_idx));
+							        panelT(diag_wp_idx));
 
     // WH = V T
     for (SizeType i = k + 1; i < m; ++i) {
       auto i_row = LocalTileIndex{Coord::Row, i};
       hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_t = panelT.read(diag_wp_idx);
+
       trmmPanel(executor_np, tile_t, panelW(i_row));
     }
 

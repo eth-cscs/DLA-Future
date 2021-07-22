@@ -115,7 +115,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
   common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus;
 
   common::internal::vector<T> tausloc;
-  tausloc.reserve(m);
+  tausloc.reserve(nr_reflector);
 
   // Impose orthogonality: Q = I - v tau vH is orthogonal (Q QH = I).
   // Real case: tau = 2 / (vH v)

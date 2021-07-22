@@ -436,8 +436,10 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
       // Note:
       // Since it is the owner, it has to perform the "mirroring" of the results from columns to
       // rows.
+      //
+      // Moreover, it reduces in place because the owner of the diagonal stores the partial result
+      // directly in x (without using xt)
       const auto i = dist.template localTileFromGlobalTile<Coord::Row>(index_k);
-      // TODO here the IN-PLACE is happening (because Xt is not used for this tile on this rank)
       comm::scheduleReduceRecvInPlace(ex_mpi, mpi_col_chain(), MPI_SUM, x({i, 0}));
     }
     else {
@@ -602,9 +604,6 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
 
   const auto& dist = mat_a.distribution();
   const comm::Index2D rank = dist.rankIndex();
-
-  // TODO not yet implemented for the moment the panel is tile-wide
-  // const SizeType band_size = nb;
 
   std::vector<hpx::shared_future<common::internal::vector<T>>> taus;
   // TODO taus.reserve(); it's a minor optimization

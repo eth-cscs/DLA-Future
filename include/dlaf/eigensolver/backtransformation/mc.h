@@ -111,10 +111,10 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   SizeType last_mb = mat_v.tileSize(GlobalTileIndex(0, m - 1)).cols();
 
   // Specific for V matrix layout where last column of tiles is empty
-  const SizeType last_panel_reflector_idx = mat_v.nrTiles().cols() - 2;
+  const SizeType num_panel_refls = mat_v.nrTiles().cols() - 1;
 
-  for (SizeType k = last_panel_reflector_idx; k >= 0; --k) {
-    bool is_last = (k == last_panel_reflector_idx) ? true : false;
+  for (SizeType k = num_panel_refls - 1; k >= 0; --k) {
+    bool is_last = (k == num_panel_refls - 1) ? true : false;
 
     auto& panelVV = panelsVV.nextResource();
     auto& panelW = panelsW.nextResource();

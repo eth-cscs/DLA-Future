@@ -83,83 +83,81 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
   dlaf::matrix::util::set_random(mat_v);
 
   SizeType tottaus;
-  if (m < mb || m == 0 || n == 0)
-    tottaus = 0;
-  else
-    tottaus = m - mb;
+  if (m == 0 || n == 0)
+    return;
 
-  if (tottaus > 0) {
-    // Reset diagonal and upper values of V
-    MatrixLocal<T> v({m, m}, blockSizeV);
-    for (const auto& ij_tile : iterate_range2d(v.nrTiles())) {
-      // copy only the panel
-      const auto& source_tile = mat_v.read(ij_tile).get();
-      if (ij_tile.row() <= ij_tile.col()) {
-        tile::set0<T>(v.tile(ij_tile));
-      }
-      else if (ij_tile.row() == ij_tile.col() + 1) {
-        copy(source_tile, v.tile(ij_tile));
-        tile::laset<T>(lapack::MatrixType::Upper, 0.f, 1.f, v.tile(ij_tile));
-      }
-      else {
-        copy(source_tile, v.tile(ij_tile));
-      }
+  const SizeType nr_reflector = std::max(0, m - mb);
+
+  // Reset diagonal and upper values of V
+  MatrixLocal<T> v({m, m}, blockSizeV);
+  for (const auto& ij_tile : iterate_range2d(v.nrTiles())) {
+    // copy only the panel
+    const auto& source_tile = mat_v.read(ij_tile).get();
+    if (ij_tile.row() <= ij_tile.col()) {
+      tile::set0<T>(v.tile(ij_tile));
     }
-
-    // Create C local
-    MatrixLocal<T> c({m, n}, blockSizeC);
-    for (const auto& ij_tile : iterate_range2d(c.nrTiles())) {
-      // copy only the panel
-      const auto& source_tile = mat_c.read(ij_tile).get();
-      copy(source_tile, c.tile(ij_tile));
+    else if (ij_tile.row() == ij_tile.col() + 1) {
+      copy(source_tile, v.tile(ij_tile));
+      tile::laset<T>(lapack::MatrixType::Upper, 0.f, 1.f, v.tile(ij_tile));
     }
-
-    common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus;
-
-    common::internal::vector<T> tausloc;
-    tausloc.reserve(m);
-
-    // Impose orthogonality: Q = I - v tau vH is orthogonal (Q QH = I).
-    // Real case: tau = 2 / (vH v)
-    // Complex case: real part of tau = [1 + sqrt(1 - vH v taui^2)]/(vH v)
-    for (SizeType k = 0; k < tottaus; k += mb) {
-      common::internal::vector<T> tau_tile;
-      tau_tile.reserve(mb);
-      auto seed = 10000 * k / mb + 1;
-      dlaf::matrix::util::internal::getter_random<BaseType<T>> random_value(seed);
-      for (SizeType j = k; j < std::min(k + mb, tottaus); ++j) {
-        const GlobalElementIndex v_offset{j + mb, j};
-        auto dotprod = blas::dot(tottaus - j, v.ptr(v_offset), 1, v.ptr(v_offset), 1);
-        BaseType<T> tau_i = 0;
-        if (std::is_same<T, ComplexType<T>>::value) {
-          tau_i = random_value();
-        }
-        T tau;
-        getTau(tau, dotprod, tau_i);
-        tausloc.push_back(tau);
-        tau_tile.push_back(tau);
-      }
-      taus.push_back(hpx::make_ready_future(tau_tile));
+    else {
+      copy(source_tile, v.tile(ij_tile));
     }
-
-    for (SizeType j = tottaus - 1; j > -1; --j) {
-      const GlobalElementIndex v_offset{j + mb, j};
-      auto tau = tausloc[j];
-      lapack::larf(lapack::Side::Left, tottaus - j, n, v.ptr(v_offset), 1, tau,
-                   c.ptr(GlobalElementIndex{j + mb, 0}), c.ld());
-    }
-
-    eigensolver::backTransformation<Backend::MC>(mat_c, mat_v, taus);
-
-    auto result = [& dist = mat_c.distribution(), &mat_local = c](const GlobalElementIndex& element) {
-      const auto tile_index = dist.globalTileIndex(element);
-      const auto tile_element = dist.tileElementIndex(element);
-      return mat_local.tile_read(tile_index)(tile_element);
-    };
-
-    const auto error = (mat_c.size().rows() + 1) * dlaf::test::TypeUtilities<T>::error;
-    CHECK_MATRIX_NEAR(result, mat_c, error, error);
   }
+
+  // Create C local
+  MatrixLocal<T> c({m, n}, blockSizeC);
+  for (const auto& ij_tile : iterate_range2d(c.nrTiles())) {
+    // copy only the panel
+    const auto& source_tile = mat_c.read(ij_tile).get();
+    copy(source_tile, c.tile(ij_tile));
+  }
+
+  common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus;
+
+  common::internal::vector<T> tausloc;
+  tausloc.reserve(m);
+
+  // Impose orthogonality: Q = I - v tau vH is orthogonal (Q QH = I).
+  // Real case: tau = 2 / (vH v)
+  // Complex case: real part of tau = [1 + sqrt(1 - vH v taui^2)]/(vH v)
+  for (SizeType k = 0; k < nr_reflector; k += mb) {
+    common::internal::vector<T> tau_tile;
+    tau_tile.reserve(mb);
+    auto seed = 10000 * k / mb + 1;
+    dlaf::matrix::util::internal::getter_random<BaseType<T>> random_value(seed);
+    for (SizeType j = k; j < std::min(k + mb, nr_reflector); ++j) {
+      const GlobalElementIndex v_offset{j + mb, j};
+      auto dotprod = blas::dot(nr_reflector - j, v.ptr(v_offset), 1, v.ptr(v_offset), 1);
+      BaseType<T> tau_i = 0;
+      if (std::is_same<T, ComplexType<T>>::value) {
+	tau_i = random_value();
+      }
+      T tau;
+      getTau(tau, dotprod, tau_i);
+      tausloc.push_back(tau);
+      tau_tile.push_back(tau);
+    }
+    taus.push_back(hpx::make_ready_future(tau_tile));
+  }
+
+  for (SizeType j = nr_reflector - 1; j > -1; --j) {
+    const GlobalElementIndex v_offset{j + mb, j};
+    auto tau = tausloc[j];
+    lapack::larf(lapack::Side::Left, nr_reflector - j, n, v.ptr(v_offset), 1, tau,
+		 c.ptr(GlobalElementIndex{j + mb, 0}), c.ld());
+  }
+
+  eigensolver::backTransformation<Backend::MC>(mat_c, mat_v, taus);
+
+  auto result = [& dist = mat_c.distribution(), &mat_local = c](const GlobalElementIndex& element) {
+    const auto tile_index = dist.globalTileIndex(element);
+    const auto tile_element = dist.tileElementIndex(element);
+    return mat_local.tile_read(tile_index)(tile_element);
+  };
+
+  const auto error = (mat_c.size().rows() + 1) * dlaf::test::TypeUtilities<T>::error;
+  CHECK_MATRIX_NEAR(result, mat_c, error, error);
 }
 
 TYPED_TEST(BackTransformationEigenSolverTestMC, CorrectnessLocal) {

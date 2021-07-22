@@ -144,8 +144,10 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     auto kk = LocalTileIndex{k, k};
     const LocalTileIndex diag_wp_idx{Coord::Col, k};
 
-    if (is_last)
+    if (is_last) {
       panelT.setHeight(dist_t.tileSize(GlobalTileIndex{k, k}).rows());
+      panelW.setWidth(dist_t.tileSize(GlobalTileIndex{k, k}).cols());
+    }
 
     dlaf::factorization::internal::computeTFactor<Backend::MC>(taupan, mat_v, v_start, taus_panel,
                                                                panelT(diag_wp_idx));
@@ -154,8 +156,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     for (SizeType i = k + 1; i < m; ++i) {
       auto i_row = LocalTileIndex{Coord::Row, i};
       hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_t = panelT.read(diag_wp_idx);
-
-      panelW.setWidth(dist_t.tileSize(GlobalTileIndex{k, k}).cols());
       trmmPanel(executor_np, tile_t, panelW(i_row));
     }
 

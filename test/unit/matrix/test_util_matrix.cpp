@@ -61,6 +61,24 @@ GlobalElementSize globalTestSize(const LocalElementSize& size, const comm::Size2
   return {size.rows() * grid_size.rows(), size.cols() * grid_size.cols()};
 }
 
+TYPED_TEST(MatrixUtilsTest, Set0) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+      memory::MemoryView<TypeParam, Device::CPU> mem(layout.minMemSize());
+      Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), layout, mem());
+
+      auto null_matrix = [](const GlobalElementIndex&) { return TypeParam(0); };
+
+      matrix::util::set0(hpx::launch::sync, matrix);
+
+      CHECK_MATRIX_EQ(null_matrix, matrix);
+    }
+  }
+}
+
 TYPED_TEST(MatrixUtilsTest, Set) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {

@@ -241,7 +241,7 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributed) {
       for (const auto& block_size : square_block_sizes) {
         const SizeType band_size = block_size.rows();
         const SizeType band_size_tiles = band_size / block_size.rows();
-        const SizeType k_reflectors = size.rows() - band_size;
+        const SizeType k_reflectors = std::max(SizeType(0), size.rows() - band_size - 1);
 
         Distribution distribution({size.rows(), size.cols()}, block_size, comm_grid.size(),
                                   comm_grid.rank(), {0, 0});

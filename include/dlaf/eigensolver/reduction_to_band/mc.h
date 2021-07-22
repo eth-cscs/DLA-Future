@@ -284,11 +284,12 @@ void setupReflectorPanelV(comm::IndexT_MPI rank_v0, const LocalTileSize& ai_offs
 
     // Note:
     // If the number of reflectors are limited by height (|reflector| > 1), the panel is narrower than
-    // the blocksize, leading to just using a part of A
-    const auto v0_index = indexFromOrigin(ai_offset);
-    const auto& tile_a = splitTile(mat_a.read(v0_index), {{0, 0}, {nrefls, nrefls}});
+    // the blocksize, leading to just using a part of A (first full nrefls columns)
+    const auto malformed_v0_idx = indexFromOrigin(ai_offset);
+    const auto nrows = mat_a.tileSize(GlobalTileIndex(Coord::Row, v.rangeStart())).rows();
+    const auto& tile_a = splitTile(mat_a.read(malformed_v0_idx), {{0, 0}, {nrows, nrefls}});
 
-    hpx::dataflow(getHpExecutor<Backend::MC>(), std::move(setupV0), v(v0_index), tile_a);
+    hpx::dataflow(getHpExecutor<Backend::MC>(), std::move(setupV0), v(malformed_v0_idx), tile_a);
 
     ++it_begin;
   }
@@ -309,7 +310,6 @@ void trmmComputeW(PanelT<Coord::Col, T>& w, MatrixLikeT& v, FutureConstTile<T> t
     // Note:
     // Since V0 is well-formed, by copying V0 to W we are also resetting W where the matrix is not going
     // to be computed.
-    // TODO check this when number of reflectors is changed (i.e. skip last single-element reflector)
     copy(tile_v, tile_w);
 
     // W = V . T
@@ -641,15 +641,20 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
     const bool is_panel_rank_col = rank_v0.col() == rank.col();
 
     const auto v0_size = mat_a.tileSize(ai_start);
-    const SizeType nrefls = [v0_size]() {
-      // TODO FIXME it can be improved, because the very last reflector of size 1 is not worth the effort
-      return std::min(v0_size.cols(), v0_size.rows());
+    const SizeType nrefls = [ai_start, nrTiles = mat_a.nrTiles(), v0_size]() {
+      if (ai_start.row() != nrTiles.rows() - 1)
+        return v0_size.cols();
+      else
+        return std::min(v0_size.rows(), v0_size.cols()) - 1;
     }();
+
+    if (nrefls == 0)
+      break;
 
     PanelT<Coord::Col, T>& v = panels_v.nextResource();
     PanelT<Coord::Row, T>& vt = panels_vt.nextResource();
 
-    v.setRangeStart(at_start);
+    v.setRangeStart(ai_start);
     vt.setRangeStart(at_start);
 
     v.setWidth(nrefls);

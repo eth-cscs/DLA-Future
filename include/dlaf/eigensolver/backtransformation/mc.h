@@ -106,7 +106,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
                                                                         mat_v.distribution());
   common::RoundRobin<matrix::Panel<Coord::Row, T, Device::CPU>> panelsW2(n_workspaces,
                                                                          mat_c.distribution());
-  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panelsT(n_workspaces, dist_t);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, Device::CPU>> panelsT(n_workspaces, dist_t);
 
   SizeType last_mb = mat_v.tileSize(GlobalTileIndex(0, m - 1)).cols();
 
@@ -142,9 +142,11 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     auto taus_panel = taus[k];
     const SizeType taupan = (is_last) ? last_mb : mat_v.blockSize().cols();
     auto kk = LocalTileIndex{k, k};
-    panelT.setRange({k, k}, {k + 1, k + 1});
-    const LocalTileIndex diag_wp_idx{Coord::Row, k};
-    panelT.setWidth(dist_t.tileSize(GlobalTileIndex{k, k}).cols());
+    const LocalTileIndex diag_wp_idx{Coord::Col, k};
+
+    if (is_last)
+      panelT.setHeight(dist_t.tileSize(GlobalTileIndex{k, k}).rows());
+
     dlaf::factorization::internal::computeTFactor<Backend::MC>(taupan, mat_v, v_start, taus_panel,
                                                                panelT(diag_wp_idx));
 

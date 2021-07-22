@@ -594,9 +594,9 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
 
   const auto ex_mpi = getMPIExecutor<Backend::MC>();
 
-  common::Pipeline<comm::Communicator> mpi_col_chain_panel(grid.colCommunicator());
+  common::Pipeline<comm::Communicator> mpi_col_chain_panel(grid.colCommunicator().clone());
   common::Pipeline<comm::Communicator> mpi_row_chain(grid.rowCommunicator());
-  common::Pipeline<comm::Communicator> mpi_col_chain(grid.colCommunicator().clone());
+  common::Pipeline<comm::Communicator> mpi_col_chain(grid.colCommunicator());
 
   const auto& dist = mat_a.distribution();
   const comm::Index2D rank = dist.rankIndex();

@@ -20,11 +20,11 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/executor.h"
 #include "dlaf/communication/kernels.h"
+#include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_base.h"
 #include "dlaf/types.h"
-#include "dlaf/util_matrix.h"
 
 namespace dlaf {
 namespace matrix {
@@ -381,6 +381,12 @@ struct Panel : public Panel<axis, const T, device> {
       return tile;
     else
       return splitTile(tile, {{0, 0}, tileSize(index)});
+  }
+
+  template <class ExecutorOrPolicy>
+  friend void set0(ExecutorOrPolicy ex, Panel<axis, T, Device::CPU>& panel) {
+    for (const auto& tile_idx : panel.iteratorLocal())
+      panel.data_(panel.fullIndex(tile_idx)).then(ex, hpx::unwrapping(tile::set0<T>));
   }
 
 protected:

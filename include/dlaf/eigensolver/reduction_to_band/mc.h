@@ -327,8 +327,6 @@ void trmmComputeW(PanelT<Coord::Col, T>& w, MatrixLikeT& v, FutureConstTile<T> t
   }
 }
 
-// TODO document that it stores in Xcols just the ones for which he is not on the right row,
-// otherwise it directly compute also gemm2 inside Xrows
 template <class T>
 void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT<Coord::Row, T>& xt,
                   const LocalTileSize at_offset, ConstMatrixT<T>& a, ConstPanelT<Coord::Col, T>& w,
@@ -344,6 +342,15 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
   const auto dist = a.distribution();
   const auto rank = dist.rankIndex();
 
+  // Note:
+  // They have to be set to zero, because all tiles are going to be reduced, and some tiles may not get
+  // "initialized" during computation, so they should not contribute with any spurious value to the final
+  // result.
+  //
+  // TODO set0 can be "embedded" in the logic but currently it will be a bit cumbersome.
+  x.clear();
+  xt.clear();
+
   for (SizeType i = at_offset.rows(); i < dist.localNrTiles().rows(); ++i) {
     const auto limit = dist.template nextLocalTileFromGlobalTile<Coord::Col>(
         dist.template globalTileFromLocalTile<Coord::Row>(i) + 1);
@@ -351,7 +358,6 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
       const LocalTileIndex ij_local{i, j};
       const GlobalTileIndex ij = dist.globalTileIndex(ij_local);
 
-      const bool is_first = j == limit - 1;
       const bool is_diagonal_tile = (ij.row() == ij.col());
 
       if (is_diagonal_tile) {
@@ -362,7 +368,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
         // clang-format on
 
         hpx::dataflow(ex, unwrapExtendTiles(hemm_o), blas::Side::Left, blas::Uplo::Lower, T(1),
-                      std::move(tile_a), std::move(tile_w), T(is_first ? 0 : 1), std::move(tile_x));
+                      std::move(tile_a), std::move(tile_w), T(1), std::move(tile_x));
       }
       else {
         // A . W*
@@ -381,7 +387,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
           // clang-format on
 
           hpx::dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::NoTrans, blas::Op::NoTrans, T(1),
-                        std::move(tile_a), std::move(tile_w), T(is_first ? 0 : 1), std::move(tile_x));
+                        std::move(tile_a), std::move(tile_w), T(1), std::move(tile_x));
         }
 
         // A* . W
@@ -399,8 +405,6 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
           const LocalTileIndex index_x{dist.template localTileFromGlobalTile<Coord::Row>(ij.col()), 0};
           const LocalTileIndex index_xt{0, ij_local.col()};
 
-          const bool is_first_xt = (dist.rankIndex().row() != owner) && is_first;
-
           // clang-format off
           FutureTile<T>       tile_x = (dist.rankIndex().row() == owner) ? x(index_x) : xt(index_xt);
           FutureConstTile<T>  tile_a = a.read(ij_local);
@@ -408,7 +412,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
           // clang-format on
 
           hpx::dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans, T(1),
-                        std::move(tile_a), std::move(tile_w), T(is_first_xt ? 0 : 1), std::move(tile_x));
+                        std::move(tile_a), std::move(tile_w), T(1), std::move(tile_x));
         }
       }
     }
@@ -445,11 +449,11 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
   // At this point partial results are all collected in X (Xt has been embedded in previous step),
   // so the last step needed is to reduce these last partial results in the final results.
   // The result is needed just on the column with reflectors.
-  for (const auto& index_x_loc : x.iteratorLocal()) {
+  for (const auto& index_x : x.iteratorLocal()) {
     if (reducer_col == rank.col())
-      comm::scheduleReduceRecvInPlace(ex_mpi, mpi_row_chain(), MPI_SUM, x(index_x_loc));
+      comm::scheduleReduceRecvInPlace(ex_mpi, mpi_row_chain(), MPI_SUM, x(index_x));
     else
-      comm::scheduleReduceSend(ex_mpi, reducer_col, mpi_row_chain(), MPI_SUM, x.read(index_x_loc));
+      comm::scheduleReduceSend(ex_mpi, reducer_col, mpi_row_chain(), MPI_SUM, x.read(index_x));
   }
 }
 
@@ -699,11 +703,8 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
     // that will contribute to two different rows of X: the ones indexed with row and col.
     // This is achieved by storing the two results in two different workspaces: X and X_conj respectively.
     //
-    // They have to be set to zero, because all tiles are going to be reduced, and some tiles may not get
-    // "initialized" during computation, so they should not contribute with any spurious value to the final result
-    x.clear();
-    xt.clear();
-
+    // On exit, x will contain a valid result just on ranks belonging to the column panel.
+    // For what concerns xt, it is just used as support and it contains junk data on all ranks.
     hemmComputeX(rank_v0.col(), x, xt, at_offset, mat_a, w, wt, mpi_row_chain, mpi_col_chain);
 
     // In the next section the next two operations are performed

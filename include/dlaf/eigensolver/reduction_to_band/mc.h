@@ -592,10 +592,6 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
   using common::iterate_range2d;
   using factorization::internal::computeTFactor;
 
-  DLAF_ASSERT(equal_process_grid(mat_a, grid), mat_a, grid);
-  DLAF_ASSERT(square_size(mat_a), mat_a.size());
-  DLAF_ASSERT(square_blocksize(mat_a), mat_a.blockSize());
-
   const auto ex_mpi = getMPIExecutor<Backend::MC>();
 
   common::Pipeline<comm::Communicator> mpi_col_chain_panel(grid.colCommunicator());

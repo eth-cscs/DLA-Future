@@ -25,7 +25,6 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> reductionToBand(com
                                                                              Matrix<T, device>& mat_a) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
-  // TODO fix for non-distributed
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
 
   return internal::ReductionToBand<backend, device, T>::call(grid, mat_a);

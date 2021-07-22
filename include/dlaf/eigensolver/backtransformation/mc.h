@@ -114,28 +114,26 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     for (SizeType i = k + 1; i < mat_v.nrTiles().rows(); ++i) {
       // Copy V panel into VV
       auto ik = LocalTileIndex{i, k};
-      auto i_row = LocalTileIndex{Coord::Row, i};
-      copySingleTile(mat_v.read(ik), panelVV(i_row));
 
-      // Setting VV
-      auto tile_i_row = panelVV(i_row);
+      copySingleTile(mat_v.read(ik), panelVV(ik));
+	// Setting VV
       if (i == k + 1) {
         hpx::dataflow(hpx::launch::sync, unwrapping(tile::laset<T>), lapack::MatrixType::Upper, 0.f, 1.f,
-                      std::move(tile_i_row));
+                      std::move(panelVV(ik)));
       }
 
       // Copy VV into W
-      copySingleTile(panelVV.read(i_row), panelW(i_row));
+      copySingleTile(panelVV.read(ik), panelW(ik));
     }
 
     const GlobalTileIndex v_start{k + 1, k};
     auto taus_panel = taus[k];
-    const SizeType taupan = (is_last) ? last_mb : mat_v.blockSize().cols();
+    const SizeType taupan = (is_last) ? mat_v.tileSize(GlobalTileIndex(0, m - 1)).cols() : mat_v.blockSize().cols();
     auto kk = LocalTileIndex{k, k};
     const LocalTileIndex diag_wp_idx{Coord::Col, k};
 
     if (is_last) {
-      panelT.setHeight(dist_t.tileSize(GlobalTileIndex{0, k}).cols());
+      panelT.setHeight(dist_t.tileSize(GlobalTileIndex{k, k}).cols());
       panelW.setWidth(dist_t.tileSize(GlobalTileIndex{k, k}).cols());
     }
 

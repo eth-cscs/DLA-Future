@@ -31,6 +31,7 @@
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/matrix_local.h"
 #include "dlaf_test/matrix/util_matrix.h"
+#include "dlaf_test/matrix/util_matrix_local.h"
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/util_types.h"
 
@@ -59,52 +60,6 @@ const std::vector<TileElementSize> square_block_sizes{{3, 3}};
 template <class T>
 MatrixLocal<T> makeLocal(const Matrix<const T, Device::CPU>& matrix) {
   return {matrix.size(), matrix.distribution().blockSize()};
-}
-
-template <class T, Device device>
-void allGather(lapack::MatrixType mat_type, Matrix<const T, device>& source, MatrixLocal<T>& dest,
-               comm::CommunicatorGrid comm_grid) {
-  using lapack::MatrixType;
-
-  const auto& dist_source = source.distribution();
-  const auto rank = dist_source.rankIndex();
-
-  auto targeted_tile = [mat_type](const GlobalTileIndex idx) {
-    switch (mat_type) {
-      case MatrixType::General:
-        return true;
-      case MatrixType::Lower:
-        return idx.row() >= idx.col();
-      case MatrixType::Upper:
-        return idx.row() <= idx.col();
-      case MatrixType::Band:
-      case MatrixType::Hessenberg:
-      case MatrixType::LowerBand:
-      case MatrixType::UpperBand:
-      default:
-        DLAF_UNIMPLEMENTED(lapack::matrixtype2str(mat_type));
-        return false;
-    }
-  };
-
-  for (const auto& ij_tile : iterate_range2d(dist_source.nrTiles())) {
-    if (!targeted_tile(ij_tile))
-      continue;
-
-    const auto owner = dist_source.rankGlobalTile(ij_tile);
-
-    auto& dest_tile = dest.tile(ij_tile);
-
-    if (owner == rank) {
-      const auto& source_tile = source.read(ij_tile).get();
-      comm::sync::broadcast::send(comm_grid.fullCommunicator(), source_tile);
-      copy(source_tile, dest_tile);
-    }
-    else {
-      comm::sync::broadcast::receive_from(comm_grid.rankFullCommunicator(owner),
-                                          comm_grid.fullCommunicator(), dest_tile);
-    }
-  }
 }
 
 template <class T>
@@ -286,10 +241,8 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributed) {
         //    existing part of the band
         // - the V matrix, whose relevant part is the submatrix underneath the band
 
-        auto mat_v = makeLocal(matrix_a);
+        auto mat_v = allGather(lapack::MatrixType::Lower, matrix_a, comm_grid);
         auto mat_b = makeLocal(matrix_a);
-
-        allGather(lapack::MatrixType::Lower, matrix_a, mat_v, comm_grid);
         splitReflectorsAndBand(mat_v, mat_b, band_size);
 
         // TODO FIXME mat_v can be smaller, but then allGather must copy a submatrix

@@ -121,7 +121,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       if (i == k + 1) {
         copySingleTile(mat_v.read(ik), panelV(ik));
         hpx::dataflow(hpx::launch::sync, unwrapping(tile::laset<T>), lapack::MatrixType::Upper, 0.f, 1.f,
-                      std::move(panelV(ik)));
+                      panelV(ik));
       }
       else {
         hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v = mat_v.read(ik);

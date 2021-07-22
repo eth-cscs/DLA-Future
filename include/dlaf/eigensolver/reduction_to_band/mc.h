@@ -472,11 +472,11 @@ void gemmComputeW2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Co
   // Not all ranks in the column always hold at least a tile in the panel Ai, but all ranks in
   // the column are going to participate to the reduce. For them, it is important to set the
   // partial result W2 to zero.
-  bool isW2initializedialized = false;
+  bool isW2initialized = false;
 
   // GEMM W2 = W* . X
   for (const auto& index_tile : w.iteratorLocal()) {
-    isW2initializedialized = true;  // with C++20 this can be moved into the for init-statement
+    isW2initialized = true;  // with C++20 this can be moved into the for init-statement
 
     const T beta = (index_tile.row() == w.rangeStartLocal()) ? 0 : 1;
 
@@ -490,7 +490,7 @@ void gemmComputeW2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Co
                   std::move(tile_w), std::move(tile_x), beta, std::move(tile_w2));
   }
 
-  if (!isW2initializedialized)
+  if (!isW2initialized)
     hpx::dataflow(ex, unwrapExtendTiles(tile::set0<T>), w2(LocalTileIndex(0, 0)));
 
   FutureTile<T> tile_w2 = w2(LocalTileIndex{0, 0});

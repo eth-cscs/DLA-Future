@@ -162,7 +162,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
     // W2 = W C
     for (SizeType j = 0; j < n; ++j) {
-      auto kj = LocalTileIndex{Coord::Col, j};
+      auto kj = LocalTileIndex{k, j};
       for (SizeType i = k + 1; i < m; ++i) {
         auto ik = LocalTileIndex{i, k};
         auto ij = LocalTileIndex{i, j};
@@ -173,7 +173,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
     // C = C - V W2
     for (SizeType i = k + 1; i < m; ++i) {
-      auto ik = LocalTileIndex{Coord::Row, i};
+      auto ik = LocalTileIndex{i, k};
       for (SizeType j = 0; j < n; ++j) {
         auto kj = LocalTileIndex{k, j};
         auto ij = LocalTileIndex{i, j};

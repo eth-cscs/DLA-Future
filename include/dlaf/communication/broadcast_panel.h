@@ -20,6 +20,7 @@
 #include "dlaf/matrix/panel.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/types.h"
+#include "dlaf/util_matrix.h"
 
 namespace dlaf {
 namespace comm {

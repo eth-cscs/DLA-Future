@@ -101,9 +101,11 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
   // Specific for V matrix layout where last column of tiles is empty
   const SizeType num_panel_refls = mat_v.nrTiles().cols() - 1;
-
+  const SizeType last_tile_cols = mat_v.tileSize(GlobalTileIndex(0, m - 1)).cols();
+  
   for (SizeType k = num_panel_refls - 1; k >= 0; --k) {
     bool is_last = (k == num_panel_refls - 1) ? true : false;
+    const SizeType t_last_cols = dist_t.tileSize(GlobalTileIndex{k, k}).cols();
 
     auto& panelV = panelsV.nextResource();
     auto& panelW = panelsW.nextResource();
@@ -137,16 +139,20 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       copySingleTile(panelV.read(ik), panelW(ik));
     }
 
+
+    // TODO: use set0 from PR #402 on panelW2 and fix gemmUpdateW2
+    
     const GlobalTileIndex v_start{k + 1, k};
     auto taus_panel = taus[k];
-    const SizeType taupan =
-        (is_last) ? mat_v.tileSize(GlobalTileIndex(0, m - 1)).cols() : mat_v.blockSize().cols();
+    const SizeType taupan = (is_last) ? last_tile_cols : mat_v.blockSize().cols();
     auto kk = LocalTileIndex{k, k};
     const LocalTileIndex diag_wp_idx{Coord::Col, k};
-
+    
     if (is_last) {
-      panelT.setHeight(dist_t.tileSize(GlobalTileIndex{k, k}).cols());
-      panelW.setWidth(dist_t.tileSize(GlobalTileIndex{k, k}).cols());
+      panelT.setHeight(t_last_cols);
+      panelW2.setHeight(t_last_cols);
+      panelW.setWidth(last_tile_cols);
+      panelV.setWidth(last_tile_cols);      
     }
 
     dlaf::factorization::internal::computeTFactor<Backend::MC>(taupan, mat_v, v_start, taus_panel,
@@ -166,8 +172,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       for (SizeType i = k + 1; i < m; ++i) {
         auto ik = LocalTileIndex{i, k};
         auto ij = LocalTileIndex{i, j};
-        panelW.setWidth(mat_v.tileSize(GlobalTileIndex{i, k}).cols());
-        gemmUpdateW2(executor_np, panelW(ik), mat_c.read(ij), (i == k + 1) ? T(0) : T(1), panelW2(kj));
+	gemmUpdateW2(executor_np, panelW(ik), mat_c.read(ij), (i == k + 1) ? T(0) : T(1), panelW2(kj));
       }
     }
 

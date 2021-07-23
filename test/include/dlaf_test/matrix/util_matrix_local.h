@@ -52,8 +52,7 @@ void copy(const MatrixLocal<const T>& source, MatrixLocal<T>& dest) {
   std::copy(source.ptr(), source.ptr() + linear_size, dest.ptr());
 }
 
-/// Given a (possibly) distributed Matrix, collect all data full-size local matrix
-///
+/// Given a (possibly) distributed Matrix, it collects the full data locally, according @p to mat_type
 /// Optionally, it is possible to specify the type of the return MatrixLocal (useful for const correctness)
 template <class T>
 MatrixLocal<T> allGather(lapack::MatrixType mat_type, Matrix<const T, Device::CPU>& source,
@@ -78,7 +77,7 @@ MatrixLocal<T> allGather(lapack::MatrixType mat_type, Matrix<const T, Device::CP
       case MatrixType::LowerBand:
       case MatrixType::UpperBand:
       default:
-        DLAF_UNIMPLEMENTED(lapack::matrixtype2str(mat_type));
+        DLAF_UNIMPLEMENTED(matrixtype2str(mat_type));
         return false;
     }
   };

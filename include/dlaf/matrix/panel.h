@@ -383,14 +383,6 @@ struct Panel : public Panel<axis, const T, device> {
       return splitTile(tile, {{0, 0}, tileSize(index)});
   }
 
-  /// This functions sets all the elements of the tiles in the range to zero without inhibiting to set the
-  /// tile as external afterward (e.g. the tile is set to zero without changing its state to "already used")
-  template <class ExecutorOrPolicy>
-  friend void set0(ExecutorOrPolicy ex, Panel<axis, T, Device::CPU>& panel) {
-    for (const auto& tile_idx : panel.iteratorLocal())
-      panel.data_(panel.fullIndex(tile_idx)).then(ex, hpx::unwrapping(tile::set0<T>));
-  }
-
 protected:
   using BaseT = Panel<axis, const T, device>;
   using BaseT::dim_;

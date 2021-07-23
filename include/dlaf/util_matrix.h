@@ -136,14 +136,14 @@ public:
 
 }
 
+/// Sets all the elements of all the tiles to zero
 template <class T, class ExecutorOrPolicy>
 void set0(ExecutorOrPolicy ex, Matrix<T, Device::CPU>& matrix) {
   for (const auto& idx : iterate_range2d(matrix.distribution().localNrTiles()))
     matrix(idx).then(ex, hpx::unwrapping(tile::set0<T>));
 }
 
-/// This functions sets all the elements of the tiles in the range to zero without inhibiting to set the
-/// tile as external afterward (e.g. the tile is set to zero without changing its state to "already used")
+/// Sets all the elements of all the tiles in the active range to zero
 template <class T, Coord axis, class ExecutorOrPolicy>
 void set0(ExecutorOrPolicy ex, Panel<axis, T, Device::CPU>& panel) {
   for (const auto& tile_idx : panel.iteratorLocal())

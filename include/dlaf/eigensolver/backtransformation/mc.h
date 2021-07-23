@@ -45,7 +45,7 @@ void trmmPanel(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> 
 
 template <class Executor, Device device, class T>
 void gemmUpdateW2(Executor&& ex, hpx::future<matrix::Tile<T, device>> w,
-                  hpx::shared_future<matrix::Tile<const T, device>> c, 
+                  hpx::shared_future<matrix::Tile<const T, device>> c,
                   hpx::future<matrix::Tile<T, device>> w2) {
   hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans,
                 T(1.0), w, c, T(1.0), std::move(w2));
@@ -92,7 +92,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panelsV(n_workspaces,
-                                                                         mat_v.distribution());
+                                                                        mat_v.distribution());
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panelsW(n_workspaces,
                                                                         mat_v.distribution());
   common::RoundRobin<matrix::Panel<Coord::Row, T, Device::CPU>> panelsW2(n_workspaces,
@@ -102,7 +102,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   // Specific for V matrix layout where last column of tiles is empty
   const SizeType num_panel_refls = mat_v.nrTiles().cols() - 1;
   const SizeType last_tile_cols = mat_v.tileSize(GlobalTileIndex(0, m - 1)).cols();
-  
+
   for (SizeType k = num_panel_refls - 1; k >= 0; --k) {
     bool is_last = (k == num_panel_refls - 1) ? true : false;
     const SizeType t_last_cols = dist_t.tileSize(GlobalTileIndex{k, k}).cols();
@@ -139,21 +139,20 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       copySingleTile(panelV.read(ik), panelW(ik));
     }
 
-
     // Set panelW2 to zero
     matrix::util::set0(executor_hp, panelW2);
-    
+
     const GlobalTileIndex v_start{k + 1, k};
     auto taus_panel = taus[k];
     const SizeType taupan = (is_last) ? last_tile_cols : mat_v.blockSize().cols();
     auto kk = LocalTileIndex{k, k};
     const LocalTileIndex diag_wp_idx{Coord::Col, k};
-    
+
     if (is_last) {
       panelT.setHeight(t_last_cols);
       panelW2.setHeight(t_last_cols);
       panelW.setWidth(last_tile_cols);
-      panelV.setWidth(last_tile_cols);      
+      panelV.setWidth(last_tile_cols);
     }
 
     dlaf::factorization::internal::computeTFactor<Backend::MC>(taupan, mat_v, v_start, taus_panel,
@@ -171,7 +170,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       for (SizeType i = k + 1; i < m; ++i) {
         auto ik = LocalTileIndex{i, k};
         auto ij = LocalTileIndex{i, j};
-	gemmUpdateW2(executor_np, panelW(ik), mat_c.read(ij), panelW2(kj));
+        gemmUpdateW2(executor_np, panelW(ik), mat_c.read(ij), panelW2(kj));
       }
     }
 

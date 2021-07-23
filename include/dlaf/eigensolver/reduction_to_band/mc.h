@@ -348,8 +348,8 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
   // result.
   //
   // TODO set0 can be "embedded" in the logic but currently it will be a bit cumbersome.
-  x.clear();
-  xt.clear();
+  matrix::util::set0(ex, x);
+  matrix::util::set0(ex, xt);
 
   for (SizeType i = at_offset.rows(); i < dist.localNrTiles().rows(); ++i) {
     const auto limit = dist.template nextLocalTileFromGlobalTile<Coord::Col>(
@@ -724,6 +724,13 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
 
       gemmUpdateX(x, w2, v);
     }
+
+    // Note:
+    // xt has been used previously as workspace for hemmComputeX, so it has to be reset, because now it
+    // will be used for accessing the broadcasted version of x
+    xt.reset();
+    xt.setRangeStart(at_start);
+    xt.setHeight(nrefls);
 
     comm::broadcast(ex_mpi, rank_v0.col(), x, xt, mpi_row_chain, mpi_col_chain);
 

@@ -243,10 +243,6 @@ struct Panel<axis, const T, D> {
     dim_ = -1;
   }
 
-  void clear() noexcept {
-    matrix::util::set(data_, [](auto) { return 0; });
-  }
-
 protected:
   TileElementSize tileSize(const LocalTileIndex& index) {
     // Transform to global panel index.

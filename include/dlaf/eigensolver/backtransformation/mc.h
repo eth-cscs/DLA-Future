@@ -160,11 +160,9 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
                                                                panelT(diag_wp_idx));
 
     // WH = V T
-    for (SizeType i = k + 1; i < m; ++i) {
-      auto ik = LocalTileIndex{i, k};
-      hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_t = panelT.read(diag_wp_idx);
-
-      trmmPanel(executor_np, tile_t, panelW(ik));
+    hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_t = panelT.read(diag_wp_idx);
+    for (const auto& idx : panelW.iteratorLocal()) {
+      trmmPanel(executor_np, tile_t, panelW(idx));
     }
 
     // W2 = W C

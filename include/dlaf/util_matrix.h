@@ -26,7 +26,9 @@ constexpr double M_PI = 3.141592;
 #include "dlaf/common/assert.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/range2d.h"
+#include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/matrix/panel.h"
 #include "dlaf/types.h"
 
 /// @file
@@ -132,6 +134,20 @@ public:
   }
 };
 
+}
+
+/// Sets all the elements of all the tiles to zero
+template <class T, class ExecutorOrPolicy>
+void set0(ExecutorOrPolicy ex, Matrix<T, Device::CPU>& matrix) {
+  for (const auto& idx : iterate_range2d(matrix.distribution().localNrTiles()))
+    matrix(idx).then(ex, hpx::unwrapping(tile::set0<T>));
+}
+
+/// Sets all the elements of all the tiles in the active range to zero
+template <class T, Coord axis, class ExecutorOrPolicy>
+void set0(ExecutorOrPolicy ex, Panel<axis, T, Device::CPU>& panel) {
+  for (const auto& tile_idx : panel.iteratorLocal())
+    panel(tile_idx).then(ex, hpx::unwrapping(tile::set0<T>));
 }
 
 /// Set the elements of the matrix.

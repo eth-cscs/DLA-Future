@@ -134,14 +134,12 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         panelV.setTile(ik, mat_v.read(ik));
       }
 
-      // Copy VV into W
+      // Copy panelV into panelW (panelW will be modified in TRMM operation, while original tile of panelV
+      // will be needed in GEMM trailing matrix)
       copySingleTile(panelV.read(ik), panelW(ik));
     }
 
-    // Set panelW2 to zero
-    matrix::util::set0(executor_hp, panelW2);
-
-    const GlobalTileIndex v_start{k + 1, k};
+    const GlobalTileIndex v_start{kt, k};
     auto taus_panel = taus[k];
     const SizeType taupan = (is_last) ? last_tile_cols : mat_v.blockSize().cols();
     auto kk = LocalTileIndex{k, k};

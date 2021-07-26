@@ -118,21 +118,23 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     panelV.setRangeStart(v_start);
     panelW.setRangeStart(v_start);
 
+    if (is_last) {
+      panelT.setHeight(t_last_cols);
+      panelW2.setHeight(t_last_cols);
+      panelW.setWidth(last_tile_cols);
+      panelV.setWidth(last_tile_cols);
+    }
+
     for (SizeType i = kt; i < mat_v.nrTiles().rows(); ++i) {
       auto ik = LocalTileIndex{i, k};
-
       if (i == kt) {
-        copySingleTile(mat_v.read(ik), panelV(ik));
+        hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v = mat_v.read(ik);
+	tile_v = splitTile(tile_v, {{0, 0}, {mat_v.distribution().tileSize(GlobalTileIndex(i,k)).rows(), dist_t.tileSize(GlobalTileIndex(k,k)).cols()}});
+        copySingleTile(tile_v, panelV(ik));
         hpx::dataflow(hpx::launch::sync, unwrapping(tile::laset<T>), lapack::MatrixType::Upper, 0.f, 1.f,
-                      panelV(ik));
+	                     panelV(ik));
       }
       else {
-        hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v = mat_v.read(ik);
-
-        if (is_last) {
-          tile_v = splitTile(tile_v, {{0, 0}, dist_t.tileSize(GlobalTileIndex(k, k))});
-        }
-
         panelV.setTile(ik, mat_v.read(ik));
       }
 
@@ -144,13 +146,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     auto taus_panel = taus[k];
     const SizeType taupan = (is_last) ? last_tile_cols : mat_v.blockSize().cols();
     const LocalTileIndex k_factor{Coord::Col, k};
-
-    if (is_last) {
-      panelT.setHeight(t_last_cols);
-      panelW2.setHeight(t_last_cols);
-      panelW.setWidth(last_tile_cols);
-      panelV.setWidth(last_tile_cols);
-    }
 
     dlaf::factorization::internal::computeTFactor<Backend::MC>(taupan, mat_v, v_start, taus_panel,
                                                                panelT(k_factor));

@@ -463,6 +463,200 @@ void GenToStd<backend, device, T>::call_U(Matrix<T, device>& mat_a, Matrix<T, de
   }
 }
 
+
+template <Backend backend, Device device, class T>
+void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a,
+                                          Matrix<T, device>& mat_u) {
+  using namespace gentostd_u;
+  auto executor_hp = dlaf::getHpExecutor<backend>();
+  auto executor_np = dlaf::getNpExecutor<backend>();
+  auto executor_mpi = dlaf::getMPIExecutor<backend>();
+
+  // Set up MPI executor pipelines
+  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
+  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
+
+  const comm::Index2D this_rank = grid.rank();
+
+  const matrix::Distribution& distr = mat_a.distribution();
+  // Number of tile (rows = cols)
+  SizeType nrtile = mat_a.nrTiles().cols();
+
+  constexpr std::size_t n_workspaces = 2;
+  common::RoundRobin<matrix::Panel<Coord::Row, T, device>> a_panels(n_workspaces, distr);
+  common::RoundRobin<matrix::Panel<Coord::Col, T, device>> a_panelsT(n_workspaces, distr);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, device>> u_panels(n_workspaces, distr);
+  common::RoundRobin<matrix::Panel<Coord::Col, T, device>> u_panelsT(n_workspaces, distr);
+
+  for (SizeType k = 0; k < nrtile; ++k) {
+    const GlobalTileIndex kk{k, k};
+    const comm::Index2D kk_rank = distr.rankGlobalTile(kk);
+
+    const LocalTileSize kk_offset{
+        distr.nextLocalTileFromGlobalTile<Coord::Row>(k),
+        distr.nextLocalTileFromGlobalTile<Coord::Col>(k),
+    };
+
+    const LocalTileSize at_offset{
+        distr.nextLocalTileFromGlobalTile<Coord::Row>(k + 1),
+        distr.nextLocalTileFromGlobalTile<Coord::Col>(k + 1),
+    };
+
+    auto& u_panel = u_panels.nextResource();
+    auto& u_panelT = u_panelsT.nextResource();
+    auto& a_panel = a_panels.nextResource();
+    auto& a_panelT = a_panelsT.nextResource();
+    u_panel.setRangeStart({k, k});
+    u_panelT.setRangeStart({k, k});
+    a_panelT.setRange({0, 0}, {k, k});
+
+    if (k == nrtile - 1) {
+      u_panel.setHeight(distr.tileSize(kk).rows());
+      a_panelT.setWidth(distr.tileSize(kk).cols());
+    }
+
+    if (kk_rank.row() == this_rank.row()) {
+      for (SizeType i_local = kk_offset.cols(); i_local < distr.localNrTiles().cols(); ++i_local) {
+        const LocalTileIndex ki_panel(Coord::Col, i_local);
+        const LocalTileIndex ki(kk_offset.rows(), i_local);
+	std::cout << " k " << k << " i_local " << i_local << " i_global " << distr.globalTileFromLocalTile<Coord::Col>(i_local) << " size " << distr.tileSize(kk) << " ki_panel " << ki_panel << " ki " << ki << " mat_u " << mat_u.read(ki).get().size() << " nrTiles " << distr.localNrTiles() << std::endl;
+        u_panel.setTile(ki_panel, mat_u.read(ki));
+      }
+    }
+
+    //    broadcast(executor_mpi, kk_rank.row(), u_panel, u_panelT, mpi_row_task_chain, mpi_col_task_chain);
+
+//    // TODO: CHECK continue update previous panels
+//    // Note: The tasks of the final huge TRSM of the HEGST step have been reshuffled to avoid extra
+//    //       communication of the matrix L.
+//    //       During k-th iteration only the tasks involving the k-th panel of L are executed.
+//    //       Therefore, all previous panel have to be updated at each step.
+//    if (kk_rank.row() == this_rank.row()) {
+//      for (SizeType j_local = 0; j_local < kk_offset.cols(); ++j_local) {
+//        const LocalTileIndex kk_panel(Coord::Row, kk_offset.rows());
+//        const LocalTileIndex kj_panelT{Coord::Col, j_local};
+//        const LocalTileIndex kj(kk_offset.rows(), j_local);
+//
+//        trsmPanelUpdateTile(executor_hp, u_panel.read(kk_panel), mat_a(kj));
+//
+//        a_panelT.setTile(kj_panelT, mat_a.read(kj));
+//      }
+//    }
+//
+//    // No next rows update if last row.
+//    if (k < nrtile - 1) {
+//      broadcast(executor_mpi, kk_rank.row(), a_panelT, mpi_col_task_chain);
+//
+//      for (SizeType j_local = 0; j_local < kk_offset.cols(); ++j_local) {
+//        for (SizeType i_local = at_offset.rows(); i_local < distr.localNrTiles().rows(); ++i_local) {
+//          const LocalTileIndex ik_panel{Coord::Row, i_local};
+//          const LocalTileIndex kj_panelT{Coord::Col, j_local};
+//          const LocalTileIndex ij{i_local, j_local};
+//
+//          gemmPanelUpdateTile(executor_np, u_panel.read(ik_panel), a_panelT.read(kj_panelT), mat_a(ij));
+//        }
+//      }
+//    }
+//
+//    a_panelT.reset();
+//
+//    // Direct transformation to standard eigenvalue problem of the diagonal tile
+//    if (kk_rank == this_rank)
+//      hegstDiagTile(executor_hp, mat_a(kk), mat_u(kk));
+//
+//    // If there is no trailing matrix
+//    if (k == nrtile - 1)
+//      continue;
+//
+//    const LocalTileIndex diag_wp_idx{0, kk_offset.cols()};
+//
+//    a_panel.setRangeStart({k + 1, k + 1});
+//
+//    hpx::shared_future<matrix::Tile<const T, device>> a_diag;
+//    if (kk_rank.col() == this_rank.col()) {
+//      // Note:
+//      // [a,l]_panelT shrinked to a single tile for temporarly storing and communicating the diagonal
+//      // tile used for the column update
+//      a_panelT.setRange({k, k}, {k + 1, k + 1});
+//
+//      if (kk_rank.row() == this_rank.row()) {
+//        a_panelT.setTile(diag_wp_idx, mat_a.read(kk));
+//      }
+//      broadcast(executor_mpi, kk_rank.row(), a_panelT, mpi_col_task_chain);
+//
+//      // panel partial update
+//      for (SizeType i_local = at_offset.rows(); i_local < distr.localNrTiles().rows(); ++i_local) {
+//        const LocalTileIndex ik_panel(Coord::Row, i_local);
+//        const LocalTileIndex ik(i_local, distr.localTileFromGlobalTile<Coord::Col>(k));
+//
+//        trsmPanelTile(executor_hp, u_panelT.read(diag_wp_idx), mat_a(ik));
+//        hemmPanelTile(executor_hp, a_panelT.read(diag_wp_idx), mat_u.read(ik), mat_a(ik));
+//
+//        // keep diagonal tile for later.
+//        a_diag = a_panelT.read(diag_wp_idx);
+//
+//        a_panel.setTile(ik_panel, mat_a.read(ik));
+//      }
+//
+//      // row panel has been used for temporary storage of diagonal panel for column update
+//      a_panelT.reset();
+//    }
+//
+//    a_panelT.setRange({k + 1, k + 1}, common::indexFromOrigin(distr.nrTiles()));
+//
+//    broadcast(executor_mpi, kk_rank.col(), a_panel, a_panelT, mpi_row_task_chain, mpi_col_task_chain);
+//
+//    // trailing matrix update
+//    for (SizeType j = k + 1; j < nrtile; ++j) {
+//      const auto owner = distr.rankGlobalTile({j, j});
+//
+//      if (owner.col() != this_rank.col())
+//        continue;
+//
+//      const auto j_local = distr.localTileFromGlobalTile<Coord::Col>(j);
+//      // first trailing panel gets high priority (look ahead).
+//      auto& trailing_matrix_executor = (j == k + 1) ? executor_hp : executor_np;
+//      if (this_rank.row() == owner.row()) {
+//        const auto i_local = distr.localTileFromGlobalTile<Coord::Row>(j);
+//
+//        her2kTrailingDiagTile(trailing_matrix_executor, a_panel.read({Coord::Row, i_local}),
+//                              u_panel.read({Coord::Row, i_local}),
+//                              mat_a(LocalTileIndex{i_local, j_local}));
+//      }
+//
+//      for (SizeType i = j + 1; i < nrtile; ++i) {
+//        const auto owner_row = distr.rankGlobalTile<Coord::Row>(i);
+//
+//        if (owner_row != this_rank.row())
+//          continue;
+//
+//        const auto i_local = distr.localTileFromGlobalTile<Coord::Row>(i);
+//        const LocalTileIndex ik_panel{Coord::Row, i_local};
+//        const LocalTileIndex kj_panelT{Coord::Col, j_local};
+//        const LocalTileIndex ij{i_local, j_local};
+//
+//        gemmTrailingMatrixTile(executor_np, a_panel.read(ik_panel), u_panelT.read(kj_panelT), mat_a(ij));
+//        gemmTrailingMatrixTile(executor_np, u_panel.read(ik_panel), a_panelT.read(kj_panelT), mat_a(ij));
+//      }
+//    }
+//
+//    a_panel.reset();
+//    a_panelT.reset();
+//    u_panel.reset();
+//    u_panelT.reset();
+//
+//    if (kk_rank.col() == this_rank.col()) {
+//      // panel partial update
+//      for (SizeType i_local = at_offset.rows(); i_local < distr.localNrTiles().rows(); ++i_local) {
+//        const LocalTileIndex local_idx(Coord::Row, i_local);
+//        const LocalTileIndex ik(i_local, distr.localTileFromGlobalTile<Coord::Col>(k));
+//
+//        hemmPanelTile(executor_hp, a_diag, mat_u.read(ik), mat_a(ik));
+//      }
+//    }
+  }
+}
+
 }
 }
 }

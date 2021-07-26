@@ -143,7 +143,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     auto taus_panel = taus[k];
     const SizeType taupan = (is_last) ? last_tile_cols : mat_v.blockSize().cols();
     auto kk = LocalTileIndex{k, k};
-    const LocalTileIndex diag_wp_idx{Coord::Col, k};
+    const LocalTileIndex k_factor{Coord::Col, k};
 
     if (is_last) {
       panelT.setHeight(t_last_cols);
@@ -153,10 +153,10 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     }
 
     dlaf::factorization::internal::computeTFactor<Backend::MC>(taupan, mat_v, v_start, taus_panel,
-                                                               panelT(diag_wp_idx));
+                                                               panelT(k_factor));
 
     // WH = V T
-    hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_t = panelT.read(diag_wp_idx);
+    hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_t = panelT.read(k_factor);
     for (const auto& idx : panelW.iteratorLocal()) {
       trmmPanel(executor_np, tile_t, panelW(idx));
     }

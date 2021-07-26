@@ -26,7 +26,7 @@ namespace eigensolver {
 ///
 /// @param mat_c contains the (m x n) matrix C (blocksize (mb x nb)), while on exit it contains Q C.
 /// @param mat_v is (m x m) matrix with blocksize (mb x mb), which contains the Householder reflectors.
-/// The j-th HH reflector is v_j = (1, V(mb : n, j)).
+/// The j-th HH reflector is v_j = (1, V(mb + 1 : n, j)).
 /// @param taus is a (blocked) vector of size m (blocksize mb). The j-th element is the scaling factor
 /// for the j-th HH tranformation.
 /// @pre mat_c is not distributed,

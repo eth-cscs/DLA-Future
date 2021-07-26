@@ -106,21 +106,20 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   for (SizeType k = num_panel_refls - 1; k >= 0; --k) {
     bool is_last = (k == num_panel_refls - 1) ? true : false;
     const SizeType t_last_cols = dist_t.tileSize(GlobalTileIndex{k, k}).cols();
+    const auto kt = k + 1;
 
     auto& panelV = panelsV.nextResource();
     auto& panelW = panelsW.nextResource();
     auto& panelW2 = panelsW2.nextResource();
     auto& panelT = panelsT.nextResource();
 
-    panelV.setRangeStart({k + 1, k});
-    panelW.setRangeStart({k + 1, k});
+    panelV.setRangeStart({kt, k});
+    panelW.setRangeStart({kt, k});
 
-    for (SizeType i = k + 1; i < mat_v.nrTiles().rows(); ++i) {
-      // Copy V panel into VV
+    for (SizeType i = kt; i < mat_v.nrTiles().rows(); ++i) {
       auto ik = LocalTileIndex{i, k};
 
-      // Setting VV
-      if (i == k + 1) {
+      if (i == kt) {
         copySingleTile(mat_v.read(ik), panelV(ik));
         hpx::dataflow(hpx::launch::sync, unwrapping(tile::laset<T>), lapack::MatrixType::Upper, 0.f, 1.f,
                       panelV(ik));

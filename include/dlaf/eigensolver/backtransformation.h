@@ -37,6 +37,7 @@ void backTransformation(Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v
   DLAF_ASSERT(matrix::local_matrix(mat_c), mat_c);
   DLAF_ASSERT(matrix::local_matrix(mat_v), mat_v);
   DLAF_ASSERT(mat_c.blockSize().rows() == mat_v.blockSize().rows(), mat_c, mat_v);
+  DLAF_ASSERT(taus.size() == mat_v.nrTiles().cols() - 1, taus.size(), mat_v);
 
   internal::BackTransformation<backend, device, T>::call_FC(mat_c, mat_v, taus);
 }

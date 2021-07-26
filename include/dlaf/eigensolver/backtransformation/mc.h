@@ -162,9 +162,10 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     }
 
     // W2 = W C
+    matrix::util::set0(executor_hp, panelW2);
     for (SizeType j = 0; j < n; ++j) {
       auto kj = LocalTileIndex{k, j};
-      for (SizeType i = k + 1; i < m; ++i) {
+      for (SizeType i = kt; i < m; ++i) {
         auto ik = LocalTileIndex{i, k};
         auto ij = LocalTileIndex{i, j};
         gemmUpdateW2(executor_np, panelW(ik), mat_c.read(ij), panelW2(kj));
@@ -172,7 +173,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     }
 
     // C = C - V W2
-    LocalTileIndex c_start{k + 1, 0};
+    LocalTileIndex c_start{kt, 0};
     LocalTileIndex c_end{m, n};
     for (const auto& idx : iterate_range2d(c_start, c_end)) {
       auto ik = LocalTileIndex{idx.row(), k};

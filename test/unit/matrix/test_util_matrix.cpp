@@ -252,6 +252,8 @@ void testSet0(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
 
     for (const auto& idx : panel.iteratorLocal())
       CHECK_TILE_EQ(null_tile, panel.read(idx).get());
+
+    panel.reset();
   }
 }
 

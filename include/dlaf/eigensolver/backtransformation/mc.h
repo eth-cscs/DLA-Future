@@ -129,17 +129,19 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       auto ik = LocalTileIndex{i, k};
       if (i == kt) {
         hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v = mat_v.read(ik);
-	tile_v = splitTile(tile_v, {{0, 0}, {mat_v.distribution().tileSize(GlobalTileIndex(i,k)).rows(), dist_t.tileSize(GlobalTileIndex(k,k)).cols()}});
+        tile_v = splitTile(tile_v, {{0, 0},
+                                    {mat_v.distribution().tileSize(GlobalTileIndex(i, k)).rows(),
+                                     dist_t.tileSize(GlobalTileIndex(k, k)).cols()}});
         copySingleTile(tile_v, panelV(ik));
         hpx::dataflow(hpx::launch::sync, unwrapping(tile::laset<T>), lapack::MatrixType::Upper, 0.f, 1.f,
-	                     panelV(ik));
+                      panelV(ik));
       }
       else {
         panelV.setTile(ik, mat_v.read(ik));
       }
 
-      // Copy panelV into panelW (panelW will be modified in TRMM operation, while original tile of panelV
-      // will be needed in GEMM trailing matrix)
+      // Copy panelV into panelW (panelW will be modified in TRMM operation, while original tile of
+      // panelV will be needed in GEMM trailing matrix)
       copySingleTile(panelV.read(ik), panelW(ik));
     }
 

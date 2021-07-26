@@ -172,10 +172,11 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       }
     }
 
-    // C = C - V W2
+    // Update trailing matrix: C = C - V W2
     LocalTileIndex c_start{kt, 0};
     LocalTileIndex c_end{m, n};
-    for (const auto& idx : iterate_range2d(c_start, c_end)) {
+    common::IterableRange2D c_k(c_start, c_end);
+    for (const auto& idx : c_k) {
       auto ik = LocalTileIndex{idx.row(), k};
       auto kj = LocalTileIndex{k, idx.col()};
       gemmTrailingMatrix(executor_np, panelV.read(ik), panelW2.read(kj), mat_c(idx));

@@ -97,7 +97,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
                                                                         mat_v.distribution());
   common::RoundRobin<matrix::Panel<Coord::Row, T, Device::CPU>> panelsW2(n_workspaces,
                                                                          mat_c.distribution());
-  common::RoundRobin<matrix::Panel<Coord::Row, T, Device::CPU>> panelsT(n_workspaces, dist_t);
+  matrix::Panel<Coord::Row, T, Device::CPU> panelT(dist_t);
 
   // Specific for V matrix layout where last column of tiles is empty
   const SizeType num_panel_refls = mat_v.nrTiles().cols() - 1;
@@ -113,7 +113,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     auto& panelV = panelsV.nextResource();
     auto& panelW = panelsW.nextResource();
     auto& panelW2 = panelsW2.nextResource();
-    auto& panelT = panelsT.nextResource();
 
     panelV.setRangeStart(v_start);
     panelW.setRangeStart(v_start);

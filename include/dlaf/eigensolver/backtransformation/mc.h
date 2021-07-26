@@ -107,14 +107,16 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     bool is_last = (k == num_panel_refls - 1);
     const SizeType t_last_cols = dist_t.tileSize(GlobalTileIndex{k, k}).cols();
     const auto kt = k + 1;
+    const GlobalTileIndex v_start{kt, k};
+    auto kk = LocalTileIndex{k, k};
 
     auto& panelV = panelsV.nextResource();
     auto& panelW = panelsW.nextResource();
     auto& panelW2 = panelsW2.nextResource();
     auto& panelT = panelsT.nextResource();
 
-    panelV.setRangeStart({kt, k});
-    panelW.setRangeStart({kt, k});
+    panelV.setRangeStart(v_start);
+    panelW.setRangeStart(v_start);
 
     for (SizeType i = kt; i < mat_v.nrTiles().rows(); ++i) {
       auto ik = LocalTileIndex{i, k};
@@ -139,10 +141,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       copySingleTile(panelV.read(ik), panelW(ik));
     }
 
-    const GlobalTileIndex v_start{kt, k};
     auto taus_panel = taus[k];
     const SizeType taupan = (is_last) ? last_tile_cols : mat_v.blockSize().cols();
-    auto kk = LocalTileIndex{k, k};
     const LocalTileIndex k_factor{Coord::Col, k};
 
     if (is_last) {

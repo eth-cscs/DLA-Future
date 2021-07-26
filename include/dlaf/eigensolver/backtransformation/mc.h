@@ -104,7 +104,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   const SizeType last_tile_cols = mat_v.tileSize(GlobalTileIndex(0, m - 1)).cols();
 
   for (SizeType k = num_panel_refls - 1; k >= 0; --k) {
-    bool is_last = (k == num_panel_refls - 1) ? true : false;
+    bool is_last = (k == num_panel_refls - 1);
     const SizeType t_last_cols = dist_t.tileSize(GlobalTileIndex{k, k}).cols();
     const auto kt = k + 1;
 

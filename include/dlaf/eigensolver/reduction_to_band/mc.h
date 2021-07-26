@@ -10,14 +10,10 @@
 #pragma once
 
 #include <cmath>
-#include <string>
-#include <type_traits>
 #include <vector>
 
-#include <hpx/future.hpp>
-#include <hpx/futures/future.hpp>
-#include <hpx/include/util.hpp>
-#include <hpx/tuple.hpp>
+#include <hpx/local/future.hpp>
+#include <hpx/local/unwrap.hpp>
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/data.h"
@@ -72,11 +68,6 @@ template <Coord panel_type, class T>
 using PanelT = matrix::Panel<panel_type, T, Device::CPU>;
 template <Coord panel_type, class T>
 using ConstPanelT = PanelT<panel_type, const T>;
-
-template <class Type>
-using FutureTile = hpx::future<TileT<Type>>;
-template <class Type>
-using FutureConstTile = hpx::shared_future<ConstTileT<Type>>;
 
 template <class T>
 T computeReflector(const comm::IndexT_MPI rank_v0, comm::Communicator& communicator,
@@ -174,12 +165,9 @@ void updateTrailingPanelWithReflector(comm::IndexT_MPI rank_v0, comm::Communicat
     const bool has_first_component = has_first(tile_a);
     const SizeType first_element = has_first_component ? index_el_x0.row() : 0;
 
-    // clang-format off
-    TileElementIndex        pt_start  {first_element, index_el_x0.col() + 1};
-    TileElementSize         pt_size   {tile_a.size().rows() - pt_start.row(), pt_cols};
-
-    TileElementIndex        v_start   {first_element, index_el_x0.col()};
-    // clang-format on
+    TileElementIndex pt_start{first_element, index_el_x0.col() + 1};
+    TileElementSize pt_size{tile_a.size().rows() - pt_start.row(), pt_cols};
+    TileElementIndex v_start{first_element, index_el_x0.col()};
 
     if (has_first_component) {
       const TileElementSize offset{1, 0};
@@ -208,12 +196,10 @@ void updateTrailingPanelWithReflector(comm::IndexT_MPI rank_v0, comm::Communicat
     const bool has_first_component = has_first(tile_a);
     const SizeType first_element = has_first_component ? index_el_x0.row() : 0;
 
-    // clang-format off
-    TileElementIndex        pt_start{first_element, index_el_x0.col() + 1};
-    TileElementSize         pt_size {tile_a.size().rows() - pt_start.row(), tile_a.size().cols() - pt_start.col()};
-
-    TileElementIndex        v_start {first_element, index_el_x0.col()};
-    // clang-format on
+    TileElementIndex pt_start{first_element, index_el_x0.col() + 1};
+    TileElementSize pt_size{tile_a.size().rows() - pt_start.row(),
+                            tile_a.size().cols() - pt_start.col()};
+    TileElementIndex v_start{first_element, index_el_x0.col()};
 
     if (has_first_component) {
       const TileElementSize offset{1, 0};
@@ -303,7 +289,7 @@ void setupReflectorPanelV(comm::IndexT_MPI rank_v0, const LocalTileSize& ai_offs
 }
 
 template <class T, class MatrixLikeT>
-void trmmComputeW(PanelT<Coord::Col, T>& w, MatrixLikeT& v, FutureConstTile<T> tile_t) {
+void trmmComputeW(PanelT<Coord::Col, T>& w, MatrixLikeT& v, hpx::shared_future<ConstTileT<T>> tile_t) {
   const auto ex = getHpExecutor<Backend::MC>();
 
   auto trmm_func = hpx::unwrapping([](auto&& tile_w, const auto& tile_v, const auto& tile_t) -> void {
@@ -317,14 +303,8 @@ void trmmComputeW(PanelT<Coord::Col, T>& w, MatrixLikeT& v, FutureConstTile<T> t
     tile::trmm(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1), tile_t, tile_w);
   });
 
-  for (const auto& index_tile_w : w.iteratorLocal()) {
-    // clang-format off
-    FutureTile<T>      tile_w = w(index_tile_w);
-    FutureConstTile<T> tile_v = v.read(index_tile_w);
-    // clang-format on
-
-    hpx::dataflow(ex, trmm_func, std::move(tile_w), std::move(tile_v), tile_t);
-  }
+  for (const auto& index_i : w.iteratorLocal())
+    hpx::dataflow(ex, trmm_func, w(index_i), v.read(index_i), tile_t);
 }
 
 template <class T>
@@ -361,14 +341,8 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
       const bool is_diagonal_tile = (ij.row() == ij.col());
 
       if (is_diagonal_tile) {
-        // clang-format off
-        FutureTile<T>       tile_x = x(ij_local);
-        FutureConstTile<T>  tile_a = a.read(ij_local);
-        FutureConstTile<T>  tile_w = w.read(ij_local);
-        // clang-format on
-
         hpx::dataflow(ex, unwrapExtendTiles(hemm_o), blas::Side::Left, blas::Uplo::Lower, T(1),
-                      std::move(tile_a), std::move(tile_w), T(1), std::move(tile_x));
+                      a.read(ij_local), w.read(ij_local), T(1), x(ij_local));
       }
       else {
         // A . W*
@@ -380,14 +354,8 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
           // However, since we are still computing the "straight" part, the result can be stored
           // in the "local" panel X.
 
-          // clang-format off
-          FutureTile<T>       tile_x = x(ij_local);
-          FutureConstTile<T>  tile_a = a.read(ij_local);
-          FutureConstTile<T>  tile_w = wt.read(ij_local);
-          // clang-format on
-
           hpx::dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::NoTrans, blas::Op::NoTrans, T(1),
-                        std::move(tile_a), std::move(tile_w), T(1), std::move(tile_x));
+                        a.read(ij_local), wt.read(ij_local), T(1), x(ij_local));
         }
 
         // A* . W
@@ -405,14 +373,10 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
           const LocalTileIndex index_x{dist.template localTileFromGlobalTile<Coord::Row>(ij.col()), 0};
           const LocalTileIndex index_xt{0, ij_local.col()};
 
-          // clang-format off
-          FutureTile<T>       tile_x = (dist.rankIndex().row() == owner) ? x(index_x) : xt(index_xt);
-          FutureConstTile<T>  tile_a = a.read(ij_local);
-          FutureConstTile<T>  tile_w = w.read(ij_local);
-          // clang-format on
+          auto tile_x = (dist.rankIndex().row() == owner) ? x(index_x) : xt(index_xt);
 
           hpx::dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans, T(1),
-                        std::move(tile_a), std::move(tile_w), T(1), std::move(tile_x));
+                        a.read(ij_local), w.read(ij_local), T(1), std::move(tile_x));
         }
       }
     }
@@ -476,25 +440,18 @@ void gemmComputeW2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Co
 
   // GEMM W2 = W* . X
   for (const auto& index_tile : w.iteratorLocal()) {
-    isW2initialized = true;  // with C++20 this can be moved into the for init-statement
-
-    const T beta = (index_tile.row() == w.rangeStartLocal()) ? 0 : 1;
-
-    // clang-format off
-    FutureTile<T>       tile_w2 = w2(LocalTileIndex{0, 0});
-    FutureConstTile<T>  tile_w  = w.read(index_tile);
-    FutureConstTile<T>  tile_x  = x.read(index_tile);
-    // clang-format on
+    const T beta = !isW2initialized ? 0 : 1;
 
     hpx::dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans, T(1),
-                  std::move(tile_w), std::move(tile_x), beta, std::move(tile_w2));
+                  w.read(index_tile), x.read(index_tile), beta, w2(LocalTileIndex(0, 0)));
+
+    isW2initialized = true;  // with C++20 this can be moved into the for init-statement
   }
 
   if (!isW2initialized)
     hpx::dataflow(ex, unwrapExtendTiles(tile::set0<T>), w2(LocalTileIndex(0, 0)));
 
-  FutureTile<T> tile_w2 = w2(LocalTileIndex{0, 0});
-  comm::scheduleAllReduceInPlace(ex_mpi, mpi_col_chain(), MPI_SUM, std::move(tile_w2));
+  comm::scheduleAllReduceInPlace(ex_mpi, mpi_col_chain(), MPI_SUM, w2(LocalTileIndex(0, 0)));
 }
 
 template <class T, class MatrixLikeT>
@@ -505,16 +462,9 @@ void gemmUpdateX(PanelT<Coord::Col, T>& x, ConstMatrixT<T>& w2, MatrixLikeT& v) 
   const auto ex = getHpExecutor<Backend::MC>();
 
   // GEMM X = X - 0.5 . V . W2
-  for (const auto& index_row : v.iteratorLocal()) {
-    // clang-format off
-    FutureTile<T>       tile_x  = x(index_row);
-    FutureConstTile<T>  tile_v  = v.read(index_row);
-    FutureConstTile<T>  tile_w2 = w2.read(LocalTileIndex{0, 0});
-    // clang-format on
-
+  for (const auto& index_i : v.iteratorLocal())
     hpx::dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::NoTrans, blas::Op::NoTrans, T(-0.5),
-                  std::move(tile_v), std::move(tile_w2), T(1), std::move(tile_x));
-  }
+                  v.read(index_i), w2.read(LocalTileIndex(0, 0)), T(1), x(index_i));
 }
 
 template <class T>
@@ -544,40 +494,17 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
       const auto& ex =
           (j == at_start.cols()) ? getHpExecutor<Backend::MC>() : getNpExecutor<Backend::MC>();
 
-      if (is_diagonal_tile) {
-        // clang-format off
-        FutureTile<T>       tile_a = a(ij_local);
-        FutureConstTile<T>  tile_v = v.read(ij_local);
-        FutureConstTile<T>  tile_x = x.read(ij_local);
-        // clang-format on
-
+      if (is_diagonal_tile)
         dataflow(ex, unwrapExtendTiles(her2k_o), blas::Uplo::Lower, blas::Op::NoTrans, T(-1),
-                 std::move(tile_v), std::move(tile_x), BaseType<T>(1), std::move(tile_a));
-      }
+                 v.read(ij_local), x.read(ij_local), BaseType<T>(1), a(ij_local));
       else {
-        // GEMM A: X . V*
-        {
-          // clang-format off
-          FutureTile<T>       tile_a = a(ij_local);
-          FutureConstTile<T>  tile_x = x.read(ij_local);
-          FutureConstTile<T>  tile_v = vt.read(ij_local);
-          // clang-format on
+        // GEMM A -= X . V*
+        dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
+                 x.read(ij_local), vt.read(ij_local), T(1), a(ij_local));
 
-          dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
-                   std::move(tile_x), std::move(tile_v), T(1), std::move(tile_a));
-        }
-
-        // GEMM A: V . X*
-        {
-          // clang-format off
-          FutureTile<T>       tile_a = a(ij_local);
-          FutureConstTile<T>  tile_v = v.read(ij_local);
-          FutureConstTile<T>  tile_x = xt.read(ij_local);
-          // clang-format on
-
-          dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
-                   std::move(tile_v), std::move(tile_x), T(1), std::move(tile_a));
-        }
+        // GEMM A -= V . X*
+        dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
+                 v.read(ij_local), xt.read(ij_local), T(1), a(ij_local));
       }
     }
   }

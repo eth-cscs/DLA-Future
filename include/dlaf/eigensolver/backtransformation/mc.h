@@ -40,7 +40,7 @@ template <class Executor, Device device, class T>
 void trmmPanel(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> t,
                hpx::future<matrix::Tile<T, device>> w) {
   hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::trmm_o), blas::Side::Right, blas::Uplo::Upper,
-                blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), t, w);
+                blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), t, std::move(w));
 }
 
 template <class Executor, Device device, class T>

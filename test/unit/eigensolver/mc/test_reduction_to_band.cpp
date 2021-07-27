@@ -63,7 +63,8 @@ std::vector<config_t> configs{
     {{3, 3}, {3, 3}},    // single tile (nothing to do)
     {{12, 12}, {3, 3}},  // tile always full size (less room for distribution over ranks)
     {{13, 13}, {3, 3}},  // tile incomplete
-    {{24, 24}, {3, 3}},  // tile always full size (more room for distirbution)
+    {{24, 24}, {3, 3}},  // tile always full size (more room for distribution)
+    {{40, 40}, {5, 5}},
 };
 
 template <class T>

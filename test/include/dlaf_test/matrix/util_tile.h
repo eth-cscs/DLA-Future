@@ -123,6 +123,17 @@ Tile<T, D> createTile(ElementGetter val, const TileElementSize size, const SizeT
   return internal::CreateTile<T, D>::createAndSet(val, size, ld);
 }
 
+/// Infinite size tile with fixed value
+///
+/// Return a callable that acts like a tile that always return @p value,
+/// for any @p index given
+template <class T>
+auto fixedValueTile(T value) noexcept {
+  return [=](TileElementIndex) noexcept {
+    return value;
+  };
+}
+
 namespace internal {
 /// Checks the elements of the tile.
 ///

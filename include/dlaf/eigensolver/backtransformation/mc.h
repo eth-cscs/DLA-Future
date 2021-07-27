@@ -86,7 +86,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   if (m <= 1 || n == 0)
     return;
 
-  const SizeType nr_reflector = mat_v.size().rows() - mb;
+  const SizeType nr_reflector = mat_v.size().rows() - mb - 1;
 
   dlaf::matrix::Distribution dist_t({mb, nr_reflector}, {mb, mb});
 
@@ -99,16 +99,14 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
                                                                          mat_c.distribution());
   matrix::Panel<Coord::Row, T, Device::CPU> panelT(dist_t);
 
-  // Specific for V matrix layout where last column of tiles is empty
-  const SizeType num_panel_refls = mat_v.nrTiles().cols() - 1;
-  const SizeType last_tile_cols = mat_v.tileSize(GlobalTileIndex(0, m - 1)).cols();
+  const SizeType nr_reflector_blocks = dist_t.nrTiles().cols();
+  const SizeType nr_reflectors_last_block =
+      dist_t.tileSize(GlobalTileIndex(0, nr_reflector_blocks - 1)).cols();
 
-  for (SizeType k = num_panel_refls - 1; k >= 0; --k) {
-    bool is_last = (k == num_panel_refls - 1);
-    const SizeType t_last_cols = dist_t.tileSize(GlobalTileIndex{k, k}).cols();
-    const auto kt = k + 1;
-    const GlobalTileIndex v_start{kt, k};
-    auto kk = LocalTileIndex{k, k};
+  for (SizeType k = nr_reflector_blocks - 1; k >= 0; --k) {
+    bool is_last = (k == nr_reflector_blocks - 1);
+    const GlobalTileIndex v_start{k + 1, k};
+    const LocalTileIndex kk{k, k};
 
     auto& panelV = panelsV.nextResource();
     auto& panelW = panelsW.nextResource();
@@ -118,19 +116,21 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     panelW.setRangeStart(v_start);
 
     if (is_last) {
-      panelT.setHeight(t_last_cols);
-      panelW2.setHeight(t_last_cols);
-      panelW.setWidth(last_tile_cols);
-      panelV.setWidth(last_tile_cols);
+      panelT.setHeight(nr_reflectors_last_block);
+      panelW2.setHeight(nr_reflectors_last_block);
+      panelW.setWidth(nr_reflectors_last_block);
+      panelV.setWidth(nr_reflectors_last_block);
     }
 
-    for (SizeType i = kt; i < mat_v.nrTiles().rows(); ++i) {
+    for (SizeType i = k + 1; i < mat_v.nrTiles().rows(); ++i) {
       auto ik = LocalTileIndex{i, k};
-      if (i == kt) {
+      if (i == k + 1) {
         hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v = mat_v.read(ik);
-        tile_v = splitTile(tile_v, {{0, 0},
-                                    {mat_v.distribution().tileSize(GlobalTileIndex(i, k)).rows(),
-                                     dist_t.tileSize(GlobalTileIndex(k, k)).cols()}});
+        if (is_last) {
+          tile_v = splitTile(tile_v, {{0, 0},
+                                      {mat_v.distribution().tileSize(GlobalTileIndex(i, k)).rows(),
+                                       nr_reflectors_last_block}});
+        }
         copySingleTile(tile_v, panelV(ik));
         hpx::dataflow(hpx::launch::sync, unwrapping(tile::laset<T>), lapack::MatrixType::Upper, 0.f, 1.f,
                       panelV(ik));
@@ -138,40 +138,34 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       else {
         panelV.setTile(ik, mat_v.read(ik));
       }
-
-      // Copy panelV into panelW (panelW will be modified in TRMM operation, while original tile of
-      // panelV will be needed in GEMM trailing matrix)
-      copySingleTile(panelV.read(ik), panelW(ik));
     }
 
     auto taus_panel = taus[k];
-    const SizeType taupan = (is_last) ? last_tile_cols : mat_v.blockSize().cols();
+    const SizeType taupan = (is_last) ? nr_reflectors_last_block : mat_v.blockSize().cols();
     const LocalTileIndex k_factor{Coord::Col, k};
 
     dlaf::factorization::internal::computeTFactor<Backend::MC>(taupan, mat_v, v_start, taus_panel,
                                                                panelT(k_factor));
 
-    // WH = V T
+    // W = V T
     hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_t = panelT.read(k_factor);
     for (const auto& idx : panelW.iteratorLocal()) {
+      copySingleTile(panelV.read(idx), panelW(idx));
       trmmPanel(executor_np, tile_t, panelW(idx));
     }
 
     // W2 = W C
     matrix::util::set0(executor_hp, panelW2);
-    for (SizeType j = 0; j < n; ++j) {
-      auto kj = LocalTileIndex{k, j};
-      for (SizeType i = kt; i < m; ++i) {
-        auto ik = LocalTileIndex{i, k};
-        auto ij = LocalTileIndex{i, j};
-        gemmUpdateW2(executor_np, panelW(ik), mat_c.read(ij), panelW2(kj));
-      }
+    LocalTileIndex c_start{k + 1, 0};
+    LocalTileIndex c_end{m, n};
+    common::IterableRange2D c_k(c_start, c_end);
+    for (const auto& idx : c_k) {
+      auto kj = LocalTileIndex{k, idx.col()};
+      auto ik = LocalTileIndex{idx.row(), k};
+      gemmUpdateW2(executor_np, panelW(ik), mat_c.read(idx), panelW2(kj));
     }
 
     // Update trailing matrix: C = C - V W2
-    LocalTileIndex c_start{kt, 0};
-    LocalTileIndex c_end{m, n};
-    common::IterableRange2D c_k(c_start, c_end);
     for (const auto& idx : c_k) {
       auto ik = LocalTileIndex{idx.row(), k};
       auto kj = LocalTileIndex{k, idx.col()};

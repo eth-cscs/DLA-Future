@@ -85,7 +85,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
   if (m == 0 || n == 0)
     return;
 
-  const SizeType nr_reflector = std::max(static_cast<SizeType>(0), m - mb);
+  const SizeType nr_reflector = std::max(static_cast<SizeType>(0), m - mb - 1);
 
   // Reset diagonal and upper values of V
   MatrixLocal<T> v({m, m}, blockSizeV);
@@ -127,7 +127,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
     dlaf::matrix::util::internal::getter_random<BaseType<T>> random_value(seed);
     for (SizeType j = k; j < std::min(k + mb, nr_reflector); ++j) {
       const GlobalElementIndex v_offset{j + mb, j};
-      auto dotprod = blas::dot(nr_reflector - j, v.ptr(v_offset), 1, v.ptr(v_offset), 1);
+      auto dotprod = blas::dot(m - mb - j, v.ptr(v_offset), 1, v.ptr(v_offset), 1);
       BaseType<T> tau_i = 0;
       if (std::is_same<T, ComplexType<T>>::value) {
         tau_i = random_value();
@@ -143,7 +143,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
   for (SizeType j = nr_reflector - 1; j > -1; --j) {
     const GlobalElementIndex v_offset{j + mb, j};
     auto tau = tausloc[j];
-    lapack::larf(lapack::Side::Left, nr_reflector - j, n, v.ptr(v_offset), 1, tau,
+    lapack::larf(lapack::Side::Left, m - mb - j, n, v.ptr(v_offset), 1, tau,
                  c.ptr(GlobalElementIndex{j + mb, 0}), c.ld());
   }
 

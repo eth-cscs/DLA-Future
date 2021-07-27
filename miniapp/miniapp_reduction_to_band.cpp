@@ -176,10 +176,8 @@ options_t parse_options(hpx::program_options::variables_map& vm) {
   DLAF_ASSERT(opts.nruns > 0, opts.nruns);
   DLAF_ASSERT(opts.nwarmups >= 0, opts.nwarmups);
 
-  if (opts.do_check != Red2BandCheckIterFreq::None) {
-    std::cerr << "Warning! At the moment result checking is not implemented." << std::endl;
-    opts.do_check = Red2BandCheckIterFreq::None;
-  }
+  DLAF_ASSERT(opts.do_check == Red2BandCheckIterFreq::None,
+              "Error! At the moment result checking is not implemented. Please rerun with --check-result=none.");
 
   return opts;
 }

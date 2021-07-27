@@ -198,6 +198,7 @@ TYPED_TEST(MatrixLocalWithCommTest, AllGather) {
         DLAF_UNIMPLEMENTED(lapack::matrixtype2str(mat_type));
         return false;
     }
+    return false;  // unreachable
   };
 
   for (const auto& comm_grid : this->commGrids()) {

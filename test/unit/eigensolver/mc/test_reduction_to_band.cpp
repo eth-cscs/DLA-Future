@@ -54,8 +54,17 @@ public:
 
 TYPED_TEST_SUITE(ReductionToBandTestMC, MatrixElementTypes);
 
-const std::vector<LocalElementSize> square_sizes{{3, 3}, {13, 13}, {12, 12}, {24, 24}};
-const std::vector<TileElementSize> square_block_sizes{{3, 3}};
+struct config_t {
+  LocalElementSize size;
+  TileElementSize block_size;
+};
+
+std::vector<config_t> configs{
+    {{3, 3}, {3, 3}},    // single tile (nothing to do)
+    {{12, 12}, {3, 3}},  // tile always full size (less room for distribution over ranks)
+    {{13, 13}, {3, 3}},  // tile incomplete
+    {{24, 24}, {3, 3}},  // tile always full size (more room for distirbution)
+};
 
 template <class T>
 MatrixLocal<T> makeLocal(const Matrix<const T, Device::CPU>& matrix) {
@@ -192,106 +201,107 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributed) {
   constexpr Device device = Device::CPU;
 
   for (auto&& comm_grid : this->commGrids()) {
-    for (const auto& size : square_sizes) {
-      for (const auto& block_size : square_block_sizes) {
-        const SizeType band_size = block_size.rows();
-        const SizeType band_size_tiles = band_size / block_size.rows();
-        const SizeType k_reflectors = std::max(SizeType(0), size.rows() - band_size - 1);
+    for (const auto& config : configs) {
+      const LocalElementSize& size = config.size;
+      const TileElementSize& block_size = config.block_size;
 
-        Distribution distribution({size.rows(), size.cols()}, block_size, comm_grid.size(),
-                                  comm_grid.rank(), {0, 0});
+      const SizeType band_size = block_size.rows();
+      const SizeType band_size_tiles = band_size / block_size.rows();
+      const SizeType k_reflectors = std::max(SizeType(0), size.rows() - band_size - 1);
 
-        // setup the reference input matrix
-        Matrix<const TypeParam, device> reference = [&]() {
-          Matrix<TypeParam, device> reference(distribution);
-          matrix::util::set_random_hermitian(reference);
-          return reference;
-        }();
+      Distribution distribution({size.rows(), size.cols()}, block_size, comm_grid.size(),
+                                comm_grid.rank(), {0, 0});
 
-        Matrix<TypeParam, device> matrix_a(std::move(distribution));
-        copy(reference, matrix_a);
+      // setup the reference input matrix
+      Matrix<const TypeParam, device> reference = [&]() {
+        Matrix<TypeParam, device> reference(distribution);
+        matrix::util::set_random_hermitian(reference);
+        return reference;
+      }();
 
-        // Apply reduction-to-band
-        DLAF_ASSERT(band_size == matrix_a.blockSize().rows(), band_size, matrix_a.blockSize().rows());
+      Matrix<TypeParam, device> matrix_a(std::move(distribution));
+      copy(reference, matrix_a);
 
-        auto local_taus = eigensolver::reductionToBand<Backend::MC>(comm_grid, matrix_a);
+      // Apply reduction-to-band
+      DLAF_ASSERT(band_size == matrix_a.blockSize().rows(), band_size, matrix_a.blockSize().rows());
 
-        // First basic check: the reduction should not affect the strictly upper part of the input
-        auto check_rest_unchanged = [&reference, &matrix_a](const GlobalElementIndex& index) {
-          const auto& dist = reference.distribution();
-          const auto ij_tile = dist.globalTileIndex(index);
-          const auto ij_element_wrt_tile = dist.tileElementIndex(index);
+      auto local_taus = eigensolver::reductionToBand<Backend::MC>(comm_grid, matrix_a);
 
-          const bool is_in_upper = index.row() < index.col();
+      // First basic check: the reduction should not affect the strictly upper part of the input
+      auto check_rest_unchanged = [&reference, &matrix_a](const GlobalElementIndex& index) {
+        const auto& dist = reference.distribution();
+        const auto ij_tile = dist.globalTileIndex(index);
+        const auto ij_element_wrt_tile = dist.tileElementIndex(index);
 
-          if (!is_in_upper)
-            return matrix_a.read(ij_tile).get()(ij_element_wrt_tile);
-          else
-            return reference.read(ij_tile).get()(ij_element_wrt_tile);
-        };
-        CHECK_MATRIX_NEAR(check_rest_unchanged, matrix_a, 0, TypeUtilities<TypeParam>::error);
+        const bool is_in_upper = index.row() < index.col();
 
-        // The distributed result of reduction to band has the following characteristics:
-        // - just lower part is relevant (diagonal is included)
-        // - it stores the lower part of the band (B)
-        // - and the matrix V with all the reflectors (the 1 component of each reflector is omitted)
+        if (!is_in_upper)
+          return matrix_a.read(ij_tile).get()(ij_element_wrt_tile);
+        else
+          return reference.read(ij_tile).get()(ij_element_wrt_tile);
+      };
+      CHECK_MATRIX_NEAR(check_rest_unchanged, matrix_a, 0, TypeUtilities<TypeParam>::error);
+
+      // The distributed result of reduction to band has the following characteristics:
+      // - just lower part is relevant (diagonal is included)
+      // - it stores the lower part of the band (B)
+      // - and the matrix V with all the reflectors (the 1 component of each reflector is omitted)
+      //
+      // Each rank collects locally the full matrix by storing each part separately
+      // - the B matrix, which is then "completed" by zeroing elements out of the band, and by mirroring the
+      //    existing part of the band
+      // - the V matrix, whose relevant part is the submatrix underneath the band
+
+      auto mat_v = allGather(lapack::MatrixType::Lower, matrix_a, comm_grid);
+      auto mat_b = makeLocal(matrix_a);
+      splitReflectorsAndBand(mat_v, mat_b, band_size);
+
+      // TODO FIXME mat_v can be smaller, but then allGather must copy a submatrix
+      const GlobalTileIndex v_offset{band_size_tiles, 0};
+
+      // Finally, collect locally tau values, which together with V allow to apply the Q transformation
+      auto taus = allGatherTaus(k_reflectors, block_size.rows(), band_size, local_taus, comm_grid);
+      DLAF_ASSERT(to_SizeType(taus.size()) == k_reflectors, taus.size(), k_reflectors);
+
+      // Now that all input are collected locally, it's time to apply the transformation,
+      // ...but just if there is any
+      if (v_offset.isIn(mat_v.nrTiles())) {
+        // Reduction to band returns a sequence of transformations applied from left and right to A
+        // allowing to reduce the matrix A to a band matrix B
         //
-        // Each rank collects locally the full matrix by storing each part separately
-        // - the B matrix, which is then "completed" by zeroing elements out of the band, and by mirroring the
-        //    existing part of the band
-        // - the V matrix, whose relevant part is the submatrix underneath the band
+        // Hn* ... H2* H1* A H1 H2 ... Hn
+        // Q* A Q = B
+        //
+        // Applying the inverse of the same transformations, we can go from B to A
+        // Q B Q* = A
+        // Q = H1 H2 ... Hn
+        // H1 H2 ... Hn B Hn* ... H2* H1*
 
-        auto mat_v = allGather(lapack::MatrixType::Lower, matrix_a, comm_grid);
-        auto mat_b = makeLocal(matrix_a);
-        splitReflectorsAndBand(mat_v, mat_b, band_size);
+        // apply from left...
+        const GlobalTileIndex left_offset{band_size_tiles, 0};
+        const GlobalElementSize left_size{mat_b.size().rows() - band_size, mat_b.size().cols()};
+        lapack::unmqr(lapack::Side::Left, lapack::Op::NoTrans, left_size.rows(), left_size.cols(),
+                      k_reflectors, mat_v.tile_read(v_offset).ptr(), mat_v.ld(), taus.data(),
+                      mat_b.tile(left_offset).ptr(), mat_b.ld());
 
-        // TODO FIXME mat_v can be smaller, but then allGather must copy a submatrix
-        const GlobalTileIndex v_offset{band_size_tiles, 0};
+        // ... and from right
+        const GlobalTileIndex right_offset = common::transposed(left_offset);
+        const GlobalElementSize right_size = common::transposed(left_size);
 
-        // Finally, collect locally tau values, which together with V allow to apply the Q transformation
-        auto taus = allGatherTaus(k_reflectors, block_size.rows(), band_size, local_taus, comm_grid);
-        DLAF_ASSERT(to_SizeType(taus.size()) == k_reflectors, taus.size(), k_reflectors);
-
-        // Now that all input are collected locally, it's time to apply the transformation,
-        // ...but just if there is any
-        if (v_offset.isIn(mat_v.nrTiles())) {
-          // Reduction to band returns a sequence of transformations applied from left and right to A
-          // allowing to reduce the matrix A to a band matrix B
-          //
-          // Hn* ... H2* H1* A H1 H2 ... Hn
-          // Q* A Q = B
-          //
-          // Applying the inverse of the same transformations, we can go from B to A
-          // Q B Q* = A
-          // Q = H1 H2 ... Hn
-          // H1 H2 ... Hn B Hn* ... H2* H1*
-
-          // apply from left...
-          const GlobalTileIndex left_offset{band_size_tiles, 0};
-          const GlobalElementSize left_size{mat_b.size().rows() - band_size, mat_b.size().cols()};
-          lapack::unmqr(lapack::Side::Left, lapack::Op::NoTrans, left_size.rows(), left_size.cols(),
-                        k_reflectors, mat_v.tile_read(v_offset).ptr(), mat_v.ld(), taus.data(),
-                        mat_b.tile(left_offset).ptr(), mat_b.ld());
-
-          // ... and from right
-          const GlobalTileIndex right_offset = common::transposed(left_offset);
-          const GlobalElementSize right_size = common::transposed(left_size);
-
-          lapack::unmqr(lapack::Side::Right, lapack::Op::ConjTrans, right_size.rows(), right_size.cols(),
-                        k_reflectors, mat_v.tile_read(v_offset).ptr(), mat_v.ld(), taus.data(),
-                        mat_b.tile(right_offset).ptr(), mat_b.ld());
-        }
-
-        // Eventually, check the result obtained by applying the inverse transformation equals the original matrix
-        auto result = [& dist = reference.distribution(),
-                       &mat_local = mat_b](const GlobalElementIndex& element) {
-          const auto tile_index = dist.globalTileIndex(element);
-          const auto tile_element = dist.tileElementIndex(element);
-          return mat_local.tile_read(tile_index)(tile_element);
-        };
-        CHECK_MATRIX_NEAR(result, reference, 0,
-                          mat_b.size().linear_size() * TypeUtilities<TypeParam>::error);
+        lapack::unmqr(lapack::Side::Right, lapack::Op::ConjTrans, right_size.rows(), right_size.cols(),
+                      k_reflectors, mat_v.tile_read(v_offset).ptr(), mat_v.ld(), taus.data(),
+                      mat_b.tile(right_offset).ptr(), mat_b.ld());
       }
+
+      // Eventually, check the result obtained by applying the inverse transformation equals the original matrix
+      auto result = [& dist = reference.distribution(),
+                     &mat_local = mat_b](const GlobalElementIndex& element) {
+        const auto tile_index = dist.globalTileIndex(element);
+        const auto tile_element = dist.tileElementIndex(element);
+        return mat_local.tile_read(tile_index)(tile_element);
+      };
+      CHECK_MATRIX_NEAR(result, reference, 0,
+                        mat_b.size().linear_size() * TypeUtilities<TypeParam>::error);
     }
   }
 }

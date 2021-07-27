@@ -101,9 +101,10 @@ int miniapp(hpx::program_options::variables_map& vm) {
 
     double gigaflops = std::numeric_limits<T>::quiet_NaN();
     {
-      // double n = matrix.size().rows();
-      // auto add_mul = n * n * n / 6;
-      // gigaflops = dlaf::total_ops<T>(add_mul, add_mul) / elapsed_time / 1e9;
+      double n = matrix.size().rows();
+      double b = matrix.blockSize().rows();
+      auto add_mul = 2. / 3. * n * n * n - n * n * b;
+      gigaflops = dlaf::total_ops<T>(add_mul, add_mul) / elapsed_time / 1e9;
     }
 
     // print benchmark results

@@ -631,8 +631,6 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
           continue;
 
         const auto j_local = distr.localTileFromGlobalTile<Coord::Col>(j);
-        const auto i_col = distr.localTileFromGlobalTile<Coord::Col>(i);
-        const auto j_row = distr.localTileFromGlobalTile<Coord::Row>(j);
         const LocalTileIndex ki_panel{Coord::Row, i_local};
         const LocalTileIndex kj_panelT{Coord::Col, j_local};
         const LocalTileIndex ij{i_local, j_local};

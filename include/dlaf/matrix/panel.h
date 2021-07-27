@@ -138,7 +138,7 @@ struct Panel<axis, const T, D> {
   /// @pre start <= 1 past the panel last tile
   /// @pre end <= 1 past the panel last tile
   void setRange(GlobalTileIndex start_idx, GlobalTileIndex end_idx) noexcept {
-    DLAF_ASSERT(!hasBeenUsed(), hasBeenUsed());
+    DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
 
     start_ = start_idx.get(CoordType);
     start_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<CoordType>(start_);
@@ -161,7 +161,7 @@ struct Panel<axis, const T, D> {
   /// @pre start <= current end range of the panel
   /// @pre panel offset on construction <= start
   void setRangeStart(GlobalTileIndex start_idx) noexcept {
-    DLAF_ASSERT(!hasBeenUsed(), hasBeenUsed());
+    DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
 
     start_ = start_idx.get(CoordType);
     start_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<CoordType>(start_);
@@ -179,7 +179,7 @@ struct Panel<axis, const T, D> {
   /// @pre current end range of the panel <= end
   /// @pre end <= 1 past the panel last tile
   void setRangeEnd(GlobalTileIndex end_idx) noexcept {
-    DLAF_ASSERT(!hasBeenUsed(), hasBeenUsed());
+    DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
 
     end_ = end_idx.get(CoordType);
     end_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<CoordType>(end_);
@@ -217,7 +217,7 @@ struct Panel<axis, const T, D> {
   /// @pre @param 0 < width <= parentDistribution().block_size().cols()
   template <Coord A = axis, std::enable_if_t<A == axis && Coord::Col == axis, int> = 0>
   void setWidth(SizeType width) noexcept {
-    DLAF_ASSERT(!hasBeenUsed(), hasBeenUsed());
+    DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
     DLAF_ASSERT(width > 0, width);
     DLAF_ASSERT(width <= parentDistribution().blockSize().cols(), width,
                 parentDistribution().blockSize().cols());
@@ -234,7 +234,7 @@ struct Panel<axis, const T, D> {
   /// @pre @param 0 < height <= parentDistribution().block_size().rows()
   template <Coord A = axis, std::enable_if_t<A == axis && Coord::Row == axis, int> = 0>
   void setHeight(SizeType height) noexcept {
-    DLAF_ASSERT(!hasBeenUsed(), hasBeenUsed());
+    DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
     DLAF_ASSERT(height > 0, height);
     DLAF_ASSERT(height <= parentDistribution().blockSize().rows(), height,
                 parentDistribution().blockSize().rows());

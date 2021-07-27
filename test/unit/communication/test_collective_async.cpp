@@ -26,6 +26,7 @@
 #include "dlaf_test/matrix/util_tile.h"
 
 using namespace dlaf;
+using namespace dlaf::matrix::test;
 
 class CollectiveTest : public ::testing::Test {
   static_assert(NUM_MPI_RANKS >= 2, "at least 2 ranks are required");
@@ -36,11 +37,6 @@ protected:
 
   comm::Communicator world = MPI_COMM_WORLD;
 };
-
-template <class T>
-auto fixedValueTile(const T value) {
-  return [value](TileElementIndex const&) { return value; };
-}
 
 template <class T, Device device>
 auto newBlockMatrixContiguous() {
@@ -72,7 +68,7 @@ void testReduceInPlace(comm::Communicator world, matrix::Matrix<T, device> matri
   common::Pipeline<comm::Communicator> chain(world);
 
   const auto root_rank = world.size() - 1;
-  const auto ex_mpi = dlaf::getMPIExecutor<Backend::MC>();
+  const auto ex_mpi = getMPIExecutor<Backend::MC>();
 
   const LocalTileIndex idx(0, 0);
 
@@ -114,7 +110,7 @@ void testAllReduceInPlace(comm::Communicator world, matrix::Matrix<T, device> ma
                           std::string test_name) {
   common::Pipeline<comm::Communicator> chain(world);
 
-  const auto ex_mpi = dlaf::getMPIExecutor<Backend::MC>();
+  const auto ex_mpi = getMPIExecutor<Backend::MC>();
 
   const LocalTileIndex idx(0, 0);
 
@@ -152,7 +148,7 @@ void testAllReduce(comm::Communicator world, matrix::Matrix<T, device> matA,
   common::Pipeline<comm::Communicator> chain(world);
 
   const auto root_rank = world.size() - 1;
-  const auto ex_mpi = dlaf::getMPIExecutor<Backend::MC>();
+  const auto ex_mpi = getMPIExecutor<Backend::MC>();
 
   const LocalTileIndex idx(0, 0);
   matrix::Matrix<T, device>& mat_in = root_rank % 2 == 0 ? matA : matB;

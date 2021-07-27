@@ -218,20 +218,42 @@ TYPED_TEST(PanelTest, ExternalTilesRow) {
 
 template <class TypeParam, Coord panel_axis>
 void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
-  using TypeUtil = TypeUtilities<TypeParam>;
-
   constexpr Coord coord1D = orthogonal(panel_axis);
 
   Matrix<TypeParam, dlaf::Device::CPU> matrix(cfg.sz, cfg.blocksz, comm_grid);
   const auto& dist = matrix.distribution();
 
-  const auto head_loc = dist.template nextLocalTileFromGlobalTile<coord1D>(cfg.offset.get<coord1D>());
-
   Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, cfg.offset);
   static_assert(coord1D == decltype(panel)::CoordType, "coord types mismatch");
 
-  for (SizeType i = head_loc; i < dist.localNrTiles().get(coord1D); ++i)
-    panel(LocalTileIndex(coord1D, i)).get()({0, 0}) = i;
+  auto setTile = [](const auto& tile, TypeParam value) noexcept {
+    tile::laset(lapack::MatrixType::General, value, value, tile);
+  };
+
+  auto setAndCheck = [=, &matrix, &panel](std::string msg, SizeType head_loc, SizeType tail_loc) {
+    const auto message = ::testing::Message()
+                         << msg << " head_loc:" << head_loc << " tail_loc:" << tail_loc;
+
+    EXPECT_EQ(tail_loc - head_loc,
+              std::distance(panel.iteratorLocal().begin(), panel.iteratorLocal().end()));
+
+    SizeType counter = 0;
+    for (SizeType k = head_loc; k < tail_loc; ++k) {
+      const LocalTileIndex idx(coord1D, k);
+      hpx::dataflow(hpx::unwrapping(setTile), panel(idx), counter++);
+      const auto& tile = panel.read(idx).get();
+      SCOPED_TRACE(message);
+      EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
+    }
+
+    counter = 0;
+    for (const auto& idx : panel.iteratorLocal()) {
+      SCOPED_TRACE(message);
+      CHECK_TILE_EQ(fixedValueTile(counter++), panel.read(idx).get());
+      const auto& tile = panel.read(idx).get();
+      EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
+    }
+  };
 
   // Shrink from head
   for (SizeType head = cfg.offset.get<coord1D>(); head <= dist.nrTiles().get(coord1D); ++head) {
@@ -240,52 +262,25 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
     const auto head_loc = dist.template nextLocalTileFromGlobalTile<coord1D>(head);
     const auto tail_loc = dist.localNrTiles().get(coord1D);
 
-    EXPECT_EQ(tail_loc - head_loc,
-              std::distance(panel.iteratorLocal().begin(), panel.iteratorLocal().end()));
+    setAndCheck("head", head_loc, tail_loc);
 
-    for (SizeType k = head_loc; k < tail_loc; ++k) {
-      const LocalTileIndex idx(coord1D, k);
-      auto& tile = panel.read(idx).get();
-      EXPECT_EQ(tile({0, 0}), TypeUtil::element(k, 0));
-      EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
-    }
-
-    for (const auto& idx : panel.iteratorLocal()) {
-      auto& tile = panel.read(idx).get();
-      EXPECT_EQ(tile({0, 0}), TypeUtil::element(idx.get(coord1D), 0));
-      EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
-    }
+    panel.reset();
   }
 
   // Shrink from tail
-  panel.setRangeStart(cfg.offset);
-
   for (SizeType tail = dist.nrTiles().get(coord1D); cfg.offset.get<coord1D>() <= tail; --tail) {
+    panel.setRangeStart(cfg.offset);
     panel.setRangeEnd(GlobalTileIndex(coord1D, tail));
 
     const auto head_loc = dist.template nextLocalTileFromGlobalTile<coord1D>(cfg.offset.get<coord1D>());
     const auto tail_loc = dist.template nextLocalTileFromGlobalTile<coord1D>(tail);
 
-    EXPECT_EQ(tail_loc - head_loc,
-              std::distance(panel.iteratorLocal().begin(), panel.iteratorLocal().end()));
+    setAndCheck("tail", head_loc, tail_loc);
 
-    for (SizeType k = head_loc; k < tail_loc; ++k) {
-      const LocalTileIndex idx(coord1D, k);
-      auto& tile = panel.read(idx).get();
-      EXPECT_EQ(tile({0, 0}), TypeUtil::element(k, 0));
-      EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
-    }
-
-    for (const auto& idx : panel.iteratorLocal()) {
-      auto& tile = panel.read(idx).get();
-      EXPECT_EQ(tile({0, 0}), TypeUtil::element(idx.get(coord1D), 0));
-      EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
-    }
+    panel.reset();
   }
 
   // Shrink from both ends
-  panel.setRangeEnd(indexFromOrigin(dist.nrTiles()));
-
   for (SizeType head = cfg.offset.get<coord1D>(), tail = dist.nrTiles().get(coord1D); head <= tail;
        ++head, --tail) {
     panel.setRange(GlobalTileIndex(coord1D, head), GlobalTileIndex(coord1D, tail));
@@ -293,21 +288,9 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
     const auto head_loc = dist.template nextLocalTileFromGlobalTile<coord1D>(head);
     const auto tail_loc = dist.template nextLocalTileFromGlobalTile<coord1D>(tail);
 
-    EXPECT_EQ(tail_loc - head_loc,
-              std::distance(panel.iteratorLocal().begin(), panel.iteratorLocal().end()));
+    setAndCheck("both ends", head_loc, tail_loc);
 
-    for (SizeType k = head_loc; k < tail_loc; ++k) {
-      const LocalTileIndex idx(coord1D, k);
-      auto& tile = panel.read(idx).get();
-      EXPECT_EQ(tile({0, 0}), TypeUtil::element(k, 0));
-      EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
-    }
-
-    for (const auto& idx : panel.iteratorLocal()) {
-      auto& tile = panel.read(idx).get();
-      EXPECT_EQ(tile({0, 0}), TypeUtil::element(idx.get(coord1D), 0));
-      EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
-    }
+    panel.reset();
   }
 }
 

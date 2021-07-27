@@ -44,7 +44,8 @@ namespace eigensolver {
 ///
 /// where each column of `v` is an elementary reflector without its first element (which is always equal
 /// to 1), `B` are the tiles containg the band-diagonal form, while `*` tiles contain both elements
-/// of the band and of the elementary reflectors.
+/// of the band (upper triangular diagonal included) and of the elementary reflectors (lower triangular
+/// diagonal excluded).
 ///
 /// @param grid is the CommunicatorGrid on which @p mat_a is distributed
 /// @param mat_a on entry it contains an Hermitian matrix, on exit it is overwritten with the

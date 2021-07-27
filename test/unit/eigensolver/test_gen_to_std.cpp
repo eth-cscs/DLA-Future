@@ -129,7 +129,7 @@ TYPED_TEST(EigensolverGenToStdTestMC, CorrectnessLocal) {
   }
 }
 
- TYPED_TEST(EigensolverGenToStdTestMC, CorrectnessDistributed) {
+TYPED_TEST(EigensolverGenToStdTestMC, CorrectnessDistributed) {
   SizeType m, mb;
 
   for (const auto& comm_grid : this->commGrids()) {
@@ -154,7 +154,7 @@ TYPED_TEST(EigensolverGenToStdTestGPU, CorrectnessLocal) {
   }
 }
 
-//TYPED_TEST(EigensolverGenToStdTestGPU, CorrectnessDistributed) {
+// TYPED_TEST(EigensolverGenToStdTestGPU, CorrectnessDistributed) {
 //  SizeType m, mb;
 //
 //  for (const auto& comm_grid : this->commGrids()) {

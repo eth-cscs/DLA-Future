@@ -35,6 +35,8 @@ using T = double;
 using MatrixType = dlaf::Matrix<T, Device::CPU>;
 using ConstMatrixType = dlaf::Matrix<const T, Device::CPU>;
 
+enum class Red2BandCheckIterFreq { None, Last, All };
+
 struct options_t {
   SizeType m;
   SizeType mb;
@@ -42,10 +44,14 @@ struct options_t {
   int grid_cols;
   int64_t nruns;
   int64_t nwarmups;
+  Red2BandCheckIterFreq do_check;
 };
 
 /// Handle CLI options
-options_t check_options(hpx::program_options::variables_map& vm);
+options_t parse_options(hpx::program_options::variables_map& vm);
+
+Red2BandCheckIterFreq parse_red2band_check(const std::string&);
+
 }
 
 int miniapp(hpx::program_options::variables_map& vm) {
@@ -55,7 +61,7 @@ int miniapp(hpx::program_options::variables_map& vm) {
   using dlaf::comm::CommunicatorGrid;
 
   dlaf::initialize(vm);
-  options_t opts = check_options(vm);
+  options_t opts = parse_options(vm);
 
   Communicator world(MPI_COMM_WORLD);
   CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, common::Ordering::ColumnMajor);
@@ -114,6 +120,8 @@ int miniapp(hpx::program_options::variables_map& vm) {
                 << " " << gigaflops << "GFlop/s"
                 << " " << matrix.size() << " " << matrix.blockSize() << " " << comm_grid.size() << " "
                 << hpx::get_os_thread_count() << std::endl;
+
+    // TODO (optional) run test
   }
 
   dlaf::finalize();
@@ -131,12 +139,13 @@ int main(int argc, char** argv) {
 
   // clang-format off
   desc_commandline.add_options()
-    ("matrix-size", value<SizeType>() ->default_value(4), "Matrix rows")
-    ("block-size",  value<SizeType>() ->default_value(2), "Block cyclic distribution size")
-    ("grid-rows",   value<int>()      ->default_value(1), "Number of row processes in the 2D communicator")
-    ("grid-cols",   value<int>()      ->default_value(1), "Number of column processes in the 2D communicator")
-    ("nruns",       value<int64_t>()  ->default_value(1), "Number of runs to compute the cholesky")
-    ("nwarmups",    value<int64_t>()  ->default_value(1), "Number of warmup runs");
+    ("matrix-size",  value<SizeType>()   ->default_value(4),      "Matrix rows")
+    ("block-size",   value<SizeType>()   ->default_value(2),      "Block cyclic distribution size")
+    ("grid-rows",    value<int>()        ->default_value(1),      "Number of row processes in the 2D communicator")
+    ("grid-cols",    value<int>()        ->default_value(1),      "Number of column processes in the 2D communicator")
+    ("nruns",        value<int64_t>()    ->default_value(1),      "Number of runs to compute the cholesky")
+    ("nwarmups",     value<int64_t>()    ->default_value(1),      "Number of warmup runs")
+    ("check-result", value<std::string>()->default_value("none"), "Enable result checking ('none', 'all', 'last')");
   // clang-format on
 
   desc_commandline.add(dlaf::getOptionsDescription());
@@ -149,10 +158,15 @@ int main(int argc, char** argv) {
 
 namespace {
 
-options_t check_options(hpx::program_options::variables_map& vm) {
+options_t parse_options(hpx::program_options::variables_map& vm) {
   options_t opts = {
-      vm["matrix-size"].as<SizeType>(), vm["block-size"].as<SizeType>(), vm["grid-rows"].as<int>(),
-      vm["grid-cols"].as<int>(),        vm["nruns"].as<int64_t>(),       vm["nwarmups"].as<int64_t>(),
+      vm["matrix-size"].as<SizeType>(),
+      vm["block-size"].as<SizeType>(),
+      vm["grid-rows"].as<int>(),
+      vm["grid-cols"].as<int>(),
+      vm["nruns"].as<int64_t>(),
+      vm["nwarmups"].as<int64_t>(),
+      parse_red2band_check(vm["check-result"].as<std::string>()),
   };
 
   DLAF_ASSERT(opts.m > 0, opts.m);
@@ -162,7 +176,25 @@ options_t check_options(hpx::program_options::variables_map& vm) {
   DLAF_ASSERT(opts.nruns > 0, opts.nruns);
   DLAF_ASSERT(opts.nwarmups >= 0, opts.nwarmups);
 
+  if (opts.do_check != Red2BandCheckIterFreq::None) {
+    std::cerr << "Warning! At the moment result checking is not implemented." << std::endl;
+    opts.do_check = Red2BandCheckIterFreq::None;
+  }
+
   return opts;
+}
+
+Red2BandCheckIterFreq parse_red2band_check(const std::string& check) {
+  if (check == "all")
+    return Red2BandCheckIterFreq::All;
+  else if (check == "last")
+    return Red2BandCheckIterFreq::Last;
+  else if (check == "none")
+    return Red2BandCheckIterFreq::None;
+
+  std::cout << "Parsing is not implemented for --check-result=" << check << "!" << std::endl;
+  std::terminate();
+  return Red2BandCheckIterFreq::None;  // unreachable
 }
 
 }

@@ -526,10 +526,10 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
 
     broadcast(executor_mpi, kk_rank.row(), u_panel, u_panelT, mpi_row_task_chain, mpi_col_task_chain);
 
-    // TODO: CHECK continue update previous panels
+    // continue update previous panels
     // Note: The tasks of the final huge TRSM of the HEGST step have been reshuffled to avoid extra
-    //       communication of the matrix L.
-    //       During k-th iteration only the tasks involving the k-th panel of L are executed.
+    //       communication of the matrix U.
+    //       During k-th iteration only the tasks involving the k-th panel of U are executed.
     //       Therefore, all previous panel have to be updated at each step.
     if (kk_rank.col() == this_rank.col()) {
       for (SizeType i_local = 0; i_local < kk_offset.rows(); ++i_local) {
@@ -543,7 +543,7 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
       }
     }
 
-    // No next rows update if last row.
+    // No next rows update if last col.
     if (k < nrtile - 1) {
       broadcast(executor_mpi, kk_rank.col(), a_panelT, mpi_row_task_chain);
 
@@ -576,7 +576,7 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
     if (kk_rank.row() == this_rank.row()) {
       // Note:
       // [a,u]_panelT shrinked to a single tile for temporarly storing and communicating the diagonal
-      // tile used for the column update
+      // tile used for the row update
       a_panelT.setRange({k, k}, {kt, kt});
 
       if (kk_rank.col() == this_rank.col()) {
@@ -598,7 +598,7 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
         a_panel.setTile(kj_panel, mat_a.read(kj));
       }
 
-      // col panel has been used for temporary storage of diagonal panel for column update
+      // col panel has been used for temporary storage of diagonal panel for row update
       a_panelT.reset();
     }
 

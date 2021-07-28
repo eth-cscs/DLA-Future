@@ -103,7 +103,8 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
   }
 
   common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus;
-  taus.reserve(nr_reflector * mb);
+  SizeType nr_reflectors_blocks = std::max<SizeType>(0, dlaf::util::ceilDiv(m - mb - 1, mb));
+  taus.reserve(nr_reflectors_blocks);
 
   common::internal::vector<T> tausloc;
   tausloc.reserve(nr_reflector);

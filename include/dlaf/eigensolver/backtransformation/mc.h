@@ -107,7 +107,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   for (SizeType k = nr_reflector_blocks - 1; k >= 0; --k) {
     bool is_last = (k == nr_reflector_blocks - 1);
     const GlobalTileIndex v_start{k + 1, k};
-    const LocalTileIndex kk{k, k};
 
     auto& panelV = panelsV.nextResource();
     auto& panelW = panelsW.nextResource();

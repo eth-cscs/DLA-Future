@@ -56,17 +56,13 @@ MatrixLocal<T> makeLocal(const Matrix<const T, Device::CPU>& matrix) {
 }
 
 template <class T>
-T getTau(T dotprod, BaseType<T> /*tau_i*/) {
-  T tau = static_cast<T>(2.0) / dotprod;
-  return tau;
+void getTau(T& tau, T dotprod, BaseType<T> /*tau_i*/) {
+  tau = static_cast<T>(2.0) / dotprod;
 }
 
 template <class T>
-std::complex<T> getTau(BaseType<T> dotprod, BaseType<T> tau_i) {
-  std::complex<T> tau = {(static_cast<T>(1.0) + sqrt(static_cast<T>(1.0) - dotprod * tau_i * tau_i)) /
-                             dotprod,
-                         tau_i};
-  return tau;
+void getTau(std::complex<T>& tau, T dotprod, BaseType<T> tau_i) {
+  tau = {(static_cast<T>(1.0) + sqrt(static_cast<T>(1.0) - dotprod * tau_i * tau_i)) / dotprod, tau_i};
 }
 
 template <class T>
@@ -127,7 +123,8 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
       if (std::is_same<T, ComplexType<T>>::value) {
         tau_i = random_value();
       }
-      T tau = static_cast<T>(getTau(dotprod, tau_i));
+      T tau;
+      getTau(tau, dotprod, tau_i);
       tausloc.push_back(tau);
       tau_tile.push_back(tau);
     }

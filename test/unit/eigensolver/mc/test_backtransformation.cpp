@@ -103,7 +103,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
   }
 
   common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus;
-  taus.reserve(nr_reflector);
+  taus.reserve(nr_reflector * mb);
 
   common::internal::vector<T> tausloc;
   tausloc.reserve(nr_reflector);

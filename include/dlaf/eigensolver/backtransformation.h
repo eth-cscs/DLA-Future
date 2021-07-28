@@ -42,9 +42,9 @@ void backTransformation(Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v
 
   const SizeType m = mat_v.size().rows();
   const SizeType mb = mat_v.blockSize().rows();
-  const auto nr_reflectors =
-      (mb == 1 || m % mb == 1) ? (mat_v.nrTiles().rows() - 2) : (mat_v.nrTiles().rows() - 1);
-  DLAF_ASSERT(taus.size() == nr_reflectors, taus.size(), mat_v, nr_reflectors);
+  SizeType nr_reflectors_blocks =
+      std::max(static_cast<SizeType>(0), static_cast<SizeType>(util::ceilDiv(m - mb - 1, mb)));
+  DLAF_ASSERT(taus.size() == nr_reflectors_blocks, taus.size(), mat_v, nr_reflectors_blocks);
 
   internal::BackTransformation<backend, device, T>::call_FC(mat_c, mat_v, taus);
 }

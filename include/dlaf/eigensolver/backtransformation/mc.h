@@ -159,7 +159,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     matrix::util::set0(executor_hp, panelW2);
     LocalTileIndex c_start{k + 1, 0};
     LocalTileIndex c_end{m, n};
-    common::IterableRange2D c_k = iterate_range2d(c_start, c_end);
+    auto c_k = iterate_range2d(c_start, c_end);
     for (const auto& idx : c_k) {
       auto kj = LocalTileIndex{k, idx.col()};
       auto ik = LocalTileIndex{idx.row(), k};

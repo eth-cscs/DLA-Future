@@ -36,6 +36,8 @@ void backTransformation(Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v
                         common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
   DLAF_ASSERT(matrix::local_matrix(mat_c), mat_c);
   DLAF_ASSERT(matrix::local_matrix(mat_v), mat_v);
+  DLAF_ASSERT(square_size(mat_v), mat_v);
+  DLAF_ASSERT(square_blocksize(mat_v), mat_v);
   DLAF_ASSERT(mat_c.blockSize().rows() == mat_v.blockSize().rows(), mat_c, mat_v);
 
   const SizeType m = mat_v.size().rows();

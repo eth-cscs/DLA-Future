@@ -56,18 +56,17 @@ MatrixLocal<T> makeLocal(const Matrix<const T, Device::CPU>& matrix) {
 }
 
 template <class T>
-void set_zero(Matrix<T, Device::CPU>& mat) {
-  dlaf::matrix::util::set(mat, [](auto&&) { return static_cast<T>(0.0); });
+T getTau(T dotprod, BaseType<T> /*tau_i*/) {
+  T tau = static_cast<T>(2.0) / dotprod;
+  return tau;
 }
 
 template <class T>
-void getTau(T& tau, T dotprod, BaseType<T> /*tau_i*/) {
-  tau = static_cast<T>(2.0) / dotprod;
-}
-
-template <class T>
-void getTau(std::complex<T>& tau, T dotprod, BaseType<T> tau_i) {
-  tau = {(static_cast<T>(1.0) + sqrt(static_cast<T>(1.0) - dotprod * tau_i * tau_i)) / dotprod, tau_i};
+std::complex<T> getTau(BaseType<T> dotprod, BaseType<T> tau_i) {
+  std::complex<T> tau = {(static_cast<T>(1.0) + sqrt(static_cast<T>(1.0) - dotprod * tau_i * tau_i)) /
+                             dotprod,
+                         tau_i};
+  return tau;
 }
 
 template <class T>
@@ -90,12 +89,8 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
   // Reset diagonal and upper values of V
   MatrixLocal<T> v({m, m}, blockSizeV);
   for (const auto& ij_tile : iterate_range2d(v.nrTiles())) {
-    // copy only the panel
     const auto& source_tile = mat_v.read(ij_tile).get();
-    if (ij_tile.row() <= ij_tile.col()) {
-      tile::set0<T>(v.tile(ij_tile));
-    }
-    else if (ij_tile.row() == ij_tile.col() + 1) {
+    if (ij_tile.row() == ij_tile.col() + 1) {
       copy(source_tile, v.tile(ij_tile));
       tile::laset<T>(lapack::MatrixType::Upper, 0.f, 1.f, v.tile(ij_tile));
     }
@@ -107,12 +102,12 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
   // Create C local
   MatrixLocal<T> c({m, n}, blockSizeC);
   for (const auto& ij_tile : iterate_range2d(c.nrTiles())) {
-    // copy only the panel
     const auto& source_tile = mat_c.read(ij_tile).get();
     copy(source_tile, c.tile(ij_tile));
   }
 
   common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus;
+  taus.reserve(nr_reflector);
 
   common::internal::vector<T> tausloc;
   tausloc.reserve(nr_reflector);
@@ -132,15 +127,14 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
       if (std::is_same<T, ComplexType<T>>::value) {
         tau_i = random_value();
       }
-      T tau;
-      getTau(tau, dotprod, tau_i);
+      T tau = static_cast<T>(getTau(dotprod, tau_i));
       tausloc.push_back(tau);
       tau_tile.push_back(tau);
     }
     taus.push_back(hpx::make_ready_future(tau_tile));
   }
 
-  for (SizeType j = nr_reflector - 1; j > -1; --j) {
+  for (SizeType j = nr_reflector - 1; j >= 0; --j) {
     const GlobalElementIndex v_offset{j + mb, j};
     auto tau = tausloc[j];
     lapack::larf(lapack::Side::Left, m - mb - j, n, v.ptr(v_offset), 1, tau,

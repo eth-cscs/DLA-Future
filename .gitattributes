@@ -1,0 +1,4 @@
+* text=auto
+
+# all files recognized as text by git will be forced to have LF as line ending
+text eol=lf

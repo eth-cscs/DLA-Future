@@ -238,6 +238,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
   for (SizeType k = 0; k < nrtile; ++k) {
     const GlobalTileIndex kk{k, k};
     const comm::Index2D kk_rank = distr.rankGlobalTile(kk);
+    const GlobalTileIndex at{k + 1, k + 1};
 
     const LocalTileSize kk_offset{
         distr.nextLocalTileFromGlobalTile<Coord::Row>(k),
@@ -253,9 +254,9 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
     auto& l_panelT = l_panelsT.nextResource();
     auto& a_panel = a_panels.nextResource();
     auto& a_panelT = a_panelsT.nextResource();
-    l_panel.setRangeStart({k, k});
-    l_panelT.setRangeStart({k, k});
-    a_panelT.setRange({0, 0}, {k, k});
+    l_panel.setRangeStart(kk);
+    l_panelT.setRangeStart(kk);
+    a_panelT.setRange({0, 0}, kk);
 
     if (k == nrtile - 1) {
       l_panel.setWidth(distr.tileSize(kk).cols());
@@ -316,14 +317,14 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 
     const LocalTileIndex diag_wp_idx{0, kk_offset.cols()};
 
-    a_panel.setRangeStart({k + 1, k + 1});
+    a_panel.setRangeStart(at);
 
     hpx::shared_future<matrix::Tile<const T, device>> a_diag;
     if (kk_rank.col() == this_rank.col()) {
       // Note:
       // [a,l]_panelT shrinked to a single tile for temporarly storing and communicating the diagonal
       // tile used for the column update
-      a_panelT.setRange({k, k}, {k + 1, k + 1});
+      a_panelT.setRange(kk, at);
 
       if (kk_rank.row() == this_rank.row()) {
         a_panelT.setTile(diag_wp_idx, mat_a.read(kk));
@@ -348,7 +349,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
       a_panelT.reset();
     }
 
-    a_panelT.setRange({k + 1, k + 1}, common::indexFromOrigin(distr.nrTiles()));
+    a_panelT.setRange(at, common::indexFromOrigin(distr.nrTiles()));
 
     broadcast(executor_mpi, kk_rank.col(), a_panel, a_panelT, mpi_row_task_chain, mpi_col_task_chain);
 
@@ -490,7 +491,7 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
   for (SizeType k = 0; k < nrtile; ++k) {
     const GlobalTileIndex kk{k, k};
     const comm::Index2D kk_rank = distr.rankGlobalTile(kk);
-    const auto kt = k + 1;
+    const GlobalTileIndex at{k + 1, k + 1};
 
     const LocalTileSize kk_offset{
         distr.nextLocalTileFromGlobalTile<Coord::Row>(k),
@@ -498,17 +499,17 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
     };
 
     const LocalTileSize at_offset{
-        distr.nextLocalTileFromGlobalTile<Coord::Row>(kt),
-        distr.nextLocalTileFromGlobalTile<Coord::Col>(kt),
+        distr.nextLocalTileFromGlobalTile<Coord::Row>(k + 1),
+        distr.nextLocalTileFromGlobalTile<Coord::Col>(k + 1),
     };
 
     auto& u_panel = u_panels.nextResource();
     auto& u_panelT = u_panelsT.nextResource();
     auto& a_panel = a_panels.nextResource();
     auto& a_panelT = a_panelsT.nextResource();
-    u_panel.setRangeStart({k, k});
-    u_panelT.setRangeStart({k, k});
-    a_panelT.setRange({0, 0}, {k, k});
+    u_panel.setRangeStart(kk);
+    u_panelT.setRangeStart(kk);
+    a_panelT.setRange({0, 0}, kk);
 
     if (k == nrtile - 1) {
       u_panel.setHeight(distr.tileSize(kk).rows());
@@ -570,14 +571,14 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
 
     const LocalTileIndex diag_wp_idx{kk_offset.rows(), 0};
 
-    a_panel.setRangeStart({kt, kt});
+    a_panel.setRangeStart(at);
 
     hpx::shared_future<matrix::Tile<const T, device>> a_diag;
     if (kk_rank.row() == this_rank.row()) {
       // Note:
       // [a,u]_panelT shrinked to a single tile for temporarly storing and communicating the diagonal
       // tile used for the row update
-      a_panelT.setRange({k, k}, {kt, kt});
+      a_panelT.setRange(kk, at);
 
       if (kk_rank.col() == this_rank.col()) {
         a_panelT.setTile(diag_wp_idx, mat_a.read(kk));
@@ -602,12 +603,12 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
       a_panelT.reset();
     }
 
-    a_panelT.setRange({kt, kt}, common::indexFromOrigin(distr.nrTiles()));
+    a_panelT.setRange(at, common::indexFromOrigin(distr.nrTiles()));
 
     broadcast(executor_mpi, kk_rank.row(), a_panel, a_panelT, mpi_row_task_chain, mpi_col_task_chain);
 
     // trailing matrix update
-    for (SizeType i = kt; i < nrtile; ++i) {
+    for (SizeType i = k + 1; i < nrtile; ++i) {
       const auto owner = distr.rankGlobalTile({i, i});
 
       if (owner.row() != this_rank.row())
@@ -615,7 +616,7 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
 
       const auto i_local = distr.localTileFromGlobalTile<Coord::Row>(i);
       // first trailing panel gets high priority (look ahead).
-      auto& trailing_matrix_executor = (i == kt) ? executor_hp : executor_np;
+      auto& trailing_matrix_executor = (i == k + 1) ? executor_hp : executor_np;
       if (this_rank.col() == owner.col()) {
         const auto j_local = distr.localTileFromGlobalTile<Coord::Col>(i);
 

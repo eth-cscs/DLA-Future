@@ -276,7 +276,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
     // Note: The tasks of the final huge TRSM of the HEGST step have been reshuffled to avoid extra
     //       communication of the matrix L.
     //       During k-th iteration only the tasks involving the k-th panel of L are executed.
-    //       Therefore, all previous panel have to be updated at each step.
+    //       Therefore, all previous panels have to be updated at each step.
     if (kk_rank.row() == this_rank.row()) {
       for (SizeType j_local = 0; j_local < kk_offset.cols(); ++j_local) {
         const LocalTileIndex kk_panel(Coord::Row, kk_offset.rows());
@@ -530,7 +530,7 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
     // Note: The tasks of the final huge TRSM of the HEGST step have been reshuffled to avoid extra
     //       communication of the matrix U.
     //       During k-th iteration only the tasks involving the k-th panel of U are executed.
-    //       Therefore, all previous panel have to be updated at each step.
+    //       Therefore, all previous panels have to be updated at each step.
     if (kk_rank.col() == this_rank.col()) {
       for (SizeType i_local = 0; i_local < kk_offset.rows(); ++i_local) {
         const LocalTileIndex kk_panel(Coord::Col, kk_offset.cols());

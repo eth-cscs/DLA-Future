@@ -16,5 +16,3 @@ DLAF_addTest(test_gen_to_std
   USE_MAIN MPIHPX
   MPIRANKS 6
 )
-
-add_subdirectory(mc)

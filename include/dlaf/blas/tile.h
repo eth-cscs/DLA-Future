@@ -52,7 +52,8 @@ void hemm(const blas::Side side, const blas::Uplo uplo, const T alpha,
 /// Performs a rank 2k update of hermitian (symmetric if T is real) tile a.
 template <class T>
 void her2k(const blas::Uplo uplo, const blas::Op op, const T alpha, const Tile<const T, Device::CPU>& a,
-           const Tile<const T, Device::CPU>& b, const BaseType<T> beta, const Tile<T, Device::CPU>& c) {
+           const Tile<const T, Device::CPU>& b, const BaseType<T> beta,
+           const Tile<T, Device::CPU>& c) noexcept {
   auto s = tile::internal::getHer2kSizes(op, a, b, c);
   blas::her2k(blas::Layout::ColMajor, uplo, op, s.n, s.k, alpha, a.ptr(), a.ld(), b.ptr(), b.ld(), beta,
               c.ptr(), c.ld());

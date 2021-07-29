@@ -8,6 +8,13 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+DLAF_addTest(test_reduction_to_band
+  SOURCES test_reduction_to_band.cpp
+  LIBRARIES dlaf.eigensolver dlaf.core
+  USE_MAIN MPIHPX
+  MPIRANKS 6
+)
+
 DLAF_addTest(test_backtransformation
   SOURCES test_backtransformation.cpp
   LIBRARIES dlaf.eigensolver dlaf.core

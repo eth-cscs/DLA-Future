@@ -20,6 +20,10 @@ if (DLAF_BUILD_TESTING)
   target_add_warnings(miniapp_triangular_solver)
 endif()
 
+add_executable(miniapp_reduction_to_band miniapp_reduction_to_band.cpp)
+target_link_libraries(miniapp_reduction_to_band PRIVATE DLAF)
+target_add_warnings(miniapp_reduction_to_band)
+
 if(DLAF_WITH_CUDA)
   add_executable(miniapp_cublas miniapp_cublas.cpp)
   target_link_libraries(miniapp_cublas PRIVATE DLAF)

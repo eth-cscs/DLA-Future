@@ -10,6 +10,7 @@
 #pragma once
 
 #include <blas.hh>
+#include "dlaf/eigensolver/backtransformation/impl-t2b.h"
 #include "dlaf/eigensolver/backtransformation/mc.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
@@ -48,5 +49,23 @@ void backTransformation(Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v
   internal::BackTransformation<backend, device, T>::call_FC(mat_c, mat_v, taus);
 }
 
+// TODO DOC
+template <Backend backend, Device device, class T>
+void backTransformationT2B(matrix::Matrix<T, device>& mat_e, matrix::Matrix<const T, device>& mat_v,
+                           matrix::Matrix<const T, device>& mat_taus) {
+  // TODO check conditions
+  DLAF_ASSERT(matrix::local_matrix(mat_e), mat_e);
+  DLAF_ASSERT(matrix::local_matrix(mat_v), mat_v);
+
+  DLAF_ASSERT(matrix::square_size(mat_v), mat_v);
+  DLAF_ASSERT(matrix::square_blocksize(mat_v), mat_v);
+
+  DLAF_ASSERT(matrix::equal_size(mat_v, mat_taus), mat_v, mat_taus);
+  DLAF_ASSERT(matrix::equal_blocksize(mat_v, mat_taus), mat_v, mat_taus);
+
+  // TODO check taus with respect to v
+
+  internal::BackTransformationT2B<backend, device, T>::call(mat_e, mat_v, mat_taus);
+}
 }
 }

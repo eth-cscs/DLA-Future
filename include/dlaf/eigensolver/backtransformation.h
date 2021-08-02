@@ -10,7 +10,9 @@
 #pragma once
 
 #include <blas.hh>
+
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/eigensolver/backtransformation/impl-t2b.h"
 #include "dlaf/eigensolver/backtransformation/mc.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
@@ -83,5 +85,19 @@ void backTransformation(comm::CommunicatorGrid grid, Matrix<T, device>& mat_c,
   internal::BackTransformation<backend, device, T>::call_FC(grid, mat_c, mat_v, taus);
 }
 
+// TODO DOC
+// @param mat_i matrix containing reflectors together with taus (compact form)
+template <Backend backend, Device device, class T>
+void backTransformationT2B(matrix::Matrix<T, device>& mat_e, matrix::Matrix<const T, device>& mat_i) {
+  // TODO check conditions
+
+  DLAF_ASSERT(matrix::local_matrix(mat_e), mat_e);
+  DLAF_ASSERT(matrix::local_matrix(mat_i), mat_i);
+
+  DLAF_ASSERT(matrix::square_size(mat_i), mat_i);
+  DLAF_ASSERT(matrix::square_blocksize(mat_i), mat_i);
+
+  internal::BackTransformationT2B<backend, device, T>::call(mat_e, mat_i);
+}
 }
 }

@@ -18,15 +18,15 @@ else
     ctest -Q $@
 fi
 
-popd > /dev/null
-
 # Create coverage reports for code run
 if [[ "$ENABLE_COVERAGE" == "YES" ]]; then
     TZ=CET date +"Start creating codecov reports from rank $SLURM_PROCID at: %H:%M:%S %z"
 
-    fastcov --gcov gcov-9 --process-gcno --branch-coverage --include /DLA-Future --exclude /DLA-Future/test/ /DLA-Future/miniapp --verbose --lcov -o "$LOCAL_REPORTS/run.info" &> /dev/null
+    fastcov --gcov gcov --process-gcno --branch-coverage --include /DLA-Future/ --exclude /DLA-Future/test/ /DLA-Future/miniapp/ --lcov -o "$LOCAL_REPORTS/run.info" &> /dev/null
 
     cp "$LOCAL_REPORTS/combined.info" "$SHARED_REPORTS/codecov-$REPORT_NAME.info"
 
     TZ=CET date +"Done creating codecov reports from rank $SLURM_PROCID at: %H:%M:%S %z"
 fi
+
+popd > /dev/null

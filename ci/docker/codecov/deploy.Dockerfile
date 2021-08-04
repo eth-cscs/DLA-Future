@@ -64,18 +64,18 @@ ARG BUILD
 ARG SOURCE
 ARG DEPLOY
 
-# Install perl to make lcov happy
+# python and pip are needed for fastcov
 # codecov upload needs curl + ca-certificates
 # tzdata is needed to print correct time
 RUN apt-get update -qq && \
     apt-get install -qq -y --no-install-recommends \
-      perl \
-      libperlio-gzip-perl \
-      libjson-perl \
+      python3 python3-pip \
       curl \
       ca-certificates \
       tzdata && \
     rm -rf /var/lib/apt/lists/*
+
+RUN pip install fastcov
 
 # Copy the executables and the codecov gcno files
 COPY --from=builder ${BUILD} ${BUILD}
@@ -108,7 +108,3 @@ ENV LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so
 RUN echo "${DEPLOY}/usr/lib/" > /etc/ld.so.conf.d/dlaf.conf && ldconfig
 
 WORKDIR ${BUILD}
-
-ENV LOCAL_REPORTS /codecov-reports
-RUN mkdir -p ${LOCAL_REPORTS} && \
-    lcov --no-external --capture --initial --base-directory /DLA-Future --directory /DLA-Future-build --output-file "${LOCAL_REPORTS}/baseline-codecov.info"

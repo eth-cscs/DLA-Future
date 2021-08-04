@@ -24,16 +24,7 @@ popd > /dev/null
 if [[ "$ENABLE_COVERAGE" == "YES" ]]; then
     TZ=CET date +"Start creating codecov reports from rank $SLURM_PROCID at: %H:%M:%S %z"
 
-    lcov --no-external --capture --base-directory /DLA-Future --directory /DLA-Future-build --output-file "$LOCAL_REPORTS/run.info" &> /dev/null
-
-    lcov --add-tracefile "$LOCAL_REPORTS/baseline-codecov.info" --add-tracefile "$LOCAL_REPORTS/run.info" --output-file "$LOCAL_REPORTS/combined.info" &> /dev/null
-
-    # Only keep our own source
-    lcov --extract "$LOCAL_REPORTS/combined.info" "/DLA-Future/*" --output-file "$LOCAL_REPORTS/combined.info" &> /dev/null
-
-    # exclude miniapp/ and test/
-    lcov --remove "$LOCAL_REPORTS/combined.info" "/DLA-Future/miniapp/*" --output-file "$LOCAL_REPORTS/combined.info" &> /dev/null
-    lcov --remove "$LOCAL_REPORTS/combined.info" "/DLA-Future/test/*" --output-file "$LOCAL_REPORTS/combined.info" &> /dev/null
+    fastcov --gcov gcov-9 --process-gcno --branch-coverage --include /DLA-Future --exclude /DLA-Future/test/ /DLA-Future/miniapp --verbose --lcov -o "$LOCAL_REPORTS/run.info" &> /dev/null
 
     cp "$LOCAL_REPORTS/combined.info" "$SHARED_REPORTS/codecov-$REPORT_NAME.info"
 

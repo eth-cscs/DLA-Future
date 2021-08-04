@@ -63,7 +63,9 @@ ARG BUILD
 ARG SOURCE
 ARG DEPLOY
 
-# python and pip are needed for fastcov
+# python is needed for fastcov
+# pip is needed only to install fastcov (it is removed with
+#     its dependencies after fastcov installation)
 # codecov upload needs curl + ca-certificates
 # tzdata is needed to print correct time
 RUN apt-get update -qq && \
@@ -72,9 +74,10 @@ RUN apt-get update -qq && \
       curl \
       ca-certificates \
       tzdata && \
-    rm -rf /var/lib/apt/lists/*
+    pip install fastcov && \
+    apt-get autoremove -qq -y python3-pip && \
+    apt-get clean
 
-RUN pip install fastcov
 
 # Copy the executables and the codecov gcno files
 COPY --from=builder ${BUILD} ${BUILD}

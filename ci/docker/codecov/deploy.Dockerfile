@@ -48,7 +48,6 @@ RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
     rm -rf ${DEPLOY}/usr/bin && \
     libtree -d ${DEPLOY} $(which ctest gcov addr2line) && \
     cp -L ${SOURCE}/ci/{mpi-ctest,upload_codecov} ${DEPLOY}/usr/bin && \
-    cp -L $(which lcov) $(which geninfo) ${DEPLOY}/usr/bin && \
     echo "$TEST_BINARIES" | xargs -I{file} find -samefile {file} -exec cp --parents '{}' ${BUILD}-tmp ';' && \
     find '(' -name CTestTestfile.cmake -o -iname "*.gcno" ')' -exec cp --parent '{}' ${BUILD}-tmp ';' && \
     rm -rf ${BUILD} && \

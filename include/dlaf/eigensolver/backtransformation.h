@@ -51,7 +51,8 @@ void backTransformation(Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v
 
 // TODO DOC
 template <Backend backend, Device device, class T>
-void backTransformationT2B(matrix::Matrix<T, device>& mat_e, matrix::Matrix<const T, device>& mat_v,
+void backTransformationT2B(SizeType band_size, matrix::Matrix<T, device>& mat_e,
+                           matrix::Matrix<const T, device>& mat_v,
                            matrix::Matrix<const T, device>& mat_taus) {
   // TODO check conditions
   DLAF_ASSERT(matrix::local_matrix(mat_e), mat_e);
@@ -63,9 +64,11 @@ void backTransformationT2B(matrix::Matrix<T, device>& mat_e, matrix::Matrix<cons
   DLAF_ASSERT(matrix::equal_size(mat_v, mat_taus), mat_v, mat_taus);
   DLAF_ASSERT(matrix::equal_blocksize(mat_v, mat_taus), mat_v, mat_taus);
 
+  DLAF_ASSERT(mat_v.blockSize().rows() % band_size == 0, mat_v.blockSize(), band_size);
+
   // TODO check taus with respect to v
 
-  internal::BackTransformationT2B<backend, device, T>::call(mat_e, mat_v, mat_taus);
+  internal::BackTransformationT2B<backend, device, T>::call(band_size, mat_e, mat_v, mat_taus);
 }
 }
 }

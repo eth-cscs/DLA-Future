@@ -127,8 +127,8 @@ auto computeW2(SizeType b, hpx::future<matrix::Tile<T, Device::CPU>> tile_w2,
       const SizeType size = (b - 1) - j;
 
       gemm(Layout::ColMajor, Op::ConjTrans, Op::NoTrans, 1, tile_e.size().cols(), size, T(1),
-           tile_v.ptr({0, j}), tile_v.ld(), tile_e.ptr({j + 1, 0}), tile_e.ld(), T(1),
-           tile_w2.ptr({j, 0}), tile_w2.ld());
+           tile_v.ptr({0, 0}), tile_v.ld(), tile_e.ptr({j + 1, 0}), tile_e.ld(), T(1),
+           tile_w2.ptr({0, 0}), tile_w2.ld());
     }
 
     return std::move(tile_w2);
@@ -160,21 +160,30 @@ auto computeW2(SizeType b, hpx::future<matrix::Tile<T, Device::CPU>> tile_w2,
 }
 
 template <class T>
+auto updateE(hpx::future<matrix::Tile<T, Device::CPU>> tile_e,
+             hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_w,
+             hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_w2) {
+  using blas::Op;
+  hpx::dataflow(hpx::unwrapping(tile::gemm_o), Op::NoTrans, Op::NoTrans, T(-1), tile_w, tile_w2, T(1),
+                std::move(tile_e));
+}
+
+template <class T>
 struct BackTransformationT2B<Backend::MC, Device::CPU, T> {
-  static void call(Matrix<T, Device::CPU>& mat_e, Matrix<const T, Device::CPU>& mat_v,
-                   Matrix<const T, Device::CPU>& mat_taus);
+  static void call(SizeType band_size, Matrix<T, Device::CPU>& mat_e,
+                   Matrix<const T, Device::CPU>& mat_v, Matrix<const T, Device::CPU>& mat_taus);
 };
 
 template <class T>
-void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& mat_e,
+void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(SizeType band_size,
+                                                              Matrix<T, Device::CPU>& mat_e,
                                                               Matrix<const T, Device::CPU>& mat_v,
                                                               Matrix<const T, Device::CPU>& mat_taus) {
   using matrix::Panel;
   using common::RoundRobin;
   using common::iterate_range2d;
 
-  const SizeType band_size = mat_v.blockSize().rows();
-  const SizeType m = mat_e.nrTiles().rows();
+  const SizeType mb = mat_v.blockSize().rows();
   const SizeType n = mat_e.nrTiles().cols();
 
   constexpr std::size_t n_workspaces = 2;
@@ -191,58 +200,166 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
       auto& mat_t = t_panels.nextResource();
       mat_t.setRange(GlobalTileIndex(i_v, 0), GlobalTileIndex(i_v + 1, 0));
 
-      const auto& tile_v = mat_v.read(ij_refls);
-      const auto& tile_taus = mat_taus.read(ij_refls);
-      const auto& tile_t = computeTFactor(band_size, mat_t(LocalTileIndex(i_v, 0)), tile_v, tile_taus);
-
-      // COMPUTE W = V T
       auto& mat_w = w_panels.nextResource();
       mat_w.setRange(GlobalTileIndex(i_v, 0), GlobalTileIndex(i_v + (affectsTwoRows ? 2 : 1), 0));
 
-      if (affectsTwoRows)
-        computeW(band_size, mat_w(ij_refls), mat_w(ij_refls + LocalTileSize(1, 0)), tile_v, tile_t);
-      else
-        computeW(band_size, mat_w(ij_refls), tile_v, tile_t);
-
-      // PRINT_MATRIX("W", mat_w);
-
-      // COMPUTE W2 = V* E
       auto& mat_w2 = w2_panels.nextResource();
 
-      for (SizeType j = 0; j < n; ++j) {
-        if (affectsTwoRows) {
-          const auto& tile_e_up = mat_e.read(LocalTileIndex(i_v, j));
-          const auto& tile_e_down = mat_e.read(LocalTileIndex(i_v + 1, j));
-          computeW2(band_size, mat_w2(LocalTileIndex(0, j)), tile_v, tile_e_up, tile_e_down);
-        }
-        else {
-          computeW2(band_size, mat_w2(LocalTileIndex(0, j)), tile_v, mat_e.read(LocalTileIndex(i_v, j)));
+      auto tile_t = mat_t(LocalTileIndex(i_v, 0));
+      auto tile_v = mat_v.read(ij_refls);
+      auto tile_taus = mat_taus.read(ij_refls);
+
+      const auto i_tile_edge = mb - band_size;
+      for (SizeType j_subv = mb - band_size; j_subv >= 0; j_subv -= band_size) {
+        for (SizeType i_subv = 0; i_subv < mb; i_subv += band_size) {
+          const auto i_skewed = i_subv + j_subv;
+          const bool onTileEdge = i_skewed == i_tile_edge;
+
+          if (!affectsTwoRows && i_skewed >= mb)  // TODO
+            continue;
+
+          // COMPUTE Tfactor
+          auto subtile_v = splitTile(tile_v, {{i_subv, j_subv}, {band_size, band_size}});
+          auto subtile_taus = splitTile(tile_taus, {{i_subv, j_subv}, {band_size, band_size}});
+          auto subtile_t_rw = splitTile(tile_t, {{i_subv, j_subv}, {band_size, band_size}});
+
+          auto subtile_t = computeTFactor(band_size, std::move(subtile_t_rw), subtile_v, subtile_taus);
+
+          // COMPUTE W = V T
+          std::vector<hpx::future<matrix::Tile<T, Device::CPU>>> tiles_w_rw;
+          tiles_w_rw.emplace_back(mat_w(ij_refls));
+          if (affectsTwoRows)
+            tiles_w_rw.emplace_back(mat_w(ij_refls + LocalTileSize(1, 0)));
+
+          if (onTileEdge) {
+            if (affectsTwoRows) {
+              auto subtile_w_up =
+                  splitTile(tiles_w_rw[0], {{mb - band_size, j_subv}, {band_size, band_size}});
+              auto subtile_w_dn = splitTile(tiles_w_rw[1], {{0, j_subv}, {band_size, band_size}});
+              computeW(band_size, std::move(subtile_w_up), std::move(subtile_w_dn), subtile_v,
+                       subtile_t);
+            }
+            else {
+              auto subtile_w_up = splitTile(tiles_w_rw[0], {{i_subv, j_subv}, {band_size, band_size}});
+              computeW(band_size, std::move(subtile_w_up), subtile_v, subtile_t);
+            }
+          }
+          else {
+            auto tile_w = std::move(tiles_w_rw[i_skewed < mb ? 0 : 1]);
+            auto subtiles_w =
+                splitTileDisjoint(tile_w,
+                                  {{{i_skewed % mb, j_subv}, {band_size, band_size}},
+                                   {{(i_skewed + band_size) % mb, j_subv}, {band_size, band_size}}});
+            computeW(band_size, std::move(subtiles_w[0]), std::move(subtiles_w[1]), subtile_v,
+                     subtile_t);
+          }
+
+          // COMPUTE W2 = V* E
+          const TileElementSize w2_subtile_sz(band_size, mat_e.blockSize().cols());
+          for (SizeType j_e = 0; j_e < n; ++j_e) {
+            auto tile_w2 = mat_w2(LocalTileIndex(j_v, j_e));
+            auto subtile_w2 = splitTile(tile_w2, {{j_subv, 0}, w2_subtile_sz});
+
+            auto tile_e_up = mat_e.read(LocalTileIndex(i_v, j_e));
+
+            if (onTileEdge) {
+              if (affectsTwoRows) {
+                auto tile_e_dn = mat_e.read(LocalTileIndex(i_v + 1, j_e));
+                auto subtile_e_up = splitTile(tile_e_up, {{mb - band_size, 0}, w2_subtile_sz});
+                auto subtile_e_dn = splitTile(tile_e_dn, {{0, 0}, w2_subtile_sz});
+                computeW2(band_size, std::move(subtile_w2), subtile_v, subtile_e_up, subtile_e_dn);
+              }
+              else {
+                auto subtile_e = splitTile(tile_e_up, {{i_skewed % mb, 0}, w2_subtile_sz});
+                computeW2(band_size, std::move(subtile_w2), subtile_v, subtile_e);
+              }
+            }
+            else {
+              decltype(tile_e_up) tile_e;
+
+              if (affectsTwoRows)
+                tile_e = (i_skewed < mb) ? tile_e_up : mat_e.read(LocalTileIndex(i_v + 1, j_e));
+              else
+                tile_e = tile_e_up;
+
+              auto subtiles_e = splitTile(tile_e, {
+                                                      {{i_skewed % mb, 0}, w2_subtile_sz},
+                                                      {{(i_skewed + band_size) % mb, 0}, w2_subtile_sz},
+                                                  });
+              computeW2(band_size, std::move(subtile_w2), subtile_v, subtiles_e[0], subtiles_e[1]);
+            }
+          }
+
+          // COMPUTE E -= W @ W2
+          for (SizeType j_e = 0; j_e < n; ++j_e) {
+            auto tile_e_up = mat_e(LocalTileIndex(i_v, j_e));
+            auto tile_w_up = mat_w.read(LocalTileIndex(i_v, j_e));
+            auto tile_w2 = mat_w2.read(LocalTileIndex(i_v, j_e));
+
+            auto subtile_w2 = splitTile(tile_w2, {{j_subv, 0}, {w2_subtile_sz}});
+
+            if (onTileEdge) {
+              if (affectsTwoRows) {
+                auto tile_e_dn = mat_e(LocalTileIndex(i_v + 1, j_e));
+                auto tile_w_dn = mat_w.read(LocalTileIndex(i_v + 1, j_e));
+
+                auto subtile_e_up = splitTile(tile_e_up, {{mb - band_size + 1, 0},
+                                                          {band_size - 1, w2_subtile_sz.cols()}});
+                auto subtile_e_dn = splitTile(tile_e_dn, {{0, 0}, w2_subtile_sz});
+
+                auto subtile_w_up =
+                    splitTile(tile_w_up, {{mb - band_size + 1, j_subv}, {band_size - 1, band_size}});
+                auto subtile_w_dn = splitTile(tile_w_dn, {{0, j_subv}, {band_size, band_size}});
+
+                updateE(std::move(subtile_e_up), subtile_w_up, subtile_w2);
+                updateE(std::move(subtile_e_dn), subtile_w_dn, subtile_w2);
+              }
+              else {
+                auto subtile_e = splitTile(tile_e_up, {{(i_skewed + 1) % mb, 0},
+                                                       {band_size - 1, w2_subtile_sz.cols()}});
+                auto subtile_w =
+                    splitTile(tile_w_up, {{(i_skewed + 1) % mb, j_subv}, {band_size - 1, band_size}});
+
+                updateE(std::move(subtile_e), subtile_w, subtile_w2);
+              }
+            }
+            else {
+              decltype(tile_e_up) tile_e;
+              decltype(tile_w_up) tile_w;
+              if (affectsTwoRows) {
+                tile_e = i_skewed < mb ? std::move(tile_e_up) : mat_e(LocalTileIndex(i_v + 1, j_e));
+                tile_w = i_skewed < mb ? tile_w_up : mat_w.read(LocalTileIndex(i_v + 1, j_e));
+              }
+              else {
+                tile_e = std::move(tile_e_up);
+                tile_w = std::move(tile_w_up);
+              }
+
+              auto subtiles_e =
+                  splitTileDisjoint(tile_e, {
+                                                {{(i_skewed + 1) % mb, 0},
+                                                 {band_size - 1, w2_subtile_sz.cols()}},
+                                                {{(i_skewed + +band_size) % mb, 0}, w2_subtile_sz},
+                                            });
+
+              auto subtiles_w =
+                  splitTile(tile_w, {
+                                        {{(i_skewed + 1) % mb, j_subv}, {band_size - 1, band_size}},
+                                        {{(i_skewed + band_size) % mb, j_subv}, {band_size, band_size}},
+                                    });
+
+              updateE(std::move(subtiles_e[0]), subtiles_w[0], subtile_w2);
+              updateE(std::move(subtiles_e[1]), subtiles_w[1], subtile_w2);
+            }
+          }
         }
       }
-
-      //PRINT_MATRIX("W2", mat_w2);
-
-      // COMPUTE E -= W @ W2
-      const auto affected_rows =
-          iterate_range2d(LocalTileIndex(i_v, 0), LocalTileIndex(std::min<SizeType>(i_v + 2, m), n));
-      for (const auto& ij : affected_rows) {
-        auto tile_e = mat_e(ij);
-        auto tile_w = mat_w.read(ij);
-        if (ij.row() == i_v) {
-          tile_e = matrix::splitTile(tile_e, {{1, 0}, {band_size - 1, mat_e.blockSize().cols()}});
-          tile_w = matrix::splitTile(tile_w, {{1, 0}, {band_size - 1, band_size}});
-        }
-
-        using blas::Op;
-        hpx::dataflow(hpx::unwrapping(tile::gemm_o), Op::NoTrans, Op::NoTrans, T(-1), tile_w,
-                      mat_w2.read(ij), T(1), std::move(tile_e));
-      }
-
-      PRINT_MATRIX("Eb", mat_e);
 
       mat_t.reset();
       mat_w.reset();
       mat_w2.reset();
+
+      PRINT_MATRIX("Eb", mat_e);
     }
   }
 }

@@ -168,6 +168,21 @@ auto updateE(hpx::future<matrix::Tile<T, Device::CPU>> tile_e,
                 std::move(tile_e));
 }
 
+auto debugBarrier = [](const auto& v, const auto& t, const auto& w, const auto& w2) {
+  // std::cout << "\n\n\nSTEP     " << message << "\n";
+
+  PRINT_TILE("v", v);
+  PRINT_TILE("t", t);
+
+  for (const auto& tile_w : w)
+    PRINT_TILE("w", tile_w.get());
+
+  for (const auto& tile_w2 : w2)
+    PRINT_TILE("w2", tile_w2.get());
+
+  // std::cout << "STEP-END " << message << "\n\n\n";
+};
+
 template <class T>
 struct BackTransformationT2B<Backend::MC, Device::CPU, T> {
   static void call(SizeType band_size, Matrix<T, Device::CPU>& mat_e,
@@ -352,6 +367,10 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(SizeType band_size
               updateE(std::move(subtiles_e[1]), subtiles_w[1], subtile_w2);
             }
           }
+
+          hpx::dataflow(hpx::unwrapping(debugBarrier), subtile_v, subtile_t,
+                        hpx::when_all(selectRead(mat_w, mat_w.iteratorLocal())),
+                        hpx::when_all(selectRead(mat_w2, mat_w2.iteratorLocal())));
         }
       }
 

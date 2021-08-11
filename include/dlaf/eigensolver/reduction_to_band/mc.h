@@ -46,6 +46,7 @@ namespace internal {
 
 template <class T>
 struct ReductionToBand<Backend::MC, Device::CPU, T> {
+  static std::vector<hpx::shared_future<common::internal::vector<T>>> call(Matrix<T, Device::CPU>& mat_a);
   static std::vector<hpx::shared_future<common::internal::vector<T>>> call(
       comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a);
 };
@@ -510,6 +511,15 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
     }
   }
 }
+}
+
+/// Local implementation of reduction to band
+/// @return a vector of shared futures of vectors, where each inner vector contains a block of taus
+template <class T>
+std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
+    Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& mat_a) {
+  (void) mat_a;
+  return {};
 }
 
 /// Distributed implementation of reduction to band

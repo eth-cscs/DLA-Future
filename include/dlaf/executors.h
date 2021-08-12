@@ -112,4 +112,31 @@ template <Device S, Device D>
 decltype(auto) getCopyExecutor() {
   return internal::GetCopyExecutor<S, D>::call();
 }
+
+namespace internal {
+
+/// Note:
+/// This is a workaround because the Np/Hp CUDA executors are able to execute
+/// cuSolver and cuBlas calls delegating to the respective custom executors, but they
+/// do not have as fallback the basic CUDA executor, who is is needed by the set0
+/// call.
+/// Moreover, for keeping it generic for both CPU and GPU, this helper allows to
+/// hide the different backends needs.
+template <Backend B>
+struct getGenericExecutor {
+  static auto call() {
+    return dlaf::getNpExecutor<Backend::MC>();
+  }
+};
+
+#ifdef DLAF_WITH_CUDA
+template <>
+struct getGenericExecutor<Backend::GPU> {
+  static auto call() {
+    return dlaf::cuda::Executor{dlaf::internal::getNpCudaStreamPool()};
+  }
+};
+#endif
+
+}
 }

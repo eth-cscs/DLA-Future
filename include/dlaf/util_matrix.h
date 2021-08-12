@@ -137,17 +137,17 @@ public:
 }
 
 /// Sets all the elements of all the tiles to zero
-template <class T, class ExecutorOrPolicy>
-void set0(ExecutorOrPolicy ex, Matrix<T, Device::CPU>& matrix) {
+template <class T, Device D, class ExecutorOrPolicy>
+void set0(ExecutorOrPolicy ex, Matrix<T, D>& matrix) {
   for (const auto& idx : iterate_range2d(matrix.distribution().localNrTiles()))
-    matrix(idx).then(ex, hpx::unwrapping(tile::internal::set0_o));
+    hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::set0_o), matrix(idx));
 }
 
 /// Sets all the elements of all the tiles in the active range to zero
-template <class T, Coord axis, class ExecutorOrPolicy>
-void set0(ExecutorOrPolicy ex, Panel<axis, T, Device::CPU>& panel) {
+template <class T, Coord axis, Device D, class ExecutorOrPolicy>
+void set0(ExecutorOrPolicy ex, Panel<axis, T, D>& panel) {
   for (const auto& tile_idx : panel.iteratorLocal())
-    panel(tile_idx).then(ex, hpx::unwrapping(tile::internal::set0_o));
+    hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::set0_o), panel(tile_idx));
 }
 
 /// Set the elements of the matrix.

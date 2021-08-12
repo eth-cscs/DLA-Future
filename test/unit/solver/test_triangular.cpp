@@ -179,8 +179,7 @@ TYPED_TEST(TriangularSolverTestMC, CorrectnessDistributed) {
       for (auto uplo : blas_uplos) {
         for (auto op : blas_ops) {
           for (auto diag : blas_diags) {
-            // Currently only NoTrans cases are implemented
-            if (!(op == blas::Op::NoTrans))
+            if (!(op == blas::Op::NoTrans || (side == blas::Side::Left && uplo == blas::Uplo::Lower)))
               continue;
 
             for (auto sz : sizes) {
@@ -225,8 +224,7 @@ TYPED_TEST(TriangularSolverTestGPU, CorrectnessDistributed) {
       for (auto uplo : blas_uplos) {
         for (auto op : blas_ops) {
           for (auto diag : blas_diags) {
-            // Currently only NoTrans cases are implemented
-            if (!(op == blas::Op::NoTrans))
+            if (!(op == blas::Op::NoTrans || (side == blas::Side::Left && uplo == blas::Uplo::Lower)))
               continue;
 
             for (auto sz : sizes) {

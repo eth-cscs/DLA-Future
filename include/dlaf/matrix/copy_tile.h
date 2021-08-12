@@ -164,11 +164,14 @@ DLAF_MAKE_CALLABLE_OBJECT(copy);
 
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(copy, internal::copy_o)
 
-/// Helper struct for copying a given tile to an identical tile on Destination.
+/// Helper struct for copying a given tile to a tile on Destination.
 ///
 /// Defines a call operator which allocates a tile of the same dimensions as the
 /// input tile on Destination, and then copies the input tile to the output
 /// tile.
+/// The allocated tile on Destination will be of the same size of the input one, but it will be also
+/// contiguous, i.e. whatever the input leading dimension is, the destination one will have the leading
+/// dimension equal to the number of rows.
 ///
 /// This is useful for use with dataflow, since the output tile is allocated
 /// only when the input tile is ready.
@@ -183,6 +186,21 @@ struct Duplicate {
     internal::copy(source, destination, std::forward<decltype(ts)>(ts)...);
     return Tile<T, Destination>(std::move(destination));
   }
+};
+
+template <Device Source, Device Destination>
+struct CopyIfNeeded {
+  template <class T, class U, template <class> class FutureD, template <class> class FutureS, class... Ts>
+  static auto call(FutureS<Tile<U, Source>> from, FutureD<Tile<T, Destination>> to, Ts&&... ts) {
+    hpx::dataflow(dlaf::getCopyExecutor<Source, Destination>(), matrix::unwrapExtendTiles(internal::copy_o),
+                  std::move(from), std::move(to), std::forward<Ts>(ts)...);
+  }
+};
+
+template <Device D>
+struct CopyIfNeeded<D, D> {
+  template <class T, class U, template <class> class FutureD, template <class> class FutureS, class... Ts>
+  static auto call(FutureS<Tile<U, D>>, FutureD<Tile<T, D>>, Ts&&...) {}
 };
 
 /// Helper function for duplicating an input tile to Destination asynchronously,
@@ -216,6 +234,18 @@ auto duplicateIfNeeded(hpx::shared_future<Tile<T, Source>> tile) {
                                   dlaf::matrix::Duplicate<Destination>{},
                                   hpx::execution::experimental::keep_future(std::move(tile))));
   }
+}
+
+/// Helper function for copying a source tile to a destination tile asynchronously,
+/// just if the destination tile is on a different device w.r.t. the source tile.
+///
+/// If the copy is going to happen, it will depend on @p wait_for_me.
+template <Device Destination, class T, Device Source, class U, template <class> class FutureD,
+          template <class> class FutureS>
+auto copyIfNeeded(FutureS<Tile<U, Source>> tile_from, FutureD<Tile<T, Destination>> tile_to,
+                  hpx::future<void> wait_for_me = hpx::make_ready_future<void>()) {
+  return CopyIfNeeded<Source, Destination>::call(std::move(tile_from), std::move(tile_to),
+                                                           std::move(wait_for_me));
 }
 }
 }

@@ -353,7 +353,6 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<matrix::Panel<Coord::Col, T, device>> a_panels(n_workspaces, distr_a);
-  common::RoundRobin<matrix::Panel<Coord::Row, T, device>> a_panels_T(n_workspaces, distr_a);
   common::RoundRobin<matrix::Panel<Coord::Row, T, device>> b_panels(n_workspaces, distr_b);
 
   for (SizeType k = 0; k < a_rows; ++k) {

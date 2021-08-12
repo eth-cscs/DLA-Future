@@ -9,11 +9,13 @@
 //
 #pragma once
 
+#include <blas/axpy.hh>
 #include <hpx/local/future.hpp>
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
+#include "dlaf/common/range2d.h"
 #include "dlaf/common/round_robin.h"
 #include "dlaf/communication/broadcast_panel.h"
 #include "dlaf/communication/communicator.h"
@@ -426,7 +428,101 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
 template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op op, blas::Diag diag,
                                               T alpha, Matrix<const T, device>& mat_a,
-                                              Matrix<T, device>& mat_b) {}
+                                              Matrix<T, device>& mat_b) {
+  constexpr auto NoTrans = blas::Op::NoTrans;
+
+  auto executor_hp = dlaf::getHpExecutor<backend>();
+  auto executor_np = dlaf::getNpExecutor<backend>();
+  auto executor_mpi = dlaf::getMPIExecutor<backend>();
+
+  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
+  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
+
+  const comm::Index2D this_rank = grid.rank();
+
+  const matrix::Distribution& distr_a = mat_a.distribution();
+  const matrix::Distribution& distr_b = mat_b.distribution();
+  // auto a_rows = mat_a.nrTiles().rows();
+  // auto local_rows = distr_a.localNrTiles().rows();
+  // auto b_local_cols = distr_b.localNrTiles().cols();
+
+  // If mat_b is empty return immediately
+  if (mat_b.size().isEmpty())
+    return;
+
+  constexpr std::size_t n_workspaces = 2;
+  common::RoundRobin<matrix::Panel<Coord::Col, T, device>> a_panels(n_workspaces, distr_a);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, device>> b_panels(n_workspaces, distr_b);
+
+  for (SizeType k = mat_a.nrTiles().cols() - 1; k >= 0; --k) {
+    const GlobalTileIndex kk{k, k};
+
+    const LocalTileIndex kk_offset{distr_a.nextLocalTileFromGlobalTile<Coord::Row>(kk.row()),
+                                   distr_a.nextLocalTileFromGlobalTile<Coord::Col>(kk.col())};
+
+    auto& a_panel = a_panels.nextResource();
+    a_panel.setRangeStart(kk);
+    if (kk.row() == mat_a.nrTiles().rows() - 1)
+      a_panel.setWidth(mat_a.tileSize(kk).rows());
+
+    const auto rank_kk = distr_a.rankGlobalTile(kk);
+    if (this_rank.col() == rank_kk.col()) {
+      for (SizeType i_loc = kk_offset.row(); i_loc < distr_a.localNrTiles().rows(); ++i_loc) {
+        const LocalTileIndex ik{i_loc, kk_offset.col()};
+        a_panel.setTile(ik, mat_a.read(ik));
+      }
+    }
+    comm::broadcast(executor_mpi, rank_kk.col(), a_panel, mpi_row_task_chain);
+
+    auto& b_panel = b_panels.nextResource();
+    b_panel.setHeight(mat_a.tileSize(kk).cols());  // TODO just if?
+
+    const LocalTileIndex bt_offset(distr_b.nextLocalTileFromGlobalTile<Coord::Row>(kk.row() + 1), 0);
+
+    matrix::util::set0(hpx::launch::sync, b_panel);
+
+    for (SizeType j = bt_offset.col(); j < distr_b.localNrTiles().cols(); ++j) {
+      for (SizeType i = bt_offset.row(); i < distr_b.localNrTiles().rows(); ++i) {
+        const LocalTileIndex ij(i, j);
+
+        const T beta = T(1) / alpha;
+        // TODO executor
+        hpx::dataflow(matrix::unwrapExtendTiles(tile::gemm_o), op, blas::Op::NoTrans, beta,
+                      a_panel.read(ij), mat_b.read(ij), T(1), b_panel(ij));
+      }
+    }
+
+    for (const auto& idx : b_panel.iteratorLocal()) {
+      if (this_rank.row() == rank_kk.row()) {
+        comm::scheduleReduceRecvInPlace(executor_mpi, mpi_col_task_chain(), MPI_SUM, b_panel(idx));
+      }
+      else {
+        comm::scheduleReduceSend(executor_mpi, rank_kk.row(), mpi_col_task_chain(), MPI_SUM,
+                                 b_panel.read(idx));
+      }
+    }
+
+    if (this_rank.row() == rank_kk.row()) {
+      for (SizeType j_loc = 0; j_loc < distr_b.localNrTiles().cols(); ++j_loc) {
+        const LocalTileIndex kj(kk_offset.row(), j_loc);
+        auto tile_diff = hpx::unwrapping([](auto tile_a, const auto& tile_b) {
+          DLAF_ASSERT(equal_size(tile_a, tile_b), tile_a, tile_b);
+          for (auto j = 0; j < tile_a.size().cols(); ++j)
+            blas::axpy(tile_a.size().rows(), T(-1), tile_b.ptr({0, j}), 1, tile_a.ptr({0, j}), 1);
+        });
+        // TODO executor
+        hpx::dataflow(tile_diff, mat_b(kj), b_panel.read(kj));
+
+        // TODO executor
+        hpx::dataflow(matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Left, blas::Uplo::Lower, op,
+                      diag, alpha, a_panel.read(kk_offset), mat_b(kj));
+      }
+    }
+
+    b_panel.reset();
+    a_panel.reset();
+  }
+}
 }
 }
 }

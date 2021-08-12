@@ -26,6 +26,7 @@
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix_mirror.h"
+#include "dlaf/matrix/print_numpy.h"
 #include "dlaf/solver.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
@@ -90,7 +91,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 
   const auto side = blas::Side::Left;
   const auto uplo = blas::Uplo::Lower;
-  const auto op = blas::Op::NoTrans;
+  const auto op = blas::Op::Trans;
   const auto diag = blas::Diag::NonUnit;
   const T alpha = 2.0;
 
@@ -102,16 +103,21 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   matrix_values_t ref_a, ref_b, ref_x;
   std::tie(ref_a, ref_b, ref_x) = ::sampleLeftTr(uplo, op, diag, alpha, ah.size().rows());
 
+  auto ref_a_input = [&ref_a](const auto& index) { return ref_a(transposed(index)); };
+
   for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
     if (0 == world.rank() && run_index >= 0)
       std::cout << "[" << run_index << "]" << std::endl;
 
     // setup matrix A and b
     using dlaf::matrix::util::set;
-    set(ah, ref_a);
+    set(ah, ref_a_input);
     set(bh, ref_b);
     a.copySourceToTarget();
     b.copySourceToTarget();
+
+    // print(dlaf::format::numpy{}, "A", ah);
+    // print(dlaf::format::numpy{}, "B", bh);
 
     sync_barrier();
 
@@ -134,6 +140,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     }
 
     b.copyTargetToSource();
+
+    // print(dlaf::format::numpy{}, "X", bh);
 
     // (optional) run test
     if (opts.do_check) {

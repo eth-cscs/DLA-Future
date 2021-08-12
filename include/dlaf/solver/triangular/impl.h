@@ -423,6 +423,10 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
   }
 }
 
+template <Backend backend, Device device, class T>
+void Triangular<backend, device, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op op, blas::Diag diag,
+                                              T alpha, Matrix<const T, device>& mat_a,
+                                              Matrix<T, device>& mat_b) {}
 }
 }
 }

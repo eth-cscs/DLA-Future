@@ -134,7 +134,7 @@ void triangular(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, b
       }
       else {
         // Left Lower Trans/ConjTrans
-        DLAF_UNIMPLEMENTED(side, uplo, op, diag);
+        internal::Triangular<backend, device, T>::call_LLT(grid, op, diag, alpha, mat_a, mat_b);
       }
     }
     else {

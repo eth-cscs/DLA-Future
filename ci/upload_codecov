@@ -2,8 +2,8 @@
 
 # Combine all reports into a single one
 SHARED_REPORTS="$CI_PROJECT_DIR/codecov-reports"
-TRACE_FILES_ARGS=`find "$SHARED_REPORTS" -type f -iname '*.info' -exec sh -c "echo --add-tracefile {}" \;`
-lcov ${TRACE_FILES_ARGS} --output-file "$SHARED_REPORTS/combined.info"
+TRACE_FILES=`find "$SHARED_REPORTS" -type f -iname '*.info'`
+fastcov -C ${TRACE_FILES} --lcov -o "$SHARED_REPORTS/combined.info"
 
 pushd /DLA-Future > /dev/null
 codecov.sh -f "$SHARED_REPORTS/combined.info" -t $CODECOV_TOKEN_GITHUB

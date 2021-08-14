@@ -48,7 +48,6 @@ RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
     rm -rf ${DEPLOY}/usr/bin && \
     libtree -d ${DEPLOY} $(which ctest gcov addr2line) && \
     cp -L ${SOURCE}/ci/{mpi-ctest,upload_codecov} ${DEPLOY}/usr/bin && \
-    cp -L $(which lcov) $(which geninfo) ${DEPLOY}/usr/bin && \
     echo "$TEST_BINARIES" | xargs -I{file} find -samefile {file} -exec cp --parents '{}' ${BUILD}-tmp ';' && \
     find '(' -name CTestTestfile.cmake -o -iname "*.gcno" ')' -exec cp --parent '{}' ${BUILD}-tmp ';' && \
     rm -rf ${BUILD} && \
@@ -64,18 +63,21 @@ ARG BUILD
 ARG SOURCE
 ARG DEPLOY
 
-# Install perl to make lcov happy
+# python is needed for fastcov
+# pip is needed only to install fastcov (it is removed with
+#     its dependencies after fastcov installation)
 # codecov upload needs curl + ca-certificates
 # tzdata is needed to print correct time
 RUN apt-get update -qq && \
     apt-get install -qq -y --no-install-recommends \
-      perl \
-      libperlio-gzip-perl \
-      libjson-perl \
+      python3 python3-pip \
       curl \
       ca-certificates \
       tzdata && \
-    rm -rf /var/lib/apt/lists/*
+    pip install fastcov && \
+    apt-get autoremove -qq -y python3-pip && \
+    apt-get clean
+
 
 # Copy the executables and the codecov gcno files
 COPY --from=builder ${BUILD} ${BUILD}
@@ -90,7 +92,7 @@ COPY --from=builder ${SOURCE} ${SOURCE}
 
 RUN cd /usr/local/bin && \
   curl -Ls https://codecov.io/bash > codecov.sh && \
-  echo "65289785bc738dec8dce952b0fb3bdea1b68453a4db27451d1270b9842ae3cb8 codecov.sh" | sha256sum --check --quiet && \
+  echo "f0e7a3ee76a787c37aa400cf44aee0c9b473b2fa79092edfb36d1faa853bbe23 codecov.sh" | sha256sum --check --quiet && \
   chmod +x codecov.sh
 
 # Make it easy to call our binaries.
@@ -108,7 +110,3 @@ ENV LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so
 RUN echo "${DEPLOY}/usr/lib/" > /etc/ld.so.conf.d/dlaf.conf && ldconfig
 
 WORKDIR ${BUILD}
-
-ENV LOCAL_REPORTS /codecov-reports
-RUN mkdir -p ${LOCAL_REPORTS} && \
-    lcov --no-external --capture --initial --base-directory /DLA-Future --directory /DLA-Future-build --output-file "${LOCAL_REPORTS}/baseline-codecov.info"

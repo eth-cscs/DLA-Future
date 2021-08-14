@@ -18,6 +18,7 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/sync/basic.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/matrix/panel.h"
 
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"
@@ -59,6 +60,24 @@ const std::vector<TestSizes> sizes_tests({
 
 GlobalElementSize globalTestSize(const LocalElementSize& size, const comm::Size2D& grid_size) {
   return {size.rows() * grid_size.rows(), size.cols() * grid_size.cols()};
+}
+
+TYPED_TEST(MatrixUtilsTest, Set0) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+      memory::MemoryView<TypeParam, Device::CPU> mem(layout.minMemSize());
+      Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), layout, mem());
+
+      auto null_matrix = [](const GlobalElementIndex&) { return TypeParam(0); };
+
+      matrix::util::set0(hpx::launch::sync, matrix);
+
+      CHECK_MATRIX_EQ(null_matrix, matrix);
+    }
+  }
 }
 
 TYPED_TEST(MatrixUtilsTest, Set) {
@@ -188,6 +207,61 @@ TYPED_TEST(MatrixUtilsTest, SetRandomHermitianPositiveDefinite) {
       CHECK_MATRIX_NEAR(identity_2N, matrix, 0, 1);
 
       check_is_hermitian(matrix, comm_grid);
+    }
+  }
+}
+
+template <typename Type>
+struct PanelUtilsTest : public ::testing::Test {
+  const std::vector<comm::CommunicatorGrid>& commGrids() {
+    return comm_grids;
+  }
+};
+
+TYPED_TEST_SUITE(PanelUtilsTest, MatrixElementTypes);
+
+struct config_t {
+  const GlobalElementSize sz;
+  const TileElementSize blocksz;
+  const GlobalTileIndex offset;
+};
+
+std::vector<config_t> test_params{
+    {{0, 0}, {3, 3}, {0, 0}},  // empty matrix
+    {{26, 13}, {3, 3}, {1, 2}},
+};
+
+template <class TypeParam, Coord panel_axis>
+void testSet0(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
+  constexpr Coord coord1D = orthogonal(panel_axis);
+
+  Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
+  Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, cfg.offset);
+
+  auto null_tile = [](const TileElementIndex&) { return TypeParam(0); };
+
+  for (SizeType head = cfg.offset.get<coord1D>(), tail = dist.nrTiles().get(coord1D); head <= tail;
+       ++head, --tail) {
+    panel.setRange(GlobalTileIndex(coord1D, head), GlobalTileIndex(coord1D, tail));
+
+    for (const auto& idx : panel.iteratorLocal())
+      hpx::dataflow(hpx::unwrapping(tile::laset<TypeParam>), lapack::MatrixType::General, 1, 1,
+                    panel(idx));
+
+    matrix::util::set0(hpx::launch::sync, panel);
+
+    for (const auto& idx : panel.iteratorLocal())
+      CHECK_TILE_EQ(null_tile, panel.read(idx).get());
+
+    panel.reset();
+  }
+}
+
+TYPED_TEST(PanelUtilsTest, Set0) {
+  for (auto& comm_grid : this->commGrids()) {
+    for (const auto& cfg : test_params) {
+      testSet0<TypeParam, Coord::Col>(cfg, comm_grid);
+      testSet0<TypeParam, Coord::Row>(cfg, comm_grid);
     }
   }
 }

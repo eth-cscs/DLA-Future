@@ -6,8 +6,18 @@
 //
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
-//
+
 #pragma once
 
-#include "dlaf/eigensolver/backtransformation.h"
-#include "dlaf/eigensolver/gen_to_std.h"
+#include "dlaf/types.h"
+
+namespace dlaf {
+namespace eigensolver {
+namespace internal {
+
+template <Backend backend, Device device, class T>
+struct ReductionToBand {};
+
+}
+}
+}

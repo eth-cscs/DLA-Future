@@ -52,23 +52,46 @@ void copy(const MatrixLocal<const T>& source, MatrixLocal<T>& dest) {
   std::copy(source.ptr(), source.ptr() + linear_size, dest.ptr());
 }
 
-/// Given a (possibly) distributed Matrix, collect all data full-size local matrix
-///
+/// Given a (possibly) distributed Matrix, it collects the full data locally, according @p to mat_type
 /// Optionally, it is possible to specify the type of the return MatrixLocal (useful for const correctness)
 template <class T>
-MatrixLocal<T> allGather(Matrix<const T, Device::CPU>& source, comm::CommunicatorGrid comm_grid) {
+MatrixLocal<T> allGather(lapack::MatrixType mat_type, Matrix<const T, Device::CPU>& source,
+                         comm::CommunicatorGrid comm_grid) {
+  using lapack::MatrixType;
+
   MatrixLocal<std::remove_const_t<T>> dest(source.size(), source.blockSize());
 
   const auto& dist_source = source.distribution();
   const auto rank = dist_source.rankIndex();
 
-  for (const auto& ij_tile : iterate_range2d(source.nrTiles())) {
+  auto targeted_tile = [mat_type](const GlobalTileIndex idx) {
+    switch (mat_type) {
+      case MatrixType::General:
+        return true;
+      case MatrixType::Lower:
+        return idx.row() >= idx.col();
+      case MatrixType::Upper:
+        return idx.row() <= idx.col();
+      case MatrixType::Band:
+      case MatrixType::Hessenberg:
+      case MatrixType::LowerBand:
+      case MatrixType::UpperBand:
+      default:
+        DLAF_UNIMPLEMENTED(matrixtype2str(mat_type));
+        return false;
+    }
+  };
+
+  for (const auto& ij_tile : iterate_range2d(dist_source.nrTiles())) {
+    if (!targeted_tile(ij_tile))
+      continue;
+
     const auto owner = dist_source.rankGlobalTile(ij_tile);
+
     auto& dest_tile = dest.tile(ij_tile);
 
     if (owner == rank) {
       const auto& source_tile = source.read(ij_tile).get();
-
       comm::sync::broadcast::send(comm_grid.fullCommunicator(), source_tile);
       copy(source_tile, dest_tile);
     }

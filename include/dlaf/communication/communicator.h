@@ -64,6 +64,15 @@ public:
   /// Return the number of ranks in the Communicator.
   IndexT_MPI size() const noexcept;
 
+  /// Return a clone of this communicator.
+  ///
+  /// For more details see MPI_Comm_dup documentation.
+  Communicator clone() const noexcept {
+    MPI_Comm comm_clone;
+    DLAF_MPI_CALL(MPI_Comm_dup(*this, &comm_clone));
+    return Communicator(comm_clone, managed{});
+  }
+
 private:
   /// Tag to give to constructor in order to give MPI_Comm ownership to Communicator.
   struct managed {};

@@ -20,11 +20,11 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/executor.h"
 #include "dlaf/communication/kernels.h"
+#include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_base.h"
 #include "dlaf/types.h"
-#include "dlaf/util_matrix.h"
 
 namespace dlaf {
 namespace matrix {
@@ -86,6 +86,8 @@ struct Panel<axis, const T, D> {
     DLAF_ASSERT(!isExternal(index), "already set to external", index);
     // Note assertion on index done by linearIndex method.
 
+    has_been_used_ = true;
+
 #if defined DLAF_ASSERT_MODERATE_ENABLE
     {
       const auto panel_tile_size = tileSize(index);
@@ -106,6 +108,8 @@ struct Panel<axis, const T, D> {
   /// @pre @p index must be a valid index for the current panel size
   hpx::shared_future<ConstTileType> read(const LocalTileIndex& index) {
     // Note assertion on index done by linearIndex method.
+
+    has_been_used_ = true;
 
     const SizeType internal_linear_idx = linearIndex(index);
     if (isExternal(index)) {
@@ -134,6 +138,8 @@ struct Panel<axis, const T, D> {
   /// @pre start <= 1 past the panel last tile
   /// @pre end <= 1 past the panel last tile
   void setRange(GlobalTileIndex start_idx, GlobalTileIndex end_idx) noexcept {
+    DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
+
     start_ = start_idx.get(CoordType);
     start_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<CoordType>(start_);
 
@@ -155,6 +161,8 @@ struct Panel<axis, const T, D> {
   /// @pre start <= current end range of the panel
   /// @pre panel offset on construction <= start
   void setRangeStart(GlobalTileIndex start_idx) noexcept {
+    DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
+
     start_ = start_idx.get(CoordType);
     start_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<CoordType>(start_);
 
@@ -171,6 +179,8 @@ struct Panel<axis, const T, D> {
   /// @pre current end range of the panel <= end
   /// @pre end <= 1 past the panel last tile
   void setRangeEnd(GlobalTileIndex end_idx) noexcept {
+    DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
+
     end_ = end_idx.get(CoordType);
     end_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<CoordType>(end_);
 
@@ -207,6 +217,7 @@ struct Panel<axis, const T, D> {
   /// @pre @param 0 < width <= parentDistribution().block_size().cols()
   template <Coord A = axis, std::enable_if_t<A == axis && Coord::Col == axis, int> = 0>
   void setWidth(SizeType width) noexcept {
+    DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
     DLAF_ASSERT(width > 0, width);
     DLAF_ASSERT(width <= parentDistribution().blockSize().cols(), width,
                 parentDistribution().blockSize().cols());
@@ -223,6 +234,7 @@ struct Panel<axis, const T, D> {
   /// @pre @param 0 < height <= parentDistribution().block_size().rows()
   template <Coord A = axis, std::enable_if_t<A == axis && Coord::Row == axis, int> = 0>
   void setHeight(SizeType height) noexcept {
+    DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
     DLAF_ASSERT(height > 0, height);
     DLAF_ASSERT(height <= parentDistribution().blockSize().rows(), height,
                 parentDistribution().blockSize().rows());
@@ -241,6 +253,7 @@ struct Panel<axis, const T, D> {
       e = {};
     internal_.clear();
     dim_ = -1;
+    has_been_used_ = false;
   }
 
 protected:
@@ -335,6 +348,10 @@ protected:
     return external_[linearIndex(idx_matrix)].valid();
   }
 
+  bool hasBeenUsed() const noexcept {
+    return has_been_used_;
+  }
+
   ///> Parent matrix which this panel is related to
   Distribution dist_matrix_;
 
@@ -351,6 +368,8 @@ protected:
   SizeType end_local_;  // local version of @p end_
   ///> It represent the width or height of the panel. Negatives means not set, i.e. block_size.
   SizeType dim_ = -1;
+
+  bool has_been_used_ = false;
 
   ///> Container for references to external tiles
   common::internal::vector<hpx::shared_future<ConstTileType>> external_;
@@ -375,6 +394,8 @@ struct Panel : public Panel<axis, const T, device> {
     // Note assertion on index done by linearIndex method.
     DLAF_ASSERT(!BaseT::isExternal(index), "read-only access on external tiles", index);
 
+    has_been_used_ = true;
+
     BaseT::internal_.insert(BaseT::linearIndex(index));
     auto tile = BaseT::data_(BaseT::fullIndex(index));
     if (dim_ < 0)
@@ -386,6 +407,7 @@ struct Panel : public Panel<axis, const T, device> {
 protected:
   using BaseT = Panel<axis, const T, device>;
   using BaseT::dim_;
+  using BaseT::has_been_used_;
   using BaseT::tileSize;
 };
 

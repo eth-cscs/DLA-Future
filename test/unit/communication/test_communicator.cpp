@@ -150,3 +150,13 @@ TEST_F(CommunicatorTest, Copy) {
   test_communication(odd_comm);
   test_communication(world);
 }
+
+TEST_F(CommunicatorTest, Clone) {
+  Communicator clone = world.clone();
+
+  int result;
+  DLAF_MPI_CALL(MPI_Comm_compare(clone, world, &result));
+  EXPECT_EQ(MPI_CONGRUENT, result);
+
+  test_communication(clone);
+}

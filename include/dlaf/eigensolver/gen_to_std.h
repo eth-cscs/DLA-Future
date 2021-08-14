@@ -52,7 +52,7 @@ void genToStd(blas::Uplo uplo, Matrix<T, device>& mat_a, Matrix<T, device>& mat_
       internal::GenToStd<backend, device, T>::call_L(mat_a, mat_b);
       break;
     case blas::Uplo::Upper:
-      DLAF_UNIMPLEMENTED(uplo);
+      internal::GenToStd<backend, device, T>::call_U(mat_a, mat_b);
       break;
     case blas::Uplo::General:
       DLAF_UNIMPLEMENTED(uplo);
@@ -95,7 +95,7 @@ void genToStd(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, device>& m
       internal::GenToStd<backend, device, T>::call_L(grid, mat_a, mat_b);
       break;
     case blas::Uplo::Upper:
-      DLAF_UNIMPLEMENTED(uplo);
+      internal::GenToStd<backend, device, T>::call_U(grid, mat_a, mat_b);
       break;
     case blas::Uplo::General:
       DLAF_UNIMPLEMENTED(uplo);

@@ -25,6 +25,7 @@
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/print_numpy.h"
+#include "dlaf/util_matrix.h"
 
 #include "dlaf_test/matrix/matrix_local.h"
 
@@ -83,17 +84,13 @@ auto checkerForIndexIn(const lapack::MatrixType mat_type) {
 /// Optionally, it is possible to specify the type of the return MatrixLocal (useful for const correctness)
 template <class T>
 MatrixLocal<T> allGather(lapack::MatrixType mat_type, Matrix<const T, Device::CPU>& source) {
-  using lapack::MatrixType;
-
   DLAF_ASSERT(matrix::local_matrix(source), source);
 
   MatrixLocal<std::remove_const_t<T>> dest(source.size(), source.blockSize());
 
   auto targeted_tile = internal::checkerForIndexIn(mat_type);
 
-  const auto& dist_source = source.distribution();
-
-  for (const auto& ij_tile : iterate_range2d(dist_source.nrTiles())) {
+  for (const auto& ij_tile : iterate_range2d(source.nrTiles())) {
     if (!targeted_tile(ij_tile))
       continue;
 
@@ -110,7 +107,7 @@ MatrixLocal<T> allGather(lapack::MatrixType mat_type, Matrix<const T, Device::CP
 template <class T>
 MatrixLocal<T> allGather(lapack::MatrixType mat_type, Matrix<const T, Device::CPU>& source,
                          comm::CommunicatorGrid comm_grid) {
-  using lapack::MatrixType;
+  DLAF_ASSERT(matrix::equal_process_grid(source, comm_grid), source, comm_grid);
 
   MatrixLocal<std::remove_const_t<T>> dest(source.size(), source.blockSize());
 

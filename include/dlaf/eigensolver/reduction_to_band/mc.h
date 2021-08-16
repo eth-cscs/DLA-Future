@@ -449,7 +449,7 @@ void gemmComputeW2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Co
   }
 
   if (!isW2initialized)
-    hpx::dataflow(ex, unwrapExtendTiles(tile::set0<T>), w2(LocalTileIndex(0, 0)));
+    hpx::dataflow(ex, unwrapExtendTiles(tile::set0_o), w2(LocalTileIndex(0, 0)));
 
   comm::scheduleAllReduceInPlace(ex_mpi, mpi_col_chain(), MPI_SUM, w2(LocalTileIndex(0, 0)));
 }

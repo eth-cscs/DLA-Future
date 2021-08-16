@@ -102,6 +102,12 @@ namespace internal {
     }                                                           \
   }
 
+DLAF_DECLARE_CUBLAS_OP(Axpy);
+DLAF_DEFINE_CUBLAS_OP(Axpy, float, Saxpy);
+DLAF_DEFINE_CUBLAS_OP(Axpy, double, Daxpy);
+DLAF_DEFINE_CUBLAS_OP(Axpy, std::complex<float>, Caxpy);
+DLAF_DEFINE_CUBLAS_OP(Axpy, std::complex<double>, Zaxpy);
+
 DLAF_DECLARE_CUBLAS_OP(Gemm);
 DLAF_DEFINE_CUBLAS_OP(Gemm, float, Sgemm);
 DLAF_DEFINE_CUBLAS_OP(Gemm, double, Dgemm);

@@ -140,14 +140,14 @@ public:
 template <class T, class ExecutorOrPolicy>
 void set0(ExecutorOrPolicy ex, Matrix<T, Device::CPU>& matrix) {
   for (const auto& idx : iterate_range2d(matrix.distribution().localNrTiles()))
-    matrix(idx).then(ex, hpx::unwrapping(tile::set0<T>));
+    matrix(idx).then(ex, hpx::unwrapping(tile::set0_o));
 }
 
 /// Sets all the elements of all the tiles in the active range to zero
-template <class T, Coord axis, class ExecutorOrPolicy>
-void set0(ExecutorOrPolicy ex, Panel<axis, T, Device::CPU>& panel) {
+template <class T, Coord axis, Device D, class ExecutorOrPolicy>
+void set0(ExecutorOrPolicy ex, Panel<axis, T, D>& panel) {
   for (const auto& tile_idx : panel.iteratorLocal())
-    panel(tile_idx).then(ex, hpx::unwrapping(tile::set0<T>));
+    hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::set0_o), panel(tile_idx));
 }
 
 /// Set the elements of the matrix.

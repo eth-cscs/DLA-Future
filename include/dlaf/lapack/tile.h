@@ -284,9 +284,19 @@ void set0(const Tile<T, Device::CPU>& tile) {
   tile::laset(lapack::MatrixType::General, static_cast<T>(0.0), static_cast<T>(0.0), tile);
 }
 
+#ifdef DLAF_WITH_CUDA
+/// Set zero all the elements of Tile @param tile.
+template <class T>
+void set0(const Tile<T, Device::GPU>& tile, cudaStream_t stream) {
+  DLAF_CUDA_CALL(cudaMemset2DAsync(tile.ptr(), tile.ld(), 0, tile.size().rows(), tile.size().cols(), stream));
+}
+#endif
+
 DLAF_MAKE_CALLABLE_OBJECT(hegst);
 DLAF_MAKE_CALLABLE_OBJECT(potrf);
 DLAF_MAKE_CALLABLE_OBJECT(potrfInfo);
+DLAF_MAKE_CALLABLE_OBJECT(laset);
+DLAF_MAKE_CALLABLE_OBJECT(set0);
 
 }
 }

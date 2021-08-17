@@ -226,8 +226,8 @@ TYPED_TEST(TriangularSolverTestGPU, CorrectnessDistributed) {
       for (auto uplo : blas_uplos) {
         for (auto op : blas_ops) {
           for (auto diag : blas_diags) {
-            // Currently only Left Lower cases are implemented
-            if (!(side == blas::Side::Left && uplo == blas::Uplo::Lower))
+            // Currently only Left Lower Notrans case is implemented
+            if (!(op == blas::Op::NoTrans && side == blas::Side::Left && uplo == blas::Uplo::Lower))
               continue;
 
             for (auto sz : sizes) {

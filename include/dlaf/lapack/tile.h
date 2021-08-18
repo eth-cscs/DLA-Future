@@ -288,7 +288,8 @@ void set0(const Tile<T, Device::CPU>& tile) {
 /// Set zero all the elements of Tile @param tile.
 template <class T>
 void set0(const Tile<T, Device::GPU>& tile, cudaStream_t stream) {
-  DLAF_CUDA_CALL(cudaMemset2DAsync(tile.ptr(), tile.ld(), 0, tile.size().rows(), tile.size().cols(), stream));
+  DLAF_CUDA_CALL(cudaMemset2DAsync(tile.ptr(), sizeof(T) * tile.ld(), 0, sizeof(T) * tile.size().rows(),
+                                   tile.size().cols(), stream));
 }
 #endif
 
@@ -297,6 +298,5 @@ DLAF_MAKE_CALLABLE_OBJECT(potrf);
 DLAF_MAKE_CALLABLE_OBJECT(potrfInfo);
 DLAF_MAKE_CALLABLE_OBJECT(laset);
 DLAF_MAKE_CALLABLE_OBJECT(set0);
-
 }
 }

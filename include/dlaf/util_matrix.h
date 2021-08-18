@@ -137,10 +137,10 @@ public:
 }
 
 /// Sets all the elements of all the tiles to zero
-template <class T, class ExecutorOrPolicy>
-void set0(ExecutorOrPolicy ex, Matrix<T, Device::CPU>& matrix) {
+template <class T, Device D, class ExecutorOrPolicy>
+void set0(ExecutorOrPolicy ex, Matrix<T, D>& matrix) {
   for (const auto& idx : iterate_range2d(matrix.distribution().localNrTiles()))
-    matrix(idx).then(ex, hpx::unwrapping(tile::set0_o));
+    matrix(idx).then(ex, matrix::unwrapExtendTiles(tile::set0_o));
 }
 
 /// Sets all the elements of all the tiles in the active range to zero

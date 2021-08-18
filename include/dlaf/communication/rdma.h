@@ -44,7 +44,7 @@ namespace internal {
 /// Duplicates the tile to CPU memory if CUDA RDMA is not enabled for MPI.
 /// Returns the tile unmodified otherwise.
 template <Device D, typename T>
-auto prepareSendTile(hpx::shared_future<matrix::Tile<const T, D>> tile) {
+auto prepareSendTile(hpx::shared_future<matrix::Tile<T, D>> tile) {
   return matrix::duplicateIfNeeded<CommunicationDevice<D>::value>(std::move(tile));
 }
 

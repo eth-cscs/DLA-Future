@@ -172,6 +172,21 @@ struct DuplicateIfNeeded<SourceDestination, SourceDestination> {
     return tile;
   }
 };
+
+template <Device Source, Device Destination>
+struct CopyIfNeeded {
+  template <class T, template <class> class Future, class... Ts>
+  static auto call(Future<Tile<T, Source>> from, Future<Tile<T, Destination>> to, Ts&&... ts) {
+    hpx::dataflow(dlaf::getCopyExecutor<Source, Destination>(), matrix::unwrapExtendTiles(copy_o),
+                  std::move(from), std::move(to), std::forward<Ts>(ts)...);
+  }
+};
+
+template <Device D>
+struct CopyIfNeeded<D, D> {
+  template <class T, template <class> class Future, class... Ts>
+  static auto call(Future<Tile<T, D>>, Future<Tile<T, D>>, Ts&&...) {}
+};
 }
 
 /// Helper function for duplicating an input tile to Destination asynchronously,
@@ -181,6 +196,12 @@ struct DuplicateIfNeeded<SourceDestination, SourceDestination> {
 template <Device Destination, typename T, Device Source, template <class> class Future>
 auto duplicateIfNeeded(Future<Tile<T, Source>> tile) {
   return internal::DuplicateIfNeeded<Destination, Source>::call(std::move(tile));
+}
+
+template <Device Destination, class T, Device Source, template <class> class Future, class... Ts>
+auto copyIfNeeded(Future<Tile<T, Source>> tile_from, Future<Tile<T, Destination>> tile_to, Ts&&... ts) {
+  return internal::CopyIfNeeded<Source, Destination>::call(std::move(tile_from), std::move(tile_to),
+                                                           std::forward<Ts>(ts)...);
 }
 }
 }

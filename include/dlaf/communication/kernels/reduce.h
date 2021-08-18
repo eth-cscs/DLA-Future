@@ -45,10 +45,10 @@ auto reduceRecvInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op re
 
 DLAF_MAKE_CALLABLE_OBJECT(reduceRecvInPlace);
 
-template <class T>
+template <class T, Device D>
 auto reduceSend(comm::IndexT_MPI rank_root, common::PromiseGuard<comm::Communicator> pcomm,
                 MPI_Op reduce_op, common::internal::ContiguousBufferHolder<const T> cont_buf,
-                matrix::Tile<const T, Device::CPU> const&, MPI_Request* req) {
+                matrix::Tile<const T, D> const&, MPI_Request* req) {
   auto msg = comm::make_message(cont_buf.descriptor);
   auto& comm = pcomm.ref();
 
@@ -60,10 +60,10 @@ DLAF_MAKE_CALLABLE_OBJECT(reduceSend);
 
 }
 
-template <class T>
+template <class T, Device D>
 void scheduleReduceRecvInPlace(const comm::Executor& ex,
                                hpx::future<common::PromiseGuard<comm::Communicator>> pcomm,
-                               MPI_Op reduce_op, hpx::future<matrix::Tile<T, Device::CPU>> tile) {
+                               MPI_Op reduce_op, hpx::future<matrix::Tile<T, D>> tile) {
   using hpx::dataflow;
   using hpx::unwrapping;
 
@@ -79,25 +79,25 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
 
   auto ex_copy = getHpExecutor<Backend::MC>();
 
-  hpx::future<common::internal::ContiguousBufferHolder<T>> cont_buf;
-  {
-    auto wrapped = getUnwrapRetValAndArgs(
-        dataflow(ex_copy, unwrapExtendTiles(makeItContiguous_o), std::move(tile)));
+  hpx::shared_future<matrix::Tile<T, D>> tile_orig = tile.share();
 
-    cont_buf = std::move(wrapped.first);
-    tile = std::move(hpx::get<0>(wrapped.second));
-  }
+  hpx::future<common::internal::ContiguousBufferHolder<T>> cont_buf;
+  hpx::shared_future<matrix::Tile<T, Device::CPU>> tile_cpu = internal::prepareSendTile(tile_orig);
+  cont_buf =
+      matrix::getUnwrapReturnValue(dataflow(ex_copy, unwrapExtendTiles(makeItContiguous_o), tile_cpu));
 
   cont_buf = dataflow(ex, unwrapping(internal::reduceRecvInPlace_o), std::move(pcomm), reduce_op,
                       std::move(cont_buf));
 
-  dataflow(ex_copy, unwrapping(copyBack_o), std::move(tile), std::move(cont_buf));
+  auto res = dataflow(ex_copy, unwrapping(copyBack_o), tile_cpu, std::move(cont_buf));
+
+  matrix::copyIfNeeded(tile_cpu, tile_orig, res);
 }
 
-template <class T>
+template <class T, Device D>
 void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
                         hpx::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
-                        hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile) {
+                        hpx::shared_future<matrix::Tile<const T, D>> tile) {
   using hpx::dataflow;
   using hpx::unwrapping;
 
@@ -113,11 +113,13 @@ void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
   auto ex_copy = getHpExecutor<Backend::MC>();
 
   // TODO shared_future<Tile> as assumption, it requires changes for future<Tile>
+  hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_cpu =
+      internal::prepareSendTile(std::move(tile));
   hpx::future<common::internal::ContiguousBufferHolder<const T>> cont_buf =
-      dataflow(ex_copy, unwrapping(makeItContiguous_o), tile);
+      dataflow(ex_copy, unwrapping(makeItContiguous_o), tile_cpu);
 
   dataflow(ex, unwrapExtendTiles(internal::reduceSend_o), rank_root, std::move(pcomm), reduce_op,
-           std::move(cont_buf), tile);
+           std::move(cont_buf), tile_cpu);
 }
 }
 }

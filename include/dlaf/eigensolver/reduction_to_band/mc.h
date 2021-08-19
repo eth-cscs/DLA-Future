@@ -141,14 +141,11 @@ std::vector<T> computeWTrailingPanel(const bool has_head, const std::vector<Tile
 
   std::vector<T> w(to_sizet(pt_cols), 0);
 
-  // TODO this is a workaround for detecting index 0 on global tile 0
-  auto has_first = [&](const auto& tile) { return has_head and &tile == &panel[0]; };
-
   const TileElementIndex index_el_x0(j, j);
+  bool has_first_component = has_head;
 
   // W = Pt * V
   for (auto& tile_a : panel) {
-    const bool has_first_component = has_first(tile_a);
     const SizeType first_element = has_first_component ? index_el_x0.row() : 0;
 
     TileElementIndex pt_start{first_element, index_el_x0.col() + 1};
@@ -172,6 +169,8 @@ std::vector<T> computeWTrailingPanel(const bool has_head, const std::vector<Tile
       blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, pt_size.rows(), pt_size.cols(), T(1),
                  tile_a.ptr(pt_start), tile_a.ld(), tile_a.ptr(v_start), 1, T(1), w.data(), 1);
     }
+
+    has_first_component = false;
   }
 
   return w;
@@ -182,12 +181,10 @@ void updateTrailingPanel(const bool has_head, const std::vector<TileT<T>>& panel
                          const std::vector<T>& w, const T tau) {
   const TileElementIndex index_el_x0(j, j);
 
-  // TODO this is a workaround for detecting index 0 on global tile 0
-  auto has_first = [&](const auto& tile) { return has_head and &tile == &panel[0]; };
+  bool has_first_component = has_head;
 
   // GER Pt = Pt - tau . v . w*
   for (auto& tile_a : panel) {
-    const bool has_first_component = has_first(tile_a);
     const SizeType first_element = has_first_component ? index_el_x0.row() : 0;
 
     TileElementIndex pt_start{first_element, index_el_x0.col() + 1};
@@ -213,6 +210,8 @@ void updateTrailingPanel(const bool has_head, const std::vector<TileT<T>>& panel
       blas::ger(blas::Layout::ColMajor, pt_size.rows(), pt_size.cols(), -dlaf::conj(tau),
                 tile_a.ptr(v_start), 1, w.data(), 1, tile_a.ptr(pt_start), tile_a.ld());
     }
+
+    has_first_component = false;
   }
 }
 

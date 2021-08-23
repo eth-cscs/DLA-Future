@@ -110,7 +110,8 @@ T computeReflector(const comm::IndexT_MPI rank_v0, comm::Communicator& communica
   // (e.g. norm, y, tau) just on the root rank and then having to broadcast them (i.e. additional
   // communication).
   comm::sync::allReduceInPlace(communicator, MPI_SUM,
-                               common::make_data(x0_and_squares.data(), x0_and_squares.size()));
+                               common::make_data(x0_and_squares.data(),
+                                                 to_SizeType(x0_and_squares.size())));
 
   const T norm = std::sqrt(x0_and_squares[1]);
   const T x0 = x0_and_squares[0];
@@ -151,7 +152,7 @@ void updateTrailingPanelWithReflector(comm::IndexT_MPI rank_v0, comm::Communicat
   if (!(pt_cols > 0))
     return;
 
-  std::vector<T> w(pt_cols, 0);
+  std::vector<T> w(to_sizet(pt_cols), 0);
 
   const bool is_head_rank = rank_v0 == communicator.rank();
 
@@ -530,7 +531,7 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
 
   const SizeType nblocks = dist.nrTiles().cols() - 1;
   std::vector<hpx::shared_future<common::internal::vector<T>>> taus;
-  taus.reserve(nblocks);
+  taus.reserve(to_sizet(nblocks));
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<PanelT<Coord::Col, T>> panels_v(n_workspaces, dist);

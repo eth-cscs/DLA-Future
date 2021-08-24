@@ -215,6 +215,21 @@ void updateTrailingPanel(const bool has_head, const std::vector<TileT<T>>& panel
   }
 }
 
+template <class Executor, class T>
+void hemmDiag(const Executor& ex, hpx::shared_future<TileT<const T>> tile_a,
+              hpx::shared_future<TileT<const T>> tile_w, hpx::future<TileT<T>> tile_x) {
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::hemm_o), blas::Side::Left, blas::Uplo::Lower, T(1),
+                std::move(tile_a), std::move(tile_w), T(1), std::move(tile_x));
+}
+
+// X += op(A) * W
+template <class Executor, class T>
+void hemmOffDiag(const Executor& ex, blas::Op op, hpx::shared_future<TileT<const T>> tile_a,
+                 hpx::shared_future<TileT<const T>> tile_w, hpx::future<TileT<T>> tile_x) {
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), op, blas::Op::NoTrans, T(1),
+                std::move(tile_a), std::move(tile_w), T(1), std::move(tile_x));
+}
+
 }
 
 namespace local {
@@ -337,10 +352,6 @@ void gemmUpdateX(PanelT<Coord::Col, T>& x, ConstMatrixT<T>& w2, MatrixLikeT& v) 
 template <class T>
 void hemmComputeX(PanelT<Coord::Col, T>& x, const LocalTileSize at_offset, ConstMatrixT<T>& a,
                   ConstPanelT<Coord::Col, T>& w) {
-  using matrix::unwrapExtendTiles;
-  using tile::hemm_o;
-  using tile::gemm_o;
-
   const auto ex = getHpExecutor<Backend::MC>();
 
   const auto dist = a.distribution();
@@ -361,8 +372,7 @@ void hemmComputeX(PanelT<Coord::Col, T>& x, const LocalTileSize at_offset, Const
       const bool is_diagonal_tile = (ij.row() == ij.col());
 
       if (is_diagonal_tile) {
-        hpx::dataflow(ex, unwrapExtendTiles(hemm_o), blas::Side::Left, blas::Uplo::Lower, T(1),
-                      a.read(ij), w.read(ij), T(1), x(ij));
+        hemmDiag(ex, a.read(ij), w.read(ij), x(ij));
       }
       else {
         // Note:
@@ -374,16 +384,14 @@ void hemmComputeX(PanelT<Coord::Col, T>& x, const LocalTileSize at_offset, Const
         {
           const LocalTileIndex index_x(Coord::Row, ij.row());
           const LocalTileIndex index_w(Coord::Row, ij.col());
-          hpx::dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::NoTrans, blas::Op::NoTrans, T(1),
-                        a.read(ij), w.read(index_w), T(1), x(index_x));
+          hemmOffDiag(ex, blas::Op::NoTrans, a.read(ij), w.read(index_w), x(index_x));
         }
 
         {
           const LocalTileIndex index_pretended = transposed(ij);
           const LocalTileIndex index_x(Coord::Row, index_pretended.row());
           const LocalTileIndex index_w(Coord::Row, index_pretended.col());
-          hpx::dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans, T(1),
-                        a.read(ij), w.read(index_w), T(1), x(index_x));
+          hemmOffDiag(ex, blas::Op::ConjTrans, a.read(ij), w.read(index_w), x(index_x));
         }
       }
     }
@@ -535,10 +543,6 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
                   const LocalTileSize at_offset, ConstMatrixT<T>& a, ConstPanelT<Coord::Col, T>& w,
                   ConstPanelT<Coord::Row, T>& wt, common::Pipeline<comm::Communicator>& mpi_row_chain,
                   common::Pipeline<comm::Communicator>& mpi_col_chain) {
-  using matrix::unwrapExtendTiles;
-  using tile::hemm_o;
-  using tile::gemm_o;
-
   const auto ex = getHpExecutor<Backend::MC>();
   const auto ex_mpi = getMPIExecutor<Backend::MC>();
 
@@ -564,41 +568,33 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
       const bool is_diagonal_tile = (ij.row() == ij.col());
 
       if (is_diagonal_tile) {
-        hpx::dataflow(ex, unwrapExtendTiles(hemm_o), blas::Side::Left, blas::Uplo::Lower, T(1),
-                      a.read(ij_local), w.read(ij_local), T(1), x(ij_local));
+        hemmDiag(ex, a.read(ij_local), w.read(ij_local), x(ij_local));
       }
       else {
-        {
-          // Note:
-          // Since it is not a diagonal tile, otherwise it would have been managed in the previous
-          // branch, the second operand is not available in W but it is accessible through the
-          // support panel Wt.
-          // However, since we are still computing the "straight" part, the result can be stored
-          // in the "local" panel X.
+        // Note:
+        // Since it is not a diagonal tile, otherwise it would have been managed in the previous
+        // branch, the second operand is not available in W but it is accessible through the
+        // support panel Wt.
+        // However, since we are still computing the "straight" part, the result can be stored
+        // in the "local" panel X.
+        hemmOffDiag(ex, blas::Op::NoTrans, a.read(ij_local), wt.read(ij_local), x(ij_local));
 
-          hpx::dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::NoTrans, blas::Op::NoTrans, T(1),
-                        a.read(ij_local), wt.read(ij_local), T(1), x(ij_local));
-        }
+        // Note:
+        // Here we are considering the hermitian part of A, so coordinates have to be "mirrored".
+        // So, first step is identifying the mirrored cell coordinate, i.e. swap row/col, together
+        // with realizing if the new coord lays on an owned row or not.
+        // If yes, the result can be stored in the X, otherwise Xt support panel will be used.
+        // For what concerns the second operand, it can be found for sure in W. In fact, the
+        // multiplication requires matching col(A) == row(W), but since coordinates are mirrored,
+        // we are mathing row(A) == row(W), so it is local by construction.
+        const auto owner = dist.template rankGlobalTile<Coord::Row>(ij.col());
 
-        {
-          // Note:
-          // Here we are considering the hermitian part of A, so coordinates have to be "mirrored".
-          // So, first step is identifying the mirrored cell coordinate, i.e. swap row/col, together
-          // with realizing if the new coord lays on an owned row or not.
-          // If yes, the result can be stored in the X, otherwise Xt support panel will be used.
-          // For what concerns the second operand, it can be found for sure in W. In fact, the
-          // multiplication requires matching col(A) == row(W), but since coordinates are mirrored,
-          // we are mathing row(A) == row(W), so it is local by construction.
-          const auto owner = dist.template rankGlobalTile<Coord::Row>(ij.col());
+        const LocalTileIndex index_x{dist.template localTileFromGlobalTile<Coord::Row>(ij.col()), 0};
+        const LocalTileIndex index_xt{0, ij_local.col()};
 
-          const LocalTileIndex index_x{dist.template localTileFromGlobalTile<Coord::Row>(ij.col()), 0};
-          const LocalTileIndex index_xt{0, ij_local.col()};
+        auto tile_x = (dist.rankIndex().row() == owner) ? x(index_x) : xt(index_xt);
 
-          auto tile_x = (dist.rankIndex().row() == owner) ? x(index_x) : xt(index_xt);
-
-          hpx::dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans, T(1),
-                        a.read(ij_local), w.read(ij_local), T(1), std::move(tile_x));
-        }
+        hemmOffDiag(ex, blas::Op::ConjTrans, a.read(ij_local), w.read(ij_local), std::move(tile_x));
       }
     }
   }

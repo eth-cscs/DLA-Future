@@ -126,7 +126,7 @@ TYPED_TEST(MatrixOutputTest, CsvFormatTile) {
     std::string output_csv = std::get<2>(config);
 
     std::ostringstream stream_tile_output;
-    dlaf::matrix::internal::print(format::csv{}, tile, stream_tile_output);
+    print(format::csv{}, tile, stream_tile_output);
 
     EXPECT_EQ(output_csv, stream_tile_output.str());
   }

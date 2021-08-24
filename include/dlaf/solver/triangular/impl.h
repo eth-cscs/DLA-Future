@@ -524,6 +524,7 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
 
     const LocalTileIndex bt_offset(distr_b.nextLocalTileFromGlobalTile<Coord::Row>(kk.row() + 1), 0);
 
+    // TODO np/hp executor selection in getGenericExecutor
     matrix::util::set0(getGenericExecutor<backend>::call(), b_panel);
 
     for (SizeType j = bt_offset.col(); j < distr_b.localNrTiles().cols(); ++j) {

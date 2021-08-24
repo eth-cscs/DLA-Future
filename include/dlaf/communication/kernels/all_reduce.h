@@ -140,7 +140,7 @@ hpx::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
 
   auto wrapped =
       dataflow(ex_copy, matrix::unwrapExtendTiles(copyBack_o), std::move(tile), std::move(cont_buf));
-  return hpx::get<0>(hpx::split_future(std::move(wrapped)));
+  return getUnwrapReturnValue(std::move(wrapped));
 }
 }
 }

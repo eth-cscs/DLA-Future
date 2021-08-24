@@ -230,6 +230,20 @@ void hemmOffDiag(const Executor& ex, blas::Op op, hpx::shared_future<TileT<const
                 std::move(tile_a), std::move(tile_w), T(1), std::move(tile_x));
 }
 
+template <class Executor, class T>
+void her2kDiag(const Executor& ex, hpx::shared_future<TileT<const T>> tile_v,
+               hpx::shared_future<TileT<const T>> tile_x, hpx::future<TileT<T>> tile_a) {
+  dataflow(ex, matrix::unwrapExtendTiles(tile::her2k_o), blas::Uplo::Lower, blas::Op::NoTrans, T(-1),
+           std::move(tile_v), std::move(tile_x), BaseType<T>(1), std::move(tile_a));
+}
+
+// C -= A . B*
+template <class Executor, class T>
+void her2kOffDiag(const Executor& ex, hpx::shared_future<TileT<const T>> tile_a,
+                  hpx::shared_future<TileT<const T>> tile_b, hpx::future<TileT<T>> tile_c) {
+  dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
+           std::move(tile_a), std::move(tile_b), T(1), std::move(tile_c));
+}
 }
 
 namespace local {
@@ -430,11 +444,6 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
                                ConstPanelT<Coord::Col, T>& x, ConstPanelT<Coord::Col, T>& v) {
   static_assert(std::is_signed<BaseType<T>>::value, "alpha in computations requires to be -1");
 
-  using hpx::dataflow;
-  using matrix::unwrapExtendTiles;
-  using tile::her2k_o;
-  using tile::gemm_o;
-
   const auto dist = a.distribution();
 
   for (SizeType i = at_start.rows(); i < dist.localNrTiles().rows(); ++i) {
@@ -451,17 +460,15 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
       const auto& ex =
           (j == at_start.cols()) ? getHpExecutor<Backend::MC>() : getNpExecutor<Backend::MC>();
 
-      if (is_diagonal_tile)
-        dataflow(ex, unwrapExtendTiles(her2k_o), blas::Uplo::Lower, blas::Op::NoTrans, T(-1),
-                 v.read(ij_local), x.read(ij_local), BaseType<T>(1), a(ij_local));
+      if (is_diagonal_tile) {
+        her2kDiag(ex, v.read(ij_local), x.read(ij_local), a(ij_local));
+      }
       else {
-        // GEMM A -= X . V*
-        dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
-                 x.read(ij_local), v.read(transposed(ij_local)), T(1), a(ij_local));
+        // A -= X . V*
+        her2kOffDiag(ex, x.read(ij_local), v.read(transposed(ij_local)), a(ij_local));
 
-        // GEMM A -= V . X*
-        dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
-                 v.read(ij_local), x.read(transposed(ij_local)), T(1), a(ij_local));
+        // A -= V . X*
+        her2kOffDiag(ex, v.read(ij_local), x.read(transposed(ij_local)), a(ij_local));
       }
     }
   }
@@ -646,11 +653,6 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
                                ConstPanelT<Coord::Col, T>& v, ConstPanelT<Coord::Row, T>& xt) {
   static_assert(std::is_signed<BaseType<T>>::value, "alpha in computations requires to be -1");
 
-  using hpx::dataflow;
-  using matrix::unwrapExtendTiles;
-  using tile::her2k_o;
-  using tile::gemm_o;
-
   const auto dist = a.distribution();
 
   for (SizeType i = at_start.rows(); i < dist.localNrTiles().rows(); ++i) {
@@ -667,17 +669,15 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
       const auto& ex =
           (j == at_start.cols()) ? getHpExecutor<Backend::MC>() : getNpExecutor<Backend::MC>();
 
-      if (is_diagonal_tile)
-        dataflow(ex, unwrapExtendTiles(her2k_o), blas::Uplo::Lower, blas::Op::NoTrans, T(-1),
-                 v.read(ij_local), x.read(ij_local), BaseType<T>(1), a(ij_local));
+      if (is_diagonal_tile) {
+        her2kDiag(ex, v.read(ij_local), x.read(ij_local), a(ij_local));
+      }
       else {
-        // GEMM A -= X . V*
-        dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
-                 x.read(ij_local), vt.read(ij_local), T(1), a(ij_local));
+        // A -= X . V*
+        her2kOffDiag(ex, x.read(ij_local), vt.read(ij_local), a(ij_local));
 
-        // GEMM A -= V . X*
-        dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
-                 v.read(ij_local), xt.read(ij_local), T(1), a(ij_local));
+        // A -= V . X*
+        her2kOffDiag(ex, v.read(ij_local), xt.read(ij_local), a(ij_local));
       }
     }
   }

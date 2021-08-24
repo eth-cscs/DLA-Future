@@ -480,7 +480,8 @@ T computeReflector(const bool has_head, comm::Communicator& communicator,
   // (e.g. norm, y, tau) just on the root rank and then having to broadcast them (i.e. additional
   // communication).
   comm::sync::allReduceInPlace(communicator, MPI_SUM,
-                               common::make_data(x0_and_squares.data(), to_SizeType(x0_and_squares.size())));
+                               common::make_data(x0_and_squares.data(),
+                                                 to_SizeType(x0_and_squares.size())));
 
   auto tau = computeReflectorAndTau(has_head, panel, j, std::move(x0_and_squares));
 

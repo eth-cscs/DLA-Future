@@ -425,6 +425,13 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
   }
 }
 
+/// Note:
+/// This is a workaround because the Np/Hp CUDA executors are able to execute
+/// cuSolver and cuBlas calls delegating to the respective custom executors, but they
+/// do not have as fallback the basic CUDA executor, who is is needed by the set0
+/// call.
+/// Moreover, since the algorithm is generic for both CPU and GPU, this helper allows to
+/// hide the different backends needs.
 template <Backend B>
 struct getGenericExecutor {
   static auto call() {

@@ -365,34 +365,25 @@ void hemmComputeX(PanelT<Coord::Col, T>& x, const LocalTileSize at_offset, Const
                       a.read(ij), w.read(ij), T(1), x(ij));
       }
       else {
-        // A . W*
-        {
-          // Note:
-          // Since it is not a diagonal tile, otherwise it would have been managed in the previous
-          // branch, the second operand is not available in W but it is accessible through the
-          // support panel Wt.
-          // However, since we are still computing the "straight" part, the result can be stored
-          // in the "local" panel X.
+        // Note:
+        // Because A is hermitian and just the lower part contains the data, for each a(ij) not
+        // on the diagonal, two computations are done:
+        // - using a(ij) in its position;
+        // - using a(ij) in its "transposed" position (applying the ConjTrans to its data)
 
+        {
+          const LocalTileIndex index_x(Coord::Row, ij.row());
+          const LocalTileIndex index_w(Coord::Row, ij.col());
           hpx::dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::NoTrans, blas::Op::NoTrans, T(1),
-                        a.read(ij), w.read(transposed(ij)), T(1), x(ij));
+                        a.read(ij), w.read(index_w), T(1), x(index_x));
         }
 
-        // A* . W
         {
-          // Note:
-          // Here we are considering the hermitian part of A, so coordinates have to be "mirrored".
-          // So, first step is identifying the mirrored cell coordinate, i.e. swap row/col, together
-          // with realizing if the new coord lays on an owned row or not.
-          // If yes, the result can be stored in the X, otherwise Xt support panel will be used.
-          // For what concerns the second operand, it can be found for sure in W. In fact, the
-          // multiplication requires matching col(A) == row(W), but since coordinates are mirrored,
-          // we are mathing row(A) == row(W), so it is local by construction.
-          const auto owner = dist.template rankGlobalTile<Coord::Row>(ij.col());
-
-          // X is in the lower part but it is ConjTrans
+          const LocalTileIndex index_pretended = transposed(ij);
+          const LocalTileIndex index_x(Coord::Row, index_pretended.row());
+          const LocalTileIndex index_w(Coord::Row, index_pretended.col());
           hpx::dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans, T(1),
-                        a.read(ij), w.read(ij), T(1), x(transposed(ij)));
+                        a.read(ij), w.read(index_w), T(1), x(index_x));
         }
       }
     }
@@ -419,7 +410,7 @@ void gemmComputeW2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Co
     hpx::dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans, T(1),
                   w.read(index_tile), x.read(index_tile), beta, w2(LocalTileIndex(0, 0)));
 
-    isW2initialized = true;  // with C++20 this can be moved into the for init-statement
+    isW2initialized = true;
   }
 
   if (!isW2initialized)
@@ -489,7 +480,7 @@ T computeReflector(const bool has_head, comm::Communicator& communicator,
   // (e.g. norm, y, tau) just on the root rank and then having to broadcast them (i.e. additional
   // communication).
   comm::sync::allReduceInPlace(communicator, MPI_SUM,
-                               common::make_data(x0_and_squares.data(), x0_and_squares.size()));
+                               common::make_data(x0_and_squares.data(), to_SizeType(x0_and_squares.size())));
 
   auto tau = computeReflectorAndTau(has_head, panel, j, std::move(x0_and_squares));
 
@@ -576,7 +567,6 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
                       a.read(ij_local), w.read(ij_local), T(1), x(ij_local));
       }
       else {
-        // A . W*
         {
           // Note:
           // Since it is not a diagonal tile, otherwise it would have been managed in the previous
@@ -589,7 +579,6 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
                         a.read(ij_local), wt.read(ij_local), T(1), x(ij_local));
         }
 
-        // A* . W
         {
           // Note:
           // Here we are considering the hermitian part of A, so coordinates have to be "mirrored".
@@ -715,7 +704,7 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
 
   const SizeType nblocks = dist.nrTiles().cols() - 1;
   std::vector<hpx::shared_future<common::internal::vector<T>>> taus;
-  taus.reserve(nblocks);
+  taus.reserve(to_sizet(nblocks));
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<PanelT<Coord::Col, T>> panels_v(n_workspaces, dist);

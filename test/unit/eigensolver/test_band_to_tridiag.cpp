@@ -23,6 +23,7 @@
 #include "dlaf_test/matrix/util_matrix_local.h"
 #include "dlaf_test/util_types.h"
 
+#include "dlaf/matrix/print_csv.h"
 #include "dlaf/matrix/print_numpy.h"
 
 using namespace dlaf;
@@ -32,10 +33,7 @@ using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 using namespace testing;
 
-template <typename Type>
-class EigensolverBandToTridiagLocalTest : public ::testing::Test {};
-
-TYPED_TEST_SUITE(EigensolverBandToTridiagLocalTest, MatrixElementTypes);
+TYPED_TEST_SUITE(EigensolverBandToTridiagTest, MatrixElementTypes);
 
 const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
     //{0, 2},                              // m = 0
@@ -55,22 +53,8 @@ void testBandToTridiag(const blas::Uplo uplo, const SizeType band_size, const Si
   set(mat_a, el_a);
   matrix::print(format::numpy(), "A", mat_a);
 
-  auto ret = eigensolver::bandToTridiag<Backend::MC>(uplo, band_size, mat_a);
-  auto d = std::move(std::get<0>(ret));
-  auto e = std::move(std::get<1>(ret));
-
-  for (auto sf : d) {
-    for (auto el : sf.get()) {
-      std::cout << el << ", ";
-    }
-  }
-  std::cout << std::endl;
-  for (auto sf : e) {
-    for (auto el : sf.get()) {
-      std::cout << el << ", ";
-    }
-  }
-  std::cout << std::endl;
+  auto mat_trid = eigensolver::bandToTridiag<Backend::MC>(uplo, band_size, mat_a);
+  matrix::print(format::csv(), "T", mat_trid);
 
   auto mat_local = matrix::test::allGather(lapack::char2matrixtype(blas::uplo2char(uplo)), mat_a);
   auto tmp = m - band_size - 1;
@@ -90,29 +74,43 @@ void testBandToTridiag(const blas::Uplo uplo, const SizeType band_size, const Si
     }
     std::cout << std::endl;
   }
-  common::internal::vector<BaseType<T>> e0(m), d0(m);
+  common::internal::vector<BaseType<T>> e(m), d(m);
   common::internal::vector<T> tau(m);
-  lapack::hetrd(uplo, m, mat_local.ptr(), mat_local.ld(), d0.data(), e0.data(), tau.data());
+  lapack::hetrd(uplo, m, mat_local.ptr(), mat_local.ld(), d.data(), e.data(), tau.data());
 
-  for (auto el : d0) {
+  for (auto el : d) {
     std::cout << el << ", ";
   }
   std::cout << std::endl;
-  for (auto el : e0) {
+  for (auto el : e) {
     std::cout << el << ", ";
   }
+  std::cout << std::endl;
+
+  // As it is not used the m-1-th element of e and of mat_trid(1, m-1) are set to 0
+  // to make the matrix check happy.
+  e[m - 1] = 0.f;
+  mat_trid(GlobalTileIndex{0, (m - 1) / mb}).get()({1, (m - 1) % mb}) = 0.f;
+
+  auto res = [&d, &e](const GlobalElementIndex& index) {
+    if (index.row() == 0)
+      return d[index.col()];
+    return e[index.col()];
+  };
+  // TODO: Find another method as tridiagonalization is not unique.
+  // CHECK_MATRIX_NEAR(res, mat_trid, mb * m * TypeUtilities<T>::error, m * TypeUtilities<T>::error);
 }
 
-TYPED_TEST(EigensolverBandToTridiagLocalTest, Correctness) {
-  // TEST(EigensolverBandToTridiagLocalTest, Correctness) {
+TYPED_TEST(EigensolverBandToTridiagTest, CorrectnessLocal) {
   SizeType m, mb, b;
   const blas::Uplo uplo = blas::Uplo::Lower;
 
   for (auto sz : sizes) {
     std::tie(m, mb, b) = sz;
+    std::cout << "\n----------------------------\n" << std::endl;
     std::cout << m << ", " << mb << ":" << b << std::endl;
 
     testBandToTridiag<TypeParam>(uplo, b, m, mb);
-    // testBandToTridiag<double>(uplo, b, m, mb);
+    std::cout << "\n----------------------------\n" << std::endl;
   }
 }

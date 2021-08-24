@@ -91,7 +91,7 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
 
   auto res = dataflow(ex_copy, unwrapping(copyBack_o), tile_cpu, std::move(cont_buf));
 
-  matrix::copyIfNeeded(tile_cpu, tile_orig, res);
+  matrix::copyIfNeeded(tile_cpu, tile_orig, std::move(res));
 }
 
 template <class T, Device D>

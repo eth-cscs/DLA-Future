@@ -50,22 +50,18 @@ void backTransformation(Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v
 }
 
 // TODO DOC
+// @param mat_i matrix containing reflectors together with taus (compact form)
 template <Backend backend, Device device, class T>
-void backTransformationT2B(matrix::Matrix<T, device>& mat_e, matrix::Matrix<const T, device>& mat_v,
-                           matrix::Matrix<const T, device>& mat_taus) {
+void backTransformationT2B(matrix::Matrix<T, device>& mat_e, matrix::Matrix<const T, device>& mat_i) {
   // TODO check conditions
+
   DLAF_ASSERT(matrix::local_matrix(mat_e), mat_e);
-  DLAF_ASSERT(matrix::local_matrix(mat_v), mat_v);
+  DLAF_ASSERT(matrix::local_matrix(mat_i), mat_i);
 
-  DLAF_ASSERT(matrix::square_size(mat_v), mat_v);
-  DLAF_ASSERT(matrix::square_blocksize(mat_v), mat_v);
+  DLAF_ASSERT(matrix::square_size(mat_i), mat_i);
+  DLAF_ASSERT(matrix::square_blocksize(mat_i), mat_i);
 
-  DLAF_ASSERT(matrix::equal_size(mat_v, mat_taus), mat_v, mat_taus);
-  DLAF_ASSERT(matrix::equal_blocksize(mat_v, mat_taus), mat_v, mat_taus);
-
-  // TODO check taus with respect to v
-
-  internal::BackTransformationT2B<backend, device, T>::call(mat_e, mat_v, mat_taus);
+  internal::BackTransformationT2B<backend, device, T>::call(mat_e, mat_i);
 }
 }
 }

@@ -56,7 +56,7 @@ DLAF_MAKE_CALLABLE_OBJECT(makeItContiguous);
 /// It returns @p tile, ensuring that if the given @p bag owns a temporary buffer, it copies data from
 /// this latter one to @p tile before returning it. Otherwise it is a no-op.
 template <class T>
-auto copyBack(matrix::Tile<T, Device::CPU> const& tile, ContiguousBufferHolder<T> bag) {
+auto copyBack(const matrix::Tile<T, Device::CPU>& tile, ContiguousBufferHolder<T> bag) {
   auto buffer_used = std::move(bag.buffer);
   if (buffer_used)
     common::copy(buffer_used, common::make_data(tile));

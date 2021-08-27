@@ -449,8 +449,8 @@ struct getGenericExecutor<Backend::GPU> {
 #endif
 
 template <class T>
-void tileSubtractInPlace(matrix::Tile<T, Device::CPU> const& tile_a,
-                         matrix::Tile<const T, Device::CPU> const& tile_b) {
+void tileSubtractInPlace(const matrix::Tile<T, Device::CPU>& tile_a,
+                         const matrix::Tile<const T, Device::CPU>& tile_b) {
   DLAF_ASSERT(equal_size(tile_a, tile_b), tile_a, tile_b);
   for (auto j = 0; j < tile_a.size().cols(); ++j)
     blas::axpy(tile_a.size().rows(), T(-1), tile_b.ptr({0, j}), 1, tile_a.ptr({0, j}), 1);
@@ -458,8 +458,8 @@ void tileSubtractInPlace(matrix::Tile<T, Device::CPU> const& tile_a,
 
 #ifdef DLAF_WITH_CUDA
 template <class T>
-void tileSubtractInPlace(cublasHandle_t handle, matrix::Tile<T, Device::GPU> const& tile_a,
-                         matrix::Tile<const T, Device::GPU> const& tile_b) {
+void tileSubtractInPlace(cublasHandle_t handle, const matrix::Tile<T, Device::GPU>& tile_a,
+                         const matrix::Tile<const T, Device::GPU>& tile_b) {
   DLAF_ASSERT(equal_size(tile_a, tile_b), tile_a, tile_b);
   const T alpha = -1;
   for (auto j = 0; j < tile_a.size().cols(); ++j)

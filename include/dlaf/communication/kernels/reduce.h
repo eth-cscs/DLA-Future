@@ -48,7 +48,7 @@ DLAF_MAKE_CALLABLE_OBJECT(reduceRecvInPlace);
 template <class T, Device D>
 auto reduceSend(comm::IndexT_MPI rank_root, common::PromiseGuard<comm::Communicator> pcomm,
                 MPI_Op reduce_op, common::internal::ContiguousBufferHolder<const T> cont_buf,
-                matrix::Tile<const T, D> const&, MPI_Request* req) {
+                const matrix::Tile<const T, D>&, MPI_Request* req) {
   auto msg = comm::make_message(cont_buf.descriptor);
   auto& comm = pcomm.ref();
 

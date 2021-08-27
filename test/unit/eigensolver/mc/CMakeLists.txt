@@ -20,3 +20,9 @@ DLAF_addTest(test_backtransformation
   LIBRARIES dlaf.eigensolver dlaf.core
   USE_MAIN HPX
 )
+
+DLAF_addTest(test_backtransformation_t2b
+  SOURCES test_backtransformation_t2b.cpp
+  LIBRARIES dlaf.eigensolver dlaf.core
+  USE_MAIN HPX
+)

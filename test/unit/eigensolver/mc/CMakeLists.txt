@@ -21,3 +21,9 @@ DLAF_addTest(test_reduction_to_band
   USE_MAIN MPIHPX
   MPIRANKS 6
 )
+
+DLAF_addTest(test_backtransformation_t2b
+  SOURCES test_backtransformation_t2b.cpp
+  LIBRARIES dlaf.eigensolver dlaf.core
+  USE_MAIN HPX
+)

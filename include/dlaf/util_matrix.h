@@ -140,7 +140,7 @@ public:
 template <class T, Device D, class ExecutorOrPolicy>
 void set0(ExecutorOrPolicy ex, Matrix<T, D>& matrix) {
   for (const auto& idx : iterate_range2d(matrix.distribution().localNrTiles()))
-    matrix(idx).then(ex, matrix::unwrapExtendTiles(tile::set0_o));
+    hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::set0_o), matrix(idx));
 }
 
 /// Sets all the elements of all the tiles in the active range to zero

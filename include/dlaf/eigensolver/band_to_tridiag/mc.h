@@ -170,6 +170,11 @@ public:
     startSweepInternal(sweep, a);
   }
 
+  void compactCopyToTile(matrix::Tile<T, Device::CPU>&& tile_v, TileElementIndex index) {
+    tile_v(index) = tau();
+    blas::copy(sizeHHR() - 1, v() + 1, 1, tile_v.ptr(index) + 1, 1);
+  }
+
   void doStep(BandBlock<T>& a) {
     doStepFull(a);
   }
@@ -185,9 +190,8 @@ protected:
 
   template <class BandBlockType>
   void doStepFull(BandBlockType& a) {
-    // std::cout << sweep_ << ", " << step_ << std::endl;
-    SizeType j = 1 + sweep_ + step_ * band_size_;
-    SizeType n = std::min(band_size_, size_ - j);  // size diagonal tile and width off-diag tile
+    SizeType j = firstRowHHR();
+    SizeType n = sizeHHR();  // size diagonal tile and width off-diag tile
     SizeType m = std::min(band_size_, size_ - band_size_ - j);  // height off diagonal tile
 
     applyHHLeftRightHerm(n, tau(), v(), a.ptr(0, j), a.ld(), w());
@@ -205,6 +209,14 @@ protected:
   void setId(SizeType sweep, SizeType step) {
     sweep_ = sweep;
     step_ = step;
+  }
+
+  SizeType firstRowHHR() {
+    return 1 + sweep_ + step_ * band_size_;
+  }
+
+  SizeType sizeHHR() {
+    return std::min(band_size_, size_ - firstRowHHR());
   }
 
   T& tau() noexcept {
@@ -239,7 +251,7 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
   }
 
   // Local implementation of bandToTridiag.
-  static auto call_L(const SizeType b, Matrix<T, Device::CPU>& mat_a) {
+  static auto call_L(const SizeType b, Matrix<const T, Device::CPU>& mat_a) {
     using MatrixType = Matrix<T, Device::CPU>;
     using ConstTileType = typename MatrixType::ConstTileType;
     using common::internal::vector;
@@ -249,7 +261,6 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
     using hpx::resource::get_num_threads;
 
     auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
-    auto executor_np = dlaf::getNpExecutor<Backend::MC>();
 
     // note: A is square and has square blocksize
     SizeType size = mat_a.size().cols();
@@ -260,6 +271,8 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
     auto a_ws = std::make_shared<BandBlock<T>>(size, b);
 
     Matrix<BaseType<T>, Device::CPU> mat_trid({2, size}, {2, nb});
+    Matrix<T, Device::CPU> mat_v({size, size}, {nb, nb});
+    const auto& dist_v = mat_v.distribution();
 
     const auto max_deps_size = ceilDiv(size, b);
     vector<hpx::shared_future<void>> deps;
@@ -299,6 +312,11 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
       worker.startSweep(sweep, *a_ws);
       return hpx::make_tuple(std::move(worker), true);
     };
+    auto store_tau_v = [](SweepWorker<T>&& worker, matrix::Tile<T, Device::CPU>&& tile_v,
+                          TileElementIndex index) {
+      worker.compactCopyToTile(std::move(tile_v), index);
+      return std::move(worker);
+    };
     auto cont_sweep = [a_ws](SweepWorker<T>&& worker) {
       worker.doStep(*a_ws);
       return hpx::make_tuple(std::move(worker), true);
@@ -319,7 +337,6 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
       const auto nb = mat_trid.blockSize().cols();
       if (sweep % nb == nb - 1 || sweep == size - 1) {
         const auto tile_index = sweep / nb;
-        std::cout << tile_index << std::endl;
         const auto start = tile_index * nb;
         hpx::dataflow(executor_hp, unwrapping(copy_tridiag_task), start, std::min(nb, size - start),
                       std::min(nb, size - 1 - start), mat_trid(GlobalTileIndex{0, tile_index}), dep);
@@ -341,6 +358,10 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
       for (SizeType step = 0; step < steps; ++step) {
         auto dep_index = std::min(step + 1, deps.size() - 1);
 
+        const GlobalElementIndex index_v((sweep / b + step) * b, sweep);
+
+        worker = hpx::dataflow(hpx::launch::sync, unwrapping(store_tau_v), worker,
+                               mat_v(dist_v.globalTileIndex(index_v)), dist_v.tileElementIndex(index_v));
         auto ret = hpx::split_future(
             hpx::dataflow(executor_hp, unwrapping(cont_sweep), worker, deps[dep_index]));
         deps[step] = hpx::future<void>(std::move(hpx::get<1>(ret)));
@@ -359,7 +380,7 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
     }
     copy_tridiag(size - 1, deps[0]);
 
-    return mat_trid;
+    return std::make_tuple(std::move(mat_trid), std::move(mat_v));
   }
 };
 

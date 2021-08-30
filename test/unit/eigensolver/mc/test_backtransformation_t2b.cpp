@@ -122,6 +122,6 @@ TYPED_TEST(BacktransformationT2BTest, CorrectnessLocal) {
     return mat_local.tile_read(tile_index)(tile_element);
   };
 
-  const auto error = 2 * TypeUtilities<TypeParam>::error; // TODO how much error
+  const auto error = m * n * TypeUtilities<TypeParam>::error; // TODO how much error
   CHECK_MATRIX_NEAR(result, mat_e, error, error);
 }

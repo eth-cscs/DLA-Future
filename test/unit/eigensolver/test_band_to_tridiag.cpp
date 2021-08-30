@@ -48,9 +48,7 @@ void testBandToTridiag(const blas::Uplo uplo, const SizeType band_size, const Si
   const TileElementSize block_size(mb, mb);
 
   Matrix<T, Device::CPU> mat_a(size, block_size);
-
-  auto el_a = [](auto index) { return T((double) 100 + 100 * index.row() - 99 * index.col()); };
-  set(mat_a, el_a);
+  matrix::util::set_random_hermitian(mat_a);
 
   auto ret = eigensolver::bandToTridiag<Backend::MC>(uplo, band_size, mat_a);
   auto mat_trid = std::move(std::get<0>(ret));
@@ -80,7 +78,7 @@ void testBandToTridiag(const blas::Uplo uplo, const SizeType band_size, const Si
   };
 
   if (std::is_same<T, ComplexType<T>>::value) {
-    T* v = mat_v_local.ptr({m - 1, m - 1});
+    T* v = mat_v_local.ptr({(m - 2) / band_size * band_size, m - 2});
     apply_left_right(1, v, m - 1);
   }
 

@@ -34,16 +34,18 @@ TYPED_TEST_SUITE(BacktransformationT2BTest, MatrixElementTypes);
 struct calculateTau {
   template <class T>
   static T call(const T* v, const SizeType size) {
-    const auto dotprod = blas::dot(size, v, 1, v, 1);
+    const T dotprod = blas::dot(size, v, 1, v, 1);
     return 2 / dotprod;
   }
 
   template <class T>
   static std::complex<T> call(const std::complex<T>* v, const SizeType size) {
     const T dotprod = std::real(blas::dot(size, v, 1, v, 1));
-    const T imag = 1;
-    return {(T(1) + std::sqrt(T(1) - dotprod * imag * imag)) / dotprod, imag};
+    const T imag = T(1) / size;  // TODO check tau vs dotprod
+    return {(T(1.0) + std::sqrt(T(1) - dotprod * imag * imag)) / dotprod, imag};
   }
+
+  // TODO random number has to be "resetted" at each time
 };
 
 template <class T>

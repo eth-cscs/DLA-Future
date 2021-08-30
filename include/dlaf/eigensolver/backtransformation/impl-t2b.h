@@ -47,8 +47,12 @@ auto setupVWellFormed(const SizeType k,
     laset(MatrixType::Upper, b, k, T(0), T(1), tile_v.ptr({0, 0}), tile_v.ld());
     laset(MatrixType::Lower, b - 1, b - 1, T(0), T(0), tile_v.ptr({b, 0}), tile_v.ld());
 
-    // std::cout << "V = ";
-    // print(format::numpy{}, tile_v);
+    // TODO this is just a workaround...it must be fixed in W?
+    if (k < b)
+      laset(MatrixType::General, 2 * b - 1, b - k, T(0), T(0), tile_v.ptr({0, k}), tile_v.ld());
+
+    //std::cout << "V = ";
+    //print(format::numpy{}, tile_v);
 
     return matrix::Tile<const T, Device::CPU>(std::move(tile_v));
   };

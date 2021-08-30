@@ -49,15 +49,13 @@ struct calculateTau {
 };
 
 template <class T>
-void computeTaus(const SizeType k, matrix::Tile<T, Device::CPU> tile) {
-  const SizeType b = tile.size().rows();
+void computeTaus(const bool limit, const SizeType k, matrix::Tile<T, Device::CPU> tile) {
+  const SizeType b = tile.size().cols();
 
   for (SizeType j = 0; j < k; ++j) {
-    const SizeType i = j;
-    const SizeType n = i + b;
-
-    auto tau = calculateTau::call(tile.ptr({0, j}), n);
-
+    SizeType size = limit ? b - (j + 1) : b;
+    DLAF_ASSERT(size > 0, size);
+    const auto tau = calculateTau::call(tile.ptr({0, j}), size);
     *tile.ptr({0, j}) = tau;
   }
 }
@@ -87,7 +85,7 @@ TYPED_TEST(BacktransformationT2BTest, CorrectnessLocal) {
     for (SizeType j = 0; j < mat_v.distribution().localNrTiles().cols(); ++j) {
       for (SizeType i = 0; i < j; ++i) {
         const SizeType k = (i == j) ? b - 2 : b;
-        hpx::dataflow(hpx::unwrapping(computeTaus<TypeParam>), k, mat_v(LocalTileIndex(i, j)));
+        hpx::dataflow(hpx::unwrapping(computeTaus<TypeParam>), i == j, k, mat_v(LocalTileIndex(i, j)));
       }
     }
 

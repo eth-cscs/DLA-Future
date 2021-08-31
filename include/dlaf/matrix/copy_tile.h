@@ -134,11 +134,14 @@ void copy(TileElementSize region, TileElementIndex in_idx, const Tile<const T, D
 
 DLAF_MAKE_CALLABLE_OBJECT(copy);
 
-/// Helper struct for copying a given tile to an identical tile on Destination.
+/// Helper struct for copying a given tile to a tile on Destination.
 ///
 /// Defines a call operator which allocates a tile of the same dimensions as the
 /// input tile on Destination, and then copies the input tile to the output
 /// tile.
+/// The allocated tile on Destination will be of the same size of the input one, but it will be also
+/// contiguous, i.e. whatever the input leading dimension is, the destination one will have the leading
+/// dimension equal to the number of rows.
 ///
 /// This is useful for use with dataflow, since the output tile is allocated
 /// only when the input tile is ready.

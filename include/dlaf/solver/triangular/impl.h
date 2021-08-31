@@ -425,10 +425,55 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
   }
 }
 
-template <Backend backend, Device device, class T>
-void Triangular<backend, device, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op op, blas::Diag diag,
-                                              T alpha, Matrix<const T, device>& mat_a,
-                                              Matrix<T, device>& mat_b) {
+/// Note:
+/// This is a workaround because the Np/Hp CUDA executors are able to execute
+/// cuSolver and cuBlas calls delegating to the respective custom executors, but they
+/// do not have as fallback the basic CUDA executor, who is is needed by the set0
+/// call.
+/// Moreover, since the algorithm is generic for both CPU and GPU, this helper allows to
+/// hide the different backends needs.
+template <Backend B>
+struct getGenericExecutor {
+  static auto call() {
+    return dlaf::getNpExecutor<Backend::MC>();
+  }
+};
+
+#ifdef DLAF_WITH_CUDA
+template <>
+struct getGenericExecutor<Backend::GPU> {
+  static auto call() {
+    return dlaf::cuda::Executor{dlaf::internal::getNpCudaStreamPool()};
+  }
+};
+#endif
+
+template <class T>
+void tileSubtractInPlace(const matrix::Tile<T, Device::CPU>& tile_a,
+                         const matrix::Tile<const T, Device::CPU>& tile_b) {
+  DLAF_ASSERT(equal_size(tile_a, tile_b), tile_a, tile_b);
+  for (auto j = 0; j < tile_a.size().cols(); ++j)
+    blas::axpy(tile_a.size().rows(), T(-1), tile_b.ptr({0, j}), 1, tile_a.ptr({0, j}), 1);
+}
+
+#ifdef DLAF_WITH_CUDA
+template <class T>
+void tileSubtractInPlace(cublasHandle_t handle, const matrix::Tile<T, Device::GPU>& tile_a,
+                         const matrix::Tile<const T, Device::GPU>& tile_b) {
+  DLAF_ASSERT(equal_size(tile_a, tile_b), tile_a, tile_b);
+  const T alpha = -1;
+  for (auto j = 0; j < tile_a.size().cols(); ++j)
+    tile::internal::CublasAxpy<T>::call(handle, tile_a.size().rows(), util::blasToCublasCast(&alpha),
+                                        util::blasToCublasCast(tile_b.ptr({0, j})), 1,
+                                        util::blasToCublasCast(tile_a.ptr({0, j})), 1);
+}
+#endif
+
+DLAF_MAKE_CALLABLE_OBJECT(tileSubtractInPlace);
+
+template <Backend backend, Device D, class T>
+void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op op, blas::Diag diag,
+                                         T alpha, Matrix<const T, D>& mat_a, Matrix<T, D>& mat_b) {
   constexpr auto NoTrans = blas::Op::NoTrans;
 
   auto executor_hp = dlaf::getHpExecutor<backend>();
@@ -451,8 +496,8 @@ void Triangular<backend, device, T>::call_LLT(comm::CommunicatorGrid grid, blas:
     return;
 
   constexpr std::size_t n_workspaces = 2;
-  common::RoundRobin<matrix::Panel<Coord::Col, T, device>> a_panels(n_workspaces, distr_a);
-  common::RoundRobin<matrix::Panel<Coord::Row, T, device>> b_panels(n_workspaces, distr_b);
+  common::RoundRobin<matrix::Panel<Coord::Col, T, D>> a_panels(n_workspaces, distr_a);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, D>> b_panels(n_workspaces, distr_b);
 
   for (SizeType k = mat_a.nrTiles().cols() - 1; k >= 0; --k) {
     const GlobalTileIndex kk{k, k};
@@ -479,7 +524,8 @@ void Triangular<backend, device, T>::call_LLT(comm::CommunicatorGrid grid, blas:
 
     const LocalTileIndex bt_offset(distr_b.nextLocalTileFromGlobalTile<Coord::Row>(kk.row() + 1), 0);
 
-    matrix::util::set0(hpx::launch::sync, b_panel);
+    // TODO np/hp executor selection in getGenericExecutor
+    matrix::util::set0(getGenericExecutor<backend>::call(), b_panel);
 
     for (SizeType j = bt_offset.col(); j < distr_b.localNrTiles().cols(); ++j) {
       for (SizeType i = bt_offset.row(); i < distr_b.localNrTiles().rows(); ++i) {
@@ -487,7 +533,7 @@ void Triangular<backend, device, T>::call_LLT(comm::CommunicatorGrid grid, blas:
 
         const T beta = T(1) / alpha;
         // TODO executor
-        hpx::dataflow(matrix::unwrapExtendTiles(tile::gemm_o), op, blas::Op::NoTrans, beta,
+        hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::gemm_o), op, blas::Op::NoTrans, beta,
                       a_panel.read(ij), mat_b.read(ij), T(1), b_panel(ij));
       }
     }
@@ -505,17 +551,13 @@ void Triangular<backend, device, T>::call_LLT(comm::CommunicatorGrid grid, blas:
     if (this_rank.row() == rank_kk.row()) {
       for (SizeType j_loc = 0; j_loc < distr_b.localNrTiles().cols(); ++j_loc) {
         const LocalTileIndex kj(kk_offset.row(), j_loc);
-        auto tile_diff = hpx::unwrapping([](auto tile_a, const auto& tile_b) {
-          DLAF_ASSERT(equal_size(tile_a, tile_b), tile_a, tile_b);
-          for (auto j = 0; j < tile_a.size().cols(); ++j)
-            blas::axpy(tile_a.size().rows(), T(-1), tile_b.ptr({0, j}), 1, tile_a.ptr({0, j}), 1);
-        });
         // TODO executor
-        hpx::dataflow(tile_diff, mat_b(kj), b_panel.read(kj));
+        hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tileSubtractInPlace_o), mat_b(kj),
+                      b_panel.read(kj));
 
         // TODO executor
-        hpx::dataflow(matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Left, blas::Uplo::Lower, op,
-                      diag, alpha, a_panel.read(kk_offset), mat_b(kj));
+        hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Left,
+                      blas::Uplo::Lower, op, diag, alpha, a_panel.read(kk_offset), mat_b(kj));
       }
     }
 

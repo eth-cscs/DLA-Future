@@ -138,7 +138,10 @@ hpx::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
   cont_buf = dataflow(ex, unwrapping(internal::allReduceInPlace_o), std::move(pcomm), reduce_op,
                       std::move(cont_buf));
 
-  return dataflow(ex_copy, unwrapping(copyBack_o), std::move(tile), std::move(cont_buf));
+  // Note:
+  // This extracts the first argument given to copyBack, not the return value.
+  return hpx::get<0>(hpx::split_future(
+      dataflow(ex_copy, matrix::unwrapExtendTiles(copyBack_o), std::move(tile), std::move(cont_buf))));
 }
 }
 }

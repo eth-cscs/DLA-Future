@@ -134,11 +134,14 @@ void copy(TileElementSize region, TileElementIndex in_idx, const Tile<const T, D
 
 DLAF_MAKE_CALLABLE_OBJECT(copy);
 
-/// Helper struct for copying a given tile to an identical tile on Destination.
+/// Helper struct for copying a given tile to a tile on Destination.
 ///
 /// Defines a call operator which allocates a tile of the same dimensions as the
 /// input tile on Destination, and then copies the input tile to the output
 /// tile.
+/// The allocated tile on Destination will be of the same size of the input one, but it will be also
+/// contiguous, i.e. whatever the input leading dimension is, the destination one will have the leading
+/// dimension equal to the number of rows.
 ///
 /// This is useful for use with dataflow, since the output tile is allocated
 /// only when the input tile is ready.
@@ -172,6 +175,21 @@ struct DuplicateIfNeeded<SourceDestination, SourceDestination> {
     return tile;
   }
 };
+
+template <Device Source, Device Destination>
+struct CopyIfNeeded {
+  template <class T, class U, template <class> class FutureD, template <class> class FutureS, class... Ts>
+  static auto call(FutureS<Tile<U, Source>> from, FutureD<Tile<T, Destination>> to, Ts&&... ts) {
+    hpx::dataflow(dlaf::getCopyExecutor<Source, Destination>(), matrix::unwrapExtendTiles(copy_o),
+                  std::move(from), std::move(to), std::forward<Ts>(ts)...);
+  }
+};
+
+template <Device D>
+struct CopyIfNeeded<D, D> {
+  template <class T, class U, template <class> class FutureD, template <class> class FutureS, class... Ts>
+  static auto call(FutureS<Tile<U, D>>, FutureD<Tile<T, D>>, Ts&&...) {}
+};
 }
 
 /// Helper function for duplicating an input tile to Destination asynchronously,
@@ -181,6 +199,14 @@ struct DuplicateIfNeeded<SourceDestination, SourceDestination> {
 template <Device Destination, typename T, Device Source, template <class> class Future>
 auto duplicateIfNeeded(Future<Tile<T, Source>> tile) {
   return internal::DuplicateIfNeeded<Destination, Source>::call(std::move(tile));
+}
+
+template <Device Destination, class T, Device Source, class U, template <class> class FutureD,
+          template <class> class FutureS, class... Ts>
+auto copyIfNeeded(FutureS<Tile<U, Source>> tile_from, FutureD<Tile<T, Destination>> tile_to,
+                  Ts&&... ts) {
+  return internal::CopyIfNeeded<Source, Destination>::call(std::move(tile_from), std::move(tile_to),
+                                                           std::forward<Ts>(ts)...);
 }
 }
 }

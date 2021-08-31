@@ -26,7 +26,7 @@ namespace eigensolver {
 namespace internal {
 
 template <class T>
-void HHReflector(const SizeType n, T& tau, T* v, T* vec) {
+void HHReflector(const SizeType n, T& tau, T* v, T* vec) noexcept {
   DLAF_ASSERT_HEAVY(n >= 0, n);
 
   using dlaf::util::size_t::mul;
@@ -41,7 +41,8 @@ void HHReflector(const SizeType n, T& tau, T* v, T* vec) {
 }
 
 template <class T>
-void applyHHLeftRightHerm(const SizeType n, const T tau, const T* v, T* a, const SizeType lda, T* w) {
+void applyHHLeftRightHerm(const SizeType n, const T tau, const T* v, T* a, const SizeType lda,
+                          T* w) noexcept {
   DLAF_ASSERT_HEAVY(n >= 0, n);
 
   constexpr auto Lower = blas::Uplo::Lower;
@@ -56,7 +57,7 @@ void applyHHLeftRightHerm(const SizeType n, const T tau, const T* v, T* a, const
 
 template <class T>
 void applyHHLeft(const SizeType m, const SizeType n, const T tau, const T* v, T* a, const SizeType lda,
-                 T* w) {
+                 T* w) noexcept {
   DLAF_ASSERT_HEAVY(m >= 0, m);
   DLAF_ASSERT_HEAVY(n >= 0, n);
 
@@ -69,7 +70,7 @@ void applyHHLeft(const SizeType m, const SizeType n, const T tau, const T* v, T*
 
 template <class T>
 void applyHHRight(const SizeType m, const SizeType n, const T tau, const T* v, T* a, const SizeType lda,
-                  T* w) {
+                  T* w) noexcept {
   DLAF_ASSERT_HEAVY(m >= 0, m);
   DLAF_ASSERT_HEAVY(n >= 0, n);
 
@@ -89,17 +90,17 @@ public:
   BandBlock(SizeType n, SizeType band_size)
       : size_(n), band_size_(band_size), ld_(2 * band_size_ - 1), mem_(n * (ld_ + 1)) {}
 
-  T* ptr(SizeType offset, SizeType j) {
+  T* ptr(SizeType offset, SizeType j) noexcept {
     DLAF_ASSERT_HEAVY(0 <= offset && offset < ld_ + 1, offset, ld_);
     DLAF_ASSERT_HEAVY(0 <= j && j < size_, j, size_);
     return mem_(j * (ld_ + 1) + offset);
   }
 
-  SizeType ld() {
+  SizeType ld() const noexcept {
     return ld_;
   }
 
-  void copyDiag(SizeType j, const ConstTileType& source) {
+  void copyDiag(SizeType j, const ConstTileType& source) noexcept {
     constexpr auto General = lapack::MatrixType::General;
     constexpr auto Lower = lapack::MatrixType::Lower;
 
@@ -123,7 +124,7 @@ public:
     lapack::lacpy(Lower, size, size, source.ptr({index, index}), source.ld(), ptr(0, j + index), ld());
   }
 
-  void copyOffdiag(SizeType j, const ConstTileType& source) {
+  void copyOffdiag(SizeType j, const ConstTileType& source) noexcept {
     constexpr auto General = lapack::MatrixType::General;
     constexpr auto Upper = lapack::MatrixType::Upper;
     // The elements are copied in the following way:
@@ -166,22 +167,22 @@ public:
   SweepWorker& operator=(const SweepWorker&&) = delete;
   SweepWorker& operator=(SweepWorker&&) = default;
 
-  void startSweep(SizeType sweep, BandBlock<T>& a) {
+  void startSweep(SizeType sweep, BandBlock<T>& a) noexcept {
     startSweepInternal(sweep, a);
   }
 
-  void compactCopyToTile(matrix::Tile<T, Device::CPU>&& tile_v, TileElementIndex index) {
+  void compactCopyToTile(matrix::Tile<T, Device::CPU>&& tile_v, TileElementIndex index) const noexcept {
     tile_v(index) = tau();
     blas::copy(sizeHHR() - 1, v() + 1, 1, tile_v.ptr(index) + 1, 1);
   }
 
-  void doStep(BandBlock<T>& a) {
+  void doStep(BandBlock<T>& a) noexcept {
     doStepFull(a);
   }
 
 protected:
   template <class BandBlockType>
-  void startSweepInternal(SizeType sweep, BandBlockType& a) {
+  void startSweepInternal(SizeType sweep, BandBlockType& a) noexcept {
     SizeType n = std::min(size_ - sweep - 1, band_size_);
     HHReflector(n, tau(), v(), a.ptr(1, sweep));
 
@@ -189,7 +190,7 @@ protected:
   }
 
   template <class BandBlockType>
-  void doStepFull(BandBlockType& a) {
+  void doStepFull(BandBlockType& a) noexcept {
     SizeType j = firstRowHHR();
     SizeType n = sizeHHR();  // size diagonal tile and width off-diag tile
     SizeType m = std::min(band_size_, size_ - band_size_ - j);  // height off diagonal tile
@@ -206,24 +207,30 @@ protected:
     // Note: the sweep is completed if m <= 1.
   }
 
-  void setId(SizeType sweep, SizeType step) {
+  void setId(SizeType sweep, SizeType step) noexcept {
     sweep_ = sweep;
     step_ = step;
   }
 
-  SizeType firstRowHHR() {
+  SizeType firstRowHHR() const noexcept {
     return 1 + sweep_ + step_ * band_size_;
   }
 
-  SizeType sizeHHR() {
+  SizeType sizeHHR() const noexcept {
     return std::min(band_size_, size_ - firstRowHHR());
   }
 
   T& tau() noexcept {
     return *data_(0);
   }
+  const T& tau() const noexcept {
+    return *data_(0);
+  }
 
   T* v() noexcept {
+    return data_(1);
+  }
+  const T* v() const noexcept {
     return data_(1);
   }
 

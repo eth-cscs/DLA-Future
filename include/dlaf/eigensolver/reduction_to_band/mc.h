@@ -69,8 +69,6 @@ using PanelT = matrix::Panel<panel_type, T, Device::CPU>;
 template <Coord panel_type, class T>
 using ConstPanelT = PanelT<panel_type, const T>;
 
-namespace {
-
 // Extract x0 and compute local cumulative sum of squares of the reflector column
 template <class T>
 std::array<T, 2> computeX0AndSquares(const bool has_head, const std::vector<TileT<T>>& panel,
@@ -243,7 +241,6 @@ void her2kOffDiag(const Executor& ex, hpx::shared_future<TileT<const T>> tile_a,
                   hpx::shared_future<TileT<const T>> tile_b, hpx::future<TileT<T>> tile_c) {
   dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
            std::move(tile_a), std::move(tile_b), T(1), std::move(tile_c));
-}
 }
 
 namespace local {
@@ -585,7 +582,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
         // If yes, the result can be stored in the X, otherwise Xt support panel will be used.
         // For what concerns the second operand, it can be found for sure in W. In fact, the
         // multiplication requires matching col(A) == row(W), but since coordinates are mirrored,
-        // we are mathing row(A) == row(W), so it is local by construction.
+        // we are matching row(A) == row(W), so it is local by construction.
         const auto owner = dist.template rankGlobalTile<Coord::Row>(ij.col());
 
         const LocalTileIndex index_x{dist.template localTileFromGlobalTile<Coord::Row>(ij.col()), 0};

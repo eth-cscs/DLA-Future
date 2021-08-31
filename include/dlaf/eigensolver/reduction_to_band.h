@@ -19,6 +19,27 @@
 namespace dlaf {
 namespace eigensolver {
 
+/// Reduce a local lower Hermitian matrix to symmetric band-diagonal form, with `band = blocksize + 1`.
+///
+/// See the related distributed version for more details.
+//
+/// @param mat_a on entry it contains an Hermitian matrix, on exit it is overwritten with the
+/// band-diagonal result together with the elementary reflectors. Just the tiles of the lower
+/// triangular part will be used.
+///
+/// @pre mat_a has a square size
+/// @pre mat_a has a square block size
+/// @pre mat_a is a local matrix
+template <Backend backend, Device device, class T>
+std::vector<hpx::shared_future<common::internal::vector<T>>> reductionToBand(Matrix<T, device>& mat_a) {
+  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
+  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+
+  DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
+
+  return internal::ReductionToBand<backend, device, T>::call(mat_a);
+}
+
 /// Reduce a distributed lower Hermitian matrix to symmetric band-diagonal form, with `band = blocksize + 1`.
 ///
 /// The reduction from a lower Hermitian matrix to the band-diagonal form is performed by an orthogonal

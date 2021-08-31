@@ -240,18 +240,19 @@ protected:
 
 template <class T>
 struct BandToTridiag<Backend::MC, Device::CPU, T> {
-  static SizeType nrSweeps(SizeType size) {
+  static SizeType nrSweeps(SizeType size) noexcept {
     // Complex needs an extra sweep to have a real tridiagonal matrix.
     return std::is_same<T, ComplexType<T>>::value ? size - 1 : size - 2;
   }
 
-  static SizeType nrStepsForSweep(SizeType sweep, SizeType size, SizeType band) {
+  static SizeType nrStepsForSweep(SizeType sweep, SizeType size, SizeType band) noexcept {
     // Last Complex sweep should be handled differently.
     return sweep == size - 2 ? 1 : util::ceilDiv(size - sweep - 2, band);
   }
 
   // Local implementation of bandToTridiag.
-  static auto call_L(const SizeType b, Matrix<const T, Device::CPU>& mat_a) {
+  static ReturnTridiagType<T, Device::CPU> call_L(const SizeType b,
+                                                  Matrix<const T, Device::CPU>& mat_a) noexcept {
     using MatrixType = Matrix<T, Device::CPU>;
     using ConstTileType = typename MatrixType::ConstTileType;
     using common::internal::vector;
@@ -273,6 +274,10 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
     Matrix<BaseType<T>, Device::CPU> mat_trid({2, size}, {2, nb});
     Matrix<T, Device::CPU> mat_v({size, size}, {nb, nb});
     const auto& dist_v = mat_v.distribution();
+
+    if (size == 0) {
+      return {std::move(mat_trid), std::move(mat_v)};
+    }
 
     const auto max_deps_size = ceilDiv(size, b);
     vector<hpx::shared_future<void>> deps;
@@ -380,7 +385,7 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
     }
     copy_tridiag(size - 1, deps[0]);
 
-    return std::make_tuple(std::move(mat_trid), std::move(mat_v));
+    return {std::move(mat_trid), std::move(mat_v)};
   }
 };
 

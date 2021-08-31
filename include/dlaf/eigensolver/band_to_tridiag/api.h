@@ -9,10 +9,18 @@
 //
 #pragma once
 
+#include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 
 namespace dlaf {
 namespace eigensolver {
+
+template <class T, Device device>
+struct ReturnTridiagType {
+  Matrix<BaseType<T>, device> tridiagonal;
+  Matrix<T, device> hh_reflectors;
+};
+
 namespace internal {
 
 template <Backend backend, Device device, class T>

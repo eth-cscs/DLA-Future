@@ -29,8 +29,8 @@ namespace eigensolver {
 /// @pre b is a divisor of mat_a.blockSize().cols(),
 /// @pre mat_a is not distributed.
 template <Backend backend, Device device, class T>
-std::tuple<Matrix<BaseType<T>, device>, Matrix<T, device>> bandToTridiag(
-    blas::Uplo uplo, SizeType band_size, Matrix<const T, device>& mat_a) {
+ReturnTridiagType<T, device> bandToTridiag(blas::Uplo uplo, SizeType band_size,
+                                           Matrix<const T, device>& mat_a) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
@@ -47,7 +47,7 @@ std::tuple<Matrix<BaseType<T>, device>, Matrix<T, device>> bandToTridiag(
       break;
   }
 
-  return DLAF_UNREACHABLE(std::tuple<Matrix<BaseType<T>, device>, Matrix<T, device>>);
+  return DLAF_UNREACHABLE(ReturnTridiagType<T, device>);
 }
 
 }

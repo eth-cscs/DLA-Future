@@ -36,7 +36,8 @@ class EigensolverBandToTridiagTest : public ::testing::Test {};
 TYPED_TEST_SUITE(EigensolverBandToTridiagTest, MatrixElementTypes);
 
 const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
-    //{0, 2, 2},                              // m = 0
+    {0, 2, 2},                                                // m = 0
+    {1, 2, 2},                                                // m = 1
     {5, 5, 5}, {4, 4, 2},                                     // m = mb
     {4, 6, 3}, {8, 4, 2}, {18, 4, 4}, {34, 6, 6}, {37, 9, 3}  // m != mb
 };
@@ -51,8 +52,11 @@ void testBandToTridiag(const blas::Uplo uplo, const SizeType band_size, const Si
   matrix::util::set_random_hermitian(mat_a);
 
   auto ret = eigensolver::bandToTridiag<Backend::MC>(uplo, band_size, mat_a);
-  auto mat_trid = std::move(std::get<0>(ret));
-  auto mat_v = std::move(std::get<1>(ret));
+  auto& mat_trid = ret.tridiagonal;
+  auto& mat_v = ret.hh_reflectors;
+
+  if (m == 0)
+    return;
 
   auto mat_trid_local = matrix::test::allGather(lapack::MatrixType::General, mat_trid);
   MatrixLocal<T> mat_local(mat_a.size(), mat_a.blockSize());
@@ -64,8 +68,7 @@ void testBandToTridiag(const blas::Uplo uplo, const SizeType band_size, const Si
     mat_local({j + 1, j}) = mat_trid_local({1, j});
     mat_local({j, j + 1}) = mat_trid_local({1, j});
   }
-  if (m > 0)
-    mat_local({m - 1, m - 1}) = mat_trid_local({0, m - 1});
+  mat_local({m - 1, m - 1}) = mat_trid_local({0, m - 1});
 
   auto mat_v_local = matrix::test::allGather(lapack::MatrixType::General, mat_v);
 
@@ -77,7 +80,7 @@ void testBandToTridiag(const blas::Uplo uplo, const SizeType band_size, const Si
                  ld);
   };
 
-  if (std::is_same<T, ComplexType<T>>::value) {
+  if (std::is_same<T, ComplexType<T>>::value && m > 1) {
     T* v = mat_v_local.ptr({(m - 2) / band_size * band_size, m - 2});
     apply_left_right(1, v, m - 1);
   }

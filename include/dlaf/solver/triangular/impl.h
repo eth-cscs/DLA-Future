@@ -474,8 +474,6 @@ DLAF_MAKE_CALLABLE_OBJECT(tileSubtractInPlace);
 template <Backend backend, Device D, class T>
 void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op op, blas::Diag diag,
                                          T alpha, Matrix<const T, D>& mat_a, Matrix<T, D>& mat_b) {
-  constexpr auto NoTrans = blas::Op::NoTrans;
-
   auto executor_hp = dlaf::getHpExecutor<backend>();
   auto executor_np = dlaf::getNpExecutor<backend>();
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
@@ -552,11 +550,11 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
       for (SizeType j_loc = 0; j_loc < distr_b.localNrTiles().cols(); ++j_loc) {
         const LocalTileIndex kj(kk_offset.row(), j_loc);
         // TODO executor
-        hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tileSubtractInPlace_o), mat_b(kj),
+        hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tileSubtractInPlace_o), mat_b(kj),
                       b_panel.read(kj));
 
         // TODO executor
-        hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Left,
+        hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), blas::Side::Left,
                       blas::Uplo::Lower, op, diag, alpha, a_panel.read(kk_offset), mat_b(kj));
       }
     }

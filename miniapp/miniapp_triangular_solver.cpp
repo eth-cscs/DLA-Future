@@ -26,7 +26,6 @@
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix_mirror.h"
-#include "dlaf/matrix/print_numpy.h"
 #include "dlaf/solver.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
@@ -117,9 +116,6 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     a.copySourceToTarget();
     b.copySourceToTarget();
 
-    // print(dlaf::format::numpy{}, "A", ah);
-    // print(dlaf::format::numpy{}, "B", bh);
-
     sync_barrier();
 
     dlaf::common::Timer<> timeit;
@@ -141,8 +137,6 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     }
 
     b.copyTargetToSource();
-
-    // print(dlaf::format::numpy{}, "X", bh);
 
     // (optional) run test
     if (opts.do_check) {

@@ -10,4 +10,7 @@
 #pragma once
 
 #include "dlaf/eigensolver/backtransformation.h"
+#include "dlaf/eigensolver/band_to_tridiag.h"
+#include "dlaf/eigensolver/eigensolver.h"
 #include "dlaf/eigensolver/gen_to_std.h"
+#include "dlaf/eigensolver/reduction_to_band.h"

@@ -118,6 +118,7 @@ add_library(dlaf.eigensolver OBJECT
   eigensolver/backtransformation/mc.cpp
   eigensolver/band_to_tridiag/mc.cpp
   eigensolver/bt_band_to_tridiag/mc.cpp
+  eigensolver/eigensolver/mc.cpp
   eigensolver/gen_to_std/mc.cpp
   $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/gen_to_std/gpu.cpp>
   eigensolver/reduction_to_band/mc.cpp)
@@ -149,6 +150,9 @@ add_library(dlaf.solver OBJECT
   $<$<BOOL:${DLAF_WITH_CUDA}>:solver/triangular/gpu.cpp>)
 target_link_libraries(dlaf.solver PUBLIC dlaf.prop)
 target_add_warnings(dlaf.solver)
+
+target_link_libraries(dlaf.eigensolver PUBLIC $<TARGET_OBJECTS:dlaf.factorization>)
+target_link_libraries(dlaf.eigensolver PUBLIC $<TARGET_OBJECTS:dlaf.solver>)
 
 # Define DLAF's complete library
 add_library(DLAF

@@ -17,6 +17,8 @@
 #include <hpx/program_options.hpp>
 #include <hpx/runtime.hpp>
 
+#include <blas/util.hh>
+
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/timer.h"
@@ -53,6 +55,7 @@ struct options_t {
   SizeType n;
   SizeType mb;
   SizeType nb;
+  blas::Op op;
   int grid_rows;
   int grid_cols;
   int64_t nruns;
@@ -91,7 +94,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 
   const auto side = blas::Side::Left;
   const auto uplo = blas::Uplo::Lower;
-  const auto op = blas::Op::Trans;
+  const auto op = opts.op;
   const auto diag = blas::Diag::NonUnit;
   const T alpha = 2.0;
 
@@ -100,10 +103,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   auto add_mul = n * m * m / 2;
   const double total_ops = dlaf::total_ops<T>(add_mul, add_mul);
 
-  matrix_values_t ref_a, ref_b, ref_x;
-  std::tie(ref_a, ref_b, ref_x) = ::sampleLeftTr(uplo, op, diag, alpha, ah.size().rows());
-
-  auto ref_a_input = [&ref_a](const auto& index) { return ref_a(transposed(index)); };
+  matrix_values_t ref_op_a, ref_b, ref_x;
+  std::tie(ref_op_a, ref_b, ref_x) = ::sampleLeftTr(uplo, op, diag, alpha, ah.size().rows());
 
   for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
     if (0 == world.rank() && run_index >= 0)
@@ -141,11 +142,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     // (optional) run test
     if (opts.do_check) {
       // TODO do not check element by element, but evaluate the entire matrix
-
-      static_assert(std::is_arithmetic<T>::value, "mul/add error is valid just for arithmetic types");
-      constexpr T muladd_error = 2 * std::numeric_limits<T>::epsilon();
-
-      const T max_error = 20 * (bh.size().rows() + 1) * muladd_error;
+      const T max_error = 20 * (bh.size().rows() + 1) * dlaf::test::TypeUtilities<T>::error;
       CHECK_MATRIX_NEAR(ref_x, bh, max_error, 0);
     }
   }
@@ -167,15 +164,16 @@ int main(int argc, char** argv) {
 
   // clang-format off
   desc_commandline.add_options()
-    ("m",             value<SizeType>()  ->default_value(4096),       "Matrix b rows")
-    ("n",             value<SizeType>()  ->default_value(512),        "Matrix b columns")
-    ("mb",            value<SizeType>()  ->default_value(256),        "Matrix b block rows")
-    ("nb",            value<SizeType>()  ->default_value(512),        "Matrix b block columns")
-    ("grid-rows",     value<int>()       ->default_value(1),          "Number of row processes in the 2D communicator.")
-    ("grid-cols",     value<int>()       ->default_value(1),          "Number of column processes in the 2D communicator.")
-    ("nruns",         value<int64_t>()   ->default_value(1),          "Number of runs to compute the cholesky")
-    ("nwarmups",      value<int64_t>()   ->default_value(1),          "Number of warmup runs")
-    ("check-result",  bool_switch()      ->default_value(false),      "Check the triangular system solution (for each run)")
+    ("m",             value<SizeType>()     ->default_value(4096),       "Matrix b rows")
+    ("n",             value<SizeType>()     ->default_value(512),        "Matrix b columns")
+    ("mb",            value<SizeType>()     ->default_value(256),        "Matrix b block rows")
+    ("nb",            value<SizeType>()     ->default_value(512),        "Matrix b block columns")
+    ("op",            value<std::string>()  ->default_value("N"),        "(N) NoTrans / (T) Trans / (C) ConjTrans")
+    ("grid-rows",     value<int>()          ->default_value(1),          "Number of row processes in the 2D communicator.")
+    ("grid-cols",     value<int>()          ->default_value(1),          "Number of column processes in the 2D communicator.")
+    ("nruns",         value<int64_t>()      ->default_value(1),          "Number of runs to compute the cholesky")
+    ("nwarmups",      value<int64_t>()      ->default_value(1),          "Number of warmup runs")
+    ("check-result",  bool_switch()         ->default_value(false),      "Check the triangular system solution (for each run)")
   ;
   // clang-format on
 
@@ -190,10 +188,14 @@ int main(int argc, char** argv) {
 namespace {
 
 options_t check_options(hpx::program_options::variables_map& vm) {
+  char c_op = vm["op"].as<std::string>()[0];
+  DLAF_ASSERT(c_op == 'N' || c_op == 'T' || c_op == 'C', c_op);
+
   // clang-format off
   options_t opts = {
     vm["m"].as<SizeType>(),     vm["n"].as<SizeType>(),
     vm["mb"].as<SizeType>(),    vm["nb"].as<SizeType>(),
+    blas::char2op(c_op),
     vm["grid-rows"].as<int>(),  vm["grid-cols"].as<int>(),
 
     vm["nruns"].as<int64_t>(),

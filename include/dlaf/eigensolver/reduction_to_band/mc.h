@@ -1033,13 +1033,13 @@ std::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<
 }
 
 /// ---- ETI
-#define DLAF_EIGENSOLVER_MC_ETI(KWORD, DATATYPE) \
+#define DLAF_EIGENSOLVER_RED_TO_BAND_MC_ETI(KWORD, DATATYPE) \
   KWORD template struct ReductionToBand<Backend::MC, Device::CPU, DATATYPE>;
 
-DLAF_EIGENSOLVER_MC_ETI(extern, float)
-DLAF_EIGENSOLVER_MC_ETI(extern, double)
-DLAF_EIGENSOLVER_MC_ETI(extern, std::complex<float>)
-DLAF_EIGENSOLVER_MC_ETI(extern, std::complex<double>)
+DLAF_EIGENSOLVER_RED_TO_BAND_MC_ETI(extern, float)
+DLAF_EIGENSOLVER_RED_TO_BAND_MC_ETI(extern, double)
+DLAF_EIGENSOLVER_RED_TO_BAND_MC_ETI(extern, std::complex<float>)
+DLAF_EIGENSOLVER_RED_TO_BAND_MC_ETI(extern, std::complex<double>)
 
 }
 }

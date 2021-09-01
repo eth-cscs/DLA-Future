@@ -72,6 +72,7 @@ linear_system_t sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T al
 
 int hpx_main(hpx::program_options::variables_map& vm) {
   dlaf::initialize(vm);
+  {
   options_t opts = check_options(vm);
 
   Communicator world(MPI_COMM_WORLD);
@@ -145,6 +146,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       const T max_error = 20 * (bh.size().rows() + 1) * dlaf::test::TypeUtilities<T>::error;
       CHECK_MATRIX_NEAR(ref_x, bh, max_error, 0);
     }
+  }
   }
 
   dlaf::finalize();

@@ -247,13 +247,16 @@ protected:
 
 template <class T>
 struct BandToTridiag<Backend::MC, Device::CPU, T> {
+  static constexpr bool is_complex = std::is_same<T, ComplexType<T>>::value;
+
   static SizeType nrSweeps(SizeType size) noexcept {
     // Complex needs an extra sweep to have a real tridiagonal matrix.
-    return std::is_same<T, ComplexType<T>>::value ? size - 1 : size - 2;
+    return is_complex ? size - 1 : size - 2;
   }
 
   static SizeType nrStepsForSweep(SizeType sweep, SizeType size, SizeType band) noexcept {
-    // Last Complex sweep should be handled differently.
+    // Sweep size-2 should be handled differently.
+    // Note: It is executed only for complex types (see nrSweeps)
     return sweep == size - 2 ? 1 : util::ceilDiv(size - sweep - 2, band);
   }
 
@@ -337,7 +340,7 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
     auto copy_tridiag = [executor_hp, a_ws, &mat_trid](SizeType sweep, hpx::shared_future<void> dep) {
       auto copy_tridiag_task = [a_ws](SizeType start, SizeType n_d, SizeType n_e, auto tile_t) {
         auto inc = a_ws->ld() + 1;
-        if (std::is_same<T, ComplexType<T>>::value)
+        if (is_complex)
           // skip imaginary part if Complex.
           inc *= 2;
 
@@ -387,7 +390,8 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
     }
 
     // copy the last elements of the diagonals
-    if (!std::is_same<T, ComplexType<T>>::value) {
+    if (!is_complex) {
+      // only needed for real types as they don't perform sweep size-2
       copy_tridiag(size - 2, deps[0]);
     }
     copy_tridiag(size - 1, deps[0]);

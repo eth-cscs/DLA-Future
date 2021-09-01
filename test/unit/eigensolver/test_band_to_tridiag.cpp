@@ -36,6 +36,7 @@ class EigensolverBandToTridiagTest : public ::testing::Test {};
 TYPED_TEST_SUITE(EigensolverBandToTridiagTest, MatrixElementTypes);
 
 const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
+    // {m, mb, band_size}
     {0, 2, 2},                                                // m = 0
     {1, 2, 2},                                                // m = 1
     {5, 5, 5}, {4, 4, 2},                                     // m = mb

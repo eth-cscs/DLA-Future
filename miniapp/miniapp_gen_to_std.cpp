@@ -126,10 +126,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
                                                                         matrix_a.get(), matrix_b.get());
 
       // wait and barrier for all ranks
-      {
-        matrix_a.get().waitLocalTiles();
-        DLAF_MPI_CALL(MPI_Barrier(world));
-      }
+      matrix_a.get().waitLocalTiles();
+      DLAF_MPI_CALL(MPI_Barrier(world));
       elapsed_time = timeit.elapsed();
     }
 

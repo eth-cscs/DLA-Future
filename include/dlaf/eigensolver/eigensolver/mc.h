@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -16,6 +16,7 @@
 #include "dlaf/common/vector.h"
 #include "dlaf/eigensolver/backtransformation.h"
 #include "dlaf/eigensolver/band_to_tridiag.h"
+#include "dlaf/eigensolver/bt_band_to_tridiag.h"
 #include "dlaf/eigensolver/reduction_to_band.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/distribution.h"
@@ -74,9 +75,8 @@ struct Eigensolver<Backend::MC, Device::CPU, T> {
     // Note: no sync needed here as next tasks are only scheduled
     //       after the completion of stemr.
 
-    // TODO needs updated branch
-    // backTransformationT2B<Backend::MC>(mat_e, ret.hh_reflectors);
-    auto taus_ = (common::internal::vector<hpx::shared_future<common::internal::vector<T>>>*) &taus;
+    backTransformationBandToTridiag<Backend::MC>(mat_e, ret.hh_reflectors);
+    auto taus_ = (common::internal::vector<pika::shared_future<common::internal::vector<T>>>*) &taus;
     backTransformation<Backend::MC>(mat_e, mat_a, *taus_);
 
     return {std::move(w), std::move(mat_e)};

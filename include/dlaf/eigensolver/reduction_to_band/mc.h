@@ -1040,7 +1040,6 @@ DLAF_EIGENSOLVER_RED_TO_BAND_MC_ETI(extern, float)
 DLAF_EIGENSOLVER_RED_TO_BAND_MC_ETI(extern, double)
 DLAF_EIGENSOLVER_RED_TO_BAND_MC_ETI(extern, std::complex<float>)
 DLAF_EIGENSOLVER_RED_TO_BAND_MC_ETI(extern, std::complex<double>)
-
 }
 }
 }

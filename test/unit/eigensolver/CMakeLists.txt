@@ -25,7 +25,13 @@ DLAF_addTest(test_bt_band_to_tridiag
 DLAF_addTest(test_eigensolver
   SOURCES test_eigensolver.cpp
   LIBRARIES dlaf.eigensolver dlaf.core
-  USE_MAIN HPX
+  USE_MAIN PIKA
+)
+
+DLAF_addTest(test_gen_eigensolver
+  SOURCES test_gen_eigensolver.cpp
+  LIBRARIES dlaf.eigensolver dlaf.core
+  USE_MAIN PIKA
 )
 
 DLAF_addTest(test_gen_to_std

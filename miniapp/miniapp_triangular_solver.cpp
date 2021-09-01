@@ -32,6 +32,7 @@
 #include "dlaf/util_matrix.h"
 
 #include "dlaf_test/matrix/util_matrix.h"
+#include "dlaf_test/util_types.h"
 
 namespace {
 
@@ -111,7 +112,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 
     // setup matrix A and b
     using dlaf::matrix::util::set;
-    set(ah, ref_a_input);
+    set(ah, ref_op_a, op);
     set(bh, ref_b);
     a.copySourceToTarget();
     b.copySourceToTarget();

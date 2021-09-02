@@ -15,8 +15,8 @@
 #include "dlaf/util_matrix.h"
 
 #include "dlaf_test/matrix/matrix_local.h"
-#include "dlaf_test/matrix/util_matrix_local.h"
 #include "dlaf_test/matrix/util_matrix.h"
+#include "dlaf_test/matrix/util_matrix_local.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
@@ -122,17 +122,20 @@ TYPED_TEST(BacktransformationT2BTest, CorrectnessLocal) {
         const TypeParam tau = v_head;
         v_head = 1;
 
-        lapack::larf(blas::Side::Left, size, n, &v_head, 1, tau, mat_e_local.ptr({i, 0}), mat_e_local.ld());
+        lapack::larf(blas::Side::Left, size, n, &v_head, 1, tau, mat_e_local.ptr({i, 0}),
+                     mat_e_local.ld());
       }
     }
 
-    auto result = [&dist = mat_e.distribution(), &mat_local = mat_e_local](const GlobalElementIndex& element) {
+    auto result = [& dist = mat_e.distribution(),
+                   &mat_local = mat_e_local](const GlobalElementIndex& element) {
       const auto tile_index = dist.globalTileIndex(element);
       const auto tile_element = dist.tileElementIndex(element);
       return mat_local.tile_read(tile_index)(tile_element);
     };
 
-    const auto error = m * n * TypeUtilities<TypeParam>::error; // TODO how much error
+    const auto error =
+        std::max<SizeType>(1, m * n) * TypeUtilities<TypeParam>::error;  // TODO how much error
     CHECK_MATRIX_NEAR(result, mat_e, error, error);
   }
 }

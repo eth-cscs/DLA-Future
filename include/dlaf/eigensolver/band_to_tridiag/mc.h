@@ -14,6 +14,7 @@
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
+#include "dlaf/common/pipeline.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/eigensolver/band_to_tridiag/api.h"
 #include "dlaf/executors.h"
@@ -266,6 +267,8 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
     using MatrixType = Matrix<T, Device::CPU>;
     using ConstTileType = typename MatrixType::ConstTileType;
     using common::internal::vector;
+    using common::Pipeline;
+    using common::PromiseGuard;
     using util::ceilDiv;
 
     using hpx::unwrapping;
@@ -321,21 +324,19 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
     // Maximum size / (2b-1) sweeps can be executed in parallel.
     const auto max_workers =
         std::min(ceilDiv(size, 2 * b - 1), to_signed<SizeType>(get_num_threads("default")));
-    vector<hpx::future<SweepWorker<T>>> workers(max_workers);
+    vector<Pipeline<SweepWorker<T>>> workers;
+    workers.reserve(max_workers);
+    for (SizeType i = 0; i < max_workers; ++i)
+      workers.emplace_back(SweepWorker<T>(size, b));
 
-    auto init_sweep = [a_ws](SizeType sweep, SweepWorker<T>&& worker) {
-      worker.startSweep(sweep, *a_ws);
-      return hpx::make_tuple(std::move(worker), true);
+    auto init_sweep = [a_ws](SizeType sweep, PromiseGuard<SweepWorker<T>>&& worker) {
+      worker.ref().startSweep(sweep, *a_ws);
     };
-    auto store_tau_v = [](SweepWorker<T>&& worker, matrix::Tile<T, Device::CPU>&& tile_v,
+    auto store_tau_v = [](PromiseGuard<SweepWorker<T>>&& worker, matrix::Tile<T, Device::CPU>&& tile_v,
                           TileElementIndex index) {
-      worker.compactCopyToTile(std::move(tile_v), index);
-      return std::move(worker);
+      worker.ref().compactCopyToTile(std::move(tile_v), index);
     };
-    auto cont_sweep = [a_ws](SweepWorker<T>&& worker) {
-      worker.doStep(*a_ws);
-      return hpx::make_tuple(std::move(worker), true);
-    };
+    auto cont_sweep = [a_ws](PromiseGuard<SweepWorker<T>>&& worker) { worker.ref().doStep(*a_ws); };
 
     auto copy_tridiag = [executor_hp, a_ws, &mat_trid](SizeType sweep, hpx::shared_future<void> dep) {
       auto copy_tridiag_task = [a_ws](SizeType start, SizeType n_d, SizeType n_e, auto tile_t) {
@@ -361,13 +362,11 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
     const auto sweeps = nrSweeps(size);
     for (SizeType sweep = 0; sweep < sweeps; ++sweep) {
       // Create the first max_workers workers and then reuse them.
-      auto worker = sweep < max_workers ? hpx::make_ready_future(SweepWorker<T>(size, b))
-                                        : std::move(workers[sweep % max_workers]);
+      auto& w_pipeline = workers[sweep % max_workers];
 
-      auto ret =
-          hpx::split_future(hpx::dataflow(executor_hp, unwrapping(init_sweep), sweep, worker, deps[0]));
-      worker = std::move(hpx::get<0>(ret));
-      copy_tridiag(sweep, hpx::future<void>(std::move(hpx::get<1>(ret))));
+      auto dep =
+          hpx::dataflow(executor_hp, unwrapping(init_sweep), sweep, w_pipeline(), deps[0]).share();
+      copy_tridiag(sweep, dep);
 
       const auto steps = nrStepsForSweep(sweep, size, b);
       for (SizeType step = 0; step < steps; ++step) {
@@ -375,15 +374,10 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
 
         const GlobalElementIndex index_v((sweep / b + step) * b, sweep);
 
-        worker = hpx::dataflow(hpx::launch::sync, unwrapping(store_tau_v), worker,
-                               mat_v(dist_v.globalTileIndex(index_v)), dist_v.tileElementIndex(index_v));
-        auto ret = hpx::split_future(
-            hpx::dataflow(executor_hp, unwrapping(cont_sweep), worker, deps[dep_index]));
-        deps[step] = hpx::future<void>(std::move(hpx::get<1>(ret)));
-        worker = std::move(hpx::get<0>(ret));
+        hpx::dataflow(hpx::launch::sync, unwrapping(store_tau_v), w_pipeline(),
+                      mat_v(dist_v.globalTileIndex(index_v)), dist_v.tileElementIndex(index_v));
+        deps[step] = hpx::dataflow(executor_hp, unwrapping(cont_sweep), w_pipeline(), deps[dep_index]);
       }
-      // Move the Worker structure such that it can be reused in a later sweep.
-      workers[sweep % max_workers] = std::move(worker);
 
       // Shrink the dependency vector to only include the futures generated in this sweep.
       deps.resize(steps);

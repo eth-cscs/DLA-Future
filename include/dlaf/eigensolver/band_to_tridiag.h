@@ -40,7 +40,7 @@ namespace eigensolver {
 /// and tau and v are defined in the following way:
 /// - start = 1 + sw + st * band_size
 /// - len = min(band_size, m - start)
-/// - pos = sw / band_size + st) * band_size
+/// - pos = (sw / band_size + st) * band_size
 /// - v[start] = 1
 /// - tau = V(pos, sw) (Note: integer division)
 /// - v[start + 1:start + len] = V(pos + 1 : pos + len, sw)

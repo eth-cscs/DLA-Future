@@ -203,7 +203,7 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
                                          });
 
         auto tile_e_up = mat_e.read(LocalTileIndex(i_v, j));
-        const auto& tile_e = splitTile(tile_e_up, {{1, 0}, {band_size - 1, band_size}});
+        const auto& tile_e = splitTile(tile_e_up, {{1, 0}, {band_size - 1, mat_e.blockSize().cols()}});
         computeW2(tile_vs[0], tile_e, T(0), mat_w2(LocalTileIndex(0, j)));
 
         if (affectsTwoRows) {

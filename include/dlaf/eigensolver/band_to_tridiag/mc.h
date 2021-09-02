@@ -400,6 +400,15 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
   }
 };
 
+/// ---- ETI
+#define DLAF_EIGENSOLVER_B2T_MC_ETI(KWORD, DATATYPE) \
+  KWORD template struct BandToTridiag<Backend::MC, Device::CPU, DATATYPE>;
+
+DLAF_EIGENSOLVER_B2T_MC_ETI(extern, float)
+DLAF_EIGENSOLVER_B2T_MC_ETI(extern, double)
+DLAF_EIGENSOLVER_B2T_MC_ETI(extern, std::complex<float>)
+DLAF_EIGENSOLVER_B2T_MC_ETI(extern, std::complex<double>)
+
 }
 }
 }

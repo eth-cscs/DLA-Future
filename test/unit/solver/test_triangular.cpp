@@ -179,13 +179,16 @@ TYPED_TEST(TriangularSolverTestMC, CorrectnessDistributed) {
       for (auto uplo : blas_uplos) {
         for (auto op : blas_ops) {
           for (auto diag : blas_diags) {
-            // Currently only Left Lower/Upper Notrans case is implemented
-            if (!(op == blas::Op::NoTrans && side == blas::Side::Left))
+            // Currently only Left Lower/Upper Notrans + RLN case is implemented
+            if (!(op == blas::Op::NoTrans && side == blas::Side::Left) &&
+                !(op == blas::Op::NoTrans && side == blas::Side::Right && uplo == blas::Uplo::Lower))
               continue;
 
             for (auto sz : sizes) {
               std::tie(m, n, mb, nb) = sz;
               TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
+              // std::cout << " triangular solver distributed " << side << " " << uplo << " " << op << "
+              // m " << m << " n " << n << " mb " << mb << " nb " << nb << std::endl;
               testTriangularSolver<TypeParam, Backend::MC, Device::CPU>(comm_grid, side, uplo, op, diag,
                                                                         alpha, m, n, mb, nb);
             }

@@ -150,12 +150,12 @@ void triangular(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, b
   }
   else {
     // Check if A and B dimensions are compatible
-    DLAF_ASSERT(matrix::multipliable(mat_a, mat_b, mat_b, blas::Op::NoTrans, op), mat_a, mat_b, op);
+    DLAF_ASSERT(matrix::multipliable(mat_b, mat_a, mat_b, blas::Op::NoTrans, op), mat_a, mat_b, op);
 
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
         // Right Lower NoTrans
-        DLAF_UNIMPLEMENTED(side, uplo, op, diag);
+        internal::Triangular<backend, device, T>::call_RLN(grid, diag, alpha, mat_a, mat_b);
       }
       else {
         // Right Lower Trans/ConjTrans

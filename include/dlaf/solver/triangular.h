@@ -165,7 +165,7 @@ void triangular(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, b
     else {
       if (op == blas::Op::NoTrans) {
         // Right Upper NoTrans
-        DLAF_UNIMPLEMENTED(side, uplo, op, diag);
+        internal::Triangular<backend, device, T>::call_RUN(grid, diag, alpha, mat_a, mat_b);
       }
       else {
         // Right Upper Trans/ConjTrans

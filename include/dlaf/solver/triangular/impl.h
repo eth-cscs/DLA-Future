@@ -660,6 +660,104 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
   }
 }
 
+template <Backend backend, Device device, class T>
+void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
+                                              Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
+  using namespace triangular_run;
+
+  auto executor_hp = dlaf::getHpExecutor<backend>();
+  auto executor_np = dlaf::getNpExecutor<backend>();
+  auto executor_mpi = dlaf::getMPIExecutor<backend>();
+
+  // Set up MPI executor pipelines
+  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
+  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
+
+  const comm::Index2D this_rank = grid.rank();
+
+  const matrix::Distribution& distr_a = mat_a.distribution();
+  const matrix::Distribution& distr_b = mat_b.distribution();
+  auto a_cols = mat_a.nrTiles().cols();
+  auto local_cols = distr_a.localNrTiles().cols();
+  auto b_local_rows = distr_b.localNrTiles().rows();
+
+  // If mat_b is empty return immediately
+  if (mat_b.size().isEmpty())
+    return;
+
+  constexpr std::size_t n_workspaces = 2;
+  common::RoundRobin<matrix::Panel<Coord::Row, T, device>> a_panels(n_workspaces, distr_a);
+  common::RoundRobin<matrix::Panel<Coord::Col, T, device>> a_panels_T(n_workspaces, distr_a);
+  common::RoundRobin<matrix::Panel<Coord::Col, T, device>> b_panels(n_workspaces, distr_b);
+
+  for (SizeType k = 0; k < a_cols; ++k) {
+    const GlobalTileIndex kk(k, k);
+    auto kk_rank = distr_a.rankGlobalTile(kk);
+
+    const LocalTileIndex kk_offset{
+        distr_a.nextLocalTileFromGlobalTile<Coord::Row>(k),
+        distr_a.nextLocalTileFromGlobalTile<Coord::Col>(k),
+    };
+
+    const LocalTileIndex bt_offset{0, distr_b.nextLocalTileFromGlobalTile<Coord::Col>(k + 1)};
+
+    auto& a_panel = a_panels.nextResource();
+    auto& b_panel = b_panels.nextResource();
+    a_panel.setRangeStart(kk);
+    if (k == a_cols - 1)
+      a_panel.setHeight(mat_a.tileSize(kk).rows());
+    b_panel.setWidth(mat_a.tileSize(kk).cols());
+
+    if (kk_rank.row() == this_rank.row()) {
+      for (SizeType j_local = kk_offset.col(); j_local < local_cols; ++j_local) {
+        const LocalTileIndex kj_panel(Coord::Col, j_local);
+        const LocalTileIndex kj(kk_offset.row(), j_local);
+        a_panel.setTile(kj_panel, mat_a.read(kj));
+      }
+    }
+    broadcast(executor_mpi, kk_rank.row(), a_panel, mpi_col_task_chain);
+
+    for (SizeType i_local = 0; i_local < b_local_rows; ++i_local) {
+      // Triangular solve B's k-th row panel and broadcast B(kj) column-wise
+      if (kk_rank.col() == this_rank.col()) {
+        auto k_local_col = distr_b.localTileFromGlobalTile<Coord::Col>(k);
+        const LocalTileIndex kk_panel(Coord::Col, k_local_col);
+        const LocalTileIndex ik(i_local, k_local_col);
+        const LocalTileIndex ik_panel(Coord::Row, i_local);
+
+        trsm_B_panel_tile(executor_hp, diag, alpha, a_panel.read(kk_panel), mat_b(ik));
+        b_panel.setTile(ik_panel, mat_b.read(ik));
+      }
+    }
+    // Nothing else to do if the trailing matrix is empty.
+    if (k == a_cols - 1)
+      continue;
+
+    broadcast(executor_mpi, kk_rank.col(), b_panel, mpi_row_task_chain);
+
+    for (SizeType j_local = bt_offset.col(); j_local < local_cols; ++j_local) {
+      // Choose queue priority
+      auto j = distr_a.globalTileFromLocalTile<Coord::Col>(j_local);
+      auto& trailing_executor = (j == k + 1) ? executor_hp : executor_np;
+
+      const LocalTileIndex kj_panel(Coord::Col, j_local);
+
+      // Update trailing matrix
+      for (SizeType i_local = 0; i_local < b_local_rows; ++i_local) {
+        const LocalTileIndex ik_panel(Coord::Row, i_local);
+        const LocalTileIndex ij(i_local, j_local);
+        const T beta = T(-1.0) / alpha;
+
+        auto j = distr_b.globalTileFromLocalTile<Coord::Col>(j_local);
+        gemm_trailing_matrix_tile(trailing_executor, beta, b_panel.read(ik_panel),
+                                  a_panel.read(kj_panel), mat_b(ij));
+      }
+    }
+    a_panel.reset();
+    b_panel.reset();
+  }
+}
+
 }
 }
 }

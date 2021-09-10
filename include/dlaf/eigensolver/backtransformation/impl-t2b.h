@@ -33,23 +33,39 @@ struct BackTransformationT2B<Backend::MC, Device::CPU, T> {
 };
 
 template <class T>
-auto setupVWellFormed(const SizeType k,
-                      hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v_compact,
+auto setupVWellFormed(SizeType k, hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v_compact,
                       hpx::future<matrix::Tile<T, Device::CPU>> tile_v) -> decltype(tile_v_compact) {
-  auto unzipV_func = [k](const auto& tile_v_orig, auto tile_v) {
-    using namespace lapack;
+  auto unzipV_func = [k](const auto& tile_v_compact, auto tile_v) {
+    constexpr auto General = lapack::MatrixType::General;
+    constexpr auto Upper = lapack::MatrixType::Upper;
+    constexpr auto Lower = lapack::MatrixType::Lower;
 
-    const auto b = tile_v_orig.size().cols();
+    const auto b = tile_v_compact.size().rows();
 
-    lacpy(MatrixType::General, b - 1, b, tile_v_orig.ptr({1, 0}), tile_v_orig.ld(), tile_v.ptr({1, 0}),
-          tile_v.ld() + 1);
+    //std::cout << "Vc = ";
+    //print(format::numpy{}, tile_v_compact);
+
+    //std::cout << "Vp = ";
+    //print(format::numpy{}, tile_v);
+
+    // TODO this requires W complete (even the bottom one)
+    //lacpy(General, b - 1, b,
+    //    tile_v_compact.ptr({1, 0}), tile_v_compact.ld(),
+    //    tile_v.ptr({1, 0}), tile_v.ld() + 1);
+
+    for (SizeType j = 0; j < k; ++j) {
+      const auto size = std::min<SizeType>(
+          tile_v.size().rows() - (1 + j),
+          tile_v_compact.size().rows() - 1);
+      lacpy(General, size, 1,
+          tile_v_compact.ptr({1, j}), tile_v_compact.ld(),
+          tile_v.ptr({1 + j, j}), tile_v.ld());
+    }
+
     // TODO is it needed because W = V . T? or is it enough just setting ones?
-    laset(MatrixType::Upper, b, k, T(0), T(1), tile_v.ptr({0, 0}), tile_v.ld());
-    laset(MatrixType::Lower, b - 1, b - 1, T(0), T(0), tile_v.ptr({b, 0}), tile_v.ld());
-
-    // TODO this is just a workaround...it must be fixed in W?
-    if (k < b)
-      laset(MatrixType::General, 2 * b - 1, b - k, T(0), T(0), tile_v.ptr({0, k}), tile_v.ld());
+    laset(Upper, tile_v.size().rows(), k, T(0), T(1), tile_v.ptr({0, 0}), tile_v.ld());
+    if (tile_v.size().rows() > tile_v_compact.size().rows())
+      laset(Lower, tile_v.size().rows() - b, b - 1, T(0), T(0), tile_v.ptr({b, 0}), tile_v.ld());
 
     //std::cout << "V = ";
     //print(format::numpy{}, tile_v);
@@ -60,15 +76,21 @@ auto setupVWellFormed(const SizeType k,
 }
 
 template <class T>
-auto computeTFactor(const SizeType n, const SizeType k,
-                    hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_taus,
+auto computeTFactor(hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_taus,
                     hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v,
                     hpx::future<matrix::Tile<T, Device::CPU>> mat_t) -> decltype(tile_v) {
-  auto tfactor_task = [n, k](const auto& tile_taus, const auto& tile_v, auto tile_t) {
+  auto tfactor_task = [](const auto& tile_taus, const auto& tile_v, auto tile_t) {
     using namespace lapack;
 
-    // std::cout << "V = ";
-    // print(format::numpy{}, tile_v);
+    //std::cout << "V = ";
+    //print(format::numpy{}, tile_v);
+
+    //std::cout << "taus = ";
+    //print(format::numpy{}, tile_taus);
+
+    const auto k = tile_v.size().cols();
+    const auto n = tile_v.size().rows();
+    DLAF_ASSERT_HEAVY((tile_t.size() == TileElementSize(k, k)), tile_t.size());
 
     std::vector<T> taus;
     taus.resize(to_sizet(tile_v.size().cols()));
@@ -78,8 +100,8 @@ auto computeTFactor(const SizeType n, const SizeType k,
     larft(Direction::Forward, StoreV::Columnwise, n, k, tile_v.ptr(), tile_v.ld(), taus.data(),
           tile_t.ptr(), tile_t.ld());
 
-    // std::cout << "T = ";
-    // print(format::numpy{}, tile_t);
+    //std::cout << "T = ";
+    //print(format::numpy{}, tile_t);
     return matrix::Tile<const T, Device::CPU>(std::move(tile_t));
   };
   return hpx::dataflow(hpx::unwrapping(tfactor_task), std::move(tile_taus), std::move(tile_v),
@@ -91,15 +113,15 @@ auto computeW(hpx::future<matrix::Tile<T, Device::CPU>> tile_v,
               hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_t) {
   using namespace blas;
 
-  // hpx::dataflow(hpx::unwrapping([](auto tile_w, const auto& tile_t) {
-  //                // std::cout << "\tV = ";
-  //                // print(format::numpy{}, tile_w);
-  //                // std::cout << "\tT = ";
-  //                // print(format::numpy{}, tile_t);
-  //                tile::trmm(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1), tile_t,
-  //                tile_w); std::cout << "W = "; print(format::numpy{}, tile_w);
-  //              }),
-  //              std::move(tile_v), std::move(tile_t));
+  //hpx::dataflow(hpx::unwrapping([](auto tile_w, const auto& tile_t) {
+  //      std::cout << "\tV = ";
+  //      print(format::numpy{}, tile_w);
+  //      std::cout << "\tT = ";
+  //      print(format::numpy{}, tile_t);
+  //      tile::trmm(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1), tile_t,
+  //          tile_w); std::cout << "W = "; print(format::numpy{}, tile_w);
+  //      }),
+  //    std::move(tile_v), std::move(tile_t));
 
   hpx::dataflow(matrix::unwrapExtendTiles(tile::trmm_o), Side::Right, Uplo::Upper, Op::NoTrans,
                 Diag::NonUnit, T(1), std::move(tile_t), std::move(tile_v));
@@ -113,16 +135,16 @@ auto computeW2(hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v,
 
   // hpx::dataflow(hpx::unwrapping(
   //                  [](const auto& tile_v, const auto& tile_e, const auto beta, auto tile_w2) {
-  //                    // std::cout << "\t_V = ";
-  //                    // print(format::numpy{}, tile_v);
-  //                    // std::cout << "\t_E = ";
-  //                    // print(format::numpy{}, tile_e);
-  //                    // std::cout << "\tbeta = " << beta << "\n";
-  //                    // std::cout << "\t_W2pre = ";
-  //                    // print(format::numpy{}, tile_w2);
+  //                    std::cout << "\t_V = ";
+  //                    print(format::numpy{}, tile_v);
+  //                    std::cout << "\t_E = ";
+  //                    print(format::numpy{}, tile_e);
+  //                    std::cout << "\tbeta = " << beta << "\n";
+  //                    std::cout << "\t_W2pre = ";
+  //                    print(format::numpy{}, tile_w2);
   //                    tile::gemm(Op::ConjTrans, Op::NoTrans, T(1), tile_v, tile_e, beta, tile_w2);
-  //                    // std::cout << "_W2 = ";
-  //                    // print(format::numpy{}, tile_w2);
+  //                    std::cout << "_W2 = ";
+  //                    print(format::numpy{}, tile_w2);
   //                  }),
   //              std::move(tile_v), std::move(tile_e), beta, std::move(tile_w2));
   hpx::dataflow(matrix::unwrapExtendTiles(tile::gemm_o), Op::ConjTrans, Op::NoTrans, T(1),
@@ -135,7 +157,7 @@ auto updateE(hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_w,
              hpx::future<matrix::Tile<T, Device::CPU>> tile_e) {
   using blas::Op;
 
-  // auto func = hpx::unwrapping([](auto&& tile_w, auto&& tile_w2, auto tile_e) {
+  //auto func = hpx::unwrapping([](auto&& tile_w, auto&& tile_w2, auto tile_e) {
   //  std::cout << "\tW = ";
   //  print(format::numpy{}, tile_w);
   //  std::cout << "\tW2 = ";
@@ -146,7 +168,7 @@ auto updateE(hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_w,
   //  std::cout << "E = ";
   //  print(format::numpy{}, tile_e);
   //});
-  // hpx::dataflow(func, std::move(tile_w), std::move(tile_w2), std::move(tile_e));
+  //hpx::dataflow(func, std::move(tile_w), std::move(tile_w2), std::move(tile_e));
 
   hpx::dataflow(hpx::unwrapping(tile::gemm_o), Op::NoTrans, Op::NoTrans, T(-1), std::move(tile_w),
                 std::move(tile_w2), T(1), std::move(tile_e));
@@ -159,78 +181,101 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
   using common::RoundRobin;
   using common::iterate_range2d;
 
-  const SizeType band_size = mat_i.blockSize().rows();
+  if (mat_i.size().isEmpty() || mat_e.size().isEmpty())
+    return;
+
   const SizeType m = mat_e.nrTiles().rows();
   const SizeType n = mat_e.nrTiles().cols();
 
+  const SizeType mb = mat_e.blockSize().rows();
+  const SizeType b = mb;
+
   const auto& dist_i = mat_i.distribution();
-  const TileElementSize w_blocksize(dist_i.blockSize().rows() * 2 - 1, dist_i.blockSize().cols());
-  const matrix::Distribution dist_w({w_blocksize.rows() * dist_i.nrTiles().rows(), w_blocksize.cols()},
-                                    w_blocksize, dist_i.commGridSize(), dist_i.rankIndex(),
-                                    dist_i.sourceRankIndex());
+  const TileElementSize w_blocksize(2 * b - 1, b);
+
+  // TODO w last tile is complete anyway, becuase of setup V well formed
+  const matrix::Distribution dist_w(
+      {(m - 1) * w_blocksize.rows() + mat_e.tileSize({m - 1, 0}).rows() - 1, w_blocksize.cols()},
+      w_blocksize,
+      dist_i.commGridSize(), dist_i.rankIndex(), dist_i.sourceRankIndex());
 
   constexpr std::size_t n_workspaces = 2;
   RoundRobin<Panel<Coord::Col, T, Device::CPU>> t_panels(n_workspaces, mat_i.distribution());
   RoundRobin<Panel<Coord::Col, T, Device::CPU>> w_panels(n_workspaces, dist_w);
   RoundRobin<Panel<Coord::Row, T, Device::CPU>> w2_panels(n_workspaces, mat_e.distribution());
 
-  for (SizeType j_v = mat_i.nrTiles().cols() - 1; j_v >= 0; --j_v) {
-    for (SizeType i_v = j_v; i_v < mat_i.nrTiles().rows(); ++i_v) {
+  for (SizeType j_v = n - 1; j_v >= 0; --j_v) {
+    for (SizeType i_v = j_v; i_v < m; ++i_v) {
       const LocalTileIndex ij_refls(i_v, j_v);
 
-      const bool affectsTwoRows = i_v < mat_i.nrTiles().rows() - 1;
+      const bool affectsTwoRows = i_v < m - 1;
 
-      auto& mat_t = t_panels.nextResource();
-      mat_t.setRange(GlobalTileIndex(i_v, 0), GlobalTileIndex(i_v + 1, 0));
+      std::array<SizeType, 2> sizes;
+      sizes[0] = mat_i.tileSize({i_v, j_v}).rows() - 1;
+      if (affectsTwoRows)
+        sizes[1] = mat_i.tileSize({i_v + 1, j_v}).rows();
+
+      // Note:
+      // -1 because of offset, -1 because of reflectors size > 1
+      const auto nrefls = affectsTwoRows ? mat_i.tileSize({i_v, j_v}).cols() : mat_i.tileSize({i_v, j_v}).rows() - 2;
 
       auto& mat_w = w_panels.nextResource();
+      mat_w.setWidth(nrefls);
       // TODO mat_w.setRange(GlobalTileIndex(i_v, 0), GlobalTileIndex(i_v + (affectsTwoRows ? 2 : 1), 0));
 
-      // TODO check and fix this
-      const SizeType refl_size = affectsTwoRows ? 2 * band_size - 1 : band_size - 1;
-      const SizeType k = affectsTwoRows ? band_size : band_size - 2;
-
       const auto& tile_i = mat_i.read(ij_refls);
-      auto tile_v = setupVWellFormed(k, tile_i, mat_w(ij_refls));
+      auto tile_v = setupVWellFormed(nrefls, tile_i, mat_w(ij_refls));
 
-      auto tile_t = computeTFactor(refl_size, k, tile_i, tile_v, mat_t(LocalTileIndex(i_v, 0)));
+      auto& mat_t = t_panels.nextResource();
+      mat_t.setWidth(nrefls);
+      // TODO mat_t.setRange(GlobalTileIndex(i_v, 0), GlobalTileIndex(i_v + 1, 0));
 
+      auto tile_t_full = mat_t(LocalTileIndex(i_v, 0));
+      auto tile_t = computeTFactor(tile_i, tile_v, splitTile(tile_t_full, {{0, 0}, {nrefls, nrefls}}));
+
+      // Note:
+      // W2 is computed before W, because W is used as temporary storage for V.
       auto& mat_w2 = w2_panels.nextResource();
-      for (SizeType j = 0; j < n; ++j) {
-        auto tile_vs = splitTile(tile_v, {
-                                             {{0, 0}, {band_size - 1, band_size}},
-                                             {{band_size - 1, 0}, {band_size, band_size}},
-                                         });
+      mat_w2.setHeight(nrefls);
 
-        auto tile_e_up = mat_e.read(LocalTileIndex(i_v, j));
-        const auto& tile_e = splitTile(tile_e_up, {{1, 0}, {band_size - 1, mat_e.blockSize().cols()}});
-        computeW2(tile_vs[0], tile_e, T(0), mat_w2(LocalTileIndex(0, j)));
+      for (SizeType j_e = 0; j_e < n; ++j_e) {
+        const auto sz_e = mat_e.tileSize({i_v, j_e});
+
+        auto tile_v_up = splitTile(tile_v, {{0, 0}, {sizes[0], nrefls}});
+        auto tile_e = mat_e.read(LocalTileIndex(i_v, j_e));
+        const auto& tile_e_up = splitTile(tile_e, {{1, 0}, {sizes[0], sz_e.cols()}});
+
+        computeW2(tile_v_up, tile_e_up, T(0), mat_w2(LocalTileIndex(0, j_e)));
 
         if (affectsTwoRows) {
-          const auto& tile_e_down = mat_e.read(LocalTileIndex(i_v + 1, j));
-          computeW2(tile_vs[1], tile_e_down, T(1), mat_w2(LocalTileIndex(0, j)));
+          auto tile_v_down = splitTile(tile_v, {{sizes[0], 0}, {sizes[1], nrefls}});
+          auto tile_e_down = mat_e.read(LocalTileIndex(i_v + 1, j_e));
+
+          computeW2(tile_v_down, tile_e_down, T(1), mat_w2(LocalTileIndex(0, j_e)));
         }
       }
 
       computeW(mat_w(ij_refls), tile_t);
+      auto tile_w = mat_w.read(ij_refls);
 
-      const auto affected_rows =
-          iterate_range2d(LocalTileIndex(i_v, 0), LocalTileIndex(std::min<SizeType>(i_v + 2, m), n));
-      for (const auto& ij : affected_rows) {
-        auto tile_e = mat_e(ij);
-        auto tile_w = mat_w.read(ij_refls);
-        if (ij.row() == i_v) {
-          tile_e = matrix::splitTile(tile_e, {{1, 0}, {band_size - 1, mat_e.blockSize().cols()}});
-          tile_w = matrix::splitTile(tile_w, {{0, 0}, {band_size - 1, band_size}});
+      for (SizeType j_e = 0; j_e < n; ++j_e) {
+        const LocalTileIndex idx_e(i_v, j_e);
+        const auto sz_e = mat_e.tileSize({i_v, j_e});
+
+        auto tile_e = mat_e(idx_e);
+        auto tile_e_up = splitTile(tile_e, {{1, 0}, {sizes[0], sz_e.cols()}});
+        auto tile_w_up = splitTile(tile_w, {{0, 0}, {sizes[0], nrefls}});
+        const auto& tile_w2 = mat_w2.read(idx_e);
+
+        updateE(tile_w_up, tile_w2, std::move(tile_e_up));
+
+        if (affectsTwoRows) {
+          auto tile_e_dn = mat_e(LocalTileIndex{i_v + 1, j_e});
+          auto tile_w_dn = splitTile(tile_w, {{sizes[0], 0}, {sizes[1], nrefls}});
+
+          updateE(tile_w_dn, tile_w2, std::move(tile_e_dn));
         }
-        else {
-          tile_w = matrix::splitTile(tile_w, {{band_size - 1, 0}, {band_size, band_size}});
-        }
-        auto tile_w2 = mat_w2.read(ij);
-        updateE(tile_w, tile_w2, std::move(tile_e));
       }
-
-      // PRINT_MATRIX("Eb", mat_e);
 
       mat_t.reset();
       mat_w.reset();

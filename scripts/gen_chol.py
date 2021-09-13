@@ -32,7 +32,7 @@ for nodes in nodes_arr:
                 m_sz,
                 mb_sz,
                 nruns,
-                suffix = f"rpn={ranks_per_node}"
+                suffix=f"rpn={ranks_per_node}",
             )
 
         # debugging
@@ -54,8 +54,8 @@ for nodes in nodes_arr:
                 m_sz,
                 mb_sz,
                 nruns,
-                suffix = f"rpn={ranks_per_node}",
-                env = "BLIS_JC_NT=1"
+                suffix=f"rpn={ranks_per_node}",
+                env="BLIS_JC_NT=1",
             )
 
         # debugging
@@ -76,7 +76,7 @@ for nodes in nodes_arr:
             m_sz,
             mb_sz,
             nruns,
-            suffix = "rpn=1"
+            suffix="rpn=1",
         )
 
     # debugging

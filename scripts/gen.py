@@ -45,14 +45,7 @@ for nodes in nodes_arr:
 
     for m_sz, mb_sz in product(m_sz_arr, mb_sz_arr):
         job_text += mp.chol(
-            system,
-            "slate",
-            slate_build_dir,
-            nodes,
-            ranks_per_node,
-            m_sz,
-            mb_sz,
-            nruns,
+            system, "slate", slate_build_dir, nodes, ranks_per_node, m_sz, mb_sz, nruns,
         )
 
     for m_sz, mb_sz in product(m_sz_arr, mb_sz_arr):

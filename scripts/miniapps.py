@@ -29,14 +29,22 @@ def _err_msg(lib):
 # Job preamble
 #
 def init_job_text(system, run_name, nodes, time_min):
-    return system["Batch preamble"].format(run_name=run_name, nodes=nodes, time_min=time_min).strip()
+    return (
+        system["Batch preamble"]
+        .format(run_name=run_name, nodes=nodes, time_min=time_min)
+        .strip()
+    )
 
 
 # Run command with options
 #
 def run_command(system, total_ranks, cpus_per_rank):
     threads_per_rank = system["Threads per core"] * cpus_per_rank
-    return system["Run command"].format(total_ranks=total_ranks, cpus_per_rank=cpus_per_rank, threads_per_rank=threads_per_rank)
+    return system["Run command"].format(
+        total_ranks=total_ranks,
+        cpus_per_rank=cpus_per_rank,
+        threads_per_rank=threads_per_rank,
+    )
 
 
 # Create the job directory tree and submit jobs.
@@ -57,7 +65,19 @@ def submit_jobs(run_dir, nodes, job_text, suffix="na"):
 # lib: allowed libraries are dlaf|slate|dplasma
 # rpn: ranks per node
 #
-def chol(system, lib, build_dir, nodes, rpn, m_sz, mb_sz, nruns, suffix="na", extra_flags="", env=""):
+def chol(
+    system,
+    lib,
+    build_dir,
+    nodes,
+    rpn,
+    m_sz,
+    mb_sz,
+    nruns,
+    suffix="na",
+    extra_flags="",
+    env="",
+):
     _check_ranks_per_node(system, lib, rpn)
 
     total_ranks = nodes * rpn
@@ -80,16 +100,25 @@ def chol(system, lib, build_dir, nodes, rpn, m_sz, mb_sz, nruns, suffix="na", ex
         raise ValueError(_err_msg(lib))
 
     run_cmd = run_command(system, total_ranks, cpus_per_rank)
-    return (
-        "\n" + f"{env} {run_cmd} {cmd} >> chol_{lib}_{suffix}.out 2>&1".strip()
-    )
+    return "\n" + f"{env} {run_cmd} {cmd} >> chol_{lib}_{suffix}.out 2>&1".strip()
 
 
 # lib: allowed libraries are dlaf|slate|dplasma
 # rpn: ranks per node
 #
 def trsm(
-    system, lib, build_dir, nodes, rpn, m_sz, n_sz, mb_sz, nruns, suffix="na", extra_flags="", env=""
+    system,
+    lib,
+    build_dir,
+    nodes,
+    rpn,
+    m_sz,
+    n_sz,
+    mb_sz,
+    nruns,
+    suffix="na",
+    extra_flags="",
+    env="",
 ):
     _check_ranks_per_node(system, lib, rpn)
 
@@ -110,6 +139,4 @@ def trsm(
         raise ValueError(_err_msg(lib))
 
     run_cmd = run_command(system, total_ranks, cpus_per_rank)
-    return (
-        "\n" + f"{env} {run_cmd} {cmd} >> trsm_{lib}_{suffix}.out 2>&1".strip()
-    )
+    return "\n" + f"{env} {run_cmd} {cmd} >> trsm_{lib}_{suffix}.out 2>&1".strip()

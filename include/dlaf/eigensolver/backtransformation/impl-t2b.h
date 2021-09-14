@@ -38,7 +38,7 @@ private:
   }
 
   static SizeType nrStepsPerSweep(SizeType sweep, SizeType m, SizeType mb) {
-    return std::max<SizeType>(0, sweep == m - 2 ? m - 1 : dlaf::util::ceilDiv(m - sweep - 2, mb));
+    return std::max<SizeType>(0, sweep == m - 2 ? 1 : dlaf::util::ceilDiv(m - sweep - 2, mb));
   }
 };
 
@@ -67,6 +67,10 @@ auto setupVWellFormed(SizeType k, hpx::shared_future<matrix::Tile<const T, Devic
       const SizeType size = std::min<SizeType>(
           tile_v.size().rows() - (1 + j),
           tile_v_compact.size().rows() - 1);
+      // TODO this is needed because of complex last reflector (i.e. just 1 element long)
+      if (size == 0)
+        continue;
+
       lacpy(General, size, 1,
           tile_v_compact.ptr({1, j}), tile_v_compact.ld(),
           tile_v.ptr({1 + j, j}), tile_v.ld());
@@ -230,8 +234,6 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
 
     const SizeType steps = nrStepsPerSweep(sweep_tile * mb, mat_i.size().cols(), mb);
 
-    std::cout << "steps=" << steps << "\n";
-
     auto& mat_w = w_panels.nextResource();
     auto& mat_t = t_panels.nextResource();
     auto& mat_w2 = w2_panels.nextResource();
@@ -251,8 +253,7 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
 
       // TODO fix this
       const SizeType nrefls = std::min(mb, nsweeps - sweep_tile * mb);
-
-      const SizeType k = (nrefls < mb) ? nrefls : std::min(w_rows - 1, mb);
+      const SizeType k = sweep_tile == last_sweep_tile ? nrefls : std::min(w_rows - 1, mb);
       std::cout << "REFL: nrefls=" << nrefls << " mb=" << mb << " w_rows=" << w_rows << " k=" << k << "\n";
 
       mat_w.setWidth(k);

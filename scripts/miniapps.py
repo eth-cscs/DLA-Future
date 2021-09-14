@@ -89,9 +89,13 @@ def chol(
         cmd = f"{build_dir}/miniapp/miniapp_cholesky --matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} --hpx:use-process-mask {extra_flags}"
     elif lib == "slate":
         env += f" OMP_NUM_THREADS={cpus_per_rank}"
+        if system["GPU"]:
+            extra_flags += " --origin d --target d"
         cmd = f"{build_dir}/test/tester --dim {m_sz}x{m_sz}x0 --nb {mb_sz} --p {grid_rows} --q {grid_cols} --repeat {nruns} --check n --ref n --type d {extra_flags} potrf"
     elif lib == "dplasma":
         env += " OMP_NUM_THREADS=1"
+        if system["GPU"]:
+            extra_flags += " -g 1"
         cmd = f"{build_dir}/tests/testing_dpotrf -N {m_sz} --MB {mb_sz} --NB {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} -c {cpus_per_rank} --nruns {nruns} -v {extra_flags}"
     elif lib == "scalapack":
         env += f" OMP_NUM_THREADS={cpus_per_rank}"
@@ -131,9 +135,13 @@ def trsm(
         cmd = f"{build_dir}/miniapp/miniapp_triangular_solver --m {m_sz} --n {n_sz} --mb {mb_sz} --nb {mb_sz} --grid-rows {gr} --grid-cols {gc} --nruns {nruns} --hpx:use-process-mask {extra_flags}"
     elif lib == "slate":
         env += f" OMP_NUM_THREADS={cpus_per_rank}"
+        if system["GPU"]:
+            extra_flags += " --origin d --target d"
         cmd = f"{build_dir}/test/tester --dim {m_sz}x{n_sz}x0 --nb {mb_sz} --p {gr} --q {gc} --repeat {nruns} --alpha 2 --check n --ref n --type d {extra_flags} trsm"
     elif lib == "dplasma":
         env += " OMP_NUM_THREADS=1"
+        if system["GPU"]:
+            extra_flags += " -g 1"
         cmd = f"{build_dir}/tests/testing_dtrsm -M {m_sz} -N {n_sz} --MB {mb_sz} --NB {mb_sz} --grid-rows {gr} --grid-cols {gc} -c {cpus_per_rank} -v {extra_flags}"
     else:
         raise ValueError(_err_msg(lib))

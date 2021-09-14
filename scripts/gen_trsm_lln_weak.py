@@ -30,6 +30,21 @@ mb_sz_arr = [256, 384, 512]
 time_min *= len(mb_sz_arr)
 time_512 *= len(mb_sz_arr)
 
+parser = argparse.ArgumentParser(description="Run trsm LLN weak scaling benchmarks.")
+parser.add_argument(
+    "--debug", help="Don't submit jobs, print job scripts instead.", action="store_true"
+)
+parser.add_argument(
+    "--libs",
+    help="Run miniapps for these libraries.",
+    nargs="+",
+    default=["dlaf"],
+)
+args = parser.parse_args()
+
+debug = args.debug
+run_dlaf = "dlaf" in args.libs
+
 
 def get_time(nodes):
     return time_min + int(time_512 * sqrt(nodes / 512))
@@ -46,25 +61,23 @@ def get_size(nodes):
 
 
 for nodes in nodes_arr:
-    job_text = mp.init_job_text(system, run_name, nodes, get_time(nodes))
+    if run_dlaf:
+        job_text = mp.init_job_text(system, run_name, nodes, get_time(nodes))
 
-    for mb_sz in mb_sz_arr:
-        m_sz = get_size(nodes)
-        for n_sz in [m_sz, m_sz // 2]:
-            job_text += mp.trsm(
-                system,
-                "dlaf",
-                dlaf_build_dir,
-                nodes,
-                ranks_per_node,
-                m_sz,
-                n_sz,
-                mb_sz,
-                nruns,
-                suffix=f"rpn={ranks_per_node}",
-            )
+        for mb_sz in mb_sz_arr:
+            m_sz = get_size(nodes)
+            for n_sz in [m_sz, m_sz // 2]:
+                job_text += mp.trsm(
+                    system,
+                    "dlaf",
+                    dlaf_build_dir,
+                    nodes,
+                    ranks_per_node,
+                    m_sz,
+                    n_sz,
+                    mb_sz,
+                    nruns,
+                    suffix=f"rpn={ranks_per_node}",
+                )
 
-    # debugging
-    # print(job_text)
-
-    mp.submit_jobs(run_dir, nodes, job_text, suffix=ranks_per_node)
+        mp.submit_jobs(run_dir, nodes, job_text, debug=debug, suffix=ranks_per_node)

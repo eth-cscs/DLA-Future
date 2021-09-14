@@ -5,23 +5,20 @@ import argparse
 import miniapps as mp
 import systems
 
-run_name = "trsm_lln_strong"
-system = systems.cscs["daint-mc"]
-
-dlaf_build_dir = "/project/csstaff/ialberto/workspace/dla-future.master/builds/daint"
+run_name = "trsm2"
+system = systems.cscs["eiger"]
+dlaf_build_dir = "/scratch/e1000/rasolca/DLA-Future/build"
 dp_build_dir = "/scratch/e1000/rasolca/dplasma/build"
 sl_build_dir = "/scratch/e1000/rasolca/slate-2020.10.00/build/"
-
-run_dir = f"/scratch/snx3000/ialberto/20210901-benchmark-PRACE/{run_name}"
-
+run_dir = f"/scratch/e1000/rasolca/DLA-Future/scripts/{run_name}"
 time_min = 500
 nruns = 5
-ranks_per_node_arr = [2]
+ranks_per_node_arr = [1, 2, 4, 8]
 nodes_arr = [1, 2, 4, 8, 16, 32]
-m_sz_arr = [10240, 20480, 40960]
-mb_sz_arr = [256, 384, 512]
+m_sz_arr = [20480, 40960, 81920]
+mb_sz_arr = [256, 384, 512, 576, 768]
 
-parser = argparse.ArgumentParser(description="Run trsm LLN strong scaling benchmarks.")
+parser = argparse.ArgumentParser(description="Run trsm strong scaling benchmarks.")
 parser.add_argument(
     "--debug", help="Don't submit jobs, print job scripts instead.", action="store_true"
 )

@@ -51,14 +51,12 @@ for nodes in nodes_arr:
                 m_sz,
                 mb_sz,
                 nruns,
+                debug=debug,
                 suffix="gpu",
                 extra_flags="",
             )
 
-            if debug:
-                print(job_text)
-            else:
-                mp.submit_jobs(run_dir, nodes, job_text, suffix="gpu")
+            mp.submit_jobs(run_dir, nodes, job_text, debug=debug, suffix="gpu")
 
     if run_slate:
         job_text = mp.init_job_text(system, run_name, nodes, time_min)
@@ -80,7 +78,4 @@ for nodes in nodes_arr:
                 extra_flags="",
             )
 
-        if debug:
-            print(job_text)
-        else:
-            mp.submit_jobs(run_dir, nodes, job_text, suffix="gpu")
+        mp.submit_jobs(run_dir, nodes, job_text, debug=debug, suffix="gpu")

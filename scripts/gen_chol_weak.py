@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from itertools import product
+import argparse
 import miniapps as mp
 import systems
 from math import sqrt
@@ -26,14 +27,27 @@ m_2node = 28672
 mb_sz_arr = [256, 384, 512]
 mb_sz_arr_scalapack = [128, 64]
 
-run_mkl = False
-run_libsci = False
-run_dlaf = True
-run_slate = False
-run_dp = False
-
 time_min *= len(mb_sz_arr)
 time_512 *= len(mb_sz_arr)
+
+parser = argparse.ArgumentParser(description="Run cholesky strong scaling benchmarks.")
+parser.add_argument(
+    "--debug", help="Don't submit jobs, print job scripts instead.", action="store_true"
+)
+parser.add_argument(
+    "--libs",
+    help="Run miniapps for these libraries.",
+    nargs="+",
+    default=["mkl", "libsci", "dlaf", "dlaf", "slate", "dplasma"],
+)
+args = parser.parse_args()
+
+debug = args.debug
+run_mkl = "mkl" in args.libs
+run_libsci = "libsci" in args.libs
+run_dlaf = "dlaf" in args.libs
+run_slate = "slate" in args.libs
+run_dp = "dplasma" in args.libs
 
 
 def get_time(nodes):
@@ -69,11 +83,7 @@ for nodes in nodes_arr:
                 extra_flags="--hpx:ini=hpx.max_idle_backoff_time=0",
             )
 
-        # debugging
-        # print(job_text)
-        # continue
-
-        mp.submit_jobs(run_dir, nodes, job_text, suffix=ranks_per_node)
+        mp.submit_jobs(run_dir, nodes, job_text, debug=debug, suffix=ranks_per_node)
 
     if run_slate:
         job_text = mp.init_job_text(system, run_name, nodes, get_time(nodes))
@@ -96,11 +106,9 @@ for nodes in nodes_arr:
                 suffix=f"rpn={ranks_per_node}",
             )
 
-        # debugging
-        print(job_text)
-        # break
-
-        mp.submit_jobs(run_dir, nodes, job_text, suffix=f"sl_{ranks_per_node}")
+        mp.submit_jobs(
+            run_dir, nodes, job_text, debug=debug, suffix=f"sl_{ranks_per_node}"
+        )
 
     if run_dp:
         job_text = mp.init_job_text(system, run_name, nodes, get_time(nodes))
@@ -123,11 +131,9 @@ for nodes in nodes_arr:
                 suffix="rpn=1",
             )
 
-        # debugging
-        print(job_text)
-        # break
-
-        mp.submit_jobs(run_dir, nodes, job_text, suffix=f"dp_{ranks_per_node}")
+        mp.submit_jobs(
+            run_dir, nodes, job_text, debug=debug, suffix=f"dp_{ranks_per_node}"
+        )
 
     if run_mkl:
         job_text = mp.init_job_text(system, run_name, nodes, 2 * get_time(nodes))
@@ -150,11 +156,9 @@ for nodes in nodes_arr:
                 suffix="mkl_rpn=36",
             )
 
-        # debugging
-        print(job_text)
-        # break
-
-        mp.submit_jobs(run_dir, nodes, job_text, suffix=f"mkl_{ranks_per_node}")
+        mp.submit_jobs(
+            run_dir, nodes, job_text, debug=debug, suffix=f"mkl_{ranks_per_node}"
+        )
 
     if run_libsci:
         job_text = mp.init_job_text(system, run_name, nodes, 2 * get_time(nodes))
@@ -177,8 +181,6 @@ for nodes in nodes_arr:
                 suffix="libsci_rpn=36",
             )
 
-        # debugging
-        print(job_text)
-        # break
-
-        mp.submit_jobs(run_dir, nodes, job_text, suffix=f"libsci_{ranks_per_node}")
+        mp.submit_jobs(
+            run_dir, nodes, job_text, debug=debug, suffix=f"libsci_{ranks_per_node}"
+        )

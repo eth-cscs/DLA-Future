@@ -209,14 +209,8 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
   const SizeType nsweeps = nrSweeps(mat_i.size().cols());
 
   // TODO w last tile is complete anyway, because of setup V well formed
-  const SizeType w_nrows = [=, last_rows=mat_i.tileSize({m - 1, 0}).rows()]() {
-    if (last_rows == mb)
-      return (m - 1) * w_blocksize.rows() + mb - 1;
-    else
-      return (mb - 1) + 2 * w_blocksize.rows() + (m > 2 ? (m - 2) * w_blocksize.rows() - 1 : 0);
-  }();
   const matrix::Distribution dist_w(
-      {w_nrows, w_blocksize.cols()},
+      {m * w_blocksize.rows(), w_blocksize.cols()},
       w_blocksize,
       dist_i.commGridSize(), dist_i.rankIndex(), dist_i.sourceRankIndex());
 
@@ -267,8 +261,11 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
 
       // TODO setRange?
 
+      auto tile_w_full = mat_w(ij_refls);
+      auto tile_w_rw = splitTile(tile_w_full, {{0, 0}, {w_rows, k}});
+
       const auto& tile_i = mat_i.read(ij_refls);
-      auto tile_v = setupVWellFormed(k, tile_i, mat_w(ij_refls));
+      auto tile_v = setupVWellFormed(k, tile_i, std::move(tile_w_rw));
 
       auto tile_t_full = mat_t(LocalTileIndex(i_v, 0));
       auto tile_t = computeTFactor(tile_i, tile_v, splitTile(tile_t_full, {{0, 0}, {k, k}}));
@@ -292,7 +289,8 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
         }
       }
 
-      computeW(mat_w(ij_refls), tile_t);
+      tile_w_rw = splitTile(tile_w_full, {{0, 0}, {w_rows, k}});
+      computeW(std::move(tile_w_rw), tile_t);
       auto tile_w = mat_w.read(ij_refls);
 
       for (SizeType j_e = 0; j_e < n; ++j_e) {

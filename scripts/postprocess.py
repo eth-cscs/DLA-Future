@@ -440,7 +440,7 @@ def gen_trsm_plots(
             filename_ppn += f"_{filename_suffix}"
             filename_time += f"_{filename_suffix}"
 
-        with NodePlotWriter("ppn", title, filename_ppn, grp_data, **proxy_args) as (
+        with NodePlotWriter(filename_ppn, "ppn", title, grp_data, **proxy_args) as (
             fig,
             ax,
         ):
@@ -453,7 +453,7 @@ def gen_trsm_plots(
             labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
             ax.legend(handles, labels, ncol=1, prop={"size": 13})
 
-        with NodePlotWriter("time", title, filename_time, grp_data, **proxy_args) as (
+        with NodePlotWriter(filename_time, "time", title, grp_data, **proxy_args) as (
             fig,
             ax,
         ):

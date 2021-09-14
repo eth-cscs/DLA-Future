@@ -328,6 +328,10 @@ def gen_chol_plots(
             if logx:
                 ax.set_xscale("log", base=2)
 
+            handles, labels = ax.get_legend_handles_labels()
+            labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
+            ax.legend(handles, labels, ncol=1, prop={"size": 13})
+
         with NodePlotWriter(
             filename_time, "time", title, grp_data, combine_mb=combine_mb, **proxy_args
         ) as (fig, ax):
@@ -335,6 +339,10 @@ def gen_chol_plots(
                 customize_time(fig, ax)
             if logx:
                 ax.set_xscale("log", base=2)
+
+            handles, labels = ax.get_legend_handles_labels()
+            labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
+            ax.legend(handles, labels, ncol=1, prop={"size": 13})
 
 
 def gen_chol_plots_weak(
@@ -390,6 +398,10 @@ def gen_chol_plots_weak(
             if logx:
                 ax.set_xscale("log", base=2)
 
+            handles, labels = ax.get_legend_handles_labels()
+            labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
+            ax.legend(handles, labels, ncol=1, prop={"size": 13})
+
         with NodePlotWriter(
             filename_time, "time", title, grp_data, combine_mb=combine_mb, **proxy_args
         ) as (fig, ax):
@@ -398,6 +410,10 @@ def gen_chol_plots_weak(
             if logx:
                 ax.set_xscale("log", base=2)
             ax.set_yscale("log", base=10)
+
+            handles, labels = ax.get_legend_handles_labels()
+            labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
+            ax.legend(handles, labels, ncol=1, prop={"size": 13})
 
 
 def gen_trsm_plots(
@@ -433,6 +449,10 @@ def gen_trsm_plots(
             if logx:
                 ax.set_xscale("log", base=2)
 
+            handles, labels = ax.get_legend_handles_labels()
+            labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
+            ax.legend(handles, labels, ncol=1, prop={"size": 13})
+
         with NodePlotWriter("time", title, filename_time, grp_data, **proxy_args) as (
             fig,
             ax,
@@ -441,3 +461,7 @@ def gen_trsm_plots(
                 customize_time(fig, ax)
             if logx:
                 ax.set_xscale("log", base=2)
+
+            handles, labels = ax.get_legend_handles_labels()
+            labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
+            ax.legend(handles, labels, ncol=1, prop={"size": 13})

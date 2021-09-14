@@ -65,7 +65,7 @@ public:
   }
 
   /// Returns the size of the Tile with global index @p index.
-  TileElementSize tileSize(const GlobalTileIndex& index) noexcept {
+  TileElementSize tileSize(const GlobalTileIndex& index) const noexcept {
     return distribution_->tileSize(index);
   }
 

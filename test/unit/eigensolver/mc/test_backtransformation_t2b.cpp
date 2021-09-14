@@ -49,11 +49,9 @@ struct calculateTau {
 };
 
 template <class T>
-void computeTaus(const bool limit, const SizeType k, matrix::Tile<T, Device::CPU> tile) {
-  const SizeType b = tile.size().cols();
-
+void computeTaus(const SizeType n, const SizeType k, matrix::Tile<T, Device::CPU> tile) {
   for (SizeType j = 0; j < k; ++j) {
-    SizeType size = limit ? b - (j + 1) : b;
+    SizeType size = std::min(n - j, tile.size().rows() - 1);
     DLAF_ASSERT(size > 0, size);
     const auto tau = calculateTau::call(tile.ptr({0, j}), size);
     *tile.ptr({0, j}) = tau;
@@ -64,19 +62,51 @@ struct config_t {
   const SizeType m, n, mb, nb;
 };
 
-std::vector<config_t> configs {
-  {12, 12, 4, 4},
-  {20, 20, 5, 5},
+std::vector<config_t> configs{
+    //{0, 0, 4, 4},
+    //{12, 12, 4, 4},
+    //{12, 12, 4, 3},
+    //{10, 10, 3, 3},
+    //{8, 8, 3, 3},
+    //{20, 30, 5, 5},
+    //{20, 30, 5, 6},
+    {12, 12, 5, 5},
+    //{12, 30, 5, 6},
 };
 
 TYPED_TEST(BacktransformationT2BTest, CorrectnessLocal) {
+  struct algorithmConfig {
+    algorithmConfig(SizeType m, SizeType mb) : m_(m), mb_(mb) {}
+
+    SizeType nrSweeps() {
+      return std::max<SizeType>(0, is_complex ? m_ - 1 : m_ - 2);
+    }
+
+    SizeType nrStepsPerSweep(SizeType sweep) {
+      return std::max<SizeType>(0, sweep == m_ - 2 ? m_ - 1 : dlaf::util::ceilDiv(m_ - sweep - 2, mb_));
+    }
+
+    auto unzipReflector(const GlobalElementIndex ij) {
+      const auto size = std::min(mb_, m_ - ij.row());
+      const auto k = ij.col() % mb_;
+      const auto i_t = (ij.row() - k + 1) / mb_;
+      const auto j_t = ij.col() / mb_;
+      return std::make_tuple(GlobalTileIndex(i_t, j_t), k, size);
+    };
+
+    const bool is_complex = std::is_same<TypeParam, ComplexType<TypeParam>>::value;
+    SizeType m_, mb_;
+  };
+
   for (const auto& config : configs) {
     const SizeType m = config.m;
     const SizeType n = config.n;
     const SizeType mb = config.mb;
     const SizeType nb = config.nb;
 
-    const SizeType b = mb;
+    algorithmConfig algConf(m, mb);
+
+    //const SizeType b = mb;
 
     const LocalElementSize sz_e(m, n);
     const TileElementSize bsz_e(mb, nb);
@@ -88,14 +118,19 @@ TYPED_TEST(BacktransformationT2BTest, CorrectnessLocal) {
     set_random(mat_e);
     auto mat_e_local = allGather(lapack::MatrixType::General, mat_e);
 
-    Matrix<const TypeParam, Device::CPU> mat_v = [b, sz_v, bsz_v]() {
+    Matrix<const TypeParam, Device::CPU> mat_v = [sz_v, bsz_v]() {
       Matrix<TypeParam, Device::CPU> mat_v(sz_v, bsz_v);
-      set_random(mat_v); // TODO ? same seed ==> mat_v == mat_e
+      set_random(mat_v);  // TODO ? same seed ==> mat_v == mat_e
 
-      for (SizeType j = 0; j < mat_v.distribution().localNrTiles().cols(); ++j) {
-        for (SizeType i = 0; i < j; ++i) {
-          const SizeType k = (i == j) ? b - 2 : b;
-          hpx::dataflow(hpx::unwrapping(computeTaus<TypeParam>), i == j, k, mat_v(LocalTileIndex(i, j)));
+      const auto m = mat_v.distribution().localNrTiles().cols();
+      for (SizeType j = 0; j < m; ++j) {
+        for (SizeType i = j; i < m; ++i) {
+          const bool affectsTwoRows = i < m - 1;
+          const SizeType k = affectsTwoRows ? mat_v.tileSize({i, j}).cols() : mat_v.tileSize({i, j}).rows() - 2;
+          const SizeType n = mat_v.tileSize({i, j}).rows() - 1 + (affectsTwoRows ? mat_v.tileSize({i + 1, j}).rows() : 0);
+          if (k <= 0)
+            continue;
+          hpx::dataflow(hpx::unwrapping(computeTaus<TypeParam>), n, k, mat_v(LocalTileIndex(i, j)));
         }
       }
 
@@ -104,23 +139,34 @@ TYPED_TEST(BacktransformationT2BTest, CorrectnessLocal) {
 
     MatrixLocal<TypeParam> mat_v_local = allGather(lapack::MatrixType::Lower, mat_v);
 
+    //std::cout << m << " " << n << " " << mb << " " << nb << std::endl;
+    //print(format::numpy{}, "E", mat_e);
+    //print(format::numpy{}, "V", mat_v);
+
     eigensolver::backTransformationT2B<Backend::MC>(mat_e, mat_v);
 
-    for (SizeType j = m - 1; j >= 0; --j) {
-      SizeType j_t = j / mb;
-      for (SizeType i = m - mb + ((j + 1) % mb); i >= j + 1; i -= mb) {
-        SizeType i_t = (i - 1) / mb;
-        SizeType k = j % mb;
+    for (SizeType sweep = algConf.nrSweeps() - 1; sweep >= 0; --sweep) {
+      for (SizeType step = algConf.nrStepsPerSweep(sweep) - 1; step >= 0; --step) {
+        const SizeType j = sweep;
+        const SizeType i = j + 1 + step * mb;
+        //std::cout << "i=" << i << "\nj=" << j << "\n";
 
-        const SizeType size = std::min(mb, m - i);
+        auto reflector = algConf.unzipReflector({i, j});
 
-        if (size == 1) // TODO check this (also for complex)
-          continue;
+        const SizeType k = std::get<1>(reflector);
+        const SizeType size = std::get<2>(reflector);
 
-        auto& tile_v = mat_v_local.tile({i_t, j_t});
+        //std::cout << "k=" << k << " size=" << size << "\n";
+
+        auto& tile_v = mat_v_local.tile(std::get<0>(reflector));
         TypeParam& v_head = *tile_v.ptr({0, k});
         const TypeParam tau = v_head;
         v_head = 1;
+
+        std::cout << "tau = " << tau << " " << "\tv = ";
+        for (auto i = 0; i < size; ++i)
+          std::cout << *tile_v.ptr({i, k}) << ", ";
+        std::cout << "\n";
 
         lapack::larf(blas::Side::Left, size, n, &v_head, 1, tau, mat_e_local.ptr({i, 0}),
                      mat_e_local.ld());
@@ -135,7 +181,10 @@ TYPED_TEST(BacktransformationT2BTest, CorrectnessLocal) {
     };
 
     const auto error =
-        std::max<SizeType>(1, m * n) * TypeUtilities<TypeParam>::error;  // TODO how much error
+        std::max<SizeType>(1, 40 * m * n) * TypeUtilities<TypeParam>::error;  // TODO how much error
     CHECK_MATRIX_NEAR(result, mat_e, error, error);
+
+    //print(format::numpy{}, "Etest", mat_e_local);
+    //print(format::numpy{}, "Erun", mat_e);
   }
 }

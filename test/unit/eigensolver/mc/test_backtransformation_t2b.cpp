@@ -83,7 +83,7 @@ TYPED_TEST(BacktransformationT2BTest, CorrectnessLocal) {
     }
 
     SizeType nrStepsPerSweep(SizeType sweep) {
-      return std::max<SizeType>(0, sweep == m_ - 2 ? m_ - 1 : dlaf::util::ceilDiv(m_ - sweep - 2, mb_));
+      return std::max<SizeType>(0, sweep == m_ - 2 ? 1 : dlaf::util::ceilDiv(m_ - sweep - 2, mb_));
     }
 
     auto unzipReflector(const GlobalElementIndex ij) {

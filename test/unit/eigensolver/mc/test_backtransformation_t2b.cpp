@@ -45,13 +45,13 @@ struct calculateTau {
     return {(T(1.0) + std::sqrt(T(1) - dotprod * imag * imag)) / dotprod, imag};
   }
 
-  // TODO random number has to be "resetted" at each time
+  // TODO random number has to be "resetted" each time
 };
 
 template <class T>
 void computeTaus(const SizeType n, const SizeType k, matrix::Tile<T, Device::CPU> tile) {
   for (SizeType j = 0; j < k; ++j) {
-    SizeType size = std::min(n - j, tile.size().rows() - 1);
+    const SizeType size = std::min(n - j, tile.size().rows() - 1);
     DLAF_ASSERT(size > 0, size);
     const auto tau = calculateTau::call(tile.ptr({0, j}), size);
     *tile.ptr({0, j}) = tau;
@@ -74,13 +74,7 @@ TYPED_TEST(BacktransformationT2BTest, CorrectnessLocal) {
     const SizeType mb = config.mb;
     const SizeType nb = config.nb;
 
-    const LocalElementSize sz_e(m, n);
-    const TileElementSize bsz_e(mb, nb);
-
-    const LocalElementSize sz_v(m, m);
-    const TileElementSize bsz_v(mb, mb);
-
-    Matrix<TypeParam, Device::CPU> mat_e(sz_e, bsz_e);
+    Matrix<TypeParam, Device::CPU> mat_e({m, n}, {mb, nb});
     set_random(mat_e);
     auto mat_e_local = allGather(lapack::MatrixType::General, mat_e);
 
@@ -93,28 +87,30 @@ TYPED_TEST(BacktransformationT2BTest, CorrectnessLocal) {
       return std::max<SizeType>(0, sweep == m - 2 ? 1 : dlaf::util::ceilDiv(m - sweep - 2, mb));
     };
 
-    Matrix<const TypeParam, Device::CPU> mat_v = [sz_v, bsz_v]() {
-      Matrix<TypeParam, Device::CPU> mat_v(sz_v, bsz_v);
-      set_random(mat_v);  // TODO ? same seed ==> mat_v == mat_e
+    Matrix<const TypeParam, Device::CPU> mat_i = [m, mb]() {
+      Matrix<TypeParam, Device::CPU> mat_i({m, m}, {mb, mb});
+      set_random(mat_i);  // TODO ? same seed ==> mat_i == mat_e
 
-      const auto m = mat_v.distribution().localNrTiles().cols();
+      const auto m = mat_i.distribution().localNrTiles().cols();
       for (SizeType j = 0; j < m; ++j) {
         for (SizeType i = j; i < m; ++i) {
           const bool affectsTwoRows = i < m - 1;
-          const SizeType k = affectsTwoRows ? mat_v.tileSize({i, j}).cols() : mat_v.tileSize({i, j}).rows() - 2;
-          const SizeType n = mat_v.tileSize({i, j}).rows() - 1 + (affectsTwoRows ? mat_v.tileSize({i + 1, j}).rows() : 0);
+          const SizeType k =
+              affectsTwoRows ? mat_i.tileSize({i, j}).cols() : mat_i.tileSize({i, j}).rows() - 2;
+          const SizeType n = mat_i.tileSize({i, j}).rows() - 1 +
+                             (affectsTwoRows ? mat_i.tileSize({i + 1, j}).rows() : 0);
           if (k <= 0)
             continue;
-          hpx::dataflow(hpx::unwrapping(computeTaus<TypeParam>), n, k, mat_v(LocalTileIndex(i, j)));
+          hpx::dataflow(hpx::unwrapping(computeTaus<TypeParam>), n, k, mat_i(LocalTileIndex(i, j)));
         }
       }
 
-      return mat_v;
+      return mat_i;
     }();
 
-    MatrixLocal<TypeParam> mat_v_local = allGather(lapack::MatrixType::Lower, mat_v);
+    MatrixLocal<TypeParam> mat_i_local = allGather(lapack::MatrixType::Lower, mat_i);
 
-    eigensolver::backTransformationT2B<Backend::MC>(mat_e, mat_v);
+    eigensolver::backTransformationT2B<Backend::MC>(mat_e, mat_i);
 
     for (SizeType sweep = nrSweeps() - 1; sweep >= 0; --sweep) {
       for (SizeType step = nrStepsPerSweep(sweep) - 1; step >= 0; --step) {
@@ -124,7 +120,7 @@ TYPED_TEST(BacktransformationT2BTest, CorrectnessLocal) {
         const SizeType size = std::min(mb, m - i);
         const SizeType i_v = (i - 1) / mb * mb;
 
-        TypeParam& v_head = *mat_v_local.ptr({i_v, j});
+        TypeParam& v_head = *mat_i_local.ptr({i_v, j});
         const TypeParam tau = v_head;
         v_head = 1;
 
@@ -140,8 +136,8 @@ TYPED_TEST(BacktransformationT2BTest, CorrectnessLocal) {
       return mat_local.tile_read(tile_index)(tile_element);
     };
 
-    const auto error =
-        std::max<SizeType>(1, 40 * m * n) * TypeUtilities<TypeParam>::error;  // TODO how much error
+    // TODO how much error
+    const auto error = std::max<SizeType>(1, 40 * m * n) * TypeUtilities<TypeParam>::error;
     CHECK_MATRIX_NEAR(result, mat_e, error, error);
   }
 }

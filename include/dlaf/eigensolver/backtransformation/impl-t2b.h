@@ -50,19 +50,6 @@ auto setupVWellFormed(SizeType k, hpx::shared_future<matrix::Tile<const T, Devic
     constexpr auto Upper = lapack::MatrixType::Upper;
     constexpr auto Lower = lapack::MatrixType::Lower;
 
-    std::cout << "Vnrefls = " << k << "\n";
-
-    std::cout << "Vc = ";
-    print(format::numpy{}, tile_v_compact);
-
-    std::cout << "Vp = ";
-    print(format::numpy{}, tile_v);
-
-    // TODO this requires W complete (even the bottom one)
-    //lacpy(General, b - 1, b,
-    //    tile_v_compact.ptr({1, 0}), tile_v_compact.ld(),
-    //    tile_v.ptr({1, 0}), tile_v.ld() + 1);
-
     for (SizeType j = 0; j < k; ++j) {
       const SizeType size = std::min<SizeType>(
           tile_v.size().rows() - (1 + j),
@@ -80,12 +67,8 @@ auto setupVWellFormed(SizeType k, hpx::shared_future<matrix::Tile<const T, Devic
     laset(Upper, tile_v.size().rows(), k, T(0), T(1), tile_v.ptr({0, 0}), tile_v.ld());
 
     const SizeType mb = tile_v_compact.size().cols();
-    if (tile_v.size().rows() > mb) {
+    if (tile_v.size().rows() > mb)
       laset(Lower, tile_v.size().rows() - mb, k - 1, T(0), T(0), tile_v.ptr({mb, 0}), tile_v.ld());
-    }
-
-    std::cout << "V = ";
-    print(format::numpy{}, tile_v);
 
     return matrix::Tile<const T, Device::CPU>(std::move(tile_v));
   };
@@ -99,12 +82,6 @@ auto computeTFactor(hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_
   auto tfactor_task = [](const auto& tile_taus, const auto& tile_v, auto tile_t) {
     using namespace lapack;
 
-    //std::cout << "V = ";
-    //print(format::numpy{}, tile_v);
-
-    //std::cout << "taus = ";
-    //print(format::numpy{}, tile_taus);
-
     const auto k = tile_v.size().cols();
     const auto n = tile_v.size().rows();
     //DLAF_ASSERT_HEAVY((tile_t.size() == TileElementSize(k, k)), tile_t.size());
@@ -117,8 +94,6 @@ auto computeTFactor(hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_
     larft(Direction::Forward, StoreV::Columnwise, n, k, tile_v.ptr(), tile_v.ld(), taus.data(),
           tile_t.ptr(), tile_t.ld());
 
-    //std::cout << "T = ";
-    //print(format::numpy{}, tile_t);
     return matrix::Tile<const T, Device::CPU>(std::move(tile_t));
   };
   return hpx::dataflow(hpx::unwrapping(tfactor_task), std::move(tile_taus), std::move(tile_v),
@@ -129,17 +104,6 @@ template <class T>
 auto computeW(hpx::future<matrix::Tile<T, Device::CPU>> tile_v,
               hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_t) {
   using namespace blas;
-
-  //hpx::dataflow(hpx::unwrapping([](auto tile_w, const auto& tile_t) {
-  //      std::cout << "\tV = ";
-  //      print(format::numpy{}, tile_w);
-  //      std::cout << "\tT = ";
-  //      print(format::numpy{}, tile_t);
-  //      tile::trmm(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1), tile_t,
-  //          tile_w); std::cout << "W = "; print(format::numpy{}, tile_w);
-  //      }),
-  //    std::move(tile_v), std::move(tile_t));
-
   hpx::dataflow(matrix::unwrapExtendTiles(tile::trmm_o), Side::Right, Uplo::Upper, Op::NoTrans,
                 Diag::NonUnit, T(1), std::move(tile_t), std::move(tile_v));
 }
@@ -148,22 +112,7 @@ template <class T>
 auto computeW2(hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v,
                hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_e, T beta,
                hpx::future<matrix::Tile<T, Device::CPU>> tile_w2) {
-  using namespace blas;
-
-  // hpx::dataflow(hpx::unwrapping(
-  //                  [](const auto& tile_v, const auto& tile_e, const auto beta, auto tile_w2) {
-  //                    std::cout << "\t_V = ";
-  //                    print(format::numpy{}, tile_v);
-  //                    std::cout << "\t_E = ";
-  //                    print(format::numpy{}, tile_e);
-  //                    std::cout << "\tbeta = " << beta << "\n";
-  //                    std::cout << "\t_W2pre = ";
-  //                    print(format::numpy{}, tile_w2);
-  //                    tile::gemm(Op::ConjTrans, Op::NoTrans, T(1), tile_v, tile_e, beta, tile_w2);
-  //                    std::cout << "_W2 = ";
-  //                    print(format::numpy{}, tile_w2);
-  //                  }),
-  //              std::move(tile_v), std::move(tile_e), beta, std::move(tile_w2));
+  using blas::Op;
   hpx::dataflow(matrix::unwrapExtendTiles(tile::gemm_o), Op::ConjTrans, Op::NoTrans, T(1),
                 std::move(tile_v), std::move(tile_e), beta, std::move(tile_w2));
 }
@@ -173,21 +122,7 @@ auto updateE(hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_w,
              hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_w2,
              hpx::future<matrix::Tile<T, Device::CPU>> tile_e) {
   using blas::Op;
-
-  //auto func = hpx::unwrapping([](auto&& tile_w, auto&& tile_w2, auto tile_e) {
-  //  std::cout << "\tW = ";
-  //  print(format::numpy{}, tile_w);
-  //  std::cout << "\tW2 = ";
-  //  print(format::numpy{}, tile_w2);
-  //  std::cout << "\tEpre = ";
-  //  print(format::numpy{}, tile_e);
-  //  tile::gemm(Op::NoTrans, Op::NoTrans, T(-1), tile_w, tile_w2, T(1), tile_e);
-  //  std::cout << "E = ";
-  //  print(format::numpy{}, tile_e);
-  //});
-  //hpx::dataflow(func, std::move(tile_w), std::move(tile_w2), std::move(tile_e));
-
-  hpx::dataflow(hpx::unwrapping(tile::gemm_o), Op::NoTrans, Op::NoTrans, T(-1), std::move(tile_w),
+  hpx::dataflow(matrix::unwrapExtendTiles(tile::gemm_o), Op::NoTrans, Op::NoTrans, T(-1), std::move(tile_w),
                 std::move(tile_w2), T(1), std::move(tile_e));
 }
 
@@ -218,11 +153,6 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
       w_blocksize,
       dist_i.commGridSize(), dist_i.rankIndex(), dist_i.sourceRankIndex());
 
-  std::cout << "W: " << dist_w.size() << "\n";
-  std::cout << "infoW:" << nsweeps << " " << mat_e.tileSize({m - 1, 0}).rows() << "\n";
-
-  print(format::numpy{}, "I", mat_i);
-
   constexpr std::size_t n_workspaces = 2;
   RoundRobin<Panel<Coord::Col, T, Device::CPU>> t_panels(n_workspaces, mat_i.distribution());
   RoundRobin<Panel<Coord::Col, T, Device::CPU>> w_panels(n_workspaces, dist_w);
@@ -230,8 +160,6 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
 
   const SizeType last_sweep_tile = (nsweeps - 1) / mb;
   for (SizeType sweep_tile = last_sweep_tile; sweep_tile >= 0; --sweep_tile) {
-    std::cout << "sweep_tile=" << sweep_tile << "/" << last_sweep_tile << "\n";
-
     const SizeType steps = nrStepsPerSweep(sweep_tile * mb, mat_i.size().cols(), mb);
 
     auto& mat_w = w_panels.nextResource();
@@ -254,7 +182,6 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
       // TODO fix this
       const SizeType nrefls = std::min(mb, nsweeps - sweep_tile * mb);
       const SizeType k = sweep_tile == last_sweep_tile ? nrefls : std::min(w_rows - 1, mb);
-      std::cout << "REFL: nrefls=" << nrefls << " mb=" << mb << " w_rows=" << w_rows << " k=" << k << "\n";
 
       mat_w.setWidth(k);
       mat_t.setWidth(k);

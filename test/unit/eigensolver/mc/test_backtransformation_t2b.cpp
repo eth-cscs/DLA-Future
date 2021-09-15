@@ -63,50 +63,16 @@ struct config_t {
 };
 
 std::vector<config_t> configs{
-    {0, 0, 4, 4},
-    {12, 12, 4, 4},
-    {12, 12, 4, 3},
-    {10, 10, 3, 3},
-    {8, 8, 3, 3},
-    {20, 30, 5, 5},
-    {20, 30, 5, 6},
-    {12, 12, 5, 5},
-    {12, 30, 5, 6},
+    {0, 0, 4, 4}, {12, 12, 4, 4}, {12, 12, 4, 3}, {20, 30, 5, 5}, {20, 30, 5, 6},
+    {8, 8, 3, 3}, {10, 10, 3, 3}, {12, 12, 5, 5}, {12, 30, 5, 6},
 };
 
 TYPED_TEST(BacktransformationT2BTest, CorrectnessLocal) {
-  struct algorithmConfig {
-    algorithmConfig(SizeType m, SizeType mb) : m_(m), mb_(mb) {}
-
-    SizeType nrSweeps() {
-      return std::max<SizeType>(0, is_complex ? m_ - 1 : m_ - 2);
-    }
-
-    SizeType nrStepsPerSweep(SizeType sweep) {
-      return std::max<SizeType>(0, sweep == m_ - 2 ? 1 : dlaf::util::ceilDiv(m_ - sweep - 2, mb_));
-    }
-
-    auto unzipReflector(const GlobalElementIndex ij) {
-      const auto size = std::min(mb_, m_ - ij.row());
-      const auto k = ij.col() % mb_;
-      const auto i_t = (ij.row() - k + 1) / mb_;
-      const auto j_t = ij.col() / mb_;
-      return std::make_tuple(GlobalTileIndex(i_t, j_t), k, size);
-    };
-
-    const bool is_complex = std::is_same<TypeParam, ComplexType<TypeParam>>::value;
-    SizeType m_, mb_;
-  };
-
   for (const auto& config : configs) {
     const SizeType m = config.m;
     const SizeType n = config.n;
     const SizeType mb = config.mb;
     const SizeType nb = config.nb;
-
-    algorithmConfig algConf(m, mb);
-
-    //const SizeType b = mb;
 
     const LocalElementSize sz_e(m, n);
     const TileElementSize bsz_e(mb, nb);
@@ -117,6 +83,15 @@ TYPED_TEST(BacktransformationT2BTest, CorrectnessLocal) {
     Matrix<TypeParam, Device::CPU> mat_e(sz_e, bsz_e);
     set_random(mat_e);
     auto mat_e_local = allGather(lapack::MatrixType::General, mat_e);
+
+    auto nrSweeps = [m]() {
+      const bool is_complex = std::is_same<TypeParam, ComplexType<TypeParam>>::value;
+      return std::max<SizeType>(0, is_complex ? m - 1 : m - 2);
+    };
+
+    auto nrStepsPerSweep = [m, mb](const SizeType sweep) {
+      return std::max<SizeType>(0, sweep == m - 2 ? 1 : dlaf::util::ceilDiv(m - sweep - 2, mb));
+    };
 
     Matrix<const TypeParam, Device::CPU> mat_v = [sz_v, bsz_v]() {
       Matrix<TypeParam, Device::CPU> mat_v(sz_v, bsz_v);
@@ -139,37 +114,22 @@ TYPED_TEST(BacktransformationT2BTest, CorrectnessLocal) {
 
     MatrixLocal<TypeParam> mat_v_local = allGather(lapack::MatrixType::Lower, mat_v);
 
-    //std::cout << m << " " << n << " " << mb << " " << nb << std::endl;
-    //print(format::numpy{}, "E", mat_e);
-    //print(format::numpy{}, "V", mat_v);
-
     eigensolver::backTransformationT2B<Backend::MC>(mat_e, mat_v);
 
-    for (SizeType sweep = algConf.nrSweeps() - 1; sweep >= 0; --sweep) {
-      for (SizeType step = algConf.nrStepsPerSweep(sweep) - 1; step >= 0; --step) {
+    for (SizeType sweep = nrSweeps() - 1; sweep >= 0; --sweep) {
+      for (SizeType step = nrStepsPerSweep(sweep) - 1; step >= 0; --step) {
         const SizeType j = sweep;
         const SizeType i = j + 1 + step * mb;
-        //std::cout << "i=" << i << "\nj=" << j << "\n";
 
-        auto reflector = algConf.unzipReflector({i, j});
+        const SizeType size = std::min(mb, m - i);
+        const SizeType i_v = (i - 1) / mb * mb;
 
-        const SizeType k = std::get<1>(reflector);
-        const SizeType size = std::get<2>(reflector);
-
-        //std::cout << "k=" << k << " size=" << size << "\n";
-
-        auto& tile_v = mat_v_local.tile(std::get<0>(reflector));
-        TypeParam& v_head = *tile_v.ptr({0, k});
+        TypeParam& v_head = *mat_v_local.ptr({i_v, j});
         const TypeParam tau = v_head;
         v_head = 1;
 
-        std::cout << "tau = " << tau << " " << "\tv = ";
-        for (auto i = 0; i < size; ++i)
-          std::cout << *tile_v.ptr({i, k}) << ", ";
-        std::cout << "\n";
-
-        lapack::larf(blas::Side::Left, size, n, &v_head, 1, tau, mat_e_local.ptr({i, 0}),
-                     mat_e_local.ld());
+        using blas::Side;
+        lapack::larf(Side::Left, size, n, &v_head, 1, tau, mat_e_local.ptr({i, 0}), mat_e_local.ld());
       }
     }
 
@@ -183,8 +143,5 @@ TYPED_TEST(BacktransformationT2BTest, CorrectnessLocal) {
     const auto error =
         std::max<SizeType>(1, 40 * m * n) * TypeUtilities<TypeParam>::error;  // TODO how much error
     CHECK_MATRIX_NEAR(result, mat_e, error, error);
-
-    //print(format::numpy{}, "Etest", mat_e_local);
-    //print(format::numpy{}, "Erun", mat_e);
   }
 }

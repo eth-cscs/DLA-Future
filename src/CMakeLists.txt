@@ -152,9 +152,6 @@ add_library(dlaf.solver OBJECT
 target_link_libraries(dlaf.solver PUBLIC dlaf.prop)
 target_add_warnings(dlaf.solver)
 
-target_link_libraries(dlaf.eigensolver PUBLIC $<TARGET_OBJECTS:dlaf.factorization>)
-target_link_libraries(dlaf.eigensolver PUBLIC $<TARGET_OBJECTS:dlaf.solver>)
-
 # Define DLAF's complete library
 add_library(DLAF
   $<TARGET_OBJECTS:dlaf.core>

@@ -62,8 +62,8 @@ private:
 /// way to register to the queue. All requests are serialized and served in the same order they arrive.
 ///
 /// The mechanism for auto-releasing the resource and passing it to the next user works thanks to the
-/// internal Wrapper object. This Wrapper contains the real resource, and it will do what is needed to
-/// unlock the next user as soon as the Wrapper is destroyed.
+/// internal PromiseGuard object. This PromiseGuard contains the real resource, and it will do what is
+/// needed to unlock the next user as soon as the PromiseGuard is destroyed.
 template <class T>
 class Pipeline {
 public:
@@ -72,10 +72,10 @@ public:
     future_ = hpx::make_ready_future(std::move(object));
   }
 
-  /// On destruction it waits that all users have finished using it.
+  /// On destruction it does not wait for the queued requests for the resource and exits immediately.
   ~Pipeline() {
     if (future_.valid())
-      future_.get();
+      future_ = {};
   }
 
   /// Enqueue for the resource.

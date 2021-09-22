@@ -510,8 +510,6 @@ struct UnwrapFuture<hpx::future<Tile<T, D>>> {
   }
 };
 
-template <class> struct dummy;
-
 template <typename T>
 struct UnwrapFuture<hpx::future<dlaf::common::PromiseGuard<T>>> {
   template <typename U>

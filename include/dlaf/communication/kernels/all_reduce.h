@@ -32,7 +32,7 @@ namespace comm {
 namespace internal {
 
 template <class T>
-auto allReduce(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
+auto allReduce(common::PromiseGuard<comm::Communicator> const& pcomm, MPI_Op reduce_op,
                common::internal::ContiguousBufferHolder<const T> cont_buf_in,
                common::internal::ContiguousBufferHolder<T> cont_buf_out,
                matrix::Tile<const T, Device::CPU> const&, MPI_Request* req) {
@@ -48,7 +48,7 @@ auto allReduce(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
 DLAF_MAKE_CALLABLE_OBJECT(allReduce);
 
 template <class T>
-auto allReduceInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
+auto allReduceInPlace(common::PromiseGuard<comm::Communicator> const& pcomm, MPI_Op reduce_op,
                       common::internal::ContiguousBufferHolder<T> cont_buf, MPI_Request* req) {
   auto& comm = pcomm.ref();
   auto msg = comm::make_message(cont_buf.descriptor);

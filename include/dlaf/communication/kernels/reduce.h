@@ -33,7 +33,7 @@ namespace comm {
 namespace internal {
 
 template <class T>
-auto reduceRecvInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
+auto reduceRecvInPlace(common::PromiseGuard<comm::Communicator> const& pcomm, MPI_Op reduce_op,
                        common::internal::ContiguousBufferHolder<T> cont_buf, MPI_Request* req) {
   auto msg = comm::make_message(cont_buf.descriptor);
   auto& comm = pcomm.ref();
@@ -46,7 +46,7 @@ auto reduceRecvInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op re
 DLAF_MAKE_CALLABLE_OBJECT(reduceRecvInPlace);
 
 template <class T>
-auto reduceSend(comm::IndexT_MPI rank_root, common::PromiseGuard<comm::Communicator> pcomm,
+auto reduceSend(comm::IndexT_MPI rank_root, common::PromiseGuard<comm::Communicator> const& pcomm,
                 MPI_Op reduce_op, common::internal::ContiguousBufferHolder<const T> cont_buf,
                 matrix::Tile<const T, Device::CPU> const&, MPI_Request* req) {
   auto msg = comm::make_message(cont_buf.descriptor);

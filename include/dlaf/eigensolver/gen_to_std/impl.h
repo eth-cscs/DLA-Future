@@ -22,7 +22,6 @@
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/executor.h"
-#include "dlaf/communication/kernels.h"
 #include "dlaf/eigensolver/gen_to_std/api.h"
 #include "dlaf/executors.h"
 #include "dlaf/lapack/tile.h"

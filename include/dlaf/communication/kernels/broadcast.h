@@ -30,7 +30,7 @@ namespace dlaf {
 namespace comm {
 
 template <class T, Device D>
-void sendBcast(matrix::Tile<const T, D> const& tile, common::PromiseGuard<Communicator> const& pcomm,
+void sendBcast(const matrix::Tile<const T, D>& tile, const common::PromiseGuard<Communicator>& pcomm,
                MPI_Request* req) {
   const auto& comm = pcomm.ref();
   auto msg = comm::make_message(common::make_data(tile));
@@ -41,8 +41,8 @@ void sendBcast(matrix::Tile<const T, D> const& tile, common::PromiseGuard<Commun
 DLAF_MAKE_CALLABLE_OBJECT(sendBcast);
 
 template <class T, Device D>
-void recvBcast(matrix::Tile<T, D> const& tile, comm::IndexT_MPI root_rank,
-               common::PromiseGuard<Communicator> const& pcomm, MPI_Request* req) {
+void recvBcast(const matrix::Tile<T, D>& tile, comm::IndexT_MPI root_rank,
+               const common::PromiseGuard<Communicator>& pcomm, MPI_Request* req) {
   auto msg = comm::make_message(common::make_data(tile));
   DLAF_MPI_CALL(MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, pcomm.ref(), req));
 }

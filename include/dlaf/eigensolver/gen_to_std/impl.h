@@ -275,8 +275,8 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   // Set up MPI executor pipelines
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
+  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
+  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
 
   const comm::Index2D this_rank = grid.rank();
 
@@ -546,8 +546,8 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   // Set up MPI executor pipelines
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
+  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
+  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
 
   const comm::Index2D this_rank = grid.rank();
 

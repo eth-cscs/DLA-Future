@@ -42,6 +42,7 @@ run_slate = "slate" in args.libs
 time_min *= len(mb_sz_arr)
 time_512 *= len(mb_sz_arr)
 
+
 def get_time(nodes):
     return time_min + int(time_512 * sqrt(nodes / 512))
 

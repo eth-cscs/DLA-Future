@@ -5,11 +5,8 @@ import math
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 
 from parse import parse
-
-sns.set_theme()
 
 
 def _gen_nodes_plot(

@@ -468,6 +468,71 @@ def gen_trsm_plots(
                 ax.set_xscale("log", base=2)
 
 
+def gen_trsm_plots_weak(
+    df,
+    weak_rt_approx,
+    logx=False,
+    combine_mb=False,
+    filename_suffix=None,
+    customize_ppn=None,
+    customize_time=None,
+    **proxy_args,
+):
+    """
+    Args:
+        customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
+        customize_time: function accepting the two arguments fig and ax for time plot customization
+    """
+    df = df.assign(
+        weakrt_rows=[
+            int(round(x[0] / math.sqrt(x[1]) / weak_rt_approx)) * weak_rt_approx
+            for x in zip(df["matrix_rows"], df["nodes"])
+        ],
+        weakrt_cols=[
+            int(round(x[0] / math.sqrt(x[1]) / weak_rt_approx)) * weak_rt_approx
+            for x in zip(df["matrix_cols"], df["nodes"])
+        ],
+    )
+
+    if combine_mb:
+        it_space = df.groupby(["weakrt_rows", "weakrt_cols"])
+    else:
+        it_space = df.groupby(["weakrt_rows", "weakrt_cols", "block_rows"])
+
+    for x, grp_data in it_space:
+        if combine_mb:
+            weakrt_m, weakrt_n = x
+        else:
+            weakrt_m, weakrt_n, mb = x
+
+        title = f"TRSM: weak scaling ({weakrt_m} x {weakrt_n})"
+        filename_ppn = f"trsm_ppn_{weakrt_m}_{weakrt_n}"
+        filename_time = f"trsm_time_{weakrt_m}_{weakrt_n}"
+        if not combine_mb:
+            title += f", block_size = {mb} x {mb}"
+            filename_ppn += f"_{mb}"
+            filename_time += f"_{mb}"
+        if filename_suffix != None:
+            filename_ppn += f"_{filename_suffix}"
+            filename_time += f"_{filename_suffix}"
+
+        with NodePlotWriter(
+            filename_ppn, "ppn", title, grp_data, combine_mb=combine_mb, **proxy_args
+        ) as (fig, ax):
+            if customize_ppn:
+                customize_ppn(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+
+        with NodePlotWriter(
+            filename_time, "time", title, grp_data, combine_mb=combine_mb, **proxy_args
+        ) as (fig, ax):
+            if customize_time:
+                customize_time(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+
+
 def gen_gen2std_plots(
     df,
     logx=False,

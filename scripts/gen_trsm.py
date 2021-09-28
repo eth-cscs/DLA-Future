@@ -21,21 +21,24 @@ for nodes in nodes_arr:
     for ranks_per_node in ranks_per_node_arr:
         job_text = mp.init_job_text(system, run_name, nodes, time_min)
 
-        for m_sz, mb_sz, in product(m_sz_arr, mb_sz_arr):
-          for n_sz in [m_sz, m_sz // 2]:
+        for (
+            m_sz,
+            mb_sz,
+        ) in product(m_sz_arr, mb_sz_arr):
+            for n_sz in [m_sz, m_sz // 2]:
 
-            job_text += mp.trsm(
-                system,
-                "dlaf",
-                dlaf_build_dir,
-                nodes,
-                ranks_per_node,
-                m_sz,
-                n_sz,
-                mb_sz,
-                nruns,
-                suffix = f"rpn={ranks_per_node}"
-            )
+                job_text += mp.trsm(
+                    system,
+                    "dlaf",
+                    dlaf_build_dir,
+                    nodes,
+                    ranks_per_node,
+                    m_sz,
+                    n_sz,
+                    mb_sz,
+                    nruns,
+                    suffix=f"rpn={ranks_per_node}",
+                )
 
         # debugging
         # print(job_text)
@@ -45,22 +48,25 @@ for nodes in nodes_arr:
 
         job_text = mp.init_job_text(system, run_name, nodes, time_min)
 
-        for m_sz, mb_sz, in product(m_sz_arr, mb_sz_arr):
-          for n_sz in [m_sz, m_sz // 2]:
+        for (
+            m_sz,
+            mb_sz,
+        ) in product(m_sz_arr, mb_sz_arr):
+            for n_sz in [m_sz, m_sz // 2]:
 
-            job_text += mp.trsm(
-                system,
-                "slate",
-                sl_build_dir,
-                nodes,
-                ranks_per_node,
-                m_sz,
-                n_sz,
-                mb_sz,
-                nruns,
-                suffix = f"rpn={ranks_per_node}",
-                env = "BLIS_JC_NT=1"
-            )
+                job_text += mp.trsm(
+                    system,
+                    "slate",
+                    sl_build_dir,
+                    nodes,
+                    ranks_per_node,
+                    m_sz,
+                    n_sz,
+                    mb_sz,
+                    nruns,
+                    suffix=f"rpn={ranks_per_node}",
+                    env="BLIS_JC_NT=1",
+                )
 
         # debugging
         # print(job_text)
@@ -70,20 +76,20 @@ for nodes in nodes_arr:
 
     job_text = mp.init_job_text(system, run_name, nodes, time_min)
     for m_sz, mb_sz in product(m_sz_arr, mb_sz_arr):
-      for n_sz in [m_sz, m_sz // 2]:
+        for n_sz in [m_sz, m_sz // 2]:
 
-        job_text += mp.trsm(
-            system,
-            "dplasma",
-            dp_build_dir,
-            nodes,
-            1,
-            m_sz,
-            n_sz,
-            mb_sz,
-            nruns,
-            suffix = "rpn=1"
-        )
+            job_text += mp.trsm(
+                system,
+                "dplasma",
+                dp_build_dir,
+                nodes,
+                1,
+                m_sz,
+                n_sz,
+                mb_sz,
+                nruns,
+                suffix="rpn=1",
+            )
 
     # debugging
     # print(job_text)

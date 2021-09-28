@@ -240,8 +240,12 @@ def _parse_line_based(fout, bench_name, nodes):
                 rd["matrix_cols"] = rd["matrix_rows"]
             rd["perf_per_node"] = rd["perf"] / nodes
 
-            # makes _calc_metrics work
-            if not "dlaf" in bench_name:
+            # makes _calc_*_metrics work
+            #
+            # Note: DPLASMA trsm miniapp does not respect `--nruns`. This is a workaround
+            # to make _calc_metrics not skipping the first run, the only one available, by
+            # not setting 'run_index' field (=NaN).
+            if not "dlaf" in bench_name and not bench_name.startswith("trsm_dplasma"):
                 rd["run_index"] = run_index
                 run_index += 1
 
@@ -293,7 +297,7 @@ def calc_trsm_metrics(df):
 def calc_gen2std_metrics(df):
     return _calc_metrics(["matrix_rows", "block_rows", "nodes", "bench_name"], df)
 
-# customize_* functions should accept fig and ax as parameters
+
 def gen_chol_plots(
     df,
     logx=False,
@@ -303,6 +307,11 @@ def gen_chol_plots(
     customize_time=None,
     **proxy_args,
 ):
+    """
+    Args:
+        customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
+        customize_time: function accepting the two arguments fig and ax for time plot customization
+    """
     if combine_mb:
         it_space = df.groupby(["matrix_rows"])
     else:
@@ -315,7 +324,7 @@ def gen_chol_plots(
             m = x[0]
             mb = x[1]
 
-        title = f"Cholesky: matrix_size = {m} x {m}"
+        title = f"Cholesky: strong scaling ({m} x {m})"
         filename_ppn = f"chol_ppn_{m}"
         filename_time = f"chol_time_{m}"
         if not combine_mb:
@@ -334,10 +343,6 @@ def gen_chol_plots(
             if logx:
                 ax.set_xscale("log", base=2)
 
-            handles, labels = ax.get_legend_handles_labels()
-            labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
-            ax.legend(handles, labels, ncol=1, prop={"size": 13})
-
         with NodePlotWriter(
             filename_time, "time", title, grp_data, combine_mb=combine_mb, **proxy_args
         ) as (fig, ax):
@@ -345,10 +350,6 @@ def gen_chol_plots(
                 customize_time(fig, ax)
             if logx:
                 ax.set_xscale("log", base=2)
-
-            handles, labels = ax.get_legend_handles_labels()
-            labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
-            ax.legend(handles, labels, ncol=1, prop={"size": 13})
 
 
 def gen_chol_plots_weak(
@@ -404,10 +405,6 @@ def gen_chol_plots_weak(
             if logx:
                 ax.set_xscale("log", base=2)
 
-            handles, labels = ax.get_legend_handles_labels()
-            labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
-            ax.legend(handles, labels, ncol=1, prop={"size": 13})
-
         with NodePlotWriter(
             filename_time, "time", title, grp_data, combine_mb=combine_mb, **proxy_args
         ) as (fig, ax):
@@ -417,14 +414,11 @@ def gen_chol_plots_weak(
                 ax.set_xscale("log", base=2)
             ax.set_yscale("log", base=10)
 
-            handles, labels = ax.get_legend_handles_labels()
-            labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
-            ax.legend(handles, labels, ncol=1, prop={"size": 13})
-
 
 def gen_trsm_plots(
     df,
     logx=False,
+    combine_mb=False,
     filename_suffix=None,
     customize_ppn=None,
     customize_time=None,
@@ -435,45 +429,45 @@ def gen_trsm_plots(
         customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
         customize_time: function accepting the two arguments fig and ax for time plot customization
     """
-    for (m, n, mb), grp_data in df.groupby(
-        ["matrix_rows", "matrix_cols", "block_rows"]
-    ):
-        title = f"TRSM: matrix_size = {m} x {n}, block_size = {mb} x {mb}"
+    if combine_mb:
+        it_space = df.groupby(["matrix_rows", "matrix_cols"])
+    else:
+        it_space = df.groupby(["matrix_rows", "matrix_cols", "block_rows"])
 
-        filename_ppn = f"trsm_ppn_{m}_{n}_{mb}"
-        filename_time = f"trsm_time_{m}_{n}_{mb}"
-        if filename_suffix is not None:
+    for x, grp_data in it_space:
+        if combine_mb:
+            m, n = x
+        else:
+            m, n, mb = x
+
+        title = f"TRSM: strong scaling ({m} x {n})"
+        filename_ppn = f"trsm_ppn_{m}_{n}"
+        filename_time = f"trsm_time_{m}_{n}"
+        if not combine_mb:
+            title += f", block_size = {mb} x {mb}"
+            filename_ppn += f"_{mb}"
+            filename_time += f"_{mb}"
+        if filename_suffix != None:
             filename_ppn += f"_{filename_suffix}"
             filename_time += f"_{filename_suffix}"
 
-        with NodePlotWriter(filename_ppn, "ppn", title, grp_data, **proxy_args) as (
-            fig,
-            ax,
-        ):
+        with NodePlotWriter(
+            filename_ppn, "ppn", title, grp_data, combine_mb=combine_mb, **proxy_args
+        ) as (fig, ax):
             if customize_ppn:
                 customize_ppn(fig, ax)
             if logx:
                 ax.set_xscale("log", base=2)
 
-            handles, labels = ax.get_legend_handles_labels()
-            labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
-            ax.legend(handles, labels, ncol=1, prop={"size": 13})
-
-        with NodePlotWriter(filename_time, "time", title, grp_data, **proxy_args) as (
-            fig,
-            ax,
-        ):
+        with NodePlotWriter(
+            filename_time, "time", title, grp_data, combine_mb=combine_mb, **proxy_args
+        ) as (fig, ax):
             if customize_time:
                 customize_time(fig, ax)
             if logx:
                 ax.set_xscale("log", base=2)
 
-            handles, labels = ax.get_legend_handles_labels()
-            labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
-            ax.legend(handles, labels, ncol=1, prop={"size": 13})
 
-
-# customize_* functions should accept fig and ax as parameters
 def gen_gen2std_plots(
     df,
     logx=False,
@@ -483,6 +477,11 @@ def gen_gen2std_plots(
     customize_time=None,
     **proxy_args,
 ):
+    """
+    Args:
+        customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
+        customize_time: function accepting the two arguments fig and ax for time plot customization
+    """
     if combine_mb:
         it_space = df.groupby(["matrix_rows"])
     else:
@@ -495,7 +494,7 @@ def gen_gen2std_plots(
             m = x[0]
             mb = x[1]
 
-        title = f"HEGST: matrix_size = {m} x {m}"
+        title = f"HEGST: strong scaling ({m} x {m})"
         filename_ppn = f"gen2std_ppn_{m}"
         filename_time = f"gen2std_time_{m}"
         if not combine_mb:
@@ -514,10 +513,6 @@ def gen_gen2std_plots(
             if logx:
                 ax.set_xscale("log", base=2)
 
-            handles, labels = ax.get_legend_handles_labels()
-            labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
-            ax.legend(handles, labels, ncol=1, prop={"size": 13})
-
         with NodePlotWriter(
             filename_time, "time", title, grp_data, combine_mb=combine_mb, **proxy_args
         ) as (fig, ax):
@@ -525,10 +520,6 @@ def gen_gen2std_plots(
                 customize_time(fig, ax)
             if logx:
                 ax.set_xscale("log", base=2)
-
-            handles, labels = ax.get_legend_handles_labels()
-            labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
-            ax.legend(handles, labels, ncol=1, prop={"size": 13})
 
 
 def gen_gen2std_plots_weak(
@@ -584,10 +575,6 @@ def gen_gen2std_plots_weak(
             if logx:
                 ax.set_xscale("log", base=2)
 
-            handles, labels = ax.get_legend_handles_labels()
-            labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
-            ax.legend(handles, labels, ncol=1, prop={"size": 13})
-
         with NodePlotWriter(
             filename_time, "time", title, grp_data, combine_mb=combine_mb, **proxy_args
         ) as (fig, ax):
@@ -596,7 +583,3 @@ def gen_gen2std_plots_weak(
             if logx:
                 ax.set_xscale("log", base=2)
             ax.set_yscale("log", base=10)
-
-            handles, labels = ax.get_legend_handles_labels()
-            labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
-            ax.legend(handles, labels, ncol=1, prop={"size": 13})

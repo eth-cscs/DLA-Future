@@ -9,11 +9,13 @@ from math import sqrt
 run_name = "cholesky_weak"
 system = systems.cscs["daint-mc"]
 
-dlaf_build_dir = "/project/csstaff/ialberto/workspace/dla-future.master/builds/daint"
-dp_build_dir = "/project/csstaff/rasolca/build_2021_Q2/dplasma/build_mc"
-sl_build_dir = "/project/csstaff/rasolca/build_2021_Q2/slate/build_mc"
-mkl_build_dir = "/project/csstaff/rasolca/build_2021_Q2/lu/build_mkl"
-libsci_build_dir = "/project/csstaff/rasolca/build_2021_Q2/lu/build_libsci"
+libpaths = {
+    "dlaf": "/users/ialberto/workspace/dla-future.master/builds/daint",
+    "dplasma": "/project/csstaff/rasolca/build_2021_Q2/dplasma/build_mc",
+    "slate": "/project/csstaff/rasolca/build_2021_Q2/slate/build_mc",
+    "scalapack-libsci": "/project/csstaff/rasolca/build_2021_Q2/lu/build_libsci",
+    "scalapack-mkl": "/project/csstaff/rasolca/build_2021_Q2/lu/build_mkl",
+}
 
 run_dir = f"/scratch/snx3000/ialberto/20210901-benchmark-PRACE/{run_name}"
 
@@ -38,13 +40,14 @@ parser.add_argument(
     "--libs",
     help="Run miniapps for these libraries.",
     nargs="+",
-    default=["mkl", "libsci", "dlaf", "dlaf", "slate", "dplasma"],
+    default=["scalapack-mkl", "scalapack-libsci", "dlaf", "slate", "dplasma"],
+    choices=list(libpaths.keys()),
 )
 args = parser.parse_args()
 
 debug = args.debug
-run_mkl = "mkl" in args.libs
-run_libsci = "libsci" in args.libs
+run_mkl = "scalapack-mkl" in args.libs
+run_libsci = "scalapack-libsci" in args.libs
 run_dlaf = "dlaf" in args.libs
 run_slate = "slate" in args.libs
 run_dp = "dplasma" in args.libs
@@ -73,7 +76,7 @@ for nodes in nodes_arr:
             job_text += mp.chol(
                 system,
                 "dlaf",
-                dlaf_build_dir,
+                libpaths["dlaf"],
                 nodes,
                 ranks_per_node,
                 m_sz,
@@ -90,14 +93,10 @@ for nodes in nodes_arr:
 
         for mb_sz in mb_sz_arr:
             m_sz = get_size(nodes)
-            if m_sz == None:
-                print("OUCH")
-                continue
-
             job_text += mp.chol(
                 system,
                 "slate",
-                sl_build_dir,
+                libpaths["slate"],
                 nodes,
                 ranks_per_node,
                 m_sz,
@@ -115,14 +114,10 @@ for nodes in nodes_arr:
 
         for mb_sz in mb_sz_arr:
             m_sz = get_size(nodes)
-            if m_sz == None:
-                print("OUCH")
-                continue
-
             job_text += mp.chol(
                 system,
                 "dplasma",
-                dp_build_dir,
+                libpaths["dplasma"],
                 nodes,
                 1,
                 m_sz,
@@ -140,14 +135,10 @@ for nodes in nodes_arr:
 
         for mb_sz in mb_sz_arr_scalapack:
             m_sz = get_size(nodes)
-            if m_sz == None:
-                print("OUCH")
-                continue
-
             job_text += mp.chol(
                 system,
                 "scalapack",
-                mkl_build_dir,
+                libpaths["scalapack-mkl"],
                 nodes,
                 36,
                 m_sz,
@@ -165,14 +156,10 @@ for nodes in nodes_arr:
 
         for mb_sz in mb_sz_arr_scalapack:
             m_sz = get_size(nodes)
-            if m_sz == None:
-                print("OUCH")
-                continue
-
             job_text += mp.chol(
                 system,
                 "scalapack",
-                libsci_build_dir,
+                libpaths["scalapack-libsci"],
                 nodes,
                 36,
                 m_sz,

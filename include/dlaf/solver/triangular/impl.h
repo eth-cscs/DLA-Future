@@ -25,6 +25,7 @@
 #include "dlaf/executors.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/distribution.h"
+#include "dlaf/matrix/extra_buffers.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/panel.h"
 #include "dlaf/matrix/tile.h"
@@ -497,6 +498,12 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
   common::RoundRobin<matrix::Panel<Coord::Col, T, D>> a_panels(n_workspaces, distr_a);
   common::RoundRobin<matrix::Panel<Coord::Row, T, D>> b_panels(n_workspaces, distr_b);
 
+  constexpr std::size_t num_extra_buffers = 4;
+  std::vector<dlaf::matrix::ExtraBuffers<T>> b_buffers;
+  b_buffers.reserve(to_sizet(distr_b.localNrTiles().cols()));
+  for (auto j = 0; j < distr_b.localNrTiles().cols(); ++j)
+    b_buffers.emplace_back(num_extra_buffers, distr_b.blockSize());
+
   for (SizeType k = mat_a.nrTiles().cols() - 1; k >= 0; --k) {
     const GlobalTileIndex kk{k, k};
 
@@ -525,15 +532,28 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
     // TODO np/hp executor selection in getGenericExecutor
     matrix::util::set0(getGenericExecutor<backend>::call(), b_panel);
 
+    for (auto j = 0; j < distr_b.localNrTiles().cols(); ++j) {
+      auto& b_extra = b_buffers.at(to_sizet(j));
+      b_extra.setup_base(b_panel(LocalTileIndex(0, j)));
+      b_extra.clear();
+    }
+
     for (SizeType j = bt_offset.col(); j < distr_b.localNrTiles().cols(); ++j) {
       for (SizeType i = bt_offset.row(); i < distr_b.localNrTiles().rows(); ++i) {
         const LocalTileIndex ij(i, j);
 
         const T beta = T(1) / alpha;
         // TODO executor
+
+        auto& b_extra = b_buffers.at(to_sizet(j));
         hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::gemm_o), op, blas::Op::NoTrans, beta,
-                      a_panel.read(ij), mat_b.read(ij), T(1), b_panel(ij));
+                      a_panel.read(ij), mat_b.read(ij), T(1), b_extra.get_buffer(i));
       }
+    }
+
+    for (auto j = 0; j < distr_b.localNrTiles().cols(); ++j) {
+      auto& b_extra = b_buffers.at(to_sizet(j));
+      b_extra.reduce();
     }
 
     for (const auto& idx : b_panel.iteratorLocal()) {

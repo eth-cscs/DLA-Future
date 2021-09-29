@@ -40,6 +40,7 @@ TYPED_TEST(ExtraBuffersTest, AccessBuffers) {
 
   const SizeType tot_buffers = 10;
   ExtraBuffers<TypeParam> buffers(matrix(LocalTileIndex{0, 0}), tot_buffers - 1, blocksize);
+  buffers.clear();
 
   for (auto i = 0; i < tot_buffers; ++i) {
     buffers.get_buffer(i).then(hpx::unwrapping([i](const auto& tile) {
@@ -63,6 +64,7 @@ TYPED_TEST(ExtraBuffersTest, BasicUsage) {
   matrix::test::set(matrix, [](auto&&) { return 1; });
 
   ExtraBuffers<TypeParam> buffers(matrix(LocalTileIndex{0, 0}), 2, blocksize);
+  buffers.clear();
 
   matrix::test::set(buffers.get_buffer(1).get(), [](auto&&) { return 3; });
   matrix::test::set(buffers.get_buffer(2).get(), [](auto&&) { return 5; });
@@ -82,6 +84,7 @@ TYPED_TEST(ExtraBuffersTest, FutureOrder) {
   matrix::test::set(matrix, [](auto&&) { return 1; });
 
   ExtraBuffers<TypeParam> buffers(matrix(LocalTileIndex{0, 0}), 2, blocksize);
+  buffers.clear();
 
   matrix.read(LocalTileIndex{0, 0}).then(unwrapping([](auto&& tile) {
     EXPECT_EQ(TypeUtils::element(4, 0), tile({0, 0}));
@@ -101,4 +104,45 @@ TYPED_TEST(ExtraBuffersTest, FutureOrder) {
   buffers.reduce();
 
   f.get();
+}
+
+TYPED_TEST(ExtraBuffersTest, BasicUsageNew) {
+  const TileElementSize blocksize(1, 1);
+  Matrix<TypeParam, Device::CPU> matrix({1, 1}, blocksize);
+  matrix::test::set(matrix, [](auto&&) { return 1; });
+
+  ExtraBuffers<TypeParam> buffers(2, blocksize);
+  buffers.clear();
+  buffers.setup_base(matrix(LocalTileIndex{0, 0}));
+
+  matrix::test::set(buffers.get_buffer(1).get(), [](auto&&) { return 3; });
+  matrix::test::set(buffers.get_buffer(2).get(), [](auto&&) { return 5; });
+
+  buffers.reduce();
+
+  CHECK_MATRIX_EQ([](const GlobalElementIndex&) { return TypeUtilities<TypeParam>::element(9, 0); },
+                  matrix);
+}
+
+TYPED_TEST(ExtraBuffersTest, BasicUsageNewMultiple) {
+  const TileElementSize blocksize(1, 1);
+  Matrix<TypeParam, Device::CPU> matrix({1, 1}, blocksize);
+  matrix::test::set(matrix, [](auto&&) { return 1; });
+
+  ExtraBuffers<TypeParam> buffers(2, blocksize);
+
+  for (int i = 0; i < 10; ++i) {
+    matrix::test::set(matrix, [](auto&&) { return 1; });
+
+    buffers.setup_base(matrix(LocalTileIndex{0, 0}));
+    buffers.clear();
+
+    matrix::test::set(buffers.get_buffer(1).get(), [](auto&&) { return 3; });
+    matrix::test::set(buffers.get_buffer(2).get(), [](auto&&) { return 5; });
+
+    buffers.reduce();
+
+    CHECK_MATRIX_EQ([](const GlobalElementIndex&) { return TypeUtilities<TypeParam>::element(9, 0); },
+        matrix);
+  }
 }

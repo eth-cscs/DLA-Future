@@ -35,12 +35,24 @@ public:
       : orig_base_tile_(std::move(tile)), base_tile_(splitAndHold(orig_base_tile_)),
         num_extra_buffers_(num_extra_buffers),
         extra_(LocalElementSize(tile_size.rows() * num_extra_buffers, tile_size.cols()), tile_size) {
-    clear();
   }
+
+  ExtraBuffers(SizeType num_extra_buffers, TileElementSize tile_size) :
+    num_extra_buffers_(num_extra_buffers),
+    extra_(LocalElementSize(tile_size.rows() * num_extra_buffers, tile_size.cols()), tile_size) {
+  }
+
+  ExtraBuffers(ExtraBuffers&&) = default;
+  ExtraBuffers& operator=(ExtraBuffers&&) = default;
 
   ~ExtraBuffers() {
     DLAF_ASSERT(not orig_base_tile_.valid(),
                 "extra buffer must be reduced to release the original tile");
+  }
+
+  void setup_base(hpx::future<tile_t> tile) {
+      orig_base_tile_ = std::move(tile);
+      base_tile_ = splitAndHold(orig_base_tile_);
   }
 
   future_t get_buffer(const SizeType index) {
@@ -89,13 +101,13 @@ protected:
     std::swap(f, base_tile_);
     return f.then(hpx::launch::sync, hpx::unwrapping([p = std::move(p)](auto tile) mutable {
                     tile.setPromise(std::move(p));
-                    return std::move(tile);
+                    return tile;
                   }));
   }
 
   future_t unlock_base() {
     DLAF_ASSERT(orig_base_tile_.valid(), "");
-    return hpx::dataflow(hpx::unwrapping([](auto tile, auto) { return std::move(tile); }),
+    return hpx::dataflow(hpx::unwrapping([](auto tile, auto) { return tile; }),
                          std::move(orig_base_tile_), std::move(base_tile_));
   }
 

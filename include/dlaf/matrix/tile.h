@@ -279,10 +279,10 @@ public:
                         TileType tile(original_tile.size_, std::move(memory_view_copy), original_tile.ld_);
                         tile.setPromise(std::move(p));
                         // TODO exceptions: if I don't set promise values, I don't have to manage excpetions
-                        return std::move(original_tile);
+                        return original_tile;
                       }));
 
-    return std::move(tile0);
+    return tile0;
   }
 
   /// Constructs a (@p size.rows() x @p size.cols()) Tile.

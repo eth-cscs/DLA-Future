@@ -29,7 +29,7 @@ Matrix<T, device>::Matrix(Distribution distribution) : Matrix<const T, device>(s
 
   auto layout = colMajorLayout(this->distribution().localSize(), this->blockSize(), ld);
 
-  std::size_t memory_size = layout.minMemSize();
+  SizeType memory_size = layout.minMemSize();
   memory::MemoryView<ElementType, device> mem(memory_size);
 
   setUpTiles(mem, layout);

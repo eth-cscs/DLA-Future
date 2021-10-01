@@ -44,6 +44,8 @@ void initializeUmpireHostAllocator(std::size_t initial_bytes) {
 
     initialized = true;
   }
+#else
+  (void) initial_bytes;
 #endif
 }
 

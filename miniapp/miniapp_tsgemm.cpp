@@ -8,9 +8,14 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <chrono>
+#include <complex>
+#include <cstdio>
+
 #include <mpi.h>
-#include <hpx/include/resource_partitioner.hpp>
 #include <hpx/init.hpp>
+#include <hpx/local/unwrap.hpp>
+#include <hpx/runtime.hpp>
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
@@ -24,13 +29,10 @@
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/communication/init.h"
 #include "dlaf/communication/kernels.h"
+#include "dlaf/communication/sync/reduce.h"
 #include "dlaf/executors.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/tile.h"
-
-#include <chrono>
-#include <complex>
-#include <cstdio>
 
 // In SIRIUS, `A`, `B` and `C` are usually submatrices of bigger matrices. The
 // only difference that entails is that the `lld` for `C` might be larger than
@@ -110,8 +112,6 @@ options_t parseOptions(hpx::program_options::variables_map&);
 
 int hpx_main(hpx::program_options::variables_map& vm) {
   dlaf::initialize(vm);
-  using clock_t = std::chrono::high_resolution_clock;
-  using seconds_t = std::chrono::duration<double>;
 
   // Input
   options_t opts = parseOptions(vm);
@@ -131,6 +131,9 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   MatrixType a_mat(LocalElementSize(k_loc, opts.m), TileElementSize(k_loc, opts.mb));
   MatrixType b_mat(LocalElementSize(k_loc, opts.n), TileElementSize(k_loc, opts.nb));
 
+  ScalarType a_val = 4.2;
+  ScalarType b_val = 2.2;
+
   // Matrices `C`-initial and `C`-final
   using dlaf::matrix::tileLayout;
   MatrixType cini_mat(Distribution(LocalElementSize(opts.m, opts.n), TileElementSize(opts.mb, opts.nb)),
@@ -144,8 +147,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       std::cout << "[" << run_index << "]" << std::endl;
     }
 
-    setMatrix(a_mat, ScalarType(1));
-    setMatrix(b_mat, ScalarType(2));
+    setMatrix(a_mat, a_val);
+    setMatrix(b_mat, b_val);
 
     waitallTiles(cfin_mat);
     MPI_Barrier(world);
@@ -179,8 +182,11 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 
     // Simple check
     if (opts.do_check) {
+      using BaseScalarType = dlaf::BaseType<ScalarType>;
+      constexpr auto eps = std::numeric_limits<BaseScalarType>::epsilon();
       ScalarType cfin_sum = sumMatrixElements(world, cfin_mat);
-      // TODO: provide a check
+      ScalarType expected_cfin_sum = ScalarType(opts.m * opts.n * opts.k) * a_val * std::conj(b_val);
+      DLAF_ASSERT(std::abs(cfin_sum - expected_cfin_sum) < eps, cfin_sum);
     }
   }
 
@@ -281,73 +287,81 @@ namespace {
 //  }
 //}
 
-void sirius_gemm(int batch_size, CommunicatorGrid& comm_grid, ConstMatrixType& a_mat,
-                 ConstMatrixType& b_mat, MatrixType& cini_mat, MatrixType& cfin_mat) {
-  using hpx::util::unwrapping;
-  using hpx::util::annotated_function;
+template <dlaf::Backend B>
+void sirius_gemm(CommunicatorGrid grid, ConstMatrixType& a_mat, ConstMatrixType& b_mat,
+                 MatrixType& cini_mat, MatrixType& cfin_mat) {
+  using hpx::unwrapping;
+  using dlaf::common::Pipeline;
+  using dlaf::comm::Communicator;
   using dlaf::common::computeLinearIndexColMajor;
   using dlaf::comm::Executor;
   using dlaf::common::Pipeline;
-  using dlaf::Backend;
 
-  Executor executor_mpi;
-  auto executor_np = dlaf::getNpExecutor<Backend::MC>();
+  auto executor_hp = dlaf::getHpExecutor<B>();
+  auto executor_np = dlaf::getNpExecutor<B>();
+  auto executor_mpi = dlaf::getMPIExecutor<B>();
 
-  // Pipeline<comm::Communicator> mpi_row_task_chain(comm_grid.rowCommunicator());
+  Pipeline<Communicator> mpi_chain(grid.fullCommunicator());
+
+  // hpx::dataflow(executor_np, dlaf::matrix::unwrapExtendTiles(dlaf::tile::gemm_o), blas::Op::Trans,
+  //              blas::Op::NoTrans, ScalarType(1), a_mat.read(a_idx), b_mat.read(b_idx),
+  //              ScalarType(0), cini_mat(c_idx));
 
   Distribution const& cfin_dist = cfin_mat.distribution();
-  int this_rank = comm_grid.rankFullCommunicator(cfin_dist.rankIndex());
+  int this_rank = grid.rankFullCommunicator(cfin_dist.rankIndex());
   dlaf::LocalTileSize const& tile_grid_size = cini_mat.distribution().localNrTiles();
-  auto dep_tile_idx = dlaf::common::computeCoordsColMajor(batch_size, tile_grid_size);
 
   for (auto cloc_idx : iterate_range2d(tile_grid_size)) {
     LocalTileIndex a_idx(0, cloc_idx.row());
     LocalTileIndex b_idx(0, cloc_idx.col());
     GlobalTileIndex c_idx(cloc_idx.row(), cloc_idx.col());
 
-    int tile_rank = comm_grid.rankFullCommunicator(cfin_dist.rankGlobalTile(c_idx));
-    int tile_tag = computeLinearIndexColMajor(cloc_idx, tile_grid_size);
+    int tile_rank = grid.rankFullCommunicator(cfin_dist.rankGlobalTile(c_idx));
+    //
+    //    // Order tasks such that tiles are computed/communicated in batches of `batch_size`
+    //    SizeType c_dep_i = cloc_idx.row() - dep_tile_idx.row();
+    //    SizeType c_dep_j = cloc_idx.col() - dep_tile_idx.col();
+    //    bool c_dep_exists = c_dep_i < 0 || c_dep_j < 0;
+    //    hpx::shared_future<void> c_dep_tile_fut =
+    //        (c_dep_exists) ? hpx::make_ready_future()
+    //                       : hpx::shared_future<void>(cini_mat.read(GlobalTileIndex(c_dep_i, c_dep_j)));
 
-    // Order tasks such that tiles are computed/communicated in batches of `batch_size`
-    SizeType c_dep_i = cloc_idx.row() - dep_tile_idx.row();
-    SizeType c_dep_j = cloc_idx.col() - dep_tile_idx.col();
-    bool c_dep_exists = c_dep_i < 0 || c_dep_j < 0;
-    hpx::shared_future<void> c_dep_tile_fut =
-        (c_dep_exists) ? hpx::make_ready_future()
-                       : hpx::shared_future<void>(cini_mat.read(GlobalTileIndex(c_dep_i, c_dep_j)));
-
+    // TODO: annotate with gemm
     // GEMM
     hpx::dataflow(executor_np, dlaf::matrix::unwrapExtendTiles(dlaf::tile::gemm_o), blas::Op::Trans,
-                  blas::Op::NoTrans, ScalarType(-1.0), a_mat.read(a_idx), b_mat.read(b_idx),
-                  ScalarType(1.0), cini_mat(c_idx));
-    auto gemm_f = unwrapping(annotated_function(
-        [](auto&& a_tile, auto&& b_tile, auto&& c_tile) {
-          dlaf::tile::gemm(blas::Op::Trans, blas::Op::NoTrans, ScalarType(1), a_tile, b_tile,
-                           ScalarType(0), c_tile);
-        },
-        "gemm"));
-    hpx::dataflow(gemm_f, a_mat.read(a_idx), b_mat.read(b_idx), cini_mat(c_idx), c_dep_tile_fut);
-
+                  blas::Op::NoTrans, ScalarType(1), a_mat.read(a_idx), b_mat.read(b_idx), ScalarType(0),
+                  cini_mat(c_idx));
+    // auto gemm_f = unwrapping(annotated_function(
+    //    [](auto&& a_tile, auto&& b_tile, auto&& c_tile) {
+    //      dlaf::tile::gemm(blas::Op::Trans, blas::Op::NoTrans, ScalarType(1), a_tile, b_tile,
+    //                       ScalarType(0), c_tile);
+    //    },
+    //    "gemm"));
+    // hpx::dataflow(gemm_f, a_mat.read(a_idx), b_mat.read(b_idx), cini_mat(c_idx), c_dep_tile_fut);
+    //
+    //    int tile_tag = computeLinearIndexColMajor(cloc_idx, tile_grid_size);
     if (this_rank == tile_rank) {
-      // RECV
-      auto recv_f = unwrapping(
-          annotated_function([=](auto&& c_tile) { recv_tile(c_tile, this_rank, tile_tag, mpi_comm); },
-                             "recv"));
-      hpx::dataflow(mpi_executor, recv_f, cini_mat(c_idx));
-
-      // OFFLOAD
-      auto offload_f =
-          unwrapping(annotated_function([](auto&& cini_tile,
-                                           auto&& cfin_tile) { offload_tile(cini_tile, cfin_tile); },
-                                        "offload"));
-      hpx::dataflow(offload_f, cini_mat.read(c_idx), cfin_mat(c_idx));
+      // dlaf::comm::scheduleReduceRecvInPlace(executor_mpi, mpi_chain(), MPI_SUM, tile);
+      //      // RECV
+      //      auto recv_f = unwrapping(
+      //          annotated_function([=](auto&& c_tile) { recv_tile(c_tile, this_rank, tile_tag, mpi_comm); },
+      //                             "recv"));
+      //      hpx::dataflow(mpi_executor, recv_f, cini_mat(c_idx));
+      //
+      //      // OFFLOAD
+      //      auto offload_f =
+      //          unwrapping(annotated_function([](auto&& cini_tile,
+      //                                           auto&& cfin_tile) { offload_tile(cini_tile, cfin_tile); },
+      //                                        "offload"));
+      //      hpx::dataflow(offload_f, cini_mat.read(c_idx), cfin_mat(c_idx));
     }
     else {
-      // SEND
-      auto send_f = unwrapping(
-          annotated_function([=](auto&& c_tile) { send_tile(c_tile, tile_rank, tile_tag, mpi_comm); },
-                             "send"));
-      hpx::dataflow(mpi_executor, send_f, cini_mat(c_idx));
+      // dlaf::comm::scheduleReduceSend(ex, rank_root, pcomm, MPI_SUM, tile);
+      //      // SEND
+      //      auto send_f = unwrapping(
+      //          annotated_function([=](auto&& c_tile) { send_tile(c_tile, tile_rank, tile_tag, mpi_comm); },
+      //                             "send"));
+      //      hpx::dataflow(mpi_executor, send_f, cini_mat(c_idx));
     }
   }
 }

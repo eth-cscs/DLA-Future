@@ -14,6 +14,7 @@
 
 #include <mpi.h>
 
+#include <hpx/local/semaphore.hpp>
 #include <hpx/local/unwrap.hpp>
 
 #include "dlaf/common/assert.h"
@@ -29,49 +30,76 @@
 namespace dlaf {
 namespace comm {
 
+using Semaphore = hpx::lcos::local::cpp20_counting_semaphore<>;
+using SemaphorePtr = std::shared_ptr<Semaphore>;
+
+inline SemaphorePtr getSemaphore(MPI_Comm comm) {
+  static std::map<MPI_Comm, SemaphorePtr> semaphores;
+  if (semaphores.count(comm) == 0)
+    semaphores[comm] = std::make_shared<Semaphore>(10);
+  return semaphores[comm];
+}
+
 // Non-blocking sender broadcast
 template <class T, Device D>
-void sendBcast(matrix::Tile<const T, D> const& tile, common::PromiseGuard<Communicator> pcomm,
-               MPI_Request* req) {
+SemaphorePtr sendBcast(matrix::Tile<const T, D> const& tile, common::PromiseGuard<Communicator> pcomm,
+                       MPI_Request* req) {
+  auto semaphore = getSemaphore(pcomm.ref());
+  semaphore->acquire();
+
   auto msg = comm::make_message(common::make_data(tile));
   DLAF_MPI_CALL(MPI_Ibcast(const_cast<T*>(msg.data()), msg.count(), msg.mpi_type(), pcomm.ref().rank(),
                            pcomm.ref(), req));
+
+  return semaphore;
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(sendBcast);
 
 // Non-blocking receiver broadcast
 template <class T, Device D>
-matrix::Tile<T, D> recvBcast(matrix::Tile<T, D> tile, comm::IndexT_MPI root_rank,
-                             common::PromiseGuard<Communicator> pcomm, MPI_Request* req) {
+std::pair<matrix::Tile<T, D>, SemaphorePtr> recvBcast(matrix::Tile<T, D> tile,
+                                                      comm::IndexT_MPI root_rank,
+                                                      common::PromiseGuard<Communicator> pcomm,
+                                                      MPI_Request* req) {
+  auto semaphore = getSemaphore(pcomm.ref());
+  semaphore->acquire();
+
   auto msg = comm::make_message(common::make_data(tile));
   DLAF_MPI_CALL(MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, pcomm.ref(), req));
-  return tile;
+
+  return {std::move(tile), semaphore};
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(recvBcast);
 
 // Non-blocking receiver broadcast (with Alloc)
 template <class T, Device D>
-matrix::Tile<const T, D> recvBcastAlloc(TileElementSize tile_size, comm::IndexT_MPI root_rank,
-                                        common::PromiseGuard<Communicator> pcomm, MPI_Request* req) {
+std::pair<matrix::Tile<const T, D>, SemaphorePtr> recvBcastAlloc(
+    TileElementSize tile_size, comm::IndexT_MPI root_rank, common::PromiseGuard<Communicator> pcomm,
+    MPI_Request* req) {
   using Tile_t = matrix::Tile<T, D>;
   using ConstTile_t = matrix::Tile<const T, D>;
   using MemView_t = memory::MemoryView<T, D>;
+
+  auto semaphore = getSemaphore(pcomm.ref());
+  semaphore->acquire();
 
   MemView_t mem_view(tile_size.rows() * tile_size.cols());
   Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
 
   auto msg = comm::make_message(common::make_data(tile));
   DLAF_MPI_CALL(MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, pcomm.ref(), req));
-  return ConstTile_t(std::move(tile));
+
+  return {ConstTile_t(std::move(tile)), semaphore};
 }
 
 template <class T, Device D, template <class> class Future>
 void scheduleSendBcast(const comm::Executor& ex, Future<matrix::Tile<const T, D>> tile,
                        hpx::future<common::PromiseGuard<comm::Communicator>> pcomm) {
   hpx::dataflow(ex, matrix::unwrapExtendTiles(sendBcast_o), internal::prepareSendTile(std::move(tile)),
-                std::move(pcomm));
+                std::move(pcomm))
+      .then(hpx::unwrapping([](auto ret) { hpx::get<0>(ret)->release(); }));
 }
 
 // This implements scheduleRecvBcast for when the device of the given tile and
@@ -91,7 +119,11 @@ struct scheduleRecvBcastImpl {
                       hpx::unwrapping([](matrix::Tile<T, D> const& tile) { return tile.size(); }),
                       tile_shared);
     auto comm_tile = hpx::dataflow(ex, hpx::unwrapping(recvBcastAlloc<T, CommunicationDevice<D>::value>),
-                                   tile_size, root_rank, std::move(pcomm));
+                                   tile_size, root_rank, std::move(pcomm))
+                         .then(hpx::unwrapping([](auto ret) {
+                           ret.second->release();
+                           return std::move(ret.first);
+                         }));
     hpx::dataflow(dlaf::getCopyExecutor<CommunicationDevice<D>::value, D>(),
                   matrix::unwrapExtendTiles(matrix::copy_o), std::move(comm_tile),
                   std::move(tile_shared));
@@ -106,7 +138,11 @@ struct scheduleRecvBcastImpl<D, D> {
   template <class T>
   static void call(const comm::Executor& ex, hpx::future<matrix::Tile<T, D>> tile,
                    comm::IndexT_MPI root_rank, hpx::future<common::PromiseGuard<Communicator>> pcomm) {
-    hpx::dataflow(ex, hpx::unwrapping(recvBcast_o), std::move(tile), root_rank, std::move(pcomm));
+    hpx::dataflow(ex, hpx::unwrapping(recvBcast_o), std::move(tile), root_rank, std::move(pcomm))
+        .then(hpx::unwrapping([](auto ret) {
+          ret.second->release();
+          return std::move(ret.first);
+        }));
   }
 };
 
@@ -123,8 +159,12 @@ hpx::future<matrix::Tile<const T, D>> scheduleRecvBcastAlloc(
     const comm::Executor& ex, TileElementSize tile_size, comm::IndexT_MPI root_rank,
     hpx::future<common::PromiseGuard<comm::Communicator>> pcomm) {
   return internal::handleRecvTile<D>(
-      hpx::dataflow(ex, hpx::unwrapping(recvBcastAlloc<T, CommunicationDevice<D>::value>), tile_size,
-                    root_rank, std::move(pcomm)));
+             hpx::dataflow(ex, hpx::unwrapping(recvBcastAlloc<T, CommunicationDevice<D>::value>),
+                           tile_size, root_rank, std::move(pcomm)))
+      .then(hpx::unwrapping([](auto ret) {
+        ret.second->release();
+        return std::move(ret.first);
+      }));
 }
 }
 }

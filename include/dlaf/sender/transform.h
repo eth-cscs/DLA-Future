@@ -85,10 +85,12 @@ struct Transform<Backend::GPU> {
       }
       else if constexpr (is_cublas_handle_invocable) {
         (void) cusolver_handle;
+        (void) stream;
         return std::invoke(hpx::unwrapping(std::forward<G>(g)), cublas_handle, us...);
       }
       else if constexpr (is_cusolver_handle_invocable) {
         (void) cublas_handle;
+        (void) stream;
         return std::invoke(hpx::unwrapping(std::forward<G>(g)), cusolver_handle, us...);
       }
     }

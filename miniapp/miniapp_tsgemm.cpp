@@ -14,8 +14,10 @@
 
 #include <mpi.h>
 #include <hpx/init.hpp>
+#include <hpx/local/future.hpp>
+#include <hpx/local/runtime.hpp>
 #include <hpx/local/unwrap.hpp>
-#include <hpx/runtime.hpp>
+#include <hpx/program_options.hpp>
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
@@ -23,7 +25,6 @@
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/round_robin.h"
 #include "dlaf/common/timer.h"
-#include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/error.h"
 #include "dlaf/communication/functions_sync.h"
@@ -31,8 +32,10 @@
 #include "dlaf/communication/kernels.h"
 #include "dlaf/communication/sync/reduce.h"
 #include "dlaf/executors.h"
+#include "dlaf/init.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/tile.h"
+#include "dlaf/util_matrix.h"
 
 // In SIRIUS, `A`, `B` and `C` are usually submatrices of bigger matrices. The
 // only difference that entails is that the `lld` for `C` might be larger than
@@ -78,9 +81,9 @@ using ConstMatrixType = dlaf::Matrix<const ScalarType, dlaf::Device::CPU>;
 using TileType = dlaf::matrix::Tile<ScalarType, dlaf::Device::CPU>;
 using ConstTileType = dlaf::matrix::Tile<const ScalarType, dlaf::Device::CPU>;
 
-// void sirius_gemm(int batch_size, ExecutorType const& mpi_executor, CommunicatorGrid& comm_grid,
-//                 ConstMatrixType& a_mat, ConstMatrixType& b_mat, MatrixType& cini_mat,
-//                 MatrixType& cfin_mat);
+template <dlaf::Backend B>
+void sirius_gemm(CommunicatorGrid grid, ConstMatrixType& a_mat, ConstMatrixType& b_mat,
+                 MatrixType& cini_mat, MatrixType& cfin_mat);
 
 // Initialize matrix
 void setMatrix(MatrixType& matrix, ScalarType val);
@@ -132,7 +135,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   MatrixType b_mat(LocalElementSize(k_loc, opts.n), TileElementSize(k_loc, opts.nb));
 
   ScalarType a_val = 4.2;
-  ScalarType b_val = 2.2;
+  ScalarType b_val = 1.3;
 
   // Matrices `C`-initial and `C`-final
   using dlaf::matrix::tileLayout;
@@ -154,6 +157,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     MPI_Barrier(world);
 
     dlaf::common::Timer<> timeit;
+    sirius_gemm<dlaf::Backend::MC>(comm_grid, a_mat, b_mat, cini_mat, cfin_mat);
     // sirius_gemm(ps.batch_size, mpi_executor, comm_grid, a_mat, b_mat, cini_mat, cfin_mat);
 
     waitallTiles(cfin_mat);
@@ -186,7 +190,9 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       constexpr auto eps = std::numeric_limits<BaseScalarType>::epsilon();
       ScalarType cfin_sum = sumMatrixElements(world, cfin_mat);
       ScalarType expected_cfin_sum = ScalarType(opts.m * opts.n * opts.k) * a_val * std::conj(b_val);
-      DLAF_ASSERT(std::abs(cfin_sum - expected_cfin_sum) < eps, cfin_sum);
+      if (std::abs(cfin_sum - expected_cfin_sum) > eps) {
+        std::cout << "FAILURE\n";
+      }
     }
   }
 
@@ -291,21 +297,20 @@ template <dlaf::Backend B>
 void sirius_gemm(CommunicatorGrid grid, ConstMatrixType& a_mat, ConstMatrixType& b_mat,
                  MatrixType& cini_mat, MatrixType& cfin_mat) {
   using hpx::unwrapping;
+  using dlaf::matrix::unwrapExtendTiles;
   using dlaf::common::Pipeline;
   using dlaf::comm::Communicator;
   using dlaf::common::computeLinearIndexColMajor;
   using dlaf::comm::Executor;
   using dlaf::common::Pipeline;
+  using hpx::util::annotated_function;
+  using dlaf::tile::gemm_o;
 
   auto executor_hp = dlaf::getHpExecutor<B>();
   auto executor_np = dlaf::getNpExecutor<B>();
   auto executor_mpi = dlaf::getMPIExecutor<B>();
 
   Pipeline<Communicator> mpi_chain(grid.fullCommunicator());
-
-  // hpx::dataflow(executor_np, dlaf::matrix::unwrapExtendTiles(dlaf::tile::gemm_o), blas::Op::Trans,
-  //              blas::Op::NoTrans, ScalarType(1), a_mat.read(a_idx), b_mat.read(b_idx),
-  //              ScalarType(0), cini_mat(c_idx));
 
   Distribution const& cfin_dist = cfin_mat.distribution();
   int this_rank = grid.rankFullCommunicator(cfin_dist.rankIndex());
@@ -326,22 +331,19 @@ void sirius_gemm(CommunicatorGrid grid, ConstMatrixType& a_mat, ConstMatrixType&
     //        (c_dep_exists) ? hpx::make_ready_future()
     //                       : hpx::shared_future<void>(cini_mat.read(GlobalTileIndex(c_dep_i, c_dep_j)));
 
-    // TODO: annotate with gemm
     // GEMM
-    hpx::dataflow(executor_np, dlaf::matrix::unwrapExtendTiles(dlaf::tile::gemm_o), blas::Op::Trans,
-                  blas::Op::NoTrans, ScalarType(1), a_mat.read(a_idx), b_mat.read(b_idx), ScalarType(0),
-                  cini_mat(c_idx));
-    // auto gemm_f = unwrapping(annotated_function(
-    //    [](auto&& a_tile, auto&& b_tile, auto&& c_tile) {
-    //      dlaf::tile::gemm(blas::Op::Trans, blas::Op::NoTrans, ScalarType(1), a_tile, b_tile,
-    //                       ScalarType(0), c_tile);
-    //    },
-    //    "gemm"));
-    // hpx::dataflow(gemm_f, a_mat.read(a_idx), b_mat.read(b_idx), cini_mat(c_idx), c_dep_tile_fut);
-    //
+    hpx::dataflow(executor_np, unwrapExtendTiles(gemm_o), blas::Op::Trans, blas::Op::NoTrans,
+                  ScalarType(1), a_mat.read(a_idx), b_mat.read(b_idx), ScalarType(0), cini_mat(c_idx));
+
     //    int tile_tag = computeLinearIndexColMajor(cloc_idx, tile_grid_size);
     if (this_rank == tile_rank) {
-      // dlaf::comm::scheduleReduceRecvInPlace(executor_mpi, mpi_chain(), MPI_SUM, tile);
+      // RECV
+      dlaf::comm::scheduleReduceRecvInPlace(executor_mpi, mpi_chain(), MPI_SUM, cini_mat(c_idx));
+
+      // OFFLOAD
+      hpx::dataflow(executor_hp, dlaf::matrix::unwrapExtendTiles(dlaf::matrix::copy_o),
+                    cini_mat.read(c_idx), cfin_mat(c_idx));
+
       //      // RECV
       //      auto recv_f = unwrapping(
       //          annotated_function([=](auto&& c_tile) { recv_tile(c_tile, this_rank, tile_tag, mpi_comm); },
@@ -356,7 +358,8 @@ void sirius_gemm(CommunicatorGrid grid, ConstMatrixType& a_mat, ConstMatrixType&
       //      hpx::dataflow(offload_f, cini_mat.read(c_idx), cfin_mat(c_idx));
     }
     else {
-      // dlaf::comm::scheduleReduceSend(ex, rank_root, pcomm, MPI_SUM, tile);
+      dlaf::comm::scheduleReduceSend(executor_mpi, tile_rank, mpi_chain(), MPI_SUM,
+                                     cini_mat.read(c_idx));
       //      // SEND
       //      auto send_f = unwrapping(
       //          annotated_function([=](auto&& c_tile) { send_tile(c_tile, tile_rank, tile_tag, mpi_comm); },

@@ -637,50 +637,6 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
 }
 
 template <class T>
-void gemmComputeW2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Coord::Col, T>& x,
-                   common::Pipeline<comm::Communicator>& mpi_col_chain) {
-  using matrix::unwrapExtendTiles;
-  using tile::internal::gemm_o;
-
-  const auto ex = getHpExecutor<Backend::MC>();
-  const auto ex_mpi = getMPIExecutor<Backend::MC>();
-
-  // Note:
-  // Not all ranks in the column always hold at least a tile in the panel Ai, but all ranks in
-  // the column are going to participate to the reduce. For them, it is important to set the
-  // partial result W2 to zero.
-  bool isW2initialized = false;
-
-  // GEMM W2 = W* . X
-  for (const auto& index_tile : w.iteratorLocal()) {
-    const T beta = !isW2initialized ? 0 : 1;
-
-    hpx::dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans, T(1),
-                  w.read(index_tile), x.read(index_tile), beta, w2(LocalTileIndex(0, 0)));
-
-    isW2initialized = true;  // with C++20 this can be moved into the for init-statement
-  }
-
-  if (!isW2initialized)
-    hpx::dataflow(ex, unwrapExtendTiles(tile::set0<T>), w2(LocalTileIndex(0, 0)));
-
-  comm::scheduleAllReduceInPlace(ex_mpi, mpi_col_chain(), MPI_SUM, w2(LocalTileIndex(0, 0)));
-}
-
-template <class T, class MatrixLikeT>
-void gemmUpdateX(PanelT<Coord::Col, T>& x, ConstMatrixT<T>& w2, MatrixLikeT& v) {
-  using matrix::unwrapExtendTiles;
-  using tile::internal::gemm_o;
-
-  const auto ex = getHpExecutor<Backend::MC>();
-
-  // GEMM X = X - 0.5 . V . W2
-  for (const auto& index_i : v.iteratorLocal())
-    hpx::dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::NoTrans, blas::Op::NoTrans, T(-0.5),
-                  v.read(index_i), w2.read(LocalTileIndex(0, 0)), T(1), x(index_i));
-}
-
-template <class T>
 void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
                                ConstPanelT<Coord::Col, T>& x, ConstPanelT<Coord::Row, T>& vt,
                                ConstPanelT<Coord::Col, T>& v, ConstPanelT<Coord::Row, T>& xt) {

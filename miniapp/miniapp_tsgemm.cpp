@@ -158,14 +158,13 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 
     dlaf::common::Timer<> timeit;
     sirius_gemm<dlaf::Backend::MC>(comm_grid, a_mat, b_mat, cini_mat, cfin_mat);
-    // sirius_gemm(ps.batch_size, mpi_executor, comm_grid, a_mat, b_mat, cini_mat, cfin_mat);
 
     waitallTiles(cfin_mat);
     MPI_Barrier(world);
 
     if (rank == 0 && run_index >= 0) {
       auto elapsed_time = timeit.elapsed();
-      double total_ops = 0.0;  // TODO
+      double total_ops = opts.m * opts.k * (2 * opts.k - 1);
       double gigaflops = total_ops / elapsed_time / 1e9;
 
       // clang-format off
@@ -187,11 +186,15 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     // Simple check
     if (opts.do_check) {
       using BaseScalarType = dlaf::BaseType<ScalarType>;
-      constexpr auto eps = std::numeric_limits<BaseScalarType>::epsilon();
+      using numlims_t = std::numeric_limits<BaseScalarType>;
+      constexpr auto eps = numlims_t::epsilon();
       ScalarType cfin_sum = sumMatrixElements(world, cfin_mat);
       ScalarType expected_cfin_sum = ScalarType(opts.m * opts.n * opts.k) * a_val * std::conj(b_val);
-      if (std::abs(cfin_sum - expected_cfin_sum) > eps) {
-        std::cout << "FAILURE\n";
+      if (world.rank() == 0 && std::abs(cfin_sum - expected_cfin_sum) < eps) {
+        std::cout.precision(numlims_t::digits10);
+        std::cout << "FAILURE !!!" << std::endl;
+        std::cout << "ACTUAL : " << cfin_sum << std::endl;
+        std::cout << "EXPECTED : " << expected_cfin_sum << std::endl;
       }
     }
   }
@@ -305,6 +308,7 @@ void sirius_gemm(CommunicatorGrid grid, ConstMatrixType& a_mat, ConstMatrixType&
   using dlaf::common::Pipeline;
   using hpx::util::annotated_function;
   using dlaf::tile::gemm_o;
+  using dlaf::matrix::copy_o;
 
   auto executor_hp = dlaf::getHpExecutor<B>();
   auto executor_np = dlaf::getNpExecutor<B>();
@@ -332,16 +336,17 @@ void sirius_gemm(CommunicatorGrid grid, ConstMatrixType& a_mat, ConstMatrixType&
     //                       : hpx::shared_future<void>(cini_mat.read(GlobalTileIndex(c_dep_i, c_dep_j)));
 
     // GEMM
-    hpx::dataflow(executor_np, unwrapExtendTiles(gemm_o), blas::Op::Trans, blas::Op::NoTrans,
-                  ScalarType(1), a_mat.read(a_idx), b_mat.read(b_idx), ScalarType(0), cini_mat(c_idx));
+    hpx::dataflow(executor_np, unwrapExtendTiles(annotated_function(gemm_o, "gemm")), blas::Op::Trans,
+                  blas::Op::NoTrans, ScalarType(1), a_mat.read(a_idx), b_mat.read(b_idx), ScalarType(0),
+                  cini_mat(c_idx));
 
     //    int tile_tag = computeLinearIndexColMajor(cloc_idx, tile_grid_size);
     if (this_rank == tile_rank) {
       // RECV
       dlaf::comm::scheduleReduceRecvInPlace(executor_mpi, mpi_chain(), MPI_SUM, cini_mat(c_idx));
 
-      // OFFLOAD
-      hpx::dataflow(executor_hp, dlaf::matrix::unwrapExtendTiles(dlaf::matrix::copy_o),
+      // COPY from c_ini to c_fin
+      hpx::dataflow(executor_hp, unwrapExtendTiles(annotated_function(copy_o, "copy")),
                     cini_mat.read(c_idx), cfin_mat(c_idx));
 
       //      // RECV

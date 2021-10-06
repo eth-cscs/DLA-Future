@@ -82,14 +82,16 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
   hpx::future<common::internal::ContiguousBufferHolder<T>> cont_buf;
   {
     auto wrapped = getUnwrapRetValAndArgs(
-        dataflow(ex_copy, unwrapExtendTiles(makeItContiguous_o), std::move(tile)));
+        dataflow(ex_copy, unwrapExtendTiles(hpx::util::annotated_function(makeItContiguous_o, "load")),
+                 std::move(tile)));
 
     cont_buf = std::move(wrapped.first);
     tile = std::move(hpx::get<0>(wrapped.second));
   }
 
-  cont_buf = dataflow(ex, unwrapping(internal::reduceRecvInPlace_o), std::move(pcomm), reduce_op,
-                      std::move(cont_buf));
+  cont_buf =
+      dataflow(ex, unwrapping(hpx::util::annotated_function(internal::reduceRecvInPlace_o, "recv")),
+               std::move(pcomm), reduce_op, std::move(cont_buf));
 
   dataflow(ex_copy, unwrapping(copyBack_o), std::move(tile), std::move(cont_buf));
 }
@@ -114,10 +116,10 @@ void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
 
   // TODO shared_future<Tile> as assumption, it requires changes for future<Tile>
   hpx::future<common::internal::ContiguousBufferHolder<const T>> cont_buf =
-      dataflow(ex_copy, unwrapping(makeItContiguous_o), tile);
+      dataflow(ex_copy, unwrapping(hpx::util::annotated_function(makeItContiguous_o, "offload")), tile);
 
-  dataflow(ex, unwrapExtendTiles(internal::reduceSend_o), rank_root, std::move(pcomm), reduce_op,
-           std::move(cont_buf), tile);
+  dataflow(ex, unwrapExtendTiles(hpx::util::annotated_function(internal::reduceSend_o, "send")),
+           rank_root, std::move(pcomm), reduce_op, std::move(cont_buf), tile);
 }
 }
 }

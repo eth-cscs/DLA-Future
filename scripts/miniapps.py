@@ -140,3 +140,31 @@ def trsm(
 
     run_cmd = run_command(system, total_ranks, cpus_per_rank)
     return "\n" + f"{env} {run_cmd} {cmd} >> trsm_{lib}_{suffix}.out 2>&1".strip()
+
+# rpn: ranks per node
+#
+def tsgemm(
+    system,
+    build_dir,
+    nodes,
+    rpn,
+    m_sz,
+    n_sz,
+    k_sz,
+    mb_sz,
+    nruns,
+    suffix="na",
+    extra_flags="",
+    env="",
+):
+    total_ranks = nodes * rpn
+    cpus_per_rank = system["Cores"] // rpn
+    gr, gc = _sq_factor(total_ranks)
+
+    env += " OMP_NUM_THREADS=1"
+    cmd = f"{build_dir}/miniapp/miniapp_tsgemm --m {m_sz} --n {n_sz} --k {k_sz} --mb {mb_sz} --nb {mb_sz} --grid-rows {gr} --grid-cols {gc} --nruns {nruns} --hpx:use-process-mask {extra_flags}"
+
+    run_cmd = run_command(system, total_ranks, cpus_per_rank)
+    if suffix == "apex":
+        run_cmd += " apex"
+    return "\n" + f"{env} {run_cmd} {cmd} >> tsgemm_{suffix}.out 2>&1".strip()

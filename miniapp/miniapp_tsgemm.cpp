@@ -61,6 +61,8 @@
 // Forward declarations
 namespace {
 
+using dlaf::Device;
+using dlaf::Backend;
 using dlaf::SizeType;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
@@ -76,20 +78,19 @@ using dlaf::LocalTileIndex;
 using dlaf::LocalTileSize;
 
 using ScalarType = std::complex<double>;
-using MatrixType = dlaf::Matrix<ScalarType, dlaf::Device::CPU>;
-using ConstMatrixType = dlaf::Matrix<const ScalarType, dlaf::Device::CPU>;
-using TileType = dlaf::matrix::Tile<ScalarType, dlaf::Device::CPU>;
-using ConstTileType = dlaf::matrix::Tile<const ScalarType, dlaf::Device::CPU>;
+using MatrixType = dlaf::Matrix<ScalarType, Device::Default>;
+using ConstMatrixType = dlaf::Matrix<const ScalarType, Device::Default>;
+using HostMatrixType = dlaf::Matrix<ScalarType, Device::CPU>;
+using ConstHostMatrixType = dlaf::Matrix<const ScalarType, Device::CPU>;
+using TileType = MatrixType::TileType;
+using ConstTileType = ConstMatrixType::ConstTileType;
 
-template <dlaf::Backend B>
+template <Backend backend>
 void sirius_gemm(CommunicatorGrid grid, ConstMatrixType& a_mat, ConstMatrixType& b_mat,
                  MatrixType& cini_mat, MatrixType& cfin_mat);
 
 // Initialize matrix
 void setMatrix(MatrixType& matrix, ScalarType val);
-
-// Wait for all tiles of the matrix.
-void waitallTiles(MatrixType& matrix);
 
 // Sum the elements of the matrix. Useful for debugging.
 ScalarType sumMatrixElements(Communicator const& comm, MatrixType& matrix);
@@ -153,18 +154,20 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     setMatrix(a_mat, a_val);
     setMatrix(b_mat, b_val);
 
-    waitallTiles(cfin_mat);
+    cfin_mat.waitLocalTiles();
     MPI_Barrier(world);
 
     dlaf::common::Timer<> timeit;
-    sirius_gemm<dlaf::Backend::MC>(comm_grid, a_mat, b_mat, cini_mat, cfin_mat);
+    sirius_gemm<Backend::Default>(comm_grid, a_mat, b_mat, cini_mat, cfin_mat);
 
-    waitallTiles(cfin_mat);
+    cfin_mat.waitLocalTiles();
     MPI_Barrier(world);
 
     if (rank == 0 && run_index >= 0) {
       auto elapsed_time = timeit.elapsed();
-      double total_ops = opts.m * opts.k * (2 * opts.k - 1);
+      double mul_ops = opts.m * opts.n * opts.k;
+      double add_ops = mul_ops - 1;
+      double total_ops = dlaf::total_ops<ScalarType>(add_ops, mul_ops);
       double gigaflops = total_ops / elapsed_time / 1e9;
 
       // clang-format off
@@ -296,7 +299,7 @@ namespace {
 //  }
 //}
 
-template <dlaf::Backend B>
+template <Backend backend>
 void sirius_gemm(CommunicatorGrid grid, ConstMatrixType& a_mat, ConstMatrixType& b_mat,
                  MatrixType& cini_mat, MatrixType& cfin_mat) {
   using hpx::unwrapping;
@@ -310,9 +313,9 @@ void sirius_gemm(CommunicatorGrid grid, ConstMatrixType& a_mat, ConstMatrixType&
   using dlaf::tile::gemm_o;
   using dlaf::matrix::copy_o;
 
-  auto executor_hp = dlaf::getHpExecutor<B>();
-  auto executor_np = dlaf::getNpExecutor<B>();
-  auto executor_mpi = dlaf::getMPIExecutor<B>();
+  auto executor_hp = dlaf::getHpExecutor<backend>();
+  auto executor_np = dlaf::getNpExecutor<backend>();
+  auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   Pipeline<Communicator> mpi_chain(grid.fullCommunicator());
 
@@ -381,11 +384,6 @@ void setMatrix(MatrixType& matrix, ScalarType val) {
       tile(el_idx) = val;
     }
   }
-}
-
-void waitallTiles(MatrixType& matrix) {
-  for (const auto tile_idx : dlaf::common::iterate_range2d(matrix.distribution().localNrTiles()))
-    matrix(tile_idx).get();
 }
 
 // Sums the distributed matrix and returns the result to process 0.

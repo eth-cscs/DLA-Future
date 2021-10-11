@@ -34,6 +34,7 @@
 #include "dlaf/executors.h"
 #include "dlaf/init.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/util_matrix.h"
 
@@ -82,6 +83,7 @@ using MatrixType = dlaf::Matrix<ScalarType, Device::Default>;
 using ConstMatrixType = dlaf::Matrix<const ScalarType, Device::Default>;
 using HostMatrixType = dlaf::Matrix<ScalarType, Device::CPU>;
 using ConstHostMatrixType = dlaf::Matrix<const ScalarType, Device::CPU>;
+using MatrixMirrorType = dlaf::matrix::MatrixMirror<ScalarType, Device::Default, Device::CPU>;
 using TileType = MatrixType::TileType;
 using ConstTileType = ConstMatrixType::ConstTileType;
 
@@ -144,27 +146,31 @@ int hpx_main(hpx::program_options::variables_map& vm) {
                       tileLayout(LocalElementSize(opts.m, opts.n), TileElementSize(opts.mb, opts.nb)));
   MatrixType cfin_mat(GlobalElementSize(opts.m, opts.n), TileElementSize(opts.mb, opts.nb), comm_grid);
 
+  setMatrix(a_mat, a_val);
+  setMatrix(b_mat, b_val);
+
   // Benchmark calls of `sirius_gemm`
-  //
   for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
     if (0 == world.rank() && run_index >= 0) {
       std::cout << "[" << run_index << "]" << std::endl;
     }
 
-    setMatrix(a_mat, a_val);
-    setMatrix(b_mat, b_val);
+    double elapsed_time;
+    {
+      // MatrixMirrorType matrix(matrix_host);
 
-    cfin_mat.waitLocalTiles();
-    MPI_Barrier(world);
+      cfin_mat.waitLocalTiles();
+      MPI_Barrier(world);
 
-    dlaf::common::Timer<> timeit;
-    sirius_gemm<Backend::Default>(comm_grid, a_mat, b_mat, cini_mat, cfin_mat);
+      dlaf::common::Timer<> timeit;
+      sirius_gemm<Backend::Default>(comm_grid, a_mat, b_mat, cini_mat, cfin_mat);
 
-    cfin_mat.waitLocalTiles();
-    MPI_Barrier(world);
+      cfin_mat.waitLocalTiles();
+      MPI_Barrier(world);
+      elapsed_time = timeit.elapsed();
+    }
 
     if (rank == 0 && run_index >= 0) {
-      auto elapsed_time = timeit.elapsed();
       double mul_ops = opts.m * opts.n * opts.k;
       double add_ops = mul_ops - 1;
       double total_ops = dlaf::total_ops<ScalarType>(add_ops, mul_ops);

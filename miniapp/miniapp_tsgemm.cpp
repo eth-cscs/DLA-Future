@@ -314,7 +314,6 @@ void sirius_gemm(CommunicatorGrid grid, ConstMatrixType& a_mat, ConstMatrixType&
   using dlaf::comm::Communicator;
   using dlaf::common::computeLinearIndexColMajor;
   using dlaf::comm::Executor;
-  using dlaf::common::Pipeline;
   using hpx::util::annotated_function;
   using dlaf::tile::gemm_o;
   using dlaf::matrix::copy_o;

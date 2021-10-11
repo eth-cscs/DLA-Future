@@ -188,8 +188,8 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
   const SizeType nr_reflector = std::max(static_cast<SizeType>(0), m - mb - 1);
 
   // Copy matrices locally
-  auto mat_c_loc = dlaf::matrix::test::allGather<T>(mat_c, grid);
-  auto mat_v_loc = dlaf::matrix::test::allGather<T>(mat_v, grid);
+  auto mat_c_loc = dlaf::matrix::test::allGather<T>(lapack::MatrixType::General, mat_c, grid);
+  auto mat_v_loc = dlaf::matrix::test::allGather<T>(lapack::MatrixType::General, mat_v, grid);
 
   // Reset diagonal and upper values of V
   MatrixLocal<T> v({m, m}, blockSizeV);

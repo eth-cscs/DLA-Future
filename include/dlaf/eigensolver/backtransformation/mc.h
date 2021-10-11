@@ -225,14 +225,10 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   const SizeType c_local_rows = mat_c.distribution().localNrTiles().rows();
   const SizeType c_local_cols = mat_c.distribution().localNrTiles().cols();
   const SizeType v_local_rows = mat_v.distribution().localNrTiles().rows();
-  const SizeType nv = mat_v.nrTiles().cols();
   const SizeType m = mat_c.nrTiles().rows();
   const SizeType n = mat_c.nrTiles().cols();
   const SizeType mb = mat_v.blockSize().rows();
-  const SizeType ms = mat_v.size().rows();
-  const SizeType ns = mat_v.size().cols();
 
-  auto dist_c = mat_c.distribution();
   auto dist_v = mat_v.distribution();
 
   const comm::Index2D this_rank = grid.rank();
@@ -277,9 +273,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       panelV.setWidth(nr_reflectors_last_block);
     }
 
-    auto i_k = mat_v.distribution().template localTileFromGlobalTile<Coord::Row>(k);
-    auto j_k = mat_v.distribution().template localTileFromGlobalTile<Coord::Col>(k);
-
     auto k_rank_col = dist_v.template rankGlobalTile<Coord::Col>(k);
 
     if (this_rank.col() == k_rank_col) {
@@ -323,11 +316,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     for (SizeType i_local = mat_v.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
          i_local < v_local_rows; ++i_local) {
       auto i = mat_v.distribution().template globalTileFromLocalTile<Coord::Row>(i_local);
-      auto i_glo_c = mat_c.distribution().template globalTileFromLocalTile<Coord::Row>(i_local);
       auto i_rank_row = dist_v.template rankGlobalTile<Coord::Row>(i);
       auto k_rank_col = dist_v.template rankGlobalTile<Coord::Col>(k);
-      auto i_v = mat_v.distribution().template localTileFromGlobalTile<Coord::Row>(i);
-      auto j_k = mat_v.distribution().template localTileFromGlobalTile<Coord::Col>(k);
       const LocalTileIndex ik{i_local, k};
 
       // WH = V T
@@ -368,7 +358,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     }    // end loop on i_local (rows)
 
     for (SizeType j_local = 0; j_local < c_local_cols; ++j_local) {
-      auto i_k = mat_v.distribution().template localTileFromGlobalTile<Coord::Row>(k);
       const LocalTileIndex kj{k, j_local};
       panelW2(kj) =
           scheduleAllReduceInPlace(executor_mpi, mpi_col_task_chain(), MPI_SUM, std::move(panelW2(kj)));
@@ -377,7 +366,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     for (SizeType i_local = mat_c.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
          i_local < c_local_rows; ++i_local) {
       auto k_rank_col = mat_v.distribution().template rankGlobalTile<Coord::Col>(k);
-      auto k_rank_row = mat_v.distribution().template rankGlobalTile<Coord::Row>(k);
       auto i_glo_v = mat_v.distribution().template globalTileFromLocalTile<Coord::Row>(i_local);
       auto i_v = mat_v.distribution().template localTileFromGlobalTile<Coord::Row>(i_glo_v);
       const LocalTileIndex ik{i_v, k};
@@ -419,5 +407,6 @@ DLAF_EIGENSOLVER_BACKTRANSFORMATION_MC_ETI(extern, double)
 DLAF_EIGENSOLVER_BACKTRANSFORMATION_MC_ETI(extern, std::complex<float>)
 DLAF_EIGENSOLVER_BACKTRANSFORMATION_MC_ETI(extern, std::complex<double>)
 
+}
 }
 }

@@ -152,7 +152,7 @@ struct test_output<std::complex<T>> {
   }
 };
 
-TYPED_TEST(MatrixLocalTest, OutputNumpyForamt) {
+TYPED_TEST(MatrixLocalTest, OutputNumpyFormat) {
   const auto test_config = test_output<TypeParam>{}();
 
   std::ostringstream stream_matrix_output;
@@ -179,7 +179,27 @@ GlobalElementSize globalTestSize(const GlobalElementSize& size, const Size2D& gr
 }
 
 TYPED_TEST(MatrixLocalWithCommTest, AllGather) {
+  using lapack::MatrixType;
+
   constexpr auto error = TypeUtilities<TypeParam>::error;
+
+  const auto isTileToSkip = [](MatrixType mat_type, GlobalTileIndex index) {
+    switch (mat_type) {
+      case MatrixType::General:
+        return true;
+      case MatrixType::Lower:
+        return index.row() < index.col();
+      case MatrixType::Upper:
+        return index.row() > index.col();
+      case MatrixType::Band:
+      case MatrixType::Hessenberg:
+      case MatrixType::LowerBand:
+      case MatrixType::UpperBand:
+        DLAF_UNIMPLEMENTED(lapack::matrixtype2str(mat_type));
+        return false;
+    }
+    return false;  // unreachable
+  };
 
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& config : sizes_tests) {
@@ -190,18 +210,25 @@ TYPED_TEST(MatrixLocalWithCommTest, AllGather) {
                                 src_rank_index);
 
       Matrix<TypeParam, Device::CPU> source(std::move(distribution));
-      set(source, value_preset<TypeParam>);
 
-      auto dest = allGather<const TypeParam>(source, comm_grid);
+      using lapack::MatrixType;
+      for (auto gather_type : {MatrixType::General, MatrixType::Lower, MatrixType::Upper}) {
+        set(source, value_preset<TypeParam>);
 
-      const auto& dist_src = source.distribution();
-      for (const auto& ij_local : iterate_range2d(dist_src.localNrTiles())) {
-        const auto ij_global = dist_src.globalTileIndex(ij_local);
+        auto dest = allGather<const TypeParam>(gather_type, source, comm_grid);
 
-        const auto& tile_src = source.read(ij_local).get();
-        const auto& tile_dst = dest.tile_read(ij_global);
+        const auto& dist_src = source.distribution();
+        for (const auto& ij_local : iterate_range2d(dist_src.localNrTiles())) {
+          const auto ij_global = dist_src.globalTileIndex(ij_local);
 
-        CHECK_TILE_NEAR(tile_src, tile_dst, error, error);
+          if (isTileToSkip(gather_type, ij_global))
+            continue;
+
+          const auto& tile_src = source.read(ij_local).get();
+          const auto& tile_dst = dest.tile_read(ij_global);
+
+          CHECK_TILE_NEAR(tile_src, tile_dst, error, error);
+        }
       }
     }
   }

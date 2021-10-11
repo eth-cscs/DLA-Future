@@ -126,6 +126,12 @@ DLAF_DEFINE_CUBLAS_OP(Herk, double, Dsyrk);
 DLAF_DEFINE_CUBLAS_OP(Herk, std::complex<float>, Cherk);
 DLAF_DEFINE_CUBLAS_OP(Herk, std::complex<double>, Zherk);
 
+DLAF_DECLARE_CUBLAS_OP(Trmm);
+DLAF_DEFINE_CUBLAS_OP(Trmm, float, Strmm);
+DLAF_DEFINE_CUBLAS_OP(Trmm, double, Dtrmm);
+DLAF_DEFINE_CUBLAS_OP(Trmm, std::complex<float>, Ctrmm);
+DLAF_DEFINE_CUBLAS_OP(Trmm, std::complex<double>, Ztrmm);
+
 DLAF_DECLARE_CUBLAS_OP(Trsm);
 DLAF_DEFINE_CUBLAS_OP(Trsm, float, Strsm);
 DLAF_DEFINE_CUBLAS_OP(Trsm, double, Dtrsm);

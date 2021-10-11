@@ -21,7 +21,10 @@ for nodes in nodes_arr:
     for ranks_per_node in ranks_per_node_arr:
         job_text = mp.init_job_text(system, run_name, nodes, time_min)
 
-        for m_sz, mb_sz, in product(m_sz_arr, mb_sz_arr):
+        for (
+            m_sz,
+            mb_sz,
+        ) in product(m_sz_arr, mb_sz_arr):
 
             job_text += mp.chol(
                 system,
@@ -32,7 +35,7 @@ for nodes in nodes_arr:
                 m_sz,
                 mb_sz,
                 nruns,
-                suffix = f"rpn={ranks_per_node}"
+                suffix=f"rpn={ranks_per_node}",
             )
 
         # debugging
@@ -43,7 +46,10 @@ for nodes in nodes_arr:
 
         job_text = mp.init_job_text(system, run_name, nodes, time_min)
 
-        for m_sz, mb_sz, in product(m_sz_arr, mb_sz_arr):
+        for (
+            m_sz,
+            mb_sz,
+        ) in product(m_sz_arr, mb_sz_arr):
 
             job_text += mp.chol(
                 system,
@@ -54,8 +60,8 @@ for nodes in nodes_arr:
                 m_sz,
                 mb_sz,
                 nruns,
-                suffix = f"rpn={ranks_per_node}",
-                env = "BLIS_JC_NT=1"
+                suffix=f"rpn={ranks_per_node}",
+                env="BLIS_JC_NT=1",
             )
 
         # debugging
@@ -76,7 +82,7 @@ for nodes in nodes_arr:
             m_sz,
             mb_sz,
             nruns,
-            suffix = "rpn=1"
+            suffix="rpn=1",
         )
 
     # debugging

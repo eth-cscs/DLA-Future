@@ -29,8 +29,6 @@ using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
 using namespace testing;
 
-using dlaf::util::size_t::mul;
-
 template <Device D, class T, class CT = const T>
 void testTrmm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const blas::Diag diag,
               const SizeType m, const SizeType n, const SizeType extra_lda, const SizeType extra_ldb) {
@@ -40,11 +38,6 @@ void testTrmm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, c
 
   const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
   const SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
-
-  std::stringstream s;
-  s << "TRMM: " << side << ", " << uplo << ", " << op << ", " << diag << ", m = " << m << ", n = " << n
-    << ", lda = " << lda << ", ldb = " << ldb;
-  SCOPED_TRACE(s.str());
 
   const T alpha = TypeUtilities<T>::element(-1.2, .7);
 
@@ -57,10 +50,15 @@ void testTrmm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, c
     std::tie(el_op_a, res_b, el_b) =
         getRightTriangularSystem<TileElementIndex, T>(uplo, op, diag, static_cast<T>(1.0) / alpha, n);
 
-  auto a = createTile<CT>(el_op_a, size_a, lda, op);
-  auto b = createTile<T>(el_b, size_b, ldb);
+  auto a = createTile<CT, D>(el_op_a, size_a, lda, op);
+  auto b = createTile<T, D>(el_b, size_b, ldb);
 
-  tile::trmm(side, uplo, op, diag, alpha, a, b);
+  invokeBlas<D>(tile::trmm_o, side, uplo, op, diag, alpha, a, b);
+
+  std::stringstream s;
+  s << "TRMM: " << side << ", " << uplo << ", " << op << ", " << diag << ", m = " << m << ", n = " << n
+    << ", lda = " << lda << ", ldb = " << ldb;
+  SCOPED_TRACE(s.str());
 
   CHECK_TILE_NEAR(res_b, b, 10 * (m + 1) * TypeUtilities<T>::error,
                   10 * (m + 1) * TypeUtilities<T>::error);

@@ -335,9 +335,9 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
       }();
 
       const MatrixLocal<const TypeParam> v = [&v_input, &dist_v, &comm_grid, a_m, a_n, nb, v_start] {
-        // TODO this can be improved by communicating just the interesting part
+        // TODO this can be improved by communicating just the selected column starting at v_start
         // gather the entire A matrix
-        auto a = matrix::test::allGather<TypeParam>(v_input, comm_grid);
+        auto a = matrix::test::allGather<TypeParam>(lapack::MatrixType::General, v_input, comm_grid);
 
         // panel shape
         GlobalElementSize v_size = dist_v.size();

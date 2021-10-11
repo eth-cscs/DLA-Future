@@ -80,8 +80,10 @@ void MPIListener::OnTestEnd(const ::testing::TestInfo& test_info) {
       std::function<std::string(int)> get_result;
 
       if (rank == 0) {
-        number_of_results = last_test_part_results_.size();
-        get_result = [this](int index) { return last_test_part_results_[index]; };
+        number_of_results = static_cast<int>(last_test_part_results_.size());
+        get_result = [this](int index) {
+          return last_test_part_results_[static_cast<std::size_t>(index)];
+        };
       }
       else {
         MPI_Recv(&number_of_results, 1, MPI_INT, rank, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
@@ -91,7 +93,7 @@ void MPIListener::OnTestEnd(const ::testing::TestInfo& test_info) {
       print_partial_results(rank, number_of_results, get_result);
     }
     else if (rank_ == rank) {
-      int num_partial_results = last_test_part_results_.size();
+      int num_partial_results = static_cast<int>(last_test_part_results_.size());
       MPI_Send(&num_partial_results, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
 
       for (const auto& partial_result : last_test_part_results_)
@@ -131,14 +133,15 @@ bool MPIListener::isMasterRank() const {
 void MPIListener::OnTestEndAllRanks(const ::testing::TestInfo& test_info) const {
   bool is_local_passed = test_info.result()->Passed();
 
-  bool all_tests_passed[world_size_];
-  MPI_Gather(&is_local_passed, 1, MPI_BYTE, isMasterRank() ? &all_tests_passed : nullptr, 1, MPI_BYTE, 0,
-             MPI_COMM_WORLD);
+  auto all_tests_passed = std::make_unique<bool[]>(static_cast<std::size_t>(world_size_));
+  MPI_Gather(&is_local_passed, 1, MPI_BYTE, isMasterRank() ? all_tests_passed.get() : nullptr, 1,
+             MPI_BYTE, 0, MPI_COMM_WORLD);
 
   if (!isMasterRank())
     return;
 
-  auto how_many_ranks_failed = std::count(all_tests_passed, all_tests_passed + world_size_, false);
+  auto how_many_ranks_failed =
+      std::count(all_tests_passed.get(), all_tests_passed.get() + world_size_, false);
 
   // exploit this to make the master rank fail if any rank failed
   // as a side-effect it calls OnTestPartResult, but since it just collects error messages,
@@ -156,7 +159,7 @@ void MPIListener::OnTestEndAllRanks(const ::testing::TestInfo& test_info) const 
 
 namespace internal {
 void mpi_send_string(const std::string& message, int to_rank) {
-  MPI_Send(message.c_str(), message.size() + 1, MPI_CHAR, to_rank, 0, MPI_COMM_WORLD);
+  MPI_Send(message.c_str(), static_cast<int>(message.size()) + 1, MPI_CHAR, to_rank, 0, MPI_COMM_WORLD);
 }
 
 std::string mpi_receive_string(int from_rank) {
@@ -166,9 +169,10 @@ std::string mpi_receive_string(int from_rank) {
   int message_length;
   MPI_Get_count(&status, MPI_CHAR, &message_length);
 
-  char message_buffer[message_length];
-  MPI_Recv(message_buffer, message_length, MPI_CHAR, from_rank, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  std::vector<char> message_buffer(static_cast<std::size_t>(message_length));
+  MPI_Recv(message_buffer.data(), message_length, MPI_CHAR, from_rank, 0, MPI_COMM_WORLD,
+           MPI_STATUS_IGNORE);
 
-  return message_buffer;
+  return message_buffer.data();
 }
 }

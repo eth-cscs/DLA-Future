@@ -16,6 +16,7 @@ target_link_libraries(DLAF_gtest_hpx_main
     dlaf.core
     HPX::hpx
 )
+target_add_warnings(DLAF_gtest_hpx_main)
 
 add_library(DLAF_gtest_mpi_main STATIC gtest_mpi_main.cpp gtest_mpi_listener.cpp)
 target_link_libraries(DLAF_gtest_mpi_main
@@ -24,6 +25,7 @@ target_link_libraries(DLAF_gtest_mpi_main
   PRIVATE
     MPI::MPI_CXX
 )
+target_add_warnings(DLAF_gtest_mpi_main)
 
 add_library(DLAF_gtest_mpihpx_main STATIC gtest_mpihpx_main.cpp gtest_mpi_listener.cpp)
 target_link_libraries(DLAF_gtest_mpihpx_main
@@ -34,3 +36,4 @@ target_link_libraries(DLAF_gtest_mpihpx_main
     MPI::MPI_CXX
     HPX::hpx
 )
+target_add_warnings(DLAF_gtest_mpihpx_main)

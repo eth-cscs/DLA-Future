@@ -58,14 +58,6 @@ void trmmPanel(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> 
 }
 
 template <class Executor, Device device, class T>
-void gemmUpdateW2Start(Executor&& ex, hpx::future<matrix::Tile<T, device>> w,
-                       hpx::shared_future<matrix::Tile<const T, device>> c,
-                       hpx::future<matrix::Tile<T, device>> w2) {
-  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans,
-                T(1.0), w, c, T(0.0), std::move(w2));
-}
-
-template <class Executor, Device device, class T>
 void gemmUpdateW2(Executor&& ex, hpx::future<matrix::Tile<T, device>> w,
                   hpx::shared_future<matrix::Tile<const T, device>> c,
                   hpx::future<matrix::Tile<T, device>> w2) {

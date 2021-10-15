@@ -38,23 +38,18 @@ namespace dlaf {
 namespace eigensolver {
 namespace internal {
 
-template <class T>
-void setZero(Matrix<T, Device::CPU>& mat) {
-  dlaf::matrix::util::set(mat, [](auto&&) { return static_cast<T>(0.f, 0.f); });
-}
-
 template <Device device, class T>
 void copySingleTile(hpx::shared_future<matrix::Tile<const T, device>> in,
                     hpx::future<matrix::Tile<T, device>> out) {
   hpx::dataflow(dlaf::getCopyExecutor<Device::CPU, Device::CPU>(),
-                matrix::unwrapExtendTiles(matrix::copy_o), in, out);
+                matrix::unwrapExtendTiles(matrix::copy_o), in, std::move(out));
 }
 
 template <class Executor, Device device, class T>
 void trmmPanel(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> t,
                hpx::future<matrix::Tile<T, device>> w) {
   hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::trmm_o), blas::Side::Right, blas::Uplo::Upper,
-                blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), t, w);
+                blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), t, std::move(w));
 }
 
 template <class Executor, Device device, class T>

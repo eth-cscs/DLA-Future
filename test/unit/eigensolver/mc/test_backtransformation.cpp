@@ -52,20 +52,16 @@ GlobalElementSize globalTestSize(const LocalElementSize& size) {
 }
 
 const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes =
+    // m, n, mb, nb
     {{3, 0, 1, 1},   {0, 5, 2, 3},  // m, n = 0
      {2, 2, 3, 3},   {3, 4, 6, 7},  // m < mb
-     {3, 3, 1, 1},   {4, 4, 1, 1},   {4, 4, 2, 2}, {6, 3, 3, 3}, {12, 2, 4, 4},
-     {12, 24, 3, 3}, {24, 36, 6, 6}, {5, 8, 3, 2}, {4, 6, 2, 3}, {5, 5, 2, 3},
-     {8, 27, 3, 4},  {15, 34, 4, 6}, {7, 6, 2, 3}, {8, 5, 2, 3}, {7, 5, 2, 3}};
+     {3, 3, 1, 1},   {4, 4, 2, 2}, {6, 3, 3, 3}, {12, 2, 4, 4}, {12, 24, 3, 3},
+     {24, 36, 6, 6}, {5, 8, 3, 2}, {4, 6, 2, 3}, {5, 5, 2, 3},  {8, 27, 3, 4},
+     {15, 34, 4, 6}, {7, 6, 2, 3}, {8, 5, 2, 3}, {7, 5, 2, 3}};
 
 template <class T>
 MatrixLocal<T> makeLocal(const Matrix<const T, Device::CPU>& matrix) {
   return {matrix.size(), matrix.distribution().blockSize()};
-}
-
-template <class T>
-void setZero(Matrix<T, Device::CPU>& mat) {
-  dlaf::matrix::util::set(mat, [](auto&&) { return static_cast<T>(0.0); });
 }
 
 template <class T>
@@ -153,6 +149,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
   }
 
   eigensolver::backTransformation<Backend::MC>(mat_c, mat_v, taus);
+
   auto result = [& dist = mat_c.distribution(), &mat_local = c](const GlobalElementIndex& element) {
     const auto tile_index = dist.globalTileIndex(element);
     const auto tile_element = dist.tileElementIndex(element);

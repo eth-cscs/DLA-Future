@@ -93,7 +93,6 @@ struct her2kSizes {
 };
 
 template <typename T, Device device>
-
 her2kSizes getHer2kSizes(blas::Op op, const dlaf::matrix::Tile<const T, device>& a,
                          const dlaf::matrix::Tile<const T, device>& b,
                          const dlaf::matrix::Tile<T, device>& c) {

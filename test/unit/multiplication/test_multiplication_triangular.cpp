@@ -29,9 +29,6 @@ using namespace testing;
 template <typename Type>
 class TriangularMultiplicationTestMC : public ::testing::Test {
 public:
-  //  const std::vector<CommunicatorGrid>& commGrids() {
-  //    return comm_grids;
-  //  }
 };
 TYPED_TEST_SUITE(TriangularMultiplicationTestMC, MatrixElementTypes);
 
@@ -81,10 +78,10 @@ void testTriangularMultiplication(blas::Side side, blas::Uplo uplo, blas::Op op,
 
   if (side == blas::Side::Left)
     std::tie(el_op_a, res_b, el_b) =
-        getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, m);
+        getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, static_cast<T>(1.0) / alpha, m);
   else
     std::tie(el_op_a, res_b, el_b) =
-        getRightTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, n);
+        getRightTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, static_cast<T>(1.0) / alpha, n);
 
   set(mat_ah, el_op_a, op);
   set(mat_bh, el_b);
@@ -96,41 +93,7 @@ void testTriangularMultiplication(blas::Side side, blas::Uplo uplo, blas::Op op,
     multiplication::triangular<B>(side, uplo, op, diag, alpha, mat_a.get(), mat_b.get());
   }
 
-  Matrix<T, Device::CPU> mat_res({m, n}, {mb, nb});
-  set(mat_res, res_b);
-  MatrixLocal<T> res({m, n}, {mb, nb});
-
-  GlobalElementSize sz_a(m, m);
-  TileElementSize bk_sz_a(mb, mb);
-  if (side == blas::Side::Right) {
-    sz_a = {n, n};
-    bk_sz_a = {nb, nb};
-  }
-  MatrixLocal<T> mat_loc_a(sz_a, bk_sz_a);
-  for (const auto& ij_tile : iterate_range2d(res.nrTiles())) {
-    const auto& source_tile = mat_res.read(ij_tile).get();
-    copy(source_tile, res.tile(ij_tile));
-    if (side == blas::Side::Left) {
-      copy(mat_ah.read(GlobalTileIndex{ij_tile.row(), ij_tile.row()}).get(),
-           mat_loc_a.tile({ij_tile.row(), ij_tile.row()}));
-      tile::gemm(blas::Op::NoTrans, blas::Op::NoTrans, T(0.),
-                 mat_loc_a.tile({ij_tile.row(), ij_tile.row()}), res.tile(ij_tile), alpha * alpha,
-                 res.tile(ij_tile));
-    }
-    else {
-      copy(mat_ah.read(GlobalTileIndex{ij_tile.col(), ij_tile.col()}).get(),
-           mat_loc_a.tile({ij_tile.col(), ij_tile.col()}));
-      tile::gemm(blas::Op::NoTrans, blas::Op::NoTrans, T(0.), res.tile(ij_tile),
-                 mat_loc_a.tile({ij_tile.col(), ij_tile.col()}), alpha * alpha, res.tile(ij_tile));
-    }
-  }
-  auto result = [& dist = mat_res.distribution(), &mat_local = res](const GlobalElementIndex& element) {
-    const auto tile_index = dist.globalTileIndex(element);
-    const auto tile_element = dist.tileElementIndex(element);
-    return mat_local.tile_read(tile_index)(tile_element);
-  };
-
-  CHECK_MATRIX_NEAR(result, mat_bh, 40 * (mat_bh.size().rows() + 1) * TypeUtilities<T>::error,
+  CHECK_MATRIX_NEAR(res_b, mat_bh, 40 * (mat_bh.size().rows() + 1) * TypeUtilities<T>::error,
                     40 * (mat_bh.size().rows() + 1) * TypeUtilities<T>::error);
 }
 

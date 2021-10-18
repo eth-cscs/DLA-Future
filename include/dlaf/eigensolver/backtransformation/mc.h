@@ -38,9 +38,9 @@ namespace dlaf {
 namespace eigensolver {
 namespace internal {
 
-template <Device device, class T>
-void copySingleTile(hpx::shared_future<matrix::Tile<const T, device>> in,
-                    hpx::future<matrix::Tile<T, device>> out) {
+template <class T>
+void copySingleTile(hpx::shared_future<matrix::Tile<const T, Device::CPU>> in,
+                    hpx::future<matrix::Tile<T, Device::CPU>> out) {
   hpx::dataflow(dlaf::getCopyExecutor<Device::CPU, Device::CPU>(),
                 matrix::unwrapExtendTiles(matrix::copy_o), in, std::move(out));
 }

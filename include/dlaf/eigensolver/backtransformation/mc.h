@@ -267,25 +267,21 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
                mat_v.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
            i_local < v_local_rows; ++i_local) {
         auto i = mat_v.distribution().template globalTileFromLocalTile<Coord::Row>(i_local);
-
-        auto i_rank_row = dist_v.template rankGlobalTile<Coord::Row>(i);
         auto ik = LocalTileIndex{i_local, k};
-        if (this_rank.row() == i_rank_row) {
-          if (i == (k + 1)) {
-            hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v =
-                mat_v.read(GlobalTileIndex(i, k));
-            if (is_last) {
-              tile_v = splitTile(tile_v, {{0, 0},
-                                          {mat_v.distribution().tileSize(GlobalTileIndex(i, k)).rows(),
-                                           nr_reflectors_last_block}});
-            }
-            copySingleTile(tile_v, panelV(ik));
-            hpx::dataflow(hpx::launch::sync, unwrapping(tile::laset<T>), lapack::MatrixType::Upper, 0.f,
-                          1.f, panelV(ik));
+        if (i == (k + 1)) {
+          hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v =
+              mat_v.read(GlobalTileIndex(i, k));
+          if (is_last) {
+            tile_v = splitTile(tile_v, {{0, 0},
+                                        {mat_v.distribution().tileSize(GlobalTileIndex(i, k)).rows(),
+                                         nr_reflectors_last_block}});
           }
-          else {
-            panelV.setTile(ik, mat_v.read(GlobalTileIndex(i, k)));
-          }
+          copySingleTile(tile_v, panelV(ik));
+          hpx::dataflow(hpx::launch::sync, unwrapping(tile::laset<T>), lapack::MatrixType::Upper, 0.f,
+                        1.f, panelV(ik));
+        }
+        else {
+          panelV.setTile(ik, mat_v.read(GlobalTileIndex(i, k)));
         }
       }
     }
@@ -296,87 +292,57 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     dlaf::factorization::internal::computeTFactor<Backend::MC>(nr_reflectors, mat_v, v_start, taus_panel,
                                                                panelT(t_index), mpi_col_task_chain);
 
-    // Broadcast T(k,k) col-wise
-    auto k_v_rank_col = mat_v.distribution().template rankGlobalTile<Coord::Col>(k);
-    broadcast(executor_mpi, k_v_rank_col, panelT, mpi_row_task_chain);
+    // Broadcast T(k,k) row-wise
+    broadcast(executor_mpi, k_rank_col, panelT, mpi_row_task_chain);
 
-    for (SizeType i_local = mat_v.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
-         i_local < v_local_rows; ++i_local) {
-      auto i = mat_v.distribution().template globalTileFromLocalTile<Coord::Row>(i_local);
-      auto i_rank_row = dist_v.template rankGlobalTile<Coord::Row>(i);
-      auto k_rank_col = dist_v.template rankGlobalTile<Coord::Col>(k);
-      const LocalTileIndex ik{i_local, k};
-
-      // WH = V T
-      if (this_rank.row() == i_rank_row && this_rank.col() == k_rank_col) {
+    if (this_rank.col() == k_rank_col) {
+      for (SizeType i_local =
+               mat_v.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
+           i_local < v_local_rows; ++i_local) {
+        // WH = V T
+        const LocalTileIndex ik{i_local, k};
         hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_t = panelT.read(ik);
         copySingleTile(panelV.read(ik), panelW(ik));
         trmmPanel(executor_np, tile_t, panelW(ik));
       }
-    }  // end loop on i_local row
+    }
 
     matrix::util::set0(executor_hp, panelW2);
 
     for (SizeType i_local = mat_c.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
          i_local < mat_c.distribution().localNrTiles().rows(); ++i_local) {
-      auto k_rank_col = mat_v.distribution().template rankGlobalTile<Coord::Col>(k);
-      auto i_glo_v = mat_v.distribution().template globalTileFromLocalTile<Coord::Row>(i_local);
-      auto i_v = mat_v.distribution().template localTileFromGlobalTile<Coord::Row>(i_glo_v);
-      const LocalTileIndex ik{i_v, k};
+      const LocalTileIndex ik{i_local, k};
 
       // Broadcast W(i,0) row-wise
       broadcast(executor_mpi, k_rank_col, panelW, mpi_row_task_chain);
 
       for (SizeType j_local = 0; j_local < c_local_cols; ++j_local) {
         // W2 = W C
-        auto i_c = mat_c.distribution().template globalTileFromLocalTile<Coord::Row>(i_local);
-        auto j_c = mat_c.distribution().template globalTileFromLocalTile<Coord::Col>(j_local);
-        auto i_c_rank_row = mat_c.distribution().template rankGlobalTile<Coord::Row>(i_c);
-        auto j_c_rank_col = mat_c.distribution().template rankGlobalTile<Coord::Col>(j_c);
-
         const LocalTileIndex kj{k, j_local};
         const LocalTileIndex ij{i_local, j_local};
-
-        if (this_rank.row() == i_c_rank_row && this_rank.col() == j_c_rank_col) {
-          gemmUpdateW2(executor_np, panelW(ik), mat_c.read(ij), std::move(panelW2(kj)));
-        }
-
-      }  // end loop on j_local (cols)
-    }    // end loop on i_local (rows)
-
-    for (SizeType j_local = 0; j_local < c_local_cols; ++j_local) {
-      const LocalTileIndex kj{k, j_local};
-      panelW2(kj) =
-          scheduleAllReduceInPlace(executor_mpi, mpi_col_task_chain(), MPI_SUM, std::move(panelW2(kj)));
+        gemmUpdateW2(executor_np, panelW(ik), mat_c.read(ij), std::move(panelW2(kj)));
+      }
     }
+
+    for (const auto& kj : panelW2.iteratorLocal())
+      scheduleAllReduceInPlace(executor_mpi, mpi_col_task_chain(), MPI_SUM, std::move(panelW2(kj)));
 
     for (SizeType i_local = mat_c.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
          i_local < c_local_rows; ++i_local) {
-      auto k_rank_col = mat_v.distribution().template rankGlobalTile<Coord::Col>(k);
       auto i_glo_v = mat_v.distribution().template globalTileFromLocalTile<Coord::Row>(i_local);
       auto i_v = mat_v.distribution().template localTileFromGlobalTile<Coord::Row>(i_glo_v);
       const LocalTileIndex ik{i_v, k};
 
-      // Broadcast V(i,0) col-wise
+      // Broadcast V(i,0) row-wise
       broadcast(executor_mpi, k_rank_col, panelV, mpi_row_task_chain);
 
       for (SizeType j_local = 0; j_local < c_local_cols; ++j_local) {
-        auto i_c = mat_c.distribution().template globalTileFromLocalTile<Coord::Row>(i_local);
-        auto j_c = mat_c.distribution().template globalTileFromLocalTile<Coord::Col>(j_local);
-        auto i_c_rank_row = mat_c.distribution().template rankGlobalTile<Coord::Row>(i_c);
-        auto j_c_rank_col = mat_c.distribution().template rankGlobalTile<Coord::Col>(j_c);
-
+        // C = C - V W2
         const LocalTileIndex kj{k, j_local};
         const LocalTileIndex ij(i_local, j_local);
-
-        // C = C - V W2
-        if (this_rank.row() == i_c_rank_row && this_rank.col() == j_c_rank_col) {
-          gemmTrailingMatrix(executor_np, panelV.read(ik), panelW2.read(kj), mat_c(ij));
-        }
-
-      }  // end of j_local loop on cols
-
-    }  // end of i_local loop on rows
+        gemmTrailingMatrix(executor_np, panelV.read(ik), panelW2.read(kj), mat_c(ij));
+      }
+    }
 
     panelV.reset();
     panelW.reset();

@@ -20,8 +20,6 @@
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/broadcast_panel.h"
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/functions_sync.h"
-#include "dlaf/communication/init.h"
 #include "dlaf/communication/kernels.h"
 #include "dlaf/eigensolver/backtransformation/api.h"
 #include "dlaf/executors.h"
@@ -197,10 +195,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
   using hpx::unwrapping;
 
-  using hpx::execution::parallel_executor;
-  using hpx::resource::get_thread_pool;
-  using hpx::threads::thread_priority;
-
   auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
   auto executor_np = dlaf::getNpExecutor<Backend::MC>();
 
@@ -217,9 +211,9 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   const SizeType mb = mat_v.blockSize().rows();
 
   auto dist_v = mat_v.distribution();
+  auto dist_c = mat_c.distribution();
 
   const comm::Index2D this_rank = grid.rank();
-  common::Pipeline<comm::CommunicatorGrid> serial_comm(grid);
 
   if (m <= 1 || n == 0)
     return;
@@ -228,12 +222,9 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   const SizeType total_nr_reflector = mat_v.size().rows() - mb - 1;
 
   constexpr std::size_t n_workspaces = 2;
-  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panelsV(n_workspaces,
-                                                                        mat_v.distribution());
-  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panelsW(n_workspaces,
-                                                                        mat_v.distribution());
-  common::RoundRobin<matrix::Panel<Coord::Row, T, Device::CPU>> panelsW2(n_workspaces,
-                                                                         mat_c.distribution());
+  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panelsV(n_workspaces, dist_v);
+  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panelsW(n_workspaces, dist_v);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, Device::CPU>> panelsW2(n_workspaces, dist_c);
 
   dlaf::matrix::Distribution dist_t({mb, total_nr_reflector}, {mb, mb});
   matrix::Panel<Coord::Row, T, Device::CPU> panelT(dist_t);
@@ -263,18 +254,18 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     auto k_rank_col = dist_v.template rankGlobalTile<Coord::Col>(k);
 
     if (this_rank.col() == k_rank_col) {
-      for (SizeType i_local =
-               mat_v.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
+      for (SizeType i_local = dist_v.template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
            i_local < v_local_rows; ++i_local) {
-        auto i = mat_v.distribution().template globalTileFromLocalTile<Coord::Row>(i_local);
+        auto i = dist_v.template globalTileFromLocalTile<Coord::Row>(i_local);
         auto ik = LocalTileIndex{i_local, k};
         if (i == (k + 1)) {
           hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v =
               mat_v.read(GlobalTileIndex(i, k));
           if (is_last) {
-            tile_v = splitTile(tile_v, {{0, 0},
-                                        {mat_v.distribution().tileSize(GlobalTileIndex(i, k)).rows(),
-                                         nr_reflectors_last_block}});
+            tile_v =
+                splitTile(tile_v,
+                          {{0, 0},
+                           {dist_v.tileSize(GlobalTileIndex(i, k)).rows(), nr_reflectors_last_block}});
           }
           copySingleTile(tile_v, panelV(ik));
           hpx::dataflow(hpx::launch::sync, unwrapping(tile::laset<T>), lapack::MatrixType::Upper, 0.f,
@@ -296,8 +287,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     broadcast(executor_mpi, k_rank_col, panelT, mpi_row_task_chain);
 
     if (this_rank.col() == k_rank_col) {
-      for (SizeType i_local =
-               mat_v.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
+      for (SizeType i_local = dist_v.template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
            i_local < v_local_rows; ++i_local) {
         // WH = V T
         const LocalTileIndex ik{i_local, k};
@@ -309,8 +299,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
     matrix::util::set0(executor_hp, panelW2);
 
-    for (SizeType i_local = mat_c.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
-         i_local < mat_c.distribution().localNrTiles().rows(); ++i_local) {
+    for (SizeType i_local = dist_c.template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
+         i_local < dist_c.localNrTiles().rows(); ++i_local) {
       const LocalTileIndex ik{i_local, k};
 
       // Broadcast W(i,0) row-wise
@@ -327,11 +317,9 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     for (const auto& kj : panelW2.iteratorLocal())
       scheduleAllReduceInPlace(executor_mpi, mpi_col_task_chain(), MPI_SUM, std::move(panelW2(kj)));
 
-    for (SizeType i_local = mat_c.distribution().template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
+    for (SizeType i_local = dist_c.template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
          i_local < c_local_rows; ++i_local) {
-      auto i_glo_v = mat_v.distribution().template globalTileFromLocalTile<Coord::Row>(i_local);
-      auto i_v = mat_v.distribution().template localTileFromGlobalTile<Coord::Row>(i_glo_v);
-      const LocalTileIndex ik{i_v, k};
+      const LocalTileIndex ik{i_local, k};
 
       // Broadcast V(i,0) row-wise
       broadcast(executor_mpi, k_rank_col, panelV, mpi_row_task_chain);

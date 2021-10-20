@@ -203,15 +203,14 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
 
-  const SizeType c_local_rows = mat_c.distribution().localNrTiles().rows();
-  const SizeType c_local_cols = mat_c.distribution().localNrTiles().cols();
-  const SizeType v_local_rows = mat_v.distribution().localNrTiles().rows();
+  auto dist_v = mat_v.distribution();
+  auto dist_c = mat_c.distribution();
+
+  const SizeType local_rows = dist_c.localNrTiles().rows();
+  const SizeType local_cols = dist_c.localNrTiles().cols();
   const SizeType m = mat_c.nrTiles().rows();
   const SizeType n = mat_c.nrTiles().cols();
   const SizeType mb = mat_v.blockSize().rows();
-
-  auto dist_v = mat_v.distribution();
-  auto dist_c = mat_c.distribution();
 
   const comm::Index2D this_rank = grid.rank();
 
@@ -255,7 +254,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
     if (this_rank.col() == k_rank_col) {
       for (SizeType i_local = dist_v.template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
-           i_local < v_local_rows; ++i_local) {
+           i_local < local_rows; ++i_local) {
         auto i = dist_v.template globalTileFromLocalTile<Coord::Row>(i_local);
         auto ik = LocalTileIndex{i_local, k};
         if (i == (k + 1)) {
@@ -288,7 +287,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
     if (this_rank.col() == k_rank_col) {
       for (SizeType i_local = dist_v.template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
-           i_local < v_local_rows; ++i_local) {
+           i_local < local_rows; ++i_local) {
         // WH = V T
         const LocalTileIndex ik{i_local, k};
         hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_t = panelT.read(ik);
@@ -300,13 +299,13 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     matrix::util::set0(executor_hp, panelW2);
 
     for (SizeType i_local = dist_c.template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
-         i_local < dist_c.localNrTiles().rows(); ++i_local) {
+         i_local < local_rows; ++i_local) {
       const LocalTileIndex ik{i_local, k};
 
       // Broadcast W(i,0) row-wise
       broadcast(executor_mpi, k_rank_col, panelW, mpi_row_task_chain);
 
-      for (SizeType j_local = 0; j_local < c_local_cols; ++j_local) {
+      for (SizeType j_local = 0; j_local < local_cols; ++j_local) {
         // W2 = W C
         const LocalTileIndex kj{k, j_local};
         const LocalTileIndex ij{i_local, j_local};
@@ -318,13 +317,13 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       scheduleAllReduceInPlace(executor_mpi, mpi_col_task_chain(), MPI_SUM, std::move(panelW2(kj)));
 
     for (SizeType i_local = dist_c.template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
-         i_local < c_local_rows; ++i_local) {
+         i_local < local_rows; ++i_local) {
       const LocalTileIndex ik{i_local, k};
 
       // Broadcast V(i,0) row-wise
       broadcast(executor_mpi, k_rank_col, panelV, mpi_row_task_chain);
 
-      for (SizeType j_local = 0; j_local < c_local_cols; ++j_local) {
+      for (SizeType j_local = 0; j_local < local_cols; ++j_local) {
         // C = C - V W2
         const LocalTileIndex kj{k, j_local};
         const LocalTileIndex ij(i_local, j_local);

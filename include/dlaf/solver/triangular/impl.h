@@ -389,9 +389,6 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
 
   const matrix::Distribution& distr_a = mat_a.distribution();
   const matrix::Distribution& distr_b = mat_b.distribution();
-  auto a_rows = mat_a.nrTiles().rows();
-  auto local_rows = distr_a.localNrTiles().rows();
-  auto b_local_cols = distr_b.localNrTiles().cols();
 
   // If mat_b is empty return immediately
   if (mat_b.size().isEmpty())
@@ -401,7 +398,7 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
   common::RoundRobin<matrix::Panel<Coord::Col, T, device>> a_panels(n_workspaces, distr_a);
   common::RoundRobin<matrix::Panel<Coord::Row, T, device>> b_panels(n_workspaces, distr_b);
 
-  for (SizeType k = 0; k < a_rows; ++k) {
+  for (SizeType k = 0; k < mat_a.nrTiles().rows(); ++k) {
     const GlobalTileIndex kk(k, k);
     auto kk_rank = distr_a.rankGlobalTile(kk);
 
@@ -415,13 +412,13 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
     auto& a_panel = a_panels.nextResource();
     auto& b_panel = b_panels.nextResource();
     a_panel.setRangeStart(kk);
-    if (k == a_rows - 1) {
+    if (k == mat_a.nrTiles().rows() - 1) {
       a_panel.setWidth(mat_a.tileSize(kk).rows());
       b_panel.setHeight(mat_a.tileSize(kk).cols());
     }
 
     if (kk_rank.col() == this_rank.col()) {
-      for (SizeType i_local = kk_offset.row(); i_local < local_rows; ++i_local) {
+      for (SizeType i_local = kk_offset.row(); i_local < distr_a.localNrTiles().rows(); ++i_local) {
         const LocalTileIndex ik_panel(Coord::Row, i_local);
         const LocalTileIndex ik(i_local, kk_offset.col());
         a_panel.setTile(ik_panel, mat_a.read(ik));
@@ -429,7 +426,7 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
     }
     broadcast(executor_mpi, kk_rank.col(), a_panel, mpi_row_task_chain);
 
-    for (SizeType j_local = 0; j_local < b_local_cols; ++j_local) {
+    for (SizeType j_local = 0; j_local < distr_b.localNrTiles().cols(); ++j_local) {
       // Triangular solve B's k-th row panel and broadcast B(kj) column-wise
       if (kk_rank.row() == this_rank.row()) {
         auto k_local_row = distr_b.localTileFromGlobalTile<Coord::Row>(k);
@@ -442,12 +439,12 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
       }
     }
     // Nothing else to do if the trailing matrix is empty.
-    if (k == a_rows - 1)
+    if (k == mat_a.nrTiles().rows() - 1)
       continue;
 
     broadcast(executor_mpi, kk_rank.row(), b_panel, mpi_col_task_chain);
 
-    for (SizeType i_local = bt_offset.row(); i_local < local_rows; ++i_local) {
+    for (SizeType i_local = bt_offset.row(); i_local < distr_a.localNrTiles().rows(); ++i_local) {
       // Choose queue priority
       auto i = distr_a.globalTileFromLocalTile<Coord::Row>(i_local);
       auto& trailing_executor = (i == k + 1) ? executor_hp : executor_np;
@@ -455,7 +452,7 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
       const LocalTileIndex ik_panel(Coord::Row, i_local);
 
       // Update trailing matrix
-      for (SizeType j_local = 0; j_local < b_local_cols; ++j_local) {
+      for (SizeType j_local = 0; j_local < distr_b.localNrTiles().cols(); ++j_local) {
         const LocalTileIndex kj_panel(Coord::Col, j_local);
         const LocalTileIndex ij(i_local, j_local);
         const T beta = T(-1.0) / alpha;
@@ -486,8 +483,6 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
 
   const matrix::Distribution& distr_a = mat_a.distribution();
   const matrix::Distribution& distr_b = mat_b.distribution();
-  auto a_rows = mat_a.nrTiles().rows();
-  auto b_local_cols = distr_b.localNrTiles().cols();
 
   // If mat_b is empty return immediately
   if (mat_b.size().isEmpty())
@@ -497,7 +492,7 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
   common::RoundRobin<matrix::Panel<Coord::Col, T, device>> a_panels(n_workspaces, distr_a);
   common::RoundRobin<matrix::Panel<Coord::Row, T, device>> b_panels(n_workspaces, distr_b);
 
-  for (SizeType k = a_rows - 1; k > -1; --k) {
+  for (SizeType k = mat_a.nrTiles().rows() - 1; k > -1; --k) {
     const GlobalTileIndex kk(k, k);
     auto kk_rank = distr_a.rankGlobalTile(kk);
 
@@ -510,7 +505,7 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
 
     auto& a_panel = a_panels.nextResource();
     auto& b_panel = b_panels.nextResource();
-    if (k == a_rows - 1) {
+    if (k == mat_a.nrTiles().rows() - 1) {
       a_panel.setWidth(mat_a.tileSize(kk).rows());
       b_panel.setHeight(mat_a.tileSize(kk).cols());
     }
@@ -524,7 +519,7 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
     }
     broadcast(executor_mpi, kk_rank.col(), a_panel, mpi_row_task_chain);
 
-    for (SizeType j_local = b_local_cols - 1; j_local >= 0; --j_local) {
+    for (SizeType j_local = distr_b.localNrTiles().cols() - 1; j_local >= 0; --j_local) {
       // Triangular solve B's k-th row panel and broadcast B(kj) column-wise
       if (kk_rank.row() == this_rank.row()) {
         auto k_local_row = distr_b.localTileFromGlobalTile<Coord::Row>(k);
@@ -550,7 +545,7 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
       const LocalTileIndex ik_panel(Coord::Row, i_local);
 
       // Update trailing matrix
-      for (SizeType j_local = b_local_cols - 1; j_local >= 0; --j_local) {
+      for (SizeType j_local = distr_b.localNrTiles().cols() - 1; j_local >= 0; --j_local) {
         const LocalTileIndex kj_panel(Coord::Col, j_local);
         const LocalTileIndex ij(i_local, j_local);
         const T beta = T(-1.0) / alpha;
@@ -581,8 +576,6 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
 
   const matrix::Distribution& distr_a = mat_a.distribution();
   const matrix::Distribution& distr_b = mat_b.distribution();
-  auto a_cols = mat_a.nrTiles().cols();
-  auto b_local_rows = distr_b.localNrTiles().rows();
 
   // If mat_b is empty return immediately
   if (mat_b.size().isEmpty())
@@ -592,7 +585,7 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
   common::RoundRobin<matrix::Panel<Coord::Row, T, device>> a_panels(n_workspaces, distr_a);
   common::RoundRobin<matrix::Panel<Coord::Col, T, device>> b_panels(n_workspaces, distr_b);
 
-  for (SizeType k = a_cols - 1; k > -1; --k) {
+  for (SizeType k = mat_a.nrTiles().cols() - 1; k > -1; --k) {
     const GlobalTileIndex kk(k, k);
     auto kk_rank = distr_a.rankGlobalTile(kk);
 
@@ -605,7 +598,7 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
 
     auto& a_panel = a_panels.nextResource();
     auto& b_panel = b_panels.nextResource();
-    if (k == a_cols - 1) {
+    if (k == mat_a.nrTiles().cols() - 1) {
       a_panel.setHeight(mat_a.tileSize(kk).cols());
       b_panel.setWidth(mat_a.tileSize(kk).rows());
     }
@@ -619,7 +612,7 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
     }
     broadcast(executor_mpi, kk_rank.row(), a_panel, mpi_col_task_chain);
 
-    for (SizeType i_local = b_local_rows - 1; i_local >= 0; --i_local) {
+    for (SizeType i_local = distr_b.localNrTiles().rows() - 1; i_local >= 0; --i_local) {
       // Triangular solve B's k-th col panel and broadcast B(ik) row-wise
       if (kk_rank.col() == this_rank.col()) {
         auto k_local_col = distr_b.localTileFromGlobalTile<Coord::Col>(k);
@@ -645,7 +638,7 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
       const LocalTileIndex kj_panel(Coord::Col, j_local);
 
       // Update trailing matrix
-      for (SizeType i_local = b_local_rows - 1; i_local >= 0; --i_local) {
+      for (SizeType i_local = distr_b.localNrTiles().rows() - 1; i_local >= 0; --i_local) {
         const LocalTileIndex ik_panel(Coord::Row, i_local);
         const LocalTileIndex ij(i_local, j_local);
         const T beta = T(-1.0) / alpha;
@@ -676,9 +669,6 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
 
   const matrix::Distribution& distr_a = mat_a.distribution();
   const matrix::Distribution& distr_b = mat_b.distribution();
-  auto a_cols = mat_a.nrTiles().cols();
-  auto local_cols = distr_a.localNrTiles().cols();
-  auto b_local_rows = distr_b.localNrTiles().rows();
 
   // If mat_b is empty return immediately
   if (mat_b.size().isEmpty())
@@ -688,7 +678,7 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
   common::RoundRobin<matrix::Panel<Coord::Row, T, device>> a_panels(n_workspaces, distr_a);
   common::RoundRobin<matrix::Panel<Coord::Col, T, device>> b_panels(n_workspaces, distr_b);
 
-  for (SizeType k = 0; k < a_cols; ++k) {
+  for (SizeType k = 0; k < mat_a.nrTiles().cols(); ++k) {
     const GlobalTileIndex kk(k, k);
     auto kk_rank = distr_a.rankGlobalTile(kk);
 
@@ -702,13 +692,13 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
     auto& a_panel = a_panels.nextResource();
     auto& b_panel = b_panels.nextResource();
     a_panel.setRangeStart(kk);
-    if (k == a_cols - 1) {
+    if (k == mat_a.nrTiles().cols() - 1) {
       a_panel.setHeight(mat_a.tileSize(kk).rows());
       b_panel.setWidth(mat_a.tileSize(kk).cols());
     }
 
     if (kk_rank.row() == this_rank.row()) {
-      for (SizeType j_local = kk_offset.col(); j_local < local_cols; ++j_local) {
+      for (SizeType j_local = kk_offset.col(); j_local < distr_a.localNrTiles().cols(); ++j_local) {
         const LocalTileIndex kj_panel(Coord::Col, j_local);
         const LocalTileIndex kj(kk_offset.row(), j_local);
         a_panel.setTile(kj_panel, mat_a.read(kj));
@@ -716,7 +706,7 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
     }
     broadcast(executor_mpi, kk_rank.row(), a_panel, mpi_col_task_chain);
 
-    for (SizeType i_local = 0; i_local < b_local_rows; ++i_local) {
+    for (SizeType i_local = 0; i_local < distr_b.localNrTiles().rows(); ++i_local) {
       // Triangular solve B's k-th row panel and broadcast B(kj) column-wise
       if (kk_rank.col() == this_rank.col()) {
         auto k_local_col = distr_b.localTileFromGlobalTile<Coord::Col>(k);
@@ -729,12 +719,12 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
       }
     }
     // Nothing else to do if the trailing matrix is empty.
-    if (k == a_cols - 1)
+    if (k == mat_a.nrTiles().cols() - 1)
       continue;
 
     broadcast(executor_mpi, kk_rank.col(), b_panel, mpi_row_task_chain);
 
-    for (SizeType j_local = bt_offset.col(); j_local < local_cols; ++j_local) {
+    for (SizeType j_local = bt_offset.col(); j_local < distr_a.localNrTiles().cols(); ++j_local) {
       // Choose queue priority
       auto j = distr_a.globalTileFromLocalTile<Coord::Col>(j_local);
       auto& trailing_executor = (j == k + 1) ? executor_hp : executor_np;
@@ -742,7 +732,7 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
       const LocalTileIndex kj_panel(Coord::Col, j_local);
 
       // Update trailing matrix
-      for (SizeType i_local = 0; i_local < b_local_rows; ++i_local) {
+      for (SizeType i_local = 0; i_local < distr_b.localNrTiles().rows(); ++i_local) {
         const LocalTileIndex ik_panel(Coord::Row, i_local);
         const LocalTileIndex ij(i_local, j_local);
         const T beta = T(-1.0) / alpha;

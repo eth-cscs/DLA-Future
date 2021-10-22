@@ -235,7 +235,8 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
       tausloc.push_back(tau);
       tau_tile.push_back(tau);
     }
-    taus.push_back(hpx::make_ready_future(tau_tile));
+    if (grid.rank().col() == mat_v.distribution().template rankGlobalTile<Coord::Col>(k / mb))
+      taus.push_back(hpx::make_ready_future(tau_tile));
   }
 
   for (SizeType j = nr_reflector - 1; j >= 0; --j) {

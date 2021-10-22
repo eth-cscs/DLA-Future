@@ -153,7 +153,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     auto taus_panel = taus[k];
     const SizeType nr_reflectors = (is_last) ? nr_reflectors_last_block : mat_v.blockSize().cols();
     const LocalTileIndex t_index{Coord::Col, k};
-
     dlaf::factorization::internal::computeTFactor<Backend::MC>(nr_reflectors, mat_v, v_start, taus_panel,
                                                                panelT(t_index));
 
@@ -223,7 +222,9 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panelsW(n_workspaces, dist_v);
   common::RoundRobin<matrix::Panel<Coord::Row, T, Device::CPU>> panelsW2(n_workspaces, dist_c);
 
-  dlaf::matrix::Distribution dist_t({mb, total_nr_reflector}, {mb, mb});
+  dlaf::matrix::Distribution dist_t({mb, total_nr_reflector}, {mb, mb}, grid.size(), this_rank,
+                                    dist_v.sourceRankIndex());
+  matrix::Panel<Coord::Row, T, Device::CPU> panelT(dist_t);
 
   const SizeType nr_reflector_blocks = dist_t.nrTiles().cols();
   const SizeType nr_reflectors_last_block =
@@ -233,15 +234,13 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     bool is_last = (k == nr_reflector_blocks - 1);
     const GlobalTileIndex v_start{k + 1, k};
 
-    dlaf::matrix::Distribution dist_tkk({mb, dist_t.tileSize(GlobalTileIndex(0, k)).cols()}, {mb, mb});
-    matrix::Panel<Coord::Row, T, Device::CPU> panelT(dist_tkk);
-
     auto& panelV = panelsV.nextResource();
     auto& panelW = panelsW.nextResource();
     auto& panelW2 = panelsW2.nextResource();
 
     panelV.setRangeStart(v_start);
     panelW.setRangeStart(v_start);
+    panelT.setRangeStart(GlobalTileIndex(k, k));
 
     if (is_last) {
       panelT.setHeight(nr_reflectors_last_block);
@@ -256,7 +255,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       for (SizeType i_local = dist_v.template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
            i_local < dist_c.localNrTiles().rows(); ++i_local) {
         auto i = dist_v.template globalTileFromLocalTile<Coord::Row>(i_local);
-        auto ik = LocalTileIndex{Coord::Row, i_local};
+        auto ik_panel = LocalTileIndex{Coord::Row, i_local};
         if (i == (k + 1)) {
           hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v =
               mat_v.read(GlobalTileIndex(i, k));
@@ -266,62 +265,60 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
                           {{0, 0},
                            {dist_v.tileSize(GlobalTileIndex(i, k)).rows(), nr_reflectors_last_block}});
           }
-          copySingleTile(tile_v, panelV(ik));
+          copySingleTile(tile_v, panelV(ik_panel));
           hpx::dataflow(hpx::launch::sync, unwrapping(tile::laset<T>), lapack::MatrixType::Upper, 0.f,
-                        1.f, panelV(ik));
+                        1.f, panelV(ik_panel));
         }
         else {
-          panelV.setTile(ik, mat_v.read(GlobalTileIndex(i, k)));
+          panelV.setTile(ik_panel, mat_v.read(GlobalTileIndex(i, k)));
         }
       }
-    }
 
-    auto taus_panel = taus[k];
-    const SizeType nr_reflectors = (is_last) ? nr_reflectors_last_block : mat_v.blockSize().cols();
-    const LocalTileIndex t_index{Coord::Col, 0};
-    dlaf::factorization::internal::computeTFactor<Backend::MC>(nr_reflectors, mat_v, v_start, taus_panel,
-                                                               panelT(t_index), mpi_col_task_chain);
+      auto k_local = dist_t.template localTileFromGlobalTile<Coord::Col>(k);
+      const LocalTileIndex t_index{Coord::Col, k_local};
+      auto taus_panel = taus[dist_v.template localTileFromGlobalTile<Coord::Col>(k)];
+      const SizeType nr_reflectors = (is_last) ? nr_reflectors_last_block : mat_v.blockSize().cols();
+      dlaf::factorization::internal::computeTFactor<Backend::MC>(nr_reflectors, mat_v, v_start,
+                                                                 taus_panel, panelT(t_index),
+                                                                 mpi_col_task_chain);
 
-    if (this_rank.col() == k_rank_col) {
       for (SizeType i_local = dist_v.template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
            i_local < dist_c.localNrTiles().rows(); ++i_local) {
         // WH = V T
-        const LocalTileIndex ik{Coord::Row, i_local};
-        copySingleTile(panelV.read(ik), panelW(ik));
-        trmmPanel(executor_np, panelT.read(t_index), panelW(ik));
+        const LocalTileIndex ik_panel{Coord::Row, i_local};
+        copySingleTile(panelV.read(ik_panel), panelW(ik_panel));
+        trmmPanel(executor_np, panelT.read(t_index), panelW(ik_panel));
       }
     }
 
     matrix::util::set0(executor_hp, panelW2);
 
-    // Broadcast W row-wise
     broadcast(executor_mpi, k_rank_col, panelW, mpi_row_task_chain);
 
     for (SizeType i_local = dist_c.template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
          i_local < dist_c.localNrTiles().rows(); ++i_local) {
-      const LocalTileIndex ik{Coord::Row, i_local};
+      const LocalTileIndex ik_panel{Coord::Row, i_local};
       for (SizeType j_local = 0; j_local < dist_c.localNrTiles().cols(); ++j_local) {
         // W2 = W C
-        const LocalTileIndex kj{Coord::Col, j_local};
+        const LocalTileIndex kj_panel{Coord::Col, j_local};
         const LocalTileIndex ij{i_local, j_local};
-        gemmUpdateW2(executor_np, panelW(ik), mat_c.read(ij), panelW2(kj));
+        gemmUpdateW2(executor_np, panelW(ik_panel), mat_c.read(ij), panelW2(kj_panel));
       }
     }
 
-    for (const auto& kj : panelW2.iteratorLocal())
-      scheduleAllReduceInPlace(executor_mpi, mpi_col_task_chain(), MPI_SUM, panelW2(kj));
+    for (const auto& kj_panel : panelW2.iteratorLocal())
+      scheduleAllReduceInPlace(executor_mpi, mpi_col_task_chain(), MPI_SUM, panelW2(kj_panel));
 
-    // Broadcast V row-wise
     broadcast(executor_mpi, k_rank_col, panelV, mpi_row_task_chain);
 
     for (SizeType i_local = dist_c.template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
          i_local < dist_c.localNrTiles().rows(); ++i_local) {
-      const LocalTileIndex ik{Coord::Row, i_local};
+      const LocalTileIndex ik_panel{Coord::Row, i_local};
       for (SizeType j_local = 0; j_local < dist_c.localNrTiles().cols(); ++j_local) {
         // C = C - V W2
-        const LocalTileIndex kj{Coord::Col, j_local};
+        const LocalTileIndex kj_panel{Coord::Col, j_local};
         const LocalTileIndex ij(i_local, j_local);
-        gemmTrailingMatrix(executor_np, panelV.read(ik), panelW2.read(kj), mat_c(ij));
+        gemmTrailingMatrix(executor_np, panelV.read(ik_panel), panelW2.read(kj_panel), mat_c(ij));
       }
     }
 

@@ -7,13 +7,13 @@ import systems
 # Benchmark parameters
 # https://confluence.cscs.ch/display/COMPMAT/Tall-and-skinny+matrix+multiplication+benchmark
 
-run_name = "tsgemm"
-system = systems.cscs["daint-mc"]
+run_name = "tsgemm" # tsgemm-gpu
+system = systems.cscs["daint-mc"] # daint-gpu
 dlaf_build_dir = "~code/dlaf/build"
 run_dir = f"~/runs/{run_name}"
 time_min = 40
 nruns = 20
-ranks_per_node_arr = [2]
+ranks_per_node_arr = [2] # 1 for gpu
 nodes_arr = [36, 64, 100, 144, 196, 256]
 m_sz_arr = [10000]
 n_sz_arr = [

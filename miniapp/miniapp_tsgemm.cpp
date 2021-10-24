@@ -114,6 +114,8 @@ struct options_t {
 /// Handle CLI options
 options_t parseOptions(hpx::program_options::variables_map&);
 
+double calc_tsgemm_ops(const options_t&, double);
+
 }  // end namespace
 
 int hpx_main(hpx::program_options::variables_map& vm) {
@@ -157,8 +159,6 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 
     double elapsed_time;
     {
-      // MatrixMirrorType matrix(matrix_host);
-
       cfin_mat.waitLocalTiles();
       MPI_Barrier(world);
 
@@ -171,15 +171,10 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     }
 
     if (rank == 0 && run_index >= 0) {
-      double mul_ops = opts.m * opts.n * opts.k;
-      double add_ops = mul_ops - 1;
-      double total_ops = dlaf::total_ops<ScalarType>(add_ops, mul_ops);
-      double gigaflops = total_ops / elapsed_time / 1e9;
-
       // clang-format off
       std::cout << "[" << run_index << "]"
                 << " " << elapsed_time << "s"
-                << " " << gigaflops << "GFlop/s"
+                << " " << calc_tsgemm_ops(opts, elapsed_time) << "GFlop/s"
                 << " " << opts.m
                 << " " << opts.n
                 << " " << opts.k
@@ -246,65 +241,6 @@ int main(int argc, char** argv) {
 
 namespace {
 
-// using dlaf::common::iterateRange2D;
-
-// Send Cini tile to the process it belongs (`tile_rank`)
-// void send_tile(ConstTileType const& c_tile, SizeType tile_rank, SizeType tag, MPI_Comm comm) {
-//  SizeType num_elements = c_tile.ld() * c_tile.size().cols();
-//  void const* buf = c_tile.ptr(TileElementIndex(0, 0));
-//  MPI_Datatype dtype = dlaf::comm::mpi_datatype<ScalarType>::type;
-//
-//  MPI_Request req;
-//  MPI_Isend(buf, num_elements, dtype, tile_rank, tag, comm, &req);
-//  hpx::util::yield_while([&req] {
-//    int flag;
-//    MPI_Test(&req, &flag, MPI_STATUS_IGNORE);
-//    return flag == 0;
-//  });
-//}
-
-// Reduce into Cini tile from all other processes
-// void recv_tile(TileType& c_tile, int this_rank, SizeType tag, MPI_Comm comm) {
-//  int nprocs = Communicator(MPI_COMM_WORLD).size() - 1;
-//  SizeType nelems = c_tile.ld() * c_tile.size().cols();
-//  ScalarType* tile_buf = c_tile.ptr(TileElementIndex(0, 0));
-//  MPI_Datatype dtype = dlaf::comm::mpi_datatype<ScalarType>::type;
-//
-//  // Note: these allocations should be better made from a pool
-//  // auto message = dlaf::comm::make_message(dlaf::common::make_data(c_tile));
-//
-//  std::vector<MPI_Request> reqs(nprocs);
-//  std::vector<ScalarType> staging_buf(nprocs * nelems);
-//
-//  // Issue receives
-//  for (int r_idx = 0; r_idx < nprocs; ++r_idx) {
-//    int rank = (r_idx < this_rank) ? r_idx : r_idx + 1;  // skip `this_rank`
-//    ScalarType* rcv_buf = staging_buf.data() + r_idx * nelems;
-//    MPI_Irecv(rcv_buf, nelems, dtype, rank, tag, comm, &reqs[r_idx]);
-//  }
-//
-//  // Yield until all issued receives completed.
-//  hpx::util::yield_while([&reqs, nprocs] {
-//    int flag;
-//    MPI_Testall(nprocs, reqs.data(), &flag, MPI_STATUSES_IGNORE);
-//    return flag == 0;
-//  });
-//
-//  // Do the reduction in tile_buf
-//  for (int r_idx = 0; r_idx < nprocs; ++r_idx) {
-//    ScalarType const* rcv_buf = staging_buf.data() + r_idx * nelems;
-//    for (int el_idx = 0; el_idx < nelems; ++el_idx) {
-//      tile_buf[el_idx] += rcv_buf[el_idx];
-//    }
-//  }
-//}
-
-// void offload_tile(ConstTileType const& cini_tile, TileType& cfin_tile) {
-//  for (auto idx : iterateRange2D(cini_tile.size())) {
-//    cfin_tile(idx) = cini_tile(idx);
-//  }
-//}
-
 template <Backend backend>
 void sirius_gemm(CommunicatorGrid grid, ConstMatrixType& a_mat, ConstMatrixType& b_mat,
                  MatrixType& cini_mat, MatrixType& cfin_mat) {
@@ -334,14 +270,6 @@ void sirius_gemm(CommunicatorGrid grid, ConstMatrixType& a_mat, ConstMatrixType&
     GlobalTileIndex c_idx(cloc_idx.row(), cloc_idx.col());
 
     int tile_rank = grid.rankFullCommunicator(cfin_dist.rankGlobalTile(c_idx));
-    //
-    //    // Order tasks such that tiles are computed/communicated in batches of `batch_size`
-    //    SizeType c_dep_i = cloc_idx.row() - dep_tile_idx.row();
-    //    SizeType c_dep_j = cloc_idx.col() - dep_tile_idx.col();
-    //    bool c_dep_exists = c_dep_i < 0 || c_dep_j < 0;
-    //    hpx::shared_future<void> c_dep_tile_fut =
-    //        (c_dep_exists) ? hpx::make_ready_future()
-    //                       : hpx::shared_future<void>(cini_mat.read(GlobalTileIndex(c_dep_i, c_dep_j)));
 
     // GEMM
     hpx::dataflow(executor_np, unwrapExtendTiles(annotated_function(gemm_o, "gemm")), blas::Op::Trans,
@@ -356,28 +284,10 @@ void sirius_gemm(CommunicatorGrid grid, ConstMatrixType& a_mat, ConstMatrixType&
       // COPY from c_ini to c_fin
       hpx::dataflow(executor_hp, unwrapExtendTiles(annotated_function(copy_o, "copy")),
                     cini_mat.read(c_idx), cfin_mat(c_idx));
-
-      //      // RECV
-      //      auto recv_f = unwrapping(
-      //          annotated_function([=](auto&& c_tile) { recv_tile(c_tile, this_rank, tile_tag, mpi_comm); },
-      //                             "recv"));
-      //      hpx::dataflow(mpi_executor, recv_f, cini_mat(c_idx));
-      //
-      //      // OFFLOAD
-      //      auto offload_f =
-      //          unwrapping(annotated_function([](auto&& cini_tile,
-      //                                           auto&& cfin_tile) { offload_tile(cini_tile, cfin_tile); },
-      //                                        "offload"));
-      //      hpx::dataflow(offload_f, cini_mat.read(c_idx), cfin_mat(c_idx));
     }
     else {
       dlaf::comm::scheduleReduceSend(executor_mpi, tile_rank, mpi_chain(), MPI_SUM,
                                      cini_mat.read(c_idx));
-      //      // SEND
-      //      auto send_f = unwrapping(
-      //          annotated_function([=](auto&& c_tile) { send_tile(c_tile, tile_rank, tile_tag, mpi_comm); },
-      //                             "send"));
-      //      hpx::dataflow(mpi_executor, send_f, cini_mat(c_idx));
     }
   }
 }
@@ -436,36 +346,16 @@ options_t parseOptions(hpx::program_options::variables_map& vm) {
   DLAF_ASSERT(opts.mb > 0, opts.mb);
   DLAF_ASSERT(opts.nb > 0, opts.nb);
   DLAF_ASSERT(opts.nruns > 0, opts.nruns);
-  // DLAF_ASSERT(opts.nwarmups >= 0, opts.nwarmups);
 
-  // int rank;
-  // MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-  // int ntiles_m = ceilDiv(len_m, tile_m);
-  // int ntiles_n = ceilDiv(len_n, tile_n);
-  // if (pgrid_rows > ntiles_m) {
-  //  std::printf("[ERROR] There are more processes along `m` than tiles.\n");
-  //  MPI_Abort(MPI_COMM_WORLD, 1);
-  //}
-  // if (pgrid_cols > ntiles_n) {
-  //  std::printf("[ERROR] There are more processes along `n` than tiles.\n");
-  //  MPI_Abort(MPI_COMM_WORLD, 1);
-  //}
-
-  // Check if too many non-blocking communications are being issued.
-  // if (rank == 0 && batch_size > 1000) {
-  //  std::printf("[WARNING] There are too many tiles batched, this may "
-  //              "result in slowdowns as the number of issued non-blocking "
-  //              "communications at each process is proportianal to the batch size.\n");
-  //}
-
-  // Setup
-  // if (rank == 0) {
-  //  std::printf("len mnk  = %d %d %d\n", len_m, len_n, len_k);
-  //  std::printf("tile mnk = %d %d\n", tile_m, tile_n);
-  //  std::printf("pgrid    = %d %d\n", pgrid_rows, pgrid_cols);
-  //}
   return opts;
+}
+
+double calc_tsgemm_ops(const options_t& opts, double elapsed_time) {
+  double mul_ops = opts.m * opts.n * opts.k;
+  double add_ops = opts.m * opts.n * (opts.k - 1);
+  double total_ops = dlaf::total_ops<ScalarType>(add_ops, mul_ops);
+  double gigaflops = total_ops / elapsed_time / 1e9;
+  return gigaflops;
 }
 
 }

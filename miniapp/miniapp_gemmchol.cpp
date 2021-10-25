@@ -94,6 +94,9 @@ template <Backend backend>
 void sirius_tsgemm(CommunicatorGrid grid, ConstMatrixType& a_mat, ConstMatrixType& b_mat,
                    MatrixType& cini_mat, MatrixType& cfin_mat);
 
+template <Backend backend>
+void make_diag_dominant(CommunicatorGrid grid, MatrixType& cfin_mat);
+
 // Sum the elements of the matrix. Useful for debugging.
 // ScalarType sumMatrixElements(Communicator const& comm, MatrixType& matrix);
 
@@ -141,7 +144,6 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 
   dlaf::matrix::util::set_random(a_mat);
   dlaf::matrix::copy(a_mat, b_mat);
-  b_mat.waitLocalTiles();
 
   // Matrices `C`-initial and `C`-final
   using dlaf::matrix::tileLayout;
@@ -169,6 +171,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
         cfin_mat.waitLocalTiles();
         MPI_Barrier(world);
       }
+      make_diag_dominant<Backend::Default>(comm_grid, cfin_mat);
+
       cholesky<Backend::Default, Device::Default, ScalarType>(comm_grid, blas::Uplo::Lower, cfin_mat);
 
       cfin_mat.waitLocalTiles();
@@ -274,6 +278,40 @@ void sirius_tsgemm(CommunicatorGrid grid, ConstMatrixType& a_mat, ConstMatrixTyp
     else {
       dlaf::comm::scheduleReduceSend(executor_mpi, tile_rank, mpi_chain(), MPI_SUM,
                                      cini_mat.read(c_idx));
+    }
+  }
+}
+
+template <Backend backend>
+void make_diag_dominant(CommunicatorGrid grid, MatrixType& cfin_mat) {
+  using dlaf::comm::Index2D;
+  using dlaf::comm::Executor;
+  using hpx::unwrapping;
+
+  DLAF_ASSERT(dlaf::matrix::square_size(cfin_mat), cfin_mat);
+  DLAF_ASSERT(dlaf::matrix::square_blocksize(cfin_mat), cfin_mat);
+
+  auto executor_hp = dlaf::getHpExecutor<backend>();
+
+  Distribution const& dist = cfin_mat.distribution();
+  const Index2D this_rank = grid.rank();
+  const SizeType nrtile = cfin_mat.nrTiles().cols();
+  const SizeType m_dim = cfin_mat.size().rows();
+
+  // Iterate over diagonal tiles
+  for (SizeType k = 0; k < nrtile; ++k) {
+    const GlobalTileIndex kk_idx(k, k);
+    const Index2D kk_rank = dist.rankGlobalTile(kk_idx);
+
+    if (kk_rank == this_rank) {
+      auto update_diag = hpx::unwrapping([m_dim](auto&& tile) {
+        SizeType ts = tile.size().rows();
+        // Iterate over the diagonal of the tile
+        for (SizeType kt = 0; kt < ts; ++kt) {
+          tile(TileElementIndex(kt, kt)) += SizeType(m_dim);
+        }
+      });
+      hpx::dataflow(executor_hp, std::move(update_diag), cfin_mat(kk_idx));
     }
   }
 }

@@ -9,7 +9,7 @@ import systems
 
 run_name = "tsgemm" # tsgemm-gpu
 system = systems.cscs["daint-mc"] # daint-gpu
-dlaf_build_dir = "~code/dlaf/build"
+dlaf_build_dir = "~/code/dlaf/build"
 run_dir = f"~/runs/{run_name}"
 time_min = 40
 nruns = 20

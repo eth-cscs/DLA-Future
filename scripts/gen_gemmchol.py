@@ -9,7 +9,7 @@ import systems
 
 run_name = "gemmchol" # gemmchol-gpu
 system = systems.cscs["daint-mc"] # daint-gpu
-dlaf_build_dir = "~code/dlaf/build"
+dlaf_build_dir = "~/code/dlaf/build"
 run_dir = f"~/runs/{run_name}"
 time_min = 40
 nruns = 20
@@ -28,6 +28,7 @@ m_sz_arr = [
 ]
 k_sz_arr = [1000000]
 mb_sz_arr = [256, 512]
+variations = ["na", "no_ovlp"]
 
 for nodes in nodes_arr:
     for ranks_per_node in ranks_per_node_arr:
@@ -36,7 +37,8 @@ for nodes in nodes_arr:
             m_sz,
             k_sz,
             mb_sz,
-        ) in product(m_sz_arr, k_sz_arr, mb_sz_arr):
+            suffix,
+        ) in product(m_sz_arr, k_sz_arr, mb_sz_arr, variations):
 
             job_text += mp.gemmchol(
                 system,
@@ -47,6 +49,7 @@ for nodes in nodes_arr:
                 k_sz,
                 mb_sz,
                 nruns,
+                suffix=suffix
             )
 
         print(job_text)

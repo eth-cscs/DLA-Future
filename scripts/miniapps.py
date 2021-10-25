@@ -194,4 +194,6 @@ def gemmchol(
     run_cmd = run_command(system, total_ranks, cpus_per_rank)
     if suffix == "apex":
         run_cmd += " apex"
-    return "\n" + f"{env} {run_cmd} {cmd} >> tsgemm_{suffix}.out 2>&1".strip()
+    if suffix == "no_ovlp":
+        cmd += " --no-overlap"
+    return "\n" + f"{env} {run_cmd} {cmd} >> gemmchol_{suffix}.out 2>&1".strip()

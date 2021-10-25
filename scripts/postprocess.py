@@ -187,6 +187,9 @@ def _parse_line_based(fout, bench_name, nodes):
     if "dlaf" in bench_name:
         pstr_arr = []
         pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}"
+    elif "gemmchol" in bench_name:
+        pstr_arr = []
+        pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s {m_dim:d} {k_dim:d} {mb_dim:d} {grid_rows:d} {grid_cols:d} {:d}"
     elif bench_name.startswith("chol_slate"):
         pstr_arr = ["input:{}potrf"]
         pstr_res = "d {} {} column lower {matrix_rows:d} {:d} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:g} {perf:g} NA NA no check"
@@ -238,7 +241,7 @@ def _parse_line_based(fout, bench_name, nodes):
                 rd["matrix_cols"] = rd["matrix_rows"]
 
             # makes _calc_metrics work
-            if not "dlaf" in bench_name:
+            if not "dlaf" in bench_name or not "gemmchol" in bench_name:
                 rd["run_index"] = run_index
                 run_index += 1
 
@@ -285,6 +288,10 @@ def calc_trsm_metrics(df):
     return _calc_metrics(
         ["matrix_rows", "matrix_cols", "block_rows", "nodes", "bench_name"], df
     )
+
+
+def calc_gemmchol_metrics(df):
+    return _calc_metrics(["m_dim", "k_dim", "mb_dim", "nodes", "bench_name"], df)
 
 
 # customize_* functions should accept fig and ax as parameters

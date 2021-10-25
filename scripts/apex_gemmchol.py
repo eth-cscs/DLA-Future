@@ -6,14 +6,15 @@ import systems
 system=systems.cscs["daint-mc"]
 run_name = "apex_gemmchol"
 run_dir = f"~/runs/{run_name}"
+nodes=36
 
 # APEX job
 job_text = mp.init_job_text(
-    system, run_name, nodes=36, time_min=10
+    system, run_name, nodes, time_min=10
 ) + mp.gemmchol(
     system,
     build_dir="~/code/dlaf/build",
-    nodes=36,
+    nodes=nodes,
     rpn=2,
     m_sz=10000,
     k_sz=1000000,

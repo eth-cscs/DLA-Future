@@ -189,7 +189,11 @@ def _parse_line_based(fout, bench_name, nodes):
         pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}"
     elif "gemmchol" in bench_name:
         pstr_arr = []
-        pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s {m_dim:d} {k_dim:d} {mb_dim:d} {grid_rows:d} {grid_cols:d} {:d}"
+        pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s {m_dim:d} {k_dim:d} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d}"
+    elif "tsgemm" in bench_name:
+        #[7] 2.22594s 35939.9GFlop/s 10000 1000 1000000 256 256 8 9 18
+        pstr_arr = []
+        pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s {matrix_rows:d} {matrix_cols:d} {k_dim:d} {block_rows:d} {block_cols:d} {grid_rows:d} {grid_cols:d} {:d}"
     elif bench_name.startswith("chol_slate"):
         pstr_arr = ["input:{}potrf"]
         pstr_res = "d {} {} column lower {matrix_rows:d} {:d} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:g} {perf:g} NA NA no check"
@@ -289,9 +293,111 @@ def calc_trsm_metrics(df):
         ["matrix_rows", "matrix_cols", "block_rows", "nodes", "bench_name"], df
     )
 
+def calc_tsgemm_metrics(df):
+    return _calc_metrics(["matrix_rows", "matrix_cols", "k_dim", "block_rows", "nodes", "bench_name"], df)
 
 def calc_gemmchol_metrics(df):
-    return _calc_metrics(["m_dim", "k_dim", "mb_dim", "nodes", "bench_name"], df)
+    return _calc_metrics(["m_dim", "k_dim", "block_rows", "nodes", "bench_name"], df)
+
+
+# customize_* functions should accept fig and ax as parameters
+def gen_gemmchol_plots(
+    df,
+    logx=False,
+    combine_mb=False,
+    filename_suffix=None,
+    customize_ppn=None,
+    customize_time=None,
+    **proxy_args,
+):
+    if combine_mb:
+        it_space = df.groupby(["m_dim", "k_dim"])
+    else:
+        it_space = df.groupby(["m_dim", "k_dim", "block_rows"])
+
+    for x, grp_data in it_space:
+        m = x[0]
+        k = x[1]
+        if not combine_mb:
+            mb = x[2]
+
+        title = f"GEMMCHOL : small_dim = {m} | big_dim = {k}"
+        filename_ppn = f"tsgemm_ppn_{m}_{k}"
+        filename_time = f"tsgemm_time_{m}_{k}"
+        if not combine_mb:
+            title += f" | block_size = {mb}"
+            filename_ppn += f"_{mb}"
+            filename_time += f"_{mb}"
+        if filename_suffix != None:
+            filename_ppn += f"_{filename_suffix}"
+            filename_time += f"_{filename_suffix}"
+
+        with NodePlotWriter(
+            filename_ppn, "ppn", title, grp_data, combine_mb=combine_mb, **proxy_args
+        ) as (fig, ax):
+            if customize_ppn:
+                customize_ppn(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+            ax.legend()
+
+        with NodePlotWriter(
+            filename_time, "time", title, grp_data, combine_mb=combine_mb, **proxy_args
+        ) as (fig, ax):
+            if customize_time:
+                customize_time(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+            ax.legend()
+
+# customize_* functions should accept fig and ax as parameters
+def gen_tsgemm_plots(
+    df,
+    logx=False,
+    combine_mb=False,
+    filename_suffix=None,
+    customize_ppn=None,
+    customize_time=None,
+    **proxy_args,
+):
+    if combine_mb:
+        it_space = df.groupby(["matrix_rows", "matrix_cols", "k_dim"])
+    else:
+        it_space = df.groupby(["matrix_rows", "matrix_cols", "k_dim", "block_rows"])
+
+    for x, grp_data in it_space:
+        m = x[0]
+        n = x[1]
+        k = x[2]
+        if not combine_mb:
+            mb = x[3]
+
+        title = f"TSGEMM: mnk = {m}x{n}x{k}"
+        filename_ppn = f"tsgemm_ppn_{m}_{n}_{k}"
+        filename_time = f"tsgemm_time_{m}_{n}_{k}"
+        if not combine_mb:
+            title += f"| block_size = {mb} x {mb}"
+            filename_ppn += f"_{mb}"
+            filename_time += f"_{mb}"
+        if filename_suffix != None:
+            filename_ppn += f"_{filename_suffix}"
+            filename_time += f"_{filename_suffix}"
+
+        with NodePlotWriter(
+            filename_ppn, "ppn", title, grp_data, combine_mb=combine_mb, **proxy_args
+        ) as (fig, ax):
+            if customize_ppn:
+                customize_ppn(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+
+        with NodePlotWriter(
+            filename_time, "time", title, grp_data, combine_mb=combine_mb, **proxy_args
+        ) as (fig, ax):
+            if customize_time:
+                customize_time(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
 
 
 # customize_* functions should accept fig and ax as parameters

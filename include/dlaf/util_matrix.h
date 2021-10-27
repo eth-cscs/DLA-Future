@@ -183,7 +183,7 @@ void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f) {
 /// @pre el_f return type should be T.
 template <class T, class ElementGetter>
 void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f, const blas::Op op) {
-  auto el_op_f = [op, el_f](const auto& index) {
+  auto el_op_f = [op, el_f](const GlobalElementIndex& index) -> T {
     using blas::Op;
     switch (op) {
       case Op::NoTrans:
@@ -192,6 +192,9 @@ void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f, const blas::Op op) 
         return el_f(transposed(index));
       case Op::ConjTrans:
         return dlaf::conj(el_f(transposed(index)));
+      default:
+        DLAF_UNIMPLEMENTED(op);
+        return T{};
     }
   };
 

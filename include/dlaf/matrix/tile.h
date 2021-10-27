@@ -25,8 +25,6 @@
 #include "dlaf/types.h"
 #include "dlaf/util_math.h"
 
-#include "dlaf/common/pipeline.h"
-
 namespace dlaf {
 /// Exception used to notify a continuation task that an exception has been thrown in a dependency task.
 ///
@@ -504,18 +502,8 @@ struct UnwrapFuture {
 template <typename T, Device D>
 struct UnwrapFuture<hpx::future<Tile<T, D>>> {
   template <typename U>
-  static auto call(U&& u) {
-    auto t = u.get();
-    return t;
-  }
-};
-
-template <typename T>
-struct UnwrapFuture<hpx::future<dlaf::common::PromiseGuard<T>>> {
-  template <typename U>
-  static auto call(U&& u) {
-    auto t = u.get();
-    return t;
+  static auto call(U u) {
+    return u.get();
   }
 };
 

@@ -195,18 +195,7 @@ void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f, const blas::Op op) 
     }
   };
 
-  const Distribution& dist = matrix.distribution();
-  for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
-    GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
-    auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
-    auto set_f = hpx::unwrapping([tl_index, el_op_f](auto&& tile) {
-      for (auto el_idx_l : iterate_range2d(tile.size())) {
-        GlobalElementIndex el_idx_g(el_idx_l.row() + tl_index.row(), el_idx_l.col() + tl_index.col());
-        tile(el_idx_l) = el_op_f(el_idx_g);
-      }
-    });
-    hpx::dataflow(std::move(set_f), matrix(tile_wrt_local));
-  }
+  set(matrix, el_op_f);
 }
 
 /// Set the matrix with random values whose absolute values are less than 1.

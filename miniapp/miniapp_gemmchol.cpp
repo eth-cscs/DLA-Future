@@ -34,6 +34,7 @@
 #include "dlaf/executors.h"
 #include "dlaf/factorization/cholesky.h"
 #include "dlaf/init.h"
+#include "dlaf/matrix/diag_tile.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf/matrix/tile.h"
@@ -144,6 +145,9 @@ int hpx_main(hpx::program_options::variables_map& vm) {
 
   dlaf::matrix::util::set_random(a_mat);
   dlaf::matrix::copy(a_mat, b_mat);
+
+  // MatrixMirrorType a_mat_gpu(a_mat);
+  // MatrixMirrorType b_mat_gpu(b_mat);
 
   // Matrices `C`-initial and `C`-final
   using dlaf::matrix::tileLayout;
@@ -287,6 +291,7 @@ void make_diag_dominant(CommunicatorGrid grid, MatrixType& cfin_mat) {
   using dlaf::comm::Index2D;
   using dlaf::comm::Executor;
   using hpx::unwrapping;
+  using dlaf::matrix::addToDiag;
 
   DLAF_ASSERT(dlaf::matrix::square_size(cfin_mat), cfin_mat);
   DLAF_ASSERT(dlaf::matrix::square_blocksize(cfin_mat), cfin_mat);
@@ -304,14 +309,7 @@ void make_diag_dominant(CommunicatorGrid grid, MatrixType& cfin_mat) {
     const Index2D kk_rank = dist.rankGlobalTile(kk_idx);
 
     if (kk_rank == this_rank) {
-      auto update_diag = hpx::unwrapping([m_dim](auto&& tile) {
-        SizeType ts = tile.size().rows();
-        // Iterate over the diagonal of the tile
-        for (SizeType kt = 0; kt < ts; ++kt) {
-          tile(TileElementIndex(kt, kt)) += SizeType(m_dim);
-        }
-      });
-      hpx::dataflow(executor_hp, std::move(update_diag), cfin_mat(kk_idx));
+      hpx::dataflow(executor_hp, unwrapping(addToDiag<ScalarType>), cfin_mat(kk_idx), ScalarType(m_dim));
     }
   }
 }

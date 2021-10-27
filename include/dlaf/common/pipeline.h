@@ -87,8 +87,8 @@ public:
     hpx::lcos::local::promise<T> promise_next;
     future_ = promise_next.get_future();
 
-    return before_last.then(hpx::launch::sync, hpx::unwrapping([promise_next = std::move(promise_next)](
-                                                                   T&& object) mutable {
+    return before_last.then(hpx::launch::sync,
+                            hpx::unwrapping([promise_next = std::move(promise_next)](T object) mutable {
                               return PromiseGuard<T>{std::move(object), std::move(promise_next)};
                             }));
   }

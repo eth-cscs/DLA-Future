@@ -204,13 +204,13 @@ void Triangular<backend, device, T>::call_LLN(blas::Diag diag, T alpha, Matrix<c
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
 
-  for (SizeType k = m - 1; k > -1; --k) {
+  for (SizeType k = m - 1; k >= 0; --k) {
     for (SizeType j = 0; j < n; ++j) {
       auto kj = LocalTileIndex{k, j};
       // Triangular solve of k-th row Panel of B
       trmm_B_panel_tile(executor_hp, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(kj));
 
-      for (SizeType i = k - 1; i > -1; --i) {
+      for (SizeType i = k - 1; i >= 0; --i) {
         // Choose queue priority
         auto& trailing_executor = (i == k - 1) ? executor_hp : executor_np;
         // Update trailing matrix
@@ -285,14 +285,14 @@ void Triangular<backend, device, T>::call_LUT(blas::Op op, blas::Diag diag, T al
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
 
-  for (SizeType k = m - 1; k > -1; --k) {
-    for (SizeType j = n - 1; j > -1; --j) {
+  for (SizeType k = m - 1; k >= 0; --k) {
+    for (SizeType j = n - 1; j >= 0; --j) {
       auto kj = LocalTileIndex{k, j};
 
       // Triangular solve of k-th row Panel of B
       trmm_B_panel_tile(executor_hp, op, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(kj));
 
-      for (SizeType i = k - 1; i > -1; --i) {
+      for (SizeType i = k - 1; i >= 0; --i) {
         // Choose queue priority
         auto& trailing_executor = (i == k - 1) ? executor_hp : executor_np;
         // Update trailing matrix
@@ -340,14 +340,14 @@ void Triangular<backend, device, T>::call_RLT(blas::Op op, blas::Diag diag, T al
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
 
-  for (SizeType k = n - 1; k > -1; --k) {
-    for (SizeType i = m - 1; i > -1; --i) {
+  for (SizeType k = n - 1; k >= 0; --k) {
+    for (SizeType i = m - 1; i >= 0; --i) {
       auto ik = LocalTileIndex{i, k};
 
       // Triangular solve of k-th col Panel of B
       trmm_B_panel_tile(executor_hp, op, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(ik));
 
-      for (SizeType j = k - 1; j > -1; --j) {
+      for (SizeType j = k - 1; j >= 0; --j) {
         // Choose queue priority
         auto& trailing_executor = (j == k - 1) ? executor_hp : executor_np;
         // Update trailing matrix
@@ -368,14 +368,14 @@ void Triangular<backend, device, T>::call_RUN(blas::Diag diag, T alpha, Matrix<c
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
 
-  for (SizeType k = n - 1; k > -1; --k) {
-    for (SizeType i = m - 1; i > -1; --i) {
+  for (SizeType k = n - 1; k >= 0; --k) {
+    for (SizeType i = m - 1; i >= 0; --i) {
       auto ik = LocalTileIndex{i, k};
 
       // Triangular solve of k-th col Panel of B
       trmm_B_panel_tile(executor_hp, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(ik));
 
-      for (SizeType j = k - 1; j > -1; --j) {
+      for (SizeType j = k - 1; j >= 0; --j) {
         // Choose queue priority
         auto& trailing_executor = (j == k - 1) ? executor_hp : executor_np;
         // Update trailing matrix

@@ -159,14 +159,14 @@ void Triangular<backend, device, T>::call_LLT(blas::Op op, blas::Diag diag, T al
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
 
-  for (SizeType k = m - 1; k > -1; --k) {
-    for (SizeType j = n - 1; j > -1; --j) {
+  for (SizeType k = m - 1; k >= 0; --k) {
+    for (SizeType j = n - 1; j >= 0; --j) {
       auto kj = LocalTileIndex{k, j};
       // Triangular solve of k-th row Panel of B
       hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), Left, Lower, op, diag, alpha,
                     mat_a.read(LocalTileIndex{k, k}), mat_b(kj));
 
-      for (SizeType i = k - 1; i > -1; --i) {
+      for (SizeType i = k - 1; i >= 0; --i) {
         // Choose queue priority
         auto& trailing_executor = (i == k - 1) ? executor_hp : executor_np;
 
@@ -190,13 +190,13 @@ void Triangular<backend, device, T>::call_LUN(blas::Diag diag, T alpha, Matrix<c
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
 
-  for (SizeType k = m - 1; k > -1; --k) {
-    for (SizeType j = n - 1; j > -1; --j) {
+  for (SizeType k = m - 1; k >= 0; --k) {
+    for (SizeType j = n - 1; j >= 0; --j) {
       auto kj = LocalTileIndex{k, j};
       // Triangular solve of k-th row Panel of B
       trsm_B_panel_tile(executor_hp, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(kj));
 
-      for (SizeType i = k - 1; i > -1; --i) {
+      for (SizeType i = k - 1; i >= 0; --i) {
         // Choose queue priority
         auto& trailing_executor = (i == k - 1) ? executor_hp : executor_np;
         auto beta = static_cast<T>(-1.0) / alpha;
@@ -253,13 +253,13 @@ void Triangular<backend, device, T>::call_RLN(blas::Diag diag, T alpha, Matrix<c
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
 
-  for (SizeType k = n - 1; k > -1; --k) {
-    for (SizeType i = m - 1; i > -1; --i) {
+  for (SizeType k = n - 1; k >= 0; --k) {
+    for (SizeType i = m - 1; i >= 0; --i) {
       auto ik = LocalTileIndex{i, k};
 
       // Triangular solve of k-th col Panel of B
       trsm_B_panel_tile(executor_hp, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(ik));
-      for (SizeType j = k - 1; j > -1; --j) {
+      for (SizeType j = k - 1; j >= 0; --j) {
         // Choose queue priority
         auto& trailing_executor = (j == k - 1) ? executor_hp : executor_np;
 
@@ -350,15 +350,15 @@ void Triangular<backend, device, T>::call_RUT(blas::Op op, blas::Diag diag, T al
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
 
-  for (SizeType k = n - 1; k > -1; --k) {
-    for (SizeType i = m - 1; i > -1; --i) {
+  for (SizeType k = n - 1; k >= 0; --k) {
+    for (SizeType i = m - 1; i >= 0; --i) {
       auto ik = LocalTileIndex{i, k};
 
       // Triangular solve of k-th col Panel of B
       hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::trsm_o), Right, Upper, op, diag, alpha,
                     mat_a.read(LocalTileIndex{k, k}), mat_b(ik));
 
-      for (SizeType j = k - 1; j > -1; --j) {
+      for (SizeType j = k - 1; j >= 0; --j) {
         // Choose queue priority
         auto& trailing_executor = (j == k - 1) ? executor_hp : executor_np;
 
@@ -492,7 +492,7 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
   common::RoundRobin<matrix::Panel<Coord::Col, T, device>> a_panels(n_workspaces, distr_a);
   common::RoundRobin<matrix::Panel<Coord::Row, T, device>> b_panels(n_workspaces, distr_b);
 
-  for (SizeType k = mat_a.nrTiles().rows() - 1; k > -1; --k) {
+  for (SizeType k = mat_a.nrTiles().rows() - 1; k >= 0; --k) {
     const GlobalTileIndex kk(k, k);
     auto kk_rank = distr_a.rankGlobalTile(kk);
 
@@ -585,7 +585,7 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
   common::RoundRobin<matrix::Panel<Coord::Row, T, device>> a_panels(n_workspaces, distr_a);
   common::RoundRobin<matrix::Panel<Coord::Col, T, device>> b_panels(n_workspaces, distr_b);
 
-  for (SizeType k = mat_a.nrTiles().cols() - 1; k > -1; --k) {
+  for (SizeType k = mat_a.nrTiles().cols() - 1; k >= 0; --k) {
     const GlobalTileIndex kk(k, k);
     auto kk_rank = distr_a.rankGlobalTile(kk);
 

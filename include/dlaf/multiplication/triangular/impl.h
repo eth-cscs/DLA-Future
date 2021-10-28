@@ -207,16 +207,14 @@ void Triangular<backend, device, T>::call_LLN(blas::Diag diag, T alpha, Matrix<c
   for (SizeType k = m - 1; k >= 0; --k) {
     for (SizeType j = 0; j < n; ++j) {
       auto kj = LocalTileIndex{k, j};
-      // Triangular solve of k-th row Panel of B
-      trmm_B_panel_tile(executor_hp, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(kj));
 
-      for (SizeType i = k - 1; i >= 0; --i) {
-        // Choose queue priority
-        auto& trailing_executor = (i == k - 1) ? executor_hp : executor_np;
-        // Update trailing matrix
-        gemm_trailing_matrix_tile(trailing_executor, alpha, mat_a.read(LocalTileIndex{k, i}),
-                                  mat_b.read(LocalTileIndex{i, j}), mat_b(LocalTileIndex{k, j}));
+      for (SizeType i = k + 1; i < m; ++i) {
+        auto& trailing_executor = (i == k + 1) ? executor_hp : executor_np;
+        gemm_trailing_matrix_tile(trailing_executor, alpha, mat_a.read(LocalTileIndex{i, k}),
+                                  mat_b.read(kj), mat_b(LocalTileIndex{i, j}));
       }
+
+      trmm_B_panel_tile(executor_hp, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(kj));
     }
   }
 }
@@ -234,16 +232,14 @@ void Triangular<backend, device, T>::call_LLT(blas::Op op, blas::Diag diag, T al
   for (SizeType k = 0; k < m; ++k) {
     for (SizeType j = 0; j < n; ++j) {
       auto kj = LocalTileIndex{k, j};
-      // Triangular solve of k-th row Panel of B
-      trmm_B_panel_tile(executor_hp, op, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(kj));
 
-      for (SizeType i = k + 1; i < m; ++i) {
-        // Choose queue priority
-        auto& trailing_executor = (i == k + 1) ? executor_hp : executor_np;
-        // Update trailing matrix
-        gemm_trailing_matrix_tile(trailing_executor, op, alpha, mat_a.read(LocalTileIndex{i, k}),
-                                  mat_b.read(LocalTileIndex{i, j}), mat_b(LocalTileIndex{k, j}));
+      for (SizeType i = k - 1; i >= 0; --i) {
+        auto& trailing_executor = (i == k - 1) ? executor_hp : executor_np;
+        gemm_trailing_matrix_tile(trailing_executor, op, alpha, mat_a.read(LocalTileIndex{k, i}),
+                                  mat_b.read(kj), mat_b(LocalTileIndex{i, j}));
       }
+
+      trmm_B_panel_tile(executor_hp, op, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(kj));
     }
   }
 }
@@ -261,16 +257,14 @@ void Triangular<backend, device, T>::call_LUN(blas::Diag diag, T alpha, Matrix<c
   for (SizeType k = 0; k < m; ++k) {
     for (SizeType j = 0; j < n; ++j) {
       auto kj = LocalTileIndex{k, j};
-      // Triangular solve of k-th row Panel of B
-      trmm_B_panel_tile(executor_hp, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(kj));
 
-      for (SizeType i = k + 1; i < m; ++i) {
-        // Choose queue priority
-        auto& trailing_executor = (i == k + 1) ? executor_hp : executor_np;
-        // Update trailing matrix
-        gemm_trailing_matrix_tile(trailing_executor, alpha, mat_a.read(LocalTileIndex{k, i}),
-                                  mat_b.read(LocalTileIndex{i, j}), mat_b(kj));
+      for (SizeType i = 0; i < k; ++i) {
+        auto& trailing_executor = (i == k - 1) ? executor_hp : executor_np;
+        gemm_trailing_matrix_tile(trailing_executor, alpha, mat_a.read(LocalTileIndex{i, k}),
+                                  mat_b.read(kj), mat_b(LocalTileIndex{i, j}));
       }
+
+      trmm_B_panel_tile(executor_hp, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(kj));
     }
   }
 }
@@ -289,16 +283,13 @@ void Triangular<backend, device, T>::call_LUT(blas::Op op, blas::Diag diag, T al
     for (SizeType j = n - 1; j >= 0; --j) {
       auto kj = LocalTileIndex{k, j};
 
-      // Triangular solve of k-th row Panel of B
-      trmm_B_panel_tile(executor_hp, op, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(kj));
-
-      for (SizeType i = k - 1; i >= 0; --i) {
-        // Choose queue priority
-        auto& trailing_executor = (i == k - 1) ? executor_hp : executor_np;
-        // Update trailing matrix
-        gemm_trailing_matrix_tile(trailing_executor, op, alpha, mat_a.read(LocalTileIndex{i, k}),
-                                  mat_b.read(LocalTileIndex{i, j}), mat_b(kj));
+      for (SizeType i = k + 1; i < m; ++i) {
+        auto& trailing_executor = (i == k + 1) ? executor_hp : executor_np;
+        gemm_trailing_matrix_tile(trailing_executor, op, alpha, mat_a.read(LocalTileIndex{k, i}),
+                                  mat_b.read(kj), mat_b(LocalTileIndex{i, j}));
       }
+
+      trmm_B_panel_tile(executor_hp, op, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(kj));
     }
   }
 }
@@ -316,16 +307,14 @@ void Triangular<backend, device, T>::call_RLN(blas::Diag diag, T alpha, Matrix<c
   for (SizeType k = 0; k < n; ++k) {
     for (SizeType i = 0; i < m; ++i) {
       auto ik = LocalTileIndex{i, k};
-      // Triangular solve of k-th col Panel of B
-      trmm_B_panel_tile(executor_hp, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(ik));
 
-      for (SizeType j = k + 1; j < n; ++j) {
-        // Choose queue priority
-        auto& trailing_executor = (j == k + 1) ? executor_hp : executor_np;
-        // Update trailing matrix
-        gemm_trailing_matrix_tile(trailing_executor, alpha, mat_b.read(LocalTileIndex{i, j}),
-                                  mat_a.read(LocalTileIndex{j, k}), mat_b(ik));
+      for (SizeType j = k - 1; j >= 0; --j) {
+        auto& trailing_executor = (j == k - 1) ? executor_hp : executor_np;
+        gemm_trailing_matrix_tile(trailing_executor, alpha, mat_b.read(ik),
+                                  mat_a.read(LocalTileIndex{k, j}), mat_b(LocalTileIndex{i, j}));
       }
+
+      trmm_B_panel_tile(executor_hp, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(ik));
     }
   }
 }
@@ -344,16 +333,13 @@ void Triangular<backend, device, T>::call_RLT(blas::Op op, blas::Diag diag, T al
     for (SizeType i = m - 1; i >= 0; --i) {
       auto ik = LocalTileIndex{i, k};
 
-      // Triangular solve of k-th col Panel of B
-      trmm_B_panel_tile(executor_hp, op, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(ik));
-
-      for (SizeType j = k - 1; j >= 0; --j) {
-        // Choose queue priority
-        auto& trailing_executor = (j == k - 1) ? executor_hp : executor_np;
-        // Update trailing matrix
-        gemm_trailing_matrix_tile(trailing_executor, op, alpha, mat_b.read(LocalTileIndex{i, j}),
-                                  mat_a.read(LocalTileIndex{k, j}), mat_b(ik));
+      for (SizeType j = k + 1; j < n; ++j) {
+        auto& trailing_executor = (j == k + 1) ? executor_hp : executor_np;
+        gemm_trailing_matrix_tile(trailing_executor, op, alpha, mat_b.read(ik),
+                                  mat_a.read(LocalTileIndex{j, k}), mat_b(LocalTileIndex{i, j}));
       }
+
+      trmm_B_panel_tile(executor_hp, op, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(ik));
     }
   }
 }
@@ -372,16 +358,13 @@ void Triangular<backend, device, T>::call_RUN(blas::Diag diag, T alpha, Matrix<c
     for (SizeType i = m - 1; i >= 0; --i) {
       auto ik = LocalTileIndex{i, k};
 
-      // Triangular solve of k-th col Panel of B
-      trmm_B_panel_tile(executor_hp, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(ik));
-
-      for (SizeType j = k - 1; j >= 0; --j) {
-        // Choose queue priority
-        auto& trailing_executor = (j == k - 1) ? executor_hp : executor_np;
-        // Update trailing matrix
-        gemm_trailing_matrix_tile(trailing_executor, alpha, mat_b.read(LocalTileIndex{i, j}),
-                                  mat_a.read(LocalTileIndex{j, k}), mat_b(ik));
+      for (SizeType j = k + 1; j < n; ++j) {
+        auto& trailing_executor = (j == k + 1) ? executor_hp : executor_np;
+        gemm_trailing_matrix_tile(trailing_executor, alpha, mat_b.read(ik),
+                                  mat_a.read(LocalTileIndex{k, j}), mat_b(LocalTileIndex{i, j}));
       }
+
+      trmm_B_panel_tile(executor_hp, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(ik));
     }
   }
 }
@@ -400,16 +383,13 @@ void Triangular<backend, device, T>::call_RUT(blas::Op op, blas::Diag diag, T al
     for (SizeType i = 0; i < m; ++i) {
       auto ik = LocalTileIndex{i, k};
 
-      // Triangular solve of k-th col Panel of B
-      trmm_B_panel_tile(executor_hp, op, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(ik));
-
-      for (SizeType j = k + 1; j < n; ++j) {
-        // Choose queue priority
-        auto& trailing_executor = (j == k + 1) ? executor_hp : executor_np;
-        // Update trailing matrix
-        gemm_trailing_matrix_tile(trailing_executor, op, alpha, mat_b.read(LocalTileIndex{i, j}),
-                                  mat_a.read(LocalTileIndex{k, j}), mat_b(ik));
+      for (SizeType j = k - 1; j >= 0; --j) {
+        auto& trailing_executor = (j == k - 1) ? executor_hp : executor_np;
+        gemm_trailing_matrix_tile(trailing_executor, op, alpha, mat_b.read(ik),
+                                  mat_a.read(LocalTileIndex{j, k}), mat_b(LocalTileIndex{i, j}));
       }
+
+      trmm_B_panel_tile(executor_hp, op, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(ik));
     }
   }
 }

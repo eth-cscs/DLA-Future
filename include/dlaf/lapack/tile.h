@@ -288,8 +288,9 @@ void set0(const Tile<T, Device::CPU>& tile) {
 /// Set zero all the elements of Tile @param tile.
 template <class T>
 void set0(const Tile<T, Device::GPU>& tile, cudaStream_t stream) {
-  DLAF_CUDA_CALL(cudaMemset2DAsync(tile.ptr(), sizeof(T) * tile.ld(), 0, sizeof(T) * tile.size().rows(),
-                                   tile.size().cols(), stream));
+  DLAF_CUDA_CALL(cudaMemset2DAsync(tile.ptr(), sizeof(T) * to_sizet(tile.ld()), 0,
+                                   sizeof(T) * to_sizet(tile.size().rows()),
+                                   to_sizet(tile.size().cols()), stream));
 }
 #endif
 

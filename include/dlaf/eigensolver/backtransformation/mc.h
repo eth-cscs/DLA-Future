@@ -240,7 +240,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
     panelV.setRangeStart(v_start);
     panelW.setRangeStart(v_start);
-    panelT.setRangeStart(GlobalTileIndex(k, k));
+    panelT.setRange(GlobalTileIndex(Coord::Col, k), GlobalTileIndex(Coord::Col, k + 1));
 
     if (is_last) {
       panelT.setHeight(nr_reflectors_last_block);

@@ -153,11 +153,11 @@ void set0(ExecutorOrPolicy ex, Panel<axis, T, D>& panel) {
 /// Set the elements of the matrix.
 ///
 /// The (i, j)-element of the matrix is set to el({i, j}).
-/// @param el a copy is given to each tile,
-/// @pre el argument is an index of type const GlobalElementIndex&,
-/// @pre el return type should be T.
+/// @param el_f a copy is given to each tile,
+/// @pre el_f argument is an index of type const GlobalElementIndex&,
+/// @pre el_f return type should be T.
 template <class T, class ElementGetter>
-void set(Matrix<T, Device::CPU>& matrix, const ElementGetter& el_f) {
+void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f) {
   const Distribution& dist = matrix.distribution();
   for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
     GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
@@ -170,6 +170,35 @@ void set(Matrix<T, Device::CPU>& matrix, const ElementGetter& el_f) {
     });
     hpx::dataflow(std::move(set_f), matrix(tile_wrt_local));
   }
+}
+
+/// Set the elements of the matrix according to transposition operator
+///
+/// The (i, j)-element of the matrix is set to op(el)(i, j).
+/// i.e. `matrix = op(el_f)`
+///
+/// @param el_f a copy is given to each tile,
+/// @param op transposition operator to apply to @p el_f before setting the value
+/// @pre el_f argument is an index of type const GlobalElementIndex&,
+/// @pre el_f return type should be T.
+template <class T, class ElementGetter>
+void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f, const blas::Op op) {
+  auto el_op_f = [op, el_f](const GlobalElementIndex& index) -> T {
+    using blas::Op;
+    switch (op) {
+      case Op::NoTrans:
+        return el_f(index);
+      case Op::Trans:
+        return el_f(transposed(index));
+      case Op::ConjTrans:
+        return dlaf::conj(el_f(transposed(index)));
+      default:
+        DLAF_UNIMPLEMENTED(op);
+        return T{};
+    }
+  };
+
+  set(matrix, el_op_f);
 }
 
 /// Set the matrix with random values whose absolute values are less than 1.

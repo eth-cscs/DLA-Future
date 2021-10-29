@@ -76,9 +76,8 @@ void backTransformation(comm::CommunicatorGrid grid, Matrix<T, device>& mat_c,
 
   const SizeType m = mat_v.size().rows();
   const SizeType mb = mat_v.blockSize().rows();
-  SizeType nr_reflectors_blocks = std::max<SizeType>(0, util::ceilDiv(m - mb - 1, mb));
-  nr_reflectors_blocks =
-      nr_reflectors_blocks / grid.size().cols() + nr_reflectors_blocks % (grid.rank().col() + 1);
+  SizeType nr_reflectors_blocks = mat_v.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(
+      std::max<SizeType>(0, util::ceilDiv(m - mb - 1, mb)));
   DLAF_ASSERT(taus.size() == nr_reflectors_blocks, taus.size(), mat_v, nr_reflectors_blocks);
 
   internal::BackTransformation<backend, device, T>::call_FC(grid, mat_c, mat_v, taus);

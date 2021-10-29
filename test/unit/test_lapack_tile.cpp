@@ -222,7 +222,7 @@ TYPED_TEST(TileOperationsTestMC, Lacpy) {
   TileElementIndex out_idx(2, 3);
   Tile_t out_tile = createTile<Scalar>([](TileElementIndex) { return 2; }, TileElementSize(7, 7), 7);
 
-  tile::internal::lacpy(region, in_idx, in_tile, out_idx, out_tile);
+  tile::lacpy(region, in_idx, in_tile, out_idx, out_tile);
 
   double eps = std::numeric_limits<double>::epsilon();
 

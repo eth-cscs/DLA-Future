@@ -50,54 +50,39 @@ using matrix::Tile;
 
 // See LAPACK documentation for more details.
 
-#ifdef DLAF_DOXYGEN
-
 /// Copies all elements from Tile a to Tile b.
 ///
 /// @pre @param a and @param b must have the same size (number of elements).
 ///
 /// This overload blocks until completion of the algorithm.
-template <Backend B, class T, Device D>
-void lacpy(const dlaf::internal::Policy<B>& p, const Tile<const T, D>& a, const Tile<T, D>& b);
+template <class T>
+void lacpy(const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b) {
+  DLAF_ASSERT_MODERATE(a.size() == b.size(), a, b);
 
-/// \overload lacpy
-///
-/// This overload takes a policy argument and a sender which must send all required arguments for the
-/// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
-template <Backend B, typename Sender, typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
-void lacpy(const dlaf::internal::Policy<B>& p, Sender&& s);
+  const SizeType m = a.size().rows();
+  const SizeType n = a.size().cols();
 
-/// \overload lacpy
-///
-/// This overload partially applies the algorithm with a policy for later use with operator| with a
-/// sender on the left-hand side.
-template <Backend B>
-void lacpy(const dlaf::internal::Policy<B>& p);
+  lapack::lacpy(lapack::MatrixType::General, m, n, a.ptr(), a.ld(), b.ptr(), b.ld());
+}
 
 /// Copies a 2D @param region from tile @param in starting at @param in_idx to tile @param out starting
 /// at @param out_idx.
 ///
 /// @pre @param region has to fit within @param in and @param out taking into account the starting
 /// indices @param in_idx and @param out_idx.
-///
-/// This overload blocks until completion of the algorithm.
-template <Backend B, class T, Device D>
-void lacpy(const dlaf::internal::Policy<B>& p, TileElementSize region, TileElementIndex in_idx, const Tile<const T, Device::CPU>& in,
-           TileElementIndex out_idx, const Tile<T, Device::CPU>& out);
+template <class T>
+void lacpy(TileElementSize region, TileElementIndex in_idx, const Tile<const T, Device::CPU>& in,
+           TileElementIndex out_idx, const Tile<T, Device::CPU>& out) {
+  DLAF_ASSERT_MODERATE(in_idx.isIn(in.size() - region + TileElementSize(1, 1)),
+                       "Region goes out of bounds for `in`!", region, in_idx, in);
+  DLAF_ASSERT_MODERATE(out_idx.isIn(out.size() - region + TileElementSize(1, 1)),
+                       "Region goes out of bounds for `out`!", region, out_idx, out);
 
-/// \overload lacpy
-///
-/// This overload takes a policy argument and a sender which must send all required arguments for the
-/// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
-template <Backend B, typename Sender, typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
-void lacpy(const dlaf::internal::Policy<B>& p, Sender&& s);
+  lapack::lacpy(lapack::MatrixType::General, region.rows(), region.cols(), in.ptr(in_idx), in.ld(),
+                out.ptr(out_idx), out.ld());
+}
 
-/// \overload lacpy
-///
-/// This overload partially applies the algorithm with a policy for later use with operator| with a
-/// sender on the left-hand side.
-template <Backend B>
-void lacpy(const dlaf::internal::Policy<B>& p);
+#ifdef DLAF_DOXYGEN
 
 /// Compute the value of the 1-norm, Frobenius norm, infinity-norm, or the largest absolute value of any
 /// element, of a general rectangular matrix.
@@ -274,27 +259,6 @@ auto potrf(const dlaf::internal::Policy<B>& p);
 #else
 
 namespace internal {
-template <class T>
-void lacpy(const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b) {
-  DLAF_ASSERT_MODERATE(a.size() == b.size(), a, b);
-
-  const SizeType m = a.size().rows();
-  const SizeType n = a.size().cols();
-
-  lapack::lacpy(lapack::MatrixType::General, m, n, a.ptr(), a.ld(), b.ptr(), b.ld());
-}
-
-template <class T>
-void lacpy(TileElementSize region, TileElementIndex in_idx, const Tile<const T, Device::CPU>& in,
-           TileElementIndex out_idx, const Tile<T, Device::CPU>& out) {
-  DLAF_ASSERT_MODERATE(in_idx.isIn(in.size() - region + TileElementSize(1, 1)),
-                       "Region goes out of bounds for `in`!", region, in_idx, in);
-  DLAF_ASSERT_MODERATE(out_idx.isIn(out.size() - region + TileElementSize(1, 1)),
-                       "Region goes out of bounds for `out`!", region, out_idx, out);
-
-  lapack::lacpy(lapack::MatrixType::General, region.rows(), region.cols(), in.ptr(in_idx), in.ld(),
-                out.ptr(out_idx), out.ld());
-}
 
 template <class T>
 dlaf::BaseType<T> lange(const lapack::Norm norm, const Tile<T, Device::CPU>& a) noexcept {
@@ -426,17 +390,6 @@ void assertExtendInfo(F assertFunc, cusolverDnHandle_t handle, CusolverInfo<T>&&
 }
 
 template <class T>
-void lacpy(cusolverDnHandle_t, const Tile<const T, Device::GPU>& a, const Tile<T, Device::GPU>& b) {
-  static_assert(sizeof(T) == 0, "lacpy is unimplemented for Backend::GPU");
-}
-
-template <class T>
-void lacpy(cusolverDnHandle_t, TileElementSize region, TileElementIndex in_idx, const Tile<const T, Device::GPU>& in,
-           TileElementIndex out_idx, const Tile<T, Device::GPU>& out) {
-  static_assert(sizeof(T) == 0, "lacpy is unimplemented for Backend::GPU");
-}
-
-template <class T>
 dlaf::BaseType<T> lange(cusolverDnHandle_t, const lapack::Norm norm, const Tile<T, Device::GPU>& a) {
   static_assert(sizeof(T) == 0, "lange is unimplemented for Backend::GPU");
 }
@@ -502,7 +455,6 @@ void potrf(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<
 }
 #endif
 
-DLAF_MAKE_CALLABLE_OBJECT(lacpy);
 DLAF_MAKE_CALLABLE_OBJECT(lange);
 DLAF_MAKE_CALLABLE_OBJECT(lantr);
 DLAF_MAKE_CALLABLE_OBJECT(laset);
@@ -512,7 +464,6 @@ DLAF_MAKE_CALLABLE_OBJECT(potrf);
 DLAF_MAKE_CALLABLE_OBJECT(potrfInfo);
 }
 
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(lacpy, internal::lacpy_o)
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(lange, internal::lange_o)
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(lantr, internal::lantr_o)
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(laset, internal::laset_o)

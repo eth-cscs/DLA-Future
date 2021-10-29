@@ -61,7 +61,7 @@ template <typename T>
 struct CopyTile<T, Device::CPU, Device::CPU> {
   static void call(const matrix::Tile<const T, Device::CPU>& source,
                    const matrix::Tile<T, Device::CPU>& destination) {
-    dlaf::tile::internal::lacpy<T>(source, destination);
+    dlaf::tile::lacpy<T>(source, destination);
   }
 };
 
@@ -157,7 +157,7 @@ void copy(const Tile<const T, Source>& source, const Tile<T, Destination>& desti
 template <class T>
 void copy(TileElementSize region, TileElementIndex in_idx, const Tile<const T, Device::CPU>& in,
           TileElementIndex out_idx, const Tile<T, Device::CPU>& out) {
-  dlaf::tile::internal::lacpy<T>(region, in_idx, in, out_idx, out);
+  dlaf::tile::lacpy<T>(region, in_idx, in, out_idx, out);
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(copy);

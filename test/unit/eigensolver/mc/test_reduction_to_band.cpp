@@ -125,8 +125,8 @@ void setupHermitianBand(MatrixLocal<T>& matrix, const SizeType& band_size) {
       if (!ij.isIn(matrix.nrTiles()))
         continue;
 
-      tile::set0(matrix.tile(ij));
-      tile::set0(matrix.tile(common::transposed(ij)));
+      tile::internal::set0(matrix.tile(ij));
+      tile::internal::set0(matrix.tile(common::transposed(ij)));
     }
   }
 

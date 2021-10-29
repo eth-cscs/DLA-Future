@@ -222,7 +222,7 @@ TYPED_TEST(TileOperationsTestMC, Lacpy) {
   TileElementIndex out_idx(2, 3);
   Tile_t out_tile = createTile<Scalar>([](TileElementIndex) { return 2; }, TileElementSize(7, 7), 7);
 
-  tile::lacpy(region, in_idx, in_tile, out_idx, out_tile);
+  tile::internal::lacpy(region, in_idx, in_tile, out_idx, out_tile);
 
   double eps = std::numeric_limits<double>::epsilon();
 
@@ -270,7 +270,7 @@ TYPED_TEST(TileOperationsTestMC, Laset) {
 
       auto tile = createTile<TypeParam>(el, TileElementSize(m, n), lda);
 
-      tile::laset<TypeParam>(mtype, alpha, beta, tile);
+      tile::internal::laset<TypeParam>(mtype, alpha, beta, tile);
       CHECK_TILE_EQ(res, tile);
     }
   }
@@ -288,7 +288,7 @@ TYPED_TEST(TileOperationsTestMC, Set0) {
 
     auto res = [](const TileElementIndex&) { return TypeUtilities<TypeParam>::element(0.0, 0.0); };
 
-    tile::set0(tile);
+    tile::internal::set0(tile);
     CHECK_TILE_EQ(res, tile);
   }
 }

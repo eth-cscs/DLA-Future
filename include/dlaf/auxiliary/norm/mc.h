@@ -51,8 +51,8 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
   using dlaf::common::make_data;
   using hpx::unwrapping;
 
-  using dlaf::tile::lange;
-  using dlaf::tile::lantr;
+  using dlaf::tile::internal::lange;
+  using dlaf::tile::internal::lantr;
 
   using NormT = dlaf::BaseType<T>;
 

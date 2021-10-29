@@ -95,7 +95,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
     const auto& source_tile = mat_v.read(ij_tile).get();
     copy(source_tile, v.tile(ij_tile));
     if (ij_tile.row() == ij_tile.col() + 1)
-      tile::laset<T>(lapack::MatrixType::Upper, 0.f, 1.f, v.tile(ij_tile));
+      tile::internal::laset<T>(lapack::MatrixType::Upper, 0.f, 1.f, v.tile(ij_tile));
   }
 
   // Create C local

@@ -245,7 +245,7 @@ void testSet0(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
     panel.setRange(GlobalTileIndex(coord1D, head), GlobalTileIndex(coord1D, tail));
 
     for (const auto& idx : panel.iteratorLocal())
-      hpx::dataflow(hpx::unwrapping(tile::laset<TypeParam>), lapack::MatrixType::General, 1, 1,
+      hpx::dataflow(hpx::unwrapping(tile::internal::laset_o), lapack::MatrixType::General, TypeParam(1), TypeParam(1),
                     panel(idx));
 
     matrix::util::set0(hpx::launch::sync, panel);

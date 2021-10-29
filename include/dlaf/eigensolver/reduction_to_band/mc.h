@@ -305,7 +305,7 @@ void setupReflectorPanelV(bool has_head, const LocalTileSize& ai_offset, const S
   if (has_head) {
     auto setupV0 = hpx::unwrapping([](auto&& tile_v, const auto& tile_a) {
       copy(tile_a, tile_v);
-      tile::laset(lapack::MatrixType::Upper, T(0), T(1), tile_v);
+      tile::internal::laset(lapack::MatrixType::Upper, T(0), T(1), tile_v);
     });
 
     // Note:
@@ -420,7 +420,7 @@ void gemmComputeW2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Co
   // Not all ranks in the column always hold at least a tile in the panel Ai, but all ranks in
   // the column are going to participate to the reduce. For them, it is important to set the
   // partial result W2 to zero.
-  hpx::dataflow(ex, unwrapExtendTiles(tile::set0<T>), w2(LocalTileIndex(0, 0)));
+  hpx::dataflow(ex, unwrapExtendTiles(tile::internal::set0_o), w2(LocalTileIndex(0, 0)));
 
   // GEMM W2 = W* . X
   for (const auto& index_tile : w.iteratorLocal())

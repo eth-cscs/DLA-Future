@@ -138,8 +138,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
                                        nr_reflectors_last_block}});
         }
         copySingleTile(tile_v, panelV(ik));
-        hpx::dataflow(hpx::launch::sync, matrix::unwrapExtendTiles(tile::laset<T>),
-                      lapack::MatrixType::Upper, 0.f, 1.f, panelV(ik));
+        hpx::dataflow(hpx::launch::sync, matrix::uwnrapExtendTiles(tile::internal::laset_o), lapack::MatrixType::Upper, T(0), T(1),
+                      panelV(ik));
       }
       else {
         panelV.setTile(ik, mat_v.read(ik));

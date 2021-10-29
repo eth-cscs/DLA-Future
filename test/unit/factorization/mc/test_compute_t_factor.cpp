@@ -269,7 +269,7 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
       const auto& source_tile = v_input.read(ij_tile + v_offset).get();
       copy(source_tile, v.tile(ij_tile));
       if (ij_tile.row() == 0)
-        tile::laset<TypeParam>(lapack::MatrixType::Upper, 0.f, 1.f, v.tile(ij_tile));
+        tile::internal::laset<TypeParam>(lapack::MatrixType::Upper, 0.f, 1.f, v.tile(ij_tile));
     }
 
     auto tmp = computeHAndTFactor(k, v);
@@ -355,7 +355,7 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
         for (const auto& ij : iterate_range2d(v.nrTiles())) {
           copy(a.tile_read(ij + v_offset), v.tile(ij));
           if (ij.row() == 0)
-            tile::laset<TypeParam>(lapack::MatrixType::Upper, 0.f, 1.f, v.tile(ij));
+            tile::internal::laset<TypeParam>(lapack::MatrixType::Upper, 0.f, 1.f, v.tile(ij));
         }
 
         return v;

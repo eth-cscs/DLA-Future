@@ -50,44 +50,77 @@ using matrix::Tile;
 
 // See LAPACK documentation for more details.
 
+#ifdef DLAF_DOXYGEN
+
 /// Copies all elements from Tile a to Tile b.
 ///
 /// @pre @param a and @param b must have the same size (number of elements).
-template <class T>
-void lacpy(const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b) {
-  DLAF_ASSERT_MODERATE(a.size() == b.size(), a, b);
+///
+/// This overload blocks until completion of the algorithm.
+template <Backend B, class T, Device D>
+void lacpy(const dlaf::internal::Policy<B>& p, const Tile<const T, D>& a, const Tile<T, D>& b);
 
-  const SizeType m = a.size().rows();
-  const SizeType n = a.size().cols();
+/// \overload lacpy
+///
+/// This overload takes a policy argument and a sender which must send all required arguments for the
+/// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
+template <Backend B, typename Sender, typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+void lacpy(const dlaf::internal::Policy<B>& p, Sender&& s);
 
-  lapack::lacpy(lapack::MatrixType::General, m, n, a.ptr(), a.ld(), b.ptr(), b.ld());
-}
+/// \overload lacpy
+///
+/// This overload partially applies the algorithm with a policy for later use with operator| with a
+/// sender on the left-hand side.
+template <Backend B>
+void lacpy(const dlaf::internal::Policy<B>& p);
 
 /// Copies a 2D @param region from tile @param in starting at @param in_idx to tile @param out starting
 /// at @param out_idx.
 ///
 /// @pre @param region has to fit within @param in and @param out taking into account the starting
 /// indices @param in_idx and @param out_idx.
-template <class T>
-void lacpy(TileElementSize region, TileElementIndex in_idx, const Tile<const T, Device::CPU>& in,
-           TileElementIndex out_idx, const Tile<T, Device::CPU>& out) {
-  DLAF_ASSERT_MODERATE(in_idx.isIn(in.size() - region + TileElementSize(1, 1)),
-                       "Region goes out of bounds for `in`!", region, in_idx, in);
-  DLAF_ASSERT_MODERATE(out_idx.isIn(out.size() - region + TileElementSize(1, 1)),
-                       "Region goes out of bounds for `out`!", region, out_idx, out);
+///
+/// This overload blocks until completion of the algorithm.
+template <Backend B, class T, Device D>
+void lacpy(const dlaf::internal::Policy<B>& p, TileElementSize region, TileElementIndex in_idx, const Tile<const T, Device::CPU>& in,
+           TileElementIndex out_idx, const Tile<T, Device::CPU>& out);
 
-  lapack::lacpy(lapack::MatrixType::General, region.rows(), region.cols(), in.ptr(in_idx), in.ld(),
-                out.ptr(out_idx), out.ld());
-}
+/// \overload lacpy
+///
+/// This overload takes a policy argument and a sender which must send all required arguments for the
+/// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
+template <Backend B, typename Sender, typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+void lacpy(const dlaf::internal::Policy<B>& p, Sender&& s);
+
+/// \overload lacpy
+///
+/// This overload partially applies the algorithm with a policy for later use with operator| with a
+/// sender on the left-hand side.
+template <Backend B>
+void lacpy(const dlaf::internal::Policy<B>& p);
 
 /// Compute the value of the 1-norm, Frobenius norm, infinity-norm, or the largest absolute value of any
 /// element, of a general rectangular matrix.
 ///
 /// @pre a.size().isValid().
-template <class T>
-dlaf::BaseType<T> lange(const lapack::Norm norm, const Tile<T, Device::CPU>& a) noexcept {
-  return lapack::lange(norm, a.size().rows(), a.size().cols(), a.ptr(), a.ld());
-}
+///
+/// This overload blocks until completion of the algorithm.
+template <Backend B, class T, Device D>
+dlaf::BaseType<T> lange(const dlaf::internal::Policy<B>& p, const lapack::Norm norm, const Tile<T, Device::CPU>& a);
+
+/// \overload lange
+///
+/// This overload takes a policy argument and a sender which must send all required arguments for the
+/// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
+template <Backend B, typename Sender, typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+dlaf::BaseType<T> lange(const dlaf::internal::Policy<B>& p, Sender&& s);
+
+/// \overload lange
+///
+/// This overload partially applies the algorithm with a policy for later use with operator| with a
+/// sender on the left-hand side.
+template <Backend B>
+dlaf::BaseType<T> lange(const dlaf::internal::Policy<B>& p);
 
 /// Compute the value of the 1-norm, Frobenius norm, infinity-norm, or the largest absolute value of any
 /// element, of a triangular matrix.
@@ -96,43 +129,65 @@ dlaf::BaseType<T> lange(const lapack::Norm norm, const Tile<T, Device::CPU>& a) 
 /// @pre a.size().isValid(),
 /// @pre a.size().rows() >= a.size().cols() if uplo == blas::Uplo::Lower,
 /// @pre a.size().rows() <= a.size().cols() if uplo == blas::Uplo::Upper.
-template <class T>
-dlaf::BaseType<T> lantr(const lapack::Norm norm, const blas::Uplo uplo, const blas::Diag diag,
-                        const Tile<T, Device::CPU>& a) noexcept {
-  switch (uplo) {
-    case blas::Uplo::Lower:
-      DLAF_ASSERT(a.size().rows() >= a.size().cols(), a);
-      break;
-    case blas::Uplo::Upper:
-      DLAF_ASSERT(a.size().rows() <= a.size().cols(), a);
-      break;
-    case blas::Uplo::General:
-      DLAF_ASSERT(blas::Uplo::General == uplo, uplo);
-      break;
-  }
-  return lapack::lantr(norm, uplo, diag, a.size().rows(), a.size().cols(), a.ptr(), a.ld());
-}
+///
+/// This overload blocks until completion of the algorithm.
+template <Backend B, class T, Device D>
+dlaf::BaseType<T> lantr(const dlaf::internal::Policy<B>& p, const lapack::Norm norm, const blas::Uplo uplo, const blas::Diag diag,
+                        const Tile<T, Device::CPU>& a);
 
-/// Set off-diagonal (@param alpha) and diagonal (@param betea) elements of Tile @param tile.
-template <class T>
-void laset(const lapack::MatrixType type, T alpha, T beta, const Tile<T, Device::CPU>& tile) {
-  DLAF_ASSERT((type == lapack::MatrixType::General || type == lapack::MatrixType::Lower ||
-               type == lapack::MatrixType::Upper),
-              type);
+/// \overload lantr
+///
+/// This overload takes a policy argument and a sender which must send all required arguments for the
+/// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
+template <Backend B, typename Sender, typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+dlaf::BaseType<T> lantr(const dlaf::internal::Policy<B>& p, Sender&& s);
 
-  const SizeType m = tile.size().rows();
-  const SizeType n = tile.size().cols();
+/// \overload lantr
+///
+/// This overload partially applies the algorithm with a policy for later use with operator| with a
+/// sender on the left-hand side.
+template <Backend B>
+dlaf::BaseType<T> lantr(const dlaf::internal::Policy<B>& p);
 
-  lapack::laset(type, m, n, alpha, beta, tile.ptr(), tile.ld());
-}
+/// Set off-diagonal (@param alpha) and diagonal (@param beta) elements of Tile @param tile.
+///
+/// This overload blocks until completion of the algorithm.
+template <Backend B, class T, Device D>
+void laset(const dlaf::internal::Policy<B>& p, const lapack::MatrixType type, T alpha, T beta, const Tile<T, Device::CPU>& tile);
+
+/// \overload laset
+///
+/// This overload takes a policy argument and a sender which must send all required arguments for the
+/// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
+template <Backend B, typename Sender, typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+void laset(const dlaf::internal::Policy<B>& p, Sender&& s);
+
+/// \overload laset
+///
+/// This overload partially applies the algorithm with a policy for later use with operator| with a
+/// sender on the left-hand side.
+template <Backend B>
+void laset(const dlaf::internal::Policy<B>& p);
 
 /// Set zero all the elements of Tile @param tile.
-template <class T>
-void set0(const Tile<T, Device::CPU>& tile) {
-  tile::laset(lapack::MatrixType::General, static_cast<T>(0.0), static_cast<T>(0.0), tile);
-}
+///
+/// This overload blocks until completion of the algorithm.
+template <Backend B, class T, Device D>
+void set0(const dlaf::internal::Policy<B>& p, const Tile<T, Device::CPU>& tile);
 
-#ifdef DLAF_DOXYGEN
+/// \overload set0
+///
+/// This overload takes a policy argument and a sender which must send all required arguments for the
+/// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
+template <Backend B, typename Sender, typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+void set0(const dlaf::internal::Policy<B>& p, Sender&& s);
+
+/// \overload set0
+///
+/// This overload partially applies the algorithm with a policy for later use with operator| with a
+/// sender on the left-hand side.
+template <Backend B>
+void set0(const dlaf::internal::Policy<B>& p);
 
 /// Reduce a Hermitian definite generalized eigenproblem to standard form.
 ///
@@ -219,6 +274,67 @@ auto potrf(const dlaf::internal::Policy<B>& p);
 #else
 
 namespace internal {
+template <class T>
+void lacpy(const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b) {
+  DLAF_ASSERT_MODERATE(a.size() == b.size(), a, b);
+
+  const SizeType m = a.size().rows();
+  const SizeType n = a.size().cols();
+
+  lapack::lacpy(lapack::MatrixType::General, m, n, a.ptr(), a.ld(), b.ptr(), b.ld());
+}
+
+template <class T>
+void lacpy(TileElementSize region, TileElementIndex in_idx, const Tile<const T, Device::CPU>& in,
+           TileElementIndex out_idx, const Tile<T, Device::CPU>& out) {
+  DLAF_ASSERT_MODERATE(in_idx.isIn(in.size() - region + TileElementSize(1, 1)),
+                       "Region goes out of bounds for `in`!", region, in_idx, in);
+  DLAF_ASSERT_MODERATE(out_idx.isIn(out.size() - region + TileElementSize(1, 1)),
+                       "Region goes out of bounds for `out`!", region, out_idx, out);
+
+  lapack::lacpy(lapack::MatrixType::General, region.rows(), region.cols(), in.ptr(in_idx), in.ld(),
+                out.ptr(out_idx), out.ld());
+}
+
+template <class T>
+dlaf::BaseType<T> lange(const lapack::Norm norm, const Tile<T, Device::CPU>& a) noexcept {
+  return lapack::lange(norm, a.size().rows(), a.size().cols(), a.ptr(), a.ld());
+}
+
+template <class T>
+dlaf::BaseType<T> lantr(const lapack::Norm norm, const blas::Uplo uplo, const blas::Diag diag,
+                        const Tile<T, Device::CPU>& a) noexcept {
+  switch (uplo) {
+    case blas::Uplo::Lower:
+      DLAF_ASSERT(a.size().rows() >= a.size().cols(), a);
+      break;
+    case blas::Uplo::Upper:
+      DLAF_ASSERT(a.size().rows() <= a.size().cols(), a);
+      break;
+    case blas::Uplo::General:
+      DLAF_ASSERT(blas::Uplo::General == uplo, uplo);
+      break;
+  }
+  return lapack::lantr(norm, uplo, diag, a.size().rows(), a.size().cols(), a.ptr(), a.ld());
+}
+
+template <class T>
+void laset(const lapack::MatrixType type, T alpha, T beta, const Tile<T, Device::CPU>& tile) {
+  DLAF_ASSERT((type == lapack::MatrixType::General || type == lapack::MatrixType::Lower ||
+               type == lapack::MatrixType::Upper),
+              type);
+
+  const SizeType m = tile.size().rows();
+  const SizeType n = tile.size().cols();
+
+  lapack::laset(type, m, n, alpha, beta, tile.ptr(), tile.ld());
+}
+
+template <class T>
+void set0(const Tile<T, Device::CPU>& tile) {
+  tile::internal::laset(lapack::MatrixType::General, static_cast<T>(0.0), static_cast<T>(0.0), tile);
+}
+
 template <class T>
 void hegst(const int itype, const blas::Uplo uplo, const Tile<T, Device::CPU>& a,
            const Tile<T, Device::CPU>& b) {
@@ -310,6 +426,38 @@ void assertExtendInfo(F assertFunc, cusolverDnHandle_t handle, CusolverInfo<T>&&
 }
 
 template <class T>
+void lacpy(cusolverDnHandle_t, const Tile<const T, Device::GPU>& a, const Tile<T, Device::GPU>& b) {
+  static_assert(sizeof(T) == 0, "lacpy is unimplemented for Backend::GPU");
+}
+
+template <class T>
+void lacpy(cusolverDnHandle_t, TileElementSize region, TileElementIndex in_idx, const Tile<const T, Device::GPU>& in,
+           TileElementIndex out_idx, const Tile<T, Device::GPU>& out) {
+  static_assert(sizeof(T) == 0, "lacpy is unimplemented for Backend::GPU");
+}
+
+template <class T>
+dlaf::BaseType<T> lange(cusolverDnHandle_t, const lapack::Norm norm, const Tile<T, Device::GPU>& a) {
+  static_assert(sizeof(T) == 0, "lange is unimplemented for Backend::GPU");
+}
+
+template <class T>
+dlaf::BaseType<T> lantr(cusolverDnHandle_t, const lapack::Norm norm, const blas::Uplo uplo, const blas::Diag diag,
+                        const Tile<T, Device::GPU>& a) {
+  static_assert(sizeof(T) == 0, "lantr is unimplemented for Backend::GPU");
+}
+
+template <class T>
+void laset(cusolverDnHandle_t, const lapack::MatrixType type, T alpha, T beta, const Tile<T, Device::GPU>& tile) {
+  static_assert(sizeof(T) == 0, "laset is unimplemented for Backend::GPU");
+}
+
+template <class T>
+void set0(cusolverDnHandle_t, const Tile<T, Device::GPU>& tile) {
+  static_assert(sizeof(T) == 0, "set0 is unimplemented for Backend::GPU");
+}
+
+template <class T>
 void hegst(cusolverDnHandle_t handle, const int itype, const blas::Uplo uplo,
            const matrix::Tile<T, Device::GPU>& a, const matrix::Tile<T, Device::GPU>& b) {
   DLAF_ASSERT(square_size(a), a);
@@ -354,11 +502,21 @@ void potrf(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<
 }
 #endif
 
+DLAF_MAKE_CALLABLE_OBJECT(lacpy);
+DLAF_MAKE_CALLABLE_OBJECT(lange);
+DLAF_MAKE_CALLABLE_OBJECT(lantr);
+DLAF_MAKE_CALLABLE_OBJECT(laset);
+DLAF_MAKE_CALLABLE_OBJECT(set0);
 DLAF_MAKE_CALLABLE_OBJECT(hegst);
 DLAF_MAKE_CALLABLE_OBJECT(potrf);
 DLAF_MAKE_CALLABLE_OBJECT(potrfInfo);
 }
 
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(lacpy, internal::lacpy_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(lange, internal::lange_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(lantr, internal::lantr_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(laset, internal::laset_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(set0, internal::set0_o)
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(hegst, internal::hegst_o)
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(potrf, internal::potrf_o)
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(potrfInfo, internal::potrfInfo_o)

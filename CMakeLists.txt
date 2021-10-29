@@ -29,6 +29,7 @@ include(CMakeDependentOption)
 option(BUILD_SHARED_LIBS "Build shared libraries." OFF)
 option(DLAF_WITH_MKL "Enable MKL as provider for LAPACK" OFF)
 option(DLAF_WITH_CUDA "Enable CUDA support" OFF)
+option(DLAF_WITH_HIP "Enable HIP support" OFF)
 cmake_dependent_option(DLAF_WITH_CUDA_MPI_RDMA "Enable MPI CUDA RDMA" OFF "DLAF_WITH_CUDA" OFF)
 option(DLAF_WITH_COVERAGE "Enable coverage" OFF)
 option(DLAF_BUILD_MINIAPPS "Build miniapps" ON)
@@ -45,13 +46,23 @@ enable_language(C)
 # ----- CXX
 enable_language(CXX)
 
-# ---- CUDA
+# ---- CUDA/HIP
+if (DLAF_WITH_CUDA AND DLAF_WITH_HIP)
+  message(FATAL_ERROR "DLAF_WITH_CUDA=ON and DLAF_WITH_HIP=ON. Only one of "
+    "them can be enabled at the same time.")
+endif()
 if (DLAF_WITH_CUDA)
   if (NOT CMAKE_CUDA_ARCHITECTURES)
     set(CMAKE_CUDA_ARCHITECTURES "60;70;80" CACHE STRING "Cuda architectures" FORCE)
   endif()
   enable_language(CUDA)
   find_package(CUDALIBS REQUIRED)
+  set(DLAF_WITH_GPU ON)
+elseif(DLAF_WITH_HIP)
+  find_package(hipblas HINTS $ENV{HIPBLAS_ROOT} REQUIRED)
+  find_package(rocblas REQUIRED)
+  find_package(rocsolver HINTS $ENV{ROCSOLVER_ROOT} REQUIRED)
+  set(DLAF_WITH_GPU ON)
 endif()
 
 # ---------------------------------------------------------------------------

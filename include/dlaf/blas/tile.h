@@ -20,8 +20,9 @@
 #include "dlaf/types.h"
 #include "dlaf/util_blas.h"
 
-#ifdef DLAF_WITH_CUDA
-#include "dlaf/cublas/api.h"
+#ifdef DLAF_WITH_GPU
+#include "dlaf/gpu/blas/api.h"
+#include "dlaf/gpu/blas/error.h"
 #include "dlaf/util_cublas.h"
 #endif
 
@@ -257,7 +258,8 @@ void trsm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const
              b.ld());
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
+
 template <class T>
 void gemm(cublasHandle_t handle, const blas::Op op_a, const blas::Op op_b, const T alpha,
           const matrix::Tile<const T, Device::GPU>& a, const matrix::Tile<const T, Device::GPU>& b,
@@ -350,7 +352,7 @@ void trsm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, c
                          blasToCublasCast(a.ptr()), to_int(a.ld()), blasToCublasCast(b.ptr()),
                          to_int(b.ld()));
 }
-#endif
+#endif  // defined(DLAF_WITH_GPU)
 
 DLAF_MAKE_CALLABLE_OBJECT(gemm);
 DLAF_MAKE_CALLABLE_OBJECT(hemm);

@@ -40,7 +40,7 @@ struct TriangularSolverTestMC : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(TriangularSolverTestMC, MatrixElementTypes);
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <class T>
 struct TriangularSolverTestGPU : public TestWithCommGrids {};
 
@@ -175,7 +175,7 @@ TYPED_TEST(TriangularSolverTestMC, CorrectnessDistributed) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(TriangularSolverTestGPU, CorrectnessLocal) {
   for (const auto side : blas_sides) {
     for (const auto uplo : blas_uplos) {

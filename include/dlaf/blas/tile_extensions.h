@@ -17,10 +17,9 @@
 #include "dlaf/sender/policy.h"
 #include "dlaf/sender/transform.h"
 
-#ifdef DLAF_WITH_CUDA
-#include <cublas_v2.h>
-
-#include "dlaf/cublas/error.h"
+#ifdef DLAF_WITH_GPU
+#include "dlaf/gpu/blas/api.h"
+#include "dlaf/gpu/blas/error.h"
 #include "dlaf/util_cublas.h"
 #endif
 
@@ -63,7 +62,7 @@ void add(T alpha, const matrix::Tile<const T, Device::CPU>& tile_b,
     blas::axpy(tile_a.size().rows(), alpha, tile_b.ptr({0, j}), 1, tile_a.ptr({0, j}), 1);
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <class T>
 void add(cublasHandle_t handle, T alpha, const matrix::Tile<const T, Device::GPU>& tile_b,
          const matrix::Tile<T, Device::GPU>& tile_a) {

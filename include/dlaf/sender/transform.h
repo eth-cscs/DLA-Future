@@ -19,10 +19,10 @@
 #include "dlaf/sender/when_all_lift.h"
 #include "dlaf/types.h"
 
-#ifdef DLAF_WITH_CUDA
-#include <cublas_v2.h>
-#include <cuda_runtime.h>
-#include <cusolverDn.h>
+#ifdef DLAF_WITH_GPU
+#include "dlaf/gpu/api.h"
+#include "dlaf/gpu/blas/api.h"
+#include "dlaf/gpu/solver/api.h"
 
 #include <pika/cuda.hpp>
 #endif
@@ -55,7 +55,7 @@ template <Backend B, typename F, typename Sender,
     return then(std::move(transfer_sender), std::move(f_unwrapping));
   }
   else if constexpr (B == Backend::GPU) {
-#if defined(DLAF_WITH_CUDA)
+#if defined(DLAF_WITH_GPU)
     using pika::cuda::experimental::then_with_cublas;
     using pika::cuda::experimental::then_with_cusolver;
     using pika::cuda::experimental::then_with_stream;

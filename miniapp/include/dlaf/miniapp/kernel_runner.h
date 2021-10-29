@@ -12,12 +12,12 @@
 
 #include "dlaf/common/timer.h"
 #include "dlaf/common/vector.h"
-#include "dlaf/cublas/error.h"
-#include "dlaf/cuda/error.h"
 #include "dlaf/types.h"
 
-#ifdef DLAF_WITH_CUDA
-#include <cuda_runtime.h>
+#ifdef DLAF_WITH_GPU
+#include "dlaf/gpu/api.h"
+#include "dlaf/gpu/blas/error.h"
+#include "dlaf/gpu/error.h"
 #endif
 namespace dlaf::miniapp {
 

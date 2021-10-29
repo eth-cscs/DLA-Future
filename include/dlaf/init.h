@@ -14,7 +14,7 @@
 #include <pika/program_options.hpp>
 #include <pika/runtime.hpp>
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 #include <pika/cuda.hpp>
 #endif
 
@@ -38,7 +38,7 @@ std::ostream& operator<<(std::ostream& os, configuration const& cfg);
 namespace internal {
 configuration& getConfiguration();
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 pika::cuda::experimental::cuda_pool getCudaPool();
 #endif
 }

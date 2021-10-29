@@ -36,7 +36,7 @@ using TileOperationsTestMC = TileOperationsTest<T, Device::CPU>;
 
 TYPED_TEST_SUITE(TileOperationsTestMC, MatrixElementTypes);
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <class T>
 using TileOperationsTestGPU = TileOperationsTest<T, Device::GPU>;
 
@@ -68,7 +68,7 @@ TYPED_TEST(TileOperationsTestMC, Gemm) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(TileOperationsTestGPU, Gemm) {
   using Type = TypeParam;
 
@@ -111,7 +111,7 @@ TYPED_TEST(TileOperationsTestMC, Hemm) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(TileOperationsTestGPU, Hemm) {
   using Type = TypeParam;
 
@@ -157,7 +157,7 @@ TYPED_TEST(TileOperationsTestMC, Her2k) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(TileOperationsTestGPU, Her2k) {
   using Type = TypeParam;
 
@@ -201,7 +201,7 @@ TYPED_TEST(TileOperationsTestMC, Herk) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(TileOperationsTestGPU, Herk) {
   using Type = TypeParam;
 
@@ -278,7 +278,7 @@ TYPED_TEST(TileOperationsTestMC, Trmm3) {
     }
   }
 }
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(TileOperationsTestGPU, Trmm) {
   using Type = TypeParam;
 
@@ -341,7 +341,7 @@ TYPED_TEST(TileOperationsTestMC, Trsm) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(TileOperationsTestGPU, Trsm) {
   using Type = TypeParam;
 

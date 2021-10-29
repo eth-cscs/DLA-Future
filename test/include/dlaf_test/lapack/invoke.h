@@ -12,11 +12,11 @@
 
 #include "dlaf/types.h"
 
-#ifdef DLAF_WITH_CUDA
-#include <cuda_runtime.h>
-#include <cusolverDn.h>
-#include "dlaf/cuda/error.h"
-#include "dlaf/cusolver/error.h"
+#ifdef DLAF_WITH_GPU
+#include "dlaf/gpu/api.h"
+#include "dlaf/gpu/error.h"
+#include "dlaf/gpu/solver/api.h"
+#include "dlaf/gpu/solver/error.h"
 #endif
 
 namespace dlaf::test {
@@ -38,7 +38,7 @@ struct InvokeLapack<Device::CPU> {
   }
 };
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <>
 struct InvokeLapack<Device::GPU> {
   template <class F, class... Args>

@@ -8,13 +8,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 #pragma once
 
 #include <iostream>
 
-#include <cuda_runtime.h>
-
+#include "dlaf/gpu/api.h"
 #include "dlaf/matrix/tile.h"
 
 namespace dlaf::matrix {

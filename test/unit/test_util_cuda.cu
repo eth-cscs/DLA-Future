@@ -8,13 +8,13 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include "dlaf/gpu/api.h"
+#include "dlaf/gpu/error.h"
 #include "dlaf/util_cuda.h"
 
 #include <complex>
 
-#include "cuda_runtime.h"
 #include "gtest/gtest.h"
-#include "dlaf/cuda/error.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;

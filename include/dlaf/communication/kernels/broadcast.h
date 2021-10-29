@@ -87,7 +87,7 @@ struct ScheduleRecvBcast {
            transformMPI(recvBcast_o);
   }
 
-#if defined(DLAF_WITH_CUDA) && !defined(DLAF_WITH_CUDA_RDMA)
+#if defined(DLAF_WITH_GPU) && !defined(DLAF_WITH_CUDA_RDMA)
   template <class CommSender>
   static auto call(pika::future<matrix::Tile<T, Device::GPU>> tile_gpu, comm::IndexT_MPI root_rank,
                    CommSender&& pcomm) {

@@ -15,17 +15,14 @@
 #include <exception>
 #include <iostream>
 
-#ifdef DLAF_WITH_CUDA
-#include <cublas_v2.h>
-#include <cuda_runtime.h>
-#endif
-
 #include "dlaf/common/source_location.h"
+#include "dlaf/gpu/api.h"
+#include "dlaf/gpu/blas/api.h"
 
 namespace dlaf {
 namespace internal {
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 
 /// CUBLAS equivalent to `cudaGetErrorString()`
 /// Reference: https://docs.nvidia.com/cuda/cublas/index.html#cublasstatus_t
@@ -41,7 +38,14 @@ inline std::string cublasGetErrorString(cublasStatus_t st) {
     case CUBLAS_STATUS_EXECUTION_FAILED: return "CUBLAS_STATUS_EXECUTION_FAILED";
     case CUBLAS_STATUS_INTERNAL_ERROR:   return "CUBLAS_STATUS_INTERNAL_ERROR";
     case CUBLAS_STATUS_NOT_SUPPORTED:    return "CUBLAS_STATUS_NOT_SUPPORTED";
+#if defined(DLAF_WITH_CUDA)
+    // HIPBLAS_STATUS_LICENSE_ERROR not existing in rocm 4.3.1
     case CUBLAS_STATUS_LICENSE_ERROR:    return "CUBLAS_STATUS_LICENSE_ERROR";
+#else
+    case HIPBLAS_STATUS_HANDLE_IS_NULLPTR:    return "CUBLAS_STATUS_HANDLE_IS_NULLPTR";
+    case HIPBLAS_STATUS_INVALID_ENUM:    return "CUBLAS_STATUS_INVALID_ENUM";
+    case HIPBLAS_STATUS_UNKNOWN:    return "CUBLAS_STATUS_UNKNOWN";
+#endif
   }
   // clang-format on
   return "UNKNOWN";

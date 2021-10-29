@@ -18,7 +18,7 @@ DLAF_MATRIX_MIRROR_ETI(, double, Device::CPU, Device::CPU)
 DLAF_MATRIX_MIRROR_ETI(, std::complex<float>, Device::CPU, Device::CPU)
 DLAF_MATRIX_MIRROR_ETI(, std::complex<double>, Device::CPU, Device::CPU)
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 DLAF_MATRIX_MIRROR_ETI(, float, Device::CPU, Device::GPU)
 DLAF_MATRIX_MIRROR_ETI(, double, Device::CPU, Device::GPU)
 DLAF_MATRIX_MIRROR_ETI(, std::complex<float>, Device::CPU, Device::GPU)

@@ -8,7 +8,7 @@
 from spack import *
 
 
-class DlaFuture(CMakePackage, CudaPackage):
+class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     """DLA-Future library: Distributed Linear Algebra with Future"""
 
     homepage = "https://github.com/eth-cscs/DLA-Future/wiki"
@@ -33,6 +33,7 @@ class DlaFuture(CMakePackage, CudaPackage):
 
     depends_on("umpire~examples")
     depends_on("umpire+cuda~shared", when="+cuda")
+    depends_on("umpire+rocm~shared", when="+rocm")
 
     # https://github.com/eth-cscs/DLA-Future/issues/420
     conflicts("umpire@6:")
@@ -40,10 +41,14 @@ class DlaFuture(CMakePackage, CudaPackage):
     depends_on("pika cxxstd=17 +mpi")
     depends_on("pika@0.4.0")
     depends_on("pika +cuda", when="+cuda")
+    depends_on("pika +rocm", when="+rocm")
 
     depends_on("pika build_type=Debug", when="build_type=Debug")
     depends_on("pika build_type=Release", when="build_type=Release")
     depends_on("pika build_type=RelWithDebInfo", when="build_type=RelWithDebInfo")
+
+    depends_on("hipblas", when="+rocm")
+    depends_on("rocsolver", when="+rocm")
 
     def cmake_args(self):
         spec = self.spec
@@ -61,8 +66,15 @@ class DlaFuture(CMakePackage, CudaPackage):
                 ),
             ]
 
-        # CUDA
+        # CUDA/HIP
         args.append(self.define_from_variant("DLAF_WITH_CUDA", "cuda"))
+        args.append(self.define_from_variant("DLAF_WITH_HIP", "rocm"))
+
+        # HIP support requires compiling with hipcc
+        if '+rocm' in self.spec:
+            args += [self.define('CMAKE_CXX_COMPILER', self.spec['hip'].hipcc)]
+            if self.spec.satisfies('^cmake@3.21.0:3.21.2'):
+                args += [self.define('__skip_rocmclang', True)]
 
         # DOC
         args.append(self.define_from_variant("DLAF_BUILD_DOC", "doc"))

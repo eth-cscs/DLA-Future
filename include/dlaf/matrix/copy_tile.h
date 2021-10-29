@@ -12,10 +12,9 @@
 
 #include <type_traits>
 
-#if DLAF_WITH_CUDA
-#include <cuda_runtime.h>
-
-#include "dlaf/cuda/error.h"
+#if DLAF_WITH_GPU
+#include "dlaf/gpu/api.h"
+#include "dlaf/gpu/error.h"
 #endif
 
 #include "dlaf/common/callable_object.h"
@@ -36,7 +35,7 @@ struct CopyBackend<Device::CPU, Device::CPU> {
   static constexpr Backend value = Backend::MC;
 };
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <>
 struct CopyBackend<Device::CPU, Device::GPU> {
   static constexpr Backend value = Backend::GPU;
@@ -67,7 +66,7 @@ struct CopyTile<T, Device::CPU, Device::CPU> {
   }
 };
 
-#if DLAF_WITH_CUDA
+#if DLAF_WITH_GPU
 template <typename T>
 struct CopyTile<T, Device::CPU, Device::GPU> {
   static void call(const matrix::Tile<const T, Device::CPU>& source,

@@ -17,7 +17,7 @@
 namespace dlaf {
 namespace memory {
 namespace internal {
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 umpire::Allocator& getUmpireHostAllocator() {
   static auto host_allocator = umpire::ResourceManager::getInstance().getAllocator("PINNED");
   return host_allocator;
@@ -35,7 +35,7 @@ umpire::Allocator& getUmpireHostAllocator() {
 #endif
 
 void initializeUmpireHostAllocator(std::size_t initial_bytes) {
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
   static bool initialized = false;
 
   // Umpire pools cannot be released, so we keep the pools around even when
@@ -61,7 +61,7 @@ void initializeUmpireHostAllocator(std::size_t initial_bytes) {
 
 void finalizeUmpireHostAllocator() {}
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 void initializeUmpireDeviceAllocator(std::size_t initial_bytes) {
   static bool initialized = false;
 

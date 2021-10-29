@@ -499,5 +499,4 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
     }
   }
 }
-
 }

@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include <cuda_runtime.h>
+#include "dlaf/gpu/api.h"
 
 /// @file
 

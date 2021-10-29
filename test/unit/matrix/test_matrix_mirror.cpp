@@ -66,7 +66,7 @@ TYPED_TEST(MatrixMirrorTest, Basics) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       basicsTest<TypeParam, Device::CPU, Device::CPU>(comm_grid, test);
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
       basicsTest<TypeParam, Device::CPU, Device::GPU>(comm_grid, test);
       basicsTest<TypeParam, Device::GPU, Device::CPU>(comm_grid, test);
       basicsTest<TypeParam, Device::GPU, Device::GPU>(comm_grid, test);
@@ -134,7 +134,7 @@ TYPED_TEST(MatrixMirrorTest, Copy) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       copyTest<TypeParam, Device::CPU, Device::CPU>(comm_grid, test);
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
       copyTest<TypeParam, Device::CPU, Device::GPU>(comm_grid, test);
       copyTest<TypeParam, Device::GPU, Device::CPU>(comm_grid, test);
       copyTest<TypeParam, Device::GPU, Device::GPU>(comm_grid, test);
@@ -176,7 +176,7 @@ TYPED_TEST(MatrixMirrorTest, CopyConst) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       copyConstTest<TypeParam, Device::CPU, Device::CPU>(comm_grid, test);
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
       copyConstTest<TypeParam, Device::CPU, Device::GPU>(comm_grid, test);
       copyConstTest<TypeParam, Device::GPU, Device::CPU>(comm_grid, test);
       copyConstTest<TypeParam, Device::GPU, Device::GPU>(comm_grid, test);
@@ -210,14 +210,14 @@ TYPED_TEST(MatrixMirrorTest, SameDevicesSameMemory) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       sameDeviceTest<TypeParam, Device::CPU, Device::CPU>(comm_grid, test);
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
       sameDeviceTest<TypeParam, Device::GPU, Device::GPU>(comm_grid, test);
 #endif
     }
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <typename T, Device Target, Device Source>
 void differentDeviceTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
   GlobalElementSize size = globalTestSize(test.size, comm_grid.size());

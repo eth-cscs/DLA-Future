@@ -19,10 +19,9 @@
 #undef I
 #endif
 
-#ifdef DLAF_WITH_CUDA
-#include <cusolverDn.h>
-
+#ifdef DLAF_WITH_GPU
 #include <pika/cuda.hpp>
+#include "dlaf/gpu/solver/api.h"
 #endif
 
 #include "dlaf/common/assert.h"
@@ -37,12 +36,17 @@
 #include "dlaf/util_lapack.h"
 #include "dlaf/util_tile.h"
 
-#ifdef DLAF_WITH_CUDA
-#include "dlaf/cusolver/assert_info.h"
-#include "dlaf/cusolver/error.h"
-#include "dlaf/cusolver/hegst.h"
+#ifdef DLAF_WITH_GPU
+#include "dlaf/gpu/solver/assert_info.h"
+#include "dlaf/gpu/solver/error.h"
 #include "dlaf/lapack/gpu/laset.h"
 #include "dlaf/util_cublas.h"
+#endif
+// hegst functions get exposed in rocSOLVER
+#ifdef DLAF_WITH_CUDA
+#include "dlaf/gpu/solver/hegst.h"
+#elif defined(DLAF_WITH_HIP)
+#include "dlaf/util_rocblas.h"
 #endif
 
 namespace dlaf {
@@ -332,11 +336,16 @@ void potrf(const blas::Uplo uplo, const Tile<T, Device::CPU>& a) noexcept {
   DLAF_ASSERT(info == 0, info);
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 namespace internal {
 #define DLAF_DECLARE_CUSOLVER_OP(Name) \
   template <typename T>                \
   struct Cusolver##Name
+
+DLAF_DECLARE_CUSOLVER_OP(Hegst);
+DLAF_DECLARE_CUSOLVER_OP(Potrf);
+
+#ifdef DLAF_WITH_CUDA
 
 #define DLAF_DEFINE_CUSOLVER_OP_BUFFER(Name, Type, f)                                     \
   template <>                                                                             \
@@ -351,17 +360,39 @@ namespace internal {
     }                                                                                     \
   }
 
-DLAF_DECLARE_CUSOLVER_OP(Hegst);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, float, Ssygst);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, double, Dsygst);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, std::complex<float>, Chegst);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, std::complex<double>, Zhegst);
 
-DLAF_DECLARE_CUSOLVER_OP(Potrf);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, float, Spotrf);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, double, Dpotrf);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<float>, Cpotrf);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<double>, Zpotrf);
+
+#elif defined(DLAF_WITH_HIP)
+
+#define DLAF_DEFINE_CUSOLVER_OP_BUFFER(Name, Type, f)                 \
+  template <>                                                         \
+  struct Cusolver##Name<Type> {                                       \
+    template <typename... Args>                                       \
+    static void call(Args&&... args) {                                \
+      DLAF_CUSOLVER_CHECK_ERROR(rocsolver_##f(std::forward<Args>(args)...)); \
+    }                                                                 \
+  }
+
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, float, ssygst);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, double, dsygst);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, std::complex<float>, chegst);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, std::complex<double>, zhegst);
+
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, float, spotrf);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, double, dpotrf);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<float>, cpotrf);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<double>, zpotrf);
+
+#endif
+
 }
 
 namespace internal {
@@ -372,6 +403,7 @@ class CusolverInfo {
 
 public:
   CusolverInfo(int workspace_size) : workspace_(workspace_size), info_(1) {}
+  CusolverInfo() : info_(1) {}
 
   T* workspace() {
     return workspace_();
@@ -430,6 +462,7 @@ void hegst(cusolverDnHandle_t handle, const int itype, const blas::Uplo uplo,
   DLAF_ASSERT(a.size() == b.size(), a, b);
   const auto n = a.size().rows();
 
+#ifdef DLAF_WITH_CUDA
   int workspace_size;
   internal::CusolverHegst<T>::callBufferSize(handle, itype, util::blasToCublas(uplo), to_int(n),
                                              util::blasToCublasCast(a.ptr()), to_int(a.ld()),
@@ -442,6 +475,11 @@ void hegst(cusolverDnHandle_t handle, const int itype, const blas::Uplo uplo,
                                    util::blasToCublasCast(info.workspace()), info.info());
 
   assertExtendInfo(dlaf::cusolver::assertInfoHegst, handle, std::move(info));
+#elif defined(DLAF_WITH_HIP)
+  internal::CusolverHegst<T>::call(handle, util::blasToRocblas(itype), util::blasToRocblas(uplo),
+                                   to_int(n), util::blasToRocblasCast(a.ptr()), to_int(a.ld()),
+                                   util::blasToRocblasCast(b.ptr()), to_int(b.ld()));
+#endif
 }
 
 template <class T>
@@ -450,6 +488,7 @@ internal::CusolverInfo<T> potrfInfo(cusolverDnHandle_t handle, const blas::Uplo 
   DLAF_ASSERT(square_size(a), a);
   const auto n = a.size().rows();
 
+#ifdef DLAF_WITH_CUDA
   int workspace_size;
   internal::CusolverPotrf<T>::callBufferSize(handle, util::blasToCublas(uplo), to_int(n),
                                              util::blasToCublasCast(a.ptr()), to_int(a.ld()),
@@ -459,6 +498,11 @@ internal::CusolverInfo<T> potrfInfo(cusolverDnHandle_t handle, const blas::Uplo 
                                    util::blasToCublasCast(a.ptr()), to_int(a.ld()),
                                    util::blasToCublasCast(info.workspace()), workspace_size,
                                    info.info());
+#elif defined(DLAF_WITH_HIP)
+  internal::CusolverInfo<T> info{};
+  internal::CusolverPotrf<T>::call(handle, util::blasToRocblas(uplo), to_int(n),
+                                   util::blasToRocblasCast(a.ptr()), to_int(a.ld()), info.info());
+#endif
 
   return info;
 }
@@ -466,7 +510,9 @@ internal::CusolverInfo<T> potrfInfo(cusolverDnHandle_t handle, const blas::Uplo 
 template <class T>
 void potrf(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<T, Device::GPU>& a) {
   auto info = potrfInfo(handle, uplo, a);
+#ifdef DLAF_WITH_CUDA
   assertExtendInfo(dlaf::cusolver::assertInfoHegst, handle, std::move(info));
+#endif
 }
 #endif
 

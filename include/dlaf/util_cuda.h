@@ -10,9 +10,9 @@
 
 #pragma once
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 
-#include <cuComplex.h>
+#include "dlaf/gpu/blas/api.h"
 #include <complex>
 
 namespace dlaf::util {

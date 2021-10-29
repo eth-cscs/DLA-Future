@@ -15,16 +15,13 @@
 #include <exception>
 #include <iostream>
 
-#ifdef DLAF_WITH_CUDA
-#include <cuda_runtime.h>
-#endif
-
 #include "dlaf/common/source_location.h"
+#include "dlaf/gpu/api.h"
 
 namespace dlaf {
 namespace internal {
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 
 inline void cudaCall(cudaError_t err, const dlaf::common::internal::source_location& info) noexcept {
   if (err != cudaSuccess) {

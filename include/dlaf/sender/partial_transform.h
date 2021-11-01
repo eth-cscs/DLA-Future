@@ -42,6 +42,6 @@ public:
 };
 
 template <Backend B, typename F>
-PartialTransform(const Policy<B> policy, F&& f) -> PartialTransform<B, std::decay_t<F>>;
+PartialTransform(const Policy<B> policy, F&& f)->PartialTransform<B, std::decay_t<F>>;
 }
 }

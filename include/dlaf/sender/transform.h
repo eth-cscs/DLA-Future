@@ -128,7 +128,7 @@ struct Transform<Backend::GPU> {
       std::decay_t<F> f;
 
       template <typename E>
-      void set_error(E&& e) && noexcept {
+          void set_error(E&& e) && noexcept {
         hpx::execution::experimental::set_error(std::move(r), std::forward<E>(e));
       }
 

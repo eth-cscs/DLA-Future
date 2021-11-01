@@ -91,13 +91,15 @@ void lacpy(TileElementSize region, TileElementIndex in_idx, const Tile<const T, 
 ///
 /// This overload blocks until completion of the algorithm.
 template <Backend B, class T, Device D>
-dlaf::BaseType<T> lange(const dlaf::internal::Policy<B>& p, const lapack::Norm norm, const Tile<T, Device::CPU>& a);
+dlaf::BaseType<T> lange(const dlaf::internal::Policy<B>& p, const lapack::Norm norm,
+                        const Tile<T, Device::CPU>& a);
 
 /// \overload lange
 ///
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
-template <Backend B, typename Sender, typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+template <Backend B, typename Sender,
+          typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
 dlaf::BaseType<T> lange(const dlaf::internal::Policy<B>& p, Sender&& s);
 
 /// \overload lange
@@ -117,14 +119,15 @@ dlaf::BaseType<T> lange(const dlaf::internal::Policy<B>& p);
 ///
 /// This overload blocks until completion of the algorithm.
 template <Backend B, class T, Device D>
-dlaf::BaseType<T> lantr(const dlaf::internal::Policy<B>& p, const lapack::Norm norm, const blas::Uplo uplo, const blas::Diag diag,
-                        const Tile<T, Device::CPU>& a);
+dlaf::BaseType<T> lantr(const dlaf::internal::Policy<B>& p, const lapack::Norm norm,
+                        const blas::Uplo uplo, const blas::Diag diag, const Tile<T, Device::CPU>& a);
 
 /// \overload lantr
 ///
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
-template <Backend B, typename Sender, typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+template <Backend B, typename Sender,
+          typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
 dlaf::BaseType<T> lantr(const dlaf::internal::Policy<B>& p, Sender&& s);
 
 /// \overload lantr
@@ -138,13 +141,15 @@ dlaf::BaseType<T> lantr(const dlaf::internal::Policy<B>& p);
 ///
 /// This overload blocks until completion of the algorithm.
 template <Backend B, class T, Device D>
-void laset(const dlaf::internal::Policy<B>& p, const lapack::MatrixType type, T alpha, T beta, const Tile<T, Device::CPU>& tile);
+void laset(const dlaf::internal::Policy<B>& p, const lapack::MatrixType type, T alpha, T beta,
+           const Tile<T, Device::CPU>& tile);
 
 /// \overload laset
 ///
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
-template <Backend B, typename Sender, typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+template <Backend B, typename Sender,
+          typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
 void laset(const dlaf::internal::Policy<B>& p, Sender&& s);
 
 /// \overload laset
@@ -164,7 +169,8 @@ void set0(const dlaf::internal::Policy<B>& p, const Tile<T, Device::CPU>& tile);
 ///
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
-template <Backend B, typename Sender, typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+template <Backend B, typename Sender,
+          typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
 void set0(const dlaf::internal::Policy<B>& p, Sender&& s);
 
 /// \overload set0
@@ -395,13 +401,14 @@ dlaf::BaseType<T> lange(cusolverDnHandle_t, const lapack::Norm norm, const Tile<
 }
 
 template <class T>
-dlaf::BaseType<T> lantr(cusolverDnHandle_t, const lapack::Norm norm, const blas::Uplo uplo, const blas::Diag diag,
-                        const Tile<T, Device::GPU>& a) {
+dlaf::BaseType<T> lantr(cusolverDnHandle_t, const lapack::Norm norm, const blas::Uplo uplo,
+                        const blas::Diag diag, const Tile<T, Device::GPU>& a) {
   static_assert(sizeof(T) == 0, "lantr is unimplemented for Backend::GPU");
 }
 
 template <class T>
-void laset(cusolverDnHandle_t, const lapack::MatrixType type, T alpha, T beta, const Tile<T, Device::GPU>& tile) {
+void laset(cusolverDnHandle_t, const lapack::MatrixType type, T alpha, T beta,
+           const Tile<T, Device::GPU>& tile) {
   static_assert(sizeof(T) == 0, "laset is unimplemented for Backend::GPU");
 }
 

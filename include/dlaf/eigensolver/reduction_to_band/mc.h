@@ -216,8 +216,8 @@ void updateTrailingPanel(const bool has_head, const std::vector<TileT<T>>& panel
 template <class Executor, class T>
 void hemmDiag(const Executor& ex, hpx::shared_future<TileT<const T>> tile_a,
               hpx::shared_future<TileT<const T>> tile_w, hpx::future<TileT<T>> tile_x) {
-  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::hemm_o), blas::Side::Left, blas::Uplo::Lower, T(1),
-                std::move(tile_a), std::move(tile_w), T(1), std::move(tile_x));
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::hemm_o), blas::Side::Left,
+                blas::Uplo::Lower, T(1), std::move(tile_a), std::move(tile_w), T(1), std::move(tile_x));
 }
 
 // X += op(A) * W
@@ -231,16 +231,16 @@ void hemmOffDiag(const Executor& ex, blas::Op op, hpx::shared_future<TileT<const
 template <class Executor, class T>
 void her2kDiag(const Executor& ex, hpx::shared_future<TileT<const T>> tile_v,
                hpx::shared_future<TileT<const T>> tile_x, hpx::future<TileT<T>> tile_a) {
-  dataflow(ex, matrix::unwrapExtendTiles(tile::internal::her2k_o), blas::Uplo::Lower, blas::Op::NoTrans, T(-1),
-           std::move(tile_v), std::move(tile_x), BaseType<T>(1), std::move(tile_a));
+  dataflow(ex, matrix::unwrapExtendTiles(tile::internal::her2k_o), blas::Uplo::Lower, blas::Op::NoTrans,
+           T(-1), std::move(tile_v), std::move(tile_x), BaseType<T>(1), std::move(tile_a));
 }
 
 // C -= A . B*
 template <class Executor, class T>
 void her2kOffDiag(const Executor& ex, hpx::shared_future<TileT<const T>> tile_a,
                   hpx::shared_future<TileT<const T>> tile_b, hpx::future<TileT<T>> tile_c) {
-  dataflow(ex, matrix::unwrapExtendTiles(tile::internal::gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
-           std::move(tile_a), std::move(tile_b), T(1), std::move(tile_c));
+  dataflow(ex, matrix::unwrapExtendTiles(tile::internal::gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans,
+           T(-1), std::move(tile_a), std::move(tile_b), T(1), std::move(tile_c));
 }
 
 namespace local {

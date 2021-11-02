@@ -13,6 +13,7 @@
 #include <cmath>
 
 #include <gtest/gtest.h>
+#include <hpx/include/threadmanager.hpp>
 #include <lapack/util.hh>
 
 #include "dlaf/common/index2d.h"
@@ -356,6 +357,7 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributed) {
       copy(reference, matrix_a);
 
       auto local_taus = eigensolver::reductionToBand<Backend::MC>(comm_grid, matrix_a);
+      hpx::threads::get_thread_manager().wait();
 
       checkUpperPartUnchanged(reference, matrix_a);
 

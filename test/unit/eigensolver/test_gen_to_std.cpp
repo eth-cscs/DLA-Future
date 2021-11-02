@@ -137,6 +137,7 @@ TYPED_TEST(EigensolverGenToStdTestMC, CorrectnessDistributed) {
       for (auto sz : sizes) {
         std::tie(m, mb) = sz;
         testGenToStdEigensolver<TypeParam, Backend::MC, Device::CPU>(comm_grid, uplo, m, mb);
+        hpx::resource::get_thread_pool("default").wait();
       }
     }
   }
@@ -162,6 +163,7 @@ TYPED_TEST(EigensolverGenToStdTestGPU, CorrectnessDistributed) {
       for (auto sz : sizes) {
         std::tie(m, mb) = sz;
         testGenToStdEigensolver<TypeParam, Backend::GPU, Device::GPU>(comm_grid, uplo, m, mb);
+        hpx::resource::get_thread_pool("default").wait();
       }
     }
   }

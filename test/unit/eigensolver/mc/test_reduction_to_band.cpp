@@ -13,6 +13,7 @@
 #include <cmath>
 
 #include <gtest/gtest.h>
+#include <hpx/runtime.hpp>
 #include <hpx/include/threadmanager.hpp>
 #include <lapack/util.hh>
 

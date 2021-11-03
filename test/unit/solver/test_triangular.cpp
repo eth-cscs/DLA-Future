@@ -12,9 +12,10 @@
 #include <functional>
 #include <tuple>
 
+#include <gtest/gtest.h>
+#include <hpx/runtime.hpp>
 #include <hpx/include/threadmanager.hpp>
 
-#include "gtest/gtest.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"

@@ -10,7 +10,6 @@
 #pragma once
 
 #include <hpx/include/parallel_executors.hpp>
-#include <hpx/include/threads.hpp>
 #include <hpx/include/util.hpp>
 
 #include "dlaf/blas/tile.h"
@@ -84,8 +83,6 @@ template <class T>
 void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     Matrix<T, Device::CPU>& mat_c, Matrix<const T, Device::CPU>& mat_v,
     common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
-  using hpx::unwrapping;
-
   auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
   auto executor_np = dlaf::getNpExecutor<Backend::MC>();
 
@@ -142,8 +139,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
                                        nr_reflectors_last_block}});
         }
         copySingleTile(tile_v, panelV(ik));
-        hpx::dataflow(hpx::launch::sync, unwrapping(tile::laset<T>), lapack::MatrixType::Upper, 0.f, 1.f,
-                      panelV(ik));
+        hpx::dataflow(hpx::launch::sync, matrix::unwrapExtendTiles(tile::laset<T>),
+                      lapack::MatrixType::Upper, 0.f, 1.f, panelV(ik));
       }
       else {
         panelV.setTile(ik, mat_v.read(ik));
@@ -192,8 +189,6 @@ template <class T>
 void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_c, Matrix<const T, Device::CPU>& mat_v,
     common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
-  using hpx::unwrapping;
-
   auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
   auto executor_np = dlaf::getNpExecutor<Backend::MC>();
 
@@ -215,7 +210,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     return;
 
   // Note: "- 1" added to deal with size 1 reflector.
-  const SizeType total_nr_reflector = mat_v.size().rows() - mb - 1;
+  const SizeType total_nr_reflector = mat_v.size().cols() - mb - 1;
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panelsV(n_workspaces, dist_v);
@@ -266,8 +261,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
                            {dist_v.tileSize(GlobalTileIndex(i, k)).rows(), nr_reflectors_last_block}});
           }
           copySingleTile(tile_v, panelV(ik_panel));
-          hpx::dataflow(hpx::launch::sync, unwrapping(tile::laset<T>), lapack::MatrixType::Upper, 0.f,
-                        1.f, panelV(ik_panel));
+          hpx::dataflow(hpx::launch::sync, matrix::unwrapExtendTiles(tile::laset<T>),
+                        lapack::MatrixType::Upper, 0.f, 1.f, panelV(ik_panel));
         }
         else {
           panelV.setTile(ik_panel, mat_v.read(GlobalTileIndex(i, k)));
@@ -276,14 +271,14 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
       auto k_local = dist_t.template localTileFromGlobalTile<Coord::Col>(k);
       const LocalTileIndex t_index{Coord::Col, k_local};
-      auto taus_panel = taus[dist_v.template localTileFromGlobalTile<Coord::Col>(k)];
+      auto taus_panel = taus[k_local];
       const SizeType nr_reflectors = (is_last) ? nr_reflectors_last_block : mat_v.blockSize().cols();
       dlaf::factorization::internal::computeTFactor<Backend::MC>(nr_reflectors, mat_v, v_start,
                                                                  taus_panel, panelT(t_index),
                                                                  mpi_col_task_chain);
 
       for (SizeType i_local = dist_v.template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
-           i_local < dist_c.localNrTiles().rows(); ++i_local) {
+           i_local < dist_v.localNrTiles().rows(); ++i_local) {
         // WH = V T
         const LocalTileIndex ik_panel{Coord::Row, i_local};
         copySingleTile(panelV.read(ik_panel), panelW(ik_panel));
@@ -295,8 +290,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
     broadcast(executor_mpi, k_rank_col, panelW, mpi_row_task_chain);
 
-    for (SizeType i_local = dist_c.template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
-         i_local < dist_c.localNrTiles().rows(); ++i_local) {
+    for (SizeType i_local = dist_v.template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
+         i_local < dist_v.localNrTiles().rows(); ++i_local) {
       const LocalTileIndex ik_panel{Coord::Row, i_local};
       for (SizeType j_local = 0; j_local < dist_c.localNrTiles().cols(); ++j_local) {
         // W2 = W C

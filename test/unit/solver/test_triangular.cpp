@@ -13,8 +13,8 @@
 #include <tuple>
 
 #include <gtest/gtest.h>
-#include <hpx/runtime.hpp>
 #include <hpx/include/threadmanager.hpp>
+#include <hpx/runtime.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/matrix.h"

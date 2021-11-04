@@ -33,7 +33,7 @@ template <class T, Device D>
 void sendBcast(const matrix::Tile<const T, D>& tile, const common::PromiseGuard<Communicator>& pcomm,
                MPI_Request* req) {
 #if !defined(DLAF_WITH_CUDA_RDMA)
-  static_assert(D == Device::CPU, "With CUDA_RDMA disabled, MPI accepts just CPU memory.");
+  static_assert(D == Device::CPU, "DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.");
 #endif
 
   const auto& comm = pcomm.ref();
@@ -48,7 +48,7 @@ template <class T, Device D>
 void recvBcast(const matrix::Tile<T, D>& tile, comm::IndexT_MPI root_rank,
                const common::PromiseGuard<Communicator>& pcomm, MPI_Request* req) {
 #if !defined(DLAF_WITH_CUDA_RDMA)
-  static_assert(D == Device::CPU, "With CUDA_RDMA disabled, MPI accepts just CPU memory.");
+  static_assert(D == Device::CPU, "DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.");
 #endif
 
   auto msg = comm::make_message(common::make_data(tile));
@@ -62,6 +62,7 @@ void scheduleSendBcast(const comm::Executor& ex, Future<matrix::Tile<const T, D>
                        hpx::future<common::PromiseGuard<Communicator>> pcomm) {
   using matrix::unwrapExtendTiles;
   using internal::prepareSendTile;
+
   hpx::dataflow(ex, unwrapExtendTiles(sendBcast_o), prepareSendTile(std::move(tile)), std::move(pcomm));
 }
 
@@ -69,8 +70,13 @@ namespace internal {
 
 template <class T>
 struct ScheduleRecvBcast {
-  static auto call(const comm::Executor& ex, hpx::future<matrix::Tile<T, Device::CPU>> tile,
+  template <Device D>
+  static auto call(const comm::Executor& ex, hpx::future<matrix::Tile<T, D>> tile,
                    comm::IndexT_MPI root_rank, hpx::future<common::PromiseGuard<Communicator>> pcomm) {
+#if !defined(DLAF_WITH_CUDA_RDMA)
+    static_assert(D == Device::CPU, "With CUDA RDMA disabled, MPI accepts just CPU memory.");
+#endif
+
     using hpx::dataflow;
     using matrix::unwrapExtendTiles;
 

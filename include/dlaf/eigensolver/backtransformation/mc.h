@@ -290,8 +290,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
     broadcast(executor_mpi, k_rank_col, panelW, mpi_row_task_chain);
 
-    for (SizeType i_local = dist_v.template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
-         i_local < dist_v.localNrTiles().rows(); ++i_local) {
+    for (SizeType i_local = dist_c.template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
+         i_local < dist_c.localNrTiles().rows(); ++i_local) {
       const LocalTileIndex ik_panel{Coord::Row, i_local};
       for (SizeType j_local = 0; j_local < dist_c.localNrTiles().cols(); ++j_local) {
         // W2 = W C

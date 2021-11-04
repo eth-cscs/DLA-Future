@@ -178,16 +178,13 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
   const SizeType nr_reflector = std::max(static_cast<SizeType>(0), m - mb - 1);
 
   // Copy matrices locally
-  auto mat_c_loc = dlaf::matrix::test::allGather<T>(lapack::MatrixType::General, mat_c, grid);
+  const auto mat_c_loc = dlaf::matrix::test::allGather<T>(lapack::MatrixType::General, mat_c, grid);
   auto mat_v_loc = dlaf::matrix::test::allGather<T>(lapack::MatrixType::General, mat_v, grid);
 
   // Reset diagonal and upper values of V
-  const MatrixLocal<T> v({m, m}, blockSizeV);
-  for (const auto& ij_tile : iterate_range2d(v.nrTiles())) {
-    const auto& source_tile = mat_v_loc.tile_read(ij_tile);
-    copy(source_tile, v.tile(ij_tile));
+  for (const auto& ij_tile : iterate_range2d(mat_v_loc.nrTiles())) {
     if (ij_tile.row() == ij_tile.col() + 1)
-      tile::laset<T>(lapack::MatrixType::Upper, 0.f, 1.f, v.tile(ij_tile));
+      tile::laset<T>(lapack::MatrixType::Upper, 0.f, 1.f, mat_v_loc.tile(ij_tile));
   }
 
   common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus;
@@ -207,7 +204,7 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
     dlaf::matrix::util::internal::getter_random<BaseType<T>> random_value(seed);
     for (SizeType j = k; j < std::min(k + mb, nr_reflector); ++j) {
       const GlobalElementIndex v_offset{j + mb, j};
-      auto dotprod = blas::dot(m - mb - j, v.ptr(v_offset), 1, v.ptr(v_offset), 1);
+      auto dotprod = blas::dot(m - mb - j, mat_v_loc.ptr(v_offset), 1, mat_v_loc.ptr(v_offset), 1);
       BaseType<T> tau_i = 0;
       if (std::is_same<T, ComplexType<T>>::value) {
         tau_i = random_value();
@@ -225,10 +222,12 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
     const GlobalElementIndex v_offset{j + mb, j};
     auto tau = tausloc[j];
     if (m != 0 && n != 0) {
-      lapack::larf(lapack::Side::Left, m - mb - j, n, v.ptr(v_offset), 1, tau,
+      lapack::larf(lapack::Side::Left, m - mb - j, n, mat_v_loc.ptr(v_offset), 1, tau,
                    mat_c_loc.ptr(GlobalElementIndex{j + mb, 0}), mat_c_loc.ld());
     }
   }
+
+  eigensolver::backTransformation<Backend::MC>(grid, mat_c, mat_v, taus);
 
   auto result = [& dist = mat_c.distribution(),
                  &mat_local = mat_c_loc](const GlobalElementIndex& element) {
@@ -236,8 +235,6 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
     const auto tile_element = dist.tileElementIndex(element);
     return mat_local.tile_read(tile_index)(tile_element);
   };
-
-  eigensolver::backTransformation<Backend::MC>(grid, mat_c, mat_v, taus);
 
   const auto error = (mat_c.size().rows() + 1) * dlaf::test::TypeUtilities<T>::error;
   CHECK_MATRIX_NEAR(result, mat_c, error, error);

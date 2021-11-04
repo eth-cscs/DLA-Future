@@ -89,6 +89,15 @@ struct ScheduleRecvBcast {
     using matrix::duplicateIfNeeded;
     using matrix::copy_o;
 
+    // Note:
+    //
+    // TILE_GPU -+-> duplicateIfNeeded<CPU> ---> TILE_CPU ---> recvBcast ---> TILE_CPU -+-> copy
+    //           |                                                                      |
+    //           +----------------------------------------------------------------------+
+    //
+    // Actually `duplicateIfNeeded` always makes a copy, because it is always needed since this
+    // is the specialization for GPU input and MPI withuot CUDA_RDMA requires CPU memory.
+
     auto tile_gpu = tile.share();
     auto tile_cpu = duplicateIfNeeded<Device::CPU>(tile_gpu);
 

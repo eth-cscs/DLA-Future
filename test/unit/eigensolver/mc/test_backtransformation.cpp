@@ -135,10 +135,10 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
     taus.push_back(hpx::make_ready_future(tau_tile));
   }
 
-  for (SizeType j = nr_reflector - 1; j >= 0; --j) {
-    const GlobalElementIndex v_offset{j + mb, j};
-    auto tau = tausloc[j];
-    if (m != 0 && n != 0) {
+  if (n != 0) {
+    for (SizeType j = nr_reflector - 1; j >= 0; --j) {
+      const GlobalElementIndex v_offset{j + mb, j};
+      auto tau = tausloc[j];
       lapack::larf(lapack::Side::Left, m - mb - j, n, v.ptr(v_offset), 1, tau,
                    c.ptr(GlobalElementIndex{j + mb, 0}), c.ld());
     }
@@ -218,10 +218,10 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
       taus.push_back(hpx::make_ready_future(tau_tile));
   }
 
-  for (SizeType j = nr_reflector - 1; j >= 0; --j) {
-    const GlobalElementIndex v_offset{j + mb, j};
-    auto tau = tausloc[j];
-    if (m != 0 && n != 0) {
+  if (n != 0) {
+    for (SizeType j = nr_reflector - 1; j >= 0; --j) {
+      const GlobalElementIndex v_offset{j + mb, j};
+      auto tau = tausloc[j];
       lapack::larf(lapack::Side::Left, m - mb - j, n, mat_v_loc.ptr(v_offset), 1, tau,
                    mat_c_loc.ptr(GlobalElementIndex{j + mb, 0}), mat_c_loc.ld());
     }

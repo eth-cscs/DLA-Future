@@ -20,7 +20,7 @@
 namespace dlaf {
 namespace internal {
 /// A partially applied transform, with the policy and callable object given,
-/// but the predecesor sender missing. The predecessor sender is applied when
+/// but the predecessor sender missing. The predecessor sender is applied when
 /// calling the operator| overload.
 template <Backend B, typename F>
 class PartialTransform {

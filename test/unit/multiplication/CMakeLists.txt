@@ -11,5 +11,6 @@
 DLAF_addTest(test_multiplication_triangular
   SOURCES test_multiplication_triangular.cpp
   LIBRARIES dlaf.multiplication dlaf.core
-  USE_MAIN HPX
+  USE_MAIN MPIHPX
+  MPIRANKS 6
 )

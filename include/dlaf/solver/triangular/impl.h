@@ -198,11 +198,11 @@ void Triangular<backend, device, T>::call_LLN(blas::Diag diag, T alpha, Matrix<c
 
       for (SizeType i = k + 1; i < m; ++i) {
         // Choose queue priority
-        const auto priority = (i == k + 1) ? thread_priority::high : thread_priority::normal;
+        const auto trailing_priority = (i == k + 1) ? thread_priority::high : thread_priority::normal;
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        gemmTrailingMatrixTile<backend>(priority, beta, mat_a.read_sender(LocalTileIndex{i, k}),
+        gemmTrailingMatrixTile<backend>(trailing_priority, beta, mat_a.read_sender(LocalTileIndex{i, k}),
                                         mat_b.read_sender(kj),
                                         mat_b.readwrite_sender(LocalTileIndex{i, j}));
       }
@@ -228,13 +228,13 @@ void Triangular<backend, device, T>::call_LLT(blas::Op op, blas::Diag diag, T al
 
       for (SizeType i = k - 1; i >= 0; --i) {
         // Choose queue priority
-        const auto priority = (i == k - 1) ? thread_priority::high : thread_priority::normal;
+        const auto trailing_priority = (i == k - 1) ? thread_priority::high : thread_priority::normal;
 
         auto beta = static_cast<T>(-1.0) / alpha;
 
         // Update trailing matrix
-        gemmTrailingMatrixTile<backend>(priority, op, beta, mat_a.read_sender(LocalTileIndex{k, i}),
-                                        mat_b.read_sender(kj),
+        gemmTrailingMatrixTile<backend>(trailing_priority, op, beta,
+                                        mat_a.read_sender(LocalTileIndex{k, i}), mat_b.read_sender(kj),
                                         mat_b.readwrite_sender(LocalTileIndex{i, j}));
       }
     }
@@ -259,10 +259,10 @@ void Triangular<backend, device, T>::call_LUN(blas::Diag diag, T alpha, Matrix<c
 
       for (SizeType i = k - 1; i >= 0; --i) {
         // Choose queue priority
-        const auto priority = (i == k - 1) ? thread_priority::high : thread_priority::normal;
+        const auto trailing_priority = (i == k - 1) ? thread_priority::high : thread_priority::normal;
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        gemmTrailingMatrixTile<backend>(priority, beta, mat_a.read_sender(LocalTileIndex{i, k}),
+        gemmTrailingMatrixTile<backend>(trailing_priority, beta, mat_a.read_sender(LocalTileIndex{i, k}),
                                         mat_b.read_sender(kj),
                                         mat_b.readwrite_sender(LocalTileIndex{i, j}));
       }
@@ -289,12 +289,12 @@ void Triangular<backend, device, T>::call_LUT(blas::Op op, blas::Diag diag, T al
 
       for (SizeType i = k + 1; i < m; ++i) {
         // Choose queue priority
-        const auto priority = (i == k + 1) ? thread_priority::high : thread_priority::normal;
+        const auto trailing_priority = (i == k + 1) ? thread_priority::high : thread_priority::normal;
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        gemmTrailingMatrixTile<backend>(priority, op, beta, mat_a.read_sender(LocalTileIndex{k, i}),
-                                        mat_b.read_sender(kj),
+        gemmTrailingMatrixTile<backend>(trailing_priority, op, beta,
+                                        mat_a.read_sender(LocalTileIndex{k, i}), mat_b.read_sender(kj),
                                         mat_b.readwrite_sender(LocalTileIndex{i, j}));
       }
     }
@@ -320,10 +320,10 @@ void Triangular<backend, device, T>::call_RLN(blas::Diag diag, T alpha, Matrix<c
 
       for (SizeType j = k - 1; j >= 0; --j) {
         // Choose queue priority
-        const auto priority = (j == k - 1) ? thread_priority::high : thread_priority::normal;
+        const auto trailing_priority = (j == k - 1) ? thread_priority::high : thread_priority::normal;
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        gemmTrailingMatrixTile<backend>(priority, beta, mat_b.read_sender(ik),
+        gemmTrailingMatrixTile<backend>(trailing_priority, beta, mat_b.read_sender(ik),
                                         mat_a.read_sender(LocalTileIndex{k, j}),
                                         mat_b.readwrite_sender(LocalTileIndex{i, j}));
       }
@@ -350,11 +350,11 @@ void Triangular<backend, device, T>::call_RLT(blas::Op op, blas::Diag diag, T al
 
       for (SizeType j = k + 1; j < n; ++j) {
         // Choose queue priority
-        const auto priority = (j == k + 1) ? thread_priority::high : thread_priority::normal;
+        const auto trailing_priority = (j == k + 1) ? thread_priority::high : thread_priority::normal;
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        gemmTrailingMatrixTile<backend>(priority, op, beta, mat_b.read_sender(ik),
+        gemmTrailingMatrixTile<backend>(trailing_priority, op, beta, mat_b.read_sender(ik),
                                         mat_a.read_sender(LocalTileIndex{j, k}),
                                         mat_b.readwrite_sender(LocalTileIndex{i, j}));
       }
@@ -381,10 +381,10 @@ void Triangular<backend, device, T>::call_RUN(blas::Diag diag, T alpha, Matrix<c
 
       for (SizeType j = k + 1; j < n; ++j) {
         // Choose queue priority
-        const auto priority = (j == k + 1) ? thread_priority::high : thread_priority::normal;
+        const auto trailing_priority = (j == k + 1) ? thread_priority::high : thread_priority::normal;
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        gemmTrailingMatrixTile<backend>(priority, beta, mat_b.read_sender(ik),
+        gemmTrailingMatrixTile<backend>(trailing_priority, beta, mat_b.read_sender(ik),
                                         mat_a.read_sender(LocalTileIndex{k, j}),
                                         mat_b.readwrite_sender(LocalTileIndex{i, j}));
       }
@@ -411,11 +411,11 @@ void Triangular<backend, device, T>::call_RUT(blas::Op op, blas::Diag diag, T al
 
       for (SizeType j = k - 1; j >= 0; --j) {
         // Choose queue priority
-        const auto priority = (j == k - 1) ? thread_priority::high : thread_priority::normal;
+        const auto trailing_priority = (j == k - 1) ? thread_priority::high : thread_priority::normal;
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        gemmTrailingMatrixTile<backend>(priority, op, beta, mat_b.read_sender(ik),
+        gemmTrailingMatrixTile<backend>(trailing_priority, op, beta, mat_b.read_sender(ik),
                                         mat_a.read_sender(LocalTileIndex{j, k}),
                                         mat_b.readwrite_sender(LocalTileIndex{i, j}));
       }
@@ -499,7 +499,7 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
     for (SizeType i_local = bt_offset.row(); i_local < distr_a.localNrTiles().rows(); ++i_local) {
       // Choose queue priority
       auto i = distr_a.globalTileFromLocalTile<Coord::Row>(i_local);
-      const auto trailing_priority = (i == k - 1) ? thread_priority::high : thread_priority::normal;
+      const auto trailing_priority = (i == k + 1) ? thread_priority::high : thread_priority::normal;
 
       const LocalTileIndex ik_panel(Coord::Row, i_local);
 

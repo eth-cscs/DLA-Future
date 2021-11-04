@@ -33,8 +33,6 @@ struct Triangular {
                        Matrix<T, device>& mat_b);
   static void call_RUT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
                        Matrix<T, device>& mat_b);
-  static void call_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
-                       Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b);
 };
 
 /// ---- ETI

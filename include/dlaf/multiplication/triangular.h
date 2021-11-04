@@ -45,51 +45,41 @@ void triangular(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, 
   DLAF_ASSERT(matrix::local_matrix(mat_b), mat_b);
 
   if (side == blas::Side::Left) {
-    // Check if A and B dimensions are compatible
     DLAF_ASSERT(matrix::multipliable(mat_a, mat_b, mat_b, op, blas::Op::NoTrans), mat_a, mat_b, op);
 
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
-        // Left Lower NoTrans
         internal::Triangular<backend, device, T>::call_LLN(diag, alpha, mat_a, mat_b);
       }
       else {
-        // Left Lower Trans/ConjTrans
         internal::Triangular<backend, device, T>::call_LLT(op, diag, alpha, mat_a, mat_b);
       }
     }
     else {
       if (op == blas::Op::NoTrans) {
-        // Left Upper NoTrans
         internal::Triangular<backend, device, T>::call_LUN(diag, alpha, mat_a, mat_b);
       }
       else {
-        // Left Upper Trans/ConjTrans
         internal::Triangular<backend, device, T>::call_LUT(op, diag, alpha, mat_a, mat_b);
       }
     }
   }
   else {
-    // Check if A and B dimensions are compatible (when side == Right)
     DLAF_ASSERT(matrix::multipliable(mat_b, mat_a, mat_b, blas::Op::NoTrans, op), mat_a, mat_b, op);
 
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
-        // Right Lower NoTrans
         internal::Triangular<backend, device, T>::call_RLN(diag, alpha, mat_a, mat_b);
       }
       else {
-        // Right Lower Trans/ConjTrans
         internal::Triangular<backend, device, T>::call_RLT(op, diag, alpha, mat_a, mat_b);
       }
     }
     else {
       if (op == blas::Op::NoTrans) {
-        // Right Upper NoTrans
         internal::Triangular<backend, device, T>::call_RUN(diag, alpha, mat_a, mat_b);
       }
       else {
-        // Right Upper Trans/ConjTrans
         internal::Triangular<backend, device, T>::call_RUT(op, diag, alpha, mat_a, mat_b);
       }
     }

@@ -38,7 +38,7 @@ template <class T>
 void copySingleTile(hpx::shared_future<matrix::Tile<const T, Device::CPU>> in,
                     hpx::future<matrix::Tile<T, Device::CPU>> out) {
   hpx::dataflow(dlaf::getCopyExecutor<Device::CPU, Device::CPU>(),
-                matrix::unwrapExtendTiles(matrix::copy_o), in, std::move(out));
+                matrix::unwrapExtendTiles(matrix::internal::copy_o), in, std::move(out));
 }
 
 template <class Executor, Device device, class T>

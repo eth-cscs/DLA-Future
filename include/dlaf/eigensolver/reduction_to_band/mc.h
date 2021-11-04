@@ -304,7 +304,7 @@ void setupReflectorPanelV(bool has_head, const LocalTileSize& ai_offset, const S
 
   if (has_head) {
     auto setupV0 = hpx::unwrapping([](auto&& tile_v, const auto& tile_a) {
-      copy(tile_a, tile_v);
+      matrix::internal::copy(tile_a, tile_v);
       tile::internal::laset(lapack::MatrixType::Upper, T(0), T(1), tile_v);
     });
 
@@ -336,7 +336,7 @@ void trmmComputeW(PanelT<Coord::Col, T>& w, MatrixLikeT& v, hpx::shared_future<C
     // Note:
     // Since V0 is well-formed, by copying V0 to W we are also resetting W where the matrix is not going
     // to be computed.
-    copy(tile_v, tile_w);
+    matrix::internal::copy(tile_v, tile_w);
 
     // W = V . T
     using namespace blas;

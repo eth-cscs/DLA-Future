@@ -144,7 +144,6 @@ struct CopyTile<T, Device::GPU, Device::GPU> {
   }
 };
 #endif
-}
 
 /// Copy a input tile to an output tile.
 template <typename T, Device Source, Device Destination, typename... Ts>
@@ -161,28 +160,9 @@ void copy(TileElementSize region, TileElementIndex in_idx, const Tile<const T, D
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(copy);
-
-// copy overload taking a policy and a sender, returning a sender. This can be
-// used in task graphs.
-template <Backend B, typename Sender,
-          typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
-auto copy(const dlaf::internal::Policy<B> p, Sender&& s) {
-  return dlaf::internal::transform<B>(p, copy_o, std::forward<Sender>(s));
 }
 
-// copy overload taking a policy, returning a partially applied algorithm. This
-// can be used in task graphs with the | operator.
-template <Backend B>
-auto copy(const dlaf::internal::Policy<B> p) {
-  return dlaf::internal::PartialTransform{p, copy_o};
-}
-
-// copy overload taking a policy and plain arguments. This is a blocking call.
-template <Backend B, typename T1, typename T2>
-void copy(const dlaf::internal::Policy<B> p, T1&& t1, T2&& t2) {
-  hpx::execution::experimental::sync_wait(
-      copy(p, hpx::execution::experimental::just(std::forward<T1>(t1), std::forward<T2>(t2))));
-}
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(copy, internal::copy_o)
 
 /// Helper struct for copying a given tile to an identical tile on Destination.
 ///
@@ -200,7 +180,7 @@ struct Duplicate {
     dlaf::memory::MemoryView<std::remove_const_t<T>, Destination> mem_view(source_size.linear_size());
     Tile<std::remove_const_t<T>, Destination> destination(source_size, std::move(mem_view),
                                                           source_size.rows());
-    copy(source, destination, std::forward<decltype(ts)>(ts)...);
+    internal::copy(source, destination, std::forward<decltype(ts)>(ts)...);
     return Tile<T, Destination>(std::move(destination));
   }
 };

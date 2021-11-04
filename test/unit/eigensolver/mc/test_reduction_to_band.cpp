@@ -149,7 +149,7 @@ void splitReflectorsAndBand(MatrixLocal<T>& mat_v, MatrixLocal<T>& mat_b, const 
   for (SizeType diag = 0; diag <= 1; ++diag) {
     for (SizeType i = diag; i < mat_v.nrTiles().rows(); ++i) {
       const GlobalTileIndex idx(i, i - diag);
-      copy(mat_v.tile(idx), mat_b.tile(idx));
+      matrix::internal::copy(mat_v.tile(idx), mat_b.tile(idx));
     }
   }
 

@@ -9,7 +9,7 @@
 //
 #pragma once
 
-#include "blas.hh"
+#include <blas.hh>
 
 #include "dlaf/common/callable_object.h"
 #include "dlaf/matrix/tile.h"
@@ -22,7 +22,6 @@
 
 #ifdef DLAF_WITH_CUDA
 #include <cublas_v2.h>
-#include <blas.hh>
 
 #include "dlaf/cublas/error.h"
 #include "dlaf/util_cublas.h"

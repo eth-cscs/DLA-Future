@@ -521,6 +521,29 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
   }
 }
 
+/// Note:
+/// This is a workaround because the Np/Hp CUDA executors are able to execute
+/// cuSolver and cuBlas calls delegating to the respective custom executors, but they
+/// do not have as fallback the basic CUDA executor, who is is needed by the set0
+/// call.
+/// Moreover, since the algorithm is generic for both CPU and GPU, this helper allows to
+/// hide the different backends needs.
+template <Backend B>
+struct getGenericExecutor {
+  static auto call() {
+    return dlaf::getNpExecutor<Backend::MC>();
+  }
+};
+
+#ifdef DLAF_WITH_CUDA
+template <>
+struct getGenericExecutor<Backend::GPU> {
+  static auto call() {
+    return dlaf::cuda::Executor{dlaf::internal::getNpCudaStreamPool()};
+  }
+};
+#endif
+
 template <Backend backend, Device D, class T>
 void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op op, blas::Diag diag,
                                          T alpha, Matrix<const T, D>& mat_a, Matrix<T, D>& mat_b) {

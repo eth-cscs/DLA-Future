@@ -19,11 +19,11 @@
 namespace dlaf {
 namespace multiplication {
 
-/// Triangular Matrix multiplication implementation on local memory, solving B = alpha op(A)  B
+/// Triangular Matrix multiplication implementation on local memory, computing B = alpha op(A)  B
 /// (when side == Left) and B = alpha B op(A) (when side == Right)
 ///
 /// @param side specifies whether op(A) appears on the \a Left or on the \a Right of matrix B,
-/// @param uplo specifies whether the matrix A is a \a Lower or \a Upper triangular matrix,
+/// @param uplo specifies whether the matrix A is a \a Lower or an \a Upper triangular matrix,
 /// @param op specifies the form of op(A) to be used in the matrix multiplication: \a NoTrans, \a Trans,
 /// \a ConjTrans,
 /// @param diag specifies if the matrix A is assumed to be unit triangular (\a Unit) or not (\a NonUnit),
@@ -31,7 +31,7 @@ namespace multiplication {
 /// the lower triangular part (depending on the value of uplo) are accessed in read-only mode (the
 /// elements are not modified),
 /// @param mat_b on entry it contains the matrix B, on exit the matrix elements are overwritten with the
-/// elements of the matrix X.
+/// elements of the transformed matrix.
 /// @pre mat_a has a square size,
 /// @pre mat_a has a square block size,
 /// @pre mat_a and mat_b are not distributed,

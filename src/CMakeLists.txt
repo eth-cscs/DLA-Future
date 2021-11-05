@@ -129,6 +129,13 @@ add_library(dlaf.factorization OBJECT
 target_link_libraries(dlaf.factorization PUBLIC dlaf.prop)
 target_add_warnings(dlaf.factorization)
 
+# Define DLAF's multiplication library
+add_library(dlaf.multiplication OBJECT
+  multiplication/triangular/mc.cpp
+  $<$<BOOL:${DLAF_WITH_CUDA}>:multiplication/triangular/gpu.cpp>)
+target_link_libraries(dlaf.multiplication PUBLIC dlaf.prop)
+target_add_warnings(dlaf.multiplication)
+
 # Define DLAF's solver library
 add_library(dlaf.solver OBJECT
   solver/triangular/mc.cpp
@@ -142,6 +149,7 @@ add_library(DLAF
   $<TARGET_OBJECTS:dlaf.auxiliary>
   $<TARGET_OBJECTS:dlaf.eigensolver>
   $<TARGET_OBJECTS:dlaf.factorization>
+  $<TARGET_OBJECTS:dlaf.multiplication>
   $<TARGET_OBJECTS:dlaf.solver>
 )
 target_link_libraries(DLAF PUBLIC dlaf.prop)

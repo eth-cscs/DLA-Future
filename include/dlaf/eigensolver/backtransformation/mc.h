@@ -9,7 +9,6 @@
 //
 #pragma once
 
-#include <hpx/include/parallel_executors.hpp>
 #include <hpx/include/util.hpp>
 
 #include "dlaf/blas/tile.h"
@@ -251,7 +250,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
            i_local < dist_c.localNrTiles().rows(); ++i_local) {
         auto i = dist_v.template globalTileFromLocalTile<Coord::Row>(i_local);
         auto ik_panel = LocalTileIndex{Coord::Row, i_local};
-        if (i == (k + 1)) {
+        if (i == v_start.row()) {
           hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v =
               mat_v.read(GlobalTileIndex(i, k));
           if (is_last) {

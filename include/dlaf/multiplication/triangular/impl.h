@@ -209,8 +209,8 @@ void Triangular<backend, device, T>::call_LLN(blas::Diag diag, T alpha, Matrix<c
       auto kj = LocalTileIndex{k, j};
 
       for (SizeType i = k + 1; i < m; ++i) {
-        gemm_trailing_matrix_tile(executor_np, alpha, mat_a.read(LocalTileIndex{i, k}),
-                                  mat_b.read(kj), mat_b(LocalTileIndex{i, j}));
+        gemm_trailing_matrix_tile(executor_np, alpha, mat_a.read(LocalTileIndex{i, k}), mat_b.read(kj),
+                                  mat_b(LocalTileIndex{i, j}));
       }
 
       trmm_B_panel_tile(executor_hp, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(kj));
@@ -257,8 +257,8 @@ void Triangular<backend, device, T>::call_LUN(blas::Diag diag, T alpha, Matrix<c
       auto kj = LocalTileIndex{k, j};
 
       for (SizeType i = 0; i < k; ++i) {
-        gemm_trailing_matrix_tile(executor_np, alpha, mat_a.read(LocalTileIndex{i, k}),
-                                  mat_b.read(kj), mat_b(LocalTileIndex{i, j}));
+        gemm_trailing_matrix_tile(executor_np, alpha, mat_a.read(LocalTileIndex{i, k}), mat_b.read(kj),
+                                  mat_b(LocalTileIndex{i, j}));
       }
 
       trmm_B_panel_tile(executor_hp, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(kj));
@@ -305,8 +305,8 @@ void Triangular<backend, device, T>::call_RLN(blas::Diag diag, T alpha, Matrix<c
       auto ik = LocalTileIndex{i, k};
 
       for (SizeType j = k - 1; j >= 0; --j) {
-        gemm_trailing_matrix_tile(executor_np, alpha, mat_b.read(ik),
-                                  mat_a.read(LocalTileIndex{k, j}), mat_b(LocalTileIndex{i, j}));
+        gemm_trailing_matrix_tile(executor_np, alpha, mat_b.read(ik), mat_a.read(LocalTileIndex{k, j}),
+                                  mat_b(LocalTileIndex{i, j}));
       }
 
       trmm_B_panel_tile(executor_hp, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(ik));
@@ -353,8 +353,8 @@ void Triangular<backend, device, T>::call_RUN(blas::Diag diag, T alpha, Matrix<c
       auto ik = LocalTileIndex{i, k};
 
       for (SizeType j = k + 1; j < n; ++j) {
-        gemm_trailing_matrix_tile(executor_np, alpha, mat_b.read(ik),
-                                  mat_a.read(LocalTileIndex{k, j}), mat_b(LocalTileIndex{i, j}));
+        gemm_trailing_matrix_tile(executor_np, alpha, mat_b.read(ik), mat_a.read(LocalTileIndex{k, j}),
+                                  mat_b(LocalTileIndex{i, j}));
       }
 
       trmm_B_panel_tile(executor_hp, diag, alpha, mat_a.read(LocalTileIndex{k, k}), mat_b(ik));

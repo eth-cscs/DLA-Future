@@ -31,7 +31,7 @@ namespace multiplication {
 /// the lower triangular part (depending on the value of uplo) are accessed in read-only mode (the
 /// elements are not modified),
 /// @param mat_b on entry it contains the matrix B, on exit the matrix elements are overwritten with the
-/// elements of the transformed matrix.
+/// elements of the result.
 /// @pre mat_a has a square size,
 /// @pre mat_a has a square block size,
 /// @pre mat_a and mat_b are not distributed,

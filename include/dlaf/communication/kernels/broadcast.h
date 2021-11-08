@@ -93,7 +93,7 @@ struct scheduleRecvBcastImpl {
     auto comm_tile = hpx::dataflow(ex, hpx::unwrapping(recvBcastAlloc<T, CommunicationDevice<D>::value>),
                                    tile_size, root_rank, std::move(pcomm));
     hpx::dataflow(dlaf::getCopyExecutor<CommunicationDevice<D>::value, D>(),
-                  matrix::unwrapExtendTiles(matrix::copy_o), std::move(comm_tile),
+                  matrix::unwrapExtendTiles(matrix::internal::copy_o), std::move(comm_tile),
                   std::move(tile_shared));
   }
 };

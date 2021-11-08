@@ -128,6 +128,14 @@ public:
     return operator()(this->distribution().localTileIndex(index));
   }
 
+  auto readwrite_sender(const LocalTileIndex& index) noexcept {
+    return this->operator()(index);
+  }
+
+  auto readwrite_sender(const GlobalTileIndex& index) {
+    return readwrite_sender(this->distribution().localTileIndex(index));
+  }
+
 protected:
   using Matrix<const T, device>::tileLinearIndex;
 
@@ -173,6 +181,16 @@ public:
   /// @pre index.isIn(globalNrTiles()).
   hpx::shared_future<ConstTileType> read(const GlobalTileIndex& index) {
     return read(distribution().localTileIndex(index));
+  }
+
+  auto read_sender(const LocalTileIndex& index) noexcept {
+    // We want to explicitly deal with the shared_future, not the const& to the
+    // value.
+    return hpx::execution::experimental::keep_future(read(index));
+  }
+
+  auto read_sender(const GlobalTileIndex& index) {
+    return read_sender(distribution().localTileIndex(index));
   }
 
   /// Synchronization barrier for all local tiles in the matrix

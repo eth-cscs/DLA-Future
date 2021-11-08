@@ -42,7 +42,6 @@ enable_language(C)
 
 # ----- CXX
 enable_language(CXX)
-set(CMAKE_CXX_STANDARD 14)
 
 # ---- CUDA
 if (DLAF_WITH_CUDA)

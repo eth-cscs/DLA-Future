@@ -39,10 +39,10 @@ void testPotrf(const blas::Uplo uplo, const SizeType n, const SizeType extra_lda
   auto a = createTile<T, D>(el_a, size_a, lda);
 
   if (return_info) {
-    EXPECT_EQ(0, invokeLapackInfo<D>(tile::potrfInfo_o, uplo, a));
+    EXPECT_EQ(0, invokeLapackInfo<D>(tile::internal::potrfInfo_o, uplo, a));
   }
   else {
-    invokeLapack<D>(tile::potrf_o, uplo, a);
+    invokeLapack<D>(tile::internal::potrf_o, uplo, a);
   }
 
   std::stringstream s;
@@ -65,7 +65,7 @@ void testPotrfNonPosDef(const blas::Uplo uplo, SizeType n, SizeType extra_lda) {
 
   auto a = createTile<T, D>(el_a, size_a, lda);
 
-  auto info = invokeLapackInfo<D>(tile::potrfInfo_o, uplo, a);
+  auto info = invokeLapackInfo<D>(tile::internal::potrfInfo_o, uplo, a);
 
   std::stringstream s;
   s << "POTRF Non Positive Definite: " << uplo;

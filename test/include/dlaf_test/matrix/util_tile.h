@@ -106,7 +106,7 @@ struct CreateTile<T, Device::GPU> {
                                            const SizeType ld) {
     auto tile_host = CreateTile<T, Device::CPU>::createAndSet(val, size, ld);
     auto tile = createTile<std::remove_const_t<T>, Device::GPU>(size, ld);
-    copy(tile_host, tile);
+    dlaf::matrix::internal::copy(tile_host, tile);
     return Tile<T, Device::GPU>(std::move(tile));
   }
 };
@@ -179,7 +179,7 @@ template <class T, class ElementGetter, class ComparisonOp, class ErrorMessageGe
 void check(ElementGetter&& expected, const Tile<const T, Device::GPU>& tile, ComparisonOp comp,
            ErrorMessageGetter err_message, const char* file, const int line) {
   auto tile_host = createTile<std::remove_const_t<T>, Device::CPU>(tile.size(), tile.ld());
-  copy(tile, tile_host);
+  dlaf::matrix::internal::copy(tile, tile_host);
   check(std::forward<ElementGetter>(expected), tile_host, comp, err_message, file, line);
 }
 #endif

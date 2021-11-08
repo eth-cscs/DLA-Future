@@ -38,8 +38,8 @@ template <class Executor, class T, Device D>
 void trmm_B_panel_tile(Executor&& ex, blas::Diag diag, T alpha,
                        hpx::shared_future<matrix::Tile<const T, D>> in_tile,
                        hpx::future<matrix::Tile<T, D>> out_tile) {
-  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::trmm_o), blas::Side::Left,
-                blas::Uplo::Lower, blas::Op::NoTrans, diag, alpha, std::move(in_tile),
+  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::internal::trmm_o),
+                blas::Side::Left, blas::Uplo::Lower, blas::Op::NoTrans, diag, alpha, std::move(in_tile),
                 std::move(out_tile));
 }
 
@@ -48,8 +48,8 @@ void gemm_trailing_matrix_tile(Executor&& ex, T beta,
                                hpx::shared_future<matrix::Tile<const T, D>> a_tile,
                                hpx::shared_future<matrix::Tile<const T, D>> b_tile,
                                hpx::future<matrix::Tile<T, D>> c_tile) {
-  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans,
-                blas::Op::NoTrans, beta, std::move(a_tile), std::move(b_tile), T(1.0),
+  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::internal::gemm_o),
+                blas::Op::NoTrans, blas::Op::NoTrans, beta, std::move(a_tile), std::move(b_tile), T(1.0),
                 std::move(c_tile));
 }
 }
@@ -59,8 +59,9 @@ template <class Executor, class T, Device D>
 void trmm_B_panel_tile(Executor&& ex, blas::Op op, blas::Diag diag, T alpha,
                        hpx::shared_future<matrix::Tile<const T, D>> in_tile,
                        hpx::future<matrix::Tile<T, D>> out_tile) {
-  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::trmm_o), blas::Side::Left,
-                blas::Uplo::Lower, op, diag, alpha, std::move(in_tile), std::move(out_tile));
+  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::internal::trmm_o),
+                blas::Side::Left, blas::Uplo::Lower, op, diag, alpha, std::move(in_tile),
+                std::move(out_tile));
 }
 
 template <class Executor, class T, Device D>
@@ -68,7 +69,7 @@ void gemm_trailing_matrix_tile(Executor&& ex, blas::Op op, T alpha,
                                hpx::shared_future<matrix::Tile<const T, D>> a_tile,
                                hpx::shared_future<matrix::Tile<const T, D>> b_tile,
                                hpx::future<matrix::Tile<T, D>> c_tile) {
-  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::gemm_o), op,
+  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::internal::gemm_o), op,
                 blas::Op::NoTrans, alpha, std::move(a_tile), std::move(b_tile), T(1.0),
                 std::move(c_tile));
 }
@@ -79,8 +80,8 @@ template <class Executor, class T, Device D>
 void trmm_B_panel_tile(Executor&& ex, blas::Diag diag, T alpha,
                        hpx::shared_future<matrix::Tile<const T, D>> in_tile,
                        hpx::future<matrix::Tile<T, D>> out_tile) {
-  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::trmm_o), blas::Side::Left,
-                blas::Uplo::Upper, blas::Op::NoTrans, diag, alpha, std::move(in_tile),
+  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::internal::trmm_o),
+                blas::Side::Left, blas::Uplo::Upper, blas::Op::NoTrans, diag, alpha, std::move(in_tile),
                 std::move(out_tile));
 }
 
@@ -89,9 +90,9 @@ void gemm_trailing_matrix_tile(Executor&& ex, T alpha,
                                hpx::shared_future<matrix::Tile<const T, D>> a_tile,
                                hpx::shared_future<matrix::Tile<const T, D>> b_tile,
                                hpx::future<matrix::Tile<T, D>> c_tile) {
-  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans,
-                blas::Op::NoTrans, alpha, std::move(a_tile), std::move(b_tile), T(1.0),
-                std::move(c_tile));
+  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::internal::gemm_o),
+                blas::Op::NoTrans, blas::Op::NoTrans, alpha, std::move(a_tile), std::move(b_tile),
+                T(1.0), std::move(c_tile));
 }
 }
 
@@ -100,8 +101,9 @@ template <class Executor, class T, Device D>
 void trmm_B_panel_tile(Executor&& ex, blas::Op op, blas::Diag diag, T alpha,
                        hpx::shared_future<matrix::Tile<const T, D>> in_tile,
                        hpx::future<matrix::Tile<T, D>> out_tile) {
-  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::trmm_o), blas::Side::Left,
-                blas::Uplo::Upper, op, diag, alpha, std::move(in_tile), std::move(out_tile));
+  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::internal::trmm_o),
+                blas::Side::Left, blas::Uplo::Upper, op, diag, alpha, std::move(in_tile),
+                std::move(out_tile));
 }
 
 template <class Executor, class T, Device D>
@@ -109,7 +111,7 @@ void gemm_trailing_matrix_tile(Executor&& ex, blas::Op op, T alpha,
                                hpx::shared_future<matrix::Tile<const T, D>> a_tile,
                                hpx::shared_future<matrix::Tile<const T, D>> b_tile,
                                hpx::future<matrix::Tile<T, D>> c_tile) {
-  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::gemm_o), op,
+  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::internal::gemm_o), op,
                 blas::Op::NoTrans, alpha, std::move(a_tile), std::move(b_tile), T(1.0),
                 std::move(c_tile));
 }
@@ -120,8 +122,8 @@ template <class Executor, class T, Device D>
 void trmm_B_panel_tile(Executor&& ex, blas::Diag diag, T alpha,
                        hpx::shared_future<matrix::Tile<const T, D>> in_tile,
                        hpx::future<matrix::Tile<T, D>> out_tile) {
-  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::trmm_o), blas::Side::Right,
-                blas::Uplo::Lower, blas::Op::NoTrans, diag, alpha, std::move(in_tile),
+  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::internal::trmm_o),
+                blas::Side::Right, blas::Uplo::Lower, blas::Op::NoTrans, diag, alpha, std::move(in_tile),
                 std::move(out_tile));
 }
 
@@ -130,9 +132,9 @@ void gemm_trailing_matrix_tile(Executor&& ex, T alpha,
                                hpx::shared_future<matrix::Tile<const T, D>> a_tile,
                                hpx::shared_future<matrix::Tile<const T, D>> b_tile,
                                hpx::future<matrix::Tile<T, D>> c_tile) {
-  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans,
-                blas::Op::NoTrans, alpha, std::move(a_tile), std::move(b_tile), T(1.0),
-                std::move(c_tile));
+  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::internal::gemm_o),
+                blas::Op::NoTrans, blas::Op::NoTrans, alpha, std::move(a_tile), std::move(b_tile),
+                T(1.0), std::move(c_tile));
 }
 }
 
@@ -141,8 +143,9 @@ template <class Executor, class T, Device D>
 void trmm_B_panel_tile(Executor&& ex, blas::Op op, blas::Diag diag, T alpha,
                        hpx::shared_future<matrix::Tile<const T, D>> in_tile,
                        hpx::future<matrix::Tile<T, D>> out_tile) {
-  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::trmm_o), blas::Side::Right,
-                blas::Uplo::Lower, op, diag, alpha, std::move(in_tile), std::move(out_tile));
+  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::internal::trmm_o),
+                blas::Side::Right, blas::Uplo::Lower, op, diag, alpha, std::move(in_tile),
+                std::move(out_tile));
 }
 
 template <class Executor, class T, Device D>
@@ -150,8 +153,9 @@ void gemm_trailing_matrix_tile(Executor&& ex, blas::Op op, T alpha,
                                hpx::shared_future<matrix::Tile<const T, D>> a_tile,
                                hpx::shared_future<matrix::Tile<const T, D>> b_tile,
                                hpx::future<matrix::Tile<T, D>> c_tile) {
-  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans,
-                op, alpha, std::move(a_tile), std::move(b_tile), T(1.0), std::move(c_tile));
+  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::internal::gemm_o),
+                blas::Op::NoTrans, op, alpha, std::move(a_tile), std::move(b_tile), T(1.0),
+                std::move(c_tile));
 }
 }
 
@@ -160,8 +164,8 @@ template <class Executor, class T, Device D>
 void trmm_B_panel_tile(Executor&& ex, blas::Diag diag, T alpha,
                        hpx::shared_future<matrix::Tile<const T, D>> in_tile,
                        hpx::future<matrix::Tile<T, D>> out_tile) {
-  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::trmm_o), blas::Side::Right,
-                blas::Uplo::Upper, blas::Op::NoTrans, diag, alpha, std::move(in_tile),
+  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::internal::trmm_o),
+                blas::Side::Right, blas::Uplo::Upper, blas::Op::NoTrans, diag, alpha, std::move(in_tile),
                 std::move(out_tile));
 }
 
@@ -170,9 +174,9 @@ void gemm_trailing_matrix_tile(Executor&& ex, T alpha,
                                hpx::shared_future<matrix::Tile<const T, D>> a_tile,
                                hpx::shared_future<matrix::Tile<const T, D>> b_tile,
                                hpx::future<matrix::Tile<T, D>> c_tile) {
-  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans,
-                blas::Op::NoTrans, alpha, std::move(a_tile), std::move(b_tile), T(1.0),
-                std::move(c_tile));
+  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::internal::gemm_o),
+                blas::Op::NoTrans, blas::Op::NoTrans, alpha, std::move(a_tile), std::move(b_tile),
+                T(1.0), std::move(c_tile));
 }
 }
 
@@ -181,8 +185,9 @@ template <class Executor, class T, Device D>
 void trmm_B_panel_tile(Executor&& ex, blas::Op op, blas::Diag diag, T alpha,
                        hpx::shared_future<matrix::Tile<const T, D>> in_tile,
                        hpx::future<matrix::Tile<T, D>> out_tile) {
-  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::trmm_o), blas::Side::Right,
-                blas::Uplo::Upper, op, diag, alpha, std::move(in_tile), std::move(out_tile));
+  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::internal::trmm_o),
+                blas::Side::Right, blas::Uplo::Upper, op, diag, alpha, std::move(in_tile),
+                std::move(out_tile));
 }
 
 template <class Executor, class T, Device D>
@@ -190,8 +195,9 @@ void gemm_trailing_matrix_tile(Executor&& ex, blas::Op op, T alpha,
                                hpx::shared_future<matrix::Tile<const T, D>> a_tile,
                                hpx::shared_future<matrix::Tile<const T, D>> b_tile,
                                hpx::future<matrix::Tile<T, D>> c_tile) {
-  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans,
-                op, alpha, std::move(a_tile), std::move(b_tile), T(1.0), std::move(c_tile));
+  hpx::dataflow(std::forward<Executor>(ex), matrix::unwrapExtendTiles(tile::internal::gemm_o),
+                blas::Op::NoTrans, op, alpha, std::move(a_tile), std::move(b_tile), T(1.0),
+                std::move(c_tile));
 }
 }
 

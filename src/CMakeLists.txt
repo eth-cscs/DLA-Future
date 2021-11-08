@@ -75,7 +75,7 @@ target_link_libraries(dlaf.prop
 )
 target_compile_features(dlaf.prop
   INTERFACE
-    cxx_std_14
+    cxx_std_17
 )
 target_compile_definitions(dlaf.prop
   INTERFACE

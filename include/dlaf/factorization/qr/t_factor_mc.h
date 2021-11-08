@@ -178,7 +178,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(const SizeType k, Matrix<cons
   const GlobalTileIndex v_end{v.nrTiles().rows(), std::min(v.nrTiles().cols(), v_start.col() + 1)};
 
   t = t.then(getHpExecutor<Backend::MC>(), hpx::unwrapping([](auto&& tile) {
-               tile::set0<T>(tile);
+               tile::internal::set0<T>(tile);
                return std::move(tile);
              }));
 
@@ -247,7 +247,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
   const LocalTileIndex v_end_loc{dist.localNrTiles().rows(), v_start_loc.col() + 1};
 
   t = t.then(getHpExecutor<Backend::MC>(), hpx::unwrapping([](auto&& tile) {
-               tile::set0<T>(tile);
+               tile::internal::set0<T>(tile);
                return std::move(tile);
              }));
 

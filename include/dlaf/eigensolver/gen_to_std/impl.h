@@ -39,32 +39,33 @@ namespace internal {
 
 namespace gentostd_l {
 template <Backend backend, class AKKSender, class LKKSender>
-void hegstDiagTile(AKKSender&& a_kk, LKKSender&& l_kk) {
+void hegstDiagTile(hpx::threads::thread_priority priority, AKKSender&& a_kk, LKKSender&& l_kk) {
   dlaf::internal::whenAllLift(1, blas::Uplo::Lower, std::forward<AKKSender>(a_kk),
                               std::forward<LKKSender>(l_kk)) |
-      dlaf::tile::hegst(dlaf::internal::Policy<backend>(hpx::threads::thread_priority::high)) |
+      dlaf::tile::hegst(dlaf::internal::Policy<backend>(priority)) |
       hpx::execution::experimental::detach();
 }
 
 template <Backend backend, class LKKSender, class AIKSender>
-void trsmPanelTile(LKKSender&& l_kk, AIKSender&& a_ik) {
+void trsmPanelTile(hpx::threads::thread_priority priority, LKKSender&& l_kk, AIKSender&& a_ik) {
   using ElementType = dlaf::internal::SenderElementType<LKKSender>;
 
   dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Lower, blas::Op::ConjTrans,
                               blas::Diag::NonUnit, ElementType(1.0), std::forward<LKKSender>(l_kk),
                               std::forward<AIKSender>(a_ik)) |
-      dlaf::tile::trsm(dlaf::internal::Policy<backend>(hpx::threads::thread_priority::high)) |
+      dlaf::tile::trsm(dlaf::internal::Policy<backend>(priority)) |
       hpx::execution::experimental::detach();
 }
 
 template <Backend backend, class AKKSender, class LIKSender, class AIKSender>
-void hemmPanelTile(AKKSender&& a_kk, LIKSender&& l_ik, AIKSender&& a_ik) {
+void hemmPanelTile(hpx::threads::thread_priority priority, AKKSender&& a_kk, LIKSender&& l_ik,
+                   AIKSender&& a_ik) {
   using ElementType = dlaf::internal::SenderElementType<AKKSender>;
 
   dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Lower, ElementType(-0.5),
                               std::forward<AKKSender>(a_kk), std::forward<LIKSender>(l_ik),
                               ElementType(1.0), std::forward<AIKSender>(a_ik)) |
-      dlaf::tile::hemm(dlaf::internal::Policy<backend>(hpx::threads::thread_priority::high)) |
+      dlaf::tile::hemm(dlaf::internal::Policy<backend>(priority)) |
       hpx::execution::experimental::detach();
 }
 
@@ -93,56 +94,58 @@ void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, MatIKSender&
 }
 
 template <Backend backend, class LJJSender, class AJKSender>
-void trsmPanelUpdateTile(LJJSender&& l_jj, AJKSender a_jk) {
+void trsmPanelUpdateTile(hpx::threads::thread_priority priority, LJJSender&& l_jj, AJKSender a_jk) {
   using ElementType = dlaf::internal::SenderElementType<LJJSender>;
 
   dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, blas::Op::NoTrans,
                               blas::Diag::NonUnit, ElementType(1.0), std::forward<LJJSender>(l_jj),
                               std::forward<AJKSender>(a_jk)) |
-      dlaf::tile::trsm(dlaf::internal::Policy<backend>(hpx::threads::thread_priority::high)) |
+      dlaf::tile::trsm(dlaf::internal::Policy<backend>(priority)) |
       hpx::execution::experimental::detach();
 }
 
 template <Backend backend, class LIJSender, class AJKSender, class AIKSender>
-void gemmPanelUpdateTile(LIJSender&& l_ij, AJKSender&& a_jk, AIKSender&& a_ik) {
+void gemmPanelUpdateTile(hpx::threads::thread_priority priority, LIJSender&& l_ij, AJKSender&& a_jk,
+                         AIKSender&& a_ik) {
   using ElementType = dlaf::internal::SenderElementType<LIJSender>;
 
   dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, ElementType(-1.0),
                               std::forward<LIJSender>(l_ij), std::forward<AJKSender>(a_jk),
                               ElementType(1.0), std::forward<AIKSender>(a_ik)) |
-      dlaf::tile::gemm(dlaf::internal::Policy<backend>(hpx::threads::thread_priority::normal)) |
+      dlaf::tile::gemm(dlaf::internal::Policy<backend>(priority)) |
       hpx::execution::experimental::detach();
 }
 }
 
 namespace gentostd_u {
 template <Backend backend, class AKKSender, class LKKSender>
-void hegstDiagTile(AKKSender&& a_kk, LKKSender&& l_kk) {
+void hegstDiagTile(hpx::threads::thread_priority priority, AKKSender&& a_kk, LKKSender&& l_kk) {
   dlaf::internal::whenAllLift(1, blas::Uplo::Upper, std::forward<AKKSender>(a_kk),
                               std::forward<LKKSender>(l_kk)) |
-      dlaf::tile::hegst(dlaf::internal::Policy<backend>(hpx::threads::thread_priority::high)) |
+      dlaf::tile::hegst(dlaf::internal::Policy<backend>(priority)) |
       hpx::execution::experimental::detach();
 }
 
 template <Backend backend, class LKKSender, class AIKSender>
-void trsmPanelTile(LKKSender&& l_kk, AIKSender&& a_ik) {
+void trsmPanelTile(hpx::threads::thread_priority priority, LKKSender&& l_kk, AIKSender&& a_ik) {
   using ElementType = dlaf::internal::SenderElementType<LKKSender>;
 
   dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, blas::Op::ConjTrans,
                               blas::Diag::NonUnit, ElementType(1.0), std::forward<LKKSender>(l_kk),
                               std::forward<AIKSender>(a_ik)) |
-      dlaf::tile::trsm(dlaf::internal::Policy<backend>(hpx::threads::thread_priority::high)) |
+      dlaf::tile::trsm(dlaf::internal::Policy<backend>(priority)) |
       hpx::execution::experimental::detach();
 }
 
 template <Backend backend, class AKKSender, class LIKSender, class AIKSender>
-void hemmPanelTile(AKKSender&& a_kk, LIKSender&& l_ik, AIKSender&& a_ik) {
+void hemmPanelTile(hpx::threads::thread_priority priority, AKKSender&& a_kk, LIKSender&& l_ik,
+                   AIKSender&& a_ik) {
   using ElementType = dlaf::internal::SenderElementType<AKKSender>;
 
   dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, ElementType(-0.5),
                               std::forward<AKKSender>(a_kk), std::forward<LIKSender>(l_ik),
                               ElementType(1.0), std::forward<AIKSender>(a_ik)) |
-      dlaf::tile::hemm(dlaf::internal::Policy<backend>(hpx::threads::thread_priority::high)) |
+      dlaf::tile::hemm(dlaf::internal::Policy<backend>(priority)) |
       hpx::execution::experimental::detach();
 }
 
@@ -171,24 +174,25 @@ void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, MatIKSender&
 }
 
 template <Backend backend, class LJJSender, class AJKSender>
-void trsmPanelUpdateTile(LJJSender&& l_jj, AJKSender a_jk) {
+void trsmPanelUpdateTile(hpx::threads::thread_priority priority, LJJSender&& l_jj, AJKSender a_jk) {
   using ElementType = dlaf::internal::SenderElementType<LJJSender>;
 
   dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Upper, blas::Op::NoTrans,
                               blas::Diag::NonUnit, ElementType(1.0), std::forward<LJJSender>(l_jj),
                               std::forward<AJKSender>(a_jk)) |
-      dlaf::tile::trsm(dlaf::internal::Policy<backend>(hpx::threads::thread_priority::high)) |
+      dlaf::tile::trsm(dlaf::internal::Policy<backend>(priority)) |
       hpx::execution::experimental::detach();
 }
 
 template <Backend backend, class LIJSender, class AJKSender, class AIKSender>
-void gemmPanelUpdateTile(LIJSender&& l_ij, AJKSender&& a_jk, AIKSender&& a_ik) {
+void gemmPanelUpdateTile(hpx::threads::thread_priority priority, LIJSender&& l_ij, AJKSender&& a_jk,
+                         AIKSender&& a_ik) {
   using ElementType = dlaf::internal::SenderElementType<LIJSender>;
 
   dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, ElementType(-1.0),
                               std::forward<LIJSender>(l_ij), std::forward<AJKSender>(a_jk),
                               ElementType(1.0), std::forward<AIKSender>(a_ik)) |
-      dlaf::tile::gemm(dlaf::internal::Policy<backend>(hpx::threads::thread_priority::normal)) |
+      dlaf::tile::gemm(dlaf::internal::Policy<backend>(priority)) |
       hpx::execution::experimental::detach();
 }
 }
@@ -198,6 +202,8 @@ void gemmPanelUpdateTile(LIJSender&& l_ij, AJKSender&& a_jk, AIKSender&& a_ik) {
 template <Backend backend, Device device, class T>
 void GenToStd<backend, device, T>::call_L(Matrix<T, device>& mat_a, Matrix<T, device>& mat_l) {
   using namespace gentostd_l;
+  using hpx::threads::thread_priority;
+
   // Number of tile (rows = cols)
   SizeType nrtile = mat_a.nrTiles().cols();
 
@@ -205,7 +211,8 @@ void GenToStd<backend, device, T>::call_L(Matrix<T, device>& mat_a, Matrix<T, de
     const LocalTileIndex kk{k, k};
 
     // Direct transformation to standard eigenvalue problem of the diagonal tile
-    hegstDiagTile<backend>(mat_a.readwrite_sender(kk), mat_l.readwrite_sender(kk));
+    hegstDiagTile<backend>(thread_priority::high, mat_a.readwrite_sender(kk),
+                           mat_l.readwrite_sender(kk));
 
     // If there is no trailing matrix
     if (k == nrtile - 1)
@@ -213,8 +220,9 @@ void GenToStd<backend, device, T>::call_L(Matrix<T, device>& mat_a, Matrix<T, de
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
       const LocalTileIndex ik{i, k};
-      trsmPanelTile<backend>(mat_l.read_sender(kk), mat_a.readwrite_sender(ik));
-      hemmPanelTile<backend>(mat_a.read_sender(kk), mat_l.read_sender(ik), mat_a.readwrite_sender(ik));
+      trsmPanelTile<backend>(thread_priority::high, mat_l.read_sender(kk), mat_a.readwrite_sender(ik));
+      hemmPanelTile<backend>(thread_priority::high, mat_a.read_sender(kk), mat_l.read_sender(ik),
+                             mat_a.readwrite_sender(ik));
     }
 
     for (SizeType j = k + 1; j < nrtile; ++j) {
@@ -222,7 +230,7 @@ void GenToStd<backend, device, T>::call_L(Matrix<T, device>& mat_a, Matrix<T, de
       const LocalTileIndex jk{j, k};
       // first trailing panel gets high priority (look ahead).
       const auto trailing_matrix_priority =
-          (j == k + 1) ? hpx::threads::thread_priority::high : hpx::threads::thread_priority::normal;
+          (j == k + 1) ? thread_priority::high : thread_priority::normal;
 
       her2kTrailingDiagTile<backend>(trailing_matrix_priority, mat_a.read_sender(jk),
                                      mat_l.read_sender(jk), mat_a.readwrite_sender(jj));
@@ -239,19 +247,21 @@ void GenToStd<backend, device, T>::call_L(Matrix<T, device>& mat_a, Matrix<T, de
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
       const LocalTileIndex ik{i, k};
-      hemmPanelTile<backend>(mat_a.read_sender(kk), mat_l.read_sender(ik), mat_a.readwrite_sender(ik));
+      hemmPanelTile<backend>(thread_priority::high, mat_a.read_sender(kk), mat_l.read_sender(ik),
+                             mat_a.readwrite_sender(ik));
     }
 
     for (SizeType j = k + 1; j < nrtile; ++j) {
       const LocalTileIndex jj{j, j};
       const LocalTileIndex jk{j, k};
-      trsmPanelUpdateTile<backend>(mat_l.read_sender(jj), mat_a.readwrite_sender(jk));
+      trsmPanelUpdateTile<backend>(thread_priority::high, mat_l.read_sender(jj),
+                                   mat_a.readwrite_sender(jk));
 
       for (SizeType i = j + 1; i < nrtile; ++i) {
         const LocalTileIndex ij{i, j};
         const LocalTileIndex ik{i, k};
-        gemmPanelUpdateTile<backend>(mat_l.read_sender(ij), mat_a.read_sender(jk),
-                                     mat_a.readwrite_sender(ik));
+        gemmPanelUpdateTile<backend>(thread_priority::normal, mat_l.read_sender(ij),
+                                     mat_a.read_sender(jk), mat_a.readwrite_sender(ik));
       }
     }
   }
@@ -261,6 +271,8 @@ template <Backend backend, Device device, class T>
 void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a,
                                           Matrix<T, device>& mat_l) {
   using namespace gentostd_l;
+  using hpx::threads::thread_priority;
+
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   // Set up MPI executor pipelines
@@ -328,7 +340,8 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex kj_panelT{Coord::Col, j_local};
         const LocalTileIndex kj(kk_offset.rows(), j_local);
 
-        trsmPanelUpdateTile<backend>(l_panel.read_sender(kk_panel), mat_a.readwrite_sender(kj));
+        trsmPanelUpdateTile<backend>(thread_priority::high, l_panel.read_sender(kk_panel),
+                                     mat_a.readwrite_sender(kj));
 
         a_panelT.setTile(kj_panelT, mat_a.read(kj));
       }
@@ -344,8 +357,8 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
           const LocalTileIndex kj_panelT{Coord::Col, j_local};
           const LocalTileIndex ij{i_local, j_local};
 
-          gemmPanelUpdateTile<backend>(l_panel.read_sender(ik_panel), a_panelT.read_sender(kj_panelT),
-                                       mat_a.readwrite_sender(ij));
+          gemmPanelUpdateTile<backend>(thread_priority::normal, l_panel.read_sender(ik_panel),
+                                       a_panelT.read_sender(kj_panelT), mat_a.readwrite_sender(ij));
         }
       }
     }
@@ -354,7 +367,8 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 
     // Direct transformation to standard eigenvalue problem of the diagonal tile
     if (kk_rank == this_rank)
-      hegstDiagTile<backend>(mat_a.readwrite_sender(kk), mat_l.readwrite_sender(kk));
+      hegstDiagTile<backend>(thread_priority::high, mat_a.readwrite_sender(kk),
+                             mat_l.readwrite_sender(kk));
 
     // If there is no trailing matrix
     if (k == nrtile - 1)
@@ -381,9 +395,10 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex ik_panel(Coord::Row, i_local);
         const LocalTileIndex ik(i_local, distr.localTileFromGlobalTile<Coord::Col>(k));
 
-        trsmPanelTile<backend>(l_panelT.read_sender(diag_wp_idx), mat_a.readwrite_sender(ik));
-        hemmPanelTile<backend>(a_panelT.read_sender(diag_wp_idx), mat_l.read_sender(ik),
+        trsmPanelTile<backend>(thread_priority::high, l_panelT.read_sender(diag_wp_idx),
                                mat_a.readwrite_sender(ik));
+        hemmPanelTile<backend>(thread_priority::high, a_panelT.read_sender(diag_wp_idx),
+                               mat_l.read_sender(ik), mat_a.readwrite_sender(ik));
 
         // keep diagonal tile for later.
         a_diag = a_panelT.read(diag_wp_idx);
@@ -409,7 +424,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
       const auto j_local = distr.localTileFromGlobalTile<Coord::Col>(j);
       // first trailing panel gets high priority (look ahead).
       const auto trailing_matrix_priority =
-          (j == k + 1) ? hpx::threads::thread_priority::high : hpx::threads::thread_priority::normal;
+          (j == k + 1) ? thread_priority::high : thread_priority::normal;
       if (this_rank.row() == owner.row()) {
         const auto i_local = distr.localTileFromGlobalTile<Coord::Row>(j);
 
@@ -430,12 +445,10 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex kj_panelT{Coord::Col, j_local};
         const LocalTileIndex ij{i_local, j_local};
 
-        gemmTrailingMatrixTile<backend>(hpx::threads::thread_priority::normal,
-                                        a_panel.read_sender(ik_panel), l_panelT.read_sender(kj_panelT),
-                                        mat_a.readwrite_sender(ij));
-        gemmTrailingMatrixTile<backend>(hpx::threads::thread_priority::normal,
-                                        l_panel.read_sender(ik_panel), a_panelT.read_sender(kj_panelT),
-                                        mat_a.readwrite_sender(ij));
+        gemmTrailingMatrixTile<backend>(thread_priority::normal, a_panel.read_sender(ik_panel),
+                                        l_panelT.read_sender(kj_panelT), mat_a.readwrite_sender(ij));
+        gemmTrailingMatrixTile<backend>(thread_priority::normal, l_panel.read_sender(ik_panel),
+                                        a_panelT.read_sender(kj_panelT), mat_a.readwrite_sender(ij));
       }
     }
 
@@ -450,8 +463,8 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex local_idx(Coord::Row, i_local);
         const LocalTileIndex ik(i_local, distr.localTileFromGlobalTile<Coord::Col>(k));
 
-        hemmPanelTile<backend>(hpx::execution::experimental::keep_future(a_diag), mat_l.read_sender(ik),
-                               mat_a.readwrite_sender(ik));
+        hemmPanelTile<backend>(thread_priority::high, hpx::execution::experimental::keep_future(a_diag),
+                               mat_l.read_sender(ik), mat_a.readwrite_sender(ik));
       }
     }
   }
@@ -460,6 +473,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 template <Backend backend, Device device, class T>
 void GenToStd<backend, device, T>::call_U(Matrix<T, device>& mat_a, Matrix<T, device>& mat_u) {
   using namespace gentostd_u;
+  using hpx::threads::thread_priority;
 
   // Number of tile (rows = cols)
   SizeType nrtile = mat_a.nrTiles().cols();
@@ -468,7 +482,8 @@ void GenToStd<backend, device, T>::call_U(Matrix<T, device>& mat_a, Matrix<T, de
     const LocalTileIndex kk{k, k};
 
     // Direct transformation to standard eigenvalue problem of the diagonal tile
-    hegstDiagTile<backend>(mat_a.readwrite_sender(kk), mat_u.readwrite_sender(kk));
+    hegstDiagTile<backend>(thread_priority::high, mat_a.readwrite_sender(kk),
+                           mat_u.readwrite_sender(kk));
 
     // If there is no trailing matrix
     if (k == nrtile - 1)
@@ -476,8 +491,9 @@ void GenToStd<backend, device, T>::call_U(Matrix<T, device>& mat_a, Matrix<T, de
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
       const LocalTileIndex ki{k, i};
-      trsmPanelTile<backend>(mat_u.read_sender(kk), mat_a.readwrite_sender(ki));
-      hemmPanelTile<backend>(mat_a.read_sender(kk), mat_u.read_sender(ki), mat_a.readwrite_sender(ki));
+      trsmPanelTile<backend>(thread_priority::high, mat_u.read_sender(kk), mat_a.readwrite_sender(ki));
+      hemmPanelTile<backend>(thread_priority::high, mat_a.read_sender(kk), mat_u.read_sender(ki),
+                             mat_a.readwrite_sender(ki));
     }
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
@@ -485,7 +501,7 @@ void GenToStd<backend, device, T>::call_U(Matrix<T, device>& mat_a, Matrix<T, de
       const LocalTileIndex ki{k, i};
       // first trailing panel gets high priority (look ahead).
       const auto trailing_matrix_priority =
-          (i == k + 1) ? hpx::threads::thread_priority::high : hpx::threads::thread_priority::normal;
+          (i == k + 1) ? thread_priority::high : thread_priority::normal;
 
       her2kTrailingDiagTile<backend>(trailing_matrix_priority, mat_a.read_sender(ki),
                                      mat_u.read_sender(ki), mat_a.readwrite_sender(ii));
@@ -502,19 +518,21 @@ void GenToStd<backend, device, T>::call_U(Matrix<T, device>& mat_a, Matrix<T, de
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
       const LocalTileIndex ki{k, i};
-      hemmPanelTile<backend>(mat_a.read_sender(kk), mat_u.read_sender(ki), mat_a.readwrite_sender(ki));
+      hemmPanelTile<backend>(thread_priority::high, mat_a.read_sender(kk), mat_u.read_sender(ki),
+                             mat_a.readwrite_sender(ki));
     }
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
       const LocalTileIndex ii{i, i};
       const LocalTileIndex ki{k, i};
-      trsmPanelUpdateTile<backend>(mat_u.read_sender(ii), mat_a.readwrite_sender(ki));
+      trsmPanelUpdateTile<backend>(thread_priority::high, mat_u.read_sender(ii),
+                                   mat_a.readwrite_sender(ki));
 
       for (SizeType j = i + 1; j < nrtile; ++j) {
         const LocalTileIndex ij{i, j};
         const LocalTileIndex kj{k, j};
-        gemmPanelUpdateTile<backend>(mat_a.read_sender(ki), mat_u.read_sender(ij),
-                                     mat_a.readwrite_sender(kj));
+        gemmPanelUpdateTile<backend>(thread_priority::normal, mat_a.read_sender(ki),
+                                     mat_u.read_sender(ij), mat_a.readwrite_sender(kj));
       }
     }
   }
@@ -524,6 +542,8 @@ template <Backend backend, Device device, class T>
 void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a,
                                           Matrix<T, device>& mat_u) {
   using namespace gentostd_u;
+  using hpx::threads::thread_priority;
+
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   // Set up MPI executor pipelines
@@ -592,7 +612,8 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex ki_panelT{Coord::Row, i_local};
         const LocalTileIndex ik(i_local, kk_offset.cols());
 
-        trsmPanelUpdateTile<backend>(u_panel.read_sender(kk_panel), mat_a.readwrite_sender(ik));
+        trsmPanelUpdateTile<backend>(thread_priority::high, u_panel.read_sender(kk_panel),
+                                     mat_a.readwrite_sender(ik));
 
         a_panelT.setTile(ki_panelT, mat_a.read(ik));
       }
@@ -608,8 +629,8 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
           const LocalTileIndex ik_panelT{Coord::Row, i_local};
           const LocalTileIndex ij{i_local, j_local};
 
-          gemmPanelUpdateTile<backend>(a_panelT.read_sender(ik_panelT), u_panel.read_sender(kj_panel),
-                                       mat_a.readwrite_sender(ij));
+          gemmPanelUpdateTile<backend>(thread_priority::normal, a_panelT.read_sender(ik_panelT),
+                                       u_panel.read_sender(kj_panel), mat_a.readwrite_sender(ij));
         }
       }
     }
@@ -618,7 +639,8 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
 
     // Direct transformation to standard eigenvalue problem of the diagonal tile
     if (kk_rank == this_rank)
-      hegstDiagTile<backend>(mat_a.readwrite_sender(kk), mat_u.readwrite_sender(kk));
+      hegstDiagTile<backend>(thread_priority::high, mat_a.readwrite_sender(kk),
+                             mat_u.readwrite_sender(kk));
 
     // If there is no trailing matrix
     if (k == nrtile - 1)
@@ -645,9 +667,10 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex kj_panel(Coord::Col, j_local);
         const LocalTileIndex kj(distr.localTileFromGlobalTile<Coord::Row>(k), j_local);
 
-        trsmPanelTile<backend>(u_panelT.read_sender(diag_wp_idx), mat_a.readwrite_sender(kj));
-        hemmPanelTile<backend>(a_panelT.read_sender(diag_wp_idx), mat_u.read_sender(kj),
+        trsmPanelTile<backend>(thread_priority::high, u_panelT.read_sender(diag_wp_idx),
                                mat_a.readwrite_sender(kj));
+        hemmPanelTile<backend>(thread_priority::high, a_panelT.read_sender(diag_wp_idx),
+                               mat_u.read_sender(kj), mat_a.readwrite_sender(kj));
 
         // keep diagonal tile for later.
         a_diag = a_panelT.read(diag_wp_idx);
@@ -673,7 +696,7 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
       const auto i_local = distr.localTileFromGlobalTile<Coord::Row>(i);
       // first trailing panel gets high priority (look ahead).
       const auto trailing_matrix_priority =
-          (i == k + 1) ? hpx::threads::thread_priority::high : hpx::threads::thread_priority::normal;
+          (i == k + 1) ? thread_priority::high : thread_priority::normal;
       if (this_rank.col() == owner.col()) {
         const auto j_local = distr.localTileFromGlobalTile<Coord::Col>(i);
 
@@ -694,12 +717,10 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex kj_panelT{Coord::Col, j_local};
         const LocalTileIndex ij{i_local, j_local};
 
-        gemmTrailingMatrixTile<backend>(hpx::threads::thread_priority::normal,
-                                        a_panelT.read_sender(ki_panel), u_panel.read_sender(kj_panelT),
-                                        mat_a.readwrite_sender(ij));
-        gemmTrailingMatrixTile<backend>(hpx::threads::thread_priority::normal,
-                                        u_panelT.read_sender(ki_panel), a_panel.read_sender(kj_panelT),
-                                        mat_a.readwrite_sender(ij));
+        gemmTrailingMatrixTile<backend>(thread_priority::normal, a_panelT.read_sender(ki_panel),
+                                        u_panel.read_sender(kj_panelT), mat_a.readwrite_sender(ij));
+        gemmTrailingMatrixTile<backend>(thread_priority::normal, u_panelT.read_sender(ki_panel),
+                                        a_panel.read_sender(kj_panelT), mat_a.readwrite_sender(ij));
       }
     }
 
@@ -714,8 +735,8 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex local_idx(Coord::Col, j_local);
         const LocalTileIndex ki(distr.localTileFromGlobalTile<Coord::Row>(k), j_local);
 
-        hemmPanelTile<backend>(hpx::execution::experimental::keep_future(a_diag), mat_u.read_sender(ki),
-                               mat_a.readwrite_sender(ki));
+        hemmPanelTile<backend>(thread_priority::high, hpx::execution::experimental::keep_future(a_diag),
+                               mat_u.read_sender(ki), mat_a.readwrite_sender(ki));
       }
     }
   }

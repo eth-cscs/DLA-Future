@@ -38,21 +38,20 @@ namespace internal {
 
 namespace cholesky_l {
 template <Backend backend, class MatrixTileSender>
-void potrfDiagTile(MatrixTileSender&& matrix_tile) {
+void potrfDiagTile(hpx::threads::thread_priority priority, MatrixTileSender&& matrix_tile) {
   dlaf::internal::whenAllLift(blas::Uplo::Lower, std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::potrf(dlaf::internal::Policy<backend>(hpx::threads::thread_priority::normal)) |
-      hpx::execution::experimental::detach();
+      tile::potrf(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
 }
 
 template <Backend backend, class KKTileSender, class MatrixTileSender>
-void trsmPanelTile(KKTileSender&& kk_tile, MatrixTileSender&& matrix_tile) {
+void trsmPanelTile(hpx::threads::thread_priority priority, KKTileSender&& kk_tile,
+                   MatrixTileSender&& matrix_tile) {
   using ElementType = dlaf::internal::SenderElementType<KKTileSender>;
 
   dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Lower, blas::Op::ConjTrans,
                               blas::Diag::NonUnit, ElementType(1.0), std::forward<KKTileSender>(kk_tile),
                               std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::trsm(dlaf::internal::Policy<backend>(hpx::threads::thread_priority::high)) |
-      hpx::execution::experimental::detach();
+      tile::trsm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
 }
 
 template <Backend backend, class PanelTileSender, class MatrixTileSender>
@@ -81,21 +80,20 @@ void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, PanelTileSen
 
 namespace cholesky_u {
 template <Backend backend, class MatrixTileSender>
-void potrfDiagTile(MatrixTileSender&& matrix_tile) {
+void potrfDiagTile(hpx::threads::thread_priority priority, MatrixTileSender&& matrix_tile) {
   dlaf::internal::whenAllLift(blas::Uplo::Upper, std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::potrf(dlaf::internal::Policy<backend>(hpx::threads::thread_priority::normal)) |
-      hpx::execution::experimental::detach();
+      tile::potrf(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
 }
 
 template <Backend backend, class KKTileSender, class MatrixTileSender>
-void trsmPanelTile(KKTileSender&& kk_tile, MatrixTileSender&& matrix_tile) {
+void trsmPanelTile(hpx::threads::thread_priority priority, KKTileSender&& kk_tile,
+                   MatrixTileSender&& matrix_tile) {
   using ElementType = dlaf::internal::SenderElementType<KKTileSender>;
 
   dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, blas::Op::ConjTrans,
                               blas::Diag::NonUnit, ElementType(1.0), std::forward<KKTileSender>(kk_tile),
                               std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::trsm(dlaf::internal::Policy<backend>(hpx::threads::thread_priority::high)) |
-      hpx::execution::experimental::detach();
+      tile::trsm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
 }
 
 template <Backend backend, class PanelTileSender, class MatrixTileSender>
@@ -126,6 +124,7 @@ void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, PanelTileSen
 template <Backend backend, Device device, class T>
 void Cholesky<backend, device, T>::call_L(Matrix<T, device>& mat_a) {
   using namespace cholesky_l;
+  using hpx::threads::thread_priority;
 
   // Number of tile (rows = cols)
   SizeType nrtile = mat_a.nrTiles().cols();
@@ -134,17 +133,18 @@ void Cholesky<backend, device, T>::call_L(Matrix<T, device>& mat_a) {
     // Cholesky decomposition on mat_a(k,k) r/w potrf (lapack operation)
     auto kk = LocalTileIndex{k, k};
 
-    potrfDiagTile<backend>(mat_a.readwrite_sender(kk));
+    potrfDiagTile<backend>(thread_priority::normal, mat_a.readwrite_sender(kk));
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
       // Update panel mat_a(i,k) with trsm (blas operation), using data mat_a.read(k,k)
-      trsmPanelTile<backend>(mat_a.read_sender(kk), mat_a.readwrite_sender(LocalTileIndex{i, k}));
+      trsmPanelTile<backend>(thread_priority::high, mat_a.read_sender(kk),
+                             mat_a.readwrite_sender(LocalTileIndex{i, k}));
     }
 
     for (SizeType j = k + 1; j < nrtile; ++j) {
       // first trailing panel gets high priority (look ahead).
       const auto trailing_matrix_priority =
-          (j == k + 1) ? hpx::threads::thread_priority::high : hpx::threads::thread_priority::normal;
+          (j == k + 1) ? thread_priority::high : thread_priority::normal;
 
       // Update trailing matrix: diagonal element mat_a(j,j), reading mat_a.read(j,k), using herk (blas operation)
       herkTrailingDiagTile<backend>(trailing_matrix_priority, mat_a.read_sender(LocalTileIndex{j, k}),
@@ -153,8 +153,7 @@ void Cholesky<backend, device, T>::call_L(Matrix<T, device>& mat_a) {
       for (SizeType i = j + 1; i < nrtile; ++i) {
         // Update remaining trailing matrix mat_a(i,j), reading mat_a.read(i,k) and mat_a.read(j,k),
         // using gemm (blas operation)
-        gemmTrailingMatrixTile<backend>(hpx::threads::thread_priority::normal,
-                                        mat_a.read_sender(LocalTileIndex{i, k}),
+        gemmTrailingMatrixTile<backend>(thread_priority::normal, mat_a.read_sender(LocalTileIndex{i, k}),
                                         mat_a.read_sender(LocalTileIndex{j, k}),
                                         mat_a.readwrite_sender(LocalTileIndex{i, j}));
       }
@@ -165,6 +164,7 @@ void Cholesky<backend, device, T>::call_L(Matrix<T, device>& mat_a) {
 template <Backend backend, Device device, class T>
 void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a) {
   using namespace cholesky_l;
+  using hpx::threads::thread_priority;
 
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
@@ -187,7 +187,7 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 
     // Factorization of diagonal tile and broadcast it along the k-th column
     if (kk_rank == this_rank)
-      potrfDiagTile<backend>(mat_a.readwrite_sender(kk_idx));
+      potrfDiagTile<backend>(thread_priority::normal, mat_a.readwrite_sender(kk_idx));
 
     // If there is no trailing matrix
     const SizeType kt = k + 1;
@@ -217,7 +217,8 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex local_idx(Coord::Row, i);
         const LocalTileIndex ik_idx(i, distr.localTileFromGlobalTile<Coord::Col>(k));
 
-        trsmPanelTile<backend>(panelT.read_sender(diag_wp_idx), mat_a.readwrite_sender(ik_idx));
+        trsmPanelTile<backend>(thread_priority::high, panelT.read_sender(diag_wp_idx),
+                               mat_a.readwrite_sender(ik_idx));
 
         panel.setTile(local_idx, mat_a.read(ik_idx));
       }
@@ -239,7 +240,7 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 
       const auto j = distr.localTileFromGlobalTile<Coord::Col>(jt_idx);
       const auto trailing_matrix_priority =
-          (jt_idx == kt) ? hpx::threads::thread_priority::high : hpx::threads::thread_priority::normal;
+          (jt_idx == kt) ? thread_priority::high : thread_priority::normal;
       if (this_rank.row() == owner.row()) {
         const auto i = distr.localTileFromGlobalTile<Coord::Row>(jt_idx);
 
@@ -256,8 +257,7 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
         const auto i = distr.localTileFromGlobalTile<Coord::Row>(i_idx);
         // TODO: This was using executor_np. Was that intentional, or should it
         // be trailing_matrix_executor/priority?
-        gemmTrailingMatrixTile<backend>(hpx::threads::thread_priority::normal,
-                                        panel.read_sender({Coord::Row, i}),
+        gemmTrailingMatrixTile<backend>(thread_priority::normal, panel.read_sender({Coord::Row, i}),
                                         panelT.read_sender({Coord::Col, j}),
                                         mat_a.readwrite_sender(LocalTileIndex{i, j}));
       }
@@ -272,6 +272,7 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 template <Backend backend, Device device, class T>
 void Cholesky<backend, device, T>::call_U(Matrix<T, device>& mat_a) {
   using namespace cholesky_u;
+  using hpx::threads::thread_priority;
 
   // Number of tile (rows = cols)
   SizeType nrtile = mat_a.nrTiles().cols();
@@ -279,22 +280,22 @@ void Cholesky<backend, device, T>::call_U(Matrix<T, device>& mat_a) {
   for (SizeType k = 0; k < nrtile; ++k) {
     auto kk = LocalTileIndex{k, k};
 
-    potrfDiagTile<backend>(mat_a.readwrite_sender(kk));
+    potrfDiagTile<backend>(thread_priority::normal, mat_a.readwrite_sender(kk));
 
     for (SizeType j = k + 1; j < nrtile; ++j) {
-      trsmPanelTile<backend>(mat_a.read_sender(kk), mat_a.readwrite_sender(LocalTileIndex{k, j}));
+      trsmPanelTile<backend>(thread_priority::high, mat_a.read_sender(kk),
+                             mat_a.readwrite_sender(LocalTileIndex{k, j}));
     }
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
       const auto trailing_matrix_priority =
-          (i == k + 1) ? hpx::threads::thread_priority::high : hpx::threads::thread_priority::normal;
+          (i == k + 1) ? thread_priority::high : thread_priority::normal;
 
       herkTrailingDiagTile<backend>(trailing_matrix_priority, mat_a.read_sender(LocalTileIndex{k, i}),
                                     mat_a.readwrite_sender(LocalTileIndex{i, i}));
 
       for (SizeType j = i + 1; j < nrtile; ++j) {
-        gemmTrailingMatrixTile<backend>(hpx::threads::thread_priority::normal,
-                                        mat_a.read_sender(LocalTileIndex{k, i}),
+        gemmTrailingMatrixTile<backend>(thread_priority::normal, mat_a.read_sender(LocalTileIndex{k, i}),
                                         mat_a.read_sender(LocalTileIndex{k, j}),
                                         mat_a.readwrite_sender(LocalTileIndex{i, j}));
       }
@@ -305,6 +306,7 @@ void Cholesky<backend, device, T>::call_U(Matrix<T, device>& mat_a) {
 template <Backend backend, Device device, class T>
 void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a) {
   using namespace cholesky_u;
+  using hpx::threads::thread_priority;
 
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
@@ -327,7 +329,7 @@ void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
 
     // Factorization of diagonal tile and broadcast it along the k-th column
     if (kk_rank == this_rank) {
-      potrfDiagTile<backend>(mat_a(kk_idx));
+      potrfDiagTile<backend>(thread_priority::normal, mat_a(kk_idx));
     }
 
     // If there is no trailing matrix
@@ -357,7 +359,8 @@ void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex local_idx(Coord::Col, j);
         const LocalTileIndex kj_idx(distr.localTileFromGlobalTile<Coord::Row>(k), j);
 
-        trsmPanelTile<backend>(panelT.read_sender(diag_wp_idx), mat_a.readwrite_sender(kj_idx));
+        trsmPanelTile<backend>(thread_priority::high, panelT.read_sender(diag_wp_idx),
+                               mat_a.readwrite_sender(kj_idx));
 
         panel.setTile(local_idx, mat_a.read(kj_idx));
       }
@@ -379,7 +382,7 @@ void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
 
       const auto i = distr.localTileFromGlobalTile<Coord::Row>(it_idx);
       const auto trailing_matrix_priority =
-          (i == k + 1) ? hpx::threads::thread_priority::high : hpx::threads::thread_priority::normal;
+          (i == k + 1) ? thread_priority::high : thread_priority::normal;
       if (this_rank.col() == owner.col()) {
         const auto j = distr.localTileFromGlobalTile<Coord::Col>(it_idx);
 
@@ -395,8 +398,7 @@ void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
 
         const auto j = distr.localTileFromGlobalTile<Coord::Col>(j_idx);
 
-        gemmTrailingMatrixTile<backend>(hpx::threads::thread_priority::normal,
-                                        panelT.read_sender({Coord::Row, i}),
+        gemmTrailingMatrixTile<backend>(thread_priority::normal, panelT.read_sender({Coord::Row, i}),
                                         panel.read_sender({Coord::Col, j}),
                                         mat_a.readwrite_sender(LocalTileIndex{i, j}));
       }

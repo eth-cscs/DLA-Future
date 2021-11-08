@@ -460,8 +460,8 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
       for (SizeType j_local = 0; j_local < distr_b.localNrTiles().cols(); ++j_local) {
         const LocalTileIndex kj_panel(Coord::Col, j_local);
         const LocalTileIndex ij(i_local, j_local);
-        gemm_trailing_matrix_tile(executor_np, alpha, a_panel.read(ik_panel),
-                                  b_panel.read(kj_panel), mat_b(ij));
+        gemm_trailing_matrix_tile(executor_np, alpha, a_panel.read(ik_panel), b_panel.read(kj_panel),
+                                  mat_b(ij));
       }
     }
 
@@ -543,8 +543,8 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
       for (SizeType j_local = 0; j_local < distr_b.localNrTiles().cols(); ++j_local) {
         const LocalTileIndex kj_panel(Coord::Col, j_local);
         const LocalTileIndex ij(i_local, j_local);
-        gemm_trailing_matrix_tile(executor_np, alpha, a_panel.read(ik_panel),
-                                  b_panel.read(kj_panel), mat_b(ij));
+        gemm_trailing_matrix_tile(executor_np, alpha, a_panel.read(ik_panel), b_panel.read(kj_panel),
+                                  mat_b(ij));
       }
     }
 
@@ -627,8 +627,8 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
       for (SizeType i_local = 0; i_local < distr_b.localNrTiles().rows(); ++i_local) {
         const LocalTileIndex ik_panel(Coord::Row, i_local);
         const LocalTileIndex ij(i_local, j_local);
-        gemm_trailing_matrix_tile(executor_np, alpha, b_panel.read(ik_panel),
-                                  a_panel.read(kj_panel), mat_b(ij));
+        gemm_trailing_matrix_tile(executor_np, alpha, b_panel.read(ik_panel), a_panel.read(kj_panel),
+                                  mat_b(ij));
       }
     }
 
@@ -711,8 +711,8 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
       for (SizeType i_local = distr_b.localNrTiles().rows() - 1; i_local >= 0; --i_local) {
         const LocalTileIndex ik_panel(Coord::Row, i_local);
         const LocalTileIndex ij(i_local, j_local);
-        gemm_trailing_matrix_tile(executor_np, alpha, b_panel.read(ik_panel),
-                                  a_panel.read(kj_panel), mat_b(ij));
+        gemm_trailing_matrix_tile(executor_np, alpha, b_panel.read(ik_panel), a_panel.read(kj_panel),
+                                  mat_b(ij));
       }
     }
 

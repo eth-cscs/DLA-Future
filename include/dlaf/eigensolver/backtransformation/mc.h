@@ -260,8 +260,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
                            {dist_v.tileSize(GlobalTileIndex(i, k)).rows(), nr_reflectors_last_block}});
           }
           copySingleTile(tile_v, panelV(ik_panel));
-          hpx::dataflow(hpx::launch::sync, matrix::unwrapExtendTiles(tile::laset<T>),
-                        lapack::MatrixType::Upper, 0.f, 1.f, panelV(ik_panel));
+          hpx::dataflow(hpx::launch::sync, matrix::unwrapExtendTiles(tile::internal::laset_o),
+                        lapack::MatrixType::Upper, T(0), T(1), panelV(ik_panel));
         }
         else {
           panelV.setTile(ik_panel, mat_v.read(GlobalTileIndex(i, k)));

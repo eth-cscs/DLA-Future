@@ -10,6 +10,7 @@
 #pragma once
 
 #include <blas.hh>
+#include "dlaf/communication/communicator_grid.h"
 #include "dlaf/eigensolver/backtransformation/mc.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
@@ -38,6 +39,7 @@ void backTransformation(Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v
   DLAF_ASSERT(matrix::local_matrix(mat_v), mat_v);
   DLAF_ASSERT(square_size(mat_v), mat_v);
   DLAF_ASSERT(square_blocksize(mat_v), mat_v);
+  DLAF_ASSERT(mat_c.size().rows() == mat_v.size().rows(), mat_c, mat_v);
   DLAF_ASSERT(mat_c.blockSize().rows() == mat_v.blockSize().rows(), mat_c, mat_v);
 
   const SizeType m = mat_v.size().rows();
@@ -46,6 +48,39 @@ void backTransformation(Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v
   DLAF_ASSERT(taus.size() == nr_reflectors_blocks, taus.size(), mat_v, nr_reflectors_blocks);
 
   internal::BackTransformation<backend, device, T>::call_FC(mat_c, mat_v, taus);
+}
+
+/// Eigenvalue back-transformation implementation on distributed memory.
+///
+/// It computes Q C, where Q = HH(1) HH(2) ... HH(m-mb)
+/// (HH(j) is the House-Holder transformation (I - v tau vH)
+/// defined by the j-th element of tau and the HH reflector stored in the j-th column of the matrix V.
+///
+/// @param mat_c contains the (m x n) matrix C (blocksize (mb x nb)), while on exit it contains Q C.
+/// @param mat_v is (m x m) matrix with blocksize (mb x mb), which contains the Householder reflectors.
+/// The j-th HH reflector is v_j = (1, V(mb + j : n, j)).
+/// @param taus is a (blocked) vector of size m (blocksize mb). The j-th element is the scaling factor
+/// for the j-th HH tranformation.
+/// @pre mat_c is distributed,
+/// @pre mat_v is distributed according to grid.
+template <Backend backend, Device device, class T>
+void backTransformation(comm::CommunicatorGrid grid, Matrix<T, device>& mat_c,
+                        Matrix<const T, device>& mat_v,
+                        common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
+  DLAF_ASSERT(matrix::equal_process_grid(mat_c, grid), mat_c, grid);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_v, grid), mat_v, grid);
+  DLAF_ASSERT(square_size(mat_v), mat_v);
+  DLAF_ASSERT(square_blocksize(mat_v), mat_v);
+  DLAF_ASSERT(mat_c.size().rows() == mat_v.size().rows(), mat_c, mat_v);
+  DLAF_ASSERT(mat_c.blockSize().rows() == mat_v.blockSize().rows(), mat_c, mat_v);
+
+  const SizeType m = mat_v.size().rows();
+  const SizeType mb = mat_v.blockSize().rows();
+  SizeType nr_reflectors_blocks = mat_v.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(
+      std::max<SizeType>(0, util::ceilDiv(m - mb - 1, mb)));
+  DLAF_ASSERT(taus.size() == nr_reflectors_blocks, taus.size(), mat_v, nr_reflectors_blocks);
+
+  internal::BackTransformation<backend, device, T>::call_FC(grid, mat_c, mat_v, taus);
 }
 
 }

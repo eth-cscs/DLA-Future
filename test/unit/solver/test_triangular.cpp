@@ -179,14 +179,13 @@ TYPED_TEST(TriangularSolverTestMC, CorrectnessDistributed) {
       for (auto uplo : blas_uplos) {
         for (auto op : blas_ops) {
           for (auto diag : blas_diags) {
-            // Currently only Left Lower Notrans case is implemented
-            if (!(op == blas::Op::NoTrans && side == blas::Side::Left && uplo == blas::Uplo::Lower))
+            // Currently only NoTrans cases are implemented
+            if (!(op == blas::Op::NoTrans))
               continue;
 
             for (auto sz : sizes) {
               std::tie(m, n, mb, nb) = sz;
               TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
-
               testTriangularSolver<TypeParam, Backend::MC, Device::CPU>(comm_grid, side, uplo, op, diag,
                                                                         alpha, m, n, mb, nb);
             }
@@ -226,8 +225,8 @@ TYPED_TEST(TriangularSolverTestGPU, CorrectnessDistributed) {
       for (auto uplo : blas_uplos) {
         for (auto op : blas_ops) {
           for (auto diag : blas_diags) {
-            // Currently only Left Lower Notrans case is implemented
-            if (!(op == blas::Op::NoTrans && side == blas::Side::Left && uplo == blas::Uplo::Lower))
+            // Currently only NoTrans cases are implemented
+            if (!(op == blas::Op::NoTrans))
               continue;
 
             for (auto sz : sizes) {

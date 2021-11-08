@@ -36,11 +36,11 @@ struct Triangular {
   static void call_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
                        Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b);
   static void call_LUN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
-		       Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b);
+                       Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b);
   static void call_RLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
-		       Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b);
+                       Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b);
   static void call_RUN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
-		       Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b);
+                       Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b);
 };
 
 /// ---- ETI

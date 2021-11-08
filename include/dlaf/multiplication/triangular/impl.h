@@ -455,16 +455,12 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
     broadcast(executor_mpi, kk_rank.row(), b_panel, mpi_col_task_chain);
 
     for (SizeType i_local = bt_offset.row(); i_local < distr_a.localNrTiles().rows(); ++i_local) {
-      // Choose queue priority
-      auto i = distr_a.globalTileFromLocalTile<Coord::Row>(i_local);
-      auto& trailing_executor = (i == k + 1) ? executor_hp : executor_np;
-
       const LocalTileIndex ik_panel(Coord::Row, i_local);
       // Update trailing matrix
       for (SizeType j_local = 0; j_local < distr_b.localNrTiles().cols(); ++j_local) {
         const LocalTileIndex kj_panel(Coord::Col, j_local);
         const LocalTileIndex ij(i_local, j_local);
-        gemm_trailing_matrix_tile(trailing_executor, alpha, a_panel.read(ik_panel),
+        gemm_trailing_matrix_tile(executor_np, alpha, a_panel.read(ik_panel),
                                   b_panel.read(kj_panel), mat_b(ij));
       }
     }
@@ -542,15 +538,12 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
 
     for (SizeType i_local = bt_offset.row() - 1; i_local >= 0; --i_local) {
       // Choose queue priority
-      auto i = distr_a.globalTileFromLocalTile<Coord::Row>(i_local);
-      auto& trailing_executor = (i == k - 1) ? executor_hp : executor_np;
-
       const LocalTileIndex ik_panel(Coord::Row, i_local);
       // Update trailing matrix
       for (SizeType j_local = 0; j_local < distr_b.localNrTiles().cols(); ++j_local) {
         const LocalTileIndex kj_panel(Coord::Col, j_local);
         const LocalTileIndex ij(i_local, j_local);
-        gemm_trailing_matrix_tile(trailing_executor, alpha, a_panel.read(ik_panel),
+        gemm_trailing_matrix_tile(executor_np, alpha, a_panel.read(ik_panel),
                                   b_panel.read(kj_panel), mat_b(ij));
       }
     }
@@ -629,15 +622,12 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
 
     for (SizeType j_local = bt_offset.col() - 1; j_local >= 0; --j_local) {
       // Choose queue priority
-      auto j = distr_a.globalTileFromLocalTile<Coord::Col>(j_local);
-      auto& trailing_executor = (j == k - 1) ? executor_hp : executor_np;
-
       const LocalTileIndex kj_panel(Coord::Col, j_local);
       // Update trailing matrix
       for (SizeType i_local = 0; i_local < distr_b.localNrTiles().rows(); ++i_local) {
         const LocalTileIndex ik_panel(Coord::Row, i_local);
         const LocalTileIndex ij(i_local, j_local);
-        gemm_trailing_matrix_tile(trailing_executor, alpha, b_panel.read(ik_panel),
+        gemm_trailing_matrix_tile(executor_np, alpha, b_panel.read(ik_panel),
                                   a_panel.read(kj_panel), mat_b(ij));
       }
     }
@@ -716,15 +706,12 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
 
     for (SizeType j_local = bt_offset.col(); j_local < distr_a.localNrTiles().cols(); ++j_local) {
       // Choose queue priority
-      auto j = distr_a.globalTileFromLocalTile<Coord::Col>(j_local);
-      auto& trailing_executor = (j == k + 1) ? executor_hp : executor_np;
-
       const LocalTileIndex kj_panel(Coord::Col, j_local);
       // Update trailing matrix
       for (SizeType i_local = distr_b.localNrTiles().rows() - 1; i_local >= 0; --i_local) {
         const LocalTileIndex ik_panel(Coord::Row, i_local);
         const LocalTileIndex ij(i_local, j_local);
-        gemm_trailing_matrix_tile(trailing_executor, alpha, b_panel.read(ik_panel),
+        gemm_trailing_matrix_tile(executor_np, alpha, b_panel.read(ik_panel),
                                   a_panel.read(kj_panel), mat_b(ij));
       }
     }

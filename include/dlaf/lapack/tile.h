@@ -397,24 +397,24 @@ void assertExtendInfo(F assertFunc, cusolverDnHandle_t handle, CusolverInfo<T>&&
 
 template <class T>
 dlaf::BaseType<T> lange(cusolverDnHandle_t, const lapack::Norm norm, const Tile<T, Device::GPU>& a) {
-  static_assert(sizeof(T) == 0, "lange is unimplemented for Backend::GPU");
+  DLAF_STATIC_UNIMPLEMENTED(sizeof(T) == 0);
 }
 
 template <class T>
 dlaf::BaseType<T> lantr(cusolverDnHandle_t, const lapack::Norm norm, const blas::Uplo uplo,
                         const blas::Diag diag, const Tile<T, Device::GPU>& a) {
-  static_assert(sizeof(T) == 0, "lantr is unimplemented for Backend::GPU");
+  DLAF_STATIC_UNIMPLEMENTED(sizeof(T) == 0);
 }
 
 template <class T>
 void laset(cusolverDnHandle_t, const lapack::MatrixType type, T alpha, T beta,
            const Tile<T, Device::GPU>& tile) {
-  static_assert(sizeof(T) == 0, "laset is unimplemented for Backend::GPU");
+  DLAF_STATIC_UNIMPLEMENTED(sizeof(T) == 0);
 }
 
 template <class T>
 void set0(cusolverDnHandle_t, const Tile<T, Device::GPU>& tile) {
-  static_assert(sizeof(T) == 0, "set0 is unimplemented for Backend::GPU");
+  DLAF_STATIC_UNIMPLEMENTED(sizeof(T) == 0);
 }
 
 template <class T>

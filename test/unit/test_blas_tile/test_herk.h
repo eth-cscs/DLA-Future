@@ -74,7 +74,7 @@ void testHerk(const blas::Uplo uplo, const blas::Op op_a, const SizeType n, cons
   auto a = createTile<CT, D>(el_op_a, size_a, lda, op_a);
   auto c = createTile<T, D>(el_c, size_c, ldc);
 
-  invokeBlas<D>(tile::herk_o, uplo, op_a, alpha, a, beta, c);
+  invokeBlas<D>(tile::internal::herk_o, uplo, op_a, alpha, a, beta, c);
 
   std::stringstream s;
   s << "HERK: " << uplo << ", " << op_a;

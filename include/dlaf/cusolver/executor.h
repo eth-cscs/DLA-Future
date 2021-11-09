@@ -31,49 +31,14 @@
 
 #include "dlaf/common/assert.h"
 #include "dlaf/cublas/executor.h"
+#include "dlaf/cublas/handle_pool.h"
 #include "dlaf/cuda/error.h"
 #include "dlaf/cusolver/error.h"
+#include "dlaf/cusolver/handle_pool.h"
 
 namespace dlaf {
 namespace cusolver {
 namespace internal {
-class HandlePoolImpl {
-  int device_;
-  std::size_t num_worker_threads_ = hpx::get_num_worker_threads();
-  std::vector<cusolverDnHandle_t> handles_;
-
-public:
-  HandlePoolImpl(int device) : device_(device), handles_(num_worker_threads_) {
-    DLAF_CUDA_CALL(cudaSetDevice(device_));
-
-    for (auto& h : handles_) {
-      DLAF_CUSOLVER_CALL(cusolverDnCreate(&h));
-    }
-  }
-
-  HandlePoolImpl& operator=(HandlePoolImpl&&) = default;
-  HandlePoolImpl(HandlePoolImpl&&) = default;
-  HandlePoolImpl(const HandlePoolImpl&) = delete;
-  HandlePoolImpl& operator=(const HandlePoolImpl&) = delete;
-
-  ~HandlePoolImpl() {
-    for (auto& h : handles_) {
-      DLAF_CUSOLVER_CALL(cusolverDnDestroy(h));
-    }
-  }
-
-  cusolverDnHandle_t getNextHandle(cudaStream_t stream) {
-    cusolverDnHandle_t handle = handles_[hpx::get_worker_thread_num()];
-    DLAF_CUDA_CALL(cudaSetDevice(device_));
-    DLAF_CUSOLVER_CALL(cusolverDnSetStream(handle, stream));
-    return handle;
-  }
-
-  int getDevice() {
-    return device_;
-  }
-};
-
 template <bool IsCallable, typename F, typename... Ts>
 struct isAsyncCusolverCallableImpl : std::false_type {
   struct dummy_type {};
@@ -95,36 +60,6 @@ struct isDataflowCusolverCallable
                         decltype(hpx::tuple_cat(hpx::tie(std::declval<cusolverDnHandle_t&>()),
                                                 std::declval<Futures>()))> {};
 }
-
-/// A pool of cuSOLVER handles with reference semantics (copying points to the
-/// same underlying cuSOLVER handles, last reference destroys the references).
-/// Allows access to cuSOLVER handles associated with a particular stream. The
-/// user must ensure that the handle pool and the stream use the same device.
-/// Each HPX worker thread is assigned thread local cuSOLVER handle.
-class HandlePool {
-  std::shared_ptr<internal::HandlePoolImpl> handles_ptr_;
-
-public:
-  HandlePool(int device = 0) : handles_ptr_(std::make_shared<internal::HandlePoolImpl>(device)) {}
-
-  cusolverDnHandle_t getNextHandle(cudaStream_t stream) {
-    DLAF_ASSERT(bool(handles_ptr_), "");
-    return handles_ptr_->getNextHandle(stream);
-  }
-
-  int getDevice() {
-    DLAF_ASSERT(bool(handles_ptr_), "");
-    return handles_ptr_->getDevice();
-  }
-
-  bool operator==(HandlePool const& rhs) const noexcept {
-    return handles_ptr_ == rhs.handles_ptr_;
-  }
-
-  bool operator!=(HandlePool const& rhs) const noexcept {
-    return !(*this == rhs);
-  }
-};
 
 /// An executor for cuSOLVER functions. Uses handles and streams from the given
 /// HandlePool and StreamPool. A cuSOLVER function is defined as any function

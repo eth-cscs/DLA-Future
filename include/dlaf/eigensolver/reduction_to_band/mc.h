@@ -216,31 +216,31 @@ void updateTrailingPanel(const bool has_head, const std::vector<TileT<T>>& panel
 template <class Executor, class T>
 void hemmDiag(const Executor& ex, hpx::shared_future<TileT<const T>> tile_a,
               hpx::shared_future<TileT<const T>> tile_w, hpx::future<TileT<T>> tile_x) {
-  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::hemm_o), blas::Side::Left, blas::Uplo::Lower, T(1),
-                std::move(tile_a), std::move(tile_w), T(1), std::move(tile_x));
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::hemm_o), blas::Side::Left,
+                blas::Uplo::Lower, T(1), std::move(tile_a), std::move(tile_w), T(1), std::move(tile_x));
 }
 
 // X += op(A) * W
 template <class Executor, class T>
 void hemmOffDiag(const Executor& ex, blas::Op op, hpx::shared_future<TileT<const T>> tile_a,
                  hpx::shared_future<TileT<const T>> tile_w, hpx::future<TileT<T>> tile_x) {
-  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), op, blas::Op::NoTrans, T(1),
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::gemm_o), op, blas::Op::NoTrans, T(1),
                 std::move(tile_a), std::move(tile_w), T(1), std::move(tile_x));
 }
 
 template <class Executor, class T>
 void her2kDiag(const Executor& ex, hpx::shared_future<TileT<const T>> tile_v,
                hpx::shared_future<TileT<const T>> tile_x, hpx::future<TileT<T>> tile_a) {
-  dataflow(ex, matrix::unwrapExtendTiles(tile::her2k_o), blas::Uplo::Lower, blas::Op::NoTrans, T(-1),
-           std::move(tile_v), std::move(tile_x), BaseType<T>(1), std::move(tile_a));
+  dataflow(ex, matrix::unwrapExtendTiles(tile::internal::her2k_o), blas::Uplo::Lower, blas::Op::NoTrans,
+           T(-1), std::move(tile_v), std::move(tile_x), BaseType<T>(1), std::move(tile_a));
 }
 
 // C -= A . B*
 template <class Executor, class T>
 void her2kOffDiag(const Executor& ex, hpx::shared_future<TileT<const T>> tile_a,
                   hpx::shared_future<TileT<const T>> tile_b, hpx::future<TileT<T>> tile_c) {
-  dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
-           std::move(tile_a), std::move(tile_b), T(1), std::move(tile_c));
+  dataflow(ex, matrix::unwrapExtendTiles(tile::internal::gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans,
+           T(-1), std::move(tile_a), std::move(tile_b), T(1), std::move(tile_c));
 }
 
 namespace local {
@@ -304,8 +304,8 @@ void setupReflectorPanelV(bool has_head, const LocalTileSize& ai_offset, const S
 
   if (has_head) {
     auto setupV0 = hpx::unwrapping([](auto&& tile_v, const auto& tile_a) {
-      copy(tile_a, tile_v);
-      tile::laset(lapack::MatrixType::Upper, T(0), T(1), tile_v);
+      matrix::internal::copy(tile_a, tile_v);
+      tile::internal::laset(lapack::MatrixType::Upper, T(0), T(1), tile_v);
     });
 
     // Note:
@@ -336,11 +336,11 @@ void trmmComputeW(PanelT<Coord::Col, T>& w, MatrixLikeT& v, hpx::shared_future<C
     // Note:
     // Since V0 is well-formed, by copying V0 to W we are also resetting W where the matrix is not going
     // to be computed.
-    copy(tile_v, tile_w);
+    matrix::internal::copy(tile_v, tile_w);
 
     // W = V . T
     using namespace blas;
-    tile::trmm(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1), tile_t, tile_w);
+    tile::internal::trmm(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1), tile_t, tile_w);
   });
 
   for (const auto& index_i : w.iteratorLocal())
@@ -350,7 +350,7 @@ void trmmComputeW(PanelT<Coord::Col, T>& w, MatrixLikeT& v, hpx::shared_future<C
 template <class T, class MatrixLikeT>
 void gemmUpdateX(PanelT<Coord::Col, T>& x, ConstMatrixT<T>& w2, MatrixLikeT& v) {
   using matrix::unwrapExtendTiles;
-  using tile::gemm_o;
+  using tile::internal::gemm_o;
 
   const auto ex = getHpExecutor<Backend::MC>();
 
@@ -412,7 +412,7 @@ void hemmComputeX(PanelT<Coord::Col, T>& x, const LocalTileSize at_offset, Const
 template <class T>
 void gemmComputeW2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Coord::Col, T>& x) {
   using matrix::unwrapExtendTiles;
-  using tile::gemm_o;
+  using tile::internal::gemm_o;
 
   const auto ex = getHpExecutor<Backend::MC>();
 
@@ -420,7 +420,7 @@ void gemmComputeW2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Co
   // Not all ranks in the column always hold at least a tile in the panel Ai, but all ranks in
   // the column are going to participate to the reduce. For them, it is important to set the
   // partial result W2 to zero.
-  hpx::dataflow(ex, unwrapExtendTiles(tile::set0<T>), w2(LocalTileIndex(0, 0)));
+  hpx::dataflow(ex, unwrapExtendTiles(tile::internal::set0_o), w2(LocalTileIndex(0, 0)));
 
   // GEMM W2 = W* . X
   for (const auto& index_tile : w.iteratorLocal())

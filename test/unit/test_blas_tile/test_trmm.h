@@ -53,7 +53,7 @@ void testTrmm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, c
   auto a = createTile<CT, D>(el_op_a, size_a, lda, op);
   auto b = createTile<T, D>(el_b, size_b, ldb);
 
-  invokeBlas<D>(tile::trmm_o, side, uplo, op, diag, alpha, a, b);
+  invokeBlas<D>(tile::internal::trmm_o, side, uplo, op, diag, alpha, a, b);
 
   std::stringstream s;
   s << "TRMM: " << side << ", " << uplo << ", " << op << ", " << diag << ", m = " << m << ", n = " << n

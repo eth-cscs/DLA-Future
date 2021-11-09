@@ -270,7 +270,7 @@ TYPED_TEST(TileOperationsTestMC, Laset) {
 
       auto tile = createTile<TypeParam>(el, TileElementSize(m, n), lda);
 
-      tile::laset<TypeParam>(mtype, alpha, beta, tile);
+      tile::internal::laset<TypeParam>(mtype, alpha, beta, tile);
       CHECK_TILE_EQ(res, tile);
     }
   }
@@ -288,7 +288,7 @@ TYPED_TEST(TileOperationsTestMC, Set0) {
 
     auto res = [](const TileElementIndex&) { return TypeUtilities<TypeParam>::element(0.0, 0.0); };
 
-    tile::set0(tile);
+    tile::internal::set0(tile);
     CHECK_TILE_EQ(res, tile);
   }
 }

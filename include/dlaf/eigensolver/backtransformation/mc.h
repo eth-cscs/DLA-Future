@@ -38,30 +38,30 @@ template <class T>
 void copySingleTile(hpx::shared_future<matrix::Tile<const T, Device::CPU>> in,
                     hpx::future<matrix::Tile<T, Device::CPU>> out) {
   hpx::dataflow(dlaf::getCopyExecutor<Device::CPU, Device::CPU>(),
-                matrix::unwrapExtendTiles(matrix::copy_o), in, std::move(out));
+                matrix::unwrapExtendTiles(matrix::internal::copy_o), in, std::move(out));
 }
 
 template <class Executor, Device device, class T>
 void trmmPanel(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> t,
                hpx::future<matrix::Tile<T, device>> w) {
-  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::trmm_o), blas::Side::Right, blas::Uplo::Upper,
-                blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), t, std::move(w));
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::trmm_o), blas::Side::Right,
+                blas::Uplo::Upper, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), t, std::move(w));
 }
 
 template <class Executor, Device device, class T>
 void gemmUpdateW2(Executor&& ex, hpx::future<matrix::Tile<T, device>> w,
                   hpx::shared_future<matrix::Tile<const T, device>> c,
                   hpx::future<matrix::Tile<T, device>> w2) {
-  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans,
-                T(1.0), w, c, T(1.0), std::move(w2));
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::gemm_o), blas::Op::ConjTrans,
+                blas::Op::NoTrans, T(1.0), w, c, T(1.0), std::move(w2));
 }
 
 template <class Executor, Device device, class T>
 void gemmTrailingMatrix(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> v,
                         hpx::shared_future<matrix::Tile<const T, device>> w2,
                         hpx::future<matrix::Tile<T, device>> c) {
-  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::gemm_o), blas::Op::NoTrans, blas::Op::NoTrans,
-                T(-1.0), v, w2, T(1.0), std::move(c));
+  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::gemm_o), blas::Op::NoTrans,
+                blas::Op::NoTrans, T(-1.0), v, w2, T(1.0), std::move(c));
 }
 
 // Implementation based on:
@@ -138,8 +138,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
                                        nr_reflectors_last_block}});
         }
         copySingleTile(tile_v, panelV(ik));
-        hpx::dataflow(hpx::launch::sync, matrix::unwrapExtendTiles(tile::laset<T>),
-                      lapack::MatrixType::Upper, 0.f, 1.f, panelV(ik));
+        hpx::dataflow(hpx::launch::sync, matrix::unwrapExtendTiles(tile::internal::laset_o),
+                      lapack::MatrixType::Upper, T(0), T(1), panelV(ik));
       }
       else {
         panelV.setTile(ik, mat_v.read(ik));
@@ -260,8 +260,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
                            {dist_v.tileSize(GlobalTileIndex(i, k)).rows(), nr_reflectors_last_block}});
           }
           copySingleTile(tile_v, panelV(ik_panel));
-          hpx::dataflow(hpx::launch::sync, matrix::unwrapExtendTiles(tile::laset<T>),
-                        lapack::MatrixType::Upper, 0.f, 1.f, panelV(ik_panel));
+          hpx::dataflow(hpx::launch::sync, matrix::unwrapExtendTiles(tile::internal::laset_o),
+                        lapack::MatrixType::Upper, T(0), T(1), panelV(ik_panel));
         }
         else {
           panelV.setTile(ik_panel, mat_v.read(GlobalTileIndex(i, k)));

@@ -95,7 +95,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
     const auto& source_tile = mat_v.read(ij_tile).get();
     copy(source_tile, v.tile(ij_tile));
     if (ij_tile.row() == ij_tile.col() + 1)
-      tile::laset<T>(lapack::MatrixType::Upper, 0.f, 1.f, v.tile(ij_tile));
+      tile::internal::laset<T>(lapack::MatrixType::Upper, 0.f, 1.f, v.tile(ij_tile));
   }
 
   // Create C local
@@ -184,7 +184,7 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
   // Reset diagonal and upper values of V
   for (const auto& ij_tile : iterate_range2d(mat_v_loc.nrTiles())) {
     if (ij_tile.row() == ij_tile.col() + 1)
-      tile::laset<T>(lapack::MatrixType::Upper, 0.f, 1.f, mat_v_loc.tile(ij_tile));
+      tile::internal::laset<T>(lapack::MatrixType::Upper, 0.f, 1.f, mat_v_loc.tile(ij_tile));
   }
 
   common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus;

@@ -12,7 +12,11 @@
 #include <functional>
 #include <sstream>
 #include <tuple>
-#include "gtest/gtest.h"
+
+#include <gtest/gtest.h>
+#include <hpx/include/threadmanager.hpp>
+#include <hpx/runtime.hpp>
+
 #include "dlaf/common/index2d.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/copy.h"
@@ -255,6 +259,7 @@ TYPED_TEST(BackTransformationEigenSolverTestMC, CorrectnessDistributed) {
     for (auto sz : sizes) {
       std::tie(m, n, mb, nb) = sz;
       testBacktransformationEigenv<TypeParam>(comm_grid, m, n, mb, nb);
+      hpx::threads::get_thread_manager().wait();
     }
   }
 }

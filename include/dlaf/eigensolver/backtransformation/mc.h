@@ -191,8 +191,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
   // Set up MPI
   auto executor_mpi = dlaf::getMPIExecutor<Backend::MC>();
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
+  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
+  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
 
   auto dist_v = mat_v.distribution();
   auto dist_c = mat_c.distribution();

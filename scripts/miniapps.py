@@ -49,7 +49,12 @@ def run_command(system, total_ranks, cpus_per_rank):
 
 # Create the job directory tree and submit jobs.
 #
-def submit_jobs(run_dir, nodes, job_text, suffix="na"):
+def submit_jobs(run_dir, nodes, job_text, debug=False, suffix="na"):
+    if debug:
+        print("Debug mode is enabled, skipping job submission")
+        print(job_text)
+        return
+
     job_path = expanduser(f"{run_dir}/{nodes}")
     makedirs(job_path, exist_ok=True)
     job_file = f"{job_path}/job_{suffix}.sh"

@@ -31,7 +31,7 @@ using dlaf::TileElementIndex;
 using dlaf::Device;
 using dlaf::matrix::Tile;
 
-using dlaf::tile::lantr;
+using dlaf::tile::internal::lantr;
 using dlaf::matrix::test::set;
 
 template <class T>

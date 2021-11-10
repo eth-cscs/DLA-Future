@@ -98,14 +98,14 @@ void copyTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
   set(mat_source_cpu, el);
 
   Matrix<T, Source> mat(size, test.block_size, comm_grid);
-  copy(mat_source_cpu, mat);
+  matrix::copy(mat_source_cpu, mat);
 
   {
     MatrixMirror<T, Target, Source> mat_mirror(mat);
 
     copy(mat, mat_source_cpu);
     CHECK_MATRIX_EQ(el, mat_source_cpu);
-    copy(mat_mirror.get(), mat_target_cpu);
+    matrix::copy(mat_mirror.get(), mat_target_cpu);
     CHECK_MATRIX_EQ(el, mat_target_cpu);
 
     offset = 1.0;

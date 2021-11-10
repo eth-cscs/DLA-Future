@@ -32,7 +32,7 @@ using dlaf::TileElementIndex;
 using dlaf::Device;
 using dlaf::matrix::Tile;
 
-using dlaf::tile::lange;
+using dlaf::tile::internal::lange;
 using dlaf::matrix::test::set;
 
 template <class T>

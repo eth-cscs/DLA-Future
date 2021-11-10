@@ -115,3 +115,6 @@ inline void do_assert(bool expr, const common::internal::source_location& loc, c
 #endif
 
 #define DLAF_UNIMPLEMENTED(...) DLAF_ASSERT(false, "Not yet implemented!", __VA_ARGS__)
+
+#define DLAF_STATIC_UNIMPLEMENTED(DummyType) \
+  static_assert(sizeof(DummyType) == 0, "Not yet implemented!")

@@ -95,6 +95,7 @@ RUN wget -q https://github.com/${HPX_FORK}/hpx/archive/${HPX_VERSION}.tar.gz -O 
       -DTCMALLOC_ROOT=$GPERFTOOLS_PATH \
       -DCMAKE_BUILD_TYPE=Debug \
       -DCMAKE_CXX_FLAGS_DEBUG="-g -Og -fno-omit-frame-pointer" \
+      -DHPX_WITH_CXX17=On \
       -DHPX_WITH_SANITIZERS=ON \
       -DHPX_WITH_STACK_OVERFLOW_DETECTION=OFF \
       -DHPX_WITH_MAX_CPU_COUNT=128 \

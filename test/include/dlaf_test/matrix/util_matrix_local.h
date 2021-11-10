@@ -96,7 +96,7 @@ MatrixLocal<T> allGather(lapack::MatrixType mat_type, Matrix<const T, Device::CP
 
     auto& dest_tile = dest.tile(ij_tile);
     const auto& source_tile = source.read(ij_tile).get();
-    copy(source_tile, dest_tile);
+    matrix::internal::copy(source_tile, dest_tile);
   }
 
   return MatrixLocal<T>(std::move(dest));
@@ -127,7 +127,7 @@ MatrixLocal<T> allGather(lapack::MatrixType mat_type, Matrix<const T, Device::CP
     if (owner == rank) {
       const auto& source_tile = source.read(ij_tile).get();
       comm::sync::broadcast::send(comm_grid.fullCommunicator(), source_tile);
-      copy(source_tile, dest_tile);
+      matrix::internal::copy(source_tile, dest_tile);
     }
     else {
       comm::sync::broadcast::receive_from(comm_grid.rankFullCommunicator(owner),

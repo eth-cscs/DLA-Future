@@ -148,3 +148,40 @@ def trsm(
 
     run_cmd = run_command(system, total_ranks, cpus_per_rank)
     return "\n" + f"{env} {run_cmd} {cmd} >> trsm_{lib}_{suffix}.out 2>&1".strip()
+
+
+# lib: allowed libraries are dlaf|slate
+# rpn: ranks per node
+#
+def gen2std(
+    system,
+    lib,
+    build_dir,
+    nodes,
+    rpn,
+    m_sz,
+    mb_sz,
+    nruns,
+    suffix="na",
+    extra_flags="",
+    env="",
+):
+    _check_ranks_per_node(system, lib, rpn)
+
+    total_ranks = nodes * rpn
+    cpus_per_rank = system["Cores"] // rpn
+    grid_cols, grid_rows = _sq_factor(total_ranks)
+
+    if lib.startswith("dlaf"):
+        env += " OMP_NUM_THREADS=1"
+        cmd = f"{build_dir}/miniapp/miniapp_gen_to_std --matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} --hpx:use-process-mask {extra_flags}"
+    elif lib == "slate":
+        env += f" OMP_NUM_THREADS={cpus_per_rank}"
+        if system["GPU"]:
+            extra_flags += " --origin d --target d"
+        cmd = f"{build_dir}/test/tester --dim {m_sz}x{m_sz}x0 --nb {mb_sz} --p {grid_rows} --q {grid_cols} --repeat {nruns} --check n --ref n --type d {extra_flags} hegst"
+    else:
+        raise ValueError(_err_msg(lib))
+
+    run_cmd = run_command(system, total_ranks, cpus_per_rank)
+    return "\n" + f"{env} {run_cmd} {cmd} >> hegst_{lib}_{suffix}.out 2>&1".strip()

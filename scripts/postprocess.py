@@ -190,6 +190,9 @@ def _parse_line_based(fout, bench_name, nodes):
     elif bench_name.startswith("trsm_slate"):
         pstr_arr = ["input:{}trsm"]
         pstr_res = "d {} {} {:d} left lower notrans nonunit {matrix_rows:d} {matrix_cols:d} {:f} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:g} {perf:g} NA NA no check"
+    elif bench_name.startswith("hegst_slate"):
+        pstr_arr = ["input:{}hegst"]
+        pstr_res = "d {} {} lower {matrix_rows:d} {:d} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:g} NA no check"
     elif bench_name.startswith("chol_dplasma"):
         pstr_arr = [
             "#+++++ M x N x K|NRHS : {matrix_rows:d} x {matrix_cols:d} x {:d}",
@@ -224,15 +227,18 @@ def _parse_line_based(fout, bench_name, nodes):
             rd.update(pdata.named)
             rd["bench_name"] = bench_name
             rd["nodes"] = nodes
-            rd["perf_per_node"] = rd["perf"] / nodes
             if bench_name.startswith("chol_slate"):
                 rd["block_cols"] = rd["block_rows"]
                 rd["matrix_cols"] = rd["matrix_rows"]
             elif bench_name.startswith("trsm_slate"):
                 rd["block_cols"] = rd["block_rows"]
+            elif bench_name.startswith("hegst_slate"):
+                ops = pow(rd["matrix_rows"], 3)  # TODO: Check. Assuming double.
+                rd["perf"] = (ops / rd["time"]) / 1e9
             elif bench_name.startswith("chol_scalapack"):
                 rd["time"] = rd["time_ms"] / 1000
                 rd["matrix_cols"] = rd["matrix_rows"]
+            rd["perf_per_node"] = rd["perf"] / nodes
 
             # makes _calc_metrics work
             if not "dlaf" in bench_name:
@@ -283,6 +289,9 @@ def calc_trsm_metrics(df):
         ["matrix_rows", "matrix_cols", "block_rows", "nodes", "bench_name"], df
     )
 
+
+def calc_gen2std_metrics(df):
+    return _calc_metrics(["matrix_rows", "block_rows", "nodes", "bench_name"], df)
 
 # customize_* functions should accept fig and ax as parameters
 def gen_chol_plots(
@@ -458,6 +467,135 @@ def gen_trsm_plots(
                 customize_time(fig, ax)
             if logx:
                 ax.set_xscale("log", base=2)
+
+            handles, labels = ax.get_legend_handles_labels()
+            labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
+            ax.legend(handles, labels, ncol=1, prop={"size": 13})
+
+
+# customize_* functions should accept fig and ax as parameters
+def gen_gen2std_plots(
+    df,
+    logx=False,
+    combine_mb=False,
+    filename_suffix=None,
+    customize_ppn=None,
+    customize_time=None,
+    **proxy_args,
+):
+    if combine_mb:
+        it_space = df.groupby(["matrix_rows"])
+    else:
+        it_space = df.groupby(["matrix_rows", "block_rows"])
+
+    for x, grp_data in it_space:
+        if combine_mb:
+            m = x
+        else:
+            m = x[0]
+            mb = x[1]
+
+        title = f"HEGST: matrix_size = {m} x {m}"
+        filename_ppn = f"gen2std_ppn_{m}"
+        filename_time = f"gen2std_time_{m}"
+        if not combine_mb:
+            title += f", block_size = {mb} x {mb}"
+            filename_ppn += f"_{mb}"
+            filename_time += f"_{mb}"
+        if filename_suffix != None:
+            filename_ppn += f"_{filename_suffix}"
+            filename_time += f"_{filename_suffix}"
+
+        with NodePlotWriter(
+            filename_ppn, "ppn", title, grp_data, combine_mb=combine_mb, **proxy_args
+        ) as (fig, ax):
+            if customize_ppn:
+                customize_ppn(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+
+            handles, labels = ax.get_legend_handles_labels()
+            labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
+            ax.legend(handles, labels, ncol=1, prop={"size": 13})
+
+        with NodePlotWriter(
+            filename_time, "time", title, grp_data, combine_mb=combine_mb, **proxy_args
+        ) as (fig, ax):
+            if customize_time:
+                customize_time(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+
+            handles, labels = ax.get_legend_handles_labels()
+            labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
+            ax.legend(handles, labels, ncol=1, prop={"size": 13})
+
+
+def gen_gen2std_plots_weak(
+    df,
+    weak_rt_approx,
+    logx=False,
+    combine_mb=False,
+    filename_suffix=None,
+    customize_ppn=None,
+    customize_time=None,
+    **proxy_args,
+):
+    """
+    Args:
+        customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
+        customize_time: function accepting the two arguments fig and ax for time plot customization
+    """
+    df = df.assign(
+        weak_rt=[
+            int(round(x[0] / math.sqrt(x[1]) / weak_rt_approx)) * weak_rt_approx
+            for x in zip(df["matrix_rows"], df["nodes"])
+        ]
+    )
+
+    if combine_mb:
+        it_space = df.groupby(["weak_rt"])
+    else:
+        it_space = df.groupby(["weak_rt", "block_rows"])
+
+    for x, grp_data in it_space:
+        if combine_mb:
+            weak_rt = x
+        else:
+            weak_rt = x[0]
+            mb = x[1]
+
+        title = f"HEGST: weak scaling ({weak_rt} x {weak_rt})"
+        filename_ppn = f"gen2std_ppn_{weak_rt}"
+        filename_time = f"gen2std_time_{weak_rt}"
+        if not combine_mb:
+            title += f", block_size = {mb} x {mb}"
+            filename_ppn += f"_{mb}"
+            filename_time += f"_{mb}"
+        if filename_suffix != None:
+            filename_ppn += f"_{filename_suffix}"
+            filename_time += f"_{filename_suffix}"
+
+        with NodePlotWriter(
+            filename_ppn, "ppn", title, grp_data, combine_mb=combine_mb, **proxy_args
+        ) as (fig, ax):
+            if customize_ppn:
+                customize_ppn(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+
+            handles, labels = ax.get_legend_handles_labels()
+            labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
+            ax.legend(handles, labels, ncol=1, prop={"size": 13})
+
+        with NodePlotWriter(
+            filename_time, "time", title, grp_data, combine_mb=combine_mb, **proxy_args
+        ) as (fig, ax):
+            if customize_time:
+                customize_time(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+            ax.set_yscale("log", base=10)
 
             handles, labels = ax.get_legend_handles_labels()
             labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))

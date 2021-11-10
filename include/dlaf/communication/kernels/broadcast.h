@@ -87,7 +87,7 @@ struct ScheduleRecvBcast {
                    comm::IndexT_MPI root_rank, hpx::future<common::PromiseGuard<Communicator>> pcomm) {
     using hpx::dataflow;
     using matrix::duplicateIfNeeded;
-    using matrix::copy_o;
+    using matrix::internal::copy_o;
 
     // Note:
     //
@@ -104,7 +104,8 @@ struct ScheduleRecvBcast {
     tile_cpu = std::move(hpx::get<0>(hpx::split_future(
         ScheduleRecvBcast<T>::call(ex, std::move(tile_cpu), root_rank, std::move(pcomm)))));
 
-    dataflow(getCopyExecutor<Device::GPU, Device::CPU>(), unwrapExtendTiles(copy_o), tile_cpu, tile_gpu);
+    dataflow(getCopyExecutor<Device::GPU, Device::CPU>(), matrix::unwrapExtendTiles(copy_o), tile_cpu,
+             tile_gpu);
   }
 };
 

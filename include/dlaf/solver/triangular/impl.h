@@ -524,8 +524,9 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
 template <Backend backend, Device D, class T>
 void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op op, blas::Diag diag,
                                          T alpha, Matrix<const T, D>& mat_a, Matrix<T, D>& mat_b) {
+  using namespace triangular_llt;
+
   auto executor_hp = dlaf::getHpExecutor<backend>();
-  auto executor_np = dlaf::getNpExecutor<backend>();
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
@@ -573,10 +574,10 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
     matrix::util::set0(dlaf::internal::getGenericExecutor<backend>::call(), b_panel);
 
     for (const auto& ij : common::iterate_range2d(bt_offset, indexFromOrigin(distr_b.localNrTiles())))
-      // TODO executor
-      hpx::dataflow(executor_np, matrix::unwrapExtendTiles(tile::internal::gemm_o), op,
-                    blas::Op::NoTrans, T(1) / alpha, a_panel.read(ij), mat_b.read(ij), T(1),
-                    b_panel(ij));
+      // TODO priority
+      gemmTrailingMatrixTile<backend>(hpx::threads::thread_priority::normal, op, T(1) / alpha,
+                                      a_panel.read_sender(ij), mat_b.read_sender(ij),
+                                      b_panel.readwrite_sender(ij));
 
     for (const auto& idx : b_panel.iteratorLocal()) {
       if (this_rank.row() == rank_kk.row())
@@ -593,9 +594,9 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
         hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::add_o), T(-1), b_panel.read(kj),
                       mat_b(kj));
 
-        // TODO executor
-        hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::internal::trsm_o), blas::Side::Left,
-                      blas::Uplo::Lower, op, diag, alpha, a_panel.read(kk_offset), mat_b(kj));
+        // TODO priority
+        trsmBPanelTile<backend>(hpx::threads::thread_priority::high, op, diag, alpha,
+                                a_panel.read_sender(kk_offset), mat_b.readwrite_sender(kj));
       }
     }
 

@@ -13,6 +13,10 @@
 
 #include "dlaf/common/callable_object.h"
 #include "dlaf/matrix/tile.h"
+#include "dlaf/sender/make_sender_algorithm_overloads.h"
+#include "dlaf/sender/partial_transform.h"
+#include "dlaf/sender/policy.h"
+#include "dlaf/sender/transform.h"
 
 #ifdef DLAF_WITH_CUDA
 #include <cublas_v2.h>
@@ -24,6 +28,33 @@
 namespace dlaf {
 namespace tile {
 using matrix::Tile;
+
+#ifdef DLAF_DOXYGEN
+
+/// Computes A += alpha * B
+///
+/// This overload blocks until completion of the algorithm.
+template <Backend B, class T, Device D>
+void add(T alpha, const matrix::Tile<const T, D>& tile_b, const matrix::Tile<T, D>& tile_a);
+
+/// \overload gemm
+///
+/// This overload takes a policy argument and a sender which must send all required arguments for the
+/// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
+template <Backend B, typename Sender,
+          typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+auto add(const dlaf::internal::Policy<B>& p, Sender&& s);
+
+/// \overload gemm
+///
+/// This overload partially applies the algorithm with a policy for later use with operator| with a
+/// sender on the left-hand side.
+template <Backend B>
+auto add(const dlaf::internal::Policy<B>& p);
+
+#else
+
+namespace internal {
 
 template <class T>
 void add(T alpha, const matrix::Tile<const T, Device::CPU>& tile_b,
@@ -46,5 +77,10 @@ void add(cublasHandle_t handle, T alpha, const matrix::Tile<const T, Device::GPU
 #endif
 
 DLAF_MAKE_CALLABLE_OBJECT(add);
+}
+
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(add, internal::add_o)
+
+#endif
 }
 }

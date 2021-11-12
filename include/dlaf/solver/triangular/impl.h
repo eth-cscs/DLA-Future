@@ -526,7 +526,6 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
                                          T alpha, Matrix<const T, D>& mat_a, Matrix<T, D>& mat_b) {
   using namespace triangular_llt;
 
-  auto executor_hp = dlaf::getHpExecutor<backend>();
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
@@ -590,13 +589,15 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
     if (this_rank.row() == rank_kk.row()) {
       for (SizeType j_loc = 0; j_loc < distr_b.localNrTiles().cols(); ++j_loc) {
         const LocalTileIndex kj(kk_offset.row(), j_loc);
-        // TODO executor
-        hpx::dataflow(executor_hp, matrix::unwrapExtendTiles(tile::add_o), T(-1), b_panel.read(kj),
-                      mat_b(kj));
-
         // TODO priority
-        trsmBPanelTile<backend>(hpx::threads::thread_priority::high, op, diag, alpha,
-                                a_panel.read_sender(kk_offset), mat_b.readwrite_sender(kj));
+        const auto& priority = hpx::threads::thread_priority::high;
+
+        dlaf::internal::whenAllLift(T(-1), b_panel.read_sender(kj), mat_b.readwrite_sender(kj)) |
+            tile::add(dlaf::internal::Policy<backend>(priority)) |
+            hpx::execution::experimental::detach();
+
+        trsmBPanelTile<backend>(priority, op, diag, alpha, a_panel.read_sender(kk_offset),
+                                mat_b.readwrite_sender(kj));
       }
     }
 

@@ -173,11 +173,11 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
 
       const bool affectsTwoRows = i_v < (m - 1);
 
-      std::array<SizeType, 2> sizes;
-      sizes[0] = mat_i.tileSize({i_v, sweep_tile}).rows() - 1;
-      if (affectsTwoRows)
-        sizes[1] = mat_i.tileSize({i_v + 1, sweep_tile}).rows();
-      const SizeType w_rows = sizes[0] + (affectsTwoRows ? sizes[1] : 0);
+      std::array<SizeType, 2> sizes {
+        mat_i.tileSize({i_v, sweep_tile}).rows() - 1,
+        affectsTwoRows ? mat_i.tileSize({i_v + 1, sweep_tile}).rows() : 0,
+      };
+      const SizeType w_rows = sizes[0] + sizes[1];
 
       // TODO fix this
       const SizeType nrefls = std::min(mb, nsweeps - sweep_tile * mb);

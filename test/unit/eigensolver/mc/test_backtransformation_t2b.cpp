@@ -129,7 +129,7 @@ TYPED_TEST(BacktransformationT2BTest, CorrectnessLocal) {
       }
     }
 
-    auto result = [& dist = mat_e.distribution(),
+    auto result = [&dist = mat_e.distribution(),
                    &mat_local = mat_e_local](const GlobalElementIndex& element) {
       const auto tile_index = dist.globalTileIndex(element);
       const auto tile_element = dist.tileElementIndex(element);

@@ -30,6 +30,7 @@ namespace internal {
 template <class T>
 struct BackTransformationT2B<Backend::MC, Device::CPU, T> {
   static void call(Matrix<T, Device::CPU>& mat_e, Matrix<const T, Device::CPU>& mat_i);
+
 private:
   static constexpr bool is_complex = std::is_same<T, ComplexType<T>>::value;
 
@@ -51,16 +52,14 @@ auto setupVWellFormed(SizeType k, hpx::shared_future<matrix::Tile<const T, Devic
     constexpr auto Lower = lapack::MatrixType::Lower;
 
     for (SizeType j = 0; j < k; ++j) {
-      const SizeType size = std::min<SizeType>(
-          tile_v.size().rows() - (1 + j),
-          tile_v_compact.size().rows() - 1);
+      const SizeType size =
+          std::min<SizeType>(tile_v.size().rows() - (1 + j), tile_v_compact.size().rows() - 1);
       // TODO this is needed because of complex last reflector (i.e. just 1 element long)
       if (size == 0)
         continue;
 
-      lacpy(General, size, 1,
-          tile_v_compact.ptr({1, j}), tile_v_compact.ld(),
-          tile_v.ptr({1 + j, j}), tile_v.ld());
+      lacpy(General, size, 1, tile_v_compact.ptr({1, j}), tile_v_compact.ld(), tile_v.ptr({1 + j, j}),
+            tile_v.ld());
     }
 
     // TODO is it needed because W = V . T? or is it enough just setting ones?
@@ -84,7 +83,7 @@ auto computeTFactor(hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_
 
     const auto k = tile_v.size().cols();
     const auto n = tile_v.size().rows();
-    //DLAF_ASSERT_HEAVY((tile_t.size() == TileElementSize(k, k)), tile_t.size());
+    // DLAF_ASSERT_HEAVY((tile_t.size() == TileElementSize(k, k)), tile_t.size());
 
     std::vector<T> taus;
     taus.resize(to_sizet(tile_v.size().cols()));
@@ -148,10 +147,8 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
   const SizeType nsweeps = nrSweeps(mat_i.size().cols());
 
   // TODO w last tile is complete anyway, because of setup V well formed
-  const matrix::Distribution dist_w(
-      {m * w_blocksize.rows(), w_blocksize.cols()},
-      w_blocksize,
-      dist_i.commGridSize(), dist_i.rankIndex(), dist_i.sourceRankIndex());
+  const matrix::Distribution dist_w({m * w_blocksize.rows(), w_blocksize.cols()}, w_blocksize,
+                                    dist_i.commGridSize(), dist_i.rankIndex(), dist_i.sourceRankIndex());
 
   constexpr std::size_t n_workspaces = 2;
   RoundRobin<Panel<Coord::Col, T, Device::CPU>> t_panels(n_workspaces, mat_i.distribution());
@@ -173,9 +170,9 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
 
       const bool affectsTwoRows = i_v < (m - 1);
 
-      std::array<SizeType, 2> sizes {
-        mat_i.tileSize({i_v, sweep_tile}).rows() - 1,
-        affectsTwoRows ? mat_i.tileSize({i_v + 1, sweep_tile}).rows() : 0,
+      std::array<SizeType, 2> sizes{
+          mat_i.tileSize({i_v, sweep_tile}).rows() - 1,
+          affectsTwoRows ? mat_i.tileSize({i_v + 1, sweep_tile}).rows() : 0,
       };
       const SizeType w_rows = sizes[0] + sizes[1];
 

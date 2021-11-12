@@ -112,6 +112,7 @@ def chol(
 
 # lib: allowed libraries are dlaf|slate|dplasma
 # rpn: ranks per node
+# n_sz can be None in which case n_sz is set to the value of m_sz.
 #
 def trsm(
     system,
@@ -127,6 +128,9 @@ def trsm(
     extra_flags="",
     env="",
 ):
+    if n_sz == None:
+      n_sz = m_sz
+
     _check_ranks_per_node(system, lib, rpn)
 
     total_ranks = nodes * rpn
@@ -188,3 +192,38 @@ def gen2std(
 
     run_cmd = run_command(system, total_ranks, cpus_per_rank)
     return "\n" + f"{env} {run_cmd} {cmd} >> hegst_{lib}_{suffix}.out 2>&1".strip()
+
+class StrongScaling:
+  # setup a strong scaling test
+  # time has to be given in minutes.
+  def __init__(self, system, run_name, nodes_arr, time):
+    self.job = {"system": system, "run_name": run_name, "nodes_arr": nodes_arr, "time:" time}
+    self.runs = []
+
+  # add one/multiple runs
+  def add(self, miniapp, lib, build_dir, params, nruns, suffix="", extra_flags="", env=""):
+    if "rpn" not in params:
+      raise KeyError("params dictionary should contain the key 'rpn'")
+
+    # convert single params in a list with a single item
+    for i in params:
+      if not isinstance(params[i], list):
+        params[i] = [params[i]]
+
+    self.runs.append({"miniapp": miniapp, "lib": lib, "build_dir": build_dir, "params": params}, "nruns": nruns, "suffix": suffix, "extra_flags": extra_flags, "env": env)
+
+  # Create dir structure and batch scripts and (if !debug) submit
+  # Post: The object is cleared and is in the state as after construction.
+  def submit(self, run_dir, batch_script_filename, debug):
+    job = self.job
+    for nodes in nodes_arr:
+      job_text = mp.init_job_text(job.system, job.run_name, nodes, job.time_min)
+      for run in self.runs:
+        params = run["params"]
+        product_params = [dict(zip(params.keys(),items)) for items in itertools.product(*params.values())]
+        for param in product_params:
+          rpn = param["rpn"]
+          suffix = "rpn={}".format(rpn)
+          if run["suffix"] != "":
+            suffix += "_{}".format(run["suffix"])
+          run["miniapp"](system=job.system, lib=run["lib"], build_dir=run["build_dir"]], nodes=nodes, nruns=run["nruns"], suffix=suffix, extra_flags=run["extra_flags"], env=run["env"], **param)

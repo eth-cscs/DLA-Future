@@ -104,7 +104,7 @@ template <class T>
 auto computeW(hpx::future<matrix::Tile<T, Device::CPU>> tile_v,
               hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_t) {
   using namespace blas;
-  hpx::dataflow(matrix::unwrapExtendTiles(tile::trmm_o), Side::Right, Uplo::Upper, Op::NoTrans,
+  hpx::dataflow(matrix::unwrapExtendTiles(tile::internal::trmm_o), Side::Right, Uplo::Upper, Op::NoTrans,
                 Diag::NonUnit, T(1), std::move(tile_t), std::move(tile_v));
 }
 
@@ -113,7 +113,7 @@ auto computeW2(hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v,
                hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_e, T beta,
                hpx::future<matrix::Tile<T, Device::CPU>> tile_w2) {
   using blas::Op;
-  hpx::dataflow(matrix::unwrapExtendTiles(tile::gemm_o), Op::ConjTrans, Op::NoTrans, T(1),
+  hpx::dataflow(matrix::unwrapExtendTiles(tile::internal::gemm_o), Op::ConjTrans, Op::NoTrans, T(1),
                 std::move(tile_v), std::move(tile_e), beta, std::move(tile_w2));
 }
 
@@ -122,8 +122,8 @@ auto updateE(hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_w,
              hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_w2,
              hpx::future<matrix::Tile<T, Device::CPU>> tile_e) {
   using blas::Op;
-  hpx::dataflow(matrix::unwrapExtendTiles(tile::gemm_o), Op::NoTrans, Op::NoTrans, T(-1), std::move(tile_w),
-                std::move(tile_w2), T(1), std::move(tile_e));
+  hpx::dataflow(matrix::unwrapExtendTiles(tile::internal::gemm_o), Op::NoTrans, Op::NoTrans, T(-1),
+                std::move(tile_w), std::move(tile_w2), T(1), std::move(tile_e));
 }
 
 template <class T>

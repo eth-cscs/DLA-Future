@@ -1,3 +1,4 @@
+from itertools import product
 from os import system, makedirs
 from os.path import expanduser
 from re import sub
@@ -49,14 +50,15 @@ def run_command(system, total_ranks, cpus_per_rank):
 
 # Create the job directory tree and submit jobs.
 #
-def submit_jobs(run_dir, nodes, job_text, debug=False, suffix="na"):
+def submit_jobs(run_dir, nodes, job_text, debug=False, bs_name="job"):
     job_path = expanduser(f"{run_dir}/{nodes}")
     makedirs(job_path, exist_ok=True)
-    job_file = f"{job_path}/job_{suffix}.sh"
+    job_file = f"{job_path}/{bs_name}.sh"
     with open(job_file, "w") as f:
-        f.write(job_text)
+        f.write(job_text + "\n")
 
     if debug:
+      print(f"Created : {job_file}")
       return
 
     print(f"Submitting : {job_file}")
@@ -197,7 +199,7 @@ class StrongScaling:
   # setup a strong scaling test
   # time has to be given in minutes.
   def __init__(self, system, run_name, nodes_arr, time):
-    self.job = {"system": system, "run_name": run_name, "nodes_arr": nodes_arr, "time:" time}
+    self.job = {"system": system, "run_name": run_name, "nodes_arr": nodes_arr, "time": time}
     self.runs = []
 
   # add one/multiple runs
@@ -210,20 +212,33 @@ class StrongScaling:
       if not isinstance(params[i], list):
         params[i] = [params[i]]
 
-    self.runs.append({"miniapp": miniapp, "lib": lib, "build_dir": build_dir, "params": params}, "nruns": nruns, "suffix": suffix, "extra_flags": extra_flags, "env": env)
+    self.runs.append({"miniapp": miniapp, "lib": lib, "build_dir": build_dir, "params": params, "nruns": nruns, "suffix": suffix, "extra_flags": extra_flags, "env": env})
+
+  def jobText(self, nodes):
+    job = self.job
+    job_text = init_job_text(job["system"], job["run_name"], nodes, job["time"])
+    for run in self.runs:
+      params = run["params"]
+      product_params = [dict(zip(params.keys(),items)) for items in product(*params.values())]
+      for param in product_params:
+        rpn = param["rpn"]
+        suffix = "rpn={}".format(rpn)
+        if run["suffix"] != "":
+          suffix += "_{}".format(run["suffix"])
+        job_text += run["miniapp"](system=job["system"], lib=run["lib"], build_dir=run["build_dir"], nodes=nodes, nruns=run["nruns"], suffix=suffix, extra_flags=run["extra_flags"], env=run["env"], **param)
+    return job_text
+
+  # Print batch scripts
+  def print(self):
+    for nodes in self.job["nodes_arr"]:
+      print(f'### {nodes} Nodes ###')
+      print(self.jobText(nodes))
+      print()
 
   # Create dir structure and batch scripts and (if !debug) submit
   # Post: The object is cleared and is in the state as after construction.
   def submit(self, run_dir, batch_script_filename, debug):
-    job = self.job
-    for nodes in nodes_arr:
-      job_text = mp.init_job_text(job.system, job.run_name, nodes, job.time_min)
-      for run in self.runs:
-        params = run["params"]
-        product_params = [dict(zip(params.keys(),items)) for items in itertools.product(*params.values())]
-        for param in product_params:
-          rpn = param["rpn"]
-          suffix = "rpn={}".format(rpn)
-          if run["suffix"] != "":
-            suffix += "_{}".format(run["suffix"])
-          run["miniapp"](system=job.system, lib=run["lib"], build_dir=run["build_dir"]], nodes=nodes, nruns=run["nruns"], suffix=suffix, extra_flags=run["extra_flags"], env=run["env"], **param)
+    for nodes in self.job["nodes_arr"]:
+      job_text = self.jobText(nodes)
+      submit_jobs(run_dir, nodes, job_text, debug=debug, bs_name=batch_script_filename)
+    self.runs = []

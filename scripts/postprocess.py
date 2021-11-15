@@ -114,7 +114,7 @@ def _gen_nodes_plot(
 
         ax.grid(axis="y", linewidth=0.5, alpha=0.5)
 
-    return fig, ax
+    return plotted, fig, ax
 
 
 class NodePlotWriter:
@@ -147,7 +147,8 @@ class NodePlotWriter:
         return (self.fig, self.ax)
 
     def __exit__(self, type, value, traceback):
-        self.fig.savefig(f"{self.filename}.png", dpi=300)
+        if self.plotted:
+            self.fig.savefig(f"{self.filename}.png", dpi=300)
         plt.close(self.fig)
 
 

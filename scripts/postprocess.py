@@ -339,19 +339,30 @@ def calc_gen2std_metrics(df):
     return _calc_metrics(["matrix_rows", "block_rows", "nodes", "bench_name"], df)
 
 
+# Customization that add a simple legend
+def add_basic_legend(fig, ax):
+    handles, labels = ax.get_legend_handles_labels()
+    if len(handles) == 0:
+        return
+
+    labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
+    ax.legend(handles, labels, ncol=1, prop={"size": 10})
+
+
 def gen_chol_plots(
     df,
     logx=False,
     combine_mb=False,
     filename_suffix=None,
-    customize_ppn=None,
-    customize_time=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
     **proxy_args,
 ):
     """
     Args:
         customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
         customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
     """
     if combine_mb:
         it_space = df.groupby(["matrix_rows"])
@@ -399,14 +410,15 @@ def gen_chol_plots_weak(
     logx=False,
     combine_mb=False,
     filename_suffix=None,
-    customize_ppn=None,
-    customize_time=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
     **proxy_args,
 ):
     """
     Args:
         customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
         customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
     """
     df = df.assign(
         weak_rt=[
@@ -461,14 +473,15 @@ def gen_trsm_plots(
     logx=False,
     combine_mb=False,
     filename_suffix=None,
-    customize_ppn=None,
-    customize_time=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
     **proxy_args,
 ):
     """
     Args:
         customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
         customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
     """
     if combine_mb:
         it_space = df.groupby(["matrix_rows", "matrix_cols"])
@@ -515,14 +528,15 @@ def gen_trsm_plots_weak(
     logx=False,
     combine_mb=False,
     filename_suffix=None,
-    customize_ppn=None,
-    customize_time=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
     **proxy_args,
 ):
     """
     Args:
         customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
         customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
     """
     df = df.assign(
         weakrt_rows=[
@@ -579,14 +593,15 @@ def gen_gen2std_plots(
     logx=False,
     combine_mb=False,
     filename_suffix=None,
-    customize_ppn=None,
-    customize_time=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
     **proxy_args,
 ):
     """
     Args:
         customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
         customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
     """
     if combine_mb:
         it_space = df.groupby(["matrix_rows"])
@@ -634,14 +649,15 @@ def gen_gen2std_plots_weak(
     logx=False,
     combine_mb=False,
     filename_suffix=None,
-    customize_ppn=None,
-    customize_time=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
     **proxy_args,
 ):
     """
     Args:
         customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
         customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
     """
     df = df.assign(
         weak_rt=[

@@ -1,3 +1,4 @@
+import argparse
 import os
 import re
 import math
@@ -269,7 +270,9 @@ def _parse_line_based(fout, bench_name, nodes):
 # │   ├── <bench_name_2>.out
 # |   ...
 #
-def parse_jobs(data_dirs):
+# If distinguish_dir is True the bench name is prepended with the directory name
+# This option is useful when comparing the results of different directories with the same bench_names.
+def parse_jobs(data_dirs, distinguish_dir=False):
     if not isinstance(data_dirs, list):
         data_dirs = [data_dirs]
     data = []
@@ -278,10 +281,42 @@ def parse_jobs(data_dirs):
             for f in files:
                 if f.endswith(".out"):
                     nodes = int(os.path.basename(subdir))
+                    benchname = f[:-4]
+                    if distinguish_dir:
+                      benchname += "@" + data_dir
+
                     with open(os.path.join(subdir, f), "r") as fout:
-                        data.extend(_parse_line_based(fout, f[:-4], nodes))
+                        data.extend(_parse_line_based(fout, benchname, nodes))
 
     return pd.DataFrame(data)
+
+
+# Read --path command line arguments (default = ".")
+# and call parse_jobs on the given directories.
+# exit is called if no results are found.
+def parse_jobs_cmdargs(description):
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument(
+        "--path",
+        action='append',
+        help="Plot results from this directory.",
+    )
+    parser.add_argument(
+        "--distinguish-dir",
+        action='store_true',
+        help="Add path name to bench name. Note it works better with short relative paths.",
+    )
+    args = parser.parse_args()
+    paths = args.path
+    if paths == None:
+        paths = ['.']
+
+    df = parse_jobs(paths, args.distinguish_dir)
+    if df.empty:
+        print('Parsed zero results, is the path correct? (path is "' + args.path + '")')
+        exit(1)
+
+    return df
 
 
 def calc_chol_metrics(df):

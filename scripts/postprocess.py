@@ -12,6 +12,7 @@ from parse import parse
 
 def _gen_nodes_plot(
     plt_type,
+    plt_routine,
     title,
     df,
     combine_mb=False,
@@ -24,6 +25,7 @@ def _gen_nodes_plot(
     """
     Args:
         plt_type:       ppn | time
+        plt_routine:    chol | trsm | hegst It is used to filter data.
         title:          title of the plot
         df:             the pandas.DataFrame with the data for the plot
         combine_mb:     bool indicates if different mb has to be included in the same plot
@@ -50,6 +52,10 @@ def _gen_nodes_plot(
             bench_name = x[1] + f"_{mb}"
         else:
             bench_name = x
+
+        # Filter by routine
+        if not bench_name.startswith(plt_routine):
+            continue
 
         # filter series by name
         if filts != None:
@@ -120,7 +126,7 @@ class NodePlotWriter:
     example usage:
 
     ```python
-    with NodePlotWriter("ppn", title, filename, df, **proxy_args) as (fig, ax):
+    with NodePlotWriter(filename, "ppn", "chol", title, df, **proxy_args) as (fig, ax):
         # log scale for ax axis
         if logx: ax.set_xscale("log", base=2)
 
@@ -133,10 +139,9 @@ class NodePlotWriter:
     See `_gen_nodes_plot` for details about parameters.
     """
 
-    def __init__(self, filename, plt_type, title, df, **gen_plot_args):
+    def __init__(self, filename, plt_type, plt_routine, title, df, **gen_plot_args):
         self.filename = filename
-
-        self.fig, self.ax = _gen_nodes_plot(plt_type, title, df, **gen_plot_args)
+        self.plotted, self.fig, self.ax = _gen_nodes_plot(plt_type, plt_routine, title, df, **gen_plot_args)
 
     def __enter__(self):
         return (self.fig, self.ax)
@@ -371,7 +376,7 @@ def gen_chol_plots(
             filename_time += f"_{filename_suffix}"
 
         with NodePlotWriter(
-            filename_ppn, "ppn", title, grp_data, combine_mb=combine_mb, **proxy_args
+            filename_ppn, "ppn", "chol", title, grp_data, combine_mb=combine_mb, **proxy_args
         ) as (fig, ax):
             if customize_ppn:
                 customize_ppn(fig, ax)
@@ -379,7 +384,7 @@ def gen_chol_plots(
                 ax.set_xscale("log", base=2)
 
         with NodePlotWriter(
-            filename_time, "time", title, grp_data, combine_mb=combine_mb, **proxy_args
+            filename_time, "time", "chol", title, grp_data, combine_mb=combine_mb, **proxy_args
         ) as (fig, ax):
             if customize_time:
                 customize_time(fig, ax)
@@ -433,7 +438,7 @@ def gen_chol_plots_weak(
             filename_time += f"_{filename_suffix}"
 
         with NodePlotWriter(
-            filename_ppn, "ppn", title, grp_data, combine_mb=combine_mb, **proxy_args
+            filename_ppn, "ppn", "chol", title, grp_data, combine_mb=combine_mb, **proxy_args
         ) as (fig, ax):
             if customize_ppn:
                 customize_ppn(fig, ax)
@@ -441,7 +446,7 @@ def gen_chol_plots_weak(
                 ax.set_xscale("log", base=2)
 
         with NodePlotWriter(
-            filename_time, "time", title, grp_data, combine_mb=combine_mb, **proxy_args
+            filename_time, "time", "chol", title, grp_data, combine_mb=combine_mb, **proxy_args
         ) as (fig, ax):
             if customize_time:
                 customize_time(fig, ax)
@@ -487,7 +492,7 @@ def gen_trsm_plots(
             filename_time += f"_{filename_suffix}"
 
         with NodePlotWriter(
-            filename_ppn, "ppn", title, grp_data, combine_mb=combine_mb, **proxy_args
+            filename_ppn, "ppn", "trsm", title, grp_data, combine_mb=combine_mb, **proxy_args
         ) as (fig, ax):
             if customize_ppn:
                 customize_ppn(fig, ax)
@@ -495,7 +500,7 @@ def gen_trsm_plots(
                 ax.set_xscale("log", base=2)
 
         with NodePlotWriter(
-            filename_time, "time", title, grp_data, combine_mb=combine_mb, **proxy_args
+            filename_time, "time", "trsm", title, grp_data, combine_mb=combine_mb, **proxy_args
         ) as (fig, ax):
             if customize_time:
                 customize_time(fig, ax)
@@ -552,7 +557,7 @@ def gen_trsm_plots_weak(
             filename_time += f"_{filename_suffix}"
 
         with NodePlotWriter(
-            filename_ppn, "ppn", title, grp_data, combine_mb=combine_mb, **proxy_args
+            filename_ppn, "ppn", "trsm", title, grp_data, combine_mb=combine_mb, **proxy_args
         ) as (fig, ax):
             if customize_ppn:
                 customize_ppn(fig, ax)
@@ -560,7 +565,7 @@ def gen_trsm_plots_weak(
                 ax.set_xscale("log", base=2)
 
         with NodePlotWriter(
-            filename_time, "time", title, grp_data, combine_mb=combine_mb, **proxy_args
+            filename_time, "time", "trsm", title, grp_data, combine_mb=combine_mb, **proxy_args
         ) as (fig, ax):
             if customize_time:
                 customize_time(fig, ax)
@@ -606,7 +611,7 @@ def gen_gen2std_plots(
             filename_time += f"_{filename_suffix}"
 
         with NodePlotWriter(
-            filename_ppn, "ppn", title, grp_data, combine_mb=combine_mb, **proxy_args
+            filename_ppn, "ppn", "hegst", title, grp_data, combine_mb=combine_mb, **proxy_args
         ) as (fig, ax):
             if customize_ppn:
                 customize_ppn(fig, ax)
@@ -614,7 +619,7 @@ def gen_gen2std_plots(
                 ax.set_xscale("log", base=2)
 
         with NodePlotWriter(
-            filename_time, "time", title, grp_data, combine_mb=combine_mb, **proxy_args
+            filename_time, "time", "hegst", title, grp_data, combine_mb=combine_mb, **proxy_args
         ) as (fig, ax):
             if customize_time:
                 customize_time(fig, ax)
@@ -668,7 +673,7 @@ def gen_gen2std_plots_weak(
             filename_time += f"_{filename_suffix}"
 
         with NodePlotWriter(
-            filename_ppn, "ppn", title, grp_data, combine_mb=combine_mb, **proxy_args
+            filename_ppn, "ppn", "hegst", title, grp_data, combine_mb=combine_mb, **proxy_args
         ) as (fig, ax):
             if customize_ppn:
                 customize_ppn(fig, ax)
@@ -676,7 +681,7 @@ def gen_gen2std_plots_weak(
                 ax.set_xscale("log", base=2)
 
         with NodePlotWriter(
-            filename_time, "time", title, grp_data, combine_mb=combine_mb, **proxy_args
+            filename_time, "time", "hegst", title, grp_data, combine_mb=combine_mb, **proxy_args
         ) as (fig, ax):
             if customize_time:
                 customize_time(fig, ax)

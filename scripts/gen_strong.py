@@ -47,8 +47,8 @@ run_slate = "slate" in args.libs
 run_dp = "dplasma" in args.libs
 
 # Example #1: Cholesky strong scaling with DLAF:
-# Note params entires can be a list or a single value (which is automatically converted to a list of a value).
-# The following benchmark are executed for this case (using (m_sz, mb_sz) notation):
+# Note params entries can be a list or a single value (which is automatically converted to a list of a value).
+# The following benchmark is executed for these cases (using (m_sz, mb_sz) notation):
 # (10240, 256)
 # (10240, 512)
 # (20480, 256)
@@ -56,7 +56,7 @@ run_dp = "dplasma" in args.libs
 # for rpn = 1 and 2
 # (5120, 64)
 # (5120, 128)
-# only for rpn = 1
+# only for rpn = 2
 
 if run_dlaf:
   run = mp.StrongScaling(system, "Cholesky_strong", nodes_arr, time)

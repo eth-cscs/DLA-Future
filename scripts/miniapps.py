@@ -31,11 +31,7 @@ def _err_msg(lib):
 # Job preamble
 #
 def init_job_text(system, run_name, nodes, time_min):
-    return (
-        system["Batch preamble"]
-        .format(run_name=run_name, nodes=nodes, time_min=time_min)
-        .strip()
-    )
+    return system["Batch preamble"].format(run_name=run_name, nodes=nodes, time_min=time_min).strip()
 
 
 # Run command with options
@@ -59,8 +55,8 @@ def submit_jobs(run_dir, nodes, job_text, debug=False, bs_name="job"):
         f.write(job_text + "\n")
 
     if debug:
-      print(f"Created : {job_file}")
-      return
+        print(f"Created : {job_file}")
+        return
 
     print(f"Submitting : {job_file}")
     system(f"sbatch --chdir={job_path} {job_file}")
@@ -132,7 +128,7 @@ def trsm(
     env="",
 ):
     if n_sz == None:
-      n_sz = m_sz
+        n_sz = m_sz
 
     _check_ranks_per_node(system, lib, rpn)
 
@@ -198,126 +194,192 @@ def gen2std(
 
 
 def _dictProduct(d):
-    p = [dict(zip(d.keys(),items)) for items in product(*d.values())]
+    p = [dict(zip(d.keys(), items)) for items in product(*d.values())]
     return p
 
 
 class StrongScaling:
-  # setup a strong scaling test
-  # time has to be given in minutes.
-  def __init__(self, system, run_name, nodes_arr, time):
-    self.job = {"system": system, "run_name": run_name, "nodes_arr": nodes_arr, "time": time}
-    self.runs = []
+    # setup a strong scaling test
+    # time has to be given in minutes.
+    def __init__(self, system, run_name, nodes_arr, time):
+        self.job = {
+            "system": system,
+            "run_name": run_name,
+            "nodes_arr": nodes_arr,
+            "time": time,
+        }
+        self.runs = []
 
-  # add one/multiple runs
-  def add(self, miniapp, lib, build_dir, params, nruns, suffix="", extra_flags="", env=""):
-    if "rpn" not in params:
-      raise KeyError("params dictionary should contain the key 'rpn'")
+    # add one/multiple runs
+    def add(self, miniapp, lib, build_dir, params, nruns, suffix="", extra_flags="", env=""):
+        if "rpn" not in params:
+            raise KeyError("params dictionary should contain the key 'rpn'")
 
-    # convert single params in a list with a single item
-    for i in params:
-      if not isinstance(params[i], list):
-        params[i] = [params[i]]
+        # convert single params in a list with a single item
+        for i in params:
+            if not isinstance(params[i], list):
+                params[i] = [params[i]]
 
-    self.runs.append({"miniapp": miniapp, "lib": lib, "build_dir": build_dir, "params": params, "nruns": nruns, "suffix": suffix, "extra_flags": extra_flags, "env": env})
+        self.runs.append(
+            {
+                "miniapp": miniapp,
+                "lib": lib,
+                "build_dir": build_dir,
+                "params": params,
+                "nruns": nruns,
+                "suffix": suffix,
+                "extra_flags": extra_flags,
+                "env": env,
+            }
+        )
 
-  def jobText(self, nodes):
-    job = self.job
-    job_text = init_job_text(job["system"], job["run_name"], nodes, job["time"])
-    for run in self.runs:
-      product_params = _dictProduct(run["params"])
+    def jobText(self, nodes):
+        job = self.job
+        job_text = init_job_text(job["system"], job["run_name"], nodes, job["time"])
+        for run in self.runs:
+            product_params = _dictProduct(run["params"])
 
-      for param in product_params:
-        rpn = param["rpn"]
-        suffix = "rpn={}".format(rpn)
-        if run["suffix"] != "":
-          suffix = "{}_{}".format(run["suffix"], suffix)
-        job_text += run["miniapp"](system=job["system"], lib=run["lib"], build_dir=run["build_dir"], nodes=nodes, nruns=run["nruns"], suffix=suffix, extra_flags=run["extra_flags"], env=run["env"], **param)
-    return job_text
+            for param in product_params:
+                rpn = param["rpn"]
+                suffix = "rpn={}".format(rpn)
+                if run["suffix"] != "":
+                    suffix = "{}_{}".format(run["suffix"], suffix)
+                job_text += run["miniapp"](
+                    system=job["system"],
+                    lib=run["lib"],
+                    build_dir=run["build_dir"],
+                    nodes=nodes,
+                    nruns=run["nruns"],
+                    suffix=suffix,
+                    extra_flags=run["extra_flags"],
+                    env=run["env"],
+                    **param,
+                )
+        return job_text
 
-  # Print batch scripts
-  def print(self):
-      for nodes in self.job["nodes_arr"]:
-          print(f'### {nodes} Nodes ###')
-          print(self.jobText(nodes))
-          print()
+    # Print batch scripts
+    def print(self):
+        for nodes in self.job["nodes_arr"]:
+            print(f"### {nodes} Nodes ###")
+            print(self.jobText(nodes))
+            print()
 
-  # Create dir structure and batch scripts and (if !debug) submit
-  # Post: The object is cleared and is in the state as after construction.
-  def submit(self, run_dir, batch_script_filename, debug):
-    for nodes in self.job["nodes_arr"]:
-      job_text = self.jobText(nodes)
-      submit_jobs(run_dir, nodes, job_text, debug=debug, bs_name=batch_script_filename)
-    self.runs = []
+    # Create dir structure and batch scripts and (if !debug) submit
+    # Post: The object is cleared and is in the state as after construction.
+    def submit(self, run_dir, batch_script_filename, debug):
+        for nodes in self.job["nodes_arr"]:
+            job_text = self.jobText(nodes)
+            submit_jobs(run_dir, nodes, job_text, debug=debug, bs_name=batch_script_filename)
+        self.runs = []
 
 
 class WeakScaling:
-  # setup a strong scaling test
-  # time_0 and time has to be given in minutes.
-  # job time is then computed as time_0 + time * sqrt(nodes)
-  #     (This time derivation assumes a N**3 complexity, where N = N1 * sqrt(nodes), and a perfect parallel efficiency)
-  def __init__(self, system, run_name, nodes_arr, time_0, time):
-    self.job = {"system": system, "run_name": run_name, "nodes_arr": nodes_arr, "time_0": time_0, "time": time}
-    self.runs = []
+    # setup a strong scaling test
+    # time_0 and time has to be given in minutes.
+    # job time is then computed as time_0 + time * sqrt(nodes)
+    #     (This time derivation assumes a N**3 complexity, where N = N1 * sqrt(nodes), and a perfect parallel efficiency)
+    def __init__(self, system, run_name, nodes_arr, time_0, time):
+        self.job = {
+            "system": system,
+            "run_name": run_name,
+            "nodes_arr": nodes_arr,
+            "time_0": time_0,
+            "time": time,
+        }
+        self.runs = []
 
-  def getTime(self, nodes):
-    return self.job["time_0"] + round(sqrt(nodes) * self.job["time"])
+    def getTime(self, nodes):
+        return self.job["time_0"] + round(sqrt(nodes) * self.job["time"])
 
-  # add one/multiple runs
-  # weak_params contains the parameter that will be scaled by the factor sqrt(nodes),
-  #     and approximated to the near multiple of approx.
-  def add(self, miniapp, lib, build_dir, params, weak_params, approx, nruns, suffix="", extra_flags="", env=""):
-    if "rpn" not in params:
-      raise KeyError("params dictionary should contain the key 'rpn'")
+    # add one/multiple runs
+    # weak_params contains the parameter that will be scaled by the factor sqrt(nodes),
+    #     and approximated to the near multiple of approx.
+    def add(
+        self,
+        miniapp,
+        lib,
+        build_dir,
+        params,
+        weak_params,
+        approx,
+        nruns,
+        suffix="",
+        extra_flags="",
+        env="",
+    ):
+        if "rpn" not in params:
+            raise KeyError("params dictionary should contain the key 'rpn'")
 
-    # convert single params in a list with a single item
-    for i in params:
-      if not isinstance(params[i], list):
-        params[i] = [params[i]]
-    for i in weak_params:
-      if not isinstance(weak_params[i], list):
-        weak_params[i] = [weak_params[i]]
+        # convert single params in a list with a single item
+        for i in params:
+            if not isinstance(params[i], list):
+                params[i] = [params[i]]
+        for i in weak_params:
+            if not isinstance(weak_params[i], list):
+                weak_params[i] = [weak_params[i]]
 
-    self.runs.append({"miniapp": miniapp, "lib": lib, "build_dir": build_dir, "params": params, "weak_params": weak_params, "approx": approx, "nruns": nruns, "suffix": suffix, "extra_flags": extra_flags, "env": env})
+        self.runs.append(
+            {
+                "miniapp": miniapp,
+                "lib": lib,
+                "build_dir": build_dir,
+                "params": params,
+                "weak_params": weak_params,
+                "approx": approx,
+                "nruns": nruns,
+                "suffix": suffix,
+                "extra_flags": extra_flags,
+                "env": env,
+            }
+        )
 
+    @staticmethod
+    def weakScale(nodes, param, approx):
+        return round(param * sqrt(nodes) / approx) * approx
 
-  @staticmethod
-  def weakScale(nodes, param, approx):
-    return round(param * sqrt(nodes) / approx) * approx
+    def jobText(self, nodes):
+        job = self.job
+        job_text = init_job_text(job["system"], job["run_name"], nodes, self.getTime(nodes))
+        for run in self.runs:
+            approx = run["approx"]
+            product_params = _dictProduct(run["params"])
+            product_weak_params = _dictProduct(run["weak_params"])
 
+            for weak_param in product_weak_params:
+                # scale weak scaling parameters
+                for i in weak_param:
+                    weak_param[i] = self.weakScale(nodes, weak_param[i], approx)
 
-  def jobText(self, nodes):
-    job = self.job
-    job_text = init_job_text(job["system"], job["run_name"], nodes, self.getTime(nodes))
-    for run in self.runs:
-      approx = run["approx"]
-      product_params = _dictProduct(run["params"])
-      product_weak_params = _dictProduct(run["weak_params"])
+                for param in product_params:
+                    rpn = param["rpn"]
+                    suffix = "rpn={}".format(rpn)
+                    if run["suffix"] != "":
+                        suffix = "{}_{}".format(run["suffix"], suffix)
+                    job_text += run["miniapp"](
+                        system=job["system"],
+                        lib=run["lib"],
+                        build_dir=run["build_dir"],
+                        nodes=nodes,
+                        nruns=run["nruns"],
+                        suffix=suffix,
+                        extra_flags=run["extra_flags"],
+                        env=run["env"],
+                        **param,
+                        **weak_param,
+                    )
+        return job_text
 
-      for weak_param in product_weak_params:
-        # scale weak scaling parameters
-        for i in weak_param:
-           weak_param[i] = self.weakScale(nodes, weak_param[i], approx)
+    # Print batch scripts
+    def print(self):
+        for nodes in self.job["nodes_arr"]:
+            print(f"### {nodes} Nodes ###")
+            print(self.jobText(nodes))
+            print()
 
-        for param in product_params:
-         rpn = param["rpn"]
-         suffix = "rpn={}".format(rpn)
-         if run["suffix"] != "":
-           suffix = "{}_{}".format(run["suffix"], suffix)
-         job_text += run["miniapp"](system=job["system"], lib=run["lib"], build_dir=run["build_dir"], nodes=nodes, nruns=run["nruns"], suffix=suffix, extra_flags=run["extra_flags"], env=run["env"], **param, **weak_param)
-    return job_text
-
-  # Print batch scripts
-  def print(self):
-    for nodes in self.job["nodes_arr"]:
-      print(f'### {nodes} Nodes ###')
-      print(self.jobText(nodes))
-      print()
-
-  # Create dir structure and batch scripts and (if !debug) submit
-  # Post: The object is cleared and is in the state as after construction.
-  def submit(self, run_dir, batch_script_filename, debug):
-    for nodes in self.job["nodes_arr"]:
-      job_text = self.jobText(nodes)
-      submit_jobs(run_dir, nodes, job_text, debug=debug, bs_name=batch_script_filename)
-    self.runs = []
+    # Create dir structure and batch scripts and (if !debug) submit
+    # Post: The object is cleared and is in the state as after construction.
+    def submit(self, run_dir, batch_script_filename, debug):
+        for nodes in self.job["nodes_arr"]:
+            job_text = self.jobText(nodes)
+            submit_jobs(run_dir, nodes, job_text, debug=debug, bs_name=batch_script_filename)
+        self.runs = []

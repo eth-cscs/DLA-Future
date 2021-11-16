@@ -21,18 +21,20 @@ libpaths = {
 
 run_dir = f"~/ws/runs_w"
 
-time0 = 20 # minutes
-time = 5 # minutes
+time0 = 20  # minutes
+time = 5  # minutes
 # Note: job time is computed as time0 + sqrt(nodes) * time
 
 nruns = 10
 nodes_arr = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]
 
-approx = 512 # the sizes used in weak scaling are chosen to be the nearest multiple of approx.
+approx = 512  # the sizes used in weak scaling are chosen to be the nearest multiple of approx.
 
 parser = argparse.ArgumentParser(description="Run weak scaling benchmarks.")
 parser.add_argument(
-    "--debug", help="Don't submit jobs, only create job scripts instead.", action="store_true"
+    "--debug",
+    help="Don't submit jobs, only create job scripts instead.",
+    action="store_true",
 )
 parser.add_argument(
     "--libs",
@@ -64,55 +66,163 @@ run_dp = "dplasma" in args.libs
 # only for rpn = 2
 
 if run_dlaf:
-  run = mp.WeakScaling(system, "Cholesky_weak", nodes_arr, time0, time)
-  run.add(mp.chol, "dlaf", libpaths["dlaf"], {"rpn": [1, 2], "mb_sz": [256, 512]}, {"m_sz": [10240, 20480]}, approx, nruns)
-  run.add(mp.chol, "dlaf", libpaths["dlaf"], {"rpn": 2, "mb_sz": [64, 128]}, {"m_sz": 5120}, approx, nruns)
-  run.submit(run_dir, "job_dlaf", debug=debug)
+    run = mp.WeakScaling(system, "Cholesky_weak", nodes_arr, time0, time)
+    run.add(
+        mp.chol,
+        "dlaf",
+        libpaths["dlaf"],
+        {"rpn": [1, 2], "mb_sz": [256, 512]},
+        {"m_sz": [10240, 20480]},
+        approx,
+        nruns,
+    )
+    run.add(
+        mp.chol,
+        "dlaf",
+        libpaths["dlaf"],
+        {"rpn": 2, "mb_sz": [64, 128]},
+        {"m_sz": 5120},
+        approx,
+        nruns,
+    )
+    run.submit(run_dir, "job_dlaf", debug=debug)
 
 # Example #2: Cholesky weak scaling with Slate:
 
 if run_slate:
-  run = mp.WeakScaling(system, "Cholesky_weak", nodes_arr, time0, time)
-  run.add(mp.chol, "slate", libpaths["slate"], {"rpn": [1, 2], "mb_sz": [256, 512]}, {"m_sz": [10240, 20480]}, approx, nruns)
-  run.submit(run_dir, "job_slate", debug=debug)
+    run = mp.WeakScaling(system, "Cholesky_weak", nodes_arr, time0, time)
+    run.add(
+        mp.chol,
+        "slate",
+        libpaths["slate"],
+        {"rpn": [1, 2], "mb_sz": [256, 512]},
+        {"m_sz": [10240, 20480]},
+        approx,
+        nruns,
+    )
+    run.submit(run_dir, "job_slate", debug=debug)
 
 # Example #3: Trsm weak scaling with DPlasma:
 # Note: n_sz = None means that n_sz = m_sz (See miniapp.trsm documentation)
 
 if run_dp:
-  run = mp.WeakScaling(system, "Trsm_weak", nodes_arr, time0, time)
-  run.add(mp.trsm, "dplasma", libpaths["dplasma"], {"rpn": 1, "mb_sz": [256, 512], "n_sz": None}, {"m_sz": [10240, 20480]}, approx, nruns)
-  run.add(mp.trsm, "dplasma", libpaths["dplasma"], {"rpn": 1, "mb_sz": [256, 512]}, {"m_sz": 20480, "n_sz": 10240}, approx, nruns)
-  run.submit(run_dir, "job_dp", debug=debug)
+    run = mp.WeakScaling(system, "Trsm_weak", nodes_arr, time0, time)
+    run.add(
+        mp.trsm,
+        "dplasma",
+        libpaths["dplasma"],
+        {"rpn": 1, "mb_sz": [256, 512], "n_sz": None},
+        {"m_sz": [10240, 20480]},
+        approx,
+        nruns,
+    )
+    run.add(
+        mp.trsm,
+        "dplasma",
+        libpaths["dplasma"],
+        {"rpn": 1, "mb_sz": [256, 512]},
+        {"m_sz": 20480, "n_sz": 10240},
+        approx,
+        nruns,
+    )
+    run.submit(run_dir, "job_dp", debug=debug)
 
 # Example #3: GenToStd weak scaling with DLAF:
 
 if run_dlaf:
-  run = mp.WeakScaling(system, "Gen2Std_weak", nodes_arr, time0, time)
-  run.add(mp.gen2std, "dlaf", libpaths["dlaf"], {"rpn": 1, "mb_sz": [256, 512]}, {"m_sz": [10240, 20480]}, approx, nruns)
-  run.submit(run_dir, "job_g2s_dlaf", debug=debug)
+    run = mp.WeakScaling(system, "Gen2Std_weak", nodes_arr, time0, time)
+    run.add(
+        mp.gen2std,
+        "dlaf",
+        libpaths["dlaf"],
+        {"rpn": 1, "mb_sz": [256, 512]},
+        {"m_sz": [10240, 20480]},
+        approx,
+        nruns,
+    )
+    run.submit(run_dir, "job_g2s_dlaf", debug=debug)
 
 # Example #4: Compare two versions:
 
 if run_dlaf:
-  run = mp.WeakScaling(system, "Cholesky_weak", nodes_arr, time0, time)
-  run.add(mp.chol, "dlaf", "<path_V1>", {"rpn": [1, 2], "mb_sz": [256, 512]}, {"m_sz": [10240, 20480]}, approx, nruns, suffix="V1")
-  run.add(mp.chol, "dlaf", "<path_V2>", {"rpn": [1, 2], "mb_sz": [256, 512]}, {"m_sz": [10240, 20480]}, approx, nruns, suffix="V2")
-  run.submit(run_dir, "job_comp_dlaf", debug=debug)
+    run = mp.WeakScaling(system, "Cholesky_weak", nodes_arr, time0, time)
+    run.add(
+        mp.chol,
+        "dlaf",
+        "<path_V1>",
+        {"rpn": [1, 2], "mb_sz": [256, 512]},
+        {"m_sz": [10240, 20480]},
+        approx,
+        nruns,
+        suffix="V1",
+    )
+    run.add(
+        mp.chol,
+        "dlaf",
+        "<path_V2>",
+        {"rpn": [1, 2], "mb_sz": [256, 512]},
+        {"m_sz": [10240, 20480]},
+        approx,
+        nruns,
+        suffix="V2",
+    )
+    run.submit(run_dir, "job_comp_dlaf", debug=debug)
 
 # Example #5: Combined:
 
 run = mp.WeakScaling(system, "Combined_weak", nodes_arr, time0, time)
 if run_dlaf:
-  run.add(mp.chol, "dlaf", libpaths["dlaf"], {"rpn": 2, "mb_sz": [256, 512]}, {"m_sz": [10240, 20480]}, approx, nruns)
+    run.add(
+        mp.chol,
+        "dlaf",
+        libpaths["dlaf"],
+        {"rpn": 2, "mb_sz": [256, 512]},
+        {"m_sz": [10240, 20480]},
+        approx,
+        nruns,
+    )
 if run_slate:
-  run.add(mp.chol, "slate", libpaths["slate"], {"rpn": 2, "mb_sz": [256, 512]}, {"m_sz": [10240, 20480]}, approx, nruns)
+    run.add(
+        mp.chol,
+        "slate",
+        libpaths["slate"],
+        {"rpn": 2, "mb_sz": [256, 512]},
+        {"m_sz": [10240, 20480]},
+        approx,
+        nruns,
+    )
 if run_dp:
-  run.add(mp.chol, "dplasma", libpaths["dplasma"], {"rpn": 1, "mb_sz": [256, 512]}, {"m_sz": [10240, 20480]}, approx, nruns)
+    run.add(
+        mp.chol,
+        "dplasma",
+        libpaths["dplasma"],
+        {"rpn": 1, "mb_sz": [256, 512]},
+        {"m_sz": [10240, 20480]},
+        approx,
+        nruns,
+    )
 if run_mkl:
-  run.add(mp.chol, "scalapack", libpaths["scalapack-mkl"], {"rpn": 36, "mb_sz": [64, 128]}, {"m_sz": [10240, 20480]}, approx, nruns, suffix="mkl")
+    run.add(
+        mp.chol,
+        "scalapack",
+        libpaths["scalapack-mkl"],
+        {"rpn": 36, "mb_sz": [64, 128]},
+        {"m_sz": [10240, 20480]},
+        approx,
+        nruns,
+        suffix="mkl",
+    )
 if run_libsci:
-  run.add(mp.chol, "scalapack", libpaths["scalapack-libsci"], {"rpn": 36, "mb_sz": [64, 128]}, {"m_sz": [10240, 20480]}, approx, nruns, suffix="libsci")
+    run.add(
+        mp.chol,
+        "scalapack",
+        libpaths["scalapack-libsci"],
+        {"rpn": 36, "mb_sz": [64, 128]},
+        {"m_sz": [10240, 20480]},
+        approx,
+        nruns,
+        suffix="libsci",
+    )
 run.print()
 run.submit(run_dir, "job", debug=debug)
 
@@ -124,12 +234,14 @@ run_name = "Cholesky_weak"
 m_1node = 10240
 mb_sz_arr = [128, 256]
 
+
 def get_time(nodes):
     return time0 + int(time * sqrt(nodes))
 
 
 def get_size(nodes):
     return round(m_1node * sqrt(nodes) / approx) * approx
+
 
 for nodes in nodes_arr:
     if run_dlaf:
@@ -168,9 +280,7 @@ for nodes in nodes_arr:
                 suffix=f"rpn=1",
             )
 
-        mp.submit_jobs(
-            run_dir, nodes, job_text, debug=debug, bs_name=f"job_custom_dp"
-        )
+        mp.submit_jobs(run_dir, nodes, job_text, debug=debug, bs_name=f"job_custom_dp")
 
     if run_mkl:
         job_text = mp.init_job_text(system, run_name, nodes, get_time(nodes))
@@ -189,6 +299,4 @@ for nodes in nodes_arr:
                 suffix="mkl_rpn=36",
             )
 
-        mp.submit_jobs(
-            run_dir, nodes, job_text, debug=debug, bs_name=f"job_custom_mkl"
-        )
+        mp.submit_jobs(run_dir, nodes, job_text, debug=debug, bs_name=f"job_custom_mkl")

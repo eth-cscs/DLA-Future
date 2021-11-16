@@ -71,7 +71,7 @@ GlobalElementSize globalTestSize(const LocalElementSize& size) {
 template <class T, Backend B, Device D>
 void testTriangularMultiplication(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag,
                                   T alpha, SizeType m, SizeType n, SizeType mb, SizeType nb) {
-  std::function<T(const GlobalElementIndex&)> el_op_a, el_b, res_b;
+  using function_type = std::function<T(const GlobalElementIndex&)>;
 
   LocalElementSize size_a(m, m);
   TileElementSize block_size_a(mb, mb);
@@ -87,12 +87,14 @@ void testTriangularMultiplication(blas::Side side, blas::Uplo uplo, blas::Op op,
   TileElementSize block_size_b(mb, nb);
   Matrix<T, Device::CPU> mat_bh(size_b, block_size_b);
 
-  if (side == blas::Side::Left)
-    std::tie(el_op_a, res_b, el_b) =
-        getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, static_cast<T>(1.0) / alpha, m);
-  else
-    std::tie(el_op_a, res_b, el_b) =
-        getRightTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, static_cast<T>(1.0) / alpha, n);
+  auto [el_op_a, res_b, el_b] = [&]() -> std::tuple<function_type, function_type, function_type> {
+    if (side == blas::Side::Left)
+      return getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, static_cast<T>(1.0) / alpha,
+                                                            m);
+    else
+      return getRightTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, static_cast<T>(1.0) / alpha,
+                                                             n);
+  }();
 
   set(mat_ah, el_op_a, op);
   set(mat_bh, el_b);
@@ -112,7 +114,7 @@ template <class T, Backend B, Device D>
 void testTriangularMultiplication(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo,
                                   blas::Op op, blas::Diag diag, T alpha, SizeType m, SizeType n,
                                   SizeType mb, SizeType nb) {
-  std::function<T(const GlobalElementIndex&)> el_op_a, el_b, res_b;
+  using function_type = std::function<T(const GlobalElementIndex&)>;
 
   LocalElementSize size_a(m, m);
   TileElementSize block_size_a(mb, mb);
@@ -133,12 +135,14 @@ void testTriangularMultiplication(comm::CommunicatorGrid grid, blas::Side side, 
   Distribution distr_b(sz_b, block_size_b, grid.size(), grid.rank(), src_rank_index);
   Matrix<T, Device::CPU> mat_bh(std::move(distr_b));
 
-  if (side == blas::Side::Left)
-    std::tie(el_op_a, res_b, el_b) =
-        getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, static_cast<T>(1.0) / alpha, m);
-  else
-    std::tie(el_op_a, res_b, el_b) =
-        getRightTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, static_cast<T>(1.0) / alpha, n);
+  auto [el_op_a, res_b, el_b] = [&]() -> std::tuple<function_type, function_type, function_type> {
+    if (side == blas::Side::Left)
+      return getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, static_cast<T>(1.0) / alpha,
+                                                            m);
+    else
+      return getRightTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, static_cast<T>(1.0) / alpha,
+                                                             n);
+  }();
 
   set(mat_ah, el_op_a, op);
   set(mat_bh, el_b);
@@ -155,14 +159,12 @@ void testTriangularMultiplication(comm::CommunicatorGrid grid, blas::Side side, 
 }
 
 TYPED_TEST(TriangularMultiplicationTestMC, CorrectnessLocal) {
-  SizeType m, n, mb, nb;
-
   for (auto side : blas_sides) {
     for (auto uplo : blas_uplos) {
       for (auto op : blas_ops) {
         for (auto diag : blas_diags) {
           for (auto sz : sizes) {
-            std::tie(m, n, mb, nb) = sz;
+            auto [m, n, mb, nb] = sz;
             TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
             testTriangularMultiplication<TypeParam, Backend::MC, Device::CPU>(side, uplo, op, diag,
                                                                               alpha, m, n, mb, nb);
@@ -174,8 +176,6 @@ TYPED_TEST(TriangularMultiplicationTestMC, CorrectnessLocal) {
 }
 
 TYPED_TEST(TriangularMultiplicationTestMC, CorrectnessDistributed) {
-  SizeType m, n, mb, nb;
-
   for (const auto& comm_grid : this->commGrids()) {
     for (auto side : blas_sides) {
       for (auto uplo : blas_uplos) {
@@ -185,7 +185,7 @@ TYPED_TEST(TriangularMultiplicationTestMC, CorrectnessDistributed) {
               continue;
 
             for (auto sz : sizes) {
-              std::tie(m, n, mb, nb) = sz;
+              auto [m, n, mb, nb] = sz;
               TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
               testTriangularMultiplication<TypeParam, Backend::MC, Device::CPU>(comm_grid, side, uplo,
                                                                                 op, diag, alpha, m, n,
@@ -200,14 +200,12 @@ TYPED_TEST(TriangularMultiplicationTestMC, CorrectnessDistributed) {
 
 #ifdef DLAF_WITH_CUDA
 TYPED_TEST(TriangularMultiplicationTestGPU, CorrectnessLocal) {
-  SizeType m, n, mb, nb;
-
   for (auto side : blas_sides) {
     for (auto uplo : blas_uplos) {
       for (auto op : blas_ops) {
         for (auto diag : blas_diags) {
           for (auto sz : sizes) {
-            std::tie(m, n, mb, nb) = sz;
+            auto [m, n, mb, nb] = sz;
             TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
 
             testTriangularMultiplication<TypeParam, Backend::GPU, Device::GPU>(side, uplo, op, diag,
@@ -220,8 +218,6 @@ TYPED_TEST(TriangularMultiplicationTestGPU, CorrectnessLocal) {
 }
 
 TYPED_TEST(TriangularMultiplicationTestGPU, CorrectnessDistributed) {
-  SizeType m, n, mb, nb;
-
   for (const auto& comm_grid : this->commGrids()) {
     for (auto side : blas_sides) {
       for (auto uplo : blas_uplos) {
@@ -231,7 +227,7 @@ TYPED_TEST(TriangularMultiplicationTestGPU, CorrectnessDistributed) {
               continue;
 
             for (auto sz : sizes) {
-              std::tie(m, n, mb, nb) = sz;
+              auto [m, n, mb, nb] = sz;
               TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
               testTriangularMultiplication<TypeParam, Backend::GPU, Device::GPU>(comm_grid, side, uplo,
                                                                                  op, diag, alpha, m, n,

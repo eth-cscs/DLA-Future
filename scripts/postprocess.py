@@ -422,7 +422,7 @@ def gen_chol_plots_weak(
     """
     df = df.assign(
         weak_rt=[
-            int(round(x[0] / math.sqrt(x[1]) / weak_rt_approx)) * weak_rt_approx
+            round(x[0] / math.sqrt(x[1]) / weak_rt_approx) * weak_rt_approx
             for x in zip(df["matrix_rows"], df["nodes"])
         ]
     )

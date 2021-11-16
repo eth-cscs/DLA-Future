@@ -4,7 +4,6 @@
 # Please do not add gen scripts used for benchmarks into the source repository,
 # they should be kept with the result produced.
 
-from itertools import product
 import argparse
 import miniapps as mp
 import systems
@@ -15,7 +14,7 @@ libpaths = {
     "dlaf": "<path_to_dlaf>",
     "dplasma": "<path_to_dplasma>",
     "slate": "<path_to_slate>",
-    "scalapack-libsci": "<path_to_libsi_miniapp>",
+    "scalapack-libsci": "<path_to_libsci_miniapp>",
     "scalapack-mkl": "<path_to_mkl_miniapp>",
 }
 
@@ -27,7 +26,7 @@ nodes_arr = [1, 2, 4, 8, 16, 32]
 
 parser = argparse.ArgumentParser(description="Run strong scaling benchmarks.")
 parser.add_argument(
-    "--debug", help="Don't submit jobs, print job scripts instead.", action="store_true"
+    "--debug", help="Don't submit jobs, only create job scripts instead.", action="store_true"
 )
 parser.add_argument(
     "--libs",
@@ -96,7 +95,7 @@ if run_dlaf:
 
 # Example #5: Combined:
 
-run = mp.StrongScaling(system, "Cholesky_strong", nodes_arr, time)
+run = mp.StrongScaling(system, "Combined_strong", nodes_arr, time)
 if run_dlaf:
   run.add(mp.chol, "dlaf", libpaths["dlaf"], {"rpn": 2, "m_sz": [10240, 20480], "mb_sz": [256, 512]}, nruns)
 if run_slate:
@@ -112,6 +111,8 @@ run.submit(run_dir, "job", debug=debug)
 
 # Example #6: Customized setup
 # Note: In case more customization is needed each job can be setup manually:
+from itertools import product
+
 run_name = "Cholesky_strong"
 m_sz_arr = [1024, 2048]
 mb_sz_arr = [128, 256]

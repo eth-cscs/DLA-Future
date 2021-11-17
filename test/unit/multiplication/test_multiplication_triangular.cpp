@@ -68,11 +68,23 @@ GlobalElementSize globalTestSize(const LocalElementSize& size) {
   return {size.rows(), size.cols()};
 }
 
+template <class T>
+
+std::tuple<std::function<T(const GlobalElementIndex&)>, std::function<T(const GlobalElementIndex&)>,
+           std::function<T(const GlobalElementIndex&)>>
+getTriangularSystem(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType m,
+                    SizeType n) {
+  if (side == blas::Side::Left)
+    return getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, static_cast<T>(1.0) / alpha,
+                                                          m);
+  else
+    return getRightTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, static_cast<T>(1.0) / alpha,
+                                                           n);
+}
+
 template <class T, Backend B, Device D>
 void testTriangularMultiplication(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag,
                                   T alpha, SizeType m, SizeType n, SizeType mb, SizeType nb) {
-  using function_type = std::function<T(const GlobalElementIndex&)>;
-
   LocalElementSize size_a(m, m);
   TileElementSize block_size_a(mb, mb);
 
@@ -87,14 +99,7 @@ void testTriangularMultiplication(blas::Side side, blas::Uplo uplo, blas::Op op,
   TileElementSize block_size_b(mb, nb);
   Matrix<T, Device::CPU> mat_bh(size_b, block_size_b);
 
-  auto [el_op_a, res_b, el_b] = [&]() -> std::tuple<function_type, function_type, function_type> {
-    if (side == blas::Side::Left)
-      return getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, static_cast<T>(1.0) / alpha,
-                                                            m);
-    else
-      return getRightTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, static_cast<T>(1.0) / alpha,
-                                                             n);
-  }();
+  auto [el_op_a, res_b, el_b] = getTriangularSystem<T>(side, uplo, op, diag, alpha, m, n);
 
   set(mat_ah, el_op_a, op);
   set(mat_bh, el_b);
@@ -114,8 +119,6 @@ template <class T, Backend B, Device D>
 void testTriangularMultiplication(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo,
                                   blas::Op op, blas::Diag diag, T alpha, SizeType m, SizeType n,
                                   SizeType mb, SizeType nb) {
-  using function_type = std::function<T(const GlobalElementIndex&)>;
-
   LocalElementSize size_a(m, m);
   TileElementSize block_size_a(mb, mb);
 
@@ -135,14 +138,7 @@ void testTriangularMultiplication(comm::CommunicatorGrid grid, blas::Side side, 
   Distribution distr_b(sz_b, block_size_b, grid.size(), grid.rank(), src_rank_index);
   Matrix<T, Device::CPU> mat_bh(std::move(distr_b));
 
-  auto [el_op_a, res_b, el_b] = [&]() -> std::tuple<function_type, function_type, function_type> {
-    if (side == blas::Side::Left)
-      return getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, static_cast<T>(1.0) / alpha,
-                                                            m);
-    else
-      return getRightTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, static_cast<T>(1.0) / alpha,
-                                                             n);
-  }();
+  auto [el_op_a, res_b, el_b] = getTriangularSystem<T>(side, uplo, op, diag, alpha, m, n);
 
   set(mat_ah, el_op_a, op);
   set(mat_bh, el_b);

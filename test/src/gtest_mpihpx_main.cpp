@@ -41,8 +41,10 @@
 
 #include <gtest/gtest.h>
 
+#include <hpx/include/threadmanager.hpp>
 #include <hpx/init.hpp>
 #include <hpx/program_options.hpp>
+#include <hpx/runtime.hpp>
 
 #include <dlaf/init.h>
 
@@ -75,9 +77,24 @@ GTEST_API_ int main(int argc, char** argv) {
   // Gets hold of the event listener list.
   ::testing::TestEventListeners& listeners = ::testing::UnitTest::GetInstance()->listeners();
 
-  // Adds MPIListener to the end. googletest takes the ownership.
+  // Note:
+  // This is a workaround that, by waiting that all HPX tasks are finished
+  // at the end of each test, ensures that the blocking MPI calls issued during
+  // the collection of results from all the MPI ranks do not create potential
+  // deadlock conditions.
+  struct MPIHPXListener : public MPIListener {
+    using MPIListener::MPIListener;
+
+  protected:
+    virtual void OnTestEnd(const ::testing::TestInfo& test_info) override {
+      hpx::threads::get_thread_manager().wait();
+      MPIListener::OnTestEnd(test_info);
+    }
+  };
+
+  // Adds MPIHPXListener to the end. googletest takes the ownership.
   auto default_listener = listeners.Release(listeners.default_result_printer());
-  listeners.Append(new MPIListener(argc, argv, default_listener));
+  listeners.Append(new MPIHPXListener(argc, argv, default_listener));
 
   using namespace hpx::program_options;
   options_description desc_commandline("Usage: " HPX_APPLICATION_STRING " [options]");

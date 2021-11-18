@@ -87,6 +87,7 @@ cineca["m100-gpu"] = {
     "Cores": 16,
     "Threads per core": 2,
     "Allowed rpns": [2],  # 4?
+    "GPU": True,
     "Run command": "mpirun gpu2ranks_ompi",
     "Batch preamble": """
 #!/bin/bash -l

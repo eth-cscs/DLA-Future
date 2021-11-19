@@ -66,7 +66,7 @@ run_dp = "dplasma" in args.libs
 # only for rpn = 2
 
 if run_dlaf:
-    run = mp.WeakScaling(system, "Cholesky_weak", nodes_arr, time0, time)
+    run = mp.WeakScaling(system, "Cholesky_weak", "job_dlaf", nodes_arr, time0, time)
     run.add(
         mp.chol,
         "dlaf",
@@ -85,12 +85,12 @@ if run_dlaf:
         approx,
         nruns,
     )
-    run.submit(run_dir, "job_dlaf", debug=debug)
+    run.submit(run_dir, debug=debug)
 
 # Example #2: Cholesky weak scaling with Slate:
 
 if run_slate:
-    run = mp.WeakScaling(system, "Cholesky_weak", nodes_arr, time0, time)
+    run = mp.WeakScaling(system, "Cholesky_weak", "job_slate", nodes_arr, time0, time)
     run.add(
         mp.chol,
         "slate",
@@ -100,13 +100,13 @@ if run_slate:
         approx,
         nruns,
     )
-    run.submit(run_dir, "job_slate", debug=debug)
+    run.submit(run_dir, debug=debug)
 
 # Example #3: Trsm weak scaling with DPlasma:
 # Note: n_sz = None means that n_sz = m_sz (See miniapp.trsm documentation)
 
 if run_dp:
-    run = mp.WeakScaling(system, "Trsm_weak", nodes_arr, time0, time)
+    run = mp.WeakScaling(system, "Trsm_weak", "job_dp", nodes_arr, time0, time)
     run.add(
         mp.trsm,
         "dplasma",
@@ -125,12 +125,12 @@ if run_dp:
         approx,
         nruns,
     )
-    run.submit(run_dir, "job_dp", debug=debug)
+    run.submit(run_dir, debug=debug)
 
 # Example #3: GenToStd weak scaling with DLAF:
 
 if run_dlaf:
-    run = mp.WeakScaling(system, "Gen2Std_weak", nodes_arr, time0, time)
+    run = mp.WeakScaling(system, "Gen2Std_weak", "job_g2s_dlaf", nodes_arr, time0, time)
     run.add(
         mp.gen2std,
         "dlaf",
@@ -140,12 +140,12 @@ if run_dlaf:
         approx,
         nruns,
     )
-    run.submit(run_dir, "job_g2s_dlaf", debug=debug)
+    run.submit(run_dir, debug=debug)
 
 # Example #4: Compare two versions:
 
 if run_dlaf:
-    run = mp.WeakScaling(system, "Cholesky_weak", nodes_arr, time0, time)
+    run = mp.WeakScaling(system, "Cholesky_weak", "job_comp_dlaf", nodes_arr, time0, time)
     run.add(
         mp.chol,
         "dlaf",
@@ -166,11 +166,11 @@ if run_dlaf:
         nruns,
         suffix="V2",
     )
-    run.submit(run_dir, "job_comp_dlaf", debug=debug)
+    run.submit(run_dir, debug=debug)
 
 # Example #5: Combined:
 
-run = mp.WeakScaling(system, "Combined_weak", nodes_arr, time0, time)
+run = mp.WeakScaling(system, "Combined_weak", "job", nodes_arr, time0, time)
 if run_dlaf:
     run.add(
         mp.chol,
@@ -224,7 +224,7 @@ if run_libsci:
         suffix="libsci",
     )
 run.print()
-run.submit(run_dir, "job", debug=debug)
+run.submit(run_dir, debug=debug)
 
 # Example #6: Customized setup
 # Note: In case more customization is needed each job can be setup manually:
@@ -235,68 +235,65 @@ m_1node = 10240
 mb_sz_arr = [128, 256]
 
 
-def get_time(nodes):
+def getTime(nodes):
     return time0 + int(time * sqrt(nodes))
 
 
-def get_size(nodes):
+def getSize(nodes):
     return round(m_1node * sqrt(nodes) / approx) * approx
 
 
 for nodes in nodes_arr:
     if run_dlaf:
-        job_text = mp.init_job_text(system, run_name, nodes, get_time(nodes))
+        job_text = mp.JobText(system, run_name, nodes, getTime(nodes), "job_custom_dlaf")
 
         for mb_sz in mb_sz_arr:
-            m_sz = get_size(nodes)
-            job_text += mp.chol(
-                system,
-                "dlaf",
-                libpaths["dlaf"],
-                nodes,
-                2,
-                m_sz,
-                mb_sz,
-                nruns,
+            m_sz = getSize(nodes)
+            job_text.addCommand(
+                mp.chol,
+                lib="dlaf",
+                build_dir=libpaths["dlaf"],
+                rpn=2,
+                m_sz=m_sz,
+                mb_sz=mb_sz,
+                nruns=nruns,
                 suffix=f"rpn=2",
             )
 
-            mp.submit_jobs(run_dir, nodes, job_text, debug=debug, bs_name=f"job_custom_dlaf")
+            job_text.submitJobs(run_dir, debug=debug)
 
     if run_dp:
-        job_text = mp.init_job_text(system, run_name, nodes, get_time(nodes))
+        job_text = mp.JobText(system, run_name, nodes, getTime(nodes), "job_custom_dp")
 
         for mb_sz in mb_sz_arr:
-            m_sz = get_size(nodes)
-            job_text += mp.chol(
-                system,
-                "dplasma",
-                libpaths["dplasma"],
-                nodes,
-                1,
-                m_sz,
-                mb_sz,
-                nruns,
+            m_sz = getSize(nodes)
+            job_text.addCommand(
+                mp.chol,
+                lib="dplasma",
+                build_dir=libpaths["dplasma"],
+                rpn=1,
+                m_sz=m_sz,
+                mb_sz=mb_sz,
+                nruns=nruns,
                 suffix=f"rpn=1",
             )
 
-        mp.submit_jobs(run_dir, nodes, job_text, debug=debug, bs_name=f"job_custom_dp")
+        job_text.submitJobs(run_dir, debug=debug)
 
     if run_mkl:
-        job_text = mp.init_job_text(system, run_name, nodes, get_time(nodes))
+        job_text = mp.JobText(system, run_name, nodes, getTime(nodes), "job_custom_mkl")
 
         for mb_sz in mb_sz_arr:
-            m_sz = get_size(nodes)
-            job_text += mp.chol(
-                system,
-                "scalapack",
-                libpaths["scalapack-mkl"],
-                nodes,
-                36,
-                m_sz,
-                mb_sz,
-                nruns // 2,
+            m_sz = getSize(nodes)
+            job_text.addCommand(
+                mp.chol,
+                lib="scalapack",
+                build_dir=libpaths["scalapack-mkl"],
+                rpn=36,
+                m_sz=m_sz,
+                mb_sz=mb_sz,
+                nruns=nruns // 2,
                 suffix="mkl_rpn=36",
             )
 
-        mp.submit_jobs(run_dir, nodes, job_text, debug=debug, bs_name=f"job_custom_mkl")
+        job_text.submitJobs(run_dir, debug=debug)

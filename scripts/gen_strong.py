@@ -187,7 +187,28 @@ if run_libsci:
 run.print()
 run.submit(run_dir, debug=debug)
 
-# Example #6: Customized setup
+# Example #6: rpn fixed for the entire job as for m100 "Multiple rpn in same job" is False
+
+run = mp.StrongScaling(systems.cineca["m100"], "Combined_strong", "job_m100", nodes_arr, time)
+if run_dlaf:
+    run.add(
+        mp.chol,
+        "dlaf",
+        libpaths["dlaf"],
+        {"rpn": 4, "m_sz": [10240, 20480], "mb_sz": [256, 512]},
+        nruns,
+    )
+if run_slate:
+    run.add(
+        mp.chol,
+        "slate",
+        libpaths["slate"],
+        {"rpn": 4, "m_sz": [10240, 20480], "mb_sz": [256, 512]},
+        nruns,
+    )
+run.submit(run_dir, debug=debug)
+
+# Example #7: Customized setup
 # Note: In case more customization is needed each job can be setup manually:
 from itertools import product
 

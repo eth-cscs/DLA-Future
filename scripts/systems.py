@@ -96,30 +96,65 @@ printenv > env_{bs_name}.txt
 """,
 }
 
-# NOTE: `gpu2ranks_ompi` has to be in PATH! (e.g. in `~/bin`)
-cineca["m100-gpu"] = {
-    "Cores": 16,
-    "Threads per core": 2,
-    "Allowed rpns": [2],  # 4?
-    "GPU": True,
-    "Run command": "mpirun gpu2ranks_ompi",
+cineca = {}
+
+cineca["m100_cpu"] = {
+    "Cores": 32,
+    "Threads per core": 4,
+    "Allowed rpns": [2, 4],
+    "Multiple rpn in same job": False,
+    "GPU": False,
+    "Run command": "mpirun --rank-by core --map-by socket:PE={cores_per_rank}",
     "Batch preamble": """
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}
 #SBATCH --time={time_min}
 #SBATCH --nodes={nodes}
+#SBATCH --ntasks-per-node={rpn}
+#SBATCH --cpus-per-task={threads_per_rank}
 #SBATCH --partition=m100_usr_prod
-#SBATCH --gres=gpu:4
+#SBATCH --account=cin_staff
 #SBATCH --qos=normal
 #SBATCH --output=output.txt
 #SBATCH --error=error.txt
 
-module load spectrum_mpi/10.3.1--binary
-module load dla-future-develop-gcc-10.2.0-ruvjcr5
+# Debug
+module list &> modules_{bs_name}.txt
+printenv > env_{bs_name}.txt
+
+# Commands
+""",
+}
+
+# NOTE: Here is assumed that `gpu2ranks_ompi` is in PATH!
+#       modify "Run command" if it is not the case.
+cineca["m100"] = {
+    "Cores": 32,
+    "Threads per core": 4,
+    "Allowed rpns": [2, 4],
+    "Multiple rpn in same job": False,
+    "GPU": False,
+    "Run command": "mpirun --rank-by core --map-by socket:PE={cores_per_rank} gpu2ranks_ompi",
+    "Batch preamble": """
+#!/bin/bash -l
+#SBATCH --job-name={run_name}_{nodes}
+#SBATCH --time={time_min}
+#SBATCH --nodes={nodes}
+#SBATCH --ntasks-per-node={rpn}
+#SBATCH --cpus-per-task={threads_per_rank}
+#SBATCH --partition=m100_usr_prod
+#SBATCH --gres=gpu:{rpn}
+#SBATCH --account=cin_staff
+#SBATCH --qos=normal
+#SBATCH --output=output.txt
+#SBATCH --error=error.txt
 
 # Debug
-module list &> modules.txt
-printenv > env.txt
+module list &> modules_{bs_name}.txt
+printenv > env_{bs_name}.txt
+
+# NOTE: It is assumed that `gpu2ranks_ompi` is in PATH!
+#       modify "Run command" in `system.py` if it is not the case.
 
 # Commands
 """,

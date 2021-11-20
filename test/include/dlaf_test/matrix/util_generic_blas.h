@@ -150,6 +150,18 @@ auto getRightTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T a
   return std::make_tuple(el_op_a, el_b, el_x);
 }
 
+/// Dispatcher function to choose between left and right implementation of triangular system generator function
+template <class ElementIndex, class T>
+std::tuple<std::function<T(const ElementIndex&)>, std::function<T(const ElementIndex&)>,
+           std::function<T(const ElementIndex&)>>
+getTriangularSystem(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType m,
+                    SizeType n) {
+  if (side == blas::Side::Left)
+    return dlaf::matrix::test::getLeftTriangularSystem<ElementIndex, T>(uplo, op, diag, alpha, m);
+  else
+    return dlaf::matrix::test::getRightTriangularSystem<ElementIndex, T>(uplo, op, diag, alpha, n);
+}
+
 }
 }
 }

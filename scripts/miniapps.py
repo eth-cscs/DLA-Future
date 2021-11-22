@@ -95,6 +95,8 @@ class JobText:
         [command, env] = command_gen(system=self.system, nodes=self.nodes, **args)
 
         self.job_text += "\n" + f"{env} {run_cmd} {command}".strip()
+        if "sleep" in self.system:
+            self.job_text += "\nsleep {}".format(self.system["sleep"])
 
     # Creates the job directory tree and the job script.
     # If debug is False it submits the job as well.

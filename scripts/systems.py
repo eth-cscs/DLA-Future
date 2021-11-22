@@ -4,6 +4,7 @@
 # "Allowed rpns" (list of int > 0),
 # "Multiple rpn in same job" (bool),
 # "GPU" (bool),
+# "sleep" (int), [optional, sleep time between runs]
 # "Run command" (string ({nodes}, {rpn}, {total_ranks}, {cores_per_rank}, {threads_per_rank} will be replaced with the correct value))
 # "Batch preamble" (multiline string ({run_name}, {time_min}, {bs_name}, {nodes} will be replaced with the correct value,
 #                  if "Multiple rpn in same job" is false {rpn}, {total_ranks}, {cores_per_rank}, {threads_per_rank} are also replaced.)
@@ -104,6 +105,7 @@ cineca["m100_cpu"] = {
     "Allowed rpns": [2, 4],
     "Multiple rpn in same job": False,
     "GPU": False,
+    "sleep": 5,
     "Run command": "mpirun --rank-by core --map-by socket:PE={cores_per_rank}",
     "Batch preamble": """
 #!/bin/bash -l
@@ -134,6 +136,7 @@ cineca["m100"] = {
     "Allowed rpns": [2, 4],
     "Multiple rpn in same job": False,
     "GPU": False,
+    "sleep": 5,
     "Run command": "mpirun --rank-by core --map-by socket:PE={cores_per_rank} gpu2ranks_ompi",
     "Batch preamble": """
 #!/bin/bash -l

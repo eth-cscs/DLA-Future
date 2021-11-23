@@ -135,7 +135,7 @@ cineca["m100"] = {
     "Threads per core": 4,
     "Allowed rpns": [2, 4],
     "Multiple rpn in same job": False,
-    "GPU": False,
+    "GPU": True,
     "sleep": 5,
     "Run command": "mpirun --rank-by core --map-by socket:PE={cores_per_rank} gpu2ranks_ompi",
     "Batch preamble": """
@@ -157,7 +157,7 @@ module list &> modules_{bs_name}.txt
 printenv > env_{bs_name}.txt
 
 # NOTE: It is assumed that `gpu2ranks_ompi` is in PATH!
-#       modify "Run command" in `system.py` if it is not the case.
+#       modify "Run command" in `systems.py` if it is not the case.
 
 # Commands
 """,

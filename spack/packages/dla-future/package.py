@@ -36,7 +36,7 @@ class DlaFuture(CMakePackage, CudaPackage):
     conflicts("umpire@6:")
 
     depends_on("hpx cxxstd=17 networking=none +async_mpi")
-    depends_on("hpx@1.7.0:")
+    depends_on("hpx@1.8.0:")
     depends_on("hpx +cuda", when="+cuda")
 
     depends_on("hpx build_type=Debug", when="build_type=Debug")

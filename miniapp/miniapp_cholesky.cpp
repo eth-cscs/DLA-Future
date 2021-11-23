@@ -344,7 +344,7 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
                                     j_loc == 0 ? T(0.0) : T(1.0),
                                     partial_result.readwrite_sender(LocalTileIndex{i_loc, 0})) |
             dlaf::tile::gemm(dlaf::internal::Policy<dlaf::Backend::MC>()) |
-            hpx::execution::experimental::detach();
+            hpx::execution::experimental::start_detached();
       }
     }
 

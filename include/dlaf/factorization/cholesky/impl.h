@@ -40,7 +40,8 @@ namespace cholesky_l {
 template <Backend backend, class MatrixTileSender>
 void potrfDiagTile(hpx::threads::thread_priority priority, MatrixTileSender&& matrix_tile) {
   dlaf::internal::whenAllLift(blas::Uplo::Lower, std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::potrf(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::potrf(dlaf::internal::Policy<backend>(priority)) |
+      hpx::execution::experimental::start_detached();
 }
 
 template <Backend backend, class KKTileSender, class MatrixTileSender>
@@ -51,7 +52,8 @@ void trsmPanelTile(hpx::threads::thread_priority priority, KKTileSender&& kk_til
   dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Lower, blas::Op::ConjTrans,
                               blas::Diag::NonUnit, ElementType(1.0), std::forward<KKTileSender>(kk_tile),
                               std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::trsm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::trsm(dlaf::internal::Policy<backend>(priority)) |
+      hpx::execution::experimental::start_detached();
 }
 
 template <Backend backend, class PanelTileSender, class MatrixTileSender>
@@ -62,7 +64,8 @@ void herkTrailingDiagTile(hpx::threads::thread_priority priority, PanelTileSende
   dlaf::internal::whenAllLift(blas::Uplo::Lower, blas::Op::NoTrans, BaseElementType(-1.0),
                               std::forward<PanelTileSender>(panel_tile), BaseElementType(1.0),
                               std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::herk(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::herk(dlaf::internal::Policy<backend>(priority)) |
+      hpx::execution::experimental::start_detached();
 }
 
 template <Backend backend, class PanelTileSender, class ColPanelSender, class MatrixTileSender>
@@ -74,7 +77,8 @@ void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, PanelTileSen
                               std::forward<PanelTileSender>(panel_tile),
                               std::forward<ColPanelSender>(col_panel), ElementType(1.0),
                               std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
+      hpx::execution::experimental::start_detached();
 }
 }
 
@@ -82,7 +86,8 @@ namespace cholesky_u {
 template <Backend backend, class MatrixTileSender>
 void potrfDiagTile(hpx::threads::thread_priority priority, MatrixTileSender&& matrix_tile) {
   dlaf::internal::whenAllLift(blas::Uplo::Upper, std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::potrf(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::potrf(dlaf::internal::Policy<backend>(priority)) |
+      hpx::execution::experimental::start_detached();
 }
 
 template <Backend backend, class KKTileSender, class MatrixTileSender>
@@ -93,7 +98,8 @@ void trsmPanelTile(hpx::threads::thread_priority priority, KKTileSender&& kk_til
   dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, blas::Op::ConjTrans,
                               blas::Diag::NonUnit, ElementType(1.0), std::forward<KKTileSender>(kk_tile),
                               std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::trsm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::trsm(dlaf::internal::Policy<backend>(priority)) |
+      hpx::execution::experimental::start_detached();
 }
 
 template <Backend backend, class PanelTileSender, class MatrixTileSender>
@@ -104,7 +110,8 @@ void herkTrailingDiagTile(hpx::threads::thread_priority priority, PanelTileSende
   dlaf::internal::whenAllLift(blas::Uplo::Upper, blas::Op::ConjTrans, base_element_type(-1.0),
                               std::forward<PanelTileSender>(panel_tile), base_element_type(1.0),
                               std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::herk(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::herk(dlaf::internal::Policy<backend>(priority)) |
+      hpx::execution::experimental::start_detached();
 }
 
 template <Backend backend, class PanelTileSender, class ColPanelSender, class MatrixTileSender>
@@ -116,7 +123,8 @@ void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, PanelTileSen
                               std::forward<PanelTileSender>(panel_tile),
                               std::forward<ColPanelSender>(col_panel), ElementType(1.0),
                               std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
+      hpx::execution::experimental::start_detached();
 }
 }
 

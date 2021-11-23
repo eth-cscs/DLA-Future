@@ -42,7 +42,7 @@ void hegstDiagTile(hpx::threads::thread_priority priority, AKKSender&& a_kk, LKK
   dlaf::internal::whenAllLift(1, blas::Uplo::Lower, std::forward<AKKSender>(a_kk),
                               std::forward<LKKSender>(l_kk)) |
       dlaf::tile::hegst(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::detach();
+      hpx::execution::experimental::start_detached();
 }
 
 template <Backend backend, class LKKSender, class AIKSender>
@@ -53,7 +53,7 @@ void trsmPanelTile(hpx::threads::thread_priority priority, LKKSender&& l_kk, AIK
                               blas::Diag::NonUnit, ElementType(1.0), std::forward<LKKSender>(l_kk),
                               std::forward<AIKSender>(a_ik)) |
       dlaf::tile::trsm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::detach();
+      hpx::execution::experimental::start_detached();
 }
 
 template <Backend backend, class AKKSender, class LIKSender, class AIKSender>
@@ -65,7 +65,7 @@ void hemmPanelTile(hpx::threads::thread_priority priority, AKKSender&& a_kk, LIK
                               std::forward<AKKSender>(a_kk), std::forward<LIKSender>(l_ik),
                               ElementType(1.0), std::forward<AIKSender>(a_ik)) |
       dlaf::tile::hemm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::detach();
+      hpx::execution::experimental::start_detached();
 }
 
 template <Backend backend, class AJKSender, class LJKSender, class AKKSender>
@@ -77,7 +77,7 @@ void her2kTrailingDiagTile(hpx::threads::thread_priority priority, AJKSender&& a
                               std::forward<AJKSender>(a_jk), std::forward<LJKSender>(l_jk),
                               BaseType<ElementType>(1.0), std::forward<AKKSender>(a_kk)) |
       dlaf::tile::her2k(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::detach();
+      hpx::execution::experimental::start_detached();
 }
 
 template <Backend backend, class MatIKSender, class MatJKSender, class AIJSender>
@@ -89,7 +89,7 @@ void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, MatIKSender&
                               std::forward<MatIKSender>(mat_ik), std::forward<MatJKSender>(mat_jk),
                               ElementType(1.0), std::forward<AIJSender>(a_ij)) |
       dlaf::tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::detach();
+      hpx::execution::experimental::start_detached();
 }
 
 template <Backend backend, class LJJSender, class AJKSender>
@@ -100,7 +100,7 @@ void trsmPanelUpdateTile(hpx::threads::thread_priority priority, LJJSender&& l_j
                               blas::Diag::NonUnit, ElementType(1.0), std::forward<LJJSender>(l_jj),
                               std::forward<AJKSender>(a_jk)) |
       dlaf::tile::trsm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::detach();
+      hpx::execution::experimental::start_detached();
 }
 
 template <Backend backend, class LIJSender, class AJKSender, class AIKSender>
@@ -112,7 +112,7 @@ void gemmPanelUpdateTile(hpx::threads::thread_priority priority, LIJSender&& l_i
                               std::forward<LIJSender>(l_ij), std::forward<AJKSender>(a_jk),
                               ElementType(1.0), std::forward<AIKSender>(a_ik)) |
       dlaf::tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::detach();
+      hpx::execution::experimental::start_detached();
 }
 }
 
@@ -122,7 +122,7 @@ void hegstDiagTile(hpx::threads::thread_priority priority, AKKSender&& a_kk, LKK
   dlaf::internal::whenAllLift(1, blas::Uplo::Upper, std::forward<AKKSender>(a_kk),
                               std::forward<LKKSender>(l_kk)) |
       dlaf::tile::hegst(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::detach();
+      hpx::execution::experimental::start_detached();
 }
 
 template <Backend backend, class LKKSender, class AIKSender>
@@ -133,7 +133,7 @@ void trsmPanelTile(hpx::threads::thread_priority priority, LKKSender&& l_kk, AIK
                               blas::Diag::NonUnit, ElementType(1.0), std::forward<LKKSender>(l_kk),
                               std::forward<AIKSender>(a_ik)) |
       dlaf::tile::trsm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::detach();
+      hpx::execution::experimental::start_detached();
 }
 
 template <Backend backend, class AKKSender, class LIKSender, class AIKSender>
@@ -145,7 +145,7 @@ void hemmPanelTile(hpx::threads::thread_priority priority, AKKSender&& a_kk, LIK
                               std::forward<AKKSender>(a_kk), std::forward<LIKSender>(l_ik),
                               ElementType(1.0), std::forward<AIKSender>(a_ik)) |
       dlaf::tile::hemm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::detach();
+      hpx::execution::experimental::start_detached();
 }
 
 template <Backend backend, class AJKSender, class LJKSender, class AKKSender>
@@ -157,7 +157,7 @@ void her2kTrailingDiagTile(hpx::threads::thread_priority priority, AJKSender&& a
                               std::forward<AJKSender>(a_jk), std::forward<LJKSender>(l_jk),
                               BaseType<ElementType>(1.0), std::forward<AKKSender>(a_kk)) |
       dlaf::tile::her2k(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::detach();
+      hpx::execution::experimental::start_detached();
 }
 
 template <Backend backend, class MatIKSender, class MatJKSender, class AIJSender>
@@ -169,7 +169,7 @@ void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, MatIKSender&
                               std::forward<MatIKSender>(mat_ik), std::forward<MatJKSender>(mat_jk),
                               ElementType(1.0), std::forward<AIJSender>(a_ij)) |
       dlaf::tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::detach();
+      hpx::execution::experimental::start_detached();
 }
 
 template <Backend backend, class LJJSender, class AJKSender>
@@ -180,7 +180,7 @@ void trsmPanelUpdateTile(hpx::threads::thread_priority priority, LJJSender&& l_j
                               blas::Diag::NonUnit, ElementType(1.0), std::forward<LJJSender>(l_jj),
                               std::forward<AJKSender>(a_jk)) |
       dlaf::tile::trsm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::detach();
+      hpx::execution::experimental::start_detached();
 }
 
 template <Backend backend, class LIJSender, class AJKSender, class AIKSender>
@@ -192,7 +192,7 @@ void gemmPanelUpdateTile(hpx::threads::thread_priority priority, LIJSender&& l_i
                               std::forward<LIJSender>(l_ij), std::forward<AJKSender>(a_jk),
                               ElementType(1.0), std::forward<AIKSender>(a_ik)) |
       dlaf::tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::detach();
+      hpx::execution::experimental::start_detached();
 }
 }
 

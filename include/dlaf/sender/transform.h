@@ -52,9 +52,9 @@ struct Transform<Backend::MC> {
   template <typename S, typename F>
   static auto call(const Policy<Backend::MC> policy, S&& s, F&& f) {
     namespace ex = hpx::execution::experimental;
-    return ex::transform(ex::on(std::forward<S>(s),
-                                ex::with_priority(ex::thread_pool_scheduler{}, policy.priority())),
-                         hpx::unwrapping(std::forward<F>(f)));
+    return ex::then(ex::on(std::forward<S>(s),
+                           ex::with_priority(ex::thread_pool_scheduler{}, policy.priority())),
+                    hpx::unwrapping(std::forward<F>(f)));
   }
 };
 
@@ -245,7 +245,7 @@ template <Backend B, typename F, typename... Ts>
 /// when_all sender of the lifted senders.
 template <Backend B, typename F, typename... Ts>
 void transformLiftDetach(const Policy<B> policy, F&& f, Ts&&... ts) {
-  hpx::execution::experimental::detach(
+  hpx::execution::experimental::start_detached(
       transformLift<B>(policy, std::forward<F>(f), std::forward<Ts>(ts)...));
 }
 }

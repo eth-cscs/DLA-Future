@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <hpx/local/execution.hpp>
 #include <hpx/local/future.hpp>
 #include <hpx/local/unwrap.hpp>
 

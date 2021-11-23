@@ -1,7 +1,7 @@
 from itertools import product
 from math import sqrt
 from os import system, makedirs
-from os.path import expanduser
+from os.path import expanduser, isfile
 from re import sub
 from time import sleep
 
@@ -124,7 +124,12 @@ class JobText:
         return _computeResourcesNeeded(self.system, self.nodes, rpn)
 
 
-# lib: allowed libraries are dlaf|slate|dplasma
+def _checkAppExec(fname):
+    if not isfile(fname):
+        raise RuntimeError(f"Executable {fname} doesn't exist")
+
+
+# lib: allowed libraries are dlaf|slate|dplasma|scalapack
 # rpn: ranks per node
 #
 def chol(
@@ -146,25 +151,29 @@ def chol(
 
     if lib.startswith("dlaf"):
         env += " OMP_NUM_THREADS=1"
-        cmd = f"{build_dir}/miniapp/miniapp_cholesky --matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} --hpx:use-process-mask {extra_flags}"
+        app = f"{build_dir}/miniapp/miniapp_cholesky"
+        opts = f"--matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} --hpx:use-process-mask {extra_flags}"
     elif lib == "slate":
         env += f" OMP_NUM_THREADS={cores_per_rank}"
+        app = f"{build_dir}/test/tester"
         if system["GPU"]:
             extra_flags += " --origin d --target d"
-        cmd = f"{build_dir}/test/tester --dim {m_sz}x{m_sz}x0 --nb {mb_sz} --p {grid_rows} --q {grid_cols} --repeat {nruns} --check n --ref n --type d {extra_flags} potrf"
+        opts = f"--dim {m_sz}x{m_sz}x0 --nb {mb_sz} --p {grid_rows} --q {grid_cols} --repeat {nruns} --check n --ref n --type d {extra_flags} potrf"
     elif lib == "dplasma":
         env += " OMP_NUM_THREADS=1"
+        app = f"{build_dir}/tests/testing_dpotrf"
         if system["GPU"]:
             extra_flags += " -g 1"
-        cmd = f"{build_dir}/tests/testing_dpotrf -N {m_sz} --MB {mb_sz} --NB {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} -c {cores_per_rank} --nruns {nruns} -v {extra_flags}"
+        opts = f"-N {m_sz} --MB {mb_sz} --NB {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} -c {cores_per_rank} --nruns {nruns} -v {extra_flags}"
     elif lib == "scalapack":
         env += f" OMP_NUM_THREADS={cores_per_rank}"
-        cmd = f"{build_dir}/cholesky -N {m_sz} -b {mb_sz} --p_grid={grid_rows},{grid_cols} -r {nruns} {extra_flags}"
+        app = f"{build_dir}/cholesky"
+        opts = f"-N {m_sz} -b {mb_sz} --p_grid={grid_rows},{grid_cols} -r {nruns} {extra_flags}"
     else:
         raise ValueError(_err_msg(lib))
 
-    cmd = cmd.strip()
-    cmd += f" >> chol_{lib}_{suffix}.out 2>&1"
+    _checkAppExec(app)
+    cmd = f"{app} {opts}".strip() + f" >> chol_{lib}_{suffix}.out 2>&1"
     return cmd, env.strip()
 
 
@@ -195,22 +204,25 @@ def trsm(
 
     if lib.startswith("dlaf"):
         env += " OMP_NUM_THREADS=1"
-        cmd = f"{build_dir}/miniapp/miniapp_triangular_solver --m {m_sz} --n {n_sz} --mb {mb_sz} --nb {mb_sz} --grid-rows {gr} --grid-cols {gc} --nruns {nruns} --hpx:use-process-mask {extra_flags}"
+        app = f"{build_dir}/miniapp/miniapp_triangular_solver"
+        opts = f"--m {m_sz} --n {n_sz} --mb {mb_sz} --nb {mb_sz} --grid-rows {gr} --grid-cols {gc} --nruns {nruns} --hpx:use-process-mask {extra_flags}"
     elif lib == "slate":
         env += f" OMP_NUM_THREADS={cores_per_rank}"
+        app = f"{build_dir}/test/tester"
         if system["GPU"]:
             extra_flags += " --origin d --target d"
-        cmd = f"{build_dir}/test/tester --dim {m_sz}x{n_sz}x0 --nb {mb_sz} --p {gr} --q {gc} --repeat {nruns} --alpha 2 --check n --ref n --type d {extra_flags} trsm"
+        opts = f"--dim {m_sz}x{n_sz}x0 --nb {mb_sz} --p {gr} --q {gc} --repeat {nruns} --alpha 2 --check n --ref n --type d {extra_flags} trsm"
     elif lib == "dplasma":
         env += " OMP_NUM_THREADS=1"
+        app = f"{build_dir}/tests/testing_dtrsm"
         if system["GPU"]:
             extra_flags += " -g 1"
-        cmd = f"{build_dir}/tests/testing_dtrsm -M {m_sz} -N {n_sz} --MB {mb_sz} --NB {mb_sz} --grid-rows {gr} --grid-cols {gc} -c {cores_per_rank} -v {extra_flags}"
+        opts = f"-M {m_sz} -N {n_sz} --MB {mb_sz} --NB {mb_sz} --grid-rows {gr} --grid-cols {gc} -c {cores_per_rank} -v {extra_flags}"
     else:
         raise ValueError(_err_msg(lib))
 
-    cmd = cmd.strip()
-    cmd += f" >> trsm_{lib}_{suffix}.out 2>&1"
+    _checkAppExec(app)
+    cmd = f"{app} {opts}".strip() + f" >> trsm_{lib}_{suffix}.out 2>&1"
     return cmd, env.strip()
 
 
@@ -238,17 +250,19 @@ def gen2std(
 
     if lib.startswith("dlaf"):
         env += " OMP_NUM_THREADS=1"
-        cmd = f"{build_dir}/miniapp/miniapp_gen_to_std --matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} --hpx:use-process-mask {extra_flags}"
+        app = f"{build_dir}/miniapp/miniapp_gen_to_std"
+        opts = f"--matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} --hpx:use-process-mask {extra_flags}"
     elif lib == "slate":
         env += f" OMP_NUM_THREADS={cores_per_rank}"
+        app = f"{build_dir}/test/tester"
         if system["GPU"]:
             extra_flags += " --origin d --target d"
-        cmd = f"{build_dir}/test/tester --dim {m_sz}x{m_sz}x0 --nb {mb_sz} --p {grid_rows} --q {grid_cols} --repeat {nruns} --check n --ref n --type d {extra_flags} hegst"
+        opts = f"--dim {m_sz}x{m_sz}x0 --nb {mb_sz} --p {grid_rows} --q {grid_cols} --repeat {nruns} --check n --ref n --type d {extra_flags} hegst"
     else:
         raise ValueError(_err_msg(lib))
 
-    cmd = cmd.strip()
-    cmd += f" >> hegst_{lib}_{suffix}.out 2>&1"
+    _checkAppExec(app)
+    cmd = f"{app} {opts}".strip() + f" >> hegst_{lib}_{suffix}.out 2>&1"
     return cmd, env.strip()
 
 

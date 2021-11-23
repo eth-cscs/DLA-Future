@@ -49,11 +49,12 @@ namespace test {
 template <class ElementIndex, class T>
 auto getLeftTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType m) {
   using dlaf::test::TypeUtilities;
+  using FuncType = std::function<T(const ElementIndex&)>;
 
   const bool op_a_lower = ((uplo == blas::Uplo::Lower && op == blas::Op::NoTrans) ||
                            (uplo == blas::Uplo::Upper && op != blas::Op::NoTrans));
 
-  std::function<T(const ElementIndex&)> el_op_a = [op_a_lower, diag](const ElementIndex& index) {
+  FuncType el_op_a = [op_a_lower, diag](const ElementIndex& index) {
     if ((op_a_lower && index.row() < index.col()) || (!op_a_lower && index.row() > index.col()) ||
         (diag == blas::Diag::Unit && index.row() == index.col()))
       return TypeUtilities<T>::element(-9.9, 0);
@@ -64,15 +65,14 @@ auto getLeftTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T al
     return TypeUtilities<T>::polar((i + 1) / (k + .5), 2 * i - k);
   };
 
-  std::function<T(const ElementIndex&)> el_x = [](const ElementIndex& index) {
+  FuncType el_x = [](const ElementIndex& index) {
     const double k = index.row();
     const double j = index.col();
 
     return TypeUtilities<T>::polar((k + .5) / (j + 2), k + j);
   };
 
-  std::function<T(const ElementIndex&)> el_b = [m, alpha, diag, op_a_lower,
-                                                el_x](const ElementIndex& index) {
+  FuncType el_b = [m, alpha, diag, op_a_lower, el_x](const ElementIndex& index) {
     BaseType<T> kk = op_a_lower ? index.row() + 1 : m - index.row();
 
     const double i = index.row();
@@ -113,18 +113,19 @@ auto getLeftTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T al
 template <class ElementIndex, class T>
 auto getRightTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType n) {
   using dlaf::test::TypeUtilities;
+  using FuncType = std::function<T(const ElementIndex&)>;
 
   const bool op_a_lower = ((uplo == blas::Uplo::Lower && op == blas::Op::NoTrans) ||
                            (uplo == blas::Uplo::Upper && op != blas::Op::NoTrans));
 
-  auto el_x = [](const ElementIndex& index) {
+  FuncType el_x = [](const ElementIndex& index) {
     const double i = index.row();
     const double k = index.col();
 
     return TypeUtilities<T>::polar((k + .5) / (i + 2), i + k);
   };
 
-  auto el_op_a = [op_a_lower, diag](const ElementIndex& index) {
+  FuncType el_op_a = [op_a_lower, diag](const ElementIndex& index) {
     if ((op_a_lower && index.row() < index.col()) || (!op_a_lower && index.row() > index.col()) ||
         (diag == blas::Diag::Unit && index.row() == index.col()))
       return TypeUtilities<T>::element(-9.9, 0);
@@ -135,7 +136,7 @@ auto getRightTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T a
     return TypeUtilities<T>::polar((j + 1) / (k + .5), 2 * j - k);
   };
 
-  auto el_b = [n, alpha, diag, op_a_lower, el_x](const ElementIndex& index) {
+  FuncType el_b = [n, alpha, diag, op_a_lower, el_x](const ElementIndex& index) {
     BaseType<T> kk = op_a_lower ? n - index.col() : index.col() + 1;
 
     const double i = index.row();
@@ -148,6 +149,16 @@ auto getRightTriangularSystem(blas::Uplo uplo, blas::Op op, blas::Diag diag, T a
   };
 
   return std::make_tuple(el_op_a, el_b, el_x);
+}
+
+/// Dispatcher function to choose between left and right implementation of triangular system generator function
+template <class ElementIndex, class T>
+auto getTriangularSystem(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha,
+                         SizeType m, SizeType n) {
+  if (side == blas::Side::Left)
+    return dlaf::matrix::test::getLeftTriangularSystem<ElementIndex, T>(uplo, op, diag, alpha, m);
+  else
+    return dlaf::matrix::test::getRightTriangularSystem<ElementIndex, T>(uplo, op, diag, alpha, n);
 }
 
 }

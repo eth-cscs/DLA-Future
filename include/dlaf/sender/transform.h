@@ -30,15 +30,6 @@
 #include "dlaf/cusolver/handle_pool.h"
 #endif
 
-// This is a compatibility layer for HPX's tag_invoke. In 1.7.X it was
-// mistakenly renamed to tag_dispatch. In 1.8.0 onwards it is called tag_invoke
-// again.
-#if HPX_VERSION_FULL >= 0x10800
-#define DLAF_TAG_INVOKE tag_invoke
-#else
-#define DLAF_TAG_INVOKE tag_dispatch
-#endif
-
 namespace dlaf {
 namespace internal {
 /// DLAF-specific transform, templated on a backend. This, together with
@@ -146,19 +137,19 @@ struct Transform<Backend::GPU> {
       std::decay_t<F> f;
 
       template <typename E>
-      friend void DLAF_TAG_INVOKE(hpx::execution::experimental::set_error_t, GPUTransformReceiver&& r,
-                                  E&& e) noexcept {
+      friend void tag_invoke(hpx::execution::experimental::set_error_t, GPUTransformReceiver&& r,
+                             E&& e) noexcept {
         hpx::execution::experimental::set_error(std::move(r.r), std::forward<E>(e));
       }
 
-      friend void DLAF_TAG_INVOKE(hpx::execution::experimental::set_done_t,
-                                  GPUTransformReceiver&& r) noexcept {
+      friend void tag_invoke(hpx::execution::experimental::set_done_t,
+                             GPUTransformReceiver&& r) noexcept {
         hpx::execution::experimental::set_done(std::move(r));
       }
 
       template <typename... Ts, typename Enable = std::enable_if_t<is_gpu_invocable<Ts...>>>
-      friend auto DLAF_TAG_INVOKE(hpx::execution::experimental::set_value_t, GPUTransformReceiver&& r,
-                                  Ts&&... ts) {
+      friend auto tag_invoke(hpx::execution::experimental::set_value_t, GPUTransformReceiver&& r,
+                             Ts&&... ts) {
         try {
           cudaStream_t stream = r.stream_pool.getNextStream();
           cublasHandle_t cublas_handle = r.cublas_handle_pool.getNextHandle(stream);
@@ -201,7 +192,7 @@ struct Transform<Backend::GPU> {
     };
 
     template <typename R>
-    friend auto DLAF_TAG_INVOKE(hpx::execution::experimental::connect_t, GPUTransformSender&& s, R&& r) {
+    friend auto tag_invoke(hpx::execution::experimental::connect_t, GPUTransformSender&& s, R&& r) {
       return hpx::execution::experimental::connect(std::move(s.s),
                                                    GPUTransformReceiver<R>{std::move(s.stream_pool),
                                                                            std::move(
@@ -250,5 +241,3 @@ void transformLiftDetach(const Policy<B> policy, F&& f, Ts&&... ts) {
 }
 }
 }
-
-#undef DLAF_TAG_INVOKE

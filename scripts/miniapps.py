@@ -1,6 +1,6 @@
 from itertools import product
 from math import sqrt
-from os import makedirs
+from os import makedirs, system
 from os.path import expanduser, isfile
 from re import sub
 from time import sleep
@@ -73,8 +73,8 @@ class JobText:
             "bs_name": bs_name,
             **self._computeResourcesNeeded(rpn),
         }
-        if "Extra Subs" in system:
-            subs = system["Extra Subs"](subs)
+        if "Extra subs" in system:
+            subs = system["Extra subs"](subs)
 
         self.job_text = system["Batch preamble"].format(**subs).strip()
 
@@ -95,8 +95,8 @@ class JobText:
             )
 
         subs = self._computeResourcesNeeded(rpn)
-        if "Extra Subs" in self.system:
-            subs = self.system["Extra Subs"](subs)
+        if "Extra subs" in self.system:
+            subs = self.system["Extra subs"](subs)
 
         run_cmd = self.system["Run command"].format(**subs).strip()
         [command, env] = command_gen(system=self.system, nodes=self.nodes, **args)
@@ -121,7 +121,7 @@ class JobText:
             return
 
         print(f"Submitting : {job_file}")
-        system(f"sbatch --chdir={job_path} {job_file}")
+        os.system(f"sbatch --chdir={job_path} {job_file}")
         # sleep to not overload the scheduler
         sleep(1)
 

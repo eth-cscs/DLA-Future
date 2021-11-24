@@ -5,14 +5,19 @@
 # "Multiple rpn in same job" (bool),
 # "GPU" (bool),
 # [optional] "sleep" (int representing the sleep time between runs)
-# "Run command" (string ({nodes}, {rpn}, {total_ranks}, {cores_per_rank}, {threads_per_rank} will be replaced with the correct value).
-#                extra keywords can be used when providing "ExtraSubs".)
-# "Batch preamble" (multiline string ({run_name}, {time_min}, {bs_name}, {nodes} will be replaced with the correct value,
-#                   if "Multiple rpn in same job" is false {rpn}, {total_ranks}, {cores_per_rank}, {threads_per_rank} are also replaced.
-#                   extra keywords can be used when providing "ExtraSubs".)
-# [optional] "Extra Subs" (function(dictionary params) which returns a dictionary containing at least the entries of params.
+# "Run command" (string:
+#                        {nodes}, {rpn}, {total_ranks}, {cores_per_rank}, {threads_per_rank}
+#                        will be replaced with the correct value (*).
+#                        Extra keywords can be used when providing "Extra subs".)
+# "Batch preamble" (multiline string:
+#                                     {run_name}, {time_min}, {bs_name}, {nodes}
+#                                     will be replaced with the correct value (*),
+#                                     if "Multiple rpn in same job" is false
+#                                     {rpn}, {total_ranks}, {cores_per_rank}, {threads_per_rank} are also replaced.
+#                                     extra keywords can be used when providing "Extra subs".)
+# [optional] "Extra subs" (function(dictionary params) which returns a dictionary containing at least the entries of params.
 #                          Note: this function is invoked for both "Run command" and "Batch preamble", therefore some items are not always present.)
-# Note: replace are done with the format command (extra care needed when using { or }).
+# (*) Note: replace are done with the format command (extra care needed when using { or }).
 
 cscs = {}
 
@@ -148,7 +153,7 @@ printenv > env_{bs_name}.txt
 
 # Commands
 """,
-    "Extra Subs": extraSubsMarconi,
+    "Extra subs": extraSubsMarconi,
 }
 
 # NOTE: Here is assumed that `gpu2ranks_ompi` is in PATH!
@@ -184,5 +189,5 @@ printenv > env_{bs_name}.txt
 
 # Commands
 """,
-    "Extra Subs": extraSubsMarconi,
+    "Extra subs": extraSubsMarconi,
 }

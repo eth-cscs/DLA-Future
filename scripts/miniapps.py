@@ -1,6 +1,6 @@
 from itertools import product
 from math import sqrt
-from os import system, makedirs
+from os import makedirs
 from os.path import expanduser, isfile
 from re import sub
 from time import sleep
@@ -73,6 +73,9 @@ class JobText:
             "bs_name": bs_name,
             **self._computeResourcesNeeded(rpn),
         }
+        if "Extra Subs" in system:
+            subs = system["Extra Subs"](subs)
+
         self.job_text = system["Batch preamble"].format(**subs).strip()
 
     # append to the self.job_text a command of the form {env} {run_command} {command}
@@ -91,7 +94,11 @@ class JobText:
                 )
             )
 
-        run_cmd = self.system["Run command"].format(**self._computeResourcesNeeded(rpn)).strip()
+        subs = self._computeResourcesNeeded(rpn)
+        if "Extra Subs" in self.system:
+            subs = self.system["Extra Subs"](subs)
+
+        run_cmd = self.system["Run command"].format(**subs).strip()
         [command, env] = command_gen(system=self.system, nodes=self.nodes, **args)
 
         self.job_text += "\n" + f"{env} {run_cmd} {command}".strip()

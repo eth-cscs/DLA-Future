@@ -14,4 +14,16 @@ fi
 
 export CUDA_VISIBLE_DEVICES=${OMPI_COMM_WORLD_LOCAL_RANK}
 
+if [ $OMPI_COMM_WORLD_LOCAL_SIZE -eq 2 ]
+then
+  if [ $OMPI_COMM_WORLD_LOCAL_RANK -eq 1 ]
+  then
+    export CUDA_VISIBLE_DEVICES=2
+  fi
+  if [ $OMPI_COMM_WORLD_LOCAL_RANK -eq 2 ]
+  then
+    export CUDA_VISIBLE_DEVICES=1
+  fi
+fi
+
 eval "$@"

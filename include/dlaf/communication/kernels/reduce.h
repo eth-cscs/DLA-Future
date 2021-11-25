@@ -110,7 +110,7 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
   auto cont_buf = dataflow(ex_copy, unwrapping(makeItContiguous_o), tile_cpu);
   cont_buf =
       dataflow(ex, unwrapping(reduceRecvInPlace_o), std::move(pcomm), reduce_op, std::move(cont_buf));
-  auto checkpoint = dataflow(ex_copy, unwrapping(copyBack_o), std::move(cont_buf), tile_cpu);
+  auto checkpoint = dataflow(ex_copy, unwrapExtendTiles(copyBack_o), std::move(cont_buf), tile_cpu);
 
   // Note:
   //

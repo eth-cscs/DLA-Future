@@ -70,11 +70,11 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
                                MPI_Op reduce_op, hpx::future<matrix::Tile<T, D>> tile) {
   // Note:
   //
-  // 1. ensure that the tile is on CPU
-  // 2. ensure that the tile is contiguous
-  // 3. communicate using the cpu+contiguous tile
-  // 4. in case a temporary has been used for assuring contiguity, copy it back
-  // 5. in case the original tile was not on the CPU, copy it back to GPU
+  // GPU  -> duplicateIfNeeded ---------------------> cCPU -> MPI -------------> copyIfNeeded --> GPU
+  // CPU  ----------------------> makeItContiguous -> cCPU -> MPI -> copyBack ------------------> CPU
+  // cCPU ------------------------------------------> cCPU -> MPI ------------------------------> cCPU
+  //
+  // where: cCPU = contiguous CPU
 
   using hpx::dataflow;
   using hpx::unwrapping;

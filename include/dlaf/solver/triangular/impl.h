@@ -525,6 +525,7 @@ template <Backend backend, Device D, class T>
 void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op op, blas::Diag diag,
                                          T alpha, Matrix<const T, D>& mat_a, Matrix<T, D>& mat_b) {
   using namespace triangular_llt;
+  using hpx::threads::thread_priority;
 
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
@@ -569,14 +570,13 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
     }
     comm::broadcast(executor_mpi, rank_kk.col(), a_panel, mpi_row_task_chain);
 
-    // TODO np/hp executor selection in getGenericExecutor
-    matrix::util::set0(dlaf::internal::getGenericExecutor<backend>::call(), b_panel);
+    // TODO priority
+    matrix::util::set0<backend>(thread_priority::normal, b_panel);
 
+    // TODO priority
     for (const auto& ij : common::iterate_range2d(bt_offset, indexFromOrigin(distr_b.localNrTiles())))
-      // TODO priority
-      gemmTrailingMatrixTile<backend>(hpx::threads::thread_priority::normal, op, T(1) / alpha,
-                                      a_panel.read_sender(ij), mat_b.read_sender(ij),
-                                      b_panel.readwrite_sender(ij));
+      gemmTrailingMatrixTile<backend>(thread_priority::normal, op, T(1) / alpha, a_panel.read_sender(ij),
+                                      mat_b.read_sender(ij), b_panel.readwrite_sender(ij));
 
     for (const auto& idx : b_panel.iteratorLocal()) {
       if (this_rank.row() == rank_kk.row())
@@ -590,7 +590,7 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
       for (SizeType j_loc = 0; j_loc < distr_b.localNrTiles().cols(); ++j_loc) {
         const LocalTileIndex kj(kk_offset.row(), j_loc);
         // TODO priority
-        const auto& priority = hpx::threads::thread_priority::high;
+        const auto& priority = thread_priority::high;
 
         dlaf::internal::whenAllLift(T(-1), b_panel.read_sender(kj), mat_b.readwrite_sender(kj)) |
             tile::add(dlaf::internal::Policy<backend>(priority)) |

@@ -137,17 +137,23 @@ public:
 }
 
 /// Sets all the elements of all the tiles to zero
-template <class T, Device D, class ExecutorOrPolicy>
-void set0(ExecutorOrPolicy ex, Matrix<T, D>& matrix) {
+template <Backend backend, class T, Device D>
+void set0(hpx::threads::thread_priority priority, Matrix<T, D>& matrix) {
+  using dlaf::internal::Policy;
+  using hpx::execution::experimental::detach;
+
   for (const auto& idx : iterate_range2d(matrix.distribution().localNrTiles()))
-    hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::set0_o), matrix(idx));
+    matrix.readwrite_sender(idx) | tile::set0(Policy<backend>(priority)) | detach();
 }
 
 /// Sets all the elements of all the tiles in the active range to zero
-template <class T, Coord axis, Device D, class ExecutorOrPolicy>
-void set0(ExecutorOrPolicy ex, Panel<axis, T, D>& panel) {
+template <Backend backend, class T, Coord axis, Device D>
+void set0(hpx::threads::thread_priority priority, Panel<axis, T, D>& panel) {
+  using dlaf::internal::Policy;
+  using hpx::execution::experimental::detach;
+
   for (const auto& tile_idx : panel.iteratorLocal())
-    hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::set0_o), panel(tile_idx));
+    panel.readwrite_sender(tile_idx) | tile::set0(Policy<backend>(priority)) | detach();
 }
 
 /// Set the elements of the matrix.

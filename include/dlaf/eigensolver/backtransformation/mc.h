@@ -82,7 +82,6 @@ template <class T>
 void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     Matrix<T, Device::CPU>& mat_c, Matrix<const T, Device::CPU>& mat_v,
     common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
-  auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
   auto executor_np = dlaf::getNpExecutor<Backend::MC>();
 
   const SizeType m = mat_c.nrTiles().rows();
@@ -160,7 +159,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     }
 
     // W2 = W C
-    matrix::util::set0(executor_hp, panelW2);
+    matrix::util::set0<Backend::MC>(hpx::threads::thread_priority::high, panelW2);
     LocalTileIndex c_start{k + 1, 0};
     LocalTileIndex c_end{m, n};
     auto c_k = iterate_range2d(c_start, c_end);
@@ -188,7 +187,6 @@ template <class T>
 void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_c, Matrix<const T, Device::CPU>& mat_v,
     common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
-  auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
   auto executor_np = dlaf::getNpExecutor<Backend::MC>();
 
   // Set up MPI
@@ -285,7 +283,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       }
     }
 
-    matrix::util::set0(executor_hp, panelW2);
+    matrix::util::set0<Backend::MC>(hpx::threads::thread_priority::high, panelW2);
 
     broadcast(executor_mpi, k_rank_col, panelW, mpi_row_task_chain);
 

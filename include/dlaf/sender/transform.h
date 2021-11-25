@@ -60,7 +60,7 @@ struct Transform<Backend::MC> {
 
 #ifdef DLAF_WITH_CUDA
 /// The Backend::GPU specialization uses a custom sender. The custom sender,
-/// when connected to a receiver, chooses an approprate stream or handle pool
+/// when connected to a receiver, chooses an appropriate stream or handle pool
 /// depending on what the callable accepts, calls the given callable with an
 /// element from a pool, and signals the receiver when the operation is ready
 /// (notified using a CUDA event).

@@ -22,7 +22,7 @@ jobs:
         run: ./.github/format.sh
 
       - name: Check scripts formatting
-        run: black scripts/
+        run: black --line-length 105 scripts/
 
          # Fails if there are differences.
       - name: Formatting issues

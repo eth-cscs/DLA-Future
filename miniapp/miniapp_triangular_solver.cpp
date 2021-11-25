@@ -143,7 +143,10 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       // (optional) run test
       if (opts.do_check) {
         // TODO do not check element by element, but evaluate the entire matrix
-        const T max_error = 20 * (bh.size().rows() + 1) * dlaf::test::TypeUtilities<T>::error;
+        static_assert(std::is_arithmetic<T>::value, "mul/add error is valid just for arithmetic types");
+        constexpr T muladd_error = 2 * std::numeric_limits<T>::epsilon();
+
+        const T max_error = 20 * (bh.size().rows() + 1) * muladd_error;
         CHECK_MATRIX_NEAR(ref_x, bh, max_error, 0);
       }
     }

@@ -43,7 +43,7 @@ struct Transform<Backend::MC> {
   template <typename S, typename F>
   static auto call(const Policy<Backend::MC> policy, S&& s, F&& f) {
     namespace ex = hpx::execution::experimental;
-    return ex::then(ex::on(std::forward<S>(s),
+    return ex::then(ex::transfer(std::forward<S>(s),
                            ex::with_priority(ex::thread_pool_scheduler{}, policy.priority())),
                     hpx::unwrapping(std::forward<F>(f)));
   }

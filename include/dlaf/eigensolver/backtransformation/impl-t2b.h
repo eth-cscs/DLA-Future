@@ -20,10 +20,9 @@
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/panel.h"
 #include "dlaf/matrix/tile.h"
+#include "dlaf/sender/traits.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
-
-#include "dlaf/matrix/print_numpy.h"
 
 namespace dlaf {
 namespace eigensolver {
@@ -101,35 +100,42 @@ auto computeTFactor(hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_
                        std::move(mat_t));
 }
 
-template <class T>
-auto computeW(hpx::future<matrix::Tile<T, Device::CPU>> tile_v,
-              hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_t) {
+template <Backend backend, class VSender, class TSender>
+auto computeW(hpx::threads::thread_priority priority, VSender&& tile_v, TSender&& tile_t) {
   using namespace blas;
-  hpx::dataflow(matrix::unwrapExtendTiles(tile::internal::trmm_o), Side::Right, Uplo::Upper, Op::NoTrans,
-                Diag::NonUnit, T(1), std::move(tile_t), std::move(tile_v));
+
+  using T = dlaf::internal::SenderElementType<VSender>;
+  dlaf::internal::whenAllLift(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1),
+                              std::forward<TSender>(tile_t), std::forward<VSender>(tile_v)) |
+      tile::trmm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
 }
 
-template <class T>
-auto computeW2(hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v,
-               hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_e, T beta,
-               hpx::future<matrix::Tile<T, Device::CPU>> tile_w2) {
+template <Backend backend, class VSender, class ESender, class T, class W2Sender>
+auto computeW2(hpx::threads::thread_priority priority, VSender&& tile_v, ESender&& tile_e, T beta,
+               W2Sender&& tile_w2) {
   using blas::Op;
-  hpx::dataflow(matrix::unwrapExtendTiles(tile::internal::gemm_o), Op::ConjTrans, Op::NoTrans, T(1),
-                std::move(tile_v), std::move(tile_e), beta, std::move(tile_w2));
+  dlaf::internal::whenAllLift(Op::ConjTrans, Op::NoTrans, T(1), std::forward<VSender>(tile_v),
+                              std::forward<ESender>(tile_e), beta, std::forward<W2Sender>(tile_w2)) |
+      tile::gemm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
 }
 
-template <class T>
-auto updateE(hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_w,
-             hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_w2,
-             hpx::future<matrix::Tile<T, Device::CPU>> tile_e) {
+template <Backend backend, class WSender, class W2Sender, class ESender>
+auto updateE(hpx::threads::thread_priority priority, WSender&& tile_w, W2Sender&& tile_w2,
+             ESender&& tile_e) {
   using blas::Op;
-  hpx::dataflow(matrix::unwrapExtendTiles(tile::internal::gemm_o), Op::NoTrans, Op::NoTrans, T(-1),
-                std::move(tile_w), std::move(tile_w2), T(1), std::move(tile_e));
+  using T = dlaf::internal::SenderElementType<ESender>;
+  dlaf::internal::whenAllLift(Op::NoTrans, Op::NoTrans, T(-1), std::forward<WSender>(tile_w),
+                              std::forward<W2Sender>(tile_w2), T(1), std::forward<ESender>(tile_e)) |
+      tile::gemm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
 }
 
 template <class T>
 void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& mat_e,
                                                               Matrix<const T, Device::CPU>& mat_i) {
+  static constexpr Backend backend = Backend::MC;
+  using hpx::threads::thread_priority;
+  using hpx::execution::experimental::keep_future;
+
   using matrix::Panel;
   using common::RoundRobin;
   using common::iterate_range2d;
@@ -202,22 +208,24 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
       for (SizeType j_e = 0; j_e < n; ++j_e) {
         const auto sz_e = mat_e.tileSize({i_v, j_e});
 
-        auto tile_v_up = splitTile(tile_v, {{0, 0}, {sizes[0], k}});
+        auto tile_v_up = keep_future(splitTile(tile_v, {{0, 0}, {sizes[0], k}}));
         auto tile_e = mat_e.read(LocalTileIndex(i_v, j_e));
-        const auto& tile_e_up = splitTile(tile_e, {{1, 0}, {sizes[0], sz_e.cols()}});
+        auto tile_e_up = keep_future(splitTile(tile_e, {{1, 0}, {sizes[0], sz_e.cols()}}));
 
-        computeW2(tile_v_up, tile_e_up, T(0), mat_w2(LocalTileIndex(0, j_e)));
+        computeW2<backend>(thread_priority::normal, std::move(tile_v_up), std::move(tile_e_up), T(0),
+                           mat_w2.readwrite_sender(LocalTileIndex(0, j_e)));
 
         if (affectsTwoRows) {
-          auto tile_v_down = splitTile(tile_v, {{sizes[0], 0}, {sizes[1], k}});
-          auto tile_e_down = mat_e.read(LocalTileIndex(i_v + 1, j_e));
+          auto tile_v_down = keep_future(splitTile(tile_v, {{sizes[0], 0}, {sizes[1], k}}));
+          auto tile_e_down = mat_e.read_sender(LocalTileIndex(i_v + 1, j_e));
 
-          computeW2(tile_v_down, tile_e_down, T(1), mat_w2(LocalTileIndex(0, j_e)));
+          computeW2<backend>(thread_priority::normal, std::move(tile_v_down), std::move(tile_e_down),
+                             T(1), mat_w2.readwrite_sender(LocalTileIndex(0, j_e)));
         }
       }
 
       tile_w_rw = splitTile(tile_w_full, {{0, 0}, {w_rows, k}});
-      computeW(std::move(tile_w_rw), tile_t);
+      computeW<backend>(thread_priority::normal, std::move(tile_w_rw), keep_future(tile_t));
       auto tile_w = mat_w.read(ij_refls);
 
       for (SizeType j_e = 0; j_e < n; ++j_e) {
@@ -226,16 +234,16 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
 
         auto tile_e = mat_e(idx_e);
         auto tile_e_up = splitTile(tile_e, {{1, 0}, {sizes[0], sz_e.cols()}});
-        auto tile_w_up = splitTile(tile_w, {{0, 0}, {sizes[0], k}});
-        const auto& tile_w2 = mat_w2.read(idx_e);
+        auto tile_w_up = keep_future(splitTile(tile_w, {{0, 0}, {sizes[0], k}}));
+        const auto& tile_w2 = mat_w2.read_sender(idx_e);
 
-        updateE(tile_w_up, tile_w2, std::move(tile_e_up));
+        updateE<backend>(hpx::threads::thread_priority::normal, tile_w_up, tile_w2, std::move(tile_e_up));
 
         if (affectsTwoRows) {
-          auto tile_e_dn = mat_e(LocalTileIndex{i_v + 1, j_e});
-          auto tile_w_dn = splitTile(tile_w, {{sizes[0], 0}, {sizes[1], k}});
+          auto tile_e_dn = mat_e.readwrite_sender(LocalTileIndex{i_v + 1, j_e});
+          auto tile_w_dn = keep_future(splitTile(tile_w, {{sizes[0], 0}, {sizes[1], k}}));
 
-          updateE(tile_w_dn, tile_w2, std::move(tile_e_dn));
+          updateE<backend>(hpx::threads::thread_priority::normal, tile_w_dn, tile_w2, std::move(tile_e_dn));
         }
       }
 

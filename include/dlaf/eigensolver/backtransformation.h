@@ -111,13 +111,14 @@ void backTransformation(comm::CommunicatorGrid grid, Matrix<T, device>& mat_c,
 // @param mat_e matrix to which the inverse transformation is applied to
 template <Backend backend, Device device, class T>
 void backTransformationT2B(matrix::Matrix<T, device>& mat_e, matrix::Matrix<const T, device>& mat_i) {
-  // TODO check conditions
-
   DLAF_ASSERT(matrix::local_matrix(mat_e), mat_e);
   DLAF_ASSERT(matrix::local_matrix(mat_i), mat_i);
 
   DLAF_ASSERT(matrix::square_size(mat_i), mat_i);
   DLAF_ASSERT(matrix::square_blocksize(mat_i), mat_i);
+
+  DLAF_ASSERT(mat_i.size().rows() == mat_e.size().rows(), mat_i, mat_e);
+  DLAF_ASSERT(mat_i.blockSize().rows() == mat_e.blockSize().rows(), mat_i, mat_e);
 
   internal::BackTransformationT2B<backend, device, T>::call(mat_e, mat_i);
 }

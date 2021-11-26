@@ -9,6 +9,8 @@
 //
 #pragma once
 
+#include <type_traits>
+
 #include <hpx/include/util.hpp>
 
 #include "dlaf/blas/tile.h"
@@ -28,19 +30,20 @@ namespace eigensolver {
 namespace internal {
 
 template <class T>
+static constexpr bool is_complex_v = std::is_same_v<T, ComplexType<T>>;
+
+template <class T>
+static SizeType nrSweeps(const SizeType m) {
+  return std::max<SizeType>(0, is_complex_v<T> ? m - 1 : m - 2);
+}
+
+static SizeType nrStepsPerSweep(SizeType sweep, SizeType m, SizeType mb) {
+  return std::max<SizeType>(0, sweep == m - 2 ? 1 : dlaf::util::ceilDiv(m - sweep - 2, mb));
+}
+
+template <class T>
 struct BackTransformationT2B<Backend::MC, Device::CPU, T> {
   static void call(Matrix<T, Device::CPU>& mat_e, Matrix<const T, Device::CPU>& mat_i);
-
-private:
-  static constexpr bool is_complex = std::is_same<T, ComplexType<T>>::value;
-
-  static SizeType nrSweeps(const SizeType m) {
-    return std::max<SizeType>(0, is_complex ? m - 1 : m - 2);
-  }
-
-  static SizeType nrStepsPerSweep(SizeType sweep, SizeType m, SizeType mb) {
-    return std::max<SizeType>(0, sweep == m - 2 ? 1 : dlaf::util::ceilDiv(m - sweep - 2, mb));
-  }
 };
 
 template <class T>
@@ -144,7 +147,7 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
   const auto& dist_i = mat_i.distribution();
   const TileElementSize w_blocksize(2 * b - 1, b);
 
-  const SizeType nsweeps = nrSweeps(mat_i.size().cols());
+  const SizeType nsweeps = nrSweeps<T>(mat_i.size().cols());
 
   // TODO w last tile is complete anyway, because of setup V well formed
   const matrix::Distribution dist_w({m * w_blocksize.rows(), w_blocksize.cols()}, w_blocksize,

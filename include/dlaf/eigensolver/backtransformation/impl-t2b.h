@@ -50,27 +50,26 @@ template <class T>
 auto setupVWellFormed(SizeType k, hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v_compact,
                       hpx::future<matrix::Tile<T, Device::CPU>> tile_v) -> decltype(tile_v_compact) {
   auto unzipV_func = [k](const auto& tile_v_compact, auto tile_v) {
-    constexpr auto General = lapack::MatrixType::General;
-    constexpr auto Upper = lapack::MatrixType::Upper;
-    constexpr auto Lower = lapack::MatrixType::Lower;
+    using lapack::MatrixType;
 
     for (SizeType j = 0; j < k; ++j) {
-      const SizeType size =
+      const auto size =
           std::min<SizeType>(tile_v.size().rows() - (1 + j), tile_v_compact.size().rows() - 1);
       // TODO this is needed because of complex last reflector (i.e. just 1 element long)
       if (size == 0)
         continue;
 
-      lacpy(General, size, 1, tile_v_compact.ptr({1, j}), tile_v_compact.ld(), tile_v.ptr({1 + j, j}),
-            tile_v.ld());
+      lacpy(MatrixType::General, size, 1, tile_v_compact.ptr({1, j}), tile_v_compact.ld(),
+            tile_v.ptr({1 + j, j}), tile_v.ld());
     }
 
     // TODO is it needed because W = V . T? or is it enough just setting ones?
-    laset(Upper, tile_v.size().rows(), k, T(0), T(1), tile_v.ptr({0, 0}), tile_v.ld());
+    laset(MatrixType::Upper, tile_v.size().rows(), k, T(0), T(1), tile_v.ptr({0, 0}), tile_v.ld());
 
     const SizeType mb = tile_v_compact.size().cols();
     if (tile_v.size().rows() > mb)
-      laset(Lower, tile_v.size().rows() - mb, k - 1, T(0), T(0), tile_v.ptr({mb, 0}), tile_v.ld());
+      laset(MatrixType::Lower, tile_v.size().rows() - mb, k - 1, T(0), T(0), tile_v.ptr({mb, 0}),
+            tile_v.ld());
 
     return matrix::Tile<const T, Device::CPU>(std::move(tile_v));
   };

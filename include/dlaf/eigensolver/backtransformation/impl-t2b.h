@@ -24,8 +24,7 @@
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
-namespace dlaf {
-namespace eigensolver {
+namespace dlaf::eigensolver {
 namespace internal {
 
 template <class T>
@@ -103,7 +102,6 @@ auto computeTFactor(hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_
 template <Backend backend, class VSender, class TSender>
 auto computeW(hpx::threads::thread_priority priority, VSender&& tile_v, TSender&& tile_t) {
   using namespace blas;
-
   using T = dlaf::internal::SenderElementType<VSender>;
   dlaf::internal::whenAllLift(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1),
                               std::forward<TSender>(tile_t), std::forward<VSender>(tile_v)) |
@@ -145,15 +143,29 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
 
   const SizeType mb = mat_e.blockSize().rows();
   const SizeType b = mb;
-
-  const auto& dist_i = mat_i.distribution();
-  const TileElementSize w_blocksize(2 * b - 1, b);
-
   const SizeType nsweeps = nrSweeps<T>(mat_i.size().cols());
 
+  const auto& dist_i = mat_i.distribution();
+
+  // Note:
+  // w_tile_sz can store reflectors are they are actually applied, opposed to how they are stored
+  // in compact form.
+  //
+  // e.g. Given b = 4
+  //
+  // compact       w_tile_sz
+  // 1 1 1 1       1 0 0 0
+  // a b c d       a 1 0 0
+  // a b c d       a b 1 0
+  // a b c d       a b c 1
+  //               0 b c d
+  //               0 0 c d
+  //               0 0 0 d
+
+  const TileElementSize w_tile_sz(2 * b - 1, b);
   // TODO w last tile is complete anyway, because of setup V well formed
-  const matrix::Distribution dist_w({mat_e.nrTiles().rows() * w_blocksize.rows(), w_blocksize.cols()},
-                                    w_blocksize, dist_i.commGridSize(), dist_i.rankIndex(),
+  const matrix::Distribution dist_w({mat_e.nrTiles().rows() * w_tile_sz.rows(), w_tile_sz.cols()},
+                                    w_tile_sz, dist_i.commGridSize(), dist_i.rankIndex(),
                                     dist_i.sourceRankIndex());
 
   constexpr std::size_t n_workspaces = 2;
@@ -269,6 +281,5 @@ DLAF_EIGENSOLVER_BACKTRANSFORMATION_T2B_MC_ETI(extern, double)
 DLAF_EIGENSOLVER_BACKTRANSFORMATION_T2B_MC_ETI(extern, std::complex<float>)
 DLAF_EIGENSOLVER_BACKTRANSFORMATION_T2B_MC_ETI(extern, std::complex<double>)
 
-}
 }
 }

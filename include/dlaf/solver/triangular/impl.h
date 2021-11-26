@@ -575,8 +575,10 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
 
     // TODO priority
     for (const auto& ij : common::iterate_range2d(bt_offset, indexFromOrigin(distr_b.localNrTiles())))
-      gemmTrailingMatrixTile<backend>(thread_priority::normal, op, T(1) / alpha, a_panel.read_sender(ij),
-                                      mat_b.read_sender(ij), b_panel.readwrite_sender(ij));
+      gemmTrailingMatrixTile<backend>(ij.row() == bt_offset.row() ? thread_priority::high
+                                                                  : thread_priority::normal,
+                                      op, T(1) / alpha, a_panel.read_sender(ij), mat_b.read_sender(ij),
+                                      b_panel.readwrite_sender(ij));
 
     for (const auto& idx : b_panel.iteratorLocal()) {
       if (this_rank.row() == rank_kk.row())

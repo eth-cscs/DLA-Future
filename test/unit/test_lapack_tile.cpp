@@ -48,14 +48,13 @@ std::vector<std::tuple<SizeType, SizeType, SizeType>> hegst_sizes = {{0, 0, 0}, 
 
 TYPED_TEST(TileOperationsTestMC, Hegst) {
   using Type = TypeParam;
-  SizeType m, extra_lda, extra_ldb;
 
   std::vector<int> itypes = {1, 2, 3};
 
   for (const auto& uplo : blas_uplos) {
     for (const auto& itype : itypes) {
       for (const auto& size : hegst_sizes) {
-        std::tie(m, extra_lda, extra_ldb) = size;
+        auto [m, extra_lda, extra_ldb] = size;
         testHegst<Type, Device::CPU>(itype, uplo, m, extra_lda, extra_ldb);
       }
     }
@@ -65,14 +64,13 @@ TYPED_TEST(TileOperationsTestMC, Hegst) {
 #ifdef DLAF_WITH_CUDA
 TYPED_TEST(TileOperationsTestGPU, Hegst) {
   using Type = TypeParam;
-  SizeType m, extra_lda, extra_ldb;
 
   std::vector<int> itypes = {1, 2, 3};
 
   for (const auto& uplo : blas_uplos) {
     for (const auto& itype : itypes) {
       for (const auto& size : hegst_sizes) {
-        std::tie(m, extra_lda, extra_ldb) = size;
+        auto [m, extra_lda, extra_ldb] = size;
         testHegst<Type, Device::GPU>(itype, uplo, m, extra_lda, extra_ldb);
       }
     }
@@ -81,8 +79,6 @@ TYPED_TEST(TileOperationsTestGPU, Hegst) {
 #endif
 
 TYPED_TEST(TileOperationsTestMC, lange) {
-  SizeType m, n, extra_lda;
-
   std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {{0, 0, 0},   {0, 0, 2},  // 0 size
                                                                  {1, 1, 0},   {12, 8, 1},  {8, 12, 1},
                                                                  {12, 12, 1}, {11, 17, 3}, {11, 17, 0},
@@ -90,7 +86,7 @@ TYPED_TEST(TileOperationsTestMC, lange) {
                                                                  {11, 11, 0}};
 
   for (const auto& size : sizes) {
-    std::tie(m, n, extra_lda) = size;
+    auto [m, n, extra_lda] = size;
 
     const SizeType lda = std::max<SizeType>(1, m) + extra_lda;
     auto tile = createTile<TypeParam, Device::CPU>(TileElementSize{m, n}, lda);
@@ -106,14 +102,12 @@ TYPED_TEST(TileOperationsTestMC, lange) {
 }
 
 TYPED_TEST(TileOperationsTestMC, lantr) {
-  SizeType m, n, extra_lda;
-
   std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {{0, 0, 0},   {0, 0, 2},  // 0 size
                                                                  {1, 1, 0},   {17, 11, 3}, {17, 11, 0},
                                                                  {17, 17, 3}, {17, 17, 3}, {11, 11, 0}};
 
   for (const auto& size : sizes) {
-    std::tie(m, n, extra_lda) = size;
+    auto [m, n, extra_lda] = size;
 
     for (const auto uplo : blas_uplos) {
       // transpose rectangular matrix to be useful for upper triangular case
@@ -142,11 +136,10 @@ std::vector<std::tuple<SizeType, SizeType>> potrf_sizes = {{0, 0}, {0, 2},  // 0
 
 TYPED_TEST(TileOperationsTestMC, Potrf) {
   using Type = TypeParam;
-  SizeType n, extra_lda;
 
   for (const auto uplo : blas_uplos) {
     for (const auto& size : potrf_sizes) {
-      std::tie(n, extra_lda) = size;
+      auto [n, extra_lda] = size;
 
       // Test version non returning info
       testPotrf<Type, Device::CPU, false>(uplo, n, extra_lda);
@@ -160,11 +153,10 @@ TYPED_TEST(TileOperationsTestMC, Potrf) {
 #ifdef DLAF_WITH_CUDA
 TYPED_TEST(TileOperationsTestGPU, Potrf) {
   using Type = TypeParam;
-  SizeType n, extra_lda;
 
   for (const auto uplo : blas_uplos) {
     for (const auto& size : potrf_sizes) {
-      std::tie(n, extra_lda) = size;
+      auto [n, extra_lda] = size;
 
       // Test version non returning info
       testPotrf<Type, Device::GPU, false>(uplo, n, extra_lda);
@@ -178,11 +170,10 @@ TYPED_TEST(TileOperationsTestGPU, Potrf) {
 
 TYPED_TEST(TileOperationsTestMC, PotrfNonPositiveDefinite) {
   using Type = TypeParam;
-  SizeType n, extra_lda;
 
   for (const auto uplo : blas_uplos) {
     for (const auto& size : potrf_sizes) {
-      std::tie(n, extra_lda) = size;
+      auto [n, extra_lda] = size;
       if (n == 0)
         continue;
 
@@ -195,11 +186,10 @@ TYPED_TEST(TileOperationsTestMC, PotrfNonPositiveDefinite) {
 #ifdef DLAF_WITH_CUDA
 TYPED_TEST(TileOperationsTestGPU, PotrfNonPositiveDefinite) {
   using Type = TypeParam;
-  SizeType n, extra_lda;
 
   for (const auto uplo : blas_uplos) {
     for (const auto& size : potrf_sizes) {
-      std::tie(n, extra_lda) = size;
+      auto [n, extra_lda] = size;
       if (n == 0)
         continue;
 
@@ -244,11 +234,9 @@ std::vector<std::tuple<SizeType, SizeType, SizeType>> setsizes = {{0, 0, 0},   {
                                                                   {17, 17, 3}, {17, 17, 3}, {11, 11, 0}};
 
 TYPED_TEST(TileOperationsTestMC, Laset) {
-  SizeType m, n, extra_lda;
-
   for (const auto& size : setsizes) {
     for (const auto mtype : lapack_matrices) {
-      std::tie(m, n, extra_lda) = size;
+      auto [m, n, extra_lda] = size;
       const SizeType lda = std::max<SizeType>(1, m) + extra_lda;
 
       const auto alpha = TypeUtilities<TypeParam>::element(-3.5, 8.72);
@@ -277,10 +265,8 @@ TYPED_TEST(TileOperationsTestMC, Laset) {
 }
 
 TYPED_TEST(TileOperationsTestMC, Set0) {
-  SizeType m, n, extra_lda;
-
   for (const auto& size : setsizes) {
-    std::tie(m, n, extra_lda) = size;
+    auto [m, n, extra_lda] = size;
     const SizeType lda = std::max<SizeType>(1, m) + extra_lda;
     Tile<TypeParam, Device::CPU> tile =
         createTile<TypeParam>([](TileElementIndex idx) { return idx.row() + idx.col(); },

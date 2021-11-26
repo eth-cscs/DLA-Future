@@ -241,20 +241,16 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
 }
 
 TYPED_TEST(BackTransformationEigenSolverTestMC, CorrectnessLocal) {
-  SizeType m, n, mb, nb;
-
   for (auto sz : sizes) {
-    std::tie(m, n, mb, nb) = sz;
+    auto [m, n, mb, nb] = sz;
     testBacktransformationEigenv<TypeParam>(m, n, mb, nb);
   }
 }
 
 TYPED_TEST(BackTransformationEigenSolverTestMC, CorrectnessDistributed) {
-  SizeType m, n, mb, nb;
-
   for (const auto& comm_grid : {this->commGrids()[0]}) {
     for (auto sz : sizes) {
-      std::tie(m, n, mb, nb) = sz;
+      auto [m, n, mb, nb] = sz;
       testBacktransformationEigenv<TypeParam>(comm_grid, m, n, mb, nb);
     }
   }

@@ -60,15 +60,13 @@ const std::vector<std::tuple<SizeType, SizeType>> sizes = {
 
 template <class T, Backend B, Device D>
 void testGenToStdEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb) {
-  std::function<T(const GlobalElementIndex&)> el_t, el_a, res_a;
-
   const LocalElementSize size(m, m);
   const TileElementSize block_size(mb, mb);
 
   Matrix<T, Device::CPU> mat_ah(size, block_size);
   Matrix<T, Device::CPU> mat_th(size, block_size);
 
-  std::tie(el_t, el_a, res_a) =
+  auto [el_t, el_a, res_a] =
       getGenToStdElementSetters<GlobalElementIndex, T>(m, 1, uplo, BaseType<T>(-2.f), BaseType<T>(1.5f),
                                                        BaseType<T>(.95f));
 
@@ -88,8 +86,6 @@ void testGenToStdEigensolver(const blas::Uplo uplo, const SizeType m, const Size
 template <class T, Backend B, Device D>
 void testGenToStdEigensolver(comm::CommunicatorGrid grid, const blas::Uplo uplo, const SizeType m,
                              const SizeType mb) {
-  std::function<T(const GlobalElementIndex&)> el_t, el_a, res_a;
-
   const GlobalElementSize size(m, m);
   const TileElementSize block_size(mb, mb);
   Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
@@ -100,7 +96,7 @@ void testGenToStdEigensolver(comm::CommunicatorGrid grid, const blas::Uplo uplo,
   Distribution distr_t(size, block_size, grid.size(), grid.rank(), src_rank_index);
   Matrix<T, Device::CPU> mat_th(std::move(distr_t));
 
-  std::tie(el_t, el_a, res_a) =
+  auto [el_t, el_a, res_a] =
       getGenToStdElementSetters<GlobalElementIndex, T>(m, 1, uplo, BaseType<T>(-2.f), BaseType<T>(1.5f),
                                                        BaseType<T>(.95f));
 
@@ -119,23 +115,19 @@ void testGenToStdEigensolver(comm::CommunicatorGrid grid, const blas::Uplo uplo,
 }
 
 TYPED_TEST(EigensolverGenToStdTestMC, CorrectnessLocal) {
-  SizeType m, mb;
-
   for (auto uplo : blas_uplos) {
     for (auto sz : sizes) {
-      std::tie(m, mb) = sz;
+      auto [m, mb] = sz;
       testGenToStdEigensolver<TypeParam, Backend::MC, Device::CPU>(uplo, m, mb);
     }
   }
 }
 
 TYPED_TEST(EigensolverGenToStdTestMC, CorrectnessDistributed) {
-  SizeType m, mb;
-
   for (const auto& comm_grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto sz : sizes) {
-        std::tie(m, mb) = sz;
+        auto [m, mb] = sz;
         testGenToStdEigensolver<TypeParam, Backend::MC, Device::CPU>(comm_grid, uplo, m, mb);
       }
     }
@@ -144,23 +136,19 @@ TYPED_TEST(EigensolverGenToStdTestMC, CorrectnessDistributed) {
 
 #ifdef DLAF_WITH_CUDA
 TYPED_TEST(EigensolverGenToStdTestGPU, CorrectnessLocal) {
-  SizeType m, mb;
-
   for (auto uplo : blas_uplos) {
     for (auto sz : sizes) {
-      std::tie(m, mb) = sz;
+      auto [m, mb] = sz;
       testGenToStdEigensolver<TypeParam, Backend::GPU, Device::GPU>(uplo, m, mb);
     }
   }
 }
 
 TYPED_TEST(EigensolverGenToStdTestGPU, CorrectnessDistributed) {
-  SizeType m, mb;
-
   for (const auto& comm_grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto sz : sizes) {
-        std::tie(m, mb) = sz;
+        auto [m, mb] = sz;
         testGenToStdEigensolver<TypeParam, Backend::GPU, Device::GPU>(comm_grid, uplo, m, mb);
       }
     }

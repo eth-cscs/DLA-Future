@@ -100,8 +100,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     auto add_mul = n * m * m / 2;
     const double total_ops = dlaf::total_ops<T>(add_mul, add_mul);
 
-    matrix_values_t ref_a, ref_b, ref_x;
-    std::tie(ref_a, ref_b, ref_x) = ::sampleLeftTr(uplo, op, diag, alpha, ah.size().rows());
+    auto [ref_a, ref_b, ref_x] = ::sampleLeftTr(uplo, op, diag, alpha, ah.size().rows());
 
     for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
       if (0 == world.rank() && run_index >= 0)

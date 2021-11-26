@@ -237,11 +237,8 @@ std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, GlobalT
 //
 // Which we expect to be the equal to the one computed previously.
 TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
-  SizeType a_m, a_n, mb, nb, k;
-  GlobalTileIndex v_start;
-
   for (auto config : configs) {
-    std::tie(a_m, a_n, mb, nb, k, v_start) = config;
+    auto [a_m, a_n, mb, nb, k, v_start] = config;
 
     ASSERT_LE(k, nb);
 
@@ -312,12 +309,9 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
 }
 
 TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
-  SizeType a_m, a_n, mb, nb, k;
-  GlobalTileIndex v_start;
-
   for (auto comm_grid : this->commGrids()) {
     for (auto config : configs) {
-      std::tie(a_m, a_n, mb, nb, k, v_start) = config;
+      auto [a_m, a_n, mb, nb, k, v_start] = config;
 
       ASSERT_LE(k, nb);
 

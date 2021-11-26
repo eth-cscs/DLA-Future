@@ -178,10 +178,7 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
                          : panelT.iteratorLocal();
 
   for (const auto& indexT : range) {
-    SizeType index_diag;
-    comm::IndexT_MPI owner_diag;
-
-    std::tie(index_diag, owner_diag) = internal::transposedOwner<coordT>(dist, indexT);
+    auto [index_diag, owner_diag] = internal::transposedOwner<coordT>(dist, indexT);
 
     if (dist.rankIndex().get(coord) == owner_diag) {
       const auto index_diag_local = dist.template localTileFromGlobalTile<coord>(index_diag);

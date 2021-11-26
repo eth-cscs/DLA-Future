@@ -188,63 +188,71 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
       const SizeType nrefls = std::min(mb, nsweeps - sweep_tile * mb);
       const SizeType k = sweep_tile == last_sweep_tile ? nrefls : std::min(w_rows - 1, mb);
 
+      const matrix::SubTileSpec w_spec{{0, 0}, {w_rows, k}};
+      const matrix::SubTileSpec v_up{{0, 0}, {sizes[0], k}};
+      const matrix::SubTileSpec v_dn{{sizes[0], 0}, {sizes[1], k}};
+
       mat_w.setWidth(k);
       mat_t.setWidth(k);
       mat_w2.setHeight(k);
 
       // TODO setRange?
 
+      // Note:
+      // Let's use W as a temporary storage for the well formed version of V, which is needed
+      // for computing W2 = V . E, and it is also useful for computing T
       auto tile_w_full = mat_w(ij_refls);
-      auto tile_w_rw = splitTile(tile_w_full, {{0, 0}, {w_rows, k}});
+      auto tile_w_rw = splitTile(tile_w_full, w_spec);
 
       const auto& tile_i = mat_i.read(ij_refls);
       auto tile_v = setupVWellFormed(k, tile_i, std::move(tile_w_rw));
 
+      // W2 = V* . E
+      // Note:
+      // Since the well-formed V is stored in W, we have to use it before W will get overwritten.
+      // For this reason W2 is computed before W.
+      for (SizeType j_e = 0; j_e < n; ++j_e) {
+        const auto sz_e = mat_e.tileSize({i_v, j_e});
+        auto tile_e = mat_e.read(LocalTileIndex(i_v, j_e));
+
+        computeW2<backend>(thread_priority::normal, keep_future(splitTile(tile_v, v_up)),
+                           keep_future(splitTile(tile_e, {{1, 0}, {sizes[0], sz_e.cols()}})), T(0),
+                           mat_w2.readwrite_sender(LocalTileIndex(0, j_e)));
+
+        if (affectsTwoRows)
+          computeW2<backend>(thread_priority::normal, keep_future(splitTile(tile_v, v_dn)),
+                             mat_e.read_sender(LocalTileIndex(i_v + 1, j_e)), T(1),
+                             mat_w2.readwrite_sender(LocalTileIndex(0, j_e)));
+      }
+
+      // Note:
+      // And we use it also for computing the T factor
       auto tile_t_full = mat_t(LocalTileIndex(i_v, 0));
       auto tile_t = computeTFactor(tile_i, tile_v, splitTile(tile_t_full, {{0, 0}, {k, k}}));
 
+      // W = V . T
       // Note:
-      // W2 is computed before W, because W is used as temporary storage for V.
-      for (SizeType j_e = 0; j_e < n; ++j_e) {
-        const auto sz_e = mat_e.tileSize({i_v, j_e});
-
-        auto tile_v_up = keep_future(splitTile(tile_v, {{0, 0}, {sizes[0], k}}));
-        auto tile_e = mat_e.read(LocalTileIndex(i_v, j_e));
-        auto tile_e_up = keep_future(splitTile(tile_e, {{1, 0}, {sizes[0], sz_e.cols()}}));
-
-        computeW2<backend>(thread_priority::normal, std::move(tile_v_up), std::move(tile_e_up), T(0),
-                           mat_w2.readwrite_sender(LocalTileIndex(0, j_e)));
-
-        if (affectsTwoRows) {
-          auto tile_v_down = keep_future(splitTile(tile_v, {{sizes[0], 0}, {sizes[1], k}}));
-          auto tile_e_down = mat_e.read_sender(LocalTileIndex(i_v + 1, j_e));
-
-          computeW2<backend>(thread_priority::normal, std::move(tile_v_down), std::move(tile_e_down),
-                             T(1), mat_w2.readwrite_sender(LocalTileIndex(0, j_e)));
-        }
-      }
-
-      tile_w_rw = splitTile(tile_w_full, {{0, 0}, {w_rows, k}});
+      // At this point W can be overwritten, but this will happen just after W2 and T computations
+      // finished. T was already a dependency, but W2 wasn't, meaning it won't run in parallel,
+      // but it could.
+      tile_w_rw = splitTile(tile_w_full, w_spec);
       computeW<backend>(thread_priority::normal, std::move(tile_w_rw), keep_future(tile_t));
       auto tile_w = mat_w.read(ij_refls);
 
+      // E -= W . W2
       for (SizeType j_e = 0; j_e < n; ++j_e) {
         const LocalTileIndex idx_e(i_v, j_e);
         const auto sz_e = mat_e.tileSize({i_v, j_e});
 
         auto tile_e = mat_e(idx_e);
-        auto tile_e_up = splitTile(tile_e, {{1, 0}, {sizes[0], sz_e.cols()}});
-        auto tile_w_up = keep_future(splitTile(tile_w, {{0, 0}, {sizes[0], k}}));
         const auto& tile_w2 = mat_w2.read_sender(idx_e);
 
-        updateE<backend>(hpx::threads::thread_priority::normal, tile_w_up, tile_w2, std::move(tile_e_up));
+        updateE<backend>(hpx::threads::thread_priority::normal, keep_future(splitTile(tile_w, v_up)),
+                         tile_w2, splitTile(tile_e, {{1, 0}, {sizes[0], sz_e.cols()}}));
 
-        if (affectsTwoRows) {
-          auto tile_e_dn = mat_e.readwrite_sender(LocalTileIndex{i_v + 1, j_e});
-          auto tile_w_dn = keep_future(splitTile(tile_w, {{sizes[0], 0}, {sizes[1], k}}));
-
-          updateE<backend>(hpx::threads::thread_priority::normal, tile_w_dn, tile_w2, std::move(tile_e_dn));
-        }
+        if (affectsTwoRows)
+          updateE<backend>(hpx::threads::thread_priority::normal, keep_future(splitTile(tile_w, v_dn)),
+                           tile_w2, mat_e.readwrite_sender(LocalTileIndex{i_v + 1, j_e}));
       }
 
       mat_t.reset();

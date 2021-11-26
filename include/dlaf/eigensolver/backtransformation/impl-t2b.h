@@ -143,9 +143,6 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
   if (mat_i.size().isEmpty() || mat_e.size().isEmpty())
     return;
 
-  const SizeType m = mat_e.nrTiles().rows();
-  const SizeType n = mat_e.nrTiles().cols();
-
   const SizeType mb = mat_e.blockSize().rows();
   const SizeType b = mb;
 
@@ -155,8 +152,9 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
   const SizeType nsweeps = nrSweeps<T>(mat_i.size().cols());
 
   // TODO w last tile is complete anyway, because of setup V well formed
-  const matrix::Distribution dist_w({m * w_blocksize.rows(), w_blocksize.cols()}, w_blocksize,
-                                    dist_i.commGridSize(), dist_i.rankIndex(), dist_i.sourceRankIndex());
+  const matrix::Distribution dist_w({mat_e.nrTiles().rows() * w_blocksize.rows(), w_blocksize.cols()},
+                                    w_blocksize, dist_i.commGridSize(), dist_i.rankIndex(),
+                                    dist_i.sourceRankIndex());
 
   constexpr std::size_t n_workspaces = 2;
   RoundRobin<Panel<Coord::Col, T, Device::CPU>> t_panels(n_workspaces, mat_i.distribution());
@@ -176,7 +174,7 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
 
       const LocalTileIndex ij_refls(i_v, sweep_tile);
 
-      const bool affectsTwoRows = i_v < (m - 1);
+      const bool affectsTwoRows = i_v < (mat_i.nrTiles().rows() - 1);
 
       std::array<SizeType, 2> sizes{
           mat_i.tileSize({i_v, sweep_tile}).rows() - 1,
@@ -211,7 +209,7 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
       // Note:
       // Since the well-formed V is stored in W, we have to use it before W will get overwritten.
       // For this reason W2 is computed before W.
-      for (SizeType j_e = 0; j_e < n; ++j_e) {
+      for (SizeType j_e = 0; j_e < mat_e.nrTiles().cols(); ++j_e) {
         const auto sz_e = mat_e.tileSize({i_v, j_e});
         auto tile_e = mat_e.read(LocalTileIndex(i_v, j_e));
 
@@ -240,7 +238,7 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
       auto tile_w = mat_w.read(ij_refls);
 
       // E -= W . W2
-      for (SizeType j_e = 0; j_e < n; ++j_e) {
+      for (SizeType j_e = 0; j_e < mat_e.nrTiles().cols(); ++j_e) {
         const LocalTileIndex idx_e(i_v, j_e);
         const auto sz_e = mat_e.tileSize({i_v, j_e});
 

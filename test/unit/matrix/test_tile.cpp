@@ -444,10 +444,8 @@ void testSubtileConst(std::string name, TileElementSize size, SizeType ld, const
   auto tile = std::move(std::get<0>(tmp));
   auto tile_ptr = std::move(std::get<1>(tmp));
 
-  hpx::lcos::local::promise<Tile<T, D>> tile_p;
-  hpx::shared_future<Tile<const T, D>> tile_sf;
-  hpx::future<Tile<T, D>> next_tile_f;
-  std::tie(tile_p, tile_sf, next_tile_f) = createTileChain<const T, D>();
+  auto [tile_p, tile_f, next_tile_f] = createTileChain<const T, D>();
+  auto tile_sf = tile_f.share();
   ASSERT_TRUE(tile_sf.valid() && !tile_sf.is_ready());
   ASSERT_TRUE(next_tile_f.valid() && !next_tile_f.is_ready());
 
@@ -480,10 +478,8 @@ void testSubtilesConst(std::string name, TileElementSize size, SizeType ld,
   auto tile = std::move(std::get<0>(tmp));
   auto tile_ptr = std::move(std::get<1>(tmp));
 
-  hpx::lcos::local::promise<Tile<T, D>> tile_p;
-  hpx::shared_future<Tile<const T, D>> tile_sf;
-  hpx::future<Tile<T, D>> next_tile_f;
-  std::tie(tile_p, tile_sf, next_tile_f) = createTileChain<const T, D>();
+  auto [tile_p, tile_f, next_tile_f] = createTileChain<const T, D>();
+  auto tile_sf = tile_f.share();
   ASSERT_TRUE(tile_sf.valid() && !tile_sf.is_ready());
   ASSERT_TRUE(next_tile_f.valid() && !next_tile_f.is_ready());
 
@@ -519,10 +515,8 @@ void testSubOfSubtileConst(std::string name, TileElementSize size, SizeType ld,
   auto tile = std::move(std::get<0>(tmp));
   auto tile_ptr = std::move(std::get<1>(tmp));
 
-  hpx::lcos::local::promise<Tile<T, D>> tile_p;
-  hpx::shared_future<Tile<const T, D>> tile_sf;
-  hpx::future<Tile<T, D>> next_tile_f;
-  std::tie(tile_p, tile_sf, next_tile_f) = createTileChain<const T, D>();
+  auto [tile_p, tile_f, next_tile_f] = createTileChain<const T, D>();
+  auto tile_sf = tile_f.share();
   ASSERT_TRUE(tile_sf.valid() && !tile_sf.is_ready());
   ASSERT_TRUE(next_tile_f.valid() && !next_tile_f.is_ready());
 
@@ -587,10 +581,7 @@ void testSubtile(std::string name, TileElementSize size, SizeType ld, const SubT
   auto tile = std::move(std::get<0>(tmp));
   auto tile_ptr = std::move(std::get<1>(tmp));
 
-  hpx::lcos::local::promise<Tile<T, D>> tile_p;
-  hpx::future<Tile<T, D>> tile_f;
-  hpx::future<Tile<T, D>> next_tile_f;
-  std::tie(tile_p, tile_f, next_tile_f) = createTileChain<T, D>();
+  auto [tile_p, tile_f, next_tile_f] = createTileChain<T, D>();
   ASSERT_TRUE(tile_f.valid() && !tile_f.is_ready());
   ASSERT_TRUE(next_tile_f.valid() && !next_tile_f.is_ready());
 
@@ -635,10 +626,7 @@ void testSubtilesDisjoint(std::string name, TileElementSize size, SizeType ld,
   auto tile = std::move(std::get<0>(tmp));
   auto tile_ptr = std::move(std::get<1>(tmp));
 
-  hpx::lcos::local::promise<Tile<T, D>> tile_p;
-  hpx::future<Tile<T, D>> tile_f;
-  hpx::future<Tile<T, D>> next_tile_f;
-  std::tie(tile_p, tile_f, next_tile_f) = createTileChain<T, D>();
+  auto [tile_p, tile_f, next_tile_f] = createTileChain<T, D>();
   ASSERT_TRUE(tile_f.valid() && !tile_f.is_ready());
   ASSERT_TRUE(next_tile_f.valid() && !next_tile_f.is_ready());
 
@@ -679,10 +667,7 @@ void testSubOfSubtile(std::string name, TileElementSize size, SizeType ld,
   auto tile = std::move(std::get<0>(tmp));
   auto tile_ptr = std::move(std::get<1>(tmp));
 
-  hpx::lcos::local::promise<Tile<T, D>> tile_p;
-  hpx::future<Tile<T, D>> tile_f;
-  hpx::future<Tile<T, D>> next_tile_f;
-  std::tie(tile_p, tile_f, next_tile_f) = createTileChain<T, D>();
+  auto [tile_p, tile_f, next_tile_f] = createTileChain<T, D>();
   ASSERT_TRUE(tile_f.valid() && !tile_f.is_ready());
   ASSERT_TRUE(next_tile_f.valid() && !next_tile_f.is_ready());
 

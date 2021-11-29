@@ -122,7 +122,7 @@ struct Transform<Backend::GPU> {
           call_helper(std::declval<cudaStream_t&>(), std::declval<cublasHandle_t&>(),
                       std::declval<cusolverDnHandle_t&>(), std::declval<F>(), std::declval<Ts&>()...));
       using type =
-          typename std::conditional<std::is_void<result_type>::value, Tuple<>, Tuple<result_type>>::type;
+          typename std::conditional<std::is_void_v<result_type>, Tuple<>, Tuple<result_type>>::type;
     };
 
     template <template <typename...> class Tuple, template <typename...> class Variant>

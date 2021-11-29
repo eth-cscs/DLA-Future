@@ -45,8 +45,9 @@ struct BackTransformationT2B<Backend::MC, Device::CPU, T> {
 };
 
 template <class T>
-auto setupVWellFormed(SizeType k, hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v_compact,
-                      hpx::future<matrix::Tile<T, Device::CPU>> tile_v) -> decltype(tile_v_compact) {
+hpx::shared_future<matrix::Tile<const T, Device::CPU>> setupVWellFormed(
+    SizeType k, hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v_compact,
+    hpx::future<matrix::Tile<T, Device::CPU>> tile_v) {
   auto unzipV_func = [k](const auto& tile_v_compact, auto tile_v) {
     using lapack::MatrixType;
 
@@ -88,7 +89,7 @@ auto computeTFactor(hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_
     std::vector<T> taus;
     taus.resize(to_sizet(tile_v.size().cols()));
     for (SizeType i = 0; i < to_SizeType(taus.size()); ++i)
-      taus[to_sizet(i)] = *tile_taus.ptr({0, i});
+      taus[to_sizet(i)] = tile_taus({0, i});
 
     larft(Direction::Forward, StoreV::Columnwise, n, k, tile_v.ptr(), tile_v.ld(), taus.data(),
           tile_t.ptr(), tile_t.ld());

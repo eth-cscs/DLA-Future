@@ -44,8 +44,6 @@ struct calculateTau {
     const T imag = T(1) / size;  // TODO check tau vs dotprod
     return {(T(1.0) + std::sqrt(T(1) - dotprod * imag * imag)) / dotprod, imag};
   }
-
-  // TODO random number has to be "resetted" each time
 };
 
 template <class T>
@@ -84,7 +82,7 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb) {
 
   Matrix<const T, Device::CPU> mat_i = [m, mb]() {
     Matrix<T, Device::CPU> mat_i({m, m}, {mb, mb});
-    set_random(mat_i);  // TODO ? same seed ==> mat_i == mat_e
+    set_random(mat_i);
 
     const auto m = mat_i.distribution().localNrTiles().cols();
     for (SizeType j = 0; j < m; ++j) {

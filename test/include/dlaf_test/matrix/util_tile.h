@@ -129,9 +129,7 @@ Tile<T, D> createTile(ElementGetter val, const TileElementSize size, const SizeT
 /// for any @p index given
 template <class T>
 auto fixedValueTile(T value) noexcept {
-  return [=](TileElementIndex) noexcept {
-    return value;
-  };
+  return [=](TileElementIndex) noexcept { return value; };
 }
 
 namespace internal {
@@ -211,6 +209,7 @@ template <class T, Device D, class ElementGetter>
 void checkEQ(ElementGetter&& exp_el, const Tile<const T, D>& tile, const char* file, const int line) {
   auto err_message = [](T expected, T value) {
     std::stringstream s;
+    s.precision(17);
     s << "expected " << expected << " == " << value;
     return s.str();
   };

@@ -73,7 +73,7 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb) {
 
   auto nrSweeps = [m]() {
     const bool is_complex = std::is_same<T, ComplexType<T>>::value;
-    return std::max<SizeType>(0, is_complex ? m - 1 : m - 2);
+    return std::max<SizeType>(0, isComplex ? m - 1 : m - 2);
   };
 
   auto nrStepsPerSweep = [m, mb](const SizeType sweep) {

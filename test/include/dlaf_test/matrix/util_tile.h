@@ -129,9 +129,7 @@ Tile<T, D> createTile(ElementGetter val, const TileElementSize size, const SizeT
 /// for any @p index given
 template <class T>
 auto fixedValueTile(T value) noexcept {
-  return [=](TileElementIndex) noexcept {
-    return value;
-  };
+  return [=](TileElementIndex) noexcept { return value; };
 }
 
 namespace internal {

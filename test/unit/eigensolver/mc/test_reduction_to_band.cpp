@@ -283,7 +283,7 @@ auto checkResult(const SizeType k, const SizeType band_size, const SizeType bloc
   }
 
   // Eventually, check the result obtained by applying the inverse transformation equals the original matrix
-  auto result = [& dist = reference.distribution(),
+  auto result = [&dist = reference.distribution(),
                  &mat_local = mat_b](const GlobalElementIndex& element) {
     const auto tile_index = dist.globalTileIndex(element);
     const auto tile_element = dist.tileElementIndex(element);

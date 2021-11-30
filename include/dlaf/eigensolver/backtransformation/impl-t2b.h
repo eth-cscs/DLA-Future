@@ -174,57 +174,84 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
   RoundRobin<Panel<Coord::Col, T, Device::CPU>> w_panels(n_workspaces, dist_w);
   RoundRobin<Panel<Coord::Row, T, Device::CPU>> w2_panels(n_workspaces, mat_e.distribution());
 
-  const SizeType last_sweep_tile = (nsweeps - 1) / mb;
-  for (SizeType sweep_tile = last_sweep_tile; sweep_tile >= 0; --sweep_tile) {
-    const SizeType steps = nrStepsPerSweep(sweep_tile * mb, mat_i.size().cols(), mb);
-
+  // Note: sweep are on diagonals, steps are on verticals
+  const SizeType j_last_sweep = (nsweeps - 1) / mb;
+  for (SizeType j = j_last_sweep; j >= 0; --j) {
     auto& mat_w = w_panels.nextResource();
     auto& mat_t = t_panels.nextResource();
     auto& mat_w2 = w2_panels.nextResource();
 
+    // Note: apply the entire column (steps)
+    const SizeType steps = nrStepsPerSweep(j * mb, mat_i.size().cols(), mb);
     for (SizeType step = 0; step < steps; ++step) {
-      const SizeType i_v = sweep_tile + step;
+      const SizeType i = j + step;
+      const LocalTileIndex ij_refls(i, j);
 
-      const LocalTileIndex ij_refls(i_v, sweep_tile);
+      const bool affectsTwoRows = i < (mat_i.nrTiles().rows() - 1);
 
-      const bool affectsTwoRows = i_v < (mat_i.nrTiles().rows() - 1);
-
-      std::array<SizeType, 2> sizes{
-          mat_i.tileSize({i_v, sweep_tile}).rows() - 1,
-          affectsTwoRows ? mat_i.tileSize({i_v + 1, sweep_tile}).rows() : 0,
+      // Note: Since the band is of size (mb + 1), in order to tridiagonalize the matrix,
+      // reflectors are of length mb and start with an offset of 1. This means that the application
+      // of the reflector involves multiple tiles.
+      //
+      // e.g. mb = 4
+      // reflectors   matrix
+      //              X X X X
+      // 1 0 0 0      X X X X
+      // a 1 0 0      X X X X
+      // a b 1 0      X X X X
+      //              -------
+      // a b c 1      Y Y Y Y
+      // 0 b c d      Y Y Y Y
+      // 0 0 c d      Y Y Y Y
+      // 0 0 0 d      Y Y Y Y
+      //
+      // From the drawing above, it is possible to see the dashed tile separation between X and Y,
+      // and how the reflectors on the left are going to be applied. In particular, the first row of
+      // the upper tile is not afftected.
+      //
+      // For this reason, we pre-compute the size of the upper and lower (in case there is one) tiles,
+      // together with the size of the tile of the refelctors (v_rows), that as depicted above it
+      // has a different blocksize (no dashed line, it's a single tile)
+      const std::array<SizeType, 2> sizes{
+          mat_i.tileSize({i, j}).rows() - 1,
+          affectsTwoRows ? mat_i.tileSize({i + 1, j}).rows() : 0,
       };
-      const SizeType w_rows = sizes[0] + sizes[1];
+      const SizeType v_rows = sizes[0] + sizes[1];
 
-      // TODO fix this
-      const SizeType nrefls = std::min(mb, nsweeps - sweep_tile * mb);
-      const SizeType k = sweep_tile == last_sweep_tile ? nrefls : std::min(w_rows - 1, mb);
+      // Note: In general a tile contains a reflector per column, but in case there aren't enough
+      // rows for storing a reflector whose length is greater than 1, then the number is reduced
+      // accordingly. An exception is represented by the last bottom right tile, where the refelctors
+      // are all the remaining ones (i.e. there may be a length 1 reflector in complex cases)
+      const SizeType k_refls = (j != j_last_sweep) ? std::min(v_rows - 1, mb) : (nsweeps - j * mb);
 
-      const matrix::SubTileSpec w_spec{{0, 0}, {w_rows, k}};
-      const matrix::SubTileSpec v_up{{0, 0}, {sizes[0], k}};
-      const matrix::SubTileSpec v_dn{{sizes[0], 0}, {sizes[1], k}};
+      const matrix::SubTileSpec v_spec{{0, 0}, {v_rows, k_refls}};
+      const matrix::SubTileSpec v_up{{0, 0}, {sizes[0], k_refls}};
+      const matrix::SubTileSpec v_dn{{sizes[0], 0}, {sizes[1], k_refls}};
 
-      mat_w.setWidth(k);
-      mat_t.setWidth(k);
-      mat_w2.setHeight(k);
+      if (k_refls < mat_i.tileSize({i, j}).cols()) {
+        mat_w.setWidth(k_refls);
+        mat_t.setWidth(k_refls);
+        mat_w2.setHeight(k_refls);
+      }
 
-      // TODO setRange?
+      // TODO setRange? it would mean setting the range to a specific tile for each step, and resetting at the end
 
       // Note:
       // Let's use W as a temporary storage for the well formed version of V, which is needed
       // for computing W2 = V . E, and it is also useful for computing T
       auto tile_w_full = mat_w(ij_refls);
-      auto tile_w_rw = splitTile(tile_w_full, w_spec);
+      auto tile_w_rw = splitTile(tile_w_full, v_spec);
 
       const auto& tile_i = mat_i.read(ij_refls);
-      auto tile_v = setupVWellFormed(k, tile_i, std::move(tile_w_rw));
+      auto tile_v = setupVWellFormed(k_refls, tile_i, std::move(tile_w_rw));
 
       // W2 = V* . E
       // Note:
       // Since the well-formed V is stored in W, we have to use it before W will get overwritten.
       // For this reason W2 is computed before W.
       for (SizeType j_e = 0; j_e < mat_e.nrTiles().cols(); ++j_e) {
-        const auto sz_e = mat_e.tileSize({i_v, j_e});
-        auto tile_e = mat_e.read(LocalTileIndex(i_v, j_e));
+        const auto sz_e = mat_e.tileSize({i, j_e});
+        auto tile_e = mat_e.read(LocalTileIndex(i, j_e));
 
         computeW2<backend>(thread_priority::normal, keep_future(splitTile(tile_v, v_up)),
                            keep_future(splitTile(tile_e, {{1, 0}, {sizes[0], sz_e.cols()}})), T(0),
@@ -232,28 +259,28 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
 
         if (affectsTwoRows)
           computeW2<backend>(thread_priority::normal, keep_future(splitTile(tile_v, v_dn)),
-                             mat_e.read_sender(LocalTileIndex(i_v + 1, j_e)), T(1),
+                             mat_e.read_sender(LocalTileIndex(i + 1, j_e)), T(1),
                              mat_w2.readwrite_sender(LocalTileIndex(0, j_e)));
       }
 
       // Note:
       // And we use it also for computing the T factor
-      auto tile_t_full = mat_t(LocalTileIndex(i_v, 0));
-      auto tile_t = computeTFactor(tile_i, tile_v, splitTile(tile_t_full, {{0, 0}, {k, k}}));
+      auto tile_t_full = mat_t(LocalTileIndex(i, 0));
+      auto tile_t = computeTFactor(tile_i, tile_v, splitTile(tile_t_full, {{0, 0}, {k_refls, k_refls}}));
 
       // W = V . T
       // Note:
       // At this point W can be overwritten, but this will happen just after W2 and T computations
       // finished. T was already a dependency, but W2 wasn't, meaning it won't run in parallel,
       // but it could.
-      tile_w_rw = splitTile(tile_w_full, w_spec);
+      tile_w_rw = splitTile(tile_w_full, v_spec);
       computeW<backend>(thread_priority::normal, std::move(tile_w_rw), keep_future(tile_t));
       auto tile_w = mat_w.read(ij_refls);
 
       // E -= W . W2
       for (SizeType j_e = 0; j_e < mat_e.nrTiles().cols(); ++j_e) {
-        const LocalTileIndex idx_e(i_v, j_e);
-        const auto sz_e = mat_e.tileSize({i_v, j_e});
+        const LocalTileIndex idx_e(i, j_e);
+        const auto sz_e = mat_e.tileSize({i, j_e});
 
         auto tile_e = mat_e(idx_e);
         const auto& tile_w2 = mat_w2.read_sender(idx_e);
@@ -263,7 +290,7 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
 
         if (affectsTwoRows)
           updateE<backend>(hpx::threads::thread_priority::normal, keep_future(splitTile(tile_w, v_dn)),
-                           tile_w2, mat_e.readwrite_sender(LocalTileIndex{i_v + 1, j_e}));
+                           tile_w2, mat_e.readwrite_sender(LocalTileIndex{i + 1, j_e}));
       }
 
       mat_t.reset();

@@ -11,13 +11,9 @@
 
 #include "dlaf/types.h"
 
-namespace dlaf {
-namespace eigensolver {
-namespace internal {
+namespace dlaf::eigensolver::internal {
 
 template <Backend backend, Device device, class T>
-struct BackTransformation {};
+struct BackTransformationT2B {};
 
-}
-}
 }

@@ -16,7 +16,7 @@
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/round_robin.h"
-#include "dlaf/eigensolver/backtransformation/api.h"
+#include "dlaf/eigensolver/bt_band_to_tri/api.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/panel.h"
 #include "dlaf/matrix/tile.h"
@@ -24,8 +24,7 @@
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
-namespace dlaf::eigensolver {
-namespace internal {
+namespace dlaf::eigensolver::internal {
 
 template <class T>
 static constexpr bool is_complex_v = std::is_same_v<T, ComplexType<T>>;
@@ -313,5 +312,4 @@ DLAF_EIGENSOLVER_BACKTRANSFORMATION_T2B_MC_ETI(extern, double)
 DLAF_EIGENSOLVER_BACKTRANSFORMATION_T2B_MC_ETI(extern, std::complex<float>)
 DLAF_EIGENSOLVER_BACKTRANSFORMATION_T2B_MC_ETI(extern, std::complex<double>)
 
-}
 }

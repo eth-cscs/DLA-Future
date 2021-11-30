@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: Install tools
         run: |
-          sudo apt-get install --no-install-recommends clang-format-8 python3
+          sudo apt-get install --no-install-recommends clang-format-10 python3
           pip3 install black==21.8b0
       - name: Checkout
         uses: actions/checkout@v2

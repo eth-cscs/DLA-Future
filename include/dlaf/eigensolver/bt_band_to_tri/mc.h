@@ -27,14 +27,14 @@
 namespace dlaf::eigensolver::internal {
 
 template <class T>
-static constexpr bool is_complex_v = std::is_same_v<T, ComplexType<T>>;
+inline constexpr bool is_complex_v = std::is_same_v<T, ComplexType<T>>;
 
 template <class T>
-static SizeType nrSweeps(const SizeType m) {
+SizeType nrSweeps(const SizeType m) {
   return std::max<SizeType>(0, is_complex_v<T> ? m - 1 : m - 2);
 }
 
-static SizeType nrStepsPerSweep(SizeType sweep, SizeType m, SizeType mb) {
+inline SizeType nrStepsPerSweep(SizeType sweep, SizeType m, SizeType mb) {
   return std::max<SizeType>(0, sweep == m - 2 ? 1 : dlaf::util::ceilDiv(m - sweep - 2, mb));
 }
 

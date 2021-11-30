@@ -56,6 +56,15 @@ void computeTaus(const SizeType n, const SizeType k, matrix::Tile<T, Device::CPU
   }
 }
 
+template <class T>
+constexpr SizeType nrSweeps(SizeType m) {
+  return std::max<SizeType>(0, isComplex_v<T> ? m - 1 : m - 2);
+}
+
+constexpr SizeType nrStepsPerSweep(const SizeType sweep, const SizeType m, const SizeType mb) {
+  return std::max<SizeType>(0, sweep == m - 2 ? 1 : dlaf::util::ceilDiv(m - sweep - 2, mb));
+}
+
 struct config_t {
   const SizeType m, n, mb, nb;
 };
@@ -70,15 +79,6 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb) {
   Matrix<T, Device::CPU> mat_e({m, n}, {mb, nb});
   set_random(mat_e);
   auto mat_e_local = allGather(lapack::MatrixType::General, mat_e);
-
-  auto nrSweeps = [m]() {
-    const bool is_complex = std::is_same<T, ComplexType<T>>::value;
-    return std::max<SizeType>(0, isComplex ? m - 1 : m - 2);
-  };
-
-  auto nrStepsPerSweep = [m, mb](const SizeType sweep) {
-    return std::max<SizeType>(0, sweep == m - 2 ? 1 : dlaf::util::ceilDiv(m - sweep - 2, mb));
-  };
 
   Matrix<const T, Device::CPU> mat_i = [m, mb]() {
     Matrix<T, Device::CPU> mat_i({m, m}, {mb, mb});
@@ -105,8 +105,8 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb) {
 
   eigensolver::backTransformationT2B<Backend::MC>(mat_e, mat_i);
 
-  for (SizeType sweep = nrSweeps() - 1; sweep >= 0; --sweep) {
-    for (SizeType step = nrStepsPerSweep(sweep) - 1; step >= 0; --step) {
+  for (SizeType sweep = nrSweeps<T>(m) - 1; sweep >= 0; --sweep) {
+    for (SizeType step = nrStepsPerSweep(sweep, m, mb) - 1; step >= 0; --step) {
       const SizeType j = sweep;
       const SizeType i = j + 1 + step * mb;
 

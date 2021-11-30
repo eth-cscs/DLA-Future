@@ -22,3 +22,9 @@ DLAF_addTest(test_gen_to_std
   USE_MAIN MPIHPX
   MPIRANKS 6
 )
+
+DLAF_addTest(test_bt_band_to_tri
+  SOURCES test_bt_band_to_tri.cpp
+  LIBRARIES dlaf.eigensolver dlaf.core
+  USE_MAIN HPX
+)

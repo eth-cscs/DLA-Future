@@ -61,7 +61,7 @@ void print(const Tile<T, Device::CPU>& tile, int precision = 4, std::ostream& ou
   // sign + number + . + exponent (e+xxx)
   int base_width = 1 + precision + 1 + 5;
 
-  int width = std::is_same<T, ComplexType<T>>::value ? 2 * base_width + 3 : base_width;
+  int width = std::is_same_v<T, ComplexType<T>> ? 2 * base_width + 3 : base_width;
 
   std::cout << "(" << tile.size().rows() << ", " << tile.size().cols() << ") Tile:" << std::endl;
   for (SizeType i = 0; i < tile.size().rows(); ++i) {
@@ -147,7 +147,7 @@ namespace internal {
 /// @pre The second argument of comp should be either T, T& or const T&,
 /// @pre The second argument of err_message should be either T, T& or const T&.
 template <class T, class ElementGetter, class ComparisonOp, class ErrorMessageGetter,
-          std::enable_if_t<!std::is_convertible<ElementGetter, T>::value, int> = 0>
+          std::enable_if_t<!std::is_convertible_v<ElementGetter, T>, int> = 0>
 void check(ElementGetter&& expected, const Tile<const T, Device::CPU>& tile, ComparisonOp comp,
            ErrorMessageGetter err_message, const char* file, const int line) {
   for (SizeType j = 0; j < tile.size().cols(); ++j) {
@@ -175,7 +175,7 @@ void check(ElementGetter&& expected, const Tile<const T, Device::CPU>& tile, Com
 /// @pre The second argument of comp should be either T, T& or const T&,
 /// @pre The second argument of err_message should be either T, T& or const T&.
 template <class T, class ElementGetter, class ComparisonOp, class ErrorMessageGetter,
-          std::enable_if_t<!std::is_convertible<ElementGetter, T>::value, int> = 0>
+          std::enable_if_t<!std::is_convertible_v<ElementGetter, T>, int> = 0>
 void check(ElementGetter&& expected, const Tile<const T, Device::GPU>& tile, ComparisonOp comp,
            ErrorMessageGetter err_message, const char* file, const int line) {
   auto tile_host = createTile<std::remove_const_t<T>, Device::CPU>(tile.size(), tile.ld());

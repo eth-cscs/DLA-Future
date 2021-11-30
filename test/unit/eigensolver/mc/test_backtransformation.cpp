@@ -124,7 +124,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
       const GlobalElementIndex v_offset{j + mb, j};
       auto dotprod = blas::dot(m - mb - j, v.ptr(v_offset), 1, v.ptr(v_offset), 1);
       BaseType<T> tau_i = 0;
-      if (std::is_same<T, ComplexType<T>>::value) {
+      if (std::is_same_v<T, ComplexType<T>>) {
         tau_i = random_value();
       }
       T tau;
@@ -206,7 +206,7 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
       const GlobalElementIndex v_offset{j + mb, j};
       auto dotprod = blas::dot(m - mb - j, mat_v_loc.ptr(v_offset), 1, mat_v_loc.ptr(v_offset), 1);
       BaseType<T> tau_i = 0;
-      if (std::is_same<T, ComplexType<T>>::value) {
+      if (std::is_same_v<T, ComplexType<T>>) {
         tau_i = random_value();
       }
       T tau;

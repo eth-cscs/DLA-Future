@@ -29,13 +29,13 @@ struct is_data : std::false_type {};
 
 template <class Data>
 struct is_data<
-    Data, std::enable_if_t<
-              std::is_pointer<decltype(data_pointer(std::declval<const Data&>()))>::value &&
-              std::is_same<decltype(data_nblocks(std::declval<const Data&>())), SizeType>::value &&
-              std::is_same<decltype(data_blocksize(std::declval<const Data&>())), SizeType>::value &&
-              std::is_same<decltype(data_stride(std::declval<const Data&>())), SizeType>::value &&
-              std::is_same<decltype(data_count(std::declval<const Data&>())), SizeType>::value &&
-              std::is_same<decltype(data_iscontiguous(std::declval<const Data&>())), bool>::value>>
+    Data,
+    std::enable_if_t<std::is_pointer_v<decltype(data_pointer(std::declval<const Data&>()))> &&
+                     std::is_same_v<decltype(data_nblocks(std::declval<const Data&>())), SizeType> &&
+                     std::is_same_v<decltype(data_blocksize(std::declval<const Data&>())), SizeType> &&
+                     std::is_same_v<decltype(data_stride(std::declval<const Data&>())), SizeType> &&
+                     std::is_same_v<decltype(data_count(std::declval<const Data&>())), SizeType> &&
+                     std::is_same_v<decltype(data_iscontiguous(std::declval<const Data&>())), bool>>>
     : std::true_type {};
 
 /// Traits for accessing properties of the given Data concept.
@@ -123,7 +123,7 @@ auto data_iscontiguous(const Data& data) noexcept -> decltype(data.is_contiguous
 /// Use this function to copy values from one Data to another.
 template <class DataIn, class DataOut>
 void copy(const DataIn& src, const DataOut& dest) {
-  static_assert(not std::is_const<typename data_traits<DataOut>::element_t>::value,
+  static_assert(not std::is_const_v<typename data_traits<DataOut>::element_t>,
                 "Cannot copy to a const Data");
 
   if (data_iscontiguous(dest) && data_iscontiguous(src)) {

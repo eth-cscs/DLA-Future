@@ -146,7 +146,7 @@ TYPED_TEST(TileOperationsTestMC, Her2k) {
 
   auto her2k_blas_ops = blas_ops;
   // [c,z]her2k do not allow op = Trans
-  if (std::is_same<Type, ComplexType<Type>>::value)
+  if (std::is_same_v<Type, ComplexType<Type>>)
     her2k_blas_ops = {blas::Op::NoTrans, blas::Op::ConjTrans};
 
   for (const auto uplo : blas_uplos) {
@@ -170,7 +170,7 @@ TYPED_TEST(TileOperationsTestGPU, Her2k) {
 
   auto her2k_blas_ops = blas_ops;
   // [c,z]her2k do not allow op = Trans
-  if (std::is_same<Type, ComplexType<Type>>::value)
+  if (std::is_same_v<Type, ComplexType<Type>>)
     her2k_blas_ops = {blas::Op::NoTrans, blas::Op::ConjTrans};
 
   for (const auto uplo : blas_uplos) {
@@ -194,7 +194,7 @@ TYPED_TEST(TileOperationsTestMC, Herk) {
 
   auto herk_blas_ops = blas_ops;
   // [c,z]herk do not allow op = Trans
-  if (std::is_same<Type, ComplexType<Type>>::value)
+  if (std::is_same_v<Type, ComplexType<Type>>)
     herk_blas_ops = {blas::Op::NoTrans, blas::Op::ConjTrans};
 
   for (const auto uplo : blas_uplos) {
@@ -218,7 +218,7 @@ TYPED_TEST(TileOperationsTestGPU, Herk) {
 
   auto herk_blas_ops = blas_ops;
   // [c,z]herk do not allow op = Trans
-  if (std::is_same<Type, ComplexType<Type>>::value)
+  if (std::is_same_v<Type, ComplexType<Type>>)
     herk_blas_ops = {blas::Op::NoTrans, blas::Op::ConjTrans};
 
   for (const auto uplo : blas_uplos) {

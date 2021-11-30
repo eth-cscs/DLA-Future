@@ -541,7 +541,7 @@ class UnwrapExtendTiles {
 
 public:
   template <typename F_,
-            typename = std::enable_if_t<!std::is_same<UnwrapExtendTiles, std::decay_t<F_>>::value>>
+            typename = std::enable_if_t<!std::is_same_v<UnwrapExtendTiles, std::decay_t<F_>>>>
   UnwrapExtendTiles(F_&& f_) : f(std::forward<F_>(f_)) {}
   UnwrapExtendTiles(UnwrapExtendTiles&&) = default;
   UnwrapExtendTiles& operator=(UnwrapExtendTiles&&) = default;

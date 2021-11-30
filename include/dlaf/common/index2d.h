@@ -49,7 +49,7 @@ namespace internal {
 template <typename IndexT>
 class basic_coords {
 public:
-  static_assert(std::is_integral<IndexT>::value && std::is_signed<IndexT>::value,
+  static_assert(std::is_integral_v<IndexT> && std::is_signed_v<IndexT>,
                 "basic_coords just works with signed integers types");
 
   using IndexType = IndexT;
@@ -109,7 +109,7 @@ public:
 
   /// Adds "(<row_>, <col_>)" to out.
   friend std::ostream& operator<<(std::ostream& out, const basic_coords& index) {
-    if (std::is_same<IndexT, signed char>::value || std::is_same<IndexT, char>::value)
+    if (std::is_same_v<IndexT, signed char> || std::is_same_v<IndexT, char>)
       return out << "(" << static_cast<int>(index.row_) << ", " << static_cast<int>(index.col_) << ")";
     return out << "(" << index.row_ << ", " << index.col_ << ")";
   }
@@ -359,7 +359,7 @@ LinearIndexT computeLinearIndexRowMajor(const Index2D<IndexT, Tag>& index,
   using dlaf::util::ptrdiff_t::mul;
   using dlaf::util::ptrdiff_t::sum;
 
-  static_assert(std::is_integral<LinearIndexT>::value, "LinearIndexT must be an integral type");
+  static_assert(std::is_integral_v<LinearIndexT>, "LinearIndexT must be an integral type");
 
   DLAF_ASSERT_MODERATE(index.isIn(dims), index, dims);
 
@@ -381,7 +381,7 @@ LinearIndexT computeLinearIndexColMajor(const Index2D<IndexT, Tag>& index,
   using dlaf::util::ptrdiff_t::mul;
   using dlaf::util::ptrdiff_t::sum;
 
-  static_assert(std::is_integral<LinearIndexT>::value, "LinearIndexT must be an integral type");
+  static_assert(std::is_integral_v<LinearIndexT>, "LinearIndexT must be an integral type");
 
   DLAF_ASSERT_MODERATE(index.isIn(dims), index, dims);
 

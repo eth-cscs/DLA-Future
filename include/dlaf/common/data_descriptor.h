@@ -78,7 +78,7 @@ struct DataDescriptor {
   ///
   /// Create a DataDescriptor from any given Data concept.
   /// It allows to use the DataDescriptor as "base-class" for any implementation of Data concept.
-  template <class Data, class T_ = T, class = std::enable_if_t<std::is_const<T_>::value>>
+  template <class Data, class T_ = T, class = std::enable_if_t<std::is_const_v<T_>>>
   DataDescriptor(const Data& data) {
     data_ = data_pointer(data);
     nblocks_ = data_nblocks(data);
@@ -142,7 +142,7 @@ protected:
 template <class T, std::size_t N>
 struct DataDescriptor<T[N]> : DataDescriptor<T> {
   /// Create a Data from a given bounded C-array.
-  DataDescriptor(T array[N]) noexcept : DataDescriptor<T>(array, std::extent<T[N]>::value) {}
+  DataDescriptor(T array[N]) noexcept : DataDescriptor<T>(array, std::extent_v<T[N]>) {}
 };
 
 /// Buffer of memory implementing the Data concept.
@@ -151,7 +151,7 @@ struct DataDescriptor<T[N]> : DataDescriptor<T> {
 /// It owns the underlying memory.
 template <class T>
 struct Buffer : public DataDescriptor<T> {
-  static_assert(not std::is_const<T>::value,
+  static_assert(not std::is_const_v<T>,
                 "It is not worth to create a readonly data that no one can write to");
 
   /// Default constructor for not allocated buffer.
@@ -177,8 +177,8 @@ protected:
   std::unique_ptr<T[]> memory_;
 };
 
-static_assert(std::is_convertible<DataDescriptor<int>, DataDescriptor<const int>>::value, "");
-static_assert(not std::is_convertible<DataDescriptor<const int>, DataDescriptor<int>>::value, "");
+static_assert(std::is_convertible_v<DataDescriptor<int>, DataDescriptor<const int>>, "");
+static_assert(not std::is_convertible_v<DataDescriptor<const int>, DataDescriptor<int>>, "");
 
 template <class T>
 struct data_traits<DataDescriptor<T>> {

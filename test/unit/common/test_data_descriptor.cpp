@@ -100,7 +100,7 @@ TYPED_TEST(DataDescriptorTest, MakeFromPointer) {
 
   static_assert(common::is_data<decltype(data)>::value, "It should be a Buffer (concept)");
 
-  static_assert(std::is_same<TypeParam, typename common::data_traits<decltype(data)>::element_t>::value,
+  static_assert(std::is_same_v<TypeParam, typename common::data_traits<decltype(data)>::element_t>,
                 "Wrong type returned");
 }
 
@@ -118,8 +118,7 @@ TYPED_TEST(DataDescriptorTest, MakeFromPointerConst) {
 
   static_assert(common::is_data<decltype(data)>::value, "It should be a Buffer (concept)");
 
-  static_assert(std::is_same<const TypeParam,
-                             typename common::data_traits<decltype(data)>::element_t>::value,
+  static_assert(std::is_same_v<const TypeParam, typename common::data_traits<decltype(data)>::element_t>,
                 "Wrong type returned");
 }
 
@@ -131,13 +130,13 @@ TYPED_TEST(DataDescriptorTest, MakeFromCArray) {
 
   EXPECT_EQ(&value_array[0], data_pointer(data));
   EXPECT_EQ(1, data_nblocks(data));
-  EXPECT_EQ(std::extent<decltype(value_array)>::value, data_blocksize(data));
+  EXPECT_EQ(std::extent_v<decltype(value_array)>, data_blocksize(data));
   EXPECT_EQ(0, data_stride(data));
   EXPECT_TRUE(data_iscontiguous(data));
 
   static_assert(common::is_data<decltype(data)>::value, "It should be a Buffer (concept)");
 
-  static_assert(std::is_same<TypeParam, typename common::data_traits<decltype(data)>::element_t>::value,
+  static_assert(std::is_same_v<TypeParam, typename common::data_traits<decltype(data)>::element_t>,
                 "Wrong type returned");
 }
 
@@ -149,14 +148,13 @@ TYPED_TEST(DataDescriptorTest, MakeFromCArrayConst) {
 
   EXPECT_EQ(&value_array[0], data_pointer(data));
   EXPECT_EQ(1, data_nblocks(data));
-  EXPECT_EQ(std::extent<decltype(value_array)>::value, data_blocksize(data));
+  EXPECT_EQ(std::extent_v<decltype(value_array)>, data_blocksize(data));
   EXPECT_EQ(0, data_stride(data));
   EXPECT_TRUE(data_iscontiguous(data));
 
   static_assert(common::is_data<decltype(data)>::value, "It should be a Buffer (concept)");
 
-  static_assert(std::is_same<const TypeParam,
-                             typename common::data_traits<decltype(data)>::element_t>::value,
+  static_assert(std::is_same_v<const TypeParam, typename common::data_traits<decltype(data)>::element_t>,
                 "Wrong type returned");
 }
 
@@ -173,7 +171,7 @@ TYPED_TEST(DataDescriptorTest, MakeFromContiguousArray) {
 
   static_assert(common::is_data<decltype(data)>::value, "It should be a Buffer (concept)");
 
-  static_assert(std::is_same<TypeParam, typename common::data_traits<decltype(data)>::element_t>::value,
+  static_assert(std::is_same_v<TypeParam, typename common::data_traits<decltype(data)>::element_t>,
                 "Wrong type returned");
 }
 
@@ -191,8 +189,7 @@ TYPED_TEST(DataDescriptorTest, MakeFromContiguousArrayConst) {
 
   static_assert(common::is_data<decltype(data)>::value, "It should be a Buffer (concept)");
 
-  static_assert(std::is_same<const TypeParam,
-                             typename common::data_traits<decltype(data)>::element_t>::value,
+  static_assert(std::is_same_v<const TypeParam, typename common::data_traits<decltype(data)>::element_t>,
                 "Wrong type returned");
 }
 
@@ -209,7 +206,7 @@ TYPED_TEST(DataDescriptorTest, MakeFromContiguousAsStridedArray) {
 
   static_assert(common::is_data<decltype(data)>::value, "It should be a Buffer (concept)");
 
-  static_assert(std::is_same<TypeParam, typename common::data_traits<decltype(data)>::element_t>::value,
+  static_assert(std::is_same_v<TypeParam, typename common::data_traits<decltype(data)>::element_t>,
                 "Wrong type returned");
 }
 
@@ -229,8 +226,7 @@ TYPED_TEST(DataDescriptorTest, MakeFromContiguousAsStridedArrayConst) {
 
   static_assert(common::is_data<decltype(data)>::value, "It should be a Buffer (concept)");
 
-  static_assert(std::is_same<const TypeParam,
-                             typename common::data_traits<decltype(data)>::element_t>::value,
+  static_assert(std::is_same_v<const TypeParam, typename common::data_traits<decltype(data)>::element_t>,
                 "Wrong type returned");
 }
 
@@ -247,7 +243,7 @@ TYPED_TEST(DataDescriptorTest, MakeFromStridedArray) {
 
   static_assert(common::is_data<decltype(data)>::value, "It should be a Buffer (concept)");
 
-  static_assert(std::is_same<TypeParam, typename common::data_traits<decltype(data)>::element_t>::value,
+  static_assert(std::is_same_v<TypeParam, typename common::data_traits<decltype(data)>::element_t>,
                 "Wrong type returned");
 }
 
@@ -265,8 +261,7 @@ TYPED_TEST(DataDescriptorTest, MakeFromStridedArrayConst) {
 
   static_assert(common::is_data<decltype(data)>::value, "It should be a Buffer (concept)");
 
-  static_assert(std::is_same<const TypeParam,
-                             typename common::data_traits<decltype(data)>::element_t>::value,
+  static_assert(std::is_same_v<const TypeParam, typename common::data_traits<decltype(data)>::element_t>,
                 "Wrong type returned");
 }
 
@@ -295,7 +290,7 @@ TYPED_TEST(DataDescriptorTest, CtorFromPointer) {
 
   static_assert(common::is_data<decltype(data)>::value, "It should be a Buffer (concept)");
 
-  static_assert(std::is_same<TypeParam, typename common::data_traits<decltype(data)>::element_t>::value,
+  static_assert(std::is_same_v<TypeParam, typename common::data_traits<decltype(data)>::element_t>,
                 "Wrong type returned");
 }
 
@@ -313,8 +308,7 @@ TYPED_TEST(DataDescriptorTest, CtorFromPointerConst) {
 
   static_assert(common::is_data<decltype(data)>::value, "It should be a Buffer (concept)");
 
-  static_assert(std::is_same<const TypeParam,
-                             typename common::data_traits<decltype(data)>::element_t>::value,
+  static_assert(std::is_same_v<const TypeParam, typename common::data_traits<decltype(data)>::element_t>,
                 "Wrong type returned");
 }
 
@@ -326,13 +320,13 @@ TYPED_TEST(DataDescriptorTest, CtorFromCArray) {
 
   EXPECT_EQ(&value_array[0], data_pointer(data));
   EXPECT_EQ(1, data_nblocks(data));
-  EXPECT_EQ(std::extent<decltype(value_array)>::value, data_blocksize(data));
+  EXPECT_EQ(std::extent_v<decltype(value_array)>, data_blocksize(data));
   EXPECT_EQ(0, data_stride(data));
   EXPECT_TRUE(data_iscontiguous(data));
 
   static_assert(common::is_data<decltype(data)>::value, "It should be a Buffer (concept)");
 
-  static_assert(std::is_same<TypeParam, typename common::data_traits<decltype(data)>::element_t>::value,
+  static_assert(std::is_same_v<TypeParam, typename common::data_traits<decltype(data)>::element_t>,
                 "Wrong type returned");
 }
 
@@ -344,14 +338,13 @@ TYPED_TEST(DataDescriptorTest, CtorFromCArrayConst) {
 
   EXPECT_EQ(&value_array[0], data_pointer(data));
   EXPECT_EQ(1, data_nblocks(data));
-  EXPECT_EQ(std::extent<decltype(value_array)>::value, data_blocksize(data));
+  EXPECT_EQ(std::extent_v<decltype(value_array)>, data_blocksize(data));
   EXPECT_EQ(0, data_stride(data));
   EXPECT_TRUE(data_iscontiguous(data));
 
   static_assert(common::is_data<decltype(data)>::value, "It should be a Buffer (concept)");
 
-  static_assert(std::is_same<const TypeParam,
-                             typename common::data_traits<decltype(data)>::element_t>::value,
+  static_assert(std::is_same_v<const TypeParam, typename common::data_traits<decltype(data)>::element_t>,
                 "Wrong type returned");
 }
 
@@ -368,7 +361,7 @@ TYPED_TEST(DataDescriptorTest, CtorFromContiguousArray) {
 
   static_assert(common::is_data<decltype(data)>::value, "It should be a Buffer (concept)");
 
-  static_assert(std::is_same<TypeParam, typename common::data_traits<decltype(data)>::element_t>::value,
+  static_assert(std::is_same_v<TypeParam, typename common::data_traits<decltype(data)>::element_t>,
                 "Wrong type returned");
 }
 
@@ -386,8 +379,7 @@ TYPED_TEST(DataDescriptorTest, CtorFromContiguousArrayConst) {
 
   static_assert(common::is_data<decltype(data)>::value, "It should be a Buffer (concept)");
 
-  static_assert(std::is_same<const TypeParam,
-                             typename common::data_traits<decltype(data)>::element_t>::value,
+  static_assert(std::is_same_v<const TypeParam, typename common::data_traits<decltype(data)>::element_t>,
                 "Wrong type returned");
 }
 
@@ -404,7 +396,7 @@ TYPED_TEST(DataDescriptorTest, CtorFromContiguousAsStridedArray) {
 
   static_assert(common::is_data<decltype(data)>::value, "It should be a Buffer (concept)");
 
-  static_assert(std::is_same<TypeParam, typename common::data_traits<decltype(data)>::element_t>::value,
+  static_assert(std::is_same_v<TypeParam, typename common::data_traits<decltype(data)>::element_t>,
                 "Wrong type returned");
 }
 
@@ -422,8 +414,7 @@ TYPED_TEST(DataDescriptorTest, CtorFromContiguousAsStridedArrayConst) {
 
   static_assert(common::is_data<decltype(data)>::value, "It should be a Buffer (concept)");
 
-  static_assert(std::is_same<const TypeParam,
-                             typename common::data_traits<decltype(data)>::element_t>::value,
+  static_assert(std::is_same_v<const TypeParam, typename common::data_traits<decltype(data)>::element_t>,
                 "Wrong type returned");
 }
 
@@ -440,7 +431,7 @@ TYPED_TEST(DataDescriptorTest, CtorFromStridedArray) {
 
   static_assert(common::is_data<decltype(data)>::value, "It should be a Buffer (concept)");
 
-  static_assert(std::is_same<TypeParam, typename common::data_traits<decltype(data)>::element_t>::value,
+  static_assert(std::is_same_v<TypeParam, typename common::data_traits<decltype(data)>::element_t>,
                 "Wrong type returned");
 }
 
@@ -458,8 +449,7 @@ TYPED_TEST(DataDescriptorTest, CtorFromStridedArrayConst) {
 
   static_assert(common::is_data<decltype(data)>::value, "It should be a Buffer (concept)");
 
-  static_assert(std::is_same<const TypeParam,
-                             typename common::data_traits<decltype(data)>::element_t>::value,
+  static_assert(std::is_same_v<const TypeParam, typename common::data_traits<decltype(data)>::element_t>,
                 "Wrong type returned");
 }
 
@@ -486,8 +476,7 @@ void check_copy_ctor(Buffer& data) {
 
   static_assert(common::is_data<decltype(data_copy)>::value, "It should be a Buffer (concept)");
 
-  static_assert(std::is_same<TypeParam,
-                             typename common::data_traits<decltype(data_copy)>::element_t>::value,
+  static_assert(std::is_same_v<TypeParam, typename common::data_traits<decltype(data_copy)>::element_t>,
                 "Wrong type returned");
 }
 

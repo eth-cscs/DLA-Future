@@ -104,7 +104,7 @@ namespace internal {
 /// Callable that returns random values in the range [-1, 1].
 template <class T>
 class getter_random {
-  static_assert(std::is_same<T, float>::value || std::is_same<T, double>::value,
+  static_assert(std::is_same_v<T, float> || std::is_same_v<T, double>,
                 "T is not compatible with random generator used.");
 
 public:

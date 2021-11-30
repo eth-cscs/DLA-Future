@@ -431,7 +431,7 @@ void gemmComputeW2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Co
 template <class T>
 void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
                                ConstPanelT<Coord::Col, T>& x, ConstPanelT<Coord::Col, T>& v) {
-  static_assert(std::is_signed<BaseType<T>>::value, "alpha in computations requires to be -1");
+  static_assert(std::is_signed_v<BaseType<T>>, "alpha in computations requires to be -1");
 
   const auto dist = a.distribution();
 
@@ -640,7 +640,7 @@ template <class T>
 void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
                                ConstPanelT<Coord::Col, T>& x, ConstPanelT<Coord::Row, T>& vt,
                                ConstPanelT<Coord::Col, T>& v, ConstPanelT<Coord::Row, T>& xt) {
-  static_assert(std::is_signed<BaseType<T>>::value, "alpha in computations requires to be -1");
+  static_assert(std::is_signed_v<BaseType<T>>, "alpha in computations requires to be -1");
 
   const auto dist = a.distribution();
 

@@ -104,7 +104,7 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
                        // been used, copy it back to the non-contiguous tile on CPU
                        return pika::dataflow(ex, internal::reduceRecvInPlace<T>, std::move(pcomm),
                                             reduce_op, std::cref(cont_buf)) |
-                              transform([&]() {
+                              then([&]() {
                                 // TODO ref_wrapper to matrix::Tile const& is not converted
                                 dlaf::common::internal::copyBack(cont_buf, tile_on_cpu);
                               });
@@ -118,9 +118,9 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
                    // TODO matrix::copy(Policy<Backend::GPU>(pika::threads::thread_priority::high));
                    return whenAllLift(/*std::move(comm_on_cpu),*/ std::cref(tile_orig),
                                       std::cref(tile_on_cpu)) |
-                          transform([](const auto&, const auto&) {});
+                          then([](const auto&, const auto&) {});
                });
-  }) | detach();
+  }) | start_detached();
 }
 
 template <class T, Device D, template <class> class Future>
@@ -149,7 +149,7 @@ void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
                                       reduce_op, std::cref(cont_buf));
                });
       }) |
-      detach();
+      start_detached();
 }
 }
 }

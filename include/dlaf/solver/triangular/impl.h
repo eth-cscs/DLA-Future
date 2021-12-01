@@ -609,7 +609,7 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
 
         dlaf::internal::whenAllLift(T(-1), b_panel.read_sender(kj), mat_b.readwrite_sender(kj)) |
             tile::add(dlaf::internal::Policy<backend>(priority)) |
-            hpx::execution::experimental::detach();
+            hpx::execution::experimental::start_detached();
 
         trsmBPanelTile<backend>(priority, op, diag, alpha, a_panel.read_sender(kk_offset),
                                 mat_b.readwrite_sender(kj));

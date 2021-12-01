@@ -42,7 +42,8 @@ void trmmBPanelTile(hpx::threads::thread_priority priority, blas::Diag diag, T a
                     OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, blas::Op::NoTrans, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-      tile::trmm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::trmm(dlaf::internal::Policy<backend>(priority)) |
+      hpx::execution::experimental::start_detached();
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
@@ -50,7 +51,8 @@ void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, T alpha, ASe
                             BSender&& b_tile, CSender&& c_tile) {
   dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha, std::forward<ASender>(a_tile),
                               std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
+      hpx::execution::experimental::start_detached();
 }
 }
 
@@ -60,7 +62,8 @@ void trmmBPanelTile(hpx::threads::thread_priority priority, blas::Op op, blas::D
                     InSender&& in_tile, OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, op, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-      tile::trmm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::trmm(dlaf::internal::Policy<backend>(priority)) |
+      hpx::execution::experimental::start_detached();
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
@@ -68,7 +71,8 @@ void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, blas::Op op,
                             ASender&& a_tile, BSender&& b_tile, CSender&& c_tile) {
   dlaf::internal::whenAllLift(op, blas::Op::NoTrans, alpha, std::forward<ASender>(a_tile),
                               std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
+      hpx::execution::experimental::start_detached();
 }
 }
 
@@ -78,7 +82,8 @@ void trmmBPanelTile(hpx::threads::thread_priority priority, blas::Diag diag, T a
                     OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, blas::Op::NoTrans, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-      tile::trmm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::trmm(dlaf::internal::Policy<backend>(priority)) |
+      hpx::execution::experimental::start_detached();
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
@@ -86,7 +91,8 @@ void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, T alpha, ASe
                             BSender&& b_tile, CSender&& c_tile) {
   dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha, std::forward<ASender>(a_tile),
                               std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
+      hpx::execution::experimental::start_detached();
 }
 }
 
@@ -96,7 +102,8 @@ void trmmBPanelTile(hpx::threads::thread_priority priority, blas::Op op, blas::D
                     InSender&& in_tile, OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, op, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-      tile::trmm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::trmm(dlaf::internal::Policy<backend>(priority)) |
+      hpx::execution::experimental::start_detached();
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
@@ -104,7 +111,8 @@ void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, blas::Op op,
                             ASender&& a_tile, BSender&& b_tile, CSender&& c_tile) {
   dlaf::internal::whenAllLift(op, blas::Op::NoTrans, alpha, std::forward<ASender>(a_tile),
                               std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
+      hpx::execution::experimental::start_detached();
 }
 }
 
@@ -114,7 +122,8 @@ void trmmBPanelTile(hpx::threads::thread_priority priority, blas::Diag diag, T a
                     OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Lower, blas::Op::NoTrans, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-      tile::trmm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::trmm(dlaf::internal::Policy<backend>(priority)) |
+      hpx::execution::experimental::start_detached();
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
@@ -122,7 +131,8 @@ void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, T alpha, ASe
                             BSender&& b_tile, CSender&& c_tile) {
   dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha, std::forward<ASender>(a_tile),
                               std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
+      hpx::execution::experimental::start_detached();
 }
 }
 
@@ -132,7 +142,8 @@ void trmmBPanelTile(hpx::threads::thread_priority priority, blas::Op op, blas::D
                     InSender&& in_tile, OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Lower, op, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-      tile::trmm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::trmm(dlaf::internal::Policy<backend>(priority)) |
+      hpx::execution::experimental::start_detached();
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
@@ -140,7 +151,8 @@ void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, blas::Op op,
                             ASender&& a_tile, BSender&& b_tile, CSender&& c_tile) {
   dlaf::internal::whenAllLift(blas::Op::NoTrans, op, alpha, std::forward<ASender>(a_tile),
                               std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
+      hpx::execution::experimental::start_detached();
 }
 }
 
@@ -150,7 +162,8 @@ void trmmBPanelTile(hpx::threads::thread_priority priority, blas::Diag diag, T a
                     OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Upper, blas::Op::NoTrans, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-      tile::trmm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::trmm(dlaf::internal::Policy<backend>(priority)) |
+      hpx::execution::experimental::start_detached();
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
@@ -158,7 +171,8 @@ void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, T alpha, ASe
                             BSender&& b_tile, CSender&& c_tile) {
   dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha, std::forward<ASender>(a_tile),
                               std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
+      hpx::execution::experimental::start_detached();
 }
 }
 
@@ -168,7 +182,8 @@ void trmmBPanelTile(hpx::threads::thread_priority priority, blas::Op op, blas::D
                     InSender&& in_tile, OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Upper, op, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-      tile::trmm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::trmm(dlaf::internal::Policy<backend>(priority)) |
+      hpx::execution::experimental::start_detached();
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
@@ -176,7 +191,8 @@ void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, blas::Op op,
                             ASender&& a_tile, BSender&& b_tile, CSender&& c_tile) {
   dlaf::internal::whenAllLift(blas::Op::NoTrans, op, alpha, std::forward<ASender>(a_tile),
                               std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
+      hpx::execution::experimental::start_detached();
 }
 }
 

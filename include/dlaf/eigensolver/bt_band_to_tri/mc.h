@@ -76,21 +76,21 @@ hpx::shared_future<matrix::Tile<const T, Device::CPU>> setupVWellFormed(
 }
 
 template <class T>
-auto computeTFactor(hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_taus,
-                    hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v,
-                    hpx::future<matrix::Tile<T, Device::CPU>> mat_t) -> decltype(tile_v) {
+hpx::shared_future<matrix::Tile<const T, Device::CPU>> computeTFactor(
+    hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_taus,
+    hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v,
+    hpx::future<matrix::Tile<T, Device::CPU>> mat_t) {
   auto tfactor_task = [](const auto& tile_taus, const auto& tile_v, auto tile_t) {
     using namespace lapack;
 
-    const auto k = tile_v.size().cols();
-    const auto n = tile_v.size().rows();
-    // DLAF_ASSERT_HEAVY((tile_t.size() == TileElementSize(k, k)), tile_t.size());
-
+    // taus have to be extracted from the compact form (i.e. first row of the input tile)
     std::vector<T> taus;
     taus.resize(to_sizet(tile_v.size().cols()));
     for (SizeType i = 0; i < to_SizeType(taus.size()); ++i)
       taus[to_sizet(i)] = tile_taus({0, i});
 
+    const auto n = tile_v.size().rows();
+    const auto k = tile_v.size().cols();
     larft(Direction::Forward, StoreV::Columnwise, n, k, tile_v.ptr(), tile_v.ld(), taus.data(),
           tile_t.ptr(), tile_t.ld());
 

@@ -15,14 +15,16 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"
+#include "dlaf/util_matrix.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
+#include "dlaf_test/matrix/util_generic_blas.h"
 #include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_matrix_blas.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
 using namespace dlaf::comm;
 using namespace dlaf::matrix;
+using namespace dlaf::matrix::util;
 using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 using namespace testing;
@@ -179,8 +181,7 @@ TYPED_TEST(TriangularSolverTestMC, CorrectnessDistributed) {
       for (auto uplo : blas_uplos) {
         for (auto op : blas_ops) {
           for (auto diag : blas_diags) {
-            // Currently only NoTrans cases are implemented
-            if (!(op == blas::Op::NoTrans))
+            if (!(op == blas::Op::NoTrans || (side == blas::Side::Left && uplo == blas::Uplo::Lower)))
               continue;
 
             for (auto sz : sizes) {
@@ -225,8 +226,7 @@ TYPED_TEST(TriangularSolverTestGPU, CorrectnessDistributed) {
       for (auto uplo : blas_uplos) {
         for (auto op : blas_ops) {
           for (auto diag : blas_diags) {
-            // Currently only NoTrans cases are implemented
-            if (!(op == blas::Op::NoTrans))
+            if (!(op == blas::Op::NoTrans || (side == blas::Side::Left && uplo == blas::Uplo::Lower)))
               continue;
 
             for (auto sz : sizes) {

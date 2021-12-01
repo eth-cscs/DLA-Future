@@ -146,7 +146,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
 
   eigensolver::backTransformation<Backend::MC>(mat_c, mat_v, taus);
 
-  auto result = [& dist = mat_c.distribution(), &mat_local = c](const GlobalElementIndex& element) {
+  auto result = [&dist = mat_c.distribution(), &mat_local = c](const GlobalElementIndex& element) {
     const auto tile_index = dist.globalTileIndex(element);
     const auto tile_element = dist.tileElementIndex(element);
     return mat_local.tile_read(tile_index)(tile_element);
@@ -229,7 +229,7 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
 
   eigensolver::backTransformation<Backend::MC>(grid, mat_c, mat_v, taus);
 
-  auto result = [& dist = mat_c.distribution(),
+  auto result = [&dist = mat_c.distribution(),
                  &mat_local = mat_c_loc](const GlobalElementIndex& element) {
     const auto tile_index = dist.globalTileIndex(element);
     const auto tile_element = dist.tileElementIndex(element);

@@ -88,18 +88,17 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
     // device. it must be noted that it is not useful for helperTileOnCPU correctness, because its
     // functionality is ensured by the previous scope.
     return whenAllLift(std::cref(tile_orig), helperTileOnCPU(tile_orig)) |
-           let_value(
-               [=, pcomm = std::move(pcomm)](const matrix::Tile<T, D>& tile_orig,
-                                             const matrix::Tile<T, Device::CPU>& tile_on_cpu) mutable {
-                 using common::internal::makeItContiguous;
+           let_value([=, pcomm =
+                             std::move(pcomm)](const matrix::Tile<T, D>& tile_orig,
+                                               const matrix::Tile<T, Device::CPU>& tile_on_cpu) mutable {
+             using common::internal::makeItContiguous;
 
-                 // inside next scope, together with the promiseguard for the communicator, we pass
-                 // also the tile_on_cpu that is ensured to be contiguous thanks to makeItContiguous
-                 auto comm_on_cpu =
-                     whenAllLift(std::move(pcomm), makeItContiguous(tile_on_cpu),
-                                 std::cref(tile_on_cpu)) |
-                     let_value([=](auto& pcomm, auto& cont_buf,
-                                   const matrix::Tile<T, Device::CPU>& tile_on_cpu) {
+             // inside next scope, together with the promiseguard for the communicator, we pass
+             // also the tile_on_cpu that is ensured to be contiguous thanks to makeItContiguous
+             auto comm_on_cpu =
+                 whenAllLift(std::move(pcomm), makeItContiguous(tile_on_cpu), std::cref(tile_on_cpu)) |
+                 let_value(
+                     [=](auto& pcomm, auto& cont_buf, const matrix::Tile<T, Device::CPU>& tile_on_cpu) {
                        // communicate the tile and, just in case a temporary contiguous tile on CPU has
                        // been used, copy it back to the non-contiguous tile on CPU
                        return pika::dataflow(ex, internal::reduceRecvInPlace<T>, std::move(pcomm),
@@ -110,15 +109,14 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
                               });
                      });
 
-                 // if the original tile was on CPU, nothing else has to be done. task finished
-                 if constexpr (Device::CPU == D)
-                   return comm_on_cpu;
-                 else  // otherwise the result on CPU has to be copied back to the original device
-                   // TODO matrix::copy(Policy<Backend::GPU>(pika::threads::thread_priority::high));
-                   return whenAllLift(std::move(comm_on_cpu), std::cref(tile_orig),
-                                      std::cref(tile_on_cpu)) |
-                          then([](const auto&, const auto&) {});
-               });
+             // if the original tile was on CPU, nothing else has to be done. task finished
+             if constexpr (Device::CPU == D)
+               return comm_on_cpu;
+             else  // otherwise the result on CPU has to be copied back to the original device
+               // TODO matrix::copy(Policy<Backend::GPU>(pika::threads::thread_priority::high));
+               return whenAllLift(std::move(comm_on_cpu), std::cref(tile_orig), std::cref(tile_on_cpu)) |
+                      then([](const auto&, const auto&) {});
+           });
   }) | start_detached();
 }
 

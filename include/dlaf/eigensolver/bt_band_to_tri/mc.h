@@ -22,6 +22,7 @@
 #include "dlaf/matrix/tile.h"
 #include "dlaf/sender/traits.h"
 #include "dlaf/types.h"
+#include "dlaf/util_math.h"
 #include "dlaf/util_matrix.h"
 
 namespace dlaf::eigensolver::internal {

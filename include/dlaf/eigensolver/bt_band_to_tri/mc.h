@@ -150,9 +150,8 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
 
   const auto& dist_i = mat_i.distribution();
 
-  // Note:
-  // w_tile_sz can store reflectors are they are actually applied, opposed to how they are stored
-  // in compact form.
+  // Note: w_tile_sz can store reflectors are they are actually applied, opposed to how they are
+  // stored in compact form.
   //
   // e.g. Given b = 4
   //
@@ -166,10 +165,50 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
   //               0 0 0 d
 
   const TileElementSize w_tile_sz(2 * b - 1, b);
-  // TODO w last tile is complete anyway, because of setup V well formed
-  const matrix::Distribution dist_w({mat_e.nrTiles().rows() * w_tile_sz.rows(), w_tile_sz.cols()},
-                                    w_tile_sz, dist_i.commGridSize(), dist_i.rankIndex(),
-                                    dist_i.sourceRankIndex());
+
+  // Note: The above formula is valid until it meets the constraints imposed by the matrix which
+  // reflectors are applied to. Indeed, `2b-1` means `b-1` rows refers to the current row tile and
+  // `b` elements to the next one.
+  //
+  // For sure last tile will not have room at all for the second part of the formula, because there is no
+  // next tile since it is the last. Moreover, it may not have space for the first part of the formula,
+  // e.g. when matrix size is not a multiple of its blocksize, so its dimension can be tailored according
+  // to the number of reflectors that fits there (considering also the last reflector of size 1 for
+  // complex martrices).
+  //
+  // Additionally, the constraints may affect also the before last tile of W. Indeed, it will have
+  // for sure room for the first part of the formula, but the second part may be limited by the size
+  // of the last tile of E.
+  //
+  // Considering all the cases, it may end up:
+  // - last tile is full (matrix size is a multiple of blocksize), so just this last one is reduced;
+  // - last tile is incomplete, last two tiles are both reduced in size (not the same)
+  //
+  // In this latter case, since the blocksize is fixed for a matrix, we can just limit the size of
+  // the last tile by constraining the size of the matrix containing it. This means that the before
+  // last tile will have a full size even if it will not be fully used, while the last one can be
+  // reduced as needed.
+  //
+  // But, there is one last case: if the last tile of E does not have enough room for applying
+  // reflectors, it will result that in W the last tile will be the one linked with the before last tile
+  // in E, so we can actually reduce its size.
+  const auto last_tile_size =
+      mat_i.tileSize(indexFromOrigin(mat_i.nrTiles() - GlobalTileSize{1, 1})).rows();
+  const SizeType last_w_tile_sz = [&]() {
+    const auto last_refl_size = last_tile_size - 1;
+    if (last_refl_size == 1)
+      return is_complex_v<T> ? SizeType(1) : SizeType(0);
+    return std::max<SizeType>(0, last_refl_size);
+  }();
+
+  const SizeType dist_w_rows = [&]() {
+    if (last_w_tile_sz != 0)
+      return (mat_e.nrTiles().rows() - 1) * w_tile_sz.rows() + last_w_tile_sz;
+    return (mat_e.nrTiles().rows() - 2) * w_tile_sz.rows() + (b - 1) + last_tile_size;
+  }();
+
+  const matrix::Distribution dist_w({dist_w_rows, w_tile_sz.cols()}, w_tile_sz, dist_i.commGridSize(),
+                                    dist_i.rankIndex(), dist_i.sourceRankIndex());
 
   constexpr std::size_t n_workspaces = 2;
   RoundRobin<Panel<Coord::Col, T, Device::CPU>> t_panels(n_workspaces, mat_i.distribution());

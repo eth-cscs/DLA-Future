@@ -42,20 +42,22 @@ struct BackTransformationT2B<Backend::MC, Device::CPU, T> {
 
 template <class T>
 hpx::shared_future<matrix::Tile<const T, Device::CPU>> setupVWellFormed(
-    SizeType k, hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v_compact,
+    hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_i,
     hpx::future<matrix::Tile<T, Device::CPU>> tile_v) {
-  auto unzipV_func = [k](const auto& tile_v_compact, auto tile_v) {
+  auto unzipV_func = [](const auto& tile_i, auto tile_v) {
     using lapack::MatrixType;
+
+    const auto k = tile_v.size().cols();
 
     // copy from compact representation reflector values (the first component set to 1 is not there)
     for (SizeType j = 0; j < k; ++j) {
       const auto compact_refl_size =
-          std::min<SizeType>(tile_v.size().rows() - (1 + j), tile_v_compact.size().rows() - 1);
+          std::min<SizeType>(tile_v.size().rows() - (1 + j), tile_i.size().rows() - 1);
       // TODO this is needed because of complex last reflector (i.e. just 1 element long)
       if (compact_refl_size == 0)
         continue;
 
-      lacpy(MatrixType::General, compact_refl_size, 1, tile_v_compact.ptr({1, j}), tile_v_compact.ld(),
+      lacpy(MatrixType::General, compact_refl_size, 1, tile_i.ptr({1, j}), tile_i.ld(),
             tile_v.ptr({1 + j, j}), tile_v.ld());
     }
 
@@ -65,14 +67,14 @@ hpx::shared_future<matrix::Tile<const T, Device::CPU>> setupVWellFormed(
 
     // due to the skewed shape, reflectors do not occupy the tile till the last row. this step
     // zeros out the lower triangular "padding" part under reflectors
-    const SizeType mb = tile_v_compact.size().cols();
+    const SizeType mb = tile_i.size().cols();
     if (tile_v.size().rows() > mb)
       laset(MatrixType::Lower, tile_v.size().rows() - mb, k - 1, T(0), T(0), tile_v.ptr({mb, 0}),
             tile_v.ld());
 
     return matrix::Tile<const T, Device::CPU>(std::move(tile_v));
   };
-  return hpx::dataflow(hpx::unwrapping(unzipV_func), std::move(tile_v_compact), std::move(tile_v));
+  return hpx::dataflow(hpx::unwrapping(unzipV_func), std::move(tile_i), std::move(tile_v));
 }
 
 template <class T>
@@ -243,7 +245,7 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
       auto tile_w_rw = splitTile(tile_w_full, v_spec);
 
       const auto& tile_i = mat_i.read(ij_refls);
-      auto tile_v = setupVWellFormed(k_refls, tile_i, std::move(tile_w_rw));
+      auto tile_v = setupVWellFormed(tile_i, std::move(tile_w_rw));
 
       // W2 = V* . E
       // Note:

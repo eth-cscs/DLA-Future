@@ -114,9 +114,8 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
                  if constexpr (Device::CPU == D)
                    return comm_on_cpu;
                  else  // otherwise the result on CPU has to be copied back to the original device
-                   // TODO Fix with PR on master about whenAll with void
                    // TODO matrix::copy(Policy<Backend::GPU>(pika::threads::thread_priority::high));
-                   return whenAllLift(/*std::move(comm_on_cpu),*/ std::cref(tile_orig),
+                   return whenAllLift(std::move(comm_on_cpu), std::cref(tile_orig),
                                       std::cref(tile_on_cpu)) |
                           then([](const auto&, const auto&) {});
                });

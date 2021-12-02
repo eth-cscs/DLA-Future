@@ -27,7 +27,7 @@ template <typename T, typename U, typename... Ts>
 struct Contains<T, U, Ts...> : Contains<T, Ts...> {};
 
 template <typename T, typename... Ts>
-inline constexpr bool ContainsV = Contains<T, Ts...>::value;
+inline constexpr bool Contains_v = Contains<T, Ts...>::value;
 
 template <typename PackUnique, typename PackRest>
 struct UniquePackHelper;
@@ -39,7 +39,7 @@ struct UniquePackHelper<Pack<Ts...>, Pack<>> {
 
 template <template <typename...> class Pack, typename... Ts, typename U, typename... Us>
 struct UniquePackHelper<Pack<Ts...>, Pack<U, Us...>>
-    : std::conditional<ContainsV<U, Ts...>, UniquePackHelper<Pack<Ts...>, Pack<Us...>>,
+    : std::conditional<Contains_v<U, Ts...>, UniquePackHelper<Pack<Ts...>, Pack<Us...>>,
                        UniquePackHelper<Pack<Ts..., U>, Pack<Us...>>>::type {};
 
 template <typename Pack>
@@ -49,7 +49,7 @@ template <template <typename...> class Pack, typename... Ts>
 struct UniquePack<Pack<Ts...>> : UniquePackHelper<Pack<>, Pack<Ts...>> {};
 
 template <typename Pack>
-using UniquePackT = typename UniquePack<Pack>::type;
+using UniquePack_t = typename UniquePack<Pack>::type;
 
 template <typename Pack, template <typename> class Transformer>
 struct TransformPack;
@@ -60,7 +60,7 @@ struct TransformPack<Pack<Ts...>, Transformer> {
 };
 
 template <typename Pack, template <typename> class Transformer>
-using TransformPackT = typename TransformPack<Pack, Transformer>::type;
+using TransformPack_t = typename TransformPack<Pack, Transformer>::type;
 
 template <typename Pack, typename T>
 struct PrependPack;
@@ -71,6 +71,6 @@ struct PrependPack<Pack<Ts...>, T> {
 };
 
 template <typename Pack, typename T>
-using PrependPackT = typename PrependPack<Pack, T>::type;
+using PrependPack_t = typename PrependPack<Pack, T>::type;
 }
 }

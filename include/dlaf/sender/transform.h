@@ -126,12 +126,12 @@ struct Transform<Backend::GPU> {
     };
 
     template <template <typename...> class Tuple, template <typename...> class Variant>
-    using value_types = dlaf::internal::UniquePackT<dlaf::internal::TransformPackT<
+    using value_types = dlaf::internal::UniquePack_t<dlaf::internal::TransformPack_to<
         typename hpx::execution::experimental::sender_traits<S>::template value_types<Tuple, Variant>,
         invoke_result_helper>>;
 
     template <template <typename...> class Variant>
-    using error_types = dlaf::internal::UniquePackT<dlaf::internal::PrependPackT<
+    using error_types = dlaf::internal::UniquePack_t<dlaf::internal::PrependPack_t<
         typename hpx::execution::experimental::sender_traits<S>::template error_types<Variant>,
         std::exception_ptr>>;
 

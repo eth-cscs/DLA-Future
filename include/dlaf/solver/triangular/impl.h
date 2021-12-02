@@ -436,8 +436,8 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   // Set up MPI executor pipelines
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
+  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
+  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
 
   const comm::Index2D this_rank = grid.rank();
 
@@ -529,8 +529,8 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
 
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
+  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
+  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
 
   const comm::Index2D this_rank = grid.rank();
 
@@ -614,8 +614,8 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   // Set up MPI executor pipelines
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
+  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
+  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
 
   const comm::Index2D this_rank = grid.rank();
 
@@ -707,8 +707,8 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   // Set up MPI executor pipelines
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
+  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
+  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
 
   const comm::Index2D this_rank = grid.rank();
 
@@ -800,8 +800,8 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   // Set up MPI executor pipelines
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
+  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
+  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
 
   const comm::Index2D this_rank = grid.rank();
 

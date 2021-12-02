@@ -11,7 +11,11 @@
 
 #include <functional>
 #include <tuple>
-#include "gtest/gtest.h"
+
+#include <gtest/gtest.h>
+#include <hpx/include/threadmanager.hpp>
+#include <hpx/runtime.hpp>
+
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"
@@ -137,6 +141,7 @@ TYPED_TEST(EigensolverGenToStdTestMC, CorrectnessDistributed) {
       for (auto sz : sizes) {
         std::tie(m, mb) = sz;
         testGenToStdEigensolver<TypeParam, Backend::MC, Device::CPU>(comm_grid, uplo, m, mb);
+        hpx::threads::get_thread_manager().wait();
       }
     }
   }
@@ -162,6 +167,7 @@ TYPED_TEST(EigensolverGenToStdTestGPU, CorrectnessDistributed) {
       for (auto sz : sizes) {
         std::tie(m, mb) = sz;
         testGenToStdEigensolver<TypeParam, Backend::GPU, Device::GPU>(comm_grid, uplo, m, mb);
+        hpx::threads::get_thread_manager().wait();
       }
     }
   }

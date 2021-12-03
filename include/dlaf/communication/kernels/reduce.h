@@ -53,6 +53,81 @@ void reduceSend(comm::IndexT_MPI rank_root, const common::PromiseGuard<comm::Com
   DLAF_MPI_CALL(
       MPI_Ireduce(msg.data(), nullptr, msg.count(), msg.mpi_type(), reduce_op, rank_root, comm, req));
 }
+
+// TODO SenderElementType of a reference_wrapper does not work
+template <class T, class Sender>
+auto senderReduceRecvInPlace(const comm::Executor& ex,
+                             pika::future<common::PromiseGuard<comm::Communicator>> pcomm,
+                             MPI_Op reduce_op, Sender&& tile) {
+  // Note:
+  //
+  // CPU  ---> makeItContiguous ---> cCPU -> MPI ---> copyBack ---> CPU
+  // cCPU -------------------------> cCPU -> MPI -----------------> cCPU
+  //
+  // where: cCPU = contiguous CPU
+
+  using namespace pika::execution::experimental;
+
+  using dlaf::matrix::Tile;
+  using dlaf::internal::Policy;
+  using dlaf::internal::transform;
+  using dlaf::internal::whenAllLift;
+
+  return std::forward<Sender>(tile) | transfer(thread_pool_scheduler{}) |
+         let_value([ex, reduce_op, pcomm = std::move(pcomm)](Tile<T, Device::CPU>& tile_orig) mutable {
+           using dlaf::common::internal::makeItContiguous;
+
+           auto contiguous_buffer = makeItContiguous(tile_orig);
+           return just(std::move(contiguous_buffer)) |
+                  let_value([ex, reduce_op, &tile_orig,
+                             pcomm = std::move(pcomm)](const auto& cont_buffer) mutable {
+                    return pika::dataflow(ex, internal::reduceRecvInPlace<T>, pcomm.get(), reduce_op,
+                                          std::cref(cont_buffer)) |
+                           then([&]() {
+                             // TODO ref_wrapper to matrix::Tile const& is not converted
+                             dlaf::common::internal::copyBack(cont_buffer, tile_orig);
+                             // TODO plus I want to return the original tile
+                             return std::move(tile_orig);
+                           });
+                  });
+         });
+}
+
+template <class T, class Sender>
+auto senderReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
+                      pika::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
+                      Sender&& tile) {
+  // Note:
+  //
+  // CPU  ---> makeItContiguous ---> cCPU -> MPI
+  // cCPU -------------------------> cCPU -> MPI
+  //
+  // where: cCPU = contiguous CPU
+
+  using namespace pika::execution::experimental;
+  using dlaf::internal::whenAllLift;
+
+  return std::forward<Sender>(tile) |  // TODO transfer on CPU?
+         let_value([ex, rank_root, reduce_op,
+                    pcomm = std::move(pcomm)](const matrix::Tile<const T, Device::CPU>& tile) mutable {
+           using common::internal::makeItContiguous;
+           return whenAllLift(std::move(pcomm), makeItContiguous(tile)) |
+                  let_value([ex, rank_root, reduce_op](auto& pcomm, const auto& cont_buf) {
+                    return pika::dataflow(ex, internal::reduceSend<T>, rank_root, std::move(pcomm),
+                                          reduce_op, std::cref(cont_buf));
+                  });
+         });
+}
+}
+
+template <class T>
+void scheduleReduceRecvInPlace(const comm::Executor& ex,
+                               pika::future<common::PromiseGuard<comm::Communicator>> pcomm,
+                               MPI_Op reduce_op, pika::future<matrix::Tile<T, Device::CPU>> tile) {
+  using namespace pika::execution::experimental;
+
+  internal::senderReduceRecvInPlace<T>(ex, std::move(pcomm), reduce_op, std::move(tile)) |
+      start_detached();
 }
 
 template <class T, Device D>
@@ -61,91 +136,76 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
                                MPI_Op reduce_op, pika::future<matrix::Tile<T, D>> tile) {
   // Note:
   //
-  // GPU  -> duplicateIfNeeded ---------------------> cCPU -> MPI -------------> copyIfNeeded --> GPU
-  // CPU  ----------------------> makeItContiguous -> cCPU -> MPI -> copyBack ------------------> CPU
-  // cCPU ------------------------------------------> cCPU -> MPI ------------------------------> cCPU
+  // GPU ---> Duplicate ---> (cCPU --> MPI) ---> copy --> GPU
   //
   // where: cCPU = contiguous CPU
 
   using namespace pika::execution::experimental;
-  using dlaf::internal::whenAllLift;
+  using dlaf::internal::transform;
 
-  // this helper returns a reference to the original tile in case it is already on CPU, otherwise
-  // returns a newly allocated tile whose content is copied from the one passed as parameter.
-  // So, it can either return a const Tile& or a Tile, but for sure on CPU.
-  constexpr auto helperTileOnCPU = [](auto& tile) constexpr->decltype(auto) {
-    if constexpr (Device::CPU == D)
-      return std::cref(tile);
-    else
-      return matrix::Duplicate<Device::CPU>{}(tile);
-  };
+  std::move(tile) |
+      let_value(pika::unwrapping([ex, reduce_op, pcomm = std::move(pcomm)](auto& tile_gpu) mutable {
+        using dlaf::internal::Policy;
+        using dlaf::matrix::internal::CopyBackend;
 
-  // the original tile has to be kept alive till the very end
-  let_value(std::move(tile), [=, pcomm = std::move(pcomm)](auto& tile_orig) mutable {
-    // inside next scope tile_on_cpu is for sure a tile on CPU, and it can either be the original one
-    // or a new one created thanks to the helper.
-    // on the other end, tile_orig is passed for the eventual copy of the result back to the original
-    // device. it must be noted that it is not useful for helperTileOnCPU correctness, because its
-    // functionality is ensured by the previous scope.
-    return whenAllLift(std::cref(tile_orig), helperTileOnCPU(tile_orig)) |
-           let_value([=, pcomm =
-                             std::move(pcomm)](const matrix::Tile<T, D>& tile_orig,
-                                               const matrix::Tile<T, Device::CPU>& tile_on_cpu) mutable {
-             using common::internal::makeItContiguous;
-
-             // inside next scope, together with the promiseguard for the communicator, we pass
-             // also the tile_on_cpu that is ensured to be contiguous thanks to makeItContiguous
-             auto comm_on_cpu =
-                 whenAllLift(std::move(pcomm), makeItContiguous(tile_on_cpu), std::cref(tile_on_cpu)) |
-                 let_value(
-                     [=](auto& pcomm, auto& cont_buf, const matrix::Tile<T, Device::CPU>& tile_on_cpu) {
-                       // communicate the tile and, just in case a temporary contiguous tile on CPU has
-                       // been used, copy it back to the non-contiguous tile on CPU
-                       return pika::dataflow(ex, internal::reduceRecvInPlace<T>, std::move(pcomm),
-                                            reduce_op, std::cref(cont_buf)) |
-                              then([&]() {
-                                // TODO ref_wrapper to matrix::Tile const& is not converted
-                                dlaf::common::internal::copyBack(cont_buf, tile_on_cpu);
-                              });
-                     });
-
-             // if the original tile was on CPU, nothing else has to be done. task finished
-             if constexpr (Device::CPU == D)
-               return comm_on_cpu;
-             else  // otherwise the result on CPU has to be copied back to the original device
-               // TODO matrix::copy(Policy<Backend::GPU>(pika::threads::thread_priority::high));
-               return whenAllLift(std::move(comm_on_cpu), std::cref(tile_orig), std::cref(tile_on_cpu)) |
-                      then([](const auto&, const auto&) {});
-           });
-  }) | start_detached();
+        auto tile_cpu = transform(
+            Policy<CopyBackend<D, Device::CPU>::value>(pika::threads::thread_priority::high),
+            [](const matrix::Tile<const T, Device::GPU>& tile_gpu, auto... args) mutable {
+              return dlaf::matrix::Duplicate<Device::CPU>{}(tile_gpu, args...);
+            },
+            just(std::cref(tile_gpu)));
+        auto tile_reduced =
+            internal::senderReduceRecvInPlace<T>(ex, std::move(pcomm), reduce_op, std::move(tile_cpu));
+        // TODO matrix::copy(Policy<Backend::GPU>(pika::threads::thread_priority::high));
+        return transform(
+            Policy<CopyBackend<Device::CPU, D>::value>(pika::threads::thread_priority::high),
+            [&](const matrix::Tile<T, Device::CPU>& tile_cpu, auto... args) {
+              matrix::internal::copy(tile_cpu, tile_gpu, args...);
+            },
+            std::move(tile_reduced));
+      })) |
+      start_detached();
 }
 
-template <class T, Device D, template <class> class Future>
+// TODO scheduleReduceSend with future will require to move the actual value, not the cref
+template <class T>
 void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
                         pika::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
-                        Future<matrix::Tile<T, D>> tile) {
+                        pika::shared_future<matrix::Tile<const T, Device::CPU>> tile) {
   using namespace pika::execution::experimental;
-  using dlaf::internal::whenAllLift;
 
-  constexpr auto tileOnCPU = [](auto fut_tile) constexpr {
-    if constexpr (Device::CPU == D)
-      return fut_tile;
-    else
-      return matrix::duplicateIfNeeded<Device::CPU>(std::move(fut_tile));
-  };
+  return keep_future(std::move(tile)) |
+         let_value(pika::unwrapping([ex, rank_root, reduce_op, pcomm = std::move(pcomm)](
+                                       const matrix::Tile<const T, Device::CPU>& tile) mutable {
+           return internal::senderReduceSend<T>(ex, rank_root, std::move(pcomm), reduce_op,
+                                                just(std::cref(tile)));
+         })) |
+         start_detached();
+}
 
-  // ensure that tile is on the CPU (re-use it or copy it from GPU)
-  keep_future(tileOnCPU(std::move(tile))) |
-      // keep it alive till the end of the communication
-      let_value([ex, rank_root, reduce_op, pcomm = std::move(pcomm)](auto& fut_tile_cpu) mutable {
-        // make it contiguous and keep it alive for the communication
-        using common::internal::makeItContiguous;
-        return whenAllLift(std::move(pcomm), makeItContiguous(fut_tile_cpu.get())) |
-               let_value([ex, rank_root, reduce_op](auto& pcomm, const auto& cont_buf) {
-                 return pika::dataflow(ex, internal::reduceSend<T>, rank_root, std::move(pcomm),
-                                      reduce_op, std::cref(cont_buf));
-               });
-      }) |
+// TODO scheduleReduceSend with future will require to move the actual value, not the cref
+template <class T, Device D>
+void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
+                        pika::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
+                        pika::shared_future<matrix::Tile<const T, D>> tile) {
+  // Note:
+  //
+  // GPU ---> Duplicate ---> (cCPU --> MPI)
+  //
+  // where: cCPU = contiguous CPU
+
+  using namespace pika::execution::experimental;
+  using dlaf::internal::Policy;
+  using dlaf::matrix::internal::CopyBackend;
+
+  auto tile_cpu = dlaf::internal::transform(
+      Policy<CopyBackend<D, Device::CPU>::value>(pika::threads::thread_priority::high),
+      [](const matrix::Tile<const T, Device::GPU>& tile_gpu, auto... args) {
+        return dlaf::matrix::Duplicate<Device::CPU>{}(tile_gpu, args...);
+      },
+      keep_future(std::move(tile)));
+
+  internal::senderReduceSend<T>(ex, rank_root, std::move(pcomm), reduce_op, std::move(tile_cpu)) |
       start_detached();
 }
 }

@@ -54,11 +54,16 @@ template <typename F, typename... Ts>
 struct isAsyncCublasCallable
     : isAsyncCublasCallableImpl<hpx::is_invocable_v<F, cublasHandle_t&, Ts...>, F, Ts...> {};
 
+template <typename F, typename... Ts>
+inline constexpr bool isAsyncCublasCallable_v = isAsyncCublasCallable<F, Ts...>::value;
+
 template <typename F, typename Futures>
 struct isDataflowCublasCallable
     : hpx::is_invocable<hpx::util::functional::invoke_fused, F,
                         decltype(hpx::tuple_cat(hpx::tie(std::declval<cublasHandle_t&>()),
                                                 std::declval<Futures>()))> {};
+template <typename F, typename Futures>
+inline constexpr bool isDataflowCublasCallable_v = isDataflowCublasCallable<F, Futures>::value;
 }
 
 /// An executor for cuBLAS functions. Uses handles and streams from the given
@@ -92,7 +97,7 @@ public:
   }
 
   template <typename F, typename... Ts>
-  std::enable_if_t<internal::isAsyncCublasCallable<F, Ts...>::value,
+  std::enable_if_t<internal::isAsyncCublasCallable_v,
                    typename internal::isAsyncCublasCallable<F, Ts...>::return_type>
   async_execute(F&& f, Ts&&... ts) {
     cudaStream_t stream = stream_pool_.getNextStream();
@@ -108,7 +113,7 @@ public:
   }
 
   template <class Frame, class F, class Futures>
-  std::enable_if_t<internal::isDataflowCublasCallable<F, Futures>::value> dataflow_finalize(
+  std::enable_if_t<internal::isDataflowCublasCallable_v<F, Futures>> dataflow_finalize(
       Frame&& frame, F&& f, Futures&& futures) {
     // Ensure the dataflow frame stays alive long enough.
     hpx::intrusive_ptr<typename std::remove_pointer<typename std::decay<Frame>::type>::type> frame_p(

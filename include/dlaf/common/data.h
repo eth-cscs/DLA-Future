@@ -38,6 +38,9 @@ struct is_data<
                      std::is_same_v<decltype(data_iscontiguous(std::declval<const Data&>())), bool>>>
     : std::true_type {};
 
+template <class T>
+inline constexpr bool is_data_v = is_data<T>::value;
+
 /// Traits for accessing properties of the given Data concept.
 ///
 /// data_traits<Data>::element_t is the data type of the elements.
@@ -62,7 +65,7 @@ auto create_data(T* data, Ts&&... args) noexcept {
 /// This is an helper function that given a Data, returns exactly it as it is
 /// It allows to use the make_data function for dealing both with common::DataDescriptor
 /// and anything that can be converted to a Data, without code duplication in user code.
-template <class Data, std::enable_if_t<is_data<Data>::value, int> = 0>
+template <class Data, std::enable_if_t<is_data_v<Data>, int> = 0>
 auto make_data(Data&& data) noexcept {
   return std::forward<Data>(data);
 }

@@ -90,9 +90,9 @@ struct scheduleRecvBcastImpl {
         hpx::dataflow(hpx::launch::sync,
                       hpx::unwrapping([](matrix::Tile<T, D> const& tile) { return tile.size(); }),
                       tile_shared);
-    auto comm_tile = hpx::dataflow(ex, hpx::unwrapping(recvBcastAlloc<T, CommunicationDevice<D>::value>),
+    auto comm_tile = hpx::dataflow(ex, hpx::unwrapping(recvBcastAlloc<T, CommunicationDevice_v<D>>),
                                    tile_size, root_rank, std::move(pcomm));
-    hpx::dataflow(dlaf::getCopyExecutor<CommunicationDevice<D>::value, D>(),
+    hpx::dataflow(dlaf::getCopyExecutor<CommunicationDevice_v<D>, D>(),
                   matrix::unwrapExtendTiles(matrix::internal::copy_o), std::move(comm_tile),
                   std::move(tile_shared));
   }
@@ -114,8 +114,8 @@ template <class T, Device D>
 void scheduleRecvBcast(const comm::Executor& ex, hpx::future<matrix::Tile<T, D>> tile,
                        comm::IndexT_MPI root_rank,
                        hpx::future<common::PromiseGuard<Communicator>> pcomm) {
-  scheduleRecvBcastImpl<D, CommunicationDevice<D>::value>::call(ex, std::move(tile), root_rank,
-                                                                std::move(pcomm));
+  scheduleRecvBcastImpl<D, CommunicationDevice_v<D>>::call(ex, std::move(tile), root_rank,
+                                                           std::move(pcomm));
 }
 
 template <class T, Device D>
@@ -123,8 +123,8 @@ hpx::future<matrix::Tile<const T, D>> scheduleRecvBcastAlloc(
     const comm::Executor& ex, TileElementSize tile_size, comm::IndexT_MPI root_rank,
     hpx::future<common::PromiseGuard<comm::Communicator>> pcomm) {
   return internal::handleRecvTile<D>(
-      hpx::dataflow(ex, hpx::unwrapping(recvBcastAlloc<T, CommunicationDevice<D>::value>), tile_size,
-                    root_rank, std::move(pcomm)));
+      hpx::dataflow(ex, hpx::unwrapping(recvBcastAlloc<T, CommunicationDevice_v>), tile_size, root_rank,
+                    std::move(pcomm)));
 }
 }
 }

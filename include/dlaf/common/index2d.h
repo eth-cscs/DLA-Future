@@ -242,31 +242,27 @@ namespace internal {
 // Traits
 /// This traits has a true value if T is an Index2D or a Size2D (with any index type and any tag)
 template <class T>
-struct is_coord {
-  constexpr static bool value = false;
-};
+struct is_coord : std::false_type {};
 
 template <class T, class Tag>
-struct is_coord<Index2D<T, Tag>> {
-  constexpr static bool value = true;
-};
+struct is_coord<Index2D<T, Tag>> : std::true_type {};
 
 template <class T, class Tag>
-struct is_coord<Size2D<T, Tag>> {
-  constexpr static bool value = true;
-};
+struct is_coord<Size2D<T, Tag>> : std::true_type {};
 
+template <class T>
+inline constexpr bool is_coord_v = is_coord<T>::value;
 }
 
 /// Basic print utility for coordinate types
-template <class Coords2DType, std::enable_if_t<internal::is_coord<Coords2DType>::value, int> = 0>
+template <class Coords2DType, std::enable_if_t<internal::is_coord_v<Coords2DType>, int> = 0>
 std::ostream& operator<<(std::ostream& out, const Coords2DType& index) {
   using IndexT = typename Coords2DType::IndexType;
   return out << static_cast<internal::basic_coords<IndexT>>(index);
 }
 
 /// Given a coordinate type, it returns its transpose
-template <class Coords2DType, std::enable_if_t<internal::is_coord<Coords2DType>::value, int> = 0>
+template <class Coords2DType, std::enable_if_t<internal::is_coord_v<Coords2DType>, int> = 0>
 Coords2DType transposed(Coords2DType coords) {
   coords.transpose();
   return coords;

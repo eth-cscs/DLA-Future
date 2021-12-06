@@ -77,8 +77,7 @@ auto senderReduceRecvInPlace(const comm::Executor& ex,
          let_value([ex, reduce_op, pcomm = std::move(pcomm)](Tile<T, Device::CPU>& tile_orig) mutable {
            using dlaf::common::internal::makeItContiguous;
 
-           auto contiguous_buffer = makeItContiguous(tile_orig);
-           return just(std::move(contiguous_buffer)) |
+           return just(makeItContiguous(tile_orig)) |
                   let_value([ex, reduce_op, &tile_orig,
                              pcomm = std::move(pcomm)](const auto& cont_buffer) mutable {
                     return pika::dataflow(ex, internal::reduceRecvInPlace<T>, pcomm.get(), reduce_op,
@@ -108,15 +107,15 @@ auto senderReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
   using dlaf::internal::whenAllLift;
 
   return std::forward<Sender>(tile) |  // TODO transfer on CPU?
-         let_value([ex, rank_root, reduce_op,
-                    pcomm = std::move(pcomm)](const matrix::Tile<const T, Device::CPU>& tile) mutable {
+         let_value(pika::unwrapping([ex, rank_root, reduce_op, pcomm = std::move(pcomm)](
+                                        const matrix::Tile<const T, Device::CPU>& tile) mutable {
            using common::internal::makeItContiguous;
            return whenAllLift(std::move(pcomm), makeItContiguous(tile)) |
                   let_value([ex, rank_root, reduce_op](auto& pcomm, const auto& cont_buf) {
                     return pika::dataflow(ex, internal::reduceSend<T>, rank_root, std::move(pcomm),
                                           reduce_op, std::cref(cont_buf));
                   });
-         });
+         }));
 }
 }
 
@@ -174,13 +173,9 @@ void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
                         pika::shared_future<matrix::Tile<const T, Device::CPU>> tile) {
   using namespace pika::execution::experimental;
 
-  return keep_future(std::move(tile)) |
-         let_value(pika::unwrapping([ex, rank_root, reduce_op, pcomm = std::move(pcomm)](
-                                       const matrix::Tile<const T, Device::CPU>& tile) mutable {
-           return internal::senderReduceSend<T>(ex, rank_root, std::move(pcomm), reduce_op,
-                                                just(std::cref(tile)));
-         })) |
-         start_detached();
+  internal::senderReduceSend<T>(ex, rank_root, std::move(pcomm), reduce_op,
+                                keep_future(std::move(tile))) |
+      start_detached();
 }
 
 // TODO scheduleReduceSend with future will require to move the actual value, not the cref

@@ -8,6 +8,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+set(CMAKE_CXX_STANDARD 17)
+
 ### GoogleTest
 include(FetchContent)
 

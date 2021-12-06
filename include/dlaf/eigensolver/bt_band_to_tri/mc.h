@@ -46,6 +46,9 @@ hpx::shared_future<matrix::Tile<const T, Device::CPU>> setupVWellFormed(
     hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_i,
     hpx::future<matrix::Tile<T, Device::CPU>> tile_v) {
   auto unzipV_func = [](const auto& tile_i, auto tile_v) {
+    // Note: the size of of tile_i and tile_v embeds a relevant information about the number of
+    // reflecotrs and their max size. This will be exploited to correctly setup the well formed
+    // tile with reflectors in place as they will be applied.
     using lapack::MatrixType;
 
     const auto k = tile_v.size().cols();
@@ -54,7 +57,8 @@ hpx::shared_future<matrix::Tile<const T, Device::CPU>> setupVWellFormed(
     for (SizeType j = 0; j < k; ++j) {
       const auto compact_refl_size =
           std::min<SizeType>(tile_v.size().rows() - (1 + j), tile_i.size().rows() - 1);
-      // TODO this is needed because of complex last reflector (i.e. just 1 element long)
+
+      // this is needed because of complex last reflector (i.e. just 1 element long)
       if (compact_refl_size == 0)
         continue;
 
@@ -62,12 +66,13 @@ hpx::shared_future<matrix::Tile<const T, Device::CPU>> setupVWellFormed(
             tile_v.ptr({1 + j, j}), tile_v.ld());
     }
 
-    // add the ones as first component for each reflector
-    // TODO is it needed because W = V . T? or is it enough just setting ones?
+    // Note:
+    // In addition to setting the diagonal to 1 for missing first components, here it zeros out
+    // both the upper and the lower part. Indeed due to the skewed shape, reflectors do not occupy
+    // the full tile height, and V should be fully well-formed because the next triangular
+    // multiplication, i.e. `V . T`, and the gemm `V* . E`, will use V as a general matrix.
     laset(MatrixType::Upper, tile_v.size().rows(), k, T(0), T(1), tile_v.ptr({0, 0}), tile_v.ld());
 
-    // due to the skewed shape, reflectors do not occupy the tile till the last row. this step
-    // zeros out the lower triangular "padding" part under reflectors
     const SizeType mb = tile_i.size().cols();
     if (tile_v.size().rows() > mb)
       laset(MatrixType::Lower, tile_v.size().rows() - mb, k - 1, T(0), T(0), tile_v.ptr({mb, 0}),

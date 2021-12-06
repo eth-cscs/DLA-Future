@@ -32,10 +32,10 @@ namespace comm {
 namespace internal {
 
 template <class T>
-auto allReduce(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
+auto allReduce(const common::PromiseGuard<comm::Communicator>& pcomm, MPI_Op reduce_op,
                common::internal::ContiguousBufferHolder<const T> cont_buf_in,
                common::internal::ContiguousBufferHolder<T> cont_buf_out,
-               matrix::Tile<const T, Device::CPU> const&, MPI_Request* req) {
+               const matrix::Tile<const T, Device::CPU>&, MPI_Request* req) {
   auto& comm = pcomm.ref();
   auto msg_in = comm::make_message(cont_buf_in.descriptor);
   auto msg_out = comm::make_message(cont_buf_out.descriptor);
@@ -48,7 +48,7 @@ auto allReduce(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
 DLAF_MAKE_CALLABLE_OBJECT(allReduce);
 
 template <class T>
-auto allReduceInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
+auto allReduceInPlace(const common::PromiseGuard<comm::Communicator>& pcomm, MPI_Op reduce_op,
                       common::internal::ContiguousBufferHolder<T> cont_buf, MPI_Request* req) {
   auto& comm = pcomm.ref();
   auto msg = comm::make_message(cont_buf.descriptor);
@@ -101,7 +101,7 @@ void scheduleAllReduce(const comm::Executor& ex,
                                                std::move(pcomm), reduce_op, std::move(cont_buf_in),
                                                std::move(cont_buf_out), tile_in));
 
-  dataflow(ex_copy, unwrapping(copyBack_o), std::move(tile_out), std::move(cont_buf_out));
+  dataflow(ex_copy, unwrapping(copyBack_o), std::move(cont_buf_out), std::move(tile_out));
 }
 
 template <class T>
@@ -138,7 +138,10 @@ hpx::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
   cont_buf = dataflow(ex, unwrapping(internal::allReduceInPlace_o), std::move(pcomm), reduce_op,
                       std::move(cont_buf));
 
-  return dataflow(ex_copy, unwrapping(copyBack_o), std::move(tile), std::move(cont_buf));
+  // Note:
+  // This extracts the tile given as argument to copyBack, not the return value.
+  return hpx::get<1>(hpx::split_future(
+      dataflow(ex_copy, matrix::unwrapExtendTiles(copyBack_o), std::move(cont_buf), std::move(tile))));
 }
 }
 }

@@ -502,9 +502,8 @@ struct UnwrapFuture {
 template <typename T, Device D>
 struct UnwrapFuture<hpx::future<Tile<T, D>>> {
   template <typename U>
-  static auto call(U&& u) {
-    auto t = u.get();
-    return t;
+  static auto call(U u) {
+    return u.get();
   }
 };
 

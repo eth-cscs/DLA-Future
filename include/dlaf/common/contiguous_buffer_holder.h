@@ -32,6 +32,10 @@ template <class T>
 struct ContiguousBufferHolder {
   common::Buffer<std::remove_const_t<T>> buffer;
   common::DataDescriptor<T> descriptor;
+
+  bool isAllocated() const {
+    return static_cast<bool>(buffer);
+  }
 };
 
 /// It returns a ContiguousBufferHolder starting from a Tile, where the ContiguousBufferHolder will be either:
@@ -53,14 +57,11 @@ auto makeItContiguous(const matrix::Tile<T, Device::CPU>& tile) {
 
 DLAF_MAKE_CALLABLE_OBJECT(makeItContiguous);
 
-/// It returns @p tile, ensuring that if the given @p bag owns a temporary buffer, it copies data from
-/// this latter one to @p tile before returning it. Otherwise it is a no-op.
+/// Copy from bag to tile, just if the bag owns a temporary buffer. Otherwise it is a no-op.
 template <class T>
-auto copyBack(matrix::Tile<T, Device::CPU> tile, ContiguousBufferHolder<T> bag) {
-  auto buffer_used = std::move(bag.buffer);
-  if (buffer_used)
-    common::copy(buffer_used, common::make_data(tile));
-  return tile;
+void copyBack(const ContiguousBufferHolder<T>& bag, const matrix::Tile<T, Device::CPU>& tile) {
+  if (bag.isAllocated())
+    common::copy(bag.buffer, common::make_data(tile));
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(copyBack);

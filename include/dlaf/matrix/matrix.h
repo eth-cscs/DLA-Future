@@ -129,6 +129,7 @@ public:
   }
 
   auto readwrite_sender(const LocalTileIndex& index) noexcept {
+    // Note: do not use `keep_future`, otherwise dlaf::transform will not handle the lifetime correctly
     return this->operator()(index);
   }
 

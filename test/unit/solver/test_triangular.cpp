@@ -11,18 +11,24 @@
 
 #include <functional>
 #include <tuple>
-#include "gtest/gtest.h"
+
+#include <gtest/gtest.h>
+#include <hpx/include/threadmanager.hpp>
+#include <hpx/runtime.hpp>
+
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"
+#include "dlaf/util_matrix.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
+#include "dlaf_test/matrix/util_generic_blas.h"
 #include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_matrix_blas.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
 using namespace dlaf::comm;
 using namespace dlaf::matrix;
+using namespace dlaf::matrix::util;
 using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 using namespace testing;
@@ -163,8 +169,7 @@ TYPED_TEST(TriangularSolverTestMC, CorrectnessDistributed) {
       for (auto uplo : blas_uplos) {
         for (auto op : blas_ops) {
           for (auto diag : blas_diags) {
-            // Currently only NoTrans cases are implemented
-            if (!(op == blas::Op::NoTrans))
+            if (!(op == blas::Op::NoTrans || (side == blas::Side::Left && uplo == blas::Uplo::Lower)))
               continue;
 
             for (auto sz : sizes) {
@@ -172,6 +177,7 @@ TYPED_TEST(TriangularSolverTestMC, CorrectnessDistributed) {
               TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
               testTriangularSolver<TypeParam, Backend::MC, Device::CPU>(comm_grid, side, uplo, op, diag,
                                                                         alpha, m, n, mb, nb);
+              hpx::threads::get_thread_manager().wait();
             }
           }
         }
@@ -205,8 +211,7 @@ TYPED_TEST(TriangularSolverTestGPU, CorrectnessDistributed) {
       for (auto uplo : blas_uplos) {
         for (auto op : blas_ops) {
           for (auto diag : blas_diags) {
-            // Currently only NoTrans cases are implemented
-            if (!(op == blas::Op::NoTrans))
+            if (!(op == blas::Op::NoTrans || (side == blas::Side::Left && uplo == blas::Uplo::Lower)))
               continue;
 
             for (auto sz : sizes) {
@@ -215,6 +220,7 @@ TYPED_TEST(TriangularSolverTestGPU, CorrectnessDistributed) {
 
               testTriangularSolver<TypeParam, Backend::GPU, Device::GPU>(comm_grid, side, uplo, op, diag,
                                                                          alpha, m, n, mb, nb);
+              hpx::threads::get_thread_manager().wait();
             }
           }
         }

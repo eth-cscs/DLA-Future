@@ -29,102 +29,94 @@
 namespace dlaf {
 namespace comm {
 
-// Non-blocking sender broadcast
 template <class T, Device D>
-void sendBcast(matrix::Tile<const T, D> const& tile, common::PromiseGuard<Communicator> pcomm,
+void sendBcast(const matrix::Tile<const T, D>& tile, const common::PromiseGuard<Communicator>& pcomm,
                MPI_Request* req) {
+#if !defined(DLAF_WITH_CUDA_RDMA)
+  static_assert(D == Device::CPU, "DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.");
+#endif
+
+  const auto& comm = pcomm.ref();
   auto msg = comm::make_message(common::make_data(tile));
-  DLAF_MPI_CALL(MPI_Ibcast(const_cast<T*>(msg.data()), msg.count(), msg.mpi_type(), pcomm.ref().rank(),
-                           pcomm.ref(), req));
+  DLAF_MPI_CALL(
+      MPI_Ibcast(const_cast<T*>(msg.data()), msg.count(), msg.mpi_type(), comm.rank(), comm, req));
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(sendBcast);
 
-// Non-blocking receiver broadcast
 template <class T, Device D>
-matrix::Tile<T, D> recvBcast(matrix::Tile<T, D> tile, comm::IndexT_MPI root_rank,
-                             common::PromiseGuard<Communicator> pcomm, MPI_Request* req) {
+void recvBcast(const matrix::Tile<T, D>& tile, comm::IndexT_MPI root_rank,
+               const common::PromiseGuard<Communicator>& pcomm, MPI_Request* req) {
+#if !defined(DLAF_WITH_CUDA_RDMA)
+  static_assert(D == Device::CPU, "DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.");
+#endif
+
   auto msg = comm::make_message(common::make_data(tile));
   DLAF_MPI_CALL(MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, pcomm.ref(), req));
-  return tile;
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(recvBcast);
 
-// Non-blocking receiver broadcast (with Alloc)
-template <class T, Device D>
-matrix::Tile<const T, D> recvBcastAlloc(TileElementSize tile_size, comm::IndexT_MPI root_rank,
-                                        common::PromiseGuard<Communicator> pcomm, MPI_Request* req) {
-  using Tile_t = matrix::Tile<T, D>;
-  using ConstTile_t = matrix::Tile<const T, D>;
-  using MemView_t = memory::MemoryView<T, D>;
-
-  MemView_t mem_view(tile_size.rows() * tile_size.cols());
-  Tile_t tile(tile_size, std::move(mem_view), tile_size.rows());
-
-  auto msg = comm::make_message(common::make_data(tile));
-  DLAF_MPI_CALL(MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, pcomm.ref(), req));
-  return ConstTile_t(std::move(tile));
-}
-
 template <class T, Device D, template <class> class Future>
 void scheduleSendBcast(const comm::Executor& ex, Future<matrix::Tile<const T, D>> tile,
-                       hpx::future<common::PromiseGuard<comm::Communicator>> pcomm) {
-  hpx::dataflow(ex, matrix::unwrapExtendTiles(sendBcast_o), internal::prepareSendTile(std::move(tile)),
-                std::move(pcomm));
+                       hpx::future<common::PromiseGuard<Communicator>> pcomm) {
+  using matrix::unwrapExtendTiles;
+  using internal::prepareSendTile;
+
+  hpx::dataflow(ex, unwrapExtendTiles(sendBcast_o), prepareSendTile(std::move(tile)), std::move(pcomm));
 }
 
-// This implements scheduleRecvBcast for when the device of the given tile and
-// the communication device are different. In that case we make use of
-// recvBcastAlloc, which will allocate a tile on the correct device for
-// communication, receive the data, and return the tile. When communication is
-// ready, we copy the data from the tile on the communication device to the tile
-// passed into scheduleRecvBcast.
-template <Device D, Device CommunicationD>
-struct scheduleRecvBcastImpl {
-  template <class T>
-  static void call(const comm::Executor& ex, hpx::future<matrix::Tile<T, D>> tile,
+namespace internal {
+
+template <class T>
+struct ScheduleRecvBcast {
+  template <Device D>
+  static auto call(const comm::Executor& ex, hpx::future<matrix::Tile<T, D>> tile,
                    comm::IndexT_MPI root_rank, hpx::future<common::PromiseGuard<Communicator>> pcomm) {
-    auto tile_shared = tile.share();
-    auto tile_size =
-        hpx::dataflow(hpx::launch::sync,
-                      hpx::unwrapping([](matrix::Tile<T, D> const& tile) { return tile.size(); }),
-                      tile_shared);
-    auto comm_tile = hpx::dataflow(ex, hpx::unwrapping(recvBcastAlloc<T, CommunicationDevice_v<D>>),
-                                   tile_size, root_rank, std::move(pcomm));
-    hpx::dataflow(dlaf::getCopyExecutor<CommunicationDevice_v<D>, D>(),
-                  matrix::unwrapExtendTiles(matrix::internal::copy_o), std::move(comm_tile),
-                  std::move(tile_shared));
+#if !defined(DLAF_WITH_CUDA_RDMA)
+    static_assert(D == Device::CPU, "With CUDA RDMA disabled, MPI accepts just CPU memory.");
+#endif
+
+    using hpx::dataflow;
+    using matrix::unwrapExtendTiles;
+
+    return dataflow(ex, unwrapExtendTiles(recvBcast_o), std::move(tile), root_rank, std::move(pcomm));
+  }
+
+  static void call(const comm::Executor& ex, hpx::future<matrix::Tile<T, Device::GPU>> tile,
+                   comm::IndexT_MPI root_rank, hpx::future<common::PromiseGuard<Communicator>> pcomm) {
+    using hpx::dataflow;
+    using matrix::duplicateIfNeeded;
+    using matrix::internal::copy_o;
+
+    // Note:
+    //
+    // TILE_GPU -+-> duplicateIfNeeded<CPU> ---> TILE_CPU ---> recvBcast ---> TILE_CPU -+-> copy
+    //           |                                                                      |
+    //           +----------------------------------------------------------------------+
+    //
+    // Actually `duplicateIfNeeded` always makes a copy, because it is always needed since this
+    // is the specialization for GPU input and MPI withuot CUDA_RDMA requires CPU memory.
+
+    auto tile_gpu = tile.share();
+    auto tile_cpu = duplicateIfNeeded<Device::CPU>(tile_gpu);
+
+    tile_cpu = std::move(hpx::get<0>(hpx::split_future(
+        ScheduleRecvBcast<T>::call(ex, std::move(tile_cpu), root_rank, std::move(pcomm)))));
+
+    dataflow(getCopyExecutor<Device::GPU, Device::CPU>(), matrix::unwrapExtendTiles(copy_o), tile_cpu,
+             tile_gpu);
   }
 };
 
-// This specialization is used when the communication device and the device used
-// for the input tile are the same. In this case we don't need to do anything
-// special and just launch a task that receives into the given tile.
-template <Device D>
-struct scheduleRecvBcastImpl<D, D> {
-  template <class T>
-  static void call(const comm::Executor& ex, hpx::future<matrix::Tile<T, D>> tile,
-                   comm::IndexT_MPI root_rank, hpx::future<common::PromiseGuard<Communicator>> pcomm) {
-    hpx::dataflow(ex, hpx::unwrapping(recvBcast_o), std::move(tile), root_rank, std::move(pcomm));
-  }
-};
+}
 
 template <class T, Device D>
 void scheduleRecvBcast(const comm::Executor& ex, hpx::future<matrix::Tile<T, D>> tile,
                        comm::IndexT_MPI root_rank,
                        hpx::future<common::PromiseGuard<Communicator>> pcomm) {
-  scheduleRecvBcastImpl<D, CommunicationDevice_v<D>>::call(ex, std::move(tile), root_rank,
-                                                           std::move(pcomm));
+  internal::ScheduleRecvBcast<T>::call(ex, std::move(tile), root_rank, std::move(pcomm));
 }
 
-template <class T, Device D>
-hpx::future<matrix::Tile<const T, D>> scheduleRecvBcastAlloc(
-    const comm::Executor& ex, TileElementSize tile_size, comm::IndexT_MPI root_rank,
-    hpx::future<common::PromiseGuard<comm::Communicator>> pcomm) {
-  return internal::handleRecvTile<D>(
-      hpx::dataflow(ex, hpx::unwrapping(recvBcastAlloc<T, CommunicationDevice_v>), tile_size, root_rank,
-                    std::move(pcomm)));
-}
 }
 }

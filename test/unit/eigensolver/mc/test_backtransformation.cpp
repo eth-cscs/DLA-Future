@@ -12,7 +12,11 @@
 #include <functional>
 #include <sstream>
 #include <tuple>
-#include "gtest/gtest.h"
+
+#include <gtest/gtest.h>
+#include <hpx/include/threadmanager.hpp>
+#include <hpx/runtime.hpp>
+
 #include "dlaf/common/index2d.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/copy.h"
@@ -22,7 +26,6 @@
 #include "dlaf/util_matrix.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_matrix_blas.h"
 #include "dlaf_test/matrix/util_matrix_local.h"
 #include "dlaf_test/util_types.h"
 
@@ -146,7 +149,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
 
   eigensolver::backTransformation<Backend::MC>(mat_c, mat_v, taus);
 
-  auto result = [& dist = mat_c.distribution(), &mat_local = c](const GlobalElementIndex& element) {
+  auto result = [&dist = mat_c.distribution(), &mat_local = c](const GlobalElementIndex& element) {
     const auto tile_index = dist.globalTileIndex(element);
     const auto tile_element = dist.tileElementIndex(element);
     return mat_local.tile_read(tile_index)(tile_element);
@@ -229,7 +232,7 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
 
   eigensolver::backTransformation<Backend::MC>(grid, mat_c, mat_v, taus);
 
-  auto result = [& dist = mat_c.distribution(),
+  auto result = [&dist = mat_c.distribution(),
                  &mat_local = mat_c_loc](const GlobalElementIndex& element) {
     const auto tile_index = dist.globalTileIndex(element);
     const auto tile_element = dist.tileElementIndex(element);
@@ -252,6 +255,7 @@ TYPED_TEST(BackTransformationEigenSolverTestMC, CorrectnessDistributed) {
     for (auto sz : sizes) {
       auto [m, n, mb, nb] = sz;
       testBacktransformationEigenv<TypeParam>(comm_grid, m, n, mb, nb);
+      hpx::threads::get_thread_manager().wait();
     }
   }
 }

@@ -60,22 +60,17 @@ private:
 /// Pipeline takes ownership of a given object and manages the access to this resource by serializing
 /// calls. Anyone that requires access to the underlying resource will get an hpx::future, which is the
 /// way to register to the queue. All requests are serialized and served in the same order they arrive.
+/// On destruction it does not wait for the queued requests for the resource and exits immediately.
 ///
 /// The mechanism for auto-releasing the resource and passing it to the next user works thanks to the
-/// internal Wrapper object. This Wrapper contains the real resource, and it will do what is needed to
-/// unlock the next user as soon as the Wrapper is destroyed.
+/// internal PromiseGuard object. This PromiseGuard contains the real resource, and it will do what is
+/// needed to unlock the next user as soon as the PromiseGuard is destroyed.
 template <class T>
 class Pipeline {
 public:
   /// Create a Pipeline by moving in the resource (it takes the ownership).
   Pipeline(T object) {
     future_ = hpx::make_ready_future(std::move(object));
-  }
-
-  /// On destruction it waits that all users have finished using it.
-  ~Pipeline() {
-    if (future_.valid())
-      future_.get();
   }
 
   /// Enqueue for the resource.
@@ -87,8 +82,8 @@ public:
     hpx::lcos::local::promise<T> promise_next;
     future_ = promise_next.get_future();
 
-    return before_last.then(hpx::launch::sync, hpx::unwrapping([promise_next = std::move(promise_next)](
-                                                                   T&& object) mutable {
+    return before_last.then(hpx::launch::sync,
+                            hpx::unwrapping([promise_next = std::move(promise_next)](T object) mutable {
                               return PromiseGuard<T>{std::move(object), std::move(promise_next)};
                             }));
   }

@@ -11,7 +11,11 @@
 
 #include <functional>
 #include <tuple>
-#include "gtest/gtest.h"
+
+#include <gtest/gtest.h>
+#include <hpx/include/threadmanager.hpp>
+#include <hpx/runtime.hpp>
+
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"
@@ -118,6 +122,7 @@ TYPED_TEST(CholeskyTestMC, CorrectnessDistributed) {
       for (auto sz : sizes) {
         auto [m, mb] = sz;
         testCholesky<TypeParam, Backend::MC, Device::CPU>(comm_grid, uplo, m, mb);
+        hpx::threads::get_thread_manager().wait();
       }
     }
   }
@@ -139,6 +144,7 @@ TYPED_TEST(CholeskyTestGPU, CorrectnessDistributed) {
       for (auto sz : sizes) {
         auto [m, mb] = sz;
         testCholesky<TypeParam, Backend::GPU, Device::GPU>(comm_grid, uplo, m, mb);
+        hpx::threads::get_thread_manager().wait();
       }
     }
   }

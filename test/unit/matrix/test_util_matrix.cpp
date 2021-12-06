@@ -73,7 +73,7 @@ TYPED_TEST(MatrixUtilsTest, Set0) {
 
       auto null_matrix = [](const GlobalElementIndex&) { return TypeParam(0); };
 
-      matrix::util::set0(hpx::launch::sync, matrix);
+      matrix::util::set0<Backend::MC>(hpx::threads::thread_priority::normal, matrix);
 
       CHECK_MATRIX_EQ(null_matrix, matrix);
     }
@@ -248,7 +248,7 @@ void testSet0(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
       hpx::dataflow(hpx::unwrapping(tile::internal::laset_o), lapack::MatrixType::General, TypeParam(1),
                     TypeParam(1), panel(idx));
 
-    matrix::util::set0(hpx::launch::sync, panel);
+    matrix::util::set0<Backend::MC>(hpx::threads::thread_priority::normal, panel);
 
     for (const auto& idx : panel.iteratorLocal())
       CHECK_TILE_EQ(null_tile, panel.read(idx).get());

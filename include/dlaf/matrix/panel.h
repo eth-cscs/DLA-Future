@@ -409,7 +409,8 @@ struct Panel : public Panel<axis, const T, device> {
   }
 
   auto readwrite_sender(const LocalTileIndex& index) {
-    return hpx::execution::experimental::keep_future(this->operator()(index));
+    // Note: do not use `keep_future`, otherwise dlaf::transform will not handle the lifetime correctly
+    return this->operator()(index);
   }
 
 protected:

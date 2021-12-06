@@ -364,6 +364,7 @@ template <class T>
 void hemmComputeX(PanelT<Coord::Col, T>& x, const LocalTileSize at_offset, ConstMatrixT<T>& a,
                   ConstPanelT<Coord::Col, T>& w) {
   const auto ex = getHpExecutor<Backend::MC>();
+  const auto priority = hpx::threads::thread_priority::high;
 
   const auto dist = a.distribution();
 
@@ -373,7 +374,7 @@ void hemmComputeX(PanelT<Coord::Col, T>& x, const LocalTileSize at_offset, Const
   // result.
   //
   // TODO set0 can be "embedded" in the logic but currently it will be a bit cumbersome.
-  matrix::util::set0(ex, x);
+  matrix::util::set0<Backend::MC>(priority, x);
 
   for (SizeType i = at_offset.rows(); i < dist.localNrTiles().rows(); ++i) {
     const auto limit = i + 1;
@@ -540,6 +541,8 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
                   ConstPanelT<Coord::Row, T>& wt, common::Pipeline<comm::Communicator>& mpi_row_chain,
                   common::Pipeline<comm::Communicator>& mpi_col_chain) {
   const auto ex = getHpExecutor<Backend::MC>();
+  const auto priority = hpx::threads::thread_priority::high;
+
   const auto ex_mpi = getMPIExecutor<Backend::MC>();
 
   const auto dist = a.distribution();
@@ -551,8 +554,8 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
   // result.
   //
   // TODO set0 can be "embedded" in the logic but currently it will be a bit cumbersome.
-  matrix::util::set0(ex, x);
-  matrix::util::set0(ex, xt);
+  matrix::util::set0<Backend::MC>(priority, x);
+  matrix::util::set0<Backend::MC>(priority, xt);
 
   for (SizeType i = at_offset.rows(); i < dist.localNrTiles().rows(); ++i) {
     const auto limit = dist.template nextLocalTileFromGlobalTile<Coord::Col>(
@@ -792,8 +795,8 @@ std::vector<hpx::shared_future<common::internal::vector<T>>> ReductionToBand<
   const auto ex_mpi = getMPIExecutor<Backend::MC>();
 
   common::Pipeline<comm::Communicator> mpi_col_chain_panel(grid.colCommunicator().clone());
-  common::Pipeline<comm::Communicator> mpi_row_chain(grid.rowCommunicator());
-  common::Pipeline<comm::Communicator> mpi_col_chain(grid.colCommunicator());
+  common::Pipeline<comm::Communicator> mpi_row_chain(grid.rowCommunicator().clone());
+  common::Pipeline<comm::Communicator> mpi_col_chain(grid.colCommunicator().clone());
 
   const auto& dist = mat_a.distribution();
   const comm::Index2D rank = dist.rankIndex();

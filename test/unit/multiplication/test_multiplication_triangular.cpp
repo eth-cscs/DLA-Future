@@ -11,19 +11,24 @@
 
 #include <functional>
 #include <tuple>
-#include "gtest/gtest.h"
+
+#include <gtest/gtest.h>
+#include <hpx/include/threadmanager.hpp>
+#include <hpx/runtime.hpp>
+
 #include "dlaf/blas/tile.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
+#include "dlaf_test/matrix/util_generic_blas.h"
 #include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_matrix_blas.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
 using namespace dlaf::comm;
 using namespace dlaf::matrix;
+using namespace dlaf::matrix::util;
 using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 using namespace testing;
@@ -176,6 +181,7 @@ TYPED_TEST(TriangularMultiplicationTestMC, CorrectnessDistributed) {
               testTriangularMultiplication<TypeParam, Backend::MC, Device::CPU>(comm_grid, side, uplo,
                                                                                 op, diag, alpha, m, n,
                                                                                 mb, nb);
+              hpx::threads::get_thread_manager().wait();
             }
           }
         }
@@ -218,6 +224,7 @@ TYPED_TEST(TriangularMultiplicationTestGPU, CorrectnessDistributed) {
               testTriangularMultiplication<TypeParam, Backend::GPU, Device::GPU>(comm_grid, side, uplo,
                                                                                  op, diag, alpha, m, n,
                                                                                  mb, nb);
+              hpx::threads::get_thread_manager().wait();
             }
           }
         }

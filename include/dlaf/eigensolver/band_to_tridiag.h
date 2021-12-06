@@ -48,7 +48,7 @@ namespace eigensolver {
 ///
 /// E.g. for m = 6 (left) and m = 7 (right) (in both cases band_size = 3)
 /// V haves the following layouts:
-/// / A0 B0 C0 ** ** ** \                    / A0 B0 C0 ** ** ** ** \
+/// / A0 B0 C0 ** ** ** \                    / A0 B0 C0 ** ** ** ** |
 /// | A0 B0 C0 ** ** ** |                    | A0 B0 C0 ** ** ** ** |
 /// | A0 B0 C0 ** ** ** |                    | A0 B0 C0 ** ** ** ** |
 /// | A1 ** ** D0 E0 ** |                    | A1 B1 ** D0 E0 F0 ** |

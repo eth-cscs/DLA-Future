@@ -38,7 +38,7 @@ void HHReflector(const SizeType n, T& tau, T* v, T* vec) noexcept {
   // copy the HH reflector to v and set the elements annihilated by the HH transf. to 0.
   v[0] = 1.;
   blas::copy(n - 1, vec + 1, 1, v + 1, 1);
-  std::memset(vec + 1, 0, mul(n - 1, sizeof(T)));
+  std::fill(vec + 1, vec + n, T{});
 }
 
 template <class T>

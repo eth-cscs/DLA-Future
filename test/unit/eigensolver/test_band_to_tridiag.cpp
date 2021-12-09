@@ -52,9 +52,7 @@ void testBandToTridiag(const blas::Uplo uplo, const SizeType band_size, const Si
   Matrix<T, Device::CPU> mat_a(size, block_size);
   matrix::util::set_random_hermitian(mat_a);
 
-  auto ret = eigensolver::bandToTridiag<Backend::MC>(uplo, band_size, mat_a);
-  auto& mat_trid = ret.tridiagonal;
-  auto& mat_v = ret.hh_reflectors;
+  auto [mat_trid, mat_v] = eigensolver::bandToTridiag<Backend::MC>(uplo, band_size, mat_a);
 
   if (m == 0)
     return;

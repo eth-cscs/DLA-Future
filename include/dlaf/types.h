@@ -79,7 +79,7 @@ template <class T>
 using ComplexType = typename TypeInfo<T>::ComplexType;
 
 template <class T>
-inline constexpr bool is_complex_v = std::is_same_v<T, ComplexType<T>>;
+inline constexpr bool isComplex_v = std::is_same_v<T, ComplexType<T>>;
 
 /// Compute the number of operations.
 ///

@@ -16,6 +16,7 @@
 #include "gtest/gtest.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/traits.h"
 #include "dlaf_test/matrix/matrix_local.h"
 #include "dlaf_test/matrix/util_generic_lapack.h"
 #include "dlaf_test/matrix/util_matrix.h"
@@ -80,7 +81,7 @@ void testBandToTridiag(const blas::Uplo uplo, const SizeType band_size, const Si
                  ld);
   };
 
-  if (std::is_same<T, ComplexType<T>>::value && m > 1) {
+  if (isComplex_v<T> && m > 1) {
     T* v = mat_v_local.ptr({(m - 2) / band_size * band_size, m - 2});
     apply_left_right(1, v, m - 1);
   }

@@ -322,8 +322,7 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
     }
 
     // Maximum size / (2b-1) sweeps can be executed in parallel.
-    const auto max_workers =
-        std::min(ceilDiv(size, 2 * b - 1), to_signed<SizeType>(get_num_threads("default")));
+    const auto max_workers = std::min(ceilDiv(size, 2 * b - 1), to_SizeType(get_num_threads("default")));
     vector<Pipeline<SweepWorker<T>>> workers;
     workers.reserve(max_workers);
     for (SizeType i = 0; i < max_workers; ++i)

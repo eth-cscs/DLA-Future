@@ -60,7 +60,7 @@ void testBandToTridiag(const blas::Uplo uplo, const SizeType band_size, const Si
 
   auto mat_trid_local = matrix::test::allGather(lapack::MatrixType::General, mat_trid);
   MatrixLocal<T> mat_local(mat_a.size(), mat_a.blockSize());
-  auto ld = mat_local.ld();
+  const auto ld = mat_local.ld();
   set(mat_local, [](auto) { return T{0}; });
 
   for (SizeType j = 0; j < m - 1; ++j) {
@@ -112,11 +112,8 @@ void testBandToTridiag(const blas::Uplo uplo, const SizeType band_size, const Si
 }
 
 TYPED_TEST(EigensolverBandToTridiagTest, CorrectnessLocal) {
-  SizeType m, mb, b;
   const blas::Uplo uplo = blas::Uplo::Lower;
 
-  for (auto sz : sizes) {
-    std::tie(m, mb, b) = sz;
+  for (const auto& [m, mb, b] : sizes)
     testBandToTridiag<TypeParam>(uplo, b, m, mb);
-  }
 }

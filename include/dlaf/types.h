@@ -78,6 +78,9 @@ using BaseType = typename TypeInfo<T>::BaseType;
 template <class T>
 using ComplexType = typename TypeInfo<T>::ComplexType;
 
+template <class T>
+inline constexpr bool isComplex_v = std::is_same_v<T, ComplexType<T>>;
+
 /// Compute the number of operations.
 ///
 /// Given the number of additions and multiplications of type @tparam T,

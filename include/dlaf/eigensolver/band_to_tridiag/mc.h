@@ -249,17 +249,6 @@ protected:
 
 template <class T>
 struct BandToTridiag<Backend::MC, Device::CPU, T> {
-  static SizeType nrSweeps(SizeType size) noexcept {
-    // Complex needs an extra sweep to have a real tridiagonal matrix.
-    return isComplex_v<T> ? size - 1 : size - 2;
-  }
-
-  static SizeType nrStepsForSweep(SizeType sweep, SizeType size, SizeType band) noexcept {
-    // Sweep size-2 should be handled differently.
-    // Note: It is executed only for complex types (see nrSweeps)
-    return sweep == size - 2 ? 1 : util::ceilDiv(size - sweep - 2, band);
-  }
-
   // Local implementation of bandToTridiag.
   static ReturnTridiagType<T, Device::CPU> call_L(const SizeType b,
                                                   Matrix<const T, Device::CPU>& mat_a) noexcept {
@@ -357,7 +346,7 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
       }
     };
 
-    const auto sweeps = nrSweeps(size);
+    const auto sweeps = nrSweeps<T>(size);
     for (SizeType sweep = 0; sweep < sweeps; ++sweep) {
       // Create the first max_workers workers and then reuse them.
       auto& w_pipeline = workers[sweep % max_workers];

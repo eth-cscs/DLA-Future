@@ -244,16 +244,14 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
 }
 
 TYPED_TEST(BackTransformationEigenSolverTestMC, CorrectnessLocal) {
-  for (auto sz : sizes) {
-    auto [m, n, mb, nb] = sz;
+  for (const auto& [m, n, mb, nb] : sizes) {
     testBacktransformationEigenv<TypeParam>(m, n, mb, nb);
   }
 }
 
 TYPED_TEST(BackTransformationEigenSolverTestMC, CorrectnessDistributed) {
   for (const auto& comm_grid : {this->commGrids()[0]}) {
-    for (auto sz : sizes) {
-      auto [m, n, mb, nb] = sz;
+    for (const auto& [m, n, mb, nb] : sizes) {
       testBacktransformationEigenv<TypeParam>(comm_grid, m, n, mb, nb);
       hpx::threads::get_thread_manager().wait();
     }

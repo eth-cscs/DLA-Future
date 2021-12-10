@@ -53,8 +53,7 @@ TYPED_TEST(TileOperationsTestMC, Hegst) {
 
   for (const auto& uplo : blas_uplos) {
     for (const auto& itype : itypes) {
-      for (const auto& size : hegst_sizes) {
-        auto [m, extra_lda, extra_ldb] = size;
+      for (const auto& [m, extra_lda, extra_ldb] : hegst_sizes) {
         testHegst<Type, Device::CPU>(itype, uplo, m, extra_lda, extra_ldb);
       }
     }
@@ -69,8 +68,7 @@ TYPED_TEST(TileOperationsTestGPU, Hegst) {
 
   for (const auto& uplo : blas_uplos) {
     for (const auto& itype : itypes) {
-      for (const auto& size : hegst_sizes) {
-        auto [m, extra_lda, extra_ldb] = size;
+      for (const auto& [m, extra_lda, extra_ldb] : _sizes) {
         testHegst<Type, Device::GPU>(itype, uplo, m, extra_lda, extra_ldb);
       }
     }
@@ -85,9 +83,7 @@ TYPED_TEST(TileOperationsTestMC, lange) {
                                                                  {17, 11, 3}, {17, 11, 0}, {17, 17, 3},
                                                                  {11, 11, 0}};
 
-  for (const auto& size : sizes) {
-    auto [m, n, extra_lda] = size;
-
+  for (const auto& [m, n, extra_lda] : sizes) {
     const SizeType lda = std::max<SizeType>(1, m) + extra_lda;
     auto tile = createTile<TypeParam, Device::CPU>(TileElementSize{m, n}, lda);
 
@@ -106,9 +102,7 @@ TYPED_TEST(TileOperationsTestMC, lantr) {
                                                                  {1, 1, 0},   {17, 11, 3}, {17, 11, 0},
                                                                  {17, 17, 3}, {17, 17, 3}, {11, 11, 0}};
 
-  for (const auto& size : sizes) {
-    auto [m, n, extra_lda] = size;
-
+  for (auto& [m, n, extra_lda] : sizes) {
     for (const auto uplo : blas_uplos) {
       // transpose rectangular matrix to be useful for upper triangular case
       if (blas::Uplo::Upper == uplo)
@@ -138,9 +132,7 @@ TYPED_TEST(TileOperationsTestMC, Potrf) {
   using Type = TypeParam;
 
   for (const auto uplo : blas_uplos) {
-    for (const auto& size : potrf_sizes) {
-      auto [n, extra_lda] = size;
-
+    for (const auto& [n, extra_lda] : potrf_sizes) {
       // Test version non returning info
       testPotrf<Type, Device::CPU, false>(uplo, n, extra_lda);
 
@@ -155,9 +147,7 @@ TYPED_TEST(TileOperationsTestGPU, Potrf) {
   using Type = TypeParam;
 
   for (const auto uplo : blas_uplos) {
-    for (const auto& size : potrf_sizes) {
-      auto [n, extra_lda] = size;
-
+    for (const auto& [n, extra_lda] : potrf_sizes) {
       // Test version non returning info
       testPotrf<Type, Device::GPU, false>(uplo, n, extra_lda);
 
@@ -172,8 +162,7 @@ TYPED_TEST(TileOperationsTestMC, PotrfNonPositiveDefinite) {
   using Type = TypeParam;
 
   for (const auto uplo : blas_uplos) {
-    for (const auto& size : potrf_sizes) {
-      auto [n, extra_lda] = size;
+    for (const auto& [n, extra_lda] : potrf_sizes) {
       if (n == 0)
         continue;
 
@@ -188,8 +177,7 @@ TYPED_TEST(TileOperationsTestGPU, PotrfNonPositiveDefinite) {
   using Type = TypeParam;
 
   for (const auto uplo : blas_uplos) {
-    for (const auto& size : potrf_sizes) {
-      auto [n, extra_lda] = size;
+    for (const auto& [n, extra_lda] : potrf_sizes) {
       if (n == 0)
         continue;
 
@@ -234,9 +222,8 @@ std::vector<std::tuple<SizeType, SizeType, SizeType>> setsizes = {{0, 0, 0},   {
                                                                   {17, 17, 3}, {17, 17, 3}, {11, 11, 0}};
 
 TYPED_TEST(TileOperationsTestMC, Laset) {
-  for (const auto& size : setsizes) {
+  for (const auto& [m, n, extra_lda] : setsizes) {
     for (const auto mtype : lapack_matrices) {
-      auto [m, n, extra_lda] = size;
       const SizeType lda = std::max<SizeType>(1, m) + extra_lda;
 
       const auto alpha = TypeUtilities<TypeParam>::element(-3.5, 8.72);
@@ -265,8 +252,7 @@ TYPED_TEST(TileOperationsTestMC, Laset) {
 }
 
 TYPED_TEST(TileOperationsTestMC, Set0) {
-  for (const auto& size : setsizes) {
-    auto [m, n, extra_lda] = size;
+  for (const auto& [m, n, extra_lda] : setsizes) {
     const SizeType lda = std::max<SizeType>(1, m) + extra_lda;
     Tile<TypeParam, Device::CPU> tile =
         createTile<TypeParam>([](TileElementIndex idx) { return idx.row() + idx.col(); },

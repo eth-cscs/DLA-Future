@@ -237,9 +237,7 @@ std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, GlobalT
 //
 // Which we expect to be the equal to the one computed previously.
 TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
-  for (auto config : configs) {
-    auto [a_m, a_n, mb, nb, k, v_start] = config;
-
+  for (auto& [a_m, a_n, mb, nb, k, v_start] : configs) {
     ASSERT_LE(k, nb);
 
     const TileElementSize block_size(mb, nb);
@@ -310,9 +308,7 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
 
 TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
   for (auto comm_grid : this->commGrids()) {
-    for (auto config : configs) {
-      auto [a_m, a_n, mb, nb, k, v_start] = config;
-
+    for (auto& [a_m, a_n, mb, nb, k, v_start] : configs) {
       ASSERT_LE(k, nb);
 
       const TileElementSize block_size(mb, nb);

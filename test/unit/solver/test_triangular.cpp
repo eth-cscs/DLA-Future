@@ -146,12 +146,11 @@ void testTriangularSolver(comm::CommunicatorGrid grid, blas::Side side, blas::Up
 }
 
 TYPED_TEST(TriangularSolverTestMC, CorrectnessLocal) {
-  for (auto side : blas_sides) {
-    for (auto uplo : blas_uplos) {
-      for (auto op : blas_ops) {
-        for (auto diag : blas_diags) {
-          for (auto sz : sizes) {
-            auto [m, n, mb, nb] = sz;
+  for (const auto side : blas_sides) {
+    for (const auto uplo : blas_uplos) {
+      for (const auto op : blas_ops) {
+        for (const auto diag : blas_diags) {
+          for (const auto& [m, n, mb, nb] : sizes) {
             TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
 
             testTriangularSolver<TypeParam, Backend::MC, Device::CPU>(side, uplo, op, diag, alpha, m, n,
@@ -165,15 +164,14 @@ TYPED_TEST(TriangularSolverTestMC, CorrectnessLocal) {
 
 TYPED_TEST(TriangularSolverTestMC, CorrectnessDistributed) {
   for (const auto& comm_grid : this->commGrids()) {
-    for (auto side : blas_sides) {
-      for (auto uplo : blas_uplos) {
-        for (auto op : blas_ops) {
-          for (auto diag : blas_diags) {
+    for (const auto side : blas_sides) {
+      for (const auto uplo : blas_uplos) {
+        for (const auto op : blas_ops) {
+          for (const auto diag : blas_diags) {
             if (!(op == blas::Op::NoTrans || (side == blas::Side::Left && uplo == blas::Uplo::Lower)))
               continue;
 
-            for (auto sz : sizes) {
-              auto [m, n, mb, nb] = sz;
+            for (const auto& [m, n, mb, nb] : sizes) {
               TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
               testTriangularSolver<TypeParam, Backend::MC, Device::CPU>(comm_grid, side, uplo, op, diag,
                                                                         alpha, m, n, mb, nb);
@@ -188,12 +186,11 @@ TYPED_TEST(TriangularSolverTestMC, CorrectnessDistributed) {
 
 #ifdef DLAF_WITH_CUDA
 TYPED_TEST(TriangularSolverTestGPU, CorrectnessLocal) {
-  for (auto side : blas_sides) {
-    for (auto uplo : blas_uplos) {
-      for (auto op : blas_ops) {
-        for (auto diag : blas_diags) {
-          for (auto sz : sizes) {
-            auto [m, n, mb, nb] = sz;
+  for (const auto side : blas_sides) {
+    for (const auto uplo : blas_uplos) {
+      for (const auto op : blas_ops) {
+        for (const auto diag : blas_diags) {
+          for (const auto& [m, n, mb, nb] : sizes) {
             TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
 
             testTriangularSolver<TypeParam, Backend::GPU, Device::GPU>(side, uplo, op, diag, alpha, m, n,
@@ -207,15 +204,14 @@ TYPED_TEST(TriangularSolverTestGPU, CorrectnessLocal) {
 
 TYPED_TEST(TriangularSolverTestGPU, CorrectnessDistributed) {
   for (const auto& comm_grid : this->commGrids()) {
-    for (auto side : blas_sides) {
-      for (auto uplo : blas_uplos) {
-        for (auto op : blas_ops) {
-          for (auto diag : blas_diags) {
+    for (const auto side : blas_sides) {
+      for (const auto uplo : blas_uplos) {
+        for (const auto op : blas_ops) {
+          for (const auto diag : blas_diags) {
             if (!(op == blas::Op::NoTrans || (side == blas::Side::Left && uplo == blas::Uplo::Lower)))
               continue;
 
-            for (auto sz : sizes) {
-              auto [m, n, mb, nb] = sz;
+            for (const auto& [m, n, mb, nb] : sizes) {
               TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
 
               testTriangularSolver<TypeParam, Backend::GPU, Device::GPU>(comm_grid, side, uplo, op, diag,

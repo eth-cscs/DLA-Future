@@ -54,9 +54,7 @@ TYPED_TEST(TileOperationsTestMC, Gemm) {
 
   for (const auto op_a : blas_ops) {
     for (const auto op_b : blas_ops) {
-      for (const auto& size : gemm_sizes) {
-        auto [m, n, k, extra_lda, extra_ldb, extra_ldc] = size;
-
+      for (const auto& [m, n, k, extra_lda, extra_ldb, extra_ldc] : gemm_sizes) {
         // Test a and b const Tiles.
         testGemm<Device::CPU, Type>(op_a, op_b, m, n, k, extra_lda, extra_ldb, extra_ldc);
 
@@ -73,9 +71,7 @@ TYPED_TEST(TileOperationsTestGPU, Gemm) {
 
   for (const auto op_a : blas_ops) {
     for (const auto op_b : blas_ops) {
-      for (const auto& size : gemm_sizes) {
-        auto [m, n, k, extra_lda, extra_ldb, extra_ldc] = size;
-
+      for (const auto& [m, n, k, extra_lda, extra_ldb, extra_ldc] : gemm_sizes) {
         // Test a and b const Tiles.
         testGemm<Device::GPU, Type>(op_a, op_b, m, n, k, extra_lda, extra_ldb, extra_ldc);
 
@@ -101,9 +97,7 @@ TYPED_TEST(TileOperationsTestMC, Hemm) {
 
   for (const auto side : blas_sides) {
     for (const auto uplo : blas_uplos) {
-      for (const auto& size : hemm_sizes) {
-        auto [m, n, extra_lda, extra_ldb, extra_ldc] = size;
-
+      for (const auto& [m, n, extra_lda, extra_ldb, extra_ldc] : hemm_sizes) {
         // Test a and b const Tiles.
         testHemm<Device::CPU, Type>(side, uplo, m, n, extra_lda, extra_ldb, extra_ldc);
 
@@ -120,9 +114,7 @@ TYPED_TEST(TileOperationsTestGPU, Hemm) {
 
   for (const auto side : blas_sides) {
     for (const auto uplo : blas_uplos) {
-      for (const auto& size : hemm_sizes) {
-        auto [m, n, extra_lda, extra_ldb, extra_ldc] = size;
-
+      for (const auto& [m, n, extra_lda, extra_ldb, extra_ldc] : hemm_sizes) {
         // Test a and b const Tiles.
         testHemm<Device::GPU, Type>(side, uplo, m, n, extra_lda, extra_ldb, extra_ldc);
 
@@ -151,9 +143,7 @@ TYPED_TEST(TileOperationsTestMC, Her2k) {
 
   for (const auto uplo : blas_uplos) {
     for (const auto op : her2k_blas_ops) {
-      for (const auto& size : herk_her2k_sizes) {
-        auto [n, k, extra_lda, extra_ldc] = size;
-
+      for (const auto& [n, k, extra_lda, extra_ldc] : herk_her2k_sizes) {
         // Test a const Tile.
         testHer2k<Device::CPU, Type>(uplo, op, n, k, extra_lda, extra_ldc);
 
@@ -175,9 +165,7 @@ TYPED_TEST(TileOperationsTestGPU, Her2k) {
 
   for (const auto uplo : blas_uplos) {
     for (const auto op : her2k_blas_ops) {
-      for (const auto& size : herk_her2k_sizes) {
-        auto [n, k, extra_lda, extra_ldc] = size;
-
+      for (const auto& [n, k, extra_lda, extra_ldc] : herk_her2k_sizes) {
         // Test a const Tile.
         testHer2k<Device::GPU, Type>(uplo, op, n, k, extra_lda, extra_ldc);
 
@@ -199,9 +187,7 @@ TYPED_TEST(TileOperationsTestMC, Herk) {
 
   for (const auto uplo : blas_uplos) {
     for (const auto op : herk_blas_ops) {
-      for (const auto& size : herk_her2k_sizes) {
-        auto [n, k, extra_lda, extra_ldc] = size;
-
+      for (const auto& [n, k, extra_lda, extra_ldc] : herk_her2k_sizes) {
         // Test a const Tile.
         testHerk<Device::CPU, Type>(uplo, op, n, k, extra_lda, extra_ldc);
 
@@ -223,9 +209,7 @@ TYPED_TEST(TileOperationsTestGPU, Herk) {
 
   for (const auto uplo : blas_uplos) {
     for (const auto op : herk_blas_ops) {
-      for (const auto& size : herk_her2k_sizes) {
-        auto [n, k, extra_lda, extra_ldc] = size;
-
+      for (const auto& [n, k, extra_lda, extra_ldc] : herk_her2k_sizes) {
         // Test a const Tile.
         testHerk<Device::GPU, Type>(uplo, op, n, k, extra_lda, extra_ldc);
 
@@ -251,9 +235,7 @@ TYPED_TEST(TileOperationsTestMC, Trmm) {
     for (const auto uplo : blas_uplos) {
       for (const auto op : blas_ops) {
         for (const auto diag : blas_diags) {
-          for (const auto& size : trmm_trsm_sizes) {
-            auto [m, n, extra_lda, extra_ldb] = size;
-
+          for (const auto& [m, n, extra_lda, extra_ldb] : trmm_trsm_sizes) {
             // Test a const Tile.
             testTrmm<Device::CPU, Type>(side, uplo, op, diag, m, n, extra_lda, extra_ldb);
 
@@ -274,9 +256,7 @@ TYPED_TEST(TileOperationsTestGPU, Trmm) {
     for (const auto uplo : blas_uplos) {
       for (const auto op : blas_ops) {
         for (const auto diag : blas_diags) {
-          for (const auto& size : trmm_trsm_sizes) {
-            auto [m, n, extra_lda, extra_ldb] = size;
-
+          for (const auto& [m, n, extra_lda, extra_ldb] : trmm_trsm_sizes) {
             // Test a const Tile.
             testTrmm<Device::GPU, Type>(side, uplo, op, diag, m, n, extra_lda, extra_ldb);
 
@@ -297,9 +277,7 @@ TYPED_TEST(TileOperationsTestMC, Trsm) {
     for (const auto uplo : blas_uplos) {
       for (const auto op : blas_ops) {
         for (const auto diag : blas_diags) {
-          for (const auto& size : trmm_trsm_sizes) {
-            auto [m, n, extra_lda, extra_ldb] = size;
-
+          for (const auto& [m, n, extra_lda, extra_ldb] : trmm_trsm_sizes) {
             // Test a const Tile.
             testTrsm<Device::CPU, Type>(side, uplo, op, diag, m, n, extra_lda, extra_ldb);
 
@@ -320,9 +298,7 @@ TYPED_TEST(TileOperationsTestGPU, Trsm) {
     for (const auto uplo : blas_uplos) {
       for (const auto op : blas_ops) {
         for (const auto diag : blas_diags) {
-          for (const auto& size : trmm_trsm_sizes) {
-            auto [m, n, extra_lda, extra_ldb] = size;
-
+          for (const auto& [m, n, extra_lda, extra_ldb] : trmm_trsm_sizes) {
             // Test a const Tile.
             testTrsm<Device::GPU, Type>(side, uplo, op, diag, m, n, extra_lda, extra_ldb);
 

@@ -119,9 +119,8 @@ void testGenToStdEigensolver(comm::CommunicatorGrid grid, const blas::Uplo uplo,
 }
 
 TYPED_TEST(EigensolverGenToStdTestMC, CorrectnessLocal) {
-  for (auto uplo : blas_uplos) {
-    for (auto sz : sizes) {
-      auto [m, mb] = sz;
+  for (const auto uplo : blas_uplos) {
+    for (const auto& [m, mb] : sizes) {
       testGenToStdEigensolver<TypeParam, Backend::MC, Device::CPU>(uplo, m, mb);
     }
   }
@@ -129,9 +128,8 @@ TYPED_TEST(EigensolverGenToStdTestMC, CorrectnessLocal) {
 
 TYPED_TEST(EigensolverGenToStdTestMC, CorrectnessDistributed) {
   for (const auto& comm_grid : this->commGrids()) {
-    for (auto uplo : blas_uplos) {
-      for (auto sz : sizes) {
-        auto [m, mb] = sz;
+    for (const auto uplo : blas_uplos) {
+      for (const auto& [m, mb] : sizes) {
         testGenToStdEigensolver<TypeParam, Backend::MC, Device::CPU>(comm_grid, uplo, m, mb);
         hpx::threads::get_thread_manager().wait();
       }
@@ -141,9 +139,8 @@ TYPED_TEST(EigensolverGenToStdTestMC, CorrectnessDistributed) {
 
 #ifdef DLAF_WITH_CUDA
 TYPED_TEST(EigensolverGenToStdTestGPU, CorrectnessLocal) {
-  for (auto uplo : blas_uplos) {
-    for (auto sz : sizes) {
-      auto [m, mb] = sz;
+  for (const auto uplo : blas_uplos) {
+    for (const auto& [m, mb] : sizes) {
       testGenToStdEigensolver<TypeParam, Backend::GPU, Device::GPU>(uplo, m, mb);
     }
   }
@@ -151,9 +148,8 @@ TYPED_TEST(EigensolverGenToStdTestGPU, CorrectnessLocal) {
 
 TYPED_TEST(EigensolverGenToStdTestGPU, CorrectnessDistributed) {
   for (const auto& comm_grid : this->commGrids()) {
-    for (auto uplo : blas_uplos) {
-      for (auto sz : sizes) {
-        auto [m, mb] = sz;
+    for (const auto uplo : blas_uplos) {
+      for (const auto& [m, mb] : sizes) {
         testGenToStdEigensolver<TypeParam, Backend::GPU, Device::GPU>(comm_grid, uplo, m, mb);
         hpx::threads::get_thread_manager().wait();
       }

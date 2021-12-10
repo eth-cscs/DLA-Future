@@ -41,13 +41,17 @@ using namespace testing;
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
-template <typename Type>
-class BackTransformationEigenSolverTestMC : public ::testing::Test {
+template <class T, Device D>
+class BackTransformationEigenSolverTest : public ::testing::Test {
 public:
   const std::vector<CommunicatorGrid>& commGrids() {
     return comm_grids;
   }
 };
+
+template <class T>
+using BackTransformationEigenSolverTestMC = BackTransformationEigenSolverTest<T, Device::CPU>;
+
 TYPED_TEST_SUITE(BackTransformationEigenSolverTestMC, MatrixElementTypes);
 
 GlobalElementSize globalTestSize(const LocalElementSize& size) {

@@ -36,23 +36,23 @@ using namespace testing;
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
-template <typename Type>
-class TriangularSolverTestMC : public ::testing::Test {
+template <class T, Device D>
+class TriangularSolverTest : public ::testing::Test {
 public:
   const std::vector<CommunicatorGrid>& commGrids() {
     return comm_grids;
   }
 };
+
+template <class T>
+using TriangularSolverTestMC = TriangularSolverTest<T, Device::CPU>;
+
 TYPED_TEST_SUITE(TriangularSolverTestMC, MatrixElementTypes);
 
 #ifdef DLAF_WITH_CUDA
-template <typename Type>
-class TriangularSolverTestGPU : public ::testing::Test {
-public:
-  const std::vector<CommunicatorGrid>& commGrids() {
-    return comm_grids;
-  }
-};
+template <class T>
+using TriangularSolverTestGPU = TriangularSolverTest<T, Device::GPU>;
+
 TYPED_TEST_SUITE(TriangularSolverTestGPU, MatrixElementTypes);
 #endif
 

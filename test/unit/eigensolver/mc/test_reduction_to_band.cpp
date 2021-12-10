@@ -46,13 +46,16 @@ using namespace dlaf::matrix::test;
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
-template <typename Type>
-class ReductionToBandTestMC : public ::testing::Test {
+template <class T, Device D>
+class ReductionToBandTest : public ::testing::Test {
 public:
   const std::vector<CommunicatorGrid>& commGrids() {
     return comm_grids;
   }
 };
+
+template <class T>
+using ReductionToBandTestMC = ReductionToBandTest<T, Device::CPU>;
 
 TYPED_TEST_SUITE(ReductionToBandTestMC, MatrixElementTypes);
 

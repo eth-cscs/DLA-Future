@@ -118,3 +118,15 @@ inline void do_assert(bool expr, const common::internal::source_location& loc, c
 
 #define DLAF_STATIC_UNIMPLEMENTED(DummyType) \
   static_assert(sizeof(DummyType) == 0, "Not yet implemented!")
+
+/// Returns a fake object of type T (specified by __VA_ARGS__) dereferencing a null pointer.
+///
+/// At runtime the program is exited with an error before dereferencing the null pointer.
+/// This macro is useful when a return statement is needed in unreachable branches,
+/// especially when T doesn't have a default constructor. (T has to be moveable.)
+/// E.g. it can be used after a switch in which all the cases return
+///      and all the possible options are covered.
+/// Note: multiple arguments are allowed as templated types might include commas.
+///       However only a type should be specified.
+#define DLAF_UNREACHABLE(...) \
+  DLAF_ASSERT(false, "Unreachable branch hit!"), std::move(*std::unique_ptr<__VA_ARGS__>())

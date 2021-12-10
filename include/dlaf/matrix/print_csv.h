@@ -24,8 +24,6 @@ struct csv {};
 
 namespace matrix {
 
-namespace internal {
-
 /// Print a tile in csv format to standard output
 template <class T>
 void print(format::csv, const Tile<const T, Device::CPU>& tile, std::ostream& os = std::cout) {
@@ -70,8 +68,6 @@ void print(format::csv, std::string sym, Matrix<const T, Device::CPU>& mat,
     }
     os << std::endl;
   }
-}
-
 }
 }
 }

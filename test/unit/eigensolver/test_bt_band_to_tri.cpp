@@ -11,6 +11,7 @@
 
 #include <gtest/gtest.h>
 
+#include "dlaf/eigensolver/band_to_tridiag.h"  // for nrSweeps/nrStepsForSweep
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/util_matrix.h"
 
@@ -56,15 +57,6 @@ void computeTaus(const SizeType n, const SizeType k, matrix::Tile<T, Device::CPU
   }
 }
 
-template <class T>
-constexpr SizeType nrSweeps(SizeType m) {
-  return std::max<SizeType>(0, isComplex_v<T> ? m - 1 : m - 2);
-}
-
-constexpr SizeType nrStepsPerSweep(const SizeType sweep, const SizeType m, const SizeType mb) {
-  return std::max<SizeType>(0, sweep == m - 2 ? 1 : dlaf::util::ceilDiv(m - sweep - 2, mb));
-}
-
 struct config_t {
   const SizeType m, n, mb, nb;
 };
@@ -105,8 +97,10 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb) {
 
   eigensolver::backTransformationT2B<Backend::MC>(mat_e, mat_i);
 
+  using eigensolver::internal::nrSweeps;
+  using eigensolver::internal::nrStepsForSweep;
   for (SizeType sweep = nrSweeps<T>(m) - 1; sweep >= 0; --sweep) {
-    for (SizeType step = nrStepsPerSweep(sweep, m, mb) - 1; step >= 0; --step) {
+    for (SizeType step = nrStepsForSweep(sweep, m, mb) - 1; step >= 0; --step) {
       const SizeType j = sweep;
       const SizeType i = j + 1 + step * mb;
 

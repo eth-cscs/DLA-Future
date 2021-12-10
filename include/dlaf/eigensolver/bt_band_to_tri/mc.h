@@ -16,6 +16,7 @@
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/round_robin.h"
+#include "dlaf/eigensolver/band_to_tridiag/api.h"
 #include "dlaf/eigensolver/bt_band_to_tri/api.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/panel.h"
@@ -26,15 +27,6 @@
 #include "dlaf/util_matrix.h"
 
 namespace dlaf::eigensolver::internal {
-
-template <class T>
-SizeType nrSweeps(const SizeType m) {
-  return std::max<SizeType>(0, isComplex_v<T> ? m - 1 : m - 2);
-}
-
-inline SizeType nrStepsPerSweep(SizeType sweep, SizeType m, SizeType mb) {
-  return std::max<SizeType>(0, sweep == m - 2 ? 1 : dlaf::util::ceilDiv(m - sweep - 2, mb));
-}
 
 template <class T>
 struct BackTransformationT2B<Backend::MC, Device::CPU, T> {
@@ -203,7 +195,7 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
   const SizeType last_w_tile_sz = [&]() {
     const auto last_refl_size = last_tile_size - 1;
     if (last_refl_size == 1)
-      return is_complex_v<T> ? SizeType(1) : SizeType(0);
+      return isComplex_v<T> ? SizeType(1) : SizeType(0);
     return std::max<SizeType>(0, last_refl_size);
   }();
 
@@ -229,7 +221,7 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
     auto& mat_w2 = w2_panels.nextResource();
 
     // Note: apply the entire column (steps)
-    const SizeType steps = nrStepsPerSweep(j * mb, mat_i.size().cols(), mb);
+    const SizeType steps = nrStepsForSweep(j * mb, mat_i.size().cols(), mb);
     for (SizeType step = 0; step < steps; ++step) {
       const SizeType i = j + step;
       const LocalTileIndex ij_refls(i, j);

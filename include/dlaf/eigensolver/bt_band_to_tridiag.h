@@ -41,7 +41,8 @@ namespace dlaf::eigensolver {
 // @param mat_i matrix containing reflectors together with taus (compact form see representation above)
 // @param mat_e matrix to which the inverse transformation is applied to
 template <Backend backend, Device device, class T>
-void backTransformationT2B(matrix::Matrix<T, device>& mat_e, matrix::Matrix<const T, device>& mat_i) {
+void backTransformationBandToTridiag(matrix::Matrix<T, device>& mat_e,
+                                     matrix::Matrix<const T, device>& mat_i) {
   DLAF_ASSERT(matrix::local_matrix(mat_e), mat_e);
   DLAF_ASSERT(matrix::local_matrix(mat_i), mat_i);
 

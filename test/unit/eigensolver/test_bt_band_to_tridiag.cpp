@@ -94,7 +94,7 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb) {
 
   MatrixLocal<T> mat_i_local = allGather(lapack::MatrixType::Lower, mat_i);
 
-  eigensolver::backTransformationT2B<Backend::MC>(mat_e, mat_i);
+  eigensolver::backTransformationBandToTridiag<Backend::MC>(mat_e, mat_i);
 
   if (m == 0 || n == 0)
     return;

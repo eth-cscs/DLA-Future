@@ -96,6 +96,9 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb) {
 
   eigensolver::backTransformationT2B<Backend::MC>(mat_e, mat_i);
 
+  if (m == 0 || n == 0)
+    return;
+
   using eigensolver::internal::nrSweeps;
   using eigensolver::internal::nrStepsForSweep;
   for (SizeType sweep = nrSweeps<T>(m) - 1; sweep >= 0; --sweep) {
@@ -122,9 +125,7 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb) {
     return mat_local.tile_read(tile_index)(tile_element);
   };
 
-  // TODO how much error
-  const auto error = std::max<SizeType>(1, 40 * m * n) * TypeUtilities<T>::error;
-  CHECK_MATRIX_NEAR(result, mat_e, error, error);
+  CHECK_MATRIX_NEAR(result, mat_e, m * TypeUtilities<T>::error, m * TypeUtilities<T>::error);
 }
 
 TYPED_TEST(BacktransformationT2BTest, CorrectnessLocal) {

@@ -32,16 +32,21 @@ class BacktransformationT2BTest : public ::testing::Test {};
 
 TYPED_TEST_SUITE(BacktransformationT2BTest, MatrixElementTypes);
 
+// Note: Helper functions for computing the tau of a given reflector. Reflector pointer should
+// point to its 2nd component, i.e. the 1st component equal to 1 is implicitly considered in the
+// computation without the need to have it in-place in the reflector. Moreover, this also means
+// that the size given is not equal to the reflector size, instead it is equal to the number of
+// components after the first one (i.e. reflector size - 1).
 struct calculateTau {
   template <class T>
   static T call(const T* v, const SizeType size) {
-    const T dotprod = blas::dot(size, v, 1, v, 1);
+    const T dotprod = blas::dot(size, v, 1, v, 1) + 1;
     return 2 / dotprod;
   }
 
   template <class T>
   static std::complex<T> call(const std::complex<T>* v, const SizeType size) {
-    const T dotprod = std::real(blas::dot(size, v, 1, v, 1));
+    const T dotprod = std::real(blas::dot(size, v, 1, v, 1)) + 1;
     return {T(1) / dotprod, T(1) / dotprod};
   }
 };
@@ -50,8 +55,9 @@ template <class T>
 void computeTaus(const SizeType n, const SizeType k, matrix::Tile<T, Device::CPU> tile) {
   for (SizeType j = 0; j < k; ++j) {
     const SizeType size = std::min(n - j, tile.size().rows() - 1);
+    // Note: calculateTau implicitly considers the first component equal to 1
     DLAF_ASSERT(size > 0, size);
-    const auto tau = calculateTau::call(tile.ptr({0, j}), size);
+    const auto tau = calculateTau::call(tile.ptr({1, j}), size - 1);
     *tile.ptr({0, j}) = tau;
   }
 }

@@ -42,8 +42,7 @@ struct calculateTau {
   template <class T>
   static std::complex<T> call(const std::complex<T>* v, const SizeType size) {
     const T dotprod = std::real(blas::dot(size, v, 1, v, 1));
-    const T imag = T(1) / size;  // TODO check tau vs dotprod
-    return {(T(1.0) + std::sqrt(T(1) - dotprod * imag * imag)) / dotprod, imag};
+    return {T(1) / dotprod, T(1) / dotprod};
   }
 };
 

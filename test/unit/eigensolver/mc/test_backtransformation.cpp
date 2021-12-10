@@ -75,7 +75,7 @@ void getTau(T& tau, T dotprod, BaseType<T> /*tau_i*/) {
 
 template <class T>
 void getTau(std::complex<T>& tau, T dotprod, BaseType<T> tau_i) {
-  tau = {(static_cast<T>(1.0) + sqrt(static_cast<T>(1.0) - dotprod * tau_i * tau_i)) / dotprod, tau_i};
+  tau = {(T(1) + sqrt(T(1) - dotprod * dotprod * tau_i * tau_i)) / dotprod, tau_i};
 }
 
 template <class T>

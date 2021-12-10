@@ -9,8 +9,7 @@
 //
 #pragma once
 
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/eigensolver/bt_band_to_tri/mc.h"
+#include "dlaf/eigensolver/bt_band_to_tridiag/mc.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"

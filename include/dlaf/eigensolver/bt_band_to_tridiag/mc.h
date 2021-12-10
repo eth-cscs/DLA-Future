@@ -17,7 +17,7 @@
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/round_robin.h"
 #include "dlaf/eigensolver/band_to_tridiag/api.h"
-#include "dlaf/eigensolver/bt_band_to_tri/api.h"
+#include "dlaf/eigensolver/bt_band_to_tridiag/api.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/panel.h"
 #include "dlaf/matrix/tile.h"

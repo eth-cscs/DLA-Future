@@ -7,7 +7,7 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 
-#include "dlaf/eigensolver/bt_band_to_tri.h"
+#include "dlaf/eigensolver/bt_band_to_tridiag.h"
 
 #include <gtest/gtest.h>
 

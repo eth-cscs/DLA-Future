@@ -1,4 +1,4 @@
-#include "dlaf/eigensolver/bt_band_to_tri/mc.h"
+#include "dlaf/eigensolver/bt_band_to_tridiag/mc.h"
 
 namespace dlaf::eigensolver::internal {
 

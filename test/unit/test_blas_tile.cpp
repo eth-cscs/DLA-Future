@@ -28,14 +28,17 @@ const std::vector<blas::Op> blas_ops({blas::Op::NoTrans, blas::Op::Trans, blas::
 const std::vector<blas::Side> blas_sides({blas::Side::Left, blas::Side::Right});
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
 
-template <typename Type>
-class TileOperationsTestMC : public ::testing::Test {};
+template <class T, Device D>
+class TileOperationsTest : public ::testing::Test {};
+
+template <class T>
+using TileOperationsTestMC = TileOperationsTest<T, Device::CPU>;
 
 TYPED_TEST_SUITE(TileOperationsTestMC, MatrixElementTypes);
 
 #ifdef DLAF_WITH_CUDA
-template <typename Type>
-class TileOperationsTestGPU : public ::testing::Test {};
+template <class T>
+using TileOperationsTestGPU = TileOperationTest<T, Device::GPU>;
 
 TYPED_TEST_SUITE(TileOperationsTestGPU, MatrixElementTypes);
 #endif

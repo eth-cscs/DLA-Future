@@ -49,7 +49,7 @@ TYPED_TEST_SUITE(EigensolverGenToStdTestMC, MatrixElementTypes);
 
 #ifdef DLAF_WITH_CUDA
 template <class T>
-using EigensolverGenToStdTestMC = EigensolverGenToStdTest<T, Device::GPU>;
+using EigensolverGenToStdTestGPU = EigensolverGenToStdTest<T, Device::GPU>;
 
 TYPED_TEST_SUITE(EigensolverGenToStdTestGPU, MatrixElementTypes);
 #endif

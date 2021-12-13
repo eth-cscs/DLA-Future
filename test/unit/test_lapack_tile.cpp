@@ -102,7 +102,7 @@ TYPED_TEST(TileOperationsTestMC, lantr) {
                                                                  {1, 1, 0},   {17, 11, 3}, {17, 11, 0},
                                                                  {17, 17, 3}, {17, 17, 3}, {11, 11, 0}};
 
-  for (auto& [m, n, extra_lda] : sizes) {
+  for (const auto& [m, n, extra_lda] : sizes) {
     for (const auto uplo : blas_uplos) {
       // transpose rectangular matrix to be useful for upper triangular case
       if (blas::Uplo::Upper == uplo)

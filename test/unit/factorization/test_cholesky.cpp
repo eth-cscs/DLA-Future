@@ -109,7 +109,7 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
 
 TYPED_TEST(CholeskyTestMC, CorrectnessLocal) {
   for (auto uplo : blas_uplos) {
-    for (auto& [m, mb] : sizes) {
+    for (const auto& [m, mb] : sizes) {
       testCholesky<TypeParam, Backend::MC, Device::CPU>(uplo, m, mb);
     }
   }
@@ -118,7 +118,7 @@ TYPED_TEST(CholeskyTestMC, CorrectnessLocal) {
 TYPED_TEST(CholeskyTestMC, CorrectnessDistributed) {
   for (const auto& comm_grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
-      for (auto& [m, mb] : sizes) {
+      for (const auto& [m, mb] : sizes) {
         testCholesky<TypeParam, Backend::MC, Device::CPU>(comm_grid, uplo, m, mb);
         hpx::threads::get_thread_manager().wait();
       }
@@ -129,7 +129,7 @@ TYPED_TEST(CholeskyTestMC, CorrectnessDistributed) {
 #ifdef DLAF_WITH_CUDA
 TYPED_TEST(CholeskyTestGPU, CorrectnessLocal) {
   for (auto uplo : blas_uplos) {
-    for (auto& [m, mb] : sizes) {
+    for (const auto& [m, mb] : sizes) {
       testCholesky<TypeParam, Backend::GPU, Device::GPU>(uplo, m, mb);
     }
   }
@@ -138,7 +138,7 @@ TYPED_TEST(CholeskyTestGPU, CorrectnessLocal) {
 TYPED_TEST(CholeskyTestGPU, CorrectnessDistributed) {
   for (const auto& comm_grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
-      for (auto& [m, mb] : sizes) {
+      for (const auto& [m, mb] : sizes) {
         testCholesky<TypeParam, Backend::GPU, Device::GPU>(comm_grid, uplo, m, mb);
         hpx::threads::get_thread_manager().wait();
       }

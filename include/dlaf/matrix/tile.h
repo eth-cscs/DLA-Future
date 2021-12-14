@@ -170,10 +170,8 @@ public:
 
   Tile(const Tile&) = delete;
 
-  Tile(Tile&& rhs) noexcept
-      : data_(std::move(rhs.data_)), p_(std::move(rhs.p_)), sf_(std::move(rhs.sf_)),
-        sfc_(std::move(rhs.sfc_)) {
-    rhs.p_.reset();
+  Tile(Tile&& rhs) noexcept : data_(std::move(rhs.data_)), dep_tracker_(std::move(rhs.dep_tracker_)) {
+    rhs.dep_tracker_ = std::monostate();
   };
 
   /// Destroys the Tile.
@@ -186,10 +184,8 @@ public:
 
   Tile& operator=(Tile&& rhs) noexcept {
     data_ = std::move(rhs.data_);
-    p_ = std::move(rhs.p_);
-    sf_ = std::move(rhs.sf_);
-    sfc_ = std::move(rhs.sfc_);
-    rhs.p_.reset();
+    dep_tracker_ = std::move(rhs.dep_tracker_);
+    rhs.dep_tracker_ = std::monostate();
 
     return *this;
   }
@@ -252,24 +248,23 @@ private:
   // e.g. in dataflow, .then, ...
   Tile(hpx::shared_future<ConstTileType> tile, const SubTileSpec& spec)
       : Tile<const T, device>(tile.get(), spec) {
-    sfc_ = std::move(tile);
+    dep_tracker_ = std::move(tile);
   }
 
   TileDataType data_;
-
-  // With C++17 the following objects can be joined in a variant.
-  std::optional<TilePromise> p_;
-  hpx::shared_future<TileType> sf_;
-  hpx::shared_future<ConstTileType> sfc_;
+  std::variant<std::monostate, TilePromise, hpx::shared_future<TileType>,
+               hpx::shared_future<ConstTileType>>
+      dep_tracker_;
 };
 
 template <class T, Device device>
 Tile<const T, device>::~Tile() {
-  if (p_) {
+  if (std::holds_alternative<TilePromise>(dep_tracker_)) {
+    auto& p_ = std::get<TilePromise>(dep_tracker_);
     if (std::uncaught_exceptions() > 0)
-      p_->set_exception(std::make_exception_ptr(ContinuationException{}));
+      p_.set_exception(std::make_exception_ptr(ContinuationException{}));
     else
-      p_->set_value(std::move(this->data_));
+      p_.set_value(std::move(this->data_));
   }
 }
 
@@ -337,10 +332,11 @@ public:
   /// @c setPromise can be called only once per object.
   /// @pre this Tile should not be a subtile.
   Tile& setPromise(TilePromise&& p) {
-    DLAF_ASSERT(!p_, "setPromise has been already used on this object!");
-    DLAF_ASSERT_HEAVY(!sf_.valid(), "setPromise cannot be used on subtiles!");
-    DLAF_ASSERT_HEAVY(!sfc_.valid(), "setPromise cannot be used on subtiles!");
-    p_ = std::move(p);
+    DLAF_ASSERT(!std::holds_alternative<TilePromise>(dep_tracker_),
+                "setPromise has been already used on this object!");
+    DLAF_ASSERT(std::holds_alternative<std::monostate>(dep_tracker_),
+                "setPromise cannot be used on subtiles!");
+    dep_tracker_ = std::move(p);
     return *this;
   }
 
@@ -349,13 +345,11 @@ private:
   // It calls old_tile.get(), therefore it should be used when old_tile is guaranteed to be ready:
   // e.g. in dataflow, .then, ...
   Tile(hpx::shared_future<TileType> tile, const SubTileSpec& spec) : ConstTileType(tile.get(), spec) {
-    sf_ = std::move(tile);
+    dep_tracker_ = std::move(tile);
   }
 
   using ConstTileType::data_;
-  using ConstTileType::p_;
-  using ConstTileType::sf_;
-  using ConstTileType::sfc_;
+  using ConstTileType::dep_tracker_;
 };
 
 /// Create a common::Buffer from a Tile.
@@ -383,39 +377,30 @@ hpx::shared_future<Tile<T, D>> splitTileInsertFutureInChain(hpx::future<Tile<T, 
   // and F1(SF(P2)) means that the shared future which will set promise P2 will be released.
   // On input tile is F1(*), on output tile is FN(*).
   // The shared future F1(PN) is returned and will be used to create subtiles.
-  using hpx::lcos::local::promise;
+  using TileType = Tile<T, D>;
+  using PromiseType = hpx::lcos::local::promise<typename TileType::TileDataType>;
 
   // 1. Create a new promise + tile pair PN, FN
-  promise<internal::TileData<T, D>> p;
+  PromiseType p;
   auto tmp_tile = p.get_future();
   // 2. Break the dependency chain inserting PN and storing P2 or SF(P2):  F1(PN)  FN()  F2(P3)
   auto swap_promise = [promise = std::move(p)](auto tile) mutable {
-    // sfc_ should not be valid here, as it should be set only for const Tiles.
-    DLAF_ASSERT_HEAVY(!tile.sfc_.valid(), "Internal Dependency Error");
-    // Similarly p_ and sf_ should not be set at the same time.
-    DLAF_ASSERT_HEAVY(!(tile.p_ && tile.sf_.valid()), "Internal Dependency Error");
+    // The dep_tracker cannot be a const Tile (can happen only for const Tiles).
+    DLAF_ASSERT_HEAVY(!std::holds_alternative < hpx::shared_future<Tile<const T, D>>(tile.dep_tracker_),
+                      "Internal Dependency Error");
 
-    auto p = std::move(tile.p_);
-    tile.p_.reset();
-    auto sf = std::move(tile.sf_);
+    auto dep_tracker = std::move(tile.dep_tracker_);
+    tile.dep_tracker_ = std::move(promise);
 
-    tile.setPromise(std::move(promise));
-    // Note: C++17 std::variant can be used.
-    return hpx::make_tuple(std::move(tile), std::make_tuple(std::move(p), std::move(sf)));
+    return hpx::make_tuple(std::move(tile), std::move(dep_tracker));
   };
   auto tmp = hpx::split_future(tile.then(hpx::launch::sync, hpx::unwrapping(std::move(swap_promise))));
   // old_tile = F1(PN) and will be used to create the subtiles
-  hpx::shared_future<Tile<T, D>> old_tile = std::move(hpx::get<0>(tmp));
+  hpx::shared_future<TileType> old_tile = std::move(hpx::get<0>(tmp));
   // 3. Set P2 or SF(P2) into FN to restore the chain:  F1(PN)  FN(*) ...
-  auto set_promise_or_shfuture = [](auto tile_data, auto p_sf_tuple) {
-    Tile<T, D> tile(std::move(tile_data));
-    auto& p = std::get<0>(p_sf_tuple);
-    auto& sf = std::get<1>(p_sf_tuple);
-    if (p)
-      tile.setPromise(std::move(*p));
-    else if (sf.valid())
-      tile.sf_ = std::move(sf);
-
+  auto set_promise_or_shfuture = [](auto tile_data, auto dep_tracker) {
+    TileType tile(std::move(tile_data));
+    tile.dep_tracker_ = std::move(dep_tracker);
     return tile;
   };
   // tile = FN(*) (out argument) can be used to access the full tile after the subtiles tasks completed.

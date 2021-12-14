@@ -126,7 +126,7 @@ struct Transform<Backend::GPU> {
     };
 
     template <template <typename...> class Tuple, template <typename...> class Variant>
-    using value_types = dlaf::internal::UniquePack_t<dlaf::internal::TransformPack_to<
+    using value_types = dlaf::internal::UniquePack_t<dlaf::internal::TransformPack_t<
         typename hpx::execution::experimental::sender_traits<S>::template value_types<Tuple, Variant>,
         invoke_result_helper>>;
 

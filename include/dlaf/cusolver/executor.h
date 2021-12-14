@@ -54,6 +54,9 @@ template <typename F, typename... Ts>
 struct isAsyncCusolverCallable
     : isAsyncCusolverCallableImpl<hpx::is_invocable_v<F, cusolverDnHandle_t&, Ts...>, F, Ts...> {};
 
+template <typename F, typename... Ts>
+inline constexpr bool isAsyncCusolverCallable_v = isAsyncCusolverCallable<F, Ts...>::value;
+
 template <typename F, typename Futures>
 struct isDataflowCusolverCallable
     : hpx::is_invocable<hpx::util::functional::invoke_fused, F,

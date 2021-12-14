@@ -35,6 +35,81 @@ struct ContinuationException final : public std::runtime_error {
 };
 
 namespace matrix {
+namespace internal {
+
+template <class T, Device device>
+class TileData {
+public:
+  TileData(const TileElementSize& size, memory::MemoryView<T, device>&& memory_view,
+           SizeType ld) noexcept
+      : size_(size), memory_view_(std::move(memory_view)), ld_(ld) {
+    DLAF_ASSERT(size_.isValid(), size_);
+    DLAF_ASSERT(ld_ >= std::max<SizeType>(1, size_.rows()), ld, size_.rows());
+    DLAF_ASSERT(size_.isEmpty() || linearSize(size_, ld_) <= memory_view_.size(), size_, ld_,
+                memory_view_.size());
+  }
+
+  TileData(const TileData& rhs) = delete;
+
+  TileData(TileData&& rhs) noexcept
+      : size_(rhs.size_), memory_view_(std::move(rhs.memory_view_)), ld_(rhs.ld_) {
+    rhs.setDefaultSize();
+  }
+
+  TileData& operator=(const TileData&) = delete;
+
+  TileData& operator=(TileData&& rhs) {
+    size_ = rhs.size_;
+    memory_view_ = std::move(rhs.memory_view_);
+    ld_ = rhs.ld_;
+    rhs.setDefaultSize();
+
+    return *this;
+  }
+
+  const auto& memoryView() const noexcept {
+    return memory_view_;
+  }
+
+  T* ptr() const noexcept {
+    return memory_view_();
+  }
+
+  T* ptr(const TileElementIndex& index) const noexcept {
+    return memory_view_(linearIndex(index));
+  }
+
+  const TileElementSize& size() const noexcept {
+    return size_;
+  }
+  SizeType ld() const noexcept {
+    return ld_;
+  }
+
+  SizeType linearIndex(const TileElementIndex& index) const noexcept {
+    DLAF_ASSERT_HEAVY(index.isIn(size_), index, size_);
+    return index.row() + ld_ * index.col();
+  }
+
+  static SizeType linearSize(const TileElementSize& size, SizeType ld) noexcept {
+    if (size.isEmpty())
+      return 0;
+    return size.rows() + ld * (size.cols() - 1);
+  }
+
+private:
+  /// Sets size to {0, 0} and ld to 1.
+  void setDefaultSize() noexcept {
+    size_ = {0, 0};
+    ld_ = 1;
+  }
+
+  TileElementSize size_;
+  memory::MemoryView<T, device> memory_view_;
+  SizeType ld_;
+};
+}
+
 /// Contains the information to create a subtile.
 struct SubTileSpec {
   TileElementIndex origin;
@@ -69,17 +144,16 @@ hpx::future<Tile<T, D>> createSubTile(const hpx::shared_future<Tile<T, D>>& tile
 /// the tile of const elements ensure that the memory will not be modified.
 template <class T, Device device>
 class Tile<const T, device> {
+public:
   using TileType = Tile<T, device>;
   using ConstTileType = Tile<const T, device>;
-
-  template <class PT>
-  using promise_t = hpx::lcos::local::promise<PT>;
+  using TileDataType = internal::TileData<T, device>;
+  using TilePromise = hpx::lcos::local::promise<TileType>;
 
   friend TileType;
   friend hpx::future<Tile<const T, device>> internal::createSubTile<>(
       const hpx::shared_future<Tile<const T, device>>& tile, const SubTileSpec& spec);
 
-public:
   using ElementType = T;
 
   /// Constructs a (@p size.rows() x @p size.cols()) Tile.
@@ -89,11 +163,13 @@ public:
   /// @pre memory_view contains enough elements.
   /// The (i, j)-th element of the Tile is stored in the (i+ld*j)-th element of memory_view.
   Tile(const TileElementSize& size, memory::MemoryView<ElementType, device>&& memory_view,
-       SizeType ld) noexcept;
+       SizeType ld) noexcept
+      : data_(size, std::move(memory_view), ld) {}
+
+  Tile(TileDataType&& data) noexcept : data_(std::move(data)) {}
 
   Tile(const Tile&) = delete;
-
-  Tile(Tile&& rhs) noexcept;
+  Tile(Tile&& rhs) = default;
 
   /// Destroys the Tile.
   ///
@@ -102,8 +178,7 @@ public:
   ~Tile();
 
   Tile& operator=(const Tile&) = delete;
-
-  Tile& operator=(Tile&& rhs) noexcept;
+  Tile& operator=(Tile&&) = default;
 
   /// Returns the (i, j)-th element,
   /// where @p i := @p index.row and @p j := @p index.col.
@@ -115,7 +190,7 @@ public:
 
   /// Returns the base pointer.
   const T* ptr() const noexcept {
-    return memory_view_();
+    return data_.ptr();
   }
 
   /// Returns the pointer to the (i, j)-th element,
@@ -123,16 +198,16 @@ public:
   ///
   /// @pre index.isIn(size()).
   const T* ptr(const TileElementIndex& index) const noexcept {
-    return memory_view_(linearIndex(index));
+    return data_.ptr(index);
   }
 
   /// Returns the size of the Tile.
   const TileElementSize& size() const noexcept {
-    return size_;
+    return data_.size();
   }
   /// Returns the leading dimension.
   SizeType ld() const noexcept {
-    return ld_;
+    return data_.ld();
   }
 
   /// Prints information about the tile.
@@ -141,33 +216,16 @@ public:
   }
 
 private:
-  /// Sets size to {0, 0} and ld to 1.
-  void setDefaultSize() noexcept {
-    size_ = {0, 0};
-    ld_ = 1;
-  }
-
-  SizeType linearIndex(const TileElementIndex& index) const noexcept {
-    DLAF_ASSERT_HEAVY(index.isIn(size_), index, size_);
-    return index.row() + ld_ * index.col();
-  }
-
-  static SizeType linearSize(const TileElementSize& size, SizeType ld) noexcept {
-    if (size.isEmpty())
-      return 0;
-    return size.rows() + ld * (size.cols() - 1);
-  }
-
   static memory::MemoryView<T, device> createMemoryViewForSubtile(const Tile<const T, device>& tile,
                                                                   const SubTileSpec& spec) {
     DLAF_ASSERT(spec.origin.isValid(), spec.origin);
     DLAF_ASSERT(spec.origin.isInOrOn(tile.size()), spec.origin, tile.size());
     DLAF_ASSERT(spec.size.isValid(), spec.size);
-    DLAF_ASSERT((spec.origin + spec.size).isInOrOn(tile.size_), spec.origin, spec.size, tile.size_);
+    DLAF_ASSERT((spec.origin + spec.size).isInOrOn(tile.size()), spec.origin, spec.size, tile.size());
 
-    return memory::MemoryView<T, device>(tile.memory_view_,
-                                         spec.size.isEmpty() ? 0 : tile.linearIndex(spec.origin),
-                                         tile.linearSize(spec.size, tile.ld()));
+    return memory::MemoryView<T, device>(tile.data_.memoryView(),
+                                         spec.size.isEmpty() ? 0 : tile.data_.linearIndex(spec.origin),
+                                         tile.data_.linearSize(spec.size, tile.ld()));
   };
 
   // Creates an untracked subtile.
@@ -183,32 +241,13 @@ private:
     sfc_ = std::move(tile);
   }
 
-  TileElementSize size_;
-  memory::MemoryView<ElementType, device> memory_view_;
-  SizeType ld_;
+  TileDataType data_;
 
   // With C++17 the following objects can be joined in a variant.
-  std::unique_ptr<promise_t<TileType>> p_;
+  std::unique_ptr<TilePromise> p_;
   hpx::shared_future<TileType> sf_;
   hpx::shared_future<ConstTileType> sfc_;
 };
-
-template <class T, Device device>
-Tile<const T, device>::Tile(const TileElementSize& size,
-                            memory::MemoryView<ElementType, device>&& memory_view, SizeType ld) noexcept
-    : size_(size), memory_view_(std::move(memory_view)), ld_(ld) {
-  DLAF_ASSERT(size_.isValid(), size_);
-  DLAF_ASSERT(ld_ >= std::max<SizeType>(1, size_.rows()), ld, size_.rows());
-  DLAF_ASSERT(size_.isEmpty() || linearSize(size_, ld_) <= memory_view_.size(), size_, ld_,
-              memory_view_.size());
-}
-
-template <class T, Device device>
-Tile<const T, device>::Tile(Tile&& rhs) noexcept
-    : size_(rhs.size_), memory_view_(std::move(rhs.memory_view_)), ld_(rhs.ld_), p_(std::move(rhs.p_)),
-      sf_(std::move(rhs.sf_)), sfc_(std::move(rhs.sfc_)) {
-  rhs.setDefaultSize();
-}
 
 template <class T, Device device>
 Tile<const T, device>::~Tile() {
@@ -216,21 +255,8 @@ Tile<const T, device>::~Tile() {
     if (std::uncaught_exceptions() > 0)
       p_->set_exception(std::make_exception_ptr(ContinuationException{}));
     else
-      p_->set_value(Tile<ElementType, device>(size_, std::move(memory_view_), ld_));
+      p_->set_value(std::move(this->data_));
   }
-}
-
-template <class T, Device device>
-Tile<const T, device>& Tile<const T, device>::operator=(Tile<const T, device>&& rhs) noexcept {
-  size_ = rhs.size_;
-  memory_view_ = std::move(rhs.memory_view_);
-  ld_ = rhs.ld_;
-  p_ = std::move(rhs.p_);
-  sf_ = std::move(rhs.sf_);
-  sfc_ = std::move(rhs.sfc_);
-  rhs.setDefaultSize();
-
-  return *this;
 }
 
 template <class T, Device device>
@@ -239,11 +265,11 @@ Tile<const T, device>::Tile(const Tile<const T, device>& tile, const SubTileSpec
 
 template <class T, Device device>
 class Tile : public Tile<const T, device> {
+public:
   using TileType = Tile<T, device>;
   using ConstTileType = Tile<const T, device>;
-
-  template <class PT>
-  using promise_t = hpx::lcos::local::promise<PT>;
+  using TileDataType = internal::TileData<T, device>;
+  using TilePromise = hpx::lcos::local::promise<TileType>;
 
   friend ConstTileType;
   friend hpx::future<Tile<T, device>> internal::createSubTile<>(
@@ -251,7 +277,6 @@ class Tile : public Tile<const T, device> {
   friend hpx::shared_future<Tile<T, device>> internal::splitTileInsertFutureInChain<>(
       hpx::future<Tile<T, device>>& tile);
 
-public:
   using ElementType = T;
 
   /// Constructs a (@p size.rows() x @p size.cols()) Tile.
@@ -264,13 +289,13 @@ public:
        SizeType ld) noexcept
       : Tile<const T, device>(size, std::move(memory_view), ld) {}
 
-  Tile(const Tile&) = delete;
+  Tile(TileDataType&& data) noexcept : ConstTileType(std::move(data)) {}
 
+  Tile(const Tile&) = delete;
   Tile(Tile&& rhs) = default;
 
   Tile& operator=(const Tile&) = delete;
-
-  Tile& operator=(Tile&& rhs) = default;
+  Tile& operator=(Tile&&) = default;
 
   /// Returns the (i, j)-th element,
   /// where @p i := @p index.row and @p j := @p index.col.
@@ -282,7 +307,7 @@ public:
 
   /// Returns the base pointer.
   T* ptr() const noexcept {
-    return memory_view_();
+    return data_.ptr();
   }
 
   /// Returns the pointer to the (i, j)-th element,
@@ -290,18 +315,18 @@ public:
   ///
   /// @pre index.isIn(size()).
   T* ptr(const TileElementIndex& index) const noexcept {
-    return memory_view_(linearIndex(index));
+    return data_.ptr(index);
   }
 
   /// Sets the promise to which this Tile will be moved on destruction.
   ///
   /// @c setPromise can be called only once per object.
   /// @pre this Tile should not be a subtile.
-  Tile& setPromise(promise_t<TileType>&& p) {
+  Tile& setPromise(TilePromise&& p) {
     DLAF_ASSERT(!p_, "setPromise has been already used on this object!");
     DLAF_ASSERT_HEAVY(!sf_.valid(), "setPromise cannot be used on subtiles!");
     DLAF_ASSERT_HEAVY(!sfc_.valid(), "setPromise cannot be used on subtiles!");
-    p_ = std::make_unique<promise_t<TileType>>(std::move(p));
+    p_ = std::make_unique<TilePromise>(std::move(p));
     return *this;
   }
 
@@ -313,10 +338,7 @@ private:
     sf_ = std::move(tile);
   }
 
-  using ConstTileType::linearIndex;
-  using ConstTileType::size_;
-  using ConstTileType::memory_view_;
-  using ConstTileType::ld_;
+  using ConstTileType::data_;
   using ConstTileType::p_;
   using ConstTileType::sf_;
   using ConstTileType::sfc_;

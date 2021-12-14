@@ -148,7 +148,7 @@ public:
   using TileType = Tile<T, device>;
   using ConstTileType = Tile<const T, device>;
   using TileDataType = internal::TileData<T, device>;
-  using TilePromise = hpx::lcos::local::promise<TileType>;
+  using TilePromise = hpx::lcos::local::promise<TileDataType>;
 
   friend TileType;
   friend hpx::future<Tile<const T, device>> internal::createSubTile<>(
@@ -269,7 +269,7 @@ public:
   using TileType = Tile<T, device>;
   using ConstTileType = Tile<const T, device>;
   using TileDataType = internal::TileData<T, device>;
-  using TilePromise = hpx::lcos::local::promise<TileType>;
+  using TilePromise = hpx::lcos::local::promise<TileDataType>;
 
   friend ConstTileType;
   friend hpx::future<Tile<T, device>> internal::createSubTile<>(
@@ -372,7 +372,7 @@ hpx::shared_future<Tile<T, D>> splitTileInsertFutureInChain(hpx::future<Tile<T, 
   using hpx::lcos::local::promise;
 
   // 1. Create a new promise + tile pair PN, FN
-  promise<Tile<T, D>> p;
+  promise<internal::TileData<T, D>> p;
   auto tmp_tile = p.get_future();
   // 2. Break the dependency chain inserting PN and storing P2 or SF(P2):  F1(PN)  FN()  F2(P3)
   auto swap_promise = [promise = std::move(p)](auto tile) mutable {
@@ -392,7 +392,8 @@ hpx::shared_future<Tile<T, D>> splitTileInsertFutureInChain(hpx::future<Tile<T, 
   // old_tile = F1(PN) and will be used to create the subtiles
   hpx::shared_future<Tile<T, D>> old_tile = std::move(hpx::get<0>(tmp));
   // 3. Set P2 or SF(P2) into FN to restore the chain:  F1(PN)  FN(*) ...
-  auto set_promise_or_shfuture = [](auto tile, auto p_sf_tuple) {
+  auto set_promise_or_shfuture = [](auto tile_data, auto p_sf_tuple) {
+    Tile<T, D> tile(std::move(tile_data));
     auto& p = std::get<0>(p_sf_tuple);
     auto& sf = std::get<1>(p_sf_tuple);
     if (p)

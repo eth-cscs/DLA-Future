@@ -59,6 +59,7 @@ public:
   using ElementType = T;
   using TileType = Tile<ElementType, device>;
   using ConstTileType = Tile<const ElementType, device>;
+  using TileDataType = internal::TileData<const ElementType, device>;
   friend Matrix<const ElementType, device>;
 
   /// Create a non distributed matrix of size @p size and block size @p block_size.
@@ -151,6 +152,7 @@ public:
   using ElementType = T;
   using TileType = Tile<ElementType, device>;
   using ConstTileType = Tile<const ElementType, device>;
+  using TileDataType = internal::TileData<ElementType, device>;
   friend Matrix<ElementType, device>;
 
   Matrix(const LayoutInfo& layout, ElementType* ptr);

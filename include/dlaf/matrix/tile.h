@@ -169,7 +169,12 @@ public:
   Tile(TileDataType&& data) noexcept : data_(std::move(data)) {}
 
   Tile(const Tile&) = delete;
-  Tile(Tile&& rhs) = default;
+
+  Tile(Tile&& rhs) noexcept
+      : data_(std::move(rhs.data_)), p_(std::move(rhs.p_)), sf_(std::move(rhs.sf_)),
+        sfc_(std::move(rhs.sfc_)) {
+    rhs.p_.reset();
+  };
 
   /// Destroys the Tile.
   ///
@@ -178,7 +183,16 @@ public:
   ~Tile();
 
   Tile& operator=(const Tile&) = delete;
-  Tile& operator=(Tile&&) = default;
+
+  Tile& operator=(Tile&& rhs) noexcept {
+    data_ = std::move(rhs.data_);
+    p_ = std::move(rhs.p_);
+    sf_ = std::move(rhs.sf_);
+    sfc_ = std::move(rhs.sfc_);
+    rhs.p_.reset();
+
+    return *this;
+  }
 
   /// Returns the (i, j)-th element,
   /// where @p i := @p index.row and @p j := @p index.col.
@@ -244,7 +258,7 @@ private:
   TileDataType data_;
 
   // With C++17 the following objects can be joined in a variant.
-  std::unique_ptr<TilePromise> p_;
+  std::optional<TilePromise> p_;
   hpx::shared_future<TileType> sf_;
   hpx::shared_future<ConstTileType> sfc_;
 };
@@ -326,7 +340,7 @@ public:
     DLAF_ASSERT(!p_, "setPromise has been already used on this object!");
     DLAF_ASSERT_HEAVY(!sf_.valid(), "setPromise cannot be used on subtiles!");
     DLAF_ASSERT_HEAVY(!sfc_.valid(), "setPromise cannot be used on subtiles!");
-    p_ = std::make_unique<TilePromise>(std::move(p));
+    p_ = std::move(p);
     return *this;
   }
 
@@ -382,6 +396,7 @@ hpx::shared_future<Tile<T, D>> splitTileInsertFutureInChain(hpx::future<Tile<T, 
     DLAF_ASSERT_HEAVY(!(tile.p_ && tile.sf_.valid()), "Internal Dependency Error");
 
     auto p = std::move(tile.p_);
+    tile.p_.reset();
     auto sf = std::move(tile.sf_);
 
     tile.setPromise(std::move(promise));

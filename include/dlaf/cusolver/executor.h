@@ -95,7 +95,7 @@ public:
   }
 
   template <typename F, typename... Ts>
-  std::enable_if_t<internal::isAsyncCusolverCallable_v,
+  std::enable_if_t<internal::isAsyncCusolverCallable_v<F, Ts...>,
                    typename internal::isAsyncCusolverCallable<F, Ts...>::return_type>
   async_execute(F&& f, Ts&&... ts) {
     cudaStream_t stream = stream_pool_.getNextStream();

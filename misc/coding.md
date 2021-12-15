@@ -56,6 +56,10 @@ In each section the included files should be sorted in alphabetical order.
 
 The names should be as descriptive as possible.
 
+Note: the following rules can be broken, to follow standard library conventions in case of similar
+functionalities. E.g trait helpers ends with `_t` and `_v`.
+
+
 ### Type and Class Names
 
 Type and class names should start with a capital letter and have a capital letter for each new word.

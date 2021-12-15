@@ -15,7 +15,7 @@ namespace matrix {
 
 template <class T, Device device>
 template <template <class, Device> class MatrixType, class T2,
-          std::enable_if_t<std::is_same<T, std::remove_const_t<T2>>::value, int>>
+          std::enable_if_t<std::is_same_v<T, std::remove_const_t<T2>>, int>>
 MatrixView<const T, device>::MatrixView(blas::Uplo uplo, MatrixType<T2, device>& matrix)
     : MatrixBase(matrix) {
   if (uplo != blas::Uplo::General)
@@ -38,7 +38,7 @@ void MatrixView<const T, device>::done(const LocalTileIndex& index) noexcept {
 
 template <class T, Device device>
 template <template <class, Device> class MatrixType, class T2,
-          std::enable_if_t<std::is_same<T, std::remove_const_t<T2>>::value, int>>
+          std::enable_if_t<std::is_same_v<T, std::remove_const_t<T2>>, int>>
 void MatrixView<const T, device>::setUpTiles(MatrixType<T2, device>& matrix) noexcept {
   const auto& nr_tiles = matrix.distribution().localNrTiles();
   tile_shared_futures_.reserve(futureVectorSize(nr_tiles));

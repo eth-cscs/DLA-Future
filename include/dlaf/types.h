@@ -22,7 +22,7 @@ namespace dlaf {
 
 using SizeType = std::ptrdiff_t;
 
-static_assert(std::is_signed<SizeType>::value && std::is_integral<SizeType>::value,
+static_assert(std::is_signed_v<SizeType> && std::is_integral_v<SizeType>,
               "SizeType should be a signed integral type");
 static_assert(sizeof(SizeType) >= 4, "SizeType should be >= 32bit");
 
@@ -109,8 +109,8 @@ T conj(const T number) {
 ///
 /// It performs the cast checking if the given unsigned value can be stored in the destination type.
 template <class S, class U,
-          std::enable_if_t<std::is_integral<U>::value && std::is_unsigned<U>::value &&
-                               std::is_integral<S>::value && std::is_signed<S>::value,
+          std::enable_if_t<std::is_integral_v<U> && std::is_unsigned_v<U> && std::is_integral_v<S> &&
+                               std::is_signed_v<S>,
                            int> = 0>
 S to_signed(const U unsigned_value) {
   DLAF_ASSERT_MODERATE(static_cast<std::size_t>(std::numeric_limits<S>::max()) >= unsigned_value,
@@ -120,8 +120,8 @@ S to_signed(const U unsigned_value) {
 
 /// Fallback.
 template <class S, class SB,
-          std::enable_if_t<std::is_integral<SB>::value && std::is_signed<SB>::value &&
-                               std::is_integral<S>::value && std::is_signed<S>::value,
+          std::enable_if_t<std::is_integral_v<SB> && std::is_signed_v<SB> && std::is_integral_v<S> &&
+                               std::is_signed_v<S>,
                            int> = 0>
 S to_signed(const SB value) {
   DLAF_ASSERT_MODERATE(std::numeric_limits<S>::max() >= value, std::numeric_limits<S>::max(), value);
@@ -134,8 +134,8 @@ S to_signed(const SB value) {
 /// It performs the cast checking if the given signed value is greater than 0 and if the destination type
 /// can store the value.
 template <class U, class S,
-          std::enable_if_t<std::is_integral<U>::value && std::is_unsigned<U>::value &&
-                               std::is_integral<S>::value && std::is_signed<S>::value,
+          std::enable_if_t<std::is_integral_v<U> && std::is_unsigned_v<U> && std::is_integral_v<S> &&
+                               std::is_signed_v<S>,
                            int> = 0>
 U to_unsigned(const S signed_value) {
   DLAF_ASSERT_MODERATE(signed_value >= 0, signed_value);
@@ -146,8 +146,8 @@ U to_unsigned(const S signed_value) {
 
 /// Fallback.
 template <class U, class UB,
-          std::enable_if_t<std::is_integral<U>::value && std::is_unsigned<U>::value &&
-                               std::is_integral<UB>::value && std::is_unsigned<UB>::value,
+          std::enable_if_t<std::is_integral_v<U> && std::is_unsigned_v<U> && std::is_integral_v<UB> &&
+                               std::is_unsigned_v<UB>,
                            int> = 0>
 U to_unsigned(const UB unsigned_value) {
   DLAF_ASSERT_MODERATE(std::numeric_limits<U>::max() >= static_cast<std::size_t>(unsigned_value),
@@ -156,17 +156,15 @@ U to_unsigned(const UB unsigned_value) {
 }
 
 template <class To, class From,
-          std::enable_if_t<std::is_integral<From>::value && std::is_integral<To>::value &&
-                               std::is_unsigned<To>::value,
+          std::enable_if_t<std::is_integral_v<From> && std::is_integral_v<To> && std::is_unsigned_v<To>,
                            int> = 0>
 To integral_cast(const From value) {
   return to_unsigned<To, From>(value);
 }
 
-template <class To, class From,
-          std::enable_if_t<std::is_integral<From>::value && std::is_integral<To>::value &&
-                               std::is_signed<To>::value,
-                           int> = 0>
+template <
+    class To, class From,
+    std::enable_if_t<std::is_integral_v<From> && std::is_integral_v<To> && std::is_signed_v<To>, int> = 0>
 To integral_cast(const From value) {
   return to_signed<To, From>(value);
 }

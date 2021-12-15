@@ -127,7 +127,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
       const GlobalElementIndex v_offset{j + mb, j};
       auto dotprod = blas::dot(m - mb - j, v.ptr(v_offset), 1, v.ptr(v_offset), 1);
       BaseType<T> tau_i = 0;
-      if (std::is_same<T, ComplexType<T>>::value) {
+      if (std::is_same_v<T, ComplexType<T>>) {
         tau_i = random_value();
       }
       T tau;
@@ -209,7 +209,7 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
       const GlobalElementIndex v_offset{j + mb, j};
       auto dotprod = blas::dot(m - mb - j, mat_v_loc.ptr(v_offset), 1, mat_v_loc.ptr(v_offset), 1);
       BaseType<T> tau_i = 0;
-      if (std::is_same<T, ComplexType<T>>::value) {
+      if (std::is_same_v<T, ComplexType<T>>) {
         tau_i = random_value();
       }
       T tau;
@@ -244,20 +244,14 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
 }
 
 TYPED_TEST(BackTransformationEigenSolverTestMC, CorrectnessLocal) {
-  SizeType m, n, mb, nb;
-
-  for (auto sz : sizes) {
-    std::tie(m, n, mb, nb) = sz;
+  for (const auto& [m, n, mb, nb] : sizes) {
     testBacktransformationEigenv<TypeParam>(m, n, mb, nb);
   }
 }
 
 TYPED_TEST(BackTransformationEigenSolverTestMC, CorrectnessDistributed) {
-  SizeType m, n, mb, nb;
-
   for (const auto& comm_grid : {this->commGrids()[0]}) {
-    for (auto sz : sizes) {
-      std::tie(m, n, mb, nb) = sz;
+    for (const auto& [m, n, mb, nb] : sizes) {
       testBacktransformationEigenv<TypeParam>(comm_grid, m, n, mb, nb);
       hpx::threads::get_thread_manager().wait();
     }

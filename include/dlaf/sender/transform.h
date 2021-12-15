@@ -122,16 +122,16 @@ struct Transform<Backend::GPU> {
           call_helper(std::declval<cudaStream_t&>(), std::declval<cublasHandle_t&>(),
                       std::declval<cusolverDnHandle_t&>(), std::declval<F>(), std::declval<Ts&>()...));
       using type =
-          typename std::conditional<std::is_void<result_type>::value, Tuple<>, Tuple<result_type>>::type;
+          typename std::conditional<std::is_void_v<result_type>, Tuple<>, Tuple<result_type>>::type;
     };
 
     template <template <typename...> class Tuple, template <typename...> class Variant>
-    using value_types = dlaf::internal::UniquePackT<dlaf::internal::TransformPackT<
+    using value_types = dlaf::internal::UniquePack_t<dlaf::internal::TransformPack_t<
         typename hpx::execution::experimental::sender_traits<S>::template value_types<Tuple, Variant>,
         invoke_result_helper>>;
 
     template <template <typename...> class Variant>
-    using error_types = dlaf::internal::UniquePackT<dlaf::internal::PrependPackT<
+    using error_types = dlaf::internal::UniquePack_t<dlaf::internal::PrependPack_t<
         typename hpx::execution::experimental::sender_traits<S>::template error_types<Variant>,
         std::exception_ptr>>;
 

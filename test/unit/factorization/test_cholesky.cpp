@@ -66,14 +66,12 @@ const std::vector<std::tuple<SizeType, SizeType>> sizes = {
 
 template <class T, Backend B, Device D>
 void testCholesky(const blas::Uplo uplo, const SizeType m, const SizeType mb) {
-  std::function<T(const GlobalElementIndex&)> el, res;
-
   const LocalElementSize size(m, m);
   const TileElementSize block_size(mb, mb);
 
   Matrix<T, Device::CPU> mat_h(size, block_size);
 
-  std::tie(el, res) = getCholeskySetters<GlobalElementIndex, T>(uplo);
+  auto [el, res] = getCholeskySetters<GlobalElementIndex, T>(uplo);
 
   set(mat_h, el);
 
@@ -89,8 +87,6 @@ void testCholesky(const blas::Uplo uplo, const SizeType m, const SizeType mb) {
 template <class T, Backend B, Device D>
 void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const SizeType m,
                   const SizeType mb) {
-  std::function<T(const GlobalElementIndex&)> el, res;
-
   const GlobalElementSize size(m, m);
   const TileElementSize block_size(mb, mb);
   Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
@@ -98,7 +94,7 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
   Distribution distribution(size, block_size, grid.size(), grid.rank(), src_rank_index);
   Matrix<T, Device::CPU> mat_h(std::move(distribution));
 
-  std::tie(el, res) = getCholeskySetters<GlobalElementIndex, T>(uplo);
+  auto [el, res] = getCholeskySetters<GlobalElementIndex, T>(uplo);
 
   set(mat_h, el);
 
@@ -112,23 +108,17 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
 }
 
 TYPED_TEST(CholeskyTestMC, CorrectnessLocal) {
-  SizeType m, mb;
-
   for (auto uplo : blas_uplos) {
-    for (auto sz : sizes) {
-      std::tie(m, mb) = sz;
+    for (const auto& [m, mb] : sizes) {
       testCholesky<TypeParam, Backend::MC, Device::CPU>(uplo, m, mb);
     }
   }
 }
 
 TYPED_TEST(CholeskyTestMC, CorrectnessDistributed) {
-  SizeType m, mb;
-
   for (const auto& comm_grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
-      for (auto sz : sizes) {
-        std::tie(m, mb) = sz;
+      for (const auto& [m, mb] : sizes) {
         testCholesky<TypeParam, Backend::MC, Device::CPU>(comm_grid, uplo, m, mb);
         hpx::threads::get_thread_manager().wait();
       }
@@ -138,23 +128,17 @@ TYPED_TEST(CholeskyTestMC, CorrectnessDistributed) {
 
 #ifdef DLAF_WITH_CUDA
 TYPED_TEST(CholeskyTestGPU, CorrectnessLocal) {
-  SizeType m, mb;
-
   for (auto uplo : blas_uplos) {
-    for (auto sz : sizes) {
-      std::tie(m, mb) = sz;
+    for (const auto& [m, mb] : sizes) {
       testCholesky<TypeParam, Backend::GPU, Device::GPU>(uplo, m, mb);
     }
   }
 }
 
 TYPED_TEST(CholeskyTestGPU, CorrectnessDistributed) {
-  SizeType m, mb;
-
   for (const auto& comm_grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
-      for (auto sz : sizes) {
-        std::tie(m, mb) = sz;
+      for (const auto& [m, mb] : sizes) {
         testCholesky<TypeParam, Backend::GPU, Device::GPU>(comm_grid, uplo, m, mb);
         hpx::threads::get_thread_manager().wait();
       }

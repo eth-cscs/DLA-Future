@@ -54,6 +54,9 @@ struct CopyBackend<Device::GPU, Device::GPU> {
 };
 #endif
 
+template <Device Source, Device Destination>
+inline constexpr auto CopyBackend_v = CopyBackend<Source, Destination>::value;
+
 template <typename T, Device Source, Device Destination>
 struct CopyTile;
 
@@ -199,8 +202,7 @@ auto duplicateIfNeeded(hpx::future<Tile<T, Source>> tile) {
   }
   else {
     return hpx::execution::experimental::make_future(
-        dlaf::internal::transform(dlaf::internal::Policy<
-                                      internal::CopyBackend<Source, Destination>::value>(
+        dlaf::internal::transform(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>(
                                       hpx::threads::thread_priority::normal),
                                   dlaf::matrix::Duplicate<Destination>{}, std::move(tile)));
   }
@@ -213,8 +215,7 @@ auto duplicateIfNeeded(hpx::shared_future<Tile<T, Source>> tile) {
   }
   else {
     return hpx::execution::experimental::make_future(
-        dlaf::internal::transform(dlaf::internal::Policy<
-                                      internal::CopyBackend<Source, Destination>::value>(
+        dlaf::internal::transform(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>(
                                       hpx::threads::thread_priority::normal),
                                   dlaf::matrix::Duplicate<Destination>{},
                                   hpx::execution::experimental::keep_future(std::move(tile))));

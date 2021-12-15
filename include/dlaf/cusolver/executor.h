@@ -54,11 +54,17 @@ template <typename F, typename... Ts>
 struct isAsyncCusolverCallable
     : isAsyncCusolverCallableImpl<hpx::is_invocable_v<F, cusolverDnHandle_t&, Ts...>, F, Ts...> {};
 
+template <typename F, typename... Ts>
+inline constexpr bool isAsyncCusolverCallable_v = isAsyncCusolverCallable<F, Ts...>::value;
+
 template <typename F, typename Futures>
 struct isDataflowCusolverCallable
     : hpx::is_invocable<hpx::util::functional::invoke_fused, F,
                         decltype(hpx::tuple_cat(hpx::tie(std::declval<cusolverDnHandle_t&>()),
                                                 std::declval<Futures>()))> {};
+
+template <typename F, typename Futures>
+inline constexpr bool isDataflowCusolverCallable_v = isDataflowCusolverCallable<F, Futures>::value;
 }
 
 /// An executor for cuSOLVER functions. Uses handles and streams from the given
@@ -92,7 +98,7 @@ public:
   }
 
   template <typename F, typename... Ts>
-  std::enable_if_t<internal::isAsyncCusolverCallable<F, Ts...>::value,
+  std::enable_if_t<internal::isAsyncCusolverCallable_v<F, Ts...>,
                    typename internal::isAsyncCusolverCallable<F, Ts...>::return_type>
   async_execute(F&& f, Ts&&... ts) {
     cudaStream_t stream = stream_pool_.getNextStream();
@@ -108,7 +114,7 @@ public:
   }
 
   template <class Frame, class F, class Futures>
-  std::enable_if_t<internal::isDataflowCusolverCallable<F, Futures>::value> dataflow_finalize(
+  std::enable_if_t<internal::isDataflowCusolverCallable_v<F, Futures>> dataflow_finalize(
       Frame&& frame, F&& f, Futures&& futures) {
     // Ensure the dataflow frame stays alive long enough.
     hpx::intrusive_ptr<typename std::remove_pointer<typename std::decay<Frame>::type>::type> frame_p(
@@ -128,14 +134,14 @@ public:
   }
 
   template <typename F, typename... Ts>
-  std::enable_if_t<cublas::internal::isAsyncCublasCallable<F, Ts...>::value,
+  std::enable_if_t<cublas::internal::isAsyncCublasCallable_v<F, Ts...>,
                    typename cublas::internal::isAsyncCublasCallable<F, Ts...>::return_type>
   async_execute(F&& f, Ts&&... ts) {
     return base::async_execute(std::forward<F>(f), std::forward<Ts>(ts)...);
   }
 
   template <class Frame, class F, class Futures>
-  std::enable_if_t<cublas::internal::isDataflowCublasCallable<F, Futures>::value> dataflow_finalize(
+  std::enable_if_t<cublas::internal::isDataflowCublasCallable_v<F, Futures>> dataflow_finalize(
       Frame&& frame, F&& f, Futures&& futures) {
     base::dataflow_finalize(std::forward<Frame>(frame), std::forward<F>(f),
                             std::forward<Futures>(futures));

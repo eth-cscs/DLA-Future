@@ -39,8 +39,7 @@ public:
   /// @param size The size of the memory to be allocated.
   ///
   /// Memory of @p size elements of type @c T is allocated on the given device.
-  template <class U = T,
-            class = typename std::enable_if_t<!std::is_const<U>::value && std::is_same<T, U>::value>>
+  template <class U = T, class = typename std::enable_if_t<!std::is_const_v<U> && std::is_same_v<T, U>>>
   explicit MemoryView(SizeType size)
       : memory_(std::make_shared<MemoryChunk<ElementType, device>>(size)), offset_(0), size_(size) {
     DLAF_ASSERT(size >= 0, size);
@@ -58,8 +57,7 @@ public:
   }
 
   MemoryView(const MemoryView&) = default;
-  template <class U = T,
-            class = typename std::enable_if_t<std::is_const<U>::value && std::is_same<T, U>::value>>
+  template <class U = T, class = typename std::enable_if_t<std::is_const_v<U> && std::is_same_v<T, U>>>
   MemoryView(const MemoryView<ElementType, device>& rhs)
       : memory_(rhs.memory_), offset_(rhs.offset_), size_(rhs.size_) {}
 
@@ -69,8 +67,7 @@ public:
     rhs.offset_ = 0;
   }
 
-  template <class U = T,
-            class = typename std::enable_if_t<std::is_const<U>::value && std::is_same<T, U>::value>>
+  template <class U = T, class = typename std::enable_if_t<std::is_const_v<U> && std::is_same_v<T, U>>>
   MemoryView(MemoryView<ElementType, device>&& rhs)
       : memory_(rhs.memory_), offset_(rhs.offset_), size_(rhs.size_) {
     rhs.memory_ = std::make_shared<MemoryChunk<ElementType, device>>();
@@ -89,8 +86,7 @@ public:
         offset_(size > 0 ? offset + memory_view.offset_ : 0), size_(size) {
     DLAF_ASSERT(offset + size <= memory_view.size_, offset + size, memory_view.size_);
   }
-  template <class U = T,
-            class = typename std::enable_if_t<std::is_const<U>::value && std::is_same<T, U>::value>>
+  template <class U = T, class = typename std::enable_if_t<std::is_const_v<U> && std::is_same_v<T, U>>>
   MemoryView(const MemoryView<ElementType, device>& memory_view, SizeType offset, SizeType size)
       : memory_(size > 0 ? memory_view.memory_ : std::make_shared<MemoryChunk<ElementType, device>>()),
         offset_(size > 0 ? offset + memory_view.offset_ : 0), size_(size) {
@@ -98,8 +94,7 @@ public:
   }
 
   MemoryView& operator=(const MemoryView&) = default;
-  template <class U = T,
-            class = typename std::enable_if_t<std::is_const<U>::value && std::is_same<T, U>::value>>
+  template <class U = T, class = typename std::enable_if_t<std::is_const_v<U> && std::is_same_v<T, U>>>
   MemoryView& operator=(const MemoryView<ElementType, device>& rhs) {
     memory_ = rhs.memory_;
     offset_ = rhs.offset_;
@@ -119,8 +114,7 @@ public:
 
     return *this;
   }
-  template <class U = T,
-            class = typename std::enable_if_t<std::is_const<U>::value && std::is_same<T, U>::value>>
+  template <class U = T, class = typename std::enable_if_t<std::is_const_v<U> && std::is_same_v<T, U>>>
   MemoryView& operator=(MemoryView<ElementType, device>&& rhs) {
     memory_ = std::move(rhs.memory_);
     offset_ = rhs.offset_;

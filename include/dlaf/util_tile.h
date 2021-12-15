@@ -43,7 +43,7 @@ bool square_size(const Tile<T, D>& t) noexcept {
 template <class T>
 bool tile_complex_trans(blas::Op op) noexcept {
   bool complextrans = false;
-  if (!std::is_same<T, ComplexType<T>>::value || op != blas::Op::Trans)
+  if (!std::is_same_v<T, ComplexType<T>> || op != blas::Op::Trans)
     complextrans = true;
 
   return complextrans;

@@ -76,8 +76,6 @@ GlobalElementSize globalTestSize(const LocalElementSize& size) {
 template <class T, Backend B, Device D>
 void testTriangularSolver(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha,
                           SizeType m, SizeType n, SizeType mb, SizeType nb) {
-  std::function<T(const GlobalElementIndex&)> el_op_a, el_b, res_b;
-
   LocalElementSize size_a(m, m);
   TileElementSize block_size_a(mb, mb);
 
@@ -92,12 +90,8 @@ void testTriangularSolver(blas::Side side, blas::Uplo uplo, blas::Op op, blas::D
   TileElementSize block_size_b(mb, nb);
   Matrix<T, Device::CPU> mat_bh(size_b, block_size_b);
 
-  if (side == blas::Side::Left)
-    std::tie(el_op_a, el_b, res_b) =
-        getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, m);
-  else
-    std::tie(el_op_a, el_b, res_b) =
-        getRightTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, n);
+  auto [el_op_a, el_b, res_b] =
+      getTriangularSystem<GlobalElementIndex, T>(side, uplo, op, diag, alpha, m, n);
 
   set(mat_ah, el_op_a, op);
   set(mat_bh, el_b);
@@ -116,8 +110,6 @@ void testTriangularSolver(blas::Side side, blas::Uplo uplo, blas::Op op, blas::D
 template <class T, Backend B, Device D>
 void testTriangularSolver(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, blas::Op op,
                           blas::Diag diag, T alpha, SizeType m, SizeType n, SizeType mb, SizeType nb) {
-  std::function<T(const GlobalElementIndex&)> el_op_a, el_b, res_b;
-
   LocalElementSize size_a(m, m);
   TileElementSize block_size_a(mb, mb);
   if (side == blas::Side::Right) {
@@ -136,12 +128,8 @@ void testTriangularSolver(comm::CommunicatorGrid grid, blas::Side side, blas::Up
   Distribution distr_b(sz_b, block_size_b, grid.size(), grid.rank(), src_rank_index);
   Matrix<T, Device::CPU> mat_bh(std::move(distr_b));
 
-  if (side == blas::Side::Left)
-    std::tie(el_op_a, el_b, res_b) =
-        getLeftTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, m);
-  else
-    std::tie(el_op_a, el_b, res_b) =
-        getRightTriangularSystem<GlobalElementIndex, T>(uplo, op, diag, alpha, n);
+  auto [el_op_a, el_b, res_b] =
+      getTriangularSystem<GlobalElementIndex, T>(side, uplo, op, diag, alpha, m, n);
 
   set(mat_ah, el_op_a, op);
   set(mat_bh, el_b);
@@ -158,14 +146,11 @@ void testTriangularSolver(comm::CommunicatorGrid grid, blas::Side side, blas::Up
 }
 
 TYPED_TEST(TriangularSolverTestMC, CorrectnessLocal) {
-  SizeType m, n, mb, nb;
-
-  for (auto side : blas_sides) {
-    for (auto uplo : blas_uplos) {
-      for (auto op : blas_ops) {
-        for (auto diag : blas_diags) {
-          for (auto sz : sizes) {
-            std::tie(m, n, mb, nb) = sz;
+  for (const auto side : blas_sides) {
+    for (const auto uplo : blas_uplos) {
+      for (const auto op : blas_ops) {
+        for (const auto diag : blas_diags) {
+          for (const auto& [m, n, mb, nb] : sizes) {
             TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
 
             testTriangularSolver<TypeParam, Backend::MC, Device::CPU>(side, uplo, op, diag, alpha, m, n,
@@ -178,18 +163,15 @@ TYPED_TEST(TriangularSolverTestMC, CorrectnessLocal) {
 }
 
 TYPED_TEST(TriangularSolverTestMC, CorrectnessDistributed) {
-  SizeType m, n, mb, nb;
-
   for (const auto& comm_grid : this->commGrids()) {
-    for (auto side : blas_sides) {
-      for (auto uplo : blas_uplos) {
-        for (auto op : blas_ops) {
-          for (auto diag : blas_diags) {
+    for (const auto side : blas_sides) {
+      for (const auto uplo : blas_uplos) {
+        for (const auto op : blas_ops) {
+          for (const auto diag : blas_diags) {
             if (!(op == blas::Op::NoTrans || (side == blas::Side::Left && uplo == blas::Uplo::Lower)))
               continue;
 
-            for (auto sz : sizes) {
-              std::tie(m, n, mb, nb) = sz;
+            for (const auto& [m, n, mb, nb] : sizes) {
               TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
               testTriangularSolver<TypeParam, Backend::MC, Device::CPU>(comm_grid, side, uplo, op, diag,
                                                                         alpha, m, n, mb, nb);
@@ -204,14 +186,11 @@ TYPED_TEST(TriangularSolverTestMC, CorrectnessDistributed) {
 
 #ifdef DLAF_WITH_CUDA
 TYPED_TEST(TriangularSolverTestGPU, CorrectnessLocal) {
-  SizeType m, n, mb, nb;
-
-  for (auto side : blas_sides) {
-    for (auto uplo : blas_uplos) {
-      for (auto op : blas_ops) {
-        for (auto diag : blas_diags) {
-          for (auto sz : sizes) {
-            std::tie(m, n, mb, nb) = sz;
+  for (const auto side : blas_sides) {
+    for (const auto uplo : blas_uplos) {
+      for (const auto op : blas_ops) {
+        for (const auto diag : blas_diags) {
+          for (const auto& [m, n, mb, nb] : sizes) {
             TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
 
             testTriangularSolver<TypeParam, Backend::GPU, Device::GPU>(side, uplo, op, diag, alpha, m, n,
@@ -224,18 +203,15 @@ TYPED_TEST(TriangularSolverTestGPU, CorrectnessLocal) {
 }
 
 TYPED_TEST(TriangularSolverTestGPU, CorrectnessDistributed) {
-  SizeType m, n, mb, nb;
-
   for (const auto& comm_grid : this->commGrids()) {
-    for (auto side : blas_sides) {
-      for (auto uplo : blas_uplos) {
-        for (auto op : blas_ops) {
-          for (auto diag : blas_diags) {
+    for (const auto side : blas_sides) {
+      for (const auto uplo : blas_uplos) {
+        for (const auto op : blas_ops) {
+          for (const auto diag : blas_diags) {
             if (!(op == blas::Op::NoTrans || (side == blas::Side::Left && uplo == blas::Uplo::Lower)))
               continue;
 
-            for (auto sz : sizes) {
-              std::tie(m, n, mb, nb) = sz;
+            for (const auto& [m, n, mb, nb] : sizes) {
               TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
 
               testTriangularSolver<TypeParam, Backend::GPU, Device::GPU>(comm_grid, side, uplo, op, diag,

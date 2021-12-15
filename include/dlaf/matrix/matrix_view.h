@@ -36,7 +36,7 @@ public:
   using ConstTileType = Tile<const ElementType, device>;
 
   template <template <class, Device> class MatrixType, class T2,
-            std::enable_if_t<std::is_same<T, std::remove_const_t<T2>>::value, int> = 0>
+            std::enable_if_t<std::is_same_v<T, std::remove_const_t<T2>>, int> = 0>
   MatrixView(blas::Uplo uplo, MatrixType<T2, device>& matrix);
 
   MatrixView(const MatrixView& rhs) = delete;
@@ -81,7 +81,7 @@ public:
 
 private:
   template <template <class, Device> class MatrixType, class T2,
-            std::enable_if_t<std::is_same<T, std::remove_const_t<T2>>::value, int> = 0>
+            std::enable_if_t<std::is_same_v<T, std::remove_const_t<T2>>, int> = 0>
   void setUpTiles(MatrixType<T2, device>& matrix) noexcept;
 
   std::vector<hpx::shared_future<ConstTileType>> tile_shared_futures_;

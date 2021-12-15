@@ -41,14 +41,8 @@ void testTrmm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, c
 
   const T alpha = TypeUtilities<T>::element(-1.2, .7);
 
-  std::function<T(const TileElementIndex&)> el_op_a, el_b, res_b;
-
-  if (side == blas::Side::Left)
-    std::tie(el_op_a, res_b, el_b) =
-        getLeftTriangularSystem<TileElementIndex, T>(uplo, op, diag, static_cast<T>(1.0) / alpha, m);
-  else
-    std::tie(el_op_a, res_b, el_b) =
-        getRightTriangularSystem<TileElementIndex, T>(uplo, op, diag, static_cast<T>(1.0) / alpha, n);
+  auto [el_op_a, res_b, el_b] =
+      getTriangularSystem<TileElementIndex, T>(side, uplo, op, diag, static_cast<T>(1.0) / alpha, m, n);
 
   auto a = createTile<CT, D>(el_op_a, size_a, lda, op);
   auto b = createTile<T, D>(el_b, size_b, ldb);

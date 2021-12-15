@@ -104,8 +104,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     auto add_mul = n * m * m / 2;
     const double total_ops = dlaf::total_ops<T>(add_mul, add_mul);
 
-    matrix_values_t ref_op_a, ref_b, ref_x;
-    std::tie(ref_op_a, ref_b, ref_x) = ::sampleLeftTr(uplo, op, diag, alpha, ah.size().rows());
+    auto [ref_op_a, ref_b, ref_x] = ::sampleLeftTr(uplo, op, diag, alpha, ah.size().rows());
 
     for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
       if (0 == world.rank() && run_index >= 0)
@@ -143,7 +142,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       // (optional) run test
       if (opts.do_check) {
         // TODO do not check element by element, but evaluate the entire matrix
-        static_assert(std::is_arithmetic<T>::value, "mul/add error is valid just for arithmetic types");
+        static_assert(std::is_arithmetic_v<T>, "mul/add error is valid just for arithmetic types");
         constexpr T muladd_error = 2 * std::numeric_limits<T>::epsilon();
 
         const T max_error = 20 * (bh.size().rows() + 1) * muladd_error;
@@ -241,7 +240,7 @@ options_t check_options(hpx::program_options::variables_map& vm) {
 /// B_ij = (X_ij + (kk-1) * gamma) / alpha, if diag == Unit
 /// B_ij = kk * gamma / alpha, otherwise.
 linear_system_t sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType m) {
-  static_assert(std::is_arithmetic<T>::value && !std::is_integral<T>::value,
+  static_assert(std::is_arithmetic_v<T> && !std::is_integral_v<T>,
                 "it is valid just with floating point values");
 
   bool op_a_lower = (uplo == blas::Uplo::Lower && op == blas::Op::NoTrans) ||

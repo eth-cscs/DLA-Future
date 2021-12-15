@@ -386,7 +386,7 @@ hpx::shared_future<Tile<T, D>> splitTileInsertFutureInChain(hpx::future<Tile<T, 
   // 2. Break the dependency chain inserting PN and storing P2 or SF(P2):  F1(PN)  FN()  F2(P3)
   auto swap_promise = [promise = std::move(p)](auto tile) mutable {
     // The dep_tracker cannot be a const Tile (can happen only for const Tiles).
-    DLAF_ASSERT_HEAVY(!std::holds_alternative < hpx::shared_future<Tile<const T, D>>(tile.dep_tracker_),
+    DLAF_ASSERT_HEAVY((!std::holds_alternative<hpx::shared_future<Tile<const T, D>>>(tile.dep_tracker_)),
                       "Internal Dependency Error");
 
     auto dep_tracker = std::move(tile.dep_tracker_);

@@ -77,30 +77,30 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb) {
   set_random(mat_e);
   auto mat_e_local = allGather(lapack::MatrixType::General, mat_e);
 
-  Matrix<const T, Device::CPU> mat_i = [m, mb]() {
-    Matrix<T, Device::CPU> mat_i({m, m}, {mb, mb});
-    set_random(mat_i);
+  Matrix<const T, Device::CPU> mat_hh = [m, mb]() {
+    Matrix<T, Device::CPU> mat_hh({m, m}, {mb, mb});
+    set_random(mat_hh);
 
-    const auto m = mat_i.distribution().localNrTiles().cols();
+    const auto m = mat_hh.distribution().localNrTiles().cols();
     for (SizeType j = 0; j < m; ++j) {
       for (SizeType i = j; i < m; ++i) {
         const bool affectsTwoRows = i < m - 1;
         const SizeType k =
-            affectsTwoRows ? mat_i.tileSize({i, j}).cols() : mat_i.tileSize({i, j}).rows() - 2;
-        const SizeType n =
-            mat_i.tileSize({i, j}).rows() - 1 + (affectsTwoRows ? mat_i.tileSize({i + 1, j}).rows() : 0);
+            affectsTwoRows ? mat_hh.tileSize({i, j}).cols() : mat_hh.tileSize({i, j}).rows() - 2;
+        const SizeType n = mat_hh.tileSize({i, j}).rows() - 1 +
+                           (affectsTwoRows ? mat_hh.tileSize({i + 1, j}).rows() : 0);
         if (k <= 0)
           continue;
-        hpx::dataflow(hpx::unwrapping(computeTaus<T>), n, k, mat_i(LocalTileIndex(i, j)));
+        hpx::dataflow(hpx::unwrapping(computeTaus<T>), n, k, mat_hh(LocalTileIndex(i, j)));
       }
     }
 
-    return mat_i;
+    return mat_hh;
   }();
 
-  MatrixLocal<T> mat_i_local = allGather(lapack::MatrixType::Lower, mat_i);
+  MatrixLocal<T> mat_hh_local = allGather(lapack::MatrixType::Lower, mat_hh);
 
-  eigensolver::backTransformationBandToTridiag<Backend::MC>(mat_e, mat_i);
+  eigensolver::backTransformationBandToTridiag<Backend::MC>(mat_e, mat_hh);
 
   if (m == 0 || n == 0)
     return;
@@ -115,7 +115,7 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb) {
       const SizeType size = std::min(mb, m - i);
       const SizeType i_v = (i - 1) / mb * mb;
 
-      T& v_head = *mat_i_local.ptr({i_v, j});
+      T& v_head = *mat_hh_local.ptr({i_v, j});
       const T tau = v_head;
       v_head = 1;
 

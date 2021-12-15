@@ -23,7 +23,7 @@ namespace dlaf::eigensolver {
 // by the reflectors in V (block-wise, so T represents the T factor which embeds the information about
 // taus), which are the ones used to transform a band matrix to a tridiagonal matrix.
 //
-// In particular, V and T are obatined using data about reflectors and taus passed via @p mat_i
+// In particular, V and T are obtained using data about reflectors and taus passed via @p mat_hh
 // where they are stored using following compact representation
 //
 // compact           extended
@@ -38,21 +38,20 @@ namespace dlaf::eigensolver {
 // where A, B, C and D refers to distinct reflectors, with their components numbered and their taus
 // identified by the letter T.
 //
-// @param mat_i matrix containing reflectors together with taus (compact form see representation above)
+// @param mat_hh matrix containing reflectors together with taus (compact form see representation above)
 // @param mat_e matrix to which the inverse transformation is applied to
 template <Backend backend, Device device, class T>
 void backTransformationBandToTridiag(matrix::Matrix<T, device>& mat_e,
-                                     matrix::Matrix<const T, device>& mat_i) {
+                                     matrix::Matrix<const T, device>& mat_hh) {
   DLAF_ASSERT(matrix::local_matrix(mat_e), mat_e);
-  DLAF_ASSERT(matrix::local_matrix(mat_i), mat_i);
+  DLAF_ASSERT(matrix::local_matrix(mat_hh), mat_hh);
 
-  DLAF_ASSERT(matrix::square_size(mat_i), mat_i);
-  DLAF_ASSERT(matrix::square_blocksize(mat_i), mat_i);
+  DLAF_ASSERT(matrix::square_size(mat_hh), mat_hh);
+  DLAF_ASSERT(matrix::square_blocksize(mat_hh), mat_hh);
 
-  DLAF_ASSERT(mat_i.size().rows() == mat_e.size().rows(), mat_i, mat_e);
-  DLAF_ASSERT(mat_i.blockSize().rows() == mat_e.blockSize().rows(), mat_i, mat_e);
+  DLAF_ASSERT(mat_hh.size().rows() == mat_e.size().rows(), mat_hh, mat_e);
+  DLAF_ASSERT(mat_hh.blockSize().rows() == mat_e.blockSize().rows(), mat_hh, mat_e);
 
-  internal::BackTransformationT2B<backend, device, T>::call(mat_e, mat_i);
+  internal::BackTransformationT2B<backend, device, T>::call(mat_e, mat_hh);
 }
-
 }

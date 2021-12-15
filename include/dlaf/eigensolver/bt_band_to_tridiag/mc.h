@@ -30,7 +30,7 @@ namespace dlaf::eigensolver::internal {
 
 template <class T>
 struct BackTransformationT2B<Backend::MC, Device::CPU, T> {
-  static void call(Matrix<T, Device::CPU>& mat_e, Matrix<const T, Device::CPU>& mat_i);
+  static void call(Matrix<T, Device::CPU>& mat_e, Matrix<const T, Device::CPU>& mat_hh);
 };
 
 template <class T>
@@ -130,7 +130,7 @@ auto updateE(hpx::threads::thread_priority priority, WSender&& tile_w, W2Sender&
 
 template <class T>
 void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& mat_e,
-                                                              Matrix<const T, Device::CPU>& mat_i) {
+                                                              Matrix<const T, Device::CPU>& mat_hh) {
   static constexpr Backend backend = Backend::MC;
   using hpx::threads::thread_priority;
   using hpx::execution::experimental::keep_future;
@@ -139,14 +139,14 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
   using common::RoundRobin;
   using common::iterate_range2d;
 
-  if (mat_i.size().isEmpty() || mat_e.size().isEmpty())
+  if (mat_hh.size().isEmpty() || mat_e.size().isEmpty())
     return;
 
   const SizeType mb = mat_e.blockSize().rows();
   const SizeType b = mb;
-  const SizeType nsweeps = nrSweeps<T>(mat_i.size().cols());
+  const SizeType nsweeps = nrSweeps<T>(mat_hh.size().cols());
 
-  const auto& dist_i = mat_i.distribution();
+  const auto& dist_i = mat_hh.distribution();
 
   // Note: w_tile_sz can store reflectors are they are actually applied, opposed to how they are
   // stored in compact form.
@@ -191,7 +191,7 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
   // reflectors, it will result that in W the last tile will be the one linked with the before last tile
   // in E, so we can actually reduce its size.
   const auto last_tile_size =
-      mat_i.tileSize(indexFromOrigin(mat_i.nrTiles() - GlobalTileSize{1, 1})).rows();
+      mat_hh.tileSize(indexFromOrigin(mat_hh.nrTiles() - GlobalTileSize{1, 1})).rows();
   const SizeType last_w_tile_sz = [&]() {
     const auto last_refl_size = last_tile_size - 1;
     if (last_refl_size == 1)
@@ -209,7 +209,7 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
                                     dist_i.rankIndex(), dist_i.sourceRankIndex());
 
   constexpr std::size_t n_workspaces = 2;
-  RoundRobin<Panel<Coord::Col, T, Device::CPU>> t_panels(n_workspaces, mat_i.distribution());
+  RoundRobin<Panel<Coord::Col, T, Device::CPU>> t_panels(n_workspaces, mat_hh.distribution());
   RoundRobin<Panel<Coord::Col, T, Device::CPU>> w_panels(n_workspaces, dist_w);
   RoundRobin<Panel<Coord::Row, T, Device::CPU>> w2_panels(n_workspaces, mat_e.distribution());
 
@@ -221,12 +221,12 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
     auto& mat_w2 = w2_panels.nextResource();
 
     // Note: apply the entire column (steps)
-    const SizeType steps = nrStepsForSweep(j * mb, mat_i.size().cols(), mb);
+    const SizeType steps = nrStepsForSweep(j * mb, mat_hh.size().cols(), mb);
     for (SizeType step = 0; step < steps; ++step) {
       const SizeType i = j + step;
       const LocalTileIndex ij_refls(i, j);
 
-      const bool affectsTwoRows = i < (mat_i.nrTiles().rows() - 1);
+      const bool affectsTwoRows = i < (mat_hh.nrTiles().rows() - 1);
 
       // Note: Since the band is of size (mb + 1), in order to tridiagonalize the matrix,
       // reflectors are of length mb and start with an offset of 1. This means that the application
@@ -252,8 +252,8 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
       // together with the size of the tile of the refelctors (v_rows), that as depicted above it
       // has a different blocksize (no dashed line, it's a single tile)
       const std::array<SizeType, 2> sizes{
-          mat_i.tileSize({i, j}).rows() - 1,
-          affectsTwoRows ? mat_i.tileSize({i + 1, j}).rows() : 0,
+          mat_hh.tileSize({i, j}).rows() - 1,
+          affectsTwoRows ? mat_hh.tileSize({i + 1, j}).rows() : 0,
       };
       const SizeType v_rows = sizes[0] + sizes[1];
 
@@ -267,7 +267,7 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
       const matrix::SubTileSpec v_up{{0, 0}, {sizes[0], k_refls}};
       const matrix::SubTileSpec v_dn{{sizes[0], 0}, {sizes[1], k_refls}};
 
-      if (k_refls < mat_i.tileSize({i, j}).cols()) {
+      if (k_refls < mat_hh.tileSize({i, j}).cols()) {
         mat_w.setWidth(k_refls);
         mat_t.setWidth(k_refls);
         mat_w2.setHeight(k_refls);
@@ -281,7 +281,7 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
       auto tile_w_full = mat_w(ij_refls);
       auto tile_w_rw = splitTile(tile_w_full, v_spec);
 
-      const auto& tile_i = mat_i.read(ij_refls);
+      const auto& tile_i = mat_hh.read(ij_refls);
       auto tile_v = setupVWellFormed(tile_i, std::move(tile_w_rw));
 
       // W2 = V* . E

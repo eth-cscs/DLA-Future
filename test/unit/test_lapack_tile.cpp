@@ -68,7 +68,7 @@ TYPED_TEST(TileOperationsTestGPU, Hegst) {
 
   for (const auto& uplo : blas_uplos) {
     for (const auto& itype : itypes) {
-      for (const auto& [m, extra_lda, extra_ldb] : _sizes) {
+      for (const auto& [m, extra_lda, extra_ldb] : hegst_sizes) {
         testHegst<Type, Device::GPU>(itype, uplo, m, extra_lda, extra_ldb);
       }
     }

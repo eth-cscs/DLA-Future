@@ -294,6 +294,7 @@ public:
 
   /// Returns the size of the Tile with global index @p index.
   TileElementSize tileSize(const GlobalTileIndex& index) const noexcept {
+    DLAF_ASSERT_HEAVY(index.isIn(nrTiles()), index, nrTiles());
     return {std::min(block_size_.rows(), size_.rows() - index.row() * block_size_.rows()),
             std::min(block_size_.cols(), size_.cols() - index.col() * block_size_.cols())};
   }

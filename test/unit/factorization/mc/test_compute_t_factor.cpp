@@ -278,8 +278,8 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
     Matrix<TypeParam, Device::CPU> t_output({max_k, max_k}, block_size);
     const LocalTileIndex t_idx(0, 0);
 
-    dlaf::factorization::internal::computeTFactor<Backend::MC>(k, v_input, v_start, taus_input,
-                                                               t_output(t_idx));
+    using dlaf::factorization::internal::computeTFactor;
+    computeTFactor<Backend::MC>(k, v_input, v_start, taus_input, t_output(t_idx));
 
     // No reflectors, so nothing to check
     if (k == 0)

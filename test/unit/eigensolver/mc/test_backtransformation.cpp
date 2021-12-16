@@ -57,10 +57,11 @@ GlobalElementSize globalTestSize(const LocalElementSize& size) {
 const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes =
     // m, n, mb, nb
     {
-        {3, 0, 1, 1}, {0, 5, 2, 3},                                  // m, n = 0
-        {2, 2, 3, 3}, {3, 4, 6, 7},                                  // m < mb
-        {3, 3, 1, 1}, {4, 4, 2, 2},  {12, 2, 4, 4}, {24, 36, 6, 6},  // mb = nb
-        {5, 8, 3, 2}, {8, 27, 3, 4}, {15, 34, 4, 6}                  // mb != nb
+        {3, 0, 1, 1}, {0, 5, 2, 3},                                   // m, n = 0
+        {2, 2, 3, 3}, {3, 4, 6, 7},                                   // m < mb
+        {3, 3, 1, 1}, {4, 4, 2, 2},  {12, 2, 4, 4},  {24, 36, 6, 6},  // mb = nb
+        {5, 8, 3, 2}, {8, 27, 3, 4}, {15, 34, 4, 6},                  // mb != nb
+        {3, 3, 2, 2}, {3, 27, 2, 4}                                   // m = mb + 1
 };
 
 template <class T>

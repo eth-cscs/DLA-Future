@@ -109,8 +109,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   matrix::Panel<Coord::Row, T, Device::CPU> panelT(dist_t);
 
   const SizeType nr_reflector_blocks = dist_t.nrTiles().cols();
-  const SizeType nr_reflectors_last_block =
-      dist_t.tileSize(GlobalTileIndex(0, nr_reflector_blocks - 1)).cols();
 
   for (SizeType k = nr_reflector_blocks - 1; k >= 0; --k) {
     bool is_last = (k == nr_reflector_blocks - 1);
@@ -123,11 +121,12 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     panelV.setRangeStart(v_start);
     panelW.setRangeStart(v_start);
 
+    const SizeType nr_reflectors = dist_t.tileSize({0, k}).cols();
     if (is_last) {
-      panelT.setHeight(nr_reflectors_last_block);
-      panelW2.setHeight(nr_reflectors_last_block);
-      panelW.setWidth(nr_reflectors_last_block);
-      panelV.setWidth(nr_reflectors_last_block);
+      panelT.setHeight(nr_reflectors);
+      panelW2.setHeight(nr_reflectors);
+      panelW.setWidth(nr_reflectors);
+      panelV.setWidth(nr_reflectors);
     }
 
     for (SizeType i = k + 1; i < mat_v.nrTiles().rows(); ++i) {
@@ -135,9 +134,10 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       if (i == k + 1) {
         hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v = mat_v.read(ik);
         if (is_last) {
-          tile_v = splitTile(tile_v, {{0, 0},
-                                      {mat_v.distribution().tileSize(GlobalTileIndex(i, k)).rows(),
-                                       nr_reflectors_last_block}});
+          tile_v =
+              splitTile(tile_v,
+                        {{0, 0},
+                         {mat_v.distribution().tileSize(GlobalTileIndex(i, k)).rows(), nr_reflectors}});
         }
         copySingleTile(tile_v, panelV(ik));
         hpx::dataflow(hpx::launch::sync, matrix::unwrapExtendTiles(tile::internal::laset_o),
@@ -149,7 +149,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     }
 
     auto taus_panel = taus[k];
-    const SizeType nr_reflectors = (is_last) ? nr_reflectors_last_block : mat_v.blockSize().cols();
     const LocalTileIndex t_index{Coord::Col, k};
     dlaf::factorization::internal::computeTFactor<Backend::MC>(nr_reflectors, mat_v, v_start, taus_panel,
                                                                panelT(t_index));
@@ -225,8 +224,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   matrix::Panel<Coord::Row, T, Device::CPU> panelT(dist_t);
 
   const SizeType nr_reflector_blocks = dist_t.nrTiles().cols();
-  const SizeType nr_reflectors_last_block =
-      dist_t.tileSize(GlobalTileIndex(0, nr_reflector_blocks - 1)).cols();
 
   for (SizeType k = nr_reflector_blocks - 1; k >= 0; --k) {
     bool is_last = (k == nr_reflector_blocks - 1);
@@ -240,11 +237,12 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     panelW.setRangeStart(v_start);
     panelT.setRange(GlobalTileIndex(Coord::Col, k), GlobalTileIndex(Coord::Col, k + 1));
 
+    const SizeType nr_reflectors = dist_t.tileSize({0, k}).cols();
     if (is_last) {
-      panelT.setHeight(nr_reflectors_last_block);
-      panelW2.setHeight(nr_reflectors_last_block);
-      panelW.setWidth(nr_reflectors_last_block);
-      panelV.setWidth(nr_reflectors_last_block);
+      panelT.setHeight(nr_reflectors);
+      panelW2.setHeight(nr_reflectors);
+      panelW.setWidth(nr_reflectors);
+      panelV.setWidth(nr_reflectors);
     }
 
     auto k_rank_col = dist_v.template rankGlobalTile<Coord::Col>(k);
@@ -258,10 +256,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
           hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v =
               mat_v.read(GlobalTileIndex(i, k));
           if (is_last) {
-            tile_v =
-                splitTile(tile_v,
-                          {{0, 0},
-                           {dist_v.tileSize(GlobalTileIndex(i, k)).rows(), nr_reflectors_last_block}});
+            tile_v = splitTile(tile_v,
+                               {{0, 0}, {dist_v.tileSize(GlobalTileIndex(i, k)).rows(), nr_reflectors}});
           }
           copySingleTile(tile_v, panelV(ik_panel));
           hpx::dataflow(hpx::launch::sync, matrix::unwrapExtendTiles(tile::internal::laset_o),
@@ -275,7 +271,6 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       auto k_local = dist_t.template localTileFromGlobalTile<Coord::Col>(k);
       const LocalTileIndex t_index{Coord::Col, k_local};
       auto taus_panel = taus[k_local];
-      const SizeType nr_reflectors = (is_last) ? nr_reflectors_last_block : mat_v.blockSize().cols();
       dlaf::factorization::internal::computeTFactor<Backend::MC>(nr_reflectors, mat_v, v_start,
                                                                  taus_panel, panelT(t_index),
                                                                  mpi_col_task_chain);

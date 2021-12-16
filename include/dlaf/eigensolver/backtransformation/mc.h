@@ -91,8 +91,11 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   if (m <= 1 || n == 0)
     return;
 
-  // Note: "- 1" added to deal with size 1 reflector.
+  // Note: "-1" added to deal with size 1 reflector.
   const SizeType total_nr_reflector = mat_v.size().rows() - mb - 1;
+
+  if (total_nr_reflector == 0)
+    return;
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panelsV(n_workspaces,
@@ -206,8 +209,11 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   if (m <= 1 || n == 0)
     return;
 
-  // Note: "- 1" added to deal with size 1 reflector.
+  // Note: "-1" added to deal with size 1 reflector.
   const SizeType total_nr_reflector = mat_v.size().cols() - mb - 1;
+
+  if (total_nr_reflector == 0)
+    return;
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panelsV(n_workspaces, dist_v);

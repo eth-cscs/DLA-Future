@@ -29,7 +29,7 @@ hpx::future<ReturnTileType> setPromiseTileFuture(
     std::exception_ptr current_exception_ptr;
 
     try {
-      return ReturnTileType(std::move(NonConstTileType(std::move(fut.get())).setPromise(std::move(p))));
+      return ReturnTileType(std::move(NonConstTileType(fut.get()).setPromise(std::move(p))));
     }
     catch (...) {
       current_exception_ptr = std::current_exception();

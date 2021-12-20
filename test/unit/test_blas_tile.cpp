@@ -38,7 +38,7 @@ TYPED_TEST_SUITE(TileOperationsTestMC, MatrixElementTypes);
 
 #ifdef DLAF_WITH_CUDA
 template <class T>
-using TileOperationsTestGPU = TileOperationTest<T, Device::GPU>;
+using TileOperationsTestGPU = TileOperationsTest<T, Device::GPU>;
 
 TYPED_TEST_SUITE(TileOperationsTestGPU, MatrixElementTypes);
 #endif

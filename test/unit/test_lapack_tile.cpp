@@ -29,14 +29,17 @@ const std::vector<lapack::MatrixType> lapack_matrices({lapack::MatrixType::Gener
 const std::vector<lapack::Norm> lapack_norms({lapack::Norm::Fro, lapack::Norm::Inf, lapack::Norm::Max,
                                               lapack::Norm::One, lapack::Norm::Two});
 
-template <typename Type>
-class TileOperationsTestMC : public ::testing::Test {};
+template <class T, Device D>
+class TileOperationsTest : public ::testing::Test {};
+
+template <class T>
+using TileOperationsTestMC = TileOperationsTest<T, Device::CPU>;
 
 TYPED_TEST_SUITE(TileOperationsTestMC, MatrixElementTypes);
 
 #ifdef DLAF_WITH_CUDA
-template <typename Type>
-class TileOperationsTestGPU : public ::testing::Test {};
+template <class T>
+using TileOperationsTestGPU = TileOperationsTest<T, Device::GPU>;
 
 TYPED_TEST_SUITE(TileOperationsTestGPU, MatrixElementTypes);
 #endif

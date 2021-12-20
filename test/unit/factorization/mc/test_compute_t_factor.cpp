@@ -39,12 +39,15 @@ using dlaf::matrix::test::MatrixLocal;
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
-template <typename Type>
-struct ComputeTFactorTestMC : public ::testing::Test {
+template <class T, Device D>
+struct ComputeTFactorTest : public ::testing::Test {
   const std::vector<CommunicatorGrid>& commGrids() {
     return comm_grids;
   }
 };
+
+template <class T>
+using ComputeTFactorTestMC = ComputeTFactorTest<T, Device::CPU>;
 
 TYPED_TEST_SUITE(ComputeTFactorTestMC, MatrixElementTypes);
 

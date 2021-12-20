@@ -34,27 +34,25 @@ using namespace testing;
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
-template <typename Type>
-class CholeskyTestMC : public ::testing::Test {
+template <class T, Device D>
+class CholeskyTest : public ::testing::Test {
 public:
   const std::vector<CommunicatorGrid>& commGrids() {
     return comm_grids;
   }
 };
+
+template <class T>
+using CholeskyTestMC = CholeskyTest<T, Device::CPU>;
+
 TYPED_TEST_SUITE(CholeskyTestMC, MatrixElementTypes);
 
 #ifdef DLAF_WITH_CUDA
-template <typename Type>
-class CholeskyTestGPU : public ::testing::Test {
-public:
-  const std::vector<CommunicatorGrid>& commGrids() {
-    return comm_grids;
-  }
-};
+template <class T>
+using CholeskyTestGPU = CholeskyTest<T, Device::GPU>;
+
 TYPED_TEST_SUITE(CholeskyTestGPU, MatrixElementTypes);
 #endif
-
-TYPED_TEST_SUITE(CholeskyTest, MatrixElementTypes);
 
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
 

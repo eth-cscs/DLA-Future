@@ -33,7 +33,59 @@ stages:
     paths:
       - pipeline.yml
 
+.build_spack_common:
+  extends: .dind
+  stage: build
+  only:
+    - master
+    - staging
+    - trying
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+    SPACK_SHA: 522a7c8ee0d51f92aa8cd685f378d54735a5307e
+  before_script:
+    - docker login -u $CSCS_REGISTRY_USER -p $CSCS_REGISTRY_PASSWORD $CSCS_REGISTRY
+  script:
+    - TAG=`cat ci/.gitlab-ci.yml $BUILD_DOCKER_FILE $SPACK_ENVIRONMENT | sha256sum - | head -c 64`
+    - docker build -t $BUILD_IMAGE:$TAG -t $BUILD_IMAGE:latest --cache-from $BUILD_IMAGE:$TAG --cache-from $BUILD_IMAGE:latest --build-arg BASE_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg SPACK_SHA --build-arg COMPILER --build-arg SPACK_ENVIRONMENT -f $BUILD_DOCKER_FILE --network=host .
+    - docker push $BUILD_IMAGE:$TAG
+    - docker push $BUILD_IMAGE:latest
+    - docker build -t $DEPLOY_IMAGE --build-arg BUILD_IMAGE=$BUILD_IMAGE:$TAG -f $DEPLOY_DOCKER_FILE --network=host .
+    - docker push $DEPLOY_IMAGE
+    - docker run -v $PWD/ci/ctest_to_gitlab.sh:/ctest_to_gitlab.sh $DEPLOY_IMAGE /ctest_to_gitlab.sh "$DEPLOY_IMAGE" "$USE_CODECOV" "$THREADS_PER_NODE" "$SLURM_CONSTRAINT" > pipeline.yml
+  artifacts:
+    paths:
+      - pipeline.yml
+
 # Builds a Docker image for the current commit
+cpu release build gcc9:
+  extends: .build_spack_common
+  variables:
+    BUILD_DOCKER_FILE: ci/docker/spack/build.Dockerfile
+    DEPLOY_DOCKER_FILE: ci/docker/spack/deploy.Dockerfile
+    BASE_IMAGE: ubuntu:20.04
+    COMPILER: gcc@9.3.0
+    SPACK_ENVIRONMENT: ci/docker/spack/cpu-release.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu-gcc9/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu-gcc9/deploy:$CI_COMMIT_SHA
+    SLURM_CONSTRAINT: mc
+    THREADS_PER_NODE: 72
+    USE_CODECOV: "false"
+
+gpu release build gcc9:
+  extends: .build_spack_common
+  variables:
+    BUILD_DOCKER_FILE: ci/docker/spack/build.Dockerfile
+    DEPLOY_DOCKER_FILE: ci/docker/spack/deploy.Dockerfile
+    BASE_IMAGE: nvidia/cuda:11.0.3-devel-ubuntu20.04
+    COMPILER: gcc@9.3.0
+    SPACK_ENVIRONMENT: ci/docker/spack/gpu-release.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-gpu-gcc9/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-gpu-gcc9/deploy:$CI_COMMIT_SHA
+    SLURM_CONSTRAINT: gpu
+    THREADS_PER_NODE: 24
+    USE_CODECOV: "false"
+
 cpu release build:
   extends: .build_common
   variables:
@@ -114,6 +166,24 @@ notify_github_start:
     - trying
   trigger:
     strategy: depend
+
+cpu release test gcc9:
+  extends: .run_common
+  needs:
+    - cpu release build gcc9
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cpu release build gcc9
+
+gpu release test gcc9:
+  extends: .run_common
+  needs:
+    - gpu release build gcc9
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: gpu release build gcc9
 
 cpu release test:
   extends: .run_common

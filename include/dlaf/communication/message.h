@@ -29,7 +29,7 @@ namespace comm {
 /// It is movable but not copyable.
 template <class Data>
 class Message {
-  static_assert(dlaf::common::is_data<Data>::value,
+  static_assert(dlaf::common::is_data_v<Data>,
                 "Message works just with the Data concept (see dlaf/common/data.h)");
 
   /// Type of the elements of the underlying data.

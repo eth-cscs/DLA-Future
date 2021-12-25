@@ -1,3 +1,4 @@
+import argparse
 import os
 import re
 import math
@@ -5,15 +6,13 @@ import math
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 
 from parse import parse
-
-sns.set_theme()
 
 
 def _gen_nodes_plot(
     plt_type,
+    plt_routine,
     title,
     df,
     combine_mb=False,
@@ -26,6 +25,7 @@ def _gen_nodes_plot(
     """
     Args:
         plt_type:       ppn | time
+        plt_routine:    chol | trsm | hegst It is used to filter data.
         title:          title of the plot
         df:             the pandas.DataFrame with the data for the plot
         combine_mb:     bool indicates if different mb has to be included in the same plot
@@ -52,6 +52,10 @@ def _gen_nodes_plot(
             bench_name = x[1] + f"_{mb}"
         else:
             bench_name = x
+
+        # Filter by routine
+        if not bench_name.startswith(plt_routine):
+            continue
 
         # filter series by name
         if filts != None:
@@ -110,7 +114,7 @@ def _gen_nodes_plot(
 
         ax.grid(axis="y", linewidth=0.5, alpha=0.5)
 
-    return fig, ax
+    return plotted, fig, ax
 
 
 class NodePlotWriter:
@@ -122,7 +126,7 @@ class NodePlotWriter:
     example usage:
 
     ```python
-    with NodePlotWriter("ppn", title, filename, df, **proxy_args) as (fig, ax):
+    with NodePlotWriter(filename, "ppn", "chol", title, df, **proxy_args) as (fig, ax):
         # log scale for ax axis
         if logx: ax.set_xscale("log", base=2)
 
@@ -135,16 +139,18 @@ class NodePlotWriter:
     See `_gen_nodes_plot` for details about parameters.
     """
 
-    def __init__(self, filename, plt_type, title, df, **gen_plot_args):
+    def __init__(self, filename, plt_type, plt_routine, title, df, **gen_plot_args):
         self.filename = filename
-
-        self.fig, self.ax = _gen_nodes_plot(plt_type, title, df, **gen_plot_args)
+        self.plotted, self.fig, self.ax = _gen_nodes_plot(
+            plt_type, plt_routine, title, df, **gen_plot_args
+        )
 
     def __enter__(self):
         return (self.fig, self.ax)
 
     def __exit__(self, type, value, traceback):
-        self.fig.savefig(f"{self.filename}.png", dpi=300)
+        if self.plotted:
+            self.fig.savefig(f"{self.filename}.png", dpi=300)
         plt.close(self.fig)
 
 
@@ -193,6 +199,9 @@ def _parse_line_based(fout, bench_name, nodes):
     elif bench_name.startswith("trsm_slate"):
         pstr_arr = ["input:{}trsm"]
         pstr_res = "d {} {} {:d} left lower notrans nonunit {matrix_rows:d} {matrix_cols:d} {:f} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:g} {perf:g} NA NA no check"
+    elif bench_name.startswith("hegst_slate"):
+        pstr_arr = ["input:{}hegst"]
+        pstr_res = "d {} {} lower {matrix_rows:d} {:d} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:g} NA no check"
     elif bench_name.startswith("chol_dplasma"):
         pstr_arr = [
             "#+++++ M x N x K|NRHS : {matrix_rows:d} x {matrix_cols:d} x {:d}",
@@ -227,18 +236,25 @@ def _parse_line_based(fout, bench_name, nodes):
             rd.update(pdata.named)
             rd["bench_name"] = bench_name
             rd["nodes"] = nodes
-            rd["perf_per_node"] = rd["perf"] / nodes
             if bench_name.startswith("chol_slate"):
                 rd["block_cols"] = rd["block_rows"]
                 rd["matrix_cols"] = rd["matrix_rows"]
             elif bench_name.startswith("trsm_slate"):
                 rd["block_cols"] = rd["block_rows"]
+            elif bench_name.startswith("hegst_slate"):
+                ops = pow(rd["matrix_rows"], 3)  # TODO: Check. Assuming double.
+                rd["perf"] = (ops / rd["time"]) / 1e9
             elif bench_name.startswith("chol_scalapack"):
                 rd["time"] = rd["time_ms"] / 1000
                 rd["matrix_cols"] = rd["matrix_rows"]
+            rd["perf_per_node"] = rd["perf"] / nodes
 
-            # makes _calc_metrics work
-            if not "dlaf" in bench_name:
+            # makes _calc_*_metrics work
+            #
+            # Note: DPLASMA trsm miniapp does not respect `--nruns`. This is a workaround
+            # to make _calc_metrics not skipping the first run, the only one available, by
+            # not setting 'run_index' field (=NaN).
+            if not "dlaf" in bench_name and not bench_name.startswith("trsm_dplasma"):
                 rd["run_index"] = run_index
                 run_index += 1
 
@@ -262,7 +278,9 @@ def _parse_line_based(fout, bench_name, nodes):
 # │   ├── <bench_name_2>.out
 # |   ...
 #
-def parse_jobs(data_dirs):
+# If distinguish_dir is True the bench name is prepended with the directory name
+# This option is useful when comparing the results of different directories with the same bench_names.
+def parse_jobs(data_dirs, distinguish_dir=False):
     if not isinstance(data_dirs, list):
         data_dirs = [data_dirs]
     data = []
@@ -271,10 +289,42 @@ def parse_jobs(data_dirs):
             for f in files:
                 if f.endswith(".out"):
                     nodes = int(os.path.basename(subdir))
+                    benchname = f[:-4]
+                    if distinguish_dir:
+                        benchname += "@" + data_dir
+
                     with open(os.path.join(subdir, f), "r") as fout:
-                        data.extend(_parse_line_based(fout, f[:-4], nodes))
+                        data.extend(_parse_line_based(fout, benchname, nodes))
 
     return pd.DataFrame(data)
+
+
+# Read --path command line arguments (default = ".")
+# and call parse_jobs on the given directories.
+# exit is called if no results are found.
+def parse_jobs_cmdargs(description):
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument(
+        "--path",
+        action="append",
+        help="Plot results from this directory.",
+    )
+    parser.add_argument(
+        "--distinguish-dir",
+        action="store_true",
+        help="Add path name to bench name. Note it works better with short relative paths.",
+    )
+    args = parser.parse_args()
+    paths = args.path
+    if paths == None:
+        paths = ["."]
+
+    df = parse_jobs(paths, args.distinguish_dir)
+    if df.empty:
+        print('Parsed zero results, is the path correct? (path is "' + args.path + '")')
+        exit(1)
+
+    return df
 
 
 def calc_chol_metrics(df):
@@ -282,21 +332,38 @@ def calc_chol_metrics(df):
 
 
 def calc_trsm_metrics(df):
-    return _calc_metrics(
-        ["matrix_rows", "matrix_cols", "block_rows", "nodes", "bench_name"], df
-    )
+    return _calc_metrics(["matrix_rows", "matrix_cols", "block_rows", "nodes", "bench_name"], df)
 
 
-# customize_* functions should accept fig and ax as parameters
+def calc_gen2std_metrics(df):
+    return _calc_metrics(["matrix_rows", "block_rows", "nodes", "bench_name"], df)
+
+
+# Customization that add a simple legend
+def add_basic_legend(fig, ax):
+    handles, labels = ax.get_legend_handles_labels()
+    if len(handles) == 0:
+        return
+
+    labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
+    ax.legend(handles, labels, ncol=1, prop={"size": 10})
+
+
 def gen_chol_plots(
     df,
     logx=False,
     combine_mb=False,
     filename_suffix=None,
-    customize_ppn=None,
-    customize_time=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
     **proxy_args,
 ):
+    """
+    Args:
+        customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
+        customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
+    """
     if combine_mb:
         it_space = df.groupby(["matrix_rows"])
     else:
@@ -309,7 +376,7 @@ def gen_chol_plots(
             m = x[0]
             mb = x[1]
 
-        title = f"Cholesky: matrix_size = {m} x {m}"
+        title = f"Cholesky: strong scaling ({m} x {m})"
         filename_ppn = f"chol_ppn_{m}"
         filename_time = f"chol_time_{m}"
         if not combine_mb:
@@ -321,7 +388,13 @@ def gen_chol_plots(
             filename_time += f"_{filename_suffix}"
 
         with NodePlotWriter(
-            filename_ppn, "ppn", title, grp_data, combine_mb=combine_mb, **proxy_args
+            filename_ppn,
+            "ppn",
+            "chol",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
         ) as (fig, ax):
             if customize_ppn:
                 customize_ppn(fig, ax)
@@ -329,7 +402,13 @@ def gen_chol_plots(
                 ax.set_xscale("log", base=2)
 
         with NodePlotWriter(
-            filename_time, "time", title, grp_data, combine_mb=combine_mb, **proxy_args
+            filename_time,
+            "time",
+            "chol",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
         ) as (fig, ax):
             if customize_time:
                 customize_time(fig, ax)
@@ -343,18 +422,19 @@ def gen_chol_plots_weak(
     logx=False,
     combine_mb=False,
     filename_suffix=None,
-    customize_ppn=None,
-    customize_time=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
     **proxy_args,
 ):
     """
     Args:
         customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
         customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
     """
     df = df.assign(
         weak_rt=[
-            int(round(x[0] / math.sqrt(x[1]) / weak_rt_approx)) * weak_rt_approx
+            round(x[0] / math.sqrt(x[1]) / weak_rt_approx) * weak_rt_approx
             for x in zip(df["matrix_rows"], df["nodes"])
         ]
     )
@@ -383,7 +463,13 @@ def gen_chol_plots_weak(
             filename_time += f"_{filename_suffix}"
 
         with NodePlotWriter(
-            filename_ppn, "ppn", title, grp_data, combine_mb=combine_mb, **proxy_args
+            filename_ppn,
+            "ppn",
+            "chol",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
         ) as (fig, ax):
             if customize_ppn:
                 customize_ppn(fig, ax)
@@ -391,7 +477,13 @@ def gen_chol_plots_weak(
                 ax.set_xscale("log", base=2)
 
         with NodePlotWriter(
-            filename_time, "time", title, grp_data, combine_mb=combine_mb, **proxy_args
+            filename_time,
+            "time",
+            "chol",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
         ) as (fig, ax):
             if customize_time:
                 customize_time(fig, ax)
@@ -403,41 +495,285 @@ def gen_chol_plots_weak(
 def gen_trsm_plots(
     df,
     logx=False,
+    combine_mb=False,
     filename_suffix=None,
-    customize_ppn=None,
-    customize_time=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
     **proxy_args,
 ):
     """
     Args:
         customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
         customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
     """
-    for (m, n, mb), grp_data in df.groupby(
-        ["matrix_rows", "matrix_cols", "block_rows"]
-    ):
-        title = f"TRSM: matrix_size = {m} x {n}, block_size = {mb} x {mb}"
+    if combine_mb:
+        it_space = df.groupby(["matrix_rows", "matrix_cols"])
+    else:
+        it_space = df.groupby(["matrix_rows", "matrix_cols", "block_rows"])
 
-        filename_ppn = f"trsm_ppn_{m}_{n}_{mb}"
-        filename_time = f"trsm_time_{m}_{n}_{mb}"
-        if filename_suffix is not None:
+    for x, grp_data in it_space:
+        if combine_mb:
+            m, n = x
+        else:
+            m, n, mb = x
+
+        title = f"TRSM: strong scaling ({m} x {n})"
+        filename_ppn = f"trsm_ppn_{m}_{n}"
+        filename_time = f"trsm_time_{m}_{n}"
+        if not combine_mb:
+            title += f", block_size = {mb} x {mb}"
+            filename_ppn += f"_{mb}"
+            filename_time += f"_{mb}"
+        if filename_suffix != None:
             filename_ppn += f"_{filename_suffix}"
             filename_time += f"_{filename_suffix}"
 
-        with NodePlotWriter("ppn", title, filename_ppn, grp_data, **proxy_args) as (
-            fig,
-            ax,
-        ):
+        with NodePlotWriter(
+            filename_ppn,
+            "ppn",
+            "trsm",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
+        ) as (fig, ax):
             if customize_ppn:
                 customize_ppn(fig, ax)
             if logx:
                 ax.set_xscale("log", base=2)
 
-        with NodePlotWriter("time", title, filename_time, grp_data, **proxy_args) as (
-            fig,
-            ax,
-        ):
+        with NodePlotWriter(
+            filename_time,
+            "time",
+            "trsm",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
+        ) as (fig, ax):
             if customize_time:
                 customize_time(fig, ax)
             if logx:
                 ax.set_xscale("log", base=2)
+
+
+def gen_trsm_plots_weak(
+    df,
+    weak_rt_approx,
+    logx=False,
+    combine_mb=False,
+    filename_suffix=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
+    **proxy_args,
+):
+    """
+    Args:
+        customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
+        customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
+    """
+    df = df.assign(
+        weakrt_rows=[
+            int(round(x[0] / math.sqrt(x[1]) / weak_rt_approx)) * weak_rt_approx
+            for x in zip(df["matrix_rows"], df["nodes"])
+        ],
+        weakrt_cols=[
+            int(round(x[0] / math.sqrt(x[1]) / weak_rt_approx)) * weak_rt_approx
+            for x in zip(df["matrix_cols"], df["nodes"])
+        ],
+    )
+
+    if combine_mb:
+        it_space = df.groupby(["weakrt_rows", "weakrt_cols"])
+    else:
+        it_space = df.groupby(["weakrt_rows", "weakrt_cols", "block_rows"])
+
+    for x, grp_data in it_space:
+        if combine_mb:
+            weakrt_m, weakrt_n = x
+        else:
+            weakrt_m, weakrt_n, mb = x
+
+        title = f"TRSM: weak scaling ({weakrt_m} x {weakrt_n})"
+        filename_ppn = f"trsm_ppn_{weakrt_m}_{weakrt_n}"
+        filename_time = f"trsm_time_{weakrt_m}_{weakrt_n}"
+        if not combine_mb:
+            title += f", block_size = {mb} x {mb}"
+            filename_ppn += f"_{mb}"
+            filename_time += f"_{mb}"
+        if filename_suffix != None:
+            filename_ppn += f"_{filename_suffix}"
+            filename_time += f"_{filename_suffix}"
+
+        with NodePlotWriter(
+            filename_ppn,
+            "ppn",
+            "trsm",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
+        ) as (fig, ax):
+            if customize_ppn:
+                customize_ppn(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+
+        with NodePlotWriter(
+            filename_time,
+            "time",
+            "trsm",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
+        ) as (fig, ax):
+            if customize_time:
+                customize_time(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+
+
+def gen_gen2std_plots(
+    df,
+    logx=False,
+    combine_mb=False,
+    filename_suffix=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
+    **proxy_args,
+):
+    """
+    Args:
+        customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
+        customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
+    """
+    if combine_mb:
+        it_space = df.groupby(["matrix_rows"])
+    else:
+        it_space = df.groupby(["matrix_rows", "block_rows"])
+
+    for x, grp_data in it_space:
+        if combine_mb:
+            m = x
+        else:
+            m = x[0]
+            mb = x[1]
+
+        title = f"HEGST: strong scaling ({m} x {m})"
+        filename_ppn = f"gen2std_ppn_{m}"
+        filename_time = f"gen2std_time_{m}"
+        if not combine_mb:
+            title += f", block_size = {mb} x {mb}"
+            filename_ppn += f"_{mb}"
+            filename_time += f"_{mb}"
+        if filename_suffix != None:
+            filename_ppn += f"_{filename_suffix}"
+            filename_time += f"_{filename_suffix}"
+
+        with NodePlotWriter(
+            filename_ppn,
+            "ppn",
+            "hegst",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
+        ) as (fig, ax):
+            if customize_ppn:
+                customize_ppn(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+
+        with NodePlotWriter(
+            filename_time,
+            "time",
+            "hegst",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
+        ) as (fig, ax):
+            if customize_time:
+                customize_time(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+
+
+def gen_gen2std_plots_weak(
+    df,
+    weak_rt_approx,
+    logx=False,
+    combine_mb=False,
+    filename_suffix=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
+    **proxy_args,
+):
+    """
+    Args:
+        customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
+        customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
+    """
+    df = df.assign(
+        weak_rt=[
+            int(round(x[0] / math.sqrt(x[1]) / weak_rt_approx)) * weak_rt_approx
+            for x in zip(df["matrix_rows"], df["nodes"])
+        ]
+    )
+
+    if combine_mb:
+        it_space = df.groupby(["weak_rt"])
+    else:
+        it_space = df.groupby(["weak_rt", "block_rows"])
+
+    for x, grp_data in it_space:
+        if combine_mb:
+            weak_rt = x
+        else:
+            weak_rt = x[0]
+            mb = x[1]
+
+        title = f"HEGST: weak scaling ({weak_rt} x {weak_rt})"
+        filename_ppn = f"gen2std_ppn_{weak_rt}"
+        filename_time = f"gen2std_time_{weak_rt}"
+        if not combine_mb:
+            title += f", block_size = {mb} x {mb}"
+            filename_ppn += f"_{mb}"
+            filename_time += f"_{mb}"
+        if filename_suffix != None:
+            filename_ppn += f"_{filename_suffix}"
+            filename_time += f"_{filename_suffix}"
+
+        with NodePlotWriter(
+            filename_ppn,
+            "ppn",
+            "hegst",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
+        ) as (fig, ax):
+            if customize_ppn:
+                customize_ppn(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+
+        with NodePlotWriter(
+            filename_time,
+            "time",
+            "hegst",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
+        ) as (fig, ax):
+            if customize_time:
+                customize_time(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+            ax.set_yscale("log", base=10)

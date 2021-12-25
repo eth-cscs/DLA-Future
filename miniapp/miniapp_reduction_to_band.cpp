@@ -24,7 +24,6 @@
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/print_numpy.h"
 #include "dlaf/types.h"
 
 namespace {

@@ -14,8 +14,10 @@
 #include <hpx/local/thread.hpp>
 
 #include "dlaf/blas/tile.h"
+#include "dlaf/blas/tile_extensions.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
+#include "dlaf/common/range2d.h"
 #include "dlaf/common/round_robin.h"
 #include "dlaf/communication/broadcast_panel.h"
 #include "dlaf/communication/communicator.h"
@@ -434,8 +436,8 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   // Set up MPI executor pipelines
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
+  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
+  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
 
   const comm::Index2D this_rank = grid.rank();
 
@@ -519,6 +521,90 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
   }
 }
 
+template <Backend backend, Device D, class T>
+void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op op, blas::Diag diag,
+                                         T alpha, Matrix<const T, D>& mat_a, Matrix<T, D>& mat_b) {
+  using namespace triangular_llt;
+  using hpx::threads::thread_priority;
+
+  auto executor_mpi = dlaf::getMPIExecutor<backend>();
+
+  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
+  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
+
+  const comm::Index2D this_rank = grid.rank();
+
+  const matrix::Distribution& distr_a = mat_a.distribution();
+  const matrix::Distribution& distr_b = mat_b.distribution();
+
+  if (mat_b.size().isEmpty())
+    return;
+
+  constexpr std::size_t n_workspaces = 2;
+  common::RoundRobin<matrix::Panel<Coord::Col, T, D>> a_panels(n_workspaces, distr_a);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, D>> b_panels(n_workspaces, distr_b);
+
+  for (SizeType k = mat_a.nrTiles().cols() - 1; k >= 0; --k) {
+    const GlobalTileIndex kk{k, k};
+
+    const LocalTileIndex kk_offset{distr_a.nextLocalTileFromGlobalTile<Coord::Row>(kk.row()),
+                                   distr_a.nextLocalTileFromGlobalTile<Coord::Col>(kk.col())};
+    const LocalTileIndex bt_offset(distr_b.nextLocalTileFromGlobalTile<Coord::Row>(kk.row() + 1), 0);
+
+    auto& a_panel = a_panels.nextResource();
+    auto& b_panel = b_panels.nextResource();
+
+    a_panel.setRangeStart(kk);
+
+    if (kk.row() == mat_a.nrTiles().rows() - 1) {
+      a_panel.setWidth(mat_a.tileSize(kk).cols());
+      b_panel.setHeight(mat_a.tileSize(kk).rows());
+    }
+
+    const auto rank_kk = distr_a.rankGlobalTile(kk);
+    if (this_rank.col() == rank_kk.col()) {
+      for (SizeType i_loc = kk_offset.row(); i_loc < distr_a.localNrTiles().rows(); ++i_loc) {
+        const LocalTileIndex ik{i_loc, kk_offset.col()};
+        a_panel.setTile(ik, mat_a.read(ik));
+      }
+    }
+    comm::broadcast(executor_mpi, rank_kk.col(), a_panel, mpi_row_task_chain);
+
+    matrix::util::set0<backend>(thread_priority::normal, b_panel);
+
+    for (const auto& ij : common::iterate_range2d(bt_offset, indexFromOrigin(distr_b.localNrTiles())))
+      gemmTrailingMatrixTile<backend>(ij.row() == bt_offset.row() ? thread_priority::high
+                                                                  : thread_priority::normal,
+                                      op, T(1) / alpha, a_panel.read_sender(ij), mat_b.read_sender(ij),
+                                      b_panel.readwrite_sender(ij));
+
+    for (const auto& idx : b_panel.iteratorLocal()) {
+      if (this_rank.row() == rank_kk.row())
+        comm::scheduleReduceRecvInPlace(executor_mpi, mpi_col_task_chain(), MPI_SUM, b_panel(idx));
+      else
+        comm::scheduleReduceSend(executor_mpi, rank_kk.row(), mpi_col_task_chain(), MPI_SUM,
+                                 b_panel.read(idx));
+    }
+
+    if (this_rank.row() == rank_kk.row()) {
+      for (SizeType j_loc = 0; j_loc < distr_b.localNrTiles().cols(); ++j_loc) {
+        const LocalTileIndex kj(kk_offset.row(), j_loc);
+        const auto& priority = thread_priority::high;
+
+        dlaf::internal::whenAllLift(T(-1), b_panel.read_sender(kj), mat_b.readwrite_sender(kj)) |
+            tile::add(dlaf::internal::Policy<backend>(priority)) |
+            hpx::execution::experimental::detach();
+
+        trsmBPanelTile<backend>(priority, op, diag, alpha, a_panel.read_sender(kk_offset),
+                                mat_b.readwrite_sender(kj));
+      }
+    }
+
+    b_panel.reset();
+    a_panel.reset();
+  }
+}
+
 template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
@@ -528,8 +614,8 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   // Set up MPI executor pipelines
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
+  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
+  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
 
   const comm::Index2D this_rank = grid.rank();
 
@@ -621,8 +707,8 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   // Set up MPI executor pipelines
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
+  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
+  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
 
   const comm::Index2D this_rank = grid.rank();
 
@@ -714,8 +800,8 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   // Set up MPI executor pipelines
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator());
+  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
+  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
 
   const comm::Index2D this_rank = grid.rank();
 
@@ -798,7 +884,6 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
     b_panel.reset();
   }
 }
-
 }
 }
 }

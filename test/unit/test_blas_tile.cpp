@@ -28,14 +28,17 @@ const std::vector<blas::Op> blas_ops({blas::Op::NoTrans, blas::Op::Trans, blas::
 const std::vector<blas::Side> blas_sides({blas::Side::Left, blas::Side::Right});
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
 
-template <typename Type>
-class TileOperationsTestMC : public ::testing::Test {};
+template <class T, Device D>
+class TileOperationsTest : public ::testing::Test {};
+
+template <class T>
+using TileOperationsTestMC = TileOperationsTest<T, Device::CPU>;
 
 TYPED_TEST_SUITE(TileOperationsTestMC, MatrixElementTypes);
 
 #ifdef DLAF_WITH_CUDA
-template <typename Type>
-class TileOperationsTestGPU : public ::testing::Test {};
+template <class T>
+using TileOperationsTestGPU = TileOperationsTest<T, Device::GPU>;
 
 TYPED_TEST_SUITE(TileOperationsTestGPU, MatrixElementTypes);
 #endif
@@ -51,13 +54,10 @@ std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, SizeTyp
 
 TYPED_TEST(TileOperationsTestMC, Gemm) {
   using Type = TypeParam;
-  SizeType m, n, k, extra_lda, extra_ldb, extra_ldc;
 
   for (const auto op_a : blas_ops) {
     for (const auto op_b : blas_ops) {
-      for (const auto& size : gemm_sizes) {
-        std::tie(m, n, k, extra_lda, extra_ldb, extra_ldc) = size;
-
+      for (const auto& [m, n, k, extra_lda, extra_ldb, extra_ldc] : gemm_sizes) {
         // Test a and b const Tiles.
         testGemm<Device::CPU, Type>(op_a, op_b, m, n, k, extra_lda, extra_ldb, extra_ldc);
 
@@ -71,13 +71,10 @@ TYPED_TEST(TileOperationsTestMC, Gemm) {
 #ifdef DLAF_WITH_CUDA
 TYPED_TEST(TileOperationsTestGPU, Gemm) {
   using Type = TypeParam;
-  SizeType m, n, k, extra_lda, extra_ldb, extra_ldc;
 
   for (const auto op_a : blas_ops) {
     for (const auto op_b : blas_ops) {
-      for (const auto& size : gemm_sizes) {
-        std::tie(m, n, k, extra_lda, extra_ldb, extra_ldc) = size;
-
+      for (const auto& [m, n, k, extra_lda, extra_ldb, extra_ldc] : gemm_sizes) {
         // Test a and b const Tiles.
         testGemm<Device::GPU, Type>(op_a, op_b, m, n, k, extra_lda, extra_ldb, extra_ldc);
 
@@ -100,13 +97,10 @@ std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType>> hemm_s
 
 TYPED_TEST(TileOperationsTestMC, Hemm) {
   using Type = TypeParam;
-  SizeType m, n, extra_lda, extra_ldb, extra_ldc;
 
   for (const auto side : blas_sides) {
     for (const auto uplo : blas_uplos) {
-      for (const auto& size : hemm_sizes) {
-        std::tie(m, n, extra_lda, extra_ldb, extra_ldc) = size;
-
+      for (const auto& [m, n, extra_lda, extra_ldb, extra_ldc] : hemm_sizes) {
         // Test a and b const Tiles.
         testHemm<Device::CPU, Type>(side, uplo, m, n, extra_lda, extra_ldb, extra_ldc);
 
@@ -120,13 +114,10 @@ TYPED_TEST(TileOperationsTestMC, Hemm) {
 #ifdef DLAF_WITH_CUDA
 TYPED_TEST(TileOperationsTestGPU, Hemm) {
   using Type = TypeParam;
-  SizeType m, n, extra_lda, extra_ldb, extra_ldc;
 
   for (const auto side : blas_sides) {
     for (const auto uplo : blas_uplos) {
-      for (const auto& size : hemm_sizes) {
-        std::tie(m, n, extra_lda, extra_ldb, extra_ldc) = size;
-
+      for (const auto& [m, n, extra_lda, extra_ldb, extra_ldc] : hemm_sizes) {
         // Test a and b const Tiles.
         testHemm<Device::GPU, Type>(side, uplo, m, n, extra_lda, extra_ldb, extra_ldc);
 
@@ -150,15 +141,12 @@ TYPED_TEST(TileOperationsTestMC, Her2k) {
 
   auto her2k_blas_ops = blas_ops;
   // [c,z]her2k do not allow op = Trans
-  if (std::is_same<Type, ComplexType<Type>>::value)
+  if (std::is_same_v<Type, ComplexType<Type>>)
     her2k_blas_ops = {blas::Op::NoTrans, blas::Op::ConjTrans};
-  SizeType n, k, extra_lda, extra_ldc;
 
   for (const auto uplo : blas_uplos) {
     for (const auto op : her2k_blas_ops) {
-      for (const auto& size : herk_her2k_sizes) {
-        std::tie(n, k, extra_lda, extra_ldc) = size;
-
+      for (const auto& [n, k, extra_lda, extra_ldc] : herk_her2k_sizes) {
         // Test a const Tile.
         testHer2k<Device::CPU, Type>(uplo, op, n, k, extra_lda, extra_ldc);
 
@@ -175,15 +163,12 @@ TYPED_TEST(TileOperationsTestGPU, Her2k) {
 
   auto her2k_blas_ops = blas_ops;
   // [c,z]her2k do not allow op = Trans
-  if (std::is_same<Type, ComplexType<Type>>::value)
+  if (std::is_same_v<Type, ComplexType<Type>>)
     her2k_blas_ops = {blas::Op::NoTrans, blas::Op::ConjTrans};
-  SizeType n, k, extra_lda, extra_ldc;
 
   for (const auto uplo : blas_uplos) {
     for (const auto op : her2k_blas_ops) {
-      for (const auto& size : herk_her2k_sizes) {
-        std::tie(n, k, extra_lda, extra_ldc) = size;
-
+      for (const auto& [n, k, extra_lda, extra_ldc] : herk_her2k_sizes) {
         // Test a const Tile.
         testHer2k<Device::GPU, Type>(uplo, op, n, k, extra_lda, extra_ldc);
 
@@ -200,15 +185,12 @@ TYPED_TEST(TileOperationsTestMC, Herk) {
 
   auto herk_blas_ops = blas_ops;
   // [c,z]herk do not allow op = Trans
-  if (std::is_same<Type, ComplexType<Type>>::value)
+  if (std::is_same_v<Type, ComplexType<Type>>)
     herk_blas_ops = {blas::Op::NoTrans, blas::Op::ConjTrans};
-  SizeType n, k, extra_lda, extra_ldc;
 
   for (const auto uplo : blas_uplos) {
     for (const auto op : herk_blas_ops) {
-      for (const auto& size : herk_her2k_sizes) {
-        std::tie(n, k, extra_lda, extra_ldc) = size;
-
+      for (const auto& [n, k, extra_lda, extra_ldc] : herk_her2k_sizes) {
         // Test a const Tile.
         testHerk<Device::CPU, Type>(uplo, op, n, k, extra_lda, extra_ldc);
 
@@ -225,15 +207,12 @@ TYPED_TEST(TileOperationsTestGPU, Herk) {
 
   auto herk_blas_ops = blas_ops;
   // [c,z]herk do not allow op = Trans
-  if (std::is_same<Type, ComplexType<Type>>::value)
+  if (std::is_same_v<Type, ComplexType<Type>>)
     herk_blas_ops = {blas::Op::NoTrans, blas::Op::ConjTrans};
-  SizeType n, k, extra_lda, extra_ldc;
 
   for (const auto uplo : blas_uplos) {
     for (const auto op : herk_blas_ops) {
-      for (const auto& size : herk_her2k_sizes) {
-        std::tie(n, k, extra_lda, extra_ldc) = size;
-
+      for (const auto& [n, k, extra_lda, extra_ldc] : herk_her2k_sizes) {
         // Test a const Tile.
         testHerk<Device::GPU, Type>(uplo, op, n, k, extra_lda, extra_ldc);
 
@@ -255,15 +234,11 @@ std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> trmm_trsm_sizes 
 TYPED_TEST(TileOperationsTestMC, Trmm) {
   using Type = TypeParam;
 
-  SizeType m, n, extra_lda, extra_ldb;
-
   for (const auto side : blas_sides) {
     for (const auto uplo : blas_uplos) {
       for (const auto op : blas_ops) {
         for (const auto diag : blas_diags) {
-          for (const auto& size : trmm_trsm_sizes) {
-            std::tie(m, n, extra_lda, extra_ldb) = size;
-
+          for (const auto& [m, n, extra_lda, extra_ldb] : trmm_trsm_sizes) {
             // Test a const Tile.
             testTrmm<Device::CPU, Type>(side, uplo, op, diag, m, n, extra_lda, extra_ldb);
 
@@ -279,15 +254,12 @@ TYPED_TEST(TileOperationsTestMC, Trmm) {
 #ifdef DLAF_WITH_CUDA
 TYPED_TEST(TileOperationsTestGPU, Trmm) {
   using Type = TypeParam;
-  SizeType m, n, extra_lda, extra_ldb;
 
   for (const auto side : blas_sides) {
     for (const auto uplo : blas_uplos) {
       for (const auto op : blas_ops) {
         for (const auto diag : blas_diags) {
-          for (const auto& size : trmm_trsm_sizes) {
-            std::tie(m, n, extra_lda, extra_ldb) = size;
-
+          for (const auto& [m, n, extra_lda, extra_ldb] : trmm_trsm_sizes) {
             // Test a const Tile.
             testTrmm<Device::GPU, Type>(side, uplo, op, diag, m, n, extra_lda, extra_ldb);
 
@@ -303,15 +275,12 @@ TYPED_TEST(TileOperationsTestGPU, Trmm) {
 
 TYPED_TEST(TileOperationsTestMC, Trsm) {
   using Type = TypeParam;
-  SizeType m, n, extra_lda, extra_ldb;
 
   for (const auto side : blas_sides) {
     for (const auto uplo : blas_uplos) {
       for (const auto op : blas_ops) {
         for (const auto diag : blas_diags) {
-          for (const auto& size : trmm_trsm_sizes) {
-            std::tie(m, n, extra_lda, extra_ldb) = size;
-
+          for (const auto& [m, n, extra_lda, extra_ldb] : trmm_trsm_sizes) {
             // Test a const Tile.
             testTrsm<Device::CPU, Type>(side, uplo, op, diag, m, n, extra_lda, extra_ldb);
 
@@ -327,15 +296,12 @@ TYPED_TEST(TileOperationsTestMC, Trsm) {
 #ifdef DLAF_WITH_CUDA
 TYPED_TEST(TileOperationsTestGPU, Trsm) {
   using Type = TypeParam;
-  SizeType m, n, extra_lda, extra_ldb;
 
   for (const auto side : blas_sides) {
     for (const auto uplo : blas_uplos) {
       for (const auto op : blas_ops) {
         for (const auto diag : blas_diags) {
-          for (const auto& size : trmm_trsm_sizes) {
-            std::tie(m, n, extra_lda, extra_ldb) = size;
-
+          for (const auto& [m, n, extra_lda, extra_ldb] : trmm_trsm_sizes) {
             // Test a const Tile.
             testTrsm<Device::GPU, Type>(side, uplo, op, diag, m, n, extra_lda, extra_ldb);
 

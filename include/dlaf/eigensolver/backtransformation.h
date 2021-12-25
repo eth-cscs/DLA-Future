@@ -10,6 +10,7 @@
 #pragma once
 
 #include <blas.hh>
+
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/eigensolver/backtransformation/mc.h"
 #include "dlaf/matrix/matrix.h"

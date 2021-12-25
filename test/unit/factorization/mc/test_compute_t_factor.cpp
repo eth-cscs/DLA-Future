@@ -39,12 +39,15 @@ using dlaf::matrix::test::MatrixLocal;
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
-template <typename Type>
-struct ComputeTFactorTestMC : public ::testing::Test {
+template <class T, Device D>
+struct ComputeTFactorTest : public ::testing::Test {
   const std::vector<CommunicatorGrid>& commGrids() {
     return comm_grids;
   }
 };
+
+template <class T>
+using ComputeTFactorTestMC = ComputeTFactorTest<T, Device::CPU>;
 
 TYPED_TEST_SUITE(ComputeTFactorTestMC, MatrixElementTypes);
 
@@ -237,17 +240,12 @@ std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, GlobalT
 //
 // Which we expect to be the equal to the one computed previously.
 TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
-  SizeType a_m, a_n, mb, nb, k;
-  GlobalTileIndex v_start;
-
-  for (auto config : configs) {
-    std::tie(a_m, a_n, mb, nb, k, v_start) = config;
-
+  for (const auto& [a_m, a_n, mb, nb, k, v_start] : configs) {
     ASSERT_LE(k, nb);
 
     const TileElementSize block_size(mb, nb);
 
-    Matrix<const TypeParam, Device::CPU> v_input = [&]() {
+    Matrix<const TypeParam, Device::CPU> v_input = [&, &a_m = a_m, &a_n = a_n]() {
       Matrix<TypeParam, Device::CPU> V({a_m, a_n}, block_size);
       dlaf::matrix::util::set_random(V);
       return V;
@@ -283,8 +281,8 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
     Matrix<TypeParam, Device::CPU> t_output({max_k, max_k}, block_size);
     const LocalTileIndex t_idx(0, 0);
 
-    dlaf::factorization::internal::computeTFactor<Backend::MC>(k, v_input, v_start, taus_input,
-                                                               t_output(t_idx));
+    using dlaf::factorization::internal::computeTFactor;
+    computeTFactor<Backend::MC>(k, v_input, v_start, taus_input, t_output(t_idx));
 
     // No reflectors, so nothing to check
     if (k == 0)
@@ -312,13 +310,8 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
 }
 
 TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
-  SizeType a_m, a_n, mb, nb, k;
-  GlobalTileIndex v_start;
-
   for (auto comm_grid : this->commGrids()) {
-    for (auto config : configs) {
-      std::tie(a_m, a_n, mb, nb, k, v_start) = config;
-
+    for (const auto& [a_m, a_n, mb, nb, k, v_start] : configs) {
       ASSERT_LE(k, nb);
 
       const TileElementSize block_size(mb, nb);
@@ -334,7 +327,8 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
         return V;
       }();
 
-      const MatrixLocal<const TypeParam> v = [&v_input, &dist_v, &comm_grid, a_m, a_n, nb, v_start] {
+      const MatrixLocal<const TypeParam> v = [&v_input, &dist_v, &comm_grid, a_m = a_m, a_n = a_n,
+                                              nb = nb, v_start = v_start] {
         // TODO this can be improved by communicating just the selected column starting at v_start
         // gather the entire A matrix
         auto a = matrix::test::allGather<TypeParam>(lapack::MatrixType::General, v_input, comm_grid);

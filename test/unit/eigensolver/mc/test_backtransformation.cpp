@@ -12,7 +12,11 @@
 #include <functional>
 #include <sstream>
 #include <tuple>
-#include "gtest/gtest.h"
+
+#include <gtest/gtest.h>
+#include <hpx/include/threadmanager.hpp>
+#include <hpx/runtime.hpp>
+
 #include "dlaf/common/index2d.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/copy.h"
@@ -22,7 +26,6 @@
 #include "dlaf/util_matrix.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_matrix_blas.h"
 #include "dlaf_test/matrix/util_matrix_local.h"
 #include "dlaf_test/util_types.h"
 
@@ -38,13 +41,17 @@ using namespace testing;
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
-template <typename Type>
-class BackTransformationEigenSolverTestMC : public ::testing::Test {
+template <class T, Device D>
+class BackTransformationEigenSolverTest : public ::testing::Test {
 public:
   const std::vector<CommunicatorGrid>& commGrids() {
     return comm_grids;
   }
 };
+
+template <class T>
+using BackTransformationEigenSolverTestMC = BackTransformationEigenSolverTest<T, Device::CPU>;
+
 TYPED_TEST_SUITE(BackTransformationEigenSolverTestMC, MatrixElementTypes);
 
 GlobalElementSize globalTestSize(const LocalElementSize& size) {
@@ -54,10 +61,11 @@ GlobalElementSize globalTestSize(const LocalElementSize& size) {
 const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes =
     // m, n, mb, nb
     {
-        {3, 0, 1, 1}, {0, 5, 2, 3},                                  // m, n = 0
-        {2, 2, 3, 3}, {3, 4, 6, 7},                                  // m < mb
-        {3, 3, 1, 1}, {4, 4, 2, 2},  {12, 2, 4, 4}, {24, 36, 6, 6},  // mb = nb
-        {5, 8, 3, 2}, {8, 27, 3, 4}, {15, 34, 4, 6}                  // mb != nb
+        {3, 0, 1, 1}, {0, 5, 2, 3},                                   // m, n = 0
+        {2, 2, 3, 3}, {3, 4, 6, 7},                                   // m < mb
+        {3, 3, 1, 1}, {4, 4, 2, 2},  {12, 2, 4, 4},  {24, 36, 6, 6},  // mb = nb
+        {5, 8, 3, 2}, {8, 27, 3, 4}, {15, 34, 4, 6},                  // mb != nb
+        {3, 3, 2, 2}, {3, 27, 2, 4}                                   // m = mb + 1
 };
 
 template <class T>
@@ -72,7 +80,7 @@ void getTau(T& tau, T dotprod, BaseType<T> /*tau_i*/) {
 
 template <class T>
 void getTau(std::complex<T>& tau, T dotprod, BaseType<T> tau_i) {
-  tau = {(static_cast<T>(1.0) + sqrt(static_cast<T>(1.0) - dotprod * tau_i * tau_i)) / dotprod, tau_i};
+  tau = {(T(1) + sqrt(T(1) - dotprod * dotprod * tau_i * tau_i)) / dotprod, tau_i};
 }
 
 template <class T>
@@ -124,7 +132,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
       const GlobalElementIndex v_offset{j + mb, j};
       auto dotprod = blas::dot(m - mb - j, v.ptr(v_offset), 1, v.ptr(v_offset), 1);
       BaseType<T> tau_i = 0;
-      if (std::is_same<T, ComplexType<T>>::value) {
+      if (std::is_same_v<T, ComplexType<T>>) {
         tau_i = random_value();
       }
       T tau;
@@ -146,7 +154,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
 
   eigensolver::backTransformation<Backend::MC>(mat_c, mat_v, taus);
 
-  auto result = [& dist = mat_c.distribution(), &mat_local = c](const GlobalElementIndex& element) {
+  auto result = [&dist = mat_c.distribution(), &mat_local = c](const GlobalElementIndex& element) {
     const auto tile_index = dist.globalTileIndex(element);
     const auto tile_element = dist.tileElementIndex(element);
     return mat_local.tile_read(tile_index)(tile_element);
@@ -206,7 +214,7 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
       const GlobalElementIndex v_offset{j + mb, j};
       auto dotprod = blas::dot(m - mb - j, mat_v_loc.ptr(v_offset), 1, mat_v_loc.ptr(v_offset), 1);
       BaseType<T> tau_i = 0;
-      if (std::is_same<T, ComplexType<T>>::value) {
+      if (std::is_same_v<T, ComplexType<T>>) {
         tau_i = random_value();
       }
       T tau;
@@ -229,7 +237,7 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
 
   eigensolver::backTransformation<Backend::MC>(grid, mat_c, mat_v, taus);
 
-  auto result = [& dist = mat_c.distribution(),
+  auto result = [&dist = mat_c.distribution(),
                  &mat_local = mat_c_loc](const GlobalElementIndex& element) {
     const auto tile_index = dist.globalTileIndex(element);
     const auto tile_element = dist.tileElementIndex(element);
@@ -241,21 +249,16 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
 }
 
 TYPED_TEST(BackTransformationEigenSolverTestMC, CorrectnessLocal) {
-  SizeType m, n, mb, nb;
-
-  for (auto sz : sizes) {
-    std::tie(m, n, mb, nb) = sz;
+  for (const auto& [m, n, mb, nb] : sizes) {
     testBacktransformationEigenv<TypeParam>(m, n, mb, nb);
   }
 }
 
 TYPED_TEST(BackTransformationEigenSolverTestMC, CorrectnessDistributed) {
-  SizeType m, n, mb, nb;
-
   for (const auto& comm_grid : {this->commGrids()[0]}) {
-    for (auto sz : sizes) {
-      std::tie(m, n, mb, nb) = sz;
+    for (const auto& [m, n, mb, nb] : sizes) {
       testBacktransformationEigenv<TypeParam>(comm_grid, m, n, mb, nb);
+      hpx::threads::get_thread_manager().wait();
     }
   }
 }

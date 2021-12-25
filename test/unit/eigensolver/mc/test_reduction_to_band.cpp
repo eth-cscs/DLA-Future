@@ -13,6 +13,8 @@
 #include <cmath>
 
 #include <gtest/gtest.h>
+#include <hpx/include/threadmanager.hpp>
+#include <hpx/runtime.hpp>
 #include <lapack/util.hh>
 
 #include "dlaf/common/index2d.h"
@@ -44,13 +46,16 @@ using namespace dlaf::matrix::test;
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
-template <typename Type>
-class ReductionToBandTestMC : public ::testing::Test {
+template <class T, Device D>
+class ReductionToBandTest : public ::testing::Test {
 public:
   const std::vector<CommunicatorGrid>& commGrids() {
     return comm_grids;
   }
 };
+
+template <class T>
+using ReductionToBandTestMC = ReductionToBandTest<T, Device::CPU>;
 
 TYPED_TEST_SUITE(ReductionToBandTestMC, MatrixElementTypes);
 
@@ -283,7 +288,7 @@ auto checkResult(const SizeType k, const SizeType band_size, const SizeType bloc
   }
 
   // Eventually, check the result obtained by applying the inverse transformation equals the original matrix
-  auto result = [& dist = reference.distribution(),
+  auto result = [&dist = reference.distribution(),
                  &mat_local = mat_b](const GlobalElementIndex& element) {
     const auto tile_index = dist.globalTileIndex(element);
     const auto tile_element = dist.tileElementIndex(element);
@@ -356,6 +361,7 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributed) {
       copy(reference, matrix_a);
 
       auto local_taus = eigensolver::reductionToBand<Backend::MC>(comm_grid, matrix_a);
+      hpx::threads::get_thread_manager().wait();
 
       checkUpperPartUnchanged(reference, matrix_a);
 

@@ -32,9 +32,7 @@ void testPotrf(const blas::Uplo uplo, const SizeType n, const SizeType extra_lda
   const TileElementSize size_a = TileElementSize(n, n);
   const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
 
-  std::function<T(const TileElementIndex&)> el_a, res_a;
-
-  std::tie(el_a, res_a) = getCholeskySetters<TileElementIndex, T>(uplo);
+  auto [el_a, res_a] = getCholeskySetters<TileElementIndex, T>(uplo);
 
   auto a = createTile<T, D>(el_a, size_a, lda);
 

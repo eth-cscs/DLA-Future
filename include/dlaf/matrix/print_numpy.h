@@ -44,7 +44,10 @@ struct numpy_datatype<std::complex<T>> {
 template <class T>
 std::string numpy_value(const T& value) {
   std::ostringstream os;
-  os << value;
+  if (std::isnan(value))
+    os << "np.nan";
+  else
+    os << value;
   return os.str();
 }
 

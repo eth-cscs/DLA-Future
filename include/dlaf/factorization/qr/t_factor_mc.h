@@ -171,6 +171,11 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(const SizeType k, Matrix<cons
                                                    hpx::shared_future<common::internal::vector<T>> taus,
                                                    hpx::future<matrix::Tile<T, Device::CPU>> t) {
   t = splitTile(t, {{0, 0}, {k, k}});
+
+  // Fast return in case of no reflectors
+  if (k == 0)
+    return;
+
   const auto panel_width = v.tileSize(v_start).cols();
 
   DLAF_ASSERT(k <= panel_width, k, panel_width);

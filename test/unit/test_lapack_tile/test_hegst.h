@@ -35,9 +35,7 @@ void testHegst(const int itype, const blas::Uplo uplo, const SizeType m, const S
   const SizeType lda = std::max<SizeType>(1, size.rows()) + extra_lda;
   const SizeType ldb = std::max<SizeType>(1, size.rows()) + extra_ldb;
 
-  std::function<T(const TileElementIndex&)> el_t, el_a, res_a;
-
-  std::tie(el_t, el_a, res_a) =
+  auto [el_t, el_a, res_a] =
       getGenToStdElementSetters<TileElementIndex, T>(m, itype, uplo, 1.2f, 1.5f, 1.1f);
 
   auto a = createTile<T, D>(el_a, size, lda);

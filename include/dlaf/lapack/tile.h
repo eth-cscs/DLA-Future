@@ -456,8 +456,10 @@ void laset(cusolverDnHandle_t, const lapack::MatrixType type, T alpha, T beta,
 }
 
 template <class T>
-void set0(cusolverDnHandle_t, const Tile<T, Device::GPU>& tile) {
-  DLAF_STATIC_UNIMPLEMENTED(sizeof(T) == 0);
+void set0(const Tile<T, Device::GPU>& tile, cudaStream_t stream) {
+  DLAF_CUDA_CALL(cudaMemset2DAsync(tile.ptr(), sizeof(T) * to_sizet(tile.ld()), 0,
+                                   sizeof(T) * to_sizet(tile.size().rows()),
+                                   to_sizet(tile.size().cols()), stream));
 }
 
 template <class T>

@@ -17,6 +17,8 @@
 #include <hpx/program_options.hpp>
 #include <hpx/runtime.hpp>
 
+#include <blas/util.hh>
+
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/timer.h"
@@ -31,6 +33,7 @@
 #include "dlaf/util_matrix.h"
 
 #include "dlaf_test/matrix/util_matrix.h"
+#include "dlaf_test/util_types.h"
 
 namespace {
 
@@ -52,6 +55,7 @@ struct options_t {
   SizeType n;
   SizeType mb;
   SizeType nb;
+  blas::Op op;
   int grid_rows;
   int grid_cols;
   int64_t nruns;
@@ -68,82 +72,82 @@ linear_system_t sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T al
 
 int hpx_main(hpx::program_options::variables_map& vm) {
   dlaf::initialize(vm);
-  options_t opts = check_options(vm);
+  {
+    options_t opts = check_options(vm);
 
-  Communicator world(MPI_COMM_WORLD);
-  CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
+    Communicator world(MPI_COMM_WORLD);
+    CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
 
-  // Allocate memory for the matrices
-  dlaf::matrix::Matrix<T, Device::CPU> ah(GlobalElementSize{opts.m, opts.m},
-                                          TileElementSize{opts.mb, opts.mb}, comm_grid);
-  dlaf::matrix::Matrix<T, Device::CPU> bh(GlobalElementSize{opts.m, opts.n},
-                                          TileElementSize{opts.mb, opts.nb}, comm_grid);
+    // Allocate memory for the matrices
+    dlaf::matrix::Matrix<T, Device::CPU> ah(GlobalElementSize{opts.m, opts.m},
+                                            TileElementSize{opts.mb, opts.mb}, comm_grid);
+    dlaf::matrix::Matrix<T, Device::CPU> bh(GlobalElementSize{opts.m, opts.n},
+                                            TileElementSize{opts.mb, opts.nb}, comm_grid);
 
-  dlaf::matrix::MatrixMirror<T, Device::Default, Device::CPU> a(ah);
-  dlaf::matrix::MatrixMirror<T, Device::Default, Device::CPU> b(bh);
+    dlaf::matrix::MatrixMirror<T, Device::Default, Device::CPU> a(ah);
+    dlaf::matrix::MatrixMirror<T, Device::Default, Device::CPU> b(bh);
 
-  auto sync_barrier = [&]() {
-    a.get().waitLocalTiles();
-    b.get().waitLocalTiles();
-    DLAF_MPI_CALL(MPI_Barrier(world));
-  };
+    auto sync_barrier = [&]() {
+      a.get().waitLocalTiles();
+      b.get().waitLocalTiles();
+      DLAF_MPI_CALL(MPI_Barrier(world));
+    };
 
-  const auto side = blas::Side::Left;
-  const auto uplo = blas::Uplo::Lower;
-  const auto op = blas::Op::NoTrans;
-  const auto diag = blas::Diag::NonUnit;
-  const T alpha = 2.0;
+    const auto side = blas::Side::Left;
+    const auto uplo = blas::Uplo::Lower;
+    const auto op = opts.op;
+    const auto diag = blas::Diag::NonUnit;
+    const T alpha = 2.0;
 
-  double m = ah.size().rows();
-  double n = bh.size().cols();
-  auto add_mul = n * m * m / 2;
-  const double total_ops = dlaf::total_ops<T>(add_mul, add_mul);
+    double m = ah.size().rows();
+    double n = bh.size().cols();
+    auto add_mul = n * m * m / 2;
+    const double total_ops = dlaf::total_ops<T>(add_mul, add_mul);
 
-  matrix_values_t ref_a, ref_b, ref_x;
-  std::tie(ref_a, ref_b, ref_x) = ::sampleLeftTr(uplo, op, diag, alpha, ah.size().rows());
+    auto [ref_op_a, ref_b, ref_x] = ::sampleLeftTr(uplo, op, diag, alpha, ah.size().rows());
 
-  for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
-    if (0 == world.rank() && run_index >= 0)
-      std::cout << "[" << run_index << "]" << std::endl;
+    for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
+      if (0 == world.rank() && run_index >= 0)
+        std::cout << "[" << run_index << "]" << std::endl;
 
-    // setup matrix A and b
-    using dlaf::matrix::util::set;
-    set(ah, ref_a);
-    set(bh, ref_b);
-    a.copySourceToTarget();
-    b.copySourceToTarget();
+      // setup matrix A and b
+      using dlaf::matrix::util::set;
+      set(ah, ref_op_a, op);
+      set(bh, ref_b);
+      a.copySourceToTarget();
+      b.copySourceToTarget();
 
-    sync_barrier();
+      sync_barrier();
 
-    dlaf::common::Timer<> timeit;
-    dlaf::solver::triangular<Backend::Default, Device::Default, T>(comm_grid, side, uplo, op, diag,
-                                                                   alpha, a.get(), b.get());
+      dlaf::common::Timer<> timeit;
+      dlaf::solver::triangular<Backend::Default, Device::Default, T>(comm_grid, side, uplo, op, diag,
+                                                                     alpha, a.get(), b.get());
 
-    sync_barrier();
+      sync_barrier();
 
-    // benchmark results
-    if (0 == world.rank() && run_index >= 0) {
-      auto elapsed_time = timeit.elapsed();
-      double gigaflops = total_ops / elapsed_time / 1e9;
+      // benchmark results
+      if (0 == world.rank() && run_index >= 0) {
+        auto elapsed_time = timeit.elapsed();
+        double gigaflops = total_ops / elapsed_time / 1e9;
 
-      std::cout << "[" << run_index << "]"
-                << " " << elapsed_time << "s"
-                << " " << gigaflops << "GFlop/s"
-                << " " << bh.size() << " " << bh.blockSize() << " " << comm_grid.size() << " "
-                << hpx::get_os_thread_count() << std::endl;
-    }
+        std::cout << "[" << run_index << "]"
+                  << " " << elapsed_time << "s"
+                  << " " << gigaflops << "GFlop/s"
+                  << " " << bh.size() << " " << bh.blockSize() << " " << comm_grid.size() << " "
+                  << hpx::get_os_thread_count() << std::endl;
+      }
 
-    b.copyTargetToSource();
+      b.copyTargetToSource();
 
-    // (optional) run test
-    if (opts.do_check) {
-      // TODO do not check element by element, but evaluate the entire matrix
+      // (optional) run test
+      if (opts.do_check) {
+        // TODO do not check element by element, but evaluate the entire matrix
+        static_assert(std::is_arithmetic_v<T>, "mul/add error is valid just for arithmetic types");
+        constexpr T muladd_error = 2 * std::numeric_limits<T>::epsilon();
 
-      static_assert(std::is_arithmetic<T>::value, "mul/add error is valid just for arithmetic types");
-      constexpr T muladd_error = 2 * std::numeric_limits<T>::epsilon();
-
-      const T max_error = 20 * (bh.size().rows() + 1) * muladd_error;
-      CHECK_MATRIX_NEAR(ref_x, bh, max_error, 0);
+        const T max_error = 20 * (bh.size().rows() + 1) * muladd_error;
+        CHECK_MATRIX_NEAR(ref_x, bh, max_error, 0);
+      }
     }
   }
 
@@ -164,15 +168,16 @@ int main(int argc, char** argv) {
 
   // clang-format off
   desc_commandline.add_options()
-    ("m",             value<SizeType>()  ->default_value(4096),       "Matrix b rows")
-    ("n",             value<SizeType>()  ->default_value(512),        "Matrix b columns")
-    ("mb",            value<SizeType>()  ->default_value(256),        "Matrix b block rows")
-    ("nb",            value<SizeType>()  ->default_value(512),        "Matrix b block columns")
-    ("grid-rows",     value<int>()       ->default_value(1),          "Number of row processes in the 2D communicator.")
-    ("grid-cols",     value<int>()       ->default_value(1),          "Number of column processes in the 2D communicator.")
-    ("nruns",         value<int64_t>()   ->default_value(1),          "Number of runs to compute the cholesky")
-    ("nwarmups",      value<int64_t>()   ->default_value(1),          "Number of warmup runs")
-    ("check-result",  bool_switch()      ->default_value(false),      "Check the triangular system solution (for each run)")
+    ("m",             value<SizeType>()     ->default_value(4096),       "Matrix b rows")
+    ("n",             value<SizeType>()     ->default_value(512),        "Matrix b columns")
+    ("mb",            value<SizeType>()     ->default_value(256),        "Matrix b block rows")
+    ("nb",            value<SizeType>()     ->default_value(512),        "Matrix b block columns")
+    ("op",            value<std::string>()  ->default_value("N"),        "(N) NoTrans / (T) Trans / (C) ConjTrans")
+    ("grid-rows",     value<int>()          ->default_value(1),          "Number of row processes in the 2D communicator.")
+    ("grid-cols",     value<int>()          ->default_value(1),          "Number of column processes in the 2D communicator.")
+    ("nruns",         value<int64_t>()      ->default_value(1),          "Number of runs to compute the cholesky")
+    ("nwarmups",      value<int64_t>()      ->default_value(1),          "Number of warmup runs")
+    ("check-result",  bool_switch()         ->default_value(false),      "Check the triangular system solution (for each run)")
   ;
   // clang-format on
 
@@ -187,10 +192,14 @@ int main(int argc, char** argv) {
 namespace {
 
 options_t check_options(hpx::program_options::variables_map& vm) {
+  char c_op = vm["op"].as<std::string>()[0];
+  DLAF_ASSERT(c_op == 'N' || c_op == 'T' || c_op == 'C', c_op);
+
   // clang-format off
   options_t opts = {
     vm["m"].as<SizeType>(),     vm["n"].as<SizeType>(),
     vm["mb"].as<SizeType>(),    vm["nb"].as<SizeType>(),
+    blas::char2op(c_op),
     vm["grid-rows"].as<int>(),  vm["grid-cols"].as<int>(),
 
     vm["nruns"].as<int64_t>(),
@@ -231,7 +240,7 @@ options_t check_options(hpx::program_options::variables_map& vm) {
 /// B_ij = (X_ij + (kk-1) * gamma) / alpha, if diag == Unit
 /// B_ij = kk * gamma / alpha, otherwise.
 linear_system_t sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType m) {
-  static_assert(std::is_arithmetic<T>::value && !std::is_integral<T>::value,
+  static_assert(std::is_arithmetic_v<T> && !std::is_integral_v<T>,
                 "it is valid just with floating point values");
 
   bool op_a_lower = (uplo == blas::Uplo::Lower && op == blas::Op::NoTrans) ||

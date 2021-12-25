@@ -11,19 +11,24 @@
 
 #include <functional>
 #include <tuple>
-#include "gtest/gtest.h"
+
+#include <gtest/gtest.h>
+#include <hpx/include/threadmanager.hpp>
+#include <hpx/runtime.hpp>
+
 #include "dlaf/blas/tile.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
+#include "dlaf_test/matrix/util_generic_blas.h"
 #include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_matrix_blas.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
 using namespace dlaf::comm;
 using namespace dlaf::matrix;
+using namespace dlaf::matrix::util;
 using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 using namespace testing;
@@ -31,23 +36,23 @@ using namespace testing;
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
-template <typename Type>
-class TriangularMultiplicationTestMC : public ::testing::Test {
+template <class T, Device D>
+class TriangularMultiplicationTest : public ::testing::Test {
 public:
   const std::vector<CommunicatorGrid>& commGrids() {
     return comm_grids;
   }
 };
+
+template <class T>
+using TriangularMultiplicationTestMC = TriangularMultiplicationTest<T, Device::CPU>;
+
 TYPED_TEST_SUITE(TriangularMultiplicationTestMC, MatrixElementTypes);
 
 #ifdef DLAF_WITH_CUDA
-template <typename Type>
-class TriangularMultiplicationTestGPU : public ::testing::Test {
-public:
-  const std::vector<CommunicatorGrid>& commGrids() {
-    return comm_grids;
-  }
-};
+template <class T>
+using TriangularMultiplicationTestGPU = TriangularMultiplicationTest<T, Device::GPU>;
+
 TYPED_TEST_SUITE(TriangularMultiplicationTestGPU, MatrixElementTypes);
 #endif
 
@@ -145,12 +150,11 @@ void testTriangularMultiplication(comm::CommunicatorGrid grid, blas::Side side, 
 }
 
 TYPED_TEST(TriangularMultiplicationTestMC, CorrectnessLocal) {
-  for (auto side : blas_sides) {
-    for (auto uplo : blas_uplos) {
-      for (auto op : blas_ops) {
-        for (auto diag : blas_diags) {
-          for (auto sz : sizes) {
-            auto [m, n, mb, nb] = sz;
+  for (const auto side : blas_sides) {
+    for (const auto uplo : blas_uplos) {
+      for (const auto op : blas_ops) {
+        for (const auto diag : blas_diags) {
+          for (const auto& [m, n, mb, nb] : sizes) {
             TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
             testTriangularMultiplication<TypeParam, Backend::MC, Device::CPU>(side, uplo, op, diag,
                                                                               alpha, m, n, mb, nb);
@@ -163,19 +167,19 @@ TYPED_TEST(TriangularMultiplicationTestMC, CorrectnessLocal) {
 
 TYPED_TEST(TriangularMultiplicationTestMC, CorrectnessDistributed) {
   for (const auto& comm_grid : this->commGrids()) {
-    for (auto side : blas_sides) {
-      for (auto uplo : blas_uplos) {
-        for (auto op : blas_ops) {
-          for (auto diag : blas_diags) {
+    for (const auto side : blas_sides) {
+      for (const auto uplo : blas_uplos) {
+        for (const auto op : blas_ops) {
+          for (const auto diag : blas_diags) {
             if (!(op == blas::Op::NoTrans))
               continue;
 
-            for (auto sz : sizes) {
-              auto [m, n, mb, nb] = sz;
+            for (const auto& [m, n, mb, nb] : sizes) {
               TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
               testTriangularMultiplication<TypeParam, Backend::MC, Device::CPU>(comm_grid, side, uplo,
                                                                                 op, diag, alpha, m, n,
                                                                                 mb, nb);
+              hpx::threads::get_thread_manager().wait();
             }
           }
         }
@@ -186,12 +190,11 @@ TYPED_TEST(TriangularMultiplicationTestMC, CorrectnessDistributed) {
 
 #ifdef DLAF_WITH_CUDA
 TYPED_TEST(TriangularMultiplicationTestGPU, CorrectnessLocal) {
-  for (auto side : blas_sides) {
-    for (auto uplo : blas_uplos) {
-      for (auto op : blas_ops) {
-        for (auto diag : blas_diags) {
-          for (auto sz : sizes) {
-            auto [m, n, mb, nb] = sz;
+  for (const auto side : blas_sides) {
+    for (const auto uplo : blas_uplos) {
+      for (const auto op : blas_ops) {
+        for (const auto diag : blas_diags) {
+          for (const auto& [m, n, mb, nb] : sizes) {
             TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
 
             testTriangularMultiplication<TypeParam, Backend::GPU, Device::GPU>(side, uplo, op, diag,
@@ -205,19 +208,19 @@ TYPED_TEST(TriangularMultiplicationTestGPU, CorrectnessLocal) {
 
 TYPED_TEST(TriangularMultiplicationTestGPU, CorrectnessDistributed) {
   for (const auto& comm_grid : this->commGrids()) {
-    for (auto side : blas_sides) {
-      for (auto uplo : blas_uplos) {
-        for (auto op : blas_ops) {
-          for (auto diag : blas_diags) {
+    for (const auto side : blas_sides) {
+      for (const auto uplo : blas_uplos) {
+        for (const auto op : blas_ops) {
+          for (const auto diag : blas_diags) {
             if (!(op == blas::Op::NoTrans && side == blas::Side::Left && uplo == blas::Uplo::Lower))
               continue;
 
-            for (auto sz : sizes) {
-              auto [m, n, mb, nb] = sz;
+            for (const auto& [m, n, mb, nb] : sizes) {
               TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
               testTriangularMultiplication<TypeParam, Backend::GPU, Device::GPU>(comm_grid, side, uplo,
                                                                                  op, diag, alpha, m, n,
                                                                                  mb, nb);
+              hpx::threads::get_thread_manager().wait();
             }
           }
         }

@@ -10,12 +10,17 @@
 
 #include "dlaf/common/pipeline.h"
 
-#include <gtest/gtest.h>
+#include <atomic>
+#include <chrono>
 
+#include <gtest/gtest.h>
 #include <hpx/local/future.hpp>
+#include <hpx/local/thread.hpp>
 #include <hpx/local/unwrap.hpp>
 
 using namespace dlaf;
+using namespace std::chrono_literals;
+
 using dlaf::common::Pipeline;
 
 TEST(Pipeline, Basic) {
@@ -45,11 +50,41 @@ TEST(Pipeline, Basic) {
   guard1.get();
 }
 
-TEST(Pipeline, DestructionNoDependency) {
-  Pipeline<int> serial(13);
-}
+// PipelineDestructor
+//
+// These tests checks that the Pipeline does not block on destruction is performed correctly.
+//
+// Note 1:
+// In each task there is the last_task future that must depend on the launched task. This is needed
+// in order to being able to wait for it before the test ends, otherwise it may end after the test is
+// already finished (and in case of failure it may not be presented correctly)
+//
+// Note 2:
+// wait_guard is the time to wait in the launched task for assuring that Pipeline d'tor has been called
+// after going out-of-scope. This duration must be kept as low as possible in order to not waste time
+// during tests, but at the same time it must be enough to let the "main" to arrive to the end of the
+// scope.
 
-TEST(Pipeline, DestructionWithDependency) {
-  Pipeline<int> serial(26);
-  auto checkpoint = serial();
+// wait for guard to become true
+auto try_waiting_guard = [](auto& guard) {
+  const auto wait_guard = 20ms;
+
+  for (int i = 0; i < 100 && !guard; ++i)
+    hpx::this_thread::sleep_for(wait_guard);
+};
+
+TEST(PipelineDestructor, DestructionWithDependency) {
+  hpx::future<void> last_task;
+
+  std::atomic<bool> is_exited_from_scope;
+  {
+    Pipeline<int> serial(26);
+    last_task = serial().then(hpx::launch::async, [&is_exited_from_scope](auto) {
+      try_waiting_guard(is_exited_from_scope);
+      EXPECT_TRUE(is_exited_from_scope);
+    });
+  }
+  is_exited_from_scope = true;
+
+  last_task.get();
 }

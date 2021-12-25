@@ -9,7 +9,7 @@
 //
 #pragma once
 
-#include "blas.hh"
+#include <blas.hh>
 
 #include "dlaf/common/callable_object.h"
 #include "dlaf/matrix/tile.h"
@@ -22,7 +22,6 @@
 
 #ifdef DLAF_WITH_CUDA
 #include <cublas_v2.h>
-#include <blas.hh>
 
 #include "dlaf/cublas/error.h"
 #include "dlaf/util_cublas.h"
@@ -237,6 +236,12 @@ void trsm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const
       DLAF_CUBLAS_CALL(cublas##f(std::forward<Args>(args)...)); \
     }                                                           \
   }
+
+DLAF_DECLARE_CUBLAS_OP(Axpy);
+DLAF_DEFINE_CUBLAS_OP(Axpy, float, Saxpy);
+DLAF_DEFINE_CUBLAS_OP(Axpy, double, Daxpy);
+DLAF_DEFINE_CUBLAS_OP(Axpy, std::complex<float>, Caxpy);
+DLAF_DEFINE_CUBLAS_OP(Axpy, std::complex<double>, Zaxpy);
 
 DLAF_DECLARE_CUBLAS_OP(Gemm);
 DLAF_DEFINE_CUBLAS_OP(Gemm, float, Sgemm);

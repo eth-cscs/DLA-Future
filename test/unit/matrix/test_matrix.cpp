@@ -79,10 +79,9 @@ TYPED_TEST(MatrixLocalTest, StaticAPI) {
 
   using matrix_t = Matrix<TypeParam, device>;
 
-  static_assert(std::is_same<TypeParam, typename matrix_t::ElementType>::value, "wrong ElementType");
-  static_assert(std::is_same<Tile<TypeParam, device>, typename matrix_t::TileType>::value,
-                "wrong TileType");
-  static_assert(std::is_same<Tile<const TypeParam, device>, typename matrix_t::ConstTileType>::value,
+  static_assert(std::is_same_v<TypeParam, typename matrix_t::ElementType>, "wrong ElementType");
+  static_assert(std::is_same_v<Tile<TypeParam, device>, typename matrix_t::TileType>, "wrong TileType");
+  static_assert(std::is_same_v<Tile<const TypeParam, device>, typename matrix_t::ConstTileType>,
                 "wrong ConstTileType");
 }
 
@@ -91,12 +90,10 @@ TYPED_TEST(MatrixLocalTest, StaticAPIConst) {
 
   using const_matrix_t = Matrix<const TypeParam, device>;
 
-  static_assert(std::is_same<TypeParam, typename const_matrix_t::ElementType>::value,
-                "wrong ElementType");
-  static_assert(std::is_same<Tile<TypeParam, device>, typename const_matrix_t::TileType>::value,
+  static_assert(std::is_same_v<TypeParam, typename const_matrix_t::ElementType>, "wrong ElementType");
+  static_assert(std::is_same_v<Tile<TypeParam, device>, typename const_matrix_t::TileType>,
                 "wrong TileType");
-  static_assert(std::is_same<Tile<const TypeParam, device>,
-                             typename const_matrix_t::ConstTileType>::value,
+  static_assert(std::is_same_v<Tile<const TypeParam, device>, typename const_matrix_t::ConstTileType>,
                 "wrong ConstTileType");
 }
 

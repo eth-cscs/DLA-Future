@@ -104,7 +104,7 @@ namespace internal {
 /// Callable that returns random values in the range [-1, 1].
 template <class T>
 class getter_random {
-  static_assert(std::is_same<T, float>::value || std::is_same<T, double>::value,
+  static_assert(std::is_same_v<T, float> || std::is_same_v<T, double>,
                 "T is not compatible with random generator used.");
 
 public:
@@ -137,27 +137,33 @@ public:
 }
 
 /// Sets all the elements of all the tiles to zero
-template <class T, class ExecutorOrPolicy>
-void set0(ExecutorOrPolicy ex, Matrix<T, Device::CPU>& matrix) {
+template <Backend backend, class T, Device D>
+void set0(hpx::threads::thread_priority priority, Matrix<T, D>& matrix) {
+  using dlaf::internal::Policy;
+  using hpx::execution::experimental::detach;
+
   for (const auto& idx : iterate_range2d(matrix.distribution().localNrTiles()))
-    matrix(idx).then(ex, hpx::unwrapping(tile::internal::set0_o));
+    matrix.readwrite_sender(idx) | tile::set0(Policy<backend>(priority)) | detach();
 }
 
 /// Sets all the elements of all the tiles in the active range to zero
-template <class T, Coord axis, class ExecutorOrPolicy>
-void set0(ExecutorOrPolicy ex, Panel<axis, T, Device::CPU>& panel) {
+template <Backend backend, class T, Coord axis, Device D>
+void set0(hpx::threads::thread_priority priority, Panel<axis, T, D>& panel) {
+  using dlaf::internal::Policy;
+  using hpx::execution::experimental::detach;
+
   for (const auto& tile_idx : panel.iteratorLocal())
-    panel(tile_idx).then(ex, hpx::unwrapping(tile::internal::set0_o));
+    panel.readwrite_sender(tile_idx) | tile::set0(Policy<backend>(priority)) | detach();
 }
 
 /// Set the elements of the matrix.
 ///
 /// The (i, j)-element of the matrix is set to el({i, j}).
-/// @param el a copy is given to each tile,
-/// @pre el argument is an index of type const GlobalElementIndex&,
-/// @pre el return type should be T.
+/// @param el_f a copy is given to each tile,
+/// @pre el_f argument is an index of type const GlobalElementIndex&,
+/// @pre el_f return type should be T.
 template <class T, class ElementGetter>
-void set(Matrix<T, Device::CPU>& matrix, const ElementGetter& el_f) {
+void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f) {
   const Distribution& dist = matrix.distribution();
   for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
     GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
@@ -170,6 +176,35 @@ void set(Matrix<T, Device::CPU>& matrix, const ElementGetter& el_f) {
     });
     hpx::dataflow(std::move(set_f), matrix(tile_wrt_local));
   }
+}
+
+/// Set the elements of the matrix according to transposition operator
+///
+/// The (i, j)-element of the matrix is set to op(el)(i, j).
+/// i.e. `matrix = op(el_f)`
+///
+/// @param el_f a copy is given to each tile,
+/// @param op transposition operator to apply to @p el_f before setting the value
+/// @pre el_f argument is an index of type const GlobalElementIndex&,
+/// @pre el_f return type should be T.
+template <class T, class ElementGetter>
+void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f, const blas::Op op) {
+  auto el_op_f = [op, el_f](const GlobalElementIndex& index) -> T {
+    using blas::Op;
+    switch (op) {
+      case Op::NoTrans:
+        return el_f(index);
+      case Op::Trans:
+        return el_f(transposed(index));
+      case Op::ConjTrans:
+        return dlaf::conj(el_f(transposed(index)));
+      default:
+        DLAF_UNIMPLEMENTED(op);
+        return T{};
+    }
+  };
+
+  set(matrix, el_op_f);
 }
 
 /// Set the matrix with random values whose absolute values are less than 1.

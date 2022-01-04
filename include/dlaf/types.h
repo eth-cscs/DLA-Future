@@ -15,6 +15,7 @@
 #include <complex>
 #include <cstddef>
 #include <limits>
+#include <ostream>
 
 #include "dlaf/common/assert.h"
 
@@ -36,6 +37,16 @@ enum class Device {
 #endif
 };
 
+inline std::ostream& operator<<(std::ostream& os, const Device& device) {
+  if (device == Device::CPU) {
+    os << "CPU";
+  }
+  else if (device == Device::GPU) {
+    os << "GPU";
+  }
+  return os;
+}
+
 enum class Backend {
   MC,
   GPU,
@@ -44,6 +55,32 @@ enum class Backend {
 #else
   Default = MC
 #endif
+};
+
+inline std::ostream& operator<<(std::ostream& os, const Backend& backend) {
+  if (backend == Backend::MC) {
+    os << "CPU";
+  }
+  else if (backend == Backend::GPU) {
+    os << "GPU";
+  }
+  return os;
+}
+
+// TODO: Do we need this? Or should we be explicit about which Backend goes with
+// which Device?
+/// Suitable device given a backend.
+template <Backend backend>
+struct BackendDevice;
+
+template <>
+struct BackendDevice<Backend::MC> {
+  static constexpr Device value = Device::CPU;
+};
+
+template <>
+struct BackendDevice<Backend::GPU> {
+  static constexpr Device value = Device::GPU;
 };
 
 template <class T>

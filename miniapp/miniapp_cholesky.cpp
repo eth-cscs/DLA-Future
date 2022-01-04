@@ -42,6 +42,7 @@ using hpx::unwrapping;
 using dlaf::Device;
 using dlaf::Coord;
 using dlaf::Backend;
+using dlaf::BackendDevice;
 using dlaf::SizeType;
 using dlaf::comm::Index2D;
 using dlaf::GlobalElementSize;
@@ -55,14 +56,10 @@ using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
 
 using T = double;
-using MatrixType = dlaf::Matrix<T, Device::Default>;
+
 using HostMatrixType = dlaf::Matrix<T, Device::CPU>;
-using ConstMatrixType = dlaf::Matrix<const T, Device::Default>;
 using ConstHostMatrixType = dlaf::Matrix<const T, Device::CPU>;
-using MatrixMirrorType = dlaf::matrix::MatrixMirror<T, Device::Default, Device::CPU>;
-using TileType = MatrixType::TileType;
 using HostTileType = HostMatrixType::TileType;
-using ConstTileType = MatrixType::ConstTileType;
 using ConstHostTileType = HostMatrixType::ConstTileType;
 
 /// Check Cholesky Factorization results
@@ -81,20 +78,24 @@ struct options_t {
   int64_t nruns;
   int64_t nwarmups;
   CholCheckIterFreq do_check;
+  Backend backend;
 };
 
 /// Handle CLI options
 options_t parse_options(hpx::program_options::variables_map&);
 
 CholCheckIterFreq parse_chol_check(const std::string&);
-
+Backend parse_backend(const std::string& backend);
 }
 
-int hpx_main(hpx::program_options::variables_map& vm) {
-  {
-    dlaf::ScopedInitializer init(vm);
-
-    options_t opts = parse_options(vm);
+// TODO: Remove this comment. This is a struct only for the purposes of the
+// dispatch function. The dispatch function can be passed a type whose run
+// method is then instantiated and called with the runtime backend. Is there
+// another cleaner way of doing this?
+struct cholesky {
+  template <Backend backend>
+  static void run(const options_t& opts) {
+    using MatrixMirrorType = dlaf::matrix::MatrixMirror<T, BackendDevice<backend>::value, Device::CPU>;
 
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
@@ -133,8 +134,9 @@ int hpx_main(hpx::program_options::variables_map& vm) {
         matrix.get().waitLocalTiles();
 
         dlaf::common::Timer<> timeit;
-        dlaf::factorization::cholesky<Backend::Default, Device::Default, T>(comm_grid, blas::Uplo::Lower,
-                                                                            matrix.get());
+        dlaf::factorization::cholesky<backend, BackendDevice<backend>::value, T>(comm_grid,
+                                                                                 blas::Uplo::Lower,
+                                                                                 matrix.get());
 
         // wait for last task and barrier for all ranks
         {
@@ -161,7 +163,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
                   << " " << elapsed_time << "s"
                   << " " << gigaflops << "GFlop/s"
                   << " " << matrix_host.size() << " " << matrix_host.blockSize() << " "
-                  << comm_grid.size() << " " << hpx::get_os_thread_count() << std::endl;
+                  << comm_grid.size() << " " << hpx::get_os_thread_count() << " " << backend
+                  << std::endl;
 
       // (optional) run test
       if ((opts.do_check == CholCheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
@@ -172,6 +175,35 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       }
     }
   }
+};
+
+// TODO: Reuse this in other miniapps.
+// TODO: This won't scale, but is simple. Do we need something more generic?
+template <typename Miniapp>
+void dispatch_miniapp(options_t const& opts) {
+  switch (opts.backend) {
+    case Backend::MC:
+      Miniapp::template run<Backend::MC>(opts);
+      break;
+    case Backend::GPU:
+#ifdef DLAF_WITH_CUDA
+      Miniapp::template run<Backend::GPU>(opts);
+#else
+      std::cout << "Attempting to dispatch to Backend::GPU but DLAF_WITH_CUDA is disabled!" << std::endl;
+      std::terminate();
+#endif
+      break;
+    default:
+      std::cout << "Unknown backend given (" << opts.backend << ")!" << std::endl;
+      std::terminate();
+  }
+}
+
+int hpx_main(hpx::program_options::variables_map& vm) {
+  dlaf::initialize(vm);
+  options_t opts = parse_options(vm);
+
+  dispatch_miniapp<cholesky>(opts);
 
   return hpx::finalize();
 }
@@ -194,6 +226,7 @@ int main(int argc, char** argv) {
     ("nruns",        value<int64_t>()    ->default_value(   1),       "Number of runs to compute the cholesky")
     ("nwarmups",     value<int64_t>()    ->default_value(   1),       "Number of warmup runs")
     ("check-result", value<std::string>()->default_value("none"),     "Enable result checking ('none', 'all', 'last')")
+    ("backend",      value<std::string>()->default_value("default"),  "Backend to use ('default', 'mc', 'gpu' (if available))")
   ;
   // clang-format on
 
@@ -414,6 +447,7 @@ options_t parse_options(hpx::program_options::variables_map& vm) {
       vm["nruns"].as<int64_t>(),
       vm["nwarmups"].as<int64_t>(),
       parse_chol_check(vm["check-result"].as<std::string>()),
+      parse_backend(vm["backend"].as<std::string>()),
   };
   // clang-format on
 
@@ -445,6 +479,24 @@ CholCheckIterFreq parse_chol_check(const std::string& check) {
   std::cout << "Parsing is not implemented for --check-result=" << check << "!" << std::endl;
   std::terminate();
   return CholCheckIterFreq::None;  // unreachable
+}
+
+Backend parse_backend(const std::string& backend) {
+  if (backend == "default")
+    return Backend::Default;
+  else if (backend == "mc")
+    return Backend::MC;
+  else if (backend == "gpu") {
+#if !defined(DLAF_WITH_CUDA)
+    std::cout << "Asked for --backend=gpu but DLAF_WITH_CUDA is disabled!" << std::endl;
+    std::terminate();
+#endif
+    return Backend::GPU;
+  }
+
+  std::cout << "Parsing is not implemented for --backend=" << backend << "!" << std::endl;
+  std::terminate();
+  return Backend::Default;  // unreachable
 }
 
 }

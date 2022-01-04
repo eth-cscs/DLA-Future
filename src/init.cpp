@@ -311,6 +311,19 @@ void finalize() {
   internal::initialized() = false;
 }
 
+ScopedInitializer::ScopedInitializer(hpx::program_options::variables_map const& vm,
+                                     configuration const& user_cfg) {
+  initialize(vm, user_cfg);
+}
+
+ScopedInitializer::ScopedInitializer(int argc, const char* const argv[], configuration const& user_cfg) {
+  initialize(argc, argv, user_cfg);
+}
+
+ScopedInitializer::~ScopedInitializer() {
+  finalize();
+}
+
 void initResourcePartitionerHandler(hpx::resource::partitioner& rp,
                                     hpx::program_options::variables_map const& vm) {
   // Don't create the MPI pool if the user disabled it

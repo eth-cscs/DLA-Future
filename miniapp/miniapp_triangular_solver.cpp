@@ -71,8 +71,9 @@ linear_system_t sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T al
 }
 
 int hpx_main(hpx::program_options::variables_map& vm) {
-  dlaf::initialize(vm);
   {
+    dlaf::ScopedInitializer init(vm);
+
     options_t opts = check_options(vm);
 
     Communicator world(MPI_COMM_WORLD);
@@ -150,8 +151,6 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       }
     }
   }
-
-  dlaf::finalize();
 
   return hpx::finalize();
 }

@@ -51,24 +51,37 @@ using dlaf::GlobalTileIndex;
 using dlaf::LocalTileIndex;
 using dlaf::TileElementIndex;
 using dlaf::TileElementSize;
+using dlaf::Matrix;
+using dlaf::matrix::MatrixMirror;
 using dlaf::common::Ordering;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
-
-using T = double;
-
-using HostMatrixType = dlaf::Matrix<T, Device::CPU>;
-using ConstHostMatrixType = dlaf::Matrix<const T, Device::CPU>;
-using HostTileType = HostMatrixType::TileType;
-using ConstHostTileType = HostMatrixType::ConstTileType;
 
 /// Check Cholesky Factorization results
 ///
 /// Given a matrix A (Hermitian Positive Definite) and its Cholesky factorization in L,
 /// this function checks that A == L * L'
-void check_cholesky(HostMatrixType& A, HostMatrixType& L, CommunicatorGrid comm_grid);
+template <typename T>
+void check_cholesky(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, CommunicatorGrid comm_grid);
 
 enum class CholCheckIterFreq { None, Last, All };
+enum class ElementType { Single, Double, ComplexSingle, ComplexDouble, Default = Double };
+
+inline std::ostream& operator<<(std::ostream& os, const ElementType& type) {
+  if (type == ElementType::Single) {
+    os << "single";
+  }
+  else if (type == ElementType::Double) {
+    os << "double";
+  }
+  else if (type == ElementType::ComplexSingle) {
+    os << "complex-single";
+  }
+  else if (type == ElementType::ComplexDouble) {
+    os << "complex-double";
+  }
+  return os;
+}
 
 struct options_t {
   SizeType m;
@@ -79,6 +92,7 @@ struct options_t {
   int64_t nwarmups;
   CholCheckIterFreq do_check;
   Backend backend;
+  ElementType type;
 };
 
 /// Handle CLI options
@@ -86,6 +100,7 @@ options_t parse_options(hpx::program_options::variables_map&);
 
 CholCheckIterFreq parse_chol_check(const std::string&);
 Backend parse_backend(const std::string& backend);
+ElementType parse_element_type(const std::string& type);
 }
 
 // TODO: Remove this comment. This is a struct only for the purposes of the
@@ -93,9 +108,11 @@ Backend parse_backend(const std::string& backend);
 // method is then instantiated and called with the runtime backend. Is there
 // another cleaner way of doing this?
 struct cholesky {
-  template <Backend backend>
+  template <Backend backend, typename T>
   static void run(const options_t& opts) {
-    using MatrixMirrorType = dlaf::matrix::MatrixMirror<T, DefaultDevice<backend>::value, Device::CPU>;
+    using MatrixMirrorType = MatrixMirror<T, DefaultDevice<backend>::value, Device::CPU>;
+    using HostMatrixType = Matrix<T, Device::CPU>;
+    using ConstHostMatrixType = Matrix<const T, Device::CPU>;
 
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
@@ -169,7 +186,7 @@ struct cholesky {
       // (optional) run test
       if ((opts.do_check == CholCheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
           opts.do_check == CholCheckIterFreq::All) {
-        HostMatrixType original(matrix_size, block_size, comm_grid);
+        Matrix<T, Device::CPU> original(matrix_size, block_size, comm_grid);
         copy(matrix_ref, original);
         check_cholesky(original, matrix_host, comm_grid);
       }
@@ -177,17 +194,38 @@ struct cholesky {
   }
 };
 
+template <typename Miniapp, Backend backend>
+void dispatch_miniapp_helper(options_t const& opts) {
+  switch (opts.type) {
+    case ElementType::Single:
+      Miniapp::template run<backend, float>(opts);
+      break;
+    case ElementType::Double:
+      Miniapp::template run<backend, double>(opts);
+      break;
+    case ElementType::ComplexSingle:
+      Miniapp::template run<backend, std::complex<float>>(opts);
+      break;
+    case ElementType::ComplexDouble:
+      Miniapp::template run<backend, std::complex<double>>(opts);
+      break;
+    default:
+      std::cout << "Unknown element type given (" << opts.type << ")!" << std::endl;
+      std::terminate();
+  }
+}
+
 // TODO: Reuse this in other miniapps.
 // TODO: This won't scale, but is simple. Do we need something more generic?
 template <typename Miniapp>
 void dispatch_miniapp(options_t const& opts) {
   switch (opts.backend) {
     case Backend::MC:
-      Miniapp::template run<Backend::MC>(opts);
+      dispatch_miniapp_helper<Miniapp, Backend::MC>(opts);
       break;
     case Backend::GPU:
 #ifdef DLAF_WITH_CUDA
-      Miniapp::template run<Backend::GPU>(opts);
+      dispatch_miniapp_helper<Miniapp, Backend::MC>(opts);
 #else
       std::cout << "Attempting to dispatch to Backend::GPU but DLAF_WITH_CUDA is disabled!" << std::endl;
       std::terminate();
@@ -226,7 +264,8 @@ int main(int argc, char** argv) {
     ("nruns",        value<int64_t>()    ->default_value(   1),       "Number of runs to compute the cholesky")
     ("nwarmups",     value<int64_t>()    ->default_value(   1),       "Number of warmup runs")
     ("check-result", value<std::string>()->default_value("none"),     "Enable result checking ('none', 'all', 'last')")
-    ("backend",      value<std::string>()->default_value("default"),  "Backend to use ('default', 'mc', 'gpu' (if available))")
+    ("backend",      value<std::string>()->default_value("default"),  "Backend to use ('default' ('gpu' if available, otherwise 'mc'), 'mc', 'gpu' (if available))")
+    ("type",         value<std::string>()->default_value("default"),  "Element type to use ('default' ('double'), 'single', 'double', 'complex-single', 'complex-double')")
   ;
   // clang-format on
 
@@ -243,25 +282,26 @@ namespace {
 /// For the tiles on the diagonal (i.e. row == col), the elements in the upper triangular
 /// part of each tile, diagonal excluded, are set to zero.
 /// Tiles that are not on the diagonal (i.e. row != col) will not be touched or referenced
-void setUpperToZeroForDiagonalTiles(HostMatrixType& matrix) {
+template <typename T>
+void setUpperToZeroForDiagonalTiles(Matrix<T, Device::CPU>& matrix) {
   DLAF_ASSERT(dlaf::matrix::square_blocksize(matrix), matrix);
 
   const auto& distribution = matrix.distribution();
 
   for (int i_tile_local = 0; i_tile_local < distribution.localNrTiles().rows(); ++i_tile_local) {
-    auto k_tile_global = distribution.globalTileFromLocalTile<Coord::Row>(i_tile_local);
-    GlobalTileIndex diag_tile{k_tile_global, k_tile_global};
+    // auto k_tile_global = distribution.globalTileFromLocalTile<Coord::Row>(i_tile_local);
+    // GlobalTileIndex diag_tile{k_tile_global, k_tile_global};
 
-    if (distribution.rankIndex() != distribution.rankGlobalTile(diag_tile))
-      continue;
+    // if (distribution.rankIndex() != distribution.rankGlobalTile(diag_tile))
+    //   continue;
 
-    auto tile_set = unwrapping([](auto&& tile) {
-      if (tile.size().rows() > 1)
-        lapack::laset(lapack::MatrixType::Upper, tile.size().rows() - 1, tile.size().cols() - 1, 0, 0,
-                      tile.ptr({0, 1}), tile.ld());
-    });
+    // auto tile_set = unwrapping([](auto&& tile) {
+    //   if (tile.size().rows() > 1)
+    //     lapack::laset(lapack::MatrixType::Upper, tile.size().rows() - 1, tile.size().cols() - 1, 0, 0,
+    //                   tile.ptr({0, 1}), tile.ld());
+    // });
 
-    matrix(diag_tile).then(tile_set);
+    // matrix(diag_tile).then(tile_set);
   }
 }
 
@@ -275,10 +315,13 @@ void setUpperToZeroForDiagonalTiles(HostMatrixType& matrix) {
 ///
 /// It is used to get the difference matrix between the matrix computed starting from the
 /// cholesky factorization and the original one
-void cholesky_diff(HostMatrixType& A, HostMatrixType& L, CommunicatorGrid comm_grid) {
+template <typename T>
+void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, CommunicatorGrid comm_grid) {
   // TODO A and L must be different
 
   using dlaf::common::make_data;
+  using HostTileType = typename Matrix<T, Device::CPU>::TileType;
+  using ConstHostTileType = typename Matrix<T, Device::CPU>::ConstTileType;
 
   // compute tile * tile_to_transpose' with the option to cumulate the result
   // compute a = abs(a - b)
@@ -296,7 +339,7 @@ void cholesky_diff(HostMatrixType& A, HostMatrixType& L, CommunicatorGrid comm_g
   const auto& distribution = L.distribution();
   const auto current_rank = distribution.rankIndex();
 
-  HostMatrixType mul_result(L.size(), L.blockSize(), comm_grid);
+  Matrix<T, Device::CPU> mul_result(L.size(), L.blockSize(), comm_grid);
 
   // k is a global index that keeps track of the diagonal tile
   // it is useful mainly for two reasons:
@@ -307,8 +350,8 @@ void cholesky_diff(HostMatrixType& A, HostMatrixType& L, CommunicatorGrid comm_g
 
     // workspace for storing the partial results for all the rows in the current rank
     // TODO this size can be reduced to just the part below the current diagonal tile
-    HostMatrixType partial_result({distribution.localSize().rows(), L.blockSize().cols()},
-                                  L.blockSize());
+    Matrix<T, Device::CPU> partial_result({distribution.localSize().rows(), L.blockSize().cols()},
+                                          L.blockSize());
 
     // it has to be set to zero, because ranks may not be able to contribute for each row at each step
     // so when the result will be reduced along the rows, they will not alter the final result
@@ -353,10 +396,10 @@ void cholesky_diff(HostMatrixType& A, HostMatrixType& L, CommunicatorGrid comm_g
       for (; i_loc < distribution.localNrTiles().rows(); ++i_loc) {
         const LocalTileIndex tile_wrt_local{i_loc, j_loc};
 
-        dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, 1.0,
+        dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, T(1.0),
                                     L.read_sender(tile_wrt_local),
                                     hpx::execution::experimental::keep_future(tile_to_transpose),
-                                    j_loc == 0 ? 0.0 : 1.0,
+                                    j_loc == 0 ? T(0.0) : T(1.0),
                                     partial_result.readwrite_sender(LocalTileIndex{i_loc, 0})) |
             dlaf::tile::gemm(dlaf::internal::Policy<dlaf::Backend::MC>()) |
             hpx::execution::experimental::detach();
@@ -398,7 +441,8 @@ void cholesky_diff(HostMatrixType& A, HostMatrixType& L, CommunicatorGrid comm_g
 /// "":        check ok
 /// "ERROR":   error is high, there is an error in the factorization
 /// "WARNING": error is slightly high, there can be an error in the factorization
-void check_cholesky(HostMatrixType& A, HostMatrixType& L, CommunicatorGrid comm_grid) {
+template <typename T>
+void check_cholesky(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, CommunicatorGrid comm_grid) {
   const Index2D rank_result{0, 0};
 
   // 1. Compute the max norm of the original matrix in A
@@ -448,6 +492,7 @@ options_t parse_options(hpx::program_options::variables_map& vm) {
       vm["nwarmups"].as<int64_t>(),
       parse_chol_check(vm["check-result"].as<std::string>()),
       parse_backend(vm["backend"].as<std::string>()),
+      parse_element_type(vm["type"].as<std::string>()),
   };
   // clang-format on
 
@@ -499,4 +544,20 @@ Backend parse_backend(const std::string& backend) {
   return Backend::Default;  // unreachable
 }
 
+ElementType parse_element_type(const std::string& type) {
+  if (type == "default")
+    return ElementType::Default;
+  else if (type == "single")
+    return ElementType::Single;
+  else if (type == "double")
+    return ElementType::Double;
+  else if (type == "complex-single")
+    return ElementType::ComplexSingle;
+  else if (type == "complex-double")
+    return ElementType::ComplexDouble;
+
+  std::cout << "Parsing is not implemented for --type=" << type << "!" << std::endl;
+  std::terminate();
+  return ElementType::Single;  // unreachable
+}
 }

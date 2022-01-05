@@ -290,7 +290,7 @@ TYPED_TEST(TileTest, PromiseToFuture) {
   }
 
   ASSERT_EQ(true, tile_future.is_ready());
-  TileType tile2{std::move(tile_future.get())};
+  TileType tile2{tile_future.get()};
   EXPECT_EQ(TileSizes(size, ld), getSizes(tile2));
 
   auto ptr = [&memory_view](const TileElementIndex& index) { return memory_view(elIndex(index, ld)); };
@@ -321,7 +321,7 @@ TYPED_TEST(TileTest, PromiseToFutureConst) {
   }
 
   ASSERT_EQ(true, tile_future.is_ready());
-  TileType tile2{std::move(tile_future.get())};
+  TileType tile2{tile_future.get()};
   EXPECT_EQ(TileSizes(size, ld), getSizes(tile2));
 
   auto ptr = [&memory_view](const TileElementIndex& index) { return memory_view(elIndex(index, ld)); };
@@ -472,7 +472,7 @@ void testSubtileConst(std::string name, TileElementSize size, SizeType ld, const
   checkReadyAndDependencyChain(tile_ptr, subtiles, full_specs, last_dep, next_tile_f);
 
   // Check next tile in the dependency chain
-  checkFullTile(tile_ptr, Tile<T, D>{std::move(next_tile_f.get())}, size);
+  checkFullTile(tile_ptr, Tile<T, D>{next_tile_f.get()}, size);
 }
 
 template <class T, Device D>
@@ -505,7 +505,7 @@ void testSubtilesConst(std::string name, TileElementSize size, SizeType ld,
   tile_p.set_value(std::move(tile));
 
   checkReadyAndDependencyChain(tile_ptr, subtiles, specs, last_dep, next_tile_f);
-  checkFullTile(tile_ptr, Tile<T, D>{std::move(next_tile_f.get())}, size);
+  checkFullTile(tile_ptr, Tile<T, D>{next_tile_f.get()}, size);
 }
 
 template <class T, Device D>

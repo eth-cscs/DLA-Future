@@ -67,19 +67,17 @@ inline std::ostream& operator<<(std::ostream& os, const Backend& backend) {
   return os;
 }
 
-// TODO: Do we need this? Or should we be explicit about which Backend goes with
-// which Device?
-/// Suitable device given a backend.
+/// Default device given a backend.
 template <Backend backend>
-struct BackendDevice;
+struct DefaultDevice;
 
 template <>
-struct BackendDevice<Backend::MC> {
+struct DefaultDevice<Backend::MC> {
   static constexpr Device value = Device::CPU;
 };
 
 template <>
-struct BackendDevice<Backend::GPU> {
+struct DefaultDevice<Backend::GPU> {
   static constexpr Device value = Device::GPU;
 };
 

@@ -42,7 +42,7 @@ using hpx::unwrapping;
 using dlaf::Device;
 using dlaf::Coord;
 using dlaf::Backend;
-using dlaf::BackendDevice;
+using dlaf::DefaultDevice;
 using dlaf::SizeType;
 using dlaf::comm::Index2D;
 using dlaf::GlobalElementSize;
@@ -95,7 +95,7 @@ Backend parse_backend(const std::string& backend);
 struct cholesky {
   template <Backend backend>
   static void run(const options_t& opts) {
-    using MatrixMirrorType = dlaf::matrix::MatrixMirror<T, BackendDevice<backend>::value, Device::CPU>;
+    using MatrixMirrorType = dlaf::matrix::MatrixMirror<T, DefaultDevice<backend>::value, Device::CPU>;
 
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
@@ -134,7 +134,7 @@ struct cholesky {
         matrix.get().waitLocalTiles();
 
         dlaf::common::Timer<> timeit;
-        dlaf::factorization::cholesky<backend, BackendDevice<backend>::value, T>(comm_grid,
+        dlaf::factorization::cholesky<backend, DefaultDevice<backend>::value, T>(comm_grid,
                                                                                  blas::Uplo::Lower,
                                                                                  matrix.get());
 

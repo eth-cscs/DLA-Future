@@ -29,6 +29,17 @@ RUN mkdir -p /opt/libtree && \
     curl -Lfso /opt/libtree/libtree https://github.com/haampie/libtree/releases/download/v2.0.0/libtree_x86_64 && \
     chmod +x /opt/libtree/libtree
 
+# Install MKL and remove static libs (to keep image smaller)
+ARG MKL_VERSION=2020.4-912
+ARG MKL_SPEC=2020.4.304
+RUN wget -qO - https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB 2>/dev/null | apt-key add - && \
+    apt-add-repository 'deb https://apt.repos.intel.com/mkl all main' && \
+    apt-get install -y -qq --no-install-recommends intel-mkl-64bit-${MKL_VERSION} && \
+    rm -rf /var/lib/apt/lists/* && \
+    find "/opt/intel/" -name "*.a" -delete && \
+    echo -e "/opt/intel/lib/intel64\n/opt/intel/compilers_and_libraries/linux/mkl/lib/intel64" >> /etc/ld.so.conf.d/intel.conf && \
+    ldconfig
+
 # This is the spack version we want to have
 ARG SPACK_SHA
 ENV SPACK_SHA=$SPACK_SHA
@@ -54,7 +65,8 @@ RUN spack external find \
     openssl \
     perl \
     python \
-    xz
+    xz && \
+    echo -e "  intel-mkl:\n    externals:\n    - spec: \"intel-mkl@$MKL_SPEC\"\n      prefix: /opt/intel\n    buildable: False" >> ~/.spack/packages.yaml
 
 # Set up the binary cache and trust the public part of our signing key
 COPY ./ci/docker/spack/public_key.asc ./public_key.asc

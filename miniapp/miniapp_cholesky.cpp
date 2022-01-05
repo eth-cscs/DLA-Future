@@ -32,6 +32,8 @@
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"
+#include "dlaf/miniapp/dispatch.h"
+#include "dlaf/miniapp/options.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
@@ -53,6 +55,7 @@ using dlaf::TileElementIndex;
 using dlaf::TileElementSize;
 using dlaf::Matrix;
 using dlaf::matrix::MatrixMirror;
+using dlaf::miniapp::MiniappOptions;
 using dlaf::common::Ordering;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
@@ -62,54 +65,60 @@ using dlaf::comm::CommunicatorGrid;
 /// Given a matrix A (Hermitian Positive Definite) and its Cholesky factorization in L,
 /// this function checks that A == L * L'
 template <typename T>
-void check_cholesky(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, CommunicatorGrid comm_grid);
+void check_cholesky(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, CommunicatorGrid comm_grid,
+                    blas::Uplo uplo);
 
 enum class CholCheckIterFreq { None, Last, All };
-enum class ElementType { Single, Double, ComplexSingle, ComplexDouble, Default = Double };
 
-inline std::ostream& operator<<(std::ostream& os, const ElementType& type) {
-  if (type == ElementType::Single) {
-    os << "single";
-  }
-  else if (type == ElementType::Double) {
-    os << "double";
-  }
-  else if (type == ElementType::ComplexSingle) {
-    os << "complex-single";
-  }
-  else if (type == ElementType::ComplexDouble) {
-    os << "complex-double";
-  }
-  return os;
+CholCheckIterFreq parse_chol_check(const std::string& check) {
+  if (check == "all")
+    return CholCheckIterFreq::All;
+  else if (check == "last")
+    return CholCheckIterFreq::Last;
+  else if (check == "none")
+    return CholCheckIterFreq::None;
+
+  std::cout << "Parsing is not implemented for --check-result=" << check << "!" << std::endl;
+  std::terminate();
+  return CholCheckIterFreq::None;  // unreachable
 }
 
-struct options_t {
+struct Options : MiniappOptions {
   SizeType m;
   SizeType mb;
   int grid_rows;
   int grid_cols;
-  int64_t nruns;
-  int64_t nwarmups;
+  blas::Uplo uplo;
   CholCheckIterFreq do_check;
-  Backend backend;
-  ElementType type;
+
+  Options(const hpx::program_options::variables_map& vm)
+      : MiniappOptions(vm), m(vm["matrix-size"].as<SizeType>()), mb(vm["block-size"].as<SizeType>()),
+        grid_rows(vm["grid-rows"].as<int>()), grid_cols(vm["grid-cols"].as<int>()),
+        uplo(dlaf::miniapp::parse_uplo(vm["uplo"].as<std::string>())),
+        do_check(parse_chol_check(vm["check-result"].as<std::string>())) {
+    DLAF_ASSERT(m > 0, m);
+    DLAF_ASSERT(mb > 0, mb);
+    DLAF_ASSERT(grid_rows > 0, grid_rows);
+    DLAF_ASSERT(grid_cols > 0, grid_cols);
+
+    if (do_check != CholCheckIterFreq::None && m % mb) {
+      std::cerr
+          << "Warning! At the moment result checking works just with matrix sizes that are multiple of the block size."
+          << std::endl;
+      do_check = CholCheckIterFreq::None;
+    }
+  }
+
+  Options(Options&&) = default;
+  Options(const Options&) = default;
+  Options& operator=(Options&&) = default;
+  Options& operator=(const Options&) = default;
 };
-
-/// Handle CLI options
-options_t parse_options(hpx::program_options::variables_map&);
-
-CholCheckIterFreq parse_chol_check(const std::string&);
-Backend parse_backend(const std::string& backend);
-ElementType parse_element_type(const std::string& type);
 }
 
-// TODO: Remove this comment. This is a struct only for the purposes of the
-// dispatch function. The dispatch function can be passed a type whose run
-// method is then instantiated and called with the runtime backend. Is there
-// another cleaner way of doing this?
 struct cholesky {
   template <Backend backend, typename T>
-  static void run(const options_t& opts) {
+  static void run(const Options& opts) {
     using MatrixMirrorType = MatrixMirror<T, DefaultDevice<backend>::value, Device::CPU>;
     using HostMatrixType = Matrix<T, Device::CPU>;
     using ConstHostMatrixType = Matrix<const T, Device::CPU>;
@@ -151,8 +160,7 @@ struct cholesky {
         matrix.get().waitLocalTiles();
 
         dlaf::common::Timer<> timeit;
-        dlaf::factorization::cholesky<backend, DefaultDevice<backend>::value, T>(comm_grid,
-                                                                                 blas::Uplo::Lower,
+        dlaf::factorization::cholesky<backend, DefaultDevice<backend>::value, T>(comm_grid, opts.uplo,
                                                                                  matrix.get());
 
         // wait for last task and barrier for all ranks
@@ -179,69 +187,26 @@ struct cholesky {
         std::cout << "[" << run_index << "]"
                   << " " << elapsed_time << "s"
                   << " " << gigaflops << "GFlop/s"
-                  << " " << matrix_host.size() << " " << matrix_host.blockSize() << " "
-                  << comm_grid.size() << " " << hpx::get_os_thread_count() << " " << backend
-                  << std::endl;
+                  << " " << opts.type << " " << opts.uplo << " " << matrix_host.size() << " "
+                  << matrix_host.blockSize() << " " << comm_grid.size() << " "
+                  << hpx::get_os_thread_count() << " " << backend << std::endl;
 
       // (optional) run test
       if ((opts.do_check == CholCheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
           opts.do_check == CholCheckIterFreq::All) {
         Matrix<T, Device::CPU> original(matrix_size, block_size, comm_grid);
         copy(matrix_ref, original);
-        check_cholesky(original, matrix_host, comm_grid);
+        check_cholesky(original, matrix_host, comm_grid, opts.uplo);
       }
     }
   }
 };
 
-template <typename Miniapp, Backend backend>
-void dispatch_miniapp_helper(options_t const& opts) {
-  switch (opts.type) {
-    case ElementType::Single:
-      Miniapp::template run<backend, float>(opts);
-      break;
-    case ElementType::Double:
-      Miniapp::template run<backend, double>(opts);
-      break;
-    case ElementType::ComplexSingle:
-      Miniapp::template run<backend, std::complex<float>>(opts);
-      break;
-    case ElementType::ComplexDouble:
-      Miniapp::template run<backend, std::complex<double>>(opts);
-      break;
-    default:
-      std::cout << "Unknown element type given (" << opts.type << ")!" << std::endl;
-      std::terminate();
-  }
-}
-
-// TODO: Reuse this in other miniapps.
-// TODO: This won't scale, but is simple. Do we need something more generic?
-template <typename Miniapp>
-void dispatch_miniapp(options_t const& opts) {
-  switch (opts.backend) {
-    case Backend::MC:
-      dispatch_miniapp_helper<Miniapp, Backend::MC>(opts);
-      break;
-    case Backend::GPU:
-#ifdef DLAF_WITH_CUDA
-      dispatch_miniapp_helper<Miniapp, Backend::MC>(opts);
-#else
-      std::cout << "Attempting to dispatch to Backend::GPU but DLAF_WITH_CUDA is disabled!" << std::endl;
-      std::terminate();
-#endif
-      break;
-    default:
-      std::cout << "Unknown backend given (" << opts.backend << ")!" << std::endl;
-      std::terminate();
-  }
-}
-
 int hpx_main(hpx::program_options::variables_map& vm) {
   dlaf::initialize(vm);
-  options_t opts = parse_options(vm);
+  const Options opts{vm};
 
-  dispatch_miniapp<cholesky>(opts);
+  dlaf::miniapp::dispatch_miniapp<cholesky>(opts);
 
   return hpx::finalize();
 }
@@ -253,19 +218,17 @@ int main(int argc, char** argv) {
   // options
   using namespace hpx::program_options;
   options_description desc_commandline("Usage: " HPX_APPLICATION_STRING " [options]");
+  desc_commandline.add(dlaf::miniapp::getMiniappOptionsDescription());
   desc_commandline.add(dlaf::getOptionsDescription());
 
   // clang-format off
   desc_commandline.add_options()
+    ("uplo",         value<std::string>()->default_value("lower"),    "Type of triangular matrix ('lower', 'upper')")
     ("matrix-size",  value<SizeType>()   ->default_value(4096),       "Matrix size")
     ("block-size",   value<SizeType>()   ->default_value( 256),       "Block cyclic distribution size")
     ("grid-rows",    value<int>()        ->default_value(   1),       "Number of row processes in the 2D communicator")
     ("grid-cols",    value<int>()        ->default_value(   1),       "Number of column processes in the 2D communicator")
-    ("nruns",        value<int64_t>()    ->default_value(   1),       "Number of runs to compute the cholesky")
-    ("nwarmups",     value<int64_t>()    ->default_value(   1),       "Number of warmup runs")
     ("check-result", value<std::string>()->default_value("none"),     "Enable result checking ('none', 'all', 'last')")
-    ("backend",      value<std::string>()->default_value("default"),  "Backend to use ('default' ('gpu' if available, otherwise 'mc'), 'mc', 'gpu' (if available))")
-    ("type",         value<std::string>()->default_value("default"),  "Element type to use ('default' ('double'), 'single', 'double', 'complex-single', 'complex-double')")
   ;
   // clang-format on
 
@@ -289,19 +252,19 @@ void setUpperToZeroForDiagonalTiles(Matrix<T, Device::CPU>& matrix) {
   const auto& distribution = matrix.distribution();
 
   for (int i_tile_local = 0; i_tile_local < distribution.localNrTiles().rows(); ++i_tile_local) {
-    // auto k_tile_global = distribution.globalTileFromLocalTile<Coord::Row>(i_tile_local);
-    // GlobalTileIndex diag_tile{k_tile_global, k_tile_global};
+    auto k_tile_global = distribution.template globalTileFromLocalTile<Coord::Row>(i_tile_local);
+    GlobalTileIndex diag_tile{k_tile_global, k_tile_global};
 
-    // if (distribution.rankIndex() != distribution.rankGlobalTile(diag_tile))
-    //   continue;
+    if (distribution.rankIndex() != distribution.rankGlobalTile(diag_tile))
+      continue;
 
-    // auto tile_set = unwrapping([](auto&& tile) {
-    //   if (tile.size().rows() > 1)
-    //     lapack::laset(lapack::MatrixType::Upper, tile.size().rows() - 1, tile.size().cols() - 1, 0, 0,
-    //                   tile.ptr({0, 1}), tile.ld());
-    // });
+    auto tile_set = unwrapping([](auto&& tile) {
+      if (tile.size().rows() > 1)
+        lapack::laset(lapack::MatrixType::Upper, tile.size().rows() - 1, tile.size().cols() - 1, 0, 0,
+                      tile.ptr({0, 1}), tile.ld());
+    });
 
-    // matrix(diag_tile).then(tile_set);
+    matrix(diag_tile).then(tile_set);
   }
 }
 
@@ -442,12 +405,13 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
 /// "ERROR":   error is high, there is an error in the factorization
 /// "WARNING": error is slightly high, there can be an error in the factorization
 template <typename T>
-void check_cholesky(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, CommunicatorGrid comm_grid) {
+void check_cholesky(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, CommunicatorGrid comm_grid,
+                    blas::Uplo uplo) {
   const Index2D rank_result{0, 0};
 
   // 1. Compute the max norm of the original matrix in A
-  const auto norm_A = dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max,
-                                                               blas::Uplo::Lower, A);
+  const auto norm_A =
+      dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max, uplo, A);
 
   // 2.
   // L is a lower triangular, reset values in the upper part (diagonal excluded)
@@ -460,8 +424,7 @@ void check_cholesky(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Commun
 
   // 3. Compute the max norm of the difference (it has been compute in-place in A)
   const auto norm_diff =
-      dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max,
-                                               blas::Uplo::Lower, A);
+      dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max, uplo, A);
 
   // 4.
   // Evaluation of correctness is done just by the master rank
@@ -479,85 +442,5 @@ void check_cholesky(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Commun
     std::cout << "Warning: ";
 
   std::cout << "Max Diff / Max A: " << diff_ratio << std::endl;
-}
-
-options_t parse_options(hpx::program_options::variables_map& vm) {
-  // clang-format off
-  options_t opts = {
-      vm["matrix-size"].as<SizeType>(),
-      vm["block-size"].as<SizeType>(),
-      vm["grid-rows"].as<int>(),
-      vm["grid-cols"].as<int>(),
-      vm["nruns"].as<int64_t>(),
-      vm["nwarmups"].as<int64_t>(),
-      parse_chol_check(vm["check-result"].as<std::string>()),
-      parse_backend(vm["backend"].as<std::string>()),
-      parse_element_type(vm["type"].as<std::string>()),
-  };
-  // clang-format on
-
-  DLAF_ASSERT(opts.m > 0, opts.m);
-  DLAF_ASSERT(opts.mb > 0, opts.mb);
-  DLAF_ASSERT(opts.grid_rows > 0, opts.grid_rows);
-  DLAF_ASSERT(opts.grid_cols > 0, opts.grid_cols);
-  DLAF_ASSERT(opts.nruns > 0, opts.nruns);
-  DLAF_ASSERT(opts.nwarmups >= 0, opts.nwarmups);
-
-  if (opts.do_check != CholCheckIterFreq::None && opts.m % opts.mb) {
-    std::cerr
-        << "Warning! At the moment result checking works just with matrix sizes that are multiple of the block size."
-        << std::endl;
-    opts.do_check = CholCheckIterFreq::None;
-  }
-
-  return opts;
-}
-
-CholCheckIterFreq parse_chol_check(const std::string& check) {
-  if (check == "all")
-    return CholCheckIterFreq::All;
-  else if (check == "last")
-    return CholCheckIterFreq::Last;
-  else if (check == "none")
-    return CholCheckIterFreq::None;
-
-  std::cout << "Parsing is not implemented for --check-result=" << check << "!" << std::endl;
-  std::terminate();
-  return CholCheckIterFreq::None;  // unreachable
-}
-
-Backend parse_backend(const std::string& backend) {
-  if (backend == "default")
-    return Backend::Default;
-  else if (backend == "mc")
-    return Backend::MC;
-  else if (backend == "gpu") {
-#if !defined(DLAF_WITH_CUDA)
-    std::cout << "Asked for --backend=gpu but DLAF_WITH_CUDA is disabled!" << std::endl;
-    std::terminate();
-#endif
-    return Backend::GPU;
-  }
-
-  std::cout << "Parsing is not implemented for --backend=" << backend << "!" << std::endl;
-  std::terminate();
-  return Backend::Default;  // unreachable
-}
-
-ElementType parse_element_type(const std::string& type) {
-  if (type == "default")
-    return ElementType::Default;
-  else if (type == "single")
-    return ElementType::Single;
-  else if (type == "double")
-    return ElementType::Double;
-  else if (type == "complex-single")
-    return ElementType::ComplexSingle;
-  else if (type == "complex-double")
-    return ElementType::ComplexDouble;
-
-  std::cout << "Parsing is not implemented for --type=" << type << "!" << std::endl;
-  std::terminate();
-  return ElementType::Single;  // unreachable
 }
 }

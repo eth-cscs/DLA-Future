@@ -8,8 +8,15 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+add_library(DLAF_miniapp INTERFACE)
+target_link_libraries(DLAF_miniapp INTERFACE DLAF HPX::hpx)
+target_include_directories(DLAF_miniapp
+  INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+)
+
 add_executable(miniapp_cholesky miniapp_cholesky.cpp)
-target_link_libraries(miniapp_cholesky PRIVATE dlaf.core dlaf.auxiliary dlaf.factorization)
+target_link_libraries(miniapp_cholesky PRIVATE dlaf.core dlaf.auxiliary dlaf.factorization DLAF_miniapp)
 target_add_warnings(miniapp_cholesky)
 
 if (DLAF_BUILD_TESTING)

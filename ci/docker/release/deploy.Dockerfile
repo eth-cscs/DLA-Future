@@ -75,6 +75,10 @@ RUN source /opt/intel/compilers_and_libraries/linux/mkl/bin/mklvars.sh intel64 &
 
 FROM ubuntu:20.04
 
+# set jfrog autoclean policy
+LABEL com.jfrog.artifactory.retention.maxDays="7"
+LABEL com.jfrog.artifactory.retention.maxCount="10"
+
 ENV DEBIAN_FRONTEND noninteractive
 
 ARG BUILD

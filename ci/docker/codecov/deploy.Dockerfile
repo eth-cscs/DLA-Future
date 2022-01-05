@@ -57,6 +57,10 @@ RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
 # Multistage build, this is the final small image
 FROM ubuntu:20.04
 
+# set jfrog autoclean policy
+LABEL com.jfrog.artifactory.retention.maxDays="7"
+LABEL com.jfrog.artifactory.retention.maxCount="10"
+
 ENV DEBIAN_FRONTEND noninteractive
 
 ARG BUILD

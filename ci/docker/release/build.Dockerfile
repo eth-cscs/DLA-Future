@@ -2,6 +2,9 @@ ARG BASE_IMAGE=ubuntu:20.04
 
 FROM $BASE_IMAGE
 
+# set jfrog autoclean policy
+LABEL com.jfrog.artifactory.retention.maxDays="21"
+
 WORKDIR /root
 
 SHELL ["/bin/bash", "-l", "-c"]

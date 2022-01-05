@@ -365,7 +365,7 @@ void potrf(const blas::Uplo uplo, const Tile<T, Device::CPU>& a) noexcept {
 }
 
 template <class T>
-void stedc(const Tile<T, Device::CPU>& tridiag, const Tile<T, Device::CPU>& evecs) {
+void stedc(const Tile<T, Device::CPU>& tridiag, const Tile<std::complex<T>, Device::CPU>& evecs) {
   DLAF_ASSERT(square_size(evecs), evecs);
   DLAF_ASSERT(tridiag.size().rows() == evecs.size().rows(), tridiag, evecs);
   DLAF_ASSERT(tridiag.size().cols() == 2, tridiag);

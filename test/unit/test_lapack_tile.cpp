@@ -35,7 +35,11 @@ class TileOperationsTest : public ::testing::Test {};
 template <class T>
 using TileOperationsTestMC = TileOperationsTest<T, Device::CPU>;
 
+template <class T>
+using RealTileOperationsTestMC = TileOperationsTest<T, Device::CPU>;
+
 TYPED_TEST_SUITE(TileOperationsTestMC, MatrixElementTypes);
+TYPED_TEST_SUITE(RealTileOperationsTestMC, RealMatrixElementTypes);
 
 #ifdef DLAF_WITH_CUDA
 template <class T>
@@ -268,71 +272,69 @@ TYPED_TEST(TileOperationsTestMC, Set0) {
   }
 }
 
-// TODO: The output of stedc can be complex but the tridiagonal matrix can only be float/double. I need
-// to find a way to handle that.
-
-// TYPED_TEST(TileOperationsTestMC, Stedc) {
-TEST(TileOperationsTestMC, Stedc) {
+// Note: The eigenvectors of stedc can be complex<> but the tridiagonal matrix can only be float/double.
+TYPED_TEST(RealTileOperationsTestMC, Stedc) {
   using dlaf::matrix::test::createTile;
 
-  using TypeParam = double;
+  using RealParam = TypeParam;
+  using ComplexParam = std::complex<RealParam>;
 
   constexpr double pi = 3.14159265358979323846;
 
   SizeType sz = 10;
 
   // Tridiagonal tile : 1D Laplacian
-  auto trd_f = [](const TileElementIndex& idx) {
+  auto tridiag_f = [](const TileElementIndex& idx) {
     if (idx.col() == 0) {
       // diagonal
-      return TypeParam(2);
+      return RealParam(2);
     }
     else {
       // off-diagoanl
-      return TypeParam(-1);
+      return RealParam(-1);
     }
   };
-  auto trd = createTile<TypeParam, Device::CPU>(std::move(trd_f), TileElementSize(sz, 2), sz);
+  auto tridiag = createTile<RealParam, Device::CPU>(std::move(tridiag_f), TileElementSize(sz, 2), sz);
 
-  auto ev = createTile<TypeParam, Device::CPU>(TileElementSize(sz, sz), sz);
-  set(ev, TypeParam(0));
+  auto evecs = createTile<ComplexParam, Device::CPU>(TileElementSize(sz, sz), sz);
+  set(evecs, ComplexParam(0));
 
-  tile::internal::stedc(trd, ev);
+  tile::internal::stedc(tridiag, evecs);
 
   // Note that only the first column is relevant but to avoid copying to a separate buffer or 1D tile, we
   // also set the expected values as returned by `stedc` in the second column where the off-diagonal is
   // stored as well as the unused last entry.
-  auto expected_trd_f = [sz](const TileElementIndex& idx) {
+  auto expected_tridiag_f = [sz](const TileElementIndex& idx) {
     if (idx.col() == 0) {
       // the diagonal (first column) holds the eigenvalues
-      return TypeParam(2 * (1 - std::cos(pi * (idx.row() + 1) / (sz + 1))));
+      return RealParam(2 * (1 - std::cos(pi * (idx.row() + 1) / (sz + 1))));
     }
     else if (idx.col() == 1 && idx.row() == sz - 1) {
       // the last element of the second column is unused and is left unchanged
-      return TypeParam(-1);
+      return RealParam(-1);
     }
     else {
       // the off-diagonal is set to zero by `stedc`
-      return TypeParam(0);
+      return RealParam(0);
     }
   };
-  auto expected_trd =
-      createTile<TypeParam, Device::CPU>(std::move(expected_trd_f), TileElementSize(sz, 2), sz);
+  auto expected_tridiag =
+      createTile<RealParam, Device::CPU>(std::move(expected_tridiag_f), TileElementSize(sz, 2), sz);
 
-  auto expected_ev_f = [sz](const TileElementIndex& idx) {
+  auto expected_evecs_f = [sz](const TileElementIndex& idx) {
     SizeType j = idx.col() + 1;
     SizeType k = idx.row() + 1;
     // Note that eigenvectors are only unique up to a sign. `eigvec_sign` tackles the sign differences
     // between the analytic formula for the eigenvectors and the values returned by `stedc`.
     int eigvec_sign = (idx.col() == 1 || idx.col() == 2 || idx.col() == 4 || idx.col() == 8) ? -1 : 1;
-    return eigvec_sign * TypeParam(std::sqrt(2.0 / (sz + 1)) * std::sin(j * k * pi / (sz + 1)));
+    return ComplexParam(eigvec_sign * std::sqrt(2.0 / (sz + 1)) * std::sin(j * k * pi / (sz + 1)));
   };
-  auto expected_ev =
-      createTile<TypeParam, Device::CPU>(std::move(expected_ev_f), TileElementSize(sz, sz), sz);
+  auto expected_evecs =
+      createTile<ComplexParam, Device::CPU>(std::move(expected_evecs_f), TileElementSize(sz, sz), sz);
 
-  CHECK_TILE_NEAR(expected_trd, trd, sz * TypeUtilities<TypeParam>::error,
-                  sz * TypeUtilities<TypeParam>::error);
+  CHECK_TILE_NEAR(expected_tridiag, tridiag, sz * TypeUtilities<RealParam>::error,
+                  sz * TypeUtilities<RealParam>::error);
 
-  CHECK_TILE_NEAR(expected_ev, ev, sz * TypeUtilities<TypeParam>::error,
-                  sz * TypeUtilities<TypeParam>::error);
+  CHECK_TILE_NEAR(expected_evecs, evecs, sz * TypeUtilities<ComplexParam>::error,
+                  sz * TypeUtilities<ComplexParam>::error);
 }

@@ -16,7 +16,8 @@ target_include_directories(DLAF_miniapp
 )
 
 add_executable(miniapp_cholesky miniapp_cholesky.cpp)
-target_link_libraries(miniapp_cholesky PRIVATE dlaf.core dlaf.auxiliary dlaf.factorization DLAF_miniapp)
+target_link_libraries(miniapp_cholesky PRIVATE dlaf.core dlaf.auxiliary dlaf.factorization)
+target_link_libraries(miniapp_cholesky PRIVATE DLAF_miniapp)
 target_add_warnings(miniapp_cholesky)
 
 if (DLAF_BUILD_TESTING)
@@ -24,11 +25,13 @@ if (DLAF_BUILD_TESTING)
   add_executable(miniapp_triangular_solver miniapp_triangular_solver.cpp)
   target_link_libraries(miniapp_triangular_solver PRIVATE DLAF)
   target_link_libraries(miniapp_triangular_solver PRIVATE DLAF_test)
+  target_link_libraries(miniapp_triangular_solver PRIVATE DLAF_miniapp)
   target_add_warnings(miniapp_triangular_solver)
 endif()
 
 add_executable(miniapp_reduction_to_band miniapp_reduction_to_band.cpp)
 target_link_libraries(miniapp_reduction_to_band PRIVATE DLAF)
+target_link_libraries(miniapp_reduction_to_band PRIVATE DLAF_miniapp)
 target_add_warnings(miniapp_reduction_to_band)
 
 if(DLAF_WITH_CUDA)

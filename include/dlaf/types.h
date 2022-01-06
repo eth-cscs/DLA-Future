@@ -59,7 +59,7 @@ enum class Backend {
 
 inline std::ostream& operator<<(std::ostream& os, const Backend& backend) {
   if (backend == Backend::MC) {
-    os << "CPU";
+    os << "MC";
   }
   else if (backend == Backend::GPU) {
     os << "GPU";

@@ -190,9 +190,15 @@ def _calc_metrics(cols, df):
 #     "nodes":
 # }
 def _parse_line_based(fout, bench_name, nodes):
-    if "dlaf" in bench_name:
+    if bench_name.startswith("chol_dlaf"):
         pstr_arr = []
-        pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d} {}"
+        pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s {} {} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d} {}"
+    elif bench_name.startswith("trsm_dlaf"):
+        pstr_arr = []
+        pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s {} {} {} {} {} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d} {}"
+    elif "dlaf" in bench_name:
+        pstr_arr = []
+        pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s {} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d} {}"
     elif bench_name.startswith("chol_slate"):
         pstr_arr = ["input:{}potrf"]
         pstr_res = "d {} {} column lower {matrix_rows:d} {:d} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:g} {perf:g} NA NA no check"

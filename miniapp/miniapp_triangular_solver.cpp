@@ -35,6 +35,9 @@
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/util_types.h"
 
+#include "dlaf/miniapp/dispatch.h"
+#include "dlaf/miniapp/options.h"
+
 namespace {
 
 using dlaf::Backend;
@@ -48,34 +51,47 @@ using dlaf::comm::CommunicatorGrid;
 using dlaf::common::Ordering;
 using dlaf::comm::MPIMech;
 
-using T = double;
-
-struct options_t {
+struct Options : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportedTypes::OnlyReal> {
   SizeType m;
   SizeType n;
   SizeType mb;
   SizeType nb;
+  blas::Side side;
+  blas::Uplo uplo;
   blas::Op op;
-  int grid_rows;
-  int grid_cols;
-  int64_t nruns;
-  int64_t nwarmups;
-  bool do_check;
+  blas::Diag diag;
+
+  Options(const hpx::program_options::variables_map& vm)
+      : MiniappOptions(vm), m(vm["m"].as<SizeType>()), n(vm["n"].as<SizeType>()),
+        mb(vm["mb"].as<SizeType>()), nb(vm["nb"].as<SizeType>()),
+        side(dlaf::miniapp::parseSide(vm["side"].as<std::string>())),
+        uplo(dlaf::miniapp::parseUplo(vm["uplo"].as<std::string>())),
+        op(dlaf::miniapp::parseOp(vm["op"].as<std::string>())),
+        diag(dlaf::miniapp::parseDiag(vm["diag"].as<std::string>())) {
+    DLAF_ASSERT(m > 0 && n > 0, m, n);
+    DLAF_ASSERT(mb > 0 && nb > 0, mb, nb);
+  }
+
+  Options(Options&&) = default;
+  Options(const Options&) = default;
+  Options& operator=(Options&&) = default;
+  Options& operator=(const Options&) = default;
 };
 
-options_t check_options(hpx::program_options::variables_map& vm);
-
+template <typename T>
 using matrix_values_t = std::function<T(const GlobalElementIndex&)>;
-using linear_system_t = std::tuple<matrix_values_t, matrix_values_t, matrix_values_t>;  // A, B, X
-linear_system_t sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType m);
+
+template <typename T>
+using linear_system_t =
+    std::tuple<matrix_values_t<T>, matrix_values_t<T>, matrix_values_t<T>>;  // A, B, X
+
+template <typename T>
+linear_system_t<T> sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType m);
 }
 
-int hpx_main(hpx::program_options::variables_map& vm) {
-  {
-    dlaf::ScopedInitializer init(vm);
-
-    options_t opts = check_options(vm);
-
+struct triangularSolverMiniapp {
+  template <dlaf::Backend backend, typename T>
+  static void run(const Options& opts) {
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
 
@@ -85,8 +101,8 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     dlaf::matrix::Matrix<T, Device::CPU> bh(GlobalElementSize{opts.m, opts.n},
                                             TileElementSize{opts.mb, opts.nb}, comm_grid);
 
-    dlaf::matrix::MatrixMirror<T, Device::Default, Device::CPU> a(ah);
-    dlaf::matrix::MatrixMirror<T, Device::Default, Device::CPU> b(bh);
+    dlaf::matrix::MatrixMirror<T, dlaf::DefaultDevice<backend>::value, Device::CPU> a(ah);
+    dlaf::matrix::MatrixMirror<T, dlaf::DefaultDevice<backend>::value, Device::CPU> b(bh);
 
     auto sync_barrier = [&]() {
       a.get().waitLocalTiles();
@@ -94,10 +110,10 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       DLAF_MPI_CALL(MPI_Barrier(world));
     };
 
-    const auto side = blas::Side::Left;
-    const auto uplo = blas::Uplo::Lower;
+    const auto side = opts.side;
+    const auto uplo = opts.uplo;
     const auto op = opts.op;
-    const auto diag = blas::Diag::NonUnit;
+    const auto diag = opts.diag;
     const T alpha = 2.0;
 
     double m = ah.size().rows();
@@ -121,8 +137,9 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       sync_barrier();
 
       dlaf::common::Timer<> timeit;
-      dlaf::solver::triangular<Backend::Default, Device::Default, T>(comm_grid, side, uplo, op, diag,
-                                                                     alpha, a.get(), b.get());
+      dlaf::solver::triangular<backend, dlaf::DefaultDevice<backend>::value, T>(comm_grid, side, uplo,
+                                                                                op, diag, alpha, a.get(),
+                                                                                b.get());
 
       sync_barrier();
 
@@ -134,14 +151,16 @@ int hpx_main(hpx::program_options::variables_map& vm) {
         std::cout << "[" << run_index << "]"
                   << " " << elapsed_time << "s"
                   << " " << gigaflops << "GFlop/s"
-                  << " " << bh.size() << " " << bh.blockSize() << " " << comm_grid.size() << " "
-                  << hpx::get_os_thread_count() << std::endl;
+                  << " " << opts.type << " " << opts.side << " " << opts.uplo << " " << opts.op << " "
+                  << opts.diag << " " << bh.size() << " " << bh.blockSize() << " " << comm_grid.size()
+                  << " " << hpx::get_os_thread_count() << " " << backend << std::endl;
       }
 
       b.copyTargetToSource();
 
       // (optional) run test
-      if (opts.do_check) {
+      if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
+          opts.do_check == dlaf::miniapp::CheckIterFreq::All) {
         // TODO do not check element by element, but evaluate the entire matrix
         static_assert(std::is_arithmetic_v<T>, "mul/add error is valid just for arithmetic types");
         constexpr T muladd_error = 2 * std::numeric_limits<T>::epsilon();
@@ -151,6 +170,13 @@ int hpx_main(hpx::program_options::variables_map& vm) {
       }
     }
   }
+};
+
+int hpx_main(hpx::program_options::variables_map& vm) {
+  dlaf::initialize(vm);
+  const Options opts{vm};
+
+  dlaf::miniapp::dispatchMiniapp<triangularSolverMiniapp>(opts);
 
   return hpx::finalize();
 }
@@ -164,6 +190,8 @@ int main(int argc, char** argv) {
       "Benchmark computation of solution for A . X = 2 . B, "
       "where A is a non-unit lower triangular matrix, and B is an m by n matrix\n\n"
       "options");
+  desc_commandline.add(dlaf::miniapp::getMiniappOptionsDescription());
+  desc_commandline.add(dlaf::getOptionsDescription());
 
   // clang-format off
   desc_commandline.add_options()
@@ -171,16 +199,12 @@ int main(int argc, char** argv) {
     ("n",             value<SizeType>()     ->default_value(512),        "Matrix b columns")
     ("mb",            value<SizeType>()     ->default_value(256),        "Matrix b block rows")
     ("nb",            value<SizeType>()     ->default_value(512),        "Matrix b block columns")
-    ("op",            value<std::string>()  ->default_value("N"),        "(N) NoTrans / (T) Trans / (C) ConjTrans")
-    ("grid-rows",     value<int>()          ->default_value(1),          "Number of row processes in the 2D communicator.")
-    ("grid-cols",     value<int>()          ->default_value(1),          "Number of column processes in the 2D communicator.")
-    ("nruns",         value<int64_t>()      ->default_value(1),          "Number of runs to compute the cholesky")
-    ("nwarmups",      value<int64_t>()      ->default_value(1),          "Number of warmup runs")
-    ("check-result",  bool_switch()         ->default_value(false),      "Check the triangular system solution (for each run)")
   ;
   // clang-format on
-
-  desc_commandline.add(dlaf::getOptionsDescription());
+  dlaf::miniapp::addSideOption(desc_commandline);
+  dlaf::miniapp::addUploOption(desc_commandline);
+  dlaf::miniapp::addOpOption(desc_commandline);
+  dlaf::miniapp::addDiagOption(desc_commandline);
 
   hpx::init_params p;
   p.desc_cmdline = desc_commandline;
@@ -189,33 +213,6 @@ int main(int argc, char** argv) {
 }
 
 namespace {
-
-options_t check_options(hpx::program_options::variables_map& vm) {
-  char c_op = vm["op"].as<std::string>()[0];
-  DLAF_ASSERT(c_op == 'N' || c_op == 'T' || c_op == 'C', c_op);
-
-  // clang-format off
-  options_t opts = {
-    vm["m"].as<SizeType>(),     vm["n"].as<SizeType>(),
-    vm["mb"].as<SizeType>(),    vm["nb"].as<SizeType>(),
-    blas::char2op(c_op),
-    vm["grid-rows"].as<int>(),  vm["grid-cols"].as<int>(),
-
-    vm["nruns"].as<int64_t>(),
-    vm["nwarmups"].as<int64_t>(),
-    vm["check-result"].as<bool>(),
-  };
-  // clang-format on
-
-  DLAF_ASSERT(opts.m > 0 && opts.n > 0, opts.m, opts.n);
-  DLAF_ASSERT(opts.mb > 0 && opts.nb > 0, opts.mb, opts.nb);
-  DLAF_ASSERT(opts.grid_rows > 0 && opts.grid_cols > 0, opts.grid_rows, opts.grid_cols);
-  DLAF_ASSERT(opts.nruns > 0, opts.nruns);
-  DLAF_ASSERT(opts.nwarmups >= 0, opts.nwarmups);
-
-  return opts;
-}
-
 /// Returns a tuple of element generators of three matrices A(m x m), B (m x n), X (m x n), for which it
 /// holds op(A) X = alpha B (alpha can be any value).
 ///
@@ -238,7 +235,8 @@ options_t check_options(hpx::program_options::variables_map& vm) {
 /// Therefore
 /// B_ij = (X_ij + (kk-1) * gamma) / alpha, if diag == Unit
 /// B_ij = kk * gamma / alpha, otherwise.
-linear_system_t sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType m) {
+template <typename T>
+linear_system_t<T> sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType m) {
   static_assert(std::is_arithmetic_v<T> && !std::is_integral_v<T>,
                 "it is valid just with floating point values");
 

@@ -55,7 +55,6 @@ using dlaf::TileElementIndex;
 using dlaf::TileElementSize;
 using dlaf::Matrix;
 using dlaf::matrix::MatrixMirror;
-using dlaf::miniapp::MiniappOptions;
 using dlaf::common::Ordering;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
@@ -68,44 +67,22 @@ template <typename T>
 void check_cholesky(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, CommunicatorGrid comm_grid,
                     blas::Uplo uplo);
 
-enum class CholCheckIterFreq { None, Last, All };
-
-CholCheckIterFreq parse_chol_check(const std::string& check) {
-  if (check == "all")
-    return CholCheckIterFreq::All;
-  else if (check == "last")
-    return CholCheckIterFreq::Last;
-  else if (check == "none")
-    return CholCheckIterFreq::None;
-
-  std::cout << "Parsing is not implemented for --check-result=" << check << "!" << std::endl;
-  std::terminate();
-  return CholCheckIterFreq::None;  // unreachable
-}
-
-struct Options : MiniappOptions {
+struct Options : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportedTypes::RealAndComplex> {
   SizeType m;
   SizeType mb;
-  int grid_rows;
-  int grid_cols;
   blas::Uplo uplo;
-  CholCheckIterFreq do_check;
 
   Options(const hpx::program_options::variables_map& vm)
       : MiniappOptions(vm), m(vm["matrix-size"].as<SizeType>()), mb(vm["block-size"].as<SizeType>()),
-        grid_rows(vm["grid-rows"].as<int>()), grid_cols(vm["grid-cols"].as<int>()),
-        uplo(dlaf::miniapp::parse_uplo(vm["uplo"].as<std::string>())),
-        do_check(parse_chol_check(vm["check-result"].as<std::string>())) {
+        uplo(dlaf::miniapp::parseUplo(vm["uplo"].as<std::string>())) {
     DLAF_ASSERT(m > 0, m);
     DLAF_ASSERT(mb > 0, mb);
-    DLAF_ASSERT(grid_rows > 0, grid_rows);
-    DLAF_ASSERT(grid_cols > 0, grid_cols);
 
-    if (do_check != CholCheckIterFreq::None && m % mb) {
+    if (do_check != dlaf::miniapp::CheckIterFreq::None && m % mb) {
       std::cerr
           << "Warning! At the moment result checking works just with matrix sizes that are multiple of the block size."
           << std::endl;
-      do_check = CholCheckIterFreq::None;
+      do_check = dlaf::miniapp::CheckIterFreq::None;
     }
   }
 
@@ -116,7 +93,7 @@ struct Options : MiniappOptions {
 };
 }
 
-struct cholesky {
+struct choleskyMiniapp {
   template <Backend backend, typename T>
   static void run(const Options& opts) {
     using MatrixMirrorType = MatrixMirror<T, DefaultDevice<backend>::value, Device::CPU>;
@@ -192,8 +169,8 @@ struct cholesky {
                   << hpx::get_os_thread_count() << " " << backend << std::endl;
 
       // (optional) run test
-      if ((opts.do_check == CholCheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
-          opts.do_check == CholCheckIterFreq::All) {
+      if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
+          opts.do_check == dlaf::miniapp::CheckIterFreq::All) {
         Matrix<T, Device::CPU> original(matrix_size, block_size, comm_grid);
         copy(matrix_ref, original);
         check_cholesky(original, matrix_host, comm_grid, opts.uplo);
@@ -206,7 +183,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
   dlaf::initialize(vm);
   const Options opts{vm};
 
-  dlaf::miniapp::dispatch_miniapp<cholesky>(opts);
+  dlaf::miniapp::dispatchMiniapp<choleskyMiniapp>(opts);
 
   return hpx::finalize();
 }
@@ -223,14 +200,11 @@ int main(int argc, char** argv) {
 
   // clang-format off
   desc_commandline.add_options()
-    ("uplo",         value<std::string>()->default_value("lower"),    "Type of triangular matrix ('lower', 'upper')")
-    ("matrix-size",  value<SizeType>()   ->default_value(4096),       "Matrix size")
-    ("block-size",   value<SizeType>()   ->default_value( 256),       "Block cyclic distribution size")
-    ("grid-rows",    value<int>()        ->default_value(   1),       "Number of row processes in the 2D communicator")
-    ("grid-cols",    value<int>()        ->default_value(   1),       "Number of column processes in the 2D communicator")
-    ("check-result", value<std::string>()->default_value("none"),     "Enable result checking ('none', 'all', 'last')")
+    ("matrix-size",  value<SizeType>()   ->default_value(4096), "Matrix size")
+    ("block-size",   value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
   ;
   // clang-format on
+  dlaf::miniapp::addUploOption(desc_commandline);
 
   hpx::init_params p;
   p.desc_cmdline = desc_commandline;

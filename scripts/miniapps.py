@@ -121,7 +121,7 @@ class JobText:
             return
 
         print(f"Submitting : {job_file}")
-        os.system(f"sbatch --chdir={job_path} {job_file}")
+        system(f"sbatch --chdir={job_path} {job_file}")
         # sleep to not overload the scheduler
         sleep(1)
 

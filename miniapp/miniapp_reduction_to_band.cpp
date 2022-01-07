@@ -59,71 +59,72 @@ int miniapp(hpx::program_options::variables_map& vm) {
   using dlaf::comm::Communicator;
   using dlaf::comm::CommunicatorGrid;
 
-  dlaf::initialize(vm);
-  options_t opts = parse_options(vm);
+  {
+    dlaf::ScopedInitializer init(vm);
+    options_t opts = parse_options(vm);
 
-  Communicator world(MPI_COMM_WORLD);
-  CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, common::Ordering::ColumnMajor);
+    Communicator world(MPI_COMM_WORLD);
+    CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, common::Ordering::ColumnMajor);
 
-  // Allocate memory for the matrix
-  GlobalElementSize matrix_size(opts.m, opts.m);
-  TileElementSize block_size(opts.mb, opts.mb);
+    // Allocate memory for the matrix
+    GlobalElementSize matrix_size(opts.m, opts.m);
+    TileElementSize block_size(opts.mb, opts.mb);
 
-  ConstMatrixType matrix_ref = [matrix_size, block_size, comm_grid]() {
-    using dlaf::matrix::util::set_random_hermitian;
+    ConstMatrixType matrix_ref = [matrix_size, block_size, comm_grid]() {
+      using dlaf::matrix::util::set_random_hermitian;
 
-    MatrixType hermitian(matrix_size, block_size, comm_grid);
-    set_random_hermitian(hermitian);
+      MatrixType hermitian(matrix_size, block_size, comm_grid);
+      set_random_hermitian(hermitian);
 
-    return hermitian;
-  }();
+      return hermitian;
+    }();
 
-  const auto& distribution = matrix_ref.distribution();
+    const auto& distribution = matrix_ref.distribution();
 
-  for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
-    if (0 == world.rank() && run_index >= 0)
-      std::cout << "[" << run_index << "]" << std::endl;
+    for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
+      if (0 == world.rank() && run_index >= 0)
+        std::cout << "[" << run_index << "]" << std::endl;
 
-    MatrixType matrix(matrix_size, block_size, comm_grid);
-    copy(matrix_ref, matrix);
+      MatrixType matrix(matrix_size, block_size, comm_grid);
+      copy(matrix_ref, matrix);
 
-    // wait all setup tasks before starting benchmark
-    matrix.waitLocalTiles();
-    DLAF_MPI_CALL(MPI_Barrier(world));
-
-    dlaf::common::Timer<> timeit;
-    auto taus = dlaf::eigensolver::reductionToBand<dlaf::Backend::MC>(comm_grid, matrix);
-
-    // wait for last task and barrier for all ranks
-    {
-      GlobalTileIndex last_tile(matrix.nrTiles().rows() - 1, matrix.nrTiles().cols() - 2);
-      if (matrix.rankIndex() == distribution.rankGlobalTile(last_tile))
-        matrix(last_tile).get();
-
+      // wait all setup tasks before starting benchmark
+      matrix.waitLocalTiles();
       DLAF_MPI_CALL(MPI_Barrier(world));
+
+      dlaf::common::Timer<> timeit;
+      auto taus = dlaf::eigensolver::reductionToBand<dlaf::Backend::MC>(comm_grid, matrix);
+
+      // wait for last task and barrier for all ranks
+      {
+        GlobalTileIndex last_tile(matrix.nrTiles().rows() - 1, matrix.nrTiles().cols() - 2);
+        if (matrix.rankIndex() == distribution.rankGlobalTile(last_tile))
+          matrix(last_tile).get();
+
+        DLAF_MPI_CALL(MPI_Barrier(world));
+      }
+      auto elapsed_time = timeit.elapsed();
+
+      double gigaflops = std::numeric_limits<T>::quiet_NaN();
+      {
+        double n = matrix.size().rows();
+        double b = matrix.blockSize().rows();
+        auto add_mul = 2. / 3. * n * n * n - n * n * b;
+        gigaflops = dlaf::total_ops<T>(add_mul, add_mul) / elapsed_time / 1e9;
+      }
+
+      // print benchmark results
+      if (0 == world.rank() && run_index >= 0)
+        std::cout << "[" << run_index << "]"
+                  << " " << elapsed_time << "s"
+                  << " " << gigaflops << "GFlop/s"
+                  << " " << matrix.size() << " " << matrix.blockSize() << " " << comm_grid.size() << " "
+                  << hpx::get_os_thread_count() << std::endl;
+
+      // TODO (optional) run test
     }
-    auto elapsed_time = timeit.elapsed();
-
-    double gigaflops = std::numeric_limits<T>::quiet_NaN();
-    {
-      double n = matrix.size().rows();
-      double b = matrix.blockSize().rows();
-      auto add_mul = 2. / 3. * n * n * n - n * n * b;
-      gigaflops = dlaf::total_ops<T>(add_mul, add_mul) / elapsed_time / 1e9;
-    }
-
-    // print benchmark results
-    if (0 == world.rank() && run_index >= 0)
-      std::cout << "[" << run_index << "]"
-                << " " << elapsed_time << "s"
-                << " " << gigaflops << "GFlop/s"
-                << " " << matrix.size() << " " << matrix.blockSize() << " " << comm_grid.size() << " "
-                << hpx::get_os_thread_count() << std::endl;
-
-    // TODO (optional) run test
   }
 
-  dlaf::finalize();
   return hpx::finalize();
 }
 

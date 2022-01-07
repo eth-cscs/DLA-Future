@@ -84,6 +84,20 @@ void initialize(int argc, const char* const argv[], configuration const& user_cf
 /// Should be called once after every dlaf::initialize call.
 void finalize();
 
+/// RAII helper for dlaf::initialize and dlaf::finalize.
+///
+/// Calls dlaf::initialize on construction and dlaf::finalize on destruction.
+struct [[nodiscard]] ScopedInitializer {
+  ScopedInitializer(hpx::program_options::variables_map const& vm, configuration const& user_cfg = {});
+  ScopedInitializer(int argc, const char* const argv[], configuration const& user_cfg = {});
+  ~ScopedInitializer();
+
+  ScopedInitializer(ScopedInitializer &&) = delete;
+  ScopedInitializer(ScopedInitializer const&) = delete;
+  ScopedInitializer& operator=(ScopedInitializer&&) = delete;
+  ScopedInitializer& operator=(ScopedInitializer const&) = delete;
+};
+
 /// Initialize the MPI pool.
 ///
 ///

@@ -151,9 +151,9 @@ struct triangularSolverMiniapp {
         std::cout << "[" << run_index << "]"
                   << " " << elapsed_time << "s"
                   << " " << gigaflops << "GFlop/s"
-                  << " " << opts.type << " " << opts.side << " " << opts.uplo << " " << opts.op << " "
-                  << opts.diag << " " << bh.size() << " " << bh.blockSize() << " " << comm_grid.size()
-                  << " " << hpx::get_os_thread_count() << " " << backend << std::endl;
+                  << " " << opts.type << opts.side << opts.uplo << opts.op << opts.diag << " "
+                  << bh.size() << " " << bh.blockSize() << " " << comm_grid.size() << " "
+                  << hpx::get_os_thread_count() << " " << backend << std::endl;
       }
 
       b.copyTargetToSource();

@@ -164,7 +164,7 @@ struct choleskyMiniapp {
         std::cout << "[" << run_index << "]"
                   << " " << elapsed_time << "s"
                   << " " << gigaflops << "GFlop/s"
-                  << " " << opts.type << " " << opts.uplo << " " << matrix_host.size() << " "
+                  << " " << opts.type << opts.uplo << " " << matrix_host.size() << " "
                   << matrix_host.blockSize() << " " << comm_grid.size() << " "
                   << hpx::get_os_thread_count() << " " << backend << std::endl;
 

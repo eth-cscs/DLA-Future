@@ -336,7 +336,7 @@ def parse_jobs_cmdargs(description):
 
     df = parse_jobs(paths, args.distinguish_dir)
     if df.empty:
-        print('Parsed zero results, is the path correct? (paths are ' + str(paths) + ')')
+        print("Parsed zero results, is the path correct? (paths are " + str(paths) + ")")
         exit(1)
 
     return df

@@ -50,21 +50,24 @@ enum class ElementType { Single, Double, ComplexSingle, ComplexDouble };
 
 template <SupportedTypes types>
 ElementType parseElementType(const std::string& type) {
-  if (type == "s")
-    return ElementType::Single;
-  else if (type == "d")
-    return ElementType::Double;
+  if (type.size() == 1) {
+    const auto type_lower = std::tolower(type[0]);
+    if (type_lower == 's')
+      return ElementType::Single;
+    else if (type_lower == 'd')
+      return ElementType::Double;
 
-  if constexpr (types == SupportedTypes::RealAndComplex) {
-    if (type == "c")
-      return ElementType::ComplexSingle;
-    else if (type == "z")
-      return ElementType::ComplexDouble;
-  }
-  else {
-    if (type == "c" || type == "z") {
-      std::cout << "--type=" << type << " is not supported in this miniapp!" << std::endl;
-      std::terminate();
+    if constexpr (types == SupportedTypes::RealAndComplex) {
+      if (type_lower == 'c')
+        return ElementType::ComplexSingle;
+      else if (type_lower == 'z')
+        return ElementType::ComplexDouble;
+    }
+    else {
+      if (type_lower == 'c' || type_lower == 'z') {
+        std::cout << "--type=" << type << " is not supported in this miniapp!" << std::endl;
+        std::terminate();
+      }
     }
   }
 

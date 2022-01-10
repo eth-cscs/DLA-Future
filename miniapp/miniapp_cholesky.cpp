@@ -20,6 +20,7 @@
 
 #include "dlaf/auxiliary/norm.h"
 #include "dlaf/blas/tile.h"
+#include "dlaf/common/format_short.h"
 #include "dlaf/common/timer.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/error.h"
@@ -164,7 +165,8 @@ struct choleskyMiniapp {
         std::cout << "[" << run_index << "]"
                   << " " << elapsed_time << "s"
                   << " " << gigaflops << "GFlop/s"
-                  << " " << opts.type << opts.uplo << " " << matrix_host.size() << " "
+                  << " " << dlaf::internal::FormatShort{opts.type}
+                  << dlaf::internal::FormatShort{opts.uplo} << " " << matrix_host.size() << " "
                   << matrix_host.blockSize() << " " << comm_grid.size() << " "
                   << hpx::get_os_thread_count() << " " << backend << std::endl;
 

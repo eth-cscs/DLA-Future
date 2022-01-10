@@ -19,6 +19,7 @@
 
 #include <blas/util.hh>
 
+#include "dlaf/common/format_short.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/timer.h"
@@ -151,8 +152,10 @@ struct triangularSolverMiniapp {
         std::cout << "[" << run_index << "]"
                   << " " << elapsed_time << "s"
                   << " " << gigaflops << "GFlop/s"
-                  << " " << opts.type << opts.side << opts.uplo << opts.op << opts.diag << " "
-                  << bh.size() << " " << bh.blockSize() << " " << comm_grid.size() << " "
+                  << " " << dlaf::internal::FormatShort{opts.type}
+                  << dlaf::internal::FormatShort{opts.side} << dlaf::internal::FormatShort{opts.uplo}
+                  << dlaf::internal::FormatShort{opts.op} << dlaf::internal::FormatShort{opts.diag}
+                  << " " << bh.size() << " " << bh.blockSize() << " " << comm_grid.size() << " "
                   << hpx::get_os_thread_count() << " " << backend << std::endl;
       }
 

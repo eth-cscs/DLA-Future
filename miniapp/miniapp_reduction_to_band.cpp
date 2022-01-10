@@ -14,6 +14,7 @@
 #include <hpx/hpx_init.hpp>
 #include <limits>
 
+#include "dlaf/common/format_short.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/timer.h"
@@ -121,9 +122,9 @@ struct reductionToBandMiniapp {
         std::cout << "[" << run_index << "]"
                   << " " << elapsed_time << "s"
                   << " " << gigaflops << "GFlop/s"
-                  << " " << opts.type << " " << matrix.size() << " " << matrix.blockSize() << " "
-                  << comm_grid.size() << " " << hpx::get_os_thread_count() << " " << backend
-                  << std::endl;
+                  << " " << dlaf::internal::FormatShort{opts.type} << " " << matrix.size() << " "
+                  << matrix.blockSize() << " " << comm_grid.size() << " " << hpx::get_os_thread_count()
+                  << " " << backend << std::endl;
 
       // TODO (optional) run test
     }

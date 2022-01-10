@@ -22,6 +22,7 @@
 #include <hpx/program_options.hpp>
 
 #include <dlaf/common/assert.h>
+#include <dlaf/common/format_short.h>
 #include <dlaf/types.h>
 
 namespace dlaf::miniapp {
@@ -74,20 +75,41 @@ ElementType parseElementType(const std::string& type) {
 }
 
 inline std::ostream& operator<<(std::ostream& os, const ElementType& type) {
-  if (type == ElementType::Single) {
-    os << "Single";
+  switch (type) {
+    case ElementType::Single:
+      os << "Single";
+      break;
+    case ElementType::Double:
+      os << "Double";
+      break;
+    case ElementType::ComplexSingle:
+      os << "ComplexSingle";
+      break;
+    case ElementType::ComplexDouble:
+      os << "ComplexDouble";
+      break;
+    default:
+      os << "unknown type (" << static_cast<std::underlying_type_t<ElementType>>(type) << ")";
   }
-  else if (type == ElementType::Double) {
-    os << "Double";
-  }
-  else if (type == ElementType::ComplexSingle) {
-    os << "ComplexSingle";
-  }
-  else if (type == ElementType::ComplexDouble) {
-    os << "ComplexDouble";
-  }
-  else {
-    os << "unknown type (" << static_cast<std::underlying_type_t<ElementType>>(type) << ")";
+  return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const dlaf::internal::FormatShort<ElementType>& type) {
+  switch (type.value) {
+    case ElementType::Single:
+      os << "s";
+      break;
+    case ElementType::Double:
+      os << "d";
+      break;
+    case ElementType::ComplexSingle:
+      os << "c";
+      break;
+    case ElementType::ComplexDouble:
+      os << "z";
+      break;
+    default:
+      os << "?";
   }
   return os;
 }

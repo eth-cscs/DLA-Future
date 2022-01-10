@@ -176,10 +176,12 @@ struct triangularSolverMiniapp {
 };
 
 int hpx_main(hpx::program_options::variables_map& vm) {
-  dlaf::initialize(vm);
-  const Options opts{vm};
+  {
+    dlaf::ScopedInitializer init(vm);
+    const Options opts(vm);
 
-  dlaf::miniapp::dispatchMiniapp<triangularSolverMiniapp>(opts);
+    dlaf::miniapp::dispatchMiniapp<triangularSolverMiniapp>(opts);
+  }
 
   return hpx::finalize();
 }

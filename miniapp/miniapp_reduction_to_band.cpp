@@ -132,12 +132,12 @@ struct reductionToBandMiniapp {
 };
 
 int hpx_main(hpx::program_options::variables_map& vm) {
-  dlaf::initialize(vm);
-  Options opts{vm};
+  {
+    dlaf::ScopedInitializer init(vm);
+    const Options opts(vm);
 
-  dlaf::miniapp::dispatchMiniapp<reductionToBandMiniapp>(opts);
-
-  dlaf::finalize();
+    dlaf::miniapp::dispatchMiniapp<reductionToBandMiniapp>(opts);
+  }
 
   return hpx::finalize();
 }

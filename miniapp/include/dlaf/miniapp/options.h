@@ -234,31 +234,37 @@ inline hpx::program_options::options_description getMiniappOptionsDescription() 
 }
 
 inline void addLayoutOption(hpx::program_options::options_description& desc,
-                            const std::string& def = "C") {
-  desc.add_options()("layout", hpx::program_options::value<std::string>()->default_value(def),
+                            const blas::Layout def = blas::Layout::ColMajor) {
+  desc.add_options()("layout",
+                     hpx::program_options::value<std::string>()->default_value({blas::layout2char(def)}),
                      "'C' (ColMajor), 'R' (RowMajor)");
 }
 
-inline void addOpOption(hpx::program_options::options_description& desc, const std::string& def = "N") {
-  desc.add_options()("op", hpx::program_options::value<std::string>()->default_value(def),
+inline void addOpOption(hpx::program_options::options_description& desc,
+                        const blas::Op def = blas::Op::NoTrans) {
+  desc.add_options()("op",
+                     hpx::program_options::value<std::string>()->default_value({blas::op2char(def)}),
                      "'N' (NoTrans), 'T' (Trans), 'C' (ConjTrans)");
 }
 
 inline void addUploOption(hpx::program_options::options_description& desc,
-                          const std::string& def = "L") {
-  desc.add_options()("uplo", hpx::program_options::value<std::string>()->default_value(def),
+                          const blas::Uplo def = blas::Uplo::Lower) {
+  desc.add_options()("uplo",
+                     hpx::program_options::value<std::string>()->default_value({blas::uplo2char(def)}),
                      "'L' (Lower), 'U' (Upper), 'G' (General)");
 }
 
 inline void addDiagOption(hpx::program_options::options_description& desc,
-                          const std::string& def = "N") {
-  desc.add_options()("diag", hpx::program_options::value<std::string>()->default_value(def),
+                          const blas::Diag def = blas::Diag::NonUnit) {
+  desc.add_options()("diag",
+                     hpx::program_options::value<std::string>()->default_value({blas::diag2char(def)}),
                      "'N' (NonUnit), 'U' (Unit)");
 }
 
 inline void addSideOption(hpx::program_options::options_description& desc,
-                          const std::string& def = "L") {
-  desc.add_options()("side", hpx::program_options::value<std::string>()->default_value(def),
+                          const blas::Side def = blas::Side::Left) {
+  desc.add_options()("side",
+                     hpx::program_options::value<std::string>()->default_value({blas::side2char(def)}),
                      "'L' (Left), 'R' (Right)");
 }
 }

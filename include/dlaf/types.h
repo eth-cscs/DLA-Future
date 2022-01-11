@@ -38,11 +38,13 @@ enum class Device {
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Device& device) {
-  if (device == Device::CPU) {
-    os << "CPU";
-  }
-  else if (device == Device::GPU) {
-    os << "GPU";
+  switch (device) {
+    case Device::CPU:
+      os << "CPU";
+      break;
+    case Device::GPU:
+      os << "GPU";
+      break;
   }
   return os;
 }
@@ -58,11 +60,13 @@ enum class Backend {
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Backend& backend) {
-  if (backend == Backend::MC) {
-    os << "MC";
-  }
-  else if (backend == Backend::GPU) {
-    os << "GPU";
+  switch (backend) {
+    case Backend::MC:
+      os << "MC";
+      break;
+    case Backend::GPU:
+      os << "GPU";
+      break;
   }
   return os;
 }

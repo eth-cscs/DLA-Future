@@ -31,15 +31,18 @@ RUN mkdir -p /opt/libtree && \
     chmod +x /opt/libtree/libtree
 
 # Install MKL and remove static libs (to keep image smaller)
+ARG USE_MKL=ON
 ARG MKL_VERSION=2020.4-912
 ARG MKL_SPEC=2020.4.304
-RUN wget -qO - https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB 2>/dev/null | apt-key add - && \
-    apt-add-repository 'deb https://apt.repos.intel.com/mkl all main' && \
-    apt-get install -y -qq --no-install-recommends intel-mkl-64bit-${MKL_VERSION} && \
-    rm -rf /var/lib/apt/lists/* && \
-    find "/opt/intel/" -name "*.a" -delete && \
-    echo -e "/opt/intel/lib/intel64\n/opt/intel/compilers_and_libraries/linux/mkl/lib/intel64" >> /etc/ld.so.conf.d/intel.conf && \
-    ldconfig
+RUN if [ "$USE_MKL" = "ON" ]; then \
+      wget -qO - https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB 2>/dev/null | apt-key add - && \
+      apt-add-repository 'deb https://apt.repos.intel.com/mkl all main' && \
+      apt-get install -y -qq --no-install-recommends intel-mkl-64bit-${MKL_VERSION} && \
+      rm -rf /var/lib/apt/lists/* && \
+      find "/opt/intel/" -name "*.a" -delete && \
+      echo -e "/opt/intel/lib/intel64\n/opt/intel/compilers_and_libraries/linux/mkl/lib/intel64" >> /etc/ld.so.conf.d/intel.conf && \
+      ldconfig ; \
+    fi
 
 # This is the spack version we want to have
 ARG SPACK_SHA
@@ -69,10 +72,12 @@ RUN spack external find \
     perl \
     python \
     xz && \
-    echo -e "  intel-mkl:\n    externals:\n    - spec: \"intel-mkl@$MKL_SPEC\"\n      prefix: /opt/intel\n    buildable: False" >> ~/.spack/packages.yaml
+    if [ "$USE_MKL" = "ON" ]; then \
+      echo -e "  intel-mkl:\n    externals:\n    - spec: \"intel-mkl@$MKL_SPEC\"\n      prefix: /opt/intel\n    buildable: False" >> ~/.spack/packages.yaml ; \
+    fi
 
 # Set up the binary cache and trust the public part of our signing key
-COPY ./ci/docker/spack/public_key.asc ./public_key.asc
+COPY ./ci/docker/public_key.asc ./public_key.asc
 RUN spack mirror add --scope site cscs https://spack.cloud && \
     spack gpg trust ./public_key.asc
 

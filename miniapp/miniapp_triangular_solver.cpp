@@ -43,6 +43,7 @@ namespace {
 
 using dlaf::Backend;
 using dlaf::Device;
+using dlaf::DefaultDevice_v;
 using dlaf::GlobalElementIndex;
 using dlaf::GlobalElementSize;
 using dlaf::SizeType;
@@ -102,8 +103,8 @@ struct triangularSolverMiniapp {
     dlaf::matrix::Matrix<T, Device::CPU> bh(GlobalElementSize{opts.m, opts.n},
                                             TileElementSize{opts.mb, opts.nb}, comm_grid);
 
-    dlaf::matrix::MatrixMirror<T, dlaf::DefaultDevice<backend>::value, Device::CPU> a(ah);
-    dlaf::matrix::MatrixMirror<T, dlaf::DefaultDevice<backend>::value, Device::CPU> b(bh);
+    dlaf::matrix::MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU> a(ah);
+    dlaf::matrix::MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU> b(bh);
 
     auto sync_barrier = [&]() {
       a.get().waitLocalTiles();
@@ -138,9 +139,9 @@ struct triangularSolverMiniapp {
       sync_barrier();
 
       dlaf::common::Timer<> timeit;
-      dlaf::solver::triangular<backend, dlaf::DefaultDevice<backend>::value, T>(comm_grid, side, uplo,
-                                                                                op, diag, alpha, a.get(),
-                                                                                b.get());
+      dlaf::solver::triangular<backend, dlaf::DefaultDevice_v<backend>, T>(comm_grid, side, uplo, op,
+                                                                           diag, alpha, a.get(),
+                                                                           b.get());
 
       sync_barrier();
 

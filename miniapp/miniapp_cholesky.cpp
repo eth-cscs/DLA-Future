@@ -45,7 +45,7 @@ using hpx::unwrapping;
 using dlaf::Device;
 using dlaf::Coord;
 using dlaf::Backend;
-using dlaf::DefaultDevice;
+using dlaf::DefaultDevice_v;
 using dlaf::SizeType;
 using dlaf::comm::Index2D;
 using dlaf::GlobalElementSize;
@@ -97,7 +97,7 @@ struct Options : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportedTypes::Re
 struct choleskyMiniapp {
   template <Backend backend, typename T>
   static void run(const Options& opts) {
-    using MatrixMirrorType = MatrixMirror<T, DefaultDevice<backend>::value, Device::CPU>;
+    using MatrixMirrorType = MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU>;
     using HostMatrixType = Matrix<T, Device::CPU>;
     using ConstHostMatrixType = Matrix<const T, Device::CPU>;
 
@@ -138,8 +138,8 @@ struct choleskyMiniapp {
         matrix.get().waitLocalTiles();
 
         dlaf::common::Timer<> timeit;
-        dlaf::factorization::cholesky<backend, DefaultDevice<backend>::value, T>(comm_grid, opts.uplo,
-                                                                                 matrix.get());
+        dlaf::factorization::cholesky<backend, DefaultDevice_v<backend>, T>(comm_grid, opts.uplo,
+                                                                            matrix.get());
 
         // wait for last task and barrier for all ranks
         {

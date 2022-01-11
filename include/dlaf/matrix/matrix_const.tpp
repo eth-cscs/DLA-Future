@@ -68,8 +68,8 @@ void Matrix<const T, device>::setUpTiles(const memory::MemoryView<ElementType, d
       LocalTileIndex ind(i, j);
       TileElementSize tile_size = layout.tileSize(ind);
       tile_managers_.emplace_back(
-          TileType(tile_size, MemView(mem, layout.tileOffset(ind), layout.minTileMemSize(tile_size)),
-                   layout.ldTile()));
+          TileDataType(tile_size, MemView(mem, layout.tileOffset(ind), layout.minTileMemSize(tile_size)),
+                       layout.ldTile()));
     }
   }
 }

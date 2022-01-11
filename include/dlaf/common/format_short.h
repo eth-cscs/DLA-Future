@@ -12,10 +12,7 @@
 
 /// @file
 
-#include <ostream>
 #include <type_traits>
-
-#include "dlaf/common/source_location.h"
 
 namespace dlaf::internal {
 /// Helper type to signal that a type should be formatted in its "short" form.

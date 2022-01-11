@@ -106,7 +106,7 @@ gpu release build gcc9:
   variables:
     BUILD_DOCKER_FILE: ci/docker/spack/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/spack/deploy.Dockerfile
-    BASE_IMAGE: nvidia/cuda:11.0.3-devel-ubuntu20.04
+    BASE_IMAGE: nvidia/cuda:11.1.1-devel-ubuntu20.04
     COMPILER: gcc@9.3.0
     SPACK_ENVIRONMENT: ci/docker/spack/gpu-release.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-gpu-gcc9/build
@@ -120,7 +120,7 @@ gpu release build clang10:
   variables:
     BUILD_DOCKER_FILE: ci/docker/spack/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/spack/deploy.Dockerfile
-    BASE_IMAGE: nvidia/cuda:11.0.3-devel-ubuntu20.04
+    BASE_IMAGE: nvidia/cuda:11.1.1-devel-ubuntu20.04
     COMPILER: clang@10.0.0
     SPACK_ENVIRONMENT: ci/docker/spack/gpu-release.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-gpu-clang10/build

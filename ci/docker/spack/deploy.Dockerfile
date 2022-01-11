@@ -21,6 +21,7 @@ SHELL ["/bin/bash", "-c"]
 RUN spack repo rm --scope site dlaf && \
     spack repo add ${SOURCE}/spack && \
     spack -e ci develop --no-clone -p ${SOURCE} dla-future@develop && \
+    spack -e ci concretize -f && \
     spack -e ci install --keep-stage
 
 # Prune and bundle binaries

@@ -324,10 +324,7 @@ TYPED_TEST(RealTileOperationsTestMC, Stedc) {
   auto expected_evecs_f = [sz](const TileElementIndex& idx) {
     SizeType j = idx.col() + 1;
     SizeType k = idx.row() + 1;
-    // Note that eigenvectors are only unique up to a sign. `eigvec_sign` tackles the sign differences
-    // between the analytic formula for the eigenvectors and the values returned by `stedc`.
-    int eigvec_sign = (idx.col() == 1 || idx.col() == 2 || idx.col() == 4 || idx.col() == 8) ? -1 : 1;
-    return ComplexParam(eigvec_sign * std::sqrt(2.0 / (sz + 1)) * std::sin(j * k * pi / (sz + 1)));
+    return ComplexParam(std::sqrt(2.0 / (sz + 1)) * std::sin(j * k * pi / (sz + 1)));
   };
   auto expected_evecs =
       createTile<ComplexParam, Device::CPU>(std::move(expected_evecs_f), TileElementSize(sz, sz), sz);
@@ -335,6 +332,6 @@ TYPED_TEST(RealTileOperationsTestMC, Stedc) {
   CHECK_TILE_NEAR(expected_tridiag, tridiag, sz * TypeUtilities<RealParam>::error,
                   sz * TypeUtilities<RealParam>::error);
 
-  CHECK_TILE_NEAR(expected_evecs, evecs, sz * TypeUtilities<ComplexParam>::error,
-                  sz * TypeUtilities<ComplexParam>::error);
+  CHECK_EVECS_NEAR_OR_OPPOSITE(expected_evecs, evecs, sz * TypeUtilities<ComplexParam>::error,
+                               sz * TypeUtilities<ComplexParam>::error);
 }

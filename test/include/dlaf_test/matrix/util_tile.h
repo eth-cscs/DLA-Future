@@ -268,6 +268,45 @@ void checkNear(ElementGetter&& expected, const Tile<const T, D>& tile, BaseType<
 }
 #define CHECK_TILE_NEAR(expected, tile, rel_err, abs_err) \
   ::dlaf::matrix::test::checkNear(expected, tile, rel_err, abs_err, __FILE__, __LINE__)
+
+template <class T>
+void checkEvecsNearOrOpposite(Tile<const T, Device::CPU>& expected_evecs,
+                              Tile<const T, Device::CPU>& actual_evecs, BaseType<T> rel_tol,
+                              BaseType<T> abs_tol, const char* file, const int line) {
+  ASSERT_GE(rel_tol, 0);
+  ASSERT_GE(abs_tol, 0);
+  ASSERT_TRUE(rel_tol > 0 || abs_tol > 0);
+
+  // Eigenvectors are unqiue up to a sign.
+  for (SizeType j = 0; j < actual_evecs.size().cols(); ++j) {
+    BaseType<T> sign = 1.0;
+    for (SizeType i = 0; i < actual_evecs.size().rows(); ++i) {
+      TileElementIndex index(i, j);
+      auto expected = expected_evecs(index);
+      auto actual = actual_evecs(index);
+      // If the first elements of the eigenvectors (expected and actual) are opposite, all remaining
+      // elements have to be opposite but equal in magnitude for the two vectors to be considered equal.
+      if (i == 0 && std::abs(expected + actual) < abs_tol) {
+        sign = -1.0;
+      }
+      auto abs_err = std::abs(expected - sign * actual);
+      auto rel_err = abs_err / std::max(std::abs(expected), std::abs(actual));
+      if ((abs_err > abs_tol) && (rel_err > rel_tol)) {
+        // clang-format off
+        ADD_FAILURE_AT(file, line) << "Error at index " << index << "!\n"
+          << "The actual value is "        << actual  << " but the expected value is "     << expected  << ".\n"
+          << "The relative difference is " << rel_err << " but the relative tolerance is " << rel_tol   << ".\n"
+          << "The absolute difference is " << abs_err << " but the absolute tolerance is " << abs_tol   << "."  << std::endl;
+        // clang-format on
+        return;
+      }
+    }
+  }
+}
+#define CHECK_EVECS_NEAR_OR_OPPOSITE(expected_evecs, actual_evecs, rel_tol, abs_tol)             \
+  ::dlaf::matrix::test::checkEvecsNearOrOpposite(expected_evecs, actual_evecs, rel_tol, abs_tol, \
+                                                 __FILE__, __LINE__)
+
 }
 }
 }

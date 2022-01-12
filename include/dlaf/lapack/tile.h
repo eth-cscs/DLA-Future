@@ -425,16 +425,17 @@ void hegst(cusolverDnHandle_t handle, const int itype, const blas::Uplo uplo,
   DLAF_ASSERT(square_size(a), a);
   DLAF_ASSERT(square_size(b), b);
   DLAF_ASSERT(a.size() == b.size(), a, b);
-  const int n = a.size().rows();
+  const auto n = a.size().rows();
 
   int workspace_size;
-  internal::CusolverHegst<T>::callBufferSize(handle, itype, util::blasToCublas(uplo), n,
-                                             util::blasToCublasCast(a.ptr()), a.ld(),
-                                             util::blasToCublasCast(b.ptr()), b.ld(), &workspace_size);
+  internal::CusolverHegst<T>::callBufferSize(handle, itype, util::blasToCublas(uplo), to_int(n),
+                                             util::blasToCublasCast(a.ptr()), to_int(a.ld()),
+                                             util::blasToCublasCast(b.ptr()), to_int(b.ld()),
+                                             &workspace_size);
   internal::CusolverInfo<T> info{std::max(1, workspace_size)};
-  internal::CusolverHegst<T>::call(handle, itype, util::blasToCublas(uplo), n,
-                                   util::blasToCublasCast(a.ptr()), a.ld(),
-                                   util::blasToCublasCast(b.ptr()), b.ld(),
+  internal::CusolverHegst<T>::call(handle, itype, util::blasToCublas(uplo), to_int(n),
+                                   util::blasToCublasCast(a.ptr()), to_int(a.ld()),
+                                   util::blasToCublasCast(b.ptr()), to_int(b.ld()),
                                    util::blasToCublasCast(info.workspace()), info.info());
 
   assertExtendInfo(dlaf::cusolver::assertInfoHegst, handle, std::move(info));
@@ -444,14 +445,16 @@ template <class T>
 internal::CusolverInfo<T> potrfInfo(cusolverDnHandle_t handle, const blas::Uplo uplo,
                                     const matrix::Tile<T, Device::GPU>& a) {
   DLAF_ASSERT(square_size(a), a);
-  const int n = a.size().rows();
+  const auto n = a.size().rows();
 
   int workspace_size;
-  internal::CusolverPotrf<T>::callBufferSize(handle, util::blasToCublas(uplo), n,
-                                             util::blasToCublasCast(a.ptr()), a.ld(), &workspace_size);
+  internal::CusolverPotrf<T>::callBufferSize(handle, util::blasToCublas(uplo), to_int(n),
+                                             util::blasToCublasCast(a.ptr()), to_int(a.ld()),
+                                             &workspace_size);
   internal::CusolverInfo<T> info{workspace_size};
-  internal::CusolverPotrf<T>::call(handle, util::blasToCublas(uplo), n, util::blasToCublasCast(a.ptr()),
-                                   a.ld(), util::blasToCublasCast(info.workspace()), workspace_size,
+  internal::CusolverPotrf<T>::call(handle, util::blasToCublas(uplo), to_int(n),
+                                   util::blasToCublasCast(a.ptr()), to_int(a.ld()),
+                                   util::blasToCublasCast(info.workspace()), workspace_size,
                                    info.info());
 
   return info;

@@ -36,7 +36,7 @@ ARG OPENBLAS_PATCH=9
 RUN wget -qO - https://github.com/xianyi/OpenBLAS/archive/v${OPENBLAS_MAJOR}.${OPENBLAS_MINOR}.${OPENBLAS_PATCH}.tar.gz -O openblas.tar.gz && \
     tar -xzf openblas.tar.gz && \
     cd OpenBLAS-${OPENBLAS_MAJOR}.${OPENBLAS_MINOR}.${OPENBLAS_PATCH}/ && \
-    make USE_OPENMP=0 USE_THREAD=0 USE_LOCKING=1 DEBUG=1 -j$(nproc) && \
+    make USE_OPENMP=0 USE_THREAD=0 USE_LOCKING=1 DEBUG=1 TARGET=HASWELL -j$(nproc) && \
     make install NO_STATIC=1 PREFIX=/usr/local/ && \
     rm -rf /root/openblas.tar.gz /root/OpenBLAS-${OPENBLAS_MAJOR}.${OPENBLAS_MINOR}.${OPENBLAS_PATCH}/
 

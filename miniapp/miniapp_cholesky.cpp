@@ -91,85 +91,87 @@ CholCheckIterFreq parse_chol_check(const std::string&);
 }
 
 int hpx_main(hpx::program_options::variables_map& vm) {
-  dlaf::initialize(vm);
-  options_t opts = parse_options(vm);
+  {
+    dlaf::ScopedInitializer init(vm);
 
-  Communicator world(MPI_COMM_WORLD);
-  CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
+    options_t opts = parse_options(vm);
 
-  // Allocate memory for the matrix
-  GlobalElementSize matrix_size(opts.m, opts.m);
-  TileElementSize block_size(opts.mb, opts.mb);
+    Communicator world(MPI_COMM_WORLD);
+    CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
 
-  ConstHostMatrixType matrix_ref = [matrix_size, block_size, comm_grid]() {
-    using dlaf::matrix::util::set_random_hermitian_positive_definite;
+    // Allocate memory for the matrix
+    GlobalElementSize matrix_size(opts.m, opts.m);
+    TileElementSize block_size(opts.mb, opts.mb);
 
-    HostMatrixType hermitian_pos_def(matrix_size, block_size, comm_grid);
-    set_random_hermitian_positive_definite(hermitian_pos_def);
+    ConstHostMatrixType matrix_ref = [matrix_size, block_size, comm_grid]() {
+      using dlaf::matrix::util::set_random_hermitian_positive_definite;
 
-    return hermitian_pos_def;
-  }();
+      HostMatrixType hermitian_pos_def(matrix_size, block_size, comm_grid);
+      set_random_hermitian_positive_definite(hermitian_pos_def);
 
-  const auto& distribution = matrix_ref.distribution();
+      return hermitian_pos_def;
+    }();
 
-  for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
-    if (0 == world.rank() && run_index >= 0)
-      std::cout << "[" << run_index << "]" << std::endl;
+    const auto& distribution = matrix_ref.distribution();
 
-    HostMatrixType matrix_host(matrix_size, block_size, comm_grid);
-    copy(matrix_ref, matrix_host);
+    for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
+      if (0 == world.rank() && run_index >= 0)
+        std::cout << "[" << run_index << "]" << std::endl;
 
-    // wait all setup tasks before starting benchmark
-    matrix_host.waitLocalTiles();
-    DLAF_MPI_CALL(MPI_Barrier(world));
+      HostMatrixType matrix_host(matrix_size, block_size, comm_grid);
+      copy(matrix_ref, matrix_host);
 
-    double elapsed_time;
-    {
-      MatrixMirrorType matrix(matrix_host);
+      // wait all setup tasks before starting benchmark
+      matrix_host.waitLocalTiles();
+      DLAF_MPI_CALL(MPI_Barrier(world));
 
-      // Wait for matrix to be copied to GPU (if necessary)
-      matrix.get().waitLocalTiles();
-
-      dlaf::common::Timer<> timeit;
-      dlaf::factorization::cholesky<Backend::Default, Device::Default, T>(comm_grid, blas::Uplo::Lower,
-                                                                          matrix.get());
-
-      // wait for last task and barrier for all ranks
+      double elapsed_time;
       {
-        GlobalTileIndex last_tile(matrix.get().nrTiles().rows() - 1, matrix.get().nrTiles().cols() - 1);
-        if (matrix.get().rankIndex() == distribution.rankGlobalTile(last_tile))
-          matrix.get()(last_tile).get();
+        MatrixMirrorType matrix(matrix_host);
 
-        DLAF_MPI_CALL(MPI_Barrier(world));
+        // Wait for matrix to be copied to GPU (if necessary)
+        matrix.get().waitLocalTiles();
+
+        dlaf::common::Timer<> timeit;
+        dlaf::factorization::cholesky<Backend::Default, Device::Default, T>(comm_grid, blas::Uplo::Lower,
+                                                                            matrix.get());
+
+        // wait for last task and barrier for all ranks
+        {
+          GlobalTileIndex last_tile(matrix.get().nrTiles().rows() - 1,
+                                    matrix.get().nrTiles().cols() - 1);
+          if (matrix.get().rankIndex() == distribution.rankGlobalTile(last_tile))
+            matrix.get()(last_tile).get();
+
+          DLAF_MPI_CALL(MPI_Barrier(world));
+        }
+        elapsed_time = timeit.elapsed();
       }
-      elapsed_time = timeit.elapsed();
-    }
 
-    double gigaflops;
-    {
-      double n = matrix_host.size().rows();
-      auto add_mul = n * n * n / 6;
-      gigaflops = dlaf::total_ops<T>(add_mul, add_mul) / elapsed_time / 1e9;
-    }
+      double gigaflops;
+      {
+        double n = matrix_host.size().rows();
+        auto add_mul = n * n * n / 6;
+        gigaflops = dlaf::total_ops<T>(add_mul, add_mul) / elapsed_time / 1e9;
+      }
 
-    // print benchmark results
-    if (0 == world.rank() && run_index >= 0)
-      std::cout << "[" << run_index << "]"
-                << " " << elapsed_time << "s"
-                << " " << gigaflops << "GFlop/s"
-                << " " << matrix_host.size() << " " << matrix_host.blockSize() << " " << comm_grid.size()
-                << " " << hpx::get_os_thread_count() << std::endl;
+      // print benchmark results
+      if (0 == world.rank() && run_index >= 0)
+        std::cout << "[" << run_index << "]"
+                  << " " << elapsed_time << "s"
+                  << " " << gigaflops << "GFlop/s"
+                  << " " << matrix_host.size() << " " << matrix_host.blockSize() << " "
+                  << comm_grid.size() << " " << hpx::get_os_thread_count() << std::endl;
 
-    // (optional) run test
-    if ((opts.do_check == CholCheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
-        opts.do_check == CholCheckIterFreq::All) {
-      HostMatrixType original(matrix_size, block_size, comm_grid);
-      copy(matrix_ref, original);
-      check_cholesky(original, matrix_host, comm_grid);
+      // (optional) run test
+      if ((opts.do_check == CholCheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
+          opts.do_check == CholCheckIterFreq::All) {
+        HostMatrixType original(matrix_size, block_size, comm_grid);
+        copy(matrix_ref, original);
+        check_cholesky(original, matrix_host, comm_grid);
+      }
     }
   }
-
-  dlaf::finalize();
 
   return hpx::finalize();
 }

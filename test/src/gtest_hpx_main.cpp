@@ -46,9 +46,10 @@
 
 GTEST_API_ int test_main(int argc, char** argv) {
   std::printf("Running main() from gtest_hpx_main.cpp\n");
-  dlaf::initialize(argc, argv);
-  auto ret = RUN_ALL_TESTS();
-  dlaf::finalize();
+  auto ret = [&] {
+    dlaf::ScopedInitializer init(argc, argv);
+    return RUN_ALL_TESTS();
+  }();
   hpx::finalize();
   return ret;
 }

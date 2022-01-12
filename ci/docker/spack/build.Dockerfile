@@ -13,9 +13,10 @@ SHELL ["/bin/bash", "-c"]
 RUN apt-get -yqq update && \
     apt-get -yqq install --no-install-recommends \
     software-properties-common \
-    build-essential \
+    build-essential gfortran \
     autoconf automake \
     clang \
+    gawk \
     python3 python3.8-distutils \
     git tar wget curl ca-certificates gpg-agent jq tzdata \
     patchelf unzip file gnupg2 && \
@@ -48,9 +49,11 @@ ENV SPACK_SHA=$SPACK_SHA
 RUN mkdir -p /opt/spack && \
     curl -Ls "https://api.github.com/repos/spack/spack/tarball/$SPACK_SHA" | tar --strip-components=1 -xz -C /opt/spack
 
-# Define which compiler we want to use
+# Find compilers + Add gfortran to clang specs + Define which compiler we want to use
 ARG COMPILER
-RUN spack compiler find && spack config add "packages:all:compiler:[${COMPILER}]"
+RUN spack compiler find && \
+    gawk -i inplace '$0 ~ "compiler:" {flag=0} $0 ~ "spec:.*clang" {flag=1} flag == 1 && $1 ~ "^f[c7]" && $2 ~ "null" {gsub("null","/usr/bin/gfortran",$0)} {print $0}' /root/.spack/linux/compilers.yaml && \
+    spack config add "packages:all:compiler:[${COMPILER}]"
 
 RUN spack external find \
     autoconf \

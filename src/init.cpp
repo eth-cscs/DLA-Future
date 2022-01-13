@@ -138,6 +138,23 @@ cusolver::HandlePool getCusolverHandlePool() {
   return *cusolver_handle_pool;
 }
 
+static std::unique_ptr<hpx::cuda::experimental::cuda_pool> cuda_pool{nullptr};
+
+void initializeCudaPool(int device, std::size_t num_streams) {
+  DLAF_ASSERT(!cuda_pool, "");
+  cuda_pool = std::make_unique<hpx::cuda::experimental::cuda_pool>(device, num_streams);
+}
+
+void finalizeCudaPool() {
+  DLAF_ASSERT(bool(cuda_pool), "");
+  cuda_pool.reset();
+}
+
+hpx::cuda::experimental::cuda_pool getCudaPool() {
+  DLAF_ASSERT(bool(cuda_pool), "");
+  return *cuda_pool;
+}
+
 template <>
 struct Init<Backend::GPU> {
   static void initialize(configuration const& cfg) {
@@ -147,6 +164,7 @@ struct Init<Backend::GPU> {
     initializeHpCudaStreamPool(device, cfg.num_hp_cuda_streams_per_thread);
     initializeCublasHandlePool();
     initializeCusolverHandlePool();
+    initializeCudaPool(device, 64); // TODO: Number of streams
     pika::cuda::experimental::detail::register_polling(pika::resource::get_thread_pool("default"));
   }
 
@@ -156,6 +174,7 @@ struct Init<Backend::GPU> {
     finalizeHpCudaStreamPool();
     finalizeCublasHandlePool();
     finalizeCusolverHandlePool();
+    finalizeCudaPool();
   }
 };
 #endif

@@ -70,7 +70,8 @@ void add(cublasHandle_t handle, T alpha, const matrix::Tile<const T, Device::GPU
          const matrix::Tile<T, Device::GPU>& tile_a) {
   DLAF_ASSERT(equal_size(tile_a, tile_b), tile_a, tile_b);
   for (auto j = 0; j < tile_a.size().cols(); ++j)
-    tile::internal::CublasAxpy<T>::call(handle, tile_a.size().rows(), util::blasToCublasCast(&alpha),
+    tile::internal::CublasAxpy<T>::call(handle, to_int(tile_a.size().rows()),
+                                        util::blasToCublasCast(&alpha),
                                         util::blasToCublasCast(tile_b.ptr({0, j})), 1,
                                         util::blasToCublasCast(tile_a.ptr({0, j})), 1);
 }

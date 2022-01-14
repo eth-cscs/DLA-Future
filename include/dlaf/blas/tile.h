@@ -284,10 +284,11 @@ void gemm(cublasHandle_t handle, const blas::Op op_a, const blas::Op op_b, const
           const matrix::Tile<const T, Device::GPU>& a, const matrix::Tile<const T, Device::GPU>& b,
           const T beta, const matrix::Tile<T, Device::GPU>& c) {
   auto s = getGemmSizes(op_a, op_b, a, b, c);
-  CublasGemm<T>::call(handle, util::blasToCublas(op_a), util::blasToCublas(op_b), s.m, s.n, s.k,
-                      util::blasToCublasCast(&alpha), util::blasToCublasCast(a.ptr()), a.ld(),
-                      util::blasToCublasCast(b.ptr()), b.ld(), util::blasToCublasCast(&beta),
-                      util::blasToCublasCast(c.ptr()), c.ld());
+  CublasGemm<T>::call(handle, util::blasToCublas(op_a), util::blasToCublas(op_b), to_int(s.m),
+                      to_int(s.n), to_int(s.k), util::blasToCublasCast(&alpha),
+                      util::blasToCublasCast(a.ptr()), to_int(a.ld()), util::blasToCublasCast(b.ptr()),
+                      to_int(b.ld()), util::blasToCublasCast(&beta), util::blasToCublasCast(c.ptr()),
+                      to_int(c.ld()));
 }
 
 template <class T>
@@ -295,10 +296,10 @@ void hemm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, c
           const Tile<const T, Device::GPU>& a, const Tile<const T, Device::GPU>& b, const T beta,
           const Tile<T, Device::GPU>& c) {
   auto s = getHemmSizes(side, a, b, c);
-  CublasHemm<T>::call(handle, util::blasToCublas(side), util::blasToCublas(uplo), s.m, s.n,
-                      util::blasToCublasCast(&alpha), util::blasToCublasCast(a.ptr()), a.ld(),
-                      util::blasToCublasCast(b.ptr()), b.ld(), util::blasToCublasCast(&beta),
-                      util::blasToCublasCast(c.ptr()), c.ld());
+  CublasHemm<T>::call(handle, util::blasToCublas(side), util::blasToCublas(uplo), to_int(s.m),
+                      to_int(s.n), util::blasToCublasCast(&alpha), util::blasToCublasCast(a.ptr()),
+                      to_int(a.ld()), util::blasToCublasCast(b.ptr()), to_int(b.ld()),
+                      util::blasToCublasCast(&beta), util::blasToCublasCast(c.ptr()), to_int(c.ld()));
 }
 
 template <class T>
@@ -306,10 +307,10 @@ void her2k(cublasHandle_t handle, const blas::Uplo uplo, const blas::Op op, cons
            const matrix::Tile<const T, Device::GPU>& a, const Tile<const T, Device::GPU>& b,
            const BaseType<T> beta, const matrix::Tile<T, Device::GPU>& c) {
   auto s = getHer2kSizes(op, a, b, c);
-  CublasHer2k<T>::call(handle, util::blasToCublas(uplo), util::blasToCublas(op), s.n, s.k,
-                       util::blasToCublasCast(&alpha), util::blasToCublasCast(a.ptr()), a.ld(),
-                       util::blasToCublasCast(b.ptr()), b.ld(), util::blasToCublasCast(&beta),
-                       util::blasToCublasCast(c.ptr()), c.ld());
+  CublasHer2k<T>::call(handle, util::blasToCublas(uplo), util::blasToCublas(op), to_int(s.n),
+                       to_int(s.k), util::blasToCublasCast(&alpha), util::blasToCublasCast(a.ptr()),
+                       to_int(a.ld()), util::blasToCublasCast(b.ptr()), to_int(b.ld()),
+                       util::blasToCublasCast(&beta), util::blasToCublasCast(c.ptr()), to_int(c.ld()));
 }
 
 template <class T>
@@ -317,9 +318,9 @@ void herk(cublasHandle_t handle, const blas::Uplo uplo, const blas::Op op, const
           const matrix::Tile<const T, Device::GPU>& a, const BaseType<T> beta,
           const matrix::Tile<T, Device::GPU>& c) {
   auto s = getHerkSizes(op, a, c);
-  CublasHerk<T>::call(handle, util::blasToCublas(uplo), util::blasToCublas(op), s.n, s.k,
-                      util::blasToCublasCast(&alpha), util::blasToCublasCast(a.ptr()), a.ld(),
-                      util::blasToCublasCast(&beta), util::blasToCublasCast(c.ptr()), c.ld());
+  CublasHerk<T>::call(handle, util::blasToCublas(uplo), util::blasToCublas(op), to_int(s.n), to_int(s.k),
+                      util::blasToCublasCast(&alpha), util::blasToCublasCast(a.ptr()), to_int(a.ld()),
+                      util::blasToCublasCast(&beta), util::blasToCublasCast(c.ptr()), to_int(c.ld()));
 }
 
 template <class T>
@@ -328,9 +329,9 @@ void trmm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, c
           const matrix::Tile<T, Device::GPU>& b) {
   auto s = tile::internal::getTrmmSizes(side, a, b);
   CublasTrmm<T>::call(handle, util::blasToCublas(side), util::blasToCublas(uplo), util::blasToCublas(op),
-                      util::blasToCublas(diag), s.m, s.n, util::blasToCublasCast(&alpha),
-                      util::blasToCublasCast(a.ptr()), a.ld(), util::blasToCublasCast(b.ptr()), b.ld(),
-                      util::blasToCublasCast(b.ptr()), b.ld());
+                      util::blasToCublas(diag), to_int(s.m), to_int(s.n), util::blasToCublasCast(&alpha),
+                      util::blasToCublasCast(a.ptr()), to_int(a.ld()), util::blasToCublasCast(b.ptr()),
+                      to_int(b.ld()), util::blasToCublasCast(b.ptr()), to_int(b.ld()));
 }
 
 template <class T>
@@ -339,8 +340,9 @@ void trsm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, c
           const matrix::Tile<T, Device::GPU>& b) {
   auto s = getTrsmSizes(side, a, b);
   CublasTrsm<T>::call(handle, util::blasToCublas(side), util::blasToCublas(uplo), util::blasToCublas(op),
-                      util::blasToCublas(diag), s.m, s.n, util::blasToCublasCast(&alpha),
-                      util::blasToCublasCast(a.ptr()), a.ld(), util::blasToCublasCast(b.ptr()), b.ld());
+                      util::blasToCublas(diag), to_int(s.m), to_int(s.n), util::blasToCublasCast(&alpha),
+                      util::blasToCublasCast(a.ptr()), to_int(a.ld()), util::blasToCublasCast(b.ptr()),
+                      to_int(b.ld()));
 }
 #endif
 

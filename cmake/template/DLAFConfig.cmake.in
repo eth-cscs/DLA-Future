@@ -31,7 +31,6 @@ else()
   find_dependency(LAPACK)
 endif()
 
-find_dependency(OpenMP)
 find_dependency(blaspp PATHS @blaspp_DIR@)
 find_dependency(lapackpp PATHS @lapackpp_DIR@)
 

@@ -10,29 +10,6 @@ stages:
 ## BUILDS
 ##
 
-.build_common:
-  extends: .dind
-  stage: build
-  only:
-    - master
-    - staging
-    - trying
-  variables:
-    GIT_SUBMODULE_STRATEGY: recursive
-  before_script:
-    - docker login -u $CSCS_REGISTRY_USER -p $CSCS_REGISTRY_PASSWORD $CSCS_REGISTRY
-  script:
-    - TAG=`sha256sum $BUILD_DOCKER_FILE | head -c 64`
-    - docker build -t $BUILD_IMAGE:$TAG -t $BUILD_IMAGE:latest --cache-from $BUILD_IMAGE:$TAG --cache-from $BUILD_IMAGE:latest --build-arg BASE_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg HPX_WITH_CUDA --build-arg UMPIRE_ENABLE_CUDA -f $BUILD_DOCKER_FILE --network=host .
-    - docker push $BUILD_IMAGE:$TAG
-    - docker push $BUILD_IMAGE:latest
-    - docker build -t $DEPLOY_IMAGE --build-arg BUILD_IMAGE=$BUILD_IMAGE:$TAG --build-arg DLAF_WITH_CUDA -f $DEPLOY_DOCKER_FILE --network=host .
-    - docker push $DEPLOY_IMAGE
-    - docker run -v $PWD/ci/ctest_to_gitlab.sh:/ctest_to_gitlab.sh $DEPLOY_IMAGE /ctest_to_gitlab.sh "$DEPLOY_IMAGE" "$USE_CODECOV" "$THREADS_PER_NODE" "$SLURM_CONSTRAINT" > pipeline.yml
-  artifacts:
-    paths:
-      - pipeline.yml
-
 .build_spack_common:
   extends: .dind
   stage: build
@@ -135,20 +112,20 @@ gpu release build clang10:
     THREADS_PER_NODE: 24
     USE_CODECOV: "false"
 
-gpu codecov build:
-  extends: .build_common
+gpu codecov build gcc9:
+  extends: .build_spack_common
   variables:
-    BUILD_DOCKER_FILE: ci/docker/codecov/build.Dockerfile
-    DEPLOY_DOCKER_FILE: ci/docker/codecov/deploy.Dockerfile
-    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-gpu/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-gpu/deploy:$CI_COMMIT_SHA
-    DLAF_WITH_CUDA: 'ON'
-    BASE_IMAGE: nvidia/cuda:11.0.3-devel-ubuntu20.04
+    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
+    DEPLOY_DOCKER_FILE: ci/docker/codecov.Dockerfile
+    BASE_IMAGE: nvidia/cuda:11.1.1-devel-ubuntu20.04
+    COMPILER: gcc@9.3.0
+    USE_MKL: "OFF"
+    SPACK_ENVIRONMENT: ci/docker/gpu-debug.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-gpu-gcc9/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-gpu-gcc9/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: gpu
     THREADS_PER_NODE: 24
     USE_CODECOV: "true"
-    HPX_WITH_CUDA: "ON"
-    UMPIRE_ENABLE_CUDA: "ON"
 
 notify_github_start:
   stage: build
@@ -217,15 +194,15 @@ gpu release test clang10:
       - artifact: pipeline.yml
         job: gpu release build clang10
 
-gpu codecov test:
+gpu codecov test gcc9:
   extends: .run_common
   needs:
-    - gpu codecov build
+    - gpu codecov build gcc9
   trigger:
     strategy: depend
     include:
       - artifact: pipeline.yml
-        job: gpu codecov build
+        job: gpu codecov build gcc9
 
 notify_github_success:
   stage: notify

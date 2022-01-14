@@ -396,20 +396,24 @@ void assertExtendInfo(F assertFunc, cusolverDnHandle_t handle, CusolverInfo<T>&&
 }
 
 template <class T>
-dlaf::BaseType<T> lange(cusolverDnHandle_t, const lapack::Norm norm, const Tile<T, Device::GPU>& a) {
+dlaf::BaseType<T> lange(cusolverDnHandle_t handle, const lapack::Norm norm,
+                        const Tile<T, Device::GPU>& a) {
   DLAF_STATIC_UNIMPLEMENTED(T);
+  dlaf::internal::silenceUnusedWarningFor(handle, norm, a);
 }
 
 template <class T>
-dlaf::BaseType<T> lantr(cusolverDnHandle_t, const lapack::Norm norm, const blas::Uplo uplo,
+dlaf::BaseType<T> lantr(cusolverDnHandle_t handle, const lapack::Norm norm, const blas::Uplo uplo,
                         const blas::Diag diag, const Tile<T, Device::GPU>& a) {
   DLAF_STATIC_UNIMPLEMENTED(T);
+  dlaf::internal::silenceUnusedWarningFor(handle, norm, uplo, diag, a);
 }
 
 template <class T>
-void laset(cusolverDnHandle_t, const lapack::MatrixType type, T alpha, T beta,
+void laset(cusolverDnHandle_t handle, const lapack::MatrixType type, T alpha, T beta,
            const Tile<T, Device::GPU>& tile) {
   DLAF_STATIC_UNIMPLEMENTED(T);
+  dlaf::internal::silenceUnusedWarningFor(handle, type, alpha, beta, tile);
 }
 
 template <class T>

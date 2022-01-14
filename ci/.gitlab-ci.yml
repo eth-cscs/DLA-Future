@@ -52,7 +52,7 @@ stages:
     - docker build -t $BUILD_IMAGE:$TAG -t $BUILD_IMAGE:latest --cache-from $BUILD_IMAGE:$TAG --cache-from $BUILD_IMAGE:latest --build-arg BASE_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg SPACK_SHA --build-arg COMPILER --build-arg SPACK_ENVIRONMENT --build-arg USE_MKL -f $BUILD_DOCKER_FILE --network=host .
     - docker push $BUILD_IMAGE:$TAG
     - docker push $BUILD_IMAGE:latest
-    - docker build -t $DEPLOY_IMAGE --build-arg BUILD_IMAGE=$BUILD_IMAGE:$TAG -f $DEPLOY_DOCKER_FILE --network=host .
+    - docker build -t $DEPLOY_IMAGE --build-arg BUILD_IMAGE=$BUILD_IMAGE:$TAG --build-arg USE_MKL -f $DEPLOY_DOCKER_FILE --network=host .
     - docker push $DEPLOY_IMAGE
     - docker run -v $PWD/ci/ctest_to_gitlab.sh:/ctest_to_gitlab.sh $DEPLOY_IMAGE /ctest_to_gitlab.sh "$DEPLOY_IMAGE" "$USE_CODECOV" "$THREADS_PER_NODE" "$SLURM_CONSTRAINT" > pipeline.yml
   artifacts:

@@ -16,6 +16,20 @@ namespace eigensolver {
 namespace internal {
 
 template <class T>
+void cuppensTridiagTileUpdate(const matrix::Tile<T, Device::CPU>& top,
+                              const matrix::Tile<T, Device::CPU>& bottom) {
+  (void) top;
+  (void) bottom;
+
+  T offdiag_val = top(TileElementIndex{top.size().rows() - 1, top.size().cols() - 1});
+  T& top_diag_val = top(TileElementIndex{top.size().rows() - 1, top.size().cols() - 2});
+  T& bottom_diag_val = bottom(TileElementIndex{0, 0});
+
+  top_diag_val -= offdiag_val;
+  bottom_diag_val -= offdiag_val;
+}
+
+template <class T>
 struct TridiagSolver<Backend::MC, Device::CPU, T> {
   static void call(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_ev);
   static void call(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a,

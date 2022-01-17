@@ -43,8 +43,7 @@ void dispatchMiniappElementType(const OptionsType& opts) {
     }
   }
 
-  std::cout << "Unknown or unsupported type (" << opts.type << ")!" << std::endl;
-  std::terminate();
+  DLAF_UNREACHABLE_PLAIN;
 }
 
 template <typename Miniapp, typename OptionsType>
@@ -62,8 +61,7 @@ void dispatchMiniappBackend(const OptionsType& opts) {
 #endif
       break;
     default:
-      std::cout << "Unknown backend given (" << opts.backend << ")!" << std::endl;
-      std::terminate();
+      DLAF_UNREACHABLE_PLAIN;
   }
 }
 }

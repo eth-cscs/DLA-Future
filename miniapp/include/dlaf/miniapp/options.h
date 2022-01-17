@@ -25,6 +25,15 @@
 #include <dlaf/common/format_short.h>
 #include <dlaf/types.h>
 
+#define DLAF_MINIAPP_UNSUPPORTED_OPTION_VALUE(option, actual)                             \
+  std::cout << "Valid but unsupported option for " << option << ": '" << actual << "\'."; \
+  std::terminate();
+
+#define DLAF_MINIAPP_INVALID_OPTION_VALUE(option, actual, expected)                                 \
+  std::cout << "Invalid option for " << option << ". Got \'" << actual << "\' but expected one of " \
+            << expected << ".";                                                                     \
+  std::terminate();
+
 namespace dlaf::miniapp {
 inline Backend parseBackend(const std::string& backend) {
   if (backend == "default")
@@ -39,10 +48,8 @@ inline Backend parseBackend(const std::string& backend) {
     return Backend::GPU;
   }
 
-  std::cout << "Invalid option for --backend. Got '" << backend
-            << "' but expected one of 'default', 'mc', 'gpu'." << std::endl;
-  std::terminate();
-  return Backend::Default;  // unreachable
+  DLAF_MINIAPP_INVALID_OPTION_VALUE("--backend", backend, "'default', 'mc', 'gpu' (if available)");
+  return DLAF_UNREACHABLE(Backend);
 }
 
 enum class SupportReal { No, Yes };
@@ -62,8 +69,7 @@ ElementType parseElementType(const std::string& type) {
     }
     else {
       if (type_lower == 's' || type_lower == 'd') {
-        std::cout << "--type=" << type << " is not supported in this miniapp!" << std::endl;
-        std::terminate();
+        DLAF_MINIAPP_UNSUPPORTED_OPTION_VALUE("--type", type);
       }
     }
 
@@ -75,16 +81,13 @@ ElementType parseElementType(const std::string& type) {
     }
     else {
       if (type_lower == 'c' || type_lower == 'z') {
-        std::cout << "--type=" << type << " is not supported in this miniapp!" << std::endl;
-        std::terminate();
+        DLAF_MINIAPP_UNSUPPORTED_OPTION_VALUE("--type", type);
       }
     }
   }
 
-  std::cout << "Invalid option for --type. Got '" << type << "' but expected one of 's', 'd', 'c', 'z'."
-            << std::endl;
-  std::terminate();
-  return ElementType::Single;  // unreachable
+  DLAF_MINIAPP_INVALID_OPTION_VALUE("--type", type, "'s', 'd', 'c', 'z'");
+  return DLAF_UNREACHABLE(ElementType);
 }
 
 inline std::ostream& operator<<(std::ostream& os, const ElementType& type) {
@@ -137,9 +140,8 @@ inline CheckIterFreq parseCheckIterFreq(const std::string& check) {
   else if (check == "none")
     return CheckIterFreq::None;
 
-  std::cout << "Parsing is not implemented for --check-result=" << check << "!" << std::endl;
-  std::terminate();
-  return CheckIterFreq::None;  // unreachable
+  DLAF_MINIAPP_INVALID_OPTION_VALUE("--check-result", check, "'none', 'last', 'all'");
+  return DLAF_UNREACHABLE(CheckIterFreq);
 }
 
 namespace internal {
@@ -156,15 +158,15 @@ T stringToBlasEnum(const std::string& option_name, const std::string& x,
                                    return std::toupper(v) == std::toupper(x[0]);
                                  }));
   if (!valid) {
-    std::cout << "Invalid option for --" << option_name << ". Got '" << x << "' but expected one of ";
+    std::ostringstream valid_values_stream;
     for (std::size_t i = 0; i < valid_values.size(); ++i) {
-      std::cout << "'" << valid_values[i] << "'";
+      valid_values_stream << "'" << valid_values[i] << "'";
       if (i != valid_values.size() - 1) {
-        std::cout << ", ";
+        valid_values_stream << ", ";
       }
     }
-    std::cout << "." << std::endl;
-    std::terminate();
+    std::string option_name_dashes = "--" + option_name;
+    DLAF_MINIAPP_INVALID_OPTION_VALUE(option_name, x, valid_values_stream.str());
   }
 
   return static_cast<T>(std::toupper(x[0]));

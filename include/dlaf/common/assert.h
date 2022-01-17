@@ -48,6 +48,13 @@ inline void do_assert(bool expr, const common::internal::source_location& loc, c
   }
 }
 
+/// Helper function for silencing unused parameter warning.
+///
+/// This allows to not add std::maybe_unused to each argument of an UNIMPLEMENTED function,
+/// but still keeping the name of arguments, so that in the future the signature will be
+/// ready for implementation.
+template <class... Args>
+void silenceUnusedWarningFor(Args&&...) {}
 }
 }
 

@@ -33,7 +33,8 @@ namespace {
 using dlaf::Device;
 using dlaf::SizeType;
 
-struct Options : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportedTypes::RealAndComplex> {
+struct Options
+    : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
   SizeType m;
   SizeType mb;
 

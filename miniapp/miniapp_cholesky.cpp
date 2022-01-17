@@ -68,7 +68,8 @@ template <typename T>
 void check_cholesky(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, CommunicatorGrid comm_grid,
                     blas::Uplo uplo);
 
-struct Options : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportedTypes::RealAndComplex> {
+struct Options
+    : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
   SizeType m;
   SizeType mb;
   blas::Uplo uplo;

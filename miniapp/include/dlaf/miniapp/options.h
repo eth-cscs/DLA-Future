@@ -45,19 +45,29 @@ inline Backend parseBackend(const std::string& backend) {
   return Backend::Default;  // unreachable
 }
 
-enum class SupportedTypes { OnlyReal, RealAndComplex };
+enum class SupportReal { No, Yes };
+enum class SupportComplex { No, Yes };
 enum class ElementType { Single, Double, ComplexSingle, ComplexDouble };
 
-template <SupportedTypes types>
+template <SupportReal support_real, SupportComplex support_complex>
 ElementType parseElementType(const std::string& type) {
   if (type.size() == 1) {
     const auto type_lower = std::tolower(type[0]);
-    if (type_lower == 's')
-      return ElementType::Single;
-    else if (type_lower == 'd')
-      return ElementType::Double;
 
-    if constexpr (types == SupportedTypes::RealAndComplex) {
+    if constexpr (support_real == SupportReal::Yes) {
+      if (type_lower == 's')
+        return ElementType::Single;
+      else if (type_lower == 'd')
+        return ElementType::Double;
+    }
+    else {
+      if (type_lower == 's' || type_lower == 'd') {
+        std::cout << "--type=" << type << " is not supported in this miniapp!" << std::endl;
+        std::terminate();
+      }
+    }
+
+    if constexpr (support_complex == SupportComplex::Yes) {
       if (type_lower == 'c')
         return ElementType::ComplexSingle;
       else if (type_lower == 'z')
@@ -181,9 +191,11 @@ inline blas::Side parseSide(const std::string& side) {
   return internal::stringToBlasEnum<blas::Side>("side", side, {'L', 'R'});
 }
 
-template <SupportedTypes types>
+template <SupportReal support_r, SupportComplex support_c>
 struct MiniappOptions {
-  static constexpr SupportedTypes supported_types = types;
+  static constexpr SupportReal support_real = support_r;
+  static constexpr SupportComplex support_complex = support_c;
+
   Backend backend;
   ElementType type;
   int grid_rows;
@@ -194,7 +206,7 @@ struct MiniappOptions {
 
   MiniappOptions(const hpx::program_options::variables_map& vm)
       : backend(parseBackend(vm["backend"].as<std::string>())),
-        type(parseElementType<supported_types>(vm["type"].as<std::string>())),
+        type(parseElementType<support_real, support_complex>(vm["type"].as<std::string>())),
         grid_rows(vm["grid-rows"].as<int>()), grid_cols(vm["grid-cols"].as<int>()),
         nruns(vm["nruns"].as<int64_t>()), nwarmups(vm["nwarmups"].as<int64_t>()),
         do_check(parseCheckIterFreq(vm["check-result"].as<std::string>())) {

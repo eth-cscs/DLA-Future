@@ -53,7 +53,8 @@ using dlaf::comm::CommunicatorGrid;
 using dlaf::common::Ordering;
 using dlaf::comm::MPIMech;
 
-struct Options : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportedTypes::OnlyReal> {
+struct Options
+    : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::No> {
   SizeType m;
   SizeType n;
   SizeType mb;

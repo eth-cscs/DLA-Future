@@ -21,24 +21,25 @@ namespace dlaf::miniapp {
 namespace internal {
 template <typename Miniapp, Backend backend, typename OptionsType>
 void dispatchMiniappElementType(const OptionsType& opts) {
-  if (opts.type == ElementType::Single) {
-    Miniapp::template run<backend, float>(opts);
-    return;
+  if constexpr (OptionsType::support_real == SupportReal::Yes) {
+    if (opts.type == ElementType::Single) {
+      Miniapp::template run<backend, float>(opts);
+      return;
+    }
+    else if (opts.type == ElementType::Double) {
+      Miniapp::template run<backend, double>(opts);
+      return;
+    }
   }
-  else if (opts.type == ElementType::Double) {
-    Miniapp::template run<backend, double>(opts);
-    return;
-  }
-  else {
-    if constexpr (OptionsType::supported_types == SupportedTypes::RealAndComplex) {
-      if (opts.type == ElementType::ComplexSingle) {
-        Miniapp::template run<backend, std::complex<float>>(opts);
-        return;
-      }
-      else if (opts.type == ElementType::ComplexDouble) {
-        Miniapp::template run<backend, std::complex<double>>(opts);
-        return;
-      }
+
+  if constexpr (OptionsType::support_complex == SupportComplex::Yes) {
+    if (opts.type == ElementType::ComplexSingle) {
+      Miniapp::template run<backend, std::complex<float>>(opts);
+      return;
+    }
+    else if (opts.type == ElementType::ComplexDouble) {
+      Miniapp::template run<backend, std::complex<double>>(opts);
+      return;
     }
   }
 

@@ -130,3 +130,5 @@ inline void do_assert(bool expr, const common::internal::source_location& loc, c
 ///       However only a type should be specified.
 #define DLAF_UNREACHABLE(...) \
   DLAF_ASSERT(false, "Unreachable branch hit!"), std::move(*std::unique_ptr<__VA_ARGS__>())
+
+#define DLAF_UNREACHABLE_PLAIN DLAF_ASSERT(false, "Unreachable branch hit!")

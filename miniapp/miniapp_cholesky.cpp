@@ -20,6 +20,7 @@
 
 #include "dlaf/auxiliary/norm.h"
 #include "dlaf/blas/tile.h"
+#include "dlaf/common/format_short.h"
 #include "dlaf/common/timer.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/error.h"
@@ -32,6 +33,8 @@
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"
+#include "dlaf/miniapp/dispatch.h"
+#include "dlaf/miniapp/options.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
@@ -42,6 +45,7 @@ using hpx::unwrapping;
 using dlaf::Device;
 using dlaf::Coord;
 using dlaf::Backend;
+using dlaf::DefaultDevice_v;
 using dlaf::SizeType;
 using dlaf::comm::Index2D;
 using dlaf::GlobalElementSize;
@@ -50,51 +54,53 @@ using dlaf::GlobalTileIndex;
 using dlaf::LocalTileIndex;
 using dlaf::TileElementIndex;
 using dlaf::TileElementSize;
+using dlaf::Matrix;
+using dlaf::matrix::MatrixMirror;
 using dlaf::common::Ordering;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
-
-using T = double;
-using MatrixType = dlaf::Matrix<T, Device::Default>;
-using HostMatrixType = dlaf::Matrix<T, Device::CPU>;
-using ConstMatrixType = dlaf::Matrix<const T, Device::Default>;
-using ConstHostMatrixType = dlaf::Matrix<const T, Device::CPU>;
-using MatrixMirrorType = dlaf::matrix::MatrixMirror<T, Device::Default, Device::CPU>;
-using TileType = MatrixType::TileType;
-using HostTileType = HostMatrixType::TileType;
-using ConstTileType = MatrixType::ConstTileType;
-using ConstHostTileType = HostMatrixType::ConstTileType;
 
 /// Check Cholesky Factorization results
 ///
 /// Given a matrix A (Hermitian Positive Definite) and its Cholesky factorization in L,
 /// this function checks that A == L * L'
-void check_cholesky(HostMatrixType& A, HostMatrixType& L, CommunicatorGrid comm_grid);
+template <typename T>
+void check_cholesky(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, CommunicatorGrid comm_grid,
+                    blas::Uplo uplo);
 
-enum class CholCheckIterFreq { None, Last, All };
-
-struct options_t {
+struct Options
+    : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
   SizeType m;
   SizeType mb;
-  int grid_rows;
-  int grid_cols;
-  int64_t nruns;
-  int64_t nwarmups;
-  CholCheckIterFreq do_check;
+  blas::Uplo uplo;
+
+  Options(const hpx::program_options::variables_map& vm)
+      : MiniappOptions(vm), m(vm["matrix-size"].as<SizeType>()), mb(vm["block-size"].as<SizeType>()),
+        uplo(dlaf::miniapp::parseUplo(vm["uplo"].as<std::string>())) {
+    DLAF_ASSERT(m > 0, m);
+    DLAF_ASSERT(mb > 0, mb);
+
+    if (do_check != dlaf::miniapp::CheckIterFreq::None && m % mb) {
+      std::cerr
+          << "Warning! At the moment result checking works just with matrix sizes that are multiple of the block size."
+          << std::endl;
+      do_check = dlaf::miniapp::CheckIterFreq::None;
+    }
+  }
+
+  Options(Options&&) = default;
+  Options(const Options&) = default;
+  Options& operator=(Options&&) = default;
+  Options& operator=(const Options&) = default;
 };
-
-/// Handle CLI options
-options_t parse_options(hpx::program_options::variables_map&);
-
-CholCheckIterFreq parse_chol_check(const std::string&);
-
 }
 
-int hpx_main(hpx::program_options::variables_map& vm) {
-  {
-    dlaf::ScopedInitializer init(vm);
-
-    options_t opts = parse_options(vm);
+struct choleskyMiniapp {
+  template <Backend backend, typename T>
+  static void run(const Options& opts) {
+    using MatrixMirrorType = MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU>;
+    using HostMatrixType = Matrix<T, Device::CPU>;
+    using ConstHostMatrixType = Matrix<const T, Device::CPU>;
 
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
@@ -133,7 +139,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
         matrix.get().waitLocalTiles();
 
         dlaf::common::Timer<> timeit;
-        dlaf::factorization::cholesky<Backend::Default, Device::Default, T>(comm_grid, blas::Uplo::Lower,
+        dlaf::factorization::cholesky<backend, DefaultDevice_v<backend>, T>(comm_grid, opts.uplo,
                                                                             matrix.get());
 
         // wait for last task and barrier for all ranks
@@ -160,17 +166,28 @@ int hpx_main(hpx::program_options::variables_map& vm) {
         std::cout << "[" << run_index << "]"
                   << " " << elapsed_time << "s"
                   << " " << gigaflops << "GFlop/s"
-                  << " " << matrix_host.size() << " " << matrix_host.blockSize() << " "
-                  << comm_grid.size() << " " << hpx::get_os_thread_count() << std::endl;
+                  << " " << dlaf::internal::FormatShort{opts.type}
+                  << dlaf::internal::FormatShort{opts.uplo} << " " << matrix_host.size() << " "
+                  << matrix_host.blockSize() << " " << comm_grid.size() << " "
+                  << hpx::get_os_thread_count() << " " << backend << std::endl;
 
       // (optional) run test
-      if ((opts.do_check == CholCheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
-          opts.do_check == CholCheckIterFreq::All) {
-        HostMatrixType original(matrix_size, block_size, comm_grid);
+      if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
+          opts.do_check == dlaf::miniapp::CheckIterFreq::All) {
+        Matrix<T, Device::CPU> original(matrix_size, block_size, comm_grid);
         copy(matrix_ref, original);
-        check_cholesky(original, matrix_host, comm_grid);
+        check_cholesky(original, matrix_host, comm_grid, opts.uplo);
       }
     }
+  }
+};
+
+int hpx_main(hpx::program_options::variables_map& vm) {
+  {
+    dlaf::ScopedInitializer init(vm);
+    const Options opts(vm);
+
+    dlaf::miniapp::dispatchMiniapp<choleskyMiniapp>(opts);
   }
 
   return hpx::finalize();
@@ -183,19 +200,16 @@ int main(int argc, char** argv) {
   // options
   using namespace hpx::program_options;
   options_description desc_commandline("Usage: " HPX_APPLICATION_STRING " [options]");
+  desc_commandline.add(dlaf::miniapp::getMiniappOptionsDescription());
   desc_commandline.add(dlaf::getOptionsDescription());
 
   // clang-format off
   desc_commandline.add_options()
-    ("matrix-size",  value<SizeType>()   ->default_value(4096),       "Matrix size")
-    ("block-size",   value<SizeType>()   ->default_value( 256),       "Block cyclic distribution size")
-    ("grid-rows",    value<int>()        ->default_value(   1),       "Number of row processes in the 2D communicator")
-    ("grid-cols",    value<int>()        ->default_value(   1),       "Number of column processes in the 2D communicator")
-    ("nruns",        value<int64_t>()    ->default_value(   1),       "Number of runs to compute the cholesky")
-    ("nwarmups",     value<int64_t>()    ->default_value(   1),       "Number of warmup runs")
-    ("check-result", value<std::string>()->default_value("none"),     "Enable result checking ('none', 'all', 'last')")
+    ("matrix-size",  value<SizeType>()   ->default_value(4096), "Matrix size")
+    ("block-size",   value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
   ;
   // clang-format on
+  dlaf::miniapp::addUploOption(desc_commandline);
 
   hpx::init_params p;
   p.desc_cmdline = desc_commandline;
@@ -210,13 +224,14 @@ namespace {
 /// For the tiles on the diagonal (i.e. row == col), the elements in the upper triangular
 /// part of each tile, diagonal excluded, are set to zero.
 /// Tiles that are not on the diagonal (i.e. row != col) will not be touched or referenced
-void setUpperToZeroForDiagonalTiles(HostMatrixType& matrix) {
+template <typename T>
+void setUpperToZeroForDiagonalTiles(Matrix<T, Device::CPU>& matrix) {
   DLAF_ASSERT(dlaf::matrix::square_blocksize(matrix), matrix);
 
   const auto& distribution = matrix.distribution();
 
   for (int i_tile_local = 0; i_tile_local < distribution.localNrTiles().rows(); ++i_tile_local) {
-    auto k_tile_global = distribution.globalTileFromLocalTile<Coord::Row>(i_tile_local);
+    auto k_tile_global = distribution.template globalTileFromLocalTile<Coord::Row>(i_tile_local);
     GlobalTileIndex diag_tile{k_tile_global, k_tile_global};
 
     if (distribution.rankIndex() != distribution.rankGlobalTile(diag_tile))
@@ -242,10 +257,13 @@ void setUpperToZeroForDiagonalTiles(HostMatrixType& matrix) {
 ///
 /// It is used to get the difference matrix between the matrix computed starting from the
 /// cholesky factorization and the original one
-void cholesky_diff(HostMatrixType& A, HostMatrixType& L, CommunicatorGrid comm_grid) {
+template <typename T>
+void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, CommunicatorGrid comm_grid) {
   // TODO A and L must be different
 
   using dlaf::common::make_data;
+  using HostTileType = typename Matrix<T, Device::CPU>::TileType;
+  using ConstHostTileType = typename Matrix<T, Device::CPU>::ConstTileType;
 
   // compute tile * tile_to_transpose' with the option to cumulate the result
   // compute a = abs(a - b)
@@ -263,7 +281,7 @@ void cholesky_diff(HostMatrixType& A, HostMatrixType& L, CommunicatorGrid comm_g
   const auto& distribution = L.distribution();
   const auto current_rank = distribution.rankIndex();
 
-  HostMatrixType mul_result(L.size(), L.blockSize(), comm_grid);
+  Matrix<T, Device::CPU> mul_result(L.size(), L.blockSize(), comm_grid);
 
   // k is a global index that keeps track of the diagonal tile
   // it is useful mainly for two reasons:
@@ -274,8 +292,8 @@ void cholesky_diff(HostMatrixType& A, HostMatrixType& L, CommunicatorGrid comm_g
 
     // workspace for storing the partial results for all the rows in the current rank
     // TODO this size can be reduced to just the part below the current diagonal tile
-    HostMatrixType partial_result({distribution.localSize().rows(), L.blockSize().cols()},
-                                  L.blockSize());
+    Matrix<T, Device::CPU> partial_result({distribution.localSize().rows(), L.blockSize().cols()},
+                                          L.blockSize());
 
     // it has to be set to zero, because ranks may not be able to contribute for each row at each step
     // so when the result will be reduced along the rows, they will not alter the final result
@@ -320,10 +338,10 @@ void cholesky_diff(HostMatrixType& A, HostMatrixType& L, CommunicatorGrid comm_g
       for (; i_loc < distribution.localNrTiles().rows(); ++i_loc) {
         const LocalTileIndex tile_wrt_local{i_loc, j_loc};
 
-        dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, 1.0,
+        dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, T(1.0),
                                     L.read_sender(tile_wrt_local),
                                     hpx::execution::experimental::keep_future(tile_to_transpose),
-                                    j_loc == 0 ? 0.0 : 1.0,
+                                    j_loc == 0 ? T(0.0) : T(1.0),
                                     partial_result.readwrite_sender(LocalTileIndex{i_loc, 0})) |
             dlaf::tile::gemm(dlaf::internal::Policy<dlaf::Backend::MC>()) |
             hpx::execution::experimental::detach();
@@ -365,12 +383,14 @@ void cholesky_diff(HostMatrixType& A, HostMatrixType& L, CommunicatorGrid comm_g
 /// "":        check ok
 /// "ERROR":   error is high, there is an error in the factorization
 /// "WARNING": error is slightly high, there can be an error in the factorization
-void check_cholesky(HostMatrixType& A, HostMatrixType& L, CommunicatorGrid comm_grid) {
+template <typename T>
+void check_cholesky(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, CommunicatorGrid comm_grid,
+                    blas::Uplo uplo) {
   const Index2D rank_result{0, 0};
 
   // 1. Compute the max norm of the original matrix in A
-  const auto norm_A = dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max,
-                                                               blas::Uplo::Lower, A);
+  const auto norm_A =
+      dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max, uplo, A);
 
   // 2.
   // L is a lower triangular, reset values in the upper part (diagonal excluded)
@@ -383,8 +403,7 @@ void check_cholesky(HostMatrixType& A, HostMatrixType& L, CommunicatorGrid comm_
 
   // 3. Compute the max norm of the difference (it has been compute in-place in A)
   const auto norm_diff =
-      dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max,
-                                               blas::Uplo::Lower, A);
+      dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max, uplo, A);
 
   // 4.
   // Evaluation of correctness is done just by the master rank
@@ -403,48 +422,4 @@ void check_cholesky(HostMatrixType& A, HostMatrixType& L, CommunicatorGrid comm_
 
   std::cout << "Max Diff / Max A: " << diff_ratio << std::endl;
 }
-
-options_t parse_options(hpx::program_options::variables_map& vm) {
-  // clang-format off
-  options_t opts = {
-      vm["matrix-size"].as<SizeType>(),
-      vm["block-size"].as<SizeType>(),
-      vm["grid-rows"].as<int>(),
-      vm["grid-cols"].as<int>(),
-      vm["nruns"].as<int64_t>(),
-      vm["nwarmups"].as<int64_t>(),
-      parse_chol_check(vm["check-result"].as<std::string>()),
-  };
-  // clang-format on
-
-  DLAF_ASSERT(opts.m > 0, opts.m);
-  DLAF_ASSERT(opts.mb > 0, opts.mb);
-  DLAF_ASSERT(opts.grid_rows > 0, opts.grid_rows);
-  DLAF_ASSERT(opts.grid_cols > 0, opts.grid_cols);
-  DLAF_ASSERT(opts.nruns > 0, opts.nruns);
-  DLAF_ASSERT(opts.nwarmups >= 0, opts.nwarmups);
-
-  if (opts.do_check != CholCheckIterFreq::None && opts.m % opts.mb) {
-    std::cerr
-        << "Warning! At the moment result checking works just with matrix sizes that are multiple of the block size."
-        << std::endl;
-    opts.do_check = CholCheckIterFreq::None;
-  }
-
-  return opts;
-}
-
-CholCheckIterFreq parse_chol_check(const std::string& check) {
-  if (check == "all")
-    return CholCheckIterFreq::All;
-  else if (check == "last")
-    return CholCheckIterFreq::Last;
-  else if (check == "none")
-    return CholCheckIterFreq::None;
-
-  std::cout << "Parsing is not implemented for --check-result=" << check << "!" << std::endl;
-  std::terminate();
-  return CholCheckIterFreq::None;  // unreachable
-}
-
 }

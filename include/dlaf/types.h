@@ -15,6 +15,7 @@
 #include <complex>
 #include <cstddef>
 #include <limits>
+#include <ostream>
 
 #include "dlaf/common/assert.h"
 
@@ -36,6 +37,18 @@ enum class Device {
 #endif
 };
 
+inline std::ostream& operator<<(std::ostream& os, const Device& device) {
+  switch (device) {
+    case Device::CPU:
+      os << "CPU";
+      break;
+    case Device::GPU:
+      os << "GPU";
+      break;
+  }
+  return os;
+}
+
 enum class Backend {
   MC,
   GPU,
@@ -45,6 +58,35 @@ enum class Backend {
   Default = MC
 #endif
 };
+
+inline std::ostream& operator<<(std::ostream& os, const Backend& backend) {
+  switch (backend) {
+    case Backend::MC:
+      os << "MC";
+      break;
+    case Backend::GPU:
+      os << "GPU";
+      break;
+  }
+  return os;
+}
+
+/// Default device given a backend.
+template <Backend backend>
+struct DefaultDevice;
+
+template <>
+struct DefaultDevice<Backend::MC> {
+  static constexpr Device value = Device::CPU;
+};
+
+template <>
+struct DefaultDevice<Backend::GPU> {
+  static constexpr Device value = Device::GPU;
+};
+
+template <Backend backend>
+inline constexpr Device DefaultDevice_v = DefaultDevice<backend>::value;
 
 template <class T>
 struct TypeInfo;

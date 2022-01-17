@@ -77,9 +77,9 @@ RUN spack external find \
     fi
 
 # Set up the binary cache and trust the public part of our signing key
-COPY ./ci/docker/public_key.asc ./public_key.asc
+COPY ./ci/docker/spack.cloud_key.asc ./spack.cloud_key.asc
 RUN spack mirror add --scope site cscs https://spack.cloud && \
-    spack gpg trust ./public_key.asc
+    spack gpg trust ./spack.cloud_key.asc
 
 # Add our custom spack repo from here
 COPY ./spack /user_repo

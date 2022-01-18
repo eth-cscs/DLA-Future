@@ -25,6 +25,7 @@
 #include "dlaf/communication/sync/broadcast.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy.h"
+#include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/memory/memory_view.h"
 #include "dlaf/types.h"
@@ -65,11 +66,27 @@ struct config_t {
 };
 
 std::vector<config_t> configs{
+    // full-tile band
     {{3, 3}, {3, 3}},    // single tile (nothing to do)
     {{12, 12}, {3, 3}},  // tile always full size (less room for distribution over ranks)
     {{13, 13}, {3, 3}},  // tile incomplete
     {{24, 24}, {3, 3}},  // tile always full size (more room for distribution)
     {{40, 40}, {5, 5}},
+};
+
+struct config_subband_t {
+  LocalElementSize size;
+  TileElementSize block_size;
+  SizeType band_size;
+};
+
+std::vector<config_subband_t> configs_subband{
+    // sub-tile band
+    {{4, 4}, {4, 4}, 2},    // single tile
+    {{12, 12}, {4, 4}, 2},  // tile always full size (less room for distribution over ranks)
+    {{13, 13}, {3, 3}, 3},  // tile incomplete
+    {{24, 24}, {3, 3}, 3},  // tile always full size (more room for distribution)
+    {{40, 40}, {5, 5}, 5},
 };
 
 template <class T>
@@ -78,69 +95,67 @@ MatrixLocal<T> makeLocal(const Matrix<const T, Device::CPU>& matrix) {
 }
 
 template <class T>
-void mirrorLowerOnDiag(const Tile<T, Device::CPU>& tile) {
-  DLAF_ASSERT(square_size(tile), tile.size());
-
-  for (SizeType j = 0; j < tile.size().cols(); j++)
-    for (SizeType i = j; i < tile.size().rows(); ++i)
-      tile({j, i}) = dlaf::conj(tile({i, j}));
-}
-
-template <class T>
 void copyConjTrans(const Tile<const T, Device::CPU>& from, const Tile<T, Device::CPU>& to) {
   DLAF_ASSERT(from.size() == transposed(to.size()), from.size(), to.size());
 
-  for (SizeType j = 0; j < from.size().cols(); j++)
-    for (SizeType i = 0; i < from.size().rows(); ++i)
-      to({j, i}) = dlaf::conj(from({i, j}));
+  for (const TileElementIndex& index : common::iterate_range2d(from.size()))
+    to(transposed(index)) = dlaf::conj(from(index));
 }
 
 template <class T>
-void setupHermitianBand(MatrixLocal<T>& matrix, const SizeType& band_size) {
-  DLAF_ASSERT(band_size == matrix.blockSize().rows(), band_size, matrix.blockSize().rows());
-  DLAF_ASSERT(band_size % matrix.blockSize().rows() == 0, band_size, matrix.blockSize().rows());
+void mirrorLowerOnDiag(const Tile<T, Device::CPU>& tile) {
+  DLAF_ASSERT(square_size(tile), tile.size());
+
+  copyConjTrans(tile, tile);
+}
+
+template <class T>
+void setupHermitianBand(MatrixLocal<T>& matrix, const SizeType band_size) {
+  DLAF_ASSERT(matrix.blockSize().rows() % band_size == 0, band_size, matrix.blockSize().rows());
 
   DLAF_ASSERT(square_blocksize(matrix), matrix.blockSize());
   DLAF_ASSERT(square_size(matrix), matrix.blockSize());
 
-  const auto k_diag = band_size / matrix.blockSize().rows();
+  // 0-diagonal: mirror band
+  // note: diagonal subtiles are correctly set just in the lower part by the algorithm
+  for (SizeType k = 0; k < matrix.nrTiles().cols(); ++k) {
+    const GlobalTileIndex kk(k, k);
 
-  // setup band "edge" and its tranposed
-  for (SizeType j = 0; j < matrix.nrTiles().cols(); ++j) {
-    const GlobalTileIndex ij{j + k_diag, j};
+    const auto& tile = matrix.tile(kk);
 
-    if (!ij.isIn(matrix.nrTiles()))
-      continue;
+    const SizeType n = std::max<SizeType>(0, tile.size().rows() - band_size - 1);
+    if (band_size < tile.size().rows())
+      laset(lapack::MatrixType::Lower, n, n, 0, 0, tile.ptr({band_size + 1, 0}), tile.ld());
 
-    const auto& tile_lo = matrix.tile(ij);
-
-    // setup the strictly lower to zero (if there is any)
-    if (std::min(tile_lo.size().rows(), tile_lo.size().cols()) - 1 > 0) {
-      lapack::laset(lapack::MatrixType::Lower, tile_lo.size().rows() - 1, tile_lo.size().cols() - 1, 0,
-                    0, tile_lo.ptr({1, 0}), tile_lo.ld());
-    }
-
-    copyConjTrans(matrix.tile_read(ij), matrix.tile(common::transposed(ij)));
+    mirrorLowerOnDiag(tile);
   }
 
-  // setup zeros in both lower and upper out-of-band
-  for (SizeType j = 0; j < matrix.nrTiles().cols(); ++j) {
-    for (SizeType i = j + k_diag + 1; i < matrix.nrTiles().rows(); ++i) {
-      const GlobalTileIndex ij{i, j};
-      if (!ij.isIn(matrix.nrTiles()))
-        continue;
+  // 1-diagonal: setup band "edge" (and its tranposed)
+  for (SizeType j = 0; j < matrix.nrTiles().cols() - 1; ++j) {
+    const SizeType i = j + 1;
+    const GlobalTileIndex ij(i, j);
+
+    const auto& tile_l = matrix.tile(ij);
+
+    if (tile_l.size().rows() > 1)
+      lapack::laset(lapack::MatrixType::Lower, tile_l.size().rows() - 1, band_size, T(0), T(0),
+                    tile_l.ptr({1, tile_l.size().cols() - band_size}), tile_l.ld());
+
+    if (band_size < tile_l.size().rows())
+      lapack::laset(lapack::MatrixType::General, tile_l.size().rows(), band_size, T(0), T(0),
+                    tile_l.ptr({0, 0}), tile_l.ld());
+
+    copyConjTrans(matrix.tile(ij), matrix.tile(common::transposed(ij)));
+  }
+
+  // k-diagonal (with k >= 2): zero out both lower and upper out-of-band subtiles
+  for (SizeType j = 0; j < matrix.nrTiles().cols() - 2; ++j) {
+    for (SizeType i = j + 2; i < matrix.nrTiles().rows(); ++i) {
+      const GlobalTileIndex ij(i, j);
 
       tile::internal::set0(matrix.tile(ij));
       tile::internal::set0(matrix.tile(common::transposed(ij)));
     }
-  }
-
-  // mirror band (diagonal tiles are correctly set just in the lower part)
-  for (SizeType k = 0; k < matrix.nrTiles().rows(); ++k) {
-    const GlobalTileIndex kk{k, k};
-    const auto& tile = matrix.tile(kk);
-
-    mirrorLowerOnDiag(tile);
   }
 }
 
@@ -162,7 +177,7 @@ void splitReflectorsAndBand(MatrixLocal<T>& mat_v, MatrixLocal<T>& mat_b, const 
 }
 
 template <class T>
-auto allGatherTaus(const SizeType k, const SizeType chunk_size, const SizeType band_size,
+auto allGatherTaus(const SizeType k, const SizeType band_size,
                    std::vector<pika::shared_future<common::internal::vector<T>>> fut_local_taus) {
   std::vector<T> taus;
   taus.reserve(to_sizet(k));
@@ -170,9 +185,7 @@ auto allGatherTaus(const SizeType k, const SizeType chunk_size, const SizeType b
   pika::wait_all(fut_local_taus);
   auto local_taus = pika::unwrap(fut_local_taus);
 
-  DLAF_ASSERT(band_size == chunk_size, band_size, chunk_size);
-
-  const auto n_chunks = std::ceil(float(k) / chunk_size);
+  const auto n_chunks = std::ceil(float(k) / band_size);
 
   for (auto index_chunk = 0; index_chunk < n_chunks; ++index_chunk) {
     std::vector<T> chunk_data;
@@ -248,18 +261,12 @@ auto checkUpperPartUnchanged(Matrix<const T, Device::CPU>& reference,
 }
 
 template <class T>
-auto checkResult(const SizeType k, const SizeType band_size, const SizeType block_size,
-                 Matrix<const T, Device::CPU>& reference, MatrixLocal<T> const& mat_v,
-                 MatrixLocal<T> const& mat_b, std::vector<T> const& taus) {
-  const SizeType band_size_tiles = band_size / block_size;
-
-  DLAF_ASSERT(band_size == block_size, band_size, block_size);
-
-  const GlobalTileIndex v_offset{band_size_tiles, 0};
-
+auto checkResult(const SizeType k, const SizeType band_size, Matrix<const T, Device::CPU>& reference,
+                 MatrixLocal<T> const& mat_v, MatrixLocal<T> const& mat_b, std::vector<T> const& taus) {
+  const GlobalElementIndex offset(band_size, 0);
   // Now that all input are collected locally, it's time to apply the transformation,
   // ...but just if there is any
-  if (v_offset.isIn(mat_v.nrTiles())) {
+  if (offset.isIn(mat_v.size())) {
     // Reduction to band returns a sequence of transformations applied from left and right to A
     // allowing to reduce the matrix A to a band matrix B
     //
@@ -272,19 +279,17 @@ auto checkResult(const SizeType k, const SizeType band_size, const SizeType bloc
     // H1 H2 ... Hn B Hn* ... H2* H1*
 
     // apply from left...
-    const GlobalTileIndex left_offset{band_size_tiles, 0};
+    const GlobalElementIndex left_offset = offset;
     const GlobalElementSize left_size{mat_b.size().rows() - band_size, mat_b.size().cols()};
     lapack::unmqr(lapack::Side::Left, lapack::Op::NoTrans, left_size.rows(), left_size.cols(), k,
-                  mat_v.tile_read(v_offset).ptr(), mat_v.ld(), taus.data(),
-                  mat_b.tile(left_offset).ptr(), mat_b.ld());
+                  mat_v.ptr(offset), mat_v.ld(), taus.data(), mat_b.ptr(left_offset), mat_b.ld());
 
     // ... and from right
-    const GlobalTileIndex right_offset = common::transposed(left_offset);
+    const GlobalElementIndex right_offset = common::transposed(left_offset);
     const GlobalElementSize right_size = common::transposed(left_size);
 
     lapack::unmqr(lapack::Side::Right, lapack::Op::ConjTrans, right_size.rows(), right_size.cols(), k,
-                  mat_v.tile_read(v_offset).ptr(), mat_v.ld(), taus.data(),
-                  mat_b.tile(right_offset).ptr(), mat_b.ld());
+                  mat_v.ptr(offset), mat_v.ld(), taus.data(), mat_b.ptr(right_offset), mat_b.ld());
   }
 
   // Eventually, check the result obtained by applying the inverse transformation equals the original matrix
@@ -297,41 +302,52 @@ auto checkResult(const SizeType k, const SizeType band_size, const SizeType bloc
   CHECK_MATRIX_NEAR(result, reference, 0, mat_b.size().linear_size() * TypeUtilities<T>::error);
 }
 
+template <class TypeParam, Device device>
+void testReductionToBandLocal(const LocalElementSize size, const TileElementSize block_size,
+                              const SizeType band_size) {
+  const SizeType k_reflectors = std::max(SizeType(0), size.rows() - band_size - 1);
+  DLAF_ASSERT(block_size.rows() % band_size == 0, block_size.rows(), band_size);
+
+  Distribution distribution({size.rows(), size.cols()}, block_size);
+
+  // setup the reference input matrix
+  Matrix<const TypeParam, device> reference = [size = size, block_size = block_size]() {
+    Matrix<TypeParam, device> reference(size, block_size);
+    matrix::util::set_random_hermitian(reference);
+    return reference;
+  }();
+
+  Matrix<TypeParam, device> matrix_a(distribution);
+  copy(reference, matrix_a);
+
+  auto local_taus = eigensolver::reductionToBand<Backend::MC>(matrix_a, band_size);
+
+  checkUpperPartUnchanged(reference, matrix_a);
+
+  auto mat_v = allGather(lapack::MatrixType::Lower, matrix_a);
+  auto mat_b = makeLocal(matrix_a);
+  splitReflectorsAndBand(mat_v, mat_b, band_size);
+
+  auto taus = allGatherTaus(k_reflectors, band_size, local_taus);
+  EXPECT_EQ(taus.size(), k_reflectors);
+
+  checkResult(k_reflectors, band_size, reference, mat_v, mat_b, taus);
+}
+
 TYPED_TEST(ReductionToBandTestMC, CorrectnessLocal) {
-  constexpr Device device = Device::CPU;
-
   for (const auto& config : configs) {
-    const LocalElementSize& size = config.size;
-    const TileElementSize& block_size = config.block_size;
+    const auto& [size, block_size] = config;
+    const auto band_size = block_size.rows();
 
-    const SizeType band_size = block_size.cols();
-    const SizeType k_reflectors = std::max(SizeType(0), size.rows() - band_size - 1);
-    DLAF_ASSERT(band_size == block_size.cols(), band_size, block_size.cols());
+    testReductionToBandLocal<TypeParam, Device::CPU>(size, block_size, band_size);
+  }
+}
 
-    Distribution distribution({size.rows(), size.cols()}, block_size);
+TYPED_TEST(ReductionToBandTestMC, CorrectnessLocalSubBand) {
+  for (const auto& config : configs_subband) {
+    const auto& [size, block_size, band_size] = config;
 
-    // setup the reference input matrix
-    Matrix<const TypeParam, device> reference = [&]() {
-      Matrix<TypeParam, device> reference(size, block_size);
-      matrix::util::set_random_hermitian(reference);
-      return reference;
-    }();
-
-    Matrix<TypeParam, device> matrix_a(distribution);
-    copy(reference, matrix_a);
-
-    auto local_taus = eigensolver::reductionToBand<Backend::MC>(matrix_a);
-
-    checkUpperPartUnchanged(reference, matrix_a);
-
-    auto mat_v = allGather(lapack::MatrixType::Lower, matrix_a);
-    auto mat_b = makeLocal(matrix_a);
-    splitReflectorsAndBand(mat_v, mat_b, band_size);
-
-    auto taus = allGatherTaus(k_reflectors, block_size.cols(), band_size, local_taus);
-    EXPECT_EQ(taus.size(), k_reflectors);
-
-    checkResult(k_reflectors, band_size, block_size.cols(), reference, mat_v, mat_b, taus);
+    testReductionToBandLocal<TypeParam, Device::CPU>(size, block_size, band_size);
   }
 }
 
@@ -340,12 +356,11 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributed) {
 
   for (auto&& comm_grid : this->commGrids()) {
     for (const auto& config : configs) {
-      const LocalElementSize& size = config.size;
-      const TileElementSize& block_size = config.block_size;
+      const auto& [size, block_size] = config;
+      const auto band_size = block_size.rows();
 
-      const SizeType band_size = block_size.cols();
       const SizeType k_reflectors = std::max(SizeType(0), size.rows() - band_size - 1);
-      DLAF_ASSERT(band_size == block_size.cols(), band_size, block_size.cols());
+      DLAF_ASSERT(block_size.rows() % band_size == 0, block_size.rows(), band_size);
 
       Distribution distribution({size.rows(), size.cols()}, block_size, comm_grid.size(),
                                 comm_grid.rank(), {0, 0});
@@ -372,7 +387,7 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributed) {
       auto taus = allGatherTaus(k_reflectors, block_size.cols(), band_size, local_taus, comm_grid);
       DLAF_ASSERT(to_SizeType(taus.size()) == k_reflectors, taus.size(), k_reflectors);
 
-      checkResult(k_reflectors, band_size, block_size.cols(), reference, mat_v, mat_b, taus);
+      checkResult(k_reflectors, band_size, reference, mat_v, mat_b, taus);
     }
   }
 }

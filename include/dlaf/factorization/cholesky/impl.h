@@ -26,6 +26,7 @@
 #include "dlaf/factorization/cholesky/api.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/distribution.h"
+#include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/panel.h"
 #include "dlaf/matrix/tile.h"
@@ -205,7 +206,7 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
     auto& panel = panels.nextResource();
     auto& panelT = panelsT.nextResource();
 
-    panel.setRangeStart({kt, kt});
+    panel.setRangeStart(GlobalTileIndex{kt, kt});
 
     if (kk_rank.col() == this_rank.col()) {
       const LocalTileIndex diag_wp_idx{0, distr.localTileFromGlobalTile<Coord::Col>(k)};
@@ -348,7 +349,7 @@ void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
     auto& panel = panels.nextResource();
     auto& panelT = panelsT.nextResource();
 
-    panel.setRangeStart({kt, kt});
+    panel.setRangeStart(GlobalTileIndex{kt, kt});
 
     if (kk_rank.row() == this_rank.row()) {
       const LocalTileIndex diag_wp_idx{distr.localTileFromGlobalTile<Coord::Row>(k), 0};

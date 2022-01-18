@@ -26,7 +26,10 @@
 #include "dlaf/communication/kernels/all_reduce.h"
 #include "dlaf/executors.h"
 #include "dlaf/lapack/tile.h"
+#include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/matrix/tile.h"
+#include "dlaf/matrix/views.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
@@ -60,7 +63,8 @@ struct QR_Tfactor<Backend::MC, Device::CPU, T> {
   /// @pre k <= t.get().size().rows && k <= t.get().size().cols()
   /// @pre k >= 0
   /// @pre v_start.isIn(v.nrTiles())
-  static void call(const SizeType k, Matrix<const T, Device::CPU>& v, const GlobalTileIndex v_start,
+  static void call(const SizeType k, Matrix<const T, Device::CPU>& v,
+                   const matrix::SubPanelView& panel_view,
                    pika::shared_future<common::internal::vector<T>> taus,
                    pika::future<matrix::Tile<T, Device::CPU>> t);
 
@@ -167,7 +171,7 @@ pika::future<matrix::Tile<T, Device::CPU>> trmvUpdateColumn(
 
 template <class T>
 void QR_Tfactor<Backend::MC, Device::CPU, T>::call(const SizeType k, Matrix<const T, Device::CPU>& v,
-                                                   const GlobalTileIndex v_start,
+                                                   const matrix::SubPanelView& panel_view,
                                                    pika::shared_future<common::internal::vector<T>> taus,
                                                    pika::future<matrix::Tile<T, Device::CPU>> t) {
   t = splitTile(t, {{0, 0}, {k, k}});
@@ -176,7 +180,9 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(const SizeType k, Matrix<cons
   if (k == 0)
     return;
 
-  const auto panel_width = v.tileSize(v_start).cols();
+  const auto v_start = panel_view.offset();
+
+  const auto panel_width = panel_view.width();
 
   DLAF_ASSERT(k <= panel_width, k, panel_width);
 
@@ -205,15 +211,18 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(const SizeType k, Matrix<cons
   // 1st step: compute the column partial result `t`
   // First we compute the matrix vector multiplication for each column
   // -tau(j) . V(j:, 0:j)* . V(j:, j)
-  for (const auto& v_i : iterate_range2d(v_start, v_end)) {
-    const bool is_v0 = (v_i.row() == v_start.row());
+  for (const auto& v_i : panel_view.iteratorLocal()) {
+    // TODO improve panel_view API (begin)
+    const bool is_v0 = (v_i.row() == panel_view.begin().row());
+
+    const matrix::SubTileSpec& spec = panel_view(v_i);
 
     // TODO
     // Note:
     // Since we are writing always on the same t, the gemv are serialized
     // A possible solution to this would be to have multiple places where to store partial
     // results, and then locally reduce them just before the reduce over ranks
-    t = gemvColumnT(is_v0, v.read(v_i), taus, t);
+    t = gemvColumnT(is_v0, splitTile(v.read(v_i), spec), taus, t);
   }
 
   // 2nd step: compute the T factor, by performing the last step on each column

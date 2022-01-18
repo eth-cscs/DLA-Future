@@ -20,7 +20,9 @@
 #include "dlaf/lapack/tile.h"  // workaround for importing lapack.hh
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/copy_tile.h"
+#include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/matrix/views.h"
 #include "dlaf/util_matrix.h"
 
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
@@ -205,11 +207,6 @@ std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, GlobalT
     {26, 39, 10, 6, 1, {1, 6}},  // k reflectors (incomplete tile)
 
     {26, 39, 10, 6, 0, {0, 6}},  // 0 reflectors
-
-    // empty matrices
-    {0, 0, 10, 6, 0, {0, 0}},
-    {39, 0, 10, 6, 0, {0, 0}},
-    {0, 26, 10, 6, 0, {0, 0}},
 };
 
 // Note:
@@ -252,8 +249,8 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
 
     GlobalElementSize v_size(a_m, a_n);
 
+    const GlobalElementIndex v_start_el = GlobalElementIndex(v_start.row() * mb, v_start.col() * nb);
     if (!v_size.isEmpty()) {
-      const auto v_start_el = GlobalElementIndex(v_start.row() * mb, v_start.col() * nb);
       const auto v_end_el = GlobalElementIndex{a_m, std::min((v_start.col() + 1) * nb, a_n)};
       v_size = v_end_el - v_start_el;
     }
@@ -281,7 +278,8 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
     const LocalTileIndex t_idx(0, 0);
 
     using dlaf::factorization::internal::computeTFactor;
-    computeTFactor<Backend::MC>(k, v_input, v_start, taus_input, t_output(t_idx));
+    const matrix::SubPanelView panel_view(v_input.distribution(), v_start_el, k);
+    computeTFactor<Backend::MC>(k, v_input, panel_view, taus_input, t_output(t_idx));
 
     // No reflectors, so nothing to check
     if (k == 0)

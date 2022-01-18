@@ -1,14 +1,10 @@
-# Build environment image
 ARG BUILD_IMAGE
 
 # This is the folder where the project is built
 ARG BUILD=/DLA-Future-build
-
 # This is where we copy the sources to
 ARG SOURCE=/DLA-Future
-
-# Where "make install" should go / we copy the bare minimum
-# of binaries to here
+# Where a bunch of shared libs live
 ARG DEPLOY=/root/DLA-Future.bundle
 
 FROM $BUILD_IMAGE as builder
@@ -17,29 +13,22 @@ ARG BUILD
 ARG SOURCE
 ARG DEPLOY
 
-# With or without CUDA
-ARG DLAF_WITH_CUDA=OFF
-
 # Build DLA-Future
-COPY . $SOURCE
+COPY . ${SOURCE}
 
 SHELL ["/bin/bash", "-c"]
 
-# Build the project with coverage symbols
-RUN mkdir ${BUILD} && cd ${BUILD} && \
-    CC=/usr/local/mpich/bin/mpicc CXX=/usr/local/mpich/bin/mpicxx cmake ${SOURCE} \
-      -DCMAKE_BUILD_TYPE=Debug \
-      -DCMAKE_CXX_FLAGS="-O0 -Werror -fprofile-arcs -ftest-coverage" \
-      -DCMAKE_EXE_LINKER_FLAGS="-fprofile-arcs -ftest-coverage" \
-      -DLAPACK_LIBRARY=openblas \
-      -DDLAF_WITH_CUDA=${DLAF_WITH_CUDA} \
-      -DCUDALIBS_ROOT=/usr/local/cuda/targets/x86_64-linux \
-      -DDLAF_WITH_MKL=OFF \
-      -DDLAF_BUILD_TESTING=ON \
-      -DDLAF_BUILD_MINIAPPS=ON \
-      -DMPIEXEC_EXECUTABLE=srun \
-      -DDLAF_CI_RUNNER_USES_MPIRUN=1 && \
-      make -j$(nproc)
+# Inject the coverage option in the spack package
+RUN gawk -i inplace '$0 ~ "return args" {print "        args.append(self.define(\"DLAF_WITH_COVERAGE\", True))"} {print $0}' ${SOURCE}/spack/packages/dla-future/package.py
+
+# Note: we force spack to build in ${BUILD} creating a link to it
+RUN spack repo rm --scope site dlaf && \
+    spack repo add ${SOURCE}/spack && \
+    spack -e ci develop --no-clone -p ${SOURCE} dla-future@develop && \
+    spack -e ci concretize -f && \
+    mkdir ${BUILD} && \
+    ln -s ${BUILD} `spack -e ci location -b dla-future` && \
+    spack -e ci install --keep-stage
 
 # Prune and bundle binaries
 RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
@@ -49,13 +38,17 @@ RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
     libtree -d ${DEPLOY} $(which ctest gcov addr2line) && \
     cp -L ${SOURCE}/ci/{mpi-ctest,upload_codecov} ${DEPLOY}/usr/bin && \
     echo "$TEST_BINARIES" | xargs -I{file} find -samefile {file} -exec cp --parents '{}' ${BUILD}-tmp ';' && \
-    find '(' -name CTestTestfile.cmake -o -iname "*.gcno" ')' -exec cp --parent '{}' ${BUILD}-tmp ';' && \
+    find '(' -name CTestTestfile.cmake -o -iname "*.gcno" ')' -exec cp --parents '{}' ${BUILD}-tmp ';' && \
     rm -rf ${BUILD} && \
     mv ${BUILD}-tmp ${BUILD} && \
     rm -rf ${SOURCE}/.git
 
 # Multistage build, this is the final small image
 FROM ubuntu:20.04
+
+# set jfrog autoclean policy
+LABEL com.jfrog.artifactory.retention.maxDays="7"
+LABEL com.jfrog.artifactory.retention.maxCount="10"
 
 ENV DEBIAN_FRONTEND noninteractive
 

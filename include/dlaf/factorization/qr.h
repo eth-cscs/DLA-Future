@@ -11,6 +11,7 @@
 
 #include "dlaf/factorization/qr/mc.h"
 #include "dlaf/factorization/qr/t_factor_impl.h"
+#include "dlaf/matrix/index.h"
 
 namespace dlaf::factorization {
 
@@ -23,10 +24,10 @@ namespace internal {
 // Schreiber, Robert & VanLoan, Charles. (1989)
 // SIAM Journal on Scientific and Statistical Computing. 10. 10.1137/0910005.
 template <Backend backend, Device device, class T>
-void computeTFactor(const SizeType k, Matrix<const T, device>& v, const GlobalTileIndex v_start,
+void computeTFactor(const SizeType k, Matrix<const T, device>& v, const matrix::SubPanelView& panel_view,
                     pika::shared_future<common::internal::vector<T>> taus,
                     pika::future<matrix::Tile<T, device>> t) {
-  QR_Tfactor<backend, device, T>::call(k, v, v_start, taus, std::move(t));
+  QR_Tfactor<backend, device, T>::call(k, v, panel_view, taus, std::move(t));
 }
 
 // Forms the triangular factor T of a block reflector H of order n, which is defined as a product of k

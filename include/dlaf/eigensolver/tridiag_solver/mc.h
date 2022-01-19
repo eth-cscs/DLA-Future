@@ -10,10 +10,19 @@
 #pragma once
 
 #include "dlaf/eigensolver/tridiag_solver/api.h"
+#include "dlaf/types.h"
 
 namespace dlaf {
 namespace eigensolver {
 namespace internal {
+
+template <class T>
+struct TridiagSolver<Backend::MC, Device::CPU, T> {
+  static void call(Matrix<BaseType<T>, Device::CPU>& mat_a, SizeType i_begin, SizeType i_end,
+                   Matrix<T, Device::CPU>& mat_ev);
+  static void call(comm::CommunicatorGrid grid, Matrix<BaseType<T>, Device::CPU>& mat_a,
+                   Matrix<T, Device::CPU>& mat_ev);
+};
 
 template <class T>
 void cuppensTridiagTileUpdate(const matrix::Tile<T, Device::CPU>& top,
@@ -30,22 +39,27 @@ void cuppensTridiagTileUpdate(const matrix::Tile<T, Device::CPU>& top,
 }
 
 template <class T>
-struct TridiagSolver<Backend::MC, Device::CPU, T> {
-  static void call(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_ev);
-  static void call(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a,
-                   Matrix<T, Device::CPU>& mat_ev);
-};
-
-template <class T>
-void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& mat_a,
+void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<BaseType<T>, Device::CPU>& mat_a,
+                                                      SizeType i_begin, SizeType i_end,
                                                       Matrix<T, Device::CPU>& mat_ev) {
-  (void) mat_a;
-  (void) mat_ev;
+  if (i_begin == i_end) {
+    // TODO: solve with stedc
+    return;
+  }
+  SizeType i_midpoint = (i_begin + i_end) / 2;
+  // TODO: call Cuppen's tridiag decomposition
+  TridiagSolver<Backend::MC, Device::CPU, T>::call(mat_a, i_begin, i_midpoint, mat_ev);    // left
+  TridiagSolver<Backend::MC, Device::CPU, T>::call(mat_a, i_midpoint + 1, i_end, mat_ev);  // right
+  // TODO: form D + rzz^T from `mat_a` and `mat_ev`
+  // TODO: Deflate D + rzz^T
+  // TODO: Find evals of D + rzz^T with laed4 (root solver)
+  // TODO: Form evecs
+  // TODO: Gemm
 }
 
 template <class T>
 void TridiagSolver<Backend::MC, Device::CPU, T>::call(comm::CommunicatorGrid grid,
-                                                      Matrix<T, Device::CPU>& mat_a,
+                                                      Matrix<BaseType<T>, Device::CPU>& mat_a,
                                                       Matrix<T, Device::CPU>& mat_ev) {
   (void) grid;
   (void) mat_a;

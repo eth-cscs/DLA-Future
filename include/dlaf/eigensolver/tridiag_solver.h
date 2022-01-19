@@ -10,8 +10,9 @@
 #pragma once
 
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/eigensolver/tridiag_solver/api.h"
+#include "dlaf/eigensolver/tridiag_solver/mc.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
 namespace dlaf {
@@ -30,7 +31,7 @@ namespace eigensolver {
 /// @pre mat_ev is a square matrix
 /// @pre mat_ev has a square block size
 template <Backend backend, Device device, class T>
-void tridiagSolver(Matrix<T, device>& mat_a, Matrix<T, device>& mat_ev) {
+void tridiagSolver(Matrix<BaseType<T>, device>& mat_a, Matrix<T, device>& mat_ev) {
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
   DLAF_ASSERT(mat_a.distribution().size().cols() == 2, mat_a);
 
@@ -38,7 +39,9 @@ void tridiagSolver(Matrix<T, device>& mat_a, Matrix<T, device>& mat_ev) {
   DLAF_ASSERT(matrix::square_size(mat_ev), mat_ev);
   DLAF_ASSERT(matrix::square_blocksize(mat_ev), mat_ev);
 
-  internal::TridiagSolver<backend, device, T>::call(mat_a, mat_ev);
+  internal::TridiagSolver<backend, device, T>::call(mat_a, SizeType(0),
+                                                    SizeType(mat_a.distribution().nrTiles().rows() - 1),
+                                                    mat_ev);
 }
 
 /// TODO: more info on the distributed version
@@ -55,7 +58,8 @@ void tridiagSolver(Matrix<T, device>& mat_a, Matrix<T, device>& mat_ev) {
 /// @pre mat_ev is a square matrix
 /// @pre mat_ev has a square block size
 template <Backend backend, Device device, class T>
-void tridiagSolver(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a, Matrix<T, device>& mat_ev) {
+void tridiagSolver(comm::CommunicatorGrid grid, Matrix<BaseType<T>, device>& mat_a,
+                   Matrix<T, device>& mat_ev) {
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
   DLAF_ASSERT(mat_a.distribution().size().cols() == 2, mat_a);
 

@@ -274,7 +274,8 @@ auto potrf(const dlaf::internal::Policy<B>& p);
 ///
 /// This overload blocks until completion of the algorithm.
 template <Backend B, class T, Device D>
-void stedc(const dlaf::internal::Policy<B>& p, const Tile<T, D>& tridiag, const Tile<T, D>& evecs);
+void stedc(const dlaf::internal::Policy<B>& p, const Tile<BaseType<T>, D>& tridiag,
+           const Tile<T, D>& evecs);
 
 /// \overload stedc
 ///
@@ -365,7 +366,7 @@ void potrf(const blas::Uplo uplo, const Tile<T, Device::CPU>& a) noexcept {
 }
 
 template <class T>
-void stedc(const Tile<T, Device::CPU>& tridiag, const Tile<std::complex<T>, Device::CPU>& evecs) {
+void stedc(const Tile<BaseType<T>, Device::CPU>& tridiag, const Tile<T, Device::CPU>& evecs) {
   DLAF_ASSERT(square_size(evecs), evecs);
   DLAF_ASSERT(tridiag.size().rows() == evecs.size().rows(), tridiag, evecs);
   DLAF_ASSERT(tridiag.size().cols() == 2, tridiag);
@@ -507,7 +508,7 @@ void potrf(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<
 }
 
 template <class T>
-void stedc(cusolverDnHandle_t, const Tile<T, Device::CPU>&, const Tile<T, Device::CPU>&) {
+void stedc(cusolverDnHandle_t, const Tile<BaseType<T>, Device::CPU>&, const Tile<T, Device::CPU>&) {
   DLAF_STATIC_UNIMPLEMENTED(sizeof(T) == 0);
 }
 #endif

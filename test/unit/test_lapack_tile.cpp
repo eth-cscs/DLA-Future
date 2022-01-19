@@ -39,7 +39,6 @@ template <class T>
 using RealTileOperationsTestMC = TileOperationsTest<T, Device::CPU>;
 
 TYPED_TEST_SUITE(TileOperationsTestMC, MatrixElementTypes);
-TYPED_TEST_SUITE(RealTileOperationsTestMC, RealMatrixElementTypes);
 
 #ifdef DLAF_WITH_CUDA
 template <class T>
@@ -273,11 +272,10 @@ TYPED_TEST(TileOperationsTestMC, Set0) {
 }
 
 // Note: The eigenvectors of stedc can be complex<> but the tridiagonal matrix can only be float/double.
-TYPED_TEST(RealTileOperationsTestMC, Stedc) {
+TYPED_TEST(TileOperationsTestMC, Stedc) {
   using dlaf::matrix::test::createTile;
 
-  using RealParam = TypeParam;
-  using ComplexParam = std::complex<RealParam>;
+  using RealParam = BaseType<TypeParam>;
 
   constexpr double pi = 3.14159265358979323846;
 
@@ -296,8 +294,8 @@ TYPED_TEST(RealTileOperationsTestMC, Stedc) {
   };
   auto tridiag = createTile<RealParam, Device::CPU>(std::move(tridiag_f), TileElementSize(sz, 2), sz);
 
-  auto evecs = createTile<ComplexParam, Device::CPU>(TileElementSize(sz, sz), sz);
-  set(evecs, ComplexParam(0));
+  auto evecs = createTile<TypeParam, Device::CPU>(TileElementSize(sz, sz), sz);
+  set(evecs, TypeParam(0));
 
   tile::internal::stedc(tridiag, evecs);
 
@@ -324,14 +322,14 @@ TYPED_TEST(RealTileOperationsTestMC, Stedc) {
   auto expected_evecs_f = [sz](const TileElementIndex& idx) {
     SizeType j = idx.col() + 1;
     SizeType k = idx.row() + 1;
-    return ComplexParam(std::sqrt(2.0 / (sz + 1)) * std::sin(j * k * pi / (sz + 1)));
+    return TypeParam(std::sqrt(2.0 / (sz + 1)) * std::sin(j * k * pi / (sz + 1)));
   };
   auto expected_evecs =
-      createTile<ComplexParam, Device::CPU>(std::move(expected_evecs_f), TileElementSize(sz, sz), sz);
+      createTile<TypeParam, Device::CPU>(std::move(expected_evecs_f), TileElementSize(sz, sz), sz);
 
   CHECK_TILE_NEAR(expected_tridiag, tridiag, sz * TypeUtilities<RealParam>::error,
                   sz * TypeUtilities<RealParam>::error);
 
-  CHECK_EVECS_NEAR_OR_OPPOSITE(expected_evecs, evecs, sz * TypeUtilities<ComplexParam>::error,
-                               sz * TypeUtilities<ComplexParam>::error);
+  CHECK_EVECS_NEAR_OR_OPPOSITE(expected_evecs, evecs, sz * TypeUtilities<TypeParam>::error,
+                               sz * TypeUtilities<TypeParam>::error);
 }

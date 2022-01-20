@@ -17,6 +17,8 @@
 #include "test_lapack_tile/test_potrf.h"
 #include "dlaf_test/matrix/util_tile.h"
 
+#include <cmath>
+
 using namespace dlaf;
 using namespace dlaf::test;
 using namespace testing;
@@ -39,6 +41,7 @@ template <class T>
 using RealTileOperationsTestMC = TileOperationsTest<T, Device::CPU>;
 
 TYPED_TEST_SUITE(TileOperationsTestMC, MatrixElementTypes);
+TYPED_TEST_SUITE(RealTileOperationsTestMC, RealMatrixElementTypes);
 
 #ifdef DLAF_WITH_CUDA
 template <class T>
@@ -271,7 +274,6 @@ TYPED_TEST(TileOperationsTestMC, Set0) {
   }
 }
 
-// Note: The eigenvectors of stedc can be complex<> but the tridiagonal matrix can only be float/double.
 TYPED_TEST(TileOperationsTestMC, Stedc) {
   using dlaf::matrix::test::createTile;
 
@@ -332,4 +334,40 @@ TYPED_TEST(TileOperationsTestMC, Stedc) {
 
   CHECK_EVECS_NEAR_OR_OPPOSITE(expected_evecs, evecs, sz * TypeUtilities<TypeParam>::error,
                                sz * TypeUtilities<TypeParam>::error);
+}
+
+// To reproduce the setup in python:
+//
+// ```
+// import numpy as np
+// from scipy.linalg import eigh
+// from scipy.linalg import norm
+//
+// n = 20
+// d = np.log(np.arange(2, n + 2))
+// z = np.arange(1, n + 1) / n
+// z = z / norm(z)
+// eigh(np.diag(d) + np.outer(z, np.transpose(z)), eigvals_only=True, subset_by_index=[n / 2, n / 2])
+//
+// ```
+//
+TYPED_TEST(RealTileOperationsTestMC, Laed4) {
+  std::size_t n = 20;
+  std::vector<TypeParam> d(n);
+  std::vector<TypeParam> z(n);
+  TypeParam sumsq = 0;
+  for (std::size_t i = 0; i < n; ++i) {
+    d[i] = std::log(TypeParam(i + 2));
+    z[i] = TypeParam(i + 1) / n;
+    sumsq += z[i] * z[i];
+  }
+  TypeParam rho = 1.0 / sumsq;  // the factor essentially normalizes `z`
+  SizeType i = n / 2;           // the index of the middle eigenvalue
+  std::vector<TypeParam> delta(n);
+  TypeParam lambda;
+
+  tile::internal::laed4(d, z, rho, i, delta, lambda);
+
+  TypeParam expected_lambda = 2.497336;
+  EXPECT_NEAR(lambda, expected_lambda, 1e-7);
 }

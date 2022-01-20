@@ -102,6 +102,7 @@ add_library(dlaf.core
     matrix_mirror.cpp
     memory/memory_view.cpp
     memory/memory_chunk.cpp
+    lapack/laed4.cpp
     $<$<BOOL:${DLAF_WITH_CUDA}>:cusolver/assert_info.cu>
 )
 target_compile_options(dlaf.core PRIVATE $<$<COMPILE_LANG_AND_ID:CUDA,NVIDIA>:--extended-lambda>)

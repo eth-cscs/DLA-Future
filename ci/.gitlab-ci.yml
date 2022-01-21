@@ -19,7 +19,9 @@ stages:
     - trying
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
-    SPACK_SHA: 522a7c8ee0d51f92aa8cd685f378d54735a5307e
+    # TODO: Change this back. The latter is on msimberg/spack.
+    # SPACK_SHA: 522a7c8ee0d51f92aa8cd685f378d54735a5307e
+    SPACK_SHA: 737f0cc1c79e8eb903e2fc2d48d02982cd392a22
   before_script:
     - docker login -u $CSCS_REGISTRY_USER -p $CSCS_REGISTRY_PASSWORD $CSCS_REGISTRY
   script:

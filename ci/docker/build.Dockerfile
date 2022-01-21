@@ -49,8 +49,9 @@ ARG SPACK_SHA
 ENV SPACK_SHA=$SPACK_SHA
 
 # Install the specific ref of Spack provided by the user and find compilers
+# TODO: Change this back to the upstream spack repo before merging
 RUN mkdir -p /opt/spack && \
-    curl -Ls "https://api.github.com/repos/spack/spack/tarball/$SPACK_SHA" | tar --strip-components=1 -xz -C /opt/spack
+    curl -Ls "https://api.github.com/repos/msimberg/spack/tarball/$SPACK_SHA" | tar --strip-components=1 -xz -C /opt/spack
 
 # Find compilers + Add gfortran to clang specs + Define which compiler we want to use
 ARG COMPILER

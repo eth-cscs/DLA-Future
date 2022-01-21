@@ -19,8 +19,8 @@ constexpr double M_PI = 3.141592;
 #endif
 
 #include <blas.hh>
-#include <hpx/local/future.hpp>
-#include <hpx/local/unwrap.hpp>
+#include <pika/future.hpp>
+#include <pika/unwrap.hpp>
 
 #include "dlaf/blas/enum_output.h"
 #include "dlaf/common/assert.h"
@@ -138,9 +138,9 @@ public:
 
 /// Sets all the elements of all the tiles to zero
 template <Backend backend, class T, Device D>
-void set0(hpx::threads::thread_priority priority, Matrix<T, D>& matrix) {
+void set0(pika::threads::thread_priority priority, Matrix<T, D>& matrix) {
   using dlaf::internal::Policy;
-  using hpx::execution::experimental::start_detached;
+  using pika::execution::experimental::start_detached;
 
   for (const auto& idx : iterate_range2d(matrix.distribution().localNrTiles()))
     matrix.readwrite_sender(idx) | tile::set0(Policy<backend>(priority)) | start_detached();
@@ -148,9 +148,9 @@ void set0(hpx::threads::thread_priority priority, Matrix<T, D>& matrix) {
 
 /// Sets all the elements of all the tiles in the active range to zero
 template <Backend backend, class T, Coord axis, Device D>
-void set0(hpx::threads::thread_priority priority, Panel<axis, T, D>& panel) {
+void set0(pika::threads::thread_priority priority, Panel<axis, T, D>& panel) {
   using dlaf::internal::Policy;
-  using hpx::execution::experimental::start_detached;
+  using pika::execution::experimental::start_detached;
 
   for (const auto& tile_idx : panel.iteratorLocal())
     panel.readwrite_sender(tile_idx) | tile::set0(Policy<backend>(priority)) | start_detached();
@@ -168,13 +168,13 @@ void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f) {
   for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
     GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
     auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
-    auto set_f = hpx::unwrapping([tl_index, el_f = el_f](auto&& tile) {
+    auto set_f = pika::unwrapping([tl_index, el_f = el_f](auto&& tile) {
       for (auto el_idx_l : iterate_range2d(tile.size())) {
         GlobalElementIndex el_idx_g(el_idx_l.row() + tl_index.row(), el_idx_l.col() + tl_index.col());
         tile(el_idx_l) = el_f(el_idx_g);
       }
     });
-    hpx::dataflow(std::move(set_f), matrix(tile_wrt_local));
+    pika::dataflow(std::move(set_f), matrix(tile_wrt_local));
   }
 }
 
@@ -224,13 +224,13 @@ void set_random(Matrix<T, Device::CPU>& matrix) {
     GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
     auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
     auto seed = tl_index.col() + tl_index.row() * matrix.size().cols();
-    auto rnd_f = hpx::unwrapping([seed](auto&& tile) {
+    auto rnd_f = pika::unwrapping([seed](auto&& tile) {
       internal::getter_random<T> random_value(seed);
       for (auto el_idx : iterate_range2d(tile.size())) {
         tile(el_idx) = random_value();
       }
     });
-    hpx::dataflow(std::move(rnd_f), matrix(tile_wrt_local));
+    pika::dataflow(std::move(rnd_f), matrix(tile_wrt_local));
   }
 }
 
@@ -323,7 +323,7 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const Size
     else
       seed = tl_index.row() + tl_index.col() * matrix.size().rows();
 
-    auto set_hp_f = hpx::unwrapping([=](auto&& tile) {
+    auto set_hp_f = pika::unwrapping([=](auto&& tile) {
       internal::getter_random<T> random_value(seed);
       if (tile_wrt_global.row() == tile_wrt_global.col())
         internal::set_diagonal_tile(tile, random_value, offset_value);
@@ -331,7 +331,7 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const Size
         internal::set_lower_and_upper_tile(tile, random_value, full_tile_size, tile_wrt_global);
     });
 
-    hpx::dataflow(std::move(set_hp_f), matrix(tile_wrt_local));
+    pika::dataflow(std::move(set_hp_f), matrix(tile_wrt_local));
   }
 }
 

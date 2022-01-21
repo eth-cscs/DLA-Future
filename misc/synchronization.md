@@ -14,8 +14,8 @@ The matrix object (`dlaf::matrix::Matrix`) is the object which manages the setup
 the correct dependencies of the tasks which involve any of its tiles.
 
 Matrix tiles (`dlaf::matrix::Tile`) can be accessed using two matrix methods.
-- `operator()` returns a `hpx::future` of a tile containing the requested tile,
-- `read()` returns a copy of a `hpx::shared_future` of a tile with constant elements representing
+- `operator()` returns a `pika::future` of a tile containing the requested tile,
+- `read()` returns a copy of a `pika::shared_future` of a tile with constant elements representing
   the tile (allows only read operations on tile elements).
 
 Successive calls to `read()` with the same tile index return a copy of the same `shared_future`
@@ -36,9 +36,9 @@ however they cannot be compiled since they are simplified to improve readability
 ```cpp
   Matrix m;
 
-  hpx::dataflow(Task1, m({0, 0}));
-  hpx::dataflow(Task2, m({0, 0}));  // Depends on Task1.
-  hpx::dataflow(Task3, m({0, 1}));  // Different tile. No dependency on Task1 nor on Task2.
+  pika::dataflow(Task1, m({0, 0}));
+  pika::dataflow(Task2, m({0, 0}));  // Depends on Task1.
+  pika::dataflow(Task3, m({0, 1}));  // Different tile. No dependency on Task1 nor on Task2.
 
 // Resulting dependency graph:
 // Task1 - Task2
@@ -49,12 +49,12 @@ however they cannot be compiled since they are simplified to improve readability
 ```cpp
   Matrix m;
 
-  hpx::dataflow(Task1, m({0, 0}));
-  hpx::dataflow(Task2, m({0, 1}));                  // Different tile.
-  hpx::dataflow(Task3, m.read({0, 0}), m({1, 1}));  // Depends on Task1.
-  hpx::dataflow(Task4, m.read({0, 0}), m({0, 1}));  // Depends on Task1 and Task2. No dependency on Task3 (both only read Tile {0, 0})
-  hpx::dataflow(Task5, m({0, 0}));                  // Depends on Task3 and Task4.
-  hpx::dataflow(Task6, m.read({0, 0}));             // Depends on Task5.
+  pika::dataflow(Task1, m({0, 0}));
+  pika::dataflow(Task2, m({0, 1}));                  // Different tile.
+  pika::dataflow(Task3, m.read({0, 0}), m({1, 1}));  // Depends on Task1.
+  pika::dataflow(Task4, m.read({0, 0}), m({0, 1}));  // Depends on Task1 and Task2. No dependency on Task3 (both only read Tile {0, 0})
+  pika::dataflow(Task5, m({0, 0}));                  // Depends on Task3 and Task4.
+  pika::dataflow(Task6, m.read({0, 0}));             // Depends on Task5.
 
 // Resulting dependency graph:
 // Task1 - Task3 - Task 5 - Task6
@@ -117,18 +117,18 @@ however they cannot be compiled since they are simplified to improve readability
 ```cpp
   Matrix m;
 
-  hpx::dataflow(Task1, m({0, 0}));
-  hpx::dataflow(Task2, m({0, 0}));  // Depends on Task1.
-  hpx::dataflow(Task3, m({0, 1}));  // Different tile. No dependency on Task1 or Task2.
+  pika::dataflow(Task1, m({0, 0}));
+  pika::dataflow(Task2, m({0, 0}));  // Depends on Task1.
+  pika::dataflow(Task3, m({0, 1}));  // Different tile. No dependency on Task1 or Task2.
 
   {
     MatrixView mv(UpLo::General, m);
-    hpx::dataflow(Task4, mv({0, 0}));  // Depends on Task2.
-    hpx::dataflow(Task5, mv({0, 1}));  // Depends on Task3.
+    pika::dataflow(Task4, mv({0, 0}));  // Depends on Task2.
+    pika::dataflow(Task5, mv({0, 1}));  // Depends on Task3.
   }
 
-  hpx::dataflow(Task6, m({0, 0}));  // Depends on Task4.
-  hpx::dataflow(Task7, m({0, 1}));  // Depends on Task5.
+  pika::dataflow(Task6, m({0, 0}));  // Depends on Task4.
+  pika::dataflow(Task7, m({0, 1}));  // Depends on Task5.
 
 // Resulting dependency graph:
 // Task1 - Task2 - Task4 ~ Task6
@@ -141,16 +141,16 @@ however they cannot be compiled since they are simplified to improve readability
 ```cpp
   Matrix m;
 
-  hpx::dataflow(Task1, m({0, 0}));
-  hpx::dataflow(Task2, m({0, 0}));  // Depends on Task1.
-  hpx::dataflow(Task3, m({0, 1}));  // Different tile. No dependency on Task1 or Task2.
+  pika::dataflow(Task1, m({0, 0}));
+  pika::dataflow(Task2, m({0, 0}));  // Depends on Task1.
+  pika::dataflow(Task3, m({0, 1}));  // Different tile. No dependency on Task1 or Task2.
 
   MatrixView mv(UpLo::General, m);
 
-  hpx::dataflow(Task4, m({0, 0}));   // Depends on done notification and Task6
-  hpx::dataflow(Task5, m({0, 1}));   // Depends on done notification and Task7
-  hpx::dataflow(Task6, mv({0, 0}));  // Depends on Task2.
-  hpx::dataflow(Task7, mv({0, 1}));  // Depends on Task3.
+  pika::dataflow(Task4, m({0, 0}));   // Depends on done notification and Task6
+  pika::dataflow(Task5, m({0, 1}));   // Depends on done notification and Task7
+  pika::dataflow(Task6, mv({0, 0}));  // Depends on Task2.
+  pika::dataflow(Task7, mv({0, 1}));  // Depends on Task3.
 
   mv.done({0, 0});
   mv.done({0, 1});
@@ -166,23 +166,23 @@ however they cannot be compiled since they are simplified to improve readability
 ```cpp
   Matrix m;
 
-  hpx::dataflow(Task1, m({0, 0}));
-  hpx::dataflow(Task2, m.read({0, 0}));  // Depends on Task1
+  pika::dataflow(Task1, m({0, 0}));
+  pika::dataflow(Task2, m.read({0, 0}));  // Depends on Task1
 
   MatrixView mv(UpLo::General, m);
 
-  hpx::dataflow(Task3, m.read({0, 0}));   // Depends on doneWrite notification and Task5
-  hpx::dataflow(Task4, mv.read({0, 0}));  // Depends on Task2.
-  hpx::dataflow(Task5, mv({0, 0}));       // Depends on Task2 and Task4.
+  pika::dataflow(Task3, m.read({0, 0}));   // Depends on doneWrite notification and Task5
+  pika::dataflow(Task4, mv.read({0, 0}));  // Depends on Task2.
+  pika::dataflow(Task5, mv({0, 0}));       // Depends on Task2 and Task4.
 
   mv.doneWrite({0, 0});
 
-  hpx::dataflow(Task6, mv.read({0, 0}));  // Depends on Task5.
+  pika::dataflow(Task6, mv.read({0, 0}));  // Depends on Task5.
 
   mv.done({0, 0});
 
-  hpx::dataflow(Task7, m.read({0, 0}));  // Depends on doneWrite notification and Task5
-  hpx::dataflow(Task8, m({0, 0}));       // Depends on done notification and Task3,6,7
+  pika::dataflow(Task7, m.read({0, 0}));  // Depends on doneWrite notification and Task5
+  pika::dataflow(Task8, m({0, 0}));       // Depends on done notification and Task3,6,7
 
 // Resulting dependency graph:
 // Task1 - Task2 - Task5 -  Task6 -= Task8
@@ -214,7 +214,7 @@ however they cannot be compiled since they are simplified to improve readability
 
 - Example 1: Returning Tiles.
 ```cpp
-Tile&& Task1(hpx::future<Tile>&& future) {
+Tile&& Task1(pika::future<Tile>&& future) {
   auto tile = future.get();
   // Do some work
 
@@ -223,17 +223,17 @@ Tile&& Task1(hpx::future<Tile>&& future) {
 
   Matrix m;
 
-  auto future1 = hpx::dataflow(Task1, m({0, 0}));
-  hpx::dataflow(Task2, m.read({0, 0}));  // Depends on Task3 (The Tile used in Task1 is still available in future1).
+  auto future1 = pika::dataflow(Task1, m({0, 0}));
+  pika::dataflow(Task2, m.read({0, 0}));  // Depends on Task3 (The Tile used in Task1 is still available in future1).
 
-  hpx::dataflow(Task3, future1);  // Depends on Task1.
+  pika::dataflow(Task3, future1);  // Depends on Task1.
 
 // Resulting dependency graph:
 // Task1 - Task3 - Task2
 ```
 - Example 2: Deadlock returning Tiles.
 ```cpp
-Tile&& Task1(hpx::future<Tile>&& future) {
+Tile&& Task1(pika::future<Tile>&& future) {
   auto tile = future.get();
   // Do some work
 
@@ -242,8 +242,8 @@ Tile&& Task1(hpx::future<Tile>&& future) {
 
   Matrix m;
 
-  auto future1 = hpx::dataflow(Task1, m({0, 0}));
-  hpx::dataflow(Task2, future1, m.read({0, 0}));
+  auto future1 = pika::dataflow(Task1, m({0, 0}));
+  pika::dataflow(Task2, future1, m.read({0, 0}));
   // DEADLOCK:
   // This task depends on Task1 (via future1), and on the destruction of the Tile in future1 (read()).
   // The scope of the Tile in future1 is extended to the end of Task2, and therefore the execution
@@ -251,7 +251,7 @@ Tile&& Task1(hpx::future<Tile>&& future) {
 ```
 - Example 3: Deadlock returning Tiles (2).
 ```cpp
-Tile&& Task1(hpx::future<Tile>&& future) {
+Tile&& Task1(pika::future<Tile>&& future) {
   auto tile = future.get();
   // Do some work
 
@@ -260,23 +260,23 @@ Tile&& Task1(hpx::future<Tile>&& future) {
 
   Matrix m;
 
-  auto future1 = hpx::dataflow(Task1, m({0, 0}));
-  auto future2 = hpx::dataflow(Task2, m.read({0, 0}));  // Depends on Task3 (The Tile used in Task1 is still available in future1).
+  auto future1 = pika::dataflow(Task1, m({0, 0}));
+  auto future2 = pika::dataflow(Task2, m.read({0, 0}));  // Depends on Task3 (The Tile used in Task1 is still available in future1).
 
   future2.get();  // DEADLOCK! Task2 is not ready yet, and cannot get ready because the destructor of the Tile in future1 will not be called.
 
-  hpx::dataflow(Task3, future1);  // Depends on Task1.
+  pika::dataflow(Task3, future1);  // Depends on Task1.
 ```
 - Example 4: Deadlock shared future scope.
 ```cpp
   Matrix m;
 
-  hpx::dataflow(Task1, m({0, 0}));
+  pika::dataflow(Task1, m({0, 0}));
   auto shared_future = matrix.read({0, 0});
-  hpx::dataflow(Task2, shared_future);   // Depends on Task1.
-  hpx::dataflow(Task3, m.read({0, 0}));  // Depends on Task1.
+  pika::dataflow(Task2, shared_future);   // Depends on Task1.
+  pika::dataflow(Task3, m.read({0, 0}));  // Depends on Task1.
 
-  auto future4 = hpx::dataflow(Task4, m({0, 0}));  // Depends on Task2 and Task3.
+  auto future4 = pika::dataflow(Task4, m({0, 0}));  // Depends on Task2 and Task3.
 
   future4.get();  // DEADLOCK! Task4 is not ready yet, and cannot get ready because the destructor of the Tile in shared_future will not be called.
 ```
@@ -284,15 +284,15 @@ Tile&& Task1(hpx::future<Tile>&& future) {
 ```cpp
   Matrix m;
 
-  hpx::dataflow(Task1, m({0, 0}));
+  pika::dataflow(Task1, m({0, 0}));
 
   {
   auto shared_future = matrix.read({0, 0});
-  hpx::dataflow(Task2, shared_future);   // Depends on Task1.
-  hpx::dataflow(Task3, m.read({0, 0}));  // Depends on Task1.
+  pika::dataflow(Task2, shared_future);   // Depends on Task1.
+  pika::dataflow(Task3, m.read({0, 0}));  // Depends on Task1.
   }  // shared_future goes out of scope here.
 
-  auto future4 = hpx::dataflow(Task4, m({0, 0}));  // Depends on Task2 and Task3.
+  auto future4 = pika::dataflow(Task4, m({0, 0}));  // Depends on Task2 and Task3.
 
   future4.get();  // Task4 may not be ready yet, but it will get ready after the completion of Task4.
 ```

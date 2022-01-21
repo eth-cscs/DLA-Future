@@ -13,7 +13,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include <hpx/local/future.hpp>
+#include <pika/future.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/sync/basic.h"
@@ -73,7 +73,7 @@ TYPED_TEST(MatrixUtilsTest, Set0) {
 
       auto null_matrix = [](const GlobalElementIndex&) { return TypeParam(0); };
 
-      matrix::util::set0<Backend::MC>(hpx::threads::thread_priority::normal, matrix);
+      matrix::util::set0<Backend::MC>(pika::threads::thread_priority::normal, matrix);
 
       CHECK_MATRIX_EQ(null_matrix, matrix);
     }
@@ -138,7 +138,7 @@ void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::Communicator
 
       if (current_rank == owner_original) {
         const auto& tile_original = matrix.read(index_tile_original).get();
-        hpx::shared_future<Tile<const T, Device::CPU>> tile_transposed;
+        pika::shared_future<Tile<const T, Device::CPU>> tile_transposed;
         const auto size_tile_transposed = transposed(tile_original.size());
 
         if (current_rank == owner_transposed) {
@@ -154,7 +154,7 @@ void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::Communicator
           const auto sender_rank = comm_grid.rankFullCommunicator(owner_transposed);
           comm::sync::receive_from(sender_rank, comm_grid.fullCommunicator(), workspace);
 
-          tile_transposed = hpx::make_ready_future<Tile<const T, Device::CPU>>(std::move(workspace));
+          tile_transposed = pika::make_ready_future<Tile<const T, Device::CPU>>(std::move(workspace));
         }
 
         auto transposed_conj_tile = [&tile_original](const TileElementIndex& index) {
@@ -245,10 +245,10 @@ void testSet0(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
     panel.setRange(GlobalTileIndex(coord1D, head), GlobalTileIndex(coord1D, tail));
 
     for (const auto& idx : panel.iteratorLocal())
-      hpx::dataflow(hpx::unwrapping(tile::internal::laset_o), lapack::MatrixType::General, TypeParam(1),
+      pika::dataflow(pika::unwrapping(tile::internal::laset_o), lapack::MatrixType::General, TypeParam(1),
                     TypeParam(1), panel(idx));
 
-    matrix::util::set0<Backend::MC>(hpx::threads::thread_priority::normal, panel);
+    matrix::util::set0<Backend::MC>(pika::threads::thread_priority::normal, panel);
 
     for (const auto& idx : panel.iteratorLocal())
       CHECK_TILE_EQ(null_tile, panel.read(idx).get());

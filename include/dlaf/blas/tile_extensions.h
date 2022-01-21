@@ -42,7 +42,7 @@ void add(T alpha, const matrix::Tile<const T, D>& tile_b, const matrix::Tile<T, 
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
 template <Backend B, typename Sender,
-          typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 auto add(const dlaf::internal::Policy<B>& p, Sender&& s);
 
 /// \overload add

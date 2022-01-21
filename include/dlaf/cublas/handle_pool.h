@@ -22,7 +22,7 @@
 #include <cublas_v2.h>
 #include <cuda_runtime.h>
 
-#include <hpx/local/runtime.hpp>
+#include <pika/runtime.hpp>
 
 #include "dlaf/common/assert.h"
 #include "dlaf/cublas/error.h"
@@ -34,7 +34,7 @@ namespace cublas {
 namespace internal {
 class HandlePoolImpl {
   int device_;
-  std::size_t num_worker_threads_ = hpx::get_num_worker_threads();
+  std::size_t num_worker_threads_ = pika::get_num_worker_threads();
   std::vector<cublasHandle_t> handles_;
   cublasPointerMode_t ptr_mode_;
 
@@ -60,7 +60,7 @@ public:
   }
 
   cublasHandle_t getNextHandle(cudaStream_t stream) {
-    cublasHandle_t handle = handles_[hpx::get_worker_thread_num()];
+    cublasHandle_t handle = handles_[pika::get_worker_thread_num()];
     DLAF_CUDA_CALL(cudaSetDevice(device_));
     DLAF_CUBLAS_CALL(cublasSetStream(handle, stream));
     DLAF_CUBLAS_CALL(cublasSetPointerMode(handle, ptr_mode_));
@@ -77,7 +77,7 @@ public:
 /// same underlying cuBLAS handles, last reference destroys the references).
 /// Allows access to cuBLAS handles associated with a particular stream. The
 /// user must ensure that the handle pool and the stream use the same device.
-/// Each HPX worker thread is assigned thread local cuBLAS handle.
+/// Each pika worker thread is assigned thread local cuBLAS handle.
 class HandlePool {
   std::shared_ptr<internal::HandlePoolImpl> handles_ptr_;
 

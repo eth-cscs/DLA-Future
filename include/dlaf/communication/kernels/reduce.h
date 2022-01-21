@@ -18,7 +18,7 @@
 
 #include <mpi.h>
 
-#include <hpx/local/unwrap.hpp>
+#include <pika/unwrap.hpp>
 
 #include "dlaf/common/callable_object.h"
 #include "dlaf/common/contiguous_buffer_holder.h"
@@ -66,8 +66,8 @@ DLAF_MAKE_CALLABLE_OBJECT(reduceSend);
 
 template <class T, Device D>
 void scheduleReduceRecvInPlace(const comm::Executor& ex,
-                               hpx::future<common::PromiseGuard<comm::Communicator>> pcomm,
-                               MPI_Op reduce_op, hpx::future<matrix::Tile<T, D>> tile) {
+                               pika::future<common::PromiseGuard<comm::Communicator>> pcomm,
+                               MPI_Op reduce_op, pika::future<matrix::Tile<T, D>> tile) {
   // Note:
   //
   // GPU  -> duplicateIfNeeded ---------------------> cCPU -> MPI -------------> copyIfNeeded --> GPU
@@ -76,8 +76,8 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
   //
   // where: cCPU = contiguous CPU
 
-  using hpx::dataflow;
-  using hpx::unwrapping;
+  using pika::dataflow;
+  using pika::unwrapping;
 
   using common::internal::copyBack_o;
   using common::internal::makeItContiguous_o;
@@ -96,8 +96,8 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
   // TILE_CPU ----> duplicateIfNeeded<CPU> ----> TILE_CPU (no-op)
   // TILE_GPU ----> duplicateIfNeeded<CPU> ----> TILE_CPU
 
-  hpx::shared_future<Tile<T, D>> tile_orig = tile.share();
-  hpx::shared_future<Tile<T, Device::CPU>> tile_cpu = duplicateIfNeeded<Device::CPU>(tile_orig);
+  pika::shared_future<Tile<T, D>> tile_orig = tile.share();
+  pika::shared_future<Tile<T, Device::CPU>> tile_cpu = duplicateIfNeeded<Device::CPU>(tile_orig);
 
   // Note:
   //
@@ -127,10 +127,10 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
 
 template <class T, Device D, template <class> class Future>
 void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
-                        hpx::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
+                        pika::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
                         Future<matrix::Tile<T, D>> tile) {
-  using hpx::dataflow;
-  using hpx::unwrapping;
+  using pika::dataflow;
+  using pika::unwrapping;
 
   using common::internal::makeItContiguous_o;
   using matrix::Tile;
@@ -146,7 +146,7 @@ void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
   //
   // TILE_CPU ----> duplicateIfNeeded<CPU> ----> TILE_CPU (no-op)
   // TILE_GPU ----> duplicateIfNeeded<CPU> ----> TILE_CPU
-  hpx::shared_future<Tile<const T, Device::CPU>> tile_cpu =
+  pika::shared_future<Tile<const T, Device::CPU>> tile_cpu =
       duplicateIfNeeded<Device::CPU>(std::move(tile));
 
   // Note:

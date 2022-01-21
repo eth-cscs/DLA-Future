@@ -22,7 +22,7 @@
 #include <cuda_runtime.h>
 #include <cusolverDn.h>
 
-#include <hpx/local/runtime.hpp>
+#include <pika/runtime.hpp>
 
 #include "dlaf/common/assert.h"
 #include "dlaf/cuda/error.h"
@@ -33,7 +33,7 @@ namespace cusolver {
 namespace internal {
 class HandlePoolImpl {
   int device_;
-  std::size_t num_worker_threads_ = hpx::get_num_worker_threads();
+  std::size_t num_worker_threads_ = pika::get_num_worker_threads();
   std::vector<cusolverDnHandle_t> handles_;
 
 public:
@@ -57,7 +57,7 @@ public:
   }
 
   cusolverDnHandle_t getNextHandle(cudaStream_t stream) {
-    cusolverDnHandle_t handle = handles_[hpx::get_worker_thread_num()];
+    cusolverDnHandle_t handle = handles_[pika::get_worker_thread_num()];
     DLAF_CUDA_CALL(cudaSetDevice(device_));
     DLAF_CUSOLVER_CALL(cusolverDnSetStream(handle, stream));
     return handle;
@@ -73,7 +73,7 @@ public:
 /// same underlying cuSOLVER handles, last reference destroys the handles).
 /// Allows access to cuSOLVER handles associated with a particular stream. The
 /// user must ensure that the handle pool and the stream use the same device.
-/// Each HPX worker thread is assigned thread local cuSOLVER handle.
+/// Each pika worker thread is assigned thread local cuSOLVER handle.
 class HandlePool {
   std::shared_ptr<internal::HandlePoolImpl> handles_ptr_;
 

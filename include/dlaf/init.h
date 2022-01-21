@@ -11,11 +11,11 @@
 
 #include <iostream>
 
-#include <hpx/include/resource_partitioner.hpp>
-#include <hpx/program_options.hpp>
+#include <pika/modules/resource_partitioner.hpp>
+#include <pika/program_options.hpp>
 
 #ifdef DLAF_WITH_CUDA
-#include <hpx/modules/async_cuda.hpp>
+#include <pika/modules/async_cuda.hpp>
 #endif
 
 #include <dlaf/communication/mech.h>
@@ -54,12 +54,12 @@ cusolver::HandlePool getCusolverHandlePool();
 }
 
 /// Returns the DLA-Future command-line options description.
-hpx::program_options::options_description getOptionsDescription();
+pika::program_options::options_description getOptionsDescription();
 
 /// Initialize DLA-Future.
 ///
 /// Should be called once before every dlaf::finalize call. This overload can
-/// be used when the application is using hpx::program_options for its own
+/// be used when the application is using pika::program_options for its own
 /// command-line parsing needs. The user is responsible for ensuring that
 /// DLA-Future command-line options are parsed. The DLA-Future options can be
 /// retrieved with dlaf::getOptionsDescription.
@@ -67,7 +67,7 @@ hpx::program_options::options_description getOptionsDescription();
 /// @param vm parsed command-line options as provided by the application entry point.
 /// @param user_cfg user-provided default configuration. Takes precedence over
 /// DLA-Future defaults.
-void initialize(hpx::program_options::variables_map const& vm, configuration const& user_cfg = {});
+void initialize(pika::program_options::variables_map const& vm, configuration const& user_cfg = {});
 
 /// Initialize DLA-Future.
 ///
@@ -88,11 +88,11 @@ void finalize();
 ///
 /// Calls dlaf::initialize on construction and dlaf::finalize on destruction.
 struct [[nodiscard]] ScopedInitializer {
-  ScopedInitializer(hpx::program_options::variables_map const& vm, configuration const& user_cfg = {});
+  ScopedInitializer(pika::program_options::variables_map const& vm, configuration const& user_cfg = {});
   ScopedInitializer(int argc, const char* const argv[], configuration const& user_cfg = {});
   ~ScopedInitializer();
 
-  ScopedInitializer(ScopedInitializer &&) = delete;
+  ScopedInitializer(ScopedInitializer&&) = delete;
   ScopedInitializer(ScopedInitializer const&) = delete;
   ScopedInitializer& operator=(ScopedInitializer&&) = delete;
   ScopedInitializer& operator=(ScopedInitializer const&) = delete;
@@ -101,6 +101,6 @@ struct [[nodiscard]] ScopedInitializer {
 /// Initialize the MPI pool.
 ///
 ///
-void initResourcePartitionerHandler(hpx::resource::partitioner& rp,
-                                    hpx::program_options::variables_map const& vm);
+void initResourcePartitionerHandler(pika::resource::partitioner& rp,
+                                    pika::program_options::variables_map const& vm);
 }

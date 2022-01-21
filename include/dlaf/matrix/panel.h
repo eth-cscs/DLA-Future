@@ -9,8 +9,8 @@
 //
 #pragma once
 
-#include <hpx/local/future.hpp>
-#include <hpx/local/unwrap.hpp>
+#include <pika/future.hpp>
+#include <pika/unwrap.hpp>
 
 #include "dlaf/common/assert.h"
 #include "dlaf/common/index2d.h"
@@ -81,7 +81,7 @@ struct Panel<axis, const T, D> {
   /// - has not been already set to an external tile
   ///
   /// @pre @p index must be a valid index for the current panel size
-  void setTile(const LocalTileIndex& index, hpx::shared_future<ConstTileType> new_tile_fut) {
+  void setTile(const LocalTileIndex& index, pika::shared_future<ConstTileType> new_tile_fut) {
     DLAF_ASSERT(internal_.count(linearIndex(index)) == 0, "internal tile have been already used", index);
     DLAF_ASSERT(!isExternal(index), "already set to external", index);
     // Note assertion on index done by linearIndex method.
@@ -91,7 +91,7 @@ struct Panel<axis, const T, D> {
 #if defined DLAF_ASSERT_MODERATE_ENABLE
     {
       const auto panel_tile_size = tileSize(index);
-      new_tile_fut.then(hpx::launch::sync, hpx::unwrapping([panel_tile_size](const auto& tile) {
+      new_tile_fut.then(pika::launch::sync, pika::unwrapping([panel_tile_size](const auto& tile) {
                           DLAF_ASSERT_MODERATE(panel_tile_size == tile.size(), panel_tile_size,
                                                tile.size());
                         }));
@@ -106,7 +106,7 @@ struct Panel<axis, const T, D> {
   /// This method is very similar to the one available in dlaf::Matrix.
   ///
   /// @pre @p index must be a valid index for the current panel size
-  hpx::shared_future<ConstTileType> read(const LocalTileIndex& index) {
+  pika::shared_future<ConstTileType> read(const LocalTileIndex& index) {
     // Note assertion on index done by linearIndex method.
 
     has_been_used_ = true;
@@ -127,7 +127,7 @@ struct Panel<axis, const T, D> {
   }
 
   auto read_sender(const LocalTileIndex& index) {
-    return hpx::execution::experimental::keep_future(read(index));
+    return pika::execution::experimental::keep_future(read(index));
   }
 
   /// Set the panel to enable access to the range of tiles [start, end)
@@ -376,7 +376,7 @@ protected:
   bool has_been_used_ = false;
 
   ///> Container for references to external tiles
-  common::internal::vector<hpx::shared_future<ConstTileType>> external_;
+  common::internal::vector<pika::shared_future<ConstTileType>> external_;
   ///> Keep track of usage status of internal tiles (accessed or not)
   std::set<SizeType> internal_;
 };
@@ -394,7 +394,7 @@ struct Panel : public Panel<axis, const T, device> {
   /// It is possible to access just internal tiles in RW mode.
   ///
   /// @pre index must point to a tile which is internally managed by the panel
-  hpx::future<TileType> operator()(const LocalTileIndex& index) {
+  pika::future<TileType> operator()(const LocalTileIndex& index) {
     // Note assertion on index done by linearIndex method.
     DLAF_ASSERT(!BaseT::isExternal(index), "read-only access on external tiles", index);
 

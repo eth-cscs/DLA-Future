@@ -25,8 +25,8 @@ namespace internal {
 // SIAM Journal on Scientific and Statistical Computing. 10. 10.1137/0910005.
 template <Backend backend, Device device, class T>
 void computeTFactor(const SizeType k, Matrix<const T, device>& v, const GlobalTileIndex v_start,
-                    hpx::shared_future<common::internal::vector<T>> taus,
-                    hpx::future<matrix::Tile<T, device>> t) {
+                    pika::shared_future<common::internal::vector<T>> taus,
+                    pika::future<matrix::Tile<T, device>> t) {
   QR_Tfactor<backend, device, T>::call(k, v, v_start, taus, std::move(t));
 }
 
@@ -38,8 +38,8 @@ void computeTFactor(const SizeType k, Matrix<const T, device>& v, const GlobalTi
 // SIAM Journal on Scientific and Statistical Computing. 10. 10.1137/0910005.
 template <Backend backend, Device device, class T>
 void computeTFactor(const SizeType k, Matrix<const T, device>& v, const GlobalTileIndex v_start,
-                    hpx::shared_future<common::internal::vector<T>> taus,
-                    hpx::future<matrix::Tile<T, device>> t,
+                    pika::shared_future<common::internal::vector<T>> taus,
+                    pika::future<matrix::Tile<T, device>> t,
                     common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
   QR_Tfactor<backend, device, T>::call(k, v, v_start, taus, std::move(t), mpi_col_task_chain);
 }

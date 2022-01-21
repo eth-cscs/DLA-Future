@@ -4,9 +4,9 @@
 
 #include <array>
 #include <cassert>
-#include <hpx/hpx.hpp>
 #include <iostream>
 #include <memory>
+#include <pika/future.hpp>
 
 template <class El>
 class Tile {
@@ -20,8 +20,8 @@ public:
 
   template <class T = El>
   Tile(std::enable_if_t<std::is_same<T, El>::value && !std::is_const<T>::value, El*> ptr,
-       hpx::lcos::local::promise<Tile<El>>&& p)
-      : ptr_(ptr), p_(std::make_unique<hpx::lcos::local::promise<Tile>>(std::move(p))) {}
+       pika::lcos::local::promise<Tile<El>>&& p)
+      : ptr_(ptr), p_(std::make_unique<pika::lcos::local::promise<Tile>>(std::move(p))) {}
 
   Tile(const Tile&) = delete;
   Tile(Tile&& rhs) = default;
@@ -39,9 +39,9 @@ public:
 
   template <class T = El>
   std::enable_if_t<std::is_same<T, El>::value && !std::is_const<T>::value, Tile&> setPromise(
-      hpx::lcos::local::promise<Tile<El>>&& p) {
+      pika::lcos::local::promise<Tile<El>>&& p) {
     assert(!p_);
-    p_ = std::make_unique<hpx::lcos::local::promise<Tile<El>>>(std::move(p));
+    p_ = std::make_unique<pika::lcos::local::promise<Tile<El>>>(std::move(p));
     return *this;
   }
 
@@ -51,7 +51,7 @@ public:
 
 private:
   ncEl* ptr_;
-  std::unique_ptr<hpx::lcos::local::promise<Tile<ncEl>>> p_;
+  std::unique_ptr<pika::lcos::local::promise<Tile<ncEl>>> p_;
 };
 
 template <class Type>
@@ -65,20 +65,20 @@ class ConstMatrix {
   using ConstType = Tile<const El>;
 
 public:
-  ConstMatrix(std::array<hpx::future<Type>, 4>&& f) : f_(std::move(f)) {}
+  ConstMatrix(std::array<pika::future<Type>, 4>&& f) : f_(std::move(f)) {}
 
   ConstMatrix(ConstMatrix&& rhs) : f_(std::move(rhs.f_)), s_(std::move(rhs.s_)){};
 
-  hpx::shared_future<ConstType> read(int i) const {
+  pika::shared_future<ConstType> read(int i) const {
     // if the shared future is not valid (i.e. the previous task modified the tile)
     // a new shared future is created. when all the shared future are destroyed, the Wrapper object
     // is destroyed as well and the future is set allowing write operation to go on.
     // Note: the copy of the i-th shared future hold by *this is destroyed when the operator(i) is called.
     if (!s_[i].valid()) {
-      hpx::future<Type> fut = std::move(f_[i]);
-      hpx::lcos::local::promise<Type> p;
+      pika::future<Type> fut = std::move(f_[i]);
+      pika::lcos::local::promise<Type> p;
       f_[i] = p.get_future();
-      s_[i] = std::move(fut.then(hpx::launch::sync, [p = std::move(p)](hpx::future<Type>&& fut) mutable {
+      s_[i] = std::move(fut.then(pika::launch::sync, [p = std::move(p)](pika::future<Type>&& fut) mutable {
         return ConstType(std::move(fut.get().setPromise(std::move(p))));
       }));
     }
@@ -89,20 +89,20 @@ public:
 
 protected:
   // used for building RW matrix.
-  ConstMatrix(std::array<hpx::future<Type>, 4>&& f, std::array<hpx::shared_future<ConstType>, 4>&& s)
+  ConstMatrix(std::array<pika::future<Type>, 4>&& f, std::array<pika::shared_future<ConstType>, 4>&& s)
       : f_(std::move(f)), s_(std::move(s)) {}
   // used for building read-only matrix.
-  ConstMatrix(std::array<hpx::shared_future<ConstType>, 4>&& s) : f_(), s_(std::move(s)) {
+  ConstMatrix(std::array<pika::shared_future<ConstType>, 4>&& s) : f_(), s_(std::move(s)) {
     for (std::size_t i = 0; i < s_.size(); ++i) {
       if (!s_[i].valid()) {
         std::cerr << "ERROR: Invalid shared future!" << std::endl;
-        hpx::terminate();
+        pika::terminate();
       }
     }
   }
 
-  mutable std::array<hpx::future<Type>, 4> f_;
-  mutable std::array<hpx::shared_future<ConstType>, 4> s_;
+  mutable std::array<pika::future<Type>, 4> f_;
+  mutable std::array<pika::shared_future<ConstType>, 4> s_;
 };
 
 template <class El>
@@ -115,18 +115,18 @@ protected:
   using ConstMatrix<El>::s_;
 
 public:
-  Matrix(std::array<hpx::future<Type>, 4>&& f) : ConstMatrix<El>(std::move(f)) {}
+  Matrix(std::array<pika::future<Type>, 4>&& f) : ConstMatrix<El>(std::move(f)) {}
 
   Matrix(Matrix&& rhs) : ConstMatrix<El>(std::move(rhs)){};
 
   // Create a new future for i-th tile which will be set as ready when the Wrapper object included in the
   // returned future is destroyed.
-  hpx::future<Type> operator()(int i) {
+  pika::future<Type> operator()(int i) {
     auto fut = std::move(f_[i]);
-    hpx::lcos::local::promise<Type> p;
+    pika::lcos::local::promise<Type> p;
     f_[i] = p.get_future();
     s_[i] = {};
-    return fut.then(hpx::launch::sync, [p = std::move(p)](hpx::future<Type>&& fut) mutable {
+    return fut.then(pika::launch::sync, [p = std::move(p)](pika::future<Type>&& fut) mutable {
       return std::move(fut.get().setPromise(std::move(p)));
     });
   }
@@ -135,7 +135,7 @@ public:
 
 protected:
   // used for building RW matrix.
-  Matrix(std::array<hpx::future<Type>, 4>&& f, std::array<hpx::shared_future<ConstType>, 4>&& s)
+  Matrix(std::array<pika::future<Type>, 4>&& f, std::array<pika::shared_future<ConstType>, 4>&& s)
       : ConstMatrix<El>(std::move(f), std::move(s)) {}
 };
 
@@ -149,10 +149,10 @@ protected:
   using Matrix<El>::s_;
 
 public:
-  MatrixRW(std::array<hpx::future<Type>, 4>&& f, std::array<hpx::shared_future<ConstType>, 4>&& s,
-           std::array<std::unique_ptr<hpx::lcos::local::promise<Type>>, 4>&& p,
-           std::array<std::unique_ptr<hpx::lcos::local::promise<ConstType>>, 4>&& sp,
-           std::array<hpx::shared_future<ConstType>, 4> sf)
+  MatrixRW(std::array<pika::future<Type>, 4>&& f, std::array<pika::shared_future<ConstType>, 4>&& s,
+           std::array<std::unique_ptr<pika::lcos::local::promise<Type>>, 4>&& p,
+           std::array<std::unique_ptr<pika::lcos::local::promise<ConstType>>, 4>&& sp,
+           std::array<pika::shared_future<ConstType>, 4> sf)
       : Matrix<El>(std::move(f), std::move(s)), p_(std::move(p)), sp_(std::move(sp)), sf_(sf) {}
 
   ~MatrixRW() {
@@ -166,8 +166,8 @@ public:
   void doneWrite(int i) {
     if (p_[i]) {
       s_[i] = sf_[i];
-      f_[i].then(hpx::launch::sync,
-                 [p = std::move(p_[i]), sp = std::move(sp_[i])](hpx::future<Type>&& fut) mutable {
+      f_[i].then(pika::launch::sync,
+                 [p = std::move(p_[i]), sp = std::move(sp_[i])](pika::future<Type>&& fut) mutable {
                    sp->set_value(ConstType(std::move(fut.get().setPromise(std::move(*p)))));
                  });
       p_[i] = nullptr;
@@ -181,9 +181,9 @@ public:
   }
 
 private:
-  std::array<std::unique_ptr<hpx::lcos::local::promise<Type>>, 4> p_;
-  std::array<std::unique_ptr<hpx::lcos::local::promise<ConstType>>, 4> sp_;
-  std::array<hpx::shared_future<ConstType>, 4> sf_;
+  std::array<std::unique_ptr<pika::lcos::local::promise<Type>>, 4> p_;
+  std::array<std::unique_ptr<pika::lcos::local::promise<ConstType>>, 4> sp_;
+  std::array<pika::shared_future<ConstType>, 4> sf_;
 };
 
 template <class El>
@@ -194,7 +194,7 @@ protected:
   using ConstMatrix<El>::s_;
 
 public:
-  MatrixRead(std::array<hpx::shared_future<ConstType>, 4>&& s) : ConstMatrix<El>(std::move(s)) {}
+  MatrixRead(std::array<pika::shared_future<ConstType>, 4>&& s) : ConstMatrix<El>(std::move(s)) {}
 
   MatrixRead(MatrixRead&&) = default;
 
@@ -217,15 +217,15 @@ MatrixRW<El> Matrix<El>::block() {
   // Create a new future for each tile. The i-th future will be set as ready when the done(i)
   // method of MatrixRW is called or the MatrixRW object is destroyed.
   // The current futures and shared futures are moved to the MatrixRW object.
-  std::array<std::unique_ptr<hpx::lcos::local::promise<Type>>, 4> p;
-  std::array<std::unique_ptr<hpx::lcos::local::promise<ConstType>>, 4> sp;
+  std::array<std::unique_ptr<pika::lcos::local::promise<Type>>, 4> p;
+  std::array<std::unique_ptr<pika::lcos::local::promise<ConstType>>, 4> sp;
 
-  std::array<hpx::future<Type>, 4> f = std::move(f_);
-  std::array<hpx::shared_future<ConstType>, 4> s = std::move(s_);
+  std::array<pika::future<Type>, 4> f = std::move(f_);
+  std::array<pika::shared_future<ConstType>, 4> s = std::move(s_);
 
   for (std::size_t i = 0; i < f_.size(); ++i) {
-    p[i] = std::make_unique<hpx::lcos::local::promise<Type>>();
-    sp[i] = std::make_unique<hpx::lcos::local::promise<ConstType>>();
+    p[i] = std::make_unique<pika::lcos::local::promise<Type>>();
+    sp[i] = std::make_unique<pika::lcos::local::promise<ConstType>>();
     f_[i] = std::move(p[i]->get_future());
     s_[i] = sp[i]->get_future();
   }
@@ -236,7 +236,7 @@ template <class El>
 MatrixRead<El> ConstMatrix<El>::block_read() {
   // Create if not already available the shared future for the tiles and store a copy of them
   // in the new MatrixRead object.
-  std::array<hpx::shared_future<ConstType>, 4> s;
+  std::array<pika::shared_future<ConstType>, 4> s;
   for (std::size_t i = 0; i < f_.size(); ++i) {
     s[i] = std::move(read(i));
   }

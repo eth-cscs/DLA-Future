@@ -13,9 +13,9 @@
 #include <type_traits>
 
 #include <mpi.h>
-#include <hpx/init.hpp>
-#include <hpx/program_options.hpp>
-#include <hpx/runtime.hpp>
+#include <pika/init.hpp>
+#include <pika/program_options.hpp>
+#include <pika/runtime.hpp>
 
 #include <blas/util.hh>
 
@@ -64,7 +64,7 @@ struct Options
   blas::Op op;
   blas::Diag diag;
 
-  Options(const hpx::program_options::variables_map& vm)
+  Options(const pika::program_options::variables_map& vm)
       : MiniappOptions(vm), m(vm["m"].as<SizeType>()), n(vm["n"].as<SizeType>()),
         mb(vm["mb"].as<SizeType>()), nb(vm["nb"].as<SizeType>()),
         side(dlaf::miniapp::parseSide(vm["side"].as<std::string>())),
@@ -158,7 +158,7 @@ struct triangularSolverMiniapp {
                   << dlaf::internal::FormatShort{opts.side} << dlaf::internal::FormatShort{opts.uplo}
                   << dlaf::internal::FormatShort{opts.op} << dlaf::internal::FormatShort{opts.diag}
                   << " " << bh.size() << " " << bh.blockSize() << " " << comm_grid.size() << " "
-                  << hpx::get_os_thread_count() << " " << backend << std::endl;
+                  << pika::get_os_thread_count() << " " << backend << std::endl;
       }
 
       b.copyTargetToSource();
@@ -177,7 +177,7 @@ struct triangularSolverMiniapp {
   }
 };
 
-int hpx_main(hpx::program_options::variables_map& vm) {
+int pika_main(pika::program_options::variables_map& vm) {
   {
     dlaf::ScopedInitializer init(vm);
     const Options opts(vm);
@@ -185,14 +185,14 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     dlaf::miniapp::dispatchMiniapp<triangularSolverMiniapp>(opts);
   }
 
-  return hpx::finalize();
+  return pika::finalize();
 }
 
 int main(int argc, char** argv) {
   dlaf::comm::mpi_init mpi_initter(argc, argv, dlaf::comm::mpi_thread_level::multiple);
 
   // options
-  using namespace hpx::program_options;
+  using namespace pika::program_options;
   options_description desc_commandline(
       "Benchmark computation of solution for A . X = 2 . B, "
       "where A is a non-unit lower triangular matrix, and B is an m by n matrix\n\n"
@@ -213,10 +213,10 @@ int main(int argc, char** argv) {
   dlaf::miniapp::addOpOption(desc_commandline);
   dlaf::miniapp::addDiagOption(desc_commandline);
 
-  hpx::init_params p;
+  pika::init_params p;
   p.desc_cmdline = desc_commandline;
   p.rp_callback = dlaf::initResourcePartitionerHandler;
-  return hpx::init(argc, argv, p);
+  return pika::init(pika_main, argc, argv, p);
 }
 
 namespace {

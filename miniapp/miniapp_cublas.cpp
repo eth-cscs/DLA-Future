@@ -14,16 +14,16 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-#include <hpx/init.hpp>
-#include <hpx/local/future.hpp>
-#include <hpx/local/thread.hpp>
-#include <hpx/local/unwrap.hpp>
-#include <hpx/modules/async_cuda.hpp>
+#include <pika/init.hpp>
+#include <pika/future.hpp>
+#include <pika/thread.hpp>
+#include <pika/unwrap.hpp>
+#include <pika/modules/async_cuda.hpp>
 
 #include "dlaf/executors.h"
 #include "dlaf/init.h"
 
-int hpx_main(int argc, char* argv[]) {
+int pika_main(int argc, char* argv[]) {
   {
     dlaf::ScopedInitializer init(argc, argv);
 
@@ -39,17 +39,17 @@ int hpx_main(int argc, char* argv[]) {
 
     // https://docs.nvidia.com/cuda/cublas/index.html#cublas-lt-t-gt-axpy
 
-    // NOTE: The hpx::async only serves to produce a future and check that
+    // NOTE: The pika::async only serves to produce a future and check that
     // dataflow works correctly also with future arguments.
-    hpx::future<const double*> alpha_f = hpx::async([]() {
+    pika::future<const double*> alpha_f = pika::async([]() {
       static constexpr double alpha = 2.0;
       return &alpha;
     });
 
-    hpx::future<cublasStatus_t> f1 = hpx::dataflow(exec, hpx::unwrapping(cublasDaxpy), n, alpha_f,
+    pika::future<cublasStatus_t> f1 = pika::dataflow(exec, pika::unwrapping(cublasDaxpy), n, alpha_f,
                                                    x.data().get(), incx, y.data().get(), incy);
 
-    hpx::future<void> f2 = f1.then([&y](hpx::future<cublasStatus_t> s) {
+    pika::future<void> f2 = f1.then([&y](pika::future<cublasStatus_t> s) {
       DLAF_CUBLAS_CALL(s.get());
 
       // Note: This doesn't lead to a race condition because this executes
@@ -65,11 +65,11 @@ int hpx_main(int argc, char* argv[]) {
     f2.get();
   }
 
-  hpx::finalize();
+  pika::finalize();
 
   return 0;
 }
 
 int main(int argc, char** argv) {
-  return hpx::init(argc, argv);
+  return pika::init(pika_main, argc, argv);
 }

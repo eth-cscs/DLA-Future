@@ -58,7 +58,7 @@ Matrix<T, device>::Matrix(const LayoutInfo& layout, ElementType* ptr)
     : Matrix<const T, device>(layout, ptr) {}
 
 template <class T, Device device>
-hpx::future<Tile<T, device>> Matrix<T, device>::operator()(const LocalTileIndex& index) noexcept {
+pika::future<Tile<T, device>> Matrix<T, device>::operator()(const LocalTileIndex& index) noexcept {
   const auto i = tileLinearIndex(index);
   return tile_managers_[i].getRWTileFuture();
 }

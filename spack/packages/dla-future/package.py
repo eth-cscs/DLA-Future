@@ -35,13 +35,13 @@ class DlaFuture(CMakePackage, CudaPackage):
     # https://github.com/eth-cscs/DLA-Future/issues/420
     conflicts("umpire@6:")
 
-    depends_on("hpx cxxstd=17 networking=none +async_mpi")
-    depends_on("hpx@1.8.0:")
-    depends_on("hpx +cuda", when="+cuda")
+    depends_on("pika cxxstd=17 +mpi")
+    depends_on("pika@main")
+    depends_on("pika +cuda", when="+cuda")
 
-    depends_on("hpx build_type=Debug", when="build_type=Debug")
-    depends_on("hpx build_type=Release", when="build_type=Release")
-    depends_on("hpx build_type=RelWithDebInfo", when="build_type=RelWithDebInfo")
+    depends_on("pika build_type=Debug", when="build_type=Debug")
+    depends_on("pika build_type=Release", when="build_type=Release")
+    depends_on("pika build_type=RelWithDebInfo", when="build_type=RelWithDebInfo")
 
     def cmake_args(self):
         spec = self.spec

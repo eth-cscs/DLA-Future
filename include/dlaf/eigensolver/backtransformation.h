@@ -35,7 +35,7 @@ namespace eigensolver {
 /// @pre mat_v is not distributed.
 template <Backend backend, Device device, class T>
 void backTransformation(Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
-                        common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
+                        common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus) {
   DLAF_ASSERT(matrix::local_matrix(mat_c), mat_c);
   DLAF_ASSERT(matrix::local_matrix(mat_v), mat_v);
   DLAF_ASSERT(square_size(mat_v), mat_v);
@@ -67,7 +67,7 @@ void backTransformation(Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v
 template <Backend backend, Device device, class T>
 void backTransformation(comm::CommunicatorGrid grid, Matrix<T, device>& mat_c,
                         Matrix<const T, device>& mat_v,
-                        common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
+                        common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus) {
   DLAF_ASSERT(matrix::equal_process_grid(mat_c, grid), mat_c, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_v, grid), mat_v, grid);
   DLAF_ASSERT(square_size(mat_v), mat_v);

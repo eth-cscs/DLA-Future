@@ -19,7 +19,7 @@
 
 #include <blas.hh>
 
-#include <hpx/program_options.hpp>
+#include <pika/program_options.hpp>
 
 #include <dlaf/common/assert.h>
 #include <dlaf/common/format_short.h>
@@ -206,7 +206,7 @@ struct MiniappOptions {
   int64_t nwarmups;
   CheckIterFreq do_check;
 
-  MiniappOptions(const hpx::program_options::variables_map& vm)
+  MiniappOptions(const pika::program_options::variables_map& vm)
       : backend(parseBackend(vm["backend"].as<std::string>())),
         type(parseElementType<support_real, support_complex>(vm["type"].as<std::string>())),
         grid_rows(vm["grid-rows"].as<int>()), grid_cols(vm["grid-cols"].as<int>()),
@@ -224,61 +224,61 @@ struct MiniappOptions {
   MiniappOptions& operator=(const MiniappOptions&) = default;
 };
 
-inline hpx::program_options::options_description getMiniappOptionsDescription() {
-  hpx::program_options::options_description desc("DLA-Future miniapp options");
+inline pika::program_options::options_description getMiniappOptionsDescription() {
+  pika::program_options::options_description desc("DLA-Future miniapp options");
 
   desc.add_options()(
-      "backend", hpx::program_options::value<std::string>()->default_value("default"),
+      "backend", pika::program_options::value<std::string>()->default_value("default"),
       "Backend to use ('default' ('gpu' if available, otherwise 'mc'), 'mc', 'gpu' (if available))");
   desc.add_options()(
-      "type", hpx::program_options::value<std::string>()->default_value("d"),
+      "type", pika::program_options::value<std::string>()->default_value("d"),
       "Element type to use ('s' (float), 'd' (double), 'c' (std::complex<single>), 'z' (std::complex<double>))");
-  desc.add_options()("grid-rows", hpx::program_options::value<int>()->default_value(1),
+  desc.add_options()("grid-rows", pika::program_options::value<int>()->default_value(1),
                      "Number of row processes in the 2D communicator");
-  desc.add_options()("grid-cols", hpx::program_options::value<int>()->default_value(1),
+  desc.add_options()("grid-cols", pika::program_options::value<int>()->default_value(1),
                      "Number of column processes in the 2D communicator");
-  desc.add_options()("nruns", hpx::program_options::value<int64_t>()->default_value(1),
+  desc.add_options()("nruns", pika::program_options::value<int64_t>()->default_value(1),
                      "Number of runs");
-  desc.add_options()("nwarmups", hpx::program_options::value<int64_t>()->default_value(1),
+  desc.add_options()("nwarmups", pika::program_options::value<int64_t>()->default_value(1),
                      "Number of warmup runs");
-  desc.add_options()("check-result", hpx::program_options::value<std::string>()->default_value("none"),
+  desc.add_options()("check-result", pika::program_options::value<std::string>()->default_value("none"),
                      "Enable result checking ('none', 'all', 'last')");
 
   return desc;
 }
 
-inline void addLayoutOption(hpx::program_options::options_description& desc,
+inline void addLayoutOption(pika::program_options::options_description& desc,
                             const blas::Layout def = blas::Layout::ColMajor) {
   desc.add_options()("layout",
-                     hpx::program_options::value<std::string>()->default_value({blas::layout2char(def)}),
+                     pika::program_options::value<std::string>()->default_value({blas::layout2char(def)}),
                      "'C' (ColMajor), 'R' (RowMajor)");
 }
 
-inline void addOpOption(hpx::program_options::options_description& desc,
+inline void addOpOption(pika::program_options::options_description& desc,
                         const blas::Op def = blas::Op::NoTrans) {
   desc.add_options()("op",
-                     hpx::program_options::value<std::string>()->default_value({blas::op2char(def)}),
+                     pika::program_options::value<std::string>()->default_value({blas::op2char(def)}),
                      "'N' (NoTrans), 'T' (Trans), 'C' (ConjTrans)");
 }
 
-inline void addUploOption(hpx::program_options::options_description& desc,
+inline void addUploOption(pika::program_options::options_description& desc,
                           const blas::Uplo def = blas::Uplo::Lower) {
   desc.add_options()("uplo",
-                     hpx::program_options::value<std::string>()->default_value({blas::uplo2char(def)}),
+                     pika::program_options::value<std::string>()->default_value({blas::uplo2char(def)}),
                      "'L' (Lower), 'U' (Upper), 'G' (General)");
 }
 
-inline void addDiagOption(hpx::program_options::options_description& desc,
+inline void addDiagOption(pika::program_options::options_description& desc,
                           const blas::Diag def = blas::Diag::NonUnit) {
   desc.add_options()("diag",
-                     hpx::program_options::value<std::string>()->default_value({blas::diag2char(def)}),
+                     pika::program_options::value<std::string>()->default_value({blas::diag2char(def)}),
                      "'N' (NonUnit), 'U' (Unit)");
 }
 
-inline void addSideOption(hpx::program_options::options_description& desc,
+inline void addSideOption(pika::program_options::options_description& desc,
                           const blas::Side def = blas::Side::Left) {
   desc.add_options()("side",
-                     hpx::program_options::value<std::string>()->default_value({blas::side2char(def)}),
+                     pika::program_options::value<std::string>()->default_value({blas::side2char(def)}),
                      "'L' (Left), 'R' (Right)");
 }
 }

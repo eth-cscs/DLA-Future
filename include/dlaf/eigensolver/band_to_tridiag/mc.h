@@ -9,8 +9,8 @@
 //
 #pragma once
 
-#include <hpx/local/future.hpp>
-#include <hpx/local/unwrap.hpp>
+#include <pika/future.hpp>
+#include <pika/unwrap.hpp>
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
@@ -259,8 +259,8 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
     using common::PromiseGuard;
     using util::ceilDiv;
 
-    using hpx::unwrapping;
-    using hpx::resource::get_num_threads;
+    using pika::unwrapping;
+    using pika::resource::get_num_threads;
 
     auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
 
@@ -281,7 +281,7 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
     }
 
     const auto max_deps_size = ceilDiv(size, b);
-    vector<hpx::shared_future<void>> deps;
+    vector<pika::shared_future<void>> deps;
     deps.reserve(max_deps_size);
 
     auto copy_diag = [a_ws](SizeType j, const ConstTileType& source) { a_ws->copyDiag(j, source); };
@@ -292,13 +292,13 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
 
     // Copy the band matrix
     for (SizeType k = 0; k < nrtile; ++k) {
-      hpx::shared_future<void> sf =
-          hpx::dataflow(executor_hp, unwrapping(copy_diag), k * nb, mat_a.read(GlobalTileIndex{k, k}));
+      pika::shared_future<void> sf =
+          pika::dataflow(executor_hp, unwrapping(copy_diag), k * nb, mat_a.read(GlobalTileIndex{k, k}));
       if (k < nrtile - 1) {
         for (int i = 0; i < nb / b - 1; ++i) {
           deps.push_back(sf);
         }
-        sf = hpx::dataflow(executor_hp, unwrapping(copy_offdiag), k * nb,
+        sf = pika::dataflow(executor_hp, unwrapping(copy_offdiag), k * nb,
                            mat_a.read(GlobalTileIndex{k + 1, k}), sf);
         deps.push_back(sf);
       }
@@ -325,7 +325,7 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
     };
     auto cont_sweep = [a_ws](PromiseGuard<SweepWorker<T>>&& worker) { worker.ref().doStep(*a_ws); };
 
-    auto copy_tridiag = [executor_hp, a_ws, &mat_trid](SizeType sweep, hpx::shared_future<void> dep) {
+    auto copy_tridiag = [executor_hp, a_ws, &mat_trid](SizeType sweep, pika::shared_future<void> dep) {
       auto copy_tridiag_task = [a_ws](SizeType start, SizeType n_d, SizeType n_e, auto tile_t) {
         auto inc = a_ws->ld() + 1;
         if (isComplex_v<T>)
@@ -341,7 +341,7 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
       if (sweep % nb == nb - 1 || sweep == size - 1) {
         const auto tile_index = sweep / nb;
         const auto start = tile_index * nb;
-        hpx::dataflow(executor_hp, unwrapping(copy_tridiag_task), start, std::min(nb, size - start),
+        pika::dataflow(executor_hp, unwrapping(copy_tridiag_task), start, std::min(nb, size - start),
                       std::min(nb, size - 1 - start), mat_trid(GlobalTileIndex{0, tile_index}), dep);
       }
     };
@@ -352,7 +352,7 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
       auto& w_pipeline = workers[sweep % max_workers];
 
       auto dep =
-          hpx::dataflow(executor_hp, unwrapping(init_sweep), sweep, w_pipeline(), deps[0]).share();
+          pika::dataflow(executor_hp, unwrapping(init_sweep), sweep, w_pipeline(), deps[0]).share();
       copy_tridiag(sweep, dep);
 
       const auto steps = nrStepsForSweep(sweep, size, b);
@@ -361,9 +361,9 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
 
         const GlobalElementIndex index_v((sweep / b + step) * b, sweep);
 
-        hpx::dataflow(hpx::launch::sync, unwrapping(store_tau_v), w_pipeline(),
+        pika::dataflow(pika::launch::sync, unwrapping(store_tau_v), w_pipeline(),
                       mat_v(dist_v.globalTileIndex(index_v)), dist_v.tileElementIndex(index_v));
-        deps[step] = hpx::dataflow(executor_hp, unwrapping(cont_sweep), w_pipeline(), deps[dep_index]);
+        deps[step] = pika::dataflow(executor_hp, unwrapping(cont_sweep), w_pipeline(), deps[dep_index]);
       }
 
       // Shrink the dependency vector to only include the futures generated in this sweep.

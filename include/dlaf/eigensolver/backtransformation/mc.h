@@ -9,7 +9,8 @@
 //
 #pragma once
 
-#include <hpx/include/util.hpp>
+#include <pika/future.hpp>
+#include <pika/thread.hpp>
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
@@ -35,33 +36,33 @@ namespace eigensolver {
 namespace internal {
 
 template <class T>
-void copySingleTile(hpx::shared_future<matrix::Tile<const T, Device::CPU>> in,
-                    hpx::future<matrix::Tile<T, Device::CPU>> out) {
-  hpx::dataflow(dlaf::getCopyExecutor<Device::CPU, Device::CPU>(),
-                matrix::unwrapExtendTiles(matrix::internal::copy_o), in, std::move(out));
+void copySingleTile(pika::shared_future<matrix::Tile<const T, Device::CPU>> in,
+                    pika::future<matrix::Tile<T, Device::CPU>> out) {
+  pika::dataflow(dlaf::getCopyExecutor<Device::CPU, Device::CPU>(),
+                 matrix::unwrapExtendTiles(matrix::internal::copy_o), in, std::move(out));
 }
 
 template <class Executor, Device device, class T>
-void trmmPanel(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> t,
-               hpx::future<matrix::Tile<T, device>> w) {
-  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::trmm_o), blas::Side::Right,
-                blas::Uplo::Upper, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), t, std::move(w));
+void trmmPanel(Executor&& ex, pika::shared_future<matrix::Tile<const T, device>> t,
+               pika::future<matrix::Tile<T, device>> w) {
+  pika::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::trmm_o), blas::Side::Right,
+                 blas::Uplo::Upper, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), t, std::move(w));
 }
 
 template <class Executor, Device device, class T>
-void gemmUpdateW2(Executor&& ex, hpx::future<matrix::Tile<T, device>> w,
-                  hpx::shared_future<matrix::Tile<const T, device>> c,
-                  hpx::future<matrix::Tile<T, device>> w2) {
-  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::gemm_o), blas::Op::ConjTrans,
-                blas::Op::NoTrans, T(1.0), w, c, T(1.0), std::move(w2));
+void gemmUpdateW2(Executor&& ex, pika::future<matrix::Tile<T, device>> w,
+                  pika::shared_future<matrix::Tile<const T, device>> c,
+                  pika::future<matrix::Tile<T, device>> w2) {
+  pika::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::gemm_o), blas::Op::ConjTrans,
+                 blas::Op::NoTrans, T(1.0), w, c, T(1.0), std::move(w2));
 }
 
 template <class Executor, Device device, class T>
-void gemmTrailingMatrix(Executor&& ex, hpx::shared_future<matrix::Tile<const T, device>> v,
-                        hpx::shared_future<matrix::Tile<const T, device>> w2,
-                        hpx::future<matrix::Tile<T, device>> c) {
-  hpx::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::gemm_o), blas::Op::NoTrans,
-                blas::Op::NoTrans, T(-1.0), v, w2, T(1.0), std::move(c));
+void gemmTrailingMatrix(Executor&& ex, pika::shared_future<matrix::Tile<const T, device>> v,
+                        pika::shared_future<matrix::Tile<const T, device>> w2,
+                        pika::future<matrix::Tile<T, device>> c) {
+  pika::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::gemm_o), blas::Op::NoTrans,
+                 blas::Op::NoTrans, T(-1.0), v, w2, T(1.0), std::move(c));
 }
 
 // Implementation based on:
@@ -72,16 +73,16 @@ void gemmTrailingMatrix(Executor&& ex, hpx::shared_future<matrix::Tile<const T, 
 template <class T>
 struct BackTransformation<Backend::MC, Device::CPU, T> {
   static void call_FC(Matrix<T, Device::CPU>& mat_c, Matrix<const T, Device::CPU>& mat_v,
-                      common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus);
+                      common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus);
   static void call_FC(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_c,
                       Matrix<const T, Device::CPU>& mat_v,
-                      common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus);
+                      common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus);
 };
 
 template <class T>
 void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     Matrix<T, Device::CPU>& mat_c, Matrix<const T, Device::CPU>& mat_v,
-    common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
+    common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus) {
   auto executor_np = dlaf::getNpExecutor<Backend::MC>();
 
   const SizeType m = mat_c.nrTiles().rows();
@@ -132,7 +133,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     for (SizeType i = k + 1; i < mat_v.nrTiles().rows(); ++i) {
       auto ik = LocalTileIndex{i, k};
       if (i == k + 1) {
-        hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v = mat_v.read(ik);
+        pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_v = mat_v.read(ik);
         if (is_last) {
           tile_v =
               splitTile(tile_v,
@@ -140,8 +141,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
                          {mat_v.distribution().tileSize(GlobalTileIndex(i, k)).rows(), nr_reflectors}});
         }
         copySingleTile(tile_v, panelV(ik));
-        hpx::dataflow(hpx::launch::sync, matrix::unwrapExtendTiles(tile::internal::laset_o),
-                      lapack::MatrixType::Upper, T(0), T(1), panelV(ik));
+        pika::dataflow(pika::launch::sync, matrix::unwrapExtendTiles(tile::internal::laset_o),
+                       lapack::MatrixType::Upper, T(0), T(1), panelV(ik));
       }
       else {
         panelV.setTile(ik, mat_v.read(ik));
@@ -154,14 +155,14 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
                                                                panelT(t_index));
 
     // W = V T
-    hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_t = panelT.read(t_index);
+    pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_t = panelT.read(t_index);
     for (const auto& idx : panelW.iteratorLocal()) {
       copySingleTile(panelV.read(idx), panelW(idx));
       trmmPanel(executor_np, tile_t, panelW(idx));
     }
 
     // W2 = W C
-    matrix::util::set0<Backend::MC>(hpx::threads::thread_priority::high, panelW2);
+    matrix::util::set0<Backend::MC>(pika::threads::thread_priority::high, panelW2);
     LocalTileIndex c_start{k + 1, 0};
     LocalTileIndex c_end{m, n};
     auto c_k = iterate_range2d(c_start, c_end);
@@ -188,7 +189,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 template <class T>
 void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_c, Matrix<const T, Device::CPU>& mat_v,
-    common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus) {
+    common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus) {
   auto executor_np = dlaf::getNpExecutor<Backend::MC>();
 
   // Set up MPI
@@ -253,15 +254,15 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         auto i = dist_v.template globalTileFromLocalTile<Coord::Row>(i_local);
         auto ik_panel = LocalTileIndex{Coord::Row, i_local};
         if (i == v_start.row()) {
-          hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v =
+          pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_v =
               mat_v.read(GlobalTileIndex(i, k));
           if (is_last) {
             tile_v = splitTile(tile_v,
                                {{0, 0}, {dist_v.tileSize(GlobalTileIndex(i, k)).rows(), nr_reflectors}});
           }
           copySingleTile(tile_v, panelV(ik_panel));
-          hpx::dataflow(hpx::launch::sync, matrix::unwrapExtendTiles(tile::internal::laset_o),
-                        lapack::MatrixType::Upper, T(0), T(1), panelV(ik_panel));
+          pika::dataflow(pika::launch::sync, matrix::unwrapExtendTiles(tile::internal::laset_o),
+                         lapack::MatrixType::Upper, T(0), T(1), panelV(ik_panel));
         }
         else {
           panelV.setTile(ik_panel, mat_v.read(GlobalTileIndex(i, k)));
@@ -284,7 +285,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       }
     }
 
-    matrix::util::set0<Backend::MC>(hpx::threads::thread_priority::high, panelW2);
+    matrix::util::set0<Backend::MC>(pika::threads::thread_priority::high, panelW2);
 
     broadcast(executor_mpi, k_rank_col, panelW, mpi_row_task_chain);
 

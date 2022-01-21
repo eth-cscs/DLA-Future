@@ -12,7 +12,7 @@
 
 /// @file
 
-#include <hpx/local/future.hpp>
+#include <pika/future.hpp>
 
 #include "dlaf/common/assert.h"
 #include "dlaf/common/callable_object.h"

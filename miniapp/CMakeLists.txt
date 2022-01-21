@@ -9,7 +9,7 @@
 #
 
 add_library(DLAF_miniapp INTERFACE)
-target_link_libraries(DLAF_miniapp INTERFACE DLAF HPX::hpx)
+target_link_libraries(DLAF_miniapp INTERFACE DLAF pika::pika)
 target_include_directories(DLAF_miniapp
   INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

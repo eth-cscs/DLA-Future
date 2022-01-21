@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <hpx/local/future.hpp>
+#include <pika/future.hpp>
 
 #include "dlaf/matrix/tile.h"
 
@@ -18,14 +18,14 @@ namespace internal {
 
 // Attach the promise to the tile included in old_future with a continuation and returns a new future to it.
 template <class ReturnTileType>
-hpx::future<ReturnTileType> setPromiseTileFuture(
-    hpx::future<typename ReturnTileType::TileDataType> old_future,
-    hpx::lcos::local::promise<typename ReturnTileType::TileDataType> p) noexcept {
+pika::future<ReturnTileType> setPromiseTileFuture(
+    pika::future<typename ReturnTileType::TileDataType> old_future,
+    pika::lcos::local::promise<typename ReturnTileType::TileDataType> p) noexcept {
   using TileDataType = typename ReturnTileType::TileDataType;
   using NonConstTileType = typename ReturnTileType::TileType;
 
   DLAF_ASSERT_HEAVY(old_future.valid(), "");
-  return old_future.then(hpx::launch::sync, [p = std::move(p)](hpx::future<TileDataType>&& fut) mutable {
+  return old_future.then(pika::launch::sync, [p = std::move(p)](pika::future<TileDataType>&& fut) mutable {
     std::exception_ptr current_exception_ptr;
 
     try {
@@ -46,12 +46,12 @@ hpx::future<ReturnTileType> setPromiseTileFuture(
 // Returns a future<ReturnTileType> setting a new promise p to the tile contained in tile_future.
 // tile_future is then updated with the new internal state future (which value is set by p).
 template <class ReturnTileType>
-hpx::future<ReturnTileType> getTileFuture(
-    hpx::future<typename ReturnTileType::TileDataType>& tile_future) noexcept {
+pika::future<ReturnTileType> getTileFuture(
+    pika::future<typename ReturnTileType::TileDataType>& tile_future) noexcept {
   using TileDataType = typename ReturnTileType::TileDataType;
 
-  hpx::future<TileDataType> old_future = std::move(tile_future);
-  hpx::lcos::local::promise<TileDataType> p;
+  pika::future<TileDataType> old_future = std::move(tile_future);
+  pika::lcos::local::promise<TileDataType> p;
   tile_future = p.get_future();
   return setPromiseTileFuture<ReturnTileType>(std::move(old_future), std::move(p));
 }
@@ -67,16 +67,16 @@ public:
 
   TileFutureManager() {}
 
-  TileFutureManager(TileDataType tile) : tile_future_(hpx::make_ready_future(std::move(tile))) {}
+  TileFutureManager(TileDataType tile) : tile_future_(pika::make_ready_future(std::move(tile))) {}
 
-  hpx::shared_future<ConstTileType> getReadTileSharedFuture() noexcept {
+  pika::shared_future<ConstTileType> getReadTileSharedFuture() noexcept {
     if (!tile_shared_future_.valid()) {
       tile_shared_future_ = getTileFuture<ConstTileType>(tile_future_);
     }
     return tile_shared_future_;
   }
 
-  hpx::future<TileType> getRWTileFuture() noexcept {
+  pika::future<TileType> getRWTileFuture() noexcept {
     tile_shared_future_ = {};
     return getTileFuture<TileType>(tile_future_);
   }
@@ -93,11 +93,11 @@ public:
 
 protected:
   // The future of the tile with no promise set.
-  hpx::future<TileDataType> tile_future_;
+  pika::future<TileDataType> tile_future_;
 
   // If valid, a copy of the shared future of the tile,
   // which has the promise set to the promise for tile_future_.
-  hpx::shared_future<ConstTileType> tile_shared_future_;
+  pika::shared_future<ConstTileType> tile_shared_future_;
 };
 
 }

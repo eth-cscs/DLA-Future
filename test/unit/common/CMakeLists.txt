@@ -31,5 +31,5 @@ DLAF_addTest(test_data_descriptor
 DLAF_addTest(test_pipeline
   SOURCES test_pipeline.cpp
   LIBRARIES dlaf.core
-  USE_MAIN HPX
+  USE_MAIN PIKA
 )

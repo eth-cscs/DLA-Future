@@ -13,7 +13,7 @@
 #include <limits>
 
 #include <gtest/gtest.h>
-#include <hpx/local/unwrap.hpp>
+#include <pika/unwrap.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/lapack/enum_output.h"
@@ -88,7 +88,7 @@ void modify_element(Matrix<T, Device::CPU>& matrix, GlobalElementIndex index, co
     return;
 
   const TileElementIndex index_wrt_local = distribution.tileElementIndex(index);
-  matrix(tile_index).then(hpx::unwrapping([value, index_wrt_local](auto&& tile) {
+  matrix(tile_index).then(pika::unwrapping([value, index_wrt_local](auto&& tile) {
     tile(index_wrt_local) = value;
   }));
 }

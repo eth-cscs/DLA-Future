@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <hpx/async_mpi/mpi_future.hpp>
+#include <pika/async_mpi/mpi_future.hpp>
 
 #include <dlaf/common/assert.h>
 #include <dlaf/communication/error.h>
@@ -57,7 +57,7 @@ struct Init<Backend::MC> {
     memory::internal::initializeUmpireHostAllocator(cfg.umpire_host_memory_pool_initial_bytes);
     // TODO: Consider disabling polling in finalize()
     if (cfg.mpi_mech == comm::MPIMech::Polling) {
-      hpx::mpi::experimental::init(false, cfg.mpi_pool);
+      pika::mpi::experimental::init(false, cfg.mpi_pool);
     }
   }
 
@@ -72,7 +72,7 @@ static std::unique_ptr<cuda::StreamPool> np_stream_pool{nullptr};
 void initializeNpCudaStreamPool(int device, std::size_t num_streams_per_thread) {
   DLAF_ASSERT(!np_stream_pool, "");
   np_stream_pool = std::make_unique<cuda::StreamPool>(device, num_streams_per_thread,
-                                                      hpx::threads::thread_priority::normal);
+                                                      pika::threads::thread_priority::normal);
 }
 
 void finalizeNpCudaStreamPool() {
@@ -90,7 +90,7 @@ static std::unique_ptr<cuda::StreamPool> hp_stream_pool{nullptr};
 void initializeHpCudaStreamPool(int device, std::size_t num_streams_per_thread) {
   DLAF_ASSERT(!hp_stream_pool, "");
   hp_stream_pool = std::make_unique<cuda::StreamPool>(device, num_streams_per_thread,
-                                                      hpx::threads::thread_priority::high);
+                                                      pika::threads::thread_priority::high);
 }
 
 void finalizeHpCudaStreamPool() {
@@ -146,7 +146,7 @@ struct Init<Backend::GPU> {
     initializeHpCudaStreamPool(device, cfg.num_hp_cuda_streams_per_thread);
     initializeCublasHandlePool();
     initializeCusolverHandlePool();
-    hpx::cuda::experimental::detail::register_polling(hpx::resource::get_thread_pool("default"));
+    pika::cuda::experimental::detail::register_polling(pika::resource::get_thread_pool("default"));
   }
 
   static void finalize() {
@@ -191,20 +191,20 @@ struct parseFromString<comm::MPIMech> {
 
 template <class T>
 struct parseFromCommandLine {
-  static T call(hpx::program_options::variables_map const& vm, const std::string& cmd_val) {
+  static T call(pika::program_options::variables_map const& vm, const std::string& cmd_val) {
     return vm[cmd_val].as<T>();
   }
 };
 
 template <>
 struct parseFromCommandLine<comm::MPIMech> {
-  static comm::MPIMech call(hpx::program_options::variables_map const& vm, const std::string& cmd_val) {
+  static comm::MPIMech call(pika::program_options::variables_map const& vm, const std::string& cmd_val) {
     return parseFromString<comm::MPIMech>::call(vm[cmd_val].as<std::string>());
   }
 };
 
 template <class T>
-void updateConfigurationValue(hpx::program_options::variables_map const& vm, T& var,
+void updateConfigurationValue(pika::program_options::variables_map const& vm, T& var,
                               std::string const& env_var, std::string const& cmdline_option) {
   const std::string dlaf_env_var = "DLAF_" + env_var;
   char* env_var_value = std::getenv(dlaf_env_var.c_str());
@@ -218,7 +218,7 @@ void updateConfigurationValue(hpx::program_options::variables_map const& vm, T& 
   }
 }
 
-void updateConfiguration(hpx::program_options::variables_map const& vm, configuration& cfg) {
+void updateConfiguration(pika::program_options::variables_map const& vm, configuration& cfg) {
   updateConfigurationValue(vm, cfg.num_np_cuda_streams_per_thread, "NUM_NP_CUDA_STREAMS_PER_THREAD",
                            "num-np-cuda-streams-per-thread");
   updateConfigurationValue(vm, cfg.num_hp_cuda_streams_per_thread, "NUM_HP_CUDA_STREAMS_PER_THREAD",
@@ -230,7 +230,7 @@ void updateConfiguration(hpx::program_options::variables_map const& vm, configur
                            "UMPIRE_DEVICE_MEMORY_POOL_INITIAL_BYTES",
                            "umpire-device-memory-pool-initial-bytes");
   updateConfigurationValue(vm, cfg.mpi_mech, "MPI_MECH", "mpi-mech");
-  cfg.mpi_pool = (hpx::resource::pool_exists("mpi")) ? "mpi" : "default";
+  cfg.mpi_pool = (pika::resource::pool_exists("mpi")) ? "mpi" : "default";
 }
 
 configuration& getConfiguration() {
@@ -239,30 +239,30 @@ configuration& getConfiguration() {
 }
 }
 
-hpx::program_options::options_description getOptionsDescription() {
-  hpx::program_options::options_description desc("DLA-Future options");
+pika::program_options::options_description getOptionsDescription() {
+  pika::program_options::options_description desc("DLA-Future options");
 
   desc.add_options()("dlaf:help", "Print help message");
   desc.add_options()("dlaf:print-config", "Print the DLA-Future configuration");
-  desc.add_options()("dlaf:num-np-cuda-streams-per-thread", hpx::program_options::value<std::size_t>(),
+  desc.add_options()("dlaf:num-np-cuda-streams-per-thread", pika::program_options::value<std::size_t>(),
                      "Number of normal priority CUDA streams per worker thread");
-  desc.add_options()("dlaf:num-hp-cuda-streams-per-thread", hpx::program_options::value<std::size_t>(),
+  desc.add_options()("dlaf:num-hp-cuda-streams-per-thread", pika::program_options::value<std::size_t>(),
                      "Number of high priority CUDA streams per worker thread");
   desc.add_options()("dlaf:umpire-host-memory-pool-initial-bytes",
-                     hpx::program_options::value<std::size_t>(),
+                     pika::program_options::value<std::size_t>(),
                      "Number of bytes to preallocate for pinned host memory pool");
   desc.add_options()("dlaf:umpire-device-memory-pool-initial-bytes",
-                     hpx::program_options::value<std::size_t>(),
+                     pika::program_options::value<std::size_t>(),
                      "Number of bytes to preallocate for device memory pool");
   desc.add_options()("dlaf:mpi-mech",
-                     hpx::program_options::value<std::string>()->default_value("yielding"),
+                     pika::program_options::value<std::string>()->default_value("yielding"),
                      "MPI mechanism ('yielding', 'polling')");
-  desc.add_options()("dlaf:no-mpi-pool", hpx::program_options::bool_switch(), "Disable the MPI pool.");
+  desc.add_options()("dlaf:no-mpi-pool", pika::program_options::bool_switch(), "Disable the MPI pool.");
 
   return desc;
 }
 
-void initialize(hpx::program_options::variables_map const& vm, configuration const& user_cfg) {
+void initialize(pika::program_options::variables_map const& vm, configuration const& user_cfg) {
   bool should_exit = false;
   if (vm.count("dlaf:help") > 0) {
     should_exit = true;
@@ -294,9 +294,9 @@ void initialize(hpx::program_options::variables_map const& vm, configuration con
 void initialize(int argc, const char* const argv[], configuration const& user_cfg) {
   auto desc = getOptionsDescription();
 
-  hpx::program_options::variables_map vm;
-  hpx::program_options::store(hpx::program_options::parse_command_line(argc, argv, desc), vm);
-  hpx::program_options::notify(vm);
+  pika::program_options::variables_map vm;
+  pika::program_options::store(pika::program_options::parse_command_line(argc, argv, desc), vm);
+  pika::program_options::notify(vm);
 
   initialize(vm, user_cfg);
 }
@@ -311,7 +311,7 @@ void finalize() {
   internal::initialized() = false;
 }
 
-ScopedInitializer::ScopedInitializer(hpx::program_options::variables_map const& vm,
+ScopedInitializer::ScopedInitializer(pika::program_options::variables_map const& vm,
                                      configuration const& user_cfg) {
   initialize(vm, user_cfg);
 }
@@ -324,8 +324,8 @@ ScopedInitializer::~ScopedInitializer() {
   finalize();
 }
 
-void initResourcePartitionerHandler(hpx::resource::partitioner& rp,
-                                    hpx::program_options::variables_map const& vm) {
+void initResourcePartitionerHandler(pika::resource::partitioner& rp,
+                                    pika::program_options::variables_map const& vm) {
   // Don't create the MPI pool if the user disabled it
   if (vm["dlaf:no-mpi-pool"].as<bool>())
     return;
@@ -337,13 +337,13 @@ void initResourcePartitionerHandler(hpx::resource::partitioner& rp,
     return;
 
   // Disable idle backoff on the MPI pool
-  using hpx::threads::policies::scheduler_mode;
+  using pika::threads::policies::scheduler_mode;
   auto mode = scheduler_mode::default_mode;
   mode = scheduler_mode(mode & ~scheduler_mode::enable_idle_backoff);
 
   // Create a thread pool with a single core that we will use for all
   // communication related tasks
-  rp.create_thread_pool("mpi", hpx::resource::scheduling_policy::local_priority_fifo, mode);
+  rp.create_thread_pool("mpi", pika::resource::scheduling_policy::local_priority_fifo, mode);
   rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], "mpi");
 }
 }

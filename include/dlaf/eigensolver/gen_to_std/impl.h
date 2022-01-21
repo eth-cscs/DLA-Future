@@ -9,9 +9,9 @@
 //
 #pragma once
 
-#include <hpx/local/execution.hpp>
-#include <hpx/local/future.hpp>
-#include <hpx/local/unwrap.hpp>
+#include <pika/execution.hpp>
+#include <pika/future.hpp>
+#include <pika/unwrap.hpp>
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
@@ -38,26 +38,26 @@ namespace internal {
 
 namespace gentostd_l {
 template <Backend backend, class AKKSender, class LKKSender>
-void hegstDiagTile(hpx::threads::thread_priority priority, AKKSender&& a_kk, LKKSender&& l_kk) {
+void hegstDiagTile(pika::threads::thread_priority priority, AKKSender&& a_kk, LKKSender&& l_kk) {
   dlaf::internal::whenAllLift(1, blas::Uplo::Lower, std::forward<AKKSender>(a_kk),
                               std::forward<LKKSender>(l_kk)) |
       dlaf::tile::hegst(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class LKKSender, class AIKSender>
-void trsmPanelTile(hpx::threads::thread_priority priority, LKKSender&& l_kk, AIKSender&& a_ik) {
+void trsmPanelTile(pika::threads::thread_priority priority, LKKSender&& l_kk, AIKSender&& a_ik) {
   using ElementType = dlaf::internal::SenderElementType<LKKSender>;
 
   dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Lower, blas::Op::ConjTrans,
                               blas::Diag::NonUnit, ElementType(1.0), std::forward<LKKSender>(l_kk),
                               std::forward<AIKSender>(a_ik)) |
       dlaf::tile::trsm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class AKKSender, class LIKSender, class AIKSender>
-void hemmPanelTile(hpx::threads::thread_priority priority, AKKSender&& a_kk, LIKSender&& l_ik,
+void hemmPanelTile(pika::threads::thread_priority priority, AKKSender&& a_kk, LIKSender&& l_ik,
                    AIKSender&& a_ik) {
   using ElementType = dlaf::internal::SenderElementType<AKKSender>;
 
@@ -65,11 +65,11 @@ void hemmPanelTile(hpx::threads::thread_priority priority, AKKSender&& a_kk, LIK
                               std::forward<AKKSender>(a_kk), std::forward<LIKSender>(l_ik),
                               ElementType(1.0), std::forward<AIKSender>(a_ik)) |
       dlaf::tile::hemm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class AJKSender, class LJKSender, class AKKSender>
-void her2kTrailingDiagTile(hpx::threads::thread_priority priority, AJKSender&& a_jk, LJKSender&& l_jk,
+void her2kTrailingDiagTile(pika::threads::thread_priority priority, AJKSender&& a_jk, LJKSender&& l_jk,
                            AKKSender&& a_kk) {
   using ElementType = dlaf::internal::SenderElementType<AJKSender>;
 
@@ -77,11 +77,11 @@ void her2kTrailingDiagTile(hpx::threads::thread_priority priority, AJKSender&& a
                               std::forward<AJKSender>(a_jk), std::forward<LJKSender>(l_jk),
                               BaseType<ElementType>(1.0), std::forward<AKKSender>(a_kk)) |
       dlaf::tile::her2k(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class MatIKSender, class MatJKSender, class AIJSender>
-void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, MatIKSender&& mat_ik,
+void gemmTrailingMatrixTile(pika::threads::thread_priority priority, MatIKSender&& mat_ik,
                             MatJKSender&& mat_jk, AIJSender a_ij) {
   using ElementType = dlaf::internal::SenderElementType<MatIKSender>;
 
@@ -89,22 +89,22 @@ void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, MatIKSender&
                               std::forward<MatIKSender>(mat_ik), std::forward<MatJKSender>(mat_jk),
                               ElementType(1.0), std::forward<AIJSender>(a_ij)) |
       dlaf::tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class LJJSender, class AJKSender>
-void trsmPanelUpdateTile(hpx::threads::thread_priority priority, LJJSender&& l_jj, AJKSender a_jk) {
+void trsmPanelUpdateTile(pika::threads::thread_priority priority, LJJSender&& l_jj, AJKSender a_jk) {
   using ElementType = dlaf::internal::SenderElementType<LJJSender>;
 
   dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, blas::Op::NoTrans,
                               blas::Diag::NonUnit, ElementType(1.0), std::forward<LJJSender>(l_jj),
                               std::forward<AJKSender>(a_jk)) |
       dlaf::tile::trsm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class LIJSender, class AJKSender, class AIKSender>
-void gemmPanelUpdateTile(hpx::threads::thread_priority priority, LIJSender&& l_ij, AJKSender&& a_jk,
+void gemmPanelUpdateTile(pika::threads::thread_priority priority, LIJSender&& l_ij, AJKSender&& a_jk,
                          AIKSender&& a_ik) {
   using ElementType = dlaf::internal::SenderElementType<LIJSender>;
 
@@ -112,32 +112,32 @@ void gemmPanelUpdateTile(hpx::threads::thread_priority priority, LIJSender&& l_i
                               std::forward<LIJSender>(l_ij), std::forward<AJKSender>(a_jk),
                               ElementType(1.0), std::forward<AIKSender>(a_ik)) |
       dlaf::tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 }
 
 namespace gentostd_u {
 template <Backend backend, class AKKSender, class LKKSender>
-void hegstDiagTile(hpx::threads::thread_priority priority, AKKSender&& a_kk, LKKSender&& l_kk) {
+void hegstDiagTile(pika::threads::thread_priority priority, AKKSender&& a_kk, LKKSender&& l_kk) {
   dlaf::internal::whenAllLift(1, blas::Uplo::Upper, std::forward<AKKSender>(a_kk),
                               std::forward<LKKSender>(l_kk)) |
       dlaf::tile::hegst(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class LKKSender, class AIKSender>
-void trsmPanelTile(hpx::threads::thread_priority priority, LKKSender&& l_kk, AIKSender&& a_ik) {
+void trsmPanelTile(pika::threads::thread_priority priority, LKKSender&& l_kk, AIKSender&& a_ik) {
   using ElementType = dlaf::internal::SenderElementType<LKKSender>;
 
   dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, blas::Op::ConjTrans,
                               blas::Diag::NonUnit, ElementType(1.0), std::forward<LKKSender>(l_kk),
                               std::forward<AIKSender>(a_ik)) |
       dlaf::tile::trsm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class AKKSender, class LIKSender, class AIKSender>
-void hemmPanelTile(hpx::threads::thread_priority priority, AKKSender&& a_kk, LIKSender&& l_ik,
+void hemmPanelTile(pika::threads::thread_priority priority, AKKSender&& a_kk, LIKSender&& l_ik,
                    AIKSender&& a_ik) {
   using ElementType = dlaf::internal::SenderElementType<AKKSender>;
 
@@ -145,11 +145,11 @@ void hemmPanelTile(hpx::threads::thread_priority priority, AKKSender&& a_kk, LIK
                               std::forward<AKKSender>(a_kk), std::forward<LIKSender>(l_ik),
                               ElementType(1.0), std::forward<AIKSender>(a_ik)) |
       dlaf::tile::hemm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class AJKSender, class LJKSender, class AKKSender>
-void her2kTrailingDiagTile(hpx::threads::thread_priority priority, AJKSender&& a_jk, LJKSender&& l_jk,
+void her2kTrailingDiagTile(pika::threads::thread_priority priority, AJKSender&& a_jk, LJKSender&& l_jk,
                            AKKSender&& a_kk) {
   using ElementType = dlaf::internal::SenderElementType<AJKSender>;
 
@@ -157,11 +157,11 @@ void her2kTrailingDiagTile(hpx::threads::thread_priority priority, AJKSender&& a
                               std::forward<AJKSender>(a_jk), std::forward<LJKSender>(l_jk),
                               BaseType<ElementType>(1.0), std::forward<AKKSender>(a_kk)) |
       dlaf::tile::her2k(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class MatIKSender, class MatJKSender, class AIJSender>
-void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, MatIKSender&& mat_ik,
+void gemmTrailingMatrixTile(pika::threads::thread_priority priority, MatIKSender&& mat_ik,
                             MatJKSender&& mat_jk, AIJSender a_ij) {
   using ElementType = dlaf::internal::SenderElementType<MatIKSender>;
 
@@ -169,22 +169,22 @@ void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, MatIKSender&
                               std::forward<MatIKSender>(mat_ik), std::forward<MatJKSender>(mat_jk),
                               ElementType(1.0), std::forward<AIJSender>(a_ij)) |
       dlaf::tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class LJJSender, class AJKSender>
-void trsmPanelUpdateTile(hpx::threads::thread_priority priority, LJJSender&& l_jj, AJKSender a_jk) {
+void trsmPanelUpdateTile(pika::threads::thread_priority priority, LJJSender&& l_jj, AJKSender a_jk) {
   using ElementType = dlaf::internal::SenderElementType<LJJSender>;
 
   dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Upper, blas::Op::NoTrans,
                               blas::Diag::NonUnit, ElementType(1.0), std::forward<LJJSender>(l_jj),
                               std::forward<AJKSender>(a_jk)) |
       dlaf::tile::trsm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class LIJSender, class AJKSender, class AIKSender>
-void gemmPanelUpdateTile(hpx::threads::thread_priority priority, LIJSender&& l_ij, AJKSender&& a_jk,
+void gemmPanelUpdateTile(pika::threads::thread_priority priority, LIJSender&& l_ij, AJKSender&& a_jk,
                          AIKSender&& a_ik) {
   using ElementType = dlaf::internal::SenderElementType<LIJSender>;
 
@@ -192,7 +192,7 @@ void gemmPanelUpdateTile(hpx::threads::thread_priority priority, LIJSender&& l_i
                               std::forward<LIJSender>(l_ij), std::forward<AJKSender>(a_jk),
                               ElementType(1.0), std::forward<AIKSender>(a_ik)) |
       dlaf::tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 }
 
@@ -201,7 +201,7 @@ void gemmPanelUpdateTile(hpx::threads::thread_priority priority, LIJSender&& l_i
 template <Backend backend, Device device, class T>
 void GenToStd<backend, device, T>::call_L(Matrix<T, device>& mat_a, Matrix<T, device>& mat_l) {
   using namespace gentostd_l;
-  using hpx::threads::thread_priority;
+  using pika::threads::thread_priority;
 
   // Number of tile (rows = cols)
   SizeType nrtile = mat_a.nrTiles().cols();
@@ -270,7 +270,7 @@ template <Backend backend, Device device, class T>
 void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a,
                                           Matrix<T, device>& mat_l) {
   using namespace gentostd_l;
-  using hpx::threads::thread_priority;
+  using pika::threads::thread_priority;
 
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
@@ -377,7 +377,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 
     a_panel.setRangeStart(at);
 
-    hpx::shared_future<matrix::Tile<const T, device>> a_diag;
+    pika::shared_future<matrix::Tile<const T, device>> a_diag;
     if (kk_rank.col() == this_rank.col()) {
       // Note:
       // [a,l]_panelT shrinked to a single tile for temporarly storing and communicating the diagonal
@@ -462,7 +462,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex local_idx(Coord::Row, i_local);
         const LocalTileIndex ik(i_local, distr.localTileFromGlobalTile<Coord::Col>(k));
 
-        hemmPanelTile<backend>(thread_priority::high, hpx::execution::experimental::keep_future(a_diag),
+        hemmPanelTile<backend>(thread_priority::high, pika::execution::experimental::keep_future(a_diag),
                                mat_l.read_sender(ik), mat_a.readwrite_sender(ik));
       }
     }
@@ -472,7 +472,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 template <Backend backend, Device device, class T>
 void GenToStd<backend, device, T>::call_U(Matrix<T, device>& mat_a, Matrix<T, device>& mat_u) {
   using namespace gentostd_u;
-  using hpx::threads::thread_priority;
+  using pika::threads::thread_priority;
 
   // Number of tile (rows = cols)
   SizeType nrtile = mat_a.nrTiles().cols();
@@ -541,7 +541,7 @@ template <Backend backend, Device device, class T>
 void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a,
                                           Matrix<T, device>& mat_u) {
   using namespace gentostd_u;
-  using hpx::threads::thread_priority;
+  using pika::threads::thread_priority;
 
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
@@ -649,7 +649,7 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
 
     a_panel.setRangeStart(at);
 
-    hpx::shared_future<matrix::Tile<const T, device>> a_diag;
+    pika::shared_future<matrix::Tile<const T, device>> a_diag;
     if (kk_rank.row() == this_rank.row()) {
       // Note:
       // [a,u]_panelT shrinked to a single tile for temporarly storing and communicating the diagonal
@@ -734,7 +734,7 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex local_idx(Coord::Col, j_local);
         const LocalTileIndex ki(distr.localTileFromGlobalTile<Coord::Row>(k), j_local);
 
-        hemmPanelTile<backend>(thread_priority::high, hpx::execution::experimental::keep_future(a_diag),
+        hemmPanelTile<backend>(thread_priority::high, pika::execution::experimental::keep_future(a_diag),
                                mat_u.read_sender(ki), mat_a.readwrite_sender(ki));
       }
     }

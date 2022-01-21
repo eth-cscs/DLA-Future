@@ -14,7 +14,7 @@
 
 #include <gtest/gtest.h>
 
-#include <hpx/init.hpp>
+#include <pika/init.hpp>
 
 static const char* binary_name = "init_test";
 static const char* env_var_name = "DLAF_NUM_HP_CUDA_STREAMS_PER_THREAD";
@@ -140,18 +140,18 @@ int precedence_main(int, char*[]) {
     EXPECT_EQ(command_line_option_val, cfg.num_hp_cuda_streams_per_thread);
   }
 
-  return hpx::finalize();
+  return pika::finalize();
 }
 
 TEST_P(InitTest, Precedence) {
   current_initializer_type = GetParam();
 
-  // The const_cast is currently necessary for hpx::init. HPX should be updated
+  // The const_cast is currently necessary for pika::init. pika should be updated
   // to take const argc/argv.
-  hpx::init(precedence_main, argc_without_option, const_cast<char**>(argv_without_option));
+  pika::init(precedence_main, argc_without_option, const_cast<char**>(argv_without_option));
 }
 
-int vm_no_command_line_option_main(hpx::program_options::variables_map& vm) {
+int vm_no_command_line_option_main(pika::program_options::variables_map& vm) {
   const dlaf::configuration default_cfg;
   const std::size_t default_val = default_cfg.num_hp_cuda_streams_per_thread;
   // Note that this test doesn't mean that the default value has to be 3. It is
@@ -210,19 +210,19 @@ int vm_no_command_line_option_main(hpx::program_options::variables_map& vm) {
     EXPECT_EQ(command_line_option_val, cfg.num_hp_cuda_streams_per_thread);
   }
 
-  return hpx::finalize();
+  return pika::finalize();
 }
 
 TEST_P(InitTest, VariablesMapNoCommandLineOption) {
   current_initializer_type = GetParam();
 
-  // The const_cast is currently necessary for hpx::init. HPX should be updated
+  // The const_cast is currently necessary for pika::init. pika should be updated
   // to take const argc/argv.
-  hpx::init(vm_no_command_line_option_main, argc_without_option,
+  pika::init(vm_no_command_line_option_main, argc_without_option,
             const_cast<char**>(argv_without_option));
 }
 
-int vm_command_line_option_main(hpx::program_options::variables_map& vm) {
+int vm_command_line_option_main(pika::program_options::variables_map& vm) {
   dlaf::configuration default_cfg;
   const std::size_t default_val = default_cfg.num_hp_cuda_streams_per_thread;
 
@@ -240,16 +240,16 @@ int vm_command_line_option_main(hpx::program_options::variables_map& vm) {
     EXPECT_EQ(command_line_option_val, cfg.num_hp_cuda_streams_per_thread);
   }
 
-  return hpx::finalize();
+  return pika::finalize();
 }
 
 TEST_P(InitTest, VariablesMapCommandLineOption) {
   current_initializer_type = GetParam();
 
-  hpx::program_options::options_description options("options");
+  pika::program_options::options_description options("options");
   options.add(dlaf::getOptionsDescription());
 
-  hpx::init_params p;
+  pika::init_params p;
   p.desc_cmdline = options;
 
   dlaf::configuration default_cfg;
@@ -263,12 +263,12 @@ TEST_P(InitTest, VariablesMapCommandLineOption) {
   std::string command_line_option_str =
       command_line_option_name + std::string("=") + command_line_option_val_str;
   int argc_with_option = 2;
-  // The const_cast is currently necessary for hpx::init. HPX should be updated
+  // The const_cast is currently necessary for pika::init. pika should be updated
   // to take const argc/argv.
   char* argv_with_option[] = {const_cast<char*>(binary_name),
                               const_cast<char*>(command_line_option_str.c_str())};
 
-  hpx::init(vm_command_line_option_main, argc_with_option, argv_with_option, p);
+  pika::init(vm_command_line_option_main, argc_with_option, argv_with_option, p);
 }
 
 INSTANTIATE_TEST_SUITE_P(Init, InitTest, initializer_types);

@@ -12,11 +12,11 @@
 #include <iostream>
 
 #include <mpi.h>
-#include <hpx/init.hpp>
-#include <hpx/local/future.hpp>
-#include <hpx/local/runtime.hpp>
-#include <hpx/local/unwrap.hpp>
-#include <hpx/program_options.hpp>
+#include <pika/init.hpp>
+#include <pika/future.hpp>
+#include <pika/runtime.hpp>
+#include <pika/unwrap.hpp>
+#include <pika/program_options.hpp>
 
 #include "dlaf/auxiliary/norm.h"
 #include "dlaf/blas/tile.h"
@@ -40,7 +40,7 @@
 
 namespace {
 
-using hpx::unwrapping;
+using pika::unwrapping;
 
 using dlaf::Device;
 using dlaf::Coord;
@@ -74,7 +74,7 @@ struct Options
   SizeType mb;
   blas::Uplo uplo;
 
-  Options(const hpx::program_options::variables_map& vm)
+  Options(const pika::program_options::variables_map& vm)
       : MiniappOptions(vm), m(vm["matrix-size"].as<SizeType>()), mb(vm["block-size"].as<SizeType>()),
         uplo(dlaf::miniapp::parseUplo(vm["uplo"].as<std::string>())) {
     DLAF_ASSERT(m > 0, m);
@@ -169,7 +169,7 @@ struct choleskyMiniapp {
                   << " " << dlaf::internal::FormatShort{opts.type}
                   << dlaf::internal::FormatShort{opts.uplo} << " " << matrix_host.size() << " "
                   << matrix_host.blockSize() << " " << comm_grid.size() << " "
-                  << hpx::get_os_thread_count() << " " << backend << std::endl;
+                  << pika::get_os_thread_count() << " " << backend << std::endl;
 
       // (optional) run test
       if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
@@ -182,7 +182,7 @@ struct choleskyMiniapp {
   }
 };
 
-int hpx_main(hpx::program_options::variables_map& vm) {
+int pika_main(pika::program_options::variables_map& vm) {
   {
     dlaf::ScopedInitializer init(vm);
     const Options opts(vm);
@@ -190,7 +190,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     dlaf::miniapp::dispatchMiniapp<choleskyMiniapp>(opts);
   }
 
-  return hpx::finalize();
+  return pika::finalize();
 }
 
 int main(int argc, char** argv) {
@@ -198,8 +198,8 @@ int main(int argc, char** argv) {
   dlaf::comm::mpi_init mpi_initter(argc, argv, dlaf::comm::mpi_thread_level::multiple);
 
   // options
-  using namespace hpx::program_options;
-  options_description desc_commandline("Usage: " HPX_APPLICATION_STRING " [options]");
+  using namespace pika::program_options;
+  options_description desc_commandline("Usage: miniapp_cholesky [options]");
   desc_commandline.add(dlaf::miniapp::getMiniappOptionsDescription());
   desc_commandline.add(dlaf::getOptionsDescription());
 
@@ -211,10 +211,10 @@ int main(int argc, char** argv) {
   // clang-format on
   dlaf::miniapp::addUploOption(desc_commandline);
 
-  hpx::init_params p;
+  pika::init_params p;
   p.desc_cmdline = desc_commandline;
   p.rp_callback = dlaf::initResourcePartitionerHandler;
-  return hpx::init(argc, argv, p);
+  return pika::init(pika_main, argc, argv, p);
 }
 
 namespace {
@@ -307,7 +307,7 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
       const auto owner_transposed = distribution.rankGlobalTile(transposed_wrt_global);
 
       // collect the 2nd operand, receving it from others if not available locally
-      hpx::shared_future<ConstHostTileType> tile_to_transpose;
+      pika::shared_future<ConstHostTileType> tile_to_transpose;
 
       if (owner_transposed == current_rank) {  // current rank already has what it needs
         tile_to_transpose = L.read(transposed_wrt_global);
@@ -330,7 +330,7 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
         dlaf::comm::sync::broadcast::receive_from(owner_transposed.row(), comm_grid.colCommunicator(),
                                                   workspace);
 
-        tile_to_transpose = hpx::make_ready_future<ConstHostTileType>(std::move(workspace));
+        tile_to_transpose = pika::make_ready_future<ConstHostTileType>(std::move(workspace));
       }
 
       // compute the part of results available locally, for each row this rank has in local
@@ -340,11 +340,11 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
 
         dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, T(1.0),
                                     L.read_sender(tile_wrt_local),
-                                    hpx::execution::experimental::keep_future(tile_to_transpose),
+                                    pika::execution::experimental::keep_future(tile_to_transpose),
                                     j_loc == 0 ? T(0.0) : T(1.0),
                                     partial_result.readwrite_sender(LocalTileIndex{i_loc, 0})) |
             dlaf::tile::gemm(dlaf::internal::Policy<dlaf::Backend::MC>()) |
-            hpx::execution::experimental::start_detached();
+            pika::execution::experimental::start_detached();
       }
     }
 
@@ -366,7 +366,7 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
       // L * L' for the current cell is computed
       // here the owner of the result performs the last step (difference with original)
       if (owner_result == current_rank) {
-        hpx::dataflow(tile_abs_diff, A(tile_result), mul_result.read(tile_result));
+        pika::dataflow(tile_abs_diff, A(tile_result), mul_result.read(tile_result));
       }
     }
   }

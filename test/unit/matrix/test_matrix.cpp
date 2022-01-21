@@ -16,8 +16,8 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include <hpx/local/future.hpp>
-#include <hpx/local/unwrap.hpp>
+#include <pika/future.hpp>
+#include <pika/unwrap.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/util_matrix.h"
@@ -35,7 +35,7 @@ using namespace dlaf::comm;
 using namespace dlaf::test;
 using namespace testing;
 
-using hpx::unwrapping;
+using pika::unwrapping;
 
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
@@ -1246,7 +1246,7 @@ auto try_waiting_guard = [](auto& guard) {
   const auto wait_guard = 20ms;
 
   for (int i = 0; i < 100 && !guard; ++i)
-    hpx::this_thread::sleep_for(wait_guard);
+    pika::this_thread::sleep_for(wait_guard);
 };
 
 // Create a single-element matrix
@@ -1268,14 +1268,14 @@ auto createConstMatrix(const T& data) {
 }
 
 TEST(MatrixDestructorFutures, NonConstAfterRead) {
-  hpx::future<void> last_task;
+  pika::future<void> last_task;
 
   std::atomic<bool> is_exited_from_scope{false};
   {
     auto matrix = createMatrix<TypeParam>();
 
     auto shared_future = matrix.read(LocalTileIndex(0, 0));
-    last_task = shared_future.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
+    last_task = shared_future.then(pika::launch::async, [&is_exited_from_scope](auto&&) {
       try_waiting_guard(is_exited_from_scope);
       EXPECT_TRUE(is_exited_from_scope);
     });
@@ -1286,14 +1286,14 @@ TEST(MatrixDestructorFutures, NonConstAfterRead) {
 }
 
 TEST(MatrixDestructorFutures, NonConstAfterReadWrite) {
-  hpx::future<void> last_task;
+  pika::future<void> last_task;
 
   std::atomic<bool> is_exited_from_scope{false};
   {
     auto matrix = createMatrix<TypeParam>();
 
     auto future = matrix(LocalTileIndex(0, 0));
-    last_task = future.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
+    last_task = future.then(pika::launch::async, [&is_exited_from_scope](auto&&) {
       try_waiting_guard(is_exited_from_scope);
       EXPECT_TRUE(is_exited_from_scope);
     });
@@ -1304,7 +1304,7 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWrite) {
 }
 
 TEST(MatrixDestructorFutures, NonConstAfterRead_UserMemory) {
-  hpx::future<void> last_task;
+  pika::future<void> last_task;
 
   std::atomic<bool> is_exited_from_scope{false};
   {
@@ -1312,7 +1312,7 @@ TEST(MatrixDestructorFutures, NonConstAfterRead_UserMemory) {
     auto matrix = createMatrix<TypeParam>(data);
 
     auto shared_future = matrix.read(LocalTileIndex(0, 0));
-    last_task = shared_future.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
+    last_task = shared_future.then(pika::launch::async, [&is_exited_from_scope](auto&&) {
       try_waiting_guard(is_exited_from_scope);
       EXPECT_TRUE(is_exited_from_scope);
     });
@@ -1323,7 +1323,7 @@ TEST(MatrixDestructorFutures, NonConstAfterRead_UserMemory) {
 }
 
 TEST(MatrixDestructorFutures, NonConstAfterReadWrite_UserMemory) {
-  hpx::future<void> last_task;
+  pika::future<void> last_task;
 
   std::atomic<bool> is_exited_from_scope{false};
   {
@@ -1331,7 +1331,7 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWrite_UserMemory) {
     auto matrix = createMatrix<TypeParam>(data);
 
     auto future = matrix(LocalTileIndex(0, 0));
-    last_task = future.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
+    last_task = future.then(pika::launch::async, [&is_exited_from_scope](auto&&) {
       try_waiting_guard(is_exited_from_scope);
       EXPECT_TRUE(is_exited_from_scope);
     });
@@ -1342,7 +1342,7 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWrite_UserMemory) {
 }
 
 TEST(MatrixDestructorFutures, ConstAfterRead_UserMemory) {
-  hpx::future<void> last_task;
+  pika::future<void> last_task;
 
   std::atomic<bool> is_exited_from_scope{false};
   {
@@ -1350,7 +1350,7 @@ TEST(MatrixDestructorFutures, ConstAfterRead_UserMemory) {
     auto matrix = createConstMatrix<TypeParam>(data);
 
     auto sf = matrix.read(LocalTileIndex(0, 0));
-    last_task = sf.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
+    last_task = sf.then(pika::launch::async, [&is_exited_from_scope](auto&&) {
       try_waiting_guard(is_exited_from_scope);
       EXPECT_TRUE(is_exited_from_scope);
     });
@@ -1392,8 +1392,8 @@ TEST_F(MatrixGenericTest, SyncBarrier) {
 
       // start a task (if it has at least a local part...otherwise there is no tile to work on)
       if (has_local)
-        matrix.read(tile_tl).then(hpx::launch::async, [&guard](auto&&) {
-          hpx::this_thread::sleep_for(100ms);
+        matrix.read(tile_tl).then(pika::launch::async, [&guard](auto&&) {
+          pika::this_thread::sleep_for(100ms);
           guard = true;
         });
 

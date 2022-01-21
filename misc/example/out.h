@@ -1,13 +1,13 @@
 #include <chrono>
 #include <sstream>
 
-#include <hpx/hpx.hpp>
+#include <pika/runtime.hpp>
 
 std::string out(const char* s, int i, int j, int index) {
   std::stringstream ss;
   std::time_t t = std::time(nullptr);
   std::tm tm = *std::localtime(&t);
-  ss << std::put_time(&tm, "%T: ") << "t" << hpx::get_worker_thread_num() << " T" << index << " " << s
+  ss << std::put_time(&tm, "%T: ") << "t" << pika::get_worker_thread_num() << " T" << index << " " << s
      << " " << i << " " << j << std::endl;
   return ss.str();
 }
@@ -16,7 +16,7 @@ std::string out(const char* s, const char* r, int index) {
   std::stringstream ss;
   std::time_t t = std::time(nullptr);
   std::tm tm = *std::localtime(&t);
-  ss << std::put_time(&tm, "%T: ") << "t" << hpx::get_worker_thread_num() << " T" << index << " " << r
+  ss << std::put_time(&tm, "%T: ") << "t" << pika::get_worker_thread_num() << " T" << index << " " << r
      << " " << s << std::endl;
   return ss.str();
 }

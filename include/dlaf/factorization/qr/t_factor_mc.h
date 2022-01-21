@@ -10,8 +10,8 @@
 
 #pragma once
 
-#include <hpx/local/future.hpp>
-#include <hpx/local/unwrap.hpp>
+#include <pika/future.hpp>
+#include <pika/unwrap.hpp>
 
 #include <blas.hh>
 
@@ -61,8 +61,8 @@ struct QR_Tfactor<Backend::MC, Device::CPU, T> {
   /// @pre k >= 0
   /// @pre v_start.isIn(v.nrTiles())
   static void call(const SizeType k, Matrix<const T, Device::CPU>& v, const GlobalTileIndex v_start,
-                   hpx::shared_future<common::internal::vector<T>> taus,
-                   hpx::future<matrix::Tile<T, Device::CPU>> t);
+                   pika::shared_future<common::internal::vector<T>> taus,
+                   pika::future<matrix::Tile<T, Device::CPU>> t);
 
   /// Forms the triangular factor T of a block of reflectors H, which is defined as a product of k
   /// elementary reflectors.
@@ -90,17 +90,17 @@ struct QR_Tfactor<Backend::MC, Device::CPU, T> {
   /// @pre k >= 0
   /// @pre v_start.isIn(v.nrTiles())
   static void call(const SizeType k, Matrix<const T, Device::CPU>& v, const GlobalTileIndex v_start,
-                   hpx::shared_future<common::internal::vector<T>> taus,
-                   hpx::future<matrix::Tile<T, Device::CPU>> t,
+                   pika::shared_future<common::internal::vector<T>> taus,
+                   pika::future<matrix::Tile<T, Device::CPU>> t,
                    common::Pipeline<comm::Communicator>& mpi_col_task_chain);
 };
 
 template <class T>
-hpx::future<matrix::Tile<T, Device::CPU>> gemvColumnT(
-    bool is_v0, hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_vi,
-    hpx::shared_future<common::internal::vector<T>>& taus,
-    hpx::future<matrix::Tile<T, Device::CPU>>& tile_t) {
-  auto gemv_func = hpx::unwrapping([is_v0](const auto& tile_v, const auto& taus, auto&& tile_t) {
+pika::future<matrix::Tile<T, Device::CPU>> gemvColumnT(
+    bool is_v0, pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_vi,
+    pika::shared_future<common::internal::vector<T>>& taus,
+    pika::future<matrix::Tile<T, Device::CPU>>& tile_t) {
+  auto gemv_func = pika::unwrapping([is_v0](const auto& tile_v, const auto& taus, auto&& tile_t) {
     const SizeType k = tile_t.size().cols();
     DLAF_ASSERT(taus.size() == k, taus.size(), k);
 
@@ -144,15 +144,15 @@ hpx::future<matrix::Tile<T, Device::CPU>> gemvColumnT(
     }
     return std::move(tile_t);
   });
-  return hpx::dataflow(getHpExecutor<Backend::MC>(), gemv_func, tile_vi, taus, tile_t);
+  return pika::dataflow(getHpExecutor<Backend::MC>(), gemv_func, tile_vi, taus, tile_t);
 }
 
 template <class T>
-hpx::future<matrix::Tile<T, Device::CPU>> trmvUpdateColumn(
-    hpx::future<matrix::Tile<T, Device::CPU>>& tile_t) {
+pika::future<matrix::Tile<T, Device::CPU>> trmvUpdateColumn(
+    pika::future<matrix::Tile<T, Device::CPU>>& tile_t) {
   // Update each column (in order) t = T . t
   // remember that T is upper triangular, so it is possible to use TRMV
-  auto trmv_func = hpx::unwrapping([](auto&& tile_t) {
+  auto trmv_func = pika::unwrapping([](auto&& tile_t) {
     for (SizeType j = 0; j < tile_t.size().cols(); ++j) {
       const TileElementIndex t_start{0, j};
       const TileElementSize t_size{j, 1};
@@ -162,14 +162,14 @@ hpx::future<matrix::Tile<T, Device::CPU>> trmvUpdateColumn(
     }
     return std::move(tile_t);
   });
-  return hpx::dataflow(getHpExecutor<Backend::MC>(), trmv_func, tile_t);
+  return pika::dataflow(getHpExecutor<Backend::MC>(), trmv_func, tile_t);
 }
 
 template <class T>
 void QR_Tfactor<Backend::MC, Device::CPU, T>::call(const SizeType k, Matrix<const T, Device::CPU>& v,
                                                    const GlobalTileIndex v_start,
-                                                   hpx::shared_future<common::internal::vector<T>> taus,
-                                                   hpx::future<matrix::Tile<T, Device::CPU>> t) {
+                                                   pika::shared_future<common::internal::vector<T>> taus,
+                                                   pika::future<matrix::Tile<T, Device::CPU>> t) {
   t = splitTile(t, {{0, 0}, {k, k}});
 
   // Fast return in case of no reflectors
@@ -182,7 +182,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(const SizeType k, Matrix<cons
 
   const GlobalTileIndex v_end{v.nrTiles().rows(), std::min(v.nrTiles().cols(), v_start.col() + 1)};
 
-  t = t.then(getHpExecutor<Backend::MC>(), hpx::unwrapping([](auto&& tile) {
+  t = t.then(getHpExecutor<Backend::MC>(), pika::unwrapping([](auto&& tile) {
                tile::internal::set0<T>(tile);
                return std::move(tile);
              }));
@@ -225,7 +225,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(const SizeType k, Matrix<cons
 template <class T>
 void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
     const SizeType k, Matrix<const T, Device::CPU>& v, const GlobalTileIndex v_start,
-    hpx::shared_future<common::internal::vector<T>> taus, hpx::future<matrix::Tile<T, Device::CPU>> t,
+    pika::shared_future<common::internal::vector<T>> taus, pika::future<matrix::Tile<T, Device::CPU>> t,
     common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
   t = splitTile(t, {{0, 0}, {k, k}});
 
@@ -251,7 +251,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
   };
   const LocalTileIndex v_end_loc{dist.localNrTiles().rows(), v_start_loc.col() + 1};
 
-  t = t.then(getHpExecutor<Backend::MC>(), hpx::unwrapping([](auto&& tile) {
+  t = t.then(getHpExecutor<Backend::MC>(), pika::unwrapping([](auto&& tile) {
                tile::internal::set0<T>(tile);
                return std::move(tile);
              }));

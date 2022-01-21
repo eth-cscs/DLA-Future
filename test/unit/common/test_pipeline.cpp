@@ -14,9 +14,9 @@
 #include <chrono>
 
 #include <gtest/gtest.h>
-#include <hpx/local/future.hpp>
-#include <hpx/local/thread.hpp>
-#include <hpx/local/unwrap.hpp>
+#include <pika/future.hpp>
+#include <pika/thread.hpp>
+#include <pika/unwrap.hpp>
 
 using namespace dlaf;
 using namespace std::chrono_literals;
@@ -28,8 +28,8 @@ TEST(Pipeline, Basic) {
 
   auto checkpoint0 = serial();
   auto checkpoint1 =
-      checkpoint0.then(hpx::launch::sync,
-                       hpx::unwrapping([](auto&& wrapper) { return std::move(wrapper); }));
+      checkpoint0.then(pika::launch::sync,
+                       pika::unwrapping([](auto&& wrapper) { return std::move(wrapper); }));
 
   auto guard0 = serial();
   auto guard1 = serial();
@@ -70,16 +70,16 @@ auto try_waiting_guard = [](auto& guard) {
   const auto wait_guard = 20ms;
 
   for (int i = 0; i < 100 && !guard; ++i)
-    hpx::this_thread::sleep_for(wait_guard);
+    pika::this_thread::sleep_for(wait_guard);
 };
 
 TEST(PipelineDestructor, DestructionWithDependency) {
-  hpx::future<void> last_task;
+  pika::future<void> last_task;
 
   std::atomic<bool> is_exited_from_scope;
   {
     Pipeline<int> serial(26);
-    last_task = serial().then(hpx::launch::async, [&is_exited_from_scope](auto) {
+    last_task = serial().then(pika::launch::async, [&is_exited_from_scope](auto) {
       try_waiting_guard(is_exited_from_scope);
       EXPECT_TRUE(is_exited_from_scope);
     });

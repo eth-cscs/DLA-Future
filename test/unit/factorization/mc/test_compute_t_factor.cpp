@@ -13,8 +13,7 @@
 
 #include <gtest/gtest.h>
 #include <blas.hh>
-#include <hpx/include/util.hpp>
-#include <hpx/local/future.hpp>
+#include <pika/future.hpp>
 
 #include "dlaf/common/range2d.h"
 #include "dlaf/communication/communicator_grid.h"
@@ -271,8 +270,8 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
     }
 
     auto tmp = computeHAndTFactor(k, v);
-    hpx::shared_future<dlaf::common::internal::vector<TypeParam>> taus_input =
-        hpx::make_ready_future<dlaf::common::internal::vector<TypeParam>>(std::move(std::get<0>(tmp)));
+    pika::shared_future<dlaf::common::internal::vector<TypeParam>> taus_input =
+        pika::make_ready_future<dlaf::common::internal::vector<TypeParam>>(std::move(std::get<0>(tmp)));
     auto h_expected = std::move(std::get<1>(tmp));
 
     is_orthogonal(h_expected);
@@ -356,8 +355,8 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
       }();
 
       auto tmp = computeHAndTFactor(k, v);
-      hpx::shared_future<dlaf::common::internal::vector<TypeParam>> taus_input =
-          hpx::make_ready_future<dlaf::common::internal::vector<TypeParam>>(std::move(std::get<0>(tmp)));
+      pika::shared_future<dlaf::common::internal::vector<TypeParam>> taus_input =
+          pika::make_ready_future<dlaf::common::internal::vector<TypeParam>>(std::move(std::get<0>(tmp)));
       auto h_expected = std::move(std::get<1>(tmp));
 
       is_orthogonal(h_expected);

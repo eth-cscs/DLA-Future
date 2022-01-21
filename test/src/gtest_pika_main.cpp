@@ -40,21 +40,21 @@
 #include <cstdio>
 
 #include <gtest/gtest.h>
-#include <hpx/init.hpp>
+#include <pika/init.hpp>
 
 #include <dlaf/init.h>
 
 GTEST_API_ int test_main(int argc, char** argv) {
-  std::printf("Running main() from gtest_hpx_main.cpp\n");
+  std::printf("Running main() from gtest_pika_main.cpp\n");
   auto ret = [&] {
     dlaf::ScopedInitializer init(argc, argv);
     return RUN_ALL_TESTS();
   }();
-  hpx::finalize();
+  pika::finalize();
   return ret;
 }
 
 GTEST_API_ int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
-  return hpx::init(test_main, argc, argv);
+  return pika::init(test_main, argc, argv);
 }

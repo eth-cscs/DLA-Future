@@ -9,9 +9,9 @@
 //
 #pragma once
 
-#include <hpx/local/execution.hpp>
-#include <hpx/local/future.hpp>
-#include <hpx/local/thread.hpp>
+#include <pika/execution.hpp>
+#include <pika/future.hpp>
+#include <pika/thread.hpp>
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
@@ -38,161 +38,161 @@ namespace internal {
 
 namespace triangular_lln {
 template <Backend backend, class T, typename InSender, typename OutSender>
-void trmmBPanelTile(hpx::threads::thread_priority priority, blas::Diag diag, T alpha, InSender&& in_tile,
+void trmmBPanelTile(pika::threads::thread_priority priority, blas::Diag diag, T alpha, InSender&& in_tile,
                     OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, blas::Op::NoTrans, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
       tile::trmm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
-void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, T alpha, ASender&& a_tile,
+void gemmTrailingMatrixTile(pika::threads::thread_priority priority, T alpha, ASender&& a_tile,
                             BSender&& b_tile, CSender&& c_tile) {
   dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha, std::forward<ASender>(a_tile),
                               std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
       tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 }
 
 namespace triangular_llt {
 template <Backend backend, class T, typename InSender, typename OutSender>
-void trmmBPanelTile(hpx::threads::thread_priority priority, blas::Op op, blas::Diag diag, T alpha,
+void trmmBPanelTile(pika::threads::thread_priority priority, blas::Op op, blas::Diag diag, T alpha,
                     InSender&& in_tile, OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, op, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
       tile::trmm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
-void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, blas::Op op, T alpha,
+void gemmTrailingMatrixTile(pika::threads::thread_priority priority, blas::Op op, T alpha,
                             ASender&& a_tile, BSender&& b_tile, CSender&& c_tile) {
   dlaf::internal::whenAllLift(op, blas::Op::NoTrans, alpha, std::forward<ASender>(a_tile),
                               std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
       tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 }
 
 namespace triangular_lun {
 template <Backend backend, class T, typename InSender, typename OutSender>
-void trmmBPanelTile(hpx::threads::thread_priority priority, blas::Diag diag, T alpha, InSender&& in_tile,
+void trmmBPanelTile(pika::threads::thread_priority priority, blas::Diag diag, T alpha, InSender&& in_tile,
                     OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, blas::Op::NoTrans, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
       tile::trmm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
-void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, T alpha, ASender&& a_tile,
+void gemmTrailingMatrixTile(pika::threads::thread_priority priority, T alpha, ASender&& a_tile,
                             BSender&& b_tile, CSender&& c_tile) {
   dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha, std::forward<ASender>(a_tile),
                               std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
       tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 }
 
 namespace triangular_lut {
 template <Backend backend, class T, typename InSender, typename OutSender>
-void trmmBPanelTile(hpx::threads::thread_priority priority, blas::Op op, blas::Diag diag, T alpha,
+void trmmBPanelTile(pika::threads::thread_priority priority, blas::Op op, blas::Diag diag, T alpha,
                     InSender&& in_tile, OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, op, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
       tile::trmm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
-void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, blas::Op op, T alpha,
+void gemmTrailingMatrixTile(pika::threads::thread_priority priority, blas::Op op, T alpha,
                             ASender&& a_tile, BSender&& b_tile, CSender&& c_tile) {
   dlaf::internal::whenAllLift(op, blas::Op::NoTrans, alpha, std::forward<ASender>(a_tile),
                               std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
       tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 }
 
 namespace triangular_rln {
 template <Backend backend, class T, typename InSender, typename OutSender>
-void trmmBPanelTile(hpx::threads::thread_priority priority, blas::Diag diag, T alpha, InSender&& in_tile,
+void trmmBPanelTile(pika::threads::thread_priority priority, blas::Diag diag, T alpha, InSender&& in_tile,
                     OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Lower, blas::Op::NoTrans, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
       tile::trmm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
-void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, T alpha, ASender&& a_tile,
+void gemmTrailingMatrixTile(pika::threads::thread_priority priority, T alpha, ASender&& a_tile,
                             BSender&& b_tile, CSender&& c_tile) {
   dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha, std::forward<ASender>(a_tile),
                               std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
       tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 }
 
 namespace triangular_rlt {
 template <Backend backend, class T, typename InSender, typename OutSender>
-void trmmBPanelTile(hpx::threads::thread_priority priority, blas::Op op, blas::Diag diag, T alpha,
+void trmmBPanelTile(pika::threads::thread_priority priority, blas::Op op, blas::Diag diag, T alpha,
                     InSender&& in_tile, OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Lower, op, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
       tile::trmm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
-void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, blas::Op op, T alpha,
+void gemmTrailingMatrixTile(pika::threads::thread_priority priority, blas::Op op, T alpha,
                             ASender&& a_tile, BSender&& b_tile, CSender&& c_tile) {
   dlaf::internal::whenAllLift(blas::Op::NoTrans, op, alpha, std::forward<ASender>(a_tile),
                               std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
       tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 }
 
 namespace triangular_run {
 template <Backend backend, class T, typename InSender, typename OutSender>
-void trmmBPanelTile(hpx::threads::thread_priority priority, blas::Diag diag, T alpha, InSender&& in_tile,
+void trmmBPanelTile(pika::threads::thread_priority priority, blas::Diag diag, T alpha, InSender&& in_tile,
                     OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Upper, blas::Op::NoTrans, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
       tile::trmm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
-void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, T alpha, ASender&& a_tile,
+void gemmTrailingMatrixTile(pika::threads::thread_priority priority, T alpha, ASender&& a_tile,
                             BSender&& b_tile, CSender&& c_tile) {
   dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha, std::forward<ASender>(a_tile),
                               std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
       tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 }
 
 namespace triangular_rut {
 template <Backend backend, class T, typename InSender, typename OutSender>
-void trmmBPanelTile(hpx::threads::thread_priority priority, blas::Op op, blas::Diag diag, T alpha,
+void trmmBPanelTile(pika::threads::thread_priority priority, blas::Op op, blas::Diag diag, T alpha,
                     InSender&& in_tile, OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Upper, op, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
       tile::trmm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
-void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, blas::Op op, T alpha,
+void gemmTrailingMatrixTile(pika::threads::thread_priority priority, blas::Op op, T alpha,
                             ASender&& a_tile, BSender&& b_tile, CSender&& c_tile) {
   dlaf::internal::whenAllLift(blas::Op::NoTrans, op, alpha, std::forward<ASender>(a_tile),
                               std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
       tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      hpx::execution::experimental::start_detached();
+      pika::execution::experimental::start_detached();
 }
 }
 
@@ -200,7 +200,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LLN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
                                               Matrix<T, device>& mat_b) {
   using namespace triangular_lln;
-  using hpx::threads::thread_priority;
+  using pika::threads::thread_priority;
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -225,7 +225,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LLT(blas::Op op, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_llt;
-  using hpx::threads::thread_priority;
+  using pika::threads::thread_priority;
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -250,7 +250,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LUN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
                                               Matrix<T, device>& mat_b) {
   using namespace triangular_lun;
-  using hpx::threads::thread_priority;
+  using pika::threads::thread_priority;
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -275,7 +275,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LUT(blas::Op op, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_lut;
-  using hpx::threads::thread_priority;
+  using pika::threads::thread_priority;
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -300,7 +300,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_RLN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
                                               Matrix<T, device>& mat_b) {
   using namespace triangular_rln;
-  using hpx::threads::thread_priority;
+  using pika::threads::thread_priority;
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -325,7 +325,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_RLT(blas::Op op, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_rlt;
-  using hpx::threads::thread_priority;
+  using pika::threads::thread_priority;
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -350,7 +350,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_RUN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
                                               Matrix<T, device>& mat_b) {
   using namespace triangular_run;
-  using hpx::threads::thread_priority;
+  using pika::threads::thread_priority;
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -375,7 +375,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_RUT(blas::Op op, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_rut;
-  using hpx::threads::thread_priority;
+  using pika::threads::thread_priority;
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -400,7 +400,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_lln;
-  using hpx::threads::thread_priority;
+  using pika::threads::thread_priority;
 
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
@@ -484,7 +484,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_lun;
-  using hpx::threads::thread_priority;
+  using pika::threads::thread_priority;
 
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
@@ -567,7 +567,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_rln;
-  using hpx::threads::thread_priority;
+  using pika::threads::thread_priority;
 
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
@@ -651,7 +651,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_run;
-  using hpx::threads::thread_priority;
+  using pika::threads::thread_priority;
 
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 

@@ -11,7 +11,10 @@
 
 #include <type_traits>
 
-#include <hpx/include/util.hpp>
+#include <pika/execution.hpp>
+#include <pika/future.hpp>
+#include <pika/thread.hpp>
+#include <pika/unwrap.hpp>
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/range2d.h"
@@ -34,9 +37,9 @@ struct BackTransformationT2B<Backend::MC, Device::CPU, T> {
 };
 
 template <class T>
-hpx::shared_future<matrix::Tile<const T, Device::CPU>> setupVWellFormed(
-    hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_i,
-    hpx::future<matrix::Tile<T, Device::CPU>> tile_v) {
+pika::shared_future<matrix::Tile<const T, Device::CPU>> setupVWellFormed(
+    pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_i,
+    pika::future<matrix::Tile<T, Device::CPU>> tile_v) {
   auto unzipV_func = [](const auto& tile_i, auto tile_v) {
     // Note: the size of of tile_i and tile_v embeds a relevant information about the number of
     // reflecotrs and their max size. This will be exploited to correctly setup the well formed
@@ -72,14 +75,14 @@ hpx::shared_future<matrix::Tile<const T, Device::CPU>> setupVWellFormed(
 
     return matrix::Tile<const T, Device::CPU>(std::move(tile_v));
   };
-  return hpx::dataflow(hpx::unwrapping(unzipV_func), std::move(tile_i), std::move(tile_v));
+  return pika::dataflow(pika::unwrapping(unzipV_func), std::move(tile_i), std::move(tile_v));
 }
 
 template <class T>
-hpx::shared_future<matrix::Tile<const T, Device::CPU>> computeTFactor(
-    hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_taus,
-    hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_v,
-    hpx::future<matrix::Tile<T, Device::CPU>> mat_t) {
+pika::shared_future<matrix::Tile<const T, Device::CPU>> computeTFactor(
+    pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_taus,
+    pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_v,
+    pika::future<matrix::Tile<T, Device::CPU>> mat_t) {
   auto tfactor_task = [](const auto& tile_taus, const auto& tile_v, auto tile_t) {
     using namespace lapack;
 
@@ -96,44 +99,47 @@ hpx::shared_future<matrix::Tile<const T, Device::CPU>> computeTFactor(
 
     return matrix::Tile<const T, Device::CPU>(std::move(tile_t));
   };
-  return hpx::dataflow(hpx::unwrapping(tfactor_task), std::move(tile_taus), std::move(tile_v),
-                       std::move(mat_t));
+  return pika::dataflow(pika::unwrapping(tfactor_task), std::move(tile_taus), std::move(tile_v),
+                        std::move(mat_t));
 }
 
 template <Backend backend, class VSender, class TSender>
-auto computeW(hpx::threads::thread_priority priority, VSender&& tile_v, TSender&& tile_t) {
+auto computeW(pika::threads::thread_priority priority, VSender&& tile_v, TSender&& tile_t) {
   using namespace blas;
   using T = dlaf::internal::SenderElementType<VSender>;
   dlaf::internal::whenAllLift(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1),
                               std::forward<TSender>(tile_t), std::forward<VSender>(tile_v)) |
-      tile::trmm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::trmm(dlaf::internal::Policy<backend>(priority)) |
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class VSender, class ESender, class T, class W2Sender>
-auto computeW2(hpx::threads::thread_priority priority, VSender&& tile_v, ESender&& tile_e, T beta,
+auto computeW2(pika::threads::thread_priority priority, VSender&& tile_v, ESender&& tile_e, T beta,
                W2Sender&& tile_w2) {
   using blas::Op;
   dlaf::internal::whenAllLift(Op::ConjTrans, Op::NoTrans, T(1), std::forward<VSender>(tile_v),
                               std::forward<ESender>(tile_e), beta, std::forward<W2Sender>(tile_w2)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class WSender, class W2Sender, class ESender>
-auto updateE(hpx::threads::thread_priority priority, WSender&& tile_w, W2Sender&& tile_w2,
+auto updateE(pika::threads::thread_priority priority, WSender&& tile_w, W2Sender&& tile_w2,
              ESender&& tile_e) {
   using blas::Op;
   using T = dlaf::internal::SenderElementType<ESender>;
   dlaf::internal::whenAllLift(Op::NoTrans, Op::NoTrans, T(-1), std::forward<WSender>(tile_w),
                               std::forward<W2Sender>(tile_w2), T(1), std::forward<ESender>(tile_e)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
+      pika::execution::experimental::start_detached();
 }
 
 template <class T>
 void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& mat_e,
                                                               Matrix<const T, Device::CPU>& mat_hh) {
   static constexpr Backend backend = Backend::MC;
-  using hpx::threads::thread_priority;
-  using hpx::execution::experimental::keep_future;
+  using pika::threads::thread_priority;
+  using pika::execution::experimental::keep_future;
 
   using matrix::Panel;
   using common::RoundRobin;
@@ -324,11 +330,11 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
         auto tile_e = mat_e(idx_e);
         const auto& tile_w2 = mat_w2.read_sender(idx_e);
 
-        updateE<backend>(hpx::threads::thread_priority::normal, keep_future(splitTile(tile_w, v_up)),
+        updateE<backend>(pika::threads::thread_priority::normal, keep_future(splitTile(tile_w, v_up)),
                          tile_w2, splitTile(tile_e, {{1, 0}, {sizes[0], sz_e.cols()}}));
 
         if (affectsTwoRows)
-          updateE<backend>(hpx::threads::thread_priority::normal, keep_future(splitTile(tile_w, v_dn)),
+          updateE<backend>(pika::threads::thread_priority::normal, keep_future(splitTile(tile_w, v_dn)),
                            tile_w2, mat_e.readwrite_sender(LocalTileIndex{i + 1, j_e}));
       }
 

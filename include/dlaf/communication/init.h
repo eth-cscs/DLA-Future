@@ -13,7 +13,7 @@
 #include <mutex>
 
 #include <mpi.h>
-#include <hpx/local/mutex.hpp>
+#include <pika/mutex.hpp>
 
 #include "dlaf/communication/error.h"
 
@@ -44,15 +44,15 @@ inline bool mpi_serialized() noexcept {
 
 /// Serializes the MPI call if `MPI_THREAD_SERIALIZED` is used.
 ///
-/// Note: HPX mutex is used instead of std::mutex to avoid stalling the HPX scheduler as the function may
-///       be called from a HPX thread/task.
-/// Note: This function should only be called after HPX has been initialized, otherwise the HPX mutex may
+/// Note: pika mutex is used instead of std::mutex to avoid stalling the pika scheduler as the function may
+///       be called from a pika thread/task.
+/// Note: This function should only be called after pika has been initialized, otherwise the pika mutex may
 ///       error out.
 template <class F, class... Ts>
 void mpi_invoke(F f, Ts... ts) noexcept {
   if (mpi_serialized()) {
-    static hpx::lcos::local::mutex mt;
-    std::lock_guard<hpx::lcos::local::mutex> lk(mt);
+    static pika::lcos::local::mutex mt;
+    std::lock_guard<pika::lcos::local::mutex> lk(mt);
     DLAF_MPI_CALL(f(ts...));
   }
   else {

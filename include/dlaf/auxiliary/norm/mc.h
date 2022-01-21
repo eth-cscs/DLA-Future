@@ -9,8 +9,8 @@
 //
 #pragma once
 
-#include <hpx/local/future.hpp>
-#include <hpx/local/unwrap.hpp>
+#include <pika/future.hpp>
+#include <pika/unwrap.hpp>
 
 #include "dlaf/auxiliary/norm/api.h"
 #include "dlaf/common/range2d.h"
@@ -49,7 +49,7 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
 
   using dlaf::common::internal::vector;
   using dlaf::common::make_data;
-  using hpx::unwrapping;
+  using pika::unwrapping;
 
   using dlaf::tile::internal::lange;
   using dlaf::tile::internal::lantr;
@@ -61,7 +61,7 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
   DLAF_ASSERT(square_size(matrix), matrix);
   DLAF_ASSERT(square_blocksize(matrix), matrix);
 
-  vector<hpx::future<NormT>> tiles_max;
+  vector<pika::future<NormT>> tiles_max;
   tiles_max.reserve(distribution.localNrTiles().rows() * distribution.localNrTiles().cols());
 
   // for each local tile in the (global) lower triangular matrix, create a task that finds the max element in the tile
@@ -78,7 +78,7 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
       else
         return lange(lapack::Norm::Max, tile);
     });
-    auto current_tile_max = hpx::dataflow(norm_max_f, matrix.read(tile_wrt_local));
+    auto current_tile_max = pika::dataflow(norm_max_f, matrix.read(tile_wrt_local));
 
     tiles_max.emplace_back(std::move(current_tile_max));
   }
@@ -86,7 +86,7 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
   // than it is necessary to reduce max values from all ranks into a single max value for the matrix
 
   // TODO unwrapping can be skipped for optimization reasons
-  NormT local_max_value = hpx::dataflow(unwrapping([](const auto&& values) {
+  NormT local_max_value = pika::dataflow(unwrapping([](const auto&& values) {
                                           if (values.size() == 0)
                                             return std::numeric_limits<NormT>::min();
                                           return *std::max_element(values.begin(), values.end());

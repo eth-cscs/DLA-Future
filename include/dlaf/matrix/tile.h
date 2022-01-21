@@ -14,10 +14,10 @@
 #include <ostream>
 #include <type_traits>
 
-#include <hpx/local/functional.hpp>
-#include <hpx/local/future.hpp>
-#include <hpx/local/tuple.hpp>
-#include <hpx/local/unwrap.hpp>
+#include <pika/functional.hpp>
+#include <pika/future.hpp>
+#include <pika/tuple.hpp>
+#include <pika/unwrap.hpp>
 
 #include "dlaf/common/data_descriptor.h"
 #include "dlaf/matrix/index.h"
@@ -125,10 +125,10 @@ class Tile<const T, device>;
 
 namespace internal {
 template <class T, Device D>
-hpx::shared_future<Tile<T, D>> splitTileInsertFutureInChain(hpx::future<Tile<T, D>>& tile);
+pika::shared_future<Tile<T, D>> splitTileInsertFutureInChain(pika::future<Tile<T, D>>& tile);
 
 template <class T, Device D>
-hpx::future<Tile<T, D>> createSubTile(const hpx::shared_future<Tile<T, D>>& tile,
+pika::future<Tile<T, D>> createSubTile(const pika::shared_future<Tile<T, D>>& tile,
                                       const SubTileSpec& spec);
 }
 
@@ -148,11 +148,11 @@ public:
   using TileType = Tile<T, device>;
   using ConstTileType = Tile<const T, device>;
   using TileDataType = internal::TileData<T, device>;
-  using TilePromise = hpx::lcos::local::promise<TileDataType>;
+  using TilePromise = pika::lcos::local::promise<TileDataType>;
 
   friend TileType;
-  friend hpx::future<Tile<const T, device>> internal::createSubTile<>(
-      const hpx::shared_future<Tile<const T, device>>& tile, const SubTileSpec& spec);
+  friend pika::future<Tile<const T, device>> internal::createSubTile<>(
+      const pika::shared_future<Tile<const T, device>>& tile, const SubTileSpec& spec);
 
   using ElementType = T;
 
@@ -246,14 +246,14 @@ private:
   // Creates a read-only subtile keeping the dependencies.
   // It calls tile.get(), therefore it should be used when tile is guaranteed to be ready:
   // e.g. in dataflow, .then, ...
-  Tile(hpx::shared_future<ConstTileType> tile, const SubTileSpec& spec)
+  Tile(pika::shared_future<ConstTileType> tile, const SubTileSpec& spec)
       : Tile<const T, device>(tile.get(), spec) {
     dep_tracker_ = std::move(tile);
   }
 
   TileDataType data_;
-  std::variant<std::monostate, TilePromise, hpx::shared_future<TileType>,
-               hpx::shared_future<ConstTileType>>
+  std::variant<std::monostate, TilePromise, pika::shared_future<TileType>,
+               pika::shared_future<ConstTileType>>
       dep_tracker_;
 };
 
@@ -278,13 +278,13 @@ public:
   using TileType = Tile<T, device>;
   using ConstTileType = Tile<const T, device>;
   using TileDataType = internal::TileData<T, device>;
-  using TilePromise = hpx::lcos::local::promise<TileDataType>;
+  using TilePromise = pika::lcos::local::promise<TileDataType>;
 
   friend ConstTileType;
-  friend hpx::future<Tile<T, device>> internal::createSubTile<>(
-      const hpx::shared_future<Tile<T, device>>& tile, const SubTileSpec& spec);
-  friend hpx::shared_future<Tile<T, device>> internal::splitTileInsertFutureInChain<>(
-      hpx::future<Tile<T, device>>& tile);
+  friend pika::future<Tile<T, device>> internal::createSubTile<>(
+      const pika::shared_future<Tile<T, device>>& tile, const SubTileSpec& spec);
+  friend pika::shared_future<Tile<T, device>> internal::splitTileInsertFutureInChain<>(
+      pika::future<Tile<T, device>>& tile);
 
   using ElementType = T;
 
@@ -344,7 +344,7 @@ private:
   // Creates a writable subtile keeping the dependencies.
   // It calls old_tile.get(), therefore it should be used when old_tile is guaranteed to be ready:
   // e.g. in dataflow, .then, ...
-  Tile(hpx::shared_future<TileType> tile, const SubTileSpec& spec) : ConstTileType(tile.get(), spec) {
+  Tile(pika::shared_future<TileType> tile, const SubTileSpec& spec) : ConstTileType(tile.get(), spec) {
     dep_tracker_ = std::move(tile);
   }
 
@@ -360,14 +360,14 @@ auto create_data(const Tile<T, device>& tile) {
 
 namespace internal {
 template <class T, Device D>
-hpx::future<Tile<T, D>> createSubTile(const hpx::shared_future<Tile<T, D>>& tile,
+pika::future<Tile<T, D>> createSubTile(const pika::shared_future<Tile<T, D>>& tile,
                                       const SubTileSpec& spec) {
-  return hpx::dataflow(
-      hpx::launch::sync, [](auto tile, auto spec) { return Tile<T, D>(tile, spec); }, tile, spec);
+  return pika::dataflow(
+      pika::launch::sync, [](auto tile, auto spec) { return Tile<T, D>(tile, spec); }, tile, spec);
 }
 
 template <class T, Device D>
-hpx::shared_future<Tile<T, D>> splitTileInsertFutureInChain(hpx::future<Tile<T, D>>& tile) {
+pika::shared_future<Tile<T, D>> splitTileInsertFutureInChain(pika::future<Tile<T, D>>& tile) {
   // Insert a Tile in the tile dependency chains. 3 different cases are supported:
   // 1)  F1(P2)  F2(P3) ...      =>  F1(PN)  FN(P2)  F2(P3) ...
   // 2)  F1(SF(P2))  F2(P3) ...  =>  F1(PN)  FN(SF(P2))  F2(P3) ...
@@ -378,7 +378,7 @@ hpx::shared_future<Tile<T, D>> splitTileInsertFutureInChain(hpx::future<Tile<T, 
   // On input tile is F1(*), on output tile is FN(*).
   // The shared future F1(PN) is returned and will be used to create subtiles.
   using TileType = Tile<T, D>;
-  using PromiseType = hpx::lcos::local::promise<typename TileType::TileDataType>;
+  using PromiseType = pika::lcos::local::promise<typename TileType::TileDataType>;
 
   // 1. Create a new promise + tile pair PN, FN
   PromiseType p;
@@ -386,17 +386,17 @@ hpx::shared_future<Tile<T, D>> splitTileInsertFutureInChain(hpx::future<Tile<T, 
   // 2. Break the dependency chain inserting PN and storing P2 or SF(P2):  F1(PN)  FN()  F2(P3)
   auto swap_promise = [promise = std::move(p)](auto tile) mutable {
     // The dep_tracker cannot be a const Tile (can happen only for const Tiles).
-    DLAF_ASSERT_HEAVY((!std::holds_alternative<hpx::shared_future<Tile<const T, D>>>(tile.dep_tracker_)),
+    DLAF_ASSERT_HEAVY((!std::holds_alternative<pika::shared_future<Tile<const T, D>>>(tile.dep_tracker_)),
                       "Internal Dependency Error");
 
     auto dep_tracker = std::move(tile.dep_tracker_);
     tile.dep_tracker_ = std::move(promise);
 
-    return hpx::make_tuple(std::move(tile), std::move(dep_tracker));
+    return pika::make_tuple(std::move(tile), std::move(dep_tracker));
   };
-  auto tmp = hpx::split_future(tile.then(hpx::launch::sync, hpx::unwrapping(std::move(swap_promise))));
+  auto tmp = pika::split_future(tile.then(pika::launch::sync, pika::unwrapping(std::move(swap_promise))));
   // old_tile = F1(PN) and will be used to create the subtiles
-  hpx::shared_future<TileType> old_tile = std::move(hpx::get<0>(tmp));
+  pika::shared_future<TileType> old_tile = std::move(pika::get<0>(tmp));
   // 3. Set P2 or SF(P2) into FN to restore the chain:  F1(PN)  FN(*) ...
   auto set_promise_or_shfuture = [](auto tile_data, auto dep_tracker) {
     TileType tile(std::move(tile_data));
@@ -404,8 +404,8 @@ hpx::shared_future<Tile<T, D>> splitTileInsertFutureInChain(hpx::future<Tile<T, 
     return tile;
   };
   // tile = FN(*) (out argument) can be used to access the full tile after the subtiles tasks completed.
-  tile = hpx::dataflow(hpx::launch::sync, hpx::unwrapping(set_promise_or_shfuture), tmp_tile,
-                       std::move(hpx::get<1>(tmp)));
+  tile = pika::dataflow(pika::launch::sync, pika::unwrapping(set_promise_or_shfuture), tmp_tile,
+                       std::move(pika::get<1>(tmp)));
 
   return old_tile;
 }
@@ -417,7 +417,7 @@ hpx::shared_future<Tile<T, D>> splitTileInsertFutureInChain(hpx::future<Tile<T, 
 /// The next dependency in the dependency chain will become ready only when @p tile
 /// and the returned subtile go out of scope.
 template <class T, Device D>
-hpx::shared_future<Tile<const T, D>> splitTile(const hpx::shared_future<Tile<const T, D>>& tile,
+pika::shared_future<Tile<const T, D>> splitTile(const pika::shared_future<Tile<const T, D>>& tile,
                                                const SubTileSpec& spec) {
   return internal::createSubTile(tile, spec);
 }
@@ -428,9 +428,9 @@ hpx::shared_future<Tile<const T, D>> splitTile(const hpx::shared_future<Tile<con
 /// The next dependency in the dependency chain will become ready only when @p tile
 /// and all the returned subtiles go out of scope.
 template <class T, Device D>
-std::vector<hpx::shared_future<Tile<const T, D>>> splitTile(
-    const hpx::shared_future<Tile<const T, D>>& tile, const std::vector<SubTileSpec>& specs) {
-  std::vector<hpx::shared_future<Tile<const T, D>>> ret;
+std::vector<pika::shared_future<Tile<const T, D>>> splitTile(
+    const pika::shared_future<Tile<const T, D>>& tile, const std::vector<SubTileSpec>& specs) {
+  std::vector<pika::shared_future<Tile<const T, D>>> ret;
   ret.reserve(specs.size());
   for (const auto& spec : specs) {
     ret.emplace_back(internal::createSubTile(tile, spec));
@@ -445,7 +445,7 @@ std::vector<hpx::shared_future<Tile<const T, D>>> splitTile(
 /// @p tile is replaced with the (full) tile which will get ready when the subtile goes out of scope.
 /// The next dependency in the dependency chain will become ready only when @p tile goes out of scope.
 template <class T, Device D>
-hpx::future<Tile<T, D>> splitTile(hpx::future<Tile<T, D>>& tile, const SubTileSpec& spec) {
+pika::future<Tile<T, D>> splitTile(pika::future<Tile<T, D>>& tile, const SubTileSpec& spec) {
   auto old_tile = internal::splitTileInsertFutureInChain(tile);
   // tile is now the new element of the dependency chain which will be ready
   // when the subtile will go out of scope.
@@ -462,7 +462,7 @@ hpx::future<Tile<T, D>> splitTile(hpx::future<Tile<T, D>>& tile, const SubTileSp
 /// @pre The subtiles described with specs should be disjoint
 ///      (i.e. two different subtile cannot access the same element).
 template <class T, Device D>
-std::vector<hpx::future<Tile<T, D>>> splitTileDisjoint(hpx::future<Tile<T, D>>& tile,
+std::vector<pika::future<Tile<T, D>>> splitTileDisjoint(pika::future<Tile<T, D>>& tile,
                                                        const std::vector<SubTileSpec>& specs) {
   if (specs.size() == 0)
     return {};
@@ -503,7 +503,7 @@ std::vector<hpx::future<Tile<T, D>>> splitTileDisjoint(hpx::future<Tile<T, D>>& 
   // tile is now the new element of the dependency chain which will be ready
   // when all subtiles will go out of scope.
 
-  std::vector<hpx::future<Tile<T, D>>> ret;
+  std::vector<pika::future<Tile<T, D>>> ret;
   ret.reserve(specs.size());
   for (const auto& spec : specs) {
     ret.emplace_back(internal::createSubTile(old_tile, spec));
@@ -523,7 +523,7 @@ struct UnwrapFuture {
 };
 
 template <typename T, Device D>
-struct UnwrapFuture<hpx::future<Tile<T, D>>> {
+struct UnwrapFuture<pika::future<Tile<T, D>>> {
   template <typename U>
   static auto call(U u) {
     return u.get();
@@ -536,10 +536,10 @@ class UnwrapExtendTiles {
   template <typename... Ts>
   auto callHelper(std::true_type, Ts&&... ts) {
     // Extract values from futures (not shared_futures).
-    auto t = hpx::make_tuple<>(UnwrapFuture<std::decay_t<Ts>>::call(std::forward<Ts>(ts))...);
+    auto t = pika::make_tuple<>(UnwrapFuture<std::decay_t<Ts>>::call(std::forward<Ts>(ts))...);
 
     // Call f with all futures (not just future<Tile>) unwrapped.
-    hpx::invoke_fused(hpx::unwrapping(f), t);
+    pika::invoke_fused(pika::unwrapping(f), t);
 
     // Finally, we extend the lifetime of read-write tiles directly and
     // read-only tiles wrapped in shared_futures by returning them here in a
@@ -550,15 +550,15 @@ class UnwrapExtendTiles {
   template <typename... Ts>
   auto callHelper(std::false_type, Ts&&... ts) {
     // Extract values from futures (not shared_futures).
-    auto t = hpx::make_tuple<>(UnwrapFuture<std::decay_t<Ts>>::call(std::forward<Ts>(ts))...);
+    auto t = pika::make_tuple<>(UnwrapFuture<std::decay_t<Ts>>::call(std::forward<Ts>(ts))...);
 
     // Call f with all futures (not just future<Tile>) unwrapped.
-    auto&& r = hpx::invoke_fused(hpx::unwrapping(f), t);
+    auto&& r = pika::invoke_fused(pika::unwrapping(f), t);
 
     // Finally, we extend the lifetime of read-write tiles directly and
     // read-only tiles wrapped in shared_futures by returning them here in a
     // tuple.
-    return hpx::make_tuple<>(std::forward<decltype(r)>(r), std::move(t));
+    return pika::make_tuple<>(std::forward<decltype(r)>(r), std::move(t));
   }
 
 public:
@@ -574,10 +574,10 @@ public:
   // become a candidate when F is not callable with the given arguments.
   template <typename... Ts>
   auto operator()(Ts&&... ts) -> decltype(callHelper(
-      std::is_void<decltype(hpx::invoke(hpx::unwrapping(std::declval<F>()), std::declval<Ts>()...))>{},
+      std::is_void<decltype(pika::invoke(pika::unwrapping(std::declval<F>()), std::declval<Ts>()...))>{},
       std::forward<Ts>(ts)...)) {
     return callHelper(std::is_void<decltype(
-                          hpx::invoke(hpx::unwrapping(std::declval<F>()), std::declval<Ts>()...))>{},
+                          pika::invoke(pika::unwrapping(std::declval<F>()), std::declval<Ts>()...))>{},
                       std::forward<Ts>(ts)...);
   }
 
@@ -586,7 +586,7 @@ private:
 };
 }
 
-/// Custom version of hpx::unwrapping for tile lifetime management.
+/// Custom version of pika::unwrapping for tile lifetime management.
 ///
 /// Unwraps and forwards all arguments to the function f, but also returns all
 /// arguments as they are with the exception of future<Tile> arguments.
@@ -615,12 +615,12 @@ auto unwrapExtendTiles(F&& f) {
 /// wrapped function. When the return type of the wrapped function is void, this
 /// also returns void.
 template <typename... Ts>
-void getUnwrapReturnValue(hpx::future<hpx::tuple<Ts...>>&&) {}
+void getUnwrapReturnValue(pika::future<pika::tuple<Ts...>>&&) {}
 
 template <typename R, typename... Ts>
-auto getUnwrapReturnValue(hpx::future<hpx::tuple<R, hpx::tuple<Ts...>>>&& f) {
-  auto split_f = hpx::split_future(std::move(f));
-  return std::move(hpx::get<0>(split_f));
+auto getUnwrapReturnValue(pika::future<pika::tuple<R, pika::tuple<Ts...>>>&& f) {
+  auto split_f = pika::split_future(std::move(f));
+  return std::move(pika::get<0>(split_f));
 }
 
 /// Access return value and arguments of the function wrapped by unwrapExtendTiles
@@ -629,10 +629,10 @@ auto getUnwrapReturnValue(hpx::future<hpx::tuple<R, hpx::tuple<Ts...>>>&& f) {
 /// the return value of the function, it returns also the tuple with all the parameters used in the
 /// call.
 template <class R, class... Ts>
-auto getUnwrapRetValAndArgs(hpx::future<hpx::tuple<R, hpx::tuple<Ts...>>>&& f) {
-  auto wrapped_res = hpx::split_future(std::move(f));
-  auto ret_value = std::move(hpx::get<0>(wrapped_res));
-  auto args = hpx::split_future(std::move(hpx::get<1>(wrapped_res)));
+auto getUnwrapRetValAndArgs(pika::future<pika::tuple<R, pika::tuple<Ts...>>>&& f) {
+  auto wrapped_res = pika::split_future(std::move(f));
+  auto ret_value = std::move(pika::get<0>(wrapped_res));
+  auto args = pika::split_future(std::move(pika::get<1>(wrapped_res)));
   return std::make_pair(std::move(ret_value), std::move(args));
 }
 

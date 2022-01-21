@@ -15,7 +15,7 @@ option(DLAF_CI_RUNNER_USES_MPIRUN "Remove mpiexec command for tests executed by 
 
 # On some machines, tests using multiple ranks + oversubscribing run
 # significantly faster when threads are not pinned.
-option(DLAF_TEST_THREAD_BINDING_ENABLED "If OFF disables HPX thread binding." ON)
+option(DLAF_TEST_THREAD_BINDING_ENABLED "If OFF disables pika thread binding." ON)
 
 # if a preset has been selected and it has been changed from previous configurations
 if (NOT DLAF_MPI_PRESET STREQUAL _DLAF_MPI_PRESET)
@@ -62,8 +62,8 @@ if ((MPIEXEC_NUMCORE_FLAG OR MPIEXEC_NUMCORES) AND NOT (MPIEXEC_NUMCORE_FLAG AND
   message(FATAL_ERROR "MPIEXEC_NUMCORES and MPIEXEC_NUMCORE_FLAG must be either both sets or both empty.")
 endif()
 
-# ----- HPX
-set(DLAF_HPXTEST_EXTRA_ARGS "" CACHE STRING "Extra arguments for tests with HPX")
+# ----- pika
+set(DLAF_PIKATEST_EXTRA_ARGS "" CACHE STRING "Extra arguments for tests with pika")
 
 add_library(DLAF_test INTERFACE)
 

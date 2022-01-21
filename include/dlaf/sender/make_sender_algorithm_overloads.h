@@ -12,7 +12,7 @@
 #include <type_traits>
 #include <utility>
 
-#include <hpx/local/execution.hpp>
+#include <pika/execution.hpp>
 
 #include "dlaf/sender/partial_transform.h"
 #include "dlaf/sender/policy.h"
@@ -32,7 +32,7 @@
 ///    does the required synchronization before returning in cases when the callable is not blocking.
 #define DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(fname, callable)                                   \
   template <Backend B, typename Sender,                                                         \
-            typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>     \
+            typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>     \
   auto fname(const dlaf::internal::Policy<B> p, Sender&& s) {                                   \
     return dlaf::internal::transform<B>(p, callable, std::forward<Sender>(s));                  \
   }                                                                                             \
@@ -44,7 +44,7 @@
                                                                                                 \
   template <Backend B, typename T1, typename T2, typename... Ts>                                \
   void fname(const dlaf::internal::Policy<B> p, T1&& t1, T2&& t2, Ts&&... ts) {                 \
-    hpx::execution::experimental::sync_wait(                                                    \
-        fname(p, hpx::execution::experimental::just(std::forward<T1>(t1), std::forward<T2>(t2), \
+    pika::execution::experimental::sync_wait(                                                    \
+        fname(p, pika::execution::experimental::just(std::forward<T1>(t1), std::forward<T2>(t2), \
                                                     std::forward<Ts>(ts)...)));                 \
   }

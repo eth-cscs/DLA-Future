@@ -1,7 +1,7 @@
 # CUDA/cuBLAS executors
 
 The current cuBLAS executor implementation lives in DLA-Future. This will be
-upstreamed to HPX once stable.
+upstreamed to pika once stable.
 
 There are four main design considerations for the cuBLAS executors:
 
@@ -12,9 +12,9 @@ There are four main design considerations for the cuBLAS executors:
 
 ## Synchronization
 
-The executor currently relies on an experimental customization point in the HPX
-dataflow implementation to improve integration with hpx::dataflow. It uses
-HPX's new internal polling mechanism to check for completion of kernels. After
+The executor currently relies on an experimental customization point in the pika
+dataflow implementation to improve integration with pika::dataflow. It uses
+pika's new internal polling mechanism to check for completion of kernels. After
 submitting a kernel for execution on the GPU, the executor registers an event
 with the scheduler, which then polls for completion between executing tasks.
 
@@ -38,14 +38,14 @@ There are two approaches that can be used here. The first is to simply make
 cuBLAS wrapper functions blocking until the operation is complete. The second
 is to return the tiles from the wrapper functions to ensure that they live
 until the future representing the operation is released. The initial
-implementation uses the second approach to avoid unnecessary yielding of HPX
+implementation uses the second approach to avoid unnecessary yielding of pika
 tasks. However, the overheads from either approach are unlikely to be high
 compared to CUDA latencies.
 
 ## Stream and handle management
 
-The current implementation uses a pool of multiple CUDA streams per HPX worker
-thread and a pool of a single cuBLAS handle per HPX worker thread. This avoids
+The current implementation uses a pool of multiple CUDA streams per pika worker
+thread and a pool of a single cuBLAS handle per pika worker thread. This avoids
 having to take locks to access the streams and handles and thus improves
 performance noticeably.
 

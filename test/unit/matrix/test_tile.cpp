@@ -13,8 +13,8 @@
 #include <stdexcept>
 
 #include <gtest/gtest.h>
-#include <hpx/local/future.hpp>
-#include <hpx/local/unwrap.hpp>
+#include <pika/future.hpp>
+#include <pika/unwrap.hpp>
 
 #include "dlaf/matrix/index.h"
 #include "dlaf/memory/memory_view.h"
@@ -278,7 +278,7 @@ TYPED_TEST(TileTest, PromiseToFuture) {
   auto mem_view = memory_view;  // Copy the memory view to check the elements later.
   TileType tile(size, std::move(mem_view), ld);
 
-  hpx::lcos::local::promise<TileDataType> tile_promise;
+  pika::lcos::local::promise<TileDataType> tile_promise;
   auto tile_future = tile_promise.get_future();
   tile.setPromise(std::move(tile_promise));
   EXPECT_EQ(false, tile_future.is_ready());
@@ -309,7 +309,7 @@ TYPED_TEST(TileTest, PromiseToFutureConst) {
   auto mem_view = memory_view;  // Copy the memory view to check the elements later.
   TileType tile(size, std::move(mem_view), ld);
 
-  hpx::lcos::local::promise<TileDataType> tile_promise;
+  pika::lcos::local::promise<TileDataType> tile_promise;
   auto tile_future = tile_promise.get_future();
   tile.setPromise(std::move(tile_promise));
   EXPECT_EQ(false, tile_future.is_ready());
@@ -366,14 +366,14 @@ auto createTileChain() {
   using TileDataType = typename TileType::TileDataType;
 
   // set up tile chain
-  hpx::lcos::local::promise<TileDataType> tile_p;
+  pika::lcos::local::promise<TileDataType> tile_p;
   auto tmp_tile_f = tile_p.get_future();
-  hpx::lcos::local::promise<TileDataType> next_tile_p;
+  pika::lcos::local::promise<TileDataType> next_tile_p;
   auto next_tile_f = next_tile_p.get_future();
 
-  hpx::future<TileType> tile_f =
-      tmp_tile_f.then(hpx::launch::sync,
-                      hpx::unwrapping([p = std::move(next_tile_p)](auto tile) mutable {
+  pika::future<TileType> tile_f =
+      tmp_tile_f.then(pika::launch::sync,
+                      pika::unwrapping([p = std::move(next_tile_p)](auto tile) mutable {
                         return TileType(
                             std::move(NonConstTileType(std::move(tile)).setPromise(std::move(p))));
                       }));
@@ -397,7 +397,7 @@ void checkFullTile(F&& ptr, T&& tile, TileElementSize size) {
 }
 
 // TileFutureOrConstTileSharedFuture should be
-// either hpx::future<Tile<T, D>> or hpx::shared_future<Tile<const T, D>>
+// either pika::future<Tile<T, D>> or pika::shared_future<Tile<const T, D>>
 template <class TileFutureOrConstTileSharedFuture>
 void checkValidNonReady(const std::vector<TileFutureOrConstTileSharedFuture>& subtiles) {
   for (const auto& subtile : subtiles) {
@@ -407,8 +407,8 @@ void checkValidNonReady(const std::vector<TileFutureOrConstTileSharedFuture>& su
 }
 
 // TileFutureOrConstTileSharedFuture should be
-// either hpx::future<Tile<T, D>> or hpx::shared_future<Tile<const T, D>>
-// TileFuture should be hpx::future<Tile<T, D>>
+// either pika::future<Tile<T, D>> or pika::shared_future<Tile<const T, D>>
+// TileFuture should be pika::future<Tile<T, D>>
 template <class F, class TileFutureOrConstTileSharedFuture, class TileFuture>
 void checkReadyAndDependencyChain(F&& tile_ptr, std::vector<TileFutureOrConstTileSharedFuture>& subtiles,
                                   const std::vector<SubTileSpec>& specs, std::size_t last_dep,
@@ -460,7 +460,7 @@ void testSubtileConst(std::string name, TileElementSize size, SizeType ld, const
   auto subtile = splitTile(tile_sf, spec);
 
   // append the full tile to the end of the subtile vector and add its specs to full_specs.
-  std::vector<hpx::shared_future<Tile<const T, D>>> subtiles = {std::move(subtile), std::move(tile_sf)};
+  std::vector<pika::shared_future<Tile<const T, D>>> subtiles = {std::move(subtile), std::move(tile_sf)};
   std::vector<SubTileSpec> full_specs = {spec, {{0, 0}, size}};
 
   checkValidNonReady(subtiles);
@@ -598,7 +598,7 @@ void testSubtile(std::string name, TileElementSize size, SizeType ld, const SubT
   ASSERT_FALSE(tile_f.is_ready());
 
   // append the full tile to the end of the subtile vector and add its specs to full_specs.
-  std::vector<hpx::future<Tile<T, D>>> subtiles;
+  std::vector<pika::future<Tile<T, D>>> subtiles;
   subtiles.emplace_back(std::move(subtile));
   std::vector<SubTileSpec> full_specs = {spec};
 

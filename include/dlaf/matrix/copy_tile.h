@@ -196,29 +196,29 @@ struct Duplicate {
 ///
 /// When Destination and Source are the same, returns the input tile unmodified.
 template <Device Destination, typename T, Device Source>
-auto duplicateIfNeeded(hpx::future<Tile<T, Source>> tile) {
+auto duplicateIfNeeded(pika::future<Tile<T, Source>> tile) {
   if constexpr (Source == Destination) {
     return tile;
   }
   else {
-    return hpx::execution::experimental::make_future(
+    return pika::execution::experimental::make_future(
         dlaf::internal::transform(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>(
-                                      hpx::threads::thread_priority::normal),
+                                      pika::threads::thread_priority::normal),
                                   dlaf::matrix::Duplicate<Destination>{}, std::move(tile)));
   }
 }
 
 template <Device Destination, typename T, Device Source>
-auto duplicateIfNeeded(hpx::shared_future<Tile<T, Source>> tile) {
+auto duplicateIfNeeded(pika::shared_future<Tile<T, Source>> tile) {
   if constexpr (Source == Destination) {
     return tile;
   }
   else {
-    return hpx::execution::experimental::make_future(
+    return pika::execution::experimental::make_future(
         dlaf::internal::transform(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>(
-                                      hpx::threads::thread_priority::normal),
+                                      pika::threads::thread_priority::normal),
                                   dlaf::matrix::Duplicate<Destination>{},
-                                  hpx::execution::experimental::keep_future(std::move(tile))));
+                                  pika::execution::experimental::keep_future(std::move(tile))));
   }
 }
 
@@ -229,9 +229,9 @@ auto duplicateIfNeeded(hpx::shared_future<Tile<T, Source>> tile) {
 template <Device Destination, class T, Device Source, class U, template <class> class FutureD,
           template <class> class FutureS>
 void copyIfNeeded(FutureS<Tile<U, Source>> tile_from, FutureD<Tile<T, Destination>> tile_to,
-                  hpx::future<void> wait_for_me = hpx::make_ready_future<void>()) {
+                  pika::future<void> wait_for_me = pika::make_ready_future<void>()) {
   if constexpr (Destination != Source)
-    hpx::dataflow(dlaf::getCopyExecutor<Source, Destination>(),
+    pika::dataflow(dlaf::getCopyExecutor<Source, Destination>(),
                   matrix::unwrapExtendTiles(internal::copy_o), wait_for_me, std::move(tile_from),
                   std::move(tile_to));
 }

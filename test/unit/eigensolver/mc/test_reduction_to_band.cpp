@@ -13,8 +13,8 @@
 #include <cmath>
 
 #include <gtest/gtest.h>
-#include <hpx/include/threadmanager.hpp>
-#include <hpx/runtime.hpp>
+#include <pika/modules/threadmanager.hpp>
+#include <pika/runtime.hpp>
 #include <lapack/util.hh>
 
 #include "dlaf/common/index2d.h"
@@ -163,12 +163,12 @@ void splitReflectorsAndBand(MatrixLocal<T>& mat_v, MatrixLocal<T>& mat_b, const 
 
 template <class T>
 auto allGatherTaus(const SizeType k, const SizeType chunk_size, const SizeType band_size,
-                   std::vector<hpx::shared_future<common::internal::vector<T>>> fut_local_taus) {
+                   std::vector<pika::shared_future<common::internal::vector<T>>> fut_local_taus) {
   std::vector<T> taus;
   taus.reserve(to_sizet(k));
 
-  hpx::wait_all(fut_local_taus);
-  auto local_taus = hpx::unwrap(fut_local_taus);
+  pika::wait_all(fut_local_taus);
+  auto local_taus = pika::unwrap(fut_local_taus);
 
   DLAF_ASSERT(band_size == chunk_size, band_size, chunk_size);
 
@@ -188,13 +188,13 @@ auto allGatherTaus(const SizeType k, const SizeType chunk_size, const SizeType b
 
 template <class T>
 auto allGatherTaus(const SizeType k, const SizeType chunk_size, const SizeType band_size,
-                   std::vector<hpx::shared_future<common::internal::vector<T>>> fut_local_taus,
+                   std::vector<pika::shared_future<common::internal::vector<T>>> fut_local_taus,
                    comm::CommunicatorGrid comm_grid) {
   std::vector<T> taus;
   taus.reserve(to_sizet(k));
 
-  hpx::wait_all(fut_local_taus);
-  auto local_taus = hpx::unwrap(fut_local_taus);
+  pika::wait_all(fut_local_taus);
+  auto local_taus = pika::unwrap(fut_local_taus);
 
   DLAF_ASSERT(band_size == chunk_size, band_size, chunk_size);
 
@@ -361,7 +361,7 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributed) {
       copy(reference, matrix_a);
 
       auto local_taus = eigensolver::reductionToBand<Backend::MC>(comm_grid, matrix_a);
-      hpx::threads::get_thread_manager().wait();
+      pika::threads::get_thread_manager().wait();
 
       checkUpperPartUnchanged(reference, matrix_a);
 

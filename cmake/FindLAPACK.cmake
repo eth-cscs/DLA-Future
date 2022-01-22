@@ -1,7 +1,7 @@
 #
 # CMake recipes
 #
-# Copyright (c) 2018-2021, ETH Zurich
+# Copyright (c) 2018-2022, ETH Zurich
 # BSD 3-Clause License. All rights reserved.
 #
 # author: Alberto Invernizzi (a.invernizzi@cscs.ch)

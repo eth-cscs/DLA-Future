@@ -1,7 +1,7 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2021, ETH Zurich
+# Copyright (c) 2018-2022, ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
@@ -30,6 +30,7 @@ option(BUILD_SHARED_LIBS "Build shared libraries." OFF)
 option(DLAF_WITH_MKL "Enable MKL as provider for LAPACK" OFF)
 option(DLAF_WITH_CUDA "Enable CUDA support" OFF)
 cmake_dependent_option(DLAF_WITH_CUDA_MPI_RDMA "Enable MPI CUDA RDMA" OFF "DLAF_WITH_CUDA" OFF)
+option(DLAF_WITH_COVERAGE "Enable coverage" OFF)
 option(DLAF_BUILD_MINIAPPS "Build miniapps" ON)
 option(DLAF_BUILD_TESTING "Build tests" ON)
 option(DLAF_BUILD_DOC "Build documentation" OFF)
@@ -50,6 +51,18 @@ if (DLAF_WITH_CUDA)
   endif()
   enable_language(CUDA)
   find_package(CUDALIBS REQUIRED)
+endif()
+
+# ---------------------------------------------------------------------------
+# Coverage
+# ---------------------------------------------------------------------------
+if (DLAF_WITH_COVERAGE)
+  if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_options(-O0 -fprofile-arcs -ftest-coverage)
+    add_link_options(-fprofile-arcs -ftest-coverage)
+  else()
+    message(FATAL_ERROR "Coverage can be enabled only for Debug builds")
+  endif()
 endif()
 
 # ---------------------------------------------------------------------------
@@ -83,7 +96,6 @@ endif()
 find_package(HPX 1.7.0 REQUIRED)
 
 # ----- BLASPP/LAPACKPP
-find_package(OpenMP REQUIRED)
 find_package(blaspp REQUIRED)
 find_package(lapackpp REQUIRED)
 

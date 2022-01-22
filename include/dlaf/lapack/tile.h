@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -499,20 +499,24 @@ void assertExtendInfo(F assertFunc, cusolverDnHandle_t handle, CusolverInfo<T>&&
 }
 
 template <class T>
-dlaf::BaseType<T> lange(cusolverDnHandle_t, const lapack::Norm norm, const Tile<T, Device::GPU>& a) {
+dlaf::BaseType<T> lange(cusolverDnHandle_t handle, const lapack::Norm norm,
+                        const Tile<T, Device::GPU>& a) {
   DLAF_STATIC_UNIMPLEMENTED(T);
+  dlaf::internal::silenceUnusedWarningFor(handle, norm, a);
 }
 
 template <class T>
-dlaf::BaseType<T> lantr(cusolverDnHandle_t, const lapack::Norm norm, const blas::Uplo uplo,
+dlaf::BaseType<T> lantr(cusolverDnHandle_t handle, const lapack::Norm norm, const blas::Uplo uplo,
                         const blas::Diag diag, const Tile<T, Device::GPU>& a) {
   DLAF_STATIC_UNIMPLEMENTED(T);
+  dlaf::internal::silenceUnusedWarningFor(handle, norm, uplo, diag, a);
 }
 
 template <class T>
-void laset(cusolverDnHandle_t, const lapack::MatrixType type, T alpha, T beta,
+void laset(cusolverDnHandle_t handle, const lapack::MatrixType type, T alpha, T beta,
            const Tile<T, Device::GPU>& tile) {
   DLAF_STATIC_UNIMPLEMENTED(T);
+  dlaf::internal::silenceUnusedWarningFor(handle, type, alpha, beta, tile);
 }
 
 template <class T>
@@ -528,16 +532,17 @@ void hegst(cusolverDnHandle_t handle, const int itype, const blas::Uplo uplo,
   DLAF_ASSERT(square_size(a), a);
   DLAF_ASSERT(square_size(b), b);
   DLAF_ASSERT(a.size() == b.size(), a, b);
-  const int n = a.size().rows();
+  const auto n = a.size().rows();
 
   int workspace_size;
-  internal::CusolverHegst<T>::callBufferSize(handle, itype, util::blasToCublas(uplo), n,
-                                             util::blasToCublasCast(a.ptr()), a.ld(),
-                                             util::blasToCublasCast(b.ptr()), b.ld(), &workspace_size);
+  internal::CusolverHegst<T>::callBufferSize(handle, itype, util::blasToCublas(uplo), to_int(n),
+                                             util::blasToCublasCast(a.ptr()), to_int(a.ld()),
+                                             util::blasToCublasCast(b.ptr()), to_int(b.ld()),
+                                             &workspace_size);
   internal::CusolverInfo<T> info{std::max(1, workspace_size)};
-  internal::CusolverHegst<T>::call(handle, itype, util::blasToCublas(uplo), n,
-                                   util::blasToCublasCast(a.ptr()), a.ld(),
-                                   util::blasToCublasCast(b.ptr()), b.ld(),
+  internal::CusolverHegst<T>::call(handle, itype, util::blasToCublas(uplo), to_int(n),
+                                   util::blasToCublasCast(a.ptr()), to_int(a.ld()),
+                                   util::blasToCublasCast(b.ptr()), to_int(b.ld()),
                                    util::blasToCublasCast(info.workspace()), info.info());
 
   assertExtendInfo(dlaf::cusolver::assertInfoHegst, handle, std::move(info));
@@ -547,14 +552,16 @@ template <class T>
 internal::CusolverInfo<T> potrfInfo(cusolverDnHandle_t handle, const blas::Uplo uplo,
                                     const matrix::Tile<T, Device::GPU>& a) {
   DLAF_ASSERT(square_size(a), a);
-  const int n = a.size().rows();
+  const auto n = a.size().rows();
 
   int workspace_size;
-  internal::CusolverPotrf<T>::callBufferSize(handle, util::blasToCublas(uplo), n,
-                                             util::blasToCublasCast(a.ptr()), a.ld(), &workspace_size);
+  internal::CusolverPotrf<T>::callBufferSize(handle, util::blasToCublas(uplo), to_int(n),
+                                             util::blasToCublasCast(a.ptr()), to_int(a.ld()),
+                                             &workspace_size);
   internal::CusolverInfo<T> info{workspace_size};
-  internal::CusolverPotrf<T>::call(handle, util::blasToCublas(uplo), n, util::blasToCublasCast(a.ptr()),
-                                   a.ld(), util::blasToCublasCast(info.workspace()), workspace_size,
+  internal::CusolverPotrf<T>::call(handle, util::blasToCublas(uplo), to_int(n),
+                                   util::blasToCublasCast(a.ptr()), to_int(a.ld()),
+                                   util::blasToCublasCast(info.workspace()), workspace_size,
                                    info.info());
 
   return info;

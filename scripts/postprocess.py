@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-from parse import parse
+from parse import parse, with_pattern
 
 
 def _gen_nodes_plot(
@@ -175,6 +175,18 @@ def _calc_metrics(cols, df):
     )
 
 
+@with_pattern(r"(|\s+\S+)")
+def _parse_optional_text(text):
+    text = text.strip()
+    # TODO: Prefer empty string or None?
+    if text:
+        return text
+    else:
+        return None
+
+
+additional_parsers = dict(optional_text=_parse_optional_text)
+
 # {
 #     "run_index":
 #     "matrix_rows":
@@ -192,7 +204,10 @@ def _calc_metrics(cols, df):
 def _parse_line_based(fout, bench_name, nodes):
     if "dlaf" in bench_name:
         pstr_arr = []
-        pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}"
+        # Note that the optional fields must not have a space in front of them.
+        # Otherwise the space is required and parsing the optional field will
+        # fail.
+        pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
     elif bench_name.startswith("chol_slate"):
         pstr_arr = ["input:{}potrf"]
         pstr_res = "d {} {} column lower {matrix_rows:d} {:d} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:g} {perf:g} NA NA no check"
@@ -226,12 +241,12 @@ def _parse_line_based(fout, bench_name, nodes):
     run_index = 0
     for line in fout:
         for pstr in pstr_arr:
-            pdata = parse(pstr, " ".join(line.split()))
+            pdata = parse(pstr, " ".join(line.split()), additional_parsers)
             if pdata:
                 rd.update(pdata.named)
                 run_index = 0
 
-        pdata = parse(pstr_res, " ".join(line.split()))
+        pdata = parse(pstr_res, " ".join(line.split()), additional_parsers)
         if pdata:
             rd.update(pdata.named)
             rd["bench_name"] = bench_name
@@ -321,7 +336,7 @@ def parse_jobs_cmdargs(description):
 
     df = parse_jobs(paths, args.distinguish_dir)
     if df.empty:
-        print('Parsed zero results, is the path correct? (path is "' + args.path + '")')
+        print("Parsed zero results, is the path correct? (paths are " + str(paths) + ")")
         exit(1)
 
     return df

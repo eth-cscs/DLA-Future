@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -14,6 +14,7 @@
 #include <hpx/hpx_init.hpp>
 #include <limits>
 
+#include "dlaf/common/format_short.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/timer.h"
@@ -24,44 +25,48 @@
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/miniapp/dispatch.h"
+#include "dlaf/miniapp/options.h"
 #include "dlaf/types.h"
 
 namespace {
 using dlaf::Device;
 using dlaf::SizeType;
 
-using T = double;
-using MatrixType = dlaf::Matrix<T, Device::CPU>;
-using ConstMatrixType = dlaf::Matrix<const T, Device::CPU>;
-
-enum class Red2BandCheckIterFreq { None, Last, All };
-
-struct options_t {
+struct Options
+    : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
   SizeType m;
   SizeType mb;
-  int grid_rows;
-  int grid_cols;
-  int64_t nruns;
-  int64_t nwarmups;
-  Red2BandCheckIterFreq do_check;
+
+  Options(const hpx::program_options::variables_map& vm)
+      : MiniappOptions(vm), m(vm["matrix-size"].as<SizeType>()), mb(vm["block-size"].as<SizeType>()) {
+    DLAF_ASSERT(m > 0, m);
+    DLAF_ASSERT(mb > 0, mb);
+
+    DLAF_ASSERT(do_check == dlaf::miniapp::CheckIterFreq::None,
+                "Error! At the moment result checking is not implemented. Please rerun with --check-result=none.");
+
+    DLAF_ASSERT(backend == dlaf::Backend::MC,
+                "Error! At the moment the GPU backend is not supported. Please rerun with --backend=mc.");
+  }
+
+  Options(Options&&) = default;
+  Options(const Options&) = default;
+  Options& operator=(Options&&) = default;
+  Options& operator=(const Options&) = default;
 };
-
-/// Handle CLI options
-options_t parse_options(hpx::program_options::variables_map& vm);
-
-Red2BandCheckIterFreq parse_red2band_check(const std::string&);
 
 }
 
-int miniapp(hpx::program_options::variables_map& vm) {
-  using namespace dlaf;
-  using dlaf::SizeType;
-  using dlaf::comm::Communicator;
-  using dlaf::comm::CommunicatorGrid;
-
-  {
-    dlaf::ScopedInitializer init(vm);
-    options_t opts = parse_options(vm);
+struct reductionToBandMiniapp {
+  template <dlaf::Backend backend, typename T>
+  static void run(const Options& opts) {
+    using namespace dlaf;
+    using dlaf::SizeType;
+    using dlaf::comm::Communicator;
+    using dlaf::comm::CommunicatorGrid;
+    using MatrixType = dlaf::Matrix<T, Device::CPU>;
+    using ConstMatrixType = dlaf::Matrix<const T, Device::CPU>;
 
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, common::Ordering::ColumnMajor);
@@ -105,7 +110,7 @@ int miniapp(hpx::program_options::variables_map& vm) {
       }
       auto elapsed_time = timeit.elapsed();
 
-      double gigaflops = std::numeric_limits<T>::quiet_NaN();
+      double gigaflops = std::numeric_limits<double>::quiet_NaN();
       {
         double n = matrix.size().rows();
         double b = matrix.blockSize().rows();
@@ -118,11 +123,21 @@ int miniapp(hpx::program_options::variables_map& vm) {
         std::cout << "[" << run_index << "]"
                   << " " << elapsed_time << "s"
                   << " " << gigaflops << "GFlop/s"
-                  << " " << matrix.size() << " " << matrix.blockSize() << " " << comm_grid.size() << " "
-                  << hpx::get_os_thread_count() << std::endl;
+                  << " " << dlaf::internal::FormatShort{opts.type} << " " << matrix.size() << " "
+                  << matrix.blockSize() << " " << comm_grid.size() << " " << hpx::get_os_thread_count()
+                  << " " << backend << std::endl;
 
       // TODO (optional) run test
     }
+  }
+};
+
+int hpx_main(hpx::program_options::variables_map& vm) {
+  {
+    dlaf::ScopedInitializer init(vm);
+    const Options opts(vm);
+
+    dlaf::miniapp::dispatchMiniapp<reductionToBandMiniapp>(opts);
   }
 
   return hpx::finalize();
@@ -136,63 +151,18 @@ int main(int argc, char** argv) {
   // options
   using namespace hpx::program_options;
   options_description desc_commandline("Usage: " HPX_APPLICATION_STRING " [options]");
+  desc_commandline.add(dlaf::miniapp::getMiniappOptionsDescription());
+  desc_commandline.add(dlaf::getOptionsDescription());
 
   // clang-format off
   desc_commandline.add_options()
     ("matrix-size",  value<SizeType>()   ->default_value(4),      "Matrix rows")
     ("block-size",   value<SizeType>()   ->default_value(2),      "Block cyclic distribution size")
-    ("grid-rows",    value<int>()        ->default_value(1),      "Number of row processes in the 2D communicator")
-    ("grid-cols",    value<int>()        ->default_value(1),      "Number of column processes in the 2D communicator")
-    ("nruns",        value<int64_t>()    ->default_value(1),      "Number of runs to compute the cholesky")
-    ("nwarmups",     value<int64_t>()    ->default_value(1),      "Number of warmup runs")
-    ("check-result", value<std::string>()->default_value("none"), "Enable result checking ('none', 'all', 'last')");
+  ;
   // clang-format on
-
-  desc_commandline.add(dlaf::getOptionsDescription());
 
   hpx::init_params p;
   p.desc_cmdline = desc_commandline;
   p.rp_callback = dlaf::initResourcePartitionerHandler;
-  return hpx::init(miniapp, argc, argv, p);
-}
-
-namespace {
-
-options_t parse_options(hpx::program_options::variables_map& vm) {
-  options_t opts = {
-      vm["matrix-size"].as<SizeType>(),
-      vm["block-size"].as<SizeType>(),
-      vm["grid-rows"].as<int>(),
-      vm["grid-cols"].as<int>(),
-      vm["nruns"].as<int64_t>(),
-      vm["nwarmups"].as<int64_t>(),
-      parse_red2band_check(vm["check-result"].as<std::string>()),
-  };
-
-  DLAF_ASSERT(opts.m > 0, opts.m);
-  DLAF_ASSERT(opts.mb > 0, opts.mb);
-  DLAF_ASSERT(opts.grid_rows > 0, opts.grid_rows);
-  DLAF_ASSERT(opts.grid_cols > 0, opts.grid_cols);
-  DLAF_ASSERT(opts.nruns > 0, opts.nruns);
-  DLAF_ASSERT(opts.nwarmups >= 0, opts.nwarmups);
-
-  DLAF_ASSERT(opts.do_check == Red2BandCheckIterFreq::None,
-              "Error! At the moment result checking is not implemented. Please rerun with --check-result=none.");
-
-  return opts;
-}
-
-Red2BandCheckIterFreq parse_red2band_check(const std::string& check) {
-  if (check == "all")
-    return Red2BandCheckIterFreq::All;
-  else if (check == "last")
-    return Red2BandCheckIterFreq::Last;
-  else if (check == "none")
-    return Red2BandCheckIterFreq::None;
-
-  std::cout << "Parsing is not implemented for --check-result=" << check << "!" << std::endl;
-  std::terminate();
-  return Red2BandCheckIterFreq::None;  // unreachable
-}
-
+  return hpx::init(argc, argv, p);
 }

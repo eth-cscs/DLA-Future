@@ -1,4 +1,4 @@
-# Copyright 2013-2020 Lawrence Livermore National Security, LLC and other
+# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
 # Spack Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
@@ -19,6 +19,9 @@ class DlaFuture(CMakePackage, CudaPackage):
     variant("doc", default=False, description="Build documentation.")
 
     variant("miniapps", default=False, description="Build miniapps.")
+
+    variant("ci-test", default=False, description="Build for CI (Advanced usage).")
+    conflicts('~miniapps', when='+ci-test')
 
     depends_on("cmake@3.14:", type="build")
     depends_on("doxygen", type="build", when="+doc")
@@ -62,8 +65,15 @@ class DlaFuture(CMakePackage, CudaPackage):
         # DOC
         args.append(self.define_from_variant("DLAF_BUILD_DOC", "doc"))
 
-        # TESTs
-        args.append(self.define("DLAF_BUILD_TESTING", self.run_tests))
+        if '+ci-test' in self.spec:
+            # Enable TESTS and setup CI specific parameters
+            args.append(self.define("CMAKE_CXX_FLAGS", "-Werror"))
+            args.append(self.define("DLAF_BUILD_TESTING", True))
+            args.append(self.define("DLAF_CI_RUNNER_USES_MPIRUN", True))
+            args.append(self.define("MPIEXEC_EXECUTABLE", "srun"))
+        else:
+            # TEST
+            args.append(self.define("DLAF_BUILD_TESTING", self.run_tests))
 
         # MINIAPPS
         args.append(self.define_from_variant("DLAF_BUILD_MINIAPPS", "miniapps"))

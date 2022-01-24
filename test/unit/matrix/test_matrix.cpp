@@ -1246,7 +1246,7 @@ auto try_waiting_guard = [](auto& guard) {
   const auto wait_guard = 20ms;
 
   for (int i = 0; i < 100 && !guard; ++i)
-    pika::this_thread::sleep_for(wait_guard);
+    std::this_thread::sleep_for(wait_guard);
 };
 
 // Create a single-element matrix
@@ -1393,7 +1393,7 @@ TEST_F(MatrixGenericTest, SyncBarrier) {
       // start a task (if it has at least a local part...otherwise there is no tile to work on)
       if (has_local)
         matrix.read(tile_tl).then(pika::launch::async, [&guard](auto&&) {
-          pika::this_thread::sleep_for(100ms);
+          std::this_thread::sleep_for(100ms);
           guard = true;
         });
 

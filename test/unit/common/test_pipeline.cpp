@@ -70,7 +70,7 @@ auto try_waiting_guard = [](auto& guard) {
   const auto wait_guard = 20ms;
 
   for (int i = 0; i < 100 && !guard; ++i)
-    pika::this_thread::sleep_for(wait_guard);
+    std::this_thread::sleep_for(wait_guard);
 };
 
 TEST(PipelineDestructor, DestructionWithDependency) {

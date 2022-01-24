@@ -21,9 +21,7 @@
 #include "dlaf/util_blas.h"
 
 #ifdef DLAF_WITH_CUDA
-#include <cublas_v2.h>
-
-#include "dlaf/cublas/error.h"
+#include "dlaf/cublas/template_cublas.h"
 #include "dlaf/util_cublas.h"
 #endif
 
@@ -223,126 +221,81 @@ void trsm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const
 }
 
 #ifdef DLAF_WITH_CUDA
-
-#define DLAF_DECLARE_CUBLAS_OP(Name) \
-  template <typename T>              \
-  struct Cublas##Name
-
-#define DLAF_DEFINE_CUBLAS_OP(Name, Type, f)                    \
-  template <>                                                   \
-  struct Cublas##Name<Type> {                                   \
-    template <typename... Args>                                 \
-    static void call(Args&&... args) {                          \
-      DLAF_CUBLAS_CALL(cublas##f(std::forward<Args>(args)...)); \
-    }                                                           \
-  }
-
-DLAF_DECLARE_CUBLAS_OP(Axpy);
-DLAF_DEFINE_CUBLAS_OP(Axpy, float, Saxpy);
-DLAF_DEFINE_CUBLAS_OP(Axpy, double, Daxpy);
-DLAF_DEFINE_CUBLAS_OP(Axpy, std::complex<float>, Caxpy);
-DLAF_DEFINE_CUBLAS_OP(Axpy, std::complex<double>, Zaxpy);
-
-DLAF_DECLARE_CUBLAS_OP(Gemm);
-DLAF_DEFINE_CUBLAS_OP(Gemm, float, Sgemm);
-DLAF_DEFINE_CUBLAS_OP(Gemm, double, Dgemm);
-DLAF_DEFINE_CUBLAS_OP(Gemm, std::complex<float>, Cgemm);
-DLAF_DEFINE_CUBLAS_OP(Gemm, std::complex<double>, Zgemm);
-
-DLAF_DECLARE_CUBLAS_OP(Hemm);
-DLAF_DEFINE_CUBLAS_OP(Hemm, float, Ssymm);
-DLAF_DEFINE_CUBLAS_OP(Hemm, double, Dsymm);
-DLAF_DEFINE_CUBLAS_OP(Hemm, std::complex<float>, Chemm);
-DLAF_DEFINE_CUBLAS_OP(Hemm, std::complex<double>, Zhemm);
-
-DLAF_DECLARE_CUBLAS_OP(Her2k);
-DLAF_DEFINE_CUBLAS_OP(Her2k, float, Ssyr2k);
-DLAF_DEFINE_CUBLAS_OP(Her2k, double, Dsyr2k);
-DLAF_DEFINE_CUBLAS_OP(Her2k, std::complex<float>, Cher2k);
-DLAF_DEFINE_CUBLAS_OP(Her2k, std::complex<double>, Zher2k);
-
-DLAF_DECLARE_CUBLAS_OP(Herk);
-DLAF_DEFINE_CUBLAS_OP(Herk, float, Ssyrk);
-DLAF_DEFINE_CUBLAS_OP(Herk, double, Dsyrk);
-DLAF_DEFINE_CUBLAS_OP(Herk, std::complex<float>, Cherk);
-DLAF_DEFINE_CUBLAS_OP(Herk, std::complex<double>, Zherk);
-
-DLAF_DECLARE_CUBLAS_OP(Trmm);
-DLAF_DEFINE_CUBLAS_OP(Trmm, float, Strmm);
-DLAF_DEFINE_CUBLAS_OP(Trmm, double, Dtrmm);
-DLAF_DEFINE_CUBLAS_OP(Trmm, std::complex<float>, Ctrmm);
-DLAF_DEFINE_CUBLAS_OP(Trmm, std::complex<double>, Ztrmm);
-
-DLAF_DECLARE_CUBLAS_OP(Trsm);
-DLAF_DEFINE_CUBLAS_OP(Trsm, float, Strsm);
-DLAF_DEFINE_CUBLAS_OP(Trsm, double, Dtrsm);
-DLAF_DEFINE_CUBLAS_OP(Trsm, std::complex<float>, Ctrsm);
-DLAF_DEFINE_CUBLAS_OP(Trsm, std::complex<double>, Ztrsm);
-
 template <class T>
 void gemm(cublasHandle_t handle, const blas::Op op_a, const blas::Op op_b, const T alpha,
           const matrix::Tile<const T, Device::GPU>& a, const matrix::Tile<const T, Device::GPU>& b,
           const T beta, const matrix::Tile<T, Device::GPU>& c) {
+  using util::blasToCublas;
+  using util::blasToCublasCast;
   auto s = getGemmSizes(op_a, op_b, a, b, c);
-  CublasGemm<T>::call(handle, util::blasToCublas(op_a), util::blasToCublas(op_b), to_int(s.m),
-                      to_int(s.n), to_int(s.k), util::blasToCublasCast(&alpha),
-                      util::blasToCublasCast(a.ptr()), to_int(a.ld()), util::blasToCublasCast(b.ptr()),
-                      to_int(b.ld()), util::blasToCublasCast(&beta), util::blasToCublasCast(c.ptr()),
-                      to_int(c.ld()));
+  cublas::Gemm<T>::call(handle, blasToCublas(op_a), blasToCublas(op_b), to_int(s.m), to_int(s.n),
+                        to_int(s.k), blasToCublasCast(&alpha), blasToCublasCast(a.ptr()), to_int(a.ld()),
+                        blasToCublasCast(b.ptr()), to_int(b.ld()), blasToCublasCast(&beta),
+                        blasToCublasCast(c.ptr()), to_int(c.ld()));
 }
 
 template <class T>
 void hemm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, const T alpha,
           const Tile<const T, Device::GPU>& a, const Tile<const T, Device::GPU>& b, const T beta,
           const Tile<T, Device::GPU>& c) {
+  using util::blasToCublas;
+  using util::blasToCublasCast;
   auto s = getHemmSizes(side, a, b, c);
-  CublasHemm<T>::call(handle, util::blasToCublas(side), util::blasToCublas(uplo), to_int(s.m),
-                      to_int(s.n), util::blasToCublasCast(&alpha), util::blasToCublasCast(a.ptr()),
-                      to_int(a.ld()), util::blasToCublasCast(b.ptr()), to_int(b.ld()),
-                      util::blasToCublasCast(&beta), util::blasToCublasCast(c.ptr()), to_int(c.ld()));
+  cublas::Hemm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), to_int(s.m), to_int(s.n),
+                        blasToCublasCast(&alpha), blasToCublasCast(a.ptr()), to_int(a.ld()),
+                        blasToCublasCast(b.ptr()), to_int(b.ld()), blasToCublasCast(&beta),
+                        blasToCublasCast(c.ptr()), to_int(c.ld()));
 }
 
 template <class T>
 void her2k(cublasHandle_t handle, const blas::Uplo uplo, const blas::Op op, const T alpha,
            const matrix::Tile<const T, Device::GPU>& a, const Tile<const T, Device::GPU>& b,
            const BaseType<T> beta, const matrix::Tile<T, Device::GPU>& c) {
+  using util::blasToCublas;
+  using util::blasToCublasCast;
   auto s = getHer2kSizes(op, a, b, c);
-  CublasHer2k<T>::call(handle, util::blasToCublas(uplo), util::blasToCublas(op), to_int(s.n),
-                       to_int(s.k), util::blasToCublasCast(&alpha), util::blasToCublasCast(a.ptr()),
-                       to_int(a.ld()), util::blasToCublasCast(b.ptr()), to_int(b.ld()),
-                       util::blasToCublasCast(&beta), util::blasToCublasCast(c.ptr()), to_int(c.ld()));
+  cublas::Her2k<T>::call(handle, blasToCublas(uplo), blasToCublas(op), to_int(s.n), to_int(s.k),
+                         blasToCublasCast(&alpha), blasToCublasCast(a.ptr()), to_int(a.ld()),
+                         blasToCublasCast(b.ptr()), to_int(b.ld()), blasToCublasCast(&beta),
+                         blasToCublasCast(c.ptr()), to_int(c.ld()));
 }
 
 template <class T>
 void herk(cublasHandle_t handle, const blas::Uplo uplo, const blas::Op op, const BaseType<T> alpha,
           const matrix::Tile<const T, Device::GPU>& a, const BaseType<T> beta,
           const matrix::Tile<T, Device::GPU>& c) {
+  using util::blasToCublas;
+  using util::blasToCublasCast;
   auto s = getHerkSizes(op, a, c);
-  CublasHerk<T>::call(handle, util::blasToCublas(uplo), util::blasToCublas(op), to_int(s.n), to_int(s.k),
-                      util::blasToCublasCast(&alpha), util::blasToCublasCast(a.ptr()), to_int(a.ld()),
-                      util::blasToCublasCast(&beta), util::blasToCublasCast(c.ptr()), to_int(c.ld()));
+  cublas::Herk<T>::call(handle, blasToCublas(uplo), blasToCublas(op), to_int(s.n), to_int(s.k),
+                        blasToCublasCast(&alpha), blasToCublasCast(a.ptr()), to_int(a.ld()),
+                        blasToCublasCast(&beta), blasToCublasCast(c.ptr()), to_int(c.ld()));
 }
 
 template <class T>
 void trmm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, const blas::Op op,
           const blas::Diag diag, const T alpha, const matrix::Tile<const T, Device::GPU>& a,
           const matrix::Tile<T, Device::GPU>& b) {
+  using util::blasToCublas;
+  using util::blasToCublasCast;
   auto s = tile::internal::getTrmmSizes(side, a, b);
-  CublasTrmm<T>::call(handle, util::blasToCublas(side), util::blasToCublas(uplo), util::blasToCublas(op),
-                      util::blasToCublas(diag), to_int(s.m), to_int(s.n), util::blasToCublasCast(&alpha),
-                      util::blasToCublasCast(a.ptr()), to_int(a.ld()), util::blasToCublasCast(b.ptr()),
-                      to_int(b.ld()), util::blasToCublasCast(b.ptr()), to_int(b.ld()));
+  cublas::Trmm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),
+                        blasToCublas(diag), to_int(s.m), to_int(s.n), blasToCublasCast(&alpha),
+                        blasToCublasCast(a.ptr()), to_int(a.ld()), blasToCublasCast(b.ptr()),
+                        to_int(b.ld()), blasToCublasCast(b.ptr()), to_int(b.ld()));
 }
 
 template <class T>
 void trsm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, const blas::Op op,
           const blas::Diag diag, const T alpha, const matrix::Tile<const T, Device::GPU>& a,
           const matrix::Tile<T, Device::GPU>& b) {
+  using util::blasToCublas;
+  using util::blasToCublasCast;
   auto s = getTrsmSizes(side, a, b);
-  CublasTrsm<T>::call(handle, util::blasToCublas(side), util::blasToCublas(uplo), util::blasToCublas(op),
-                      util::blasToCublas(diag), to_int(s.m), to_int(s.n), util::blasToCublasCast(&alpha),
-                      util::blasToCublasCast(a.ptr()), to_int(a.ld()), util::blasToCublasCast(b.ptr()),
-                      to_int(b.ld()));
+  cublas::Trsm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),
+                        blasToCublas(diag), to_int(s.m), to_int(s.n), blasToCublasCast(&alpha),
+                        blasToCublasCast(a.ptr()), to_int(a.ld()), blasToCublasCast(b.ptr()),
+                        to_int(b.ld()));
 }
 #endif
 

@@ -38,8 +38,8 @@ namespace internal {
 
 namespace triangular_lln {
 template <Backend backend, class T, typename InSender, typename OutSender>
-void trmmBPanelTile(pika::threads::thread_priority priority, blas::Diag diag, T alpha, InSender&& in_tile,
-                    OutSender&& out_tile) {
+void trmmBPanelTile(pika::threads::thread_priority priority, blas::Diag diag, T alpha,
+                    InSender&& in_tile, OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, blas::Op::NoTrans, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
       tile::trmm(dlaf::internal::Policy<backend>(priority)) |
@@ -78,8 +78,8 @@ void gemmTrailingMatrixTile(pika::threads::thread_priority priority, blas::Op op
 
 namespace triangular_lun {
 template <Backend backend, class T, typename InSender, typename OutSender>
-void trmmBPanelTile(pika::threads::thread_priority priority, blas::Diag diag, T alpha, InSender&& in_tile,
-                    OutSender&& out_tile) {
+void trmmBPanelTile(pika::threads::thread_priority priority, blas::Diag diag, T alpha,
+                    InSender&& in_tile, OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, blas::Op::NoTrans, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
       tile::trmm(dlaf::internal::Policy<backend>(priority)) |
@@ -118,8 +118,8 @@ void gemmTrailingMatrixTile(pika::threads::thread_priority priority, blas::Op op
 
 namespace triangular_rln {
 template <Backend backend, class T, typename InSender, typename OutSender>
-void trmmBPanelTile(pika::threads::thread_priority priority, blas::Diag diag, T alpha, InSender&& in_tile,
-                    OutSender&& out_tile) {
+void trmmBPanelTile(pika::threads::thread_priority priority, blas::Diag diag, T alpha,
+                    InSender&& in_tile, OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Lower, blas::Op::NoTrans, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
       tile::trmm(dlaf::internal::Policy<backend>(priority)) |
@@ -158,8 +158,8 @@ void gemmTrailingMatrixTile(pika::threads::thread_priority priority, blas::Op op
 
 namespace triangular_run {
 template <Backend backend, class T, typename InSender, typename OutSender>
-void trmmBPanelTile(pika::threads::thread_priority priority, blas::Diag diag, T alpha, InSender&& in_tile,
-                    OutSender&& out_tile) {
+void trmmBPanelTile(pika::threads::thread_priority priority, blas::Diag diag, T alpha,
+                    InSender&& in_tile, OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Upper, blas::Op::NoTrans, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
       tile::trmm(dlaf::internal::Policy<backend>(priority)) |

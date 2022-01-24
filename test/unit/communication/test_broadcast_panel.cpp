@@ -73,8 +73,8 @@ void testBroadcast(comm::Executor& executor_mpi, const config_t& cfg, comm::Comm
   // set all panels
   for (const auto i_w : panel.iteratorLocal())
     pika::dataflow(unwrapping(
-                      [rank](auto&& tile) { matrix::test::set(tile, TypeUtil::element(rank, 26)); }),
-                  panel(i_w));
+                       [rank](auto&& tile) { matrix::test::set(tile, TypeUtil::element(rank, 26)); }),
+                   panel(i_w));
 
   // check that all panels have been set
   for (const auto i_w : panel.iteratorLocal())
@@ -130,8 +130,8 @@ void testBrodcastTranspose(comm::Executor& executor_mpi, const config_t& cfg,
 
   for (const auto i_w : panel_src.iteratorLocal())
     pika::dataflow(unwrapping(
-                      [rank](auto&& tile) { matrix::test::set(tile, TypeUtil::element(rank, 26)); }),
-                  panel_src(i_w));
+                       [rank](auto&& tile) { matrix::test::set(tile, TypeUtil::element(rank, 26)); }),
+                   panel_src(i_w));
 
   // test it!
   common::Pipeline<comm::Communicator> row_task_chain(comm_grid.rowCommunicator());

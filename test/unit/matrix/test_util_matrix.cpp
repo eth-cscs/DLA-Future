@@ -245,8 +245,8 @@ void testSet0(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
     panel.setRange(GlobalTileIndex(coord1D, head), GlobalTileIndex(coord1D, tail));
 
     for (const auto& idx : panel.iteratorLocal())
-      pika::dataflow(pika::unwrapping(tile::internal::laset_o), lapack::MatrixType::General, TypeParam(1),
-                    TypeParam(1), panel(idx));
+      pika::dataflow(pika::unwrapping(tile::internal::laset_o), lapack::MatrixType::General,
+                     TypeParam(1), TypeParam(1), panel(idx));
 
     matrix::util::set0<Backend::MC>(pika::threads::thread_priority::normal, panel);
 

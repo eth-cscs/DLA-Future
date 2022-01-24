@@ -87,11 +87,11 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
 
   // TODO unwrapping can be skipped for optimization reasons
   NormT local_max_value = pika::dataflow(unwrapping([](const auto&& values) {
-                                          if (values.size() == 0)
-                                            return std::numeric_limits<NormT>::min();
-                                          return *std::max_element(values.begin(), values.end());
-                                        }),
-                                        tiles_max)
+                                           if (values.size() == 0)
+                                             return std::numeric_limits<NormT>::min();
+                                           return *std::max_element(values.begin(), values.end());
+                                         }),
+                                         tiles_max)
                               .get();
   NormT max_value;
   dlaf::comm::sync::reduce(comm_grid.rankFullCommunicator(rank), comm_grid.fullCommunicator(), MPI_MAX,

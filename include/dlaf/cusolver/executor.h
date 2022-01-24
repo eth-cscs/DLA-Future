@@ -24,10 +24,10 @@
 #include <pika/execution.hpp>
 #include <pika/functional.hpp>
 #include <pika/future.hpp>
+#include <pika/modules/async_cuda.hpp>
 #include <pika/mutex.hpp>
 #include <pika/tuple.hpp>
 #include <pika/type_traits.hpp>
-#include <pika/modules/async_cuda.hpp>
 
 #include "dlaf/common/assert.h"
 #include "dlaf/cublas/executor.h"
@@ -60,8 +60,8 @@ inline constexpr bool isAsyncCusolverCallable_v = isAsyncCusolverCallable<F, Ts.
 template <typename F, typename Futures>
 struct isDataflowCusolverCallable
     : pika::is_invocable<pika::util::functional::invoke_fused, F,
-                        decltype(pika::tuple_cat(pika::tie(std::declval<cusolverDnHandle_t&>()),
-                                                std::declval<Futures>()))> {};
+                         decltype(pika::tuple_cat(pika::tie(std::declval<cusolverDnHandle_t&>()),
+                                                  std::declval<Futures>()))> {};
 
 template <typename F, typename Futures>
 inline constexpr bool isDataflowCusolverCallable_v = isDataflowCusolverCallable<F, Futures>::value;
@@ -123,14 +123,14 @@ public:
     cudaStream_t stream = stream_pool_.getNextStream();
     cusolverDnHandle_t handle = handle_pool_.getNextHandle(stream);
     auto r = pika::invoke_fused(std::forward<F>(f),
-                               pika::tuple_cat(pika::tie(handle), std::forward<Futures>(futures)));
+                                pika::tuple_cat(pika::tie(handle), std::forward<Futures>(futures)));
     pika::future<void> fut = pika::cuda::experimental::detail::get_future_with_event(stream);
 
     // The handle and stream pools are captured by value to ensure that the
     // streams live at least until the event has completed.
     fut.then(pika::launch::sync, [r = std::move(r), frame_p = std::move(frame_p),
-                                 stream_pool = stream_pool_, handle_pool = handle_pool_](
-                                    pika::future<void>&&) mutable { frame_p->set_data(std::move(r)); });
+                                  stream_pool = stream_pool_, handle_pool = handle_pool_](
+                                     pika::future<void>&&) mutable { frame_p->set_data(std::move(r)); });
   }
 
   template <typename F, typename... Ts>

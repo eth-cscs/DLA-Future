@@ -62,7 +62,7 @@ TEST(Bcast, Dataflow) {
 
   // Tests the handling of futures in a dataflow
   pika::dataflow(ex, pika::unwrapping(MPI_Ibcast), buf.data(), pika::make_ready_future<int>(size), dtype,
-                root_rank, comm, pika::make_ready_future<void>())
+                 root_rank, comm, pika::make_ready_future<void>())
       .get();
 
   std::vector<double> expected_buf(static_cast<std::size_t>(size), 4.2);

@@ -356,7 +356,8 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
 
       auto tmp = computeHAndTFactor(k, v);
       pika::shared_future<dlaf::common::internal::vector<TypeParam>> taus_input =
-          pika::make_ready_future<dlaf::common::internal::vector<TypeParam>>(std::move(std::get<0>(tmp)));
+          pika::make_ready_future<dlaf::common::internal::vector<TypeParam>>(
+              std::move(std::get<0>(tmp)));
       auto h_expected = std::move(std::get<1>(tmp));
 
       is_orthogonal(h_expected);

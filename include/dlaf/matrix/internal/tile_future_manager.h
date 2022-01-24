@@ -25,7 +25,8 @@ pika::future<ReturnTileType> setPromiseTileFuture(
   using NonConstTileType = typename ReturnTileType::TileType;
 
   DLAF_ASSERT_HEAVY(old_future.valid(), "");
-  return old_future.then(pika::launch::sync, [p = std::move(p)](pika::future<TileDataType>&& fut) mutable {
+  return old_future.then(pika::launch::sync, [p = std::move(p)](
+                                                 pika::future<TileDataType>&& fut) mutable {
     std::exception_ptr current_exception_ptr;
 
     try {

@@ -53,7 +53,7 @@ public:
   };
 
 private:
-  T object_;                              /// the object owned by the wrapper.
+  T object_;                               /// the object owned by the wrapper.
   pika::lcos::local::promise<T> promise_;  /// the shared state that will unlock the next user.
 };
 

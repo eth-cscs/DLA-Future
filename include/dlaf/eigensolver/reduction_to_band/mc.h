@@ -46,7 +46,8 @@ namespace internal {
 
 template <class T>
 struct ReductionToBand<Backend::MC, Device::CPU, T> {
-  static std::vector<pika::shared_future<common::internal::vector<T>>> call(Matrix<T, Device::CPU>& mat_a);
+  static std::vector<pika::shared_future<common::internal::vector<T>>> call(
+      Matrix<T, Device::CPU>& mat_a);
   static std::vector<pika::shared_future<common::internal::vector<T>>> call(
       comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a);
 };
@@ -217,7 +218,7 @@ template <class Executor, class T>
 void hemmDiag(const Executor& ex, pika::shared_future<TileT<const T>> tile_a,
               pika::shared_future<TileT<const T>> tile_w, pika::future<TileT<T>> tile_x) {
   pika::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::hemm_o), blas::Side::Left,
-                blas::Uplo::Lower, T(1), std::move(tile_a), std::move(tile_w), T(1), std::move(tile_x));
+                 blas::Uplo::Lower, T(1), std::move(tile_a), std::move(tile_w), T(1), std::move(tile_x));
 }
 
 // X += op(A) * W
@@ -225,7 +226,7 @@ template <class Executor, class T>
 void hemmOffDiag(const Executor& ex, blas::Op op, pika::shared_future<TileT<const T>> tile_a,
                  pika::shared_future<TileT<const T>> tile_w, pika::future<TileT<T>> tile_x) {
   pika::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::gemm_o), op, blas::Op::NoTrans, T(1),
-                std::move(tile_a), std::move(tile_w), T(1), std::move(tile_x));
+                 std::move(tile_a), std::move(tile_w), T(1), std::move(tile_x));
 }
 
 template <class Executor, class T>
@@ -357,7 +358,7 @@ void gemmUpdateX(PanelT<Coord::Col, T>& x, ConstMatrixT<T>& w2, MatrixLikeT& v) 
   // GEMM X = X - 0.5 . V . W2
   for (const auto& index_i : v.iteratorLocal())
     pika::dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::NoTrans, blas::Op::NoTrans, T(-0.5),
-                  v.read(index_i), w2.read(LocalTileIndex(0, 0)), T(1), x(index_i));
+                   v.read(index_i), w2.read(LocalTileIndex(0, 0)), T(1), x(index_i));
 }
 
 template <class T>
@@ -426,7 +427,7 @@ void gemmComputeW2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Co
   // GEMM W2 = W* . X
   for (const auto& index_tile : w.iteratorLocal())
     pika::dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans, T(1),
-                  w.read(index_tile), x.read(index_tile), T(1), w2(LocalTileIndex(0, 0)));
+                   w.read(index_tile), x.read(index_tile), T(1), w2(LocalTileIndex(0, 0)));
 }
 
 template <class T>
@@ -532,7 +533,7 @@ pika::shared_future<common::internal::vector<T>> computePanelReflectors(
   auto panel_tiles = pika::when_all(matrix::select(mat_a, ai_panel_range));
 
   return pika::dataflow(getHpExecutor<Backend::MC>(), std::move(panel_task), std::move(panel_tiles),
-                       mpi_col_chain_panel, std::move(trigger));
+                        mpi_col_chain_panel, std::move(trigger));
 }
 
 template <class T>

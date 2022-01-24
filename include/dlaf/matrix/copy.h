@@ -42,8 +42,8 @@ void copy(Matrix<const T, Source>& source, Matrix<T, Destination>& dest) {
   for (SizeType j = 0; j < local_tile_cols; ++j) {
     for (SizeType i = 0; i < local_tile_rows; ++i) {
       pika::dataflow(dlaf::getCopyExecutor<Source, Destination>(),
-                    unwrapExtendTiles(dlaf::matrix::internal::copy_o), source.read(LocalTileIndex(i, j)),
-                    dest(LocalTileIndex(i, j)));
+                     unwrapExtendTiles(dlaf::matrix::internal::copy_o),
+                     source.read(LocalTileIndex(i, j)), dest(LocalTileIndex(i, j)));
     }
   }
 }

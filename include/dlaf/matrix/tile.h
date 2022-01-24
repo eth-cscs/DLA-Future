@@ -129,7 +129,7 @@ pika::shared_future<Tile<T, D>> splitTileInsertFutureInChain(pika::future<Tile<T
 
 template <class T, Device D>
 pika::future<Tile<T, D>> createSubTile(const pika::shared_future<Tile<T, D>>& tile,
-                                      const SubTileSpec& spec);
+                                       const SubTileSpec& spec);
 }
 
 /// The Tile object aims to provide an effective way to access the memory as a two dimensional
@@ -361,7 +361,7 @@ auto create_data(const Tile<T, device>& tile) {
 namespace internal {
 template <class T, Device D>
 pika::future<Tile<T, D>> createSubTile(const pika::shared_future<Tile<T, D>>& tile,
-                                      const SubTileSpec& spec) {
+                                       const SubTileSpec& spec) {
   return pika::dataflow(
       pika::launch::sync, [](auto tile, auto spec) { return Tile<T, D>(tile, spec); }, tile, spec);
 }
@@ -394,7 +394,8 @@ pika::shared_future<Tile<T, D>> splitTileInsertFutureInChain(pika::future<Tile<T
 
     return pika::make_tuple(std::move(tile), std::move(dep_tracker));
   };
-  auto tmp = pika::split_future(tile.then(pika::launch::sync, pika::unwrapping(std::move(swap_promise))));
+  auto tmp =
+      pika::split_future(tile.then(pika::launch::sync, pika::unwrapping(std::move(swap_promise))));
   // old_tile = F1(PN) and will be used to create the subtiles
   pika::shared_future<TileType> old_tile = std::move(pika::get<0>(tmp));
   // 3. Set P2 or SF(P2) into FN to restore the chain:  F1(PN)  FN(*) ...
@@ -405,7 +406,7 @@ pika::shared_future<Tile<T, D>> splitTileInsertFutureInChain(pika::future<Tile<T
   };
   // tile = FN(*) (out argument) can be used to access the full tile after the subtiles tasks completed.
   tile = pika::dataflow(pika::launch::sync, pika::unwrapping(set_promise_or_shfuture), tmp_tile,
-                       std::move(pika::get<1>(tmp)));
+                        std::move(pika::get<1>(tmp)));
 
   return old_tile;
 }
@@ -418,7 +419,7 @@ pika::shared_future<Tile<T, D>> splitTileInsertFutureInChain(pika::future<Tile<T
 /// and the returned subtile go out of scope.
 template <class T, Device D>
 pika::shared_future<Tile<const T, D>> splitTile(const pika::shared_future<Tile<const T, D>>& tile,
-                                               const SubTileSpec& spec) {
+                                                const SubTileSpec& spec) {
   return internal::createSubTile(tile, spec);
 }
 
@@ -463,7 +464,7 @@ pika::future<Tile<T, D>> splitTile(pika::future<Tile<T, D>>& tile, const SubTile
 ///      (i.e. two different subtile cannot access the same element).
 template <class T, Device D>
 std::vector<pika::future<Tile<T, D>>> splitTileDisjoint(pika::future<Tile<T, D>>& tile,
-                                                       const std::vector<SubTileSpec>& specs) {
+                                                        const std::vector<SubTileSpec>& specs) {
   if (specs.size() == 0)
     return {};
 

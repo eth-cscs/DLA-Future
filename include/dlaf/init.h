@@ -92,7 +92,7 @@ struct [[nodiscard]] ScopedInitializer {
   ScopedInitializer(int argc, const char* const argv[], configuration const& user_cfg = {});
   ~ScopedInitializer();
 
-  ScopedInitializer(ScopedInitializer&&) = delete;
+  ScopedInitializer(ScopedInitializer &&) = delete;
   ScopedInitializer(ScopedInitializer const&) = delete;
   ScopedInitializer& operator=(ScopedInitializer&&) = delete;
   ScopedInitializer& operator=(ScopedInitializer const&) = delete;

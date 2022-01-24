@@ -41,8 +41,8 @@
 
 #include <gtest/gtest.h>
 
-#include <pika/modules/threadmanager.hpp>
 #include <pika/init.hpp>
+#include <pika/modules/threadmanager.hpp>
 #include <pika/program_options.hpp>
 #include <pika/runtime.hpp>
 

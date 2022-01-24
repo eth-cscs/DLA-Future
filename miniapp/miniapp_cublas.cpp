@@ -14,11 +14,11 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-#include <pika/init.hpp>
 #include <pika/future.hpp>
+#include <pika/init.hpp>
+#include <pika/modules/async_cuda.hpp>
 #include <pika/thread.hpp>
 #include <pika/unwrap.hpp>
-#include <pika/modules/async_cuda.hpp>
 
 #include "dlaf/executors.h"
 #include "dlaf/init.h"
@@ -47,7 +47,7 @@ int pika_main(int argc, char* argv[]) {
     });
 
     pika::future<cublasStatus_t> f1 = pika::dataflow(exec, pika::unwrapping(cublasDaxpy), n, alpha_f,
-                                                   x.data().get(), incx, y.data().get(), incy);
+                                                     x.data().get(), incx, y.data().get(), incy);
 
     pika::future<void> f2 = f1.then([&y](pika::future<cublasStatus_t> s) {
       DLAF_CUBLAS_CALL(s.get());

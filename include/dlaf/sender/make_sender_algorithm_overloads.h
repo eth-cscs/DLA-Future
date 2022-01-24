@@ -30,21 +30,21 @@
 /// 3. One that takes a policy and the arguments required by the callable. This is almost equivalent to
 ///    calling the callable directly with the required arguments, with the difference that this overload
 ///    does the required synchronization before returning in cases when the callable is not blocking.
-#define DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(fname, callable)                                   \
-  template <Backend B, typename Sender,                                                         \
+#define DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(fname, callable)                                    \
+  template <Backend B, typename Sender,                                                          \
             typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>     \
-  auto fname(const dlaf::internal::Policy<B> p, Sender&& s) {                                   \
-    return dlaf::internal::transform<B>(p, callable, std::forward<Sender>(s));                  \
-  }                                                                                             \
-                                                                                                \
-  template <Backend B>                                                                          \
-  auto fname(const dlaf::internal::Policy<B> p) {                                               \
-    return dlaf::internal::PartialTransform{p, callable};                                       \
-  }                                                                                             \
-                                                                                                \
-  template <Backend B, typename T1, typename T2, typename... Ts>                                \
-  void fname(const dlaf::internal::Policy<B> p, T1&& t1, T2&& t2, Ts&&... ts) {                 \
+  auto fname(const dlaf::internal::Policy<B> p, Sender&& s) {                                    \
+    return dlaf::internal::transform<B>(p, callable, std::forward<Sender>(s));                   \
+  }                                                                                              \
+                                                                                                 \
+  template <Backend B>                                                                           \
+  auto fname(const dlaf::internal::Policy<B> p) {                                                \
+    return dlaf::internal::PartialTransform{p, callable};                                        \
+  }                                                                                              \
+                                                                                                 \
+  template <Backend B, typename T1, typename T2, typename... Ts>                                 \
+  void fname(const dlaf::internal::Policy<B> p, T1&& t1, T2&& t2, Ts&&... ts) {                  \
     pika::execution::experimental::sync_wait(                                                    \
         fname(p, pika::execution::experimental::just(std::forward<T1>(t1), std::forward<T2>(t2), \
-                                                    std::forward<Ts>(ts)...)));                 \
+                                                     std::forward<Ts>(ts)...)));                 \
   }

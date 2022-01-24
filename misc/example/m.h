@@ -78,9 +78,10 @@ public:
       pika::future<Type> fut = std::move(f_[i]);
       pika::lcos::local::promise<Type> p;
       f_[i] = p.get_future();
-      s_[i] = std::move(fut.then(pika::launch::sync, [p = std::move(p)](pika::future<Type>&& fut) mutable {
-        return ConstType(std::move(fut.get().setPromise(std::move(p))));
-      }));
+      s_[i] =
+          std::move(fut.then(pika::launch::sync, [p = std::move(p)](pika::future<Type>&& fut) mutable {
+            return ConstType(std::move(fut.get().setPromise(std::move(p))));
+          }));
     }
     return s_[i];
   }

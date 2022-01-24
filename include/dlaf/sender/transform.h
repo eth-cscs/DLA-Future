@@ -194,13 +194,13 @@ struct Transform<Backend::GPU> {
     template <typename R>
     friend auto tag_invoke(pika::execution::experimental::connect_t, GPUTransformSender&& s, R&& r) {
       return pika::execution::experimental::connect(std::move(s.s),
-                                                   GPUTransformReceiver<R>{std::move(s.stream_pool),
-                                                                           std::move(
-                                                                               s.cublas_handle_pool),
-                                                                           std::move(
-                                                                               s.cusolver_handle_pool),
-                                                                           std::forward<R>(r),
-                                                                           std::move(s.f)});
+                                                    GPUTransformReceiver<R>{std::move(s.stream_pool),
+                                                                            std::move(
+                                                                                s.cublas_handle_pool),
+                                                                            std::move(
+                                                                                s.cusolver_handle_pool),
+                                                                            std::forward<R>(r),
+                                                                            std::move(s.f)});
     }
   };
 

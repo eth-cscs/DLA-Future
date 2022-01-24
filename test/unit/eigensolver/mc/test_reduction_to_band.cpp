@@ -13,9 +13,9 @@
 #include <cmath>
 
 #include <gtest/gtest.h>
+#include <lapack/util.hh>
 #include <pika/modules/threadmanager.hpp>
 #include <pika/runtime.hpp>
-#include <lapack/util.hh>
 
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"

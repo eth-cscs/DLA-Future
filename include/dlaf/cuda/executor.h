@@ -66,7 +66,7 @@ public:
     // The stream pool is captured by value to ensure that the streams live at
     // least until the event has completed.
     return fut.then(pika::launch::sync, [r = std::move(r), stream_pool = stream_pool_](
-                                           pika::future<void>&&) mutable { return std::move(r); });
+                                            pika::future<void>&&) mutable { return std::move(r); });
   }
 
   template <class Frame, class F, class Futures>
@@ -77,7 +77,7 @@ public:
 
     cudaStream_t stream = stream_pool_.getNextStream();
     auto r = pika::invoke_fused(std::forward<F>(f),
-                               pika::tuple_cat(std::forward<Futures>(futures), pika::tie(stream)));
+                                pika::tuple_cat(std::forward<Futures>(futures), pika::tie(stream)));
     pika::future<void> fut = pika::cuda::experimental::detail::get_future_with_event(stream);
 
     // The stream pool is captured by value to ensure that the streams live at

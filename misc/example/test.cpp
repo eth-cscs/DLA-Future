@@ -45,14 +45,14 @@ void foo() {
   std::array<int, 4> a = {0, 1, 2, 3};
   std::array<int, 4> b = {0, 1, 2, 3};
   std::array<pika::future<Type>, 4> fa = {pika::make_ready_future<Type>(&a[0]),
-                                         pika::make_ready_future<Type>(&a[1]),
-                                         pika::make_ready_future<Type>(&a[2]),
-                                         pika::make_ready_future<Type>(&a[3])};
+                                          pika::make_ready_future<Type>(&a[1]),
+                                          pika::make_ready_future<Type>(&a[2]),
+                                          pika::make_ready_future<Type>(&a[3])};
 
   std::array<pika::future<Type>, 4> fb = {pika::make_ready_future<Type>(&b[0]),
-                                         pika::make_ready_future<Type>(&b[1]),
-                                         pika::make_ready_future<Type>(&b[2]),
-                                         pika::make_ready_future<Type>(&b[3])};
+                                          pika::make_ready_future<Type>(&b[1]),
+                                          pika::make_ready_future<Type>(&b[2]),
+                                          pika::make_ready_future<Type>(&b[3])};
 
   Matrix<int> ma(std::move(fa));
   Matrix<int> mb(std::move(fb));

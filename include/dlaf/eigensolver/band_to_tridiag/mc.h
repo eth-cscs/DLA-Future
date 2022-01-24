@@ -299,7 +299,7 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
           deps.push_back(sf);
         }
         sf = pika::dataflow(executor_hp, unwrapping(copy_offdiag), k * nb,
-                           mat_a.read(GlobalTileIndex{k + 1, k}), sf);
+                            mat_a.read(GlobalTileIndex{k + 1, k}), sf);
         deps.push_back(sf);
       }
       else {
@@ -342,7 +342,7 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
         const auto tile_index = sweep / nb;
         const auto start = tile_index * nb;
         pika::dataflow(executor_hp, unwrapping(copy_tridiag_task), start, std::min(nb, size - start),
-                      std::min(nb, size - 1 - start), mat_trid(GlobalTileIndex{0, tile_index}), dep);
+                       std::min(nb, size - 1 - start), mat_trid(GlobalTileIndex{0, tile_index}), dep);
       }
     };
 
@@ -362,7 +362,7 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
         const GlobalElementIndex index_v((sweep / b + step) * b, sweep);
 
         pika::dataflow(pika::launch::sync, unwrapping(store_tau_v), w_pipeline(),
-                      mat_v(dist_v.globalTileIndex(index_v)), dist_v.tileElementIndex(index_v));
+                       mat_v(dist_v.globalTileIndex(index_v)), dist_v.tileElementIndex(index_v));
         deps[step] = pika::dataflow(executor_hp, unwrapping(cont_sweep), w_pipeline(), deps[dep_index]);
       }
 

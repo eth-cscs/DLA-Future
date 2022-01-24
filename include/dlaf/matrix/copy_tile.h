@@ -232,8 +232,8 @@ void copyIfNeeded(FutureS<Tile<U, Source>> tile_from, FutureD<Tile<T, Destinatio
                   pika::future<void> wait_for_me = pika::make_ready_future<void>()) {
   if constexpr (Destination != Source)
     pika::dataflow(dlaf::getCopyExecutor<Source, Destination>(),
-                  matrix::unwrapExtendTiles(internal::copy_o), wait_for_me, std::move(tile_from),
-                  std::move(tile_to));
+                   matrix::unwrapExtendTiles(internal::copy_o), wait_for_me, std::move(tile_from),
+                   std::move(tile_to));
 }
 }
 }

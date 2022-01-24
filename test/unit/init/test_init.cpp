@@ -219,7 +219,7 @@ TEST_P(InitTest, VariablesMapNoCommandLineOption) {
   // The const_cast is currently necessary for pika::init. pika should be updated
   // to take const argc/argv.
   pika::init(vm_no_command_line_option_main, argc_without_option,
-            const_cast<char**>(argv_without_option));
+             const_cast<char**>(argv_without_option));
 }
 
 int vm_command_line_option_main(pika::program_options::variables_map& vm) {

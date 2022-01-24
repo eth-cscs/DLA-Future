@@ -9,12 +9,12 @@
 //
 #pragma once
 
-#include <hpx/include/resource_partitioner.hpp>
-#include <hpx/local/execution.hpp>
-#include <hpx/local/thread.hpp>
+#include <pika/execution.hpp>
+#include <pika/modules/resource_partitioner.hpp>
+#include <pika/thread.hpp>
 
 #ifdef DLAF_WITH_CUDA
-#include <hpx/modules/async_cuda.hpp>
+#include <pika/modules/async_cuda.hpp>
 #endif
 
 #include <dlaf/init.h>
@@ -24,18 +24,18 @@ namespace dlaf {
 template <Backend backend>
 auto getBackendScheduler() {
   if constexpr (backend == Backend::MC) {
-    return hpx::execution::experimental::thread_pool_scheduler{
-        &hpx::resource::get_thread_pool("default")};
+    return pika::execution::experimental::thread_pool_scheduler{
+        &pika::resource::get_thread_pool("default")};
   }
 #ifdef DLAF_WITH_CUDA
   else if constexpr (backend == Backend::GPU) {
-    return hpx::cuda::experimental::cuda_scheduler{internal::getCudaPool()};
+    return pika::cuda::experimental::cuda_scheduler{internal::getCudaPool()};
   }
 #endif
 }
 
 template <Backend backend>
-auto getBackendScheduler(const hpx::threads::thread_priority priority) {
-  return hpx::execution::experimental::with_priority(getBackendScheduler<backend>(), priority);
+auto getBackendScheduler(const pika::threads::thread_priority priority) {
+  return pika::execution::experimental::with_priority(getBackendScheduler<backend>(), priority);
 }
 }

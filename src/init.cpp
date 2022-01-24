@@ -138,11 +138,11 @@ cusolver::HandlePool getCusolverHandlePool() {
   return *cusolver_handle_pool;
 }
 
-static std::unique_ptr<hpx::cuda::experimental::cuda_pool> cuda_pool{nullptr};
+static std::unique_ptr<pika::cuda::experimental::cuda_pool> cuda_pool{nullptr};
 
 void initializeCudaPool(int device, std::size_t num_streams) {
   DLAF_ASSERT(!cuda_pool, "");
-  cuda_pool = std::make_unique<hpx::cuda::experimental::cuda_pool>(device, num_streams);
+  cuda_pool = std::make_unique<pika::cuda::experimental::cuda_pool>(device, num_streams);
 }
 
 void finalizeCudaPool() {
@@ -150,7 +150,7 @@ void finalizeCudaPool() {
   cuda_pool.reset();
 }
 
-hpx::cuda::experimental::cuda_pool getCudaPool() {
+pika::cuda::experimental::cuda_pool getCudaPool() {
   DLAF_ASSERT(bool(cuda_pool), "");
   return *cuda_pool;
 }

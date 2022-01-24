@@ -18,7 +18,7 @@
                         [] __device__() { printf("GPU assertion failed: %s:%d", __FILE__, __LINE__); })
 
 #else
-#define #define DLAF_GPU_ASSERT_HEAVY(expr)
+#define DLAF_GPU_ASSERT_HEAVY(expr)
 #endif
 
 namespace dlaf {

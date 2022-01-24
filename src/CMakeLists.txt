@@ -127,7 +127,12 @@ target_add_warnings(dlaf.eigensolver)
 # Define DLAF's factorization library
 add_library(dlaf.factorization OBJECT
   factorization/cholesky/mc.cpp
-  $<$<BOOL:${DLAF_WITH_CUDA}>:factorization/cholesky/gpu.cpp>)
+  $<$<BOOL:${DLAF_WITH_CUDA}>:factorization/cholesky/gpu.cpp>
+  factorization/qr/mc.cpp
+  $<$<BOOL:${DLAF_WITH_CUDA}>:factorization/qr/gpu.cpp>
+  $<$<BOOL:${DLAF_WITH_CUDA}>:factorization/qr/tfactor_kernels.cu>
+)
+target_compile_options(dlaf.factorization PRIVATE $<$<COMPILE_LANG_AND_ID:CUDA,NVIDIA>:--extended-lambda>)
 target_link_libraries(dlaf.factorization PUBLIC dlaf.prop)
 target_add_warnings(dlaf.factorization)
 

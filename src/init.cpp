@@ -27,6 +27,9 @@
 
 namespace dlaf {
 std::ostream& operator<<(std::ostream& os, configuration const& cfg) {
+  os << "  num_np_cuda_streams = " << cfg.num_np_cuda_streams << std::endl;
+  os << "  num_hp_cuda_streams = " << cfg.num_hp_cuda_streams << std::endl;
+  // TODO: Remove the per_thread variables
   os << "  num_np_cuda_streams_per_thread = " << cfg.num_np_cuda_streams_per_thread << std::endl;
   os << "  num_hp_cuda_streams_per_thread = " << cfg.num_hp_cuda_streams_per_thread << std::endl;
   os << "  umpire_host_memory_pool_initial_bytes = " << cfg.umpire_host_memory_pool_initial_bytes
@@ -140,9 +143,10 @@ cusolver::HandlePool getCusolverHandlePool() {
 
 static std::unique_ptr<pika::cuda::experimental::cuda_pool> cuda_pool{nullptr};
 
-void initializeCudaPool(int device, std::size_t num_streams) {
+void initializeCudaPool(int device, std::size_t num_np_streams, std::size_t num_hp_streams) {
   DLAF_ASSERT(!cuda_pool, "");
-  cuda_pool = std::make_unique<pika::cuda::experimental::cuda_pool>(device, num_streams);
+  cuda_pool =
+      std::make_unique<pika::cuda::experimental::cuda_pool>(device, num_np_streams, num_hp_streams);
 }
 
 void finalizeCudaPool() {
@@ -164,7 +168,7 @@ struct Init<Backend::GPU> {
     initializeHpCudaStreamPool(device, cfg.num_hp_cuda_streams_per_thread);
     initializeCublasHandlePool();
     initializeCusolverHandlePool();
-    initializeCudaPool(device, 64); // TODO: Number of streams
+    initializeCudaPool(device, cfg.num_np_cuda_streams, cfg.num_hp_cuda_streams);
     pika::cuda::experimental::detail::register_polling(pika::resource::get_thread_pool("default"));
   }
 
@@ -239,6 +243,8 @@ void updateConfigurationValue(pika::program_options::variables_map const& vm, T&
 }
 
 void updateConfiguration(pika::program_options::variables_map const& vm, configuration& cfg) {
+  updateConfigurationValue(vm, cfg.num_np_cuda_streams, "NUM_NP_CUDA_STREAMS", "num-np-cuda-streams");
+  updateConfigurationValue(vm, cfg.num_hp_cuda_streams, "NUM_HP_CUDA_STREAMS", "num-hp-cuda-streams");
   updateConfigurationValue(vm, cfg.num_np_cuda_streams_per_thread, "NUM_NP_CUDA_STREAMS_PER_THREAD",
                            "num-np-cuda-streams-per-thread");
   updateConfigurationValue(vm, cfg.num_hp_cuda_streams_per_thread, "NUM_HP_CUDA_STREAMS_PER_THREAD",
@@ -264,6 +270,10 @@ pika::program_options::options_description getOptionsDescription() {
 
   desc.add_options()("dlaf:help", "Print help message");
   desc.add_options()("dlaf:print-config", "Print the DLA-Future configuration");
+  desc.add_options()("dlaf:num-np-cuda-streams", pika::program_options::value<std::size_t>(),
+                     "Number of normal priority CUDA streams");
+  desc.add_options()("dlaf:num-hp-cuda-streams", pika::program_options::value<std::size_t>(),
+                     "Number of high priority CUDA streams");
   desc.add_options()("dlaf:num-np-cuda-streams-per-thread", pika::program_options::value<std::size_t>(),
                      "Number of normal priority CUDA streams per worker thread");
   desc.add_options()("dlaf:num-hp-cuda-streams-per-thread", pika::program_options::value<std::size_t>(),

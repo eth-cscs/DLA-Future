@@ -9,7 +9,12 @@
 //
 #pragma once
 
+#include "dlaf/common/callable_object.h"
 #include "dlaf/eigensolver/tridiag_solver/api.h"
+#include "dlaf/lapack/tile.h"
+#include "dlaf/sender/make_sender_algorithm_overloads.h"
+#include "dlaf/sender/policy.h"
+#include "dlaf/sender/transform.h"
 #include "dlaf/types.h"
 
 namespace dlaf {
@@ -25,8 +30,8 @@ struct TridiagSolver<Backend::MC, Device::CPU, T> {
 };
 
 template <class T>
-void cuppensTridiagTileUpdate(const matrix::Tile<T, Device::CPU>& top,
-                              const matrix::Tile<T, Device::CPU>& bottom) {
+void cuppensDecomposition(const matrix::Tile<T, Device::CPU>& top,
+                          const matrix::Tile<T, Device::CPU>& bottom) {
   (void) top;
   (void) bottom;
 
@@ -38,16 +43,31 @@ void cuppensTridiagTileUpdate(const matrix::Tile<T, Device::CPU>& top,
   bottom_diag_val -= offdiag_val;
 }
 
+DLAF_MAKE_CALLABLE_OBJECT(cuppensDecomposition);
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(cuppensDecomposition, cuppensDecomposition_o)
+
 template <class T>
 void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<BaseType<T>, Device::CPU>& mat_a,
                                                       SizeType i_begin, SizeType i_end,
                                                       Matrix<T, Device::CPU>& mat_ev) {
+  using hpx::threads::thread_priority;
+  using dlaf::internal::Policy;
+  using hpx::execution::experimental::detach;
+
   if (i_begin == i_end) {
-    // TODO: solve with stedc
+    // Solve leaf eigensystem with stedc
+    dlaf::internal::whenAllLift(mat_a.readwrite_sender(LocalTileIndex(i_begin, 0)),
+                                mat_ev.readwrite_sender(LocalTileIndex(i_begin, 0))) |
+        tile::stedc(Policy<Backend::MC>(thread_priority::normal)) | detach();
     return;
   }
   SizeType i_midpoint = (i_begin + i_end) / 2;
-  // TODO: call Cuppen's tridiag decomposition
+
+  // Cuppen's tridiagonal decomposition
+  dlaf::internal::whenAllLift(mat_a.readwrite_sender(LocalTileIndex(i_midpoint, 0)),
+                              mat_a.readwrite_sender(LocalTileIndex(i_midpoint + 1, 0))) |
+      cuppensDecomposition(Policy<Backend::MC>(thread_priority::normal)) | detach();
+
   TridiagSolver<Backend::MC, Device::CPU, T>::call(mat_a, i_begin, i_midpoint, mat_ev);    // left
   TridiagSolver<Backend::MC, Device::CPU, T>::call(mat_a, i_midpoint + 1, i_end, mat_ev);  // right
   // TODO: form D + rzz^T from `mat_a` and `mat_ev`
@@ -71,9 +91,9 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(comm::CommunicatorGrid gri
   KWORD template struct TridiagSolver<BACKEND, DEVICE, DATATYPE>;
 
 DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::MC, Device::CPU, float)
-DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::MC, Device::CPU, double)
-DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::MC, Device::CPU, std::complex<float>)
-DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
+// DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::MC, Device::CPU, double)
+// DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::MC, Device::CPU, std::complex<float>)
+// DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
 
 #ifdef DLAF_WITH_CUDA
 // DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::GPU, Device::GPU, float)

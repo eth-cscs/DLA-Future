@@ -37,7 +37,7 @@ TYPED_TEST(TridiagEigensolverTest, CuppensDecomposition) {
   auto top = createTile<TypeParam, Device::CPU>(laplace1d_fn, tile_size, sz);
   auto bottom = createTile<TypeParam, Device::CPU>(laplace1d_fn, tile_size, sz);
 
-  eigensolver::internal::cuppensTridiagTileUpdate(top, bottom);
+  eigensolver::internal::cuppensDecomposition(top, bottom);
 
   auto expected_top = createTile<TypeParam, Device::CPU>(laplace1d_fn, tile_size, sz);
   auto expected_bottom = createTile<TypeParam, Device::CPU>(laplace1d_fn, tile_size, sz);

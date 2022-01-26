@@ -57,7 +57,7 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<BaseType<T>, Device
   if (i_begin == i_end) {
     // Solve leaf eigensystem with stedc
     dlaf::internal::whenAllLift(mat_a.readwrite_sender(LocalTileIndex(i_begin, 0)),
-                                mat_ev.readwrite_sender(LocalTileIndex(i_begin, 0))) |
+                                mat_ev.readwrite_sender(LocalTileIndex(i_begin, i_begin))) |
         tile::stedc(Policy<Backend::MC>(thread_priority::normal)) | detach();
     return;
   }

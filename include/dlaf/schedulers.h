@@ -11,6 +11,7 @@
 
 #include <pika/execution.hpp>
 #include <pika/modules/resource_partitioner.hpp>
+#include <pika/runtime.hpp>
 #include <pika/thread.hpp>
 
 #ifdef DLAF_WITH_CUDA

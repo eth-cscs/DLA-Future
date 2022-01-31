@@ -9,6 +9,7 @@
 //
 
 #include <pika/async_mpi/mpi_future.hpp>
+#include <pika/runtime.hpp>
 
 #include <dlaf/common/assert.h>
 #include <dlaf/communication/error.h>

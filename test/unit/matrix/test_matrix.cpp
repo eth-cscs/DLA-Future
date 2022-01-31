@@ -49,6 +49,7 @@ template <typename Type>
 class MatrixTest : public ::testing::Test {
 public:
   const std::vector<CommunicatorGrid>& commGrids() {
+    EXPECT_FALSE(comm_grids.empty());
     return comm_grids;
   }
 };
@@ -1127,6 +1128,7 @@ TYPED_TEST(MatrixTest, GPUCopy) {
 class MatrixGenericTest : public ::testing::Test {
 public:
   const std::vector<CommunicatorGrid>& commGrids() {
+    EXPECT_FALSE(comm_grids.empty());
     return comm_grids;
   }
 };

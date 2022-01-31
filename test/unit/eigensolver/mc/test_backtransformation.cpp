@@ -45,6 +45,7 @@ template <class T, Device D>
 class BackTransformationEigenSolverTest : public ::testing::Test {
 public:
   const std::vector<CommunicatorGrid>& commGrids() {
+    EXPECT_FALSE(comm_grids.empty());
     return comm_grids;
   }
 };

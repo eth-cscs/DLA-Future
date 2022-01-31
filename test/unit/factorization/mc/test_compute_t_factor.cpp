@@ -42,6 +42,7 @@ using dlaf::matrix::test::MatrixLocal;
 template <class T, Device D>
 struct ComputeTFactorTest : public ::testing::Test {
   const std::vector<CommunicatorGrid>& commGrids() {
+    EXPECT_FALSE(comm_grids.empty());
     return comm_grids;
   }
 };

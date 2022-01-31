@@ -34,6 +34,7 @@ using namespace dlaf::comm;
 template <typename Type>
 struct PanelBcastTest : public ::testing::Test {
   const std::vector<CommunicatorGrid>& commGrids() {
+    EXPECT_FALSE(comm_grids.empty());
     return comm_grids;
   }
 };

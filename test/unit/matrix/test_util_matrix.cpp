@@ -37,6 +37,7 @@ template <class T>
 class MatrixUtilsTest : public ::testing::Test {
 public:
   const std::vector<comm::CommunicatorGrid>& commGrids() {
+    EXPECT_FALSE(comm_grids.empty());
     return comm_grids;
   }
 };
@@ -214,6 +215,7 @@ TYPED_TEST(MatrixUtilsTest, SetRandomHermitianPositiveDefinite) {
 template <typename Type>
 struct PanelUtilsTest : public ::testing::Test {
   const std::vector<comm::CommunicatorGrid>& commGrids() {
+    EXPECT_FALSE(comm_grids.empty());
     return comm_grids;
   }
 };

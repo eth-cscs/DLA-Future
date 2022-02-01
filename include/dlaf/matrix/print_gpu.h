@@ -32,14 +32,14 @@ template <class Format, class T>
 void print(Format format, const Tile<const T, Device::GPU>& tile, std::ostream& os,
            cudaStream_t stream) {
   const auto size = tile.size();
-  if (size.isEmpty())
-    return;
+  const auto ld = std::max<SizeType>(1, size.rows());
+  Tile<T, Device::CPU> tile_h(size, memory::MemoryView<T, Device::CPU>(size.rows() * size.cols()), ld);
 
-  Tile<T, Device::CPU> tile_h(size, memory::MemoryView<T, Device::CPU>(size.rows() * size.cols()),
-                              size.rows());
+  if (!size.isEmpty()) {
+    internal::copy_o(tile, tile_h, stream);
+    DLAF_CUDA_CALL(cudaStreamSynchronize(stream));
+  }
 
-  internal::copy_o(tile, tile_h, stream);
-  DLAF_CUDA_CALL(cudaStreamSynchronize(stream));
   print(format, tile_h, os);
 }
 
@@ -50,13 +50,14 @@ void print(Format format, const Tile<const T, Device::GPU>& tile, cudaStream_t s
 
 template <class Format, class T>
 void print(Format format, const Tile<const T, Device::GPU>& tile, std::ostream& os = std::cout) {
-  if (tile.size().isEmpty())
-    return;
+  cudaStream_t stream = NULL;
+  if (!tile.size().isEmpty())
+    DLAF_CUDA_CALL(cudaStreamCreate(&stream));
 
-  cudaStream_t stream;
-  DLAF_CUDA_CALL(cudaStreamCreate(&stream));
   print(format, tile, os, stream);
-  DLAF_CUDA_CALL(cudaStreamDestroy(stream));
+
+  if (!tile.size().isEmpty())
+    DLAF_CUDA_CALL(cudaStreamDestroy(stream));
 }
 
 }

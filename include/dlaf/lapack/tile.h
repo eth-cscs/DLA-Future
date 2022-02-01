@@ -390,8 +390,10 @@ void assertExtendInfo(F assertFunc, cusolverDnHandle_t handle, CusolverInfo<T>&&
   DLAF_CUSOLVER_CALL(cusolverDnGetStream(handle, &stream));
   assertFunc(stream, info.info());
   // Extend info scope to the end of the kernel execution
-  pika::cuda::experimental::detail::get_future_with_event(stream)  //
-      .then(pika::launch::sync, [info = std::move(info)](pika::future<void>&&) {});
+  auto extend_info = [info = std::move(info)]() {};
+  pika::cuda::experimental::detail::get_future_with_event(stream) |
+      pika::execution::experimental::then(std::move(extend_info)) |
+      pika::execution::experimental::start_detached();
 }
 }
 

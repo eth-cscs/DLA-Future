@@ -36,6 +36,7 @@ however they cannot be compiled since they are simplified to improve readability
 ```cpp
   Matrix m;
 
+  // TODO: These should probably be updated to use sender algorithms?
   pika::dataflow(Task1, m({0, 0}));
   pika::dataflow(Task2, m({0, 0}));  // Depends on Task1.
   pika::dataflow(Task3, m({0, 1}));  // Different tile. No dependency on Task1 nor on Task2.

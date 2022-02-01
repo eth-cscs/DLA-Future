@@ -125,11 +125,11 @@ template <class T>
 struct Helpers<Backend::GPU, Device::GPU, T> {
   static pika::future<matrix::Tile<T, Device::GPU>> set0(pika::future<matrix::Tile<T, Device::GPU>>& t) {
     return pika::dataflow(dlaf::cuda::Executor{dlaf::internal::getHpCudaStreamPool()},
-                         pika::unwrapping([](auto&& tile, cudaStream_t stream) {
-                           tile::internal::set0<T>(tile, stream);
-                           return std::move(tile);
-                         }),
-                         std::move(t));
+                          pika::unwrapping([](auto&& tile, cudaStream_t stream) {
+                            tile::internal::set0<T>(tile, stream);
+                            return std::move(tile);
+                          }),
+                          std::move(t));
   }
 
   static pika::future<matrix::Tile<T, Device::GPU>> gemvColumnT(

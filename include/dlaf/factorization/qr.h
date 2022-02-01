@@ -43,17 +43,17 @@ void computeTFactor(const SizeType k, Matrix<const T, device>& v, const GlobalTi
   QR_Tfactor<backend, device, T>::call(k, v, v_start, taus, std::move(t), mpi_col_task_chain);
 }
 /// ---- ETI
-#define DLAF_FACTORIZATION_QR_TFACTOR_LOCAL_ETI(KWORD, BACKEND, DEVICE, T)                 \
-  KWORD template void                                                                      \
-  computeTFactor<BACKEND, DEVICE, T>(const SizeType k, Matrix<const T, DEVICE>& v,         \
-                                     const GlobalTileIndex v_start,                        \
+#define DLAF_FACTORIZATION_QR_TFACTOR_LOCAL_ETI(KWORD, BACKEND, DEVICE, T)                  \
+  KWORD template void                                                                       \
+  computeTFactor<BACKEND, DEVICE, T>(const SizeType k, Matrix<const T, DEVICE>& v,          \
+                                     const GlobalTileIndex v_start,                         \
                                      pika::shared_future<common::internal::vector<T>> taus, \
                                      pika::future<matrix::Tile<T, DEVICE>> t);
 
-#define DLAF_FACTORIZATION_QR_TFACTOR_DISTR_ETI(KWORD, BACKEND, DEVICE, T)                 \
-  KWORD template void                                                                      \
-  computeTFactor<BACKEND, DEVICE, T>(const SizeType k, Matrix<const T, DEVICE>& v,         \
-                                     const GlobalTileIndex v_start,                        \
+#define DLAF_FACTORIZATION_QR_TFACTOR_DISTR_ETI(KWORD, BACKEND, DEVICE, T)                  \
+  KWORD template void                                                                       \
+  computeTFactor<BACKEND, DEVICE, T>(const SizeType k, Matrix<const T, DEVICE>& v,          \
+                                     const GlobalTileIndex v_start,                         \
                                      pika::shared_future<common::internal::vector<T>> taus, \
                                      pika::future<matrix::Tile<T, DEVICE>> t,               \
                                      common::Pipeline<comm::Communicator>& mpi_col_task_chain);

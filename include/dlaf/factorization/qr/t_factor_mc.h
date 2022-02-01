@@ -170,6 +170,8 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(const SizeType k, Matrix<cons
                                                    const GlobalTileIndex v_start,
                                                    pika::shared_future<common::internal::vector<T>> taus,
                                                    pika::future<matrix::Tile<T, Device::CPU>> t) {
+  namespace ex = pika::execution::experimental;
+
   t = splitTile(t, {{0, 0}, {k, k}});
 
   // Fast return in case of no reflectors
@@ -182,10 +184,14 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(const SizeType k, Matrix<cons
 
   const GlobalTileIndex v_end{v.nrTiles().rows(), std::min(v.nrTiles().cols(), v_start.col() + 1)};
 
-  t = t.then(getHpExecutor<Backend::MC>(), pika::unwrapping([](auto&& tile) {
-               tile::internal::set0<T>(tile);
-               return std::move(tile);
-             }));
+  constexpr auto set0_return_tile = [](matrix::Tile<T, Device::CPU>&& tile) {
+    tile::internal::set0<T>(tile);
+    return std::move(tile);
+  };
+  t = dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
+                                    pika::threads::thread_priority::high),
+                                set0_return_tile, std::move(t)) |
+      ex::make_future();
 
   // Note:
   // T factor is an upper triangular square matrix, built column by column
@@ -227,6 +233,8 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
     const SizeType k, Matrix<const T, Device::CPU>& v, const GlobalTileIndex v_start,
     pika::shared_future<common::internal::vector<T>> taus, pika::future<matrix::Tile<T, Device::CPU>> t,
     common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
+  namespace ex = pika::execution::experimental;
+
   t = splitTile(t, {{0, 0}, {k, k}});
 
   // Fast return in case of no reflectors
@@ -251,10 +259,14 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
   };
   const LocalTileIndex v_end_loc{dist.localNrTiles().rows(), v_start_loc.col() + 1};
 
-  t = t.then(getHpExecutor<Backend::MC>(), pika::unwrapping([](auto&& tile) {
-               tile::internal::set0<T>(tile);
-               return std::move(tile);
-             }));
+  constexpr auto set0_return_tile = [](matrix::Tile<T, Device::CPU>&& tile) {
+    tile::internal::set0<T>(tile);
+    return std::move(tile);
+  };
+  t = dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
+                                    pika::threads::thread_priority::high),
+                                set0_return_tile, std::move(t)) |
+      ex::make_future();
 
   // Note:
   // T factor is an upper triangular square matrix, built column by column

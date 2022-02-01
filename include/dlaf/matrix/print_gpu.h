@@ -11,19 +11,29 @@
 #ifdef DLAF_WITH_CUDA
 #pragma once
 
+#include <iostream>
 #include <cuda_runtime.h>
 
 #include "dlaf/matrix/tile.h"
 
-namespace dlaf {
+namespace dlaf::matrix {
 
-namespace matrix {
-
-/// Print a tile in csv format to standard output
+/// Print a GPU tile in the given format
+///
+/// Copies the tile to CPU and output its elements.
+/// It can be invoked in 4 different ways:
+/// - when the output stream is omitted std::cout is used.
+/// - when the cuda stream is omitted a new stream is created internally to execute the copy.
+/// When this function is used in a GPU task it is recommended to invoke it with the task stream
+/// (extracted from the cublas or cusolver handle if necessary).
+/// Note: the cuda stream is synchronized internally if the tile is not empty.
 template <class Format, class T>
-void print(Format format, const Tile<const T, Device::GPU>& tile, std::ostream& os = std::cout,
-           cudaStream_t stream = NULL) {
+void print(Format format, const Tile<const T, Device::GPU>& tile, std::ostream& os,
+           cudaStream_t stream) {
   const auto size = tile.size();
+  if (size.isEmpty())
+    return;
+
   Tile<T, Device::CPU> tile_h(size, memory::MemoryView<T, Device::CPU>(size.rows() * size.cols()),
                               size.rows());
 
@@ -32,6 +42,21 @@ void print(Format format, const Tile<const T, Device::GPU>& tile, std::ostream& 
   print(format, tile_h, os);
 }
 
+template <class Format, class T>
+void print(Format format, const Tile<const T, Device::GPU>& tile, cudaStream_t stream) {
+  print(format, tile, std::cout, stream);
 }
+
+template <class Format, class T>
+void print(Format format, const Tile<const T, Device::GPU>& tile, std::ostream& os = std::cout) {
+  if (tile.size().isEmpty())
+    return;
+
+  cudaStream_t stream;
+  DLAF_CUDA_CALL(cudaStreamCreate(&stream));
+  print(format, tile, os, stream);
+  DLAF_CUDA_CALL(cudaStreamDestroy(stream));
+}
+
 }
 #endif

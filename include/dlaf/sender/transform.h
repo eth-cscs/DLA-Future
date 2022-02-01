@@ -231,6 +231,14 @@ template <Backend B, typename F, typename... Ts>
                                       std::forward<F>(f));
 }
 
+/// Fire-and-forget transform. This submits the work and returns void.
+template <Backend B, typename F, typename Sender,
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
+void transformDetach(const Policy<B> policy, F&& f, Sender&& sender) {
+  pika::execution::experimental::start_detached(
+      internal::Transform<B>::call(policy, std::forward<Sender>(sender), std::forward<F>(f)));
+}
+
 /// Fire-and-forget transform. This submits the work and returns void. First
 /// lifts non-senders into senders using just, and then calls transform with a
 /// when_all sender of the lifted senders.

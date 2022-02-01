@@ -29,6 +29,7 @@ constexpr double M_PI = 3.141592;
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/panel.h"
+#include "dlaf/sender/transform.h"
 #include "dlaf/types.h"
 
 /// @file
@@ -168,13 +169,17 @@ void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f) {
   for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
     GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
     auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
-    auto set_f = pika::unwrapping([tl_index, el_f = el_f](auto&& tile) {
+
+    using TileType = typename std::decay_t<decltype(matrix)>::TileType;
+    auto set_f = [tl_index, el_f = el_f](TileType&& tile) {
       for (auto el_idx_l : iterate_range2d(tile.size())) {
         GlobalElementIndex el_idx_g(el_idx_l.row() + tl_index.row(), el_idx_l.col() + tl_index.col());
         tile(el_idx_l) = el_f(el_idx_g);
       }
-    });
-    pika::dataflow(std::move(set_f), matrix(tile_wrt_local));
+    };
+
+    dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(set_f),
+                                    matrix.readwrite_sender(tile_wrt_local));
   }
 }
 
@@ -224,13 +229,17 @@ void set_random(Matrix<T, Device::CPU>& matrix) {
     GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
     auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
     auto seed = tl_index.col() + tl_index.row() * matrix.size().cols();
-    auto rnd_f = pika::unwrapping([seed](auto&& tile) {
+
+    using TileType = typename std::decay_t<decltype(matrix)>::TileType;
+    auto rnd_f = pika::unwrapping([seed](TileType&& tile) {
       internal::getter_random<T> random_value(seed);
       for (auto el_idx : iterate_range2d(tile.size())) {
         tile(el_idx) = random_value();
       }
     });
-    pika::dataflow(std::move(rnd_f), matrix(tile_wrt_local));
+
+    dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(rnd_f),
+                                    matrix.readwrite_sender(tile_wrt_local));
   }
 }
 
@@ -323,15 +332,17 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const Size
     else
       seed = tl_index.row() + tl_index.col() * matrix.size().rows();
 
-    auto set_hp_f = pika::unwrapping([=](auto&& tile) {
+    using TileType = typename std::decay_t<decltype(matrix)>::TileType;
+    auto set_hp_f = [=](TileType&& tile) {
       internal::getter_random<T> random_value(seed);
       if (tile_wrt_global.row() == tile_wrt_global.col())
         internal::set_diagonal_tile(tile, random_value, offset_value);
       else
         internal::set_lower_and_upper_tile(tile, random_value, full_tile_size, tile_wrt_global);
-    });
+    };
 
-    pika::dataflow(std::move(set_hp_f), matrix(tile_wrt_local));
+    dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(set_hp_f),
+                                    matrix.readwrite_sender(tile_wrt_local));
   }
 }
 

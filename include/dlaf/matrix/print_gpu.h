@@ -12,6 +12,7 @@
 #pragma once
 
 #include <iostream>
+
 #include <cuda_runtime.h>
 
 #include "dlaf/matrix/tile.h"

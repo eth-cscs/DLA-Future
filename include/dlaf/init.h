@@ -33,7 +33,7 @@ namespace dlaf {
 /// dlaf::initialize.
 struct configuration {
   std::size_t num_np_cuda_streams = 64;
-  std::size_t num_hp_cuda_streams = 1;
+  std::size_t num_hp_cuda_streams = 64;
   std::size_t num_np_cuda_streams_per_thread = 3;
   std::size_t num_hp_cuda_streams_per_thread = 3;
   std::size_t umpire_host_memory_pool_initial_bytes = 1 << 30;

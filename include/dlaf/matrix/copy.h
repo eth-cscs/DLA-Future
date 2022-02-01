@@ -10,8 +10,9 @@
 
 #pragma once
 
-#include <hpx/local/future.hpp>
-#include <hpx/local/unwrap.hpp>
+#include <pika/execution.hpp>
+#include <pika/future.hpp>
+#include <pika/unwrap.hpp>
 
 #include "dlaf/executors.h"
 #include "dlaf/matrix/copy_tile.h"
@@ -36,13 +37,13 @@ void copy(Matrix<const T, Source>& source, Matrix<T, Destination>& dest) {
   const SizeType local_tile_rows = distribution.localNrTiles().rows();
   const SizeType local_tile_cols = distribution.localNrTiles().cols();
 
-  namespace ex = hpx::execution::experimental;
+  namespace ex = pika::execution::experimental;
 
   for (SizeType j = 0; j < local_tile_cols; ++j) {
     for (SizeType i = 0; i < local_tile_rows; ++i) {
-      hpx::dataflow(dlaf::getCopyExecutor<Source, Destination>(),
-                    unwrapExtendTiles(dlaf::matrix::internal::copy_o), source.read(LocalTileIndex(i, j)),
-                    dest(LocalTileIndex(i, j)));
+      pika::dataflow(dlaf::getCopyExecutor<Source, Destination>(),
+                     unwrapExtendTiles(dlaf::matrix::internal::copy_o),
+                     source.read(LocalTileIndex(i, j)), dest(LocalTileIndex(i, j)));
     }
   }
 }

@@ -9,9 +9,9 @@
 //
 #pragma once
 
-#include <hpx/local/execution.hpp>
-#include <hpx/local/unwrap.hpp>
-#include <hpx/version.hpp>
+#include <pika/execution.hpp>
+#include <pika/unwrap.hpp>
+#include <pika/version.hpp>
 
 #include "dlaf/init.h"
 #include "dlaf/sender/policy.h"
@@ -30,15 +30,6 @@
 #include "dlaf/cusolver/handle_pool.h"
 #endif
 
-// This is a compatibility layer for HPX's tag_invoke. In 1.7.X it was
-// mistakenly renamed to tag_dispatch. In 1.8.0 onwards it is called tag_invoke
-// again.
-#if HPX_VERSION_FULL >= 0x10800
-#define DLAF_TAG_INVOKE tag_invoke
-#else
-#define DLAF_TAG_INVOKE tag_dispatch
-#endif
-
 namespace dlaf {
 namespace internal {
 /// DLAF-specific transform, templated on a backend. This, together with
@@ -46,15 +37,15 @@ namespace internal {
 template <Backend B>
 struct Transform;
 
-/// The Backend::MC specialization uses regular thread pool scheduler from HPX.
+/// The Backend::MC specialization uses regular thread pool scheduler from pika.
 template <>
 struct Transform<Backend::MC> {
   template <typename S, typename F>
   static auto call(const Policy<Backend::MC> policy, S&& s, F&& f) {
-    namespace ex = hpx::execution::experimental;
-    return ex::transform(ex::on(std::forward<S>(s),
-                                ex::with_priority(ex::thread_pool_scheduler{}, policy.priority())),
-                         hpx::unwrapping(std::forward<F>(f)));
+    namespace ex = pika::execution::experimental;
+    return ex::then(ex::transfer(std::forward<S>(s),
+                                 ex::with_priority(ex::thread_pool_scheduler{}, policy.priority())),
+                    pika::unwrapping(std::forward<F>(f)));
   }
 };
 
@@ -74,7 +65,7 @@ struct Transform<Backend::GPU> {
     std::decay_t<S> s;
     std::decay_t<F> f;
 
-    using unwrapping_function_type = decltype(hpx::unwrapping(std::declval<std::decay_t<F>>()));
+    using unwrapping_function_type = decltype(pika::unwrapping(std::declval<std::decay_t<F>>()));
     template <typename... Ts>
     static constexpr bool is_cuda_stream_invocable =
         std::is_invocable_v<unwrapping_function_type, std::decay_t<Ts>&..., cudaStream_t>;
@@ -99,17 +90,17 @@ struct Transform<Backend::GPU> {
       if constexpr (is_cuda_stream_invocable<Us...>) {
         (void) cublas_handle;
         (void) cusolver_handle;
-        return std::invoke(hpx::unwrapping(std::forward<G>(g)), us..., stream);
+        return std::invoke(pika::unwrapping(std::forward<G>(g)), us..., stream);
       }
       else if constexpr (is_cublas_handle_invocable<Us...>) {
         (void) cusolver_handle;
         (void) stream;
-        return std::invoke(hpx::unwrapping(std::forward<G>(g)), cublas_handle, us...);
+        return std::invoke(pika::unwrapping(std::forward<G>(g)), cublas_handle, us...);
       }
       else if constexpr (is_cusolver_handle_invocable<Us...>) {
         (void) cublas_handle;
         (void) stream;
-        return std::invoke(hpx::unwrapping(std::forward<G>(g)), cusolver_handle, us...);
+        return std::invoke(pika::unwrapping(std::forward<G>(g)), cusolver_handle, us...);
       }
     }
 
@@ -127,12 +118,12 @@ struct Transform<Backend::GPU> {
 
     template <template <typename...> class Tuple, template <typename...> class Variant>
     using value_types = dlaf::internal::UniquePack_t<dlaf::internal::TransformPack_t<
-        typename hpx::execution::experimental::sender_traits<S>::template value_types<Tuple, Variant>,
+        typename pika::execution::experimental::sender_traits<S>::template value_types<Tuple, Variant>,
         invoke_result_helper>>;
 
     template <template <typename...> class Variant>
     using error_types = dlaf::internal::UniquePack_t<dlaf::internal::PrependPack_t<
-        typename hpx::execution::experimental::sender_traits<S>::template error_types<Variant>,
+        typename pika::execution::experimental::sender_traits<S>::template error_types<Variant>,
         std::exception_ptr>>;
 
     static constexpr bool sends_done = false;
@@ -146,19 +137,19 @@ struct Transform<Backend::GPU> {
       std::decay_t<F> f;
 
       template <typename E>
-      friend void DLAF_TAG_INVOKE(hpx::execution::experimental::set_error_t, GPUTransformReceiver&& r,
-                                  E&& e) noexcept {
-        hpx::execution::experimental::set_error(std::move(r.r), std::forward<E>(e));
+      friend void tag_invoke(pika::execution::experimental::set_error_t, GPUTransformReceiver&& r,
+                             E&& e) noexcept {
+        pika::execution::experimental::set_error(std::move(r.r), std::forward<E>(e));
       }
 
-      friend void DLAF_TAG_INVOKE(hpx::execution::experimental::set_done_t,
-                                  GPUTransformReceiver&& r) noexcept {
-        hpx::execution::experimental::set_done(std::move(r));
+      friend void tag_invoke(pika::execution::experimental::set_done_t,
+                             GPUTransformReceiver&& r) noexcept {
+        pika::execution::experimental::set_done(std::move(r));
       }
 
       template <typename... Ts, typename Enable = std::enable_if_t<is_gpu_invocable<Ts...>>>
-      friend auto DLAF_TAG_INVOKE(hpx::execution::experimental::set_value_t, GPUTransformReceiver&& r,
-                                  Ts&&... ts) {
+      friend auto tag_invoke(pika::execution::experimental::set_value_t, GPUTransformReceiver&& r,
+                             Ts&&... ts) {
         try {
           cudaStream_t stream = r.stream_pool.getNextStream();
           cublasHandle_t cublas_handle = r.cublas_handle_pool.getNextHandle(stream);
@@ -169,53 +160,53 @@ struct Transform<Backend::GPU> {
           if constexpr (std::is_void_v<decltype(call_helper(stream, cublas_handle, cusolver_handle,
                                                             std::move(r.f), ts...))>) {
             call_helper(stream, cublas_handle, cusolver_handle, std::move(r.f), ts...);
-            hpx::cuda::experimental::detail::add_event_callback(
+            pika::cuda::experimental::detail::add_event_callback(
                 [r = std::move(r.r),
                  keep_alive =
                      std::make_tuple(std::forward<Ts>(ts)..., std::move(r.stream_pool),
                                      std::move(r.cublas_handle_pool),
                                      std::move(r.cusolver_handle_pool))](cudaError_t status) mutable {
                   DLAF_CUDA_CALL(status);
-                  hpx::execution::experimental::set_value(std::move(r));
+                  pika::execution::experimental::set_value(std::move(r));
                 },
                 stream);
           }
           else {
             auto res = call_helper(stream, cublas_handle, cusolver_handle, std::move(r.f), ts...);
-            hpx::cuda::experimental::detail::add_event_callback(
+            pika::cuda::experimental::detail::add_event_callback(
                 [r = std::move(r.r), res = std::move(res),
                  keep_alive =
                      std::make_tuple(std::forward<Ts>(ts)..., std::move(r.stream_pool),
                                      std::move(r.cublas_handle_pool),
                                      std::move(r.cusolver_handle_pool))](cudaError_t status) mutable {
                   DLAF_CUDA_CALL(status);
-                  hpx::execution::experimental::set_value(std::move(r), std::move(res));
+                  pika::execution::experimental::set_value(std::move(r), std::move(res));
                 },
                 stream);
           }
         }
         catch (...) {
-          hpx::execution::experimental::set_error(std::move(r), std::current_exception());
+          pika::execution::experimental::set_error(std::move(r), std::current_exception());
         }
       }
     };
 
     template <typename R>
-    friend auto DLAF_TAG_INVOKE(hpx::execution::experimental::connect_t, GPUTransformSender&& s, R&& r) {
-      return hpx::execution::experimental::connect(std::move(s.s),
-                                                   GPUTransformReceiver<R>{std::move(s.stream_pool),
-                                                                           std::move(
-                                                                               s.cublas_handle_pool),
-                                                                           std::move(
-                                                                               s.cusolver_handle_pool),
-                                                                           std::forward<R>(r),
-                                                                           std::move(s.f)});
+    friend auto tag_invoke(pika::execution::experimental::connect_t, GPUTransformSender&& s, R&& r) {
+      return pika::execution::experimental::connect(std::move(s.s),
+                                                    GPUTransformReceiver<R>{std::move(s.stream_pool),
+                                                                            std::move(
+                                                                                s.cublas_handle_pool),
+                                                                            std::move(
+                                                                                s.cusolver_handle_pool),
+                                                                            std::forward<R>(r),
+                                                                            std::move(s.f)});
     }
   };
 
   template <typename S, typename F>
   static auto call(const Policy<Backend::GPU> policy, S&& s, F&& f) {
-    return GPUTransformSender<S, F>{policy.priority() >= hpx::threads::thread_priority::high
+    return GPUTransformSender<S, F>{policy.priority() >= pika::threads::thread_priority::high
                                         ? getHpCudaStreamPool()
                                         : getNpCudaStreamPool(),
                                     getCublasHandlePool(), getCusolverHandlePool(), std::forward<S>(s),
@@ -226,7 +217,7 @@ struct Transform<Backend::GPU> {
 
 /// Lazy transform. This does not submit the work and returns a sender.
 template <Backend B, typename F, typename Sender,
-          typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 [[nodiscard]] decltype(auto) transform(const Policy<B> policy, F&& f, Sender&& sender) {
   return internal::Transform<B>::call(policy, std::forward<Sender>(sender), std::forward<F>(f));
 }
@@ -245,10 +236,8 @@ template <Backend B, typename F, typename... Ts>
 /// when_all sender of the lifted senders.
 template <Backend B, typename F, typename... Ts>
 void transformLiftDetach(const Policy<B> policy, F&& f, Ts&&... ts) {
-  hpx::execution::experimental::detach(
+  pika::execution::experimental::start_detached(
       transformLift<B>(policy, std::forward<F>(f), std::forward<Ts>(ts)...));
 }
 }
 }
-
-#undef DLAF_TAG_INVOKE

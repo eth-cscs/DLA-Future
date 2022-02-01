@@ -91,7 +91,7 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb) {
                            (affectsTwoRows ? mat_hh.tileSize({i + 1, j}).rows() : 0);
         if (k <= 0)
           continue;
-        hpx::dataflow(hpx::unwrapping(computeTaus<T>), n, k, mat_hh(LocalTileIndex(i, j)));
+        pika::dataflow(pika::unwrapping(computeTaus<T>), n, k, mat_hh(LocalTileIndex(i, j)));
       }
     }
 

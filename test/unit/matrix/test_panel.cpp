@@ -13,7 +13,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include <hpx/local/unwrap.hpp>
+#include <pika/unwrap.hpp>
 
 #include "dlaf/common/range2d.h"
 #include "dlaf/communication/communicator.h"
@@ -59,7 +59,7 @@ std::vector<config_t> test_params{
 
 TYPED_TEST(PanelTest, AssignToConstRef) {
   using namespace dlaf;
-  using hpx::unwrapping;
+  using pika::unwrapping;
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& cfg : test_params) {
@@ -120,7 +120,7 @@ TYPED_TEST(PanelTest, IteratorRow) {
 template <class TypeParam, Coord panel_axis>
 void testAccess(const config_t& cfg, const comm::CommunicatorGrid comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
-  using hpx::unwrapping;
+  using pika::unwrapping;
 
   const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
 
@@ -153,7 +153,7 @@ TYPED_TEST(PanelTest, AccessTileRow) {
 template <class TypeParam, Coord panel_axis>
 void testExternalTile(const config_t& cfg, const comm::CommunicatorGrid comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
-  using hpx::unwrapping;
+  using pika::unwrapping;
 
   constexpr Coord coord1D = orthogonal(panel_axis);
 
@@ -240,7 +240,7 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
     SizeType counter = 0;
     for (SizeType k = head_loc; k < tail_loc; ++k) {
       const LocalTileIndex idx(coord1D, k);
-      hpx::dataflow(hpx::unwrapping(setTile), panel(idx), counter++);
+      pika::dataflow(pika::unwrapping(setTile), panel(idx), counter++);
       const auto& tile = panel.read(idx).get();
       SCOPED_TRACE(message);
       EXPECT_EQ(tile.size(), matrix.read(idx).get().size());

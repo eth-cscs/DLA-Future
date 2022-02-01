@@ -14,7 +14,7 @@
 
 #include <mpi.h>
 
-#include <hpx/local/unwrap.hpp>
+#include <pika/unwrap.hpp>
 
 #include "dlaf/common/assert.h"
 #include "dlaf/common/callable_object.h"
@@ -59,11 +59,11 @@ DLAF_MAKE_CALLABLE_OBJECT(recvBcast);
 
 template <class T, Device D, template <class> class Future>
 void scheduleSendBcast(const comm::Executor& ex, Future<matrix::Tile<const T, D>> tile,
-                       hpx::future<common::PromiseGuard<Communicator>> pcomm) {
+                       pika::future<common::PromiseGuard<Communicator>> pcomm) {
   using matrix::unwrapExtendTiles;
   using internal::prepareSendTile;
 
-  hpx::dataflow(ex, unwrapExtendTiles(sendBcast_o), prepareSendTile(std::move(tile)), std::move(pcomm));
+  pika::dataflow(ex, unwrapExtendTiles(sendBcast_o), prepareSendTile(std::move(tile)), std::move(pcomm));
 }
 
 namespace internal {
@@ -71,21 +71,21 @@ namespace internal {
 template <class T>
 struct ScheduleRecvBcast {
   template <Device D>
-  static auto call(const comm::Executor& ex, hpx::future<matrix::Tile<T, D>> tile,
-                   comm::IndexT_MPI root_rank, hpx::future<common::PromiseGuard<Communicator>> pcomm) {
+  static auto call(const comm::Executor& ex, pika::future<matrix::Tile<T, D>> tile,
+                   comm::IndexT_MPI root_rank, pika::future<common::PromiseGuard<Communicator>> pcomm) {
 #if !defined(DLAF_WITH_CUDA_RDMA)
     static_assert(D == Device::CPU, "With CUDA RDMA disabled, MPI accepts just CPU memory.");
 #endif
 
-    using hpx::dataflow;
+    using pika::dataflow;
     using matrix::unwrapExtendTiles;
 
     return dataflow(ex, unwrapExtendTiles(recvBcast_o), std::move(tile), root_rank, std::move(pcomm));
   }
 
-  static void call(const comm::Executor& ex, hpx::future<matrix::Tile<T, Device::GPU>> tile,
-                   comm::IndexT_MPI root_rank, hpx::future<common::PromiseGuard<Communicator>> pcomm) {
-    using hpx::dataflow;
+  static void call(const comm::Executor& ex, pika::future<matrix::Tile<T, Device::GPU>> tile,
+                   comm::IndexT_MPI root_rank, pika::future<common::PromiseGuard<Communicator>> pcomm) {
+    using pika::dataflow;
     using matrix::duplicateIfNeeded;
     using matrix::internal::copy_o;
 
@@ -101,7 +101,7 @@ struct ScheduleRecvBcast {
     auto tile_gpu = tile.share();
     auto tile_cpu = duplicateIfNeeded<Device::CPU>(tile_gpu);
 
-    tile_cpu = std::move(hpx::get<0>(hpx::split_future(
+    tile_cpu = std::move(pika::get<0>(pika::split_future(
         ScheduleRecvBcast<T>::call(ex, std::move(tile_cpu), root_rank, std::move(pcomm)))));
 
     dataflow(getCopyExecutor<Device::GPU, Device::CPU>(), matrix::unwrapExtendTiles(copy_o), tile_cpu,
@@ -112,9 +112,9 @@ struct ScheduleRecvBcast {
 }
 
 template <class T, Device D>
-void scheduleRecvBcast(const comm::Executor& ex, hpx::future<matrix::Tile<T, D>> tile,
+void scheduleRecvBcast(const comm::Executor& ex, pika::future<matrix::Tile<T, D>> tile,
                        comm::IndexT_MPI root_rank,
-                       hpx::future<common::PromiseGuard<Communicator>> pcomm) {
+                       pika::future<common::PromiseGuard<Communicator>> pcomm) {
   internal::ScheduleRecvBcast<T>::call(ex, std::move(tile), root_rank, std::move(pcomm));
 }
 

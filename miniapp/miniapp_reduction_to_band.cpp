@@ -9,10 +9,11 @@
 //
 
 #include <iostream>
-
-#include <hpx/hpx.hpp>
-#include <hpx/hpx_init.hpp>
 #include <limits>
+
+#include <pika/init.hpp>
+#include <pika/program_options.hpp>
+#include <pika/runtime.hpp>
 
 #include "dlaf/common/format_short.h"
 #include "dlaf/common/index2d.h"
@@ -38,7 +39,7 @@ struct Options
   SizeType m;
   SizeType mb;
 
-  Options(const hpx::program_options::variables_map& vm)
+  Options(const pika::program_options::variables_map& vm)
       : MiniappOptions(vm), m(vm["matrix-size"].as<SizeType>()), mb(vm["block-size"].as<SizeType>()) {
     DLAF_ASSERT(m > 0, m);
     DLAF_ASSERT(mb > 0, mb);
@@ -124,7 +125,7 @@ struct reductionToBandMiniapp {
                   << " " << elapsed_time << "s"
                   << " " << gigaflops << "GFlop/s"
                   << " " << dlaf::internal::FormatShort{opts.type} << " " << matrix.size() << " "
-                  << matrix.blockSize() << " " << comm_grid.size() << " " << hpx::get_os_thread_count()
+                  << matrix.blockSize() << " " << comm_grid.size() << " " << pika::get_os_thread_count()
                   << " " << backend << std::endl;
 
       // TODO (optional) run test
@@ -132,7 +133,7 @@ struct reductionToBandMiniapp {
   }
 };
 
-int hpx_main(hpx::program_options::variables_map& vm) {
+int pika_main(pika::program_options::variables_map& vm) {
   {
     dlaf::ScopedInitializer init(vm);
     const Options opts(vm);
@@ -140,7 +141,7 @@ int hpx_main(hpx::program_options::variables_map& vm) {
     dlaf::miniapp::dispatchMiniapp<reductionToBandMiniapp>(opts);
   }
 
-  return hpx::finalize();
+  return pika::finalize();
 }
 
 int main(int argc, char** argv) {
@@ -149,8 +150,8 @@ int main(int argc, char** argv) {
   dlaf::comm::mpi_init mpi_initter(argc, argv, dlaf::comm::mpi_thread_level::multiple);
 
   // options
-  using namespace hpx::program_options;
-  options_description desc_commandline("Usage: " HPX_APPLICATION_STRING " [options]");
+  using namespace pika::program_options;
+  options_description desc_commandline("Usage: miniapp_reduction_to_band [options]");
   desc_commandline.add(dlaf::miniapp::getMiniappOptionsDescription());
   desc_commandline.add(dlaf::getOptionsDescription());
 
@@ -161,8 +162,8 @@ int main(int argc, char** argv) {
   ;
   // clang-format on
 
-  hpx::init_params p;
+  pika::init_params p;
   p.desc_cmdline = desc_commandline;
   p.rp_callback = dlaf::initResourcePartitionerHandler;
-  return hpx::init(argc, argv, p);
+  return pika::init(pika_main, argc, argv, p);
 }

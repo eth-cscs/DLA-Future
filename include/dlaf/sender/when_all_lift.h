@@ -12,7 +12,7 @@
 #include <type_traits>
 #include <utility>
 
-#include <hpx/local/execution.hpp>
+#include <pika/execution.hpp>
 
 #include "dlaf/sender/lift_non_sender.h"
 
@@ -22,7 +22,7 @@ namespace internal {
 /// non-senders are first turned into senders using just.
 template <typename... Ts>
 auto whenAllLift(Ts&&... ts) {
-  return hpx::execution::experimental::when_all(liftNonSender<Ts>(std::forward<Ts>(ts))...);
+  return pika::execution::experimental::when_all(liftNonSender<Ts>(std::forward<Ts>(ts))...);
 }
 }
 }

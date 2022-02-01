@@ -14,7 +14,7 @@
 
 #include <lapack.hh>
 // LAPACKPP includes complex.h which defines the macro I.
-// This breaks HPX.
+// This breaks pika.
 #ifdef I
 #undef I
 #endif
@@ -22,7 +22,7 @@
 #ifdef DLAF_WITH_CUDA
 #include <cusolverDn.h>
 
-#include <hpx/modules/async_cuda.hpp>
+#include <pika/modules/async_cuda.hpp>
 #endif
 
 #include "dlaf/common/assert.h"
@@ -99,7 +99,7 @@ dlaf::BaseType<T> lange(const dlaf::internal::Policy<B>& p, const lapack::Norm n
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
 template <Backend B, typename Sender,
-          typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 dlaf::BaseType<T> lange(const dlaf::internal::Policy<B>& p, Sender&& s);
 
 /// \overload lange
@@ -127,7 +127,7 @@ dlaf::BaseType<T> lantr(const dlaf::internal::Policy<B>& p, const lapack::Norm n
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
 template <Backend B, typename Sender,
-          typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 dlaf::BaseType<T> lantr(const dlaf::internal::Policy<B>& p, Sender&& s);
 
 /// \overload lantr
@@ -149,7 +149,7 @@ void laset(const dlaf::internal::Policy<B>& p, const lapack::MatrixType type, T 
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
 template <Backend B, typename Sender,
-          typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 void laset(const dlaf::internal::Policy<B>& p, Sender&& s);
 
 /// \overload laset
@@ -170,7 +170,7 @@ void set0(const dlaf::internal::Policy<B>& p, const Tile<T, Device::CPU>& tile);
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
 template <Backend B, typename Sender,
-          typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 void set0(const dlaf::internal::Policy<B>& p, Sender&& s);
 
 /// \overload set0
@@ -203,7 +203,7 @@ void hegst(const dlaf::internal::Policy<B>&, const int itype, const blas::Uplo u
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
 template <Backend B, typename Sender,
-          typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 auto hegst(const dlaf::internal::Policy<B>& p, Sender&& s);
 
 /// \overload hegst
@@ -227,7 +227,7 @@ auto potrfInfo(const dlaf::internal::Policy<B>&, const blas::Uplo uplo, const Ti
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
 template <Backend B, typename Sender,
-          typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 auto potrfInfo(const dlaf::internal::Policy<B>& p, Sender&& s);
 
 /// \overload potrfInfo
@@ -252,7 +252,7 @@ void potrf(const dlaf::internal::Policy<B>& p, const blas::Uplo uplo, const Tile
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
 template <Backend B, typename Sender,
-          typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 auto potrf(const dlaf::internal::Policy<B>& p, Sender&& s);
 
 /// \overload potrf
@@ -390,8 +390,8 @@ void assertExtendInfo(F assertFunc, cusolverDnHandle_t handle, CusolverInfo<T>&&
   DLAF_CUSOLVER_CALL(cusolverDnGetStream(handle, &stream));
   assertFunc(stream, info.info());
   // Extend info scope to the end of the kernel execution
-  hpx::cuda::experimental::detail::get_future_with_event(stream)  //
-      .then(hpx::launch::sync, [info = std::move(info)](hpx::future<void>&&) {});
+  pika::cuda::experimental::detail::get_future_with_event(stream)  //
+      .then(pika::launch::sync, [info = std::move(info)](pika::future<void>&&) {});
 }
 }
 

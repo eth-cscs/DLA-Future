@@ -11,6 +11,6 @@
 DLAF_addTest(test_triangular
   SOURCES test_triangular.cpp
   LIBRARIES dlaf.solver dlaf.core
-  USE_MAIN MPIHPX
+  USE_MAIN MPIPIKA
   MPIRANKS 6
 )

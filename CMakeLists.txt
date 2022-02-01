@@ -92,8 +92,8 @@ else()
   find_package(LAPACK REQUIRED)
 endif()
 
-# ----- HPX
-find_package(HPX 1.7.0 REQUIRED)
+# ----- pika
+find_package(pika 0.1.0 REQUIRED EXACT)
 
 # ----- BLASPP/LAPACKPP
 find_package(blaspp REQUIRED)

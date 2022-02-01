@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 
 project(test CXX)
 
-find_package(HPX)
+find_package(pika)
 
-add_hpx_executable(test SOURCES test.cpp)
+add_executable(test test.cpp)
+target_link_libraries(test pika::pika)

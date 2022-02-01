@@ -9,8 +9,8 @@
 //
 #pragma once
 
-#include <hpx/local/execution.hpp>
-#include <hpx/local/future.hpp>
+#include <pika/execution.hpp>
+#include <pika/future.hpp>
 
 namespace dlaf::internal {
 template <typename...>
@@ -27,19 +27,19 @@ struct SenderSingleValueTypeImpl<TypeList<TypeList<T>>> {
 // We are only interested in the types wrapped by future and shared_future since
 // we will internally unwrap them.
 template <typename T>
-struct SenderSingleValueTypeImpl<TypeList<TypeList<hpx::future<T>>>> {
+struct SenderSingleValueTypeImpl<TypeList<TypeList<pika::future<T>>>> {
   using type = T;
 };
 
 template <typename T>
-struct SenderSingleValueTypeImpl<TypeList<TypeList<hpx::shared_future<T>>>> {
+struct SenderSingleValueTypeImpl<TypeList<TypeList<pika::shared_future<T>>>> {
   using type = T;
 };
 
 // The type sent by Sender, if Sender sends exactly one type.
 template <typename Sender>
 using SenderSingleValueType =
-    typename SenderSingleValueTypeImpl<typename hpx::execution::experimental::sender_traits<
+    typename SenderSingleValueTypeImpl<typename pika::execution::experimental::sender_traits<
         Sender>::template value_types<TypeList, TypeList>>::type;
 
 // The type of an embedded ElementType in the value_types of Sender, if it

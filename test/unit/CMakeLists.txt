@@ -23,13 +23,13 @@ DLAF_addTest(test_util_math
 DLAF_addTest(test_blas_tile
   SOURCES test_blas_tile.cpp
   LIBRARIES dlaf.core
-  USE_MAIN HPX
+  USE_MAIN PIKA
 )
 
 DLAF_addTest(test_lapack_tile
   SOURCES test_lapack_tile.cpp
   LIBRARIES dlaf.core
-  USE_MAIN HPX
+  USE_MAIN PIKA
 )
 
 # Generic libraries

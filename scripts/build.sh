@@ -8,7 +8,7 @@ rm -rf CMakeCache.txt CMakeFiles
 export CC=<FIXME: path to C compiler>
 export CXX=<FIXME: path to C++ compiler>
 export MKLROOT=<FIXME: path to the root installation directory of MKL>
-HPX_DIR=<FIXME: path to the root installation directory of HPX>
+pika_DIR=<FIXME: path to the root installation directory of pika>
 blaspp_DIR=<FIXME: path to the root installation directory of BLASPP>
 lapackpp_DIR=<FIXME: path to the root installation directory of LAPACKPP>
 

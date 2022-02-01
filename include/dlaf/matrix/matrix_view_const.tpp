@@ -24,7 +24,7 @@ MatrixView<const T, device>::MatrixView(blas::Uplo uplo, MatrixType<T2, device>&
 }
 
 template <class T, Device device>
-hpx::shared_future<Tile<const T, device>> MatrixView<const T, device>::read(
+pika::shared_future<Tile<const T, device>> MatrixView<const T, device>::read(
     const LocalTileIndex& index) noexcept {
   const auto i = tileLinearIndex(index);
   return tile_shared_futures_[i];

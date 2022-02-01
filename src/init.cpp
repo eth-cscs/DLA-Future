@@ -31,7 +31,8 @@ std::ostream& operator<<(std::ostream& os, configuration const& cfg) {
   os << "  num_hp_cuda_streams_per_thread = " << cfg.num_hp_cuda_streams_per_thread << std::endl;
   os << "  umpire_host_memory_pool_initial_bytes = " << cfg.umpire_host_memory_pool_initial_bytes
      << std::endl;
-  os << "  umpire_device_memory_pool_initial_bytes = " << cfg.umpire_device_memory_pool_initial_bytes;
+  os << "  umpire_device_memory_pool_initial_bytes = " << cfg.umpire_device_memory_pool_initial_bytes
+     << std::endl;
   os << "  mpi_pool = " << cfg.mpi_pool << std::endl;
   os << "  mpi_mech = " << cfg.mpi_mech << std::endl;
   return os;

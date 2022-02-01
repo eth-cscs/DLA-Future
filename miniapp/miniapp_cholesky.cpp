@@ -267,10 +267,10 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
 
   // compute tile * tile_to_transpose' with the option to cumulate the result
   // compute a = abs(a - b)
-  auto tile_abs_diff = unwrapping([](auto&& a, auto&& b) {
+  auto tile_abs_diff = [](auto&& a, auto&& b) {
     for (const auto el_idx : dlaf::common::iterate_range2d(a.size()))
       a(el_idx) = std::abs(a(el_idx) - b(el_idx));
-  });
+  };
 
   DLAF_ASSERT(dlaf::matrix::square_size(A), A);
   DLAF_ASSERT(dlaf::matrix::square_blocksize(A), A);
@@ -365,8 +365,13 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
 
       // L * L' for the current cell is computed
       // here the owner of the result performs the last step (difference with original)
+
       if (owner_result == current_rank) {
-        pika::dataflow(tile_abs_diff, A(tile_result), mul_result.read(tile_result));
+        dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), tile_abs_diff,
+                                        pika::execution::experimental::when_all(A.readwrite_sender(
+                                                                                    tile_result),
+                                                                                mul_result.read_sender(
+                                                                                    tile_result)));
       }
     }
   }

@@ -13,9 +13,9 @@
 #ifdef DLAF_WITH_CUDA
 
 #include <cuComplex.h>
+#include <complex>
 
-namespace dlaf {
-namespace util {
+namespace dlaf::util {
 namespace internal {
 
 template <typename T>
@@ -200,8 +200,6 @@ __host__ __device__ inline cuDoubleComplex operator*(cuDoubleComplex a, double b
 
 __host__ __device__ inline cuDoubleComplex operator/(cuDoubleComplex a, double b) {
   return make_cuDoubleComplex(a.x / b, a.y / b);
-}
-
 }
 
 }

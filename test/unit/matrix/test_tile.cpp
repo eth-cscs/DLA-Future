@@ -13,6 +13,7 @@
 #include <stdexcept>
 
 #include <gtest/gtest.h>
+#include <pika/execution.hpp>
 #include <pika/future.hpp>
 #include <pika/unwrap.hpp>
 
@@ -361,6 +362,8 @@ auto createTileAndPtrChecker(TileElementSize size, SizeType ld) {
 
 template <class T, Device D>
 auto createTileChain() {
+  namespace ex = pika::execution::experimental;
+
   using TileType = Tile<T, Device::CPU>;
   using NonConstTileType = typename TileType::TileType;
   using TileDataType = typename TileType::TileDataType;
@@ -372,11 +375,10 @@ auto createTileChain() {
   auto next_tile_f = next_tile_p.get_future();
 
   pika::future<TileType> tile_f =
-      tmp_tile_f.then(pika::launch::sync,
-                      pika::unwrapping([p = std::move(next_tile_p)](auto tile) mutable {
-                        return TileType(
-                            std::move(NonConstTileType(std::move(tile)).setPromise(std::move(p))));
-                      }));
+      std::move(tmp_tile_f) | ex::then([p = std::move(next_tile_p)](TileDataType&& tile) mutable {
+        return TileType(std::move(NonConstTileType(std::move(tile)).setPromise(std::move(p))));
+      }) |
+      ex::make_future();
 
   return std::make_tuple(std::move(tile_p), std::move(tile_f), std::move(next_tile_f));
 }

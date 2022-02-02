@@ -20,6 +20,7 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/executor.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/sender/transform.h"
 #include "dlaf/util_matrix.h"
 
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
@@ -124,7 +125,8 @@ void testAccess(const config_t& cfg, const comm::CommunicatorGrid comm_grid) {
 
   const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
 
-  Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, cfg.offset);
+  using PanelType = Panel<panel_axis, TypeParam, dlaf::Device::CPU>;
+  PanelType panel(dist, cfg.offset);
   constexpr Coord coord1D = decltype(panel)::CoordType;
 
   // rw-access
@@ -136,6 +138,24 @@ void testAccess(const config_t& cfg, const comm::CommunicatorGrid comm_grid) {
   // ro-access
   for (const auto& idx : panel.iteratorLocal())
     CHECK_MATRIX_EQ(TypeUtil::element(idx.get(coord1D), 26), panel.read(idx).get());
+
+  // Repeat the same test with sender adaptors
+
+  // Sender adaptors
+  // rw-access
+  for (const auto& idx : panel.iteratorLocal()) {
+    dlaf::internal::transformDetach(
+        dlaf::internal::Policy<dlaf::Backend::MC>(),
+        [idx](typename PanelType::TileType&& tile) {
+          matrix::test::set(tile, TypeUtil::element(idx.get(coord1D), 42));
+        },
+        panel.readwrite_sender(idx));
+  }
+
+  // ro-access
+  for (const auto& idx : panel.iteratorLocal())
+    CHECK_MATRIX_EQ(TypeUtil::element(idx.get(coord1D), 42),
+                    pika::execution::experimental::sync_wait(panel.read_sender(idx)).get());
 }
 
 TYPED_TEST(PanelTest, AccessTileCol) {
@@ -157,7 +177,8 @@ void testExternalTile(const config_t& cfg, const comm::CommunicatorGrid comm_gri
 
   constexpr Coord coord1D = orthogonal(panel_axis);
 
-  Matrix<TypeParam, dlaf::Device::CPU> matrix(cfg.sz, cfg.blocksz, comm_grid);
+  using MatrixType = Matrix<TypeParam, dlaf::Device::CPU>;
+  MatrixType matrix(cfg.sz, cfg.blocksz, comm_grid);
   const auto& dist = matrix.distribution();
 
   matrix::test::set(matrix, [](const auto& index) { return TypeUtil::element(index.get(coord1D), 26); });
@@ -202,6 +223,51 @@ void testExternalTile(const config_t& cfg, const comm::CommunicatorGrid comm_gri
     else
       CHECK_TILE_EQ(matrix.read(idx).get(), panel.read(idx).get());
   }
+
+  // Repeat the same test with sender adaptors
+  for (const auto& idx : panel.iteratorLocal()) {
+    if (idx.row() % 2 == 0)
+      dlaf::internal::transformDetach(
+          dlaf::internal::Policy<dlaf::Backend::MC>(),
+          [idx](typename MatrixType::TileType&& tile) {
+            matrix::test::set(tile, TypeUtil::element(-idx.get(coord1D), 14));
+          },
+          matrix.readwrite_sender(idx));
+    else
+      panel.setTile(idx, matrix.read(idx));
+  }
+
+  for (const auto& idx : panel.iteratorLocal()) {
+    if (idx.row() % 2 == 0)
+      CHECK_TILE_EQ(TypeUtil::element(-idx.get(coord1D), 14),
+                    pika::execution::experimental::sync_wait(panel.read_sender(idx)).get());
+    else
+      CHECK_TILE_EQ(matrix.read(idx).get(),
+                    pika::execution::experimental::sync_wait(panel.read_sender(idx)).get());
+  }
+
+  panel.reset();
+
+  for (const auto& idx : panel.iteratorLocal()) {
+    if (idx.row() % 2 == 1)
+      dlaf::internal::transformDetach(
+          dlaf::internal::Policy<dlaf::Backend::MC>(),
+          [idx](typename MatrixType::TileType&& tile) {
+            matrix::test::set(tile, TypeUtil::element(-idx.get(coord1D), 6));
+          },
+          matrix.readwrite_sender(idx));
+    else
+      panel.setTile(idx, matrix.read(idx));
+  }
+
+  for (const auto& idx : panel.iteratorLocal()) {
+    if (idx.row() % 2 == 1)
+      CHECK_TILE_EQ(TypeUtil::element(-idx.get(coord1D), 6),
+                    pika::execution::experimental::sync_wait(panel.read_sender(idx)).get());
+    else
+      CHECK_TILE_EQ(matrix.read(idx).get(),
+                    pika::execution::experimental::sync_wait(panel.read_sender(idx)).get());
+  }
 }
 
 TYPED_TEST(PanelTest, ExternalTilesCol) {
@@ -240,7 +306,8 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
     SizeType counter = 0;
     for (SizeType k = head_loc; k < tail_loc; ++k) {
       const LocalTileIndex idx(coord1D, k);
-      pika::dataflow(pika::unwrapping(setTile), panel(idx), counter++);
+      dlaf::internal::transformLiftDetach(dlaf::internal::Policy<Backend::MC>(), setTile,
+                                          panel.readwrite_sender(idx), counter++);
       const auto& tile = panel.read(idx).get();
       SCOPED_TRACE(message);
       EXPECT_EQ(tile.size(), matrix.read(idx).get().size());

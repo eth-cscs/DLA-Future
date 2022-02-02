@@ -46,6 +46,7 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
                                                            comm::Index2D rank,
                                                            Matrix<const T, Device::CPU>& matrix) {
   using namespace dlaf::matrix;
+  namespace ex = pika::execution::experimental;
 
   using dlaf::common::internal::vector;
   using dlaf::common::make_data;
@@ -78,7 +79,10 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
       else
         return lange(lapack::Norm::Max, tile);
     });
-    auto current_tile_max = pika::dataflow(norm_max_f, matrix.read(tile_wrt_local));
+    auto current_tile_max =
+        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), std::move(norm_max_f),
+                                  matrix.read_sender(tile_wrt_local)) |
+        ex::make_future();
 
     tiles_max.emplace_back(std::move(current_tile_max));
   }
@@ -86,6 +90,8 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
   // than it is necessary to reduce max values from all ranks into a single max value for the matrix
 
   // TODO unwrapping can be skipped for optimization reasons
+  // TODO this requires a new sender adaptor to handle a vector of
+  // senders/futures before dataflow can be replaced
   NormT local_max_value = pika::dataflow(unwrapping([](const auto&& values) {
                                            if (values.size() == 0)
                                              return std::numeric_limits<NormT>::min();

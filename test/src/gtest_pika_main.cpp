@@ -40,75 +40,21 @@
 #include <cstdio>
 
 #include <gtest/gtest.h>
-
-#include <hpx/include/threadmanager.hpp>
-#include <hpx/init.hpp>
-#include <hpx/program_options.hpp>
-#include <hpx/runtime.hpp>
+#include <pika/init.hpp>
 
 #include <dlaf/init.h>
 
-#include "gtest_mpi_listener.h"
-
 GTEST_API_ int test_main(int argc, char** argv) {
-  std::printf("Running main() from gtest_mpihpx_main.cpp\n");
+  std::printf("Running main() from gtest_pika_main.cpp\n");
   auto ret = [&] {
     dlaf::ScopedInitializer init(argc, argv);
     return RUN_ALL_TESTS();
   }();
-  hpx::finalize();
+  pika::finalize();
   return ret;
 }
 
 GTEST_API_ int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
-
-  // Initialize MPI
-  int threading_required = MPI_THREAD_MULTIPLE;
-  int threading_provided;
-  MPI_Init_thread(&argc, &argv, threading_required, &threading_provided);
-
-  if (threading_provided != threading_required) {
-    std::fprintf(stderr, "Provided MPI threading model does not match the required one.\n");
-    MPI_Abort(MPI_COMM_WORLD, 1);
-  }
-
-  MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
-
-  // Gets hold of the event listener list.
-  ::testing::TestEventListeners& listeners = ::testing::UnitTest::GetInstance()->listeners();
-
-  // Note:
-  // This is a workaround that, by waiting that all HPX tasks are finished
-  // at the end of each test, ensures that the blocking MPI calls issued during
-  // the collection of results from all the MPI ranks do not create potential
-  // deadlock conditions.
-  struct MPIHPXListener : public MPIListener {
-    using MPIListener::MPIListener;
-
-  protected:
-    virtual void OnTestEnd(const ::testing::TestInfo& test_info) override {
-      hpx::threads::get_thread_manager().wait();
-      MPIListener::OnTestEnd(test_info);
-    }
-  };
-
-  // Adds MPIHPXListener to the end. googletest takes the ownership.
-  auto default_listener = listeners.Release(listeners.default_result_printer());
-  listeners.Append(new MPIHPXListener(argc, argv, default_listener));
-
-  using namespace hpx::program_options;
-  options_description desc_commandline("Usage: " HPX_APPLICATION_STRING " [options]");
-  desc_commandline.add(dlaf::getOptionsDescription());
-
-  hpx::init_params p;
-  p.desc_cmdline = desc_commandline;
-  p.rp_callback = dlaf::initResourcePartitionerHandler;
-
-  // Initialize HPX
-  auto ret = hpx::init(test_main, argc, argv, p);
-
-  MPI_Finalize();
-
-  return ret;
+  return pika::init(test_main, argc, argv);
 }

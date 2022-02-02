@@ -11,6 +11,6 @@
 DLAF_addTest(test_compute_t_factor
   SOURCES test_compute_t_factor.cpp
   LIBRARIES dlaf.factorization dlaf.core
-  USE_MAIN MPIHPX
+  USE_MAIN MPIPIKA
   MPIRANKS 6
 )

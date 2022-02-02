@@ -9,7 +9,7 @@
 //
 #pragma once
 
-#include <hpx/local/execution.hpp>
+#include <pika/execution.hpp>
 
 #include <type_traits>
 #include <utility>
@@ -21,17 +21,17 @@ namespace internal {
 template <Backend B>
 class Policy {
 private:
-  const hpx::threads::thread_priority priority_ = hpx::threads::thread_priority::normal;
+  const pika::threads::thread_priority priority_ = pika::threads::thread_priority::normal;
 
 public:
   Policy() = default;
-  explicit Policy(hpx::threads::thread_priority priority) : priority_(priority) {}
+  explicit Policy(pika::threads::thread_priority priority) : priority_(priority) {}
   Policy(Policy&&) = default;
   Policy(Policy const&) = default;
   Policy& operator=(Policy&&) = default;
   Policy& operator=(Policy const&) = default;
 
-  hpx::threads::thread_priority priority() const noexcept {
+  pika::threads::thread_priority priority() const noexcept {
     return priority_;
   }
 };

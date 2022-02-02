@@ -9,8 +9,8 @@
 //
 #pragma once
 
-#include <hpx/local/future.hpp>
-#include <hpx/local/unwrap.hpp>
+#include <pika/future.hpp>
+#include <pika/unwrap.hpp>
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
@@ -38,35 +38,38 @@ namespace internal {
 
 namespace cholesky_l {
 template <Backend backend, class MatrixTileSender>
-void potrfDiagTile(hpx::threads::thread_priority priority, MatrixTileSender&& matrix_tile) {
+void potrfDiagTile(pika::threads::thread_priority priority, MatrixTileSender&& matrix_tile) {
   dlaf::internal::whenAllLift(blas::Uplo::Lower, std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::potrf(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::potrf(dlaf::internal::Policy<backend>(priority)) |
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class KKTileSender, class MatrixTileSender>
-void trsmPanelTile(hpx::threads::thread_priority priority, KKTileSender&& kk_tile,
+void trsmPanelTile(pika::threads::thread_priority priority, KKTileSender&& kk_tile,
                    MatrixTileSender&& matrix_tile) {
   using ElementType = dlaf::internal::SenderElementType<KKTileSender>;
 
   dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Lower, blas::Op::ConjTrans,
                               blas::Diag::NonUnit, ElementType(1.0), std::forward<KKTileSender>(kk_tile),
                               std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::trsm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::trsm(dlaf::internal::Policy<backend>(priority)) |
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class PanelTileSender, class MatrixTileSender>
-void herkTrailingDiagTile(hpx::threads::thread_priority priority, PanelTileSender&& panel_tile,
+void herkTrailingDiagTile(pika::threads::thread_priority priority, PanelTileSender&& panel_tile,
                           MatrixTileSender&& matrix_tile) {
   using BaseElementType = BaseType<dlaf::internal::SenderElementType<PanelTileSender>>;
 
   dlaf::internal::whenAllLift(blas::Uplo::Lower, blas::Op::NoTrans, BaseElementType(-1.0),
                               std::forward<PanelTileSender>(panel_tile), BaseElementType(1.0),
                               std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::herk(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::herk(dlaf::internal::Policy<backend>(priority)) |
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class PanelTileSender, class ColPanelSender, class MatrixTileSender>
-void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, PanelTileSender&& panel_tile,
+void gemmTrailingMatrixTile(pika::threads::thread_priority priority, PanelTileSender&& panel_tile,
                             ColPanelSender&& col_panel, MatrixTileSender&& matrix_tile) {
   using ElementType = dlaf::internal::SenderElementType<PanelTileSender>;
 
@@ -74,41 +77,45 @@ void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, PanelTileSen
                               std::forward<PanelTileSender>(panel_tile),
                               std::forward<ColPanelSender>(col_panel), ElementType(1.0),
                               std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
+      pika::execution::experimental::start_detached();
 }
 }
 
 namespace cholesky_u {
 template <Backend backend, class MatrixTileSender>
-void potrfDiagTile(hpx::threads::thread_priority priority, MatrixTileSender&& matrix_tile) {
+void potrfDiagTile(pika::threads::thread_priority priority, MatrixTileSender&& matrix_tile) {
   dlaf::internal::whenAllLift(blas::Uplo::Upper, std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::potrf(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::potrf(dlaf::internal::Policy<backend>(priority)) |
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class KKTileSender, class MatrixTileSender>
-void trsmPanelTile(hpx::threads::thread_priority priority, KKTileSender&& kk_tile,
+void trsmPanelTile(pika::threads::thread_priority priority, KKTileSender&& kk_tile,
                    MatrixTileSender&& matrix_tile) {
   using ElementType = dlaf::internal::SenderElementType<KKTileSender>;
 
   dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, blas::Op::ConjTrans,
                               blas::Diag::NonUnit, ElementType(1.0), std::forward<KKTileSender>(kk_tile),
                               std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::trsm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::trsm(dlaf::internal::Policy<backend>(priority)) |
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class PanelTileSender, class MatrixTileSender>
-void herkTrailingDiagTile(hpx::threads::thread_priority priority, PanelTileSender&& panel_tile,
+void herkTrailingDiagTile(pika::threads::thread_priority priority, PanelTileSender&& panel_tile,
                           MatrixTileSender&& matrix_tile) {
   using base_element_type = BaseType<dlaf::internal::SenderElementType<PanelTileSender>>;
 
   dlaf::internal::whenAllLift(blas::Uplo::Upper, blas::Op::ConjTrans, base_element_type(-1.0),
                               std::forward<PanelTileSender>(panel_tile), base_element_type(1.0),
                               std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::herk(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::herk(dlaf::internal::Policy<backend>(priority)) |
+      pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class PanelTileSender, class ColPanelSender, class MatrixTileSender>
-void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, PanelTileSender&& panel_tile,
+void gemmTrailingMatrixTile(pika::threads::thread_priority priority, PanelTileSender&& panel_tile,
                             ColPanelSender&& col_panel, MatrixTileSender&& matrix_tile) {
   using ElementType = dlaf::internal::SenderElementType<PanelTileSender>;
 
@@ -116,7 +123,8 @@ void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, PanelTileSen
                               std::forward<PanelTileSender>(panel_tile),
                               std::forward<ColPanelSender>(col_panel), ElementType(1.0),
                               std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) | hpx::execution::experimental::detach();
+      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
+      pika::execution::experimental::start_detached();
 }
 }
 
@@ -124,7 +132,7 @@ void gemmTrailingMatrixTile(hpx::threads::thread_priority priority, PanelTileSen
 template <Backend backend, Device device, class T>
 void Cholesky<backend, device, T>::call_L(Matrix<T, device>& mat_a) {
   using namespace cholesky_l;
-  using hpx::threads::thread_priority;
+  using pika::threads::thread_priority;
 
   // Number of tile (rows = cols)
   SizeType nrtile = mat_a.nrTiles().cols();
@@ -164,7 +172,7 @@ void Cholesky<backend, device, T>::call_L(Matrix<T, device>& mat_a) {
 template <Backend backend, Device device, class T>
 void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a) {
   using namespace cholesky_l;
-  using hpx::threads::thread_priority;
+  using pika::threads::thread_priority;
 
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
@@ -272,7 +280,7 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 template <Backend backend, Device device, class T>
 void Cholesky<backend, device, T>::call_U(Matrix<T, device>& mat_a) {
   using namespace cholesky_u;
-  using hpx::threads::thread_priority;
+  using pika::threads::thread_priority;
 
   // Number of tile (rows = cols)
   SizeType nrtile = mat_a.nrTiles().cols();
@@ -306,7 +314,7 @@ void Cholesky<backend, device, T>::call_U(Matrix<T, device>& mat_a) {
 template <Backend backend, Device device, class T>
 void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a) {
   using namespace cholesky_u;
-  using hpx::threads::thread_priority;
+  using pika::threads::thread_priority;
 
   auto executor_mpi = dlaf::getMPIExecutor<backend>();
 

@@ -11,7 +11,7 @@
 DLAF_addTest(test_tile
   SOURCES test_tile.cpp
   LIBRARIES dlaf.core
-  USE_MAIN HPX
+  USE_MAIN PIKA
 )
 
 DLAF_addTest(test_layout_info
@@ -35,48 +35,48 @@ DLAF_addTest(test_util_distribution
 DLAF_addTest(test_matrix
   SOURCES test_matrix.cpp
   LIBRARIES dlaf.core
-  USE_MAIN MPIHPX
+  USE_MAIN MPIPIKA
   MPIRANKS 6
 )
 
 DLAF_addTest(test_matrix_local
   SOURCES test_matrix_local.cpp
   LIBRARIES dlaf.core
-  USE_MAIN MPIHPX
+  USE_MAIN MPIPIKA
   MPIRANKS 6
 )
 
 DLAF_addTest(test_matrix_mirror
   SOURCES test_matrix_mirror.cpp
   LIBRARIES dlaf.core
-  USE_MAIN MPIHPX
+  USE_MAIN MPIPIKA
   MPIRANKS 6
 )
 
 DLAF_addTest(test_matrix_view
   SOURCES test_matrix_view.cpp
   LIBRARIES dlaf.core
-  USE_MAIN MPIHPX
+  USE_MAIN MPIPIKA
   MPIRANKS 6
 )
 
 DLAF_addTest(test_util_matrix
   SOURCES test_util_matrix.cpp
   LIBRARIES dlaf.core
-  USE_MAIN MPIHPX
+  USE_MAIN MPIPIKA
   MPIRANKS 6
 )
 
 DLAF_addTest(test_matrix_output
   SOURCES test_matrix_output.cpp
   LIBRARIES dlaf.core
-  USE_MAIN MPIHPX
+  USE_MAIN MPIPIKA
   MPIRANKS 6
 )
 
 DLAF_addTest(test_panel
   SOURCES test_panel.cpp
   LIBRARIES dlaf.core
-  USE_MAIN MPIHPX
+  USE_MAIN MPIPIKA
   MPIRANKS 6
 )

@@ -13,6 +13,6 @@ add_subdirectory(mc)
 DLAF_addTest(test_cholesky
   SOURCES test_cholesky.cpp
   LIBRARIES dlaf.factorization dlaf.core
-  USE_MAIN MPIHPX
+  USE_MAIN MPIPIKA
   MPIRANKS 6
 )

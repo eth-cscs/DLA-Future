@@ -65,7 +65,7 @@ target_link_libraries(dlaf.prop
   INTERFACE
     MPI::MPI_CXX
     LAPACK::LAPACK
-    HPX::hpx
+    pika::pika
     lapackpp
     blaspp
     umpire

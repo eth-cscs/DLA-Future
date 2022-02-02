@@ -21,9 +21,9 @@
 
 #include <cuda_runtime.h>
 
-#include <hpx/include/util.hpp>
-#include <hpx/local/runtime.hpp>
-#include <hpx/thread.hpp>
+#include <pika/modules/concurrency.hpp>
+#include <pika/runtime.hpp>
+#include <pika/thread.hpp>
 
 #include "dlaf/common/assert.h"
 #include "dlaf/cuda/error.h"
@@ -34,25 +34,25 @@ namespace internal {
 
 struct StreamPoolImpl {
   int device_;
-  std::size_t num_worker_threads_ = hpx::get_num_worker_threads();
+  std::size_t num_worker_threads_ = pika::get_num_worker_threads();
   std::size_t num_streams_per_worker_thread_;
   std::vector<cudaStream_t> streams_;
-  std::vector<hpx::util::cache_aligned_data<std::size_t>> current_stream_idxs_;
+  std::vector<pika::util::cache_aligned_data<std::size_t>> current_stream_idxs_;
 
   StreamPoolImpl(int device, std::size_t num_streams_per_worker_thread,
-                 hpx::threads::thread_priority hpx_thread_priority)
+                 pika::threads::thread_priority pika_thread_priority)
       : device_(device), num_streams_per_worker_thread_(num_streams_per_worker_thread),
         streams_(num_worker_threads_ * num_streams_per_worker_thread),
         current_stream_idxs_(num_worker_threads_, {std::size_t(0)}) {
     DLAF_CUDA_CALL(cudaSetDevice(device));
 
-    // We map hpx::threads::thread_priority::high to the highest CUDA stream
+    // We map pika::threads::thread_priority::high to the highest CUDA stream
     // priority, and the rest to the lowest. Typically CUDA streams will only
     // have two priorities.
     int least_priority, greatest_priority;
     DLAF_CUDA_CALL(cudaDeviceGetStreamPriorityRange(&least_priority, &greatest_priority));
     int stream_priority = least_priority;
-    if (hpx_thread_priority == hpx::threads::thread_priority::high) {
+    if (pika_thread_priority == pika::threads::thread_priority::high) {
       stream_priority = greatest_priority;
     }
 
@@ -82,7 +82,7 @@ struct StreamPoolImpl {
     // [1]: https://docs.nvidia.com/cuda/cublas/index.html#cublascreate
     // [2]: CUDA Runtime API, section 5.1 Device Management
     DLAF_CUDA_CALL(cudaSetDevice(device_));
-    const std::size_t worker_thread_num = hpx::get_worker_thread_num();
+    const std::size_t worker_thread_num = pika::get_worker_thread_num();
     DLAF_ASSERT(worker_thread_num != std::size_t(-1), worker_thread_num);
     std::size_t stream_idx =
         worker_thread_num * num_streams_per_worker_thread_ +
@@ -99,16 +99,17 @@ struct StreamPoolImpl {
 
 /// A pool of CUDA streams with reference semantics (copying points to the same
 /// underlying CUDA streams, last reference destroys the references).  Allows
-/// access to CUDA streams in a round-robin fashion.  Each HPX worker thread is
+/// access to CUDA streams in a round-robin fashion.  Each pika worker thread is
 /// assigned a set of thread local CUDA streams.
 class StreamPool {
   std::shared_ptr<internal::StreamPoolImpl> streams_ptr_;
 
 public:
-  StreamPool(int device = 0, std::size_t num_streams_per_worker_thread = 3,
-             hpx::threads::thread_priority hpx_thread_priority = hpx::threads::thread_priority::default_)
+  StreamPool(
+      int device = 0, std::size_t num_streams_per_worker_thread = 3,
+      pika::threads::thread_priority pika_thread_priority = pika::threads::thread_priority::default_)
       : streams_ptr_(std::make_shared<internal::StreamPoolImpl>(device, num_streams_per_worker_thread,
-                                                                hpx_thread_priority)) {}
+                                                                pika_thread_priority)) {}
 
   cudaStream_t getNextStream() {
     DLAF_ASSERT(bool(streams_ptr_), "");

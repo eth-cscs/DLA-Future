@@ -45,7 +45,7 @@ void gemm(const blas::Op op_a, const blas::Op op_b, const T alpha, const Tile<co
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
 template <Backend B, typename Sender,
-          typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 auto gemm(const dlaf::internal::Policy<B>& p, Sender&& s);
 
 /// \overload gemm
@@ -67,7 +67,7 @@ void hemm(const blas::Side side, const blas::Uplo uplo, const T alpha, const Til
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
 template <Backend B, typename Sender,
-          typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 auto hemm(const dlaf::internal::Policy<B>& p, Sender&& s);
 
 /// \overload hemm
@@ -89,7 +89,7 @@ void her2k(const blas::Uplo uplo, const blas::Op op, const T alpha, const Tile<c
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
 template <Backend B, typename Sender,
-          typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 auto her2k(const dlaf::internal::Policy<B>& p, Sender&& s);
 
 /// \overload her2k
@@ -111,7 +111,7 @@ void herk(const blas::Uplo uplo, const blas::Op op, const BaseType<T> alpha, con
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
 template <Backend B, typename Sender,
-          typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 auto herk(const dlaf::internal::Policy<B>& p, Sender&& s);
 
 /// \overload herk
@@ -134,7 +134,7 @@ void trmm(const dlaf::internal::Policy<B>& policy, const blas::Side side, const 
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
 template <Backend B, typename Sender,
-          typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 auto trmm(const dlaf::internal::Policy<B>& p, Sender&& s);
 
 /// \overload trmm
@@ -157,7 +157,7 @@ void trsm(const dlaf::internal::Policy<B>& policy, const blas::Side side, const 
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
 template <Backend B, typename Sender,
-          typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 auto trsm(const dlaf::internal::Policy<B>& p, Sender&& s);
 
 /// \overload trsm

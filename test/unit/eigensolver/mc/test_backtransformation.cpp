@@ -14,8 +14,8 @@
 #include <tuple>
 
 #include <gtest/gtest.h>
-#include <hpx/include/threadmanager.hpp>
-#include <hpx/runtime.hpp>
+#include <pika/modules/threadmanager.hpp>
+#include <pika/runtime.hpp>
 
 #include "dlaf/common/index2d.h"
 #include "dlaf/communication/communicator_grid.h"
@@ -113,7 +113,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
     copy(source_tile, c.tile(ij_tile));
   }
 
-  common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus;
+  common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus;
   SizeType nr_reflectors_blocks = std::max<SizeType>(0, dlaf::util::ceilDiv(m - mb - 1, mb));
   taus.reserve(nr_reflectors_blocks);
 
@@ -140,7 +140,7 @@ void testBacktransformationEigenv(SizeType m, SizeType n, SizeType mb, SizeType 
       tausloc.push_back(tau);
       tau_tile.push_back(tau);
     }
-    taus.push_back(hpx::make_ready_future(tau_tile));
+    taus.push_back(pika::make_ready_future(tau_tile));
   }
 
   if (n != 0) {
@@ -195,7 +195,7 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
       tile::internal::laset<T>(lapack::MatrixType::Upper, 0.f, 1.f, mat_v_loc.tile(ij_tile));
   }
 
-  common::internal::vector<hpx::shared_future<common::internal::vector<T>>> taus;
+  common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus;
   SizeType nr_reflectors_blocks = std::max<SizeType>(0, dlaf::util::ceilDiv(m - mb - 1, mb));
   taus.reserve(nr_reflectors_blocks);
 
@@ -223,7 +223,7 @@ void testBacktransformationEigenv(comm::CommunicatorGrid grid, SizeType m, SizeT
       tau_tile.push_back(tau);
     }
     if (grid.rank().col() == mat_v.distribution().template rankGlobalTile<Coord::Col>(k / mb))
-      taus.push_back(hpx::make_ready_future(tau_tile));
+      taus.push_back(pika::make_ready_future(tau_tile));
   }
 
   if (n != 0) {
@@ -258,7 +258,7 @@ TYPED_TEST(BackTransformationEigenSolverTestMC, CorrectnessDistributed) {
   for (const auto& comm_grid : {this->commGrids()[0]}) {
     for (const auto& [m, n, mb, nb] : sizes) {
       testBacktransformationEigenv<TypeParam>(comm_grid, m, n, mb, nb);
-      hpx::threads::get_thread_manager().wait();
+      pika::threads::get_thread_manager().wait();
     }
   }
 }

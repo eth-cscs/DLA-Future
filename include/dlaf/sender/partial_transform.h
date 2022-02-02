@@ -9,7 +9,7 @@
 //
 #pragma once
 
-#include <hpx/local/execution.hpp>
+#include <pika/execution.hpp>
 
 #include <type_traits>
 #include <utility>

@@ -12,7 +12,7 @@
 
 /// @file
 
-#include <hpx/local/future.hpp>
+#include <pika/future.hpp>
 
 #include "dlaf/communication/message.h"
 #include "dlaf/executors.h"
@@ -47,7 +47,7 @@ namespace internal {
 /// Duplicates the tile to CPU memory if CUDA RDMA is not enabled for MPI.
 /// Returns the tile unmodified otherwise.
 template <Device D, typename T>
-auto prepareSendTile(hpx::shared_future<matrix::Tile<const T, D>> tile) {
+auto prepareSendTile(pika::shared_future<matrix::Tile<const T, D>> tile) {
   return matrix::duplicateIfNeeded<CommunicationDevice_v<D>>(std::move(tile));
 }
 
@@ -57,7 +57,7 @@ auto prepareSendTile(hpx::shared_future<matrix::Tile<const T, D>> tile) {
 /// the CPU. This helper duplicates to the GPU if the first template parameter
 /// is a GPU device. The first template parameter must be given.
 template <Device D, typename T>
-auto handleRecvTile(hpx::future<matrix::Tile<T, CommunicationDevice_v<D>>> tile) {
+auto handleRecvTile(pika::future<matrix::Tile<T, CommunicationDevice_v<D>>> tile) {
   return matrix::duplicateIfNeeded<D>(std::move(tile));
 }
 }

@@ -14,10 +14,9 @@ spack:
       variants:
         - '~cuda'
         - '~openmp'
-    hpx:
+    pika:
       variants:
         - 'build_type=Debug'
-        - 'max_cpu_count=128'
     mpich:
       variants:
         - '~fortran'

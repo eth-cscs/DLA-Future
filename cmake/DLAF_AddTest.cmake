@@ -14,7 +14,7 @@
 #   [INCLUDE_DIRS <arguments for target_include_directories>]
 #   [LIBRARIES <arguments for target_link_libraries>]
 #   [MPIRANKS <number of rank>]
-#   [USE_MAIN {PLAIN | HPX | MPI | MPIHPX}]
+#   [USE_MAIN {PLAIN | PIKA | MPI | MPIPIKA}]
 # )
 #
 # At least one source file has to be specified, while other parameters are optional.
@@ -27,9 +27,9 @@
 #
 # USE_MAIN links to an external main function, in particular:
 #   - PLAIN: uses the classic gtest_main
-#   - HPX: uses a main that initializes HPX
+#   - PIKA: uses a main that initializes pika
 #   - MPI: uses a main that initializes MPI
-#   - MPIHPX: uses a main that initializes both HPX and MPI
+#   - MPIPIKA: uses a main that initializes both pika and MPI
 # If not specified, no external main is used and it should exist in the test source code.
 #
 # e.g.
@@ -58,21 +58,21 @@ function(DLAF_addTest test_target_name)
   endif()
 
   set(IS_AN_MPI_TEST FALSE)
-  set(IS_AN_HPX_TEST FALSE)
+  set(IS_AN_PIKA_TEST FALSE)
   if (NOT DLAF_AT_USE_MAIN)
     set(_gtest_tgt gtest)
   elseif (DLAF_AT_USE_MAIN STREQUAL PLAIN)
     set(_gtest_tgt gtest_main)
-  elseif (DLAF_AT_USE_MAIN STREQUAL HPX)
-    set(_gtest_tgt DLAF_gtest_hpx_main)
-    set(IS_AN_HPX_TEST TRUE)
+  elseif (DLAF_AT_USE_MAIN STREQUAL PIKA)
+    set(_gtest_tgt DLAF_gtest_pika_main)
+    set(IS_AN_PIKA_TEST TRUE)
   elseif (DLAF_AT_USE_MAIN STREQUAL MPI)
     set(_gtest_tgt DLAF_gtest_mpi_main)
     set(IS_AN_MPI_TEST TRUE)
-  elseif (DLAF_AT_USE_MAIN STREQUAL MPIHPX)
-    set(_gtest_tgt DLAF_gtest_mpihpx_main)
+  elseif (DLAF_AT_USE_MAIN STREQUAL MPIPIKA)
+    set(_gtest_tgt DLAF_gtest_mpipika_main)
     set(IS_AN_MPI_TEST TRUE)
-    set(IS_AN_HPX_TEST TRUE)
+    set(IS_AN_PIKA_TEST TRUE)
   else()
     message(FATAL_ERROR "USE_MAIN=${DLAF_AT_USE_MAIN} is not a supported option")
   endif()
@@ -136,19 +136,19 @@ function(DLAF_addTest test_target_name)
     set(_TEST_LABEL "RANK_1")
   endif()
 
-  if (IS_AN_HPX_TEST)
-    separate_arguments(_HPX_EXTRA_ARGS_LIST UNIX_COMMAND ${DLAF_HPXTEST_EXTRA_ARGS})
+  if (IS_AN_PIKA_TEST)
+    separate_arguments(_PIKA_EXTRA_ARGS_LIST UNIX_COMMAND ${DLAF_PIKATEST_EXTRA_ARGS})
 
     # APPLE platform does not support thread binding
     if (NOT APPLE)
-      list(APPEND _TEST_ARGUMENTS "--hpx:use-process-mask")
+      list(APPEND _TEST_ARGUMENTS "--pika:use-process-mask")
     endif()
 
     if(NOT DLAF_TEST_THREAD_BINDING_ENABLED)
-      list(APPEND _TEST_ARGUMENTS "--hpx:bind=none")
+      list(APPEND _TEST_ARGUMENTS "--pika:bind=none")
     endif()
 
-    list(APPEND _TEST_ARGUMENTS ${_HPX_EXTRA_ARGS_LIST})
+    list(APPEND _TEST_ARGUMENTS ${_PIKA_EXTRA_ARGS_LIST})
   endif()
 
   ### Test executable target

@@ -11,6 +11,6 @@
 DLAF_addTest(test_norm
   SOURCES test_norm.cpp
   LIBRARIES dlaf.auxiliary dlaf.core
-  USE_MAIN MPIHPX
+  USE_MAIN MPIPIKA
   MPIRANKS 6
 )

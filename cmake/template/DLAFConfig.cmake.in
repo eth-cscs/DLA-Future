@@ -34,7 +34,7 @@ endif()
 find_dependency(blaspp PATHS @blaspp_DIR@)
 find_dependency(lapackpp PATHS @lapackpp_DIR@)
 
-# ----- HPX
-find_dependency(HPX PATHS @HPX_DIR@)
+# ----- pika
+find_dependency(pika PATHS @pika_DIR@)
 
 check_required_components(DLAF)

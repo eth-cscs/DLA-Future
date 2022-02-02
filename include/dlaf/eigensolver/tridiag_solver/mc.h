@@ -48,8 +48,8 @@ void cuppensDecomposition(const matrix::Tile<T, Device::CPU>& top,
 template <class T>
 void assembleZVec(SizeType i_begin, SizeType i_middle, SizeType i_end,
                   Matrix<const T, Device::CPU>& mat_ev, Matrix<T, Device::CPU>& z) {
-  using hpx::threads::thread_priority;
-  using hpx::execution::experimental::detach;
+  using pika::threads::thread_priority;
+  using pika::execution::experimental::start_detached;
   using dlaf::internal::Policy;
   using dlaf::internal::whenAllLift;
 
@@ -64,7 +64,7 @@ void assembleZVec(SizeType i_begin, SizeType i_middle, SizeType i_end,
     // Transpose the column vector `z` and copy rows from Q1 or Q2
     whenAllLift(common::transposed(z.distribution().tileSize(z_idx)), TileElementIndex(tile_row, 0),
                 mat_ev.read_sender(mat_ev_idx), TileElementIndex(0, 0), z.readwrite_sender(z_idx)) |
-        matrix::copy(Policy<Backend::MC>(thread_priority::normal)) | detach();
+        matrix::copy(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
   }
 }
 
@@ -75,15 +75,15 @@ template <class T>
 void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<BaseType<T>, Device::CPU>& mat_a,
                                                       SizeType i_begin, SizeType i_end,
                                                       Matrix<T, Device::CPU>& mat_ev) {
-  using hpx::threads::thread_priority;
+  using pika::threads::thread_priority;
   using dlaf::internal::Policy;
-  using hpx::execution::experimental::detach;
+  using pika::execution::experimental::start_detached;
 
   if (i_begin == i_end) {
     // Solve leaf eigensystem with stedc
     dlaf::internal::whenAllLift(mat_a.readwrite_sender(LocalTileIndex(i_begin, 0)),
                                 mat_ev.readwrite_sender(LocalTileIndex(i_begin, i_begin))) |
-        tile::stedc(Policy<Backend::MC>(thread_priority::normal)) | detach();
+        tile::stedc(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
     return;
   }
   SizeType i_midpoint = (i_begin + i_end) / 2;
@@ -91,7 +91,7 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<BaseType<T>, Device
   // Cuppen's tridiagonal decomposition
   dlaf::internal::whenAllLift(mat_a.readwrite_sender(LocalTileIndex(i_midpoint, 0)),
                               mat_a.readwrite_sender(LocalTileIndex(i_midpoint + 1, 0))) |
-      cuppensDecomposition(Policy<Backend::MC>(thread_priority::normal)) | detach();
+      cuppensDecomposition(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
 
   TridiagSolver<Backend::MC, Device::CPU, T>::call(mat_a, i_begin, i_midpoint, mat_ev);    // left
   TridiagSolver<Backend::MC, Device::CPU, T>::call(mat_a, i_midpoint + 1, i_end, mat_ev);  // right

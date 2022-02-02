@@ -123,8 +123,7 @@ template <class T>
 matrix::Tile<T, Device::GPU> gpuTile(const matrix::Tile<const T, Device::CPU>& tile) {
   const auto size = tile.size();
   const auto ld = std::max<SizeType>(1, size.rows());
-  matrix::Tile<T, Device::GPU> tile_gpu(size,
-                                        memory::MemoryView<T, Device::GPU>(size.linear_size()),
+  matrix::Tile<T, Device::GPU> tile_gpu(size, memory::MemoryView<T, Device::GPU>(size.linear_size()),
                                         ld);
 
   matrix::internal::copy_o(tile, tile_gpu);

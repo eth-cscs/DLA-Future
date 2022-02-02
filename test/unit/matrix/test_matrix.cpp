@@ -46,13 +46,7 @@ class MatrixLocalTest : public ::testing::Test {};
 TYPED_TEST_SUITE(MatrixLocalTest, MatrixElementTypes);
 
 template <typename Type>
-class MatrixTest : public ::testing::Test {
-public:
-  const std::vector<CommunicatorGrid>& commGrids() {
-    EXPECT_FALSE(comm_grids.empty());
-    return comm_grids;
-  }
-};
+struct MatrixTest : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(MatrixTest, MatrixElementTypes);
 
@@ -1125,13 +1119,7 @@ TYPED_TEST(MatrixTest, GPUCopy) {
 }
 #endif
 
-class MatrixGenericTest : public ::testing::Test {
-public:
-  const std::vector<CommunicatorGrid>& commGrids() {
-    EXPECT_FALSE(comm_grids.empty());
-    return comm_grids;
-  }
-};
+struct MatrixGenericTest : public TestWithCommGrids {};
 
 TEST_F(MatrixGenericTest, SelectTilesReadonly) {
   using TypeParam = double;

@@ -40,6 +40,8 @@ template <class T>
 pika::shared_future<matrix::Tile<const T, Device::CPU>> setupVWellFormed(
     pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_i,
     pika::future<matrix::Tile<T, Device::CPU>> tile_v) {
+  namespace ex = pika::execution::experimental;
+
   auto unzipV_func = [](const auto& tile_i, auto tile_v) {
     // Note: the size of of tile_i and tile_v embeds a relevant information about the number of
     // reflecotrs and their max size. This will be exploited to correctly setup the well formed
@@ -75,7 +77,9 @@ pika::shared_future<matrix::Tile<const T, Device::CPU>> setupVWellFormed(
 
     return matrix::Tile<const T, Device::CPU>(std::move(tile_v));
   };
-  return pika::dataflow(pika::unwrapping(unzipV_func), std::move(tile_i), std::move(tile_v));
+  return ex::make_future(
+      dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), unzipV_func,
+                                ex::when_all(ex::keep_future(std::move(tile_i)), std::move(tile_v))));
 }
 
 template <class T>
@@ -83,6 +87,8 @@ pika::shared_future<matrix::Tile<const T, Device::CPU>> computeTFactor(
     pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_taus,
     pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_v,
     pika::future<matrix::Tile<T, Device::CPU>> mat_t) {
+  namespace ex = pika::execution::experimental;
+
   auto tfactor_task = [](const auto& tile_taus, const auto& tile_v, auto tile_t) {
     using namespace lapack;
 
@@ -99,8 +105,10 @@ pika::shared_future<matrix::Tile<const T, Device::CPU>> computeTFactor(
 
     return matrix::Tile<const T, Device::CPU>(std::move(tile_t));
   };
-  return pika::dataflow(pika::unwrapping(tfactor_task), std::move(tile_taus), std::move(tile_v),
-                        std::move(mat_t));
+  return ex::make_future(
+      dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), tfactor_task,
+                                ex::when_all(ex::keep_future(std::move(tile_taus)),
+                                             ex::keep_future(std::move(tile_v)), std::move(mat_t))));
 }
 
 template <Backend backend, class VSender, class TSender>

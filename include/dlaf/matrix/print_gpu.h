@@ -33,7 +33,7 @@ void print(Format format, const Tile<const T, Device::GPU>& tile, std::ostream& 
            cudaStream_t stream) {
   const auto size = tile.size();
   const auto ld = std::max<SizeType>(1, size.rows());
-  Tile<T, Device::CPU> tile_h(size, memory::MemoryView<T, Device::CPU>(size.rows() * size.cols()), ld);
+  Tile<T, Device::CPU> tile_h(size, memory::MemoryView<T, Device::CPU>(size.linear_size()), ld);
 
   if (!size.isEmpty()) {
     internal::copy_o(tile, tile_h, stream);

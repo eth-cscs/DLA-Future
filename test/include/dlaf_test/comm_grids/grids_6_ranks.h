@@ -25,7 +25,7 @@ public:
     if (comm_grids.empty()) {
       comm::Communicator world(MPI_COMM_WORLD);
 
-      // Leave comm_grid empty if invoked with only one rank.
+      // Leave comm_grids empty if invoked with only one rank.
       // Useful to debug local algorithms that otherwise are executed independently on multiple ranks.
       if (world.size() == 1)
         return;

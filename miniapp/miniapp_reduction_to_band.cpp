@@ -105,7 +105,7 @@ struct reductionToBandMiniapp {
       {
         GlobalTileIndex last_tile(matrix.nrTiles().rows() - 1, matrix.nrTiles().cols() - 2);
         if (matrix.rankIndex() == distribution.rankGlobalTile(last_tile))
-          matrix(last_tile).get();
+          pika::execution::experimental::sync_wait(matrix.readwrite_sender(last_tile));
 
         DLAF_MPI_CALL(MPI_Barrier(world));
       }

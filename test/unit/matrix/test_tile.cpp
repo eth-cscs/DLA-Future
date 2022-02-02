@@ -28,6 +28,8 @@ using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 using namespace testing;
 
+namespace ex = pika::execution::experimental;
+
 const std::vector<SizeType> sizes({0, 1, 13, 32});
 constexpr SizeType m = 37;
 constexpr SizeType n = 87;
@@ -291,7 +293,7 @@ TYPED_TEST(TileTest, PromiseToFuture) {
   }
 
   ASSERT_EQ(true, tile_future.is_ready());
-  TileType tile2{tile_future.get()};
+  TileType tile2{ex::sync_wait(std::move(tile_future))};
   EXPECT_EQ(TileSizes(size, ld), getSizes(tile2));
 
   auto ptr = [&memory_view](const TileElementIndex& index) { return memory_view(elIndex(index, ld)); };
@@ -322,7 +324,7 @@ TYPED_TEST(TileTest, PromiseToFutureConst) {
   }
 
   ASSERT_EQ(true, tile_future.is_ready());
-  TileType tile2{tile_future.get()};
+  TileType tile2{ex::sync_wait(std::move(tile_future))};
   EXPECT_EQ(TileSizes(size, ld), getSizes(tile2));
 
   auto ptr = [&memory_view](const TileElementIndex& index) { return memory_view(elIndex(index, ld)); };
@@ -427,7 +429,7 @@ void checkReadyAndDependencyChain(F&& tile_ptr, std::vector<TileFutureOrConstTil
   // As one subtile (last_dep) is still alive next_tile is still locked.
   for (std::size_t i = 0; i < subtiles.size(); ++i) {
     if (i != last_dep) {
-      checkSubtile(tile_ptr, subtiles[i].get(), specs[i]);
+      checkSubtile(tile_ptr, ex::sync_wait(ex::keep_future(std::move(subtiles[i]))).get(), specs[i]);
       subtiles[i] = {};
     }
   }
@@ -439,7 +441,7 @@ void checkReadyAndDependencyChain(F&& tile_ptr, std::vector<TileFutureOrConstTil
   // next_tile_f should be ready.
   {
     std::size_t i = last_dep;
-    checkSubtile(tile_ptr, subtiles[i].get(), specs[i]);
+    checkSubtile(tile_ptr, ex::sync_wait(ex::keep_future(std::move(subtiles[i]))).get(), specs[i]);
     subtiles[i] = {};
   }
   EXPECT_TRUE(next_tile_f.is_ready());
@@ -474,7 +476,7 @@ void testSubtileConst(std::string name, TileElementSize size, SizeType ld, const
   checkReadyAndDependencyChain(tile_ptr, subtiles, full_specs, last_dep, next_tile_f);
 
   // Check next tile in the dependency chain
-  checkFullTile(tile_ptr, Tile<T, D>{next_tile_f.get()}, size);
+  checkFullTile(tile_ptr, Tile<T, D>{ex::sync_wait(std::move(next_tile_f))}, size);
 }
 
 template <class T, Device D>
@@ -507,7 +509,7 @@ void testSubtilesConst(std::string name, TileElementSize size, SizeType ld,
   tile_p.set_value(std::move(tile));
 
   checkReadyAndDependencyChain(tile_ptr, subtiles, specs, last_dep, next_tile_f);
-  checkFullTile(tile_ptr, Tile<T, D>{next_tile_f.get()}, size);
+  checkFullTile(tile_ptr, Tile<T, D>{ex::sync_wait(std::move(next_tile_f))}, size);
 }
 
 template <class T, Device D>
@@ -549,7 +551,7 @@ void testSubOfSubtileConst(std::string name, TileElementSize size, SizeType ld,
   tile_p.set_value(std::move(tile));
 
   checkReadyAndDependencyChain(tile_ptr, subtiles, specs, last_dep, next_tile_f);
-  checkFullTile(tile_ptr, Tile<T, D>{next_tile_f.get()}, size);
+  checkFullTile(tile_ptr, Tile<T, D>{ex::sync_wait(std::move(next_tile_f))}, size);
 }
 
 TYPED_TEST(TileTest, SubtileConst) {
@@ -617,10 +619,10 @@ void testSubtile(std::string name, TileElementSize size, SizeType ld, const SubT
   EXPECT_FALSE(next_tile_f.is_ready());
   // check tile pointer and unlock next_tile.
   // next_tile_f should be ready.
-  checkFullTile(tile_ptr, tile_f.get(), size);
+  checkFullTile(tile_ptr, ex::sync_wait(std::move(tile_f)), size);
 
   ASSERT_TRUE(next_tile_f.is_ready());
-  checkFullTile(tile_ptr, Tile<T, D>{next_tile_f.get()}, size);
+  checkFullTile(tile_ptr, Tile<T, D>{ex::sync_wait(std::move(next_tile_f))}, size);
 }
 
 template <class T, Device D>
@@ -659,10 +661,10 @@ void testSubtilesDisjoint(std::string name, TileElementSize size, SizeType ld,
   EXPECT_FALSE(next_tile_f.is_ready());
   // check tile pointer and unlock next_tile.
   // next_tile_f should be ready.
-  checkFullTile(tile_ptr, tile_f.get(), size);
+  checkFullTile(tile_ptr, ex::sync_wait(std::move(tile_f)), size);
 
   ASSERT_TRUE(next_tile_f.is_ready());
-  checkFullTile(tile_ptr, Tile<T, D>{next_tile_f.get()}, size);
+  checkFullTile(tile_ptr, Tile<T, D>{ex::sync_wait(std::move(next_tile_f))}, size);
 }
 
 template <class T, Device D>
@@ -718,16 +720,16 @@ void testSubOfSubtile(std::string name, TileElementSize size, SizeType ld,
   EXPECT_FALSE(next_tile_f.is_ready());
   // check subtile pointer and unlock tile.
   // tile_f should be ready.
-  checkSubtile(tile_ptr, subtile_f.get(), spec0);
+  checkSubtile(tile_ptr, ex::sync_wait(std::move(subtile_f)), spec0);
 
   ASSERT_TRUE(tile_f.is_ready());
   EXPECT_FALSE(next_tile_f.is_ready());
   // check tile pointer and unlock next_tile.
   // next_tile_f should be ready.
-  checkFullTile(tile_ptr, tile_f.get(), size);
+  checkFullTile(tile_ptr, ex::sync_wait(std::move(tile_f)), size);
 
   ASSERT_TRUE(next_tile_f.is_ready());
-  checkFullTile(tile_ptr, Tile<T, D>{next_tile_f.get()}, size);
+  checkFullTile(tile_ptr, Tile<T, D>{ex::sync_wait(std::move(next_tile_f))}, size);
 }
 
 TYPED_TEST(TileTest, Subtile) {

@@ -121,6 +121,8 @@ TYPED_TEST(MatrixUtilsTest, SetRandom) {
 
 template <class T>
 void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::CommunicatorGrid comm_grid) {
+  namespace ex = pika::execution::experimental;
+
   using dlaf::util::size_t::mul;
   const auto& distribution = matrix.distribution();
   const auto current_rank = distribution.rankIndex();
@@ -137,7 +139,7 @@ void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::Communicator
         continue;
 
       if (current_rank == owner_original) {
-        const auto& tile_original = matrix.read(index_tile_original).get();
+        const auto& tile_original = ex::sync_wait(matrix.read_sender(index_tile_original)).get();
         pika::shared_future<Tile<const T, Device::CPU>> tile_transposed;
         const auto size_tile_transposed = transposed(tile_original.size());
 
@@ -161,8 +163,8 @@ void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::Communicator
           return dlaf::conj(tile_original({index.col(), index.row()}));
         };
 
-        CHECK_TILE_NEAR(transposed_conj_tile, tile_transposed.get(), TypeUtilities<T>::error,
-                        TypeUtilities<T>::error);
+        CHECK_TILE_NEAR(transposed_conj_tile, ex::sync_wait(ex::keep_future(tile_transposed)).get(),
+                        TypeUtilities<T>::error, TypeUtilities<T>::error);
       }
       else if (current_rank == owner_transposed) {
         // send to owner_original
@@ -233,6 +235,8 @@ std::vector<config_t> test_params{
 
 template <class TypeParam, Coord panel_axis>
 void testSet0(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
+  namespace ex = pika::execution::experimental;
+
   constexpr Coord coord1D = orthogonal(panel_axis);
 
   Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
@@ -252,7 +256,7 @@ void testSet0(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
     matrix::util::set0<Backend::MC>(pika::threads::thread_priority::normal, panel);
 
     for (const auto& idx : panel.iteratorLocal())
-      CHECK_TILE_EQ(null_tile, panel.read(idx).get());
+      CHECK_TILE_EQ(null_tile, ex::sync_wait(panel.read_sender(idx)).get());
 
     panel.reset();
   }

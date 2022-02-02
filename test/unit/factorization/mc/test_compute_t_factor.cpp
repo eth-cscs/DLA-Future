@@ -239,6 +239,8 @@ std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, GlobalT
 //
 // Which we expect to be the equal to the one computed previously.
 TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
+  namespace ex = pika::execution::experimental;
+
   for (const auto& [a_m, a_n, mb, nb, k, v_start] : configs) {
     ASSERT_LE(k, nb);
 
@@ -263,7 +265,7 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
     const GlobalTileSize v_offset{v_start.row(), v_start.col()};
     for (const auto& ij_tile : iterate_range2d(v.nrTiles())) {
       // copy only the panel
-      const auto& source_tile = v_input.read(ij_tile + v_offset).get();
+      const auto& source_tile = ex::sync_wait(v_input.read_sender(ij_tile + v_offset)).get();
       matrix::internal::copy(source_tile, v.tile(ij_tile));
       if (ij_tile.row() == 0)
         tile::internal::laset<TypeParam>(lapack::MatrixType::Upper, 0.f, 1.f, v.tile(ij_tile));
@@ -296,7 +298,7 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
     // H_res = I - V T V*
     //
     // is computed and compared to the one previously obtained by applying reflectors sequentially
-    const auto& t = t_output.read(t_idx).get();
+    const auto& t = ex::sync_wait(t_output.read_sender(t_idx)).get();
     MatrixLocal<TypeParam> h_result = computeHFromTFactor(k, t, v);
 
     is_orthogonal(h_result);
@@ -309,6 +311,8 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
 }
 
 TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
+  namespace ex = pika::execution::experimental;
+
   for (auto comm_grid : this->commGrids()) {
     for (const auto& [a_m, a_n, mb, nb, k, v_start] : configs) {
       ASSERT_LE(k, nb);
@@ -388,7 +392,7 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
       // H_res = I - V T V*
       //
       // is computed and compared to the one previously obtained by applying reflectors sequentially
-      const auto& t = t_output.read(t_idx).get();
+      const auto& t = ex::sync_wait(t_output.read_sender(t_idx)).get();
       MatrixLocal<TypeParam> h_result = computeHFromTFactor(k, t, v);
 
       is_orthogonal(h_result);

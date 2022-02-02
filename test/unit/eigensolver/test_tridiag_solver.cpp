@@ -22,6 +22,19 @@ using namespace dlaf::test;
 
 TYPED_TEST_SUITE(TridiagEigensolverTest, RealMatrixElementTypes);
 
+TYPED_TEST(TridiagEigensolverTest, AssembleZVector) {
+  SizeType n = 10;
+  SizeType nb = 2;
+
+  SizeType i_begin = 2;
+  SizeType i_middle = 4;
+  SizeType i_end = 6;
+  matrix::Matrix<TypeParam, Device::CPU> mat_ev(LocalElementSize(n, n), TileElementSize(nb, nb));
+  matrix::Matrix<TypeParam, Device::CPU> z(LocalElementSize(n, 1), TileElementSize(nb, 1));
+
+  eigensolver::internal::assembleZVec(i_begin, i_middle, i_end, mat_ev, z);
+}
+
 TYPED_TEST(TridiagEigensolverTest, CuppensDecomposition) {
   using matrix::test::createTile;
 
@@ -50,7 +63,6 @@ TYPED_TEST(TridiagEigensolverTest, CuppensDecomposition) {
 }
 
 // TYPED_TEST(TridiagEigensolverTest, CorrectnessLocal) {
-//   using namespace dlaf;
 //   using RealParam = BaseType<TypeParam>;
 //
 //   SizeType n = 10;

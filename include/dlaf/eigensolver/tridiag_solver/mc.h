@@ -12,6 +12,7 @@
 #include "dlaf/common/callable_object.h"
 #include "dlaf/eigensolver/tridiag_solver/api.h"
 #include "dlaf/lapack/tile.h"
+#include "dlaf/matrix/copy_tile.h"
 #include "dlaf/sender/make_sender_algorithm_overloads.h"
 #include "dlaf/sender/policy.h"
 #include "dlaf/sender/transform.h"
@@ -41,6 +42,30 @@ void cuppensDecomposition(const matrix::Tile<T, Device::CPU>& top,
 
   top_diag_val -= offdiag_val;
   bottom_diag_val -= offdiag_val;
+}
+
+// The bottom row of Q1 and the top row of Q2
+template <class T>
+void assembleZVec(SizeType i_begin, SizeType i_middle, SizeType i_end,
+                  Matrix<const T, Device::CPU>& mat_ev, Matrix<T, Device::CPU>& z) {
+  using hpx::threads::thread_priority;
+  using hpx::execution::experimental::detach;
+  using dlaf::internal::Policy;
+  using dlaf::internal::whenAllLift;
+
+  // Iterate over tiles of Q1 and Q2 around the split row `i_middle`.
+  for (SizeType i = i_begin; i <= i_end; ++i) {
+    // Move to the row below `i_middle` for `Q2`
+    SizeType mat_ev_row = i_middle + ((i > i_middle) ? 1 : 0);
+    GlobalTileIndex mat_ev_idx(mat_ev_row, i);
+    // Take the last row of a `Q1` tile or the first row of a `Q2` tile
+    SizeType tile_row = (i > i_middle) ? 0 : mat_ev.distribution().tileSize(mat_ev_idx).rows() - 1;
+    GlobalTileIndex z_idx(i, 0);
+    // Transpose the column vector `z` and copy rows from Q1 or Q2
+    whenAllLift(common::transposed(z.distribution().tileSize(z_idx)), TileElementIndex(tile_row, 0),
+                mat_ev.read_sender(mat_ev_idx), TileElementIndex(0, 0), z.readwrite_sender(z_idx)) |
+        matrix::copy(Policy<Backend::MC>(thread_priority::normal)) | detach();
+  }
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(cuppensDecomposition);

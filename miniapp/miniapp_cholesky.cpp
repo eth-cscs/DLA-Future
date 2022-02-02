@@ -237,13 +237,14 @@ void setUpperToZeroForDiagonalTiles(Matrix<T, Device::CPU>& matrix) {
     if (distribution.rankIndex() != distribution.rankGlobalTile(diag_tile))
       continue;
 
-    auto tile_set = unwrapping([](auto&& tile) {
+    auto tile_set = [](typename Matrix<T, Device::CPU>::TileType&& tile) {
       if (tile.size().rows() > 1)
         lapack::laset(lapack::MatrixType::Upper, tile.size().rows() - 1, tile.size().cols() - 1, 0, 0,
                       tile.ptr({0, 1}), tile.ld());
-    });
+    };
 
-    matrix(diag_tile).then(tile_set);
+    dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(tile_set),
+                                    matrix.readwrite_sender(diag_tile));
   }
 }
 

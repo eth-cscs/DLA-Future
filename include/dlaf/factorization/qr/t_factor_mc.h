@@ -100,7 +100,9 @@ pika::future<matrix::Tile<T, Device::CPU>> gemvColumnT(
     bool is_v0, pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_vi,
     pika::shared_future<common::internal::vector<T>>& taus,
     pika::future<matrix::Tile<T, Device::CPU>>& tile_t) {
-  auto gemv_func = pika::unwrapping([is_v0](const auto& tile_v, const auto& taus, auto&& tile_t) {
+  namespace ex = pika::execution::experimental;
+
+  auto gemv_func = [is_v0](const auto& tile_v, const auto& taus, auto&& tile_t) {
     const SizeType k = tile_t.size().cols();
     DLAF_ASSERT(taus.size() == k, taus.size(), k);
 
@@ -143,16 +145,23 @@ pika::future<matrix::Tile<T, Device::CPU>> gemvColumnT(
       }
     }
     return std::move(tile_t);
-  });
-  return pika::dataflow(getHpExecutor<Backend::MC>(), gemv_func, tile_vi, taus, tile_t);
+  };
+  return dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
+                                       pika::threads::thread_priority::high),
+                                   std::move(gemv_func),
+                                   ex::when_all(ex::keep_future(tile_vi), ex::keep_future(taus),
+                                                std::move(tile_t))) |
+         ex::make_future();
 }
 
 template <class T>
 pika::future<matrix::Tile<T, Device::CPU>> trmvUpdateColumn(
     pika::future<matrix::Tile<T, Device::CPU>>& tile_t) {
+  namespace ex = pika::execution::experimental;
+
   // Update each column (in order) t = T . t
   // remember that T is upper triangular, so it is possible to use TRMV
-  auto trmv_func = pika::unwrapping([](auto&& tile_t) {
+  auto trmv_func = [](matrix::Tile<T, Device::CPU>&& tile_t) {
     for (SizeType j = 0; j < tile_t.size().cols(); ++j) {
       const TileElementIndex t_start{0, j};
       const TileElementSize t_size{j, 1};
@@ -161,8 +170,11 @@ pika::future<matrix::Tile<T, Device::CPU>> trmvUpdateColumn(
                  t_size.rows(), tile_t.ptr(), tile_t.ld(), tile_t.ptr(t_start), 1);
     }
     return std::move(tile_t);
-  });
-  return pika::dataflow(getHpExecutor<Backend::MC>(), trmv_func, tile_t);
+  };
+  return dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
+                                       pika::threads::thread_priority::high),
+                                   std::move(trmv_func), std::move(tile_t)) |
+         ex::make_future();
 }
 
 template <class T>

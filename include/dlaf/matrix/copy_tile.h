@@ -22,6 +22,7 @@
 #include "dlaf/executors.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/tile.h"
+#include "dlaf/sender/keep_if_shared_future.h"
 #include "dlaf/sender/partial_transform.h"
 #include "dlaf/sender/policy.h"
 #include "dlaf/sender/transform.h"
@@ -214,11 +215,11 @@ auto duplicateIfNeeded(pika::shared_future<Tile<T, Source>> tile) {
     return tile;
   }
   else {
-    return pika::execution::experimental::make_future(
-        dlaf::internal::transform(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>(
-                                      pika::threads::thread_priority::normal),
-                                  dlaf::matrix::Duplicate<Destination>{},
-                                  pika::execution::experimental::keep_future(std::move(tile))));
+    return dlaf::internal::transform(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>(
+                                         pika::threads::thread_priority::normal),
+                                     dlaf::matrix::Duplicate<Destination>{},
+                                     pika::execution::experimental::keep_future(std::move(tile))) |
+           pika::execution::experimental::make_future();
   }
 }
 
@@ -230,10 +231,17 @@ template <Device Destination, class T, Device Source, class U, template <class> 
           template <class> class FutureS>
 void copyIfNeeded(FutureS<Tile<U, Source>> tile_from, FutureD<Tile<T, Destination>> tile_to,
                   pika::future<void> wait_for_me = pika::make_ready_future<void>()) {
-  if constexpr (Destination != Source)
-    pika::dataflow(dlaf::getCopyExecutor<Source, Destination>(),
-                   matrix::unwrapExtendTiles(internal::copy_o), wait_for_me, std::move(tile_from),
-                   std::move(tile_to));
+  if constexpr (Destination != Source) {
+    dlaf::internal::transform(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>(
+                                  pika::threads::thread_priority::normal),
+                              internal::copy_o,
+                              pika::execution::experimental::when_all(std::move(wait_for_me),
+                                                                      dlaf::internal::keepIfSharedFuture(
+                                                                          std::move(tile_from)),
+                                                                      dlaf::internal::keepIfSharedFuture(
+                                                                          std::move(tile_to)))) |
+        pika::execution::experimental::start_detached();
+  }
 }
 }
 }

@@ -30,8 +30,6 @@ int pika_main(int argc, char* argv[]) {
   {
     dlaf::ScopedInitializer init(argc, argv);
 
-    auto exec = dlaf::getHpExecutor<dlaf::Backend::GPU>();
-
     constexpr int n = 10000;
     constexpr int incx = 1;
     constexpr int incy = 1;

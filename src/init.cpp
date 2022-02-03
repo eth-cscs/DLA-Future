@@ -30,7 +30,6 @@ namespace dlaf {
 std::ostream& operator<<(std::ostream& os, configuration const& cfg) {
   os << "  num_np_cuda_streams = " << cfg.num_np_cuda_streams << std::endl;
   os << "  num_hp_cuda_streams = " << cfg.num_hp_cuda_streams << std::endl;
-  // TODO: Remove the per_thread variables
   os << "  num_np_cuda_streams_per_thread = " << cfg.num_np_cuda_streams_per_thread << std::endl;
   os << "  num_hp_cuda_streams_per_thread = " << cfg.num_hp_cuda_streams_per_thread << std::endl;
   os << "  umpire_host_memory_pool_initial_bytes = " << cfg.umpire_host_memory_pool_initial_bytes

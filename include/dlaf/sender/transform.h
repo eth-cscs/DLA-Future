@@ -64,26 +64,8 @@ struct Transform<Backend::GPU> {
     auto cuda_sender = ex::transfer(std::forward<S>(s), std::move(scheduler));
     auto f_unwrapping = pika::unwrapping(std::forward<F>(f));
 
-    if constexpr (std::is_invocable_v<decltype(cu::then_with_stream), decltype(std::move(cuda_sender)),
-                                      decltype(std::move(f_unwrapping))>) {
-      return cu::then_with_stream(std::move(cuda_sender), std::move(f_unwrapping));
-    }
-    else if constexpr (std::is_invocable_v<decltype(cu::then_with_cublas),
-                                           decltype(std::move(cuda_sender)),
-                                           decltype(std::move(f_unwrapping)), cublasPointerMode_t>) {
-      return cu::then_with_cublas(std::move(cuda_sender), std::move(f_unwrapping),
+    return cu::then_with_any_cuda(std::move(cuda_sender), std::move(f_unwrapping),
                                   CUBLAS_POINTER_MODE_HOST);
-    }
-    else if constexpr (std::is_invocable_v<decltype(cu::then_with_cusolver),
-                                           decltype(std::move(cuda_sender)),
-                                           decltype(std::move(f_unwrapping))>) {
-      return cu::then_with_cusolver(std::move(cuda_sender), std::move(f_unwrapping));
-    }
-    else {
-      static_assert(
-          sizeof(S) == 0,
-          "Attempting to use Transform<GPU>, but callable is not invocable with a CUDA stream as the last argument or cuBLAS/cuSOLVER handle as the first argument.");
-    }
   }
 };
 #endif

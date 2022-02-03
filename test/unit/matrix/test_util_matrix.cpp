@@ -34,12 +34,7 @@ using namespace dlaf::test;
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
 template <class T>
-class MatrixUtilsTest : public ::testing::Test {
-public:
-  const std::vector<comm::CommunicatorGrid>& commGrids() {
-    return comm_grids;
-  }
-};
+struct MatrixUtilsTest : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(MatrixUtilsTest, MatrixElementTypes);
 
@@ -212,11 +207,7 @@ TYPED_TEST(MatrixUtilsTest, SetRandomHermitianPositiveDefinite) {
 }
 
 template <typename Type>
-struct PanelUtilsTest : public ::testing::Test {
-  const std::vector<comm::CommunicatorGrid>& commGrids() {
-    return comm_grids;
-  }
-};
+struct PanelUtilsTest : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(PanelUtilsTest, MatrixElementTypes);
 

@@ -38,11 +38,7 @@ using namespace dlaf::comm;
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
 template <typename Type>
-struct PanelTest : public ::testing::Test {
-  const std::vector<CommunicatorGrid>& commGrids() {
-    return comm_grids;
-  }
-};
+struct PanelTest : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(PanelTest, MatrixElementTypes);
 

@@ -33,48 +33,41 @@
 
 namespace dlaf {
 namespace internal {
-/// DLAF-specific transform, templated on a backend. This, together with
-/// when_all, takes the place of dataflow(executor, ...) for futures.
-template <Backend B>
-struct Transform;
-
-/// The Backend::MC specialization uses regular thread pool scheduler from pika.
-template <>
-struct Transform<Backend::MC> {
-  template <typename S, typename F>
-  static auto call(const Policy<Backend::MC> policy, S&& s, F&& f) {
-    namespace ex = pika::execution::experimental;
-
-    auto scheduler = getBackendScheduler<Backend::MC>(policy.priority());
-
-    return ex::then(ex::transfer(std::forward<S>(s), std::move(scheduler)),
-                    pika::unwrapping(std::forward<F>(f)));
-  }
-};
-
-#ifdef DLAF_WITH_CUDA
-template <>
-struct Transform<Backend::GPU> {
-  template <typename S, typename F>
-  static auto call(const Policy<Backend::GPU> policy, S&& s, F&& f) {
-    namespace ex = pika::execution::experimental;
-    namespace cu = pika::cuda::experimental;
-
-    auto scheduler = getBackendScheduler<Backend::GPU>(policy.priority());
-    auto cuda_sender = ex::transfer(std::forward<S>(s), std::move(scheduler));
-    auto f_unwrapping = pika::unwrapping(std::forward<F>(f));
-
-    return cu::then_with_any_cuda(std::move(cuda_sender), std::move(f_unwrapping),
-                                  CUBLAS_POINTER_MODE_HOST);
-  }
-};
-#endif
+// The following are DLA-Future-specific transforms, with some helper variations
+// for convenience and to approximate the behaviour of dataflow. Unlike
+// execution::then, the transforms below insert additional arguments for the GPU
+// backend (i.e. CUDA streams or cuBLAS/cuSOLVER handles). Additionally, the
+// selection of which context to run on is hidden behind the Policy which also
+// allows choosing the priority.
+//
+// At its core, transform is a convenience wrapper around
+// sender | transfer(with_priority(scheduler, priority)) | then(unwrapping(f)).
 
 /// Lazy transform. This does not submit the work and returns a sender.
 template <Backend B, typename F, typename Sender,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 [[nodiscard]] decltype(auto) transform(const Policy<B> policy, F&& f, Sender&& sender) {
-  return internal::Transform<B>::call(policy, std::forward<Sender>(sender), std::forward<F>(f));
+  namespace ex = pika::execution::experimental;
+
+  auto scheduler = getBackendScheduler<B>(policy.priority());
+  auto transfer_sender = ex::transfer(std::forward<Sender>(sender), std::move(scheduler));
+  auto f_unwrapping = pika::unwrapping(std::forward<F>(f));
+
+  if constexpr (B == Backend::MC) {
+    return ex::then(std::move(transfer_sender), std::move(f_unwrapping));
+  }
+  else if constexpr (B == Backend::GPU) {
+#if defined(DLAF_WITH_CUDA)
+    return pika::cuda::experimental::then_with_any_cuda(std::move(transfer_sender),
+                                                        std::move(f_unwrapping),
+                                                        CUBLAS_POINTER_MODE_HOST);
+#else
+    static_assert(sizeof(F) == 0, "Attempting to use transform with Backend::GPU but it is disabled");
+#endif
+  }
+  else {
+    static_assert(sizeof(F) == 0, "Unknown backend given to transform");
+  }
 }
 
 /// Lazy transform. This does not submit the work and returns a sender. First
@@ -82,8 +75,7 @@ template <Backend B, typename F, typename Sender,
 /// when_all sender of the lifted senders.
 template <Backend B, typename F, typename... Ts>
 [[nodiscard]] decltype(auto) transformLift(const Policy<B> policy, F&& f, Ts&&... ts) {
-  return internal::Transform<B>::call(policy, internal::whenAllLift(std::forward<Ts>(ts)...),
-                                      std::forward<F>(f));
+  return transform<B>(policy, std::forward<F>(f), whenAllLift(std::forward<Ts>(ts)...));
 }
 
 /// Fire-and-forget transform. This submits the work and returns void. First

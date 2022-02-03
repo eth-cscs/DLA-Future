@@ -575,7 +575,7 @@ void potrf(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<
 
 template <class T>
 void stedc(cusolverDnHandle_t, const Tile<BaseType<T>, Device::CPU>&, const Tile<T, Device::CPU>&) {
-  DLAF_STATIC_UNIMPLEMENTED(sizeof(T) == 0);
+  DLAF_STATIC_UNIMPLEMENTED(T);
 }
 #endif
 

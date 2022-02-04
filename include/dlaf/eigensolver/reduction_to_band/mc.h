@@ -226,7 +226,7 @@ void hemmDiag(pika::threads::thread_priority priority, ASender&& tile_a, WSender
 // X += op(A) * W
 template <typename T, typename ASender, typename WSender, typename XSender>
 void hemmOffDiag(pika::threads::thread_priority priority, blas::Op op, ASender&& tile_a,
-                 WSender&& tile_w, XSender tile_x) {
+                 WSender&& tile_w, XSender&& tile_x) {
   dlaf::internal::whenAllLift(op, blas::Op::NoTrans, T(1), std::forward<ASender>(tile_a),
                               std::forward<WSender>(tile_w), T(1), std::forward<XSender>(tile_x)) |
       tile::gemm(dlaf::internal::Policy<Backend::MC>(priority)) |
@@ -318,10 +318,10 @@ void setupReflectorPanelV(bool has_head, const LocalTileSize& ai_offset, const S
   auto it_end = v.iteratorLocal().end();
 
   if (has_head) {
-    auto setupV0 = pika::unwrapping([](auto&& tile_v, const auto& tile_a) {
+    auto setupV0 = [](auto&& tile_v, const auto& tile_a) {
       matrix::internal::copy(tile_a, tile_v);
       tile::internal::laset(lapack::MatrixType::Upper, T(0), T(1), tile_v);
-    });
+    };
 
     // Note:
     // If the number of reflectors are limited by height (|reflector| > 1), the panel is narrower than
@@ -350,7 +350,7 @@ void trmmComputeW(PanelT<Coord::Col, T>& w, MatrixLikeT& v, pika::shared_future<
   using pika::execution::experimental::keep_future;
   using pika::threads::thread_priority;
 
-  auto trmm_func = pika::unwrapping([](auto&& tile_w, const auto& tile_v, const auto& tile_t) -> void {
+  auto trmm_func = [](auto&& tile_w, const auto& tile_v, const auto& tile_t) -> void {
     // Note:
     // Since V0 is well-formed, by copying V0 to W we are also resetting W where the matrix is not going
     // to be computed.
@@ -359,12 +359,12 @@ void trmmComputeW(PanelT<Coord::Col, T>& w, MatrixLikeT& v, pika::shared_future<
     // W = V . T
     using namespace blas;
     tile::internal::trmm(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1), tile_t, tile_w);
-  });
+  };
 
   for (const auto& index_i : w.iteratorLocal()) {
     dlaf::internal::transformLiftDetach(dlaf::internal::Policy<Backend::MC>(thread_priority::high),
                                         std::move(trmm_func), w.readwrite_sender(index_i),
-                                        v.read_sender(index_i), keep_future(std::move(tile_t)));
+                                        v.read_sender(index_i), keep_future(tile_t));
   }
 }
 

@@ -10,9 +10,30 @@ jobs:
       - uses: actions/javascript-action@v1
       - uses: actions/checkout@v2
 
-      - name: Check source code
+      - name: Check file extensions
+        if: always()          # needed so that it runs even if previous one fails
         run: |
-          if: always()          # needed so that it runs even if previous one fails
+          # highlight if in these folders there are files with other extensions
+          find src include test miniapp -type f                                   \
+               ! '('                                                              \
+                       -name '*.cpp'                                              \
+                   -o  -name '*.h'                                                \
+                   -o  -name '*.h.in'                                             \
+                   -o  -name '*.tpp'                                              \
+                   -o  -name '*.cu'                                               \
+                   -o  -name 'CMakeLists.txt'                                     \
+               ')'                                                                \
+            > result-extension.check
+          # Genearate an error message for each file with an unkown extension
+          for filepath in `cat result-extension.check`; do                        \
+            echo "::error file=$filepath,line=1::check extension of $filepath";   \
+          done
+
+          test ! -s result-extension.check
+
+      - name: Check source code
+        if: always()          # needed so that it runs even if previous one fails
+        run: |
           # Compare first lines of each source file with reference in misc/HEADER
           find src include test miniapp -type f                                   \
                '('                                                                \

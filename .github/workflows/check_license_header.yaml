@@ -1,0 +1,33 @@
+name: Check license
+
+on:
+  - pull_request
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Check source code
+        run: |
+          # Compare header license in misc/HEADER with the first lines of each source code file
+          find  '(' -type f ! -path './misc*' ')'                                                 \
+                '('                                                                               \
+                        -name '*.cpp'                                                             \
+                    -o  -name '*.h'                                                               \
+                    -o  -name '*.hpp'                                                             \
+                    -o  -name '*.tpp'                                                             \
+                    -o  -name '*.ipp'                                                             \
+                    -o  -name '*.cu'                                                              \
+                ')'                                                                               \
+            | xargs -I{} sh -c                                                                    \
+                "head -n9 {} | diff -sq - misc/HEADER > /dev/null || echo 'CHECK LICENSE IN {}'"  \
+            > source_code.check
+          test ! -s source_code.check
+
+      - name: Check failed
+        if: failure()
+        run: cat source_code.check

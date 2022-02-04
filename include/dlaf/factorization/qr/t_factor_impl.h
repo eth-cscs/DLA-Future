@@ -44,69 +44,83 @@ struct Helpers {};
 template <class T>
 struct Helpers<Backend::MC, Device::CPU, T> {
   static pika::future<matrix::Tile<T, Device::CPU>> set0(pika::future<matrix::Tile<T, Device::CPU>>& t) {
-    return t.then(getHpExecutor<Backend::MC>(), pika::unwrapping([](auto&& tile) {
-                    tile::internal::set0<T>(tile);
-                    return std::move(tile);
-                  }));
+    namespace ex = pika::execution::experimental;
+
+    return dlaf::internal::transform(
+               dlaf::internal::Policy<Backend::MC>(pika::threads::thread_priority::high),
+               [](matrix::Tile<T, Device::CPU>&& tile) {
+                 tile::internal::set0<T>(tile);
+                 return std::move(tile);
+               },
+               std::move(t)) |
+           ex::make_future();
   }
 
   static pika::future<matrix::Tile<T, Device::CPU>> gemvColumnT(
       bool is_v0, pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_vi,
       pika::shared_future<common::internal::vector<T>>& taus,
       pika::future<matrix::Tile<T, Device::CPU>>& tile_t) {
-    auto gemv_func =
-        pika::unwrapping([is_v0](const auto& tile_v, const auto& taus, auto&& tile_t) noexcept {
-          const SizeType k = tile_t.size().cols();
-          DLAF_ASSERT(taus.size() == k, taus.size(), k);
+    namespace ex = pika::execution::experimental;
 
-          for (SizeType j = 0; j < k; ++j) {
-            const T tau = taus[j];
-            // this is the x0 element of the reflector j
-            const TileElementIndex x0{j, j};
+    auto gemv_func = [is_v0](const auto& tile_v, const auto& taus, auto&& tile_t) noexcept {
+      const SizeType k = tile_t.size().cols();
+      DLAF_ASSERT(taus.size() == k, taus.size(), k);
 
-            const TileElementIndex t_start{0, x0.col()};
+      for (SizeType j = 0; j < k; ++j) {
+        const T tau = taus[j];
+        // this is the x0 element of the reflector j
+        const TileElementIndex x0{j, j};
 
-            const SizeType first_element_in_tile = is_v0 ? x0.row() : 0;
+        const TileElementIndex t_start{0, x0.col()};
 
-            // T(0:j, j) = -tau . V(j:, 0:j)* . V(j:, j)
-            // [j x 1] = [(n-j) x j]* . [(n-j) x 1]
-            TileElementSize va_size{tile_v.size().rows() - first_element_in_tile, x0.col()};
-            TileElementIndex va_start{first_element_in_tile, 0};
-            TileElementIndex vb_start{first_element_in_tile, x0.col()};
+        const SizeType first_element_in_tile = is_v0 ? x0.row() : 0;
 
-            if (is_v0) {
-              tile_t(x0) = tau;
+        // T(0:j, j) = -tau . V(j:, 0:j)* . V(j:, j)
+        // [j x 1] = [(n-j) x j]* . [(n-j) x 1]
+        TileElementSize va_size{tile_v.size().rows() - first_element_in_tile, x0.col()};
+        TileElementIndex va_start{first_element_in_tile, 0};
+        TileElementIndex vb_start{first_element_in_tile, x0.col()};
 
-              // use implicit 1 for the 2nd operand
-              for (SizeType r = 0; !va_size.isEmpty() && r < va_size.cols(); ++r) {
-                const TileElementIndex i_v{va_start.row(), r + va_start.col()};
-                const TileElementIndex i_t{r + t_start.row(), t_start.col()};
+        if (is_v0) {
+          tile_t(x0) = tau;
 
-                tile_t(i_t) = -tau * dlaf::conj(tile_v(i_v));
-              }
+          // use implicit 1 for the 2nd operand
+          for (SizeType r = 0; !va_size.isEmpty() && r < va_size.cols(); ++r) {
+            const TileElementIndex i_v{va_start.row(), r + va_start.col()};
+            const TileElementIndex i_t{r + t_start.row(), t_start.col()};
 
-              // skip already managed computations with implicit 1
-              va_start = va_start + TileElementSize{1, 0};
-              vb_start = vb_start + TileElementSize{1, 0};
-              va_size = {va_size.rows() - 1, va_size.cols()};
-            }
-
-            if (!va_size.isEmpty()) {
-              blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, va_size.rows(), va_size.cols(),
-                         -tau, tile_v.ptr(va_start), tile_v.ld(), tile_v.ptr(vb_start), 1, 1,
-                         tile_t.ptr(t_start), 1);
-            }
+            tile_t(i_t) = -tau * dlaf::conj(tile_v(i_v));
           }
-          return std::move(tile_t);
-        });
-    return pika::dataflow(getHpExecutor<Backend::MC>(), gemv_func, tile_vi, taus, tile_t);
+
+          // skip already managed computations with implicit 1
+          va_start = va_start + TileElementSize{1, 0};
+          vb_start = vb_start + TileElementSize{1, 0};
+          va_size = {va_size.rows() - 1, va_size.cols()};
+        }
+
+        if (!va_size.isEmpty()) {
+          blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, va_size.rows(), va_size.cols(), -tau,
+                     tile_v.ptr(va_start), tile_v.ld(), tile_v.ptr(vb_start), 1, 1, tile_t.ptr(t_start),
+                     1);
+        }
+      }
+      return std::move(tile_t);
+    };
+    return dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
+                                         pika::threads::thread_priority::high),
+                                     std::move(gemv_func),
+                                     ex::when_all(ex::keep_future(tile_vi), ex::keep_future(taus),
+                                                  std::move(tile_t))) |
+           ex::make_future();
   }
 
   static pika::future<matrix::Tile<T, Device::CPU>> trmvUpdateColumn(
       pika::future<matrix::Tile<T, Device::CPU>>& tile_t) noexcept {
+    namespace ex = pika::execution::experimental;
+
     // Update each column (in order) t = T . t
     // remember that T is upper triangular, so it is possible to use TRMV
-    auto trmv_func = pika::unwrapping([](auto&& tile_t) {
+    auto trmv_func = [](matrix::Tile<T, Device::CPU>&& tile_t) {
       for (SizeType j = 0; j < tile_t.size().cols(); ++j) {
         const TileElementIndex t_start{0, j};
         const TileElementSize t_size{j, 1};
@@ -115,8 +129,11 @@ struct Helpers<Backend::MC, Device::CPU, T> {
                    t_size.rows(), tile_t.ptr(), tile_t.ld(), tile_t.ptr(t_start), 1);
       }
       return std::move(tile_t);
-    });
-    return pika::dataflow(getHpExecutor<Backend::MC>(), trmv_func, tile_t);
+    };
+    return dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
+                                         pika::threads::thread_priority::high),
+                                     std::move(trmv_func), std::move(tile_t)) |
+           ex::make_future();
   }
 };
 
@@ -124,75 +141,88 @@ struct Helpers<Backend::MC, Device::CPU, T> {
 template <class T>
 struct Helpers<Backend::GPU, Device::GPU, T> {
   static pika::future<matrix::Tile<T, Device::GPU>> set0(pika::future<matrix::Tile<T, Device::GPU>>& t) {
-    return pika::dataflow(dlaf::cuda::Executor{dlaf::internal::getHpCudaStreamPool()},
-                          pika::unwrapping([](auto&& tile, cudaStream_t stream) {
-                            tile::internal::set0<T>(tile, stream);
-                            return std::move(tile);
-                          }),
-                          std::move(t));
+    namespace ex = pika::execution::experimental;
+
+    return dlaf::internal::transform(
+               dlaf::internal::Policy<Backend::GPU>(pika::threads::thread_priority::high),
+               [](matrix::Tile<T, Device::GPU>&& tile, cudaStream_t stream) {
+                 tile::internal::set0<T>(tile, stream);
+                 return std::move(tile);
+               },
+               ex::keep_future(std::move(t))) |
+           ex::make_future();
   }
 
   static pika::future<matrix::Tile<T, Device::GPU>> gemvColumnT(
       bool is_v0, pika::shared_future<matrix::Tile<const T, Device::GPU>> tile_vi,
       pika::shared_future<common::internal::vector<T>>& taus,
       pika::future<matrix::Tile<T, Device::GPU>>& tile_t) noexcept {
-    auto gemv_func = pika::unwrapping(
-        [is_v0](cublasHandle_t handle, const auto& tile_v, const auto& taus, auto&& tile_t) {
-          const SizeType k = tile_t.size().cols();
-          DLAF_ASSERT(taus.size() == k, taus.size(), k);
+    namespace ex = pika::execution::experimental;
 
-          if (is_v0) {
-            cudaStream_t stream;
-            DLAF_CUBLAS_CALL(cublasGetStream(handle, &stream));
+    auto gemv_func = [is_v0](cublasHandle_t handle, const auto& tile_v, const auto& taus,
+                             auto&& tile_t) {
+      const SizeType k = tile_t.size().cols();
+      DLAF_ASSERT(taus.size() == k, taus.size(), k);
 
-            memory::MemoryView<T, Device::GPU> taus_d(taus.size());
-            DLAF_CUDA_CALL(cudaMemcpyAsync(taus_d(), taus.data(), to_sizet(taus.size()) * sizeof(T),
-                                           cudaMemcpyDefault, stream));
+      if (is_v0) {
+        cudaStream_t stream;
+        DLAF_CUBLAS_CALL(cublasGetStream(handle, &stream));
 
-            // manage computations with implicit 1 for the whole j loop
-            tfactorImplicit1(k, taus_d(), tile_v.ptr(), tile_v.ld(), tile_t.ptr(), tile_t.ld(), stream);
-          }
+        memory::MemoryView<T, Device::GPU> taus_d(taus.size());
+        DLAF_CUDA_CALL(cudaMemcpyAsync(taus_d(), taus.data(), to_sizet(taus.size()) * sizeof(T),
+                                       cudaMemcpyDefault, stream));
 
-          for (SizeType j = 0; j < k; ++j) {
-            const auto mtau = util::blasToCublasCast(-taus[j]);
-            const auto one = util::blasToCublasCast(T{1});
-            // this is the x0 element of the reflector j
-            const TileElementIndex x0{j, j};
+        // manage computations with implicit 1 for the whole j loop
+        tfactorImplicit1(k, taus_d(), tile_v.ptr(), tile_v.ld(), tile_t.ptr(), tile_t.ld(), stream);
+      }
 
-            const TileElementIndex t_start{0, x0.col()};
+      for (SizeType j = 0; j < k; ++j) {
+        const auto mtau = util::blasToCublasCast(-taus[j]);
+        const auto one = util::blasToCublasCast(T{1});
+        // this is the x0 element of the reflector j
+        const TileElementIndex x0{j, j};
 
-            const SizeType first_element_in_tile = is_v0 ? x0.row() : 0;
+        const TileElementIndex t_start{0, x0.col()};
 
-            // T(0:j, j) = -tau . V(j:, 0:j)* . V(j:, j)
-            // [j x 1] = [(n-j) x j]* . [(n-j) x 1]
-            TileElementSize va_size{tile_v.size().rows() - first_element_in_tile, x0.col()};
-            TileElementIndex va_start{first_element_in_tile, 0};
-            TileElementIndex vb_start{first_element_in_tile, x0.col()};
+        const SizeType first_element_in_tile = is_v0 ? x0.row() : 0;
 
-            if (is_v0) {
-              // skip already managed computations with implicit 1
-              va_start = va_start + TileElementSize{1, 0};
-              vb_start = vb_start + TileElementSize{1, 0};
-              va_size = va_size - TileElementSize{1, 0};
-            }
+        // T(0:j, j) = -tau . V(j:, 0:j)* . V(j:, j)
+        // [j x 1] = [(n-j) x j]* . [(n-j) x 1]
+        TileElementSize va_size{tile_v.size().rows() - first_element_in_tile, x0.col()};
+        TileElementIndex va_start{first_element_in_tile, 0};
+        TileElementIndex vb_start{first_element_in_tile, x0.col()};
 
-            if (!va_size.isEmpty()) {
-              gpublas::Gemv<T>::call(handle, CUBLAS_OP_C, to_int(va_size.rows()), to_int(va_size.cols()),
-                                     &mtau, util::blasToCublasCast(tile_v.ptr(va_start)),
-                                     to_int(tile_v.ld()), util::blasToCublasCast(tile_v.ptr(vb_start)),
-                                     1, &one, util::blasToCublasCast(tile_t.ptr(t_start)), 1);
-            }
-          }
-          return std::move(tile_t);
-        });
-    return pika::dataflow(getHpExecutor<Backend::GPU>(), gemv_func, tile_vi, taus, tile_t);
+        if (is_v0) {
+          // skip already managed computations with implicit 1
+          va_start = va_start + TileElementSize{1, 0};
+          vb_start = vb_start + TileElementSize{1, 0};
+          va_size = va_size - TileElementSize{1, 0};
+        }
+
+        if (!va_size.isEmpty()) {
+          gpublas::Gemv<T>::call(handle, CUBLAS_OP_C, to_int(va_size.rows()), to_int(va_size.cols()),
+                                 &mtau, util::blasToCublasCast(tile_v.ptr(va_start)),
+                                 to_int(tile_v.ld()), util::blasToCublasCast(tile_v.ptr(vb_start)), 1,
+                                 &one, util::blasToCublasCast(tile_t.ptr(t_start)), 1);
+        }
+      }
+      return std::move(tile_t);
+    };
+    return dlaf::internal::transform(dlaf::internal::Policy<Backend::GPU>(
+                                         pika::threads::thread_priority::high),
+                                     std::move(gemv_func),
+                                     ex::when_all(ex::keep_future(tile_vi), ex::keep_future(taus),
+                                                  ex::keep_future(std::move(tile_t)))) |
+           ex::make_future();
   }
 
   static pika::future<matrix::Tile<T, Device::GPU>> trmvUpdateColumn(
       pika::future<matrix::Tile<T, Device::GPU>>& tile_t) noexcept {
+    namespace ex = pika::execution::experimental;
+
     // Update each column (in order) t = T . t
     // remember that T is upper triangular, so it is possible to use TRMV
-    auto trmv_func = pika::unwrapping([](cublasHandle_t handle, auto&& tile_t) {
+    auto trmv_func = [](cublasHandle_t handle, matrix::Tile<T, Device::GPU>&& tile_t) {
       for (SizeType j = 0; j < tile_t.size().cols(); ++j) {
         const TileElementIndex t_start{0, j};
         const TileElementSize t_size{j, 1};
@@ -202,8 +232,12 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
                                to_int(tile_t.ld()), util::blasToCublasCast(tile_t.ptr(t_start)), 1);
       }
       return std::move(tile_t);
-    });
-    return pika::dataflow(getHpExecutor<Backend::GPU>(), trmv_func, tile_t);
+    };
+
+    return dlaf::internal::transform(dlaf::internal::Policy<Backend::GPU>(
+                                         pika::threads::thread_priority::high),
+                                     std::move(trmv_func), ex::keep_future(std::move(tile_t))) |
+           ex::make_future();
   }
 };
 #endif
@@ -297,10 +331,7 @@ void QR_Tfactor<backend, device, T>::call(const SizeType k, Matrix<const T, devi
   };
   const LocalTileIndex v_end_loc{dist.localNrTiles().rows(), v_start_loc.col() + 1};
 
-  t = t.then(getHpExecutor<Backend::MC>(), pika::unwrapping([](auto&& tile) {
-               tile::internal::set0<T>(tile);
-               return std::move(tile);
-             }));
+  t = Helpers::set0(t);
 
   // Note:
   // T factor is an upper triangular square matrix, built column by column

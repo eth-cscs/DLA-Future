@@ -8,8 +8,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - uses: actions/javascript-action@v1
+      - uses: actions/checkout@v2
 
       - name: Check source code
         run: |
@@ -24,8 +24,11 @@ jobs:
                     -o  -name '*.cu'                                                              \
                 ')'                                                                               \
             | xargs -I{} sh -c                                                                    \
-                "head -n9 {} | diff -sq - misc/HEADER > /dev/null || echo 'CHECK LICENSE IN {}'"  \
+                "head -n9 {} | diff -sq - misc/HEADER > /dev/null || echo {}"                     \
             > source_code.check
+          for filepath in `cat source_code.check`; do                                         \
+            echo "::error file=$filepath,line=1,title=$filepath::check the license";             \
+          done
           test ! -s source_code.check
 
       - name: Check failed

@@ -222,21 +222,20 @@ template <Backend B, typename F, typename Sender,
   return internal::Transform<B>::call(policy, std::forward<Sender>(sender), std::forward<F>(f));
 }
 
-/// Lazy transform. This does not submit the work and returns a sender. First
-/// lifts non-senders into senders using just, and then calls transform with a
-/// when_all sender of the lifted senders.
-template <Backend B, typename F, typename... Ts>
-[[nodiscard]] decltype(auto) transformLift(const Policy<B> policy, F&& f, Ts&&... ts) {
-  return internal::Transform<B>::call(policy, internal::whenAllLift(std::forward<Ts>(ts)...),
-                                      std::forward<F>(f));
-}
-
 /// Fire-and-forget transform. This submits the work and returns void.
 template <Backend B, typename F, typename Sender,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 void transformDetach(const Policy<B> policy, F&& f, Sender&& sender) {
   pika::execution::experimental::start_detached(
-      internal::Transform<B>::call(policy, std::forward<Sender>(sender), std::forward<F>(f)));
+      transform(policy, std::forward<F>(f), std::forward<Sender>(sender)));
+}
+
+/// Lazy transform. This does not submit the work and returns a sender. First
+/// lifts non-senders into senders using just, and then calls transform with a
+/// when_all sender of the lifted senders.
+template <Backend B, typename F, typename... Ts>
+[[nodiscard]] decltype(auto) transformLift(const Policy<B> policy, F&& f, Ts&&... ts) {
+  return transform(policy, std::forward<F>(f), internal::whenAllLift(std::forward<Ts>(ts)...));
 }
 
 /// Fire-and-forget transform. This submits the work and returns void. First
@@ -245,7 +244,7 @@ void transformDetach(const Policy<B> policy, F&& f, Sender&& sender) {
 template <Backend B, typename F, typename... Ts>
 void transformLiftDetach(const Policy<B> policy, F&& f, Ts&&... ts) {
   pika::execution::experimental::start_detached(
-      transformLift<B>(policy, std::forward<F>(f), std::forward<Ts>(ts)...));
+      transformLift(policy, std::forward<F>(f), std::forward<Ts>(ts)...));
 }
 }
 }

@@ -14,11 +14,13 @@ DLAF_addTest(test_types
   USE_MAIN PLAIN
 )
 
-DLAF_addTest(test_util_cuda
-  SOURCES test_util_cuda.cu
-  LIBRARIES dlaf.core
-  USE_MAIN PLAIN
-)
+if (DLAF_WITH_CUDA)
+  DLAF_addTest(test_util_cuda
+    SOURCES test_util_cuda.cu
+    LIBRARIES dlaf.core
+    USE_MAIN PLAIN
+  )
+endif()
 
 DLAF_addTest(test_util_math
   SOURCES test_util_math.cpp

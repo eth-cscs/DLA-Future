@@ -15,6 +15,7 @@ class DlaFuture(CMakePackage, CudaPackage):
     maintainers = ["teonnik", "albestro", "Sely85"]
 
     version("develop", branch="master")
+    version("hpx_latest", branch="hpx_latest")
 
     variant("doc", default=False, description="Build documentation.")
 

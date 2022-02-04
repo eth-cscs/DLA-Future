@@ -1,10 +1,9 @@
 name: Check license
 
-on:
-  - pull_request
+on: [pull_request]
 
 jobs:
-  check:
+  check-cpp:
     runs-on: ubuntu-latest
 
     steps:
@@ -13,24 +12,47 @@ jobs:
 
       - name: Check source code
         run: |
-          # Compare header license in misc/HEADER with the first lines of each source code file
-          find  '(' -type f ! -path './misc*' ')'                                                 \
-                '('                                                                               \
-                        -name '*.cpp'                                                             \
-                    -o  -name '*.h'                                                               \
-                    -o  -name '*.hpp'                                                             \
-                    -o  -name '*.tpp'                                                             \
-                    -o  -name '*.ipp'                                                             \
-                    -o  -name '*.cu'                                                              \
-                ')'                                                                               \
-            | xargs -I{} sh -c                                                                    \
-                "head -n9 {} | diff -sq - misc/HEADER > /dev/null || echo {}"                     \
-            > source_code.check
-          for filepath in `cat source_code.check`; do                                         \
-            echo "::error file=$filepath,line=1,title=$filepath::check the license";             \
-          done
-          test ! -s source_code.check
+          if: always()          # needed so that it runs even if previous one fails
+          # Compare first lines of each source file with reference in misc/HEADER
+          find src include test miniapp -type f                                   \
+               '('                                                                \
+                       -name '*.cpp'                                              \
+                   -o  -name '*.h'                                                \
+                   -o  -name '*.h.in'                                             \
+                   -o  -name '*.tpp'                                              \
+                   -o  -name '*.cu'                                               \
+               ')'                                                                \
+            | xargs -I{} sh -c                                                    \
+                "head -n9 {} | diff -sq - misc/HEADER > /dev/null || echo {}"     \
+            > result-cpp.check
 
-      - name: Check failed
-        if: failure()
-        run: cat source_code.check
+          # Genearate an error message for each offending file
+          for filepath in `cat result-cpp.check`; do                              \
+            echo "::error file=$filepath,line=1::check the license in $filepath"; \
+          done
+
+          test ! -s result-cpp.check
+
+      - name: Check CMake files
+        if: always()          # needed so that it runs even if previous one fails
+        run: |
+          # Generate header license CMake compliant
+          sed 's|^//|#|g' misc/HEADER > HEADER_CMAKE
+
+          # Compare first lines of cmake files with the reference
+          find  '(' -type f ! -path './misc*' ')'                                 \
+                '('                                                               \
+                        -name 'CMakeLists.txt'                                    \
+                    -o  -name 'DLAF*.cmake'                                       \
+                    -o  -name 'DLAF*.cmake.in'                                    \
+                ')'                                                               \
+            | xargs -I{} sh -c                                                    \
+                "head -n9 {} | diff -sq - HEADER_CMAKE > /dev/null || echo {}"    \
+            > result-cmake.check
+
+          # Genearate an error message for each offending file
+          for filepath in `cat result-cmake.check`; do                            \
+            echo "::error file=$filepath,line=1::check the license in $filepath"; \
+          done
+
+          test ! -s result-cmake.check

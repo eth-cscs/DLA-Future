@@ -214,34 +214,44 @@ void updateTrailingPanel(const bool has_head, const std::vector<TileT<T>>& panel
   }
 }
 
-template <class Executor, class T>
-void hemmDiag(const Executor& ex, pika::shared_future<TileT<const T>> tile_a,
-              pika::shared_future<TileT<const T>> tile_w, pika::future<TileT<T>> tile_x) {
-  pika::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::hemm_o), blas::Side::Left,
-                 blas::Uplo::Lower, T(1), std::move(tile_a), std::move(tile_w), T(1), std::move(tile_x));
+template <typename T, typename ASender, typename WSender, typename XSender>
+void hemmDiag(pika::threads::thread_priority priority, ASender&& tile_a, WSender&& tile_w,
+              XSender&& tile_x) {
+  dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, T(1), std::forward<ASender>(tile_a),
+                              std::forward<WSender>(tile_w), T(1), std::forward<XSender>(tile_x)) |
+      tile::hemm(dlaf::internal::Policy<Backend::MC>(priority)) |
+      pika::execution::experimental::start_detached();
 }
 
 // X += op(A) * W
-template <class Executor, class T>
-void hemmOffDiag(const Executor& ex, blas::Op op, pika::shared_future<TileT<const T>> tile_a,
-                 pika::shared_future<TileT<const T>> tile_w, pika::future<TileT<T>> tile_x) {
-  pika::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::gemm_o), op, blas::Op::NoTrans, T(1),
-                 std::move(tile_a), std::move(tile_w), T(1), std::move(tile_x));
+template <typename T, typename ASender, typename WSender, typename XSender>
+void hemmOffDiag(pika::threads::thread_priority priority, blas::Op op, ASender&& tile_a,
+                 WSender&& tile_w, XSender tile_x) {
+  dlaf::internal::whenAllLift(op, blas::Op::NoTrans, T(1), std::forward<ASender>(tile_a),
+                              std::forward<WSender>(tile_w), T(1), std::forward<XSender>(tile_x)) |
+      tile::gemm(dlaf::internal::Policy<Backend::MC>(priority)) |
+      pika::execution::experimental::start_detached();
 }
 
-template <class Executor, class T>
-void her2kDiag(const Executor& ex, pika::shared_future<TileT<const T>> tile_v,
-               pika::shared_future<TileT<const T>> tile_x, pika::future<TileT<T>> tile_a) {
-  dataflow(ex, matrix::unwrapExtendTiles(tile::internal::her2k_o), blas::Uplo::Lower, blas::Op::NoTrans,
-           T(-1), std::move(tile_v), std::move(tile_x), BaseType<T>(1), std::move(tile_a));
+template <typename T, typename VSender, typename XSender, typename ASender>
+void her2kDiag(pika::threads::thread_priority priority, VSender&& tile_v, XSender&& tile_x,
+               ASender&& tile_a) {
+  dlaf::internal::whenAllLift(blas::Uplo::Lower, blas::Op::NoTrans, T(-1), std::forward<VSender>(tile_v),
+                              std::forward<XSender>(tile_x), BaseType<T>(1),
+                              std::forward<ASender>(tile_a)) |
+      tile::her2k(dlaf::internal::Policy<Backend::MC>(priority)) |
+      pika::execution::experimental::start_detached();
 }
 
 // C -= A . B*
-template <class Executor, class T>
-void her2kOffDiag(const Executor& ex, pika::shared_future<TileT<const T>> tile_a,
-                  pika::shared_future<TileT<const T>> tile_b, pika::future<TileT<T>> tile_c) {
-  dataflow(ex, matrix::unwrapExtendTiles(tile::internal::gemm_o), blas::Op::NoTrans, blas::Op::ConjTrans,
-           T(-1), std::move(tile_a), std::move(tile_b), T(1), std::move(tile_c));
+template <typename T, typename ASender, typename BSender, typename CSender>
+void her2kOffDiag(pika::threads::thread_priority priority, ASender&& tile_a, BSender&& tile_b,
+                  CSender&& tile_c) {
+  dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
+                              std::forward<ASender>(tile_a), std::forward<BSender>(tile_b), T(1),
+                              std::forward<CSender>(tile_c)) |
+      tile::gemm(dlaf::internal::Policy<Backend::MC>(priority)) |
+      pika::execution::experimental::start_detached();
 }
 
 namespace local {
@@ -287,12 +297,16 @@ pika::shared_future<common::internal::vector<T>> computePanelReflectors(
 
   auto panel_tiles = pika::when_all(matrix::select(mat_a, ai_panel_range));
 
+  // TODO: This needs a when_all equivalent that can take a range of senders.
   return pika::dataflow(getHpExecutor<Backend::MC>(), std::move(panel_task), std::move(panel_tiles));
 }
 
 template <class T>
 void setupReflectorPanelV(bool has_head, const LocalTileSize& ai_offset, const SizeType nrefls,
                           PanelT<Coord::Col, T>& v, MatrixT<const T>& mat_a) {
+  using pika::execution::experimental::keep_future;
+  using pika::threads::thread_priority;
+
   // Note:
   // Reflectors are stored in the lower triangular part of the A matrix leading to sharing memory
   // between reflectors and results, which are in the upper triangular part. The problem exists only
@@ -314,9 +328,11 @@ void setupReflectorPanelV(bool has_head, const LocalTileSize& ai_offset, const S
     // the blocksize, leading to just using a part of A (first full nrefls columns)
     const auto malformed_v0_idx = indexFromOrigin(ai_offset);
     const auto nrows = mat_a.tileSize(GlobalTileIndex(Coord::Row, v.rangeStart())).rows();
-    const auto& tile_a = splitTile(mat_a.read(malformed_v0_idx), {{0, 0}, {nrows, nrefls}});
+    auto tile_a = splitTile(mat_a.read(malformed_v0_idx), {{0, 0}, {nrows, nrefls}});
 
-    pika::dataflow(getHpExecutor<Backend::MC>(), std::move(setupV0), v(malformed_v0_idx), tile_a);
+    dlaf::internal::transformLiftDetach(dlaf::internal::Policy<Backend::MC>(thread_priority::high),
+                                        std::move(setupV0), v.readwrite_sender(malformed_v0_idx),
+                                        keep_future(std::move(tile_a)));
 
     ++it_begin;
   }
@@ -331,7 +347,8 @@ void setupReflectorPanelV(bool has_head, const LocalTileSize& ai_offset, const S
 
 template <class T, class MatrixLikeT>
 void trmmComputeW(PanelT<Coord::Col, T>& w, MatrixLikeT& v, pika::shared_future<ConstTileT<T>> tile_t) {
-  const auto ex = getHpExecutor<Backend::MC>();
+  using pika::execution::experimental::keep_future;
+  using pika::threads::thread_priority;
 
   auto trmm_func = pika::unwrapping([](auto&& tile_w, const auto& tile_v, const auto& tile_t) -> void {
     // Note:
@@ -344,28 +361,36 @@ void trmmComputeW(PanelT<Coord::Col, T>& w, MatrixLikeT& v, pika::shared_future<
     tile::internal::trmm(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1), tile_t, tile_w);
   });
 
-  for (const auto& index_i : w.iteratorLocal())
-    pika::dataflow(ex, trmm_func, w(index_i), v.read(index_i), tile_t);
+  for (const auto& index_i : w.iteratorLocal()) {
+    dlaf::internal::transformLiftDetach(dlaf::internal::Policy<Backend::MC>(thread_priority::high),
+                                        std::move(trmm_func), w.readwrite_sender(index_i),
+                                        v.read_sender(index_i), keep_future(std::move(tile_t)));
+  }
 }
 
 template <class T, class MatrixLikeT>
 void gemmUpdateX(PanelT<Coord::Col, T>& x, ConstMatrixT<T>& w2, MatrixLikeT& v) {
   using matrix::unwrapExtendTiles;
   using tile::internal::gemm_o;
-
-  const auto ex = getHpExecutor<Backend::MC>();
+  using pika::execution::experimental::keep_future;
+  using pika::threads::thread_priority;
 
   // GEMM X = X - 0.5 . V . W2
-  for (const auto& index_i : v.iteratorLocal())
-    pika::dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::NoTrans, blas::Op::NoTrans, T(-0.5),
-                   v.read(index_i), w2.read(LocalTileIndex(0, 0)), T(1), x(index_i));
+  for (const auto& index_i : v.iteratorLocal()) {
+    dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, T(-0.5), v.read_sender(index_i),
+                                w2.read_sender(LocalTileIndex(0, 0)), T(1),
+                                x.readwrite_sender(index_i)) |
+        tile::gemm(dlaf::internal::Policy<Backend::MC>(thread_priority::high)) |
+        pika::execution::experimental::start_detached();
+  }
 }
 
 template <class T>
 void hemmComputeX(PanelT<Coord::Col, T>& x, const LocalTileSize at_offset, ConstMatrixT<T>& a,
                   ConstPanelT<Coord::Col, T>& w) {
-  const auto ex = getHpExecutor<Backend::MC>();
-  const auto priority = pika::threads::thread_priority::high;
+  using pika::threads::thread_priority;
+
+  const auto priority = thread_priority::high;
 
   const auto dist = a.distribution();
 
@@ -385,7 +410,8 @@ void hemmComputeX(PanelT<Coord::Col, T>& x, const LocalTileSize at_offset, Const
       const bool is_diagonal_tile = (ij.row() == ij.col());
 
       if (is_diagonal_tile) {
-        hemmDiag(ex, a.read(ij), w.read(ij), x(ij));
+        hemmDiag<T>(thread_priority::normal, a.read_sender(ij), w.read_sender(ij),
+                    x.readwrite_sender(ij));
       }
       else {
         // Note:
@@ -397,14 +423,16 @@ void hemmComputeX(PanelT<Coord::Col, T>& x, const LocalTileSize at_offset, Const
         {
           const LocalTileIndex index_x(Coord::Row, ij.row());
           const LocalTileIndex index_w(Coord::Row, ij.col());
-          hemmOffDiag(ex, blas::Op::NoTrans, a.read(ij), w.read(index_w), x(index_x));
+          hemmOffDiag<T>(thread_priority::high, blas::Op::NoTrans, a.read_sender(ij),
+                         w.read_sender(index_w), x.readwrite_sender(index_x));
         }
 
         {
           const LocalTileIndex index_pretended = transposed(ij);
           const LocalTileIndex index_x(Coord::Row, index_pretended.row());
           const LocalTileIndex index_w(Coord::Row, index_pretended.col());
-          hemmOffDiag(ex, blas::Op::ConjTrans, a.read(ij), w.read(index_w), x(index_x));
+          hemmOffDiag<T>(thread_priority::high, blas::Op::ConjTrans, a.read_sender(ij),
+                         w.read_sender(index_w), x.readwrite_sender(index_x));
         }
       }
     }
@@ -415,24 +443,32 @@ template <class T>
 void gemmComputeW2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Coord::Col, T>& x) {
   using matrix::unwrapExtendTiles;
   using tile::internal::gemm_o;
-
-  const auto ex = getHpExecutor<Backend::MC>();
+  using pika::execution::experimental::keep_future;
+  using pika::threads::thread_priority;
 
   // Note:
   // Not all ranks in the column always hold at least a tile in the panel Ai, but all ranks in
   // the column are going to participate to the reduce. For them, it is important to set the
   // partial result W2 to zero.
-  pika::dataflow(ex, unwrapExtendTiles(tile::internal::set0_o), w2(LocalTileIndex(0, 0)));
+  tile::set0(dlaf::internal::Policy<Backend::MC>(thread_priority::high),
+             w2.readwrite_sender(LocalTileIndex(0, 0))) |
+      pika::execution::experimental::start_detached();
 
   // GEMM W2 = W* . X
-  for (const auto& index_tile : w.iteratorLocal())
-    pika::dataflow(ex, unwrapExtendTiles(gemm_o), blas::Op::ConjTrans, blas::Op::NoTrans, T(1),
-                   w.read(index_tile), x.read(index_tile), T(1), w2(LocalTileIndex(0, 0)));
+  for (const auto& index_tile : w.iteratorLocal()) {
+    dlaf::internal::whenAllLift(blas::Op::ConjTrans, blas::Op::NoTrans, T(1), w.read_sender(index_tile),
+                                x.read_sender(index_tile), T(1),
+                                w2.readwrite_sender(LocalTileIndex(0, 0))) |
+        tile::gemm(dlaf::internal::Policy<Backend::MC>(thread_priority::high)) |
+        pika::execution::experimental::start_detached();
+  }
 }
 
 template <class T>
 void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
                                ConstPanelT<Coord::Col, T>& x, ConstPanelT<Coord::Col, T>& v) {
+  using pika::threads::thread_priority;
+
   static_assert(std::is_signed_v<BaseType<T>>, "alpha in computations requires to be -1");
 
   const auto dist = a.distribution();
@@ -448,18 +484,20 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
 
       // The first column of the trailing matrix (except for the very first global tile) has to be
       // updated first, in order to unlock the next iteration as soon as possible.
-      const auto& ex =
-          (j == at_start.cols()) ? getHpExecutor<Backend::MC>() : getNpExecutor<Backend::MC>();
+      const auto priority = (j == at_start.cols()) ? thread_priority::high : thread_priority::normal;
 
       if (is_diagonal_tile) {
-        her2kDiag(ex, v.read(ij_local), x.read(ij_local), a(ij_local));
+        her2kDiag<T>(priority, v.read_sender(ij_local), x.read_sender(ij_local),
+                     a.readwrite_sender(ij_local));
       }
       else {
         // A -= X . V*
-        her2kOffDiag(ex, x.read(ij_local), v.read(transposed(ij_local)), a(ij_local));
+        her2kOffDiag<T>(priority, x.read_sender(ij_local), v.read_sender(transposed(ij_local)),
+                        a.readwrite_sender(ij_local));
 
         // A -= V . X*
-        her2kOffDiag(ex, v.read(ij_local), x.read(transposed(ij_local)), a(ij_local));
+        her2kOffDiag<T>(priority, v.read_sender(ij_local), x.read_sender(transposed(ij_local)),
+                        a.readwrite_sender(ij_local));
       }
     }
   }
@@ -532,6 +570,7 @@ pika::shared_future<common::internal::vector<T>> computePanelReflectors(
 
   auto panel_tiles = pika::when_all(matrix::select(mat_a, ai_panel_range));
 
+  // TODO: This needs a when_all equivalent that can take a range of senders.
   return pika::dataflow(getHpExecutor<Backend::MC>(), std::move(panel_task), std::move(panel_tiles),
                         mpi_col_chain_panel, std::move(trigger));
 }
@@ -541,7 +580,8 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
                   const LocalTileSize at_offset, ConstMatrixT<T>& a, ConstPanelT<Coord::Col, T>& w,
                   ConstPanelT<Coord::Row, T>& wt, common::Pipeline<comm::Communicator>& mpi_row_chain,
                   common::Pipeline<comm::Communicator>& mpi_col_chain) {
-  const auto ex = getHpExecutor<Backend::MC>();
+  using pika::threads::thread_priority;
+
   const auto priority = pika::threads::thread_priority::high;
 
   const auto ex_mpi = getMPIExecutor<Backend::MC>();
@@ -568,7 +608,8 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
       const bool is_diagonal_tile = (ij.row() == ij.col());
 
       if (is_diagonal_tile) {
-        hemmDiag(ex, a.read(ij_local), w.read(ij_local), x(ij_local));
+        hemmDiag<T>(thread_priority::normal, a.read_sender(ij_local), w.read_sender(ij_local),
+                    x.readwrite_sender(ij_local));
       }
       else {
         // Note:
@@ -577,7 +618,8 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
         // support panel Wt.
         // However, since we are still computing the "straight" part, the result can be stored
         // in the "local" panel X.
-        hemmOffDiag(ex, blas::Op::NoTrans, a.read(ij_local), wt.read(ij_local), x(ij_local));
+        hemmOffDiag<T>(thread_priority::high, blas::Op::NoTrans, a.read_sender(ij_local),
+                       wt.read_sender(ij_local), x.readwrite_sender(ij_local));
 
         // Note:
         // Here we are considering the hermitian part of A, so coordinates have to be "mirrored".
@@ -592,9 +634,11 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
         const LocalTileIndex index_x{dist.template localTileFromGlobalTile<Coord::Row>(ij.col()), 0};
         const LocalTileIndex index_xt{0, ij_local.col()};
 
-        auto tile_x = (dist.rankIndex().row() == owner) ? x(index_x) : xt(index_xt);
+        auto tile_x = (dist.rankIndex().row() == owner) ? x.readwrite_sender(index_x)
+                                                        : xt.readwrite_sender(index_xt);
 
-        hemmOffDiag(ex, blas::Op::ConjTrans, a.read(ij_local), w.read(ij_local), std::move(tile_x));
+        hemmOffDiag<T>(thread_priority::high, blas::Op::ConjTrans, a.read_sender(ij_local),
+                       w.read_sender(ij_local), std::move(tile_x));
       }
     }
   }
@@ -644,6 +688,8 @@ template <class T>
 void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
                                ConstPanelT<Coord::Col, T>& x, ConstPanelT<Coord::Row, T>& vt,
                                ConstPanelT<Coord::Col, T>& v, ConstPanelT<Coord::Row, T>& xt) {
+  using pika::threads::thread_priority;
+
   static_assert(std::is_signed_v<BaseType<T>>, "alpha in computations requires to be -1");
 
   const auto dist = a.distribution();
@@ -659,18 +705,20 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
 
       // The first column of the trailing matrix (except for the very first global tile) has to be
       // updated first, in order to unlock the next iteration as soon as possible.
-      const auto& ex =
-          (j == at_start.cols()) ? getHpExecutor<Backend::MC>() : getNpExecutor<Backend::MC>();
+      const auto priority = (j == at_start.cols()) ? thread_priority::high : thread_priority::normal;
 
       if (is_diagonal_tile) {
-        her2kDiag(ex, v.read(ij_local), x.read(ij_local), a(ij_local));
+        her2kDiag<T>(priority, v.read_sender(ij_local), x.read_sender(ij_local),
+                     a.readwrite_sender(ij_local));
       }
       else {
         // A -= X . V*
-        her2kOffDiag(ex, x.read(ij_local), vt.read(ij_local), a(ij_local));
+        her2kOffDiag<T>(priority, x.read_sender(ij_local), vt.read_sender(ij_local),
+                        a.readwrite_sender(ij_local));
 
         // A -= V . X*
-        her2kOffDiag(ex, v.read(ij_local), xt.read(ij_local), a(ij_local));
+        her2kOffDiag<T>(priority, v.read_sender(ij_local), xt.read_sender(ij_local),
+                        a.readwrite_sender(ij_local));
       }
     }
   }

@@ -14,7 +14,6 @@
 
 #include <pika/execution.hpp>
 
-#include "dlaf/sender/partial_transform.h"
 #include "dlaf/sender/policy.h"
 #include "dlaf/sender/transform.h"
 

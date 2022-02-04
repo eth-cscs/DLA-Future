@@ -23,7 +23,6 @@
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/sender/keep_if_shared_future.h"
-#include "dlaf/sender/partial_transform.h"
 #include "dlaf/sender/policy.h"
 #include "dlaf/sender/transform.h"
 

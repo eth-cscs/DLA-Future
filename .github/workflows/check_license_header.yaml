@@ -3,7 +3,7 @@ name: Check license
 on: [pull_request]
 
 jobs:
-  check-cpp:
+  check-licenses:
     runs-on: ubuntu-latest
 
     steps:
@@ -24,7 +24,7 @@ jobs:
                    -o  -name 'CMakeLists.txt'                                     \
                ')'                                                                \
             > result-extension.check
-          # Genearate an error message for each file with an unkown extension
+          # Generate an error message for each file with an unkown extension
           for filepath in `cat result-extension.check`; do                        \
             echo "::error file=$filepath,line=1::check extension of $filepath";   \
           done
@@ -47,7 +47,7 @@ jobs:
                 "head -n9 {} | diff -sq - misc/HEADER > /dev/null || echo {}"     \
             > result-cpp.check
 
-          # Genearate an error message for each offending file
+          # Generate an error message for each offending file
           for filepath in `cat result-cpp.check`; do                              \
             echo "::error file=$filepath,line=1::check the license in $filepath"; \
           done
@@ -71,7 +71,7 @@ jobs:
                 "head -n9 {} | diff -sq - HEADER_CMAKE > /dev/null || echo {}"    \
             > result-cmake.check
 
-          # Genearate an error message for each offending file
+          # Generate an error message for each offending file
           for filepath in `cat result-cmake.check`; do                            \
             echo "::error file=$filepath,line=1::check the license in $filepath"; \
           done

@@ -438,6 +438,13 @@ void laed4(std::vector<T> const& d, std::vector<T> const& z, T rho, SizeType i, 
                                 delta.data(), rho, &lambda);
 }
 
+template <class T>
+void scale_col(T alpha, SizeType col, const Tile<T, Device::CPU>& tile) {
+  DLAF_ASSERT(col >= 0, col);
+  DLAF_ASSERT(tile.size().cols() > col, tile, col);
+  blas::scal(tile.size().rows(), alpha, tile.ptr(TileElementIndex(0, col)), 1);
+}
+
 #ifdef DLAF_WITH_CUDA
 namespace internal {
 #define DLAF_DECLARE_CUSOLVER_OP(Name) \

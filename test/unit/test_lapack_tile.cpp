@@ -371,3 +371,22 @@ TYPED_TEST(RealTileOperationsTestMC, Laed4) {
   TypeParam expected_lambda = 2.497336;
   EXPECT_NEAR(lambda, expected_lambda, 1e-7);
 }
+
+TYPED_TEST(TileOperationsTestMC, ScaleCol) {
+  TileElementSize tile_size{5, 5};
+  auto tile_fn = [](const TileElementIndex& idx) { return TypeParam(idx.row() + idx.col()); };
+  auto tile = createTile<TypeParam, Device::CPU>(std::move(tile_fn), tile_size, tile_size.rows());
+  TypeParam alpha = 4.2;
+  SizeType col = 3;
+
+  tile::internal::scale_col(alpha, col, tile);
+
+  auto expected_tile_fn = [col, alpha](const TileElementIndex& idx) {
+    TypeParam factor = (idx.col() == col) ? alpha : TypeParam(1);
+    return TypeParam(idx.row() + idx.col()) * factor;
+  };
+  auto expected_tile =
+      createTile<TypeParam, Device::CPU>(std::move(expected_tile_fn), tile_size, tile_size.rows());
+
+  CHECK_TILE_NEAR(expected_tile, tile, TypeUtilities<TypeParam>::error, TypeUtilities<TypeParam>::error);
+}

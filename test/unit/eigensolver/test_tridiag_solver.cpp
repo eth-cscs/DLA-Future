@@ -35,6 +35,18 @@ TYPED_TEST(TridiagEigensolverTest, AssembleZVector) {
   eigensolver::internal::assembleZVec(i_begin, i_middle, i_end, mat_ev, z);
 }
 
+TYPED_TEST(TridiagEigensolverTest, AssembleDiag) {
+  SizeType n = 10;
+  SizeType nb = 2;
+
+  SizeType i_begin = 0;
+  SizeType i_end = 4;
+  matrix::Matrix<TypeParam, Device::CPU> mat_a(LocalElementSize(n, n), TileElementSize(nb, nb));
+  matrix::Matrix<TypeParam, Device::CPU> d(LocalElementSize(n, 1), TileElementSize(nb, 1));
+
+  eigensolver::internal::assembleDiag(i_begin, i_end, mat_a, d);
+}
+
 TYPED_TEST(TridiagEigensolverTest, CuppensDecomposition) {
   using matrix::test::createTile;
 

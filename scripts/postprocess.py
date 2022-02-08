@@ -364,7 +364,7 @@ def add_basic_legend(fig, ax):
     ax.legend(handles, labels, ncol=1, prop={"size": 10})
 
 
-def gen_chol_plots(
+def gen_chol_plots_strong(
     df,
     logx=False,
     combine_mb=False,
@@ -392,8 +392,8 @@ def gen_chol_plots(
             mb = x[1]
 
         title = f"Cholesky: strong scaling ({m} x {m})"
-        filename_ppn = f"chol_ppn_{m}"
-        filename_time = f"chol_time_{m}"
+        filename_ppn = f"chol_strong_ppn_{m}"
+        filename_time = f"chol_strong_time_{m}"
         if not combine_mb:
             title += f", block_size = {mb} x {mb}"
             filename_ppn += f"_{mb}"
@@ -467,8 +467,8 @@ def gen_chol_plots_weak(
             mb = x[1]
 
         title = f"Cholesky: weak scaling ({weak_rt} x {weak_rt})"
-        filename_ppn = f"chol_ppn_{weak_rt}"
-        filename_time = f"chol_time_{weak_rt}"
+        filename_ppn = f"chol_weak_ppn_{weak_rt}"
+        filename_time = f"chol_weak_time_{weak_rt}"
         if not combine_mb:
             title += f", block_size = {mb} x {mb}"
             filename_ppn += f"_{mb}"
@@ -507,7 +507,7 @@ def gen_chol_plots_weak(
             ax.set_yscale("log", base=10)
 
 
-def gen_trsm_plots(
+def gen_trsm_plots_strong(
     df,
     logx=False,
     combine_mb=False,
@@ -534,8 +534,8 @@ def gen_trsm_plots(
             m, n, mb = x
 
         title = f"TRSM: strong scaling ({m} x {n})"
-        filename_ppn = f"trsm_ppn_{m}_{n}"
-        filename_time = f"trsm_time_{m}_{n}"
+        filename_ppn = f"trsm_strong_ppn_{m}_{n}"
+        filename_time = f"trsm_strong_time_{m}_{n}"
         if not combine_mb:
             title += f", block_size = {mb} x {mb}"
             filename_ppn += f"_{mb}"
@@ -612,8 +612,8 @@ def gen_trsm_plots_weak(
             weakrt_m, weakrt_n, mb = x
 
         title = f"TRSM: weak scaling ({weakrt_m} x {weakrt_n})"
-        filename_ppn = f"trsm_ppn_{weakrt_m}_{weakrt_n}"
-        filename_time = f"trsm_time_{weakrt_m}_{weakrt_n}"
+        filename_ppn = f"trsm_weak_ppn_{weakrt_m}_{weakrt_n}"
+        filename_time = f"trsm_weak_time_{weakrt_m}_{weakrt_n}"
         if not combine_mb:
             title += f", block_size = {mb} x {mb}"
             filename_ppn += f"_{mb}"
@@ -651,7 +651,7 @@ def gen_trsm_plots_weak(
                 ax.set_xscale("log", base=2)
 
 
-def gen_gen2std_plots(
+def gen_gen2std_plots_strong(
     df,
     logx=False,
     combine_mb=False,
@@ -679,8 +679,8 @@ def gen_gen2std_plots(
             mb = x[1]
 
         title = f"HEGST: strong scaling ({m} x {m})"
-        filename_ppn = f"gen2std_ppn_{m}"
-        filename_time = f"gen2std_time_{m}"
+        filename_ppn = f"gen2std_strong_ppn_{m}"
+        filename_time = f"gen2std_strong_time_{m}"
         if not combine_mb:
             title += f", block_size = {mb} x {mb}"
             filename_ppn += f"_{mb}"
@@ -754,8 +754,8 @@ def gen_gen2std_plots_weak(
             mb = x[1]
 
         title = f"HEGST: weak scaling ({weak_rt} x {weak_rt})"
-        filename_ppn = f"gen2std_ppn_{weak_rt}"
-        filename_time = f"gen2std_time_{weak_rt}"
+        filename_ppn = f"gen2std_weak_ppn_{weak_rt}"
+        filename_time = f"gen2std_weak_time_{weak_rt}"
         if not combine_mb:
             title += f", block_size = {mb} x {mb}"
             filename_ppn += f"_{mb}"

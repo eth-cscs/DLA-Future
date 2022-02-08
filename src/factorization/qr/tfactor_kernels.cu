@@ -87,7 +87,7 @@ __global__ void tfactorImplicit1(const unsigned n, const T* tau, const T* v, con
   }
 }
 }
-#include <iostream>
+
 template <class T>
 void tfactorImplicit1(const SizeType n, const T* tau, const T* v, const SizeType ldv, T* t,
                       const SizeType ldt, cudaStream_t stream) {

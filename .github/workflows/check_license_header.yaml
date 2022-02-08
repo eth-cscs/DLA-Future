@@ -44,7 +44,8 @@ jobs:
                    -o  -name '*.cu'                                               \
                ')'                                                                \
             | xargs -I{} sh -c                                                    \
-                "head -n9 {} | diff -sq - misc/HEADER > /dev/null || echo {}"     \
+                "grep -sq 'dlaf-no-license-check' {}                              \
+                || head -n9 {} | diff - misc/HEADER > /dev/null || echo {}"       \
             > result-cpp.check
 
           # Generate an error message for each offending file
@@ -68,7 +69,7 @@ jobs:
                     -o  -name 'DLAF*.cmake.in'                                    \
                 ')'                                                               \
             | xargs -I{} sh -c                                                    \
-                "head -n9 {} | diff -sq - HEADER_HASH > /dev/null || echo {}"     \
+                "head -n9 {} | diff - HEADER_HASH > /dev/null || echo {}"         \
             >> result.check
 
           # Look for the LICENSE inside the python file

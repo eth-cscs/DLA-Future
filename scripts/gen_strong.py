@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
 
+#
+# Distributed Linear Algebra with Future (DLAF)
+#
+# Copyright (c) 2018-2022, ETH Zurich
+# All rights reserved.
+#
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+
 # This file is an example on how to use the miniapp module.
 # Please do not add gen scripts used for benchmarks into the source repository,
 # they should be kept with the result produced.

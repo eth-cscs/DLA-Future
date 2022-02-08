@@ -54,11 +54,11 @@ jobs:
 
           test ! -s result-cpp.check
 
-      - name: Check CMake files
+      - name: Check CMake and Python files
         if: always()          # needed so that it runs even if previous one fails
         run: |
           # Generate header license CMake compliant
-          sed 's|^//|#|g' misc/HEADER > HEADER_CMAKE
+          sed 's|^//|#|g' misc/HEADER > HEADER_HASH
 
           # Compare first lines of cmake files with the reference
           find  '(' -type f ! -path './misc*' ')'                                 \
@@ -68,12 +68,19 @@ jobs:
                     -o  -name 'DLAF*.cmake.in'                                    \
                 ')'                                                               \
             | xargs -I{} sh -c                                                    \
-                "head -n9 {} | diff -sq - HEADER_CMAKE > /dev/null || echo {}"    \
-            > result-cmake.check
+                "head -n9 {} | diff -sq - HEADER_HASH > /dev/null || echo {}"     \
+            >> result.check
+
+          # Look for the LICENSE inside the python file
+          function streambin { xxd -p $1 | tr -d "\n"; }
+          BIN_HEADER_CMAKE=`streambin HEADER_HASH`
+          for file in `find scripts -type f -name "*.py"`; do                     \
+            streambin $file | grep -sq $BIN_HEADER_CMAKE || echo $file;           \
+          done >> result.check
 
           # Generate an error message for each offending file
-          for filepath in `cat result-cmake.check`; do                            \
+          for filepath in `cat result.check`; do                                  \
             echo "::error file=$filepath,line=1::check the license in $filepath"; \
           done
 
-          test ! -s result-cmake.check
+          test ! -s result.check

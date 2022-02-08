@@ -1585,8 +1585,12 @@ TEST(MatrixExceptionPropagation, RWPropagatesInRWAccessWithSenderAdaptors) {
 
   auto matrix = createMatrix<TypeParam>();
 
-  auto s =
-      matrix.readwrite_sender(LocalTileIndex(0, 0)) | ex::then([](auto&&) { throw CustomException{}; });
+  auto s = matrix.readwrite_sender(LocalTileIndex(0, 0)) | ex::then([](auto&& f) {
+             // TODO: This reproduces the behaviour with futures, but is it a must?
+             auto f_local = std::move(f);
+             throw CustomException{};
+           }) |
+           ex::ensure_started();
 
   EXPECT_THROW(ex::sync_wait(matrix.readwrite_sender(LocalTileIndex(0, 0))),
                dlaf::ContinuationException);
@@ -1607,10 +1611,15 @@ TEST(MatrixExceptionPropagation, RWPropagatesInReadAccessWithSenderAdaptors) {
 
   auto matrix = createMatrix<TypeParam>();
 
-  auto s =
-      matrix.readwrite_sender(LocalTileIndex(0, 0)) | ex::then([](auto&&) { throw CustomException{}; });
+  auto s = matrix.readwrite_sender(LocalTileIndex(0, 0)) | ex::then([](auto&& f) {
+             // TODO: This reproduces the behaviour with futures, but is it a must?
+             auto f_local = std::move(f);
+             throw CustomException{};
+           }) |
+           ex::ensure_started();
 
-  EXPECT_THROW(ex::sync_wait(matrix.read_sender(LocalTileIndex(0, 0))), dlaf::ContinuationException);
+  EXPECT_THROW(ex::sync_wait(matrix.read_sender(LocalTileIndex(0, 0))).get(),
+               dlaf::ContinuationException);
   EXPECT_THROW(ex::sync_wait(std::move(s)), CustomException);
 }
 
@@ -1623,12 +1632,18 @@ TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInRWAccess) {
   EXPECT_THROW(f.get(), CustomException);
 }
 
-TEST(MatrixExceptionPropagation, ReadPropagatesInRWAccessWithSenderAdaptors) {
+TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInRWAccessWithSenderAdaptors) {
   namespace ex = pika::execution::experimental;
 
   auto matrix = createMatrix<TypeParam>();
 
-  auto s = matrix.read_sender(LocalTileIndex(0, 0)) | ex::then([](auto&&) { throw CustomException{}; });
+  // TODO: Can we ensure that the shared_future is released as early as possible
+  // instead of manually consuming it like this?
+  auto s = matrix.read_sender(LocalTileIndex(0, 0)) | ex::then([](auto&& f) {
+             auto f_local = std::move(f);
+             throw CustomException{};
+           }) |
+           ex::ensure_started();
 
   EXPECT_NO_THROW(ex::sync_wait(matrix.readwrite_sender(LocalTileIndex(0, 0))));
   EXPECT_THROW(ex::sync_wait(std::move(s)), CustomException);
@@ -1643,13 +1658,19 @@ TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInReadAccess) {
   EXPECT_THROW(f.get(), CustomException);
 }
 
-TEST(MatrixExceptionPropagation, ReadPropagatesInReadAccessWithSenderAdaptors) {
+TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInReadAccessWithSenderAdaptors) {
   namespace ex = pika::execution::experimental;
 
   auto matrix = createMatrix<TypeParam>();
 
-  auto s = matrix.read_sender(LocalTileIndex(0, 0)) | ex::then([](auto&&) { throw CustomException{}; });
+  // TODO: Can we ensure that the shared_future is released as early as possible
+  // instead of manually consuming it like this?
+  auto s = matrix.read_sender(LocalTileIndex(0, 0)) | ex::then([](auto&& f) {
+             auto f_local = std::move(f);
+             throw CustomException{};
+           }) |
+           ex::ensure_started();
 
-  EXPECT_NO_THROW(ex::sync_wait(matrix.read_sender(LocalTileIndex(0, 0))));
+  EXPECT_NO_THROW(ex::sync_wait(matrix.read_sender(LocalTileIndex(0, 0))).get());
   EXPECT_THROW(ex::sync_wait(std::move(s)), CustomException);
 }

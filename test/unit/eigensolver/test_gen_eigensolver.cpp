@@ -101,11 +101,9 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
 }
 
 TYPED_TEST(GenEigensolverTestMC, CorrectnessLocal) {
-  SizeType m, mb;
-
   for (auto uplo : blas_uplos) {
     for (auto sz : sizes) {
-      std::tie(m, mb) = sz;
+      const auto& [m, mb] = sz;
       testGenEigensolver<TypeParam, Backend::MC, Device::CPU>(uplo, m, mb);
     }
   }

@@ -87,11 +87,9 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb)
 }
 
 TYPED_TEST(EigensolverTestMC, CorrectnessLocal) {
-  SizeType m, mb;
-
   for (auto uplo : blas_uplos) {
     for (auto sz : sizes) {
-      std::tie(m, mb) = sz;
+      const auto& [m, mb] = sz;
       testEigensolver<TypeParam, Backend::MC, Device::CPU>(uplo, m, mb);
     }
   }

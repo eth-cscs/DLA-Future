@@ -736,9 +736,10 @@ std::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<
   taus.reserve(to_sizet(nblocks));
 
   constexpr std::size_t n_workspaces = 2;
-  common::RoundRobin<PanelT<Coord::Col, T>> panels_v(n_workspaces, dist);
-  common::RoundRobin<PanelT<Coord::Col, T>> panels_w(n_workspaces, dist);
-  common::RoundRobin<PanelT<Coord::Col, T>> panels_x(n_workspaces, dist);
+  using common::RoundRobin;
+  RoundRobin<PanelT<Coord::Col, T>> panels_v(n_workspaces, dist, GlobalTileIndex(0, 0), band_size);
+  RoundRobin<PanelT<Coord::Col, T>> panels_w(n_workspaces, dist, GlobalTileIndex(0, 0), band_size);
+  RoundRobin<PanelT<Coord::Col, T>> panels_x(n_workspaces, dist, GlobalTileIndex(0, 0), band_size);
 
   for (SizeType j_sub = 0; j_sub < nblocks; ++j_sub) {
     const auto i_sub = j_sub + 1;

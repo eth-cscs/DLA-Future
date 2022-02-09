@@ -722,8 +722,9 @@ std::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<
   using factorization::internal::computeTFactor;
 
   const auto dist_a = mat_a.distribution();
-  const matrix::Distribution dist({mat_a.size().rows(), band_size}, dist_a.blockSize(),
-                                  dist_a.commGridSize(), dist_a.rankIndex(), dist_a.sourceRankIndex());
+  const matrix::Distribution dist({mat_a.size().rows(), band_size},
+                                  {dist_a.blockSize().rows(), band_size}, dist_a.commGridSize(),
+                                  dist_a.rankIndex(), dist_a.sourceRankIndex());
 
   // Note:
   // Reflector of size = 1 is not considered whatever T is (i.e. neither real nor complex)

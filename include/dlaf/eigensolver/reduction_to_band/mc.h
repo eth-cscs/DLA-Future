@@ -721,13 +721,11 @@ std::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<
   using common::iterate_range2d;
   using factorization::internal::computeTFactor;
 
-  const auto dist_a = mat_a.distribution();
-  const matrix::Distribution dist({mat_a.size().rows(), band_size}, dist_a.blockSize(),
-                                  dist_a.commGridSize(), dist_a.rankIndex(), dist_a.sourceRankIndex());
+  const auto dist = mat_a.distribution();
 
   // Note:
   // Reflector of size = 1 is not considered whatever T is (i.e. neither real nor complex)
-  const SizeType nrefls = std::max<SizeType>(0, dist_a.size().rows() - band_size - 1);
+  const SizeType nrefls = std::max<SizeType>(0, dist.size().rows() - band_size - 1);
 
   std::vector<pika::shared_future<common::internal::vector<T>>> taus;
 
@@ -761,7 +759,7 @@ std::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<
 
     // Note:  SubPanelView is (at most) band_size wide, but it may contain a smaller number of
     //        reflectors (i.e. at the end when last reflector size is 1)
-    const matrix::SubPanelView panel_view(dist_a, ij_offset, band_size);
+    const matrix::SubPanelView panel_view(dist, ij_offset, band_size);
 
     PanelT<Coord::Col, T>& v = panels_v.nextResource();
     v.setRangeStart(ij_offset);
@@ -787,7 +785,7 @@ std::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<
     if (!at_offset.isIn(mat_a.size()))
       break;
 
-    const matrix::SubMatrixView trailing_matrix_view(dist_a, at_offset);
+    const matrix::SubMatrixView trailing_matrix_view(dist, at_offset);
 
     // W = V . T
     PanelT<Coord::Col, T>& w = panels_w.nextResource();

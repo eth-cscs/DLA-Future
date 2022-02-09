@@ -119,7 +119,7 @@ struct Panel<axis, const T, D> {
       internal_.insert(internal_linear_idx);
       auto tile = data_.read(fullIndex(index));
 
-      if (dim_ < 0 && dist_matrix_.size().get(axis) == dist_matrix_.blockSize().get(axis))
+      if (dim_ < 0)
         return tile;
       else
         return splitTile(tile, {{0, 0}, tileSize(index)});
@@ -286,7 +286,7 @@ protected:
         (start_local_ == index.get(CoordType));
     const auto size_coord = dist_matrix_.tileSize(panel_index).template get<CoordType>() -
                             (is_first_global_tile ? start_offset_ : 0);
-    const auto size_axis = dim_ < 0 ? dist_matrix_.size().template get<axis>() : dim_;
+    const auto size_axis = dim_ < 0 ? dist_matrix_.blockSize().template get<axis>() : dim_;
 
     return {axis, size_axis, size_coord};
   }
@@ -424,7 +424,7 @@ struct Panel : public Panel<axis, const T, device> {
 
     BaseT::internal_.insert(BaseT::linearIndex(index));
     auto tile = BaseT::data_(BaseT::fullIndex(index));
-    if (dim_ < 0 && dist_matrix_.size().get(axis) == dist_matrix_.blockSize().get(axis))
+    if (dim_ < 0)
       return tile;
     else
       return splitTile(tile, {{0, 0}, tileSize(index)});

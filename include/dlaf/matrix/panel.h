@@ -22,6 +22,7 @@
 #include "dlaf/communication/kernels.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/distribution.h"
+#include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_base.h"
 #include "dlaf/types.h"
@@ -119,7 +120,7 @@ struct Panel<axis, const T, D> {
       internal_.insert(internal_linear_idx);
       auto tile = data_.read(fullIndex(index));
 
-      if (dim_ < 0)
+      if (dim_ < 0 && !isFirstGlobalTile(index))  // TODO check if start offset is aligned to tile or not
         return tile;
       else
         return splitTile(tile, {{0, 0}, tileSize(index)});
@@ -276,23 +277,27 @@ struct Panel<axis, const T, D> {
   }
 
 protected:
+  bool isFirstGlobalTile(const LocalTileIndex index) const {
+    const bool rank_has_first_global_tile =
+        dist_matrix_.rankGlobalTile<CoordType>(start_) == dist_matrix_.rankIndex().get(CoordType);
+    return rank_has_first_global_tile && (start_local_ == index.get(CoordType));
+  }
+
   TileElementSize tileSize(const LocalTileIndex& index) {
     // Transform to global panel index.
     const auto panel_coord = dist_matrix_.globalTileFromLocalTile<CoordType>(index.get<CoordType>());
     const GlobalTileIndex panel_index(CoordType, panel_coord);
 
-    const bool is_first_global_tile =
-        dist_matrix_.rankGlobalTile<CoordType>(start_) == dist_matrix_.rankIndex().get(CoordType) &&
-        (start_local_ == index.get(CoordType));
+    const bool is_first_global_tile = isFirstGlobalTile(index);
     const auto size_coord = dist_matrix_.tileSize(panel_index).template get<CoordType>() -
                             (is_first_global_tile ? start_offset_ : 0);
-    const auto size_axis = dim_ < 0 ? dist_matrix_.blockSize().template get<axis>() : dim_;
+    const auto size_axis = dim_ < 0 ? data_.size().template get<axis>() : dim_;
 
     return {axis, size_axis, size_coord};
   }
 
   static LocalElementSize computePanelSize(LocalElementSize size, TileElementSize blocksize,
-                                           LocalTileIndex start) {
+                                           LocalTileIndex start, const SizeType axis_size) {
     const auto mb = blocksize.rows();
     const auto nb = blocksize.cols();
 
@@ -301,9 +306,9 @@ protected:
 
     switch (axis) {
       case Coord::Col:
-        return {mat_size - i_tile * mb, nb};
+        return {mat_size - i_tile * mb, axis_size};
       case Coord::Row:
-        return {mb, mat_size - i_tile * nb};
+        return {axis_size, mat_size - i_tile * nb};
     }
   }
 
@@ -311,11 +316,12 @@ protected:
   ///
   /// It allocates just the memory needed for the part of matrix used, so
   /// starting from @p start
-  static Matrix<T, D> setupInternalMatrix(const Distribution& dist, const GlobalTileIndex start) {
+  static Matrix<T, D> setupInternalMatrix(const Distribution& dist, const GlobalTileIndex start,
+                                          const SizeType size_axis) {
     constexpr auto CT = CoordType;
 
     const LocalTileIndex start_loc(CT, dist.template nextLocalTileFromGlobalTile<CT>(start.get(CT)));
-    const auto panel_size = computePanelSize(dist.localSize(), dist.blockSize(), start_loc);
+    const auto panel_size = computePanelSize(dist.localSize(), dist.blockSize(), start_loc, size_axis);
 
     Distribution dist_internal{panel_size, dist.blockSize()};
     auto layout = tileLayout(dist_internal);
@@ -332,7 +338,13 @@ protected:
   /// - a Panel<Col> 2x1
   /// - or a Panel<Row> 4x1
   Panel(matrix::Distribution dist_matrix, GlobalTileIndex start)
-      : dist_matrix_(dist_matrix), data_(setupInternalMatrix(dist_matrix, start)) {
+      : Panel(dist_matrix, start, dist_matrix.blockSize().get<axis>()) {}
+
+  // TODO doc
+  Panel(matrix::Distribution dist_matrix, GlobalTileIndex start, const SizeType size_axis)
+      : dist_matrix_(dist_matrix), data_(setupInternalMatrix(dist_matrix, start, size_axis)) {
+    DLAF_ASSERT_HEAVY(size_axis <= dist_matrix_.blockSize().template get<axis>(), size_axis,
+                      dist_matrix_.blockSize().template get<axis>());
     DLAF_ASSERT_HEAVY(data_.nrTiles().get(axis) == 1, data_.nrTiles());
 
     bias_ = dist_matrix_.template nextLocalTileFromGlobalTile<CoordType>(start.get(CoordType));
@@ -411,6 +423,9 @@ struct Panel : public Panel<axis, const T, device> {
   explicit Panel(matrix::Distribution distribution, GlobalTileIndex start = {0, 0})
       : Panel<axis, const T, device>(std::move(distribution), std::move(start)) {}
 
+  explicit Panel(matrix::Distribution distribution, GlobalTileIndex start, SizeType size_axis)
+      : Panel<axis, const T, device>(std::move(distribution), std::move(start), std::move(size_axis)) {}
+
   /// Access tile at specified index in readwrite mode
   ///
   /// It is possible to access just internal tiles in RW mode.
@@ -424,7 +439,7 @@ struct Panel : public Panel<axis, const T, device> {
 
     BaseT::internal_.insert(BaseT::linearIndex(index));
     auto tile = BaseT::data_(BaseT::fullIndex(index));
-    if (dim_ < 0)
+    if (dim_ < 0 && !isFirstGlobalTile(index))  // TODO check if start offset is aligned to tile or not
       return tile;
     else
       return splitTile(tile, {{0, 0}, tileSize(index)});
@@ -441,6 +456,7 @@ protected:
   using BaseT::has_been_used_;
   using BaseT::tileSize;
   using BaseT::dist_matrix_;
+  using BaseT::isFirstGlobalTile;
 };
 }
 }

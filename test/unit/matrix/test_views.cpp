@@ -66,11 +66,6 @@ const std::vector<config_t> configs{
 }
 
 void testMatrixOffset(const Distribution& dist, const GlobalElementIndex& offset_e) {
-  const LocalTileIndex offset_tile = {
-      dist.template nextLocalTileFromGlobalElement<Coord::Row>(offset_e.row()),
-      dist.template nextLocalTileFromGlobalElement<Coord::Col>(offset_e.col()),
-  };
-
   const SubMatrixView view(dist, offset_e);
 
   const GlobalTileIndex offset = dist.globalTileIndex(offset_e);
@@ -194,11 +189,6 @@ const std::vector<config_t> configs{
 
 void testPanelOffset(const Distribution& dist, const GlobalElementIndex& offset_e,
                      const SizeType width) {
-  const LocalTileIndex offset_tile = {
-      dist.template nextLocalTileFromGlobalElement<Coord::Row>(offset_e.row()),
-      dist.template nextLocalTileFromGlobalElement<Coord::Col>(offset_e.col()),
-  };
-
   const SubPanelView panel_view(dist, offset_e, width);
 
   const GlobalTileIndex offset = dist.globalTileIndex(offset_e);

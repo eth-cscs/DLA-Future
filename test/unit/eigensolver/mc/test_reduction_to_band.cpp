@@ -55,6 +55,7 @@ TYPED_TEST_SUITE(ReductionToBandTestMC, MatrixElementTypes);
 struct config_t {
   LocalElementSize size;
   TileElementSize block_size;
+  SizeType band_size = block_size.rows();
 };
 
 std::vector<config_t> configs{
@@ -66,13 +67,7 @@ std::vector<config_t> configs{
     {{40, 40}, {5, 5}},
 };
 
-struct config_subband_t {
-  LocalElementSize size;
-  TileElementSize block_size;
-  SizeType band_size;
-};
-
-std::vector<config_subband_t> configs_subband{
+std::vector<config_t> configs_subband{
     // sub-tile band
     {{4, 4}, {4, 4}, 2},    // single tile
     {{12, 12}, {4, 4}, 2},  // tile always full size (less room for distribution over ranks)
@@ -328,8 +323,7 @@ void testReductionToBandLocal(const LocalElementSize size, const TileElementSize
 
 TYPED_TEST(ReductionToBandTestMC, CorrectnessLocal) {
   for (const auto& config : configs) {
-    const auto& [size, block_size] = config;
-    const auto band_size = block_size.rows();
+    const auto& [size, block_size, band_size] = config;
 
     testReductionToBandLocal<TypeParam, Device::CPU>(size, block_size, band_size);
   }
@@ -348,8 +342,7 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributed) {
 
   for (auto&& comm_grid : this->commGrids()) {
     for (const auto& config : configs) {
-      const auto& [size, block_size] = config;
-      const auto band_size = block_size.rows();
+      const auto& [size, block_size, band_size] = config;
 
       const SizeType k_reflectors = std::max(SizeType(0), size.rows() - band_size - 1);
       DLAF_ASSERT(block_size.rows() % band_size == 0, block_size.rows(), band_size);

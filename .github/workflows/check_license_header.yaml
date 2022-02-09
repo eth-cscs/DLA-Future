@@ -44,8 +44,7 @@ jobs:
                    -o  -name '*.cu'                                               \
                ')'                                                                \
             | xargs -I{} sh -c                                                    \
-                "grep -sq 'dlaf-no-license-check' {}                              \
-                || head -n9 {} | diff - misc/HEADER > /dev/null || echo {}"       \
+                ".github/check_license.sh misc/HEADER {} > /dev/null || echo {}"  \
             > result-cpp.check
 
           # Generate an error message for each offending file
@@ -58,10 +57,10 @@ jobs:
       - name: Check CMake and Python files
         if: always()          # needed so that it runs even if previous one fails
         run: |
-          # Generate header license CMake compliant
+          # Generate header license CMake/Python compliant (with hashes)
           sed 's|^//|#|g' misc/HEADER > HEADER_HASH
 
-          # Compare first lines of cmake files with the reference
+          # Check license in CMake files
           find  '(' -type f ! -path './misc*' ')'                                 \
                 '('                                                               \
                         -name 'CMakeLists.txt'                                    \
@@ -69,15 +68,14 @@ jobs:
                     -o  -name 'DLAF*.cmake.in'                                    \
                 ')'                                                               \
             | xargs -I{} sh -c                                                    \
-                "head -n9 {} | diff - HEADER_HASH > /dev/null || echo {}"         \
+                ".github/check_license.sh HEADER_HASH {} > /dev/null || echo {}"  \
             >> result.check
 
-          # Look for the LICENSE inside the python file
-          function streambin { xxd -p $1 | tr -d "\n"; }
-          BIN_HEADER_CMAKE=`streambin HEADER_HASH`
-          for file in `find scripts -type f -name "*.py"`; do                     \
-            streambin $file | grep -sq $BIN_HEADER_CMAKE || echo $file;           \
-          done >> result.check
+          # Check license in Python files
+          find scripts -type f -name '*.py'                                           \
+            | xargs -I{} sh -c                                                        \
+                ".github/check_license.sh -r 4 HEADER_HASH {} > /dev/null || echo {}" \
+            >> result.check
 
           # Generate an error message for each offending file
           for filepath in `cat result.check`; do                                  \

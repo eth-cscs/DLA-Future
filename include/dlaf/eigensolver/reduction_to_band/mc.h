@@ -755,6 +755,8 @@ std::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<
       return nrefls_last == 0 ? band_size : nrefls_last;
     }();
 
+    const bool isPanelIncomplete = (nrefls_block != band_size);
+
     // Note: if this is running, it must have at least one valid reflector (i.e. with size > 1)
     DLAF_ASSERT_HEAVY(nrefls_block != 0, nrefls_block);
 
@@ -764,7 +766,8 @@ std::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<
 
     PanelT<Coord::Col, T>& v = panels_v.nextResource();
     v.setRangeStart(ij_offset);
-    v.setWidth(nrefls_block);
+    if (isPanelIncomplete)
+      v.setWidth(nrefls_block);
 
     const LocalTileIndex t_idx(0, 0);
     // TODO used just by the column, maybe we can re-use a panel tile?
@@ -791,14 +794,16 @@ std::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<
     // W = V . T
     PanelT<Coord::Col, T>& w = panels_w.nextResource();
     w.setRangeStart(at_offset);
-    w.setWidth(nrefls_block);
+    if (isPanelIncomplete)
+      w.setWidth(nrefls_block);
 
     trmmComputeW(w, v, t.read(t_idx));
 
     // X = At . W
     PanelT<Coord::Col, T>& x = panels_x.nextResource();
     x.setRangeStart(at_offset);
-    x.setWidth(nrefls_block);
+    if (isPanelIncomplete)
+      x.setWidth(nrefls_block);
 
     // Note:
     // Since At is hermitian, just the lower part is referenced.

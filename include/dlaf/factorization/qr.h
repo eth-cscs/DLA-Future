@@ -47,7 +47,7 @@ void computeTFactor(const SizeType k, Matrix<const T, device>& v, const GlobalTi
 #define DLAF_FACTORIZATION_QR_TFACTOR_LOCAL_ETI(KWORD, BACKEND, DEVICE, T)                  \
   KWORD template void                                                                       \
   computeTFactor<BACKEND, DEVICE, T>(const SizeType k, Matrix<const T, DEVICE>& v,          \
-                                     const GlobalTileIndex v_start,                         \
+                                     const matrix::SubPanelView& panel_view,                \
                                      pika::shared_future<common::internal::vector<T>> taus, \
                                      pika::future<matrix::Tile<T, DEVICE>> t);
 

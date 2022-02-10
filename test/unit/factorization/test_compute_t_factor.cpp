@@ -287,7 +287,7 @@ void testComputeTFactor(const SizeType a_m, const SizeType a_n, const SizeType m
     MatrixMirror<T, D, Device::CPU> t_output(t_output_h);
 
     using dlaf::factorization::internal::computeTFactor;
-    const matrix::SubPanelView panel_view(v_input.distribution(), v_start_el, k);
+    const matrix::SubPanelView panel_view(v_input_h.distribution(), v_start_el, k);
     computeTFactor<B>(k, v_input.get(), panel_view, taus_input, t_output.get()(t_idx));
   }
 

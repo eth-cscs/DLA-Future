@@ -84,7 +84,7 @@ struct Transform<Backend::GPU> {
     static auto call_helper(cudaStream_t stream, cublasHandle_t cublas_handle,
                             cusolverDnHandle_t cusolver_handle, G&& g, Us&... us) {
       static_assert(is_gpu_invocable<Us...>,
-                    "function passed to transform<GPU> must be invocable with a cudaStream_t as the"
+                    "function passed to transform<GPU> must be invocable with a cudaStream_t as the "
                     "last argument or a cublasHandle_t/cusolverDnHandle_t as the first argument");
 
       if constexpr (is_cuda_stream_invocable<Us...>) {

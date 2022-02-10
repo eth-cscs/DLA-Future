@@ -14,41 +14,14 @@
 
 #include <cublas_v2.h>
 #include <blas.hh>
+#include "dlaf/util_cuda.h"
 
 namespace dlaf {
 namespace util {
-namespace internal {
 
 template <typename T>
-struct BlasToCublasType {
-  using type = T;
-};
-
-template <>
-struct BlasToCublasType<std::complex<float>> {
-  using type = cuComplex;
-};
-
-template <>
-struct BlasToCublasType<std::complex<double>> {
-  using type = cuDoubleComplex;
-};
-
-template <typename T>
-struct BlasToCublasType<const T> {
-  using type = const typename BlasToCublasType<T>::type;
-};
-
-template <typename T>
-struct BlasToCublasType<T*> {
-  using type = typename BlasToCublasType<T>::type*;
-};
-
-}
-
-template <typename T>
-constexpr typename internal::BlasToCublasType<T>::type blasToCublasCast(T p) {
-  return reinterpret_cast<typename internal::BlasToCublasType<T>::type>(p);
+constexpr auto blasToCublasCast(T x) {
+  return cppToCudaCast(x);
 }
 
 inline constexpr cublasSideMode_t blasToCublas(const blas::Side side) {

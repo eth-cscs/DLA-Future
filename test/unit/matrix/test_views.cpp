@@ -51,6 +51,8 @@ struct config_t {
 };
 
 const std::vector<config_t> configs{
+    // empty
+    {{0, 0}, {3, 4}, {0, 0}},
     // complete-tiles
     {{8, 8}, {4, 4}, {0, 0}},    // no offset
     {{12, 12}, {4, 4}, {0, 0}},  // no offset
@@ -68,12 +70,18 @@ const std::vector<config_t> configs{
 void testMatrixOffset(const Distribution& dist, const GlobalElementIndex& offset_e) {
   const SubMatrixView view(dist, offset_e);
 
+  if (dist.size().isEmpty())
+    return;
+
   const GlobalTileIndex offset = dist.globalTileIndex(offset_e);
   EXPECT_EQ(view.offset(), offset);
 }
 
 void testMatrixRange(const Distribution& dist, const GlobalElementIndex& offset_e) {
   const SubMatrixView view(dist, offset_e);
+
+  if (dist.size().isEmpty())
+    return;
 
   const LocalTileIndex offset_local = {
       dist.template nextLocalTileFromGlobalElement<Coord::Row>(offset_e.row()),
@@ -94,6 +102,9 @@ void testMatrixRange(const Distribution& dist, const GlobalElementIndex& offset_
 
 void testMatrixSpecs(const Distribution& dist, const GlobalElementIndex offset_e) {
   const SubMatrixView view(dist, offset_e);
+
+  if (dist.size().isEmpty())
+    return;
 
   const LocalTileIndex offset_local{
       dist.template nextLocalTileFromGlobalElement<Coord::Row>(offset_e.row()),
@@ -191,12 +202,18 @@ void testPanelOffset(const Distribution& dist, const GlobalElementIndex& offset_
                      const SizeType width) {
   const SubPanelView panel_view(dist, offset_e, width);
 
+  if (dist.size().isEmpty())
+    return;
+
   const GlobalTileIndex offset = dist.globalTileIndex(offset_e);
   EXPECT_EQ(panel_view.offset(), offset);
 }
 
 void testPanelRange(const Distribution& dist, const GlobalElementIndex& offset_e, const SizeType width) {
   const SubPanelView panel_view(dist, offset_e, width);
+
+  if (dist.size().isEmpty())
+    return;
 
   const LocalTileIndex offset_local = {
       dist.template nextLocalTileFromGlobalElement<Coord::Row>(offset_e.row()),
@@ -216,6 +233,9 @@ void testPanelRange(const Distribution& dist, const GlobalElementIndex& offset_e
 
 void testPanelSpecs(const Distribution& dist, const GlobalElementIndex offset_e, const SizeType width) {
   const SubPanelView panel_view(dist, offset_e, width);
+
+  if (dist.size().isEmpty())
+    return;
 
   if (dist.rankIndex().col() != dist.rankGlobalElement<Coord::Col>(offset_e.col()))
     return;

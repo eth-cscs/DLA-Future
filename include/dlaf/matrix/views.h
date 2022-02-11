@@ -23,7 +23,9 @@ namespace dlaf::matrix {
 struct IndexHelper {
   IndexHelper(Distribution dist, GlobalElementIndex start_offset)
       : dist_(dist), offset_e_(start_offset) {
-    // TODO decide defaults for empty panel
+    if (dist.size().isEmpty())
+      return;
+
     DLAF_ASSERT(offset_e_.isIn(dist_.size()), offset_e_, dist_.size());
 
     offset_tile_ = dist_.globalTileIndex(offset_e_);
@@ -57,6 +59,9 @@ protected:
 
 struct SubMatrixView : public IndexHelper {
   SubMatrixView(Distribution dist, GlobalElementIndex offset_e) : IndexHelper(dist, offset_e) {
+    if (dist.size().isEmpty())
+      return;
+
     tile_end_ = indexFromOrigin(dist_.localNrTiles());
 
     has_subtile_ = dist_.rankGlobalTile<Coord::Row>(offset().row()) == dist_.rankIndex().row() ||
@@ -90,6 +95,9 @@ private:
 struct SubPanelView : public IndexHelper {
   SubPanelView(Distribution dist, GlobalElementIndex offset_e, const SizeType width)
       : IndexHelper(dist, offset_e), width_(width) {
+    if (dist.size().isEmpty())
+      return;
+
     i_sub_offset_ = offset_e_.row() % dist_.blockSize().rows();
     j_sub_offset_ = offset_e_.col() % dist_.blockSize().cols();
 

@@ -211,6 +211,11 @@ std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, GlobalT
     {26, 39, 10, 6, 1, {1, 6}},  // k reflectors (incomplete tile)
 
     {26, 39, 10, 6, 0, {0, 6}},  // 0 reflectors
+
+    // empty matrices
+    {0, 0, 10, 6, 0, {0, 0}},
+    {39, 0, 10, 6, 0, {0, 0}},
+    {0, 26, 10, 6, 0, {0, 0}},
 };
 
 // Note:

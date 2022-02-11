@@ -9,6 +9,7 @@
 //
 
 #include "dlaf/common/index2d.h"
+#include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/panel.h"
 
@@ -43,6 +44,22 @@ template <typename Type>
 struct PanelTest : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(PanelTest, MatrixElementTypes);
+
+// Helper for checking if current rank, along specific Axis, locally stores just an incomplete tile,
+// i.e. a tile with a size < blocksize
+template <Coord Axis>
+bool doesThisRankOwnsJustIncomplete(const matrix::Distribution& dist) {
+  // an empty matrix does not fall in this specific edge-case
+  if (dist.nrTiles().isEmpty())
+    return false;
+
+  // look at the last tile along panel_axis dimension, and see if its size is full or not
+  const GlobalTileIndex last_tile_axis(Axis, dist.nrTiles().get(Axis) - 1);
+  const bool is_last_tile =
+      dist.rankIndex().get(Axis) == dist.template rankGlobalTile<Axis>(last_tile_axis.get(Axis));
+  return is_last_tile && dist.localNrTiles().get(Axis) == 1 &&
+         dist.tileSize(last_tile_axis).get(Axis) != dist.blockSize().get(Axis);
+}
 
 struct config_t {
   const GlobalElementSize sz;
@@ -164,6 +181,14 @@ void testExternalTile(const config_t& cfg, const comm::CommunicatorGrid comm_gri
   Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, cfg.offset);
   static_assert(coord1D == decltype(panel)::CoordType, "coord types mismatch");
 
+  // if locally there are just incomplete tiles, skip the test (not worth it)
+  if (doesThisRankOwnsJustIncomplete<panel_axis>(dist))
+    return;
+
+  // if there is no local tiles...cannot test external tiles
+  if (dist.localNrTiles().isEmpty())
+    return;
+
   // Note:
   // - Even indexed tiles in panel, odd indexed linked to the matrix first column
   // - Even indexed, i.e. the one using panel memory, are set to a different value
@@ -224,6 +249,14 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
 
   Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, cfg.offset);
   static_assert(coord1D == decltype(panel)::CoordType, "coord types mismatch");
+
+  // if locally there are just incomplete tiles, skip the test (not worth it)
+  if (doesThisRankOwnsJustIncomplete<panel_axis>(dist))
+    return;
+
+  // if there is no local tiles...there is nothing to check
+  if (dist.localNrTiles().isEmpty())
+    return;
 
   auto setTile = [](const auto& tile, TypeParam value) noexcept {
     tile::internal::laset(lapack::MatrixType::General, value, value, tile);

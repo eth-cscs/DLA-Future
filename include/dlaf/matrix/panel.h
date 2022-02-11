@@ -22,6 +22,7 @@
 #include "dlaf/communication/kernels.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/distribution.h"
+#include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_base.h"
 #include "dlaf/types.h"
@@ -119,7 +120,7 @@ struct Panel<axis, const T, D> {
       internal_.insert(internal_linear_idx);
       auto tile = data_.read(fullIndex(index));
 
-      if (dim_ < 0)
+      if (dim_ < 0 && (isFirstGlobalTile(index) && isFirstGlobalTileFull()))
         return tile;
       else
         return splitTile(tile, {{0, 0}, tileSize(index)});
@@ -164,11 +165,26 @@ struct Panel<axis, const T, D> {
   /// @pre (just the index relevant for the axis of the panel)
   /// @pre start <= current end range of the panel
   /// @pre panel offset on construction <= start
-  void setRangeStart(GlobalTileIndex start_idx) noexcept {
+  void setRangeStart(const GlobalTileIndex& start_idx) noexcept {
     DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
 
     start_ = start_idx.get(CoordType);
-    start_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<CoordType>(start_);
+    start_local_ = dist_matrix_.nextLocalTileFromGlobalTile<CoordType>(start_);
+
+    DLAF_ASSERT(rangeStartLocal() >= bias_ && rangeStart() <= rangeEnd(), rangeStart(), rangeEnd(),
+                bias_);
+  }
+
+  void setRangeStart(const GlobalElementIndex& start) noexcept {
+    DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
+
+    start_ = dist_matrix_.globalTileFromGlobalElement<CoordType>(start.get(CoordType));
+    start_local_ = dist_matrix_.nextLocalTileFromGlobalTile<CoordType>(start_);
+
+    const bool has_first_global_tile =
+        dist_matrix_.rankGlobalTile<CoordType>(start_) == dist_matrix_.rankIndex().get(CoordType);
+    if (has_first_global_tile)
+      start_offset_ = dist_matrix_.tileElementFromGlobalElement<CoordType>(start.get(CoordType));
 
     DLAF_ASSERT(rangeStartLocal() >= bias_ && rangeStart() <= rangeEnd(), rangeStart(), rangeEnd(),
                 bias_);
@@ -186,7 +202,7 @@ struct Panel<axis, const T, D> {
     DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
 
     end_ = end_idx.get(CoordType);
-    end_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<CoordType>(end_);
+    end_local_ = dist_matrix_.nextLocalTileFromGlobalTile<CoordType>(end_);
 
     DLAF_ASSERT(rangeEnd() >= rangeStart() && rangeEnd() <= dist_matrix_.nrTiles().get(CoordType),
                 rangeStart(), end_idx, dist_matrix_.nrTiles().get(CoordType));
@@ -261,12 +277,24 @@ struct Panel<axis, const T, D> {
   }
 
 protected:
-  TileElementSize tileSize(const LocalTileIndex& index) {
+  bool isFirstGlobalTileFull() const {
+    return start_offset_ == 0;
+  }
+
+  bool isFirstGlobalTile(const LocalTileIndex& index) const {
+    const bool rank_has_first_global_tile =
+        dist_matrix_.rankGlobalTile<CoordType>(start_) == dist_matrix_.rankIndex().get(CoordType);
+    return rank_has_first_global_tile && (start_local_ == index.get(CoordType));
+  }
+
+  TileElementSize tileSize(const LocalTileIndex& index) const {
     // Transform to global panel index.
     const auto panel_coord = dist_matrix_.globalTileFromLocalTile<CoordType>(index.get<CoordType>());
     const GlobalTileIndex panel_index(CoordType, panel_coord);
 
-    const auto size_coord = dist_matrix_.tileSize(panel_index).template get<CoordType>();
+    const bool is_first_global_tile = isFirstGlobalTile(index);
+    const auto size_coord = dist_matrix_.tileSize(panel_index).template get<CoordType>() -
+                            (is_first_global_tile ? start_offset_ : 0);
     const auto size_axis = dim_ < 0 ? dist_matrix_.blockSize().template get<axis>() : dim_;
 
     return {axis, size_axis, size_coord};
@@ -373,6 +401,9 @@ protected:
   ///> It represent the width or height of the panel. Negatives means not set, i.e. block_size.
   SizeType dim_ = -1;
 
+  ///> It represents the offset to use in first global tile
+  SizeType start_offset_ = 0;
+
   bool has_been_used_ = false;
 
   ///> Container for references to external tiles
@@ -402,7 +433,7 @@ struct Panel : public Panel<axis, const T, device> {
 
     BaseT::internal_.insert(BaseT::linearIndex(index));
     auto tile = BaseT::data_(BaseT::fullIndex(index));
-    if (dim_ < 0)
+    if (dim_ < 0 && (isFirstGlobalTile(index) && isFirstGlobalTileFull()))
       return tile;
     else
       return splitTile(tile, {{0, 0}, tileSize(index)});
@@ -418,6 +449,8 @@ protected:
   using BaseT::dim_;
   using BaseT::has_been_used_;
   using BaseT::tileSize;
+  using BaseT::isFirstGlobalTile;
+  using BaseT::isFirstGlobalTileFull;
 };
 }
 }

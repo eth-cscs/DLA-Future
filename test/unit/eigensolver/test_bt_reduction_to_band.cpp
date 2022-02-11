@@ -22,6 +22,7 @@
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_base.h"
+#include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
@@ -118,7 +119,7 @@ common::internal::vector<T> setUpTest(SizeType b, MatrixLocal<T>& c, MatrixLocal
   return taus;
 }
 
-template <class T>
+template <class T, Backend B, Device D>
 void testBackTransformationReductionToBand(SizeType m, SizeType n, SizeType mb, SizeType nb,
                                            SizeType b) {
   const LocalElementSize size_c(m, n);
@@ -126,14 +127,14 @@ void testBackTransformationReductionToBand(SizeType m, SizeType n, SizeType mb, 
   const TileElementSize block_size_c(mb, nb);
   const TileElementSize block_size_v(mb, mb);
 
-  Matrix<T, Device::CPU> mat_c(size_c, block_size_c);
-  dlaf::matrix::util::set_random(mat_c);
+  Matrix<T, Device::CPU> mat_c_h(size_c, block_size_c);
+  dlaf::matrix::util::set_random(mat_c_h);
 
-  Matrix<T, Device::CPU> mat_v(size_v, block_size_v);
-  dlaf::matrix::util::set_random(mat_v);
+  Matrix<T, Device::CPU> mat_v_h(size_v, block_size_v);
+  dlaf::matrix::util::set_random(mat_v_h);
 
-  auto c_loc = dlaf::matrix::test::allGather<T>(blas::Uplo::General, mat_c);
-  auto v_loc = dlaf::matrix::test::allGather<T>(blas::Uplo::Lower, mat_v);
+  auto c_loc = dlaf::matrix::test::allGather<T>(blas::Uplo::General, mat_c_h);
+  auto v_loc = dlaf::matrix::test::allGather<T>(blas::Uplo::Lower, mat_v_h);
 
   auto taus_loc = setUpTest(b, c_loc, v_loc);
   auto nr_reflectors = taus_loc.size();
@@ -151,15 +152,19 @@ void testBackTransformationReductionToBand(SizeType m, SizeType n, SizeType mb, 
     taus.push_back(pika::make_ready_future(tau_tile));
   }
 
-  eigensolver::backTransformationReductionToBand<Backend::MC>(b, mat_c, mat_v, taus);
+  {
+    MatrixMirror<T, D, Device::CPU> mat_c(mat_c_h);
+    MatrixMirror<const T, D, Device::CPU> mat_v(mat_v_h);
+    eigensolver::backTransformationReductionToBand<B, D, T>(b, mat_c.get(), mat_v.get(), taus);
+  }
 
   auto result = [&c_loc](const GlobalElementIndex& index) { return c_loc(index); };
 
-  const auto error = (mat_c.size().rows() + 1) * dlaf::test::TypeUtilities<T>::error;
-  CHECK_MATRIX_NEAR(result, mat_c, error, error);
+  const auto error = (mat_c_h.size().rows() + 1) * dlaf::test::TypeUtilities<T>::error;
+  CHECK_MATRIX_NEAR(result, mat_c_h, error, error);
 }
 
-template <class T>
+template <class T, Backend B, Device D>
 void testBackTransformationReductionToBand(comm::CommunicatorGrid grid, SizeType m, SizeType n,
                                            SizeType mb, SizeType nb) {
   const GlobalElementSize size_c(m, n);
@@ -171,14 +176,14 @@ void testBackTransformationReductionToBand(comm::CommunicatorGrid grid, SizeType
   const Distribution dist_c(size_c, block_size_c, grid.size(), grid.rank(), src_rank_index);
   const Distribution dist_v(size_v, block_size_v, grid.size(), grid.rank(), src_rank_index);
 
-  Matrix<T, Device::CPU> mat_c(std::move(dist_c));
-  dlaf::matrix::util::set_random(mat_c);
+  Matrix<T, Device::CPU> mat_c_h(std::move(dist_c));
+  dlaf::matrix::util::set_random(mat_c_h);
 
-  Matrix<T, Device::CPU> mat_v(std::move(dist_v));
-  dlaf::matrix::util::set_random(mat_v);
+  Matrix<T, Device::CPU> mat_v_h(std::move(dist_v));
+  dlaf::matrix::util::set_random(mat_v_h);
 
-  auto c_loc = dlaf::matrix::test::allGather<T>(blas::Uplo::General, mat_c, grid);
-  auto v_loc = dlaf::matrix::test::allGather<T>(blas::Uplo::General, mat_v, grid);
+  auto c_loc = dlaf::matrix::test::allGather<T>(blas::Uplo::General, mat_c_h, grid);
+  auto v_loc = dlaf::matrix::test::allGather<T>(blas::Uplo::Lower, mat_v_h, grid);
 
   auto taus_loc = setUpTest(mb, c_loc, v_loc);
   auto nr_reflectors = taus_loc.size();
@@ -190,7 +195,7 @@ void testBackTransformationReductionToBand(comm::CommunicatorGrid grid, SizeType
   for (SizeType k = 0; k < nr_reflectors; k += mb) {
     common::internal::vector<T> tau_tile;
     tau_tile.reserve(mb);
-    if (grid.rank().col() == mat_v.distribution().template rankGlobalTile<Coord::Col>(k / mb)) {
+    if (grid.rank().col() == mat_v_h.distribution().template rankGlobalTile<Coord::Col>(k / mb)) {
       for (SizeType j = k; j < std::min(k + mb, nr_reflectors); ++j) {
         tau_tile.push_back(taus_loc[j]);
       }
@@ -198,19 +203,31 @@ void testBackTransformationReductionToBand(comm::CommunicatorGrid grid, SizeType
     }
   }
 
-  eigensolver::backTransformationReductionToBand<Backend::MC>(grid, mat_c, mat_v, taus);
+  {
+    MatrixMirror<T, D, Device::CPU> mat_c(mat_c_h);
+    MatrixMirror<const T, D, Device::CPU> mat_v(mat_v_h);
+    eigensolver::backTransformationReductionToBand<B, D, T>(grid, mat_c.get(), mat_v.get(), taus);
+  }
 
   auto result = [&c_loc](const GlobalElementIndex& index) { return c_loc(index); };
 
-  const auto error = (mat_c.size().rows() + 1) * dlaf::test::TypeUtilities<T>::error;
-  CHECK_MATRIX_NEAR(result, mat_c, error, error);
+  const auto error = (mat_c_h.size().rows() + 1) * dlaf::test::TypeUtilities<T>::error;
+  CHECK_MATRIX_NEAR(result, mat_c_h, error, error);
 }
 
 TYPED_TEST(BackTransformationReductionToBandEigenSolverTestMC, CorrectnessLocal) {
   for (const auto& [m, n, mb, nb, b] : sizes) {
-    testBackTransformationReductionToBand<TypeParam>(m, n, mb, nb, b);
+    testBackTransformationReductionToBand<TypeParam, Backend::MC, Device::CPU>(m, n, mb, nb, b);
   }
 }
+
+#ifdef DLAF_WITH_CUDA
+TYPED_TEST(BackTransformationReductionToBandEigenSolverTestGPU, CorrectnessLocal) {
+  for (const auto& [m, n, mb, nb, b] : sizes) {
+    testBackTransformationReductionToBand<TypeParam, Backend::GPU, Device::GPU>(m, n, mb, nb, b);
+  }
+}
+#endif
 
 TYPED_TEST(BackTransformationReductionToBandEigenSolverTestMC, CorrectnessDistributed) {
   for (const auto& comm_grid : this->commGrids()) {
@@ -218,7 +235,7 @@ TYPED_TEST(BackTransformationReductionToBandEigenSolverTestMC, CorrectnessDistri
       // b != mb is currently not supported by the implementation yet.
       (void) mb;
 
-      testBackTransformationReductionToBand<TypeParam>(comm_grid, m, n, b, nb);
+      testBackTransformationReductionToBand<TypeParam, Backend::MC, Device::CPU>(comm_grid, m, n, b, nb);
       pika::threads::get_thread_manager().wait();
     }
   }

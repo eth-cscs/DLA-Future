@@ -12,6 +12,7 @@
 #include <blas.hh>
 
 #include "dlaf/common/callable_object.h"
+#include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/sender/make_sender_algorithm_overloads.h"
 #include "dlaf/sender/partial_transform.h"
@@ -119,7 +120,7 @@ auto herk(const dlaf::internal::Policy<B>& p, Sender&& s);
 template <Backend B>
 auto herk(const dlaf::internal::Policy<B>& p);
 
-/// Performs a matrix-matrix multiplication involving a triangular matrix.
+/// Triangular matrix-matrix multiplication.
 ///
 /// This overload blocks until completion of the algorithm.
 template <Backend B, class T, Device D>
@@ -141,6 +142,30 @@ auto trmm(const dlaf::internal::Policy<B>& p, Sender&& s);
 /// sender on the left-hand side.
 template <Backend B>
 auto trmm(const dlaf::internal::Policy<B>& p);
+
+/// Triangular matrix-matrix multiplication.
+/// Version with 3 tile arguments (different output tile).
+///
+/// This overload blocks until completion of the algorithm.
+template <Backend B, class T, Device D>
+void trmm3(const dlaf::internal::Policy<B>& policy, const blas::Side side, const blas::Uplo uplo,
+           const blas::Op op, const blas::Diag diag, const T alpha, const Tile<const T, D>& a,
+           const Tile<const T, D>& b, const Tile<T, D>& c);
+
+/// \overload trmm3
+///
+/// This overload takes a policy argument and a sender which must send all required arguments for the
+/// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
+template <Backend B, typename Sender,
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
+auto trmm3(const dlaf::internal::Policy<B>& p, Sender&& s);
+
+/// \overload trmm3
+///
+/// This overload partially applies the algorithm with a policy for later use with operator| with a
+/// sender on the left-hand side.
+template <Backend B>
+auto trmm3(const dlaf::internal::Policy<B>& p);
 
 /// Performs a triangular solve.
 ///
@@ -202,7 +227,7 @@ void herk(const blas::Uplo uplo, const blas::Op op, const BaseType<T> alpha,
   blas::herk(blas::Layout::ColMajor, uplo, op, s.n, s.k, alpha, a.ptr(), a.ld(), beta, c.ptr(), c.ld());
 }
 
-/// Performs a matrix-matrix multiplication, involving a triangular matrix.
+// Triangular matrix-matrix multiplication.
 template <class T>
 void trmm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const blas::Diag diag,
           const T alpha, const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b) noexcept {
@@ -211,7 +236,20 @@ void trmm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const
              b.ld());
 }
 
-/// Performs a triangular solve.
+// Triangular matrix-matrix multiplication.
+// Version with 3 tile arguments (different output tile).
+template <class T>
+void trmm3(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const blas::Diag diag,
+           const T alpha, const Tile<const T, Device::CPU>& a, const Tile<const T, Device::CPU>& b,
+           const Tile<T, Device::CPU>& c) noexcept {
+  auto s = tile::internal::getTrmm3Sizes(side, a, b, c);
+  DLAF_ASSERT(b.ptr() == nullptr || b.ptr() != c.ptr(), b.ptr(), c.ptr());
+
+  matrix::internal::copy(b, c);
+  blas::trmm(blas::Layout::ColMajor, side, uplo, op, diag, s.m, s.n, alpha, a.ptr(), a.ld(), c.ptr(),
+             c.ld());
+}
+
 template <class T>
 void trsm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const blas::Diag diag,
           const T alpha, const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b) noexcept {
@@ -279,10 +317,26 @@ void trmm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, c
   using util::blasToCublas;
   using util::blasToCublasCast;
   auto s = tile::internal::getTrmmSizes(side, a, b);
+
   gpublas::Trmm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),
                          blasToCublas(diag), to_int(s.m), to_int(s.n), blasToCublasCast(&alpha),
                          blasToCublasCast(a.ptr()), to_int(a.ld()), blasToCublasCast(b.ptr()),
                          to_int(b.ld()), blasToCublasCast(b.ptr()), to_int(b.ld()));
+}
+
+template <class T>
+void trmm3(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, const blas::Op op,
+           const blas::Diag diag, const T alpha, const matrix::Tile<const T, Device::GPU>& a,
+           const matrix::Tile<const T, Device::GPU>& b, const matrix::Tile<T, Device::GPU>& c) {
+  using util::blasToCublas;
+  using util::blasToCublasCast;
+  auto s = tile::internal::getTrmm3Sizes(side, a, b, c);
+  DLAF_ASSERT(b.ptr() != c.ptr(), b.ptr(), c.ptr());
+
+  gpublas::Trmm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),
+                         blasToCublas(diag), to_int(s.m), to_int(s.n), blasToCublasCast(&alpha),
+                         blasToCublasCast(a.ptr()), to_int(a.ld()), blasToCublasCast(b.ptr()),
+                         to_int(b.ld()), blasToCublasCast(c.ptr()), to_int(c.ld()));
 }
 
 template <class T>
@@ -304,6 +358,7 @@ DLAF_MAKE_CALLABLE_OBJECT(hemm);
 DLAF_MAKE_CALLABLE_OBJECT(her2k);
 DLAF_MAKE_CALLABLE_OBJECT(herk);
 DLAF_MAKE_CALLABLE_OBJECT(trmm);
+DLAF_MAKE_CALLABLE_OBJECT(trmm3);
 DLAF_MAKE_CALLABLE_OBJECT(trsm);
 }
 
@@ -312,6 +367,7 @@ DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(hemm, internal::hemm_o)
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(her2k, internal::her2k_o)
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(herk, internal::herk_o)
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(trmm, internal::trmm_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(trmm3, internal::trmm3_o)
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(trsm, internal::trsm_o)
 
 #endif

@@ -20,7 +20,7 @@
 #include "dlaf/communication/broadcast_panel.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/kernels.h"
-#include "dlaf/eigensolver/backtransformation/api.h"
+#include "dlaf/eigensolver/bt_reduction_to_band/api.h"
 #include "dlaf/executors.h"
 #include "dlaf/factorization/qr.h"
 #include "dlaf/matrix/copy.h"
@@ -33,59 +33,82 @@
 #include "dlaf/matrix/views.h"
 #include "dlaf/util_matrix.h"
 
-namespace dlaf {
-namespace eigensolver {
-namespace internal {
+namespace dlaf::eigensolver::internal {
 
-template <class T>
-void copySingleTile(pika::shared_future<matrix::Tile<const T, Device::CPU>> in,
-                    pika::future<matrix::Tile<T, Device::CPU>> out) {
-  pika::dataflow(dlaf::getCopyExecutor<Device::CPU, Device::CPU>(),
-                 matrix::unwrapExtendTiles(matrix::internal::copy_o), in, std::move(out));
+namespace bt_red_band {
+
+template <Backend B>
+struct Helpers;
+
+template <>
+struct Helpers<Backend::MC> {
+  template <class T>
+  static void copyAndSetHHUpperTile(const matrix::Tile<const T, Device::CPU>& src,
+                                    matrix::Tile<T, Device::CPU>&& dst) {
+    matrix::internal::copy_o(src, dst);
+    tile::internal::laset_o(blas::Uplo::Upper, T{0.}, T{1.}, dst);
+  }
+};
+
+template <Backend backend, typename SrcSender, typename DstSender>
+void copyAndSetHHUpperTile(SrcSender&& src, DstSender&& dst) {
+  namespace ex = pika::execution::experimental;
+  using ElementType = dlaf::internal::SenderElementType<DstSender>;
+
+  dlaf::internal::transform(dlaf::internal::Policy<backend>(pika::threads::thread_priority::high),
+                            Helpers<backend>::template copyAndSetHHUpperTile<ElementType>,
+                            ex::when_all(std::forward<SrcSender>(src), std::forward<DstSender>(dst))) |
+      ex::start_detached();
 }
 
-template <class Executor, Device device, class T>
-void trmmPanel(Executor&& ex, pika::shared_future<matrix::Tile<const T, device>> t,
-               pika::future<matrix::Tile<T, device>> w) {
-  pika::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::trmm_o), blas::Side::Right,
-                 blas::Uplo::Upper, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1.0), t, std::move(w));
+template <Backend backend, class TSender, class SourcePanelSender, class PanelTileSender>
+void trmmPanel(pika::threads::thread_priority priority, TSender&& t, SourcePanelSender&& v,
+               PanelTileSender&& w) {
+  using ElementType = dlaf::internal::SenderElementType<PanelTileSender>;
+
+  dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Upper, blas::Op::ConjTrans,
+                              blas::Diag::NonUnit, ElementType(1.0), std::forward<TSender>(t),
+                              std::forward<SourcePanelSender>(v), std::forward<PanelTileSender>(w)) |
+      tile::trmm3(dlaf::internal::Policy<backend>(priority)) |
+      pika::execution::experimental::start_detached();
 }
 
-template <class Executor, Device device, class T>
-void gemmUpdateW2(Executor&& ex, pika::future<matrix::Tile<T, device>> w,
-                  pika::shared_future<matrix::Tile<const T, device>> c,
-                  pika::future<matrix::Tile<T, device>> w2) {
-  pika::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::gemm_o), blas::Op::ConjTrans,
-                 blas::Op::NoTrans, T(1.0), w, c, T(1.0), std::move(w2));
+template <Backend backend, class PanelTileSender, class MatrixTileSender, class ColPanelSender>
+void gemmUpdateW2(pika::threads::thread_priority priority, PanelTileSender&& w, MatrixTileSender&& c,
+                  ColPanelSender&& w2) {
+  using ElementType = dlaf::internal::SenderElementType<PanelTileSender>;
+
+  dlaf::internal::whenAllLift(blas::Op::ConjTrans, blas::Op::NoTrans, ElementType(1.0),
+                              std::forward<PanelTileSender>(w), std::forward<MatrixTileSender>(c),
+                              ElementType(1.0), std::forward<ColPanelSender>(w2)) |
+      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
+      pika::execution::experimental::start_detached();
 }
 
-template <class Executor, Device device, class T>
-void gemmTrailingMatrix(Executor&& ex, pika::shared_future<matrix::Tile<const T, device>> v,
-                        pika::shared_future<matrix::Tile<const T, device>> w2,
-                        pika::future<matrix::Tile<T, device>> c) {
-  pika::dataflow(ex, matrix::unwrapExtendTiles(tile::internal::gemm_o), blas::Op::NoTrans,
-                 blas::Op::NoTrans, T(-1.0), v, w2, T(1.0), std::move(c));
+template <Backend backend, class PanelTileSender, class ColPanelSender, class MatrixTileSender>
+void gemmTrailingMatrix(pika::threads::thread_priority priority, PanelTileSender&& v,
+                        ColPanelSender&& w2, MatrixTileSender&& c) {
+  using ElementType = dlaf::internal::SenderElementType<PanelTileSender>;
+
+  dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, ElementType(-1.0),
+                              std::forward<PanelTileSender>(v), std::forward<ColPanelSender>(w2),
+                              ElementType(1.0), std::forward<MatrixTileSender>(c)) |
+      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
+      pika::execution::experimental::start_detached();
+}
 }
 
 // Implementation based on:
-// 1. Algorithm 6 "LAPACK Algorithm for the eigenvector back-transformation", page 15, PhD thesis
-// "GPU Accelerated Implementations of a Generalized Eigenvalue Solver for Hermitian Matrices with
-// Systematic Energy and Time to Solution Analysis" presented by Raffaele Solcà (2016)
-// 2. G. H. Golub and C. F. Van Loan, Matrix Computations, chapter 5, The Johns Hopkins University Press
-template <class T>
-struct BackTransformation<Backend::MC, Device::CPU, T> {
-  static void call_FC(Matrix<T, Device::CPU>& mat_c, Matrix<const T, Device::CPU>& mat_v,
-                      common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus);
-  static void call_FC(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_c,
-                      Matrix<const T, Device::CPU>& mat_v,
-                      common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus);
-};
+// G. H. Golub and C. F. Van Loan, Matrix Computations, chapter 5, The Johns Hopkins University Press
 
-template <class T>
-void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
-    Matrix<T, Device::CPU>& mat_c, Matrix<const T, Device::CPU>& mat_v,
+template <Backend backend, Device device, class T>
+void BackTransformationReductionToBand<backend, device, T>::call(
+    Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
     common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus) {
-  auto executor_np = dlaf::getNpExecutor<Backend::MC>();
+  using namespace bt_red_band;
+  using pika::execution::experimental::keep_future;
+  auto hp = pika::threads::thread_priority::high;
+  auto np = pika::threads::thread_priority::normal;
 
   const SizeType m = mat_c.nrTiles().rows();
   const SizeType n = mat_c.nrTiles().cols();
@@ -101,15 +124,12 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     return;
 
   constexpr std::size_t n_workspaces = 2;
-  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panelsV(n_workspaces,
-                                                                        mat_v.distribution());
-  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panelsW(n_workspaces,
-                                                                        mat_v.distribution());
-  common::RoundRobin<matrix::Panel<Coord::Row, T, Device::CPU>> panelsW2(n_workspaces,
-                                                                         mat_c.distribution());
+  common::RoundRobin<matrix::Panel<Coord::Col, T, device>> panelsV(n_workspaces, mat_v.distribution());
+  common::RoundRobin<matrix::Panel<Coord::Col, T, device>> panelsW(n_workspaces, mat_v.distribution());
+  common::RoundRobin<matrix::Panel<Coord::Row, T, device>> panelsW2(n_workspaces, mat_c.distribution());
 
   dlaf::matrix::Distribution dist_t({mb, total_nr_reflector}, {mb, mb});
-  matrix::Panel<Coord::Row, T, Device::CPU> panelT(dist_t);
+  matrix::Panel<Coord::Row, T, device> panelT(dist_t);
 
   const SizeType nr_reflector_blocks = dist_t.nrTiles().cols();
 
@@ -135,16 +155,14 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     for (SizeType i = k + 1; i < mat_v.nrTiles().rows(); ++i) {
       auto ik = LocalTileIndex{i, k};
       if (i == k + 1) {
-        pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_v = mat_v.read(ik);
+        auto tile_v = mat_v.read(ik);
         if (is_last) {
           tile_v =
               splitTile(tile_v,
                         {{0, 0},
                          {mat_v.distribution().tileSize(GlobalTileIndex(i, k)).rows(), nr_reflectors}});
         }
-        copySingleTile(tile_v, panelV(ik));
-        pika::dataflow(pika::launch::sync, matrix::unwrapExtendTiles(tile::internal::laset_o),
-                       blas::Uplo::Upper, T(0), T(1), panelV(ik));
+        copyAndSetHHUpperTile<backend>(keep_future(tile_v), panelV.readwrite_sender(ik));
       }
       else {
         panelV.setTile(ik, mat_v.read(ik));
@@ -156,32 +174,32 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
 
     auto taus_panel = taus[k];
     const LocalTileIndex t_index{Coord::Col, k};
-    dlaf::factorization::internal::computeTFactor<Backend::MC>(nr_reflectors, mat_v, panel_view,
-                                                               taus_panel, panelT(t_index));
+    dlaf::factorization::internal::computeTFactor<backend>(nr_reflectors, mat_v, panel_view, taus_panel,
+                                                           panelT(t_index));
 
     // W = V T
-    pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_t = panelT.read(t_index);
+    auto tile_t = panelT.read_sender(t_index);
     for (const auto& idx : panelW.iteratorLocal()) {
-      copySingleTile(panelV.read(idx), panelW(idx));
-      trmmPanel(executor_np, tile_t, panelW(idx));
+      trmmPanel<backend>(np, tile_t, panelV.read_sender(idx), panelW.readwrite_sender(idx));
     }
 
     // W2 = W C
-    matrix::util::set0<Backend::MC>(pika::threads::thread_priority::high, panelW2);
+    matrix::util::set0<backend>(hp, panelW2);
     LocalTileIndex c_start{k + 1, 0};
     LocalTileIndex c_end{m, n};
     auto c_k = iterate_range2d(c_start, c_end);
     for (const auto& idx : c_k) {
       auto kj = LocalTileIndex{k, idx.col()};
       auto ik = LocalTileIndex{idx.row(), k};
-      gemmUpdateW2(executor_np, panelW(ik), mat_c.read(idx), panelW2(kj));
+      gemmUpdateW2<backend>(np, panelW(ik), mat_c.read_sender(idx), panelW2.readwrite_sender(kj));
     }
 
     // Update trailing matrix: C = C - V W2
     for (const auto& idx : c_k) {
       auto ik = LocalTileIndex{idx.row(), k};
       auto kj = LocalTileIndex{k, idx.col()};
-      gemmTrailingMatrix(executor_np, panelV.read(ik), panelW2.read(kj), mat_c(idx));
+      gemmTrailingMatrix<backend>(np, panelV.read_sender(ik), panelW2.read_sender(kj),
+                                  mat_c.readwrite_sender(idx));
     }
 
     panelV.reset();
@@ -191,14 +209,21 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
   }
 }
 
-template <class T>
-void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
-    comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_c, Matrix<const T, Device::CPU>& mat_v,
+template <Backend backend, Device device, class T>
+void BackTransformationReductionToBand<backend, device, T>::call(
+    comm::CommunicatorGrid grid, Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
     common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus) {
-  auto executor_np = dlaf::getNpExecutor<Backend::MC>();
+  using namespace bt_red_band;
+  using pika::execution::experimental::keep_future;
+  auto hp = pika::threads::thread_priority::high;
+  auto np = pika::threads::thread_priority::normal;
+
+  if constexpr (backend != Backend::MC) {
+    DLAF_STATIC_UNIMPLEMENTED(T);
+  }
 
   // Set up MPI
-  auto executor_mpi = dlaf::getMPIExecutor<Backend::MC>();
+  auto executor_mpi = dlaf::getMPIExecutor<backend>();
   common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
 
@@ -265,9 +290,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
             tile_v = splitTile(tile_v,
                                {{0, 0}, {dist_v.tileSize(GlobalTileIndex(i, k)).rows(), nr_reflectors}});
           }
-          copySingleTile(tile_v, panelV(ik_panel));
-          pika::dataflow(pika::launch::sync, matrix::unwrapExtendTiles(tile::internal::laset_o),
-                         blas::Uplo::Upper, T(0), T(1), panelV(ik_panel));
+          copyAndSetHHUpperTile<backend>(keep_future(tile_v), panelV.readwrite_sender(ik_panel));
         }
         else {
           panelV.setTile(ik_panel, mat_v.read(GlobalTileIndex(i, k)));
@@ -277,20 +300,19 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       auto k_local = dist_t.template localTileFromGlobalTile<Coord::Col>(k);
       const LocalTileIndex t_index{Coord::Col, k_local};
       auto taus_panel = taus[k_local];
-      dlaf::factorization::internal::computeTFactor<Backend::MC>(nr_reflectors, mat_v, v_start,
-                                                                 taus_panel, panelT(t_index),
-                                                                 mpi_col_task_chain);
+      dlaf::factorization::internal::computeTFactor<backend>(nr_reflectors, mat_v, v_start, taus_panel,
+                                                             panelT(t_index), mpi_col_task_chain);
 
       for (SizeType i_local = dist_v.template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
            i_local < dist_v.localNrTiles().rows(); ++i_local) {
         // WH = V T
         const LocalTileIndex ik_panel{Coord::Row, i_local};
-        copySingleTile(panelV.read(ik_panel), panelW(ik_panel));
-        trmmPanel(executor_np, panelT.read(t_index), panelW(ik_panel));
+        trmmPanel<backend>(np, panelT.read_sender(t_index), panelV.read_sender(ik_panel),
+                           panelW.readwrite_sender(ik_panel));
       }
     }
 
-    matrix::util::set0<Backend::MC>(pika::threads::thread_priority::high, panelW2);
+    matrix::util::set0<backend>(hp, panelW2);
 
     broadcast(executor_mpi, k_rank_col, panelW, mpi_row_task_chain);
 
@@ -301,7 +323,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         // W2 = W C
         const LocalTileIndex kj_panel{Coord::Col, j_local};
         const LocalTileIndex ij{i_local, j_local};
-        gemmUpdateW2(executor_np, panelW(ik_panel), mat_c.read(ij), panelW2(kj_panel));
+        gemmUpdateW2<backend>(np, panelW(ik_panel), mat_c.read_sender(ij),
+                              panelW2.readwrite_sender(kj_panel));
       }
     }
 
@@ -317,7 +340,8 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         // C = C - V W2
         const LocalTileIndex kj_panel{Coord::Col, j_local};
         const LocalTileIndex ij(i_local, j_local);
-        gemmTrailingMatrix(executor_np, panelV.read(ik_panel), panelW2.read(kj_panel), mat_c(ij));
+        gemmTrailingMatrix<backend>(np, panelV.read_sender(ik_panel), panelW2.read_sender(kj_panel),
+                                    mat_c.readwrite_sender(ij));
       }
     }
 
@@ -326,17 +350,5 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
     panelW2.reset();
     panelT.reset();
   }
-}
-
-/// ---- ETI
-#define DLAF_EIGENSOLVER_BACKTRANSFORMATION_MC_ETI(KWORD, DATATYPE) \
-  KWORD template struct BackTransformation<Backend::MC, Device::CPU, DATATYPE>;
-
-DLAF_EIGENSOLVER_BACKTRANSFORMATION_MC_ETI(extern, float)
-DLAF_EIGENSOLVER_BACKTRANSFORMATION_MC_ETI(extern, double)
-DLAF_EIGENSOLVER_BACKTRANSFORMATION_MC_ETI(extern, std::complex<float>)
-DLAF_EIGENSOLVER_BACKTRANSFORMATION_MC_ETI(extern, std::complex<double>)
-
-}
 }
 }

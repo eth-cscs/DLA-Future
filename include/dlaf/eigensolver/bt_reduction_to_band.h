@@ -12,7 +12,7 @@
 #include <blas.hh>
 
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/eigensolver/backtransformation/mc.h"
+#include "dlaf/eigensolver/bt_reduction_to_band/impl.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
@@ -34,8 +34,9 @@ namespace eigensolver {
 /// @pre mat_c is not distributed,
 /// @pre mat_v is not distributed.
 template <Backend backend, Device device, class T>
-void backTransformation(Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
-                        common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus) {
+void backTransformationReductionToBand(
+    Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
+    common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus) {
   DLAF_ASSERT(matrix::local_matrix(mat_c), mat_c);
   DLAF_ASSERT(matrix::local_matrix(mat_v), mat_v);
   DLAF_ASSERT(square_size(mat_v), mat_v);
@@ -48,7 +49,7 @@ void backTransformation(Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v
   SizeType nr_reflectors_blocks = std::max<SizeType>(0, util::ceilDiv(m - mb - 1, mb));
   DLAF_ASSERT(taus.size() == nr_reflectors_blocks, taus.size(), mat_v, nr_reflectors_blocks);
 
-  internal::BackTransformation<backend, device, T>::call_FC(mat_c, mat_v, taus);
+  internal::BackTransformationReductionToBand<backend, device, T>::call(mat_c, mat_v, taus);
 }
 
 /// Eigenvalue back-transformation implementation on distributed memory.
@@ -65,9 +66,9 @@ void backTransformation(Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v
 /// @pre mat_c is distributed,
 /// @pre mat_v is distributed according to grid.
 template <Backend backend, Device device, class T>
-void backTransformation(comm::CommunicatorGrid grid, Matrix<T, device>& mat_c,
-                        Matrix<const T, device>& mat_v,
-                        common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus) {
+void backTransformationReductionToBand(
+    comm::CommunicatorGrid grid, Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
+    common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus) {
   DLAF_ASSERT(matrix::equal_process_grid(mat_c, grid), mat_c, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_v, grid), mat_v, grid);
   DLAF_ASSERT(square_size(mat_v), mat_v);
@@ -81,8 +82,29 @@ void backTransformation(comm::CommunicatorGrid grid, Matrix<T, device>& mat_c,
       std::max<SizeType>(0, util::ceilDiv(m - mb - 1, mb)));
   DLAF_ASSERT(taus.size() == nr_reflectors_blocks, taus.size(), mat_v, nr_reflectors_blocks);
 
-  internal::BackTransformation<backend, device, T>::call_FC(grid, mat_c, mat_v, taus);
+  internal::BackTransformationReductionToBand<backend, device, T>::call(grid, mat_c, mat_v, taus);
 }
 
+/// ---- ETI
+#define DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_LOCAL_ETI(KWORD, BACKEND, DEVICE, T)                   \
+  KWORD template void backTransformationReductionToBand<                                             \
+      BACKEND, DEVICE, T>(Matrix<T, DEVICE> & mat_c, Matrix<const T, DEVICE> & mat_v,                \
+                          common::internal::vector<pika::shared_future<common::internal::vector<T>>> \
+                              taus);
+
+#define DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_DISTR_ETI(KWORD, BACKEND, DEVICE, T)                \
+  KWORD template void backTransformationReductionToBand<                                          \
+      BACKEND, DEVICE,                                                                            \
+      T>(comm::CommunicatorGrid grid, Matrix<T, DEVICE> & mat_c, Matrix<const T, DEVICE> & mat_v, \
+         common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus);
+
+#define DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
+  DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_LOCAL_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
+  DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_DISTR_ETI(KWORD, BACKEND, DEVICE, DATATYPE)
+
+DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_ETI(extern, Backend::MC, Device::CPU, float)
+DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_ETI(extern, Backend::MC, Device::CPU, double)
+DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_ETI(extern, Backend::MC, Device::CPU, std::complex<float>)
+DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
 }
 }

@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include "dlaf/common/index2d.h"
+#include "dlaf/matrix/index.h"
 #include "dlaf/matrix/panel.h"
 
 #include <vector>
@@ -45,11 +47,12 @@ TYPED_TEST_SUITE(PanelTest, MatrixElementTypes);
 struct config_t {
   const GlobalElementSize sz;
   const TileElementSize blocksz;
-  const GlobalTileIndex offset;
+  const GlobalTileIndex offset = {0, 0};
 };
 
 std::vector<config_t> test_params{
-    {{0, 0}, {3, 3}, {0, 0}},  // empty matrix
+    {{0, 0}, {3, 3}},  // empty matrix
+    {{8, 5}, {3, 3}},
     {{26, 13}, {3, 3}, {1, 2}},
 };
 
@@ -372,4 +375,61 @@ TYPED_TEST(PanelTest, SetHeight) {
     // Check twice as size shouldn't change
     checkPanelTileSize(default_dim, panel);
   }
+}
+
+template <class T, Coord Axis>
+void testOffsetTileUnaligned(const GlobalElementSize size, const TileElementSize blocksize,
+                             const comm::CommunicatorGrid& comm_grid) {
+  const Distribution dist(size, blocksize, comm_grid.size(), comm_grid.rank(), {0, 0});
+
+  Panel<Axis, T, dlaf::Device::CPU> panel(dist);
+  constexpr auto Coord1D = Panel<Axis, T, Device::CPU>::CoordType;
+
+  const SizeType size_axis = std::min(blocksize.get<Axis>(), size.get<Axis>());
+  const GlobalElementSize panel_size(Coord1D, size.get<Coord1D>(), size_axis);
+
+  // use each row of the matrix as offset
+  for (SizeType offset_index = 0; offset_index < panel_size.get(Coord1D); ++offset_index) {
+    const GlobalElementIndex offset_e(Coord1D, offset_index);
+    const SizeType offset = dist.globalTileFromGlobalElement<Coord1D>(offset_e.get<Coord1D>());
+
+    panel.setRangeStart(offset_e);
+
+    for (const LocalTileIndex& i : panel.iteratorLocal()) {
+      const TileElementSize expected_size = [&]() {
+        // Note:  globalTile used with GlobalElementIndex is preferred over the one with LocalTileIndex,
+        //        because the former one does not implicitly target anything local, that would otherwise
+        //        be problematic in case of ranks that do not have any part of the matrix locally.
+        const GlobalTileIndex i_global(Coord1D, dist.globalTileFromLocalTile<Coord1D>(i.get<Coord1D>()));
+
+        const TileElementSize full_size = dist.tileSize(i_global);
+
+        // just first global tile may have offset, others are full size, compatibly with matrix size
+        if (i_global.get<Coord1D>() != offset)
+          return full_size;
+
+        // by computing the offseted size with repsect to the acutal tile size, it also checks the
+        // edge case where a panel has a single tile, both offseted and "incomplete"
+        const SizeType sub_offset = dist.tileElementFromGlobalElement<Coord1D>(offset_e.get<Coord1D>());
+        return TileElementSize(Coord1D, full_size.get<Coord1D>() - sub_offset, size_axis);
+      }();
+
+      EXPECT_EQ(expected_size, panel.read(i).get().size());
+      EXPECT_EQ(expected_size, panel(i).get().size());
+    }
+
+    panel.reset();
+  }
+}
+
+TYPED_TEST(PanelTest, OffsetTileUnalignedRow) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& [size, blocksize, offset] : test_params)
+      testOffsetTileUnaligned<TypeParam, Coord::Row>(size, blocksize, comm_grid);
+}
+
+TYPED_TEST(PanelTest, OffsetTileUnalignedCol) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& [size, blocksize, offset] : test_params)
+      testOffsetTileUnaligned<TypeParam, Coord::Col>(size, blocksize, comm_grid);
 }

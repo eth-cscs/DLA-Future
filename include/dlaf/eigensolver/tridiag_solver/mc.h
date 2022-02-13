@@ -24,9 +24,10 @@ namespace internal {
 
 template <class T>
 struct TridiagSolver<Backend::MC, Device::CPU, T> {
-  static void call(Matrix<BaseType<T>, Device::CPU>& mat_a, SizeType i_begin, SizeType i_end,
+  static void call(Matrix<T, Device::CPU>& mat_a, SizeType i_begin, SizeType i_end,
+                   Matrix<T, Device::CPU>& d, Matrix<T, Device::CPU>& z, Matrix<T, Device::CPU>& mat_ws,
                    Matrix<T, Device::CPU>& mat_ev);
-  static void call(comm::CommunicatorGrid grid, Matrix<BaseType<T>, Device::CPU>& mat_a,
+  static void call(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a,
                    Matrix<T, Device::CPU>& mat_ev);
 };
 
@@ -106,11 +107,11 @@ void assembleDiag(SizeType i_begin, SizeType i_end, Matrix<const T, Device::CPU>
   }
 }
 
-
-
 template <class T>
-void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<BaseType<T>, Device::CPU>& mat_a,
-                                                      SizeType i_begin, SizeType i_end,
+void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& mat_a, SizeType i_begin,
+                                                      SizeType i_end, Matrix<T, Device::CPU>& d,
+                                                      Matrix<T, Device::CPU>& z,
+                                                      Matrix<T, Device::CPU>& mat_ws,
                                                       Matrix<T, Device::CPU>& mat_ev) {
   using pika::threads::thread_priority;
   using dlaf::internal::Policy;
@@ -130,13 +131,17 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<BaseType<T>, Device
                               mat_a.readwrite_sender(LocalTileIndex(i_midpoint + 1, 0))) |
       cuppensDecomposition(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
 
-  TridiagSolver<Backend::MC, Device::CPU, T>::call(mat_a, i_begin, i_midpoint, mat_ev);    // left
-  TridiagSolver<Backend::MC, Device::CPU, T>::call(mat_a, i_midpoint + 1, i_end, mat_ev);  // right
+  // Left leaf
+  TridiagSolver<Backend::MC, Device::CPU, T>::call(mat_a, i_begin, i_midpoint, d, z, mat_ws, mat_ev);
+  // Right leaf
+  TridiagSolver<Backend::MC, Device::CPU, T>::call(mat_a, i_midpoint + 1, i_end, d, z, mat_ws, mat_ev);
 
   // Form D + rzz^T from `mat_a` and `mat_ev`
-  //assembleZVec(i_begin, i_midpoint, i_end, mat_ev, z);
-  //assembleDiag(i_begin, i_end, mat_a, d);
-  // norm of `z` is sqrt(2) because it is a concatination of two normalized vectors
+  assembleZVec(i_begin, i_midpoint, i_end, mat_ev, z);
+  assembleDiag(i_begin, i_end, mat_a, d);
+
+  // The norm of `z` is sqrt(2) because it is a concatination of two normalized vectors
+
   // multiply the parameter `rho` by 2 to account for the normalization of `z`
 
   // Deflate D + rzz^T
@@ -147,7 +152,7 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<BaseType<T>, Device
 
 template <class T>
 void TridiagSolver<Backend::MC, Device::CPU, T>::call(comm::CommunicatorGrid grid,
-                                                      Matrix<BaseType<T>, Device::CPU>& mat_a,
+                                                      Matrix<T, Device::CPU>& mat_a,
                                                       Matrix<T, Device::CPU>& mat_ev) {
   (void) grid;
   (void) mat_a;
@@ -159,7 +164,7 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(comm::CommunicatorGrid gri
   KWORD template struct TridiagSolver<BACKEND, DEVICE, DATATYPE>;
 
 DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::MC, Device::CPU, float)
-// DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::MC, Device::CPU, double)
+DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::MC, Device::CPU, double)
 // DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::MC, Device::CPU, std::complex<float>)
 // DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
 

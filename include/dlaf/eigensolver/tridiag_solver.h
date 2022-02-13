@@ -31,7 +31,10 @@ namespace eigensolver {
 /// @pre mat_ev is a square matrix
 /// @pre mat_ev has a square block size
 template <Backend backend, Device device, class T>
-void tridiagSolver(Matrix<BaseType<T>, device>& mat_a, Matrix<T, device>& mat_ev) {
+void tridiagSolver(Matrix<T, device>& mat_a, Matrix<T, device>& mat_ev) {
+  static_assert(std::is_same<T, float>::value || std::is_same<T, double>::value,
+                "tridagSolver accepts only real values (float, double)!");
+
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
   DLAF_ASSERT(mat_a.distribution().size().cols() == 2, mat_a);
 
@@ -39,8 +42,16 @@ void tridiagSolver(Matrix<BaseType<T>, device>& mat_a, Matrix<T, device>& mat_ev
   DLAF_ASSERT(matrix::square_size(mat_ev), mat_ev);
   DLAF_ASSERT(matrix::square_blocksize(mat_ev), mat_ev);
 
+  // Auxiliary matrix and vectors used for the D&C algorithm
+  const matrix::Distribution& distr = mat_ev.distribution();
+  Matrix<T, device> mat_ws(distr);
+  Matrix<T, device> d(LocalElementSize(distr.size().rows(), 1),
+                      TileElementSize(distr.blockSize().rows(), 1));
+  Matrix<T, device> z(LocalElementSize(distr.size().rows(), 1),
+                      TileElementSize(distr.blockSize().rows(), 1));
+
   internal::TridiagSolver<backend, device, T>::call(mat_a, SizeType(0),
-                                                    SizeType(mat_a.distribution().nrTiles().rows() - 1),
+                                                    SizeType(distr.nrTiles().rows() - 1), d, z, mat_ws,
                                                     mat_ev);
 }
 
@@ -58,8 +69,7 @@ void tridiagSolver(Matrix<BaseType<T>, device>& mat_a, Matrix<T, device>& mat_ev
 /// @pre mat_ev is a square matrix
 /// @pre mat_ev has a square block size
 template <Backend backend, Device device, class T>
-void tridiagSolver(comm::CommunicatorGrid grid, Matrix<BaseType<T>, device>& mat_a,
-                   Matrix<T, device>& mat_ev) {
+void tridiagSolver(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a, Matrix<T, device>& mat_ev) {
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
   DLAF_ASSERT(mat_a.distribution().size().cols() == 2, mat_a);
 

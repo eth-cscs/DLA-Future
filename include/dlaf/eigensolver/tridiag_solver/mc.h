@@ -9,6 +9,9 @@
 //
 #pragma once
 
+#include <pika/future.hpp>
+#include <pika/unwrap.hpp>
+
 #include "dlaf/common/callable_object.h"
 #include "dlaf/eigensolver/tridiag_solver/api.h"
 #include "dlaf/lapack/tile.h"
@@ -48,18 +51,23 @@ void cuppensDecomposition(const matrix::Tile<T, Device::CPU>& top,
 DLAF_MAKE_CALLABLE_OBJECT(cuppensDecomposition);
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(cuppensDecomposition, cuppensDecomposition_o)
 
+// Copies and normalizes a row of the `tile` into the column vector tile `col`
+//
 template <class T>
-void copyTileRow(SizeType row, const matrix::Tile<const T, Device::CPU>& tile,
-                 const matrix::Tile<T, Device::CPU>& col) {
+void copyTileRowAndNormalize(SizeType row, const matrix::Tile<const T, Device::CPU>& tile,
+                             const matrix::Tile<T, Device::CPU>& col) {
   for (SizeType i = 0; i < tile.size().rows(); ++i) {
-    col(TileElementIndex(i, 0)) = tile(TileElementIndex(row, i));
+    col(TileElementIndex(i, 0)) = tile(TileElementIndex(row, i)) / std::sqrt(2);
   }
 }
 
-DLAF_MAKE_CALLABLE_OBJECT(copyTileRow);
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(copyTileRow, copyTileRow_o)
+DLAF_MAKE_CALLABLE_OBJECT(copyTileRowAndNormalize);
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(copyTileRowAndNormalize, copyTileRowAndNormalize_o)
 
 // The bottom row of Q1 and the top row of Q2
+//
+// Note that the norm of `z` is sqrt(2) because it is a concatination of two normalized vectors. Hence to
+// normalize `z` we have to divide by sqrt(2). That is handled in `copyTileRowAndNormalize()`
 template <class T>
 void assembleZVec(SizeType i_begin, SizeType i_middle, SizeType i_end,
                   Matrix<const T, Device::CPU>& mat_ev, Matrix<T, Device::CPU>& z) {
@@ -78,7 +86,7 @@ void assembleZVec(SizeType i_begin, SizeType i_middle, SizeType i_end,
     GlobalTileIndex z_idx(i, 0);
     // Copy the row into the column vector `z`
     whenAllLift(tile_row, mat_ev.read_sender(mat_ev_idx), z.readwrite_sender(z_idx)) |
-        copyTileRow(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
+        copyTileRowAndNormalize(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
   }
 }
 
@@ -106,6 +114,16 @@ void assembleDiag(SizeType i_begin, SizeType i_end, Matrix<const T, Device::CPU>
         copyDiagTile(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
   }
 }
+
+template <class T>
+T extractRho(const matrix::Tile<const T, Device::CPU>& mat_a_tile) {
+  // Get the bottom-right element of the tile
+  // Multiply by factor 2 to account for the normalization of `z`
+  return 2 * mat_a_tile(TileElementIndex(mat_a_tile.size().rows() - 1, 1));
+}
+
+DLAF_MAKE_CALLABLE_OBJECT(extractRho);
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(extractRho, extractRho_o)
 
 template <class T>
 void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& mat_a, SizeType i_begin,
@@ -139,10 +157,8 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& ma
   // Form D + rzz^T from `mat_a` and `mat_ev`
   assembleZVec(i_begin, i_midpoint, i_end, mat_ev, z);
   assembleDiag(i_begin, i_end, mat_a, d);
-
-  // The norm of `z` is sqrt(2) because it is a concatination of two normalized vectors
-
-  // multiply the parameter `rho` by 2 to account for the normalization of `z`
+  pika::future<T> rho_fut =
+      pika::dataflow(pika::unwrapping(extractRho<T>), mat_a.read(LocalTileIndex(i_midpoint, 0)));
 
   // Deflate D + rzz^T
   // Find evals of D + rzz^T with laed4 (root solver)

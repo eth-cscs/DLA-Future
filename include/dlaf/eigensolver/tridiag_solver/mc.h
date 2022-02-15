@@ -9,6 +9,8 @@
 //
 #pragma once
 
+#include <algorithm>
+
 #include <pika/future.hpp>
 #include <pika/unwrap.hpp>
 
@@ -125,6 +127,31 @@ T extractRho(const matrix::Tile<const T, Device::CPU>& mat_a_tile) {
 DLAF_MAKE_CALLABLE_OBJECT(extractRho);
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(extractRho, extractRho_o)
 
+// Returns the maximum element of a portion of a column vector from tile indices `i_begin` to `i_end` including.
+//
+template <class T>
+pika::future<T> maxVectorElement(SizeType i_begin, SizeType i_end, Matrix<const T, Device::CPU>& vec) {
+  std::vector<pika::future<T>> tiles_max;
+  tiles_max.reserve(to_sizet(i_end - i_begin + 1));
+  for (SizeType i = i_begin; i <= i_end; ++i) {
+    tiles_max.push_back(pika::dataflow(pika::unwrapping(tile::internal::lange_o), lapack::Norm::Max,
+                                       vec.read(LocalTileIndex(i, 0))));
+  }
+
+  auto tol_calc_fn = [](const std::vector<T>& maxvals) {
+    return *std::max_element(maxvals.begin(), maxvals.end());
+  };
+  return pika::dataflow(pika::unwrapping(std::move(tol_calc_fn)), std::move(tiles_max));
+}
+
+// The tolerance calculation is the same as the one used in LAPACK's stedc implementation [1].
+//
+// [1] LAPACK 3.10.0, file dlaed2.f, line 315, variable TOL
+template <class T>
+T calcTolerance(T dmax, T zmax) {
+  return 8 * std::numeric_limits<T>::epsilon() * std::max(dmax, zmax);
+}
+
 template <class T>
 void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& mat_a, SizeType i_begin,
                                                       SizeType i_end, Matrix<T, Device::CPU>& d,
@@ -161,6 +188,11 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& ma
       pika::dataflow(pika::unwrapping(extractRho<T>), mat_a.read(LocalTileIndex(i_midpoint, 0)));
 
   // Deflate D + rzz^T
+  pika::future<T> dmax_fut = maxVectorElement(i_begin, i_end, d);
+  pika::future<T> zmax_fut = maxVectorElement(i_begin, i_end, z);
+  pika::future<T> tol_fut =
+      pika::dataflow(pika::unwrapping(calcTolerance<T>), std::move(dmax_fut), std::move(zmax_fut));
+
   // Find evals of D + rzz^T with laed4 (root solver)
   // Form evecs
   // Gemm

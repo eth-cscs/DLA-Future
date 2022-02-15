@@ -144,7 +144,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
         }
         copySingleTile(tile_v, panelV(ik));
         pika::dataflow(pika::launch::sync, matrix::unwrapExtendTiles(tile::internal::laset_o),
-                       lapack::MatrixType::Upper, T(0), T(1), panelV(ik));
+                       blas::Uplo::Upper, T(0), T(1), panelV(ik));
       }
       else {
         panelV.setTile(ik, mat_v.read(ik));
@@ -267,7 +267,7 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
           }
           copySingleTile(tile_v, panelV(ik_panel));
           pika::dataflow(pika::launch::sync, matrix::unwrapExtendTiles(tile::internal::laset_o),
-                         lapack::MatrixType::Upper, T(0), T(1), panelV(ik_panel));
+                         blas::Uplo::Upper, T(0), T(1), panelV(ik_panel));
         }
         else {
           panelV.setTile(ik_panel, mat_v.read(GlobalTileIndex(i, k)));

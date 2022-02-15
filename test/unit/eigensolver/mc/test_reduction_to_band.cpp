@@ -114,7 +114,7 @@ void setupHermitianBand(MatrixLocal<T>& matrix, const SizeType band_size) {
 
     const SizeType n = std::max<SizeType>(0, tile.size().rows() - band_size - 1);
     if (band_size < tile.size().rows())
-      laset(lapack::MatrixType::Lower, n, n, 0, 0, tile.ptr({band_size + 1, 0}), tile.ld());
+      lapack::laset(blas::Uplo::Lower, n, n, T{0}, T{0}, tile.ptr({band_size + 1, 0}), tile.ld());
 
     mirrorLowerOnDiag(tile);
   }
@@ -127,12 +127,12 @@ void setupHermitianBand(MatrixLocal<T>& matrix, const SizeType band_size) {
     const auto& tile_l = matrix.tile(ij);
 
     if (tile_l.size().rows() > 1)
-      lapack::laset(lapack::MatrixType::Lower, tile_l.size().rows() - 1, band_size, T(0), T(0),
+      lapack::laset(blas::Uplo::Lower, tile_l.size().rows() - 1, band_size, T(0), T(0),
                     tile_l.ptr({1, tile_l.size().cols() - band_size}), tile_l.ld());
 
     if (band_size < tile_l.size().rows())
-      lapack::laset(lapack::MatrixType::General, tile_l.size().rows(), band_size, T(0), T(0),
-                    tile_l.ptr({0, 0}), tile_l.ld());
+      lapack::laset(blas::Uplo::General, tile_l.size().rows(), band_size, T(0), T(0), tile_l.ptr({0, 0}),
+                    tile_l.ld());
 
     copyConjTrans(matrix.tile(ij), matrix.tile(common::transposed(ij)));
   }
@@ -314,7 +314,7 @@ void testReductionToBandLocal(const LocalElementSize size, const TileElementSize
 
   checkUpperPartUnchanged(reference, matrix_a);
 
-  auto mat_v = allGather(lapack::MatrixType::Lower, matrix_a);
+  auto mat_v = allGather(blas::Uplo::Lower, matrix_a);
   auto mat_b = makeLocal(matrix_a);
   splitReflectorsAndBand(mat_v, mat_b, band_size);
 
@@ -368,7 +368,7 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributed) {
 
       checkUpperPartUnchanged(reference, matrix_a);
 
-      auto mat_v = allGather(lapack::MatrixType::Lower, matrix_a, comm_grid);
+      auto mat_v = allGather(blas::Uplo::Lower, matrix_a, comm_grid);
       auto mat_b = makeLocal(matrix_a);
       splitReflectorsAndBand(mat_v, mat_b, band_size);
 

@@ -64,12 +64,12 @@ bool doesThisRankOwnsJustIncomplete(const matrix::Distribution& dist) {
 struct config_t {
   const GlobalElementSize sz;
   const TileElementSize blocksz;
-  const GlobalTileIndex offset = {0, 0};
+  const GlobalTileIndex offset;
 };
 
 std::vector<config_t> test_params{
-    {{0, 0}, {3, 3}},  // empty matrix
-    {{8, 5}, {3, 3}},
+    {{0, 0}, {3, 3}, {0, 0}},  // empty matrix
+    {{8, 5}, {3, 3}, {0, 0}},
     {{26, 13}, {3, 3}, {1, 2}},
 };
 

@@ -14,6 +14,7 @@
 #include "test_lapack_tile/test_hegst.h"
 #include "test_lapack_tile/test_lange.h"
 #include "test_lapack_tile/test_lantr.h"
+#include "test_lapack_tile/test_laset.h"
 #include "test_lapack_tile/test_potrf.h"
 #include "dlaf_test/matrix/util_tile.h"
 
@@ -218,50 +219,52 @@ TYPED_TEST(TileOperationsTestMC, Lacpy) {
   ASSERT_TRUE(std::abs(Scalar(3 + 4) - out_tile(TileElementIndex(4, 5))) < eps);
 }
 
-std::vector<std::tuple<SizeType, SizeType, SizeType>> setsizes = {{0, 0, 0},   {0, 0, 2},  // 0 size
-                                                                  {1, 1, 0},   {17, 11, 3}, {17, 11, 0},
-                                                                  {17, 17, 3}, {17, 17, 3}, {11, 11, 0}};
+std::vector<std::tuple<SizeType, SizeType, SizeType>> setsizes = {  //
+    {0, 0, 0},   {0, 1, 2},   {3, 0, 1},   {1, 1, 0},    {17, 11, 3},  {17, 11, 0},
+    {17, 17, 3}, {17, 17, 3}, {11, 11, 0}, {117, 35, 3}, {68, 117, 3}, {121, 121, 0}};
 
 TYPED_TEST(TileOperationsTestMC, Laset) {
-  for (const auto& [m, n, extra_lda] : setsizes) {
-    for (const auto mtype : blas_geuplos) {
-      const SizeType lda = std::max<SizeType>(1, m) + extra_lda;
+  using Type = TypeParam;
 
-      const auto alpha = TypeUtilities<TypeParam>::element(-3.5, 8.72);
-      const auto beta = TypeUtilities<TypeParam>::element(-1.25, -7.21);
-
-      auto el = [](const TileElementIndex& idx) {
-        return TypeUtilities<TypeParam>::element(idx.row() + idx.col(), idx.row() - idx.col());
-      };
-      auto res = [mtype, alpha, beta, el](const TileElementIndex& idx) {
-        const double i = idx.row();
-        const double j = idx.col();
-        if (i == j)
-          return beta;
-        else if (mtype == blas::Uplo::General || (mtype == blas::Uplo::Lower && i > j) ||
-                 (mtype == blas::Uplo::Upper && i < j))
-          return alpha;
-        return el(idx);
-      };
-
-      auto tile = createTile<TypeParam>(el, TileElementSize(m, n), lda);
-
-      tile::internal::laset<TypeParam>(mtype, alpha, beta, tile);
-      CHECK_TILE_EQ(res, tile);
+  const auto alpha = TypeUtilities<TypeParam>::element(-3.5, 8.72);
+  for (const auto beta : {alpha, TypeUtilities<TypeParam>::element(-1.25, -7.21)}) {
+    for (const auto& [m, n, extra_lda] : setsizes) {
+      for (const auto uplo : blas_geuplos) {
+        testLaset<Type, Device::CPU>(uplo, m, n, alpha, beta, extra_lda);
+      }
     }
   }
 }
 
-TYPED_TEST(TileOperationsTestMC, Set0) {
-  for (const auto& [m, n, extra_lda] : setsizes) {
-    const SizeType lda = std::max<SizeType>(1, m) + extra_lda;
-    Tile<TypeParam, Device::CPU> tile =
-        createTile<TypeParam>([](TileElementIndex idx) { return idx.row() + idx.col(); },
-                              TileElementSize(m, n), lda);
+#ifdef DLAF_WITH_CUDA
+TYPED_TEST(TileOperationsTestGPU, Laset) {
+  using Type = TypeParam;
 
-    auto res = [](const TileElementIndex&) { return TypeUtilities<TypeParam>::element(0.0, 0.0); };
-
-    tile::internal::set0(tile);
-    CHECK_TILE_EQ(res, tile);
+  const auto alpha = TypeUtilities<TypeParam>::element(-3.5, 8.72);
+  for (const auto beta : {alpha, TypeUtilities<TypeParam>::element(-1.25, -7.21)}) {
+    for (const auto& [m, n, extra_lda] : setsizes) {
+      for (const auto uplo : blas_geuplos) {
+        testLaset<Type, Device::GPU>(uplo, m, n, alpha, beta, extra_lda);
+      }
+    }
   }
 }
+#endif
+
+TYPED_TEST(TileOperationsTestMC, Set0) {
+  using Type = TypeParam;
+
+  for (const auto& [m, n, extra_lda] : setsizes) {
+    testSet0<Type, Device::CPU>(m, n, extra_lda);
+  }
+}
+
+#ifdef DLAF_WITH_CUDA
+TYPED_TEST(TileOperationsTestGPU, Set0) {
+  using Type = TypeParam;
+
+  for (const auto& [m, n, extra_lda] : setsizes) {
+    testSet0<Type, Device::GPU>(m, n, extra_lda);
+  }
+}
+#endif

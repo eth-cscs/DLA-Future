@@ -39,6 +39,7 @@
 #include "dlaf/util_tile.h"
 
 #ifdef DLAF_WITH_CUDA
+#include "dlaf/cublas/laset.h"
 #include "dlaf/cusolver/assert_info.h"
 #include "dlaf/cusolver/error.h"
 #include "dlaf/cusolver/hegst.h"
@@ -409,8 +410,10 @@ dlaf::BaseType<T> lantr(cusolverDnHandle_t handle, const lapack::Norm norm, cons
 template <class T>
 void laset(const blas::Uplo uplo, T alpha, T beta, const Tile<T, Device::GPU>& tile,
            cudaStream_t stream) {
-  DLAF_STATIC_UNIMPLEMENTED(T);
-  dlaf::internal::silenceUnusedWarningFor(uplo, alpha, beta, tile, stream);
+  const SizeType m = tile.size().rows();
+  const SizeType n = tile.size().cols();
+
+  gpublas::laset(util::blasToCublas(uplo), m, n, alpha, beta, tile.ptr(), tile.ld(), stream);
 }
 
 template <class T>

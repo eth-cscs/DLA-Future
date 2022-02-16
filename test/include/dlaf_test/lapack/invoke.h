@@ -19,10 +19,9 @@
 #include "dlaf/cusolver/error.h"
 #endif
 
-namespace dlaf {
-namespace test {
-
+namespace dlaf::test {
 namespace internal {
+
 template <Device D>
 struct InvokeLapack;
 
@@ -71,7 +70,7 @@ struct InvokeLapack<Device::GPU> {
 
 /// Invokes a Blas call in a generic way:
 /// For CPU it calls f(args...),
-/// For GPU it create a cublas handle, it calls f(handle, args...) and it sychronize.
+/// For GPU it creates a cublas handle, it calls f(handle, args...) and it synchronizes.
 template <Device D, class F, class... Args>
 void invokeLapack(F&& f, Args&&... args) {
   internal::InvokeLapack<D>::call(std::forward<F>(f), std::forward<Args>(args)...);
@@ -82,5 +81,4 @@ auto invokeLapackInfo(F&& f, Args&&... args) {
   return internal::InvokeLapack<D>::callInfo(std::forward<F>(f), std::forward<Args>(args)...);
 }
 
-}
 }

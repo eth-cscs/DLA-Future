@@ -69,7 +69,7 @@ struct Panel<axis, const T, D> {
     return dist_matrix_.rankIndex();
   }
 
-  /// Return the Distribution of the parent matrix
+  /// Return Distribution used for construction
   auto parentDistribution() const noexcept {
     return dist_matrix_;
   }
@@ -331,15 +331,18 @@ protected:
     return {std::move(dist_internal), layout};
   }
 
-  /// Create a Panel related to the Matrix passed as parameter.
+  /// Create a Panel related to Matrix represented by given Distribution.
   ///
-  /// The Panel is strictly related to its parent dlaf::Matrix.
-  /// In particular, it will create a Row or Column with the same size of its parent matrix (local),
-  /// considering the specified offset from the top left origin.
+  /// The Panel is strictly related to its parent Matrix via its @p dist_matrix.
+  /// In particular, it will be created as a Row or Column (1st axis) with:
+  /// - 1st axis size, same as @p dist_matrix, taking into account @p start offset
+  /// - 2nd axis size, same as blocksize (on the same axis) of @p dist_matrix
   ///
-  /// e.g. a 4x5 matrix with an offset 2x1 will have either:
-  /// - a Panel<Col> 2x1
-  /// - or a Panel<Row> 4x1
+  /// e.g.
+  /// A (38, 15) matrix is distributed over (4, 5) tiles, with blocksize (10, 3).
+  /// Using above distribution, together with a (2, 1) start offset results in either:
+  /// - Panel<Col>: (18,  3) with (2, 1) tiles,
+  /// - Panel<Row>: (10, 12) with (1, 4) tiles,
   Panel(matrix::Distribution dist_matrix, GlobalTileIndex start)
       : dist_matrix_(dist_matrix), data_(setupInternalMatrix(dist_matrix, start)) {
     DLAF_ASSERT_HEAVY(data_.nrTiles().get(axis) == 1, data_.nrTiles());

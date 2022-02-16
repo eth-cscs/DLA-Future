@@ -70,6 +70,10 @@ namespace cuda_operators {
 //       However for complex type it make a more efficient use of the fma instruction,
 //       therefore it is preferable in performance critical kernels.
 
+__host__ __device__ inline unsigned ceilDiv(unsigned i, unsigned j) {
+  return (i + j - 1) / j;
+}
+
 // Float
 __host__ __device__ inline float conj(float a) {
   return a;
@@ -102,6 +106,14 @@ __host__ __device__ inline float real(cuComplex a) {
 
 __host__ __device__ inline float imag(cuComplex a) {
   return a.y;
+}
+
+__host__ __device__ inline bool operator==(cuComplex a, cuComplex b) {
+  return a.x == b.x && a.y == b.y;
+}
+
+__host__ __device__ inline bool operator!=(cuComplex a, cuComplex b) {
+  return !operator==(a, b);
 }
 
 __host__ __device__ inline cuComplex operator+(cuComplex a, cuComplex b) {
@@ -168,6 +180,14 @@ __host__ __device__ inline double real(cuDoubleComplex a) {
 
 __host__ __device__ inline double imag(cuDoubleComplex a) {
   return a.y;
+}
+
+__host__ __device__ inline bool operator==(cuDoubleComplex a, cuDoubleComplex b) {
+  return a.x == b.x && a.y == b.y;
+}
+
+__host__ __device__ inline bool operator!=(cuDoubleComplex a, cuDoubleComplex b) {
+  return !operator==(a, b);
 }
 
 __host__ __device__ inline cuDoubleComplex operator+(cuDoubleComplex a, cuDoubleComplex b) {

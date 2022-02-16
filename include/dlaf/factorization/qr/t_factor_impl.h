@@ -256,7 +256,7 @@ void QR_Tfactor<backend, device, T>::call(const SizeType k, Matrix<const T, devi
 
   const auto v_start = panel_view.offset();
 
-  const auto panel_width = panel_view.width();
+  const auto panel_width = panel_view.cols();
 
   t = splitTile(t, {{0, 0}, {k, k}});
 

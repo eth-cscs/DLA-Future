@@ -94,7 +94,7 @@ private:
 
 struct SubPanelView : public IndexHelper {
   SubPanelView(Distribution dist, GlobalElementIndex offset_e, const SizeType width)
-      : IndexHelper(dist, offset_e), width_(width) {
+      : IndexHelper(dist, offset_e), cols_(width) {
     if (dist.size().isEmpty())
       return;
 
@@ -117,17 +117,17 @@ struct SubPanelView : public IndexHelper {
 
     const TileElementSize size_tile = dist_.tileSize(dist_.globalTileIndex(index));
     const TileElementSize size_sub(size_tile.rows() - offset_sub.row(),
-                                   std::min(width_, size_tile.cols() - offset_sub.col()));
+                                   std::min(cols_, size_tile.cols() - offset_sub.col()));
     return {offset_sub, size_sub};
   }
 
-  SizeType width() const noexcept {
-    return width_;
+  SizeType cols() const noexcept {
+    return cols_;
   }
 
 private:
   ///> Maximum width for the panel (it can be less in case there are not enough elements in the matrix)
-  SizeType width_;
+  SizeType cols_;
   SizeType i_sub_offset_, j_sub_offset_;
 
   bool has_top_tile_;

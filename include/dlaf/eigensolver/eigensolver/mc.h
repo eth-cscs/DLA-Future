@@ -56,7 +56,7 @@ struct Eigensolver<Backend::MC, Device::CPU, T> {
       blas::copy(tile.size().cols(), tile.ptr({1, 0}), tile.ld(), &e[start], 1);
     }
 
-    // mat_e ia allocated in lapack layout to be able to call stemr directly on it.
+    // mat_e is allocated in lapack layout to be able to call stemr directly on it.
     SizeType lde = std::max<SizeType>(1, size);
     auto distr_a = mat_a.distribution();
     auto layout = matrix::colMajorLayout(distr_a, lde);

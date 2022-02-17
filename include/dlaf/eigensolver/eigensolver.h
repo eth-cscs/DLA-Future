@@ -18,7 +18,18 @@
 namespace dlaf {
 namespace eigensolver {
 
-/// TODO
+/// Standard Eigensolver.
+///
+/// It solves the standard eigenvalue problem A * x = lambda * x.
+///
+/// On exit, the lower triangle or the upper triangle (depending on @p uplo) of @p mat_a,
+/// including the diagonal, is destroyed.
+///
+/// Implementation on local memory.
+///
+/// @return struct ReturnEigensolverType with eigenvalues, as a vector<T>, and eigenvectors as a Matrix
+/// @param uplo specifies if upper or lower triangular part of @p mat will be referenced
+/// @param mat contains the Hermitian matrix A
 template <Backend backend, Device device, class T>
 ReturnEigensolverType<T, device> eigensolver(blas::Uplo uplo, Matrix<T, device>& mat) {
   DLAF_ASSERT(matrix::local_matrix(mat), mat);

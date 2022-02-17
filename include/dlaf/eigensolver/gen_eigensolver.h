@@ -18,7 +18,21 @@
 namespace dlaf {
 namespace eigensolver {
 
-/// TODO
+/// Generalized Eigensolver.
+///
+/// It solves the generalized eigenvalue problem A * x = lambda * B * x.
+///
+/// On exit:
+/// - the lower triangle or the upper triangle (depending on @p uplo) of @p mat_a,
+/// including the diagonal, is destroyed.
+/// - @p mat_b contains the Cholesky decomposition of B
+///
+/// Implementation on local memory.
+///
+/// @return struct ReturnEigensolverType with eigenvalues, as a vector<T>, and eigenvectors as a Matrix
+/// @param uplo specifies if upper or lower triangular part of @p mat_a and @p mat_b will be referenced
+/// @param mat_a contains the Hermitian matrix A
+/// @param mat_b contains the Hermitian positive definite matrix B
 template <Backend backend, Device device, class T>
 ReturnEigensolverType<T, device> genEigensolver(blas::Uplo uplo, Matrix<T, device>& mat_a,
                                                 Matrix<T, device>& mat_b) {

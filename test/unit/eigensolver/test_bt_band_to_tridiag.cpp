@@ -148,3 +148,14 @@ TYPED_TEST(BacktransformationT2BTest, CorrectnessLocal) {
   for (const auto& [m, n, mb, nb, b] : configs)
     testBacktransformation<TypeParam>(m, n, mb, nb, b);
 }
+
+std::vector<config_t> configs_subband{
+    {12, 12, 4, 4, 2},
+    {12, 12, 6, 6, 2},
+    {11, 11, 6, 6, 3},
+};
+
+TYPED_TEST(BacktransformationT2BTest, CorrectnessLocalSubBand) {
+  for (const auto& [m, n, mb, nb, b] : configs_subband)
+    testBacktransformation<TypeParam>(m, n, mb, nb, b);
+}

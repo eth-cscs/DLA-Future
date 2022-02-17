@@ -12,6 +12,7 @@
 #include <gtest/gtest.h>
 
 #include "dlaf/eigensolver/band_to_tridiag.h"  // for nrSweeps/nrStepsForSweep
+#include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/util_matrix.h"
 
@@ -52,9 +53,9 @@ struct calculateTau {
 };
 
 template <class T>
-void computeTaus(const SizeType n, const SizeType k, matrix::Tile<T, Device::CPU> tile) {
+void computeTaus(const SizeType max_refl_size, const SizeType k, matrix::Tile<T, Device::CPU> tile) {
   for (SizeType j = 0; j < k; ++j) {
-    const SizeType size = std::min(n - j, tile.size().rows() - 1);
+    const SizeType size = std::min(max_refl_size, tile.size().rows());
     // Note: calculateTau implicitly considers the first component equal to 1
     DLAF_ASSERT(size > 0, size);
     const auto tau = calculateTau::call(tile.ptr({1, j}), size - 1);
@@ -84,14 +85,12 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb) {
     const auto m = mat_hh.distribution().localNrTiles().cols();
     for (SizeType j = 0; j < m; ++j) {
       for (SizeType i = j; i < m; ++i) {
+        const GlobalTileIndex ij(i, j);
         const bool affectsTwoRows = i < m - 1;
-        const SizeType k =
-            affectsTwoRows ? mat_hh.tileSize({i, j}).cols() : mat_hh.tileSize({i, j}).rows() - 2;
-        const SizeType n = mat_hh.tileSize({i, j}).rows() - 1 +
-                           (affectsTwoRows ? mat_hh.tileSize({i + 1, j}).rows() : 0);
+        const SizeType k = affectsTwoRows ? mat_hh.tileSize(ij).cols() : mat_hh.tileSize(ij).rows() - 2;
         if (k <= 0)
           continue;
-        pika::dataflow(pika::unwrapping(computeTaus<T>), n, k, mat_hh(LocalTileIndex(i, j)));
+        pika::dataflow(pika::unwrapping(computeTaus<T>), b, k, mat_hh(ij));
       }
     }
 

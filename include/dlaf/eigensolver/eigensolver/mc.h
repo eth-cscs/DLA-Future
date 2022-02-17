@@ -76,8 +76,7 @@ struct Eigensolver<Backend::MC, Device::CPU, T> {
     //       after the completion of stemr.
 
     backTransformationBandToTridiag<Backend::MC>(mat_e, ret.hh_reflectors);
-    auto taus_ = (common::internal::vector<pika::shared_future<common::internal::vector<T>>>*) &taus;
-    backTransformation<Backend::MC>(mat_e, mat_a, *taus_);
+    backTransformation<Backend::MC>(mat_e, mat_a, taus);
 
     return {std::move(w), std::move(mat_e)};
   }

@@ -31,8 +31,8 @@ namespace eigensolver {
 /// @pre mat_a has a square block size
 /// @pre mat_a is a local matrix
 template <Backend backend, Device device, class T>
-std::vector<pika::shared_future<common::internal::vector<T>>> reductionToBand(Matrix<T, device>& mat_a,
-                                                                              const SizeType band_size) {
+common::internal::vector<pika::shared_future<common::internal::vector<T>>> reductionToBand(
+    Matrix<T, device>& mat_a, const SizeType band_size) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
 
@@ -79,7 +79,7 @@ std::vector<pika::shared_future<common::internal::vector<T>>> reductionToBand(Ma
 /// @pre mat_a has a square block size
 /// @pre mat_a is distributed according to @p grid
 template <Backend backend, Device device, class T>
-std::vector<pika::shared_future<common::internal::vector<T>>> reductionToBand(
+common::internal::vector<pika::shared_future<common::internal::vector<T>>> reductionToBand(
     comm::CommunicatorGrid grid, Matrix<T, device>& mat_a) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);

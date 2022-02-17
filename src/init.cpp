@@ -168,7 +168,7 @@ struct Init<Backend::GPU> {
     initializeHpCudaStreamPool(device, cfg.num_hp_cuda_streams_per_thread);
     initializeCublasHandlePool();
     initializeCusolverHandlePool();
-    initializeCudaPool(device, cfg.num_np_cuda_streams, cfg.num_hp_cuda_streams);
+    initializeCudaPool(device, cfg.num_np_cuda_streams_per_thread, cfg.num_hp_cuda_streams_per_thread);
     pika::cuda::experimental::detail::register_polling(pika::resource::get_thread_pool("default"));
   }
 

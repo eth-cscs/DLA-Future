@@ -85,9 +85,7 @@ struct ScheduleRecvBcast {
 
   static void call(const comm::Executor& ex, pika::future<matrix::Tile<T, Device::GPU>> tile,
                    comm::IndexT_MPI root_rank, pika::future<common::PromiseGuard<Communicator>> pcomm) {
-    using pika::dataflow;
     using matrix::duplicateIfNeeded;
-    using matrix::internal::copy_o;
 
     // Note:
     //
@@ -104,8 +102,11 @@ struct ScheduleRecvBcast {
     tile_cpu = std::move(pika::get<0>(pika::split_future(
         ScheduleRecvBcast<T>::call(ex, std::move(tile_cpu), root_rank, std::move(pcomm)))));
 
-    dataflow(getCopyExecutor<Device::GPU, Device::CPU>(), matrix::unwrapExtendTiles(copy_o), tile_cpu,
-             tile_gpu);
+    pika::execution::experimental::when_all(dlaf::internal::keepIfSharedFuture(std::move(tile_cpu)),
+                                            dlaf::internal::keepIfSharedFuture(std::move(tile_gpu))) |
+        dlaf::matrix::copy(
+            dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::CPU, Device::GPU>>()) |
+        pika::execution::experimental::start_detached();
   }
 };
 

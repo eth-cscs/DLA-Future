@@ -46,4 +46,13 @@ using SenderSingleValueType =
 // exists and Sender sends exactly one type.
 template <typename Sender>
 using SenderElementType = typename SenderSingleValueType<Sender>::ElementType;
+
+template <typename T>
+struct IsSharedFuture : std::false_type {};
+
+template <typename U>
+struct IsSharedFuture<pika::shared_future<U>> : std::true_type {};
+
+template <typename T>
+inline constexpr bool is_shared_future_v = IsSharedFuture<std::decay_t<T>>::value;
 }

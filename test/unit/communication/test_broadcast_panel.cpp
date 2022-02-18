@@ -60,7 +60,7 @@ void testBroadcast(comm::Executor& executor_mpi, const config_t& cfg, comm::Comm
   matrix::test::set(matrix, [](const auto& index) { return TypeUtil::element(index.get(coord1D), 26); });
 
   Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, cfg.offset);
-  static_assert(coord1D == decltype(panel)::CoordType, "coord types mismatch");
+  static_assert(coord1D == decltype(panel)::coord, "coord types mismatch");
 
   // select the last available rank as root rank, i.e. it owns the panel to be broadcasted
   const comm::IndexT_MPI root = std::max(0, comm_grid.size().get(panel_axis) - 1);
@@ -146,7 +146,7 @@ void testBrodcastTranspose(comm::Executor& executor_mpi, const config_t& cfg,
     CHECK_TILE_EQ(TypeUtil::element(owner, 26), panel_src.read(idx).get());
 
   for (const auto idx : panel_dst.iteratorLocal()) {
-    constexpr auto CT = decltype(panel_dst)::CoordType;
+    constexpr auto CT = decltype(panel_dst)::coord;
     const auto i = dist.template globalTileFromLocalTile<CT>(idx.get(CT));
     if (i == panel_dst.rangeEnd() - 1)
       continue;

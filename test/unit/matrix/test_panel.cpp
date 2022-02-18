@@ -8,6 +8,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include "dlaf/common/index2d.h"
+#include "dlaf/matrix/distribution.h"
+#include "dlaf/matrix/index.h"
 #include "dlaf/matrix/panel.h"
 
 #include <vector>
@@ -42,6 +45,22 @@ struct PanelTest : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(PanelTest, MatrixElementTypes);
 
+// Helper for checking if current rank, along specific Axis, locally stores just an incomplete tile,
+// i.e. a tile with a size < blocksize
+template <Coord Axis>
+bool doesThisRankOwnsJustIncomplete(const matrix::Distribution& dist) {
+  // an empty matrix does not fall in this specific edge-case
+  if (dist.nrTiles().isEmpty())
+    return false;
+
+  // look at the last tile along panel_axis dimension, and see if its size is full or not
+  const GlobalTileIndex last_tile_axis(Axis, dist.nrTiles().get(Axis) - 1);
+  const bool is_last_tile =
+      dist.rankIndex().get(Axis) == dist.template rankGlobalTile<Axis>(last_tile_axis.get(Axis));
+  return is_last_tile && dist.localNrTiles().get(Axis) == 1 &&
+         dist.tileSize(last_tile_axis).get(Axis) != dist.blockSize().get(Axis);
+}
+
 struct config_t {
   const GlobalElementSize sz;
   const TileElementSize blocksz;
@@ -50,6 +69,7 @@ struct config_t {
 
 std::vector<config_t> test_params{
     {{0, 0}, {3, 3}, {0, 0}},  // empty matrix
+    {{8, 5}, {3, 3}, {0, 0}},
     {{26, 13}, {3, 3}, {1, 2}},
 };
 
@@ -161,6 +181,14 @@ void testExternalTile(const config_t& cfg, const comm::CommunicatorGrid comm_gri
   Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, cfg.offset);
   static_assert(coord1D == decltype(panel)::CoordType, "coord types mismatch");
 
+  // if locally there are just incomplete tiles, skip the test (not worth it)
+  if (doesThisRankOwnsJustIncomplete<panel_axis>(dist))
+    return;
+
+  // if there is no local tiles...cannot test external tiles
+  if (dist.localNrTiles().isEmpty())
+    return;
+
   // Note:
   // - Even indexed tiles in panel, odd indexed linked to the matrix first column
   // - Even indexed, i.e. the one using panel memory, are set to a different value
@@ -221,6 +249,14 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
 
   Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, cfg.offset);
   static_assert(coord1D == decltype(panel)::CoordType, "coord types mismatch");
+
+  // if locally there are just incomplete tiles, skip the test (not worth it)
+  if (doesThisRankOwnsJustIncomplete<panel_axis>(dist))
+    return;
+
+  // if there is no local tiles...there is nothing to check
+  if (dist.localNrTiles().isEmpty())
+    return;
 
   auto setTile = [](const auto& tile, TypeParam value) noexcept {
     tile::internal::laset(lapack::MatrixType::General, value, value, tile);
@@ -372,4 +408,61 @@ TYPED_TEST(PanelTest, SetHeight) {
     // Check twice as size shouldn't change
     checkPanelTileSize(default_dim, panel);
   }
+}
+
+template <class T, Coord Axis>
+void testOffsetTileUnaligned(const GlobalElementSize size, const TileElementSize blocksize,
+                             const comm::CommunicatorGrid& comm_grid) {
+  const Distribution dist(size, blocksize, comm_grid.size(), comm_grid.rank(), {0, 0});
+
+  Panel<Axis, T, dlaf::Device::CPU> panel(dist);
+  constexpr auto Coord1D = Panel<Axis, T, Device::CPU>::CoordType;
+
+  const SizeType size_axis = std::min(blocksize.get<Axis>(), size.get<Axis>());
+  const GlobalElementSize panel_size(Coord1D, size.get<Coord1D>(), size_axis);
+
+  // use each row of the matrix as offset
+  for (SizeType offset_index = 0; offset_index < panel_size.get(Coord1D); ++offset_index) {
+    const GlobalElementIndex offset_e(Coord1D, offset_index);
+    const SizeType offset = dist.globalTileFromGlobalElement<Coord1D>(offset_e.get<Coord1D>());
+
+    panel.setRangeStart(offset_e);
+
+    for (const LocalTileIndex& i : panel.iteratorLocal()) {
+      const TileElementSize expected_size = [&]() {
+        // Note:  globalTile used with GlobalElementIndex is preferred over the one with LocalTileIndex,
+        //        because the former one does not implicitly target anything local, that would otherwise
+        //        be problematic in case of ranks that do not have any part of the matrix locally.
+        const GlobalTileIndex i_global(Coord1D, dist.globalTileFromLocalTile<Coord1D>(i.get<Coord1D>()));
+
+        const TileElementSize full_size = dist.tileSize(i_global);
+
+        // just first global tile may have offset, others are full size, compatibly with matrix size
+        if (i_global.get<Coord1D>() != offset)
+          return full_size;
+
+        // by computing the offseted size with repsect to the acutal tile size, it also checks the
+        // edge case where a panel has a single tile, both offseted and "incomplete"
+        const SizeType sub_offset = dist.tileElementFromGlobalElement<Coord1D>(offset_e.get<Coord1D>());
+        return TileElementSize(Coord1D, full_size.get<Coord1D>() - sub_offset, size_axis);
+      }();
+
+      EXPECT_EQ(expected_size, panel.read(i).get().size());
+      EXPECT_EQ(expected_size, panel(i).get().size());
+    }
+
+    panel.reset();
+  }
+}
+
+TYPED_TEST(PanelTest, OffsetTileUnalignedRow) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& [size, blocksize, offset] : test_params)
+      testOffsetTileUnaligned<TypeParam, Coord::Row>(size, blocksize, comm_grid);
+}
+
+TYPED_TEST(PanelTest, OffsetTileUnalignedCol) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& [size, blocksize, offset] : test_params)
+      testOffsetTileUnaligned<TypeParam, Coord::Col>(size, blocksize, comm_grid);
 }

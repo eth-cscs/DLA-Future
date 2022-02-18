@@ -36,7 +36,9 @@ void test_single_arg() {
   act_values.reserve(exp_values.size());
   for (Index i : range) {
     act_values.push_back(i);
+    EXPECT_TRUE(isIndexInRange(i, range));
   }
+  EXPECT_FALSE(isIndexInRange(*range.end(), range));
 
   EXPECT_EQ(exp_values.size(), std::distance(range.begin(), range.end()));
   EXPECT_EQ(act_values, exp_values);
@@ -58,7 +60,9 @@ void test_double_arg(TypeParam end) {
   act_values.reserve(exp_values.size());
   for (Index i : range) {
     act_values.push_back(i);
+    EXPECT_TRUE(isIndexInRange(i, range));
   }
+  EXPECT_FALSE(isIndexInRange(*range.end(), range));
 
   EXPECT_EQ(exp_values.size(), std::distance(range.begin(), range.end()));
   EXPECT_EQ(act_values, exp_values);

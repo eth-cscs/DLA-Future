@@ -69,7 +69,8 @@ struct SubMatrixView : public IndexHelper {
   }
 
   matrix::SubTileSpec operator()(const LocalTileIndex& index) const {
-    // TODO index must be valid inside the range
+    DLAF_ASSERT_MODERATE(isIndexInRange(index, iteratorLocal()), index, tile_begin_, tile_end_);
+
     SizeType i_sub = 0, j_sub = 0;
 
     if (has_subtile_) {
@@ -106,11 +107,8 @@ struct SubPanelView : public IndexHelper {
     has_top_tile_ = dist_.rankGlobalTile<Coord::Row>(offset().row()) == dist_.rankIndex().row();
   }
 
-  // TODO we can add an helper c'tor that given a GlobalTileIndex it creates a panel tile-wide
-
   matrix::SubTileSpec operator()(const LocalTileIndex& index) const {
-    // TODO index must be valid inside the range
-    DLAF_ASSERT_MODERATE(index.isIn(dist_.localNrTiles()), index, dist_.localNrTiles());
+    DLAF_ASSERT_MODERATE(isIndexInRange(index, iteratorLocal()), index, tile_begin_, tile_end_);
 
     const TileElementIndex offset_sub((has_top_tile_ && index == tile_begin_) ? i_sub_offset_ : 0,
                                       j_sub_offset_);

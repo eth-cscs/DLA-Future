@@ -190,6 +190,18 @@ public:
     return iter2d_t(begin_idx_, ld_, i_max_);
   }
 
+  /// Given an index and a range, check if index is in the range
+  ///
+  /// The range is rectangular, with top-left corner set to the beginning of the range, and the bottom
+  /// right corner in the before-last iterator (i.e. std::prev(end)).
+  friend bool isIndexInRange(const index2d_t& index, const IterableRange2D& range) noexcept {
+    const auto tl = *range.begin();
+    const auto br = *std::prev(range.end());
+
+    return tl.row() <= index.row() && index.row() <= br.row() && tl.col() <= index.col() &&
+           index.col() <= br.col();
+  }
+
 private:
   index2d_t begin_idx_;
   IndexT ld_;

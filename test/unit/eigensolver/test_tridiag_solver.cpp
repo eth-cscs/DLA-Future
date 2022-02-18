@@ -74,27 +74,27 @@ TYPED_TEST(TridiagEigensolverTest, CuppensDecomposition) {
                   TypeUtilities<TypeParam>::error);
 }
 
-// TYPED_TEST(TridiagEigensolverTest, CorrectnessLocal) {
-//   using RealParam = BaseType<TypeParam>;
-//
-//   SizeType n = 10;
-//   SizeType nb = 2;
-//
-//   matrix::Matrix<RealParam, Device::CPU> mat_a(LocalElementSize(n, 2), TileElementSize(nb, 2));
-//   matrix::Matrix<TypeParam, Device::CPU> mat_ev(LocalElementSize(n, n), TileElementSize(nb, nb));
-//
-//   // Tridiagonal matrix : 1D Laplacian
-//   auto mat_a_fn = [](GlobalElementIndex el) {
-//     if (el.col() == 0)
-//       // diagonal
-//       return RealParam(-1);
-//     else
-//       // off-diagoanl
-//       return RealParam(2);
-//   };
-//   matrix::util::set(mat_a, std::move(mat_a_fn));
-//
-//   eigensolver::tridiagSolver<Backend::MC>(mat_a, mat_ev);
-//
-//   // TODO: checks
-// }
+TYPED_TEST(TridiagEigensolverTest, CorrectnessLocal) {
+  using RealParam = BaseType<TypeParam>;
+
+  SizeType n = 10;
+  SizeType nb = 2;
+
+  matrix::Matrix<RealParam, Device::CPU> mat_a(LocalElementSize(n, 2), TileElementSize(nb, 2));
+  matrix::Matrix<TypeParam, Device::CPU> mat_ev(LocalElementSize(n, n), TileElementSize(nb, nb));
+
+  // Tridiagonal matrix : 1D Laplacian
+  auto mat_a_fn = [](GlobalElementIndex el) {
+    if (el.col() == 0)
+      // diagonal
+      return RealParam(-1);
+    else
+      // off-diagoanl
+      return RealParam(2);
+  };
+  matrix::util::set(mat_a, std::move(mat_a_fn));
+
+  eigensolver::tridiagSolver<Backend::MC>(mat_a, mat_ev);
+
+  // TODO: checks
+}

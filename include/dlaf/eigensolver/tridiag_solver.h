@@ -42,17 +42,25 @@ void tridiagSolver(Matrix<T, device>& mat_a, Matrix<T, device>& mat_ev) {
   DLAF_ASSERT(matrix::square_size(mat_ev), mat_ev);
   DLAF_ASSERT(matrix::square_blocksize(mat_ev), mat_ev);
 
-  // Auxiliary matrix and vectors used for the D&C algorithm
+  // Auxiliary matrix used for the D&C algorithm
   const matrix::Distribution& distr = mat_ev.distribution();
   Matrix<T, device> mat_ws(distr);
-  Matrix<T, device> d(LocalElementSize(distr.size().rows(), 1),
-                      TileElementSize(distr.blockSize().rows(), 1));
-  Matrix<T, device> z(LocalElementSize(distr.size().rows(), 1),
-                      TileElementSize(distr.blockSize().rows(), 1));
 
-  internal::TridiagSolver<backend, device, T>::call(mat_a, SizeType(0),
-                                                    SizeType(distr.nrTiles().rows() - 1), d, z, mat_ws,
-                                                    mat_ev);
+  // Auxialiary vectors used for the D&C algorithm
+  LocalElementSize vec_size(distr.size().rows(), 1);
+  TileElementSize vec_tile_size(distr.blockSize().rows(), 1);
+  // Holds the diagonal elements of the tridiagonal matrix
+  Matrix<T, device> d(vec_size, vec_tile_size);
+  // Holds the values of Cuppen's rank-1 vector
+  Matrix<T, device> z(vec_size, vec_tile_size);
+  // Holds the global indices of the vector `d`
+  Matrix<SizeType, Device::CPU> index(vec_size, vec_tile_size);
+
+  // Tile indices of the first and last diagonal tiles
+  SizeType i_begin = 0;
+  SizeType i_end = SizeType(distr.nrTiles().rows() - 1);
+
+  internal::TridiagSolver<backend, device, T>::call(mat_a, i_begin, i_end, d, z, index, mat_ws, mat_ev);
 }
 
 /// TODO: more info on the distributed version

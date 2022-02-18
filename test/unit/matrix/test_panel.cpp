@@ -68,8 +68,8 @@ struct config_t {
 };
 
 std::vector<config_t> test_params{
-    {{0, 0}, {3, 3}},  // empty matrix
-    {{8, 5}, {3, 3}},
+    {{0, 0}, {3, 3}, {0, 0}},  // empty matrix
+    {{8, 5}, {3, 3}, {0, 0}},
     {{26, 13}, {3, 3}, {1, 2}},
 };
 

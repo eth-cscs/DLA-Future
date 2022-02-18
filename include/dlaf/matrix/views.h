@@ -94,13 +94,16 @@ private:
 };
 
 struct SubPanelView : public IndexHelper {
-  SubPanelView(Distribution dist, GlobalElementIndex offset_e, const SizeType width)
-      : IndexHelper(dist, offset_e), cols_(width) {
-    if (dist.size().isEmpty())
-      return;
-
+  SubPanelView(Distribution dist, GlobalElementIndex offset_e, const SizeType ncols)
+      : IndexHelper(dist, offset_e), cols_(ncols) {
     i_sub_offset_ = offset_e_.row() % dist_.blockSize().rows();
     j_sub_offset_ = offset_e_.col() % dist_.blockSize().cols();
+
+    DLAF_ASSERT(j_sub_offset_ + cols_ <= dist_.blockSize().cols(), j_sub_offset_ + cols_,
+                dist_.blockSize().cols());
+
+    if (dist.size().isEmpty())
+      return;
 
     tile_end_ = LocalTileIndex(dist_.localNrTiles().rows(), tile_begin_.col() + 1);
 

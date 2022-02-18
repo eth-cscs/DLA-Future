@@ -213,7 +213,7 @@ TYPED_TEST(BackTransformationReductionToBandEigenSolverTestMC, CorrectnessLocal)
 }
 
 TYPED_TEST(BackTransformationReductionToBandEigenSolverTestMC, CorrectnessDistributed) {
-  for (const auto& comm_grid : {this->commGrids()[0]}) {
+  for (const auto& comm_grid : this->commGrids()) {
     for (const auto& [m, n, mb, nb] : sizes) {
       testBackTransformationReductionToBand<TypeParam>(comm_grid, m, n, mb, nb);
       pika::threads::get_thread_manager().wait();

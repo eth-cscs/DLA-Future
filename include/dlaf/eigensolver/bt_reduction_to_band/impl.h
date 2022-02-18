@@ -43,21 +43,23 @@ struct Helpers;
 template <>
 struct Helpers<Backend::MC> {
   template <class T>
-  static void copyAndSetHHUpperTile(const matrix::Tile<const T, Device::CPU>& src,
-                                    matrix::Tile<T, Device::CPU>&& dst) {
+  static void copyAndSetHHUpperTiles(SizeType j_diag, const matrix::Tile<const T, Device::CPU>& src,
+                                     matrix::Tile<T, Device::CPU>&& dst) {
     matrix::internal::copy_o(src, dst);
-    tile::internal::laset_o(blas::Uplo::Upper, T{0.}, T{1.}, dst);
+    lapack::laset(blas::Uplo::Upper, dst.size().rows(), dst.size().cols() - j_diag, T{0.}, T{1.},
+                  dst.ptr({0, j_diag}), dst.ld());
   }
 };
 
 template <Backend backend, typename SrcSender, typename DstSender>
-void copyAndSetHHUpperTile(SrcSender&& src, DstSender&& dst) {
+void copyAndSetHHUpperTiles(SizeType j_diag, SrcSender&& src, DstSender&& dst) {
   namespace ex = pika::execution::experimental;
   using ElementType = dlaf::internal::SenderElementType<DstSender>;
 
   dlaf::internal::transform(dlaf::internal::Policy<backend>(pika::threads::thread_priority::high),
-                            Helpers<backend>::template copyAndSetHHUpperTile<ElementType>,
-                            ex::when_all(std::forward<SrcSender>(src), std::forward<DstSender>(dst))) |
+                            Helpers<backend>::template copyAndSetHHUpperTiles<ElementType>,
+                            dlaf::internal::whenAllLift(j_diag, std::forward<SrcSender>(src),
+                                                        std::forward<DstSender>(dst))) |
       ex::start_detached();
 }
 
@@ -123,10 +125,13 @@ void BackTransformationReductionToBand<backend, device, T>::call(
   if (total_nr_reflector == 0)
     return;
 
+  const auto dist_v = mat_v.distribution();
+  const auto dist_c = mat_c.distribution();
+
   constexpr std::size_t n_workspaces = 2;
-  common::RoundRobin<matrix::Panel<Coord::Col, T, device>> panelsV(n_workspaces, mat_v.distribution());
-  common::RoundRobin<matrix::Panel<Coord::Col, T, device>> panelsW(n_workspaces, mat_v.distribution());
-  common::RoundRobin<matrix::Panel<Coord::Row, T, device>> panelsW2(n_workspaces, mat_c.distribution());
+  common::RoundRobin<matrix::Panel<Coord::Col, T, device>> panelsV(n_workspaces, dist_v);
+  common::RoundRobin<matrix::Panel<Coord::Col, T, device>> panelsW(n_workspaces, dist_v);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, device>> panelsW2(n_workspaces, dist_c);
 
   dlaf::matrix::Distribution dist_t({mb, total_nr_reflector}, {mb, mb});
   matrix::Panel<Coord::Row, T, device> panelT(dist_t);
@@ -135,16 +140,21 @@ void BackTransformationReductionToBand<backend, device, T>::call(
 
   for (SizeType k = nr_reflector_blocks - 1; k >= 0; --k) {
     bool is_last = (k == nr_reflector_blocks - 1);
-    const GlobalTileIndex v_start{k + 1, k};
+    const SizeType nr_reflectors = dist_t.tileSize({0, k}).cols();
+
+    const GlobalElementIndex v_offset((k + 1) * mb, k * mb);
+    const GlobalElementIndex c_offset((k + 1) * mb, 0);
+
+    const matrix::SubPanelView panel_view(dist_v, v_offset, nr_reflectors);
+    const matrix::SubMatrixView mat_c_view(dist_c, c_offset);
 
     auto& panelV = panelsV.nextResource();
     auto& panelW = panelsW.nextResource();
     auto& panelW2 = panelsW2.nextResource();
 
-    panelV.setRangeStart(v_start);
-    panelW.setRangeStart(v_start);
+    panelV.setRangeStart(v_offset);
+    panelW.setRangeStart(v_offset);
 
-    const SizeType nr_reflectors = dist_t.tileSize({0, k}).cols();
     if (is_last) {
       panelT.setHeight(nr_reflectors);
       panelW2.setHeight(nr_reflectors);
@@ -152,25 +162,19 @@ void BackTransformationReductionToBand<backend, device, T>::call(
       panelV.setWidth(nr_reflectors);
     }
 
-    for (SizeType i = k + 1; i < mat_v.nrTiles().rows(); ++i) {
-      auto ik = LocalTileIndex{i, k};
-      if (i == k + 1) {
-        auto tile_v = mat_v.read(ik);
-        if (is_last) {
-          tile_v =
-              splitTile(tile_v,
-                        {{0, 0},
-                         {mat_v.distribution().tileSize(GlobalTileIndex(i, k)).rows(), nr_reflectors}});
-        }
-        copyAndSetHHUpperTile<backend>(keep_future(tile_v), panelV.readwrite_sender(ik));
+    for (const auto& i : panel_view.iteratorLocal()) {
+      // Column index of the HH reflector which starts in the first row of this tile.
+      const SizeType j_diag =
+          std::max<SizeType>(0, i.row() * mat_v.blockSize().rows() - panel_view.offsetElement().row());
+
+      if (j_diag < mb) {
+        auto tile_v = splitTile(mat_v.read(i), panel_view(i));
+        copyAndSetHHUpperTiles<backend>(j_diag, keep_future(tile_v), panelV.readwrite_sender(i));
       }
       else {
-        panelV.setTile(ik, mat_v.read(ik));
+        panelV.setTile(i, mat_v.read(i));
       }
     }
-
-    const GlobalElementIndex v_offset(v_start.row() * mb, v_start.col() * mb);
-    const matrix::SubPanelView panel_view(mat_v.distribution(), v_offset, nr_reflectors);
 
     auto taus_panel = taus[k];
     const LocalTileIndex t_index{Coord::Col, k};
@@ -185,21 +189,21 @@ void BackTransformationReductionToBand<backend, device, T>::call(
 
     // W2 = W C
     matrix::util::set0<backend>(hp, panelW2);
-    LocalTileIndex c_start{k + 1, 0};
-    LocalTileIndex c_end{m, n};
-    auto c_k = iterate_range2d(c_start, c_end);
-    for (const auto& idx : c_k) {
-      auto kj = LocalTileIndex{k, idx.col()};
-      auto ik = LocalTileIndex{idx.row(), k};
-      gemmUpdateW2<backend>(np, panelW(ik), mat_c.read_sender(idx), panelW2.readwrite_sender(kj));
+    for (const auto& ij : mat_c_view.iteratorLocal()) {
+      auto kj = LocalTileIndex{k, ij.col()};
+      auto ik = LocalTileIndex{ij.row(), k};
+      gemmUpdateW2<backend>(np, panelW.read_sender(ik),
+                            keep_future(splitTile(mat_c.read(ij), mat_c_view(ij))),
+                            panelW2.readwrite_sender(kj));
     }
 
     // Update trailing matrix: C = C - V W2
-    for (const auto& idx : c_k) {
-      auto ik = LocalTileIndex{idx.row(), k};
-      auto kj = LocalTileIndex{k, idx.col()};
+    for (const auto& ij : mat_c_view.iteratorLocal()) {
+      auto ik = LocalTileIndex{ij.row(), k};
+      auto kj = LocalTileIndex{k, ij.col()};
+      auto c_ij = mat_c(ij);
       gemmTrailingMatrix<backend>(np, panelV.read_sender(ik), panelW2.read_sender(kj),
-                                  mat_c.readwrite_sender(idx));
+                                  splitTile(c_ij, mat_c_view(ij)));
     }
 
     panelV.reset();
@@ -290,7 +294,7 @@ void BackTransformationReductionToBand<backend, device, T>::call(
             tile_v = splitTile(tile_v,
                                {{0, 0}, {dist_v.tileSize(GlobalTileIndex(i, k)).rows(), nr_reflectors}});
           }
-          copyAndSetHHUpperTile<backend>(keep_future(tile_v), panelV.readwrite_sender(ik_panel));
+          copyAndSetHHUpperTiles<backend>(0, keep_future(tile_v), panelV.readwrite_sender(ik_panel));
         }
         else {
           panelV.setTile(ik_panel, mat_v.read(GlobalTileIndex(i, k)));

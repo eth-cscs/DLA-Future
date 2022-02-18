@@ -198,16 +198,17 @@ SizeType permutateZVecZeroesToBottom(
   return std::distance(it_begin, it_split);
 }
 
+// Returns true if `d1` is close to `d2`.
 //
-// template <class T>
-// void deflateTile(T tol, T rho, matrix::Tile<T, Device::CPU>& d, matrix::Tile<T, Device::CPU>& z,
-//                  matrix::Tile<SizeType, Device::CPU>& index) {
-//   SizeType nrows = d.size().rows();
+// Given's deflation condition is the same as the one used in LAPACK's stedc implementation [1].
 //
-//   // Given's rotation condition
-//   //  if (std::abs(z1 * z2 * (d1 - d2) / (z1 * z1 + z2 * z2)) < tol) {
-//   //  }
-// }
+// [1] LAPACK 3.10.0, file dlaed2.f, line 393
+template <class T>
+bool givensDeflationCondition(T tol, T d1, T d2, T z1, T z2) {
+  // Note that this is similar to calling `rotg()` but we want to make sure that the condition is
+  // satisfied before modifying z1, z2 that is why the function is not used here.
+  return std::abs(z1 * z2 * (d1 - d2) / (z1 * z1 + z2 * z2)) < tol;
+}
 
 template <class T>
 void sortAscendingBasedOnDiagonal(const std::vector<matrix::Tile<T, Device::CPU>>& d_tiles,
@@ -294,14 +295,17 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& ma
   pika::shared_future<T> rho_fut =
       pika::dataflow(pika::unwrapping(extractRho<T>), mat_a.read(LocalTileIndex(i_midpoint, 0)));
 
-  // Deflate D + rzz^T
+  // Calculate the tolerance used for deflation
   pika::future<T> dmax_fut = maxVectorElement(i_begin, i_end, d);
   pika::future<T> zmax_fut = maxVectorElement(i_begin, i_end, z);
   pika::shared_future<T> tol_fut =
       pika::dataflow(pika::unwrapping(calcTolerance<T>), std::move(dmax_fut), std::move(zmax_fut));
+
+  // Initialize the index
   initIndex(i_begin, i_end, index);
 
   {
+    // Sort the diagonal in ascending order
     auto d_tiles = collectVectorTileFutures(i_begin, i_end, d);
     auto z_tiles = collectVectorTileFutures(i_begin, i_end, z);
     auto index_tiles = collectVectorTileFutures(i_begin, i_end, index);
@@ -312,6 +316,7 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& ma
   // The number of non-zero entries in `z`
   pika::future<SizeType> k_fut;
   {
+    // Deflate based on `z` entries close to zero
     auto d_tiles = collectVectorTileFutures(i_begin, i_end, d);
     auto z_tiles = collectVectorTileFutures(i_begin, i_end, z);
     auto index_tiles = collectVectorTileFutures(i_begin, i_end, index);

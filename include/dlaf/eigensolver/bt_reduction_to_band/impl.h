@@ -105,7 +105,7 @@ void gemmTrailingMatrix(pika::threads::thread_priority priority, PanelTileSender
 
 template <Backend backend, Device device, class T>
 void BackTransformationReductionToBand<backend, device, T>::call(
-    Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
+    const SizeType b, Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
     common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus) {
   using namespace bt_red_band;
   using pika::execution::experimental::keep_future;
@@ -120,9 +120,9 @@ void BackTransformationReductionToBand<backend, device, T>::call(
     return;
 
   // Note: "-1" added to deal with size 1 reflector.
-  const SizeType total_nr_reflector = mat_v.size().rows() - mb - 1;
+  const SizeType total_nr_reflector = mat_v.size().rows() - b - 1;
 
-  if (total_nr_reflector == 0)
+  if (total_nr_reflector <= 0)
     return;
 
   const auto dist_v = mat_v.distribution();
@@ -142,8 +142,8 @@ void BackTransformationReductionToBand<backend, device, T>::call(
     bool is_last = (k == nr_reflector_blocks - 1);
     const SizeType nr_reflectors = dist_t.tileSize({0, k}).cols();
 
-    const GlobalElementIndex v_offset((k + 1) * mb, k * mb);
-    const GlobalElementIndex c_offset((k + 1) * mb, 0);
+    const GlobalElementIndex v_offset(k * mb + b, k * mb);
+    const GlobalElementIndex c_offset(k * mb + b, 0);
 
     const matrix::SubPanelView panel_view(dist_v, v_offset, nr_reflectors);
     const matrix::SubMatrixView mat_c_view(dist_c, c_offset);

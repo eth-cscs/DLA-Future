@@ -76,8 +76,8 @@ struct Helpers<Backend::MC, Device::CPU, T> {
         SizeType i_diag = j - first_row_tile;
         const SizeType first_element_in_tile = std::max<SizeType>(0, i_diag);
 
-        // Break if this reflector (and therefore the following ones) starts in he next tile.
-        if (i_diag > tile_v.size().rows())
+        // Break if only the first element (i.e. the 1) of this reflector in in this tile.
+        if (i_diag >= tile_v.size().rows())
           break;
 
         // T(0:j, j) = -tau . V(j:, 0:j)* . V(j:, j)

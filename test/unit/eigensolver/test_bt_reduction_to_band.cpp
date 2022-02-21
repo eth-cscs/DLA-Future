@@ -53,14 +53,14 @@ struct BackTransformationReductionToBandEigenSolverTestGPU : public TestWithComm
 TYPED_TEST_SUITE(BackTransformationReductionToBandEigenSolverTestGPU, MatrixElementTypes);
 #endif
 
-const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes =
-    // m, n, mb, nb
+const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType>> sizes =
+    // m, n, mb, nb, b
     {
-        {3, 0, 1, 1}, {0, 5, 2, 3},                                   // m, n = 0
-        {2, 2, 3, 3}, {3, 4, 6, 7},                                   // m < mb
-        {3, 3, 1, 1}, {4, 4, 2, 2},  {12, 2, 4, 4},  {24, 36, 6, 6},  // mb = nb
-        {5, 8, 3, 2}, {8, 27, 3, 4}, {15, 34, 4, 6},                  // mb != nb
-        {3, 3, 2, 2}, {3, 27, 2, 4}                                   // m = mb + 1
+        {3, 0, 1, 1, 1}, {0, 5, 2, 3, 2},                                         // m, n = 0
+        {2, 2, 3, 3, 3}, {3, 4, 6, 7, 6},  {2, 2, 5, 4, 3},   {4, 4, 2, 3, 5},    // m < b
+        {3, 3, 2, 2, 2}, {3, 27, 2, 4, 2}, {3, 3, 2, 2, 2},   {3, 3, 2, 2, 2},    // m = b + 1
+        {3, 3, 1, 1, 1}, {4, 4, 2, 2, 4},  {12, 2, 4, 4, 2},  {24, 36, 6, 6, 4},  // mb = nb
+        {5, 8, 3, 2, 3}, {8, 27, 5, 4, 3}, {15, 34, 4, 6, 6},                     // mb != nb
 };
 
 template <class T>
@@ -81,11 +81,10 @@ void getTau(std::complex<T>& tau, T dotprod, BaseType<T> tau_i) {
 // Generate the vector with all the taus and compute the reference result in c.
 // Note: v is modified as well.
 template <class T>
-common::internal::vector<T> setUpTest(MatrixLocal<T>& c, MatrixLocal<T>& v) {
+common::internal::vector<T> setUpTest(SizeType b, MatrixLocal<T>& c, MatrixLocal<T>& v) {
   const auto m = c.size().rows();
-  const auto mb = c.blockSize().rows();
 
-  const SizeType nr_reflectors = std::max<SizeType>(0, m - mb - 1);
+  const SizeType nr_reflectors = std::max<SizeType>(0, m - b - 1);
 
   common::internal::vector<T> taus;
   taus.reserve(nr_reflectors);
@@ -96,9 +95,9 @@ common::internal::vector<T> setUpTest(MatrixLocal<T>& c, MatrixLocal<T>& v) {
   // Real case: tau = 2 / (vH v)
   // Complex case: real part of tau = [1 + sqrt(1 - vH v taui^2)]/(vH v)
   for (SizeType k = 0; k < nr_reflectors; ++k) {
-    const GlobalElementIndex v_offset{k + mb, k};
+    const GlobalElementIndex v_offset{k + b, k};
     v(v_offset) = T{1};
-    auto dotprod = blas::dot(m - mb - k, v.ptr(v_offset), 1, v.ptr(v_offset), 1);
+    auto dotprod = blas::dot(m - b - k, v.ptr(v_offset), 1, v.ptr(v_offset), 1);
 
     BaseType<T> tau_i = std::is_same_v<T, ComplexType<T>> ? random_value() : 0;
     T tau;
@@ -110,9 +109,9 @@ common::internal::vector<T> setUpTest(MatrixLocal<T>& c, MatrixLocal<T>& v) {
   const auto n = c.size().cols();
   if (n > 0) {
     for (SizeType k = nr_reflectors - 1; k >= 0; --k) {
-      const GlobalElementIndex v_offset{k + mb, k};
-      lapack::larf(lapack::Side::Left, m - mb - k, n, v.ptr(v_offset), 1, taus[k],
-                   c.ptr(GlobalElementIndex{k + mb, 0}), c.ld());
+      const GlobalElementIndex v_offset{k + b, k};
+      lapack::larf(lapack::Side::Left, m - b - k, n, v.ptr(v_offset), 1, taus[k],
+                   c.ptr(GlobalElementIndex{k + b, 0}), c.ld());
     }
   }
 
@@ -120,7 +119,8 @@ common::internal::vector<T> setUpTest(MatrixLocal<T>& c, MatrixLocal<T>& v) {
 }
 
 template <class T>
-void testBackTransformationReductionToBand(SizeType m, SizeType n, SizeType mb, SizeType nb) {
+void testBackTransformationReductionToBand(SizeType m, SizeType n, SizeType mb, SizeType nb,
+                                           SizeType b) {
   const LocalElementSize size_c(m, n);
   const LocalElementSize size_v(m, m);
   const TileElementSize block_size_c(mb, nb);
@@ -135,7 +135,7 @@ void testBackTransformationReductionToBand(SizeType m, SizeType n, SizeType mb, 
   auto c_loc = dlaf::matrix::test::allGather<T>(blas::Uplo::General, mat_c);
   auto v_loc = dlaf::matrix::test::allGather<T>(blas::Uplo::Lower, mat_v);
 
-  auto taus_loc = setUpTest(c_loc, v_loc);
+  auto taus_loc = setUpTest(b, c_loc, v_loc);
   auto nr_reflectors = taus_loc.size();
 
   common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus;
@@ -151,7 +151,7 @@ void testBackTransformationReductionToBand(SizeType m, SizeType n, SizeType mb, 
     taus.push_back(pika::make_ready_future(tau_tile));
   }
 
-  eigensolver::backTransformationReductionToBand<Backend::MC>(mat_c, mat_v, taus);
+  eigensolver::backTransformationReductionToBand<Backend::MC>(b, mat_c, mat_v, taus);
 
   auto result = [&c_loc](const GlobalElementIndex& index) { return c_loc(index); };
 
@@ -180,7 +180,7 @@ void testBackTransformationReductionToBand(comm::CommunicatorGrid grid, SizeType
   auto c_loc = dlaf::matrix::test::allGather<T>(blas::Uplo::General, mat_c, grid);
   auto v_loc = dlaf::matrix::test::allGather<T>(blas::Uplo::General, mat_v, grid);
 
-  auto taus_loc = setUpTest(c_loc, v_loc);
+  auto taus_loc = setUpTest(mb, c_loc, v_loc);
   auto nr_reflectors = taus_loc.size();
 
   common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus;
@@ -207,15 +207,18 @@ void testBackTransformationReductionToBand(comm::CommunicatorGrid grid, SizeType
 }
 
 TYPED_TEST(BackTransformationReductionToBandEigenSolverTestMC, CorrectnessLocal) {
-  for (const auto& [m, n, mb, nb] : sizes) {
-    testBackTransformationReductionToBand<TypeParam>(m, n, mb, nb);
+  for (const auto& [m, n, mb, nb, b] : sizes) {
+    testBackTransformationReductionToBand<TypeParam>(m, n, mb, nb, b);
   }
 }
 
 TYPED_TEST(BackTransformationReductionToBandEigenSolverTestMC, CorrectnessDistributed) {
   for (const auto& comm_grid : this->commGrids()) {
-    for (const auto& [m, n, mb, nb] : sizes) {
-      testBackTransformationReductionToBand<TypeParam>(comm_grid, m, n, mb, nb);
+    for (const auto& [m, n, mb, nb, b] : sizes) {
+      // b != mb is currently not supported by the implementation yet.
+      (void) mb;
+
+      testBackTransformationReductionToBand<TypeParam>(comm_grid, m, n, b, nb);
       pika::threads::get_thread_manager().wait();
     }
   }

@@ -22,7 +22,7 @@ namespace eigensolver {
 
 /// Eigenvalue back-transformation implementation on local memory.
 ///
-/// It computes Q C, where Q = HH(1) HH(2) ... HH(m-mb)
+/// It computes Q C, where Q = HH(1) HH(2) ... HH(m-b)
 /// (HH(j) is the House-Holder transformation (I - v tau vH)
 /// defined by the j-th element of tau and the HH reflector stored in the j-th column of the matrix V.
 ///
@@ -35,7 +35,7 @@ namespace eigensolver {
 /// @pre mat_v is not distributed.
 template <Backend backend, Device device, class T>
 void backTransformationReductionToBand(
-    Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
+    const SizeType b, Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
     common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus) {
   DLAF_ASSERT(matrix::local_matrix(mat_c), mat_c);
   DLAF_ASSERT(matrix::local_matrix(mat_v), mat_v);
@@ -44,12 +44,14 @@ void backTransformationReductionToBand(
   DLAF_ASSERT(mat_c.size().rows() == mat_v.size().rows(), mat_c, mat_v);
   DLAF_ASSERT(mat_c.blockSize().rows() == mat_v.blockSize().rows(), mat_c, mat_v);
 
-  const SizeType m = mat_v.size().rows();
-  const SizeType mb = mat_v.blockSize().rows();
-  SizeType nr_reflectors_blocks = std::max<SizeType>(0, util::ceilDiv(m - mb - 1, mb));
-  DLAF_ASSERT(taus.size() == nr_reflectors_blocks, taus.size(), mat_v, nr_reflectors_blocks);
+  [[maybe_unused]] auto nr_reflectors_blocks = [&b, &mat_v]() {
+    const SizeType m = mat_v.size().rows();
+    const SizeType mb = mat_v.blockSize().rows();
+    return std::max<SizeType>(0, util::ceilDiv(m - b - 1, mb));
+  };
+  DLAF_ASSERT(taus.size() == nr_reflectors_blocks(), taus.size(), mat_v, b);
 
-  internal::BackTransformationReductionToBand<backend, device, T>::call(mat_c, mat_v, taus);
+  internal::BackTransformationReductionToBand<backend, device, T>::call(b, mat_c, mat_v, taus);
 }
 
 /// Eigenvalue back-transformation implementation on distributed memory.
@@ -76,20 +78,22 @@ void backTransformationReductionToBand(
   DLAF_ASSERT(mat_c.size().rows() == mat_v.size().rows(), mat_c, mat_v);
   DLAF_ASSERT(mat_c.blockSize().rows() == mat_v.blockSize().rows(), mat_c, mat_v);
 
-  const SizeType m = mat_v.size().rows();
-  const SizeType mb = mat_v.blockSize().rows();
-  SizeType nr_reflectors_blocks = mat_v.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(
-      std::max<SizeType>(0, util::ceilDiv(m - mb - 1, mb)));
-  DLAF_ASSERT(taus.size() == nr_reflectors_blocks, taus.size(), mat_v, nr_reflectors_blocks);
+  [[maybe_unused]] auto nr_reflectors_blocks = [&mat_v]() {
+    const SizeType m = mat_v.size().rows();
+    const SizeType mb = mat_v.blockSize().rows();
+    return mat_v.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(
+        std::max<SizeType>(0, util::ceilDiv(m - mb - 1, mb)));
+  };
+  DLAF_ASSERT(taus.size() == nr_reflectors_blocks(), taus.size(), mat_v);
 
   internal::BackTransformationReductionToBand<backend, device, T>::call(grid, mat_c, mat_v, taus);
 }
 
 /// ---- ETI
-#define DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_LOCAL_ETI(KWORD, BACKEND, DEVICE, T)                   \
-  KWORD template void backTransformationReductionToBand<                                             \
-      BACKEND, DEVICE, T>(Matrix<T, DEVICE> & mat_c, Matrix<const T, DEVICE> & mat_v,                \
-                          common::internal::vector<pika::shared_future<common::internal::vector<T>>> \
+#define DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_LOCAL_ETI(KWORD, BACKEND, DEVICE, T)                    \
+  KWORD template void backTransformationReductionToBand<                                              \
+      BACKEND, DEVICE, T>(const SizeType b, Matrix<T, DEVICE>& mat_c, Matrix<const T, DEVICE>& mat_v, \
+                          common::internal::vector<pika::shared_future<common::internal::vector<T>>>  \
                               taus);
 
 #define DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_DISTR_ETI(KWORD, BACKEND, DEVICE, T)                \

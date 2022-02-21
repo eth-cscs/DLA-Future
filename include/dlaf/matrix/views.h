@@ -54,6 +54,11 @@ struct View {
   }
 
   /// Return the top left corner
+  GlobalElementIndex offsetElement() const noexcept {
+    return offset_e_;
+  }
+
+  /// Return the top left corner
   GlobalTileIndex offset() const noexcept {
     return offset_tile_;
   }

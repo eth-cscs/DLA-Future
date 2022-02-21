@@ -147,21 +147,25 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
         using dlaf::internal::Policy;
         using dlaf::matrix::internal::CopyBackend;
 
+        // GPU -> cCPU
         auto tile_cpu = transform(
             Policy<CopyBackend<D, Device::CPU>::value>(pika::threads::thread_priority::high),
             [](const matrix::Tile<const T, Device::GPU>& tile_gpu, auto... args) mutable {
               return dlaf::matrix::Duplicate<Device::CPU>{}(tile_gpu, args...);
             },
             just(std::cref(tile_gpu)));
+
+        // cCPU -> MPI -> cCPU
         auto tile_reduced =
             internal::senderReduceRecvInPlace<T>(ex, std::move(pcomm), reduce_op, std::move(tile_cpu));
+
+        // cCPU -> GPU
         // TODO matrix::copy(Policy<Backend::GPU>(pika::threads::thread_priority::high));
-        return transform(
-            Policy<CopyBackend<Device::CPU, D>::value>(pika::threads::thread_priority::high),
-            [&](const matrix::Tile<T, Device::CPU>& tile_cpu, auto... args) {
-              matrix::internal::copy(tile_cpu, tile_gpu, args...);
-            },
-            std::move(tile_reduced));
+        namespace arg = std::placeholders;
+        return transform(Policy<CopyBackend<Device::CPU, D>::value>(
+                             pika::threads::thread_priority::high),
+                         std::bind(matrix::internal::copy_o, arg::_1, std::cref(tile_gpu), arg::_2),
+                         std::move(tile_reduced));
       })) |
       start_detached();
 }

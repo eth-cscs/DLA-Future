@@ -106,7 +106,7 @@ auto senderReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
   using namespace pika::execution::experimental;
   using dlaf::internal::whenAllLift;
 
-  return std::forward<Sender>(tile) |  // TODO transfer on CPU?
+  return std::forward<Sender>(tile) | transfer(thread_pool_scheduler{}) |
          let_value(pika::unwrapping([ex, rank_root, reduce_op, pcomm = std::move(pcomm)](
                                         const matrix::Tile<const T, Device::CPU>& tile) mutable {
            using common::internal::makeItContiguous;

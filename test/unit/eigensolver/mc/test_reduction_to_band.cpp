@@ -59,6 +59,7 @@ struct config_t {
 };
 
 std::vector<config_t> configs{
+    {{0, 0}, {3, 3}},
     // full-tile band
     {{3, 3}, {3, 3}},    // single tile (nothing to do)
     {{12, 12}, {3, 3}},  // tile always full size (less room for distribution over ranks)
@@ -68,6 +69,7 @@ std::vector<config_t> configs{
 };
 
 std::vector<config_t> configs_subband{
+    {{0, 0}, {6, 6}, 2},
     // sub-tile band
     {{4, 4}, {4, 4}, 2},    // single tile
     {{12, 12}, {4, 4}, 2},  // tile always full size (less room for distribution over ranks)
@@ -286,7 +288,8 @@ auto checkResult(const SizeType k, const SizeType band_size, Matrix<const T, Dev
     const auto tile_element = dist.tileElementIndex(element);
     return mat_local.tile_read(tile_index)(tile_element);
   };
-  CHECK_MATRIX_NEAR(result, reference, 0, mat_b.size().linear_size() * TypeUtilities<T>::error);
+  CHECK_MATRIX_NEAR(result, reference, 0,
+                    std::max<SizeType>(1, mat_b.size().linear_size()) * TypeUtilities<T>::error);
 }
 
 template <class TypeParam, Device device>

@@ -18,8 +18,8 @@ namespace eigensolver {
 namespace internal {
 template <Backend backend, Device device, class T>
 struct GenEigensolver {
-  static ReturnEigensolverType<T, device> call(blas::Uplo uplo, Matrix<T, device>& mat_a,
-                                               Matrix<T, device>& mat_b);
+  static EigensolverResult<T, device> call(blas::Uplo uplo, Matrix<T, device>& mat_a,
+                                           Matrix<T, device>& mat_b);
 };
 
 /// ---- ETI

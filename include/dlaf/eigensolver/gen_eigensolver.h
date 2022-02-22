@@ -34,8 +34,8 @@ namespace eigensolver {
 /// @param mat_a contains the Hermitian matrix A
 /// @param mat_b contains the Hermitian positive definite matrix B
 template <Backend backend, Device device, class T>
-ReturnEigensolverType<T, device> genEigensolver(blas::Uplo uplo, Matrix<T, device>& mat_a,
-                                                Matrix<T, device>& mat_b) {
+EigensolverResult<T, device> genEigensolver(blas::Uplo uplo, Matrix<T, device>& mat_a,
+                                            Matrix<T, device>& mat_b) {
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
   DLAF_ASSERT(matrix::local_matrix(mat_b), mat_b);
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);

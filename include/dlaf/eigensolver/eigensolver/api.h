@@ -17,7 +17,7 @@ namespace dlaf {
 namespace eigensolver {
 
 template <class T, Device device>
-struct ReturnEigensolverType {
+struct EigensolverResult {
   common::internal::vector<BaseType<T>> eigenvalues;
   Matrix<T, device> eigenvectors;
 };

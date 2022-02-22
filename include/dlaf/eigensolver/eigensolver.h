@@ -31,7 +31,7 @@ namespace eigensolver {
 /// @param uplo specifies if upper or lower triangular part of @p mat will be referenced
 /// @param mat contains the Hermitian matrix A
 template <Backend backend, Device device, class T>
-ReturnEigensolverType<T, device> eigensolver(blas::Uplo uplo, Matrix<T, device>& mat) {
+EigensolverResult<T, device> eigensolver(blas::Uplo uplo, Matrix<T, device>& mat) {
   DLAF_ASSERT(matrix::local_matrix(mat), mat);
   DLAF_ASSERT(square_size(mat), mat);
   DLAF_ASSERT(square_blocksize(mat), mat);

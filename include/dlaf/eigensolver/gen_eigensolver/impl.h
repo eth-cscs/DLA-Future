@@ -23,9 +23,9 @@ namespace eigensolver {
 namespace internal {
 
 template <Backend backend, Device device, class T>
-ReturnEigensolverType<T, device> GenEigensolver<backend, device, T>::call(blas::Uplo uplo,
-                                                                          Matrix<T, device>& mat_a,
-                                                                          Matrix<T, device>& mat_b) {
+EigensolverResult<T, device> GenEigensolver<backend, device, T>::call(blas::Uplo uplo,
+                                                                      Matrix<T, device>& mat_a,
+                                                                      Matrix<T, device>& mat_b) {
   factorization::cholesky<backend>(uplo, mat_b);
   eigensolver::genToStd<backend>(uplo, mat_a, mat_b);
 

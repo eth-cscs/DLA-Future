@@ -31,7 +31,7 @@ namespace internal {
 
 template <class T>
 struct Eigensolver<Backend::MC, Device::CPU, T> {
-  static ReturnEigensolverType<T, Device::CPU> call(blas::Uplo uplo, Matrix<T, Device::CPU>& mat_a) {
+  static EigensolverResult<T, Device::CPU> call(blas::Uplo uplo, Matrix<T, Device::CPU>& mat_a) {
     using common::internal::vector;
 
     const SizeType size = mat_a.size().rows();

@@ -28,8 +28,6 @@
 
 namespace dlaf {
 std::ostream& operator<<(std::ostream& os, configuration const& cfg) {
-  os << "  num_np_cuda_streams = " << cfg.num_np_cuda_streams << std::endl;
-  os << "  num_hp_cuda_streams = " << cfg.num_hp_cuda_streams << std::endl;
   os << "  num_np_cuda_streams_per_thread = " << cfg.num_np_cuda_streams_per_thread << std::endl;
   os << "  num_hp_cuda_streams_per_thread = " << cfg.num_hp_cuda_streams_per_thread << std::endl;
   os << "  umpire_host_memory_pool_initial_bytes = " << cfg.umpire_host_memory_pool_initial_bytes
@@ -243,8 +241,6 @@ void updateConfigurationValue(pika::program_options::variables_map const& vm, T&
 }
 
 void updateConfiguration(pika::program_options::variables_map const& vm, configuration& cfg) {
-  updateConfigurationValue(vm, cfg.num_np_cuda_streams, "NUM_NP_CUDA_STREAMS", "num-np-cuda-streams");
-  updateConfigurationValue(vm, cfg.num_hp_cuda_streams, "NUM_HP_CUDA_STREAMS", "num-hp-cuda-streams");
   updateConfigurationValue(vm, cfg.num_np_cuda_streams_per_thread, "NUM_NP_CUDA_STREAMS_PER_THREAD",
                            "num-np-cuda-streams-per-thread");
   updateConfigurationValue(vm, cfg.num_hp_cuda_streams_per_thread, "NUM_HP_CUDA_STREAMS_PER_THREAD",
@@ -270,10 +266,6 @@ pika::program_options::options_description getOptionsDescription() {
 
   desc.add_options()("dlaf:help", "Print help message");
   desc.add_options()("dlaf:print-config", "Print the DLA-Future configuration");
-  desc.add_options()("dlaf:num-np-cuda-streams", pika::program_options::value<std::size_t>(),
-                     "Number of normal priority CUDA streams");
-  desc.add_options()("dlaf:num-hp-cuda-streams", pika::program_options::value<std::size_t>(),
-                     "Number of high priority CUDA streams");
   desc.add_options()("dlaf:num-np-cuda-streams-per-thread", pika::program_options::value<std::size_t>(),
                      "Number of normal priority CUDA streams per worker thread");
   desc.add_options()("dlaf:num-hp-cuda-streams-per-thread", pika::program_options::value<std::size_t>(),

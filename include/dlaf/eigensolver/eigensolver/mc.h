@@ -35,12 +35,13 @@ struct Eigensolver<Backend::MC, Device::CPU, T> {
     using common::internal::vector;
 
     const SizeType size = mat_a.size().rows();
+    const SizeType band_size = mat_a.blockSize().rows();
 
     // need uplo check as reduction to band doesn't have the uplo argument yet.
     if (uplo != blas::Uplo::Lower)
       DLAF_UNIMPLEMENTED(uplo);
 
-    auto taus = reductionToBand<Backend::MC>(mat_a);
+    auto taus = reductionToBand<Backend::MC>(mat_a, band_size);
     auto ret = bandToTridiag<Backend::MC>(uplo, mat_a.blockSize().rows(), mat_a);
 
     auto& mat_trid = ret.tridiagonal;

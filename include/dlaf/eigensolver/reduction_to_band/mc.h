@@ -736,7 +736,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     return taus;
 
   const SizeType nblocks = (nrefls - 1) / band_size + 1;
-  taus.reserve(to_sizet(nblocks));
+  taus.reserve(nblocks);
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<PanelT<Coord::Col, T>> panels_v(n_workspaces, dist);
@@ -864,7 +864,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
   if (nblocks == 0)
     return taus;
 
-  taus.reserve(to_sizet(nblocks));
+  taus.reserve(nblocks);
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<PanelT<Coord::Col, T>> panels_v(n_workspaces, dist);

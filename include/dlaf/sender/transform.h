@@ -49,26 +49,49 @@ namespace internal {
 template <Backend B, typename F, typename Sender,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 [[nodiscard]] decltype(auto) transform(const Policy<B> policy, F&& f, Sender&& sender) {
-  namespace ex = pika::execution::experimental;
+  using pika::execution::experimental::then;
+  using pika::execution::experimental::transfer;
+  using pika::unwrapping;
 
   auto scheduler = getBackendScheduler<B>(policy.priority());
-  auto transfer_sender = ex::transfer(std::forward<Sender>(sender), std::move(scheduler));
+  auto transfer_sender = transfer(std::forward<Sender>(sender), std::move(scheduler));
   auto f_unwrapping = pika::unwrapping(std::forward<F>(f));
 
   if constexpr (B == Backend::MC) {
-    return ex::then(std::move(transfer_sender), std::move(f_unwrapping));
+    return then(std::move(transfer_sender), std::move(f_unwrapping));
   }
   else if constexpr (B == Backend::GPU) {
 #if defined(DLAF_WITH_CUDA)
-    return pika::cuda::experimental::then_with_any_cuda(std::move(transfer_sender),
-                                                        std::move(f_unwrapping),
-                                                        CUBLAS_POINTER_MODE_HOST);
+    using pika::cuda::experimental::then_with_cublas;
+    using pika::cuda::experimental::then_with_cusolver;
+    using pika::cuda::experimental::then_with_stream;
+
+    if constexpr (std::is_invocable_v<decltype(then_with_stream), decltype(std::move(transfer_sender)),
+                                      decltype(std::move(f_unwrapping))>) {
+      return then_with_stream(std::move(transfer_sender), std::move(f_unwrapping));
+    }
+    else if constexpr (std::is_invocable_v<decltype(then_with_cublas),
+                                           decltype(std::move(transfer_sender)),
+                                           decltype(std::move(f_unwrapping)), cublasPointerMode_t>) {
+      return then_with_cublas(std::move(transfer_sender), std::move(f_unwrapping),
+                              CUBLAS_POINTER_MODE_HOST);
+    }
+    else if constexpr (std::is_invocable_v<decltype(then_with_cusolver),
+                                           decltype(std::move(transfer_sender)),
+                                           decltype(std::move(f_unwrapping))>) {
+      return then_with_cusolver(std::move(transfer_sender), std::move(f_unwrapping));
+    }
+    else {
+      DLAF_STATIC_FAIL(
+          F,
+          "Attempting to use transform with a GPU policy, but f is not invocable with a CUDA stream as the last argument or cuBLAS/cuSOLVER handle as the first argument.");
+    }
 #else
-    static_assert(sizeof(F) == 0, "Attempting to use transform with Backend::GPU but it is disabled");
+    DLAF_STATIC_FAIL(F, "Attempting to use transform with Backend::GPU but it is disabled");
 #endif
   }
   else {
-    static_assert(sizeof(F) == 0, "Unknown backend given to transform");
+    DLAF_STATIC_FAIL(F, "Unknown backend given to transform");
   }
 }
 

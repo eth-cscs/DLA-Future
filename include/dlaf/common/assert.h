@@ -126,6 +126,8 @@ void silenceUnusedWarningFor(Args&&...) {}
 #define DLAF_STATIC_UNIMPLEMENTED(DummyType) \
   static_assert(sizeof(DummyType) == 0, "Not yet implemented!")
 
+#define DLAF_STATIC_FAIL(DummyType, Msg) static_assert(sizeof(DummyType) == 0, Msg)
+
 /// Returns a fake object of type T (specified by __VA_ARGS__) dereferencing a null pointer.
 ///
 /// At runtime the program is exited with an error before dereferencing the null pointer.

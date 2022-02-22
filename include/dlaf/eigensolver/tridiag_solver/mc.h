@@ -198,18 +198,6 @@ SizeType permutateZVecZeroesToBottom(
   return std::distance(it_begin, it_split);
 }
 
-// Returns true if `d1` is close to `d2`.
-//
-// Given's deflation condition is the same as the one used in LAPACK's stedc implementation [1].
-//
-// [1] LAPACK 3.10.0, file dlaed2.f, line 393
-template <class T>
-bool givensDeflationCondition(T tol, T d1, T d2, T z1, T z2) {
-  // Note that this is similar to calling `rotg()` but we want to make sure that the condition is
-  // satisfied before modifying z1, z2 that is why the function is not used here.
-  return std::abs(z1 * z2 * (d1 - d2) / (z1 * z1 + z2 * z2)) < tol;
-}
-
 template <class T>
 void sortAscendingBasedOnDiagonal(const std::vector<matrix::Tile<T, Device::CPU>>& d_tiles,
                                   const std::vector<matrix::Tile<T, Device::CPU>>& z_tiles,
@@ -255,6 +243,97 @@ inline void initIndex(SizeType i_begin, SizeType i_end, Matrix<SizeType, Device:
     whenAllLift(tile_row, index.readwrite_sender(tile_idx)) |
         initIndexTile(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
   }
+}
+
+template <class T>
+struct GivensRotation {
+  SizeType i;  // the first column index
+  SizeType j;  // the second column index
+  T c;         // cosine
+  T s;         // sine
+};
+
+// Returns true if `d1` is close to `d2`.
+//
+// Given's deflation condition is the same as the one used in LAPACK's stedc implementation [1].
+//
+// [1] LAPACK 3.10.0, file dlaed2.f, line 393
+template <class T>
+bool diagonalValuesNearlyEqual(T tol, T d1, T d2, T z1, T z2) {
+  // Note that this is similar to calling `rotg()` but we want to make sure that the condition is
+  // satisfied before modifying z1, z2 that is why the function is not used here.
+  return std::abs(z1 * z2 * (d1 - d2) / (z1 * z1 + z2 * z2)) < tol;
+}
+
+template <class T>
+bool zvecValueNearlyZero(T tol, T rho, T z) {
+  return rho * std::abs(z) > tol;
+}
+
+template <class T>
+void updateDiagValuesWithGivensCoeff(T c, T s, T& d1, T& d2) {
+  d1 = d1 * c * c + d2 * s * s;
+  d2 = d1 * s * s + d2 * c * c;
+}
+
+// The type of a column in the Q matrix
+enum class ColType {
+  UpperHalf,  // non-zeroes in the upper half only
+  LowerHalf,  // non-zeroes in the lower half only
+  Dense,      // full column vector
+  Deflated    // deflated vectors
+};
+
+// Assumption 1: The algorithm assumes that the diagonal `dptr` is sorted in ascending order with
+// corresponding `zptr` and `coltyps` arrays.
+//
+// Assumption 2: The `coltyps` array stores as `ColType::Deflated` at all indices corresponding to zeroes
+// in `zptr`.
+//
+// Note: parallelizing this algorithm is non-trivial because the deflation regions due to Givens
+// rotations can cross over tiles and are of unknown length. However such algorithm is unlikely to
+// benefit much from parallelization anyway as it is quite light on flops and it appears memory bound.
+//
+// Returns an array of Given's rotations used to update the colunmns of the eigenvector matrix Q
+template <class T>
+std::vector<GivensRotation<T>> applyDeflationWithGivensRotation(T tol, SizeType len, T* dptr, T* zptr,
+                                                                ColType* coltyps) {
+  std::vector<GivensRotation<T>> rots;
+  rots.reserve(len);
+
+  SizeType i1 = 0;  // index of 1st element in the Givens rotation
+  for (SizeType i2 = 1; i2 < len; ++i2) {
+    // Note: i1 < i2 for every iteration
+    T& d1 = dptr[i1];
+    T& d2 = dptr[i2];
+    T& z1 = zptr[i1];
+    T& z2 = zptr[i2];
+    ColType& c1 = coltyps[i1];
+    ColType& c2 = coltyps[i2];
+
+    // if z2 = 0 go to the next iteration
+    if (c1 != ColType::Deflated && c2 != ColType::Deflated &&
+        diagonalValuesNearlyEqual(tol, d1, d2, z1, z2)) {
+      // if z1 != 0 and z2 != 0 and d1 = d2 apply Givens rotation
+      T c, s;
+      blas::rotg(z1, z2, c, s);
+      updateDiagValuesWithGivensCoeff(c, s, d1, d2);
+      rots.push_back(GivensRotation<T>{i1, i2, c, s});
+      // Set the the `i1` column as "Dense" if the `i2` column has opposite non-zero structure (i.e if
+      // one comes from Q1 and the other from Q2 or vice-versa)
+      if ((c1 == ColType::UpperHalf && c2 == ColType::LowerHalf) ||
+          (c1 == ColType::LowerHalf && c2 == ColType::UpperHalf)) {
+        c1 = ColType::Dense;
+      }
+      c2 = ColType::Deflated;
+    }
+    else if (c2 != ColType::Deflated) {
+      // if z2 != 0 but z1 == 0 or d1 != d2 then use the index of i2 as the new 1st element in the Givens rotation
+      i1 = i2;
+    }
+  }
+
+  return rots;
 }
 
 template <class T>

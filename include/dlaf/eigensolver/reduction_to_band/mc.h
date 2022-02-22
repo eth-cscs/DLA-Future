@@ -858,8 +858,12 @@ std::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<
   const auto& dist = mat_a.distribution();
   const comm::Index2D rank = dist.rankIndex();
 
-  const SizeType nblocks = dist.nrTiles().cols() - 1;
   std::vector<pika::shared_future<common::internal::vector<T>>> taus;
+  const SizeType nblocks = std::max<SizeType>(0, dist.nrTiles().cols() - 1);
+
+  if (nblocks == 0)
+    return taus;
+
   taus.reserve(to_sizet(nblocks));
 
   constexpr std::size_t n_workspaces = 2;

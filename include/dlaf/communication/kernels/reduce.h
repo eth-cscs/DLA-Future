@@ -83,9 +83,10 @@ auto senderReduceRecvInPlace(const comm::Executor& ex,
                     return pika::dataflow(ex, internal::reduceRecvInPlace<T>, pcomm.get(), reduce_op,
                                           std::cref(cont_buffer)) |
                            then([&]() {
-                             // TODO ref_wrapper to matrix::Tile const& is not converted
+                             // note: this lambda does two things:
+                             //       - avoid implicit conversion problem from reference_wrapper
+                             //       - act as if the copy returns the destination tile
                              dlaf::common::internal::copyBack(cont_buffer, tile_orig);
-                             // TODO plus I want to return the original tile
                              return std::move(tile_orig);
                            });
                   });
@@ -119,23 +120,31 @@ auto senderReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
 }
 }
 
+/// Given a CPU tile, contiguous or not, perform MPI_Reduce in-place
 template <class T>
 void scheduleReduceRecvInPlace(const comm::Executor& ex,
                                pika::future<common::PromiseGuard<comm::Communicator>> pcomm,
                                MPI_Op reduce_op, pika::future<matrix::Tile<T, Device::CPU>> tile) {
+  // Note:
+  //
+  // (CPU/cCPU) --> MPI --> (CPU/cCPU)
+  //
+  // where: cCPU = contiguous CPU
+
   using namespace pika::execution::experimental;
 
   internal::senderReduceRecvInPlace<T>(ex, std::move(pcomm), reduce_op, std::move(tile)) |
       start_detached();
 }
 
+/// Given a GPU tile, perform MPI_Reduce in-place
 template <class T, Device D>
 void scheduleReduceRecvInPlace(const comm::Executor& ex,
                                pika::future<common::PromiseGuard<comm::Communicator>> pcomm,
                                MPI_Op reduce_op, pika::future<matrix::Tile<T, D>> tile) {
   // Note:
   //
-  // GPU ---> Duplicate ---> (cCPU --> MPI) ---> copy --> GPU
+  // GPU --> Duplicate --> (cCPU --> MPI --> cCPU) --> copy --> GPU
   //
   // where: cCPU = contiguous CPU
 
@@ -160,7 +169,6 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
             internal::senderReduceRecvInPlace<T>(ex, std::move(pcomm), reduce_op, std::move(tile_cpu));
 
         // cCPU -> GPU
-        // TODO matrix::copy(Policy<Backend::GPU>(pika::threads::thread_priority::high));
         namespace arg = std::placeholders;
         return transform(Policy<CopyBackend<Device::CPU, D>::value>(
                              pika::threads::thread_priority::high),
@@ -171,10 +179,17 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
 }
 
 // TODO scheduleReduceSend with future will require to move the actual value, not the cref
+/// Given a CPU tile, being it contiguous or not, perform MPI_Reduce in-place
 template <class T>
 void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
                         pika::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
                         pika::shared_future<matrix::Tile<const T, Device::CPU>> tile) {
+  // Note:
+  //
+  // (CPU/cCPU) --> MPI --> (CPU/cCPU)
+  //
+  // where: cCPU = contiguous CPU
+
   using namespace pika::execution::experimental;
 
   internal::senderReduceSend<T>(ex, rank_root, std::move(pcomm), reduce_op,
@@ -183,13 +198,14 @@ void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
 }
 
 // TODO scheduleReduceSend with future will require to move the actual value, not the cref
+/// Given a GPU tile perform MPI_Reduce in-place
 template <class T, Device D>
 void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
                         pika::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
                         pika::shared_future<matrix::Tile<const T, D>> tile) {
   // Note:
   //
-  // GPU ---> Duplicate ---> (cCPU --> MPI)
+  // GPU --> Duplicate --> (cCPU --> MPI --> cCPU)
   //
   // where: cCPU = contiguous CPU
 

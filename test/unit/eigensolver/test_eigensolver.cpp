@@ -32,7 +32,7 @@ TYPED_TEST_SUITE(EigensolverTestMC, MatrixElementTypes);
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
 
 const std::vector<std::tuple<SizeType, SizeType>> sizes = {
-    //    {0, 2},                              // m = 0
+    {0, 2},                              // m = 0
     {5, 8}, {34, 34},                    // m <= mb
     {4, 3}, {16, 10}, {34, 13}, {32, 5}  // m > mb
 };
@@ -52,6 +52,9 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb)
   copy(reference, mat_a);
 
   auto ret = eigensolver::eigensolver<B>(uplo, mat_a);
+
+  if (mat_a.size().isEmpty())
+    return;
 
   auto mat_a_local = allGather(lapack::MatrixType::General, reference);
   auto mat_e_local = allGather(lapack::MatrixType::General, ret.eigenvectors);

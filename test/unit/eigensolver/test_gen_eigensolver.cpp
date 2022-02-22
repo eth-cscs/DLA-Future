@@ -32,7 +32,7 @@ TYPED_TEST_SUITE(GenEigensolverTestMC, MatrixElementTypes);
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
 
 const std::vector<std::tuple<SizeType, SizeType>> sizes = {
-    //    {0, 2},                              // m = 0
+    {0, 2},                              // m = 0
     {5, 8}, {34, 34},                    // m <= mb
     {4, 3}, {16, 10}, {34, 13}, {32, 5}  // m > mb
 };
@@ -60,6 +60,9 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
   copy(reference_b, mat_b);
 
   auto ret = eigensolver::genEigensolver<B>(uplo, mat_a, mat_b);
+
+  if (mat_a.size().isEmpty())
+    return;
 
   auto mat_a_local = allGather(lapack::MatrixType::General, reference_a);
   auto mat_b_local = allGather(lapack::MatrixType::General, reference_b);

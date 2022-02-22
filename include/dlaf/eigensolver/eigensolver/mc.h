@@ -44,37 +44,43 @@ struct Eigensolver<Backend::MC, Device::CPU, T> {
     auto taus = reductionToBand<Backend::MC>(mat_a, band_size);
     auto ret = bandToTridiag<Backend::MC>(uplo, mat_a.blockSize().rows(), mat_a);
 
-    auto& mat_trid = ret.tridiagonal;
-    vector<BaseType<T>> d(size);
-    vector<BaseType<T>> e(size);
-
-    // Synchronize mat_trid and copy tile by tile.
-    for (SizeType j = 0; j < mat_a.nrTiles().cols(); ++j) {
-      auto tile_sf = mat_trid.read(GlobalTileIndex(0, j));
-      auto& tile = tile_sf.get();
-      auto start = j * mat_a.blockSize().cols();
-      blas::copy(tile.size().cols(), tile.ptr({0, 0}), tile.ld(), &d[start], 1);
-      blas::copy(tile.size().cols(), tile.ptr({1, 0}), tile.ld(), &e[start], 1);
-    }
+    vector<BaseType<T>> w(size);
 
     // mat_e is allocated in lapack layout to be able to call stemr directly on it.
-    SizeType lde = std::max<SizeType>(1, size);
-    auto distr_a = mat_a.distribution();
-    auto layout = matrix::colMajorLayout(distr_a, lde);
-    Matrix<T, Device::CPU> mat_e(distr_a, layout);
-    auto ptr_e = mat_e(GlobalTileIndex(0, 0)).get().ptr();
+    const SizeType lde = std::max<SizeType>(1, size);
+    Matrix<T, Device::CPU> mat_e = [&]() {
+      auto distr_a = mat_a.distribution();
+      auto layout = matrix::colMajorLayout(distr_a, lde);
+      return Matrix<T, Device::CPU>{distr_a, layout};
+    }();
 
-    // Note I'm using mrrr instead of divide & conquer as
-    // mrrr is more suitable for a single core task.
-    int64_t tmp;
-    vector<BaseType<T>> w(size);
-    vector<int64_t> isuppz(2 * std::max<SizeType>(1, size));
-    bool tryrac = false;
-    lapack::stemr(lapack::Job::Vec, lapack::Range::All, size, d.data(), e.data(), 0, 0, 0, 0, &tmp,
-                  w.data(), ptr_e, lde, size, isuppz.data(), &tryrac);
+    if (!mat_a.size().isEmpty()) {
+      auto& mat_trid = ret.tridiagonal;
+      vector<BaseType<T>> d(size);
+      vector<BaseType<T>> e(size);
 
-    // Note: no sync needed here as next tasks are only scheduled
-    //       after the completion of stemr.
+      // Synchronize mat_trid and copy tile by tile.
+      for (SizeType j = 0; j < mat_a.nrTiles().cols(); ++j) {
+        auto tile_sf = mat_trid.read(GlobalTileIndex(0, j));
+        auto& tile = tile_sf.get();
+        auto start = j * mat_a.blockSize().cols();
+        blas::copy(tile.size().cols(), tile.ptr({0, 0}), tile.ld(), &d[start], 1);
+        blas::copy(tile.size().cols(), tile.ptr({1, 0}), tile.ld(), &e[start], 1);
+      }
+
+      auto ptr_e = mat_e(GlobalTileIndex(0, 0)).get().ptr();
+
+      // Note I'm using mrrr instead of divide & conquer as
+      // mrrr is more suitable for a single core task.
+      int64_t tmp;
+      vector<int64_t> isuppz(2 * std::max<SizeType>(1, size));
+      bool tryrac = false;
+      lapack::stemr(lapack::Job::Vec, lapack::Range::All, size, d.data(), e.data(), 0, 0, 0, 0, &tmp,
+                    w.data(), ptr_e, lde, size, isuppz.data(), &tryrac);
+
+      // Note: no sync needed here as next tasks are only scheduled
+      //       after the completion of stemr.
+    }
 
     backTransformationBandToTridiag<Backend::MC>(mat_e, ret.hh_reflectors);
     backTransformation<Backend::MC>(mat_e, mat_a, taus);

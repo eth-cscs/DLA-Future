@@ -147,6 +147,7 @@ struct Panel<axis, const T, D> {
 
     start_ = start_idx.get(CoordType);
     start_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<CoordType>(start_);
+    offset_element_ = start_ * dist_matrix_.blockSize().get<CoordType>();
 
     end_ = end_idx.get(CoordType);
     end_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<CoordType>(end_);
@@ -170,6 +171,7 @@ struct Panel<axis, const T, D> {
 
     start_ = start_idx.get(CoordType);
     start_local_ = dist_matrix_.nextLocalTileFromGlobalTile<CoordType>(start_);
+    offset_element_ = start_ * dist_matrix_.blockSize().get<CoordType>();
 
     DLAF_ASSERT(rangeStartLocal() >= bias_ && rangeStart() <= rangeEnd(), rangeStart(), rangeEnd(),
                 bias_);

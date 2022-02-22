@@ -62,8 +62,7 @@ const std::vector<config_t> configs{
     // incomplete tiles
     {{13, 13}, {4, 4}, {4, 2}},  // symmetric offset
     {{13, 13}, {4, 4}, {4, 2}},  // asymmetric offset
-                                 // TODO non-square tiles
-                                 // TODO non-square matrix
+    {{26, 13}, {4, 5}, {3, 2}},  // non-square matrix with non-square tiles
 };
 }
 
@@ -193,8 +192,11 @@ struct config_t {
 };
 
 const std::vector<config_t> configs{
+    // single-bound sub-panel
     {{12, 12}, {4, 4}, {2, 2}, 2},
-    {{12, 12}, {6, 6}, {2, 2}, 4},
+    {{13, 12}, {6, 6}, {2, 2}, 4},  // incomplete tile
+    // double-bound sub-panel
+    {{26, 13}, {4, 6}, {3, 2}, 3},  // incomplete tile, non-square tile
 };
 }
 
@@ -256,7 +258,10 @@ void testPanelSpecs(const Distribution& dist, const GlobalElementIndex offset_e,
     sub_j += dist.tileElementIndex(offset_e).col();
 
     const TileElementIndex sub_offset(sub_i, sub_j);
-    const TileElementSize sub_size = dist.tileSize(ij) - TileElementSize(sub_i, sub_j);
+    const TileElementSize sub_size = [&]() {
+      const TileElementSize full_sub = dist.tileSize(ij) - TileElementSize(sub_i, sub_j);
+      return TileElementSize{full_sub.rows(), std::min(full_sub.cols(), panel_view.cols())};
+    }();
 
     const matrix::SubTileSpec spec = panel_view(ij_local);
 

@@ -26,6 +26,8 @@
 #include <cuda_runtime.h>
 #include <cusolverDn.h>
 
+#include <pika/modules/async_cuda.hpp>
+
 #include "dlaf/cublas/handle_pool.h"
 #include "dlaf/cuda/stream_pool.h"
 #include "dlaf/cusolver/handle_pool.h"

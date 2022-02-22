@@ -118,6 +118,11 @@ TEST(DoubleArgEmptyRange2D, Size2D) {
   ::test_double_arg_empty(Size(0, 0));
 }
 
+TEST(isIndexInRange, EmptyRange) {
+  EXPECT_FALSE(isIndexInRange(Index{0, 0}, iterate_range2d(Index(0, 0), Index(0, 0))));
+  EXPECT_FALSE(isIndexInRange(Index{1, 2}, iterate_range2d(Index(1, 2), Index(1, 2))));
+}
+
 /// This is a very trivial test fixture that creates the following range2D
 ///
 /// +---------+--------+---------+

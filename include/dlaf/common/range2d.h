@@ -195,6 +195,10 @@ public:
   /// The range is rectangular, with top-left corner set to the beginning of the range, and the bottom
   /// right corner in the before-last iterator (i.e. std::prev(end)).
   friend bool isIndexInRange(const index2d_t& index, const IterableRange2D& range) noexcept {
+    // In case it is empty, it cannot be in the range
+    if (range.begin() == range.end())
+      return false;
+
     const auto tl = *range.begin();
     const auto br = *std::prev(range.end());
 

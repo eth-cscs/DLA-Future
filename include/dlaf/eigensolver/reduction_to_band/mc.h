@@ -277,14 +277,14 @@ template <class T>
 pika::shared_future<common::internal::vector<T>> computePanelReflectors(MatrixT<T>& mat_a,
                                                                         const SubPanelView& panel_view,
                                                                         const SizeType nrefls) {
-  auto panel_task = pika::unwrapping([nrefls, width = panel_view.cols()](auto fut_panel_tiles) {
+  auto panel_task = pika::unwrapping([nrefls, cols = panel_view.cols()](auto fut_panel_tiles) {
     const auto panel_tiles = pika::unwrap(fut_panel_tiles);
 
     common::internal::vector<T> taus;
     taus.reserve(nrefls);
     for (SizeType j = 0; j < nrefls; ++j) {
       taus.emplace_back(computeReflector(panel_tiles, j));
-      updateTrailingPanelWithReflector(panel_tiles, j, width - (j + 1), taus.back());
+      updateTrailingPanelWithReflector(panel_tiles, j, cols - (j + 1), taus.back());
     }
 
     return taus;

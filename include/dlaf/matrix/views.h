@@ -20,9 +20,26 @@
 
 namespace dlaf::matrix {
 
-struct IndexHelper {
-  IndexHelper(Distribution dist, GlobalElementIndex start_offset)
-      : dist_(dist), offset_e_(start_offset) {
+namespace internal {
+/// Helper for accessing a Matrix whose top-left offset is not necessarily tile-aligned.
+///
+/// It is defined in terms of global reference system and, in addition to providing an iterator to access
+/// all local tiles part of the view, it computes the correct SubTileSpec to use for accessing the
+/// right part of the tile for each LocalTileIndex in its range.
+struct View {
+  /// Create a view, for a Distribution @p dist, whose top-left corner is @p offset_e
+  ///
+  /// This internal helper does not fully initializes the range. Indeed just @p tile_begin_ gets
+  /// initialized according to the top-left corner specified, while @p tile_end_ is left to the
+  /// deriving implementation to be initialized according to their needs.
+  ///
+  /// If an empty distribution is passed, the range is initialized to be the empty interval starting and
+  /// ending in LocalTileIndex(0, 0).
+  ///
+  /// @param dist is the distribution of the matrix on which the view is applied
+  /// @param offset_e is the top left corner where the view starts in the global matrix
+  /// @pre not dist.size().isEmpty() => start_offset.isIn(dist.size())
+  View(Distribution dist, GlobalElementIndex start_offset) : dist_(dist), offset_e_(start_offset) {
     if (dist.size().isEmpty())
       return;
 
@@ -36,10 +53,12 @@ struct IndexHelper {
     };
   }
 
+  /// Return the top left corner
   GlobalTileIndex offset() const noexcept {
     return offset_tile_;
   }
 
+  /// Return a Range2D that gives access to all local tiles part of the View
   auto iteratorLocal() const noexcept {
     return common::iterate_range2d(tile_begin_, tile_end_);
   }
@@ -54,11 +73,20 @@ protected:
   GlobalElementIndex offset_e_;
   GlobalTileIndex offset_tile_;
 
-  LocalTileIndex tile_begin_, tile_end_;
+  LocalTileIndex tile_begin_ = {0, 0}, tile_end_ = {0, 0};
 };
+}
 
-struct SubMatrixView : public IndexHelper {
-  SubMatrixView(Distribution dist, GlobalElementIndex offset_e) : IndexHelper(dist, offset_e) {
+struct SubMatrixView : public internal::View {
+  /// Create a SubMatrixView, for a Distribution @p dist, whose top-left corner is @p offset_e, and the
+  /// bottom-right corner is implicitly set at the bottom-right limit of the global matrix.
+  ///
+  /// If an empty distribution is passed, the range is initialized to be the empty interval starting and
+  /// ending in LocalTileIndex(0, 0).
+  ///
+  /// @param dist is the distribution of the matrix on which the view is applied
+  /// @param offset_e is the top left corner where the view starts in the global matrix
+  SubMatrixView(Distribution dist, GlobalElementIndex offset_e) : View(dist, offset_e) {
     if (dist.size().isEmpty())
       return;
 
@@ -93,9 +121,22 @@ private:
   bool has_subtile_;
 };
 
-struct SubPanelView : public IndexHelper {
+struct SubPanelView : public internal::View {
+  /// Create a SubPanelView, for a Distribution @p dist, whose top-left corner is @p offset_e, and the
+  /// bottom-right corner is set at the bottom row and @p ncols columns on the right in the global matrix.
+  ///
+  /// It is constrained to be 1 column wide in terms of tiles.
+  ///
+  /// If an empty distribution is passed, the range is initialized to be the empty interval starting and
+  /// ending in LocalTileIndex(0, 0).
+  ///
+  /// @param dist is the distribution of the matrix on which the view is applied
+  /// @param offset_e is the top left corner where the view starts in the global matrix
+  /// @param ncols is the number of columns composing this panel
+  ///
+  /// @pre offset_e.col() + ncols <= dist.blockSize().cols()
   SubPanelView(Distribution dist, GlobalElementIndex offset_e, const SizeType ncols)
-      : IndexHelper(dist, offset_e), cols_(ncols) {
+      : View(dist, offset_e), cols_(ncols) {
     i_sub_offset_ = offset_e_.row() % dist_.blockSize().rows();
     j_sub_offset_ = offset_e_.col() % dist_.blockSize().cols();
 
@@ -122,6 +163,7 @@ struct SubPanelView : public IndexHelper {
     return {offset_sub, size_sub};
   }
 
+  /// Return the number of columns of elements part of this panel view
   SizeType cols() const noexcept {
     return cols_;
   }

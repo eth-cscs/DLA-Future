@@ -17,44 +17,39 @@ namespace dlaf::factorization {
 
 namespace internal {
 
-// Forms the triangular factor T of a block reflector H of order n, which is defined as a product of k
-// elementary reflectors.
+// Forms the triangular factor T of a block reflector H of order n,
+// which is defined as a product of k := hh_panel.size.cols() elementary reflectors.
 //
 // A Storage-Efficient WY Representation for Products of Householder Transformations.
 // Schreiber, Robert & VanLoan, Charles. (1989)
 // SIAM Journal on Scientific and Statistical Computing. 10. 10.1137/0910005.
+//
+// @pre taus contains a vector with k elements
+// @pre t contains a (k x k) tile
 template <Backend backend, Device device, class T>
-void computeTFactor(const SizeType k, Matrix<const T, device>& v, const matrix::SubPanelView& panel_view,
+void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
                     pika::shared_future<common::internal::vector<T>> taus,
                     pika::future<matrix::Tile<T, device>> t) {
-  QR_Tfactor<backend, device, T>::call(k, v, panel_view, taus, std::move(t));
+  QR_Tfactor<backend, device, T>::call(hh_panel, taus, std::move(t));
 }
 
-// Forms the triangular factor T of a block reflector H of order n, which is defined as a product of k
-// elementary reflectors.
-//
-// A Storage-Efficient WY Representation for Products of Householder Transformations.
-// Schreiber, Robert & VanLoan, Charles. (1989)
-// SIAM Journal on Scientific and Statistical Computing. 10. 10.1137/0910005.
 template <Backend backend, Device device, class T>
-void computeTFactor(const SizeType k, Matrix<const T, device>& v, const GlobalTileIndex v_start,
+void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
                     pika::shared_future<common::internal::vector<T>> taus,
                     pika::future<matrix::Tile<T, device>> t,
                     common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
-  QR_Tfactor<backend, device, T>::call(k, v, v_start, taus, std::move(t), mpi_col_task_chain);
+  QR_Tfactor<backend, device, T>::call(hh_panel, taus, std::move(t), mpi_col_task_chain);
 }
 /// ---- ETI
 #define DLAF_FACTORIZATION_QR_TFACTOR_LOCAL_ETI(KWORD, BACKEND, DEVICE, T)                  \
   KWORD template void                                                                       \
-  computeTFactor<BACKEND, DEVICE, T>(const SizeType k, Matrix<const T, DEVICE>& v,          \
-                                     const matrix::SubPanelView& panel_view,                \
+  computeTFactor<BACKEND, DEVICE, T>(matrix::Panel<Coord::Col, T, DEVICE>& hh_panel,        \
                                      pika::shared_future<common::internal::vector<T>> taus, \
                                      pika::future<matrix::Tile<T, DEVICE>> t);
 
 #define DLAF_FACTORIZATION_QR_TFACTOR_DISTR_ETI(KWORD, BACKEND, DEVICE, T)                  \
   KWORD template void                                                                       \
-  computeTFactor<BACKEND, DEVICE, T>(const SizeType k, Matrix<const T, DEVICE>& v,          \
-                                     const GlobalTileIndex v_start,                         \
+  computeTFactor<BACKEND, DEVICE, T>(matrix::Panel<Coord::Col, T, DEVICE>& hh_panel,        \
                                      pika::shared_future<common::internal::vector<T>> taus, \
                                      pika::future<matrix::Tile<T, DEVICE>> t,               \
                                      common::Pipeline<comm::Communicator>& mpi_col_task_chain);

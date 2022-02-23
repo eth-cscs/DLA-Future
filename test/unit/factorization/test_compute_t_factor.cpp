@@ -243,7 +243,6 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
                         const GlobalElementIndex v_start) {
   ASSERT_LE(v_start.row() + k, m);
   ASSERT_LE(v_start.col() + k, nb);
-  std::cout << m << " " << k << std::endl;
 
   const TileElementSize block_size(mb, nb);
 

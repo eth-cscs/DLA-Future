@@ -16,7 +16,6 @@
 #include <blas.hh>
 
 #include "dlaf/factorization/qr/api.h"
-#include "dlaf/factorization/qr/t_factor_kernels.h"
 
 #include "dlaf/common/assert.h"
 #include "dlaf/common/data.h"
@@ -150,22 +149,16 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
       pika::future<matrix::Tile<T, Device::GPU>>& tile_t) noexcept {
     namespace ex = pika::execution::experimental;
 
-    bool is_v0 = first_row_tile == 0;
-    auto gemv_func = [is_v0](cublasHandle_t handle, const auto& tile_v, const auto& taus,
-                             auto&& tile_t) {
+    auto gemv_func = [first_row_tile](cublasHandle_t handle, const auto& tile_v, const auto& taus, auto&& tile_t) noexcept {
       const SizeType k = tile_t.size().cols();
+      DLAF_ASSERT(tile_v.size().cols() == k, tile_v.size().cols(), k);
       DLAF_ASSERT(taus.size() == k, taus.size(), k);
 
-      if (is_v0) {
+      if (first_row_tile == 0) {
         cudaStream_t stream;
         DLAF_CUBLAS_CALL(cublasGetStream(handle, &stream));
 
-        memory::MemoryView<T, Device::GPU> taus_d(taus.size());
-        DLAF_CUDA_CALL(cudaMemcpyAsync(taus_d(), taus.data(), to_sizet(taus.size()) * sizeof(T),
-                                       cudaMemcpyDefault, stream));
-
-        // manage computations with implicit 1 for the whole j loop
-        tfactorImplicit1(k, taus_d(), tile_v.ptr(), tile_v.ld(), tile_t.ptr(), tile_t.ld(), stream);
+        DLAF_CUDA_CALL(cudaMemcpy2DAsync(tile_t.ptr(), to_sizet(tile_t.ld() + 1) * sizeof(T), taus.data(), sizeof(T), sizeof(T), to_sizet(k), cudaMemcpyDefault, stream));
       }
 
       for (SizeType j = 0; j < k; ++j) {
@@ -174,27 +167,25 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 
         const TileElementIndex t_start{0, j};
 
-        const SizeType first_element_in_tile = is_v0 ? j : 0;
+        // Position of the 1 in the diagonal in the current column.
+        SizeType i_diag = j - first_row_tile;
+        const SizeType first_element_in_col = std::max<SizeType>(0, i_diag);
+
+        // Break if the reflector starts in the next tile.
+        if (i_diag >= tile_v.size().rows())
+          break;
 
         // T(0:j, j) = -tau . V(j:, 0:j)* . V(j:, j)
         // [j x 1] = [(n-j) x j]* . [(n-j) x 1]
-        TileElementIndex va_start{first_element_in_tile, 0};
-        TileElementIndex vb_start{first_element_in_tile, j};
-        TileElementSize va_size{tile_v.size().rows() - first_element_in_tile, j};
+        TileElementIndex va_start{first_element_in_col, 0};
+        TileElementIndex vb_start{first_element_in_col, j};
+        TileElementSize va_size{tile_v.size().rows() - first_element_in_col, j};
 
-        if (is_v0) {
-          // skip already managed computations with implicit 1
-          va_start = va_start + TileElementSize{1, 0};
-          vb_start = vb_start + TileElementSize{1, 0};
-          va_size = va_size - TileElementSize{1, 0};
-        }
 
-        if (!va_size.isEmpty()) {
-          gpublas::Gemv<T>::call(handle, CUBLAS_OP_C, to_int(va_size.rows()), to_int(va_size.cols()),
-                                 &mtau, util::blasToCublasCast(tile_v.ptr(va_start)),
-                                 to_int(tile_v.ld()), util::blasToCublasCast(tile_v.ptr(vb_start)), 1,
-                                 &one, util::blasToCublasCast(tile_t.ptr(t_start)), 1);
-        }
+        gpublas::Gemv<T>::call(handle, CUBLAS_OP_C, to_int(va_size.rows()), to_int(va_size.cols()),
+                               &mtau, util::blasToCublasCast(tile_v.ptr(va_start)),
+                               to_int(tile_v.ld()), util::blasToCublasCast(tile_v.ptr(vb_start)), 1,
+                               &one, util::blasToCublasCast(tile_t.ptr(t_start)), 1);
       }
       return std::move(tile_t);
     };

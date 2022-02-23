@@ -76,7 +76,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
         SizeType i_diag = j - first_row_tile;
         const SizeType first_element_in_tile = std::max<SizeType>(0, i_diag);
 
-        // Break if only the first element (i.e. the 1) of this reflector in in this tile.
+        // Break if only the first element (i.e. the 1) of this reflector is in this tile.
         if (i_diag >= tile_v.size().rows())
           break;
 
@@ -294,7 +294,6 @@ void QR_Tfactor<backend, device, T>::call(const SizeType k, Matrix<const T, devi
   // First we compute the matrix vector multiplication for each column
   // -tau(j) . V(j:, 0:j)* . V(j:, j)
   for (const auto& v_i : panel_view.iteratorLocal()) {
-    // TODO improve panel_view API (begin)
     const SizeType first_row_tile =
         std::max<SizeType>(0, v_i.row() * v.blockSize().rows() - v_start.row());
 

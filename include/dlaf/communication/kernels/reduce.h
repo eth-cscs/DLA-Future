@@ -28,6 +28,7 @@
 #include "dlaf/communication/message.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/schedulers.h"
+#include "dlaf/sender/traits.h"
 
 namespace dlaf {
 namespace comm {
@@ -55,8 +56,7 @@ void reduceSend(comm::IndexT_MPI rank_root, const common::PromiseGuard<comm::Com
       MPI_Ireduce(msg.data(), nullptr, msg.count(), msg.mpi_type(), reduce_op, rank_root, comm, req));
 }
 
-// TODO SenderElementType of a reference_wrapper does not work
-template <class T, class Sender>
+template <class Sender>
 auto senderReduceRecvInPlace(const comm::Executor& ex,
                              pika::future<common::PromiseGuard<comm::Communicator>> pcomm,
                              MPI_Op reduce_op, Sender&& tile) {
@@ -74,6 +74,8 @@ auto senderReduceRecvInPlace(const comm::Executor& ex,
   using dlaf::internal::transform;
   using dlaf::internal::whenAllLift;
   using dlaf::internal::getBackendScheduler;
+
+  using T = dlaf::internal::SenderElementType<Sender>;
 
   return std::forward<Sender>(tile) | transfer(getBackendScheduler<Backend::MC>()) |
          let_value([ex, reduce_op, pcomm = std::move(pcomm)](Tile<T, Device::CPU>& tile_orig) mutable {
@@ -95,7 +97,7 @@ auto senderReduceRecvInPlace(const comm::Executor& ex,
          });
 }
 
-template <class T, class Sender>
+template <class Sender>
 auto senderReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
                       pika::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
                       Sender&& tile) {
@@ -109,6 +111,8 @@ auto senderReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
   using namespace pika::execution::experimental;
   using dlaf::internal::whenAllLift;
   using dlaf::internal::getBackendScheduler;
+
+  using T = dlaf::internal::SenderElementType<Sender>;
 
   return std::forward<Sender>(tile) | transfer(getBackendScheduler<Backend::MC>()) |
          let_value(pika::unwrapping([ex, rank_root, reduce_op, pcomm = std::move(pcomm)](
@@ -136,8 +140,7 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
 
   using namespace pika::execution::experimental;
 
-  internal::senderReduceRecvInPlace<T>(ex, std::move(pcomm), reduce_op, std::move(tile)) |
-      start_detached();
+  internal::senderReduceRecvInPlace(ex, std::move(pcomm), reduce_op, std::move(tile)) | start_detached();
 }
 
 /// Given a GPU tile, perform MPI_Reduce in-place
@@ -169,7 +172,7 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
 
         // cCPU -> MPI -> cCPU
         auto tile_reduced =
-            internal::senderReduceRecvInPlace<T>(ex, std::move(pcomm), reduce_op, std::move(tile_cpu));
+            internal::senderReduceRecvInPlace(ex, std::move(pcomm), reduce_op, std::move(tile_cpu));
 
         // cCPU -> GPU
         namespace arg = std::placeholders;
@@ -195,8 +198,7 @@ void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
 
   using namespace pika::execution::experimental;
 
-  internal::senderReduceSend<T>(ex, rank_root, std::move(pcomm), reduce_op,
-                                keep_future(std::move(tile))) |
+  internal::senderReduceSend(ex, rank_root, std::move(pcomm), reduce_op, keep_future(std::move(tile))) |
       start_detached();
 }
 
@@ -223,7 +225,7 @@ void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
       },
       keep_future(std::move(tile)));
 
-  internal::senderReduceSend<T>(ex, rank_root, std::move(pcomm), reduce_op, std::move(tile_cpu)) |
+  internal::senderReduceSend(ex, rank_root, std::move(pcomm), reduce_op, std::move(tile_cpu)) |
       start_detached();
 }
 }

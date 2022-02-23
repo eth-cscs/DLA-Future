@@ -36,6 +36,11 @@ struct SenderSingleValueTypeImpl<TypeList<TypeList<pika::shared_future<T>>>> {
   using type = T;
 };
 
+template <typename T>
+struct SenderSingleValueTypeImpl<TypeList<TypeList<std::reference_wrapper<T>>>> {
+  using type = T;
+};
+
 // The type sent by Sender, if Sender sends exactly one type.
 template <typename Sender>
 using SenderSingleValueType =

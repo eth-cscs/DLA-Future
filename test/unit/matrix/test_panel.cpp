@@ -64,7 +64,7 @@ bool doesThisRankOwnsJustIncomplete(const matrix::Distribution& dist) {
 struct config_t {
   const GlobalElementSize sz;
   const TileElementSize blocksz;
-  const GlobalTileIndex offset;
+  const GlobalTileIndex offset = {0, 0};
 };
 
 std::vector<config_t> test_params{

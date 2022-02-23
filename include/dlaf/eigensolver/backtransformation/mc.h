@@ -26,9 +26,11 @@
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/distribution.h"
+#include "dlaf/matrix/index.h"
 #include "dlaf/matrix/layout_info.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/panel.h"
+#include "dlaf/matrix/views.h"
 #include "dlaf/util_matrix.h"
 
 namespace dlaf {
@@ -149,10 +151,13 @@ void BackTransformation<Backend::MC, Device::CPU, T>::call_FC(
       }
     }
 
+    const GlobalElementIndex v_offset(v_start.row() * mb, v_start.col() * mb);
+    const matrix::SubPanelView panel_view(mat_v.distribution(), v_offset, nr_reflectors);
+
     auto taus_panel = taus[k];
     const LocalTileIndex t_index{Coord::Col, k};
-    dlaf::factorization::internal::computeTFactor<Backend::MC>(nr_reflectors, mat_v, v_start, taus_panel,
-                                                               panelT(t_index));
+    dlaf::factorization::internal::computeTFactor<Backend::MC>(nr_reflectors, mat_v, panel_view,
+                                                               taus_panel, panelT(t_index));
 
     // W = V T
     pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_t = panelT.read(t_index);

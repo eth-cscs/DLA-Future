@@ -28,6 +28,7 @@
 #include "dlaf/executors.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/matrix/views.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
@@ -245,7 +246,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 
 template <Backend backend, Device device, class T>
 void QR_Tfactor<backend, device, T>::call(const SizeType k, Matrix<const T, device>& v,
-                                          const GlobalTileIndex v_start,
+                                          const matrix::SubPanelView& panel_view,
                                           pika::shared_future<common::internal::vector<T>> taus,
                                           pika::future<matrix::Tile<T, device>> t) {
   using Helpers = tfactor_l::Helpers<backend, device, T>;
@@ -253,8 +254,11 @@ void QR_Tfactor<backend, device, T>::call(const SizeType k, Matrix<const T, devi
   if (k == 0)
     return;
 
+  const auto v_start = panel_view.offset();
+
+  const auto panel_width = panel_view.cols();
+
   t = splitTile(t, {{0, 0}, {k, k}});
-  const auto panel_width = v.tileSize(v_start).cols();
 
   DLAF_ASSERT(k <= panel_width, k, panel_width);
 
@@ -281,14 +285,17 @@ void QR_Tfactor<backend, device, T>::call(const SizeType k, Matrix<const T, devi
   // 1st step: compute the column partial result `t`
   // First we compute the matrix vector multiplication for each column
   // -tau(j) . V(j:, 0:j)* . V(j:, j)
-  for (const auto& v_i : iterate_range2d(v_start, v_end)) {
-    const bool is_v0 = (v_i.row() == v_start.row());
+  for (const auto& v_i : panel_view.iteratorLocal()) {
+    // TODO improve panel_view API (begin)
+    const bool is_v0 = (v_i.row() == panel_view.begin().row());
+
+    const matrix::SubTileSpec& spec = panel_view(v_i);
 
     // Note:
     // Since we are writing always on the same t, the gemv are serialized
     // A possible solution to this would be to have multiple places where to store partial
     // results, and then locally reduce them just before the reduce over ranks
-    t = Helpers::gemvColumnT(is_v0, v.read(v_i), taus, t);
+    t = Helpers::gemvColumnT(is_v0, splitTile(v.read(v_i), spec), taus, t);
   }
 
   // 2nd step: compute the T factor, by performing the last step on each column

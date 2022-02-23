@@ -12,6 +12,7 @@
 
 #include <blas.hh>
 #include <lapack/util.hh>
+#include "dlaf/common/assert.h"
 
 namespace lapack {
 
@@ -24,7 +25,7 @@ inline MatrixType uploToMatrixType(blas::Uplo uplo) {
     case blas::Uplo::General:
       return MatrixType::General;
     default:
-      return {};
+      return DLAF_UNREACHABLE(MatrixType);
   }
 }
 

@@ -27,6 +27,7 @@
 #include "dlaf/communication/executor.h"
 #include "dlaf/communication/message.h"
 #include "dlaf/matrix/tile.h"
+#include "dlaf/schedulers.h"
 
 namespace dlaf {
 namespace comm {
@@ -72,8 +73,9 @@ auto senderReduceRecvInPlace(const comm::Executor& ex,
   using dlaf::internal::Policy;
   using dlaf::internal::transform;
   using dlaf::internal::whenAllLift;
+  using dlaf::internal::getBackendScheduler;
 
-  return std::forward<Sender>(tile) | transfer(thread_pool_scheduler{}) |
+  return std::forward<Sender>(tile) | transfer(getBackendScheduler<Backend::MC>()) |
          let_value([ex, reduce_op, pcomm = std::move(pcomm)](Tile<T, Device::CPU>& tile_orig) mutable {
            using dlaf::common::internal::makeItContiguous;
 
@@ -106,8 +108,9 @@ auto senderReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
 
   using namespace pika::execution::experimental;
   using dlaf::internal::whenAllLift;
+  using dlaf::internal::getBackendScheduler;
 
-  return std::forward<Sender>(tile) | transfer(thread_pool_scheduler{}) |
+  return std::forward<Sender>(tile) | transfer(getBackendScheduler<Backend::MC>()) |
          let_value(pika::unwrapping([ex, rank_root, reduce_op, pcomm = std::move(pcomm)](
                                         const matrix::Tile<const T, Device::CPU>& tile) mutable {
            using common::internal::makeItContiguous;

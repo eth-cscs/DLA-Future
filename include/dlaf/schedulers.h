@@ -21,7 +21,7 @@
 #include <dlaf/init.h>
 #include <dlaf/types.h>
 
-namespace dlaf {
+namespace dlaf::internal {
 template <Backend backend>
 auto getBackendScheduler() {
   if constexpr (backend == Backend::MC) {

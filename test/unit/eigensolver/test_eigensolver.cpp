@@ -86,7 +86,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb)
 
   // Check A E == Lambda E
   auto res = [&mat_e_local](GlobalElementIndex index) { return mat_e_local(index); };
-  CHECK_MATRIX_NEAR(res, workspace, m * TypeUtilities<T>::error, m * TypeUtilities<T>::error);
+  CHECK_MATRIX_NEAR(res, workspace, 2 * m * TypeUtilities<T>::error, 2 * m * TypeUtilities<T>::error);
 }
 
 TYPED_TEST(EigensolverTestMC, CorrectnessLocal) {

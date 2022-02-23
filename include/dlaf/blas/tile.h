@@ -331,7 +331,7 @@ void trmm3(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, 
   using util::blasToCublas;
   using util::blasToCublasCast;
   auto s = tile::internal::getTrmm3Sizes(side, a, b, c);
-  DLAF_ASSERT(b.ptr() != c.ptr(), b.ptr(), c.ptr());
+  DLAF_ASSERT(b.ptr() == nullptr || b.ptr() != c.ptr(), b.ptr(), c.ptr());
 
   gpublas::Trmm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),
                          blasToCublas(diag), to_int(s.m), to_int(s.n), blasToCublasCast(&alpha),

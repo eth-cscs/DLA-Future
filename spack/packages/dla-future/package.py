@@ -36,7 +36,8 @@ class DlaFuture(CMakePackage, CudaPackage):
     conflicts("umpire@6:")
 
     depends_on("pika cxxstd=17 +mpi")
-    depends_on("pika@cuda-scheduler-2")
+    # TODO: Depend on 0.2.0
+    depends_on("pika@0.2.0-rc1")
     depends_on("pika +cuda", when="+cuda")
 
     depends_on("pika build_type=Debug", when="build_type=Debug")

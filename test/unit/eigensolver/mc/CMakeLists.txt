@@ -10,14 +10,14 @@
 
 DLAF_addTest(test_backtransformation
   SOURCES test_backtransformation.cpp
-  LIBRARIES dlaf.eigensolver dlaf.core
+  LIBRARIES dlaf.eigensolver dlaf.factorization dlaf.core
   USE_MAIN MPIPIKA
   MPIRANKS 6
 )
 
 DLAF_addTest(test_reduction_to_band
   SOURCES test_reduction_to_band.cpp
-  LIBRARIES dlaf.eigensolver dlaf.core
+  LIBRARIES dlaf.eigensolver dlaf.factorization dlaf.core
   USE_MAIN MPIPIKA
   MPIRANKS 6
 )

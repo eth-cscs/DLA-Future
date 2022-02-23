@@ -303,8 +303,8 @@ void BackTransformationReductionToBand<backend, device, T>::call(
       auto k_local = dist_t.template localTileFromGlobalTile<Coord::Col>(k);
       const LocalTileIndex t_index{Coord::Col, k_local};
       auto taus_panel = taus[k_local];
-      dlaf::factorization::internal::computeTFactor<backend>(panelV, taus_panel,
-                                                             panelT(t_index), mpi_col_task_chain);
+      dlaf::factorization::internal::computeTFactor<backend>(panelV, taus_panel, panelT(t_index),
+                                                             mpi_col_task_chain);
 
       for (SizeType i_local = dist_v.template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
            i_local < dist_v.localNrTiles().rows(); ++i_local) {

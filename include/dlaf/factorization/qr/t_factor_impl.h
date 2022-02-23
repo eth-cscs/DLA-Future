@@ -149,7 +149,8 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
       pika::future<matrix::Tile<T, Device::GPU>>& tile_t) noexcept {
     namespace ex = pika::execution::experimental;
 
-    auto gemv_func = [first_row_tile](cublasHandle_t handle, const auto& tile_v, const auto& taus, auto&& tile_t) noexcept {
+    auto gemv_func = [first_row_tile](cublasHandle_t handle, const auto& tile_v, const auto& taus,
+                                      auto&& tile_t) noexcept {
       const SizeType k = tile_t.size().cols();
       DLAF_ASSERT(tile_v.size().cols() == k, tile_v.size().cols(), k);
       DLAF_ASSERT(taus.size() == k, taus.size(), k);
@@ -158,7 +159,9 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
         cudaStream_t stream;
         DLAF_CUBLAS_CALL(cublasGetStream(handle, &stream));
 
-        DLAF_CUDA_CALL(cudaMemcpy2DAsync(tile_t.ptr(), to_sizet(tile_t.ld() + 1) * sizeof(T), taus.data(), sizeof(T), sizeof(T), to_sizet(k), cudaMemcpyDefault, stream));
+        DLAF_CUDA_CALL(cudaMemcpy2DAsync(tile_t.ptr(), to_sizet(tile_t.ld() + 1) * sizeof(T),
+                                         taus.data(), sizeof(T), sizeof(T), to_sizet(k),
+                                         cudaMemcpyDefault, stream));
       }
 
       for (SizeType j = 0; j < k; ++j) {
@@ -181,11 +184,10 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
         TileElementIndex vb_start{first_element_in_col, j};
         TileElementSize va_size{tile_v.size().rows() - first_element_in_col, j};
 
-
         gpublas::Gemv<T>::call(handle, CUBLAS_OP_C, to_int(va_size.rows()), to_int(va_size.cols()),
-                               &mtau, util::blasToCublasCast(tile_v.ptr(va_start)),
-                               to_int(tile_v.ld()), util::blasToCublasCast(tile_v.ptr(vb_start)), 1,
-                               &one, util::blasToCublasCast(tile_t.ptr(t_start)), 1);
+                               &mtau, util::blasToCublasCast(tile_v.ptr(va_start)), to_int(tile_v.ld()),
+                               util::blasToCublasCast(tile_v.ptr(vb_start)), 1, &one,
+                               util::blasToCublasCast(tile_t.ptr(t_start)), 1);
       }
       return std::move(tile_t);
     };

@@ -43,16 +43,16 @@ void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
 /// ---- ETI
 #define DLAF_FACTORIZATION_QR_TFACTOR_LOCAL_ETI(KWORD, BACKEND, DEVICE, T)                  \
   KWORD template void                                                                       \
-  computeTFactor<BACKEND, DEVICE, T>(matrix::Panel<Coord::Col, T, DEVICE>& hh_panel,        \
+  computeTFactor<BACKEND, DEVICE, T>(matrix::Panel<Coord::Col, T, DEVICE> & hh_panel,       \
                                      pika::shared_future<common::internal::vector<T>> taus, \
                                      pika::future<matrix::Tile<T, DEVICE>> t);
 
 #define DLAF_FACTORIZATION_QR_TFACTOR_DISTR_ETI(KWORD, BACKEND, DEVICE, T)                  \
   KWORD template void                                                                       \
-  computeTFactor<BACKEND, DEVICE, T>(matrix::Panel<Coord::Col, T, DEVICE>& hh_panel,        \
+  computeTFactor<BACKEND, DEVICE, T>(matrix::Panel<Coord::Col, T, DEVICE> & hh_panel,       \
                                      pika::shared_future<common::internal::vector<T>> taus, \
                                      pika::future<matrix::Tile<T, DEVICE>> t,               \
-                                     common::Pipeline<comm::Communicator>& mpi_col_task_chain);
+                                     common::Pipeline<comm::Communicator> & mpi_col_task_chain);
 
 #define DLAF_FACTORIZATION_QR_TFACTOR_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
   DLAF_FACTORIZATION_QR_TFACTOR_LOCAL_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \

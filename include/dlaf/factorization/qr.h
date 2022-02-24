@@ -17,15 +17,26 @@ namespace dlaf::factorization {
 
 namespace internal {
 
-// Forms the triangular factor T of a block reflector H of order n,
-// which is defined as a product of k := hh_panel.size.cols() elementary reflectors.
-//
-// A Storage-Efficient WY Representation for Products of Householder Transformations.
-// Schreiber, Robert & VanLoan, Charles. (1989)
-// SIAM Journal on Scientific and Statistical Computing. 10. 10.1137/0910005.
-//
-// @pre taus contains a vector with k elements
-// @pre t contains a (k x k) tile
+/// Forms the triangular factor T of a block reflector H of order n,
+/// which is defined as a product of k := hh_panel.getWidth() elementary reflectors.
+///
+/// hh_panel should have the following form
+/// H0  0  0 ...    0
+///  . H1  0 ...    0
+///  .  . H2 ...    0
+///  .  .  . ...    0
+///  .  .  . ... HK-1
+///  .  .  . ...    .
+/// H0 H1 H2 ... HK-1
+/// Note: The first element of the HH reflectors is NOT implicitly assumed to be 1,
+///       it has to be set correctly in the panel (0s as well).
+
+/// A Storage-Efficient WY Representation for Products of Householder Transformations.
+/// Schreiber, Robert & VanLoan, Charles. (1989)
+/// SIAM Journal on Scientific and Statistical Computing. 10. 10.1137/0910005.
+///
+/// @pre taus contains a vector with k elements
+/// @pre t contains a (k x k) tile
 template <Backend backend, Device device, class T>
 void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
                     pika::shared_future<common::internal::vector<T>> taus,

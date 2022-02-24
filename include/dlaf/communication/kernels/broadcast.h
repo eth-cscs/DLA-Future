@@ -83,6 +83,7 @@ struct ScheduleRecvBcast {
     return dataflow(ex, unwrapExtendTiles(recvBcast_o), std::move(tile), root_rank, std::move(pcomm));
   }
 
+#if defined(DLAF_WITH_CUDA) && !defined(DLAF_WITH_CUDA_RDMA)
   static void call(const comm::Executor& ex, pika::future<matrix::Tile<T, Device::GPU>> tile,
                    comm::IndexT_MPI root_rank, pika::future<common::PromiseGuard<Communicator>> pcomm) {
     using matrix::duplicateIfNeeded;
@@ -94,7 +95,7 @@ struct ScheduleRecvBcast {
     //           +----------------------------------------------------------------------+
     //
     // Actually `duplicateIfNeeded` always makes a copy, because it is always needed since this
-    // is the specialization for GPU input and MPI withuot CUDA_RDMA requires CPU memory.
+    // is the specialization for GPU input and MPI without CUDA_RDMA requires CPU memory.
 
     auto tile_gpu = tile.share();
     auto tile_cpu = duplicateIfNeeded<Device::CPU>(tile_gpu);
@@ -108,6 +109,7 @@ struct ScheduleRecvBcast {
             dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::CPU, Device::GPU>>()) |
         pika::execution::experimental::start_detached();
   }
+#endif
 };
 
 }

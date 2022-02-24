@@ -31,7 +31,7 @@ jobs:
 
           test ! -s result-extension.check
 
-      - name: Check source code
+      - name: Check license in source code
         if: always()          # needed so that it runs even if previous one fails
         run: |
           # Compare first lines of each source file with reference in misc/HEADER
@@ -54,25 +54,26 @@ jobs:
 
           test ! -s result-cpp.check
 
-      - name: Check CMake and Python files
+      - name: Check license in files using "#" comments
         if: always()          # needed so that it runs even if previous one fails
         run: |
           # Generate header license CMake/Python compliant (with hashes)
           sed 's|^//|#|g' misc/HEADER > HEADER_HASH
 
-          # Check license in CMake files
+          # Check license in files that should the license at the very beginning
           find  '(' -type f ! -path './misc*' ')'                                 \
                 '('                                                               \
                         -name 'CMakeLists.txt'                                    \
-                    -o  -name 'DLAF*.cmake'                                       \
-                    -o  -name 'DLAF*.cmake.in'                                    \
+                    -o  -name '*.cmake'                                           \
+                    -o  -name '*.cmake.in'                                        \
+                    -o  -name '*.yaml'                                            \
                 ')'                                                               \
             | xargs -I{} sh -c                                                    \
                 ".github/check_license.sh HEADER_HASH {} > /dev/null || echo {}"  \
             >> result.check
 
-          # Check license in Python files
-          find scripts -type f -name '*.py'                                           \
+          # Check license in scripts which may start with #! shebang and other directives
+          find -type f '(' -name '*.py' -o -name '*.sh' ')'                           \
             | xargs -I{} sh -c                                                        \
                 ".github/check_license.sh -r 4 HEADER_HASH {} > /dev/null || echo {}" \
             >> result.check

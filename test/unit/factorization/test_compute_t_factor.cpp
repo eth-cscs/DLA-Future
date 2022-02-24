@@ -262,7 +262,7 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
     }
   }
 
-  auto v_local = dlaf::matrix::test::allGather<T>(blas::Uplo::General, v_h);
+  auto v_local = dlaf::matrix::test::allGather<const T>(blas::Uplo::General, v_h);
 
   auto [taus, h_expected] = computeHAndTFactor(k, v_local, v_start);
   pika::shared_future<dlaf::common::internal::vector<T>> taus_input =
@@ -338,7 +338,7 @@ void testComputeTFactor(comm::CommunicatorGrid grid, const SizeType m, const Siz
     }
   }
 
-  auto v_local = matrix::test::allGather<T>(blas::Uplo::General, v_h, grid);
+  auto v_local = matrix::test::allGather<const T>(blas::Uplo::General, v_h, grid);
 
   // Ranks without HHReflectors can return.
   if (dist_v.rankIndex().col() != source_rank_index.col())
@@ -401,7 +401,7 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
 }
 
 TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
-  for (auto comm_grid : {this->commGrids()[0]}) {
+  for (auto comm_grid : this->commGrids()) {
     for (const auto& [m, k, mb, nb, v_start] : configs) {
       testComputeTFactor<TypeParam, Backend::MC, Device::CPU>(comm_grid, m, k, mb, nb, v_start);
     }

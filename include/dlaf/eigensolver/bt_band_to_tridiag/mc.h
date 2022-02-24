@@ -45,6 +45,9 @@ pika::shared_future<matrix::Tile<const T, Device::CPU>> setupVWellFormed(
     const SizeType b, pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_i,
     pika::future<matrix::Tile<T, Device::CPU>> tile_v) {
   auto unzipV_func = [b](const auto& tile_i, auto tile_v) {
+    using lapack::lacpy;
+    using lapack::laset;
+
     // Note: the size of of tile_i and tile_v embeds a relevant information about the number of
     // reflecotrs and their max size. This will be exploited to correctly setup the well formed
     // tile with reflectors in place as they will be applied.

@@ -64,9 +64,9 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
   if (mat_a.size().isEmpty())
     return;
 
-  auto mat_a_local = allGather(lapack::MatrixType::General, reference_a);
-  auto mat_b_local = allGather(lapack::MatrixType::General, reference_b);
-  auto mat_e_local = allGather(lapack::MatrixType::General, ret.eigenvectors);
+  auto mat_a_local = allGather(blas::Uplo::General, reference_a);
+  auto mat_b_local = allGather(blas::Uplo::General, reference_b);
+  auto mat_e_local = allGather(blas::Uplo::General, ret.eigenvectors);
 
   MatrixLocal<T> mat_be_local({m, m}, block_size);
   // Compute B E which is needed for both checks.

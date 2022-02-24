@@ -432,7 +432,7 @@ struct Panel : public Panel<axis, const T, device> {
   /// @pre index must point to a tile which is internally managed by the panel
   pika::future<TileType> operator()(const LocalTileIndex& index) {
     // Note assertion on index done by linearIndex method.
-    DLAF_ASSERT(!BaseT::isExternal(index), "read-only access on external tiles", index);
+    DLAF_ASSERT(!BaseT::isExternal(index), "read-write access not allowed on external tiles", index);
 
     has_been_used_ = true;
 

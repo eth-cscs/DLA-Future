@@ -240,8 +240,9 @@ void testSet0(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
     panel.setRange(GlobalTileIndex(coord1D, head), GlobalTileIndex(coord1D, tail));
 
     for (const auto& idx : panel.iteratorLocal())
+      // TODO: don't use transform, but when_all | laset(policy) | start_detached();
       dlaf::internal::transformLiftDetach(dlaf::internal::Policy<dlaf::Backend::MC>(),
-                                          tile::internal::laset_o, lapack::MatrixType::General,
+                                          tile::internal::laset_o, blas::Uplo::General,
                                           TypeParam(1), TypeParam(1), panel.readwrite_sender(idx));
 
     matrix::util::set0<Backend::MC>(pika::threads::thread_priority::normal, panel);

@@ -273,7 +273,7 @@ void testComputeTFactor(const SizeType a_m, const SizeType a_n, const SizeType m
     const auto& source_tile = v_input_h.read(ij_tile + v_offset).get();
     matrix::internal::copy(source_tile, v.tile(ij_tile));
     if (ij_tile.row() == 0)
-      tile::internal::laset<T>(lapack::MatrixType::Upper, 0.f, 1.f, v.tile(ij_tile));
+      tile::internal::laset<T>(blas::Uplo::Upper, 0.f, 1.f, v.tile(ij_tile));
   }
 
   auto tmp = computeHAndTFactor(k, v);
@@ -342,7 +342,7 @@ void testComputeTFactor(comm::CommunicatorGrid grid, const SizeType a_m, const S
                                   v_start = v_start] {
     // TODO this can be improved by communicating just the selected column starting at v_start
     // gather the entire A matrix
-    auto a = matrix::test::allGather<T>(lapack::MatrixType::General, v_input, grid);
+    auto a = matrix::test::allGather<T>(blas::Uplo::General, v_input, grid);
 
     // panel shape
     GlobalElementSize v_size = dist_v.size();
@@ -360,7 +360,7 @@ void testComputeTFactor(comm::CommunicatorGrid grid, const SizeType a_m, const S
     for (const auto& ij : iterate_range2d(v.nrTiles())) {
       matrix::internal::copy(a.tile_read(ij + v_offset), v.tile(ij));
       if (ij.row() == 0)
-        tile::internal::laset<T>(lapack::MatrixType::Upper, 0.f, 1.f, v.tile(ij));
+        tile::internal::laset<T>(blas::Uplo::Upper, 0.f, 1.f, v.tile(ij));
     }
 
     return v;

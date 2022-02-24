@@ -14,9 +14,9 @@
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/vector.h"
-#include "dlaf/eigensolver/backtransformation.h"
 #include "dlaf/eigensolver/band_to_tridiag.h"
 #include "dlaf/eigensolver/bt_band_to_tridiag.h"
+#include "dlaf/eigensolver/bt_reduction_to_band.h"
 #include "dlaf/eigensolver/reduction_to_band.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/distribution.h"
@@ -83,7 +83,7 @@ struct Eigensolver<Backend::MC, Device::CPU, T> {
     }
 
     backTransformationBandToTridiag<Backend::MC>(mat_e, ret.hh_reflectors);
-    backTransformation<Backend::MC>(mat_e, mat_a, taus);
+    backTransformationReductionToBand<Backend::MC>(band_size, mat_e, mat_a, taus);
 
     return {std::move(w), std::move(mat_e)};
   }

@@ -34,6 +34,13 @@ DLAF_addTest(test_gen_eigensolver
   USE_MAIN PIKA
 )
 
+DLAF_addTest(test_bt_reduction_to_band
+  SOURCES test_bt_reduction_to_band.cpp
+  LIBRARIES dlaf.core dlaf.eigensolver dlaf.factorization dlaf.solver
+  USE_MAIN MPIPIKA
+  MPIRANKS 6
+)
+
 DLAF_addTest(test_gen_to_std
   SOURCES test_gen_to_std.cpp
   LIBRARIES dlaf.core dlaf.eigensolver dlaf.factorization dlaf.solver

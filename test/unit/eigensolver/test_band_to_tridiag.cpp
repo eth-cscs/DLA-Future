@@ -57,7 +57,7 @@ void testBandToTridiag(const blas::Uplo uplo, const SizeType band_size, const Si
   if (m == 0)
     return;
 
-  auto mat_trid_local = matrix::test::allGather(lapack::MatrixType::General, mat_trid);
+  auto mat_trid_local = matrix::test::allGather(blas::Uplo::General, mat_trid);
   MatrixLocal<T> mat_local(mat_a.size(), mat_a.blockSize());
   const auto ld = mat_local.ld();
   set(mat_local, [](auto) { return T{0}; });
@@ -69,7 +69,7 @@ void testBandToTridiag(const blas::Uplo uplo, const SizeType band_size, const Si
   }
   mat_local({m - 1, m - 1}) = mat_trid_local({0, m - 1});
 
-  auto mat_v_local = matrix::test::allGather(lapack::MatrixType::General, mat_v);
+  auto mat_v_local = matrix::test::allGather(blas::Uplo::General, mat_v);
 
   auto apply_left_right = [&mat_local, m, ld](SizeType size_hhr, T* v, SizeType first_index) {
     T tau = v[0];

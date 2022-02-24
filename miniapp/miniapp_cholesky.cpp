@@ -239,7 +239,7 @@ void setUpperToZeroForDiagonalTiles(Matrix<T, Device::CPU>& matrix) {
 
     auto tile_set = [](typename Matrix<T, Device::CPU>::TileType&& tile) {
       if (tile.size().rows() > 1)
-        lapack::laset(lapack::MatrixType::Upper, tile.size().rows() - 1, tile.size().cols() - 1, 0, 0,
+        lapack::laset(blas::Uplo::Upper, tile.size().rows() - 1, tile.size().cols() - 1, T{0}, T{0},
                       tile.ptr({0, 1}), tile.ld());
     };
 

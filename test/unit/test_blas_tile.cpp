@@ -231,6 +231,13 @@ std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> trmm_trsm_sizes 
      {1, 1, 0, 3},  {1, 12, 1, 0},  {17, 12, 1, 3}, {11, 23, 0, 3},
      {9, 12, 1, 1}, {32, 32, 0, 0}, {32, 32, 4, 7}};
 
+// Tuple elements:  m, n, extra_lda, extra_ldb, extra_ldc
+std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType>> trmm3_sizes =
+    {{0, 0, 0, 0, 0},                    // all 0 sizes
+     {0, 5, 1, 0, 3},  {7, 0, 1, 2, 0},  // one 0 size
+     {1, 1, 0, 3, 2},  {1, 12, 1, 0, 0},  {17, 12, 1, 3, 2}, {11, 23, 0, 3, 0},
+     {9, 12, 1, 1, 1}, {32, 32, 0, 0, 2}, {32, 32, 4, 7, 0}};
+
 TYPED_TEST(TileOperationsTestMC, Trmm) {
   using Type = TypeParam;
 
@@ -251,6 +258,26 @@ TYPED_TEST(TileOperationsTestMC, Trmm) {
   }
 }
 
+TYPED_TEST(TileOperationsTestMC, Trmm3) {
+  using Type = TypeParam;
+
+  for (const auto side : blas_sides) {
+    for (const auto uplo : blas_uplos) {
+      for (const auto op : blas_ops) {
+        for (const auto diag : blas_diags) {
+          for (const auto& [m, n, extra_lda, extra_ldb, extra_ldc] : trmm3_sizes) {
+            // Test a const Tile.
+            testTrmm3<Device::CPU, Type>(side, uplo, op, diag, m, n, extra_lda, extra_ldb, extra_ldc);
+
+            // Test a non const Tile.
+            testTrmm3<Device::CPU, Type, Type>(side, uplo, op, diag, m, n, extra_lda, extra_ldb,
+                                               extra_ldc);
+          }
+        }
+      }
+    }
+  }
+}
 #ifdef DLAF_WITH_CUDA
 TYPED_TEST(TileOperationsTestGPU, Trmm) {
   using Type = TypeParam;
@@ -265,6 +292,27 @@ TYPED_TEST(TileOperationsTestGPU, Trmm) {
 
             // Test a non const Tile.
             testTrmm<Device::GPU, Type, Type>(side, uplo, op, diag, m, n, extra_lda, extra_ldb);
+          }
+        }
+      }
+    }
+  }
+}
+
+TYPED_TEST(TileOperationsTestGPU, Trmm3) {
+  using Type = TypeParam;
+
+  for (const auto side : blas_sides) {
+    for (const auto uplo : blas_uplos) {
+      for (const auto op : blas_ops) {
+        for (const auto diag : blas_diags) {
+          for (const auto& [m, n, extra_lda, extra_ldb, extra_ldc] : trmm3_sizes) {
+            // Test a const Tile.
+            testTrmm3<Device::GPU, Type>(side, uplo, op, diag, m, n, extra_lda, extra_ldb, extra_ldc);
+
+            // Test a non const Tile.
+            testTrmm3<Device::GPU, Type, Type>(side, uplo, op, diag, m, n, extra_lda, extra_ldb,
+                                               extra_ldc);
           }
         }
       }

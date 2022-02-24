@@ -354,7 +354,7 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
     return;
 
   auto setTile = [](const auto& tile, TypeParam value) noexcept {
-    tile::internal::laset(lapack::MatrixType::General, value, value, tile);
+    tile::internal::laset(blas::Uplo::General, value, value, tile);
   };
 
   auto setAndCheck = [=, &matrix, &panel](std::string msg, SizeType head_loc, SizeType tail_loc) {

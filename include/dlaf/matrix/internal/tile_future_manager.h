@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#pragma once
+
 #include <pika/future.hpp>
 
 #include "dlaf/matrix/tile.h"

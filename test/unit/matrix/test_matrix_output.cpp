@@ -11,12 +11,19 @@
 #include "dlaf/matrix/print_csv.h"
 #include "dlaf/matrix/print_numpy.h"
 
+#ifdef DLAF_WITH_CUDA
+#include "dlaf/matrix/print_gpu.h"
+#endif
+
 #include <sstream>
 #include <tuple>
 
 #include <gtest/gtest.h>
 
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/matrix/matrix.h"
+#include "dlaf/matrix/matrix_mirror.h"
+#include "dlaf/matrix/tile.h"
 
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/matrix/util_tile.h"
@@ -33,6 +40,13 @@ template <typename Type>
 class MatrixOutputTest : public ::testing::Test {};
 
 TYPED_TEST_SUITE(MatrixOutputTest, dlaf::test::MatrixElementTypes);
+
+#ifdef DLAF_WITH_CUDA
+template <typename Type>
+class MatrixOutputTestGPU : public ::testing::Test {};
+
+TYPED_TEST_SUITE(MatrixOutputTestGPU, dlaf::test::MatrixElementTypes);
+#endif
 
 template <class T>
 struct test_tile_output {
@@ -104,6 +118,19 @@ struct test_tile_output<std::complex<T>> {
   }
 };
 
+#ifdef DLAF_WITH_CUDA
+template <class T>
+matrix::Tile<T, Device::GPU> gpuTile(const matrix::Tile<const T, Device::CPU>& tile) {
+  const auto size = tile.size();
+  const auto ld = std::max<SizeType>(1, size.rows());
+  matrix::Tile<T, Device::GPU> tile_gpu(size, memory::MemoryView<T, Device::GPU>(size.linear_size()),
+                                        ld);
+
+  matrix::internal::copy_o(tile, tile_gpu);
+  return tile_gpu;
+}
+#endif
+
 TYPED_TEST(MatrixOutputTest, NumpyFormatTile) {
   using test_output = test_tile_output<TypeParam>;
   for (auto get_test_config : {test_output::empty, test_output::nonempty}) {
@@ -118,6 +145,22 @@ TYPED_TEST(MatrixOutputTest, NumpyFormatTile) {
   }
 }
 
+#ifdef DLAF_WITH_CUDA
+TYPED_TEST(MatrixOutputTestGPU, NumpyFormatTile) {
+  using test_output = test_tile_output<TypeParam>;
+  for (auto get_test_config : {test_output::empty, test_output::nonempty}) {
+    const auto config = get_test_config();
+    auto tile = gpuTile(std::get<0>(config));
+    std::string output_np = std::get<1>(config);
+
+    std::ostringstream stream_tile_output;
+    print(format::numpy{}, tile, stream_tile_output);
+
+    EXPECT_EQ(output_np, stream_tile_output.str());
+  }
+}
+#endif
+
 TYPED_TEST(MatrixOutputTest, CsvFormatTile) {
   using test_output = test_tile_output<TypeParam>;
   for (auto get_test_config : {test_output::empty, test_output::nonempty}) {
@@ -131,6 +174,22 @@ TYPED_TEST(MatrixOutputTest, CsvFormatTile) {
     EXPECT_EQ(output_csv, stream_tile_output.str());
   }
 }
+
+#ifdef DLAF_WITH_CUDA
+TYPED_TEST(MatrixOutputTestGPU, CsvFormatTile) {
+  using test_output = test_tile_output<TypeParam>;
+  for (auto get_test_config : {test_output::empty, test_output::nonempty}) {
+    const auto config = get_test_config();
+    auto tile = gpuTile(std::get<0>(config));
+    std::string output_np = std::get<2>(config);
+
+    std::ostringstream stream_tile_output;
+    print(format::csv{}, tile, stream_tile_output);
+
+    EXPECT_EQ(output_np, stream_tile_output.str());
+  }
+}
+#endif
 
 template <class T>
 struct test_matrix_output {
@@ -238,6 +297,24 @@ TYPED_TEST(MatrixOutputTest, NumpyFormatMatrix) {
     EXPECT_EQ(output_np, stream_matrix_output.str());
   }
 }
+
+#ifdef DLAF_WITH_CUDA
+TYPED_TEST(MatrixOutputTestGPU, NumpyFormatMatrix) {
+  using test_output = test_matrix_output<TypeParam>;
+  for (auto get_test_config : {test_output::empty, test_output::nonempty}) {
+    auto config = get_test_config();
+    auto& matrix = std::get<0>(config);
+    MatrixMirror<const TypeParam, Device::GPU, Device::CPU> matrix_d(matrix);
+
+    std::string output_np = std::get<1>(config);
+
+    std::ostringstream stream_matrix_output;
+    print(format::numpy{}, "mat", matrix_d.get(), stream_matrix_output);
+
+    EXPECT_EQ(output_np, stream_matrix_output.str());
+  }
+}
+#endif
 
 TYPED_TEST(MatrixOutputTest, CsvFormatMatrix) {
   using test_output = test_matrix_output<TypeParam>;
@@ -387,6 +464,26 @@ TYPED_TEST(MatrixOutputTest, NumpyFormatMatrixDist) {
     EXPECT_EQ(output_np, stream_matrix_output.str());
   }
 }
+
+#ifdef DLAF_WITH_CUDA
+TYPED_TEST(MatrixOutputTestGPU, NumpyFormatMatrixDist) {
+  using test_output_t = test_matrix_dist_output<TypeParam>;
+  test_output_t instance;
+
+  for (auto get_test_config : {&test_output_t::empty, &test_output_t::nonempty}) {
+    auto config = (instance.*get_test_config)();
+    auto& matrix = std::get<0>(config);
+    MatrixMirror<const TypeParam, Device::GPU, Device::CPU> matrix_d(matrix);
+
+    std::string output_np = std::get<1>(config);
+
+    std::ostringstream stream_matrix_output;
+    print(format::numpy{}, "M", matrix_d.get(), stream_matrix_output);
+
+    EXPECT_EQ(output_np, stream_matrix_output.str());
+  }
+}
+#endif
 
 TYPED_TEST(MatrixOutputTest, CsvFormatMatrixDist) {
   using test_output_t = test_matrix_dist_output<TypeParam>;

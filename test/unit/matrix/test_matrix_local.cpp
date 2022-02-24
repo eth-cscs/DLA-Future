@@ -165,12 +165,7 @@ TYPED_TEST(MatrixLocalTest, OutputNumpyFormat) {
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
 template <typename Type>
-class MatrixLocalWithCommTest : public ::testing::Test {
-public:
-  const std::vector<CommunicatorGrid>& commGrids() {
-    return comm_grids;
-  }
-};
+struct MatrixLocalWithCommTest : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(MatrixLocalWithCommTest, MatrixElementTypes);
 

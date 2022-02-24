@@ -38,12 +38,7 @@ using NormT = dlaf::BaseType<T>;
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
 template <typename Type>
-class NormDistributedTest : public ::testing::Test {
-public:
-  const std::vector<CommunicatorGrid>& commGrids() {
-    return comm_grids;
-  }
-};
+struct NormDistributedTest : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(NormDistributedTest, MatrixElementTypes);
 

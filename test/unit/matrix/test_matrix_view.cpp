@@ -35,12 +35,7 @@ class MatrixLocalViewTest : public ::testing::Test {};
 TYPED_TEST_SUITE(MatrixLocalViewTest, MatrixElementTypes);
 
 template <typename Type>
-class MatrixViewTest : public ::testing::Test {
-public:
-  const std::vector<CommunicatorGrid>& commGrids() {
-    return comm_grids;
-  }
-};
+struct MatrixViewTest : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(MatrixViewTest, MatrixElementTypes);
 

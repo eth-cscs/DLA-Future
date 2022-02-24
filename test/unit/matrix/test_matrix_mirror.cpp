@@ -31,12 +31,7 @@ using namespace testing;
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
 template <typename Type>
-class MatrixMirrorTest : public ::testing::Test {
-public:
-  const std::vector<CommunicatorGrid>& commGrids() {
-    return comm_grids;
-  }
-};
+struct MatrixMirrorTest : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(MatrixMirrorTest, MatrixElementTypes);
 

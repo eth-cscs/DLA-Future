@@ -103,11 +103,11 @@ public:
   }
 
   void copyDiag(SizeType j, const ConstTileType& source) noexcept {
-    constexpr auto General = lapack::MatrixType::General;
-    constexpr auto Lower = lapack::MatrixType::Lower;
+    constexpr auto General = blas::Uplo::General;
+    constexpr auto Lower = blas::Uplo::Lower;
 
     // First set the diagonals from b+2 to 2b to 0.
-    lapack::laset(General, band_size_ - 1, source.size().cols(), 0., 0., ptr(band_size_ + 1, j),
+    lapack::laset(General, band_size_ - 1, source.size().cols(), T{0.}, T{0.}, ptr(band_size_ + 1, j),
                   ld() + 1);
     // The elements are copied in the following way:
     // (a: copied with first lacpy (General), b: copied with second lacpy (Lower))
@@ -127,8 +127,8 @@ public:
   }
 
   void copyOffdiag(SizeType j, const ConstTileType& source) noexcept {
-    constexpr auto General = lapack::MatrixType::General;
-    constexpr auto Upper = lapack::MatrixType::Upper;
+    constexpr auto General = blas::Uplo::General;
+    constexpr auto Upper = blas::Uplo::Upper;
     // The elements are copied in the following way:
     // (a: copied with first lacpy (Upper), b: copied with second lacpy (General))
     // (copied when j = n)

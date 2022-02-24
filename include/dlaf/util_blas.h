@@ -145,6 +145,14 @@ trmmSizes getTrmmSizes(const blas::Side side, const dlaf::matrix::Tile<const T, 
   return s;
 }
 
+template <typename T, Device device>
+trmmSizes getTrmm3Sizes(const blas::Side side, const dlaf::matrix::Tile<const T, device>& a,
+                        const dlaf::matrix::Tile<const T, device>& b,
+                        const dlaf::matrix::Tile<T, device>& c) {
+  DLAF_ASSERT(b.size() == c.size(), b, c);
+  return getTrmmSizes(side, a, c);
+}
+
 struct trsmSizes {
   const SizeType m;
   const SizeType n;

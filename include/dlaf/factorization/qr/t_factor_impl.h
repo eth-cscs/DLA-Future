@@ -58,32 +58,36 @@ struct Helpers<Backend::MC, Device::CPU, T> {
   }
 
   static pika::future<matrix::Tile<T, Device::CPU>> gemvColumnT(
-      bool is_v0, pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_vi,
+      SizeType first_row_tile, pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_vi,
       pika::shared_future<common::internal::vector<T>>& taus,
       pika::future<matrix::Tile<T, Device::CPU>>& tile_t) {
     namespace ex = pika::execution::experimental;
 
-    auto gemv_func = [is_v0](const auto& tile_v, const auto& taus, auto&& tile_t) noexcept {
+    auto gemv_func = [first_row_tile](const auto& tile_v, const auto& taus, auto&& tile_t) noexcept {
       const SizeType k = tile_t.size().cols();
       DLAF_ASSERT(taus.size() == k, taus.size(), k);
 
       for (SizeType j = 0; j < k; ++j) {
         const T tau = taus[j];
-        // this is the x0 element of the reflector j
-        const TileElementIndex x0{j, j};
 
-        const TileElementIndex t_start{0, x0.col()};
+        const TileElementIndex t_start{0, j};
 
-        const SizeType first_element_in_tile = is_v0 ? x0.row() : 0;
+        // Position of the 1 in the diagonal wrt the current tile.
+        SizeType i_diag = j - first_row_tile;
+        const SizeType first_element_in_tile = std::max<SizeType>(0, i_diag);
+
+        // Break if only the first element (i.e. the 1) of this reflector is in this tile.
+        if (i_diag >= tile_v.size().rows())
+          break;
 
         // T(0:j, j) = -tau . V(j:, 0:j)* . V(j:, j)
         // [j x 1] = [(n-j) x j]* . [(n-j) x 1]
-        TileElementSize va_size{tile_v.size().rows() - first_element_in_tile, x0.col()};
         TileElementIndex va_start{first_element_in_tile, 0};
-        TileElementIndex vb_start{first_element_in_tile, x0.col()};
+        TileElementIndex vb_start{first_element_in_tile, j};
+        TileElementSize va_size{tile_v.size().rows() - first_element_in_tile, j};
 
-        if (is_v0) {
-          tile_t(x0) = tau;
+        if (i_diag >= 0) {
+          tile_t({j, j}) = tau;
 
           // use implicit 1 for the 2nd operand
           for (SizeType r = 0; !va_size.isEmpty() && r < va_size.cols(); ++r) {
@@ -155,11 +159,12 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
   }
 
   static pika::future<matrix::Tile<T, Device::GPU>> gemvColumnT(
-      bool is_v0, pika::shared_future<matrix::Tile<const T, Device::GPU>> tile_vi,
+      SizeType first_row_tile, pika::shared_future<matrix::Tile<const T, Device::GPU>> tile_vi,
       pika::shared_future<common::internal::vector<T>>& taus,
       pika::future<matrix::Tile<T, Device::GPU>>& tile_t) noexcept {
     namespace ex = pika::execution::experimental;
 
+    bool is_v0 = first_row_tile == 0;
     auto gemv_func = [is_v0](cublasHandle_t handle, const auto& tile_v, const auto& taus,
                              auto&& tile_t) {
       const SizeType k = tile_t.size().cols();
@@ -180,18 +185,16 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
       for (SizeType j = 0; j < k; ++j) {
         const auto mtau = util::blasToCublasCast(-taus[j]);
         const auto one = util::blasToCublasCast(T{1});
-        // this is the x0 element of the reflector j
-        const TileElementIndex x0{j, j};
 
-        const TileElementIndex t_start{0, x0.col()};
+        const TileElementIndex t_start{0, j};
 
-        const SizeType first_element_in_tile = is_v0 ? x0.row() : 0;
+        const SizeType first_element_in_tile = is_v0 ? j : 0;
 
         // T(0:j, j) = -tau . V(j:, 0:j)* . V(j:, j)
         // [j x 1] = [(n-j) x j]* . [(n-j) x 1]
-        TileElementSize va_size{tile_v.size().rows() - first_element_in_tile, x0.col()};
         TileElementIndex va_start{first_element_in_tile, 0};
-        TileElementIndex vb_start{first_element_in_tile, x0.col()};
+        TileElementIndex vb_start{first_element_in_tile, j};
+        TileElementSize va_size{tile_v.size().rows() - first_element_in_tile, j};
 
         if (is_v0) {
           // skip already managed computations with implicit 1
@@ -254,7 +257,12 @@ void QR_Tfactor<backend, device, T>::call(const SizeType k, Matrix<const T, devi
   if (k == 0)
     return;
 
-  const auto v_start = panel_view.offset();
+  const auto v_start = panel_view.offsetElement();
+  const auto v_start_tile = panel_view.offset();
+
+  if (device == Device::GPU && v_start.row() % v.blockSize().rows() != 0) {
+    DLAF_UNIMPLEMENTED(v_start, v.blockSize().rows());
+  }
 
   const auto panel_width = panel_view.cols();
 
@@ -262,7 +270,7 @@ void QR_Tfactor<backend, device, T>::call(const SizeType k, Matrix<const T, devi
 
   DLAF_ASSERT(k <= panel_width, k, panel_width);
 
-  const GlobalTileIndex v_end{v.nrTiles().rows(), std::min(v.nrTiles().cols(), v_start.col() + 1)};
+  const GlobalTileIndex v_end{v.nrTiles().rows(), std::min(v.nrTiles().cols(), v_start_tile.col() + 1)};
 
   // TODO S/R
   t = Helpers::set0(t);
@@ -286,8 +294,8 @@ void QR_Tfactor<backend, device, T>::call(const SizeType k, Matrix<const T, devi
   // First we compute the matrix vector multiplication for each column
   // -tau(j) . V(j:, 0:j)* . V(j:, j)
   for (const auto& v_i : panel_view.iteratorLocal()) {
-    // TODO improve panel_view API (begin)
-    const bool is_v0 = (v_i.row() == panel_view.begin().row());
+    const SizeType first_row_tile =
+        std::max<SizeType>(0, v_i.row() * v.blockSize().rows() - v_start.row());
 
     const matrix::SubTileSpec& spec = panel_view(v_i);
 
@@ -295,7 +303,7 @@ void QR_Tfactor<backend, device, T>::call(const SizeType k, Matrix<const T, devi
     // Since we are writing always on the same t, the gemv are serialized
     // A possible solution to this would be to have multiple places where to store partial
     // results, and then locally reduce them just before the reduce over ranks
-    t = Helpers::gemvColumnT(is_v0, splitTile(v.read(v_i), spec), taus, t);
+    t = Helpers::gemvColumnT(first_row_tile, splitTile(v.read(v_i), spec), taus, t);
   }
 
   // 2nd step: compute the T factor, by performing the last step on each column
@@ -360,14 +368,14 @@ void QR_Tfactor<backend, device, T>::call(const SizeType k, Matrix<const T, devi
   // -tau(j) . V(j:, 0:j)* . V(j:, j)
   for (const auto& v_i_loc : iterate_range2d(v_start_loc, v_end_loc)) {
     const SizeType v_i = dist.template globalTileFromLocalTile<Coord::Row>(v_i_loc.row());
-    const bool is_v0 = (v_i == v_start.row());
+    const SizeType first_row_tile = std::max<SizeType>(0, (v_i - v_start.row()) * v.blockSize().rows());
 
     // TODO
     // Note:
     // Since we are writing always on the same t, the gemv are serialized
     // A possible solution to this would be to have multiple places where to store partial
     // results, and then locally reduce them just before the reduce over ranks
-    t = Helpers::gemvColumnT(is_v0, v.read(v_i_loc), taus, t);
+    t = Helpers::gemvColumnT(first_row_tile, v.read(v_i_loc), taus, t);
   }
 
   // at this point each rank has its partial result for each column

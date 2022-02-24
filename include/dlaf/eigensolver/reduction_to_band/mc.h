@@ -319,7 +319,7 @@ void setupReflectorPanelV(bool has_head, const SubPanelView& panel_view, const S
   if (has_head) {
     auto setupV0 = pika::unwrapping([](auto&& tile_v, const auto& tile_a) {
       matrix::internal::copy(tile_a, tile_v);
-      tile::internal::laset(lapack::MatrixType::Upper, T(0), T(1), tile_v);
+      tile::internal::laset(blas::Uplo::Upper, T(0), T(1), tile_v);
     });
 
     const LocalTileIndex i = *it_begin;

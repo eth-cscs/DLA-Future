@@ -10,7 +10,7 @@
 
 DLAF_addTest(test_reduction_to_band
   SOURCES test_reduction_to_band.cpp
-  LIBRARIES dlaf.eigensolver dlaf.factorization dlaf.core
+  LIBRARIES dlaf.core dlaf.eigensolver dlaf.factorization dlaf.solver
   USE_MAIN MPIPIKA
   MPIRANKS 6
 )

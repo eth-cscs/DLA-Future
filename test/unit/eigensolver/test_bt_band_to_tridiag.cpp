@@ -150,9 +150,10 @@ TYPED_TEST(BacktransformationT2BTest, CorrectnessLocal) {
 }
 
 std::vector<config_t> configs_subband{
+    {0, 12, 4, 4, 2},
     {12, 12, 4, 4, 2},
-    {12, 12, 6, 6, 2},
-    {11, 11, 6, 6, 3},
+    {12, 25, 6, 3, 2},
+    {11, 13, 6, 4, 2},
 };
 
 TYPED_TEST(BacktransformationT2BTest, CorrectnessLocalSubBand) {

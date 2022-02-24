@@ -275,13 +275,13 @@ struct Panel<axis, const T, D> {
   /// Get the current width of the col panel.
   template <Coord A = axis, std::enable_if_t<A == axis && Coord::Col == axis, int> = 0>
   SizeType getWidth() const noexcept {
-    return dim_;
+    return dim_ < 0 ? dist_matrix_.blockSize().template get<axis>() : dim_;
   }
 
   /// Get the current height of the row panel.
   template <Coord A = axis, std::enable_if_t<A == axis && Coord::Row == axis, int> = 0>
   SizeType getHeight() noexcept {
-    return dim_;
+    return dim_ < 0 ? dist_matrix_.blockSize().template get<axis>() : dim_;
   }
 
   /// Reset the internal usage status of the panel.

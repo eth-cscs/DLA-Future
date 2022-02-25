@@ -349,7 +349,7 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
         dlaf::internal::transformLiftDetach(policy_hp, copy_tridiag_task, start,
                                             std::min(nb, size - start), std::min(nb, size - 1 - start),
                                             mat_trid.readwrite_sender(GlobalTileIndex{0, tile_index}),
-                                            dep);
+                                            std::move(dep));
       }
     };
 
@@ -361,7 +361,7 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
       auto dep = ex::make_future(
                      dlaf::internal::transformLift(policy_hp, init_sweep, sweep, w_pipeline(), deps[0]))
                      .share();
-      copy_tridiag(sweep, dep);
+      copy_tridiag(sweep, std::move(dep));
 
       const auto steps = nrStepsForSweep(sweep, size, b);
       for (SizeType step = 0; step < steps; ++step) {

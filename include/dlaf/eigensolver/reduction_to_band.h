@@ -14,7 +14,7 @@
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/util_matrix.h"
 
-#include "dlaf/eigensolver/reduction_to_band/mc.h"
+#include "dlaf/eigensolver/reduction_to_band/impl.h"
 
 namespace dlaf {
 namespace eigensolver {

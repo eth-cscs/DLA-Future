@@ -309,7 +309,7 @@ struct BandToTridiag<Backend::MC, Device::CPU, T> {
       }
       else {
         while (deps.size() < max_deps_size) {
-          deps.push_back(std::move(sf));
+          deps.push_back(sf);
         }
       }
     }

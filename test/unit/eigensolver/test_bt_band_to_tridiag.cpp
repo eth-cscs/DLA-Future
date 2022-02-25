@@ -68,8 +68,10 @@ struct config_t {
 };
 
 std::vector<config_t> configs{
-    {0, 0, 4, 4}, {12, 12, 4, 4}, {12, 12, 4, 3}, {20, 30, 5, 5}, {20, 30, 5, 6},
-    {8, 8, 3, 3}, {10, 10, 3, 3}, {12, 12, 5, 5}, {12, 30, 5, 6},
+    {0, 0, 4, 4},                                  // empty
+    {1, 1, 4, 4},   {2, 2, 4, 4},   {2, 2, 1, 1},  // edge-cases
+    {12, 12, 4, 4}, {12, 12, 4, 3}, {20, 30, 5, 5}, {20, 30, 5, 6},
+    {8, 8, 3, 3},   {10, 10, 3, 3}, {12, 12, 5, 5}, {12, 30, 5, 6},
 };
 
 template <class T>
@@ -150,10 +152,7 @@ TYPED_TEST(BacktransformationT2BTest, CorrectnessLocal) {
 }
 
 std::vector<config_t> configs_subband{
-    {0, 12, 4, 4, 2},
-    {12, 12, 4, 4, 2},
-    {12, 25, 6, 3, 2},
-    {11, 13, 6, 4, 2},
+    {0, 12, 4, 4, 2}, {4, 4, 4, 4, 2}, {12, 12, 4, 4, 2}, {12, 25, 6, 3, 2}, {11, 13, 6, 4, 2},
 };
 
 TYPED_TEST(BacktransformationT2BTest, CorrectnessLocalSubBand) {

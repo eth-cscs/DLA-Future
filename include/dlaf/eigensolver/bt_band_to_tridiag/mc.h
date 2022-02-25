@@ -247,6 +247,10 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
   if (mat_hh.size().isEmpty() || mat_e.size().isEmpty())
     return;
 
+  // Note: if no householder reflectors are going to be applied (in case of trivial matrix)
+  if (mat_hh.size().rows() <= (dlaf::isComplex_v<T> ? 1 : 2))
+    return;
+
   const SizeType b = band_size;
   const SizeType nsweeps = nrSweeps<T>(mat_hh.size().cols());
 
@@ -267,9 +271,7 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::
   //               0 0 0 d
   const TileElementSize w_tile_sz(2 * b - 1, b);
 
-  // TODO optimize allocated space for w
   const SizeType dist_w_rows = [&]() { return mat_e.nrTiles().rows() * w_tile_sz.rows(); }();
-
   const matrix::Distribution dist_w({dist_w_rows, b}, w_tile_sz);
   const matrix::Distribution dist_t({mat_hh.size().rows(), b}, {b, b});
   const matrix::Distribution dist_w2({b, mat_e.size().cols()}, {b, mat_e.blockSize().cols()});

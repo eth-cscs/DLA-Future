@@ -70,7 +70,7 @@ namespace cuda_operators {
 //       However for complex type it make a more efficient use of the fma instruction,
 //       therefore it is preferable in performance critical kernels.
 
-__host__ __device__ inline unsigned ceilDiv(unsigned i, unsigned j) {
+__host__ __device__ inline constexpr unsigned ceilDiv(unsigned i, unsigned j) noexcept {
   return (i + j - 1) / j;
 }
 

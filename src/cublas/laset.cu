@@ -23,15 +23,15 @@ struct LasetParams {
   static constexpr unsigned kernel_tile_size_cols = 16;
 };
 
-__device__ bool all(unsigned i, unsigned j) {
+__device__ inline constexpr bool all(unsigned i, unsigned j) noexcept {
   return true;
 }
 
-__device__ bool lower(unsigned i, unsigned j) {
+__device__ inline constexpr bool lower(unsigned i, unsigned j) noexcept {
   return i >= j;
 }
 
-__device__ bool upper(unsigned i, unsigned j) {
+__device__ inline constexpr bool upper(unsigned i, unsigned j) noexcept {
   return i <= j;
 }
 

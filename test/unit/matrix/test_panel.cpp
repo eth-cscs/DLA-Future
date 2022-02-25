@@ -270,6 +270,14 @@ void testExternalTileWithSenders(const config_t& cfg, const comm::CommunicatorGr
   Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, cfg.offset);
   static_assert(coord1D == decltype(panel)::CoordType, "coord types mismatch");
 
+  // if locally there are just incomplete tiles, skip the test (not worth it)
+  if (doesThisRankOwnsJustIncomplete<panel_axis>(dist))
+    return;
+
+  // if there is no local tiles...cannot test external tiles
+  if (dist.localNrTiles().isEmpty())
+    return;
+
   // Note:
   // - Even indexed tiles in panel, odd indexed linked to the matrix first column
   // - Even indexed, i.e. the one using panel memory, are set to a different value

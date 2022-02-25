@@ -112,7 +112,7 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, co
 
   MatrixLocal<T> mat_hh_local = allGather(blas::Uplo::Lower, mat_hh);
 
-  eigensolver::backTransformationBandToTridiag<Backend::MC>(mat_e, mat_hh, b);
+  eigensolver::backTransformationBandToTridiag<Backend::MC>(b, mat_e, mat_hh);
 
   if (m == 0 || n == 0)
     return;

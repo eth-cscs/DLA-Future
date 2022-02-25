@@ -82,7 +82,7 @@ struct Eigensolver<Backend::MC, Device::CPU, T> {
       //       after the completion of stemr.
     }
 
-    backTransformationBandToTridiag<Backend::MC>(mat_e, ret.hh_reflectors, band_size);
+    backTransformationBandToTridiag<Backend::MC>(band_size, mat_e, ret.hh_reflectors);
     backTransformationReductionToBand<Backend::MC>(band_size, mat_e, mat_a, taus);
 
     return {std::move(w), std::move(mat_e)};

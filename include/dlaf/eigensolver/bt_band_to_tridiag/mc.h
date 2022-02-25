@@ -36,8 +36,8 @@ namespace dlaf::eigensolver::internal {
 
 template <class T>
 struct BackTransformationT2B<Backend::MC, Device::CPU, T> {
-  static void call(Matrix<T, Device::CPU>& mat_e, Matrix<const T, Device::CPU>& mat_hh,
-                   const SizeType band_size);
+  static void call(const SizeType band_size, Matrix<T, Device::CPU>& mat_e,
+                   Matrix<const T, Device::CPU>& mat_hh);
 };
 
 template <class T>
@@ -233,9 +233,9 @@ private:
 };
 
 template <class T>
-void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& mat_e,
-                                                              Matrix<const T, Device::CPU>& mat_hh,
-                                                              const SizeType band_size) {
+void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(const SizeType band_size,
+                                                              Matrix<T, Device::CPU>& mat_e,
+                                                              Matrix<const T, Device::CPU>& mat_hh) {
   static constexpr Backend backend = Backend::MC;
   using pika::threads::thread_priority;
   using pika::execution::experimental::keep_future;

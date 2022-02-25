@@ -49,8 +49,8 @@ namespace dlaf::eigensolver {
 // @pre mat_e is not distributed
 // @pre mat_hh is not distributed
 template <Backend backend, Device device, class T>
-void backTransformationBandToTridiag(matrix::Matrix<T, device>& mat_e,
-                                     matrix::Matrix<const T, device>& mat_hh, const SizeType band_size) {
+void backTransformationBandToTridiag(const SizeType band_size, matrix::Matrix<T, device>& mat_e,
+                                     matrix::Matrix<const T, device>& mat_hh) {
   DLAF_ASSERT(matrix::local_matrix(mat_e), mat_e);
   DLAF_ASSERT(matrix::local_matrix(mat_hh), mat_hh);
 
@@ -62,6 +62,6 @@ void backTransformationBandToTridiag(matrix::Matrix<T, device>& mat_e,
 
   DLAF_ASSERT(mat_hh.blockSize().rows() % band_size == 0, mat_hh.blockSize(), band_size);
 
-  internal::BackTransformationT2B<backend, device, T>::call(mat_e, mat_hh, band_size);
+  internal::BackTransformationT2B<backend, device, T>::call(band_size, mat_e, mat_hh);
 }
 }

@@ -40,12 +40,13 @@ template <class T>
 pika::shared_future<matrix::Tile<const T, Device::CPU>> setupVWellFormed(
     pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_i,
     pika::future<matrix::Tile<T, Device::CPU>> tile_v) {
+  using lapack::lacpy;
+  using lapack::laset;
+
   auto unzipV_func = [](const auto& tile_i, auto tile_v) {
     // Note: the size of of tile_i and tile_v embeds a relevant information about the number of
     // reflecotrs and their max size. This will be exploited to correctly setup the well formed
     // tile with reflectors in place as they will be applied.
-    using lapack::MatrixType;
-
     const auto k = tile_v.size().cols();
 
     // copy from compact representation reflector values (the first component set to 1 is not there)
@@ -57,7 +58,7 @@ pika::shared_future<matrix::Tile<const T, Device::CPU>> setupVWellFormed(
       if (compact_refl_size == 0)
         continue;
 
-      lacpy(MatrixType::General, compact_refl_size, 1, tile_i.ptr({1, j}), tile_i.ld(),
+      lacpy(blas::Uplo::General, compact_refl_size, 1, tile_i.ptr({1, j}), tile_i.ld(),
             tile_v.ptr({1 + j, j}), tile_v.ld());
     }
 
@@ -66,11 +67,11 @@ pika::shared_future<matrix::Tile<const T, Device::CPU>> setupVWellFormed(
     // both the upper and the lower part. Indeed due to the skewed shape, reflectors do not occupy
     // the full tile height, and V should be fully well-formed because the next triangular
     // multiplication, i.e. `V . T`, and the gemm `V* . E`, will use V as a general matrix.
-    laset(MatrixType::Upper, tile_v.size().rows(), k, T(0), T(1), tile_v.ptr({0, 0}), tile_v.ld());
+    laset(blas::Uplo::Upper, tile_v.size().rows(), k, T(0), T(1), tile_v.ptr({0, 0}), tile_v.ld());
 
     const SizeType mb = tile_i.size().cols();
     if (tile_v.size().rows() > mb)
-      laset(MatrixType::Lower, tile_v.size().rows() - mb, k - 1, T(0), T(0), tile_v.ptr({mb, 0}),
+      laset(blas::Uplo::Lower, tile_v.size().rows() - mb, k - 1, T(0), T(0), tile_v.ptr({mb, 0}),
             tile_v.ld());
 
     return matrix::Tile<const T, Device::CPU>(std::move(tile_v));

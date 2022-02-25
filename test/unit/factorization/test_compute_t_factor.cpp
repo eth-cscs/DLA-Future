@@ -20,8 +20,10 @@
 #include "dlaf/lapack/tile.h"  // workaround for importing lapack.hh
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/copy_tile.h"
+#include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"
+#include "dlaf/matrix/views.h"
 #include "dlaf/util_matrix.h"
 
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
@@ -257,9 +259,9 @@ void testComputeTFactor(const SizeType a_m, const SizeType a_n, const SizeType m
 
   GlobalElementSize v_size(a_m, a_n);
 
+  const GlobalElementIndex v_start_el(v_start.row() * mb, v_start.col() * nb);
   if (!v_size.isEmpty()) {
-    const auto v_start_el = GlobalElementIndex(v_start.row() * mb, v_start.col() * nb);
-    const auto v_end_el = GlobalElementIndex{a_m, std::min((v_start.col() + 1) * nb, a_n)};
+    const GlobalElementIndex v_end_el(a_m, std::min((v_start.col() + 1) * nb, a_n));
     v_size = v_end_el - v_start_el;
   }
 
@@ -271,7 +273,7 @@ void testComputeTFactor(const SizeType a_m, const SizeType a_n, const SizeType m
     const auto& source_tile = v_input_h.read(ij_tile + v_offset).get();
     matrix::internal::copy(source_tile, v.tile(ij_tile));
     if (ij_tile.row() == 0)
-      tile::internal::laset<T>(lapack::MatrixType::Upper, 0.f, 1.f, v.tile(ij_tile));
+      tile::internal::laset<T>(blas::Uplo::Upper, 0.f, 1.f, v.tile(ij_tile));
   }
 
   auto tmp = computeHAndTFactor(k, v);
@@ -290,7 +292,8 @@ void testComputeTFactor(const SizeType a_m, const SizeType a_n, const SizeType m
     MatrixMirror<T, D, Device::CPU> t_output(t_output_h);
 
     using dlaf::factorization::internal::computeTFactor;
-    computeTFactor<B>(k, v_input.get(), v_start, taus_input, t_output.get()(t_idx));
+    const matrix::SubPanelView panel_view(v_input_h.distribution(), v_start_el, k);
+    computeTFactor<B>(k, v_input.get(), panel_view, taus_input, t_output.get()(t_idx));
   }
 
   // No reflectors, so nothing to check
@@ -339,7 +342,7 @@ void testComputeTFactor(comm::CommunicatorGrid grid, const SizeType a_m, const S
                                   v_start = v_start] {
     // TODO this can be improved by communicating just the selected column starting at v_start
     // gather the entire A matrix
-    auto a = matrix::test::allGather<T>(lapack::MatrixType::General, v_input, grid);
+    auto a = matrix::test::allGather<T>(blas::Uplo::General, v_input, grid);
 
     // panel shape
     GlobalElementSize v_size = dist_v.size();
@@ -357,7 +360,7 @@ void testComputeTFactor(comm::CommunicatorGrid grid, const SizeType a_m, const S
     for (const auto& ij : iterate_range2d(v.nrTiles())) {
       matrix::internal::copy(a.tile_read(ij + v_offset), v.tile(ij));
       if (ij.row() == 0)
-        tile::internal::laset<T>(lapack::MatrixType::Upper, 0.f, 1.f, v.tile(ij));
+        tile::internal::laset<T>(blas::Uplo::Upper, 0.f, 1.f, v.tile(ij));
     }
 
     return v;

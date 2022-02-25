@@ -75,7 +75,7 @@ template <class T>
 void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb) {
   Matrix<T, Device::CPU> mat_e({m, n}, {mb, nb});
   set_random(mat_e);
-  auto mat_e_local = allGather(lapack::MatrixType::General, mat_e);
+  auto mat_e_local = allGather(blas::Uplo::General, mat_e);
 
   Matrix<const T, Device::CPU> mat_hh = [m, mb]() {
     Matrix<T, Device::CPU> mat_hh({m, m}, {mb, mb});
@@ -98,7 +98,7 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb) {
     return mat_hh;
   }();
 
-  MatrixLocal<T> mat_hh_local = allGather(lapack::MatrixType::Lower, mat_hh);
+  MatrixLocal<T> mat_hh_local = allGather(blas::Uplo::Lower, mat_hh);
 
   eigensolver::backTransformationBandToTridiag<Backend::MC>(mat_e, mat_hh);
 

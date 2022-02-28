@@ -250,7 +250,7 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(const SizeType ban
   const SizeType b = band_size;
   const SizeType nsweeps = nrSweeps<T>(mat_hh.size().cols());
 
-  const auto& dist_i = mat_hh.distribution();
+  const auto& dist_hh = mat_hh.distribution();
 
   // Note: w_tile_sz can store reflectors as they are actually applied, opposed to how they are
   // stored in compact form.
@@ -290,14 +290,14 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(const SizeType ban
       const SizeType i = j + step;
 
       const GlobalElementIndex ij_e(i * b, j * b);
-      const LocalTileIndex ij(dist_i.localTileIndex(dist_i.globalTileIndex(ij_e)));
+      const LocalTileIndex ij(dist_hh.localTileIndex(dist_hh.globalTileIndex(ij_e)));
 
       // Note:  reflector with size = 1 must be ignored, except for the last step of the last sweep
       //        with complex type
       const SizeType nrefls = [&]() {
         const bool allowSize1 = isComplex_v<T> && j == j_last_sweep && step == steps - 1;
-        const GlobalElementSize delta(dist_i.size().rows() - ij_e.row() - 1,
-                                      std::min(b, dist_i.size().cols() - ij_e.col()));
+        const GlobalElementSize delta(dist_hh.size().rows() - ij_e.row() - 1,
+                                      std::min(b, dist_hh.size().cols() - ij_e.col()));
         return std::min(b, std::min(delta.rows() - (allowSize1 ? 0 : 1), delta.cols()));
       }();
 

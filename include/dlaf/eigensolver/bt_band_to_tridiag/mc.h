@@ -167,10 +167,6 @@ struct Helper {
         parts_[1] = part_t{std::min(b, mb2), nrefls, 0, b - 1};
       }
     }
-
-    input_spec_ = {sub_offset,
-                   {std::min(b, dist.size().rows() - offset.row()),
-                    std::min(b, dist.size().cols() - offset.col())}};
   };
 
   // Return true if the application of Householder reflectors involves multiple tiles
@@ -271,7 +267,7 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(const SizeType ban
   //               0 0 0 d
   const TileElementSize w_tile_sz(2 * b - 1, b);
 
-  const SizeType dist_w_rows = [&]() { return mat_e.nrTiles().rows() * w_tile_sz.rows(); }();
+  const SizeType dist_w_rows = mat_e.nrTiles().rows() * w_tile_sz.rows();
   const matrix::Distribution dist_w({dist_w_rows, b}, w_tile_sz);
   const matrix::Distribution dist_t({mat_hh.size().rows(), b}, {b, b});
   const matrix::Distribution dist_w2({b, mat_e.size().cols()}, {b, mat_e.blockSize().cols()});

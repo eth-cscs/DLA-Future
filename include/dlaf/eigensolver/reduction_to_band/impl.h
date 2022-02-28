@@ -825,6 +825,138 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
   return taus;
 }
 
+/// Local implementation of reduction to band
+/// @return a vector of shared futures of vectors, where each inner vector contains a block of taus
+template <class T>
+common::internal::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<
+    Backend::GPU, Device::GPU, T>::call(Matrix<T, Device::GPU>& mat_a, const SizeType band_size) {
+  constexpr auto B = Backend::GPU;
+  constexpr auto D = Device::GPU;
+
+  using dlaf::matrix::Panel;
+  using dlaf::matrix::Matrix;
+
+  using namespace red2band::local;
+
+  using common::iterate_range2d;
+  using factorization::internal::computeTFactor;
+
+  const auto dist_a = mat_a.distribution();
+  const matrix::Distribution dist({mat_a.size().rows(), band_size},
+                                  {dist_a.blockSize().rows(), band_size}, dist_a.commGridSize(),
+                                  dist_a.rankIndex(), dist_a.sourceRankIndex());
+
+  // Note:
+  // Reflector of size = 1 is not considered whatever T is (i.e. neither real nor complex)
+  const SizeType nrefls = std::max<SizeType>(0, dist_a.size().rows() - band_size - 1);
+
+  common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus;
+
+  if (nrefls == 0)
+    return taus;
+
+  const SizeType nblocks = (nrefls - 1) / band_size + 1;
+  taus.reserve(nblocks);
+
+  constexpr std::size_t n_workspaces = 2;
+  common::RoundRobin<Panel<Coord::Col, T, D>> panels_v(n_workspaces, dist);
+  common::RoundRobin<Panel<Coord::Col, T, D>> panels_w(n_workspaces, dist);
+  common::RoundRobin<Panel<Coord::Col, T, D>> panels_x(n_workspaces, dist);
+
+  for (SizeType j_sub = 0; j_sub < nblocks; ++j_sub) {
+    const auto i_sub = j_sub + 1;
+
+    const GlobalElementIndex ij_offset(i_sub * band_size, j_sub * band_size);
+
+    const SizeType nrefls_block = [=]() {
+      const bool is_last = j_sub == nblocks - 1;
+      if (!is_last)
+        return band_size;
+
+      const SizeType nrefls_last = nrefls % band_size;
+      return nrefls_last == 0 ? band_size : nrefls_last;
+    }();
+
+    const bool isPanelIncomplete = (nrefls_block != band_size);
+
+    // Note: if this is running, it must have at least one valid reflector (i.e. with size > 1)
+    DLAF_ASSERT_HEAVY(nrefls_block != 0, nrefls_block);
+
+    // Note:  SubPanelView is (at most) band_size wide, but it may contain a smaller number of
+    //        reflectors (i.e. at the end when last reflector size is 1)
+    const matrix::SubPanelView panel_view(dist_a, ij_offset, band_size);
+
+    Panel<Coord::Col, T, D>& v = panels_v.nextResource();
+    v.setRangeStart(ij_offset);
+    if (isPanelIncomplete)
+      v.setWidth(nrefls_block);
+
+    const LocalTileIndex t_idx(0, 0);
+    // TODO used just by the column, maybe we can re-use a panel tile?
+    // TODO probably the first one in any panel is ok?
+    Matrix<T, D> t({nrefls_block, nrefls_block}, dist.blockSize());
+
+    // PANEL
+    // TODO this taus.emplace_back(computePanelReflectors(mat_a, panel_view, nrefls_block));
+
+    computeTFactor<B>(nrefls_block, mat_a, panel_view, taus.back(), t(t_idx));
+
+    // constexpr bool has_reflector_head = true;
+    // setupReflectorPanelV<T, true>(has_reflector_head, panel_view, nrefls_block, v, mat_a);
+
+    // PREPARATION FOR TRAILING MATRIX UPDATE
+    const GlobalElementIndex at_offset(ij_offset + GlobalElementSize(0, band_size));
+
+    // Note: if there is no trailing matrix, algorithm has finised
+    if (!at_offset.isIn(mat_a.size()))
+      break;
+
+    const matrix::SubMatrixView trailing_matrix_view(dist_a, at_offset);
+
+    // W = V . T
+    Panel<Coord::Col, T, D>& w = panels_w.nextResource();
+    w.setRangeStart(at_offset);
+    if (isPanelIncomplete)
+      w.setWidth(nrefls_block);
+
+    // trmmComputeW(w, v, t.read(t_idx));
+
+    // X = At . W
+    Panel<Coord::Col, T, D>& x = panels_x.nextResource();
+    x.setRangeStart(at_offset);
+    if (isPanelIncomplete)
+      x.setWidth(nrefls_block);
+
+    // Note:
+    // Since At is hermitian, just the lower part is referenced.
+    // When the tile is not part of the main diagonal, the same tile has to be used for two computations
+    // that will contribute to two different rows of X: the ones indexed with row and col.
+    // hemmComputeX(x, trailing_matrix_view, mat_a, w);
+
+    // In the next section the next two operations are performed
+    // A) W2 = W* . X
+    // B) X -= 1/2 . V . W2
+
+    // Note:
+    // T can be re-used because it is not needed anymore in this step and it has the same shape
+    Matrix<T, D> w2 = std::move(t);
+
+    // gemmComputeW2(w2, w, x);
+    // gemmUpdateX(x, w2, v);
+
+    // TRAILING MATRIX UPDATE
+
+    // At -= X . V* + V . X*
+    // her2kUpdateTrailingMatrix(trailing_matrix_view, mat_a, x, v);
+
+    x.reset();
+    w.reset();
+    v.reset();
+  }
+
+  return taus;
+}
+
 /// Distributed implementation of reduction to band
 /// @return a vector of shared futures of vectors, where each inner vector contains a block of taus
 template <Backend B, Device D, class T>

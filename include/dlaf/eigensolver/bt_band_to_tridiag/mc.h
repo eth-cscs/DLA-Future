@@ -146,32 +146,64 @@ struct Helper {
                                       std::min(b, dist.size().cols() - offset.col())}} {
     const TileElementIndex& sub_offset = input_spec_.origin;
 
-    const SizeType tile_row = dist.globalTileFromGlobalElement<Coord::Row>(offset.row());
-    const bool isLastRow = tile_row == dist.nrTiles().rows() - 1;
+    // Note:
+    // Next logic is about detecting the available application space for reflectors, which once
+    // extracted they expands to a matrix with 2 * b - 1 height.
+    //
+    // There are two main scenarios:
+    // - reflectors involves rows of a single tile;
+    // - reflectors involves rows across two different tiles.
+    //
+    // In both scenarios, it may happen that all reflectors cannot be fully applied to to matrix
+    // size constraint.
 
-    const SizeType max_size = dist.size().rows() - offset.row() - 1;
-    if (isLastRow && max_size < 2 * b - 1) {
-      mode_ = Mode::SINGLE_PART;
-      parts_[0] = part_t{max_size, nrefls, sub_offset.row() + 1};
+    const SizeType fullsize = 2 * b - 1;
+    const SizeType mb = dist.blockSize().rows();
+    const SizeType rows_below = dist.size().rows() - offset.row();
+
+    // Note:
+    // In general, keep in mind that to sub_offset.row() is applied a + 1, to take into account the
+    // offset about how reflectors are actually applied.
+    //
+    // e.g. b = 4
+    // reflectors   matrix
+    //              X X X X
+    // 1 0 0 0      X X X X
+    // a 1 0 0      X X X X
+    // a b 1 0      X X X X
+    //              -------
+    // a b c 1      Y Y Y Y
+    // 0 b c d      Y Y Y Y
+    // 0 0 c d      Y Y Y Y
+    // 0 0 0 d      Y Y Y Y
+    //
+    // From the drawing above, it is possible to see the dashed tile separation between X and Y,
+    // and how the reflectors on the left are going to be applied. In particular, the first row of
+    // the upper tile is not affected.
+
+    acrossTiles_ = [&]() {
+      // Note:
+      // A single tile is involved if:
+      // - it is the last row tile, so by construction reflectors will be applied to a single tile;
+      // - applying reflectors falls entirely withing a single tile
+      const SizeType i_tile = dist.globalTileFromGlobalElement<Coord::Row>(offset.row());
+      const bool is_last_row_tile = i_tile == dist.nrTiles().rows() - 1;
+      return !(is_last_row_tile || sub_offset.row() + 1 + fullsize <= mb);
+    }();
+
+    if (acrossTiles_) {
+      const auto part0_nrows = b - 1;
+      parts_[0] = part_t(sub_offset.row() + 1, part0_nrows, nrefls);
+      parts_[1] = part_t(0, std::min(b, rows_below - b), nrefls, part0_nrows);
     }
     else {
-      const SizeType mb = dist.blockSize().rows();
-      if (mb - sub_offset.row() - 1 >= 2 * b - 1) {
-        mode_ = Mode::SINGLE_FULL;
-        parts_[0] = part_t{2 * b - 1, nrefls, sub_offset.row() + 1};
-      }
-      else {
-        mode_ = Mode::DOUBLE_FULL;
-        const SizeType mb2 = dist.size().rows() - offset.row() - b;
-        parts_[0] = part_t{b - 1, nrefls, sub_offset.row() + 1};
-        parts_[1] = part_t{std::min(b, mb2), nrefls, 0, b - 1};
-      }
+      parts_[0] = part_t(sub_offset.row() + 1, std::min(fullsize, rows_below - 1), nrefls);
     }
   };
 
   // Return true if the application of Householder reflectors involves multiple tiles
   bool affectsMultipleTiles() const noexcept {
-    return mode_ == Mode::DOUBLE_FULL;
+    return acrossTiles_;
   }
 
   // Return SubTileSpec to use for accessing Householder reflectors in compact form
@@ -196,8 +228,8 @@ private:
     // Create an "empty" part
     part_t() = default;
 
-    part_t(const SizeType nrows, const SizeType nrefls, const SizeType origin, const SizeType offset = 0)
-        : nrows_(nrows), nrefls_(nrefls), origin_(origin), offset_(offset) {}
+    part_t(const SizeType origin, const SizeType nrows, const SizeType nrefls, const SizeType offset = 0)
+        : origin_(origin), nrows_(nrows), nrefls_(nrefls), offset_(offset) {}
 
     // Return the number of rows that this part involves
     SizeType rows() const noexcept {
@@ -215,16 +247,16 @@ private:
     }
 
   private:
+    SizeType origin_;
     SizeType nrows_ = 0;
     SizeType nrefls_ = 0;
-    SizeType origin_;
     SizeType offset_;
   };
 
   SizeType nrefls_;
   matrix::SubTileSpec input_spec_;
 
-  enum class Mode { SINGLE_FULL, DOUBLE_FULL, SINGLE_PART } mode_;
+  bool acrossTiles_;
   std::array<part_t, 2> parts_;
 };
 

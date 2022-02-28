@@ -341,9 +341,10 @@ void setupReflectorPanelV(bool has_head, const SubPanelView& panel_view, const S
   }
 }
 
-template <class T, class MatrixLikeT>
-void trmmComputeW(PanelT<Coord::Col, T>& w, MatrixLikeT& v, pika::shared_future<ConstTileT<T>> tile_t) {
-  const auto ex = getHpExecutor<Backend::MC>();
+template <Backend B, Device D, class T>
+void trmmComputeW(matrix::Panel<Coord::Col, T, D>& w, matrix::Panel<Coord::Col, T, D>& v,
+                  pika::shared_future<matrix::Tile<const T, D>> tile_t) {
+  const auto ex = getHpExecutor<B>();
 
   auto trmm_func = pika::unwrapping([](auto&& tile_w, const auto& tile_v, const auto& tile_t) -> void {
     // Note:
@@ -360,12 +361,13 @@ void trmmComputeW(PanelT<Coord::Col, T>& w, MatrixLikeT& v, pika::shared_future<
     pika::dataflow(ex, trmm_func, w(index_i), v.read(index_i), tile_t);
 }
 
-template <class T, class MatrixLikeT>
-void gemmUpdateX(PanelT<Coord::Col, T>& x, ConstMatrixT<T>& w2, MatrixLikeT& v) {
+template <Backend B, Device D, class T>
+void gemmUpdateX(matrix::Panel<Coord::Col, T, D>& x, matrix::Matrix<const T, D>& w2,
+                 matrix::Panel<Coord::Col, const T, D>& v) {
   using matrix::unwrapExtendTiles;
   using tile::internal::gemm_o;
 
-  const auto ex = getHpExecutor<Backend::MC>();
+  const auto ex = getHpExecutor<B>();
 
   // GEMM X = X - 0.5 . V . W2
   for (const auto& index_i : v.iteratorLocal())
@@ -373,10 +375,10 @@ void gemmUpdateX(PanelT<Coord::Col, T>& x, ConstMatrixT<T>& w2, MatrixLikeT& v) 
                    v.read(index_i), w2.read(LocalTileIndex(0, 0)), T(1), x(index_i));
 }
 
-template <class T>
-void hemmComputeX(PanelT<Coord::Col, T>& x, const SubMatrixView& view, ConstMatrixT<T>& a,
-                  ConstPanelT<Coord::Col, T>& w) {
-  const auto ex = getHpExecutor<Backend::MC>();
+template <Backend B, Device D, class T>
+void hemmComputeX(matrix::Panel<Coord::Col, T, D>& x, const SubMatrixView& view,
+                  matrix::Matrix<const T, D>& a, matrix::Panel<Coord::Col, const T, D>& w) {
+  const auto ex = getHpExecutor<B>();
   const auto priority = pika::threads::thread_priority::high;
 
   const auto dist = a.distribution();
@@ -387,7 +389,7 @@ void hemmComputeX(PanelT<Coord::Col, T>& x, const SubMatrixView& view, ConstMatr
   // result.
   //
   // TODO set0 can be "embedded" in the logic but currently it will be a bit cumbersome.
-  matrix::util::set0<Backend::MC>(priority, x);
+  matrix::util::set0<B>(priority, x);
 
   const LocalTileIndex at_offset = view.begin();
 
@@ -427,12 +429,13 @@ void hemmComputeX(PanelT<Coord::Col, T>& x, const SubMatrixView& view, ConstMatr
   }
 }
 
-template <class T>
-void gemmComputeW2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Coord::Col, T>& x) {
+template <Backend B, Device D, class T>
+void gemmComputeW2(matrix::Matrix<T, D>& w2, matrix::Panel<Coord::Col, const T, D>& w,
+                   matrix::Panel<Coord::Col, const T, D>& x) {
   using matrix::unwrapExtendTiles;
   using tile::internal::gemm_o;
 
-  const auto ex = getHpExecutor<Backend::MC>();
+  const auto ex = getHpExecutor<B>();
 
   // Note:
   // Not all ranks in the column always hold at least a tile in the panel Ai, but all ranks in
@@ -446,9 +449,10 @@ void gemmComputeW2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Co
                    w.read(index_tile), x.read(index_tile), T(1), w2(LocalTileIndex(0, 0)));
 }
 
-template <class T>
-void her2kUpdateTrailingMatrix(const SubMatrixView& view, MatrixT<T>& a, ConstPanelT<Coord::Col, T>& x,
-                               ConstPanelT<Coord::Col, T>& v) {
+template <Backend B, Device D, class T>
+void her2kUpdateTrailingMatrix(const SubMatrixView& view, matrix::Matrix<T, D>& a,
+                               matrix::Panel<Coord::Col, const T, D>& x,
+                               matrix::Panel<Coord::Col, const T, D>& v) {
   static_assert(std::is_signed_v<BaseType<T>>, "alpha in computations requires to be -1");
 
   const auto dist = a.distribution();
@@ -469,8 +473,7 @@ void her2kUpdateTrailingMatrix(const SubMatrixView& view, MatrixT<T>& a, ConstPa
 
       // The first column of the trailing matrix (except for the very first global tile) has to be
       // updated first, in order to unlock the next iteration as soon as possible.
-      const auto& ex =
-          (j == at_start.col()) ? getHpExecutor<Backend::MC>() : getNpExecutor<Backend::MC>();
+      const auto& ex = (j == at_start.col()) ? getHpExecutor<B>() : getNpExecutor<B>();
 
       if (is_diagonal_tile) {
         her2kDiag(ex, v.read(ij_local), x.read(ij_local), getSubA(tile_a));
@@ -787,7 +790,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     if (isPanelIncomplete)
       w.setWidth(nrefls_block);
 
-    trmmComputeW(w, v, t.read(t_idx));
+    trmmComputeW<B, D>(w, v, t.read(t_idx));
 
     // X = At . W
     PanelT<Coord::Col, T>& x = panels_x.nextResource();
@@ -799,7 +802,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     // Since At is hermitian, just the lower part is referenced.
     // When the tile is not part of the main diagonal, the same tile has to be used for two computations
     // that will contribute to two different rows of X: the ones indexed with row and col.
-    hemmComputeX(x, trailing_matrix_view, mat_a, w);
+    hemmComputeX<B, D>(x, trailing_matrix_view, mat_a, w);
 
     // In the next section the next two operations are performed
     // A) W2 = W* . X
@@ -809,13 +812,13 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     // T can be re-used because it is not needed anymore in this step and it has the same shape
     MatrixT<T> w2 = std::move(t);
 
-    gemmComputeW2(w2, w, x);
-    gemmUpdateX(x, w2, v);
+    gemmComputeW2<B, D>(w2, w, x);
+    gemmUpdateX<B, D>(x, w2, v);
 
     // TRAILING MATRIX UPDATE
 
     // At -= X . V* + V . X*
-    her2kUpdateTrailingMatrix(trailing_matrix_view, mat_a, x, v);
+    her2kUpdateTrailingMatrix<B, D>(trailing_matrix_view, mat_a, x, v);
 
     x.reset();
     w.reset();
@@ -1070,7 +1073,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     wt.setHeight(nrefls);
 
     if (is_panel_rank_col)
-      red2band::local::trmmComputeW(w, v, t.read(t_idx));
+      red2band::local::trmmComputeW<B, D>(w, v, t.read(t_idx));
 
     comm::broadcast(ex_mpi, rank_v0.col(), w, wt, mpi_row_chain, mpi_col_chain);
 
@@ -1106,10 +1109,10 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
       // T can be re-used because it is not needed anymore in this step and it has the same shape
       MatrixT<T> w2 = std::move(t);
 
-      red2band::local::gemmComputeW2(w2, w, x);
+      red2band::local::gemmComputeW2<B, D>(w2, w, x);
       comm::scheduleAllReduceInPlace(ex_mpi, mpi_col_chain(), MPI_SUM, w2(LocalTileIndex(0, 0)));
 
-      red2band::local::gemmUpdateX(x, w2, v);
+      red2band::local::gemmUpdateX<B, D>(x, w2, v);
     }
 
     // Note:

@@ -303,9 +303,13 @@ pika::shared_future<common::internal::vector<T>> computePanelReflectors(MatrixT<
                         pika::when_all(std::move(panel_tiles)));
 }
 
-template <class T, bool ForceCopy = false>
+template <Backend B, Device D, class T, bool ForceCopy = false>
 void setupReflectorPanelV(bool has_head, const SubPanelView& panel_view, const SizeType nrefls,
-                          PanelT<Coord::Col, T>& v, MatrixT<const T>& mat_a) {
+                          matrix::Panel<Coord::Col, T, D>& v, matrix::Matrix<const T, D>& mat_a) {
+  namespace ex = pika::execution::experimental;
+
+  using pika::threads::thread_priority;
+
   // Note:
   // Reflectors are stored in the lower triangular part of the A matrix leading to sharing memory
   // between reflectors and results, which are in the upper triangular part. The problem exists only
@@ -317,11 +321,6 @@ void setupReflectorPanelV(bool has_head, const SubPanelView& panel_view, const S
   auto it_end = panel_view.iteratorLocal().end();
 
   if (has_head) {
-    auto setupV0 = pika::unwrapping([](auto&& tile_v, const auto& tile_a) {
-      matrix::internal::copy(tile_a, tile_v);
-      tile::internal::laset(blas::Uplo::Upper, T(0), T(1), tile_v);
-    });
-
     const LocalTileIndex i = *it_begin;
     matrix::SubTileSpec spec = panel_view(i);
 
@@ -330,9 +329,13 @@ void setupReflectorPanelV(bool has_head, const SubPanelView& panel_view, const S
     // the blocksize, leading to just using a part of A (first full nrefls columns)
     spec.size = {spec.size.rows(), std::min(nrefls, spec.size.cols())};
 
-    auto tile_v = v(i);
-    pika::dataflow(getHpExecutor<Backend::MC>(), std::move(setupV0), std::move(tile_v),
-                   splitTile(mat_a.read(i), spec));
+    // TODO solution with "hand-made" continuation from Raffaele
+    const auto p = dlaf::internal::Policy<B>(thread_priority::high);
+    dlaf::internal::whenAllLift(ex::keep_future(splitTile(mat_a.read(i), spec)), v.readwrite_sender(i)) |
+        matrix::copy(p) | ex::start_detached();
+
+    dlaf::internal::whenAllLift(blas::Uplo::Upper, T(0), T(1), v.readwrite_sender(i)) | tile::laset(p) |
+        ex::start_detached();
 
     ++it_begin;
   }
@@ -345,8 +348,8 @@ void setupReflectorPanelV(bool has_head, const SubPanelView& panel_view, const S
 
     // TODO this is a workaround for the deadlock problem
     if constexpr (ForceCopy)
-      pika::dataflow(getHpExecutor<Backend::MC>(), pika::unwrapping(matrix::internal::copy_o),
-                     matrix::splitTile(mat_a.read(idx), spec), v(idx));
+      ex::when_all(ex::keep_future(matrix::splitTile(mat_a.read(idx), spec)), v.readwrite_sender(idx)) |
+          matrix::copy(dlaf::internal::Policy<B>(thread_priority::high)) | ex::start_detached();
     else
       v.setTile(idx, matrix::splitTile(mat_a.read(idx), spec));
   }
@@ -800,7 +803,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     taus.emplace_back(computePanelReflectors(mat_a, panel_view, nrefls_block));
 
     constexpr bool has_reflector_head = true;
-    setupReflectorPanelV<T, true>(has_reflector_head, panel_view, nrefls_block, v, mat_a);
+    setupReflectorPanelV<B, D, T, true>(has_reflector_head, panel_view, nrefls_block, v, mat_a);
     computeTFactor<Backend::MC>(v, taus.back(), t(t_idx));
 
     // PREPARATION FOR TRAILING MATRIX UPDATE
@@ -941,8 +944,8 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
         taus.emplace_back(pika::make_ready_future(std::move(fake_taus)));
       }
 
-      // constexpr bool has_reflector_head = true;
-      // setupReflectorPanelV<T, true>(has_reflector_head, panel_view, nrefls_block, v, mat_a);
+      constexpr bool has_reflector_head = true;
+      setupReflectorPanelV<B, D, T, true>(has_reflector_head, panel_view, nrefls_block, v, mat_a);
     }
 
     computeTFactor<B>(nrefls_block, mat_a, panel_view, taus.back(), t(t_idx));
@@ -1095,7 +1098,8 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     if (is_panel_rank_col) {
       taus.emplace_back(computePanelReflectors(std::move(trigger_panel), rank_v0.row(),
                                                mpi_col_chain_panel(), mat_a, ai_panel, nrefls));
-      red2band::local::setupReflectorPanelV(rank.row() == rank_v0.row(), panel_view, nrefls, v, mat_a);
+      red2band::local::setupReflectorPanelV<B, D>(rank.row() == rank_v0.row(), panel_view, nrefls, v,
+                                                  mat_a);
       computeTFactor<Backend::MC>(v, taus.back(), t(t_idx), mpi_col_chain);
     }
 

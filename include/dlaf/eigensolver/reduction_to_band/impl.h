@@ -932,16 +932,38 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
 
     // PANEL
     {
-      // TODO
-      // - copy panel_view from GPU to CPU
-      // - computePanelReflectors on CPU (on a matrix like, with just a panel)
-      // - copy back matrix "panel" from CPU to GPU
-      // - setupReflectorPanelV wellformed
-
-      // TODO this taus.emplace_back(computePanelReflectors(mat_a, panel_view, nrefls_block));
       {
-        dlaf::common::internal::vector<T> fake_taus(to_sizet(nrefls_block), 1);
-        taus.emplace_back(pika::make_ready_future(std::move(fake_taus)));
+        // TODO
+        // - copy panel_view from GPU to CPU
+        // - computePanelReflectors on CPU (on a matrix like, with just a panel)
+        // - copy back matrix "panel" from CPU to GPU
+
+        namespace ex = pika::execution::experimental;
+        using pika::threads::thread_priority;
+
+        // TODO allocate just a panel, but panel_view has to be adapted
+        Matrix<T, Device::CPU> tmp_panel(dist_a.localSize(), dist_a.blockSize());
+        for (const auto& i : panel_view.iteratorLocal()) {
+          auto spec = panel_view(i);
+          auto tmp_tile = tmp_panel.readwrite_sender(i);
+          ex::when_all(ex::keep_future(splitTile(mat_a.read(i), spec)), splitTile(tmp_tile, spec)) |
+              matrix::copy(
+                  dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>(
+                      thread_priority::high)) |
+              ex::start_detached();
+        }
+
+        taus.emplace_back(computePanelReflectors(tmp_panel, panel_view, nrefls_block));
+
+        for (const auto& i : panel_view.iteratorLocal()) {
+          auto spec = panel_view(i);
+          auto tile_a = mat_a.readwrite_sender(i);
+          ex::when_all(ex::keep_future(splitTile(tmp_panel.read(i), spec)), splitTile(tile_a, spec)) |
+              matrix::copy(
+                  dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::CPU, Device::GPU>>(
+                      thread_priority::high)) |
+              ex::start_detached();
+        }
       }
 
       constexpr bool has_reflector_head = true;

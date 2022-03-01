@@ -344,21 +344,16 @@ void setupReflectorPanelV(bool has_head, const SubPanelView& panel_view, const S
 template <Backend B, Device D, class T>
 void trmmComputeW(matrix::Panel<Coord::Col, T, D>& w, matrix::Panel<Coord::Col, T, D>& v,
                   pika::shared_future<matrix::Tile<const T, D>> tile_t) {
-  const auto ex = getHpExecutor<B>();
+  namespace ex = pika::execution::experimental;
 
-  auto trmm_func = pika::unwrapping([](auto&& tile_w, const auto& tile_v, const auto& tile_t) -> void {
-    // Note:
-    // Since V0 is well-formed, by copying V0 to W we are also resetting W where the matrix is not going
-    // to be computed.
-    matrix::internal::copy(tile_v, tile_w);
-
-    // W = V . T
-    using namespace blas;
-    tile::internal::trmm(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1), tile_t, tile_w);
-  });
+  using pika::threads::thread_priority;
+  using namespace blas;
 
   for (const auto& index_i : w.iteratorLocal())
-    pika::dataflow(ex, trmm_func, w(index_i), v.read(index_i), tile_t);
+    dlaf::internal::whenAllLift(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1),
+                                ex::keep_future(tile_t), v.read_sender(index_i),
+                                w.readwrite_sender(index_i)) |
+        tile::trmm3(dlaf::internal::Policy<B>(thread_priority::high)) | ex::start_detached();
 }
 
 template <Backend B, Device D, class T>
@@ -902,10 +897,10 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     // PANEL
     // TODO this taus.emplace_back(computePanelReflectors(mat_a, panel_view, nrefls_block));
 
-    computeTFactor<B>(nrefls_block, mat_a, panel_view, taus.back(), t(t_idx));
-
     // constexpr bool has_reflector_head = true;
     // setupReflectorPanelV<T, true>(has_reflector_head, panel_view, nrefls_block, v, mat_a);
+
+    computeTFactor<B>(nrefls_block, mat_a, panel_view, taus.back(), t(t_idx));
 
     // PREPARATION FOR TRAILING MATRIX UPDATE
     const GlobalElementIndex at_offset(ij_offset + GlobalElementSize(0, band_size));
@@ -922,7 +917,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     if (isPanelIncomplete)
       w.setWidth(nrefls_block);
 
-    // trmmComputeW(w, v, t.read(t_idx));
+    trmmComputeW<B, D>(w, v, t.read(t_idx));
 
     // X = At . W
     Panel<Coord::Col, T, D>& x = panels_x.nextResource();

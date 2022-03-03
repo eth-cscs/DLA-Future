@@ -141,7 +141,7 @@ TYPED_TEST(CudaUtilTestHost, CudaOperatorsComplex) {
   const T d = 7.77;
 
   // The equality operator test is designed requiring a.x != b.x and a.y != b.y.
-  ASSERT_FALSE(a.x == b.x || a.y == b.y);
+  ASSERT_TRUE(a.x != b.x && a.y != b.y);
 
   ComplexT tmp;
 

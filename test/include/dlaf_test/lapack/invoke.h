@@ -70,7 +70,7 @@ struct InvokeLapack<Device::GPU> {
 
 /// Invokes a Blas call in a generic way:
 /// For CPU it calls f(args...),
-/// For GPU it creates a cublas handle, it calls f(handle, args...) and it synchronizes.
+/// For GPU it creates a cuSolver handle, it calls f(handle, args...) and it synchronizes.
 template <Device D, class F, class... Args>
 void invokeLapack(F&& f, Args&&... args) {
   internal::InvokeLapack<D>::call(std::forward<F>(f), std::forward<Args>(args)...);

@@ -120,7 +120,7 @@ void laset(cublasFillMode_t uplo, SizeType m, SizeType n, T alpha, T beta, T* a,
   const unsigned um = to_uint(m);
   const unsigned un = to_uint(n);
 
-  dim3 nr_threads(kernel_tile_size_rows, kernel_tile_size_cols);
+  dim3 nr_threads(kernel_tile_size_rows, 1);
   dim3 nr_blocks(util::ceilDiv(um, kernel_tile_size_rows), util::ceilDiv(un, kernel_tile_size_cols));
   kernels::laset<<<nr_blocks, nr_threads, 0, stream>>>(uplo, um, un, util::cppToCudaCast(alpha),
                                                        util::cppToCudaCast(beta), util::cppToCudaCast(a),

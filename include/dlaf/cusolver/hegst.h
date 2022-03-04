@@ -47,6 +47,8 @@
  * Users Notice.
  */
 
+// dlaf-no-license-check
+
 #pragma once
 
 #include <cusolverDn.h>

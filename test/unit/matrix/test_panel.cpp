@@ -246,9 +246,11 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
 
   Matrix<TypeParam, dlaf::Device::CPU> matrix(cfg.sz, cfg.blocksz, comm_grid);
   const auto& dist = matrix.distribution();
+  const SizeType bs = dist.blockSize().get(coord1D);
 
   Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, cfg.offset);
   static_assert(coord1D == decltype(panel)::CoordType, "coord types mismatch");
+  EXPECT_EQ(cfg.offset.get<coord1D>() * bs, panel.offsetElement());
 
   // if locally there are just incomplete tiles, skip the test (not worth it)
   if (doesThisRankOwnsJustIncomplete<panel_axis>(dist))
@@ -259,7 +261,7 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
     return;
 
   auto setTile = [](const auto& tile, TypeParam value) noexcept {
-    tile::internal::laset(lapack::MatrixType::General, value, value, tile);
+    tile::internal::laset(blas::Uplo::General, value, value, tile);
   };
 
   auto setAndCheck = [=, &matrix, &panel](std::string msg, SizeType head_loc, SizeType tail_loc) {
@@ -290,6 +292,7 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
   // Shrink from head
   for (SizeType head = cfg.offset.get<coord1D>(); head <= dist.nrTiles().get(coord1D); ++head) {
     panel.setRangeStart(GlobalTileIndex(coord1D, head));
+    EXPECT_EQ(head * bs, panel.offsetElement());
 
     const auto head_loc = dist.template nextLocalTileFromGlobalTile<coord1D>(head);
     const auto tail_loc = dist.localNrTiles().get(coord1D);
@@ -303,6 +306,7 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
   for (SizeType tail = dist.nrTiles().get(coord1D); cfg.offset.get<coord1D>() <= tail; --tail) {
     panel.setRangeStart(cfg.offset);
     panel.setRangeEnd(GlobalTileIndex(coord1D, tail));
+    EXPECT_EQ(cfg.offset.get<coord1D>() * bs, panel.offsetElement());
 
     const auto head_loc = dist.template nextLocalTileFromGlobalTile<coord1D>(cfg.offset.get<coord1D>());
     const auto tail_loc = dist.template nextLocalTileFromGlobalTile<coord1D>(tail);
@@ -316,6 +320,7 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
   for (SizeType head = cfg.offset.get<coord1D>(), tail = dist.nrTiles().get(coord1D); head <= tail;
        ++head, --tail) {
     panel.setRange(GlobalTileIndex(coord1D, head), GlobalTileIndex(coord1D, tail));
+    EXPECT_EQ(head * bs, panel.offsetElement());
 
     const auto head_loc = dist.template nextLocalTileFromGlobalTile<coord1D>(head);
     const auto tail_loc = dist.template nextLocalTileFromGlobalTile<coord1D>(tail);
@@ -367,17 +372,20 @@ TYPED_TEST(PanelTest, SetWidth) {
 
     const auto default_dim = cfg.blocksz.cols();
 
+    EXPECT_EQ(default_dim, panel.getWidth());
     checkPanelTileSize(default_dim, panel);
     // Check twice as size shouldn't change
     checkPanelTileSize(default_dim, panel);
     for (const auto dim : {default_dim / 2, default_dim}) {
       panel.reset();
       panel.setWidth(dim);
+      EXPECT_EQ(dim, panel.getWidth());
       checkPanelTileSize(dim, panel);
       // Check twice as size shouldn't change
       checkPanelTileSize(dim, panel);
     }
     panel.reset();
+    EXPECT_EQ(default_dim, panel.getWidth());
     checkPanelTileSize(default_dim, panel);
     // Check twice as size shouldn't change
     checkPanelTileSize(default_dim, panel);
@@ -393,17 +401,20 @@ TYPED_TEST(PanelTest, SetHeight) {
 
     const auto default_dim = cfg.blocksz.rows();
 
+    EXPECT_EQ(default_dim, panel.getHeight());
     checkPanelTileSize(default_dim, panel);
     // Check twice as size shouldn't change
     checkPanelTileSize(default_dim, panel);
     for (const auto dim : {default_dim / 2, default_dim}) {
       panel.reset();
       panel.setHeight(dim);
+      EXPECT_EQ(dim, panel.getHeight());
       checkPanelTileSize(dim, panel);
       // Check twice as size shouldn't change
       checkPanelTileSize(dim, panel);
     }
     panel.reset();
+    EXPECT_EQ(default_dim, panel.getHeight());
     checkPanelTileSize(default_dim, panel);
     // Check twice as size shouldn't change
     checkPanelTileSize(default_dim, panel);
@@ -427,6 +438,7 @@ void testOffsetTileUnaligned(const GlobalElementSize size, const TileElementSize
     const SizeType offset = dist.globalTileFromGlobalElement<Coord1D>(offset_e.get<Coord1D>());
 
     panel.setRangeStart(offset_e);
+    EXPECT_EQ(offset_e.get<Coord1D>(), panel.offsetElement());
 
     for (const LocalTileIndex& i : panel.iteratorLocal()) {
       const TileElementSize expected_size = [&]() {

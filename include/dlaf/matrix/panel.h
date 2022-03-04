@@ -147,6 +147,7 @@ struct Panel<axis, const T, D> {
 
     start_ = start_idx.get(CoordType);
     start_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<CoordType>(start_);
+    offset_element_ = start_ * dist_matrix_.blockSize().get<CoordType>();
 
     end_ = end_idx.get(CoordType);
     end_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<CoordType>(end_);
@@ -170,6 +171,7 @@ struct Panel<axis, const T, D> {
 
     start_ = start_idx.get(CoordType);
     start_local_ = dist_matrix_.nextLocalTileFromGlobalTile<CoordType>(start_);
+    offset_element_ = start_ * dist_matrix_.blockSize().get<CoordType>();
 
     DLAF_ASSERT(rangeStartLocal() >= bias_ && rangeStart() <= rangeEnd(), rangeStart(), rangeEnd(),
                 bias_);
@@ -180,6 +182,7 @@ struct Panel<axis, const T, D> {
 
     start_ = dist_matrix_.globalTileFromGlobalElement<CoordType>(start.get(CoordType));
     start_local_ = dist_matrix_.nextLocalTileFromGlobalTile<CoordType>(start_);
+    offset_element_ = start.get<CoordType>();
 
     const bool has_first_global_tile =
         dist_matrix_.rankGlobalTile<CoordType>(start_) == dist_matrix_.rankIndex().get(CoordType);
@@ -228,6 +231,13 @@ struct Panel<axis, const T, D> {
     return end_local_;
   }
 
+  /// Returns
+  /// the global 1D index of the first row of the panel (axis == Coord::Col)
+  /// the global 1D index of the first column of the panel (axis == Coord::Row)
+  SizeType offsetElement() const noexcept {
+    return offset_element_;
+  }
+
   /// Set the width of the col panel.
   ///
   /// By default the width of the panel is parentDistribution().block_size().cols().
@@ -260,6 +270,18 @@ struct Panel<axis, const T, D> {
                 parentDistribution().blockSize().rows());
 
     dim_ = height;
+  }
+
+  /// Get the current width of the col panel.
+  template <Coord A = axis, std::enable_if_t<A == axis && Coord::Col == axis, int> = 0>
+  SizeType getWidth() const noexcept {
+    return dim_ < 0 ? dist_matrix_.blockSize().template get<axis>() : dim_;
+  }
+
+  /// Get the current height of the row panel.
+  template <Coord A = axis, std::enable_if_t<A == axis && Coord::Row == axis, int> = 0>
+  SizeType getHeight() noexcept {
+    return dim_ < 0 ? dist_matrix_.blockSize().template get<axis>() : dim_;
   }
 
   /// Reset the internal usage status of the panel.
@@ -407,6 +429,8 @@ protected:
   ///> It represents the offset to use in first global tile
   SizeType start_offset_ = 0;
 
+  SizeType offset_element_ = 0;
+
   bool has_been_used_ = false;
 
   ///> Container for references to external tiles
@@ -430,7 +454,7 @@ struct Panel : public Panel<axis, const T, device> {
   /// @pre index must point to a tile which is internally managed by the panel
   pika::future<TileType> operator()(const LocalTileIndex& index) {
     // Note assertion on index done by linearIndex method.
-    DLAF_ASSERT(!BaseT::isExternal(index), "read-only access on external tiles", index);
+    DLAF_ASSERT(!BaseT::isExternal(index), "read-write access not allowed on external tiles", index);
 
     has_been_used_ = true;
 

@@ -56,22 +56,16 @@ void copy(const MatrixLocal<const T>& source, MatrixLocal<T>& dest) {
 }
 
 namespace internal {
-auto checkerForIndexIn(const lapack::MatrixType mat_type) {
-  auto targeted_tile = [mat_type](const GlobalTileIndex idx) {
-    using lapack::MatrixType;
-    switch (mat_type) {
-      case MatrixType::General:
+auto checkerForIndexIn(const blas::Uplo uplo) {
+  auto targeted_tile = [uplo](const GlobalTileIndex idx) {
+    switch (uplo) {
+      case blas::Uplo::General:
         return true;
-      case MatrixType::Lower:
+      case blas::Uplo::Lower:
         return idx.row() >= idx.col();
-      case MatrixType::Upper:
+      case blas::Uplo::Upper:
         return idx.row() <= idx.col();
-      case MatrixType::Band:
-      case MatrixType::Hessenberg:
-      case MatrixType::LowerBand:
-      case MatrixType::UpperBand:
       default:
-        DLAF_UNIMPLEMENTED(matrixtype2str(mat_type));
         return false;
     }
   };
@@ -80,15 +74,15 @@ auto checkerForIndexIn(const lapack::MatrixType mat_type) {
 }
 }
 
-/// Given a local Matrix, it collects the full data locally, according @p to mat_type
+/// Given a local Matrix, it collects the full data locally, according @p to uplo
 /// Optionally, it is possible to specify the type of the return MatrixLocal (useful for const correctness)
 template <class T>
-MatrixLocal<T> allGather(lapack::MatrixType mat_type, Matrix<const T, Device::CPU>& source) {
+MatrixLocal<T> allGather(blas::Uplo uplo, Matrix<const T, Device::CPU>& source) {
   DLAF_ASSERT(matrix::local_matrix(source), source);
 
   MatrixLocal<std::remove_const_t<T>> dest(source.size(), source.blockSize());
 
-  auto targeted_tile = internal::checkerForIndexIn(mat_type);
+  auto targeted_tile = internal::checkerForIndexIn(uplo);
 
   for (const auto& ij_tile : iterate_range2d(source.nrTiles())) {
     if (!targeted_tile(ij_tile))
@@ -102,10 +96,10 @@ MatrixLocal<T> allGather(lapack::MatrixType mat_type, Matrix<const T, Device::CP
   return MatrixLocal<T>(std::move(dest));
 }
 
-/// Given a distributed Matrix, it collects the full data locally, according @p to mat_type
+/// Given a distributed Matrix, it collects the full data locally, according @p to uplo
 /// Optionally, it is possible to specify the type of the return MatrixLocal (useful for const correctness)
 template <class T>
-MatrixLocal<T> allGather(lapack::MatrixType mat_type, Matrix<const T, Device::CPU>& source,
+MatrixLocal<T> allGather(blas::Uplo uplo, Matrix<const T, Device::CPU>& source,
                          comm::CommunicatorGrid comm_grid) {
   DLAF_ASSERT(matrix::equal_process_grid(source, comm_grid), source, comm_grid);
 
@@ -114,7 +108,7 @@ MatrixLocal<T> allGather(lapack::MatrixType mat_type, Matrix<const T, Device::CP
   const auto& dist_source = source.distribution();
   const auto rank = dist_source.rankIndex();
 
-  auto targeted_tile = internal::checkerForIndexIn(mat_type);
+  auto targeted_tile = internal::checkerForIndexIn(uplo);
 
   for (const auto& ij_tile : iterate_range2d(dist_source.nrTiles())) {
     if (!targeted_tile(ij_tile))

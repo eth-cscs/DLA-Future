@@ -48,9 +48,9 @@ namespace internal {
 
 template <class T>
 struct ReductionToBand<Backend::MC, Device::CPU, T> {
-  static std::vector<pika::shared_future<common::internal::vector<T>>> call(
+  static common::internal::vector<pika::shared_future<common::internal::vector<T>>> call(
       Matrix<T, Device::CPU>& mat_a, const SizeType band_size);
-  static std::vector<pika::shared_future<common::internal::vector<T>>> call(
+  static common::internal::vector<pika::shared_future<common::internal::vector<T>>> call(
       comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a);
 };
 
@@ -319,7 +319,7 @@ void setupReflectorPanelV(bool has_head, const SubPanelView& panel_view, const S
   if (has_head) {
     auto setupV0 = pika::unwrapping([](auto&& tile_v, const auto& tile_a) {
       matrix::internal::copy(tile_a, tile_v);
-      tile::internal::laset(lapack::MatrixType::Upper, T(0), T(1), tile_v);
+      tile::internal::laset(blas::Uplo::Upper, T(0), T(1), tile_v);
     });
 
     const LocalTileIndex i = *it_begin;
@@ -712,7 +712,7 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
 /// Local implementation of reduction to band
 /// @return a vector of shared futures of vectors, where each inner vector contains a block of taus
 template <class T>
-std::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<
+common::internal::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<
     Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& mat_a, const SizeType band_size) {
   using namespace red2band::local;
   using red2band::MatrixT;
@@ -730,13 +730,13 @@ std::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<
   // Reflector of size = 1 is not considered whatever T is (i.e. neither real nor complex)
   const SizeType nrefls = std::max<SizeType>(0, dist_a.size().rows() - band_size - 1);
 
-  std::vector<pika::shared_future<common::internal::vector<T>>> taus;
+  common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus;
 
   if (nrefls == 0)
     return taus;
 
   const SizeType nblocks = (nrefls - 1) / band_size + 1;
-  taus.reserve(to_sizet(nblocks));
+  taus.reserve(nblocks);
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<PanelT<Coord::Col, T>> panels_v(n_workspaces, dist);
@@ -779,10 +779,9 @@ std::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<
     // PANEL
     taus.emplace_back(computePanelReflectors(mat_a, panel_view, nrefls_block));
 
-    computeTFactor<Backend::MC>(nrefls_block, mat_a, panel_view, taus.back(), t(t_idx));
-
     constexpr bool has_reflector_head = true;
     setupReflectorPanelV<T, true>(has_reflector_head, panel_view, nrefls_block, v, mat_a);
+    computeTFactor<Backend::MC>(v, taus.back(), t(t_idx));
 
     // PREPARATION FOR TRAILING MATRIX UPDATE
     const GlobalElementIndex at_offset(ij_offset + GlobalElementSize(0, band_size));
@@ -840,7 +839,7 @@ std::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<
 /// Distributed implementation of reduction to band
 /// @return a vector of shared futures of vectors, where each inner vector contains a block of taus
 template <class T>
-std::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<
+common::internal::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<
     Backend::MC, Device::CPU, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
   using namespace red2band::distributed;
   using red2band::MatrixT;
@@ -858,13 +857,13 @@ std::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<
   const auto& dist = mat_a.distribution();
   const comm::Index2D rank = dist.rankIndex();
 
-  std::vector<pika::shared_future<common::internal::vector<T>>> taus;
+  common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus;
   const SizeType nblocks = std::max<SizeType>(0, dist.nrTiles().cols() - 1);
 
   if (nblocks == 0)
     return taus;
 
-  taus.reserve(to_sizet(nblocks));
+  taus.reserve(nblocks);
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<PanelT<Coord::Col, T>> panels_v(n_workspaces, dist);
@@ -932,8 +931,8 @@ std::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<
     if (is_panel_rank_col) {
       taus.emplace_back(computePanelReflectors(std::move(trigger_panel), rank_v0.row(),
                                                mpi_col_chain_panel(), mat_a, ai_panel, nrefls));
-      computeTFactor<Backend::MC>(nrefls, mat_a, ai_start, taus.back(), t(t_idx), mpi_col_chain);
       red2band::local::setupReflectorPanelV(rank.row() == rank_v0.row(), panel_view, nrefls, v, mat_a);
+      computeTFactor<Backend::MC>(v, taus.back(), t(t_idx), mpi_col_chain);
     }
 
     // PREPARATION FOR TRAILING MATRIX UPDATE
@@ -1033,14 +1032,13 @@ std::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<
 }
 
 /// ---- ETI
-#define DLAF_EIGENSOLVER_MC_ETI(KWORD, DATATYPE) \
+#define DLAF_EIGENSOLVER_RED_TO_BAND_MC_ETI(KWORD, DATATYPE) \
   KWORD template struct ReductionToBand<Backend::MC, Device::CPU, DATATYPE>;
 
-DLAF_EIGENSOLVER_MC_ETI(extern, float)
-DLAF_EIGENSOLVER_MC_ETI(extern, double)
-DLAF_EIGENSOLVER_MC_ETI(extern, std::complex<float>)
-DLAF_EIGENSOLVER_MC_ETI(extern, std::complex<double>)
-
+DLAF_EIGENSOLVER_RED_TO_BAND_MC_ETI(extern, float)
+DLAF_EIGENSOLVER_RED_TO_BAND_MC_ETI(extern, double)
+DLAF_EIGENSOLVER_RED_TO_BAND_MC_ETI(extern, std::complex<float>)
+DLAF_EIGENSOLVER_RED_TO_BAND_MC_ETI(extern, std::complex<double>)
 }
 }
 }

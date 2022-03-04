@@ -36,6 +36,7 @@
 #include "dlaf/sender/policy.h"
 #include "dlaf/sender/transform.h"
 #include "dlaf/types.h"
+#include "dlaf/util_lapack.h"
 #include "dlaf/util_tile.h"
 
 #ifdef DLAF_WITH_CUDA
@@ -63,7 +64,7 @@ void lacpy(const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b) {
   const SizeType m = a.size().rows();
   const SizeType n = a.size().cols();
 
-  lapack::lacpy(lapack::MatrixType::General, m, n, a.ptr(), a.ld(), b.ptr(), b.ld());
+  lapack::lacpy(blas::Uplo::General, m, n, a.ptr(), a.ld(), b.ptr(), b.ld());
 }
 
 /// Copies a 2D @param region from tile @param in starting at @param in_idx to tile @param out starting
@@ -79,7 +80,7 @@ void lacpy(TileElementSize region, TileElementIndex in_idx, const Tile<const T, 
   DLAF_ASSERT_MODERATE(out_idx.isIn(out.size() - region + TileElementSize(1, 1)),
                        "Region goes out of bounds for `out`!", region, out_idx, out);
 
-  lapack::lacpy(lapack::MatrixType::General, region.rows(), region.cols(), in.ptr(in_idx), in.ld(),
+  lapack::lacpy(blas::Uplo::General, region.rows(), region.cols(), in.ptr(in_idx), in.ld(),
                 out.ptr(out_idx), out.ld());
 }
 
@@ -142,7 +143,7 @@ dlaf::BaseType<T> lantr(const dlaf::internal::Policy<B>& p);
 ///
 /// This overload blocks until completion of the algorithm.
 template <Backend B, class T, Device D>
-void laset(const dlaf::internal::Policy<B>& p, const lapack::MatrixType type, T alpha, T beta,
+void laset(const dlaf::internal::Policy<B>& p, const blas::Uplo uplo, T alpha, T beta,
            const Tile<T, Device::CPU>& tile);
 
 /// \overload laset
@@ -367,20 +368,16 @@ dlaf::BaseType<T> lantr(const lapack::Norm norm, const blas::Uplo uplo, const bl
 }
 
 template <class T>
-void laset(const lapack::MatrixType type, T alpha, T beta, const Tile<T, Device::CPU>& tile) {
-  DLAF_ASSERT((type == lapack::MatrixType::General || type == lapack::MatrixType::Lower ||
-               type == lapack::MatrixType::Upper),
-              type);
-
+void laset(const blas::Uplo uplo, T alpha, T beta, const Tile<T, Device::CPU>& tile) {
   const SizeType m = tile.size().rows();
   const SizeType n = tile.size().cols();
 
-  lapack::laset(type, m, n, alpha, beta, tile.ptr(), tile.ld());
+  lapack::laset(uplo, m, n, alpha, beta, tile.ptr(), tile.ld());
 }
 
 template <class T>
 void set0(const Tile<T, Device::CPU>& tile) {
-  tile::internal::laset(lapack::MatrixType::General, static_cast<T>(0.0), static_cast<T>(0.0), tile);
+  tile::internal::laset(blas::Uplo::General, static_cast<T>(0.0), static_cast<T>(0.0), tile);
 }
 
 template <class T>
@@ -520,10 +517,10 @@ dlaf::BaseType<T> lantr(cusolverDnHandle_t handle, const lapack::Norm norm, cons
 }
 
 template <class T>
-void laset(cusolverDnHandle_t handle, const lapack::MatrixType type, T alpha, T beta,
-           const Tile<T, Device::GPU>& tile) {
+void laset(const blas::Uplo uplo, T alpha, T beta, const Tile<T, Device::GPU>& tile,
+           cudaStream_t stream) {
   DLAF_STATIC_UNIMPLEMENTED(T);
-  dlaf::internal::silenceUnusedWarningFor(handle, type, alpha, beta, tile);
+  dlaf::internal::silenceUnusedWarningFor(uplo, alpha, beta, tile, stream);
 }
 
 template <class T>

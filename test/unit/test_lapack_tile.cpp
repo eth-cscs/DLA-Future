@@ -25,9 +25,7 @@ using namespace testing;
 
 const std::vector<blas::Diag> blas_diags({blas::Diag::Unit, blas::Diag::NonUnit});
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
-const std::vector<lapack::MatrixType> lapack_matrices({lapack::MatrixType::General,
-                                                       lapack::MatrixType::Lower,
-                                                       lapack::MatrixType::Upper});
+const std::vector<blas::Uplo> blas_geuplos({blas::Uplo::General, blas::Uplo::Lower, blas::Uplo::Upper});
 const std::vector<lapack::Norm> lapack_norms({lapack::Norm::Fro, lapack::Norm::Inf, lapack::Norm::Max,
                                               lapack::Norm::One, lapack::Norm::Two});
 
@@ -232,7 +230,7 @@ std::vector<std::tuple<SizeType, SizeType, SizeType>> setsizes = {{0, 0, 0},   {
 
 TYPED_TEST(TileOperationsTestMC, Laset) {
   for (const auto& [m, n, extra_lda] : setsizes) {
-    for (const auto mtype : lapack_matrices) {
+    for (const auto mtype : blas_geuplos) {
       const SizeType lda = std::max<SizeType>(1, m) + extra_lda;
 
       const auto alpha = TypeUtilities<TypeParam>::element(-3.5, 8.72);
@@ -246,8 +244,8 @@ TYPED_TEST(TileOperationsTestMC, Laset) {
         const double j = idx.col();
         if (i == j)
           return beta;
-        else if (mtype == lapack::MatrixType::General || (mtype == lapack::MatrixType::Lower && i > j) ||
-                 (mtype == lapack::MatrixType::Upper && i < j))
+        else if (mtype == blas::Uplo::General || (mtype == blas::Uplo::Lower && i > j) ||
+                 (mtype == blas::Uplo::Upper && i < j))
           return alpha;
         return el(idx);
       };

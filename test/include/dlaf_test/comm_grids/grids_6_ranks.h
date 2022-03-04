@@ -70,6 +70,5 @@ struct TestWithCommGrids : public ::testing::Test {
     return comm_grids;
   }
 };
-
 }
 }

@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -13,8 +13,8 @@
 #include <stdexcept>
 
 #include <gtest/gtest.h>
-#include <hpx/local/future.hpp>
-#include <hpx/local/unwrap.hpp>
+#include <pika/future.hpp>
+#include <pika/unwrap.hpp>
 
 #include "dlaf/matrix/index.h"
 #include "dlaf/memory/memory_view.h"
@@ -269,25 +269,28 @@ TYPED_TEST(TileTest, PointerMix) {
 
 TYPED_TEST(TileTest, PromiseToFuture) {
   using Type = TypeParam;
+  using TileType = Tile<Type, Device::CPU>;
+  using TileDataType = typename TileType::TileDataType;
+
   memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
 
   TileElementSize size(m, n);
   auto mem_view = memory_view;  // Copy the memory view to check the elements later.
-  Tile<Type, Device::CPU> tile(size, std::move(mem_view), ld);
+  TileType tile(size, std::move(mem_view), ld);
 
-  hpx::lcos::local::promise<Tile<Type, Device::CPU>> tile_promise;
-  hpx::future<Tile<Type, Device::CPU>> tile_future = tile_promise.get_future();
+  pika::lcos::local::promise<TileDataType> tile_promise;
+  auto tile_future = tile_promise.get_future();
   tile.setPromise(std::move(tile_promise));
   EXPECT_EQ(false, tile_future.is_ready());
 
   {
-    Tile<Type, Device::CPU> tile1 = std::move(tile);
+    TileType tile1 = std::move(tile);
     EXPECT_EQ(false, tile_future.is_ready());
     EXPECT_EQ(TileSizes({0, 0}, 1), getSizes(tile));
   }
 
   ASSERT_EQ(true, tile_future.is_ready());
-  Tile<Type, Device::CPU> tile2 = std::move(tile_future.get());
+  TileType tile2{tile_future.get()};
   EXPECT_EQ(TileSizes(size, ld), getSizes(tile2));
 
   auto ptr = [&memory_view](const TileElementIndex& index) { return memory_view(elIndex(index, ld)); };
@@ -296,25 +299,29 @@ TYPED_TEST(TileTest, PromiseToFuture) {
 
 TYPED_TEST(TileTest, PromiseToFutureConst) {
   using Type = TypeParam;
+  using TileType = Tile<Type, Device::CPU>;
+  using ConstTileType = Tile<const Type, Device::CPU>;
+  using TileDataType = typename TileType::TileDataType;
+
   memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
 
   TileElementSize size(m, n);
   auto mem_view = memory_view;  // Copy the memory view to check the elements later.
-  Tile<Type, Device::CPU> tile(size, std::move(mem_view), ld);
+  TileType tile(size, std::move(mem_view), ld);
 
-  hpx::lcos::local::promise<Tile<Type, Device::CPU>> tile_promise;
-  hpx::future<Tile<Type, Device::CPU>> tile_future = tile_promise.get_future();
+  pika::lcos::local::promise<TileDataType> tile_promise;
+  auto tile_future = tile_promise.get_future();
   tile.setPromise(std::move(tile_promise));
   EXPECT_EQ(false, tile_future.is_ready());
 
   {
-    Tile<const Type, Device::CPU> const_tile = std::move(tile);
+    ConstTileType const_tile = std::move(tile);
     EXPECT_EQ(false, tile_future.is_ready());
     EXPECT_EQ(TileSizes({0, 0}, 1), getSizes(tile));
   }
 
   ASSERT_EQ(true, tile_future.is_ready());
-  Tile<Type, Device::CPU> tile2 = std::move(tile_future.get());
+  TileType tile2{tile_future.get()};
   EXPECT_EQ(TileSizes(size, ld), getSizes(tile2));
 
   auto ptr = [&memory_view](const TileElementIndex& index) { return memory_view(elIndex(index, ld)); };
@@ -345,28 +352,30 @@ template <class T, Device D>
 auto createTileAndPtrChecker(TileElementSize size, SizeType ld) {
   memory::MemoryView<T, D> memory_view(ld * size.cols());
   auto memory_view2 = memory_view;
-  Tile<T, D> tile(size, std::move(memory_view), ld);
+  typename Tile<T, D>::TileDataType tile(size, std::move(memory_view), ld);
   // construct a second tile referencing the same memory for testing pointers
   Tile<T, D> tile2(size, std::move(memory_view2), ld);
   auto tile_ptr = [tile2 = std::move(tile2)](const TileElementIndex& index) { return tile2.ptr(index); };
-  CHECK_TILE_PTR(tile_ptr, tile);
   return std::make_tuple(std::move(tile), std::move(tile_ptr));
 }
 
 template <class T, Device D>
 auto createTileChain() {
-  using T0 = std::remove_const_t<T>;
-  // set up tile chain
-  hpx::lcos::local::promise<Tile<T0, D>> tile_p;
-  hpx::future<Tile<T0, D>> tmp_tile_f = tile_p.get_future();
-  hpx::lcos::local::promise<Tile<T0, D>> next_tile_p;
-  hpx::future<Tile<T0, D>> next_tile_f = next_tile_p.get_future();
+  using TileType = Tile<T, Device::CPU>;
+  using NonConstTileType = typename TileType::TileType;
+  using TileDataType = typename TileType::TileDataType;
 
-  hpx::future<Tile<T, D>> tile_f =
-      tmp_tile_f.then(hpx::launch::sync,
-                      hpx::unwrapping([p = std::move(next_tile_p)](auto tile) mutable {
-                        tile.setPromise(std::move(p));
-                        return Tile<T, D>(std::move(tile));
+  // set up tile chain
+  pika::lcos::local::promise<TileDataType> tile_p;
+  auto tmp_tile_f = tile_p.get_future();
+  pika::lcos::local::promise<TileDataType> next_tile_p;
+  auto next_tile_f = next_tile_p.get_future();
+
+  pika::future<TileType> tile_f =
+      tmp_tile_f.then(pika::launch::sync,
+                      pika::unwrapping([p = std::move(next_tile_p)](auto tile) mutable {
+                        return TileType(
+                            std::move(NonConstTileType(std::move(tile)).setPromise(std::move(p))));
                       }));
 
   return std::make_tuple(std::move(tile_p), std::move(tile_f), std::move(next_tile_f));
@@ -388,7 +397,7 @@ void checkFullTile(F&& ptr, T&& tile, TileElementSize size) {
 }
 
 // TileFutureOrConstTileSharedFuture should be
-// either hpx::future<Tile<T, D>> or hpx::shared_future<Tile<const T, D>>
+// either pika::future<Tile<T, D>> or pika::shared_future<Tile<const T, D>>
 template <class TileFutureOrConstTileSharedFuture>
 void checkValidNonReady(const std::vector<TileFutureOrConstTileSharedFuture>& subtiles) {
   for (const auto& subtile : subtiles) {
@@ -398,8 +407,8 @@ void checkValidNonReady(const std::vector<TileFutureOrConstTileSharedFuture>& su
 }
 
 // TileFutureOrConstTileSharedFuture should be
-// either hpx::future<Tile<T, D>> or hpx::shared_future<Tile<const T, D>>
-// TileFuture should be hpx::future<Tile<T, D>>
+// either pika::future<Tile<T, D>> or pika::shared_future<Tile<const T, D>>
+// TileFuture should be pika::future<Tile<T, D>>
 template <class F, class TileFutureOrConstTileSharedFuture, class TileFuture>
 void checkReadyAndDependencyChain(F&& tile_ptr, std::vector<TileFutureOrConstTileSharedFuture>& subtiles,
                                   const std::vector<SubTileSpec>& specs, std::size_t last_dep,
@@ -440,14 +449,10 @@ void testSubtileConst(std::string name, TileElementSize size, SizeType ld, const
   SCOPED_TRACE(name);
   ASSERT_LE(last_dep, 1);
 
-  auto tmp = createTileAndPtrChecker<T, D>(size, ld);
-  auto tile = std::move(std::get<0>(tmp));
-  auto tile_ptr = std::move(std::get<1>(tmp));
+  auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
 
-  hpx::lcos::local::promise<Tile<T, D>> tile_p;
-  hpx::shared_future<Tile<const T, D>> tile_sf;
-  hpx::future<Tile<T, D>> next_tile_f;
-  std::tie(tile_p, tile_sf, next_tile_f) = createTileChain<const T, D>();
+  auto [tile_p, tile_f, next_tile_f] = createTileChain<const T, D>();
+  auto tile_sf = tile_f.share();
   ASSERT_TRUE(tile_sf.valid() && !tile_sf.is_ready());
   ASSERT_TRUE(next_tile_f.valid() && !next_tile_f.is_ready());
 
@@ -455,7 +460,7 @@ void testSubtileConst(std::string name, TileElementSize size, SizeType ld, const
   auto subtile = splitTile(tile_sf, spec);
 
   // append the full tile to the end of the subtile vector and add its specs to full_specs.
-  std::vector<hpx::shared_future<Tile<const T, D>>> subtiles = {std::move(subtile), std::move(tile_sf)};
+  std::vector<pika::shared_future<Tile<const T, D>>> subtiles = {std::move(subtile), std::move(tile_sf)};
   std::vector<SubTileSpec> full_specs = {spec, {{0, 0}, size}};
 
   checkValidNonReady(subtiles);
@@ -467,7 +472,7 @@ void testSubtileConst(std::string name, TileElementSize size, SizeType ld, const
   checkReadyAndDependencyChain(tile_ptr, subtiles, full_specs, last_dep, next_tile_f);
 
   // Check next tile in the dependency chain
-  checkFullTile(tile_ptr, next_tile_f.get(), size);
+  checkFullTile(tile_ptr, Tile<T, D>{next_tile_f.get()}, size);
 }
 
 template <class T, Device D>
@@ -480,10 +485,8 @@ void testSubtilesConst(std::string name, TileElementSize size, SizeType ld,
   auto tile = std::move(std::get<0>(tmp));
   auto tile_ptr = std::move(std::get<1>(tmp));
 
-  hpx::lcos::local::promise<Tile<T, D>> tile_p;
-  hpx::shared_future<Tile<const T, D>> tile_sf;
-  hpx::future<Tile<T, D>> next_tile_f;
-  std::tie(tile_p, tile_sf, next_tile_f) = createTileChain<const T, D>();
+  auto [tile_p, tile_f, next_tile_f] = createTileChain<const T, D>();
+  auto tile_sf = tile_f.share();
   ASSERT_TRUE(tile_sf.valid() && !tile_sf.is_ready());
   ASSERT_TRUE(next_tile_f.valid() && !next_tile_f.is_ready());
 
@@ -502,7 +505,7 @@ void testSubtilesConst(std::string name, TileElementSize size, SizeType ld,
   tile_p.set_value(std::move(tile));
 
   checkReadyAndDependencyChain(tile_ptr, subtiles, specs, last_dep, next_tile_f);
-  checkFullTile(tile_ptr, next_tile_f.get(), size);
+  checkFullTile(tile_ptr, Tile<T, D>{next_tile_f.get()}, size);
 }
 
 template <class T, Device D>
@@ -519,10 +522,8 @@ void testSubOfSubtileConst(std::string name, TileElementSize size, SizeType ld,
   auto tile = std::move(std::get<0>(tmp));
   auto tile_ptr = std::move(std::get<1>(tmp));
 
-  hpx::lcos::local::promise<Tile<T, D>> tile_p;
-  hpx::shared_future<Tile<const T, D>> tile_sf;
-  hpx::future<Tile<T, D>> next_tile_f;
-  std::tie(tile_p, tile_sf, next_tile_f) = createTileChain<const T, D>();
+  auto [tile_p, tile_f, next_tile_f] = createTileChain<const T, D>();
+  auto tile_sf = tile_f.share();
   ASSERT_TRUE(tile_sf.valid() && !tile_sf.is_ready());
   ASSERT_TRUE(next_tile_f.valid() && !next_tile_f.is_ready());
 
@@ -546,7 +547,7 @@ void testSubOfSubtileConst(std::string name, TileElementSize size, SizeType ld,
   tile_p.set_value(std::move(tile));
 
   checkReadyAndDependencyChain(tile_ptr, subtiles, specs, last_dep, next_tile_f);
-  checkFullTile(tile_ptr, next_tile_f.get(), size);
+  checkFullTile(tile_ptr, Tile<T, D>{next_tile_f.get()}, size);
 }
 
 TYPED_TEST(TileTest, SubtileConst) {
@@ -587,10 +588,7 @@ void testSubtile(std::string name, TileElementSize size, SizeType ld, const SubT
   auto tile = std::move(std::get<0>(tmp));
   auto tile_ptr = std::move(std::get<1>(tmp));
 
-  hpx::lcos::local::promise<Tile<T, D>> tile_p;
-  hpx::future<Tile<T, D>> tile_f;
-  hpx::future<Tile<T, D>> next_tile_f;
-  std::tie(tile_p, tile_f, next_tile_f) = createTileChain<T, D>();
+  auto [tile_p, tile_f, next_tile_f] = createTileChain<T, D>();
   ASSERT_TRUE(tile_f.valid() && !tile_f.is_ready());
   ASSERT_TRUE(next_tile_f.valid() && !next_tile_f.is_ready());
 
@@ -600,7 +598,7 @@ void testSubtile(std::string name, TileElementSize size, SizeType ld, const SubT
   ASSERT_FALSE(tile_f.is_ready());
 
   // append the full tile to the end of the subtile vector and add its specs to full_specs.
-  std::vector<hpx::future<Tile<T, D>>> subtiles;
+  std::vector<pika::future<Tile<T, D>>> subtiles;
   subtiles.emplace_back(std::move(subtile));
   std::vector<SubTileSpec> full_specs = {spec};
 
@@ -620,7 +618,7 @@ void testSubtile(std::string name, TileElementSize size, SizeType ld, const SubT
   checkFullTile(tile_ptr, tile_f.get(), size);
 
   ASSERT_TRUE(next_tile_f.is_ready());
-  checkFullTile(tile_ptr, next_tile_f.get(), size);
+  checkFullTile(tile_ptr, Tile<T, D>{next_tile_f.get()}, size);
 }
 
 template <class T, Device D>
@@ -635,10 +633,7 @@ void testSubtilesDisjoint(std::string name, TileElementSize size, SizeType ld,
   auto tile = std::move(std::get<0>(tmp));
   auto tile_ptr = std::move(std::get<1>(tmp));
 
-  hpx::lcos::local::promise<Tile<T, D>> tile_p;
-  hpx::future<Tile<T, D>> tile_f;
-  hpx::future<Tile<T, D>> next_tile_f;
-  std::tie(tile_p, tile_f, next_tile_f) = createTileChain<T, D>();
+  auto [tile_p, tile_f, next_tile_f] = createTileChain<T, D>();
   ASSERT_TRUE(tile_f.valid() && !tile_f.is_ready());
   ASSERT_TRUE(next_tile_f.valid() && !next_tile_f.is_ready());
 
@@ -665,7 +660,7 @@ void testSubtilesDisjoint(std::string name, TileElementSize size, SizeType ld,
   checkFullTile(tile_ptr, tile_f.get(), size);
 
   ASSERT_TRUE(next_tile_f.is_ready());
-  checkFullTile(tile_ptr, next_tile_f.get(), size);
+  checkFullTile(tile_ptr, Tile<T, D>{next_tile_f.get()}, size);
 }
 
 template <class T, Device D>
@@ -679,10 +674,7 @@ void testSubOfSubtile(std::string name, TileElementSize size, SizeType ld,
   auto tile = std::move(std::get<0>(tmp));
   auto tile_ptr = std::move(std::get<1>(tmp));
 
-  hpx::lcos::local::promise<Tile<T, D>> tile_p;
-  hpx::future<Tile<T, D>> tile_f;
-  hpx::future<Tile<T, D>> next_tile_f;
-  std::tie(tile_p, tile_f, next_tile_f) = createTileChain<T, D>();
+  auto [tile_p, tile_f, next_tile_f] = createTileChain<T, D>();
   ASSERT_TRUE(tile_f.valid() && !tile_f.is_ready());
   ASSERT_TRUE(next_tile_f.valid() && !next_tile_f.is_ready());
 
@@ -733,7 +725,7 @@ void testSubOfSubtile(std::string name, TileElementSize size, SizeType ld,
   checkFullTile(tile_ptr, tile_f.get(), size);
 
   ASSERT_TRUE(next_tile_f.is_ready());
-  checkFullTile(tile_ptr, next_tile_f.get(), size);
+  checkFullTile(tile_ptr, Tile<T, D>{next_tile_f.get()}, size);
 }
 
 TYPED_TEST(TileTest, Subtile) {

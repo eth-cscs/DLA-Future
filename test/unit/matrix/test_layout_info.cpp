@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -162,16 +162,8 @@ const std::vector<
     });
 
 TEST(LayoutInfoTest, TileLayout) {
-  for (const auto& v : tile_values) {
-    auto size = std::get<0>(v);
-    auto block_size = std::get<1>(v);
-    auto ld = std::get<2>(v);
-    auto tiles_per_col = std::get<3>(v);
-    auto row_offset = std::get<4>(v);
-    auto col_offset = std::get<5>(v);
-    auto min_memory = std::get<6>(v);
-    auto is_basic = std::get<7>(v);
-
+  for (const auto& [size, block_size, ld, tiles_per_col, row_offset, col_offset, min_memory, is_basic] :
+       tile_values) {
     matrix::LayoutInfo exp_layout(size, block_size, ld, row_offset, col_offset);
     if (is_basic) {
       matrix::LayoutInfo layout_basic = tileLayout(size, block_size);

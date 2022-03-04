@@ -1,7 +1,7 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2021, ETH Zurich
+# Copyright (c) 2018-2022, ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
@@ -11,6 +11,6 @@
 DLAF_addTest(test_triangular
   SOURCES test_triangular.cpp
   LIBRARIES dlaf.solver dlaf.core
-  USE_MAIN MPIHPX
+  USE_MAIN MPIPIKA
   MPIRANKS 6
 )

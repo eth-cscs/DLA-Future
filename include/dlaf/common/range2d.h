@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -188,6 +188,25 @@ public:
   }
   iter2d_t end() const noexcept {
     return iter2d_t(begin_idx_, ld_, i_max_);
+  }
+
+  bool empty() const noexcept {
+    return begin() == end();
+  }
+
+  /// Given an index and a range, check if index is in the range
+  ///
+  /// The range is rectangular, with top-left corner set to the beginning of the range, and the bottom
+  /// right corner in the before-last iterator (i.e. std::prev(end)).
+  friend bool isIndexInRange(const index2d_t& index, const IterableRange2D& range) noexcept {
+    if (range.empty())
+      return false;
+
+    const auto tl = *range.begin();
+    const auto br = *std::prev(range.end());
+
+    return tl.row() <= index.row() && index.row() <= br.row() && tl.col() <= index.col() &&
+           index.col() <= br.col();
   }
 
 private:

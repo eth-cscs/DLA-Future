@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -19,8 +19,8 @@ constexpr double M_PI = 3.141592;
 #endif
 
 #include <blas.hh>
-#include <hpx/local/future.hpp>
-#include <hpx/local/unwrap.hpp>
+#include <pika/future.hpp>
+#include <pika/unwrap.hpp>
 
 #include "dlaf/common/assert.h"
 #include "dlaf/common/index2d.h"
@@ -43,7 +43,7 @@ bool square_size(const Tile<T, D>& t) noexcept {
 template <class T>
 bool tile_complex_trans(blas::Op op) noexcept {
   bool complextrans = false;
-  if (!std::is_same<T, ComplexType<T>>::value || op != blas::Op::Trans)
+  if (!std::is_same_v<T, ComplexType<T>> || op != blas::Op::Trans)
     complextrans = true;
 
   return complextrans;

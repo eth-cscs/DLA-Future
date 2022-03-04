@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -48,6 +48,13 @@ inline void do_assert(bool expr, const common::internal::source_location& loc, c
   }
 }
 
+/// Helper function for silencing unused parameter warning.
+///
+/// This allows to not add std::maybe_unused to each argument of an UNIMPLEMENTED function,
+/// but still keeping the name of arguments, so that in the future the signature will be
+/// ready for implementation.
+template <class... Args>
+void silenceUnusedWarningFor(Args&&...) {}
 }
 }
 
@@ -115,3 +122,20 @@ inline void do_assert(bool expr, const common::internal::source_location& loc, c
 #endif
 
 #define DLAF_UNIMPLEMENTED(...) DLAF_ASSERT(false, "Not yet implemented!", __VA_ARGS__)
+
+#define DLAF_STATIC_UNIMPLEMENTED(DummyType) \
+  static_assert(sizeof(DummyType) == 0, "Not yet implemented!")
+
+/// Returns a fake object of type T (specified by __VA_ARGS__) dereferencing a null pointer.
+///
+/// At runtime the program is exited with an error before dereferencing the null pointer.
+/// This macro is useful when a return statement is needed in unreachable branches,
+/// especially when T doesn't have a default constructor. (T has to be moveable.)
+/// E.g. it can be used after a switch in which all the cases return
+///      and all the possible options are covered.
+/// Note: multiple arguments are allowed as templated types might include commas.
+///       However only a type should be specified.
+#define DLAF_UNREACHABLE(...) \
+  DLAF_ASSERT(false, "Unreachable branch hit!"), std::move(*std::unique_ptr<__VA_ARGS__>())
+
+#define DLAF_UNREACHABLE_PLAIN DLAF_ASSERT(false, "Unreachable branch hit!")

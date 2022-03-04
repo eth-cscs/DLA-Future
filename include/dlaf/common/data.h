@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -29,14 +29,17 @@ struct is_data : std::false_type {};
 
 template <class Data>
 struct is_data<
-    Data, std::enable_if_t<
-              std::is_pointer<decltype(data_pointer(std::declval<const Data&>()))>::value &&
-              std::is_same<decltype(data_nblocks(std::declval<const Data&>())), SizeType>::value &&
-              std::is_same<decltype(data_blocksize(std::declval<const Data&>())), SizeType>::value &&
-              std::is_same<decltype(data_stride(std::declval<const Data&>())), SizeType>::value &&
-              std::is_same<decltype(data_count(std::declval<const Data&>())), SizeType>::value &&
-              std::is_same<decltype(data_iscontiguous(std::declval<const Data&>())), bool>::value>>
+    Data,
+    std::enable_if_t<std::is_pointer_v<decltype(data_pointer(std::declval<const Data&>()))> &&
+                     std::is_same_v<decltype(data_nblocks(std::declval<const Data&>())), SizeType> &&
+                     std::is_same_v<decltype(data_blocksize(std::declval<const Data&>())), SizeType> &&
+                     std::is_same_v<decltype(data_stride(std::declval<const Data&>())), SizeType> &&
+                     std::is_same_v<decltype(data_count(std::declval<const Data&>())), SizeType> &&
+                     std::is_same_v<decltype(data_iscontiguous(std::declval<const Data&>())), bool>>>
     : std::true_type {};
+
+template <class T>
+inline constexpr bool is_data_v = is_data<T>::value;
 
 /// Traits for accessing properties of the given Data concept.
 ///
@@ -62,7 +65,7 @@ auto create_data(T* data, Ts&&... args) noexcept {
 /// This is an helper function that given a Data, returns exactly it as it is
 /// It allows to use the make_data function for dealing both with common::DataDescriptor
 /// and anything that can be converted to a Data, without code duplication in user code.
-template <class Data, std::enable_if_t<is_data<Data>::value, int> = 0>
+template <class Data, std::enable_if_t<is_data_v<Data>, int> = 0>
 auto make_data(Data&& data) noexcept {
   return std::forward<Data>(data);
 }
@@ -123,7 +126,7 @@ auto data_iscontiguous(const Data& data) noexcept -> decltype(data.is_contiguous
 /// Use this function to copy values from one Data to another.
 template <class DataIn, class DataOut>
 void copy(const DataIn& src, const DataOut& dest) {
-  static_assert(not std::is_const<typename data_traits<DataOut>::element_t>::value,
+  static_assert(not std::is_const_v<typename data_traits<DataOut>::element_t>,
                 "Cannot copy to a const Data");
 
   if (data_iscontiguous(dest) && data_iscontiguous(src)) {

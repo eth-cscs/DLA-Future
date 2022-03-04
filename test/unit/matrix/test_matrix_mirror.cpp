@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -31,12 +31,7 @@ using namespace testing;
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
 template <typename Type>
-class MatrixMirrorTest : public ::testing::Test {
-public:
-  const std::vector<CommunicatorGrid>& commGrids() {
-    return comm_grids;
-  }
-};
+struct MatrixMirrorTest : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(MatrixMirrorTest, MatrixElementTypes);
 
@@ -98,14 +93,14 @@ void copyTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
   set(mat_source_cpu, el);
 
   Matrix<T, Source> mat(size, test.block_size, comm_grid);
-  copy(mat_source_cpu, mat);
+  matrix::copy(mat_source_cpu, mat);
 
   {
     MatrixMirror<T, Target, Source> mat_mirror(mat);
 
     copy(mat, mat_source_cpu);
     CHECK_MATRIX_EQ(el, mat_source_cpu);
-    copy(mat_mirror.get(), mat_target_cpu);
+    matrix::copy(mat_mirror.get(), mat_target_cpu);
     CHECK_MATRIX_EQ(el, mat_target_cpu);
 
     offset = 1.0;

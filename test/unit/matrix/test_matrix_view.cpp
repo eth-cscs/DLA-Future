@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -35,12 +35,7 @@ class MatrixLocalViewTest : public ::testing::Test {};
 TYPED_TEST_SUITE(MatrixLocalViewTest, MatrixElementTypes);
 
 template <typename Type>
-class MatrixViewTest : public ::testing::Test {
-public:
-  const std::vector<CommunicatorGrid>& commGrids() {
-    return comm_grids;
-  }
-};
+struct MatrixViewTest : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(MatrixViewTest, MatrixElementTypes);
 
@@ -71,10 +66,10 @@ GlobalElementSize globalTestSize(const LocalElementSize& size, const Size2D& gri
 //
 //  using matrix_t = Matrix<TypeParam, device>;
 //
-//  static_assert(std::is_same<TypeParam, typename matrix_t::ElementType>::value, "wrong ElementType");
-//  static_assert(std::is_same<Tile<TypeParam, device>, typename matrix_t::TileType>::value,
+//  static_assert(std::is_same_v<TypeParam, typename matrix_t::ElementType>, "wrong ElementType");
+//  static_assert(std::is_same_v<Tile<TypeParam, device>, typename matrix_t::TileType>,
 //                "wrong TileType");
-//  static_assert(std::is_same<Tile<const TypeParam, device>, typename matrix_t::ConstTileType>::value,
+//  static_assert(std::is_same_v<Tile<const TypeParam, device>, typename matrix_t::ConstTileType>,
 //                "wrong ConstTileType");
 //}
 
@@ -83,12 +78,12 @@ TYPED_TEST(MatrixLocalViewTest, StaticAPIConst) {
 
   using const_matrix_view_t = MatrixView<const TypeParam, device>;
 
-  static_assert(std::is_same<TypeParam, typename const_matrix_view_t::ElementType>::value,
+  static_assert(std::is_same_v<TypeParam, typename const_matrix_view_t::ElementType>,
                 "wrong ElementType");
-  static_assert(std::is_same<Tile<TypeParam, device>, typename const_matrix_view_t::TileType>::value,
+  static_assert(std::is_same_v<Tile<TypeParam, device>, typename const_matrix_view_t::TileType>,
                 "wrong TileType");
-  static_assert(std::is_same<Tile<const TypeParam, device>,
-                             typename const_matrix_view_t::ConstTileType>::value,
+  static_assert(std::is_same_v<Tile<const TypeParam, device>,
+                               typename const_matrix_view_t::ConstTileType>,
                 "wrong ConstTileType");
 }
 

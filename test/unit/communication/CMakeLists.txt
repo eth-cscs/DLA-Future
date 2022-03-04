@@ -1,7 +1,7 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2021, ETH Zurich
+# Copyright (c) 2018-2022, ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
@@ -61,33 +61,33 @@ DLAF_addTest(test_broadcast_matrix
   SOURCES test_broadcast_matrix.cpp
   LIBRARIES dlaf.core
   MPIRANKS 4
-  USE_MAIN MPIHPX
+  USE_MAIN MPIPIKA
 )
 
 DLAF_addTest(test_broadcast_panel
   SOURCES test_broadcast_panel.cpp
   LIBRARIES dlaf.core
   MPIRANKS 6
-  USE_MAIN MPIHPX
+  USE_MAIN MPIPIKA
 )
 
 DLAF_addTest(test_comm_executor
   SOURCES test_comm_executor.cpp
   LIBRARIES dlaf.core
   MPIRANKS 4
-  USE_MAIN MPIHPX
+  USE_MAIN MPIPIKA
 )
 
 DLAF_addTest(test_comm_matrix
   SOURCES test_comm_matrix.cpp
   LIBRARIES dlaf.core
   MPIRANKS 2
-  USE_MAIN MPIHPX
+  USE_MAIN MPIPIKA
 )
 
 DLAF_addTest(test_collective_async
   SOURCES test_collective_async.cpp
   LIBRARIES dlaf.core
   MPIRANKS 2
-  USE_MAIN MPIHPX
+  USE_MAIN MPIPIKA
 )

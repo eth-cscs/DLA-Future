@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -41,19 +41,13 @@ void testTrsm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, c
 
   const T alpha = TypeUtilities<T>::element(-1.2, .7);
 
-  std::function<T(const TileElementIndex&)> el_op_a, el_b, res_b;
-
-  if (side == blas::Side::Left)
-    std::tie(el_op_a, el_b, res_b) =
-        getLeftTriangularSystem<TileElementIndex, T>(uplo, op, diag, alpha, m);
-  else
-    std::tie(el_op_a, el_b, res_b) =
-        getRightTriangularSystem<TileElementIndex, T>(uplo, op, diag, alpha, n);
+  auto [el_op_a, el_b, res_b] =
+      getTriangularSystem<TileElementIndex, T>(side, uplo, op, diag, alpha, m, n);
 
   auto a = createTile<CT, D>(el_op_a, size_a, lda, op);
   auto b = createTile<T, D>(el_b, size_b, ldb);
 
-  invokeBlas<D>(tile::trsm_o, side, uplo, op, diag, alpha, a, b);
+  invokeBlas<D>(tile::internal::trsm_o, side, uplo, op, diag, alpha, a, b);
 
   std::stringstream s;
   s << "TRSM: " << side << ", " << uplo << ", " << op << ", " << diag << ", m = " << m << ", n = " << n

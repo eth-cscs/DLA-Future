@@ -1,14 +1,16 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <hpx/local/future.hpp>
+#include <pika/future.hpp>
+#include <pika/unwrap.hpp>
+
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -31,9 +33,9 @@ void test_exec() {
   int recv_rank = (rank != 0) ? rank - 1 : nprocs - 1;
   int tag = 0;
 
-  auto send_fut = hpx::async(ex, MPI_Isend, send_buf.data(), size, dtype, send_rank, tag, comm);
-  auto recv_fut = hpx::async(ex, MPI_Irecv, recv_buf.data(), size, dtype, recv_rank, tag, comm);
-  hpx::wait_all(send_fut, recv_fut);
+  auto send_fut = pika::async(ex, MPI_Isend, send_buf.data(), size, dtype, send_rank, tag, comm);
+  auto recv_fut = pika::async(ex, MPI_Irecv, recv_buf.data(), size, dtype, recv_rank, tag, comm);
+  pika::wait_all(send_fut, recv_fut);
 
   std::vector<double> expected_recv_buf(static_cast<std::size_t>(size), recv_rank);
 
@@ -59,8 +61,8 @@ TEST(Bcast, Dataflow) {
   std::vector<double> buf(static_cast<std::size_t>(size), val);
 
   // Tests the handling of futures in a dataflow
-  hpx::dataflow(ex, hpx::unwrapping(MPI_Ibcast), buf.data(), hpx::make_ready_future<int>(size), dtype,
-                root_rank, comm, hpx::make_ready_future<void>())
+  pika::dataflow(ex, pika::unwrapping(MPI_Ibcast), buf.data(), pika::make_ready_future<int>(size), dtype,
+                 root_rank, comm, pika::make_ready_future<void>())
       .get();
 
   std::vector<double> expected_buf(static_cast<std::size_t>(size), 4.2);

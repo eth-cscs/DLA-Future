@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -49,7 +49,7 @@ namespace internal {
 template <typename IndexT>
 class basic_coords {
 public:
-  static_assert(std::is_integral<IndexT>::value && std::is_signed<IndexT>::value,
+  static_assert(std::is_integral_v<IndexT> && std::is_signed_v<IndexT>,
                 "basic_coords just works with signed integers types");
 
   using IndexType = IndexT;
@@ -109,7 +109,7 @@ public:
 
   /// Adds "(<row_>, <col_>)" to out.
   friend std::ostream& operator<<(std::ostream& out, const basic_coords& index) {
-    if (std::is_same<IndexT, signed char>::value || std::is_same<IndexT, char>::value)
+    if (std::is_same_v<IndexT, signed char> || std::is_same_v<IndexT, char>)
       return out << "(" << static_cast<int>(index.row_) << ", " << static_cast<int>(index.col_) << ")";
     return out << "(" << index.row_ << ", " << index.col_ << ")";
   }
@@ -242,31 +242,27 @@ namespace internal {
 // Traits
 /// This traits has a true value if T is an Index2D or a Size2D (with any index type and any tag)
 template <class T>
-struct is_coord {
-  constexpr static bool value = false;
-};
+struct is_coord : std::false_type {};
 
 template <class T, class Tag>
-struct is_coord<Index2D<T, Tag>> {
-  constexpr static bool value = true;
-};
+struct is_coord<Index2D<T, Tag>> : std::true_type {};
 
 template <class T, class Tag>
-struct is_coord<Size2D<T, Tag>> {
-  constexpr static bool value = true;
-};
+struct is_coord<Size2D<T, Tag>> : std::true_type {};
 
+template <class T>
+inline constexpr bool is_coord_v = is_coord<T>::value;
 }
 
 /// Basic print utility for coordinate types
-template <class Coords2DType, std::enable_if_t<internal::is_coord<Coords2DType>::value, int> = 0>
+template <class Coords2DType, std::enable_if_t<internal::is_coord_v<Coords2DType>, int> = 0>
 std::ostream& operator<<(std::ostream& out, const Coords2DType& index) {
   using IndexT = typename Coords2DType::IndexType;
   return out << static_cast<internal::basic_coords<IndexT>>(index);
 }
 
 /// Given a coordinate type, it returns its transpose
-template <class Coords2DType, std::enable_if_t<internal::is_coord<Coords2DType>::value, int> = 0>
+template <class Coords2DType, std::enable_if_t<internal::is_coord_v<Coords2DType>, int> = 0>
 Coords2DType transposed(Coords2DType coords) {
   coords.transpose();
   return coords;
@@ -359,7 +355,7 @@ LinearIndexT computeLinearIndexRowMajor(const Index2D<IndexT, Tag>& index,
   using dlaf::util::ptrdiff_t::mul;
   using dlaf::util::ptrdiff_t::sum;
 
-  static_assert(std::is_integral<LinearIndexT>::value, "LinearIndexT must be an integral type");
+  static_assert(std::is_integral_v<LinearIndexT>, "LinearIndexT must be an integral type");
 
   DLAF_ASSERT_MODERATE(index.isIn(dims), index, dims);
 
@@ -381,7 +377,7 @@ LinearIndexT computeLinearIndexColMajor(const Index2D<IndexT, Tag>& index,
   using dlaf::util::ptrdiff_t::mul;
   using dlaf::util::ptrdiff_t::sum;
 
-  static_assert(std::is_integral<LinearIndexT>::value, "LinearIndexT must be an integral type");
+  static_assert(std::is_integral_v<LinearIndexT>, "LinearIndexT must be an integral type");
 
   DLAF_ASSERT_MODERATE(index.isIn(dims), index, dims);
 

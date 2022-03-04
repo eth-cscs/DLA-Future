@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -165,12 +165,7 @@ TYPED_TEST(MatrixLocalTest, OutputNumpyFormat) {
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
 template <typename Type>
-class MatrixLocalWithCommTest : public ::testing::Test {
-public:
-  const std::vector<CommunicatorGrid>& commGrids() {
-    return comm_grids;
-  }
-};
+struct MatrixLocalWithCommTest : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(MatrixLocalWithCommTest, MatrixElementTypes);
 
@@ -179,24 +174,16 @@ GlobalElementSize globalTestSize(const GlobalElementSize& size, const Size2D& gr
 }
 
 TYPED_TEST(MatrixLocalWithCommTest, AllGather) {
-  using lapack::MatrixType;
-
   constexpr auto error = TypeUtilities<TypeParam>::error;
 
-  const auto isTileToSkip = [](MatrixType mat_type, GlobalTileIndex index) {
-    switch (mat_type) {
-      case MatrixType::General:
+  const auto isTileToSkip = [](blas::Uplo uplo, GlobalTileIndex index) {
+    switch (uplo) {
+      case blas::Uplo::General:
         return true;
-      case MatrixType::Lower:
+      case blas::Uplo::Lower:
         return index.row() < index.col();
-      case MatrixType::Upper:
+      case blas::Uplo::Upper:
         return index.row() > index.col();
-      case MatrixType::Band:
-      case MatrixType::Hessenberg:
-      case MatrixType::LowerBand:
-      case MatrixType::UpperBand:
-        DLAF_UNIMPLEMENTED(lapack::matrixtype2str(mat_type));
-        return false;
     }
     return false;  // unreachable
   };
@@ -211,8 +198,7 @@ TYPED_TEST(MatrixLocalWithCommTest, AllGather) {
 
       Matrix<TypeParam, Device::CPU> source(std::move(distribution));
 
-      using lapack::MatrixType;
-      for (auto gather_type : {MatrixType::General, MatrixType::Lower, MatrixType::Upper}) {
+      for (auto gather_type : {blas::Uplo::General, blas::Uplo::Lower, blas::Uplo::Upper}) {
         set(source, value_preset<TypeParam>);
 
         auto dest = allGather<const TypeParam>(gather_type, source, comm_grid);

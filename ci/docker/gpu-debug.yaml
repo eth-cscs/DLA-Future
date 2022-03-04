@@ -1,0 +1,22 @@
+spack:
+  specs:
+    - dla-future@develop build_type=Debug +cuda +miniapps +ci-test ^openblas ^mpich
+  view: false
+  concretization: together
+
+  packages:
+    all:
+      target: [x86_64]
+      variants:
+        - 'build_type=Release'
+        - 'cxxstd=17'
+    blaspp:
+      variants:
+        - '~cuda'
+        - '~openmp'
+    pika:
+      variants:
+        - 'build_type=Debug'
+    mpich:
+      variants:
+        - '~fortran'

@@ -17,7 +17,7 @@ Otherwise you can download the archive of the latest `master` branch as a [zip](
 ### Dependencies
 
 - MPI
-- [HPX](https://github.com/STEllAR-GROUP/hpx)
+- [pika](https://github.com/pika-org/pika)
 - [blaspp](https://bitbucket.org/icl/blaspp/src/default/)
 - [lapackpp](https://bitbucket.org/icl/lapackpp/src/default/)
 - Intel MKL or other LAPACK implementation
@@ -37,27 +37,22 @@ Example installation:
 
 `spack install dla-future ^intel-mkl`
 
-Or you can go even further with a more detailed spec like this one, which builds dla-future in debug mode, using the clang compiler, specifying that the HPX on which it depends has to be built
-in debug mode too, with APEX instrumentation enabled, and that we want to use MPICH as MPI implementation, without fortran support (because clang does not support it).
+Or you can go even further with a more detailed spec like this one, which builds dla-future in debug mode, using the clang compiler, specifying that the pika on which it depends has to be built
+in debug mode too, and that we want to use MPICH as MPI implementation, without fortran support (because clang does not support it).
 
-`spack install dla-future %clang build_type=Debug ^hpx build_type=Debug instrumentation=apex ^mpich ~fortran`
-
-Notice that, for the package to work correctly, the HPX option `max_cpu_count` must be set accordingly to the architecture, as it represents the size of the bitmask to interface with hardware threads.
-
-`spack install dla-future ^intel-mkl ^hpx max_cpu_count=256`
+`spack install dla-future %clang build_type=Debug ^pika build_type=Debug ^mpich ~fortran`
 
 #### Build the old good way
 
 You can build all the dependencies by yourself, but you have to ensure that:
 - BLAS/LAPACK implementation is not multithreaded
-- HPX: `HPX_WITH_NETWORKING=none` + `HPX_WITH_MAX_CPU_COUNT=n` (according to number of cores in the architecture, suggested the next closest power of 2)
-- HPX and DLAF must have a compatible `CMAKE_BUILD_TYPE`: they must be built both in Debug, or with any combination of release types (Release, RelWithDebInfo or MinSizeRel)
+- pika: `PIKA_WITH_CUDA=ON` (if building for CUDA) + `PIKA_WITH_MPI`
 
 And here the main CMake options for DLAF build customization:
 
 CMake option | Values | Note
 :---|:---|:---
-`HPX_DIR` | CMAKE:PATH | Location of the HPX CMake-config file
+`pika_DIR` | CMAKE:PATH | Location of the pika CMake-config file
 `blaspp_DIR` | CMAKE:PATH | Location of the blaspp CMake-config file
 `lapackpp_DIR` | CMAKE:PATH | Location of the lapackpp CMake-config file
 `DLAF_WITH_MKL` | `{ON,OFF}` (default: `OFF`) | if blaspp/lapackpp is built with MKL
@@ -71,7 +66,7 @@ CMake option | Values | Note
 `DLAF_INSTALL_TESTS` | `{ON,OFF}` (default: `OFF`) | enable/disable installing tests
 `DLAF_MPI_PRESET` | `{plain-mpi, slurm, custom}` (default `plain-mpi`) | presets for MPI configuration for tests. See [CMake Doc](https://cmake.org/cmake/help/latest/module/FindMPI.html?highlight=mpiexec_executable#usage-of-mpiexec) for additional information
 `DLAF_TEST_RUNALL_WITH_MPIEXEC` | `{ON, OFF}` (default: `OFF`) | Use mpi runner also for non-MPI based tests
-`DLAF_HPXTEST_EXTRA_ARGS` | CMAKE:STRING | Additional HPX command-line options for tests
+`DLAF_PIKATEST_EXTRA_ARGS` | CMAKE:STRING | Additional pika command-line options for tests
 `DLAF_BUILD_DOC` | `{ON,OFF}` (default: `OFF`) | enable/disable documentation generation
 
 ### Link your program/library with DLAF

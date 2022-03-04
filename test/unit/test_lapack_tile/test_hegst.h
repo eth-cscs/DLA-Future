@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -35,15 +35,13 @@ void testHegst(const int itype, const blas::Uplo uplo, const SizeType m, const S
   const SizeType lda = std::max<SizeType>(1, size.rows()) + extra_lda;
   const SizeType ldb = std::max<SizeType>(1, size.rows()) + extra_ldb;
 
-  std::function<T(const TileElementIndex&)> el_t, el_a, res_a;
-
-  std::tie(el_t, el_a, res_a) =
+  auto [el_t, el_a, res_a] =
       getGenToStdElementSetters<TileElementIndex, T>(m, itype, uplo, 1.2f, 1.5f, 1.1f);
 
   auto a = createTile<T, D>(el_a, size, lda);
   auto t = createTile<T, D>(el_t, size, ldb);
 
-  invokeLapack<D>(tile::hegst_o, itype, uplo, a, t);
+  invokeLapack<D>(tile::internal::hegst_o, itype, uplo, a, t);
 
   std::stringstream s;
   s << "HEGST: itype = " << itype << ", uplo = " << uplo;

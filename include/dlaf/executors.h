@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2020-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -9,12 +9,12 @@
 //
 #pragma once
 
-#include <hpx/include/resource_partitioner.hpp>
-#include <hpx/local/execution.hpp>
-#include <hpx/local/thread.hpp>
+#include <pika/execution.hpp>
+#include <pika/modules/resource_partitioner.hpp>
+#include <pika/thread.hpp>
 
 #ifdef DLAF_WITH_CUDA
-#include <hpx/modules/async_cuda.hpp>
+#include <pika/modules/async_cuda.hpp>
 #endif
 
 #include <dlaf/communication/executor.h>
@@ -31,8 +31,8 @@ namespace internal {
 template <Device S, Device D>
 struct GetCopyExecutor {
   static auto call() {
-    return hpx::execution::parallel_executor{&hpx::resource::get_thread_pool("default"),
-                                             hpx::threads::thread_priority::normal};
+    return pika::execution::parallel_executor{&pika::resource::get_thread_pool("default"),
+                                              pika::threads::thread_priority::normal};
   }
 };
 
@@ -74,8 +74,8 @@ auto getMPIExecutor() {
 /// @tparam B backend with which the executor should be used.
 template <Backend B>
 auto getNpExecutor() {
-  return hpx::execution::parallel_executor{&hpx::resource::get_thread_pool("default"),
-                                           hpx::threads::thread_priority::normal};
+  return pika::execution::parallel_executor{&pika::resource::get_thread_pool("default"),
+                                            pika::threads::thread_priority::normal};
 }
 
 #ifdef DLAF_WITH_CUDA
@@ -92,8 +92,8 @@ inline auto getNpExecutor<Backend::GPU>() {
 /// @tparam B backend with which the executor should be used.
 template <Backend B>
 auto getHpExecutor() {
-  return hpx::execution::parallel_executor{&hpx::resource::get_thread_pool("default"),
-                                           hpx::threads::thread_priority::high};
+  return pika::execution::parallel_executor{&pika::resource::get_thread_pool("default"),
+                                            pika::threads::thread_priority::high};
 }
 
 #ifdef DLAF_WITH_CUDA

@@ -2,7 +2,7 @@
 
 - MPI
 - OpenMP
-- HPX
+- pika
 - BLAS/LAPACK
 - BLASPP & LAPACKPP
 
@@ -10,12 +10,12 @@
 
 ## OpenMP
 
-## HPX
+## pika
 
-HPX provides a CMake config script in `$HPX_ROOT/lib/cmake/HPX`. To make it available, the variable
-`HPX_DIR` has to be set to this path.
+pika provides a CMake config script in `$pika_ROOT/lib/cmake/pika`. To make it available, the variable
+`pika_DIR` has to be set to this path. Depending on the platform, the files may also be in `lib64` instead of `lib`.
 
-e.g. `cmake -DHPX_DIR=${HPX_ROOT}/lib/cmake/HPX ..`
+e.g. `cmake -Dpika_DIR=${PIKA_ROOT}/lib/cmake/pika ..`
 
 ## BLAS/LAPACK
 

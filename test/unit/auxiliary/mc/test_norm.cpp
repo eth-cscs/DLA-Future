@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -13,7 +13,7 @@
 #include <limits>
 
 #include <gtest/gtest.h>
-#include <hpx/local/unwrap.hpp>
+#include <pika/unwrap.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/lapack/enum_output.h"
@@ -38,12 +38,7 @@ using NormT = dlaf::BaseType<T>;
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
 template <typename Type>
-class NormDistributedTest : public ::testing::Test {
-public:
-  const std::vector<CommunicatorGrid>& commGrids() {
-    return comm_grids;
-  }
-};
+struct NormDistributedTest : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(NormDistributedTest, MatrixElementTypes);
 
@@ -88,7 +83,7 @@ void modify_element(Matrix<T, Device::CPU>& matrix, GlobalElementIndex index, co
     return;
 
   const TileElementIndex index_wrt_local = distribution.tileElementIndex(index);
-  matrix(tile_index).then(hpx::unwrapping([value, index_wrt_local](auto&& tile) {
+  matrix(tile_index).then(pika::unwrapping([value, index_wrt_local](auto&& tile) {
     tile(index_wrt_local) = value;
   }));
 }

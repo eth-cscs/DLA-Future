@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -32,7 +32,7 @@ using dlaf::TileElementIndex;
 using dlaf::Device;
 using dlaf::matrix::Tile;
 
-using dlaf::tile::lange;
+using dlaf::tile::internal::lange;
 using dlaf::matrix::test::set;
 
 template <class T>

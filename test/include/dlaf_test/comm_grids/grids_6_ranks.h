@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -24,6 +24,12 @@ public:
   virtual void SetUp() override {
     if (comm_grids.empty()) {
       comm::Communicator world(MPI_COMM_WORLD);
+
+      // Leave comm_grids empty if invoked with only one rank.
+      // Useful to debug local algorithms that otherwise are executed independently on multiple ranks.
+      if (world.size() == 1)
+        return;
+
       comm_grids.emplace_back(world, 3, 2, common::Ordering::RowMajor);
       comm_grids.emplace_back(world, 2, 3, common::Ordering::ColumnMajor);
 
@@ -58,5 +64,11 @@ public:
   }
 };
 
+struct TestWithCommGrids : public ::testing::Test {
+  const std::vector<comm::CommunicatorGrid>& commGrids() {
+    EXPECT_FALSE(comm_grids.empty());
+    return comm_grids;
+  }
+};
 }
 }

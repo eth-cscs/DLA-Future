@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -13,7 +13,7 @@
 #include <exception>
 #include <vector>
 
-#include <hpx/local/future.hpp>
+#include <pika/future.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/distribution.h"
@@ -59,6 +59,7 @@ public:
   using ElementType = T;
   using TileType = Tile<ElementType, device>;
   using ConstTileType = Tile<const ElementType, device>;
+  using TileDataType = internal::TileData<const ElementType, device>;
   friend Matrix<const ElementType, device>;
 
   /// Create a non distributed matrix of size @p size and block size @p block_size.
@@ -117,15 +118,24 @@ public:
   ///
   /// See misc/synchronization.md for the synchronization details.
   /// @pre index.isIn(distribution().localNrTiles()).
-  hpx::future<TileType> operator()(const LocalTileIndex& index) noexcept;
+  pika::future<TileType> operator()(const LocalTileIndex& index) noexcept;
 
   /// Returns a future of the Tile with global index @p index.
   ///
   /// See misc/synchronization.md for the synchronization details.
   /// @pre the global tile is stored in the current process,
   /// @pre index.isIn(globalNrTiles()).
-  hpx::future<TileType> operator()(const GlobalTileIndex& index) {
+  pika::future<TileType> operator()(const GlobalTileIndex& index) {
     return operator()(this->distribution().localTileIndex(index));
+  }
+
+  auto readwrite_sender(const LocalTileIndex& index) noexcept {
+    // Note: do not use `keep_future`, otherwise dlaf::transform will not handle the lifetime correctly
+    return this->operator()(index);
+  }
+
+  auto readwrite_sender(const GlobalTileIndex& index) {
+    return readwrite_sender(this->distribution().localTileIndex(index));
   }
 
 protected:
@@ -142,6 +152,7 @@ public:
   using ElementType = T;
   using TileType = Tile<ElementType, device>;
   using ConstTileType = Tile<const ElementType, device>;
+  using TileDataType = internal::TileData<ElementType, device>;
   friend Matrix<ElementType, device>;
 
   Matrix(const LayoutInfo& layout, ElementType* ptr);
@@ -164,15 +175,25 @@ public:
   ///
   /// See misc/synchronization.md for the synchronization details.
   /// @pre index.isIn(distribution().localNrTiles()).
-  hpx::shared_future<ConstTileType> read(const LocalTileIndex& index) noexcept;
+  pika::shared_future<ConstTileType> read(const LocalTileIndex& index) noexcept;
 
   /// Returns a read-only shared_future of the Tile with global index @p index.
   ///
   /// See misc/synchronization.md for the synchronization details.
   /// @pre the global tile is stored in the current process,
   /// @pre index.isIn(globalNrTiles()).
-  hpx::shared_future<ConstTileType> read(const GlobalTileIndex& index) {
+  pika::shared_future<ConstTileType> read(const GlobalTileIndex& index) {
     return read(distribution().localTileIndex(index));
+  }
+
+  auto read_sender(const LocalTileIndex& index) noexcept {
+    // We want to explicitly deal with the shared_future, not the const& to the
+    // value.
+    return pika::execution::experimental::keep_future(read(index));
+  }
+
+  auto read_sender(const GlobalTileIndex& index) {
+    return read_sender(distribution().localTileIndex(index));
   }
 
   /// Synchronization barrier for all local tiles in the matrix
@@ -360,7 +381,7 @@ Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const Tile
 ///
 /// @pre @p range must be a valid range for @p matrix
 template <class MatrixLike>
-std::vector<hpx::shared_future<typename MatrixLike::ConstTileType>> selectRead(
+std::vector<pika::shared_future<typename MatrixLike::ConstTileType>> selectRead(
     MatrixLike& matrix, common::IterableRange2D<SizeType, LocalTile_TAG> range) {
   return internal::selectGeneric([&](auto index) { return matrix.read(index); }, range);
 }
@@ -369,7 +390,7 @@ std::vector<hpx::shared_future<typename MatrixLike::ConstTileType>> selectRead(
 ///
 /// @pre @p range must be a valid range for @p matrix
 template <class MatrixLike>
-std::vector<hpx::future<typename MatrixLike::TileType>> select(
+std::vector<pika::future<typename MatrixLike::TileType>> select(
     MatrixLike& matrix, common::IterableRange2D<SizeType, LocalTile_TAG> range) {
   return internal::selectGeneric([&](auto index) { return matrix(index); }, range);
 }

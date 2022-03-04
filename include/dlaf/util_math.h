@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -39,7 +39,7 @@ constexpr IntType ceilDiv(const IntType num, const IntType den);
 #else
 template <typename IntType>
 constexpr auto ceilDiv(const IntType num, const IntType den)
-    -> std::enable_if_t<std::is_integral<IntType>::value, IntType> {
+    -> std::enable_if_t<std::is_integral_v<IntType>, IntType> {
   return (num + den - 1) / den;
 }
 #endif

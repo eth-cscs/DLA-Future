@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -16,8 +16,8 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include <hpx/local/future.hpp>
-#include <hpx/local/unwrap.hpp>
+#include <pika/future.hpp>
+#include <pika/unwrap.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/util_matrix.h"
@@ -35,7 +35,7 @@ using namespace dlaf::comm;
 using namespace dlaf::test;
 using namespace testing;
 
-using hpx::unwrapping;
+using pika::unwrapping;
 
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
@@ -46,12 +46,7 @@ class MatrixLocalTest : public ::testing::Test {};
 TYPED_TEST_SUITE(MatrixLocalTest, MatrixElementTypes);
 
 template <typename Type>
-class MatrixTest : public ::testing::Test {
-public:
-  const std::vector<CommunicatorGrid>& commGrids() {
-    return comm_grids;
-  }
-};
+struct MatrixTest : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(MatrixTest, MatrixElementTypes);
 
@@ -79,10 +74,9 @@ TYPED_TEST(MatrixLocalTest, StaticAPI) {
 
   using matrix_t = Matrix<TypeParam, device>;
 
-  static_assert(std::is_same<TypeParam, typename matrix_t::ElementType>::value, "wrong ElementType");
-  static_assert(std::is_same<Tile<TypeParam, device>, typename matrix_t::TileType>::value,
-                "wrong TileType");
-  static_assert(std::is_same<Tile<const TypeParam, device>, typename matrix_t::ConstTileType>::value,
+  static_assert(std::is_same_v<TypeParam, typename matrix_t::ElementType>, "wrong ElementType");
+  static_assert(std::is_same_v<Tile<TypeParam, device>, typename matrix_t::TileType>, "wrong TileType");
+  static_assert(std::is_same_v<Tile<const TypeParam, device>, typename matrix_t::ConstTileType>,
                 "wrong ConstTileType");
 }
 
@@ -91,12 +85,10 @@ TYPED_TEST(MatrixLocalTest, StaticAPIConst) {
 
   using const_matrix_t = Matrix<const TypeParam, device>;
 
-  static_assert(std::is_same<TypeParam, typename const_matrix_t::ElementType>::value,
-                "wrong ElementType");
-  static_assert(std::is_same<Tile<TypeParam, device>, typename const_matrix_t::TileType>::value,
+  static_assert(std::is_same_v<TypeParam, typename const_matrix_t::ElementType>, "wrong ElementType");
+  static_assert(std::is_same_v<Tile<TypeParam, device>, typename const_matrix_t::TileType>,
                 "wrong TileType");
-  static_assert(std::is_same<Tile<const TypeParam, device>,
-                             typename const_matrix_t::ConstTileType>::value,
+  static_assert(std::is_same_v<Tile<const TypeParam, device>, typename const_matrix_t::ConstTileType>,
                 "wrong ConstTileType");
 }
 
@@ -1127,12 +1119,7 @@ TYPED_TEST(MatrixTest, GPUCopy) {
 }
 #endif
 
-class MatrixGenericTest : public ::testing::Test {
-public:
-  const std::vector<CommunicatorGrid>& commGrids() {
-    return comm_grids;
-  }
-};
+struct MatrixGenericTest : public TestWithCommGrids {};
 
 TEST_F(MatrixGenericTest, SelectTilesReadonly) {
   using TypeParam = double;
@@ -1249,7 +1236,7 @@ auto try_waiting_guard = [](auto& guard) {
   const auto wait_guard = 20ms;
 
   for (int i = 0; i < 100 && !guard; ++i)
-    hpx::this_thread::sleep_for(wait_guard);
+    std::this_thread::sleep_for(wait_guard);
 };
 
 // Create a single-element matrix
@@ -1271,14 +1258,14 @@ auto createConstMatrix(const T& data) {
 }
 
 TEST(MatrixDestructorFutures, NonConstAfterRead) {
-  hpx::future<void> last_task;
+  pika::future<void> last_task;
 
   std::atomic<bool> is_exited_from_scope{false};
   {
     auto matrix = createMatrix<TypeParam>();
 
     auto shared_future = matrix.read(LocalTileIndex(0, 0));
-    last_task = shared_future.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
+    last_task = shared_future.then(pika::launch::async, [&is_exited_from_scope](auto&&) {
       try_waiting_guard(is_exited_from_scope);
       EXPECT_TRUE(is_exited_from_scope);
     });
@@ -1289,14 +1276,14 @@ TEST(MatrixDestructorFutures, NonConstAfterRead) {
 }
 
 TEST(MatrixDestructorFutures, NonConstAfterReadWrite) {
-  hpx::future<void> last_task;
+  pika::future<void> last_task;
 
   std::atomic<bool> is_exited_from_scope{false};
   {
     auto matrix = createMatrix<TypeParam>();
 
     auto future = matrix(LocalTileIndex(0, 0));
-    last_task = future.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
+    last_task = future.then(pika::launch::async, [&is_exited_from_scope](auto&&) {
       try_waiting_guard(is_exited_from_scope);
       EXPECT_TRUE(is_exited_from_scope);
     });
@@ -1307,7 +1294,7 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWrite) {
 }
 
 TEST(MatrixDestructorFutures, NonConstAfterRead_UserMemory) {
-  hpx::future<void> last_task;
+  pika::future<void> last_task;
 
   std::atomic<bool> is_exited_from_scope{false};
   {
@@ -1315,7 +1302,7 @@ TEST(MatrixDestructorFutures, NonConstAfterRead_UserMemory) {
     auto matrix = createMatrix<TypeParam>(data);
 
     auto shared_future = matrix.read(LocalTileIndex(0, 0));
-    last_task = shared_future.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
+    last_task = shared_future.then(pika::launch::async, [&is_exited_from_scope](auto&&) {
       try_waiting_guard(is_exited_from_scope);
       EXPECT_TRUE(is_exited_from_scope);
     });
@@ -1326,7 +1313,7 @@ TEST(MatrixDestructorFutures, NonConstAfterRead_UserMemory) {
 }
 
 TEST(MatrixDestructorFutures, NonConstAfterReadWrite_UserMemory) {
-  hpx::future<void> last_task;
+  pika::future<void> last_task;
 
   std::atomic<bool> is_exited_from_scope{false};
   {
@@ -1334,7 +1321,7 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWrite_UserMemory) {
     auto matrix = createMatrix<TypeParam>(data);
 
     auto future = matrix(LocalTileIndex(0, 0));
-    last_task = future.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
+    last_task = future.then(pika::launch::async, [&is_exited_from_scope](auto&&) {
       try_waiting_guard(is_exited_from_scope);
       EXPECT_TRUE(is_exited_from_scope);
     });
@@ -1345,7 +1332,7 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWrite_UserMemory) {
 }
 
 TEST(MatrixDestructorFutures, ConstAfterRead_UserMemory) {
-  hpx::future<void> last_task;
+  pika::future<void> last_task;
 
   std::atomic<bool> is_exited_from_scope{false};
   {
@@ -1353,7 +1340,7 @@ TEST(MatrixDestructorFutures, ConstAfterRead_UserMemory) {
     auto matrix = createConstMatrix<TypeParam>(data);
 
     auto sf = matrix.read(LocalTileIndex(0, 0));
-    last_task = sf.then(hpx::launch::async, [&is_exited_from_scope](auto&&) {
+    last_task = sf.then(pika::launch::async, [&is_exited_from_scope](auto&&) {
       try_waiting_guard(is_exited_from_scope);
       EXPECT_TRUE(is_exited_from_scope);
     });
@@ -1395,8 +1382,8 @@ TEST_F(MatrixGenericTest, SyncBarrier) {
 
       // start a task (if it has at least a local part...otherwise there is no tile to work on)
       if (has_local)
-        matrix.read(tile_tl).then(hpx::launch::async, [&guard](auto&&) {
-          hpx::this_thread::sleep_for(100ms);
+        matrix.read(tile_tl).then(pika::launch::async, [&guard](auto&&) {
+          std::this_thread::sleep_for(100ms);
           guard = true;
         });
 

@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -12,7 +12,7 @@
 
 /// @file
 
-#include <hpx/local/future.hpp>
+#include <pika/future.hpp>
 
 #include "dlaf/communication/message.h"
 #include "dlaf/executors.h"
@@ -38,14 +38,17 @@ struct CommunicationDevice<Device::GPU> {
 };
 #endif
 
+template <Device D>
+inline constexpr auto CommunicationDevice_v = CommunicationDevice<D>::value;
+
 namespace internal {
 /// Helper function for preparing a tile for sending.
 ///
 /// Duplicates the tile to CPU memory if CUDA RDMA is not enabled for MPI.
 /// Returns the tile unmodified otherwise.
 template <Device D, typename T>
-auto prepareSendTile(hpx::shared_future<matrix::Tile<const T, D>> tile) {
-  return matrix::duplicateIfNeeded<CommunicationDevice<D>::value>(std::move(tile));
+auto prepareSendTile(pika::shared_future<matrix::Tile<const T, D>> tile) {
+  return matrix::duplicateIfNeeded<CommunicationDevice_v<D>>(std::move(tile));
 }
 
 /// Helper function for handling a tile after receiving.
@@ -54,7 +57,7 @@ auto prepareSendTile(hpx::shared_future<matrix::Tile<const T, D>> tile) {
 /// the CPU. This helper duplicates to the GPU if the first template parameter
 /// is a GPU device. The first template parameter must be given.
 template <Device D, typename T>
-auto handleRecvTile(hpx::future<matrix::Tile<T, CommunicationDevice<D>::value>> tile) {
+auto handleRecvTile(pika::future<matrix::Tile<T, CommunicationDevice_v<D>>> tile) {
   return matrix::duplicateIfNeeded<D>(std::move(tile));
 }
 }

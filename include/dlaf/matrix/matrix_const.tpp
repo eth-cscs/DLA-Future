@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -32,7 +32,7 @@ Matrix<const T, device>::Matrix(Distribution distribution, const matrix::LayoutI
 }
 
 template <class T, Device device>
-hpx::shared_future<Tile<const T, device>> Matrix<const T, device>::read(
+pika::shared_future<Tile<const T, device>> Matrix<const T, device>::read(
     const LocalTileIndex& index) noexcept {
   const auto i = tileLinearIndex(index);
   return tile_managers_[i].getReadTileSharedFuture();
@@ -50,7 +50,7 @@ void Matrix<const T, device>::waitLocalTiles() noexcept {
   };
 
   const auto range_local = common::iterate_range2d(distribution().localNrTiles());
-  hpx::wait_all(internal::selectGeneric(readwrite_f, range_local));
+  pika::wait_all(internal::selectGeneric(readwrite_f, range_local));
 }
 
 template <class T, Device device>
@@ -68,8 +68,8 @@ void Matrix<const T, device>::setUpTiles(const memory::MemoryView<ElementType, d
       LocalTileIndex ind(i, j);
       TileElementSize tile_size = layout.tileSize(ind);
       tile_managers_.emplace_back(
-          TileType(tile_size, MemView(mem, layout.tileOffset(ind), layout.minTileMemSize(tile_size)),
-                   layout.ldTile()));
+          TileDataType(tile_size, MemView(mem, layout.tileOffset(ind), layout.minTileMemSize(tile_size)),
+                       layout.ldTile()));
     }
   }
 }

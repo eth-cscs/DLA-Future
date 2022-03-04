@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -17,7 +17,7 @@ namespace dlaf {
 namespace common {
 namespace internal {
 
-/// Alias for std::vector with overloads for signed indexes.
+/// Alias for std::vector with overloads for signed indices.
 ///
 /// It is an std::vector with overloads for working seamlessly with unsigned integers as parameters.
 template <typename T>

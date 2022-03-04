@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -13,7 +13,7 @@
 #include <vector>
 
 #include <blas.hh>
-#include <hpx/local/future.hpp>
+#include <pika/future.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/distribution.h"
@@ -36,7 +36,7 @@ public:
   using ConstTileType = Tile<const ElementType, device>;
 
   template <template <class, Device> class MatrixType, class T2,
-            std::enable_if_t<std::is_same<T, std::remove_const_t<T2>>::value, int> = 0>
+            std::enable_if_t<std::is_same_v<T, std::remove_const_t<T2>>, int> = 0>
   MatrixView(blas::Uplo uplo, MatrixType<T2, device>& matrix);
 
   MatrixView(const MatrixView& rhs) = delete;
@@ -51,7 +51,7 @@ public:
   /// TODO: Sync details.
   ///
   /// @pre index.isIn(distribution().localNrTiles()).
-  hpx::shared_future<ConstTileType> read(const LocalTileIndex& index) noexcept;
+  pika::shared_future<ConstTileType> read(const LocalTileIndex& index) noexcept;
 
   /// Returns a read-only shared_future of the Tile with global index @p index.
   ///
@@ -59,7 +59,7 @@ public:
   ///
   /// @pre index.isIn(globalNrTiles()),
   /// @pre global tile stored in current process.
-  hpx::shared_future<ConstTileType> read(const GlobalTileIndex& index) noexcept {
+  pika::shared_future<ConstTileType> read(const GlobalTileIndex& index) noexcept {
     return read(distribution().localTileIndex(index));
   }
 
@@ -81,10 +81,10 @@ public:
 
 private:
   template <template <class, Device> class MatrixType, class T2,
-            std::enable_if_t<std::is_same<T, std::remove_const_t<T2>>::value, int> = 0>
+            std::enable_if_t<std::is_same_v<T, std::remove_const_t<T2>>, int> = 0>
   void setUpTiles(MatrixType<T2, device>& matrix) noexcept;
 
-  std::vector<hpx::shared_future<ConstTileType>> tile_shared_futures_;
+  std::vector<pika::shared_future<ConstTileType>> tile_shared_futures_;
 };
 
 template <template <class, Device> class MatrixType, class T, Device device>

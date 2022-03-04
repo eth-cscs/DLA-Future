@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -61,7 +61,7 @@ void print(const Tile<T, Device::CPU>& tile, int precision = 4, std::ostream& ou
   // sign + number + . + exponent (e+xxx)
   int base_width = 1 + precision + 1 + 5;
 
-  int width = std::is_same<T, ComplexType<T>>::value ? 2 * base_width + 3 : base_width;
+  int width = std::is_same_v<T, ComplexType<T>> ? 2 * base_width + 3 : base_width;
 
   std::cout << "(" << tile.size().rows() << ", " << tile.size().cols() << ") Tile:" << std::endl;
   for (SizeType i = 0; i < tile.size().rows(); ++i) {
@@ -106,7 +106,7 @@ struct CreateTile<T, Device::GPU> {
                                            const SizeType ld) {
     auto tile_host = CreateTile<T, Device::CPU>::createAndSet(val, size, ld);
     auto tile = createTile<std::remove_const_t<T>, Device::GPU>(size, ld);
-    copy(tile_host, tile);
+    dlaf::matrix::internal::copy(tile_host, tile);
     return Tile<T, Device::GPU>(std::move(tile));
   }
 };
@@ -129,9 +129,7 @@ Tile<T, D> createTile(ElementGetter val, const TileElementSize size, const SizeT
 /// for any @p index given
 template <class T>
 auto fixedValueTile(T value) noexcept {
-  return [=](TileElementIndex) noexcept {
-    return value;
-  };
+  return [=](TileElementIndex) noexcept { return value; };
 }
 
 namespace internal {
@@ -147,7 +145,7 @@ namespace internal {
 /// @pre The second argument of comp should be either T, T& or const T&,
 /// @pre The second argument of err_message should be either T, T& or const T&.
 template <class T, class ElementGetter, class ComparisonOp, class ErrorMessageGetter,
-          std::enable_if_t<!std::is_convertible<ElementGetter, T>::value, int> = 0>
+          std::enable_if_t<!std::is_convertible_v<ElementGetter, T>, int> = 0>
 void check(ElementGetter&& expected, const Tile<const T, Device::CPU>& tile, ComparisonOp comp,
            ErrorMessageGetter err_message, const char* file, const int line) {
   for (SizeType j = 0; j < tile.size().cols(); ++j) {
@@ -175,11 +173,11 @@ void check(ElementGetter&& expected, const Tile<const T, Device::CPU>& tile, Com
 /// @pre The second argument of comp should be either T, T& or const T&,
 /// @pre The second argument of err_message should be either T, T& or const T&.
 template <class T, class ElementGetter, class ComparisonOp, class ErrorMessageGetter,
-          std::enable_if_t<!std::is_convertible<ElementGetter, T>::value, int> = 0>
+          std::enable_if_t<!std::is_convertible_v<ElementGetter, T>, int> = 0>
 void check(ElementGetter&& expected, const Tile<const T, Device::GPU>& tile, ComparisonOp comp,
            ErrorMessageGetter err_message, const char* file, const int line) {
   auto tile_host = createTile<std::remove_const_t<T>, Device::CPU>(tile.size(), tile.ld());
-  copy(tile, tile_host);
+  dlaf::matrix::internal::copy(tile, tile_host);
   check(std::forward<ElementGetter>(expected), tile_host, comp, err_message, file, line);
 }
 #endif

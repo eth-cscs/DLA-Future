@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -19,8 +19,8 @@ constexpr double M_PI = 3.141592;
 #endif
 
 #include <blas.hh>
-#include <hpx/local/future.hpp>
-#include <hpx/local/unwrap.hpp>
+#include <pika/future.hpp>
+#include <pika/unwrap.hpp>
 
 #include "dlaf/blas/enum_output.h"
 #include "dlaf/common/assert.h"
@@ -104,7 +104,7 @@ namespace internal {
 /// Callable that returns random values in the range [-1, 1].
 template <class T>
 class getter_random {
-  static_assert(std::is_same<T, float>::value || std::is_same<T, double>::value,
+  static_assert(std::is_same_v<T, float> || std::is_same_v<T, double>,
                 "T is not compatible with random generator used.");
 
 public:
@@ -137,39 +137,74 @@ public:
 }
 
 /// Sets all the elements of all the tiles to zero
-template <class T, class ExecutorOrPolicy>
-void set0(ExecutorOrPolicy ex, Matrix<T, Device::CPU>& matrix) {
+template <Backend backend, class T, Device D>
+void set0(pika::threads::thread_priority priority, Matrix<T, D>& matrix) {
+  using dlaf::internal::Policy;
+  using pika::execution::experimental::start_detached;
+
   for (const auto& idx : iterate_range2d(matrix.distribution().localNrTiles()))
-    matrix(idx).then(ex, hpx::unwrapping(tile::set0<T>));
+    matrix.readwrite_sender(idx) | tile::set0(Policy<backend>(priority)) | start_detached();
 }
 
 /// Sets all the elements of all the tiles in the active range to zero
-template <class T, Coord axis, class ExecutorOrPolicy>
-void set0(ExecutorOrPolicy ex, Panel<axis, T, Device::CPU>& panel) {
+template <Backend backend, class T, Coord axis, Device D>
+void set0(pika::threads::thread_priority priority, Panel<axis, T, D>& panel) {
+  using dlaf::internal::Policy;
+  using pika::execution::experimental::start_detached;
+
   for (const auto& tile_idx : panel.iteratorLocal())
-    panel(tile_idx).then(ex, hpx::unwrapping(tile::set0<T>));
+    panel.readwrite_sender(tile_idx) | tile::set0(Policy<backend>(priority)) | start_detached();
 }
 
 /// Set the elements of the matrix.
 ///
 /// The (i, j)-element of the matrix is set to el({i, j}).
-/// @param el a copy is given to each tile,
-/// @pre el argument is an index of type const GlobalElementIndex&,
-/// @pre el return type should be T.
+/// @param el_f a copy is given to each tile,
+/// @pre el_f argument is an index of type const GlobalElementIndex&,
+/// @pre el_f return type should be T.
 template <class T, class ElementGetter>
-void set(Matrix<T, Device::CPU>& matrix, const ElementGetter& el_f) {
+void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f) {
   const Distribution& dist = matrix.distribution();
   for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
     GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
     auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
-    auto set_f = hpx::unwrapping([tl_index, el_f = el_f](auto&& tile) {
+    auto set_f = pika::unwrapping([tl_index, el_f = el_f](auto&& tile) {
       for (auto el_idx_l : iterate_range2d(tile.size())) {
         GlobalElementIndex el_idx_g(el_idx_l.row() + tl_index.row(), el_idx_l.col() + tl_index.col());
         tile(el_idx_l) = el_f(el_idx_g);
       }
     });
-    hpx::dataflow(std::move(set_f), matrix(tile_wrt_local));
+    pika::dataflow(std::move(set_f), matrix(tile_wrt_local));
   }
+}
+
+/// Set the elements of the matrix according to transposition operator
+///
+/// The (i, j)-element of the matrix is set to op(el)(i, j).
+/// i.e. `matrix = op(el_f)`
+///
+/// @param el_f a copy is given to each tile,
+/// @param op transposition operator to apply to @p el_f before setting the value
+/// @pre el_f argument is an index of type const GlobalElementIndex&,
+/// @pre el_f return type should be T.
+template <class T, class ElementGetter>
+void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f, const blas::Op op) {
+  auto el_op_f = [op, el_f](const GlobalElementIndex& index) -> T {
+    using blas::Op;
+    switch (op) {
+      case Op::NoTrans:
+        return el_f(index);
+      case Op::Trans:
+        return el_f(transposed(index));
+      case Op::ConjTrans:
+        return dlaf::conj(el_f(transposed(index)));
+      default:
+        DLAF_UNIMPLEMENTED(op);
+        return T{};
+    }
+  };
+
+  set(matrix, el_op_f);
 }
 
 /// Set the matrix with random values whose absolute values are less than 1.
@@ -189,13 +224,13 @@ void set_random(Matrix<T, Device::CPU>& matrix) {
     GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
     auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
     auto seed = tl_index.col() + tl_index.row() * matrix.size().cols();
-    auto rnd_f = hpx::unwrapping([seed](auto&& tile) {
+    auto rnd_f = pika::unwrapping([seed](auto&& tile) {
       internal::getter_random<T> random_value(seed);
       for (auto el_idx : iterate_range2d(tile.size())) {
         tile(el_idx) = random_value();
       }
     });
-    hpx::dataflow(std::move(rnd_f), matrix(tile_wrt_local));
+    pika::dataflow(std::move(rnd_f), matrix(tile_wrt_local));
   }
 }
 
@@ -288,7 +323,7 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const Size
     else
       seed = tl_index.row() + tl_index.col() * matrix.size().rows();
 
-    auto set_hp_f = hpx::unwrapping([=](auto&& tile) {
+    auto set_hp_f = pika::unwrapping([=](auto&& tile) {
       internal::getter_random<T> random_value(seed);
       if (tile_wrt_global.row() == tile_wrt_global.col())
         internal::set_diagonal_tile(tile, random_value, offset_value);
@@ -296,7 +331,7 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const Size
         internal::set_lower_and_upper_tile(tile, random_value, full_tile_size, tile_wrt_global);
     });
 
-    hpx::dataflow(std::move(set_hp_f), matrix(tile_wrt_local));
+    pika::dataflow(std::move(set_hp_f), matrix(tile_wrt_local));
   }
 }
 

@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -36,7 +36,9 @@ void test_single_arg() {
   act_values.reserve(exp_values.size());
   for (Index i : range) {
     act_values.push_back(i);
+    EXPECT_TRUE(isIndexInRange(i, range));
   }
+  EXPECT_FALSE(isIndexInRange(*range.end(), range));
 
   EXPECT_EQ(exp_values.size(), std::distance(range.begin(), range.end()));
   EXPECT_EQ(act_values, exp_values);
@@ -58,7 +60,9 @@ void test_double_arg(TypeParam end) {
   act_values.reserve(exp_values.size());
   for (Index i : range) {
     act_values.push_back(i);
+    EXPECT_TRUE(isIndexInRange(i, range));
   }
+  EXPECT_FALSE(isIndexInRange(*range.end(), range));
 
   EXPECT_EQ(exp_values.size(), std::distance(range.begin(), range.end()));
   EXPECT_EQ(act_values, exp_values);
@@ -112,6 +116,11 @@ TEST(DoubleArgEmptyRange2D, Index2D) {
 
 TEST(DoubleArgEmptyRange2D, Size2D) {
   ::test_double_arg_empty(Size(0, 0));
+}
+
+TEST(isIndexInRange, EmptyRange) {
+  EXPECT_FALSE(isIndexInRange(Index{0, 0}, iterate_range2d(Index(0, 0), Index(0, 0))));
+  EXPECT_FALSE(isIndexInRange(Index{1, 2}, iterate_range2d(Index(1, 2), Index(1, 2))));
 }
 
 /// This is a very trivial test fixture that creates the following range2D

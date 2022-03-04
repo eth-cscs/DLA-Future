@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -87,7 +87,7 @@ void testHer2k(const blas::Uplo uplo, const blas::Op op, const SizeType n, const
   auto b = createTile<CT, D>(el_op_b, size_b, ldb, op);
   auto c = createTile<T, D>(el_c, size_c, ldc);
 
-  invokeBlas<D>(tile::her2k_o, uplo, op, alpha, a, b, beta, c);
+  invokeBlas<D>(tile::internal::her2k_o, uplo, op, alpha, a, b, beta, c);
 
   std::stringstream s;
   s << "HER2K: " << uplo << ", " << op;

@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -114,7 +114,7 @@ void testHemm(const blas::Side side, const blas::Uplo uplo, const SizeType m, co
   auto b = createTile<CT, D>(el_b, size_b, ldb);
   auto c = createTile<T, D>(el_c, size_c, ldc);
 
-  invokeBlas<D>(tile::hemm_o, side, uplo, alpha, a, b, beta, c);
+  invokeBlas<D>(tile::internal::hemm_o, side, uplo, alpha, a, b, beta, c);
 
   std::stringstream s;
   s << "HEMM: " << side << ", " << uplo;

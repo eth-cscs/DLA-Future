@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -44,7 +44,10 @@ struct numpy_datatype<std::complex<T>> {
 template <class T>
 std::string numpy_value(const T& value) {
   std::ostringstream os;
-  os << value;
+  if (std::isnan(value))
+    os << "np.nan";
+  else
+    os << value;
   return os.str();
 }
 

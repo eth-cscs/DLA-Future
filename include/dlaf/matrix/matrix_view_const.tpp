@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -15,7 +15,7 @@ namespace matrix {
 
 template <class T, Device device>
 template <template <class, Device> class MatrixType, class T2,
-          std::enable_if_t<std::is_same<T, std::remove_const_t<T2>>::value, int>>
+          std::enable_if_t<std::is_same_v<T, std::remove_const_t<T2>>, int>>
 MatrixView<const T, device>::MatrixView(blas::Uplo uplo, MatrixType<T2, device>& matrix)
     : MatrixBase(matrix) {
   if (uplo != blas::Uplo::General)
@@ -24,7 +24,7 @@ MatrixView<const T, device>::MatrixView(blas::Uplo uplo, MatrixType<T2, device>&
 }
 
 template <class T, Device device>
-hpx::shared_future<Tile<const T, device>> MatrixView<const T, device>::read(
+pika::shared_future<Tile<const T, device>> MatrixView<const T, device>::read(
     const LocalTileIndex& index) noexcept {
   const auto i = tileLinearIndex(index);
   return tile_shared_futures_[i];
@@ -38,7 +38,7 @@ void MatrixView<const T, device>::done(const LocalTileIndex& index) noexcept {
 
 template <class T, Device device>
 template <template <class, Device> class MatrixType, class T2,
-          std::enable_if_t<std::is_same<T, std::remove_const_t<T2>>::value, int>>
+          std::enable_if_t<std::is_same_v<T, std::remove_const_t<T2>>, int>>
 void MatrixView<const T, device>::setUpTiles(MatrixType<T2, device>& matrix) noexcept {
   const auto& nr_tiles = matrix.distribution().localNrTiles();
   tile_shared_futures_.reserve(futureVectorSize(nr_tiles));

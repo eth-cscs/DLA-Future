@@ -1,0 +1,19 @@
+spack:
+  specs:
+    - dla-future@develop +cuda +miniapps +ci-test ^intel-mkl ^mpich
+  view: false
+  concretization: together
+
+  packages:
+    all:
+      target: [x86_64]
+      variants:
+        - 'build_type=Release'
+        - 'cxxstd=17'
+    blaspp:
+      variants:
+        - '~cuda'
+        - '~openmp'
+    mpich:
+      variants:
+        - '~fortran'

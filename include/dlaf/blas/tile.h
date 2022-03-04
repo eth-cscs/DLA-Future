@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -9,18 +9,20 @@
 //
 #pragma once
 
-#include "blas.hh"
+#include <blas.hh>
 
 #include "dlaf/common/callable_object.h"
+#include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/tile.h"
+#include "dlaf/sender/make_sender_algorithm_overloads.h"
+#include "dlaf/sender/partial_transform.h"
+#include "dlaf/sender/policy.h"
+#include "dlaf/sender/transform.h"
 #include "dlaf/types.h"
 #include "dlaf/util_blas.h"
 
 #ifdef DLAF_WITH_CUDA
-#include <cublas_v2.h>
-#include <blas.hh>
-
-#include "dlaf/cublas/error.h"
+#include "dlaf/cublas/api.h"
 #include "dlaf/util_cublas.h"
 #endif
 
@@ -28,9 +30,169 @@ namespace dlaf {
 namespace tile {
 using matrix::Tile;
 
-// See BLAS documentation for more details.
+#ifdef DLAF_DOXYGEN
 
 /// Computes general matrix matrix multiplication.
+///
+/// This overload blocks until completion of the algorithm.
+template <Backend B, class T, Device D>
+void gemm(const blas::Op op_a, const blas::Op op_b, const T alpha, const Tile<const T, D>& a,
+          const Tile<const T, D>& b, const T beta, const Tile<T, D>& c);
+
+/// \overload gemm
+///
+/// This overload takes a policy argument and a sender which must send all required arguments for the
+/// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
+template <Backend B, typename Sender,
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
+auto gemm(const dlaf::internal::Policy<B>& p, Sender&& s);
+
+/// \overload gemm
+///
+/// This overload partially applies the algorithm with a policy for later use with operator| with a
+/// sender on the left-hand side.
+template <Backend B>
+auto gemm(const dlaf::internal::Policy<B>& p);
+
+/// Computes matrix matrix multiplication where matrix @p a is hermitian (symmetric if T is real).
+///
+/// This overload blocks until completion of the algorithm.
+template <Backend B, class T, Device D>
+void hemm(const blas::Side side, const blas::Uplo uplo, const T alpha, const Tile<const T, D>& a,
+          const Tile<const T, D>& b, const T beta, const Tile<T, D>& c);
+
+/// \overload hemm
+///
+/// This overload takes a policy argument and a sender which must send all required arguments for the
+/// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
+template <Backend B, typename Sender,
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
+auto hemm(const dlaf::internal::Policy<B>& p, Sender&& s);
+
+/// \overload hemm
+///
+/// This overload partially applies the algorithm with a policy for later use with operator| with a
+/// sender on the left-hand side.
+template <Backend B>
+auto hemm(const dlaf::internal::Policy<B>& p);
+
+/// Performs a rank 2k update of hermitian (symmetric if T is real) tile @p a.
+///
+/// This overload blocks until completion of the algorithm.
+template <Backend B, class T, Device D>
+void her2k(const blas::Uplo uplo, const blas::Op op, const T alpha, const Tile<const T, D>& a,
+           const Tile<const T, D>& b, const BaseType<T> beta, const Tile<T, D>& c);
+
+/// \overload her2k
+///
+/// This overload takes a policy argument and a sender which must send all required arguments for the
+/// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
+template <Backend B, typename Sender,
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
+auto her2k(const dlaf::internal::Policy<B>& p, Sender&& s);
+
+/// \overload her2k
+///
+/// This overload partially applies the algorithm with a policy for later use with operator| with a
+/// sender on the left-hand side.
+template <Backend B>
+auto her2k(const dlaf::internal::Policy<B>& p);
+
+/// Performs a rank k update of hermitian (symmetric if T is real) tile @p a.
+///
+/// This overload blocks until completion of the algorithm.
+template <Backend B, class T, Device D>
+void herk(const blas::Uplo uplo, const blas::Op op, const BaseType<T> alpha, const Tile<const T, D>& a,
+          const BaseType<T> beta, const Tile<T, D>& c);
+
+/// \overload herk
+///
+/// This overload takes a policy argument and a sender which must send all required arguments for the
+/// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
+template <Backend B, typename Sender,
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
+auto herk(const dlaf::internal::Policy<B>& p, Sender&& s);
+
+/// \overload herk
+///
+/// This overload partially applies the algorithm with a policy for later use with operator| with a
+/// sender on the left-hand side.
+template <Backend B>
+auto herk(const dlaf::internal::Policy<B>& p);
+
+/// Triangular matrix-matrix multiplication.
+///
+/// This overload blocks until completion of the algorithm.
+template <Backend B, class T, Device D>
+void trmm(const dlaf::internal::Policy<B>& policy, const blas::Side side, const blas::Uplo uplo,
+          const blas::Op op, const blas::Diag diag, const T alpha, const Tile<const T, D>& a,
+          const Tile<T, D>& b);
+
+/// \overload trmm
+///
+/// This overload takes a policy argument and a sender which must send all required arguments for the
+/// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
+template <Backend B, typename Sender,
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
+auto trmm(const dlaf::internal::Policy<B>& p, Sender&& s);
+
+/// \overload trmm
+///
+/// This overload partially applies the algorithm with a policy for later use with operator| with a
+/// sender on the left-hand side.
+template <Backend B>
+auto trmm(const dlaf::internal::Policy<B>& p);
+
+/// Triangular matrix-matrix multiplication.
+/// Version with 3 tile arguments (different output tile).
+///
+/// This overload blocks until completion of the algorithm.
+template <Backend B, class T, Device D>
+void trmm3(const dlaf::internal::Policy<B>& policy, const blas::Side side, const blas::Uplo uplo,
+           const blas::Op op, const blas::Diag diag, const T alpha, const Tile<const T, D>& a,
+           const Tile<const T, D>& b, const Tile<T, D>& c);
+
+/// \overload trmm3
+///
+/// This overload takes a policy argument and a sender which must send all required arguments for the
+/// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
+template <Backend B, typename Sender,
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
+auto trmm3(const dlaf::internal::Policy<B>& p, Sender&& s);
+
+/// \overload trmm3
+///
+/// This overload partially applies the algorithm with a policy for later use with operator| with a
+/// sender on the left-hand side.
+template <Backend B>
+auto trmm3(const dlaf::internal::Policy<B>& p);
+
+/// Performs a triangular solve.
+///
+/// This overload blocks until completion of the algorithm.
+template <Backend B, class T, Device D>
+void trsm(const dlaf::internal::Policy<B>& policy, const blas::Side side, const blas::Uplo uplo,
+          const blas::Op op, const blas::Diag diag, const T alpha, const Tile<const T, D>& a,
+          const Tile<T, D>& b);
+
+/// \overload trsm
+///
+/// This overload takes a policy argument and a sender which must send all required arguments for the
+/// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
+template <Backend B, typename Sender,
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
+auto trsm(const dlaf::internal::Policy<B>& p, Sender&& s);
+
+/// \overload trsm
+///
+/// This overload partially applies the algorithm with a policy for later use with operator| with a
+/// sender on the left-hand side.
+template <Backend B>
+auto trsm(const dlaf::internal::Policy<B>& p);
+#else
+
+namespace internal {
+
 template <class T>
 void gemm(const blas::Op op_a, const blas::Op op_b, const T alpha, const Tile<const T, Device::CPU>& a,
           const Tile<const T, Device::CPU>& b, const T beta, const Tile<T, Device::CPU>& c) noexcept {
@@ -39,7 +201,6 @@ void gemm(const blas::Op op_a, const blas::Op op_b, const T alpha, const Tile<co
              beta, c.ptr(), c.ld());
 }
 
-/// Computes matrix matrix multiplication where matrix @p a is hermitian (symmetric if T is real).
 template <class T>
 void hemm(const blas::Side side, const blas::Uplo uplo, const T alpha,
           const Tile<const T, Device::CPU>& a, const Tile<const T, Device::CPU>& b, const T beta,
@@ -49,7 +210,6 @@ void hemm(const blas::Side side, const blas::Uplo uplo, const T alpha,
              c.ptr(), c.ld());
 }
 
-/// Performs a rank 2k update of hermitian (symmetric if T is real) tile a.
 template <class T>
 void her2k(const blas::Uplo uplo, const blas::Op op, const T alpha, const Tile<const T, Device::CPU>& a,
            const Tile<const T, Device::CPU>& b, const BaseType<T> beta,
@@ -59,7 +219,6 @@ void her2k(const blas::Uplo uplo, const blas::Op op, const T alpha, const Tile<c
               c.ptr(), c.ld());
 }
 
-/// Performs a rank k update of hermitian (symmetric if T is real) tile @p a.
 template <class T>
 void herk(const blas::Uplo uplo, const blas::Op op, const BaseType<T> alpha,
           const Tile<const T, Device::CPU>& a, const BaseType<T> beta,
@@ -68,7 +227,7 @@ void herk(const blas::Uplo uplo, const blas::Op op, const BaseType<T> alpha,
   blas::herk(blas::Layout::ColMajor, uplo, op, s.n, s.k, alpha, a.ptr(), a.ld(), beta, c.ptr(), c.ld());
 }
 
-/// Performs a matrix-matrix multiplication, involving a triangular matrix.
+// Triangular matrix-matrix multiplication.
 template <class T>
 void trmm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const blas::Diag diag,
           const T alpha, const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b) noexcept {
@@ -77,7 +236,20 @@ void trmm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const
              b.ld());
 }
 
-/// Performs a triangular solve.
+// Triangular matrix-matrix multiplication.
+// Version with 3 tile arguments (different output tile).
+template <class T>
+void trmm3(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const blas::Diag diag,
+           const T alpha, const Tile<const T, Device::CPU>& a, const Tile<const T, Device::CPU>& b,
+           const Tile<T, Device::CPU>& c) noexcept {
+  auto s = tile::internal::getTrmm3Sizes(side, a, b, c);
+  DLAF_ASSERT(b.ptr() == nullptr || b.ptr() != c.ptr(), b.ptr(), c.ptr());
+
+  matrix::internal::copy(b, c);
+  blas::trmm(blas::Layout::ColMajor, side, uplo, op, diag, s.m, s.n, alpha, a.ptr(), a.ld(), c.ptr(),
+             c.ld());
+}
+
 template <class T>
 void trsm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const blas::Diag diag,
           const T alpha, const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b) noexcept {
@@ -87,128 +259,97 @@ void trsm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const
 }
 
 #ifdef DLAF_WITH_CUDA
-namespace internal {
-
-#define DLAF_DECLARE_CUBLAS_OP(Name) \
-  template <typename T>              \
-  struct Cublas##Name
-
-#define DLAF_DEFINE_CUBLAS_OP(Name, Type, f)                    \
-  template <>                                                   \
-  struct Cublas##Name<Type> {                                   \
-    template <typename... Args>                                 \
-    static void call(Args&&... args) {                          \
-      DLAF_CUBLAS_CALL(cublas##f(std::forward<Args>(args)...)); \
-    }                                                           \
-  }
-
-DLAF_DECLARE_CUBLAS_OP(Gemm);
-DLAF_DEFINE_CUBLAS_OP(Gemm, float, Sgemm);
-DLAF_DEFINE_CUBLAS_OP(Gemm, double, Dgemm);
-DLAF_DEFINE_CUBLAS_OP(Gemm, std::complex<float>, Cgemm);
-DLAF_DEFINE_CUBLAS_OP(Gemm, std::complex<double>, Zgemm);
-
-DLAF_DECLARE_CUBLAS_OP(Hemm);
-DLAF_DEFINE_CUBLAS_OP(Hemm, float, Ssymm);
-DLAF_DEFINE_CUBLAS_OP(Hemm, double, Dsymm);
-DLAF_DEFINE_CUBLAS_OP(Hemm, std::complex<float>, Chemm);
-DLAF_DEFINE_CUBLAS_OP(Hemm, std::complex<double>, Zhemm);
-
-DLAF_DECLARE_CUBLAS_OP(Her2k);
-DLAF_DEFINE_CUBLAS_OP(Her2k, float, Ssyr2k);
-DLAF_DEFINE_CUBLAS_OP(Her2k, double, Dsyr2k);
-DLAF_DEFINE_CUBLAS_OP(Her2k, std::complex<float>, Cher2k);
-DLAF_DEFINE_CUBLAS_OP(Her2k, std::complex<double>, Zher2k);
-
-DLAF_DECLARE_CUBLAS_OP(Herk);
-DLAF_DEFINE_CUBLAS_OP(Herk, float, Ssyrk);
-DLAF_DEFINE_CUBLAS_OP(Herk, double, Dsyrk);
-DLAF_DEFINE_CUBLAS_OP(Herk, std::complex<float>, Cherk);
-DLAF_DEFINE_CUBLAS_OP(Herk, std::complex<double>, Zherk);
-
-DLAF_DECLARE_CUBLAS_OP(Trmm);
-DLAF_DEFINE_CUBLAS_OP(Trmm, float, Strmm);
-DLAF_DEFINE_CUBLAS_OP(Trmm, double, Dtrmm);
-DLAF_DEFINE_CUBLAS_OP(Trmm, std::complex<float>, Ctrmm);
-DLAF_DEFINE_CUBLAS_OP(Trmm, std::complex<double>, Ztrmm);
-
-DLAF_DECLARE_CUBLAS_OP(Trsm);
-DLAF_DEFINE_CUBLAS_OP(Trsm, float, Strsm);
-DLAF_DEFINE_CUBLAS_OP(Trsm, double, Dtrsm);
-DLAF_DEFINE_CUBLAS_OP(Trsm, std::complex<float>, Ctrsm);
-DLAF_DEFINE_CUBLAS_OP(Trsm, std::complex<double>, Ztrsm);
-}
-
-/// Computes general matrix matrix multiplication.
 template <class T>
 void gemm(cublasHandle_t handle, const blas::Op op_a, const blas::Op op_b, const T alpha,
           const matrix::Tile<const T, Device::GPU>& a, const matrix::Tile<const T, Device::GPU>& b,
           const T beta, const matrix::Tile<T, Device::GPU>& c) {
-  auto s = tile::internal::getGemmSizes(op_a, op_b, a, b, c);
-  internal::CublasGemm<T>::call(handle, util::blasToCublas(op_a), util::blasToCublas(op_b), s.m, s.n,
-                                s.k, util::blasToCublasCast(&alpha), util::blasToCublasCast(a.ptr()),
-                                a.ld(), util::blasToCublasCast(b.ptr()), b.ld(),
-                                util::blasToCublasCast(&beta), util::blasToCublasCast(c.ptr()), c.ld());
+  using util::blasToCublas;
+  using util::blasToCublasCast;
+  auto s = getGemmSizes(op_a, op_b, a, b, c);
+  gpublas::Gemm<T>::call(handle, blasToCublas(op_a), blasToCublas(op_b), to_int(s.m), to_int(s.n),
+                         to_int(s.k), blasToCublasCast(&alpha), blasToCublasCast(a.ptr()),
+                         to_int(a.ld()), blasToCublasCast(b.ptr()), to_int(b.ld()),
+                         blasToCublasCast(&beta), blasToCublasCast(c.ptr()), to_int(c.ld()));
 }
 
-/// Computes matrix matrix multiplication where matrix @p a is hermitian (symmetric if T is real).
 template <class T>
 void hemm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, const T alpha,
           const Tile<const T, Device::GPU>& a, const Tile<const T, Device::GPU>& b, const T beta,
           const Tile<T, Device::GPU>& c) {
-  auto s = tile::internal::getHemmSizes(side, a, b, c);
-  internal::CublasHemm<T>::call(handle, util::blasToCublas(side), util::blasToCublas(uplo), s.m, s.n,
-                                util::blasToCublasCast(&alpha), util::blasToCublasCast(a.ptr()), a.ld(),
-                                util::blasToCublasCast(b.ptr()), b.ld(), util::blasToCublasCast(&beta),
-                                util::blasToCublasCast(c.ptr()), c.ld());
+  using util::blasToCublas;
+  using util::blasToCublasCast;
+  auto s = getHemmSizes(side, a, b, c);
+  gpublas::Hemm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), to_int(s.m), to_int(s.n),
+                         blasToCublasCast(&alpha), blasToCublasCast(a.ptr()), to_int(a.ld()),
+                         blasToCublasCast(b.ptr()), to_int(b.ld()), blasToCublasCast(&beta),
+                         blasToCublasCast(c.ptr()), to_int(c.ld()));
 }
 
-/// Performs a rank 2k update of hermitian (symmetric if T is real) tile @p a.
 template <class T>
 void her2k(cublasHandle_t handle, const blas::Uplo uplo, const blas::Op op, const T alpha,
            const matrix::Tile<const T, Device::GPU>& a, const Tile<const T, Device::GPU>& b,
            const BaseType<T> beta, const matrix::Tile<T, Device::GPU>& c) {
-  auto s = tile::internal::getHer2kSizes(op, a, b, c);
-  internal::CublasHer2k<T>::call(handle, util::blasToCublas(uplo), util::blasToCublas(op), s.n, s.k,
-                                 util::blasToCublasCast(&alpha), util::blasToCublasCast(a.ptr()), a.ld(),
-                                 util::blasToCublasCast(b.ptr()), b.ld(), util::blasToCublasCast(&beta),
-                                 util::blasToCublasCast(c.ptr()), c.ld());
+  using util::blasToCublas;
+  using util::blasToCublasCast;
+  auto s = getHer2kSizes(op, a, b, c);
+  gpublas::Her2k<T>::call(handle, blasToCublas(uplo), blasToCublas(op), to_int(s.n), to_int(s.k),
+                          blasToCublasCast(&alpha), blasToCublasCast(a.ptr()), to_int(a.ld()),
+                          blasToCublasCast(b.ptr()), to_int(b.ld()), blasToCublasCast(&beta),
+                          blasToCublasCast(c.ptr()), to_int(c.ld()));
 }
 
-/// Performs a rank k update of hermitian (symmetric if T is real) tile @p a.
 template <class T>
 void herk(cublasHandle_t handle, const blas::Uplo uplo, const blas::Op op, const BaseType<T> alpha,
           const matrix::Tile<const T, Device::GPU>& a, const BaseType<T> beta,
           const matrix::Tile<T, Device::GPU>& c) {
-  auto s = tile::internal::getHerkSizes(op, a, c);
-  internal::CublasHerk<T>::call(handle, util::blasToCublas(uplo), util::blasToCublas(op), s.n, s.k,
-                                util::blasToCublasCast(&alpha), util::blasToCublasCast(a.ptr()), a.ld(),
-                                util::blasToCublasCast(&beta), util::blasToCublasCast(c.ptr()), c.ld());
+  using util::blasToCublas;
+  using util::blasToCublasCast;
+  auto s = getHerkSizes(op, a, c);
+  gpublas::Herk<T>::call(handle, blasToCublas(uplo), blasToCublas(op), to_int(s.n), to_int(s.k),
+                         blasToCublasCast(&alpha), blasToCublasCast(a.ptr()), to_int(a.ld()),
+                         blasToCublasCast(&beta), blasToCublasCast(c.ptr()), to_int(c.ld()));
 }
 
-/// Performs a matrix-matrix multiplication, involving a triangular matrix.
 template <class T>
 void trmm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, const blas::Op op,
           const blas::Diag diag, const T alpha, const matrix::Tile<const T, Device::GPU>& a,
           const matrix::Tile<T, Device::GPU>& b) {
+  using util::blasToCublas;
+  using util::blasToCublasCast;
   auto s = tile::internal::getTrmmSizes(side, a, b);
-  internal::CublasTrmm<T>::call(handle, util::blasToCublas(side), util::blasToCublas(uplo),
-                                util::blasToCublas(op), util::blasToCublas(diag), s.m, s.n,
-                                util::blasToCublasCast(&alpha), util::blasToCublasCast(a.ptr()), a.ld(),
-                                util::blasToCublasCast(b.ptr()), b.ld(), util::blasToCublasCast(b.ptr()),
-                                b.ld());
+
+  gpublas::Trmm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),
+                         blasToCublas(diag), to_int(s.m), to_int(s.n), blasToCublasCast(&alpha),
+                         blasToCublasCast(a.ptr()), to_int(a.ld()), blasToCublasCast(b.ptr()),
+                         to_int(b.ld()), blasToCublasCast(b.ptr()), to_int(b.ld()));
 }
 
-/// Performs a triangular solve.
+template <class T>
+void trmm3(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, const blas::Op op,
+           const blas::Diag diag, const T alpha, const matrix::Tile<const T, Device::GPU>& a,
+           const matrix::Tile<const T, Device::GPU>& b, const matrix::Tile<T, Device::GPU>& c) {
+  using util::blasToCublas;
+  using util::blasToCublasCast;
+  auto s = tile::internal::getTrmm3Sizes(side, a, b, c);
+  DLAF_ASSERT(b.ptr() == nullptr || b.ptr() != c.ptr(), b.ptr(), c.ptr());
+
+  gpublas::Trmm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),
+                         blasToCublas(diag), to_int(s.m), to_int(s.n), blasToCublasCast(&alpha),
+                         blasToCublasCast(a.ptr()), to_int(a.ld()), blasToCublasCast(b.ptr()),
+                         to_int(b.ld()), blasToCublasCast(c.ptr()), to_int(c.ld()));
+}
+
 template <class T>
 void trsm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, const blas::Op op,
           const blas::Diag diag, const T alpha, const matrix::Tile<const T, Device::GPU>& a,
           const matrix::Tile<T, Device::GPU>& b) {
-  auto s = tile::internal::getTrsmSizes(side, a, b);
-  internal::CublasTrsm<T>::call(handle, util::blasToCublas(side), util::blasToCublas(uplo),
-                                util::blasToCublas(op), util::blasToCublas(diag), s.m, s.n,
-                                util::blasToCublasCast(&alpha), util::blasToCublasCast(a.ptr()), a.ld(),
-                                util::blasToCublasCast(b.ptr()), b.ld());
+  using util::blasToCublas;
+  using util::blasToCublasCast;
+  auto s = getTrsmSizes(side, a, b);
+  gpublas::Trsm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),
+                         blasToCublas(diag), to_int(s.m), to_int(s.n), blasToCublasCast(&alpha),
+                         blasToCublasCast(a.ptr()), to_int(a.ld()), blasToCublasCast(b.ptr()),
+                         to_int(b.ld()));
 }
 #endif
 
@@ -217,7 +358,18 @@ DLAF_MAKE_CALLABLE_OBJECT(hemm);
 DLAF_MAKE_CALLABLE_OBJECT(her2k);
 DLAF_MAKE_CALLABLE_OBJECT(herk);
 DLAF_MAKE_CALLABLE_OBJECT(trmm);
+DLAF_MAKE_CALLABLE_OBJECT(trmm3);
 DLAF_MAKE_CALLABLE_OBJECT(trsm);
+}
 
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(gemm, internal::gemm_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(hemm, internal::hemm_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(her2k, internal::her2k_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(herk, internal::herk_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(trmm, internal::trmm_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(trmm3, internal::trmm3_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(trsm, internal::trsm_o)
+
+#endif
 }
 }

@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -14,7 +14,7 @@
 
 #include <mpi.h>
 
-#include <hpx/local/unwrap.hpp>
+#include <pika/unwrap.hpp>
 
 #include "dlaf/common/callable_object.h"
 #include "dlaf/common/contiguous_buffer_holder.h"
@@ -32,10 +32,10 @@ namespace comm {
 namespace internal {
 
 template <class T>
-auto allReduce(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
+auto allReduce(const common::PromiseGuard<comm::Communicator>& pcomm, MPI_Op reduce_op,
                common::internal::ContiguousBufferHolder<const T> cont_buf_in,
                common::internal::ContiguousBufferHolder<T> cont_buf_out,
-               matrix::Tile<const T, Device::CPU> const&, MPI_Request* req) {
+               const matrix::Tile<const T, Device::CPU>&, MPI_Request* req) {
   auto& comm = pcomm.ref();
   auto msg_in = comm::make_message(cont_buf_in.descriptor);
   auto msg_out = comm::make_message(cont_buf_out.descriptor);
@@ -48,7 +48,7 @@ auto allReduce(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
 DLAF_MAKE_CALLABLE_OBJECT(allReduce);
 
 template <class T>
-auto allReduceInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
+auto allReduceInPlace(const common::PromiseGuard<comm::Communicator>& pcomm, MPI_Op reduce_op,
                       common::internal::ContiguousBufferHolder<T> cont_buf, MPI_Request* req) {
   auto& comm = pcomm.ref();
   auto msg = comm::make_message(cont_buf.descriptor);
@@ -63,11 +63,11 @@ DLAF_MAKE_CALLABLE_OBJECT(allReduceInPlace);
 
 template <class T>
 void scheduleAllReduce(const comm::Executor& ex,
-                       hpx::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
-                       hpx::shared_future<matrix::Tile<const T, Device::CPU>> tile_in,
-                       hpx::future<matrix::Tile<T, Device::CPU>> tile_out) {
-  using hpx::dataflow;
-  using hpx::unwrapping;
+                       pika::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
+                       pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_in,
+                       pika::future<matrix::Tile<T, Device::CPU>> tile_out) {
+  using pika::dataflow;
+  using pika::unwrapping;
 
   using common::internal::ContiguousBufferHolder;
   using common::internal::copyBack_o;
@@ -86,30 +86,30 @@ void scheduleAllReduce(const comm::Executor& ex,
 
   auto ex_copy = getHpExecutor<Backend::MC>();
 
-  hpx::future<ContiguousBufferHolder<const T>> cont_buf_in =
+  pika::future<ContiguousBufferHolder<const T>> cont_buf_in =
       dataflow(unwrapping(makeItContiguous_o), tile_in);
 
-  hpx::future<ContiguousBufferHolder<T>> cont_buf_out;
+  pika::future<ContiguousBufferHolder<T>> cont_buf_out;
   {
     auto wrapped = getUnwrapRetValAndArgs(
         dataflow(ex_copy, unwrapExtendTiles(makeItContiguous_o), std::move(tile_out)));
     cont_buf_out = std::move(wrapped.first);
-    tile_out = std::move(hpx::get<0>(wrapped.second));
+    tile_out = std::move(pika::get<0>(wrapped.second));
   }
 
   cont_buf_out = getUnwrapReturnValue(dataflow(ex, unwrapExtendTiles(internal::allReduce_o),
                                                std::move(pcomm), reduce_op, std::move(cont_buf_in),
                                                std::move(cont_buf_out), tile_in));
 
-  dataflow(ex_copy, unwrapping(copyBack_o), std::move(tile_out), std::move(cont_buf_out));
+  dataflow(ex_copy, unwrapping(copyBack_o), std::move(cont_buf_out), std::move(tile_out));
 }
 
 template <class T>
-hpx::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
-    const comm::Executor& ex, hpx::future<common::PromiseGuard<comm::Communicator>> pcomm,
-    MPI_Op reduce_op, hpx::future<matrix::Tile<T, Device::CPU>> tile) {
-  using hpx::dataflow;
-  using hpx::unwrapping;
+pika::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
+    const comm::Executor& ex, pika::future<common::PromiseGuard<comm::Communicator>> pcomm,
+    MPI_Op reduce_op, pika::future<matrix::Tile<T, Device::CPU>> tile) {
+  using pika::dataflow;
+  using pika::unwrapping;
 
   using common::internal::copyBack_o;
   using common::internal::makeItContiguous_o;
@@ -127,18 +127,21 @@ hpx::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
 
   auto ex_copy = getHpExecutor<Backend::MC>();
 
-  hpx::future<common::internal::ContiguousBufferHolder<T>> cont_buf;
+  pika::future<common::internal::ContiguousBufferHolder<T>> cont_buf;
   {
     auto wrapped = getUnwrapRetValAndArgs(
         dataflow(ex_copy, unwrapExtendTiles(makeItContiguous_o), std::move(tile)));
     cont_buf = std::move(wrapped.first);
-    tile = std::move(hpx::get<0>(wrapped.second));
+    tile = std::move(pika::get<0>(wrapped.second));
   }
 
   cont_buf = dataflow(ex, unwrapping(internal::allReduceInPlace_o), std::move(pcomm), reduce_op,
                       std::move(cont_buf));
 
-  return dataflow(ex_copy, unwrapping(copyBack_o), std::move(tile), std::move(cont_buf));
+  // Note:
+  // This extracts the tile given as argument to copyBack, not the return value.
+  return pika::get<1>(pika::split_future(
+      dataflow(ex_copy, matrix::unwrapExtendTiles(copyBack_o), std::move(cont_buf), std::move(tile))));
 }
 }
 }

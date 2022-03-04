@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -12,7 +12,7 @@
 
 /// @file
 
-#include <hpx/local/future.hpp>
+#include <pika/future.hpp>
 
 #include "dlaf/communication/message.h"
 #include "dlaf/executors.h"
@@ -49,12 +49,12 @@ std::pair<SizeType, comm::IndexT_MPI> transposedOwner(const matrix::Distribution
 ///                     on other ranks it is the destination panel
 /// @param serial_comm  where to pipeline the tasks for communications.
 /// @pre Communicator in @p serial_comm must be orthogonal to panel axis
-template <class T, Device device, Coord axis, class = std::enable_if_t<!std::is_const<T>::value>>
+template <class T, Device device, Coord axis, class = std::enable_if_t<!std::is_const_v<T>>>
 void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
                matrix::Panel<axis, T, device>& panel,
                common::Pipeline<comm::Communicator>& serial_comm) {
-  using hpx::dataflow;
-  using hpx::unwrapping;
+  using pika::dataflow;
+  using pika::unwrapping;
 
   constexpr auto comm_coord = axis;
 
@@ -101,13 +101,13 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
 /// @pre both panels are child of a matrix (even not the same) with the same Distribution
 /// @pre both panels parent matrices should be square matrices with square blocksizes
 /// @pre both panels offsets should lay on the main diagonal of the parent matrix
-template <class T, Device device, Coord axis, class = std::enable_if_t<!std::is_const<T>::value>>
+template <class T, Device device, Coord axis, class = std::enable_if_t<!std::is_const_v<T>>>
 void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
                matrix::Panel<axis, T, device>& panel, matrix::Panel<orthogonal(axis), T, device>& panelT,
                common::Pipeline<comm::Communicator>& row_task_chain,
                common::Pipeline<comm::Communicator>& col_task_chain) {
-  using hpx::dataflow;
-  using hpx::unwrapping;
+  using pika::dataflow;
+  using pika::unwrapping;
 
   constexpr Coord axisT = orthogonal(axis);
 
@@ -178,10 +178,7 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
                          : panelT.iteratorLocal();
 
   for (const auto& indexT : range) {
-    SizeType index_diag;
-    comm::IndexT_MPI owner_diag;
-
-    std::tie(index_diag, owner_diag) = internal::transposedOwner<coordT>(dist, indexT);
+    auto [index_diag, owner_diag] = internal::transposedOwner<coordT>(dist, indexT);
 
     if (dist.rankIndex().get(coord) == owner_diag) {
       const auto index_diag_local = dist.template localTileFromGlobalTile<coord>(index_diag);

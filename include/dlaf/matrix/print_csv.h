@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -23,8 +23,6 @@ struct csv {};
 }
 
 namespace matrix {
-
-namespace internal {
 
 /// Print a tile in csv format to standard output
 template <class T>
@@ -70,8 +68,6 @@ void print(format::csv, std::string sym, Matrix<const T, Device::CPU>& mat,
     }
     os << std::endl;
   }
-}
-
 }
 }
 }

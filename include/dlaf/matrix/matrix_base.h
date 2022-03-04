@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -65,7 +65,7 @@ public:
   }
 
   /// Returns the size of the Tile with global index @p index.
-  TileElementSize tileSize(const GlobalTileIndex& index) noexcept {
+  TileElementSize tileSize(const GlobalTileIndex& index) const noexcept {
     return distribution_->tileSize(index);
   }
 

@@ -1,4 +1,4 @@
-# Copyright 2013-2020 Lawrence Livermore National Security, LLC and other
+# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
 # Spack Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
@@ -20,20 +20,28 @@ class DlaFuture(CMakePackage, CudaPackage):
 
     variant("miniapps", default=False, description="Build miniapps.")
 
+    variant("ci-test", default=False, description="Build for CI (Advanced usage).")
+    conflicts('~miniapps', when='+ci-test')
+
     depends_on("cmake@3.14:", type="build")
     depends_on("doxygen", type="build", when="+doc")
     depends_on("mpi")
     depends_on("blaspp")
     depends_on("lapackpp")
+
     depends_on("umpire~examples")
     depends_on("umpire+cuda~shared", when="+cuda")
-    depends_on("hpx cxxstd=14 networking=none +async_mpi")
-    depends_on("hpx@1.7.0:")
-    depends_on("hpx +cuda", when="+cuda")
 
-    depends_on("hpx build_type=Debug", when="build_type=Debug")
-    depends_on("hpx build_type=Release", when="build_type=Release")
-    depends_on("hpx build_type=RelWithDebInfo", when="build_type=RelWithDebInfo")
+    # https://github.com/eth-cscs/DLA-Future/issues/420
+    conflicts("umpire@6:")
+
+    depends_on("pika cxxstd=17 +mpi")
+    depends_on("pika@0.1.0")
+    depends_on("pika +cuda", when="+cuda")
+
+    depends_on("pika build_type=Debug", when="build_type=Debug")
+    depends_on("pika build_type=Release", when="build_type=Release")
+    depends_on("pika build_type=RelWithDebInfo", when="build_type=RelWithDebInfo")
 
     def cmake_args(self):
         spec = self.spec
@@ -57,8 +65,15 @@ class DlaFuture(CMakePackage, CudaPackage):
         # DOC
         args.append(self.define_from_variant("DLAF_BUILD_DOC", "doc"))
 
-        # TESTs
-        args.append(self.define("DLAF_BUILD_TESTING", self.run_tests))
+        if '+ci-test' in self.spec:
+            # Enable TESTS and setup CI specific parameters
+            args.append(self.define("CMAKE_CXX_FLAGS", "-Werror"))
+            args.append(self.define("DLAF_BUILD_TESTING", True))
+            args.append(self.define("DLAF_CI_RUNNER_USES_MPIRUN", True))
+            args.append(self.define("MPIEXEC_EXECUTABLE", "srun"))
+        else:
+            # TEST
+            args.append(self.define("DLAF_BUILD_TESTING", self.run_tests))
 
         # MINIAPPS
         args.append(self.define_from_variant("DLAF_BUILD_MINIAPPS", "miniapps"))

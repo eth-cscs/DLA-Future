@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -21,59 +21,24 @@
 #include <cuda_runtime.h>
 #include <cusolverDn.h>
 
-#include <hpx/local/execution.hpp>
-#include <hpx/local/functional.hpp>
-#include <hpx/local/future.hpp>
-#include <hpx/local/mutex.hpp>
-#include <hpx/local/tuple.hpp>
-#include <hpx/local/type_traits.hpp>
-#include <hpx/modules/async_cuda.hpp>
+#include <pika/execution.hpp>
+#include <pika/functional.hpp>
+#include <pika/future.hpp>
+#include <pika/modules/async_cuda.hpp>
+#include <pika/mutex.hpp>
+#include <pika/tuple.hpp>
+#include <pika/type_traits.hpp>
 
 #include "dlaf/common/assert.h"
 #include "dlaf/cublas/executor.h"
+#include "dlaf/cublas/handle_pool.h"
 #include "dlaf/cuda/error.h"
 #include "dlaf/cusolver/error.h"
+#include "dlaf/cusolver/handle_pool.h"
 
 namespace dlaf {
 namespace cusolver {
 namespace internal {
-class HandlePoolImpl {
-  int device_;
-  std::size_t num_worker_threads_ = hpx::get_num_worker_threads();
-  std::vector<cusolverDnHandle_t> handles_;
-
-public:
-  HandlePoolImpl(int device) : device_(device), handles_(num_worker_threads_) {
-    DLAF_CUDA_CALL(cudaSetDevice(device_));
-
-    for (auto& h : handles_) {
-      DLAF_CUSOLVER_CALL(cusolverDnCreate(&h));
-    }
-  }
-
-  HandlePoolImpl& operator=(HandlePoolImpl&&) = default;
-  HandlePoolImpl(HandlePoolImpl&&) = default;
-  HandlePoolImpl(const HandlePoolImpl&) = delete;
-  HandlePoolImpl& operator=(const HandlePoolImpl&) = delete;
-
-  ~HandlePoolImpl() {
-    for (auto& h : handles_) {
-      DLAF_CUSOLVER_CALL(cusolverDnDestroy(h));
-    }
-  }
-
-  cusolverDnHandle_t getNextHandle(cudaStream_t stream) {
-    cusolverDnHandle_t handle = handles_[hpx::get_worker_thread_num()];
-    DLAF_CUDA_CALL(cudaSetDevice(device_));
-    DLAF_CUSOLVER_CALL(cusolverDnSetStream(handle, stream));
-    return handle;
-  }
-
-  int getDevice() {
-    return device_;
-  }
-};
-
 template <bool IsCallable, typename F, typename... Ts>
 struct isAsyncCusolverCallableImpl : std::false_type {
   struct dummy_type {};
@@ -82,49 +47,25 @@ struct isAsyncCusolverCallableImpl : std::false_type {
 
 template <typename F, typename... Ts>
 struct isAsyncCusolverCallableImpl<true, F, Ts...> : std::true_type {
-  using return_type = hpx::future<typename hpx::invoke_result<F, cusolverDnHandle_t&, Ts...>::type>;
+  using return_type = pika::future<typename pika::invoke_result<F, cusolverDnHandle_t&, Ts...>::type>;
 };
 
 template <typename F, typename... Ts>
 struct isAsyncCusolverCallable
-    : isAsyncCusolverCallableImpl<hpx::is_invocable_v<F, cusolverDnHandle_t&, Ts...>, F, Ts...> {};
+    : isAsyncCusolverCallableImpl<pika::is_invocable_v<F, cusolverDnHandle_t&, Ts...>, F, Ts...> {};
+
+template <typename F, typename... Ts>
+inline constexpr bool isAsyncCusolverCallable_v = isAsyncCusolverCallable<F, Ts...>::value;
 
 template <typename F, typename Futures>
 struct isDataflowCusolverCallable
-    : hpx::is_invocable<hpx::util::functional::invoke_fused, F,
-                        decltype(hpx::tuple_cat(hpx::tie(std::declval<cusolverDnHandle_t&>()),
-                                                std::declval<Futures>()))> {};
+    : pika::is_invocable<pika::util::functional::invoke_fused, F,
+                         decltype(pika::tuple_cat(pika::tie(std::declval<cusolverDnHandle_t&>()),
+                                                  std::declval<Futures>()))> {};
+
+template <typename F, typename Futures>
+inline constexpr bool isDataflowCusolverCallable_v = isDataflowCusolverCallable<F, Futures>::value;
 }
-
-/// A pool of cuSOLVER handles with reference semantics (copying points to the
-/// same underlying cuSOLVER handles, last reference destroys the references).
-/// Allows access to cuSOLVER handles associated with a particular stream. The
-/// user must ensure that the handle pool and the stream use the same device.
-/// Each HPX worker thread is assigned thread local cuSOLVER handle.
-class HandlePool {
-  std::shared_ptr<internal::HandlePoolImpl> handles_ptr_;
-
-public:
-  HandlePool(int device = 0) : handles_ptr_(std::make_shared<internal::HandlePoolImpl>(device)) {}
-
-  cusolverDnHandle_t getNextHandle(cudaStream_t stream) {
-    DLAF_ASSERT(bool(handles_ptr_), "");
-    return handles_ptr_->getNextHandle(stream);
-  }
-
-  int getDevice() {
-    DLAF_ASSERT(bool(handles_ptr_), "");
-    return handles_ptr_->getDevice();
-  }
-
-  bool operator==(HandlePool const& rhs) const noexcept {
-    return handles_ptr_ == rhs.handles_ptr_;
-  }
-
-  bool operator!=(HandlePool const& rhs) const noexcept {
-    return !(*this == rhs);
-  }
-};
 
 /// An executor for cuSOLVER functions. Uses handles and streams from the given
 /// HandlePool and StreamPool. A cuSOLVER function is defined as any function
@@ -157,50 +98,50 @@ public:
   }
 
   template <typename F, typename... Ts>
-  std::enable_if_t<internal::isAsyncCusolverCallable<F, Ts...>::value,
+  std::enable_if_t<internal::isAsyncCusolverCallable_v<F, Ts...>,
                    typename internal::isAsyncCusolverCallable<F, Ts...>::return_type>
   async_execute(F&& f, Ts&&... ts) {
     cudaStream_t stream = stream_pool_.getNextStream();
     cusolverDnHandle_t handle = handle_pool_.getNextHandle(stream);
-    auto r = hpx::invoke(std::forward<F>(f), handle, std::forward<Ts>(ts)...);
-    hpx::future<void> fut = hpx::cuda::experimental::detail::get_future_with_event(stream);
+    auto r = pika::invoke(std::forward<F>(f), handle, std::forward<Ts>(ts)...);
+    pika::future<void> fut = pika::cuda::experimental::detail::get_future_with_event(stream);
 
     // The handle and stream pools are captured by value to ensure that the
     // streams live at least until the event has completed.
-    return fut.then(hpx::launch::sync,
+    return fut.then(pika::launch::sync,
                     [r = std::move(r), stream_pool = stream_pool_,
-                     handle_pool = handle_pool_](hpx::future<void>&&) mutable { return std::move(r); });
+                     handle_pool = handle_pool_](pika::future<void>&&) mutable { return std::move(r); });
   }
 
   template <class Frame, class F, class Futures>
-  std::enable_if_t<internal::isDataflowCusolverCallable<F, Futures>::value> dataflow_finalize(
+  std::enable_if_t<internal::isDataflowCusolverCallable_v<F, Futures>> dataflow_finalize(
       Frame&& frame, F&& f, Futures&& futures) {
     // Ensure the dataflow frame stays alive long enough.
-    hpx::intrusive_ptr<typename std::remove_pointer<typename std::decay<Frame>::type>::type> frame_p(
+    pika::intrusive_ptr<typename std::remove_pointer<typename std::decay<Frame>::type>::type> frame_p(
         frame);
 
     cudaStream_t stream = stream_pool_.getNextStream();
     cusolverDnHandle_t handle = handle_pool_.getNextHandle(stream);
-    auto r = hpx::invoke_fused(std::forward<F>(f),
-                               hpx::tuple_cat(hpx::tie(handle), std::forward<Futures>(futures)));
-    hpx::future<void> fut = hpx::cuda::experimental::detail::get_future_with_event(stream);
+    auto r = pika::invoke_fused(std::forward<F>(f),
+                                pika::tuple_cat(pika::tie(handle), std::forward<Futures>(futures)));
+    pika::future<void> fut = pika::cuda::experimental::detail::get_future_with_event(stream);
 
     // The handle and stream pools are captured by value to ensure that the
     // streams live at least until the event has completed.
-    fut.then(hpx::launch::sync, [r = std::move(r), frame_p = std::move(frame_p),
-                                 stream_pool = stream_pool_, handle_pool = handle_pool_](
-                                    hpx::future<void>&&) mutable { frame_p->set_data(std::move(r)); });
+    fut.then(pika::launch::sync, [r = std::move(r), frame_p = std::move(frame_p),
+                                  stream_pool = stream_pool_, handle_pool = handle_pool_](
+                                     pika::future<void>&&) mutable { frame_p->set_data(std::move(r)); });
   }
 
   template <typename F, typename... Ts>
-  std::enable_if_t<cublas::internal::isAsyncCublasCallable<F, Ts...>::value,
+  std::enable_if_t<cublas::internal::isAsyncCublasCallable_v<F, Ts...>,
                    typename cublas::internal::isAsyncCublasCallable<F, Ts...>::return_type>
   async_execute(F&& f, Ts&&... ts) {
     return base::async_execute(std::forward<F>(f), std::forward<Ts>(ts)...);
   }
 
   template <class Frame, class F, class Futures>
-  std::enable_if_t<cublas::internal::isDataflowCublasCallable<F, Futures>::value> dataflow_finalize(
+  std::enable_if_t<cublas::internal::isDataflowCublasCallable_v<F, Futures>> dataflow_finalize(
       Frame&& frame, F&& f, Futures&& futures) {
     base::dataflow_finalize(std::forward<Frame>(frame), std::forward<F>(f),
                             std::forward<Futures>(futures));
@@ -209,7 +150,7 @@ public:
 }
 }
 
-namespace hpx {
+namespace pika {
 namespace parallel {
 namespace execution {
 template <>

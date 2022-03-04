@@ -10,7 +10,7 @@ stages:
 ## BUILDS
 ##
 
-.build_common:
+.build_spack_common:
   extends: .dind
   stage: build
   only:
@@ -19,14 +19,17 @@ stages:
     - trying
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
+    SPACK_SHA: 4b52f0e4d739998b8aca49356d66fadd0b22af17
   before_script:
     - docker login -u $CSCS_REGISTRY_USER -p $CSCS_REGISTRY_PASSWORD $CSCS_REGISTRY
   script:
-    - TAG=`sha256sum $BUILD_DOCKER_FILE | head -c 64`
-    - docker build -t $BUILD_IMAGE:$TAG -t $BUILD_IMAGE:latest --cache-from $BUILD_IMAGE:$TAG --cache-from $BUILD_IMAGE:latest --build-arg BASE_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg HPX_WITH_CUDA --build-arg UMPIRE_ENABLE_CUDA -f $BUILD_DOCKER_FILE --network=host .
+    - TAG1=`echo $BASE_IMAGE$COMPILER$SPACK_SHA$USE_MKL | sha256sum - | head -c 8`
+    - TAG2=`cat $BUILD_DOCKER_FILE $SPACK_ENVIRONMENT | sha256sum - | head -c 64`
+    - TAG=$TAG1$TAG2
+    - docker build -t $BUILD_IMAGE:$TAG -t $BUILD_IMAGE:latest --cache-from $BUILD_IMAGE:$TAG --cache-from $BUILD_IMAGE:latest --build-arg BASE_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg SPACK_SHA --build-arg COMPILER --build-arg SPACK_ENVIRONMENT --build-arg USE_MKL -f $BUILD_DOCKER_FILE --network=host .
     - docker push $BUILD_IMAGE:$TAG
     - docker push $BUILD_IMAGE:latest
-    - docker build -t $DEPLOY_IMAGE --build-arg BUILD_IMAGE=$BUILD_IMAGE:$TAG --build-arg DLAF_WITH_CUDA -f $DEPLOY_DOCKER_FILE --network=host .
+    - docker build -t $DEPLOY_IMAGE --build-arg BUILD_IMAGE=$BUILD_IMAGE:$TAG --build-arg USE_MKL -f $DEPLOY_DOCKER_FILE --network=host .
     - docker push $DEPLOY_IMAGE
     - docker run -v $PWD/ci/ctest_to_gitlab.sh:/ctest_to_gitlab.sh $DEPLOY_IMAGE /ctest_to_gitlab.sh "$DEPLOY_IMAGE" "$USE_CODECOV" "$THREADS_PER_NODE" "$SLURM_CONSTRAINT" > pipeline.yml
   artifacts:
@@ -34,65 +37,95 @@ stages:
       - pipeline.yml
 
 # Builds a Docker image for the current commit
-cpu release build:
-  extends: .build_common
+cpu release build gcc9:
+  extends: .build_spack_common
   variables:
-    BUILD_DOCKER_FILE: ci/docker/release/build.Dockerfile
-    DEPLOY_DOCKER_FILE: ci/docker/release/deploy.Dockerfile
-    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu/deploy:$CI_COMMIT_SHA
-    DLAF_WITH_CUDA: 'OFF'
+    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
+    DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
     BASE_IMAGE: ubuntu:20.04
+    COMPILER: gcc@9.3.0
+    USE_MKL: "ON"
+    SPACK_ENVIRONMENT: ci/docker/cpu-release.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu-gcc9/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu-gcc9/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: mc
     THREADS_PER_NODE: 72
     USE_CODECOV: "false"
-    HPX_WITH_CUDA: "OFF"
-    UMPIRE_ENABLE_CUDA: "OFF"
 
-cpu codecov build:
-  extends: .build_common
+cpu release build clang10:
+  extends: .build_spack_common
   variables:
-    BUILD_DOCKER_FILE: ci/docker/codecov/build.Dockerfile
-    DEPLOY_DOCKER_FILE: ci/docker/codecov/deploy.Dockerfile
-    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-cpu/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-cpu/deploy:$CI_COMMIT_SHA
-    DLAF_WITH_CUDA: 'OFF'
+    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
+    DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
     BASE_IMAGE: ubuntu:20.04
+    COMPILER: clang@10.0.0
+    USE_MKL: "ON"
+    SPACK_ENVIRONMENT: ci/docker/cpu-release.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu-clang10/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu-clang10/deploy:$CI_COMMIT_SHA
+    SLURM_CONSTRAINT: mc
+    THREADS_PER_NODE: 72
+    USE_CODECOV: "false"
+
+cpu codecov build gcc9:
+  extends: .build_spack_common
+  variables:
+    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
+    DEPLOY_DOCKER_FILE: ci/docker/codecov.Dockerfile
+    BASE_IMAGE: ubuntu:20.04
+    COMPILER: gcc@9.3.0
+    USE_MKL: "OFF"
+    SPACK_ENVIRONMENT: ci/docker/cpu-debug.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-cpu-gcc9/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-cpu-gcc9/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: mc
     THREADS_PER_NODE: 72
     USE_CODECOV: "true"
-    HPX_WITH_CUDA: "OFF"
-    UMPIRE_ENABLE_CUDA: "OFF"
 
-gpu release build:
-  extends: .build_common
+gpu release build gcc9:
+  extends: .build_spack_common
   variables:
-    BUILD_DOCKER_FILE: ci/docker/release/build.Dockerfile
-    DEPLOY_DOCKER_FILE: ci/docker/release/deploy.Dockerfile
-    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-gpu/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-gpu/deploy:$CI_COMMIT_SHA
-    DLAF_WITH_CUDA: 'ON'
-    BASE_IMAGE: nvidia/cuda:11.0.3-devel-ubuntu20.04
+    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
+    DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
+    BASE_IMAGE: nvidia/cuda:11.1.1-devel-ubuntu20.04
+    COMPILER: gcc@9.3.0
+    USE_MKL: "ON"
+    SPACK_ENVIRONMENT: ci/docker/gpu-release.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-gpu-gcc9/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-gpu-gcc9/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: gpu
     THREADS_PER_NODE: 24
     USE_CODECOV: "false"
-    HPX_WITH_CUDA: "ON"
-    UMPIRE_ENABLE_CUDA: "ON"
 
-gpu codecov build:
-  extends: .build_common
+gpu release build clang10:
+  extends: .build_spack_common
   variables:
-    BUILD_DOCKER_FILE: ci/docker/codecov/build.Dockerfile
-    DEPLOY_DOCKER_FILE: ci/docker/codecov/deploy.Dockerfile
-    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-gpu/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-gpu/deploy:$CI_COMMIT_SHA
-    DLAF_WITH_CUDA: 'ON'
-    BASE_IMAGE: nvidia/cuda:11.0.3-devel-ubuntu20.04
+    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
+    DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
+    BASE_IMAGE: nvidia/cuda:11.1.1-devel-ubuntu20.04
+    COMPILER: clang@10.0.0
+    USE_MKL: "ON"
+    SPACK_ENVIRONMENT: ci/docker/gpu-release.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-gpu-clang10/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-gpu-clang10/deploy:$CI_COMMIT_SHA
+    SLURM_CONSTRAINT: gpu
+    THREADS_PER_NODE: 24
+    USE_CODECOV: "false"
+
+gpu codecov build gcc9:
+  extends: .build_spack_common
+  variables:
+    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
+    DEPLOY_DOCKER_FILE: ci/docker/codecov.Dockerfile
+    BASE_IMAGE: nvidia/cuda:11.1.1-devel-ubuntu20.04
+    COMPILER: gcc@9.3.0
+    USE_MKL: "OFF"
+    SPACK_ENVIRONMENT: ci/docker/gpu-debug.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-gpu-gcc9/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-gpu-gcc9/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: gpu
     THREADS_PER_NODE: 24
     USE_CODECOV: "true"
-    HPX_WITH_CUDA: "ON"
-    UMPIRE_ENABLE_CUDA: "ON"
 
 notify_github_start:
   stage: build
@@ -115,43 +148,61 @@ notify_github_start:
   trigger:
     strategy: depend
 
-cpu release test:
+cpu release test gcc9:
   extends: .run_common
   needs:
-    - cpu release build
+    - cpu release build gcc9
   trigger:
     include:
       - artifact: pipeline.yml
-        job: cpu release build
+        job: cpu release build gcc9
 
-cpu codecov test:
+cpu release test clang10:
   extends: .run_common
   needs:
-    - cpu codecov build
+    - cpu release build clang10
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cpu release build clang10
+
+cpu codecov test gcc9:
+  extends: .run_common
+  needs:
+    - cpu codecov build gcc9
   trigger:
     strategy: depend
     include:
       - artifact: pipeline.yml
-        job: cpu codecov build
+        job: cpu codecov build gcc9
 
-gpu release test:
+gpu release test gcc9:
   extends: .run_common
   needs:
-    - gpu release build
+    - gpu release build gcc9
   trigger:
     include:
       - artifact: pipeline.yml
-        job: gpu release build
+        job: gpu release build gcc9
 
-gpu codecov test:
+gpu release test clang10:
   extends: .run_common
   needs:
-    - gpu codecov build
+    - gpu release build clang10
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: gpu release build clang10
+
+gpu codecov test gcc9:
+  extends: .run_common
+  needs:
+    - gpu codecov build gcc9
   trigger:
     strategy: depend
     include:
       - artifact: pipeline.yml
-        job: gpu codecov build
+        job: gpu codecov build gcc9
 
 notify_github_success:
   stage: notify

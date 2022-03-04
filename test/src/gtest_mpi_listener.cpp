@@ -1,6 +1,6 @@
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -80,7 +80,7 @@ void MPIListener::OnTestEnd(const ::testing::TestInfo& test_info) {
       std::function<std::string(int)> get_result;
 
       if (rank == 0) {
-        number_of_results = last_test_part_results_.size();
+        number_of_results = static_cast<int>(last_test_part_results_.size());
         get_result = [this](int index) {
           return last_test_part_results_[static_cast<std::size_t>(index)];
         };
@@ -93,7 +93,7 @@ void MPIListener::OnTestEnd(const ::testing::TestInfo& test_info) {
       print_partial_results(rank, number_of_results, get_result);
     }
     else if (rank_ == rank) {
-      int num_partial_results = last_test_part_results_.size();
+      int num_partial_results = static_cast<int>(last_test_part_results_.size());
       MPI_Send(&num_partial_results, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
 
       for (const auto& partial_result : last_test_part_results_)
@@ -159,7 +159,7 @@ void MPIListener::OnTestEndAllRanks(const ::testing::TestInfo& test_info) const 
 
 namespace internal {
 void mpi_send_string(const std::string& message, int to_rank) {
-  MPI_Send(message.c_str(), message.size() + 1, MPI_CHAR, to_rank, 0, MPI_COMM_WORLD);
+  MPI_Send(message.c_str(), static_cast<int>(message.size()) + 1, MPI_CHAR, to_rank, 0, MPI_COMM_WORLD);
 }
 
 std::string mpi_receive_string(int from_rank) {

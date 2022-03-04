@@ -1,7 +1,7 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2021, ETH Zurich
+# Copyright (c) 2018-2022, ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
@@ -65,7 +65,7 @@ target_link_libraries(dlaf.prop
   INTERFACE
     MPI::MPI_CXX
     LAPACK::LAPACK
-    HPX::hpx
+    pika::pika
     lapackpp
     blaspp
     umpire
@@ -75,7 +75,7 @@ target_link_libraries(dlaf.prop
 )
 target_compile_features(dlaf.prop
   INTERFACE
-    cxx_std_14
+    cxx_std_17
 )
 target_compile_definitions(dlaf.prop
   INTERFACE
@@ -115,7 +115,11 @@ target_add_warnings(dlaf.auxiliary)
 
 # Define DLAF's eigensolver library
 add_library(dlaf.eigensolver OBJECT
-  eigensolver/backtransformation/mc.cpp
+  eigensolver/band_to_tridiag/mc.cpp
+  eigensolver/bt_band_to_tridiag/mc.cpp
+  eigensolver/bt_reduction_to_band/mc.cpp
+  eigensolver/eigensolver/mc.cpp
+  eigensolver/gen_eigensolver/mc.cpp
   eigensolver/gen_to_std/mc.cpp
   $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/gen_to_std/gpu.cpp>
   eigensolver/reduction_to_band/mc.cpp)
@@ -125,9 +129,20 @@ target_add_warnings(dlaf.eigensolver)
 # Define DLAF's factorization library
 add_library(dlaf.factorization OBJECT
   factorization/cholesky/mc.cpp
-  $<$<BOOL:${DLAF_WITH_CUDA}>:factorization/cholesky/gpu.cpp>)
+  $<$<BOOL:${DLAF_WITH_CUDA}>:factorization/cholesky/gpu.cpp>
+  factorization/qr/mc.cpp
+  $<$<BOOL:${DLAF_WITH_CUDA}>:factorization/qr/gpu.cpp>
+)
+target_compile_options(dlaf.factorization PRIVATE $<$<COMPILE_LANG_AND_ID:CUDA,NVIDIA>:--extended-lambda>)
 target_link_libraries(dlaf.factorization PUBLIC dlaf.prop)
 target_add_warnings(dlaf.factorization)
+
+# Define DLAF's multiplication library
+add_library(dlaf.multiplication OBJECT
+  multiplication/triangular/mc.cpp
+  $<$<BOOL:${DLAF_WITH_CUDA}>:multiplication/triangular/gpu.cpp>)
+target_link_libraries(dlaf.multiplication PUBLIC dlaf.prop)
+target_add_warnings(dlaf.multiplication)
 
 # Define DLAF's solver library
 add_library(dlaf.solver OBJECT
@@ -142,6 +157,7 @@ add_library(DLAF
   $<TARGET_OBJECTS:dlaf.auxiliary>
   $<TARGET_OBJECTS:dlaf.eigensolver>
   $<TARGET_OBJECTS:dlaf.factorization>
+  $<TARGET_OBJECTS:dlaf.multiplication>
   $<TARGET_OBJECTS:dlaf.solver>
 )
 target_link_libraries(DLAF PUBLIC dlaf.prop)

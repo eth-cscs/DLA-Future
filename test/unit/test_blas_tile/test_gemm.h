@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -80,7 +80,7 @@ void testGemm(const blas::Op op_a, const blas::Op op_b, const SizeType m, const 
   auto b = createTile<CT, D>(el_op_b, size_b, ldb, op_b);
   auto c = createTile<T, D>(el_c, size_c, ldc);
 
-  invokeBlas<D>(tile::gemm_o, op_a, op_b, alpha, a, b, beta, c);
+  invokeBlas<D>(tile::internal::gemm_o, op_a, op_b, alpha, a, b, beta, c);
 
   std::stringstream s;
   s << "GEMM: " << op_a << ", " << op_b;

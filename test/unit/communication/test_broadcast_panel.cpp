@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -32,11 +32,7 @@ using namespace dlaf::comm;
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
 template <typename Type>
-struct PanelBcastTest : public ::testing::Test {
-  const std::vector<CommunicatorGrid>& commGrids() {
-    return comm_grids;
-  }
-};
+struct PanelBcastTest : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(PanelBcastTest, MatrixElementTypes);
 
@@ -54,7 +50,7 @@ std::vector<config_t> test_params{
 template <class TypeParam, Coord panel_axis>
 void testBroadcast(comm::Executor& executor_mpi, const config_t& cfg, comm::CommunicatorGrid comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
-  using hpx::unwrapping;
+  using pika::unwrapping;
 
   constexpr Coord coord1D = orthogonal(panel_axis);
 
@@ -72,9 +68,9 @@ void testBroadcast(comm::Executor& executor_mpi, const config_t& cfg, comm::Comm
 
   // set all panels
   for (const auto i_w : panel.iteratorLocal())
-    hpx::dataflow(unwrapping(
-                      [rank](auto&& tile) { matrix::test::set(tile, TypeUtil::element(rank, 26)); }),
-                  panel(i_w));
+    pika::dataflow(unwrapping(
+                       [rank](auto&& tile) { matrix::test::set(tile, TypeUtil::element(rank, 26)); }),
+                   panel(i_w));
 
   // check that all panels have been set
   for (const auto i_w : panel.iteratorLocal())
@@ -118,7 +114,7 @@ template <class TypeParam, Coord PANEL_SRC_AXIS>
 void testBrodcastTranspose(comm::Executor& executor_mpi, const config_t& cfg,
                            comm::CommunicatorGrid comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
-  using hpx::unwrapping;
+  using pika::unwrapping;
 
   const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
   const auto rank = dist.rankIndex().get(PANEL_SRC_AXIS);
@@ -129,9 +125,9 @@ void testBrodcastTranspose(comm::Executor& executor_mpi, const config_t& cfg,
   Panel<PANEL_DST_AXIS, TypeParam, dlaf::Device::CPU> panel_dst(dist, cfg.offset);
 
   for (const auto i_w : panel_src.iteratorLocal())
-    hpx::dataflow(unwrapping(
-                      [rank](auto&& tile) { matrix::test::set(tile, TypeUtil::element(rank, 26)); }),
-                  panel_src(i_w));
+    pika::dataflow(unwrapping(
+                       [rank](auto&& tile) { matrix::test::set(tile, TypeUtil::element(rank, 26)); }),
+                   panel_src(i_w));
 
   // test it!
   common::Pipeline<comm::Communicator> row_task_chain(comm_grid.rowCommunicator());

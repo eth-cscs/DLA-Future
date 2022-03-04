@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -27,9 +27,9 @@ namespace dlaf {
 /// @returns type T (default = void) if F can be converted to a std::function with given Signature.
 template <class F, class Signature, class T = void>
 using enable_if_signature_t =
-    typename std::enable_if_t<std::is_convertible<F, std::function<Signature>>::value, T>;
+    typename std::enable_if_t<std::is_convertible_v<F, std::function<Signature>>, T>;
 
 /// std::enable_if wrapper for std::is_convertible.
 template <class U, class V, class T = void>
-using enable_if_convertible_t = typename std::enable_if_t<std::is_convertible<U, V>::value, T>;
+using enable_if_convertible_t = typename std::enable_if_t<std::is_convertible_v<U, V>, T>;
 }

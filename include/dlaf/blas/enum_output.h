@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -12,6 +12,8 @@
 
 #include <ostream>
 #include "blas.hh"
+
+#include <dlaf/common/format_short.h>
 
 namespace blas {
 inline std::ostream& operator<<(std::ostream& out, const blas::Diag& diag) {
@@ -26,6 +28,18 @@ inline std::ostream& operator<<(std::ostream& out, const blas::Diag& diag) {
   return out;
 }
 
+inline std::ostream& operator<<(std::ostream& out, const dlaf::internal::FormatShort<blas::Diag>& diag) {
+  switch (diag.value) {
+    case blas::Diag::Unit:
+      out << "U";
+      break;
+    case blas::Diag::NonUnit:
+      out << "N";
+      break;
+  }
+  return out;
+}
+
 inline std::ostream& operator<<(std::ostream& out, const blas::Layout& layout) {
   switch (layout) {
     case blas::Layout::RowMajor:
@@ -33,6 +47,19 @@ inline std::ostream& operator<<(std::ostream& out, const blas::Layout& layout) {
       break;
     case blas::Layout::ColMajor:
       out << "ColMajor";
+      break;
+  }
+  return out;
+}
+
+inline std::ostream& operator<<(std::ostream& out,
+                                const dlaf::internal::FormatShort<blas::Layout>& layout) {
+  switch (layout.value) {
+    case blas::Layout::RowMajor:
+      out << "R";
+      break;
+    case blas::Layout::ColMajor:
+      out << "C";
       break;
   }
   return out;
@@ -53,6 +80,21 @@ inline std::ostream& operator<<(std::ostream& out, const blas::Op& trans) {
   return out;
 }
 
+inline std::ostream& operator<<(std::ostream& out, const dlaf::internal::FormatShort<blas::Op>& trans) {
+  switch (trans.value) {
+    case blas::Op::NoTrans:
+      out << "N";
+      break;
+    case blas::Op::Trans:
+      out << "T";
+      break;
+    case blas::Op::ConjTrans:
+      out << "C";
+      break;
+  }
+  return out;
+}
+
 inline std::ostream& operator<<(std::ostream& out, const blas::Side& side) {
   switch (side) {
     case blas::Side::Left:
@@ -60,6 +102,18 @@ inline std::ostream& operator<<(std::ostream& out, const blas::Side& side) {
       break;
     case blas::Side::Right:
       out << "Right";
+      break;
+  }
+  return out;
+}
+
+inline std::ostream& operator<<(std::ostream& out, const dlaf::internal::FormatShort<blas::Side>& side) {
+  switch (side.value) {
+    case blas::Side::Left:
+      out << "L";
+      break;
+    case blas::Side::Right:
+      out << "R";
       break;
   }
   return out;
@@ -75,6 +129,21 @@ inline std::ostream& operator<<(std::ostream& out, const blas::Uplo& uplo) {
       break;
     case blas::Uplo::General:
       out << "General";
+      break;
+  }
+  return out;
+}
+
+inline std::ostream& operator<<(std::ostream& out, const dlaf::internal::FormatShort<blas::Uplo>& uplo) {
+  switch (uplo.value) {
+    case blas::Uplo::Lower:
+      out << "L";
+      break;
+    case blas::Uplo::Upper:
+      out << "U";
+      break;
+    case blas::Uplo::General:
+      out << "G";
       break;
   }
   return out;

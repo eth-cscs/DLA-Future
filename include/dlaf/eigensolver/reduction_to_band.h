@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -18,6 +18,30 @@
 
 namespace dlaf {
 namespace eigensolver {
+
+/// Reduce a local lower Hermitian matrix to symmetric band-diagonal form, with `band = blocksize + 1`.
+///
+/// See the related distributed version for more details.
+//
+/// @param mat_a on entry it contains an Hermitian matrix, on exit it is overwritten with the
+/// band-diagonal result together with the elementary reflectors. Just the tiles of the lower
+/// triangular part will be used.
+///
+/// @pre mat_a has a square size
+/// @pre mat_a has a square block size
+/// @pre mat_a is a local matrix
+template <Backend backend, Device device, class T>
+common::internal::vector<pika::shared_future<common::internal::vector<T>>> reductionToBand(
+    Matrix<T, device>& mat_a, const SizeType band_size) {
+  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
+  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+
+  DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
+
+  DLAF_ASSERT(mat_a.blockSize().rows() % band_size == 0, mat_a.blockSize().rows(), band_size);
+
+  return internal::ReductionToBand<backend, device, T>::call(mat_a, band_size);
+}
 
 /// Reduce a distributed lower Hermitian matrix to symmetric band-diagonal form, with `band = blocksize + 1`.
 ///
@@ -55,8 +79,8 @@ namespace eigensolver {
 /// @pre mat_a has a square block size
 /// @pre mat_a is distributed according to @p grid
 template <Backend backend, Device device, class T>
-std::vector<hpx::shared_future<common::internal::vector<T>>> reductionToBand(comm::CommunicatorGrid grid,
-                                                                             Matrix<T, device>& mat_a) {
+common::internal::vector<pika::shared_future<common::internal::vector<T>>> reductionToBand(
+    comm::CommunicatorGrid grid, Matrix<T, device>& mat_a) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);

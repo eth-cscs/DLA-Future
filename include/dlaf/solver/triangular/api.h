@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -34,6 +34,14 @@ struct Triangular {
   static void call_RUT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
                        Matrix<T, device>& mat_b);
   static void call_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
+                       Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b);
+  static void call_LLT(comm::CommunicatorGrid grid, blas::Op op, blas::Diag diag, T alpha,
+                       Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b);
+  static void call_LUN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
+                       Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b);
+  static void call_RLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
+                       Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b);
+  static void call_RUN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
                        Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b);
 };
 

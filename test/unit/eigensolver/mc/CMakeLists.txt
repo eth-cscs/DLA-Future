@@ -1,7 +1,7 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2021, ETH Zurich
+# Copyright (c) 2018-2022, ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
@@ -10,13 +10,7 @@
 
 DLAF_addTest(test_reduction_to_band
   SOURCES test_reduction_to_band.cpp
-  LIBRARIES dlaf.eigensolver dlaf.core
-  USE_MAIN MPIHPX
+  LIBRARIES dlaf.core dlaf.eigensolver dlaf.factorization dlaf.solver
+  USE_MAIN MPIPIKA
   MPIRANKS 6
-)
-
-DLAF_addTest(test_backtransformation
-  SOURCES test_backtransformation.cpp
-  LIBRARIES dlaf.eigensolver dlaf.core
-  USE_MAIN HPX
 )

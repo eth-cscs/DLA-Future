@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -9,8 +9,8 @@
 //
 #pragma once
 
-#include <hpx/local/future.hpp>
-#include <hpx/local/unwrap.hpp>
+#include <pika/future.hpp>
+#include <pika/unwrap.hpp>
 
 #include "dlaf/common/assert.h"
 #include "dlaf/common/index2d.h"
@@ -22,6 +22,7 @@
 #include "dlaf/communication/kernels.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/distribution.h"
+#include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_base.h"
 #include "dlaf/types.h"
@@ -68,7 +69,7 @@ struct Panel<axis, const T, D> {
     return dist_matrix_.rankIndex();
   }
 
-  /// Return the Distribution of the parent matrix
+  /// Return Distribution used for construction
   auto parentDistribution() const noexcept {
     return dist_matrix_;
   }
@@ -81,7 +82,7 @@ struct Panel<axis, const T, D> {
   /// - has not been already set to an external tile
   ///
   /// @pre @p index must be a valid index for the current panel size
-  void setTile(const LocalTileIndex& index, hpx::shared_future<ConstTileType> new_tile_fut) {
+  void setTile(const LocalTileIndex& index, pika::shared_future<ConstTileType> new_tile_fut) {
     DLAF_ASSERT(internal_.count(linearIndex(index)) == 0, "internal tile have been already used", index);
     DLAF_ASSERT(!isExternal(index), "already set to external", index);
     // Note assertion on index done by linearIndex method.
@@ -91,7 +92,7 @@ struct Panel<axis, const T, D> {
 #if defined DLAF_ASSERT_MODERATE_ENABLE
     {
       const auto panel_tile_size = tileSize(index);
-      new_tile_fut.then(hpx::launch::sync, hpx::unwrapping([panel_tile_size](const auto& tile) {
+      new_tile_fut.then(pika::launch::sync, pika::unwrapping([panel_tile_size](const auto& tile) {
                           DLAF_ASSERT_MODERATE(panel_tile_size == tile.size(), panel_tile_size,
                                                tile.size());
                         }));
@@ -106,7 +107,7 @@ struct Panel<axis, const T, D> {
   /// This method is very similar to the one available in dlaf::Matrix.
   ///
   /// @pre @p index must be a valid index for the current panel size
-  hpx::shared_future<ConstTileType> read(const LocalTileIndex& index) {
+  pika::shared_future<ConstTileType> read(const LocalTileIndex& index) {
     // Note assertion on index done by linearIndex method.
 
     has_been_used_ = true;
@@ -119,11 +120,15 @@ struct Panel<axis, const T, D> {
       internal_.insert(internal_linear_idx);
       auto tile = data_.read(fullIndex(index));
 
-      if (dim_ < 0)
+      if (dim_ < 0 && (isFirstGlobalTile(index) && isFirstGlobalTileFull()))
         return tile;
       else
         return splitTile(tile, {{0, 0}, tileSize(index)});
     }
+  }
+
+  auto read_sender(const LocalTileIndex& index) {
+    return pika::execution::experimental::keep_future(read(index));
   }
 
   /// Set the panel to enable access to the range of tiles [start, end)
@@ -142,6 +147,7 @@ struct Panel<axis, const T, D> {
 
     start_ = start_idx.get(CoordType);
     start_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<CoordType>(start_);
+    offset_element_ = start_ * dist_matrix_.blockSize().get<CoordType>();
 
     end_ = end_idx.get(CoordType);
     end_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<CoordType>(end_);
@@ -160,11 +166,28 @@ struct Panel<axis, const T, D> {
   /// @pre (just the index relevant for the axis of the panel)
   /// @pre start <= current end range of the panel
   /// @pre panel offset on construction <= start
-  void setRangeStart(GlobalTileIndex start_idx) noexcept {
+  void setRangeStart(const GlobalTileIndex& start_idx) noexcept {
     DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
 
     start_ = start_idx.get(CoordType);
-    start_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<CoordType>(start_);
+    start_local_ = dist_matrix_.nextLocalTileFromGlobalTile<CoordType>(start_);
+    offset_element_ = start_ * dist_matrix_.blockSize().get<CoordType>();
+
+    DLAF_ASSERT(rangeStartLocal() >= bias_ && rangeStart() <= rangeEnd(), rangeStart(), rangeEnd(),
+                bias_);
+  }
+
+  void setRangeStart(const GlobalElementIndex& start) noexcept {
+    DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
+
+    start_ = dist_matrix_.globalTileFromGlobalElement<CoordType>(start.get(CoordType));
+    start_local_ = dist_matrix_.nextLocalTileFromGlobalTile<CoordType>(start_);
+    offset_element_ = start.get<CoordType>();
+
+    const bool has_first_global_tile =
+        dist_matrix_.rankGlobalTile<CoordType>(start_) == dist_matrix_.rankIndex().get(CoordType);
+    if (has_first_global_tile)
+      start_offset_ = dist_matrix_.tileElementFromGlobalElement<CoordType>(start.get(CoordType));
 
     DLAF_ASSERT(rangeStartLocal() >= bias_ && rangeStart() <= rangeEnd(), rangeStart(), rangeEnd(),
                 bias_);
@@ -182,7 +205,7 @@ struct Panel<axis, const T, D> {
     DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
 
     end_ = end_idx.get(CoordType);
-    end_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<CoordType>(end_);
+    end_local_ = dist_matrix_.nextLocalTileFromGlobalTile<CoordType>(end_);
 
     DLAF_ASSERT(rangeEnd() >= rangeStart() && rangeEnd() <= dist_matrix_.nrTiles().get(CoordType),
                 rangeStart(), end_idx, dist_matrix_.nrTiles().get(CoordType));
@@ -206,6 +229,13 @@ struct Panel<axis, const T, D> {
   /// Return the current end (1D)
   SizeType rangeEndLocal() const noexcept {
     return end_local_;
+  }
+
+  /// Returns
+  /// the global 1D index of the first row of the panel (axis == Coord::Col)
+  /// the global 1D index of the first column of the panel (axis == Coord::Row)
+  SizeType offsetElement() const noexcept {
+    return offset_element_;
   }
 
   /// Set the width of the col panel.
@@ -242,6 +272,18 @@ struct Panel<axis, const T, D> {
     dim_ = height;
   }
 
+  /// Get the current width of the col panel.
+  template <Coord A = axis, std::enable_if_t<A == axis && Coord::Col == axis, int> = 0>
+  SizeType getWidth() const noexcept {
+    return dim_ < 0 ? dist_matrix_.blockSize().template get<axis>() : dim_;
+  }
+
+  /// Get the current height of the row panel.
+  template <Coord A = axis, std::enable_if_t<A == axis && Coord::Row == axis, int> = 0>
+  SizeType getHeight() noexcept {
+    return dim_ < 0 ? dist_matrix_.blockSize().template get<axis>() : dim_;
+  }
+
   /// Reset the internal usage status of the panel.
   ///
   /// In particular:
@@ -257,12 +299,24 @@ struct Panel<axis, const T, D> {
   }
 
 protected:
-  TileElementSize tileSize(const LocalTileIndex& index) {
+  bool isFirstGlobalTileFull() const {
+    return start_offset_ == 0;
+  }
+
+  bool isFirstGlobalTile(const LocalTileIndex& index) const {
+    const bool rank_has_first_global_tile =
+        dist_matrix_.rankGlobalTile<CoordType>(start_) == dist_matrix_.rankIndex().get(CoordType);
+    return rank_has_first_global_tile && (start_local_ == index.get(CoordType));
+  }
+
+  TileElementSize tileSize(const LocalTileIndex& index) const {
     // Transform to global panel index.
     const auto panel_coord = dist_matrix_.globalTileFromLocalTile<CoordType>(index.get<CoordType>());
     const GlobalTileIndex panel_index(CoordType, panel_coord);
 
-    const auto size_coord = dist_matrix_.tileSize(panel_index).template get<CoordType>();
+    const bool is_first_global_tile = isFirstGlobalTile(index);
+    const auto size_coord = dist_matrix_.tileSize(panel_index).template get<CoordType>() -
+                            (is_first_global_tile ? start_offset_ : 0);
     const auto size_axis = dim_ < 0 ? dist_matrix_.blockSize().template get<axis>() : dim_;
 
     return {axis, size_axis, size_coord};
@@ -299,15 +353,18 @@ protected:
     return {std::move(dist_internal), layout};
   }
 
-  /// Create a Panel related to the Matrix passed as parameter.
+  /// Create a Panel related to Matrix represented by given Distribution.
   ///
-  /// The Panel is strictly related to its parent dlaf::Matrix.
-  /// In particular, it will create a Row or Column with the same size of its parent matrix (local),
-  /// considering the specified offset from the top left origin.
+  /// The Panel is strictly related to its parent Matrix via its @p dist_matrix.
+  /// In particular, it will be created as a Row or Column (1st axis) with:
+  /// - 1st axis size, same as @p dist_matrix, taking into account @p start offset
+  /// - 2nd axis size, same as blocksize (on the same axis) of @p dist_matrix
   ///
-  /// e.g. a 4x5 matrix with an offset 2x1 will have either:
-  /// - a Panel<Col> 2x1
-  /// - or a Panel<Row> 4x1
+  /// e.g.
+  /// A (38, 15) matrix is distributed over (4, 5) tiles, with blocksize (10, 3).
+  /// Using above distribution, together with a (2, 1) start offset results in either:
+  /// - Panel<Col>: (18,  3) with (2, 1) tiles,
+  /// - Panel<Row>: (10, 12) with (1, 4) tiles,
   Panel(matrix::Distribution dist_matrix, GlobalTileIndex start)
       : dist_matrix_(dist_matrix), data_(setupInternalMatrix(dist_matrix, start)) {
     DLAF_ASSERT_HEAVY(data_.nrTiles().get(axis) == 1, data_.nrTiles());
@@ -369,10 +426,15 @@ protected:
   ///> It represent the width or height of the panel. Negatives means not set, i.e. block_size.
   SizeType dim_ = -1;
 
+  ///> It represents the offset to use in first global tile
+  SizeType start_offset_ = 0;
+
+  SizeType offset_element_ = 0;
+
   bool has_been_used_ = false;
 
   ///> Container for references to external tiles
-  common::internal::vector<hpx::shared_future<ConstTileType>> external_;
+  common::internal::vector<pika::shared_future<ConstTileType>> external_;
   ///> Keep track of usage status of internal tiles (accessed or not)
   std::set<SizeType> internal_;
 };
@@ -390,18 +452,23 @@ struct Panel : public Panel<axis, const T, device> {
   /// It is possible to access just internal tiles in RW mode.
   ///
   /// @pre index must point to a tile which is internally managed by the panel
-  hpx::future<TileType> operator()(const LocalTileIndex& index) {
+  pika::future<TileType> operator()(const LocalTileIndex& index) {
     // Note assertion on index done by linearIndex method.
-    DLAF_ASSERT(!BaseT::isExternal(index), "read-only access on external tiles", index);
+    DLAF_ASSERT(!BaseT::isExternal(index), "read-write access not allowed on external tiles", index);
 
     has_been_used_ = true;
 
     BaseT::internal_.insert(BaseT::linearIndex(index));
     auto tile = BaseT::data_(BaseT::fullIndex(index));
-    if (dim_ < 0)
+    if (dim_ < 0 && (isFirstGlobalTile(index) && isFirstGlobalTileFull()))
       return tile;
     else
       return splitTile(tile, {{0, 0}, tileSize(index)});
+  }
+
+  auto readwrite_sender(const LocalTileIndex& index) {
+    // Note: do not use `keep_future`, otherwise dlaf::transform will not handle the lifetime correctly
+    return this->operator()(index);
   }
 
 protected:
@@ -409,7 +476,8 @@ protected:
   using BaseT::dim_;
   using BaseT::has_been_used_;
   using BaseT::tileSize;
+  using BaseT::isFirstGlobalTile;
+  using BaseT::isFirstGlobalTileFull;
 };
-
 }
 }

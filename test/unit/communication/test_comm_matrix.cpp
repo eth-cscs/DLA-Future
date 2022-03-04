@@ -1,14 +1,14 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2019, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <hpx/local/future.hpp>
+#include <pika/future.hpp>
 
 #include <gtest/gtest.h>
 #include <mpi.h>
@@ -30,19 +30,18 @@ TEST(BcastMatrixTest, DataflowFuture) {
   int root = 0;
   int sz = 10000;
 
+  LocalTileIndex index(0, 0);
+  dlaf::Matrix<double, Device::CPU> mat({sz, 1}, {sz, 1});
   if (comm.rank() == root) {
-    LocalTileIndex index(0, 0);
-    dlaf::Matrix<double, Device::CPU> mat({sz, 1}, {sz, 1});
     mat(index).get()({sz - 1, 0}) = 1.;
-    hpx::dataflow(ex, matrix::unwrapExtendTiles(comm::sendBcast_o), mat(index), ccomm());
-    hpx::dataflow(hpx::unwrapping([sz](auto tile) { tile({sz - 1, 0}) = 2.; }), mat(index));
-    EXPECT_EQ(2., mat(index).get()({sz - 1, 0}));
+    pika::dataflow(ex, matrix::unwrapExtendTiles(comm::sendBcast_o), mat(index), ccomm());
+    pika::dataflow(pika::unwrapping([sz](auto tile) { tile({sz - 1, 0}) = 2.; }), mat(index));
+    EXPECT_EQ(2., mat.read(index).get()({sz - 1, 0}));
   }
   else {
     std::this_thread::sleep_for(50ms);
-    auto tile_f = hpx::dataflow(ex, hpx::unwrapping(comm::recvBcastAlloc<double, Device::CPU>),
-                                TileElementSize{sz, 1}, root, ccomm());
-    EXPECT_EQ(1., tile_f.get()({sz - 1, 0}));
+    pika::dataflow(ex, matrix::unwrapExtendTiles(comm::recvBcast_o), mat(index), root, ccomm());
+    EXPECT_EQ(1., mat.read(index).get()({sz - 1, 0}));
   }
 }
 
@@ -56,18 +55,17 @@ TEST(BcastMatrixTest, DataflowSharedFuture) {
   int root = 0;
   int sz = 10000;
 
+  LocalTileIndex index(0, 0);
+  dlaf::Matrix<double, Device::CPU> mat({sz, 1}, {sz, 1});
   if (comm.rank() == root) {
-    LocalTileIndex index(0, 0);
-    dlaf::Matrix<double, Device::CPU> mat({sz, 1}, {sz, 1});
     mat(index).get()({sz - 1, 0}) = 1.;
-    hpx::dataflow(ex, matrix::unwrapExtendTiles(comm::sendBcast_o), mat.read(index), ccomm());
-    hpx::dataflow(hpx::unwrapping([sz](auto tile) { tile({sz - 1, 0}) = 2.; }), mat(index));
-    EXPECT_EQ(2., mat(index).get()({sz - 1, 0}));
+    pika::dataflow(ex, matrix::unwrapExtendTiles(comm::sendBcast_o), mat.read(index), ccomm());
+    pika::dataflow(pika::unwrapping([sz](auto tile) { tile({sz - 1, 0}) = 2.; }), mat(index));
+    EXPECT_EQ(2., mat.read(index).get()({sz - 1, 0}));
   }
   else {
     std::this_thread::sleep_for(50ms);
-    auto tile_f = hpx::dataflow(ex, hpx::unwrapping(comm::recvBcastAlloc<double, Device::CPU>),
-                                TileElementSize{sz, 1}, root, ccomm());
-    EXPECT_EQ(1., tile_f.get()({sz - 1, 0}));
+    pika::dataflow(ex, matrix::unwrapExtendTiles(comm::recvBcast_o), mat(index), root, ccomm());
+    EXPECT_EQ(1., mat.read(index).get()({sz - 1, 0}));
   }
 }

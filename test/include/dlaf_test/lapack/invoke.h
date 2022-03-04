@@ -68,7 +68,7 @@ struct InvokeLapack<Device::GPU> {
 #endif
 }
 
-/// Invokes a Blas call in a generic way:
+/// Invokes a Lapack call in a generic way:
 /// For CPU it calls f(args...),
 /// For GPU it creates a cuSolver handle, it calls f(handle, args...) and it synchronizes.
 template <Device D, class F, class... Args>

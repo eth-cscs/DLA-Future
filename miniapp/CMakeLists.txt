@@ -31,6 +31,7 @@ endif()
 
 add_executable(miniapp_gen_to_std miniapp_gen_to_std.cpp)
 target_link_libraries(miniapp_gen_to_std PRIVATE DLAF)
+target_link_libraries(miniapp_gen_to_std PRIVATE DLAF_miniapp)
 target_add_warnings(miniapp_gen_to_std)
 
 add_executable(miniapp_reduction_to_band miniapp_reduction_to_band.cpp)

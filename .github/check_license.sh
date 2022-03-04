@@ -9,7 +9,7 @@ usage() {
   echo ""
   echo "SPECIAL TAGS: they can be used inside files to control behavior of this tool"
   echo ""
-  echo "dlaf-no-check-license       skip any check and return 0"
+  echo "dlaf-no-license-check       skip any check and return 0"
   echo "dlaf-multi-license-check    check license in the entire file (-r option is ignored)"
 
   exit 0

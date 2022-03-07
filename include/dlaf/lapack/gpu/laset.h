@@ -16,7 +16,7 @@
 #include <cuda_runtime.h>
 #include "dlaf/types.h"
 
-namespace dlaf::gpublas {
+namespace dlaf::gpulapack {
 
 template <class T>
 void laset(cublasFillMode_t uplo, SizeType m, SizeType n, T alpha, T beta, T* a, SizeType lda,

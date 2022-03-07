@@ -11,11 +11,9 @@
 
 #include <pika/execution.hpp>
 #include <pika/unwrap.hpp>
-#include <pika/version.hpp>
 
 #include "dlaf/init.h"
 #include "dlaf/sender/policy.h"
-#include "dlaf/sender/traits.h"
 #include "dlaf/sender/typelist.h"
 #include "dlaf/sender/when_all_lift.h"
 #include "dlaf/types.h"

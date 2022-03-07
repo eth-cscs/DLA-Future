@@ -132,7 +132,7 @@ struct GenToStdMiniapp {
         DLAF_MPI_CALL(MPI_Barrier(world));
 
         dlaf::common::Timer<> timeit;
-        dlaf::eigensolver::genToStd<Backend::Default, Device::Default, T>(comm_grid, opts.uplo,
+        dlaf::eigensolver::genToStd<backend, DefaultDevice_v<backend>, T>(comm_grid, opts.uplo,
                                                                           matrix_a.get(),
                                                                           matrix_b.get());
 

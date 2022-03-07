@@ -43,7 +43,7 @@ struct Panel<axis, const T, D> {
   // This specialization acts as base for the RW version of the panel,
   // moreover allows the casting between references (i.e. Panel<const T>& = Panel<T>)
 
-  constexpr static Coord CoordType = axis == Coord::Col ? Coord::Row : Coord::Col;
+  constexpr static Coord coord = orthogonal(axis);
 
   using TileType = Tile<T, D>;
   using ConstTileType = Tile<const T, D>;
@@ -60,8 +60,8 @@ struct Panel<axis, const T, D> {
 
   /// Return an IterableRange2D with a range over all tiles of the panel (considering the offset)
   auto iteratorLocal() const noexcept {
-    return common::iterate_range2d(LocalTileIndex(CoordType, rangeStartLocal()),
-                                   LocalTileIndex(CoordType, rangeEndLocal(), 1));
+    return common::iterate_range2d(LocalTileIndex(coord, rangeStartLocal()),
+                                   LocalTileIndex(coord, rangeEndLocal(), 1));
   }
 
   /// Return the rank which this (local) panel belongs to
@@ -145,17 +145,17 @@ struct Panel<axis, const T, D> {
   void setRange(GlobalTileIndex start_idx, GlobalTileIndex end_idx) noexcept {
     DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
 
-    start_ = start_idx.get(CoordType);
-    start_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<CoordType>(start_);
-    offset_element_ = start_ * dist_matrix_.blockSize().get<CoordType>();
+    start_ = start_idx.get(coord);
+    start_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<coord>(start_);
+    offset_element_ = start_ * dist_matrix_.blockSize().get<coord>();
 
-    end_ = end_idx.get(CoordType);
-    end_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<CoordType>(end_);
+    end_ = end_idx.get(coord);
+    end_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<coord>(end_);
 
     DLAF_ASSERT(rangeStart() <= rangeEnd(), rangeStart(), rangeEnd());
     DLAF_ASSERT(rangeStartLocal() >= bias_, start_idx, bias_);
-    DLAF_ASSERT(rangeEnd() <= dist_matrix_.nrTiles().get(CoordType), end_idx,
-                dist_matrix_.nrTiles().get(CoordType));
+    DLAF_ASSERT(rangeEnd() <= dist_matrix_.nrTiles().get(coord), end_idx,
+                dist_matrix_.nrTiles().get(coord));
   }
 
   /// Change the start boundary of the range of tiles to which the panel allows access to
@@ -169,9 +169,9 @@ struct Panel<axis, const T, D> {
   void setRangeStart(const GlobalTileIndex& start_idx) noexcept {
     DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
 
-    start_ = start_idx.get(CoordType);
-    start_local_ = dist_matrix_.nextLocalTileFromGlobalTile<CoordType>(start_);
-    offset_element_ = start_ * dist_matrix_.blockSize().get<CoordType>();
+    start_ = start_idx.get(coord);
+    start_local_ = dist_matrix_.nextLocalTileFromGlobalTile<coord>(start_);
+    offset_element_ = start_ * dist_matrix_.blockSize().get<coord>();
 
     DLAF_ASSERT(rangeStartLocal() >= bias_ && rangeStart() <= rangeEnd(), rangeStart(), rangeEnd(),
                 bias_);
@@ -180,14 +180,14 @@ struct Panel<axis, const T, D> {
   void setRangeStart(const GlobalElementIndex& start) noexcept {
     DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
 
-    start_ = dist_matrix_.globalTileFromGlobalElement<CoordType>(start.get(CoordType));
-    start_local_ = dist_matrix_.nextLocalTileFromGlobalTile<CoordType>(start_);
-    offset_element_ = start.get<CoordType>();
+    start_ = dist_matrix_.globalTileFromGlobalElement<coord>(start.get(coord));
+    start_local_ = dist_matrix_.nextLocalTileFromGlobalTile<coord>(start_);
+    offset_element_ = start.get<coord>();
 
     const bool has_first_global_tile =
-        dist_matrix_.rankGlobalTile<CoordType>(start_) == dist_matrix_.rankIndex().get(CoordType);
+        dist_matrix_.rankGlobalTile<coord>(start_) == dist_matrix_.rankIndex().get(coord);
     if (has_first_global_tile)
-      start_offset_ = dist_matrix_.tileElementFromGlobalElement<CoordType>(start.get(CoordType));
+      start_offset_ = dist_matrix_.tileElementFromGlobalElement<coord>(start.get(coord));
 
     DLAF_ASSERT(rangeStartLocal() >= bias_ && rangeStart() <= rangeEnd(), rangeStart(), rangeEnd(),
                 bias_);
@@ -204,11 +204,11 @@ struct Panel<axis, const T, D> {
   void setRangeEnd(GlobalTileIndex end_idx) noexcept {
     DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
 
-    end_ = end_idx.get(CoordType);
-    end_local_ = dist_matrix_.nextLocalTileFromGlobalTile<CoordType>(end_);
+    end_ = end_idx.get(coord);
+    end_local_ = dist_matrix_.nextLocalTileFromGlobalTile<coord>(end_);
 
-    DLAF_ASSERT(rangeEnd() >= rangeStart() && rangeEnd() <= dist_matrix_.nrTiles().get(CoordType),
-                rangeStart(), end_idx, dist_matrix_.nrTiles().get(CoordType));
+    DLAF_ASSERT(rangeEnd() >= rangeStart() && rangeEnd() <= dist_matrix_.nrTiles().get(coord),
+                rangeStart(), end_idx, dist_matrix_.nrTiles().get(coord));
   }
 
   /// Return the current start (1D)
@@ -305,17 +305,17 @@ protected:
 
   bool isFirstGlobalTile(const LocalTileIndex& index) const {
     const bool rank_has_first_global_tile =
-        dist_matrix_.rankGlobalTile<CoordType>(start_) == dist_matrix_.rankIndex().get(CoordType);
-    return rank_has_first_global_tile && (start_local_ == index.get(CoordType));
+        dist_matrix_.rankGlobalTile<coord>(start_) == dist_matrix_.rankIndex().get(coord);
+    return rank_has_first_global_tile && (start_local_ == index.get(coord));
   }
 
   TileElementSize tileSize(const LocalTileIndex& index) const {
     // Transform to global panel index.
-    const auto panel_coord = dist_matrix_.globalTileFromLocalTile<CoordType>(index.get<CoordType>());
-    const GlobalTileIndex panel_index(CoordType, panel_coord);
+    const auto panel_coord = dist_matrix_.globalTileFromLocalTile<coord>(index.get<coord>());
+    const GlobalTileIndex panel_index(coord, panel_coord);
 
     const bool is_first_global_tile = isFirstGlobalTile(index);
-    const auto size_coord = dist_matrix_.tileSize(panel_index).template get<CoordType>() -
+    const auto size_coord = dist_matrix_.tileSize(panel_index).template get<coord>() -
                             (is_first_global_tile ? start_offset_ : 0);
     const auto size_axis = dim_ < 0 ? dist_matrix_.blockSize().template get<axis>() : dim_;
 
@@ -327,8 +327,8 @@ protected:
     const auto mb = blocksize.rows();
     const auto nb = blocksize.cols();
 
-    const auto mat_size = size.get(CoordType);
-    const auto i_tile = start.get(CoordType);
+    const auto mat_size = size.get(coord);
+    const auto i_tile = start.get(coord);
 
     switch (axis) {
       case Coord::Col:
@@ -343,7 +343,7 @@ protected:
   /// It allocates just the memory needed for the part of matrix used, so
   /// starting from @p start
   static Matrix<T, D> setupInternalMatrix(const Distribution& dist, const GlobalTileIndex start) {
-    constexpr auto CT = CoordType;
+    constexpr auto CT = coord;
 
     const LocalTileIndex start_loc(CT, dist.template nextLocalTileFromGlobalTile<CT>(start.get(CT)));
     const auto panel_size = computePanelSize(dist.localSize(), dist.blockSize(), start_loc);
@@ -369,11 +369,11 @@ protected:
       : dist_matrix_(dist_matrix), data_(setupInternalMatrix(dist_matrix, start)) {
     DLAF_ASSERT_HEAVY(data_.nrTiles().get(axis) == 1, data_.nrTiles());
 
-    bias_ = dist_matrix_.template nextLocalTileFromGlobalTile<CoordType>(start.get(CoordType));
+    bias_ = dist_matrix_.template nextLocalTileFromGlobalTile<coord>(start.get(coord));
 
     setRange(start, indexFromOrigin(dist_matrix_.nrTiles()));
 
-    external_.resize(data_.nrTiles().get(CoordType));
+    external_.resize(data_.nrTiles().get(coord));
 
     DLAF_ASSERT_HEAVY(data_.distribution().localNrTiles().linear_size() == external_.size(),
                       data_.distribution().localNrTiles().linear_size(), external_.size());
@@ -381,7 +381,7 @@ protected:
 
   /// Given a matrix index, compute the internal linear index
   SizeType linearIndex(const LocalTileIndex& index) const noexcept {
-    const auto idx = index.get(CoordType);
+    const auto idx = index.get(coord);
     DLAF_ASSERT_MODERATE(rangeStartLocal() <= idx && idx < rangeEndLocal(), idx, rangeStartLocal(),
                          rangeEndLocal());
 
@@ -395,7 +395,7 @@ protected:
   /// The 2D index is the projection of the given index, i.e. in a Panel<Col> the Col for index
   /// will always be 0 (and relatively for a Panel<Row>)
   LocalTileIndex fullIndex(LocalTileIndex index) const {
-    index = LocalTileIndex(CoordType, linearIndex(index));
+    index = LocalTileIndex(coord, linearIndex(index));
 
     return index;
   }

@@ -111,8 +111,8 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
 
   constexpr Coord axisT = orthogonal(axis);
 
-  constexpr Coord coord = std::decay_t<decltype(panel)>::CoordType;
-  constexpr Coord coordT = std::decay_t<decltype(panelT)>::CoordType;
+  constexpr Coord coord = std::decay_t<decltype(panel)>::coord;
+  constexpr Coord coordT = std::decay_t<decltype(panelT)>::coord;
 
   auto get_taskchain = [&](Coord comm_dir) -> auto& {
     return comm_dir == Coord::Row ? row_task_chain : col_task_chain;

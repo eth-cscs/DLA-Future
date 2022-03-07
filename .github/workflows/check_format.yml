@@ -1,3 +1,13 @@
+#
+# Distributed Linear Algebra with Future (DLAF)
+#
+# Copyright (c) 2018-2022, ETH Zurich
+# All rights reserved.
+#
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+
 name: Check format
 
 on:
@@ -8,12 +18,13 @@ jobs:
     runs-on: ubuntu-18.04
 
     steps:
+      - uses: actions/checkout@v2
+      - uses: actions/javascript-action@v1
+
       - name: Install tools
         run: |
           sudo apt-get install --no-install-recommends clang-format-10 python3
           pip3 install black==21.8b0
-      - name: Checkout
-        uses: actions/checkout@v2
       - name: Checkout master
         run: git fetch --no-tags --depth=1 origin +refs/heads/master:refs/heads/master
 
@@ -22,9 +33,24 @@ jobs:
         run: ./.github/format.sh
 
       - name: Check scripts formatting
+        if: always()
         run: black --line-length 105 scripts/
 
          # Fails if there are differences.
       - name: Formatting issues
         if: always()
         run: git diff --color --exit-code
+
+      - name: Check include guards
+        if: always()
+        run: |
+          find include test -type f '(' -name "*.h" -o -name "*.h.in" ')'             \
+            | xargs -I{} sh -c                                                        \
+                "egrep -sq '^#pragma once' {} || echo {}"                             \
+            > pragma-once.check
+
+          for filepath in `cat pragma-once.check`; do                                 \
+            echo "::error file=$filepath,line=1::missing include guard in $filepath"; \
+          done
+
+          test ! -s pragma-once.check

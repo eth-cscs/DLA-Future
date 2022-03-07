@@ -31,12 +31,22 @@ namespace dlaf {
 namespace eigensolver {
 namespace internal {
 
+// The type of a column in the Q matrix
+enum class ColType {
+  UpperHalf,  // non-zeroes in the upper half only
+  LowerHalf,  // non-zeroes in the lower half only
+  Dense,      // full column vector
+  Deflated    // deflated vectors
+};
+
 template <class T>
 struct TridiagSolver<Backend::MC, Device::CPU, T> {
-  static void call(Matrix<T, Device::CPU>& mat_a, SizeType i_begin, SizeType i_end,
-                   Matrix<T, Device::CPU>& d, Matrix<T, Device::CPU>& z,
-                   Matrix<SizeType, Device::CPU>& index, Matrix<T, Device::CPU>& mat_ws,
-                   Matrix<T, Device::CPU>& mat_ev);
+  static void call(SizeType i_begin, SizeType i_end, Matrix<internal::ColType, Device::CPU>& coltypes,
+                   Matrix<T, Device::CPU>& d, Matrix<T, Device::CPU>& d_defl, Matrix<T, Device::CPU>& z,
+                   Matrix<T, Device::CPU>& z_defl, Matrix<SizeType, Device::CPU>& perm_d,
+                   Matrix<SizeType, Device::CPU>& perm_q, Matrix<SizeType, Device::CPU>& perm_u,
+                   Matrix<T, Device::CPU>& mat_q, Matrix<T, Device::CPU>& mat_u,
+                   Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_ev);
   static void call(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a,
                    Matrix<T, Device::CPU>& mat_ev);
 };
@@ -276,14 +286,6 @@ void updateDiagValuesWithGivensCoeff(T c, T s, T& d1, T& d2) {
   d2 = d1 * s * s + d2 * c * c;
 }
 
-// The type of a column in the Q matrix
-enum class ColType {
-  UpperHalf,  // non-zeroes in the upper half only
-  LowerHalf,  // non-zeroes in the lower half only
-  Dense,      // full column vector
-  Deflated    // deflated vectors
-};
-
 // Assumption 1: The algorithm assumes that the diagonal `dptr` is sorted in ascending order with
 // corresponding `zptr` and `coltyps` arrays.
 //
@@ -337,12 +339,13 @@ std::vector<GivensRotation<T>> applyDeflationWithGivensRotation(T tol, SizeType 
 }
 
 template <class T>
-void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& mat_a, SizeType i_begin,
-                                                      SizeType i_end, Matrix<T, Device::CPU>& d,
-                                                      Matrix<T, Device::CPU>& z,
-                                                      Matrix<SizeType, Device::CPU>& index,
-                                                      Matrix<T, Device::CPU>& mat_ws,
-                                                      Matrix<T, Device::CPU>& mat_ev) {
+void TridiagSolver<Backend::MC, Device::CPU, T>::call(
+    SizeType i_begin, SizeType i_end, Matrix<internal::ColType, Device::CPU>& coltypes,
+    Matrix<T, Device::CPU>& d, Matrix<T, Device::CPU>& d_defl, Matrix<T, Device::CPU>& z,
+    Matrix<T, Device::CPU>& z_defl, Matrix<SizeType, Device::CPU>& perm_d,
+    Matrix<SizeType, Device::CPU>& perm_q, Matrix<SizeType, Device::CPU>& perm_u,
+    Matrix<T, Device::CPU>& mat_qws, Matrix<T, Device::CPU>& mat_uws, Matrix<T, Device::CPU>& mat_trd,
+    Matrix<T, Device::CPU>& mat_ev) {
   using dlaf::internal::whenAllLift;
   using pika::threads::thread_priority;
   using dlaf::internal::Policy;
@@ -351,7 +354,7 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& ma
 
   if (i_begin == i_end) {
     // Solve leaf eigensystem with stedc
-    whenAllLift(mat_a.readwrite_sender(LocalTileIndex(i_begin, 0)),
+    whenAllLift(mat_trd.readwrite_sender(LocalTileIndex(i_begin, 0)),
                 mat_ev.readwrite_sender(LocalTileIndex(i_begin, i_begin))) |
         tile::stedc(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
     return;
@@ -359,20 +362,22 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& ma
   SizeType i_midpoint = (i_begin + i_end) / 2;
 
   // Cuppen's tridiagonal decomposition
-  dlaf::internal::whenAllLift(mat_a.readwrite_sender(LocalTileIndex(i_midpoint, 0)),
-                              mat_a.readwrite_sender(LocalTileIndex(i_midpoint + 1, 0))) |
+  dlaf::internal::whenAllLift(mat_trd.readwrite_sender(LocalTileIndex(i_midpoint, 0)),
+                              mat_trd.readwrite_sender(LocalTileIndex(i_midpoint + 1, 0))) |
       cuppensDecomposition(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
 
-  // Left leaf
-  Solver::call(mat_a, i_begin, i_midpoint, d, z, index, mat_ws, mat_ev);
-  // Right leaf
-  Solver::call(mat_a, i_midpoint + 1, i_end, d, z, index, mat_ws, mat_ev);
+  // Top subproblem
+  Solver::call(i_begin, i_midpoint, coltypes, d, d_defl, z, z_defl, perm_d, perm_q, perm_u, mat_qws,
+               mat_uws, mat_trd, mat_ev);
+  // Bottom subproblem
+  Solver::call(i_begin, i_midpoint + 1, coltypes, d, d_defl, z, z_defl, perm_d, perm_q, perm_u, mat_qws,
+               mat_uws, mat_trd, mat_ev);
 
-  // Form D + rzz^T from `mat_a` and `mat_ev`
+  // Form D + rzz^T from `mat_trd` and `mat_ev`
   assembleZVec(i_begin, i_midpoint, i_end, mat_ev, z);
-  assembleDiag(i_begin, i_end, mat_a, d);
+  assembleDiag(i_begin, i_end, mat_trd, d);
   pika::shared_future<T> rho_fut =
-      pika::dataflow(pika::unwrapping(extractRho<T>), mat_a.read(LocalTileIndex(i_midpoint, 0)));
+      pika::dataflow(pika::unwrapping(extractRho<T>), mat_trd.read(LocalTileIndex(i_midpoint, 0)));
 
   // Calculate the tolerance used for deflation
   pika::future<T> dmax_fut = maxVectorElement(i_begin, i_end, d);
@@ -381,15 +386,15 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& ma
       pika::dataflow(pika::unwrapping(calcTolerance<T>), std::move(dmax_fut), std::move(zmax_fut));
 
   // Initialize the index
-  initIndex(i_begin, i_end, index);
+  // initIndex(i_begin, i_end, index);
 
   {
     // Sort the diagonal in ascending order
     auto d_tiles = collectVectorTileFutures(i_begin, i_end, d);
     auto z_tiles = collectVectorTileFutures(i_begin, i_end, z);
-    auto index_tiles = collectVectorTileFutures(i_begin, i_end, index);
-    pika::dataflow(pika::unwrapping(sortAscendingBasedOnDiagonal<T>), std::move(d_tiles),
-                   std::move(z_tiles), std::move(index_tiles));
+    // auto index_tiles = collectVectorTileFutures(i_begin, i_end, index);
+    // pika::dataflow(pika::unwrapping(sortAscendingBasedOnDiagonal<T>), std::move(d_tiles),
+    //                std::move(z_tiles), std::move(index_tiles));
   }
 
   // The number of non-zero entries in `z`
@@ -398,9 +403,9 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& ma
     // Deflate based on `z` entries close to zero
     auto d_tiles = collectVectorTileFutures(i_begin, i_end, d);
     auto z_tiles = collectVectorTileFutures(i_begin, i_end, z);
-    auto index_tiles = collectVectorTileFutures(i_begin, i_end, index);
-    k_fut = pika::dataflow(pika::unwrapping(permutateZVecZeroesToBottom<T>), tol_fut, rho_fut,
-                           std::move(d_tiles), std::move(z_tiles), std::move(index_tiles));
+    // auto index_tiles = collectVectorTileFutures(i_begin, i_end, index);
+    // k_fut = pika::dataflow(pika::unwrapping(permutateZVecZeroesToBottom<T>), tol_fut, rho_fut,
+    //                        std::move(d_tiles), std::move(z_tiles), std::move(index_tiles));
   }
 
   // Find evals of D + rzz^T with laed4 (root solver)

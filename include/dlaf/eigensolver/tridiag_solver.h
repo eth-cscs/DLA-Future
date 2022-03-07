@@ -52,12 +52,12 @@ namespace eigensolver {
 /// @pre mat_ev is a square matrix
 /// @pre mat_ev has a square block size
 template <Backend backend, Device device, class T>
-void tridiagSolver(Matrix<T, device>& mat_a, Matrix<T, device>& mat_ev) {
+void tridiagSolver(Matrix<T, device>& mat_trd, Matrix<T, device>& mat_ev) {
   static_assert(std::is_same<T, float>::value || std::is_same<T, double>::value,
                 "tridagSolver accepts only real values (float, double)!");
 
-  DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
-  DLAF_ASSERT(mat_a.distribution().size().cols() == 2, mat_a);
+  DLAF_ASSERT(matrix::local_matrix(mat_trd), mat_trd);
+  DLAF_ASSERT(mat_trd.distribution().size().cols() == 2, mat_trd);
 
   DLAF_ASSERT(matrix::local_matrix(mat_ev), mat_ev);
   DLAF_ASSERT(matrix::square_size(mat_ev), mat_ev);
@@ -65,7 +65,10 @@ void tridiagSolver(Matrix<T, device>& mat_a, Matrix<T, device>& mat_ev) {
 
   // Auxiliary matrix used for the D&C algorithm
   const matrix::Distribution& distr = mat_ev.distribution();
-  Matrix<T, device> mat_ws(distr);
+  // Extra workspace for Q1 and Q2
+  Matrix<T, device> mat_qws(distr);
+  // Extra workspace for U
+  Matrix<T, device> mat_uws(distr);
 
   // Auxialiary vectors used for the D&C algorithm
   LocalElementSize vec_size(distr.size().rows(), 1);
@@ -92,7 +95,9 @@ void tridiagSolver(Matrix<T, device>& mat_a, Matrix<T, device>& mat_ev) {
   SizeType i_begin = 0;
   SizeType i_end = SizeType(distr.nrTiles().rows() - 1);
 
-  internal::TridiagSolver<backend, device, T>::call(mat_a, i_begin, i_end, d, z, perm_d, mat_ws, mat_ev);
+  internal::TridiagSolver<backend, device, T>::call(i_begin, i_end, coltypes, d, d_defl, z, z_defl,
+                                                    perm_d, perm_q, perm_u, mat_qws, mat_uws, mat_trd,
+                                                    mat_ev);
 }
 
 /// TODO: more info on the distributed version

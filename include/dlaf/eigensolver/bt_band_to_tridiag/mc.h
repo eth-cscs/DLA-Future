@@ -193,11 +193,11 @@ struct Helper {
 
     if (acrossTiles_) {
       const auto part0_nrows = b - 1;
-      parts_[0] = part_t(sub_offset.row() + 1, part0_nrows, nrefls);
-      parts_[1] = part_t(0, std::min(b, rows_below - b), nrefls, part0_nrows);
+      part_top_ = part_t(sub_offset.row() + 1, part0_nrows, nrefls);
+      part_bottom_ = part_t(0, std::min(b, rows_below - b), nrefls, part0_nrows);
     }
     else {
-      parts_[0] = part_t(sub_offset.row() + 1, std::min(fullsize, rows_below - 1), nrefls);
+      part_top_ = part_t(sub_offset.row() + 1, std::min(fullsize, rows_below - 1), nrefls);
     }
   };
 
@@ -213,14 +213,16 @@ struct Helper {
 
   // Return SubTileSpec to use for accessing Householder reflectors in well formed form
   matrix::SubTileSpec specHH() const noexcept {
-    return {{0, 0}, {parts_[0].rows() + parts_[1].rows(), nrefls_}};
+    return {{0, 0}, {part_top_.rows() + part_bottom_.rows(), nrefls_}};
   }
 
-  // Return requested part, which gives access to specs (see part_t for more info)
-  const auto& operator[](const SizeType index) const noexcept {
-    DLAF_ASSERT_MODERATE(index >= 0 && index < (affectsMultipleTiles() ? 2 : 1), index,
-                         affectsMultipleTiles());
-    return parts_[to_sizet(index)];
+  const auto& topPart() const noexcept {
+    return part_top_;
+  }
+
+  const auto& bottomPart() const noexcept {
+    DLAF_ASSERT_MODERATE(affectsMultipleTiles(), affectsMultipleTiles());
+    return part_bottom_;
   }
 
 private:
@@ -257,7 +259,8 @@ private:
   matrix::SubTileSpec input_spec_;
 
   bool acrossTiles_;
-  std::array<part_t, 2> parts_;
+  part_t part_top_;
+  part_t part_bottom_;
 };
 
 template <class T>
@@ -360,15 +363,17 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(const SizeType ban
         const auto sz_e = mat_e.tileSize({ij.row(), j_e});
         auto tile_e = mat_e.read(LocalTileIndex(ij.row(), j_e));
 
-        computeW2<backend>(thread_priority::normal, keep_future(splitTile(tile_v, helper[0].specHH())),
-                           keep_future(splitTile(tile_e, helper[0].specEV(sz_e.cols()))), T(0),
+        computeW2<backend>(thread_priority::normal,
+                           keep_future(splitTile(tile_v, helper.topPart().specHH())),
+                           keep_future(splitTile(tile_e, helper.topPart().specEV(sz_e.cols()))), T(0),
                            mat_w2.readwrite_sender(LocalTileIndex(0, j_e)));
 
         if (helper.affectsMultipleTiles()) {
           auto tile_e = mat_e.read(LocalTileIndex(ij.row() + 1, j_e));
-          computeW2<backend>(thread_priority::normal, keep_future(splitTile(tile_v, helper[1].specHH())),
-                             keep_future(splitTile(tile_e, helper[1].specEV(sz_e.cols()))), T(1),
-                             mat_w2.readwrite_sender(LocalTileIndex(0, j_e)));
+          computeW2<backend>(thread_priority::normal,
+                             keep_future(splitTile(tile_v, helper.bottomPart().specHH())),
+                             keep_future(splitTile(tile_e, helper.bottomPart().specEV(sz_e.cols()))),
+                             T(1), mat_w2.readwrite_sender(LocalTileIndex(0, j_e)));
         }
       }
 
@@ -395,14 +400,14 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(const SizeType ban
         const auto& tile_w2 = mat_w2.read_sender(idx_e);
 
         updateE<backend>(pika::threads::thread_priority::normal,
-                         keep_future(splitTile(tile_w, helper[0].specHH())), tile_w2,
-                         splitTile(tile_e, helper[0].specEV(sz_e.cols())));
+                         keep_future(splitTile(tile_w, helper.topPart().specHH())), tile_w2,
+                         splitTile(tile_e, helper.topPart().specEV(sz_e.cols())));
 
         if (helper.affectsMultipleTiles()) {
           auto tile_e = mat_e(LocalTileIndex{ij.row() + 1, j_e});
           updateE<backend>(pika::threads::thread_priority::normal,
-                           keep_future(splitTile(tile_w, helper[1].specHH())), tile_w2,
-                           splitTile(tile_e, helper[1].specEV(sz_e.cols())));
+                           keep_future(splitTile(tile_w, helper.bottomPart().specHH())), tile_w2,
+                           splitTile(tile_e, helper.bottomPart().specEV(sz_e.cols())));
         }
       }
 

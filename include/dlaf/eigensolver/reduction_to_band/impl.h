@@ -794,17 +794,18 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     if (isPanelIncomplete)
       v.setWidth(nrefls_block);
 
-    const LocalTileIndex t_idx(0, 0);
-    // TODO used just by the column, maybe we can re-use a panel tile?
-    // TODO probably the first one in any panel is ok?
-    MatrixT<T> t({nrefls_block, nrefls_block}, dist.blockSize());
-
     // PANEL
     taus.emplace_back(computePanelReflectors(mat_a, panel_view, nrefls_block));
 
     constexpr bool has_reflector_head = true;
     setupReflectorPanelV<B, D, T, true>(has_reflector_head, panel_view, nrefls_block, v, mat_a);
-    computeTFactor<Backend::MC>(v, taus.back(), t(t_idx));
+
+    const LocalTileIndex t_idx(0, 0);
+    // TODO used just by the column, maybe we can re-use a panel tile?
+    // TODO probably the first one in any panel is ok?
+    MatrixT<T> t({nrefls_block, nrefls_block}, dist.blockSize());
+
+    computeTFactor<B>(v, taus.back(), t(t_idx));
 
     // PREPARATION FOR TRAILING MATRIX UPDATE
     const GlobalElementIndex at_offset(ij_offset + GlobalElementSize(0, band_size));
@@ -925,50 +926,48 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     if (isPanelIncomplete)
       v.setWidth(nrefls_block);
 
+    // PANEL
+    {
+      // TODO
+      // - copy panel_view from GPU to CPU
+      // - computePanelReflectors on CPU (on a matrix like, with just a panel)
+      // - copy back matrix "panel" from CPU to GPU
+
+      namespace ex = pika::execution::experimental;
+      using pika::threads::thread_priority;
+
+      // TODO allocate just a panel, but panel_view has to be adapted
+      Matrix<T, Device::CPU> tmp_panel(dist_a.localSize(), dist_a.blockSize());
+      for (const auto& i : panel_view.iteratorLocal()) {
+        auto spec = panel_view(i);
+        auto tmp_tile = tmp_panel.readwrite_sender(i);
+        ex::when_all(ex::keep_future(splitTile(mat_a.read(i), spec)), splitTile(tmp_tile, spec)) |
+            matrix::copy(
+                dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>(
+                    thread_priority::high)) |
+            ex::start_detached();
+      }
+
+      taus.emplace_back(computePanelReflectors(tmp_panel, panel_view, nrefls_block));
+
+      for (const auto& i : panel_view.iteratorLocal()) {
+        auto spec = panel_view(i);
+        auto tile_a = mat_a.readwrite_sender(i);
+        ex::when_all(ex::keep_future(splitTile(tmp_panel.read(i), spec)), splitTile(tile_a, spec)) |
+            matrix::copy(
+                dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::CPU, Device::GPU>>(
+                    thread_priority::high)) |
+            ex::start_detached();
+      }
+    }
+
+    constexpr bool has_reflector_head = true;
+    setupReflectorPanelV<B, D, T, true>(has_reflector_head, panel_view, nrefls_block, v, mat_a);
+
     const LocalTileIndex t_idx(0, 0);
     // TODO used just by the column, maybe we can re-use a panel tile?
     // TODO probably the first one in any panel is ok?
     Matrix<T, D> t({nrefls_block, nrefls_block}, dist.blockSize());
-
-    // PANEL
-    {
-      {
-        // TODO
-        // - copy panel_view from GPU to CPU
-        // - computePanelReflectors on CPU (on a matrix like, with just a panel)
-        // - copy back matrix "panel" from CPU to GPU
-
-        namespace ex = pika::execution::experimental;
-        using pika::threads::thread_priority;
-
-        // TODO allocate just a panel, but panel_view has to be adapted
-        Matrix<T, Device::CPU> tmp_panel(dist_a.localSize(), dist_a.blockSize());
-        for (const auto& i : panel_view.iteratorLocal()) {
-          auto spec = panel_view(i);
-          auto tmp_tile = tmp_panel.readwrite_sender(i);
-          ex::when_all(ex::keep_future(splitTile(mat_a.read(i), spec)), splitTile(tmp_tile, spec)) |
-              matrix::copy(
-                  dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>(
-                      thread_priority::high)) |
-              ex::start_detached();
-        }
-
-        taus.emplace_back(computePanelReflectors(tmp_panel, panel_view, nrefls_block));
-
-        for (const auto& i : panel_view.iteratorLocal()) {
-          auto spec = panel_view(i);
-          auto tile_a = mat_a.readwrite_sender(i);
-          ex::when_all(ex::keep_future(splitTile(tmp_panel.read(i), spec)), splitTile(tile_a, spec)) |
-              matrix::copy(
-                  dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::CPU, Device::GPU>>(
-                      thread_priority::high)) |
-              ex::start_detached();
-        }
-      }
-
-      constexpr bool has_reflector_head = true;
-      setupReflectorPanelV<B, D, T, true>(has_reflector_head, panel_view, nrefls_block, v, mat_a);
-    }
 
     computeTFactor<B>(v, taus.back(), t(t_idx));
 

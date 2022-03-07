@@ -14,7 +14,7 @@
 
 #include <gtest/gtest.h>
 #include <lapack/util.hh>
-#include <pika/futures/future.hpp>
+#include <pika/future.hpp>
 #include <pika/modules/threadmanager.hpp>
 #include <pika/runtime.hpp>
 

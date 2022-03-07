@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#pragma once
+
 #include "gtest/gtest.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/error.h"

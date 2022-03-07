@@ -132,7 +132,6 @@ add_library(dlaf.factorization OBJECT
   $<$<BOOL:${DLAF_WITH_CUDA}>:factorization/cholesky/gpu.cpp>
   factorization/qr/mc.cpp
   $<$<BOOL:${DLAF_WITH_CUDA}>:factorization/qr/gpu.cpp>
-  $<$<BOOL:${DLAF_WITH_CUDA}>:factorization/qr/tfactor_kernels.cu>
 )
 target_compile_options(dlaf.factorization PRIVATE $<$<COMPILE_LANG_AND_ID:CUDA,NVIDIA>:--extended-lambda>)
 target_link_libraries(dlaf.factorization PUBLIC dlaf.prop)

@@ -7,6 +7,8 @@
 # author: Alberto Invernizzi (a.invernizzi@cscs.ch)
 #
 
+# dlaf-no-license-check
+
 # Find LAPACK library
 #
 # LAPACK depends on BLAS and it is up to the user to honor this dependency by specifying

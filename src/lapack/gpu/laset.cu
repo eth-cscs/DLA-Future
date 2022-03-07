@@ -80,7 +80,7 @@ __global__ void laset(cublasFillMode_t uplo, const unsigned m, const unsigned n,
 
   DLAF_GPU_ASSERT_HEAVY(kernel_tile_size_rows % kernel_tile_size_cols == 0);
   DLAF_GPU_ASSERT_HEAVY(kernel_tile_size_rows == blockDim.x);
-  DLAF_GPU_ASSERT_HEAVY(kernel_tile_size_cols == blockDim.y);
+  DLAF_GPU_ASSERT_HEAVY(1 == blockDim.y);
   DLAF_GPU_ASSERT_HEAVY(1 == blockDim.z);
   DLAF_GPU_ASSERT_HEAVY(gridDim.x == ceilDiv(m, kernel_tile_size_rows));
   DLAF_GPU_ASSERT_HEAVY(gridDim.y == ceilDiv(n, kernel_tile_size_cols));

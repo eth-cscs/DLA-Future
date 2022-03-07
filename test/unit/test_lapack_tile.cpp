@@ -226,8 +226,8 @@ std::vector<std::tuple<SizeType, SizeType, SizeType>> setsizes = {  //
 TYPED_TEST(TileOperationsTestMC, Laset) {
   using Type = TypeParam;
 
-  const auto alpha = TypeUtilities<TypeParam>::element(-3.5, 8.72);
-  for (const auto beta : {alpha, TypeUtilities<TypeParam>::element(-1.25, -7.21)}) {
+  const auto alpha = TypeUtilities<Type>::element(-3.5, 8.72);
+  for (const auto beta : {alpha, TypeUtilities<Type>::element(-1.25, -7.21)}) {
     for (const auto& [m, n, extra_lda] : setsizes) {
       for (const auto uplo : blas_geuplos) {
         testLaset<Type, Device::CPU>(uplo, m, n, alpha, beta, extra_lda);
@@ -240,8 +240,8 @@ TYPED_TEST(TileOperationsTestMC, Laset) {
 TYPED_TEST(TileOperationsTestGPU, Laset) {
   using Type = TypeParam;
 
-  const auto alpha = TypeUtilities<TypeParam>::element(-3.5, 8.72);
-  for (const auto beta : {alpha, TypeUtilities<TypeParam>::element(-1.25, -7.21)}) {
+  const auto alpha = TypeUtilities<Type>::element(-3.5, 8.72);
+  for (const auto beta : {alpha, TypeUtilities<Type>::element(-1.25, -7.21)}) {
     for (const auto& [m, n, extra_lda] : setsizes) {
       for (const auto uplo : blas_geuplos) {
         testLaset<Type, Device::GPU>(uplo, m, n, alpha, beta, extra_lda);

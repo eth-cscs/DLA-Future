@@ -14,7 +14,7 @@
 
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/vector.h"
-#include "dlaf/matrix/matrix.h"
+#include "dlaf/matrix/panel.h"
 #include "dlaf/matrix/views.h"
 #include "dlaf/types.h"
 
@@ -49,7 +49,7 @@ struct QR_Tfactor {
   /// @pre k <= t.get().size().rows && k <= t.get().size().cols()
   /// @pre k >= 0
   /// @pre v_start.isIn(v.nrTiles())
-  static void call(const SizeType k, Matrix<const T, device>& v, const matrix::SubPanelView& panel_view,
+  static void call(matrix::Panel<Coord::Col, T, device>& panel_view,
                    pika::shared_future<common::internal::vector<T>> taus,
                    pika::future<matrix::Tile<T, device>> t);
 
@@ -78,7 +78,7 @@ struct QR_Tfactor {
   /// @pre k <= t.get().size().rows && k <= t.get().size().cols()
   /// @pre k >= 0
   /// @pre v_start.isIn(v.nrTiles())
-  static void call(const SizeType k, Matrix<const T, device>& v, const GlobalTileIndex v_start,
+  static void call(matrix::Panel<Coord::Col, T, device>& hh_panel,
                    pika::shared_future<common::internal::vector<T>> taus,
                    pika::future<matrix::Tile<T, device>> t,
                    common::Pipeline<comm::Communicator>& mpi_col_task_chain);

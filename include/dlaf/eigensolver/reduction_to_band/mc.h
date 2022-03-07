@@ -838,10 +838,9 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     // PANEL
     taus.emplace_back(computePanelReflectors(mat_a, panel_view, nrefls_block));
 
-    computeTFactor<Backend::MC>(nrefls_block, mat_a, panel_view, taus.back(), t(t_idx));
-
     constexpr bool has_reflector_head = true;
     setupReflectorPanelV<T, true>(has_reflector_head, panel_view, nrefls_block, v, mat_a);
+    computeTFactor<Backend::MC>(v, taus.back(), t(t_idx));
 
     // PREPARATION FOR TRAILING MATRIX UPDATE
     const GlobalElementIndex at_offset(ij_offset + GlobalElementSize(0, band_size));
@@ -991,8 +990,8 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     if (is_panel_rank_col) {
       taus.emplace_back(computePanelReflectors(std::move(trigger_panel), rank_v0.row(),
                                                mpi_col_chain_panel(), mat_a, ai_panel, nrefls));
-      computeTFactor<Backend::MC>(nrefls, mat_a, ai_start, taus.back(), t(t_idx), mpi_col_chain);
       red2band::local::setupReflectorPanelV(rank.row() == rank_v0.row(), panel_view, nrefls, v, mat_a);
+      computeTFactor<Backend::MC>(v, taus.back(), t(t_idx), mpi_col_chain);
     }
 
     // PREPARATION FOR TRAILING MATRIX UPDATE

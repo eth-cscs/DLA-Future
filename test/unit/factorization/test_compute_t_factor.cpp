@@ -92,8 +92,9 @@ void is_orthogonal(const MatrixLocal<const T>& matrix) {
 
 template <class T>
 std::tuple<dlaf::common::internal::vector<T>, MatrixLocal<T>> computeHAndTFactor(
-    const SizeType k, const MatrixLocal<const T>& v) {
-  const SizeType m = v.size().rows();
+    const SizeType k, const MatrixLocal<const T>& v, GlobalElementIndex v_start) {
+  // PRE: m >= k
+  const SizeType m = v.size().rows() - v_start.row();
   const TileElementSize block_size = v.blockSize();
 
   // compute taus and H_exp
@@ -103,12 +104,12 @@ std::tuple<dlaf::common::internal::vector<T>, MatrixLocal<T>> computeHAndTFactor
   MatrixLocal<T> h_expected({m, m}, block_size);
   set(h_expected, preset_eye<T>);
 
-  for (auto j = 0; !v.size().isEmpty() && j < k; ++j) {
+  for (auto j = 0; j < k; ++j) {
     const SizeType reflector_size = m - j;
 
-    const T* data_ptr = v.ptr({j, j});
+    const T* data_ptr = v.ptr({v_start.row() + j, v_start.col() + j});
     const auto norm = blas::nrm2(reflector_size, data_ptr, 1);
-    const T tau = 2 / std::pow(norm, static_cast<decltype(norm)>(2));
+    const T tau = 2 / (norm * norm);
 
     taus.push_back(tau);
 
@@ -120,8 +121,8 @@ std::tuple<dlaf::common::internal::vector<T>, MatrixLocal<T>> computeHAndTFactor
     blas::ger(blas::Layout::ColMajor,
         reflector_size, reflector_size,
         -tau,
-        v.ptr({j, j}), 1,
-        v.ptr({j, j}), 1,
+        data_ptr, 1,
+        data_ptr, 1,
         h_i.ptr(), h_i.ld());
     // clang-format on
 
@@ -148,13 +149,14 @@ std::tuple<dlaf::common::internal::vector<T>, MatrixLocal<T>> computeHAndTFactor
 
 template <class T>
 MatrixLocal<T> computeHFromTFactor(const SizeType k, const Tile<const T, Device::CPU>& t,
-                                   const MatrixLocal<const T>& v) {
-  const SizeType m = v.size().rows();
+                                   const MatrixLocal<const T>& v, GlobalElementIndex v_start) {
+  // PRE: m >= k
+  const SizeType m = v.size().rows() - v_start.row();
   const TileElementSize block_size = v.blockSize();
 
   // TV* = (VT*)* = W
   MatrixLocal<T> w({m, k}, block_size);
-  std::copy(v.ptr(), v.ptr() + w.size().linear_size(), w.ptr());
+  lapack::lacpy(blas::Uplo::General, m, k, v.ptr(v_start), v.ld(), w.ptr(), w.ld());
 
   // clang-format off
   blas::trmm(blas::Layout::ColMajor,
@@ -175,7 +177,7 @@ MatrixLocal<T> computeHFromTFactor(const SizeType k, const Tile<const T, Device:
       blas::Op::NoTrans, blas::Op::ConjTrans,
       m, m, k,
       -1,
-      v.ptr(), v.ld(),
+      v.ptr(v_start), v.ld(),
       w.ptr(), w.ld(),
       1,
       h_result.ptr(), h_result.ld());
@@ -184,38 +186,30 @@ MatrixLocal<T> computeHFromTFactor(const SizeType k, const Tile<const T, Device:
   return h_result;
 }
 
-std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, GlobalTileIndex>> configs{
-    // m, n, mb, nb, k, v_start
-    {39, 26, 6, 6, 6, {0, 3}},  // all reflectors (complete tile)
-    {39, 26, 6, 6, 2, {1, 4}},  // all reflectors (incomplete tile)
-    {39, 26, 6, 6, 4, {0, 3}},  // k reflectors (complete tile)
-    {39, 26, 6, 6, 1, {1, 4}},  // k reflectors (incomplete tile)
-
-    {26, 39, 6, 6, 6, {0, 5}},  // all reflectors (complete tile)
-    {26, 39, 6, 6, 2, {1, 6}},  // all reflectors (incomplete tile)
-    {26, 39, 6, 6, 4, {1, 5}},  // k reflectors (complete tile)
-    {26, 39, 6, 6, 1, {0, 6}},  // k reflectors (incomplete tile)
-
-    // large T, to check tfactorImplicit1 GPU kernel (internal tile size = 32)
-    {127, 133, 127, 133, 123, {0, 0}},  // k reflectors (incomplete tile)
+std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, GlobalElementIndex>> configs{
+    // m, k, mb, nb, v_start
+    {39, 6, 6, 6, {0, 0}},  // all reflectors
+    {39, 4, 6, 6, {6, 0}},  // k reflectors
+    {26, 6, 6, 6, {0, 0}},  // all reflectors
+    {26, 4, 6, 6, {6, 0}},  // k reflectors
 
     // non-square tiles
-    {39, 26, 10, 4, 4, {1, 5}},  // all reflectors (complete tile)
-    {39, 26, 10, 4, 2, {0, 6}},  // all reflectors (incomplete tile)
-    {39, 26, 10, 4, 3, {1, 5}},  // k reflectors (complete tile)
-    {39, 26, 10, 4, 1, {0, 6}},  // k reflectors (incomplete tile)
+    {39, 4, 10, 4, {10, 0}},  // all reflectors
+    {39, 3, 10, 4, {0, 0}},   // k reflectors
+    {26, 6, 3, 6, {6, 0}},    // all reflectors
+    {26, 3, 3, 6, {0, 0}},    // k reflectors
 
-    {26, 39, 10, 6, 6, {1, 5}},  // all reflectors (complete tile)
-    {26, 39, 10, 6, 2, {0, 6}},  // all reflectors (incomplete tile)
-    {26, 39, 10, 6, 4, {0, 5}},  // k reflectors (complete tile)
-    {26, 39, 10, 6, 1, {1, 6}},  // k reflectors (incomplete tile)
-
-    {26, 39, 10, 6, 0, {0, 6}},  // 0 reflectors
-
-    // empty matrices
-    {0, 0, 10, 6, 0, {0, 0}},
-    {39, 0, 10, 6, 0, {0, 0}},
-    {0, 26, 10, 6, 0, {0, 0}},
+    // Same panel, different v_start
+    {26, 4, 5, 4, {0, 0}},
+    {26, 3, 5, 4, {1, 1}},
+    {26, 2, 5, 4, {2, 2}},
+    {26, 4, 5, 4, {3, 0}},
+    {26, 4, 5, 4, {4, 0}},
+    {26, 2, 5, 4, {5, 2}},
+    {26, 4, 5, 4, {22, 0}},
+    {26, 3, 5, 4, {23, 0}},
+    {26, 2, 5, 4, {24, 2}},
+    {26, 1, 5, 4, {25, 2}},
 };
 
 // Note:
@@ -245,60 +239,54 @@ std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, GlobalT
 //
 // Which we expect to be the equal to the one computed previously.
 template <class T, Backend B, Device D>
-void testComputeTFactor(const SizeType a_m, const SizeType a_n, const SizeType mb, const SizeType nb,
-                        const SizeType k, const GlobalTileIndex v_start) {
-  ASSERT_LE(k, nb);
+void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, const SizeType nb,
+                        const GlobalElementIndex v_start) {
+  ASSERT_LE(v_start.row() + k, m);
+  ASSERT_LE(v_start.col() + k, nb);
 
   const TileElementSize block_size(mb, nb);
 
-  Matrix<const T, Device::CPU> v_input_h = [&, &a_m = a_m, &a_n = a_n]() {
-    Matrix<T, Device::CPU> V({a_m, a_n}, block_size);
-    dlaf::matrix::util::set_random(V);
-    return V;
-  }();
+  Matrix<T, Device::CPU> v_h({m, nb}, block_size);
+  dlaf::matrix::util::set_random(v_h);
+  auto dist_v = v_h.distribution();
 
-  GlobalElementSize v_size(a_m, a_n);
-
-  const GlobalElementIndex v_start_el(v_start.row() * mb, v_start.col() * nb);
-  if (!v_size.isEmpty()) {
-    const GlobalElementIndex v_end_el(a_m, std::min((v_start.col() + 1) * nb, a_n));
-    v_size = v_end_el - v_start_el;
+  // set up HHReflectors correctly.
+  for (SizeType i = v_start.row(); i < v_start.row() + k && i < m; ++i) {
+    SizeType j = i - v_start.row() + v_start.col();
+    GlobalElementIndex ij(i, j);
+    auto tile = v_h(dist_v.globalTileIndex(ij)).get();
+    auto ij_tile = dist_v.tileElementIndex(ij);
+    tile(ij_tile) = T{1};
+    for (SizeType jj = j + 1; jj < v_start.col() + k; ++jj) {
+      tile({ij_tile.row(), jj}) = T{0};
+    }
   }
 
-  MatrixLocal<T> v(v_size, block_size);
+  auto v_local = dlaf::matrix::test::allGather<const T>(blas::Uplo::General, v_h);
 
-  const GlobalTileSize v_offset{v_start.row(), v_start.col()};
-  for (const auto& ij_tile : iterate_range2d(v.nrTiles())) {
-    // copy only the panel
-    const auto& source_tile = v_input_h.read(ij_tile + v_offset).get();
-    matrix::internal::copy(source_tile, v.tile(ij_tile));
-    if (ij_tile.row() == 0)
-      tile::internal::laset<T>(blas::Uplo::Upper, 0.f, 1.f, v.tile(ij_tile));
-  }
-
-  auto tmp = computeHAndTFactor(k, v);
+  auto [taus, h_expected] = computeHAndTFactor(k, v_local, v_start);
   pika::shared_future<dlaf::common::internal::vector<T>> taus_input =
-      pika::make_ready_future<dlaf::common::internal::vector<T>>(std::move(std::get<0>(tmp)));
-  auto h_expected = std::move(std::get<1>(tmp));
+      pika::make_ready_future<dlaf::common::internal::vector<T>>(std::move(taus));
 
   is_orthogonal(h_expected);
 
-  const auto max_k = std::min(mb, nb);
-  Matrix<T, Device::CPU> t_output_h({max_k, max_k}, block_size);
+  Matrix<T, Device::CPU> t_output_h({k, k}, {k, k});
   const LocalTileIndex t_idx(0, 0);
 
   {
-    MatrixMirror<const T, D, Device::CPU> v_input(v_input_h);
+    MatrixMirror<T, D, Device::CPU> v(v_h);
     MatrixMirror<T, D, Device::CPU> t_output(t_output_h);
+    const matrix::SubPanelView panel_view(dist_v, v_start, k);
+    Panel<Coord::Col, T, D> panel_v(dist_v);
+    panel_v.setRangeStart(v_start);
+    panel_v.setWidth(k);
+    for (const auto& i : panel_view.iteratorLocal()) {
+      panel_v.setTile(i, splitTile(v.get().read(i), panel_view(i)));
+    }
 
     using dlaf::factorization::internal::computeTFactor;
-    const matrix::SubPanelView panel_view(v_input_h.distribution(), v_start_el, k);
-    computeTFactor<B>(k, v_input.get(), panel_view, taus_input, t_output.get()(t_idx));
+    computeTFactor<B>(panel_v, taus_input, t_output.get()(t_idx));
   }
-
-  // No reflectors, so nothing to check
-  if (k == 0)
-    return;
 
   // Note:
   // In order to check T correctness, the test will compute the H transformation matrix
@@ -310,85 +298,77 @@ void testComputeTFactor(const SizeType a_m, const SizeType a_n, const SizeType m
   //
   // is computed and compared to the one previously obtained by applying reflectors sequentially
   const auto& t = t_output_h.read(t_idx).get();
-  MatrixLocal<T> h_result = computeHFromTFactor(k, t, v);
+  MatrixLocal<T> h_result = computeHFromTFactor(k, t, v_local, v_start);
 
   is_orthogonal(h_result);
 
-  SCOPED_TRACE(::testing::Message() << "Comparison test m = " << a_m << " n=" << a_n << " mb=" << mb
-                                    << " nb=" << nb << " k=" << k << " v_start=" << v_start);
+  SCOPED_TRACE(::testing::Message() << "Comparison test m=" << m << " k=" << k << " mb=" << mb
+                                    << " nb=" << nb << " v_start=" << v_start);
   const auto error = h_result.size().rows() * k * TypeUtilities<T>::error;
   CHECK_MATRIX_NEAR(h_expected, h_result, 0, error);
 }
 
-template <class T>
-void testComputeTFactor(comm::CommunicatorGrid grid, const SizeType a_m, const SizeType a_n,
-                        const SizeType mb, const SizeType nb, const SizeType k,
-                        const GlobalTileIndex v_start) {
-  ASSERT_LE(k, nb);
+template <class T, Backend B, Device D>
+void testComputeTFactor(comm::CommunicatorGrid grid, const SizeType m, const SizeType k,
+                        const SizeType mb, const SizeType nb, const GlobalElementIndex v_start) {
+  ASSERT_LE(v_start.row() + k, m);
+  ASSERT_LE(v_start.col() + k, nb);
 
   const TileElementSize block_size(mb, nb);
 
   comm::Index2D source_rank_index(std::max(0, grid.size().rows() - 1),
                                   std::min(1, grid.size().cols() - 1));
-  const matrix::Distribution dist_v({a_m, a_n}, block_size, grid.size(), grid.rank(), source_rank_index);
 
-  Matrix<const T, Device::CPU> v_input = [&]() {
-    Matrix<T, Device::CPU> V(dist_v);
-    dlaf::matrix::util::set_random(V);
-    return V;
-  }();
+  const matrix::Distribution dist_v({m, nb}, block_size, grid.size(), grid.rank(), source_rank_index);
 
-  const MatrixLocal<const T> v = [&v_input, &dist_v, &grid, a_m = a_m, a_n = a_n, nb = nb,
-                                  v_start = v_start] {
-    // TODO this can be improved by communicating just the selected column starting at v_start
-    // gather the entire A matrix
-    auto a = matrix::test::allGather<T>(blas::Uplo::General, v_input, grid);
+  Matrix<T, Device::CPU> v_h(dist_v);
+  dlaf::matrix::util::set_random(v_h);
 
-    // panel shape
-    GlobalElementSize v_size = dist_v.size();
-
-    if (!v_size.isEmpty()) {
-      const auto v_start_el = dist_v.globalElementIndex(v_start, {0, 0});
-      const auto v_end_el = GlobalElementIndex{a_m, std::min(v_start_el.col() + nb, a_n)};
-      v_size = v_end_el - v_start_el;
+  // set up HHReflectors correctly.
+  for (SizeType i = v_start.row(); i < v_start.row() + k && i < m; ++i) {
+    SizeType j = i - v_start.row() + v_start.col();
+    GlobalElementIndex ij(i, j);
+    if (dist_v.rankIndex() == dist_v.rankGlobalTile(dist_v.globalTileIndex(ij))) {
+      auto tile = v_h(dist_v.globalTileIndex(ij)).get();
+      auto ij_tile = dist_v.tileElementIndex(ij);
+      tile(ij_tile) = T{1};
+      for (SizeType jj = j + 1; jj < v_start.col() + k; ++jj) {
+        tile({ij_tile.row(), jj}) = T{0};
+      }
     }
+  }
 
-    MatrixLocal<T> v(v_size, a.blockSize());
+  auto v_local = matrix::test::allGather<const T>(blas::Uplo::General, v_h, grid);
 
-    // copy only the panel
-    const GlobalTileSize v_offset{v_start.row(), v_start.col()};
-    for (const auto& ij : iterate_range2d(v.nrTiles())) {
-      matrix::internal::copy(a.tile_read(ij + v_offset), v.tile(ij));
-      if (ij.row() == 0)
-        tile::internal::laset<T>(blas::Uplo::Upper, 0.f, 1.f, v.tile(ij));
-    }
+  // Ranks without HHReflectors can return.
+  if (dist_v.rankIndex().col() != source_rank_index.col())
+    return;
 
-    return v;
-  }();
-
-  auto tmp = computeHAndTFactor(k, v);
+  auto [taus, h_expected] = computeHAndTFactor(k, v_local, v_start);
   pika::shared_future<dlaf::common::internal::vector<T>> taus_input =
-      pika::make_ready_future<dlaf::common::internal::vector<T>>(std::move(std::get<0>(tmp)));
-  auto h_expected = std::move(std::get<1>(tmp));
+      pika::make_ready_future<dlaf::common::internal::vector<T>>(std::move(taus));
 
   is_orthogonal(h_expected);
 
   common::Pipeline<comm::Communicator> serial_comm(grid.colCommunicator());
 
-  const auto max_k = std::min(mb, nb);
-  Matrix<T, Device::CPU> t_output({max_k, max_k}, block_size);
+  Matrix<T, Device::CPU> t_output_h({k, k}, {k, k});
   const LocalTileIndex t_idx(0, 0);
 
-  dlaf::factorization::internal::computeTFactor<Backend::MC>(k, v_input, v_start, taus_input,
-                                                             t_output(t_idx), serial_comm);
+  {
+    MatrixMirror<T, D, Device::CPU> v(v_h);
+    MatrixMirror<T, D, Device::CPU> t_output(t_output_h);
+    const matrix::SubPanelView panel_view(dist_v, v_start, k);
+    Panel<Coord::Col, T, D> panel_v(dist_v);
+    panel_v.setRangeStart(v_start);
+    panel_v.setWidth(k);
+    for (const auto& i : panel_view.iteratorLocal()) {
+      panel_v.setTile(i, splitTile(v.get().read(i), panel_view(i)));
+    }
 
-  // No reflectors, so nothing to check
-  if (k == 0)
-    return;
-
-  const auto column_involved = dist_v.rankGlobalTile(v_start).col();
-  if (dist_v.rankIndex().col() != column_involved)
-    return;
+    using dlaf::factorization::internal::computeTFactor;
+    computeTFactor<B>(panel_v, taus_input, t_output.get()(t_idx), serial_comm);
+  }
 
   // Note:
   // In order to check T correctness, the test will compute the H transformation matrix
@@ -399,8 +379,8 @@ void testComputeTFactor(comm::CommunicatorGrid grid, const SizeType a_m, const S
   // H_res = I - V T V*
   //
   // is computed and compared to the one previously obtained by applying reflectors sequentially
-  const auto& t = t_output.read(t_idx).get();
-  MatrixLocal<T> h_result = computeHFromTFactor(k, t, v);
+  const auto& t = t_output_h.read(t_idx).get();
+  MatrixLocal<T> h_result = computeHFromTFactor(k, t, v_local, v_start);
 
   is_orthogonal(h_result);
 
@@ -408,15 +388,15 @@ void testComputeTFactor(comm::CommunicatorGrid grid, const SizeType a_m, const S
   // The error threshold has been determined considering that ~2*n*nb arithmetic operations (n*nb
   // multiplications and n*nb addition) are needed to compute each of the element of the matrix `h_result`,
   // and that TypeUtilities<T>::error indicates maximum error for a multiplication + addition.
-  SCOPED_TRACE(::testing::Message() << "Comparison test m = " << a_m << " n=" << a_n << " mb=" << mb
-                                    << " nb=" << nb << " k=" << k << " v_start=" << v_start);
+  SCOPED_TRACE(::testing::Message() << "Comparison test m=" << m << " k=" << k << " mb=" << mb
+                                    << " nb=" << nb << " v_start=" << v_start);
   const auto error = h_result.size().rows() * k * TypeUtilities<T>::error;
   CHECK_MATRIX_NEAR(h_expected, h_result, 0, error);
 }
 
 TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
-  for (const auto& [a_m, a_n, mb, nb, k, v_start] : configs) {
-    testComputeTFactor<TypeParam, Backend::MC, Device::CPU>(a_m, a_n, mb, nb, k, v_start);
+  for (const auto& [m, k, mb, nb, v_start] : configs) {
+    testComputeTFactor<TypeParam, Backend::MC, Device::CPU>(m, k, mb, nb, v_start);
   }
 }
 
@@ -424,16 +404,16 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
   namespace ex = pika::execution::experimental;
 
   for (auto comm_grid : this->commGrids()) {
-    for (const auto& [a_m, a_n, mb, nb, k, v_start] : configs) {
-      testComputeTFactor<TypeParam>(comm_grid, a_m, a_n, mb, nb, k, v_start);
+    for (const auto& [m, k, mb, nb, v_start] : configs) {
+      testComputeTFactor<TypeParam, Backend::MC, Device::CPU>(comm_grid, m, k, mb, nb, v_start);
     }
   }
 }
 
 #ifdef DLAF_WITH_CUDA
 TYPED_TEST(ComputeTFactorTestGPU, CorrectnessLocal) {
-  for (const auto& [a_m, a_n, mb, nb, k, v_start] : configs) {
-    testComputeTFactor<TypeParam, Backend::GPU, Device::GPU>(a_m, a_n, mb, nb, k, v_start);
+  for (const auto& [m, k, mb, nb, v_start] : configs) {
+    testComputeTFactor<TypeParam, Backend::GPU, Device::GPU>(m, k, mb, nb, v_start);
   }
 }
 #endif

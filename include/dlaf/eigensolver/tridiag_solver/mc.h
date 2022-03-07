@@ -20,6 +20,7 @@
 
 #include "dlaf/common/callable_object.h"
 #include "dlaf/eigensolver/tridiag_solver/api.h"
+#include "dlaf/eigensolver/tridiag_solver/index.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/sender/make_sender_algorithm_overloads.h"
@@ -27,9 +28,7 @@
 #include "dlaf/sender/transform.h"
 #include "dlaf/types.h"
 
-namespace dlaf {
-namespace eigensolver {
-namespace internal {
+namespace dlaf::eigensolver::internal {
 
 // The type of a column in the Q matrix
 enum class ColType {
@@ -232,29 +231,6 @@ void sortAscendingBasedOnDiagonal(const std::vector<matrix::Tile<T, Device::CPU>
              pika::util::make_zip_iterator(d_ptr + len, z_ptr + len, index_ptr + len), sortComp);
 }
 
-inline void initIndexTile(SizeType tile_row, const matrix::Tile<SizeType, Device::CPU>& index) {
-  for (SizeType i = 0; i < index.size().rows(); ++i) {
-    index(TileElementIndex(i, 0)) = tile_row + i;
-  }
-}
-
-DLAF_MAKE_CALLABLE_OBJECT(initIndexTile);
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(initIndexTile, initIndexTile_o)
-
-inline void initIndex(SizeType i_begin, SizeType i_end, Matrix<SizeType, Device::CPU>& index) {
-  using dlaf::internal::whenAllLift;
-  using pika::threads::thread_priority;
-  using dlaf::internal::Policy;
-  using pika::execution::experimental::start_detached;
-
-  for (SizeType i = i_begin; i <= i_end; ++i) {
-    GlobalTileIndex tile_idx(i, 0);
-    SizeType tile_row = index.distribution().globalElementIndex(tile_idx, TileElementIndex(0, 0)).row();
-    whenAllLift(tile_row, index.readwrite_sender(tile_idx)) |
-        initIndexTile(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
-  }
-}
-
 template <class T>
 struct GivensRotation {
   SizeType i;  // the first column index
@@ -385,8 +361,10 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(
   pika::shared_future<T> tol_fut =
       pika::dataflow(pika::unwrapping(calcTolerance<T>), std::move(dmax_fut), std::move(zmax_fut));
 
-  // Initialize the index
-  // initIndex(i_begin, i_end, index);
+  // Initialize permutation indices
+  initIndex(i_begin, i_end, perm_d);
+  initIndex(i_begin, i_end, perm_q);
+  initIndex(i_begin, i_end, perm_u);
 
   {
     // Sort the diagonal in ascending order
@@ -438,6 +416,4 @@ DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::MC, Device::CPU, double)
 // DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::GPU, Device::GPU, std::complex<double>)
 #endif
 
-}
-}
 }

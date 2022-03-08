@@ -509,6 +509,67 @@ void her2kUpdateTrailingMatrix(const SubMatrixView& view, matrix::Matrix<T, D>& 
     }
   }
 }
+
+template <Backend B, Device D, class T>
+struct ComputePanelHelper;
+
+template <class T>
+struct ComputePanelHelper<Backend::MC, Device::CPU, T> {
+  ComputePanelHelper(const std::size_t, matrix::Distribution) {}
+
+  auto call(Matrix<T, Device::CPU>& mat_a, const matrix::SubPanelView& panel_view,
+            const SizeType nrefls_block) {
+    using dlaf::eigensolver::internal::red2band::local::computePanelReflectors;
+    return computePanelReflectors(mat_a, panel_view, nrefls_block);
+  }
+};
+
+template <class T>
+struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
+  ComputePanelHelper(const std::size_t n_workspaces, matrix::Distribution dist_a)
+      : panels_v(n_workspaces, dist_a) {}
+
+  auto call(Matrix<T, Device::GPU>& mat_a, const matrix::SubPanelView& panel_view,
+            const SizeType nrefls_block) {
+    using pika::threads::thread_priority;
+    using dlaf::eigensolver::internal::red2band::local::computePanelReflectors;
+
+    namespace ex = pika::execution::experimental;
+
+    // Note:
+    // - copy panel_view from GPU to CPU
+    // - computePanelReflectors on CPU (on a matrix like, with just a panel)
+    // - copy back matrix "panel" from CPU to GPU
+
+    auto& v = panels_v.nextResource();
+    for (const auto& i : panel_view.iteratorLocal()) {
+      auto spec = panel_view(i);
+      auto tmp_tile = v.readwrite_sender(i);
+      ex::when_all(ex::keep_future(splitTile(mat_a.read(i), spec)), splitTile(tmp_tile, spec)) |
+          matrix::copy(
+              dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>(
+                  thread_priority::high)) |
+          ex::start_detached();
+    }
+
+    auto taus = computePanelReflectors(v, panel_view, nrefls_block);
+
+    for (const auto& i : panel_view.iteratorLocal()) {
+      auto spec = panel_view(i);
+      auto tile_a = mat_a.readwrite_sender(i);
+      ex::when_all(ex::keep_future(splitTile(v.read(i), spec)), splitTile(tile_a, spec)) |
+          matrix::copy(
+              dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::CPU, Device::GPU>>(
+                  thread_priority::high)) |
+          ex::start_detached();
+    }
+
+    return taus;
+  }
+
+protected:
+  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panels_v;
+};
 }
 
 namespace distributed {
@@ -732,66 +793,6 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
 }
 }
 
-template <Backend B, Device D, class T>
-struct Helper;
-
-template <class T>
-struct Helper<Backend::MC, Device::CPU, T> {
-  Helper(const std::size_t, matrix::Distribution) {}
-
-  auto computePanel(Matrix<T, Device::CPU>& mat_a, const matrix::SubPanelView& panel_view,
-                    const SizeType nrefls_block) {
-    using dlaf::eigensolver::internal::red2band::local::computePanelReflectors;
-    return computePanelReflectors(mat_a, panel_view, nrefls_block);
-  }
-};
-
-template <class T>
-struct Helper<Backend::GPU, Device::GPU, T> {
-  Helper(const std::size_t n_workspaces, matrix::Distribution dist_a) : panels_v(n_workspaces, dist_a) {}
-
-  auto computePanel(Matrix<T, Device::GPU>& mat_a, const matrix::SubPanelView& panel_view,
-                    const SizeType nrefls_block) {
-    using pika::threads::thread_priority;
-    using dlaf::eigensolver::internal::red2band::local::computePanelReflectors;
-
-    namespace ex = pika::execution::experimental;
-
-    // Note:
-    // - copy panel_view from GPU to CPU
-    // - computePanelReflectors on CPU (on a matrix like, with just a panel)
-    // - copy back matrix "panel" from CPU to GPU
-
-    auto& v = panels_v.nextResource();
-    for (const auto& i : panel_view.iteratorLocal()) {
-      auto spec = panel_view(i);
-      auto tmp_tile = v.readwrite_sender(i);
-      ex::when_all(ex::keep_future(splitTile(mat_a.read(i), spec)), splitTile(tmp_tile, spec)) |
-          matrix::copy(
-              dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>(
-                  thread_priority::high)) |
-          ex::start_detached();
-    }
-
-    auto taus = computePanelReflectors(v, panel_view, nrefls_block);
-
-    for (const auto& i : panel_view.iteratorLocal()) {
-      auto spec = panel_view(i);
-      auto tile_a = mat_a.readwrite_sender(i);
-      ex::when_all(ex::keep_future(splitTile(v.read(i), spec)), splitTile(tile_a, spec)) |
-          matrix::copy(
-              dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::CPU, Device::GPU>>(
-                  thread_priority::high)) |
-          ex::start_detached();
-    }
-
-    return taus;
-  }
-
-protected:
-  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panels_v;
-};
-
 /// Local implementation of reduction to band
 /// @return a vector of shared futures of vectors, where each inner vector contains a block of taus
 template <Backend B, Device D, class T>
@@ -827,7 +828,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
   common::RoundRobin<Panel<Coord::Col, T, D>> panels_w(n_workspaces, dist);
   common::RoundRobin<Panel<Coord::Col, T, D>> panels_x(n_workspaces, dist);
 
-  Helper<B, D, T> helper(n_workspaces, dist_a);
+  ComputePanelHelper<B, D, T> compute_panel_helper(n_workspaces, dist_a);
 
   for (SizeType j_sub = 0; j_sub < nblocks; ++j_sub) {
     const auto i_sub = j_sub + 1;
@@ -858,7 +859,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
       v.setWidth(nrefls_block);
 
     // PANEL
-    taus.emplace_back(helper.computePanel(mat_a, panel_view, nrefls_block));
+    taus.emplace_back(compute_panel_helper.call(mat_a, panel_view, nrefls_block));
 
     constexpr bool has_reflector_head = true;
     setupReflectorPanelV<B, D, T, true>(has_reflector_head, panel_view, nrefls_block, v, mat_a);

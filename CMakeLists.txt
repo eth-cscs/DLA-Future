@@ -93,8 +93,7 @@ else()
 endif()
 
 # ----- pika
-# TODO: 0.2.0
-find_package(pika 0.1.0 REQUIRED)
+find_package(pika 0.2.0 REQUIRED EXACT)
 
 # ----- BLASPP/LAPACKPP
 find_package(blaspp REQUIRED)

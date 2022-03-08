@@ -303,7 +303,7 @@ auto computePanelReflectors(MatrixLike& mat_a, const SubPanelView& panel_view, c
                         pika::when_all(std::move(panel_tiles)));
 }
 
-template <Backend B, Device D, class T, bool ForceCopy = false>
+template <Backend B, Device D, class T, bool force_copy = false>
 void setupReflectorPanelV(bool has_head, const SubPanelView& panel_view, const SizeType nrefls,
                           matrix::Panel<Coord::Col, T, D>& v, matrix::Matrix<const T, D>& mat_a) {
   namespace ex = pika::execution::experimental;
@@ -347,7 +347,7 @@ void setupReflectorPanelV(bool has_head, const SubPanelView& panel_view, const S
     const matrix::SubTileSpec& spec = panel_view(idx);
 
     // TODO this is a workaround for the deadlock problem
-    if constexpr (ForceCopy)
+    if constexpr (force_copy)
       ex::when_all(ex::keep_future(matrix::splitTile(mat_a.read(idx), spec)), v.readwrite_sender(idx)) |
           matrix::copy(dlaf::internal::Policy<B>(thread_priority::high)) | ex::start_detached();
     else

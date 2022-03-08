@@ -109,8 +109,8 @@ pika::shared_future<matrix::Tile<const T, Device::CPU>> computeTFactor(
                         std::move(mat_t));
 }
 
-template <Backend backend, class VSender, class TSender>
-auto computeW(pika::threads::thread_priority priority, VSender&& tile_v, TSender&& tile_t) {
+template <Backend backend, class TSender, class VSender>
+auto computeW(pika::threads::thread_priority priority, TSender&& tile_t, VSender&& tile_v) {
   using namespace blas;
   using T = dlaf::internal::SenderElementType<VSender>;
   dlaf::internal::whenAllLift(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1),
@@ -392,7 +392,7 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(const SizeType ban
       // finished. T was already a dependency, but W2 wasn't, meaning it won't run in parallel,
       // but it could.
       tile_w_rw = splitTile(tile_w_full, helper.specHH());
-      computeW<backend>(thread_priority::normal, std::move(tile_w_rw), keep_future(tile_t));
+      computeW<backend>(thread_priority::normal, keep_future(tile_t), std::move(tile_w_rw));
       auto tile_w = mat_w.read(ij);
 
       // E -= W . W2

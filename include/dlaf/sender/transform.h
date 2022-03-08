@@ -81,15 +81,15 @@ template <Backend B, typename F, typename Sender,
     }
     else {
       DLAF_STATIC_FAIL(
-          F,
+          Sender,
           "Attempting to use transform with a GPU policy, but f is not invocable with a CUDA stream as the last argument or cuBLAS/cuSOLVER handle as the first argument.");
     }
 #else
-    DLAF_STATIC_FAIL(F, "Attempting to use transform with Backend::GPU but it is disabled");
+    DLAF_STATIC_FAIL(Sender, "Attempting to use transform with Backend::GPU but it is disabled");
 #endif
   }
   else {
-    DLAF_STATIC_FAIL(F, "Unknown backend given to transform");
+    DLAF_STATIC_FAIL(Sender, "Unknown backend given to transform");
   }
 }
 

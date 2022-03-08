@@ -195,11 +195,11 @@ struct TileAccessHelper {
 
     if (acrossTiles_) {
       const auto part0_nrows = b - 1;
-      part_top_ = part_t(sub_offset.row() + 1, part0_nrows, nrefls);
-      part_bottom_ = part_t(0, std::min(b, rows_below - b), nrefls, part0_nrows);
+      part_top_ = Part(sub_offset.row() + 1, part0_nrows, nrefls);
+      part_bottom_ = Part(0, std::min(b, rows_below - b), nrefls, part0_nrows);
     }
     else {
-      part_top_ = part_t(sub_offset.row() + 1, std::min(fullsize, rows_below - 1), nrefls);
+      part_top_ = Part(sub_offset.row() + 1, std::min(fullsize, rows_below - 1), nrefls);
     }
   };
 
@@ -228,11 +228,11 @@ struct TileAccessHelper {
   }
 
 private:
-  struct part_t {
+  struct Part {
     // Create an "empty" part
-    part_t() = default;
+    Part() = default;
 
-    part_t(const SizeType origin, const SizeType nrows, const SizeType nrefls, const SizeType offset = 0)
+    Part(const SizeType origin, const SizeType nrows, const SizeType nrefls, const SizeType offset = 0)
         : origin_(origin), nrows_(nrows), nrefls_(nrefls), offset_(offset) {}
 
     // Return the number of rows that this part involves
@@ -261,8 +261,8 @@ private:
   matrix::SubTileSpec input_spec_;
 
   bool acrossTiles_;
-  part_t part_top_;
-  part_t part_bottom_;
+  Part part_top_;
+  Part part_bottom_;
 };
 }
 

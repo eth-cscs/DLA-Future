@@ -42,17 +42,7 @@
 #include "dlaf/eigensolver/reduction_to_band/api.h"
 #include "dlaf/factorization/qr.h"
 
-namespace dlaf {
-namespace eigensolver {
-namespace internal {
-
-template <class T>
-struct ReductionToBand<Backend::MC, Device::CPU, T> {
-  static common::internal::vector<pika::shared_future<common::internal::vector<T>>> call(
-      Matrix<T, Device::CPU>& mat_a, const SizeType band_size);
-  static common::internal::vector<pika::shared_future<common::internal::vector<T>>> call(
-      comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a);
-};
+namespace dlaf::eigensolver::internal {
 
 namespace red2band {
 using matrix::Matrix;
@@ -770,9 +760,9 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
 
 /// Local implementation of reduction to band
 /// @return a vector of shared futures of vectors, where each inner vector contains a block of taus
-template <class T>
-common::internal::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<
-    Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& mat_a, const SizeType band_size) {
+template <Backend B, Device D, class T>
+common::internal::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<B, D, T>::call(
+    Matrix<T, D>& mat_a, const SizeType band_size) {
   using namespace red2band::local;
   using red2band::MatrixT;
   using red2band::PanelT;
@@ -897,9 +887,9 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
 
 /// Distributed implementation of reduction to band
 /// @return a vector of shared futures of vectors, where each inner vector contains a block of taus
-template <class T>
-common::internal::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<
-    Backend::MC, Device::CPU, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a) {
+template <Backend B, Device D, class T>
+common::internal::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<B, D, T>::call(
+    comm::CommunicatorGrid grid, Matrix<T, D>& mat_a) {
   using namespace red2band::distributed;
   using red2band::MatrixT;
   using red2band::PanelT;
@@ -1088,16 +1078,5 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
   }
 
   return taus;
-}
-
-/// ---- ETI
-#define DLAF_EIGENSOLVER_RED_TO_BAND_MC_ETI(KWORD, DATATYPE) \
-  KWORD template struct ReductionToBand<Backend::MC, Device::CPU, DATATYPE>;
-
-DLAF_EIGENSOLVER_RED_TO_BAND_MC_ETI(extern, float)
-DLAF_EIGENSOLVER_RED_TO_BAND_MC_ETI(extern, double)
-DLAF_EIGENSOLVER_RED_TO_BAND_MC_ETI(extern, std::complex<float>)
-DLAF_EIGENSOLVER_RED_TO_BAND_MC_ETI(extern, std::complex<double>)
-}
 }
 }

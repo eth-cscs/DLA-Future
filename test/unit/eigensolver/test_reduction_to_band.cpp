@@ -14,6 +14,7 @@
 
 #include <gtest/gtest.h>
 #include <lapack/util.hh>
+#include <pika/future.hpp>
 #include <pika/modules/threadmanager.hpp>
 #include <pika/runtime.hpp>
 
@@ -27,6 +28,7 @@
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf/memory/memory_view.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
@@ -48,7 +50,10 @@ using namespace dlaf::matrix::test;
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
 template <class T>
-struct ReductionToBandTestMC : public TestWithCommGrids {};
+struct ReductionToBandTest : public TestWithCommGrids {};
+
+template <class T>
+using ReductionToBandTestMC = ReductionToBandTest<T>;
 
 TYPED_TEST_SUITE(ReductionToBandTestMC, MatrixElementTypes);
 
@@ -292,7 +297,7 @@ auto checkResult(const SizeType k, const SizeType band_size, Matrix<const T, Dev
                     std::max<SizeType>(1, mat_b.size().linear_size()) * TypeUtilities<T>::error);
 }
 
-template <class TypeParam, Device device>
+template <class T, Backend B, Device D>
 void testReductionToBandLocal(const LocalElementSize size, const TileElementSize block_size,
                               const SizeType band_size) {
   const SizeType k_reflectors = std::max(SizeType(0), size.rows() - band_size - 1);
@@ -301,21 +306,25 @@ void testReductionToBandLocal(const LocalElementSize size, const TileElementSize
   Distribution distribution({size.rows(), size.cols()}, block_size);
 
   // setup the reference input matrix
-  Matrix<const TypeParam, device> reference = [size = size, block_size = block_size]() {
-    Matrix<TypeParam, device> reference(size, block_size);
+  Matrix<const T, Device::CPU> reference = [size = size, block_size = block_size]() {
+    Matrix<T, Device::CPU> reference(size, block_size);
     matrix::util::set_random_hermitian(reference);
     return reference;
   }();
 
-  Matrix<TypeParam, device> matrix_a(distribution);
-  copy(reference, matrix_a);
+  Matrix<T, Device::CPU> mat_a_h(distribution);
+  copy(reference, mat_a_h);
 
-  auto local_taus = eigensolver::reductionToBand<Backend::MC>(matrix_a, band_size);
+  common::internal::vector<pika::shared_future<common::internal::vector<T>>> local_taus;
+  {
+    MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
+    local_taus = eigensolver::reductionToBand<B, D, T>(mat_a.get(), band_size);
+  }
 
-  checkUpperPartUnchanged(reference, matrix_a);
+  checkUpperPartUnchanged(reference, mat_a_h);
 
-  auto mat_v = allGather(blas::Uplo::Lower, matrix_a);
-  auto mat_b = makeLocal(matrix_a);
+  auto mat_v = allGather(blas::Uplo::Lower, mat_a_h);
+  auto mat_b = makeLocal(mat_a_h);
   splitReflectorsAndBand(mat_v, mat_b, band_size);
 
   auto taus = allGatherTaus(k_reflectors, band_size, local_taus);
@@ -328,7 +337,7 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessLocal) {
   for (const auto& config : configs) {
     const auto& [size, block_size, band_size] = config;
 
-    testReductionToBandLocal<TypeParam, Device::CPU>(size, block_size, band_size);
+    testReductionToBandLocal<TypeParam, Backend::MC, Device::CPU>(size, block_size, band_size);
   }
 }
 
@@ -336,7 +345,7 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessLocalSubBand) {
   for (const auto& config : configs_subband) {
     const auto& [size, block_size, band_size] = config;
 
-    testReductionToBandLocal<TypeParam, Device::CPU>(size, block_size, band_size);
+    testReductionToBandLocal<TypeParam, Backend::MC, Device::CPU>(size, block_size, band_size);
   }
 }
 

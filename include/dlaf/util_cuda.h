@@ -67,138 +67,167 @@ namespace cuda_operators {
 // conj, real, imag, fma
 //
 // Note: fma(a, b, c) is equivalent to a * b + c.
-//       However for complex type it make a more efficient use of the fma instruction,
+//       However for complex type it makes a more efficient use of the fma instruction,
 //       therefore it is preferable in performance critical kernels.
 
+__host__ __device__ inline constexpr unsigned ceilDiv(unsigned i, unsigned j) noexcept {
+  return (i + j - 1) / j;
+}
+
 // Float
-__host__ __device__ inline float conj(float a) {
+__host__ __device__ inline float conj(const float& a) noexcept {
   return a;
 }
 
-__host__ __device__ inline float real(float a) {
+__host__ __device__ inline float real(const float& a) noexcept {
   return a;
 }
 
-__host__ __device__ inline float imag(float) {
+__host__ __device__ inline float imag(const float&) noexcept {
   return 0.f;
 }
 
-__host__ __device__ inline float fma(float a, float b, float c) {
+__host__ __device__ inline float fma(const float& a, const float& b, const float& c) noexcept {
   return a * b + c;
 }
 
 // Complex
-__host__ __device__ inline cuComplex operator-(cuComplex a) {
+__host__ __device__ inline cuComplex operator-(const cuComplex& a) noexcept {
   return make_cuComplex(-a.x, -a.y);
 }
 
-__host__ __device__ inline cuComplex conj(cuComplex a) {
+__host__ __device__ inline cuComplex conj(const cuComplex& a) noexcept {
   return cuConjf(a);
 }
 
-__host__ __device__ inline float real(cuComplex a) {
+__host__ __device__ inline float real(const cuComplex& a) noexcept {
   return a.x;
 }
 
-__host__ __device__ inline float imag(cuComplex a) {
+__host__ __device__ inline float imag(const cuComplex& a) noexcept {
   return a.y;
 }
 
-__host__ __device__ inline cuComplex operator+(cuComplex a, cuComplex b) {
+__host__ __device__ inline bool operator==(const cuComplex& a, const cuComplex& b) noexcept {
+  return a.x == b.x && a.y == b.y;
+}
+
+__host__ __device__ inline bool operator!=(const cuComplex& a, const cuComplex& b) noexcept {
+  return !operator==(a, b);
+}
+
+__host__ __device__ inline cuComplex operator+(const cuComplex& a, const cuComplex& b) noexcept {
   return cuCaddf(a, b);
 }
 
-__host__ __device__ inline cuComplex operator-(cuComplex a, cuComplex b) {
+__host__ __device__ inline cuComplex operator-(const cuComplex& a, const cuComplex& b) noexcept {
   return cuCsubf(a, b);
 }
 
-__host__ __device__ inline cuComplex operator*(cuComplex a, cuComplex b) {
+__host__ __device__ inline cuComplex operator*(const cuComplex& a, const cuComplex& b) noexcept {
   return cuCmulf(a, b);
 }
 
-__host__ __device__ inline cuComplex operator/(cuComplex a, cuComplex b) {
+__host__ __device__ inline cuComplex operator/(const cuComplex& a, const cuComplex& b) noexcept {
   return cuCdivf(a, b);
 }
 
-__host__ __device__ inline cuComplex fma(cuComplex a, cuComplex b, cuComplex c) {
+__host__ __device__ inline cuComplex fma(const cuComplex& a, const cuComplex& b,
+                                         const cuComplex& c) noexcept {
   return cuCfmaf(a, b, c);
 }
 
-__host__ __device__ inline cuComplex operator*(float a, cuComplex b) {
+__host__ __device__ inline cuComplex operator*(const float& a, const cuComplex& b) noexcept {
   return make_cuComplex(a * b.x, a * b.y);
 }
 
-__host__ __device__ inline cuComplex operator*(cuComplex a, float b) {
+__host__ __device__ inline cuComplex operator*(const cuComplex& a, const float& b) noexcept {
   return operator*(b, a);
 }
 
-__host__ __device__ inline cuComplex operator/(cuComplex a, float b) {
+__host__ __device__ inline cuComplex operator/(const cuComplex& a, const float& b) noexcept {
   return make_cuComplex(a.x / b, a.y / b);
 }
 
 // Double
-__host__ __device__ inline double conj(double a) {
+__host__ __device__ inline double conj(const double& a) noexcept {
   return a;
 }
 
-__host__ __device__ inline double real(double a) {
+__host__ __device__ inline double real(const double& a) noexcept {
   return a;
 }
 
-__host__ __device__ inline double imag(double) {
+__host__ __device__ inline double imag(const double&) noexcept {
   return 0.;
 }
 
-__host__ __device__ inline double fma(double a, double b, double c) {
+__host__ __device__ inline double fma(const double& a, const double& b, const double& c) noexcept {
   return a * b + c;
 }
 
 // Double complex
-__host__ __device__ inline cuDoubleComplex operator-(cuDoubleComplex a) {
+__host__ __device__ inline cuDoubleComplex operator-(const cuDoubleComplex& a) noexcept {
   return make_cuDoubleComplex(-a.x, -a.y);
 }
 
-__host__ __device__ inline cuDoubleComplex conj(cuDoubleComplex a) {
+__host__ __device__ inline cuDoubleComplex conj(const cuDoubleComplex& a) noexcept {
   return cuConj(a);
 }
 
-__host__ __device__ inline double real(cuDoubleComplex a) {
+__host__ __device__ inline double real(const cuDoubleComplex& a) noexcept {
   return a.x;
 }
 
-__host__ __device__ inline double imag(cuDoubleComplex a) {
+__host__ __device__ inline double imag(const cuDoubleComplex& a) noexcept {
   return a.y;
 }
 
-__host__ __device__ inline cuDoubleComplex operator+(cuDoubleComplex a, cuDoubleComplex b) {
+__host__ __device__ inline bool operator==(const cuDoubleComplex& a, const cuDoubleComplex& b) noexcept {
+  return a.x == b.x && a.y == b.y;
+}
+
+__host__ __device__ inline bool operator!=(const cuDoubleComplex& a, const cuDoubleComplex& b) noexcept {
+  return !operator==(a, b);
+}
+
+__host__ __device__ inline cuDoubleComplex operator+(const cuDoubleComplex& a,
+                                                     const cuDoubleComplex& b) noexcept {
   return cuCadd(a, b);
 }
 
-__host__ __device__ inline cuDoubleComplex operator-(cuDoubleComplex a, cuDoubleComplex b) {
+__host__ __device__ inline cuDoubleComplex operator-(const cuDoubleComplex& a,
+                                                     const cuDoubleComplex& b) noexcept {
   return cuCsub(a, b);
 }
 
-__host__ __device__ inline cuDoubleComplex operator*(cuDoubleComplex a, cuDoubleComplex b) {
+__host__ __device__ inline cuDoubleComplex operator*(const cuDoubleComplex& a,
+                                                     const cuDoubleComplex& b) noexcept {
   return cuCmul(a, b);
 }
 
-__host__ __device__ inline cuDoubleComplex operator/(cuDoubleComplex a, cuDoubleComplex b) {
+__host__ __device__ inline cuDoubleComplex operator/(const cuDoubleComplex& a,
+                                                     const cuDoubleComplex& b) noexcept {
   return cuCdiv(a, b);
 }
 
-__host__ __device__ inline cuDoubleComplex fma(cuDoubleComplex a, cuDoubleComplex b, cuDoubleComplex c) {
+__host__ __device__ inline cuDoubleComplex fma(const cuDoubleComplex& a, const cuDoubleComplex& b,
+                                               const cuDoubleComplex& c) noexcept {
   return cuCfma(a, b, c);
 }
 
-__host__ __device__ inline cuDoubleComplex operator*(double a, cuDoubleComplex b) {
+__host__ __device__ inline cuDoubleComplex operator*(const double& a,
+                                                     const cuDoubleComplex& b) noexcept {
   return make_cuDoubleComplex(a * b.x, a * b.y);
 }
 
-__host__ __device__ inline cuDoubleComplex operator*(cuDoubleComplex a, double b) {
+__host__ __device__ inline cuDoubleComplex operator*(const cuDoubleComplex& a,
+                                                     const double& b) noexcept {
   return operator*(b, a);
 }
 
-__host__ __device__ inline cuDoubleComplex operator/(cuDoubleComplex a, double b) {
+__host__ __device__ inline cuDoubleComplex operator/(const cuDoubleComplex& a,
+                                                     const double& b) noexcept {
   return make_cuDoubleComplex(a.x / b, a.y / b);
 }
 

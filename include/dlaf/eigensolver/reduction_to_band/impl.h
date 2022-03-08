@@ -752,19 +752,20 @@ struct Helper<Backend::GPU, Device::GPU, T> {
 
   auto computePanel(Matrix<T, Device::GPU>& mat_a, const matrix::SubPanelView& panel_view,
                     const SizeType nrefls_block) {
+    using pika::threads::thread_priority;
     using dlaf::eigensolver::internal::red2band::local::computePanelReflectors;
-    // TODO
+
+    namespace ex = pika::execution::experimental;
+
+    // Note:
     // - copy panel_view from GPU to CPU
     // - computePanelReflectors on CPU (on a matrix like, with just a panel)
     // - copy back matrix "panel" from CPU to GPU
 
-    namespace ex = pika::execution::experimental;
-    using pika::threads::thread_priority;
-
-    auto& tmp_panel = panels_v.nextResource();
+    auto& v = panels_v.nextResource();
     for (const auto& i : panel_view.iteratorLocal()) {
       auto spec = panel_view(i);
-      auto tmp_tile = tmp_panel.readwrite_sender(i);
+      auto tmp_tile = v.readwrite_sender(i);
       ex::when_all(ex::keep_future(splitTile(mat_a.read(i), spec)), splitTile(tmp_tile, spec)) |
           matrix::copy(
               dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>(
@@ -772,12 +773,12 @@ struct Helper<Backend::GPU, Device::GPU, T> {
           ex::start_detached();
     }
 
-    auto taus = computePanelReflectors(tmp_panel, panel_view, nrefls_block);
+    auto taus = computePanelReflectors(v, panel_view, nrefls_block);
 
     for (const auto& i : panel_view.iteratorLocal()) {
       auto spec = panel_view(i);
       auto tile_a = mat_a.readwrite_sender(i);
-      ex::when_all(ex::keep_future(splitTile(tmp_panel.read(i), spec)), splitTile(tile_a, spec)) |
+      ex::when_all(ex::keep_future(splitTile(v.read(i), spec)), splitTile(tile_a, spec)) |
           matrix::copy(
               dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::CPU, Device::GPU>>(
                   thread_priority::high)) |

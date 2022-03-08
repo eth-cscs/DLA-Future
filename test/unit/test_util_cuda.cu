@@ -84,6 +84,19 @@ TYPED_TEST(CudaUtilTestHost, CppToCudaCastComplex) {
   EXPECT_EQ(reinterpret_cast<T*>(&z) + 1, &(ptr->y));
 }
 
+TEST(CudaUtilTestHost, CudaOperatorsUnsigned) {
+  using namespace cuda_operators;
+  using T = unsigned;
+
+  EXPECT_EQ(0u, ceilDiv(0u, 1u));
+  EXPECT_EQ(0u, ceilDiv(0u, 10u));
+  EXPECT_EQ(3u, ceilDiv(3u, 1u));
+  EXPECT_EQ(1u, ceilDiv(3u, 3u));
+  EXPECT_EQ(2u, ceilDiv(4u, 3u));
+  EXPECT_EQ(2u, ceilDiv(5u, 3u));
+  EXPECT_EQ(2u, ceilDiv(6u, 3u));
+}
+
 TYPED_TEST(CudaUtilTestHost, CudaOperatorsReal) {
   using namespace cuda_operators;
   using T = TypeParam;
@@ -98,6 +111,12 @@ TYPED_TEST(CudaUtilTestHost, CudaOperatorsReal) {
 
   EXPECT_NEAR(a * b + c, cuda_operators::fma(a, b, c), 5 * TypeUtilities<T>::error);
 }
+
+#define SET(c, real, imag) \
+  do {                     \
+    (c).x = (real);        \
+    (c).y = (imag);        \
+  } while (0)
 
 #define EXPECT_EQ_COMPLEX(real, imag, val) \
   do {                                     \
@@ -121,6 +140,29 @@ TYPED_TEST(CudaUtilTestHost, CudaOperatorsComplex) {
   const ComplexT c = cppToCudaCast(std::complex<T>(-7.65f, -5.12f));
   const T d = 7.77;
 
+  // The equality operator test is designed requiring a.x != b.x and a.y != b.y.
+  ASSERT_TRUE(a.x != b.x && a.y != b.y);
+
+  ComplexT tmp;
+
+  EXPECT_TRUE(a == a);
+  EXPECT_FALSE(a != a);
+
+  SET(tmp, a.x, a.y);
+  EXPECT_TRUE(a == tmp);
+  EXPECT_FALSE(a != tmp);
+
+  SET(tmp, b.x, a.y);
+  EXPECT_FALSE(a == tmp);
+  EXPECT_TRUE(a != tmp);
+
+  SET(tmp, a.x, b.y);
+  EXPECT_FALSE(a == tmp);
+  EXPECT_TRUE(a != tmp);
+
+  EXPECT_FALSE(a == b);
+  EXPECT_TRUE(a != b);
+
   EXPECT_EQ_COMPLEX(-(a.x), -(a.y), -a);
   EXPECT_EQ_COMPLEX(a.x, -(a.y), conj(a));
   EXPECT_EQ(b.x, real(b));
@@ -139,6 +181,41 @@ TYPED_TEST(CudaUtilTestHost, CudaOperatorsComplex) {
   EXPECT_NEAR_COMPLEX(d * a.x, d * a.y, d * a, 5 * TypeUtilities<T>::error);
   EXPECT_NEAR_COMPLEX(b.x * d, b.y * d, b * d, 5 * TypeUtilities<T>::error);
   EXPECT_NEAR_COMPLEX(c.x / d, c.y / d, c / d, 5 * TypeUtilities<T>::error);
+}
+
+__global__ void testOperatorsUnsigned(unsigned* result) {
+  using namespace cuda_operators;
+  result[0] = ceilDiv(0u, 1u);
+  result[1] = ceilDiv(0u, 10u);
+  result[2] = ceilDiv(3u, 1u);
+  result[3] = ceilDiv(3u, 3u);
+  result[4] = ceilDiv(4u, 3u);
+  result[5] = ceilDiv(5u, 3u);
+  result[6] = ceilDiv(6u, 3u);
+}
+
+TEST(CudaUtilTestDevice, CudaOperatorsUnsigned) {
+  using namespace cuda_operators;
+  using T = unsigned;
+
+  constexpr unsigned res_size = 7;
+
+  T* res_d;
+  DLAF_CUDA_CALL(cudaMalloc(&res_d, res_size * sizeof(T)));
+
+  testOperatorsUnsigned<<<1, 1>>>(res_d);
+
+  T* res_h;
+  DLAF_CUDA_CALL(cudaMallocHost(&res_h, res_size * sizeof(T)));
+  DLAF_CUDA_CALL(cudaMemcpy(res_h, res_d, res_size * sizeof(T), cudaMemcpyDefault));
+
+  EXPECT_EQ(0u, res_h[0]);
+  EXPECT_EQ(0u, res_h[1]);
+  EXPECT_EQ(3u, res_h[2]);
+  EXPECT_EQ(1u, res_h[3]);
+  EXPECT_EQ(2u, res_h[4]);
+  EXPECT_EQ(2u, res_h[5]);
+  EXPECT_EQ(2u, res_h[6]);
 }
 
 template <class T>
@@ -181,8 +258,27 @@ TYPED_TEST(CudaUtilTestDevice, CudaOperatorsReal) {
 
 template <class T>
 __global__ void testOperatorsComplex(cudaComplex_t<T> a, cudaComplex_t<T> b, cudaComplex_t<T> c, T d,
-                                     cudaComplex_t<T>* result, T* result_real) {
+                                     bool* result_bool, cudaComplex_t<T>* result, T* result_real) {
   using namespace cuda_operators;
+  cudaComplex_t<T> tmp;
+  result_bool[0] = a == a;
+  result_bool[1] = a != a;
+
+  SET(tmp, a.x, a.y);
+  result_bool[2] = a == tmp;
+  result_bool[3] = a != tmp;
+
+  SET(tmp, b.x, a.y);
+  result_bool[4] = a == tmp;
+  result_bool[5] = a != tmp;
+
+  SET(tmp, a.x, b.y);
+  result_bool[6] = a == tmp;
+  result_bool[7] = a != tmp;
+
+  result_bool[8] = a == b;
+  result_bool[9] = a != b;
+
   result[0] = -a;
   result[1] = conj(a);
   result_real[0] = real(b);
@@ -210,22 +306,42 @@ TYPED_TEST(CudaUtilTestDevice, CudaOperatorsComplex) {
   const ComplexT c = cppToCudaCast(std::complex<T>(-7.65f, -5.12f));
   const T d = 7.77;
 
+  // The equality operator test is designed requiring a.x != b.x and a.y != b.y.
+  ASSERT_FALSE(a.x == b.x || a.y == b.y);
+
+  constexpr unsigned res_bool_size = 10;
   constexpr unsigned res_size = 10;
   constexpr unsigned res_real_size = 2;
 
+  bool* res_bool_d;
+  DLAF_CUDA_CALL(cudaMalloc(&res_bool_d, res_bool_size * sizeof(bool)));
   ComplexT* res_d;
   DLAF_CUDA_CALL(cudaMalloc(&res_d, res_size * sizeof(ComplexT)));
   T* res_real_d;
   DLAF_CUDA_CALL(cudaMalloc(&res_real_d, res_real_size * sizeof(T)));
 
-  testOperatorsComplex<<<1, 1>>>(a, b, c, d, res_d, res_real_d);
+  testOperatorsComplex<<<1, 1>>>(a, b, c, d, res_bool_d, res_d, res_real_d);
 
+  bool* res_bool_h;
+  DLAF_CUDA_CALL(cudaMallocHost(&res_bool_h, res_bool_size * sizeof(bool)));
+  DLAF_CUDA_CALL(cudaMemcpy(res_bool_h, res_bool_d, res_bool_size * sizeof(bool), cudaMemcpyDefault));
   ComplexT* res_h;
   DLAF_CUDA_CALL(cudaMallocHost(&res_h, res_size * sizeof(ComplexT)));
   DLAF_CUDA_CALL(cudaMemcpy(res_h, res_d, res_size * sizeof(ComplexT), cudaMemcpyDefault));
   T* res_real_h;
   DLAF_CUDA_CALL(cudaMallocHost(&res_real_h, res_real_size * sizeof(T)));
   DLAF_CUDA_CALL(cudaMemcpy(res_real_h, res_real_d, res_real_size * sizeof(T), cudaMemcpyDefault));
+
+  EXPECT_TRUE(res_bool_h[0]);
+  EXPECT_FALSE(res_bool_h[1]);
+  EXPECT_TRUE(res_bool_h[2]);
+  EXPECT_FALSE(res_bool_h[3]);
+  EXPECT_FALSE(res_bool_h[4]);
+  EXPECT_TRUE(res_bool_h[5]);
+  EXPECT_FALSE(res_bool_h[6]);
+  EXPECT_TRUE(res_bool_h[7]);
+  EXPECT_FALSE(res_bool_h[8]);
+  EXPECT_TRUE(res_bool_h[9]);
 
   EXPECT_EQ_COMPLEX(-(a.x), -(a.y), res_h[0]);
   EXPECT_EQ_COMPLEX(a.x, -(a.y), res_h[1]);

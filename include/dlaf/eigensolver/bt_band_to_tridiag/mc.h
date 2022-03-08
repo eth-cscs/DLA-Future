@@ -40,6 +40,8 @@ struct BackTransformationT2B<Backend::MC, Device::CPU, T> {
                    Matrix<const T, Device::CPU>& mat_hh);
 };
 
+namespace bt_tridiag {
+
 template <class T>
 pika::shared_future<matrix::Tile<const T, Device::CPU>> setupVWellFormed(
     const SizeType b, pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_i,
@@ -138,9 +140,9 @@ auto updateE(pika::threads::thread_priority priority, WSender&& tile_w, W2Sender
       pika::execution::experimental::start_detached();
 }
 
-struct Helper {
-  Helper(const SizeType b, const SizeType nrefls, matrix::Distribution dist,
-         const GlobalElementIndex offset)
+struct TileAccessHelper {
+  TileAccessHelper(const SizeType b, const SizeType nrefls, matrix::Distribution dist,
+                   const GlobalElementIndex offset)
       : nrefls_(nrefls), input_spec_{dist.tileElementIndex(offset),
                                      {std::min(b, dist.size().rows() - offset.row()),
                                       std::min(b, dist.size().cols() - offset.col())}} {
@@ -262,6 +264,7 @@ private:
   part_t part_top_;
   part_t part_bottom_;
 };
+}
 
 template <class T>
 void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(const SizeType band_size,
@@ -274,6 +277,7 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(const SizeType ban
   using matrix::Panel;
   using common::RoundRobin;
   using common::iterate_range2d;
+  using namespace bt_tridiag;
 
   if (mat_hh.size().isEmpty() || mat_e.size().isEmpty())
     return;
@@ -336,7 +340,7 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(const SizeType ban
         return std::min(b, std::min(delta.rows() - (allowSize1 ? 0 : 1), delta.cols()));
       }();
 
-      const Helper helper(b, nrefls, mat_hh.distribution(), ij_e);
+      const TileAccessHelper helper(b, nrefls, mat_hh.distribution(), ij_e);
 
       if (nrefls < b) {
         mat_w.setWidth(nrefls);

@@ -17,7 +17,7 @@
 namespace dlaf::eigensolver {
 
 // Eigenvalue back-transformation implementation on local memory, which applies the inverse of the
-// transformation used to get a tridiagonal matrix from band one.
+// transformation used to get a tridiagonal matrix from a band one.
 //
 // It computes E -= V T V* E, applying to a general matrix E the inverse of the transformation described
 // by the reflectors in V (block-wise, so T represents the T factor which embeds the information about
@@ -40,8 +40,16 @@ namespace dlaf::eigensolver {
 //
 // @param mat_hh matrix containing reflectors together with taus (compact form see representation above)
 // @param mat_e matrix to which the inverse transformation is applied to
+// @param band_size size of the reflectors (normal one, not constrained by any matrix size limit)
+// @pre mat_hh has a square size
+// @pre mat_hh has a square block size
+// @pre mat_e and mat_hh share the same number of rows
+// @pre mat_e block size and mat_hh block size share the same number of rows
+// @pre band_size is a divisor of mat_hh.blockSize().cols()
+// @pre mat_e is not distributed
+// @pre mat_hh is not distributed
 template <Backend backend, Device device, class T>
-void backTransformationBandToTridiag(matrix::Matrix<T, device>& mat_e,
+void backTransformationBandToTridiag(const SizeType band_size, matrix::Matrix<T, device>& mat_e,
                                      matrix::Matrix<const T, device>& mat_hh) {
   DLAF_ASSERT(matrix::local_matrix(mat_e), mat_e);
   DLAF_ASSERT(matrix::local_matrix(mat_hh), mat_hh);
@@ -52,6 +60,8 @@ void backTransformationBandToTridiag(matrix::Matrix<T, device>& mat_e,
   DLAF_ASSERT(mat_hh.size().rows() == mat_e.size().rows(), mat_hh, mat_e);
   DLAF_ASSERT(mat_hh.blockSize().rows() == mat_e.blockSize().rows(), mat_hh, mat_e);
 
-  internal::BackTransformationT2B<backend, device, T>::call(mat_e, mat_hh);
+  DLAF_ASSERT(mat_hh.blockSize().rows() % band_size == 0, mat_hh.blockSize(), band_size);
+
+  internal::BackTransformationT2B<backend, device, T>::call(band_size, mat_e, mat_hh);
 }
 }

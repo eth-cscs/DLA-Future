@@ -105,13 +105,10 @@ pika::shared_future<matrix::Tile<const T, Device::CPU>> computeTFactor(
 
     return matrix::Tile<const T, Device::CPU>(std::move(tile_t));
   };
-  // TODO: What's wrong here? This hangs.
-  // return ex::make_future(
-  //     dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), pika::unwrapping(tfactor_task),
-  //                               ex::when_all(ex::keep_future(std::move(tile_taus)),
-  //                                            ex::keep_future(std::move(tile_v)), std::move(mat_t))));
-  return pika::dataflow(pika::unwrapping(tfactor_task), std::move(tile_taus), std::move(tile_v),
-                        std::move(mat_t));
+  return ex::make_future(
+      dlaf::internal::transformLift(dlaf::internal::Policy<Backend::MC>(), tfactor_task,
+                                    ex::keep_future(std::move(tile_taus)),
+                                    ex::keep_future(std::move(tile_v)), std::move(mat_t)));
 }
 
 template <Backend backend, class VSender, class TSender>

@@ -37,7 +37,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-// dlaf-no-license-check
+// dlaf-multi-license-check
 
 #include <cstdio>
 

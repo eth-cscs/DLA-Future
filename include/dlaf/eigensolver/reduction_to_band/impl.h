@@ -277,9 +277,7 @@ template <class T>
 pika::shared_future<common::internal::vector<T>> computePanelReflectors(MatrixT<T>& mat_a,
                                                                         const SubPanelView& panel_view,
                                                                         const SizeType nrefls) {
-  auto panel_task = pika::unwrapping([nrefls, cols = panel_view.cols()](auto fut_panel_tiles) {
-    const auto panel_tiles = pika::unwrap(fut_panel_tiles);
-
+  auto panel_task = [nrefls, cols = panel_view.cols()](std::vector<TileT<T>>&& panel_tiles) {
     common::internal::vector<T> taus;
     taus.reserve(nrefls);
     for (SizeType j = 0; j < nrefls; ++j) {
@@ -288,7 +286,7 @@ pika::shared_future<common::internal::vector<T>> computePanelReflectors(MatrixT<
     }
 
     return taus;
-  });
+  };
 
   std::vector<pika::future<TileT<T>>> panel_tiles;
   panel_tiles.reserve(
@@ -299,14 +297,11 @@ pika::shared_future<common::internal::vector<T>> computePanelReflectors(MatrixT<
     panel_tiles.emplace_back(matrix::splitTile(tile, spec));
   }
 
-  // TODO: Is when_all_vector still buggy?
-  // return pika::execution::experimental::when_all_vector(std::move(panel_tiles)) |
-  //        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
-  //                                      pika::threads::thread_priority::high),
-  //                                  std::move(panel_task)) |
-  //        pika::execution::experimental::make_future();
-  return pika::dataflow(getHpExecutor<Backend::MC>(), std::move(panel_task),
-                        pika::when_all(std::move(panel_tiles)));
+  return pika::execution::experimental::when_all_vector(std::move(panel_tiles)) |
+         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
+                                       pika::threads::thread_priority::high),
+                                   std::move(panel_task)) |
+         pika::execution::experimental::make_future();
 }
 
 template <class T, bool ForceCopy = false>
@@ -576,12 +571,12 @@ pika::shared_future<common::internal::vector<T>> computePanelReflectors(
     pika::future<void> trigger, comm::IndexT_MPI rank_v0,
     pika::future<common::PromiseGuard<comm::Communicator>> mpi_col_chain_panel, MatrixT<T>& mat_a,
     const common::IterableRange2D<SizeType, matrix::LocalTile_TAG> ai_panel_range, SizeType nrefls) {
-  auto panel_task = pika::unwrapping(
-      [rank_v0, nrefls, cols = mat_a.blockSize().cols()](auto fut_panel_tiles, auto comm_wrapper) {
+  auto panel_task =
+      [rank_v0, nrefls,
+       cols = mat_a.blockSize().cols()](std::vector<typename MatrixT<T>::TileType>&& panel_tiles,
+                                        common::PromiseGuard<comm::Communicator>&& comm_wrapper) {
         auto communicator = comm_wrapper.ref();
         const bool has_head = communicator.rank() == rank_v0;
-
-        const auto panel_tiles = pika::unwrap(fut_panel_tiles);
 
         common::internal::vector<T> taus;
         taus.reserve(nrefls);
@@ -591,20 +586,15 @@ pika::shared_future<common::internal::vector<T>> computePanelReflectors(
                                            taus.back());
         }
         return taus;
-      });
+      };
 
-  // TODO: Is when_all_vector still buggy?
-  // return pika::execution::experimental::when_all(pika::execution::experimental::when_all_vector(
-  //                                                    matrix::select(mat_a, ai_panel_range)),
-  //                                                std::move(mpi_col_chain_panel), std::move(trigger)) |
-  //        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
-  //                                      pika::threads::thread_priority::high),
-  //                                  std::move(panel_task)) |
-  //        pika::execution::experimental::make_future();
-  auto panel_tiles = pika::when_all(matrix::select(mat_a, ai_panel_range));
-
-  return pika::dataflow(getHpExecutor<Backend::MC>(), std::move(panel_task), std::move(panel_tiles),
-                        mpi_col_chain_panel, std::move(trigger));
+  return pika::execution::experimental::when_all(pika::execution::experimental::when_all_vector(
+                                                     matrix::select(mat_a, ai_panel_range)),
+                                                 std::move(mpi_col_chain_panel), std::move(trigger)) |
+         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
+                                       pika::threads::thread_priority::high),
+                                   std::move(panel_task)) |
+         pika::execution::experimental::make_future();
 }
 
 template <class T>

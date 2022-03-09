@@ -27,39 +27,6 @@
 #endif
 
 namespace dlaf {
-namespace internal {
-template <Device S, Device D>
-struct GetCopyExecutor {
-  static auto call() {
-    return pika::execution::parallel_executor{&pika::resource::get_thread_pool("default"),
-                                              pika::threads::thread_priority::normal};
-  }
-};
-
-#ifdef DLAF_WITH_CUDA
-template <>
-struct GetCopyExecutor<Device::GPU, Device::CPU> {
-  static auto call() {
-    return dlaf::cuda::Executor{getNpCudaStreamPool()};
-  }
-};
-
-template <>
-struct GetCopyExecutor<Device::CPU, Device::GPU> {
-  static auto call() {
-    return dlaf::cuda::Executor{getNpCudaStreamPool()};
-  }
-};
-
-template <>
-struct GetCopyExecutor<Device::GPU, Device::GPU> {
-  static auto call() {
-    return dlaf::cuda::Executor{getNpCudaStreamPool()};
-  }
-};
-#endif
-}
-
 /// Returns an MPI executor appropriate for use with the given backend.
 ///
 /// @tparam B backend with which the executor should be used.
@@ -108,8 +75,15 @@ inline auto getHpExecutor<Backend::GPU>() {
 ///
 /// @tparam S source device.
 /// @tparam D destination device.
-template <Device S, Device D>
+template <Device S, Device D, typename Dummy = void>
 decltype(auto) getCopyExecutor() {
-  return internal::GetCopyExecutor<S, D>::call();
+  if constexpr (S == Device::CPU && D == Device::CPU) {
+    return pika::execution::parallel_executor{&pika::resource::get_thread_pool("default"),
+                                              pika::threads::thread_priority::normal};
+  }
+  else {
+    DLAF_STATIC_FAIL(Dummy,
+                     "Do not use getCopyExecutor for copying anymore. Prefer sender adaptors with CopyBackend.");
+  }
 }
 }

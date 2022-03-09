@@ -50,6 +50,7 @@ cuda::StreamPool getNpCudaStreamPool();
 cuda::StreamPool getHpCudaStreamPool();
 cublas::HandlePool getCublasHandlePool();
 cusolver::HandlePool getCusolverHandlePool();
+pika::cuda::experimental::cuda_pool getCudaPool();
 #endif
 }
 

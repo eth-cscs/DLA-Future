@@ -308,6 +308,8 @@ template <class T, bool ForceCopy = false>
 void setupReflectorPanelV(bool has_head, const SubPanelView& panel_view, const SizeType nrefls,
                           PanelT<Coord::Col, T>& v, MatrixT<const T>& mat_a) {
   using pika::execution::experimental::keep_future;
+  using pika::execution::experimental::start_detached;
+  using pika::execution::experimental::when_all;
   using pika::threads::thread_priority;
 
   // Note:
@@ -350,8 +352,8 @@ void setupReflectorPanelV(bool has_head, const SubPanelView& panel_view, const S
 
     // TODO this is a workaround for the deadlock problem
     if constexpr (ForceCopy)
-      pika::dataflow(getHpExecutor<Backend::MC>(), pika::unwrapping(matrix::internal::copy_o),
-                     matrix::splitTile(mat_a.read(idx), spec), v(idx));
+      when_all(keep_future(matrix::splitTile(mat_a.read(idx), spec)), v.readwrite_sender(idx)) |
+          matrix::copy(dlaf::internal::Policy<Backend::MC>(thread_priority::high)) | start_detached();
     else
       v.setTile(idx, matrix::splitTile(mat_a.read(idx), spec));
   }

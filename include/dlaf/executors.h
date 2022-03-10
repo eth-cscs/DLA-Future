@@ -35,24 +35,6 @@ auto getMPIExecutor() {
   return dlaf::comm::Executor{};
 }
 
-/// Returns a normal priority executor appropriate for use with the given
-/// backend.
-///
-/// @tparam B backend with which the executor should be used.
-template <Backend B>
-auto getNpExecutor() {
-  return pika::execution::parallel_executor{&pika::resource::get_thread_pool("default"),
-                                            pika::threads::thread_priority::normal};
-}
-
-#ifdef DLAF_WITH_CUDA
-template <>
-inline auto getNpExecutor<Backend::GPU>() {
-  return dlaf::cusolver::Executor{internal::getNpCudaStreamPool(), internal::getCublasHandlePool(),
-                                  internal::getCusolverHandlePool()};
-}
-#endif
-
 /// Returns a high priority executor appropriate for use with the given
 /// backend.
 ///

@@ -20,14 +20,6 @@ struct BackTransformationT2B {
   static void call(const SizeType band_size, Matrix<T, D>& mat_e, Matrix<const T, Device::CPU>& mat_hh);
 };
 
-#ifdef DLAF_WITH_CUDA
-template <class T>
-struct BackTransformationT2B<Backend::GPU, Device::GPU, T> {
-  static void call(const SizeType band_size, Matrix<T, Device::GPU>& mat_e,
-                   Matrix<const T, Device::CPU>& mat_hh);
-};
-#endif
-
 /// ---- ETI
 #define DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_LOCAL_ETI(KWORD, BACKEND, DEVICE, T) \
   KWORD template struct BackTransformationT2B<BACKEND, DEVICE, T>;

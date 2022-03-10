@@ -18,6 +18,8 @@
 
 #include <mpi.h>
 
+#include <pika/execution.hpp>
+#include <pika/mpi.hpp>
 #include <pika/unwrap.hpp>
 
 #include "dlaf/common/contiguous_buffer_holder.h"
@@ -68,6 +70,7 @@ auto senderReduceRecvInPlace(const comm::Executor& ex,
   // where: cCPU = contiguous CPU
 
   using namespace pika::execution::experimental;
+  using namespace pika::mpi::experimental;
 
   using dlaf::internal::getBackendScheduler;
   using dlaf::internal::Policy;
@@ -84,9 +87,8 @@ auto senderReduceRecvInPlace(const comm::Executor& ex,
            return just(makeItContiguous(tile_orig)) |
                   let_value([ex, reduce_op, &tile_orig,
                              pcomm = std::move(pcomm)](const auto& cont_buffer) mutable {
-                    return pika::dataflow(ex, internal::reduceRecvInPlace<T>, pcomm.get(), reduce_op,
-                                          std::cref(cont_buffer)) |
-                           then([&]() {
+                    return whenAllLift(pcomm.get(), reduce_op, std::cref(cont_buffer)) |
+                           transform_mpi(internal::reduceRecvInPlace<T>) | then([&]() {
                              // note: this lambda does two things:
                              //       - avoid implicit conversion problem from reference_wrapper
                              //       - act as if the copy returns the destination tile
@@ -109,6 +111,7 @@ auto senderReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
   // where: cCPU = contiguous CPU
 
   using namespace pika::execution::experimental;
+  using namespace pika::mpi::experimental;
   using dlaf::internal::getBackendScheduler;
   using dlaf::internal::whenAllLift;
 
@@ -120,8 +123,8 @@ auto senderReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
            using common::internal::makeItContiguous;
            return whenAllLift(std::move(pcomm), makeItContiguous(tile)) |
                   let_value([ex, rank_root, reduce_op](auto& pcomm, const auto& cont_buf) {
-                    return pika::dataflow(ex, internal::reduceSend<T>, rank_root, std::move(pcomm),
-                                          reduce_op, std::cref(cont_buf));
+                    return whenAllLift(rank_root, std::move(pcomm), reduce_op, std::cref(cont_buf)) |
+                           transform_mpi(internal::reduceSend<T>);
                   });
          }));
 }

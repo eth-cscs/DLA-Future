@@ -14,6 +14,8 @@
 
 #include <mpi.h>
 
+#include <pika/execution.hpp>
+#include <pika/mpi.hpp>
 #include <pika/unwrap.hpp>
 
 #include "dlaf/common/callable_object.h"
@@ -67,11 +69,20 @@ void scheduleAllReduce(const comm::Executor& ex,
                        pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_in,
                        pika::future<matrix::Tile<T, Device::CPU>> tile_out) {
   using pika::dataflow;
+  using pika::execution::experimental::ensure_started;
+  using pika::execution::experimental::keep_future;
+  using pika::execution::experimental::make_future;
+  using pika::execution::experimental::start_detached;
+  using pika::mpi::experimental::transform_mpi;
+  using pika::threads::thread_priority;
   using pika::unwrapping;
 
   using common::internal::ContiguousBufferHolder;
   using common::internal::copyBack_o;
   using common::internal::makeItContiguous_o;
+  using dlaf::internal::Policy;
+  using dlaf::internal::transform;
+  using dlaf::internal::whenAllLift;
   using matrix::unwrapExtendTiles;
 
   // Note:
@@ -87,21 +98,24 @@ void scheduleAllReduce(const comm::Executor& ex,
   auto ex_copy = getHpExecutor<Backend::MC>();
 
   pika::future<ContiguousBufferHolder<const T>> cont_buf_in =
-      dataflow(unwrapping(makeItContiguous_o), tile_in);
+      keep_future(tile_in) | transform(Policy<Backend::MC>(), makeItContiguous_o) | make_future();
 
   pika::future<ContiguousBufferHolder<T>> cont_buf_out;
   {
+    // TODO: Need something similar to split_future, but not quite. Can tile_out
+    // be passed differently? Can we use a shared_future instead?
     auto wrapped = getUnwrapRetValAndArgs(
         dataflow(ex_copy, unwrapExtendTiles(makeItContiguous_o), std::move(tile_out)));
     cont_buf_out = std::move(wrapped.first);
     tile_out = std::move(pika::get<0>(wrapped.second));
   }
 
-  cont_buf_out = getUnwrapReturnValue(dataflow(ex, unwrapExtendTiles(internal::allReduce_o),
-                                               std::move(pcomm), reduce_op, std::move(cont_buf_in),
-                                               std::move(cont_buf_out), tile_in));
+  cont_buf_out = whenAllLift(std::move(pcomm), reduce_op, std::move(cont_buf_in),
+                             std::move(cont_buf_out), keep_future(std::move(tile_in))) |
+                 transform_mpi(pika::unwrapping(internal::allReduce_o)) | make_future();
 
-  dataflow(ex_copy, unwrapping(copyBack_o), std::move(cont_buf_out), std::move(tile_out));
+  when_all(std::move(cont_buf_out), std::move(tile_out)) |
+      transform(Policy<Backend::MC>(thread_priority::high), copyBack_o) | start_detached();
 }
 
 template <class T>
@@ -109,10 +123,13 @@ pika::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
     const comm::Executor& ex, pika::future<common::PromiseGuard<comm::Communicator>> pcomm,
     MPI_Op reduce_op, pika::future<matrix::Tile<T, Device::CPU>> tile) {
   using pika::dataflow;
+  using pika::execution::experimental::make_future;
+  using pika::mpi::experimental::transform_mpi;
   using pika::unwrapping;
 
   using common::internal::copyBack_o;
   using common::internal::makeItContiguous_o;
+  using dlaf::internal::whenAllLift;
   using matrix::unwrapExtendTiles;
 
   // Note:
@@ -135,8 +152,8 @@ pika::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
     tile = std::move(pika::get<0>(wrapped.second));
   }
 
-  cont_buf = dataflow(ex, unwrapping(internal::allReduceInPlace_o), std::move(pcomm), reduce_op,
-                      std::move(cont_buf));
+  cont_buf = whenAllLift(std::move(pcomm), reduce_op, std::move(cont_buf)) |
+             transform_mpi(pika::unwrapping(internal::allReduceInPlace_o)) | make_future();
 
   // Note:
   // This extracts the tile given as argument to copyBack, not the return value.

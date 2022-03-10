@@ -14,6 +14,7 @@
 
 #include <mpi.h>
 
+#include <pika/mpi.hpp>
 #include <pika/unwrap.hpp>
 
 #include "dlaf/common/assert.h"
@@ -60,10 +61,15 @@ DLAF_MAKE_CALLABLE_OBJECT(recvBcast);
 template <class T, Device D, template <class> class Future>
 void scheduleSendBcast(const comm::Executor& ex, Future<matrix::Tile<const T, D>> tile,
                        pika::future<common::PromiseGuard<Communicator>> pcomm) {
+  using dlaf::internal::keepIfSharedFuture;
+  using dlaf::internal::whenAllLift;
   using internal::prepareSendTile;
   using matrix::unwrapExtendTiles;
+  using pika::execution::experimental::start_detached;
+  using pika::mpi::experimental::transform_mpi;
 
-  pika::dataflow(ex, unwrapExtendTiles(sendBcast_o), prepareSendTile(std::move(tile)), std::move(pcomm));
+  whenAllLift(keepIfSharedFuture(prepareSendTile(std::move(tile))), std::move(pcomm)) |
+      transform_mpi(pika::unwrapping(sendBcast_o)) | start_detached();
 }
 
 namespace internal {
@@ -77,10 +83,14 @@ struct ScheduleRecvBcast {
     static_assert(D == Device::CPU, "With CUDA RDMA disabled, MPI accepts just CPU memory.");
 #endif
 
+    using dlaf::internal::whenAllLift;
     using matrix::unwrapExtendTiles;
     using pika::dataflow;
+    using pika::execution::experimental::make_future;
+    using pika::mpi::experimental::transform_mpi;
 
-    return dataflow(ex, unwrapExtendTiles(recvBcast_o), std::move(tile), root_rank, std::move(pcomm));
+    return whenAllLift(std::move(tile), root_rank, std::move(pcomm)) | transform_mpi(recvBcast_o) |
+           make_future();
   }
 
 #if defined(DLAF_WITH_CUDA) && !defined(DLAF_WITH_CUDA_RDMA)

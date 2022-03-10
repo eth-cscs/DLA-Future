@@ -57,10 +57,9 @@ template <>
 struct Init<Backend::MC> {
   static void initialize(configuration const& cfg) {
     memory::internal::initializeUmpireHostAllocator(cfg.umpire_host_memory_pool_initial_bytes);
-    // TODO: Consider disabling polling in finalize()
-    if (cfg.mpi_mech == comm::MPIMech::Polling) {
-      pika::mpi::experimental::init(false, cfg.mpi_pool);
-    }
+    // TODO: Is there any need to do polling on the MPI pool? Blocking MPI
+    // communication is also there and keeps polling from happening.
+    pika::mpi::experimental::init(false, cfg.mpi_pool);
   }
 
   static void finalize() {

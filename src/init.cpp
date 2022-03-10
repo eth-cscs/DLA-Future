@@ -9,6 +9,7 @@
 //
 
 #include <pika/async_mpi/mpi_future.hpp>
+#include <pika/runtime.hpp>
 
 #include <dlaf/common/assert.h>
 #include <dlaf/communication/error.h>
@@ -138,6 +139,24 @@ cusolver::HandlePool getCusolverHandlePool() {
   return *cusolver_handle_pool;
 }
 
+static std::unique_ptr<pika::cuda::experimental::cuda_pool> cuda_pool{nullptr};
+
+void initializeCudaPool(int device, std::size_t num_np_streams, std::size_t num_hp_streams) {
+  DLAF_ASSERT(!cuda_pool, "");
+  cuda_pool =
+      std::make_unique<pika::cuda::experimental::cuda_pool>(device, num_np_streams, num_hp_streams);
+}
+
+void finalizeCudaPool() {
+  DLAF_ASSERT(bool(cuda_pool), "");
+  cuda_pool.reset();
+}
+
+pika::cuda::experimental::cuda_pool getCudaPool() {
+  DLAF_ASSERT(bool(cuda_pool), "");
+  return *cuda_pool;
+}
+
 template <>
 struct Init<Backend::GPU> {
   static void initialize(configuration const& cfg) {
@@ -147,6 +166,7 @@ struct Init<Backend::GPU> {
     initializeHpCudaStreamPool(device, cfg.num_hp_cuda_streams_per_thread);
     initializeCublasHandlePool();
     initializeCusolverHandlePool();
+    initializeCudaPool(device, cfg.num_np_cuda_streams_per_thread, cfg.num_hp_cuda_streams_per_thread);
     pika::cuda::experimental::detail::register_polling(pika::resource::get_thread_pool("default"));
   }
 
@@ -156,6 +176,7 @@ struct Init<Backend::GPU> {
     finalizeHpCudaStreamPool();
     finalizeCublasHandlePool();
     finalizeCusolverHandlePool();
+    finalizeCudaPool();
   }
 };
 #endif

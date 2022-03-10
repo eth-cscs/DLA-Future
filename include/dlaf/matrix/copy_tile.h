@@ -229,17 +229,13 @@ template <Device Destination, class T, Device Source, class U, template <class> 
           template <class> class FutureS>
 void copyIfNeeded(FutureS<Tile<U, Source>> tile_from, FutureD<Tile<T, Destination>> tile_to,
                   pika::future<void> wait_for_me = pika::make_ready_future<void>()) {
-  if constexpr (Destination != Source) {
-    dlaf::internal::transform(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>(
-                                  pika::threads::thread_priority::normal),
-                              internal::copy_o,
-                              pika::execution::experimental::when_all(std::move(wait_for_me),
-                                                                      dlaf::internal::keepIfSharedFuture(
-                                                                          std::move(tile_from)),
-                                                                      dlaf::internal::keepIfSharedFuture(
-                                                                          std::move(tile_to)))) |
+  if constexpr (Destination != Source)
+    pika::execution::experimental::when_all(std::move(wait_for_me),
+                                            dlaf::internal::keepIfSharedFuture(std::move(tile_from)),
+                                            dlaf::internal::keepIfSharedFuture(std::move(tile_to))) |
+        dlaf::matrix::copy(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>(
+            pika::threads::thread_priority::normal)) |
         pika::execution::experimental::start_detached();
-  }
 }
 }
 }

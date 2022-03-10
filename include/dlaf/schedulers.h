@@ -14,6 +14,10 @@
 #include <pika/runtime.hpp>
 #include <pika/thread.hpp>
 
+#ifdef DLAF_WITH_CUDA
+#include <pika/modules/async_cuda.hpp>
+#endif
+
 #include <dlaf/init.h>
 #include <dlaf/types.h>
 
@@ -24,6 +28,11 @@ auto getBackendScheduler() {
     return pika::execution::experimental::thread_pool_scheduler{
         &pika::resource::get_thread_pool("default")};
   }
+#ifdef DLAF_WITH_CUDA
+  else if constexpr (backend == Backend::GPU) {
+    return pika::cuda::experimental::cuda_scheduler{internal::getCudaPool()};
+  }
+#endif
 }
 
 template <Backend backend>

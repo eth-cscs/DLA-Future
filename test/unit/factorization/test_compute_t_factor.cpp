@@ -401,8 +401,6 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
 }
 
 TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
-  namespace ex = pika::execution::experimental;
-
   for (auto comm_grid : this->commGrids()) {
     for (const auto& [m, k, mb, nb, v_start] : configs) {
       testComputeTFactor<TypeParam, Backend::MC, Device::CPU>(comm_grid, m, k, mb, nb, v_start);

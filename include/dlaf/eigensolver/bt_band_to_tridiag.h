@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "dlaf/eigensolver/bt_band_to_tridiag/impl.h"
+#include "dlaf/eigensolver/bt_band_to_tridiag/api.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
@@ -65,24 +65,4 @@ void backTransformationBandToTridiag(const SizeType band_size, matrix::Matrix<T,
 
   internal::BackTransformationT2B<B, D, T>::call(band_size, mat_e, mat_hh);
 }
-
-/// ---- ETI
-#define DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_LOCAL_ETI(KWORD, BACKEND, DEVICE, T)    \
-  KWORD template void                                                                   \
-  backTransformationBandToTridiag<BACKEND, DEVICE, T>(const SizeType band_size,         \
-                                                      matrix::Matrix<T, DEVICE>& mat_e, \
-                                                      matrix::Matrix<const T, Device::CPU>& mat_hh);
-
-DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_LOCAL_ETI(extern, Backend::MC, Device::CPU, float)
-DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_LOCAL_ETI(extern, Backend::MC, Device::CPU, double)
-DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_LOCAL_ETI(extern, Backend::MC, Device::CPU, std::complex<float>)
-DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_LOCAL_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
-
-#ifdef DLAF_WITH_CUDA
-DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_LOCAL_ETI(extern, Backend::GPU, Device::GPU, float)
-DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_LOCAL_ETI(extern, Backend::GPU, Device::GPU, double)
-DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_LOCAL_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)
-DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_LOCAL_ETI(extern, Backend::GPU, Device::GPU,
-                                                  std::complex<double>)
-#endif
 }

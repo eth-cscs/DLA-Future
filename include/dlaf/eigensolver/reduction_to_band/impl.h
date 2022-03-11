@@ -28,7 +28,6 @@
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/communication/kernels/all_reduce.h"
 #include "dlaf/communication/kernels/reduce.h"
-#include "dlaf/executors.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/distribution.h"

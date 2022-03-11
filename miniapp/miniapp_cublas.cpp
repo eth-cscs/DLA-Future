@@ -20,7 +20,6 @@
 #include <pika/thread.hpp>
 #include <pika/unwrap.hpp>
 
-#include "dlaf/executors.h"
 #include "dlaf/init.h"
 #include "dlaf/sender/policy.h"
 #include "dlaf/sender/transform.h"

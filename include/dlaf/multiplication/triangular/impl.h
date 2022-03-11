@@ -21,7 +21,6 @@
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/kernels.h"
-#include "dlaf/executors.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/matrix.h"

@@ -17,7 +17,6 @@
 #include "dlaf/common/data.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/communication/communicator.h"
-#include "dlaf/executors.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/memory/memory_view.h"

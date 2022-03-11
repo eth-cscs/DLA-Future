@@ -24,7 +24,6 @@
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/kernels/all_reduce.h"
-#include "dlaf/executors.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/views.h"

@@ -21,7 +21,6 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/kernels.h"
 #include "dlaf/eigensolver/bt_reduction_to_band/api.h"
-#include "dlaf/executors.h"
 #include "dlaf/factorization/qr.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/copy_tile.h"

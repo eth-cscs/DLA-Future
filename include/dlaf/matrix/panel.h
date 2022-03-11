@@ -18,7 +18,6 @@
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/executor.h"
 #include "dlaf/communication/kernels.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/distribution.h"

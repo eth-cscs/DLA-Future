@@ -15,7 +15,6 @@
 #include "dlaf/common/range2d.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/executor.h"
 
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"
@@ -48,7 +47,7 @@ std::vector<config_t> test_params{
 };
 
 template <class TypeParam, Coord panel_axis>
-void testBroadcast(comm::Executor& executor_mpi, const config_t& cfg, comm::CommunicatorGrid comm_grid) {
+void testBroadcast(const config_t& cfg, comm::CommunicatorGrid comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
   using pika::unwrapping;
 
@@ -80,7 +79,7 @@ void testBroadcast(comm::Executor& executor_mpi, const config_t& cfg, comm::Comm
   constexpr Coord comm_dir = orthogonal(panel_axis);
   common::Pipeline<comm::Communicator> mpi_task_chain(comm_grid.subCommunicator(comm_dir));
 
-  broadcast(executor_mpi, root, panel, mpi_task_chain);
+  broadcast(root, panel, mpi_task_chain);
 
   // check all panel are equal on all ranks
   for (const auto i_w : panel.iteratorLocal())
@@ -88,19 +87,15 @@ void testBroadcast(comm::Executor& executor_mpi, const config_t& cfg, comm::Comm
 }
 
 TYPED_TEST(PanelBcastTest, BroadcastCol) {
-  comm::Executor executor_mpi;
-
   for (auto comm_grid : this->commGrids())
     for (const auto& cfg : test_params)
-      testBroadcast<TypeParam, Coord::Col>(executor_mpi, cfg, comm_grid);
+      testBroadcast<TypeParam, Coord::Col>(cfg, comm_grid);
 }
 
 TYPED_TEST(PanelBcastTest, BroadcastRow) {
-  comm::Executor executor_mpi;
-
   for (auto comm_grid : this->commGrids())
     for (const auto& cfg : test_params)
-      testBroadcast<TypeParam, Coord::Row>(executor_mpi, cfg, comm_grid);
+      testBroadcast<TypeParam, Coord::Row>(cfg, comm_grid);
 }
 
 std::vector<config_t> test_params_bcast_transpose{
@@ -111,8 +106,7 @@ std::vector<config_t> test_params_bcast_transpose{
 };
 
 template <class TypeParam, Coord PANEL_SRC_AXIS>
-void testBrodcastTranspose(comm::Executor& executor_mpi, const config_t& cfg,
-                           comm::CommunicatorGrid comm_grid) {
+void testBrodcastTranspose(const config_t& cfg, comm::CommunicatorGrid comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
   using pika::unwrapping;
 
@@ -136,7 +130,7 @@ void testBrodcastTranspose(comm::Executor& executor_mpi, const config_t& cfg,
   // select a "random" source rank which will be the source for the data
   const comm::IndexT_MPI owner = comm_grid.size().get(PANEL_SRC_AXIS) / 2;
 
-  broadcast(executor_mpi, owner, panel_src, panel_dst, row_task_chain, col_task_chain);
+  broadcast(owner, panel_src, panel_dst, row_task_chain, col_task_chain);
 
   // Note:
   // all source panels will have access to the same data available on the root rank,
@@ -155,17 +149,13 @@ void testBrodcastTranspose(comm::Executor& executor_mpi, const config_t& cfg,
 }
 
 TYPED_TEST(PanelBcastTest, BroadcastCol2Row) {
-  comm::Executor executor_mpi;
-
   for (auto comm_grid : this->commGrids())
     for (const auto& cfg : test_params_bcast_transpose)
-      testBrodcastTranspose<TypeParam, Coord::Col>(executor_mpi, cfg, comm_grid);
+      testBrodcastTranspose<TypeParam, Coord::Col>(cfg, comm_grid);
 }
 
 TYPED_TEST(PanelBcastTest, BroadcastRow2Col) {
-  comm::Executor executor_mpi;
-
   for (auto comm_grid : this->commGrids())
     for (const auto& cfg : test_params_bcast_transpose)
-      testBrodcastTranspose<TypeParam, Coord::Row>(executor_mpi, cfg, comm_grid);
+      testBrodcastTranspose<TypeParam, Coord::Row>(cfg, comm_grid);
 }

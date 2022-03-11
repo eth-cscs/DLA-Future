@@ -662,8 +662,6 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
 
   constexpr auto B = Backend::MC;
 
-  const auto ex_mpi = getMPIExecutor<B>();
-
   const auto dist = a.distribution();
   const auto rank = dist.rankIndex();
 
@@ -741,10 +739,10 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
       // Moreover, it reduces in place because the owner of the diagonal stores the partial result
       // directly in x (without using xt)
       const auto i = dist.template localTileFromGlobalTile<Coord::Row>(index_k);
-      comm::scheduleReduceRecvInPlace(ex_mpi, mpi_col_chain(), MPI_SUM, x({i, 0}));
+      comm::scheduleReduceRecvInPlace(mpi_col_chain(), MPI_SUM, x({i, 0}));
     }
     else {
-      comm::scheduleReduceSend(ex_mpi, rank_owner_row, mpi_col_chain(), MPI_SUM, xt.read(index_xt));
+      comm::scheduleReduceSend(rank_owner_row, mpi_col_chain(), MPI_SUM, xt.read(index_xt));
     }
   }
 
@@ -754,9 +752,9 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
   // The result is needed just on the column with reflectors.
   for (const auto& index_x : x.iteratorLocal()) {
     if (reducer_col == rank.col())
-      comm::scheduleReduceRecvInPlace(ex_mpi, mpi_row_chain(), MPI_SUM, x(index_x));
+      comm::scheduleReduceRecvInPlace(mpi_row_chain(), MPI_SUM, x(index_x));
     else
-      comm::scheduleReduceSend(ex_mpi, reducer_col, mpi_row_chain(), MPI_SUM, x.read(index_x));
+      comm::scheduleReduceSend(reducer_col, mpi_row_chain(), MPI_SUM, x.read(index_x));
   }
 }
 
@@ -954,8 +952,6 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
   using common::iterate_range2d;
   using factorization::internal::computeTFactor;
 
-  const auto ex_mpi = getMPIExecutor<Backend::MC>();
-
   common::Pipeline<comm::Communicator> mpi_col_chain_panel(grid.colCommunicator().clone());
   common::Pipeline<comm::Communicator> mpi_row_chain(grid.rowCommunicator().clone());
   common::Pipeline<comm::Communicator> mpi_col_chain(grid.colCommunicator().clone());
@@ -1043,7 +1039,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     }
 
     // PREPARATION FOR TRAILING MATRIX UPDATE
-    comm::broadcast(ex_mpi, rank_v0.col(), v, vt, mpi_row_chain, mpi_col_chain);
+    comm::broadcast(rank_v0.col(), v, vt, mpi_row_chain, mpi_col_chain);
 
     // W = V . T
     PanelT<Coord::Col, T>& w = panels_w.nextResource();
@@ -1058,7 +1054,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     if (is_panel_rank_col)
       red2band::local::trmmComputeW<B, D>(w, v, t.read(t_idx));
 
-    comm::broadcast(ex_mpi, rank_v0.col(), w, wt, mpi_row_chain, mpi_col_chain);
+    comm::broadcast(rank_v0.col(), w, wt, mpi_row_chain, mpi_col_chain);
 
     // X = At . W
     PanelT<Coord::Col, T>& x = panels_x.nextResource();
@@ -1093,7 +1089,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
       MatrixT<T> w2 = std::move(t);
 
       red2band::local::gemmComputeW2<B, D>(w2, w, x);
-      comm::scheduleAllReduceInPlace(ex_mpi, mpi_col_chain(), MPI_SUM, w2(LocalTileIndex(0, 0)));
+      comm::scheduleAllReduceInPlace(mpi_col_chain(), MPI_SUM, w2(LocalTileIndex(0, 0)));
 
       red2band::local::gemmUpdateX<B, D>(x, w2, v);
     }
@@ -1105,7 +1101,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     xt.setRangeStart(at_start);
     xt.setHeight(nrefls);
 
-    comm::broadcast(ex_mpi, rank_v0.col(), x, xt, mpi_row_chain, mpi_col_chain);
+    comm::broadcast(rank_v0.col(), x, xt, mpi_row_chain, mpi_col_chain);
 
     // TRAILING MATRIX UPDATE
 

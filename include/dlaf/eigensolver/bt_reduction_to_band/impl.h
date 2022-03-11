@@ -242,7 +242,6 @@ void BackTransformationReductionToBand<backend, device, T>::call(
   }
 
   // Set up MPI
-  auto executor_mpi = dlaf::getMPIExecutor<backend>();
   common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
 
@@ -333,7 +332,7 @@ void BackTransformationReductionToBand<backend, device, T>::call(
 
     matrix::util::set0<backend>(hp, panelW2);
 
-    broadcast(executor_mpi, k_rank_col, panelW, mpi_row_task_chain);
+    broadcast(k_rank_col, panelW, mpi_row_task_chain);
 
     for (SizeType i_local = dist_c.template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
          i_local < dist_c.localNrTiles().rows(); ++i_local) {
@@ -348,9 +347,9 @@ void BackTransformationReductionToBand<backend, device, T>::call(
     }
 
     for (const auto& kj_panel : panelW2.iteratorLocal())
-      scheduleAllReduceInPlace(executor_mpi, mpi_col_task_chain(), MPI_SUM, panelW2(kj_panel));
+      scheduleAllReduceInPlace(mpi_col_task_chain(), MPI_SUM, panelW2(kj_panel));
 
-    broadcast(executor_mpi, k_rank_col, panelV, mpi_row_task_chain);
+    broadcast(k_rank_col, panelV, mpi_row_task_chain);
 
     for (SizeType i_local = dist_c.template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
          i_local < dist_c.localNrTiles().rows(); ++i_local) {

@@ -22,7 +22,6 @@
 #include "dlaf/common/contiguous_buffer_holder.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/communication/communicator.h"
-#include "dlaf/communication/executor.h"
 #include "dlaf/communication/message.h"
 #include "dlaf/communication/rdma.h"
 #include "dlaf/executors.h"
@@ -63,8 +62,7 @@ DLAF_MAKE_CALLABLE_OBJECT(allReduceInPlace);
 }
 
 template <class T>
-void scheduleAllReduce(const comm::Executor& ex,
-                       pika::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
+void scheduleAllReduce(pika::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
                        pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_in,
                        pika::future<matrix::Tile<T, Device::CPU>> tile_out) {
   using pika::execution::experimental::keep_future;
@@ -110,8 +108,8 @@ void scheduleAllReduce(const comm::Executor& ex,
 
 template <class T>
 pika::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
-    const comm::Executor& ex, pika::future<common::PromiseGuard<comm::Communicator>> pcomm,
-    MPI_Op reduce_op, pika::future<matrix::Tile<T, Device::CPU>> tile) {
+    pika::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
+    pika::future<matrix::Tile<T, Device::CPU>> tile) {
   using pika::execution::experimental::let_value;
   using pika::execution::experimental::make_future;
   using pika::execution::experimental::then;

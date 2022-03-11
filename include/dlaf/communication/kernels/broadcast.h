@@ -22,7 +22,6 @@
 #include "dlaf/common/data.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/communication/communicator.h"
-#include "dlaf/communication/executor.h"
 #include "dlaf/communication/message.h"
 #include "dlaf/communication/rdma.h"
 #include "dlaf/matrix/tile.h"
@@ -59,7 +58,7 @@ void recvBcast(const matrix::Tile<T, D>& tile, comm::IndexT_MPI root_rank,
 DLAF_MAKE_CALLABLE_OBJECT(recvBcast);
 
 template <class T, Device D, template <class> class Future>
-void scheduleSendBcast(const comm::Executor& ex, Future<matrix::Tile<const T, D>> tile,
+void scheduleSendBcast(Future<matrix::Tile<const T, D>> tile,
                        pika::future<common::PromiseGuard<Communicator>> pcomm) {
   using dlaf::internal::keepIfSharedFuture;
   using dlaf::internal::whenAllLift;
@@ -77,8 +76,8 @@ namespace internal {
 template <class T>
 struct ScheduleRecvBcast {
   template <Device D>
-  static auto call(const comm::Executor& ex, pika::future<matrix::Tile<T, D>> tile,
-                   comm::IndexT_MPI root_rank, pika::future<common::PromiseGuard<Communicator>> pcomm) {
+  static auto call(pika::future<matrix::Tile<T, D>> tile, comm::IndexT_MPI root_rank,
+                   pika::future<common::PromiseGuard<Communicator>> pcomm) {
 #if !defined(DLAF_WITH_CUDA_RDMA)
     static_assert(D == Device::CPU, "With CUDA RDMA disabled, MPI accepts just CPU memory.");
 #endif
@@ -91,8 +90,8 @@ struct ScheduleRecvBcast {
   }
 
 #if defined(DLAF_WITH_CUDA) && !defined(DLAF_WITH_CUDA_RDMA)
-  static auto call(const comm::Executor& ex, pika::future<matrix::Tile<T, Device::GPU>> tile_gpu,
-                   comm::IndexT_MPI root_rank, pika::future<common::PromiseGuard<Communicator>> pcomm) {
+  static auto call(pika::future<matrix::Tile<T, Device::GPU>> tile_gpu, comm::IndexT_MPI root_rank,
+                   pika::future<common::PromiseGuard<Communicator>> pcomm) {
     // Note:
     // TILE_GPU -+-> duplicate<CPU> ---> TILE_CPU ---> recvBcast ---> TILE_CPU -+-> copy
     //           |                                                              |
@@ -141,10 +140,9 @@ struct ScheduleRecvBcast {
 }
 
 template <class T, Device D>
-void scheduleRecvBcast(const comm::Executor& ex, pika::future<matrix::Tile<T, D>> tile,
-                       comm::IndexT_MPI root_rank,
+void scheduleRecvBcast(pika::future<matrix::Tile<T, D>> tile, comm::IndexT_MPI root_rank,
                        pika::future<common::PromiseGuard<Communicator>> pcomm) {
-  internal::ScheduleRecvBcast<T>::call(ex, std::move(tile), root_rank, std::move(pcomm)) |
+  internal::ScheduleRecvBcast<T>::call(std::move(tile), root_rank, std::move(pcomm)) |
       pika::execution::experimental::start_detached();
 }
 

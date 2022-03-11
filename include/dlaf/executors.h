@@ -17,7 +17,6 @@
 #include <pika/cuda.hpp>
 #endif
 
-#include <dlaf/communication/executor.h>
 #include <dlaf/init.h>
 #include <dlaf/types.h>
 
@@ -27,14 +26,6 @@
 #endif
 
 namespace dlaf {
-/// Returns an MPI executor appropriate for use with the given backend.
-///
-/// @tparam B backend with which the executor should be used.
-template <Backend B>
-auto getMPIExecutor() {
-  return dlaf::comm::Executor{};
-}
-
 /// Returns a high priority executor appropriate for use with the given
 /// backend.
 ///

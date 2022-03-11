@@ -21,7 +21,6 @@
 #include "dlaf/common/range2d.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/executor.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/sender/transform.h"
 #include "dlaf/util_matrix.h"

@@ -8,8 +8,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <pika/execution.hpp>
 #include <pika/future.hpp>
-#include <pika/unwrap.hpp>
+#include <pika/mpi.hpp>
 
 #include <vector>
 
@@ -17,13 +18,17 @@
 #include <mpi.h>
 
 #include "dlaf/communication/communicator.h"
-#include "dlaf/communication/executor.h"
 
-void test_exec() {
+using pika::execution::experimental::just;
+using pika::execution::experimental::sync_wait;
+using pika::execution::experimental::then;
+using pika::execution::experimental::when_all;
+using pika::mpi::experimental::transform_mpi;
+
+void test_transform_mpi() {
   auto comm = dlaf::comm::Communicator(MPI_COMM_WORLD);
   int rank = comm.rank();
   int nprocs = comm.size();
-  dlaf::comm::Executor ex{};
 
   int size = 1000;
   MPI_Datatype dtype = MPI_DOUBLE;
@@ -33,37 +38,33 @@ void test_exec() {
   int recv_rank = (rank != 0) ? rank - 1 : nprocs - 1;
   int tag = 0;
 
-  auto send_fut = pika::async(ex, MPI_Isend, send_buf.data(), size, dtype, send_rank, tag, comm);
-  auto recv_fut = pika::async(ex, MPI_Irecv, recv_buf.data(), size, dtype, recv_rank, tag, comm);
-  pika::wait_all(send_fut, recv_fut);
+  auto send = just(send_buf.data(), size, dtype, send_rank, tag, comm) | transform_mpi(MPI_Isend);
+  auto recv = just(recv_buf.data(), size, dtype, recv_rank, tag, comm) | transform_mpi(MPI_Irecv);
+  when_all(std::move(send), std::move(recv)) | then([](int e1, int e2) {
+    DLAF_MPI_CALL(e1);
+    DLAF_MPI_CALL(e2);
+  }) | sync_wait();
 
   std::vector<double> expected_recv_buf(static_cast<std::size_t>(size), recv_rank);
 
   ASSERT_TRUE(expected_recv_buf == recv_buf);
 }
 
-// TEST(SendRecv, Yielding) {
-//  dlaf::internal::getConfiguration().mpi_mech = dlaf::comm::MPIMech::Yielding;
-//  test_exec();
-//}
-
 TEST(SendRecv, Polling) {
-  test_exec();
+  test_transform_mpi();
 }
 
-TEST(Bcast, Dataflow) {
+TEST(Bcast, Polling) {
   auto comm = dlaf::comm::Communicator(MPI_COMM_WORLD);
-  dlaf::comm::Executor ex{};
   int root_rank = 1;
   MPI_Datatype dtype = MPI_DOUBLE;
   int size = 1000;
   double val = (comm.rank() == root_rank) ? 4.2 : 1.2;
   std::vector<double> buf(static_cast<std::size_t>(size), val);
 
-  // Tests the handling of futures in a dataflow
-  pika::dataflow(ex, pika::unwrapping(MPI_Ibcast), buf.data(), pika::make_ready_future<int>(size), dtype,
-                 root_rank, comm, pika::make_ready_future<void>())
-      .get();
+  when_all(just(buf.data()), pika::make_ready_future<int>(size), just(dtype, root_rank, comm),
+           pika::make_ready_future<void>()) |
+      transform_mpi(MPI_Ibcast) | then([](int e) { DLAF_MPI_CALL(e); }) | sync_wait();
 
   std::vector<double> expected_buf(static_cast<std::size_t>(size), 4.2);
   ASSERT_TRUE(expected_buf == buf);

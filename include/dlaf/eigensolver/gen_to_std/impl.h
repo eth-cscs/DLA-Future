@@ -21,7 +21,6 @@
 #include "dlaf/communication/broadcast_panel.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/executor.h"
 #include "dlaf/eigensolver/gen_to_std/api.h"
 #include "dlaf/executors.h"
 #include "dlaf/lapack/tile.h"
@@ -272,8 +271,6 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
   using namespace gentostd_l;
   using pika::threads::thread_priority;
 
-  auto executor_mpi = dlaf::getMPIExecutor<backend>();
-
   // Set up MPI executor pipelines
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
   common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
@@ -326,7 +323,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
       }
     }
 
-    broadcast(executor_mpi, kk_rank.col(), l_panel, l_panelT, mpi_row_task_chain, mpi_col_task_chain);
+    broadcast(kk_rank.col(), l_panel, l_panelT, mpi_row_task_chain, mpi_col_task_chain);
 
     // continue update previous panels
     // Note: The tasks of the final huge TRSM of the HEGST step have been reshuffled to avoid extra
@@ -348,7 +345,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 
     // No next rows update if last row.
     if (k < nrtile - 1) {
-      broadcast(executor_mpi, kk_rank.row(), a_panelT, mpi_col_task_chain);
+      broadcast(kk_rank.row(), a_panelT, mpi_col_task_chain);
 
       for (SizeType j_local = 0; j_local < kk_offset.cols(); ++j_local) {
         for (SizeType i_local = at_offset.rows(); i_local < distr.localNrTiles().rows(); ++i_local) {
@@ -387,7 +384,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
       if (kk_rank.row() == this_rank.row()) {
         a_panelT.setTile(diag_wp_idx, mat_a.read(kk));
       }
-      broadcast(executor_mpi, kk_rank.row(), a_panelT, mpi_col_task_chain);
+      broadcast(kk_rank.row(), a_panelT, mpi_col_task_chain);
 
       // panel partial update
       for (SizeType i_local = at_offset.rows(); i_local < distr.localNrTiles().rows(); ++i_local) {
@@ -411,7 +408,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 
     a_panelT.setRange(at, common::indexFromOrigin(distr.nrTiles()));
 
-    broadcast(executor_mpi, kk_rank.col(), a_panel, a_panelT, mpi_row_task_chain, mpi_col_task_chain);
+    broadcast(kk_rank.col(), a_panel, a_panelT, mpi_row_task_chain, mpi_col_task_chain);
 
     // trailing matrix update
     for (SizeType j = k + 1; j < nrtile; ++j) {
@@ -543,8 +540,6 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
   using namespace gentostd_u;
   using pika::threads::thread_priority;
 
-  auto executor_mpi = dlaf::getMPIExecutor<backend>();
-
   // Set up MPI executor pipelines
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
   common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
@@ -598,7 +593,7 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
       }
     }
 
-    broadcast(executor_mpi, kk_rank.row(), u_panel, u_panelT, mpi_row_task_chain, mpi_col_task_chain);
+    broadcast(kk_rank.row(), u_panel, u_panelT, mpi_row_task_chain, mpi_col_task_chain);
 
     // continue update previous panels
     // Note: The tasks of the final huge TRSM of the HEGST step have been reshuffled to avoid extra
@@ -620,7 +615,7 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
 
     // No next rows update if last col.
     if (k < nrtile - 1) {
-      broadcast(executor_mpi, kk_rank.col(), a_panelT, mpi_row_task_chain);
+      broadcast(kk_rank.col(), a_panelT, mpi_row_task_chain);
 
       for (SizeType i_local = 0; i_local < kk_offset.rows(); ++i_local) {
         for (SizeType j_local = at_offset.cols(); j_local < distr.localNrTiles().cols(); ++j_local) {
@@ -659,7 +654,7 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
       if (kk_rank.col() == this_rank.col()) {
         a_panelT.setTile(diag_wp_idx, mat_a.read(kk));
       }
-      broadcast(executor_mpi, kk_rank.col(), a_panelT, mpi_row_task_chain);
+      broadcast(kk_rank.col(), a_panelT, mpi_row_task_chain);
 
       // panel partial update
       for (SizeType j_local = at_offset.cols(); j_local < distr.localNrTiles().cols(); ++j_local) {
@@ -683,7 +678,7 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
 
     a_panelT.setRange(at, common::indexFromOrigin(distr.nrTiles()));
 
-    broadcast(executor_mpi, kk_rank.row(), a_panel, a_panelT, mpi_row_task_chain, mpi_col_task_chain);
+    broadcast(kk_rank.row(), a_panel, a_panelT, mpi_row_task_chain, mpi_col_task_chain);
 
     // trailing matrix update
     for (SizeType i = k + 1; i < nrtile; ++i) {

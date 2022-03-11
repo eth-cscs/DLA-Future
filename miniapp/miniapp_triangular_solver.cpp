@@ -50,7 +50,6 @@ using dlaf::SizeType;
 using dlaf::TileElementSize;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
-using dlaf::comm::MPIMech;
 using dlaf::common::Ordering;
 
 struct Options

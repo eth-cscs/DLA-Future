@@ -35,7 +35,6 @@ std::ostream& operator<<(std::ostream& os, configuration const& cfg) {
   os << "  umpire_device_memory_pool_initial_bytes = " << cfg.umpire_device_memory_pool_initial_bytes
      << std::endl;
   os << "  mpi_pool = " << cfg.mpi_pool << std::endl;
-  os << "  mpi_mech = " << cfg.mpi_mech << std::endl;
   return os;
 }
 
@@ -194,33 +193,10 @@ struct parseFromString<std::size_t> {
   };
 };
 
-template <>
-struct parseFromString<comm::MPIMech> {
-  static comm::MPIMech call(const std::string& var) {
-    if (var == "yielding") {
-      return comm::MPIMech::Yielding;
-    }
-    else if (var == "polling") {
-      return comm::MPIMech::Polling;
-    }
-
-    std::cout << "Unknown value for --mech=" << var << "!" << std::endl;
-    std::terminate();
-    return comm::MPIMech::Polling;  // unreachable
-  };
-};
-
 template <class T>
 struct parseFromCommandLine {
   static T call(pika::program_options::variables_map const& vm, const std::string& cmd_val) {
     return vm[cmd_val].as<T>();
-  }
-};
-
-template <>
-struct parseFromCommandLine<comm::MPIMech> {
-  static comm::MPIMech call(pika::program_options::variables_map const& vm, const std::string& cmd_val) {
-    return parseFromString<comm::MPIMech>::call(vm[cmd_val].as<std::string>());
   }
 };
 
@@ -250,7 +226,6 @@ void updateConfiguration(pika::program_options::variables_map const& vm, configu
   updateConfigurationValue(vm, cfg.umpire_device_memory_pool_initial_bytes,
                            "UMPIRE_DEVICE_MEMORY_POOL_INITIAL_BYTES",
                            "umpire-device-memory-pool-initial-bytes");
-  updateConfigurationValue(vm, cfg.mpi_mech, "MPI_MECH", "mpi-mech");
   cfg.mpi_pool = (pika::resource::pool_exists("mpi")) ? "mpi" : "default";
 }
 
@@ -275,9 +250,6 @@ pika::program_options::options_description getOptionsDescription() {
   desc.add_options()("dlaf:umpire-device-memory-pool-initial-bytes",
                      pika::program_options::value<std::size_t>(),
                      "Number of bytes to preallocate for device memory pool");
-  desc.add_options()("dlaf:mpi-mech",
-                     pika::program_options::value<std::string>()->default_value("yielding"),
-                     "MPI mechanism ('yielding', 'polling')");
   desc.add_options()("dlaf:no-mpi-pool", pika::program_options::bool_switch(), "Disable the MPI pool.");
 
   return desc;

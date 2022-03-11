@@ -18,7 +18,6 @@
 #include <pika/cuda.hpp>
 #endif
 
-#include <dlaf/communication/mech.h>
 #include <dlaf/types.h>
 
 #ifdef DLAF_WITH_CUDA
@@ -37,7 +36,6 @@ struct configuration {
   std::size_t umpire_host_memory_pool_initial_bytes = 1 << 30;
   std::size_t umpire_device_memory_pool_initial_bytes = 1 << 30;
   std::string mpi_pool = "mpi";
-  comm::MPIMech mpi_mech = comm::MPIMech::Polling;
 };
 
 std::ostream& operator<<(std::ostream& os, configuration const& cfg);

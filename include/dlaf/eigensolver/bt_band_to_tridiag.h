@@ -7,9 +7,10 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
+
 #pragma once
 
-#include "dlaf/eigensolver/bt_band_to_tridiag/mc.h"
+#include "dlaf/eigensolver/bt_band_to_tridiag/impl.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"

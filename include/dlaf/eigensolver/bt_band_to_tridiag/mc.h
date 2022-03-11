@@ -34,23 +34,17 @@
 
 namespace dlaf::eigensolver::internal {
 
-template <class T>
-struct BackTransformationT2B<Backend::MC, Device::CPU, T> {
-  static void call(const SizeType band_size, Matrix<T, Device::CPU>& mat_e,
-                   Matrix<const T, Device::CPU>& mat_hh);
-};
-
 namespace bt_tridiag {
 
 template <class T>
 pika::shared_future<matrix::Tile<const T, Device::CPU>> setupVWellFormed(
-    const SizeType b, pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_i,
+    const SizeType b, pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_hh,
     pika::future<matrix::Tile<T, Device::CPU>> tile_v) {
-  auto unzipV_func = [b](const auto& tile_i, auto tile_v) {
+  auto unzipV_func = [b](const auto& tile_hh, auto tile_v) {
     using lapack::lacpy;
     using lapack::laset;
 
-    // Note: the size of of tile_i and tile_v embeds a relevant information about the number of
+    // Note: the size of of tile_hh and tile_v embeds a relevant information about the number of
     // reflecotrs and their max size. This will be exploited to correctly setup the well formed
     // tile with reflectors in place as they will be applied.
     const auto k = tile_v.size().cols();
@@ -58,13 +52,13 @@ pika::shared_future<matrix::Tile<const T, Device::CPU>> setupVWellFormed(
     // copy from compact representation reflector values (the first component set to 1 is not there)
     for (SizeType j = 0; j < k; ++j) {
       const auto compact_refl_size =
-          std::min<SizeType>(tile_v.size().rows() - (1 + j), tile_i.size().rows() - 1);
+          std::min<SizeType>(tile_v.size().rows() - (1 + j), tile_hh.size().rows() - 1);
 
       // this is needed because of complex last reflector (i.e. just 1 element long)
       if (compact_refl_size == 0)
         continue;
 
-      lacpy(blas::Uplo::General, compact_refl_size, 1, tile_i.ptr({1, j}), tile_i.ld(),
+      lacpy(blas::Uplo::General, compact_refl_size, 1, tile_hh.ptr({1, j}), tile_hh.ld(),
             tile_v.ptr({1 + j, j}), tile_v.ld());
     }
 
@@ -81,7 +75,7 @@ pika::shared_future<matrix::Tile<const T, Device::CPU>> setupVWellFormed(
 
     return matrix::Tile<const T, Device::CPU>(std::move(tile_v));
   };
-  return pika::dataflow(pika::unwrapping(unzipV_func), std::move(tile_i), std::move(tile_v));
+  return pika::dataflow(pika::unwrapping(unzipV_func), std::move(tile_hh), std::move(tile_v));
 }
 
 template <class T>
@@ -266,11 +260,9 @@ private:
 };
 }
 
-template <class T>
-void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(const SizeType band_size,
-                                                              Matrix<T, Device::CPU>& mat_e,
-                                                              Matrix<const T, Device::CPU>& mat_hh) {
-  static constexpr Backend backend = Backend::MC;
+template <Backend B, Device D, class T>
+void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>& mat_e,
+                                          Matrix<const T, Device::CPU>& mat_hh) {
   using pika::threads::thread_priority;
   using pika::execution::experimental::keep_future;
 
@@ -356,8 +348,8 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(const SizeType ban
       auto tile_w_full = mat_w(ij);
       auto tile_w_rw = splitTile(tile_w_full, helper.specHH());
 
-      auto tile_i = splitTile(mat_hh.read(ij), helper.specHHCompact());
-      auto tile_v = setupVWellFormed(b, tile_i, std::move(tile_w_rw));
+      auto tile_hh = splitTile(mat_hh.read(ij), helper.specHHCompact());
+      auto tile_v = setupVWellFormed(b, tile_hh, std::move(tile_w_rw));
 
       // W2 = V* . E
       // Note:
@@ -367,24 +359,23 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(const SizeType ban
         const auto sz_e = mat_e.tileSize({ij.row(), j_e});
         auto tile_e = mat_e.read(LocalTileIndex(ij.row(), j_e));
 
-        computeW2<backend>(thread_priority::normal,
-                           keep_future(splitTile(tile_v, helper.topPart().specHH())),
-                           keep_future(splitTile(tile_e, helper.topPart().specEV(sz_e.cols()))), T(0),
-                           mat_w2.readwrite_sender(LocalTileIndex(0, j_e)));
+        computeW2<B>(thread_priority::normal, keep_future(splitTile(tile_v, helper.topPart().specHH())),
+                     keep_future(splitTile(tile_e, helper.topPart().specEV(sz_e.cols()))), T(0),
+                     mat_w2.readwrite_sender(LocalTileIndex(0, j_e)));
 
         if (helper.affectsMultipleTiles()) {
           auto tile_e = mat_e.read(LocalTileIndex(ij.row() + 1, j_e));
-          computeW2<backend>(thread_priority::normal,
-                             keep_future(splitTile(tile_v, helper.bottomPart().specHH())),
-                             keep_future(splitTile(tile_e, helper.bottomPart().specEV(sz_e.cols()))),
-                             T(1), mat_w2.readwrite_sender(LocalTileIndex(0, j_e)));
+          computeW2<B>(thread_priority::normal,
+                       keep_future(splitTile(tile_v, helper.bottomPart().specHH())),
+                       keep_future(splitTile(tile_e, helper.bottomPart().specEV(sz_e.cols()))), T(1),
+                       mat_w2.readwrite_sender(LocalTileIndex(0, j_e)));
         }
       }
 
       // Note:
       // And we use it also for computing the T factor
       auto tile_t_full = mat_t(LocalTileIndex(ij.row(), 0));
-      auto tile_t = computeTFactor(tile_i, tile_v, splitTile(tile_t_full, {{0, 0}, {nrefls, nrefls}}));
+      auto tile_t = computeTFactor(tile_hh, tile_v, splitTile(tile_t_full, {{0, 0}, {nrefls, nrefls}}));
 
       // W = V . T
       // Note:
@@ -392,7 +383,7 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(const SizeType ban
       // finished. T was already a dependency, but W2 wasn't, meaning it won't run in parallel,
       // but it could.
       tile_w_rw = splitTile(tile_w_full, helper.specHH());
-      computeW<backend>(thread_priority::normal, keep_future(tile_t), std::move(tile_w_rw));
+      computeW<B>(thread_priority::normal, keep_future(tile_t), std::move(tile_w_rw));
       auto tile_w = mat_w.read(ij);
 
       // E -= W . W2
@@ -403,15 +394,15 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(const SizeType ban
         auto tile_e = mat_e(idx_e);
         const auto& tile_w2 = mat_w2.read_sender(idx_e);
 
-        updateE<backend>(pika::threads::thread_priority::normal,
-                         keep_future(splitTile(tile_w, helper.topPart().specHH())), tile_w2,
-                         splitTile(tile_e, helper.topPart().specEV(sz_e.cols())));
+        updateE<B>(pika::threads::thread_priority::normal,
+                   keep_future(splitTile(tile_w, helper.topPart().specHH())), tile_w2,
+                   splitTile(tile_e, helper.topPart().specEV(sz_e.cols())));
 
         if (helper.affectsMultipleTiles()) {
           auto tile_e = mat_e(LocalTileIndex{ij.row() + 1, j_e});
-          updateE<backend>(pika::threads::thread_priority::normal,
-                           keep_future(splitTile(tile_w, helper.bottomPart().specHH())), tile_w2,
-                           splitTile(tile_e, helper.bottomPart().specEV(sz_e.cols())));
+          updateE<B>(pika::threads::thread_priority::normal,
+                     keep_future(splitTile(tile_w, helper.bottomPart().specHH())), tile_w2,
+                     splitTile(tile_e, helper.bottomPart().specEV(sz_e.cols())));
         }
       }
 
@@ -421,13 +412,4 @@ void BackTransformationT2B<Backend::MC, Device::CPU, T>::call(const SizeType ban
     }
   }
 }
-
-/// ---- ETI
-#define DLAF_EIGENSOLVER_BACKTRANSFORMATION_B2T_MC_ETI(KWORD, DATATYPE) \
-  KWORD template struct BackTransformationT2B<Backend::MC, Device::CPU, DATATYPE>;
-
-DLAF_EIGENSOLVER_BACKTRANSFORMATION_B2T_MC_ETI(extern, float)
-DLAF_EIGENSOLVER_BACKTRANSFORMATION_B2T_MC_ETI(extern, double)
-DLAF_EIGENSOLVER_BACKTRANSFORMATION_B2T_MC_ETI(extern, std::complex<float>)
-DLAF_EIGENSOLVER_BACKTRANSFORMATION_B2T_MC_ETI(extern, std::complex<double>)
 }

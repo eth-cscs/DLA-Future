@@ -7,13 +7,16 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
+
 #pragma once
 
 #include "dlaf/types.h"
 
 namespace dlaf::eigensolver::internal {
 
-template <Backend backend, Device device, class T>
-struct BackTransformationT2B {};
+template <Backend B, Device D, class T>
+struct BackTransformationT2B {
+  static void call(const SizeType band_size, Matrix<T, D>& mat_e, Matrix<const T, Device::CPU>& mat_hh);
+};
 
 }

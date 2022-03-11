@@ -167,7 +167,7 @@ T calcTolerance(T dmax, T zmax) {
 }
 
 template <class T>
-std::vector<pika::future<matrix::Tile<T, Device::CPU>>> collectVectorTileFutures(
+std::vector<pika::future<matrix::Tile<T, Device::CPU>>> collectVectorReadWriteFuturesOfTiles(
     SizeType i_begin, SizeType i_end, Matrix<T, Device::CPU>& vec) {
   std::size_t num_tiles = to_sizet(i_end - i_begin + 1);
   std::vector<pika::future<matrix::Tile<T, Device::CPU>>> tiles;
@@ -182,53 +182,97 @@ std::vector<pika::future<matrix::Tile<T, Device::CPU>>> collectVectorTileFutures
 }
 
 template <class T>
-SizeType permutateZVecZeroesToBottom(
-    T rho, T tol, const std::vector<matrix::Tile<T, Device::CPU>>& d_tiles,
-    const std::vector<matrix::Tile<T, Device::CPU>>& z_tiles,
-    const std::vector<matrix::Tile<SizeType, Device::CPU>>& index_tiles) {
-  SizeType len =
-      (to_SizeType(d_tiles.size()) - 1) * d_tiles.front().size().rows() + d_tiles.back().size().rows();
-  TileElementIndex zero_idx(0, 0);
-  T* d_ptr = d_tiles[0].ptr(zero_idx);
-  T* z_ptr = z_tiles[0].ptr(zero_idx);
-  SizeType* index_ptr = index_tiles[0].ptr(zero_idx);
+std::vector<pika::shared_future<matrix::Tile<const T, Device::CPU>>> collectVectorReadFuturesOfTiles(
+    SizeType i_begin, SizeType i_end, Matrix<const T, Device::CPU>& vec) {
+  std::size_t num_tiles = to_sizet(i_end - i_begin + 1);
+  std::vector<pika::shared_future<matrix::Tile<const T, Device::CPU>>> tiles;
+  tiles.reserve(num_tiles);
 
-  // false values go to the bottom
-  auto smallz_fn = [rho, tol](const pika::tuple<T, T, SizeType>& t) {
-    return rho * std::abs(std::get<1>(t)) > tol;
-  };
+  for (SizeType i = i_begin; i <= i_end; ++i) {
+    GlobalTileIndex tile_idx(i, 0);
+    tiles.push_back(vec.read(tile_idx));
+  }
 
-  auto it_begin = pika::util::make_zip_iterator(d_ptr, z_ptr, index_ptr);
-  auto it_end = pika::util::make_zip_iterator(d_ptr + len, z_ptr + len, index_ptr + len);
-  // Note that stable_partition preserves the relative order of elements in the two groups
-  // The iterator points to the first zero of the z vector after all zeroes were moved to the bottom.
-  auto it_split = pika::stable_partition(pika::execution::par, it_begin, it_end, smallz_fn);
-  // Returns the number of non-zero entries in `z`
-  return std::distance(it_begin, it_split);
+  return tiles;
 }
 
+// Save the index of the elements (perm_d) in ascending order of the diagonal (d)
+//
+// NOTE: `d_tiles` should be `const T` but there seems to be a compile-time issue
 template <class T>
 void sortAscendingBasedOnDiagonal(const std::vector<matrix::Tile<T, Device::CPU>>& d_tiles,
-                                  const std::vector<matrix::Tile<T, Device::CPU>>& z_tiles,
-                                  const std::vector<matrix::Tile<SizeType, Device::CPU>>& index_tiles) {
+                                  const std::vector<matrix::Tile<SizeType, Device::CPU>>& perm_tiles) {
   SizeType len =
       (to_SizeType(d_tiles.size()) - 1) * d_tiles.front().size().rows() + d_tiles.back().size().rows();
   TileElementIndex zero_idx(0, 0);
-  T* d_ptr = d_tiles[0].ptr(zero_idx);
-  T* z_ptr = z_tiles[0].ptr(zero_idx);
-  SizeType* index_ptr = index_tiles[0].ptr(zero_idx);
+  const T* d_ptr = d_tiles[0].ptr(zero_idx);
+  SizeType* perm_ptr = perm_tiles[0].ptr(zero_idx);
 
-  // The entries of the tuples are elements of the vectors `d`, `z` and `index` in that order.
-  auto sortComp = [](const pika::tuple<T, T, SizeType>& t1, const pika::tuple<T, T, SizeType>& t2) {
-    return std::get<0>(t1) < std::get<0>(t2);
-  };
+  pika::sort(pika::execution::par, perm_ptr, perm_ptr + len,
+             [d_ptr](SizeType i1, SizeType i2) { return d_ptr[i1] < d_ptr[i2]; });
+}
 
-  // Note that pika's zip iterator may not exactly model the requirements of `std::sort` and it can't be
-  // used here. [1]
-  //
-  // [1]: https://stackoverflow.com/questions/13840998/sorting-zipped-locked-containers-in-c-using-boost-or-the-stl
-  pika::sort(pika::execution::par, pika::util::make_zip_iterator(d_ptr, z_ptr, index_ptr),
-             pika::util::make_zip_iterator(d_ptr + len, z_ptr + len, index_ptr + len), sortComp);
+inline void setColTypeTile(const matrix::Tile<ColType, Device::CPU>& tile, ColType val) {
+  SizeType len = tile.size().rows();
+  for (SizeType i = 0; i < len; ++i) {
+    tile(TileElementIndex(i, 0)) = val;
+  }
+}
+
+DLAF_MAKE_CALLABLE_OBJECT(setColTypeTile);
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(setColTypeTile, setColTypeTile_o)
+
+inline void initColTypes(SizeType i_begin, SizeType i_middle, SizeType i_end,
+                         Matrix<ColType, Device::CPU>& coltypes) {
+  using pika::threads::thread_priority;
+  using pika::execution::experimental::start_detached;
+  using dlaf::internal::Policy;
+  using dlaf::internal::whenAllLift;
+
+  for (SizeType i = i_begin; i <= i_end; ++i) {
+    ColType val = (i <= i_middle) ? ColType::UpperHalf : ColType::LowerHalf;
+    whenAllLift(coltypes.readwrite_sender(LocalTileIndex(i, 0)), val) |
+        setColTypeTile(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
+  }
+}
+
+// @param zt tile from the `z`-vector
+// @param ct tile from the `coltypes` vector
+template <class T>
+void updateTileColumnTypesBasedOnZvecNearlyZero(T tol, T rho,
+                                                const matrix::Tile<const T, Device::CPU>& zt,
+                                                const matrix::Tile<ColType, Device::CPU>& ct) {
+  SizeType len = zt.size().rows();
+  for (SizeType i = 0; i < len; ++i) {
+    TileElementIndex idx(i, 0);
+    if (rho * std::abs(zt(idx)) < tol) {
+      ct(idx) = ColType::Deflated;
+    }
+  }
+}
+
+DLAF_MAKE_CALLABLE_OBJECT(updateTileColumnTypesBasedOnZvecNearlyZero);
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(updateTileColumnTypesBasedOnZvecNearlyZero,
+                                     updateTileColumnTypesBasedOnZvecNearlyZero_o)
+
+template <class T>
+void updateVectorColumnTypesBasedOnZvecNearlyZero(SizeType i_begin, SizeType i_end,
+                                                  pika::shared_future<T> tol_fut,
+                                                  pika::shared_future<T> rho_fut,
+                                                  Matrix<const T, Device::CPU>& z,
+                                                  Matrix<ColType, Device::CPU>& coltypes) {
+  using pika::threads::thread_priority;
+  using pika::execution::experimental::start_detached;
+  using dlaf::internal::Policy;
+  using dlaf::internal::whenAllLift;
+
+  for (SizeType i = i_begin; i <= i_end; ++i) {
+    LocalTileIndex idx(i, 0);
+    whenAllLift(std::move(tol_fut), std::move(rho_fut), z.read_sender(idx),
+                coltypes.readwrite_sender(idx)) |
+        updateTileColumnTypesBasedOnZvecNearlyZero(Policy<Backend::MC>(thread_priority::normal)) |
+        start_detached();
+  }
 }
 
 template <class T>
@@ -249,11 +293,6 @@ bool diagonalValuesNearlyEqual(T tol, T d1, T d2, T z1, T z2) {
   // Note that this is similar to calling `rotg()` but we want to make sure that the condition is
   // satisfied before modifying z1, z2 that is why the function is not used here.
   return std::abs(z1 * z2 * (d1 - d2) / (z1 * z1 + z2 * z2)) < tol;
-}
-
-template <class T>
-bool zvecValueNearlyZero(T tol, T rho, T z) {
-  return rho * std::abs(z) > tol;
 }
 
 template <class T>
@@ -366,25 +405,22 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(
   initIndex(i_begin, i_end, perm_q);
   initIndex(i_begin, i_end, perm_u);
 
-  {
-    // Sort the diagonal in ascending order
-    auto d_tiles = collectVectorTileFutures(i_begin, i_end, d);
-    auto z_tiles = collectVectorTileFutures(i_begin, i_end, z);
-    // auto index_tiles = collectVectorTileFutures(i_begin, i_end, index);
-    // pika::dataflow(pika::unwrapping(sortAscendingBasedOnDiagonal<T>), std::move(d_tiles),
-    //                std::move(z_tiles), std::move(index_tiles));
-  }
+  // Initialize coltypes
+  initColTypes(i_begin, i_midpoint, i_end, coltypes);
+
+  // Mark columns as deflated if corresponding rank-1 update vector elements are nearly zero
+  updateVectorColumnTypesBasedOnZvecNearlyZero(i_begin, i_end, tol_fut, rho_fut, z, coltypes);
+
+  // Sort the diagonal in ascending order and initialize the corresponding permutation index
+  //
+  // NOTE: `collectVectorReadFuturesOfTiles` should be used for `d_tiles` but there seems to be a
+  //       compile-time issue
+  pika::dataflow(pika::unwrapping(sortAscendingBasedOnDiagonal<T>),
+                 collectVectorReadWriteFuturesOfTiles(i_begin, i_end, d),
+                 collectVectorReadWriteFuturesOfTiles(i_begin, i_end, perm_d));
 
   // The number of non-zero entries in `z`
   pika::future<SizeType> k_fut;
-  {
-    // Deflate based on `z` entries close to zero
-    auto d_tiles = collectVectorTileFutures(i_begin, i_end, d);
-    auto z_tiles = collectVectorTileFutures(i_begin, i_end, z);
-    // auto index_tiles = collectVectorTileFutures(i_begin, i_end, index);
-    // k_fut = pika::dataflow(pika::unwrapping(permutateZVecZeroesToBottom<T>), tol_fut, rho_fut,
-    //                        std::move(d_tiles), std::move(z_tiles), std::move(index_tiles));
-  }
 
   // Find evals of D + rzz^T with laed4 (root solver)
   // Form evecs

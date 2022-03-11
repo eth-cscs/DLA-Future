@@ -20,6 +20,7 @@
 #include <pika/thread.hpp>
 #include <pika/unwrap.hpp>
 
+#include "dlaf/cublas/error.h"
 #include "dlaf/init.h"
 #include "dlaf/sender/policy.h"
 #include "dlaf/sender/transform.h"

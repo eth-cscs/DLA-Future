@@ -16,12 +16,6 @@
 #include <dlaf/init.h>
 #include <dlaf/memory/memory_chunk.h>
 
-#ifdef DLAF_WITH_CUDA
-#include <dlaf/cublas/executor.h>
-#include <dlaf/cuda/executor.h>
-#include <dlaf/cusolver/executor.h>
-#endif
-
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -67,76 +61,6 @@ struct Init<Backend::MC> {
 };
 
 #ifdef DLAF_WITH_CUDA
-static std::unique_ptr<cuda::StreamPool> np_stream_pool{nullptr};
-
-void initializeNpCudaStreamPool(int device, std::size_t num_streams_per_thread) {
-  DLAF_ASSERT(!np_stream_pool, "");
-  np_stream_pool = std::make_unique<cuda::StreamPool>(device, num_streams_per_thread,
-                                                      pika::threads::thread_priority::normal);
-}
-
-void finalizeNpCudaStreamPool() {
-  DLAF_ASSERT(bool(np_stream_pool), "");
-  np_stream_pool.reset();
-}
-
-cuda::StreamPool getNpCudaStreamPool() {
-  DLAF_ASSERT(bool(np_stream_pool), "");
-  return *np_stream_pool;
-}
-
-static std::unique_ptr<cuda::StreamPool> hp_stream_pool{nullptr};
-
-void initializeHpCudaStreamPool(int device, std::size_t num_streams_per_thread) {
-  DLAF_ASSERT(!hp_stream_pool, "");
-  hp_stream_pool = std::make_unique<cuda::StreamPool>(device, num_streams_per_thread,
-                                                      pika::threads::thread_priority::high);
-}
-
-void finalizeHpCudaStreamPool() {
-  DLAF_ASSERT(bool(hp_stream_pool), "");
-  hp_stream_pool.reset();
-}
-
-cuda::StreamPool getHpCudaStreamPool() {
-  DLAF_ASSERT(bool(hp_stream_pool), "");
-  return *hp_stream_pool;
-}
-
-static std::unique_ptr<cublas::HandlePool> cublas_handle_pool{nullptr};
-
-void initializeCublasHandlePool() {
-  DLAF_ASSERT(!cublas_handle_pool, "");
-  cublas_handle_pool = std::make_unique<cublas::HandlePool>(0, CUBLAS_POINTER_MODE_HOST);
-}
-
-void finalizeCublasHandlePool() {
-  DLAF_ASSERT(bool(cublas_handle_pool), "");
-  cublas_handle_pool.reset();
-}
-
-cublas::HandlePool getCublasHandlePool() {
-  DLAF_ASSERT(bool(cublas_handle_pool), "");
-  return *cublas_handle_pool;
-}
-
-static std::unique_ptr<cusolver::HandlePool> cusolver_handle_pool{nullptr};
-
-void initializeCusolverHandlePool() {
-  DLAF_ASSERT(!cusolver_handle_pool, "");
-  cusolver_handle_pool = std::make_unique<cusolver::HandlePool>(0);
-}
-
-void finalizeCusolverHandlePool() {
-  DLAF_ASSERT(bool(cusolver_handle_pool), "");
-  cusolver_handle_pool.reset();
-}
-
-cusolver::HandlePool getCusolverHandlePool() {
-  DLAF_ASSERT(bool(cusolver_handle_pool), "");
-  return *cusolver_handle_pool;
-}
-
 static std::unique_ptr<pika::cuda::experimental::cuda_pool> cuda_pool{nullptr};
 
 void initializeCudaPool(int device, std::size_t num_np_streams, std::size_t num_hp_streams) {
@@ -160,20 +84,12 @@ struct Init<Backend::GPU> {
   static void initialize(configuration const& cfg) {
     const int device = 0;
     memory::internal::initializeUmpireDeviceAllocator(cfg.umpire_device_memory_pool_initial_bytes);
-    initializeNpCudaStreamPool(device, cfg.num_np_cuda_streams_per_thread);
-    initializeHpCudaStreamPool(device, cfg.num_hp_cuda_streams_per_thread);
-    initializeCublasHandlePool();
-    initializeCusolverHandlePool();
     initializeCudaPool(device, cfg.num_np_cuda_streams_per_thread, cfg.num_hp_cuda_streams_per_thread);
     pika::cuda::experimental::detail::register_polling(pika::resource::get_thread_pool("default"));
   }
 
   static void finalize() {
     memory::internal::finalizeUmpireDeviceAllocator();
-    finalizeNpCudaStreamPool();
-    finalizeHpCudaStreamPool();
-    finalizeCublasHandlePool();
-    finalizeCusolverHandlePool();
     finalizeCudaPool();
   }
 };

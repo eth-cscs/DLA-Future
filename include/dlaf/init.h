@@ -20,11 +20,6 @@
 
 #include <dlaf/types.h>
 
-#ifdef DLAF_WITH_CUDA
-#include <dlaf/cublas/executor.h>
-#include <dlaf/cusolver/executor.h>
-#endif
-
 namespace dlaf {
 /// DLA-Future configuration.
 ///
@@ -44,10 +39,6 @@ namespace internal {
 configuration& getConfiguration();
 
 #ifdef DLAF_WITH_CUDA
-cuda::StreamPool getNpCudaStreamPool();
-cuda::StreamPool getHpCudaStreamPool();
-cublas::HandlePool getCublasHandlePool();
-cusolver::HandlePool getCusolverHandlePool();
 pika::cuda::experimental::cuda_pool getCudaPool();
 #endif
 }

@@ -19,4 +19,12 @@ struct BackTransformationT2B {
   static void call(const SizeType band_size, Matrix<T, D>& mat_e, Matrix<const T, Device::CPU>& mat_hh);
 };
 
+template <class T>
+struct BackTransformationT2B<Backend::GPU, Device::GPU, T> {
+  static void call(const SizeType band_size, Matrix<T, Device::GPU>& mat_e,
+                   Matrix<const T, Device::CPU>& mat_hh) {
+    dlaf::internal::silenceUnusedWarningFor(band_size, mat_e, mat_hh);
+    DLAF_UNIMPLEMENTED(Backend::GPU);
+  }
+};
 }

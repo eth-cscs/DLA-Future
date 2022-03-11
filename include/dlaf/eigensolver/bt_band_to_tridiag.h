@@ -77,4 +77,12 @@ DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_LOCAL_ETI(extern, Backend::MC, Device::C
 DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_LOCAL_ETI(extern, Backend::MC, Device::CPU, double)
 DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_LOCAL_ETI(extern, Backend::MC, Device::CPU, std::complex<float>)
 DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_LOCAL_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
+
+#ifdef DLAF_WITH_CUDA
+DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_LOCAL_ETI(extern, Backend::GPU, Device::GPU, float)
+DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_LOCAL_ETI(extern, Backend::GPU, Device::GPU, double)
+DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_LOCAL_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)
+DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_LOCAL_ETI(extern, Backend::GPU, Device::GPU,
+                                                  std::complex<double>)
+#endif
 }

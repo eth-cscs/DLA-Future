@@ -36,8 +36,7 @@ namespace internal {
 template <class T>
 auto allReduce(const common::PromiseGuard<comm::Communicator>& pcomm, MPI_Op reduce_op,
                common::internal::ContiguousBufferHolder<const T> cont_buf_in,
-               common::internal::ContiguousBufferHolder<T> cont_buf_out,
-               const matrix::Tile<const T, Device::CPU>&, MPI_Request* req) {
+               common::internal::ContiguousBufferHolder<T> cont_buf_out, MPI_Request* req) {
   auto& comm = pcomm.ref();
   auto msg_in = comm::make_message(cont_buf_in.descriptor);
   auto msg_out = comm::make_message(cont_buf_out.descriptor);
@@ -68,18 +67,19 @@ void scheduleAllReduce(const comm::Executor& ex,
                        pika::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
                        pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_in,
                        pika::future<matrix::Tile<T, Device::CPU>> tile_out) {
-  using pika::dataflow;
-  using pika::execution::experimental::ensure_started;
   using pika::execution::experimental::keep_future;
-  using pika::execution::experimental::make_future;
+  using pika::execution::experimental::let_value;
   using pika::execution::experimental::start_detached;
+  using pika::execution::experimental::transfer;
+  using pika::execution::experimental::when_all;
   using pika::mpi::experimental::transform_mpi;
   using pika::threads::thread_priority;
   using pika::unwrapping;
 
   using common::internal::ContiguousBufferHolder;
   using common::internal::copyBack_o;
-  using common::internal::makeItContiguous_o;
+  using common::internal::makeItContiguous;
+  using dlaf::internal::getBackendScheduler;
   using dlaf::internal::Policy;
   using dlaf::internal::transform;
   using dlaf::internal::whenAllLift;
@@ -94,43 +94,37 @@ void scheduleAllReduce(const comm::Executor& ex,
   // TILE_O ---> makeContiguous --+--> CONT_BUF_O --+                              |
   //                              |                                                |
   //                              +----------------------> TILE_O -----------------+-> copyBack
-
-  auto ex_copy = getHpExecutor<Backend::MC>();
-
-  pika::future<ContiguousBufferHolder<const T>> cont_buf_in =
-      keep_future(tile_in) | transform(Policy<Backend::MC>(), makeItContiguous_o) | make_future();
-
-  pika::future<ContiguousBufferHolder<T>> cont_buf_out;
-  {
-    // TODO: Need something similar to split_future, but not quite. Can tile_out
-    // be passed differently? Can we use a shared_future instead?
-    auto wrapped = getUnwrapRetValAndArgs(
-        dataflow(ex_copy, unwrapExtendTiles(makeItContiguous_o), std::move(tile_out)));
-    cont_buf_out = std::move(wrapped.first);
-    tile_out = std::move(pika::get<0>(wrapped.second));
-  }
-
-  cont_buf_out = whenAllLift(std::move(pcomm), reduce_op, std::move(cont_buf_in),
-                             std::move(cont_buf_out), keep_future(std::move(tile_in))) |
-                 transform_mpi(pika::unwrapping(internal::allReduce_o)) | make_future();
-
-  when_all(std::move(cont_buf_out), std::move(tile_out)) |
-      transform(Policy<Backend::MC>(thread_priority::high), copyBack_o) | start_detached();
+  when_all(keep_future(std::move(tile_in)), std::move(tile_out)) |
+      transfer(getBackendScheduler<Backend::MC>()) |
+      let_value(unwrapping(
+          [pcomm = std::move(pcomm), reduce_op](const matrix::Tile<const T, Device::CPU>& tile_in,
+                                                matrix::Tile<T, Device::CPU>& tile_out) mutable {
+            return whenAllLift(std::move(pcomm), reduce_op, makeItContiguous(tile_in),
+                               makeItContiguous(tile_out)) |
+                   transform_mpi(unwrapping(internal::allReduce_o)) |
+                   transform(Policy<Backend::MC>(thread_priority::high),
+                             std::bind(copyBack_o, std::placeholders::_1, std::cref(tile_out)));
+          })) |
+      start_detached();
 }
 
 template <class T>
 pika::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
     const comm::Executor& ex, pika::future<common::PromiseGuard<comm::Communicator>> pcomm,
     MPI_Op reduce_op, pika::future<matrix::Tile<T, Device::CPU>> tile) {
-  using pika::dataflow;
+  using pika::execution::experimental::let_value;
   using pika::execution::experimental::make_future;
+  using pika::execution::experimental::then;
+  using pika::execution::experimental::transfer;
   using pika::mpi::experimental::transform_mpi;
   using pika::unwrapping;
 
   using common::internal::copyBack_o;
-  using common::internal::makeItContiguous_o;
+  using common::internal::makeItContiguous;
+  using dlaf::internal::getBackendScheduler;
+  using dlaf::internal::Policy;
+  using dlaf::internal::transform;
   using dlaf::internal::whenAllLift;
-  using matrix::unwrapExtendTiles;
 
   // Note:
   //
@@ -141,24 +135,15 @@ pika::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
   //
   // The last TILE after the copyBack is returned so that other task can be attached to it,
   // AFTER the asynchronous MPI_AllReduce has completed
-
-  auto ex_copy = getHpExecutor<Backend::MC>();
-
-  pika::future<common::internal::ContiguousBufferHolder<T>> cont_buf;
-  {
-    auto wrapped = getUnwrapRetValAndArgs(
-        dataflow(ex_copy, unwrapExtendTiles(makeItContiguous_o), std::move(tile)));
-    cont_buf = std::move(wrapped.first);
-    tile = std::move(pika::get<0>(wrapped.second));
-  }
-
-  cont_buf = whenAllLift(std::move(pcomm), reduce_op, std::move(cont_buf)) |
-             transform_mpi(pika::unwrapping(internal::allReduceInPlace_o)) | make_future();
-
-  // Note:
-  // This extracts the tile given as argument to copyBack, not the return value.
-  return pika::get<1>(pika::split_future(
-      dataflow(ex_copy, matrix::unwrapExtendTiles(copyBack_o), std::move(cont_buf), std::move(tile))));
+  return std::move(tile) | transfer(getBackendScheduler<Backend::MC>()) |
+         let_value([pcomm = std::move(pcomm), reduce_op](matrix::Tile<T, Device::CPU>& tile) mutable {
+           return whenAllLift(std::move(pcomm), reduce_op, makeItContiguous(tile)) |
+                  transform_mpi(unwrapping(internal::allReduceInPlace_o)) |
+                  transform(Policy<Backend::MC>(),
+                            std::bind(copyBack_o, std::placeholders::_1, std::cref(tile))) |
+                  then([&tile]() { return std::move(tile); });
+         }) |
+         make_future();
 }
 }
 }

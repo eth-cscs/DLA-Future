@@ -22,6 +22,7 @@
 #include "dlaf/executors.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/tile.h"
+#include "dlaf/sender/keep_if_shared_future.h"
 #include "dlaf/sender/partial_transform.h"
 #include "dlaf/sender/policy.h"
 #include "dlaf/sender/transform.h"
@@ -181,11 +182,10 @@ DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(copy, internal::copy_o)
 template <Device Destination>
 struct Duplicate {
   template <typename T, Device Source, typename... Ts>
-  Tile<T, Destination> operator()(const Tile<T, Source>& source, Ts&&... ts) {
+  Tile<T, Destination> operator()(const Tile<const T, Source>& source, Ts&&... ts) {
     auto source_size = source.size();
-    dlaf::memory::MemoryView<std::remove_const_t<T>, Destination> mem_view(source_size.linear_size());
-    Tile<std::remove_const_t<T>, Destination> destination(source_size, std::move(mem_view),
-                                                          source_size.rows());
+    dlaf::memory::MemoryView<T, Destination> mem_view(source_size.linear_size());
+    Tile<T, Destination> destination(source_size, std::move(mem_view), source_size.rows());
     internal::copy(source, destination, std::forward<decltype(ts)>(ts)...);
     return Tile<T, Destination>(std::move(destination));
   }
@@ -231,9 +231,12 @@ template <Device Destination, class T, Device Source, class U, template <class> 
 void copyIfNeeded(FutureS<Tile<U, Source>> tile_from, FutureD<Tile<T, Destination>> tile_to,
                   pika::future<void> wait_for_me = pika::make_ready_future<void>()) {
   if constexpr (Destination != Source)
-    pika::dataflow(dlaf::getCopyExecutor<Source, Destination>(),
-                   matrix::unwrapExtendTiles(internal::copy_o), wait_for_me, std::move(tile_from),
-                   std::move(tile_to));
+    pika::execution::experimental::when_all(std::move(wait_for_me),
+                                            dlaf::internal::keepIfSharedFuture(std::move(tile_from)),
+                                            dlaf::internal::keepIfSharedFuture(std::move(tile_to))) |
+        dlaf::matrix::copy(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>(
+            pika::threads::thread_priority::normal)) |
+        pika::execution::experimental::start_detached();
 }
 }
 }

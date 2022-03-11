@@ -37,6 +37,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+// dlaf-multi-license-check
+
 #include <cstdio>
 
 #include <gtest/gtest.h>

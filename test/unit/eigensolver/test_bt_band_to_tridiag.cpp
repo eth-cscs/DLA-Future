@@ -6,12 +6,14 @@
 //
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
+//
 
 #include "dlaf/eigensolver/bt_band_to_tridiag.h"
 
 #include <gtest/gtest.h>
 
 #include "dlaf/eigensolver/band_to_tridiag.h"  // for nrSweeps/nrStepsForSweep
+#include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/util_matrix.h"
 
@@ -52,9 +54,9 @@ struct calculateTau {
 };
 
 template <class T>
-void computeTaus(const SizeType n, const SizeType k, matrix::Tile<T, Device::CPU> tile) {
+void computeTaus(const SizeType max_refl_size, const SizeType k, matrix::Tile<T, Device::CPU> tile) {
   for (SizeType j = 0; j < k; ++j) {
-    const SizeType size = std::min(n - j, tile.size().rows() - 1);
+    const SizeType size = std::min(max_refl_size, tile.size().rows());
     // Note: calculateTau implicitly considers the first component equal to 1
     DLAF_ASSERT(size > 0, size);
     const auto tau = calculateTau::call(tile.ptr({1, j}), size - 1);
@@ -63,35 +65,46 @@ void computeTaus(const SizeType n, const SizeType k, matrix::Tile<T, Device::CPU
 }
 
 struct config_t {
-  const SizeType m, n, mb, nb;
+  const SizeType m, n, mb, nb, b = mb;
 };
 
 std::vector<config_t> configs{
-    {0, 0, 4, 4}, {12, 12, 4, 4}, {12, 12, 4, 3}, {20, 30, 5, 5}, {20, 30, 5, 6},
-    {8, 8, 3, 3}, {10, 10, 3, 3}, {12, 12, 5, 5}, {12, 30, 5, 6},
+    {0, 0, 4, 4},                                  // empty
+    {1, 1, 4, 4},   {2, 2, 4, 4},   {2, 2, 1, 1},  // edge-cases
+    {12, 12, 4, 4}, {12, 12, 4, 3}, {20, 30, 5, 5}, {20, 30, 5, 6},
+    {8, 8, 3, 3},   {10, 10, 3, 3}, {12, 12, 5, 5}, {12, 30, 5, 6},
 };
 
 template <class T>
-void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb) {
+void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, const SizeType b) {
   Matrix<T, Device::CPU> mat_e({m, n}, {mb, nb});
   set_random(mat_e);
   auto mat_e_local = allGather(blas::Uplo::General, mat_e);
 
-  Matrix<const T, Device::CPU> mat_hh = [m, mb]() {
+  Matrix<const T, Device::CPU> mat_hh = [m, mb, b]() {
     Matrix<T, Device::CPU> mat_hh({m, m}, {mb, mb});
     set_random(mat_hh);
 
-    const auto m = mat_hh.distribution().localNrTiles().cols();
-    for (SizeType j = 0; j < m; ++j) {
-      for (SizeType i = j; i < m; ++i) {
-        const bool affectsTwoRows = i < m - 1;
-        const SizeType k =
-            affectsTwoRows ? mat_hh.tileSize({i, j}).cols() : mat_hh.tileSize({i, j}).rows() - 2;
-        const SizeType n = mat_hh.tileSize({i, j}).rows() - 1 +
-                           (affectsTwoRows ? mat_hh.tileSize({i + 1, j}).rows() : 0);
+    const auto& dist = mat_hh.distribution();
+
+    for (SizeType j = 0; j < mat_hh.size().cols(); j += b) {
+      for (SizeType i = j; i < mat_hh.size().rows(); i += b) {
+        const GlobalElementIndex ij(i, j);
+
+        const TileElementIndex sub_origin = dist.tileElementIndex(ij);
+        const TileElementSize sub_size(std::min(b, mat_hh.size().rows() - ij.row()),
+                                       std::min(b, mat_hh.size().cols() - ij.col()));
+
+        const SizeType n = std::min(2 * b - 1, mat_hh.size().rows() - ij.row() - 1);
+        const SizeType k = std::min(n - 1, sub_size.cols());
+
         if (k <= 0)
           continue;
-        pika::dataflow(pika::unwrapping(computeTaus<T>), n, k, mat_hh(LocalTileIndex(i, j)));
+
+        const GlobalTileIndex ij_tile = dist.globalTileIndex(ij);
+        auto tile_v = mat_hh(ij_tile);
+        pika::dataflow(pika::unwrapping(computeTaus<T>), b, k,
+                       splitTile(tile_v, {sub_origin, sub_size}));
       }
     }
 
@@ -100,7 +113,7 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb) {
 
   MatrixLocal<T> mat_hh_local = allGather(blas::Uplo::Lower, mat_hh);
 
-  eigensolver::backTransformationBandToTridiag<Backend::MC>(mat_e, mat_hh);
+  eigensolver::backTransformationBandToTridiag<Backend::MC>(b, mat_e, mat_hh);
 
   if (m == 0 || n == 0)
     return;
@@ -108,12 +121,12 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb) {
   using eigensolver::internal::nrSweeps;
   using eigensolver::internal::nrStepsForSweep;
   for (SizeType sweep = nrSweeps<T>(m) - 1; sweep >= 0; --sweep) {
-    for (SizeType step = nrStepsForSweep(sweep, m, mb) - 1; step >= 0; --step) {
+    for (SizeType step = nrStepsForSweep(sweep, m, b) - 1; step >= 0; --step) {
       const SizeType j = sweep;
-      const SizeType i = j + 1 + step * mb;
+      const SizeType i = j + 1 + step * b;
 
-      const SizeType size = std::min(mb, m - i);
-      const SizeType i_v = (i - 1) / mb * mb;
+      const SizeType size = std::min(b, m - i);
+      const SizeType i_v = (i - 1) / b * b;
 
       T& v_head = *mat_hh_local.ptr({i_v, j});
       const T tau = v_head;
@@ -135,6 +148,15 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb) {
 }
 
 TYPED_TEST(BacktransformationT2BTest, CorrectnessLocal) {
-  for (const auto& [m, n, mb, nb] : configs)
-    testBacktransformation<TypeParam>(m, n, mb, nb);
+  for (const auto& [m, n, mb, nb, b] : configs)
+    testBacktransformation<TypeParam>(m, n, mb, nb, b);
+}
+
+std::vector<config_t> configs_subband{
+    {0, 12, 4, 4, 2}, {4, 4, 4, 4, 2}, {12, 12, 4, 4, 2}, {12, 25, 6, 3, 2}, {11, 13, 6, 4, 2},
+};
+
+TYPED_TEST(BacktransformationT2BTest, CorrectnessLocalSubBand) {
+  for (const auto& [m, n, mb, nb, b] : configs_subband)
+    testBacktransformation<TypeParam>(m, n, mb, nb, b);
 }

@@ -1,13 +1,20 @@
-#include "dlaf/eigensolver/reduction_to_band/mc.h"
+//
+// Distributed Linear Algebra with Future (DLAF)
+//
+// Copyright (c) 2018-2022, ETH Zurich
+// All rights reserved.
+//
+// Please, refer to the LICENSE file in the root directory.
+// SPDX-License-Identifier: BSD-3-Clause
+//
 
-namespace dlaf {
-namespace eigensolver {
-namespace internal {
+#include "dlaf/eigensolver/reduction_to_band.h"
 
-DLAF_EIGENSOLVER_RED_TO_BAND_MC_ETI(, float)
-DLAF_EIGENSOLVER_RED_TO_BAND_MC_ETI(, double)
-DLAF_EIGENSOLVER_RED_TO_BAND_MC_ETI(, std::complex<float>)
-DLAF_EIGENSOLVER_RED_TO_BAND_MC_ETI(, std::complex<double>)
-}
-}
+namespace dlaf::eigensolver {
+
+DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(, Backend::MC, Device::CPU, float)
+DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(, Backend::MC, Device::CPU, double)
+DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(, Backend::MC, Device::CPU, std::complex<float>)
+DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(, Backend::MC, Device::CPU, std::complex<double>)
+
 }

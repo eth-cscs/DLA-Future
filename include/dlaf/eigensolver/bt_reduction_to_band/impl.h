@@ -33,6 +33,10 @@
 #include "dlaf/matrix/views.h"
 #include "dlaf/util_matrix.h"
 
+#ifdef DLAF_WITH_CUDA
+#include <cuda_runtime.h>
+#endif
+
 namespace dlaf::eigensolver::internal {
 
 namespace bt_red_band {
@@ -44,12 +48,25 @@ template <>
 struct Helpers<Backend::MC> {
   template <class T>
   static void copyAndSetHHUpperTiles(SizeType j_diag, const matrix::Tile<const T, Device::CPU>& src,
-                                     matrix::Tile<T, Device::CPU>&& dst) {
+                                     const matrix::Tile<T, Device::CPU>& dst) {
     matrix::internal::copy_o(src, dst);
     lapack::laset(blas::Uplo::Upper, dst.size().rows(), dst.size().cols() - j_diag, T{0.}, T{1.},
                   dst.ptr({0, j_diag}), dst.ld());
   }
 };
+
+#ifdef DLAF_WITH_CUDA
+template <>
+struct Helpers<Backend::GPU> {
+  template <class T>
+  static void copyAndSetHHUpperTiles(SizeType j_diag, const matrix::Tile<const T, Device::GPU>& src,
+                                     const matrix::Tile<T, Device::GPU>& dst, cudaStream_t stream) {
+    matrix::internal::copy_o(src, dst, stream);
+    gpulapack::laset(CUBLAS_FILL_MODE_UPPER, dst.size().rows(), dst.size().cols() - j_diag, T{0.}, T{1.},
+                     dst.ptr({0, j_diag}), dst.ld(), stream);
+  }
+};
+#endif
 
 template <Backend backend, typename SrcSender, typename DstSender>
 void copyAndSetHHUpperTiles(SizeType j_diag, SrcSender&& src, DstSender&& dst) {

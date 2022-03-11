@@ -7,6 +7,9 @@
 #
 # Author: Teodor Nikolov (tnikolov@cscs.ch)
 #
+
+# dlaf-no-license-check
+
 #[=======================================================================[.rst:
 FindMKL
 -------

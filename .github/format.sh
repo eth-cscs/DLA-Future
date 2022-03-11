@@ -1,5 +1,15 @@
 #! /usr/bin/env bash
 
+#
+# Distributed Linear Algebra with Future (DLAF)
+#
+# Copyright (c) 2018-2022, ETH Zurich
+# All rights reserved.
+#
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+
 FILES_CHANGED=`git diff --name-only origin/master`
 TAB_FOUND=0
 
@@ -11,7 +21,7 @@ do
   fi
 
   case $FILE in
-    *.cpp|*.h|*.hpp|*.tpp|*.ipp|*.cu)
+    *.cpp|*.h|*.h.in|*.tpp|*.cu)
       clang-format-10 -i --style=file $FILE
       # The following is needed for regions in which clang-format is disabled.
       # Note: clang-format removes trailing spaces even in disabled regions.

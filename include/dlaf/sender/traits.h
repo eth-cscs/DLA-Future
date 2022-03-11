@@ -36,6 +36,11 @@ struct SenderSingleValueTypeImpl<TypeList<TypeList<pika::shared_future<T>>>> {
   using type = T;
 };
 
+template <typename T>
+struct SenderSingleValueTypeImpl<TypeList<TypeList<std::reference_wrapper<T>>>> {
+  using type = T;
+};
+
 // The type sent by Sender, if Sender sends exactly one type.
 template <typename Sender>
 using SenderSingleValueType =
@@ -46,4 +51,13 @@ using SenderSingleValueType =
 // exists and Sender sends exactly one type.
 template <typename Sender>
 using SenderElementType = typename SenderSingleValueType<Sender>::ElementType;
+
+template <typename T>
+struct IsSharedFuture : std::false_type {};
+
+template <typename U>
+struct IsSharedFuture<pika::shared_future<U>> : std::true_type {};
+
+template <typename T>
+inline constexpr bool is_shared_future_v = IsSharedFuture<std::decay_t<T>>::value;
 }

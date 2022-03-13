@@ -67,6 +67,14 @@ void cuppensDecomposition(const matrix::Tile<T, Device::CPU>& top,
 DLAF_MAKE_CALLABLE_OBJECT(cuppensDecomposition);
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(cuppensDecomposition, cuppensDecomposition_o)
 
+// Calculates the combined problem size of the two subproblems that are being merged
+inline SizeType combinedProblemSize(SizeType i_begin, SizeType i_end,
+                                    const matrix::Distribution& distr) {
+  SizeType nb = distr.blockSize().rows();
+  SizeType nbr = distr.tileSize(GlobalTileIndex(i_end, 0)).rows();
+  return (i_end - i_begin) * nb + nbr;
+}
+
 // Copies and normalizes a row of the `tile` into the column vector tile `col`
 //
 template <class T>
@@ -200,15 +208,14 @@ std::vector<pika::shared_future<matrix::Tile<const T, Device::CPU>>> collectVect
 //
 // NOTE: `d_tiles` should be `const T` but there seems to be a compile-time issue
 template <class T>
-void sortAscendingBasedOnDiagonal(const std::vector<matrix::Tile<T, Device::CPU>>& d_tiles,
-                                  const std::vector<matrix::Tile<SizeType, Device::CPU>>& perm_tiles) {
-  SizeType len =
-      (to_SizeType(d_tiles.size()) - 1) * d_tiles.front().size().rows() + d_tiles.back().size().rows();
+void sortAscendingBasedOnDiagonal(
+    SizeType n, std::vector<pika::shared_future<matrix::Tile<const T, Device::CPU>>> d_tiles,
+    std::vector<pika::future<matrix::Tile<SizeType, Device::CPU>>> perm_tiles) {
   TileElementIndex zero_idx(0, 0);
-  const T* d_ptr = d_tiles[0].ptr(zero_idx);
-  SizeType* perm_ptr = perm_tiles[0].ptr(zero_idx);
+  const T* d_ptr = d_tiles[0].get().ptr(zero_idx);
+  SizeType* perm_ptr = perm_tiles[0].get().ptr(zero_idx);
 
-  pika::sort(pika::execution::par, perm_ptr, perm_ptr + len,
+  pika::sort(pika::execution::par, perm_ptr, perm_ptr + n,
              [d_ptr](SizeType i1, SizeType i2) { return d_ptr[i1] < d_ptr[i2]; });
 }
 
@@ -277,6 +284,10 @@ void updateVectorColumnTypesBasedOnZvecNearlyZero(SizeType i_begin, SizeType i_e
 
 template <class T>
 struct GivensRotation {
+  // GivensRotation() = default;
+  // GivensRotation(const GivensRotation&) = default;
+  // GivensRotation& operator=(const GivensRotation&) = default;
+  // GivensRotation(SizeType i, SizeType j, T c, T s) : i{i}, j{j}, c{c}, s{s} {}
   SizeType i;  // the first column index
   SizeType j;  // the second column index
   T c;         // cosine
@@ -313,31 +324,38 @@ void updateDiagValuesWithGivensCoeff(T c, T s, T& d1, T& d2) {
 //
 // Returns an array of Given's rotations used to update the colunmns of the eigenvector matrix Q
 template <class T>
-std::vector<GivensRotation<T>> applyDeflationWithGivensRotation(T tol, SizeType len, T* dptr, T* zptr,
-                                                                ColType* coltyps) {
+std::vector<GivensRotation<T>> applyDeflationWithGivensRotation(T tol, SizeType len, T* dptr,
+                                                                const SizeType* i_ptr, T* zptr,
+                                                                ColType* c_ptr) {
   std::vector<GivensRotation<T>> rots;
-  rots.reserve(len);
+  rots.reserve(to_sizet(len));
 
   SizeType i1 = 0;  // index of 1st element in the Givens rotation
+
+  // Iterate over the indices of the sorted elements in pair (i1, i2) where i1 < i2 for every iteration
   for (SizeType i2 = 1; i2 < len; ++i2) {
-    // Note: i1 < i2 for every iteration
-    T& d1 = dptr[i1];
-    T& d2 = dptr[i2];
-    T& z1 = zptr[i1];
-    T& z2 = zptr[i2];
-    ColType& c1 = coltyps[i1];
-    ColType& c2 = coltyps[i2];
+    // Indices of elements sorted in ascending order
+    SizeType i1s = i_ptr[i1];
+    SizeType i2s = i_ptr[i2];
+
+    T& d1 = dptr[i1s];
+    T& d2 = dptr[i2s];
+    T& z1 = zptr[i1s];
+    T& z2 = zptr[i2s];
+    ColType& c1 = c_ptr[i1s];
+    ColType& c2 = c_ptr[i2s];
 
     // if z2 = 0 go to the next iteration
     if (c1 != ColType::Deflated && c2 != ColType::Deflated &&
         diagonalValuesNearlyEqual(tol, d1, d2, z1, z2)) {
       // if z1 != 0 and z2 != 0 and d1 = d2 apply Givens rotation
       T c, s;
-      blas::rotg(z1, z2, c, s);
+      blas::rotg(&z1, &z2, &c, &s);
       updateDiagValuesWithGivensCoeff(c, s, d1, d2);
-      rots.push_back(GivensRotation<T>{i1, i2, c, s});
-      // Set the the `i1` column as "Dense" if the `i2` column has opposite non-zero structure (i.e if
-      // one comes from Q1 and the other from Q2 or vice-versa)
+
+      rots.push_back(GivensRotation<T>{i1s, i2s, c, s});
+      //  Set the the `i1` column as "Dense" if the `i2` column has opposite non-zero structure (i.e if
+      //  one comes from Q1 and the other from Q2 or vice-versa)
       if ((c1 == ColType::UpperHalf && c2 == ColType::LowerHalf) ||
           (c1 == ColType::LowerHalf && c2 == ColType::UpperHalf)) {
         c1 = ColType::Dense;
@@ -352,6 +370,53 @@ std::vector<GivensRotation<T>> applyDeflationWithGivensRotation(T tol, SizeType 
 
   return rots;
 }
+
+template <class T>
+std::vector<GivensRotation<T>> applyGivensDeflation(
+    SizeType n, pika::shared_future<T> tol,
+    std::vector<pika::future<matrix::Tile<T, Device::CPU>>> d_tiles,
+    std::vector<pika::shared_future<matrix::Tile<const SizeType, Device::CPU>>> perm_d_tiles,
+    std::vector<pika::future<matrix::Tile<T, Device::CPU>>> z_tiles,
+    std::vector<pika::future<matrix::Tile<ColType, Device::CPU>>> coltypes_tiles) {
+  TileElementIndex zero_idx(0, 0);
+  T* d_ptr = d_tiles[0].get().ptr(zero_idx);
+  T* z_ptr = z_tiles[0].get().ptr(zero_idx);
+  ColType* c_ptr = coltypes_tiles[0].get().ptr(zero_idx);
+  const SizeType* i_ptr = perm_d_tiles[0].get().ptr(zero_idx);
+
+  return applyDeflationWithGivensRotation(tol.get(), n, d_ptr, i_ptr, z_ptr, c_ptr);
+}
+
+struct QLens {
+  SizeType num_uphalf;
+  SizeType num_dense;
+  SizeType num_lowhalf;
+  SizeType num_deflated;
+};
+
+// Partitions `p_ptr` based on a `ctype` in `c_ptr` array.
+//
+// Returns the number of elements in the second partition.
+inline SizeType partitionColType(SizeType len, ColType ctype, const ColType* c_ptr, SizeType* i_ptr) {
+  auto it = pika::partition(pika::execution::par, i_ptr, i_ptr + len,
+                            [ctype, c_ptr](SizeType i) { return ctype != c_ptr[i]; });
+  return len - std::distance(i_ptr, it);
+}
+
+// Partition `coltypes` to get the indices of the matrix-multiplication form
+inline QLens setMatrixMultiplicationIndex(
+    SizeType n, std::vector<pika::shared_future<matrix::Tile<const ColType, Device::CPU>>> c_tiles,
+    std::vector<pika::future<matrix::Tile<SizeType, Device::CPU>>> perm_q_tiles) {
+  TileElementIndex zero_idx(0, 0);
+  const ColType* c_ptr = c_tiles[0].get().ptr(zero_idx);
+  SizeType* i_ptr = perm_q_tiles[0].get().ptr(zero_idx);
+  QLens ql;
+  ql.num_deflated = partitionColType(n, ColType::Deflated, c_ptr, i_ptr);
+  ql.num_lowhalf = partitionColType(n - ql.num_deflated, ColType::LowerHalf, c_ptr, i_ptr);
+  ql.num_dense = partitionColType(n - ql.num_deflated - ql.num_lowhalf, ColType::Dense, c_ptr, i_ptr);
+  ql.num_uphalf = n - ql.num_deflated - ql.num_lowhalf - ql.num_dense;
+  return ql;
+};
 
 template <class T>
 void TridiagSolver<Backend::MC, Device::CPU, T>::call(
@@ -377,8 +442,8 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(
   SizeType i_midpoint = (i_begin + i_end) / 2;
 
   // Cuppen's tridiagonal decomposition
-  dlaf::internal::whenAllLift(mat_trd.readwrite_sender(LocalTileIndex(i_midpoint, 0)),
-                              mat_trd.readwrite_sender(LocalTileIndex(i_midpoint + 1, 0))) |
+  whenAllLift(mat_trd.readwrite_sender(LocalTileIndex(i_midpoint, 0)),
+              mat_trd.readwrite_sender(LocalTileIndex(i_midpoint + 1, 0))) |
       cuppensDecomposition(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
 
   // Top subproblem
@@ -408,6 +473,8 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(
   // Initialize coltypes
   initColTypes(i_begin, i_midpoint, i_end, coltypes);
 
+  SizeType n = combinedProblemSize(i_begin, i_end, mat_ev.distribution());
+
   // Mark columns as deflated if corresponding rank-1 update vector elements are nearly zero
   updateVectorColumnTypesBasedOnZvecNearlyZero(i_begin, i_end, tol_fut, rho_fut, z, coltypes);
 
@@ -415,12 +482,23 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(
   //
   // NOTE: `collectVectorReadFuturesOfTiles` should be used for `d_tiles` but there seems to be a
   //       compile-time issue
-  pika::dataflow(pika::unwrapping(sortAscendingBasedOnDiagonal<T>),
-                 collectVectorReadWriteFuturesOfTiles(i_begin, i_end, d),
+  pika::dataflow(sortAscendingBasedOnDiagonal<T>, n, collectVectorReadFuturesOfTiles(i_begin, i_end, d),
                  collectVectorReadWriteFuturesOfTiles(i_begin, i_end, perm_d));
 
-  // The number of non-zero entries in `z`
-  pika::future<SizeType> k_fut;
+  // Apply deflation with Givens rotations on `d`, `z` and `coltypes` using the sorted index `perm_d` and
+  // return metadata used for applying the rotations on `Q`
+  pika::future<std::vector<GivensRotation<T>>> rots_fut =
+      pika::dataflow(applyGivensDeflation<T>, n, tol_fut,
+                     collectVectorReadWriteFuturesOfTiles(i_begin, i_end, d),
+                     collectVectorReadFuturesOfTiles(i_begin, i_end, perm_d),
+                     collectVectorReadWriteFuturesOfTiles(i_begin, i_end, z),
+                     collectVectorReadWriteFuturesOfTiles(i_begin, i_end, coltypes));
+
+  // `coltypes`
+  pika::future<QLens> qlens_fut =
+      pika::dataflow(setMatrixMultiplicationIndex, n,
+                     collectVectorReadFuturesOfTiles(i_begin, i_end, coltypes),
+                     collectVectorReadWriteFuturesOfTiles(i_begin, i_end, perm_q));
 
   // Find evals of D + rzz^T with laed4 (root solver)
   // Form evecs

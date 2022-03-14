@@ -217,12 +217,10 @@ void scheduleReduceSend(comm::IndexT_MPI rank_root,
   using dlaf::internal::Policy;
   using dlaf::matrix::internal::CopyBackend;
 
-  auto tile_cpu = dlaf::internal::transform(
-      Policy<CopyBackend<D, Device::CPU>::value>(pika::threads::thread_priority::high),
-      [](const matrix::Tile<const T, Device::GPU>& tile_gpu, auto... args) {
-        return dlaf::matrix::Duplicate<Device::CPU>{}(tile_gpu, args...);
-      },
-      keep_future(std::move(tile)));
+  auto tile_cpu =
+      dlaf::internal::transform(Policy<CopyBackend<D, Device::CPU>::value>(
+                                    pika::threads::thread_priority::high),
+                                dlaf::matrix::Duplicate<Device::CPU>{}, keep_future(std::move(tile)));
 
   internal::senderReduceSend(rank_root, std::move(pcomm), reduce_op, std::move(tile_cpu)) |
       start_detached();

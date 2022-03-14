@@ -174,34 +174,42 @@ T calcTolerance(T dmax, T zmax) {
   return 8 * std::numeric_limits<T>::epsilon() * std::max(dmax, zmax);
 }
 
-template <class T>
-std::vector<pika::future<matrix::Tile<T, Device::CPU>>> collectVectorReadWriteFuturesOfTiles(
-    SizeType i_begin, SizeType i_end, Matrix<T, Device::CPU>& vec) {
-  std::size_t num_tiles = to_sizet(i_end - i_begin + 1);
-  std::vector<pika::future<matrix::Tile<T, Device::CPU>>> tiles;
+// Note the range is inclusive: [begin, end]
+//
+// The tiles are returned in column major order
+template <class FutureTile, class T>
+std::vector<FutureTile> collectTiles(GlobalTileIndex begin, GlobalTileIndex end,
+                                     Matrix<T, Device::CPU>& mat) {
+  std::size_t num_tiles = to_sizet(end.row() - begin.row() + 1) * to_sizet(end.col() - begin.col() + 1);
+  std::vector<FutureTile> tiles;
   tiles.reserve(num_tiles);
 
-  for (SizeType i = i_begin; i <= i_end; ++i) {
-    GlobalTileIndex tile_idx(i, 0);
-    tiles.push_back(vec(tile_idx));
+  for (SizeType j = begin.col(); j <= end.col(); ++j) {
+    for (SizeType i = begin.row(); i <= end.row(); ++i) {
+      GlobalTileIndex idx(i, j);
+      if constexpr (std::is_const<T>::value) {
+        tiles.push_back(mat.read(idx));
+      }
+      else {
+        tiles.push_back(mat(idx));
+      }
+    }
   }
-
   return tiles;
 }
 
 template <class T>
-std::vector<pika::shared_future<matrix::Tile<const T, Device::CPU>>> collectVectorReadFuturesOfTiles(
-    SizeType i_begin, SizeType i_end, Matrix<const T, Device::CPU>& vec) {
-  std::size_t num_tiles = to_sizet(i_end - i_begin + 1);
-  std::vector<pika::shared_future<matrix::Tile<const T, Device::CPU>>> tiles;
-  tiles.reserve(num_tiles);
+std::vector<pika::future<matrix::Tile<T, Device::CPU>>> collectReadWriteTiles(
+    GlobalTileIndex begin, GlobalTileIndex end, Matrix<T, Device::CPU>& mat) {
+  using FutureTileType = pika::future<matrix::Tile<T, Device::CPU>>;
+  return collectTiles<FutureTileType>(begin, end, mat);
+}
 
-  for (SizeType i = i_begin; i <= i_end; ++i) {
-    GlobalTileIndex tile_idx(i, 0);
-    tiles.push_back(vec.read(tile_idx));
-  }
-
-  return tiles;
+template <class T>
+std::vector<pika::shared_future<matrix::Tile<const T, Device::CPU>>> collectReadTiles(
+    GlobalTileIndex begin, GlobalTileIndex end, Matrix<const T, Device::CPU>& mat) {
+  using FutureTileType = pika::shared_future<matrix::Tile<const T, Device::CPU>>;
+  return collectTiles<FutureTileType, const T>(begin, end, mat);
 }
 
 // Save the index of the elements (perm_d) in ascending order of the diagonal (d)
@@ -418,6 +426,44 @@ inline QLens setMatrixMultiplicationIndex(
   return ql;
 };
 
+// Assumption: the memory layout of the matrix from which the tiles are coming is column major.
+//
+// `tiles`: The tiles of the matrix between tile indices `(i_begin, i_begin)` and `(i_end, i_end)` that
+// are potentially affected by the Givens rotations. `n` : column size
+//
+// Note: a column index may be paired to more than one other index, this may lead to a race condition if
+//       parallelized trivially. Current implementation is serial.
+//
+template <class T>
+void applyGivensRotationsToMatrixColumns(std::vector<GivensRotation<T>> rots, SizeType n,
+                                         SizeType ncol_tiles, const matrix::Distribution& distr,
+                                         std::vector<matrix::Tile<T, Device::CPU>> tiles) {
+  for (const GivensRotation<T>& rot : rots) {
+    // Get the index of the tile that has column `rot.i`
+    SizeType i_tile = distr.globalTileFromGlobalElement<Coord::Col>(rot.i);
+    // Get the index of the `rot.i` column within the tile
+    SizeType i_el = distr.tileElementFromGlobalElement<Coord::Col>(rot.i);
+    // Get the pointer to the first element of the `rot.i` column
+    //
+    // Note: this works because `tiles` come from a matrix with column-major layout
+    T* x = tiles[to_sizet(i_tile * ncol_tiles)].ptr(TileElementIndex(0, i_el));
+
+    // Get the index of the tile that has column `rot.j`
+    SizeType j_tile = distr.globalTileFromGlobalElement<Coord::Col>(rot.j);
+    // Get the index of the `rot.j` column within the tile
+    SizeType j_el = distr.tileElementFromGlobalElement<Coord::Col>(rot.j);
+    // Get the pointer to the first element of the `rot.j` column
+    //
+    // Note: this works because `tiles` come from a matrix with column-major layout
+    T* y = tiles[to_sizet(j_tile * ncol_tiles)].ptr(TileElementIndex(0, j_el));
+
+    DLAF_ASSERT(i_el != j_el, "");
+
+    // Apply Givens rotations
+    blas::rot(n, x, 1, y, 1, rot.c, rot.s);
+  }
+}
+
 template <class T>
 void TridiagSolver<Backend::MC, Device::CPU, T>::call(
     SizeType i_begin, SizeType i_end, Matrix<internal::ColType, Device::CPU>& coltypes,
@@ -473,36 +519,57 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(
   // Initialize coltypes
   initColTypes(i_begin, i_midpoint, i_end, coltypes);
 
+  // Calculate the merged size of the subproblem
   SizeType n = combinedProblemSize(i_begin, i_end, mat_ev.distribution());
 
-  // Mark columns as deflated if corresponding rank-1 update vector elements are nearly zero
-  updateVectorColumnTypesBasedOnZvecNearlyZero(i_begin, i_end, tol_fut, rho_fut, z, coltypes);
+  // The tile indices of column vectors `d`, `z`, `coltypes`, `d_defl` and `z_defl`
+  GlobalTileIndex col_begin(i_begin, 0);
+  GlobalTileIndex col_end(i_end, 0);
 
   // Sort the diagonal in ascending order and initialize the corresponding permutation index
   //
-  // NOTE: `collectVectorReadFuturesOfTiles` should be used for `d_tiles` but there seems to be a
-  //       compile-time issue
-  pika::dataflow(sortAscendingBasedOnDiagonal<T>, n, collectVectorReadFuturesOfTiles(i_begin, i_end, d),
-                 collectVectorReadWriteFuturesOfTiles(i_begin, i_end, perm_d));
+  // Note: `pika::unwrapping()` is not used because it requires that `Tile<>` is copiable at compile-time.
+  pika::dataflow(sortAscendingBasedOnDiagonal<T>, n, collectReadTiles(col_begin, col_end, d),
+                 collectReadWriteTiles(col_begin, col_end, perm_d));
 
   // Apply deflation with Givens rotations on `d`, `z` and `coltypes` using the sorted index `perm_d` and
   // return metadata used for applying the rotations on `Q`
-  pika::future<std::vector<GivensRotation<T>>> rots_fut =
-      pika::dataflow(applyGivensDeflation<T>, n, tol_fut,
-                     collectVectorReadWriteFuturesOfTiles(i_begin, i_end, d),
-                     collectVectorReadFuturesOfTiles(i_begin, i_end, perm_d),
-                     collectVectorReadWriteFuturesOfTiles(i_begin, i_end, z),
-                     collectVectorReadWriteFuturesOfTiles(i_begin, i_end, coltypes));
+  //
+  // Note: `pika::unwrapping()` is not used because it requires that `Tile<>` is copiable at compile-time.
+  pika::shared_future<std::vector<GivensRotation<T>>> rots_fut =
+      pika::dataflow(applyGivensDeflation<T>, n, tol_fut, collectReadWriteTiles(col_begin, col_end, d),
+                     collectReadTiles(col_begin, col_end, perm_d),
+                     collectReadWriteTiles(col_begin, col_end, z),
+                     collectReadWriteTiles(col_begin, col_end, coltypes));
 
-  // `coltypes`
+  // Build the permutaion index for the `Q`-`U` multiplication and return the sizes of each segment.
+  //
+  // Note: `pika::unwrapping()` is not used because it requires that `Tile<>` is copiable at
+  // compile-time.
   pika::future<QLens> qlens_fut =
-      pika::dataflow(setMatrixMultiplicationIndex, n,
-                     collectVectorReadFuturesOfTiles(i_begin, i_end, coltypes),
-                     collectVectorReadWriteFuturesOfTiles(i_begin, i_end, perm_q));
+      pika::dataflow(setMatrixMultiplicationIndex, n, collectReadTiles(col_begin, col_end, coltypes),
+                     collectReadWriteTiles(col_begin, col_end, perm_q));
 
-  // Find evals of D + rzz^T with laed4 (root solver)
-  // Form evecs
-  // Gemm
+  // Apply Givens rotations to `Q`
+   SizeType ncol_tiles = i_end - i_begin + 1;
+   GlobalTileIndex ev_begin(i_begin, i_begin);
+   GlobalTileIndex ev_end(i_end, i_end);
+   pika::dataflow(pika::unwrapping(applyGivensRotationsToMatrixColumns<T>), rots_fut, n, ncol_tiles,
+                 mat_ev.distribution(), collectReadWriteTiles(ev_begin, ev_end, mat_ev));
+
+  // Use the permutation index `perm_q` on the columns of `mat_ev` and save the result to `mat_q`
+
+  // Offload the non-deflated diagonal values from `d` in ascedning order to `d_defl` using the index
+  // `perm_d` and `coltypes`.
+
+  // Offload the non-zero rank-1 values from `z` to `z_defl` using the permutations index `perm_d` and `coltypes`.
+
+  // Build the matrix of eigenvectors `U` of the deflated rank-1 problem `d_defl + rho * z_defl *
+  // z_defl^T` using the root solver `laed4`.
+
+  // Apply the permutation index `perm`to the rows of `U`
+
+  // GEMM `mat_q` and `mat_u` into `mat_ev`
 }
 
 template <class T>

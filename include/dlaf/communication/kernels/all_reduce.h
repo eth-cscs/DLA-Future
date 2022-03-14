@@ -80,7 +80,6 @@ void scheduleAllReduce(pika::future<common::PromiseGuard<comm::Communicator>> pc
   using dlaf::internal::Policy;
   using dlaf::internal::transform;
   using dlaf::internal::whenAllLift;
-  using matrix::unwrapExtendTiles;
 
   // Note:
   //

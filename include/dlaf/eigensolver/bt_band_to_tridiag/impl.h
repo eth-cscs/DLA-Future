@@ -260,6 +260,12 @@ private:
   Part part_bottom_;
 };
 
+template <class T, Device D>
+auto splitTileAndDiscard(pika::future<matrix::Tile<T, D>> tile,
+                         const matrix::SubTileSpec spec) noexcept {
+  return splitTile(tile, spec);
+}
+
 template <Backend B, Device D, class T>
 struct Helper;
 
@@ -274,14 +280,12 @@ struct Helper<Backend::MC, Device::CPU, T> {
                          matrix::Matrix<const T, Device::CPU>& mat_hh,
                          matrix::Panel<Coord::Col, T, D>& mat_v,
                          matrix::Panel<Coord::Col, T, D>& mat_t) {
-    auto tile_v_full = mat_v(ij);
-    auto tile_v_rw = splitTile(tile_v_full, helper.specHH());
-
     auto tile_hh = splitTile(mat_hh.read(ij), helper.specHHCompact());
-    auto tile_v = setupVWellFormed(b, tile_hh, std::move(tile_v_rw));
+    auto tile_v = setupVWellFormed(b, tile_hh, splitTileAndDiscard(mat_v(ij), helper.specHH()));
 
-    auto tile_t_full = mat_t(LocalTileIndex(ij.row(), 0));
-    auto tile_t = computeTFactor(tile_hh, tile_v, splitTile(tile_t_full, {{0, 0}, {nrefls, nrefls}}));
+    const matrix::SubTileSpec t_spec{{0, 0}, {nrefls, nrefls}};
+    const LocalTileIndex ij_t(LocalTileIndex(ij.row(), 0));
+    auto tile_t = computeTFactor(tile_hh, tile_v, splitTileAndDiscard(mat_t(ij_t), t_spec));
 
     return std::make_pair(std::move(tile_v), std::move(tile_t));
   }
@@ -308,38 +312,37 @@ struct Helper<Backend::GPU, Device::GPU, T> {
     auto& mat_v_h = w_panels_h.nextResource();
     auto& mat_t_h = t_panels_h.nextResource();
 
-    auto tile_v_h_full = mat_v_h(ij);
-    auto tile_v_h_rw = splitTile(tile_v_h_full, helper.specHH());
-
     auto tile_hh = splitTile(mat_hh.read(ij), helper.specHHCompact());
-    auto tile_v_h = setupVWellFormed(b, tile_hh, std::move(tile_v_h_rw));
 
-    auto tile_v_full = mat_v(ij);
-    auto tile_v_rw = splitTile(tile_v_full, helper.specHH());
+    auto tile_v_h = setupVWellFormed(b, tile_hh, splitTileAndDiscard(mat_v_h(ij), helper.specHH()));
+    auto tile_v = scheduleCopy(tile_v_h, mat_v, ij, helper.specHH());
 
-    dlaf::internal::whenAllLift(ex::keep_future(tile_v_h), std::move(tile_v_rw)) |
-        matrix::copy(dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::CPU, D>>()) |
-        ex::start_detached();
+    const LocalTileIndex ij_t(ij.row(), 0);
+    const matrix::SubTileSpec t_spec = {{0, 0}, {nrefls, nrefls}};
 
-    auto tile_v = splitTile(tile_v_full, helper.specHH());
-
-    auto tile_t_h_full = mat_t_h(LocalTileIndex(ij.row(), 0));
-    auto tile_t_h =
-        computeTFactor(tile_hh, tile_v_h, splitTile(tile_t_h_full, {{0, 0}, {nrefls, nrefls}}));
-
-    auto tile_t_full = mat_t(LocalTileIndex(ij.row(), 0));
-    auto tile_t_rw = splitTile(tile_t_full, {{0, 0}, {nrefls, nrefls}});
-
-    dlaf::internal::whenAllLift(ex::keep_future(tile_t_h), std::move(tile_t_rw)) |
-        matrix::copy(dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::CPU, D>>()) |
-        ex::start_detached();
-
-    auto tile_t = splitTile(mat_t.read(LocalTileIndex(ij.row(), 0)), {{0, 0}, {nrefls, nrefls}});
+    auto tile_t_h = computeTFactor(tile_hh, tile_v_h, splitTileAndDiscard(mat_t_h(ij_t), t_spec));
+    auto tile_t = scheduleCopy(tile_t_h, mat_t, ij_t, t_spec);
 
     return std::make_pair(std::move(tile_v), std::move(tile_t));
   }
 
 protected:
+  auto scheduleCopy(pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_src,
+                    matrix::Panel<Coord::Col, T, D>& mat, const LocalTileIndex ij,
+                    const matrix::SubTileSpec spec) const {
+    namespace ex = pika::execution::experimental;
+
+    constexpr auto copy_backend = dlaf::matrix::internal::CopyBackend_v<Device::CPU, D>;
+
+    auto fulltile = mat(ij);
+    auto tile_dst = splitTile(fulltile, spec);
+
+    dlaf::internal::whenAllLift(ex::keep_future(tile_src), std::move(tile_dst)) |
+        matrix::copy(dlaf::internal::Policy<copy_backend>()) | ex::start_detached();
+
+    return splitTile(mat.read(ij), spec);
+  }
+
   const SizeType b;
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> t_panels_h;
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> w_panels_h;

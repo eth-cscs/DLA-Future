@@ -118,6 +118,7 @@ target_add_warnings(dlaf.auxiliary)
 add_library(dlaf.eigensolver OBJECT
   eigensolver/band_to_tridiag/mc.cpp
   eigensolver/bt_band_to_tridiag/mc.cpp
+  $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/bt_band_to_tridiag/gpu.cpp>
   eigensolver/bt_reduction_to_band/mc.cpp
   $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/bt_reduction_to_band/gpu.cpp>
   eigensolver/eigensolver/mc.cpp

@@ -312,6 +312,8 @@ void setupReflectorPanelV(bool has_head, const SubPanelView& panel_view, const S
   using pika::execution::experimental::when_all;
   using pika::threads::thread_priority;
 
+  const dlaf::internal::Policy<Backend::MC> policy_hp(thread_priority::high);
+
   // Note:
   // Reflectors are stored in the lower triangular part of the A matrix leading to sharing memory
   // between reflectors and results, which are in the upper triangular part. The problem exists only
@@ -337,8 +339,7 @@ void setupReflectorPanelV(bool has_head, const SubPanelView& panel_view, const S
     spec.size = {spec.size.rows(), std::min(nrefls, spec.size.cols())};
 
     auto tile_v = v.readwrite_sender(i);
-    dlaf::internal::transformLiftDetach(dlaf::internal::Policy<Backend::MC>(thread_priority::high),
-                                        std::move(setupV0), std::move(tile_v),
+    dlaf::internal::transformLiftDetach(policy_hp, std::move(setupV0), std::move(tile_v),
                                         keep_future(splitTile(mat_a.read(i), spec)));
 
     ++it_begin;
@@ -353,7 +354,7 @@ void setupReflectorPanelV(bool has_head, const SubPanelView& panel_view, const S
     // TODO this is a workaround for the deadlock problem
     if constexpr (ForceCopy)
       when_all(keep_future(matrix::splitTile(mat_a.read(idx), spec)), v.readwrite_sender(idx)) |
-          matrix::copy(dlaf::internal::Policy<Backend::MC>(thread_priority::high)) | start_detached();
+          matrix::copy(policy_hp) | start_detached();
     else
       v.setTile(idx, matrix::splitTile(mat_a.read(idx), spec));
   }
@@ -465,12 +466,13 @@ void gemmComputeW2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Co
   using pika::execution::experimental::keep_future;
   using pika::threads::thread_priority;
 
+  const dlaf::internal::Policy<Backend::MC> policy_hp(thread_priority::high);
+
   // Note:
   // Not all ranks in the column always hold at least a tile in the panel Ai, but all ranks in
   // the column are going to participate to the reduce. For them, it is important to set the
   // partial result W2 to zero.
-  tile::set0(dlaf::internal::Policy<Backend::MC>(thread_priority::high),
-             w2.readwrite_sender(LocalTileIndex(0, 0))) |
+  tile::set0(policy_hp, w2.readwrite_sender(LocalTileIndex(0, 0))) |
       pika::execution::experimental::start_detached();
 
   // GEMM W2 = W* . X
@@ -478,8 +480,7 @@ void gemmComputeW2(MatrixT<T>& w2, ConstPanelT<Coord::Col, T>& w, ConstPanelT<Co
     dlaf::internal::whenAllLift(blas::Op::ConjTrans, blas::Op::NoTrans, T(1), w.read_sender(index_tile),
                                 x.read_sender(index_tile), T(1),
                                 w2.readwrite_sender(LocalTileIndex(0, 0))) |
-        tile::gemm(dlaf::internal::Policy<Backend::MC>(thread_priority::high)) |
-        pika::execution::experimental::start_detached();
+        tile::gemm(policy_hp) | pika::execution::experimental::start_detached();
   }
 }
 

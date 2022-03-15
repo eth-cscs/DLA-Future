@@ -7,9 +7,10 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
+
 #pragma once
 
-#include "dlaf/eigensolver/bt_band_to_tridiag/mc.h"
+#include "dlaf/eigensolver/bt_band_to_tridiag/api.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
@@ -48,9 +49,9 @@ namespace dlaf::eigensolver {
 // @pre band_size is a divisor of mat_hh.blockSize().cols()
 // @pre mat_e is not distributed
 // @pre mat_hh is not distributed
-template <Backend backend, Device device, class T>
-void backTransformationBandToTridiag(const SizeType band_size, matrix::Matrix<T, device>& mat_e,
-                                     matrix::Matrix<const T, device>& mat_hh) {
+template <Backend B, Device D, class T>
+void backTransformationBandToTridiag(const SizeType band_size, matrix::Matrix<T, D>& mat_e,
+                                     matrix::Matrix<const T, Device::CPU>& mat_hh) {
   DLAF_ASSERT(matrix::local_matrix(mat_e), mat_e);
   DLAF_ASSERT(matrix::local_matrix(mat_hh), mat_hh);
 
@@ -62,6 +63,6 @@ void backTransformationBandToTridiag(const SizeType band_size, matrix::Matrix<T,
 
   DLAF_ASSERT(mat_hh.blockSize().rows() % band_size == 0, mat_hh.blockSize(), band_size);
 
-  internal::BackTransformationT2B<backend, device, T>::call(band_size, mat_e, mat_hh);
+  internal::BackTransformationT2B<B, D, T>::call(band_size, mat_e, mat_hh);
 }
 }

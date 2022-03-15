@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2021, ETH Zurich
+// Copyright (c) 2018-2022, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -464,6 +464,60 @@ void applyGivensRotationsToMatrixColumns(std::vector<GivensRotation<T>> rots, Si
   }
 }
 
+// Copy column `in_col` from tile `in` to column `out_col` in tile `out`.
+template <class T>
+void copyTileCol(SizeType in_col, matrix::Tile<const T, Device::CPU>& in, SizeType out_col,
+                 matrix::Tile<T, Device::CPU>& out) {
+  DLAF_ASSERT(in.size().rows() <= out.size().rows(), in.size(), out.size());
+  DLAF_ASSERT(in_col <= in.size().cols(), in_col);
+  DLAF_ASSERT(out_col <= out.size().cols(), in_col);
+
+  for (SizeType i = 0; i < in.size().rows(); ++i) {
+    out(TileElementIndex(i, out_col)) = in(TileElementIndex(i, in_col));
+  }
+}
+
+// Applies the permutation index `perm_tiles` to tiles from `Q` and saves the result in a workspace
+// matrix `mat_q`.
+//
+// `in_tiles` and `out_tiles` are in column-major order
+//
+// Note: this is currently not parallelized
+template <class T>
+void applyPermutationIndexToMatrixQ(
+    SizeType i_begin, SizeType i_end,
+    std::vector<pika::shared_future<matrix::Tile<const SizeType, Device::CPU>>> perm_tiles,
+    const matrix::Distribution& distr,
+    std::vector<pika::shared_future<matrix::Tile<const T, Device::CPU>>> in_tiles,
+    std::vector<pika::future<matrix::Tile<T, Device::CPU>>> out_tiles) {
+  SizeType ncol_tiles = i_end - i_begin + 1;
+
+  // Iterate over columns of `in_tiles` and use the permutation index `perm_tiles` to copy columns from
+  for (SizeType j_out_tile = i_begin; j_out_tile <= i_end; ++j_out_tile) {
+    // Get the indices of permutations correspo
+    const auto& perm_tile = perm_tiles[to_sizet(j_out_tile)].get();
+    for (SizeType i_out_tile = i_begin; i_out_tile <= i_end; ++i_out_tile) {
+      auto out_tile = out_tiles[to_sizet(i_out_tile + j_out_tile * ncol_tiles)].get();
+      TileElementSize sz_out_tile = out_tile.size();
+
+      // Iterate over columns of `out_tile`
+      for (SizeType j_out_el = 0; j_out_el < sz_out_tile.cols(); ++j_out_el) {
+        // Get the index of the global column
+        SizeType j_in_gl_el = perm_tile(TileElementIndex(j_out_el, 0));
+        // Get the index of the tile that has column `gl_col`
+        SizeType j_in_tile = distr.globalTileFromGlobalElement<Coord::Col>(j_in_gl_el);
+        const auto& in_tile = in_tiles[to_sizet(i_out_tile + j_in_tile * ncol_tiles)].get();
+        // Get the index of the `gl_col` column within the tile
+        SizeType j_in_el = distr.tileElementFromGlobalElement<Coord::Col>(j_in_gl_el);
+        // Copy a column from `in_tile` into `out_tile`
+        for (SizeType i_out_el = 0; i_out_el < sz_out_tile.rows(); ++i_out_el) {
+          out_tile(TileElementIndex(i_out_el, j_out_el)) = in_tile(TileElementIndex(i_out_el, j_in_el));
+        }
+      }
+    }
+  }
+}
+
 template <class T>
 void TridiagSolver<Backend::MC, Device::CPU, T>::call(
     SizeType i_begin, SizeType i_end, Matrix<internal::ColType, Device::CPU>& coltypes,
@@ -551,13 +605,17 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(
                      collectReadWriteTiles(col_begin, col_end, perm_q));
 
   // Apply Givens rotations to `Q`
-   SizeType ncol_tiles = i_end - i_begin + 1;
-   GlobalTileIndex ev_begin(i_begin, i_begin);
-   GlobalTileIndex ev_end(i_end, i_end);
-   pika::dataflow(pika::unwrapping(applyGivensRotationsToMatrixColumns<T>), rots_fut, n, ncol_tiles,
+  SizeType ncol_tiles = i_end - i_begin + 1;
+  GlobalTileIndex ev_begin(i_begin, i_begin);
+  GlobalTileIndex ev_end(i_end, i_end);
+  pika::dataflow(pika::unwrapping(applyGivensRotationsToMatrixColumns<T>), rots_fut, n, ncol_tiles,
                  mat_ev.distribution(), collectReadWriteTiles(ev_begin, ev_end, mat_ev));
 
   // Use the permutation index `perm_q` on the columns of `mat_ev` and save the result to `mat_q`
+  pika::dataflow(applyPermutationIndexToMatrixQ<T>, i_begin, i_end,
+                 collectReadTiles(col_begin, col_end, perm_q), mat_ev.distribution(),
+                 collectReadTiles(ev_begin, ev_end, mat_ev),
+                 collectReadWriteTiles(ev_begin, ev_end, mat_qws));
 
   // Offload the non-deflated diagonal values from `d` in ascedning order to `d_defl` using the index
   // `perm_d` and `coltypes`.

@@ -519,6 +519,34 @@ void applyPermutationIndexToMatrixQ(
 }
 
 template <class T>
+void offloadInAscendingOrder(
+    SizeType n, std::vector<pika::shared_future<matrix::Tile<const SizeType, Device::CPU>>> index,
+    std::vector<pika::shared_future<matrix::Tile<const ColType, Device::CPU>>> coltypes,
+    std::vector<pika::shared_future<matrix::Tile<const T, Device::CPU>>> in_tiles,
+    std::vector<pika::future<matrix::Tile<T, Device::CPU>>> out_tiles) {
+  // const QLens& qlens = qlens_fut.get();
+
+  TileElementIndex zero(0, 0);
+  const SizeType* i_ptr = index[0].get().ptr(zero);
+  const ColType* c_ptr = coltypes[0].get().ptr(zero);
+  const T* in_ptr = in_tiles[0].get().ptr(zero);
+  T* out_ptr = out_tiles[0].get().ptr(zero);
+
+  SizeType k = 0;  // index of non-deflated entry of the output pointer
+  // Iterates over all elements of `in_tiles` in ascending order and saves non-deflated values in `i_ptr`
+  for (SizeType i = 0; i < n; ++i) {
+    SizeType is = i_ptr[i];  // map the sorted index `i` to the original index `is`
+
+    // skip deflated entries
+    if (c_ptr[is] == ColType::Deflated)
+      continue;
+
+    out_ptr[k] = in_ptr[is];
+    ++k;
+  }
+}
+
+template <class T>
 void TridiagSolver<Backend::MC, Device::CPU, T>::call(
     SizeType i_begin, SizeType i_end, Matrix<internal::ColType, Device::CPU>& coltypes,
     Matrix<T, Device::CPU>& d, Matrix<T, Device::CPU>& d_defl, Matrix<T, Device::CPU>& z,
@@ -600,7 +628,7 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(
   //
   // Note: `pika::unwrapping()` is not used because it requires that `Tile<>` is copiable at
   // compile-time.
-  pika::future<QLens> qlens_fut =
+  pika::shared_future<QLens> qlens_fut =
       pika::dataflow(setMatrixMultiplicationIndex, n, collectReadTiles(col_begin, col_end, coltypes),
                      collectReadWriteTiles(col_begin, col_end, perm_q));
 
@@ -619,8 +647,14 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(
 
   // Offload the non-deflated diagonal values from `d` in ascedning order to `d_defl` using the index
   // `perm_d` and `coltypes`.
+  pika::dataflow(offloadInAscendingOrder<T>, n, collectReadTiles(col_begin, col_end, perm_d),
+                 collectReadTiles(col_begin, col_end, coltypes), collectReadTiles(col_begin, col_end, d),
+                 collectReadWriteTiles(col_begin, col_end, d_defl));
 
   // Offload the non-zero rank-1 values from `z` to `z_defl` using the permutations index `perm_d` and `coltypes`.
+  pika::dataflow(offloadInAscendingOrder<T>, n, collectReadTiles(col_begin, col_end, perm_d),
+                 collectReadTiles(col_begin, col_end, coltypes), collectReadTiles(col_begin, col_end, z),
+                 collectReadWriteTiles(col_begin, col_end, z_defl));
 
   // Build the matrix of eigenvectors `U` of the deflated rank-1 problem `d_defl + rho * z_defl *
   // z_defl^T` using the root solver `laed4`.

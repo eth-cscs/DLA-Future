@@ -160,7 +160,7 @@ TYPED_TEST(TriangularSolverTestMC, CorrectnessDistributed) {
       for (const auto uplo : blas_uplos) {
         for (const auto op : blas_ops) {
           for (const auto diag : blas_diags) {
-            if (!(op == blas::Op::NoTrans || (side == blas::Side::Left && uplo == blas::Uplo::Lower)))
+            if (!(side == blas::Side::Left))
               continue;
 
             for (const auto& [m, n, mb, nb] : sizes) {

@@ -10,6 +10,12 @@
 
 if (DLAF_BUILD_TESTING)
   # TODO they depends on DLAF_TEST exclusively for the createTile method.
+  add_executable(miniapp_larft miniapp_larft.cpp)
+  target_link_libraries(miniapp_larft PRIVATE dlaf.core)
+  target_link_libraries(miniapp_larft PRIVATE DLAF_test)
+  target_link_libraries(miniapp_larft PRIVATE DLAF_miniapp)
+  target_add_warnings(miniapp_larft)
+
   add_executable(miniapp_laset miniapp_laset.cpp)
   target_link_libraries(miniapp_laset PRIVATE dlaf.core)
   target_link_libraries(miniapp_laset PRIVATE DLAF_test)

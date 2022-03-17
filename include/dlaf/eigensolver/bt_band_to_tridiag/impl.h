@@ -375,8 +375,8 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
 
       // Note:
       // And we use it also for computing the T factor
-      auto tile_t_full = mat_t(LocalTileIndex(ij.row(), 0));
-      auto tile_t = computeTFactor(tile_hh, tile_v, splitTile(tile_t_full, {{0, 0}, {nrefls, nrefls}}));
+      auto tile_t =
+          computeTFactor(tile_hh, tile_v, splitTileDiscard(mat_t(ij), {{0, 0}, {nrefls, nrefls}}));
 
       // W = V . T
       // Note:
@@ -392,18 +392,17 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
         const LocalTileIndex idx_e(ij.row(), j_e);
         const auto sz_e = mat_e.tileSize({ij.row(), j_e});
 
-        auto tile_e = mat_e(idx_e);
         const auto& tile_w2 = mat_w2.read_sender(idx_e);
 
         updateE<B>(pika::threads::thread_priority::normal,
                    keep_future(splitTile(tile_w, helper.topPart().specHH())), tile_w2,
-                   splitTile(tile_e, helper.topPart().specEV(sz_e.cols())));
+                   matrix::splitTileDiscard(mat_e(idx_e), helper.topPart().specEV(sz_e.cols())));
 
         if (helper.affectsMultipleTiles()) {
-          auto tile_e = mat_e(LocalTileIndex{ij.row() + 1, j_e});
           updateE<B>(pika::threads::thread_priority::normal,
                      keep_future(splitTile(tile_w, helper.bottomPart().specHH())), tile_w2,
-                     splitTile(tile_e, helper.bottomPart().specEV(sz_e.cols())));
+                     matrix::splitTileDiscard(mat_e(LocalTileIndex{ij.row() + 1, j_e}),
+                                              helper.bottomPart().specEV(sz_e.cols())));
         }
       }
 

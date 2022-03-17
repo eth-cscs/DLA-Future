@@ -15,6 +15,7 @@
 #include "dlaf/eigensolver/band_to_tridiag.h"  // for nrSweeps/nrStepsForSweep
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/matrix/tile.h"
 #include "dlaf/util_matrix.h"
 
 #include "dlaf_test/matrix/matrix_local.h"
@@ -102,9 +103,8 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, co
           continue;
 
         const GlobalTileIndex ij_tile = dist.globalTileIndex(ij);
-        auto tile_v = mat_hh(ij_tile);
         pika::dataflow(pika::unwrapping(computeTaus<T>), b, k,
-                       splitTile(tile_v, {sub_origin, sub_size}));
+                       splitTileDiscard(mat_hh(ij_tile), {sub_origin, sub_size}));
       }
     }
 

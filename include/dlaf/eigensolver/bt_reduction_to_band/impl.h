@@ -217,9 +217,8 @@ void BackTransformationReductionToBand<backend, device, T>::call(
     for (const auto& ij : mat_c_view.iteratorLocal()) {
       auto ik = LocalTileIndex{ij.row(), k};
       auto kj = LocalTileIndex{k, ij.col()};
-      auto c_ij = mat_c(ij);
       gemmTrailingMatrix<backend>(np, panelV.read_sender(ik), panelW2.read_sender(kj),
-                                  splitTile(c_ij, mat_c_view(ij)));
+                                  splitTileDiscard(mat_c(ij), mat_c_view(ij)));
     }
 
     panelV.reset();

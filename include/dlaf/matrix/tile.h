@@ -454,6 +454,20 @@ pika::future<Tile<T, D>> splitTile(pika::future<Tile<T, D>>& tile, const SubTile
   return internal::createSubTile(old_tile, spec);
 }
 
+/// Create a writeable subtile of a given tile, without replacing given tile with the (full) tile
+/// that will come after the subtile will go out of scope.
+///
+/// The returned subtile will get ready, when the original tile was supposed to get ready.
+/// The next dependency in the dependency chain will become ready only when @p tile goes out of scope.
+template <class T, Device D>
+pika::future<Tile<T, D>> splitTileDiscard(pika::future<Tile<T, D>> tile, const SubTileSpec& spec) {
+  auto old_tile = internal::splitTileInsertFutureInChain(tile);
+  // tile is now the new element of the dependency chain which will be ready
+  // when the subtile will go out of scope.
+
+  return internal::createSubTile(old_tile, spec);
+}
+
 /// Create a writeable subtile of a given tile.
 ///
 /// All the returned subtiles will get ready, when the original tile was supposed to get ready

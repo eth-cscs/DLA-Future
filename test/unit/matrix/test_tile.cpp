@@ -481,9 +481,7 @@ void testSubtilesConst(std::string name, TileElementSize size, SizeType ld,
   SCOPED_TRACE(name);
   ASSERT_LE(last_dep, specs.size());
 
-  auto tmp = createTileAndPtrChecker<T, D>(size, ld);
-  auto tile = std::move(std::get<0>(tmp));
-  auto tile_ptr = std::move(std::get<1>(tmp));
+  auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
 
   auto [tile_p, tile_f, next_tile_f] = createTileChain<const T, D>();
   auto tile_sf = tile_f.share();
@@ -518,9 +516,7 @@ void testSubOfSubtileConst(std::string name, TileElementSize size, SizeType ld,
   // specs.size() -> subsubtile
   // specs.size() + 1 -> full tile
 
-  auto tmp = createTileAndPtrChecker<T, D>(size, ld);
-  auto tile = std::move(std::get<0>(tmp));
-  auto tile_ptr = std::move(std::get<1>(tmp));
+  auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
 
   auto [tile_p, tile_f, next_tile_f] = createTileChain<const T, D>();
   auto tile_sf = tile_f.share();
@@ -584,9 +580,7 @@ template <class T, Device D>
 void testSubtile(std::string name, TileElementSize size, SizeType ld, const SubTileSpec& spec) {
   SCOPED_TRACE(name);
 
-  auto tmp = createTileAndPtrChecker<T, D>(size, ld);
-  auto tile = std::move(std::get<0>(tmp));
-  auto tile_ptr = std::move(std::get<1>(tmp));
+  auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
 
   auto [tile_p, tile_f, next_tile_f] = createTileChain<T, D>();
   ASSERT_TRUE(tile_f.valid() && !tile_f.is_ready());
@@ -629,9 +623,7 @@ void testSubtilesDisjoint(std::string name, TileElementSize size, SizeType ld,
     ASSERT_LT(last_dep, specs.size());
   }
 
-  auto tmp = createTileAndPtrChecker<T, D>(size, ld);
-  auto tile = std::move(std::get<0>(tmp));
-  auto tile_ptr = std::move(std::get<1>(tmp));
+  auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
 
   auto [tile_p, tile_f, next_tile_f] = createTileChain<T, D>();
   ASSERT_TRUE(tile_f.valid() && !tile_f.is_ready());
@@ -670,9 +662,7 @@ void testSubOfSubtile(std::string name, TileElementSize size, SizeType ld,
   ASSERT_LE(1, specs.size());  // Need at least a subtile to create a subsubtile
   // last_dep = 0 -> subsubtile
 
-  auto tmp = createTileAndPtrChecker<T, D>(size, ld);
-  auto tile = std::move(std::get<0>(tmp));
-  auto tile_ptr = std::move(std::get<1>(tmp));
+  auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
 
   auto [tile_p, tile_f, next_tile_f] = createTileChain<T, D>();
   ASSERT_TRUE(tile_f.valid() && !tile_f.is_ready());

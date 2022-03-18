@@ -616,7 +616,7 @@ void testSubtile(std::string name, TileElementSize size, SizeType ld, const SubT
 }
 
 template <class T, Device D>
-void testSubtileDiscard(std::string name, TileElementSize size, SizeType ld, const SubTileSpec& spec) {
+void testSubtileMove(std::string name, TileElementSize size, SizeType ld, const SubTileSpec& spec) {
   SCOPED_TRACE(name);
 
   auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
@@ -626,7 +626,7 @@ void testSubtileDiscard(std::string name, TileElementSize size, SizeType ld, con
   ASSERT_TRUE(next_tile_f.valid() && !next_tile_f.is_ready());
 
   // create subtiles
-  auto subtile = splitTileDiscard(std::move(tile_f), spec);
+  auto subtile = splitTile(std::move(tile_f), spec);
 
   // append the full tile to the end of the subtile vector and add its specs to full_specs.
   std::vector<pika::future<Tile<T, D>>> subtiles;
@@ -755,7 +755,9 @@ TYPED_TEST(TileTest, Subtile) {
   testSubtile<Type, Device::CPU>("Test 2", {5, 7}, 8, {{4, 6}, {1, 1}});
   testSubtile<Type, Device::CPU>("Test 3", {5, 7}, 8, {{0, 0}, {5, 7}});
 
-  testSubtileDiscard<Type, Device::CPU>("Test 4", {5, 7}, 8, {{0, 0}, {5, 7}});
+  testSubtileMove<Type, Device::CPU>("Test Move 1", {5, 7}, 8, {{3, 4}, {2, 3}});
+  testSubtileMove<Type, Device::CPU>("Test Move 2", {5, 7}, 8, {{4, 6}, {1, 1}});
+  testSubtileMove<Type, Device::CPU>("Test Move 3", {5, 7}, 8, {{0, 0}, {5, 7}});
 
   testSubtilesDisjoint<Type, Device::CPU>("Test Vector Empty", {5, 7}, 8, {}, 0);
   testSubtilesDisjoint<Type, Device::CPU>("Test Vector 1", {5, 7}, 8, {{{3, 4}, {2, 3}}}, 0);

@@ -546,6 +546,73 @@ void offloadInAscendingOrder(
   }
 }
 
+// Inverts `perm_q`
+// Initializes `perm_u`
+inline void setPermutationsU(
+    SizeType n, std::vector<pika::shared_future<matrix::Tile<const SizeType, Device::CPU>>> perm_d,
+    std::vector<pika::future<matrix::Tile<SizeType, Device::CPU>>> perm_q,
+    std::vector<pika::future<matrix::Tile<SizeType, Device::CPU>>> perm_u) {
+  TileElementIndex zero(0, 0);
+  const SizeType* d_ptr = perm_d[0].get().ptr(zero);
+  SizeType* q_ptr = perm_q[0].get().ptr(zero);
+  SizeType* u_ptr = perm_u[0].get().ptr(zero);
+
+  // Invert `perm_q` into `perm_u` temporarily
+  for (SizeType i = 0; i < n; ++i) {
+    u_ptr[q_ptr[i]] = i;
+  }
+
+  // Copy `perm_u` to `perm_q` to save the inverted index back into `perm_q`
+  for (SizeType i = 0; i < n; ++i) {
+    q_ptr[i] = u_ptr[i];
+  }
+
+  // Index map from sorted incices to matrix-multiplication index
+  for (SizeType i = 0; i < n; ++i) {
+    u_ptr[i] = q_ptr[d_ptr[i]];
+  }
+}
+
+template <class T>
+void buildRank1EigVecMatrix(
+    SizeType n, pika::shared_future<QLens> qlens_fut,
+    std::vector<pika::shared_future<matrix::Tile<const T, Device::CPU>>> d_defl,
+    pika::shared_future<T> rho_fut,
+    std::vector<pika::shared_future<matrix::Tile<const T, Device::CPU>>> z_defl,
+    std::vector<pika::shared_future<matrix::Tile<const ColType, Device::CPU>>> coltypes,
+    std::vector<pika::shared_future<matrix::Tile<const SizeType, Device::CPU>>> perm_d,
+    std::vector<pika::future<matrix::Tile<T, Device::CPU>>> d,
+    std::vector<pika::shared_future<matrix::Tile<const SizeType, Device::CPU>>> perm_u,
+    const matrix::Distribution& distr, std::vector<pika::future<matrix::Tile<T, Device::CPU>>> mat_uws) {
+  TileElementIndex zero(0, 0);
+  const QLens& qlens = qlens_fut.get();
+  SizeType k = qlens.num_dense + qlens.num_lowhalf + qlens.num_uphalf;
+  const T* d_defl_ptr = d_defl[0].get().ptr(zero);
+  const SizeType* s_ptr = perm_d[0].get().ptr(zero);
+  T rho = rho_fut.get();
+  T* d_ptr = d[0].get().ptr(zero);
+  const SizeType* u_ptr = perm_u[0].get().ptr(zero);
+  const T* z_ptr = z_defl[0].get().ptr(zero);
+  const ColType* c_ptr = coltypes[0].get().ptr(zero);
+
+  for (SizeType i = 0; i < n; ++i) {
+    SizeType is = s_ptr[i];  // original index
+    if (c_ptr[is] == ColType::Deflated)
+      continue;
+
+    SizeType iu = u_ptr[i];  // matrix-multiplication index
+    SizeType i_tile = distr.globalTileFromGlobalElement<Coord::Col>(iu);
+    SizeType i_col = distr.tileElementFromGlobalElement<Coord::Col>(iu);
+
+    T* delta = mat_uws[to_sizet(i_tile)].get().ptr(TileElementIndex(0, i_col));
+    T& eigenval = d_ptr[to_sizet(is)];
+    dlaf::internal::laed4_wrapper(static_cast<int>(k), static_cast<int>(i), d_defl_ptr, z_ptr, delta,
+                                  rho, &eigenval);
+
+    // TODO: check the eigenvectors formula for `delta`
+  }
+}
+
 template <class T>
 void TridiagSolver<Backend::MC, Device::CPU, T>::call(
     SizeType i_begin, SizeType i_end, Matrix<internal::ColType, Device::CPU>& coltypes,
@@ -645,6 +712,11 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(
                  collectReadTiles(ev_begin, ev_end, mat_ev),
                  collectReadWriteTiles(ev_begin, ev_end, mat_qws));
 
+  // Invert the `perm_q` index and map sorted indices to matrix-multiplication indices in `perm_u`
+  pika::dataflow(setPermutationsU, n, collectReadTiles(col_begin, col_end, perm_d),
+                 collectReadWriteTiles(col_begin, col_end, perm_q),
+                 collectReadWriteTiles(col_begin, col_end, perm_u));
+
   // Offload the non-deflated diagonal values from `d` in ascedning order to `d_defl` using the index
   // `perm_d` and `coltypes`.
   pika::dataflow(offloadInAscendingOrder<T>, n, collectReadTiles(col_begin, col_end, perm_d),
@@ -656,12 +728,19 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(
                  collectReadTiles(col_begin, col_end, coltypes), collectReadTiles(col_begin, col_end, z),
                  collectReadWriteTiles(col_begin, col_end, z_defl));
 
-  // Build the matrix of eigenvectors `U` of the deflated rank-1 problem `d_defl + rho * z_defl *
+  // Build the matrix of eigenvectors `U^T` of the deflated rank-1 problem `d_defl + rho * z_defl *
   // z_defl^T` using the root solver `laed4`.
+  pika::dataflow(buildRank1EigVecMatrix<T>, n, qlens_fut, collectReadTiles(col_begin, col_end, d_defl),
+                 rho_fut, collectReadTiles(col_begin, col_end, z_defl),
+                 collectReadTiles(col_begin, col_end, coltypes),
+                 collectReadTiles(col_begin, col_end, perm_d),
+                 collectReadWriteTiles(col_begin, col_end, d),
+                 collectReadTiles(col_begin, col_end, perm_u), mat_uws.distribution(),
+                 collectReadWriteTiles(ev_begin, ev_end, mat_uws));
 
-  // Apply the permutation index `perm`to the rows of `U`
-
-  // GEMM `mat_q` and `mat_u` into `mat_ev`
+  // GEMM `mat_q` holding Q and `mat_u` holding U^T into `mat_ev`
+  //
+  // Note: the transpose of `mat_u` is used here to recover U
 }
 
 template <class T>

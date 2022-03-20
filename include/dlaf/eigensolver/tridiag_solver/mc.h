@@ -613,6 +613,39 @@ void buildRank1EigVecMatrix(
   }
 }
 
+// `mat_[q,u,ev]_tiles` are in column-major order with leading dimension `ncol_tiles`.
+//
+// template <class T>
+// void gemmQU(SizeType i_begin, SizeType i_end, SizeType ncol_tiles, SizeType n1, SizeType n2,
+//            pika::shared_future<QLens> qlens_fut,
+//            std::vector<pika::shared_future<matrix::Tile<const T, Device::CPU>>> mat_q_tiles,
+//            std::vector<pika::shared_future<matrix::Tile<const T, Device::CPU>>> mat_u_tiles,
+//            std::vector<pika::future<matrix::Tile<T, Device::CPU>>> mat_ev_tiles) {
+//  const QLens& qlens = qlens_fut.get();
+//  SizeType l1 = qlens.num_uphalf + qlens.num_dense;
+//  SizeType l2 = qlens.num_lowhalf + qlens.num_dense;
+//
+//  // TODO: Get the end tile index of q1 matrix
+//  // TODO: Get the end tile element index of q2 matrix
+//
+//  // TODO: Get the start tile index of q2 matrix
+//  // TODO: Get the start tile element index of q2 matrix
+//
+//  // Iterate over `mat_ev` tiles in column-major order
+//  for (SizeType j = i_begin; j <= i_end; ++j) {
+//    for (SizeType i = i_begin; i <= i_end; ++i) {
+//      auto mat_ev = mat_ev_tiles[i + j * ncol_tiles].get();
+//      // Iterate over rows of `mat_q` and columns of `mat_u`
+//      // TODO: Only multiply with l1 and l2
+//      for (SizeType k = i_begin; k <= i_end; ++k) {
+//        auto const& q_tile = mat_q_tiles[i + k * ncol_tiles].get();
+//        auto const& u_tile = mat_u_tiles[j + k * ncol_tiles].get();
+//        gemm(blas::Op::NoTrans, blas::Op::Trans, T(1), q_tile, u_tile, T(0), mat_ev);
+//      }
+//    }
+//  }
+//}
+
 template <class T>
 void TridiagSolver<Backend::MC, Device::CPU, T>::call(
     SizeType i_begin, SizeType i_end, Matrix<internal::ColType, Device::CPU>& coltypes,
@@ -741,6 +774,9 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(
   // GEMM `mat_q` holding Q and `mat_u` holding U^T into `mat_ev`
   //
   // Note: the transpose of `mat_u` is used here to recover U
+  // pika::dataflow(gemmQU<T>, qlens_fut, collectReadTiles(ev_begin, ev_end, mat_qws),
+  //               collectReadTiles(ev_begin, ev_end, mat_uws),
+  //               collectReadWriteTiles(ev_begin, ev_end, mat_ev));
 }
 
 template <class T>

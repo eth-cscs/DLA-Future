@@ -24,7 +24,7 @@ namespace eigensolver {
 ///
 /// nb - the block/tile size of all matrices and vectors
 /// n1 - the size of the top subproblem
-/// n2 - the size of the bottom subproblem
+/// n2 - the size of the bottom subproblem, n2 = n1 + {0, nb} => n2 >= n1
 /// Q1 - (n1 x n1) the orthogonal matrix of the top subproblem
 /// Q2 - (n2 x n2) the orthogonal matrix of the bottom subproblem
 /// n := n1 + n2, the size of the merged problem
@@ -46,37 +46,36 @@ namespace eigensolver {
 /// D' + rho*z'*z'^T  := deflated rank 1 update problem
 /// U'                := (k x k) matrix of eigenvectors of the deflated rank 1 update problem
 ///
-/// l1  := number of columns of the top subproblem after deflation
-/// l2  := number of columns of the bottom subproblem after deflation
-/// Q1' := (n1 x l1) the non-deflated part of Q1 (l1 < n1)
-/// Q2' := (n2 x l2) the non-deflated part of Q2 (l2 < n2)
+/// l1  := number of columns of the top subproblem after deflation, l1 <= n1
+/// l2  := number of columns of the bottom subproblem after deflation, l2 <= n2
+/// Q1' := (n1 x l1) the non-deflated part of Q1 (l1 <= n1)
+/// Q2' := (n2 x l2) the non-deflated part of Q2 (l2 <= n2)
 /// Qd  := (n-k x n) the deflated parts of Q1 and Q2
-/// U1' := (k x l1) is the first l1 columns of U'
-/// U2' := (k x l2) is the last l2 columns of U'
+/// U1' := (l1 x k) is the first l1 rows of U'
+/// U2' := (l2 x k) is the last l2 rows of U'
 /// I   := (n-k x n-k) identity matrix
 /// P   := (n x n) permutation matrix used to bring Q and U into multiplication form
 ///
 /// Q-U multiplication form to arrive at the eigenvectors of the merged problem:
 ///
-///          ┌────┬───┬──┐   ┌────┬───┬──┐T  ┌────────┬──┐
-///          │ Q1'│   │  │   │ U1'│   │  │   │Q1'U1'^T│  │
-/// QPP^TU = │    │   │  │   │        │  │   │        │  │
-///          ├───┬┴───┤Qd│ X │   │ U2'│  │ = ├────────┤Qd│
-///          │   │Q2' │  │   ├───┴────┼──┤   │Q2'U2'^T│  │
-///          │   │    │  │   │        │I │   │        │  │
-///          └───┴────┴──┘   └────────┴──┘   └────────┴──┘
+/// ┌────────┬──────┬────┐       ┌───────────────┬────┐       ┌───────────────┬────┐
+/// │        │      │    │       │               │    │       │               │    │
+/// │  Q1'   │      │    │       │               │    │       │    Q1'xU1'    │    │
+/// │        │      │    │       │   U1'         │    │       │               │    │
+/// │        │      │    │       │         ──────┤    │       │               │    │
+/// ├──────┬─┴──────┤ Qd │       ├───────        │    │       ├───────────────┤ Qd │
+/// │      │        │    │   X   │          U2'  │    │   =   │               │    │
+/// │      │        │    │       │               │    │       │    Q2'xU2'    │    │
+/// │      │  Q2'   │    │       ├───────────────┼────┤       │               │    │
+/// │      │        │    │       │               │ I  │       │               │    │
+/// │      │        │    │       │               │    │       │               │    │
+/// └──────┴────────┴────┘       └───────────────┴────┘       └───────────────┴────┘
 ///
 /// Note:
 /// 1. U1' and U2' may overlap (in practice they almost always do)
-/// 2. The second matrix is transposed
-/// 3. The overlap between U1' and U2' matches the number of shared columns between Q1' and Q2'
-/// 4. The overlap region is due to deflation via Givens rotations of a column vector from Q1 with a
+/// 2. The overlap between U1' and U2' matches the number of shared columns between Q1' and Q2'
+/// 3. The overlap region is due to deflation via Givens rotations of a column vector from Q1 with a
 ///    column vector of Q2.
-///
-/// The following statements hold:
-///
-/// 1. either n2 = n1 or n2 = n1 + nb
-/// 2. l1 + l2 <= n
 ///
 /// @param mat_a  [in/out] (n x 2) local matrix with the diagonal and off-diagonal of the symmetric
 /// tridiagonal matrix in the first column and second columns respectively. The last entry of the second
@@ -103,7 +102,20 @@ void tridiagSolver(Matrix<T, device>& mat_trd, Matrix<T, device>& mat_ev) {
 
   // Auxiliary matrix used for the D&C algorithm
   const matrix::Distribution& distr = mat_ev.distribution();
-  // Extra workspace for Q1', Q2' and U1' when l2 > l1 or U2' when l1 > l2
+
+  // Extra workspace for Q1', Q2' and U1' which are packed as follows:
+  //
+  //   ┌──────┬──────┬───┐
+  //   │  Q1' │  Q2' │   │
+  //   │      │      │   │
+  //   ├──────┤      │   │
+  //   │      └──────┘   │
+  //   │                 │
+  //   ├────────────┐    │
+  //   │     U1'    │    │
+  //   │            │    │
+  //   └────────────┴────┘
+  //
   Matrix<T, device> mat_qws(distr);
   // Extra workspace for U
   Matrix<T, device> mat_uws(distr);

@@ -32,7 +32,7 @@ namespace comm {
 namespace internal {
 
 template <class T>
-auto allReduce(const common::PromiseGuard<comm::Communicator>& pcomm, MPI_Op reduce_op,
+auto allReduce(common::PromiseGuard<comm::Communicator>& pcomm, MPI_Op reduce_op,
                common::internal::ContiguousBufferHolder<const T>& cont_buf_in,
                common::internal::ContiguousBufferHolder<T>& cont_buf_out, MPI_Request* req) {
   auto& comm = pcomm.ref();
@@ -41,19 +41,39 @@ auto allReduce(const common::PromiseGuard<comm::Communicator>& pcomm, MPI_Op red
 
   DLAF_MPI_CHECK_ERROR(MPI_Iallreduce(msg_in.data(), msg_out.data(), msg_in.count(), msg_in.mpi_type(),
                                       reduce_op, comm, req));
+
+  // TODO: Replace this with a cleaner solution. The old MPI executor would move
+  // the pcomm argument into this function, releasing it on return. The MPI
+  // sender adaptor only gives references to arguments and keeps them alive
+  // until the MPI request completes. This means that pcomm would prevent other
+  // communication from being scheduled until the request is completed, when it
+  // is enough to order the MPI function calls (not their completion). This
+  // consumes pcomm locally and releases it on return.
+  auto discard = std::move(pcomm);
+
   return std::move(cont_buf_out);
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(allReduce);
 
 template <class T>
-auto allReduceInPlace(const common::PromiseGuard<comm::Communicator>& pcomm, MPI_Op reduce_op,
+auto allReduceInPlace(common::PromiseGuard<comm::Communicator>& pcomm, MPI_Op reduce_op,
                       common::internal::ContiguousBufferHolder<T>& cont_buf, MPI_Request* req) {
   auto& comm = pcomm.ref();
   auto msg = comm::make_message(cont_buf.descriptor);
 
   DLAF_MPI_CHECK_ERROR(
       MPI_Iallreduce(MPI_IN_PLACE, msg.data(), msg.count(), msg.mpi_type(), reduce_op, comm, req));
+
+  // TODO: Replace this with a cleaner solution. The old MPI executor would move
+  // the pcomm argument into this function, releasing it on return. The MPI
+  // sender adaptor only gives references to arguments and keeps them alive
+  // until the MPI request completes. This means that pcomm would prevent other
+  // communication from being scheduled until the request is completed, when it
+  // is enough to order the MPI function calls (not their completion). This
+  // consumes pcomm locally and releases it on return.
+  auto discard = std::move(pcomm);
+
   return std::move(cont_buf);
 }
 

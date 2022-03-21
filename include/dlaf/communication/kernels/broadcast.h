@@ -30,7 +30,7 @@ namespace dlaf {
 namespace comm {
 
 template <class T, Device D>
-void sendBcast(const matrix::Tile<const T, D>& tile, const common::PromiseGuard<Communicator>& pcomm,
+void sendBcast(const matrix::Tile<const T, D>& tile, common::PromiseGuard<Communicator>& pcomm,
                MPI_Request* req) {
 #if !defined(DLAF_WITH_CUDA_RDMA)
   static_assert(D == Device::CPU, "DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.");
@@ -40,19 +40,37 @@ void sendBcast(const matrix::Tile<const T, D>& tile, const common::PromiseGuard<
   auto msg = comm::make_message(common::make_data(tile));
   DLAF_MPI_CHECK_ERROR(
       MPI_Ibcast(const_cast<T*>(msg.data()), msg.count(), msg.mpi_type(), comm.rank(), comm, req));
+
+  // TODO: Replace this with a cleaner solution. The old MPI executor would move
+  // the pcomm argument into this function, releasing it on return. The MPI
+  // sender adaptor only gives references to arguments and keeps them alive
+  // until the MPI request completes. This means that pcomm would prevent other
+  // communication from being scheduled until the request is completed, when it
+  // is enough to order the MPI function calls (not their completion). This
+  // consumes pcomm locally and releases it on return.
+  auto discard = std::move(pcomm);
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(sendBcast);
 
 template <class T, Device D>
 void recvBcast(const matrix::Tile<T, D>& tile, comm::IndexT_MPI root_rank,
-               const common::PromiseGuard<Communicator>& pcomm, MPI_Request* req) {
+               common::PromiseGuard<Communicator>& pcomm, MPI_Request* req) {
 #if !defined(DLAF_WITH_CUDA_RDMA)
   static_assert(D == Device::CPU, "DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.");
 #endif
 
   auto msg = comm::make_message(common::make_data(tile));
   DLAF_MPI_CHECK_ERROR(MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, pcomm.ref(), req));
+
+  // TODO: Replace this with a cleaner solution. The old MPI executor would move
+  // the pcomm argument into this function, releasing it on return. The MPI
+  // sender adaptor only gives references to arguments and keeps them alive
+  // until the MPI request completes. This means that pcomm would prevent other
+  // communication from being scheduled until the request is completed, when it
+  // is enough to order the MPI function calls (not their completion). This
+  // consumes pcomm locally and releases it on return.
+  auto discard = std::move(pcomm);
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(recvBcast);

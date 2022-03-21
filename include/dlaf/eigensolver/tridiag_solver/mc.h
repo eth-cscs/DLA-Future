@@ -46,9 +46,39 @@ struct TridiagSolver<Backend::MC, Device::CPU, T> {
                    Matrix<SizeType, Device::CPU>& perm_q, Matrix<SizeType, Device::CPU>& perm_u,
                    Matrix<T, Device::CPU>& mat_q, Matrix<T, Device::CPU>& mat_u,
                    Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_ev);
-  static void call(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& mat_a,
-                   Matrix<T, Device::CPU>& mat_ev);
 };
+
+/// Splits [i_begin, i_end] in the middle and waits for all splits on [i_begin, i_middle] and [i_middle +
+/// 1, i_end] before saving the triad (i_begin, i_middle, i_end) into `indices`.
+///
+/// The recursive calls span a binary tree which is traversed in depth first left-right-root order. That
+/// is also the order of triads in `indices`.
+///
+/// Note: the intervals are all closed!
+///
+inline void splitIntervalInTheMiddleRecursively(
+    SizeType i_begin, SizeType i_end, std::vector<std::tuple<SizeType, SizeType, SizeType>>& indices) {
+  if (i_begin == i_end)
+    return;
+  SizeType i_middle = (i_begin + i_end) / 2;
+  splitIntervalInTheMiddleRecursively(i_begin, i_middle, indices);
+  splitIntervalInTheMiddleRecursively(i_middle + 1, i_end, indices);
+  indices.emplace_back(i_begin, i_middle, i_end);
+}
+
+/// Generates an array of triad indices. Each triad is composed of begin <= middle < end indices and
+/// represents two intervals [begin, middle] and [middle + 1, end]. The two intervals are the subprobelms
+/// that have to be merged to arrive at [begin, end].
+///
+/// Note: the intervals are all closed!
+///
+inline std::vector<std::tuple<SizeType, SizeType, SizeType>> generateSubproblemIndices(SizeType n) {
+  DLAF_ASSERT(n > 0, n);
+  std::vector<std::tuple<SizeType, SizeType, SizeType>> indices;
+  indices.reserve(to_sizet(n));
+  splitIntervalInTheMiddleRecursively(0, n - 1, indices);
+  return indices;
+}
 
 template <class T>
 void cuppensDecomposition(const matrix::Tile<T, Device::CPU>& top,
@@ -777,15 +807,6 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(
   // pika::dataflow(gemmQU<T>, qlens_fut, collectReadTiles(ev_begin, ev_end, mat_qws),
   //               collectReadTiles(ev_begin, ev_end, mat_uws),
   //               collectReadWriteTiles(ev_begin, ev_end, mat_ev));
-}
-
-template <class T>
-void TridiagSolver<Backend::MC, Device::CPU, T>::call(comm::CommunicatorGrid grid,
-                                                      Matrix<T, Device::CPU>& mat_a,
-                                                      Matrix<T, Device::CPU>& mat_ev) {
-  (void) grid;
-  (void) mat_a;
-  (void) mat_ev;
 }
 
 /// ---- ETI

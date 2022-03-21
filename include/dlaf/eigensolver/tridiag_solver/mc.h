@@ -40,8 +40,9 @@ enum class ColType {
 
 template <class T>
 struct TridiagSolver<Backend::MC, Device::CPU, T> {
-  static void call(SizeType i_begin, SizeType i_end, Matrix<internal::ColType, Device::CPU>& coltypes,
-                   Matrix<T, Device::CPU>& d, Matrix<T, Device::CPU>& d_defl, Matrix<T, Device::CPU>& z,
+  static void mergeSubproblems(SizeType i_begin, SizeType i_middle, SizeType i_end,
+                   Matrix<internal::ColType, Device::CPU>& coltypes, Matrix<T, Device::CPU>& d,
+                   Matrix<T, Device::CPU>& d_defl, Matrix<T, Device::CPU>& z,
                    Matrix<T, Device::CPU>& z_defl, Matrix<SizeType, Device::CPU>& perm_d,
                    Matrix<SizeType, Device::CPU>& perm_q, Matrix<SizeType, Device::CPU>& perm_u,
                    Matrix<T, Device::CPU>& mat_q, Matrix<T, Device::CPU>& mat_u,
@@ -49,7 +50,7 @@ struct TridiagSolver<Backend::MC, Device::CPU, T> {
 };
 
 /// Splits [i_begin, i_end] in the middle and waits for all splits on [i_begin, i_middle] and [i_middle +
-/// 1, i_end] before saving the triad (i_begin, i_middle, i_end) into `indices`.
+/// 1, i_end] before saving the triad <i_begin, i_middle, i_end> into `indices`.
 ///
 /// The recursive calls span a binary tree which is traversed in depth first left-right-root order. That
 /// is also the order of triads in `indices`.
@@ -81,8 +82,8 @@ inline std::vector<std::tuple<SizeType, SizeType, SizeType>> generateSubproblemI
 }
 
 template <class T>
-void cuppensDecomposition(const matrix::Tile<T, Device::CPU>& top,
-                          const matrix::Tile<T, Device::CPU>& bottom) {
+void cuppensTileDecomposition(const matrix::Tile<T, Device::CPU>& top,
+                              const matrix::Tile<T, Device::CPU>& bottom) {
   (void) top;
   (void) bottom;
 
@@ -94,8 +95,41 @@ void cuppensDecomposition(const matrix::Tile<T, Device::CPU>& top,
   bottom_diag_val -= offdiag_val;
 }
 
-DLAF_MAKE_CALLABLE_OBJECT(cuppensDecomposition);
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(cuppensDecomposition, cuppensDecomposition_o)
+DLAF_MAKE_CALLABLE_OBJECT(cuppensTileDecomposition);
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(cuppensTileDecomposition, cuppensTileDecomposition_o)
+
+template <class T>
+void cuppensDecomposition(Matrix<T, Device::CPU>& mat_trd) {
+  using pika::threads::thread_priority;
+  using pika::execution::experimental::start_detached;
+  using dlaf::internal::Policy;
+  using dlaf::internal::whenAllLift;
+
+  SizeType i_end = mat_trd.distribution().nrTiles().rows() - 1;
+  for (SizeType i_split = 0; i_split < i_end; ++i_split) {
+    // Cuppen's tridiagonal decomposition
+    whenAllLift(mat_trd.readwrite_sender(LocalTileIndex(i_split, 0)),
+                mat_trd.readwrite_sender(LocalTileIndex(i_split + 1, 0))) |
+        cuppensTileDecomposition(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
+  }
+}
+
+// Solve leaf eigensystem with stedc
+template <class T>
+void solveLeaf(Matrix<T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& mat_ev) {
+  using pika::threads::thread_priority;
+  using pika::execution::experimental::start_detached;
+  using dlaf::internal::Policy;
+  using dlaf::internal::whenAllLift;
+
+  SizeType ntiles = mat_trd.distribution().nrTiles().rows();
+  for (SizeType i = 0; i < ntiles; ++i) {
+    whenAllLift(mat_trd.readwrite_sender(LocalTileIndex(i, 0)),
+                mat_ev.readwrite_sender(LocalTileIndex(i, i))) |
+        tile::stedc(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
+    return;
+  }
+}
 
 // Calculates the combined problem size of the two subproblems that are being merged
 inline SizeType combinedProblemSize(SizeType i_begin, SizeType i_end,
@@ -677,45 +711,18 @@ void buildRank1EigVecMatrix(
 //}
 
 template <class T>
-void TridiagSolver<Backend::MC, Device::CPU, T>::call(
-    SizeType i_begin, SizeType i_end, Matrix<internal::ColType, Device::CPU>& coltypes,
-    Matrix<T, Device::CPU>& d, Matrix<T, Device::CPU>& d_defl, Matrix<T, Device::CPU>& z,
-    Matrix<T, Device::CPU>& z_defl, Matrix<SizeType, Device::CPU>& perm_d,
-    Matrix<SizeType, Device::CPU>& perm_q, Matrix<SizeType, Device::CPU>& perm_u,
-    Matrix<T, Device::CPU>& mat_qws, Matrix<T, Device::CPU>& mat_uws, Matrix<T, Device::CPU>& mat_trd,
-    Matrix<T, Device::CPU>& mat_ev) {
-  using dlaf::internal::whenAllLift;
-  using pika::threads::thread_priority;
-  using dlaf::internal::Policy;
-  using pika::execution::experimental::start_detached;
-  using Solver = TridiagSolver<Backend::MC, Device::CPU, T>;
-
-  if (i_begin == i_end) {
-    // Solve leaf eigensystem with stedc
-    whenAllLift(mat_trd.readwrite_sender(LocalTileIndex(i_begin, 0)),
-                mat_ev.readwrite_sender(LocalTileIndex(i_begin, i_begin))) |
-        tile::stedc(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
-    return;
-  }
-  SizeType i_midpoint = (i_begin + i_end) / 2;
-
-  // Cuppen's tridiagonal decomposition
-  whenAllLift(mat_trd.readwrite_sender(LocalTileIndex(i_midpoint, 0)),
-              mat_trd.readwrite_sender(LocalTileIndex(i_midpoint + 1, 0))) |
-      cuppensDecomposition(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
-
-  // Top subproblem
-  Solver::call(i_begin, i_midpoint, coltypes, d, d_defl, z, z_defl, perm_d, perm_q, perm_u, mat_qws,
-               mat_uws, mat_trd, mat_ev);
-  // Bottom subproblem
-  Solver::call(i_begin, i_midpoint + 1, coltypes, d, d_defl, z, z_defl, perm_d, perm_q, perm_u, mat_qws,
-               mat_uws, mat_trd, mat_ev);
-
+void TridiagSolver<Backend::MC, Device::CPU, T>::mergeSubproblems(
+    SizeType i_begin, SizeType i_middle, SizeType i_end,
+    Matrix<internal::ColType, Device::CPU>& coltypes, Matrix<T, Device::CPU>& d,
+    Matrix<T, Device::CPU>& d_defl, Matrix<T, Device::CPU>& z, Matrix<T, Device::CPU>& z_defl,
+    Matrix<SizeType, Device::CPU>& perm_d, Matrix<SizeType, Device::CPU>& perm_q,
+    Matrix<SizeType, Device::CPU>& perm_u, Matrix<T, Device::CPU>& mat_qws,
+    Matrix<T, Device::CPU>& mat_uws, Matrix<T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& mat_ev) {
   // Form D + rzz^T from `mat_trd` and `mat_ev`
-  assembleZVec(i_begin, i_midpoint, i_end, mat_ev, z);
+  assembleZVec(i_begin, i_middle, i_end, mat_ev, z);
   assembleDiag(i_begin, i_end, mat_trd, d);
   pika::shared_future<T> rho_fut =
-      pika::dataflow(pika::unwrapping(extractRho<T>), mat_trd.read(LocalTileIndex(i_midpoint, 0)));
+      pika::dataflow(pika::unwrapping(extractRho<T>), mat_trd.read(LocalTileIndex(i_middle, 0)));
 
   // Calculate the tolerance used for deflation
   pika::future<T> dmax_fut = maxVectorElement(i_begin, i_end, d);
@@ -729,7 +736,7 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(
   initIndex(i_begin, i_end, perm_u);
 
   // Initialize coltypes
-  initColTypes(i_begin, i_midpoint, i_end, coltypes);
+  initColTypes(i_begin, i_middle, i_end, coltypes);
 
   // Calculate the merged size of the subproblem
   SizeType n = combinedProblemSize(i_begin, i_end, mat_ev.distribution());

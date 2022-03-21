@@ -100,6 +100,12 @@ void tridiagSolver(Matrix<T, device>& mat_trd, Matrix<T, device>& mat_ev) {
   DLAF_ASSERT(matrix::square_blocksize(mat_ev), mat_ev);
   // TODO: ASSERT that `mat_trd` and `mat_ev` have column-major layout
 
+  // Cuppen's decomposition
+  internal::cuppensDecomposition(mat_trd);
+  // Solve with stedc for each tile of `mat_trd` (nb x 2) and save eigenvectors in diagonal tiles of
+  // `mat_ev` (nb x nb)
+  internal::solveLeaf(mat_trd, mat_ev);
+
   // Auxiliary matrix used for the D&C algorithm
   const matrix::Distribution& distr = mat_ev.distribution();
 
@@ -141,13 +147,13 @@ void tridiagSolver(Matrix<T, device>& mat_trd, Matrix<T, device>& mat_ev) {
   // that bring them in matrix multiplication form.
   Matrix<internal::ColType, Device::CPU> coltypes(vec_size, vec_tile_size);
 
-  // Tile indices of the first and last diagonal tiles
-  SizeType i_begin = 0;
-  SizeType i_end = SizeType(distr.nrTiles().rows() - 1);
-
-  internal::TridiagSolver<backend, device, T>::call(i_begin, i_end, coltypes, d, d_defl, z, z_defl,
-                                                    perm_d, perm_q, perm_u, mat_qws, mat_uws, mat_trd,
-                                                    mat_ev);
+  // At each iteration merges two subproblems
+  for (auto [i_begin, i_middle, i_end] : internal::generateSubproblemIndices(distr.nrTiles().rows())) {
+    internal::TridiagSolver<backend, device, T>::mergeSubproblems(i_begin, i_middle, i_end, coltypes, d,
+                                                                  d_defl, z, z_defl, perm_d, perm_q,
+                                                                  perm_u, mat_qws, mat_uws, mat_trd,
+                                                                  mat_ev);
+  }
 }
 
 }

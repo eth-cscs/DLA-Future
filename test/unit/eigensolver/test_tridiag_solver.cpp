@@ -25,7 +25,7 @@ TYPED_TEST_SUITE(TridiagEigensolverTest, RealMatrixElementTypes);
 
 TEST(MatrixIndexPairsGeneration, IndexPairsGeneration) {
   SizeType n = 10;
-  auto actual_indices = dlaf::eigensolver::internal::generateIndexPairs(n);
+  auto actual_indices = dlaf::eigensolver::internal::generateSubproblemIndices(n);
   // i_begin, i_middle, i_end
   std::vector<std::tuple<SizeType, SizeType, SizeType>> expected_indices{{0, 0, 1}, {0, 1, 2},
                                                                          {3, 3, 4}, {0, 2, 4},
@@ -75,7 +75,7 @@ TYPED_TEST(TridiagEigensolverTest, CuppensDecomposition) {
   auto top = createTile<TypeParam, Device::CPU>(laplace1d_fn, tile_size, sz);
   auto bottom = createTile<TypeParam, Device::CPU>(laplace1d_fn, tile_size, sz);
 
-  eigensolver::internal::cuppensDecomposition(top, bottom);
+  eigensolver::internal::cuppensTileDecomposition(top, bottom);
 
   auto expected_top = createTile<TypeParam, Device::CPU>(laplace1d_fn, tile_size, sz);
   auto expected_bottom = createTile<TypeParam, Device::CPU>(laplace1d_fn, tile_size, sz);
@@ -87,27 +87,27 @@ TYPED_TEST(TridiagEigensolverTest, CuppensDecomposition) {
                   TypeUtilities<TypeParam>::error);
 }
 
-// TYPED_TEST(TridiagEigensolverTest, CorrectnessLocal) {
-//   using RealParam = BaseType<TypeParam>;
-//
-//   SizeType n = 10;
-//   SizeType nb = 2;
-//
-//   matrix::Matrix<RealParam, Device::CPU> mat_a(LocalElementSize(n, 2), TileElementSize(nb, 2));
-//   matrix::Matrix<TypeParam, Device::CPU> mat_ev(LocalElementSize(n, n), TileElementSize(nb, nb));
-//
-//   // Tridiagonal matrix : 1D Laplacian
-//   auto mat_a_fn = [](GlobalElementIndex el) {
-//     if (el.col() == 0)
-//       // diagonal
-//       return RealParam(-1);
-//     else
-//       // off-diagoanl
-//       return RealParam(2);
-//   };
-//   matrix::util::set(mat_a, std::move(mat_a_fn));
-//
-//   eigensolver::tridiagSolver<Backend::MC>(mat_a, mat_ev);
-//
-//   // TODO: checks
-// }
+TYPED_TEST(TridiagEigensolverTest, CorrectnessLocal) {
+  using RealParam = BaseType<TypeParam>;
+
+  SizeType n = 10;
+  SizeType nb = 2;
+
+  matrix::Matrix<RealParam, Device::CPU> mat_a(LocalElementSize(n, 2), TileElementSize(nb, 2));
+  matrix::Matrix<TypeParam, Device::CPU> mat_ev(LocalElementSize(n, n), TileElementSize(nb, nb));
+
+  // Tridiagonal matrix : 1D Laplacian
+  auto mat_a_fn = [](GlobalElementIndex el) {
+    if (el.col() == 0)
+      // diagonal
+      return RealParam(-1);
+    else
+      // off-diagoanl
+      return RealParam(2);
+  };
+  matrix::util::set(mat_a, std::move(mat_a_fn));
+
+  eigensolver::tridiagSolver<Backend::MC>(mat_a, mat_ev);
+
+  // TODO: checks
+}

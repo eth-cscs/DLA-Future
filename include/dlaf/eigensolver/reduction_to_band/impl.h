@@ -285,7 +285,7 @@ pika::shared_future<common::internal::vector<T>> computePanelReflectors(MatrixT<
       to_sizet(std::distance(panel_view.iteratorLocal().begin(), panel_view.iteratorLocal().end())));
   for (const auto& i : panel_view.iteratorLocal()) {
     const matrix::SubTileSpec& spec = panel_view(i);
-    panel_tiles.emplace_back(matrix::splitTileDiscard(mat_a(i), spec));
+    panel_tiles.emplace_back(matrix::splitTile(mat_a(i), spec));
   }
 
   return pika::dataflow(getHpExecutor<Backend::MC>(), std::move(panel_task),

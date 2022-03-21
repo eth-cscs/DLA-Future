@@ -104,7 +104,7 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, co
 
         const GlobalTileIndex ij_tile = dist.globalTileIndex(ij);
         pika::dataflow(pika::unwrapping(computeTaus<T>), b, k,
-                       splitTileDiscard(mat_hh(ij_tile), {sub_origin, sub_size}));
+                       splitTile(mat_hh(ij_tile), {sub_origin, sub_size}));
       }
     }
 

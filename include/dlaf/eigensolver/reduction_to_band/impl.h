@@ -329,7 +329,6 @@ void setupReflectorPanelV(bool has_head, const SubPanelView& panel_view, const S
     // the blocksize, leading to just using a part of A (first full nrefls columns)
     spec.size = {spec.size.rows(), std::min(nrefls, spec.size.cols())};
 
-    // TODO solution with "hand-made" continuation from Raffaele
     const auto p = dlaf::internal::Policy<B>(thread_priority::high);
     dlaf::internal::whenAllLift(ex::keep_future(splitTile(mat_a.read(i), spec)), v.readwrite_sender(i)) |
         matrix::copy(p) | ex::start_detached();

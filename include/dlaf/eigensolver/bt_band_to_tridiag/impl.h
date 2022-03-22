@@ -459,7 +459,8 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
       // At this point W can be overwritten, but this will happen just after W2 and T computations
       // finished. T was already a dependency, but W2 wasn't, meaning it won't run in parallel,
       // but it could.
-      computeW<B>(thread_priority::normal, ex::keep_future(tile_t), splitTile(mat_w(ij), helper.specHH()));
+      computeW<B>(thread_priority::normal, ex::keep_future(tile_t),
+                  splitTile(mat_w(ij), helper.specHH()));
       auto tile_w = mat_w.read(ij);
 
       // E -= W . W2
@@ -476,7 +477,8 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
         if (helper.affectsMultipleTiles()) {
           updateE<B>(pika::threads::thread_priority::normal,
                      ex::keep_future(splitTile(tile_w, helper.bottomPart().specHH())), tile_w2,
-                     splitTile(mat_e(LocalTileIndex{ij.row() + 1, j_e}), helper.bottomPart().specEV(sz_e.cols())));
+                     splitTile(mat_e(LocalTileIndex{ij.row() + 1, j_e}),
+                               helper.bottomPart().specEV(sz_e.cols())));
         }
       }
 

@@ -15,8 +15,8 @@
 #include "dlaf/eigensolver/band_to_tridiag.h"  // for nrSweeps/nrStepsForSweep
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/tile.h"
 #include "dlaf/matrix/matrix_mirror.h"
+#include "dlaf/matrix/tile.h"
 #include "dlaf/util_matrix.h"
 
 #include "dlaf_test/matrix/matrix_local.h"

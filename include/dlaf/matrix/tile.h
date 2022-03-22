@@ -456,6 +456,18 @@ pika::future<Tile<T, D>> splitTile(pika::future<Tile<T, D>>& tile, const SubTile
 
 /// Create a writeable subtile of a given tile.
 ///
+/// The returned subtile will get ready, when the original tile was supposed to get ready.
+/// This variant does not provide access to the (full) tile which will get ready when the subtile goes
+/// out of scope.
+/// The next dependency in the dependency chain will become ready only when @p tile goes
+/// out of scope.
+template <class T, Device D>
+pika::future<Tile<T, D>> splitTile(pika::future<Tile<T, D>>&& tile, const SubTileSpec& spec) {
+  return internal::createSubTile(tile.share(), spec);
+}
+
+/// Create a writeable subtile of a given tile.
+///
 /// All the returned subtiles will get ready, when the original tile was supposed to get ready
 /// (therefore the returned subtiles should be disjoint, otherwise race conditions might occour).
 /// @p tile is replaced with the (full) tile which will get ready when the all the subtiles go out of scope.

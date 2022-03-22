@@ -40,13 +40,7 @@ enum class ColType {
 
 template <class T>
 struct TridiagSolver<Backend::MC, Device::CPU, T> {
-  static void mergeSubproblems(SizeType i_begin, SizeType i_middle, SizeType i_end,
-                   Matrix<internal::ColType, Device::CPU>& coltypes, Matrix<T, Device::CPU>& d,
-                   Matrix<T, Device::CPU>& d_defl, Matrix<T, Device::CPU>& z,
-                   Matrix<T, Device::CPU>& z_defl, Matrix<SizeType, Device::CPU>& perm_d,
-                   Matrix<SizeType, Device::CPU>& perm_q, Matrix<SizeType, Device::CPU>& perm_u,
-                   Matrix<T, Device::CPU>& mat_q, Matrix<T, Device::CPU>& mat_u,
-                   Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_ev);
+  static void call(Matrix<T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& mat_ev);
 };
 
 /// Splits [i_begin, i_end] in the middle and waits for all splits on [i_begin, i_middle] and [i_middle +
@@ -190,7 +184,7 @@ DLAF_MAKE_CALLABLE_OBJECT(copyDiagTile);
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(copyDiagTile, copyDiagTile_o)
 
 template <class T>
-void assembleDiag(SizeType i_begin, SizeType i_end, Matrix<const T, Device::CPU>& mat_a,
+void assembleDiag(SizeType i_begin, SizeType i_end, Matrix<const T, Device::CPU>& mat_trd,
                   Matrix<T, Device::CPU>& d) {
   using pika::threads::thread_priority;
   using pika::execution::experimental::start_detached;
@@ -198,16 +192,16 @@ void assembleDiag(SizeType i_begin, SizeType i_end, Matrix<const T, Device::CPU>
   using dlaf::internal::whenAllLift;
 
   for (SizeType i = i_begin; i <= i_end; ++i) {
-    whenAllLift(mat_a.read_sender(GlobalTileIndex(i, 0)), d.readwrite_sender(GlobalTileIndex(i, 0))) |
+    whenAllLift(mat_trd.read_sender(GlobalTileIndex(i, 0)), d.readwrite_sender(GlobalTileIndex(i, 0))) |
         copyDiagTile(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
   }
 }
 
 template <class T>
-T extractRho(const matrix::Tile<const T, Device::CPU>& mat_a_tile) {
+T extractRho(const matrix::Tile<const T, Device::CPU>& mat_trd_tile) {
   // Get the bottom-right element of the tile
   // Multiply by factor 2 to account for the normalization of `z`
-  return 2 * mat_a_tile(TileElementIndex(mat_a_tile.size().rows() - 1, 1));
+  return 2 * mat_trd_tile(TileElementIndex(mat_trd_tile.size().rows() - 1, 1));
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(extractRho);
@@ -711,13 +705,13 @@ void buildRank1EigVecMatrix(
 //}
 
 template <class T>
-void TridiagSolver<Backend::MC, Device::CPU, T>::mergeSubproblems(
-    SizeType i_begin, SizeType i_middle, SizeType i_end,
-    Matrix<internal::ColType, Device::CPU>& coltypes, Matrix<T, Device::CPU>& d,
-    Matrix<T, Device::CPU>& d_defl, Matrix<T, Device::CPU>& z, Matrix<T, Device::CPU>& z_defl,
-    Matrix<SizeType, Device::CPU>& perm_d, Matrix<SizeType, Device::CPU>& perm_q,
-    Matrix<SizeType, Device::CPU>& perm_u, Matrix<T, Device::CPU>& mat_qws,
-    Matrix<T, Device::CPU>& mat_uws, Matrix<T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& mat_ev) {
+void mergeSubproblems(SizeType i_begin, SizeType i_middle, SizeType i_end,
+                      Matrix<internal::ColType, Device::CPU>& coltypes, Matrix<T, Device::CPU>& d,
+                      Matrix<T, Device::CPU>& d_defl, Matrix<T, Device::CPU>& z,
+                      Matrix<T, Device::CPU>& z_defl, Matrix<SizeType, Device::CPU>& perm_d,
+                      Matrix<SizeType, Device::CPU>& perm_q, Matrix<SizeType, Device::CPU>& perm_u,
+                      Matrix<T, Device::CPU>& mat_qws, Matrix<T, Device::CPU>& mat_uws,
+                      Matrix<T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& mat_ev) {
   // Form D + rzz^T from `mat_trd` and `mat_ev`
   assembleZVec(i_begin, i_middle, i_end, mat_ev, z);
   assembleDiag(i_begin, i_end, mat_trd, d);
@@ -814,6 +808,119 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::mergeSubproblems(
   // pika::dataflow(gemmQU<T>, qlens_fut, collectReadTiles(ev_begin, ev_end, mat_qws),
   //               collectReadTiles(ev_begin, ev_end, mat_uws),
   //               collectReadWriteTiles(ev_begin, ev_end, mat_ev));
+}
+
+/// Notation:
+///
+/// nb - the block/tile size of all matrices and vectors
+/// n1 - the size of the top subproblem
+/// n2 - the size of the bottom subproblem
+/// Q1 - (n1 x n1) the orthogonal matrix of the top subproblem
+/// Q2 - (n2 x n2) the orthogonal matrix of the bottom subproblem
+/// n := n1 + n2, the size of the merged problem
+///
+///      ┌───┬───┐
+///      │Q1 │   │
+/// Q := ├───┼───┤ , (n x n) orthogonal matrix composed of the top and bottom subproblems
+///      │   │Q2 │
+///      └───┴───┘
+/// D                 := diag(Q), (n x 1) the diagonal of Q
+/// z                 := (n x 1) rank 1 update vector
+/// rho               := rank 1 update scaling factor
+/// D + rho*z*z^T     := rank 1 update problem
+/// U                 := (n x n) matrix of eigenvectors of the rank 1 update problem:
+///
+/// k                 := the size of the deflated rank 1 update problem (k <= n)
+/// D'                := (k x 1), deflated D
+/// z'                := (k x 1), deflated z
+/// D' + rho*z'*z'^T  := deflated rank 1 update problem
+/// U'                := (k x k) matrix of eigenvectors of the deflated rank 1 update problem
+///
+/// l1  := number of columns of the top subproblem after deflation, l1 <= n1
+/// l2  := number of columns of the bottom subproblem after deflation, l2 <= n2
+/// Q1' := (n1 x l1) the non-deflated part of Q1 (l1 <= n1)
+/// Q2' := (n2 x l2) the non-deflated part of Q2 (l2 <= n2)
+/// Qd  := (n-k x n) the deflated parts of Q1 and Q2
+/// U1' := (l1 x k) is the first l1 rows of U'
+/// U2' := (l2 x k) is the last l2 rows of U'
+/// I   := (n-k x n-k) identity matrix
+/// P   := (n x n) permutation matrix used to bring Q and U into multiplication form
+///
+/// Q-U multiplication form to arrive at the eigenvectors of the merged problem:
+///
+/// ┌────────┬──────┬────┐       ┌───────────────┬────┐       ┌───────────────┬────┐
+/// │        │      │    │       │               │    │       │               │    │
+/// │  Q1'   │      │    │       │               │    │       │    Q1'xU1'    │    │
+/// │        │      │    │       │   U1'         │    │       │               │    │
+/// │        │      │    │       │         ──────┤    │       │               │    │
+/// ├──────┬─┴──────┤ Qd │       ├───────        │    │       ├───────────────┤ Qd │
+/// │      │        │    │   X   │          U2'  │    │   =   │               │    │
+/// │      │        │    │       │               │    │       │    Q2'xU2'    │    │
+/// │      │  Q2'   │    │       ├───────────────┼────┤       │               │    │
+/// │      │        │    │       │               │ I  │       │               │    │
+/// │      │        │    │       │               │    │       │               │    │
+/// └──────┴────────┴────┘       └───────────────┴────┘       └───────────────┴────┘
+///
+/// Note:
+/// 1. U1' and U2' may overlap (in practice they almost always do)
+/// 2. The overlap between U1' and U2' matches the number of shared columns between Q1' and Q2'
+/// 3. The overlap region is due to deflation via Givens rotations of a column vector from Q1 with a
+///    column vector of Q2.
+template <class T>
+void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& mat_trd,
+                                                      Matrix<T, Device::CPU>& mat_ev) {
+  // Cuppen's decomposition
+  internal::cuppensDecomposition(mat_trd);
+  // Solve with stedc for each tile of `mat_trd` (nb x 2) and save eigenvectors in diagonal tiles of
+  // `mat_ev` (nb x nb)
+  internal::solveLeaf(mat_trd, mat_ev);
+
+  // Auxiliary matrix used for the D&C algorithm
+  const matrix::Distribution& distr = mat_ev.distribution();
+
+  // Extra workspace for Q1', Q2' and U1' if n2 > n1 or U2' if n1 >= n2 which are packed as follows:
+  //
+  //   ┌──────┬──────┬───┐
+  //   │  Q1' │  Q2' │   │
+  //   │      │      │   │
+  //   ├──────┤      │   │
+  //   │      └──────┘   │
+  //   │                 │
+  //   ├────────────┐    │
+  //   │     U1'    │    │
+  //   │            │    │
+  //   └────────────┴────┘
+  //
+  Matrix<T, Device::CPU> mat_qws(distr);
+  // Extra workspace for U
+  Matrix<T, Device::CPU> mat_uws(distr);
+
+  // Auxialiary vectors used for the D&C algorithm
+  LocalElementSize vec_size(distr.size().rows(), 1);
+  TileElementSize vec_tile_size(distr.blockSize().rows(), 1);
+  // Holds the diagonal elements of the tridiagonal matrix
+  Matrix<T, Device::CPU> d(vec_size, vec_tile_size);
+  // Holds the values of the deflated diagonal sorted in ascending order
+  Matrix<T, Device::CPU> d_defl(vec_size, vec_tile_size);
+  // Holds the values of Cuppen's rank-1 vector
+  Matrix<T, Device::CPU> z(vec_size, vec_tile_size);
+  // Holds the values of the rank-1 update vector sorted corresponding to `d_defl`
+  Matrix<T, Device::CPU> z_defl(vec_size, vec_tile_size);
+  // Holds indices/permutations of elements of the diagonal sorted in ascending order.
+  Matrix<SizeType, Device::CPU> perm_d(vec_size, vec_tile_size);
+  // Holds indices/permutations of the rows of U that bring it in Q-U matrix multiplication form
+  Matrix<SizeType, Device::CPU> perm_u(vec_size, vec_tile_size);
+  // Holds indices/permutations of the columns of Q that bring it in Q-U matrix multiplication form
+  Matrix<SizeType, Device::CPU> perm_q(vec_size, vec_tile_size);
+  // Assigns a type to each column of Q which is used to calculate the permutation indices for Q and U
+  // that bring them in matrix multiplication form.
+  Matrix<internal::ColType, Device::CPU> coltypes(vec_size, vec_tile_size);
+
+  // Each triad represents two subproblems to be merged
+  for (auto [i_begin, i_middle, i_end] : internal::generateSubproblemIndices(distr.nrTiles().rows())) {
+    mergeSubproblems(i_begin, i_middle, i_end, coltypes, d, d_defl, z, z_defl, perm_d, perm_q, perm_u,
+                     mat_qws, mat_uws, mat_trd, mat_ev);
+  }
 }
 
 /// ---- ETI

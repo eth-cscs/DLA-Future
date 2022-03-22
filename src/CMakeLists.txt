@@ -149,6 +149,7 @@ add_library(dlaf.core
     memory/memory_chunk.cpp
     $<$<BOOL:${DLAF_WITH_CUDA}>:cusolver/assert_info.cu>
     $<$<BOOL:${DLAF_WITH_CUDA}>:lapack/gpu/lacpy.cu>
+    $<$<BOOL:${DLAF_WITH_CUDA}>:lapack/gpu/larft.cu>
     $<$<BOOL:${DLAF_WITH_CUDA}>:lapack/gpu/laset.cu>
 )
 target_compile_options(dlaf.core PRIVATE $<$<COMPILE_LANG_AND_ID:CUDA,NVIDIA>:--extended-lambda>)

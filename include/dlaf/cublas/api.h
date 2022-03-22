@@ -12,6 +12,7 @@
 #ifdef DLAF_WITH_CUDA
 
 #include <cublas_v2.h>
+#include <complex>
 #include "dlaf/cublas/error.h"
 
 #define DLAF_DECLARE_GPUBLAS_OP(Name) \

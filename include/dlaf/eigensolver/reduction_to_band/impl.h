@@ -346,7 +346,12 @@ void setupReflectorPanelV(bool has_head, const SubPanelView& panel_view, const S
     const LocalTileIndex idx = *it;
     const matrix::SubTileSpec& spec = panel_view(idx);
 
-    // TODO this is a workaround for the deadlock problem
+    // Note:  This is a workaround for the deadlock problem with sub-tiles.
+    //        Without this copy, during matrix update the same tile would get accessed at the same
+    //        time both in readonly mode (for reflectors) and in readwrite mode (for updating the
+    //        matrix). This would result in a deadlock, so instead of linking the panel to an external
+    //        tile, memory provided internally by the panel is used as support. In this way, the two
+    //        subtiles used in the operation belong to different tiles.
     if constexpr (force_copy)
       ex::when_all(ex::keep_future(matrix::splitTile(mat_a.read(idx), spec)), v.readwrite_sender(idx)) |
           matrix::copy(dlaf::internal::Policy<B>(thread_priority::high)) | ex::start_detached();
@@ -398,8 +403,6 @@ void hemmComputeX(matrix::Panel<Coord::Col, T, D>& x, const SubMatrixView& view,
   // They have to be set to zero, because all tiles are going to be reduced, and some tiles may not get
   // "initialized" during computation, so they should not contribute with any spurious value to the final
   // result.
-  //
-  // TODO set0 can be "embedded" in the logic but currently it will be a bit cumbersome.
   matrix::util::set0<B>(thread_priority::high, x);
 
   const LocalTileIndex at_offset = view.begin();
@@ -659,8 +662,6 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
   // They have to be set to zero, because all tiles are going to be reduced, and some tiles may not get
   // "initialized" during computation, so they should not contribute with any spurious value to the final
   // result.
-  //
-  // TODO set0 can be "embedded" in the logic but currently it will be a bit cumbersome.
   matrix::util::set0<B>(thread_priority::high, x);
   matrix::util::set0<B>(thread_priority::high, xt);
 

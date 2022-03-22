@@ -260,12 +260,6 @@ private:
   Part part_bottom_;
 };
 
-template <class T, Device D>
-auto splitTileAndDiscard(pika::future<matrix::Tile<T, D>> tile,
-                         const matrix::SubTileSpec spec) noexcept {
-  return splitTile(tile, spec);
-}
-
 template <Backend B, Device D, class T>
 struct Helper;
 
@@ -281,11 +275,11 @@ struct Helper<Backend::MC, Device::CPU, T> {
                          matrix::Panel<Coord::Col, T, D>& mat_v,
                          matrix::Panel<Coord::Col, T, D>& mat_t) {
     auto tile_hh = splitTile(mat_hh.read(ij), helper.specHHCompact());
-    auto tile_v = setupVWellFormed(b, tile_hh, splitTileAndDiscard(mat_v(ij), helper.specHH()));
+    auto tile_v = setupVWellFormed(b, tile_hh, splitTile(mat_v(ij), helper.specHH()));
 
     const matrix::SubTileSpec t_spec{{0, 0}, {nrefls, nrefls}};
     const LocalTileIndex ij_t(LocalTileIndex(ij.row(), 0));
-    auto tile_t = computeTFactor(tile_hh, tile_v, splitTileAndDiscard(mat_t(ij_t), t_spec));
+    auto tile_t = computeTFactor(tile_hh, tile_v, splitTile(mat_t(ij_t), t_spec));
 
     return std::make_pair(std::move(tile_v), std::move(tile_t));
   }
@@ -314,13 +308,13 @@ struct Helper<Backend::GPU, Device::GPU, T> {
 
     auto tile_hh = splitTile(mat_hh.read(ij), helper.specHHCompact());
 
-    auto tile_v_h = setupVWellFormed(b, tile_hh, splitTileAndDiscard(mat_v_h(ij), helper.specHH()));
+    auto tile_v_h = setupVWellFormed(b, tile_hh, splitTile(mat_v_h(ij), helper.specHH()));
     auto tile_v = scheduleCopy(tile_v_h, mat_v, ij, helper.specHH());
 
     const LocalTileIndex ij_t(ij.row(), 0);
     const matrix::SubTileSpec t_spec = {{0, 0}, {nrefls, nrefls}};
 
-    auto tile_t_h = computeTFactor(tile_hh, tile_v_h, splitTileAndDiscard(mat_t_h(ij_t), t_spec));
+    auto tile_t_h = computeTFactor(tile_hh, tile_v_h, splitTile(mat_t_h(ij_t), t_spec));
     auto tile_t = scheduleCopy(tile_t_h, mat_t, ij_t, t_spec);
 
     return std::make_pair(std::move(tile_v), std::move(tile_t));

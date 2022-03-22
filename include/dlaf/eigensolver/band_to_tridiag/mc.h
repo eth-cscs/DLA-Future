@@ -7,6 +7,7 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
+
 #pragma once
 
 #include <pika/future.hpp>
@@ -23,9 +24,7 @@
 #include "dlaf/memory/memory_view.h"
 #include "dlaf/traits.h"
 
-namespace dlaf {
-namespace eigensolver {
-namespace internal {
+namespace dlaf::eigensolver::internal {
 
 template <class T>
 void HHReflector(const SizeType n, T& tau, T* v, T* vec) noexcept {
@@ -247,149 +246,140 @@ protected:
   memory::MemoryView<T, Device::CPU> data_;
 };
 
-template <class T>
-struct BandToTridiag<Backend::MC, Device::CPU, T> {
-  // Local implementation of bandToTridiag.
-  static ReturnTridiagType<T, Device::CPU> call_L(const SizeType b,
-                                                  Matrix<const T, Device::CPU>& mat_a) noexcept {
-    using MatrixType = Matrix<T, Device::CPU>;
-    using ConstTileType = typename MatrixType::ConstTileType;
-    using common::internal::vector;
-    using common::Pipeline;
-    using common::PromiseGuard;
-    using util::ceilDiv;
+template <Device D, class T>
+ReturnTridiagType<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
+    const SizeType b, Matrix<const T, D>& mat_a) noexcept {
+  using MatrixType = Matrix<T, Device::CPU>;
+  using ConstTileType = typename MatrixType::ConstTileType;
+  using common::internal::vector;
+  using common::Pipeline;
+  using common::PromiseGuard;
+  using util::ceilDiv;
 
-    using pika::unwrapping;
-    using pika::resource::get_num_threads;
+  using pika::unwrapping;
+  using pika::resource::get_num_threads;
 
-    auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
+  auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
 
-    // note: A is square and has square blocksize
-    SizeType size = mat_a.size().cols();
-    SizeType nrtile = mat_a.nrTiles().cols();
-    SizeType nb = mat_a.blockSize().cols();
+  // note: A is square and has square blocksize
+  SizeType size = mat_a.size().cols();
+  SizeType nrtile = mat_a.nrTiles().cols();
+  SizeType nb = mat_a.blockSize().cols();
 
-    // Need share pointer to keep the allocation until all the tasks are executed.
-    auto a_ws = std::make_shared<BandBlock<T>>(size, b);
+  // Need share pointer to keep the allocation until all the tasks are executed.
+  auto a_ws = std::make_shared<BandBlock<T>>(size, b);
 
-    Matrix<BaseType<T>, Device::CPU> mat_trid({2, size}, {2, nb});
-    Matrix<T, Device::CPU> mat_v({size, size}, {nb, nb});
-    const auto& dist_v = mat_v.distribution();
+  Matrix<BaseType<T>, Device::CPU> mat_trid({2, size}, {2, nb});
+  Matrix<T, Device::CPU> mat_v({size, size}, {nb, nb});
+  const auto& dist_v = mat_v.distribution();
 
-    if (size == 0) {
-      return {std::move(mat_trid), std::move(mat_v)};
-    }
-
-    const auto max_deps_size = ceilDiv(size, b);
-    vector<pika::shared_future<void>> deps;
-    deps.reserve(max_deps_size);
-
-    auto copy_diag = [a_ws](SizeType j, const ConstTileType& source) { a_ws->copyDiag(j, source); };
-
-    auto copy_offdiag = [a_ws](SizeType j, const ConstTileType& source) {
-      a_ws->copyOffdiag(j, source);
-    };
-
-    // Copy the band matrix
-    for (SizeType k = 0; k < nrtile; ++k) {
-      pika::shared_future<void> sf =
-          pika::dataflow(executor_hp, unwrapping(copy_diag), k * nb, mat_a.read(GlobalTileIndex{k, k}));
-      if (k < nrtile - 1) {
-        for (int i = 0; i < nb / b - 1; ++i) {
-          deps.push_back(sf);
-        }
-        sf = pika::dataflow(executor_hp, unwrapping(copy_offdiag), k * nb,
-                            mat_a.read(GlobalTileIndex{k + 1, k}), sf);
-        deps.push_back(sf);
-      }
-      else {
-        while (deps.size() < max_deps_size) {
-          deps.push_back(sf);
-        }
-      }
-    }
-
-    // Maximum size / (2b-1) sweeps can be executed in parallel.
-    const auto max_workers = std::min(ceilDiv(size, 2 * b - 1), to_SizeType(get_num_threads("default")));
-    vector<Pipeline<SweepWorker<T>>> workers;
-    workers.reserve(max_workers);
-    for (SizeType i = 0; i < max_workers; ++i)
-      workers.emplace_back(SweepWorker<T>(size, b));
-
-    auto init_sweep = [a_ws](SizeType sweep, PromiseGuard<SweepWorker<T>>&& worker) {
-      worker.ref().startSweep(sweep, *a_ws);
-    };
-    auto store_tau_v = [](PromiseGuard<SweepWorker<T>>&& worker, matrix::Tile<T, Device::CPU>&& tile_v,
-                          TileElementIndex index) {
-      worker.ref().compactCopyToTile(std::move(tile_v), index);
-    };
-    auto cont_sweep = [a_ws](PromiseGuard<SweepWorker<T>>&& worker) { worker.ref().doStep(*a_ws); };
-
-    auto copy_tridiag = [executor_hp, a_ws, &mat_trid](SizeType sweep, pika::shared_future<void> dep) {
-      auto copy_tridiag_task = [a_ws](SizeType start, SizeType n_d, SizeType n_e, auto tile_t) {
-        auto inc = a_ws->ld() + 1;
-        if (isComplex_v<T>)
-          // skip imaginary part if Complex.
-          inc *= 2;
-
-        blas::copy(n_d, (BaseType<T>*) a_ws->ptr(0, start), inc, tile_t.ptr({0, 0}), tile_t.ld());
-        blas::copy(n_e, (BaseType<T>*) a_ws->ptr(1, start), inc, tile_t.ptr({1, 0}), tile_t.ld());
-      };
-
-      const auto size = mat_trid.size().cols();
-      const auto nb = mat_trid.blockSize().cols();
-      if (sweep % nb == nb - 1 || sweep == size - 1) {
-        const auto tile_index = sweep / nb;
-        const auto start = tile_index * nb;
-        pika::dataflow(executor_hp, unwrapping(copy_tridiag_task), start, std::min(nb, size - start),
-                       std::min(nb, size - 1 - start), mat_trid(GlobalTileIndex{0, tile_index}), dep);
-      }
-    };
-
-    const auto sweeps = nrSweeps<T>(size);
-    for (SizeType sweep = 0; sweep < sweeps; ++sweep) {
-      // Create the first max_workers workers and then reuse them.
-      auto& w_pipeline = workers[sweep % max_workers];
-
-      auto dep =
-          pika::dataflow(executor_hp, unwrapping(init_sweep), sweep, w_pipeline(), deps[0]).share();
-      copy_tridiag(sweep, dep);
-
-      const auto steps = nrStepsForSweep(sweep, size, b);
-      for (SizeType step = 0; step < steps; ++step) {
-        auto dep_index = std::min(step + 1, deps.size() - 1);
-
-        const GlobalElementIndex index_v((sweep / b + step) * b, sweep);
-
-        pika::dataflow(pika::launch::sync, unwrapping(store_tau_v), w_pipeline(),
-                       mat_v(dist_v.globalTileIndex(index_v)), dist_v.tileElementIndex(index_v));
-        deps[step] = pika::dataflow(executor_hp, unwrapping(cont_sweep), w_pipeline(), deps[dep_index]);
-      }
-
-      // Shrink the dependency vector to only include the futures generated in this sweep.
-      deps.resize(steps);
-    }
-
-    // copy the last elements of the diagonals
-    if (!isComplex_v<T>) {
-      // only needed for real types as they don't perform sweep size-2
-      copy_tridiag(size - 2, deps[0]);
-    }
-    copy_tridiag(size - 1, deps[0]);
-
+  if (size == 0) {
     return {std::move(mat_trid), std::move(mat_v)};
   }
-};
 
-/// ---- ETI
-#define DLAF_EIGENSOLVER_B2T_MC_ETI(KWORD, DATATYPE) \
-  KWORD template struct BandToTridiag<Backend::MC, Device::CPU, DATATYPE>;
+  const auto max_deps_size = ceilDiv(size, b);
+  vector<pika::shared_future<void>> deps;
+  deps.reserve(max_deps_size);
 
-DLAF_EIGENSOLVER_B2T_MC_ETI(extern, float)
-DLAF_EIGENSOLVER_B2T_MC_ETI(extern, double)
-DLAF_EIGENSOLVER_B2T_MC_ETI(extern, std::complex<float>)
-DLAF_EIGENSOLVER_B2T_MC_ETI(extern, std::complex<double>)
+  auto copy_diag = [a_ws](SizeType j, const ConstTileType& source) { a_ws->copyDiag(j, source); };
 
+  auto copy_offdiag = [a_ws](SizeType j, const ConstTileType& source) { a_ws->copyOffdiag(j, source); };
+
+  // Copy the band matrix
+  for (SizeType k = 0; k < nrtile; ++k) {
+    pika::shared_future<void> sf =
+        pika::dataflow(executor_hp, unwrapping(copy_diag), k * nb, mat_a.read(GlobalTileIndex{k, k}));
+    if (k < nrtile - 1) {
+      for (int i = 0; i < nb / b - 1; ++i) {
+        deps.push_back(sf);
+      }
+      sf = pika::dataflow(executor_hp, unwrapping(copy_offdiag), k * nb,
+                          mat_a.read(GlobalTileIndex{k + 1, k}), sf);
+      deps.push_back(sf);
+    }
+    else {
+      while (deps.size() < max_deps_size) {
+        deps.push_back(sf);
+      }
+    }
+  }
+
+  // Maximum size / (2b-1) sweeps can be executed in parallel.
+  const auto max_workers = std::min(ceilDiv(size, 2 * b - 1), to_SizeType(get_num_threads("default")));
+  vector<Pipeline<SweepWorker<T>>> workers;
+  workers.reserve(max_workers);
+  for (SizeType i = 0; i < max_workers; ++i)
+    workers.emplace_back(SweepWorker<T>(size, b));
+
+  auto init_sweep = [a_ws](SizeType sweep, PromiseGuard<SweepWorker<T>>&& worker) {
+    worker.ref().startSweep(sweep, *a_ws);
+  };
+  auto store_tau_v = [](PromiseGuard<SweepWorker<T>>&& worker, matrix::Tile<T, Device::CPU>&& tile_v,
+                        TileElementIndex index) {
+    worker.ref().compactCopyToTile(std::move(tile_v), index);
+  };
+  auto cont_sweep = [a_ws](PromiseGuard<SweepWorker<T>>&& worker) { worker.ref().doStep(*a_ws); };
+
+  auto copy_tridiag = [executor_hp, a_ws, &mat_trid](SizeType sweep, pika::shared_future<void> dep) {
+    auto copy_tridiag_task = [a_ws](SizeType start, SizeType n_d, SizeType n_e, auto tile_t) {
+      auto inc = a_ws->ld() + 1;
+      if (isComplex_v<T>)
+        // skip imaginary part if Complex.
+        inc *= 2;
+
+      blas::copy(n_d, (BaseType<T>*) a_ws->ptr(0, start), inc, tile_t.ptr({0, 0}), tile_t.ld());
+      blas::copy(n_e, (BaseType<T>*) a_ws->ptr(1, start), inc, tile_t.ptr({1, 0}), tile_t.ld());
+    };
+
+    const auto size = mat_trid.size().cols();
+    const auto nb = mat_trid.blockSize().cols();
+    if (sweep % nb == nb - 1 || sweep == size - 1) {
+      const auto tile_index = sweep / nb;
+      const auto start = tile_index * nb;
+      pika::dataflow(executor_hp, unwrapping(copy_tridiag_task), start, std::min(nb, size - start),
+                     std::min(nb, size - 1 - start), mat_trid(GlobalTileIndex{0, tile_index}), dep);
+    }
+  };
+
+  const auto sweeps = nrSweeps<T>(size);
+  for (SizeType sweep = 0; sweep < sweeps; ++sweep) {
+    // Create the first max_workers workers and then reuse them.
+    auto& w_pipeline = workers[sweep % max_workers];
+
+    auto dep = pika::dataflow(executor_hp, unwrapping(init_sweep), sweep, w_pipeline(), deps[0]).share();
+    copy_tridiag(sweep, dep);
+
+    const auto steps = nrStepsForSweep(sweep, size, b);
+    for (SizeType step = 0; step < steps; ++step) {
+      auto dep_index = std::min(step + 1, deps.size() - 1);
+
+      const GlobalElementIndex index_v((sweep / b + step) * b, sweep);
+
+      pika::dataflow(pika::launch::sync, unwrapping(store_tau_v), w_pipeline(),
+                     mat_v(dist_v.globalTileIndex(index_v)), dist_v.tileElementIndex(index_v));
+      deps[step] = pika::dataflow(executor_hp, unwrapping(cont_sweep), w_pipeline(), deps[dep_index]);
+    }
+
+    // Shrink the dependency vector to only include the futures generated in this sweep.
+    deps.resize(steps);
+  }
+
+  // copy the last elements of the diagonals
+  if (!isComplex_v<T>) {
+    // only needed for real types as they don't perform sweep size-2
+    copy_tridiag(size - 2, deps[0]);
+  }
+  copy_tridiag(size - 1, deps[0]);
+
+  return {std::move(mat_trid), std::move(mat_v)};
 }
+
+template <class T>
+ReturnTridiagType<T, Device::CPU> BandToTridiag<Backend::MC, Device::GPU, T>::call_L(
+    const SizeType b, Matrix<const T, Device::GPU>& mat_a) noexcept {
+  dlaf::internal::silenceUnusedWarningFor(b, mat_a);
+  DLAF_UNIMPLEMENTED(Device::GPU);
+  return DLAF_UNREACHABLE(ReturnTridiagType<T, Device::CPU>);
 }
+
 }

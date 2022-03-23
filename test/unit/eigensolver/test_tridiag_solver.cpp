@@ -35,6 +35,50 @@ TEST(MatrixIndexPairsGeneration, IndexPairsGeneration) {
   ASSERT_TRUE(actual_indices == expected_indices);
 }
 
+TEST(Splits, DifferentOffsets) {
+  SizeType l = 10;
+  SizeType b = 3;
+  SizeType o1 = 1;
+  SizeType o2 = 2;
+  std::vector<SizeType> splits = dlaf::eigensolver::internal::interleaveSplits(l, b, o1, o2);
+
+  std::vector<SizeType> expected_splits{0, 1, 2, 4, 5, 7, 8, 10};
+  ASSERT_TRUE(splits == expected_splits);
+}
+
+TEST(Splits, EqualOffsets) {
+  SizeType l = 10;
+  SizeType b = 3;
+  SizeType o1 = 2;
+  SizeType o2 = 2;
+  std::vector<SizeType> splits = dlaf::eigensolver::internal::interleaveSplits(l, b, o1, o2);
+
+  std::vector<SizeType> expected_splits{0, 2, 5, 8, 10};
+  ASSERT_TRUE(splits == expected_splits);
+}
+
+TEST(Splits, SingleZeroOffset) {
+  SizeType l = 10;
+  SizeType b = 3;
+  SizeType o1 = 2;
+  SizeType o2 = 0;
+  std::vector<SizeType> splits = dlaf::eigensolver::internal::interleaveSplits(l, b, o1, o2);
+
+  std::vector<SizeType> expected_splits{0, 2, 3, 5, 6, 8, 9, 10};
+  ASSERT_TRUE(splits == expected_splits);
+}
+
+TEST(Splits, ZeroOffsets) {
+  SizeType l = 10;
+  SizeType b = 3;
+  SizeType o1 = 0;
+  SizeType o2 = 0;
+  std::vector<SizeType> splits = dlaf::eigensolver::internal::interleaveSplits(l, b, o1, o2);
+
+  std::vector<SizeType> expected_splits{0, 3, 6, 9, 10};
+  ASSERT_TRUE(splits == expected_splits);
+}
+
 // Initializes square input and output matices of size (n x n) and block size (nb x nb). The matrices are
 // discribed by a distribution and an array of input and output tiles respectively. Note that in contrast
 // to `Matrix<>`, the tiles are readily available, they are not stored in futures.

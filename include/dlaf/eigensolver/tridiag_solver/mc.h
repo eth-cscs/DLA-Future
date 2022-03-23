@@ -799,6 +799,55 @@ void applyPermutations(
   }
 }
 
+// Interleaves two intervals of length `l` split in blocks of size `b` starting at offsets `o1` and `o2`
+// respectively and returns an array of indices where the splits have occured.
+//
+// o1
+//  │
+//  └► │   │   │   │   │
+//    ─┴───┴───┴───┴───┴───  ◄─┐
+//               ▲             │
+// o2      b ─┬──┘              l
+// │          │                │
+// └─►  │   │ ▼ │   │   │      │
+//    ──┴───┴───┴───┴───┴──  ◄─┘
+//
+inline std::vector<SizeType> interleaveSplits(SizeType l, SizeType b, SizeType o1, SizeType o2) {
+  DLAF_ASSERT(l > 0, l);
+  DLAF_ASSERT(b > 0, b);
+  DLAF_ASSERT(o1 >= 0, o1);
+  DLAF_ASSERT(o2 >= 0, o2);
+
+  // Set small and big from offsets o1 and o2 s.t small <= big
+  SizeType small = o1;
+  SizeType big = o2;
+  if (small > big)
+    std::swap(small, big);
+
+  // Reserve enough memory for array of splits
+  std::vector<SizeType> splits;
+  splits.reserve(2 * to_sizet(l / b) + 2);
+
+  splits.push_back(0);
+  for (SizeType i = small, j = big; i < l || j < l; i += b, j += b) {
+    if (splits.back() != i && i < l)
+      splits.push_back(i);
+    if (splits.back() != j && j < l)
+      splits.push_back(j);
+  }
+  splits.push_back(l);
+  return splits;
+}
+
+// template <class T>
+// void gemm(SizeType m, SizeType n, SizeType k, GlobalElementIndex a_idx, GlobalElementIndex b_idx,
+//           GlobalElementIndex c_idx, matrix::Distribution const& distr,
+//           const std::vector<matrix::Tile<T, Device::CPU>>& a_tiles,
+//           const std::vector<matrix::Tile<T, Device::CPU>>& b_tiles,
+//           std::vector<matrix::Tile<T, Device::CPU>>& c_tiles) {
+//
+// }
+
 template <class T>
 void mergeSubproblems(SizeType i_begin, SizeType i_middle, SizeType i_end,
                       Matrix<internal::ColType, Device::CPU>& coltypes, Matrix<T, Device::CPU>& d,

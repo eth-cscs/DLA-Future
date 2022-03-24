@@ -26,6 +26,12 @@ DLAF_addTest(test_tridiag_solver
   USE_MAIN PIKA
 )
 
+DLAF_addTest(test_tridiag_solver_gemm
+  SOURCES test_tridiag_solver_gemm.cpp
+  LIBRARIES dlaf.core
+  USE_MAIN PIKA
+)
+
 DLAF_addTest(test_eigensolver
   SOURCES test_eigensolver.cpp
   LIBRARIES dlaf.core dlaf.eigensolver dlaf.factorization dlaf.solver

@@ -20,6 +20,7 @@
 
 #include "dlaf/common/callable_object.h"
 #include "dlaf/eigensolver/tridiag_solver/api.h"
+#include "dlaf/eigensolver/tridiag_solver/gemm.h"
 #include "dlaf/eigensolver/tridiag_solver/index.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
@@ -683,18 +684,11 @@ void buildRank1EigVecMatrix(
 //  SizeType l1 = qlens.num_uphalf + qlens.num_dense;
 //  SizeType l2 = qlens.num_lowhalf + qlens.num_dense;
 //
-//  // TODO: Get the end tile index of q1 matrix
-//  // TODO: Get the end tile element index of q2 matrix
-//
-//  // TODO: Get the start tile index of q2 matrix
-//  // TODO: Get the start tile element index of q2 matrix
-//
 //  // Iterate over `mat_ev` tiles in column-major order
 //  for (SizeType j = i_begin; j <= i_end; ++j) {
 //    for (SizeType i = i_begin; i <= i_end; ++i) {
 //      auto mat_ev = mat_ev_tiles[i + j * ncol_tiles].get();
 //      // Iterate over rows of `mat_q` and columns of `mat_u`
-//      // TODO: Only multiply with l1 and l2
 //      for (SizeType k = i_begin; k <= i_end; ++k) {
 //        auto const& q_tile = mat_q_tiles[i + k * ncol_tiles].get();
 //        auto const& u_tile = mat_u_tiles[j + k * ncol_tiles].get();
@@ -798,55 +792,6 @@ void applyPermutations(
     }
   }
 }
-
-// Interleaves two intervals of length `l` split in blocks of size `b` starting at offsets `o1` and `o2`
-// respectively and returns an array of indices where the splits have occured.
-//
-// o1
-//  │
-//  └► │   │   │   │   │
-//    ─┴───┴───┴───┴───┴───  ◄─┐
-//               ▲             │
-// o2      b ─┬──┘              l
-// │          │                │
-// └─►  │   │ ▼ │   │   │      │
-//    ──┴───┴───┴───┴───┴──  ◄─┘
-//
-inline std::vector<SizeType> interleaveSplits(SizeType l, SizeType b, SizeType o1, SizeType o2) {
-  DLAF_ASSERT(l > 0, l);
-  DLAF_ASSERT(b > 0, b);
-  DLAF_ASSERT(o1 >= 0, o1);
-  DLAF_ASSERT(o2 >= 0, o2);
-
-  // Set small and big from offsets o1 and o2 s.t small <= big
-  SizeType small = o1;
-  SizeType big = o2;
-  if (small > big)
-    std::swap(small, big);
-
-  // Reserve enough memory for array of splits
-  std::vector<SizeType> splits;
-  splits.reserve(2 * to_sizet(l / b) + 2);
-
-  splits.push_back(0);
-  for (SizeType i = small, j = big; i < l || j < l; i += b, j += b) {
-    if (splits.back() != i && i < l)
-      splits.push_back(i);
-    if (splits.back() != j && j < l)
-      splits.push_back(j);
-  }
-  splits.push_back(l);
-  return splits;
-}
-
-// template <class T>
-// void gemm(SizeType m, SizeType n, SizeType k, GlobalElementIndex a_idx, GlobalElementIndex b_idx,
-//           GlobalElementIndex c_idx, matrix::Distribution const& distr,
-//           const std::vector<matrix::Tile<T, Device::CPU>>& a_tiles,
-//           const std::vector<matrix::Tile<T, Device::CPU>>& b_tiles,
-//           std::vector<matrix::Tile<T, Device::CPU>>& c_tiles) {
-//
-// }
 
 template <class T>
 void mergeSubproblems(SizeType i_begin, SizeType i_middle, SizeType i_end,
@@ -1082,5 +1027,4 @@ DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::MC, Device::CPU, double)
 // DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)
 // DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::GPU, Device::GPU, std::complex<double>)
 #endif
-
 }

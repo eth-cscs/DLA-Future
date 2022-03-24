@@ -87,7 +87,7 @@ ReturnTridiagType<T, Device::CPU> bandToTridiag(blas::Uplo uplo, SizeType band_s
       break;
   }
 
-  return DLAF_UNREACHABLE(ReturnTridiagType<T, D>);
+  return DLAF_UNREACHABLE(ReturnTridiagType<T, Device::CPU>);
 }
 }
 }

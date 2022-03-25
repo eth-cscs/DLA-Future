@@ -546,16 +546,9 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
     // - computePanelReflectors on CPU (on a matrix like, with just a panel)
     // - copy back matrix "panel" from CPU to GPU
 
-    // Note:
-    // There is a hacky usage of Panel and SubPanelView.
-    // SubPanelView is not meant to be used with Panel, but just with Matrix.
-    // In particular, origin of the spec returned is changed in order to comply with the single
-    // column available in the panel.
-
     auto& v = panels_v.nextResource();
     for (const auto& i : panel_view.iteratorLocal()) {
       auto spec = panel_view(i);
-      spec.origin = {spec.origin.row(), 0};
       auto tmp_tile = v.readwrite_sender(i);
       ex::when_all(ex::keep_future(splitTile(mat_a.read(i), spec)), splitTile(tmp_tile, spec)) |
           matrix::copy(
@@ -568,7 +561,6 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
 
     for (const auto& i : panel_view.iteratorLocal()) {
       auto spec = panel_view(i);
-      spec.origin = {spec.origin.row(), 0};
       auto tile_a = mat_a.readwrite_sender(i);
       ex::when_all(ex::keep_future(splitTile(v.read(i), spec)), splitTile(tile_a, spec)) |
           matrix::copy(
@@ -840,7 +832,14 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
   common::RoundRobin<Panel<Coord::Col, T, D>> panels_w(n_workspaces, dist);
   common::RoundRobin<Panel<Coord::Col, T, D>> panels_x(n_workspaces, dist);
 
-  ComputePanelHelper<B, D, T> compute_panel_helper(n_workspaces, dist);
+  // Note:
+  // Here dist_a is given with full panel size instead of dist with just the part actually needeed,
+  // because the GPU Helper internally exploits Panel data-structure. Indeed, the full size panel is
+  // needed in order to mimick Matrix with Panel, so it is possible to apply a SubPanelView to it.
+  //
+  // It is a bit hacky usage, because SubPanelView is not meant to be used with Panel, but just with
+  // Matrix. This results in a variable waste of memory, depending no the ratio band_size/nb.
+  ComputePanelHelper<B, D, T> compute_panel_helper(n_workspaces, dist_a);
 
   for (SizeType j_sub = 0; j_sub < nblocks; ++j_sub) {
     const auto i_sub = j_sub + 1;

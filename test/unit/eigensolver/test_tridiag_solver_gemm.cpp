@@ -14,9 +14,6 @@
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/util_types.h"
 
-template <typename Type>
-class TridiagEigensolverTest : public ::testing::Test {};
-
 using namespace dlaf;
 using namespace dlaf::test;
 using namespace dlaf::eigensolver::internal;

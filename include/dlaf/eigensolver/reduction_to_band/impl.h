@@ -329,10 +329,12 @@ void setupReflectorPanelV(bool has_head, const SubPanelView& panel_view, const S
     // the blocksize, leading to just using a part of A (first full nrefls columns)
     spec.size = {spec.size.rows(), std::min(nrefls, spec.size.cols())};
 
+    // Note:
+    // copy + laset is done in two independent tasks, but it could be theoretically merged to into a
+    // single task doing both.
     const auto p = dlaf::internal::Policy<B>(thread_priority::high);
     dlaf::internal::whenAllLift(ex::keep_future(splitTile(mat_a.read(i), spec)), v.readwrite_sender(i)) |
         matrix::copy(p) | ex::start_detached();
-
     dlaf::internal::whenAllLift(blas::Uplo::Upper, T(0), T(1), v.readwrite_sender(i)) | tile::laset(p) |
         ex::start_detached();
 

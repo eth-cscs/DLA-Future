@@ -11,7 +11,10 @@
 
 #include <functional>
 #include <tuple>
-#include "gtest/gtest.h"
+
+#include <gtest/gtest.h>
+
+#include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf_test/matrix/matrix_local.h"
 #include "dlaf_test/matrix/util_matrix.h"
@@ -26,7 +29,11 @@ using namespace dlaf::test;
 using namespace testing;
 
 template <typename Type>
-class EigensolverTestMC : public ::testing::Test {};
+class EigensolverTest : public ::testing::Test {};
+
+template <class T>
+using EigensolverTestMC = EigensolverTest<T>;
+
 TYPED_TEST_SUITE(EigensolverTestMC, MatrixElementTypes);
 
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});

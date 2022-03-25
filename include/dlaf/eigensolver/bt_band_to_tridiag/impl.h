@@ -261,14 +261,14 @@ private:
 };
 
 template <Backend B, Device D, class T>
-struct Helper;
+struct HHManager;
 
 template <class T>
-struct Helper<Backend::MC, Device::CPU, T> {
+struct HHManager<Backend::MC, Device::CPU, T> {
   static constexpr Backend B = Backend::MC;
   static constexpr Device D = Device::CPU;
 
-  Helper(const SizeType b, const std::size_t, matrix::Distribution, matrix::Distribution) : b(b) {}
+  HHManager(const SizeType b, const std::size_t, matrix::Distribution, matrix::Distribution) : b(b) {}
 
   auto setupVAndComputeT(const LocalTileIndex ij, const SizeType nrefls, const TileAccessHelper& helper,
                          matrix::Matrix<const T, Device::CPU>& mat_hh,
@@ -289,12 +289,12 @@ protected:
 };
 
 template <class T>
-struct Helper<Backend::GPU, Device::GPU, T> {
+struct HHManager<Backend::GPU, Device::GPU, T> {
   static constexpr Backend B = Backend::GPU;
   static constexpr Device D = Device::GPU;
 
-  Helper(const SizeType b, const std::size_t n_workspaces, matrix::Distribution dist_t,
-         matrix::Distribution dist_w)
+  HHManager(const SizeType b, const std::size_t n_workspaces, matrix::Distribution dist_t,
+            matrix::Distribution dist_w)
       : b(b), t_panels_h(n_workspaces, dist_t), w_panels_h(n_workspaces, dist_w) {}
 
   auto setupVAndComputeT(const LocalTileIndex ij, const SizeType nrefls, const TileAccessHelper& helper,
@@ -391,7 +391,7 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
   RoundRobin<Panel<Coord::Col, T, D>> w_panels(n_workspaces, dist_w);
   RoundRobin<Panel<Coord::Row, T, D>> w2_panels(n_workspaces, dist_w2);
 
-  Helper<B, D, T> helperBackend(b, n_workspaces, dist_t, dist_w);
+  HHManager<B, D, T> helperBackend(b, n_workspaces, dist_t, dist_w);
 
   // Note: sweep are on diagonals, steps are on verticals
   const SizeType j_last_sweep = (nsweeps - 1) / b;

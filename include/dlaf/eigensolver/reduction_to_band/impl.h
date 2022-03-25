@@ -528,6 +528,7 @@ struct ComputePanelHelper<Backend::MC, Device::CPU, T> {
   }
 };
 
+#ifdef DLAF_WITH_CUDA
 template <class T>
 struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
   ComputePanelHelper(const std::size_t n_workspaces, matrix::Distribution dist_a)
@@ -582,6 +583,7 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
 protected:
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panels_v;
 };
+#endif
 }
 
 namespace distributed {

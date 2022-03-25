@@ -17,15 +17,6 @@
 
 namespace dlaf::eigensolver::internal {
 
-// Get the index of the element local to the tile that contains it as well as the index of that tile
-// in the tiles arrays.
-inline std::pair<TileElementIndex, std::size_t> getSubmatrixElementAndTileIndices(
-    GlobalElementIndex idx_el, const matrix::Distribution& distr) {
-  auto arr_idx = distr.globalTileIndex(idx_el);
-  return std::make_pair(distr.tileElementIndex(idx_el),
-                        arr_idx.row() + arr_idx.col() * distr.nrTiles().rows());
-}
-
 // Applies the permutaton index `perm_arr` to a portion of the columns/rows(depends on coord) [1] of an
 // input submatrix [2] and saves the result into a subregion [3] of an output submatrix [4].
 //
@@ -104,8 +95,10 @@ void applyPermutations(
 
       // Get the index of the element local to the tile that contains it as well as the index of that
       // tile in the tiles arrays.
-      auto [idx_el_out, idx_arr_out] = getSubmatrixElementAndTileIndices(idx_el_gl_out, distr);
-      auto [idx_el_in, idx_arr_in] = getSubmatrixElementAndTileIndices(idx_el_gl_in, distr);
+      TileElementIndex idx_el_out = distr.tileElementIndex(idx_el_gl_out);
+      std::size_t idx_arr_out = to_sizet(distr.globalTileLinearIndex(idx_el_gl_out));
+      TileElementIndex idx_el_in = distr.tileElementIndex(idx_el_gl_in);
+      std::size_t idx_arr_in = to_sizet(distr.globalTileLinearIndex(idx_el_gl_in));
       //  copy from `in` to `out`
       out_tiles[idx_arr_out](idx_el_out) = in_tiles[idx_arr_in](idx_el_in);
     }

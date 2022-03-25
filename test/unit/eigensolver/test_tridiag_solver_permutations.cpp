@@ -8,45 +8,19 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/eigensolver/tridiag_solver.h"
+#include "dlaf/eigensolver/tridiag_solver/permutations.h"
 
 #include "gtest/gtest.h"
-//#include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/util_types.h"
 
-template <typename Type>
-class TridiagEigensolverTest : public ::testing::Test {};
-
 using namespace dlaf;
 using namespace dlaf::test;
+using namespace dlaf::eigensolver::internal;
 
-TYPED_TEST_SUITE(TridiagEigensolverTest, RealMatrixElementTypes);
-
-TEST(MatrixIndexPairsGeneration, IndexPairsGeneration) {
-  SizeType n = 10;
-  auto actual_indices = dlaf::eigensolver::internal::generateSubproblemIndices(n);
-  // i_begin, i_middle, i_end
-  std::vector<std::tuple<SizeType, SizeType, SizeType>> expected_indices{{0, 0, 1}, {0, 1, 2},
-                                                                         {3, 3, 4}, {0, 2, 4},
-                                                                         {5, 5, 6}, {5, 6, 7},
-                                                                         {8, 8, 9}, {5, 7, 9},
-                                                                         {0, 4, 9}};
-  ASSERT_TRUE(actual_indices == expected_indices);
-}
-
-TYPED_TEST(TridiagEigensolverTest, GivensDeflations) {
-  using T = TypeParam;
-  T tol = 1e-7;
-  std::vector<T> d{1};
-  std::vector<T> z{1, 2, 0, 3, 1, 0, 2, 0, 0, 0, 1, 2.3, 0};
-  std::vector<SizeType> indices{};
-  std::vector<T> coltypes{};
-
-  std::cout << lapack::lapy2(2.0, 3.0) << std::endl;
-  //dlaf::eigensolver::internal::applyDeflationWithGivensRotation(tol, d.size(), d.data(), indices.data(),
-  //                                                              z.data(), coltypes.data());
-}
+template <typename Type>
+class TridiagEigensolverPermutationsTest : public ::testing::Test {};
+TYPED_TEST_SUITE(TridiagEigensolverPermutationsTest, RealMatrixElementTypes);
 
 // Initializes square input and output matices of size (n x n) and block size (nb x nb). The matrices are
 // discribed by a distribution and an array of input and output tiles respectively. Note that in contrast
@@ -104,7 +78,7 @@ setupMaticesForPermutations(SizeType n, SizeType nb) {
 //  │                 │   │                 │
 //  └─────────────────┘   └─────────────────┘
 //
-TYPED_TEST(TridiagEigensolverTest, ApplyColumnPermutations) {
+TYPED_TEST(TridiagEigensolverPermutationsTest, ApplyColumnPermutations) {
   using T = TypeParam;
   using dlaf::matrix::test::createTile;
   using dlaf::matrix::test::set;
@@ -169,7 +143,7 @@ TYPED_TEST(TridiagEigensolverTest, ApplyColumnPermutations) {
 // └──────────────────────┘    └──────────────────────┘
 // where the (i, j) element of `in` is `i + j`
 //
-TYPED_TEST(TridiagEigensolverTest, ApplyRowPermutations) {
+TYPED_TEST(TridiagEigensolverPermutationsTest, ApplyRowPermutations) {
   using T = TypeParam;
   using dlaf::matrix::test::createTile;
   using dlaf::matrix::test::set;
@@ -221,81 +195,4 @@ TYPED_TEST(TridiagEigensolverTest, ApplyRowPermutations) {
   for (auto [i_tile, i_el, val] : expected_entries) {
     EXPECT_NEAR(out_tiles[i_tile](i_el), val, 1e-7);
   }
-}
-
-// TYPED_TEST(TridiagEigensolverTest, AssembleZVector) {
-//   SizeType n = 10;
-//   SizeType nb = 2;
-//
-//   SizeType i_begin = 2;
-//   SizeType i_middle = 4;
-//   SizeType i_end = 6;
-//   matrix::Matrix<TypeParam, Device::CPU> mat_ev(LocalElementSize(n, n), TileElementSize(nb, nb));
-//   matrix::Matrix<TypeParam, Device::CPU> z(LocalElementSize(n, 1), TileElementSize(nb, 1));
-//
-//   eigensolver::internal::assembleZVec(i_begin, i_middle, i_end, mat_ev, z);
-// }
-
-// TYPED_TEST(TridiagEigensolverTest, AssembleDiag) {
-//   SizeType n = 10;
-//   SizeType nb = 2;
-//
-//   SizeType i_begin = 0;
-//   SizeType i_end = 4;
-//   matrix::Matrix<TypeParam, Device::CPU> mat_a(LocalElementSize(n, n), TileElementSize(nb, nb));
-//   matrix::Matrix<TypeParam, Device::CPU> d(LocalElementSize(n, 1), TileElementSize(nb, 1));
-//
-//   eigensolver::internal::assembleDiag(i_begin, i_end, mat_a, d);
-// }
-
-TYPED_TEST(TridiagEigensolverTest, CuppensDecomposition) {
-  using matrix::test::createTile;
-
-  SizeType sz = 10;
-  auto laplace1d_fn = [](const TileElementIndex& idx) {
-    if (idx.col() == 0)
-      return TypeParam(2);
-    else
-      return TypeParam(-1);
-  };
-
-  TileElementSize tile_size(sz, 2);
-  auto top = createTile<TypeParam, Device::CPU>(laplace1d_fn, tile_size, sz);
-  auto bottom = createTile<TypeParam, Device::CPU>(laplace1d_fn, tile_size, sz);
-
-  eigensolver::internal::cuppensTileDecomposition(top, bottom);
-
-  auto expected_top = createTile<TypeParam, Device::CPU>(laplace1d_fn, tile_size, sz);
-  auto expected_bottom = createTile<TypeParam, Device::CPU>(laplace1d_fn, tile_size, sz);
-  expected_top(TileElementIndex(sz - 1, 0)) = TypeParam(3);
-  expected_bottom(TileElementIndex(0, 0)) = TypeParam(3);
-
-  CHECK_TILE_NEAR(expected_top, top, TypeUtilities<TypeParam>::error, TypeUtilities<TypeParam>::error);
-  CHECK_TILE_NEAR(expected_bottom, bottom, TypeUtilities<TypeParam>::error,
-                  TypeUtilities<TypeParam>::error);
-}
-
-TYPED_TEST(TridiagEigensolverTest, CorrectnessLocal) {
-  using RealParam = BaseType<TypeParam>;
-
-  SizeType n = 10;
-  SizeType nb = 2;
-
-  matrix::Matrix<RealParam, Device::CPU> mat_a(LocalElementSize(n, 2), TileElementSize(nb, 2));
-  matrix::Matrix<TypeParam, Device::CPU> mat_ev(LocalElementSize(n, n), TileElementSize(nb, nb));
-
-  // Tridiagonal matrix : 1D Laplacian
-  auto mat_a_fn = [](GlobalElementIndex el) {
-    if (el.col() == 0)
-      // diagonal
-      return RealParam(-1);
-    else
-      // off-diagoanl
-      return RealParam(2);
-  };
-  matrix::util::set(mat_a, std::move(mat_a_fn));
-
-  // eigensolver::tridiagSolver<Backend::MC>(mat_a, mat_ev);
-
-  // TODO: checks
 }

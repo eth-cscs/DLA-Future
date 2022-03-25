@@ -32,6 +32,12 @@ DLAF_addTest(test_tridiag_solver_gemm
   USE_MAIN PIKA
 )
 
+DLAF_addTest(test_tridiag_solver_permutations
+  SOURCES test_tridiag_solver_permutations.cpp
+  LIBRARIES dlaf.core
+  USE_MAIN PIKA
+)
+
 DLAF_addTest(test_eigensolver
   SOURCES test_eigensolver.cpp
   LIBRARIES dlaf.core dlaf.eigensolver dlaf.factorization dlaf.solver

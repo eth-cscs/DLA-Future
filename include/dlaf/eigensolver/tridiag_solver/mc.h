@@ -22,6 +22,7 @@
 #include "dlaf/eigensolver/tridiag_solver/api.h"
 #include "dlaf/eigensolver/tridiag_solver/gemm.h"
 #include "dlaf/eigensolver/tridiag_solver/index.h"
+#include "dlaf/eigensolver/tridiag_solver/permutations.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/sender/make_sender_algorithm_overloads.h"
@@ -319,7 +320,7 @@ void updateTileColumnTypesBasedOnZvecNearlyZero(T tol, T rho,
   SizeType len = zt.size().rows();
   for (SizeType i = 0; i < len; ++i) {
     TileElementIndex idx(i, 0);
-    if (rho * std::abs(zt(idx)) < tol) {
+    if (std::abs(rho * zt(idx)) < tol) {
       ct(idx) = ColType::Deflated;
     }
   }
@@ -391,8 +392,8 @@ void updateDiagValuesWithGivensCoeff(T c, T s, T& d1, T& d2) {
 //
 // Returns an array of Given's rotations used to update the colunmns of the eigenvector matrix Q
 template <class T>
-std::vector<GivensRotation<T>> applyDeflationWithGivensRotation(T tol, SizeType len, T* dptr,
-                                                                const SizeType* i_ptr, T* zptr,
+std::vector<GivensRotation<T>> applyDeflationWithGivensRotation(T tol, SizeType len, T* d_ptr,
+                                                                const SizeType* i_ptr, T* z_ptr,
                                                                 ColType* c_ptr) {
   std::vector<GivensRotation<T>> rots;
   rots.reserve(to_sizet(len));
@@ -405,16 +406,18 @@ std::vector<GivensRotation<T>> applyDeflationWithGivensRotation(T tol, SizeType 
     SizeType i1s = i_ptr[i1];
     SizeType i2s = i_ptr[i2];
 
-    T& d1 = dptr[i1s];
-    T& d2 = dptr[i2s];
-    T& z1 = zptr[i1s];
-    T& z2 = zptr[i2s];
+    T& d1 = d_ptr[i1s];
+    T& d2 = d_ptr[i2s];
+    T& z1 = z_ptr[i1s];
+    T& z2 = z_ptr[i2s];
     ColType& c1 = c_ptr[i1s];
     ColType& c2 = c_ptr[i2s];
 
-    // if z2 = 0 go to the next iteration
-    if (c1 != ColType::Deflated && c2 != ColType::Deflated &&
-        diagonalValuesNearlyEqual(tol, d1, d2, z1, z2)) {
+    // if z2 == 0 go to the next iteration
+    if (c2 == ColType::Deflated)
+      continue;
+
+    if (c1 != ColType::Deflated && diagonalValuesNearlyEqual(tol, d1, d2, z1, z2)) {
       // if z1 != 0 and z2 != 0 and d1 = d2 apply Givens rotation
       T c, s;
       blas::rotg(&z1, &z2, &c, &s);
@@ -429,7 +432,7 @@ std::vector<GivensRotation<T>> applyDeflationWithGivensRotation(T tol, SizeType 
       }
       c2 = ColType::Deflated;
     }
-    else if (c2 != ColType::Deflated) {
+    else {
       // if z2 != 0 but z1 == 0 or d1 != d2 then use the index of i2 as the new 1st element in the Givens rotation
       i1 = i2;
     }
@@ -697,101 +700,6 @@ void buildRank1EigVecMatrix(
 //    }
 //  }
 //}
-
-// Get the index of the element local to the tile that contains it as well as the index of that tile
-// in the tiles arrays.
-inline std::pair<TileElementIndex, std::size_t> getSubmatrixElementAndTileIndices(
-    GlobalElementIndex idx_el, const matrix::Distribution& distr) {
-  auto arr_idx = distr.globalTileIndex(idx_el);
-  return std::make_pair(distr.tileElementIndex(idx_el),
-                        arr_idx.row() + arr_idx.col() * distr.nrTiles().rows());
-}
-
-// Applies the permutaton index `perm_arr` to a portion of the columns/rows(depends on coord) [1] of an
-// input submatrix [2] and saves the result into a subregion [3] of an output submatrix [4].
-//
-// Example column permutations with `perm_arr = [8, 2, 5]`:
-//
-//          2     5     8      out_begin
-//     ┌────────────────────┐    ┌─────┬─────────────┐
-//     │  in_offset      in │    │     │         out │
-//     │ │                  │    │     └─►┌─┬─┬─┐    │
-//     │◄┘ ┌─┐   ┌─┐   ┌─┐  │    │        │c│a│b│    │
-//     │   │a│   │b│   │c│  │    │    ┌──►│ │ │ │    │
-//     │   │ │ ┌►│ │   │ │◄─┼────┼──┐ │   └─┴─┴─┘    │
-//     │   └─┘ │ └─┘   └─┘  │    │  │ │      ▲       │
-//     │       │            │    │sz.rows()  │       │
-//     │      sz.rows()     │    │           └─      │
-//     │                    │    │          sz.cols()│
-//     └────────────────────┘    └───────────────────┘
-//
-// Example row permutations with `perm_arr = [3, 1]`:
-//
-//             ┌─── in_offset
-//             │                   out_begin
-//     ┌───────▼────────────┐    ┌──┬────────────────┐
-//     │                 in │    │  │            out │
-//     │       ┌─────┐      │    │  └►┌─────┐        │
-//   1 │       │  a  │      │    │    │  b  │        │
-//     │       └─────┘      │    │    ├─────┤ ◄─┐    │
-//     │                    │    │    │  a  │   │    │
-//     │       ┌─────┐      │    │    └──▲──┘   │    │
-//   3 │       │  b  │      │    │       │      │    │
-//     │       └──▲──┘      │    │ sz.cols()    │    │
-//     │          │         │    │          sz.rows()│
-//     └──────────┼─────────┘    └───────────────────┘
-//                │
-//             sz.cols()
-//
-//
-// [1]: The portion of each input column or row is defined by the interval [in_offset, in_offset +
-//      sz.col()) or the interval [in_offset, in_offset + sz.row()) respectively.
-// [2]: The input submatrix is defined by `begin_tiles`, `ld_tiles`, `distr` and `in_tiles`
-// [3]: The subregion is defined by `begin` and `sz`
-// [4]: The output submatrix is defined by `begin_tiles`, `ld_tiles`, `distr` and `out_tiles`
-//
-// clang-format off
-template<class T, Coord coord>
-void applyPermutations(
-    GlobalElementIndex out_begin,
-    GlobalElementSize sz,
-    SizeType in_offset,
-    const matrix::Distribution& distr,
-    const SizeType* perm_arr,
-    const std::vector<matrix::Tile<T, Device::CPU>>& in_tiles,
-    std::vector<matrix::Tile<T, Device::CPU>>& out_tiles
-    ) {
-  // clang-format on
-
-  // Iterate over rows if `coord == Coord::Row` otherwise iterate over columns
-  SizeType dim1 = sz.cols();
-  SizeType dim2 = sz.rows();
-  if constexpr (coord == Coord::Row)
-    std::swap(dim1, dim2);
-  for (SizeType i1 = 0; i1 < dim1; ++i1) {
-    for (SizeType i2 = 0; i2 < dim2; ++i2) {
-      SizeType i = i2;  // row
-      SizeType j = i1;  // column
-      if constexpr (coord == Coord::Row)
-        std::swap(i, j);
-
-      // Get the global index of the `out` element
-      GlobalElementIndex idx_el_gl_out(out_begin.row() + i, out_begin.col() + j);
-      // Get the global index of the `in` element. If `coord == Coord::Row` use the permutation index on
-      // the rows, otherwise use it on the columns.
-      GlobalElementIndex idx_el_gl_in(in_offset + i, perm_arr[j]);
-      if constexpr (coord == Coord::Row)
-        idx_el_gl_in = GlobalElementIndex(perm_arr[i], in_offset + j);
-
-      // Get the index of the element local to the tile that contains it as well as the index of that
-      // tile in the tiles arrays.
-      auto [idx_el_out, idx_arr_out] = getSubmatrixElementAndTileIndices(idx_el_gl_out, distr);
-      auto [idx_el_in, idx_arr_in] = getSubmatrixElementAndTileIndices(idx_el_gl_in, distr);
-      //  copy from `in` to `out`
-      out_tiles[idx_arr_out](idx_el_out) = in_tiles[idx_arr_in](idx_el_in);
-    }
-  }
-}
 
 template <class T>
 void mergeSubproblems(SizeType i_begin, SizeType i_middle, SizeType i_end,

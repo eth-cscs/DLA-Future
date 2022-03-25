@@ -15,6 +15,7 @@
 #include "dlaf/eigensolver/band_to_tridiag.h"  // for nrSweeps/nrStepsForSweep
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/util_matrix.h"
 
@@ -33,7 +34,17 @@ using namespace dlaf::matrix::test;
 template <typename Type>
 class BacktransformationT2BTest : public ::testing::Test {};
 
-TYPED_TEST_SUITE(BacktransformationT2BTest, MatrixElementTypes);
+template <class T>
+using BacktransformationT2BTestMC = BacktransformationT2BTest<T>;
+
+TYPED_TEST_SUITE(BacktransformationT2BTestMC, MatrixElementTypes);
+
+#ifdef DLAF_WITH_CUDA
+template <class T>
+using BacktransformationT2BTestGPU = BacktransformationT2BTest<T>;
+
+TYPED_TEST_SUITE(BacktransformationT2BTestGPU, MatrixElementTypes);
+#endif
 
 // Note: Helper functions for computing the tau of a given reflector. Reflector pointer should
 // point to its 2nd component, i.e. the 1st component equal to 1 is implicitly considered in the
@@ -76,11 +87,11 @@ std::vector<config_t> configs{
     {8, 8, 3, 3},   {10, 10, 3, 3}, {12, 12, 5, 5}, {12, 30, 5, 6},
 };
 
-template <class T>
+template <Backend B, Device D, class T>
 void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, const SizeType b) {
-  Matrix<T, Device::CPU> mat_e({m, n}, {mb, nb});
-  set_random(mat_e);
-  auto mat_e_local = allGather(blas::Uplo::General, mat_e);
+  Matrix<T, Device::CPU> mat_e_h({m, n}, {mb, nb});
+  set_random(mat_e_h);
+  auto mat_e_local = allGather(blas::Uplo::General, mat_e_h);
 
   Matrix<const T, Device::CPU> mat_hh = [m, mb, b]() {
     Matrix<T, Device::CPU> mat_hh({m, m}, {mb, mb});
@@ -113,7 +124,10 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, co
 
   MatrixLocal<T> mat_hh_local = allGather(blas::Uplo::Lower, mat_hh);
 
-  eigensolver::backTransformationBandToTridiag<Backend::MC>(b, mat_e, mat_hh);
+  {
+    MatrixMirror<T, D, Device::CPU> mat_e(mat_e_h);
+    eigensolver::backTransformationBandToTridiag<B>(b, mat_e.get(), mat_hh);
+  }
 
   if (m == 0 || n == 0)
     return;
@@ -137,26 +151,40 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, co
     }
   }
 
-  auto result = [&dist = mat_e.distribution(),
+  auto result = [&dist = mat_e_h.distribution(),
                  &mat_local = mat_e_local](const GlobalElementIndex& element) {
     const auto tile_index = dist.globalTileIndex(element);
     const auto tile_element = dist.tileElementIndex(element);
     return mat_local.tile_read(tile_index)(tile_element);
   };
 
-  CHECK_MATRIX_NEAR(result, mat_e, m * TypeUtilities<T>::error, m * TypeUtilities<T>::error);
+  CHECK_MATRIX_NEAR(result, mat_e_h, m * TypeUtilities<T>::error, m * TypeUtilities<T>::error);
 }
 
-TYPED_TEST(BacktransformationT2BTest, CorrectnessLocal) {
+TYPED_TEST(BacktransformationT2BTestMC, CorrectnessLocal) {
   for (const auto& [m, n, mb, nb, b] : configs)
-    testBacktransformation<TypeParam>(m, n, mb, nb, b);
+    testBacktransformation<Backend::MC, Device::CPU, TypeParam>(m, n, mb, nb, b);
 }
+
+#ifdef DLAF_WITH_CUDA
+TYPED_TEST(BacktransformationT2BTestGPU, CorrectnessLocal) {
+  for (const auto& [m, n, mb, nb, b] : configs)
+    testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(m, n, mb, nb, b);
+}
+#endif
 
 std::vector<config_t> configs_subband{
     {0, 12, 4, 4, 2}, {4, 4, 4, 4, 2}, {12, 12, 4, 4, 2}, {12, 25, 6, 3, 2}, {11, 13, 6, 4, 2},
 };
 
-TYPED_TEST(BacktransformationT2BTest, CorrectnessLocalSubBand) {
+TYPED_TEST(BacktransformationT2BTestMC, CorrectnessLocalSubBand) {
   for (const auto& [m, n, mb, nb, b] : configs_subband)
-    testBacktransformation<TypeParam>(m, n, mb, nb, b);
+    testBacktransformation<Backend::MC, Device::CPU, TypeParam>(m, n, mb, nb, b);
 }
+
+#ifdef DLAF_WITH_CUDA
+TYPED_TEST(BacktransformationT2BTestGPU, CorrectnessLocalSubBand) {
+  for (const auto& [m, n, mb, nb, b] : configs_subband)
+    testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(m, n, mb, nb, b);
+}
+#endif

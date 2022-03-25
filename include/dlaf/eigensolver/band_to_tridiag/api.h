@@ -7,18 +7,18 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
+
 #pragma once
 
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 
-namespace dlaf {
-namespace eigensolver {
+namespace dlaf::eigensolver {
 
-template <class T, Device device>
+template <class T, Device D>
 struct ReturnTridiagType {
-  Matrix<BaseType<T>, device> tridiagonal;
-  Matrix<T, device> hh_reflectors;
+  Matrix<BaseType<T>, D> tridiagonal;
+  Matrix<T, D> hh_reflectors;
 };
 
 namespace internal {
@@ -43,14 +43,6 @@ struct BandToTridiag<Backend::MC, D, T> {
   static ReturnTridiagType<T, Device::CPU> call_L(const SizeType b, Matrix<const T, D>& mat_a) noexcept;
 };
 
-#ifdef DLAF_WITH_CUDA
-template <class T>
-struct BandToTridiag<Backend::MC, Device::GPU, T> {
-  static ReturnTridiagType<T, Device::CPU> call_L(const SizeType b,
-                                                  Matrix<const T, Device::GPU>& mat_a) noexcept;
-};
-#endif
-
 /// ---- ETI
 #define DLAF_EIGENSOLVER_B2T_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
   KWORD template struct BandToTridiag<BACKEND, DEVICE, DATATYPE>;
@@ -60,12 +52,5 @@ DLAF_EIGENSOLVER_B2T_ETI(extern, Backend::MC, Device::CPU, double)
 DLAF_EIGENSOLVER_B2T_ETI(extern, Backend::MC, Device::CPU, std::complex<float>)
 DLAF_EIGENSOLVER_B2T_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
 
-#ifdef DLAF_WITH_CUDA
-DLAF_EIGENSOLVER_B2T_ETI(extern, Backend::MC, Device::GPU, float)
-DLAF_EIGENSOLVER_B2T_ETI(extern, Backend::MC, Device::GPU, double)
-DLAF_EIGENSOLVER_B2T_ETI(extern, Backend::MC, Device::GPU, std::complex<float>)
-DLAF_EIGENSOLVER_B2T_ETI(extern, Backend::MC, Device::GPU, std::complex<double>)
-#endif
-}
 }
 }

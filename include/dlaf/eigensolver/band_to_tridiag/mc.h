@@ -374,12 +374,4 @@ ReturnTridiagType<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   return {std::move(mat_trid), std::move(mat_v)};
 }
 
-template <class T>
-ReturnTridiagType<T, Device::CPU> BandToTridiag<Backend::MC, Device::GPU, T>::call_L(
-    const SizeType b, Matrix<const T, Device::GPU>& mat_a) noexcept {
-  dlaf::internal::silenceUnusedWarningFor(b, mat_a);
-  DLAF_UNIMPLEMENTED(Device::GPU);
-  return DLAF_UNREACHABLE(ReturnTridiagType<T, Device::CPU>);
-}
-
 }

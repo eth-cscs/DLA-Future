@@ -22,9 +22,16 @@ template <class T>
 void larft0(cublasHandle_t handle, const SizeType n, SizeType k, const T* v, const SizeType ldv,
             const T* tau, T* t, const SizeType ldt);
 
+template <class T>
+void larft(cublasHandle_t handle, const SizeType n, SizeType k, const T* v, const SizeType ldv,
+           const T* tau, T* t, const SizeType ldt);
+
 #define DLAF_CUBLAS_LARFT_ETI(kword, Type)                                                       \
   kword template void larft0(cublasHandle_t handle, const SizeType n, SizeType k, const Type* v, \
-                             const SizeType ldv, const Type* tau, Type* t, const SizeType ldt)
+                             const SizeType ldv, const Type* tau, Type* t, const SizeType ldt);  \
+                                                                                                 \
+  kword template void larft(cublasHandle_t handle, const SizeType n, SizeType k, const Type* v,  \
+                            const SizeType ldv, const Type* tau, Type* t, const SizeType ldt)
 
 DLAF_CUBLAS_LARFT_ETI(extern, float);
 DLAF_CUBLAS_LARFT_ETI(extern, double);

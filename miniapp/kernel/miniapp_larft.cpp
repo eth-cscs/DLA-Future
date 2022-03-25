@@ -94,7 +94,7 @@ struct Test {
 
     WorkTiles<T, device> vs(opts.count, n, k, ldv);
     WorkTiles<T, Device::CPU> taus(opts.count, k, 1, k);
-    WorkTiles<T, device> ts(opts.count, n, k, ldt);
+    WorkTiles<T, device> ts(opts.count, k, k, ldt);
 
     vs.setElementsFromTile(v);
     taus.setElementsFromTile(tau);
@@ -104,8 +104,12 @@ struct Test {
                     vs(i).ld(), taus(i).ptr(), ts(i).ptr(), ts(i).ld());
     };
 #ifdef DLAF_WITH_CUDA
-    [[maybe_unused]] auto kernel_GPU = [n, k, &vs, &taus, &ts](SizeType i, cublasHandle_t handle) {
+    [[maybe_unused]] auto kernel_GPU0 = [n, k, &vs, &taus, &ts](SizeType i, cublasHandle_t handle) {
       gpulapack::larft0(handle, n, k, vs(i).ptr(), vs(i).ld(), taus(i).ptr(), ts(i).ptr(), ts(i).ld());
+    };
+
+    [[maybe_unused]] auto kernel_GPU = [n, k, &vs, &taus, &ts](SizeType i, cublasHandle_t handle) {
+      gpulapack::larft(handle, n, k, vs(i).ptr(), vs(i).ld(), taus(i).ptr(), ts(i).ptr(), ts(i).ld());
     };
 #endif
     const double flop = ops<T>(n, k);
@@ -120,6 +124,12 @@ struct Test {
       }
 #ifdef DLAF_WITH_CUDA
       if constexpr (backend == Backend::GPU) {
+        ts.setElements(el_t_gpu);
+        double elapsed_time0 = runner.runHandle(kernel_GPU0);
+
+        std::cout << "[" << run_index << "]"
+                  << " " << elapsed_time0 << "s" << std::endl;
+
         ts.setElements(el_t_gpu);
         elapsed_time = runner.runHandle(kernel_GPU);
       }

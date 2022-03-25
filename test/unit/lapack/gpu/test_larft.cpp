@@ -74,7 +74,7 @@ TYPED_TEST(LarftTestGPU, CorrectnessLocal) {
     lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise, n, k, v_h.ptr(), v_h.ld(),
                   taus.data(), t_h.ptr(), t_h.ld());
 
-    gpulapack::larft0(handle, n, k, v_d.ptr(), v_d.ld(), taus.data(), t_d.ptr(), t_d.ld());
+    gpulapack::larft(handle, n, k, v_d.ptr(), v_d.ld(), taus.data(), t_d.ptr(), t_d.ld());
     DLAF_CUDA_CALL(cudaStreamSynchronize(stream));
 
     SCOPED_TRACE(::testing::Message()

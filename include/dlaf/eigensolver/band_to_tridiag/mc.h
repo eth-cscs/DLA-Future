@@ -247,7 +247,7 @@ protected:
 };
 
 template <Device D, class T>
-ReturnTridiagType<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
+TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     const SizeType b, Matrix<const T, D>& mat_a) noexcept {
   using MatrixType = Matrix<T, Device::CPU>;
   using ConstTileType = typename MatrixType::ConstTileType;

@@ -16,7 +16,7 @@
 namespace dlaf::eigensolver {
 
 template <class T, Device D>
-struct ReturnTridiagType {
+struct TridiagResult {
   Matrix<BaseType<T>, D> tridiagonal;
   Matrix<T, D> hh_reflectors;
 };
@@ -40,7 +40,7 @@ struct BandToTridiag;
 
 template <Device D, class T>
 struct BandToTridiag<Backend::MC, D, T> {
-  static ReturnTridiagType<T, Device::CPU> call_L(const SizeType b, Matrix<const T, D>& mat_a) noexcept;
+  static TridiagResult<T, Device::CPU> call_L(const SizeType b, Matrix<const T, D>& mat_a) noexcept;
 };
 
 /// ---- ETI
@@ -51,6 +51,5 @@ DLAF_EIGENSOLVER_B2T_ETI(extern, Backend::MC, Device::CPU, float)
 DLAF_EIGENSOLVER_B2T_ETI(extern, Backend::MC, Device::CPU, double)
 DLAF_EIGENSOLVER_B2T_ETI(extern, Backend::MC, Device::CPU, std::complex<float>)
 DLAF_EIGENSOLVER_B2T_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
-
 }
 }

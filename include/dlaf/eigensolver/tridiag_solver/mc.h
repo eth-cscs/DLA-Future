@@ -297,7 +297,7 @@ inline void setColTypeTile(const matrix::Tile<ColType, Device::CPU>& tile, ColTy
 DLAF_MAKE_CALLABLE_OBJECT(setColTypeTile);
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(setColTypeTile, setColTypeTile_o)
 
-inline void initColTypes(SizeType i_begin, SizeType i_middle, SizeType i_end,
+inline void initColTypes(SizeType i_begin, SizeType i_split, SizeType i_end,
                          Matrix<ColType, Device::CPU>& coltypes) {
   using pika::threads::thread_priority;
   using pika::execution::experimental::start_detached;
@@ -305,7 +305,7 @@ inline void initColTypes(SizeType i_begin, SizeType i_middle, SizeType i_end,
   using dlaf::internal::whenAllLift;
 
   for (SizeType i = i_begin; i <= i_end; ++i) {
-    ColType val = (i <= i_middle) ? ColType::UpperHalf : ColType::LowerHalf;
+    ColType val = (i <= i_split) ? ColType::UpperHalf : ColType::LowerHalf;
     whenAllLift(coltypes.readwrite_sender(LocalTileIndex(i, 0)), val) |
         setColTypeTile(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
   }
@@ -702,7 +702,7 @@ void buildRank1EigVecMatrix(
 //}
 
 template <class T>
-void mergeSubproblems(SizeType i_begin, SizeType i_middle, SizeType i_end,
+void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end,
                       Matrix<internal::ColType, Device::CPU>& coltypes, Matrix<T, Device::CPU>& d,
                       Matrix<T, Device::CPU>& d_defl, Matrix<T, Device::CPU>& z,
                       Matrix<T, Device::CPU>& z_defl, Matrix<SizeType, Device::CPU>& perm_d,
@@ -710,10 +710,10 @@ void mergeSubproblems(SizeType i_begin, SizeType i_middle, SizeType i_end,
                       Matrix<T, Device::CPU>& mat_qws, Matrix<T, Device::CPU>& mat_uws,
                       Matrix<T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& mat_ev) {
   // Form D + rzz^T from `mat_trd` and `mat_ev`
-  assembleZVec(i_begin, i_middle, i_end, mat_ev, z);
+  assembleZVec(i_begin, i_split, i_end, mat_ev, z);
   assembleDiag(i_begin, i_end, mat_trd, d);
   pika::shared_future<T> rho_fut =
-      pika::dataflow(pika::unwrapping(extractRho<T>), mat_trd.read(LocalTileIndex(i_middle, 0)));
+      pika::dataflow(pika::unwrapping(extractRho<T>), mat_trd.read(LocalTileIndex(i_split, 0)));
 
   // Calculate the tolerance used for deflation
   pika::future<T> dmax_fut = maxVectorElement(i_begin, i_end, d);
@@ -727,7 +727,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_middle, SizeType i_end,
   initIndex(i_begin, i_end, perm_u);
 
   // Initialize coltypes
-  initColTypes(i_begin, i_middle, i_end, coltypes);
+  initColTypes(i_begin, i_split, i_end, coltypes);
 
   // Calculate the merged size of the subproblem
   SizeType n = combinedProblemSize(i_begin, i_end, mat_ev.distribution());

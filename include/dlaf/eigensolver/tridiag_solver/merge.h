@@ -35,6 +35,64 @@ enum class ColType {
   Deflated    // deflated vectors
 };
 
+// Auxialiary matrix and vectors used for the D&C algorithm
+template <class T>
+struct WorkSpace {
+  WorkSpace(WorkSpace&&) = default;
+  WorkSpace& operator=(WorkSpace&&) = default;
+
+  // Extra workspace for Q1', Q2' and U1' if n2 > n1 or U2' if n1 >= n2 which are packed as follows:
+  //
+  //   ┌──────┬──────┬───┐
+  //   │  Q1' │  Q2' │   │
+  //   │      │      │   │
+  //   ├──────┤      │   │
+  //   │      └──────┘   │
+  //   │                 │
+  //   ├────────────┐    │
+  //   │     U1'    │    │
+  //   │            │    │
+  //   └────────────┴────┘
+  //
+  Matrix<T, Device::CPU> mat;
+
+  // Holds the diagonal elements of the tridiagonal matrix
+  Matrix<T, Device::CPU> d;
+  // Holds the values of the deflated diagonal sorted in ascending order
+  Matrix<T, Device::CPU> d_defl;
+  // Holds the values of Cuppen's rank-1 vector
+  Matrix<T, Device::CPU> z;
+  // Holds the values of the rank-1 update vector sorted corresponding to `d_defl`
+  Matrix<T, Device::CPU> z_defl;
+
+  // An index map from sorted (in ascending order) indices to initial indices of D
+  Matrix<SizeType, Device::CPU> isorted;
+  // An index map from sorted (in ascending order) indices of D to sorted indices of the diagonal after
+  // the deflated system is solved and the deflated part is incorporated Holds indices/permutations of
+  // the rows of U that bring it in Q-U matrix multiplication form
+  Matrix<SizeType, Device::CPU> ideflated;
+  // An index map from Q-U matrix multiplication form `ideflated`
+  Matrix<SizeType, Device::CPU> imatmul;
+  // Assigns a type to each column of Q which is used to calculate the permutation indices for Q and U
+  // that bring them in matrix multiplication form.
+  Matrix<internal::ColType, Device::CPU> coltypes;
+};
+
+template <class T>
+WorkSpace<T> initWorkSpace(const matrix::Distribution ev_distr) {
+  LocalElementSize vec_size(ev_distr.size().rows(), 1);
+  TileElementSize vec_tile_size(ev_distr.blockSize().rows(), 1);
+  return WorkSpace<T>{Matrix<T, Device::CPU>(ev_distr),
+                      Matrix<T, Device::CPU>(vec_size, vec_tile_size),
+                      Matrix<T, Device::CPU>(vec_size, vec_tile_size),
+                      Matrix<T, Device::CPU>(vec_size, vec_tile_size),
+                      Matrix<T, Device::CPU>(vec_size, vec_tile_size),
+                      Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
+                      Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
+                      Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
+                      Matrix<internal::ColType, Device::CPU>(vec_size, vec_tile_size)};
+}
+
 // Calculates the combined problem size of the two subproblems that are being merged
 inline SizeType combinedProblemSize(SizeType i_begin, SizeType i_end,
                                     const matrix::Distribution& distr) {
@@ -617,12 +675,7 @@ void buildRank1EigVecMatrix(
 //}
 
 template <class T>
-void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end,
-                      Matrix<internal::ColType, Device::CPU>& coltypes, Matrix<T, Device::CPU>& d,
-                      Matrix<T, Device::CPU>& d_defl, Matrix<T, Device::CPU>& z,
-                      Matrix<T, Device::CPU>& z_defl, Matrix<SizeType, Device::CPU>& perm_d,
-                      Matrix<SizeType, Device::CPU>& perm_q, Matrix<SizeType, Device::CPU>& perm_u,
-                      Matrix<T, Device::CPU>& mat_qws, Matrix<T, Device::CPU>& mat_uws,
+void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSpace<T>& ws,
                       Matrix<const T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& mat_ev) {
   // Get the off-diagonal element from the second column of `mat_trd`
   // TODO: consider moving to mc.h?
@@ -630,27 +683,27 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end,
       pika::dataflow(pika::unwrapping(extractRho<T>), mat_trd.read(LocalTileIndex(i_split, 0)));
 
   // TODO: consider moving to mc.h?
-  assembleDiag(i_begin, i_end, mat_trd, d);
+  assembleDiag(i_begin, i_end, mat_trd, ws.d);
 
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
-  assembleZVec(i_begin, i_split, i_end, rho_fut, mat_ev, z);
+  assembleZVec(i_begin, i_split, i_end, rho_fut, mat_ev, ws.z);
 
   // Double `rho` to account for the normalization of `z` and make sure `rho > 0` for the root solver laed4
   rho_fut = scaleRho(rho_fut);
 
   // Calculate the tolerance used for deflation
-  pika::future<T> dmax_fut = maxVectorElement(i_begin, i_end, d);
-  pika::future<T> zmax_fut = maxVectorElement(i_begin, i_end, z);
+  pika::future<T> dmax_fut = maxVectorElement(i_begin, i_end, ws.d);
+  pika::future<T> zmax_fut = maxVectorElement(i_begin, i_end, ws.z);
   pika::shared_future<T> tol_fut =
       pika::dataflow(pika::unwrapping(calcTolerance<T>), std::move(dmax_fut), std::move(zmax_fut));
 
   // Initialize permutation indices
-  initIndex(i_begin, i_end, perm_d);
-  initIndex(i_begin, i_end, perm_q);
-  initIndex(i_begin, i_end, perm_u);
+  initIndex(i_begin, i_end, ws.isorted);
+  initIndex(i_begin, i_end, ws.ideflated);
+  initIndex(i_begin, i_end, ws.imatmul);
 
   // Initialize coltypes
-  initColTypes(i_begin, i_split, i_end, coltypes);
+  initColTypes(i_begin, i_split, i_end, ws.coltypes);
 
   // Calculate the merged size of the subproblem
   SizeType n = combinedProblemSize(i_begin, i_end, mat_ev.distribution());
@@ -662,26 +715,27 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end,
   // Sort the diagonal in ascending order and initialize the corresponding permutation index
   //
   // Note: `pika::unwrapping()` is not used because it requires that `Tile<>` is copiable at compile-time.
-  pika::dataflow(sortAscendingBasedOnDiagonal<T>, n, collectReadTiles(col_begin, col_end, d),
-                 collectReadWriteTiles(col_begin, col_end, perm_d));
+  pika::dataflow(sortAscendingBasedOnDiagonal<T>, n, collectReadTiles(col_begin, col_end, ws.d),
+                 collectReadWriteTiles(col_begin, col_end, ws.isorted));
 
   // Apply deflation with Givens rotations on `d`, `z` and `coltypes` using the sorted index `perm_d` and
   // return metadata used for applying the rotations on `Q`
   //
   // Note: `pika::unwrapping()` is not used because it requires that `Tile<>` is copiable at compile-time.
   pika::shared_future<std::vector<GivensRotation<T>>> rots_fut =
-      pika::dataflow(applyGivensDeflation<T>, n, tol_fut, collectReadWriteTiles(col_begin, col_end, d),
-                     collectReadTiles(col_begin, col_end, perm_d),
-                     collectReadWriteTiles(col_begin, col_end, z),
-                     collectReadWriteTiles(col_begin, col_end, coltypes));
+      pika::dataflow(applyGivensDeflation<T>, n, tol_fut,
+                     collectReadWriteTiles(col_begin, col_end, ws.d),
+                     collectReadTiles(col_begin, col_end, ws.isorted),
+                     collectReadWriteTiles(col_begin, col_end, ws.z),
+                     collectReadWriteTiles(col_begin, col_end, ws.coltypes));
 
   // Build the permutaion index for the `Q`-`U` multiplication and return the sizes of each segment.
   //
   // Note: `pika::unwrapping()` is not used because it requires that `Tile<>` is copiable at
   // compile-time.
   pika::shared_future<QLens> qlens_fut =
-      pika::dataflow(setMatrixMultiplicationIndex, n, collectReadTiles(col_begin, col_end, coltypes),
-                     collectReadWriteTiles(col_begin, col_end, perm_q));
+      pika::dataflow(setMatrixMultiplicationIndex, n, collectReadTiles(col_begin, col_end, ws.coltypes),
+                     collectReadWriteTiles(col_begin, col_end, ws.imatmul));
 
   // Apply Givens rotations to `Q`
   SizeType ncol_tiles = i_end - i_begin + 1;
@@ -692,35 +746,37 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end,
 
   // Use the permutation index `perm_q` on the columns of `mat_ev` and save the result to `mat_q`
   pika::dataflow(applyPermutationIndexToMatrixQ<T>, i_begin, i_end,
-                 collectReadTiles(col_begin, col_end, perm_q), mat_ev.distribution(),
+                 collectReadTiles(col_begin, col_end, ws.imatmul), mat_ev.distribution(),
                  collectReadTiles(ev_begin, ev_end, mat_ev),
-                 collectReadWriteTiles(ev_begin, ev_end, mat_qws));
+                 collectReadWriteTiles(ev_begin, ev_end, ws.mat));
 
   // Invert the `perm_q` index and map sorted indices to matrix-multiplication indices in `perm_u`
-  pika::dataflow(setPermutationsU, n, collectReadTiles(col_begin, col_end, perm_d),
-                 collectReadWriteTiles(col_begin, col_end, perm_q),
-                 collectReadWriteTiles(col_begin, col_end, perm_u));
+  // pika::dataflow(setPermutationsU, n, collectReadTiles(col_begin, col_end, ws.isorted),
+  //               collectReadWriteTiles(col_begin, col_end, ws.imatmul),
+  //               collectReadWriteTiles(col_begin, col_end, perm_u));
 
   // Offload the non-deflated diagonal values from `d` in ascedning order to `d_defl` using the index
   // `perm_d` and `coltypes`.
-  pika::dataflow(offloadInAscendingOrder<T>, n, collectReadTiles(col_begin, col_end, perm_d),
-                 collectReadTiles(col_begin, col_end, coltypes), collectReadTiles(col_begin, col_end, d),
-                 collectReadWriteTiles(col_begin, col_end, d_defl));
+  pika::dataflow(offloadInAscendingOrder<T>, n, collectReadTiles(col_begin, col_end, ws.isorted),
+                 collectReadTiles(col_begin, col_end, ws.coltypes),
+                 collectReadTiles(col_begin, col_end, ws.d),
+                 collectReadWriteTiles(col_begin, col_end, ws.d_defl));
 
   // Offload the non-zero rank-1 values from `z` to `z_defl` using the permutations index `perm_d` and `coltypes`.
-  pika::dataflow(offloadInAscendingOrder<T>, n, collectReadTiles(col_begin, col_end, perm_d),
-                 collectReadTiles(col_begin, col_end, coltypes), collectReadTiles(col_begin, col_end, z),
-                 collectReadWriteTiles(col_begin, col_end, z_defl));
+  pika::dataflow(offloadInAscendingOrder<T>, n, collectReadTiles(col_begin, col_end, ws.isorted),
+                 collectReadTiles(col_begin, col_end, ws.coltypes),
+                 collectReadTiles(col_begin, col_end, ws.z),
+                 collectReadWriteTiles(col_begin, col_end, ws.z_defl));
 
   // Build the matrix of eigenvectors `U^T` of the deflated rank-1 problem `d_defl + rho * z_defl *
   // z_defl^T` using the root solver `laed4`.
-  pika::dataflow(buildRank1EigVecMatrix<T>, n, qlens_fut, collectReadTiles(col_begin, col_end, d_defl),
-                 rho_fut, collectReadTiles(col_begin, col_end, z_defl),
-                 collectReadTiles(col_begin, col_end, coltypes),
-                 collectReadTiles(col_begin, col_end, perm_d),
-                 collectReadWriteTiles(col_begin, col_end, d),
-                 collectReadTiles(col_begin, col_end, perm_u), mat_uws.distribution(),
-                 collectReadWriteTiles(ev_begin, ev_end, mat_uws));
+  // pika::dataflow(buildRank1EigVecMatrix<T>, n, qlens_fut, collectReadTiles(col_begin, col_end, ws.d_defl),
+  //               rho_fut, collectReadTiles(col_begin, col_end, ws.z_defl),
+  //               collectReadTiles(col_begin, col_end, ws.coltypes),
+  //               collectReadTiles(col_begin, col_end, ws.isorted),
+  //               collectReadWriteTiles(col_begin, col_end, ws.d),
+  //               collectReadTiles(col_begin, col_end, ws.ideflated), ws.mat.distribution(),
+  //               collectReadWriteTiles(ev_begin, ev_end, mat_uws));
 
   // GEMM `mat_q` holding Q and `mat_u` holding U^T into `mat_ev`
   //

@@ -188,48 +188,11 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& ma
   // Auxiliary matrix used for the D&C algorithm
   const matrix::Distribution& distr = mat_ev.distribution();
 
-  // Extra workspace for Q1', Q2' and U1' if n2 > n1 or U2' if n1 >= n2 which are packed as follows:
-  //
-  //   ┌──────┬──────┬───┐
-  //   │  Q1' │  Q2' │   │
-  //   │      │      │   │
-  //   ├──────┤      │   │
-  //   │      └──────┘   │
-  //   │                 │
-  //   ├────────────┐    │
-  //   │     U1'    │    │
-  //   │            │    │
-  //   └────────────┴────┘
-  //
-  Matrix<T, Device::CPU> mat_qws(distr);
-  // Extra workspace for U
-  Matrix<T, Device::CPU> mat_uws(distr);
-
-  // Auxialiary vectors used for the D&C algorithm
-  LocalElementSize vec_size(distr.size().rows(), 1);
-  TileElementSize vec_tile_size(distr.blockSize().rows(), 1);
-  // Holds the diagonal elements of the tridiagonal matrix
-  Matrix<T, Device::CPU> d(vec_size, vec_tile_size);
-  // Holds the values of the deflated diagonal sorted in ascending order
-  Matrix<T, Device::CPU> d_defl(vec_size, vec_tile_size);
-  // Holds the values of Cuppen's rank-1 vector
-  Matrix<T, Device::CPU> z(vec_size, vec_tile_size);
-  // Holds the values of the rank-1 update vector sorted corresponding to `d_defl`
-  Matrix<T, Device::CPU> z_defl(vec_size, vec_tile_size);
-  // Holds indices/permutations of elements of the diagonal sorted in ascending order.
-  Matrix<SizeType, Device::CPU> perm_d(vec_size, vec_tile_size);
-  // Holds indices/permutations of the rows of U that bring it in Q-U matrix multiplication form
-  Matrix<SizeType, Device::CPU> perm_u(vec_size, vec_tile_size);
-  // Holds indices/permutations of the columns of Q that bring it in Q-U matrix multiplication form
-  Matrix<SizeType, Device::CPU> perm_q(vec_size, vec_tile_size);
-  // Assigns a type to each column of Q which is used to calculate the permutation indices for Q and U
-  // that bring them in matrix multiplication form.
-  Matrix<internal::ColType, Device::CPU> coltypes(vec_size, vec_tile_size);
+  WorkSpace<T> ws = initWorkSpace<T>(distr);
 
   // Each triad represents two subproblems to be merged
   for (auto [i_begin, i_middle, i_end] : internal::generateSubproblemIndices(distr.nrTiles().rows())) {
-    mergeSubproblems(i_begin, i_middle, i_end, coltypes, d, d_defl, z, z_defl, perm_d, perm_q, perm_u,
-                     mat_qws, mat_uws, mat_trd, mat_ev);
+    mergeSubproblems(i_begin, i_middle, i_end, ws, mat_trd, mat_ev);
   }
 }
 

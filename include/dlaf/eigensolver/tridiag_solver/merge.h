@@ -46,22 +46,26 @@ inline SizeType combinedProblemSize(SizeType i_begin, SizeType i_end,
 // Copies and normalizes a row of the `tile` into the column vector tile `col`
 //
 template <class T>
-void copyTileRowAndNormalize(SizeType row, const matrix::Tile<const T, Device::CPU>& tile,
+void copyTileRowAndNormalize(SizeType row, T rho, const matrix::Tile<const T, Device::CPU>& tile,
                              const matrix::Tile<T, Device::CPU>& col) {
+  // Negate Q1's last row if rho < 1
+  //
+  // lapack 3.10.0, dlaed2.f, line 280 and 281
+  int sign = (rho < 0) ? -1 : 1;
   for (SizeType i = 0; i < tile.size().rows(); ++i) {
-    col(TileElementIndex(i, 0)) = tile(TileElementIndex(row, i)) / std::sqrt(2);
+    col(TileElementIndex(i, 0)) = sign * tile(TileElementIndex(row, i)) / std::sqrt(2);
   }
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(copyTileRowAndNormalize);
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(copyTileRowAndNormalize, copyTileRowAndNormalize_o)
 
-// The bottom row of Q1 and the top row of Q2
+// The bottom row of Q1 and the top row of Q2. The bottom row of Q1 is negated if `rho < 0`.
 //
 // Note that the norm of `z` is sqrt(2) because it is a concatination of two normalized vectors. Hence to
 // normalize `z` we have to divide by sqrt(2). That is handled in `copyTileRowAndNormalize()`
 template <class T>
-void assembleZVec(SizeType i_begin, SizeType i_middle, SizeType i_end,
+void assembleZVec(SizeType i_begin, SizeType i_middle, SizeType i_end, pika::shared_future<T> rho_fut,
                   Matrix<const T, Device::CPU>& mat_ev, Matrix<T, Device::CPU>& z) {
   using pika::threads::thread_priority;
   using pika::execution::experimental::start_detached;
@@ -77,7 +81,7 @@ void assembleZVec(SizeType i_begin, SizeType i_middle, SizeType i_end,
     SizeType tile_row = (i > i_middle) ? 0 : mat_ev.distribution().tileSize(mat_ev_idx).rows() - 1;
     GlobalTileIndex z_idx(i, 0);
     // Copy the row into the column vector `z`
-    whenAllLift(tile_row, mat_ev.read_sender(mat_ev_idx), z.readwrite_sender(z_idx)) |
+    whenAllLift(tile_row, rho_fut, mat_ev.read_sender(mat_ev_idx), z.readwrite_sender(z_idx)) |
         copyTileRowAndNormalize(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
   }
 }
@@ -107,15 +111,18 @@ void assembleDiag(SizeType i_begin, SizeType i_end, Matrix<const T, Device::CPU>
   }
 }
 
+// Get the bottom-right element of the tridiagonal matrix
 template <class T>
 T extractRho(const matrix::Tile<const T, Device::CPU>& mat_trd_tile) {
-  // Get the bottom-right element of the tile
-  // Multiply by factor 2 to account for the normalization of `z`
-  return 2 * mat_trd_tile(TileElementIndex(mat_trd_tile.size().rows() - 1, 1));
+  return mat_trd_tile(TileElementIndex(mat_trd_tile.size().rows() - 1, 1));
 }
 
-DLAF_MAKE_CALLABLE_OBJECT(extractRho);
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(extractRho, extractRho_o)
+// Multiply by factor 2 to account for the normalization of `z` vector and make sure rho > 0 f
+//
+template <class T>
+pika::future<T> scaleRho(pika::shared_future<T> rho_fut) {
+  return pika::dataflow(pika::unwrapping([](T rho) { return 2 * std::abs(rho); }), std::move(rho_fut));
+}
 
 // Returns the maximum element of a portion of a column vector from tile indices `i_begin` to `i_end` including.
 //
@@ -616,12 +623,20 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end,
                       Matrix<T, Device::CPU>& z_defl, Matrix<SizeType, Device::CPU>& perm_d,
                       Matrix<SizeType, Device::CPU>& perm_q, Matrix<SizeType, Device::CPU>& perm_u,
                       Matrix<T, Device::CPU>& mat_qws, Matrix<T, Device::CPU>& mat_uws,
-                      Matrix<T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& mat_ev) {
-  // Form D + rzz^T from `mat_trd` and `mat_ev`
-  assembleZVec(i_begin, i_split, i_end, mat_ev, z);
-  assembleDiag(i_begin, i_end, mat_trd, d);
+                      Matrix<const T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& mat_ev) {
+  // Get the off-diagonal element from the second column of `mat_trd`
+  // TODO: consider moving to mc.h?
   pika::shared_future<T> rho_fut =
       pika::dataflow(pika::unwrapping(extractRho<T>), mat_trd.read(LocalTileIndex(i_split, 0)));
+
+  // TODO: consider moving to mc.h?
+  assembleDiag(i_begin, i_end, mat_trd, d);
+
+  // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
+  assembleZVec(i_begin, i_split, i_end, rho_fut, mat_ev, z);
+
+  // Double `rho` to account for the normalization of `z` and make sure `rho > 0` for the root solver laed4
+  rho_fut = scaleRho(rho_fut);
 
   // Calculate the tolerance used for deflation
   pika::future<T> dmax_fut = maxVectorElement(i_begin, i_end, d);

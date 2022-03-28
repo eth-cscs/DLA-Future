@@ -20,8 +20,6 @@
 using pika::execution::experimental::just;
 using pika::execution::experimental::start_detached;
 using pika::execution::experimental::when_all;
-using pika::mpi::experimental::transform_mpi;
-using pika::unwrapping;
 
 using namespace dlaf;
 
@@ -39,7 +37,8 @@ TEST(BcastMatrixTest, TransformMPIRW) {
   dlaf::Matrix<double, Device::CPU> mat({sz, 1}, {sz, 1});
   if (comm.rank() == root) {
     mat(index).get()({sz - 1, 0}) = 1.;
-    when_all(mat.readwrite_sender(index), ccomm()) | transform_mpi(comm::sendBcast_o) | start_detached();
+    when_all(mat.readwrite_sender(index), ccomm()) | comm::internal::transformMPI(comm::sendBcast_o) |
+        start_detached();
     mat.readwrite_sender(index) |
         transformDetach(internal::Policy<Backend::MC>(), [sz](matrix::Tile<double, Device::CPU> tile) {
           tile({sz - 1, 0}) = 2.;
@@ -48,8 +47,8 @@ TEST(BcastMatrixTest, TransformMPIRW) {
   }
   else {
     std::this_thread::sleep_for(50ms);
-    when_all(mat.readwrite_sender(index), just(root), ccomm()) | transform_mpi(comm::recvBcast_o) |
-        start_detached();
+    when_all(mat.readwrite_sender(index), just(root), ccomm()) |
+        comm::internal::transformMPI(comm::recvBcast_o) | start_detached();
     EXPECT_EQ(1., mat.read(index).get()({sz - 1, 0}));
   }
 }
@@ -58,7 +57,6 @@ TEST(BcastMatrixTest, TransformMPIRO) {
   using namespace std::literals;
   using pika::execution::experimental::start_detached;
   using pika::execution::experimental::when_all;
-  using pika::mpi::experimental::transform_mpi;
 
   comm::Communicator comm(MPI_COMM_WORLD);
   comm::CommunicatorGrid grid(comm, 1, 2, common::Ordering::ColumnMajor);
@@ -71,7 +69,7 @@ TEST(BcastMatrixTest, TransformMPIRO) {
   dlaf::Matrix<double, Device::CPU> mat({sz, 1}, {sz, 1});
   if (comm.rank() == root) {
     mat(index).get()({sz - 1, 0}) = 1.;
-    when_all(mat.read_sender(index), ccomm()) | transform_mpi(unwrapping(comm::sendBcast_o)) |
+    when_all(mat.read_sender(index), ccomm()) | comm::internal::transformMPI(comm::sendBcast_o) |
         start_detached();
     mat.readwrite_sender(index) |
         transformDetach(internal::Policy<Backend::MC>(), [sz](matrix::Tile<double, Device::CPU> tile) {
@@ -81,8 +79,8 @@ TEST(BcastMatrixTest, TransformMPIRO) {
   }
   else {
     std::this_thread::sleep_for(50ms);
-    when_all(mat.readwrite_sender(index), just(root), ccomm()) | transform_mpi(comm::recvBcast_o) |
-        start_detached();
+    when_all(mat.readwrite_sender(index), just(root), ccomm()) |
+        comm::internal::transformMPI(comm::recvBcast_o) | start_detached();
     EXPECT_EQ(1., mat.read(index).get()({sz - 1, 0}));
   }
 }

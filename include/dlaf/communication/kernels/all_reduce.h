@@ -25,6 +25,7 @@
 #include "dlaf/communication/message.h"
 #include "dlaf/communication/rdma.h"
 #include "dlaf/matrix/tile.h"
+#include "dlaf/sender/transform_mpi.h"
 
 namespace dlaf {
 namespace comm {
@@ -32,7 +33,7 @@ namespace comm {
 namespace internal {
 
 template <class T>
-auto allReduce(common::PromiseGuard<comm::Communicator>& pcomm, MPI_Op reduce_op,
+auto allReduce(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
                common::internal::ContiguousBufferHolder<const T>& cont_buf_in,
                common::internal::ContiguousBufferHolder<T>& cont_buf_out, MPI_Request* req) {
   auto& comm = pcomm.ref();
@@ -42,37 +43,19 @@ auto allReduce(common::PromiseGuard<comm::Communicator>& pcomm, MPI_Op reduce_op
   DLAF_MPI_CHECK_ERROR(MPI_Iallreduce(msg_in.data(), msg_out.data(), msg_in.count(), msg_in.mpi_type(),
                                       reduce_op, comm, req));
 
-  // TODO: Replace this with a cleaner solution. The old MPI executor would move
-  // the pcomm argument into this function, releasing it on return. The MPI
-  // sender adaptor only gives references to arguments and keeps them alive
-  // until the MPI request completes. This means that pcomm would prevent other
-  // communication from being scheduled until the request is completed, when it
-  // is enough to order the MPI function calls (not their completion). This
-  // consumes pcomm locally and releases it on return.
-  auto discard = std::move(pcomm);
-
   return std::move(cont_buf_out);
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(allReduce);
 
 template <class T>
-auto allReduceInPlace(common::PromiseGuard<comm::Communicator>& pcomm, MPI_Op reduce_op,
+auto allReduceInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
                       common::internal::ContiguousBufferHolder<T>& cont_buf, MPI_Request* req) {
   auto& comm = pcomm.ref();
   auto msg = comm::make_message(cont_buf.descriptor);
 
   DLAF_MPI_CHECK_ERROR(
       MPI_Iallreduce(MPI_IN_PLACE, msg.data(), msg.count(), msg.mpi_type(), reduce_op, comm, req));
-
-  // TODO: Replace this with a cleaner solution. The old MPI executor would move
-  // the pcomm argument into this function, releasing it on return. The MPI
-  // sender adaptor only gives references to arguments and keeps them alive
-  // until the MPI request completes. This means that pcomm would prevent other
-  // communication from being scheduled until the request is completed, when it
-  // is enough to order the MPI function calls (not their completion). This
-  // consumes pcomm locally and releases it on return.
-  auto discard = std::move(pcomm);
 
   return std::move(cont_buf);
 }
@@ -89,7 +72,6 @@ void scheduleAllReduce(pika::future<common::PromiseGuard<comm::Communicator>> pc
   using pika::execution::experimental::start_detached;
   using pika::execution::experimental::transfer;
   using pika::execution::experimental::when_all;
-  using pika::mpi::experimental::transform_mpi;
   using pika::threads::thread_priority;
   using pika::unwrapping;
 
@@ -117,7 +99,7 @@ void scheduleAllReduce(pika::future<common::PromiseGuard<comm::Communicator>> pc
                                                 matrix::Tile<T, Device::CPU>& tile_out) mutable {
             return whenAllLift(std::move(pcomm), reduce_op, makeItContiguous(tile_in),
                                makeItContiguous(tile_out)) |
-                   transform_mpi(unwrapping(internal::allReduce_o)) |
+                   transformMPI(internal::allReduce_o) |
                    transform(Policy<Backend::MC>(thread_priority::high),
                              std::bind(copyBack_o, std::placeholders::_1, std::cref(tile_out)));
           })) |
@@ -132,8 +114,6 @@ pika::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
   using pika::execution::experimental::make_future;
   using pika::execution::experimental::then;
   using pika::execution::experimental::transfer;
-  using pika::mpi::experimental::transform_mpi;
-  using pika::unwrapping;
 
   using common::internal::copyBack_o;
   using common::internal::makeItContiguous;
@@ -154,7 +134,7 @@ pika::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
   return std::move(tile) | transfer(getBackendScheduler<Backend::MC>()) |
          let_value([pcomm = std::move(pcomm), reduce_op](matrix::Tile<T, Device::CPU>& tile) mutable {
            return whenAllLift(std::move(pcomm), reduce_op, makeItContiguous(tile)) |
-                  transform_mpi(unwrapping(internal::allReduceInPlace_o)) |
+                  transformMPI(internal::allReduceInPlace_o) |
                   transform(Policy<Backend::MC>(),
                             std::bind(copyBack_o, std::placeholders::_1, std::cref(tile))) |
                   then([&tile]() { return std::move(tile); });

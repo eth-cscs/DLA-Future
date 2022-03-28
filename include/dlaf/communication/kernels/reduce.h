@@ -30,6 +30,7 @@
 #include "dlaf/matrix/tile.h"
 #include "dlaf/schedulers.h"
 #include "dlaf/sender/traits.h"
+#include "dlaf/sender/transform_mpi.h"
 
 namespace dlaf {
 namespace comm {
@@ -37,26 +38,17 @@ namespace comm {
 namespace internal {
 
 template <class T>
-void reduceRecvInPlace(common::PromiseGuard<comm::Communicator>& pcomm, MPI_Op reduce_op,
+void reduceRecvInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
                        const common::internal::ContiguousBufferHolder<T>& cont_buf, MPI_Request* req) {
   auto msg = comm::make_message(cont_buf.descriptor);
   auto& comm = pcomm.ref();
 
   DLAF_MPI_CHECK_ERROR(MPI_Ireduce(MPI_IN_PLACE, msg.data(), msg.count(), msg.mpi_type(), reduce_op,
                                    comm.rank(), comm, req));
-
-  // TODO: Replace this with a cleaner solution. The old MPI executor would move
-  // the pcomm argument into this function, releasing it on return. The MPI
-  // sender adaptor only gives references to arguments and keeps them alive
-  // until the MPI request completes. This means that pcomm would prevent other
-  // communication from being scheduled until the request is completed, when it
-  // is enough to order the MPI function calls (not their completion). This
-  // consumes pcomm locally and releases it on return.
-  auto discard = std::move(pcomm);
 }
 
 template <class T>
-void reduceSend(comm::IndexT_MPI rank_root, common::PromiseGuard<comm::Communicator>& pcomm,
+void reduceSend(comm::IndexT_MPI rank_root, common::PromiseGuard<comm::Communicator> pcomm,
                 MPI_Op reduce_op, const common::internal::ContiguousBufferHolder<const T>& cont_buf,
                 MPI_Request* req) {
   auto msg = comm::make_message(cont_buf.descriptor);
@@ -64,15 +56,6 @@ void reduceSend(comm::IndexT_MPI rank_root, common::PromiseGuard<comm::Communica
 
   DLAF_MPI_CHECK_ERROR(
       MPI_Ireduce(msg.data(), nullptr, msg.count(), msg.mpi_type(), reduce_op, rank_root, comm, req));
-
-  // TODO: Replace this with a cleaner solution. The old MPI executor would move
-  // the pcomm argument into this function, releasing it on return. The MPI
-  // sender adaptor only gives references to arguments and keeps them alive
-  // until the MPI request completes. This means that pcomm would prevent other
-  // communication from being scheduled until the request is completed, when it
-  // is enough to order the MPI function calls (not their completion). This
-  // consumes pcomm locally and releases it on return.
-  auto discard = std::move(pcomm);
 }
 
 template <class Sender>
@@ -104,7 +87,7 @@ auto senderReduceRecvInPlace(pika::future<common::PromiseGuard<comm::Communicato
                   let_value([reduce_op, &tile_orig,
                              pcomm = std::move(pcomm)](const auto& cont_buffer) mutable {
                     return whenAllLift(pcomm.get(), reduce_op, std::cref(cont_buffer)) |
-                           transform_mpi(internal::reduceRecvInPlace<T>) | then([&]() {
+                           transformMPI(internal::reduceRecvInPlace<T>) | then([&]() {
                              // note: this lambda does two things:
                              //       - avoid implicit conversion problem from reference_wrapper
                              //       - act as if the copy returns the destination tile
@@ -140,7 +123,7 @@ auto senderReduceSend(comm::IndexT_MPI rank_root,
            return whenAllLift(std::move(pcomm), makeItContiguous(tile)) |
                   let_value([rank_root, reduce_op](auto& pcomm, const auto& cont_buf) {
                     return whenAllLift(rank_root, std::move(pcomm), reduce_op, std::cref(cont_buf)) |
-                           transform_mpi(internal::reduceSend<T>);
+                           transformMPI(internal::reduceSend<T>);
                   });
          }));
 }

@@ -25,12 +25,13 @@
 #include "dlaf/communication/message.h"
 #include "dlaf/communication/rdma.h"
 #include "dlaf/matrix/tile.h"
+#include "dlaf/sender/transform_mpi.h"
 
 namespace dlaf {
 namespace comm {
 
 template <class T, Device D>
-void sendBcast(const matrix::Tile<const T, D>& tile, common::PromiseGuard<Communicator>& pcomm,
+void sendBcast(const matrix::Tile<const T, D>& tile, common::PromiseGuard<Communicator> pcomm,
                MPI_Request* req) {
 #if !defined(DLAF_WITH_CUDA_RDMA)
   static_assert(D == Device::CPU, "DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.");
@@ -40,37 +41,19 @@ void sendBcast(const matrix::Tile<const T, D>& tile, common::PromiseGuard<Commun
   auto msg = comm::make_message(common::make_data(tile));
   DLAF_MPI_CHECK_ERROR(
       MPI_Ibcast(const_cast<T*>(msg.data()), msg.count(), msg.mpi_type(), comm.rank(), comm, req));
-
-  // TODO: Replace this with a cleaner solution. The old MPI executor would move
-  // the pcomm argument into this function, releasing it on return. The MPI
-  // sender adaptor only gives references to arguments and keeps them alive
-  // until the MPI request completes. This means that pcomm would prevent other
-  // communication from being scheduled until the request is completed, when it
-  // is enough to order the MPI function calls (not their completion). This
-  // consumes pcomm locally and releases it on return.
-  auto discard = std::move(pcomm);
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(sendBcast);
 
 template <class T, Device D>
 void recvBcast(const matrix::Tile<T, D>& tile, comm::IndexT_MPI root_rank,
-               common::PromiseGuard<Communicator>& pcomm, MPI_Request* req) {
+               common::PromiseGuard<Communicator> pcomm, MPI_Request* req) {
 #if !defined(DLAF_WITH_CUDA_RDMA)
   static_assert(D == Device::CPU, "DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.");
 #endif
 
   auto msg = comm::make_message(common::make_data(tile));
   DLAF_MPI_CHECK_ERROR(MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, pcomm.ref(), req));
-
-  // TODO: Replace this with a cleaner solution. The old MPI executor would move
-  // the pcomm argument into this function, releasing it on return. The MPI
-  // sender adaptor only gives references to arguments and keeps them alive
-  // until the MPI request completes. This means that pcomm would prevent other
-  // communication from being scheduled until the request is completed, when it
-  // is enough to order the MPI function calls (not their completion). This
-  // consumes pcomm locally and releases it on return.
-  auto discard = std::move(pcomm);
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(recvBcast);
@@ -86,7 +69,7 @@ void scheduleSendBcast(Future<matrix::Tile<const T, D>> tile,
   using pika::mpi::experimental::transform_mpi;
 
   whenAllLift(keepIfSharedFuture(prepareSendTile(std::move(tile))), std::move(pcomm)) |
-      transform_mpi(pika::unwrapping(sendBcast_o)) | start_detached();
+      internal::transformMPI(sendBcast_o) | start_detached();
 }
 
 namespace internal {
@@ -102,9 +85,8 @@ struct ScheduleRecvBcast {
 
     using dlaf::internal::whenAllLift;
     using pika::execution::experimental::start_detached;
-    using pika::mpi::experimental::transform_mpi;
 
-    return whenAllLift(std::move(tile), root_rank, std::move(pcomm)) | transform_mpi(recvBcast_o);
+    return whenAllLift(std::move(tile), root_rank, std::move(pcomm)) | transformMPI(recvBcast_o);
   }
 
 #if defined(DLAF_WITH_CUDA) && !defined(DLAF_WITH_CUDA_RDMA)
@@ -116,7 +98,6 @@ struct ScheduleRecvBcast {
     //           +--------------------------------------------------------------+
     using pika::execution::experimental::just;
     using pika::execution::experimental::let_value;
-    using pika::mpi::experimental::transform_mpi;
 
     using dlaf::internal::Policy;
     using dlaf::internal::transform;
@@ -142,8 +123,8 @@ struct ScheduleRecvBcast {
                                &tile_gpu](Tile<T, Device::CPU>& tile_cpu) mutable {
                       return std::move(pcomm) |
                              // Perform the actual receive into the CPU tile.
-                             transform_mpi(std::bind(recvBcast_o, std::cref(tile_cpu), root_rank,
-                                                     std::placeholders::_1, std::placeholders::_2)) |
+                             transformMPI(std::bind(recvBcast_o, std::cref(tile_cpu), root_rank,
+                                                    std::placeholders::_1, std::placeholders::_2)) |
                              // Copy the received data from the CPU tile to the
                              // GPU tile.
                              transform(Policy<Backend::GPU>(),

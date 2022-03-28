@@ -56,8 +56,6 @@ struct WorkSpace {
   //
   Matrix<T, Device::CPU> mat;
 
-  // Holds the diagonal elements of the tridiagonal matrix
-  Matrix<T, Device::CPU> d;
   // Holds the values of the deflated diagonal sorted in ascending order
   Matrix<T, Device::CPU> d_defl;
   // Holds the values of Cuppen's rank-1 vector
@@ -79,11 +77,10 @@ struct WorkSpace {
 };
 
 template <class T>
-WorkSpace<T> initWorkSpace(const matrix::Distribution ev_distr) {
+WorkSpace<T> initWorkSpace(const matrix::Distribution& ev_distr) {
   LocalElementSize vec_size(ev_distr.size().rows(), 1);
   TileElementSize vec_tile_size(ev_distr.blockSize().rows(), 1);
   return WorkSpace<T>{Matrix<T, Device::CPU>(ev_distr),
-                      Matrix<T, Device::CPU>(vec_size, vec_tile_size),
                       Matrix<T, Device::CPU>(vec_size, vec_tile_size),
                       Matrix<T, Device::CPU>(vec_size, vec_tile_size),
                       Matrix<T, Device::CPU>(vec_size, vec_tile_size),
@@ -142,37 +139,6 @@ void assembleZVec(SizeType i_begin, SizeType i_middle, SizeType i_end, pika::sha
     whenAllLift(tile_row, rho_fut, mat_ev.read_sender(mat_ev_idx), z.readwrite_sender(z_idx)) |
         copyTileRowAndNormalize(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
   }
-}
-
-template <class T>
-void copyDiagTile(const matrix::Tile<const T, Device::CPU>& tridiag_tile,
-                  const matrix::Tile<T, Device::CPU>& diag_tile) {
-  for (SizeType i = 0; i < tridiag_tile.size().rows(); ++i) {
-    diag_tile(TileElementIndex(i, 0)) = tridiag_tile(TileElementIndex(i, 0));
-  }
-}
-
-DLAF_MAKE_CALLABLE_OBJECT(copyDiagTile);
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(copyDiagTile, copyDiagTile_o)
-
-template <class T>
-void assembleDiag(SizeType i_begin, SizeType i_end, Matrix<const T, Device::CPU>& mat_trd,
-                  Matrix<T, Device::CPU>& d) {
-  using pika::threads::thread_priority;
-  using pika::execution::experimental::start_detached;
-  using dlaf::internal::Policy;
-  using dlaf::internal::whenAllLift;
-
-  for (SizeType i = i_begin; i <= i_end; ++i) {
-    whenAllLift(mat_trd.read_sender(GlobalTileIndex(i, 0)), d.readwrite_sender(GlobalTileIndex(i, 0))) |
-        copyDiagTile(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
-  }
-}
-
-// Get the bottom-right element of the tridiagonal matrix
-template <class T>
-T extractRho(const matrix::Tile<const T, Device::CPU>& mat_trd_tile) {
-  return mat_trd_tile(TileElementIndex(mat_trd_tile.size().rows() - 1, 1));
 }
 
 // Multiply by factor 2 to account for the normalization of `z` vector and make sure rho > 0 f
@@ -676,15 +642,8 @@ void buildRank1EigVecMatrix(
 
 template <class T>
 void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSpace<T>& ws,
-                      Matrix<const T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& mat_ev) {
-  // Get the off-diagonal element from the second column of `mat_trd`
-  // TODO: consider moving to mc.h?
-  pika::shared_future<T> rho_fut =
-      pika::dataflow(pika::unwrapping(extractRho<T>), mat_trd.read(LocalTileIndex(i_split, 0)));
-
-  // TODO: consider moving to mc.h?
-  assembleDiag(i_begin, i_end, mat_trd, ws.d);
-
+                      pika::shared_future<T> rho_fut, Matrix<T, Device::CPU>& d,
+                      Matrix<T, Device::CPU>& mat_ev) {
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
   assembleZVec(i_begin, i_split, i_end, rho_fut, mat_ev, ws.z);
 
@@ -692,7 +651,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   rho_fut = scaleRho(rho_fut);
 
   // Calculate the tolerance used for deflation
-  pika::future<T> dmax_fut = maxVectorElement(i_begin, i_end, ws.d);
+  pika::future<T> dmax_fut = maxVectorElement(i_begin, i_end, d);
   pika::future<T> zmax_fut = maxVectorElement(i_begin, i_end, ws.z);
   pika::shared_future<T> tol_fut =
       pika::dataflow(pika::unwrapping(calcTolerance<T>), std::move(dmax_fut), std::move(zmax_fut));
@@ -715,7 +674,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   // Sort the diagonal in ascending order and initialize the corresponding permutation index
   //
   // Note: `pika::unwrapping()` is not used because it requires that `Tile<>` is copiable at compile-time.
-  pika::dataflow(sortAscendingBasedOnDiagonal<T>, n, collectReadTiles(col_begin, col_end, ws.d),
+  pika::dataflow(sortAscendingBasedOnDiagonal<T>, n, collectReadTiles(col_begin, col_end, d),
                  collectReadWriteTiles(col_begin, col_end, ws.isorted));
 
   // Apply deflation with Givens rotations on `d`, `z` and `coltypes` using the sorted index `perm_d` and
@@ -723,8 +682,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   //
   // Note: `pika::unwrapping()` is not used because it requires that `Tile<>` is copiable at compile-time.
   pika::shared_future<std::vector<GivensRotation<T>>> rots_fut =
-      pika::dataflow(applyGivensDeflation<T>, n, tol_fut,
-                     collectReadWriteTiles(col_begin, col_end, ws.d),
+      pika::dataflow(applyGivensDeflation<T>, n, tol_fut, collectReadWriteTiles(col_begin, col_end, d),
                      collectReadTiles(col_begin, col_end, ws.isorted),
                      collectReadWriteTiles(col_begin, col_end, ws.z),
                      collectReadWriteTiles(col_begin, col_end, ws.coltypes));
@@ -759,7 +717,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   // `perm_d` and `coltypes`.
   pika::dataflow(offloadInAscendingOrder<T>, n, collectReadTiles(col_begin, col_end, ws.isorted),
                  collectReadTiles(col_begin, col_end, ws.coltypes),
-                 collectReadTiles(col_begin, col_end, ws.d),
+                 collectReadTiles(col_begin, col_end, d),
                  collectReadWriteTiles(col_begin, col_end, ws.d_defl));
 
   // Offload the non-zero rank-1 values from `z` to `z_defl` using the permutations index `perm_d` and `coltypes`.
@@ -774,7 +732,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   //               rho_fut, collectReadTiles(col_begin, col_end, ws.z_defl),
   //               collectReadTiles(col_begin, col_end, ws.coltypes),
   //               collectReadTiles(col_begin, col_end, ws.isorted),
-  //               collectReadWriteTiles(col_begin, col_end, ws.d),
+  //               collectReadWriteTiles(col_begin, col_end, d),
   //               collectReadTiles(col_begin, col_end, ws.ideflated), ws.mat.distribution(),
   //               collectReadWriteTiles(ev_begin, ev_end, mat_uws));
 

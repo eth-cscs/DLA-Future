@@ -35,7 +35,8 @@ namespace dlaf::eigensolver::internal {
 
 template <class T>
 struct TridiagSolver<Backend::MC, Device::CPU, T> {
-  static void call(Matrix<T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& mat_ev);
+  static void call(Matrix<T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& d,
+                   Matrix<T, Device::CPU>& mat_ev);
 };
 
 /// Splits [i_begin, i_end] in the middle and waits for all splits on [i_begin, i_middle] and [i_middle +
@@ -70,9 +71,15 @@ inline std::vector<std::tuple<SizeType, SizeType, SizeType>> generateSubproblemI
   return indices;
 }
 
+// Cuppen's decompostion
+//
+// Substracts the offdiagonal element at the split from the top and bottom diagonal elements and returns
+// the offdiagonal element. The split is between the last row of the top tile and the first row of the
+// bottom tile.
+//
 template <class T>
-void cuppensTileDecomposition(const matrix::Tile<T, Device::CPU>& top,
-                              const matrix::Tile<T, Device::CPU>& bottom) {
+T cuppensTileDecomposition(const matrix::Tile<T, Device::CPU>& top,
+                           const matrix::Tile<T, Device::CPU>& bottom) {
   (void) top;
   (void) bottom;
 
@@ -82,25 +89,24 @@ void cuppensTileDecomposition(const matrix::Tile<T, Device::CPU>& top,
 
   top_diag_val -= offdiag_val;
   bottom_diag_val -= offdiag_val;
+  return offdiag_val;
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(cuppensTileDecomposition);
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(cuppensTileDecomposition, cuppensTileDecomposition_o)
 
 template <class T>
-void cuppensDecomposition(Matrix<T, Device::CPU>& mat_trd) {
-  using pika::threads::thread_priority;
-  using pika::execution::experimental::start_detached;
-  using dlaf::internal::Policy;
-  using dlaf::internal::whenAllLift;
-
+std::vector<pika::shared_future<T>> cuppensDecomposition(Matrix<T, Device::CPU>& mat_trd) {
   SizeType i_end = mat_trd.distribution().nrTiles().rows() - 1;
+  std::vector<pika::shared_future<T>> offdiag_vals;
+  offdiag_vals.reserve(to_sizet(i_end));
+
   for (SizeType i_split = 0; i_split < i_end; ++i_split) {
     // Cuppen's tridiagonal decomposition
-    whenAllLift(mat_trd.readwrite_sender(LocalTileIndex(i_split, 0)),
-                mat_trd.readwrite_sender(LocalTileIndex(i_split + 1, 0))) |
-        cuppensTileDecomposition(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
+    offdiag_vals[to_sizet(i_split)] =
+        pika::dataflow(pika::unwrapping(cuppensTileDecomposition_o), mat_trd(LocalTileIndex(i_split, 0)),
+                       mat_trd(LocalTileIndex(i_split + 1, 0)));
   }
+  return offdiag_vals;
 }
 
 // Solve leaf eigensystem with stedc
@@ -117,6 +123,30 @@ void solveLeaf(Matrix<T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& mat_ev) 
                 mat_ev.readwrite_sender(LocalTileIndex(i, i))) |
         tile::stedc(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
     return;
+  }
+}
+
+template <class T>
+void copyDiagTile(const matrix::Tile<const T, Device::CPU>& tridiag_tile,
+                  const matrix::Tile<T, Device::CPU>& diag_tile) {
+  for (SizeType i = 0; i < tridiag_tile.size().rows(); ++i) {
+    diag_tile(TileElementIndex(i, 0)) = tridiag_tile(TileElementIndex(i, 0));
+  }
+}
+
+DLAF_MAKE_CALLABLE_OBJECT(copyDiagTile);
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(copyDiagTile, copyDiagTile_o)
+
+template <class T>
+void offloadDiagonal(Matrix<const T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& d) {
+  using pika::threads::thread_priority;
+  using pika::execution::experimental::start_detached;
+  using dlaf::internal::Policy;
+  using dlaf::internal::whenAllLift;
+
+  for (SizeType i = 0; i < d.distribution().nrTiles().rows(); ++i) {
+    whenAllLift(mat_trd.read_sender(GlobalTileIndex(i, 0)), d.readwrite_sender(GlobalTileIndex(i, 0))) |
+        copyDiagTile(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
   }
 }
 
@@ -178,21 +208,25 @@ void solveLeaf(Matrix<T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& mat_ev) 
 ///    column vector of Q2.
 template <class T>
 void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& mat_trd,
+                                                      Matrix<T, Device::CPU>& d,
                                                       Matrix<T, Device::CPU>& mat_ev) {
   // Cuppen's decomposition
-  internal::cuppensDecomposition(mat_trd);
+  std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(mat_trd);
+
   // Solve with stedc for each tile of `mat_trd` (nb x 2) and save eigenvectors in diagonal tiles of
   // `mat_ev` (nb x nb)
-  internal::solveLeaf(mat_trd, mat_ev);
+  solveLeaf(mat_trd, mat_ev);
+
+  // Offload the diagonal from `mat_trd` to `d`
+  offloadDiagonal(mat_trd, d);
 
   // Auxiliary matrix used for the D&C algorithm
   const matrix::Distribution& distr = mat_ev.distribution();
-
   WorkSpace<T> ws = initWorkSpace<T>(distr);
 
   // Each triad represents two subproblems to be merged
-  for (auto [i_begin, i_middle, i_end] : internal::generateSubproblemIndices(distr.nrTiles().rows())) {
-    mergeSubproblems(i_begin, i_middle, i_end, ws, mat_trd, mat_ev);
+  for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(distr.nrTiles().rows())) {
+    mergeSubproblems(i_begin, i_split, i_end, ws, offdiag_vals[to_sizet(i_split)], d, mat_ev);
   }
 }
 

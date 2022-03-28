@@ -43,6 +43,13 @@ struct GivensRotation {
   T s;         // sine
 };
 
+struct QLens {
+  SizeType num_uphalf;
+  SizeType num_dense;
+  SizeType num_lowhalf;
+  SizeType num_deflated;
+};
+
 // Auxialiary matrix and vectors used for the D&C algorithm
 template <class T>
 struct WorkSpace {
@@ -258,45 +265,6 @@ inline void initColTypes(SizeType i_begin, SizeType i_split, SizeType i_end,
   }
 }
 
-// @param zt tile from the `z`-vector
-// @param ct tile from the `coltypes` vector
-template <class T>
-void updateTileColumnTypesBasedOnZvecNearlyZero(T tol, T rho,
-                                                const matrix::Tile<const T, Device::CPU>& zt,
-                                                const matrix::Tile<ColType, Device::CPU>& ct) {
-  SizeType len = zt.size().rows();
-  for (SizeType i = 0; i < len; ++i) {
-    TileElementIndex idx(i, 0);
-    if (std::abs(rho * zt(idx)) < tol) {
-      ct(idx) = ColType::Deflated;
-    }
-  }
-}
-
-DLAF_MAKE_CALLABLE_OBJECT(updateTileColumnTypesBasedOnZvecNearlyZero);
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(updateTileColumnTypesBasedOnZvecNearlyZero,
-                                     updateTileColumnTypesBasedOnZvecNearlyZero_o)
-
-template <class T>
-void updateVectorColumnTypesBasedOnZvecNearlyZero(SizeType i_begin, SizeType i_end,
-                                                  pika::shared_future<T> tol_fut,
-                                                  pika::shared_future<T> rho_fut,
-                                                  Matrix<const T, Device::CPU>& z,
-                                                  Matrix<ColType, Device::CPU>& coltypes) {
-  using pika::threads::thread_priority;
-  using pika::execution::experimental::start_detached;
-  using dlaf::internal::Policy;
-  using dlaf::internal::whenAllLift;
-
-  for (SizeType i = i_begin; i <= i_end; ++i) {
-    LocalTileIndex idx(i, 0);
-    whenAllLift(std::move(tol_fut), std::move(rho_fut), z.read_sender(idx),
-                coltypes.readwrite_sender(idx)) |
-        updateTileColumnTypesBasedOnZvecNearlyZero(Policy<Backend::MC>(thread_priority::normal)) |
-        start_detached();
-  }
-}
-
 // Returns true if `d1` is close to `d2`.
 //
 // Given's deflation condition is the same as the one used in LAPACK's stedc implementation [1].
@@ -307,12 +275,6 @@ bool diagonalValuesNearlyEqual(T tol, T d1, T d2, T z1, T z2) {
   // Note that this is similar to calling `rotg()` but we want to make sure that the condition is
   // satisfied before modifying z1, z2 that is why the function is not used here.
   return std::abs(z1 * z2 * (d1 - d2) / (z1 * z1 + z2 * z2)) < tol;
-}
-
-template <class T>
-void updateDiagValuesWithGivensCoeff(T c, T s, T& d1, T& d2) {
-  d1 = d1 * c * c + d2 * s * s;
-  d2 = d1 * s * s + d2 * c * c;
 }
 
 // Assumption 1: The algorithm assumes that the diagonal `dptr` is sorted in ascending order with
@@ -327,9 +289,8 @@ void updateDiagValuesWithGivensCoeff(T c, T s, T& d1, T& d2) {
 //
 // Returns an array of Given's rotations used to update the colunmns of the eigenvector matrix Q
 template <class T>
-std::vector<GivensRotation<T>> applyDeflationWithGivensRotation(T tol, SizeType len, T* d_ptr,
-                                                                const SizeType* i_ptr, T* z_ptr,
-                                                                ColType* c_ptr) {
+std::vector<GivensRotation<T>> applyDeflationToArrays(T rho, T tol, SizeType len, T* d_ptr,
+                                                      const SizeType* i_ptr, T* z_ptr, ColType* c_ptr) {
   std::vector<GivensRotation<T>> rots;
   rots.reserve(to_sizet(len));
 
@@ -348,37 +309,47 @@ std::vector<GivensRotation<T>> applyDeflationWithGivensRotation(T tol, SizeType 
     ColType& c1 = c_ptr[i1s];
     ColType& c2 = c_ptr[i2s];
 
-    // if z2 == 0 go to the next iteration
-    if (c2 == ColType::Deflated)
-      continue;
-
-    if (c1 != ColType::Deflated && diagonalValuesNearlyEqual(tol, d1, d2, z1, z2)) {
-      // if z1 != 0 and z2 != 0 and d1 = d2 apply Givens rotation
-      T c, s;
-      blas::rotg(&z1, &z2, &c, &s);
-      updateDiagValuesWithGivensCoeff(c, s, d1, d2);
-
-      rots.push_back(GivensRotation<T>{i1s, i2s, c, s});
-      //  Set the the `i1` column as "Dense" if the `i2` column has opposite non-zero structure (i.e if
-      //  one comes from Q1 and the other from Q2 or vice-versa)
-      if ((c1 == ColType::UpperHalf && c2 == ColType::LowerHalf) ||
-          (c1 == ColType::LowerHalf && c2 == ColType::UpperHalf)) {
-        c1 = ColType::Dense;
-      }
-      c2 = ColType::Deflated;
-    }
-    else {
-      // if z2 != 0 but z1 == 0 or d1 != d2 then use the index of i2 as the new 1st element in the Givens rotation
+    // if z1 nearly zero deflate the element and move i1 forward to i2
+    if (std::abs(rho * z1) < tol) {
+      c1 = ColType::Deflated;
       i1 = i2;
+      continue;
     }
+
+    // Deflate the second element if z2 nearly zero
+    if (std::abs(rho * z2) < tol) {
+      c2 = ColType::Deflated;
+      continue;
+    }
+
+    // If d1 is not nearly equal to d2, move i1 forward to i2
+    if (!diagonalValuesNearlyEqual(tol, d1, d2, z1, z2)) {
+      i1 = i2;
+      continue;
+    }
+
+    // When d1 is nearly equal to d2 apply Givens rotation
+    T c, s;
+    blas::rotg(&z1, &z2, &c, &s);
+    d1 = d1 * c * c + d2 * s * s;
+    d2 = d1 * s * s + d2 * c * c;
+
+    rots.push_back(GivensRotation<T>{i1s, i2s, c, s});
+    //  Set the the `i1` column as "Dense" if the `i2` column has opposite non-zero structure (i.e if
+    //  one comes from Q1 and the other from Q2 or vice-versa)
+    if ((c1 == ColType::UpperHalf && c2 == ColType::LowerHalf) ||
+        (c1 == ColType::LowerHalf && c2 == ColType::UpperHalf)) {
+      c1 = ColType::Dense;
+    }
+    c2 = ColType::Deflated;
   }
 
   return rots;
 }
 
 template <class T>
-std::vector<GivensRotation<T>> applyGivensDeflation(
-    SizeType n, pika::shared_future<T> tol,
+std::vector<GivensRotation<T>> applyDeflation(
+    SizeType n, pika::shared_future<T> rho_fut, pika::shared_future<T> tol_fut,
     std::vector<pika::future<matrix::Tile<T, Device::CPU>>> d_tiles,
     std::vector<pika::shared_future<matrix::Tile<const SizeType, Device::CPU>>> perm_d_tiles,
     std::vector<pika::future<matrix::Tile<T, Device::CPU>>> z_tiles,
@@ -389,15 +360,8 @@ std::vector<GivensRotation<T>> applyGivensDeflation(
   ColType* c_ptr = coltypes_tiles[0].get().ptr(zero_idx);
   const SizeType* i_ptr = perm_d_tiles[0].get().ptr(zero_idx);
 
-  return applyDeflationWithGivensRotation(tol.get(), n, d_ptr, i_ptr, z_ptr, c_ptr);
+  return applyDeflationToArrays(rho_fut.get(), tol_fut.get(), n, d_ptr, i_ptr, z_ptr, c_ptr);
 }
-
-struct QLens {
-  SizeType num_uphalf;
-  SizeType num_dense;
-  SizeType num_lowhalf;
-  SizeType num_deflated;
-};
 
 // Partitions `p_ptr` based on a `ctype` in `c_ptr` array.
 //
@@ -678,7 +642,8 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   //
   // Note: `pika::unwrapping()` is not used because it requires that `Tile<>` is copiable at compile-time.
   pika::shared_future<std::vector<GivensRotation<T>>> rots_fut =
-      pika::dataflow(applyGivensDeflation<T>, n, tol_fut, collectReadWriteTiles(col_begin, col_end, d),
+      pika::dataflow(applyDeflation<T>, n, rho_fut, tol_fut,
+                     collectReadWriteTiles(col_begin, col_end, d),
                      collectReadTiles(col_begin, col_end, ws.isorted),
                      collectReadWriteTiles(col_begin, col_end, ws.z),
                      collectReadWriteTiles(col_begin, col_end, ws.coltypes));

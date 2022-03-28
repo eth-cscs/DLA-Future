@@ -22,14 +22,4 @@ struct ReductionToBand {
       comm::CommunicatorGrid grid, Matrix<T, D>& mat_a);
 };
 
-// TODO this is just a placeholder for development purposes
-template <class T>
-struct ReductionToBand<Backend::GPU, Device::GPU, T> {
-  static common::internal::vector<pika::shared_future<common::internal::vector<T>>> call(
-      Matrix<T, Device::GPU>&, const SizeType) {
-    DLAF_UNIMPLEMENTED(Backend::GPU);
-    return {};
-  }
-};
-
 }

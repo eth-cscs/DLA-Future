@@ -35,6 +35,14 @@ enum class ColType {
   Deflated    // deflated vectors
 };
 
+template <class T>
+struct GivensRotation {
+  SizeType i;  // the first column index
+  SizeType j;  // the second column index
+  T c;         // cosine
+  T s;         // sine
+};
+
 // Auxialiary matrix and vectors used for the D&C algorithm
 template <class T>
 struct WorkSpace {
@@ -288,18 +296,6 @@ void updateVectorColumnTypesBasedOnZvecNearlyZero(SizeType i_begin, SizeType i_e
         start_detached();
   }
 }
-
-template <class T>
-struct GivensRotation {
-  // GivensRotation() = default;
-  // GivensRotation(const GivensRotation&) = default;
-  // GivensRotation& operator=(const GivensRotation&) = default;
-  // GivensRotation(SizeType i, SizeType j, T c, T s) : i{i}, j{j}, c{c}, s{s} {}
-  SizeType i;  // the first column index
-  SizeType j;  // the second column index
-  T c;         // cosine
-  T s;         // sine
-};
 
 // Returns true if `d1` is close to `d2`.
 //

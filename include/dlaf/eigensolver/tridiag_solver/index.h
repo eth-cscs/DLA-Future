@@ -35,9 +35,11 @@ inline void initIndex(SizeType i_begin, SizeType i_end, Matrix<SizeType, Device:
   using dlaf::internal::Policy;
   using pika::execution::experimental::start_detached;
 
+  SizeType nb = index.distribution().blockSize().rows();
+
   for (SizeType i = i_begin; i <= i_end; ++i) {
     GlobalTileIndex tile_idx(i, 0);
-    SizeType tile_row = index.distribution().globalElementIndex(tile_idx, TileElementIndex(0, 0)).row();
+    SizeType tile_row = (i - i_begin) * nb;
     whenAllLift(tile_row, index.readwrite_sender(tile_idx)) |
         initIndexTile(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
   }

@@ -29,6 +29,7 @@ inline void initIndexTile(SizeType tile_row, const matrix::Tile<SizeType, Device
 DLAF_MAKE_CALLABLE_OBJECT(initIndexTile);
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(initIndexTile, initIndexTile_o)
 
+// The index starts at `0` for tiles in the range [i_begin, i_end].
 inline void initIndex(SizeType i_begin, SizeType i_end, Matrix<SizeType, Device::CPU>& index) {
   using dlaf::internal::whenAllLift;
   using pika::threads::thread_priority;

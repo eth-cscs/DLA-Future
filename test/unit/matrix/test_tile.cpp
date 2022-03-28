@@ -485,9 +485,7 @@ void testSubtilesConst(std::string name, TileElementSize size, SizeType ld,
   SCOPED_TRACE(name);
   ASSERT_LE(last_dep, specs.size());
 
-  auto tmp = createTileAndPtrChecker<T, D>(size, ld);
-  auto tile = std::move(std::get<0>(tmp));
-  auto tile_ptr = std::move(std::get<1>(tmp));
+  auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
 
   auto [tile_p, tile_f, next_tile_f] = createTileChain<const T, D>();
   auto tile_sf = tile_f.share();
@@ -522,9 +520,7 @@ void testSubOfSubtileConst(std::string name, TileElementSize size, SizeType ld,
   // specs.size() -> subsubtile
   // specs.size() + 1 -> full tile
 
-  auto tmp = createTileAndPtrChecker<T, D>(size, ld);
-  auto tile = std::move(std::get<0>(tmp));
-  auto tile_ptr = std::move(std::get<1>(tmp));
+  auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
 
   auto [tile_p, tile_f, next_tile_f] = createTileChain<const T, D>();
   auto tile_sf = tile_f.share();
@@ -588,9 +584,7 @@ template <class T, Device D>
 void testSubtile(std::string name, TileElementSize size, SizeType ld, const SubTileSpec& spec) {
   SCOPED_TRACE(name);
 
-  auto tmp = createTileAndPtrChecker<T, D>(size, ld);
-  auto tile = std::move(std::get<0>(tmp));
-  auto tile_ptr = std::move(std::get<1>(tmp));
+  auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
 
   auto [tile_p, tile_f, next_tile_f] = createTileChain<T, D>();
   ASSERT_TRUE(tile_f.valid() && !tile_f.is_ready());
@@ -626,6 +620,36 @@ void testSubtile(std::string name, TileElementSize size, SizeType ld, const SubT
 }
 
 template <class T, Device D>
+void testSubtileMove(std::string name, TileElementSize size, SizeType ld, const SubTileSpec& spec) {
+  SCOPED_TRACE(name);
+
+  auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
+
+  auto [tile_p, tile_f, next_tile_f] = createTileChain<T, D>();
+  ASSERT_TRUE(tile_f.valid() && !tile_f.is_ready());
+  ASSERT_TRUE(next_tile_f.valid() && !next_tile_f.is_ready());
+
+  // create subtiles
+  auto subtile = splitTile(std::move(tile_f), spec);
+
+  // append the full tile to the end of the subtile vector and add its specs to full_specs.
+  std::vector<pika::future<Tile<T, D>>> subtiles;
+  subtiles.emplace_back(std::move(subtile));
+  std::vector<SubTileSpec> full_specs = {spec};
+
+  checkValidNonReady(subtiles);
+  ASSERT_FALSE(next_tile_f.is_ready());
+
+  // Make subtiles ready
+  tile_p.set_value(std::move(tile));
+
+  checkReadyAndDependencyChain(tile_ptr, subtiles, full_specs, 0, next_tile_f);
+
+  ASSERT_TRUE(next_tile_f.is_ready());
+  checkFullTile(tile_ptr, Tile<T, D>{next_tile_f.get()}, size);
+}
+
+template <class T, Device D>
 void testSubtilesDisjoint(std::string name, TileElementSize size, SizeType ld,
                           const std::vector<SubTileSpec>& specs, std::size_t last_dep) {
   SCOPED_TRACE(name);
@@ -633,9 +657,7 @@ void testSubtilesDisjoint(std::string name, TileElementSize size, SizeType ld,
     ASSERT_LT(last_dep, specs.size());
   }
 
-  auto tmp = createTileAndPtrChecker<T, D>(size, ld);
-  auto tile = std::move(std::get<0>(tmp));
-  auto tile_ptr = std::move(std::get<1>(tmp));
+  auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
 
   auto [tile_p, tile_f, next_tile_f] = createTileChain<T, D>();
   ASSERT_TRUE(tile_f.valid() && !tile_f.is_ready());
@@ -674,9 +696,7 @@ void testSubOfSubtile(std::string name, TileElementSize size, SizeType ld,
   ASSERT_LE(1, specs.size());  // Need at least a subtile to create a subsubtile
   // last_dep = 0 -> subsubtile
 
-  auto tmp = createTileAndPtrChecker<T, D>(size, ld);
-  auto tile = std::move(std::get<0>(tmp));
-  auto tile_ptr = std::move(std::get<1>(tmp));
+  auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
 
   auto [tile_p, tile_f, next_tile_f] = createTileChain<T, D>();
   ASSERT_TRUE(tile_f.valid() && !tile_f.is_ready());
@@ -738,6 +758,10 @@ TYPED_TEST(TileTest, Subtile) {
   testSubtile<Type, Device::CPU>("Test 1", {5, 7}, 8, {{3, 4}, {2, 3}});
   testSubtile<Type, Device::CPU>("Test 2", {5, 7}, 8, {{4, 6}, {1, 1}});
   testSubtile<Type, Device::CPU>("Test 3", {5, 7}, 8, {{0, 0}, {5, 7}});
+
+  testSubtileMove<Type, Device::CPU>("Test Move 1", {5, 7}, 8, {{3, 4}, {2, 3}});
+  testSubtileMove<Type, Device::CPU>("Test Move 2", {5, 7}, 8, {{4, 6}, {1, 1}});
+  testSubtileMove<Type, Device::CPU>("Test Move 3", {5, 7}, 8, {{0, 0}, {5, 7}});
 
   testSubtilesDisjoint<Type, Device::CPU>("Test Vector Empty", {5, 7}, 8, {}, 0);
   testSubtilesDisjoint<Type, Device::CPU>("Test Vector 1", {5, 7}, 8, {{{3, 4}, {2, 3}}}, 0);

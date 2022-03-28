@@ -268,13 +268,95 @@ private:
   Part part_top_;
   Part part_bottom_;
 };
+
+template <Backend B, Device D, class T>
+struct HHManager;
+
+template <class T>
+struct HHManager<Backend::MC, Device::CPU, T> {
+  static constexpr Backend B = Backend::MC;
+  static constexpr Device D = Device::CPU;
+
+  HHManager(const SizeType b, const std::size_t, matrix::Distribution, matrix::Distribution) : b(b) {}
+
+  auto setupVAndComputeT(const LocalTileIndex ij, const SizeType nrefls, const TileAccessHelper& helper,
+                         matrix::Matrix<const T, Device::CPU>& mat_hh,
+                         matrix::Panel<Coord::Col, T, D>& mat_v,
+                         matrix::Panel<Coord::Col, T, D>& mat_t) {
+    auto tile_hh = splitTile(mat_hh.read(ij), helper.specHHCompact());
+    auto tile_v = setupVWellFormed(b, tile_hh, splitTile(mat_v(ij), helper.specHH()));
+
+    const matrix::SubTileSpec t_spec{{0, 0}, {nrefls, nrefls}};
+    const LocalTileIndex ij_t(LocalTileIndex(ij.row(), 0));
+    auto tile_t = computeTFactor(tile_hh, tile_v, splitTile(mat_t(ij_t), t_spec));
+
+    return std::make_pair(std::move(tile_v), std::move(tile_t));
+  }
+
+protected:
+  const SizeType b;
+};
+
+template <class T>
+struct HHManager<Backend::GPU, Device::GPU, T> {
+  static constexpr Backend B = Backend::GPU;
+  static constexpr Device D = Device::GPU;
+
+  HHManager(const SizeType b, const std::size_t n_workspaces, matrix::Distribution dist_t,
+            matrix::Distribution dist_w)
+      : b(b), t_panels_h(n_workspaces, dist_t), w_panels_h(n_workspaces, dist_w) {}
+
+  auto setupVAndComputeT(const LocalTileIndex ij, const SizeType nrefls, const TileAccessHelper& helper,
+                         matrix::Matrix<const T, Device::CPU>& mat_hh,
+                         matrix::Panel<Coord::Col, T, D>& mat_v,
+                         matrix::Panel<Coord::Col, T, D>& mat_t) {
+    namespace ex = pika::execution::experimental;
+
+    auto& mat_v_h = w_panels_h.nextResource();
+    auto& mat_t_h = t_panels_h.nextResource();
+
+    auto tile_hh = splitTile(mat_hh.read(ij), helper.specHHCompact());
+
+    auto tile_v_h = setupVWellFormed(b, tile_hh, splitTile(mat_v_h(ij), helper.specHH()));
+    auto tile_v = scheduleCopy(tile_v_h, mat_v, ij, helper.specHH());
+
+    const LocalTileIndex ij_t(ij.row(), 0);
+    const matrix::SubTileSpec t_spec = {{0, 0}, {nrefls, nrefls}};
+
+    auto tile_t_h = computeTFactor(tile_hh, tile_v_h, splitTile(mat_t_h(ij_t), t_spec));
+    auto tile_t = scheduleCopy(tile_t_h, mat_t, ij_t, t_spec);
+
+    return std::make_pair(std::move(tile_v), std::move(tile_t));
+  }
+
+protected:
+  auto scheduleCopy(pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_src,
+                    matrix::Panel<Coord::Col, T, D>& mat, const LocalTileIndex ij,
+                    const matrix::SubTileSpec spec) const {
+    namespace ex = pika::execution::experimental;
+
+    constexpr auto copy_backend = dlaf::matrix::internal::CopyBackend_v<Device::CPU, D>;
+
+    auto fulltile = mat(ij);
+    auto tile_dst = splitTile(fulltile, spec);
+
+    dlaf::internal::whenAllLift(ex::keep_future(tile_src), std::move(tile_dst)) |
+        matrix::copy(dlaf::internal::Policy<copy_backend>()) | ex::start_detached();
+
+    return splitTile(mat.read(ij), spec);
+  }
+
+  const SizeType b;
+  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> t_panels_h;
+  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> w_panels_h;
+};
 }
 
 template <Backend B, Device D, class T>
 void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>& mat_e,
                                           Matrix<const T, Device::CPU>& mat_hh) {
   using pika::threads::thread_priority;
-  using pika::execution::experimental::keep_future;
+  namespace ex = pika::execution::experimental;
 
   using matrix::Panel;
   using common::RoundRobin;
@@ -314,9 +396,11 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
   const matrix::Distribution dist_w2({b, mat_e.size().cols()}, {b, mat_e.blockSize().cols()});
 
   constexpr std::size_t n_workspaces = 2;
-  RoundRobin<Panel<Coord::Col, T, Device::CPU>> t_panels(n_workspaces, dist_t);
-  RoundRobin<Panel<Coord::Col, T, Device::CPU>> w_panels(n_workspaces, dist_w);
-  RoundRobin<Panel<Coord::Row, T, Device::CPU>> w2_panels(n_workspaces, dist_w2);
+  RoundRobin<Panel<Coord::Col, T, D>> t_panels(n_workspaces, dist_t);
+  RoundRobin<Panel<Coord::Col, T, D>> w_panels(n_workspaces, dist_w);
+  RoundRobin<Panel<Coord::Row, T, D>> w2_panels(n_workspaces, dist_w2);
+
+  HHManager<B, D, T> helperBackend(b, n_workspaces, dist_t, dist_w);
 
   // Note: sweep are on diagonals, steps are on verticals
   const SizeType j_last_sweep = (nsweeps - 1) / b;
@@ -355,11 +439,7 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
       // Note:
       // Let's use W as a temporary storage for the well formed version of V, which is needed
       // for computing W2 = V . E, and it is also useful for computing T
-      auto tile_w_full = mat_w(ij);
-      auto tile_w_rw = splitTile(tile_w_full, helper.specHH());
-
-      auto tile_hh = splitTile(mat_hh.read(ij), helper.specHHCompact());
-      auto tile_v = setupVWellFormed(b, tile_hh, std::move(tile_w_rw));
+      auto [tile_v, tile_t] = helperBackend.setupVAndComputeT(ij, nrefls, helper, mat_hh, mat_w, mat_t);
 
       // W2 = V* . E
       // Note:
@@ -369,31 +449,27 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
         const auto sz_e = mat_e.tileSize({ij.row(), j_e});
         auto tile_e = mat_e.read(LocalTileIndex(ij.row(), j_e));
 
-        computeW2<B>(thread_priority::normal, keep_future(splitTile(tile_v, helper.topPart().specHH())),
-                     keep_future(splitTile(tile_e, helper.topPart().specEV(sz_e.cols()))), T(0),
+        computeW2<B>(thread_priority::normal,
+                     ex::keep_future(splitTile(tile_v, helper.topPart().specHH())),
+                     ex::keep_future(splitTile(tile_e, helper.topPart().specEV(sz_e.cols()))), T(0),
                      mat_w2.readwrite_sender(LocalTileIndex(0, j_e)));
 
         if (helper.affectsMultipleTiles()) {
           auto tile_e = mat_e.read(LocalTileIndex(ij.row() + 1, j_e));
           computeW2<B>(thread_priority::normal,
-                       keep_future(splitTile(tile_v, helper.bottomPart().specHH())),
-                       keep_future(splitTile(tile_e, helper.bottomPart().specEV(sz_e.cols()))), T(1),
+                       ex::keep_future(splitTile(tile_v, helper.bottomPart().specHH())),
+                       ex::keep_future(splitTile(tile_e, helper.bottomPart().specEV(sz_e.cols()))), T(1),
                        mat_w2.readwrite_sender(LocalTileIndex(0, j_e)));
         }
       }
-
-      // Note:
-      // And we use it also for computing the T factor
-      auto tile_t_full = mat_t(LocalTileIndex(ij.row(), 0));
-      auto tile_t = computeTFactor(tile_hh, tile_v, splitTile(tile_t_full, {{0, 0}, {nrefls, nrefls}}));
 
       // W = V . T
       // Note:
       // At this point W can be overwritten, but this will happen just after W2 and T computations
       // finished. T was already a dependency, but W2 wasn't, meaning it won't run in parallel,
       // but it could.
-      tile_w_rw = splitTile(tile_w_full, helper.specHH());
-      computeW<B>(thread_priority::normal, keep_future(tile_t), std::move(tile_w_rw));
+      computeW<B>(thread_priority::normal, ex::keep_future(tile_t),
+                  splitTile(mat_w(ij), helper.specHH()));
       auto tile_w = mat_w.read(ij);
 
       // E -= W . W2
@@ -401,18 +477,17 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
         const LocalTileIndex idx_e(ij.row(), j_e);
         const auto sz_e = mat_e.tileSize({ij.row(), j_e});
 
-        auto tile_e = mat_e(idx_e);
         const auto& tile_w2 = mat_w2.read_sender(idx_e);
 
         updateE<B>(pika::threads::thread_priority::normal,
-                   keep_future(splitTile(tile_w, helper.topPart().specHH())), tile_w2,
-                   splitTile(tile_e, helper.topPart().specEV(sz_e.cols())));
+                   ex::keep_future(splitTile(tile_w, helper.topPart().specHH())), tile_w2,
+                   splitTile(mat_e(idx_e), helper.topPart().specEV(sz_e.cols())));
 
         if (helper.affectsMultipleTiles()) {
-          auto tile_e = mat_e(LocalTileIndex{ij.row() + 1, j_e});
           updateE<B>(pika::threads::thread_priority::normal,
-                     keep_future(splitTile(tile_w, helper.bottomPart().specHH())), tile_w2,
-                     splitTile(tile_e, helper.bottomPart().specEV(sz_e.cols())));
+                     ex::keep_future(splitTile(tile_w, helper.bottomPart().specHH())), tile_w2,
+                     splitTile(mat_e(LocalTileIndex{ij.row() + 1, j_e}),
+                               helper.bottomPart().specEV(sz_e.cols())));
         }
       }
 
@@ -422,15 +497,5 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
     }
   }
 }
-
-#ifdef DLAF_WITH_CUDA
-template <class T>
-void BackTransformationT2B<Backend::GPU, Device::GPU, T>::call(const SizeType band_size,
-                                                               Matrix<T, Device::GPU>& mat_e,
-                                                               Matrix<const T, Device::CPU>& mat_hh) {
-  dlaf::internal::silenceUnusedWarningFor(band_size, mat_e, mat_hh);
-  DLAF_UNIMPLEMENTED(Backend::GPU);
-}
-#endif
 
 }

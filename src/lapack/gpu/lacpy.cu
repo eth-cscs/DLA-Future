@@ -8,7 +8,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <cuda_runtime.h>
+
 #include "dlaf/cuda/assert.cu.h"
+#include "dlaf/cuda/error.h"
 #include "dlaf/lapack/gpu/lacpy.h"
 #include "dlaf/util_cublas.h"
 #include "dlaf/util_math.h"
@@ -108,14 +111,22 @@ void lacpy(cublasFillMode_t uplo, SizeType m, SizeType n, const T* a, SizeType l
   constexpr unsigned kernel_tile_size_rows = kernels::LacpyParams::kernel_tile_size_rows;
   constexpr unsigned kernel_tile_size_cols = kernels::LacpyParams::kernel_tile_size_cols;
 
-  const unsigned um = to_uint(m);
-  const unsigned un = to_uint(n);
+  if (uplo == CUBLAS_FILL_MODE_FULL) {
+    const auto kind = cudaMemcpyDefault;
+    DLAF_CUDA_CALL(cudaMemcpy2DAsync(b, ldb * sizeof(T), a, lda * sizeof(T), sizeof(T) * m, to_sizet(n),
+                                     kind, stream));
+  }
+  else {
+    const unsigned um = to_uint(m);
+    const unsigned un = to_uint(n);
 
-  dim3 nr_threads(kernel_tile_size_rows, 1);
-  dim3 nr_blocks(util::ceilDiv(um, kernel_tile_size_rows), util::ceilDiv(un, kernel_tile_size_cols));
-  kernels::lacpy<<<nr_blocks, nr_threads, 0, stream>>>(uplo, um, un, util::cppToCudaCast(a),
-                                                       to_uint(lda), util::cppToCudaCast(b),
-                                                       to_uint(ldb));
+    const dim3 nr_threads(kernel_tile_size_rows, 1);
+    const dim3 nr_blocks(util::ceilDiv(um, kernel_tile_size_rows),
+                         util::ceilDiv(un, kernel_tile_size_cols));
+    kernels::lacpy<<<nr_blocks, nr_threads, 0, stream>>>(uplo, um, un, util::cppToCudaCast(a),
+                                                         to_uint(lda), util::cppToCudaCast(b),
+                                                         to_uint(ldb));
+  }
 }
 
 DLAF_CUBLAS_LACPY_ETI(, float);

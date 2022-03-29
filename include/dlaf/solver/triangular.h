@@ -141,7 +141,6 @@ void triangular(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, b
         internal::Triangular<backend, device, T>::call_RLN(grid, diag, alpha, mat_a, mat_b);
       }
       else {
-        // Right Lower Trans/ConjTrans
         internal::Triangular<backend, device, T>::call_RLT(grid, op, diag, alpha, mat_a, mat_b);
       }
     }
@@ -150,8 +149,7 @@ void triangular(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, b
         internal::Triangular<backend, device, T>::call_RUN(grid, diag, alpha, mat_a, mat_b);
       }
       else {
-        // Right Upper Trans/ConjTrans
-        DLAF_UNIMPLEMENTED(side, uplo, op, diag);
+        internal::Triangular<backend, device, T>::call_RUT(grid, op, diag, alpha, mat_a, mat_b);
       }
     }
   }

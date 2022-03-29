@@ -413,7 +413,7 @@ void laset(const blas::Uplo uplo, T alpha, T beta, const Tile<T, Device::GPU>& t
   const SizeType m = tile.size().rows();
   const SizeType n = tile.size().cols();
 
-  gpulapack::laset(util::blasToCublas(uplo), m, n, alpha, beta, tile.ptr(), tile.ld(), stream);
+  gpulapack::laset(uplo, m, n, alpha, beta, tile.ptr(), tile.ld(), stream);
 }
 
 template <class T>

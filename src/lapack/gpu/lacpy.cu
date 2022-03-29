@@ -103,7 +103,7 @@ __global__ void lacpy(cublasFillMode_t uplo, const unsigned m, const unsigned n,
 }
 
 template <class T>
-void lacpy(cublasFillMode_t uplo, SizeType m, SizeType n, const T* a, SizeType lda, T* b, SizeType ldb,
+void lacpy(blas::Uplo uplo, SizeType m, SizeType n, const T* a, SizeType lda, T* b, SizeType ldb,
            cudaStream_t stream) {
   DLAF_ASSERT_HEAVY(m >= lda, m, lda);
   DLAF_ASSERT_HEAVY(m >= ldb, m, ldb);
@@ -111,7 +111,7 @@ void lacpy(cublasFillMode_t uplo, SizeType m, SizeType n, const T* a, SizeType l
   constexpr unsigned kernel_tile_size_rows = kernels::LacpyParams::kernel_tile_size_rows;
   constexpr unsigned kernel_tile_size_cols = kernels::LacpyParams::kernel_tile_size_cols;
 
-  if (uplo == CUBLAS_FILL_MODE_FULL) {
+  if (uplo == blas::Uplo::General) {
     const auto kind = cudaMemcpyDefault;
     DLAF_CUDA_CALL(cudaMemcpy2DAsync(b, ldb * sizeof(T), a, lda * sizeof(T), sizeof(T) * m, to_sizet(n),
                                      kind, stream));
@@ -123,9 +123,9 @@ void lacpy(cublasFillMode_t uplo, SizeType m, SizeType n, const T* a, SizeType l
     const dim3 nr_threads(kernel_tile_size_rows, 1);
     const dim3 nr_blocks(util::ceilDiv(um, kernel_tile_size_rows),
                          util::ceilDiv(un, kernel_tile_size_cols));
-    kernels::lacpy<<<nr_blocks, nr_threads, 0, stream>>>(uplo, um, un, util::cppToCudaCast(a),
-                                                         to_uint(lda), util::cppToCudaCast(b),
-                                                         to_uint(ldb));
+    kernels::lacpy<<<nr_blocks, nr_threads, 0, stream>>>(util::blasToCublas(uplo), um, un,
+                                                         util::cppToCudaCast(a), to_uint(lda),
+                                                         util::cppToCudaCast(b), to_uint(ldb));
   }
 }
 

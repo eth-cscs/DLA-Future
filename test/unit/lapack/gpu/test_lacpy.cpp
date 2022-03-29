@@ -64,8 +64,7 @@ TYPED_TEST(LacpyTestGPU, CorrectnessLocal) {
       auto tile_src = createTile<const T, Device::GPU>(el, {m, n}, lda);
       auto tile_dst = createTile<T, Device::GPU>(zero, {m, n}, ldb);
 
-      gpulapack::lacpy(dlaf::util::blasToCublas(uplo), m, n, tile_src.ptr(), tile_src.ld(),
-                       tile_dst.ptr(), tile_dst.ld(), stream);
+      gpulapack::lacpy(uplo, m, n, tile_src.ptr(), tile_src.ld(), tile_dst.ptr(), tile_dst.ld(), stream);
       DLAF_CUDA_CALL(cudaStreamSynchronize(stream));
 
       // Verify

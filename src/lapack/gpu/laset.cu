@@ -100,7 +100,7 @@ __global__ void laset(cublasFillMode_t uplo, const unsigned m, const unsigned n,
 }
 
 template <class T>
-void laset(cublasFillMode_t uplo, SizeType m, SizeType n, T alpha, T beta, T* a, SizeType lda,
+void laset(blas::Uplo uplo, SizeType m, SizeType n, T alpha, T beta, T* a, SizeType lda,
            cudaStream_t stream) {
   constexpr unsigned kernel_tile_size_rows = kernels::LasetParams::kernel_tile_size_rows;
   constexpr unsigned kernel_tile_size_cols = kernels::LasetParams::kernel_tile_size_cols;
@@ -109,7 +109,8 @@ void laset(cublasFillMode_t uplo, SizeType m, SizeType n, T alpha, T beta, T* a,
 
   dim3 nr_threads(kernel_tile_size_rows, 1);
   dim3 nr_blocks(util::ceilDiv(um, kernel_tile_size_rows), util::ceilDiv(un, kernel_tile_size_cols));
-  kernels::laset<<<nr_blocks, nr_threads, 0, stream>>>(uplo, um, un, util::cppToCudaCast(alpha),
+  kernels::laset<<<nr_blocks, nr_threads, 0, stream>>>(util::blasToCublas(uplo), um, un,
+                                                       util::cppToCudaCast(alpha),
                                                        util::cppToCudaCast(beta), util::cppToCudaCast(a),
                                                        to_uint(lda));
 }

@@ -14,17 +14,18 @@
 
 #include <cublas_v2.h>
 #include <cuda_runtime.h>
+#include <blas.hh>
 
 #include "dlaf/types.h"
 
 namespace dlaf::gpulapack {
 
 template <class T>
-void lacpy(cublasFillMode_t uplo, SizeType m, SizeType n, const T* a, SizeType lda, T* b, SizeType ldb,
+void lacpy(blas::Uplo uplo, SizeType m, SizeType n, const T* a, SizeType lda, T* b, SizeType ldb,
            cudaStream_t stream);
 
-#define DLAF_CUBLAS_LACPY_ETI(kword, Type)                                                              \
-  kword template void lacpy(cublasFillMode_t uplo, SizeType m, SizeType n, const Type* a, SizeType lda, \
+#define DLAF_CUBLAS_LACPY_ETI(kword, Type)                                                        \
+  kword template void lacpy(blas::Uplo uplo, SizeType m, SizeType n, const Type* a, SizeType lda, \
                             Type* b, SizeType ldb, cudaStream_t stream)
 
 DLAF_CUBLAS_LACPY_ETI(extern, float);

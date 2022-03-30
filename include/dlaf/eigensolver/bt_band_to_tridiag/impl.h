@@ -288,6 +288,7 @@ protected:
   const SizeType b;
 };
 
+#ifdef DLAF_WITH_CUDA
 template <class T>
 struct HHManager<Backend::GPU, Device::GPU, T> {
   static constexpr Backend B = Backend::GPU;
@@ -341,6 +342,7 @@ protected:
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> t_panels_h;
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> w_panels_h;
 };
+#endif
 }
 
 template <Backend B, Device D, class T>

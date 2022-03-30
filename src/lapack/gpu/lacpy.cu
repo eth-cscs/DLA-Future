@@ -60,7 +60,7 @@ __device__ void copyDiag(const unsigned m, const unsigned n, const T* a, const u
   const unsigned k_max = min(j + kernel_tile_size_cols, n);
 
   for (unsigned k = j; k < k_max; ++k)
-    if (i == k or (comp(i, k)))
+    if (comp(i, k))
       b[i + k * ldb] = a[i + k * lda];
 }
 

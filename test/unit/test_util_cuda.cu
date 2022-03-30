@@ -138,7 +138,7 @@ TYPED_TEST(CudaUtilTestHost, CudaOperatorsComplex) {
   const ComplexT a = cppToCudaCast(std::complex<T>(3.55f, -2.35f));
   const ComplexT b = cppToCudaCast(std::complex<T>(2.15f, 0.66f));
   const ComplexT c = cppToCudaCast(std::complex<T>(-7.65f, -5.12f));
-  const T d = 7.77;
+  const T d = 7.77f;
 
   // The equality operator test is designed requiring a.x != b.x and a.y != b.y.
   ASSERT_TRUE(a.x != b.x && a.y != b.y);
@@ -304,7 +304,7 @@ TYPED_TEST(CudaUtilTestDevice, CudaOperatorsComplex) {
   const ComplexT a = cppToCudaCast(std::complex<T>(3.55f, -2.35f));
   const ComplexT b = cppToCudaCast(std::complex<T>(2.15f, 0.66f));
   const ComplexT c = cppToCudaCast(std::complex<T>(-7.65f, -5.12f));
-  const T d = 7.77;
+  const T d = 7.77f;
 
   // The equality operator test is designed requiring a.x != b.x and a.y != b.y.
   ASSERT_FALSE(a.x == b.x || a.y == b.y);

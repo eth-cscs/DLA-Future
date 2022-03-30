@@ -13,6 +13,7 @@
 #include "dlaf/cuda/assert.cu.h"
 #include "dlaf/cuda/error.h"
 #include "dlaf/lapack/gpu/lacpy.h"
+#include "dlaf/types.h"
 #include "dlaf/util_cublas.h"
 #include "dlaf/util_math.h"
 
@@ -112,9 +113,9 @@ void lacpy(blas::Uplo uplo, SizeType m, SizeType n, const T* a, SizeType lda, T*
   constexpr unsigned kernel_tile_size_cols = kernels::LacpyParams::kernel_tile_size_cols;
 
   if (uplo == blas::Uplo::General) {
-    const auto kind = cudaMemcpyDefault;
-    DLAF_CUDA_CALL(cudaMemcpy2DAsync(b, ldb * sizeof(T), a, lda * sizeof(T), sizeof(T) * m, to_sizet(n),
-                                     kind, stream));
+    const cudaMemcpyKind kind = cudaMemcpyDefault;
+    DLAF_CUDA_CALL(cudaMemcpy2DAsync(b, to_sizet(ldb) * sizeof(T), a, to_sizet(lda) * sizeof(T),
+                                     to_sizet(m) * sizeof(T), to_sizet(n), kind, stream));
   }
   else {
     const unsigned um = to_uint(m);

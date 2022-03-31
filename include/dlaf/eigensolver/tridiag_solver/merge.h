@@ -338,7 +338,7 @@ inline void composeIndices(
   }
 }
 
-inline SizeType partitionIndex(
+inline SizeType stablePartitionIndexForDeflation(
     SizeType n, std::vector<pika::shared_future<matrix::Tile<const ColType, Device::CPU>>> ct_tiles,
     std::vector<pika::future<matrix::Tile<SizeType, Device::CPU>>> index_tiles) {
   TileElementIndex zero_idx(0, 0);
@@ -407,8 +407,8 @@ bool diagonalValuesNearlyEqual(T tol, T d1, T d2, T z1, T z2) {
 //
 // Returns an array of Given's rotations used to update the colunmns of the eigenvector matrix Q
 template <class T>
-std::vector<GivensRotation<T>> applyDeflationToArrays(T rho, T tol, SizeType len, T* d_ptr, T* z_ptr,
-                                                      ColType* c_ptr) {
+std::vector<GivensRotation<T>> applyDeflationToArrays(T rho, T tol, SizeType len, const SizeType* i_ptr,
+                                                      T* d_ptr, T* z_ptr, ColType* c_ptr) {
   std::vector<GivensRotation<T>> rots;
   rots.reserve(to_sizet(len));
 
@@ -447,7 +447,7 @@ std::vector<GivensRotation<T>> applyDeflationToArrays(T rho, T tol, SizeType len
     d1 = d1 * c * c + d2 * s * s;
     d2 = d1 * s * s + d2 * c * c;
 
-    rots.push_back(GivensRotation<T>{i1, i2, c, s});
+    rots.push_back(GivensRotation<T>{i_ptr[i1], i_ptr[i2], c, s});
     //  Set the the `i1` column as "Dense" if the `i2` column has opposite non-zero structure (i.e if
     //  one comes from Q1 and the other from Q2 or vice-versa)
     if ((c1 == ColType::UpperHalf && c2 == ColType::LowerHalf) ||
@@ -463,15 +463,17 @@ std::vector<GivensRotation<T>> applyDeflationToArrays(T rho, T tol, SizeType len
 template <class T>
 std::vector<GivensRotation<T>> applyDeflation(
     SizeType n, pika::shared_future<T> rho_fut, pika::shared_future<T> tol_fut,
+    std::vector<pika::shared_future<matrix::Tile<const SizeType, Device::CPU>>> i_tiles,
     std::vector<pika::future<matrix::Tile<T, Device::CPU>>> d_tiles,
     std::vector<pika::future<matrix::Tile<T, Device::CPU>>> z_tiles,
     std::vector<pika::future<matrix::Tile<ColType, Device::CPU>>> ct_tiles) {
   TileElementIndex zero_idx(0, 0);
+  const SizeType* i_ptr = i_tiles[0].get().ptr(zero_idx);
   T* d_ptr = d_tiles[0].get().ptr(zero_idx);
   T* z_ptr = z_tiles[0].get().ptr(zero_idx);
   ColType* c_ptr = ct_tiles[0].get().ptr(zero_idx);
 
-  return applyDeflationToArrays(rho_fut.get(), tol_fut.get(), n, d_ptr, z_ptr, c_ptr);
+  return applyDeflationToArrays(rho_fut.get(), tol_fut.get(), n, i_ptr, d_ptr, z_ptr, c_ptr);
 }
 
 // Partitions `p_ptr` based on a `ctype` in `c_ptr` array.
@@ -484,7 +486,7 @@ inline SizeType partitionColType(SizeType len, ColType ctype, const ColType* c_p
 }
 
 // Partition `coltypes` to get the indices of the matrix-multiplication form
-inline ColTypeLens setMatrixMultiplicationIndex(
+inline ColTypeLens partitionIndexForMatrixMultiplication(
     SizeType n, std::vector<pika::shared_future<matrix::Tile<const ColType, Device::CPU>>> c_tiles,
     std::vector<pika::future<matrix::Tile<SizeType, Device::CPU>>> perm_q_tiles) {
   TileElementIndex zero_idx(0, 0);
@@ -507,29 +509,23 @@ inline ColTypeLens setMatrixMultiplicationIndex(
 //       parallelized trivially. Current implementation is serial.
 //
 template <class T>
-void applyGivensRotationsToMatrixColumns(std::vector<GivensRotation<T>> rots, SizeType n,
-                                         SizeType ncol_tiles, const matrix::Distribution& distr,
+void applyGivensRotationsToMatrixColumns(SizeType n, SizeType nb, std::vector<GivensRotation<T>> rots,
                                          std::vector<matrix::Tile<T, Device::CPU>> tiles) {
+  // Distribution of the merged subproblems
+  matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
+
   for (const GivensRotation<T>& rot : rots) {
-    // Get the index of the tile that has column `rot.i`
-    SizeType i_tile = distr.globalTileFromGlobalElement<Coord::Col>(rot.i);
-    // Get the index of the `rot.i` column within the tile
+    // Get the index of the tile that has column `rot.i` and the the index of the column within the tile.
+    SizeType i_tile = distr.globalTileLinearIndex(GlobalElementIndex(0, rot.i));
     SizeType i_el = distr.tileElementFromGlobalElement<Coord::Col>(rot.i);
-    // Get the pointer to the first element of the `rot.i` column
-    //
-    // Note: this works because `tiles` come from a matrix with column-major layout
-    T* x = tiles[to_sizet(i_tile * ncol_tiles)].ptr(TileElementIndex(0, i_el));
+    T* x = tiles[to_sizet(i_tile)].ptr(TileElementIndex(0, i_el));
 
-    // Get the index of the tile that has column `rot.j`
-    SizeType j_tile = distr.globalTileFromGlobalElement<Coord::Col>(rot.j);
-    // Get the index of the `rot.j` column within the tile
+    // Get the index of the tile that has column `rot.j` and the the index of the column within the tile.
+    SizeType j_tile = distr.globalTileLinearIndex(GlobalElementIndex(0, rot.j));
     SizeType j_el = distr.tileElementFromGlobalElement<Coord::Col>(rot.j);
-    // Get the pointer to the first element of the `rot.j` column
-    //
-    // Note: this works because `tiles` come from a matrix with column-major layout
-    T* y = tiles[to_sizet(j_tile * ncol_tiles)].ptr(TileElementIndex(0, j_el));
+    T* y = tiles[to_sizet(j_tile)].ptr(TileElementIndex(0, j_el));
 
-    DLAF_ASSERT(i_el != j_el, "");
+    DLAF_ASSERT(i_el != j_el, i_el, j_el);
 
     // Apply Givens rotations
     blas::rot(n, x, 1, y, 1, rot.c, rot.s);
@@ -712,9 +708,9 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   pika::dataflow(applyIndex_o, n, tc.readVec(ws.istage), tc.readVec(d), tc.readwriteVec(ws.dtmp));
   pika::dataflow(applyIndex_o, n, tc.readVec(ws.istage), tc.readVec(ws.z), tc.readwriteVec(ws.ztmp));
   pika::dataflow(applyIndex_o, n, tc.readVec(ws.istage), tc.readVec(ws.c), tc.readwriteVec(ws.ctmp));
-  pika::shared_future<std::vector<GivensRotation<T>>> rots_fut =
-      pika::dataflow(applyDeflation<T>, n, rho_fut, tol_fut, tc.readwriteVec(ws.dtmp),
-                     tc.readwriteVec(ws.ztmp), tc.readwriteVec(ws.ctmp));
+  pika::future<std::vector<GivensRotation<T>>> rots_fut =
+      pika::dataflow(applyDeflation<T>, n, rho_fut, tol_fut, tc.readVec(ws.istage),
+                     tc.readwriteVec(ws.dtmp), tc.readwriteVec(ws.ztmp), tc.readwriteVec(ws.ctmp));
 
   // 1. set index `istage` to `presorted <--- deflated`
   // 2. update index `iorig` to `original <--- deflated`
@@ -723,8 +719,8 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   // 4. Solve the rank-1 problem `d + rho * z * z^T`, save eigenvalues in `dtmp` and eigenvectors in
   // `ws.mat`.
   //
-  pika::shared_future<SizeType> k_fut =
-      pika::dataflow(partitionIndex, n, tc.readVec(ws.ctmp), tc.readwriteVec(ws.istage));
+  pika::shared_future<SizeType> k_fut = pika::dataflow(stablePartitionIndexForDeflation, n,
+                                                       tc.readVec(ws.ctmp), tc.readwriteVec(ws.istage));
   composeIndices(n, tc.readVec(ws.iorig), tc.readVec(ws.istage), tc.readwriteVec(ws.itmp));
   copyVector(i_begin, i_end, ws.itmp, ws.iorig);
   pika::dataflow(applyIndex_o, n, tc.readVec(ws.istage), tc.readVec(ws.dtmp), tc.readwriteVec(d));
@@ -755,16 +751,16 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   // 2. set the index `idefl` to `deflated <--- matmul`
   // 3. update the index `iorig` to `original <--- postsorted`
   pika::shared_future<ColTypeLens> qlens_fut =
-      pika::dataflow(setMatrixMultiplicationIndex, n, tc.readVec(ws.ctmp), tc.readwriteVec(ws.istage));
+      pika::dataflow(partitionIndexForMatrixMultiplication, n, tc.readVec(ws.ctmp),
+                     tc.readwriteVec(ws.istage));
   composeIndices(n, tc.readVec(ws.idefl), tc.readVec(ws.istage), tc.readwriteVec(ws.itmp));
   copyVector(i_begin, i_end, ws.itmp, ws.idefl);
   composeIndices(n, tc.readVec(ws.iorig), tc.readVec(ws.istage), tc.readwriteVec(ws.itmp));
   copyVector(i_begin, i_end, ws.itmp, ws.iorig);
 
-  // Apply Givens rotations to `Q`
-  // SizeType ncol_tiles = i_end - i_begin + 1;
-  // pika::dataflow(pika::unwrapping(applyGivensRotationsToMatrixColumns<T>), rots_fut, n, ncol_tiles,
-  //               mat_ev.distribution(), collectReadWriteTiles(ev_begin, ev_end, mat_ev));
+  // Apply Givens rotations to `Q` - `mat_ev`
+  pika::dataflow(pika::unwrapping(applyGivensRotationsToMatrixColumns<T>), n, nb, std::move(rots_fut),
+                 tc.readwriteMat(mat_ev));
 
   // Use the permutation index `perm_q` on the columns of `mat_ev` and save the result to `mat_q`
   // pika::dataflow(applyPermutationIndexToMatrixQ<T>, i_begin, i_end,

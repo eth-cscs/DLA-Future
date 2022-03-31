@@ -108,8 +108,11 @@ __global__ void lacpy(cublasFillMode_t uplo, const unsigned m, const unsigned n,
 template <class T>
 void lacpy(blas::Uplo uplo, SizeType m, SizeType n, const T* a, SizeType lda, T* b, SizeType ldb,
            cudaStream_t stream) {
-  DLAF_ASSERT_HEAVY(m >= lda, m, lda);
-  DLAF_ASSERT_HEAVY(m >= ldb, m, ldb);
+  if (m == 0 || n == 0)
+    return;
+
+  DLAF_ASSERT_HEAVY(m <= lda, m, lda);
+  DLAF_ASSERT_HEAVY(m <= ldb, m, ldb);
 
   constexpr unsigned kernel_tile_size_rows = kernels::LacpyParams::kernel_tile_size_rows;
   constexpr unsigned kernel_tile_size_cols = kernels::LacpyParams::kernel_tile_size_cols;

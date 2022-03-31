@@ -38,4 +38,9 @@ template <Backend backend>
 auto getBackendScheduler(const pika::threads::thread_priority priority) {
   return pika::execution::experimental::with_priority(getBackendScheduler<backend>(), priority);
 }
+
+inline auto getMPIScheduler() {
+  return pika::execution::experimental::thread_pool_scheduler{
+      &pika::resource::get_thread_pool(getConfiguration().mpi_pool)};
+}
 }

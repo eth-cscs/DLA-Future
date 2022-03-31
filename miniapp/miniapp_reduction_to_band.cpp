@@ -101,14 +101,10 @@ struct reductionToBandMiniapp {
       dlaf::common::Timer<> timeit;
       auto taus = dlaf::eigensolver::reductionToBand<dlaf::Backend::MC>(comm_grid, matrix);
 
-      // wait for last task and barrier for all ranks
-      {
-        GlobalTileIndex last_tile(matrix.nrTiles().rows() - 1, matrix.nrTiles().cols() - 2);
-        if (matrix.rankIndex() == distribution.rankGlobalTile(last_tile))
-          matrix(last_tile).get();
+      // wait and barrier for all ranks
+      matrix.waitLocalTiles();
+      DLAF_MPI_CALL(MPI_Barrier(world));
 
-        DLAF_MPI_CALL(MPI_Barrier(world));
-      }
       auto elapsed_time = timeit.elapsed();
 
       double gigaflops = std::numeric_limits<double>::quiet_NaN();

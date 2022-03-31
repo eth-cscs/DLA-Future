@@ -142,15 +142,10 @@ struct choleskyMiniapp {
         dlaf::factorization::cholesky<backend, DefaultDevice_v<backend>, T>(comm_grid, opts.uplo,
                                                                             matrix.get());
 
-        // wait for last task and barrier for all ranks
-        {
-          GlobalTileIndex last_tile(matrix.get().nrTiles().rows() - 1,
-                                    matrix.get().nrTiles().cols() - 1);
-          if (matrix.get().rankIndex() == distribution.rankGlobalTile(last_tile))
-            matrix.get()(last_tile).get();
+        // wait and barrier for all ranks
+        matrix.get().waitLocalTiles();
+        DLAF_MPI_CALL(MPI_Barrier(world));
 
-          DLAF_MPI_CALL(MPI_Barrier(world));
-        }
         elapsed_time = timeit.elapsed();
       }
 

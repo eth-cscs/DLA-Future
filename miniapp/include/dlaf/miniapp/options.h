@@ -247,6 +247,58 @@ inline pika::program_options::options_description getMiniappOptionsDescription()
   return desc;
 }
 
+template <SupportReal support_r, SupportComplex support_c>
+struct MiniappKernelOptions {
+  static constexpr SupportReal support_real = support_r;
+  static constexpr SupportComplex support_complex = support_c;
+
+  Backend backend;
+  ElementType type;
+  int64_t nruns;
+  int64_t nparallel;
+  int64_t count;
+  CheckIterFreq do_check;
+
+  MiniappKernelOptions(const pika::program_options::variables_map& vm)
+      : backend(parseBackend(vm["backend"].as<std::string>())),
+        type(parseElementType<support_real, support_complex>(vm["type"].as<std::string>())),
+        nruns(vm["nruns"].as<int64_t>()), nparallel(vm["nparallel"].as<int64_t>()),
+        count(vm["count"].as<int64_t>()),
+        do_check(parseCheckIterFreq(vm["check-result"].as<std::string>())) {
+    DLAF_ASSERT(nruns > 0, nruns);
+    DLAF_ASSERT(nparallel > 0, nparallel);
+    DLAF_ASSERT(count > 0, count);
+  }
+
+  MiniappKernelOptions(MiniappKernelOptions&&) = default;
+  MiniappKernelOptions(const MiniappKernelOptions&) = default;
+  MiniappKernelOptions& operator=(MiniappKernelOptions&&) = default;
+  MiniappKernelOptions& operator=(const MiniappKernelOptions&) = default;
+};
+
+inline pika::program_options::options_description getMiniappKernelOptionsDescription() {
+  pika::program_options::options_description desc("DLA-Future kernel miniapp options");
+
+  desc.add_options()("help,h", "produce help message");
+
+  desc.add_options()(
+      "backend", pika::program_options::value<std::string>()->default_value("default"),
+      "Backend to use ('default' ('gpu' if available, otherwise 'mc'), 'mc', 'gpu' (if available))");
+  desc.add_options()(
+      "type", pika::program_options::value<std::string>()->default_value("d"),
+      "Element type to use ('s' (float), 'd' (double), 'c' (std::complex<single>), 'z' (std::complex<double>))");
+  desc.add_options()("nruns", pika::program_options::value<int64_t>()->default_value(1),
+                     "Number of runs");
+  desc.add_options()("nparallel", pika::program_options::value<int64_t>()->default_value(1),
+                     "Number of operation allowed in parallel (i.e. CPU threads or CUDA streams used)");
+  desc.add_options()("count", pika::program_options::value<int64_t>()->default_value(10),
+                     "Total number of operations scheduled");
+  desc.add_options()("check-result", pika::program_options::value<std::string>()->default_value("none"),
+                     "Enable result checking ('none', 'all', 'last')");
+
+  return desc;
+}
+
 inline void addLayoutOption(pika::program_options::options_description& desc,
                             const blas::Layout def = blas::Layout::ColMajor) {
   desc.add_options()("layout",

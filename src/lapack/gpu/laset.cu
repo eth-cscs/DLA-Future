@@ -20,7 +20,7 @@ using namespace dlaf::util::cuda_operators;
 
 struct LasetParams {
   static constexpr unsigned kernel_tile_size_rows = 64;
-  static constexpr unsigned kernel_tile_size_cols = 16;
+  static constexpr unsigned kernel_tile_size_cols = 64;
 };
 
 __device__ inline constexpr bool all(unsigned i, unsigned j) noexcept {

@@ -49,3 +49,5 @@ if(DLAF_WITH_CUDA)
   target_add_warnings(miniapp_cublas)
   DLAF_addPrecompiledHeaders(miniapp_cublas)
 endif()
+
+add_subdirectory(kernel)

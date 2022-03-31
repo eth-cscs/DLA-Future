@@ -32,7 +32,9 @@ struct KernelRunner<Backend::MC> {
   template <class F>
   double run(F&& kernel_task) noexcept {
     auto task = [count = count_, &kernel_task](int id, int tot) {
-      for (SizeType i = id * count / tot; i < (id + 1) * count / tot; ++i) {
+      const SizeType i_start = id * count / tot;
+      const SizeType i_end = (id + 1) * count / tot;
+      for (SizeType i = i_start; i < i_end; ++i) {
         kernel_task(i);
       }
     };

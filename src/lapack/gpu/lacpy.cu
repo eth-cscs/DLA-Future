@@ -97,7 +97,9 @@ __global__ void lacpy(cublasFillMode_t uplo, const unsigned m, const unsigned n,
         copyAll(m, n, a, lda, b, ldb);
       break;
     case CUBLAS_FILL_MODE_FULL:
-      copyAll(m, n, a, lda, b, ldb);
+      // Note: it seems more appropriate to use cudaMemcpy2DAsync in this case
+      DLAF_GPU_ASSERT_HEAVY(false);
+      // copyAll(m, n, a, lda, b, ldb);
       break;
   }
 }

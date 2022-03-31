@@ -88,9 +88,7 @@ void applyHHRight(const SizeType m, const SizeType n, const T tau, const T* v, T
 template <class T>
 struct BandBlock {
   BandBlock(SizeType n, SizeType band_size)
-      : size_(n), band_size_(band_size), ld_(2 * band_size_ - 1), mem_(n * (ld_ + 1)) {
-    // TODO add assert about memory accessible from gpu
-  }
+      : size_(n), band_size_(band_size), ld_(2 * band_size_ - 1), mem_(n * (ld_ + 1)) {}
 
   T* ptr(SizeType offset, SizeType j) noexcept {
     DLAF_ASSERT_HEAVY(0 <= offset && offset < ld_ + 1, offset, ld_);
@@ -141,6 +139,7 @@ struct BandBlock {
     }
 #ifdef DLAF_WITH_CUDA
     else if constexpr (D == Device::GPU) {
+      DLAF_ASSERT_HEAVY(isAccessibleFromGPU(), "BandBlock memory should be accessible from GPU");
       return transform(
           dlaf::internal::Policy<B>(),
           [=](const matrix::Tile<const T, D>& source, cudaStream_t stream) {
@@ -214,6 +213,7 @@ struct BandBlock {
     }
 #ifdef DLAF_WITH_CUDA
     else if constexpr (D == Device::GPU) {
+      DLAF_ASSERT_HEAVY(isAccessibleFromGPU(), "BandBlock memory should be accessible from GPU");
       return transform(
           dlaf::internal::Policy<B>(),
           [=](const matrix::Tile<const T, D>& source, cudaStream_t stream) {
@@ -248,6 +248,12 @@ struct BandBlock {
   }
 
 private:
+  bool isAccessibleFromGPU() const {
+    cudaPointerAttributes attrs;
+    DLAF_CUDA_CALL(cudaPointerGetAttributes(&attrs, mem_()));
+    return cudaMemoryTypeUnregistered != attrs.type;
+  }
+
   SizeType size_;
   SizeType band_size_;
   SizeType ld_;

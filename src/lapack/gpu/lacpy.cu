@@ -97,7 +97,7 @@ __global__ void lacpy(cublasFillMode_t uplo, const unsigned m, const unsigned n,
         copyAll(m, n, a, lda, b, ldb);
       break;
     case CUBLAS_FILL_MODE_FULL:
-      // Note: it seems more appropriate to use cudaMemcpy2DAsync in this case
+      // Note: it is more appropriate to use cudaMemcpy2DAsync in this case
       DLAF_GPU_ASSERT_HEAVY(false);
       // copyAll(m, n, a, lda, b, ldb);
       break;
@@ -106,8 +106,8 @@ __global__ void lacpy(cublasFillMode_t uplo, const unsigned m, const unsigned n,
 }
 
 template <class T>
-void lacpy(blas::Uplo uplo, SizeType m, SizeType n, const T* a, SizeType lda, T* b, SizeType ldb,
-           cudaStream_t stream) {
+void lacpy(const blas::Uplo uplo, const SizeType m, const SizeType n, const T* a, const SizeType lda,
+           T* b, const SizeType ldb, const cudaStream_t stream) {
   if (m == 0 || n == 0)
     return;
 

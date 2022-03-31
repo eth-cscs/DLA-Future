@@ -32,7 +32,7 @@ decltype(auto) movePromiseGuard(T&& t) {
     return std::move(t);
   }
   else {
-    return std::forward<T>(t);
+    return static_cast<T&>(t);
   }
 }
 
@@ -40,15 +40,33 @@ decltype(auto) movePromiseGuard(T&& t) {
 template <typename F, typename Sender,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 [[nodiscard]] decltype(auto) transformMPI(F&& f, Sender&& sender) {
-  using pika::mpi::experimental::transform_mpi;
+  using pika::execution::experimental::then;
+  using pika::execution::experimental::thread_pool_scheduler;
+  using pika::execution::experimental::transfer;
   using pika::unwrapping;
 
-  auto f_unwrapping_discard_guard = [f = std::forward<F>(f)](auto&&... ts)
-      -> decltype(unwrapping(std::move(f))(movePromiseGuard(std::forward<decltype(ts)>(ts))...)) {
-    return unwrapping(std::move(f))(movePromiseGuard(std::forward<decltype(ts)>(ts))...);
-  };
+  auto f_wrapper = [f = std::forward<F>(f)](auto&&... ts)
+      -> decltype(unwrapping(std::move(f))(movePromiseGuard(ts)..., std::declval<MPI_Request*>())) {
+    MPI_Request req;
+    auto is_request_completed = [&req] {
+      int flag;
+      MPI_Test(&req, &flag, MPI_STATUS_IGNORE);
+      return flag == 0;
+    };
 
-  return transform_mpi(std::forward<Sender>(sender), std::move(f_unwrapping_discard_guard));
+    using result_type = decltype(unwrapping(std::move(f))(movePromiseGuard(ts)..., &req));
+    if constexpr (std::is_void_v<result_type>) {
+      unwrapping(std::move(f))(movePromiseGuard(ts)..., &req);
+      pika::util::yield_while(is_request_completed);
+    }
+    else {
+      auto r = unwrapping(std::move(f))(movePromiseGuard(ts)..., &req);
+      pika::util::yield_while(is_request_completed);
+      return r;
+    }
+  };
+  return transfer(std::forward<Sender>(sender), dlaf::internal::getMPIScheduler()) |
+         then(std::move(f_wrapper));
 }
 
 /// Fire-and-forget transformMPI. This submits the work and returns void.

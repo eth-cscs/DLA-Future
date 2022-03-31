@@ -76,8 +76,7 @@ struct Test {
 #ifdef DLAF_WITH_CUDA
     [[maybe_unused]] auto kernel_GPU = [uplo, m, n, alpha, beta, &tiles](SizeType i,
                                                                          cudaStream_t stream) {
-      gpulapack::laset(util::blasToCublas(uplo), m, n, alpha, beta, tiles(i).ptr(), tiles(i).ld(),
-                       stream);
+      gpulapack::laset(uplo, m, n, alpha, beta, tiles(i).ptr(), tiles(i).ld(), stream);
     };
 #endif
     const double mem_ops = memOps(uplo, m, n);

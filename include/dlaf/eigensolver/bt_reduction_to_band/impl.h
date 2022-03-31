@@ -62,7 +62,7 @@ struct Helpers<Backend::GPU> {
   static void copyAndSetHHUpperTiles(SizeType j_diag, const matrix::Tile<const T, Device::GPU>& src,
                                      const matrix::Tile<T, Device::GPU>& dst, cudaStream_t stream) {
     matrix::internal::copy_o(src, dst, stream);
-    gpulapack::laset(CUBLAS_FILL_MODE_UPPER, dst.size().rows(), dst.size().cols() - j_diag, T{0.}, T{1.},
+    gpulapack::laset(blas::Uplo::Upper, dst.size().rows(), dst.size().cols() - j_diag, T{0.}, T{1.},
                      dst.ptr({0, j_diag}), dst.ld(), stream);
   }
 };

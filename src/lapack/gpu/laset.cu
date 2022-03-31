@@ -10,7 +10,7 @@
 
 #include "dlaf/cuda/assert.cu.h"
 #include "dlaf/lapack/gpu/laset.h"
-#include "dlaf/util_cuda.h"
+#include "dlaf/util_cublas.h"
 #include "dlaf/util_math.h"
 
 namespace dlaf::gpulapack {
@@ -22,18 +22,6 @@ struct LasetParams {
   static constexpr unsigned kernel_tile_size_rows = 64;
   static constexpr unsigned kernel_tile_size_cols = 64;
 };
-
-__device__ inline constexpr bool all(unsigned i, unsigned j) noexcept {
-  return true;
-}
-
-__device__ inline constexpr bool lower(unsigned i, unsigned j) noexcept {
-  return i >= j;
-}
-
-__device__ inline constexpr bool upper(unsigned i, unsigned j) noexcept {
-  return i <= j;
-}
 
 template <class T>
 __device__ void setAll(const unsigned m, const unsigned n, const T alpha, T* a, const unsigned lda) {
@@ -92,28 +80,27 @@ __global__ void laset(cublasFillMode_t uplo, const unsigned m, const unsigned n,
 
   if (uplo == CUBLAS_FILL_MODE_LOWER) {
     if (i == j)
-      setDiag<lower>(m, n, alpha, beta, a, lda);
+      setDiag<dlaf::util::isLower>(m, n, alpha, beta, a, lda);
     else if (i > j)
       setAll(m, n, alpha, a, lda);
   }
   else if (uplo == CUBLAS_FILL_MODE_UPPER) {
     if (i == j)
-      setDiag<upper>(m, n, alpha, beta, a, lda);
+      setDiag<dlaf::util::isUpper>(m, n, alpha, beta, a, lda);
     else if (i < j)
       setAll(m, n, alpha, a, lda);
   }
   else {
     if (i == j && alpha != beta)
-      setDiag<all>(m, n, alpha, beta, a, lda);
+      setDiag<dlaf::util::isGeneral>(m, n, alpha, beta, a, lda);
     else
       setAll(m, n, alpha, a, lda);
   }
-  return;
 }
 }
 
 template <class T>
-void laset(cublasFillMode_t uplo, SizeType m, SizeType n, T alpha, T beta, T* a, SizeType lda,
+void laset(blas::Uplo uplo, SizeType m, SizeType n, T alpha, T beta, T* a, SizeType lda,
            cudaStream_t stream) {
   constexpr unsigned kernel_tile_size_rows = kernels::LasetParams::kernel_tile_size_rows;
   constexpr unsigned kernel_tile_size_cols = kernels::LasetParams::kernel_tile_size_cols;
@@ -122,7 +109,8 @@ void laset(cublasFillMode_t uplo, SizeType m, SizeType n, T alpha, T beta, T* a,
 
   dim3 nr_threads(kernel_tile_size_rows, 1);
   dim3 nr_blocks(util::ceilDiv(um, kernel_tile_size_rows), util::ceilDiv(un, kernel_tile_size_cols));
-  kernels::laset<<<nr_blocks, nr_threads, 0, stream>>>(uplo, um, un, util::cppToCudaCast(alpha),
+  kernels::laset<<<nr_blocks, nr_threads, 0, stream>>>(util::blasToCublas(uplo), um, un,
+                                                       util::cppToCudaCast(alpha),
                                                        util::cppToCudaCast(beta), util::cppToCudaCast(a),
                                                        to_uint(lda));
 }

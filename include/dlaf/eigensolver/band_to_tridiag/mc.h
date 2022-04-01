@@ -248,11 +248,13 @@ struct BandBlock {
   }
 
 private:
+#ifdef DLAF_WITH_CUDA
   bool isAccessibleFromGPU() const {
     cudaPointerAttributes attrs;
     DLAF_CUDA_CALL(cudaPointerGetAttributes(&attrs, mem_()));
     return cudaMemoryTypeUnregistered != attrs.type;
   }
+#endif
 
   SizeType size_;
   SizeType band_size_;

@@ -18,9 +18,7 @@
 
 #include "dlaf/eigensolver/gen_eigensolver/api.h"
 
-namespace dlaf {
-namespace eigensolver {
-namespace internal {
+namespace dlaf::eigensolver::internal {
 
 template <Backend B, Device D, class T>
 EigensolverResult<T, D> GenEigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a,
@@ -35,6 +33,5 @@ EigensolverResult<T, D> GenEigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T,
 
   return ret;
 }
-}
-}
+
 }

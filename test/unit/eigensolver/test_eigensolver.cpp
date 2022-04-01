@@ -67,17 +67,20 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb)
   Matrix<T, Device::CPU> mat_a_h(reference.distribution());
   copy(reference, mat_a_h);
 
-  MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
-  auto ret = eigensolver::eigensolver<B>(uplo, mat_a.get());
-
-  MatrixMirror<T, Device::CPU, D> mat_e(ret.eigenvectors);
-  mat_e.copySourceToTarget();
+  auto ret = [&]() {
+    MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
+    return eigensolver::eigensolver<B>(uplo, mat_a.get());
+    // TODO there is a superflous copy back
+  }();
 
   if (mat_a_h.size().isEmpty())
     return;
 
   auto mat_a_local = allGather(blas::Uplo::General, reference);
-  auto mat_e_local = allGather(blas::Uplo::General, mat_e.get());
+  auto mat_e_local = [&]() {
+    MatrixMirror<const T, Device::CPU, D> mat_e(ret.eigenvectors);
+    return allGather(blas::Uplo::General, mat_e.get());
+  }();
 
   MatrixLocal<T> workspace({m, m}, block_size);
 

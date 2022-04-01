@@ -260,6 +260,19 @@ struct TileCollector {
   }
 };
 
+template <class U>
+std::vector<matrix::Tile<const U, Device::CPU>> unwrapConstTile(
+    const std::vector<pika::shared_future<matrix::Tile<const U, Device::CPU>>>& tiles_fut) {
+  std::vector<matrix::Tile<const U, Device::CPU>> tiles;
+  tiles.reserve(tiles_fut.size());
+  for (const auto& tile_fut : tiles_fut) {
+    const auto& tile = tile_fut.get();
+    SizeType len = tile.size().isEmpty() ? 0 : tile.ld() * (tile.size().cols() - 1) + tile.size().rows();
+    tiles.emplace_back(tile.size(), MemoryView(tile.ptr(), len), tile.ld());
+  }
+  return tiles;
+}
+
 // Note: not using matrix::copy for Tile<> here because this has to work for U = SizeType too.
 template <class U>
 void copyVector(SizeType i_begin, SizeType i_end, Matrix<const U, Device::CPU>& in,
@@ -293,7 +306,9 @@ void sortIndex(SizeType n, pika::shared_future<SizeType> k_fut,
   TileElementIndex zero_idx(0, 0);
   const T* v_ptr = vals_tiles[0].get().ptr(zero_idx);
   const SizeType* in_index_ptr = in_index_tiles[0].get().ptr(zero_idx);
-  SizeType* out_index_ptr = out_index_tiles[0].get().ptr(zero_idx);
+  // save in variable avoid releasing the tile too soon
+  auto out_index_tile = out_index_tiles[0].get();
+  SizeType* out_index_ptr = out_index_tile.ptr(zero_idx);
 
   auto begin_it = in_index_ptr;
   auto split_it = in_index_ptr + n;
@@ -315,7 +330,9 @@ void applyIndex(SizeType n,
   TileElementIndex zero_idx(0, 0);
   const SizeType* i_ptr = index[0].get().ptr(zero_idx);
   const T* in_ptr = in[0].get().ptr(zero_idx);
-  T* out_ptr = out[0].get().ptr(zero_idx);
+  // save in variable avoid releasing the tile too soon
+  auto out_tile = out[0].get();
+  T* out_ptr = out_tile.ptr(zero_idx);
 
   for (SizeType i = 0; i < n; ++i) {
     out_ptr[i] = in_ptr[i_ptr[i]];
@@ -331,7 +348,9 @@ inline void composeIndices(
   TileElementIndex zero_idx(0, 0);
   const SizeType* inner_ptr = outer[0].get().ptr(zero_idx);
   const SizeType* outer_ptr = inner[0].get().ptr(zero_idx);
-  SizeType* result_ptr = result[0].get().ptr(zero_idx);
+  // save in variable avoid releasing the tile too soon
+  auto result_tile = result[0].get();
+  SizeType* result_ptr = result_tile.ptr(zero_idx);
 
   for (SizeType i = 0; i < n; ++i) {
     result_ptr[i] = outer_ptr[inner_ptr[i]];
@@ -343,7 +362,9 @@ inline SizeType stablePartitionIndexForDeflation(
     std::vector<pika::future<matrix::Tile<SizeType, Device::CPU>>> index_tiles) {
   TileElementIndex zero_idx(0, 0);
   const ColType* c_ptr = ct_tiles[0].get().ptr(zero_idx);
-  SizeType* i_ptr = index_tiles[0].get().ptr(zero_idx);
+  // save in variable avoid releasing the tile too soon
+  auto index_tile = index_tiles[0].get();
+  SizeType* i_ptr = index_tile.ptr(zero_idx);
 
   // Get the number of non-deflated entries
   SizeType k = 0;
@@ -466,12 +487,16 @@ std::vector<GivensRotation<T>> applyDeflation(
     std::vector<pika::shared_future<matrix::Tile<const SizeType, Device::CPU>>> i_tiles,
     std::vector<pika::future<matrix::Tile<T, Device::CPU>>> d_tiles,
     std::vector<pika::future<matrix::Tile<T, Device::CPU>>> z_tiles,
-    std::vector<pika::future<matrix::Tile<ColType, Device::CPU>>> ct_tiles) {
+    std::vector<pika::future<matrix::Tile<ColType, Device::CPU>>> c_tiles) {
   TileElementIndex zero_idx(0, 0);
   const SizeType* i_ptr = i_tiles[0].get().ptr(zero_idx);
-  T* d_ptr = d_tiles[0].get().ptr(zero_idx);
-  T* z_ptr = z_tiles[0].get().ptr(zero_idx);
-  ColType* c_ptr = ct_tiles[0].get().ptr(zero_idx);
+  // save in variable avoid releasing the tile too soon
+  auto d_tile = d_tiles[0].get();
+  auto z_tile = z_tiles[0].get();
+  auto c_tile = c_tiles[0].get();
+  T* d_ptr = d_tile.ptr(zero_idx);
+  T* z_ptr = z_tile.ptr(zero_idx);
+  ColType* c_ptr = c_tile.ptr(zero_idx);
 
   return applyDeflationToArrays(rho_fut.get(), tol_fut.get(), n, i_ptr, d_ptr, z_ptr, c_ptr);
 }
@@ -491,7 +516,9 @@ inline ColTypeLens partitionIndexForMatrixMultiplication(
     std::vector<pika::future<matrix::Tile<SizeType, Device::CPU>>> perm_q_tiles) {
   TileElementIndex zero_idx(0, 0);
   const ColType* c_ptr = c_tiles[0].get().ptr(zero_idx);
-  SizeType* i_ptr = perm_q_tiles[0].get().ptr(zero_idx);
+  // save in variable avoid releasing the tile too soon
+  auto perm_q_tile = perm_q_tiles[0].get();
+  SizeType* i_ptr = perm_q_tile.ptr(zero_idx);
   ColTypeLens ql;
   ql.num_deflated = partitionColType(n, ColType::Deflated, c_ptr, i_ptr);
   ql.num_lowhalf = partitionColType(n - ql.num_deflated, ColType::LowerHalf, c_ptr, i_ptr);
@@ -551,40 +578,40 @@ void copyTileCol(SizeType in_col, matrix::Tile<const T, Device::CPU>& in, SizeTy
 // `in_tiles` and `out_tiles` are in column-major order
 //
 // Note: this is currently not parallelized
-template <class T>
-void applyPermutationIndexToMatrixQ(
-    SizeType i_begin, SizeType i_end,
-    std::vector<pika::shared_future<matrix::Tile<const SizeType, Device::CPU>>> perm_tiles,
-    const matrix::Distribution& distr,
-    std::vector<pika::shared_future<matrix::Tile<const T, Device::CPU>>> in_tiles,
-    std::vector<pika::future<matrix::Tile<T, Device::CPU>>> out_tiles) {
-  SizeType ncol_tiles = i_end - i_begin + 1;
-
-  // Iterate over columns of `in_tiles` and use the permutation index `perm_tiles` to copy columns from
-  for (SizeType j_out_tile = i_begin; j_out_tile <= i_end; ++j_out_tile) {
-    // Get the indices of permutations correspo
-    const auto& perm_tile = perm_tiles[to_sizet(j_out_tile)].get();
-    for (SizeType i_out_tile = i_begin; i_out_tile <= i_end; ++i_out_tile) {
-      auto out_tile = out_tiles[to_sizet(i_out_tile + j_out_tile * ncol_tiles)].get();
-      TileElementSize sz_out_tile = out_tile.size();
-
-      // Iterate over columns of `out_tile`
-      for (SizeType j_out_el = 0; j_out_el < sz_out_tile.cols(); ++j_out_el) {
-        // Get the index of the global column
-        SizeType j_in_gl_el = perm_tile(TileElementIndex(j_out_el, 0));
-        // Get the index of the tile that has column `gl_col`
-        SizeType j_in_tile = distr.globalTileFromGlobalElement<Coord::Col>(j_in_gl_el);
-        const auto& in_tile = in_tiles[to_sizet(i_out_tile + j_in_tile * ncol_tiles)].get();
-        // Get the index of the `gl_col` column within the tile
-        SizeType j_in_el = distr.tileElementFromGlobalElement<Coord::Col>(j_in_gl_el);
-        // Copy a column from `in_tile` into `out_tile`
-        for (SizeType i_out_el = 0; i_out_el < sz_out_tile.rows(); ++i_out_el) {
-          out_tile(TileElementIndex(i_out_el, j_out_el)) = in_tile(TileElementIndex(i_out_el, j_in_el));
-        }
-      }
-    }
-  }
-}
+// template <class T>
+// void applyPermutationIndexToMatrixQ(
+//    SizeType i_begin, SizeType i_end,
+//    std::vector<pika::shared_future<matrix::Tile<const SizeType, Device::CPU>>> perm_tiles,
+//    const matrix::Distribution& distr,
+//    std::vector<pika::shared_future<matrix::Tile<const T, Device::CPU>>> in_tiles,
+//    std::vector<pika::future<matrix::Tile<T, Device::CPU>>> out_tiles) {
+//  SizeType ncol_tiles = i_end - i_begin + 1;
+//
+//  // Iterate over columns of `in_tiles` and use the permutation index `perm_tiles` to copy columns from
+//  for (SizeType j_out_tile = i_begin; j_out_tile <= i_end; ++j_out_tile) {
+//    // Get the indices of permutations correspo
+//    const auto& perm_tile = perm_tiles[to_sizet(j_out_tile)].get();
+//    for (SizeType i_out_tile = i_begin; i_out_tile <= i_end; ++i_out_tile) {
+//      auto out_tile = out_tiles[to_sizet(i_out_tile + j_out_tile * ncol_tiles)].get();
+//      TileElementSize sz_out_tile = out_tile.size();
+//
+//      // Iterate over columns of `out_tile`
+//      for (SizeType j_out_el = 0; j_out_el < sz_out_tile.cols(); ++j_out_el) {
+//        // Get the index of the global column
+//        SizeType j_in_gl_el = perm_tile(TileElementIndex(j_out_el, 0));
+//        // Get the index of the tile that has column `gl_col`
+//        SizeType j_in_tile = distr.globalTileFromGlobalElement<Coord::Col>(j_in_gl_el);
+//        const auto& in_tile = in_tiles[to_sizet(i_out_tile + j_in_tile * ncol_tiles)].get();
+//        // Get the index of the `gl_col` column within the tile
+//        SizeType j_in_el = distr.tileElementFromGlobalElement<Coord::Col>(j_in_gl_el);
+//        // Copy a column from `in_tile` into `out_tile`
+//        for (SizeType i_out_el = 0; i_out_el < sz_out_tile.rows(); ++i_out_el) {
+//          out_tile(TileElementIndex(i_out_el, j_out_el)) = in_tile(TileElementIndex(i_out_el, j_in_el));
+//        }
+//      }
+//    }
+//  }
+//}
 
 // Inverts `perm_q`
 // Initializes `perm_u`
@@ -625,15 +652,18 @@ void solveRank1Problem(SizeType n, SizeType nb, pika::shared_future<SizeType> k_
 
   TileElementIndex zero(0, 0);
   const T* d_defl_ptr = d_defl[0].get().ptr(zero);
-  T* d_ptr = d[0].get().ptr(zero);
   const T* z_ptr = z_defl[0].get().ptr(zero);
+
+  auto d_tile = d[0].get();
+  auto mat_tiles = pika::unwrap(std::move(mat));
+  T* d_ptr = d_tile.ptr(zero);
 
   matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
 
   for (SizeType i = 0; i < k; ++i) {
     SizeType i_tile = distr.globalTileLinearIndex(GlobalElementIndex(0, i));
     SizeType i_col = distr.tileElementFromGlobalElement<Coord::Col>(i);
-    T* delta = mat[to_sizet(i_tile)].get().ptr(TileElementIndex(0, i_col));
+    T* delta = mat_tiles[to_sizet(i_tile)].ptr(TileElementIndex(0, i_col));
     T& eigenval = d_ptr[to_sizet(i)];
     dlaf::internal::laed4_wrapper(static_cast<int>(k), static_cast<int>(i), d_defl_ptr, z_ptr, delta,
                                   rho, &eigenval);

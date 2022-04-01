@@ -94,7 +94,7 @@ void lacpy(TileElementSize region, TileElementIndex in_idx, const Tile<const T, 
 /// This overload blocks until completion of the algorithm.
 template <Backend B, class T, Device D>
 dlaf::BaseType<T> lange(const dlaf::internal::Policy<B>& p, const lapack::Norm norm,
-                        const Tile<T, Device::CPU>& a);
+                        const Tile<T, D>& a);
 
 /// \overload lange
 ///
@@ -122,7 +122,7 @@ dlaf::BaseType<T> lange(const dlaf::internal::Policy<B>& p);
 /// This overload blocks until completion of the algorithm.
 template <Backend B, class T, Device D>
 dlaf::BaseType<T> lantr(const dlaf::internal::Policy<B>& p, const lapack::Norm norm,
-                        const blas::Uplo uplo, const blas::Diag diag, const Tile<T, Device::CPU>& a);
+                        const blas::Uplo uplo, const blas::Diag diag, const Tile<T, D>& a);
 
 /// \overload lantr
 ///
@@ -144,7 +144,7 @@ dlaf::BaseType<T> lantr(const dlaf::internal::Policy<B>& p);
 /// This overload blocks until completion of the algorithm.
 template <Backend B, class T, Device D>
 void laset(const dlaf::internal::Policy<B>& p, const blas::Uplo uplo, T alpha, T beta,
-           const Tile<T, Device::CPU>& tile);
+           const Tile<T, D>& tile);
 
 /// \overload laset
 ///
@@ -165,7 +165,7 @@ void laset(const dlaf::internal::Policy<B>& p);
 ///
 /// This overload blocks until completion of the algorithm.
 template <Backend B, class T, Device D>
-void set0(const dlaf::internal::Policy<B>& p, const Tile<T, Device::CPU>& tile);
+void set0(const dlaf::internal::Policy<B>& p, const Tile<T, D>& tile);
 
 /// \overload set0
 ///
@@ -413,7 +413,7 @@ void laset(const blas::Uplo uplo, T alpha, T beta, const Tile<T, Device::GPU>& t
   const SizeType m = tile.size().rows();
   const SizeType n = tile.size().cols();
 
-  gpulapack::laset(util::blasToCublas(uplo), m, n, alpha, beta, tile.ptr(), tile.ld(), stream);
+  gpulapack::laset(uplo, m, n, alpha, beta, tile.ptr(), tile.ld(), stream);
 }
 
 template <class T>

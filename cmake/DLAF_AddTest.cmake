@@ -166,6 +166,7 @@ function(DLAF_addTest test_target_name)
   )
   target_include_directories(${test_target_name} PRIVATE ${DLAF_AT_INCLUDE_DIRS})
   target_add_warnings(${test_target_name})
+  DLAF_addPrecompiledHeaders(${test_target_name})
   add_test(
     NAME ${test_target_name}
     COMMAND ${_TEST_COMMAND} ${_TEST_ARGUMENTS}

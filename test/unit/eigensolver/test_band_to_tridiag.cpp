@@ -16,6 +16,7 @@
 #include "gtest/gtest.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf/traits.h"
 #include "dlaf_test/matrix/matrix_local.h"
 #include "dlaf_test/matrix/util_generic_lapack.h"
@@ -43,22 +44,25 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
     {4, 6, 3}, {8, 4, 2}, {18, 4, 4}, {34, 6, 6}, {37, 9, 3}  // m != mb
 };
 
-template <class T>
+template <Device D, class T>
 void testBandToTridiag(const blas::Uplo uplo, const SizeType band_size, const SizeType m,
                        const SizeType mb) {
   const LocalElementSize size(m, m);
   const TileElementSize block_size(mb, mb);
 
-  Matrix<T, Device::CPU> mat_a(size, block_size);
-  matrix::util::set_random_hermitian(mat_a);
+  Matrix<T, Device::CPU> mat_a_h(size, block_size);
+  matrix::util::set_random_hermitian(mat_a_h);
 
-  auto [mat_trid, mat_v] = eigensolver::bandToTridiag<Backend::MC>(uplo, band_size, mat_a);
+  auto [mat_trid, mat_v] = [&]() {
+    MatrixMirror<const T, D, Device::CPU> mat_a(mat_a_h);
+    return eigensolver::bandToTridiag<Backend::MC>(uplo, band_size, mat_a.get());
+  }();
 
   if (m == 0)
     return;
 
   auto mat_trid_local = matrix::test::allGather(blas::Uplo::General, mat_trid);
-  MatrixLocal<T> mat_local(mat_a.size(), mat_a.blockSize());
+  MatrixLocal<T> mat_local(mat_a_h.size(), mat_a_h.blockSize());
   const auto ld = mat_local.ld();
   set(mat_local, [](auto) { return T{0}; });
 
@@ -95,24 +99,33 @@ void testBandToTridiag(const blas::Uplo uplo, const SizeType band_size, const Si
     }
   }
 
-  // mat_a is a const input so it has not changed.
-  auto res = [uplo, band_size, &mat_a, &mat_local](const GlobalElementIndex& index) {
+  // mat_a_h is a const input so it has not changed.
+  auto res = [uplo, band_size, &mat_a_h, &mat_local](const GlobalElementIndex& index) {
     auto diag_index = index.row() - index.col();
     if (uplo == blas::Uplo::Upper && -diag_index >= 0 && -diag_index > band_size + 1)
       return mat_local(index);
     if (uplo == blas::Uplo::Lower && diag_index >= 0 && diag_index < band_size + 1)
       return mat_local(index);
 
-    const auto& dist_a = mat_a.distribution();
-    return mat_a.read(dist_a.globalTileIndex(index)).get()(dist_a.tileElementIndex(index));
+    const auto& dist_a = mat_a_h.distribution();
+    return mat_a_h.read(dist_a.globalTileIndex(index)).get()(dist_a.tileElementIndex(index));
   };
 
-  CHECK_MATRIX_NEAR(res, mat_a, mb * m * TypeUtilities<T>::error, m * TypeUtilities<T>::error);
+  CHECK_MATRIX_NEAR(res, mat_a_h, mb * m * TypeUtilities<T>::error, m * TypeUtilities<T>::error);
 }
 
-TYPED_TEST(EigensolverBandToTridiagTest, CorrectnessLocal) {
+TYPED_TEST(EigensolverBandToTridiagTest, CorrectnessLocalFromCPU) {
   const blas::Uplo uplo = blas::Uplo::Lower;
 
   for (const auto& [m, mb, b] : sizes)
-    testBandToTridiag<TypeParam>(uplo, b, m, mb);
+    testBandToTridiag<Device::CPU, TypeParam>(uplo, b, m, mb);
 }
+
+#ifdef DLAF_WITH_CUDA
+TYPED_TEST(EigensolverBandToTridiagTest, CorrectnessLocalFromGPU) {
+  const blas::Uplo uplo = blas::Uplo::Lower;
+
+  for (const auto& [m, mb, b] : sizes)
+    testBandToTridiag<Device::GPU, TypeParam>(uplo, b, m, mb);
+}
+#endif

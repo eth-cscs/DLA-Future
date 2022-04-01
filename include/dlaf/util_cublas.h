@@ -48,6 +48,21 @@ inline constexpr cublasFillMode_t blasToCublas(const blas::Uplo uplo) {
   }
 }
 
+/// Predicate returning true for all coordinates lying in the lower part or on the diagonal of a matrix
+__device__ inline constexpr bool isLower(unsigned i, unsigned j) noexcept {
+  return i >= j;
+}
+
+/// Predicate returning true for all coordinates lying in the upper part or on the diagonal of a matrix
+__device__ inline constexpr bool isUpper(unsigned i, unsigned j) noexcept {
+  return i <= j;
+}
+
+/// Predicate returning true for all coordinates valid for a "general" matrix (i.e. always true)
+__device__ inline constexpr bool isGeneral(unsigned, unsigned) noexcept {
+  return true;
+}
+
 inline constexpr cublasOperation_t blasToCublas(const blas::Op op) {
   switch (op) {
     case blas::Op::NoTrans:

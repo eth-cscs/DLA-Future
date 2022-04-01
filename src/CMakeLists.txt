@@ -87,6 +87,51 @@ target_compile_definitions(dlaf.prop
     $<$<BOOL:${DLAF_WITH_CUDA_MPI_RDMA}>:DLAF_WITH_CUDA_MPI_RDMA>
 )
 
+# Precompiled headers
+if(DLAF_WITH_PRECOMPILED_HEADERS)
+  # We create two separate targets whose precompiled headers will be reused, one
+  # for libraries and one for executables. Separate targets are needed because
+  # the compilation flags for executables and libraries may differ.
+  add_library(dlaf.pch_lib OBJECT dummy.cpp)
+  target_link_libraries(dlaf.pch_lib PRIVATE dlaf.prop)
+  target_add_warnings(dlaf.pch_lib)
+
+  add_executable(dlaf.pch_exe dummy.cpp)
+  target_link_libraries(dlaf.pch_exe PRIVATE dlaf.prop)
+  target_add_warnings(dlaf.pch_exe)
+
+  set(precompiled_headers
+    <mpi.h>
+
+    $<$<BOOL:${DLAF_WITH_CUDA}>:<pika/cuda.hpp$<ANGLE-R>>
+    <pika/execution.hpp>
+    <pika/future.hpp>
+    <pika/mpi.hpp>
+    <pika/mutex.hpp>
+    <pika/program_options.hpp>
+    <pika/runtime.hpp>
+    <pika/thread.hpp>
+    <pika/unwrap.hpp>
+
+    <blas.hh>
+    # We exclude lapack.hh because it pulls in complex.h and defines I as a
+    # macro. I is a commonly used e.g. as template parameter names and defining
+    # it as a macro breaks compilation. Undefining I for the precompiled header
+    # is a bigger hassle than excluding the header since it's a cheap header to
+    # compile.
+    # <lapack.hh>
+
+    <umpire/Allocator.hpp>
+    <umpire/ResourceManager.hpp>
+
+    $<$<BOOL:${DLAF_WITH_CUDA}>:<cublas_v2.h$<ANGLE-R>>
+    $<$<BOOL:${DLAF_WITH_CUDA}>:<cuda_runtime.h$<ANGLE-R>>
+    $<$<BOOL:${DLAF_WITH_CUDA}>:<cusolverDn.h$<ANGLE-R>>
+  )
+  target_precompile_headers(dlaf.pch_lib PRIVATE ${precompiled_headers})
+  target_precompile_headers(dlaf.pch_exe PRIVATE ${precompiled_headers})
+endif()
+
 # Define DLAF's CORE library
 add_library(dlaf.core
   OBJECT
@@ -103,24 +148,29 @@ add_library(dlaf.core
     memory/memory_view.cpp
     memory/memory_chunk.cpp
     $<$<BOOL:${DLAF_WITH_CUDA}>:cusolver/assert_info.cu>
+    $<$<BOOL:${DLAF_WITH_CUDA}>:lapack/gpu/lacpy.cu>
     $<$<BOOL:${DLAF_WITH_CUDA}>:lapack/gpu/laset.cu>
 )
 target_compile_options(dlaf.core PRIVATE $<$<COMPILE_LANG_AND_ID:CUDA,NVIDIA>:--extended-lambda>)
 target_link_libraries(dlaf.core PUBLIC dlaf.prop)
 target_add_warnings(dlaf.core)
+DLAF_addPrecompiledHeaders(dlaf.core)
 
 # Define DLAF's auxiliary library
 add_library(dlaf.auxiliary OBJECT auxiliary/norm/mc.cpp)
 target_link_libraries(dlaf.auxiliary PUBLIC dlaf.prop)
 target_add_warnings(dlaf.auxiliary)
+DLAF_addPrecompiledHeaders(dlaf.auxiliary)
 
 # Define DLAF's eigensolver library
 add_library(dlaf.eigensolver OBJECT
   eigensolver/band_to_tridiag/mc.cpp
   eigensolver/bt_band_to_tridiag/mc.cpp
+  $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/bt_band_to_tridiag/gpu.cpp>
   eigensolver/bt_reduction_to_band/mc.cpp
   $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/bt_reduction_to_band/gpu.cpp>
   eigensolver/eigensolver/mc.cpp
+  $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/eigensolver/gpu.cpp>
   eigensolver/gen_eigensolver/mc.cpp
   eigensolver/gen_to_std/mc.cpp
   $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/gen_to_std/gpu.cpp>
@@ -128,6 +178,7 @@ add_library(dlaf.eigensolver OBJECT
   $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/reduction_to_band/gpu.cpp>)
 target_link_libraries(dlaf.eigensolver PUBLIC dlaf.prop)
 target_add_warnings(dlaf.eigensolver)
+DLAF_addPrecompiledHeaders(dlaf.eigensolver)
 
 # Define DLAF's factorization library
 add_library(dlaf.factorization OBJECT
@@ -139,6 +190,7 @@ add_library(dlaf.factorization OBJECT
 target_compile_options(dlaf.factorization PRIVATE $<$<COMPILE_LANG_AND_ID:CUDA,NVIDIA>:--extended-lambda>)
 target_link_libraries(dlaf.factorization PUBLIC dlaf.prop)
 target_add_warnings(dlaf.factorization)
+DLAF_addPrecompiledHeaders(dlaf.factorization)
 
 # Define DLAF's multiplication library
 add_library(dlaf.multiplication OBJECT
@@ -146,6 +198,7 @@ add_library(dlaf.multiplication OBJECT
   $<$<BOOL:${DLAF_WITH_CUDA}>:multiplication/triangular/gpu.cpp>)
 target_link_libraries(dlaf.multiplication PUBLIC dlaf.prop)
 target_add_warnings(dlaf.multiplication)
+DLAF_addPrecompiledHeaders(dlaf.multiplication)
 
 # Define DLAF's solver library
 add_library(dlaf.solver OBJECT
@@ -153,6 +206,7 @@ add_library(dlaf.solver OBJECT
   $<$<BOOL:${DLAF_WITH_CUDA}>:solver/triangular/gpu.cpp>)
 target_link_libraries(dlaf.solver PUBLIC dlaf.prop)
 target_add_warnings(dlaf.solver)
+DLAF_addPrecompiledHeaders(dlaf.solver)
 
 # Define DLAF's complete library
 add_library(DLAF

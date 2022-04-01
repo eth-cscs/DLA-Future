@@ -22,21 +22,19 @@ namespace dlaf {
 namespace eigensolver {
 namespace internal {
 
-template <Backend backend, Device device, class T>
-EigensolverResult<T, device> GenEigensolver<backend, device, T>::call(blas::Uplo uplo,
-                                                                      Matrix<T, device>& mat_a,
-                                                                      Matrix<T, device>& mat_b) {
-  factorization::cholesky<backend>(uplo, mat_b);
-  eigensolver::genToStd<backend>(uplo, mat_a, mat_b);
+template <Backend B, Device D, class T>
+EigensolverResult<T, D> GenEigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a,
+                                                      Matrix<T, D>& mat_b) {
+  factorization::cholesky<B>(uplo, mat_b);
+  eigensolver::genToStd<B>(uplo, mat_a, mat_b);
 
-  auto ret = eigensolver::eigensolver<backend>(uplo, mat_a);
+  auto ret = eigensolver::eigensolver<B>(uplo, mat_a);
 
-  solver::triangular<backend>(blas::Side::Left, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1),
-                              mat_b, ret.eigenvectors);
+  solver::triangular<B>(blas::Side::Left, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1), mat_b,
+                        ret.eigenvectors);
 
   return ret;
 }
-
 }
 }
 }

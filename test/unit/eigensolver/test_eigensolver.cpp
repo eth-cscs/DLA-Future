@@ -70,7 +70,6 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb)
   auto ret = [&]() {
     MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
     return eigensolver::eigensolver<B>(uplo, mat_a.get());
-    // TODO there is a superflous copy back
   }();
 
   if (mat_a_h.size().isEmpty())

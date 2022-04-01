@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include "dlaf/eigensolver/band_to_tridiag/api.h"
+
 #include <pika/future.hpp>
 #include <pika/unwrap.hpp>
 
@@ -17,8 +19,9 @@
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/vector.h"
-#include "dlaf/eigensolver/band_to_tridiag/api.h"
 #include "dlaf/executors.h"
+#include "dlaf/lapack/gpu/lacpy.h"
+#include "dlaf/lapack/gpu/laset.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/memory/memory_view.h"
@@ -83,11 +86,7 @@ void applyHHRight(const SizeType m, const SizeType n, const T tau, const T* v, T
 }
 
 template <class T>
-class BandBlock {
-  using MatrixType = Matrix<T, Device::CPU>;
-  using ConstTileType = typename MatrixType::ConstTileType;
-
-public:
+struct BandBlock {
   BandBlock(SizeType n, SizeType band_size)
       : size_(n), band_size_(band_size), ld_(2 * band_size_ - 1), mem_(n * (ld_ + 1)) {}
 
@@ -101,55 +100,162 @@ public:
     return ld_;
   }
 
-  void copyDiag(SizeType j, const ConstTileType& source) noexcept {
-    constexpr auto General = blas::Uplo::General;
-    constexpr auto Lower = blas::Uplo::Lower;
+  template <Device D, class Sender>
+  auto copyDiag(SizeType j, Sender source) noexcept {
+    using dlaf::internal::transform;
+    namespace ex = pika::execution::experimental;
 
-    // First set the diagonals from b+2 to 2b to 0.
-    lapack::laset(General, band_size_ - 1, source.size().cols(), T{0.}, T{0.}, ptr(band_size_ + 1, j),
-                  ld() + 1);
-    // The elements are copied in the following way:
-    // (a: copied with first lacpy (General), b: copied with second lacpy (Lower))
-    // 6x6 tile, band_size = 3  |  2x2 tile, band_size = 3
-    // a * * * * *              |
-    // a a * * * *              |  b *
-    // a a a * * *              |  b b
-    // a a a b * *              |
-    // * a a b b *              |
-    // * * a b b b              |
-    const auto index = std::max(SizeType{0}, source.size().cols() - band_size_);
-    if (index > 0) {
-      lapack::lacpy(General, band_size_ + 1, index, source.ptr(), source.ld() + 1, ptr(0, j), ld() + 1);
+    constexpr auto B = dlaf::matrix::internal::CopyBackend_v<D, Device::CPU>;
+
+    if constexpr (D == Device::CPU) {
+      return transform(
+          dlaf::internal::Policy<B>(),
+          [=](const matrix::Tile<const T, D>& source) {
+            constexpr auto General = blas::Uplo::General;
+            constexpr auto Lower = blas::Uplo::Lower;
+
+            // First set the diagonals from b+2 to 2b to 0.
+            lapack::laset(General, band_size_ - 1, source.size().cols(), T(0), T(0),
+                          ptr(band_size_ + 1, j), ld() + 1);
+            // The elements are copied in the following way:
+            // (a: copied with first lacpy (General), b: copied with second lacpy (Lower))
+            // 6x6 tile, band_size = 3  |  2x2 tile, band_size = 3
+            // a * * * * *              |
+            // a a * * * *              |  b *
+            // a a a * * *              |  b b
+            // a a a b * *              |
+            // * a a b b *              |
+            // * * a b b b              |
+            const auto index = std::max(SizeType{0}, source.size().cols() - band_size_);
+            if (index > 0) {
+              lapack::lacpy(General, band_size_ + 1, index, source.ptr(), source.ld() + 1, ptr(0, j),
+                            ld() + 1);
+            }
+            const auto size = std::min(band_size_, source.size().cols());
+            lapack::lacpy(Lower, size, size, source.ptr({index, index}), source.ld(), ptr(0, j + index),
+                          ld());
+          },
+          std::move(source));
     }
-    const auto size = std::min(band_size_, source.size().cols());
-    lapack::lacpy(Lower, size, size, source.ptr({index, index}), source.ld(), ptr(0, j + index), ld());
+#ifdef DLAF_WITH_CUDA
+    else if constexpr (D == Device::GPU) {
+      DLAF_ASSERT_HEAVY(isAccessibleFromGPU(), "BandBlock memory should be accessible from GPU");
+      return transform(
+          dlaf::internal::Policy<B>(),
+          [=](const matrix::Tile<const T, D>& source, cudaStream_t stream) {
+            constexpr auto General = blas::Uplo::General;
+            constexpr auto Lower = blas::Uplo::Lower;
+
+            // First set the diagonals from b+2 to 2b to 0.
+            gpulapack::laset(General, band_size_ - 1, source.size().cols(), T(0), T(0),
+                             ptr(band_size_ + 1, j), ld() + 1, stream);
+            // The elements are copied in the following way:
+            // (a: copied with first lacpy (General), b: copied with second lacpy (Lower))
+            // 6x6 tile, band_size = 3  |  2x2 tile, band_size = 3
+            // a * * * * *              |
+            // a a * * * *              |  b *
+            // a a a * * *              |  b b
+            // a a a b * *              |
+            // * a a b b *              |
+            // * * a b b b              |
+            const auto index = std::max(SizeType{0}, source.size().cols() - band_size_);
+            if (index > 0) {
+              gpulapack::lacpy(General, band_size_ + 1, index, source.ptr(), source.ld() + 1, ptr(0, j),
+                               ld() + 1, stream);
+            }
+            const auto size = std::min(band_size_, source.size().cols());
+            gpulapack::lacpy(Lower, size, size, source.ptr({index, index}), source.ld(),
+                             ptr(0, j + index), ld(), stream);
+          },
+          std::move(source));
+    }
+#endif
+    else {
+      return DLAF_UNREACHABLE(decltype(ex::just()));
+    }
   }
 
-  void copyOffdiag(SizeType j, const ConstTileType& source) noexcept {
-    constexpr auto General = blas::Uplo::General;
-    constexpr auto Upper = blas::Uplo::Upper;
-    // The elements are copied in the following way:
-    // (a: copied with first lacpy (Upper), b: copied with second lacpy (General))
-    // (copied when j = n)
-    // 6x6 tile, band_size = 3  |  2x6 tile, band_size = 3
-    // * * * a a a              |
-    // * * * * a a              |  * * * a a b
-    // * * * * * a              |  * * * * a b
-    // * * * * * *              |
-    // * * * * * *              |
-    // * * * * * *              |
-    const auto index = source.size().cols() - band_size_;
-    const auto size = std::min(band_size_, source.size().rows());
-    auto dest = ptr(band_size_, j + index);
-    lapack::lacpy(Upper, size, size, source.ptr({0, index}), source.ld(), dest, ld());
-    if (band_size_ > size) {
-      const auto size2 = band_size_ - size;
-      lapack::lacpy(General, source.size().rows(), size2, source.ptr({0, index + size}), source.ld(),
-                    dest + ld() * size, ld());
+  template <Device D, class Sender>
+  auto copyOffDiag(const SizeType j, Sender source) noexcept {
+    using dlaf::internal::transform;
+
+    namespace ex = pika::execution::experimental;
+
+    constexpr auto B = dlaf::matrix::internal::CopyBackend_v<D, Device::CPU>;
+
+    if constexpr (D == Device::CPU) {
+      return transform(
+          dlaf::internal::Policy<B>(),
+          [=](const matrix::Tile<const T, D>& source) {
+            constexpr auto General = blas::Uplo::General;
+            constexpr auto Upper = blas::Uplo::Upper;
+            // The elements are copied in the following way:
+            // (a: copied with first lacpy (Upper), b: copied with second lacpy (General))
+            // (copied when j = n)
+            // 6x6 tile, band_size = 3  |  2x6 tile, band_size = 3
+            // * * * a a a              |
+            // * * * * a a              |  * * * a a b
+            // * * * * * a              |  * * * * a b
+            // * * * * * *              |
+            // * * * * * *              |
+            // * * * * * *              |
+            const auto index = source.size().cols() - band_size_;
+            const auto size = std::min(band_size_, source.size().rows());
+            auto dest = ptr(band_size_, j + index);
+            ::lapack::lacpy(Upper, size, size, source.ptr({0, index}), source.ld(), dest, ld());
+            if (band_size_ > size) {
+              const auto size2 = band_size_ - size;
+              ::lapack::lacpy(General, source.size().rows(), size2, source.ptr({0, index + size}),
+                              source.ld(), dest + ld() * size, ld());
+            }
+          },
+          std::move(source));
+    }
+#ifdef DLAF_WITH_CUDA
+    else if constexpr (D == Device::GPU) {
+      DLAF_ASSERT_HEAVY(isAccessibleFromGPU(), "BandBlock memory should be accessible from GPU");
+      return transform(
+          dlaf::internal::Policy<B>(),
+          [=](const matrix::Tile<const T, D>& source, cudaStream_t stream) {
+            constexpr auto General = blas::Uplo::General;
+            constexpr auto Upper = blas::Uplo::Upper;
+            // The elements are copied in the following way:
+            // (a: copied with first lacpy (Upper), b: copied with second lacpy (General))
+            // (copied when j = n)
+            // 6x6 tile, band_size = 3  |  2x6 tile, band_size = 3
+            // * * * a a a              |
+            // * * * * a a              |  * * * a a b
+            // * * * * * a              |  * * * * a b
+            // * * * * * *              |
+            // * * * * * *              |
+            // * * * * * *              |
+            const auto index = source.size().cols() - band_size_;
+            const auto size = std::min(band_size_, source.size().rows());
+            auto dest = ptr(band_size_, j + index);
+            gpulapack::lacpy(Upper, size, size, source.ptr({0, index}), source.ld(), dest, ld(), stream);
+            if (band_size_ > size) {
+              const auto size2 = band_size_ - size;
+              gpulapack::lacpy(General, source.size().rows(), size2, source.ptr({0, index + size}),
+                               source.ld(), dest + ld() * size, ld(), stream);
+            }
+          },
+          std::move(source));
+    }
+#endif
+    else {
+      return DLAF_UNREACHABLE(decltype(ex::just()));
     }
   }
 
 private:
+#ifdef DLAF_WITH_CUDA
+  bool isAccessibleFromGPU() const {
+    cudaPointerAttributes attrs;
+    DLAF_CUDA_CALL(cudaPointerGetAttributes(&attrs, mem_()));
+    return cudaMemoryTypeUnregistered != attrs.type;
+  }
+#endif
+
   SizeType size_;
   SizeType band_size_;
   SizeType ld_;
@@ -249,8 +355,6 @@ protected:
 template <Device D, class T>
 TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     const SizeType b, Matrix<const T, D>& mat_a) noexcept {
-  using MatrixType = Matrix<T, Device::CPU>;
-  using ConstTileType = typename MatrixType::ConstTileType;
   using common::internal::vector;
   using common::Pipeline;
   using common::PromiseGuard;
@@ -259,12 +363,14 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   using pika::unwrapping;
   using pika::resource::get_num_threads;
 
+  namespace ex = pika::execution::experimental;
+
   auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
 
   // note: A is square and has square blocksize
-  SizeType size = mat_a.size().cols();
-  SizeType nrtile = mat_a.nrTiles().cols();
-  SizeType nb = mat_a.blockSize().cols();
+  const SizeType size = mat_a.size().cols();
+  const SizeType nrtile = mat_a.nrTiles().cols();
+  const SizeType nb = mat_a.blockSize().cols();
 
   // Need share pointer to keep the allocation until all the tasks are executed.
   auto a_ws = std::make_shared<BandBlock<T>>(size, b);
@@ -281,20 +387,26 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   vector<pika::shared_future<void>> deps;
   deps.reserve(max_deps_size);
 
-  auto copy_diag = [a_ws](SizeType j, const ConstTileType& source) { a_ws->copyDiag(j, source); };
+  auto copy_diag = [a_ws](SizeType j, auto source) {
+    return a_ws->template copyDiag<D>(j, std::move(source));
+  };
 
-  auto copy_offdiag = [a_ws](SizeType j, const ConstTileType& source) { a_ws->copyOffdiag(j, source); };
+  auto copy_offdiag = [a_ws](SizeType j, auto source) {
+    return a_ws->template copyOffDiag<D>(j, std::move(source));
+  };
 
   // Copy the band matrix
   for (SizeType k = 0; k < nrtile; ++k) {
     pika::shared_future<void> sf =
-        pika::dataflow(executor_hp, unwrapping(copy_diag), k * nb, mat_a.read(GlobalTileIndex{k, k}));
+        ex::make_future(copy_diag(k * nb, mat_a.read_sender(GlobalTileIndex{k, k})));
     if (k < nrtile - 1) {
       for (int i = 0; i < nb / b - 1; ++i) {
         deps.push_back(sf);
       }
-      sf = pika::dataflow(executor_hp, unwrapping(copy_offdiag), k * nb,
-                          mat_a.read(GlobalTileIndex{k + 1, k}), sf);
+
+      sf = ex::make_future(
+          copy_offdiag(k * nb,
+                       ex::when_all(ex::keep_future(sf), mat_a.read_sender(GlobalTileIndex{k + 1, k}))));
       deps.push_back(sf);
     }
     else {

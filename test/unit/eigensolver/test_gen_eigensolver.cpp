@@ -16,6 +16,7 @@
 
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf_test/matrix/matrix_local.h"
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/matrix/util_matrix_local.h"
@@ -29,8 +30,19 @@ using namespace dlaf::test;
 using namespace testing;
 
 template <typename Type>
-class GenEigensolverTestMC : public ::testing::Test {};
+class GenEigensolverTest : public ::testing::Test {};
+
+template <class T>
+using GenEigensolverTestMC = GenEigensolverTest<T>;
+
 TYPED_TEST_SUITE(GenEigensolverTestMC, MatrixElementTypes);
+
+#ifdef DLAF_WITH_CUDA
+template <class T>
+using GenEigensolverTestGPU = GenEigensolverTest<T>;
+
+TYPED_TEST_SUITE(GenEigensolverTestGPU, MatrixElementTypes);
+#endif
 
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
 
@@ -57,19 +69,26 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
     return reference;
   }();
 
-  Matrix<T, D> mat_a(reference_a.distribution());
-  copy(reference_a, mat_a);
-  Matrix<T, D> mat_b(reference_b.distribution());
-  copy(reference_b, mat_b);
+  Matrix<T, Device::CPU> mat_a_h(reference_a.distribution());
+  copy(reference_a, mat_a_h);
+  Matrix<T, Device::CPU> mat_b_h(reference_b.distribution());
+  copy(reference_b, mat_b_h);
 
-  auto ret = eigensolver::genEigensolver<B>(uplo, mat_a, mat_b);
+  MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
+  MatrixMirror<T, D, Device::CPU> mat_b(mat_b_h);
+  auto ret = eigensolver::genEigensolver<B>(uplo, mat_a.get(), mat_b.get());
+  mat_a.copyTargetToSource();
+  mat_b.copyTargetToSource();
 
-  if (mat_a.size().isEmpty())
+  MatrixMirror<T, Device::CPU, D> mat_e(ret.eigenvectors);
+  mat_e.copySourceToTarget();
+
+  if (mat_a_h.size().isEmpty())
     return;
 
   auto mat_a_local = allGather(blas::Uplo::General, reference_a);
   auto mat_b_local = allGather(blas::Uplo::General, reference_b);
-  auto mat_e_local = allGather(blas::Uplo::General, ret.eigenvectors);
+  auto mat_e_local = allGather(blas::Uplo::General, mat_e.get());
 
   MatrixLocal<T> mat_be_local({m, m}, block_size);
   // Compute B E which is needed for both checks.
@@ -114,3 +133,14 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessLocal) {
     }
   }
 }
+
+#ifdef DLAF_WITH_CUDA
+TYPED_TEST(GenEigensolverTestGPU, CorrectnessLocal) {
+  for (auto uplo : blas_uplos) {
+    for (auto sz : sizes) {
+      const auto& [m, mb] = sz;
+      testGenEigensolver<TypeParam, Backend::GPU, Device::GPU>(uplo, m, mb);
+    }
+  }
+}
+#endif

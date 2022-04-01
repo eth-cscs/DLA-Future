@@ -74,21 +74,22 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
   Matrix<T, Device::CPU> mat_b_h(reference_b.distribution());
   copy(reference_b, mat_b_h);
 
-  MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
-  MatrixMirror<T, D, Device::CPU> mat_b(mat_b_h);
-  auto ret = eigensolver::genEigensolver<B>(uplo, mat_a.get(), mat_b.get());
-  mat_a.copyTargetToSource();
-  mat_b.copyTargetToSource();
-
-  MatrixMirror<T, Device::CPU, D> mat_e(ret.eigenvectors);
-  mat_e.copySourceToTarget();
+  auto ret = [&]() {
+    MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
+    MatrixMirror<T, D, Device::CPU> mat_b(mat_b_h);
+    return eigensolver::genEigensolver<B>(uplo, mat_a.get(), mat_b.get());
+  }();
 
   if (mat_a_h.size().isEmpty())
     return;
 
   auto mat_a_local = allGather(blas::Uplo::General, reference_a);
   auto mat_b_local = allGather(blas::Uplo::General, reference_b);
-  auto mat_e_local = allGather(blas::Uplo::General, mat_e.get());
+
+  auto mat_e_local = [&]() {
+    MatrixMirror<const T, Device::CPU, D> mat_e(ret.eigenvectors);
+    return allGather(blas::Uplo::General, mat_e.get());
+  }();
 
   MatrixLocal<T> mat_be_local({m, m}, block_size);
   // Compute B E which is needed for both checks.

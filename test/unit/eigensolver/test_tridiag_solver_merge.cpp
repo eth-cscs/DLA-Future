@@ -39,8 +39,7 @@ TYPED_TEST(TridiagEigensolverMergeTest, ApplyIndex) {
   // n, n+1, n+2, ..., 2*n - 1
   dlaf::matrix::util::set(in, [n](GlobalElementIndex i) { return TypeParam(n + i.row()); });
 
-  TileCollector tc{0, 3};
-  pika::dataflow(applyIndex_o, n, tc.readVec(index), tc.readVec(in), tc.readwriteVec(out));
+  applyIndex(0, 3, index, in, out);
 
   // 2*n - 1, 2*n - 2, ..., n
   auto expected_out = [n](GlobalElementIndex i) { return TypeParam(2 * n - 1 - i.row()); };

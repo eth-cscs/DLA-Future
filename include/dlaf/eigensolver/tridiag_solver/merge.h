@@ -323,23 +323,26 @@ void sortIndex(SizeType n, pika::shared_future<SizeType> k_fut,
 // internally which requires that Tile<const > is copiable which it isn't. As a consequence the API can't
 // be simplified unless const is dropped.
 template <class T>
-void applyIndex(SizeType n,
-                std::vector<pika::shared_future<matrix::Tile<const SizeType, Device::CPU>>> index,
-                std::vector<pika::shared_future<matrix::Tile<const T, Device::CPU>>> in,
-                std::vector<pika::future<matrix::Tile<T, Device::CPU>>> out) {
-  TileElementIndex zero_idx(0, 0);
-  const SizeType* i_ptr = index[0].get().ptr(zero_idx);
-  const T* in_ptr = in[0].get().ptr(zero_idx);
-  // save in variable avoid releasing the tile too soon
-  auto out_tile = out[0].get();
-  T* out_ptr = out_tile.ptr(zero_idx);
+void applyIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device::CPU>& index,
+                Matrix<const T, Device::CPU>& in, Matrix<T, Device::CPU>& out) {
+  SizeType n = problemSize(i_begin, i_end, index.distribution());
+  auto applyIndex_fn = [n](auto index, auto in, auto out) {
+    TileElementIndex zero_idx(0, 0);
+    const SizeType* i_ptr = index[0].get().ptr(zero_idx);
+    const T* in_ptr = in[0].get().ptr(zero_idx);
+    // save in variable avoid releasing the tile too soon
+    auto out_tile = out[0].get();
+    T* out_ptr = out_tile.ptr(zero_idx);
 
-  for (SizeType i = 0; i < n; ++i) {
-    out_ptr[i] = in_ptr[i_ptr[i]];
-  }
+    for (SizeType i = 0; i < n; ++i) {
+      out_ptr[i] = in_ptr[i_ptr[i]];
+    }
+  };
+
+  TileCollector tc{i_begin, i_end};
+
+  pika::dataflow(std::move(applyIndex_fn), tc.readVec(index), tc.readVec(in), tc.readwriteVec(out));
 }
-
-DLAF_MAKE_CALLABLE_OBJECT(applyIndex);
 
 inline void composeIndices(
     SizeType n, std::vector<pika::shared_future<matrix::Tile<const SizeType, Device::CPU>>> outer,
@@ -735,9 +738,9 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   pika::dataflow(sortIndex<T>, n, pika::make_ready_future(n1), tc.readVec(d), tc.readVec(ws.itmp),
                  tc.readwriteVec(ws.istage));
   copyVector(i_begin, i_end, ws.iorig, ws.istage);
-  pika::dataflow(applyIndex_o, n, tc.readVec(ws.istage), tc.readVec(d), tc.readwriteVec(ws.dtmp));
-  pika::dataflow(applyIndex_o, n, tc.readVec(ws.istage), tc.readVec(ws.z), tc.readwriteVec(ws.ztmp));
-  pika::dataflow(applyIndex_o, n, tc.readVec(ws.istage), tc.readVec(ws.c), tc.readwriteVec(ws.ctmp));
+  applyIndex(i_begin, i_end, ws.istage, d, ws.dtmp);
+  applyIndex(i_begin, i_end, ws.istage, ws.z, ws.ztmp);
+  applyIndex(i_begin, i_end, ws.istage, ws.c, ws.ctmp);
   pika::future<std::vector<GivensRotation<T>>> rots_fut =
       pika::dataflow(applyDeflation<T>, n, rho_fut, tol_fut, tc.readVec(ws.istage),
                      tc.readwriteVec(ws.dtmp), tc.readwriteVec(ws.ztmp), tc.readwriteVec(ws.ctmp));
@@ -753,9 +756,9 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
                                                        tc.readVec(ws.ctmp), tc.readwriteVec(ws.istage));
   composeIndices(n, tc.readVec(ws.iorig), tc.readVec(ws.istage), tc.readwriteVec(ws.itmp));
   copyVector(i_begin, i_end, ws.itmp, ws.iorig);
-  pika::dataflow(applyIndex_o, n, tc.readVec(ws.istage), tc.readVec(ws.dtmp), tc.readwriteVec(d));
-  pika::dataflow(applyIndex_o, n, tc.readVec(ws.istage), tc.readVec(ws.ztmp), tc.readwriteVec(ws.z));
-  pika::dataflow(applyIndex_o, n, tc.readVec(ws.istage), tc.readVec(ws.ctmp), tc.readwriteVec(ws.c));
+  applyIndex(i_begin, i_end, ws.istage, ws.dtmp, d);
+  applyIndex(i_begin, i_end, ws.istage, ws.ztmp, ws.z);
+  applyIndex(i_begin, i_end, ws.istage, ws.ctmp, ws.c);
   copyVector(i_begin, i_end, d, ws.dtmp);
   pika::dataflow(solveRank1Problem<T>, n, nb, k_fut, rho_fut, tc.readVec(ws.dtmp), tc.readVec(ws.z),
                  tc.readwriteVec(d), tc.readwriteVec(ws.mat));
@@ -773,8 +776,8 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   copyVector(i_begin, i_end, ws.istage, ws.idefl);
   composeIndices(n, tc.readVec(ws.iorig), tc.readVec(ws.istage), tc.readwriteVec(ws.itmp));
   copyVector(i_begin, i_end, ws.itmp, ws.iorig);
-  pika::dataflow(applyIndex_o, n, tc.readVec(ws.istage), tc.readVec(d), tc.readwriteVec(ws.dtmp));
-  pika::dataflow(applyIndex_o, n, tc.readVec(ws.istage), tc.readVec(ws.c), tc.readwriteVec(ws.ctmp));
+  applyIndex(i_begin, i_end, ws.istage, ws.d, ws.dtmp);
+  applyIndex(i_begin, i_end, ws.istage, ws.c, ws.ctmp);
   copyVector(i_begin, i_end, ws.dtmp, d);
 
   // 1. set index `istage` to `postsorted <--- matmul`

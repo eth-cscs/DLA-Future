@@ -491,23 +491,30 @@ std::vector<GivensRotation<T>> applyDeflationToArrays(T rho, T tol, SizeType len
 }
 
 template <class T>
-std::vector<GivensRotation<T>> applyDeflation(
-    SizeType n, pika::shared_future<T> rho_fut, pika::shared_future<T> tol_fut,
-    std::vector<pika::shared_future<matrix::Tile<const SizeType, Device::CPU>>> i_tiles,
-    std::vector<pika::future<matrix::Tile<T, Device::CPU>>> d_tiles,
-    std::vector<pika::future<matrix::Tile<T, Device::CPU>>> z_tiles,
-    std::vector<pika::future<matrix::Tile<ColType, Device::CPU>>> c_tiles) {
-  TileElementIndex zero_idx(0, 0);
-  const SizeType* i_ptr = i_tiles[0].get().ptr(zero_idx);
-  // save in variable avoid releasing the tile too soon
-  auto d_tile = d_tiles[0].get();
-  auto z_tile = z_tiles[0].get();
-  auto c_tile = c_tiles[0].get();
-  T* d_ptr = d_tile.ptr(zero_idx);
-  T* z_ptr = z_tile.ptr(zero_idx);
-  ColType* c_ptr = c_tile.ptr(zero_idx);
+pika::future<std::vector<GivensRotation<T>>> applyDeflation(
+    SizeType i_begin, SizeType i_end, pika::shared_future<T> rho_fut, pika::shared_future<T> tol_fut,
+    Matrix<const SizeType, Device::CPU>& index, Matrix<T, Device::CPU>& d, Matrix<T, Device::CPU>& z,
+    Matrix<ColType, Device::CPU>& c) {
+  SizeType n = problemSize(i_begin, i_end, index.distribution());
 
-  return applyDeflationToArrays(rho_fut.get(), tol_fut.get(), n, i_ptr, d_ptr, z_ptr, c_ptr);
+  auto deflate_fn = [n](auto rho_fut, auto tol_fut, auto index_tiles, auto d_tiles, auto z_tiles,
+                        auto c_tiles) {
+    TileElementIndex zero_idx(0, 0);
+    const SizeType* i_ptr = index_tiles[0].get().ptr(zero_idx);
+    // save in variable avoid releasing the tile too soon
+    auto d_tile = d_tiles[0].get();
+    auto z_tile = z_tiles[0].get();
+    auto c_tile = c_tiles[0].get();
+    T* d_ptr = d_tile.ptr(zero_idx);
+    T* z_ptr = z_tile.ptr(zero_idx);
+    ColType* c_ptr = c_tile.ptr(zero_idx);
+
+    return applyDeflationToArrays(rho_fut.get(), tol_fut.get(), n, i_ptr, d_ptr, z_ptr, c_ptr);
+  };
+
+  TileCollector tc{i_begin, i_end};
+  return pika::dataflow(std::move(deflate_fn), std::move(rho_fut), std::move(tol_fut), tc.readVec(index),
+                        tc.readwriteVec(d), tc.readwriteVec(z), tc.readwriteVec(c));
 }
 
 // Partitions `p_ptr` based on a `ctype` in `c_ptr` array.
@@ -747,8 +754,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   applyIndex(i_begin, i_end, ws.istage, ws.z, ws.ztmp);
   applyIndex(i_begin, i_end, ws.istage, ws.c, ws.ctmp);
   pika::future<std::vector<GivensRotation<T>>> rots_fut =
-      pika::dataflow(applyDeflation<T>, n, rho_fut, tol_fut, tc.readVec(ws.istage),
-                     tc.readwriteVec(ws.dtmp), tc.readwriteVec(ws.ztmp), tc.readwriteVec(ws.ctmp));
+      applyDeflation(i_begin, i_end, rho_fut, tol_fut, ws.istage, ws.dtmp, ws.ztmp, ws.ctmp);
 
   // 1. set index `istage` to `presorted <--- deflated`
   // 2. update index `iorig` to `original <--- deflated`

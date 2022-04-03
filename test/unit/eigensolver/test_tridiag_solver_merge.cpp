@@ -63,3 +63,35 @@ TEST(CopyVector, Index) {
   auto expected_out = [](GlobalElementIndex i) { return i.row(); };
   CHECK_MATRIX_EQ(expected_out, out);
 }
+
+TYPED_TEST(TridiagEigensolverMergeTest, SortIndex) {
+  SizeType n = 10;
+  SizeType nb = 3;
+  SizeType split = 4;
+
+  LocalElementSize sz(n, 1);
+  TileElementSize bk(nb, 1);
+
+  Matrix<TypeParam, Device::CPU> vec(sz, bk);
+  Matrix<SizeType, Device::CPU> in(sz, bk);
+  Matrix<SizeType, Device::CPU> out(sz, bk);
+
+  std::vector<SizeType> vec_arr{7, 2, 4, 8, 12, 1, 17, 32, 9, 6};
+  DLAF_ASSERT(vec_arr.size() == to_sizet(n), n);
+  dlaf::matrix::util::set(vec, [&vec_arr](GlobalElementIndex i) { return vec_arr[to_sizet(i.row())]; });
+
+  // `in` orders `vec` in two sorted ranges : [2, 4, 7, 8] and [1, 6, 9, 12, 17, 32] (note split = 4)
+  std::vector<SizeType> in_arr{1, 2, 0, 3, 5, 9, 8, 4, 6, 7};
+  DLAF_ASSERT(in_arr.size() == to_sizet(n), n);
+  dlaf::matrix::util::set(in, [&in_arr](GlobalElementIndex i) { return in_arr[to_sizet(i.row())]; });
+
+  // Sort `vec` in ascending order
+  sortIndex(0, 3, pika::make_ready_future(split), vec, in, out);
+
+  // Merges the two sorted ranges in `vec` to get the indices of the sorted array [1, 2, 4, 6, 7, 8, 9, 12, 17, 32]
+  std::vector<SizeType> expected_out_arr{1, 2, 0, 3, 5, 9, 8, 4, 6, 7};
+  auto expected_out = [&expected_out_arr](GlobalElementIndex i) {
+    return expected_out_arr[to_sizet(i.row())];
+  };
+  CHECK_MATRIX_EQ(expected_out, out);
+}

@@ -296,25 +296,31 @@ void copyVector(SizeType i_begin, SizeType i_end, Matrix<const U, Device::CPU>& 
 // merged, the first is [0, k) and the second is [k, n).
 //
 template <class T>
-void sortIndex(SizeType n, pika::shared_future<SizeType> k_fut,
-               std::vector<pika::shared_future<matrix::Tile<const T, Device::CPU>>> vals_tiles,
-               std::vector<pika::shared_future<matrix::Tile<const SizeType, Device::CPU>>> in_index_tiles,
-               std::vector<pika::future<matrix::Tile<SizeType, Device::CPU>>> out_index_tiles) {
-  SizeType k = k_fut.get();
-  DLAF_ASSERT(k <= n, k, n);
+void sortIndex(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k_fut,
+               Matrix<const T, Device::CPU>& vec, Matrix<const SizeType, Device::CPU>& in_index,
+               Matrix<SizeType, Device::CPU>& out_index) {
+  SizeType n = problemSize(i_begin, i_end, vec.distribution());
+  auto sort_fn = [n](auto k_fut, auto vec, auto in_index, auto out_index) {
+    SizeType k = k_fut.get();
+    DLAF_ASSERT(k <= n, k, n);
 
-  TileElementIndex zero_idx(0, 0);
-  const T* v_ptr = vals_tiles[0].get().ptr(zero_idx);
-  const SizeType* in_index_ptr = in_index_tiles[0].get().ptr(zero_idx);
-  // save in variable avoid releasing the tile too soon
-  auto out_index_tile = out_index_tiles[0].get();
-  SizeType* out_index_ptr = out_index_tile.ptr(zero_idx);
+    TileElementIndex zero_idx(0, 0);
+    const T* v_ptr = vec[0].get().ptr(zero_idx);
+    const SizeType* in_index_ptr = in_index[0].get().ptr(zero_idx);
+    // save in variable avoid releasing the tile too soon
+    auto out_index_tile = out_index[0].get();
+    SizeType* out_index_ptr = out_index_tile.ptr(zero_idx);
 
-  auto begin_it = in_index_ptr;
-  auto split_it = in_index_ptr + n;
-  auto end_it = in_index_ptr + n;
-  pika::merge(pika::execution::par, begin_it, split_it, split_it, end_it, out_index_ptr,
-              [v_ptr](SizeType i1, SizeType i2) { return v_ptr[i1] < v_ptr[i2]; });
+    auto begin_it = in_index_ptr;
+    auto split_it = in_index_ptr + n;
+    auto end_it = in_index_ptr + n;
+    pika::merge(pika::execution::par, begin_it, split_it, split_it, end_it, out_index_ptr,
+                [v_ptr](SizeType i1, SizeType i2) { return v_ptr[i1] < v_ptr[i2]; });
+  };
+
+  TileCollector tc{i_begin, i_end};
+  pika::dataflow(std::move(sort_fn), std::move(k_fut), tc.readVec(vec), tc.readVec(in_index),
+                 tc.readwriteVec(out_index));
 }
 
 // Applies `index` to `in` to get `out`
@@ -735,8 +741,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   // 4. Deflate the sorted `dtmp`, `ztmp` and `ctmp`
   //
   initIndex(i_begin, i_end, ws.itmp);
-  pika::dataflow(sortIndex<T>, n, pika::make_ready_future(n1), tc.readVec(d), tc.readVec(ws.itmp),
-                 tc.readwriteVec(ws.istage));
+  sortIndex(i_begin, i_end, pika::make_ready_future(n1), d, ws.itmp, ws.istage);
   copyVector(i_begin, i_end, ws.iorig, ws.istage);
   applyIndex(i_begin, i_end, ws.istage, d, ws.dtmp);
   applyIndex(i_begin, i_end, ws.istage, ws.z, ws.ztmp);
@@ -771,12 +776,12 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   // 5. copy `dtmp -> d`
   //
   initIndex(i_begin, i_end, ws.itmp);
-  pika::dataflow(sortIndex<T>, n, k_fut, tc.readVec(ws.dtmp), tc.readVec(ws.itmp),
-                 tc.readwriteVec(ws.istage));
+  sortIndex(i_begin, i_end, k_fut, ws.dtmp, ws.itmp, ws.istage);
+  copyVector(i_begin, i_end, ws.iorig, ws.istage);
   copyVector(i_begin, i_end, ws.istage, ws.idefl);
   composeIndices(n, tc.readVec(ws.iorig), tc.readVec(ws.istage), tc.readwriteVec(ws.itmp));
   copyVector(i_begin, i_end, ws.itmp, ws.iorig);
-  applyIndex(i_begin, i_end, ws.istage, ws.d, ws.dtmp);
+  applyIndex(i_begin, i_end, ws.istage, d, ws.dtmp);
   applyIndex(i_begin, i_end, ws.istage, ws.c, ws.ctmp);
   copyVector(i_begin, i_end, ws.dtmp, d);
 

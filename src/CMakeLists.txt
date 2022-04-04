@@ -172,6 +172,7 @@ add_library(dlaf.eigensolver OBJECT
   eigensolver/eigensolver/mc.cpp
   $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/eigensolver/gpu.cpp>
   eigensolver/gen_eigensolver/mc.cpp
+  $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/gen_eigensolver/gpu.cpp>
   eigensolver/gen_to_std/mc.cpp
   $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/gen_to_std/gpu.cpp>
   eigensolver/reduction_to_band/mc.cpp

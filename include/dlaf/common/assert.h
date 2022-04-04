@@ -121,7 +121,8 @@ void silenceUnusedWarningFor(Args&&...) {}
 #define DLAF_ASSERT_HEAVY(Expr, ...)
 #endif
 
-#define DLAF_UNIMPLEMENTED(...) DLAF_ASSERT(false, "Not yet implemented!", __VA_ARGS__)
+#define DLAF_UNIMPLEMENTED(...) \
+  dlaf::internal::do_assert(false, SOURCE_LOCATION(), "Not yet implemented!", __VA_ARGS__)
 
 #define DLAF_STATIC_UNIMPLEMENTED(DummyType) \
   static_assert(sizeof(DummyType) == 0, "Not yet implemented!")
@@ -137,7 +138,9 @@ void silenceUnusedWarningFor(Args&&...) {}
 ///      and all the possible options are covered.
 /// Note: multiple arguments are allowed as templated types might include commas.
 ///       However only a type should be specified.
-#define DLAF_UNREACHABLE(...) \
-  DLAF_ASSERT(false, "Unreachable branch hit!"), std::move(*std::unique_ptr<__VA_ARGS__>())
+#define DLAF_UNREACHABLE(...)                                                     \
+  dlaf::internal::do_assert(false, SOURCE_LOCATION(), "Unreachable branch hit!"), \
+      std::move(*std::unique_ptr<__VA_ARGS__>())
 
-#define DLAF_UNREACHABLE_PLAIN DLAF_ASSERT(false, "Unreachable branch hit!")
+#define DLAF_UNREACHABLE_PLAIN \
+  dlaf::internal::do_assert(false, SOURCE_LOCATION(), "Unreachable branch hit!")

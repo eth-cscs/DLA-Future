@@ -95,3 +95,37 @@ TYPED_TEST(TridiagEigensolverMergeTest, SortIndex) {
   };
   CHECK_MATRIX_EQ(expected_out, out);
 }
+
+TEST(StablePartitionIndex, FullRange) {
+  SizeType n = 10;
+  SizeType nb = 3;
+
+  LocalElementSize sz(n, 1);
+  TileElementSize bk(nb, 1);
+
+  Matrix<ColType, Device::CPU> c(sz, bk);
+  Matrix<SizeType, Device::CPU> in(sz, bk);
+  Matrix<SizeType, Device::CPU> out(sz, bk);
+
+  std::vector<ColType> c_arr{ColType::LowerHalf, ColType::Dense,     ColType::Deflated,
+                             ColType::Deflated,  ColType::UpperHalf, ColType::UpperHalf,
+                             ColType::LowerHalf, ColType::Dense,     ColType::Deflated,
+                             ColType::LowerHalf};
+  DLAF_ASSERT(c_arr.size() == to_sizet(n), n);
+  dlaf::matrix::util::set(c, [&c_arr](GlobalElementIndex i) { return c_arr[to_sizet(i.row())]; });
+
+  std::vector<SizeType> in_arr{1, 4, 2, 3, 0, 5, 6, 7, 8, 9};
+  dlaf::matrix::util::set(in, [&in_arr](GlobalElementIndex i) { return in_arr[to_sizet(i.row())]; });
+
+  SizeType i_begin = 0;
+  SizeType i_end = 3;
+  pika::future<SizeType> k_fut = stablePartitionIndexForDeflation(i_begin, i_end, c, in, out);
+
+  ASSERT_TRUE(k_fut.get() == 7);
+
+  std::vector<SizeType> expected_out_arr{1, 4, 0, 5, 6, 7, 9, 2, 3, 8};
+  auto expected_out = [&expected_out_arr](GlobalElementIndex i) {
+    return expected_out_arr[to_sizet(i.row())];
+  };
+  CHECK_MATRIX_EQ(expected_out, out);
+}

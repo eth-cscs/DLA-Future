@@ -10,13 +10,12 @@
 #pragma once
 
 #include <blas.hh>
-#include "dlaf/eigensolver/gen_eigensolver/impl.h"
+#include "dlaf/eigensolver/gen_eigensolver/api.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
-namespace dlaf {
-namespace eigensolver {
+namespace dlaf::eigensolver {
 
 /// Generalized Eigensolver.
 ///
@@ -33,9 +32,8 @@ namespace eigensolver {
 /// @param uplo specifies if upper or lower triangular part of @p mat_a and @p mat_b will be referenced
 /// @param mat_a contains the Hermitian matrix A
 /// @param mat_b contains the Hermitian positive definite matrix B
-template <Backend backend, Device device, class T>
-EigensolverResult<T, device> genEigensolver(blas::Uplo uplo, Matrix<T, device>& mat_a,
-                                            Matrix<T, device>& mat_b) {
+template <Backend B, Device D, class T>
+EigensolverResult<T, D> genEigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b) {
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
   DLAF_ASSERT(matrix::local_matrix(mat_b), mat_b);
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
@@ -45,7 +43,6 @@ EigensolverResult<T, device> genEigensolver(blas::Uplo uplo, Matrix<T, device>& 
   DLAF_ASSERT(mat_a.size() == mat_b.size(), mat_a, mat_b);
   DLAF_ASSERT(mat_a.blockSize() == mat_b.blockSize(), mat_a, mat_b);
 
-  return internal::GenEigensolver<backend, device, T>::call(uplo, mat_a, mat_b);
-}
+  return internal::GenEigensolver<B, D, T>::call(uplo, mat_a, mat_b);
 }
 }

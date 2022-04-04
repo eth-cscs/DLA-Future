@@ -66,7 +66,7 @@ int pika_main(int argc, char* argv[]) {
         },
         std::move(s1));
 
-    pika::execution::experimental::sync_wait(std::move(s2));
+    pika::this_thread::experimental::sync_wait(std::move(s2));
   }
 
   pika::finalize();

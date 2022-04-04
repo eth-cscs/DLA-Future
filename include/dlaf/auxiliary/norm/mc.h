@@ -98,7 +98,7 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
                               : pika::execution::experimental::when_all_vector(std::move(tiles_max)) |
                                     dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(),
                                                               std::move(max_element)) |
-                                    pika::execution::experimental::sync_wait();
+                                    pika::this_thread::experimental::sync_wait();
   NormT max_value;
   dlaf::comm::sync::reduce(comm_grid.rankFullCommunicator(rank), comm_grid.fullCommunicator(), MPI_MAX,
                            make_data(&local_max_value, 1), make_data(&max_value, 1));

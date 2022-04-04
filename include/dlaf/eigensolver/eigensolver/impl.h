@@ -38,7 +38,7 @@ EigensolverResult<T, D> Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>
   if (uplo != blas::Uplo::Lower)
     DLAF_UNIMPLEMENTED(uplo);
 
-  auto taus = reductionToBand<Backend::MC>(mat_a, band_size);
+  auto taus = reductionToBand<B>(mat_a, band_size);
   auto ret = bandToTridiag<Backend::MC>(uplo, mat_a.blockSize().rows(), mat_a);
 
   vector<BaseType<T>> w(size);
@@ -79,10 +79,22 @@ EigensolverResult<T, D> Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>
     //       after the completion of stemr.
   }
 
-  backTransformationBandToTridiag<Backend::MC>(band_size, mat_e, ret.hh_reflectors);
-  backTransformationReductionToBand<Backend::MC>(band_size, mat_e, mat_a, taus);
+  // Note: This is just a temporary workaround. It will be removed as soon as we will have our
+  // tridiagonal eigensolver implementation both on CPU and GPU.
+  Matrix<T, D> mat_e_device = [&]() {
+    if constexpr (D == Device::CPU)
+      return std::move(mat_e);
+    else {
+      Matrix<T, D> e(mat_e.distribution());
+      dlaf::matrix::copy(mat_e, e);
+      return e;
+    }
+  }();
 
-  return {std::move(w), std::move(mat_e)};
+  backTransformationBandToTridiag<B>(band_size, mat_e_device, ret.hh_reflectors);
+  backTransformationReductionToBand<B>(band_size, mat_e_device, mat_a, taus);
+
+  return {std::move(w), std::move(mat_e_device)};
 }
 
 }

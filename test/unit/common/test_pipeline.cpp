@@ -54,13 +54,13 @@ TEST(Pipeline, Basic) {
 }
 
 TEST(Pipeline, BasicWithSenderAdaptors) {
-  namespace ex = pika::execution::experimental;
+  using pika::execution::experimental::then;
+  using pika::this_thread::experimental::sync_wait;
 
   Pipeline<int> serial(26);
 
   auto checkpoint0 = serial();
-  auto checkpoint1 =
-      std::move(checkpoint0) | ex::then([](auto&& wrapper) { return std::move(wrapper); });
+  auto checkpoint1 = std::move(checkpoint0) | then([](auto&& wrapper) { return std::move(wrapper); });
 
   auto guard0 = serial();
   auto guard1 = serial();
@@ -68,16 +68,16 @@ TEST(Pipeline, BasicWithSenderAdaptors) {
   EXPECT_FALSE(guard0.is_ready());
   EXPECT_FALSE(guard1.is_ready());
 
-  ex::sync_wait(std::move(checkpoint1));
+  sync_wait(std::move(checkpoint1));
 
   EXPECT_TRUE(guard0.is_ready());
   EXPECT_FALSE(guard1.is_ready());
 
-  ex::sync_wait(std::move(guard0));
+  sync_wait(std::move(guard0));
 
   EXPECT_TRUE(guard1.is_ready());
 
-  ex::sync_wait(std::move(guard1));
+  sync_wait(std::move(guard1));
 }
 
 // PipelineDestructor
@@ -120,7 +120,7 @@ TEST(PipelineDestructor, DestructionWithDependency) {
 }
 
 TEST(PipelineDestructor, DestructionWithDependencyWithSenderAdaptors) {
-  namespace ex = pika::execution::experimental;
+  using pika::execution::experimental::make_future;
 
   pika::future<void> last_task;
 
@@ -134,7 +134,7 @@ TEST(PipelineDestructor, DestructionWithDependencyWithSenderAdaptors) {
                       EXPECT_TRUE(is_exited_from_scope);
                     },
                     serial()) |
-                ex::make_future();
+                make_future();
   }
   is_exited_from_scope = true;
 

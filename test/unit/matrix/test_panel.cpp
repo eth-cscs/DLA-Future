@@ -171,7 +171,7 @@ void testAccess(const config_t& cfg, const comm::CommunicatorGrid comm_grid) {
   // ro-access
   for (const auto& idx : panel.iteratorLocal())
     CHECK_MATRIX_EQ(TypeUtil::element(idx.get(coord), 42),
-                    pika::execution::experimental::sync_wait(panel.read_sender(idx)).get());
+                    pika::this_thread::experimental::sync_wait(panel.read_sender(idx)).get());
 }
 
 TYPED_TEST(PanelTest, AccessTileCol) {
@@ -254,7 +254,7 @@ void testExternalTileWithSenders(const config_t& cfg, const comm::CommunicatorGr
   using TypeUtil = TypeUtilities<TypeParam>;
   using dlaf::internal::transformDetach;
   using dlaf::internal::Policy;
-  using pika::execution::experimental::sync_wait;
+  using pika::this_thread::experimental::sync_wait;
   using pika::unwrapping;
 
   constexpr Coord coord1D = orthogonal(panel_axis);

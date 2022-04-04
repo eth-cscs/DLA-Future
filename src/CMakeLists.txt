@@ -148,6 +148,7 @@ add_library(dlaf.core
     memory/memory_view.cpp
     memory/memory_chunk.cpp
     $<$<BOOL:${DLAF_WITH_CUDA}>:cusolver/assert_info.cu>
+    $<$<BOOL:${DLAF_WITH_CUDA}>:lapack/gpu/lacpy.cu>
     $<$<BOOL:${DLAF_WITH_CUDA}>:lapack/gpu/laset.cu>
 )
 target_compile_options(dlaf.core PRIVATE $<$<COMPILE_LANG_AND_ID:CUDA,NVIDIA>:--extended-lambda>)
@@ -169,7 +170,9 @@ add_library(dlaf.eigensolver OBJECT
   eigensolver/bt_reduction_to_band/mc.cpp
   $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/bt_reduction_to_band/gpu.cpp>
   eigensolver/eigensolver/mc.cpp
+  $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/eigensolver/gpu.cpp>
   eigensolver/gen_eigensolver/mc.cpp
+  $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/gen_eigensolver/gpu.cpp>
   eigensolver/gen_to_std/mc.cpp
   $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/gen_to_std/gpu.cpp>
   eigensolver/reduction_to_band/mc.cpp

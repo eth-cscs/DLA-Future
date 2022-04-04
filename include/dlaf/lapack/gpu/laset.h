@@ -14,17 +14,19 @@
 
 #include <cublas_v2.h>
 #include <cuda_runtime.h>
+#include <blas.hh>
+
 #include "dlaf/types.h"
 
 namespace dlaf::gpulapack {
 
 template <class T>
-void laset(cublasFillMode_t uplo, SizeType m, SizeType n, T alpha, T beta, T* a, SizeType lda,
+void laset(blas::Uplo uplo, SizeType m, SizeType n, T alpha, T beta, T* a, SizeType lda,
            cudaStream_t stream);
 
-#define DLAF_CUBLAS_LASET_ETI(kword, Type)                                                        \
-  kword template void laset(cublasFillMode_t uplo, SizeType m, SizeType n, Type alpha, Type beta, \
-                            Type* a, SizeType lda, cudaStream_t stream)
+#define DLAF_CUBLAS_LASET_ETI(kword, Type)                                                           \
+  kword template void laset(blas::Uplo uplo, SizeType m, SizeType n, Type alpha, Type beta, Type* a, \
+                            SizeType lda, cudaStream_t stream)
 
 DLAF_CUBLAS_LASET_ETI(extern, float);
 DLAF_CUBLAS_LASET_ETI(extern, double);

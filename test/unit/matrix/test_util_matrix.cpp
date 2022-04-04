@@ -31,6 +31,10 @@ using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 
+using pika::execution::experimental::keep_future;
+using pika::execution::experimental::start_detached;
+using pika::this_thread::experimental::sync_wait;
+
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
@@ -135,7 +139,7 @@ void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::Communicator
         continue;
 
       if (current_rank == owner_original) {
-        const auto& tile_original = ex::sync_wait(matrix.read_sender(index_tile_original)).get();
+        const auto& tile_original = sync_wait(matrix.read_sender(index_tile_original)).get();
         pika::shared_future<Tile<const T, Device::CPU>> tile_transposed;
         const auto size_tile_transposed = transposed(tile_original.size());
 
@@ -159,7 +163,7 @@ void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::Communicator
           return dlaf::conj(tile_original({index.col(), index.row()}));
         };
 
-        CHECK_TILE_NEAR(transposed_conj_tile, ex::sync_wait(ex::keep_future(tile_transposed)).get(),
+        CHECK_TILE_NEAR(transposed_conj_tile, sync_wait(keep_future(tile_transposed)).get(),
                         TypeUtilities<T>::error, TypeUtilities<T>::error);
       }
       else if (current_rank == owner_transposed) {
@@ -243,12 +247,12 @@ void testSet0(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
     for (const auto& idx : panel.iteratorLocal())
       dlaf::internal::whenAllLift(blas::Uplo::General, TypeParam(1), TypeParam(1),
                                   panel.readwrite_sender(idx)) |
-          tile::laset(dlaf::internal::Policy<dlaf::Backend::MC>()) | ex::start_detached();
+          tile::laset(dlaf::internal::Policy<dlaf::Backend::MC>()) | start_detached();
 
     matrix::util::set0<Backend::MC>(pika::threads::thread_priority::normal, panel);
 
     for (const auto& idx : panel.iteratorLocal())
-      CHECK_TILE_EQ(null_tile, ex::sync_wait(panel.read_sender(idx)).get());
+      CHECK_TILE_EQ(null_tile, sync_wait(panel.read_sender(idx)).get());
 
     panel.reset();
   }

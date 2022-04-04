@@ -7,6 +7,7 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
+
 #include "dlaf/eigensolver/eigensolver.h"
 
 #include <functional>
@@ -16,6 +17,7 @@
 
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf_test/matrix/matrix_local.h"
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/matrix/util_matrix_local.h"
@@ -36,6 +38,13 @@ using EigensolverTestMC = EigensolverTest<T>;
 
 TYPED_TEST_SUITE(EigensolverTestMC, MatrixElementTypes);
 
+#ifdef DLAF_WITH_CUDA
+template <class T>
+using EigensolverTestGPU = EigensolverTest<T>;
+
+TYPED_TEST_SUITE(EigensolverTestGPU, MatrixElementTypes);
+#endif
+
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
 
 const std::vector<std::tuple<SizeType, SizeType>> sizes = {
@@ -55,16 +64,22 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb)
     return reference;
   }();
 
-  Matrix<T, D> mat_a(reference.distribution());
-  copy(reference, mat_a);
+  Matrix<T, Device::CPU> mat_a_h(reference.distribution());
+  copy(reference, mat_a_h);
 
-  auto ret = eigensolver::eigensolver<B>(uplo, mat_a);
+  auto ret = [&]() {
+    MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
+    return eigensolver::eigensolver<B>(uplo, mat_a.get());
+  }();
 
-  if (mat_a.size().isEmpty())
+  if (mat_a_h.size().isEmpty())
     return;
 
   auto mat_a_local = allGather(blas::Uplo::General, reference);
-  auto mat_e_local = allGather(blas::Uplo::General, ret.eigenvectors);
+  auto mat_e_local = [&]() {
+    MatrixMirror<const T, Device::CPU, D> mat_e(ret.eigenvectors);
+    return allGather(blas::Uplo::General, mat_e.get());
+  }();
 
   MatrixLocal<T> workspace({m, m}, block_size);
 
@@ -104,3 +119,14 @@ TYPED_TEST(EigensolverTestMC, CorrectnessLocal) {
     }
   }
 }
+
+#ifdef DLAF_WITH_CUDA
+TYPED_TEST(EigensolverTestGPU, CorrectnessLocal) {
+  for (auto uplo : blas_uplos) {
+    for (auto sz : sizes) {
+      const auto& [m, mb] = sz;
+      testEigensolver<TypeParam, Backend::GPU, Device::GPU>(uplo, m, mb);
+    }
+  }
+}
+#endif

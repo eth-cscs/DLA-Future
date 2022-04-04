@@ -552,18 +552,18 @@ inline SizeType partitionColType(SizeType len, ColType ctype, const ColType* c_p
 
 // Partition `coltypes` to get the indices of the matrix-multiplication form
 inline pika::future<ColTypeLens> partitionIndexForMatrixMultiplication(
-    SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k_fut,
-    Matrix<const ColType, Device::CPU>& c, Matrix<SizeType, Device::CPU>& index) {
+    SizeType i_begin, SizeType i_end, Matrix<const ColType, Device::CPU>& c,
+    Matrix<SizeType, Device::CPU>& index) {
   SizeType n = problemSize(i_begin, i_end, c.distribution());
-  auto part_fn = [n](auto k_fut, auto c_tiles, auto index_tiles) {
+  auto part_fn = [n](auto c_tiles, auto index_tiles) {
     TileElementIndex zero_idx(0, 0);
     const ColType* c_ptr = c_tiles[0].get().ptr(zero_idx);
     // save in variable avoid releasing the tile too soon
-    auto perm_q_tile = index_tiles[0].get();
-    SizeType* i_ptr = perm_q_tile.ptr(zero_idx);
+    auto index_tile = index_tiles[0].get();
+    SizeType* i_ptr = index_tile.ptr(zero_idx);
 
     ColTypeLens ql;
-    ql.num_deflated = k_fut.get();
+    ql.num_deflated = partitionColType(n, ColType::Deflated, c_ptr, i_ptr);
     ql.num_lowhalf = partitionColType(n - ql.num_deflated, ColType::LowerHalf, c_ptr, i_ptr);
     ql.num_dense = partitionColType(n - ql.num_deflated - ql.num_lowhalf, ColType::Dense, c_ptr, i_ptr);
     ql.num_uphalf = n - ql.num_deflated - ql.num_lowhalf - ql.num_dense;
@@ -571,7 +571,7 @@ inline pika::future<ColTypeLens> partitionIndexForMatrixMultiplication(
   };
 
   TileCollector tc{i_begin, i_end};
-  return pika::dataflow(std::move(part_fn), std::move(k_fut), tc.readVec(c), tc.readwriteVec(index));
+  return pika::dataflow(std::move(part_fn), tc.readVec(c), tc.readwriteVec(index));
 };
 
 // Assumption: the memory layout of the matrix from which the tiles are coming is column major.
@@ -810,7 +810,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   // 3. update the index `iorig` to `original <--- postsorted`
   //
   pika::shared_future<ColTypeLens> qlens_fut =
-      partitionIndexForMatrixMultiplication(i_begin, i_end, k_fut, ws.c, ws.iorig);
+      partitionIndexForMatrixMultiplication(i_begin, i_end, ws.c, ws.iorig);
   composeIndices(i_begin, i_end, ws.iorig, ws.itmp, ws.iorig);
   composeIndices(i_begin, i_end, ws.iorig, ws.itmp, ws.idefl);
 

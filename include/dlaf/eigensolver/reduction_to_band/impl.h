@@ -415,7 +415,7 @@ void hemmComputeX(matrix::Panel<Coord::Col, T, D>& x, const SubMatrixView& view,
       const auto& tile_a = splitTile(a.read(ij), view(ij));
 
       if (is_diagonal_tile) {
-        hemmDiag<B, T>(thread_priority::normal, ex::keep_future(tile_a), w.read_sender(ij),
+        hemmDiag<B, T>(thread_priority::high, ex::keep_future(tile_a), w.read_sender(ij),
                        x.readwrite_sender(ij));
       }
       else {
@@ -678,7 +678,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
       const bool is_diagonal_tile = (ij.row() == ij.col());
 
       if (is_diagonal_tile) {
-        hemmDiag<B, T>(thread_priority::normal, a.read_sender(ij_local), w.read_sender(ij_local),
+        hemmDiag<B, T>(thread_priority::high, a.read_sender(ij_local), w.read_sender(ij_local),
                        x.readwrite_sender(ij_local));
       }
       else {

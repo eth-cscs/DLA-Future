@@ -365,7 +365,9 @@ template <class T, Device D>
 pika::future<Tile<T, D>> createSubTile(const pika::shared_future<Tile<T, D>>& tile,
                                        const SubTileSpec& spec) {
   namespace ex = pika::execution::experimental;
-  auto f = [](auto tile, auto spec) { return Tile<T, D>(tile, spec); };
+  auto f = [](pika::shared_future<Tile<T, D>>&& tile, SubTileSpec&& spec) {
+    return Tile<T, D>(std::move(tile), std::move(spec));
+  };
   return dlaf::internal::whenAllLift(ex::keep_future(tile), spec) | ex::then(std::move(f)) |
          ex::make_future();
 }
@@ -400,9 +402,9 @@ pika::shared_future<Tile<T, D>> splitTileInsertFutureInChain(pika::future<Tile<T
 
     return pika::make_tuple(std::move(tile), std::move(dep_tracker));
   };
-  auto tmp = pika::split_future(std::move(tile) | ex::then(std::move(swap_promise)) | ex::make_future());
   // old_tile = F1(PN) and will be used to create the subtiles
-  pika::shared_future<TileType> old_tile = std::move(pika::get<0>(tmp));
+  auto [old_tile, dep_tracker] =
+      pika::split_future(std::move(tile) | ex::then(std::move(swap_promise)) | ex::make_future());
   // 3. Set P2 or SF(P2) into FN to restore the chain:  F1(PN)  FN(*) ...
   auto set_promise_or_shfuture = [](auto tile_data, auto dep_tracker) {
     TileType tile(std::move(tile_data));
@@ -410,10 +412,10 @@ pika::shared_future<Tile<T, D>> splitTileInsertFutureInChain(pika::future<Tile<T
     return tile;
   };
   // tile = FN(*) (out argument) can be used to access the full tile after the subtiles tasks completed.
-  tile = ex::when_all(std::move(tmp_tile), std::move(pika::get<1>(tmp))) |
+  tile = ex::when_all(std::move(tmp_tile), std::move(dep_tracker)) |
          ex::then(std::move(set_promise_or_shfuture)) | ex::make_future();
 
-  return old_tile;
+  return std::move(old_tile);
 }
 }
 

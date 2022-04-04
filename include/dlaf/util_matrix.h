@@ -231,12 +231,12 @@ void set_random(Matrix<T, Device::CPU>& matrix) {
     auto seed = tl_index.col() + tl_index.row() * matrix.size().cols();
 
     using TileType = typename std::decay_t<decltype(matrix)>::TileType;
-    auto rnd_f = pika::unwrapping([seed](TileType&& tile) {
+    auto rnd_f = [seed](TileType&& tile) {
       internal::getter_random<T> random_value(seed);
       for (auto el_idx : iterate_range2d(tile.size())) {
         tile(el_idx) = random_value();
       }
-    });
+    };
 
     dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(rnd_f),
                                     matrix.readwrite_sender(tile_wrt_local));

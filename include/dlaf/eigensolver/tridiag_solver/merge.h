@@ -35,6 +35,22 @@ enum class ColType {
   Deflated    // deflated vectors
 };
 
+inline std::ostream& operator<<(std::ostream& str, const ColType& ct) {
+  if (ct == ColType::Deflated) {
+    str << "Deflated";
+  }
+  else if (ct == ColType::Dense) {
+    str << "Dense";
+  }
+  else if (ct == ColType::UpperHalf) {
+    str << "UpperHalf";
+  }
+  else {
+    str << "LowerHalf";
+  }
+  return str;
+}
+
 template <class T>
 struct GivensRotation {
   SizeType i;  // the first column index
@@ -438,18 +454,6 @@ inline void initColTypes(SizeType i_begin, SizeType i_split, SizeType i_end,
   }
 }
 
-// Returns true if `d1` is close to `d2`.
-//
-// Given's deflation condition is the same as the one used in LAPACK's stedc implementation [1].
-//
-// [1] LAPACK 3.10.0, file dlaed2.f, line 393
-template <class T>
-bool diagonalValuesNearlyEqual(T tol, T d1, T d2, T z1, T z2) {
-  // Note that this is similar to calling `rotg()` but we want to make sure that the condition is
-  // satisfied before modifying z1, z2 that is why the function is not used here.
-  return std::abs(z1 * z2 * (d1 - d2) / (z1 * z1 + z2 * z2)) < tol;
-}
-
 // Assumption 1: The algorithm assumes that the arrays `d_ptr`, `z_ptr` and `c_ptr` are of equal length
 // `len` and are sorted in ascending order of `d_ptr` elements with `i_ptr`.
 //
@@ -477,29 +481,37 @@ std::vector<GivensRotation<T>> applyDeflationToArrays(T rho, T tol, SizeType len
     ColType& c2 = c_ptr[i2s];
 
     // if z1 nearly zero deflate the element and move i1 forward to i2
-    if (std::abs(rho * z1) < tol) {
+    if (std::abs(rho * z1) <= tol) {
       c1 = ColType::Deflated;
       i1 = i2;
       continue;
     }
 
     // Deflate the second element if z2 nearly zero
-    if (std::abs(rho * z2) < tol) {
+    if (std::abs(rho * z2) <= tol) {
       c2 = ColType::Deflated;
       continue;
     }
 
+    // Given's deflation condition is the same as the one used in LAPACK's stedc implementation [1].
+    //
+    // [1] LAPACK 3.10.0, file dlaed2.f, line 393
+    T r = std::sqrt(z1 * z1 + z2 * z2);
+    T c = z1 / r;
+    T s = -z2 / r;
+
     // If d1 is not nearly equal to d2, move i1 forward to i2
-    if (!diagonalValuesNearlyEqual(tol, d1, d2, z1, z2)) {
+    if (std::abs(c * s * (d2 - d1)) > tol) {
       i1 = i2;
       continue;
     }
 
     // When d1 is nearly equal to d2 apply Givens rotation
-    T c, s;
-    blas::rotg(&z1, &z2, &c, &s);
+    z1 = r;
+    z2 = 0;
+    T tmp = d1 * s * s + d2 * c * c;
     d1 = d1 * c * c + d2 * s * s;
-    d2 = d1 * s * s + d2 * c * c;
+    d2 = tmp;
 
     rots.push_back(GivensRotation<T>{i1s, i2s, c, s});
     //  Set the the `i1` column as "Dense" if the `i2` column has opposite non-zero structure (i.e if

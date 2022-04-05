@@ -167,18 +167,88 @@ TEST(PartitionIndexBasedOnColTypes, FullRange) {
                                         ColType::LowerHalf, ColType::Deflated,  ColType::Deflated,
                                         ColType::Deflated};
 
-  std::size_t i = 0;
-  for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
-    auto tile = c_out(GlobalTileIndex(i_tile, 0)).get();
-    for (SizeType row = 0; row < tile.size().rows(); ++row) {
-      ASSERT_TRUE(tile(TileElementIndex(row, 0)) == expected_out_arr[i]);
-      ++i;
-    }
-  }
+  auto expected_out_fn = [&expected_out_arr](GlobalElementIndex i) {
+    return expected_out_arr[to_sizet(i.row())];
+  };
+  CHECK_MATRIX_EQ(expected_out_fn, c_out);
 
   ColTypeLens clens = clens_fut.get();
   ASSERT_TRUE(clens.num_deflated == 3);
   ASSERT_TRUE(clens.num_dense == 2);
   ASSERT_TRUE(clens.num_lowhalf == 3);
   ASSERT_TRUE(clens.num_uphalf == 2);
+}
+
+TYPED_TEST(TridiagEigensolverMergeTest, Deflation) {
+  SizeType n = 10;
+  SizeType nb = 3;
+
+  LocalElementSize sz(n, 1);
+  TileElementSize bk(nb, 1);
+
+  constexpr ColType deflated = ColType::Deflated;
+  constexpr ColType up = ColType::UpperHalf;
+  constexpr ColType low = ColType::LowerHalf;
+  constexpr ColType dense = ColType::Dense;
+
+  Matrix<SizeType, Device::CPU> index_mat(sz, bk);
+  Matrix<TypeParam, Device::CPU> d_mat(sz, bk);
+  Matrix<TypeParam, Device::CPU> z_mat(sz, bk);
+  Matrix<ColType, Device::CPU> c_mat(sz, bk);
+
+  // the index array that sorts `d`
+  std::vector<SizeType> index_arr{0, 6, 7, 1, 9, 5, 2, 4, 3, 8};
+  dlaf::matrix::util::set(index_mat,
+                          [&index_arr](GlobalElementIndex i) { return index_arr[to_sizet(i.row())]; });
+
+  // 11 11 11 13 13 17 18 18 34 34
+  std::vector<TypeParam> d_arr{11, 13, 18, 34, 18, 17, 11, 11, 34, 13};
+  dlaf::matrix::util::set(d_mat, [&d_arr](GlobalElementIndex i) { return d_arr[to_sizet(i.row())]; });
+
+  // 12 72 102 31 9 0 16 0 0 0
+  std::vector<TypeParam> z_arr{12, 31, 16, 0, 0, 0, 72, 102, 0, 9};
+  dlaf::matrix::util::set(z_mat, [&z_arr](GlobalElementIndex i) { return z_arr[to_sizet(i.row())]; });
+
+  // u l l u l l u u u l
+  std::vector<ColType> c_arr{up, up, up, up, up, low, low, low, low, low};
+  dlaf::matrix::util::set(c_mat, [&c_arr](GlobalElementIndex i) { return c_arr[to_sizet(i.row())]; });
+
+  TypeParam tol = 0.01;
+  TypeParam rho = 1;
+  SizeType i_begin = 0;
+  SizeType i_end = 3;
+  auto rots_fut =
+      applyDeflation<TypeParam>(i_begin, i_end, pika::make_ready_future(rho),
+                                pika::make_ready_future(tol), index_mat, d_mat, z_mat, c_mat);
+
+  Matrix<TypeParam, Device::CPU> d_mat_sorted(sz, bk);
+  Matrix<TypeParam, Device::CPU> z_mat_sorted(sz, bk);
+  Matrix<ColType, Device::CPU> c_mat_sorted(sz, bk);
+  applyIndex(i_begin, i_end, index_mat, d_mat, d_mat_sorted);
+  applyIndex(i_begin, i_end, index_mat, z_mat, z_mat_sorted);
+  applyIndex(i_begin, i_end, index_mat, c_mat, c_mat_sorted);
+
+  // Check sorted `d`
+  std::vector<TypeParam> expected_d_arr{11, 11, 11, 13, 13, 17, 18, 18, 34, 34};
+  auto expected_d_fn = [&expected_d_arr](GlobalElementIndex i) {
+    return expected_d_arr[to_sizet(i.row())];
+  };
+  CHECK_MATRIX_NEAR(expected_d_fn, d_mat_sorted, tol, tol);
+
+  // Check sorted `z`
+  std::vector<TypeParam> expected_z_arr{125.427, 0, 0, 32.28, 0, 0, 16, 0, 0, 0};
+  auto expected_z_fn = [&expected_z_arr](GlobalElementIndex i) {
+    return expected_z_arr[to_sizet(i.row())];
+  };
+  CHECK_MATRIX_NEAR(expected_z_fn, z_mat_sorted, tol, tol);
+
+  // Check sorted `c`
+  //
+  // Note: `CHECK_MATRIX_EQ` doesn't compile here
+  std::vector<ColType> expected_c_arr{dense,    deflated, deflated, dense,    deflated,
+                                      deflated, up,       deflated, deflated, deflated};
+  auto expected_c_fn = [&expected_c_arr](GlobalElementIndex i) {
+    return expected_c_arr[to_sizet(i.row())];
+  };
+  CHECK_MATRIX_EQ(expected_c_fn, c_mat_sorted);
 }

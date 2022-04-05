@@ -216,8 +216,15 @@ pika::future<T> maxVectorElement(SizeType i_begin, SizeType i_end, Matrix<const 
 //
 // [1] LAPACK 3.10.0, file dlaed2.f, line 315, variable TOL
 template <class T>
-T calcTolerance(T dmax, T zmax) {
-  return 8 * std::numeric_limits<T>::epsilon() * std::max(dmax, zmax);
+pika::future<T> calcTolerance(SizeType i_begin, SizeType i_end, Matrix<const T, Device::CPU>& d,
+                              Matrix<const T, Device::CPU>& z) {
+  pika::future<T> dmax_fut = maxVectorElement(i_begin, i_end, d);
+  pika::future<T> zmax_fut = maxVectorElement(i_begin, i_end, z);
+
+  auto tol_fn = [](T dmax, T zmax) {
+    return 8 * std::numeric_limits<T>::epsilon() * std::max(dmax, zmax);
+  };
+  return pika::dataflow(pika::unwrapping(std::move(tol_fn)), std::move(dmax_fut), std::move(zmax_fut));
 }
 
 // Note the range is inclusive: [begin, end]
@@ -765,10 +772,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   rho_fut = scaleRho(rho_fut);
 
   // Calculate the tolerance used for deflation
-  pika::future<T> dmax_fut = maxVectorElement(i_begin, i_end, d);
-  pika::future<T> zmax_fut = maxVectorElement(i_begin, i_end, ws.z);
-  pika::shared_future<T> tol_fut =
-      pika::dataflow(pika::unwrapping(calcTolerance<T>), std::move(dmax_fut), std::move(zmax_fut));
+  pika::shared_future<T> tol_fut = calcTolerance(i_begin, i_end, d, ws.z);
 
   // Initialize the column types vector `c`
   initColTypes(i_begin, i_split, i_end, ws.c);

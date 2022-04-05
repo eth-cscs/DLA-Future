@@ -185,7 +185,7 @@ int main(int argc, char** argv) {
 
   // options
   using namespace pika::program_options;
-  options_description desc_commandline("Usage: miniapp_gen_to_std.cpp [options]");
+  options_description desc_commandline("Usage: miniapp_gen_to_std [options]");
   desc_commandline.add(dlaf::miniapp::getMiniappOptionsDescription());
   desc_commandline.add(dlaf::getOptionsDescription());
 

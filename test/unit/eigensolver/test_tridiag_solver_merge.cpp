@@ -148,7 +148,6 @@ TEST(PartitionIndexBasedOnColTypes, FullRange) {
   DLAF_ASSERT(c_arr.size() == to_sizet(n), n);
   dlaf::matrix::util::set(c, [&c_arr](GlobalElementIndex i) { return c_arr[to_sizet(i.row())]; });
 
-  // Note: deflated values are assumed to be already at the back
   std::vector<SizeType> index_arr{1, 4, 0, 5, 6, 7, 9, 2, 3, 8};
   dlaf::matrix::util::set(index,
                           [&index_arr](GlobalElementIndex i) { return index_arr[to_sizet(i.row())]; });
@@ -243,8 +242,6 @@ TYPED_TEST(TridiagEigensolverMergeTest, Deflation) {
   CHECK_MATRIX_NEAR(expected_z_fn, z_mat_sorted, tol, tol);
 
   // Check sorted `c`
-  //
-  // Note: `CHECK_MATRIX_EQ` doesn't compile here
   std::vector<ColType> expected_c_arr{dense,    deflated, deflated, dense,    deflated,
                                       deflated, up,       deflated, deflated, deflated};
   auto expected_c_fn = [&expected_c_arr](GlobalElementIndex i) {

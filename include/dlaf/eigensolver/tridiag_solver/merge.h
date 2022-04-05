@@ -94,25 +94,28 @@ struct WorkSpace {
   // Holds the values of the rank-1 update vector sorted corresponding to `d_defl`
   Matrix<T, Device::CPU> ztmp;
 
-  // Temporary index map storage
-  Matrix<SizeType, Device::CPU> itmp;
-  // An index map from next to prevous stage of the algorithm.
+  // Steps:
   //
-  // The index is used to map:
-  // 1. original  <--- presorted*
-  // 2. presorted <--- deflated**
-  // 3. deflated  <--- postsorted***
+  // 1. Sort index based on diagonal values in ascending order. This creates a map sorted to inital indices
   //
-  // * presorted: the indices of the diagonal `d` of the merged problem sorted in ascending order before
-  //              the rank 1 problem is solved.
-  // *** postsorted: the indices of the diagonal `d` of the merged problem sorted in ascending order after
-  //                 the rank 1 problem is solved. (integrates back the deflated part)
+  //        initial <--- pre_sorted
   //
-  Matrix<SizeType, Device::CPU> istage;
-  // An index map: original <--- matmul
-  Matrix<SizeType, Device::CPU> iorig;
-  // An index map: <--- deflated
-  Matrix<SizeType, Device::CPU> idefl;
+  // 2. Sort index based on column types such that all deflated entries are at the end
+  //
+  //        pre_sorted <--- deflated
+  //
+  // 3. Sort index based on updated diagonal values in ascending order. The diagonal conatins eigenvalues
+  //    of the deflated problem and deflated entreis from the initial diagonal
+  //
+  //        deflated <--- post_sorted
+  //
+  // 4. Sort index based on column types such that matrices `Q` and `U` are in matrix multiplication form.
+  //
+  //        post_sorted <--- matmul
+  //
+  Matrix<SizeType, Device::CPU> i1;
+  Matrix<SizeType, Device::CPU> i2;
+  Matrix<SizeType, Device::CPU> i3;
 
   // Assigns a type to each column of Q which is used to calculate the permutation indices for Q and U
   // that bring them in matrix multiplication form.
@@ -128,7 +131,6 @@ WorkSpace<T> initWorkSpace(const matrix::Distribution& ev_distr) {
                       Matrix<T, Device::CPU>(vec_size, vec_tile_size),
                       Matrix<T, Device::CPU>(vec_size, vec_tile_size),
                       Matrix<T, Device::CPU>(vec_size, vec_tile_size),
-                      Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
                       Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
                       Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
                       Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
@@ -430,6 +432,39 @@ inline pika::future<SizeType> stablePartitionIndexForDeflation(SizeType i_begin,
   return pika::dataflow(part_fn, tc.readVec(c), tc.readVec(in), tc.readwriteVec(out));
 }
 
+// Partitions `p_ptr` based on a `ctype` in `c_ptr` array.
+//
+// Returns the number of elements in the second partition.
+inline SizeType partitionColType(SizeType len, ColType ctype, const ColType* c_ptr, SizeType* i_ptr) {
+  auto it = pika::partition(pika::execution::par, i_ptr, i_ptr + len,
+                            [ctype, c_ptr](SizeType i) { return ctype != c_ptr[i]; });
+  return len - std::distance(i_ptr, it);
+}
+
+// Partition `coltypes` to get the indices of the matrix-multiplication form
+inline pika::future<ColTypeLens> partitionIndexForMatrixMultiplication(
+    SizeType i_begin, SizeType i_end, Matrix<const ColType, Device::CPU>& c,
+    Matrix<SizeType, Device::CPU>& index) {
+  SizeType n = problemSize(i_begin, i_end, c.distribution());
+  auto part_fn = [n](auto c_tiles, auto index_tiles) {
+    TileElementIndex zero_idx(0, 0);
+    const ColType* c_ptr = c_tiles[0].get().ptr(zero_idx);
+    // save in variable avoid releasing the tile too soon
+    auto index_tile = index_tiles[0].get();
+    SizeType* i_ptr = index_tile.ptr(zero_idx);
+
+    ColTypeLens ql;
+    ql.num_deflated = partitionColType(n, ColType::Deflated, c_ptr, i_ptr);
+    ql.num_lowhalf = partitionColType(n - ql.num_deflated, ColType::LowerHalf, c_ptr, i_ptr);
+    ql.num_dense = partitionColType(n - ql.num_deflated - ql.num_lowhalf, ColType::Dense, c_ptr, i_ptr);
+    ql.num_uphalf = n - ql.num_deflated - ql.num_lowhalf - ql.num_dense;
+    return ql;
+  };
+
+  TileCollector tc{i_begin, i_end};
+  return pika::dataflow(std::move(part_fn), tc.readVec(c), tc.readwriteVec(index));
+};
+
 inline void setColTypeTile(const matrix::Tile<ColType, Device::CPU>& tile, ColType val) {
   SizeType len = tile.size().rows();
   for (SizeType i = 0; i < len; ++i) {
@@ -553,39 +588,6 @@ pika::future<std::vector<GivensRotation<T>>> applyDeflation(
                         tc.readwriteVec(d), tc.readwriteVec(z), tc.readwriteVec(c));
 }
 
-// Partitions `p_ptr` based on a `ctype` in `c_ptr` array.
-//
-// Returns the number of elements in the second partition.
-inline SizeType partitionColType(SizeType len, ColType ctype, const ColType* c_ptr, SizeType* i_ptr) {
-  auto it = pika::partition(pika::execution::par, i_ptr, i_ptr + len,
-                            [ctype, c_ptr](SizeType i) { return ctype != c_ptr[i]; });
-  return len - std::distance(i_ptr, it);
-}
-
-// Partition `coltypes` to get the indices of the matrix-multiplication form
-inline pika::future<ColTypeLens> partitionIndexForMatrixMultiplication(
-    SizeType i_begin, SizeType i_end, Matrix<const ColType, Device::CPU>& c,
-    Matrix<SizeType, Device::CPU>& index) {
-  SizeType n = problemSize(i_begin, i_end, c.distribution());
-  auto part_fn = [n](auto c_tiles, auto index_tiles) {
-    TileElementIndex zero_idx(0, 0);
-    const ColType* c_ptr = c_tiles[0].get().ptr(zero_idx);
-    // save in variable avoid releasing the tile too soon
-    auto index_tile = index_tiles[0].get();
-    SizeType* i_ptr = index_tile.ptr(zero_idx);
-
-    ColTypeLens ql;
-    ql.num_deflated = partitionColType(n, ColType::Deflated, c_ptr, i_ptr);
-    ql.num_lowhalf = partitionColType(n - ql.num_deflated, ColType::LowerHalf, c_ptr, i_ptr);
-    ql.num_dense = partitionColType(n - ql.num_deflated - ql.num_lowhalf, ColType::Dense, c_ptr, i_ptr);
-    ql.num_uphalf = n - ql.num_deflated - ql.num_lowhalf - ql.num_dense;
-    return ql;
-  };
-
-  TileCollector tc{i_begin, i_end};
-  return pika::dataflow(std::move(part_fn), tc.readVec(c), tc.readwriteVec(index));
-};
-
 // Assumption: the memory layout of the matrix from which the tiles are coming is column major.
 //
 // `tiles`: The tiles of the matrix between tile indices `(i_begin, i_begin)` and `(i_end, i_end)` that
@@ -618,18 +620,64 @@ void applyGivensRotationsToMatrixColumns(SizeType n, SizeType nb, std::vector<Gi
   }
 }
 
-// Copy column `in_col` from tile `in` to column `out_col` in tile `out`.
 template <class T>
-void copyTileCol(SizeType in_col, matrix::Tile<const T, Device::CPU>& in, SizeType out_col,
-                 matrix::Tile<T, Device::CPU>& out) {
-  DLAF_ASSERT(in.size().rows() <= out.size().rows(), in.size(), out.size());
-  DLAF_ASSERT(in_col <= in.size().cols(), in_col);
-  DLAF_ASSERT(out_col <= out.size().cols(), in_col);
+void solveRank1Problem(SizeType n, SizeType nb, pika::shared_future<SizeType> k_fut,
+                       pika::shared_future<T> rho_fut,
+                       std::vector<pika::shared_future<matrix::Tile<const T, Device::CPU>>> d_defl,
+                       std::vector<pika::shared_future<matrix::Tile<const T, Device::CPU>>> z_defl,
+                       std::vector<pika::future<matrix::Tile<T, Device::CPU>>> d,
+                       std::vector<pika::future<matrix::Tile<T, Device::CPU>>> mat) {
+  SizeType k = k_fut.get();
+  T rho = rho_fut.get();
 
-  for (SizeType i = 0; i < in.size().rows(); ++i) {
-    out(TileElementIndex(i, out_col)) = in(TileElementIndex(i, in_col));
+  TileElementIndex zero(0, 0);
+  const T* d_defl_ptr = d_defl[0].get().ptr(zero);
+  const T* z_ptr = z_defl[0].get().ptr(zero);
+
+  auto d_tile = d[0].get();
+  auto mat_tiles = pika::unwrap(std::move(mat));
+  T* d_ptr = d_tile.ptr(zero);
+
+  matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
+
+  for (SizeType i = 0; i < k; ++i) {
+    SizeType i_tile = distr.globalTileLinearIndex(GlobalElementIndex(0, i));
+    SizeType i_col = distr.tileElementFromGlobalElement<Coord::Col>(i);
+    T* delta = mat_tiles[to_sizet(i_tile)].ptr(TileElementIndex(0, i_col));
+    T& eigenval = d_ptr[to_sizet(i)];
+    dlaf::internal::laed4_wrapper(static_cast<int>(k), static_cast<int>(i), d_defl_ptr, z_ptr, delta,
+                                  rho, &eigenval);
+
+    // TODO: check the eigenvectors formula for `delta`
   }
 }
+
+// // Inverts `perm_q`
+// // Initializes `perm_u`
+// inline void setPermutationsU(
+//     SizeType n, std::vector<pika::shared_future<matrix::Tile<const SizeType, Device::CPU>>> perm_d,
+//     std::vector<pika::future<matrix::Tile<SizeType, Device::CPU>>> perm_q,
+//     std::vector<pika::future<matrix::Tile<SizeType, Device::CPU>>> perm_u) {
+//   TileElementIndex zero(0, 0);
+//   const SizeType* d_ptr = perm_d[0].get().ptr(zero);
+//   SizeType* q_ptr = perm_q[0].get().ptr(zero);
+//   SizeType* u_ptr = perm_u[0].get().ptr(zero);
+//
+//   // Invert `perm_q` into `perm_u` temporarily
+//   for (SizeType i = 0; i < n; ++i) {
+//     u_ptr[q_ptr[i]] = i;
+//   }
+//
+//   // Copy `perm_u` to `perm_q` to save the inverted index back into `perm_q`
+//   for (SizeType i = 0; i < n; ++i) {
+//     q_ptr[i] = u_ptr[i];
+//   }
+//
+//   // Index map from sorted incices to matrix-multiplication index
+//   for (SizeType i = 0; i < n; ++i) {
+//     u_ptr[i] = q_ptr[d_ptr[i]];
+//   }
+// }
 
 // Applies the permutation index `perm_tiles` to tiles from `Q` and saves the result in a workspace
 // matrix `mat_q`.
@@ -671,65 +719,6 @@ void copyTileCol(SizeType in_col, matrix::Tile<const T, Device::CPU>& in, SizeTy
 //    }
 //  }
 //}
-
-// Inverts `perm_q`
-// Initializes `perm_u`
-inline void setPermutationsU(
-    SizeType n, std::vector<pika::shared_future<matrix::Tile<const SizeType, Device::CPU>>> perm_d,
-    std::vector<pika::future<matrix::Tile<SizeType, Device::CPU>>> perm_q,
-    std::vector<pika::future<matrix::Tile<SizeType, Device::CPU>>> perm_u) {
-  TileElementIndex zero(0, 0);
-  const SizeType* d_ptr = perm_d[0].get().ptr(zero);
-  SizeType* q_ptr = perm_q[0].get().ptr(zero);
-  SizeType* u_ptr = perm_u[0].get().ptr(zero);
-
-  // Invert `perm_q` into `perm_u` temporarily
-  for (SizeType i = 0; i < n; ++i) {
-    u_ptr[q_ptr[i]] = i;
-  }
-
-  // Copy `perm_u` to `perm_q` to save the inverted index back into `perm_q`
-  for (SizeType i = 0; i < n; ++i) {
-    q_ptr[i] = u_ptr[i];
-  }
-
-  // Index map from sorted incices to matrix-multiplication index
-  for (SizeType i = 0; i < n; ++i) {
-    u_ptr[i] = q_ptr[d_ptr[i]];
-  }
-}
-
-template <class T>
-void solveRank1Problem(SizeType n, SizeType nb, pika::shared_future<SizeType> k_fut,
-                       pika::shared_future<T> rho_fut,
-                       std::vector<pika::shared_future<matrix::Tile<const T, Device::CPU>>> d_defl,
-                       std::vector<pika::shared_future<matrix::Tile<const T, Device::CPU>>> z_defl,
-                       std::vector<pika::future<matrix::Tile<T, Device::CPU>>> d,
-                       std::vector<pika::future<matrix::Tile<T, Device::CPU>>> mat) {
-  SizeType k = k_fut.get();
-  T rho = rho_fut.get();
-
-  TileElementIndex zero(0, 0);
-  const T* d_defl_ptr = d_defl[0].get().ptr(zero);
-  const T* z_ptr = z_defl[0].get().ptr(zero);
-
-  auto d_tile = d[0].get();
-  auto mat_tiles = pika::unwrap(std::move(mat));
-  T* d_ptr = d_tile.ptr(zero);
-
-  matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
-
-  for (SizeType i = 0; i < k; ++i) {
-    SizeType i_tile = distr.globalTileLinearIndex(GlobalElementIndex(0, i));
-    SizeType i_col = distr.tileElementFromGlobalElement<Coord::Col>(i);
-    T* delta = mat_tiles[to_sizet(i_tile)].ptr(TileElementIndex(0, i_col));
-    T& eigenval = d_ptr[to_sizet(i)];
-    dlaf::internal::laed4_wrapper(static_cast<int>(k), static_cast<int>(i), d_defl_ptr, z_ptr, delta,
-                                  rho, &eigenval);
-
-    // TODO: check the eigenvectors formula for `delta`
-  }
-}
 
 // `mat_[q,u,ev]_tiles` are in column-major order with leading dimension `ncol_tiles`.
 //
@@ -784,47 +773,62 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   // Initialize the column types vector `c`
   initColTypes(i_begin, i_split, i_end, ws.c);
 
-  // 1. set index `istage` to `original <--- presorted`
-  // 2. Deflate the sorted `d`, `z` and `c`
-  // 3. Apply Givens rotations to `Q` - `mat_ev`
+  // Step #1
   //
-  initIndex(i_begin, i_end, ws.itmp);
-  sortIndex(i_begin, i_end, pika::make_ready_future(n1), d, ws.itmp, ws.istage);
+  //    i1 (out) : initial <--- initial (identity map)
+  //    i2 (out) : initial <--- pre_sorted
+  //
+  // - deflate `d`, `z` and `c`
+  // - apply Givens rotations to `Q` - `mat_ev`
+  //
+  initIndex(i_begin, i_end, ws.i1);
+  sortIndex(i_begin, i_end, pika::make_ready_future(n1), d, ws.i1, ws.i2);
   pika::future<std::vector<GivensRotation<T>>> rots_fut =
-      applyDeflation(i_begin, i_end, rho_fut, tol_fut, ws.istage, d, ws.z, ws.c);
+      applyDeflation(i_begin, i_end, rho_fut, tol_fut, ws.i2, d, ws.z, ws.c);
   pika::dataflow(pika::unwrapping(applyGivensRotationsToMatrixColumns<T>), n, nb, std::move(rots_fut),
                  tc.readwriteMat(mat_ev));
 
-  // 1. Use `istage` : original <--- presorted to get `iorig` : original <--- partition_deflated
-  // 2. reorder `d -> dtmp`, `z -> ztmp` using `iorig` such that deflated entries are at the bottom.
-  // 3. Solve the rank-1 problem `d + rho * z * z^T`, save eigenvalues in `dtmp` and eigenvectors in
-  //    `ws.mat`.
+  // Step #2
+  //
+  //    i2 (in)  : initial <--- pre_sorted
+  //    i3 (out) : initial <--- deflated
+  //
+  // - reorder `d -> dtmp`, `z -> ztmp`, `c -> ctmp` using `i3` such that deflated entries are at the bottom.
+  // - solve the rank-1 problem and save eigenvalues in `dtmp` and eigenvectors in `ws.mat`.
   //
   pika::shared_future<SizeType> k_fut =
-      stablePartitionIndexForDeflation(i_begin, i_end, ws.c, ws.istage, ws.iorig);
-  applyIndex(i_begin, i_end, ws.iorig, d, ws.dtmp);
-  applyIndex(i_begin, i_end, ws.iorig, ws.z, ws.ztmp);
+      stablePartitionIndexForDeflation(i_begin, i_end, ws.c, ws.i2, ws.i3);
+  applyIndex(i_begin, i_end, ws.i3, d, ws.dtmp);
+  applyIndex(i_begin, i_end, ws.i3, ws.z, ws.ztmp);
+  applyIndex(i_begin, i_end, ws.i3, ws.c, ws.ctmp);
   copyVector(i_begin, i_end, ws.dtmp, d);
   pika::dataflow(solveRank1Problem<T>, n, nb, k_fut, rho_fut, tc.readVec(d), tc.readVec(ws.ztmp),
                  tc.readwriteVec(ws.dtmp), tc.readwriteVec(ws.mat));
 
-  // 1. set the index `idefl` to `deflated <--- postsorted`
-  // 2. update the index `istage` to `original <--- postsorted`
-  // 3. reorder `dtmp -> d` using the `istage` such that `d` values (eigenvalues and
-  //    deflated values) are in ascending order
+  // Step #3
   //
-  sortIndex(i_begin, i_end, k_fut, ws.dtmp, ws.itmp, ws.idefl);
-  composeIndices(i_begin, i_end, ws.iorig, ws.idefl, ws.istage);
-  applyIndex(i_begin, i_end, ws.idefl, ws.dtmp, d);
+  //    i1 (in)  : deflated <--- deflated  (identity map)
+  //       (out) : initial  <--- post_sorted
+  //    i2 (out) : deflated <--- post_sorted
+  //    i3 (in)  : initial  <--- deflated
+  //
+  // - reorder `dtmp -> d` using the `i2` such that `d` values (eigenvalues and deflated values) are in
+  //   ascending order
+  //
+  sortIndex(i_begin, i_end, k_fut, ws.dtmp, ws.i1, ws.i2);
+  composeIndices(i_begin, i_end, ws.i3, ws.i2, ws.i1);
+  applyIndex(i_begin, i_end, ws.i2, ws.dtmp, d);
 
-  // 1. set index `istage` to `postsorted <--- matmul`
-  // 2. set the index `idefl` to `deflated <--- matmul`
-  // 3. update the index `iorig` to `original <--- postsorted`
+  // Step #4
+  //
+  //    i1 (in)  : initial  <--- post_sorted
+  //       (out) : initial  <--- matmul
+  //    i2 (in)  : deflated <--- post_sorted
+  //       (out) : deflated <--- matmul
   //
   pika::shared_future<ColTypeLens> qlens_fut =
-      partitionIndexForMatrixMultiplication(i_begin, i_end, ws.c, ws.iorig);
-  composeIndices(i_begin, i_end, ws.iorig, ws.itmp, ws.iorig);
-  composeIndices(i_begin, i_end, ws.iorig, ws.itmp, ws.idefl);
+      partitionIndexForMatrixMultiplication(i_begin, i_end, ws.ctmp, ws.i2);
+  partitionIndexForMatrixMultiplication(i_begin, i_end, ws.c, ws.i1);
 
   // Use the permutation index `perm_q` on the columns of `mat_ev` and save the result to `mat_q`
   // pika::dataflow(applyPermutationIndexToMatrixQ<T>, i_begin, i_end,

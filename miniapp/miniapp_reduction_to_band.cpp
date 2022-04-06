@@ -85,8 +85,6 @@ struct reductionToBandMiniapp {
       return hermitian;
     }();
 
-    const auto& distribution = matrix_ref.distribution();
-
     for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
       if (0 == world.rank() && run_index >= 0)
         std::cout << "[" << run_index << "]" << std::endl;

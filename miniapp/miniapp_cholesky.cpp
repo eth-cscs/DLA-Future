@@ -118,8 +118,6 @@ struct choleskyMiniapp {
       return hermitian_pos_def;
     }();
 
-    const auto& distribution = matrix_ref.distribution();
-
     for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
       if (0 == world.rank() && run_index >= 0)
         std::cout << "[" << run_index << "]" << std::endl;
@@ -127,16 +125,13 @@ struct choleskyMiniapp {
       HostMatrixType matrix_host(matrix_size, block_size, comm_grid);
       copy(matrix_ref, matrix_host);
 
-      // wait all setup tasks before starting benchmark
-      matrix_host.waitLocalTiles();
-      DLAF_MPI_CALL(MPI_Barrier(world));
-
       double elapsed_time;
       {
         MatrixMirrorType matrix(matrix_host);
 
         // Wait for matrix to be copied to GPU (if necessary)
         matrix.get().waitLocalTiles();
+        DLAF_MPI_CALL(MPI_Barrier(world));
 
         dlaf::common::Timer<> timeit;
         dlaf::factorization::cholesky<backend, DefaultDevice_v<backend>, T>(comm_grid, opts.uplo,

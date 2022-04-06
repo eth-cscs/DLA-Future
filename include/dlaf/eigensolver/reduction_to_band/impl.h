@@ -303,9 +303,9 @@ auto computePanelReflectors(MatrixLike& mat_a, const SubPanelView& panel_view, c
                         pika::when_all(std::move(panel_tiles)));
 }
 
-template <Backend B, Device D, class T, bool force_copy = false>
+template <Backend B, Device D, class T, bool force_copy, class MatrixLike>
 void setupReflectorPanelV(bool has_head, const SubPanelView& panel_view, const SizeType nrefls,
-                          matrix::Panel<Coord::Col, T, D>& v, matrix::Matrix<const T, D>& mat_a) {
+                          matrix::Panel<Coord::Col, T, D>& v, MatrixLike& mat_a) {
   namespace ex = pika::execution::experimental;
 
   using pika::threads::thread_priority;
@@ -519,23 +519,38 @@ struct ComputePanelHelper;
 
 template <class T>
 struct ComputePanelHelper<Backend::MC, Device::CPU, T> {
-  ComputePanelHelper(const std::size_t, matrix::Distribution) {}
+  ComputePanelHelper(const std::size_t, matrix::Distribution, matrix::Distribution) {}
 
-  auto call(Matrix<T, Device::CPU>& mat_a, const matrix::SubPanelView& panel_view,
-            const SizeType nrefls_block) {
+  auto call(const GlobalElementIndex ij_offset, const SizeType nrefls_block,
+            Matrix<T, Device::CPU>& mat_a, const matrix::SubPanelView& panel_view,
+            matrix::Panel<Coord::Col, T, Device::CPU>& v_ext, Matrix<T, Device::CPU>& t) {
+    dlaf::internal::silenceUnusedWarningFor(ij_offset);
+
     using dlaf::eigensolver::internal::red2band::local::computePanelReflectors;
-    return computePanelReflectors(mat_a, panel_view, nrefls_block);
+    pika::shared_future<common::internal::vector<T>> taus =
+        computePanelReflectors(mat_a, panel_view, nrefls_block);
+
+    constexpr bool has_reflector_head = true;
+    setupReflectorPanelV<Backend::MC, Device::CPU, T, true>(has_reflector_head, panel_view, nrefls_block,
+                                                            v_ext, mat_a);
+
+    const LocalTileIndex t_index(0, 0);
+    dlaf::factorization::internal::computeTFactor<Backend::MC, Device::CPU>(v_ext, taus, t(t_index));
+
+    return taus;
   }
 };
 
 #ifdef DLAF_WITH_CUDA
 template <class T>
 struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
-  ComputePanelHelper(const std::size_t n_workspaces, matrix::Distribution dist_a)
-      : panels_v(n_workspaces, dist_a) {}
+  ComputePanelHelper(const std::size_t n_workspaces, matrix::Distribution dist_a,
+                     matrix::Distribution dist)
+      : panels_v(n_workspaces, dist_a), panels_v_band(n_workspaces, dist) {}
 
-  auto call(Matrix<T, Device::GPU>& mat_a, const matrix::SubPanelView& panel_view,
-            const SizeType nrefls_block) {
+  auto call(const GlobalElementIndex ij_offset, const SizeType nrefls_block,
+            Matrix<T, Device::GPU>& mat_a, const matrix::SubPanelView& panel_view,
+            matrix::Panel<Coord::Col, T, Device::GPU>& v_ext, Matrix<T, Device::GPU>& t_ext) {
     using pika::threads::thread_priority;
     using dlaf::eigensolver::internal::red2band::local::computePanelReflectors;
 
@@ -557,7 +572,8 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
           ex::start_detached();
     }
 
-    auto taus = computePanelReflectors(v, panel_view, nrefls_block);
+    pika::shared_future<common::internal::vector<T>> taus =
+        computePanelReflectors(v, panel_view, nrefls_block);
 
     for (const auto& i : panel_view.iteratorLocal()) {
       auto spec = panel_view(i);
@@ -569,11 +585,40 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
           ex::start_detached();
     }
 
+    constexpr bool has_reflector_head = true;
+
+    // Note: TFactor computation on CPU
+    setupReflectorPanelV<Backend::GPU, Device::GPU, T, true>(has_reflector_head, panel_view,
+                                                             nrefls_block, v_ext, mat_a);
+
+    // TODO setup panel
+    auto& v_band = panels_v_band.nextResource();
+    v_band.setRangeStart(ij_offset);
+    v_band.setWidth(nrefls_block);
+
+    setupReflectorPanelV<Backend::MC, Device::CPU, T, false>(has_reflector_head, panel_view,
+                                                             nrefls_block, v_band, v);
+
+    // TODO computeTFactor
+    const LocalTileIndex t_index(0, 0);
+    Matrix<T, Device::CPU> t({nrefls_block, nrefls_block}, mat_a.blockSize());
+    dlaf::factorization::internal::computeTFactor<Backend::MC, Device::CPU>(v_band, taus, t(t_index));
+
+    // TODO copy back tfactor from cpu to gpu
+    ex::when_all(t.read_sender(t_index), t_ext.readwrite_sender(t_index)) |
+        matrix::copy(
+            dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::CPU, Device::GPU>>(
+                thread_priority::high)) |
+        ex::start_detached();
+
+    v.reset();
+    v_band.reset();
     return taus;
   }
 
 protected:
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panels_v;
+  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panels_v_band;
 };
 #endif
 }
@@ -839,7 +884,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
   //
   // It is a bit hacky usage, because SubPanelView is not meant to be used with Panel, but just with
   // Matrix. This results in a variable waste of memory, depending no the ratio band_size/nb.
-  ComputePanelHelper<B, D, T> compute_panel_helper(n_workspaces, dist_a);
+  ComputePanelHelper<B, D, T> compute_panel_helper(n_workspaces, dist_a, dist);
 
   for (SizeType j_sub = 0; j_sub < nblocks; ++j_sub) {
     const auto i_sub = j_sub + 1;
@@ -870,17 +915,10 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
       v.setWidth(nrefls_block);
 
     // PANEL
-    taus.emplace_back(compute_panel_helper.call(mat_a, panel_view, nrefls_block));
-
-    constexpr bool has_reflector_head = true;
-    setupReflectorPanelV<B, D, T, true>(has_reflector_head, panel_view, nrefls_block, v, mat_a);
-
     const LocalTileIndex t_idx(0, 0);
-    // TODO used just by the column, maybe we can re-use a panel tile?
-    // TODO probably the first one in any panel is ok?
     Matrix<T, D> t({nrefls_block, nrefls_block}, dist.blockSize());
 
-    computeTFactor<B>(v, taus.back(), t(t_idx));
+    taus.emplace_back(compute_panel_helper.call(ij_offset, nrefls_block, mat_a, panel_view, v, t));
 
     // PREPARATION FOR TRAILING MATRIX UPDATE
     const GlobalElementIndex at_offset(ij_offset + GlobalElementSize(0, band_size));
@@ -1030,8 +1068,8 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     if (is_panel_rank_col) {
       taus.emplace_back(computePanelReflectors(std::move(trigger_panel), rank_v0.row(),
                                                mpi_col_chain_panel(), mat_a, ai_panel, nrefls));
-      red2band::local::setupReflectorPanelV<B, D>(rank.row() == rank_v0.row(), panel_view, nrefls, v,
-                                                  mat_a);
+      red2band::local::setupReflectorPanelV<B, D, T, false>(rank.row() == rank_v0.row(), panel_view,
+                                                            nrefls, v, mat_a);
       computeTFactor<B>(v, taus.back(), t(t_idx), mpi_col_chain);
     }
 

@@ -15,7 +15,6 @@
 #include <gtest/gtest.h>
 #include <lapack/util.hh>
 #include <pika/future.hpp>
-#include <pika/modules/threadmanager.hpp>
 #include <pika/runtime.hpp>
 
 #include "dlaf/common/index2d.h"

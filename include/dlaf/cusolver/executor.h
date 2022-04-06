@@ -21,10 +21,10 @@
 #include <cuda_runtime.h>
 #include <cusolverDn.h>
 
+#include <pika/cuda.hpp>
 #include <pika/execution.hpp>
 #include <pika/functional.hpp>
 #include <pika/future.hpp>
-#include <pika/modules/async_cuda.hpp>
 #include <pika/mutex.hpp>
 #include <pika/tuple.hpp>
 #include <pika/type_traits.hpp>

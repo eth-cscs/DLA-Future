@@ -14,9 +14,9 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
+#include <pika/cuda.hpp>
 #include <pika/future.hpp>
 #include <pika/init.hpp>
-#include <pika/modules/async_cuda.hpp>
 #include <pika/thread.hpp>
 #include <pika/unwrap.hpp>
 

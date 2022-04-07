@@ -85,8 +85,6 @@ struct reductionToBandMiniapp {
       return hermitian;
     }();
 
-    const auto& distribution = matrix_ref.distribution();
-
     for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
       if (0 == world.rank() && run_index >= 0)
         std::cout << "[" << run_index << "]" << std::endl;
@@ -101,14 +99,10 @@ struct reductionToBandMiniapp {
       dlaf::common::Timer<> timeit;
       auto taus = dlaf::eigensolver::reductionToBand<dlaf::Backend::MC>(comm_grid, matrix);
 
-      // wait for last task and barrier for all ranks
-      {
-        GlobalTileIndex last_tile(matrix.nrTiles().rows() - 1, matrix.nrTiles().cols() - 2);
-        if (matrix.rankIndex() == distribution.rankGlobalTile(last_tile))
-          pika::this_thread::experimental::sync_wait(matrix.readwrite_sender(last_tile));
+      // wait and barrier for all ranks
+      matrix.waitLocalTiles();
+      DLAF_MPI_CALL(MPI_Barrier(world));
 
-        DLAF_MPI_CALL(MPI_Barrier(world));
-      }
       auto elapsed_time = timeit.elapsed();
 
       double gigaflops = std::numeric_limits<double>::quiet_NaN();

@@ -79,9 +79,9 @@ pika::shared_future<matrix::Tile<const T, Device::CPU>> setupVWellFormed(
     return matrix::Tile<const T, Device::CPU>(std::move(tile_v));
   };
 
-  return ex::make_future(
-      dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), unzipV_func,
-                                ex::when_all(ex::keep_future(std::move(tile_hh)), std::move(tile_v))));
+  return ex::when_all(ex::keep_future(std::move(tile_hh)), std::move(tile_v)) |
+         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), unzipV_func) |
+         ex::make_future();
 }
 
 template <class T>
@@ -107,10 +107,10 @@ pika::shared_future<matrix::Tile<const T, Device::CPU>> computeTFactor(
 
     return matrix::Tile<const T, Device::CPU>(std::move(tile_t));
   };
-  return ex::make_future(
-      dlaf::internal::transformLift(dlaf::internal::Policy<Backend::MC>(), tfactor_task,
-                                    ex::keep_future(std::move(tile_taus)),
-                                    ex::keep_future(std::move(tile_v)), std::move(mat_t)));
+  return dlaf::internal::whenAllLift(ex::keep_future(std::move(tile_taus)),
+                                     ex::keep_future(std::move(tile_v)), std::move(mat_t)) |
+         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), tfactor_task) |
+         ex::make_future();
 }
 
 template <Backend backend, class TSender, class VSender>

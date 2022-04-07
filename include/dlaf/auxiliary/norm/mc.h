@@ -47,6 +47,7 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
                                                            Matrix<const T, Device::CPU>& matrix) {
   using namespace dlaf::matrix;
   namespace ex = pika::execution::experimental;
+  using pika::this_thread::experimental::sync_wait;
 
   using dlaf::common::internal::vector;
   using dlaf::common::make_data;
@@ -80,8 +81,8 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
         return lange(lapack::Norm::Max, tile);
     });
     auto current_tile_max =
-        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), std::move(norm_max_f),
-                                  matrix.read_sender(tile_wrt_local)) |
+        matrix.read_sender(tile_wrt_local) |
+        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), std::move(norm_max_f)) |
         ex::make_future();
 
     tiles_max.emplace_back(std::move(current_tile_max));
@@ -93,12 +94,11 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
     DLAF_ASSERT(!values.empty(), "");
     return *std::max_element(values.begin(), values.end());
   };
-  NormT local_max_value = tiles_max.empty()
-                              ? std::numeric_limits<NormT>::min()
-                              : pika::execution::experimental::when_all_vector(std::move(tiles_max)) |
+  NormT local_max_value =
+      tiles_max.empty() ? std::numeric_limits<NormT>::min()
+                        : sync_wait(ex::when_all_vector(std::move(tiles_max)) |
                                     dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(),
-                                                              std::move(max_element)) |
-                                    pika::this_thread::experimental::sync_wait();
+                                                              std::move(max_element)));
   NormT max_value;
   dlaf::comm::sync::reduce(comm_grid.rankFullCommunicator(rank), comm_grid.fullCommunicator(), MPI_MAX,
                            make_data(&local_max_value, 1), make_data(&max_value, 1));

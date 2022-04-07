@@ -273,6 +273,7 @@ void updateTrailingPanelWithReflector(const std::vector<TileT<T>>& panel, const 
 template <class MatrixLike>
 auto computePanelReflectors(MatrixLike& mat_a, const SubPanelView& panel_view, const SizeType nrefls) {
   using T = typename MatrixLike::ElementType;
+  namespace ex = pika::execution::experimental;
 
   auto panel_task = [nrefls, cols = panel_view.cols()](std::vector<TileT<T>>&& panel_tiles) {
     common::internal::vector<T> taus;
@@ -293,11 +294,11 @@ auto computePanelReflectors(MatrixLike& mat_a, const SubPanelView& panel_view, c
     panel_tiles.emplace_back(matrix::splitTile(mat_a(i), spec));
   }
 
-  return pika::execution::experimental::when_all_vector(std::move(panel_tiles)) |
+  return ex::when_all_vector(std::move(panel_tiles)) |
          dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
                                        pika::threads::thread_priority::high),
                                    std::move(panel_task)) |
-         pika::execution::experimental::make_future();
+         ex::make_future();
 }
 
 template <Backend B, Device D, class T, bool force_copy = false>
@@ -621,6 +622,8 @@ pika::shared_future<common::internal::vector<T>> computePanelReflectors(
     pika::future<void> trigger, comm::IndexT_MPI rank_v0,
     pika::future<common::PromiseGuard<comm::Communicator>> mpi_col_chain_panel, MatrixT<T>& mat_a,
     const common::IterableRange2D<SizeType, matrix::LocalTile_TAG> ai_panel_range, SizeType nrefls) {
+  namespace ex = pika::execution::experimental;
+
   auto panel_task =
       [rank_v0, nrefls,
        cols = mat_a.blockSize().cols()](std::vector<typename MatrixT<T>::TileType>&& panel_tiles,
@@ -638,13 +641,12 @@ pika::shared_future<common::internal::vector<T>> computePanelReflectors(
         return taus;
       };
 
-  return pika::execution::experimental::when_all(pika::execution::experimental::when_all_vector(
-                                                     matrix::select(mat_a, ai_panel_range)),
-                                                 std::move(mpi_col_chain_panel), std::move(trigger)) |
+  return ex::when_all(ex::when_all_vector(matrix::select(mat_a, ai_panel_range)),
+                      std::move(mpi_col_chain_panel), std::move(trigger)) |
          dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
                                        pika::threads::thread_priority::high),
                                    std::move(panel_task)) |
-         pika::execution::experimental::make_future();
+         ex::make_future();
 }
 
 template <class T>

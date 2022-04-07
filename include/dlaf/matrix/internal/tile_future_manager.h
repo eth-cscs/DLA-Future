@@ -23,9 +23,7 @@ template <class ReturnTileType>
 pika::future<ReturnTileType> setPromiseTileFuture(
     pika::future<typename ReturnTileType::TileDataType> old_future,
     pika::lcos::local::promise<typename ReturnTileType::TileDataType> p) noexcept {
-  using pika::execution::experimental::keep_future;
-  using pika::execution::experimental::make_future;
-  using pika::execution::experimental::then;
+  namespace ex = pika::execution::experimental;
 
   using TileDataType = typename ReturnTileType::TileDataType;
   using NonConstTileType = typename ReturnTileType::TileType;
@@ -49,7 +47,7 @@ pika::future<ReturnTileType> setPromiseTileFuture(
     p.set_exception(current_exception_ptr);
     std::rethrow_exception(current_exception_ptr);
   };
-  return keep_future(std::move(old_future)) | then(std::move(set_promise)) | make_future();
+  return ex::keep_future(std::move(old_future)) | ex::then(std::move(set_promise)) | ex::make_future();
 }
 
 // Returns a future<ReturnTileType> setting a new promise p to the tile contained in tile_future.

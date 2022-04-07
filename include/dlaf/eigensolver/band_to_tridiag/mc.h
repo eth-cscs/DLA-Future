@@ -355,14 +355,14 @@ protected:
 template <Device D, class T>
 TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     const SizeType b, Matrix<const T, D>& mat_a) noexcept {
-  namespace ex = pika::execution::experimental;
-
   using common::internal::vector;
   using common::Pipeline;
   using common::PromiseGuard;
   using util::ceilDiv;
 
   using pika::resource::get_num_threads;
+
+  namespace ex = pika::execution::experimental;
 
   // note: A is square and has square blocksize
   const SizeType size = mat_a.size().cols();
@@ -445,10 +445,10 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     if (sweep % nb == nb - 1 || sweep == size - 1) {
       const auto tile_index = sweep / nb;
       const auto start = tile_index * nb;
-      dlaf::internal::transformLiftDetach(policy_hp, copy_tridiag_task, start,
-                                          std::min(nb, size - start), std::min(nb, size - 1 - start),
-                                          mat_trid.readwrite_sender(GlobalTileIndex{0, tile_index}),
-                                          std::move(dep));
+      dlaf::internal::whenAllLift(start, std::min(nb, size - start), std::min(nb, size - 1 - start),
+                                  mat_trid.readwrite_sender(GlobalTileIndex{0, tile_index}),
+                                  std::move(dep)) |
+          dlaf::internal::transformDetach(policy_hp, copy_tridiag_task);
     }
   };
 
@@ -457,8 +457,8 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     // Create the first max_workers workers and then reuse them.
     auto& w_pipeline = workers[sweep % max_workers];
 
-    auto dep = ex::make_future(
-                   dlaf::internal::transformLift(policy_hp, init_sweep, sweep, w_pipeline(), deps[0]))
+    auto dep = (dlaf::internal::whenAllLift(sweep, w_pipeline(), deps[0]) |
+                dlaf::internal::transform(policy_hp, init_sweep) | ex::make_future())
                    .share();
     copy_tridiag(sweep, dep);
 
@@ -471,8 +471,8 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
       dlaf::internal::whenAllLift(w_pipeline(), mat_v.readwrite_sender(dist_v.globalTileIndex(index_v)),
                                   dist_v.tileElementIndex(index_v)) |
           ex::then(store_tau_v) | ex::start_detached();
-      deps[step] = ex::make_future(
-          dlaf::internal::transformLift(policy_hp, cont_sweep, w_pipeline(), deps[dep_index]));
+      deps[step] = dlaf::internal::whenAllLift(w_pipeline(), deps[dep_index]) |
+                   dlaf::internal::transform(policy_hp, cont_sweep) | ex::make_future();
     }
 
     // Shrink the dependency vector to only include the futures generated in this sweep.

@@ -41,6 +41,9 @@
 namespace {
 
 using pika::unwrapping;
+using pika::execution::experimental::keep_future;
+using pika::execution::experimental::start_detached;
+using pika::execution::experimental::when_all;
 
 using dlaf::Device;
 using dlaf::Coord;
@@ -59,6 +62,7 @@ using dlaf::matrix::MatrixMirror;
 using dlaf::common::Ordering;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
+using dlaf::internal::transformDetach;
 
 /// Check Cholesky Factorization results
 ///
@@ -233,8 +237,8 @@ void setUpperToZeroForDiagonalTiles(Matrix<T, Device::CPU>& matrix) {
                       tile.ptr({0, 1}), tile.ld());
     };
 
-    dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(tile_set),
-                                    matrix.readwrite_sender(diag_tile));
+    matrix.readwrite_sender(diag_tile) |
+        transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(tile_set));
   }
 }
 
@@ -330,12 +334,10 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
         const LocalTileIndex tile_wrt_local{i_loc, j_loc};
 
         dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, T(1.0),
-                                    L.read_sender(tile_wrt_local),
-                                    pika::execution::experimental::keep_future(tile_to_transpose),
+                                    L.read_sender(tile_wrt_local), keep_future(tile_to_transpose),
                                     j_loc == 0 ? T(0.0) : T(1.0),
                                     partial_result.readwrite_sender(LocalTileIndex{i_loc, 0})) |
-            dlaf::tile::gemm(dlaf::internal::Policy<dlaf::Backend::MC>()) |
-            pika::execution::experimental::start_detached();
+            dlaf::tile::gemm(dlaf::internal::Policy<dlaf::Backend::MC>()) | start_detached();
       }
     }
 
@@ -358,11 +360,8 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
       // here the owner of the result performs the last step (difference with original)
 
       if (owner_result == current_rank) {
-        dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), tile_abs_diff,
-                                        pika::execution::experimental::when_all(A.readwrite_sender(
-                                                                                    tile_result),
-                                                                                mul_result.read_sender(
-                                                                                    tile_result)));
+        when_all(A.readwrite_sender(tile_result), mul_result.read_sender(tile_result)) |
+            transformDetach(dlaf::internal::Policy<Backend::MC>(), tile_abs_diff);
       }
     }
   }

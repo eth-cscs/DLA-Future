@@ -20,10 +20,7 @@
 
 #include "dlaf/common/callable_object.h"
 #include "dlaf/eigensolver/tridiag_solver/api.h"
-#include "dlaf/eigensolver/tridiag_solver/gemm.h"
-#include "dlaf/eigensolver/tridiag_solver/index.h"
 #include "dlaf/eigensolver/tridiag_solver/merge.h"
-#include "dlaf/eigensolver/tridiag_solver/permutations.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/sender/make_sender_algorithm_overloads.h"
@@ -210,6 +207,8 @@ template <class T>
 void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& mat_trd,
                                                       Matrix<T, Device::CPU>& d,
                                                       Matrix<T, Device::CPU>& mat_ev) {
+  matrix::util::set(mat_ev, [](auto) { return 0; });
+
   // Cuppen's decomposition
   std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(mat_trd);
 

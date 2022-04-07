@@ -17,13 +17,18 @@
 #include <pika/unwrap.hpp>
 #include "dlaf/eigensolver/tridiag_solver/index.h"
 
+#include "dlaf/eigensolver/tridiag_solver/gemm.h"
+#include "dlaf/eigensolver/tridiag_solver/index.h"
+#include "dlaf/eigensolver/tridiag_solver/permutations.h"
 #include "dlaf/lapack/tile.h"
+#include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/sender/make_sender_algorithm_overloads.h"
 #include "dlaf/sender/policy.h"
 #include "dlaf/sender/transform.h"
 #include "dlaf/types.h"
+#include "dlaf/util_matrix.h"
 
 namespace dlaf::eigensolver::internal {
 
@@ -85,7 +90,8 @@ struct WorkSpace {
   //   │            │    │
   //   └────────────┴────┘
   //
-  Matrix<T, Device::CPU> mat;
+  Matrix<T, Device::CPU> mat_q;
+  Matrix<T, Device::CPU> mat_u;
 
   // Holds the values of the deflated diagonal sorted in ascending order
   Matrix<T, Device::CPU> dtmp;
@@ -127,15 +133,19 @@ template <class T>
 WorkSpace<T> initWorkSpace(const matrix::Distribution& ev_distr) {
   LocalElementSize vec_size(ev_distr.size().rows(), 1);
   TileElementSize vec_tile_size(ev_distr.blockSize().rows(), 1);
-  return WorkSpace<T>{Matrix<T, Device::CPU>(ev_distr),
-                      Matrix<T, Device::CPU>(vec_size, vec_tile_size),
-                      Matrix<T, Device::CPU>(vec_size, vec_tile_size),
-                      Matrix<T, Device::CPU>(vec_size, vec_tile_size),
-                      Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
-                      Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
-                      Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
-                      Matrix<ColType, Device::CPU>(vec_size, vec_tile_size),
-                      Matrix<ColType, Device::CPU>(vec_size, vec_tile_size)};
+  WorkSpace<T> ws{Matrix<T, Device::CPU>(ev_distr),
+                  Matrix<T, Device::CPU>(ev_distr),
+                  Matrix<T, Device::CPU>(vec_size, vec_tile_size),
+                  Matrix<T, Device::CPU>(vec_size, vec_tile_size),
+                  Matrix<T, Device::CPU>(vec_size, vec_tile_size),
+                  Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
+                  Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
+                  Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
+                  Matrix<ColType, Device::CPU>(vec_size, vec_tile_size),
+                  Matrix<ColType, Device::CPU>(vec_size, vec_tile_size)};
+  matrix::util::set(ws.mat_q, [](auto) { return 0; });
+  matrix::util::set(ws.mat_u, [](auto) { return 0; });
+  return ws;
 }
 
 // Calculates the problem size in the tile range [i_begin, i_end]
@@ -668,99 +678,96 @@ void solveRank1Problem(SizeType i_begin, SizeType i_end, pika::shared_future<Siz
                  tc.readVec(z_defl), tc.readwriteVec(d), tc.readwriteVec(mat));
 }
 
-// // Inverts `perm_q`
-// // Initializes `perm_u`
-// inline void setPermutationsU(
-//     SizeType n, std::vector<pika::shared_future<matrix::Tile<const SizeType, Device::CPU>>> perm_d,
-//     std::vector<pika::future<matrix::Tile<SizeType, Device::CPU>>> perm_q,
-//     std::vector<pika::future<matrix::Tile<SizeType, Device::CPU>>> perm_u) {
-//   TileElementIndex zero(0, 0);
-//   const SizeType* d_ptr = perm_d[0].get().ptr(zero);
-//   SizeType* q_ptr = perm_q[0].get().ptr(zero);
-//   SizeType* u_ptr = perm_u[0].get().ptr(zero);
-//
-//   // Invert `perm_q` into `perm_u` temporarily
-//   for (SizeType i = 0; i < n; ++i) {
-//     u_ptr[q_ptr[i]] = i;
-//   }
-//
-//   // Copy `perm_u` to `perm_q` to save the inverted index back into `perm_q`
-//   for (SizeType i = 0; i < n; ++i) {
-//     q_ptr[i] = u_ptr[i];
-//   }
-//
-//   // Index map from sorted incices to matrix-multiplication index
-//   for (SizeType i = 0; i < n; ++i) {
-//     u_ptr[i] = q_ptr[d_ptr[i]];
-//   }
-// }
+template <class T>
+void permutateQ(SizeType i_begin, SizeType i_split, SizeType i_end,
+                pika::future<ColTypeLens> ct_lens_fut, Matrix<const SizeType, Device::CPU>& index,
+                Matrix<T, Device::CPU>& mat_ev, Matrix<T, Device::CPU>& mat_q) {
+  SizeType n = problemSize(i_begin, i_end, mat_ev.distribution());
+  SizeType n1 = problemSize(i_begin, i_split, mat_ev.distribution());
+  SizeType nb = mat_ev.distribution().blockSize().rows();
 
-// Applies the permutation index `perm_tiles` to tiles from `Q` and saves the result in a workspace
-// matrix `mat_q`.
-//
-// `in_tiles` and `out_tiles` are in column-major order
-//
-// Note: this is currently not parallelized
-// template <class T>
-// void applyPermutationIndexToMatrixQ(
-//    SizeType i_begin, SizeType i_end,
-//    std::vector<pika::shared_future<matrix::Tile<const SizeType, Device::CPU>>> perm_tiles,
-//    const matrix::Distribution& distr,
-//    std::vector<pika::shared_future<matrix::Tile<const T, Device::CPU>>> in_tiles,
-//    std::vector<pika::future<matrix::Tile<T, Device::CPU>>> out_tiles) {
-//  SizeType ncol_tiles = i_end - i_begin + 1;
-//
-//  // Iterate over columns of `in_tiles` and use the permutation index `perm_tiles` to copy columns from
-//  for (SizeType j_out_tile = i_begin; j_out_tile <= i_end; ++j_out_tile) {
-//    // Get the indices of permutations correspo
-//    const auto& perm_tile = perm_tiles[to_sizet(j_out_tile)].get();
-//    for (SizeType i_out_tile = i_begin; i_out_tile <= i_end; ++i_out_tile) {
-//      auto out_tile = out_tiles[to_sizet(i_out_tile + j_out_tile * ncol_tiles)].get();
-//      TileElementSize sz_out_tile = out_tile.size();
-//
-//      // Iterate over columns of `out_tile`
-//      for (SizeType j_out_el = 0; j_out_el < sz_out_tile.cols(); ++j_out_el) {
-//        // Get the index of the global column
-//        SizeType j_in_gl_el = perm_tile(TileElementIndex(j_out_el, 0));
-//        // Get the index of the tile that has column `gl_col`
-//        SizeType j_in_tile = distr.globalTileFromGlobalElement<Coord::Col>(j_in_gl_el);
-//        const auto& in_tile = in_tiles[to_sizet(i_out_tile + j_in_tile * ncol_tiles)].get();
-//        // Get the index of the `gl_col` column within the tile
-//        SizeType j_in_el = distr.tileElementFromGlobalElement<Coord::Col>(j_in_gl_el);
-//        // Copy a column from `in_tile` into `out_tile`
-//        for (SizeType i_out_el = 0; i_out_el < sz_out_tile.rows(); ++i_out_el) {
-//          out_tile(TileElementIndex(i_out_el, j_out_el)) = in_tile(TileElementIndex(i_out_el, j_in_el));
-//        }
-//      }
-//    }
-//  }
-//}
+  auto permutate_fn = [n, n1, nb](auto ct_lens_fut, auto index_fut_tiles, auto mat_ev_fut_tiles,
+                                  auto mat_q_fut_tiles) {
+    ColTypeLens ct_lens = ct_lens_fut.get();
+    TileElementIndex zero(0, 0);
+    const SizeType* i_ptr = index_fut_tiles[0].get().ptr(zero);
 
-// `mat_[q,u,ev]_tiles` are in column-major order with leading dimension `ncol_tiles`.
+    auto mat_ev_tiles = pika::unwrap(mat_ev_fut_tiles);
+    auto mat_q_tiles = pika::unwrap(mat_q_fut_tiles);
+
+    matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
+
+    // Q1'
+    applyPermutations<T, Coord::Col>(GlobalElementIndex(0, 0),
+                                     GlobalElementSize(n1, ct_lens.num_uphalf + ct_lens.num_dense), 0,
+                                     distr, i_ptr, mat_ev_tiles, mat_q_tiles);
+
+    // Q2'
+    applyPermutations<T, Coord::Col>(GlobalElementIndex(n1, 0),
+                                     GlobalElementSize(n - n1, ct_lens.num_dense + ct_lens.num_lowhalf),
+                                     n1, distr, i_ptr + ct_lens.num_uphalf, mat_ev_tiles, mat_q_tiles);
+
+    // Deflated
+    applyPermutations<T, Coord::Col>(GlobalElementIndex(0, n - ct_lens.num_deflated),
+                                     GlobalElementSize(n, ct_lens.num_deflated), 0, distr,
+                                     i_ptr + n - ct_lens.num_deflated, mat_ev_tiles, mat_q_tiles);
+  };
+
+  TileCollector tc{i_begin, i_end};
+  pika::dataflow(std::move(permutate_fn), std::move(ct_lens_fut), tc.readVec(index),
+                 tc.readwriteMat(mat_ev), tc.readwriteMat(mat_q));
+}
+
+template <class T>
+void permutateU(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k_fut,
+                Matrix<const SizeType, Device::CPU>& index, Matrix<T, Device::CPU>& mat_in,
+                Matrix<T, Device::CPU>& mat_out) {
+  SizeType n = problemSize(i_begin, i_end, mat_in.distribution());
+  SizeType nb = mat_in.distribution().blockSize().rows();
+  auto permute_fn = [n, nb](auto k_fut, auto index_tiles, auto mat_in_tiles_fut,
+                            auto mat_out_tiles_fut) {
+    SizeType k = k_fut.get();
+    TileElementIndex zero(0, 0);
+    const SizeType* i_ptr = index_tiles[0].get().ptr(zero);
+    auto mat_in_tiles = pika::unwrap(mat_in_tiles_fut);
+    auto mat_out_tiles = pika::unwrap(mat_out_tiles_fut);
+
+    matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
+
+    applyPermutations<T, Coord::Row>(GlobalElementIndex(0, 0), GlobalElementSize(k, k), 0, distr, i_ptr,
+                                     mat_in_tiles, mat_out_tiles);
+  };
+  TileCollector tc{i_begin, i_end};
+  pika::dataflow(std::move(permute_fn), std::move(k_fut), tc.readVec(index), tc.readwriteMat(mat_in),
+                 tc.readwriteMat(mat_out));
+}
+
+// Assumption: Matrices are set to zero.
 //
-// template <class T>
-// void gemmQU(SizeType i_begin, SizeType i_end, SizeType ncol_tiles, SizeType n1, SizeType n2,
-//            pika::shared_future<QLens> qlens_fut,
-//            std::vector<pika::shared_future<matrix::Tile<const T, Device::CPU>>> mat_q_tiles,
-//            std::vector<pika::shared_future<matrix::Tile<const T, Device::CPU>>> mat_u_tiles,
-//            std::vector<pika::future<matrix::Tile<T, Device::CPU>>> mat_ev_tiles) {
-//  const QLens& qlens = qlens_fut.get();
-//  SizeType l1 = qlens.num_uphalf + qlens.num_dense;
-//  SizeType l2 = qlens.num_lowhalf + qlens.num_dense;
-//
-//  // Iterate over `mat_ev` tiles in column-major order
-//  for (SizeType j = i_begin; j <= i_end; ++j) {
-//    for (SizeType i = i_begin; i <= i_end; ++i) {
-//      auto mat_ev = mat_ev_tiles[i + j * ncol_tiles].get();
-//      // Iterate over rows of `mat_q` and columns of `mat_u`
-//      for (SizeType k = i_begin; k <= i_end; ++k) {
-//        auto const& q_tile = mat_q_tiles[i + k * ncol_tiles].get();
-//        auto const& u_tile = mat_u_tiles[j + k * ncol_tiles].get();
-//        gemm(blas::Op::NoTrans, blas::Op::Trans, T(1), q_tile, u_tile, T(0), mat_ev);
-//      }
-//    }
-//  }
-//}
+template <class T>
+void gemmQU(SizeType i_begin, SizeType i_end, Matrix<const T, Device::CPU>& mat_a,
+            Matrix<const T, Device::CPU>& mat_b, Matrix<T, Device::CPU>& mat_c) {
+  // Iterate over columns of `c`
+  for (SizeType j = i_begin; j <= i_end; ++j) {
+    // Iterate over rows of `c`
+    for (SizeType i = i_begin; i <= i_end; ++i) {
+      auto tile_c = mat_c(GlobalTileIndex(i, j));
+      for (SizeType k = i_begin; k <= i_end; ++k) {
+        auto tile_a = mat_a.read(GlobalTileIndex(i, k));
+        auto tile_b = mat_b.read(GlobalTileIndex(k, j));
+
+        constexpr T alpha = 1;
+        T beta = 1;
+        if (k == 0)
+          beta = 0;
+
+        // C = alpha * A * B + beta * C
+        pika::dataflow(pika::unwrapping(tile::internal::gemm_o), blas::Op::NoTrans, blas::Op::NoTrans,
+                       alpha, std::move(tile_a), std::move(tile_b), beta, std::move(tile_c));
+      }
+    }
+  }
+}
 
 template <class T>
 void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSpace<T>& ws,
@@ -807,7 +814,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   //    i3 (out) : initial <--- deflated
   //
   // - reorder `d -> dtmp`, `z -> ztmp`, `c -> ctmp` using `i3` such that deflated entries are at the bottom.
-  // - solve the rank-1 problem and save eigenvalues in `dtmp` and eigenvectors in `ws.mat`.
+  // - solve the rank-1 problem and save eigenvalues in `dtmp` and eigenvectors in `ws.mat_u`.
   //
   pika::shared_future<SizeType> k_fut =
       stablePartitionIndexForDeflation(i_begin, i_end, ws.c, ws.i2, ws.i3);
@@ -815,7 +822,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   applyIndex(i_begin, i_end, ws.i3, ws.z, ws.ztmp);
   applyIndex(i_begin, i_end, ws.i3, ws.c, ws.ctmp);
   copyVector(i_begin, i_end, ws.dtmp, d);
-  solveRank1Problem(i_begin, i_end, k_fut, rho_fut, d, ws.ztmp, ws.dtmp, ws.mat);
+  solveRank1Problem(i_begin, i_end, k_fut, rho_fut, d, ws.ztmp, ws.dtmp, ws.mat_u);
 
   // Step #3
   //
@@ -838,27 +845,20 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   //    i2 (in)  : deflated <--- post_sorted
   //       (out) : deflated <--- matmul
   //
-  pika::shared_future<ColTypeLens> qlens_fut =
-      partitionIndexForMatrixMultiplication(i_begin, i_end, ws.ctmp, ws.i2);
+  auto ctlens_fut = partitionIndexForMatrixMultiplication(i_begin, i_end, ws.ctmp, ws.i2);
   partitionIndexForMatrixMultiplication(i_begin, i_end, ws.c, ws.i1);
 
-  // Use the permutation index `perm_q` on the columns of `mat_ev` and save the result to `mat_q`
-  // pika::dataflow(applyPermutationIndexToMatrixQ<T>, i_begin, i_end,
-  //               collectReadTiles(col_begin, col_end, ws.imatmul), mat_ev.distribution(),
-  //               collectReadTiles(ev_begin, ev_end, mat_ev),
-  //               collectReadWriteTiles(ev_begin, ev_end, ws.mat));
+  // Permutate columns of the `Q` matrix to arrane in multiplication form
+  permutateQ(i_begin, i_split, i_end, std::move(ctlens_fut), ws.i1, mat_ev, ws.mat_q);
 
-  // Invert the `perm_q` index and map sorted indices to matrix-multiplication indices in `perm_u`
-  // pika::dataflow(setPermutationsU, n, collectReadTiles(col_begin, col_end, ws.isorted),
-  //               collectReadWriteTiles(col_begin, col_end, ws.imatmul),
-  //               collectReadWriteTiles(col_begin, col_end, perm_u));
+  // Permutate rows of the `U` matrix to arrange in multiplication form
+  permutateU(i_begin, i_end, k_fut, ws.i2, ws.mat_u, mat_ev);
 
-  // GEMM `mat_q` holding Q and `mat_u` holding U^T into `mat_ev`
-  //
-  // Note: the transpose of `mat_u` is used here to recover U
-  // pika::dataflow(gemmQU<T>, qlens_fut, collectReadTiles(ev_begin, ev_end, mat_qws),
-  //               collectReadTiles(ev_begin, ev_end, mat_uws),
-  //               collectReadWriteTiles(ev_begin, ev_end, mat_ev));
+  // Matrix multiply Q' * U' to get the eigenvectors of the merged system
+  gemmQU(i_begin, i_end, ws.mat_q, mat_ev, ws.mat_u);
+
+  // Copy back into `mat_ev`
+  matrix::copy(ws.mat_u, mat_ev);
 }
 
 }

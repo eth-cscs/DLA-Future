@@ -38,10 +38,10 @@ TYPED_TEST(LacpyTestGPU, CorrectnessLocal) {
   using blas::Uplo;
 
   cudaStream_t stream;
-  DLAF_CUDA_CALL(cudaStreamCreate(&stream));
+  DLAF_CUDA_CHECK_ERROR(cudaStreamCreate(&stream));
   cublasHandle_t handle;
-  DLAF_CUBLAS_CALL(cublasCreate(&handle));
-  DLAF_CUBLAS_CALL(cublasSetStream(handle, stream));
+  DLAF_CUBLAS_CHECK_ERROR(cublasCreate(&handle));
+  DLAF_CUBLAS_CHECK_ERROR(cublasSetStream(handle, stream));
 
   auto zero = [](const TileElementIndex&) { return T(0); };
 
@@ -65,7 +65,7 @@ TYPED_TEST(LacpyTestGPU, CorrectnessLocal) {
       auto tile_dst = createTile<T, Device::GPU>(zero, {m, n}, ldb);
 
       gpulapack::lacpy(uplo, m, n, tile_src.ptr(), tile_src.ld(), tile_dst.ptr(), tile_dst.ld(), stream);
-      DLAF_CUDA_CALL(cudaStreamSynchronize(stream));
+      DLAF_CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
 
       // Verify
       SCOPED_TRACE(::testing::Message() << "Comparison test m=" << m << " n=" << n << " lda=" << lda
@@ -76,6 +76,6 @@ TYPED_TEST(LacpyTestGPU, CorrectnessLocal) {
     }
   }
 
-  DLAF_CUBLAS_CALL(cublasDestroy(handle));
-  DLAF_CUDA_CALL(cudaStreamDestroy(stream));
+  DLAF_CUBLAS_CHECK_ERROR(cublasDestroy(handle));
+  DLAF_CUDA_CHECK_ERROR(cudaStreamDestroy(stream));
 }

@@ -16,6 +16,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include <pika/execution.hpp>
 #include <pika/future.hpp>
 #include <pika/unwrap.hpp>
 
@@ -35,6 +36,10 @@ using namespace dlaf::comm;
 using namespace dlaf::test;
 using namespace testing;
 
+using pika::execution::experimental::ensure_started;
+using pika::execution::experimental::make_future;
+using pika::execution::experimental::then;
+using pika::this_thread::experimental::sync_wait;
 using pika::unwrapping;
 
 ::testing::Environment* const comm_grids_env =
@@ -1257,6 +1262,17 @@ auto createConstMatrix(const T& data) {
   return createMatrixFromColMajor<Device::CPU>({1, 1}, {1, 1}, 1, &data);
 }
 
+// Helper for waiting for guard and ensuring that is_exited_from_scope has been set
+struct WaitGuardHelper {
+  std::atomic<bool>& is_exited_from_scope;
+
+  template <typename T>
+  void operator()(T&&) {
+    try_waiting_guard(is_exited_from_scope);
+    EXPECT_TRUE(is_exited_from_scope);
+  }
+};
+
 TEST(MatrixDestructorFutures, NonConstAfterRead) {
   pika::future<void> last_task;
 
@@ -1265,14 +1281,30 @@ TEST(MatrixDestructorFutures, NonConstAfterRead) {
     auto matrix = createMatrix<TypeParam>();
 
     auto shared_future = matrix.read(LocalTileIndex(0, 0));
-    last_task = shared_future.then(pika::launch::async, [&is_exited_from_scope](auto&&) {
-      try_waiting_guard(is_exited_from_scope);
-      EXPECT_TRUE(is_exited_from_scope);
-    });
+    last_task = shared_future.then(pika::launch::async, WaitGuardHelper{is_exited_from_scope});
   }
   is_exited_from_scope = true;
 
   last_task.get();
+}
+
+TEST(MatrixDestructorFutures, NonConstAfterReadWithSenderAdaptors) {
+  namespace ex = pika::execution::experimental;
+  pika::future<void> last_task;
+
+  std::atomic<bool> is_exited_from_scope{false};
+  {
+    auto matrix = createMatrix<TypeParam>();
+
+    auto shared_future = matrix.read_sender(LocalTileIndex(0, 0));
+    last_task = shared_future |
+                dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
+                                          WaitGuardHelper{is_exited_from_scope}) |
+                make_future();
+  }
+  is_exited_from_scope = true;
+
+  sync_wait(std::move(last_task));
 }
 
 TEST(MatrixDestructorFutures, NonConstAfterReadWrite) {
@@ -1283,14 +1315,30 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWrite) {
     auto matrix = createMatrix<TypeParam>();
 
     auto future = matrix(LocalTileIndex(0, 0));
-    last_task = future.then(pika::launch::async, [&is_exited_from_scope](auto&&) {
-      try_waiting_guard(is_exited_from_scope);
-      EXPECT_TRUE(is_exited_from_scope);
-    });
+    last_task = future.then(pika::launch::async, WaitGuardHelper{is_exited_from_scope});
   }
   is_exited_from_scope = true;
 
   last_task.get();
+}
+
+TEST(MatrixDestructorFutures, NonConstAfterReadWriteWithSenderAdaptors) {
+  namespace ex = pika::execution::experimental;
+  pika::future<void> last_task;
+
+  std::atomic<bool> is_exited_from_scope{false};
+  {
+    auto matrix = createMatrix<TypeParam>();
+
+    auto future = matrix.readwrite_sender(LocalTileIndex(0, 0));
+    last_task = std::move(future) |
+                dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
+                                          WaitGuardHelper{is_exited_from_scope}) |
+                make_future();
+  }
+  is_exited_from_scope = true;
+
+  sync_wait(std::move(last_task));
 }
 
 TEST(MatrixDestructorFutures, NonConstAfterRead_UserMemory) {
@@ -1302,14 +1350,31 @@ TEST(MatrixDestructorFutures, NonConstAfterRead_UserMemory) {
     auto matrix = createMatrix<TypeParam>(data);
 
     auto shared_future = matrix.read(LocalTileIndex(0, 0));
-    last_task = shared_future.then(pika::launch::async, [&is_exited_from_scope](auto&&) {
-      try_waiting_guard(is_exited_from_scope);
-      EXPECT_TRUE(is_exited_from_scope);
-    });
+    last_task = shared_future.then(pika::launch::async, WaitGuardHelper{is_exited_from_scope});
   }
   is_exited_from_scope = true;
 
   last_task.get();
+}
+
+TEST(MatrixDestructorFutures, NonConstAfterReadWithSenderAdaptors_UserMemory) {
+  namespace ex = pika::execution::experimental;
+  pika::future<void> last_task;
+
+  std::atomic<bool> is_exited_from_scope{false};
+  {
+    TypeParam data;
+    auto matrix = createMatrix<TypeParam>(data);
+
+    auto shared_future = matrix.read_sender(LocalTileIndex(0, 0));
+    last_task = shared_future |
+                dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
+                                          WaitGuardHelper{is_exited_from_scope}) |
+                make_future();
+  }
+  is_exited_from_scope = true;
+
+  sync_wait(std::move(last_task));
 }
 
 TEST(MatrixDestructorFutures, NonConstAfterReadWrite_UserMemory) {
@@ -1321,10 +1386,7 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWrite_UserMemory) {
     auto matrix = createMatrix<TypeParam>(data);
 
     auto future = matrix(LocalTileIndex(0, 0));
-    last_task = future.then(pika::launch::async, [&is_exited_from_scope](auto&&) {
-      try_waiting_guard(is_exited_from_scope);
-      EXPECT_TRUE(is_exited_from_scope);
-    });
+    last_task = future.then(pika::launch::async, WaitGuardHelper{is_exited_from_scope});
   }
   is_exited_from_scope = true;
 
@@ -1340,14 +1402,31 @@ TEST(MatrixDestructorFutures, ConstAfterRead_UserMemory) {
     auto matrix = createConstMatrix<TypeParam>(data);
 
     auto sf = matrix.read(LocalTileIndex(0, 0));
-    last_task = sf.then(pika::launch::async, [&is_exited_from_scope](auto&&) {
-      try_waiting_guard(is_exited_from_scope);
-      EXPECT_TRUE(is_exited_from_scope);
-    });
+    last_task = sf.then(pika::launch::async, WaitGuardHelper{is_exited_from_scope});
   }
   is_exited_from_scope = true;
 
   last_task.get();
+}
+
+TEST(MatrixDestructorFutures, NonConstAfterReadWriteWithSenderAdaptors_UserMemory) {
+  namespace ex = pika::execution::experimental;
+  pika::future<void> last_task;
+
+  std::atomic<bool> is_exited_from_scope{false};
+  {
+    TypeParam data;
+    auto matrix = createMatrix<TypeParam>(data);
+
+    auto future = matrix.readwrite_sender(LocalTileIndex(0, 0));
+    last_task = std::move(future) |
+                dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
+                                          WaitGuardHelper{is_exited_from_scope}) |
+                make_future();
+  }
+  is_exited_from_scope = true;
+
+  sync_wait(std::move(last_task));
 }
 
 TEST_F(MatrixGenericTest, SyncBarrier) {
@@ -1402,6 +1481,68 @@ TEST_F(MatrixGenericTest, SyncBarrier) {
   }
 }
 
+TEST_F(MatrixGenericTest, SyncBarrierWithSenderAdaptors) {
+  namespace ex = pika::execution::experimental;
+  using TypeParam = double;
+  using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
+  using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
+
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+
+      MemoryViewT mem(layout.minMemSize());
+      MatrixT matrix = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid,
+                                                         static_cast<TypeParam*>(mem()));
+
+      const auto local_size = distribution.localNrTiles();
+      const LocalTileIndex tile_tl(0, 0);
+      const LocalTileIndex tile_br(std::max(SizeType(0), local_size.rows() - 1),
+                                   std::max(SizeType(0), local_size.cols() - 1));
+
+      const bool has_local = !local_size.isEmpty();
+
+      // Note:
+      // the guard is used to check that tasks before and after the barrier run sequentially and not
+      // in parallel.
+      // Indeed, two read calls one after the other would result in a parallel execution of their
+      // tasks, while a barrier between them must assure that they will be run sequentially.
+      std::atomic<bool> guard(false);
+
+      // start a task (if it has at least a local part...otherwise there is no tile to work on)
+      if (has_local)
+        dlaf::internal::transformDetach(
+            dlaf::internal::Policy<dlaf::Backend::MC>(),
+            [&guard](auto&&) {
+              std::this_thread::sleep_for(100ms);
+              guard = true;
+            },
+            matrix.read_sender(tile_tl));
+
+      // everyone wait on its local part...
+      // this means that it is possible to call it also on empty local matrices, they just don't
+      // have anything to wait for
+      matrix.waitLocalTiles();
+
+      // after the sync barrier, start a task on a tile (another one/the same) expecting that
+      // the previous task has been fully completed (and the future mechanism still works)
+      if (has_local) {
+        dlaf::internal::transform(
+            dlaf::internal::Policy<dlaf::Backend::MC>(), [&guard](auto&&) { EXPECT_TRUE(guard); },
+            matrix.read_sender(tile_tl)) |
+            sync_wait();
+        dlaf::internal::transform(
+            dlaf::internal::Policy<dlaf::Backend::MC>(), [&guard](auto&&) { EXPECT_TRUE(guard); },
+            matrix.read_sender(tile_br)) |
+            sync_wait();
+      }
+    }
+  }
+}
+
 struct CustomException final : public std::exception {};
 
 TEST(MatrixExceptionPropagation, RWPropagatesInRWAccess) {
@@ -1413,6 +1554,18 @@ TEST(MatrixExceptionPropagation, RWPropagatesInRWAccess) {
   EXPECT_THROW(f.get(), CustomException);
 }
 
+TEST(MatrixExceptionPropagation, RWPropagatesInRWAccessWithSenderAdaptors) {
+  namespace ex = pika::execution::experimental;
+
+  auto matrix = createMatrix<TypeParam>();
+
+  auto s = matrix.readwrite_sender(LocalTileIndex(0, 0)) |
+           then(unwrapping([](auto&&) { throw CustomException{}; })) | ensure_started();
+
+  EXPECT_THROW(sync_wait(matrix.readwrite_sender(LocalTileIndex(0, 0))), dlaf::ContinuationException);
+  EXPECT_THROW(sync_wait(std::move(s)), CustomException);
+}
+
 TEST(MatrixExceptionPropagation, RWPropagatesInReadAccess) {
   auto matrix = createMatrix<TypeParam>();
 
@@ -1422,13 +1575,36 @@ TEST(MatrixExceptionPropagation, RWPropagatesInReadAccess) {
   EXPECT_THROW(f.get(), CustomException);
 }
 
+TEST(MatrixExceptionPropagation, RWPropagatesInReadAccessWithSenderAdaptors) {
+  namespace ex = pika::execution::experimental;
+
+  auto matrix = createMatrix<TypeParam>();
+
+  auto s = matrix.readwrite_sender(LocalTileIndex(0, 0)) |
+           then(unwrapping([](auto&&) { throw CustomException{}; })) | ensure_started();
+
+  EXPECT_THROW(sync_wait(matrix.read_sender(LocalTileIndex(0, 0))).get(), dlaf::ContinuationException);
+  EXPECT_THROW(sync_wait(std::move(s)), CustomException);
+}
+
 TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInRWAccess) {
   auto matrix = createMatrix<TypeParam>();
 
-  auto f = matrix.read(LocalTileIndex(0, 0)).then(unwrapping([](auto&&) { throw CustomException{}; }));
+  auto f =
+      matrix.read(LocalTileIndex(0, 0)).then(unwrapping([](auto const&) { throw CustomException{}; }));
 
   EXPECT_NO_THROW(matrix(LocalTileIndex(0, 0)).get());
   EXPECT_THROW(f.get(), CustomException);
+}
+
+TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInRWAccessWithSenderAdaptors) {
+  auto matrix = createMatrix<TypeParam>();
+
+  auto s = matrix.read_sender(LocalTileIndex(0, 0)) |
+           then(unwrapping([](auto&&) { throw CustomException{}; })) | ensure_started();
+
+  EXPECT_NO_THROW(sync_wait(matrix.readwrite_sender(LocalTileIndex(0, 0))));
+  EXPECT_THROW(sync_wait(std::move(s)), CustomException);
 }
 
 TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInReadAccess) {
@@ -1438,4 +1614,14 @@ TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInReadAccess) {
 
   EXPECT_NO_THROW(matrix.read(LocalTileIndex(0, 0)).get());
   EXPECT_THROW(f.get(), CustomException);
+}
+
+TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInReadAccessWithSenderAdaptors) {
+  auto matrix = createMatrix<TypeParam>();
+
+  auto s = matrix.read_sender(LocalTileIndex(0, 0)) |
+           then(unwrapping([](auto&&) { throw CustomException{}; })) | ensure_started();
+
+  EXPECT_NO_THROW(sync_wait(matrix.read_sender(LocalTileIndex(0, 0))).get());
+  EXPECT_THROW(sync_wait(std::move(s)), CustomException);
 }

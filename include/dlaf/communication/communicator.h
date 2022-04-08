@@ -69,7 +69,7 @@ public:
   /// For more details see MPI_Comm_dup documentation.
   Communicator clone() const noexcept {
     MPI_Comm comm_clone;
-    DLAF_MPI_CALL(MPI_Comm_dup(*this, &comm_clone));
+    DLAF_MPI_CHECK_ERROR(MPI_Comm_dup(*this, &comm_clone));
     return Communicator(comm_clone, managed{});
   }
 

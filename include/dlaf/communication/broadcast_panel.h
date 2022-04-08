@@ -53,9 +53,6 @@ template <class T, Device device, Coord axis, class = std::enable_if_t<!std::is_
 void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
                matrix::Panel<axis, T, device>& panel,
                common::Pipeline<comm::Communicator>& serial_comm) {
-  using pika::dataflow;
-  using pika::unwrapping;
-
   constexpr auto comm_coord = axis;
 
   // do not schedule communication tasks if there is no reason to do so...
@@ -106,9 +103,6 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
                matrix::Panel<axis, T, device>& panel, matrix::Panel<orthogonal(axis), T, device>& panelT,
                common::Pipeline<comm::Communicator>& row_task_chain,
                common::Pipeline<comm::Communicator>& col_task_chain) {
-  using pika::dataflow;
-  using pika::unwrapping;
-
   constexpr Coord axisT = orthogonal(axis);
 
   constexpr Coord coord = std::decay_t<decltype(panel)>::coord;

@@ -124,7 +124,7 @@ struct reductionToBandMiniapp {
 
         // wait all setup tasks before starting benchmark
         matrix_host.waitLocalTiles();
-        DLAF_MPI_CALL(MPI_Barrier(world));
+        DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         dlaf::common::Timer<> timeit;
         auto taus = [&]() {
@@ -136,7 +136,7 @@ struct reductionToBandMiniapp {
 
         // wait and barrier for all ranks
         matrix.waitLocalTiles();
-        DLAF_MPI_CALL(MPI_Barrier(world));
+        DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         elapsed_time = timeit.elapsed();
       }

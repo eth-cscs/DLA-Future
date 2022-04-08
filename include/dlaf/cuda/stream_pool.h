@@ -44,20 +44,20 @@ struct StreamPoolImpl {
       : device_(device), num_streams_per_worker_thread_(num_streams_per_worker_thread),
         streams_(num_worker_threads_ * num_streams_per_worker_thread),
         current_stream_idxs_(num_worker_threads_, {std::size_t(0)}) {
-    DLAF_CUDA_CALL(cudaSetDevice(device));
+    DLAF_CUDA_CHECK_ERROR(cudaSetDevice(device));
 
     // We map pika::threads::thread_priority::high to the highest CUDA stream
     // priority, and the rest to the lowest. Typically CUDA streams will only
     // have two priorities.
     int least_priority, greatest_priority;
-    DLAF_CUDA_CALL(cudaDeviceGetStreamPriorityRange(&least_priority, &greatest_priority));
+    DLAF_CUDA_CHECK_ERROR(cudaDeviceGetStreamPriorityRange(&least_priority, &greatest_priority));
     int stream_priority = least_priority;
     if (pika_thread_priority == pika::threads::thread_priority::high) {
       stream_priority = greatest_priority;
     }
 
     for (auto& s : streams_) {
-      DLAF_CUDA_CALL(cudaStreamCreateWithPriority(&s, cudaStreamNonBlocking, stream_priority));
+      DLAF_CUDA_CHECK_ERROR(cudaStreamCreateWithPriority(&s, cudaStreamNonBlocking, stream_priority));
     }
   }
 
@@ -68,7 +68,7 @@ struct StreamPoolImpl {
 
   ~StreamPoolImpl() {
     for (auto& s : streams_) {
-      DLAF_CUDA_CALL(cudaStreamDestroy(s));
+      DLAF_CUDA_CHECK_ERROR(cudaStreamDestroy(s));
     }
   }
 
@@ -81,7 +81,7 @@ struct StreamPoolImpl {
     //
     // [1]: https://docs.nvidia.com/cuda/cublas/index.html#cublascreate
     // [2]: CUDA Runtime API, section 5.1 Device Management
-    DLAF_CUDA_CALL(cudaSetDevice(device_));
+    DLAF_CUDA_CHECK_ERROR(cudaSetDevice(device_));
     const std::size_t worker_thread_num = pika::get_worker_thread_num();
     DLAF_ASSERT(worker_thread_num != std::size_t(-1), worker_thread_num);
     std::size_t stream_idx =

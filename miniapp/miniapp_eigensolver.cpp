@@ -111,7 +111,7 @@ struct EigensolverMiniapp {
 
         // Wait for matrix to be copied to GPU (if necessary)
         matrix.get().waitLocalTiles();
-        DLAF_MPI_CALL(MPI_Barrier(world));
+        DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         dlaf::common::Timer<> timeit;
         auto [eigenvalues, eigenvectors] =
@@ -119,7 +119,7 @@ struct EigensolverMiniapp {
 
         // wait and barrier for all ranks
         eigenvectors.waitLocalTiles();
-        DLAF_MPI_CALL(MPI_Barrier(world));
+        DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
         elapsed_time = timeit.elapsed();
       }
 

@@ -14,6 +14,7 @@
 #include <ostream>
 #include <type_traits>
 
+#include <pika/execution.hpp>
 #include <pika/functional.hpp>
 #include <pika/future.hpp>
 #include <pika/tuple.hpp>
@@ -22,6 +23,7 @@
 #include "dlaf/common/data_descriptor.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/memory/memory_view.h"
+#include "dlaf/sender/when_all_lift.h"
 #include "dlaf/types.h"
 #include "dlaf/util_math.h"
 
@@ -362,12 +364,18 @@ namespace internal {
 template <class T, Device D>
 pika::future<Tile<T, D>> createSubTile(const pika::shared_future<Tile<T, D>>& tile,
                                        const SubTileSpec& spec) {
-  return pika::dataflow(
-      pika::launch::sync, [](auto tile, auto spec) { return Tile<T, D>(tile, spec); }, tile, spec);
+  namespace ex = pika::execution::experimental;
+  auto f = [](pika::shared_future<Tile<T, D>>&& tile, SubTileSpec&& spec) {
+    return Tile<T, D>(std::move(tile), std::move(spec));
+  };
+  return dlaf::internal::whenAllLift(ex::keep_future(tile), spec) | ex::then(std::move(f)) |
+         ex::make_future();
 }
 
 template <class T, Device D>
 pika::shared_future<Tile<T, D>> splitTileInsertFutureInChain(pika::future<Tile<T, D>>& tile) {
+  namespace ex = pika::execution::experimental;
+
   // Insert a Tile in the tile dependency chains. 3 different cases are supported:
   // 1)  F1(P2)  F2(P3) ...      =>  F1(PN)  FN(P2)  F2(P3) ...
   // 2)  F1(SF(P2))  F2(P3) ...  =>  F1(PN)  FN(SF(P2))  F2(P3) ...
@@ -384,7 +392,7 @@ pika::shared_future<Tile<T, D>> splitTileInsertFutureInChain(pika::future<Tile<T
   PromiseType p;
   auto tmp_tile = p.get_future();
   // 2. Break the dependency chain inserting PN and storing P2 or SF(P2):  F1(PN)  FN()  F2(P3)
-  auto swap_promise = [promise = std::move(p)](auto tile) mutable {
+  auto swap_promise = [promise = std::move(p)](TileType&& tile) mutable {
     // The dep_tracker cannot be a const Tile (can happen only for const Tiles).
     DLAF_ASSERT_HEAVY((!std::holds_alternative<pika::shared_future<Tile<const T, D>>>(tile.dep_tracker_)),
                       "Internal Dependency Error");
@@ -394,10 +402,9 @@ pika::shared_future<Tile<T, D>> splitTileInsertFutureInChain(pika::future<Tile<T
 
     return pika::make_tuple(std::move(tile), std::move(dep_tracker));
   };
-  auto tmp =
-      pika::split_future(tile.then(pika::launch::sync, pika::unwrapping(std::move(swap_promise))));
   // old_tile = F1(PN) and will be used to create the subtiles
-  pika::shared_future<TileType> old_tile = std::move(pika::get<0>(tmp));
+  auto [old_tile, dep_tracker] =
+      pika::split_future(std::move(tile) | ex::then(std::move(swap_promise)) | ex::make_future());
   // 3. Set P2 or SF(P2) into FN to restore the chain:  F1(PN)  FN(*) ...
   auto set_promise_or_shfuture = [](auto tile_data, auto dep_tracker) {
     TileType tile(std::move(tile_data));
@@ -405,10 +412,10 @@ pika::shared_future<Tile<T, D>> splitTileInsertFutureInChain(pika::future<Tile<T
     return tile;
   };
   // tile = FN(*) (out argument) can be used to access the full tile after the subtiles tasks completed.
-  tile = pika::dataflow(pika::launch::sync, pika::unwrapping(set_promise_or_shfuture), tmp_tile,
-                        std::move(pika::get<1>(tmp)));
+  tile = ex::when_all(std::move(tmp_tile), std::move(dep_tracker)) |
+         ex::then(std::move(set_promise_or_shfuture)) | ex::make_future();
 
-  return old_tile;
+  return std::move(old_tile);
 }
 }
 

@@ -114,8 +114,8 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, co
           continue;
 
         const GlobalTileIndex ij_tile = dist.globalTileIndex(ij);
-        pika::dataflow(pika::unwrapping(computeTaus<T>), b, k,
-                       splitTile(mat_hh(ij_tile), {sub_origin, sub_size}));
+        dlaf::internal::transformLiftDetach(dlaf::internal::Policy<dlaf::Backend::MC>(), computeTaus<T>,
+                                            b, k, splitTile(mat_hh(ij_tile), {sub_origin, sub_size}));
       }
     }
 

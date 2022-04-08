@@ -110,7 +110,7 @@ struct triangularSolverMiniapp {
     auto sync_barrier = [&]() {
       a.get().waitLocalTiles();
       b.get().waitLocalTiles();
-      DLAF_MPI_CALL(MPI_Barrier(world));
+      DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
     };
 
     const auto side = opts.side;

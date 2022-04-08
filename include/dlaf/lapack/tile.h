@@ -31,7 +31,6 @@
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/sender/make_sender_algorithm_overloads.h"
-#include "dlaf/sender/partial_transform.h"
 #include "dlaf/sender/policy.h"
 #include "dlaf/sender/transform.h"
 #include "dlaf/types.h"
@@ -339,17 +338,17 @@ namespace internal {
   template <typename T>                \
   struct Cusolver##Name
 
-#define DLAF_DEFINE_CUSOLVER_OP_BUFFER(Name, Type, f)                              \
-  template <>                                                                      \
-  struct Cusolver##Name<Type> {                                                    \
-    template <typename... Args>                                                    \
-    static void call(Args&&... args) {                                             \
-      DLAF_CUSOLVER_CALL(cusolverDn##f(std::forward<Args>(args)...));              \
-    }                                                                              \
-    template <typename... Args>                                                    \
-    static void callBufferSize(Args&&... args) {                                   \
-      DLAF_CUSOLVER_CALL(cusolverDn##f##_bufferSize(std::forward<Args>(args)...)); \
-    }                                                                              \
+#define DLAF_DEFINE_CUSOLVER_OP_BUFFER(Name, Type, f)                                     \
+  template <>                                                                             \
+  struct Cusolver##Name<Type> {                                                           \
+    template <typename... Args>                                                           \
+    static void call(Args&&... args) {                                                    \
+      DLAF_CUSOLVER_CHECK_ERROR(cusolverDn##f(std::forward<Args>(args)...));              \
+    }                                                                                     \
+    template <typename... Args>                                                           \
+    static void callBufferSize(Args&&... args) {                                          \
+      DLAF_CUSOLVER_CHECK_ERROR(cusolverDn##f##_bufferSize(std::forward<Args>(args)...)); \
+    }                                                                                     \
   }
 
 DLAF_DECLARE_CUSOLVER_OP(Hegst);
@@ -385,11 +384,11 @@ public:
 template <class F, class T>
 void assertExtendInfo(F assertFunc, cusolverDnHandle_t handle, CusolverInfo<T>&& info) {
   cudaStream_t stream;
-  DLAF_CUSOLVER_CALL(cusolverDnGetStream(handle, &stream));
+  DLAF_CUSOLVER_CHECK_ERROR(cusolverDnGetStream(handle, &stream));
   assertFunc(stream, info.info());
   // Extend info scope to the end of the kernel execution
-  pika::cuda::experimental::detail::get_future_with_event(stream)  //
-      .then(pika::launch::sync, [info = std::move(info)](pika::future<void>&&) {});
+  auto extend_info = [info = std::move(info)](cudaError_t status) { DLAF_CUDA_CHECK_ERROR(status); };
+  pika::cuda::experimental::detail::add_event_callback(std::move(extend_info), stream);
 }
 }
 
@@ -418,9 +417,9 @@ void laset(const blas::Uplo uplo, T alpha, T beta, const Tile<T, Device::GPU>& t
 
 template <class T>
 void set0(const Tile<T, Device::GPU>& tile, cudaStream_t stream) {
-  DLAF_CUDA_CALL(cudaMemset2DAsync(tile.ptr(), sizeof(T) * to_sizet(tile.ld()), 0,
-                                   sizeof(T) * to_sizet(tile.size().rows()),
-                                   to_sizet(tile.size().cols()), stream));
+  DLAF_CUDA_CHECK_ERROR(cudaMemset2DAsync(tile.ptr(), sizeof(T) * to_sizet(tile.ld()), 0,
+                                          sizeof(T) * to_sizet(tile.size().rows()),
+                                          to_sizet(tile.size().cols()), stream));
 }
 
 template <class T>

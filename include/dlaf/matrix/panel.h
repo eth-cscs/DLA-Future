@@ -92,11 +92,13 @@ struct Panel<axis, const T, D> {
 
 #if defined DLAF_ASSERT_MODERATE_ENABLE
     {
+      namespace ex = pika::execution::experimental;
+
       const auto panel_tile_size = tileSize(index);
-      new_tile_fut.then(pika::launch::sync, pika::unwrapping([panel_tile_size](const auto& tile) {
-                          DLAF_ASSERT_MODERATE(panel_tile_size == tile.size(), panel_tile_size,
-                                               tile.size());
-                        }));
+      auto assert_tile_size = pika::unwrapping([panel_tile_size](ConstTileType const& tile) {
+        DLAF_ASSERT_MODERATE(panel_tile_size == tile.size(), panel_tile_size, tile.size());
+      });
+      ex::keep_future(new_tile_fut) | ex::then(std::move(assert_tile_size)) | ex::start_detached();
     }
 #endif
 

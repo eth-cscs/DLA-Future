@@ -251,7 +251,7 @@ private:
 #ifdef DLAF_WITH_CUDA
   bool isAccessibleFromGPU() const {
     cudaPointerAttributes attrs;
-    DLAF_CUDA_CALL(cudaPointerGetAttributes(&attrs, mem_()));
+    DLAF_CUDA_CHECK_ERROR(cudaPointerGetAttributes(&attrs, mem_()));
     return cudaMemoryTypeUnregistered != attrs.type;
   }
 #endif
@@ -360,12 +360,9 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   using common::PromiseGuard;
   using util::ceilDiv;
 
-  using pika::unwrapping;
   using pika::resource::get_num_threads;
 
   namespace ex = pika::execution::experimental;
-
-  auto executor_hp = dlaf::getHpExecutor<Backend::MC>();
 
   // note: A is square and has square blocksize
   const SizeType size = mat_a.size().cols();
@@ -403,7 +400,6 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
       for (int i = 0; i < nb / b - 1; ++i) {
         deps.push_back(sf);
       }
-
       sf = ex::make_future(
           copy_offdiag(k * nb,
                        ex::when_all(ex::keep_future(sf), mat_a.read_sender(GlobalTileIndex{k + 1, k}))));
@@ -432,7 +428,8 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   };
   auto cont_sweep = [a_ws](PromiseGuard<SweepWorker<T>>&& worker) { worker.ref().doStep(*a_ws); };
 
-  auto copy_tridiag = [executor_hp, a_ws, &mat_trid](SizeType sweep, pika::shared_future<void> dep) {
+  auto policy_hp = dlaf::internal::Policy<Backend::MC>(pika::threads::thread_priority::high);
+  auto copy_tridiag = [policy_hp, a_ws, &mat_trid](SizeType sweep, auto&& dep) {
     auto copy_tridiag_task = [a_ws](SizeType start, SizeType n_d, SizeType n_e, auto tile_t) {
       auto inc = a_ws->ld() + 1;
       if (isComplex_v<T>)
@@ -448,8 +445,10 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     if (sweep % nb == nb - 1 || sweep == size - 1) {
       const auto tile_index = sweep / nb;
       const auto start = tile_index * nb;
-      pika::dataflow(executor_hp, unwrapping(copy_tridiag_task), start, std::min(nb, size - start),
-                     std::min(nb, size - 1 - start), mat_trid(GlobalTileIndex{0, tile_index}), dep);
+      dlaf::internal::whenAllLift(start, std::min(nb, size - start), std::min(nb, size - 1 - start),
+                                  mat_trid.readwrite_sender(GlobalTileIndex{0, tile_index}),
+                                  std::forward<decltype(dep)>(dep)) |
+          dlaf::internal::transformDetach(policy_hp, copy_tridiag_task);
     }
   };
 
@@ -458,8 +457,9 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     // Create the first max_workers workers and then reuse them.
     auto& w_pipeline = workers[sweep % max_workers];
 
-    auto dep = pika::dataflow(executor_hp, unwrapping(init_sweep), sweep, w_pipeline(), deps[0]).share();
-    copy_tridiag(sweep, dep);
+    auto dep = dlaf::internal::whenAllLift(sweep, w_pipeline(), deps[0]) |
+               dlaf::internal::transform(policy_hp, init_sweep) | ex::make_future();
+    copy_tridiag(sweep, std::move(dep));
 
     const auto steps = nrStepsForSweep(sweep, size, b);
     for (SizeType step = 0; step < steps; ++step) {
@@ -467,9 +467,11 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
 
       const GlobalElementIndex index_v((sweep / b + step) * b, sweep);
 
-      pika::dataflow(pika::launch::sync, unwrapping(store_tau_v), w_pipeline(),
-                     mat_v(dist_v.globalTileIndex(index_v)), dist_v.tileElementIndex(index_v));
-      deps[step] = pika::dataflow(executor_hp, unwrapping(cont_sweep), w_pipeline(), deps[dep_index]);
+      dlaf::internal::whenAllLift(w_pipeline(), mat_v.readwrite_sender(dist_v.globalTileIndex(index_v)),
+                                  dist_v.tileElementIndex(index_v)) |
+          ex::then(store_tau_v) | ex::start_detached();
+      deps[step] = dlaf::internal::whenAllLift(w_pipeline(), deps[dep_index]) |
+                   dlaf::internal::transform(policy_hp, cont_sweep) | ex::make_future();
     }
 
     // Shrink the dependency vector to only include the futures generated in this sweep.

@@ -112,9 +112,9 @@ struct reductionToBandMiniapp {
 
         Matrix<T, DefaultDevice_v<backend>>& matrix = matrix_mirror.get();
 
-	// wait all setup tasks before starting benchmark
-	matrix_host.waitLocalTiles();
-	DLAF_MPI_CALL(MPI_Barrier(world));
+        // wait all setup tasks before starting benchmark
+        matrix_host.waitLocalTiles();
+        DLAF_MPI_CALL(MPI_Barrier(world));
 
         dlaf::common::Timer<> timeit;
         auto taus = [&]() {
@@ -124,9 +124,9 @@ struct reductionToBandMiniapp {
             return dlaf::eigensolver::reductionToBand<backend>(comm_grid, matrix);
         }();
 
-	// wait and barrier for all ranks
-	matrix.waitLocalTiles();
-	DLAF_MPI_CALL(MPI_Barrier(world));
+        // wait and barrier for all ranks
+        matrix.waitLocalTiles();
+        DLAF_MPI_CALL(MPI_Barrier(world));
 
         elapsed_time = timeit.elapsed();
       }

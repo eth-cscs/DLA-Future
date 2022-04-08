@@ -51,12 +51,12 @@ struct Options
       b = mb;
     DLAF_ASSERT(b > 0 && b <= mb, b, mb);
 
-    DLAF_ASSERT(do_check == dlaf::miniapp::CheckIterFreq::None,
-                "Error! At the moment result checking is not implemented. "
-                "Please rerun with --check-result=none.");
+    if (do_check != dlaf::miniapp::CheckIterFreq::None) {
+      std::cerr << "Warning! At the moment result checking it is not implemented." << std::endl;
+      do_check = dlaf::miniapp::CheckIterFreq::None;
+    }
 
-    DLAF_ASSERT(backend == dlaf::Backend::MC ||
-                    (vm["grid-rows"].as<int>() * vm["grid-cols"].as<int>()) == 1,
+    DLAF_ASSERT(backend == dlaf::Backend::MC || (grid_rows * grid_cols) == 1,
                 "Error! At the moment the GPU backend is supported just with local runs. "
                 "Please rerun with --backend=mc or with both --grid-rows and --grid-cols set to 1");
   }
@@ -79,6 +79,9 @@ struct reductionToBandMiniapp {
     using MatrixMirrorType = matrix::MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU>;
     using HostMatrixType = Matrix<T, Device::CPU>;
     using ConstMatrixType = Matrix<const T, Device::CPU>;
+
+    if (backend == dlaf::Backend::GPU && (opts.grid_rows * opts.grid_cols) != 1)
+      DLAF_UNIMPLEMENTED("Distributed reduction to band is not implemented on GPU yet.");
 
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, common::Ordering::ColumnMajor);
@@ -145,7 +148,11 @@ struct reductionToBandMiniapp {
                   << matrix_host.blockSize() << " " << opts.b << " " << comm_grid.size() << " "
                   << pika::get_os_thread_count() << " " << backend << std::endl;
 
-      // TODO (optional) run test
+      // (optional) run test
+      if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
+          opts.do_check == dlaf::miniapp::CheckIterFreq::All) {
+        DLAF_UNIMPLEMENTED("Check");
+      }
     }
   }
 };

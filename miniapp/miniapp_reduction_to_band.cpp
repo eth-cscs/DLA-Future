@@ -51,7 +51,8 @@ struct Options
 
     if (b < 0)
       b = mb;
-    DLAF_ASSERT(b > 0 && b <= mb, b, mb);
+
+    DLAF_ASSERT(b > 0 && (mb % b == 0), b, mb);
 
     if (isDistributed && mb != b) {
       std::cerr << "Warning! "

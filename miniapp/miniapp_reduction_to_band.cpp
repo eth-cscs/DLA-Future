@@ -26,6 +26,7 @@
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf/miniapp/dispatch.h"
 #include "dlaf/miniapp/options.h"
 #include "dlaf/types.h"
@@ -38,17 +39,26 @@ struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
   SizeType m;
   SizeType mb;
+  SizeType b;
 
   Options(const pika::program_options::variables_map& vm)
-      : MiniappOptions(vm), m(vm["matrix-size"].as<SizeType>()), mb(vm["block-size"].as<SizeType>()) {
+      : MiniappOptions(vm), m(vm["matrix-size"].as<SizeType>()), mb(vm["block-size"].as<SizeType>()),
+        b(vm["band-size"].as<SizeType>()) {
     DLAF_ASSERT(m > 0, m);
     DLAF_ASSERT(mb > 0, mb);
 
-    DLAF_ASSERT(do_check == dlaf::miniapp::CheckIterFreq::None,
-                "Error! At the moment result checking is not implemented. Please rerun with --check-result=none.");
+    if (b < 0)
+      b = mb;
+    DLAF_ASSERT(b > 0 && b <= mb, b, mb);
 
-    DLAF_ASSERT(backend == dlaf::Backend::MC,
-                "Error! At the moment the GPU backend is not supported. Please rerun with --backend=mc.");
+    DLAF_ASSERT(do_check == dlaf::miniapp::CheckIterFreq::None,
+                "Error! At the moment result checking is not implemented. "
+                "Please rerun with --check-result=none.");
+
+    DLAF_ASSERT(backend == dlaf::Backend::MC ||
+                    (vm["grid-rows"].as<int>() * vm["grid-cols"].as<int>()) == 1,
+                "Error! At the moment the GPU backend is supported just with local runs. "
+                "Please rerun with --backend=mc or with both --grid-rows and --grid-cols set to 1");
   }
 
   Options(Options&&) = default;
@@ -66,20 +76,21 @@ struct reductionToBandMiniapp {
     using dlaf::SizeType;
     using dlaf::comm::Communicator;
     using dlaf::comm::CommunicatorGrid;
-    using MatrixType = dlaf::Matrix<T, Device::CPU>;
-    using ConstMatrixType = dlaf::Matrix<const T, Device::CPU>;
+    using MatrixMirrorType = matrix::MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU>;
+    using HostMatrixType = Matrix<T, Device::CPU>;
+    using ConstMatrixType = Matrix<const T, Device::CPU>;
 
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, common::Ordering::ColumnMajor);
 
     // Allocate memory for the matrix
-    GlobalElementSize matrix_size(opts.m, opts.m);
-    TileElementSize block_size(opts.mb, opts.mb);
+    const GlobalElementSize matrix_size(opts.m, opts.m);
+    const TileElementSize block_size(opts.mb, opts.mb);
 
     ConstMatrixType matrix_ref = [matrix_size, block_size, comm_grid]() {
       using dlaf::matrix::util::set_random_hermitian;
 
-      MatrixType hermitian(matrix_size, block_size, comm_grid);
+      HostMatrixType hermitian(matrix_size, block_size, comm_grid);
       set_random_hermitian(hermitian);
 
       return hermitian;
@@ -89,26 +100,38 @@ struct reductionToBandMiniapp {
       if (0 == world.rank() && run_index >= 0)
         std::cout << "[" << run_index << "]" << std::endl;
 
-      MatrixType matrix(matrix_size, block_size, comm_grid);
-      copy(matrix_ref, matrix);
+      HostMatrixType matrix_host(matrix_size, block_size, comm_grid);
+      copy(matrix_ref, matrix_host);
 
-      // wait all setup tasks before starting benchmark
-      matrix.waitLocalTiles();
-      DLAF_MPI_CALL(MPI_Barrier(world));
+      double elapsed_time;
+      {
+        MatrixMirrorType matrix_mirror(matrix_host);
 
-      dlaf::common::Timer<> timeit;
-      auto taus = dlaf::eigensolver::reductionToBand<dlaf::Backend::MC>(comm_grid, matrix);
+        Matrix<T, DefaultDevice_v<backend>>& matrix = matrix_mirror.get();
 
-      // wait and barrier for all ranks
-      matrix.waitLocalTiles();
-      DLAF_MPI_CALL(MPI_Barrier(world));
+	// wait all setup tasks before starting benchmark
+	matrix_host.waitLocalTiles();
+	DLAF_MPI_CALL(MPI_Barrier(world));
 
-      auto elapsed_time = timeit.elapsed();
+        dlaf::common::Timer<> timeit;
+        auto taus = [&]() {
+          if constexpr (Backend::GPU == backend)
+            return dlaf::eigensolver::reductionToBand<backend>(matrix, opts.b);
+          else
+            return dlaf::eigensolver::reductionToBand<backend>(comm_grid, matrix);
+        }();
+
+	// wait and barrier for all ranks
+	matrix.waitLocalTiles();
+	DLAF_MPI_CALL(MPI_Barrier(world));
+
+        elapsed_time = timeit.elapsed();
+      }
 
       double gigaflops = std::numeric_limits<double>::quiet_NaN();
       {
-        double n = matrix.size().rows();
-        double b = matrix.blockSize().rows();
+        double n = matrix_host.size().rows();
+        double b = matrix_host.blockSize().rows();
         auto add_mul = 2. / 3. * n * n * n - n * n * b;
         gigaflops = dlaf::total_ops<T>(add_mul, add_mul) / elapsed_time / 1e9;
       }
@@ -118,9 +141,9 @@ struct reductionToBandMiniapp {
         std::cout << "[" << run_index << "]"
                   << " " << elapsed_time << "s"
                   << " " << gigaflops << "GFlop/s"
-                  << " " << dlaf::internal::FormatShort{opts.type} << " " << matrix.size() << " "
-                  << matrix.blockSize() << " " << comm_grid.size() << " " << pika::get_os_thread_count()
-                  << " " << backend << std::endl;
+                  << " " << dlaf::internal::FormatShort{opts.type} << " " << matrix_host.size() << " "
+                  << matrix_host.blockSize() << " " << opts.b << " " << comm_grid.size() << " "
+                  << pika::get_os_thread_count() << " " << backend << std::endl;
 
       // TODO (optional) run test
     }
@@ -153,6 +176,7 @@ int main(int argc, char** argv) {
   desc_commandline.add_options()
     ("matrix-size",  value<SizeType>()   ->default_value(4),      "Matrix rows")
     ("block-size",   value<SizeType>()   ->default_value(2),      "Block cyclic distribution size")
+    ("band-size",    value<SizeType>()   ->default_value(-1),     "Band size")
   ;
   // clang-format on
 

@@ -181,9 +181,9 @@ int main(int argc, char** argv) {
 
   // clang-format off
   desc_commandline.add_options()
-    ("matrix-size",  value<SizeType>()   ->default_value(4),      "Matrix rows")
-    ("block-size",   value<SizeType>()   ->default_value(2),      "Block cyclic distribution size")
-    ("band-size",    value<SizeType>()   ->default_value(-1),     "Band size")
+    ("matrix-size", value<SizeType>()  ->default_value(4096), "Matrix rows")
+    ("block-size",  value<SizeType>()  ->default_value(256),  "Block cyclic distribution size")
+    ("band-size",   value<SizeType>()  ->default_value(-1),   "Band size (a negative value implies band-size=block-size")
   ;
   // clang-format on
 

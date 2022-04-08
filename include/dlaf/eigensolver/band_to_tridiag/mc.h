@@ -429,7 +429,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   auto cont_sweep = [a_ws](PromiseGuard<SweepWorker<T>>&& worker) { worker.ref().doStep(*a_ws); };
 
   auto policy_hp = dlaf::internal::Policy<Backend::MC>(pika::threads::thread_priority::high);
-  auto copy_tridiag = [policy_hp, a_ws, &mat_trid](SizeType sweep, pika::shared_future<void> dep) {
+  auto copy_tridiag = [policy_hp, a_ws, &mat_trid](SizeType sweep, auto&& dep) {
     auto copy_tridiag_task = [a_ws](SizeType start, SizeType n_d, SizeType n_e, auto tile_t) {
       auto inc = a_ws->ld() + 1;
       if (isComplex_v<T>)
@@ -447,7 +447,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
       const auto start = tile_index * nb;
       dlaf::internal::whenAllLift(start, std::min(nb, size - start), std::min(nb, size - 1 - start),
                                   mat_trid.readwrite_sender(GlobalTileIndex{0, tile_index}),
-                                  std::move(dep)) |
+                                  std::forward<decltype(dep)>(dep)) |
           dlaf::internal::transformDetach(policy_hp, copy_tridiag_task);
     }
   };
@@ -457,10 +457,9 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     // Create the first max_workers workers and then reuse them.
     auto& w_pipeline = workers[sweep % max_workers];
 
-    auto dep = (dlaf::internal::whenAllLift(sweep, w_pipeline(), deps[0]) |
-                dlaf::internal::transform(policy_hp, init_sweep) | ex::make_future())
-                   .share();
-    copy_tridiag(sweep, dep);
+    auto dep = dlaf::internal::whenAllLift(sweep, w_pipeline(), deps[0]) |
+               dlaf::internal::transform(policy_hp, init_sweep) | ex::make_future();
+    copy_tridiag(sweep, std::move(dep));
 
     const auto steps = nrStepsForSweep(sweep, size, b);
     for (SizeType step = 0; step < steps; ++step) {

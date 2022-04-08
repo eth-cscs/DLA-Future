@@ -18,12 +18,13 @@
 #include <mpi.h>
 
 #include "dlaf/communication/communicator.h"
+#include "dlaf/communication/error.h"
 
 using pika::execution::experimental::just;
-using pika::execution::experimental::sync_wait;
 using pika::execution::experimental::then;
 using pika::execution::experimental::when_all;
 using pika::mpi::experimental::transform_mpi;
+using pika::this_thread::experimental::sync_wait;
 
 void test_transform_mpi() {
   auto comm = dlaf::comm::Communicator(MPI_COMM_WORLD);
@@ -41,8 +42,8 @@ void test_transform_mpi() {
   auto send = just(send_buf.data(), size, dtype, send_rank, tag, comm) | transform_mpi(MPI_Isend);
   auto recv = just(recv_buf.data(), size, dtype, recv_rank, tag, comm) | transform_mpi(MPI_Irecv);
   when_all(std::move(send), std::move(recv)) | then([](int e1, int e2) {
-    DLAF_MPI_CALL(e1);
-    DLAF_MPI_CALL(e2);
+    DLAF_MPI_CHECK_ERROR(e1);
+    DLAF_MPI_CHECK_ERROR(e2);
   }) | sync_wait();
 
   std::vector<double> expected_recv_buf(static_cast<std::size_t>(size), recv_rank);
@@ -64,7 +65,7 @@ TEST(Bcast, Polling) {
 
   when_all(just(buf.data()), pika::make_ready_future<int>(size), just(dtype, root_rank, comm),
            pika::make_ready_future<void>()) |
-      transform_mpi(MPI_Ibcast) | then([](int e) { DLAF_MPI_CALL(e); }) | sync_wait();
+      transform_mpi(MPI_Ibcast) | then([](int e) { DLAF_MPI_CHECK_ERROR(e); }) | sync_wait();
 
   std::vector<double> expected_buf(static_cast<std::size_t>(size), 4.2);
   ASSERT_TRUE(expected_buf == buf);

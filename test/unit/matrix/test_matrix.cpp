@@ -1262,6 +1262,17 @@ auto createConstMatrix(const T& data) {
   return createMatrixFromColMajor<Device::CPU>({1, 1}, {1, 1}, 1, &data);
 }
 
+// Helper for waiting for guard and ensuring that is_exited_from_scope has been set
+struct WaitGuardHelper {
+  std::atomic<bool>& is_exited_from_scope;
+
+  template <typename T>
+  void operator()(T&&) {
+    try_waiting_guard(is_exited_from_scope);
+    EXPECT_TRUE(is_exited_from_scope);
+  }
+};
+
 TEST(MatrixDestructorFutures, NonConstAfterRead) {
   pika::future<void> last_task;
 
@@ -1270,10 +1281,7 @@ TEST(MatrixDestructorFutures, NonConstAfterRead) {
     auto matrix = createMatrix<TypeParam>();
 
     auto shared_future = matrix.read(LocalTileIndex(0, 0));
-    last_task = shared_future.then(pika::launch::async, [&is_exited_from_scope](auto&&) {
-      try_waiting_guard(is_exited_from_scope);
-      EXPECT_TRUE(is_exited_from_scope);
-    });
+    last_task = shared_future.then(pika::launch::async, WaitGuardHelper{is_exited_from_scope});
   }
   is_exited_from_scope = true;
 
@@ -1289,13 +1297,9 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWithSenderAdaptors) {
     auto matrix = createMatrix<TypeParam>();
 
     auto shared_future = matrix.read_sender(LocalTileIndex(0, 0));
-    last_task = dlaf::internal::transform(
-                    dlaf::internal::Policy<dlaf::Backend::MC>(),
-                    [&is_exited_from_scope](auto&&) {
-                      try_waiting_guard(is_exited_from_scope);
-                      EXPECT_TRUE(is_exited_from_scope);
-                    },
-                    shared_future) |
+    last_task = shared_future |
+                dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
+                                          WaitGuardHelper{is_exited_from_scope}) |
                 make_future();
   }
   is_exited_from_scope = true;
@@ -1311,10 +1315,7 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWrite) {
     auto matrix = createMatrix<TypeParam>();
 
     auto future = matrix(LocalTileIndex(0, 0));
-    last_task = future.then(pika::launch::async, [&is_exited_from_scope](auto&&) {
-      try_waiting_guard(is_exited_from_scope);
-      EXPECT_TRUE(is_exited_from_scope);
-    });
+    last_task = future.then(pika::launch::async, WaitGuardHelper{is_exited_from_scope});
   }
   is_exited_from_scope = true;
 
@@ -1330,13 +1331,9 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWriteWithSenderAdaptors) {
     auto matrix = createMatrix<TypeParam>();
 
     auto future = matrix.readwrite_sender(LocalTileIndex(0, 0));
-    last_task = dlaf::internal::transform(
-                    dlaf::internal::Policy<dlaf::Backend::MC>(),
-                    [&is_exited_from_scope](auto&&) {
-                      try_waiting_guard(is_exited_from_scope);
-                      EXPECT_TRUE(is_exited_from_scope);
-                    },
-                    std::move(future)) |
+    last_task = std::move(future) |
+                dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
+                                          WaitGuardHelper{is_exited_from_scope}) |
                 make_future();
   }
   is_exited_from_scope = true;
@@ -1353,10 +1350,7 @@ TEST(MatrixDestructorFutures, NonConstAfterRead_UserMemory) {
     auto matrix = createMatrix<TypeParam>(data);
 
     auto shared_future = matrix.read(LocalTileIndex(0, 0));
-    last_task = shared_future.then(pika::launch::async, [&is_exited_from_scope](auto&&) {
-      try_waiting_guard(is_exited_from_scope);
-      EXPECT_TRUE(is_exited_from_scope);
-    });
+    last_task = shared_future.then(pika::launch::async, WaitGuardHelper{is_exited_from_scope});
   }
   is_exited_from_scope = true;
 
@@ -1373,13 +1367,9 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWithSenderAdaptors_UserMemory) {
     auto matrix = createMatrix<TypeParam>(data);
 
     auto shared_future = matrix.read_sender(LocalTileIndex(0, 0));
-    last_task = dlaf::internal::transform(
-                    dlaf::internal::Policy<dlaf::Backend::MC>(),
-                    [&is_exited_from_scope](auto&&) {
-                      try_waiting_guard(is_exited_from_scope);
-                      EXPECT_TRUE(is_exited_from_scope);
-                    },
-                    shared_future) |
+    last_task = shared_future |
+                dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
+                                          WaitGuardHelper{is_exited_from_scope}) |
                 make_future();
   }
   is_exited_from_scope = true;
@@ -1396,10 +1386,7 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWrite_UserMemory) {
     auto matrix = createMatrix<TypeParam>(data);
 
     auto future = matrix(LocalTileIndex(0, 0));
-    last_task = future.then(pika::launch::async, [&is_exited_from_scope](auto&&) {
-      try_waiting_guard(is_exited_from_scope);
-      EXPECT_TRUE(is_exited_from_scope);
-    });
+    last_task = future.then(pika::launch::async, WaitGuardHelper{is_exited_from_scope});
   }
   is_exited_from_scope = true;
 
@@ -1415,10 +1402,7 @@ TEST(MatrixDestructorFutures, ConstAfterRead_UserMemory) {
     auto matrix = createConstMatrix<TypeParam>(data);
 
     auto sf = matrix.read(LocalTileIndex(0, 0));
-    last_task = sf.then(pika::launch::async, [&is_exited_from_scope](auto&&) {
-      try_waiting_guard(is_exited_from_scope);
-      EXPECT_TRUE(is_exited_from_scope);
-    });
+    last_task = sf.then(pika::launch::async, WaitGuardHelper{is_exited_from_scope});
   }
   is_exited_from_scope = true;
 
@@ -1435,13 +1419,9 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWriteWithSenderAdaptors_UserMemor
     auto matrix = createMatrix<TypeParam>(data);
 
     auto future = matrix.readwrite_sender(LocalTileIndex(0, 0));
-    last_task = dlaf::internal::transform(
-                    dlaf::internal::Policy<dlaf::Backend::MC>(),
-                    [&is_exited_from_scope](auto&&) {
-                      try_waiting_guard(is_exited_from_scope);
-                      EXPECT_TRUE(is_exited_from_scope);
-                    },
-                    std::move(future)) |
+    last_task = std::move(future) |
+                dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
+                                          WaitGuardHelper{is_exited_from_scope}) |
                 make_future();
   }
   is_exited_from_scope = true;

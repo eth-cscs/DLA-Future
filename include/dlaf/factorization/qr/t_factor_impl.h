@@ -157,11 +157,11 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 
       if (first_row_tile == 0) {
         cudaStream_t stream;
-        DLAF_CUBLAS_CALL(cublasGetStream(handle, &stream));
+        DLAF_CUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
 
-        DLAF_CUDA_CALL(cudaMemcpy2DAsync(tile_t.ptr(), to_sizet(tile_t.ld() + 1) * sizeof(T),
-                                         taus.data(), sizeof(T), sizeof(T), to_sizet(k),
-                                         cudaMemcpyDefault, stream));
+        DLAF_CUDA_CHECK_ERROR(cudaMemcpy2DAsync(tile_t.ptr(), to_sizet(tile_t.ld() + 1) * sizeof(T),
+                                                taus.data(), sizeof(T), sizeof(T), to_sizet(k),
+                                                cudaMemcpyDefault, stream));
       }
 
       for (SizeType j = 0; j < k; ++j) {

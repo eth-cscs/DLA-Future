@@ -129,7 +129,7 @@ struct GenToStdMiniapp {
         // Wait all setup tasks and (if necessary) for matrix to be copied to GPU.
         matrix_a.get().waitLocalTiles();
         matrix_b.get().waitLocalTiles();
-        DLAF_MPI_CALL(MPI_Barrier(world));
+        DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         dlaf::common::Timer<> timeit;
         dlaf::eigensolver::genToStd<backend, DefaultDevice_v<backend>, T>(comm_grid, opts.uplo,
@@ -138,7 +138,7 @@ struct GenToStdMiniapp {
 
         // wait and barrier for all ranks
         matrix_a.get().waitLocalTiles();
-        DLAF_MPI_CALL(MPI_Barrier(world));
+        DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
         elapsed_time = timeit.elapsed();
       }
 

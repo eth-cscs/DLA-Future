@@ -135,7 +135,7 @@ struct choleskyMiniapp {
 
         // Wait for matrix to be copied to GPU (if necessary)
         matrix.get().waitLocalTiles();
-        DLAF_MPI_CALL(MPI_Barrier(world));
+        DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         dlaf::common::Timer<> timeit;
         dlaf::factorization::cholesky<backend, DefaultDevice_v<backend>, T>(comm_grid, opts.uplo,
@@ -143,7 +143,7 @@ struct choleskyMiniapp {
 
         // wait and barrier for all ranks
         matrix.get().waitLocalTiles();
-        DLAF_MPI_CALL(MPI_Barrier(world));
+        DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         elapsed_time = timeit.elapsed();
       }

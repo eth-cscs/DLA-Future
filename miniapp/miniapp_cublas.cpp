@@ -53,7 +53,7 @@ int pika_main(int argc, char* argv[]) {
     auto s2 = dlaf::internal::transform(
         dlaf::internal::Policy<dlaf::Backend::MC>(),
         [&y](cublasStatus_t s) {
-          DLAF_CUBLAS_CALL(s);
+          DLAF_CUBLAS_CHECK_ERROR(s);
 
           // Note: This doesn't lead to a race condition because this executes
           // after the `cublasDaxpy()`.

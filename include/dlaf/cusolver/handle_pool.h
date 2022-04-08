@@ -38,10 +38,10 @@ class HandlePoolImpl {
 
 public:
   HandlePoolImpl(int device) : device_(device), handles_(num_worker_threads_) {
-    DLAF_CUDA_CALL(cudaSetDevice(device_));
+    DLAF_CUDA_CHECK_ERROR(cudaSetDevice(device_));
 
     for (auto& h : handles_) {
-      DLAF_CUSOLVER_CALL(cusolverDnCreate(&h));
+      DLAF_CUSOLVER_CHECK_ERROR(cusolverDnCreate(&h));
     }
   }
 
@@ -52,14 +52,14 @@ public:
 
   ~HandlePoolImpl() {
     for (auto& h : handles_) {
-      DLAF_CUSOLVER_CALL(cusolverDnDestroy(h));
+      DLAF_CUSOLVER_CHECK_ERROR(cusolverDnDestroy(h));
     }
   }
 
   cusolverDnHandle_t getNextHandle(cudaStream_t stream) {
     cusolverDnHandle_t handle = handles_[pika::get_worker_thread_num()];
-    DLAF_CUDA_CALL(cudaSetDevice(device_));
-    DLAF_CUSOLVER_CALL(cusolverDnSetStream(handle, stream));
+    DLAF_CUDA_CHECK_ERROR(cudaSetDevice(device_));
+    DLAF_CUSOLVER_CHECK_ERROR(cusolverDnSetStream(handle, stream));
     return handle;
   }
 

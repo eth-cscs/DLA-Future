@@ -78,8 +78,8 @@ struct CopyTile<T, Device::CPU, Device::GPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_CUDA_CALL(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
-                                ld_source * sizeof(T), m * sizeof(T), n, cudaMemcpyHostToDevice));
+    DLAF_CUDA_CHECK_ERROR(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+                                       ld_source * sizeof(T), m * sizeof(T), n, cudaMemcpyHostToDevice));
   }
 
   static void call(const matrix::Tile<const T, Device::CPU>& source,
@@ -89,9 +89,9 @@ struct CopyTile<T, Device::CPU, Device::GPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_CUDA_CALL(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
-                                     ld_source * sizeof(T), m * sizeof(T), n, cudaMemcpyHostToDevice,
-                                     stream));
+    DLAF_CUDA_CHECK_ERROR(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+                                            ld_source * sizeof(T), m * sizeof(T), n,
+                                            cudaMemcpyHostToDevice, stream));
   }
 };
 
@@ -104,8 +104,8 @@ struct CopyTile<T, Device::GPU, Device::CPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_CUDA_CALL(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
-                                ld_source * sizeof(T), m * sizeof(T), n, cudaMemcpyDeviceToHost));
+    DLAF_CUDA_CHECK_ERROR(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+                                       ld_source * sizeof(T), m * sizeof(T), n, cudaMemcpyDeviceToHost));
   }
 
   static void call(const matrix::Tile<const T, Device::GPU>& source,
@@ -115,9 +115,9 @@ struct CopyTile<T, Device::GPU, Device::CPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_CUDA_CALL(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
-                                     ld_source * sizeof(T), m * sizeof(T), n, cudaMemcpyDeviceToHost,
-                                     stream));
+    DLAF_CUDA_CHECK_ERROR(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+                                            ld_source * sizeof(T), m * sizeof(T), n,
+                                            cudaMemcpyDeviceToHost, stream));
   }
 };
 
@@ -130,8 +130,9 @@ struct CopyTile<T, Device::GPU, Device::GPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_CUDA_CALL(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
-                                ld_source * sizeof(T), m * sizeof(T), n, cudaMemcpyDeviceToDevice));
+    DLAF_CUDA_CHECK_ERROR(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+                                       ld_source * sizeof(T), m * sizeof(T), n,
+                                       cudaMemcpyDeviceToDevice));
   }
 
   static void call(const matrix::Tile<const T, Device::GPU>& source,
@@ -141,9 +142,9 @@ struct CopyTile<T, Device::GPU, Device::GPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_CUDA_CALL(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
-                                     ld_source * sizeof(T), m * sizeof(T), n, cudaMemcpyDeviceToDevice,
-                                     stream));
+    DLAF_CUDA_CHECK_ERROR(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+                                            ld_source * sizeof(T), m * sizeof(T), n,
+                                            cudaMemcpyDeviceToDevice, stream));
   }
 };
 #endif

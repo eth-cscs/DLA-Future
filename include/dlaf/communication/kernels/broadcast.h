@@ -38,7 +38,7 @@ void sendBcast(const matrix::Tile<const T, D>& tile, const common::PromiseGuard<
 
   const auto& comm = pcomm.ref();
   auto msg = comm::make_message(common::make_data(tile));
-  DLAF_MPI_CALL(
+  DLAF_MPI_CHECK_ERROR(
       MPI_Ibcast(const_cast<T*>(msg.data()), msg.count(), msg.mpi_type(), comm.rank(), comm, req));
 }
 
@@ -52,7 +52,7 @@ void recvBcast(const matrix::Tile<T, D>& tile, comm::IndexT_MPI root_rank,
 #endif
 
   auto msg = comm::make_message(common::make_data(tile));
-  DLAF_MPI_CALL(MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, pcomm.ref(), req));
+  DLAF_MPI_CHECK_ERROR(MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, pcomm.ref(), req));
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(recvBcast);

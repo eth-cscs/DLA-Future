@@ -50,8 +50,9 @@ void reduceRecv(Communicator& communicator, MPI_Op reduce_op, const DataIn input
   if (buffer_in)
     common::copy(input, buffer_in);
 
-  DLAF_MPI_CALL(MPI_Reduce(message_input.data(), message_output.data(), message_input.count(),
-                           message_input.mpi_type(), reduce_op, communicator.rank(), communicator));
+  DLAF_MPI_CHECK_ERROR(MPI_Reduce(message_input.data(), message_output.data(), message_input.count(),
+                                  message_input.mpi_type(), reduce_op, communicator.rank(),
+                                  communicator));
 
   // if the output buffer has been used, copy-back output values
   if (buffer_out)
@@ -87,8 +88,9 @@ void reduceRecvInPlace(Communicator& communicator, MPI_Op reduce_op, const DataI
   if (buffer_inout)
     common::copy(inout, buffer_inout);
 
-  DLAF_MPI_CALL(MPI_Reduce(MPI_IN_PLACE, message_inout.data(), message_inout.count(),
-                           message_inout.mpi_type(), reduce_op, communicator.rank(), communicator));
+  DLAF_MPI_CHECK_ERROR(MPI_Reduce(MPI_IN_PLACE, message_inout.data(), message_inout.count(),
+                                  message_inout.mpi_type(), reduce_op, communicator.rank(),
+                                  communicator));
 
   // if the buffer has been used, copy-back output values
   if (buffer_inout)
@@ -116,8 +118,8 @@ void reduceSend(IndexT_MPI rank_root, Communicator& communicator, MPI_Op reduce_
   if (buffer_in)
     common::copy(input, buffer_in);
 
-  DLAF_MPI_CALL(MPI_Reduce(message_input.data(), nullptr, message_input.count(),
-                           message_input.mpi_type(), reduce_op, rank_root, communicator));
+  DLAF_MPI_CHECK_ERROR(MPI_Reduce(message_input.data(), nullptr, message_input.count(),
+                                  message_input.mpi_type(), reduce_op, rank_root, communicator));
 }
 
 /// MPI_Reduce wrapper (both sides).

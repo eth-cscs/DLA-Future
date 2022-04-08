@@ -63,17 +63,17 @@ struct KernelRunner<Backend::GPU> {
   KernelRunner(SizeType count, SizeType nstreams) noexcept
       : count_(count), streams_(nstreams), handles_(nstreams) {
     for (SizeType i = 0; i < nstreams; ++i) {
-      DLAF_CUDA_CALL(cudaStreamCreate(&streams_[i]));
-      DLAF_CUBLAS_CALL(cublasCreate(&handles_[i]));
-      DLAF_CUBLAS_CALL(cublasSetStream(handles_[i], streams_[i]));
+      DLAF_CUDA_CHECK_ERROR(cudaStreamCreate(&streams_[i]));
+      DLAF_CUBLAS_CHECK_ERROR(cublasCreate(&handles_[i]));
+      DLAF_CUBLAS_CHECK_ERROR(cublasSetStream(handles_[i], streams_[i]));
     }
   }
 
   ~KernelRunner() noexcept {
     for (auto& handle : handles_)
-      DLAF_CUBLAS_CALL(cublasDestroy(handle));
+      DLAF_CUBLAS_CHECK_ERROR(cublasDestroy(handle));
     for (auto& stream : streams_)
-      DLAF_CUDA_CALL(cudaStreamDestroy(stream));
+      DLAF_CUDA_CHECK_ERROR(cudaStreamDestroy(stream));
   }
 
   // @pre kernel_task should accept exactly two arguments. First argument of type SizeType,
@@ -100,7 +100,7 @@ private:
     }
 
     for (auto& stream : streams_)
-      DLAF_CUDA_CALL(cudaStreamSynchronize(stream));
+      DLAF_CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
 
     return timeit.elapsed() / count_;
   }

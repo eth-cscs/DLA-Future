@@ -251,7 +251,7 @@ private:
 #ifdef DLAF_WITH_CUDA
   bool isAccessibleFromGPU() const {
     cudaPointerAttributes attrs;
-    DLAF_CUDA_CALL(cudaPointerGetAttributes(&attrs, mem_()));
+    DLAF_CUDA_CHECK_ERROR(cudaPointerGetAttributes(&attrs, mem_()));
     return cudaMemoryTypeUnregistered != attrs.type;
   }
 #endif

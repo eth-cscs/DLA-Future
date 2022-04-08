@@ -44,6 +44,8 @@ struct Options
   Options(const pika::program_options::variables_map& vm)
       : MiniappOptions(vm), m(vm["matrix-size"].as<SizeType>()), mb(vm["block-size"].as<SizeType>()),
         b(vm["band-size"].as<SizeType>()) {
+    const bool isDistributed = (grid_rows * grid_cols) > 1;
+
     DLAF_ASSERT(m > 0, m);
     DLAF_ASSERT(mb > 0, mb);
 
@@ -51,12 +53,19 @@ struct Options
       b = mb;
     DLAF_ASSERT(b > 0 && b <= mb, b, mb);
 
+    if (isDistributed && mb != b) {
+      std::cerr << "Warning! "
+                   "At the moment distributed variant does not support band-size != block-size."
+                << std::endl;
+      b = mb;
+    }
+
     if (do_check != dlaf::miniapp::CheckIterFreq::None) {
       std::cerr << "Warning! At the moment result checking it is not implemented." << std::endl;
       do_check = dlaf::miniapp::CheckIterFreq::None;
     }
 
-    DLAF_ASSERT(backend == dlaf::Backend::MC || (grid_rows * grid_cols) == 1,
+    DLAF_ASSERT(backend == dlaf::Backend::MC || !isDistributed,
                 "Error! At the moment the GPU backend is supported just with local runs. "
                 "Please rerun with --backend=mc or with both --grid-rows and --grid-cols set to 1");
   }

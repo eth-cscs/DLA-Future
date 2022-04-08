@@ -764,8 +764,6 @@ template <class T>
 void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
                                ConstPanelT<Coord::Col, T>& x, ConstPanelT<Coord::Row, T>& vt,
                                ConstPanelT<Coord::Col, T>& v, ConstPanelT<Coord::Row, T>& xt) {
-  using pika::threads::thread_priority;
-
   static_assert(std::is_signed_v<BaseType<T>>, "alpha in computations requires to be -1");
 
   using pika::threads::thread_priority;

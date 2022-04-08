@@ -479,9 +479,9 @@ protected:
   using BaseT = Panel<axis, const T, device>;
   using BaseT::dim_;
   using BaseT::has_been_used_;
-  using BaseT::tileSize;
   using BaseT::isFirstGlobalTile;
   using BaseT::isFirstGlobalTileFull;
+  using BaseT::tileSize;
 };
 }
 }

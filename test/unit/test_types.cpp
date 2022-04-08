@@ -16,9 +16,9 @@
 
 #include "dlaf/common/source_location.h"
 
+using dlaf::integral_cast;
 using dlaf::to_signed;
 using dlaf::to_unsigned;
-using dlaf::integral_cast;
 using dlaf::common::internal::source_location;
 
 const char* ERROR_MESSAGE = "\\[ERROR\\]";

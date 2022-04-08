@@ -360,9 +360,9 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
   using pika::threads::thread_priority;
   namespace ex = pika::execution::experimental;
 
-  using matrix::Panel;
-  using common::RoundRobin;
   using common::iterate_range2d;
+  using common::RoundRobin;
+  using matrix::Panel;
   using namespace bt_tridiag;
 
   if (mat_hh.size().isEmpty() || mat_e.size().isEmpty())

@@ -60,8 +60,8 @@ DLAF_MAKE_CALLABLE_OBJECT(recvBcast);
 template <class T, Device D, template <class> class Future>
 void scheduleSendBcast(const comm::Executor& ex, Future<matrix::Tile<const T, D>> tile,
                        pika::future<common::PromiseGuard<Communicator>> pcomm) {
-  using matrix::unwrapExtendTiles;
   using internal::prepareSendTile;
+  using matrix::unwrapExtendTiles;
 
   pika::dataflow(ex, unwrapExtendTiles(sendBcast_o), prepareSendTile(std::move(tile)), std::move(pcomm));
 }
@@ -77,8 +77,8 @@ struct ScheduleRecvBcast {
     static_assert(D == Device::CPU, "With CUDA RDMA disabled, MPI accepts just CPU memory.");
 #endif
 
-    using pika::dataflow;
     using matrix::unwrapExtendTiles;
+    using pika::dataflow;
 
     return dataflow(ex, unwrapExtendTiles(recvBcast_o), std::move(tile), root_rank, std::move(pcomm));
   }

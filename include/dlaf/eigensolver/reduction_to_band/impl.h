@@ -47,8 +47,8 @@ namespace dlaf::eigensolver::internal {
 
 namespace red2band {
 using matrix::Matrix;
-using matrix::SubPanelView;
 using matrix::SubMatrixView;
+using matrix::SubPanelView;
 using matrix::Tile;
 
 template <class Type>
@@ -538,8 +538,8 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
 
   auto call(Matrix<T, Device::GPU>& mat_a, const matrix::SubPanelView& panel_view,
             const SizeType nrefls_block) {
-    using pika::threads::thread_priority;
     using dlaf::eigensolver::internal::red2band::local::computePanelReflectors;
+    using pika::threads::thread_priority;
 
     namespace ex = pika::execution::experimental;
 
@@ -809,8 +809,8 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
 template <Backend B, Device D, class T>
 common::internal::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<B, D, T>::call(
     Matrix<T, D>& mat_a, const SizeType band_size) {
-  using dlaf::matrix::Panel;
   using dlaf::matrix::Matrix;
+  using dlaf::matrix::Panel;
 
   using namespace red2band::local;
 

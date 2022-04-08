@@ -47,9 +47,9 @@ namespace internal {
 template <Backend B, typename F, typename Sender,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 [[nodiscard]] decltype(auto) transform(const Policy<B> policy, F&& f, Sender&& sender) {
+  using pika::unwrapping;
   using pika::execution::experimental::then;
   using pika::execution::experimental::transfer;
-  using pika::unwrapping;
 
   auto scheduler = getBackendScheduler<B>(policy.priority());
   auto transfer_sender = transfer(std::forward<Sender>(sender), std::move(scheduler));

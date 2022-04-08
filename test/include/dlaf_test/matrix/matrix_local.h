@@ -159,9 +159,9 @@ struct MatrixLocal : public MatrixLocal<const T> {
 protected:
   using BaseT = MatrixLocal<const T>;
   using BaseT::elementLinearIndex;
-  using BaseT::tileLinearIndex;
   using BaseT::layout_;
   using BaseT::memory_;
+  using BaseT::tileLinearIndex;
   using BaseT::tiles_;
 };
 

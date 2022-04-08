@@ -355,9 +355,9 @@ protected:
 template <Device D, class T>
 TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     const SizeType b, Matrix<const T, D>& mat_a) noexcept {
-  using common::internal::vector;
   using common::Pipeline;
   using common::PromiseGuard;
+  using common::internal::vector;
   using util::ceilDiv;
 
   using pika::resource::get_num_threads;

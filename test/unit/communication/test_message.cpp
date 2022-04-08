@@ -20,8 +20,8 @@ using namespace dlaf;
 using namespace dlaf::test;
 using namespace dlaf::comm;
 
-using dlaf::common::make_data;
 using dlaf::comm::make_message;
+using dlaf::common::make_data;
 
 template <class Type>
 class MessageTest : public ::testing::Test {};

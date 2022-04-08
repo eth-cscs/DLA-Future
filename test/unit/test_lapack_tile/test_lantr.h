@@ -25,14 +25,14 @@ namespace dlaf {
 namespace test {
 namespace lantr {
 
-using dlaf::SizeType;
-using dlaf::TileElementSize;
-using dlaf::TileElementIndex;
 using dlaf::Device;
+using dlaf::SizeType;
+using dlaf::TileElementIndex;
+using dlaf::TileElementSize;
 using dlaf::matrix::Tile;
 
-using dlaf::tile::internal::lantr;
 using dlaf::matrix::test::set;
+using dlaf::tile::internal::lantr;
 
 template <class T>
 using NormT = dlaf::BaseType<T>;

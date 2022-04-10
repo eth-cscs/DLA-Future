@@ -769,6 +769,22 @@ void gemmQU(SizeType i_begin, SizeType i_end, Matrix<const T, Device::CPU>& mat_
   }
 }
 
+template <class T, Device Source, Device Destination>
+void copySubMatrix(SizeType i_begin, SizeType i_end, Matrix<const T, Source>& source,
+                   Matrix<T, Destination>& dest) {
+  const auto& distribution = source.distribution();
+  namespace ex = pika::execution::experimental;
+
+  for (SizeType j = i_begin; j <= i_end; ++j) {
+    for (SizeType i = i_begin; i <= i_end; ++i) {
+      ex::when_all(source.read_sender(LocalTileIndex(i, j)),
+                   dest.readwrite_sender(LocalTileIndex(i, j))) |
+          copy(dlaf::internal::Policy<matrix::internal::CopyBackend_v<Source, Destination>>{}) |
+          ex::start_detached();
+    }
+  }
+}
+
 template <class T>
 void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSpace<T>& ws,
                       pika::shared_future<T> rho_fut, Matrix<T, Device::CPU>& d,
@@ -854,11 +870,13 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   // Permutate rows of the `U` matrix to arrange in multiplication form
   permutateU(i_begin, i_end, k_fut, ws.i2, ws.mat_u, mat_ev);
 
+  // TODO: set deflated diagonal entries of `U` to 1
+
   // Matrix multiply Q' * U' to get the eigenvectors of the merged system
   gemmQU(i_begin, i_end, ws.mat_q, mat_ev, ws.mat_u);
 
   // Copy back into `mat_ev`
-  matrix::copy(ws.mat_u, mat_ev);
+  copySubMatrix(i_begin, i_end, ws.mat_u, mat_ev);
 }
 
 }

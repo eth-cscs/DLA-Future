@@ -11,11 +11,7 @@
 
 #include <algorithm>
 
-#include <pika/datastructures/tuple.hpp>
 #include <pika/future.hpp>
-#include <pika/modules/iterator_support.hpp>
-#include <pika/parallel/algorithms/partition.hpp>
-#include <pika/parallel/algorithms/sort.hpp>
 #include <pika/unwrap.hpp>
 
 #include "dlaf/common/callable_object.h"

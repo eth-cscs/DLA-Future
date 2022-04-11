@@ -9,19 +9,14 @@
 //
 #pragma once
 
-#include <pika/datastructures/tuple.hpp>
+#include <pika/algorithm.hpp>
 #include <pika/future.hpp>
-#include <pika/modules/iterator_support.hpp>
-#include <pika/parallel/algorithms/merge.hpp>
-#include <pika/parallel/algorithms/partition.hpp>
 #include <pika/unwrap.hpp>
-#include "dlaf/eigensolver/tridiag_solver/index.h"
 
 #include "dlaf/eigensolver/tridiag_solver/gemm.h"
 #include "dlaf/eigensolver/tridiag_solver/index.h"
 #include "dlaf/eigensolver/tridiag_solver/permutations.h"
 #include "dlaf/lapack/tile.h"
-#include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/sender/make_sender_algorithm_overloads.h"

@@ -60,19 +60,11 @@ namespace dlaf::eigensolver::internal {
 // [3]: The subregion is defined by `begin` and `sz`
 // [4]: The output submatrix is defined by `begin_tiles`, `ld_tiles`, `distr` and `out_tiles`
 //
-// clang-format off
-template<class T, Coord coord>
-void applyPermutations(
-    GlobalElementIndex out_begin,
-    GlobalElementSize sz,
-    SizeType in_offset,
-    const matrix::Distribution& distr,
-    const SizeType* perm_arr,
-    const std::vector<matrix::Tile<T, Device::CPU>>& in_tiles,
-    std::vector<matrix::Tile<T, Device::CPU>>& out_tiles
-    ) {
-  // clang-format on
-
+template <class T, Coord coord>
+void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeType in_offset,
+                       const matrix::Distribution& distr, const SizeType* perm_arr,
+                       const std::vector<matrix::Tile<T, Device::CPU>>& in_tiles,
+                       std::vector<matrix::Tile<T, Device::CPU>>& out_tiles) {
   // Iterate over rows if `coord == Coord::Row` otherwise iterate over columns
   SizeType dim1 = sz.cols();
   SizeType dim2 = sz.rows();

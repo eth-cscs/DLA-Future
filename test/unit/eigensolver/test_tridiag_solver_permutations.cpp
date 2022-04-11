@@ -23,7 +23,7 @@ class TridiagEigensolverPermutationsTest : public ::testing::Test {};
 TYPED_TEST_SUITE(TridiagEigensolverPermutationsTest, RealMatrixElementTypes);
 
 // Initializes square input and output matices of size (n x n) and block size (nb x nb). The matrices are
-// discribed by a distribution and an array of input and output tiles respectively. Note that in contrast
+// described by a distribution and an array of input and output tiles respectively. Note that in contrast
 // to `Matrix<>`, the tiles are readily available, they are not stored in futures.
 //
 // The elements of the input matrix are as follows:
@@ -35,7 +35,7 @@ TYPED_TEST_SUITE(TridiagEigensolverPermutationsTest, RealMatrixElementTypes);
 template <class T>
 std::tuple<matrix::Distribution, std::vector<matrix::Tile<T, Device::CPU>>,
            std::vector<matrix::Tile<T, Device::CPU>>>
-setupMaticesForPermutations(SizeType n, SizeType nb) {
+setupMatricesForPermutations(SizeType n, SizeType nb) {
   using dlaf::matrix::test::createTile;
   using dlaf::matrix::test::set;
   matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
@@ -85,7 +85,7 @@ TYPED_TEST(TridiagEigensolverPermutationsTest, ApplyColumnPermutations) {
 
   SizeType n = 10;
   SizeType nb = 3;
-  auto [distr, in_tiles, out_tiles] = setupMaticesForPermutations<T>(n, nb);
+  auto [distr, in_tiles, out_tiles] = setupMatricesForPermutations<T>(n, nb);
 
   GlobalElementIndex begin(4, 4);
   GlobalElementSize sz(3, 4);
@@ -150,7 +150,7 @@ TYPED_TEST(TridiagEigensolverPermutationsTest, ApplyRowPermutations) {
 
   SizeType n = 10;
   SizeType nb = 3;
-  auto [distr, in_tiles, out_tiles] = setupMaticesForPermutations<T>(n, nb);
+  auto [distr, in_tiles, out_tiles] = setupMatricesForPermutations<T>(n, nb);
 
   GlobalElementIndex begin(7, 3);
   GlobalElementSize sz(3, 6);

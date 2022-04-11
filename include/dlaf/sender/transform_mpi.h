@@ -27,7 +27,7 @@ namespace dlaf::comm::internal {
 /// wrapper to move PromiseGuard<Communicator> into a transformMPI callables so
 /// that the guard is released on return from the callable.
 template <typename T>
-decltype(auto) movePromiseGuard(T&& t) {
+decltype(auto) movePromiseGuard(T& t) {
   if constexpr (std::is_same_v<std::decay_t<T>, dlaf::common::PromiseGuard<Communicator>>) {
     return std::move(t);
   }

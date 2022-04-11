@@ -90,8 +90,8 @@ struct WorkSpace {
   //   │            │    │
   //   └────────────┴────┘
   //
-  Matrix<T, Device::CPU> mat_q;
-  Matrix<T, Device::CPU> mat_u;
+  Matrix<T, Device::CPU> mat1;
+  Matrix<T, Device::CPU> mat2;
 
   // Holds the values of the deflated diagonal sorted in ascending order
   Matrix<T, Device::CPU> dtmp;
@@ -143,8 +143,6 @@ WorkSpace<T> initWorkSpace(const matrix::Distribution& ev_distr) {
                   Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
                   Matrix<ColType, Device::CPU>(vec_size, vec_tile_size),
                   Matrix<ColType, Device::CPU>(vec_size, vec_tile_size)};
-  matrix::util::set(ws.mat_q, [](auto) { return 0; });
-  matrix::util::set(ws.mat_u, [](auto) { return 0; });
   return ws;
 }
 
@@ -772,15 +770,59 @@ void gemmQU(SizeType i_begin, SizeType i_end, Matrix<const T, Device::CPU>& mat_
 template <class T, Device Source, Device Destination>
 void copySubMatrix(SizeType i_begin, SizeType i_end, Matrix<const T, Source>& source,
                    Matrix<T, Destination>& dest) {
-  const auto& distribution = source.distribution();
   namespace ex = pika::execution::experimental;
 
   for (SizeType j = i_begin; j <= i_end; ++j) {
     for (SizeType i = i_begin; i <= i_end; ++i) {
       ex::when_all(source.read_sender(LocalTileIndex(i, j)),
                    dest.readwrite_sender(LocalTileIndex(i, j))) |
-          copy(dlaf::internal::Policy<matrix::internal::CopyBackend_v<Source, Destination>>{}) |
+          matrix::copy(dlaf::internal::Policy<matrix::internal::CopyBackend_v<Source, Destination>>{}) |
           ex::start_detached();
+    }
+  }
+}
+
+template <class T>
+void setUnitDiag(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k_fut,
+                 Matrix<T, Device::CPU>& mat) {
+  auto diag_f = [](SizeType k, SizeType tile_begin, matrix::Tile<T, Device::CPU> tile) {
+    SizeType nb = tile.size().rows();
+    SizeType tile_offset = k - tile_begin;
+    // If all elements of the tile are before the `k` index do nothing
+    if (tile_offset > nb)
+      return;
+
+    // If all elements of the tile are after the `k` index reset the offset
+    if (tile_offset < 0)
+      tile_offset = 0;
+
+    // Set all diagonal elements of the tile to 1.
+    for (SizeType i = tile_offset; i < tile.size().rows(); ++i) {
+      tile(TileElementIndex(i, i)) = 1;
+    }
+  };
+
+  // Iterate over diagonal tiles
+  const matrix::Distribution& distr = mat.distribution();
+  for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
+    SizeType tile_begin = distr.globalElementFromGlobalTileAndTileElement<Coord::Row>(i_tile, 0) -
+                          distr.globalElementFromGlobalTileAndTileElement<Coord::Row>(i_begin, 0);
+    pika::dataflow(pika::unwrapping(std::move(diag_f)), std::move(k_fut), tile_begin,
+                   mat(GlobalTileIndex(i_tile, i_tile)));
+  }
+}
+
+// Set submatrix to zero
+template <class T>
+void resetSubMatrix(SizeType i_begin, SizeType i_end, Matrix<T, Device::CPU>& mat) {
+  using dlaf::internal::Policy;
+  using pika::execution::experimental::start_detached;
+  using pika::threads::thread_priority;
+
+  for (SizeType j = i_begin; j <= i_end; ++j) {
+    for (SizeType i = i_begin; i <= i_end; ++i) {
+      mat.readwrite_sender(GlobalTileIndex(i, j)) |
+          tile::set0(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
     }
   }
 }
@@ -830,7 +872,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   //    i3 (out) : initial <--- deflated
   //
   // - reorder `d -> dtmp`, `z -> ztmp`, `c -> ctmp` using `i3` such that deflated entries are at the bottom.
-  // - solve the rank-1 problem and save eigenvalues in `dtmp` and eigenvectors in `ws.mat_u`.
+  // - solve the rank-1 problem and save eigenvalues in `dtmp` and eigenvectors in `ws.mat1`.
   //
   pika::shared_future<SizeType> k_fut =
       stablePartitionIndexForDeflation(i_begin, i_end, ws.c, ws.i2, ws.i3);
@@ -838,7 +880,8 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   applyIndex(i_begin, i_end, ws.i3, ws.z, ws.ztmp);
   applyIndex(i_begin, i_end, ws.i3, ws.c, ws.ctmp);
   copyVector(i_begin, i_end, ws.dtmp, d);
-  solveRank1Problem(i_begin, i_end, k_fut, rho_fut, d, ws.ztmp, ws.dtmp, ws.mat_u);
+  resetSubMatrix(i_begin, i_end, ws.mat1);
+  solveRank1Problem(i_begin, i_end, k_fut, rho_fut, d, ws.ztmp, ws.dtmp, ws.mat1);
 
   // Step #3
   //
@@ -864,19 +907,21 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   auto ctlens_fut = partitionIndexForMatrixMultiplication(i_begin, i_end, ws.ctmp, ws.i2);
   partitionIndexForMatrixMultiplication(i_begin, i_end, ws.c, ws.i1);
 
-  // Permutate columns of the `Q` matrix to arrane in multiplication form
-  permutateQ(i_begin, i_split, i_end, std::move(ctlens_fut), ws.i1, mat_ev, ws.mat_q);
+  // Permutate columns of the `Q` matrix to arrange in multiplication form
+  resetSubMatrix(i_begin, i_end, ws.mat2);
+  permutateQ(i_begin, i_split, i_end, std::move(ctlens_fut), ws.i1, mat_ev, ws.mat2);
 
   // Permutate rows of the `U` matrix to arrange in multiplication form
-  permutateU(i_begin, i_end, k_fut, ws.i2, ws.mat_u, mat_ev);
+  resetSubMatrix(i_begin, i_end, mat_ev);
+  permutateU(i_begin, i_end, k_fut, ws.i2, ws.mat1, mat_ev);
 
-  // TODO: set deflated diagonal entries of `U` to 1
+  // Set deflated diagonal entries of `U` to 1
+  setUnitDiag(i_begin, i_end, k_fut, mat_ev);
 
   // Matrix multiply Q' * U' to get the eigenvectors of the merged system
-  gemmQU(i_begin, i_end, ws.mat_q, mat_ev, ws.mat_u);
+  gemmQU(i_begin, i_end, ws.mat2, mat_ev, ws.mat1);
 
   // Copy back into `mat_ev`
-  copySubMatrix(i_begin, i_end, ws.mat_u, mat_ev);
+  copySubMatrix(i_begin, i_end, ws.mat1, mat_ev);
 }
-
 }

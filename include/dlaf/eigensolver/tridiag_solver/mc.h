@@ -207,8 +207,6 @@ template <class T>
 void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& mat_trd,
                                                       Matrix<T, Device::CPU>& d,
                                                       Matrix<T, Device::CPU>& mat_ev) {
-  matrix::util::set(mat_ev, [](auto) { return 0; });
-
   // Cuppen's decomposition
   std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(mat_trd);
 

@@ -17,10 +17,10 @@
 #include <type_traits>
 #include <utility>
 
-#include <pika/async_mpi/mpi_future.hpp>
 #include <pika/execution.hpp>
 #include <pika/functional.hpp>
 #include <pika/future.hpp>
+#include <pika/mpi.hpp>
 #include <pika/mutex.hpp>
 #include <pika/tuple.hpp>
 #include <pika/type_support/unused.hpp>

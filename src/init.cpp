@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <pika/async_mpi/mpi_future.hpp>
+#include <pika/mpi.hpp>
 #include <pika/runtime.hpp>
 
 #include <dlaf/common/assert.h>

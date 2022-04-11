@@ -22,7 +22,7 @@
 #ifdef DLAF_WITH_CUDA
 #include <cusolverDn.h>
 
-#include <pika/modules/async_cuda.hpp>
+#include <pika/cuda.hpp>
 #endif
 
 #include "dlaf/common/assert.h"

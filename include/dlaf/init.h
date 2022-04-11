@@ -11,11 +11,11 @@
 
 #include <iostream>
 
-#include <pika/modules/resource_partitioner.hpp>
 #include <pika/program_options.hpp>
+#include <pika/runtime.hpp>
 
 #ifdef DLAF_WITH_CUDA
-#include <pika/modules/async_cuda.hpp>
+#include <pika/cuda.hpp>
 #endif
 
 #include <dlaf/communication/mech.h>

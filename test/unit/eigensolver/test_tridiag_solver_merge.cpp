@@ -249,3 +249,60 @@ TYPED_TEST(TridiagEigensolverMergeTest, Deflation) {
   };
   CHECK_MATRIX_EQ(expected_c_fn, c_mat_sorted);
 }
+
+// import numpy as np
+// from scipy.linalg import eigh, norm
+//
+// n = 10
+// d = np.log(4.2 + np.arange(n))
+// z = 0.42 + np.sin(np.arange(n))
+// z = z / norm(z)
+// rho = 1.5
+// defl = np.diag(d) + rho * np.outer(z, np.transpose(z))
+// eigh(defl)
+//
+TYPED_TEST(TridiagEigensolverMergeTest, SolveRank1Problem) {
+  using T = TypeParam;
+
+  SizeType n = 10;
+  SizeType nb = 3;
+
+  SizeType i_begin = 0;  // first tile
+  SizeType i_end = 3;    // last tile
+  pika::shared_future<SizeType> k_fut = pika::make_ready_future<SizeType>(n);
+  pika::shared_future<T> rho_fut = pika::make_ready_future<T>(1.5);
+  Matrix<T, Device::CPU> d_defl(LocalElementSize(n, 1), TileElementSize(nb, 1));
+  Matrix<T, Device::CPU> z_defl(LocalElementSize(n, 1), TileElementSize(nb, 1));
+
+  dlaf::matrix::util::set(d_defl, [](GlobalElementIndex i) { return std::log(4.2 + i.row()); });
+  constexpr T z_norm = 2.84813054;
+  dlaf::matrix::util::set(z_defl,
+                          [](GlobalElementIndex i) { return (0.42 + std::sin(i.row())) / z_norm; });
+
+  Matrix<T, Device::CPU> evals(LocalElementSize(n, 1), TileElementSize(nb, 1));
+  Matrix<T, Device::CPU> evecs(LocalElementSize(n, n), TileElementSize(nb, nb));
+
+  //  matrix::print(format::csv{}, "d_defl", d_defl);
+  //  matrix::print(format::csv{}, "z_defl", z_defl);
+
+  dlaf::eigensolver::internal::solveRank1Problem(i_begin, i_end, k_fut, rho_fut, d_defl, z_defl, evals,
+                                                 evecs);
+
+  evals.waitLocalTiles();
+  evecs.waitLocalTiles();
+
+  std::vector<T> expected_evals{1.44288664, 1.70781225, 1.93425131, 2.03886453, 2.11974489,
+                                2.24176809, 2.32330826, 2.44580313, 2.56317737, 3.70804892};
+  auto expected_evals_fn = [&expected_evals](GlobalElementIndex i) {
+    return expected_evals[to_sizet(i.row())];
+  };
+  CHECK_MATRIX_NEAR(expected_evals_fn, evals, 1e-6, 1e-6);
+
+  // clang-format off
+  //std::vector<T> expected_evecs{};  // TODO
+  //  clang-format on
+  // auto expected_evecs_fn = [&expected_evecs, n](GlobalElementIndex i) {
+  //   return expected_evecs[to_sizet(i.row() + n * i.col())];
+  // };
+  // CHECK_MATRIX_EQ(expected_evecs_fn, evecs);
+}

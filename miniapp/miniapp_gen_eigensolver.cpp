@@ -31,17 +31,17 @@
 #include "dlaf/types.h"
 
 namespace {
-using dlaf::Device;
 using dlaf::Backend;
 using dlaf::DefaultDevice_v;
-using dlaf::SizeType;
+using dlaf::Device;
 using dlaf::GlobalElementSize;
-using dlaf::TileElementSize;
 using dlaf::Matrix;
-using dlaf::matrix::MatrixMirror;
-using dlaf::common::Ordering;
+using dlaf::SizeType;
+using dlaf::TileElementSize;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
+using dlaf::common::Ordering;
+using dlaf::matrix::MatrixMirror;
 
 struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {

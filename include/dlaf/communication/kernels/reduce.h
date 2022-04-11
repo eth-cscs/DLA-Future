@@ -69,11 +69,11 @@ auto senderReduceRecvInPlace(const comm::Executor& ex,
 
   using namespace pika::execution::experimental;
 
-  using dlaf::matrix::Tile;
+  using dlaf::internal::getBackendScheduler;
   using dlaf::internal::Policy;
   using dlaf::internal::transform;
   using dlaf::internal::whenAllLift;
-  using dlaf::internal::getBackendScheduler;
+  using dlaf::matrix::Tile;
 
   using T = dlaf::internal::SenderElementType<Sender>;
 
@@ -109,8 +109,8 @@ auto senderReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
   // where: cCPU = contiguous CPU
 
   using namespace pika::execution::experimental;
-  using dlaf::internal::whenAllLift;
   using dlaf::internal::getBackendScheduler;
+  using dlaf::internal::whenAllLift;
 
   using T = dlaf::internal::SenderElementType<Sender>;
 

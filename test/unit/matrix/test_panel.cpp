@@ -252,10 +252,10 @@ void testExternalTile(const config_t& cfg, const comm::CommunicatorGrid comm_gri
 template <class TypeParam, Coord panel_axis>
 void testExternalTileWithSenders(const config_t& cfg, const comm::CommunicatorGrid comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
-  using dlaf::internal::transformDetach;
   using dlaf::internal::Policy;
-  using pika::this_thread::experimental::sync_wait;
+  using dlaf::internal::transformDetach;
   using pika::unwrapping;
+  using pika::this_thread::experimental::sync_wait;
 
   constexpr Coord coord1D = orthogonal(panel_axis);
 

@@ -49,8 +49,8 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
   namespace ex = pika::execution::experimental;
   using pika::this_thread::experimental::sync_wait;
 
-  using dlaf::common::internal::vector;
   using dlaf::common::make_data;
+  using dlaf::common::internal::vector;
   using pika::unwrapping;
 
   using dlaf::tile::internal::lange;

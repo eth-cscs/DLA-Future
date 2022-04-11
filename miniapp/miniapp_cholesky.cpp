@@ -40,29 +40,28 @@
 
 namespace {
 
-using pika::unwrapping;
 using pika::execution::experimental::keep_future;
 using pika::execution::experimental::start_detached;
 using pika::execution::experimental::when_all;
 
-using dlaf::Device;
-using dlaf::Coord;
 using dlaf::Backend;
+using dlaf::Coord;
 using dlaf::DefaultDevice_v;
-using dlaf::SizeType;
-using dlaf::comm::Index2D;
-using dlaf::GlobalElementSize;
+using dlaf::Device;
 using dlaf::GlobalElementIndex;
+using dlaf::GlobalElementSize;
 using dlaf::GlobalTileIndex;
 using dlaf::LocalTileIndex;
+using dlaf::Matrix;
+using dlaf::SizeType;
 using dlaf::TileElementIndex;
 using dlaf::TileElementSize;
-using dlaf::Matrix;
-using dlaf::matrix::MatrixMirror;
-using dlaf::common::Ordering;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
+using dlaf::comm::Index2D;
+using dlaf::common::Ordering;
 using dlaf::internal::transformDetach;
+using dlaf::matrix::MatrixMirror;
 
 /// Check Cholesky Factorization results
 ///

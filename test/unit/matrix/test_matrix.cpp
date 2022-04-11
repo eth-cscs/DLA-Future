@@ -36,11 +36,11 @@ using namespace dlaf::comm;
 using namespace dlaf::test;
 using namespace testing;
 
+using pika::unwrapping;
 using pika::execution::experimental::ensure_started;
 using pika::execution::experimental::make_future;
 using pika::execution::experimental::then;
 using pika::this_thread::experimental::sync_wait;
-using pika::unwrapping;
 
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);

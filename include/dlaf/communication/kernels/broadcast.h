@@ -94,8 +94,7 @@ struct ScheduleRecvBcast {
     // TILE_GPU -+-> duplicate<CPU> ---> TILE_CPU ---> recvBcast ---> TILE_CPU -+-> copy
     //           |                                                              |
     //           +--------------------------------------------------------------+
-    using pika::execution::experimental::just;
-    using pika::execution::experimental::let_value;
+    namespace ex = pika::execution::experimental;
 
     using dlaf::internal::Policy;
     using dlaf::internal::transform;
@@ -109,16 +108,16 @@ struct ScheduleRecvBcast {
     return std::move(tile_gpu) |
            // Start an asynchronous scope for keeping the GPU tile alive until
            // data has been copied back into it.
-           let_value([=, pcomm = std::move(pcomm)](Tile<T, Device::GPU>& tile_gpu) mutable {
+           ex::let_value([=, pcomm = std::move(pcomm)](Tile<T, Device::GPU>& tile_gpu) mutable {
              // Create a CPU tile with the same dimensions as the GPU tile.
              return transform(Policy<Backend::GPU>(),
                               std::bind(Duplicate<Device::CPU>{}, std::cref(tile_gpu),
                                         std::placeholders::_1),
-                              just()) |
+                              ex::just()) |
                     // Start an asynchronous scoped for keeping the CPU tile
                     // alive until data has been copied away from it.
-                    let_value([=, pcomm = std::move(pcomm),
-                               &tile_gpu](Tile<T, Device::CPU>& tile_cpu) mutable {
+                    ex::let_value([=, pcomm = std::move(pcomm),
+                                   &tile_gpu](Tile<T, Device::CPU>& tile_cpu) mutable {
                       return std::move(pcomm) |
                              // Perform the actual receive into the CPU tile.
                              transformMPI(std::bind(recvBcast_o, std::cref(tile_cpu), root_rank,

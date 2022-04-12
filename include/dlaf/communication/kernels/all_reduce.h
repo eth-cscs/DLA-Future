@@ -67,12 +67,9 @@ template <class T>
 void scheduleAllReduce(pika::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
                        pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_in,
                        pika::future<matrix::Tile<T, Device::CPU>> tile_out) {
+  namespace ex = pika::execution::experimental;
+
   using pika::unwrapping;
-  using pika::execution::experimental::keep_future;
-  using pika::execution::experimental::let_value;
-  using pika::execution::experimental::start_detached;
-  using pika::execution::experimental::transfer;
-  using pika::execution::experimental::when_all;
   using pika::threads::thread_priority;
 
   using common::internal::ContiguousBufferHolder;
@@ -101,18 +98,16 @@ void scheduleAllReduce(pika::future<common::PromiseGuard<comm::Communicator>> pc
                transform(Policy<Backend::MC>(thread_priority::high),
                          std::bind(copyBack_o, std::placeholders::_1, std::cref(tile_out)));
       });
-  when_all(keep_future(std::move(tile_in)), std::move(tile_out)) |
-      transfer(getBackendScheduler<Backend::MC>()) | let_value(std::move(f)) | start_detached();
+  ex::when_all(ex::keep_future(std::move(tile_in)), std::move(tile_out)) |
+      ex::transfer(getBackendScheduler<Backend::MC>()) | ex::let_value(std::move(f)) |
+      ex::start_detached();
 }
 
 template <class T>
 pika::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
     pika::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
     pika::future<matrix::Tile<T, Device::CPU>> tile) {
-  using pika::execution::experimental::let_value;
-  using pika::execution::experimental::make_future;
-  using pika::execution::experimental::then;
-  using pika::execution::experimental::transfer;
+  namespace ex = pika::execution::experimental;
 
   using common::internal::copyBack_o;
   using common::internal::makeItContiguous;
@@ -130,15 +125,16 @@ pika::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
   //
   // The last TILE after the copyBack is returned so that other task can be attached to it,
   // AFTER the asynchronous MPI_AllReduce has completed
-  return std::move(tile) | transfer(getBackendScheduler<Backend::MC>()) |
-         let_value([pcomm = std::move(pcomm), reduce_op](matrix::Tile<T, Device::CPU>& tile) mutable {
-           return whenAllLift(std::move(pcomm), reduce_op, makeItContiguous(tile)) |
-                  transformMPI(internal::allReduceInPlace_o) |
-                  transform(Policy<Backend::MC>(),
-                            std::bind(copyBack_o, std::placeholders::_1, std::cref(tile))) |
-                  then([&tile]() { return std::move(tile); });
-         }) |
-         make_future();
+  return std::move(tile) | ex::transfer(getBackendScheduler<Backend::MC>()) |
+         ex::let_value(
+             [pcomm = std::move(pcomm), reduce_op](matrix::Tile<T, Device::CPU>& tile) mutable {
+               return whenAllLift(std::move(pcomm), reduce_op, makeItContiguous(tile)) |
+                      transformMPI(internal::allReduceInPlace_o) |
+                      transform(Policy<Backend::MC>(),
+                                std::bind(copyBack_o, std::placeholders::_1, std::cref(tile))) |
+                      ex::then([&tile]() { return std::move(tile); });
+             }) |
+         ex::make_future();
 }
 }
 }

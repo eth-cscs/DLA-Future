@@ -92,18 +92,17 @@ void scheduleAllReduce(pika::future<common::PromiseGuard<comm::Communicator>> pc
   // TILE_O ---> makeContiguous --+--> CONT_BUF_O --+                              |
   //                              |                                                |
   //                              +----------------------> TILE_O -----------------+-> copyBack
+  auto f =
+      unwrapping([pcomm = std::move(pcomm), reduce_op](const matrix::Tile<const T, Device::CPU>& tile_in,
+                                                       matrix::Tile<T, Device::CPU>& tile_out) mutable {
+        return whenAllLift(std::move(pcomm), reduce_op, makeItContiguous(tile_in),
+                           makeItContiguous(tile_out)) |
+               transformMPI(internal::allReduce_o) |
+               transform(Policy<Backend::MC>(thread_priority::high),
+                         std::bind(copyBack_o, std::placeholders::_1, std::cref(tile_out)));
+      });
   when_all(keep_future(std::move(tile_in)), std::move(tile_out)) |
-      transfer(getBackendScheduler<Backend::MC>()) |
-      let_value(unwrapping(
-          [pcomm = std::move(pcomm), reduce_op](const matrix::Tile<const T, Device::CPU>& tile_in,
-                                                matrix::Tile<T, Device::CPU>& tile_out) mutable {
-            return whenAllLift(std::move(pcomm), reduce_op, makeItContiguous(tile_in),
-                               makeItContiguous(tile_out)) |
-                   transformMPI(internal::allReduce_o) |
-                   transform(Policy<Backend::MC>(thread_priority::high),
-                             std::bind(copyBack_o, std::placeholders::_1, std::cref(tile_out)));
-          })) |
-      start_detached();
+      transfer(getBackendScheduler<Backend::MC>()) | let_value(std::move(f)) | start_detached();
 }
 
 template <class T>

@@ -72,7 +72,7 @@ struct MPICallHelper {
 };
 
 template <typename F>
-MPICallHelper(F&&) -> MPICallHelper<std::decay_t<F>>;
+MPICallHelper(F &&) -> MPICallHelper<std::decay_t<F>>;
 
 /// Lazy transformMPI. This does not submit the work and returns a sender.
 template <typename F, typename Sender,

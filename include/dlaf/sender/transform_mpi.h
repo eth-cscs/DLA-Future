@@ -36,17 +36,22 @@ decltype(auto) movePromiseGuard(T& t) {
   }
 }
 
-/// Lazy transformMPI. This does not submit the work and returns a sender.
-template <typename F, typename Sender,
-          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
-[[nodiscard]] decltype(auto) transformMPI(F&& f, Sender&& sender) {
-  using pika::execution::experimental::then;
-  using pika::execution::experimental::thread_pool_scheduler;
-  using pika::execution::experimental::transfer;
-  using pika::unwrapping;
-
-  auto f_wrapper = [f = std::forward<F>(f)](auto&&... ts)
-      -> decltype(unwrapping(std::move(f))(movePromiseGuard(ts)..., std::declval<MPI_Request*>())) {
+/// Helper type for wrapping MPI calls.
+///
+/// Wrapper type around calls to MPI functions. Provides a call operator that
+/// creates an MPI request and passes it as the last argument to the provided
+/// callable. The wrapper then waits for the the request to complete with
+/// yield_while.
+///
+/// This could in theory be a lambda inside transformMPI.  However, clang at
+/// least until version 12 fails with an internal compiler error with a trailing
+/// decltype for SFINAE. GCC has no problems with a lambda.
+template <typename F>
+struct MPICallHelper {
+  std::decay_t<F> f;
+  template <typename... Ts>
+  auto operator()(Ts&&... ts) -> decltype(pika::unwrapping(std::move(f))(movePromiseGuard(ts)...,
+                                                                         std::declval<MPI_Request*>())) {
     MPI_Request req;
     auto is_request_completed = [&req] {
       int flag;
@@ -54,19 +59,30 @@ template <typename F, typename Sender,
       return flag == 0;
     };
 
-    using result_type = decltype(unwrapping(std::move(f))(movePromiseGuard(ts)..., &req));
+    using result_type = decltype(pika::unwrapping(std::move(f))(movePromiseGuard(ts)..., &req));
     if constexpr (std::is_void_v<result_type>) {
-      unwrapping(std::move(f))(movePromiseGuard(ts)..., &req);
+      pika::unwrapping(std::move(f))(movePromiseGuard(ts)..., &req);
       pika::util::yield_while(is_request_completed);
     }
     else {
-      auto r = unwrapping(std::move(f))(movePromiseGuard(ts)..., &req);
+      auto r = pika::unwrapping(std::move(f))(movePromiseGuard(ts)..., &req);
       pika::util::yield_while(is_request_completed);
       return r;
     }
-  };
-  return transfer(std::forward<Sender>(sender), dlaf::internal::getMPIScheduler()) |
-         then(std::move(f_wrapper));
+  }
+};
+
+template <typename F>
+MPICallHelper(F&&) -> MPICallHelper<std::decay_t<F>>;
+
+/// Lazy transformMPI. This does not submit the work and returns a sender.
+template <typename F, typename Sender,
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
+[[nodiscard]] decltype(auto) transformMPI(F&& f, Sender&& sender) {
+  namespace ex = pika::execution::experimental;
+
+  return ex::transfer(std::forward<Sender>(sender), dlaf::internal::getMPIScheduler()) |
+         ex::then(MPICallHelper{std::forward<F>(f)});
 }
 
 /// Fire-and-forget transformMPI. This submits the work and returns void.

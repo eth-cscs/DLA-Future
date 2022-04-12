@@ -102,6 +102,7 @@ struct ScheduleRecvBcast {
     using dlaf::matrix::Duplicate;
     using dlaf::matrix::Tile;
     using dlaf::matrix::internal::copy_o;
+    using pika::threads::thread_priority;
 
     // TODO: std::bind currently serves as a reference_wrapper unwrapper until
     // https://github.com/eth-cscs/DLA-Future/issues/492 is resolved.
@@ -110,10 +111,10 @@ struct ScheduleRecvBcast {
            // data has been copied back into it.
            ex::let_value([=, pcomm = std::move(pcomm)](Tile<T, Device::GPU>& tile_gpu) mutable {
              // Create a CPU tile with the same dimensions as the GPU tile.
-             return transform(Policy<Backend::GPU>(),
+             return ex::just() |
+                    transform(Policy<Backend::GPU>(thread_priority::high),
                               std::bind(Duplicate<Device::CPU>{}, std::cref(tile_gpu),
-                                        std::placeholders::_1),
-                              ex::just()) |
+                                        std::placeholders::_1)) |
                     // Start an asynchronous scoped for keeping the CPU tile
                     // alive until data has been copied away from it.
                     ex::let_value([=, pcomm = std::move(pcomm),
@@ -124,7 +125,7 @@ struct ScheduleRecvBcast {
                                                     std::placeholders::_1, std::placeholders::_2)) |
                              // Copy the received data from the CPU tile to the
                              // GPU tile.
-                             transform(Policy<Backend::GPU>(),
+                             transform(Policy<Backend::GPU>(thread_priority::high),
                                        std::bind(copy_o, std::cref(tile_cpu), std::cref(tile_gpu),
                                                  std::placeholders::_1));
                     });

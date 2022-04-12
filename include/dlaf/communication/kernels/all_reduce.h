@@ -115,6 +115,7 @@ pika::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
   using dlaf::internal::Policy;
   using dlaf::internal::transform;
   using dlaf::internal::whenAllLift;
+  using pika::threads::thread_priority;
 
   // Note:
   //
@@ -130,7 +131,7 @@ pika::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
              [pcomm = std::move(pcomm), reduce_op](matrix::Tile<T, Device::CPU>& tile) mutable {
                return whenAllLift(std::move(pcomm), reduce_op, makeItContiguous(tile)) |
                       transformMPI(internal::allReduceInPlace_o) |
-                      transform(Policy<Backend::MC>(),
+                      transform(Policy<Backend::MC>(thread_priority::high),
                                 std::bind(copyBack_o, std::placeholders::_1, std::cref(tile))) |
                       ex::then([&tile]() { return std::move(tile); });
              }) |

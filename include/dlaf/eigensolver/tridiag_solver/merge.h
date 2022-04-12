@@ -632,24 +632,25 @@ void applyGivensRotationsToMatrixColumns(SizeType n, SizeType nb, std::vector<Gi
 
 template <class T>
 void solveRank1Problem(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k_fut,
-                       pika::shared_future<T> rho_fut, Matrix<const T, Device::CPU>& d_defl,
-                       Matrix<const T, Device::CPU>& z_defl, Matrix<T, Device::CPU>& evals,
+                       pika::shared_future<T> rho_fut, Matrix<const T, Device::CPU>& d,
+                       Matrix<const T, Device::CPU>& z, Matrix<T, Device::CPU>& evals,
                        Matrix<T, Device::CPU>& evecs) {
   SizeType n = problemSize(i_begin, i_end, evals.distribution());
   SizeType nb = evals.distribution().blockSize().rows();
 
-  auto rank1_fn = [n, nb](auto k_fut, auto rho_fut, auto d_defl_tiles, auto z_defl_tiles,
-                          auto eval_tiles, auto evec_tiles_fut) {
+  auto rank1_fn = [n, nb](auto k_fut, auto rho_fut, auto d_tiles, auto z_tiles, auto eval_tiles,
+                          auto evec_tiles_fut) {
     SizeType k = k_fut.get();
     T rho = rho_fut.get();
 
     TileElementIndex zero(0, 0);
-    const T* d_defl_ptr = d_defl_tiles[0].get().ptr(zero);
-    const T* z_ptr = z_defl_tiles[0].get().ptr(zero);
+    const T* d_ptr = d_tiles[0].get().ptr(zero);
+    const T* z_ptr = z_tiles[0].get().ptr(zero);
 
     // save in variable avoid releasing the tile too soon
     auto eval_tile = eval_tiles[0].get();
     T* eval_ptr = eval_tile.ptr(zero);
+
     std::vector<matrix::Tile<T, Device::CPU>> evec_tiles = pika::unwrap(std::move(evec_tiles_fut));
     matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
 
@@ -660,15 +661,15 @@ void solveRank1Problem(SizeType i_begin, SizeType i_end, pika::shared_future<Siz
       SizeType i_col = distr.tileElementFromGlobalElement<Coord::Col>(i);
       T* delta = evec_tiles[to_sizet(i_tile)].ptr(TileElementIndex(0, i_col));
 
-      dlaf::internal::laed4_wrapper(static_cast<int>(k), static_cast<int>(i), d_defl_ptr, z_ptr, delta,
-                                    rho, &eigenval);
+      dlaf::internal::laed4_wrapper(static_cast<int>(k), static_cast<int>(i), d_ptr, z_ptr, delta, rho,
+                                    &eigenval);
       // TODO: check the eigenvectors formula for `delta`
     }
   };
 
   TileCollector tc{i_begin, i_end};
-  pika::dataflow(std::move(rank1_fn), std::move(k_fut), std::move(rho_fut), tc.readVec(d_defl),
-                 tc.readVec(z_defl), tc.readwriteVec(evals), tc.readwriteMat(evecs));
+  pika::dataflow(std::move(rank1_fn), std::move(k_fut), std::move(rho_fut), tc.readVec(d), tc.readVec(z),
+                 tc.readwriteVec(evals), tc.readwriteMat(evecs));
 }
 
 template <class T>

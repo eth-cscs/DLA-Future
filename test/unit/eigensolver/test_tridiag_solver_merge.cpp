@@ -283,10 +283,13 @@ TYPED_TEST(TridiagEigensolverMergeTest, SolveRank1Problem) {
   Matrix<T, Device::CPU> evecs(LocalElementSize(n, n), TileElementSize(nb, nb));
 
   //  matrix::print(format::csv{}, "d_defl", d_defl);
-  //  matrix::print(format::csv{}, "z_defl", z_defl);
+  matrix::print(format::csv{}, "z_defl", z_defl);
 
   dlaf::eigensolver::internal::solveRank1Problem(i_begin, i_end, k_fut, rho_fut, d_defl, z_defl, evals,
                                                  evecs);
+
+  matrix::print(format::csv{}, "EVECS", evecs);
+  matrix::print(format::csv{}, "Z", z_defl);
 
   evals.waitLocalTiles();
   evecs.waitLocalTiles();

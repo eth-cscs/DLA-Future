@@ -630,10 +630,12 @@ void applyGivensRotationsToMatrixColumns(SizeType n, SizeType nb, std::vector<Gi
   }
 }
 
+// Note: `z` is non-const because it is used as an intermediary buffer for eigenvector computation
+//
 template <class T>
 void solveRank1Problem(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k_fut,
                        pika::shared_future<T> rho_fut, Matrix<const T, Device::CPU>& d,
-                       Matrix<const T, Device::CPU>& z, Matrix<T, Device::CPU>& evals,
+                       Matrix<T, Device::CPU>& z, Matrix<T, Device::CPU>& evals,
                        Matrix<T, Device::CPU>& evecs) {
   SizeType n = problemSize(i_begin, i_end, evals.distribution());
   SizeType nb = evals.distribution().blockSize().rows();
@@ -645,9 +647,11 @@ void solveRank1Problem(SizeType i_begin, SizeType i_end, pika::shared_future<Siz
 
     TileElementIndex zero(0, 0);
     const T* d_ptr = d_tiles[0].get().ptr(zero);
-    const T* z_ptr = z_tiles[0].get().ptr(zero);
 
     // save in variable avoid releasing the tile too soon
+    auto z_tile = z_tiles[0].get();
+    T* z_ptr = z_tile.ptr(zero);
+
     auto eval_tile = eval_tiles[0].get();
     T* eval_ptr = eval_tile.ptr(zero);
 
@@ -663,13 +667,65 @@ void solveRank1Problem(SizeType i_begin, SizeType i_end, pika::shared_future<Siz
 
       dlaf::internal::laed4_wrapper(static_cast<int>(k), static_cast<int>(i), d_ptr, z_ptr, delta, rho,
                                     &eigenval);
-      // TODO: check the eigenvectors formula for `delta`
+    }
+
+    // References:
+    // - lapack 3.10.0, dlaed3.f, line 293
+    // - LAPACK Working Notes: lawn132, Parallelizing the Divide and Conquer Algorithm for the Symmetric
+    //   Tridiagonal Eigenvalue Problem on Distributed Memory Architectures, 4.2 Orthogonality
+
+    // Copy the diagonal of `evals` to `z`
+    for (SizeType i = 0; i < k; ++i) {
+      GlobalElementIndex i_gl_el_evals(i, i);
+      SizeType i_tile = distr.globalTileLinearIndex(i_gl_el_evals);
+      TileElementIndex i_el = distr.tileElementIndex(i_gl_el_evals);
+      z_ptr[i] = evec_tiles[to_sizet(i_tile)](i_el);
+    }
+
+    // Initialize modified `z` by multipliying eigenvector elements across rows.
+    for (SizeType j = 0; j < k; ++j) {
+      // Iterate over rows of `evecs`
+      for (SizeType i = 0; i < k; ++i) {
+        if (j == i)
+          continue;
+
+        // j != i
+        GlobalElementIndex i_gl_el_evals(i, j);
+        SizeType i_tile = distr.globalTileLinearIndex(i_gl_el_evals);
+        TileElementIndex i_el = distr.tileElementIndex(i_gl_el_evals);
+        z_ptr[i] = z_ptr[i] * evec_tiles[to_sizet(i_tile)](i_el) / (d_ptr[i] - d_ptr[j]);
+      }
+    }
+
+    // Form eigenvectors using the modified `z`
+    for (SizeType j = 0; j < k; ++j) {
+      // Iterate over rows of an eigenvector
+      T normsq = 0;
+      for (SizeType i = 0; i < k; ++i) {
+        GlobalElementIndex i_gl_el_evals(i, j);
+        SizeType i_tile = distr.globalTileLinearIndex(i_gl_el_evals);
+        TileElementIndex i_el = distr.tileElementIndex(i_gl_el_evals);
+        T& el_evec = evec_tiles[to_sizet(i_tile)](i_el);
+
+        el_evec = std::sqrt(std::abs(z_ptr[i])) / el_evec;
+        normsq += el_evec * el_evec;
+      }
+
+      // Normalize the eigenvector
+      for (SizeType i = 0; i < k; ++i) {
+        GlobalElementIndex i_gl_el_evals(i, j);
+        SizeType i_tile = distr.globalTileLinearIndex(i_gl_el_evals);
+        TileElementIndex i_el = distr.tileElementIndex(i_gl_el_evals);
+        T& el_evec = evec_tiles[to_sizet(i_tile)](i_el);
+
+        el_evec = el_evec / std::sqrt(normsq);
+      }
     }
   };
 
   TileCollector tc{i_begin, i_end};
-  pika::dataflow(std::move(rank1_fn), std::move(k_fut), std::move(rho_fut), tc.readVec(d), tc.readVec(z),
-                 tc.readwriteVec(evals), tc.readwriteMat(evecs));
+  pika::dataflow(std::move(rank1_fn), std::move(k_fut), std::move(rho_fut), tc.readVec(d),
+                 tc.readwriteVec(z), tc.readwriteVec(evals), tc.readwriteMat(evecs));
 }
 
 template <class T>

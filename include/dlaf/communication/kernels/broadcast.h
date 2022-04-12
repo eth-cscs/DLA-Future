@@ -64,7 +64,6 @@ void scheduleSendBcast(Future<matrix::Tile<const T, D>> tile,
   using dlaf::internal::keepIfSharedFuture;
   using dlaf::internal::whenAllLift;
   using internal::prepareSendTile;
-  using matrix::unwrapExtendTiles;
   using pika::execution::experimental::start_detached;
   using pika::mpi::experimental::transform_mpi;
 

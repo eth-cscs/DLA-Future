@@ -10,7 +10,6 @@
 
 #include <pika/execution.hpp>
 #include <pika/future.hpp>
-#include <pika/mpi.hpp>
 
 #include <vector>
 
@@ -19,11 +18,12 @@
 
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/error.h"
+#include "dlaf/sender/transform_mpi.h"
 
+using dlaf::comm::internal::transformMPI;
 using pika::execution::experimental::just;
 using pika::execution::experimental::then;
 using pika::execution::experimental::when_all;
-using pika::mpi::experimental::transform_mpi;
 using pika::this_thread::experimental::sync_wait;
 
 void test_transform_mpi() {
@@ -39,8 +39,8 @@ void test_transform_mpi() {
   int recv_rank = (rank != 0) ? rank - 1 : nprocs - 1;
   int tag = 0;
 
-  auto send = just(send_buf.data(), size, dtype, send_rank, tag, comm) | transform_mpi(MPI_Isend);
-  auto recv = just(recv_buf.data(), size, dtype, recv_rank, tag, comm) | transform_mpi(MPI_Irecv);
+  auto send = just(send_buf.data(), size, dtype, send_rank, tag, comm) | transformMPI(MPI_Isend);
+  auto recv = just(recv_buf.data(), size, dtype, recv_rank, tag, comm) | transformMPI(MPI_Irecv);
   when_all(std::move(send), std::move(recv)) | then([](int e1, int e2) {
     DLAF_MPI_CHECK_ERROR(e1);
     DLAF_MPI_CHECK_ERROR(e2);
@@ -65,7 +65,7 @@ TEST(Bcast, Polling) {
 
   when_all(just(buf.data()), pika::make_ready_future<int>(size), just(dtype, root_rank, comm),
            pika::make_ready_future<void>()) |
-      transform_mpi(MPI_Ibcast) | then([](int e) { DLAF_MPI_CHECK_ERROR(e); }) | sync_wait();
+      transformMPI(MPI_Ibcast) | then([](int e) { DLAF_MPI_CHECK_ERROR(e); }) | sync_wait();
 
   std::vector<double> expected_buf(static_cast<std::size_t>(size), 4.2);
   ASSERT_TRUE(expected_buf == buf);

@@ -15,7 +15,7 @@
 #include <mpi.h>
 
 #include <pika/execution.hpp>
-#include <pika/mpi.hpp>
+#include <pika/future.hpp>
 #include <pika/unwrap.hpp>
 
 #include "dlaf/common/callable_object.h"
@@ -67,13 +67,13 @@ template <class T>
 void scheduleAllReduce(pika::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
                        pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_in,
                        pika::future<matrix::Tile<T, Device::CPU>> tile_out) {
+  using pika::unwrapping;
   using pika::execution::experimental::keep_future;
   using pika::execution::experimental::let_value;
   using pika::execution::experimental::start_detached;
   using pika::execution::experimental::transfer;
   using pika::execution::experimental::when_all;
   using pika::threads::thread_priority;
-  using pika::unwrapping;
 
   using common::internal::ContiguousBufferHolder;
   using common::internal::copyBack_o;

@@ -14,8 +14,8 @@
 
 #include <mpi.h>
 
-#include <pika/mpi.hpp>
-#include <pika/unwrap.hpp>
+#include <pika/execution.hpp>
+#include <pika/future.hpp>
 
 #include "dlaf/common/assert.h"
 #include "dlaf/common/callable_object.h"
@@ -65,7 +65,6 @@ void scheduleSendBcast(Future<matrix::Tile<const T, D>> tile,
   using dlaf::internal::whenAllLift;
   using internal::prepareSendTile;
   using pika::execution::experimental::start_detached;
-  using pika::mpi::experimental::transform_mpi;
 
   whenAllLift(keepIfSharedFuture(prepareSendTile(std::move(tile))), std::move(pcomm)) |
       internal::transformMPI(sendBcast_o) | start_detached();

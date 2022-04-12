@@ -8,7 +8,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <pika/mpi.hpp>
 #include <pika/runtime.hpp>
 
 #include <dlaf/common/assert.h>
@@ -50,9 +49,6 @@ template <>
 struct Init<Backend::MC> {
   static void initialize(configuration const& cfg) {
     memory::internal::initializeUmpireHostAllocator(cfg.umpire_host_memory_pool_initial_bytes);
-    // TODO: Is there any need to do polling on the MPI pool? Blocking MPI
-    // communication is also there and keeps polling from happening.
-    pika::mpi::experimental::init(false, cfg.mpi_pool);
   }
 
   static void finalize() {

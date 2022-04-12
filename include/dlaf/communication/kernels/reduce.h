@@ -19,7 +19,7 @@
 #include <mpi.h>
 
 #include <pika/execution.hpp>
-#include <pika/mpi.hpp>
+#include <pika/future.hpp>
 #include <pika/unwrap.hpp>
 
 #include "dlaf/common/contiguous_buffer_holder.h"
@@ -69,7 +69,6 @@ auto senderReduceRecvInPlace(pika::future<common::PromiseGuard<comm::Communicato
   // where: cCPU = contiguous CPU
 
   using namespace pika::execution::experimental;
-  using namespace pika::mpi::experimental;
 
   using dlaf::internal::getBackendScheduler;
   using dlaf::internal::Policy;
@@ -110,7 +109,6 @@ auto senderReduceSend(comm::IndexT_MPI rank_root,
   // where: cCPU = contiguous CPU
 
   using namespace pika::execution::experimental;
-  using namespace pika::mpi::experimental;
   using dlaf::internal::getBackendScheduler;
   using dlaf::internal::whenAllLift;
 

@@ -9,7 +9,6 @@
 //
 #pragma once
 
-#include <pika/mpi.hpp>
 #include <pika/unwrap.hpp>
 
 #include "dlaf/common/pipeline.h"

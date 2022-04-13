@@ -105,10 +105,10 @@ std::vector<pika::shared_future<T>> cuppensDecomposition(Matrix<T, Device::CPU>&
 // Solve leaf eigensystem with stedc
 template <class T>
 void solveLeaf(Matrix<T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& mat_ev) {
-  using pika::threads::thread_priority;
-  using pika::execution::experimental::start_detached;
   using dlaf::internal::Policy;
   using dlaf::internal::whenAllLift;
+  using pika::execution::experimental::start_detached;
+  using pika::threads::thread_priority;
 
   SizeType ntiles = mat_trd.distribution().nrTiles().rows();
   for (SizeType i = 0; i < ntiles; ++i) {
@@ -132,10 +132,10 @@ DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(copyDiagTile, copyDiagTile_o)
 
 template <class T>
 void offloadDiagonal(Matrix<const T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& d) {
-  using pika::threads::thread_priority;
-  using pika::execution::experimental::start_detached;
   using dlaf::internal::Policy;
   using dlaf::internal::whenAllLift;
+  using pika::execution::experimental::start_detached;
+  using pika::threads::thread_priority;
 
   for (SizeType i = 0; i < d.distribution().nrTiles().rows(); ++i) {
     whenAllLift(mat_trd.read_sender(GlobalTileIndex(i, 0)), d.readwrite_sender(GlobalTileIndex(i, 0))) |

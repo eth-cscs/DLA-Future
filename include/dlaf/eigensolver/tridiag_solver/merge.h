@@ -172,10 +172,10 @@ DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(copyTileRowAndNormalize, copyTileRowAndNorm
 template <class T>
 void assembleZVec(SizeType i_begin, SizeType i_middle, SizeType i_end, pika::shared_future<T> rho_fut,
                   Matrix<const T, Device::CPU>& mat_ev, Matrix<T, Device::CPU>& z) {
-  using pika::threads::thread_priority;
-  using pika::execution::experimental::start_detached;
   using dlaf::internal::Policy;
   using dlaf::internal::whenAllLift;
+  using pika::execution::experimental::start_detached;
+  using pika::threads::thread_priority;
 
   // Iterate over tiles of Q1 and Q2 around the split row `i_middle`.
   for (SizeType i = i_begin; i <= i_end; ++i) {
@@ -487,10 +487,10 @@ DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(setColTypeTile, setColTypeTile_o)
 
 inline void initColTypes(SizeType i_begin, SizeType i_split, SizeType i_end,
                          Matrix<ColType, Device::CPU>& coltypes) {
-  using pika::threads::thread_priority;
-  using pika::execution::experimental::start_detached;
   using dlaf::internal::Policy;
   using dlaf::internal::whenAllLift;
+  using pika::execution::experimental::start_detached;
+  using pika::threads::thread_priority;
 
   for (SizeType i = i_begin; i <= i_end; ++i) {
     ColType val = (i <= i_split) ? ColType::UpperHalf : ColType::LowerHalf;

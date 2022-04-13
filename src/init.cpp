@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <pika/async_mpi/mpi_future.hpp>
+#include <pika/mpi.hpp>
 #include <pika/runtime.hpp>
 
 #include <dlaf/common/assert.h>
@@ -354,7 +354,7 @@ void initResourcePartitionerHandler(pika::resource::partitioner& rp,
 
   // Don't create the MPI pool if there is a single process
   int ntasks;
-  DLAF_MPI_CALL(MPI_Comm_size(MPI_COMM_WORLD, &ntasks));
+  DLAF_MPI_CHECK_ERROR(MPI_Comm_size(MPI_COMM_WORLD, &ntasks));
   if (ntasks == 1)
     return;
 

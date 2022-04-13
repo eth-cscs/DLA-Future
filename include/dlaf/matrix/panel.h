@@ -47,6 +47,7 @@ struct Panel<axis, const T, D> {
 
   using TileType = Tile<T, D>;
   using ConstTileType = Tile<const T, D>;
+  using ElementType = const T;
   using BaseT = Matrix<T, D>;
 
   Panel(Panel&&) = default;
@@ -91,11 +92,13 @@ struct Panel<axis, const T, D> {
 
 #if defined DLAF_ASSERT_MODERATE_ENABLE
     {
+      namespace ex = pika::execution::experimental;
+
       const auto panel_tile_size = tileSize(index);
-      new_tile_fut.then(pika::launch::sync, pika::unwrapping([panel_tile_size](const auto& tile) {
-                          DLAF_ASSERT_MODERATE(panel_tile_size == tile.size(), panel_tile_size,
-                                               tile.size());
-                        }));
+      auto assert_tile_size = pika::unwrapping([panel_tile_size](ConstTileType const& tile) {
+        DLAF_ASSERT_MODERATE(panel_tile_size == tile.size(), panel_tile_size, tile.size());
+      });
+      ex::keep_future(new_tile_fut) | ex::then(std::move(assert_tile_size)) | ex::start_detached();
     }
 #endif
 
@@ -147,7 +150,7 @@ struct Panel<axis, const T, D> {
 
     start_ = start_idx.get(coord);
     start_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<coord>(start_);
-    offset_element_ = start_ * dist_matrix_.blockSize().get<coord>();
+    offset_element_ = start_ * dist_matrix_.blockSize().template get<coord>();
 
     end_ = end_idx.get(coord);
     end_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<coord>(end_);
@@ -171,7 +174,7 @@ struct Panel<axis, const T, D> {
 
     start_ = start_idx.get(coord);
     start_local_ = dist_matrix_.nextLocalTileFromGlobalTile<coord>(start_);
-    offset_element_ = start_ * dist_matrix_.blockSize().get<coord>();
+    offset_element_ = start_ * dist_matrix_.blockSize().template get<coord>();
 
     DLAF_ASSERT(rangeStartLocal() >= bias_ && rangeStart() <= rangeEnd(), rangeStart(), rangeEnd(),
                 bias_);
@@ -443,6 +446,7 @@ template <Coord axis, class T, Device device>
 struct Panel : public Panel<axis, const T, device> {
   using TileType = Tile<T, device>;
   using ConstTileType = Tile<const T, device>;
+  using ElementType = T;
 
   explicit Panel(matrix::Distribution distribution, GlobalTileIndex start = {0, 0})
       : Panel<axis, const T, device>(std::move(distribution), std::move(start)) {}
@@ -475,9 +479,9 @@ protected:
   using BaseT = Panel<axis, const T, device>;
   using BaseT::dim_;
   using BaseT::has_been_used_;
-  using BaseT::tileSize;
   using BaseT::isFirstGlobalTile;
   using BaseT::isFirstGlobalTileFull;
+  using BaseT::tileSize;
 };
 }
 }

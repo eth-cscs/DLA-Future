@@ -18,13 +18,13 @@
   template <typename T>               \
   struct Name
 
-#define DLAF_DEFINE_GPUBLAS_OP(Name, Type, f)                        \
-  template <>                                                        \
-  struct Name<Type> {                                                \
-    template <typename... Args>                                      \
-    static void call(Args&&... args) {                               \
-      DLAF_CUBLAS_CALL(cublas##f##_v2(std::forward<Args>(args)...)); \
-    }                                                                \
+#define DLAF_DEFINE_GPUBLAS_OP(Name, Type, f)                               \
+  template <>                                                               \
+  struct Name<Type> {                                                       \
+    template <typename... Args>                                             \
+    static void call(Args&&... args) {                                      \
+      DLAF_CUBLAS_CHECK_ERROR(cublas##f##_v2(std::forward<Args>(args)...)); \
+    }                                                                       \
   }
 
 #define DLAF_MAKE_GPUBLAS_OP(Name, f)                      \

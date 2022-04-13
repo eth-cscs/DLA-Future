@@ -41,10 +41,10 @@ class HandlePoolImpl {
 public:
   HandlePoolImpl(int device, cublasPointerMode_t ptr_mode)
       : device_(device), handles_(num_worker_threads_), ptr_mode_(ptr_mode) {
-    DLAF_CUDA_CALL(cudaSetDevice(device_));
+    DLAF_CUDA_CHECK_ERROR(cudaSetDevice(device_));
 
     for (auto& h : handles_) {
-      DLAF_CUBLAS_CALL(cublasCreate(&h));
+      DLAF_CUBLAS_CHECK_ERROR(cublasCreate(&h));
     }
   }
 
@@ -55,15 +55,15 @@ public:
 
   ~HandlePoolImpl() {
     for (auto& h : handles_) {
-      DLAF_CUBLAS_CALL(cublasDestroy(h));
+      DLAF_CUBLAS_CHECK_ERROR(cublasDestroy(h));
     }
   }
 
   cublasHandle_t getNextHandle(cudaStream_t stream) {
     cublasHandle_t handle = handles_[pika::get_worker_thread_num()];
-    DLAF_CUDA_CALL(cudaSetDevice(device_));
-    DLAF_CUBLAS_CALL(cublasSetStream(handle, stream));
-    DLAF_CUBLAS_CALL(cublasSetPointerMode(handle, ptr_mode_));
+    DLAF_CUDA_CHECK_ERROR(cudaSetDevice(device_));
+    DLAF_CUBLAS_CHECK_ERROR(cublasSetStream(handle, stream));
+    DLAF_CUBLAS_CHECK_ERROR(cublasSetPointerMode(handle, ptr_mode_));
     return handle;
   }
 

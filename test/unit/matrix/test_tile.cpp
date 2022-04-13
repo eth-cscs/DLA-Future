@@ -13,6 +13,7 @@
 #include <stdexcept>
 
 #include <gtest/gtest.h>
+#include <pika/execution.hpp>
 #include <pika/future.hpp>
 #include <pika/unwrap.hpp>
 
@@ -26,6 +27,11 @@ using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 using namespace testing;
+
+using pika::execution::experimental::keep_future;
+using pika::execution::experimental::make_future;
+using pika::execution::experimental::then;
+using pika::this_thread::experimental::sync_wait;
 
 const std::vector<SizeType> sizes({0, 1, 13, 32});
 constexpr SizeType m = 37;
@@ -290,7 +296,7 @@ TYPED_TEST(TileTest, PromiseToFuture) {
   }
 
   ASSERT_EQ(true, tile_future.is_ready());
-  TileType tile2{tile_future.get()};
+  TileType tile2{sync_wait(std::move(tile_future))};
   EXPECT_EQ(TileSizes(size, ld), getSizes(tile2));
 
   auto ptr = [&memory_view](const TileElementIndex& index) { return memory_view(elIndex(index, ld)); };
@@ -321,7 +327,7 @@ TYPED_TEST(TileTest, PromiseToFutureConst) {
   }
 
   ASSERT_EQ(true, tile_future.is_ready());
-  TileType tile2{tile_future.get()};
+  TileType tile2{sync_wait(std::move(tile_future))};
   EXPECT_EQ(TileSizes(size, ld), getSizes(tile2));
 
   auto ptr = [&memory_view](const TileElementIndex& index) { return memory_view(elIndex(index, ld)); };
@@ -372,11 +378,10 @@ auto createTileChain() {
   auto next_tile_f = next_tile_p.get_future();
 
   pika::future<TileType> tile_f =
-      tmp_tile_f.then(pika::launch::sync,
-                      pika::unwrapping([p = std::move(next_tile_p)](auto tile) mutable {
-                        return TileType(
-                            std::move(NonConstTileType(std::move(tile)).setPromise(std::move(p))));
-                      }));
+      std::move(tmp_tile_f) | then([p = std::move(next_tile_p)](TileDataType&& tile) mutable {
+        return TileType(std::move(NonConstTileType(std::move(tile)).setPromise(std::move(p))));
+      }) |
+      make_future();
 
   return std::make_tuple(std::move(tile_p), std::move(tile_f), std::move(next_tile_f));
 }
@@ -425,7 +430,7 @@ void checkReadyAndDependencyChain(F&& tile_ptr, std::vector<TileFutureOrConstTil
   // As one subtile (last_dep) is still alive next_tile is still locked.
   for (std::size_t i = 0; i < subtiles.size(); ++i) {
     if (i != last_dep) {
-      checkSubtile(tile_ptr, subtiles[i].get(), specs[i]);
+      checkSubtile(tile_ptr, sync_wait(keep_future(std::move(subtiles[i]))).get(), specs[i]);
       subtiles[i] = {};
     }
   }
@@ -437,7 +442,7 @@ void checkReadyAndDependencyChain(F&& tile_ptr, std::vector<TileFutureOrConstTil
   // next_tile_f should be ready.
   {
     std::size_t i = last_dep;
-    checkSubtile(tile_ptr, subtiles[i].get(), specs[i]);
+    checkSubtile(tile_ptr, sync_wait(keep_future(std::move(subtiles[i]))).get(), specs[i]);
     subtiles[i] = {};
   }
   EXPECT_TRUE(next_tile_f.is_ready());
@@ -472,7 +477,7 @@ void testSubtileConst(std::string name, TileElementSize size, SizeType ld, const
   checkReadyAndDependencyChain(tile_ptr, subtiles, full_specs, last_dep, next_tile_f);
 
   // Check next tile in the dependency chain
-  checkFullTile(tile_ptr, Tile<T, D>{next_tile_f.get()}, size);
+  checkFullTile(tile_ptr, Tile<T, D>{sync_wait(std::move(next_tile_f))}, size);
 }
 
 template <class T, Device D>
@@ -481,9 +486,7 @@ void testSubtilesConst(std::string name, TileElementSize size, SizeType ld,
   SCOPED_TRACE(name);
   ASSERT_LE(last_dep, specs.size());
 
-  auto tmp = createTileAndPtrChecker<T, D>(size, ld);
-  auto tile = std::move(std::get<0>(tmp));
-  auto tile_ptr = std::move(std::get<1>(tmp));
+  auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
 
   auto [tile_p, tile_f, next_tile_f] = createTileChain<const T, D>();
   auto tile_sf = tile_f.share();
@@ -505,7 +508,7 @@ void testSubtilesConst(std::string name, TileElementSize size, SizeType ld,
   tile_p.set_value(std::move(tile));
 
   checkReadyAndDependencyChain(tile_ptr, subtiles, specs, last_dep, next_tile_f);
-  checkFullTile(tile_ptr, Tile<T, D>{next_tile_f.get()}, size);
+  checkFullTile(tile_ptr, Tile<T, D>{sync_wait(std::move(next_tile_f))}, size);
 }
 
 template <class T, Device D>
@@ -518,9 +521,7 @@ void testSubOfSubtileConst(std::string name, TileElementSize size, SizeType ld,
   // specs.size() -> subsubtile
   // specs.size() + 1 -> full tile
 
-  auto tmp = createTileAndPtrChecker<T, D>(size, ld);
-  auto tile = std::move(std::get<0>(tmp));
-  auto tile_ptr = std::move(std::get<1>(tmp));
+  auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
 
   auto [tile_p, tile_f, next_tile_f] = createTileChain<const T, D>();
   auto tile_sf = tile_f.share();
@@ -547,7 +548,7 @@ void testSubOfSubtileConst(std::string name, TileElementSize size, SizeType ld,
   tile_p.set_value(std::move(tile));
 
   checkReadyAndDependencyChain(tile_ptr, subtiles, specs, last_dep, next_tile_f);
-  checkFullTile(tile_ptr, Tile<T, D>{next_tile_f.get()}, size);
+  checkFullTile(tile_ptr, Tile<T, D>{sync_wait(std::move(next_tile_f))}, size);
 }
 
 TYPED_TEST(TileTest, SubtileConst) {
@@ -584,9 +585,7 @@ template <class T, Device D>
 void testSubtile(std::string name, TileElementSize size, SizeType ld, const SubTileSpec& spec) {
   SCOPED_TRACE(name);
 
-  auto tmp = createTileAndPtrChecker<T, D>(size, ld);
-  auto tile = std::move(std::get<0>(tmp));
-  auto tile_ptr = std::move(std::get<1>(tmp));
+  auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
 
   auto [tile_p, tile_f, next_tile_f] = createTileChain<T, D>();
   ASSERT_TRUE(tile_f.valid() && !tile_f.is_ready());
@@ -615,7 +614,37 @@ void testSubtile(std::string name, TileElementSize size, SizeType ld, const SubT
   EXPECT_FALSE(next_tile_f.is_ready());
   // check tile pointer and unlock next_tile.
   // next_tile_f should be ready.
-  checkFullTile(tile_ptr, tile_f.get(), size);
+  checkFullTile(tile_ptr, sync_wait(std::move(tile_f)), size);
+
+  ASSERT_TRUE(next_tile_f.is_ready());
+  checkFullTile(tile_ptr, Tile<T, D>{sync_wait(std::move(next_tile_f))}, size);
+}
+
+template <class T, Device D>
+void testSubtileMove(std::string name, TileElementSize size, SizeType ld, const SubTileSpec& spec) {
+  SCOPED_TRACE(name);
+
+  auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
+
+  auto [tile_p, tile_f, next_tile_f] = createTileChain<T, D>();
+  ASSERT_TRUE(tile_f.valid() && !tile_f.is_ready());
+  ASSERT_TRUE(next_tile_f.valid() && !next_tile_f.is_ready());
+
+  // create subtiles
+  auto subtile = splitTile(std::move(tile_f), spec);
+
+  // append the full tile to the end of the subtile vector and add its specs to full_specs.
+  std::vector<pika::future<Tile<T, D>>> subtiles;
+  subtiles.emplace_back(std::move(subtile));
+  std::vector<SubTileSpec> full_specs = {spec};
+
+  checkValidNonReady(subtiles);
+  ASSERT_FALSE(next_tile_f.is_ready());
+
+  // Make subtiles ready
+  tile_p.set_value(std::move(tile));
+
+  checkReadyAndDependencyChain(tile_ptr, subtiles, full_specs, 0, next_tile_f);
 
   ASSERT_TRUE(next_tile_f.is_ready());
   checkFullTile(tile_ptr, Tile<T, D>{next_tile_f.get()}, size);
@@ -629,9 +658,7 @@ void testSubtilesDisjoint(std::string name, TileElementSize size, SizeType ld,
     ASSERT_LT(last_dep, specs.size());
   }
 
-  auto tmp = createTileAndPtrChecker<T, D>(size, ld);
-  auto tile = std::move(std::get<0>(tmp));
-  auto tile_ptr = std::move(std::get<1>(tmp));
+  auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
 
   auto [tile_p, tile_f, next_tile_f] = createTileChain<T, D>();
   ASSERT_TRUE(tile_f.valid() && !tile_f.is_ready());
@@ -657,10 +684,10 @@ void testSubtilesDisjoint(std::string name, TileElementSize size, SizeType ld,
   EXPECT_FALSE(next_tile_f.is_ready());
   // check tile pointer and unlock next_tile.
   // next_tile_f should be ready.
-  checkFullTile(tile_ptr, tile_f.get(), size);
+  checkFullTile(tile_ptr, sync_wait(std::move(tile_f)), size);
 
   ASSERT_TRUE(next_tile_f.is_ready());
-  checkFullTile(tile_ptr, Tile<T, D>{next_tile_f.get()}, size);
+  checkFullTile(tile_ptr, Tile<T, D>{sync_wait(std::move(next_tile_f))}, size);
 }
 
 template <class T, Device D>
@@ -670,9 +697,7 @@ void testSubOfSubtile(std::string name, TileElementSize size, SizeType ld,
   ASSERT_LE(1, specs.size());  // Need at least a subtile to create a subsubtile
   // last_dep = 0 -> subsubtile
 
-  auto tmp = createTileAndPtrChecker<T, D>(size, ld);
-  auto tile = std::move(std::get<0>(tmp));
-  auto tile_ptr = std::move(std::get<1>(tmp));
+  auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
 
   auto [tile_p, tile_f, next_tile_f] = createTileChain<T, D>();
   ASSERT_TRUE(tile_f.valid() && !tile_f.is_ready());
@@ -716,16 +741,16 @@ void testSubOfSubtile(std::string name, TileElementSize size, SizeType ld,
   EXPECT_FALSE(next_tile_f.is_ready());
   // check subtile pointer and unlock tile.
   // tile_f should be ready.
-  checkSubtile(tile_ptr, subtile_f.get(), spec0);
+  checkSubtile(tile_ptr, sync_wait(std::move(subtile_f)), spec0);
 
   ASSERT_TRUE(tile_f.is_ready());
   EXPECT_FALSE(next_tile_f.is_ready());
   // check tile pointer and unlock next_tile.
   // next_tile_f should be ready.
-  checkFullTile(tile_ptr, tile_f.get(), size);
+  checkFullTile(tile_ptr, sync_wait(std::move(tile_f)), size);
 
   ASSERT_TRUE(next_tile_f.is_ready());
-  checkFullTile(tile_ptr, Tile<T, D>{next_tile_f.get()}, size);
+  checkFullTile(tile_ptr, Tile<T, D>{sync_wait(std::move(next_tile_f))}, size);
 }
 
 TYPED_TEST(TileTest, Subtile) {
@@ -734,6 +759,10 @@ TYPED_TEST(TileTest, Subtile) {
   testSubtile<Type, Device::CPU>("Test 1", {5, 7}, 8, {{3, 4}, {2, 3}});
   testSubtile<Type, Device::CPU>("Test 2", {5, 7}, 8, {{4, 6}, {1, 1}});
   testSubtile<Type, Device::CPU>("Test 3", {5, 7}, 8, {{0, 0}, {5, 7}});
+
+  testSubtileMove<Type, Device::CPU>("Test Move 1", {5, 7}, 8, {{3, 4}, {2, 3}});
+  testSubtileMove<Type, Device::CPU>("Test Move 2", {5, 7}, 8, {{4, 6}, {1, 1}});
+  testSubtileMove<Type, Device::CPU>("Test Move 3", {5, 7}, 8, {{0, 0}, {5, 7}});
 
   testSubtilesDisjoint<Type, Device::CPU>("Test Vector Empty", {5, 7}, 8, {}, 0);
   testSubtilesDisjoint<Type, Device::CPU>("Test Vector 1", {5, 7}, 8, {{{3, 4}, {2, 3}}}, 0);

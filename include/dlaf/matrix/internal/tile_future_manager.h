@@ -23,16 +23,19 @@ template <class ReturnTileType>
 pika::future<ReturnTileType> setPromiseTileFuture(
     pika::future<typename ReturnTileType::TileDataType> old_future,
     pika::lcos::local::promise<typename ReturnTileType::TileDataType> p) noexcept {
+  namespace ex = pika::execution::experimental;
+
   using TileDataType = typename ReturnTileType::TileDataType;
   using NonConstTileType = typename ReturnTileType::TileType;
 
   DLAF_ASSERT_HEAVY(old_future.valid(), "");
-  return old_future.then(pika::launch::sync, [p = std::move(p)](
-                                                 pika::future<TileDataType>&& fut) mutable {
+
+  // This uses keep_future because we want to handle exceptions in a special way
+  auto set_promise = [p = std::move(p)](pika::future<TileDataType>&& tile) mutable {
     std::exception_ptr current_exception_ptr;
 
     try {
-      return ReturnTileType(std::move(NonConstTileType(fut.get()).setPromise(std::move(p))));
+      return ReturnTileType(std::move(NonConstTileType(tile.get()).setPromise(std::move(p))));
     }
     catch (...) {
       current_exception_ptr = std::current_exception();
@@ -43,7 +46,8 @@ pika::future<ReturnTileType> setPromiseTileFuture(
     // was started may lead to segfaults.
     p.set_exception(current_exception_ptr);
     std::rethrow_exception(current_exception_ptr);
-  });
+  };
+  return ex::keep_future(std::move(old_future)) | ex::then(std::move(set_promise)) | ex::make_future();
 }
 
 // Returns a future<ReturnTileType> setting a new promise p to the tile contained in tile_future.

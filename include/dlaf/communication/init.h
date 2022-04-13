@@ -53,10 +53,10 @@ void mpi_invoke(F f, Ts... ts) noexcept {
   if (mpi_serialized()) {
     static pika::lcos::local::mutex mt;
     std::lock_guard<pika::lcos::local::mutex> lk(mt);
-    DLAF_MPI_CALL(f(ts...));
+    DLAF_MPI_CHECK_ERROR(f(ts...));
   }
   else {
-    DLAF_MPI_CALL(f(ts...));
+    DLAF_MPI_CHECK_ERROR(f(ts...));
   }
 }
 

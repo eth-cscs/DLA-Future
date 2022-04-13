@@ -11,9 +11,10 @@
 #pragma once
 
 #include <ostream>
-#include "blas.hh"
 
-#include <dlaf/common/format_short.h>
+#include <blas.hh>
+
+#include "dlaf/common/format_short.h"
 
 namespace blas {
 inline std::ostream& operator<<(std::ostream& out, const blas::Diag& diag) {

@@ -25,7 +25,7 @@ class DlaFuture(CMakePackage, CudaPackage):
     variant("ci-test", default=False, description="Build for CI (Advanced usage).")
     conflicts('~miniapps', when='+ci-test')
 
-    depends_on("cmake@3.14:", type="build")
+    depends_on("cmake@3.16:", type="build")
     depends_on("doxygen", type="build", when="+doc")
     depends_on("mpi")
     depends_on("blaspp")
@@ -38,7 +38,7 @@ class DlaFuture(CMakePackage, CudaPackage):
     conflicts("umpire@6:")
 
     depends_on("pika cxxstd=17 +mpi")
-    depends_on("pika@0.2.0")
+    depends_on("pika@0.3.0")
     depends_on("pika +cuda", when="+cuda")
 
     depends_on("pika build_type=Debug", when="build_type=Debug")

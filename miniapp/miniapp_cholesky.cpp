@@ -40,25 +40,28 @@
 
 namespace {
 
-using pika::unwrapping;
+using pika::execution::experimental::keep_future;
+using pika::execution::experimental::start_detached;
+using pika::execution::experimental::when_all;
 
-using dlaf::Device;
-using dlaf::Coord;
 using dlaf::Backend;
+using dlaf::Coord;
 using dlaf::DefaultDevice_v;
-using dlaf::SizeType;
-using dlaf::comm::Index2D;
-using dlaf::GlobalElementSize;
+using dlaf::Device;
 using dlaf::GlobalElementIndex;
+using dlaf::GlobalElementSize;
 using dlaf::GlobalTileIndex;
 using dlaf::LocalTileIndex;
+using dlaf::Matrix;
+using dlaf::SizeType;
 using dlaf::TileElementIndex;
 using dlaf::TileElementSize;
-using dlaf::Matrix;
-using dlaf::matrix::MatrixMirror;
-using dlaf::common::Ordering;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
+using dlaf::comm::Index2D;
+using dlaf::common::Ordering;
+using dlaf::internal::transformDetach;
+using dlaf::matrix::MatrixMirror;
 
 /// Check Cholesky Factorization results
 ///
@@ -118,8 +121,6 @@ struct choleskyMiniapp {
       return hermitian_pos_def;
     }();
 
-    const auto& distribution = matrix_ref.distribution();
-
     for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
       if (0 == world.rank() && run_index >= 0)
         std::cout << "[" << run_index << "]" << std::endl;
@@ -127,30 +128,22 @@ struct choleskyMiniapp {
       HostMatrixType matrix_host(matrix_size, block_size, comm_grid);
       copy(matrix_ref, matrix_host);
 
-      // wait all setup tasks before starting benchmark
-      matrix_host.waitLocalTiles();
-      DLAF_MPI_CALL(MPI_Barrier(world));
-
       double elapsed_time;
       {
         MatrixMirrorType matrix(matrix_host);
 
         // Wait for matrix to be copied to GPU (if necessary)
         matrix.get().waitLocalTiles();
+        DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         dlaf::common::Timer<> timeit;
         dlaf::factorization::cholesky<backend, DefaultDevice_v<backend>, T>(comm_grid, opts.uplo,
                                                                             matrix.get());
 
-        // wait for last task and barrier for all ranks
-        {
-          GlobalTileIndex last_tile(matrix.get().nrTiles().rows() - 1,
-                                    matrix.get().nrTiles().cols() - 1);
-          if (matrix.get().rankIndex() == distribution.rankGlobalTile(last_tile))
-            matrix.get()(last_tile).get();
+        // wait and barrier for all ranks
+        matrix.get().waitLocalTiles();
+        DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
-          DLAF_MPI_CALL(MPI_Barrier(world));
-        }
         elapsed_time = timeit.elapsed();
       }
 
@@ -237,13 +230,14 @@ void setUpperToZeroForDiagonalTiles(Matrix<T, Device::CPU>& matrix) {
     if (distribution.rankIndex() != distribution.rankGlobalTile(diag_tile))
       continue;
 
-    auto tile_set = unwrapping([](auto&& tile) {
+    auto tile_set = [](typename Matrix<T, Device::CPU>::TileType&& tile) {
       if (tile.size().rows() > 1)
         lapack::laset(blas::Uplo::Upper, tile.size().rows() - 1, tile.size().cols() - 1, T{0}, T{0},
                       tile.ptr({0, 1}), tile.ld());
-    });
+    };
 
-    matrix(diag_tile).then(tile_set);
+    matrix.readwrite_sender(diag_tile) |
+        transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(tile_set));
   }
 }
 
@@ -267,10 +261,10 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
 
   // compute tile * tile_to_transpose' with the option to cumulate the result
   // compute a = abs(a - b)
-  auto tile_abs_diff = unwrapping([](auto&& a, auto&& b) {
+  auto tile_abs_diff = [](auto&& a, auto&& b) {
     for (const auto el_idx : dlaf::common::iterate_range2d(a.size()))
       a(el_idx) = std::abs(a(el_idx) - b(el_idx));
-  });
+  };
 
   DLAF_ASSERT(dlaf::matrix::square_size(A), A);
   DLAF_ASSERT(dlaf::matrix::square_blocksize(A), A);
@@ -339,12 +333,10 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
         const LocalTileIndex tile_wrt_local{i_loc, j_loc};
 
         dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, T(1.0),
-                                    L.read_sender(tile_wrt_local),
-                                    pika::execution::experimental::keep_future(tile_to_transpose),
+                                    L.read_sender(tile_wrt_local), keep_future(tile_to_transpose),
                                     j_loc == 0 ? T(0.0) : T(1.0),
                                     partial_result.readwrite_sender(LocalTileIndex{i_loc, 0})) |
-            dlaf::tile::gemm(dlaf::internal::Policy<dlaf::Backend::MC>()) |
-            pika::execution::experimental::start_detached();
+            dlaf::tile::gemm(dlaf::internal::Policy<dlaf::Backend::MC>()) | start_detached();
       }
     }
 
@@ -365,8 +357,10 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
 
       // L * L' for the current cell is computed
       // here the owner of the result performs the last step (difference with original)
+
       if (owner_result == current_rank) {
-        pika::dataflow(tile_abs_diff, A(tile_result), mul_result.read(tile_result));
+        when_all(A.readwrite_sender(tile_result), mul_result.read_sender(tile_result)) |
+            transformDetach(dlaf::internal::Policy<Backend::MC>(), tile_abs_diff);
       }
     }
   }

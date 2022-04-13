@@ -69,7 +69,8 @@ inline void cusolverCall(cusolverStatus_t st,
   }
 }
 
-#define DLAF_CUSOLVER_CALL(cusolver_f) dlaf::internal::cusolverCall((cusolver_f), SOURCE_LOCATION())
+#define DLAF_CUSOLVER_CHECK_ERROR(cusolver_err) \
+  dlaf::internal::cusolverCall((cusolver_err), SOURCE_LOCATION())
 
 #endif
 

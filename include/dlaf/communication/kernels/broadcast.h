@@ -38,7 +38,7 @@ void sendBcast(const matrix::Tile<const T, D>& tile, const common::PromiseGuard<
 
   const auto& comm = pcomm.ref();
   auto msg = comm::make_message(common::make_data(tile));
-  DLAF_MPI_CALL(
+  DLAF_MPI_CHECK_ERROR(
       MPI_Ibcast(const_cast<T*>(msg.data()), msg.count(), msg.mpi_type(), comm.rank(), comm, req));
 }
 
@@ -52,7 +52,7 @@ void recvBcast(const matrix::Tile<T, D>& tile, comm::IndexT_MPI root_rank,
 #endif
 
   auto msg = comm::make_message(common::make_data(tile));
-  DLAF_MPI_CALL(MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, pcomm.ref(), req));
+  DLAF_MPI_CHECK_ERROR(MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, pcomm.ref(), req));
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(recvBcast);
@@ -60,8 +60,8 @@ DLAF_MAKE_CALLABLE_OBJECT(recvBcast);
 template <class T, Device D, template <class> class Future>
 void scheduleSendBcast(const comm::Executor& ex, Future<matrix::Tile<const T, D>> tile,
                        pika::future<common::PromiseGuard<Communicator>> pcomm) {
-  using matrix::unwrapExtendTiles;
   using internal::prepareSendTile;
+  using matrix::unwrapExtendTiles;
 
   pika::dataflow(ex, unwrapExtendTiles(sendBcast_o), prepareSendTile(std::move(tile)), std::move(pcomm));
 }
@@ -77,8 +77,8 @@ struct ScheduleRecvBcast {
     static_assert(D == Device::CPU, "With CUDA RDMA disabled, MPI accepts just CPU memory.");
 #endif
 
-    using pika::dataflow;
     using matrix::unwrapExtendTiles;
+    using pika::dataflow;
 
     return dataflow(ex, unwrapExtendTiles(recvBcast_o), std::move(tile), root_rank, std::move(pcomm));
   }

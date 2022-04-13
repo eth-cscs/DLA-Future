@@ -24,7 +24,7 @@
 #include <cuda_runtime.h>
 #include <cusolverDn.h>
 
-#include <pika/modules/async_cuda.hpp>
+#include <pika/cuda.hpp>
 
 #include "dlaf/cublas/handle_pool.h"
 #include "dlaf/cuda/stream_pool.h"
@@ -47,9 +47,9 @@ namespace internal {
 template <Backend B, typename F, typename Sender,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 [[nodiscard]] decltype(auto) transform(const Policy<B> policy, F&& f, Sender&& sender) {
+  using pika::unwrapping;
   using pika::execution::experimental::then;
   using pika::execution::experimental::transfer;
-  using pika::unwrapping;
 
   auto scheduler = getBackendScheduler<B>(policy.priority());
   auto transfer_sender = transfer(std::forward<Sender>(sender), std::move(scheduler));
@@ -93,12 +93,20 @@ template <Backend B, typename F, typename Sender,
   }
 }
 
+/// Fire-and-forget transform. This submits the work and returns void.
+template <Backend B, typename F, typename Sender,
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
+void transformDetach(const Policy<B> policy, F&& f, Sender&& sender) {
+  pika::execution::experimental::start_detached(
+      transform(policy, std::forward<F>(f), std::forward<Sender>(sender)));
+}
+
 /// Lazy transform. This does not submit the work and returns a sender. First
 /// lifts non-senders into senders using just, and then calls transform with a
 /// when_all sender of the lifted senders.
 template <Backend B, typename F, typename... Ts>
 [[nodiscard]] decltype(auto) transformLift(const Policy<B> policy, F&& f, Ts&&... ts) {
-  return transform<B>(policy, std::forward<F>(f), whenAllLift(std::forward<Ts>(ts)...));
+  return transform(policy, std::forward<F>(f), internal::whenAllLift(std::forward<Ts>(ts)...));
 }
 
 /// Fire-and-forget transform. This submits the work and returns void. First
@@ -107,7 +115,78 @@ template <Backend B, typename F, typename... Ts>
 template <Backend B, typename F, typename... Ts>
 void transformLiftDetach(const Policy<B> policy, F&& f, Ts&&... ts) {
   pika::execution::experimental::start_detached(
-      transformLift<B>(policy, std::forward<F>(f), std::forward<Ts>(ts)...));
+      transformLift(policy, std::forward<F>(f), std::forward<Ts>(ts)...));
+}
+
+template <Backend B, typename F>
+struct PartialTransformBase {
+  const Policy<B> policy_;
+  std::decay_t<F> f_;
+};
+
+/// A partially applied transform, with the policy and callable object given,
+/// but the predecessor sender missing. The predecessor sender is applied when
+/// calling the operator| overload.
+template <Backend B, typename F>
+class PartialTransform : private PartialTransformBase<B, F> {
+public:
+  template <typename F_>
+  PartialTransform(const Policy<B> policy, F_&& f)
+      : PartialTransformBase<B, F>{policy, std::forward<F_>(f)} {}
+  PartialTransform(PartialTransform&&) = default;
+  PartialTransform(PartialTransform const&) = default;
+  PartialTransform& operator=(PartialTransform&&) = default;
+  PartialTransform& operator=(PartialTransform const&) = default;
+
+  template <typename Sender>
+  friend auto operator|(Sender&& sender, const PartialTransform pa) {
+    return transform<B>(pa.policy_, std::move(pa.f_), std::forward<Sender>(sender));
+  }
+};
+
+template <Backend B, typename F>
+PartialTransform(const Policy<B> policy, F&& f) -> PartialTransform<B, std::decay_t<F>>;
+
+/// A partially applied transformDetach, with the policy and callable object
+/// given, but the predecessor sender missing. The predecessor sender is applied
+/// when calling the operator| overload.
+template <Backend B, typename F>
+class PartialTransformDetach : private PartialTransformBase<B, F> {
+public:
+  template <typename F_>
+  PartialTransformDetach(const Policy<B> policy, F_&& f)
+      : PartialTransformBase<B, F>{policy, std::forward<F_>(f)} {}
+  PartialTransformDetach(PartialTransformDetach&&) = default;
+  PartialTransformDetach(PartialTransformDetach const&) = default;
+  PartialTransformDetach& operator=(PartialTransformDetach&&) = default;
+  PartialTransformDetach& operator=(PartialTransformDetach const&) = default;
+
+  template <typename Sender>
+  friend auto operator|(Sender&& sender, const PartialTransformDetach pa) {
+    return pika::execution::experimental::start_detached(
+        transform<B>(pa.policy_, std::move(pa.f_), std::forward<Sender>(sender)));
+  }
+};
+
+template <Backend B, typename F>
+PartialTransformDetach(const Policy<B> policy, F&& f) -> PartialTransformDetach<B, std::decay_t<F>>;
+
+/// \overload transform
+///
+/// This overload partially applies the transform for later use with operator|
+/// with a sender on the left-hand side.
+template <Backend B, typename F>
+[[nodiscard]] decltype(auto) transform(const Policy<B> policy, F&& f) {
+  return PartialTransform{policy, std::forward<F>(f)};
+}
+
+/// \overload transformDetach
+///
+/// This overload partially applies transformDetach for later use with operator|
+/// with a sender on the left-hand side.
+template <Backend B, typename F>
+[[nodiscard]] decltype(auto) transformDetach(const Policy<B> policy, F&& f) {
+  return PartialTransformDetach{policy, std::forward<F>(f)};
 }
 }
 }

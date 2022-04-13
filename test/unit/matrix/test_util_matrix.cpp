@@ -13,6 +13,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include <pika/execution.hpp>
 #include <pika/future.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
@@ -29,6 +30,10 @@ using namespace dlaf;
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
 using namespace dlaf::test;
+
+using pika::execution::experimental::keep_future;
+using pika::execution::experimental::start_detached;
+using pika::this_thread::experimental::sync_wait;
 
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
@@ -116,6 +121,8 @@ TYPED_TEST(MatrixUtilsTest, SetRandom) {
 
 template <class T>
 void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::CommunicatorGrid comm_grid) {
+  namespace ex = pika::execution::experimental;
+
   using dlaf::util::size_t::mul;
   const auto& distribution = matrix.distribution();
   const auto current_rank = distribution.rankIndex();
@@ -132,7 +139,7 @@ void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::Communicator
         continue;
 
       if (current_rank == owner_original) {
-        const auto& tile_original = matrix.read(index_tile_original).get();
+        const auto& tile_original = sync_wait(matrix.read_sender(index_tile_original)).get();
         pika::shared_future<Tile<const T, Device::CPU>> tile_transposed;
         const auto size_tile_transposed = transposed(tile_original.size());
 
@@ -156,8 +163,8 @@ void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::Communicator
           return dlaf::conj(tile_original({index.col(), index.row()}));
         };
 
-        CHECK_TILE_NEAR(transposed_conj_tile, tile_transposed.get(), TypeUtilities<T>::error,
-                        TypeUtilities<T>::error);
+        CHECK_TILE_NEAR(transposed_conj_tile, sync_wait(keep_future(tile_transposed)).get(),
+                        TypeUtilities<T>::error, TypeUtilities<T>::error);
       }
       else if (current_rank == owner_transposed) {
         // send to owner_original
@@ -224,6 +231,8 @@ std::vector<config_t> test_params{
 
 template <class TypeParam, Coord panel_axis>
 void testSet0(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
+  namespace ex = pika::execution::experimental;
+
   constexpr Coord coord1D = orthogonal(panel_axis);
 
   Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
@@ -236,13 +245,14 @@ void testSet0(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
     panel.setRange(GlobalTileIndex(coord1D, head), GlobalTileIndex(coord1D, tail));
 
     for (const auto& idx : panel.iteratorLocal())
-      pika::dataflow(pika::unwrapping(tile::internal::laset_o), blas::Uplo::General, TypeParam(1),
-                     TypeParam(1), panel(idx));
+      dlaf::internal::whenAllLift(blas::Uplo::General, TypeParam(1), TypeParam(1),
+                                  panel.readwrite_sender(idx)) |
+          tile::laset(dlaf::internal::Policy<dlaf::Backend::MC>()) | start_detached();
 
     matrix::util::set0<Backend::MC>(pika::threads::thread_priority::normal, panel);
 
     for (const auto& idx : panel.iteratorLocal())
-      CHECK_TILE_EQ(null_tile, panel.read(idx).get());
+      CHECK_TILE_EQ(null_tile, sync_wait(panel.read_sender(idx)).get());
 
     panel.reset();
   }

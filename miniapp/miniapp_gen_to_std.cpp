@@ -37,19 +37,19 @@
 
 namespace {
 
-using dlaf::Device;
-using dlaf::Coord;
 using dlaf::Backend;
+using dlaf::Coord;
 using dlaf::DefaultDevice_v;
-using dlaf::SizeType;
-using dlaf::comm::Index2D;
+using dlaf::Device;
 using dlaf::GlobalElementSize;
-using dlaf::TileElementSize;
 using dlaf::Matrix;
-using dlaf::matrix::MatrixMirror;
-using dlaf::common::Ordering;
+using dlaf::SizeType;
+using dlaf::TileElementSize;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
+using dlaf::comm::Index2D;
+using dlaf::common::Ordering;
+using dlaf::matrix::MatrixMirror;
 
 struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
@@ -129,7 +129,7 @@ struct GenToStdMiniapp {
         // Wait all setup tasks and (if necessary) for matrix to be copied to GPU.
         matrix_a.get().waitLocalTiles();
         matrix_b.get().waitLocalTiles();
-        DLAF_MPI_CALL(MPI_Barrier(world));
+        DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         dlaf::common::Timer<> timeit;
         dlaf::eigensolver::genToStd<backend, DefaultDevice_v<backend>, T>(comm_grid, opts.uplo,
@@ -138,7 +138,7 @@ struct GenToStdMiniapp {
 
         // wait and barrier for all ranks
         matrix_a.get().waitLocalTiles();
-        DLAF_MPI_CALL(MPI_Barrier(world));
+        DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
         elapsed_time = timeit.elapsed();
       }
 
@@ -185,7 +185,7 @@ int main(int argc, char** argv) {
 
   // options
   using namespace pika::program_options;
-  options_description desc_commandline("Usage: miniapp_gen_to_std.cpp [options]");
+  options_description desc_commandline("Usage: miniapp_gen_to_std [options]");
   desc_commandline.add(dlaf::miniapp::getMiniappOptionsDescription());
   desc_commandline.add(dlaf::getOptionsDescription());
 

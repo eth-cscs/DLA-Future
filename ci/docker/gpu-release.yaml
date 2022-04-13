@@ -10,7 +10,7 @@
 
 spack:
   specs:
-    - dla-future@develop +cuda +miniapps +ci-test ^intel-mkl ^mpich
+    - dla-future@develop +cuda +miniapps +ci-test ^intel-mkl ^mpich@3.4.2
   view: false
   concretization: together
 

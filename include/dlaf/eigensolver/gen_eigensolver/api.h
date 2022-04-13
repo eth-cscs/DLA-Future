@@ -13,9 +13,7 @@
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 
-namespace dlaf {
-namespace eigensolver {
-namespace internal {
+namespace dlaf::eigensolver::internal {
 template <Backend backend, Device device, class T>
 struct GenEigensolver {
   static EigensolverResult<T, device> call(blas::Uplo uplo, Matrix<T, device>& mat_a,
@@ -31,6 +29,11 @@ DLAF_EIGENSOLVER_GEN_ETI(extern, Backend::MC, Device::CPU, double)
 DLAF_EIGENSOLVER_GEN_ETI(extern, Backend::MC, Device::CPU, std::complex<float>)
 DLAF_EIGENSOLVER_GEN_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
 
-}
-}
+#ifdef DLAF_WITH_CUDA
+DLAF_EIGENSOLVER_GEN_ETI(extern, Backend::GPU, Device::GPU, float)
+DLAF_EIGENSOLVER_GEN_ETI(extern, Backend::GPU, Device::GPU, double)
+DLAF_EIGENSOLVER_GEN_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)
+DLAF_EIGENSOLVER_GEN_ETI(extern, Backend::GPU, Device::GPU, std::complex<double>)
+#endif
+
 }

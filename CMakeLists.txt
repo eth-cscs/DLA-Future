@@ -8,7 +8,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.16)
 
 project(DLAF VERSION 0.1.0)
 
@@ -34,6 +34,7 @@ option(DLAF_WITH_COVERAGE "Enable coverage" OFF)
 option(DLAF_BUILD_MINIAPPS "Build miniapps" ON)
 option(DLAF_BUILD_TESTING "Build tests" ON)
 option(DLAF_BUILD_DOC "Build documentation" OFF)
+option(DLAF_WITH_PRECOMPILED_HEADERS "Use precompiled headers." OFF)
 
 # ---------------------------------------------------------------------------
 # Languages
@@ -93,7 +94,7 @@ else()
 endif()
 
 # ----- pika
-find_package(pika 0.2.0 REQUIRED EXACT)
+find_package(pika 0.3.0 REQUIRED EXACT)
 
 # ----- BLASPP/LAPACKPP
 find_package(blaspp REQUIRED)

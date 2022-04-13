@@ -37,15 +37,15 @@ struct type_handler {
   /// @param stride       stride (in elements) between starts of adjacent blocks.
   type_handler(SizeType nblocks, SizeType block_size, SizeType stride) {
     MPI_Datatype element_type = dlaf::comm::mpi_datatype<std::remove_pointer_t<T>>::type;
-    DLAF_MPI_CALL(MPI_Type_vector(to_int(nblocks), to_int(block_size), to_int(stride), element_type,
-                                  &custom_type_));
-    DLAF_MPI_CALL(MPI_Type_commit(&custom_type_));
+    DLAF_MPI_CHECK_ERROR(MPI_Type_vector(to_int(nblocks), to_int(block_size), to_int(stride),
+                                         element_type, &custom_type_));
+    DLAF_MPI_CHECK_ERROR(MPI_Type_commit(&custom_type_));
   }
 
   /// Release the custom MPI_Datatype.
   ~type_handler() {
     if (static_cast<bool>(*this))
-      DLAF_MPI_CALL(MPI_Type_free(&custom_type_));
+      DLAF_MPI_CHECK_ERROR(MPI_Type_free(&custom_type_));
   }
 
   // movable

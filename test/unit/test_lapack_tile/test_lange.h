@@ -26,14 +26,14 @@ namespace dlaf {
 namespace test {
 namespace lange {
 
-using dlaf::SizeType;
-using dlaf::TileElementSize;
-using dlaf::TileElementIndex;
 using dlaf::Device;
+using dlaf::SizeType;
+using dlaf::TileElementIndex;
+using dlaf::TileElementSize;
 using dlaf::matrix::Tile;
 
-using dlaf::tile::internal::lange;
 using dlaf::matrix::test::set;
+using dlaf::tile::internal::lange;
 
 template <class T>
 using NormT = dlaf::BaseType<T>;

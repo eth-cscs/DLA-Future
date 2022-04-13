@@ -55,8 +55,8 @@ void allReduce(Communicator& communicator, MPI_Op reduce_operation, const DataIn
   if (buffer_in)
     common::copy(input, buffer_in);
 
-  DLAF_MPI_CALL(MPI_Allreduce(message_input.data(), message_output.data(), message_input.count(),
-                              message_input.mpi_type(), reduce_operation, communicator));
+  DLAF_MPI_CHECK_ERROR(MPI_Allreduce(message_input.data(), message_output.data(), message_input.count(),
+                                     message_input.mpi_type(), reduce_operation, communicator));
 
   // if the output buffer has been used, copy-back output values
   if (buffer_out)
@@ -86,8 +86,8 @@ void allReduceInPlace(Communicator& communicator, MPI_Op reduce_operation, const
   if (buffer_inout)
     common::copy(inout, buffer_inout);
 
-  DLAF_MPI_CALL(MPI_Allreduce(MPI_IN_PLACE, message_inout.data(), message_inout.count(),
-                              message_inout.mpi_type(), reduce_operation, communicator));
+  DLAF_MPI_CHECK_ERROR(MPI_Allreduce(MPI_IN_PLACE, message_inout.data(), message_inout.count(),
+                                     message_inout.mpi_type(), reduce_operation, communicator));
 
   // if the output buffer has been used, copy-back output values
   if (buffer_inout)

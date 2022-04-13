@@ -41,8 +41,8 @@ void reduceRecvInPlace(const common::PromiseGuard<comm::Communicator>& pcomm, MP
   auto msg = comm::make_message(cont_buf.descriptor);
   auto& comm = pcomm.ref();
 
-  DLAF_MPI_CALL(MPI_Ireduce(MPI_IN_PLACE, msg.data(), msg.count(), msg.mpi_type(), reduce_op,
-                            comm.rank(), comm, req));
+  DLAF_MPI_CHECK_ERROR(MPI_Ireduce(MPI_IN_PLACE, msg.data(), msg.count(), msg.mpi_type(), reduce_op,
+                                   comm.rank(), comm, req));
 }
 
 template <class T>
@@ -52,7 +52,7 @@ void reduceSend(comm::IndexT_MPI rank_root, const common::PromiseGuard<comm::Com
   auto msg = comm::make_message(cont_buf.descriptor);
   auto& comm = pcomm.ref();
 
-  DLAF_MPI_CALL(
+  DLAF_MPI_CHECK_ERROR(
       MPI_Ireduce(msg.data(), nullptr, msg.count(), msg.mpi_type(), reduce_op, rank_root, comm, req));
 }
 
@@ -69,11 +69,11 @@ auto senderReduceRecvInPlace(const comm::Executor& ex,
 
   using namespace pika::execution::experimental;
 
-  using dlaf::matrix::Tile;
+  using dlaf::internal::getBackendScheduler;
   using dlaf::internal::Policy;
   using dlaf::internal::transform;
   using dlaf::internal::whenAllLift;
-  using dlaf::internal::getBackendScheduler;
+  using dlaf::matrix::Tile;
 
   using T = dlaf::internal::SenderElementType<Sender>;
 
@@ -109,8 +109,8 @@ auto senderReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
   // where: cCPU = contiguous CPU
 
   using namespace pika::execution::experimental;
-  using dlaf::internal::whenAllLift;
   using dlaf::internal::getBackendScheduler;
+  using dlaf::internal::whenAllLift;
 
   using T = dlaf::internal::SenderElementType<Sender>;
 

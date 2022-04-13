@@ -20,8 +20,8 @@ using namespace dlaf;
 using namespace dlaf::test;
 using namespace dlaf::comm;
 
-using dlaf::common::make_data;
 using dlaf::comm::make_message;
+using dlaf::common::make_data;
 
 template <class Type>
 class MessageTest : public ::testing::Test {};
@@ -36,7 +36,7 @@ TYPED_TEST(MessageTest, MakeFromPointer) {
   auto message = make_message(data);
 
   int type_size;
-  DLAF_MPI_CALL(MPI_Type_size(message.mpi_type(), &type_size));
+  DLAF_MPI_CHECK_ERROR(MPI_Type_size(message.mpi_type(), &type_size));
 
   EXPECT_EQ(value_ptr, message.data());
   EXPECT_EQ(1, message.count());
@@ -52,7 +52,7 @@ TYPED_TEST(MessageTest, MakeFromContiguousArray) {
   auto message = make_message(data);
 
   int type_size;
-  DLAF_MPI_CALL(MPI_Type_size(message.mpi_type(), &type_size));
+  DLAF_MPI_CHECK_ERROR(MPI_Type_size(message.mpi_type(), &type_size));
 
   EXPECT_EQ(value_array, message.data());
   EXPECT_EQ(N, message.count());
@@ -75,7 +75,7 @@ TYPED_TEST(MessageTest, MakeFromContiguousAsStridedArray) {
   auto message = make_message(data);
 
   int type_size;
-  DLAF_MPI_CALL(MPI_Type_size(message.mpi_type(), &type_size));
+  DLAF_MPI_CHECK_ERROR(MPI_Type_size(message.mpi_type(), &type_size));
 
   EXPECT_EQ(value_array, message.data());
   EXPECT_EQ(total_elements, message.count());
@@ -98,7 +98,7 @@ TYPED_TEST(MessageTest, MakeFromStridedArray) {
   auto message = make_message(data);
 
   int type_size;
-  DLAF_MPI_CALL(MPI_Type_size(message.mpi_type(), &type_size));
+  DLAF_MPI_CHECK_ERROR(MPI_Type_size(message.mpi_type(), &type_size));
 
   EXPECT_EQ(value_array, message.data());
   EXPECT_EQ(1, message.count());
@@ -115,7 +115,7 @@ TYPED_TEST(MessageTest, MoveBasicType) {
   auto new_message = std::move(message);
 
   int type_size;
-  DLAF_MPI_CALL(MPI_Type_size(new_message.mpi_type(), &type_size));
+  DLAF_MPI_CHECK_ERROR(MPI_Type_size(new_message.mpi_type(), &type_size));
 
   EXPECT_EQ(value_ptr, new_message.data());
   EXPECT_EQ(1, new_message.count());
@@ -139,7 +139,7 @@ TYPED_TEST(MessageTest, MoveCustomType) {
   auto new_message = std::move(message);
 
   int type_size;
-  DLAF_MPI_CALL(MPI_Type_size(new_message.mpi_type(), &type_size));
+  DLAF_MPI_CHECK_ERROR(MPI_Type_size(new_message.mpi_type(), &type_size));
 
   EXPECT_EQ(value_array, new_message.data());
   EXPECT_EQ(1, new_message.count());

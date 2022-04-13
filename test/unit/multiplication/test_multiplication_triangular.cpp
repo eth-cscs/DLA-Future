@@ -13,7 +13,6 @@
 #include <tuple>
 
 #include <gtest/gtest.h>
-#include <pika/modules/threadmanager.hpp>
 #include <pika/runtime.hpp>
 
 #include "dlaf/blas/tile.h"

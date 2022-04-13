@@ -41,7 +41,6 @@ inline void mpi_call(int err, const common::internal::source_location& info) {
   }
 }
 
-#define DLAF_MPI_CALL(mpi_f) dlaf::internal::mpi_call((mpi_f), SOURCE_LOCATION())
-
+#define DLAF_MPI_CHECK_ERROR(mpi_err) dlaf::internal::mpi_call((mpi_err), SOURCE_LOCATION())
 }
 }

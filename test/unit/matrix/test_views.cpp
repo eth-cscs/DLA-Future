@@ -27,8 +27,8 @@
 using namespace dlaf;
 using namespace dlaf::test;
 
-using matrix::SubPanelView;
 using matrix::SubMatrixView;
+using matrix::SubPanelView;
 
 using matrix::Distribution;
 

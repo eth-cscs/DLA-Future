@@ -10,13 +10,12 @@
 #pragma once
 
 #include <blas.hh>
-#include "dlaf/eigensolver/eigensolver/mc.h"
+#include "dlaf/eigensolver/eigensolver/api.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
-namespace dlaf {
-namespace eigensolver {
+namespace dlaf::eigensolver {
 
 /// Standard Eigensolver.
 ///
@@ -30,13 +29,12 @@ namespace eigensolver {
 /// @return struct ReturnEigensolverType with eigenvalues, as a vector<T>, and eigenvectors as a Matrix
 /// @param uplo specifies if upper or lower triangular part of @p mat will be referenced
 /// @param mat contains the Hermitian matrix A
-template <Backend backend, Device device, class T>
-EigensolverResult<T, device> eigensolver(blas::Uplo uplo, Matrix<T, device>& mat) {
+template <Backend B, Device D, class T>
+EigensolverResult<T, D> eigensolver(blas::Uplo uplo, Matrix<T, D>& mat) {
   DLAF_ASSERT(matrix::local_matrix(mat), mat);
   DLAF_ASSERT(square_size(mat), mat);
   DLAF_ASSERT(square_blocksize(mat), mat);
 
-  return internal::Eigensolver<backend, device, T>::call(uplo, mat);
-}
+  return internal::Eigensolver<B, D, T>::call(uplo, mat);
 }
 }

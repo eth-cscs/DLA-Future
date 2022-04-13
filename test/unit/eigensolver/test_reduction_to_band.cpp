@@ -15,7 +15,6 @@
 #include <gtest/gtest.h>
 #include <lapack/util.hh>
 #include <pika/future.hpp>
-#include <pika/modules/threadmanager.hpp>
 #include <pika/runtime.hpp>
 
 #include "dlaf/common/index2d.h"
@@ -56,6 +55,13 @@ template <class T>
 using ReductionToBandTestMC = ReductionToBandTest<T>;
 
 TYPED_TEST_SUITE(ReductionToBandTestMC, MatrixElementTypes);
+
+#ifdef DLAF_WITH_CUDA
+template <class T>
+using ReductionToBandTestGPU = ReductionToBandTest<T>;
+
+TYPED_TEST_SUITE(ReductionToBandTestGPU, MatrixElementTypes);
+#endif
 
 struct config_t {
   LocalElementSize size;
@@ -348,6 +354,24 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessLocalSubBand) {
     testReductionToBandLocal<TypeParam, Backend::MC, Device::CPU>(size, block_size, band_size);
   }
 }
+
+#ifdef DLAF_WITH_CUDA
+TYPED_TEST(ReductionToBandTestGPU, CorrectnessLocal) {
+  for (const auto& config : configs) {
+    const auto& [size, block_size, band_size] = config;
+
+    testReductionToBandLocal<TypeParam, Backend::GPU, Device::GPU>(size, block_size, band_size);
+  }
+}
+
+TYPED_TEST(ReductionToBandTestGPU, CorrectnessLocalSubBand) {
+  for (const auto& config : configs_subband) {
+    const auto& [size, block_size, band_size] = config;
+
+    testReductionToBandLocal<TypeParam, Backend::GPU, Device::GPU>(size, block_size, band_size);
+  }
+}
+#endif
 
 TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributed) {
   constexpr Device device = Device::CPU;

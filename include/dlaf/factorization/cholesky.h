@@ -10,6 +10,8 @@
 #pragma once
 
 #include <blas.hh>
+#include <pika/thread.hpp>
+
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/factorization/cholesky/api.h"
 #include "dlaf/matrix/matrix.h"
@@ -63,6 +65,8 @@ void cholesky(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, device>& m
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
+
+  pika::scoped_annotation annotate("cholesky");
 
   // Method only for Lower triangular matrix
   if (uplo == blas::Uplo::Lower)

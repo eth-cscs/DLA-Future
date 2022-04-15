@@ -10,6 +10,8 @@
 #pragma once
 
 #include <blas.hh>
+#include <pika/thread.hpp>
+
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/eigensolver/gen_to_std/impl.h"
 #include "dlaf/matrix/matrix.h"
@@ -89,6 +91,8 @@ void genToStd(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, device>& m
   DLAF_ASSERT(mat_a.blockSize() == mat_b.blockSize(), mat_a, mat_b);
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_b, grid), mat_b, grid);
+
+  pika::scoped_annotation annotate("gen2std");
 
   switch (uplo) {
     case blas::Uplo::Lower:

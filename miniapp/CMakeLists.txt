@@ -43,11 +43,19 @@ target_link_libraries(miniapp_reduction_to_band PRIVATE DLAF_miniapp)
 target_add_warnings(miniapp_reduction_to_band)
 DLAF_addPrecompiledHeaders(miniapp_reduction_to_band)
 
+add_executable(miniapp_chol_and_gen2std miniapp_chol_and_gen2std.cpp)
+target_link_libraries(miniapp_chol_and_gen2std PRIVATE DLAF)
+target_link_libraries(miniapp_chol_and_gen2std PRIVATE DLAF_miniapp)
+target_add_warnings(miniapp_chol_and_gen2std)
+DLAF_addPrecompiledHeaders(miniapp_chol_and_gen2std)
+
+
 if(DLAF_WITH_CUDA)
   add_executable(miniapp_cublas miniapp_cublas.cpp)
   target_link_libraries(miniapp_cublas PRIVATE DLAF)
   target_add_warnings(miniapp_cublas)
   DLAF_addPrecompiledHeaders(miniapp_cublas)
 endif()
+
 
 add_subdirectory(kernel)

@@ -90,7 +90,7 @@ TYPED_TEST(TridiagEigensolverMergeTest, SortIndex) {
   sortIndex(0, 3, pika::make_ready_future(split), vec, in, out);
 
   // Merges the two sorted ranges in `vec` to get the indices of the sorted array [1, 2, 4, 6, 7, 8, 9, 12, 17, 32]
-  std::vector<SizeType> expected_out_arr{1, 2, 0, 3, 5, 9, 8, 4, 6, 7};
+  std::vector<SizeType> expected_out_arr{5, 1, 2, 9, 0, 3, 8, 4, 6, 7};
   auto expected_out = [&expected_out_arr](GlobalElementIndex i) {
     return expected_out_arr[to_sizet(i.row())];
   };

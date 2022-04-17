@@ -24,6 +24,8 @@
 #include "dlaf/sender/transform.h"
 #include "dlaf/types.h"
 
+#include "dlaf/matrix/print_csv.h"
+
 namespace dlaf::eigensolver::internal {
 
 template <class T>
@@ -95,9 +97,9 @@ std::vector<pika::shared_future<T>> cuppensDecomposition(Matrix<T, Device::CPU>&
 
   for (SizeType i_split = 0; i_split < i_end; ++i_split) {
     // Cuppen's tridiagonal decomposition
-    offdiag_vals[to_sizet(i_split)] =
-        pika::dataflow(pika::unwrapping(cuppensTileDecomposition_o), mat_trd(LocalTileIndex(i_split, 0)),
-                       mat_trd(LocalTileIndex(i_split + 1, 0)));
+    offdiag_vals.push_back(pika::dataflow(pika::unwrapping(cuppensTileDecomposition_o),
+                                          mat_trd(LocalTileIndex(i_split, 0)),
+                                          mat_trd(LocalTileIndex(i_split + 1, 0))));
   }
   return offdiag_vals;
 }
@@ -115,7 +117,6 @@ void solveLeaf(Matrix<T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& mat_ev) 
     whenAllLift(mat_trd.readwrite_sender(LocalTileIndex(i, 0)),
                 mat_ev.readwrite_sender(LocalTileIndex(i, i))) |
         tile::stedc(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
-    return;
   }
 }
 

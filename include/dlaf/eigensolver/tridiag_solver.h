@@ -41,14 +41,17 @@ void tridiagSolver(Matrix<T, device>& mat_trd, Matrix<T, device>& d, Matrix<T, d
   DLAF_ASSERT(matrix::local_matrix(mat_trd), mat_trd);
   DLAF_ASSERT(mat_trd.distribution().size().cols() == 2, mat_trd);
 
+  DLAF_ASSERT(matrix::local_matrix(d), d);
+  DLAF_ASSERT(d.distribution().size().cols() == 1, d);
+
   DLAF_ASSERT(matrix::local_matrix(mat_ev), mat_ev);
   DLAF_ASSERT(matrix::square_size(mat_ev), mat_ev);
   DLAF_ASSERT(matrix::square_blocksize(mat_ev), mat_ev);
 
-  DLAF_ASSERT(mat_trd.distribution().blockSize() == mat_ev.distribution().blockSize(),
-              mat_ev.distribution().blockSize(), mat_trd.distribution().blockSize());
-  DLAF_ASSERT(mat_trd.distribution().blockSize() == d.distribution().blockSize(),
-              mat_trd.distribution().blockSize(), d.distribution().blockSize());
+  DLAF_ASSERT(mat_trd.distribution().blockSize().rows() == mat_ev.distribution().blockSize().rows(),
+              mat_ev.distribution().blockSize().rows(), mat_trd.distribution().blockSize().rows());
+  DLAF_ASSERT(mat_trd.distribution().blockSize().rows() == d.distribution().blockSize().rows(),
+              mat_trd.distribution().blockSize().rows(), d.distribution().blockSize().rows());
   DLAF_ASSERT(mat_trd.distribution().size().rows() == mat_ev.distribution().size().rows(),
               mat_ev.distribution().size().rows(), mat_trd.distribution().size().rows());
   DLAF_ASSERT(mat_trd.distribution().size().rows() == d.distribution().size().rows(),

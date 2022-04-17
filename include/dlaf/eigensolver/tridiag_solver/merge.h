@@ -25,6 +25,8 @@
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
+#include "dlaf/matrix/print_csv.h"
+
 namespace dlaf::eigensolver::internal {
 
 // The type of a column in the Q matrix
@@ -170,7 +172,7 @@ DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(copyTileRowAndNormalize, copyTileRowAndNorm
 // Note that the norm of `z` is sqrt(2) because it is a concatination of two normalized vectors. Hence to
 // normalize `z` we have to divide by sqrt(2). That is handled in `copyTileRowAndNormalize()`
 template <class T>
-void assembleZVec(SizeType i_begin, SizeType i_middle, SizeType i_end, pika::shared_future<T> rho_fut,
+void assembleZVec(SizeType i_begin, SizeType i_split, SizeType i_end, pika::shared_future<T> rho_fut,
                   Matrix<const T, Device::CPU>& mat_ev, Matrix<T, Device::CPU>& z) {
   using dlaf::internal::Policy;
   using dlaf::internal::whenAllLift;
@@ -180,10 +182,10 @@ void assembleZVec(SizeType i_begin, SizeType i_middle, SizeType i_end, pika::sha
   // Iterate over tiles of Q1 and Q2 around the split row `i_middle`.
   for (SizeType i = i_begin; i <= i_end; ++i) {
     // Move to the row below `i_middle` for `Q2`
-    SizeType mat_ev_row = i_middle + ((i > i_middle) ? 1 : 0);
+    SizeType mat_ev_row = i_split + ((i > i_split) ? 1 : 0);
     GlobalTileIndex mat_ev_idx(mat_ev_row, i);
     // Take the last row of a `Q1` tile or the first row of a `Q2` tile
-    SizeType tile_row = (i > i_middle) ? 0 : mat_ev.distribution().tileSize(mat_ev_idx).rows() - 1;
+    SizeType tile_row = (i > i_split) ? 0 : mat_ev.distribution().tileSize(mat_ev_idx).rows() - 1;
     GlobalTileIndex z_idx(i, 0);
     // Copy the row into the column vector `z`
     whenAllLift(tile_row, rho_fut, mat_ev.read_sender(mat_ev_idx), z.readwrite_sender(z_idx)) |
@@ -340,7 +342,7 @@ void sortIndex(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
     SizeType* out_index_ptr = out_index_tile.ptr(zero_idx);
 
     auto begin_it = in_index_ptr;
-    auto split_it = in_index_ptr + n;
+    auto split_it = in_index_ptr + k;
     auto end_it = in_index_ptr + n;
     pika::merge(pika::execution::par, begin_it, split_it, split_it, end_it, out_index_ptr,
                 [v_ptr](SizeType i1, SizeType i2) { return v_ptr[i1] < v_ptr[i2]; });

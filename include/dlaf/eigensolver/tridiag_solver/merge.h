@@ -625,8 +625,6 @@ void applyGivensRotationsToMatrixColumns(SizeType n, SizeType nb, std::vector<Gi
     SizeType j_el = distr.tileElementFromGlobalElement<Coord::Col>(rot.j);
     T* y = tiles[to_sizet(j_tile)].ptr(TileElementIndex(0, j_el));
 
-    DLAF_ASSERT(i_el != j_el, i_el, j_el);
-
     // Apply Givens rotations
     blas::rot(n, x, 1, y, 1, rot.c, rot.s);
   }

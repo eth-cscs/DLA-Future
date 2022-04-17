@@ -153,12 +153,16 @@ inline SizeType problemSize(SizeType i_begin, SizeType i_end, const matrix::Dist
 // Copies and normalizes a row of the `tile` into the column vector tile `col`
 //
 template <class T>
-void copyTileRowAndNormalize(SizeType row, T rho, const matrix::Tile<const T, Device::CPU>& tile,
+void copyTileRowAndNormalize(bool top_tile, T rho, const matrix::Tile<const T, Device::CPU>& tile,
                              const matrix::Tile<T, Device::CPU>& col) {
-  // Negate Q1's last row if rho < 1
+  // Copy the bottom row of the top tile or the top row of the bottom tile
+  SizeType row = (top_tile) ? col.size().rows() - 1 : 0;
+
+  // Negate Q1's last row if rho < 0
   //
   // lapack 3.10.0, dlaed2.f, line 280 and 281
-  int sign = (rho < 0) ? -1 : 1;
+  int sign = (top_tile && rho < 0) ? -1 : 1;
+
   for (SizeType i = 0; i < tile.size().rows(); ++i) {
     col(TileElementIndex(i, 0)) = sign * tile(TileElementIndex(row, i)) / std::sqrt(2);
   }
@@ -181,14 +185,15 @@ void assembleZVec(SizeType i_begin, SizeType i_split, SizeType i_end, pika::shar
 
   // Iterate over tiles of Q1 and Q2 around the split row `i_middle`.
   for (SizeType i = i_begin; i <= i_end; ++i) {
+    // True if tile is in Q1
+    bool top_tile = i <= i_split;
     // Move to the row below `i_middle` for `Q2`
-    SizeType mat_ev_row = i_split + ((i > i_split) ? 1 : 0);
+    SizeType mat_ev_row = i_split + ((top_tile) ? 0 : 1);
     GlobalTileIndex mat_ev_idx(mat_ev_row, i);
     // Take the last row of a `Q1` tile or the first row of a `Q2` tile
-    SizeType tile_row = (i > i_split) ? 0 : mat_ev.distribution().tileSize(mat_ev_idx).rows() - 1;
     GlobalTileIndex z_idx(i, 0);
     // Copy the row into the column vector `z`
-    whenAllLift(tile_row, rho_fut, mat_ev.read_sender(mat_ev_idx), z.readwrite_sender(z_idx)) |
+    whenAllLift(top_tile, rho_fut, mat_ev.read_sender(mat_ev_idx), z.readwrite_sender(z_idx)) |
         copyTileRowAndNormalize(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
   }
 }

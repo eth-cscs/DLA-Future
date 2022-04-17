@@ -77,10 +77,10 @@ TYPED_TEST(TridiagEigensolverTest, CorrectnessLocal) {
   auto mat_trd_fn = [](GlobalElementIndex el) {
     if (el.col() == 0)
       // diagonal
-      return TypeParam(-1);
+      return TypeParam(2);
     else
       // off-diagoanl
-      return TypeParam(2);
+      return TypeParam(-1);
   };
   matrix::util::set(tridiag, std::move(mat_trd_fn));
 

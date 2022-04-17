@@ -82,8 +82,10 @@ T cuppensTileDecomposition(const matrix::Tile<T, Device::CPU>& top,
   T& top_diag_val = top(TileElementIndex{top.size().rows() - 1, 0});
   T& bottom_diag_val = bottom(TileElementIndex{0, 0});
 
-  top_diag_val -= offdiag_val;
-  bottom_diag_val -= offdiag_val;
+  // Refence: Lapack working notes: LAWN 69, Serial Cuppen algorithm, Chapter 3
+  //
+  top_diag_val -= std::abs(offdiag_val);
+  bottom_diag_val -= std::abs(offdiag_val);
   return offdiag_val;
 }
 

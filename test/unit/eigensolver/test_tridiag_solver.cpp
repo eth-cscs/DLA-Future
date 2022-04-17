@@ -93,8 +93,17 @@ TYPED_TEST(TridiagEigensolverTest, CorrectnessLocal) {
   CHECK_MATRIX_NEAR(expected_evals_fn, evals, 1e-6, 1e-6);
 
   // Eigenvectors
-  // auto expected_evecs_fn = [](GlobalElementIndex i) {
-  //  // TODO
-  //};
+  auto expected_evecs_fn = [n](GlobalElementIndex i) {
+    SizeType j = i.col() + 1;
+    SizeType k = i.row() + 1;
+    return TypeParam(std::sqrt(2.0 / (n + 1)) * std::sin(j * k * pi / (n + 1)));
+  };
+  std::cout << "Expected evecs:" << std::endl;
+  for (int i = 0; i < n; ++i) {
+    for (int j = 0; j < n; ++j) {
+      std::cout << expected_evecs_fn(GlobalElementIndex(i, j)) << ",";
+    }
+    std::cout << std::endl;
+  }
   // CHECK_MATRIX_NEAR(expected_evecs_fn, evecs, 1e-6, 1e-6);
 }

@@ -793,8 +793,12 @@ void permutateU(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> 
 
     matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
 
+    //(void) k;
     applyPermutations<T, Coord::Row>(GlobalElementIndex(0, 0), GlobalElementSize(k, k), 0, distr, i_ptr,
                                      mat_in_tiles, mat_out_tiles);
+
+    // applyPermutations<T, Coord::Row>(GlobalElementIndex(0, 0), GlobalElementSize(n, n), 0, distr, i_ptr,
+    //                                  mat_in_tiles, mat_out_tiles);
   };
   TileCollector tc{i_begin, i_end};
   pika::dataflow(std::move(permute_fn), std::move(k_fut), tc.readVec(index), tc.readwriteMat(mat_in),
@@ -810,19 +814,18 @@ void gemmQU(SizeType i_begin, SizeType i_end, Matrix<const T, Device::CPU>& mat_
   for (SizeType j = i_begin; j <= i_end; ++j) {
     // Iterate over rows of `c`
     for (SizeType i = i_begin; i <= i_end; ++i) {
-      auto tile_c = mat_c(GlobalTileIndex(i, j));
+      // Iterate over columns of `a` and rows of `b`
       for (SizeType k = i_begin; k <= i_end; ++k) {
-        auto tile_a = mat_a.read(GlobalTileIndex(i, k));
-        auto tile_b = mat_b.read(GlobalTileIndex(k, j));
-
-        constexpr T alpha = 1;
+        // C = alpha * A * B + beta * C
         T beta = 1;
         if (k == 0)
           beta = 0;
 
-        // C = alpha * A * B + beta * C
+        auto tile_a = mat_a.read(GlobalTileIndex(i, k));
+        auto tile_b = mat_b.read(GlobalTileIndex(k, j));
+        auto tile_c = mat_c(GlobalTileIndex(i, j));
         pika::dataflow(pika::unwrapping(tile::internal::gemm_o), blas::Op::NoTrans, blas::Op::NoTrans,
-                       alpha, std::move(tile_a), std::move(tile_b), beta, std::move(tile_c));
+                       T(1), std::move(tile_a), std::move(tile_b), beta, std::move(tile_c));
       }
     }
   }
@@ -847,13 +850,8 @@ template <class T>
 void setUnitDiag(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k_fut,
                  Matrix<T, Device::CPU>& mat) {
   auto diag_f = [](SizeType k, SizeType tile_begin, matrix::Tile<T, Device::CPU> tile) {
-    SizeType nb = tile.size().rows();
-    SizeType tile_offset = k - tile_begin;
-    // If all elements of the tile are before the `k` index do nothing
-    if (tile_offset > nb)
-      return;
-
     // If all elements of the tile are after the `k` index reset the offset
+    SizeType tile_offset = k - tile_begin;
     if (tile_offset < 0)
       tile_offset = 0;
 
@@ -868,8 +866,7 @@ void setUnitDiag(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType>
   for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
     SizeType tile_begin = distr.globalElementFromGlobalTileAndTileElement<Coord::Row>(i_tile, 0) -
                           distr.globalElementFromGlobalTileAndTileElement<Coord::Row>(i_begin, 0);
-    pika::dataflow(pika::unwrapping(std::move(diag_f)), std::move(k_fut), tile_begin,
-                   mat(GlobalTileIndex(i_tile, i_tile)));
+    pika::dataflow(pika::unwrapping(diag_f), k_fut, tile_begin, mat(GlobalTileIndex(i_tile, i_tile)));
   }
 }
 
@@ -984,5 +981,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
 
   // Copy back into `mat_ev`
   copySubMatrix(i_begin, i_end, ws.mat1, mat_ev);
+
+  matrix::print(format::csv{}, "fin evecs", mat_ev);
 }
 }

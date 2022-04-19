@@ -17,8 +17,6 @@
 #include "dlaf/common/data.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/communication/communicator.h"
-#include "dlaf/communication/executor.h"
-#include "dlaf/executors.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/memory/memory_view.h"
@@ -68,8 +66,6 @@ void testReduceInPlace(comm::Communicator world, matrix::Matrix<T, device> matri
   common::Pipeline<comm::Communicator> chain(world);
 
   const auto root_rank = world.size() - 1;
-  const auto ex_mpi = getMPIExecutor<Backend::MC>();
-
   const LocalTileIndex idx(0, 0);
 
   auto input_tile = fixedValueTile(world.rank() + 1);
@@ -78,13 +74,13 @@ void testReduceInPlace(comm::Communicator world, matrix::Matrix<T, device> matri
   std::function<T(TileElementIndex)> exp_tile;
   if (root_rank == world.rank()) {
     // use -> read
-    scheduleReduceRecvInPlace(ex_mpi, chain(), MPI_SUM, matrix(idx));
+    scheduleReduceRecvInPlace(chain(), MPI_SUM, matrix(idx));
 
     exp_tile = fixedValueTile(world.size() * (world.size() + 1) / 2);
   }
   else {
     // use -> read -> set -> read
-    scheduleReduceSend(ex_mpi, root_rank, chain(), MPI_SUM, matrix.read(idx));
+    scheduleReduceSend(root_rank, chain(), MPI_SUM, matrix.read(idx));
 
     CHECK_TILE_EQ(input_tile, matrix.read(idx).get());
 
@@ -110,15 +106,13 @@ void testAllReduceInPlace(comm::Communicator world, matrix::Matrix<T, device> ma
                           std::string test_name) {
   common::Pipeline<comm::Communicator> chain(world);
 
-  const auto ex_mpi = getMPIExecutor<Backend::MC>();
-
   const LocalTileIndex idx(0, 0);
 
   // set -> use -> read
   auto input_tile = fixedValueTile(world.rank() + 1);
   matrix::test::set(matrix(idx).get(), input_tile);
 
-  auto after = scheduleAllReduceInPlace(ex_mpi, chain(), MPI_SUM, matrix(idx));
+  auto after = scheduleAllReduceInPlace(chain(), MPI_SUM, matrix(idx));
 
   // Note:
   // The call `after.get()` waits for any scheduled task with the aim to ensure that no other task
@@ -148,7 +142,6 @@ void testAllReduce(comm::Communicator world, matrix::Matrix<T, device> matA,
   common::Pipeline<comm::Communicator> chain(world);
 
   const auto root_rank = world.size() - 1;
-  const auto ex_mpi = getMPIExecutor<Backend::MC>();
 
   const LocalTileIndex idx(0, 0);
   matrix::Matrix<T, device>& mat_in = root_rank % 2 == 0 ? matA : matB;
@@ -158,7 +151,7 @@ void testAllReduce(comm::Communicator world, matrix::Matrix<T, device> matA,
   auto input_tile = fixedValueTile(world.rank() + 1);
   matrix::test::set(mat_in(idx).get(), input_tile);
 
-  scheduleAllReduce(ex_mpi, chain(), MPI_SUM, mat_in.read(idx), mat_out(idx));
+  scheduleAllReduce(chain(), MPI_SUM, mat_in.read(idx), mat_out(idx));
 
   const auto& tile_in = mat_in.read(idx).get();
   const auto& tile_out = mat_out.read(idx).get();

@@ -18,17 +18,19 @@
 
 #include <mpi.h>
 
+#include <pika/execution.hpp>
+#include <pika/future.hpp>
 #include <pika/unwrap.hpp>
 
 #include "dlaf/common/contiguous_buffer_holder.h"
 #include "dlaf/common/data.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/communication/communicator.h"
-#include "dlaf/communication/executor.h"
 #include "dlaf/communication/message.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/schedulers.h"
 #include "dlaf/sender/traits.h"
+#include "dlaf/sender/transform_mpi.h"
 
 namespace dlaf {
 namespace comm {
@@ -36,7 +38,7 @@ namespace comm {
 namespace internal {
 
 template <class T>
-void reduceRecvInPlace(const common::PromiseGuard<comm::Communicator>& pcomm, MPI_Op reduce_op,
+void reduceRecvInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
                        const common::internal::ContiguousBufferHolder<T>& cont_buf, MPI_Request* req) {
   auto msg = comm::make_message(cont_buf.descriptor);
   auto& comm = pcomm.ref();
@@ -46,7 +48,7 @@ void reduceRecvInPlace(const common::PromiseGuard<comm::Communicator>& pcomm, MP
 }
 
 template <class T>
-void reduceSend(comm::IndexT_MPI rank_root, const common::PromiseGuard<comm::Communicator>& pcomm,
+void reduceSend(comm::IndexT_MPI rank_root, common::PromiseGuard<comm::Communicator> pcomm,
                 MPI_Op reduce_op, const common::internal::ContiguousBufferHolder<const T>& cont_buf,
                 MPI_Request* req) {
   auto msg = comm::make_message(cont_buf.descriptor);
@@ -57,8 +59,7 @@ void reduceSend(comm::IndexT_MPI rank_root, const common::PromiseGuard<comm::Com
 }
 
 template <class Sender>
-auto senderReduceRecvInPlace(const comm::Executor& ex,
-                             pika::future<common::PromiseGuard<comm::Communicator>> pcomm,
+auto senderReduceRecvInPlace(pika::future<common::PromiseGuard<comm::Communicator>> pcomm,
                              MPI_Op reduce_op, Sender&& tile) {
   // Note:
   //
@@ -67,7 +68,7 @@ auto senderReduceRecvInPlace(const comm::Executor& ex,
   //
   // where: cCPU = contiguous CPU
 
-  using namespace pika::execution::experimental;
+  namespace ex = pika::execution::experimental;
 
   using dlaf::internal::getBackendScheduler;
   using dlaf::internal::Policy;
@@ -77,16 +78,15 @@ auto senderReduceRecvInPlace(const comm::Executor& ex,
 
   using T = dlaf::internal::SenderElementType<Sender>;
 
-  return std::forward<Sender>(tile) | transfer(getBackendScheduler<Backend::MC>()) |
-         let_value([ex, reduce_op, pcomm = std::move(pcomm)](Tile<T, Device::CPU>& tile_orig) mutable {
+  return std::forward<Sender>(tile) | ex::transfer(getBackendScheduler<Backend::MC>()) |
+         ex::let_value([reduce_op, pcomm = std::move(pcomm)](Tile<T, Device::CPU>& tile_orig) mutable {
            using dlaf::common::internal::makeItContiguous;
 
-           return just(makeItContiguous(tile_orig)) |
-                  let_value([ex, reduce_op, &tile_orig,
-                             pcomm = std::move(pcomm)](const auto& cont_buffer) mutable {
-                    return pika::dataflow(ex, internal::reduceRecvInPlace<T>, pcomm.get(), reduce_op,
-                                          std::cref(cont_buffer)) |
-                           then([&]() {
+           return ex::just(makeItContiguous(tile_orig)) |
+                  ex::let_value([reduce_op, &tile_orig,
+                                 pcomm = std::move(pcomm)](const auto& cont_buffer) mutable {
+                    return whenAllLift(pcomm.get(), reduce_op, std::cref(cont_buffer)) |
+                           transformMPI(internal::reduceRecvInPlace<T>) | ex::then([&]() {
                              // note: this lambda does two things:
                              //       - avoid implicit conversion problem from reference_wrapper
                              //       - act as if the copy returns the destination tile
@@ -98,7 +98,7 @@ auto senderReduceRecvInPlace(const comm::Executor& ex,
 }
 
 template <class Sender>
-auto senderReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
+auto senderReduceSend(comm::IndexT_MPI rank_root,
                       pika::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
                       Sender&& tile) {
   // Note:
@@ -108,20 +108,21 @@ auto senderReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
   //
   // where: cCPU = contiguous CPU
 
-  using namespace pika::execution::experimental;
+  namespace ex = pika::execution::experimental;
+
   using dlaf::internal::getBackendScheduler;
   using dlaf::internal::whenAllLift;
 
   using T = dlaf::internal::SenderElementType<Sender>;
 
-  return std::forward<Sender>(tile) | transfer(getBackendScheduler<Backend::MC>()) |
-         let_value(pika::unwrapping([ex, rank_root, reduce_op, pcomm = std::move(pcomm)](
-                                        const matrix::Tile<const T, Device::CPU>& tile) mutable {
+  return std::forward<Sender>(tile) | ex::transfer(getBackendScheduler<Backend::MC>()) |
+         ex::let_value(pika::unwrapping([rank_root, reduce_op, pcomm = std::move(pcomm)](
+                                            const matrix::Tile<const T, Device::CPU>& tile) mutable {
            using common::internal::makeItContiguous;
            return whenAllLift(std::move(pcomm), makeItContiguous(tile)) |
-                  let_value([ex, rank_root, reduce_op](auto& pcomm, const auto& cont_buf) {
-                    return pika::dataflow(ex, internal::reduceSend<T>, rank_root, std::move(pcomm),
-                                          reduce_op, std::cref(cont_buf));
+                  ex::let_value([rank_root, reduce_op](auto& pcomm, const auto& cont_buf) {
+                    return whenAllLift(rank_root, std::move(pcomm), reduce_op, std::cref(cont_buf)) |
+                           transformMPI(internal::reduceSend<T>);
                   });
          }));
 }
@@ -129,8 +130,7 @@ auto senderReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
 
 /// Given a CPU tile, contiguous or not, perform MPI_Reduce in-place
 template <class T>
-void scheduleReduceRecvInPlace(const comm::Executor& ex,
-                               pika::future<common::PromiseGuard<comm::Communicator>> pcomm,
+void scheduleReduceRecvInPlace(pika::future<common::PromiseGuard<comm::Communicator>> pcomm,
                                MPI_Op reduce_op, pika::future<matrix::Tile<T, Device::CPU>> tile) {
   // Note:
   //
@@ -138,15 +138,14 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
   //
   // where: cCPU = contiguous CPU
 
-  using namespace pika::execution::experimental;
+  using pika::execution::experimental::start_detached;
 
-  internal::senderReduceRecvInPlace(ex, std::move(pcomm), reduce_op, std::move(tile)) | start_detached();
+  internal::senderReduceRecvInPlace(std::move(pcomm), reduce_op, std::move(tile)) | start_detached();
 }
 
 /// Given a GPU tile, perform MPI_Reduce in-place
 template <class T, Device D>
-void scheduleReduceRecvInPlace(const comm::Executor& ex,
-                               pika::future<common::PromiseGuard<comm::Communicator>> pcomm,
+void scheduleReduceRecvInPlace(pika::future<common::PromiseGuard<comm::Communicator>> pcomm,
                                MPI_Op reduce_op, pika::future<matrix::Tile<T, D>> tile) {
   // Note:
   //
@@ -154,11 +153,12 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
   //
   // where: cCPU = contiguous CPU
 
-  using namespace pika::execution::experimental;
+  namespace ex = pika::execution::experimental;
+
   using dlaf::internal::transform;
 
   std::move(tile) |
-      let_value(pika::unwrapping([ex, reduce_op, pcomm = std::move(pcomm)](auto& tile_gpu) mutable {
+      ex::let_value(pika::unwrapping([reduce_op, pcomm = std::move(pcomm)](auto& tile_gpu) mutable {
         using dlaf::internal::Policy;
         using dlaf::matrix::internal::CopyBackend;
 
@@ -168,11 +168,11 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
             [](const matrix::Tile<const T, Device::GPU>& tile_gpu, auto... args) mutable {
               return dlaf::matrix::Duplicate<Device::CPU>{}(tile_gpu, args...);
             },
-            just(std::cref(tile_gpu)));
+            ex::just(std::cref(tile_gpu)));
 
         // cCPU -> MPI -> cCPU
         auto tile_reduced =
-            internal::senderReduceRecvInPlace(ex, std::move(pcomm), reduce_op, std::move(tile_cpu));
+            internal::senderReduceRecvInPlace(std::move(pcomm), reduce_op, std::move(tile_cpu));
 
         // cCPU -> GPU
         namespace arg = std::placeholders;
@@ -181,13 +181,13 @@ void scheduleReduceRecvInPlace(const comm::Executor& ex,
                          std::bind(matrix::internal::copy_o, arg::_1, std::cref(tile_gpu), arg::_2),
                          std::move(tile_reduced));
       })) |
-      start_detached();
+      ex::start_detached();
 }
 
 // TODO scheduleReduceSend with future will require to move the actual value, not the cref
 /// Given a CPU tile, being it contiguous or not, perform MPI_Reduce in-place
 template <class T>
-void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
+void scheduleReduceSend(comm::IndexT_MPI rank_root,
                         pika::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
                         pika::shared_future<matrix::Tile<const T, Device::CPU>> tile) {
   // Note:
@@ -196,16 +196,16 @@ void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
   //
   // where: cCPU = contiguous CPU
 
-  using namespace pika::execution::experimental;
+  namespace ex = pika::execution::experimental;
 
-  internal::senderReduceSend(ex, rank_root, std::move(pcomm), reduce_op, keep_future(std::move(tile))) |
-      start_detached();
+  internal::senderReduceSend(rank_root, std::move(pcomm), reduce_op, ex::keep_future(std::move(tile))) |
+      ex::start_detached();
 }
 
 // TODO scheduleReduceSend with future will require to move the actual value, not the cref
 /// Given a GPU tile perform MPI_Reduce in-place
 template <class T, Device D>
-void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
+void scheduleReduceSend(comm::IndexT_MPI rank_root,
                         pika::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
                         pika::shared_future<matrix::Tile<const T, D>> tile) {
   // Note:
@@ -214,19 +214,18 @@ void scheduleReduceSend(const comm::Executor& ex, comm::IndexT_MPI rank_root,
   //
   // where: cCPU = contiguous CPU
 
-  using namespace pika::execution::experimental;
+  namespace ex = pika::execution::experimental;
+
   using dlaf::internal::Policy;
   using dlaf::matrix::internal::CopyBackend;
 
-  auto tile_cpu = dlaf::internal::transform(
-      Policy<CopyBackend<D, Device::CPU>::value>(pika::threads::thread_priority::high),
-      [](const matrix::Tile<const T, Device::GPU>& tile_gpu, auto... args) {
-        return dlaf::matrix::Duplicate<Device::CPU>{}(tile_gpu, args...);
-      },
-      keep_future(std::move(tile)));
+  auto tile_cpu = ex::keep_future(std::move(tile)) |
+                  dlaf::internal::transform(Policy<CopyBackend<D, Device::CPU>::value>(
+                                                pika::threads::thread_priority::high),
+                                            dlaf::matrix::Duplicate<Device::CPU>{});
 
-  internal::senderReduceSend(ex, rank_root, std::move(pcomm), reduce_op, std::move(tile_cpu)) |
-      start_detached();
+  internal::senderReduceSend(rank_root, std::move(pcomm), reduce_op, std::move(tile_cpu)) |
+      ex::start_detached();
 }
 }
 }

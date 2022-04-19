@@ -25,10 +25,6 @@
 #include <cusolverDn.h>
 
 #include <pika/cuda.hpp>
-
-#include "dlaf/cublas/handle_pool.h"
-#include "dlaf/cuda/stream_pool.h"
-#include "dlaf/cusolver/handle_pool.h"
 #endif
 
 namespace dlaf {

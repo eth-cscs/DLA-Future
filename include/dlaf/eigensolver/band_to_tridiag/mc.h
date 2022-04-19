@@ -19,7 +19,7 @@
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/vector.h"
-#include "dlaf/executors.h"
+#include "dlaf/eigensolver/band_to_tridiag/api.h"
 #include "dlaf/lapack/gpu/lacpy.h"
 #include "dlaf/lapack/gpu/laset.h"
 #include "dlaf/lapack/tile.h"

@@ -18,13 +18,7 @@
 #include <pika/cuda.hpp>
 #endif
 
-#include <dlaf/communication/mech.h>
 #include <dlaf/types.h>
-
-#ifdef DLAF_WITH_CUDA
-#include <dlaf/cublas/executor.h>
-#include <dlaf/cusolver/executor.h>
-#endif
 
 namespace dlaf {
 /// DLA-Future configuration.
@@ -37,7 +31,6 @@ struct configuration {
   std::size_t umpire_host_memory_pool_initial_bytes = 1 << 30;
   std::size_t umpire_device_memory_pool_initial_bytes = 1 << 30;
   std::string mpi_pool = "mpi";
-  comm::MPIMech mpi_mech = comm::MPIMech::Polling;
 };
 
 std::ostream& operator<<(std::ostream& os, configuration const& cfg);
@@ -46,10 +39,6 @@ namespace internal {
 configuration& getConfiguration();
 
 #ifdef DLAF_WITH_CUDA
-cuda::StreamPool getNpCudaStreamPool();
-cuda::StreamPool getHpCudaStreamPool();
-cublas::HandlePool getCublasHandlePool();
-cusolver::HandlePool getCusolverHandlePool();
 pika::cuda::experimental::cuda_pool getCudaPool();
 #endif
 }

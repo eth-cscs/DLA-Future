@@ -20,9 +20,7 @@
 #include "dlaf/communication/broadcast_panel.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/executor.h"
 #include "dlaf/communication/kernels.h"
-#include "dlaf/executors.h"
 #include "dlaf/factorization/cholesky/api.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/distribution.h"
@@ -175,8 +173,6 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
   using namespace cholesky_l;
   using pika::threads::thread_priority;
 
-  auto executor_mpi = dlaf::getMPIExecutor<backend>();
-
   // Set up MPI executor pipelines
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
   common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
@@ -218,7 +214,7 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 
       if (kk_rank.row() == this_rank.row())
         panelT.setTile(diag_wp_idx, mat_a.read(kk_idx));
-      broadcast(executor_mpi, kk_rank.row(), panelT, mpi_col_task_chain);
+      broadcast(kk_rank.row(), panelT, mpi_col_task_chain);
 
       // COLUMN UPDATE
       for (SizeType i = distr.nextLocalTileFromGlobalTile<Coord::Row>(kt);
@@ -238,7 +234,7 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 
     panelT.setRange({kt, kt}, indexFromOrigin(distr.nrTiles()));
 
-    broadcast(executor_mpi, kk_rank.col(), panel, panelT, mpi_row_task_chain, mpi_col_task_chain);
+    broadcast(kk_rank.col(), panel, panelT, mpi_row_task_chain, mpi_col_task_chain);
 
     // TRAILING MATRIX
     for (SizeType jt_idx = kt; jt_idx < nrtile; ++jt_idx) {
@@ -317,8 +313,6 @@ void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
   using namespace cholesky_u;
   using pika::threads::thread_priority;
 
-  auto executor_mpi = dlaf::getMPIExecutor<backend>();
-
   // Set up MPI executor pipelines
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
   common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
@@ -360,7 +354,7 @@ void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
 
       if (kk_rank.col() == this_rank.col())
         panelT.setTile(diag_wp_idx, mat_a.read(kk_idx));
-      broadcast(executor_mpi, kk_rank.col(), panelT, mpi_row_task_chain);
+      broadcast(kk_rank.col(), panelT, mpi_row_task_chain);
 
       // ROW UPDATE
       for (SizeType j = distr.nextLocalTileFromGlobalTile<Coord::Col>(k + 1);
@@ -380,7 +374,7 @@ void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
 
     panelT.setRange({kt, kt}, indexFromOrigin(distr.nrTiles()));
 
-    broadcast(executor_mpi, kk_rank.row(), panel, panelT, mpi_row_task_chain, mpi_col_task_chain);
+    broadcast(kk_rank.row(), panel, panelT, mpi_row_task_chain, mpi_col_task_chain);
 
     // TRAILING MATRIX
     for (SizeType it_idx = kt; it_idx < nrtile; ++it_idx) {

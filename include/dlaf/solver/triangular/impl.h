@@ -22,9 +22,7 @@
 #include "dlaf/communication/broadcast_panel.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/executor.h"
 #include "dlaf/communication/kernels.h"
-#include "dlaf/executors.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/matrix.h"
@@ -449,8 +447,6 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
 
   using common::internal::vector;
 
-  auto executor_mpi = dlaf::getMPIExecutor<backend>();
-
   // Set up MPI executor pipelines
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
   common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
@@ -494,7 +490,7 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
         a_panel.setTile(ik_panel, mat_a.read(ik));
       }
     }
-    broadcast(executor_mpi, kk_rank.col(), a_panel, mpi_row_task_chain);
+    broadcast(kk_rank.col(), a_panel, mpi_row_task_chain);
 
     for (SizeType j_local = 0; j_local < distr_b.localNrTiles().cols(); ++j_local) {
       // Triangular solve B's k-th row panel and broadcast B(kj) column-wise
@@ -513,7 +509,7 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
     if (k == mat_a.nrTiles().rows() - 1)
       continue;
 
-    broadcast(executor_mpi, kk_rank.row(), b_panel, mpi_col_task_chain);
+    broadcast(kk_rank.row(), b_panel, mpi_col_task_chain);
 
     for (SizeType i_local = bt_offset.row(); i_local < distr_a.localNrTiles().rows(); ++i_local) {
       // Choose queue priority
@@ -542,8 +538,6 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
                                          T alpha, Matrix<const T, D>& mat_a, Matrix<T, D>& mat_b) {
   using namespace triangular_llt;
   using pika::threads::thread_priority;
-
-  auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
   common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
@@ -584,7 +578,7 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
         a_panel.setTile(ik, mat_a.read(ik));
       }
     }
-    comm::broadcast(executor_mpi, rank_kk.col(), a_panel, mpi_row_task_chain);
+    comm::broadcast(rank_kk.col(), a_panel, mpi_row_task_chain);
 
     matrix::util::set0<backend>(thread_priority::normal, b_panel);
 
@@ -596,10 +590,9 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
 
     for (const auto& idx : b_panel.iteratorLocal()) {
       if (this_rank.row() == rank_kk.row())
-        comm::scheduleReduceRecvInPlace(executor_mpi, mpi_col_task_chain(), MPI_SUM, b_panel(idx));
+        comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM, b_panel(idx));
       else
-        comm::scheduleReduceSend(executor_mpi, rank_kk.row(), mpi_col_task_chain(), MPI_SUM,
-                                 b_panel.read(idx));
+        comm::scheduleReduceSend(rank_kk.row(), mpi_col_task_chain(), MPI_SUM, b_panel.read(idx));
     }
 
     if (this_rank.row() == rank_kk.row()) {
@@ -626,8 +619,6 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_lun;
   using pika::threads::thread_priority;
-
-  auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   // Set up MPI executor pipelines
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
@@ -671,7 +662,7 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
         a_panel.setTile(ik_panel, mat_a.read(ik));
       }
     }
-    broadcast(executor_mpi, kk_rank.col(), a_panel, mpi_row_task_chain);
+    broadcast(kk_rank.col(), a_panel, mpi_row_task_chain);
 
     for (SizeType j_local = distr_b.localNrTiles().cols() - 1; j_local >= 0; --j_local) {
       // Triangular solve B's k-th row panel and broadcast B(kj) column-wise
@@ -690,7 +681,7 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
     if (k == 0)
       continue;
 
-    broadcast(executor_mpi, kk_rank.row(), b_panel, mpi_col_task_chain);
+    broadcast(kk_rank.row(), b_panel, mpi_col_task_chain);
 
     for (SizeType i_local = bt_offset.row() - 1; i_local >= 0; --i_local) {
       // Choose queue priority
@@ -719,8 +710,6 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_rln;
   using pika::threads::thread_priority;
-
-  auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   // Set up MPI executor pipelines
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
@@ -764,7 +753,7 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
         a_panel.setTile(kj_panel, mat_a.read(kj));
       }
     }
-    broadcast(executor_mpi, kk_rank.row(), a_panel, mpi_col_task_chain);
+    broadcast(kk_rank.row(), a_panel, mpi_col_task_chain);
 
     for (SizeType i_local = distr_b.localNrTiles().rows() - 1; i_local >= 0; --i_local) {
       // Triangular solve B's k-th col panel and broadcast B(ik) row-wise
@@ -783,7 +772,7 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
     if (k == 0)
       continue;
 
-    broadcast(executor_mpi, kk_rank.col(), b_panel, mpi_row_task_chain);
+    broadcast(kk_rank.col(), b_panel, mpi_row_task_chain);
 
     for (SizeType j_local = bt_offset.col() - 1; j_local >= 0; --j_local) {
       // Choose queue priority
@@ -812,8 +801,6 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_run;
   using pika::threads::thread_priority;
-
-  auto executor_mpi = dlaf::getMPIExecutor<backend>();
 
   // Set up MPI executor pipelines
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
@@ -858,7 +845,7 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
         a_panel.setTile(kj_panel, mat_a.read(kj));
       }
     }
-    broadcast(executor_mpi, kk_rank.row(), a_panel, mpi_col_task_chain);
+    broadcast(kk_rank.row(), a_panel, mpi_col_task_chain);
 
     for (SizeType i_local = 0; i_local < distr_b.localNrTiles().rows(); ++i_local) {
       // Triangular solve B's k-th row panel and broadcast B(kj) column-wise
@@ -877,7 +864,7 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
     if (k == mat_a.nrTiles().cols() - 1)
       continue;
 
-    broadcast(executor_mpi, kk_rank.col(), b_panel, mpi_row_task_chain);
+    broadcast(kk_rank.col(), b_panel, mpi_row_task_chain);
 
     for (SizeType j_local = bt_offset.col(); j_local < distr_a.localNrTiles().cols(); ++j_local) {
       // Choose queue priority

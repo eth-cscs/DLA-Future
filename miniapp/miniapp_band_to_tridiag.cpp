@@ -146,7 +146,7 @@ struct BandToTridiagMiniapp {
                   << " " << gigaflops << "GFlop/s"
                   << " " << dlaf::internal::FormatShort{opts.type}
                   << dlaf::internal::FormatShort{opts.uplo} << " " << matrix_host.size() << " "
-                  << matrix_host.blockSize() << " " << comm_grid.size() << " "
+                  << matrix_host.blockSize() << " " << opts.b << " " << comm_grid.size() << " "
                   << pika::get_os_thread_count() << " " << backend << std::endl;
 
       // (optional) run test

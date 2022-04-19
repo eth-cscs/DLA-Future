@@ -39,7 +39,7 @@ struct Invoke<Device::GPU> {
   template <class F, class... Args>
   static void call(F&& f, Args&&... args) {
     f(std::forward<Args>(args)..., nullptr);
-    DLAF_CUDA_CALL(cudaDeviceSynchronize());
+    DLAF_CUDA_CHECK_ERROR(cudaDeviceSynchronize());
   }
 };
 #endif
@@ -61,10 +61,10 @@ struct InvokeBlas<Device::GPU> {
   template <class F, class... Args>
   static void call(F&& f, Args&&... args) {
     cublasHandle_t handle;
-    DLAF_CUBLAS_CALL(cublasCreate(&handle));
+    DLAF_CUBLAS_CHECK_ERROR(cublasCreate(&handle));
     f(handle, std::forward<Args>(args)...);
-    DLAF_CUDA_CALL(cudaDeviceSynchronize());
-    DLAF_CUBLAS_CALL(cublasDestroy(handle));
+    DLAF_CUDA_CHECK_ERROR(cudaDeviceSynchronize());
+    DLAF_CUBLAS_CHECK_ERROR(cublasDestroy(handle));
   }
 };
 #endif

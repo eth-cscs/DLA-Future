@@ -42,8 +42,8 @@
 namespace {
 
 using dlaf::Backend;
-using dlaf::Device;
 using dlaf::DefaultDevice_v;
+using dlaf::Device;
 using dlaf::GlobalElementIndex;
 using dlaf::GlobalElementSize;
 using dlaf::SizeType;
@@ -51,7 +51,6 @@ using dlaf::TileElementSize;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
 using dlaf::common::Ordering;
-using dlaf::comm::MPIMech;
 
 struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::No> {
@@ -110,7 +109,7 @@ struct triangularSolverMiniapp {
     auto sync_barrier = [&]() {
       a.get().waitLocalTiles();
       b.get().waitLocalTiles();
-      DLAF_MPI_CALL(MPI_Barrier(world));
+      DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
     };
 
     const auto side = opts.side;

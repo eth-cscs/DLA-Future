@@ -125,8 +125,8 @@ TYPED_TEST(MathUtilTest, size_t_Arithmetic_SumMul) {
 
   auto expected_result = static_cast<size_t>(a) * static_cast<size_t>(b) + static_cast<size_t>(c);
 
-  using util::size_t::sum;
   using util::size_t::mul;
+  using util::size_t::sum;
 
   EXPECT_EQ(expected_result, sum(mul(a, b), c));
 }
@@ -205,8 +205,8 @@ TYPED_TEST(MathUtilTest, ptrdiff_t_Arithmetic_SumMul) {
     c = static_cast<TypeParam>(std::numeric_limits<ArithmeticT>::max() / 2);
   }
 
-  using util::ptrdiff_t::sum;
   using util::ptrdiff_t::mul;
+  using util::ptrdiff_t::sum;
 
   {
     auto expected_result =

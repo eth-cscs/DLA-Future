@@ -46,9 +46,11 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
                                                            comm::Index2D rank,
                                                            Matrix<const T, Device::CPU>& matrix) {
   using namespace dlaf::matrix;
+  namespace ex = pika::execution::experimental;
+  using pika::this_thread::experimental::sync_wait;
 
-  using dlaf::common::internal::vector;
   using dlaf::common::make_data;
+  using dlaf::common::internal::vector;
   using pika::unwrapping;
 
   using dlaf::tile::internal::lange;
@@ -78,21 +80,25 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
       else
         return lange(lapack::Norm::Max, tile);
     });
-    auto current_tile_max = pika::dataflow(norm_max_f, matrix.read(tile_wrt_local));
+    auto current_tile_max =
+        matrix.read_sender(tile_wrt_local) |
+        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), std::move(norm_max_f)) |
+        ex::make_future();
 
     tiles_max.emplace_back(std::move(current_tile_max));
   }
 
-  // than it is necessary to reduce max values from all ranks into a single max value for the matrix
+  // then it is necessary to reduce max values from all ranks into a single max value for the matrix
 
-  // TODO unwrapping can be skipped for optimization reasons
-  NormT local_max_value = pika::dataflow(unwrapping([](const auto&& values) {
-                                           if (values.size() == 0)
-                                             return std::numeric_limits<NormT>::min();
-                                           return *std::max_element(values.begin(), values.end());
-                                         }),
-                                         tiles_max)
-                              .get();
+  auto max_element = [](std::vector<NormT>&& values) {
+    DLAF_ASSERT(!values.empty(), "");
+    return *std::max_element(values.begin(), values.end());
+  };
+  NormT local_max_value =
+      tiles_max.empty() ? std::numeric_limits<NormT>::min()
+                        : sync_wait(ex::when_all_vector(std::move(tiles_max)) |
+                                    dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(),
+                                                              std::move(max_element)));
   NormT max_value;
   dlaf::comm::sync::reduce(comm_grid.rankFullCommunicator(rank), comm_grid.fullCommunicator(), MPI_MAX,
                            make_data(&local_max_value, 1), make_data(&max_value, 1));

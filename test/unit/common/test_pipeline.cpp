@@ -9,11 +9,14 @@
 //
 
 #include "dlaf/common/pipeline.h"
+#include "dlaf/sender/policy.h"
+#include "dlaf/sender/transform.h"
 
 #include <atomic>
 #include <chrono>
 
 #include <gtest/gtest.h>
+#include <pika/execution.hpp>
 #include <pika/future.hpp>
 #include <pika/thread.hpp>
 #include <pika/unwrap.hpp>
@@ -50,6 +53,33 @@ TEST(Pipeline, Basic) {
   guard1.get();
 }
 
+TEST(Pipeline, BasicWithSenderAdaptors) {
+  using pika::execution::experimental::then;
+  using pika::this_thread::experimental::sync_wait;
+
+  Pipeline<int> serial(26);
+
+  auto checkpoint0 = serial();
+  auto checkpoint1 = std::move(checkpoint0) | then([](auto&& wrapper) { return std::move(wrapper); });
+
+  auto guard0 = serial();
+  auto guard1 = serial();
+
+  EXPECT_FALSE(guard0.is_ready());
+  EXPECT_FALSE(guard1.is_ready());
+
+  sync_wait(std::move(checkpoint1));
+
+  EXPECT_TRUE(guard0.is_ready());
+  EXPECT_FALSE(guard1.is_ready());
+
+  sync_wait(std::move(guard0));
+
+  EXPECT_TRUE(guard1.is_ready());
+
+  sync_wait(std::move(guard1));
+}
+
 // PipelineDestructor
 //
 // These tests checks that the Pipeline does not block on destruction is performed correctly.
@@ -83,6 +113,28 @@ TEST(PipelineDestructor, DestructionWithDependency) {
       try_waiting_guard(is_exited_from_scope);
       EXPECT_TRUE(is_exited_from_scope);
     });
+  }
+  is_exited_from_scope = true;
+
+  last_task.get();
+}
+
+TEST(PipelineDestructor, DestructionWithDependencyWithSenderAdaptors) {
+  using pika::execution::experimental::make_future;
+
+  pika::future<void> last_task;
+
+  std::atomic<bool> is_exited_from_scope;
+  {
+    Pipeline<int> serial(26);
+    last_task = dlaf::internal::transform(
+                    dlaf::internal::Policy<dlaf::Backend::MC>(),
+                    [&is_exited_from_scope](auto) {
+                      try_waiting_guard(is_exited_from_scope);
+                      EXPECT_TRUE(is_exited_from_scope);
+                    },
+                    serial()) |
+                make_future();
   }
   is_exited_from_scope = true;
 

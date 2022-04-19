@@ -24,7 +24,6 @@
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/kernels/all_reduce.h"
-#include "dlaf/executors.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/views.h"
@@ -157,11 +156,11 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 
       if (first_row_tile == 0) {
         cudaStream_t stream;
-        DLAF_CUBLAS_CALL(cublasGetStream(handle, &stream));
+        DLAF_CUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
 
-        DLAF_CUDA_CALL(cudaMemcpy2DAsync(tile_t.ptr(), to_sizet(tile_t.ld() + 1) * sizeof(T),
-                                         taus.data(), sizeof(T), sizeof(T), to_sizet(k),
-                                         cudaMemcpyDefault, stream));
+        DLAF_CUDA_CHECK_ERROR(cudaMemcpy2DAsync(tile_t.ptr(), to_sizet(tile_t.ld() + 1) * sizeof(T),
+                                                taus.data(), sizeof(T), sizeof(T), to_sizet(k),
+                                                cudaMemcpyDefault, stream));
       }
 
       for (SizeType j = 0; j < k; ++j) {
@@ -326,8 +325,7 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
   // at this point each rank has its partial result for each column
   // so, let's reduce the results (on all ranks, so that everyone can independently compute T factor)
   if (true)  // TODO if the column communicator has more than 1 tile...but I just have the pipeline
-    t = scheduleAllReduceInPlace(getMPIExecutor<Backend::MC>(), mpi_col_task_chain(), MPI_SUM,
-                                 std::move(t));
+    t = scheduleAllReduceInPlace(mpi_col_task_chain(), MPI_SUM, std::move(t));
 
   // 2nd step: compute the T factor, by performing the last step on each column
   // each column depends on the previous part (all reflectors that comes before)

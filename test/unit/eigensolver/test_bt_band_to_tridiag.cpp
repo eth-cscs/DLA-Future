@@ -114,8 +114,8 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, co
           continue;
 
         const GlobalTileIndex ij_tile = dist.globalTileIndex(ij);
-        pika::dataflow(pika::unwrapping(computeTaus<T>), b, k,
-                       splitTile(mat_hh(ij_tile), {sub_origin, sub_size}));
+        dlaf::internal::transformLiftDetach(dlaf::internal::Policy<dlaf::Backend::MC>(), computeTaus<T>,
+                                            b, k, splitTile(mat_hh(ij_tile), {sub_origin, sub_size}));
       }
     }
 
@@ -132,8 +132,8 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, co
   if (m == 0 || n == 0)
     return;
 
-  using eigensolver::internal::nrSweeps;
   using eigensolver::internal::nrStepsForSweep;
+  using eigensolver::internal::nrSweeps;
   for (SizeType sweep = nrSweeps<T>(m) - 1; sweep >= 0; --sweep) {
     for (SizeType step = nrStepsForSweep(sweep, m, b) - 1; step >= 0; --step) {
       const SizeType j = sweep;

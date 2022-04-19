@@ -33,7 +33,7 @@ inline void cudaCall(cudaError_t err, const dlaf::common::internal::source_locat
   }
 }
 
-#define DLAF_CUDA_CALL(cuda_f) dlaf::internal::cudaCall((cuda_f), SOURCE_LOCATION())
+#define DLAF_CUDA_CHECK_ERROR(cuda_err) dlaf::internal::cudaCall((cuda_err), SOURCE_LOCATION())
 
 #endif
 }

@@ -19,11 +19,9 @@
 #endif
 
 #include "dlaf/common/callable_object.h"
-#include "dlaf/executors.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/sender/keep_if_shared_future.h"
-#include "dlaf/sender/partial_transform.h"
 #include "dlaf/sender/policy.h"
 #include "dlaf/sender/transform.h"
 
@@ -79,8 +77,8 @@ struct CopyTile<T, Device::CPU, Device::GPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_CUDA_CALL(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
-                                ld_source * sizeof(T), m * sizeof(T), n, cudaMemcpyHostToDevice));
+    DLAF_CUDA_CHECK_ERROR(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+                                       ld_source * sizeof(T), m * sizeof(T), n, cudaMemcpyHostToDevice));
   }
 
   static void call(const matrix::Tile<const T, Device::CPU>& source,
@@ -90,9 +88,9 @@ struct CopyTile<T, Device::CPU, Device::GPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_CUDA_CALL(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
-                                     ld_source * sizeof(T), m * sizeof(T), n, cudaMemcpyHostToDevice,
-                                     stream));
+    DLAF_CUDA_CHECK_ERROR(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+                                            ld_source * sizeof(T), m * sizeof(T), n,
+                                            cudaMemcpyHostToDevice, stream));
   }
 };
 
@@ -105,8 +103,8 @@ struct CopyTile<T, Device::GPU, Device::CPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_CUDA_CALL(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
-                                ld_source * sizeof(T), m * sizeof(T), n, cudaMemcpyDeviceToHost));
+    DLAF_CUDA_CHECK_ERROR(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+                                       ld_source * sizeof(T), m * sizeof(T), n, cudaMemcpyDeviceToHost));
   }
 
   static void call(const matrix::Tile<const T, Device::GPU>& source,
@@ -116,9 +114,9 @@ struct CopyTile<T, Device::GPU, Device::CPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_CUDA_CALL(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
-                                     ld_source * sizeof(T), m * sizeof(T), n, cudaMemcpyDeviceToHost,
-                                     stream));
+    DLAF_CUDA_CHECK_ERROR(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+                                            ld_source * sizeof(T), m * sizeof(T), n,
+                                            cudaMemcpyDeviceToHost, stream));
   }
 };
 
@@ -131,8 +129,9 @@ struct CopyTile<T, Device::GPU, Device::GPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_CUDA_CALL(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
-                                ld_source * sizeof(T), m * sizeof(T), n, cudaMemcpyDeviceToDevice));
+    DLAF_CUDA_CHECK_ERROR(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+                                       ld_source * sizeof(T), m * sizeof(T), n,
+                                       cudaMemcpyDeviceToDevice));
   }
 
   static void call(const matrix::Tile<const T, Device::GPU>& source,
@@ -142,9 +141,9 @@ struct CopyTile<T, Device::GPU, Device::GPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_CUDA_CALL(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
-                                     ld_source * sizeof(T), m * sizeof(T), n, cudaMemcpyDeviceToDevice,
-                                     stream));
+    DLAF_CUDA_CHECK_ERROR(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+                                            ld_source * sizeof(T), m * sizeof(T), n,
+                                            cudaMemcpyDeviceToDevice, stream));
   }
 };
 #endif
@@ -197,28 +196,33 @@ struct Duplicate {
 /// When Destination and Source are the same, returns the input tile unmodified.
 template <Device Destination, typename T, Device Source>
 auto duplicateIfNeeded(pika::future<Tile<T, Source>> tile) {
+  namespace ex = pika::execution::experimental;
+
   if constexpr (Source == Destination) {
     return tile;
   }
   else {
-    return pika::execution::experimental::make_future(
-        dlaf::internal::transform(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>(
-                                      pika::threads::thread_priority::normal),
-                                  dlaf::matrix::Duplicate<Destination>{}, std::move(tile)));
+    return std::move(tile) |
+           dlaf::internal::transform(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>(
+                                         pika::threads::thread_priority::normal),
+                                     dlaf::matrix::Duplicate<Destination>{}) |
+           ex::make_future();
   }
 }
 
 template <Device Destination, typename T, Device Source>
 auto duplicateIfNeeded(pika::shared_future<Tile<T, Source>> tile) {
+  namespace ex = pika::execution::experimental;
+
   if constexpr (Source == Destination) {
     return tile;
   }
   else {
-    return pika::execution::experimental::make_future(
-        dlaf::internal::transform(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>(
-                                      pika::threads::thread_priority::normal),
-                                  dlaf::matrix::Duplicate<Destination>{},
-                                  pika::execution::experimental::keep_future(std::move(tile))));
+    return ex::keep_future(std::move(tile)) |
+           dlaf::internal::transform(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>(
+                                         pika::threads::thread_priority::normal),
+                                     dlaf::matrix::Duplicate<Destination>{}) |
+           ex::make_future();
   }
 }
 
@@ -230,13 +234,14 @@ template <Device Destination, class T, Device Source, class U, template <class> 
           template <class> class FutureS>
 void copyIfNeeded(FutureS<Tile<U, Source>> tile_from, FutureD<Tile<T, Destination>> tile_to,
                   pika::future<void> wait_for_me = pika::make_ready_future<void>()) {
+  namespace ex = pika::execution::experimental;
+
   if constexpr (Destination != Source)
-    pika::execution::experimental::when_all(std::move(wait_for_me),
-                                            dlaf::internal::keepIfSharedFuture(std::move(tile_from)),
-                                            dlaf::internal::keepIfSharedFuture(std::move(tile_to))) |
+    ex::when_all(std::move(wait_for_me), dlaf::internal::keepIfSharedFuture(std::move(tile_from)),
+                 dlaf::internal::keepIfSharedFuture(std::move(tile_to))) |
         dlaf::matrix::copy(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>(
             pika::threads::thread_priority::normal)) |
-        pika::execution::experimental::start_detached();
+        ex::start_detached();
 }
 }
 }

@@ -82,10 +82,12 @@ public:
     pika::lcos::local::promise<T> promise_next;
     future_ = promise_next.get_future();
 
-    return before_last.then(pika::launch::sync,
-                            pika::unwrapping([promise_next = std::move(promise_next)](T object) mutable {
-                              return PromiseGuard<T>{std::move(object), std::move(promise_next)};
-                            }));
+    auto make_promise_guard = [promise_next = std::move(promise_next)](T object) mutable {
+      return PromiseGuard<T>{std::move(object), std::move(promise_next)};
+    };
+
+    namespace ex = pika::execution::experimental;
+    return std::move(before_last) | ex::then(std::move(make_promise_guard)) | ex::make_future();
   }
 
 private:

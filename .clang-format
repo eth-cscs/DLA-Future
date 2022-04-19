@@ -103,7 +103,7 @@ PenaltyReturnTypeOnItsOwnLine: 1000
 PointerAlignment: Left
 ReflowComments:  true
 SortIncludes:    true
-SortUsingDeclarations: false
+SortUsingDeclarations: true
 SpaceAfterCStyleCast: true
 SpaceAfterLogicalNot: false
 SpaceAfterTemplateKeyword: true

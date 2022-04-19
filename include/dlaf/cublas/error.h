@@ -54,7 +54,7 @@ inline void cublasCall(cublasStatus_t st, const dlaf::common::internal::source_l
   }
 }
 
-#define DLAF_CUBLAS_CALL(cublas_f) dlaf::internal::cublasCall((cublas_f), SOURCE_LOCATION())
+#define DLAF_CUBLAS_CHECK_ERROR(cublas_err) dlaf::internal::cublasCall((cublas_err), SOURCE_LOCATION())
 
 #endif
 

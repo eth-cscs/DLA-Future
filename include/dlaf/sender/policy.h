@@ -14,6 +14,8 @@
 #include <type_traits>
 #include <utility>
 
+#include <dlaf/types.h>
+
 namespace dlaf {
 namespace internal {
 /// A policy class for use as a tag for dispatching algorithms to a particular

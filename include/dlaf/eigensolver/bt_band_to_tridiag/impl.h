@@ -41,6 +41,8 @@ template <class T>
 pika::shared_future<matrix::Tile<const T, Device::CPU>> setupVWellFormed(
     const SizeType b, pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_hh,
     pika::future<matrix::Tile<T, Device::CPU>> tile_v) {
+  namespace ex = pika::execution::experimental;
+
   auto unzipV_func = [b](const auto& tile_hh, auto tile_v) {
     using lapack::lacpy;
     using lapack::laset;
@@ -76,7 +78,10 @@ pika::shared_future<matrix::Tile<const T, Device::CPU>> setupVWellFormed(
 
     return matrix::Tile<const T, Device::CPU>(std::move(tile_v));
   };
-  return pika::dataflow(pika::unwrapping(unzipV_func), std::move(tile_hh), std::move(tile_v));
+
+  return ex::when_all(ex::keep_future(std::move(tile_hh)), std::move(tile_v)) |
+         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), unzipV_func) |
+         ex::make_future();
 }
 
 template <class T>
@@ -84,6 +89,8 @@ pika::shared_future<matrix::Tile<const T, Device::CPU>> computeTFactor(
     pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_taus,
     pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_v,
     pika::future<matrix::Tile<T, Device::CPU>> mat_t) {
+  namespace ex = pika::execution::experimental;
+
   auto tfactor_task = [](const auto& tile_taus, const auto& tile_v, auto tile_t) {
     using namespace lapack;
 
@@ -100,8 +107,10 @@ pika::shared_future<matrix::Tile<const T, Device::CPU>> computeTFactor(
 
     return matrix::Tile<const T, Device::CPU>(std::move(tile_t));
   };
-  return pika::dataflow(pika::unwrapping(tfactor_task), std::move(tile_taus), std::move(tile_v),
-                        std::move(mat_t));
+  return dlaf::internal::whenAllLift(ex::keep_future(std::move(tile_taus)),
+                                     ex::keep_future(std::move(tile_v)), std::move(mat_t)) |
+         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), tfactor_task) |
+         ex::make_future();
 }
 
 template <Backend backend, class TSender, class VSender>
@@ -351,9 +360,9 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
   using pika::threads::thread_priority;
   namespace ex = pika::execution::experimental;
 
-  using matrix::Panel;
-  using common::RoundRobin;
   using common::iterate_range2d;
+  using common::RoundRobin;
+  using matrix::Panel;
   using namespace bt_tridiag;
 
   if (mat_hh.size().isEmpty() || mat_e.size().isEmpty())

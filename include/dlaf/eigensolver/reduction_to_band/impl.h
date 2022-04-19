@@ -28,7 +28,6 @@
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/communication/kernels/all_reduce.h"
 #include "dlaf/communication/kernels/reduce.h"
-#include "dlaf/executors.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/distribution.h"
@@ -47,8 +46,8 @@ namespace dlaf::eigensolver::internal {
 
 namespace red2band {
 using matrix::Matrix;
-using matrix::SubPanelView;
 using matrix::SubMatrixView;
+using matrix::SubPanelView;
 using matrix::Tile;
 
 template <class Type>
@@ -277,10 +276,9 @@ void updateTrailingPanelWithReflector(const std::vector<TileT<T>>& panel, const 
 template <class MatrixLike>
 auto computePanelReflectors(MatrixLike& mat_a, const SubPanelView& panel_view, const SizeType nrefls) {
   using T = typename MatrixLike::ElementType;
+  namespace ex = pika::execution::experimental;
 
-  auto panel_task = pika::unwrapping([nrefls, cols = panel_view.cols()](auto fut_panel_tiles) {
-    const auto panel_tiles = pika::unwrap(fut_panel_tiles);
-
+  auto panel_task = [nrefls, cols = panel_view.cols()](std::vector<TileT<T>>&& panel_tiles) {
     common::internal::vector<T> taus;
     taus.reserve(nrefls);
     for (SizeType j = 0; j < nrefls; ++j) {
@@ -289,7 +287,7 @@ auto computePanelReflectors(MatrixLike& mat_a, const SubPanelView& panel_view, c
     }
 
     return taus;
-  });
+  };
 
   std::vector<pika::future<TileT<T>>> panel_tiles;
   panel_tiles.reserve(
@@ -299,8 +297,11 @@ auto computePanelReflectors(MatrixLike& mat_a, const SubPanelView& panel_view, c
     panel_tiles.emplace_back(matrix::splitTile(mat_a(i), spec));
   }
 
-  return pika::dataflow(getHpExecutor<Backend::MC>(), std::move(panel_task),
-                        pika::when_all(std::move(panel_tiles)));
+  return ex::when_all_vector(std::move(panel_tiles)) |
+         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
+                                       pika::threads::thread_priority::high),
+                                   std::move(panel_task)) |
+         ex::make_future();
 }
 
 template <Backend B, Device D, class T, bool force_copy = false>
@@ -496,7 +497,7 @@ void her2kUpdateTrailingMatrix(const SubMatrixView& view, matrix::Matrix<T, D>& 
 
       // The first column of the trailing matrix (except for the very first global tile) has to be
       // updated first, in order to unlock the next iteration as soon as possible.
-      const auto& priority = (j == at_start.col()) ? thread_priority::high : thread_priority::normal;
+      const auto priority = (j == at_start.col()) ? thread_priority::high : thread_priority::normal;
 
       if (is_diagonal_tile) {
         her2kDiag<B>(priority, v.read_sender(ij_local), x.read_sender(ij_local), getSubA(tile_a));
@@ -536,8 +537,8 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
 
   auto call(Matrix<T, Device::GPU>& mat_a, const matrix::SubPanelView& panel_view,
             const SizeType nrefls_block) {
-    using pika::threads::thread_priority;
     using dlaf::eigensolver::internal::red2band::local::computePanelReflectors;
+    using pika::threads::thread_priority;
 
     namespace ex = pika::execution::experimental;
 
@@ -624,12 +625,14 @@ pika::shared_future<common::internal::vector<T>> computePanelReflectors(
     pika::future<void> trigger, comm::IndexT_MPI rank_v0,
     pika::future<common::PromiseGuard<comm::Communicator>> mpi_col_chain_panel, MatrixT<T>& mat_a,
     const common::IterableRange2D<SizeType, matrix::LocalTile_TAG> ai_panel_range, SizeType nrefls) {
-  auto panel_task = pika::unwrapping(
-      [rank_v0, nrefls, cols = mat_a.blockSize().cols()](auto fut_panel_tiles, auto comm_wrapper) {
+  namespace ex = pika::execution::experimental;
+
+  auto panel_task =
+      [rank_v0, nrefls,
+       cols = mat_a.blockSize().cols()](std::vector<typename MatrixT<T>::TileType>&& panel_tiles,
+                                        common::PromiseGuard<comm::Communicator>&& comm_wrapper) {
         auto communicator = comm_wrapper.ref();
         const bool has_head = communicator.rank() == rank_v0;
-
-        const auto panel_tiles = pika::unwrap(fut_panel_tiles);
 
         common::internal::vector<T> taus;
         taus.reserve(nrefls);
@@ -639,12 +642,14 @@ pika::shared_future<common::internal::vector<T>> computePanelReflectors(
                                            taus.back());
         }
         return taus;
-      });
+      };
 
-  auto panel_tiles = pika::when_all(matrix::select(mat_a, ai_panel_range));
-
-  return pika::dataflow(getHpExecutor<Backend::MC>(), std::move(panel_task), std::move(panel_tiles),
-                        mpi_col_chain_panel, std::move(trigger));
+  return ex::when_all(ex::when_all_vector(matrix::select(mat_a, ai_panel_range)),
+                      std::move(mpi_col_chain_panel), std::move(trigger)) |
+         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
+                                       pika::threads::thread_priority::high),
+                                   std::move(panel_task)) |
+         ex::make_future();
 }
 
 template <class T>
@@ -655,8 +660,6 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
   using pika::threads::thread_priority;
 
   constexpr auto B = Backend::MC;
-
-  const auto ex_mpi = getMPIExecutor<B>();
 
   const auto dist = a.distribution();
   const auto rank = dist.rankIndex();
@@ -704,7 +707,8 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
         const LocalTileIndex index_x{dist.template localTileFromGlobalTile<Coord::Row>(ij.col()), 0};
         const LocalTileIndex index_xt{0, ij_local.col()};
 
-        auto tile_x = (dist.rankIndex().row() == owner) ? x(index_x) : xt(index_xt);
+        auto tile_x = (dist.rankIndex().row() == owner) ? x.readwrite_sender(index_x)
+                                                        : xt.readwrite_sender(index_xt);
 
         hemmOffDiag<B>(thread_priority::high, blas::Op::ConjTrans, a.read_sender(ij_local),
                        w.read_sender(ij_local), std::move(tile_x));
@@ -734,10 +738,10 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
       // Moreover, it reduces in place because the owner of the diagonal stores the partial result
       // directly in x (without using xt)
       const auto i = dist.template localTileFromGlobalTile<Coord::Row>(index_k);
-      comm::scheduleReduceRecvInPlace(ex_mpi, mpi_col_chain(), MPI_SUM, x({i, 0}));
+      comm::scheduleReduceRecvInPlace(mpi_col_chain(), MPI_SUM, x({i, 0}));
     }
     else {
-      comm::scheduleReduceSend(ex_mpi, rank_owner_row, mpi_col_chain(), MPI_SUM, xt.read(index_xt));
+      comm::scheduleReduceSend(rank_owner_row, mpi_col_chain(), MPI_SUM, xt.read(index_xt));
     }
   }
 
@@ -747,9 +751,9 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
   // The result is needed just on the column with reflectors.
   for (const auto& index_x : x.iteratorLocal()) {
     if (reducer_col == rank.col())
-      comm::scheduleReduceRecvInPlace(ex_mpi, mpi_row_chain(), MPI_SUM, x(index_x));
+      comm::scheduleReduceRecvInPlace(mpi_row_chain(), MPI_SUM, x(index_x));
     else
-      comm::scheduleReduceSend(ex_mpi, reducer_col, mpi_row_chain(), MPI_SUM, x.read(index_x));
+      comm::scheduleReduceSend(reducer_col, mpi_row_chain(), MPI_SUM, x.read(index_x));
   }
 }
 
@@ -776,7 +780,7 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
 
       // The first column of the trailing matrix (except for the very first global tile) has to be
       // updated first, in order to unlock the next iteration as soon as possible.
-      const auto& priority = (j == at_start.cols()) ? thread_priority::high : thread_priority::normal;
+      const auto priority = (j == at_start.cols()) ? thread_priority::high : thread_priority::normal;
 
       if (is_diagonal_tile) {
         her2kDiag<B>(priority, v.read_sender(ij_local), x.read_sender(ij_local),
@@ -802,8 +806,8 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
 template <Backend B, Device D, class T>
 common::internal::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<B, D, T>::call(
     Matrix<T, D>& mat_a, const SizeType band_size) {
-  using dlaf::matrix::Panel;
   using dlaf::matrix::Matrix;
+  using dlaf::matrix::Panel;
 
   using namespace red2band::local;
 
@@ -947,8 +951,6 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
   using common::iterate_range2d;
   using factorization::internal::computeTFactor;
 
-  const auto ex_mpi = getMPIExecutor<Backend::MC>();
-
   common::Pipeline<comm::Communicator> mpi_col_chain_panel(grid.colCommunicator().clone());
   common::Pipeline<comm::Communicator> mpi_row_chain(grid.rowCommunicator().clone());
   common::Pipeline<comm::Communicator> mpi_col_chain(grid.colCommunicator().clone());
@@ -1036,7 +1038,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     }
 
     // PREPARATION FOR TRAILING MATRIX UPDATE
-    comm::broadcast(ex_mpi, rank_v0.col(), v, vt, mpi_row_chain, mpi_col_chain);
+    comm::broadcast(rank_v0.col(), v, vt, mpi_row_chain, mpi_col_chain);
 
     // W = V . T
     PanelT<Coord::Col, T>& w = panels_w.nextResource();
@@ -1051,7 +1053,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     if (is_panel_rank_col)
       red2band::local::trmmComputeW<B, D>(w, v, t.read(t_idx));
 
-    comm::broadcast(ex_mpi, rank_v0.col(), w, wt, mpi_row_chain, mpi_col_chain);
+    comm::broadcast(rank_v0.col(), w, wt, mpi_row_chain, mpi_col_chain);
 
     // X = At . W
     PanelT<Coord::Col, T>& x = panels_x.nextResource();
@@ -1086,7 +1088,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
       MatrixT<T> w2 = std::move(t);
 
       red2band::local::gemmComputeW2<B, D>(w2, w, x);
-      comm::scheduleAllReduceInPlace(ex_mpi, mpi_col_chain(), MPI_SUM, w2(LocalTileIndex(0, 0)));
+      comm::scheduleAllReduceInPlace(mpi_col_chain(), MPI_SUM, w2(LocalTileIndex(0, 0)));
 
       red2band::local::gemmUpdateX<B, D>(x, w2, v);
     }
@@ -1098,7 +1100,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     xt.setRangeStart(at_start);
     xt.setHeight(nrefls);
 
-    comm::broadcast(ex_mpi, rank_v0.col(), x, xt, mpi_row_chain, mpi_col_chain);
+    comm::broadcast(rank_v0.col(), x, xt, mpi_row_chain, mpi_col_chain);
 
     // TRAILING MATRIX UPDATE
 

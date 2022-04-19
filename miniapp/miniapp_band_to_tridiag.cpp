@@ -183,7 +183,7 @@ int main(int argc, char** argv) {
   desc_commandline.add_options()
     ("matrix-size",  value<SizeType>()   ->default_value(4096), "Matrix size")
     ("block-size",   value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
-    ("band-size",    value<SizeType>()   ->default_value( 64), "band size")
+    ("band-size",    value<SizeType>()   ->default_value( 64),  "band size")
   ;
   // clang-format on
   dlaf::miniapp::addUploOption(desc_commandline);

@@ -406,6 +406,25 @@ inline void composeIndices(SizeType i_begin, SizeType i_end, Matrix<const SizeTy
   pika::dataflow(compose_fn, tc.readVec(outer), tc.readVec(inner), tc.readwriteVec(result));
 }
 
+inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device::CPU>& in,
+                        Matrix<SizeType, Device::CPU>& out) {
+  SizeType n = problemSize(i_begin, i_end, in.distribution());
+  auto inv_fn = [n](auto in_tiles, auto out_tiles) {
+    TileElementIndex zero(0, 0);
+    const SizeType* in_ptr = in_tiles[0].get().ptr(zero);
+    // save in variable avoid releasing the tile too soon
+    auto out_tile = out_tiles[0].get();
+    SizeType* out_ptr = out_tile.ptr(zero);
+
+    for (SizeType i = 0; i < n; ++i) {
+      out_ptr[in_ptr[i]] = i;
+    }
+  };
+
+  TileCollector tc{i_begin, i_end};
+  pika::dataflow(std::move(inv_fn), tc.readVec(in), tc.readwriteVec(out));
+}
+
 // The index array `out_ptr` holds the indices of elements of `c_ptr` that order it such that ColType::Deflated
 // entries are moved to the end. The `c_ptr` array is implicitly ordered according to `in_ptr` on entry.
 //
@@ -635,8 +654,6 @@ void applyGivensRotationsToMatrixColumns(SizeType n, SizeType nb, std::vector<Gi
   }
 }
 
-// Note: `z` is non-const because it is used as an intermediary buffer for eigenvector computation
-//
 template <class T>
 void solveRank1Problem(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k_fut,
                        pika::shared_future<T> rho_fut, Matrix<const T, Device::CPU>& d,
@@ -793,15 +810,32 @@ void permutateU(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> 
 
     matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
 
-    //(void) k;
     applyPermutations<T, Coord::Row>(GlobalElementIndex(0, 0), GlobalElementSize(k, k), 0, distr, i_ptr,
                                      mat_in_tiles, mat_out_tiles);
-
-    // applyPermutations<T, Coord::Row>(GlobalElementIndex(0, 0), GlobalElementSize(n, n), 0, distr, i_ptr,
-    //                                  mat_in_tiles, mat_out_tiles);
   };
   TileCollector tc{i_begin, i_end};
   pika::dataflow(std::move(permute_fn), std::move(k_fut), tc.readVec(index), tc.readwriteMat(mat_in),
+                 tc.readwriteMat(mat_out));
+}
+
+template <class T, Coord coord>
+void permutateQU(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device::CPU>& index,
+                 Matrix<T, Device::CPU>& mat_in, Matrix<T, Device::CPU>& mat_out) {
+  SizeType n = problemSize(i_begin, i_end, mat_in.distribution());
+  SizeType nb = mat_in.distribution().blockSize().rows();
+  auto permute_fn = [n, nb](auto index_tiles, auto mat_in_tiles_fut, auto mat_out_tiles_fut) {
+    TileElementIndex zero(0, 0);
+    const SizeType* i_ptr = index_tiles[0].get().ptr(zero);
+    auto mat_in_tiles = pika::unwrap(mat_in_tiles_fut);
+    auto mat_out_tiles = pika::unwrap(mat_out_tiles_fut);
+
+    matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
+
+    applyPermutations<T, coord>(GlobalElementIndex(0, 0), GlobalElementSize(n, n), 0, distr, i_ptr,
+                                mat_in_tiles, mat_out_tiles);
+  };
+  TileCollector tc{i_begin, i_end};
+  pika::dataflow(std::move(permute_fn), tc.readVec(index), tc.readwriteMat(mat_in),
                  tc.readwriteMat(mat_out));
 }
 
@@ -921,6 +955,8 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   sortIndex(i_begin, i_end, pika::make_ready_future(n1), d, ws.i1, ws.i2);
   pika::future<std::vector<GivensRotation<T>>> rots_fut =
       applyDeflation(i_begin, i_end, rho_fut, tol_fut, ws.i2, d, ws.z, ws.c);
+
+  // TODO: make sure zero blocks are actually zero!
   pika::dataflow(pika::unwrapping(applyGivensRotationsToMatrixColumns<T>), n, nb, std::move(rots_fut),
                  tc.readwriteMat(mat_ev));
 
@@ -931,6 +967,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   //
   // - reorder `d -> dtmp`, `z -> ztmp`, `c -> ctmp` using `i3` such that deflated entries are at the bottom.
   // - solve the rank-1 problem and save eigenvalues in `dtmp` and eigenvectors in `ws.mat1`.
+  // - set deflated diagonal entries of `U` to 1 (temporary solution until optimized GEMM is implemented)
   //
   pika::shared_future<SizeType> k_fut =
       stablePartitionIndexForDeflation(i_begin, i_end, ws.c, ws.i2, ws.i3);
@@ -940,8 +977,18 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   copyVector(i_begin, i_end, ws.dtmp, d);
   resetSubMatrix(i_begin, i_end, ws.mat1);
   solveRank1Problem(i_begin, i_end, k_fut, rho_fut, d, ws.ztmp, ws.mat2, ws.dtmp, ws.mat1);
+  setUnitDiag(i_begin, i_end, k_fut, ws.mat1);
 
-  // Step #3
+  // Step #3: Eigenvectors of the tridiagonal system: Q * U
+  //
+  //    i3 (in)  : initial <--- deflated
+  //    i2 (out) : initial ---> deflated
+  //
+  invertIndex(i_begin, i_end, ws.i3, ws.i2);
+  permutateQU<T, Coord::Row>(i_begin, i_end, ws.i2, ws.mat1, ws.mat2);  // U
+  gemmQU(i_begin, i_end, mat_ev, ws.mat2, ws.mat1);
+
+  // Step #4: Final sorting of eigenvalues and eigenvectors
   //
   //    i1 (in)  : deflated <--- deflated  (identity map)
   //       (out) : initial  <--- post_sorted
@@ -950,38 +997,42 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   //
   // - reorder `dtmp -> d` using the `i2` such that `d` values (eigenvalues and deflated values) are in
   //   ascending order
+  // - reorder columns in `mat_ev` using `i1` such that eigenvectors match eigenvalues
   //
   sortIndex(i_begin, i_end, k_fut, ws.dtmp, ws.i1, ws.i2);
   composeIndices(i_begin, i_end, ws.i3, ws.i2, ws.i1);
   applyIndex(i_begin, i_end, ws.i2, ws.dtmp, d);
+  permutateQU<T, Coord::Col>(i_begin, i_end, ws.i1, ws.mat1, mat_ev);  // U
 
-  // Step #4
+  matrix::print(format::csv{}, "evecs", mat_ev);
+  matrix::print(format::csv{}, "evals", d);
+
+  // ----------- ! Optimized approach
+
+  //  // Step #4
+  //  //
+  //  //    i1 (in)  : initial  <--- post_sorted
+  //  //       (out) : initial  <--- matmul
+  //  //    i2 (in)  : deflated <--- post_sorted
+  //  //       (out) : deflated <--- matmul
+  //  //
+  //  auto ctlens_fut = partitionIndexForMatrixMultiplication(i_begin, i_end, ws.ctmp, ws.i2);
+  //  partitionIndexForMatrixMultiplication(i_begin, i_end, ws.c, ws.i1);
   //
-  //    i1 (in)  : initial  <--- post_sorted
-  //       (out) : initial  <--- matmul
-  //    i2 (in)  : deflated <--- post_sorted
-  //       (out) : deflated <--- matmul
+  //  // Permutate columns of the `Q` matrix to arrange in multiplication form
+  //  resetSubMatrix(i_begin, i_end, ws.mat2);
+  //  permutateQ(i_begin, i_split, i_end, std::move(ctlens_fut), ws.i1, mat_ev, ws.mat2);
   //
-  auto ctlens_fut = partitionIndexForMatrixMultiplication(i_begin, i_end, ws.ctmp, ws.i2);
-  partitionIndexForMatrixMultiplication(i_begin, i_end, ws.c, ws.i1);
+  //  // Permutate rows of the `U` matrix to arrange in multiplication form
+  //  resetSubMatrix(i_begin, i_end, mat_ev);
+  //  permutateU(i_begin, i_end, k_fut, ws.i2, ws.mat1, mat_ev);
 
-  // Permutate columns of the `Q` matrix to arrange in multiplication form
-  resetSubMatrix(i_begin, i_end, ws.mat2);
-  permutateQ(i_begin, i_split, i_end, std::move(ctlens_fut), ws.i1, mat_ev, ws.mat2);
-
-  // Permutate rows of the `U` matrix to arrange in multiplication form
-  resetSubMatrix(i_begin, i_end, mat_ev);
-  permutateU(i_begin, i_end, k_fut, ws.i2, ws.mat1, mat_ev);
-
-  // Set deflated diagonal entries of `U` to 1
-  setUnitDiag(i_begin, i_end, k_fut, mat_ev);
-
-  // Matrix multiply Q' * U' to get the eigenvectors of the merged system
-  gemmQU(i_begin, i_end, ws.mat2, mat_ev, ws.mat1);
-
-  // Copy back into `mat_ev`
-  copySubMatrix(i_begin, i_end, ws.mat1, mat_ev);
-
-  matrix::print(format::csv{}, "fin evecs", mat_ev);
+  //  // Matrix multiply Q' * U' to get the eigenvectors of the merged system
+  //  gemmQU(i_begin, i_end, ws.mat2, mat_ev, ws.mat1);
+  //
+  //  // Copy back into `mat_ev`
+  //  copySubMatrix(i_begin, i_end, ws.mat1, mat_ev);
+  //
+  //  matrix::print(format::csv{}, "fin evecs", mat_ev);
 }
 }

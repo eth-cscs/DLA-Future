@@ -64,6 +64,16 @@ TEST(MatrixIndexPairsGeneration, IndexPairsGeneration) {
 //                   TypeUtilities<TypeParam>::error);
 // }
 
+// import numpy as np
+// from scipy.sparse import diags
+// from scipy.linalg import eigh
+//
+// n = 10
+// d = np.full(n, 2)
+// e = np.full(n - 1, -1)
+// trd = diags([e,d,e], [-1, 0, 1]).toarray()
+// evals, evecs = eigh(trd)
+//
 TYPED_TEST(TridiagEigensolverTest, CorrectnessLocal) {
   constexpr double pi = 3.14159265358979323846;
   SizeType n = 10;

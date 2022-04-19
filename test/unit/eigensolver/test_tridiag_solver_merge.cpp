@@ -115,6 +115,7 @@ TEST(StablePartitionIndexOnDeflated, FullRange) {
   DLAF_ASSERT(c_arr.size() == to_sizet(n), n);
   dlaf::matrix::util::set(c, [&c_arr](GlobalElementIndex i) { return c_arr[to_sizet(i.row())]; });
 
+  // f, u, d, d, l, u, l, f, d, l
   std::vector<SizeType> in_arr{1, 4, 2, 3, 0, 5, 6, 7, 8, 9};
   dlaf::matrix::util::set(in, [&in_arr](GlobalElementIndex i) { return in_arr[to_sizet(i.row())]; });
 
@@ -124,6 +125,7 @@ TEST(StablePartitionIndexOnDeflated, FullRange) {
 
   ASSERT_TRUE(k_fut.get() == 7);
 
+  // f u l u l f l d d d
   std::vector<SizeType> expected_out_arr{1, 4, 0, 5, 6, 7, 9, 2, 3, 8};
   auto expected_out = [&expected_out_arr](GlobalElementIndex i) {
     return expected_out_arr[to_sizet(i.row())];

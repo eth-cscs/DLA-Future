@@ -109,7 +109,7 @@ struct BandBlock {
 
     if constexpr (D == Device::CPU) {
       return transform(
-          dlaf::internal::Policy<B>(),
+          dlaf::internal::Policy<B>(pika::threads::thread_priority::high),
           [=](const matrix::Tile<const T, D>& source) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Lower = blas::Uplo::Lower;
@@ -141,7 +141,7 @@ struct BandBlock {
     else if constexpr (D == Device::GPU) {
       DLAF_ASSERT_HEAVY(isAccessibleFromGPU(), "BandBlock memory should be accessible from GPU");
       return transform(
-          dlaf::internal::Policy<B>(),
+          dlaf::internal::Policy<B>(pika::threads::thread_priority::high),
           [=](const matrix::Tile<const T, D>& source, cudaStream_t stream) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Lower = blas::Uplo::Lower;
@@ -185,7 +185,7 @@ struct BandBlock {
 
     if constexpr (D == Device::CPU) {
       return transform(
-          dlaf::internal::Policy<B>(),
+          dlaf::internal::Policy<B>(pika::threads::thread_priority::high),
           [=](const matrix::Tile<const T, D>& source) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Upper = blas::Uplo::Upper;
@@ -215,7 +215,7 @@ struct BandBlock {
     else if constexpr (D == Device::GPU) {
       DLAF_ASSERT_HEAVY(isAccessibleFromGPU(), "BandBlock memory should be accessible from GPU");
       return transform(
-          dlaf::internal::Policy<B>(),
+          dlaf::internal::Policy<B>(pika::threads::thread_priority::high),
           [=](const matrix::Tile<const T, D>& source, cudaStream_t stream) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Upper = blas::Uplo::Upper;

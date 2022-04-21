@@ -620,11 +620,11 @@ void updateTrailingPanelWithReflector(const bool has_head, comm::Communicator& c
   updateTrailingPanel(has_head, panel, j, w, tau);
 }
 
-template <class T>
+template <class T, class CommSender>
 pika::shared_future<common::internal::vector<T>> computePanelReflectors(
-    pika::future<void> trigger, comm::IndexT_MPI rank_v0,
-    pika::future<common::PromiseGuard<comm::Communicator>> mpi_col_chain_panel, MatrixT<T>& mat_a,
-    const common::IterableRange2D<SizeType, matrix::LocalTile_TAG> ai_panel_range, SizeType nrefls) {
+    pika::future<void> trigger, comm::IndexT_MPI rank_v0, CommSender&& mpi_col_chain_panel,
+    MatrixT<T>& mat_a, const common::IterableRange2D<SizeType, matrix::LocalTile_TAG> ai_panel_range,
+    SizeType nrefls) {
   namespace ex = pika::execution::experimental;
 
   auto panel_task =
@@ -645,7 +645,7 @@ pika::shared_future<common::internal::vector<T>> computePanelReflectors(
       };
 
   return ex::when_all(ex::when_all_vector(matrix::select(mat_a, ai_panel_range)),
-                      std::move(mpi_col_chain_panel), std::move(trigger)) |
+                      std::forward<CommSender>(mpi_col_chain_panel), std::move(trigger)) |
          dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
                                        pika::threads::thread_priority::high),
                                    std::move(panel_task)) |

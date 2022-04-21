@@ -35,8 +35,10 @@ auto getBackendScheduler() {
 }
 
 template <Backend backend>
-auto getBackendScheduler(const pika::threads::thread_priority priority) {
-  return pika::execution::experimental::with_priority(getBackendScheduler<backend>(), priority);
+auto getBackendScheduler(const pika::threads::thread_priority priority,
+                         const pika::threads::thread_schedule_hint hint) {
+  namespace ex = pika::execution::experimental;
+  return ex::with_hint(ex::with_priority(getBackendScheduler<backend>(), priority), hint);
 }
 
 inline auto getMPIScheduler() {

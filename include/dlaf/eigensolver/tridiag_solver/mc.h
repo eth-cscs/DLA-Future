@@ -206,6 +206,9 @@ template <class T>
 void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& mat_trd,
                                                       Matrix<T, Device::CPU>& d,
                                                       Matrix<T, Device::CPU>& mat_ev) {
+  // Set `mat_ev` to `zero` (needed for Given's rotation to make sure no random values are picked up)
+  matrix::util::set0<Backend::MC, T, Device::CPU>(pika::threads::thread_priority::normal, mat_ev);
+
   // Cuppen's decomposition
   std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(mat_trd);
 

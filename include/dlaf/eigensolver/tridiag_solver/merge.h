@@ -565,11 +565,13 @@ std::vector<GivensRotation<T>> applyDeflationToArrays(T rho, T tol, SizeType len
     }
 
     // Given's deflation condition is the same as the one used in LAPACK's stedc implementation [1].
+    // However, here the second entry is deflated instead of the first (z2/d2 instead of z1/d1), thus `s`
+    // is not negated.
     //
     // [1] LAPACK 3.10.0, file dlaed2.f, line 393
     T r = std::sqrt(z1 * z1 + z2 * z2);
     T c = z1 / r;
-    T s = -z2 / r;
+    T s = z2 / r;
 
     // If d1 is not nearly equal to d2, move i1 forward to i2
     if (std::abs(c * s * (d2 - d1)) > tol) {
@@ -717,7 +719,8 @@ void solveRank1Problem(SizeType i_begin, SizeType i_end, pika::shared_future<Siz
         GlobalElementIndex i_gl_el_evals(i, j);
         SizeType i_tile = distr.globalTileLinearIndex(i_gl_el_evals);
         TileElementIndex i_el = distr.tileElementIndex(i_gl_el_evals);
-        ws_ptr[i] = ws_ptr[i] * evec_tiles[to_sizet(i_tile)](i_el) / (d_ptr[i] - d_ptr[j]);
+        T el_evec = evec_tiles[to_sizet(i_tile)](i_el);
+        ws_ptr[i] = ws_ptr[i] * el_evec / (d_ptr[i] - d_ptr[j]);
       }
     }
 
@@ -852,7 +855,7 @@ void gemmQU(SizeType i_begin, SizeType i_end, Matrix<const T, Device::CPU>& mat_
       for (SizeType k = i_begin; k <= i_end; ++k) {
         // C = alpha * A * B + beta * C
         T beta = 1;
-        if (k == 0)
+        if (k == i_begin)
           beta = 0;
 
         auto tile_a = mat_a.read(GlobalTileIndex(i, k));
@@ -956,7 +959,6 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   pika::future<std::vector<GivensRotation<T>>> rots_fut =
       applyDeflation(i_begin, i_end, rho_fut, tol_fut, ws.i2, d, ws.z, ws.c);
 
-  // TODO: make sure zero blocks are actually zero!
   pika::dataflow(pika::unwrapping(applyGivensRotationsToMatrixColumns<T>), n, nb, std::move(rots_fut),
                  tc.readwriteMat(mat_ev));
 
@@ -973,7 +975,6 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
       stablePartitionIndexForDeflation(i_begin, i_end, ws.c, ws.i2, ws.i3);
   applyIndex(i_begin, i_end, ws.i3, d, ws.dtmp);
   applyIndex(i_begin, i_end, ws.i3, ws.z, ws.ztmp);
-  applyIndex(i_begin, i_end, ws.i3, ws.c, ws.ctmp);
   copyVector(i_begin, i_end, ws.dtmp, d);
   resetSubMatrix(i_begin, i_end, ws.mat1);
   solveRank1Problem(i_begin, i_end, k_fut, rho_fut, d, ws.ztmp, ws.mat2, ws.dtmp, ws.mat1);
@@ -984,28 +985,25 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   //    i3 (in)  : initial <--- deflated
   //    i2 (out) : initial ---> deflated
   //
+  // The eigenvectors resulting from the multiplication are already in the order of the eigenvalues as
+  // prepared for the deflated system.
+  //
   invertIndex(i_begin, i_end, ws.i3, ws.i2);
-  permutateQU<T, Coord::Row>(i_begin, i_end, ws.i2, ws.mat1, ws.mat2);  // U
+  permutateQU<T, Coord::Row>(i_begin, i_end, ws.i2, ws.mat1, ws.mat2);  // permutate U to match Q
   gemmQU(i_begin, i_end, mat_ev, ws.mat2, ws.mat1);
 
   // Step #4: Final sorting of eigenvalues and eigenvectors
   //
   //    i1 (in)  : deflated <--- deflated  (identity map)
-  //       (out) : initial  <--- post_sorted
   //    i2 (out) : deflated <--- post_sorted
-  //    i3 (in)  : initial  <--- deflated
   //
   // - reorder `dtmp -> d` using the `i2` such that `d` values (eigenvalues and deflated values) are in
   //   ascending order
-  // - reorder columns in `mat_ev` using `i1` such that eigenvectors match eigenvalues
+  // - reorder columns in `mat_ev` using `i2` such that eigenvectors match eigenvalues
   //
   sortIndex(i_begin, i_end, k_fut, ws.dtmp, ws.i1, ws.i2);
-  composeIndices(i_begin, i_end, ws.i3, ws.i2, ws.i1);
   applyIndex(i_begin, i_end, ws.i2, ws.dtmp, d);
-  permutateQU<T, Coord::Col>(i_begin, i_end, ws.i1, ws.mat1, mat_ev);  // U
-
-  matrix::print(format::csv{}, "evecs", mat_ev);
-  matrix::print(format::csv{}, "evals", d);
+  permutateQU<T, Coord::Col>(i_begin, i_end, ws.i2, ws.mat1, mat_ev);
 
   // ----------- ! Optimized approach
 

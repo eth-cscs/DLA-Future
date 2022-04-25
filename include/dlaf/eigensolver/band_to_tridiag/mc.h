@@ -421,11 +421,11 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   auto init_sweep = [a_ws](SizeType sweep, PromiseGuard<SweepWorker<T>> worker) {
     worker.ref().startSweep(sweep, *a_ws);
   };
-  auto store_tau_v = [](PromiseGuard<SweepWorker<T>> worker, matrix::Tile<T, Device::CPU>&& tile_v,
-                        TileElementIndex index) {
+  auto cont_sweep = [a_ws](PromiseGuard<SweepWorker<T>> worker, matrix::Tile<T, Device::CPU>&& tile_v,
+                           TileElementIndex index) {
     worker.ref().compactCopyToTile(std::move(tile_v), index);
+    worker.ref().doStep(*a_ws);
   };
-  auto cont_sweep = [a_ws](PromiseGuard<SweepWorker<T>> worker) { worker.ref().doStep(*a_ws); };
 
   auto policy_hp = dlaf::internal::Policy<Backend::MC>(pika::threads::thread_priority::high);
   auto copy_tridiag = [policy_hp, a_ws, &mat_trid](SizeType sweep, auto&& dep) {
@@ -469,10 +469,9 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
 
       const GlobalElementIndex index_v((sweep / b + step) * b, sweep);
 
-      dlaf::internal::whenAllLift(w_pipeline(), mat_v.readwrite_sender(dist_v.globalTileIndex(index_v)),
-                                  dist_v.tileElementIndex(index_v)) |
-          ex::then(store_tau_v) | ex::start_detached();
-      deps[step] = dlaf::internal::whenAllLift(w_pipeline(), deps[dep_index]) |
+      deps[step] = dlaf::internal::whenAllLift(w_pipeline(),
+                                               mat_v.readwrite_sender(dist_v.globalTileIndex(index_v)),
+                                               dist_v.tileElementIndex(index_v), deps[dep_index]) |
                    dlaf::internal::transform(policy_hp, cont_sweep) | ex::split();
     }
 

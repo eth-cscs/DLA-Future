@@ -20,6 +20,7 @@
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/traits.h"
+#include "dlaf/util_math.h"
 
 namespace dlaf {
 namespace matrix {
@@ -276,7 +277,7 @@ void setTileColumnSigns(Fn el_f, matrix::Tile<T, Device::CPU>& tile) {
   SizeType ncols = tile.size().cols();
   for (SizeType i = 0; i < ncols; ++i) {
     TileElementIndex idx(0, i);
-    if (util::sameSign(el_f(idx), tile(idx)))
+    if (dlaf::util::sameSign(el_f(idx), tile(idx)))
       continue;
 
     // if signs of first column elements are opposite, negate that column of `tile`

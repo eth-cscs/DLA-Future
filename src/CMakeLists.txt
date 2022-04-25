@@ -195,6 +195,7 @@ DLAF_addPrecompiledHeaders(dlaf.factorization)
 
 # Define DLAF's multiplication library
 add_library(dlaf.multiplication OBJECT
+  multiplication/general/mc.cpp
   multiplication/triangular/mc.cpp
   $<$<BOOL:${DLAF_WITH_CUDA}>:multiplication/triangular/gpu.cpp>)
 target_link_libraries(dlaf.multiplication PUBLIC dlaf.prop)

@@ -8,6 +8,12 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+DLAF_addTest(test_multiplication_general
+  SOURCES test_multiplication_general.cpp
+  LIBRARIES dlaf.multiplication dlaf.core
+  USE_MAIN PIKA
+)
+
 DLAF_addTest(test_multiplication_triangular
   SOURCES test_multiplication_triangular.cpp
   LIBRARIES dlaf.multiplication dlaf.core

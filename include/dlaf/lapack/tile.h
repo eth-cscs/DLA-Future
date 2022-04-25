@@ -435,13 +435,6 @@ void laed4(std::vector<T> const& d, std::vector<T> const& z, T rho, SizeType i, 
                                 delta.data(), rho, &lambda);
 }
 
-template <class T>
-void scale_col(T alpha, SizeType col, const Tile<T, Device::CPU>& tile) {
-  DLAF_ASSERT(col >= 0, col);
-  DLAF_ASSERT(tile.size().cols() > col, tile, col);
-  blas::scal(tile.size().rows(), alpha, tile.ptr(TileElementIndex(0, col)), 1);
-}
-
 #ifdef DLAF_WITH_CUDA
 namespace internal {
 #define DLAF_DECLARE_CUSOLVER_OP(Name) \
@@ -593,7 +586,6 @@ DLAF_MAKE_CALLABLE_OBJECT(hegst);
 DLAF_MAKE_CALLABLE_OBJECT(potrf);
 DLAF_MAKE_CALLABLE_OBJECT(potrfInfo);
 DLAF_MAKE_CALLABLE_OBJECT(stedc);
-DLAF_MAKE_CALLABLE_OBJECT(scale_col);
 }
 
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(lange, internal::lange_o)
@@ -604,7 +596,6 @@ DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(hegst, internal::hegst_o)
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(potrf, internal::potrf_o)
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(potrfInfo, internal::potrfInfo_o)
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(stedc, internal::stedc_o)
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(scale_col, internal::scale_col_o)
 
 #endif
 }

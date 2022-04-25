@@ -256,7 +256,27 @@ TYPED_TEST(TileOperationsTestGPU, Laset) {
   }
 }
 
-TYPED_TEST(TileOperationsTestMC, Stedc) {
+#endif
+
+TYPED_TEST(TileOperationsTestMC, Set0) {
+  using Type = TypeParam;
+
+  for (const auto& [m, n, extra_lda] : setsizes) {
+    testSet0<Type, Device::CPU>(m, n, extra_lda);
+  }
+}
+
+#ifdef DLAF_WITH_CUDA
+TYPED_TEST(TileOperationsTestGPU, Set0) {
+  using Type = TypeParam;
+
+  for (const auto& [m, n, extra_lda] : setsizes) {
+    testSet0<Type, Device::GPU>(m, n, extra_lda);
+  }
+}
+#endif
+
+TYPED_TEST(RealTileOperationsTestMC, Stedc) {
   using dlaf::matrix::test::createTile;
 
   using RealParam = BaseType<TypeParam>;
@@ -308,14 +328,14 @@ TYPED_TEST(TileOperationsTestMC, Stedc) {
     SizeType k = idx.row() + 1;
     return TypeParam(std::sqrt(2.0 / (sz + 1)) * std::sin(j * k * pi / (sz + 1)));
   };
-  auto expected_evecs =
-      createTile<TypeParam, Device::CPU>(std::move(expected_evecs_f), TileElementSize(sz, sz), sz);
 
+  // Eigenvalues
   CHECK_TILE_NEAR(expected_tridiag, tridiag, sz * TypeUtilities<RealParam>::error,
                   sz * TypeUtilities<RealParam>::error);
 
-  CHECK_EVECS_NEAR_OR_OPPOSITE(expected_evecs, evecs, sz * TypeUtilities<TypeParam>::error,
-                               sz * TypeUtilities<TypeParam>::error);
+  // Eigenvectors are unique up to a sign, this makes sure evecs have the same signs as the expected evecs
+  setTileColumnSigns(expected_evecs_f, evecs);
+  CHECK_TILE_NEAR(expected_evecs_f, evecs, 1e-6, 1e-6);
 }
 
 // To reproduce the setup in python:
@@ -353,41 +373,3 @@ TYPED_TEST(RealTileOperationsTestMC, Laed4) {
   TypeParam expected_lambda = 2.497336;
   EXPECT_NEAR(lambda, expected_lambda, 1e-7);
 }
-
-TYPED_TEST(TileOperationsTestMC, ScaleCol) {
-  TileElementSize tile_size{5, 5};
-  auto tile_fn = [](const TileElementIndex& idx) { return TypeParam(idx.row() + idx.col()); };
-  auto tile = createTile<TypeParam, Device::CPU>(std::move(tile_fn), tile_size, tile_size.rows());
-  TypeParam alpha = 4.2;
-  SizeType col = 3;
-
-  tile::internal::scale_col(alpha, col, tile);
-
-  auto expected_tile_fn = [col, alpha](const TileElementIndex& idx) {
-    TypeParam factor = (idx.col() == col) ? alpha : TypeParam(1);
-    return TypeParam(idx.row() + idx.col()) * factor;
-  };
-  auto expected_tile =
-      createTile<TypeParam, Device::CPU>(std::move(expected_tile_fn), tile_size, tile_size.rows());
-
-  CHECK_TILE_NEAR(expected_tile, tile, TypeUtilities<TypeParam>::error, TypeUtilities<TypeParam>::error);
-}
-#endif
-
-TYPED_TEST(TileOperationsTestMC, Set0) {
-  using Type = TypeParam;
-
-  for (const auto& [m, n, extra_lda] : setsizes) {
-    testSet0<Type, Device::CPU>(m, n, extra_lda);
-  }
-}
-
-#ifdef DLAF_WITH_CUDA
-TYPED_TEST(TileOperationsTestGPU, Set0) {
-  using Type = TypeParam;
-
-  for (const auto& [m, n, extra_lda] : setsizes) {
-    testSet0<Type, Device::GPU>(m, n, extra_lda);
-  }
-}
-#endif

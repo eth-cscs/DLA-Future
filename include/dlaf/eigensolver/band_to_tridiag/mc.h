@@ -366,7 +366,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
 
   // note: A is square and has square blocksize
   const SizeType size = mat_a.size().cols();
-  const SizeType nrtile = mat_a.nrTiles().cols();
+  const SizeType nrtiles = mat_a.nrTiles().cols();
   const SizeType nb = mat_a.blockSize().cols();
 
   // Need share pointer to keep the allocation until all the tasks are executed.
@@ -412,7 +412,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   }
 
   // Maximum size / (2b-1) sweeps can be executed in parallel.
-  const auto max_workers = std::min(ceilDiv(size, 2 * b - 1), to_SizeType(get_num_threads("default")));
+  const auto max_workers = std::min(ceilDiv(size, 2 * b - 1), 2 * to_SizeType(get_num_threads("default")));
   vector<Pipeline<SweepWorker<T>>> workers;
   workers.reserve(max_workers);
   for (SizeType i = 0; i < max_workers; ++i)

@@ -124,7 +124,6 @@ struct WorkSpace {
   // Assigns a type to each column of Q which is used to calculate the permutation indices for Q and U
   // that bring them in matrix multiplication form.
   Matrix<ColType, Device::CPU> c;
-  Matrix<ColType, Device::CPU> ctmp;
 };
 
 template <class T>
@@ -139,7 +138,6 @@ WorkSpace<T> initWorkSpace(const matrix::Distribution& ev_distr) {
                   Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
                   Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
                   Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
-                  Matrix<ColType, Device::CPU>(vec_size, vec_tile_size),
                   Matrix<ColType, Device::CPU>(vec_size, vec_tile_size)};
   return ws;
 }
@@ -968,7 +966,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   //    i2 (in)  : initial <--- pre_sorted
   //    i3 (out) : initial <--- deflated
   //
-  // - reorder `d -> dtmp`, `z -> ztmp`, `c -> ctmp` using `i3` such that deflated entries are at the bottom.
+  // - reorder `d -> dtmp`, `z -> ztmp`, using `i3` such that deflated entries are at the bottom.
   // - solve the rank-1 problem and save eigenvalues in `dtmp` and eigenvectors in `ws.mat1`.
   // - set deflated diagonal entries of `U` to 1 (temporary solution until optimized GEMM is implemented)
   //

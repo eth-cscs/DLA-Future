@@ -372,7 +372,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   // Need share pointer to keep the allocation until all the tasks are executed.
   auto a_ws = std::make_shared<BandBlock<T>>(size, b);
 
-  Matrix<BaseType<T>, Device::CPU> mat_trid({2, size}, {2, nb});
+  Matrix<BaseType<T>, Device::CPU> mat_trid({size, 2}, {nb, 2});
   Matrix<T, Device::CPU> mat_v({size, size}, {nb, nb});
   const auto& dist_v = mat_v.distribution();
 
@@ -436,17 +436,17 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
         // skip imaginary part if Complex.
         inc *= 2;
 
-      blas::copy(n_d, (BaseType<T>*) a_ws->ptr(0, start), inc, tile_t.ptr({0, 0}), tile_t.ld());
-      blas::copy(n_e, (BaseType<T>*) a_ws->ptr(1, start), inc, tile_t.ptr({1, 0}), tile_t.ld());
+      blas::copy(n_d, (BaseType<T>*) a_ws->ptr(0, start), inc, tile_t.ptr({0, 0}), 1);
+      blas::copy(n_e, (BaseType<T>*) a_ws->ptr(1, start), inc, tile_t.ptr({0, 1}), 1);
     };
 
-    const auto size = mat_trid.size().cols();
-    const auto nb = mat_trid.blockSize().cols();
+    const auto size = mat_trid.size().rows();
+    const auto nb = mat_trid.blockSize().rows();
     if (sweep % nb == nb - 1 || sweep == size - 1) {
       const auto tile_index = sweep / nb;
       const auto start = tile_index * nb;
       dlaf::internal::whenAllLift(start, std::min(nb, size - start), std::min(nb, size - 1 - start),
-                                  mat_trid.readwrite_sender(GlobalTileIndex{0, tile_index}),
+                                  mat_trid.readwrite_sender(GlobalTileIndex{tile_index, 0}),
                                   std::forward<decltype(dep)>(dep)) |
           dlaf::internal::transformDetach(policy_hp, copy_tridiag_task);
     }

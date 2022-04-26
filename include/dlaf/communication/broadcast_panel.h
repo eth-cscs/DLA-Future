@@ -15,7 +15,6 @@
 #include <pika/future.hpp>
 
 #include "dlaf/communication/message.h"
-#include "dlaf/executors.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/panel.h"
 #include "dlaf/matrix/tile.h"
@@ -50,8 +49,7 @@ std::pair<SizeType, comm::IndexT_MPI> transposedOwner(const matrix::Distribution
 /// @param serial_comm  where to pipeline the tasks for communications.
 /// @pre Communicator in @p serial_comm must be orthogonal to panel axis
 template <class T, Device device, Coord axis, class = std::enable_if_t<!std::is_const_v<T>>>
-void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
-               matrix::Panel<axis, T, device>& panel,
+void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, device>& panel,
                common::Pipeline<comm::Communicator>& serial_comm) {
   constexpr auto comm_coord = axis;
 
@@ -63,9 +61,9 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
 
   for (const auto& index : panel.iteratorLocal()) {
     if (rank == rank_root)
-      scheduleSendBcast(ex, panel.read(index), serial_comm());
+      scheduleSendBcast(panel.read(index), serial_comm());
     else
-      scheduleRecvBcast(ex, panel(index), rank_root, serial_comm());
+      scheduleRecvBcast(panel(index), rank_root, serial_comm());
   }
 }
 
@@ -99,8 +97,8 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
 /// @pre both panels parent matrices should be square matrices with square blocksizes
 /// @pre both panels offsets should lay on the main diagonal of the parent matrix
 template <class T, Device device, Coord axis, class = std::enable_if_t<!std::is_const_v<T>>>
-void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
-               matrix::Panel<axis, T, device>& panel, matrix::Panel<orthogonal(axis), T, device>& panelT,
+void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, device>& panel,
+               matrix::Panel<orthogonal(axis), T, device>& panelT,
                common::Pipeline<comm::Communicator>& row_task_chain,
                common::Pipeline<comm::Communicator>& col_task_chain) {
   constexpr Coord axisT = orthogonal(axis);
@@ -156,7 +154,7 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
   constexpr auto comm_dir_step1 = orthogonal(axis);
   auto& chain_step1 = get_taskchain(comm_dir_step1);
 
-  broadcast(ex, rank_root, panel, chain_step1);
+  broadcast(rank_root, panel, chain_step1);
 
   // STEP 2
   constexpr auto comm_dir_step2 = orthogonal(axisT);
@@ -179,11 +177,11 @@ void broadcast(const comm::Executor& ex, comm::IndexT_MPI rank_root,
       panelT.setTile(indexT, panel.read({coord, index_diag_local}));
 
       if (dist.commGridSize().get(comm_coord_step2) > 1)
-        scheduleSendBcast(ex, panelT.read(indexT), chain_step2());
+        scheduleSendBcast(panelT.read(indexT), chain_step2());
     }
     else {
       if (dist.commGridSize().get(comm_coord_step2) > 1)
-        scheduleRecvBcast(ex, panelT(indexT), owner_diag, chain_step2());
+        scheduleRecvBcast(panelT(indexT), owner_diag, chain_step2());
     }
   }
 }

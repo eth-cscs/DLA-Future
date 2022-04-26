@@ -14,7 +14,6 @@
 #include <pika/future.hpp>
 #include <pika/unwrap.hpp>
 
-#include "dlaf/executors.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"

@@ -43,6 +43,12 @@ target_link_libraries(miniapp_reduction_to_band PRIVATE DLAF_miniapp)
 target_add_warnings(miniapp_reduction_to_band)
 DLAF_addPrecompiledHeaders(miniapp_reduction_to_band)
 
+add_executable(miniapp_band_to_tridiag miniapp_band_to_tridiag.cpp)
+target_link_libraries(miniapp_band_to_tridiag PRIVATE DLAF)
+target_link_libraries(miniapp_band_to_tridiag PRIVATE DLAF_miniapp)
+target_add_warnings(miniapp_band_to_tridiag)
+DLAF_addPrecompiledHeaders(miniapp_band_to_tridiag)
+
 add_executable(miniapp_eigensolver miniapp_eigensolver.cpp)
 target_link_libraries(miniapp_eigensolver PRIVATE DLAF)
 target_link_libraries(miniapp_eigensolver PRIVATE DLAF_miniapp)

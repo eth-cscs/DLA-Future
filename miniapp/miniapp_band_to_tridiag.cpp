@@ -8,22 +8,20 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <blas/util.hh>
 #include <iostream>
+#include <limits>
 
-#include <mpi.h>
-#include <pika/future.hpp>
 #include <pika/init.hpp>
 #include <pika/program_options.hpp>
 #include <pika/runtime.hpp>
-#include <pika/unwrap.hpp>
 
+#include "dlaf/common/format_short.h"
+#include "dlaf/common/index2d.h"
+#include "dlaf/common/range2d.h"
 #include "dlaf/common/timer.h"
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/error.h"
 #include "dlaf/communication/init.h"
-#include "dlaf/communication/sync/broadcast.h"
-#include "dlaf/eigensolver/gen_to_std.h"
+#include "dlaf/eigensolver/band_to_tridiag.h"
 #include "dlaf/init.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
@@ -31,12 +29,9 @@
 #include "dlaf/miniapp/dispatch.h"
 #include "dlaf/miniapp/options.h"
 #include "dlaf/types.h"
-#include "dlaf/util_matrix.h"
 
 namespace {
-
 using dlaf::Backend;
-using dlaf::Coord;
 using dlaf::DefaultDevice_v;
 using dlaf::Device;
 using dlaf::GlobalElementSize;
@@ -45,7 +40,6 @@ using dlaf::SizeType;
 using dlaf::TileElementSize;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
-using dlaf::comm::Index2D;
 using dlaf::common::Ordering;
 using dlaf::matrix::MatrixMirror;
 
@@ -53,13 +47,24 @@ struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
   SizeType m;
   SizeType mb;
+  SizeType b;
   blas::Uplo uplo;
 
   Options(const pika::program_options::variables_map& vm)
       : MiniappOptions(vm), m(vm["matrix-size"].as<SizeType>()), mb(vm["block-size"].as<SizeType>()),
-        uplo(dlaf::miniapp::parseUplo(vm["uplo"].as<std::string>())) {
+        b(vm["band-size"].as<SizeType>()), uplo(dlaf::miniapp::parseUplo(vm["uplo"].as<std::string>())) {
     DLAF_ASSERT(m > 0, m);
     DLAF_ASSERT(mb > 0, mb);
+    DLAF_ASSERT(b > 0 && mb % b == 0, b, mb);
+
+    DLAF_ASSERT(grid_rows * grid_cols == 1,
+                "Error! Distributed is not avilable yet. "
+                "Please rerun with both --grid-rows and --grid-cols set to 1");
+
+    if (backend == Backend::GPU) {
+      std::cerr << "Warning! Backend GPU is not implemented, Using MC backend starting from GPU memory."
+                << std::endl;
+    }
 
     if (do_check != dlaf::miniapp::CheckIterFreq::None) {
       std::cerr << "Warning! At the moment result checking it is not implemented." << std::endl;
@@ -74,12 +79,15 @@ struct Options
 };
 }
 
-struct GenToStdMiniapp {
+struct BandToTridiagMiniapp {
   template <Backend backend, typename T>
   static void run(const Options& opts) {
     using MatrixMirrorType = MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU>;
     using HostMatrixType = Matrix<T, Device::CPU>;
     using ConstHostMatrixType = Matrix<const T, Device::CPU>;
+
+    if (opts.grid_rows * opts.grid_cols != 1)
+      DLAF_UNIMPLEMENTED("Distributed implementation not available yet.");
 
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
@@ -88,7 +96,7 @@ struct GenToStdMiniapp {
     GlobalElementSize matrix_size(opts.m, opts.m);
     TileElementSize block_size(opts.mb, opts.mb);
 
-    ConstHostMatrixType matrix_a_ref = [matrix_size, block_size, comm_grid]() {
+    ConstHostMatrixType matrix_ref = [matrix_size, block_size, comm_grid]() {
       using dlaf::matrix::util::set_random_hermitian;
 
       HostMatrixType hermitian(matrix_size, block_size, comm_grid);
@@ -97,53 +105,37 @@ struct GenToStdMiniapp {
       return hermitian;
     }();
 
-    ConstHostMatrixType matrix_b_ref = [matrix_size, block_size, comm_grid]() {
-      // As the result of the Cholesky decomposition is a triangular matrix with
-      // strictly poitive real elements on the diagonal, and as only the upper/lower
-      // part of the tridiagonal is referenced, it is fine to use
-      // set_random_hermitian_positive_definite to set the triangular factor.
-      using dlaf::matrix::util::set_random_hermitian_positive_definite;
-
-      HostMatrixType triangular(matrix_size, block_size, comm_grid);
-      set_random_hermitian_positive_definite(triangular);
-
-      return triangular;
-    }();
-
     for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
       if (0 == world.rank() && run_index >= 0)
         std::cout << "[" << run_index << "]" << std::endl;
 
-      HostMatrixType matrix_a_host(matrix_size, block_size, comm_grid);
-      HostMatrixType matrix_b_host(matrix_size, block_size, comm_grid);
-      copy(matrix_a_ref, matrix_a_host);
-      copy(matrix_b_ref, matrix_b_host);
+      HostMatrixType matrix_host(matrix_size, block_size, comm_grid);
+      copy(matrix_ref, matrix_host);
 
       double elapsed_time;
       {
-        MatrixMirrorType matrix_a(matrix_a_host);
-        MatrixMirrorType matrix_b(matrix_b_host);
+        MatrixMirrorType matrix(matrix_host);
 
-        // Wait all setup tasks and (if necessary) for matrix to be copied to GPU.
-        matrix_a.get().waitLocalTiles();
-        matrix_b.get().waitLocalTiles();
+        // Wait for matrix to be copied to GPU (if necessary)
+        matrix.get().waitLocalTiles();
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         dlaf::common::Timer<> timeit;
-        dlaf::eigensolver::genToStd<backend, DefaultDevice_v<backend>, T>(comm_grid, opts.uplo,
-                                                                          matrix_a.get(),
-                                                                          matrix_b.get());
+        auto [trid, hhr] =
+            dlaf::eigensolver::bandToTridiag<Backend::MC>(opts.uplo, opts.b, matrix.get());
 
         // wait and barrier for all ranks
-        matrix_a.get().waitLocalTiles();
+        trid.waitLocalTiles();
+        hhr.waitLocalTiles();
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
         elapsed_time = timeit.elapsed();
       }
 
       double gigaflops;
       {
-        double n = matrix_a_host.size().rows();
-        auto add_mul = n * n * n / 2;
+        double n = matrix_host.size().rows();
+        double b = opts.b;
+        auto add_mul = 3 * n * n * b;
         gigaflops = dlaf::total_ops<T>(add_mul, add_mul) / elapsed_time / 1e9;
       }
 
@@ -153,8 +145,8 @@ struct GenToStdMiniapp {
                   << " " << elapsed_time << "s"
                   << " " << gigaflops << "GFlop/s"
                   << " " << dlaf::internal::FormatShort{opts.type}
-                  << dlaf::internal::FormatShort{opts.uplo} << " " << matrix_a_host.size() << " "
-                  << matrix_a_host.blockSize() << " " << comm_grid.size() << " "
+                  << dlaf::internal::FormatShort{opts.uplo} << " " << matrix_host.size() << " "
+                  << matrix_host.blockSize() << " " << opts.b << " " << comm_grid.size() << " "
                   << pika::get_os_thread_count() << " " << backend << std::endl;
 
       // (optional) run test
@@ -171,7 +163,7 @@ int pika_main(pika::program_options::variables_map& vm) {
     dlaf::ScopedInitializer init(vm);
     const Options opts(vm);
 
-    dlaf::miniapp::dispatchMiniapp<GenToStdMiniapp>(opts);
+    dlaf::miniapp::dispatchMiniapp<BandToTridiagMiniapp>(opts);
   }
 
   return pika::finalize();
@@ -183,7 +175,7 @@ int main(int argc, char** argv) {
 
   // options
   using namespace pika::program_options;
-  options_description desc_commandline("Usage: miniapp_gen_to_std [options]");
+  options_description desc_commandline("Usage: miniapp_bandToTridiag [options]");
   desc_commandline.add(dlaf::miniapp::getMiniappOptionsDescription());
   desc_commandline.add(dlaf::getOptionsDescription());
 
@@ -191,6 +183,7 @@ int main(int argc, char** argv) {
   desc_commandline.add_options()
     ("matrix-size",  value<SizeType>()   ->default_value(4096), "Matrix size")
     ("block-size",   value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
+    ("band-size",    value<SizeType>()   ->default_value(  64), "band size")
   ;
   // clang-format on
   dlaf::miniapp::addUploOption(desc_commandline);

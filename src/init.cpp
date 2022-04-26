@@ -8,19 +8,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <pika/mpi.hpp>
 #include <pika/runtime.hpp>
 
 #include <dlaf/common/assert.h>
 #include <dlaf/communication/error.h>
 #include <dlaf/init.h>
 #include <dlaf/memory/memory_chunk.h>
-
-#ifdef DLAF_WITH_CUDA
-#include <dlaf/cublas/executor.h>
-#include <dlaf/cuda/executor.h>
-#include <dlaf/cusolver/executor.h>
-#endif
 
 #include <cstdlib>
 #include <iostream>
@@ -35,7 +28,6 @@ std::ostream& operator<<(std::ostream& os, configuration const& cfg) {
   os << "  umpire_device_memory_pool_initial_bytes = " << cfg.umpire_device_memory_pool_initial_bytes
      << std::endl;
   os << "  mpi_pool = " << cfg.mpi_pool << std::endl;
-  os << "  mpi_mech = " << cfg.mpi_mech << std::endl;
   return os;
 }
 
@@ -57,10 +49,6 @@ template <>
 struct Init<Backend::MC> {
   static void initialize(configuration const& cfg) {
     memory::internal::initializeUmpireHostAllocator(cfg.umpire_host_memory_pool_initial_bytes);
-    // TODO: Consider disabling polling in finalize()
-    if (cfg.mpi_mech == comm::MPIMech::Polling) {
-      pika::mpi::experimental::init(false, cfg.mpi_pool);
-    }
   }
 
   static void finalize() {
@@ -69,76 +57,6 @@ struct Init<Backend::MC> {
 };
 
 #ifdef DLAF_WITH_CUDA
-static std::unique_ptr<cuda::StreamPool> np_stream_pool{nullptr};
-
-void initializeNpCudaStreamPool(int device, std::size_t num_streams_per_thread) {
-  DLAF_ASSERT(!np_stream_pool, "");
-  np_stream_pool = std::make_unique<cuda::StreamPool>(device, num_streams_per_thread,
-                                                      pika::threads::thread_priority::normal);
-}
-
-void finalizeNpCudaStreamPool() {
-  DLAF_ASSERT(bool(np_stream_pool), "");
-  np_stream_pool.reset();
-}
-
-cuda::StreamPool getNpCudaStreamPool() {
-  DLAF_ASSERT(bool(np_stream_pool), "");
-  return *np_stream_pool;
-}
-
-static std::unique_ptr<cuda::StreamPool> hp_stream_pool{nullptr};
-
-void initializeHpCudaStreamPool(int device, std::size_t num_streams_per_thread) {
-  DLAF_ASSERT(!hp_stream_pool, "");
-  hp_stream_pool = std::make_unique<cuda::StreamPool>(device, num_streams_per_thread,
-                                                      pika::threads::thread_priority::high);
-}
-
-void finalizeHpCudaStreamPool() {
-  DLAF_ASSERT(bool(hp_stream_pool), "");
-  hp_stream_pool.reset();
-}
-
-cuda::StreamPool getHpCudaStreamPool() {
-  DLAF_ASSERT(bool(hp_stream_pool), "");
-  return *hp_stream_pool;
-}
-
-static std::unique_ptr<cublas::HandlePool> cublas_handle_pool{nullptr};
-
-void initializeCublasHandlePool() {
-  DLAF_ASSERT(!cublas_handle_pool, "");
-  cublas_handle_pool = std::make_unique<cublas::HandlePool>(0, CUBLAS_POINTER_MODE_HOST);
-}
-
-void finalizeCublasHandlePool() {
-  DLAF_ASSERT(bool(cublas_handle_pool), "");
-  cublas_handle_pool.reset();
-}
-
-cublas::HandlePool getCublasHandlePool() {
-  DLAF_ASSERT(bool(cublas_handle_pool), "");
-  return *cublas_handle_pool;
-}
-
-static std::unique_ptr<cusolver::HandlePool> cusolver_handle_pool{nullptr};
-
-void initializeCusolverHandlePool() {
-  DLAF_ASSERT(!cusolver_handle_pool, "");
-  cusolver_handle_pool = std::make_unique<cusolver::HandlePool>(0);
-}
-
-void finalizeCusolverHandlePool() {
-  DLAF_ASSERT(bool(cusolver_handle_pool), "");
-  cusolver_handle_pool.reset();
-}
-
-cusolver::HandlePool getCusolverHandlePool() {
-  DLAF_ASSERT(bool(cusolver_handle_pool), "");
-  return *cusolver_handle_pool;
-}
-
 static std::unique_ptr<pika::cuda::experimental::cuda_pool> cuda_pool{nullptr};
 
 void initializeCudaPool(int device, std::size_t num_np_streams, std::size_t num_hp_streams) {
@@ -162,20 +80,12 @@ struct Init<Backend::GPU> {
   static void initialize(configuration const& cfg) {
     const int device = 0;
     memory::internal::initializeUmpireDeviceAllocator(cfg.umpire_device_memory_pool_initial_bytes);
-    initializeNpCudaStreamPool(device, cfg.num_np_cuda_streams_per_thread);
-    initializeHpCudaStreamPool(device, cfg.num_hp_cuda_streams_per_thread);
-    initializeCublasHandlePool();
-    initializeCusolverHandlePool();
     initializeCudaPool(device, cfg.num_np_cuda_streams_per_thread, cfg.num_hp_cuda_streams_per_thread);
     pika::cuda::experimental::detail::register_polling(pika::resource::get_thread_pool("default"));
   }
 
   static void finalize() {
     memory::internal::finalizeUmpireDeviceAllocator();
-    finalizeNpCudaStreamPool();
-    finalizeHpCudaStreamPool();
-    finalizeCublasHandlePool();
-    finalizeCusolverHandlePool();
     finalizeCudaPool();
   }
 };
@@ -195,33 +105,10 @@ struct parseFromString<std::size_t> {
   };
 };
 
-template <>
-struct parseFromString<comm::MPIMech> {
-  static comm::MPIMech call(const std::string& var) {
-    if (var == "yielding") {
-      return comm::MPIMech::Yielding;
-    }
-    else if (var == "polling") {
-      return comm::MPIMech::Polling;
-    }
-
-    std::cout << "Unknown value for --mech=" << var << "!" << std::endl;
-    std::terminate();
-    return comm::MPIMech::Polling;  // unreachable
-  };
-};
-
 template <class T>
 struct parseFromCommandLine {
   static T call(pika::program_options::variables_map const& vm, const std::string& cmd_val) {
     return vm[cmd_val].as<T>();
-  }
-};
-
-template <>
-struct parseFromCommandLine<comm::MPIMech> {
-  static comm::MPIMech call(pika::program_options::variables_map const& vm, const std::string& cmd_val) {
-    return parseFromString<comm::MPIMech>::call(vm[cmd_val].as<std::string>());
   }
 };
 
@@ -251,7 +138,6 @@ void updateConfiguration(pika::program_options::variables_map const& vm, configu
   updateConfigurationValue(vm, cfg.umpire_device_memory_pool_initial_bytes,
                            "UMPIRE_DEVICE_MEMORY_POOL_INITIAL_BYTES",
                            "umpire-device-memory-pool-initial-bytes");
-  updateConfigurationValue(vm, cfg.mpi_mech, "MPI_MECH", "mpi-mech");
   cfg.mpi_pool = (pika::resource::pool_exists("mpi")) ? "mpi" : "default";
 }
 
@@ -276,9 +162,6 @@ pika::program_options::options_description getOptionsDescription() {
   desc.add_options()("dlaf:umpire-device-memory-pool-initial-bytes",
                      pika::program_options::value<std::size_t>(),
                      "Number of bytes to preallocate for device memory pool");
-  desc.add_options()("dlaf:mpi-mech",
-                     pika::program_options::value<std::string>()->default_value("yielding"),
-                     "MPI mechanism ('yielding', 'polling')");
   desc.add_options()("dlaf:no-mpi-pool", pika::program_options::bool_switch(), "Disable the MPI pool.");
 
   return desc;

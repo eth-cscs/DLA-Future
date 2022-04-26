@@ -13,6 +13,8 @@
 #include <gtest/gtest.h>
 
 #include "dlaf/blas/enum_output.h"
+#include "dlaf/cublas/error.h"
+#include "dlaf/cuda/error.h"
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/util_types.h"
 

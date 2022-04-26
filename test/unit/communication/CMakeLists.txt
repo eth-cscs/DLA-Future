@@ -71,8 +71,8 @@ DLAF_addTest(test_broadcast_panel
   USE_MAIN MPIPIKA
 )
 
-DLAF_addTest(test_comm_executor
-  SOURCES test_comm_executor.cpp
+DLAF_addTest(test_comm_sender
+  SOURCES test_comm_sender.cpp
   LIBRARIES dlaf.core
   MPIRANKS 4
   USE_MAIN MPIPIKA

@@ -14,23 +14,24 @@
 
 #include <mpi.h>
 
-#include <pika/unwrap.hpp>
+#include <pika/execution.hpp>
+#include <pika/future.hpp>
 
 #include "dlaf/common/assert.h"
 #include "dlaf/common/callable_object.h"
 #include "dlaf/common/data.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/communication/communicator.h"
-#include "dlaf/communication/executor.h"
 #include "dlaf/communication/message.h"
 #include "dlaf/communication/rdma.h"
 #include "dlaf/matrix/tile.h"
+#include "dlaf/sender/transform_mpi.h"
 
 namespace dlaf {
 namespace comm {
 
 template <class T, Device D>
-void sendBcast(const matrix::Tile<const T, D>& tile, const common::PromiseGuard<Communicator>& pcomm,
+void sendBcast(const matrix::Tile<const T, D>& tile, common::PromiseGuard<Communicator> pcomm,
                MPI_Request* req) {
 #if !defined(DLAF_WITH_CUDA_RDMA)
   static_assert(D == Device::CPU, "DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.");
@@ -46,7 +47,7 @@ DLAF_MAKE_CALLABLE_OBJECT(sendBcast);
 
 template <class T, Device D>
 void recvBcast(const matrix::Tile<T, D>& tile, comm::IndexT_MPI root_rank,
-               const common::PromiseGuard<Communicator>& pcomm, MPI_Request* req) {
+               common::PromiseGuard<Communicator> pcomm, MPI_Request* req) {
 #if !defined(DLAF_WITH_CUDA_RDMA)
   static_assert(D == Device::CPU, "DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.");
 #endif
@@ -58,12 +59,15 @@ void recvBcast(const matrix::Tile<T, D>& tile, comm::IndexT_MPI root_rank,
 DLAF_MAKE_CALLABLE_OBJECT(recvBcast);
 
 template <class T, Device D, template <class> class Future>
-void scheduleSendBcast(const comm::Executor& ex, Future<matrix::Tile<const T, D>> tile,
+void scheduleSendBcast(Future<matrix::Tile<const T, D>> tile,
                        pika::future<common::PromiseGuard<Communicator>> pcomm) {
+  using dlaf::internal::keepIfSharedFuture;
+  using dlaf::internal::whenAllLift;
   using internal::prepareSendTile;
-  using matrix::unwrapExtendTiles;
+  using pika::execution::experimental::start_detached;
 
-  pika::dataflow(ex, unwrapExtendTiles(sendBcast_o), prepareSendTile(std::move(tile)), std::move(pcomm));
+  whenAllLift(keepIfSharedFuture(prepareSendTile(std::move(tile))), std::move(pcomm)) |
+      internal::transformMPI(sendBcast_o) | start_detached();
 }
 
 namespace internal {
@@ -71,43 +75,61 @@ namespace internal {
 template <class T>
 struct ScheduleRecvBcast {
   template <Device D>
-  static auto call(const comm::Executor& ex, pika::future<matrix::Tile<T, D>> tile,
-                   comm::IndexT_MPI root_rank, pika::future<common::PromiseGuard<Communicator>> pcomm) {
+  static auto call(pika::future<matrix::Tile<T, D>> tile, comm::IndexT_MPI root_rank,
+                   pika::future<common::PromiseGuard<Communicator>> pcomm) {
 #if !defined(DLAF_WITH_CUDA_RDMA)
     static_assert(D == Device::CPU, "With CUDA RDMA disabled, MPI accepts just CPU memory.");
 #endif
 
-    using matrix::unwrapExtendTiles;
-    using pika::dataflow;
+    using dlaf::internal::whenAllLift;
+    using pika::execution::experimental::start_detached;
 
-    return dataflow(ex, unwrapExtendTiles(recvBcast_o), std::move(tile), root_rank, std::move(pcomm));
+    return whenAllLift(std::move(tile), root_rank, std::move(pcomm)) | transformMPI(recvBcast_o);
   }
 
 #if defined(DLAF_WITH_CUDA) && !defined(DLAF_WITH_CUDA_RDMA)
-  static void call(const comm::Executor& ex, pika::future<matrix::Tile<T, Device::GPU>> tile,
-                   comm::IndexT_MPI root_rank, pika::future<common::PromiseGuard<Communicator>> pcomm) {
-    using matrix::duplicateIfNeeded;
-
+  static auto call(pika::future<matrix::Tile<T, Device::GPU>> tile_gpu, comm::IndexT_MPI root_rank,
+                   pika::future<common::PromiseGuard<Communicator>> pcomm) {
     // Note:
-    //
-    // TILE_GPU -+-> duplicateIfNeeded<CPU> ---> TILE_CPU ---> recvBcast ---> TILE_CPU -+-> copy
-    //           |                                                                      |
-    //           +----------------------------------------------------------------------+
-    //
-    // Actually `duplicateIfNeeded` always makes a copy, because it is always needed since this
-    // is the specialization for GPU input and MPI without CUDA_RDMA requires CPU memory.
+    // TILE_GPU -+-> duplicate<CPU> ---> TILE_CPU ---> recvBcast ---> TILE_CPU -+-> copy
+    //           |                                                              |
+    //           +--------------------------------------------------------------+
+    namespace ex = pika::execution::experimental;
 
-    auto tile_gpu = tile.share();
-    auto tile_cpu = duplicateIfNeeded<Device::CPU>(tile_gpu);
+    using dlaf::internal::Policy;
+    using dlaf::internal::transform;
+    using dlaf::internal::whenAllLift;
+    using dlaf::matrix::Duplicate;
+    using dlaf::matrix::Tile;
+    using dlaf::matrix::internal::copy_o;
+    using pika::threads::thread_priority;
 
-    tile_cpu = std::move(pika::get<0>(pika::split_future(
-        ScheduleRecvBcast<T>::call(ex, std::move(tile_cpu), root_rank, std::move(pcomm)))));
-
-    pika::execution::experimental::when_all(dlaf::internal::keepIfSharedFuture(std::move(tile_cpu)),
-                                            dlaf::internal::keepIfSharedFuture(std::move(tile_gpu))) |
-        dlaf::matrix::copy(
-            dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::CPU, Device::GPU>>()) |
-        pika::execution::experimental::start_detached();
+    // TODO: std::bind currently serves as a reference_wrapper unwrapper until
+    // https://github.com/eth-cscs/DLA-Future/issues/492 is resolved.
+    return std::move(tile_gpu) |
+           // Start an asynchronous scope for keeping the GPU tile alive until
+           // data has been copied back into it.
+           ex::let_value([=, pcomm = std::move(pcomm)](Tile<T, Device::GPU>& tile_gpu) mutable {
+             // Create a CPU tile with the same dimensions as the GPU tile.
+             return ex::just() |
+                    transform(Policy<Backend::GPU>(thread_priority::high),
+                              std::bind(Duplicate<Device::CPU>{}, std::cref(tile_gpu),
+                                        std::placeholders::_1)) |
+                    // Start an asynchronous scoped for keeping the CPU tile
+                    // alive until data has been copied away from it.
+                    ex::let_value([=, pcomm = std::move(pcomm),
+                                   &tile_gpu](Tile<T, Device::CPU>& tile_cpu) mutable {
+                      return std::move(pcomm) |
+                             // Perform the actual receive into the CPU tile.
+                             transformMPI(std::bind(recvBcast_o, std::cref(tile_cpu), root_rank,
+                                                    std::placeholders::_1, std::placeholders::_2)) |
+                             // Copy the received data from the CPU tile to the
+                             // GPU tile.
+                             transform(Policy<Backend::GPU>(thread_priority::high),
+                                       std::bind(copy_o, std::cref(tile_cpu), std::cref(tile_gpu),
+                                                 std::placeholders::_1));
+                    });
+           });
   }
 #endif
 };
@@ -115,10 +137,10 @@ struct ScheduleRecvBcast {
 }
 
 template <class T, Device D>
-void scheduleRecvBcast(const comm::Executor& ex, pika::future<matrix::Tile<T, D>> tile,
-                       comm::IndexT_MPI root_rank,
+void scheduleRecvBcast(pika::future<matrix::Tile<T, D>> tile, comm::IndexT_MPI root_rank,
                        pika::future<common::PromiseGuard<Communicator>> pcomm) {
-  internal::ScheduleRecvBcast<T>::call(ex, std::move(tile), root_rank, std::move(pcomm));
+  internal::ScheduleRecvBcast<T>::call(std::move(tile), root_rank, std::move(pcomm)) |
+      pika::execution::experimental::start_detached();
 }
 
 }

@@ -12,6 +12,8 @@
 
 #include "dlaf/common/timer.h"
 #include "dlaf/common/vector.h"
+#include "dlaf/cublas/error.h"
+#include "dlaf/cuda/error.h"
 #include "dlaf/types.h"
 
 #ifdef DLAF_WITH_CUDA

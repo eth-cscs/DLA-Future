@@ -28,7 +28,6 @@
 #include "dlaf/common/assert.h"
 #include "dlaf/common/callable_object.h"
 #include "dlaf/lapack/enum_output.h"
-#include "dlaf/lapack/laed4.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/sender/make_sender_algorithm_overloads.h"
@@ -294,53 +293,6 @@ auto stedc(const dlaf::internal::Policy<B>& p, Sender&& s);
 template <Backend B>
 auto stedc(const dlaf::internal::Policy<B>& p);
 
-/// Computes the i-th updated eigenvalue of a symmetric rank-1 modification to a diagonal matrix:
-///
-///         D + rho * zz^T
-///
-/// with rho > 0, D[i] < D[j] for i < j and the Euclidean norm of z is 1.
-///
-/// @tparam T
-///    a real number : either `float` or `double`
-///
-/// @param[in] d
-///    the orginal eigenvalues assumed to be in ascending order : d[i] < d[j] for i < j
-///
-/// @param[in] z
-///    the rank-1 updating vector
-///
-/// @param[in] rho
-///    a scalar multiplication factor : rho > 0
-///
-/// @param[in] i
-///    the index of the eigenvalue to be computed : 0 <= i < n
-///
-/// @param[out] delta
-///    a vector used to construct the eigenvectors of the form : d[j] - lambda
-///
-/// @param[out] lambda
-///    the i-th updated eigenvalue
-///
-/// This overload blocks until completion of the algorithm.
-template <Backend B, class T>
-void laed4(const dlaf::internal::Policy<B>& p, std::vector<T> const& d, std::vector<T> const& z, T rho,
-           SizeType i, std::vector<T>& delta, T& lambda);
-
-/// \overload laed4
-///
-/// This overload takes a policy argument and a sender which must send all required arguments for the
-/// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
-template <Backend B, typename Sender,
-          typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
-auto laed4(const dlaf::internal::Policy<B>& p, Sender&& s);
-
-/// \overload laed4
-///
-/// This overload partially applies the algorithm with a policy for later use with operator| with a
-/// sender on the left-hand side.
-template <Backend B>
-auto laed4(const dlaf::internal::Policy<B>& p);
-
 #else
 
 namespace internal {
@@ -422,17 +374,6 @@ void stedc(const Tile<BaseType<T>, Device::CPU>& tridiag, const Tile<T, Device::
   // compz, n, D, E, Z, ldz
   lapack::stedc(lapack::Job::Vec, evecs.size().rows(), tridiag.ptr(),
                 tridiag.ptr(TileElementIndex(0, 1)), evecs.ptr(), evecs.ld());
-}
-
-template <class T>
-void laed4(std::vector<T> const& d, std::vector<T> const& z, T rho, SizeType i, std::vector<T>& delta,
-           T& lambda) {
-  DLAF_ASSERT(rho > 0, rho);
-  DLAF_ASSERT(d.size() == z.size(), d.size(), z.size());
-  DLAF_ASSERT(delta.size() == z.size(), delta.size(), z.size());
-  DLAF_ASSERT(0 <= i && i < SizeType(d.size()), i, d.size());
-  dlaf::internal::laed4_wrapper(static_cast<int>(d.size()), static_cast<int>(i), d.data(), z.data(),
-                                delta.data(), rho, &lambda);
 }
 
 #ifdef DLAF_WITH_CUDA

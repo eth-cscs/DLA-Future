@@ -337,39 +337,3 @@ TYPED_TEST(RealTileOperationsTestMC, Stedc) {
   setTileColumnSigns(expected_evecs_f, evecs);
   CHECK_TILE_NEAR(expected_evecs_f, evecs, 1e-6, 1e-6);
 }
-
-// To reproduce the setup in python:
-//
-// ```
-// import numpy as np
-// from scipy.linalg import eigh
-// from scipy.linalg import norm
-//
-// n = 20
-// d = np.log(np.arange(2, n + 2))
-// z = np.arange(1, n + 1) / n
-// z = z / norm(z)
-// eigh(np.diag(d) + np.outer(z, np.transpose(z)), eigvals_only=True, subset_by_index=[n / 2, n / 2])
-//
-// ```
-//
-TYPED_TEST(RealTileOperationsTestMC, Laed4) {
-  std::size_t n = 20;
-  std::vector<TypeParam> d(n);
-  std::vector<TypeParam> z(n);
-  TypeParam sumsq = 0;
-  for (std::size_t i = 0; i < n; ++i) {
-    d[i] = std::log(TypeParam(i + 2));
-    z[i] = TypeParam(i + 1) / n;
-    sumsq += z[i] * z[i];
-  }
-  TypeParam rho = 1.0 / sumsq;  // the factor essentially normalizes `z`
-  SizeType i = n / 2;           // the index of the middle eigenvalue
-  std::vector<TypeParam> delta(n);
-  TypeParam lambda;
-
-  tile::internal::laed4(d, z, rho, i, delta, lambda);
-
-  TypeParam expected_lambda = 2.497336;
-  EXPECT_NEAR(lambda, expected_lambda, 1e-7);
-}

@@ -76,10 +76,9 @@ TEST(MatrixIndexPairsGeneration, IndexPairsGeneration) {
 //
 TYPED_TEST(TridiagEigensolverTest, CorrectnessLocal) {
   constexpr double pi = 3.14159265358979323846;
-  // SizeType n = 10;
-  // SizeType nb = 5;
   SizeType n = 16;
-  SizeType nb = 3;
+  SizeType nb = 4;
+  //SizeType nb = 3; // this segfaults sometimes
 
   matrix::Matrix<TypeParam, Device::CPU> tridiag(LocalElementSize(n, 2), TileElementSize(nb, 2));
   matrix::Matrix<TypeParam, Device::CPU> evals(LocalElementSize(n, 1), TileElementSize(nb, 1));

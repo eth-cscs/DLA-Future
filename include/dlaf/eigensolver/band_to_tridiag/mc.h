@@ -278,7 +278,7 @@ public:
     startSweepInternal(sweep, a);
   }
 
-  void compactCopyToTile(matrix::Tile<T, Device::CPU>&& tile_v, TileElementIndex index) const noexcept {
+  void compactCopyToTile(matrix::Tile<T, Device::CPU>& tile_v, TileElementIndex index) const noexcept {
     tile_v(index) = tau();
     blas::copy(sizeHHR() - 1, v() + 1, 1, tile_v.ptr(index) + 1, 1);
   }
@@ -355,6 +355,25 @@ protected:
 template <Device D, class T>
 TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     const SizeType b, Matrix<const T, D>& mat_a) noexcept {
+  // Note on the algorithm and dependency tracking:
+  // The algorithm is composed by n-2 (real) or n-1 (complex) sweeps:
+  // The i-th sweep is initialized by init_sweep which act on the i-th column of the mand matrix.
+  // Then the sweep continues applying steps. j-th step act on the columns [i+1 + j * b, i+1 + (j+1) * b)
+  // The steps in the same sweep has to be executed in order and the dependencies are managed by the worker pipelines.
+  // The deps vector is used to set the dependencies among two different sweeps.
+  //
+  // assuming b = 4 and nb = 8 (i.e each task applies two steps):
+  // Copy of band: A A A A B B B B C C C C D D D D E ...
+  //                   deps[0]    |    deps[1]    | ...
+  // Sweep 0       I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3
+  //                |    deps[0]    |    deps[1]    | ...
+  // Sweep 1         I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3
+  //                  |    deps[0]    |    deps[1]    | ...
+  // Sweep 2           I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3
+  //                    ...
+  // Note: j-th task (in this case 2*j-th and 2*j+1-th steps) depend explicitely only on deps[j+1],
+  //       as the pipeline dependency on j-1-th task (or sweep_init for j=0) implies a dependency on deps[j] as well.
+
   using common::Pipeline;
   using common::PromiseGuard;
   using common::internal::vector;
@@ -380,7 +399,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     return {std::move(mat_trid), std::move(mat_v)};
   }
 
-  const auto max_deps_size = ceilDiv(size, b);
+  const auto max_deps_size = nrtiles;
   vector<pika::execution::experimental::any_sender<>> deps;
   deps.reserve(max_deps_size);
 
@@ -393,26 +412,24 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   };
 
   // Copy the band matrix
-  for (SizeType k = 0; k < nrtile; ++k) {
+  for (SizeType k = 0; k < nrtiles; ++k) {
     auto sf = copy_diag(k * nb, mat_a.read_sender(GlobalTileIndex{k, k})) | ex::split();
-    if (k < nrtile - 1) {
-      for (int i = 0; i < nb / b - 1; ++i) {
-        deps.push_back(sf);
-      }
+    if (k < nrtiles - 1) {
       auto sf2 = copy_offdiag(k * nb, ex::when_all(std::move(sf),
                                                    mat_a.read_sender(GlobalTileIndex{k + 1, k}))) |
                  ex::split();
       deps.push_back(std::move(sf2));
     }
     else {
-      while (deps.size() < max_deps_size) {
-        deps.push_back(sf);
-      }
+      deps.push_back(sf);
     }
   }
 
-  // Maximum size / (2b-1) sweeps can be executed in parallel.
-  const auto max_workers = std::min(ceilDiv(size, 2 * b - 1), 2 * to_SizeType(get_num_threads("default")));
+  // Maximum size / (2b-1) sweeps can be executed in parallel, however due to task combination it reduces
+  // to size / (2nb-1).
+  const auto max_workers =
+      std::min(ceilDiv(size, 2 * nb - 1), 2 * to_SizeType(get_num_threads("default")));
+
   vector<Pipeline<SweepWorker<T>>> workers;
   workers.reserve(max_workers);
   for (SizeType i = 0; i < max_workers; ++i)
@@ -421,10 +438,12 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   auto init_sweep = [a_ws](SizeType sweep, PromiseGuard<SweepWorker<T>> worker) {
     worker.ref().startSweep(sweep, *a_ws);
   };
-  auto cont_sweep = [a_ws](PromiseGuard<SweepWorker<T>> worker, matrix::Tile<T, Device::CPU>&& tile_v,
-                           TileElementIndex index) {
-    worker.ref().compactCopyToTile(std::move(tile_v), index);
-    worker.ref().doStep(*a_ws);
+  auto cont_sweep = [a_ws, b](SizeType nr_steps, PromiseGuard<SweepWorker<T>> worker,
+                              matrix::Tile<T, Device::CPU>&& tile_v, TileElementIndex index) {
+    for (SizeType j = 0; j < nr_steps; ++j) {
+      worker.ref().compactCopyToTile(tile_v, index + TileElementSize(j * b, 0));
+      worker.ref().doStep(*a_ws);
+    }
   };
 
   auto policy_hp = dlaf::internal::Policy<Backend::MC>(pika::threads::thread_priority::high);
@@ -464,19 +483,28 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     copy_tridiag(sweep, std::move(dep));
 
     const auto steps = nrStepsForSweep(sweep, size, b);
-    for (SizeType step = 0; step < steps; ++step) {
-      auto dep_index = std::min(step + 1, deps.size() - 1);
+
+    SizeType last_step = 0;
+    for (SizeType step = 0; step < steps;) {
+      SizeType nr_steps = step == 0 ? nb / b - sweep % nb / b : nb / b;
+      nr_steps = std::min(nr_steps, steps - step);
+
+      auto dep_index = std::min(ceilDiv(step + nr_steps, nb / b), deps.size() - 1);
 
       const GlobalElementIndex index_v((sweep / b + step) * b, sweep);
 
-      deps[step] = dlaf::internal::whenAllLift(w_pipeline(),
-                                               mat_v.readwrite_sender(dist_v.globalTileIndex(index_v)),
-                                               dist_v.tileElementIndex(index_v), deps[dep_index]) |
-                   dlaf::internal::transform(policy_hp, cont_sweep) | ex::split();
+      deps[ceilDiv(step, nb / b)] =
+          dlaf::internal::whenAllLift(nr_steps, w_pipeline(),
+                                      mat_v.readwrite_sender(dist_v.globalTileIndex(index_v)),
+                                      dist_v.tileElementIndex(index_v), deps[dep_index]) |
+          dlaf::internal::transform(policy_hp, cont_sweep) | ex::split();
+
+      last_step = step;
+      step += nr_steps;
     }
 
     // Shrink the dependency vector to only include the futures generated in this sweep.
-    deps.resize(steps);
+    deps.resize(ceilDiv(last_step, nb / b) + 1);
   }
 
   // copy the last elements of the diagonals

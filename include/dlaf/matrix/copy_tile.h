@@ -190,6 +190,22 @@ struct Duplicate {
   }
 };
 
+// TODO: Name...
+template <Device Destination>
+struct DuplicateNoCopy {
+  template <typename T, Device Source>
+  Tile<T, Destination> operator()(const Tile<const T, Source>& source) {
+    auto source_size = source.size();
+    dlaf::memory::MemoryView<T, Destination> mem_view(source_size.linear_size());
+    Tile<T, Destination> destination(source_size, std::move(mem_view), source_size.rows());
+    return Tile<T, Destination>(std::move(destination));
+  }
+};
+
+// TODO?
+// template <typename Destination>
+// inline constexpr DuplicateNoCopy<Destination> duplicate_no_copy(_o){};
+
 /// Helper function for duplicating an input tile to Destination asynchronously,
 /// but only if the destination device is different from the source device.
 ///

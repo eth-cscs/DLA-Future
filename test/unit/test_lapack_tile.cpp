@@ -334,7 +334,13 @@ TYPED_TEST(RealTileOperationsTestMC, Stedc) {
                   sz * TypeUtilities<RealParam>::error);
 
   // Eigenvectors are unique up to a sign, this makes sure evecs have the same signs as the expected evecs
-  setTileColumnSigns(expected_evecs_f, evecs);
+  for (SizeType i = 0; i < sz; ++i) {
+    TileElementIndex idx(0, i);
+    if (dlaf::util::sameSign(expected_evecs_f(idx), evecs(idx)))
+      continue;
+
+    tile::internal::scaleCol(TypeParam(-1), i, evecs);
+  }
   CHECK_TILE_NEAR(expected_evecs_f, evecs, 1e-6, 1e-6);
 }
 

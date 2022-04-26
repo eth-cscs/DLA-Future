@@ -270,23 +270,6 @@ void checkNear(ElementGetter&& expected, const Tile<const T, D>& tile, BaseType<
 #define CHECK_TILE_NEAR(expected, tile, rel_err, abs_err) \
   ::dlaf::matrix::test::checkNear(expected, tile, rel_err, abs_err, __FILE__, __LINE__)
 
-template <class Fn, class T>
-void setTileColumnSigns(Fn el_f, matrix::Tile<T, Device::CPU>& tile) {
-  static_assert(std::is_same_v<T, float> || std::is_same_v<T, double>, "T must be a real number.");
-
-  SizeType ncols = tile.size().cols();
-  for (SizeType i = 0; i < ncols; ++i) {
-    TileElementIndex idx(0, i);
-    if (dlaf::util::sameSign(el_f(idx), tile(idx)))
-      continue;
-
-    // if signs of first column elements are opposite, negate that column of `tile`
-    T* begin = tile.ptr(idx);
-    T* end = begin + tile.size().rows();
-    std::transform(begin, end, begin, std::negate<T>());
-  }
-}
-
 }
 }
 }

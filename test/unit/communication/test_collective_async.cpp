@@ -25,6 +25,7 @@
 
 using namespace dlaf;
 using namespace dlaf::matrix::test;
+namespace tt = pika::this_thread::experimental;
 
 class CollectiveTest : public ::testing::Test {
   static_assert(NUM_MPI_RANKS >= 2, "at least 2 ranks are required");
@@ -112,17 +113,17 @@ void testAllReduceInPlace(comm::Communicator world, matrix::Matrix<T, device> ma
   auto input_tile = fixedValueTile(world.rank() + 1);
   matrix::test::set(matrix(idx).get(), input_tile);
 
-  auto after = dlaf::comm::scheduleAllReduceInPlace(chain(), MPI_SUM, matrix(idx));
+  auto after = dlaf::comm::scheduleAllReduceInPlace<T>(chain(), MPI_SUM, matrix(idx));
 
   // Note:
-  // The call `after.get()` waits for any scheduled task with the aim to ensure that no other task
+  // The call `sync_wait(after)` waits for any scheduled task with the aim to ensure that no other task
   // will yield after it, so `SCOPED_TRACE` can be called safely.
   //
   // Moreover, the code block is needed in order to limit the lifetime of `tile`, so that just after
   // it, it is possible to check the read operation (which implicitly depends on it)
   auto exp_tile = fixedValueTile(world.size() * (world.size() + 1) / 2);
   {
-    auto tile = after.get();
+    auto tile = tt::sync_wait(std::move(after));
     SCOPED_TRACE(test_name);
 
     CHECK_TILE_EQ(exp_tile, tile);

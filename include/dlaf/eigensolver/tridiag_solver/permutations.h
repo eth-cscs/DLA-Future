@@ -11,6 +11,8 @@
 
 #include <vector>
 
+#include "pika/parallel/algorithms/for_each.hpp"
+
 #include "dlaf/blas/tile.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
@@ -70,7 +72,10 @@ void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeT
   SizeType dim2 = sz.rows();
   if constexpr (coord == Coord::Row)
     std::swap(dim1, dim2);
-  for (SizeType i1 = 0; i1 < dim1; ++i1) {
+
+  std::vector<SizeType> loop_arr(to_sizet(dim1));
+  std::iota(std::begin(loop_arr), std::end(loop_arr), 0);
+  pika::for_each(pika::execution::par, std::begin(loop_arr), std::end(loop_arr), [&](SizeType i1) {
     for (SizeType i2 = 0; i2 < dim2; ++i2) {
       SizeType i = i2;  // row
       SizeType j = i1;  // column
@@ -94,7 +99,7 @@ void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeT
       //  copy from `in` to `out`
       out_tiles[idx_arr_out](idx_el_out) = in_tiles[idx_arr_in](idx_el_in);
     }
-  }
+  });
 }
 
 }

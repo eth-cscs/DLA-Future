@@ -103,21 +103,37 @@ TYPED_TEST(TridiagEigensolverTest, CorrectnessLocal) {
   };
   CHECK_MATRIX_NEAR(expected_evals_fn, evals, 1e-6, 1e-6);
 
-  matrix::print(format::csv{}, "Evals", evals);
-  matrix::print(format::csv{}, "Evecs", evecs);
-
   // Eigenvectors
   auto expected_evecs_fn = [n](GlobalElementIndex i) {
     SizeType j = i.col() + 1;
     SizeType k = i.row() + 1;
     return TypeParam(std::sqrt(2.0 / (n + 1)) * std::sin(j * k * pi / (n + 1)));
   };
-  std::cout << "Expected evecs:" << std::endl;
-  for (int i = 0; i < n; ++i) {
-    for (int j = 0; j < n; ++j) {
-      std::cout << expected_evecs_fn(GlobalElementIndex(i, j)) << ",";
+
+  // Eigenvectors are unique up to a sign
+  std::vector<SizeType> neg_cols;  // columns to negate
+  neg_cols.reserve(to_sizet(n));
+  const auto& dist = evecs.distribution();
+  for (SizeType i_tile = 0; i_tile < dist.nrTiles().cols(); ++i_tile) {
+    SizeType i_gl_el = dist.template globalElementFromGlobalTileAndTileElement<Coord::Col>(i_tile, 0);
+    auto tile = evecs(GlobalTileIndex(0, i_tile)).get();
+    for (SizeType i_tile_el = 0; i_tile_el < tile.size().cols(); ++i_tile_el) {
+      if (dlaf::util::sameSign(expected_evecs_fn(GlobalElementIndex(0, i_gl_el + i_tile_el)),
+                               tile(TileElementIndex(0, i_tile_el))))
+        continue;
+      neg_cols.push_back(i_gl_el + i_tile_el);
     }
-    std::cout << std::endl;
   }
-  // CHECK_MATRIX_NEAR(expected_evecs_fn, evecs, 1e-6, 1e-6);
+
+  for (SizeType i_gl_el : neg_cols) {
+    SizeType j_tile = dist.template globalTileFromGlobalElement<Coord::Col>(i_gl_el);
+    SizeType j_tile_el = dist.template tileElementFromGlobalElement<Coord::Col>(i_gl_el);
+
+    // Iterate over all tiles on the `j_tile` tile column
+    for (SizeType i_tile = 0; i_tile < dist.nrTiles().rows(); ++i_tile) {
+      auto tile = evecs(GlobalTileIndex(i_tile, j_tile)).get();
+      tile::internal::scaleCol(TypeParam(-1), j_tile_el, tile);
+    }
+  }
+  CHECK_MATRIX_NEAR(expected_evecs_fn, evecs, 1e-6, 1e-6);
 }

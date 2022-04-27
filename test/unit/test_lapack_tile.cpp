@@ -357,8 +357,6 @@ TYPED_TEST(TileOperationsTestMC, ScaleCol) {
     TypeParam factor = (idx.col() == col) ? alpha : TypeParam(1);
     return TypeParam(idx.row() + idx.col()) * factor;
   };
-  // auto expected_tile =
-  //     createTile<TypeParam, Device::CPU>(std::move(expected_tile_fn), tile_size, tile_size.rows());
 
   CHECK_TILE_NEAR(expected_tile_fn, tile, TypeUtilities<TypeParam>::error,
                   TypeUtilities<TypeParam>::error);

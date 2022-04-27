@@ -24,14 +24,15 @@ using namespace std::chrono_literals;
 
 using dlaf::common::Pipeline;
 
-TEST(Pipeline, Basic) {
-  using pika::execution::experimental::then;
-  using pika::this_thread::experimental::sync_wait;
+namespace ex = pika::execution::experimental;
+namespace tt = pika::this_thread::experimental;
 
+TEST(Pipeline, Basic) {
   Pipeline<int> serial(26);
 
   auto checkpoint0 = serial();
-  auto checkpoint1 = std::move(checkpoint0) | then([](auto&& wrapper) { return std::move(wrapper); });
+  auto checkpoint1 =
+      std::move(checkpoint0) | ex::then([](auto&& wrapper) { return std::move(wrapper); });
 
   auto guard0 = serial();
   auto guard1 = serial();
@@ -40,16 +41,16 @@ TEST(Pipeline, Basic) {
   // EXPECT_FALSE(guard0.is_ready());
   // EXPECT_FALSE(guard1.is_ready());
 
-  sync_wait(std::move(checkpoint1));
+  tt::sync_wait(std::move(checkpoint1));
 
   // EXPECT_TRUE(guard0.is_ready());
   // EXPECT_FALSE(guard1.is_ready());
 
-  sync_wait(std::move(guard0));
+  tt::sync_wait(std::move(guard0));
 
   // EXPECT_TRUE(guard1.is_ready());
 
-  sync_wait(std::move(guard1));
+  tt::sync_wait(std::move(guard1));
 }
 
 // PipelineDestructor
@@ -76,9 +77,7 @@ auto try_waiting_guard = [](auto& guard) {
 };
 
 TEST(PipelineDestructor, DestructionWithDependency) {
-  using pika::execution::experimental::make_future;
-
-  pika::future<void> last_task;
+  ex::unique_any_sender<> last_task;
 
   std::atomic<bool> is_exited_from_scope;
   {
@@ -90,9 +89,9 @@ TEST(PipelineDestructor, DestructionWithDependency) {
                       EXPECT_TRUE(is_exited_from_scope);
                     },
                     serial()) |
-                make_future();
+                ex::ensure_started();
   }
   is_exited_from_scope = true;
 
-  last_task.get();
+  tt::sync_wait(std::move(last_task));
 }

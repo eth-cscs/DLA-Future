@@ -17,9 +17,7 @@
 
 #include <gtest/gtest.h>
 #include <pika/execution.hpp>
-#include <pika/future.hpp>
 #include <pika/thread.hpp>
-#include <pika/unwrap.hpp>
 
 using namespace dlaf;
 using namespace std::chrono_literals;
@@ -27,33 +25,6 @@ using namespace std::chrono_literals;
 using dlaf::common::Pipeline;
 
 TEST(Pipeline, Basic) {
-  Pipeline<int> serial(26);
-
-  auto checkpoint0 = serial();
-  auto checkpoint1 =
-      checkpoint0.then(pika::launch::sync,
-                       pika::unwrapping([](auto&& wrapper) { return std::move(wrapper); }));
-
-  auto guard0 = serial();
-  auto guard1 = serial();
-
-  EXPECT_TRUE(checkpoint1.is_ready());
-  EXPECT_FALSE(guard0.is_ready());
-  EXPECT_FALSE(guard1.is_ready());
-
-  checkpoint1.get();
-
-  EXPECT_TRUE(guard0.is_ready());
-  EXPECT_FALSE(guard1.is_ready());
-
-  guard0.get();
-
-  EXPECT_TRUE(guard1.is_ready());
-
-  guard1.get();
-}
-
-TEST(Pipeline, BasicWithSenderAdaptors) {
   using pika::execution::experimental::then;
   using pika::this_thread::experimental::sync_wait;
 
@@ -65,17 +36,18 @@ TEST(Pipeline, BasicWithSenderAdaptors) {
   auto guard0 = serial();
   auto guard1 = serial();
 
-  EXPECT_FALSE(guard0.is_ready());
-  EXPECT_FALSE(guard1.is_ready());
+  // TODO: What would be a reasonable test here now that guard0 is not a future?
+  // EXPECT_FALSE(guard0.is_ready());
+  // EXPECT_FALSE(guard1.is_ready());
 
   sync_wait(std::move(checkpoint1));
 
-  EXPECT_TRUE(guard0.is_ready());
-  EXPECT_FALSE(guard1.is_ready());
+  // EXPECT_TRUE(guard0.is_ready());
+  // EXPECT_FALSE(guard1.is_ready());
 
   sync_wait(std::move(guard0));
 
-  EXPECT_TRUE(guard1.is_ready());
+  // EXPECT_TRUE(guard1.is_ready());
 
   sync_wait(std::move(guard1));
 }
@@ -104,22 +76,6 @@ auto try_waiting_guard = [](auto& guard) {
 };
 
 TEST(PipelineDestructor, DestructionWithDependency) {
-  pika::future<void> last_task;
-
-  std::atomic<bool> is_exited_from_scope;
-  {
-    Pipeline<int> serial(26);
-    last_task = serial().then(pika::launch::async, [&is_exited_from_scope](auto) {
-      try_waiting_guard(is_exited_from_scope);
-      EXPECT_TRUE(is_exited_from_scope);
-    });
-  }
-  is_exited_from_scope = true;
-
-  last_task.get();
-}
-
-TEST(PipelineDestructor, DestructionWithDependencyWithSenderAdaptors) {
   using pika::execution::experimental::make_future;
 
   pika::future<void> last_task;

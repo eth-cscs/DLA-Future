@@ -20,6 +20,7 @@
 #include "dlaf/eigensolver/bt_band_to_tridiag.h"
 #include "dlaf/eigensolver/bt_reduction_to_band.h"
 #include "dlaf/eigensolver/reduction_to_band.h"
+#include "dlaf/eigensolver/tridiag_solver.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/matrix.h"
@@ -39,48 +40,26 @@ EigensolverResult<T, D> Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>
     DLAF_UNIMPLEMENTED(uplo);
 
   auto taus = reductionToBand<B>(mat_a, band_size);
-  auto ret = bandToTridiag<Backend::MC>(uplo, mat_a.blockSize().rows(), mat_a);
+  auto ret = bandToTridiag<Backend::MC>(uplo, band_size, mat_a);
 
-  vector<BaseType<T>> w(size);
+  matrix::Matrix<T, Device::CPU> evals(LocalElementSize(size, 1),
+                                       TileElementSize(mat_a.blockSize().rows(), 1));
+  matrix::Matrix<T, Device::CPU> mat_e(LocalElementSize(size, size), mat_a.blockSize());
 
-  // mat_e is allocated in lapack layout to be able to call stemr directly on it.
-  const SizeType lde = std::max<SizeType>(1, size);
-  Matrix<T, Device::CPU> mat_e = [&]() {
-    auto distr_a = mat_a.distribution();
-    auto layout = matrix::colMajorLayout(distr_a, lde);
-    return Matrix<T, Device::CPU>{distr_a, layout};
-  }();
-
-  if (!mat_a.size().isEmpty()) {
-    auto& mat_trid = ret.tridiagonal;
-    vector<BaseType<T>> d(size);
-    vector<BaseType<T>> e(size);
-
-    // Synchronize mat_trid and copy tile by tile.
-    for (SizeType j = 0; j < mat_a.nrTiles().cols(); ++j) {
-      auto tile_sf = mat_trid.read(GlobalTileIndex(j, 0));
-      auto& tile = tile_sf.get();
-      auto start = j * mat_a.blockSize().cols();
-      blas::copy(tile.size().rows(), tile.ptr({0, 0}), 1, &d[start], 1);
-      blas::copy(tile.size().rows(), tile.ptr({0, 1}), 1, &e[start], 1);
-    }
-
-    auto ptr_e = mat_e(GlobalTileIndex(0, 0)).get().ptr();
-
-    // Note I'm using mrrr instead of divide & conquer as
-    // mrrr is more suitable for a single core task.
-    int64_t tmp;
-    vector<int64_t> isuppz(2 * std::max<SizeType>(1, size));
-    bool tryrac = false;
-    lapack::stemr(lapack::Job::Vec, lapack::Range::All, size, d.data(), e.data(), 0, 0, 0, 0, &tmp,
-                  w.data(), ptr_e, lde, size, isuppz.data(), &tryrac);
-
-    // Note: no sync needed here as next tasks are only scheduled
-    //       after the completion of stemr.
-  }
+  eigensolver::tridiagSolver<Backend::MC>(ret.tridiagonal, evals, mat_e);
 
   // Note: This is just a temporary workaround. It will be removed as soon as we will have our
   // tridiagonal eigensolver implementation both on CPU and GPU.
+  Matrix<T, D> evals_device = [&]() {
+    if constexpr (D == Device::CPU)
+      return std::move(evals);
+    else {
+      Matrix<T, D> evals_device(evals.distribution());
+      dlaf::matrix::copy(evals, evals_device);
+      return evals_device;
+    }
+  }();
+
   Matrix<T, D> mat_e_device = [&]() {
     if constexpr (D == Device::CPU)
       return std::move(mat_e);
@@ -94,7 +73,7 @@ EigensolverResult<T, D> Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>
   backTransformationBandToTridiag<B>(band_size, mat_e_device, ret.hh_reflectors);
   backTransformationReductionToBand<B>(band_size, mat_e_device, mat_a, taus);
 
-  return {std::move(w), std::move(mat_e_device)};
+  return {std::move(evals_device), std::move(mat_e_device)};
 }
 
 }

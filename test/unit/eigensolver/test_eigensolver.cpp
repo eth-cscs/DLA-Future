@@ -76,6 +76,10 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb)
     return;
 
   auto mat_a_local = allGather(blas::Uplo::General, reference);
+  auto mat_evalues_local  = [&]() {
+    MatrixMirror<const T, Device::CPU, D> mat_evals(ret.eigenvalues);
+    return allGather(blas::Uplo::General, mat_evals.get());
+  }();
   auto mat_e_local = [&]() {
     MatrixMirror<const T, Device::CPU, D> mat_e(ret.eigenvectors);
     return allGather(blas::Uplo::General, mat_e.get());
@@ -103,7 +107,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb)
 
   // Compute Lambda E (in place in mat_e_local)
   for (SizeType j = 0; j < m; ++j) {
-    blas::scal(m, ret.eigenvalues[j], mat_e_local.ptr({0, j}), 1);
+    blas::scal(m, mat_evalues_local({j, 0}), mat_e_local.ptr({0, j}), 1);
   }
 
   // Check A E == Lambda E

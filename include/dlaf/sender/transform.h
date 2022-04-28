@@ -47,7 +47,7 @@ template <Backend B, typename F, typename Sender,
   using pika::execution::experimental::then;
   using pika::execution::experimental::transfer;
 
-  auto scheduler = getBackendScheduler<B>(policy.priority(), policy.hint());
+  auto scheduler = getBackendScheduler<B>(policy.priority());
   auto transfer_sender = transfer(std::forward<Sender>(sender), std::move(scheduler));
   auto f_unwrapping = pika::unwrapping(std::forward<F>(f));
 

@@ -24,12 +24,11 @@ template <Backend B>
 class Policy {
 private:
   const pika::threads::thread_priority priority_ = pika::threads::thread_priority::normal;
-  const pika::threads::thread_schedule_hint hint_{};
 
 public:
   Policy() = default;
-  explicit Policy(pika::threads::thread_priority priority, pika::threads::thread_schedule_hint hint = {})
-      : priority_(priority), hint_(hint) {}
+  explicit Policy(pika::threads::thread_priority priority)
+      : priority_(priority) {}
   Policy(Policy&&) = default;
   Policy(Policy const&) = default;
   Policy& operator=(Policy&&) = default;
@@ -37,10 +36,6 @@ public:
 
   pika::threads::thread_priority priority() const noexcept {
     return priority_;
-  }
-
-  pika::threads::thread_schedule_hint hint() const noexcept {
-    return hint_;
   }
 };
 }

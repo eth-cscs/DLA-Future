@@ -35,13 +35,8 @@ auto getBackendScheduler() {
 }
 
 template <Backend backend>
-auto getBackendScheduler(const pika::threads::thread_priority priority,
-                         const pika::threads::thread_schedule_hint) {
-  namespace ex = pika::execution::experimental;
-  using pika::experimental::prefer;
-  // TODO: prefer is broken with with_hint. Try to fix for pika 0.4.0?
-  // return prefer(ex::with_hint, ex::with_priority(getBackendScheduler<backend>(), priority), hint);
-  return ex::with_priority(getBackendScheduler<backend>(), priority);
+auto getBackendScheduler(const pika::threads::thread_priority priority) {
+  return pika::execution::experimental::with_priority(getBackendScheduler<backend>(), priority);
 }
 
 inline auto getMPIScheduler() {

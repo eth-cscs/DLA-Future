@@ -109,9 +109,6 @@ struct BandToTridiagMiniapp {
       if (0 == world.rank() && run_index >= 0)
         std::cout << "[" << run_index << "]" << std::endl;
 
-      pika::scoped_annotation ann1(std::string("miniapp_band_to_tridiag/run_") +
-                                   std::to_string(run_index));
-
       HostMatrixType matrix_host(matrix_size, block_size, comm_grid);
       copy(matrix_ref, matrix_host);
 

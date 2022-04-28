@@ -355,7 +355,6 @@ protected:
 template <Device D, class T>
 TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     const SizeType b, Matrix<const T, D>& mat_a) noexcept {
-  pika::scoped_annotation ann1("band_to_tridiag");
   using common::Pipeline;
   using common::PromiseGuard;
   using common::internal::vector;
@@ -395,7 +394,6 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
 
   // Copy the band matrix
   {
-    pika::scoped_annotation ann2("band_to_tridiag/copy");
     for (SizeType k = 0; k < nrtile; ++k) {
       auto sf = copy_diag(k * nb, mat_a.read_sender(GlobalTileIndex{k, k})) | ex::split();
       if (k < nrtile - 1) {
@@ -459,42 +457,38 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     }
   };
 
-  {
-    pika::scoped_annotation ann3("band_to_tridiag/sweeps");
-    const auto sweeps = nrSweeps<T>(size);
-    for (SizeType sweep = 0; sweep < sweeps; ++sweep) {
-      // Create the first max_workers workers and then reuse them.
-      auto& w_pipeline = workers[sweep % max_workers];
-      auto thread_hint = static_cast<std::remove_cv_t<decltype(num_threads)>>(sweep) % num_threads;
-      dlaf::internal::Policy<Backend::MC>
-          policy(pika::threads::thread_priority::high,
-                 pika::threads::thread_schedule_hint(pika::threads::thread_schedule_hint_mode::thread,
-                                                     thread_hint));
+  const auto sweeps = nrSweeps<T>(size);
+  for (SizeType sweep = 0; sweep < sweeps; ++sweep) {
+    // Create the first max_workers workers and then reuse them.
+    auto& w_pipeline = workers[sweep % max_workers];
+    auto thread_hint = static_cast<std::remove_cv_t<decltype(num_threads)>>(sweep) % num_threads;
+    dlaf::internal::Policy<Backend::MC>
+        policy(pika::threads::thread_priority::high,
+               pika::threads::thread_schedule_hint(pika::threads::thread_schedule_hint_mode::thread,
+                                                   thread_hint));
 
-      auto dep = dlaf::internal::whenAllLift(sweep, w_pipeline(), deps[0]) |
-                 dlaf::internal::transform(policy, init_sweep);
-      copy_tridiag(sweep, std::move(dep), policy);
+    auto dep = dlaf::internal::whenAllLift(sweep, w_pipeline(), deps[0]) |
+               dlaf::internal::transform(policy, init_sweep);
+    copy_tridiag(sweep, std::move(dep), policy);
 
-      const auto steps = nrStepsForSweep(sweep, size, b);
-      for (SizeType step = 0; step < steps; ++step) {
-        auto dep_index = std::min(step + 1, deps.size() - 1);
+    const auto steps = nrStepsForSweep(sweep, size, b);
+    for (SizeType step = 0; step < steps; ++step) {
+      auto dep_index = std::min(step + 1, deps.size() - 1);
 
-        const GlobalElementIndex index_v((sweep / b + step) * b, sweep);
+      const GlobalElementIndex index_v((sweep / b + step) * b, sweep);
 
-        dlaf::internal::whenAllLift(w_pipeline(),
-                                    mat_v.readwrite_sender(dist_v.globalTileIndex(index_v)),
-                                    dist_v.tileElementIndex(index_v)) |
-            ex::then(store_tau_v) | ex::start_detached();
-        deps[step] = dlaf::internal::whenAllLift(w_pipeline(), deps[dep_index]) |
-                     dlaf::internal::transform(policy, cont_sweep) | ex::ensure_started() | ex::split();
-      }
+      dlaf::internal::whenAllLift(w_pipeline(), mat_v.readwrite_sender(dist_v.globalTileIndex(index_v)),
+                                  dist_v.tileElementIndex(index_v)) |
+          ex::then(store_tau_v) | ex::start_detached();
+      deps[step] = dlaf::internal::whenAllLift(w_pipeline(), deps[dep_index]) |
+                   dlaf::internal::transform(policy, cont_sweep) | ex::ensure_started() | ex::split();
+    }
 
-      // Shrink the dependency vector to only include the futures generated in this sweep.
-      deps.resize(steps);
+    // Shrink the dependency vector to only include the futures generated in this sweep.
+    deps.resize(steps);
 
-      if (thread_hint == 0) {
-        pika::this_thread::yield();
-      }
+    if (thread_hint == 0) {
+      pika::this_thread::yield();
     }
   }
 
@@ -502,14 +496,10 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   // copy the last elements of the diagonals
   if (!isComplex_v<T>) {
     // only needed for real types as they don't perform sweep size-2
-    pika::scoped_annotation ann4("band_to_tridiag/non-complex-copy_tridiag");
     copy_tridiag(size - 2, deps[0], policy_hp);
   }
 
-  {
-    pika::scoped_annotation ann4("band_to_tridiag/final-copy_tridiag");
-    copy_tridiag(size - 1, std::move(deps[0]), policy_hp);
-  }
+  copy_tridiag(size - 1, std::move(deps[0]), policy_hp);
 
   return {std::move(mat_trid), std::move(mat_v)};
 }

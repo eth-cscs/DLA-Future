@@ -28,29 +28,76 @@ namespace ex = pika::execution::experimental;
 namespace tt = pika::this_thread::experimental;
 
 TEST(Pipeline, Basic) {
-  Pipeline<int> serial(26);
+  {
+    Pipeline<int> serial(26);
 
-  auto checkpoint0 = serial();
-  auto checkpoint1 =
-      std::move(checkpoint0) | ex::then([](auto&& wrapper) { return std::move(wrapper); });
+    std::atomic<bool> first_access_done{false};
+    std::atomic<bool> second_access_done{false};
+    std::atomic<bool> third_access_done{false};
 
-  auto guard0 = serial();
-  auto guard1 = serial();
+    auto checkpoint0 = serial() | ex::then([&](auto&& wrapper) {
+                         EXPECT_FALSE(first_access_done);
+                         EXPECT_FALSE(second_access_done);
+                         EXPECT_FALSE(third_access_done);
+                         first_access_done = true;
+                         auto local = std::move(wrapper);
+                         dlaf::internal::silenceUnusedWarningFor(local);
+                       });
+    auto checkpoint1 = serial() | ex::then([&](auto&& wrapper) {
+                         EXPECT_TRUE(first_access_done);
+                         EXPECT_FALSE(second_access_done);
+                         EXPECT_FALSE(third_access_done);
+                         second_access_done = true;
+                         auto local = std::move(wrapper);
+                         dlaf::internal::silenceUnusedWarningFor(local);
+                       });
+    auto checkpoint2 = serial() | ex::then([&](auto&& wrapper) {
+                         EXPECT_TRUE(first_access_done);
+                         EXPECT_TRUE(second_access_done);
+                         EXPECT_FALSE(third_access_done);
+                         third_access_done = true;
+                         auto local = std::move(wrapper);
+                         dlaf::internal::silenceUnusedWarningFor(local);
+                       });
 
-  // TODO: What would be a reasonable test here now that guard0 is not a future?
-  // EXPECT_FALSE(guard0.is_ready());
-  // EXPECT_FALSE(guard1.is_ready());
+    tt::sync_wait(ex::when_all(std::move(checkpoint0), std::move(checkpoint1), std::move(checkpoint2)));
+  }
 
-  tt::sync_wait(std::move(checkpoint1));
+  // The order of access does not depend on how the senders are started by when_all
+  {
+    Pipeline<int> serial(26);
 
-  // EXPECT_TRUE(guard0.is_ready());
-  // EXPECT_FALSE(guard1.is_ready());
+    std::atomic<bool> first_access_done{false};
+    std::atomic<bool> second_access_done{false};
+    std::atomic<bool> third_access_done{false};
 
-  tt::sync_wait(std::move(guard0));
+    auto checkpoint0 = serial() | ex::then([&](auto&& wrapper) {
+                         EXPECT_FALSE(first_access_done);
+                         EXPECT_FALSE(second_access_done);
+                         EXPECT_FALSE(third_access_done);
+                         first_access_done = true;
+                         auto local = std::move(wrapper);
+                         dlaf::internal::silenceUnusedWarningFor(local);
+                       });
+    auto checkpoint1 = serial() | ex::then([&](auto&& wrapper) {
+                         EXPECT_TRUE(first_access_done);
+                         EXPECT_FALSE(second_access_done);
+                         EXPECT_FALSE(third_access_done);
+                         second_access_done = true;
+                         auto local = std::move(wrapper);
+                         dlaf::internal::silenceUnusedWarningFor(local);
+                       });
+    auto checkpoint2 = serial() | ex::then([&](auto&& wrapper) {
+                         EXPECT_TRUE(first_access_done);
+                         EXPECT_TRUE(second_access_done);
+                         EXPECT_FALSE(third_access_done);
+                         third_access_done = true;
+                         auto local = std::move(wrapper);
+                         dlaf::internal::silenceUnusedWarningFor(local);
+                       });
 
-  // EXPECT_TRUE(guard1.is_ready());
-
-  tt::sync_wait(std::move(guard1));
+    tt::sync_wait(ex::when_all(std::move(checkpoint2), std::move(checkpoint1), std::move(checkpoint0)));
+  }
 }
 
 // PipelineDestructor

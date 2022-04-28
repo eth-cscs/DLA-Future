@@ -11,6 +11,7 @@
 
 #include <pika/algorithm.hpp>
 #include <pika/future.hpp>
+#include <pika/parallel/algorithms/for_each.hpp>
 #include <pika/unwrap.hpp>
 
 #include "dlaf/eigensolver/tridiag_solver/gemm.h"
@@ -682,7 +683,9 @@ void solveRank1Problem(SizeType i_begin, SizeType i_end, pika::shared_future<Siz
     auto evec_tiles = pika::unwrap(std::move(evec_tiles_fut));
     matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
 
-    for (SizeType i = 0; i < k; ++i) {
+    std::vector<SizeType> loop_arr(to_sizet(k));
+    std::iota(std::begin(loop_arr), std::end(loop_arr), 0);
+    pika::for_each(pika::execution::par, std::begin(loop_arr), std::end(loop_arr), [&](SizeType i) {
       T& eigenval = eval_ptr[to_sizet(i)];
 
       SizeType i_tile = distr.globalTileLinearIndex(GlobalElementIndex(0, i));
@@ -691,7 +694,7 @@ void solveRank1Problem(SizeType i_begin, SizeType i_end, pika::shared_future<Siz
 
       dlaf::internal::laed4_wrapper(static_cast<int>(k), static_cast<int>(i), d_ptr, z_ptr, delta, rho,
                                     &eigenval);
-    }
+    });
 
     // References:
     // - lapack 3.10.0, dlaed3.f, line 293

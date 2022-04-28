@@ -27,8 +27,7 @@ private:
 
 public:
   Policy() = default;
-  explicit Policy(pika::threads::thread_priority priority)
-      : priority_(priority) {}
+  explicit Policy(pika::threads::thread_priority priority) : priority_(priority) {}
   Policy(Policy&&) = default;
   Policy(Policy const&) = default;
   Policy& operator=(Policy&&) = default;

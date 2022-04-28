@@ -63,7 +63,7 @@ auto allReduceInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op red
 DLAF_MAKE_CALLABLE_OBJECT(allReduceInPlace);
 }
 
-template <class T, class CommSender>
+template <class CommSender, class T>
 void scheduleAllReduce(CommSender&& pcomm, MPI_Op reduce_op,
                        pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_in,
                        pika::future<matrix::Tile<T, Device::CPU>> tile_out) {

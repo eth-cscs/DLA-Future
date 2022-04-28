@@ -58,7 +58,7 @@ void reduceSend(comm::IndexT_MPI rank_root, common::PromiseGuard<comm::Communica
       MPI_Ireduce(msg.data(), nullptr, msg.count(), msg.mpi_type(), reduce_op, rank_root, comm, req));
 }
 
-template <class Sender, class CommSender>
+template <class CommSender, class Sender>
 auto senderReduceRecvInPlace(CommSender&& pcomm, MPI_Op reduce_op, Sender&& tile) {
   // Note:
   //
@@ -97,7 +97,7 @@ auto senderReduceRecvInPlace(CommSender&& pcomm, MPI_Op reduce_op, Sender&& tile
          });
 }
 
-template <class Sender, class CommSender>
+template <class CommSender, class Sender>
 auto senderReduceSend(comm::IndexT_MPI rank_root, CommSender&& pcomm, MPI_Op reduce_op, Sender&& tile) {
   // Note:
   //
@@ -127,7 +127,7 @@ auto senderReduceSend(comm::IndexT_MPI rank_root, CommSender&& pcomm, MPI_Op red
 }
 
 /// Given a CPU tile, contiguous or not, perform MPI_Reduce in-place
-template <class T, class CommSender>
+template <class CommSender, class T>
 void scheduleReduceRecvInPlace(CommSender&& pcomm, MPI_Op reduce_op,
                                pika::future<matrix::Tile<T, Device::CPU>> tile) {
   // Note:
@@ -143,7 +143,7 @@ void scheduleReduceRecvInPlace(CommSender&& pcomm, MPI_Op reduce_op,
 }
 
 /// Given a GPU tile, perform MPI_Reduce in-place
-template <class T, Device D, class CommSender>
+template <class CommSender, class T, Device D>
 void scheduleReduceRecvInPlace(CommSender&& pcomm, MPI_Op reduce_op,
                                pika::future<matrix::Tile<T, D>> tile) {
   // Note:
@@ -186,7 +186,7 @@ void scheduleReduceRecvInPlace(CommSender&& pcomm, MPI_Op reduce_op,
 
 // TODO scheduleReduceSend with future will require to move the actual value, not the cref
 /// Given a CPU tile, being it contiguous or not, perform MPI_Reduce in-place
-template <class T, class CommSender>
+template <class CommSender, class T>
 void scheduleReduceSend(comm::IndexT_MPI rank_root, CommSender&& pcomm, MPI_Op reduce_op,
                         pika::shared_future<matrix::Tile<const T, Device::CPU>> tile) {
   // Note:

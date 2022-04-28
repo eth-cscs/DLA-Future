@@ -620,7 +620,7 @@ void updateTrailingPanelWithReflector(const bool has_head, comm::Communicator& c
   updateTrailingPanel(has_head, panel, j, w, tau);
 }
 
-template <class T, class CommSender>
+template <class CommSender, class T>
 pika::shared_future<common::internal::vector<T>> computePanelReflectors(
     pika::future<void> trigger, comm::IndexT_MPI rank_v0, CommSender&& mpi_col_chain_panel,
     MatrixT<T>& mat_a, const common::IterableRange2D<SizeType, matrix::LocalTile_TAG> ai_panel_range,

@@ -103,7 +103,7 @@ void scheduleAllReduce(CommSender&& pcomm, MPI_Op reduce_op,
       ex::start_detached();
 }
 
-template <class T, class CommSender, class TSender>
+template <class CommSender, class TSender>
 [[nodiscard]] auto scheduleAllReduceInPlace(CommSender&& pcomm, MPI_Op reduce_op, TSender&& tile) {
   namespace ex = pika::execution::experimental;
 
@@ -114,6 +114,8 @@ template <class T, class CommSender, class TSender>
   using dlaf::internal::transform;
   using dlaf::internal::whenAllLift;
   using pika::threads::thread_priority;
+
+  using T = dlaf::internal::SenderElementType<TSender>;
 
   // Note:
   //

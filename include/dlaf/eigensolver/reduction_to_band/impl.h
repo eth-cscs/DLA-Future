@@ -1091,7 +1091,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
 
       red2band::local::gemmComputeW2<B, D>(w2, w, x);
       ex::start_detached(
-          comm::scheduleAllReduceInPlace<T>(mpi_col_chain(), MPI_SUM, w2(LocalTileIndex(0, 0))));
+          comm::scheduleAllReduceInPlace(mpi_col_chain(), MPI_SUM, w2(LocalTileIndex(0, 0))));
 
       red2band::local::gemmUpdateX<B, D>(x, w2, v);
     }

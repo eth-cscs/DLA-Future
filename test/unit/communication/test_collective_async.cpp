@@ -113,7 +113,7 @@ void testAllReduceInPlace(comm::Communicator world, matrix::Matrix<T, device> ma
   auto input_tile = fixedValueTile(world.rank() + 1);
   matrix::test::set(matrix(idx).get(), input_tile);
 
-  auto after = dlaf::comm::scheduleAllReduceInPlace<T>(chain(), MPI_SUM, matrix(idx));
+  auto after = dlaf::comm::scheduleAllReduceInPlace(chain(), MPI_SUM, matrix(idx));
 
   // Note:
   // The call `sync_wait(after)` waits for any scheduled task with the aim to ensure that no other task

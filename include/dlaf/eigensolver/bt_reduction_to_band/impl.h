@@ -231,6 +231,7 @@ template <Backend backend, Device device, class T>
 void BackTransformationReductionToBand<backend, device, T>::call(
     comm::CommunicatorGrid grid, Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
     common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus) {
+  namespace ex = pika::execution::experimental;
   using namespace bt_red_band;
   using pika::execution::experimental::keep_future;
   auto hp = pika::threads::thread_priority::high;
@@ -346,7 +347,8 @@ void BackTransformationReductionToBand<backend, device, T>::call(
     }
 
     for (const auto& kj_panel : panelW2.iteratorLocal())
-      dlaf::comm::scheduleAllReduceInPlace<T>(mpi_col_task_chain(), MPI_SUM, panelW2(kj_panel));
+      ex::start_detached(
+          dlaf::comm::scheduleAllReduceInPlace(mpi_col_task_chain(), MPI_SUM, panelW2(kj_panel)));
 
     broadcast(k_rank_col, panelV, mpi_row_task_chain);
 

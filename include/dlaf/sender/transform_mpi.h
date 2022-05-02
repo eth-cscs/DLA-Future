@@ -49,8 +49,8 @@ template <typename F>
 struct MPICallHelper {
   std::decay_t<F> f;
   template <typename... Ts>
-  auto operator()(Ts&&... ts) -> decltype(pika::unwrapping(std::move(f))(movePromiseGuard(ts)...,
-                                                                         std::declval<MPI_Request*>())) {
+  auto operator()(Ts&&... ts) -> decltype(pika::unwrapping(std::move(f))(
+      movePromiseGuard(dlaf::internal::getReferenceWrapper(ts))..., std::declval<MPI_Request*>())) {
     MPI_Request req;
     auto is_request_completed = [&req] {
       int flag;
@@ -58,13 +58,15 @@ struct MPICallHelper {
       return flag == 0;
     };
 
-    using result_type = decltype(pika::unwrapping(std::move(f))(movePromiseGuard(ts)..., &req));
+    using result_type = decltype(pika::unwrapping(
+        std::move(f))(movePromiseGuard(dlaf::internal::getReferenceWrapper(ts))..., &req));
     if constexpr (std::is_void_v<result_type>) {
-      pika::unwrapping(std::move(f))(movePromiseGuard(ts)..., &req);
+      pika::unwrapping(std::move(f))(movePromiseGuard(dlaf::internal::getReferenceWrapper(ts))..., &req);
       pika::util::yield_while(is_request_completed);
     }
     else {
-      auto r = pika::unwrapping(std::move(f))(movePromiseGuard(ts)..., &req);
+      auto r = pika::unwrapping(
+          std::move(f))(movePromiseGuard(dlaf::internal::getReferenceWrapper(ts))..., &req);
       pika::util::yield_while(is_request_completed);
       return r;
     }

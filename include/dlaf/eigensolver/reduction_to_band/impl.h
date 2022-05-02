@@ -951,6 +951,8 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
   using common::iterate_range2d;
   using factorization::internal::computeTFactor;
 
+  namespace ex = pika::execution::experimental;
+
   common::Pipeline<comm::Communicator> mpi_col_chain_panel(grid.colCommunicator().clone());
   common::Pipeline<comm::Communicator> mpi_row_chain(grid.rowCommunicator().clone());
   common::Pipeline<comm::Communicator> mpi_col_chain(grid.colCommunicator().clone());
@@ -1088,7 +1090,8 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
       MatrixT<T> w2 = std::move(t);
 
       red2band::local::gemmComputeW2<B, D>(w2, w, x);
-      comm::scheduleAllReduceInPlace<T>(mpi_col_chain(), MPI_SUM, w2(LocalTileIndex(0, 0)));
+      ex::start_detached(
+          comm::scheduleAllReduceInPlace<T>(mpi_col_chain(), MPI_SUM, w2(LocalTileIndex(0, 0))));
 
       red2band::local::gemmUpdateX<B, D>(x, w2, v);
     }

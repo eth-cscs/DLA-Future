@@ -104,7 +104,7 @@ void scheduleAllReduce(CommSender&& pcomm, MPI_Op reduce_op,
 }
 
 template <class T, class CommSender, class TSender>
-auto scheduleAllReduceInPlace(CommSender&& pcomm, MPI_Op reduce_op, TSender&& tile) {
+[[nodiscard]] auto scheduleAllReduceInPlace(CommSender&& pcomm, MPI_Op reduce_op, TSender&& tile) {
   namespace ex = pika::execution::experimental;
 
   using common::internal::copyBack_o;
@@ -132,9 +132,7 @@ auto scheduleAllReduceInPlace(CommSender&& pcomm, MPI_Op reduce_op, TSender&& ti
                   transform(Policy<Backend::MC>(thread_priority::high),
                             std::bind(copyBack_o, std::placeholders::_1, std::cref(tile))) |
                   ex::then([&tile]() { return std::move(tile); });
-         }) |
-         // TODO: Leave this up to the caller?
-         ex::ensure_started();
+         });
 }
 }
 }

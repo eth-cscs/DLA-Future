@@ -236,8 +236,7 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
 
   const auto v_start = hh_panel.offsetElement();
 
-  // TODO: Better name for tt?
-  ex::unique_any_sender<matrix::Tile<T, device>> tt = Helpers::set0(std::move(t));
+  ex::unique_any_sender<matrix::Tile<T, device>> t_local = Helpers::set0(std::move(t));
 
   // Note:
   // T factor is an upper triangular square matrix, built column by column
@@ -265,13 +264,13 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
     // Since we are writing always on the same t, the gemv are serialized
     // A possible solution to this would be to have multiple places where to store partial
     // results, and then locally reduce them just before the reduce over ranks
-    tt = Helpers::gemvColumnT(first_row_tile, hh_panel.read(v_i), taus, std::move(tt));
+    t_local = Helpers::gemvColumnT(first_row_tile, hh_panel.read(v_i), taus, std::move(t_local));
   }
 
   // 2nd step: compute the T factor, by performing the last step on each column
   // each column depends on the previous part (all reflectors that comes before)
   // so it is performed sequentially
-  ex::start_detached(Helpers::trmvUpdateColumn(std::move(tt)));
+  ex::start_detached(Helpers::trmvUpdateColumn(std::move(t_local)));
 }
 
 template <Backend backend, Device device, class T>
@@ -293,8 +292,7 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
   const auto v_start = hh_panel.offsetElement();
   auto dist = hh_panel.parentDistribution();
 
-  // TODO: Better name for tt.
-  ex::unique_any_sender<matrix::Tile<T, device>> tt = Helpers::set0(std::move(t));
+  ex::unique_any_sender<matrix::Tile<T, device>> t_local = Helpers::set0(std::move(t));
 
   // Note:
   // T factor is an upper triangular square matrix, built column by column
@@ -323,18 +321,18 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
     // Since we are writing always on the same t, the gemv are serialized
     // A possible solution to this would be to have multiple places where to store partial
     // results, and then locally reduce them just before the reduce over ranks
-    tt = Helpers::gemvColumnT(first_row_tile, hh_panel.read(v_i_loc), taus, std::move(tt));
+    t_local = Helpers::gemvColumnT(first_row_tile, hh_panel.read(v_i_loc), taus, std::move(t_local));
   }
 
   // at this point each rank has its partial result for each column
   // so, let's reduce the results (on all ranks, so that everyone can independently compute T factor)
   if (true)  // TODO if the column communicator has more than 1 tile...but I just have the pipeline
-    tt = dlaf::comm::scheduleAllReduceInPlace<T>(mpi_col_task_chain(), MPI_SUM, std::move(tt));
+    t_local = dlaf::comm::scheduleAllReduceInPlace(mpi_col_task_chain(), MPI_SUM, std::move(t_local));
 
   // 2nd step: compute the T factor, by performing the last step on each column
   // each column depends on the previous part (all reflectors that comes before)
   // so it is performed sequentially
-  ex::start_detached(Helpers::trmvUpdateColumn(std::move(tt)));
+  ex::start_detached(Helpers::trmvUpdateColumn(std::move(t_local)));
 }
 
 }

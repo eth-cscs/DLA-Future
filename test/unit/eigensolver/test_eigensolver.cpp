@@ -76,7 +76,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb)
     return;
 
   auto mat_a_local = allGather(blas::Uplo::General, reference);
-  auto mat_evalues_local  = [&]() {
+  auto mat_evalues_local = [&]() {
     MatrixMirror<const T, Device::CPU, D> mat_evals(ret.eigenvalues);
     return allGather(blas::Uplo::General, mat_evals.get());
   }();

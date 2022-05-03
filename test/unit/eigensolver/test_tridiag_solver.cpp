@@ -74,24 +74,23 @@ TEST(MatrixIndexPairsGeneration, IndexPairsGeneration) {
 // trd = diags([e,d,e], [-1, 0, 1]).toarray()
 // evals, evecs = eigh(trd)
 //
-TYPED_TEST(TridiagEigensolverTest, CorrectnessLocal) {
-  constexpr double pi = 3.14159265358979323846;
-  SizeType n = 16;
-  SizeType nb = 4;
-  // SizeType nb = 3; // this segfaults sometimes
 
-  matrix::Matrix<TypeParam, Device::CPU> tridiag(LocalElementSize(n, 2), TileElementSize(nb, 2));
-  matrix::Matrix<TypeParam, Device::CPU> evals(LocalElementSize(n, 1), TileElementSize(nb, 1));
-  matrix::Matrix<TypeParam, Device::CPU> evecs(LocalElementSize(n, n), TileElementSize(nb, nb));
+template <class T>
+void solveLaplace1D(SizeType n, SizeType nb) {
+  constexpr double pi = 3.14159265358979323846;
+
+  matrix::Matrix<T, Device::CPU> tridiag(LocalElementSize(n, 2), TileElementSize(nb, 2));
+  matrix::Matrix<T, Device::CPU> evals(LocalElementSize(n, 1), TileElementSize(nb, 1));
+  matrix::Matrix<T, Device::CPU> evecs(LocalElementSize(n, n), TileElementSize(nb, nb));
 
   // Tridiagonal matrix : 1D Laplacian
   auto mat_trd_fn = [](GlobalElementIndex el) {
     if (el.col() == 0)
       // diagonal
-      return TypeParam(2);
+      return T(2);
     else
       // off-diagoanl
-      return TypeParam(-1);
+      return T(-1);
   };
   matrix::util::set(tridiag, std::move(mat_trd_fn));
 
@@ -99,7 +98,7 @@ TYPED_TEST(TridiagEigensolverTest, CorrectnessLocal) {
 
   // Eigenvalues
   auto expected_evals_fn = [n](GlobalElementIndex i) {
-    return TypeParam(2 * (1 - std::cos(pi * (i.row() + 1) / (n + 1))));
+    return T(2 * (1 - std::cos(pi * (i.row() + 1) / (n + 1))));
   };
   CHECK_MATRIX_NEAR(expected_evals_fn, evals, 1e-6, 1e-6);
 
@@ -107,7 +106,7 @@ TYPED_TEST(TridiagEigensolverTest, CorrectnessLocal) {
   auto expected_evecs_fn = [n](GlobalElementIndex i) {
     SizeType j = i.col() + 1;
     SizeType k = i.row() + 1;
-    return TypeParam(std::sqrt(2.0 / (n + 1)) * std::sin(j * k * pi / (n + 1)));
+    return T(std::sqrt(2.0 / (n + 1)) * std::sin(j * k * pi / (n + 1)));
   };
 
   // Eigenvectors are unique up to a sign
@@ -132,8 +131,21 @@ TYPED_TEST(TridiagEigensolverTest, CorrectnessLocal) {
     // Iterate over all tiles on the `j_tile` tile column
     for (SizeType i_tile = 0; i_tile < dist.nrTiles().rows(); ++i_tile) {
       auto tile = evecs(GlobalTileIndex(i_tile, j_tile)).get();
-      tile::internal::scaleCol(TypeParam(-1), j_tile_el, tile);
+      tile::internal::scaleCol(T(-1), j_tile_el, tile);
     }
   }
   CHECK_MATRIX_NEAR(expected_evecs_fn, evecs, 1e-6, 1e-6);
 }
+
+TYPED_TEST(TridiagEigensolverTest, Laplace1D_n16_nb8) {
+  solveLaplace1D<TypeParam>(16, 8);
+}
+
+TYPED_TEST(TridiagEigensolverTest, Laplace1D_n16_nb4) {
+  solveLaplace1D<TypeParam>(16, 4);
+}
+
+// This occasionally segfaults. It may also deadlock?
+//TYPED_TEST(TridiagEigensolverTest, Laplace1D_n16_nb3) {
+//  solveLaplace1D<TypeParam>(16, 3);
+//}

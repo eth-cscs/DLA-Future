@@ -265,8 +265,10 @@ void checkNear(ElementGetter&& expected, const Tile<const T, D>& tile, BaseType<
   };
   internal::check(expected, tile, comp, err_message, file, line);
 }
+DLAF_MAKE_CALLABLE_OBJECT(checkNear);
+
 #define CHECK_TILE_NEAR(expected, tile, rel_err, abs_err) \
-  ::dlaf::matrix::test::checkNear(expected, tile, rel_err, abs_err, __FILE__, __LINE__)
+  ::dlaf::matrix::test::checkNear_o(expected, tile, rel_err, abs_err, __FILE__, __LINE__)
 }
 }
 }

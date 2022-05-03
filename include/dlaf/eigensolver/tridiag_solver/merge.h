@@ -241,14 +241,16 @@ pika::future<T> calcTolerance(SizeType i_begin, SizeType i_end, Matrix<const T, 
 //
 // The tiles are returned in column major order
 template <class FutureTile, class T>
-std::vector<FutureTile> collectTiles(GlobalTileIndex begin, GlobalTileIndex end,
-                                     Matrix<T, Device::CPU>& mat) {
-  std::size_t num_tiles = to_sizet(end.row() - begin.row() + 1) * to_sizet(end.col() - begin.col() + 1);
-  std::vector<FutureTile> tiles;
-  tiles.reserve(num_tiles);
+std::vector<FutureTile> collectTiles(SizeType i_begin, SizeType i_end, Matrix<T, Device::CPU>& mat) {
+  bool is_col_matrix = mat.distribution().size().cols() == 1;
+  SizeType col_begin = (is_col_matrix) ? 0 : i_begin;
+  SizeType col_end = (is_col_matrix) ? 0 : i_end;
 
-  for (SizeType j = begin.col(); j <= end.col(); ++j) {
-    for (SizeType i = begin.row(); i <= end.row(); ++i) {
+  std::vector<FutureTile> tiles;
+  tiles.reserve(to_sizet(i_end - i_begin + 1) * to_sizet(col_end - col_begin + 1));
+
+  for (SizeType j = col_begin; j <= col_end; ++j) {
+    for (SizeType i = i_begin; i <= i_end; ++i) {
       GlobalTileIndex idx(i, j);
       if constexpr (std::is_const<T>::value) {
         tiles.push_back(mat.read(idx));
@@ -271,27 +273,13 @@ struct TileCollector {
   using ReadWriteFutureTile = pika::future<matrix::Tile<T, Device::CPU>>;
 
   template <class T>
-  std::vector<ReadFutureTile<T>> readVec(Matrix<const T, Device::CPU>& vec) {
-    return collectTiles<ReadFutureTile<T>, const T>(GlobalTileIndex(i_begin, 0),
-                                                    GlobalTileIndex(i_end, 0), vec);
+  std::vector<ReadFutureTile<T>> read(Matrix<const T, Device::CPU>& mat) {
+    return collectTiles<ReadFutureTile<T>, const T>(i_begin, i_end, mat);
   }
 
   template <class T>
-  std::vector<ReadWriteFutureTile<T>> readwriteVec(Matrix<T, Device::CPU>& vec) {
-    return collectTiles<ReadWriteFutureTile<T>, T>(GlobalTileIndex(i_begin, 0),
-                                                   GlobalTileIndex(i_end, 0), vec);
-  }
-
-  template <class T>
-  std::vector<ReadFutureTile<T>> readMat(Matrix<const T, Device::CPU>& mat) {
-    return collectTiles<ReadFutureTile<T>, const T>(GlobalTileIndex(i_begin, i_begin),
-                                                    GlobalTileIndex(i_end, i_end), mat);
-  }
-
-  template <class T>
-  std::vector<ReadWriteFutureTile<T>> readwriteMat(Matrix<T, Device::CPU>& mat) {
-    return collectTiles<ReadWriteFutureTile<T>, T>(GlobalTileIndex(i_begin, i_begin),
-                                                   GlobalTileIndex(i_end, i_end), mat);
+  std::vector<ReadWriteFutureTile<T>> readwrite(Matrix<T, Device::CPU>& mat) {
+    return collectTiles<ReadWriteFutureTile<T>, T>(i_begin, i_end, mat);
   }
 };
 
@@ -354,8 +342,8 @@ void sortIndex(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
   };
 
   TileCollector tc{i_begin, i_end};
-  pika::dataflow(std::move(sort_fn), std::move(k_fut), tc.readVec(vec), tc.readVec(in_index),
-                 tc.readwriteVec(out_index));
+  pika::dataflow(std::move(sort_fn), std::move(k_fut), tc.read(vec), tc.read(in_index),
+                 tc.readwrite(out_index));
 }
 
 // Applies `index` to `in` to get `out`
@@ -381,8 +369,7 @@ void applyIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device:
   };
 
   TileCollector tc{i_begin, i_end};
-
-  pika::dataflow(std::move(applyIndex_fn), tc.readVec(index), tc.readVec(in), tc.readwriteVec(out));
+  pika::dataflow(std::move(applyIndex_fn), tc.read(index), tc.read(in), tc.readwrite(out));
 }
 
 inline void composeIndices(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device::CPU>& outer,
@@ -403,7 +390,7 @@ inline void composeIndices(SizeType i_begin, SizeType i_end, Matrix<const SizeTy
   };
 
   TileCollector tc{i_begin, i_end};
-  pika::dataflow(compose_fn, tc.readVec(outer), tc.readVec(inner), tc.readwriteVec(result));
+  pika::dataflow(compose_fn, tc.read(outer), tc.read(inner), tc.readwrite(result));
 }
 
 inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device::CPU>& in,
@@ -422,7 +409,7 @@ inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType,
   };
 
   TileCollector tc{i_begin, i_end};
-  pika::dataflow(std::move(inv_fn), tc.readVec(in), tc.readwriteVec(out));
+  pika::dataflow(std::move(inv_fn), tc.read(in), tc.readwrite(out));
 }
 
 // The index array `out_ptr` holds the indices of elements of `c_ptr` that order it such that ColType::Deflated
@@ -464,8 +451,7 @@ inline pika::future<SizeType> stablePartitionIndexForDeflation(SizeType i_begin,
   };
 
   TileCollector tc{i_begin, i_end};
-
-  return pika::dataflow(part_fn, tc.readVec(c), tc.readVec(in), tc.readwriteVec(out));
+  return pika::dataflow(part_fn, tc.read(c), tc.read(in), tc.readwrite(out));
 }
 
 // Partitions `p_ptr` based on a `ctype` in `c_ptr` array.
@@ -498,7 +484,7 @@ inline pika::future<ColTypeLens> partitionIndexForMatrixMultiplication(
   };
 
   TileCollector tc{i_begin, i_end};
-  return pika::dataflow(std::move(part_fn), tc.readVec(c), tc.readwriteVec(index));
+  return pika::dataflow(std::move(part_fn), tc.read(c), tc.readwrite(index));
 };
 
 inline void setColTypeTile(const matrix::Tile<ColType, Device::CPU>& tile, ColType val) {
@@ -622,8 +608,8 @@ pika::future<std::vector<GivensRotation<T>>> applyDeflation(
   };
 
   TileCollector tc{i_begin, i_end};
-  return pika::dataflow(std::move(deflate_fn), std::move(rho_fut), std::move(tol_fut), tc.readVec(index),
-                        tc.readwriteVec(d), tc.readwriteVec(z), tc.readwriteVec(c));
+  return pika::dataflow(std::move(deflate_fn), std::move(rho_fut), std::move(tol_fut), tc.read(index),
+                        tc.readwrite(d), tc.readwrite(z), tc.readwrite(c));
 }
 
 // Assumption: the memory layout of the matrix from which the tiles are coming is column major.
@@ -755,8 +741,8 @@ void solveRank1Problem(SizeType i_begin, SizeType i_end, pika::shared_future<Siz
   };
 
   TileCollector tc{i_begin, i_end};
-  pika::dataflow(std::move(rank1_fn), std::move(k_fut), std::move(rho_fut), tc.readVec(d), tc.readVec(z),
-                 tc.readwriteMat(ws), tc.readwriteVec(evals), tc.readwriteMat(evecs));
+  pika::dataflow(std::move(rank1_fn), std::move(k_fut), std::move(rho_fut), tc.read(d), tc.read(z),
+                 tc.readwrite(ws), tc.readwrite(evals), tc.readwrite(evecs));
 }
 
 template <class T>
@@ -795,8 +781,8 @@ void permutateQ(SizeType i_begin, SizeType i_split, SizeType i_end,
   };
 
   TileCollector tc{i_begin, i_end};
-  pika::dataflow(std::move(permutate_fn), std::move(ct_lens_fut), tc.readVec(index),
-                 tc.readwriteMat(mat_ev), tc.readwriteMat(mat_q));
+  pika::dataflow(std::move(permutate_fn), std::move(ct_lens_fut), tc.read(index), tc.readwrite(mat_ev),
+                 tc.readwrite(mat_q));
 }
 
 template <class T>
@@ -819,8 +805,8 @@ void permutateU(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> 
                                      mat_in_tiles, mat_out_tiles);
   };
   TileCollector tc{i_begin, i_end};
-  pika::dataflow(std::move(permute_fn), std::move(k_fut), tc.readVec(index), tc.readwriteMat(mat_in),
-                 tc.readwriteMat(mat_out));
+  pika::dataflow(std::move(permute_fn), std::move(k_fut), tc.read(index), tc.readwrite(mat_in),
+                 tc.readwrite(mat_out));
 }
 
 template <class T, Coord coord>
@@ -840,8 +826,7 @@ void permutateQU(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device
                                 mat_in_tiles, mat_out_tiles);
   };
   TileCollector tc{i_begin, i_end};
-  pika::dataflow(std::move(permute_fn), tc.readVec(index), tc.readwriteMat(mat_in),
-                 tc.readwriteMat(mat_out));
+  pika::dataflow(std::move(permute_fn), tc.read(index), tc.readwrite(mat_in), tc.readwrite(mat_out));
 }
 
 // Assumption: Matrices are set to zero.
@@ -928,8 +913,6 @@ template <class T>
 void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSpace<T>& ws,
                       pika::shared_future<T> rho_fut, Matrix<T, Device::CPU>& d,
                       Matrix<T, Device::CPU>& mat_ev) {
-  TileCollector tc{i_begin, i_end};
-
   // Calculate the merged size of the subproblem
   SizeType n1 = problemSize(i_begin, i_split, mat_ev.distribution());
   SizeType n2 = problemSize(i_split + 1, i_end, mat_ev.distribution());
@@ -961,8 +944,9 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   pika::future<std::vector<GivensRotation<T>>> rots_fut =
       applyDeflation(i_begin, i_end, rho_fut, tol_fut, ws.i2, d, ws.z, ws.c);
 
+  TileCollector tc{i_begin, i_end};
   pika::dataflow(pika::unwrapping(applyGivensRotationsToMatrixColumns<T>), n, nb, std::move(rots_fut),
-                 tc.readwriteMat(mat_ev));
+                 tc.readwrite(mat_ev));
 
   // Step #2
   //

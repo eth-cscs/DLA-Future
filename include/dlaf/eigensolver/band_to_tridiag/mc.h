@@ -473,7 +473,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
                                   dist_v.tileElementIndex(index_v)) |
           ex::then(store_tau_v) | ex::start_detached();
       deps[step] = dlaf::internal::whenAllLift(w_pipeline(), deps[dep_index]) |
-                   dlaf::internal::transform(policy_hp, cont_sweep) | ex::ensure_started() | ex::split();
+                   dlaf::internal::transform(policy_hp, cont_sweep) | ex::split();
     }
 
     // Shrink the dependency vector to only include the futures generated in this sweep.

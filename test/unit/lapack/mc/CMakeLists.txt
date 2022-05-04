@@ -8,8 +8,11 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-DLAF_addTest(test_laed4
-  SOURCES test_laed4.cpp
-  LIBRARIES dlaf.core
-  USE_MAIN PLAIN
-)
+
+if (DLAF_WITH_MKL)
+  DLAF_addTest(test_laed4
+    SOURCES test_laed4.cpp
+    LIBRARIES dlaf.core
+    USE_MAIN PLAIN
+  )
+endif()

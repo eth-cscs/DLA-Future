@@ -37,32 +37,32 @@ TEST(MatrixIndexPairsGeneration, IndexPairsGeneration) {
   ASSERT_TRUE(actual_indices == expected_indices);
 }
 
-// TYPED_TEST(TridiagEigensolverTest, CuppensDecomposition) {
-//   using matrix::test::createTile;
-//
-//   SizeType sz = 10;
-//   auto laplace1d_fn = [](const TileElementIndex& idx) {
-//     if (idx.col() == 0)
-//       return TypeParam(2);
-//     else
-//       return TypeParam(-1);
-//   };
-//
-//   TileElementSize tile_size(sz, 2);
-//   auto top = createTile<TypeParam, Device::CPU>(laplace1d_fn, tile_size, sz);
-//   auto bottom = createTile<TypeParam, Device::CPU>(laplace1d_fn, tile_size, sz);
-//
-//   eigensolver::internal::cuppensTileDecomposition(top, bottom);
-//
-//   auto expected_top = createTile<TypeParam, Device::CPU>(laplace1d_fn, tile_size, sz);
-//   auto expected_bottom = createTile<TypeParam, Device::CPU>(laplace1d_fn, tile_size, sz);
-//   expected_top(TileElementIndex(sz - 1, 0)) = TypeParam(3);
-//   expected_bottom(TileElementIndex(0, 0)) = TypeParam(3);
-//
-//   CHECK_TILE_NEAR(expected_top, top, TypeUtilities<TypeParam>::error, TypeUtilities<TypeParam>::error);
-//   CHECK_TILE_NEAR(expected_bottom, bottom, TypeUtilities<TypeParam>::error,
-//                   TypeUtilities<TypeParam>::error);
-// }
+TYPED_TEST(TridiagEigensolverTest, CuppensDecomposition) {
+  using matrix::test::createTile;
+
+  SizeType sz = 10;
+  auto laplace1d_fn = [](const TileElementIndex& idx) {
+    if (idx.col() == 0)
+      return TypeParam(2);
+    else
+      return TypeParam(-1);
+  };
+
+  TileElementSize tile_size(sz, 2);
+  auto top = createTile<TypeParam, Device::CPU>(laplace1d_fn, tile_size, sz);
+  auto bottom = createTile<TypeParam, Device::CPU>(laplace1d_fn, tile_size, sz);
+
+  eigensolver::internal::cuppensTileDecomposition(top, bottom);
+
+  auto expected_top = createTile<TypeParam, Device::CPU>(laplace1d_fn, tile_size, sz);
+  auto expected_bottom = createTile<TypeParam, Device::CPU>(laplace1d_fn, tile_size, sz);
+  expected_top(TileElementIndex(sz - 1, 0)) = TypeParam(1);
+  expected_bottom(TileElementIndex(0, 0)) = TypeParam(1);
+
+  CHECK_TILE_NEAR(expected_top, top, TypeUtilities<TypeParam>::error, TypeUtilities<TypeParam>::error);
+  CHECK_TILE_NEAR(expected_bottom, bottom, TypeUtilities<TypeParam>::error,
+                  TypeUtilities<TypeParam>::error);
+}
 
 // import numpy as np
 // from scipy.sparse import diags
@@ -146,6 +146,6 @@ TYPED_TEST(TridiagEigensolverTest, Laplace1D_n16_nb4) {
 }
 
 // This occasionally segfaults. It may also deadlock?
-//TYPED_TEST(TridiagEigensolverTest, Laplace1D_n16_nb3) {
+// TYPED_TEST(TridiagEigensolverTest, Laplace1D_n16_nb3) {
 //  solveLaplace1D<TypeParam>(16, 3);
 //}

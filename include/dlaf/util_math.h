@@ -44,6 +44,13 @@ constexpr auto ceilDiv(const IntType num, const IntType den)
 }
 #endif
 
+/// Returns true if @p a and @p b are both positive or both negative
+template <class T>
+bool sameSign(T a, T b) {
+  static_assert(std::is_same_v<T, float> || std::is_same_v<T, double>, "T must be a real number.");
+  return std::signbit(a) == std::signbit(b);
+}
+
 namespace internal {
 
 /// Perform the given binary operation on integer types in @tparam ArithmeticT arithmetic.

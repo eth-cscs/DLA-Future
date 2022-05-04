@@ -16,7 +16,7 @@ namespace dlaf {
 namespace internal {
 
 void laed4_wrapper(int n, int i, float const* d, float const* z, float* delta, float rho,
-                   float* lambda) {
+                   float* lambda) noexcept {
   ++i;  // Fortran indexing starts from 1
   int info = 0;
   slaed4(&n, &i, d, z, delta, &rho, lambda, &info);
@@ -24,7 +24,7 @@ void laed4_wrapper(int n, int i, float const* d, float const* z, float* delta, f
 }
 
 void laed4_wrapper(int n, int i, double const* d, double const* z, double* delta, double rho,
-                   double* lambda) {
+                   double* lambda) noexcept {
   ++i;  // Fortran indexing starts from 1
   int info = 0;
   dlaed4(&n, &i, d, z, delta, &rho, lambda, &info);

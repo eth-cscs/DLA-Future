@@ -28,9 +28,10 @@ stages:
     - TAG_IMAGE=`echo ${BASE_IMAGE##*/} | sed 's/[:]//g'`
     - TAG_COMPILER=`echo $COMPILER | sed 's/[@]//g'`
     - TAG_DOCKERFILE=`sha256sum $BUILD_DOCKER_FILE | head -c 16`
+    - TAG_SPACK=`echo $SPACK_SHA | head -c 8`
     - TAG_REPO=`find $SPACK_DLAF_REPO -type f -exec sha256sum {} \; | sha256sum - | head -c 16`
     - TAG_ENVIRONMENT=`sha256sum $SPACK_ENVIRONMENT | head -c 16`
-    - TAG=${TAG_IMAGE}-${TAG_COMPILER}-MKL${USE_MKL}-${TAG_DOCKERFILE}-${TAG_REPO}-${TAG_ENVIRONMENT}
+    - TAG=${TAG_IMAGE}-${TAG_COMPILER}-MKL${USE_MKL}-${TAG_DOCKERFILE}-${TAG_SPACK}-${TAG_REPO}-${TAG_ENVIRONMENT}
     - docker build -t $BUILD_IMAGE:$TAG -t $BUILD_IMAGE:latest --cache-from $BUILD_IMAGE:$TAG --cache-from $BUILD_IMAGE:latest --build-arg BASE_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg SPACK_SHA --build-arg COMPILER --build-arg SPACK_ENVIRONMENT --build-arg SPACK_DLAF_REPO --build-arg USE_MKL -f $BUILD_DOCKER_FILE --network=host .
     - docker push $BUILD_IMAGE:$TAG
     - docker push $BUILD_IMAGE:latest

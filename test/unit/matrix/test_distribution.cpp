@@ -281,3 +281,58 @@ TEST(DistributionTest, Index2DConversions) {
     }
   }
 }
+
+TEST(DistributionTest, DistanceToAdjacentTile) {
+  matrix::Distribution distr(LocalElementSize(10, 10), TileElementSize(3, 3));
+
+  // Columns
+  //
+  // Inside a tile
+  EXPECT_TRUE(distr.distanceToAdjacentTile<Coord::Col>(7) == 2);
+  // At the start of tile
+  EXPECT_TRUE(distr.distanceToAdjacentTile<Coord::Col>(6) == 3);
+  // At the end of tile
+  EXPECT_TRUE(distr.distanceToAdjacentTile<Coord::Col>(5) == 1);
+  // At the beginning of matrix
+  EXPECT_TRUE(distr.distanceToAdjacentTile<Coord::Col>(0) == 3);
+  // At the end of matrix
+  EXPECT_TRUE(distr.distanceToAdjacentTile<Coord::Col>(9) == 1);
+
+  // Rows
+  //
+  // Inside a tile
+  EXPECT_TRUE(distr.distanceToAdjacentTile<Coord::Row>(1) == 2);
+  // At the start of tile
+  EXPECT_TRUE(distr.distanceToAdjacentTile<Coord::Row>(3) == 3);
+  // At the end of tile
+  EXPECT_TRUE(distr.distanceToAdjacentTile<Coord::Row>(8) == 1);
+  // At the beginning of matrix
+  EXPECT_TRUE(distr.distanceToAdjacentTile<Coord::Row>(0) == 3);
+  // At the end of matrix
+  EXPECT_TRUE(distr.distanceToAdjacentTile<Coord::Row>(9) == 1);
+}
+
+TEST(DistributionTest, TileSizeFromGlobalElement) {
+  matrix::Distribution distr(LocalElementSize(8, 7), TileElementSize(3, 2));
+
+  // Rows
+  EXPECT_TRUE(distr.tileSizeFromGlobalElement<Coord::Row>(1) == 3);
+  EXPECT_TRUE(distr.tileSizeFromGlobalElement<Coord::Row>(5) == 3);
+  EXPECT_TRUE(distr.tileSizeFromGlobalElement<Coord::Row>(7) == 2);
+
+  // Cols
+  EXPECT_TRUE(distr.tileSizeFromGlobalElement<Coord::Col>(1) == 2);
+  EXPECT_TRUE(distr.tileSizeFromGlobalElement<Coord::Col>(3) == 2);
+  EXPECT_TRUE(distr.tileSizeFromGlobalElement<Coord::Col>(6) == 1);
+}
+
+TEST(DistributionTest, GlobalTileLinearIndex) {
+  matrix::Distribution distr(LocalElementSize(10, 10), TileElementSize(3, 3));
+
+  // Start of matrix
+  EXPECT_TRUE(distr.globalTileLinearIndex(GlobalElementIndex(0, 0)) == 0);
+  // End of matrix
+  EXPECT_TRUE(distr.globalTileLinearIndex(GlobalElementIndex(9, 9)) == 15);
+  EXPECT_TRUE(distr.globalTileLinearIndex(GlobalElementIndex(5, 5)) == 5);
+  EXPECT_TRUE(distr.globalTileLinearIndex(GlobalElementIndex(9, 4)) == 7);
+}

@@ -20,13 +20,19 @@ stages:
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
     SPACK_SHA: 2418cfb79b46491122baad8efd6af596078b396d
+    SPACK_DLAF_REPO: ./spack
   before_script:
     - docker login -u $CSCS_REGISTRY_USER -p $CSCS_REGISTRY_PASSWORD $CSCS_REGISTRY
   script:
-    - TAG1=`echo $BASE_IMAGE$COMPILER$SPACK_SHA$USE_MKL | sha256sum - | head -c 8`
-    - TAG2=`cat $BUILD_DOCKER_FILE $SPACK_ENVIRONMENT | sha256sum - | head -c 64`
-    - TAG=$TAG1$TAG2
-    - docker build -t $BUILD_IMAGE:$TAG -t $BUILD_IMAGE:latest --cache-from $BUILD_IMAGE:$TAG --cache-from $BUILD_IMAGE:latest --build-arg BASE_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg SPACK_SHA --build-arg COMPILER --build-arg SPACK_ENVIRONMENT --build-arg USE_MKL -f $BUILD_DOCKER_FILE --network=host .
+    # Note: a tag can contain 0-9 A-Z a-z -_.
+    - TAG_IMAGE=`echo ${BASE_IMAGE##*/} | sed 's/[:]//g'`
+    - TAG_COMPILER=`echo $COMPILER | sed 's/[@]//g'`
+    - TAG_DOCKERFILE=`sha256sum $BUILD_DOCKER_FILE | head -c 16`
+    - TAG_SPACK=`echo $SPACK_SHA | head -c 8`
+    - TAG_REPO=`find $SPACK_DLAF_REPO -type f -exec sha256sum {} \; | sha256sum - | head -c 16`
+    - TAG_ENVIRONMENT=`sha256sum $SPACK_ENVIRONMENT | head -c 16`
+    - TAG=${TAG_IMAGE}-${TAG_COMPILER}-MKL${USE_MKL}-${TAG_DOCKERFILE}-${TAG_SPACK}-${TAG_REPO}-${TAG_ENVIRONMENT}
+    - docker build -t $BUILD_IMAGE:$TAG -t $BUILD_IMAGE:latest --cache-from $BUILD_IMAGE:$TAG --cache-from $BUILD_IMAGE:latest --build-arg BASE_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg SPACK_SHA --build-arg COMPILER --build-arg SPACK_ENVIRONMENT --build-arg SPACK_DLAF_REPO --build-arg USE_MKL -f $BUILD_DOCKER_FILE --network=host .
     - docker push $BUILD_IMAGE:$TAG
     - docker push $BUILD_IMAGE:latest
     - docker build -t $DEPLOY_IMAGE --build-arg BUILD_IMAGE=$BUILD_IMAGE:$TAG --build-arg USE_MKL -f $DEPLOY_DOCKER_FILE --network=host .

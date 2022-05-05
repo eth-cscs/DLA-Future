@@ -20,9 +20,9 @@ namespace internal {
 
 template <Device D, class T>
 struct GeneralSub {
-  static void call(const SizeType i_tile_from, const SizeType i_tile_to, const blas::Op opA,
-                   const blas::Op opB, const T alpha, Matrix<const T, D>& mat_a,
-                   Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c);
+  static void callNN(const SizeType i_tile_from, const SizeType i_tile_to, const blas::Op opA,
+                     const blas::Op opB, const T alpha, Matrix<const T, D>& mat_a,
+                     Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c);
 };
 
 /// ---- ETI

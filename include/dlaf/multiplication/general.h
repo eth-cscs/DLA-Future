@@ -36,7 +36,12 @@ void generalSubMatrix(const SizeType a, const SizeType b, const blas::Op opA, co
   DLAF_ASSERT(a <= b, a, b);
   DLAF_ASSERT(a >= 0 and a < m, a, m);
 
-  internal::GeneralSub<D, T>::call(a, b, opA, opB, alpha, mat_a, mat_b, beta, mat_c);
+  using namespace blas;
+
+  if (opA == Op::NoTrans && opB == Op::NoTrans)
+    internal::GeneralSub<D, T>::callNN(a, b, opA, opB, alpha, mat_a, mat_b, beta, mat_c);
+  else
+    DLAF_UNIMPLEMENTED(opA, opB);
 }
 
 }

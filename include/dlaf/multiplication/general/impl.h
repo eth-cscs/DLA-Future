@@ -22,15 +22,10 @@ namespace dlaf::multiplication {
 namespace internal {
 
 template <Device D, class T>
-void GeneralSub<D, T>::call(const SizeType idx_begin, const SizeType idx_end, const blas::Op opA,
-                            const blas::Op opB, const T alpha, Matrix<const T, D>& mat_a,
-                            Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
+void GeneralSub<D, T>::callNN(const SizeType idx_begin, const SizeType idx_end, const blas::Op opA,
+                              const blas::Op opB, const T alpha, Matrix<const T, D>& mat_a,
+                              Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
   namespace ex = pika::execution::experimental;
-
-  if (opA != blas::Op::NoTrans)
-    DLAF_UNIMPLEMENTED(opA);
-  if (opB != blas::Op::NoTrans)
-    DLAF_UNIMPLEMENTED(opB);
 
   for (SizeType j = idx_begin; j <= idx_end; ++j) {
     for (SizeType i = idx_begin; i <= idx_end; ++i) {
@@ -44,6 +39,5 @@ void GeneralSub<D, T>::call(const SizeType idx_begin, const SizeType idx_end, co
     }
   }
 }
-
 }
 }

@@ -59,14 +59,14 @@ auto getSubMatrixMatrixMultiplication(const SizeType a, const SizeType b, const 
     return TypeUtilities<T>::polar((k + .5) / (j + 2), k + j);
   };
 
-  auto elC = [a, b](const GlobalElementIndex ij) {
+  auto elC = [a, b, k](const GlobalElementIndex ij) {
     if (ij.row() < a || ij.row() > b || ij.col() < a || ij.col() > b)
       return TypeUtilities<T>::polar(-99, 99);
 
     const double i = ij.row();
     const double j = ij.col();
 
-    return TypeUtilities<T>::polar((i + 3) / (j + 5), i + j);
+    return TypeUtilities<T>::polar((i + k + 1) / (j + 5), i + j + k);
   };
 
   auto elR = [a, b, k, alpha, beta](const GlobalElementIndex ij) {
@@ -77,7 +77,7 @@ auto getSubMatrixMatrixMultiplication(const SizeType a, const SizeType b, const 
     const double j = ij.col();
 
     return alpha * TypeUtilities<T>::polar((i + 1) / (j + 2) * (b - a + 1), (2 * i) + j) +
-           beta * TypeUtilities<T>::polar((i + 3) / (j + 5), i + j);
+           beta * TypeUtilities<T>::polar((i + k + 1) / (j + 5), k + i + j);
   };
 
   return std::make_tuple<>(elA, elB, elC, elR);

@@ -22,9 +22,9 @@ namespace dlaf::multiplication {
 namespace internal {
 
 template <Device D, class T>
-void GeneralSub<D, T>::call(const SizeType a, const SizeType b, const blas::Op opA, const blas::Op opB,
-                            const T alpha, Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b,
-                            const T beta, Matrix<T, D>& mat_c) {
+void GeneralSub<D, T>::call(const SizeType idx_begin, const SizeType idx_end, const blas::Op opA,
+                            const blas::Op opB, const T alpha, Matrix<const T, D>& mat_a,
+                            Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
   namespace ex = pika::execution::experimental;
 
   if (opA != blas::Op::NoTrans)
@@ -32,11 +32,12 @@ void GeneralSub<D, T>::call(const SizeType a, const SizeType b, const blas::Op o
   if (opB != blas::Op::NoTrans)
     DLAF_UNIMPLEMENTED(opB);
 
-  for (SizeType j = a; j <= b; ++j) {
-    for (SizeType i = a; i <= b; ++i) {
-      for (SizeType k = a; k <= b; ++k) {
+  for (SizeType j = idx_begin; j <= idx_end; ++j) {
+    for (SizeType i = idx_begin; i <= idx_end; ++i) {
+      for (SizeType k = idx_begin; k <= idx_end; ++k) {
         dlaf::internal::whenAllLift(opA, opB, alpha, mat_a.read_sender(GlobalTileIndex(i, k)),
-                                    mat_b.read_sender(GlobalTileIndex(k, j)), k == a ? beta : T(1),
+                                    mat_b.read_sender(GlobalTileIndex(k, j)),
+                                    k == idx_begin ? beta : T(1),
                                     mat_c.readwrite_sender(GlobalTileIndex(i, j))) |
             tile::gemm(dlaf::internal::Policy<Backend::MC>()) | ex::start_detached();
       }

@@ -346,7 +346,7 @@ void BackTransformationReductionToBand<backend, device, T>::call(
     }
 
     for (const auto& kj_panel : panelW2.iteratorLocal())
-      scheduleAllReduceInPlace(mpi_col_task_chain(), MPI_SUM, panelW2(kj_panel));
+      dlaf::comm::scheduleAllReduceInPlace(mpi_col_task_chain(), MPI_SUM, panelW2(kj_panel));
 
     broadcast(k_rank_col, panelV, mpi_row_task_chain);
 

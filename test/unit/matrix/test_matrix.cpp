@@ -36,11 +36,9 @@ using namespace dlaf::comm;
 using namespace dlaf::test;
 using namespace testing;
 
+namespace ex = pika::execution::experimental;
+namespace tt = pika::this_thread::experimental;
 using pika::unwrapping;
-using pika::execution::experimental::ensure_started;
-using pika::execution::experimental::make_future;
-using pika::execution::experimental::then;
-using pika::this_thread::experimental::sync_wait;
 
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
@@ -1289,8 +1287,7 @@ TEST(MatrixDestructorFutures, NonConstAfterRead) {
 }
 
 TEST(MatrixDestructorFutures, NonConstAfterReadWithSenderAdaptors) {
-  namespace ex = pika::execution::experimental;
-  pika::future<void> last_task;
+  ex::unique_any_sender<> last_task;
 
   std::atomic<bool> is_exited_from_scope{false};
   {
@@ -1300,11 +1297,11 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWithSenderAdaptors) {
     last_task = shared_future |
                 dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
                                           WaitGuardHelper{is_exited_from_scope}) |
-                make_future();
+                ex::ensure_started();
   }
   is_exited_from_scope = true;
 
-  sync_wait(std::move(last_task));
+  tt::sync_wait(std::move(last_task));
 }
 
 TEST(MatrixDestructorFutures, NonConstAfterReadWrite) {
@@ -1324,7 +1321,7 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWrite) {
 
 TEST(MatrixDestructorFutures, NonConstAfterReadWriteWithSenderAdaptors) {
   namespace ex = pika::execution::experimental;
-  pika::future<void> last_task;
+  ex::unique_any_sender<> last_task;
 
   std::atomic<bool> is_exited_from_scope{false};
   {
@@ -1334,11 +1331,11 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWriteWithSenderAdaptors) {
     last_task = std::move(future) |
                 dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
                                           WaitGuardHelper{is_exited_from_scope}) |
-                make_future();
+                ex::ensure_started();
   }
   is_exited_from_scope = true;
 
-  sync_wait(std::move(last_task));
+  tt::sync_wait(std::move(last_task));
 }
 
 TEST(MatrixDestructorFutures, NonConstAfterRead_UserMemory) {
@@ -1358,8 +1355,7 @@ TEST(MatrixDestructorFutures, NonConstAfterRead_UserMemory) {
 }
 
 TEST(MatrixDestructorFutures, NonConstAfterReadWithSenderAdaptors_UserMemory) {
-  namespace ex = pika::execution::experimental;
-  pika::future<void> last_task;
+  ex::unique_any_sender<> last_task;
 
   std::atomic<bool> is_exited_from_scope{false};
   {
@@ -1370,11 +1366,11 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWithSenderAdaptors_UserMemory) {
     last_task = shared_future |
                 dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
                                           WaitGuardHelper{is_exited_from_scope}) |
-                make_future();
+                ex::ensure_started();
   }
   is_exited_from_scope = true;
 
-  sync_wait(std::move(last_task));
+  tt::sync_wait(std::move(last_task));
 }
 
 TEST(MatrixDestructorFutures, NonConstAfterReadWrite_UserMemory) {
@@ -1410,8 +1406,7 @@ TEST(MatrixDestructorFutures, ConstAfterRead_UserMemory) {
 }
 
 TEST(MatrixDestructorFutures, NonConstAfterReadWriteWithSenderAdaptors_UserMemory) {
-  namespace ex = pika::execution::experimental;
-  pika::future<void> last_task;
+  ex::unique_any_sender<> last_task;
 
   std::atomic<bool> is_exited_from_scope{false};
   {
@@ -1422,11 +1417,11 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWriteWithSenderAdaptors_UserMemor
     last_task = std::move(future) |
                 dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
                                           WaitGuardHelper{is_exited_from_scope}) |
-                make_future();
+                ex::ensure_started();
   }
   is_exited_from_scope = true;
 
-  sync_wait(std::move(last_task));
+  tt::sync_wait(std::move(last_task));
 }
 
 TEST_F(MatrixGenericTest, SyncBarrier) {
@@ -1482,7 +1477,6 @@ TEST_F(MatrixGenericTest, SyncBarrier) {
 }
 
 TEST_F(MatrixGenericTest, SyncBarrierWithSenderAdaptors) {
-  namespace ex = pika::execution::experimental;
   using TypeParam = double;
   using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
   using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
@@ -1533,11 +1527,11 @@ TEST_F(MatrixGenericTest, SyncBarrierWithSenderAdaptors) {
         dlaf::internal::transform(
             dlaf::internal::Policy<dlaf::Backend::MC>(), [&guard](auto&&) { EXPECT_TRUE(guard); },
             matrix.read_sender(tile_tl)) |
-            sync_wait();
+            tt::sync_wait();
         dlaf::internal::transform(
             dlaf::internal::Policy<dlaf::Backend::MC>(), [&guard](auto&&) { EXPECT_TRUE(guard); },
             matrix.read_sender(tile_br)) |
-            sync_wait();
+            tt::sync_wait();
       }
     }
   }
@@ -1555,15 +1549,14 @@ TEST(MatrixExceptionPropagation, RWPropagatesInRWAccess) {
 }
 
 TEST(MatrixExceptionPropagation, RWPropagatesInRWAccessWithSenderAdaptors) {
-  namespace ex = pika::execution::experimental;
-
   auto matrix = createMatrix<TypeParam>();
 
   auto s = matrix.readwrite_sender(LocalTileIndex(0, 0)) |
-           then(unwrapping([](auto&&) { throw CustomException{}; })) | ensure_started();
+           ex::then(unwrapping([](auto&&) { throw CustomException{}; })) | ex::ensure_started();
 
-  EXPECT_THROW(sync_wait(matrix.readwrite_sender(LocalTileIndex(0, 0))), dlaf::ContinuationException);
-  EXPECT_THROW(sync_wait(std::move(s)), CustomException);
+  EXPECT_THROW(tt::sync_wait(matrix.readwrite_sender(LocalTileIndex(0, 0))),
+               dlaf::ContinuationException);
+  EXPECT_THROW(tt::sync_wait(std::move(s)), CustomException);
 }
 
 TEST(MatrixExceptionPropagation, RWPropagatesInReadAccess) {
@@ -1576,15 +1569,14 @@ TEST(MatrixExceptionPropagation, RWPropagatesInReadAccess) {
 }
 
 TEST(MatrixExceptionPropagation, RWPropagatesInReadAccessWithSenderAdaptors) {
-  namespace ex = pika::execution::experimental;
-
   auto matrix = createMatrix<TypeParam>();
 
   auto s = matrix.readwrite_sender(LocalTileIndex(0, 0)) |
-           then(unwrapping([](auto&&) { throw CustomException{}; })) | ensure_started();
+           ex::then(unwrapping([](auto&&) { throw CustomException{}; })) | ex::ensure_started();
 
-  EXPECT_THROW(sync_wait(matrix.read_sender(LocalTileIndex(0, 0))).get(), dlaf::ContinuationException);
-  EXPECT_THROW(sync_wait(std::move(s)), CustomException);
+  EXPECT_THROW(tt::sync_wait(matrix.read_sender(LocalTileIndex(0, 0))).get(),
+               dlaf::ContinuationException);
+  EXPECT_THROW(tt::sync_wait(std::move(s)), CustomException);
 }
 
 TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInRWAccess) {
@@ -1601,10 +1593,10 @@ TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInRWAccessWithSenderAdaptor
   auto matrix = createMatrix<TypeParam>();
 
   auto s = matrix.read_sender(LocalTileIndex(0, 0)) |
-           then(unwrapping([](auto&&) { throw CustomException{}; })) | ensure_started();
+           ex::then(unwrapping([](auto&&) { throw CustomException{}; })) | ex::ensure_started();
 
-  EXPECT_NO_THROW(sync_wait(matrix.readwrite_sender(LocalTileIndex(0, 0))));
-  EXPECT_THROW(sync_wait(std::move(s)), CustomException);
+  EXPECT_NO_THROW(tt::sync_wait(matrix.readwrite_sender(LocalTileIndex(0, 0))));
+  EXPECT_THROW(tt::sync_wait(std::move(s)), CustomException);
 }
 
 TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInReadAccess) {
@@ -1620,8 +1612,8 @@ TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInReadAccessWithSenderAdapt
   auto matrix = createMatrix<TypeParam>();
 
   auto s = matrix.read_sender(LocalTileIndex(0, 0)) |
-           then(unwrapping([](auto&&) { throw CustomException{}; })) | ensure_started();
+           ex::then(unwrapping([](auto&&) { throw CustomException{}; })) | ex::ensure_started();
 
-  EXPECT_NO_THROW(sync_wait(matrix.read_sender(LocalTileIndex(0, 0))).get());
-  EXPECT_THROW(sync_wait(std::move(s)), CustomException);
+  EXPECT_NO_THROW(tt::sync_wait(matrix.read_sender(LocalTileIndex(0, 0))).get());
+  EXPECT_THROW(tt::sync_wait(std::move(s)), CustomException);
 }

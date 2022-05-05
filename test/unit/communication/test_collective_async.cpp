@@ -74,13 +74,13 @@ void testReduceInPlace(comm::Communicator world, matrix::Matrix<T, device> matri
   std::function<T(TileElementIndex)> exp_tile;
   if (root_rank == world.rank()) {
     // use -> read
-    scheduleReduceRecvInPlace(chain(), MPI_SUM, matrix(idx));
+    dlaf::comm::scheduleReduceRecvInPlace(chain(), MPI_SUM, matrix(idx));
 
     exp_tile = fixedValueTile(world.size() * (world.size() + 1) / 2);
   }
   else {
     // use -> read -> set -> read
-    scheduleReduceSend(root_rank, chain(), MPI_SUM, matrix.read(idx));
+    dlaf::comm::scheduleReduceSend(root_rank, chain(), MPI_SUM, matrix.read(idx));
 
     CHECK_TILE_EQ(input_tile, matrix.read(idx).get());
 
@@ -112,7 +112,7 @@ void testAllReduceInPlace(comm::Communicator world, matrix::Matrix<T, device> ma
   auto input_tile = fixedValueTile(world.rank() + 1);
   matrix::test::set(matrix(idx).get(), input_tile);
 
-  auto after = scheduleAllReduceInPlace(chain(), MPI_SUM, matrix(idx));
+  auto after = dlaf::comm::scheduleAllReduceInPlace(chain(), MPI_SUM, matrix(idx));
 
   // Note:
   // The call `after.get()` waits for any scheduled task with the aim to ensure that no other task
@@ -151,7 +151,7 @@ void testAllReduce(comm::Communicator world, matrix::Matrix<T, device> matA,
   auto input_tile = fixedValueTile(world.rank() + 1);
   matrix::test::set(mat_in(idx).get(), input_tile);
 
-  scheduleAllReduce(chain(), MPI_SUM, mat_in.read(idx), mat_out(idx));
+  dlaf::comm::scheduleAllReduce(chain(), MPI_SUM, mat_in.read(idx), mat_out(idx));
 
   const auto& tile_in = mat_in.read(idx).get();
   const auto& tile_out = mat_out.read(idx).get();

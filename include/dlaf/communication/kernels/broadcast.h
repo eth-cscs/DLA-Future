@@ -108,7 +108,8 @@ struct ScheduleRecvBcast {
     return std::move(tile_gpu) |
            // Start an asynchronous scope for keeping the GPU tile alive until
            // data has been copied back into it.
-           ex::let_value([=, pcomm = std::forward<CommSender>(pcomm)](Tile<T, Device::GPU>& tile_gpu) mutable {
+           ex::let_value([=, pcomm = std::forward<CommSender>(pcomm)](
+                             Tile<T, Device::GPU>& tile_gpu) mutable {
              // Create a CPU tile with the same dimensions as the GPU tile.
              return ex::just(std::cref(tile_gpu)) |
                     transform(Policy<Backend::GPU>(thread_priority::high), Duplicate<Device::CPU>{}) |

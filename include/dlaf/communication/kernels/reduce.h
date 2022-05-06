@@ -156,7 +156,8 @@ void scheduleReduceRecvInPlace(CommSender&& pcomm, MPI_Op reduce_op,
   using dlaf::internal::transform;
 
   std::move(tile) |
-      ex::let_value(pika::unwrapping([reduce_op, pcomm = std::forward<CommSender>(pcomm)](auto& tile_gpu) mutable {
+      ex::let_value(pika::unwrapping([reduce_op,
+                                      pcomm = std::forward<CommSender>(pcomm)](auto& tile_gpu) mutable {
         using dlaf::internal::Policy;
         using dlaf::matrix::copy;
         using dlaf::matrix::internal::CopyBackend;

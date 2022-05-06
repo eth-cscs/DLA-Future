@@ -311,6 +311,7 @@ void herk(cublasHandle_t handle, const blas::Uplo uplo, const blas::Op op, const
                          blasToCublasCast(&beta), blasToCublasCast(c.ptr()), to_int(c.ld()));
 }
 
+#ifdef DLAF_WITH_CUDA
 template <class T>
 void trmm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, const blas::Op op,
           const blas::Diag diag, const T alpha, const matrix::Tile<const T, Device::GPU>& a,
@@ -339,6 +340,19 @@ void trmm3(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, 
                          blasToCublasCast(a.ptr()), to_int(a.ld()), blasToCublasCast(b.ptr()),
                          to_int(b.ld()), blasToCublasCast(c.ptr()), to_int(c.ld()));
 }
+#elif defined DLAF_WITH_HIP
+template <class T>
+void trmm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, const blas::Op op,
+          const blas::Diag diag, const T alpha, const matrix::Tile<const T, Device::GPU>& a,
+          const matrix::Tile<T, Device::GPU>& b) {
+}
+
+template <class T>
+void trmm3(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, const blas::Op op,
+           const blas::Diag diag, const T alpha, const matrix::Tile<const T, Device::GPU>& a,
+           const matrix::Tile<const T, Device::GPU>& b, const matrix::Tile<T, Device::GPU>& c) {
+}
+#endif
 
 template <class T>
 void trsm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, const blas::Op op,

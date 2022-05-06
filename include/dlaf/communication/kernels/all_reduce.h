@@ -103,9 +103,8 @@ void scheduleAllReduce(CommSender&& pcomm, MPI_Op reduce_op,
       ex::start_detached();
 }
 
-template <class T, class CommSender>
-pika::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
-    CommSender&& pcomm, MPI_Op reduce_op, pika::future<matrix::Tile<T, Device::CPU>> tile) {
+template <class CommSender, class TSender>
+[[nodiscard]] auto scheduleAllReduceInPlace(CommSender&& pcomm, MPI_Op reduce_op, TSender&& tile) {
   namespace ex = pika::execution::experimental;
 
   using common::internal::copyBack_o;
@@ -116,6 +115,8 @@ pika::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
   using dlaf::internal::whenAllLift;
   using pika::threads::thread_priority;
 
+  using T = dlaf::internal::SenderElementType<TSender>;
+
   // Note:
   //
   // TILE ---> makeContiguous --+--> CONT_BUF ----> mpi_call ---> CONT_BUF --+
@@ -125,7 +126,7 @@ pika::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
   //
   // The last TILE after the copyBack is returned so that other task can be attached to it,
   // AFTER the asynchronous MPI_AllReduce has completed
-  return std::move(tile) | ex::transfer(getBackendScheduler<Backend::MC>()) |
+  return std::forward<TSender>(tile) | ex::transfer(getBackendScheduler<Backend::MC>()) |
          ex::let_value([pcomm = std::forward<CommSender>(pcomm),
                         reduce_op](matrix::Tile<T, Device::CPU>& tile) mutable {
            return whenAllLift(std::move(pcomm), reduce_op, makeItContiguous(tile)) |
@@ -133,8 +134,7 @@ pika::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
                   transform(Policy<Backend::MC>(thread_priority::high),
                             std::bind(copyBack_o, std::placeholders::_1, std::cref(tile))) |
                   ex::then([&tile]() { return std::move(tile); });
-         }) |
-         ex::make_future();
+         });
 }
 }
 }

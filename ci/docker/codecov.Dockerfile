@@ -1,4 +1,5 @@
 ARG BUILD_IMAGE
+ARG DEPLOY_BASE_IMAGE
 
 # This is the folder where the project is built
 ARG BUILD=/DLA-Future-build
@@ -44,7 +45,7 @@ RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
     rm -rf ${SOURCE}/.git
 
 # Multistage build, this is the final small image
-FROM ubuntu:20.04
+FROM $DEPLOY_BASE_IMAGE
 
 # set jfrog autoclean policy
 LABEL com.jfrog.artifactory.retention.maxDays="7"

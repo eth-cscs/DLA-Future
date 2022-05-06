@@ -1,4 +1,5 @@
 ARG BUILD_IMAGE
+ARG DEPLOY_BASE_IMAGE
 
 # This is the folder where the project is built
 ARG BUILD=/DLA-Future-build
@@ -61,7 +62,8 @@ RUN if [ "$USE_MKL" = "ON" ]; then \
       ${MKL_LIB}/libmkl_vml_mc3.so ; \
     fi
 
-FROM ubuntu:20.04
+# Multistage build, this is the final small image
+FROM $DEPLOY_BASE_IMAGE
 
 # set jfrog autoclean policy
 LABEL com.jfrog.artifactory.retention.maxDays="7"

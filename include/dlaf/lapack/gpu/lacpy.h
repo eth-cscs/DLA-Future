@@ -10,10 +10,12 @@
 
 #pragma once
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 
+#if defined DLAF_WITH_CUDA
 #include <cublas_v2.h>
 #include <cuda_runtime.h>
+#endif
 #include <blas.hh>
 
 #include "dlaf/types.h"

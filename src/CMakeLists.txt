@@ -171,13 +171,13 @@ DLAF_addPrecompiledHeaders(dlaf.auxiliary)
 add_library(dlaf.eigensolver OBJECT
   eigensolver/band_to_tridiag/mc.cpp
   eigensolver/bt_band_to_tridiag/mc.cpp
-  $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/bt_band_to_tridiag/gpu.cpp>
+  $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/bt_band_to_tridiag/gpu.cpp>
   eigensolver/bt_reduction_to_band/mc.cpp
-  $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/bt_reduction_to_band/gpu.cpp>
+  $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/bt_reduction_to_band/gpu.cpp>
   eigensolver/eigensolver/mc.cpp
-  $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/eigensolver/gpu.cpp>
+  $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/eigensolver/gpu.cpp>
   eigensolver/gen_eigensolver/mc.cpp
-  $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/gen_eigensolver/gpu.cpp>
+  $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/gen_eigensolver/gpu.cpp>
   eigensolver/gen_to_std/mc.cpp
   $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/gen_to_std/gpu.cpp>
   eigensolver/reduction_to_band/mc.cpp
@@ -201,7 +201,7 @@ DLAF_addPrecompiledHeaders(dlaf.factorization)
 # Define DLAF's multiplication library
 add_library(dlaf.multiplication OBJECT
   multiplication/triangular/mc.cpp
-  $<$<BOOL:${DLAF_WITH_CUDA}>:multiplication/triangular/gpu.cpp>)
+  $<$<BOOL:${DLAF_WITH_GPU}>:multiplication/triangular/gpu.cpp>)
 target_link_libraries(dlaf.multiplication PUBLIC dlaf.prop)
 target_add_warnings(dlaf.multiplication)
 DLAF_addPrecompiledHeaders(dlaf.multiplication)

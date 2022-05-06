@@ -297,7 +297,7 @@ protected:
   const SizeType b;
 };
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <class T>
 struct HHManager<Backend::GPU, Device::GPU, T> {
   static constexpr Backend B = Backend::GPU;

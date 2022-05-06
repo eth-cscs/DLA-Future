@@ -59,7 +59,7 @@ private:
   common::internal::vector<std::future<void>> threads_;
 };
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <>
 struct KernelRunner<Backend::GPU> {
   KernelRunner(SizeType count, SizeType nstreams) noexcept

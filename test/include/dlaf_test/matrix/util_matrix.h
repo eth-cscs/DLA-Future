@@ -92,8 +92,8 @@ namespace internal {
 /// @pre The second argument of err_message should be either T, T& or const T&.
 template <template <class, Device> class MatrixType, class T, class ElementGetter, class ComparisonOp,
           class ErrorMessageGetter>
-void check(ElementGetter expected, MatrixType<const T, Device::CPU>& mat, ComparisonOp comp,
-           ErrorMessageGetter err_message, const char* file, const int line) {
+void checkMatrix(ElementGetter expected, MatrixType<const T, Device::CPU>& mat, ComparisonOp comp,
+                 ErrorMessageGetter err_message, const char* file, const int line) {
   const matrix::Distribution& dist = mat.distribution();
   for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {
     for (SizeType tile_i = 0; tile_i < dist.localNrTiles().rows(); ++tile_i) {
@@ -126,8 +126,8 @@ void check(ElementGetter expected, MatrixType<const T, Device::CPU>& mat, Compar
 /// @pre The second argument of comp should be either T, T& or const T&,
 /// @pre The second argument of err_message should be either T, T& or const T&.
 template <class T, class ElementGetter, class ComparisonOp, class ErrorMessageGetter>
-void check(ElementGetter&& expected, MatrixLocal<const T>& mat, ComparisonOp comp,
-           ErrorMessageGetter err_message, const char* file, const int line) {
+void checkMatrix(ElementGetter&& expected, MatrixLocal<const T>& mat, ComparisonOp comp,
+                 ErrorMessageGetter err_message, const char* file, const int line) {
   for (const auto& index : dlaf::common::iterate_range2d(mat.size())) {
     if (!comp(expected(index), mat(index))) {
       ADD_FAILURE_AT(file, line) << "Error at index (" << index
@@ -143,17 +143,16 @@ void check(ElementGetter&& expected, MatrixLocal<const T>& mat, ComparisonOp com
 /// The (i, j)-element of the matrix is compared to exp_el({i, j}).
 /// @pre exp_el argument is an index of type const GlobalElementIndex&,
 /// @pre exp_el return type should be T.
-template <class MatrixType, class ElementGetter>
-void checkEQ(ElementGetter&& exp_el, MatrixType& mat, const char* file, const int line) {
-  using T = typename matrix_traits<MatrixType>::ElementT;
+template <class T, Device D, class ElementGetter>
+void checkMatrixEQ(ElementGetter&& exp_el, Matrix<const T, D>& mat, const char* file, const int line) {
   auto err_message = [](T expected, T value) {
     std::stringstream s;
     s << "expected " << expected << " == " << value;
     return s.str();
   };
-  internal::check(exp_el, mat, std::equal_to<T>{}, err_message, file, line);
+  internal::checkMatrix(exp_el, mat, std::equal_to<T>{}, err_message, file, line);
 }
-#define CHECK_MATRIX_EQ(exp_el, mat) ::dlaf::matrix::test::checkEQ(exp_el, mat, __FILE__, __LINE__)
+#define CHECK_MATRIX_EQ(exp_el, mat) ::dlaf::matrix::test::checkMatrixEQ(exp_el, mat, __FILE__, __LINE__)
 
 /// Checks the pointers to the elements of the matrix.
 ///
@@ -161,7 +160,7 @@ void checkEQ(ElementGetter&& exp_el, MatrixType& mat, const char* file, const in
 /// @pre exp_ptr argument is an index of type const GlobalElementIndex&,
 /// @pre exp_ptr return type should be T*.
 template <class MatrixType, class PointerGetter>
-void checkPtr(PointerGetter exp_ptr, MatrixType& mat, const char* file, const int line) {
+void checkMatrixPtr(PointerGetter exp_ptr, MatrixType& mat, const char* file, const int line) {
   using T = typename std::pointer_traits<decltype(exp_ptr({}))>::element_type;
   auto comp = [](T* ptr, const T& value) { return ptr == &value; };
   auto err_message = [](T* expected, const T& value) {
@@ -169,9 +168,10 @@ void checkPtr(PointerGetter exp_ptr, MatrixType& mat, const char* file, const in
     s << "expected " << expected << " == " << &value;
     return s.str();
   };
-  internal::check(exp_ptr, mat, comp, err_message, file, line);
+  internal::checkMatrix(exp_ptr, mat, comp, err_message, file, line);
 }
-#define CHECK_MATRIX_PTR(exp_ptr, mat) ::dlaf::matrix::test::checkPtr(exp_ptr, mat, __FILE__, __LINE__)
+#define CHECK_MATRIX_PTR(exp_ptr, mat) \
+  ::dlaf::matrix::test::checkMatrixPtr(exp_ptr, mat, __FILE__, __LINE__)
 
 /// Checks the elements of the matrix.
 ///
@@ -181,12 +181,9 @@ void checkPtr(PointerGetter exp_ptr, MatrixType& mat, const char* file, const in
 /// @pre rel_err >= 0,
 /// @pre abs_err >= 0,
 /// @pre rel_err > 0 || abs_err > 0.
-template <class MatrixType, class ElementGetter>
-void checkNear(ElementGetter&& expected, MatrixType& mat,
-               BaseType<typename matrix_traits<MatrixType>::ElementT> rel_err,
-               BaseType<typename matrix_traits<MatrixType>::ElementT> abs_err, const char* file,
-               const int line) {
-  using T = typename matrix_traits<MatrixType>::ElementT;
+template <class T, Device D, class ElementGetter>
+void checkMatrixNear(ElementGetter&& expected, Matrix<const T, D>& mat, BaseType<T> rel_err,
+                     BaseType<T> abs_err, const char* file, const int line) {
   ASSERT_GE(rel_err, 0);
   ASSERT_GE(abs_err, 0);
   ASSERT_TRUE(rel_err > 0 || abs_err > 0);
@@ -206,10 +203,10 @@ void checkNear(ElementGetter&& expected, MatrixType& mat,
       << rel_err << ", Absolute diff: " << diff << " > " << abs_err << ")";
     return s.str();
   };
-  internal::check(expected, mat, comp, err_message, file, line);
+  internal::checkMatrix(expected, mat, comp, err_message, file, line);
 }
 #define CHECK_MATRIX_NEAR(expected, mat, rel_err, abs_err) \
-  ::dlaf::matrix::test::checkNear(expected, mat, rel_err, abs_err, __FILE__, __LINE__)
+  ::dlaf::matrix::test::checkMatrixNear(expected, mat, rel_err, abs_err, __FILE__, __LINE__)
 
 template <class MatrixType>
 void checkMatrixDistribution(const Distribution& distribution, const MatrixType& matrix) {

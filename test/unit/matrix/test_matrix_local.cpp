@@ -219,3 +219,10 @@ TYPED_TEST(MatrixLocalWithCommTest, AllGather) {
     }
   }
 }
+
+TYPED_TEST(MatrixLocalTest, Dummy) {
+  constexpr auto error = TypeUtilities<TypeParam>::error;
+  auto tile = createTile<TypeParam>([](TileElementIndex idx) { return idx.row() + idx.col(); },
+                                    TileElementSize(5, 5), 5);
+  CHECK_TILE_NEAR(tile, tile, error, error);
+}

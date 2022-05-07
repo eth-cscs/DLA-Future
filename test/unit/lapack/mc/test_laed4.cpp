@@ -30,8 +30,7 @@ TYPED_TEST_SUITE(RealTileOperationsTestMC, RealMatrixElementTypes);
 //
 // ```
 // import numpy as np
-// from scipy.linalg import eigh
-// from scipy.linalg import norm
+// from scipy.linalg import eigh, norm
 //
 // n = 20
 // d = np.log(np.arange(2, n + 2))
@@ -58,6 +57,6 @@ TYPED_TEST(RealTileOperationsTestMC, Laed4) {
 
   dlaf::internal::laed4_wrapper(n, i, d.data(), z.data(), delta.data(), rho, &lambda);
 
-  TypeParam expected_lambda = 2.497336;
-  EXPECT_NEAR(lambda, expected_lambda, 1e-7);
+  TypeParam expected_lambda = 2.497335998568758;
+  EXPECT_NEAR(lambda, expected_lambda, n * TypeUtilities<TypeParam>::error);
 }

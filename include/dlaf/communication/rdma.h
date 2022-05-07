@@ -49,16 +49,6 @@ template <Device D, typename T>
 auto prepareSendTile(pika::shared_future<matrix::Tile<const T, D>> tile) {
   return matrix::duplicateIfNeeded<CommunicationDevice_v<D>>(std::move(tile));
 }
-
-/// Helper function for handling a tile after receiving.
-///
-/// If CUDA RDMA is disabled, the tile returned from recvTile will always be on
-/// the CPU. This helper duplicates to the GPU if the first template parameter
-/// is a GPU device. The first template parameter must be given.
-template <Device D, typename T>
-auto handleRecvTile(pika::future<matrix::Tile<T, CommunicationDevice_v<D>>> tile) {
-  return matrix::duplicateIfNeeded<D>(std::move(tile));
-}
 }
 }
 }

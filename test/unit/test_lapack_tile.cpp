@@ -339,14 +339,15 @@ TYPED_TEST(RealTileOperationsTestMC, Stedc) {
 
     tile::internal::scaleCol(TypeParam(-1), i, evecs);
   }
-  CHECK_TILE_NEAR(expected_evecs_f, evecs, 1e-6, 1e-6);
+  CHECK_TILE_NEAR(expected_evecs_f, evecs, sz * TypeUtilities<TypeParam>::error,
+                  sz * TypeUtilities<TypeParam>::error);
 }
 
 TYPED_TEST(TileOperationsTestMC, ScaleCol) {
   TileElementSize tile_size{5, 5};
   auto tile_fn = [](const TileElementIndex& idx) { return TypeParam(idx.row() + idx.col()); };
   auto tile = createTile<TypeParam, Device::CPU>(std::move(tile_fn), tile_size, tile_size.rows());
-  TypeParam alpha = 4.2;
+  TypeParam alpha = 4.2f;
   SizeType col = 3;
 
   tile::internal::scaleCol(alpha, col, tile);

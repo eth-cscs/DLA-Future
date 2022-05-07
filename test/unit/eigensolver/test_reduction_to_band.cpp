@@ -30,6 +30,7 @@
 #include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf/memory/memory_view.h"
 #include "dlaf/types.h"
+#include "dlaf/util_math.h"
 #include "dlaf/util_matrix.h"
 
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
@@ -177,7 +178,7 @@ void splitReflectorsAndBand(MatrixLocal<T>& mat_v, MatrixLocal<T>& mat_b, const 
 }
 
 template <class T>
-auto allGatherTaus(const SizeType k, const SizeType band_size,
+auto allGatherTaus(const SizeType k, const SizeType chunk_size,
                    std::vector<pika::shared_future<common::internal::vector<T>>> fut_local_taus) {
   std::vector<T> taus;
   taus.reserve(to_sizet(k));
@@ -185,7 +186,7 @@ auto allGatherTaus(const SizeType k, const SizeType band_size,
   pika::wait_all(fut_local_taus);
   auto local_taus = pika::unwrap(fut_local_taus);
 
-  const auto n_chunks = std::ceil(float(k) / band_size);
+  const SizeType n_chunks = dlaf::util::ceilDiv(k, chunk_size);
 
   for (auto index_chunk = 0; index_chunk < n_chunks; ++index_chunk) {
     std::vector<T> chunk_data;
@@ -200,7 +201,7 @@ auto allGatherTaus(const SizeType k, const SizeType band_size,
 }
 
 template <class T>
-auto allGatherTaus(const SizeType k, const SizeType chunk_size, const SizeType band_size,
+auto allGatherTaus(const SizeType k, const SizeType chunk_size,
                    std::vector<pika::shared_future<common::internal::vector<T>>> fut_local_taus,
                    comm::CommunicatorGrid comm_grid) {
   std::vector<T> taus;
@@ -208,8 +209,6 @@ auto allGatherTaus(const SizeType k, const SizeType chunk_size, const SizeType b
 
   pika::wait_all(fut_local_taus);
   auto local_taus = pika::unwrap(fut_local_taus);
-
-  DLAF_ASSERT(band_size == chunk_size, band_size, chunk_size);
 
   const auto n_chunks = std::ceil(float(k) / chunk_size);
 
@@ -333,7 +332,7 @@ void testReductionToBandLocal(const LocalElementSize size, const TileElementSize
   auto mat_b = makeLocal(mat_a_h);
   splitReflectorsAndBand(mat_v, mat_b, band_size);
 
-  auto taus = allGatherTaus(k_reflectors, band_size, local_taus);
+  auto taus = allGatherTaus(k_reflectors, mat_a_h.blockSize().rows(), local_taus);
   EXPECT_EQ(taus.size(), k_reflectors);
 
   checkResult(k_reflectors, band_size, reference, mat_v, mat_b, taus);
@@ -405,7 +404,7 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributed) {
       auto mat_b = makeLocal(matrix_a);
       splitReflectorsAndBand(mat_v, mat_b, band_size);
 
-      auto taus = allGatherTaus(k_reflectors, block_size.cols(), band_size, local_taus, comm_grid);
+      auto taus = allGatherTaus(k_reflectors, block_size.cols(), local_taus, comm_grid);
       DLAF_ASSERT(to_SizeType(taus.size()) == k_reflectors, taus.size(), k_reflectors);
 
       checkResult(k_reflectors, band_size, reference, mat_v, mat_b, taus);

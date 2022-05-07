@@ -17,67 +17,87 @@
 
 #include <gtest/gtest.h>
 #include <pika/execution.hpp>
-#include <pika/future.hpp>
 #include <pika/thread.hpp>
-#include <pika/unwrap.hpp>
 
 using namespace dlaf;
 using namespace std::chrono_literals;
 
 using dlaf::common::Pipeline;
 
+namespace ex = pika::execution::experimental;
+namespace tt = pika::this_thread::experimental;
+
 TEST(Pipeline, Basic) {
-  Pipeline<int> serial(26);
+  {
+    Pipeline<int> serial(26);
 
-  auto checkpoint0 = serial();
-  auto checkpoint1 =
-      checkpoint0.then(pika::launch::sync,
-                       pika::unwrapping([](auto&& wrapper) { return std::move(wrapper); }));
+    std::atomic<bool> first_access_done{false};
+    std::atomic<bool> second_access_done{false};
+    std::atomic<bool> third_access_done{false};
 
-  auto guard0 = serial();
-  auto guard1 = serial();
+    auto checkpoint0 = serial() | ex::then([&](auto&& wrapper) {
+                         EXPECT_FALSE(first_access_done);
+                         EXPECT_FALSE(second_access_done);
+                         EXPECT_FALSE(third_access_done);
+                         first_access_done = true;
+                         auto local = std::move(wrapper);
+                         dlaf::internal::silenceUnusedWarningFor(local);
+                       });
+    auto checkpoint1 = serial() | ex::then([&](auto&& wrapper) {
+                         EXPECT_TRUE(first_access_done);
+                         EXPECT_FALSE(second_access_done);
+                         EXPECT_FALSE(third_access_done);
+                         second_access_done = true;
+                         auto local = std::move(wrapper);
+                         dlaf::internal::silenceUnusedWarningFor(local);
+                       });
+    auto checkpoint2 = serial() | ex::then([&](auto&& wrapper) {
+                         EXPECT_TRUE(first_access_done);
+                         EXPECT_TRUE(second_access_done);
+                         EXPECT_FALSE(third_access_done);
+                         third_access_done = true;
+                         auto local = std::move(wrapper);
+                         dlaf::internal::silenceUnusedWarningFor(local);
+                       });
 
-  EXPECT_TRUE(checkpoint1.is_ready());
-  EXPECT_FALSE(guard0.is_ready());
-  EXPECT_FALSE(guard1.is_ready());
+    tt::sync_wait(ex::when_all(std::move(checkpoint0), std::move(checkpoint1), std::move(checkpoint2)));
+  }
 
-  checkpoint1.get();
+  // The order of access does not depend on how the senders are started by when_all
+  {
+    Pipeline<int> serial(26);
 
-  EXPECT_TRUE(guard0.is_ready());
-  EXPECT_FALSE(guard1.is_ready());
+    std::atomic<bool> first_access_done{false};
+    std::atomic<bool> second_access_done{false};
+    std::atomic<bool> third_access_done{false};
 
-  guard0.get();
+    auto checkpoint0 = serial() | ex::then([&](auto&& wrapper) {
+                         EXPECT_FALSE(first_access_done);
+                         EXPECT_FALSE(second_access_done);
+                         EXPECT_FALSE(third_access_done);
+                         first_access_done = true;
+                         auto local = std::move(wrapper);
+                         dlaf::internal::silenceUnusedWarningFor(local);
+                       });
+    auto checkpoint1 = serial() | ex::then([&](auto&& wrapper) {
+                         EXPECT_TRUE(first_access_done);
+                         EXPECT_FALSE(second_access_done);
+                         EXPECT_FALSE(third_access_done);
+                         second_access_done = true;
+                         auto local = std::move(wrapper);
+                         dlaf::internal::silenceUnusedWarningFor(local);
+                       });
+    auto checkpoint2 = serial() | ex::then([&](auto&& wrapper) {
+                         EXPECT_TRUE(first_access_done);
+                         EXPECT_TRUE(second_access_done);
+                         EXPECT_FALSE(third_access_done);
+                         third_access_done = true;
+                         auto local = std::move(wrapper);
+                         dlaf::internal::silenceUnusedWarningFor(local);
+                       });
 
-  EXPECT_TRUE(guard1.is_ready());
-
-  guard1.get();
-}
-
-TEST(Pipeline, BasicWithSenderAdaptors) {
-  using pika::execution::experimental::then;
-  using pika::this_thread::experimental::sync_wait;
-
-  Pipeline<int> serial(26);
-
-  auto checkpoint0 = serial();
-  auto checkpoint1 = std::move(checkpoint0) | then([](auto&& wrapper) { return std::move(wrapper); });
-
-  auto guard0 = serial();
-  auto guard1 = serial();
-
-  EXPECT_FALSE(guard0.is_ready());
-  EXPECT_FALSE(guard1.is_ready());
-
-  sync_wait(std::move(checkpoint1));
-
-  EXPECT_TRUE(guard0.is_ready());
-  EXPECT_FALSE(guard1.is_ready());
-
-  sync_wait(std::move(guard0));
-
-  EXPECT_TRUE(guard1.is_ready());
-
-  sync_wait(std::move(guard1));
+    tt::sync_wait(ex::when_all(std::move(checkpoint2), std::move(checkpoint1), std::move(checkpoint0)));
+  }
 }
 
 // PipelineDestructor
@@ -104,25 +124,7 @@ auto try_waiting_guard = [](auto& guard) {
 };
 
 TEST(PipelineDestructor, DestructionWithDependency) {
-  pika::future<void> last_task;
-
-  std::atomic<bool> is_exited_from_scope;
-  {
-    Pipeline<int> serial(26);
-    last_task = serial().then(pika::launch::async, [&is_exited_from_scope](auto) {
-      try_waiting_guard(is_exited_from_scope);
-      EXPECT_TRUE(is_exited_from_scope);
-    });
-  }
-  is_exited_from_scope = true;
-
-  last_task.get();
-}
-
-TEST(PipelineDestructor, DestructionWithDependencyWithSenderAdaptors) {
-  using pika::execution::experimental::make_future;
-
-  pika::future<void> last_task;
+  ex::unique_any_sender<> last_task;
 
   std::atomic<bool> is_exited_from_scope;
   {
@@ -134,9 +136,9 @@ TEST(PipelineDestructor, DestructionWithDependencyWithSenderAdaptors) {
                       EXPECT_TRUE(is_exited_from_scope);
                     },
                     serial()) |
-                make_future();
+                ex::ensure_started();
   }
   is_exited_from_scope = true;
 
-  last_task.get();
+  tt::sync_wait(std::move(last_task));
 }

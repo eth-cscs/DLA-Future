@@ -205,8 +205,7 @@ auto duplicateIfNeeded(pika::future<Tile<T, Source>> tile) {
     return std::move(tile) |
            dlaf::internal::transform(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>(
                                          pika::threads::thread_priority::normal),
-                                     dlaf::matrix::Duplicate<Destination>{}) |
-           ex::make_future();
+                                     dlaf::matrix::Duplicate<Destination>{});
   }
 }
 
@@ -221,8 +220,7 @@ auto duplicateIfNeeded(pika::shared_future<Tile<T, Source>> tile) {
     return ex::keep_future(std::move(tile)) |
            dlaf::internal::transform(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>(
                                          pika::threads::thread_priority::normal),
-                                     dlaf::matrix::Duplicate<Destination>{}) |
-           ex::make_future();
+                                     dlaf::matrix::Duplicate<Destination>{});
   }
 }
 

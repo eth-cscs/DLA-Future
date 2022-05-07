@@ -58,11 +58,11 @@ EigensolverResult<T, D> Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>
 
     // Synchronize mat_trid and copy tile by tile.
     for (SizeType j = 0; j < mat_a.nrTiles().cols(); ++j) {
-      auto tile_sf = mat_trid.read(GlobalTileIndex(0, j));
+      auto tile_sf = mat_trid.read(GlobalTileIndex(j, 0));
       auto& tile = tile_sf.get();
       auto start = j * mat_a.blockSize().cols();
-      blas::copy(tile.size().cols(), tile.ptr({0, 0}), tile.ld(), &d[start], 1);
-      blas::copy(tile.size().cols(), tile.ptr({1, 0}), tile.ld(), &e[start], 1);
+      blas::copy(tile.size().rows(), tile.ptr({0, 0}), 1, &d[start], 1);
+      blas::copy(tile.size().rows(), tile.ptr({0, 1}), 1, &e[start], 1);
     }
 
     auto ptr_e = mat_e(GlobalTileIndex(0, 0)).get().ptr();

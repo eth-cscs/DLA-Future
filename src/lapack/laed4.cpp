@@ -20,7 +20,7 @@ void laed4_wrapper(int n, int i, float const* d, float const* z, float* delta, f
   ++i;  // Fortran indexing starts from 1
   int info = 0;
   slaed4(&n, &i, d, z, delta, &rho, lambda, &info);
-  DLAF_ASSERT(info >= 0, info);
+  DLAF_ASSERT(info == 0, info);
 }
 
 void laed4_wrapper(int n, int i, double const* d, double const* z, double* delta, double rho,
@@ -28,7 +28,7 @@ void laed4_wrapper(int n, int i, double const* d, double const* z, double* delta
   ++i;  // Fortran indexing starts from 1
   int info = 0;
   dlaed4(&n, &i, d, z, delta, &rho, lambda, &info);
-  DLAF_ASSERT(info >= 0, info);
+  DLAF_ASSERT(info == 0, info);
 }
 
 }

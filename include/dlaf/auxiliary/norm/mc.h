@@ -9,7 +9,6 @@
 //
 #pragma once
 
-#include <pika/future.hpp>
 #include <pika/unwrap.hpp>
 
 #include "dlaf/auxiliary/norm/api.h"
@@ -63,7 +62,7 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
   DLAF_ASSERT(square_size(matrix), matrix);
   DLAF_ASSERT(square_blocksize(matrix), matrix);
 
-  vector<pika::future<NormT>> tiles_max;
+  vector<ex::unique_any_sender<NormT>> tiles_max;
   tiles_max.reserve(distribution.localNrTiles().rows() * distribution.localNrTiles().cols());
 
   // for each local tile in the (global) lower triangular matrix, create a task that finds the max element in the tile
@@ -82,10 +81,9 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
     });
     auto current_tile_max =
         matrix.read_sender(tile_wrt_local) |
-        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), std::move(norm_max_f)) |
-        ex::make_future();
+        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), std::move(norm_max_f));
 
-    tiles_max.emplace_back(std::move(current_tile_max));
+    tiles_max.push_back(std::move(current_tile_max));
   }
 
   // then it is necessary to reduce max values from all ranks into a single max value for the matrix

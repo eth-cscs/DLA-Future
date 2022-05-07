@@ -82,7 +82,8 @@ RUN spack mirror add --scope site cscs https://spack.cloud && \
     spack gpg trust ./spack.cloud_key.asc
 
 # Add our custom spack repo from here
-COPY ./spack /user_repo
+ARG SPACK_DLAF_REPO
+COPY $SPACK_DLAF_REPO /user_repo
 
 RUN spack repo add --scope site /user_repo
 

@@ -63,8 +63,8 @@ auto allReduceInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op red
 DLAF_MAKE_CALLABLE_OBJECT(allReduceInPlace);
 }
 
-template <class T>
-void scheduleAllReduce(pika::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
+template <class CommSender, class T>
+void scheduleAllReduce(CommSender&& pcomm, MPI_Op reduce_op,
                        pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_in,
                        pika::future<matrix::Tile<T, Device::CPU>> tile_out) {
   namespace ex = pika::execution::experimental;
@@ -89,24 +89,22 @@ void scheduleAllReduce(pika::future<common::PromiseGuard<comm::Communicator>> pc
   // TILE_O ---> makeContiguous --+--> CONT_BUF_O --+                              |
   //                              |                                                |
   //                              +----------------------> TILE_O -----------------+-> copyBack
-  auto f =
-      unwrapping([pcomm = std::move(pcomm), reduce_op](const matrix::Tile<const T, Device::CPU>& tile_in,
-                                                       matrix::Tile<T, Device::CPU>& tile_out) mutable {
-        return whenAllLift(std::move(pcomm), reduce_op, makeItContiguous(tile_in),
-                           makeItContiguous(tile_out)) |
-               transformMPI(internal::allReduce_o) |
-               transform(Policy<Backend::MC>(thread_priority::high),
-                         std::bind(copyBack_o, std::placeholders::_1, std::cref(tile_out)));
-      });
+  auto f = unwrapping([pcomm = std::forward<CommSender>(pcomm),
+                       reduce_op](const matrix::Tile<const T, Device::CPU>& tile_in,
+                                  matrix::Tile<T, Device::CPU>& tile_out) mutable {
+    return whenAllLift(std::move(pcomm), reduce_op, makeItContiguous(tile_in),
+                       makeItContiguous(tile_out)) |
+           transformMPI(internal::allReduce_o) |
+           transform(Policy<Backend::MC>(thread_priority::high),
+                     std::bind(copyBack_o, std::placeholders::_1, std::cref(tile_out)));
+  });
   ex::when_all(ex::keep_future(std::move(tile_in)), std::move(tile_out)) |
       ex::transfer(getBackendScheduler<Backend::MC>()) | ex::let_value(std::move(f)) |
       ex::start_detached();
 }
 
-template <class T>
-pika::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
-    pika::future<common::PromiseGuard<comm::Communicator>> pcomm, MPI_Op reduce_op,
-    pika::future<matrix::Tile<T, Device::CPU>> tile) {
+template <class CommSender, class TSender>
+[[nodiscard]] auto scheduleAllReduceInPlace(CommSender&& pcomm, MPI_Op reduce_op, TSender&& tile) {
   namespace ex = pika::execution::experimental;
 
   using common::internal::copyBack_o;
@@ -117,6 +115,8 @@ pika::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
   using dlaf::internal::whenAllLift;
   using pika::threads::thread_priority;
 
+  using T = dlaf::internal::SenderElementType<TSender>;
+
   // Note:
   //
   // TILE ---> makeContiguous --+--> CONT_BUF ----> mpi_call ---> CONT_BUF --+
@@ -126,16 +126,15 @@ pika::future<matrix::Tile<T, Device::CPU>> scheduleAllReduceInPlace(
   //
   // The last TILE after the copyBack is returned so that other task can be attached to it,
   // AFTER the asynchronous MPI_AllReduce has completed
-  return std::move(tile) | ex::transfer(getBackendScheduler<Backend::MC>()) |
-         ex::let_value(
-             [pcomm = std::move(pcomm), reduce_op](matrix::Tile<T, Device::CPU>& tile) mutable {
-               return whenAllLift(std::move(pcomm), reduce_op, makeItContiguous(tile)) |
-                      transformMPI(internal::allReduceInPlace_o) |
-                      transform(Policy<Backend::MC>(thread_priority::high),
-                                std::bind(copyBack_o, std::placeholders::_1, std::cref(tile))) |
-                      ex::then([&tile]() { return std::move(tile); });
-             }) |
-         ex::make_future();
+  return std::forward<TSender>(tile) | ex::transfer(getBackendScheduler<Backend::MC>()) |
+         ex::let_value([pcomm = std::forward<CommSender>(pcomm),
+                        reduce_op](matrix::Tile<T, Device::CPU>& tile) mutable {
+           return whenAllLift(std::move(pcomm), reduce_op, makeItContiguous(tile)) |
+                  transformMPI(internal::allReduceInPlace_o) |
+                  transform(Policy<Backend::MC>(thread_priority::high),
+                            std::bind(copyBack_o, std::placeholders::_1, std::cref(tile))) |
+                  ex::then([&tile]() { return std::move(tile); });
+         });
 }
 }
 }

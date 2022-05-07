@@ -42,23 +42,23 @@ struct Helpers {};
 
 template <class T>
 struct Helpers<Backend::MC, Device::CPU, T> {
-  static pika::future<matrix::Tile<T, Device::CPU>> set0(pika::future<matrix::Tile<T, Device::CPU>>& t) {
+  template <class TSender>
+  static auto set0(TSender&& t) {
     namespace ex = pika::execution::experimental;
 
     return dlaf::internal::transform(
-               dlaf::internal::Policy<Backend::MC>(pika::threads::thread_priority::high),
-               [](matrix::Tile<T, Device::CPU>&& tile) {
-                 tile::internal::set0<T>(tile);
-                 return std::move(tile);
-               },
-               std::move(t)) |
-           ex::make_future();
+        dlaf::internal::Policy<Backend::MC>(pika::threads::thread_priority::high),
+        [](matrix::Tile<T, Device::CPU>&& tile) {
+          tile::internal::set0<T>(tile);
+          return std::move(tile);
+        },
+        std::forward<TSender>(t));
   }
 
-  static pika::future<matrix::Tile<T, Device::CPU>> gemvColumnT(
-      SizeType first_row_tile, pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_vi,
-      pika::shared_future<common::internal::vector<T>>& taus,
-      pika::future<matrix::Tile<T, Device::CPU>>& tile_t) {
+  template <class TSender>
+  static auto gemvColumnT(SizeType first_row_tile,
+                          pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_vi,
+                          pika::shared_future<common::internal::vector<T>>& taus, TSender&& tile_t) {
     namespace ex = pika::execution::experimental;
 
     auto gemv_func = [first_row_tile](const auto& tile_v, const auto& taus, auto&& tile_t) noexcept {
@@ -99,12 +99,11 @@ struct Helpers<Backend::MC, Device::CPU, T> {
                                          pika::threads::thread_priority::high),
                                      std::move(gemv_func),
                                      ex::when_all(ex::keep_future(tile_vi), ex::keep_future(taus),
-                                                  std::move(tile_t))) |
-           ex::make_future();
+                                                  std::forward<TSender>(tile_t)));
   }
 
-  static pika::future<matrix::Tile<T, Device::CPU>> trmvUpdateColumn(
-      pika::future<matrix::Tile<T, Device::CPU>>& tile_t) noexcept {
+  template <typename TSender>
+  static auto trmvUpdateColumn(TSender&& tile_t) noexcept {
     namespace ex = pika::execution::experimental;
 
     // Update each column (in order) t = T . t
@@ -117,39 +116,40 @@ struct Helpers<Backend::MC, Device::CPU, T> {
         blas::trmv(blas::Layout::ColMajor, blas::Uplo::Upper, blas::Op::NoTrans, blas::Diag::NonUnit,
                    t_size.rows(), tile_t.ptr(), tile_t.ld(), tile_t.ptr(t_start), 1);
       }
+      // TODO: Why return if the tile is unused?
       return std::move(tile_t);
     };
     return dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
                                          pika::threads::thread_priority::high),
-                                     std::move(trmv_func), std::move(tile_t)) |
-           ex::make_future();
+                                     std::move(trmv_func), std::forward<TSender>(tile_t));
   }
 };
 
 #ifdef DLAF_WITH_CUDA
 template <class T>
 struct Helpers<Backend::GPU, Device::GPU, T> {
-  static pika::future<matrix::Tile<T, Device::GPU>> set0(pika::future<matrix::Tile<T, Device::GPU>>& t) {
+  template <class TSender>
+  static auto set0(TSender&& t) {
     namespace ex = pika::execution::experimental;
 
     return dlaf::internal::transform(
-               dlaf::internal::Policy<Backend::GPU>(pika::threads::thread_priority::high),
-               [](matrix::Tile<T, Device::GPU>&& tile, cudaStream_t stream) {
-                 tile::internal::set0<T>(tile, stream);
-                 return std::move(tile);
-               },
-               ex::keep_future(std::move(t))) |
-           ex::make_future();
+        dlaf::internal::Policy<Backend::GPU>(pika::threads::thread_priority::high),
+        [](matrix::Tile<T, Device::GPU>& tile, cudaStream_t stream) {
+          tile::internal::set0<T>(tile, stream);
+          return std::move(tile);
+        },
+        std::forward<TSender>(t));
   }
 
-  static pika::future<matrix::Tile<T, Device::GPU>> gemvColumnT(
-      SizeType first_row_tile, pika::shared_future<matrix::Tile<const T, Device::GPU>> tile_vi,
-      pika::shared_future<common::internal::vector<T>>& taus,
-      pika::future<matrix::Tile<T, Device::GPU>>& tile_t) noexcept {
+  template <class TSender>
+  static auto gemvColumnT(SizeType first_row_tile,
+                          pika::shared_future<matrix::Tile<const T, Device::GPU>> tile_vi,
+                          pika::shared_future<common::internal::vector<T>>& taus,
+                          TSender&& tile_t) noexcept {
     namespace ex = pika::execution::experimental;
 
     auto gemv_func = [first_row_tile](cublasHandle_t handle, const auto& tile_v, const auto& taus,
-                                      auto&& tile_t) noexcept {
+                                      auto& tile_t) noexcept {
       const SizeType k = tile_t.size().cols();
       DLAF_ASSERT(tile_v.size().cols() == k, tile_v.size().cols(), k);
       DLAF_ASSERT(taus.size() == k, taus.size(), k);
@@ -194,17 +194,16 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
                                          pika::threads::thread_priority::high),
                                      std::move(gemv_func),
                                      ex::when_all(ex::keep_future(tile_vi), ex::keep_future(taus),
-                                                  ex::keep_future(std::move(tile_t)))) |
-           ex::make_future();
+                                                  std::forward<TSender>(tile_t)));
   }
 
-  static pika::future<matrix::Tile<T, Device::GPU>> trmvUpdateColumn(
-      pika::future<matrix::Tile<T, Device::GPU>>& tile_t) noexcept {
+  template <class TSender>
+  static auto trmvUpdateColumn(TSender&& tile_t) noexcept {
     namespace ex = pika::execution::experimental;
 
     // Update each column (in order) t = T . t
     // remember that T is upper triangular, so it is possible to use TRMV
-    auto trmv_func = [](cublasHandle_t handle, matrix::Tile<T, Device::GPU>&& tile_t) {
+    auto trmv_func = [](cublasHandle_t handle, matrix::Tile<T, Device::GPU>& tile_t) {
       for (SizeType j = 0; j < tile_t.size().cols(); ++j) {
         const TileElementIndex t_start{0, j};
         const TileElementSize t_size{j, 1};
@@ -218,8 +217,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 
     return dlaf::internal::transform(dlaf::internal::Policy<Backend::GPU>(
                                          pika::threads::thread_priority::high),
-                                     std::move(trmv_func), ex::keep_future(std::move(tile_t))) |
-           ex::make_future();
+                                     std::move(trmv_func), std::forward<TSender>(tile_t));
   }
 };
 #endif
@@ -229,6 +227,8 @@ template <Backend backend, Device device, class T>
 void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& hh_panel,
                                           pika::shared_future<common::internal::vector<T>> taus,
                                           pika::future<matrix::Tile<T, device>> t) {
+  namespace ex = pika::execution::experimental;
+
   using Helpers = tfactor_l::Helpers<backend, device, T>;
   // Fast return in case of no reflectors
   if (hh_panel.getWidth() == 0)
@@ -236,7 +236,7 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
 
   const auto v_start = hh_panel.offsetElement();
 
-  t = Helpers::set0(t);
+  ex::unique_any_sender<matrix::Tile<T, device>> t_local = Helpers::set0(std::move(t));
 
   // Note:
   // T factor is an upper triangular square matrix, built column by column
@@ -264,13 +264,13 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
     // Since we are writing always on the same t, the gemv are serialized
     // A possible solution to this would be to have multiple places where to store partial
     // results, and then locally reduce them just before the reduce over ranks
-    t = Helpers::gemvColumnT(first_row_tile, hh_panel.read(v_i), taus, t);
+    t_local = Helpers::gemvColumnT(first_row_tile, hh_panel.read(v_i), taus, std::move(t_local));
   }
 
   // 2nd step: compute the T factor, by performing the last step on each column
   // each column depends on the previous part (all reflectors that comes before)
   // so it is performed sequentially
-  t = Helpers::trmvUpdateColumn(t);
+  ex::start_detached(Helpers::trmvUpdateColumn(std::move(t_local)));
 }
 
 template <Backend backend, Device device, class T>
@@ -278,6 +278,8 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
                                           pika::shared_future<common::internal::vector<T>> taus,
                                           pika::future<matrix::Tile<T, device>> t,
                                           common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
+  namespace ex = pika::execution::experimental;
+
   using Helpers = tfactor_l::Helpers<backend, device, T>;
   if constexpr (backend != Backend::MC) {
     DLAF_STATIC_UNIMPLEMENTED(T);
@@ -290,7 +292,7 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
   const auto v_start = hh_panel.offsetElement();
   auto dist = hh_panel.parentDistribution();
 
-  t = Helpers::set0(t);
+  ex::unique_any_sender<matrix::Tile<T, device>> t_local = Helpers::set0(std::move(t));
 
   // Note:
   // T factor is an upper triangular square matrix, built column by column
@@ -319,18 +321,18 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
     // Since we are writing always on the same t, the gemv are serialized
     // A possible solution to this would be to have multiple places where to store partial
     // results, and then locally reduce them just before the reduce over ranks
-    t = Helpers::gemvColumnT(first_row_tile, hh_panel.read(v_i_loc), taus, t);
+    t_local = Helpers::gemvColumnT(first_row_tile, hh_panel.read(v_i_loc), taus, std::move(t_local));
   }
 
   // at this point each rank has its partial result for each column
   // so, let's reduce the results (on all ranks, so that everyone can independently compute T factor)
   if (true)  // TODO if the column communicator has more than 1 tile...but I just have the pipeline
-    t = scheduleAllReduceInPlace(mpi_col_task_chain(), MPI_SUM, std::move(t));
+    t_local = dlaf::comm::scheduleAllReduceInPlace(mpi_col_task_chain(), MPI_SUM, std::move(t_local));
 
   // 2nd step: compute the T factor, by performing the last step on each column
   // each column depends on the previous part (all reflectors that comes before)
   // so it is performed sequentially
-  t = Helpers::trmvUpdateColumn(t);
+  ex::start_detached(Helpers::trmvUpdateColumn(std::move(t_local)));
 }
 
 }

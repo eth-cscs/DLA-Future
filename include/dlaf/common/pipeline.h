@@ -70,28 +70,29 @@ class Pipeline {
 public:
   /// Create a Pipeline by moving in the resource (it takes the ownership).
   Pipeline(T object) {
-    future_ = pika::make_ready_future(std::move(object));
+    sender_ = pika::execution::experimental::just(std::move(object));
   }
 
   /// Enqueue for the resource.
   ///
-  /// @return a future that will become ready as soon as the previous user release the resource.
-  pika::future<PromiseGuard<T>> operator()() {
-    auto before_last = std::move(future_);
+  /// @return a sender that will become ready as soon as the previous user releases the resource.
+  auto operator()() {
+    auto before_last = std::move(sender_);
 
     pika::lcos::local::promise<T> promise_next;
-    future_ = promise_next.get_future();
+    sender_ = promise_next.get_future();
 
     auto make_promise_guard = [promise_next = std::move(promise_next)](T object) mutable {
       return PromiseGuard<T>{std::move(object), std::move(promise_next)};
     };
 
     namespace ex = pika::execution::experimental;
-    return std::move(before_last) | ex::then(std::move(make_promise_guard)) | ex::make_future();
+    return std::move(before_last) | ex::then(std::move(make_promise_guard));
   }
 
 private:
-  pika::future<T> future_;  ///< This contains always the "tail" of the queue of futures.
+  pika::execution::experimental::unique_any_sender<T>
+      sender_;  ///< This contains always the "tail" of the queue of senders.
 };
 }
 }

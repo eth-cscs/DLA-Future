@@ -109,7 +109,7 @@ struct BandBlock {
 
     if constexpr (D == Device::CPU) {
       return transform(
-          dlaf::internal::Policy<B>(),
+          dlaf::internal::Policy<B>(pika::threads::thread_priority::high),
           [=](const matrix::Tile<const T, D>& source) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Lower = blas::Uplo::Lower;
@@ -141,7 +141,7 @@ struct BandBlock {
     else if constexpr (D == Device::GPU) {
       DLAF_ASSERT_HEAVY(isAccessibleFromGPU(), "BandBlock memory should be accessible from GPU");
       return transform(
-          dlaf::internal::Policy<B>(),
+          dlaf::internal::Policy<B>(pika::threads::thread_priority::high),
           [=](const matrix::Tile<const T, D>& source, cudaStream_t stream) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Lower = blas::Uplo::Lower;
@@ -185,7 +185,7 @@ struct BandBlock {
 
     if constexpr (D == Device::CPU) {
       return transform(
-          dlaf::internal::Policy<B>(),
+          dlaf::internal::Policy<B>(pika::threads::thread_priority::high),
           [=](const matrix::Tile<const T, D>& source) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Upper = blas::Uplo::Upper;
@@ -215,7 +215,7 @@ struct BandBlock {
     else if constexpr (D == Device::GPU) {
       DLAF_ASSERT_HEAVY(isAccessibleFromGPU(), "BandBlock memory should be accessible from GPU");
       return transform(
-          dlaf::internal::Policy<B>(),
+          dlaf::internal::Policy<B>(pika::threads::thread_priority::high),
           [=](const matrix::Tile<const T, D>& source, cudaStream_t stream) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Upper = blas::Uplo::Upper;
@@ -347,8 +347,8 @@ protected:
 
   SizeType size_;
   SizeType band_size_;
-  SizeType sweep_;
-  SizeType step_;
+  SizeType sweep_ = 0;
+  SizeType step_ = 0;
   memory::MemoryView<T, Device::CPU> data_;
 };
 
@@ -372,7 +372,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   // Need share pointer to keep the allocation until all the tasks are executed.
   auto a_ws = std::make_shared<BandBlock<T>>(size, b);
 
-  Matrix<BaseType<T>, Device::CPU> mat_trid({2, size}, {2, nb});
+  Matrix<BaseType<T>, Device::CPU> mat_trid({size, 2}, {nb, 2});
   Matrix<T, Device::CPU> mat_v({size, size}, {nb, nb});
   const auto& dist_v = mat_v.distribution();
 
@@ -381,7 +381,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   }
 
   const auto max_deps_size = ceilDiv(size, b);
-  vector<pika::shared_future<void>> deps;
+  vector<pika::execution::experimental::any_sender<>> deps;
   deps.reserve(max_deps_size);
 
   auto copy_diag = [a_ws](SizeType j, auto source) {
@@ -394,16 +394,15 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
 
   // Copy the band matrix
   for (SizeType k = 0; k < nrtile; ++k) {
-    pika::shared_future<void> sf =
-        ex::make_future(copy_diag(k * nb, mat_a.read_sender(GlobalTileIndex{k, k})));
+    auto sf = copy_diag(k * nb, mat_a.read_sender(GlobalTileIndex{k, k})) | ex::split();
     if (k < nrtile - 1) {
       for (int i = 0; i < nb / b - 1; ++i) {
         deps.push_back(sf);
       }
-      sf = ex::make_future(
-          copy_offdiag(k * nb,
-                       ex::when_all(ex::keep_future(sf), mat_a.read_sender(GlobalTileIndex{k + 1, k}))));
-      deps.push_back(sf);
+      auto sf2 = copy_offdiag(k * nb, ex::when_all(std::move(sf),
+                                                   mat_a.read_sender(GlobalTileIndex{k + 1, k}))) |
+                 ex::split();
+      deps.push_back(std::move(sf2));
     }
     else {
       while (deps.size() < max_deps_size) {
@@ -419,14 +418,14 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   for (SizeType i = 0; i < max_workers; ++i)
     workers.emplace_back(SweepWorker<T>(size, b));
 
-  auto init_sweep = [a_ws](SizeType sweep, PromiseGuard<SweepWorker<T>>&& worker) {
+  auto init_sweep = [a_ws](SizeType sweep, PromiseGuard<SweepWorker<T>> worker) {
     worker.ref().startSweep(sweep, *a_ws);
   };
-  auto store_tau_v = [](PromiseGuard<SweepWorker<T>>&& worker, matrix::Tile<T, Device::CPU>&& tile_v,
+  auto store_tau_v = [](PromiseGuard<SweepWorker<T>> worker, matrix::Tile<T, Device::CPU>&& tile_v,
                         TileElementIndex index) {
     worker.ref().compactCopyToTile(std::move(tile_v), index);
   };
-  auto cont_sweep = [a_ws](PromiseGuard<SweepWorker<T>>&& worker) { worker.ref().doStep(*a_ws); };
+  auto cont_sweep = [a_ws](PromiseGuard<SweepWorker<T>> worker) { worker.ref().doStep(*a_ws); };
 
   auto policy_hp = dlaf::internal::Policy<Backend::MC>(pika::threads::thread_priority::high);
   auto copy_tridiag = [policy_hp, a_ws, &mat_trid](SizeType sweep, auto&& dep) {
@@ -436,19 +435,22 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
         // skip imaginary part if Complex.
         inc *= 2;
 
-      blas::copy(n_d, (BaseType<T>*) a_ws->ptr(0, start), inc, tile_t.ptr({0, 0}), tile_t.ld());
-      blas::copy(n_e, (BaseType<T>*) a_ws->ptr(1, start), inc, tile_t.ptr({1, 0}), tile_t.ld());
+      blas::copy(n_d, (BaseType<T>*) a_ws->ptr(0, start), inc, tile_t.ptr({0, 0}), 1);
+      blas::copy(n_e, (BaseType<T>*) a_ws->ptr(1, start), inc, tile_t.ptr({0, 1}), 1);
     };
 
-    const auto size = mat_trid.size().cols();
-    const auto nb = mat_trid.blockSize().cols();
+    const auto size = mat_trid.size().rows();
+    const auto nb = mat_trid.blockSize().rows();
     if (sweep % nb == nb - 1 || sweep == size - 1) {
       const auto tile_index = sweep / nb;
       const auto start = tile_index * nb;
       dlaf::internal::whenAllLift(start, std::min(nb, size - start), std::min(nb, size - 1 - start),
-                                  mat_trid.readwrite_sender(GlobalTileIndex{0, tile_index}),
+                                  mat_trid.readwrite_sender(GlobalTileIndex{tile_index, 0}),
                                   std::forward<decltype(dep)>(dep)) |
           dlaf::internal::transformDetach(policy_hp, copy_tridiag_task);
+    }
+    else {
+      ex::start_detached(std::forward<decltype(dep)>(dep));
     }
   };
 
@@ -458,7 +460,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     auto& w_pipeline = workers[sweep % max_workers];
 
     auto dep = dlaf::internal::whenAllLift(sweep, w_pipeline(), deps[0]) |
-               dlaf::internal::transform(policy_hp, init_sweep) | ex::make_future();
+               dlaf::internal::transform(policy_hp, init_sweep);
     copy_tridiag(sweep, std::move(dep));
 
     const auto steps = nrStepsForSweep(sweep, size, b);
@@ -471,7 +473,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
                                   dist_v.tileElementIndex(index_v)) |
           ex::then(store_tau_v) | ex::start_detached();
       deps[step] = dlaf::internal::whenAllLift(w_pipeline(), deps[dep_index]) |
-                   dlaf::internal::transform(policy_hp, cont_sweep) | ex::make_future();
+                   dlaf::internal::transform(policy_hp, cont_sweep) | ex::split();
     }
 
     // Shrink the dependency vector to only include the futures generated in this sweep.
@@ -483,7 +485,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     // only needed for real types as they don't perform sweep size-2
     copy_tridiag(size - 2, deps[0]);
   }
-  copy_tridiag(size - 1, deps[0]);
+  copy_tridiag(size - 1, std::move(deps[0]));
 
   return {std::move(mat_trid), std::move(mat_v)};
 }

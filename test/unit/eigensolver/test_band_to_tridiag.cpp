@@ -67,11 +67,11 @@ void testBandToTridiag(const blas::Uplo uplo, const SizeType band_size, const Si
   set(mat_local, [](auto) { return T{0}; });
 
   for (SizeType j = 0; j < m - 1; ++j) {
-    mat_local({j, j}) = mat_trid_local({0, j});
-    mat_local({j + 1, j}) = mat_trid_local({1, j});
-    mat_local({j, j + 1}) = mat_trid_local({1, j});
+    mat_local({j, j}) = mat_trid_local({j, 0});
+    mat_local({j + 1, j}) = mat_trid_local({j, 1});
+    mat_local({j, j + 1}) = mat_trid_local({j, 1});
   }
-  mat_local({m - 1, m - 1}) = mat_trid_local({0, m - 1});
+  mat_local({m - 1, m - 1}) = mat_trid_local({m - 1, 0});
 
   auto mat_v_local = matrix::test::allGather(blas::Uplo::General, mat_v);
 

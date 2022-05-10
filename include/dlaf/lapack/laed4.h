@@ -43,10 +43,11 @@ namespace internal {
 ///    the i-th updated eigenvalue
 ///
 /// This overload blocks until completion of the algorithm.
-void laed4_wrapper(int n, int i, float const* d, float const* z, float* delta, float rho, float* lambda);
+void laed4_wrapper(int n, int i, float const* d, float const* z, float* delta, float rho,
+                   float* lambda) noexcept;
 
 void laed4_wrapper(int n, int i, double const* d, double const* z, double* delta, double rho,
-                   double* lambda);
+                   double* lambda) noexcept;
 
 }
 }

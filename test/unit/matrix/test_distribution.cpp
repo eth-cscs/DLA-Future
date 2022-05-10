@@ -288,51 +288,51 @@ TEST(DistributionTest, DistanceToAdjacentTile) {
   // Columns
   //
   // Inside a tile
-  EXPECT_TRUE(distr.distanceToAdjacentTile<Coord::Col>(7) == 2);
+  EXPECT_EQ(2, distr.distanceToAdjacentTile<Coord::Col>(7));
   // At the start of tile
-  EXPECT_TRUE(distr.distanceToAdjacentTile<Coord::Col>(6) == 3);
+  EXPECT_EQ(3, distr.distanceToAdjacentTile<Coord::Col>(6));
   // At the end of tile
-  EXPECT_TRUE(distr.distanceToAdjacentTile<Coord::Col>(5) == 1);
+  EXPECT_EQ(1, distr.distanceToAdjacentTile<Coord::Col>(5));
   // At the beginning of matrix
-  EXPECT_TRUE(distr.distanceToAdjacentTile<Coord::Col>(0) == 3);
+  EXPECT_EQ(3, distr.distanceToAdjacentTile<Coord::Col>(0));
   // At the end of matrix
-  EXPECT_TRUE(distr.distanceToAdjacentTile<Coord::Col>(9) == 1);
+  EXPECT_EQ(1, distr.distanceToAdjacentTile<Coord::Col>(9));
 
   // Rows
   //
   // Inside a tile
-  EXPECT_TRUE(distr.distanceToAdjacentTile<Coord::Row>(1) == 2);
+  EXPECT_EQ(2, distr.distanceToAdjacentTile<Coord::Row>(1));
   // At the start of tile
-  EXPECT_TRUE(distr.distanceToAdjacentTile<Coord::Row>(3) == 3);
+  EXPECT_EQ(3, distr.distanceToAdjacentTile<Coord::Row>(3));
   // At the end of tile
-  EXPECT_TRUE(distr.distanceToAdjacentTile<Coord::Row>(8) == 1);
+  EXPECT_EQ(1, distr.distanceToAdjacentTile<Coord::Row>(8));
   // At the beginning of matrix
-  EXPECT_TRUE(distr.distanceToAdjacentTile<Coord::Row>(0) == 3);
+  EXPECT_EQ(3, distr.distanceToAdjacentTile<Coord::Row>(0));
   // At the end of matrix
-  EXPECT_TRUE(distr.distanceToAdjacentTile<Coord::Row>(9) == 1);
+  EXPECT_EQ(1, distr.distanceToAdjacentTile<Coord::Row>(9));
 }
 
 TEST(DistributionTest, TileSizeFromGlobalElement) {
   matrix::Distribution distr(LocalElementSize(8, 7), TileElementSize(3, 2));
 
   // Rows
-  EXPECT_TRUE(distr.tileSizeFromGlobalElement<Coord::Row>(1) == 3);
-  EXPECT_TRUE(distr.tileSizeFromGlobalElement<Coord::Row>(5) == 3);
-  EXPECT_TRUE(distr.tileSizeFromGlobalElement<Coord::Row>(7) == 2);
+  EXPECT_EQ(3, distr.tileSizeFromGlobalElement<Coord::Row>(1));
+  EXPECT_EQ(3, distr.tileSizeFromGlobalElement<Coord::Row>(5));
+  EXPECT_EQ(2, distr.tileSizeFromGlobalElement<Coord::Row>(7));
 
   // Cols
-  EXPECT_TRUE(distr.tileSizeFromGlobalElement<Coord::Col>(1) == 2);
-  EXPECT_TRUE(distr.tileSizeFromGlobalElement<Coord::Col>(3) == 2);
-  EXPECT_TRUE(distr.tileSizeFromGlobalElement<Coord::Col>(6) == 1);
+  EXPECT_EQ(2, distr.tileSizeFromGlobalElement<Coord::Col>(1));
+  EXPECT_EQ(2, distr.tileSizeFromGlobalElement<Coord::Col>(3));
+  EXPECT_EQ(1, distr.tileSizeFromGlobalElement<Coord::Col>(6));
 }
 
 TEST(DistributionTest, GlobalTileLinearIndex) {
   matrix::Distribution distr(LocalElementSize(10, 10), TileElementSize(3, 3));
 
   // Start of matrix
-  EXPECT_TRUE(distr.globalTileLinearIndex(GlobalElementIndex(0, 0)) == 0);
+  EXPECT_EQ(0, distr.globalTileLinearIndex(GlobalElementIndex(0, 0)));
   // End of matrix
-  EXPECT_TRUE(distr.globalTileLinearIndex(GlobalElementIndex(9, 9)) == 15);
-  EXPECT_TRUE(distr.globalTileLinearIndex(GlobalElementIndex(5, 5)) == 5);
-  EXPECT_TRUE(distr.globalTileLinearIndex(GlobalElementIndex(9, 4)) == 7);
+  EXPECT_EQ(15, distr.globalTileLinearIndex(GlobalElementIndex(9, 9)));
+  EXPECT_EQ(5, distr.globalTileLinearIndex(GlobalElementIndex(5, 5)));
+  EXPECT_EQ(7, distr.globalTileLinearIndex(GlobalElementIndex(9, 4)));
 }

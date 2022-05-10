@@ -70,7 +70,6 @@ auto senderReduceRecvInPlace(CommSender&& pcomm, MPI_Op reduce_op, Sender&& tile
   namespace ex = pika::execution::experimental;
 
   using dlaf::internal::getBackendScheduler;
-  using dlaf::internal::Policy;
   using dlaf::internal::transform;
   using dlaf::internal::whenAllLift;
   using dlaf::matrix::Tile;
@@ -157,30 +156,30 @@ void scheduleReduceRecvInPlace(CommSender&& pcomm, MPI_Op reduce_op,
   using dlaf::internal::transform;
 
   std::move(tile) |
-      ex::let_value(
-          pika::unwrapping([reduce_op, pcomm = std::forward<CommSender>(pcomm)](auto& tile_gpu) mutable {
-            using dlaf::internal::Policy;
-            using dlaf::matrix::internal::CopyBackend;
+      ex::let_value(pika::unwrapping([reduce_op,
+                                      pcomm = std::forward<CommSender>(pcomm)](auto& tile_gpu) mutable {
+        using dlaf::internal::Policy;
+        using dlaf::matrix::copy;
+        using dlaf::matrix::internal::CopyBackend;
+        using dlaf::internal::whenAllLift;
 
-            // GPU -> cCPU
-            auto tile_cpu = transform(
-                Policy<CopyBackend<D, Device::CPU>::value>(pika::threads::thread_priority::high),
-                [](const matrix::Tile<const T, Device::GPU>& tile_gpu, auto... args) mutable {
-                  return dlaf::matrix::Duplicate<Device::CPU>{}(tile_gpu, args...);
-                },
-                ex::just(std::cref(tile_gpu)));
+        // GPU -> cCPU
+        auto tile_cpu = transform(
+            Policy<CopyBackend<D, Device::CPU>::value>(pika::threads::thread_priority::high),
+            [](const matrix::Tile<const T, Device::GPU>& tile_gpu, auto... args) mutable {
+              return dlaf::matrix::Duplicate<Device::CPU>{}(tile_gpu, args...);
+            },
+            ex::just(std::cref(tile_gpu)));
 
-            // cCPU -> MPI -> cCPU
-            auto tile_reduced =
-                internal::senderReduceRecvInPlace(std::move(pcomm), reduce_op, std::move(tile_cpu));
+        // cCPU -> MPI -> cCPU
+        auto tile_reduced =
+            internal::senderReduceRecvInPlace(std::move(pcomm), reduce_op, std::move(tile_cpu));
 
-            // cCPU -> GPU
-            namespace arg = std::placeholders;
-            return transform(Policy<CopyBackend<Device::CPU, D>::value>(
-                                 pika::threads::thread_priority::high),
-                             std::bind(matrix::internal::copy_o, arg::_1, std::cref(tile_gpu), arg::_2),
-                             std::move(tile_reduced));
-          })) |
+        // cCPU -> GPU
+        namespace arg = std::placeholders;
+        return whenAllLift(std::move(tile_reduced), std::cref(tile_gpu)) |
+               copy(Policy<CopyBackend<Device::CPU, D>::value>(pika::threads::thread_priority::high));
+      })) |
       ex::start_detached();
 }
 

@@ -100,38 +100,33 @@ struct ScheduleRecvBcast {
     using dlaf::internal::Policy;
     using dlaf::internal::transform;
     using dlaf::internal::whenAllLift;
+    using dlaf::matrix::copy;
     using dlaf::matrix::Duplicate;
     using dlaf::matrix::Tile;
-    using dlaf::matrix::internal::copy_o;
     using pika::threads::thread_priority;
 
-    // TODO: std::bind currently serves as a reference_wrapper unwrapper until
-    // https://github.com/eth-cscs/DLA-Future/issues/492 is resolved.
     return std::move(tile_gpu) |
            // Start an asynchronous scope for keeping the GPU tile alive until
            // data has been copied back into it.
-           ex::let_value(
-               [=, pcomm = std::forward<CommSender>(pcomm)](Tile<T, Device::GPU>& tile_gpu) mutable {
-                 // Create a CPU tile with the same dimensions as the GPU tile.
-                 return ex::just() |
-                        transform(Policy<Backend::GPU>(thread_priority::high),
-                                  std::bind(Duplicate<Device::CPU>{}, std::cref(tile_gpu),
-                                            std::placeholders::_1)) |
-                        // Start an asynchronous scoped for keeping the CPU tile
-                        // alive until data has been copied away from it.
-                        ex::let_value([=, pcomm = std::move(pcomm),
-                                       &tile_gpu](Tile<T, Device::CPU>& tile_cpu) mutable {
-                          return std::move(pcomm) |
-                                 // Perform the actual receive into the CPU tile.
-                                 transformMPI(std::bind(recvBcast_o, std::cref(tile_cpu), root_rank,
-                                                        std::placeholders::_1, std::placeholders::_2)) |
-                                 // Copy the received data from the CPU tile to the
-                                 // GPU tile.
-                                 transform(Policy<Backend::GPU>(thread_priority::high),
-                                           std::bind(copy_o, std::cref(tile_cpu), std::cref(tile_gpu),
-                                                     std::placeholders::_1));
-                        });
-               });
+           ex::let_value([=, pcomm = std::forward<CommSender>(pcomm)](
+                             Tile<T, Device::GPU>& tile_gpu) mutable {
+             // Create a CPU tile with the same dimensions as the GPU tile.
+             return ex::just(std::cref(tile_gpu)) |
+                    transform(Policy<Backend::GPU>(thread_priority::high), Duplicate<Device::CPU>{}) |
+                    // Start an asynchronous scope for keeping the CPU tile
+                    // alive until data has been copied away from it.
+                    ex::let_value([=, pcomm = std::move(pcomm),
+                                   &tile_gpu](Tile<T, Device::CPU>& tile_cpu) mutable {
+                      // Perform the actual receive into the CPU tile.
+                      auto recv_sender = whenAllLift(std::cref(tile_cpu), root_rank, std::move(pcomm)) |
+                                         transformMPI(recvBcast_o);
+                      // Copy the received data from the CPU tile to the
+                      // GPU tile.
+                      return whenAllLift(std::move(recv_sender), std::cref(tile_cpu),
+                                         std::cref(tile_gpu)) |
+                             copy(Policy<Backend::GPU>(thread_priority::high));
+                    });
+           });
   }
 #endif
 };

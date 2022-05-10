@@ -281,8 +281,6 @@ TYPED_TEST(RealTileOperationsTestMC, Stedc) {
 
   using RealParam = BaseType<TypeParam>;
 
-  constexpr double pi = 3.14159265358979323846;
-
   SizeType sz = 10;
 
   // Tridiagonal tile : 1D Laplacian
@@ -309,7 +307,7 @@ TYPED_TEST(RealTileOperationsTestMC, Stedc) {
   auto expected_tridiag_f = [sz](const TileElementIndex& idx) {
     if (idx.col() == 0) {
       // the diagonal (first column) holds the eigenvalues
-      return RealParam(2 * (1 - std::cos(pi * (idx.row() + 1) / (sz + 1))));
+      return RealParam(2 * (1 - std::cos(M_PI * (idx.row() + 1) / (sz + 1))));
     }
     else if (idx.col() == 1 && idx.row() == sz - 1) {
       // the last element of the second column is unused and is left unchanged
@@ -326,7 +324,7 @@ TYPED_TEST(RealTileOperationsTestMC, Stedc) {
   auto expected_evecs_f = [sz](const TileElementIndex& idx) {
     SizeType j = idx.col() + 1;
     SizeType k = idx.row() + 1;
-    return TypeParam(std::sqrt(2.0 / (sz + 1)) * std::sin(j * k * pi / (sz + 1)));
+    return TypeParam(std::sqrt(2.0 / (sz + 1)) * std::sin(j * k * M_PI / (sz + 1)));
   };
 
   // Eigenvalues
@@ -341,14 +339,15 @@ TYPED_TEST(RealTileOperationsTestMC, Stedc) {
 
     tile::internal::scaleCol(TypeParam(-1), i, evecs);
   }
-  CHECK_TILE_NEAR(expected_evecs_f, evecs, 1e-6, 1e-6);
+  CHECK_TILE_NEAR(expected_evecs_f, evecs, sz * TypeUtilities<TypeParam>::error,
+                  sz * TypeUtilities<TypeParam>::error);
 }
 
 TYPED_TEST(TileOperationsTestMC, ScaleCol) {
   TileElementSize tile_size{5, 5};
   auto tile_fn = [](const TileElementIndex& idx) { return TypeParam(idx.row() + idx.col()); };
   auto tile = createTile<TypeParam, Device::CPU>(std::move(tile_fn), tile_size, tile_size.rows());
-  TypeParam alpha = 4.2;
+  TypeParam alpha = 4.2f;
   SizeType col = 3;
 
   tile::internal::scaleCol(alpha, col, tile);

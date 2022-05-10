@@ -70,7 +70,7 @@ struct ColTypeLens {
   SizeType num_deflated;
 };
 
-// Auxialiary matrix and vectors used for the D&C algorithm
+// Auxiliary matrix and vectors used for the D&C algorithm
 template <class T>
 struct WorkSpace {
   WorkSpace(WorkSpace&&) = default;

@@ -521,7 +521,7 @@ void potrf(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<
 }
 
 template <class T>
-void stedc(cusolverDnHandle_t, const Tile<BaseType<T>, Device::CPU>&, const Tile<T, Device::CPU>&) {
+void stedc(cusolverDnHandle_t, const Tile<BaseType<T>, Device::GPU>&, const Tile<T, Device::GPU>&) {
   DLAF_STATIC_UNIMPLEMENTED(T);
 }
 #endif

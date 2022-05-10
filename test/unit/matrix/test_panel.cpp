@@ -152,7 +152,7 @@ void testAccess(const config_t& cfg, const comm::CommunicatorGrid comm_grid) {
 
   // ro-access
   for (const auto& idx : panel.iteratorLocal())
-    CHECK_MATRIX_EQ(TypeUtil::element(idx.get(coord), 26), panel.read(idx).get());
+    CHECK_TILE_EQ(TypeUtil::element(idx.get(coord), 26), panel.read(idx).get());
 
   // Repeat the same test with sender adaptors
 
@@ -169,8 +169,8 @@ void testAccess(const config_t& cfg, const comm::CommunicatorGrid comm_grid) {
 
   // ro-access
   for (const auto& idx : panel.iteratorLocal())
-    CHECK_MATRIX_EQ(TypeUtil::element(idx.get(coord), 42),
-                    pika::this_thread::experimental::sync_wait(panel.read_sender(idx)).get());
+    CHECK_TILE_EQ(TypeUtil::element(idx.get(coord), 42),
+                  pika::this_thread::experimental::sync_wait(panel.read_sender(idx)).get());
 }
 
 TYPED_TEST(PanelTest, AccessTileCol) {

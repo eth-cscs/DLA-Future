@@ -211,7 +211,6 @@ void checkTileEQ(ElementGetter&& exp_el, const Tile<const T, D>& tile, const cha
                  const int line) {
   auto err_message = [](T expected, T value) {
     std::stringstream s;
-    s.precision(17);
     s << "expected " << expected << " == " << value;
     return s.str();
   };

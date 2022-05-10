@@ -13,6 +13,7 @@
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/util_matrix.h"
 #include "dlaf/types.h"
 
 namespace dlaf::eigensolver::internal {
@@ -77,7 +78,7 @@ void submatrixGEMM(SizeType len_m, SizeType len_n, SizeType len_k, GlobalElement
                    const std::vector<matrix::Tile<T, Device::CPU>>& tiles_a,
                    const std::vector<matrix::Tile<T, Device::CPU>>& tiles_b,
                    std::vector<matrix::Tile<T, Device::CPU>>& tiles_c) {
-  DLAF_ASSERT(distr.blockSize().rows() == distr.blockSize().cols(), distr.blockSize());
+  DLAF_ASSERT(matrix::square_blocksize(distr), distr.blockSize());
   SizeType nb = distr.blockSize().rows();
 
   std::vector<SizeType> splits_m =

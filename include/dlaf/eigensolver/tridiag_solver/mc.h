@@ -53,7 +53,7 @@ inline void splitIntervalInTheMiddleRecursively(
 }
 
 /// Generates an array of triad indices. Each triad is composed of begin <= middle < end indices and
-/// represents two intervals [begin, middle] and [middle + 1, end]. The two intervals are the subprobelms
+/// represents two intervals [begin, middle] and [middle + 1, end]. The two intervals are the subproblems
 /// that have to be merged to arrive at [begin, end].
 ///
 /// Note: the intervals are all closed!
@@ -66,7 +66,7 @@ inline std::vector<std::tuple<SizeType, SizeType, SizeType>> generateSubproblemI
   return indices;
 }
 
-// Cuppen's decompostion
+// Cuppen's decomposition
 //
 // Substracts the offdiagonal element at the split from the top and bottom diagonal elements and returns
 // the offdiagonal element. The split is between the last row of the top tile and the first row of the

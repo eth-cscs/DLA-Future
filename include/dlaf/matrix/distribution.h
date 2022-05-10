@@ -299,6 +299,29 @@ public:
             std::min(block_size_.cols(), size_.cols() - index.col() * block_size_.cols())};
   }
 
+  /// Returns the size of the tile that contains @p i_gl along the @p rc coordinate.
+  template <Coord rc>
+  SizeType tileSizeFromGlobalElement(SizeType i_gl) const noexcept {
+    SizeType n = size_.get<rc>();
+    DLAF_ASSERT_HEAVY(0 <= i_gl && i_gl < n, i_gl, n);
+    SizeType nb = block_size_.get<rc>();
+    SizeType i_tile = util::matrix::tileFromElement(i_gl, nb);
+    return std::min(nb, n - i_tile * nb);
+  }
+
+  /// Returns the distance from the global index @p i_gl to the tile adjacent the one containing @p i_gl
+  /// along @p rc coordinate.
+  template <Coord rc>
+  SizeType distanceToAdjacentTile(SizeType i_gl) const noexcept {
+    return tileSizeFromGlobalElement<rc>(i_gl) - tileElementFromGlobalElement<rc>(i_gl);
+  }
+
+  /// Returns a global linear column-major index of the tile that contains @p i_gl
+  SizeType globalTileLinearIndex(GlobalElementIndex i_gl) const noexcept {
+    GlobalTileIndex i_tile = globalTileIndex(i_gl);
+    return i_tile.row() + i_tile.col() * global_nr_tiles_.rows();
+  }
+
 private:
   /// Computes and sets @p size_.
   ///

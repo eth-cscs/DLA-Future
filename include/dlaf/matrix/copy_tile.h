@@ -164,7 +164,8 @@ void copy(TileElementSize region, TileElementIndex in_idx, const Tile<const T, D
 DLAF_MAKE_CALLABLE_OBJECT(copy);
 }
 
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(copy, internal::copy_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::transform_dispatch_tag::plain,
+        copy, internal::copy_o)
 
 /// Helper struct for copying a given tile to a tile on Destination.
 ///

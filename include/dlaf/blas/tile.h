@@ -383,13 +383,20 @@ DLAF_MAKE_CALLABLE_OBJECT(trmm3);
 DLAF_MAKE_CALLABLE_OBJECT(trsm);
 }
 
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(gemm, internal::gemm_o)
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(hemm, internal::hemm_o)
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(her2k, internal::her2k_o)
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(herk, internal::herk_o)
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(trmm, internal::trmm_o)
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(trmm3, internal::trmm3_o)
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(trsm, internal::trsm_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::transform_dispatch_tag::blas,
+        gemm, internal::gemm_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::transform_dispatch_tag::blas,
+        hemm, internal::hemm_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::transform_dispatch_tag::blas,
+        her2k, internal::her2k_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::transform_dispatch_tag::blas,
+        herk, internal::herk_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::transform_dispatch_tag::blas,
+        trmm, internal::trmm_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::transform_dispatch_tag::blas,
+        trmm3, internal::trmm3_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::transform_dispatch_tag::blas,
+        trsm, internal::trsm_o)
 
 #endif
 }

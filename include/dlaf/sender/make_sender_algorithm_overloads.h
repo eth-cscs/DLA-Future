@@ -29,11 +29,11 @@
 /// 3. One that takes a policy and the arguments required by the callable. This is almost equivalent to
 ///    calling the callable directly with the required arguments, with the difference that this overload
 ///    does the required synchronization before returning in cases when the callable is not blocking.
-#define DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(fname, callable)                                    \
+#define DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(tag, fname, callable)                                    \
   template <Backend B, typename Sender,                                                          \
             typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>     \
   auto fname(const dlaf::internal::Policy<B> p, Sender&& s) {                                    \
-    return dlaf::internal::transform<B>(p, callable, std::forward<Sender>(s));                   \
+    return dlaf::internal::transform<B, tag>(p, callable, std::forward<Sender>(s));              \
   }                                                                                              \
                                                                                                  \
   template <Backend B>                                                                           \

@@ -77,7 +77,8 @@ void add(cublasHandle_t handle, T alpha, const matrix::Tile<const T, Device::GPU
 DLAF_MAKE_CALLABLE_OBJECT(add);
 }
 
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(add, internal::add_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(internal::transform_dispatch_tag::plain,
+        add, internal::add_o)
 
 #endif
 }

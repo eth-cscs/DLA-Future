@@ -29,6 +29,17 @@
 
 namespace dlaf {
 namespace internal {
+
+// hipBLAS functions take a handle of type hipblasHandle_t which is a typedef
+// for a void pointer. Those functions can be therefore called with a
+// rocblas_handle (handle used for rocsolver functions). This tag is here to
+// disambiguate the call.
+enum class transform_dispatch_tag {
+    plain,
+    blas,
+    lapack
+};
+
 // The following are DLA-Future-specific transforms, with some helper variations
 // for convenience and to approximate the behaviour of dataflow. Unlike
 // execution::then, the transforms below insert additional arguments for the GPU
@@ -68,7 +79,7 @@ template <typename F>
 TransformCallHelper(F &&) -> TransformCallHelper<std::decay_t<F>>;
 
 /// Lazy transform. This does not submit the work and returns a sender.
-template <Backend B, typename F, typename Sender,
+template <Backend B, typename F, typename Sender, transform_dispatch_tag Tag,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 [[nodiscard]] decltype(auto) transform(const Policy<B> policy, F&& f, Sender&& sender) {
   using pika::unwrapping;
@@ -88,19 +99,14 @@ template <Backend B, typename F, typename Sender,
     using pika::cuda::experimental::then_with_cusolver;
     using pika::cuda::experimental::then_with_stream;
 
-    if constexpr (std::is_invocable_v<decltype(then_with_stream), decltype(std::move(transfer_sender)),
-                                      decltype(std::move(f_unwrapping))>) {
+    if constexpr (Tag == transform_dispatch_tag::plain) {
       return then_with_stream(std::move(transfer_sender), std::move(f_unwrapping));
     }
-    else if constexpr (std::is_invocable_v<decltype(then_with_cublas),
-                                           decltype(std::move(transfer_sender)),
-                                           decltype(std::move(f_unwrapping)), cublasPointerMode_t>) {
+    else if constexpr (Tag == transform_dispatch_tag::blas) {
       return then_with_cublas(std::move(transfer_sender), std::move(f_unwrapping),
                               CUBLAS_POINTER_MODE_HOST);
     }
-    else if constexpr (std::is_invocable_v<decltype(then_with_cusolver),
-                                           decltype(std::move(transfer_sender)),
-                                           decltype(std::move(f_unwrapping))>) {
+    else if constexpr (Tag == transform_dispatch_tag::lapack) {
       return then_with_cusolver(std::move(transfer_sender), std::move(f_unwrapping));
     }
     else {
@@ -151,7 +157,7 @@ struct PartialTransformBase {
 /// A partially applied transform, with the policy and callable object given,
 /// but the predecessor sender missing. The predecessor sender is applied when
 /// calling the operator| overload.
-template <Backend B, typename F>
+template <Backend B, typename F, transform_dispatch_tag Tag>
 class PartialTransform : private PartialTransformBase<B, F> {
 public:
   template <typename F_>
@@ -164,12 +170,12 @@ public:
 
   template <typename Sender>
   friend auto operator|(Sender&& sender, const PartialTransform pa) {
-    return transform<B>(pa.policy_, std::move(pa.f_), std::forward<Sender>(sender));
+    return transform<B, Tag>(pa.policy_, std::move(pa.f_), std::forward<Sender>(sender));
   }
 };
 
-template <Backend B, typename F>
-PartialTransform(const Policy<B> policy, F&& f) -> PartialTransform<B, std::decay_t<F>>;
+//template <Backend B, typename F, transform_dispatch_tag Tag>
+//PartialTransform(const Policy<B> policy, F&& f) -> PartialTransform<B, std::decay_t<F>, Tag>;
 
 /// A partially applied transformDetach, with the policy and callable object
 /// given, but the predecessor sender missing. The predecessor sender is applied
@@ -199,9 +205,9 @@ PartialTransformDetach(const Policy<B> policy, F&& f) -> PartialTransformDetach<
 ///
 /// This overload partially applies the transform for later use with operator|
 /// with a sender on the left-hand side.
-template <Backend B, typename F>
+template <Backend B, typename F, transform_dispatch_tag Tag>
 [[nodiscard]] decltype(auto) transform(const Policy<B> policy, F&& f) {
-  return PartialTransform{policy, std::forward<F>(f)};
+  return PartialTransform{policy, std::forward<F>(f), Tag};
 }
 
 /// \overload transformDetach

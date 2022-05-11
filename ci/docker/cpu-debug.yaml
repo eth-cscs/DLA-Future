@@ -27,6 +27,7 @@ spack:
     pika:
       variants:
         - 'build_type=Debug'
+        - 'malloc=system'
     mpich:
       version:
         - 3.4.2

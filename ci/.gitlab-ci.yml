@@ -19,7 +19,7 @@ stages:
     - trying
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
-    SPACK_SHA: 2418cfb79b46491122baad8efd6af596078b396d
+    SPACK_SHA: 63f7053fe8a99c5718a15e94ca385f1c478d53e4
     SPACK_DLAF_REPO: ./spack
   before_script:
     - docker login -u $CSCS_REGISTRY_USER -p $CSCS_REGISTRY_PASSWORD $CSCS_REGISTRY
@@ -36,7 +36,7 @@ stages:
     - docker build -t $BUILD_IMAGE:$TAG -t $BUILD_IMAGE:latest --cache-from $BUILD_IMAGE:$TAG --cache-from $BUILD_IMAGE:latest --build-arg BASE_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg SPACK_SHA --build-arg EXTRA_APTGET --build-arg COMPILER --build-arg SPACK_ENVIRONMENT --build-arg SPACK_DLAF_REPO --build-arg USE_MKL -f $BUILD_DOCKER_FILE --network=host .
     - docker push $BUILD_IMAGE:$TAG
     - docker push $BUILD_IMAGE:latest
-    - docker build -t $DEPLOY_IMAGE --build-arg BUILD_IMAGE=$BUILD_IMAGE:$TAG --build-arg DEPLOY_BASE_IMAGE --build-arg USE_MKL -f $DEPLOY_DOCKER_FILE --network=host .
+    - docker build -t $DEPLOY_IMAGE --build-arg BUILD_IMAGE=$BUILD_IMAGE:$TAG --build-arg DEPLOY_BASE_IMAGE --build-arg EXTRA_APTGET_DEPLOY --build-arg USE_MKL -f $DEPLOY_DOCKER_FILE --network=host .
     - docker push $DEPLOY_IMAGE
     - docker run -v $PWD/ci/ctest_to_gitlab.sh:/ctest_to_gitlab.sh $DEPLOY_IMAGE /ctest_to_gitlab.sh "$DEPLOY_IMAGE" "$USE_CODECOV" "$THREADS_PER_NODE" "$SLURM_CONSTRAINT" > pipeline.yml
   artifacts:
@@ -52,6 +52,8 @@ cpu release build gcc11:
     BASE_IMAGE: ubuntu:22.04
     DEPLOY_BASE_IMAGE: ubuntu:22.04
     EXTRA_APTGET: ""
+    EXTRA_APTGET_DEPLOY: "glibc-tools"
+    # glibc-tools is needed for libSegFault on ubuntu:22.04
     COMPILER: gcc@11.2.0
     USE_MKL: "ON"
     SPACK_ENVIRONMENT: ci/docker/cpu-release.yaml
@@ -69,6 +71,7 @@ cpu release build clang10:
     BASE_IMAGE: ubuntu:20.04
     DEPLOY_BASE_IMAGE: ubuntu:20.04
     EXTRA_APTGET: clang
+    EXTRA_APTGET_DEPLOY: ""
     COMPILER: clang@10.0.0
     USE_MKL: "ON"
     SPACK_ENVIRONMENT: ci/docker/cpu-release.yaml
@@ -86,6 +89,8 @@ cpu release build clang12:
     BASE_IMAGE: ubuntu:22.04
     DEPLOY_BASE_IMAGE: ubuntu:22.04
     EXTRA_APTGET: clang-12
+    EXTRA_APTGET_DEPLOY: "glibc-tools"
+    # glibc-tools is needed for libSegFault on ubuntu:22.04
     COMPILER: clang@12.0.1
     USE_MKL: "ON"
     SPACK_ENVIRONMENT: ci/docker/cpu-release.yaml
@@ -103,6 +108,8 @@ cpu codecov build gcc11:
     BASE_IMAGE: ubuntu:22.04
     DEPLOY_BASE_IMAGE: ubuntu:22.04
     EXTRA_APTGET: ""
+    EXTRA_APTGET_DEPLOY: "glibc-tools"
+    # glibc-tools is needed for libSegFault on ubuntu:22.04
     COMPILER: gcc@11.2.0
     USE_MKL: "OFF"
     SPACK_ENVIRONMENT: ci/docker/cpu-debug.yaml
@@ -120,6 +127,7 @@ gpu release build gcc9:
     BASE_IMAGE: nvidia/cuda:11.1.1-devel-ubuntu20.04
     DEPLOY_BASE_IMAGE: ubuntu:20.04
     EXTRA_APTGET: ""
+    EXTRA_APTGET_DEPLOY: ""
     COMPILER: gcc@9.3.0
     USE_MKL: "ON"
     SPACK_ENVIRONMENT: ci/docker/gpu-release.yaml
@@ -137,6 +145,7 @@ gpu release build clang10:
     BASE_IMAGE: nvidia/cuda:11.1.1-devel-ubuntu20.04
     DEPLOY_BASE_IMAGE: ubuntu:20.04
     EXTRA_APTGET: clang
+    EXTRA_APTGET_DEPLOY: ""
     COMPILER: clang@10.0.0
     USE_MKL: "ON"
     SPACK_ENVIRONMENT: ci/docker/gpu-release.yaml
@@ -154,6 +163,7 @@ gpu codecov build gcc9:
     BASE_IMAGE: nvidia/cuda:11.1.1-devel-ubuntu20.04
     DEPLOY_BASE_IMAGE: ubuntu:20.04
     EXTRA_APTGET: ""
+    EXTRA_APTGET_DEPLOY: ""
     COMPILER: gcc@9.3.0
     USE_MKL: "OFF"
     SPACK_ENVIRONMENT: ci/docker/gpu-debug.yaml

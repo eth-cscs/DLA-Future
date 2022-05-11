@@ -74,9 +74,11 @@ ENV DEBIAN_FRONTEND noninteractive
 ARG BUILD
 ARG DEPLOY
 
+ARG EXTRA_APTGET_DEPLOY
 # tzdata is needed to print correct time
 RUN apt-get update -qq && \
     apt-get install -qq -y --no-install-recommends \
+      ${EXTRA_APTGET_DEPLOY} \
       tzdata && \
     rm -rf /var/lib/apt/lists/*
 

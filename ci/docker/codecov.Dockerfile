@@ -57,6 +57,7 @@ ARG BUILD
 ARG SOURCE
 ARG DEPLOY
 
+ARG EXTRA_APTGET_DEPLOY
 # python is needed for fastcov
 # pip is needed only to install fastcov (it is removed with
 #     its dependencies after fastcov installation)
@@ -64,6 +65,7 @@ ARG DEPLOY
 # tzdata is needed to print correct time
 RUN apt-get update -qq && \
     apt-get install -qq -y --no-install-recommends \
+      ${EXTRA_APTGET_DEPLOY} \
       python3 python3-pip \
       curl \
       ca-certificates \

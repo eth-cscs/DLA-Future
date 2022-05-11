@@ -267,6 +267,36 @@ auto potrf(const dlaf::internal::Policy<B>& p, Sender&& s);
 template <Backend B>
 auto potrf(const dlaf::internal::Policy<B>& p);
 
+/// Computes the eigenvalues and eigenvectors of a real tridiagonal symmetric matrix using the divide &
+/// conquer algorithm.
+///
+/// @param tridiag is `n x 2`. On entry stores the tridiagonal symmetric matrix: the diagonal in the
+/// first column, the off-diagonal in the second column. The last entry of the second column is unused.
+/// On exit stores the eigenvalues in the 1st column in ascending order.
+///
+/// @param evecs is `n x n`. On exit stores the eigenvectors of the tridiagonal symmetrix matrix. The
+/// order of the eigenvectors follows that of the eigenvalues.
+///
+/// This overload blocks until completion of the algorithm.
+template <Backend B, class T, Device D>
+void stedc(const dlaf::internal::Policy<B>& p, const Tile<BaseType<T>, D>& tridiag,
+           const Tile<T, D>& evecs);
+
+/// \overload stedc
+///
+/// This overload takes a policy argument and a sender which must send all required arguments for the
+/// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
+template <Backend B, typename Sender,
+          typename = std::enable_if_t<hpx::execution::experimental::is_sender_v<Sender>>>
+auto stedc(const dlaf::internal::Policy<B>& p, Sender&& s);
+
+/// \overload stedc
+///
+/// This overload partially applies the algorithm with a policy for later use with operator| with a
+/// sender on the left-hand side.
+template <Backend B>
+auto stedc(const dlaf::internal::Policy<B>& p);
+
 #else
 
 namespace internal {
@@ -334,6 +364,27 @@ void potrf(const blas::Uplo uplo, const Tile<T, Device::CPU>& a) noexcept {
   auto info = potrfInfo(uplo, a);
 
   DLAF_ASSERT(info == 0, info);
+}
+
+template <class T>
+void stedc(const Tile<BaseType<T>, Device::CPU>& tridiag, const Tile<T, Device::CPU>& evecs) {
+  DLAF_ASSERT(square_size(evecs), evecs);
+  DLAF_ASSERT(tridiag.size().rows() == evecs.size().rows(), tridiag, evecs);
+  DLAF_ASSERT(tridiag.size().cols() == 2, tridiag);
+
+  // In lapackpp see `util.hh` and `job_comp2char()` and `enum class Job`
+  // Note that `lapack::Job::Vec` corresponds to `compz=I` in the LAPACK
+
+  // compz, n, D, E, Z, ldz
+  lapack::stedc(lapack::Job::Vec, evecs.size().rows(), tridiag.ptr(),
+                tridiag.ptr(TileElementIndex(0, 1)), evecs.ptr(), evecs.ld());
+}
+
+template <class T>
+void scaleCol(T alpha, SizeType col, const Tile<T, Device::CPU>& tile) {
+  DLAF_ASSERT(col >= 0, col);
+  DLAF_ASSERT(tile.size().cols() > col, tile, col);
+  blas::scal(tile.size().rows(), alpha, tile.ptr(TileElementIndex(0, col)), 1);
 }
 
 #ifdef DLAF_WITH_GPU
@@ -514,6 +565,11 @@ void potrf(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<
   assertExtendInfo(dlaf::cusolver::assertInfoHegst, handle, std::move(info));
 #endif
 }
+
+template <class T>
+void stedc(cusolverDnHandle_t, const Tile<BaseType<T>, Device::CPU>&, const Tile<T, Device::CPU>&) {
+  DLAF_STATIC_UNIMPLEMENTED(T);
+}
 #endif
 
 DLAF_MAKE_CALLABLE_OBJECT(lange);
@@ -523,6 +579,8 @@ DLAF_MAKE_CALLABLE_OBJECT(set0);
 DLAF_MAKE_CALLABLE_OBJECT(hegst);
 DLAF_MAKE_CALLABLE_OBJECT(potrf);
 DLAF_MAKE_CALLABLE_OBJECT(potrfInfo);
+DLAF_MAKE_CALLABLE_OBJECT(stedc);
+DLAF_MAKE_CALLABLE_OBJECT(scaleCol);
 }
 
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(lange, internal::lange_o)
@@ -532,6 +590,8 @@ DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(set0, internal::set0_o)
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(hegst, internal::hegst_o)
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(potrf, internal::potrf_o)
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(potrfInfo, internal::potrfInfo_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(stedc, internal::stedc_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(scaleCol, internal::scaleCol_o)
 
 #endif
 }

@@ -146,8 +146,8 @@ namespace internal {
 /// @pre The second argument of err_message should be either T, T& or const T&.
 template <class T, class ElementGetter, class ComparisonOp, class ErrorMessageGetter,
           std::enable_if_t<!std::is_convertible_v<ElementGetter, T>, int> = 0>
-void check(ElementGetter&& expected, const Tile<const T, Device::CPU>& tile, ComparisonOp comp,
-           ErrorMessageGetter err_message, const char* file, const int line) {
+void checkTile(ElementGetter&& expected, const Tile<const T, Device::CPU>& tile, ComparisonOp comp,
+               ErrorMessageGetter err_message, const char* file, const int line) {
   for (SizeType j = 0; j < tile.size().cols(); ++j) {
     for (SizeType i = 0; i < tile.size().rows(); ++i) {
       TileElementIndex index(i, j);
@@ -174,11 +174,11 @@ void check(ElementGetter&& expected, const Tile<const T, Device::CPU>& tile, Com
 /// @pre The second argument of err_message should be either T, T& or const T&.
 template <class T, class ElementGetter, class ComparisonOp, class ErrorMessageGetter,
           std::enable_if_t<!std::is_convertible_v<ElementGetter, T>, int> = 0>
-void check(ElementGetter&& expected, const Tile<const T, Device::GPU>& tile, ComparisonOp comp,
-           ErrorMessageGetter err_message, const char* file, const int line) {
+void checkTile(ElementGetter&& expected, const Tile<const T, Device::GPU>& tile, ComparisonOp comp,
+               ErrorMessageGetter err_message, const char* file, const int line) {
   auto tile_host = createTile<std::remove_const_t<T>, Device::CPU>(tile.size(), tile.ld());
   dlaf::matrix::internal::copy(tile, tile_host);
-  check(std::forward<ElementGetter>(expected), tile_host, comp, err_message, file, line);
+  checkTile(std::forward<ElementGetter>(expected), tile_host, comp, err_message, file, line);
 }
 #endif
 
@@ -194,9 +194,9 @@ void check(ElementGetter&& expected, const Tile<const T, Device::GPU>& tile, Com
 /// @pre the second argument of err_message should be either T, T& or const T&.
 template <class T, Device D, class U, class ComparisonOp, class ErrorMessageGetter,
           enable_if_convertible_t<U, T, int> = 0>
-void check(U expected, const Tile<const T, D>& tile, ComparisonOp comp, ErrorMessageGetter err_message,
-           const char* file, const int line) {
-  check([expected](TileElementIndex) { return expected; }, tile, comp, err_message, file, line);
+void checkTile(U expected, const Tile<const T, D>& tile, ComparisonOp comp,
+               ErrorMessageGetter err_message, const char* file, const int line) {
+  checkTile([expected](TileElementIndex) { return expected; }, tile, comp, err_message, file, line);
 }
 }
 
@@ -206,15 +206,16 @@ void check(U expected, const Tile<const T, D>& tile, ComparisonOp comp, ErrorMes
 /// @pre exp_el argument is an index of type const TileElementIndex&,
 /// @pre exp_el return type should be T.
 template <class T, Device D, class ElementGetter>
-void checkEQ(ElementGetter&& exp_el, const Tile<const T, D>& tile, const char* file, const int line) {
+void checkTileEQ(ElementGetter&& exp_el, const Tile<const T, D>& tile, const char* file,
+                 const int line) {
   auto err_message = [](T expected, T value) {
     std::stringstream s;
     s << "expected " << expected << " == " << value;
     return s.str();
   };
-  internal::check(exp_el, tile, std::equal_to<T>{}, err_message, file, line);
+  internal::checkTile(exp_el, tile, std::equal_to<T>{}, err_message, file, line);
 }
-#define CHECK_TILE_EQ(exp_el, tile) ::dlaf::matrix::test::checkEQ(exp_el, tile, __FILE__, __LINE__)
+#define CHECK_TILE_EQ(exp_el, tile) ::dlaf::matrix::test::checkTileEQ(exp_el, tile, __FILE__, __LINE__)
 
 /// Checks the pointers to the elements of the tile.
 ///
@@ -222,16 +223,18 @@ void checkEQ(ElementGetter&& exp_el, const Tile<const T, D>& tile, const char* f
 /// @pre exp_ptr argument is an index of type const TileElementIndex&,
 /// @pre exp_ptr return type should be T*.
 template <class T, Device D, class PointerGetter>
-void checkPtr(PointerGetter&& exp_ptr, const Tile<const T, D>& tile, const char* file, const int line) {
+void checkTilePtr(PointerGetter&& exp_ptr, const Tile<const T, D>& tile, const char* file,
+                  const int line) {
   auto comp = [](const T* ptr, const T& value) { return ptr == &value; };
   auto err_message = [](const T* expected, const T& value) {
     std::stringstream s;
     s << "expected " << expected << " == " << &value;
     return s.str();
   };
-  internal::check(exp_ptr, tile, comp, err_message, file, line);
+  internal::checkTile(exp_ptr, tile, comp, err_message, file, line);
 }
-#define CHECK_TILE_PTR(exp_ptr, tile) ::dlaf::matrix::test::checkPtr(exp_ptr, tile, __FILE__, __LINE__)
+#define CHECK_TILE_PTR(exp_ptr, tile) \
+  ::dlaf::matrix::test::checkTilePtr(exp_ptr, tile, __FILE__, __LINE__)
 
 /// Checks the elements of the tile.
 ///
@@ -242,8 +245,8 @@ void checkPtr(PointerGetter&& exp_ptr, const Tile<const T, D>& tile, const char*
 /// @pre abs_err >= 0,
 /// @pre rel_err > 0 || abs_err > 0.
 template <class T, Device D, class ElementGetter>
-void checkNear(ElementGetter&& expected, const Tile<const T, D>& tile, BaseType<T> rel_err,
-               BaseType<T> abs_err, const char* file, const int line) {
+void checkTileNear(ElementGetter&& expected, const Tile<const T, D>& tile, BaseType<T> rel_err,
+                   BaseType<T> abs_err, const char* file, const int line) {
   ASSERT_GE(rel_err, 0);
   ASSERT_GE(abs_err, 0);
   ASSERT_TRUE(rel_err > 0 || abs_err > 0);
@@ -263,10 +266,11 @@ void checkNear(ElementGetter&& expected, const Tile<const T, D>& tile, BaseType<
       << rel_err << ", Absolute diff: " << diff << " > " << abs_err << ")";
     return s.str();
   };
-  internal::check(expected, tile, comp, err_message, file, line);
+  internal::checkTile(expected, tile, comp, err_message, file, line);
 }
+
 #define CHECK_TILE_NEAR(expected, tile, rel_err, abs_err) \
-  ::dlaf::matrix::test::checkNear(expected, tile, rel_err, abs_err, __FILE__, __LINE__)
+  ::dlaf::matrix::test::checkTileNear(expected, tile, rel_err, abs_err, __FILE__, __LINE__)
 }
 }
 }

@@ -152,6 +152,7 @@ add_library(dlaf.core
     matrix_mirror.cpp
     memory/memory_view.cpp
     memory/memory_chunk.cpp
+    lapack/laed4.cpp
     $<$<BOOL:${DLAF_WITH_GPU}>:cusolver/assert_info.cu>
     $<$<BOOL:${DLAF_WITH_CUDA}>:lapack/gpu/lacpy.cu>
     $<$<BOOL:${DLAF_WITH_CUDA}>:lapack/gpu/laset.cu>

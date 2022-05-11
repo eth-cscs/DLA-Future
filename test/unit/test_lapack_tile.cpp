@@ -18,6 +18,8 @@
 #include "test_lapack_tile/test_potrf.h"
 #include "dlaf_test/matrix/util_tile.h"
 
+#include <cmath>
+
 using namespace dlaf;
 using namespace dlaf::test;
 using namespace testing;
@@ -34,7 +36,11 @@ class TileOperationsTest : public ::testing::Test {};
 template <class T>
 using TileOperationsTestMC = TileOperationsTest<T, Device::CPU>;
 
+template <class T>
+using RealTileOperationsTestMC = TileOperationsTest<T, Device::CPU>;
+
 TYPED_TEST_SUITE(TileOperationsTestMC, MatrixElementTypes);
+TYPED_TEST_SUITE(RealTileOperationsTestMC, RealMatrixElementTypes);
 
 #ifdef DLAF_WITH_GPU
 template <class T>
@@ -249,6 +255,7 @@ TYPED_TEST(TileOperationsTestGPU, Laset) {
     }
   }
 }
+
 #endif
 
 TYPED_TEST(TileOperationsTestMC, Set0) {
@@ -268,3 +275,88 @@ TYPED_TEST(TileOperationsTestGPU, Set0) {
   }
 }
 #endif
+
+TYPED_TEST(RealTileOperationsTestMC, Stedc) {
+  using dlaf::matrix::test::createTile;
+
+  using RealParam = BaseType<TypeParam>;
+
+  SizeType sz = 10;
+
+  // Tridiagonal tile : 1D Laplacian
+  auto tridiag_f = [](const TileElementIndex& idx) {
+    if (idx.col() == 0) {
+      // diagonal
+      return RealParam(2);
+    }
+    else {
+      // off-diagoanl
+      return RealParam(-1);
+    }
+  };
+  auto tridiag = createTile<RealParam, Device::CPU>(std::move(tridiag_f), TileElementSize(sz, 2), sz);
+
+  auto evecs = createTile<TypeParam, Device::CPU>(TileElementSize(sz, sz), sz);
+  set(evecs, TypeParam(0));
+
+  tile::internal::stedc(tridiag, evecs);
+
+  // Note that only the first column is relevant but to avoid copying to a separate buffer or 1D tile, we
+  // also set the expected values as returned by `stedc` in the second column where the off-diagonal is
+  // stored as well as the unused last entry.
+  auto expected_tridiag_f = [sz](const TileElementIndex& idx) {
+    if (idx.col() == 0) {
+      // the diagonal (first column) holds the eigenvalues
+      return RealParam(2 * (1 - std::cos(M_PI * (idx.row() + 1) / (sz + 1))));
+    }
+    else if (idx.col() == 1 && idx.row() == sz - 1) {
+      // the last element of the second column is unused and is left unchanged
+      return RealParam(-1);
+    }
+    else {
+      // the off-diagonal is set to zero by `stedc`
+      return RealParam(0);
+    }
+  };
+  auto expected_tridiag =
+      createTile<RealParam, Device::CPU>(std::move(expected_tridiag_f), TileElementSize(sz, 2), sz);
+
+  auto expected_evecs_f = [sz](const TileElementIndex& idx) {
+    SizeType j = idx.col() + 1;
+    SizeType k = idx.row() + 1;
+    return TypeParam(std::sqrt(2.0 / (sz + 1)) * std::sin(j * k * M_PI / (sz + 1)));
+  };
+
+  // Eigenvalues
+  CHECK_TILE_NEAR(expected_tridiag, tridiag, sz * TypeUtilities<RealParam>::error,
+                  sz * TypeUtilities<RealParam>::error);
+
+  // Eigenvectors are unique up to a sign, this makes sure evecs have the same signs as the expected evecs
+  for (SizeType i = 0; i < sz; ++i) {
+    TileElementIndex idx(0, i);
+    if (dlaf::util::sameSign(expected_evecs_f(idx), evecs(idx)))
+      continue;
+
+    tile::internal::scaleCol(TypeParam(-1), i, evecs);
+  }
+  CHECK_TILE_NEAR(expected_evecs_f, evecs, sz * TypeUtilities<TypeParam>::error,
+                  sz * TypeUtilities<TypeParam>::error);
+}
+
+TYPED_TEST(TileOperationsTestMC, ScaleCol) {
+  TileElementSize tile_size{5, 5};
+  auto tile_fn = [](const TileElementIndex& idx) { return TypeParam(idx.row() + idx.col()); };
+  auto tile = createTile<TypeParam, Device::CPU>(std::move(tile_fn), tile_size, tile_size.rows());
+  TypeParam alpha = 4.2f;
+  SizeType col = 3;
+
+  tile::internal::scaleCol(alpha, col, tile);
+
+  auto expected_tile_fn = [col, alpha](const TileElementIndex& idx) {
+    TypeParam factor = (idx.col() == col) ? alpha : TypeParam(1);
+    return TypeParam(idx.row() + idx.col()) * factor;
+  };
+
+  CHECK_TILE_NEAR(expected_tile_fn, tile, TypeUtilities<TypeParam>::error,
+                  TypeUtilities<TypeParam>::error);
+}

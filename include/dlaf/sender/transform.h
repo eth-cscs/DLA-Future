@@ -39,6 +39,34 @@ namespace internal {
 // At its core, transform is a convenience wrapper around
 // sender | transfer(with_priority(scheduler, priority)) | then(unwrapping(f)).
 
+template <typename T>
+struct IsReferenceWrapper : std::false_type {};
+
+template <typename U>
+struct IsReferenceWrapper<std::reference_wrapper<U>> : std::true_type {};
+
+template <typename T>
+decltype(auto) getReferenceWrapper(T&& t) {
+  if constexpr (IsReferenceWrapper<std::decay_t<T>>::value) {
+    return t.get();
+  }
+  else {
+    return std::forward<T>(t);
+  }
+}
+
+template <typename F>
+struct TransformCallHelper {
+  std::decay_t<F> f;
+  template <typename... Ts>
+  auto operator()(Ts&&... ts) -> decltype(std::move(f)(getReferenceWrapper(std::forward<Ts>(ts))...)) {
+    return std::move(f)(getReferenceWrapper(std::forward<Ts>(ts))...);
+  }
+};
+
+template <typename F>
+TransformCallHelper(F &&) -> TransformCallHelper<std::decay_t<F>>;
+
 /// Lazy transform. This does not submit the work and returns a sender.
 template <Backend B, typename F, typename Sender,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
@@ -49,7 +77,7 @@ template <Backend B, typename F, typename Sender,
 
   auto scheduler = getBackendScheduler<B>(policy.priority());
   auto transfer_sender = transfer(std::forward<Sender>(sender), std::move(scheduler));
-  auto f_unwrapping = pika::unwrapping(std::forward<F>(f));
+  auto f_unwrapping = pika::unwrapping(TransformCallHelper{std::forward<F>(f)});
 
   if constexpr (B == Backend::MC) {
     return then(std::move(transfer_sender), std::move(f_unwrapping));

@@ -82,6 +82,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         if '+ci-test' in self.spec:
             # Enable TESTS and setup CI specific parameters
             args.append(self.define("CMAKE_CXX_FLAGS", "-Werror"))
+            args.append(self.define("BUILD_TESTING", True))
             args.append(self.define("DLAF_BUILD_TESTING", True))
             args.append(self.define("DLAF_CI_RUNNER_USES_MPIRUN", True))
             args.append(self.define("MPIEXEC_EXECUTABLE", "srun"))

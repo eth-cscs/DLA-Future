@@ -250,9 +250,9 @@ struct BandBlock {
 private:
 #ifdef DLAF_WITH_GPU
   bool isAccessibleFromGPU() const {
+#if defined DLAF_WITH_CUDA
     cudaPointerAttributes attrs;
     DLAF_CUDA_CHECK_ERROR(cudaPointerGetAttributes(&attrs, mem_()));
-#if defined DLAF_WITH_CUDA
     return cudaMemoryTypeUnregistered != attrs.type;
 #elif defined DLAF_WITH_HIP
     //return attrs.memoryType, true;

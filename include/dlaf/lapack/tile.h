@@ -585,8 +585,10 @@ DLAF_MAKE_CALLABLE_OBJECT(scaleCol);
 
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::transform_dispatch_tag::lapack, lange, internal::lange_o)
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::transform_dispatch_tag::lapack, lantr, internal::lantr_o)
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::transform_dispatch_tag::lapack, laset, internal::laset_o)
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::transform_dispatch_tag::lapack, set0, internal::set0_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::transform_dispatch_tag::plain, laset,
+                                     internal::laset_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::transform_dispatch_tag::plain, set0,
+                                     internal::set0_o)
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::transform_dispatch_tag::lapack, hegst, internal::hegst_o)
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::transform_dispatch_tag::lapack, potrf, internal::potrf_o)
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::transform_dispatch_tag::lapack, potrfInfo, internal::potrfInfo_o)

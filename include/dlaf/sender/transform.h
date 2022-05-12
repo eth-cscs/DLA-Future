@@ -34,11 +34,7 @@ namespace internal {
 // for a void pointer. Those functions can be therefore called with a
 // rocblas_handle (handle used for rocsolver functions). This tag is here to
 // disambiguate the call.
-enum class transform_dispatch_tag {
-    plain,
-    blas,
-    lapack
-};
+enum class TransformDispatchType { Plain, Blas, Lapack };
 
 // The following are DLA-Future-specific transforms, with some helper variations
 // for convenience and to approximate the behaviour of dataflow. Unlike
@@ -79,7 +75,7 @@ template <typename F>
 TransformCallHelper(F &&) -> TransformCallHelper<std::decay_t<F>>;
 
 /// Lazy transform. This does not submit the work and returns a sender.
-template <transform_dispatch_tag Tag = transform_dispatch_tag::plain, Backend B = Backend::MC,
+template <TransformDispatchType Tag = TransformDispatchType::Plain, Backend B = Backend::MC,
           typename F = void, typename Sender = void,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 [[nodiscard]] decltype(auto) transform(const Policy<B> policy, F&& f, Sender&& sender) {
@@ -100,14 +96,14 @@ template <transform_dispatch_tag Tag = transform_dispatch_tag::plain, Backend B 
     using pika::cuda::experimental::then_with_cusolver;
     using pika::cuda::experimental::then_with_stream;
 
-    if constexpr (Tag == transform_dispatch_tag::plain) {
+    if constexpr (Tag == TransformDispatchType::Plain) {
       return then_with_stream(std::move(transfer_sender), std::move(f_unwrapping));
     }
-    else if constexpr (Tag == transform_dispatch_tag::blas) {
+    else if constexpr (Tag == TransformDispatchType::Blas) {
       return then_with_cublas(std::move(transfer_sender), std::move(f_unwrapping),
                               CUBLAS_POINTER_MODE_HOST);
     }
-    else if constexpr (Tag == transform_dispatch_tag::lapack) {
+    else if constexpr (Tag == TransformDispatchType::Lapack) {
       return then_with_cusolver(std::move(transfer_sender), std::move(f_unwrapping));
     }
     else {
@@ -125,7 +121,7 @@ template <transform_dispatch_tag Tag = transform_dispatch_tag::plain, Backend B 
 }
 
 /// Fire-and-forget transform. This submits the work and returns void.
-template <transform_dispatch_tag Tag = transform_dispatch_tag::plain, Backend B = Backend::MC,
+template <TransformDispatchType Tag = TransformDispatchType::Plain, Backend B = Backend::MC,
           typename F = void, typename Sender = void,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 void transformDetach(const Policy<B> policy, F&& f, Sender&& sender) {
@@ -136,7 +132,7 @@ void transformDetach(const Policy<B> policy, F&& f, Sender&& sender) {
 /// Lazy transform. This does not submit the work and returns a sender. First
 /// lifts non-senders into senders using just, and then calls transform with a
 /// when_all sender of the lifted senders.
-template <transform_dispatch_tag Tag, Backend B, typename F, typename... Ts>
+template <TransformDispatchType Tag, Backend B, typename F, typename... Ts>
 [[nodiscard]] decltype(auto) transformLift(const Policy<B> policy, F&& f, Ts&&... ts) {
   return transform<Tag>(policy, std::forward<F>(f), internal::whenAllLift(std::forward<Ts>(ts)...));
 }
@@ -144,14 +140,14 @@ template <transform_dispatch_tag Tag, Backend B, typename F, typename... Ts>
 /// Fire-and-forget transform. This submits the work and returns void. First
 /// lifts non-senders into senders using just, and then calls transform with a
 /// when_all sender of the lifted senders.
-template <transform_dispatch_tag Tag = transform_dispatch_tag::plain, Backend B = Backend::MC,
+template <TransformDispatchType Tag = TransformDispatchType::Plain, Backend B = Backend::MC,
           typename F = void, typename... Ts>
 void transformLiftDetach(const Policy<B> policy, F&& f, Ts&&... ts) {
   pika::execution::experimental::start_detached(
       transformLift<Tag>(policy, std::forward<F>(f), std::forward<Ts>(ts)...));
 }
 
-template <transform_dispatch_tag Tag, Backend B, typename F>
+template <TransformDispatchType Tag, Backend B, typename F>
 struct PartialTransformBase {
   const Policy<B> policy_;
   std::decay_t<F> f_;
@@ -160,7 +156,7 @@ struct PartialTransformBase {
 /// A partially applied transform, with the policy and callable object given,
 /// but the predecessor sender missing. The predecessor sender is applied when
 /// calling the operator| overload.
-template <transform_dispatch_tag Tag, Backend B, typename F>
+template <TransformDispatchType Tag, Backend B, typename F>
 class PartialTransform : private PartialTransformBase<Tag, B, F> {
 public:
   template <typename F_>
@@ -177,7 +173,7 @@ public:
   }
 };
 
-template <transform_dispatch_tag Tag, Backend B, typename F>
+template <TransformDispatchType Tag, Backend B, typename F>
 auto makePartialTransform(const Policy<B> policy, F&& f) {
   return PartialTransform<Tag, B, std::decay_t<F>>{policy, std::forward<F>(f)};
 }
@@ -185,7 +181,7 @@ auto makePartialTransform(const Policy<B> policy, F&& f) {
 /// A partially applied transformDetach, with the policy and callable object
 /// given, but the predecessor sender missing. The predecessor sender is applied
 /// when calling the operator| overload.
-template <transform_dispatch_tag Tag, Backend B, typename F>
+template <TransformDispatchType Tag, Backend B, typename F>
 class PartialTransformDetach : private PartialTransformBase<Tag, B, F> {
 public:
   template <typename F_>
@@ -203,7 +199,7 @@ public:
   }
 };
 
-template <transform_dispatch_tag Tag, Backend B, typename F>
+template <TransformDispatchType Tag, Backend B, typename F>
 auto makePartialTransformDetach(const Policy<B> policy, F&& f) {
   return PartialTransformDetach<Tag, B, std::decay_t<F>>{policy, std::forward<F>(f)};
 }
@@ -212,7 +208,7 @@ auto makePartialTransformDetach(const Policy<B> policy, F&& f) {
 ///
 /// This overload partially applies the transform for later use with operator|
 /// with a sender on the left-hand side.
-template <transform_dispatch_tag Tag = transform_dispatch_tag::plain, Backend B = Backend::MC,
+template <TransformDispatchType Tag = TransformDispatchType::Plain, Backend B = Backend::MC,
           typename F = void>
 [[nodiscard]] decltype(auto) transform(const Policy<B> policy, F&& f) {
   return makePartialTransform<Tag>(policy, std::forward<F>(f));
@@ -222,7 +218,7 @@ template <transform_dispatch_tag Tag = transform_dispatch_tag::plain, Backend B 
 ///
 /// This overload partially applies transformDetach for later use with operator|
 /// with a sender on the left-hand side.
-template <transform_dispatch_tag Tag = transform_dispatch_tag::plain, Backend B = Backend::MC,
+template <TransformDispatchType Tag = TransformDispatchType::Plain, Backend B = Backend::MC,
           typename F = void>
 [[nodiscard]] decltype(auto) transformDetach(const Policy<B> policy, F&& f) {
   return makePartialTransformDetach<Tag>(policy, std::forward<F>(f));

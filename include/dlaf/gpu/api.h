@@ -28,6 +28,8 @@
 #define cudaMemcpyDeviceToDevice         hipMemcpyDeviceToDevice
 #define cudaMemcpyDeviceToHost           hipMemcpyDeviceToHost
 #define cudaMemcpyHostToDevice           hipMemcpyHostToDevice
+#define cudaMemoryTypeDevice             hipMemoryTypeDevice
+#define cudaMemoryTypeHost               hipMemoryTypeHost
 #define cudaMemset2DAsync                hipMemset2DAsync
 #define cudaPointerAttributes            hipPointerAttribute_t
 #define cudaSetDevice                    hipSetDevice

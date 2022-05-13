@@ -134,7 +134,7 @@ TYPED_TEST(TileOperationsTestMC, lantr) {
 
 // Tuple elements:  n, extra_lda
 std::vector<std::tuple<SizeType, SizeType>> potrf_sizes = {{0, 0}, {0, 2},  // 0 size
-                                                           {1, 0}, {12, 1}, {17, 3}, {11, 0}};
+                                                           {1, 0}, {12, 1}, {17, 3}, {11, 0}, {128, 0}};
 
 TYPED_TEST(TileOperationsTestMC, Potrf) {
   using Type = TypeParam;

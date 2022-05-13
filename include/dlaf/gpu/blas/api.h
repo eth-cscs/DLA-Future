@@ -28,11 +28,13 @@
 #define cublasStatus_t       hipblasStatus_t
 #define cublasCherk          hipblasCherk
 #define cublasCreate         hipblasCreate
+#define cublasCtrmm          hipblasCtrmm
 #define cublasCtrsm          hipblasCtrsm
 #define cublasDaxpy          hipblasDaxpy
 #define cublasDestroy        hipblasDestroy
 #define cublasDgemm          hipblasDgemm
 #define cublasDiagType_t     hipblasDiagType_t
+#define cublasDtrmm          hipblasDtrmm
 #define cublasDtrsm          hipblasDtrsm
 #define cublasFillMode_t     hipblasFillMode_t
 #define cublasGetErrorString hipblasGetErrorString
@@ -43,9 +45,11 @@
 #define cublasSetStream      hipblasSetStream
 #define cublasSgemm          hipblasSgemm
 #define cublasSideMode_t     hipblasSideMode_t
+#define cublasStrmm          hipblasStrmm
 #define cublasStrsm          hipblasStrsm
 #define cublasZgemm          hipblasZgemm
 #define cublasZherk          hipblasZherk
+#define cublasZtrmm          hipblasZtrmm
 #define cublasZtrsm          hipblasZtrsm
 #define cuComplex            hipblasComplex
 #define cuDoubleComplex      hipblasDoubleComplex

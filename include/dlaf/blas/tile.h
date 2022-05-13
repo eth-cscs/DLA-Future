@@ -345,12 +345,34 @@ template <class T>
 void trmm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, const blas::Op op,
           const blas::Diag diag, const T alpha, const matrix::Tile<const T, Device::GPU>& a,
           const matrix::Tile<T, Device::GPU>& b) {
+  using util::blasToCublas;
+  using util::blasToCublasCast;
+  auto s = tile::internal::getTrmmSizes(side, a, b);
+
+  // TODO: This is almost like the CUDA version except it's missing the last
+  // two parameters. ifdef in the CUDA version instead?
+  gpublas::Trmm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),
+                         blasToCublas(diag), to_int(s.m), to_int(s.n), blasToCublasCast(&alpha),
+                         blasToCublasCast(a.ptr()), to_int(a.ld()), blasToCublasCast(b.ptr()),
+                         to_int(b.ld()));
 }
 
 template <class T>
 void trmm3(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, const blas::Op op,
            const blas::Diag diag, const T alpha, const matrix::Tile<const T, Device::GPU>& a,
            const matrix::Tile<const T, Device::GPU>& b, const matrix::Tile<T, Device::GPU>& c) {
+  using util::blasToCublas;
+  using util::blasToCublasCast;
+  auto s = tile::internal::getTrmm3Sizes(side, a, b, c);
+  DLAF_ASSERT(b.ptr() == nullptr || b.ptr() != c.ptr(), b.ptr(), c.ptr());
+
+  cudaStream_t stream;
+  DLAF_CUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
+  matrix::internal::copy(b, c, stream);
+  gpublas::Trmm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),
+                         blasToCublas(diag), to_int(s.m), to_int(s.n), blasToCublasCast(&alpha),
+                         blasToCublasCast(a.ptr()), to_int(a.ld()), blasToCublasCast(c.ptr()),
+			 to_int(c.ld()));
 }
 #endif
 

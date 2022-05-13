@@ -27,8 +27,8 @@ template<> MPI_Datatype mpi_datatype<unsigned long long>   ::type = MPI_UNSIGNED
 template<> MPI_Datatype mpi_datatype<float>                ::type = MPI_FLOAT;
 template<> MPI_Datatype mpi_datatype<double>               ::type = MPI_DOUBLE;
 template<> MPI_Datatype mpi_datatype<bool>                 ::type = MPI_CXX_BOOL;
-template<> MPI_Datatype mpi_datatype<std::complex<float>>  ::type = MPI_CXX_FLOAT_COMPLEX;
-template<> MPI_Datatype mpi_datatype<std::complex<double>> ::type = MPI_CXX_DOUBLE_COMPLEX;
+template<> MPI_Datatype mpi_datatype<std::complex<float>>  ::type = MPI_C_FLOAT_COMPLEX;
+template<> MPI_Datatype mpi_datatype<std::complex<double>> ::type = MPI_C_DOUBLE_COMPLEX;
 // clang-format on
 
 }

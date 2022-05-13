@@ -153,10 +153,20 @@ add_library(dlaf.core
     memory/memory_view.cpp
     memory/memory_chunk.cpp
     lapack/laed4.cpp
-    $<$<BOOL:${DLAF_WITH_GPU}>:cusolver/assert_info.cu>
-    $<$<BOOL:${DLAF_WITH_CUDA}>:lapack/gpu/lacpy.cu>
-    $<$<BOOL:${DLAF_WITH_CUDA}>:lapack/gpu/laset.cu>
 )
+
+if(DLAF_WITH_GPU)
+  set(dlaf_core_gpu_source_files
+    cusolver/assert_info.cu
+    lapack/gpu/lacpy.cu
+    lapack/gpu/laset.cu
+  )
+  target_sources(dlaf.core PRIVATE ${dlaf_core_gpu_source_files})
+  if(DLAF_WITH_HIP)
+    set_source_files_properties(${dlaf_core_gpu_source_files} PROPERTIES LANGUAGE CXX)
+  endif()
+endif()
+
 target_compile_options(dlaf.core PRIVATE $<$<COMPILE_LANG_AND_ID:CUDA,NVIDIA>:--extended-lambda>)
 target_link_libraries(dlaf.core PUBLIC dlaf.prop)
 target_add_warnings(dlaf.core)

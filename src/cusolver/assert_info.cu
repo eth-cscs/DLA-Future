@@ -9,7 +9,7 @@
 //
 
 #include <stdio.h>
-#include "dlaf/cusolver/assert_info.h"
+#include "dlaf/gpu/solver/assert_info.h"
 
 #ifdef DLAF_ASSERT_ENABLE
 
@@ -32,7 +32,11 @@ template <class F>
 __global__ void assert_info(int* info, F func) {
   if (*info != 0) {
     printf("Error %s: info != 0 (%d)\n", func(), *info);
+#ifdef DLAF_HAVE_CUDA
     __trap();
+#else
+    abort();
+#endif
   }
 }
 

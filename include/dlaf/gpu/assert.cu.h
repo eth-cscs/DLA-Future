@@ -9,6 +9,9 @@
 //
 
 #pragma once
+
+#include <dlaf/gpu/api.h>
+
 #include <stdio.h>
 
 #ifdef DLAF_ASSERT_HEAVY_ENABLE
@@ -28,7 +31,12 @@ template <class PrintFunc>
 __device__ void gpuAssert(bool expr, PrintFunc&& print_func) {
   if (!expr) {
     print_func();
+#ifdef DLAF_WITH_CUDA
     __trap();
+#else
+    // TODO: Verify what this does...
+    abort();
+#endif
   }
 }
 

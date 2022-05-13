@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/cuda/assert.cu.h"
+#include "dlaf/gpu/assert.cu.h"
 #include "dlaf/lapack/gpu/laset.h"
 #include "dlaf/util_cublas.h"
 #include "dlaf/util_math.h"

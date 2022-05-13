@@ -23,10 +23,9 @@
 #if defined(DLAF_WITH_HIP)
 
 #include <hipblas.h>
-// Need this macro before the cublasCall definition in error.h
-#define cublasCall           hipblasCall
-#include "dlaf/gpu/blas/error.h"
 
+#define cublasCall           hipblasCall
+#define cublasStatus_t       hipblasStatus_t
 #define cublasCherk          hipblasCherk
 #define cublasCreate         hipblasCreate
 #define cublasCtrsm          hipblasCtrsm
@@ -44,7 +43,6 @@
 #define cublasSetStream      hipblasSetStream
 #define cublasSgemm          hipblasSgemm
 #define cublasSideMode_t     hipblasSideMode_t
-#define cublasStatus_t       hipblasStatus_t
 #define cublasStrsm          hipblasStrsm
 #define cublasZgemm          hipblasZgemm
 #define cublasZherk          hipblasZherk
@@ -72,6 +70,11 @@
 #define CUBLAS_STATUS_NOT_INITIALIZED  HIPBLAS_STATUS_NOT_INITIALIZED
 #define CUBLAS_STATUS_NOT_SUPPORTED    HIPBLAS_STATUS_NOT_SUPPORTED
 #define CUBLAS_STATUS_SUCCESS          HIPBLAS_STATUS_SUCCESS
+
+// Need this macro before the cublasCall definition in error.h
+// TODO: This is dirty. This kind of include structure should not be
+// necessary... split headers if necessary.
+#include "dlaf/gpu/blas/error.h"
 
 #define DLAF_DEFINE_GPUBLAS_OP(Name, Type, f)                           \
   template <>                                                           \

@@ -21,6 +21,7 @@
 #define cudaDeviceSynchronize            hipDeviceSynchronize
 #define cudaError_t                      hipError_t
 #define cudaGetErrorString               hipGetErrorString
+#define cudaMemcpyKind                   hipMemcpyKind
 #define cudaMemcpy2D                     hipMemcpy2D
 #define cudaMemcpy2DAsync                hipMemcpy2DAsync
 #define cudaMemcpyDefault                hipMemcpyDefault

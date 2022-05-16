@@ -357,8 +357,8 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     const SizeType b, Matrix<const T, D>& mat_a) noexcept {
   // Note on the algorithm and dependency tracking:
   // The algorithm is composed by n-2 (real) or n-1 (complex) sweeps:
-  // The i-th sweep is initialized by init_sweep which act on the i-th column of the mand matrix.
-  // Then the sweep continues applying steps. j-th step act on the columns [i+1 + j * b, i+1 + (j+1) * b)
+  // The i-th sweep is initialized by init_sweep which act on the i-th column of the band matrix.
+  // Then the sweep continues applying steps. The j-th step acts on the columns [i+1 + j * b, i+1 + (j+1) * b)
   // The steps in the same sweep has to be executed in order and the dependencies are managed by the
   // worker pipelines. The deps vector is used to set the dependencies among two different sweeps.
   //
@@ -371,7 +371,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   //                  |    deps[0]    |    deps[1]    | ...
   // Sweep 2           I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3
   //                    ...
-  // Note: j-th task (in this case 2*j-th and 2*j+1-th steps) depend explicitely only on deps[j+1],
+  // Note: j-th task (in this case 2*j-th and 2*j+1-th steps) depends explicitly only on deps[j+1],
   //       as the pipeline dependency on j-1-th task (or sweep_init for j=0) implies a dependency on
   //       deps[j] as well.
 

@@ -19,6 +19,25 @@
 
 namespace dlaf::multiplication {
 
+/// General sub-matrix multiplication implementation on local memory, computing
+/// C[a:b][a:b] = alpha * opA(A[a:b][a:b]) * opB(B[a:b][a:b]) + beta * C[a:b][a:b]
+/// where [a:b] is the range of tiles starting from tile index @p a to tile index @p b (included)
+///
+/// @param  opA specifies the form of opA(A) to be used in the matrix multiplication:
+///         \a NoTrans, \a Trans, \a ConjTrans,
+/// @param  opB specifies the form of opB(B) to be used in the matrix multiplication:
+///         \a NoTrans, \a Trans, \a ConjTrans,
+/// @param  mat_a contains the input matrix A. Only tiles whose both row and col tile coords are in
+///         the closed range [a,b] are accessed in read-only mode (elements are not modified)
+/// @param  mat_b contains the input matrix B. Only tiles whose both row and col tile coords are in
+///         the closed range [a,b] are accessed in read-only mode (elements are not modified)
+/// @param  mat_c On entry it contains the input matrix C. On exit matrix tiles in the range will be
+///         overwritten with the result, while others are left untouched.
+///         Only tiles whose both row and col tile coords are in the closed range [a,b] are accessed.
+/// @pre mat_a, mat_b and mat_c have the same square block size,
+/// @pre mat_a, mat_b and mat_c have the same square size,
+/// @pre mat_a, mat_b and mat_c are not distributed,
+/// @pre a <= b < mat_a.nrTiles().rows()
 template <Device D, class T>
 void generalSubMatrix(const SizeType a, const SizeType b, const blas::Op opA, const blas::Op opB,
                       const T alpha, Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta,
@@ -32,9 +51,13 @@ void generalSubMatrix(const SizeType a, const SizeType b, const blas::Op opA, co
   DLAF_ASSERT(dlaf::matrix::square_size(mat_b), mat_b);
   DLAF_ASSERT(dlaf::matrix::square_size(mat_c), mat_c);
 
+  DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
+  DLAF_ASSERT(matrix::local_matrix(mat_b), mat_b);
+  DLAF_ASSERT(matrix::local_matrix(mat_c), mat_c);
+
   const SizeType m = mat_a.nrTiles().rows();
   DLAF_ASSERT(a <= b, a, b);
-  DLAF_ASSERT(a >= 0 and a < m, a, m);
+  DLAF_ASSERT(a >= 0 && a < m, a, m);
 
   using namespace blas;
 

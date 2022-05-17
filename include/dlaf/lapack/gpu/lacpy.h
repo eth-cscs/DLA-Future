@@ -12,13 +12,11 @@
 
 #ifdef DLAF_WITH_GPU
 
-#if defined DLAF_WITH_CUDA
-#include <cublas_v2.h>
-#include <cuda_runtime.h>
-#endif
-#include <blas.hh>
-
+#include "dlaf/gpu/api.h"
+#include "dlaf/gpu/blas/api.h"
 #include "dlaf/types.h"
+
+#include <blas.hh>
 
 namespace dlaf::gpulapack {
 

@@ -311,19 +311,23 @@ void herk(cublasHandle_t handle, const blas::Uplo uplo, const blas::Op op, const
                          blasToCublasCast(&beta), blasToCublasCast(c.ptr()), to_int(c.ld()));
 }
 
+template <class T>
+void trmm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, const blas::Op op,
+          const blas::Diag diag, const T alpha, const matrix::Tile<const T, Device::GPU>& a,
+          const matrix::Tile<T, Device::GPU>& b) {
+  using util::blasToCublas;
+  using util::blasToCublasCast;
+  auto s = tile::internal::getTrmmSizes(side, a, b);
+
+  gpublas::Trmm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),
+                         blasToCublas(diag), to_int(s.m), to_int(s.n), blasToCublasCast(&alpha),
+                         blasToCublasCast(a.ptr()), to_int(a.ld()), blasToCublasCast(b.ptr()),
+                         to_int(b.ld())
 #ifdef DLAF_WITH_CUDA
-template <class T>
-void trmm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, const blas::Op op,
-          const blas::Diag diag, const T alpha, const matrix::Tile<const T, Device::GPU>& a,
-          const matrix::Tile<T, Device::GPU>& b) {
-  using util::blasToCublas;
-  using util::blasToCublasCast;
-  auto s = tile::internal::getTrmmSizes(side, a, b);
-
-  gpublas::Trmm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),
-                         blasToCublas(diag), to_int(s.m), to_int(s.n), blasToCublasCast(&alpha),
-                         blasToCublasCast(a.ptr()), to_int(a.ld()), blasToCublasCast(b.ptr()),
-                         to_int(b.ld()), blasToCublasCast(b.ptr()), to_int(b.ld()));
+                             ,
+                         blasToCublasCast(b.ptr()), to_int(b.ld())
+#endif
+  );
 }
 
 template <class T>
@@ -335,46 +339,19 @@ void trmm3(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, 
   auto s = tile::internal::getTrmm3Sizes(side, a, b, c);
   DLAF_ASSERT(b.ptr() == nullptr || b.ptr() != c.ptr(), b.ptr(), c.ptr());
 
-  gpublas::Trmm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),
-                         blasToCublas(diag), to_int(s.m), to_int(s.n), blasToCublasCast(&alpha),
-                         blasToCublasCast(a.ptr()), to_int(a.ld()), blasToCublasCast(b.ptr()),
-                         to_int(b.ld()), blasToCublasCast(c.ptr()), to_int(c.ld()));
-}
-#elif defined DLAF_WITH_HIP
-template <class T>
-void trmm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, const blas::Op op,
-          const blas::Diag diag, const T alpha, const matrix::Tile<const T, Device::GPU>& a,
-          const matrix::Tile<T, Device::GPU>& b) {
-  using util::blasToCublas;
-  using util::blasToCublasCast;
-  auto s = tile::internal::getTrmmSizes(side, a, b);
-
-  // TODO: This is almost like the CUDA version except it's missing the last
-  // two parameters. ifdef in the CUDA version instead?
-  gpublas::Trmm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),
-                         blasToCublas(diag), to_int(s.m), to_int(s.n), blasToCublasCast(&alpha),
-                         blasToCublasCast(a.ptr()), to_int(a.ld()), blasToCublasCast(b.ptr()),
-                         to_int(b.ld()));
-}
-
-template <class T>
-void trmm3(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, const blas::Op op,
-           const blas::Diag diag, const T alpha, const matrix::Tile<const T, Device::GPU>& a,
-           const matrix::Tile<const T, Device::GPU>& b, const matrix::Tile<T, Device::GPU>& c) {
-  using util::blasToCublas;
-  using util::blasToCublasCast;
-  auto s = tile::internal::getTrmm3Sizes(side, a, b, c);
-  DLAF_ASSERT(b.ptr() == nullptr || b.ptr() != c.ptr(), b.ptr(), c.ptr());
-
+#ifdef DLAF_WITH_HIP
   cudaStream_t stream;
   DLAF_CUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
   matrix::internal::copy(b, c, stream);
+#endif
   gpublas::Trmm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),
                          blasToCublas(diag), to_int(s.m), to_int(s.n), blasToCublasCast(&alpha),
-                         blasToCublasCast(a.ptr()), to_int(a.ld()), blasToCublasCast(c.ptr()),
-			 to_int(c.ld()));
-}
+                         blasToCublasCast(a.ptr()), to_int(a.ld()),
+#ifdef DLAF_WITH_CUDA
+                         blasToCublasCast(b.ptr()), to_int(b.ld()),
 #endif
+                         blasToCublasCast(c.ptr()), to_int(c.ld()));
+}
 
 template <class T>
 void trsm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, const blas::Op op,

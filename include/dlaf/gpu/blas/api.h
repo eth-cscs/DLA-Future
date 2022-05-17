@@ -12,14 +12,6 @@
 
 /// @file
 
-#if defined(DLAF_WITH_GPU)
-
-#define DLAF_DECLARE_GPUBLAS_OP(Name) \
-  template <typename T>               \
-  struct Name
-
-#endif
-
 #if defined(DLAF_WITH_HIP)
 
 #include <hipblas.h>
@@ -75,75 +67,9 @@
 #define CUBLAS_STATUS_NOT_SUPPORTED    HIPBLAS_STATUS_NOT_SUPPORTED
 #define CUBLAS_STATUS_SUCCESS          HIPBLAS_STATUS_SUCCESS
 
-// Need this macro before the cublasCall definition in error.h
-// TODO: This is dirty. This kind of include structure should not be
-// necessary... split headers if necessary.
-#include "dlaf/gpu/blas/error.h"
-
-#define DLAF_DEFINE_GPUBLAS_OP(Name, Type, f)                           \
-  template <>                                                           \
-  struct Name<Type> {                                                   \
-    template <typename... Args>                                         \
-    static void call(Args&&... args) {                                  \
-      DLAF_CUBLAS_CHECK_ERROR(hipblas##f(std::forward<Args>(args)...)); \
-    }                                                                   \
-  }
-
 #elif defined(DLAF_WITH_CUDA)
 
 #include <cuComplex.h>
 #include <cublas_v2.h>
-#include "dlaf/gpu/blas/error.h"
-
-#define DLAF_DEFINE_GPUBLAS_OP(Name, Type, f)                               \
-  template <>                                                               \
-  struct Name<Type> {                                                       \
-    template <typename... Args>                                             \
-    static void call(Args&&... args) {                                      \
-      DLAF_CUBLAS_CHECK_ERROR(cublas##f##_v2(std::forward<Args>(args)...)); \
-    }                                                                       \
-  }
-#endif
-
-#if defined(DLAF_WITH_GPU)
-
-#define DLAF_MAKE_GPUBLAS_OP(Name, f)                      \
-  DLAF_DECLARE_GPUBLAS_OP(Name);                           \
-  DLAF_DEFINE_GPUBLAS_OP(Name, float, S##f);               \
-  DLAF_DEFINE_GPUBLAS_OP(Name, double, D##f);              \
-  DLAF_DEFINE_GPUBLAS_OP(Name, std::complex<float>, C##f); \
-  DLAF_DEFINE_GPUBLAS_OP(Name, std::complex<double>, Z##f)
-
-#define DLAF_MAKE_GPUBLAS_SYHE_OP(Name, f)                   \
-  DLAF_DECLARE_GPUBLAS_OP(Name);                             \
-  DLAF_DEFINE_GPUBLAS_OP(Name, float, Ssy##f);               \
-  DLAF_DEFINE_GPUBLAS_OP(Name, double, Dsy##f);              \
-  DLAF_DEFINE_GPUBLAS_OP(Name, std::complex<float>, Che##f); \
-  DLAF_DEFINE_GPUBLAS_OP(Name, std::complex<double>, Zhe##f)
-
-namespace dlaf::gpublas {
-
-// Level 1
-DLAF_MAKE_GPUBLAS_OP(Axpy, axpy);
-
-// Level 2
-DLAF_MAKE_GPUBLAS_OP(Gemv, gemv);
-
-DLAF_MAKE_GPUBLAS_OP(Trmv, trmv);
-
-// Level 3
-DLAF_MAKE_GPUBLAS_OP(Gemm, gemm);
-
-DLAF_MAKE_GPUBLAS_SYHE_OP(Hemm, mm);
-
-DLAF_MAKE_GPUBLAS_SYHE_OP(Her2k, r2k);
-
-DLAF_MAKE_GPUBLAS_SYHE_OP(Herk, rk);
-
-DLAF_MAKE_GPUBLAS_OP(Trmm, trmm);
-
-DLAF_MAKE_GPUBLAS_OP(Trsm, trsm);
-
-}
 
 #endif

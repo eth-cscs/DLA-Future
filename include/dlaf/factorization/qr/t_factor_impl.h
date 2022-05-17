@@ -31,7 +31,9 @@
 #include "dlaf/util_matrix.h"
 
 #ifdef DLAF_WITH_GPU
+#include "dlaf/blas/tile.h"
 #include "dlaf/gpu/blas/api.h"
+#include "dlaf/gpu/blas/error.h"
 #endif
 
 namespace dlaf::factorization::internal {

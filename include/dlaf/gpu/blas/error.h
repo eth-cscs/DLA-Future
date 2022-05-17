@@ -39,7 +39,6 @@ inline std::string cublasGetErrorString(cublasStatus_t st) {
     case CUBLAS_STATUS_INTERNAL_ERROR:   return "CUBLAS_STATUS_INTERNAL_ERROR";
     case CUBLAS_STATUS_NOT_SUPPORTED:    return "CUBLAS_STATUS_NOT_SUPPORTED";
 #if defined(DLAF_WITH_CUDA)
-    // HIPBLAS_STATUS_LICENSE_ERROR not existing in rocm 4.3.1
     case CUBLAS_STATUS_LICENSE_ERROR:    return "CUBLAS_STATUS_LICENSE_ERROR";
 #else
     case HIPBLAS_STATUS_HANDLE_IS_NULLPTR:    return "CUBLAS_STATUS_HANDLE_IS_NULLPTR";

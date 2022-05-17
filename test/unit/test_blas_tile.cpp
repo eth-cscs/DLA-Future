@@ -49,8 +49,7 @@ std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, SizeTyp
     {7, 0, 0, 3, 1, 0},  {0, 5, 0, 0, 0, 1},    {0, 0, 11, 1, 1, 2},  // two 0 sizes
     {0, 5, 13, 1, 0, 1}, {7, 0, 4, 1, 2, 0},    {3, 11, 0, 0, 1, 0},  // one 0 size
     {1, 1, 1, 0, 3, 0},  {1, 12, 1, 1, 0, 7},   {17, 12, 16, 1, 3, 0}, {11, 23, 8, 0, 3, 4},
-    {6, 9, 12, 1, 1, 1}, {32, 32, 32, 0, 0, 0}, {32, 32, 32, 4, 5, 7},
-    {128, 128, 128, 0, 0, 0},
+    {6, 9, 12, 1, 1, 1}, {32, 32, 32, 0, 0, 0}, {32, 32, 32, 4, 5, 7}, {128, 128, 128, 0, 0, 0},
 };
 
 TYPED_TEST(TileOperationsTestMC, Gemm) {
@@ -135,9 +134,7 @@ std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> herk_her2k_sizes
     {{0, 0, 0, 0},                 // all 0 sizes
      {0, 5, 1, 0},  {7, 0, 1, 2},  // one 0 size
      {1, 1, 0, 3},  {1, 12, 1, 0},  {17, 12, 1, 3}, {11, 23, 0, 3},
-     {9, 12, 1, 1}, {32, 32, 0, 0}, {32, 32, 4, 7},
-     {128, 128, 0, 0}
-    };
+     {9, 12, 1, 1}, {32, 32, 0, 0}, {32, 32, 4, 7}, {128, 128, 0, 0}};
 
 TYPED_TEST(TileOperationsTestMC, Her2k) {
   using Type = TypeParam;

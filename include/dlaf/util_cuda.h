@@ -16,24 +16,24 @@
 
 // Float
 #define make_cuComplex make_hipComplex
-#define cuCaddf hipCaddf
-#define cuCsubf hipCsubf
-#define cuCmulf hipCmulf
-#define cuCdivf hipCdivf
-#define cuCfmaf hipCfmaf
+#define cuCaddf        hipCaddf
+#define cuCsubf        hipCsubf
+#define cuCmulf        hipCmulf
+#define cuCdivf        hipCdivf
+#define cuCfmaf        hipCfmaf
 
 // Double
 #define make_cuDoubleComplex make_hipDoubleComplex
-#define cuCadd hipCadd
-#define cuCsub hipCsub
-#define cuCmul hipCmul
-#define cuCdiv hipCdiv
-#define cuCfma hipCfma
+#define cuCadd               hipCadd
+#define cuCsub               hipCsub
+#define cuCmul               hipCmul
+#define cuCdiv               hipCdiv
+#define cuCfma               hipCfma
 
 #endif
 
-#include "dlaf/gpu/blas/api.h"
 #include <complex>
+#include "dlaf/gpu/blas/api.h"
 
 namespace dlaf::util {
 namespace internal {

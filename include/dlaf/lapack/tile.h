@@ -423,13 +423,13 @@ DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<double>, Zpotrf);
 
 #elif defined(DLAF_WITH_HIP)
 
-#define DLAF_DEFINE_CUSOLVER_OP_BUFFER(Name, Type, f)                 \
-  template <>                                                         \
-  struct Cusolver##Name<Type> {                                       \
-    template <typename... Args>                                       \
-    static void call(Args&&... args) {                                \
+#define DLAF_DEFINE_CUSOLVER_OP_BUFFER(Name, Type, f)                        \
+  template <>                                                                \
+  struct Cusolver##Name<Type> {                                              \
+    template <typename... Args>                                              \
+    static void call(Args&&... args) {                                       \
       DLAF_CUSOLVER_CHECK_ERROR(rocsolver_##f(std::forward<Args>(args)...)); \
-    }                                                                 \
+    }                                                                        \
   }
 
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, float, ssygst);
@@ -443,7 +443,6 @@ DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<float>, cpotrf);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<double>, zpotrf);
 
 #endif
-
 }
 
 namespace internal {

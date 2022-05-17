@@ -368,8 +368,8 @@ void trsm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, c
       blasToCublasCast(const_cast<T*>(a.ptr()));
 #endif
   gpublas::Trsm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),
-                         blasToCublas(diag), to_int(s.m), to_int(s.n), blasToCublasCast(&alpha),
-                         a_ptr, to_int(a.ld()), blasToCublasCast(b.ptr()), to_int(b.ld()));
+                         blasToCublas(diag), to_int(s.m), to_int(s.n), blasToCublasCast(&alpha), a_ptr,
+                         to_int(a.ld()), blasToCublasCast(b.ptr()), to_int(b.ld()));
 }
 #endif  // defined(DLAF_WITH_GPU)
 

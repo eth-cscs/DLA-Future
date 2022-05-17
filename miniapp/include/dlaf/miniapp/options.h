@@ -42,7 +42,8 @@ inline Backend parseBackend(const std::string& backend) {
     return Backend::MC;
   else if (backend == "gpu") {
 #if !defined(DLAF_WITH_GPU)
-    std::cout << "Asked for --backend=gpu but both DLAF_WITH_CUDA and DLAF_WITH_HIP are disabled!" << std::endl;
+    std::cout << "Asked for --backend=gpu but both DLAF_WITH_CUDA and DLAF_WITH_HIP are disabled!"
+              << std::endl;
     std::terminate();
 #endif
     return Backend::GPU;

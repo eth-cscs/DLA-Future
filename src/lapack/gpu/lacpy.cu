@@ -8,8 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/gpu/assert.cu.h"
 #include "dlaf/gpu/api.h"
+#include "dlaf/gpu/assert.cu.h"
 #include "dlaf/gpu/blas/api.h"
 #include "dlaf/gpu/error.h"
 #include "dlaf/lapack/gpu/lacpy.h"

@@ -18,7 +18,7 @@
 
 #define DLAF_GPU_ASSERT_HEAVY(expr) \
   dlaf::cuda::gpuAssert(expr,       \
-                        [] __device__() { printf("GPU assertion failed: %s:%d", __FILE__, __LINE__); })
+                        [] __device__() { printf("GPU assertion failed: %s:%d\n", __FILE__, __LINE__); })
 
 #else
 #define DLAF_GPU_ASSERT_HEAVY(expr)
@@ -34,7 +34,6 @@ __device__ void gpuAssert(bool expr, PrintFunc&& print_func) {
 #ifdef DLAF_WITH_CUDA
     __trap();
 #else
-    // TODO: Verify what this does...
     abort();
 #endif
   }

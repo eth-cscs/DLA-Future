@@ -358,7 +358,8 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   // Note on the algorithm and dependency tracking:
   // The algorithm is composed by n-2 (real) or n-1 (complex) sweeps:
   // The i-th sweep is initialized by init_sweep which act on the i-th column of the band matrix.
-  // Then the sweep continues applying steps. The j-th step acts on the columns [i+1 + j * b, i+1 + (j+1) * b)
+  // Then the sweep continues applying steps.
+  // The j-th step acts on the columns [i+1 + j * b, i+1 + (j+1) * b)
   // The steps in the same sweep has to be executed in order and the dependencies are managed by the
   // worker pipelines. The deps vector is used to set the dependencies among two different sweeps.
   //
@@ -474,7 +475,8 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     }
   };
 
-  const auto sweeps = nrSweeps<T>(size);
+  const SizeType steps_per_task = nb / b;
+  const SizeType sweeps = nrSweeps<T>(size);
   for (SizeType sweep = 0; sweep < sweeps; ++sweep) {
     // Create the first max_workers workers and then reuse them.
     auto& w_pipeline = workers[sweep % max_workers];
@@ -483,11 +485,13 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
                dlaf::internal::transform(policy_hp, init_sweep);
     copy_tridiag(sweep, std::move(dep));
 
-    const auto steps = nrStepsForSweep(sweep, size, b);
+    const SizeType steps = nrStepsForSweep(sweep, size, b);
 
     SizeType last_step = 0;
     for (SizeType step = 0; step < steps;) {
-      SizeType nr_steps = step == 0 ? nb / b - sweep % nb / b : nb / b;
+      // First task might apply less steps to align with the boundaries of the HHR tile v.
+      SizeType nr_steps = steps_per_task - (step == 0 ? (sweep % nb) / b : 0);
+      // Last task only applies the remaining steps
       nr_steps = std::min(nr_steps, steps - step);
 
       auto dep_index = std::min(ceilDiv(step + nr_steps, nb / b), deps.size() - 1);

@@ -18,8 +18,7 @@
 #include <blas.hh>
 #include "dlaf/gpu/blas/api.h"
 
-namespace dlaf {
-namespace util {
+namespace dlaf::util {
 namespace internal {
 
 template <typename T>
@@ -115,7 +114,6 @@ inline constexpr rocblas_eform blasToRocblas(const int eigenvalueType) {
   }
 }
 
-}
 }
 
 #endif

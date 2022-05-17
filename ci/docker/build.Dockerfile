@@ -10,14 +10,15 @@ ENV DEBIAN_FRONTEND=noninteractive \
     SPACK_COLOR=always
 SHELL ["/bin/bash", "-c"]
 
+ARG EXTRA_APTGET
 RUN apt-get -yqq update && \
     apt-get -yqq install --no-install-recommends \
     software-properties-common \
     build-essential gfortran \
     autoconf automake \
-    clang \
+    ${EXTRA_APTGET} \
     gawk \
-    python3 python3.8-distutils \
+    python3 python3-distutils \
     git tar wget curl ca-certificates gpg-agent jq tzdata \
     patchelf unzip file gnupg2 && \
     rm -rf /var/lib/apt/lists/*

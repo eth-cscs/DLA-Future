@@ -15,13 +15,73 @@
 
 #include <blas.hh>
 
+#include "dlaf/common/assert.h"
+#include "dlaf/matrix/index.h"
+#include "dlaf/types.h"
 #include "dlaf_test/util_types.h"
 
 /// @file
 
-namespace dlaf {
-namespace matrix {
-namespace test {
+namespace dlaf::matrix::test {
+
+template <class T>
+auto getSubMatrixMatrixMultiplication(const SizeType a, const SizeType b, const SizeType m,
+                                      const SizeType n, const SizeType k, const T alpha, const T beta,
+                                      const blas::Op opA, const blas::Op opB) {
+  using dlaf::test::TypeUtilities;
+
+  if (opA != blas::Op::NoTrans)
+    DLAF_UNIMPLEMENTED(opA);
+  if (opB != blas::Op::NoTrans)
+    DLAF_UNIMPLEMENTED(opB);
+
+  DLAF_ASSERT(a >= 0 and a < m and a < n, a, m, n);
+  DLAF_ASSERT(b >= 0 and b < m and b < n, b, m, n);
+  DLAF_ASSERT(a <= b, a, b);
+
+  auto elA = [a, b](const GlobalElementIndex ik) {
+    if (ik.row() < a || ik.row() > b || ik.col() < a || ik.col() > b)
+      return TypeUtilities<T>::polar(13, -26);
+
+    const double i = ik.row();
+    const double k = ik.col();
+
+    return TypeUtilities<T>::polar((i + 1) / (k + .5), 2 * i - k);
+  };
+
+  auto elB = [a, b](const GlobalElementIndex kj) {
+    if (kj.row() < a || kj.row() > b || kj.col() < a || kj.col() > b)
+      return TypeUtilities<T>::polar(13, -26);
+
+    const double k = kj.row();
+    const double j = kj.col();
+
+    return TypeUtilities<T>::polar((k + .5) / (j + 2), k + j);
+  };
+
+  auto elC = [a, b, k](const GlobalElementIndex ij) {
+    if (ij.row() < a || ij.row() > b || ij.col() < a || ij.col() > b)
+      return TypeUtilities<T>::polar(-99, 99);
+
+    const double i = ij.row();
+    const double j = ij.col();
+
+    return TypeUtilities<T>::polar((i + k + 1) / (j + 5), i + j + k);
+  };
+
+  auto elR = [a, b, k, alpha, beta](const GlobalElementIndex ij) {
+    if (ij.row() < a || ij.row() > b || ij.col() < a || ij.col() > b)
+      return TypeUtilities<T>::polar(13, -26);
+
+    const double i = ij.row();
+    const double j = ij.col();
+
+    return alpha * TypeUtilities<T>::polar((i + 1) / (j + 2) * (b - a + 1), (2 * i) + j) +
+           beta * TypeUtilities<T>::polar((i + k + 1) / (j + 5), k + i + j);
+  };
+
+  return std::make_tuple<>(elA, elB, elC, elR);
+}
 
 /// Returns a tuple of element generators of three matrices A(m x m), B (m x n), X (m x n), for which it
 /// holds op(A) X = alpha B (n can be any value).
@@ -161,6 +221,4 @@ auto getTriangularSystem(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Di
     return dlaf::matrix::test::getRightTriangularSystem<ElementIndex, T>(uplo, op, diag, alpha, n);
 }
 
-}
-}
 }

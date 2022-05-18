@@ -61,12 +61,4 @@ target_link_libraries(miniapp_gen_eigensolver PRIVATE DLAF_miniapp)
 target_add_warnings(miniapp_gen_eigensolver)
 DLAF_addPrecompiledHeaders(miniapp_gen_eigensolver)
 
-# TODO: try rocThrust
-if(DLAF_WITH_CUDA)
-  add_executable(miniapp_cublas miniapp_cublas.cpp)
-  target_link_libraries(miniapp_cublas PRIVATE DLAF)
-  target_add_warnings(miniapp_cublas)
-  DLAF_addPrecompiledHeaders(miniapp_cublas)
-endif()
-
 add_subdirectory(kernel)

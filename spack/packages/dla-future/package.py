@@ -47,6 +47,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("pika build_type=Release", when="build_type=Release")
     depends_on("pika build_type=RelWithDebInfo", when="build_type=RelWithDebInfo")
 
+    depends_on("rocblas", when="+rocm")
     depends_on("hipblas", when="+rocm")
     depends_on("rocsolver", when="+rocm")
 

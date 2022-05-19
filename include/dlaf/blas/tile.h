@@ -354,12 +354,21 @@ void hemm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, c
 }
 
 template <class T>
-void her2k(cublasHandle_t handle, const blas::Uplo uplo, const blas::Op op, const T alpha,
+void her2k(cublasHandle_t handle, const blas::Uplo uplo, blas::Op op, const T alpha,
            const matrix::Tile<const T, Device::GPU>& a, const Tile<const T, Device::GPU>& b,
            const BaseType<T> beta, const matrix::Tile<T, Device::GPU>& c) {
   using util::blasToCublas;
   using util::blasToCublasCast;
   auto s = getHer2kSizes(op, a, b, c);
+#ifdef DLAF_WITH_HIP
+  // Note:
+  // Up to date the fix for this problem is on rocblas@develop, which should be included in
+  // the next 5.2.0 release.
+  //
+  // https://github.com/ROCmSoftwarePlatform/rocBLAS/commit/e714f1f29ab71dfcdfa4add4462548b34d1cd9e8
+  if (!isComplex_v<T> && op == blas::Op::ConjTrans)
+    op = blas::Op::Trans;
+#endif
   gpublas::Her2k<T>::call(handle, blasToCublas(uplo), blasToCublas(op), to_int(s.n), to_int(s.k),
                           blasToCublasCast(&alpha), blasToCublasCast(a.ptr()), to_int(a.ld()),
                           blasToCublasCast(b.ptr()), to_int(b.ld()), blasToCublasCast(&beta),

@@ -32,8 +32,8 @@ using namespace testing;
 template <Device D, class T, class CT = const T>
 void testTrsm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, const blas::Diag diag,
               const SizeType m, const SizeType n, const SizeType extra_lda, const SizeType extra_ldb) {
-  const TileElementSize size_a =
-      side == blas::Side::Left ? TileElementSize(m, m) : TileElementSize(n, n);
+  const SizeType k = side == blas::Side::Left ? m : n;
+  const TileElementSize size_a(k, k);
   const TileElementSize size_b(m, n);
 
   const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
@@ -54,8 +54,8 @@ void testTrsm(const blas::Side side, const blas::Uplo uplo, const blas::Op op, c
     << ", lda = " << lda << ", ldb = " << ldb;
   SCOPED_TRACE(s.str());
 
-  CHECK_TILE_NEAR(res_b, b, 10 * (m + 1) * TypeUtilities<T>::error,
-                  10 * (m + 1) * TypeUtilities<T>::error);
+  CHECK_TILE_NEAR(res_b, b, 10 * (k + 1) * TypeUtilities<T>::error,
+                  10 * (k + 1) * TypeUtilities<T>::error);
 }
 
 }

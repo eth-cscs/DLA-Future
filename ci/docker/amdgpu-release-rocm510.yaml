@@ -1,0 +1,82 @@
+#
+# Distributed Linear Algebra with Future (DLAF)
+#
+# Copyright (c) 2018-2022, ETH Zurich
+# All rights reserved.
+#
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+
+spack:
+  specs:
+  - dla-future@develop +rocm +miniapps +ci-test amdgpu_target=gfx906:xnack- ^openblas ^mpich
+  view: false
+  concretization: together
+
+  packages:
+    all:
+      target: [x86_64]
+      variants:
+      - build_type=Release
+      - cxxstd=17
+    blaspp:
+      variants:
+      - ~cuda
+      - ~rocm
+      - ~openmp
+    pika:
+      version:
+      - main
+      variants:
+      - malloc=mimalloc
+      - amdgpu_target=gfx906:xnack-
+    mpich:
+      variants:
+      - ~fortran
+      - ~rocm
+      - ~hwloc
+      - device=ch3
+      - netmod=tcp
+    git:
+      # Force git as non-buildable to allow deprecated versions in environments
+      # https://github.com/spack/spack/pull/30040
+      buildable: false
+    umpire:
+      version:
+      - 4.1.2
+      variants:
+      - amdgpu_target=gfx906:xnack-
+    blt:
+      version:
+      - 0.4.1
+    llvm-amdgpu:
+      externals:
+      - spec: llvm-amdgpu@5.1.0
+        prefix: /opt/amdgpu
+        buildable: false
+    hip:
+      externals:
+      - spec: hip@5.1.0
+        prefix: /opt/rocm-5.1.0/hip
+        buildable: false
+    hipblas:
+      externals:
+      - spec: hipblas@5.1.0
+        prefix: /opt/rocm-5.1.0/hipblas
+        buildable: false
+    rocblas:
+      externals:
+      - spec: rocblas@5.1.0
+        prefix: /opt/rocm-5.1.0/rocblas
+        buildable: false
+    rocsolver:
+      externals:
+      - spec: rocsolver@5.1.0
+        prefix: /opt/rocm-5.1.0/rocsolver
+        buildable: false
+    hsa-rocr-dev:
+      externals:
+      - spec: hsa-rocr-dev@5.1.0
+        prefix: /opt/rocm-5.1.0
+        buildable: false

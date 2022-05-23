@@ -21,8 +21,8 @@
 namespace dlaf::multiplication {
 namespace internal {
 
-template <Device D, class T>
-void GeneralSub<D, T>::callNN(const SizeType idx_begin, const SizeType idx_end, const blas::Op opA,
+template <Backend B, Device D, class T>
+void GeneralSub<B, D, T>::callNN(const SizeType idx_begin, const SizeType idx_end, const blas::Op opA,
                               const blas::Op opB, const T alpha, Matrix<const T, D>& mat_a,
                               Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
   namespace ex = pika::execution::experimental;
@@ -34,7 +34,7 @@ void GeneralSub<D, T>::callNN(const SizeType idx_begin, const SizeType idx_end, 
                                     mat_b.read_sender(GlobalTileIndex(k, j)),
                                     k == idx_begin ? beta : T(1),
                                     mat_c.readwrite_sender(GlobalTileIndex(i, j))) |
-            tile::gemm(dlaf::internal::Policy<Backend::MC>()) | ex::start_detached();
+            tile::gemm(dlaf::internal::Policy<B>()) | ex::start_detached();
       }
     }
   }

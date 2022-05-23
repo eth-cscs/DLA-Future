@@ -23,8 +23,8 @@ namespace internal {
 
 template <Backend B, Device D, class T>
 void GeneralSub<B, D, T>::callNN(const SizeType idx_begin, const SizeType idx_end, const blas::Op opA,
-                              const blas::Op opB, const T alpha, Matrix<const T, D>& mat_a,
-                              Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
+                                 const blas::Op opB, const T alpha, Matrix<const T, D>& mat_a,
+                                 Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
   namespace ex = pika::execution::experimental;
 
   for (SizeType j = idx_begin; j <= idx_end; ++j) {

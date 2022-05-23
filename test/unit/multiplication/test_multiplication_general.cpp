@@ -73,7 +73,8 @@ void testGeneralMultiplication(const SizeType a, const SizeType b, const blas::O
     MatrixMirror<const T, D, Device::CPU> mat_b(mat_bh);
     MatrixMirror<T, D, Device::CPU> mat_c(mat_ch);
 
-    multiplication::generalSubMatrix<B>(a, b, opA, opB, alpha, mat_a.get(), mat_b.get(), beta, mat_c.get());
+    multiplication::generalSubMatrix<B>(a, b, opA, opB, alpha, mat_a.get(), mat_b.get(), beta,
+                                        mat_c.get());
   }
 
   CHECK_MATRIX_NEAR(refResult, mat_ch, 40 * (mat_ch.size().rows() + 1) * TypeUtilities<T>::error,
@@ -108,8 +109,8 @@ TYPED_TEST(GeneralMultiplicationTestGPU, CorrectnessLocal) {
       for (const auto& [m, n, k, mb, a, b] : sizes) {
         const TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
         const TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
-        testGeneralMultiplication<TypeParam, Backend::GPU, Device::GPU>(a, b, opA, opB, alpha, beta, m, n,
-                                                                       k, mb);
+        testGeneralMultiplication<TypeParam, Backend::GPU, Device::GPU>(a, b, opA, opB, alpha, beta, m,
+                                                                        n, k, mb);
       }
     }
   }

@@ -66,5 +66,4 @@ void generalSubMatrix(const SizeType a, const SizeType b, const blas::Op opA, co
   else
     DLAF_UNIMPLEMENTED(opA, opB);
 }
-
 }

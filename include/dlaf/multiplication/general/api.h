@@ -40,6 +40,5 @@ DLAF_MULTIPLICATION_GENERAL_ETI(extern, Backend::GPU, Device::GPU, double)
 DLAF_MULTIPLICATION_GENERAL_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)
 DLAF_MULTIPLICATION_GENERAL_ETI(extern, Backend::GPU, Device::GPU, std::complex<double>)
 #endif
-
 }
 }

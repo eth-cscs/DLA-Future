@@ -43,9 +43,9 @@ namespace dlaf::eigensolver::internal {
 namespace bt_tridiag {
 
 template <class T>
-matrix::Tile<const T, Device::CPU> task_setupVWellFormed(
-    const SizeType b, const matrix::Tile<const T, Device::CPU>& tile_hh,
-    matrix::Tile<T, Device::CPU> tile_v) {
+matrix::Tile<const T, Device::CPU> setupVWellFormed(const SizeType b,
+                                                    const matrix::Tile<const T, Device::CPU>& tile_hh,
+                                                    matrix::Tile<T, Device::CPU> tile_v) {
   using lapack::lacpy;
   using lapack::laset;
 
@@ -82,20 +82,9 @@ matrix::Tile<const T, Device::CPU> task_setupVWellFormed(
 }
 
 template <class T>
-pika::shared_future<matrix::Tile<const T, Device::CPU>> setupVWellFormed(
-    const SizeType b, pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_hh,
-    pika::future<matrix::Tile<T, Device::CPU>> tile_v) {
-  namespace ex = pika::execution::experimental;
-
-  return dlaf::internal::whenAllLift(b, ex::keep_future(std::move(tile_hh)), std::move(tile_v)) |
-         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), task_setupVWellFormed<T>) |
-         ex::make_future();
-}
-
-template <class T>
-matrix::Tile<const T, Device::CPU> task_computeTFactor(
-    const matrix::Tile<const T, Device::CPU>& tile_taus,
-    const matrix::Tile<const T, Device::CPU>& tile_v, matrix::Tile<T, Device::CPU> tile_t) {
+matrix::Tile<const T, Device::CPU> computeTFactor(const matrix::Tile<const T, Device::CPU>& tile_taus,
+                                                  const matrix::Tile<const T, Device::CPU>& tile_v,
+                                                  matrix::Tile<T, Device::CPU> tile_t) {
   using namespace lapack;
 
   // taus have to be extracted from the compact form (i.e. first row of the input tile)
@@ -113,36 +102,11 @@ matrix::Tile<const T, Device::CPU> task_computeTFactor(
 }
 
 template <class T>
-pika::shared_future<matrix::Tile<const T, Device::CPU>> computeTFactor(
-    pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_taus,
-    pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_v,
-    pika::future<matrix::Tile<T, Device::CPU>> mat_t) {
-  namespace ex = pika::execution::experimental;
-
-  return dlaf::internal::whenAllLift(ex::keep_future(std::move(tile_taus)),
-                                     ex::keep_future(std::move(tile_v)), std::move(mat_t)) |
-         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), task_computeTFactor<T>) |
-         ex::make_future();
-}
-
-template <Backend backend, class TSender, class VSender, class WSender>
-auto computeW(pika::threads::thread_priority priority, TSender&& tile_t, VSender&& tile_v,
-              WSender&& tile_w) {
-  using namespace blas;
-  using T = dlaf::internal::SenderElementType<WSender>;
-  dlaf::internal::whenAllLift(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1),
-                              std::forward<TSender>(tile_t), std::forward<VSender>(tile_v),
-                              std::forward<WSender>(tile_w)) |
-      tile::trmm3(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
-}
-
-template <class T>
 std::tuple<matrix::Tile<const T, Device::CPU>, matrix::Tile<const T, Device::CPU>> computeVT(
     const SizeType b, const matrix::Tile<const T, Device::CPU>& tile_hh,
     matrix::Tile<T, Device::CPU> tile_v, matrix::Tile<T, Device::CPU> tile_t) {
-  auto tile_v_c = task_setupVWellFormed(b, tile_hh, std::move(tile_v));
-  auto tile_t_c = task_computeTFactor(tile_hh, tile_v_c, std::move(tile_t));
+  auto tile_v_c = setupVWellFormed(b, tile_hh, std::move(tile_v));
+  auto tile_t_c = computeTFactor(tile_hh, tile_v_c, std::move(tile_t));
   return std::make_tuple(std::move(tile_v_c), std::move(tile_t_c));
 }
 

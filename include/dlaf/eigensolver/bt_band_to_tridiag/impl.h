@@ -137,14 +137,24 @@ auto computeW(pika::threads::thread_priority priority, TSender&& tile_t, VSender
 }
 
 template <class T>
+std::tuple<matrix::Tile<const T, Device::CPU>, matrix::Tile<const T, Device::CPU>> computeVT(
+    const SizeType b, const matrix::Tile<const T, Device::CPU>& tile_hh,
+    matrix::Tile<T, Device::CPU> tile_v, matrix::Tile<T, Device::CPU> tile_t) {
+  auto tile_v_c = task_setupVWellFormed(b, tile_hh, std::move(tile_v));
+  auto tile_t_c = task_computeTFactor(tile_hh, tile_v_c, std::move(tile_t));
+  return std::make_tuple(std::move(tile_v_c), std::move(tile_t_c));
+}
+
+template <class T>
 std::tuple<matrix::Tile<const T, Device::CPU>, matrix::Tile<const T, Device::CPU>,
            matrix::Tile<const T, Device::CPU>>
 computeVTW(const SizeType b, const matrix::Tile<const T, Device::CPU>& tile_hh,
            matrix::Tile<T, Device::CPU> tile_v, matrix::Tile<T, Device::CPU> tile_t,
            matrix::Tile<T, Device::CPU> tile_w) {
-  auto tile_v_c = task_setupVWellFormed(b, tile_hh, std::move(tile_v));
-  auto tile_t_c = task_computeTFactor(tile_hh, tile_v_c, std::move(tile_t));
   using namespace blas;
+
+  auto [tile_v_c, tile_t_c] = computeVT(b, tile_hh, std::move(tile_v), std::move(tile_t));
+
   dlaf::tile::internal::trmm3_o(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1), tile_t_c,
                                 tile_v_c, tile_w);
   return std::make_tuple(std::move(tile_v_c), std::move(tile_t_c), std::move(tile_w));
@@ -350,16 +360,21 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
     auto& mat_v_h = w_panels_h.nextResource();
     auto& mat_t_h = t_panels_h.nextResource();
 
-    auto tile_hh = splitTile(mat_hh.read(ij), helper.specHHCompact());
-
-    auto tile_v_h = setupVWellFormed(b, tile_hh, splitTile(mat_v_h(ij), helper.specHH()));
-    auto tile_v = scheduleCopy(tile_v_h, mat_v, ij, helper.specHH());
-
     const LocalTileIndex ij_t(ij.row(), 0);
     const matrix::SubTileSpec t_spec = {{0, 0}, {nrefls, nrefls}};
 
-    auto tile_t_h = computeTFactor(tile_hh, tile_v_h, splitTile(mat_t_h(ij_t), t_spec));
-    auto tile_t = scheduleCopy(tile_t_h, mat_t, ij_t, t_spec);
+    auto tup =
+        dlaf::internal::whenAllLift(b,
+                                    ex::keep_future(splitTile(mat_hh.read(ij), helper.specHHCompact())),
+                                    splitTile(mat_v_h(ij), helper.specHH()),
+                                    splitTile(mat_t_h(ij_t), t_spec)) |
+        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), computeVT<T>) |
+        ex::make_future();
+
+    auto [tile_v_h, tile_t_h] = pika::split_future(std::move(tup));
+
+    auto tile_v = scheduleCopy(std::move(tile_v_h), mat_v, ij, helper.specHH());
+    auto tile_t = scheduleCopy(std::move(tile_t_h), mat_t, ij_t, t_spec);
 
     // W = V . T
     using pika::threads::thread_priority;
@@ -370,7 +385,7 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
   }
 
 protected:
-  auto scheduleCopy(pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_src,
+  auto scheduleCopy(pika::future<matrix::Tile<const T, Device::CPU>> tile_src,
                     matrix::Panel<Coord::Col, T, D>& mat, const LocalTileIndex ij,
                     const matrix::SubTileSpec spec) const {
     namespace ex = pika::execution::experimental;
@@ -380,7 +395,7 @@ protected:
     auto fulltile = mat(ij);
     auto tile_dst = splitTile(fulltile, spec);
 
-    dlaf::internal::whenAllLift(ex::keep_future(tile_src), std::move(tile_dst)) |
+    dlaf::internal::whenAllLift(std::move(tile_src), std::move(tile_dst)) |
         matrix::copy(dlaf::internal::Policy<copy_backend>()) | ex::start_detached();
 
     return splitTile(mat.read(ij), spec);

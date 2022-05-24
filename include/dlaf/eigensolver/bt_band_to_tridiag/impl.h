@@ -147,18 +147,17 @@ std::tuple<matrix::Tile<const T, Device::CPU>, matrix::Tile<const T, Device::CPU
 }
 
 template <class T>
-std::tuple<matrix::Tile<const T, Device::CPU>, matrix::Tile<const T, Device::CPU>,
-           matrix::Tile<const T, Device::CPU>>
-computeVTW(const SizeType b, const matrix::Tile<const T, Device::CPU>& tile_hh,
-           matrix::Tile<T, Device::CPU> tile_v, matrix::Tile<T, Device::CPU> tile_t,
-           matrix::Tile<T, Device::CPU> tile_w) {
+std::tuple<matrix::Tile<const T, Device::CPU>, matrix::Tile<const T, Device::CPU>> computeVW(
+    const SizeType b, const matrix::Tile<const T, Device::CPU>& tile_hh,
+    matrix::Tile<T, Device::CPU> tile_v, matrix::Tile<T, Device::CPU> tile_t,
+    matrix::Tile<T, Device::CPU> tile_w) {
   using namespace blas;
 
   auto [tile_v_c, tile_t_c] = computeVT(b, tile_hh, std::move(tile_v), std::move(tile_t));
 
   dlaf::tile::internal::trmm3_o(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1), tile_t_c,
                                 tile_v_c, tile_w);
-  return std::make_tuple(std::move(tile_v_c), std::move(tile_t_c), std::move(tile_w));
+  return std::make_tuple(std::move(tile_v_c), std::move(tile_w));
 }
 
 template <Backend backend, class VSender, class ESender, class T, class W2Sender>
@@ -317,10 +316,9 @@ struct HHManager<Backend::MC, Device::CPU, T> {
 
   HHManager(const SizeType b, const std::size_t, matrix::Distribution, matrix::Distribution) : b(b) {}
 
-  auto setupVAndComputeT(const LocalTileIndex ij, const SizeType nrefls, const TileAccessHelper& helper,
-                         matrix::Matrix<const T, Device::CPU>& mat_hh,
-                         matrix::Panel<Coord::Col, T, D>& mat_v, matrix::Panel<Coord::Col, T, D>& mat_t,
-                         matrix::Panel<Coord::Col, T, D>& mat_w) {
+  auto computeVW(const LocalTileIndex ij, const SizeType nrefls, const TileAccessHelper& helper,
+                 matrix::Matrix<const T, Device::CPU>& mat_hh, matrix::Panel<Coord::Col, T, D>& mat_v,
+                 matrix::Panel<Coord::Col, T, D>& mat_t, matrix::Panel<Coord::Col, T, D>& mat_w) {
     namespace ex = pika::execution::experimental;
 
     const matrix::SubTileSpec t_spec{{0, 0}, {nrefls, nrefls}};
@@ -332,7 +330,7 @@ struct HHManager<Backend::MC, Device::CPU, T> {
                                     splitTile(mat_v(ij), helper.specHH()),
                                     splitTile(mat_t(ij_t), t_spec),
                                     splitTile(mat_w(ij), helper.specHH())) |
-        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), computeVTW<T>) |
+        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), bt_tridiag::computeVW<T>) |
         ex::make_future();
 
     return pika::split_future(std::move(tup));
@@ -352,10 +350,9 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
             matrix::Distribution dist_w)
       : b(b), t_panels_h(n_workspaces, dist_t), w_panels_h(n_workspaces, dist_w) {}
 
-  auto setupVAndComputeT(const LocalTileIndex ij, const SizeType nrefls, const TileAccessHelper& helper,
-                         matrix::Matrix<const T, Device::CPU>& mat_hh,
-                         matrix::Panel<Coord::Col, T, D>& mat_v, matrix::Panel<Coord::Col, T, D>& mat_t,
-                         matrix::Panel<Coord::Col, T, D>& mat_w) {
+  auto computeVW(const LocalTileIndex ij, const SizeType nrefls, const TileAccessHelper& helper,
+                 matrix::Matrix<const T, Device::CPU>& mat_hh, matrix::Panel<Coord::Col, T, D>& mat_v,
+                 matrix::Panel<Coord::Col, T, D>& mat_t, matrix::Panel<Coord::Col, T, D>& mat_w) {
     namespace ex = pika::execution::experimental;
 
     auto& mat_v_h = w_panels_h.nextResource();
@@ -389,7 +386,7 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
           tile::internal::trmm3(handle, Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1),
                                 tile_t, tile_v, tile_w);
 
-          return std::make_tuple(std::move(tile_v), std::move(tile_t), std::move(tile_w));
+          return std::make_tuple(std::move(tile_v), std::move(tile_w));
         };
 
     auto tup2 = ex::when_all(ex::keep_future(std::move(tile_v_h)), ex::keep_future(std::move(tile_t_h)),
@@ -496,8 +493,7 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
 
       // TODO setRange? it would mean setting the range to a specific tile for each step, and resetting at the end
 
-      auto [tile_v, tile_t, tile_w] =
-          helperBackend.setupVAndComputeT(ij, nrefls, helper, mat_hh, mat_v, mat_t, mat_w);
+      auto [tile_v, tile_w] = helperBackend.computeVW(ij, nrefls, helper, mat_hh, mat_v, mat_t, mat_w);
 
       // W2 = V* . E
       for (SizeType j_e = 0; j_e < mat_e.nrTiles().cols(); ++j_e) {

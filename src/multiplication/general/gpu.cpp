@@ -12,8 +12,9 @@
 
 namespace dlaf::multiplication::internal {
 
-DLAF_MULTIPLICATION_GENERAL_ETI(, Backend::MC, Device::CPU, float)
-DLAF_MULTIPLICATION_GENERAL_ETI(, Backend::MC, Device::CPU, double)
-DLAF_MULTIPLICATION_GENERAL_ETI(, Backend::MC, Device::CPU, std::complex<float>)
-DLAF_MULTIPLICATION_GENERAL_ETI(, Backend::MC, Device::CPU, std::complex<double>)
+DLAF_MULTIPLICATION_GENERAL_ETI(, Backend::GPU, Device::GPU, float)
+DLAF_MULTIPLICATION_GENERAL_ETI(, Backend::GPU, Device::GPU, double)
+DLAF_MULTIPLICATION_GENERAL_ETI(, Backend::GPU, Device::GPU, std::complex<float>)
+DLAF_MULTIPLICATION_GENERAL_ETI(, Backend::GPU, Device::GPU, std::complex<double>)
+
 }

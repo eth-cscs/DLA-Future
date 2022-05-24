@@ -14,6 +14,7 @@
 #include "dlaf/blas/enum_output.h"
 #include "dlaf/common/assert.h"
 #include "dlaf/matrix/index.h"
+#include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf/util_matrix.h"
 
 #include "dlaf_test/matrix/util_generic_blas.h"
@@ -21,12 +22,20 @@
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
+using namespace dlaf::matrix;
 using namespace dlaf::test;
 
 template <class T>
 struct GeneralMultiplicationTestMC : public ::testing::Test {};
 
 TYPED_TEST_SUITE(GeneralMultiplicationTestMC, MatrixElementTypes);
+
+#ifdef DLAF_WITH_CUDA
+template <class T>
+struct GeneralMultiplicationTestGPU : public ::testing::Test {};
+
+TYPED_TEST_SUITE(GeneralMultiplicationTestGPU, MatrixElementTypes);
+#endif
 
 const std::vector<blas::Op> blas_ops({blas::Op::NoTrans, blas::Op::Trans, blas::Op::ConjTrans});
 const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, SizeType>> sizes = {
@@ -55,14 +64,21 @@ void testGeneralMultiplication(const SizeType a, const SizeType b, const blas::O
     return matrix;
   };
 
-  Matrix<const T, Device::CPU> mat_a = setMatrix(refA, {m, k}, {mb, mb});
-  Matrix<const T, Device::CPU> mat_b = setMatrix(refB, {k, n}, {mb, mb});
-  Matrix<T, Device::CPU> mat_c = setMatrix(refC, {m, n}, {mb, mb});
+  Matrix<const T, Device::CPU> mat_ah = setMatrix(refA, {m, k}, {mb, mb});
+  Matrix<const T, Device::CPU> mat_bh = setMatrix(refB, {k, n}, {mb, mb});
+  Matrix<T, Device::CPU> mat_ch = setMatrix(refC, {m, n}, {mb, mb});
 
-  dlaf::multiplication::generalSubMatrix(a, b, opA, opB, alpha, mat_a, mat_b, beta, mat_c);
+  {
+    MatrixMirror<const T, D, Device::CPU> mat_a(mat_ah);
+    MatrixMirror<const T, D, Device::CPU> mat_b(mat_bh);
+    MatrixMirror<T, D, Device::CPU> mat_c(mat_ch);
 
-  CHECK_MATRIX_NEAR(refResult, mat_c, 40 * (mat_c.size().rows() + 1) * TypeUtilities<T>::error,
-                    40 * (mat_c.size().rows() + 1) * TypeUtilities<T>::error);
+    multiplication::generalSubMatrix<B>(a, b, opA, opB, alpha, mat_a.get(), mat_b.get(), beta,
+                                        mat_c.get());
+  }
+
+  CHECK_MATRIX_NEAR(refResult, mat_ch, 40 * (mat_ch.size().rows() + 1) * TypeUtilities<T>::error,
+                    40 * (mat_ch.size().rows() + 1) * TypeUtilities<T>::error);
 }
 
 TYPED_TEST(GeneralMultiplicationTestMC, CorrectnessLocal) {
@@ -81,3 +97,22 @@ TYPED_TEST(GeneralMultiplicationTestMC, CorrectnessLocal) {
     }
   }
 }
+
+#ifdef DLAF_WITH_CUDA
+TYPED_TEST(GeneralMultiplicationTestGPU, CorrectnessLocal) {
+  for (const auto opA : blas_ops) {
+    for (const auto opB : blas_ops) {
+      // Note: not yet implemented
+      if (opA != blas::Op::NoTrans || opB != blas::Op::NoTrans)
+        continue;
+
+      for (const auto& [m, n, k, mb, a, b] : sizes) {
+        const TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
+        const TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
+        testGeneralMultiplication<TypeParam, Backend::GPU, Device::GPU>(a, b, opA, opB, alpha, beta, m,
+                                                                        n, k, mb);
+      }
+    }
+  }
+}
+#endif

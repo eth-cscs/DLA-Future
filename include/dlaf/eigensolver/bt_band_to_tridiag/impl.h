@@ -113,13 +113,15 @@ pika::shared_future<matrix::Tile<const T, Device::CPU>> computeTFactor(
          ex::make_future();
 }
 
-template <Backend backend, class TSender, class VSender>
-auto computeW(pika::threads::thread_priority priority, TSender&& tile_t, VSender&& tile_v) {
+template <Backend backend, class TSender, class VSender, class WSender>
+auto computeW(pika::threads::thread_priority priority, TSender&& tile_t, VSender&& tile_v,
+              WSender&& tile_w) {
   using namespace blas;
-  using T = dlaf::internal::SenderElementType<VSender>;
+  using T = dlaf::internal::SenderElementType<WSender>;
   dlaf::internal::whenAllLift(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1),
-                              std::forward<TSender>(tile_t), std::forward<VSender>(tile_v)) |
-      tile::trmm(dlaf::internal::Policy<backend>(priority)) |
+                              std::forward<TSender>(tile_t), std::forward<VSender>(tile_v),
+                              std::forward<WSender>(tile_w)) |
+      tile::trmm3(dlaf::internal::Policy<backend>(priority)) |
       pika::execution::experimental::start_detached();
 }
 
@@ -399,6 +401,7 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
 
   constexpr std::size_t n_workspaces = 2;
   RoundRobin<Panel<Coord::Col, T, D>> t_panels(n_workspaces, dist_t);
+  RoundRobin<Panel<Coord::Col, T, D>> v_panels(n_workspaces, dist_w);
   RoundRobin<Panel<Coord::Col, T, D>> w_panels(n_workspaces, dist_w);
   RoundRobin<Panel<Coord::Row, T, D>> w2_panels(n_workspaces, dist_w2);
 
@@ -407,8 +410,9 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
   // Note: sweep are on diagonals, steps are on verticals
   const SizeType j_last_sweep = (nsweeps - 1) / b;
   for (SizeType j = j_last_sweep; j >= 0; --j) {
-    auto& mat_w = w_panels.nextResource();
     auto& mat_t = t_panels.nextResource();
+    auto& mat_v = v_panels.nextResource();
+    auto& mat_w = w_panels.nextResource();
     auto& mat_w2 = w2_panels.nextResource();
 
     // Note: apply the entire column (steps)
@@ -431,22 +435,22 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
       const TileAccessHelper helper(b, nrefls, mat_hh.distribution(), ij_e);
 
       if (nrefls < b) {
-        mat_w.setWidth(nrefls);
         mat_t.setWidth(nrefls);
+        mat_v.setWidth(nrefls);
+        mat_w.setWidth(nrefls);
         mat_w2.setHeight(nrefls);
       }
 
       // TODO setRange? it would mean setting the range to a specific tile for each step, and resetting at the end
 
-      // Note:
-      // Let's use W as a temporary storage for the well formed version of V, which is needed
-      // for computing W2 = V . E, and it is also useful for computing T
-      auto [tile_v, tile_t] = helperBackend.setupVAndComputeT(ij, nrefls, helper, mat_hh, mat_w, mat_t);
+      auto [tile_v, tile_t] = helperBackend.setupVAndComputeT(ij, nrefls, helper, mat_hh, mat_v, mat_t);
+
+      // W = V . T
+      computeW<B>(thread_priority::normal, ex::keep_future(tile_t), ex::keep_future(tile_v),
+                  splitTile(mat_w(ij), helper.specHH()));
+      auto tile_w = mat_w.read(ij);
 
       // W2 = V* . E
-      // Note:
-      // Since the well-formed V is stored in W, we have to use it before W will get overwritten.
-      // For this reason W2 is computed before W.
       for (SizeType j_e = 0; j_e < mat_e.nrTiles().cols(); ++j_e) {
         const auto sz_e = mat_e.tileSize({ij.row(), j_e});
         auto tile_e = mat_e.read(LocalTileIndex(ij.row(), j_e));
@@ -464,15 +468,6 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
                        mat_w2.readwrite_sender(LocalTileIndex(0, j_e)));
         }
       }
-
-      // W = V . T
-      // Note:
-      // At this point W can be overwritten, but this will happen just after W2 and T computations
-      // finished. T was already a dependency, but W2 wasn't, meaning it won't run in parallel,
-      // but it could.
-      computeW<B>(thread_priority::normal, ex::keep_future(tile_t),
-                  splitTile(mat_w(ij), helper.specHH()));
-      auto tile_w = mat_w.read(ij);
 
       // E -= W . W2
       for (SizeType j_e = 0; j_e < mat_e.nrTiles().cols(); ++j_e) {
@@ -494,6 +489,7 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
       }
 
       mat_t.reset();
+      mat_v.reset();
       mat_w.reset();
       mat_w2.reset();
     }

@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <tuple>
 #include <type_traits>
 
 #include <pika/execution.hpp>
@@ -28,7 +29,9 @@
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/panel.h"
 #include "dlaf/matrix/tile.h"
+#include "dlaf/sender/policy.h"
 #include "dlaf/sender/traits.h"
+#include "dlaf/sender/transform.h"
 #include "dlaf/sender/when_all_lift.h"
 #include "dlaf/types.h"
 #include "dlaf/util_math.h"
@@ -131,6 +134,20 @@ auto computeW(pika::threads::thread_priority priority, TSender&& tile_t, VSender
                               std::forward<WSender>(tile_w)) |
       tile::trmm3(dlaf::internal::Policy<backend>(priority)) |
       pika::execution::experimental::start_detached();
+}
+
+template <class T>
+std::tuple<matrix::Tile<const T, Device::CPU>, matrix::Tile<const T, Device::CPU>,
+           matrix::Tile<const T, Device::CPU>>
+computeVTW(const SizeType b, const matrix::Tile<const T, Device::CPU>& tile_hh,
+           matrix::Tile<T, Device::CPU> tile_v, matrix::Tile<T, Device::CPU> tile_t,
+           matrix::Tile<T, Device::CPU> tile_w) {
+  auto tile_v_c = task_setupVWellFormed(b, tile_hh, std::move(tile_v));
+  auto tile_t_c = task_computeTFactor(tile_hh, tile_v_c, std::move(tile_t));
+  using namespace blas;
+  dlaf::tile::internal::trmm3_o(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1), tile_t_c,
+                                tile_v_c, tile_w);
+  return std::make_tuple(std::move(tile_v_c), std::move(tile_t_c), std::move(tile_w));
 }
 
 template <Backend backend, class VSender, class ESender, class T, class W2Sender>
@@ -291,16 +308,23 @@ struct HHManager<Backend::MC, Device::CPU, T> {
 
   auto setupVAndComputeT(const LocalTileIndex ij, const SizeType nrefls, const TileAccessHelper& helper,
                          matrix::Matrix<const T, Device::CPU>& mat_hh,
-                         matrix::Panel<Coord::Col, T, D>& mat_v,
-                         matrix::Panel<Coord::Col, T, D>& mat_t) {
-    auto tile_hh = splitTile(mat_hh.read(ij), helper.specHHCompact());
-    auto tile_v = setupVWellFormed(b, tile_hh, splitTile(mat_v(ij), helper.specHH()));
+                         matrix::Panel<Coord::Col, T, D>& mat_v, matrix::Panel<Coord::Col, T, D>& mat_t,
+                         matrix::Panel<Coord::Col, T, D>& mat_w) {
+    namespace ex = pika::execution::experimental;
 
     const matrix::SubTileSpec t_spec{{0, 0}, {nrefls, nrefls}};
     const LocalTileIndex ij_t(LocalTileIndex(ij.row(), 0));
-    auto tile_t = computeTFactor(tile_hh, tile_v, splitTile(mat_t(ij_t), t_spec));
 
-    return std::make_pair(std::move(tile_v), std::move(tile_t));
+    auto tup =
+        dlaf::internal::whenAllLift(b,
+                                    ex::keep_future(splitTile(mat_hh.read(ij), helper.specHHCompact())),
+                                    splitTile(mat_v(ij), helper.specHH()),
+                                    splitTile(mat_t(ij_t), t_spec),
+                                    splitTile(mat_w(ij), helper.specHH())) |
+        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), computeVTW<T>) |
+        ex::make_future();
+
+    return pika::split_future(std::move(tup));
   }
 
 protected:
@@ -319,8 +343,8 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
 
   auto setupVAndComputeT(const LocalTileIndex ij, const SizeType nrefls, const TileAccessHelper& helper,
                          matrix::Matrix<const T, Device::CPU>& mat_hh,
-                         matrix::Panel<Coord::Col, T, D>& mat_v,
-                         matrix::Panel<Coord::Col, T, D>& mat_t) {
+                         matrix::Panel<Coord::Col, T, D>& mat_v, matrix::Panel<Coord::Col, T, D>& mat_t,
+                         matrix::Panel<Coord::Col, T, D>& mat_w) {
     namespace ex = pika::execution::experimental;
 
     auto& mat_v_h = w_panels_h.nextResource();
@@ -337,7 +361,12 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
     auto tile_t_h = computeTFactor(tile_hh, tile_v_h, splitTile(mat_t_h(ij_t), t_spec));
     auto tile_t = scheduleCopy(tile_t_h, mat_t, ij_t, t_spec);
 
-    return std::make_pair(std::move(tile_v), std::move(tile_t));
+    // W = V . T
+    using pika::threads::thread_priority;
+    computeW<B>(thread_priority::normal, ex::keep_future(tile_t), ex::keep_future(tile_v),
+                splitTile(mat_w(ij), helper.specHH()));
+
+    return std::make_tuple(std::move(tile_v), std::move(tile_t), mat_w.read(ij));
   }
 
 protected:
@@ -451,12 +480,8 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
 
       // TODO setRange? it would mean setting the range to a specific tile for each step, and resetting at the end
 
-      auto [tile_v, tile_t] = helperBackend.setupVAndComputeT(ij, nrefls, helper, mat_hh, mat_v, mat_t);
-
-      // W = V . T
-      computeW<B>(thread_priority::normal, ex::keep_future(tile_t), ex::keep_future(tile_v),
-                  splitTile(mat_w(ij), helper.specHH()));
-      auto tile_w = mat_w.read(ij);
+      auto [tile_v, tile_t, tile_w] =
+          helperBackend.setupVAndComputeT(ij, nrefls, helper, mat_hh, mat_v, mat_t, mat_w);
 
       // W2 = V* . E
       for (SizeType j_e = 0; j_e < mat_e.nrTiles().cols(); ++j_e) {

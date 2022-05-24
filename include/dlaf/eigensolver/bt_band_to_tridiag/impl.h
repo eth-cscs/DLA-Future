@@ -495,11 +495,12 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
 
       auto [tile_v, tile_w] = helperBackend.computeVW(ij, nrefls, helper, mat_hh, mat_v, mat_t, mat_w);
 
-      // W2 = V* . E
       for (SizeType j_e = 0; j_e < mat_e.nrTiles().cols(); ++j_e) {
+        const LocalTileIndex idx_e(ij.row(), j_e);
         const auto sz_e = mat_e.tileSize({ij.row(), j_e});
-        auto tile_e = mat_e.read(LocalTileIndex(ij.row(), j_e));
+        auto tile_e = mat_e.read(idx_e);
 
+        // W2 = V* . E
         computeW2<B>(thread_priority::normal,
                      ex::keep_future(splitTile(tile_v, helper.topPart().specHH())),
                      ex::keep_future(splitTile(tile_e, helper.topPart().specEV(sz_e.cols()))), T(0),
@@ -512,15 +513,10 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
                        ex::keep_future(splitTile(tile_e, helper.bottomPart().specEV(sz_e.cols()))), T(1),
                        mat_w2.readwrite_sender(LocalTileIndex(0, j_e)));
         }
-      }
-
-      // E -= W . W2
-      for (SizeType j_e = 0; j_e < mat_e.nrTiles().cols(); ++j_e) {
-        const LocalTileIndex idx_e(ij.row(), j_e);
-        const auto sz_e = mat_e.tileSize({ij.row(), j_e});
 
         const auto& tile_w2 = mat_w2.read_sender(idx_e);
 
+        // E -= W . W2
         updateE<B>(pika::threads::thread_priority::normal,
                    ex::keep_future(splitTile(tile_w, helper.topPart().specHH())), tile_w2,
                    splitTile(mat_e(idx_e), helper.topPart().specEV(sz_e.cols())));

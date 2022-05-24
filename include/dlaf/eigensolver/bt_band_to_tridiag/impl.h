@@ -24,6 +24,7 @@
 #include "dlaf/common/round_robin.h"
 #include "dlaf/eigensolver/band_to_tridiag/api.h"
 #include "dlaf/eigensolver/bt_band_to_tridiag/api.h"
+#include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
@@ -373,34 +374,34 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
 
     auto [tile_v_h, tile_t_h] = pika::split_future(std::move(tup));
 
-    auto tile_v = scheduleCopy(std::move(tile_v_h), mat_v, ij, helper.specHH());
-    auto tile_t = scheduleCopy(std::move(tile_t_h), mat_t, ij_t, t_spec);
+    auto copyVTandComputeW =
+        [](cublasHandle_t handle, const matrix::Tile<const T, Device::CPU>& tile_v_h,
+           const matrix::Tile<const T, Device::CPU>& tile_t_h, matrix::Tile<T, Device::GPU>& tile_v,
+           matrix::Tile<T, Device::GPU>& tile_t, matrix::Tile<T, Device::GPU>& tile_w) {
+          cudaStream_t stream;
+          DLAF_CUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
 
-    // W = V . T
-    using pika::threads::thread_priority;
-    computeW<B>(thread_priority::normal, ex::keep_future(tile_t), ex::keep_future(tile_v),
-                splitTile(mat_w(ij), helper.specHH()));
+          matrix::internal::copy(tile_v_h, tile_v, stream);
+          matrix::internal::copy(tile_t_h, tile_t, stream);
 
-    return std::make_tuple(std::move(tile_v), std::move(tile_t), mat_w.read(ij));
+          // W = V . T
+          using namespace blas;
+          tile::internal::trmm3(handle, Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1),
+                                tile_t, tile_v, tile_w);
+
+          return std::make_tuple(std::move(tile_v), std::move(tile_t), std::move(tile_w));
+        };
+
+    auto tup2 = ex::when_all(ex::keep_future(std::move(tile_v_h)), ex::keep_future(std::move(tile_t_h)),
+                             splitTile(mat_v(ij), helper.specHH()), splitTile(mat_t(ij_t), t_spec),
+                             splitTile(mat_w(ij), helper.specHH())) |
+                dlaf::internal::transform(dlaf::internal::Policy<Backend::GPU>(), copyVTandComputeW) |
+                ex::make_future();
+
+    return pika::split_future(std::move(tup2));
   }
 
 protected:
-  auto scheduleCopy(pika::future<matrix::Tile<const T, Device::CPU>> tile_src,
-                    matrix::Panel<Coord::Col, T, D>& mat, const LocalTileIndex ij,
-                    const matrix::SubTileSpec spec) const {
-    namespace ex = pika::execution::experimental;
-
-    constexpr auto copy_backend = dlaf::matrix::internal::CopyBackend_v<Device::CPU, D>;
-
-    auto fulltile = mat(ij);
-    auto tile_dst = splitTile(fulltile, spec);
-
-    dlaf::internal::whenAllLift(std::move(tile_src), std::move(tile_dst)) |
-        matrix::copy(dlaf::internal::Policy<copy_backend>()) | ex::start_detached();
-
-    return splitTile(mat.read(ij), spec);
-  }
-
   const SizeType b;
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> t_panels_h;
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> w_panels_h;

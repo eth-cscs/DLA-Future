@@ -29,6 +29,7 @@
 #include "dlaf/matrix/panel.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/sender/traits.h"
+#include "dlaf/sender/when_all_lift.h"
 #include "dlaf/types.h"
 #include "dlaf/util_math.h"
 #include "dlaf/util_matrix.h"
@@ -38,50 +39,73 @@ namespace dlaf::eigensolver::internal {
 namespace bt_tridiag {
 
 template <class T>
+matrix::Tile<const T, Device::CPU> task_setupVWellFormed(
+    const SizeType b, const matrix::Tile<const T, Device::CPU>& tile_hh,
+    matrix::Tile<T, Device::CPU> tile_v) {
+  using lapack::lacpy;
+  using lapack::laset;
+
+  // Note: the size of of tile_hh and tile_v embeds a relevant information about the number of
+  // reflecotrs and their max size. This will be exploited to correctly setup the well formed
+  // tile with reflectors in place as they will be applied.
+  const auto k = tile_v.size().cols();
+
+  // copy from compact representation reflector values (the first component set to 1 is not there)
+  for (SizeType j = 0; j < k; ++j) {
+    const auto compact_refl_size =
+        std::min<SizeType>(tile_v.size().rows() - (1 + j), tile_hh.size().rows() - 1);
+
+    // this is needed because of complex last reflector (i.e. just 1 element long)
+    if (compact_refl_size == 0)
+      continue;
+
+    lacpy(blas::Uplo::General, compact_refl_size, 1, tile_hh.ptr({1, j}), tile_hh.ld(),
+          tile_v.ptr({1 + j, j}), tile_v.ld());
+  }
+
+  // Note:
+  // In addition to setting the diagonal to 1 for missing first components, here it zeros out
+  // both the upper and the lower part. Indeed due to the skewed shape, reflectors do not occupy
+  // the full tile height, and V should be fully well-formed because the next triangular
+  // multiplication, i.e. `V . T`, and the gemm `V* . E`, will use V as a general matrix.
+  laset(blas::Uplo::Upper, tile_v.size().rows(), k, T(0), T(1), tile_v.ptr({0, 0}), tile_v.ld());
+
+  if (tile_v.size().rows() > b)
+    laset(blas::Uplo::Lower, tile_v.size().rows() - b, k - 1, T(0), T(0), tile_v.ptr({b, 0}),
+          tile_v.ld());
+
+  return matrix::Tile<const T, Device::CPU>(std::move(tile_v));
+}
+
+template <class T>
 pika::shared_future<matrix::Tile<const T, Device::CPU>> setupVWellFormed(
     const SizeType b, pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_hh,
     pika::future<matrix::Tile<T, Device::CPU>> tile_v) {
   namespace ex = pika::execution::experimental;
 
-  auto unzipV_func = [b](const auto& tile_hh, auto tile_v) {
-    using lapack::lacpy;
-    using lapack::laset;
-
-    // Note: the size of of tile_hh and tile_v embeds a relevant information about the number of
-    // reflecotrs and their max size. This will be exploited to correctly setup the well formed
-    // tile with reflectors in place as they will be applied.
-    const auto k = tile_v.size().cols();
-
-    // copy from compact representation reflector values (the first component set to 1 is not there)
-    for (SizeType j = 0; j < k; ++j) {
-      const auto compact_refl_size =
-          std::min<SizeType>(tile_v.size().rows() - (1 + j), tile_hh.size().rows() - 1);
-
-      // this is needed because of complex last reflector (i.e. just 1 element long)
-      if (compact_refl_size == 0)
-        continue;
-
-      lacpy(blas::Uplo::General, compact_refl_size, 1, tile_hh.ptr({1, j}), tile_hh.ld(),
-            tile_v.ptr({1 + j, j}), tile_v.ld());
-    }
-
-    // Note:
-    // In addition to setting the diagonal to 1 for missing first components, here it zeros out
-    // both the upper and the lower part. Indeed due to the skewed shape, reflectors do not occupy
-    // the full tile height, and V should be fully well-formed because the next triangular
-    // multiplication, i.e. `V . T`, and the gemm `V* . E`, will use V as a general matrix.
-    laset(blas::Uplo::Upper, tile_v.size().rows(), k, T(0), T(1), tile_v.ptr({0, 0}), tile_v.ld());
-
-    if (tile_v.size().rows() > b)
-      laset(blas::Uplo::Lower, tile_v.size().rows() - b, k - 1, T(0), T(0), tile_v.ptr({b, 0}),
-            tile_v.ld());
-
-    return matrix::Tile<const T, Device::CPU>(std::move(tile_v));
-  };
-
-  return ex::when_all(ex::keep_future(std::move(tile_hh)), std::move(tile_v)) |
-         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), unzipV_func) |
+  return dlaf::internal::whenAllLift(b, ex::keep_future(std::move(tile_hh)), std::move(tile_v)) |
+         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), task_setupVWellFormed<T>) |
          ex::make_future();
+}
+
+template <class T>
+matrix::Tile<const T, Device::CPU> task_computeTFactor(
+    const matrix::Tile<const T, Device::CPU>& tile_taus,
+    const matrix::Tile<const T, Device::CPU>& tile_v, matrix::Tile<T, Device::CPU> tile_t) {
+  using namespace lapack;
+
+  // taus have to be extracted from the compact form (i.e. first row of the input tile)
+  std::vector<T> taus;
+  taus.resize(to_sizet(tile_v.size().cols()));
+  for (SizeType i = 0; i < to_SizeType(taus.size()); ++i)
+    taus[to_sizet(i)] = tile_taus({0, i});
+
+  const auto n = tile_v.size().rows();
+  const auto k = tile_v.size().cols();
+  larft(Direction::Forward, StoreV::Columnwise, n, k, tile_v.ptr(), tile_v.ld(), taus.data(),
+        tile_t.ptr(), tile_t.ld());
+
+  return matrix::Tile<const T, Device::CPU>(std::move(tile_t));
 }
 
 template <class T>
@@ -91,25 +115,9 @@ pika::shared_future<matrix::Tile<const T, Device::CPU>> computeTFactor(
     pika::future<matrix::Tile<T, Device::CPU>> mat_t) {
   namespace ex = pika::execution::experimental;
 
-  auto tfactor_task = [](const auto& tile_taus, const auto& tile_v, auto tile_t) {
-    using namespace lapack;
-
-    // taus have to be extracted from the compact form (i.e. first row of the input tile)
-    std::vector<T> taus;
-    taus.resize(to_sizet(tile_v.size().cols()));
-    for (SizeType i = 0; i < to_SizeType(taus.size()); ++i)
-      taus[to_sizet(i)] = tile_taus({0, i});
-
-    const auto n = tile_v.size().rows();
-    const auto k = tile_v.size().cols();
-    larft(Direction::Forward, StoreV::Columnwise, n, k, tile_v.ptr(), tile_v.ld(), taus.data(),
-          tile_t.ptr(), tile_t.ld());
-
-    return matrix::Tile<const T, Device::CPU>(std::move(tile_t));
-  };
   return dlaf::internal::whenAllLift(ex::keep_future(std::move(tile_taus)),
                                      ex::keep_future(std::move(tile_v)), std::move(mat_t)) |
-         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), tfactor_task) |
+         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), task_computeTFactor<T>) |
          ex::make_future();
 }
 

@@ -254,6 +254,8 @@ private:
   }
 
   TileDataType data_;
+
+public:
   std::variant<std::monostate, TilePromise, pika::shared_future<TileType>,
                pika::shared_future<ConstTileType>>
       dep_tracker_;

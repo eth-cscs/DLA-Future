@@ -645,13 +645,13 @@ void applyGivensRotationsToMatrixColumns(SizeType n, SizeType nb, std::vector<Gi
 template <class T>
 void solveRank1Problem(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k_fut,
                        pika::shared_future<T> rho_fut, Matrix<const T, Device::CPU>& d,
-                       Matrix<const T, Device::CPU>& z, Matrix<T, Device::CPU>& ws,
-                       Matrix<T, Device::CPU>& evals, Matrix<T, Device::CPU>& evecs) {
+                       Matrix<const T, Device::CPU>& z, Matrix<T, Device::CPU>& evals,
+                       Matrix<T, Device::CPU>& evecs) {
   SizeType n = problemSize(i_begin, i_end, evals.distribution());
   SizeType nb = evals.distribution().blockSize().rows();
 
-  auto rank1_fn = [n, nb](auto k_fut, auto rho_fut, auto d_tiles, auto z_tiles, auto ws_tiles_fut,
-                          auto eval_tiles, auto evec_tiles_fut) {
+  auto rank1_fn = [n, nb](auto k_fut, auto rho_fut, auto d_tiles, auto z_tiles, auto eval_tiles,
+                          auto evec_tiles_fut) {
     SizeType k = k_fut.get();
     T rho = rho_fut.get();
 
@@ -662,9 +662,6 @@ void solveRank1Problem(SizeType i_begin, SizeType i_end, pika::shared_future<Siz
     // save in variable avoid releasing the tile too soon
     auto eval_tile = eval_tiles[0].get();
     T* eval_ptr = eval_tile.ptr(zero);
-
-    auto ws_tile = ws_tiles_fut[0].get();  // only the first column of the matrix is used currently
-    T* ws_ptr = ws_tile.ptr(zero);
 
     auto evec_tiles = pika::unwrap(std::move(evec_tiles_fut));
     matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
@@ -681,68 +678,182 @@ void solveRank1Problem(SizeType i_begin, SizeType i_end, pika::shared_future<Siz
       dlaf::internal::laed4_wrapper(static_cast<int>(k), static_cast<int>(i), d_ptr, z_ptr, delta, rho,
                                     &eigenval);
     });
-
-    // References:
-    // - lapack 3.10.0, dlaed3.f, line 293
-    // - LAPACK Working Notes: lawn132, Parallelizing the Divide and Conquer Algorithm for the Symmetric
-    //   Tridiagonal Eigenvalue Problem on Distributed Memory Architectures, 4.2 Orthogonality
-
-    // Copy the diagonal of `evals` to `ws_ptr`
-    for (SizeType i = 0; i < k; ++i) {
-      GlobalElementIndex i_gl_el_evals(i, i);
-      SizeType i_tile = distr.globalTileLinearIndex(i_gl_el_evals);
-      TileElementIndex i_el = distr.tileElementIndex(i_gl_el_evals);
-
-      ws_ptr[i] = evec_tiles[to_sizet(i_tile)](i_el);
-    }
-
-    // Initialize modified `z` by multipliying eigenvector elements across rows.
-    for (SizeType j = 0; j < k; ++j) {
-      // Iterate over rows of `evecs`
-      for (SizeType i = 0; i < k; ++i) {
-        if (j == i)
-          continue;
-
-        // j != i
-        GlobalElementIndex i_gl_el_evals(i, j);
-        SizeType i_tile = distr.globalTileLinearIndex(i_gl_el_evals);
-        TileElementIndex i_el = distr.tileElementIndex(i_gl_el_evals);
-        T el_evec = evec_tiles[to_sizet(i_tile)](i_el);
-        ws_ptr[i] = ws_ptr[i] * el_evec / (d_ptr[i] - d_ptr[j]);
-      }
-    }
-
-    // Form eigenvectors using `ws_ptr`
-    for (SizeType j = 0; j < k; ++j) {
-      // Iterate over rows of an eigenvector
-      T normsq = 0;
-      for (SizeType i = 0; i < k; ++i) {
-        GlobalElementIndex i_gl_el_evals(i, j);
-        SizeType i_tile = distr.globalTileLinearIndex(i_gl_el_evals);
-        TileElementIndex i_el = distr.tileElementIndex(i_gl_el_evals);
-        T& el_evec = evec_tiles[to_sizet(i_tile)](i_el);
-
-        // Here the sign of `z[i]` is important, if ignored rows of the eigenvector matrix where `z[i] <
-        // 0` will have to be negated.
-        el_evec = std::copysign(std::sqrt(std::abs(ws_ptr[i])), z_ptr[i]) / el_evec;
-        normsq += el_evec * el_evec;
-      }
-
-      // Normalize the eigenvector
-      for (SizeType i = 0; i < k; ++i) {
-        GlobalElementIndex i_gl_el_evals(i, j);
-        SizeType i_tile = distr.globalTileLinearIndex(i_gl_el_evals);
-        TileElementIndex i_el = distr.tileElementIndex(i_gl_el_evals);
-        T& el_evec = evec_tiles[to_sizet(i_tile)](i_el);
-
-        el_evec = el_evec / std::sqrt(normsq);
-      }
-    }
   };
 
   TileCollector tc{i_begin, i_end};
   pika::dataflow(std::move(rank1_fn), std::move(k_fut), std::move(rho_fut), tc.read(d), tc.read(z),
-                 tc.readwrite(ws), tc.readwrite(evals), tc.readwrite(evecs));
+                 tc.readwrite(evals), tc.readwrite(evecs));
+}
+
+// References:
+// - lapack 3.10.0, dlaed3.f, line 293
+// - LAPACK Working Notes: lawn132, Parallelizing the Divide and Conquer Algorithm for the Symmetric
+//   Tridiagonal Eigenvalue Problem on Distributed Memory Architectures, 4.2 Orthogonality
+template <class T>
+void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k_fut,
+               Matrix<const T, Device::CPU>& diag, Matrix<const T, Device::CPU>& z,
+               Matrix<T, Device::CPU>& ws, Matrix<T, Device::CPU>& evecs) {
+  using ConstTileType = matrix::Tile<const T, Device::CPU>;
+  using TileType = matrix::Tile<T, Device::CPU>;
+
+  const matrix::Distribution& distr = evecs.distribution();
+
+  for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
+    SizeType i_subm_el = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
+    for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
+      SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
+      auto mul_rows = [i_subm_el, j_subm_el](SizeType k, const ConstTileType& diag_rows,
+                                             const ConstTileType& diag_cols,
+                                             const ConstTileType& evecs_tile, const TileType& ws_tile) {
+        if (i_subm_el >= k || j_subm_el >= k)
+          return;
+
+        SizeType nrows = std::min(k - i_subm_el, evecs_tile.size().rows());
+        SizeType ncols = std::min(k - j_subm_el, evecs_tile.size().cols());
+
+        for (SizeType j = 0; j < ncols; ++j) {
+          for (SizeType i = 0; i < nrows; ++i) {
+            T di = diag_rows(TileElementIndex(i, 0));
+            T dj = diag_cols(TileElementIndex(j, 0));
+            T evec_el = evecs_tile(TileElementIndex(i, j));
+            T& ws_el = ws_tile(TileElementIndex(i, 0));
+
+            // Exact comparison is OK because di and dj come from the same vector
+            T weight = (di == dj) ? evec_el : evec_el / (di - dj);
+            ws_el = (j == 0) ? weight : weight * ws_el;
+          }
+        }
+      };
+      pika::dataflow(pika::unwrapping(std::move(mul_rows)), k_fut, diag.read(GlobalTileIndex(i_tile, 0)),
+                     diag.read(GlobalTileIndex(j_tile, 0)), evecs.read(GlobalTileIndex(i_tile, j_tile)),
+                     ws(GlobalTileIndex(i_tile, j_tile)));
+    }
+  }
+
+  // Accumulate weights into the first column of ws
+  for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
+    SizeType i_subm_el = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
+    for (SizeType j_tile = i_begin + 1; j_tile <= i_end; ++j_tile) {
+      SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
+      auto acc_col_ws_fn = [i_subm_el, j_subm_el](SizeType k, const ConstTileType& ws_tile,
+                                                  const TileType& ws_tile_col) {
+        if (i_subm_el >= k || j_subm_el >= k)
+          return;
+
+        SizeType nrows = std::min(k - i_subm_el, ws_tile.size().rows());
+
+        for (SizeType i = 0; i < nrows; ++i) {
+          TileElementIndex idx(i, 0);
+          ws_tile_col(idx) = ws_tile_col(idx) * ws_tile(idx);
+        }
+      };
+      pika::dataflow(pika::unwrapping(std::move(acc_col_ws_fn)), k_fut,
+                     ws.read(GlobalTileIndex(i_tile, j_tile)), ws(GlobalTileIndex(i_tile, i_begin)));
+    }
+  }
+
+  // Use the first column of `ws` matrix to compute
+  for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
+    SizeType i_subm_el = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
+    for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
+      SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
+      auto weights_vec = [i_subm_el, j_subm_el](SizeType k, const ConstTileType& z_tile,
+                                                const ConstTileType& ws_tile,
+                                                const TileType& evecs_tile) {
+        if (i_subm_el >= k || j_subm_el >= k)
+          return;
+
+        SizeType nrows = std::min(k - i_subm_el, evecs_tile.size().rows());
+        SizeType ncols = std::min(k - j_subm_el, evecs_tile.size().cols());
+
+        for (SizeType j = 0; j < ncols; ++j) {
+          for (SizeType i = 0; i < nrows; ++i) {
+            T ws_el = ws_tile(TileElementIndex(i, 0));
+            T z_el = z_tile(TileElementIndex(i, 0));
+            T& el_evec = evecs_tile(TileElementIndex(i, j));
+            el_evec = std::copysign(std::sqrt(std::abs(ws_el)), z_el) / el_evec;
+          }
+        }
+      };
+      pika::dataflow(pika::unwrapping(std::move(weights_vec)), k_fut, z.read(GlobalTileIndex(i_tile, 0)),
+                     ws.read(GlobalTileIndex(i_tile, i_begin)), evecs(GlobalTileIndex(i_tile, j_tile)));
+    }
+  }
+
+  // Calculate the sum of square for each column in each tile
+  for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
+    SizeType i_subm_el = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
+    for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
+      SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
+      auto locnorm_fn = [i_subm_el, j_subm_el](SizeType k, const ConstTileType& evecs_tile,
+                                               const TileType& ws_tile) {
+        if (i_subm_el >= k || j_subm_el >= k)
+          return;
+
+        SizeType nrows = std::min(k - i_subm_el, evecs_tile.size().rows());
+        SizeType ncols = std::min(k - j_subm_el, evecs_tile.size().cols());
+
+        for (SizeType j = 0; j < ncols; ++j) {
+          T loc_norm = 0;
+          for (SizeType i = 0; i < nrows; ++i) {
+            T el = evecs_tile(TileElementIndex(i, j));
+            loc_norm += el * el;
+          }
+          ws_tile(TileElementIndex(0, j)) = loc_norm;
+        }
+      };
+
+      GlobalTileIndex mat_idx(i_tile, j_tile);
+      pika::dataflow(pika::unwrapping(std::move(locnorm_fn)), k_fut, evecs.read(mat_idx), ws(mat_idx));
+    }
+  }
+
+  // Sum the sum of squares into the first row of `ws` submatrix
+  for (SizeType i_tile = i_begin + 1; i_tile <= i_end; ++i_tile) {
+    SizeType i_subm_el = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
+    for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
+      SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
+      auto sum_first_tile_cols_fn = [i_subm_el, j_subm_el](SizeType k, const ConstTileType& ws_tile,
+                                                           const TileType& ws_row_tile) {
+        if (i_subm_el >= k || j_subm_el >= k)
+          return;
+
+        SizeType ncols = std::min(k - j_subm_el, ws_tile.size().cols());
+        for (SizeType j = 0; j < ncols; ++j) {
+          ws_row_tile(TileElementIndex(0, j)) += ws_tile(TileElementIndex(0, j));
+        }
+      };
+
+      pika::dataflow(pika::unwrapping(std::move(sum_first_tile_cols_fn)), k_fut,
+                     ws.read(GlobalTileIndex(i_tile, j_tile)), ws(GlobalTileIndex(i_begin, j_tile)));
+    }
+  }
+
+  // Normalize column vectors
+  for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
+    SizeType i_subm_el = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
+    for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
+      SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
+      auto scale_fn = [i_subm_el, j_subm_el](SizeType k, const ConstTileType& ws_tile,
+                                             const TileType& evecs_tile) {
+        if (i_subm_el >= k || j_subm_el >= k)
+          return;
+
+        SizeType nrows = std::min(k - i_subm_el, evecs_tile.size().rows());
+        SizeType ncols = std::min(k - j_subm_el, evecs_tile.size().cols());
+
+        for (SizeType j = 0; j < ncols; ++j) {
+          for (SizeType i = 0; i < nrows; ++i) {
+            T& evecs_el = evecs_tile(TileElementIndex(i, j));
+            evecs_el = evecs_el / std::sqrt(ws_tile(TileElementIndex(0, j)));
+          }
+        }
+      };
+
+      pika::dataflow(pika::unwrapping(std::move(scale_fn)), k_fut,
+                     ws.read(GlobalTileIndex(i_begin, j_tile)), evecs(GlobalTileIndex(i_tile, j_tile)));
+    }
+  }
 }
 
 template <class T>
@@ -963,7 +1074,8 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   applyIndex(i_begin, i_end, ws.i3, ws.z, ws.ztmp);
   copyVector(i_begin, i_end, ws.dtmp, d);
   resetSubMatrix(i_begin, i_end, ws.mat1);
-  solveRank1Problem(i_begin, i_end, k_fut, rho_fut, d, ws.ztmp, ws.mat2, ws.dtmp, ws.mat1);
+  solveRank1Problem(i_begin, i_end, k_fut, rho_fut, d, ws.ztmp, ws.dtmp, ws.mat1);
+  formEvecs(i_begin, i_end, k_fut, d, ws.ztmp, ws.mat2, ws.mat1);
   setUnitDiag(i_begin, i_end, k_fut, ws.mat1);
 
   // Step #3: Eigenvectors of the tridiagonal system: Q * U

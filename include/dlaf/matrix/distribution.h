@@ -322,6 +322,14 @@ public:
     return i_tile.row() + i_tile.col() * global_nr_tiles_.rows();
   }
 
+  /// Returns the global element distance between tiles along the @p rc coordinate
+  template <Coord rc>
+  SizeType globalTileElementDistance(SizeType i_begin, SizeType i_end) const noexcept {
+    DLAF_ASSERT(i_begin <= i_end, i_begin, i_end);
+    return globalElementFromGlobalTileAndTileElement<rc>(i_end, 0) -
+           globalElementFromGlobalTileAndTileElement<rc>(i_begin, 0);
+  }
+
 private:
   /// Computes and sets @p size_.
   ///

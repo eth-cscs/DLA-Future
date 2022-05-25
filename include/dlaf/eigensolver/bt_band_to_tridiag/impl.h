@@ -119,8 +119,8 @@ std::tuple<matrix::Tile<const T, Device::CPU>, matrix::Tile<const T, Device::CPU
 
   auto [tile_v_c, tile_t_c] = computeVT(b, tile_hh, std::move(tile_v), std::move(tile_t));
 
-  dlaf::tile::internal::trmm3_o(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1), tile_t_c,
-                                tile_v_c, tile_w);
+  dlaf::tile::internal::trmm3(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1), tile_t_c,
+                              tile_v_c, tile_w);
   return std::make_tuple(std::move(tile_v_c), std::move(tile_w));
 }
 

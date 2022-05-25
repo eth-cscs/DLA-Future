@@ -22,7 +22,7 @@ DLAF_addTest(test_bt_band_to_tridiag
 
 DLAF_addTest(test_tridiag_solver_full
   SOURCES test_tridiag_solver.cpp
-  LIBRARIES dlaf.core dlaf.eigensolver dlaf.factorization dlaf.solver
+  LIBRARIES dlaf.core dlaf.eigensolver dlaf.factorization dlaf.solver dlaf.multiplication
   USE_MAIN PIKA
 )
 

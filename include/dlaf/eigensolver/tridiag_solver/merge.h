@@ -21,6 +21,7 @@
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/multiplication/general.h"
 #include "dlaf/sender/make_sender_algorithm_overloads.h"
 #include "dlaf/sender/policy.h"
 #include "dlaf/sender/transform.h"
@@ -940,32 +941,6 @@ void permutateQU(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device
   pika::dataflow(std::move(permute_fn), tc.read(index), tc.readwrite(mat_in), tc.readwrite(mat_out));
 }
 
-// Assumption: Matrices are set to zero.
-//
-template <class T>
-void gemmQU(SizeType i_begin, SizeType i_end, Matrix<const T, Device::CPU>& mat_a,
-            Matrix<const T, Device::CPU>& mat_b, Matrix<T, Device::CPU>& mat_c) {
-  // Iterate over columns of `c`
-  for (SizeType j = i_begin; j <= i_end; ++j) {
-    // Iterate over rows of `c`
-    for (SizeType i = i_begin; i <= i_end; ++i) {
-      // Iterate over columns of `a` and rows of `b`
-      for (SizeType k = i_begin; k <= i_end; ++k) {
-        // C = alpha * A * B + beta * C
-        T beta = 1;
-        if (k == i_begin)
-          beta = 0;
-
-        auto tile_a = mat_a.read(GlobalTileIndex(i, k));
-        auto tile_b = mat_b.read(GlobalTileIndex(k, j));
-        auto tile_c = mat_c(GlobalTileIndex(i, j));
-        pika::dataflow(pika::unwrapping(tile::internal::gemm_o), blas::Op::NoTrans, blas::Op::NoTrans,
-                       T(1), std::move(tile_a), std::move(tile_b), beta, std::move(tile_c));
-      }
-    }
-  }
-}
-
 template <class T, Device Source, Device Destination>
 void copySubMatrix(SizeType i_begin, SizeType i_end, Matrix<const T, Source>& source,
                    Matrix<T, Destination>& dest) {
@@ -1088,7 +1063,9 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   //
   invertIndex(i_begin, i_end, ws.i3, ws.i2);
   permutateQU<T, Coord::Row>(i_begin, i_end, ws.i2, ws.mat1, ws.mat2);  // permutate U to match Q
-  gemmQU(i_begin, i_end, mat_ev, ws.mat2, ws.mat1);
+  dlaf::multiplication::generalSubMatrix<Backend::MC, Device::CPU, T>(i_begin, i_end, blas::Op::NoTrans,
+                                                                      blas::Op::NoTrans, T(1), mat_ev,
+                                                                      ws.mat2, T(0), ws.mat1);
 
   // Step #4: Final sorting of eigenvalues and eigenvectors
   //

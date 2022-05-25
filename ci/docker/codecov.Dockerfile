@@ -1,4 +1,5 @@
 ARG BUILD_IMAGE
+ARG DEPLOY_BASE_IMAGE
 
 # This is the folder where the project is built
 ARG BUILD=/DLA-Future-build
@@ -44,7 +45,7 @@ RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
     rm -rf ${SOURCE}/.git
 
 # Multistage build, this is the final small image
-FROM ubuntu:20.04
+FROM $DEPLOY_BASE_IMAGE
 
 # set jfrog autoclean policy
 LABEL com.jfrog.artifactory.retention.maxDays="7"
@@ -56,6 +57,7 @@ ARG BUILD
 ARG SOURCE
 ARG DEPLOY
 
+ARG EXTRA_APTGET_DEPLOY
 # python is needed for fastcov
 # pip is needed only to install fastcov (it is removed with
 #     its dependencies after fastcov installation)
@@ -63,6 +65,7 @@ ARG DEPLOY
 # tzdata is needed to print correct time
 RUN apt-get update -qq && \
     apt-get install -qq -y --no-install-recommends \
+      ${EXTRA_APTGET_DEPLOY} \
       python3 python3-pip \
       curl \
       ca-certificates \

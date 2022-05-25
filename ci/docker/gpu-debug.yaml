@@ -10,7 +10,7 @@
 
 spack:
   specs:
-    - dla-future@develop build_type=Debug +cuda +miniapps +ci-test ^openblas ^mpich@3.4.2
+    - dla-future@develop build_type=Debug +cuda +miniapps +ci-test ^openblas ^mpich
   view: false
   concretization: together
 
@@ -27,6 +27,13 @@ spack:
     pika:
       variants:
         - 'build_type=Debug'
+        - 'malloc=system'
     mpich:
+      version:
+        - 3.4.2
       variants:
         - '~fortran'
+    git:
+      # Force git as non-buildable to allow deprecated versions in environments
+      # https://github.com/spack/spack/pull/30040
+      buildable: false

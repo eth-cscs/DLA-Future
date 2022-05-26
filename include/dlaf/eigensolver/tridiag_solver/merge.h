@@ -14,7 +14,6 @@
 #include <pika/parallel/algorithms/for_each.hpp>
 #include <pika/unwrap.hpp>
 
-#include "dlaf/eigensolver/tridiag_solver/gemm.h"
 #include "dlaf/eigensolver/tridiag_solver/index.h"
 #include "dlaf/eigensolver/tridiag_solver/permutations.h"
 #include "dlaf/lapack/laed4.h"

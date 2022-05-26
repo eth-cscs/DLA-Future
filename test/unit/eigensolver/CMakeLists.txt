@@ -26,12 +26,6 @@ DLAF_addTest(test_tridiag_solver_full
   USE_MAIN PIKA
 )
 
-DLAF_addTest(test_tridiag_solver_gemm
-  SOURCES test_tridiag_solver_gemm.cpp
-  LIBRARIES dlaf.core
-  USE_MAIN PIKA
-)
-
 DLAF_addTest(test_tridiag_solver_permutations
   SOURCES test_tridiag_solver_permutations.cpp
   LIBRARIES dlaf.core

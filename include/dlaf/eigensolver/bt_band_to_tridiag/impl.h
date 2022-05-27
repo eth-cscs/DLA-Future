@@ -124,26 +124,81 @@ std::tuple<matrix::Tile<const T, Device::CPU>, matrix::Tile<const T, Device::CPU
   return std::make_tuple(std::move(tile_v_c), std::move(tile_w));
 }
 
-template <Backend backend, class VSender, class ESender, class T, class W2Sender>
-auto computeW2(pika::threads::thread_priority priority, VSender&& tile_v, ESender&& tile_e, T beta,
-               W2Sender&& tile_w2) {
-  using blas::Op;
-  dlaf::internal::whenAllLift(Op::ConjTrans, Op::NoTrans, T(1), std::forward<VSender>(tile_v),
-                              std::forward<ESender>(tile_e), beta, std::forward<W2Sender>(tile_w2)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
-}
+template <Backend B, class T>
+struct single_tile_f;
 
-template <Backend backend, class WSender, class W2Sender, class ESender>
-auto updateE(pika::threads::thread_priority priority, WSender&& tile_w, W2Sender&& tile_w2,
-             ESender&& tile_e) {
-  using blas::Op;
-  using T = dlaf::internal::SenderElementType<ESender>;
-  dlaf::internal::whenAllLift(Op::NoTrans, Op::NoTrans, T(-1), std::forward<WSender>(tile_w),
-                              std::forward<W2Sender>(tile_w2), T(1), std::forward<ESender>(tile_e)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
-}
+template <class T>
+struct single_tile_f<Backend::MC, T> {
+  void operator()(const matrix::Tile<const T, Device::CPU>& tile_v,
+                  const matrix::Tile<const T, Device::CPU>& tile_w, matrix::Tile<T, Device::CPU> tile_w2,
+                  matrix::Tile<T, Device::CPU> tile_e) {
+    using namespace blas;
+    using tile::internal::gemm;
+    // W2 = V* . E
+    gemm(Op::ConjTrans, Op::NoTrans, T(1), tile_v, tile_e, T(0), tile_w2);
+    // E -= W . V2
+    gemm(Op::NoTrans, Op::NoTrans, T(-1), tile_w, tile_w2, T(1), tile_e);
+  }
+};
+
+#ifdef DLAF_WITH_CUDA
+template <class T>
+struct single_tile_f<Backend::GPU, T> {
+  void operator()(cublasHandle_t handle, const matrix::Tile<const T, Device::GPU>& tile_v,
+                  const matrix::Tile<const T, Device::GPU>& tile_w,
+                  matrix::Tile<T, Device::GPU>& tile_w2, matrix::Tile<T, Device::GPU>& tile_e) {
+    using namespace blas;
+    using tile::internal::gemm;
+    // W2 = V* . E
+    gemm(handle, Op::ConjTrans, Op::NoTrans, T(1), tile_v, tile_e, T(0), tile_w2);
+    // E -= W . V2
+    gemm(handle, Op::NoTrans, Op::NoTrans, T(-1), tile_w, tile_w2, T(1), tile_e);
+  }
+};
+#endif
+
+template <Backend B, class T>
+struct double_tile_f;
+
+template <class T>
+struct double_tile_f<Backend::MC, T> {
+  void operator()(const matrix::Tile<const T, Device::CPU>& tile_v0,
+                  const matrix::Tile<const T, Device::CPU>& tile_v1,
+                  const matrix::Tile<const T, Device::CPU>& tile_w0,
+                  const matrix::Tile<const T, Device::CPU>& tile_w1,
+                  matrix::Tile<T, Device::CPU> tile_w2, matrix::Tile<T, Device::CPU> tile_e_top,
+                  matrix::Tile<T, Device::CPU> tile_e_bottom) {
+    using namespace blas;
+    using tile::internal::gemm;
+    // W2 = V* . E
+    gemm(Op::ConjTrans, Op::NoTrans, T(1), tile_v0, tile_e_top, T(0), tile_w2);
+    gemm(Op::ConjTrans, Op::NoTrans, T(1), tile_v1, tile_e_bottom, T(1), tile_w2);
+    // E -= W . V2
+    gemm(Op::NoTrans, Op::NoTrans, T(-1), tile_w0, tile_w2, T(1), tile_e_top);
+    gemm(Op::NoTrans, Op::NoTrans, T(-1), tile_w1, tile_w2, T(1), tile_e_bottom);
+  }
+};
+
+#ifdef DLAF_WITH_CUDA
+template <class T>
+struct double_tile_f<Backend::GPU, T> {
+  void operator()(cublasHandle_t handle, const matrix::Tile<const T, Device::GPU>& tile_v0,
+                  const matrix::Tile<const T, Device::GPU>& tile_v1,
+                  const matrix::Tile<const T, Device::GPU>& tile_w0,
+                  const matrix::Tile<const T, Device::GPU>& tile_w1,
+                  matrix::Tile<T, Device::GPU>& tile_w2, matrix::Tile<T, Device::GPU>& tile_e_top,
+                  matrix::Tile<T, Device::GPU>& tile_e_bottom) {
+    using namespace blas;
+    using tile::internal::gemm;
+    // W2 = V* . E
+    gemm(handle, Op::ConjTrans, Op::NoTrans, T(1), tile_v0, tile_e_top, T(0), tile_w2);
+    gemm(handle, Op::ConjTrans, Op::NoTrans, T(1), tile_v1, tile_e_bottom, T(1), tile_w2);
+    // E -= W . V2
+    gemm(handle, Op::NoTrans, Op::NoTrans, T(-1), tile_w0, tile_w2, T(1), tile_e_top);
+    gemm(handle, Op::NoTrans, Op::NoTrans, T(-1), tile_w1, tile_w2, T(1), tile_e_bottom);
+  }
+};
+#endif
 
 struct TileAccessHelper {
   TileAccessHelper(const SizeType b, const SizeType nrefls, matrix::Distribution dist,
@@ -280,9 +335,10 @@ struct HHManager<Backend::MC, Device::CPU, T> {
 
   HHManager(const SizeType b, const std::size_t, matrix::Distribution, matrix::Distribution) : b(b) {}
 
-  auto computeVW(const LocalTileIndex ij, const SizeType nrefls, const TileAccessHelper& helper,
-                 matrix::Matrix<const T, Device::CPU>& mat_hh, matrix::Panel<Coord::Col, T, D>& mat_v,
-                 matrix::Panel<Coord::Col, T, D>& mat_t, matrix::Panel<Coord::Col, T, D>& mat_w) {
+  std::tuple<pika::shared_future<matrix::Tile<const T, D>>, pika::shared_future<matrix::Tile<const T, D>>>
+  computeVW(const LocalTileIndex ij, const SizeType nrefls, const TileAccessHelper& helper,
+            matrix::Matrix<const T, Device::CPU>& mat_hh, matrix::Panel<Coord::Col, T, D>& mat_v,
+            matrix::Panel<Coord::Col, T, D>& mat_t, matrix::Panel<Coord::Col, T, D>& mat_w) {
     namespace ex = pika::execution::experimental;
 
     const matrix::SubTileSpec t_spec{{0, 0}, {nrefls, nrefls}};
@@ -314,9 +370,10 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
             matrix::Distribution dist_w)
       : b(b), t_panels_h(n_workspaces, dist_t), w_panels_h(n_workspaces, dist_w) {}
 
-  auto computeVW(const LocalTileIndex ij, const SizeType nrefls, const TileAccessHelper& helper,
-                 matrix::Matrix<const T, Device::CPU>& mat_hh, matrix::Panel<Coord::Col, T, D>& mat_v,
-                 matrix::Panel<Coord::Col, T, D>& mat_t, matrix::Panel<Coord::Col, T, D>& mat_w) {
+  std::tuple<pika::shared_future<matrix::Tile<const T, D>>, pika::shared_future<matrix::Tile<const T, D>>>
+  computeVW(const LocalTileIndex ij, const SizeType nrefls, const TileAccessHelper& helper,
+            matrix::Matrix<const T, Device::CPU>& mat_hh, matrix::Panel<Coord::Col, T, D>& mat_v,
+            matrix::Panel<Coord::Col, T, D>& mat_t, matrix::Panel<Coord::Col, T, D>& mat_w) {
     namespace ex = pika::execution::experimental;
 
     auto& mat_v_h = w_panels_h.nextResource();
@@ -350,7 +407,8 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
           tile::internal::trmm3(handle, Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1),
                                 tile_t, tile_v, tile_w);
 
-          return std::make_tuple(std::move(tile_v), std::move(tile_w));
+          return std::make_tuple(matrix::Tile<const T, D>(std::move(tile_v)),
+                                 matrix::Tile<const T, D>(std::move(tile_w)));
         };
 
     auto tup2 = ex::when_all(ex::keep_future(std::move(tile_v_h)), ex::keep_future(std::move(tile_t_h)),
@@ -464,32 +522,27 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
         const auto sz_e = mat_e.tileSize({ij.row(), j_e});
         auto tile_e = mat_e.read(idx_e);
 
-        // W2 = V* . E
-        computeW2<B>(thread_priority::normal,
-                     ex::keep_future(splitTile(tile_v, helper.topPart().specHH())),
-                     ex::keep_future(splitTile(tile_e, helper.topPart().specEV(sz_e.cols()))), T(0),
-                     mat_w2.readwrite_sender(LocalTileIndex(0, j_e)));
-
-        if (helper.affectsMultipleTiles()) {
-          auto tile_e = mat_e.read(LocalTileIndex(ij.row() + 1, j_e));
-          computeW2<B>(thread_priority::normal,
-                       ex::keep_future(splitTile(tile_v, helper.bottomPart().specHH())),
-                       ex::keep_future(splitTile(tile_e, helper.bottomPart().specEV(sz_e.cols()))), T(1),
-                       mat_w2.readwrite_sender(LocalTileIndex(0, j_e)));
+        if (not helper.affectsMultipleTiles()) {
+          ex::when_all(ex::keep_future(splitTile(tile_v, helper.topPart().specHH())),
+                       ex::keep_future(splitTile(tile_w, helper.topPart().specHH())),
+                       mat_w2.readwrite_sender(LocalTileIndex(0, j_e)),
+                       splitTile(mat_e(idx_e), helper.topPart().specEV(sz_e.cols()))) |
+              dlaf::internal::transform(dlaf::internal::Policy<B>(thread_priority::normal),
+                                        single_tile_f<B, T>{}) |
+              ex::start_detached();
         }
-
-        const auto& tile_w2 = mat_w2.read_sender(idx_e);
-
-        // E -= W . W2
-        updateE<B>(pika::threads::thread_priority::normal,
-                   ex::keep_future(splitTile(tile_w, helper.topPart().specHH())), tile_w2,
-                   splitTile(mat_e(idx_e), helper.topPart().specEV(sz_e.cols())));
-
-        if (helper.affectsMultipleTiles()) {
-          updateE<B>(pika::threads::thread_priority::normal,
-                     ex::keep_future(splitTile(tile_w, helper.bottomPart().specHH())), tile_w2,
-                     splitTile(mat_e(LocalTileIndex{ij.row() + 1, j_e}),
-                               helper.bottomPart().specEV(sz_e.cols())));
+        else {
+          auto tile_vs = splitTile(tile_v, {helper.topPart().specHH(), helper.bottomPart().specHH()});
+          auto tile_ws = splitTile(tile_w, {helper.topPart().specHH(), helper.bottomPart().specHH()});
+          ex::when_all(ex::keep_future(tile_vs[0]), ex::keep_future(tile_vs[1]),
+                       ex::keep_future(tile_ws[0]), ex::keep_future(tile_ws[1]),
+                       mat_w2.readwrite_sender(LocalTileIndex(0, j_e)),
+                       splitTile(mat_e(idx_e), helper.topPart().specEV(sz_e.cols())),
+                       splitTile(mat_e(LocalTileIndex{ij.row() + 1, j_e}),
+                                 helper.bottomPart().specEV(sz_e.cols()))) |
+              dlaf::internal::transform(dlaf::internal::Policy<B>(thread_priority::normal),
+                                        double_tile_f<B, T>{}) |
+              ex::start_detached();
         }
       }
 
